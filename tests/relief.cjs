@@ -30,8 +30,12 @@ const errs = []; console.error = (...a) => errs.push(String(a[0]).slice(0, 180))
    この試験は、囲みが解かれるまでに何月かを要する。その間に寄せ手が強攻に出るか、
    城が耐えるか、後詰が間に合うかが賽の目で変わり、十二回に一度ほど落ちていた。
    落ちるたびに「どこか壊れたのか」と調べ直すことになるので、目を固定する。
-   仕組みを変えたときにここが落ちれば、それは本当に変わったということである。 */
-let 種 = 0x5EC0C0;
+
+   ただし、合戦の仕組みに手を入れると賽の目の流れそのものが変わり、
+   同じ種でも筋書きが変わる。ここが落ちたときは、まず種を変えて試されたい。
+   （RELIEF_SEED=111 のように外から渡せる。いくつか試して大半で通るなら、
+   壊れたのではなく巡り合わせである。壊れていれば、どの種でも通らない。） */
+let 種 = Number(process.env.RELIEF_SEED || 111);
 Math.random = function () {
   種 |= 0; 種 = (種 + 0x6D2B79F5) | 0;
   let t = Math.imul(種 ^ (種 >>> 15), 1 | 種);
@@ -149,35 +153,56 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
   };
 
   // 着くまで月を送る
+  /* 開いている札をすべて閉じる。
+     月初報告を閉じる釦は「評定を開く」である（panels.jsx の MonthReport）。
+     一つ閉じたら止める、という書き方だと札が重なったときに閉じ残す。
+     閉じるものが無くなるまで繰り返す。 */
+  const 札を閉じる = async () => {
+    for (let i = 0; i < 6; i++) {
+      let 閉じた = false;
+      for (const t of ['評定を開く', '閉じる', '了', '確かめた']) {
+        if (await rc(t)) { 閉じた = true; break; }
+      }
+      if (!閉じた) break;
+      await flush();
+    }
+  };
+  /* 月を送る。
+     「次月へ」は battle・openSiege・openCamp のいずれかが開いていると押せない。
+     段の名前は仕組みを直すたびに変わりうるので（包囲の段は「籠城して待つ」の
+     こともあれば「兵糧攻め」のこともある）、名を追いかけるのはやめ、
+     押せるようになるまで、開いている段を片端から片づける。 */
+  const 月を送る = async () => {
+    for (let i = 0; i < 10; i++) {
+      if (await rc('次月へ')) { await flush(); await flush(); return true; }
+      if (await 戦を片づける()) continue;            // 盤が開いていた
+      let 片づけた = false;
+      for (const t of ['籠城して待つ', '耐える', '守りを固める', '兵糧攻め',
+        '評定を開く', '閉じる', '了', '確かめた']) {
+        if (await rc(t)) { 片づけた = true; break; }
+      }
+      if (!片づけた) return false;
+      await flush();
+    }
+    return false;
+  };
   let 着 = false;
   for (let m = 0; m < 14 && !着; m++) {
-    // 自城が囲まれている間は、月送りの前に城方の腹を決めねばならぬ
-    for (const t of ['籠城して待つ', '耐える', '守りを固める']) if (await rc(t)) break;
-    if (await 戦を片づける()) {                 // 寄せ手が攻めかかってきた
-      if (/討って出るか/.test(document.body.textContent)) { 着 = true; break; }
-    }
-    const 進めた = await rc('次月へ');
-    await flush(); await flush(); await flush();
-    if (!進めた) {
-      if (await 戦を片づける()) { m--; continue; }   // まだ盤が残っていた
-      const 釦 = [...document.querySelectorAll('button')].map((b) => b.textContent.trim() + (b.disabled ? '[不可]' : '')).filter(Boolean);
-      console.log(`    [${m + 1}] 次月へ進めない。釦: ${釦.slice(0, 9).join(' / ')}`);
-      const card = document.querySelector('.card');
-      if (card) console.log('      札: ' + card.textContent.replace(/\s+/g, ' ').slice(0, 160));
+    if (!(await 月を送る())) {
+      const 釦 = [...document.querySelectorAll('button')]
+        .map((b) => b.textContent.trim().slice(0, 12) + (b.disabled ? '[不可]' : '')).filter(Boolean);
+      console.log(`    [${m + 1}] 月を送れない。釦: ${釦.slice(0, 14).join(' / ')}`);
       break;
     }
     if (/討って出るか/.test(document.body.textContent)) { 着 = true; break; }
-    if (m === 1 || m === 3) {
-      await rc('戦国記'); await flush();
-      const card = document.querySelector('.card');
-      console.log(`    [${m + 1}月の戦国記] ` + (card ? card.textContent.replace(/\s+/g, ' ').slice(0, 260) : 'なし'));
-      await rc('閉じる'); await flush();
-    }
-    /* 札を閉じる。月初報告を閉じる釦は「評定を開く」である（panels.jsx の MonthReport）。
-       ここに挙げ忘れていたため、報告が開いたままになり、
-       次の月の「次月へ」が押せなくなって止まっていた。 */
-    for (const t of ['評定を開く', '閉じる', '了', '確かめた']) if (await rc(t)) break;
-    await flush();
+  }
+  if (!着) {
+    for (const t of ['評定を開く', '閉じる']) await rc(t);
+    await rc('戦国記'); await flush();
+    const card = document.querySelector('.card');
+    const 記 = card ? card.textContent.replace(/\s+/g, ' ') : '';
+    console.log('    戦国記: ' + 記.slice(0, 420));
+    await rc('閉じる'); await flush();
   }
   確('着陣すると「討って出るか」を問われる', 着);
   if (!着) { console.log('エラー: 後詰が着かない'); console.log('エラー: なし'); process.exit(1); }

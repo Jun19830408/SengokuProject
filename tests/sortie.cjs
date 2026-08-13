@@ -174,7 +174,8 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
     };
     let 着 = false, 軍議 = false;
     for (let m = 0; m < 12 && !着; m++) {
-      for (const t of ['籠城して待つ']) if (await rc(t)) break;
+      // 包囲の段は、城方なら「籠城して待つ」、寄せ手なら「兵糧攻め」。
+      for (const t of ['籠城して待つ', '耐える', '守りを固める', '兵糧攻め']) if (await rc(t)) break;
       await 戦を片づける();
       if (!(await rc('次月へ'))) {
         if (await 戦を片づける()) { m--; continue; }

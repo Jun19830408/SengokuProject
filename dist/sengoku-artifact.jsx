@@ -10850,7 +10850,7 @@ function applyDamage(b, fCorps, e, dmg, flank, valor) {
   e.men = Math.max(0, e.men - dmg * pinch);
   const lost = before - e.men;
   fCorps.loss[e.origin] += lost;
-  e.cohesion -= lost * 0.7 * flank * (0.55 + (valor || 60) / 100);
+  e.cohesion = Math.max(0, e.cohesion - lost * 0.7 * flank * (0.55 + (valor || 60) / 100));
   const share = lost / Math.max(1, corpsMax(fCorps));
   fCorps.morale -= share * 100 * 2.2 * (1 + (flank - 1) * 0.8);
 }
@@ -11023,7 +11023,10 @@ function stepBattle(b, dt) {
       }
       const room = 60 + Math.sqrt(Math.max(1, nq)) * SP * 0.7;
       const lag = engaged ? 1 : far <= room ? 1 : far > room * 1.8 ? 0.12 : 0.55;
-      const v = avgSpeed * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag;
+      const \u751F\u304D\u305F\u7D44 = c.squads.filter((q) => q.men > 0);
+      const \u6700\u3082\u9045\u3044\u8DB3 = \u751F\u304D\u305F\u7D44.length ? Math.min(...\u751F\u304D\u305F\u7D44.map((q) => ARM_STATS[q.type].speed)) : avgSpeed;
+      const \u968A\u306E\u8DB3 = engaged ? avgSpeed : Math.min(avgSpeed, \u6700\u3082\u9045\u3044\u8DB3 * 1.12);
+      const v = \u968A\u306E\u8DB3 * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag;
       const mvx = dx / dist * v * dt, mvy = dy / dist * v * dt;
       if (passableFor(c, b, c.x + mvx, c.y + mvy)) {
         c.x += mvx;
@@ -11150,7 +11153,9 @@ function stepBattle(b, dt) {
       const qd = Math.hypot(targetX - q.x, targetY - q.y);
       const terr = TERRAIN[terrainAt(q.x, q.y)];
       if (qd > 2 && !q.engaged) {
-        const v = st0.speed * fieldScale() * terr.speed * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
+        const \u9045\u308C = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
+        const \u8FFD\u3044\u3064\u304D = c.routed ? 1 : clamp(1 + \u9045\u308C / 34, 1, 2.4);
+        const v = st0.speed * \u8FFD\u3044\u3064\u304D * fieldScale() * terr.speed * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = (targetX - q.x) / qd * Math.min(v * dt, qd);
         const sy = (targetY - q.y) / qd * Math.min(v * dt, qd);
         if (passableFor(c, b, q.x + sx, q.y + sy)) {
@@ -11160,7 +11165,8 @@ function stepBattle(b, dt) {
         else if (passableFor(c, b, q.x, q.y + sy)) q.y += sy;
         const base = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
         q.facing = base + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
-        q.cohesion += (terr.cohesion * 0.6 - 0.5) * dt;
+        const \u843D\u3061\u7740\u304F\u5148 = clamp(52 + c.gen.lead * 0.28 + terr.cohesion * 4, 12, 92);
+        q.cohesion += ((\u843D\u3061\u7740\u304F\u5148 - q.cohesion) * 0.1 + terr.cohesion * 0.25) * dt;
       } else {
         const rec = (1.2 + c.gen.lead / 40) * (q.engaged ? 0.15 : 1) * (1 - c.fatigue / 200);
         q.cohesion += (rec + terr.cohesion * 0.25) * dt;

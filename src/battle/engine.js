@@ -26,7 +26,8 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor) {
   const lost = before - e.men;
   fCorps.loss[e.origin] += lost;
   // 武勇は「相手の陣形を崩す圧力」として効く。士気そのものは下げない（GDD 8.3）
-  e.cohesion -= lost * 0.7 * flank * (0.55 + (valor || 60) / 100);
+  // 零より下へは落とさぬ。負のまま持ち越すと、戦のあと整え直すのに際限がなくなる。
+  e.cohesion = Math.max(0, e.cohesion - lost * 0.7 * flank * (0.55 + (valor || 60) / 100));
   const share = lost / Math.max(1, corpsMax(fCorps));
   fCorps.morale -= share * 100 * 2.2 * (1 + (flank - 1) * 0.8);
 }
@@ -188,7 +189,19 @@ export function stepBattle(b, dt) {
       const room = 60 + Math.sqrt(Math.max(1, nq)) * SP * 0.7;
       // 交戦中は隊が広がるのが当たり前なので、伸びを理由に足を止めない
       const lag = engaged ? 1 : far <= room ? 1 : far > room * 1.8 ? 0.12 : 0.55;
-      const v = avgSpeed * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1)
+      /* 隊は、いちばん遅い兵科の足に合わせて進む。
+
+         これまでは兵科の平均（男数で重みをつけたもの）で進んでいた。
+         槍三十四・鉄砲三十であれば平均は三十六ほどになり、鉄砲は隊についていけない。
+         一度離されたら二度と追いつけず、進むほど隊が伸びて崩れていた。
+
+         行軍とは、遅い者に合わせて歩くことである。
+         ただし組み打ちの最中は隊が広がるのが当たり前なので、この縛りは掛けない。 */
+      const 生きた組 = c.squads.filter((q) => q.men > 0);
+      const 最も遅い足 = 生きた組.length
+        ? Math.min(...生きた組.map((q) => ARM_STATS[q.type].speed)) : avgSpeed;
+      const 隊の足 = engaged ? avgSpeed : Math.min(avgSpeed, 最も遅い足 * 1.12);
+      const v = 隊の足 * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1)
         * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag;
       const mvx = (dx / dist) * v * dt, mvy = (dy / dist) * v * dt;
       // 城壁と閉じた門は通れない。ぶつかったら壁沿いに滑る。
@@ -298,7 +311,19 @@ export function stepBattle(b, dt) {
       const qd = Math.hypot(targetX - q.x, targetY - q.y);
       const terr = TERRAIN[terrainAt(q.x, q.y)];
       if (qd > 2 && !q.engaged) {
-        const v = st0.speed * fieldScale() * terr.speed * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
+        /* 持ち場へ追いつくための足（GDD 8.3）。
+
+           組は自分の兵科の速さでしか歩けなかった。ところが隊そのものは
+           兵科の平均で進む。鉄砲は三十、平均は三十六ほどであるから、
+           遅い兵科は一度離されると二度と追いつけない。
+           進むほど隊は伸び、崩れたまま戦に入っていた。
+
+           持ち場から遅れているぶんだけ、足を速められるようにする。
+           駆け足で列に戻る、というだけのことである。追いついた組は元の速さに戻り、
+           行き過ぎることもない（歩幅は残りの隔たりで頭打ちにしてある）。 */
+        const 遅れ = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
+        const 追いつき = c.routed ? 1 : clamp(1 + 遅れ / 34, 1, 2.4);
+        const v = st0.speed * 追いつき * fieldScale() * terr.speed * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = ((targetX - q.x) / qd) * Math.min(v * dt, qd);
         const sy = ((targetY - q.y) / qd) * Math.min(v * dt, qd);
         if (passableFor(c, b, q.x + sx, q.y + sy)) { q.x += sx; q.y += sy; }
@@ -306,7 +331,17 @@ export function stepBattle(b, dt) {
         else if (passableFor(c, b, q.x, q.y + sy)) q.y += sy;
         const base = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
         q.facing = base + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;   // 乱れて初めて向きがずれる
-        q.cohesion += (terr.cohesion * 0.6 - 0.5) * dt;
+        /* 行軍のあいだの陣形維持（GDD 8.3）。
+
+           これまでは、歩けば毎秒じわじわ減るだけで、歩きながら整える道がなかった。
+           平地でも百秒で零、森なら二十四秒で零になる。零になれば足は三割落ち、
+           崩れがまた遅れを呼び、隊は崩れたまま戦に入っていた。
+
+           行軍とは陣形が壊れていく過程ではない。良い地なら隊列は保てるし、
+           悪路や川では乱れる。そこで「その地で落ち着く先」を置き、そこへ寄せる。
+           平地では将の統率しだいで七割前後に落ち着き、森や湿地ではもっと下がる。 */
+        const 落ち着く先 = clamp(52 + c.gen.lead * 0.28 + terr.cohesion * 4, 12, 92);
+        q.cohesion += ((落ち着く先 - q.cohesion) * 0.10 + terr.cohesion * 0.25) * dt;
       } else {
         // 統率が陣形維持の回復に効く。疲労が回復を鈍らせる（GDD 6.1 / 8.8）
         const rec = (1.2 + c.gen.lead / 40) * (q.engaged ? 0.15 : 1) * (1 - c.fatigue / 200);
