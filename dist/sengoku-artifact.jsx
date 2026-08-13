@@ -6272,9 +6272,27 @@ function \u65D7\u306E\u4E0B\u3092\u72D9\u3046\u6226\u5F79\u3092\u843D\u3068\u305
   });
   return s2;
 }
+function \u7ACB\u305F\u306C\u7533\u3057\u9001\u308A\u3092\u843D\u3068\u3059(s2) {
+  if (s2.ransomOffer) {
+    const q = (s2.generals || []).find((x) => x.id === s2.ransomOffer.genId);
+    if (!q || !q.captive || !houseAlive(s2, s2.ransomOffer.from)) s2.ransomOffer = null;
+  }
+  if (Array.isArray(s2.captives)) {
+    s2.captives = s2.captives.filter((id) => {
+      const q = (s2.generals || []).find((x) => x.id === id);
+      return !!q && !!q.captive;
+    });
+  }
+  if (s2.warSettle && Array.isArray(s2.warSettle.queue)) {
+    const \u6B8B\u308A = s2.warSettle.queue.filter((id) => (s2.generals || []).some((x) => x.id === id));
+    s2.warSettle = \u6B8B\u308A.length ? { ...s2.warSettle, queue: \u6B8B\u308A } : null;
+  }
+  return s2;
+}
 function migrateSave(s2) {
   migrateRosters(s2);
   \u65D7\u306E\u4E0B\u3092\u72D9\u3046\u6226\u5F79\u3092\u843D\u3068\u3059(s2);
+  \u7ACB\u305F\u306C\u7533\u3057\u9001\u308A\u3092\u843D\u3068\u3059(s2);
   return s2;
 }
 
@@ -7153,6 +7171,10 @@ function doCaptive(prev, genId, how) {
     }
     if (ransomAccept(s2, q)) {
       const paid = payRansom(s2, q);
+      if (!paid) {
+        s2.msg = `${from ? from.name : "\u65E7\u4E3B"}\u304B\u3089\u53D6\u308A\u7ACB\u3066\u3089\u308C\u306A\u304B\u3063\u305F\u3002`;
+        return s2;
+      }
       const rel = s2.relations[relKey(s2.player, cost.payer)];
       if (rel) rel.trust = clamp(rel.trust + 4, 0, 100);
       log(`${from.name}\u304C\u8EAB\u4EE3\u91D1\u3092\u7D0D\u3081\u3001${q.name}\u3092\u5F15\u304D\u53D6\u3063\u305F\uFF08\u91D1${fmt(paid.gold)}\u8CAB\u30FB\u5175\u7CE7${fmt(paid.food)}\u77F3\uFF09\u3002`);
@@ -14927,13 +14949,17 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         const q = s2.generals.find((x) => x.id === o.genId);
         if (q && q.captive) {
           const paid = payRansom(s2, q);
-          const rel = s2.relations[relKey(s2.player, o.from)];
-          if (rel) rel.trust = clamp(rel.trust + 5, 0, 100);
-          s2.chronicle.push({
-            y: s2.year,
-            m: s2.month,
-            text: `${s2.factions[o.from].name}\u3088\u308A\u8EAB\u4EE3\u91D1\u3092\u53D7\u3051\u3001${q.name}\u3092\u8FD4\u3057\u305F\uFF08\u91D1${fmt(paid.gold)}\u8CAB\u30FB\u5175\u7CE7${fmt(paid.food)}\u77F3\uFF09\u3002`
-          });
+          if (!paid) {
+            s2.msg = `${(s2.factions[o.from] || {}).name || "\u65E7\u4E3B"}\u306F\u3059\u3067\u306B\u6EC5\u3093\u3067\u3044\u308B\u3002\u8EAB\u4EE3\u91D1\u306E\u8A71\u306F\u6D41\u308C\u305F\u3002`;
+          } else {
+            const rel = s2.relations[relKey(s2.player, o.from)];
+            if (rel) rel.trust = clamp(rel.trust + 5, 0, 100);
+            s2.chronicle.push({
+              y: s2.year,
+              m: s2.month,
+              text: `${s2.factions[o.from].name}\u3088\u308A\u8EAB\u4EE3\u91D1\u3092\u53D7\u3051\u3001${q.name}\u3092\u8FD4\u3057\u305F\uFF08\u91D1${fmt(paid.gold)}\u8CAB\u30FB\u5175\u7CE7${fmt(paid.food)}\u77F3\uFF09\u3002`
+            });
+          }
         }
         s2.ransomOffer = null;
         return s2;

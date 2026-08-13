@@ -1590,11 +1590,18 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
                     const s = structuredClone(p);
                     const q = s.generals.find((x) => x.id === o.genId);
                     if (q && q.captive) {
+                      /* 取り立てが立たぬこともある（相手の家が滅んでいるとき）。
+                         payRansom は偽を返すので、そのまま paid.gold を読むと落ちる。
+                         古い記録には、滅んだ家からの申し出が残っていることがある。 */
                       const paid = payRansom(s, q);
-                      const rel = s.relations[relKey(s.player, o.from)];
-                      if (rel) rel.trust = clamp(rel.trust + 5, 0, 100);
-                      s.chronicle.push({ y: s.year, m: s.month,
-                        text: `${s.factions[o.from].name}より身代金を受け、${q.name}を返した（金${fmt(paid.gold)}貫・兵糧${fmt(paid.food)}石）。` });
+                      if (!paid) {
+                        s.msg = `${(s.factions[o.from] || {}).name || "旧主"}はすでに滅んでいる。身代金の話は流れた。`;
+                      } else {
+                        const rel = s.relations[relKey(s.player, o.from)];
+                        if (rel) rel.trust = clamp(rel.trust + 5, 0, 100);
+                        s.chronicle.push({ y: s.year, m: s.month,
+                          text: `${s.factions[o.from].name}より身代金を受け、${q.name}を返した（金${fmt(paid.gold)}貫・兵糧${fmt(paid.food)}石）。` });
+                      }
                     }
                     s.ransomOffer = null; return s;
                   })}>受ける</button>

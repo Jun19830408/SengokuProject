@@ -396,8 +396,35 @@ export function 旗の下を狙う戦役を落とす(s) {
 }
 
 // 記録を読むときの繕い一式
+/* ------------------------------------------ 古い記録に残った申し送りを繕う
+
+   仕組みを直しても、直す前の記録に書き込まれてしまったものまでは戻らない。
+   遊びの途中で直しが入るのだから、読み込むときに繕っておく。
+   ここで落とすのは「もう成り立たない申し送り」だけで、遊んだ跡は触らない。 */
+export function 立たぬ申し送りを落とす(s) {
+  // 一、滅んだ家からの身代金の申し出。受けても取り立てようがない。
+  if (s.ransomOffer) {
+    const q = (s.generals || []).find((x) => x.id === s.ransomOffer.genId);
+    if (!q || !q.captive || !houseAlive(s, s.ransomOffer.from)) s.ransomOffer = null;
+  }
+  // 二、捕虜の処遇を問う列。すでに捕虜でない者、盤にいない者は落とす。
+  if (Array.isArray(s.captives)) {
+    s.captives = s.captives.filter((id) => {
+      const q = (s.generals || []).find((x) => x.id === id);
+      return !!q && !!q.captive;
+    });
+  }
+  // 三、滅亡の始末を問う列。討死などで盤を去った者は飛ばす。
+  if (s.warSettle && Array.isArray(s.warSettle.queue)) {
+    const 残り = s.warSettle.queue.filter((id) => (s.generals || []).some((x) => x.id === id));
+    s.warSettle = 残り.length ? { ...s.warSettle, queue: 残り } : null;
+  }
+  return s;
+}
+
 export function migrateSave(s) {
   migrateRosters(s);
   旗の下を狙う戦役を落とす(s);
+  立たぬ申し送りを落とす(s);
   return s;
 }

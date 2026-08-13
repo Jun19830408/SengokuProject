@@ -220,6 +220,10 @@ export function doCaptive(prev, genId, how) {
       }
       if (ransomAccept(s, q)) {
         const paid = payRansom(s, q);
+        if (!paid) {                                   // 取り立てが立たなかった
+          s.msg = `${from ? from.name : "旧主"}から取り立てられなかった。`;
+          return s;
+        }
         const rel = s.relations[relKey(s.player, cost.payer)];
         if (rel) rel.trust = clamp(rel.trust + 4, 0, 100);
         log(`${from.name}が身代金を納め、${q.name}を引き取った（金${fmt(paid.gold)}貫・兵糧${fmt(paid.food)}石）。`);

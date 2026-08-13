@@ -19,7 +19,8 @@ fs.writeFileSync(entry,
   'export { initState, houseAlive } from "../src/core/state.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n'
 + 'export { ransomCost, ransomAccept, payRansom } from "../src/core/capture.js";\n'
-+ 'export { doCaptive } from "../src/govern/commands.js";\n');
++ 'export { doCaptive } from "../src/govern/commands.js";\n'
++ 'export { migrateSave } from "../src/core/state.js";\n');
 const out = path.join(ROOT, 'build', 'ransom.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
   loader: { '.jsx': 'jsx' }, logLevel: 'error' });
@@ -111,6 +112,33 @@ const 仕込む = () => {
   確('身請けされた者は旧主の城へ帰る',
     !!q2 && !q2.captive && (s.castles.find((c) => c.id === q2.at) || {}).faction === 敵,
     q2 ? `${(s.castles.find((c) => c.id === q2.at) || {}).name}へ` : '');
+}
+
+/* --------------- 五、直す前の記録に残った申し出は、読み込むときに落とす
+
+   遊びの途中で直しが入るのだから、直す前に書き込まれた申し送りが記録に残る。
+   滅んだ家からの身代金の申し出がそれで、受けると取り立てが立たず、
+   呼ぶ側が paid.gold を読んで落ちていた。読み込むときに繕う。 */
+{
+  const { s, 敵, q } = 仕込む();
+  for (const c of s.castles.filter((c2) => c2.faction === 敵)) c.faction = s.player;
+  s.ruined = [敵];
+  // 直す前の仕組みが書き込んだ申し出を、そのまま記録に持たせる
+  s.ransomOffer = { genId: q.id, gold: 520, food: 0, rank: '丙', from: 敵 };
+  s.captives = [q.id, 'いない者'];
+  s.warSettle = { faction: 敵, winner: s.player, castleId: s.castles[0].id,
+    lordId: null, queue: ['討死した者', q.id] };
+  const t = A.migrateSave(JSON.parse(JSON.stringify(s)));
+  確('滅んだ家からの申し出は読み込みで落ちる', !t.ransomOffer,
+    t.ransomOffer ? '★残っている' : '落ちた');
+  確('捕虜の列から、もう捕虜でない者が落ちる', (t.captives || []).length === 1,
+    `${(s.captives || []).length} → ${(t.captives || []).length}名`);
+  確('滅亡の始末の列から、盤にいない者が落ちる',
+    t.warSettle && t.warSettle.queue.length === 1,
+    t.warSettle ? `${s.warSettle.queue.length} → ${t.warSettle.queue.length}名` : '★列ごと消えた');
+  // 繕ったあとは、受けても落ちない
+  const u = A.doCaptive(t, q.id, '身代金');
+  確('繕ったあとに身代金を求めても落ちない', !!u && !!u.generals);
 }
 
 console.log('');
