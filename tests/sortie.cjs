@@ -24,6 +24,19 @@ Object.defineProperty(dom.window.HTMLElement.prototype, 'clientWidth', { get() {
 Object.defineProperty(dom.window.HTMLElement.prototype, 'clientHeight', { get() { return 600; } });
 dom.window.HTMLElement.prototype.getBoundingClientRect = function () { return { left: 0, top: 0, width: 900, height: 600, right: 900, bottom: 600 }; };
 const errs = []; console.error = (...a) => errs.push(String(a[0]).slice(0, 180));
+
+/* 賽の目を固定する。
+   自城が囲まれているので、月送りの前に城方の腹を決めねばならない。
+   そこで三割ほどの目で寄せ手が攻めかかり、防戦の盤が開く。
+   目が定まっていないと、その日の運で通ったり落ちたりする。 */
+let 種 = 0x50D71E;
+Math.random = function () {
+  種 |= 0; 種 = (種 + 0x6D2B79F5) | 0;
+  let t = Math.imul(種 ^ (種 >>> 15), 1 | 種);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+dom.window.Math.random = Math.random;
 const { createRoot, act, App, React, initState, findPath } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
 /* ------------------------------------------- 盤をこしらえる
@@ -142,22 +155,46 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
     await rc('閉じる'); await flush();
 
     // 着くまで月を送り、軍議が出ないこと・合流できることを見る
+    /* 盤が開いたら委ねて片づける。
+       「籠城して待つ」を選ぶと三割ほどの目で寄せ手が攻めかかり、防戦の盤が開く。
+       これは正しい振る舞いなので、決着させてから月送りを続ける。 */
+    const 戦を片づける = async () => {
+      if (!btn('合戦開始')) return false;
+      await rc('合戦開始');
+      await rc('委ねて結果を見る');
+      for (let k = 0; k < 3000; k++) {
+        const q = [...rafMap.entries()]; rafMap.clear();
+        if (q.length) await act(async () => { q.forEach(([, cb]) => cb(2000 + k * 90)); });
+        else await flush();
+        if (btn('戦場を離れる')) break;
+      }
+      await rc('戦場を離れる');
+      await flush(); await flush();
+      return true;
+    };
     let 着 = false, 軍議 = false;
-    for (let m = 0; m < 8 && !着; m++) {
+    for (let m = 0; m < 12 && !着; m++) {
       for (const t of ['籠城して待つ']) if (await rc(t)) break;
-      if (!(await rc('次月へ'))) break;
+      await 戦を片づける();
+      if (!(await rc('次月へ'))) {
+        if (await 戦を片づける()) { m--; continue; }
+        break;
+      }
       await flush(); await flush();
       const t = document.body.textContent;
       if (/攻めかかる/.test(t)) { 軍議 = true; break; }
       if (/城へ合流した|援軍.*を入れた/.test(t)) { 着 = true; break; }
-      for (const b of ['閉じる', '了']) if (await rc(b)) break;
+      // 月初報告を閉じる釦は「評定を開く」である。挙げ忘れると翌月へ進めなくなる。
+      for (const b of ['評定を開く', '閉じる', '了']) if (await rc(b)) break;
     }
     確('味方の城で軍議（攻めかかる）が開かれない', !軍議);
     確('味方の城へ着いて合流する', 着);
   }
 
   console.log('確かめ:', 咎 ? `★${咎}件が通らなかった` : 'すべて通った');
-  console.log('エラー:', errs.length ? errs.slice(0, 2).join(' | ') : 'なし');
+  // 通らなかった確かめがあるのに「エラー: なし」と出しては、一覧で見落とす。
+  console.log('エラー:', 咎 ? `${咎}件が通らなかった`
+    : (errs.length ? errs.slice(0, 2).join(' | ') : 'なし'));
   process.exit(咎 ? 1 : 0);
 })().catch((e) => {
   console.log('例外:', e.message, '\n', (e.stack || '').split('\n').slice(0, 5).join('\n'));
