@@ -15,6 +15,7 @@ import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "./ai.js";
 import { checkUnified } from "./unify.js";
 import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy } from "./war.js";
+import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 /* ==========================================================================
    月送り ─ 天下じゅうの一月
    この一手で、諸家の内政・調略・出陣・包囲・寿命・一揆・官位までが動く。
@@ -776,6 +777,10 @@ export function advanceMonth(prev, g) {
           break;
         }
       }
+      /* 旗の下の城を狙う戦役は落とす。
+         寝返りや従属で、狙っていた城が味方になることがある。
+         そのまま残せば、味方に向かって軍議が開かれる。 */
+      旗の下を狙う戦役を落とす(s);
       // 天下が定まったか（報せに載せるため、月を進める前に判ずる）
       if (!s.unified) {
         const u = checkUnified(s);

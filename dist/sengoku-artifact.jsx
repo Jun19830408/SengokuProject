@@ -6262,6 +6262,20 @@ function isVassal(g, me, other) {
   return factionKoku(g, me) >= factionKoku(g, other);
 }
 var underMyBanner = (g, me, other) => me === other || isVassal(g, me, other);
+function \u65D7\u306E\u4E0B\u3092\u72D9\u3046\u6226\u5F79\u3092\u843D\u3068\u3059(s2) {
+  if (!Array.isArray(s2.campaigns)) return s2;
+  s2.campaigns = s2.campaigns.filter((c) => {
+    const t = s2.castles.find((x) => x.id === c.target);
+    if (!t) return false;
+    return !underMyBanner(s2, c.faction || s2.player, t.faction);
+  });
+  return s2;
+}
+function migrateSave(s2) {
+  migrateRosters(s2);
+  \u65D7\u306E\u4E0B\u3092\u72D9\u3046\u6226\u5F79\u3092\u843D\u3068\u3059(s2);
+  return s2;
+}
 
 // src/core/terrainCanvas.js
 function buildTerrainCanvas() {
@@ -6479,7 +6493,7 @@ function \u89E3\u304F(\u6587) {
     return null;
   }
   if (!d || !d.state || !Array.isArray(d.state.castles)) return null;
-  migrateRosters(d.state);
+  migrateSave(d.state);
   return d;
 }
 async function saveGame(state) {
@@ -8719,6 +8733,7 @@ function advanceMonth(prev, g) {
       break;
     }
   }
+  \u65D7\u306E\u4E0B\u3092\u72D9\u3046\u6226\u5F79\u3092\u843D\u3068\u3059(s2);
   if (!s2.unified) {
     const u = checkUnified(s2);
     if (u) {
@@ -14604,7 +14619,11 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
     setModal(null);
   };
   const totalMen = mine.reduce((a, c) => a + c.local, 0) + myGens.filter((x) => x.at).reduce((a, x) => a + x.retinue, 0) + g.armies.filter((a) => a.faction === g.player).reduce((a, x) => a + x.men, 0);
-  const openCamp = (g.campaigns || []).find((c) => c.decided !== `${g.year}-${g.month}` && c.arrived.length > 0);
+  const openCamp = (g.campaigns || []).find((c) => {
+    if (c.decided === `${g.year}-${g.month}` || !c.arrived.length) return false;
+    const t = g.castles.find((x) => x.id === c.target);
+    return t && !underMyBanner(g, g.player, t.faction);
+  });
   const openSiege = g.sieges.find((x) => {
     if (x.decided === `${g.year}-${g.month}`) return false;
     const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);

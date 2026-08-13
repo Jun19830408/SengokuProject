@@ -1353,7 +1353,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
 
   const totalMen = mine.reduce((a, c) => a + c.local, 0) + myGens.filter((x) => x.at).reduce((a, x) => a + x.retinue, 0)
     + g.armies.filter((a) => a.faction === g.player).reduce((a, x) => a + x.men, 0);
-  const openCamp = (g.campaigns || []).find((c) => c.decided !== `${g.year}-${g.month}` && c.arrived.length > 0);
+  // 軍議は敵城に対してのみ開く。旗の下の城に向かって軍議を開く筋はない。
+  const openCamp = (g.campaigns || []).find((c) => {
+    if (c.decided === `${g.year}-${g.month}` || !c.arrived.length) return false;
+    const t = g.castles.find((x) => x.id === c.target);
+    return t && !underMyBanner(g, g.player, t.faction);
+  });
   const openSiege = g.sieges.find((x) => {
     if (x.decided === `${g.year}-${g.month}`) return false;
     const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);

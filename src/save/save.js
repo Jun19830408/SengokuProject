@@ -1,4 +1,4 @@
-import { migrateRosters } from "../core/state.js";
+import { migrateSave } from "../core/state.js";
 import { 置き場 } from "./store.js";
 
 /* ==========================================================================
@@ -19,7 +19,7 @@ function 解く(文) {
   let d = null;
   try { d = JSON.parse(文); } catch (e) { return null; }
   if (!d || !d.state || !Array.isArray(d.state.castles)) return null;
-  migrateRosters(d.state);                 // 旧い記録には名簿がない。読むときに作る。
+  migrateSave(d.state);                    // 旧い記録を繕う（名簿、旗の下を狙う戦役）
   return d;
 }
 

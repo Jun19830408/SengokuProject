@@ -44,22 +44,24 @@ function strip(src) {
 }
 
 // 性質の参照（obj.name / obj?.name）は名として数えない。
+// 名には日本語も使う（旗の下を狙う戦役を落とす、など）。英字だけを見ていては取り逃がす。
+const 名の綴り = '[\\p{L}_$][\\p{L}\\p{N}_$]*';
 function usedNames(text) {
   const s = strip(text);
   const out = new Set();
-  const re = /((?:\?\.|\.)\s*)?\b([A-Za-z_$][\w$]*)\b/g;
+  const re = new RegExp(`((?:\\?\\.|\\.)\\s*)?(${名の綴り})`, 'gu');
   let m;
   while ((m = re.exec(s))) if (!m[1]) out.add(m[2]);
   return out;
 }
 
 // その折が外へ出している名（export しているもの）を拾う
-const EXPORTED = /(?:^|\n)export\s+(?:async\s+)?(const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/g;
+const EXPORTED = new RegExp(`(?:^|\\n)export\\s+(?:async\\s+)?(const|let|var|function|class)\\s+(${名の綴り})`, 'gu');
 function exportedNames(text) {
   const s = strip(text);
   const out = [];
   let m;
-  const re = new RegExp(EXPORTED.source, 'g');
+  const re = new RegExp(EXPORTED.source, 'gu');
   while ((m = re.exec(s))) {
     out.push(m[2]);
     // 一文で幾つも宣言している分（const A = 1, B = 2;）も拾う
@@ -71,7 +73,7 @@ function exportedNames(text) {
         if (c === ')' || c === ']' || c === '}') { depth--; i++; continue; }
         if (depth === 0 && c === ';') break;
         if (depth === 0 && c === ',') {
-          const nm = s.slice(i + 1).match(/^\s*([A-Za-z_$][\w$]*)/);
+          const nm = s.slice(i + 1).match(new RegExp(`^\\s*(${名の綴り})`, 'u'));
           if (nm) out.push(nm[1]);
           i++; continue;
         }
@@ -130,7 +132,7 @@ function fixImports(file, owner) {
   const defined = new Set(exportedNames(text));
   // その折の中で名づけているもの。奥まった処理の中の名も数える。
   // 同じ名が折の中にあるなら、外から取り込んではならない（取り違えのもと）。
-  for (const m of strip(body).matchAll(/\b(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/g)) defined.add(m[1]);
+  for (const m of strip(body).matchAll(new RegExp(`(?:const|let|var|function|class)\\s+(${名の綴り})`, 'gu'))) defined.add(m[1]);
 
   const need = {};
   for (const n of usedNames(body)) {

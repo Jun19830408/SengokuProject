@@ -366,3 +366,27 @@ export function canAskAid(g, me, other) {
   if (st === "従属" || st === "臣従") return !isVassal(g, me, other);   // 相手が上、または対等
   return false;
 }
+
+/* ------------------------------------------------ 旧い記録を繕う
+
+   かつては味方の城へ向かうときにも「戦役」を起こしていた。戦役は敵城を攻める
+   ための仕組みで、着けば軍議が開かれ「攻めかかるか」と問われる。
+   その名残が記録に残っていると、直したあとも味方を攻める形が続いてしまう。
+
+   読み込むときに、旗の下の城を狙う戦役を落とす。 */
+export function 旗の下を狙う戦役を落とす(s) {
+  if (!Array.isArray(s.campaigns)) return s;
+  s.campaigns = s.campaigns.filter((c) => {
+    const t = s.castles.find((x) => x.id === c.target);
+    if (!t) return false;                       // 城そのものが無い戦役も落とす
+    return !underMyBanner(s, c.faction || s.player, t.faction);
+  });
+  return s;
+}
+
+// 記録を読むときの繕い一式
+export function migrateSave(s) {
+  migrateRosters(s);
+  旗の下を狙う戦役を落とす(s);
+  return s;
+}
