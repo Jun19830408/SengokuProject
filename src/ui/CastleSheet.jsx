@@ -10,6 +10,7 @@ import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { captiveRecruit } from "../core/capture.js";
+import { houseAlive } from "../core/state.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
 export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
@@ -563,16 +564,26 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                                 })()}
                                 <button className="btn sm" onClick={() => onCaptive(x.id, "逃す")}>逃す</button>
                                 <button className="btn sm" onClick={() => onCaptive(x.id, "斬首")}>斬首</button>
-                                <button className="btn sm" onClick={() => onCaptive(x.id, "身代金")}
-                                  title={`${ransomRank(x)}の器量。旧主の金銭・兵糧の${RANSOM_DIV[ransomRank(x)]}分の1を求める`}>
-                                  身代金（{ransomRank(x)}）
-                                </button>
+                                {(() => {
+                                  // 旧主が滅んでいれば、身請けする相手がいない。
+                                  const 在る = houseAlive(g, x.captive.from);
+                                  return (
+                                    <button className="btn sm" disabled={!在る}
+                                      onClick={() => onCaptive(x.id, "身代金")}
+                                      title={在る
+                                        ? `${ransomRank(x)}の器量。旧主の金銭・兵糧の${RANSOM_DIV[ransomRank(x)]}分の1を求める`
+                                        : `${from ? from.name : "旧主"}は滅んでいる。身請けする者がいない`}>
+                                      身代金（{ransomRank(x)}）
+                                    </button>
+                                  );
+                                })()}
                               </div>
                             </div>
                           );
                         })}
                         <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
                           捕虜は月ごとに旧主への忠誠を失います。40以下になれば降ります。<br />
+                          旧主が滅んだ者は、身代金を求める相手がいません（登用・逃す・斬首のみ）。<br />
                           ただし旧主と血を分けた一門は、忠誠が下がっても降りません。
                         </div>
                       </>

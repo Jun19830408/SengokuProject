@@ -8,6 +8,7 @@ import { clamp, fmt } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
+import { houseAlive } from "../core/state.js";
 /* ==========================================================================
    政務 ─ 城と家中への下知
    いずれも「いまの盤の様子（prev）を受け取り、改めた盤の様子を返す」だけの処理。
@@ -212,6 +213,11 @@ export function doCaptive(prev, genId, how) {
     } else if (how === "身代金") {
       const cost = ransomCost(s, q);
       const from = s.factions[q.captive.from];
+      // 滅んだ家には求められぬ。断られたのではなく、求める相手がいない。
+      if (!houseAlive(s, q.captive.from)) {
+        s.msg = `${from ? from.name : "旧主"}は滅んでいる。身代金を求める相手がいない。`;
+        return s;
+      }
       if (ransomAccept(s, q)) {
         const paid = payRansom(s, q);
         const rel = s.relations[relKey(s.player, cost.payer)];

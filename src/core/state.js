@@ -315,6 +315,17 @@ export const relOf = (g, a, b) => g.relations[relKey(a, b)] || { trust: 45, stat
 
 export const atPeace = (g, a, b) => { const r = relOf(g, a, b); return r.state === "不可侵" || r.state === "同盟" || r.state === "臣従" || r.state === "従属"; };
 
+/* その家はまだ在るか（GDD 12.4）。
+
+   家を滅ぼしても、勢力の記録そのもの（名・色・金）は盤に残る。戦国記や捕虜の
+   「旧主」の名を出すのに要るからである。残っているだけで、家として立ってはいない。
+
+   これを見ずに金だけを見ていたため、滅んだ家から身代金の申し出が来ていた。
+   城を失えば年貢も兵糧も入らぬのに、金二千六百貫を抱えたまま使者を寄越す形である。
+   拠るべき城が一つも無ければ、その家はもう無い。 */
+export const houseAlive = (g, fid) => !!fid && !!g.factions[fid]
+  && g.castles.some((c) => c.faction === fid);
+
 export const intelFresh = (g, castleId) => {
   const i = g.intel[castleId];
   return !!i && monthsBetween(i.y, i.m, g.year, g.month) <= 12;

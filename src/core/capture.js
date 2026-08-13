@@ -1,5 +1,6 @@
 import { canRecruit } from "./house.js";
 import { clamp } from "./util.js";
+import { houseAlive } from "./state.js";
 
 /* --------------------------------------------- 捕縛と捕虜（GDD 12.3）
    捕らわれること自体は稀である。統率・武勇・知略に優れた者ほど、
@@ -33,10 +34,11 @@ export function ransomCost(s, gen) {
 }
 
 // 相手方が身代金に応じるか。器量が高く、払えるほど応じる。
+// 家が滅んでいれば、応じる者がいない。
 export function ransomAccept(s, gen) {
   const { gold, food, payer } = ransomCost(s, gen);
   const f = s.factions[payer];
-  if (!f) return false;
+  if (!f || !houseAlive(s, payer)) return false;
   const canPay = f.gold >= gold && s.castles.filter((c) => c.faction === payer).reduce((a, c) => a + c.food, 0) >= food;
   if (!canPay) return false;
   const worth = (gen.lead + gen.valor + gen.wit + gen.gov) / 400;    // 器量
@@ -48,7 +50,8 @@ export function ransomAccept(s, gen) {
 export function payRansom(s, gen) {
   const { gold, food, payer } = ransomCost(s, gen);
   const f = s.factions[payer];
-  if (!f) return false;
+  // 滅んだ家へは返せない。帰る城がなく、他家の城へ置き去りにすることになる。
+  if (!f || !houseAlive(s, payer)) return false;
   f.gold -= gold;
   let left = food;
   for (const c of s.castles.filter((c2) => c2.faction === payer)) {
@@ -59,7 +62,8 @@ export function payRansom(s, gen) {
   s.factions[s.player].gold += gold;
   const mine = s.castles.filter((c) => c.faction === s.player);
   if (mine.length) mine[0].food += food;
-  const home = s.castles.find((c) => c.faction === payer) || s.castles[0];
+  const home = s.castles.find((c) => c.faction === payer);
+  if (!home) return false;                       // 帰る城がない（ここへは来ないはずだが念のため）
   gen.captive = null; gen.at = home.id;
   gen.retinue = Math.round(180 + Math.random() * 120);
   return { gold, food, home };

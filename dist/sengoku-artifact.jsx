@@ -6240,6 +6240,7 @@ var atPeace = (g, a, b) => {
   const r = relOf(g, a, b);
   return r.state === "\u4E0D\u53EF\u4FB5" || r.state === "\u540C\u76DF" || r.state === "\u81E3\u5F93" || r.state === "\u5F93\u5C5E";
 };
+var houseAlive = (g, fid) => !!fid && !!g.factions[fid] && g.castles.some((c) => c.faction === fid);
 var intelFresh = (g, castleId) => {
   const i = g.intel[castleId];
   return !!i && monthsBetween(i.y, i.m, g.year, g.month) <= 12;
@@ -6866,7 +6867,7 @@ function ransomCost(s2, gen) {
 function ransomAccept(s2, gen) {
   const { gold, food, payer } = ransomCost(s2, gen);
   const f = s2.factions[payer];
-  if (!f) return false;
+  if (!f || !houseAlive(s2, payer)) return false;
   const canPay = f.gold >= gold && s2.castles.filter((c) => c.faction === payer).reduce((a, c) => a + c.food, 0) >= food;
   if (!canPay) return false;
   const worth = (gen.lead + gen.valor + gen.wit + gen.gov) / 400;
@@ -6876,7 +6877,7 @@ function ransomAccept(s2, gen) {
 function payRansom(s2, gen) {
   const { gold, food, payer } = ransomCost(s2, gen);
   const f = s2.factions[payer];
-  if (!f) return false;
+  if (!f || !houseAlive(s2, payer)) return false;
   f.gold -= gold;
   let left = food;
   for (const c of s2.castles.filter((c2) => c2.faction === payer)) {
@@ -6888,7 +6889,8 @@ function payRansom(s2, gen) {
   s2.factions[s2.player].gold += gold;
   const mine = s2.castles.filter((c) => c.faction === s2.player);
   if (mine.length) mine[0].food += food;
-  const home = s2.castles.find((c) => c.faction === payer) || s2.castles[0];
+  const home = s2.castles.find((c) => c.faction === payer);
+  if (!home) return false;
   gen.captive = null;
   gen.at = home.id;
   gen.retinue = Math.round(180 + Math.random() * 120);
@@ -7145,6 +7147,10 @@ function doCaptive(prev, genId, how) {
   } else if (how === "\u8EAB\u4EE3\u91D1") {
     const cost = ransomCost(s2, q);
     const from = s2.factions[q.captive.from];
+    if (!houseAlive(s2, q.captive.from)) {
+      s2.msg = `${from ? from.name : "\u65E7\u4E3B"}\u306F\u6EC5\u3093\u3067\u3044\u308B\u3002\u8EAB\u4EE3\u91D1\u3092\u6C42\u3081\u308B\u76F8\u624B\u304C\u3044\u306A\u3044\u3002`;
+      return s2;
+    }
     if (ransomAccept(s2, q)) {
       const paid = payRansom(s2, q);
       const rel = s2.relations[relKey(s2.player, cost.payer)];
@@ -8284,6 +8290,7 @@ function advanceMonth(prev, g) {
   }
   for (const q of s2.generals) {
     if (!q.captive || q.captive.by !== s2.player || s2.ransomOffer) continue;
+    if (!houseAlive(s2, q.captive.from)) continue;
     const worth = (q.lead + q.valor + q.wit + q.gov) / 400;
     if (Math.random() > 0.1 + worth * 0.18) continue;
     const cost = ransomCost(s2, q);
@@ -13145,18 +13152,22 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onAp
             },
             "\u767B\u7528"
           );
-        })(), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onCaptive(x.id, "\u9003\u3059") }, "\u9003\u3059"), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onCaptive(x.id, "\u65AC\u9996") }, "\u65AC\u9996"), /* @__PURE__ */ React4.createElement(
-          "button",
-          {
-            className: "btn sm",
-            onClick: () => onCaptive(x.id, "\u8EAB\u4EE3\u91D1"),
-            title: `${ransomRank(x)}\u306E\u5668\u91CF\u3002\u65E7\u4E3B\u306E\u91D1\u92AD\u30FB\u5175\u7CE7\u306E${RANSOM_DIV[ransomRank(x)]}\u5206\u306E1\u3092\u6C42\u3081\u308B`
-          },
-          "\u8EAB\u4EE3\u91D1\uFF08",
-          ransomRank(x),
-          "\uFF09"
-        )));
-      }), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u6355\u865C\u306F\u6708\u3054\u3068\u306B\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0\u3092\u5931\u3044\u307E\u3059\u300240\u4EE5\u4E0B\u306B\u306A\u308C\u3070\u964D\u308A\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u305F\u3060\u3057\u65E7\u4E3B\u3068\u8840\u3092\u5206\u3051\u305F\u4E00\u9580\u306F\u3001\u5FE0\u8AA0\u304C\u4E0B\u304C\u3063\u3066\u3082\u964D\u308A\u307E\u305B\u3093\u3002"));
+        })(), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onCaptive(x.id, "\u9003\u3059") }, "\u9003\u3059"), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onCaptive(x.id, "\u65AC\u9996") }, "\u65AC\u9996"), (() => {
+          const \u5728\u308B = houseAlive(g, x.captive.from);
+          return /* @__PURE__ */ React4.createElement(
+            "button",
+            {
+              className: "btn sm",
+              disabled: !\u5728\u308B,
+              onClick: () => onCaptive(x.id, "\u8EAB\u4EE3\u91D1"),
+              title: \u5728\u308B ? `${ransomRank(x)}\u306E\u5668\u91CF\u3002\u65E7\u4E3B\u306E\u91D1\u92AD\u30FB\u5175\u7CE7\u306E${RANSOM_DIV[ransomRank(x)]}\u5206\u306E1\u3092\u6C42\u3081\u308B` : `${from ? from.name : "\u65E7\u4E3B"}\u306F\u6EC5\u3093\u3067\u3044\u308B\u3002\u8EAB\u8ACB\u3051\u3059\u308B\u8005\u304C\u3044\u306A\u3044`
+            },
+            "\u8EAB\u4EE3\u91D1\uFF08",
+            ransomRank(x),
+            "\uFF09"
+          );
+        })()));
+      }), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u6355\u865C\u306F\u6708\u3054\u3068\u306B\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0\u3092\u5931\u3044\u307E\u3059\u300240\u4EE5\u4E0B\u306B\u306A\u308C\u3070\u964D\u308A\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u65E7\u4E3B\u304C\u6EC5\u3093\u3060\u8005\u306F\u3001\u8EAB\u4EE3\u91D1\u3092\u6C42\u3081\u308B\u76F8\u624B\u304C\u3044\u307E\u305B\u3093\uFF08\u767B\u7528\u30FB\u9003\u3059\u30FB\u65AC\u9996\u306E\u307F\uFF09\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u305F\u3060\u3057\u65E7\u4E3B\u3068\u8840\u3092\u5206\u3051\u305F\u4E00\u9580\u306F\u3001\u5FE0\u8AA0\u304C\u4E0B\u304C\u3063\u3066\u3082\u964D\u308A\u307E\u305B\u3093\u3002"));
     })()), tab === "\u8ABF\u7565" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("select", { className: "sel", style: { width: "100%", marginBottom: 8 }, value: pt || "", onChange: (e) => setPlotTarget(e.target.value) }, foeCastles.slice(0, 30).map((x) => /* @__PURE__ */ React4.createElement("option", { key: x.id, value: x.id }, `${x.name}\uFF08${g.factions[x.faction].name}\uFF09\u3000\u7D04${marchMonths(c.id, x.id) || "?"}\u304B\u6708`))), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginBottom: 8 } }, "\u8FD1\u3044\u57CE\u304B\u3089\u9806\u306B\u4E09\u5341\u307E\u3067\u793A\u3057\u307E\u3059\u3002\u624B\u306E\u8005\u306F\u9060\u56FD\u3078\u306F\u5BB9\u6613\u306B\u5165\u308C\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React4.createElement("div", { className: "g3", style: { marginBottom: 8 } }, PLOTS.map((x) => /* @__PURE__ */ React4.createElement("button", { key: x.key, className: `btn sm ${plot === x.key ? "on" : ""}`, onClick: () => setPlot(x.key) }, x.key))), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 8, lineHeight: 1.8 } }, (PLOTS.find((x) => x.key === plot) || {}).desc, /* @__PURE__ */ React4.createElement("br", null), "\u8CBB\u7528", (PLOTS.find((x) => x.key === plot) || {}).cost, "\u8CAB\uFF0F \u5224\u660E\u307E\u3067", (PLOTS.find((x) => x.key === plot) || {}).months, "\u304B\u6708\uFF0F \u8981\u3059\u308B\u77E5\u7565 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, (PLOTS.find((x) => x.key === plot) || {}).need), "\uFF0F \u898B\u8FBC\u307F\u306E\u4E0A\u9650 ", Math.round(((PLOTS.find((x) => x.key === plot) || {}).cap || 0.85) * 100), "\uFF05"), (() => {
       const d2 = PLOTS.find((x) => x.key === plot);
       const who = freeGens.some((x) => x.id === cur) ? freeGens.find((x) => x.id === cur) : freeGens[0];

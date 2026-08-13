@@ -16,6 +16,7 @@ import { reviewAim } from "./ai.js";
 import { checkUnified } from "./unify.js";
 import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy } from "./war.js";
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
+import { houseAlive } from "../core/state.js";
 /* ==========================================================================
    月送り ─ 天下じゅうの一月
    この一手で、諸家の内政・調略・出陣・包囲・寿命・一揆・官位までが動く。
@@ -328,6 +329,10 @@ export function advanceMonth(prev, g) {
       // 相手方から身代金の申し出。こちらが捕らえている武将について月ごとに起こりうる。
       for (const q of s.generals) {
         if (!q.captive || q.captive.by !== s.player || s.ransomOffer) continue;
+        /* 滅んだ家からは使者が来ない。
+           勢力の記録は盤に残り、金も残ったままなので、城を一つも持たぬ家が
+           身代金を申し出ていた。身請けする家がもう無いのだから、話が立たない。 */
+        if (!houseAlive(s, q.captive.from)) continue;
         const worth = (q.lead + q.valor + q.wit + q.gov) / 400;
         if (Math.random() > 0.10 + worth * 0.18) continue;
         const cost = ransomCost(s, q);
