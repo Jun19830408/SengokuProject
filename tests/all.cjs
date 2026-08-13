@@ -6,6 +6,7 @@ const { buildHarness } = require('../tools/bundle.cjs');
 
 const 試験 = [
   ['sel', '大名を選ぶ画面'],
+  ['age', '武将の値に齢が並ぶ'],
   ['run5', '政務（24か月）'],
   ['save', 'セーブと読み込み'],
   ['succ', '家督・調略・外交'],

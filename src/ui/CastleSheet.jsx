@@ -182,7 +182,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                 )}
               </span>
               <span className="num" style={{ color: U.dim, fontSize: 11 }}>
-                統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{x.loyal}／
+                {x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{x.loyal}／
                 {x.lord ? `御料${fmt(goryoOf(g, x.faction).total)}石` : `禄高${fmt(stipendOf(g, x))}石`}
                 ・直属{fmt(x.retinue)}
               </span>
@@ -208,7 +208,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       </span>
                     </span>
                     <span className="num" style={{ color: U.dim, fontSize: 11 }}>
-                      統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov}
+                      {x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov}
                       {x.captive.ruin ? `／心 ${x.warLoyal || 0}／50` : `／忠${Math.round(x.loyal == null ? 60 : x.loyal)}`}
                     </span>
                   </div>
@@ -245,7 +245,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     value={freeGens.some((x) => x.id === cur) ? cur : (freeGens[0] || {}).id || ""}
                     onChange={(e) => setGenId(e.target.value)}>
                     {freeGens.map((x) => (
-                      <option key={x.id} value={x.id}>{`担当：${x.name}（統${x.lead} 政${x.gov} 知${x.wit}）`}</option>
+                      <option key={x.id} value={x.id}>{`担当：${x.name}（${x.age}歳 統${x.lead} 政${x.gov} 知${x.wit}）`}</option>
                     ))}
                   </select>
                   <button className="btn dark" style={{ width: "100%" }}
@@ -373,7 +373,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                                 </span>
                               </div>
                               <div className="num" style={{ fontSize: 11, color: U.dim, marginTop: 2 }}>
-                                統{x.lead}・武{x.valor}・知{x.wit}・政{x.gov}
+                                {x.age}歳／統{x.lead}・武{x.valor}・知{x.wit}・政{x.gov}
                               </div>
                               <div className="g3" style={{ marginTop: 6 }}>
                                 <button className="btn sm" disabled={wl < 50}
@@ -487,7 +487,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                           color: "#A9A499", fontSize: 12.5, padding: "4px 0" }}>
                           <span>【捕虜】{x.name}</span>
                           <span className="num">
-                            統{x.lead}／武{x.valor}／知{x.wit}／政{x.gov}　
+                            {x.age}歳／統{x.lead}／武{x.valor}／知{x.wit}／政{x.gov}　
                             旧主への忠誠 {Math.round(x.loyal == null ? 60 : x.loyal)}
                           </span>
                         </div>
@@ -549,7 +549,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                                 </span>
                               </div>
                               <div className="num" style={{ fontSize: 11.5, color: U.dim, marginTop: 2 }}>
-                                統率{x.lead}／武勇{x.valor}／知略{x.wit}／政務{x.gov}
+                                {x.age}歳／統率{x.lead}／武勇{x.valor}／知略{x.wit}／政務{x.gov}
                                 {bond > 0 ? "　旧主と厚い縁（忠誠が下がりにくい）" : bond < 0 ? "　旧主に含むところあり（忠誠が下がりやすい）" : ""}
                               </div>
                               <div className="g4" style={{ marginTop: 4 }}>

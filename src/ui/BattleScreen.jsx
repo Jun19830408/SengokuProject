@@ -574,7 +574,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 {isCastle && selC.gateFat > 3 ? `／門攻めの疲れ${Math.round(selC.gateFat)}` : ""}
               </div>
               <div className="num" style={{ fontSize: 11.5, color: U.text, lineHeight: 1.6 }}>
-                統率 <b>{selC.gen.lead}</b>　武勇 <b>{selC.gen.valor}</b>　知略 <b>{selC.gen.wit}</b>
+                {selC.gen.age ? <>齢 <b>{selC.gen.age}</b>　</> : null}統率 <b>{selC.gen.lead}</b>　武勇 <b>{selC.gen.valor}</b>　知略 <b>{selC.gen.wit}</b>
                 <span style={{ color: U.dim }}>
                   　（統率＝指揮圏と伝令・陣形替えの速さ、武勇＝白兵の強さ、知略＝伏兵と分遣の判断）
                 </span>

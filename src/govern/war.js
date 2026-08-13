@@ -42,7 +42,7 @@ export function reinforceOffers(g, from, target) {
       castleId: c.id, name: c.name, faction: c.faction, kind, men, legs, chance, 指図,
       months: marchMonths(c.id, target) || Math.max(1, legs),
       // 指図の通る城では、こちらが将と兵を選ぶ。そのための素材も添える。
-      gens: 指図 ? gens.map((x) => ({ id: x.id, name: x.name, lead: x.lead, valor: x.valor, wit: x.wit,
+      gens: 指図 ? gens.map((x) => ({ id: x.id, name: x.name, age: x.age, lead: x.lead, valor: x.valor, wit: x.wit,
         retinue: x.retinue, rank: rankName(x, g), limit: troopLimit(x, g) })) : [],
       local: c.local, avail, garrison: minGarrison(c),
       reason: avail < 400 ? "守備が手薄で出せない" : men < 200 && !指図 ? "出せる兵が少なすぎる" : null,

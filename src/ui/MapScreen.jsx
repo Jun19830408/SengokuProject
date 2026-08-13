@@ -1651,7 +1651,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
                   {wx}。{tr}である。
                 </div>
                 <div style={{ borderLeft: `3px solid ${U.line}`, paddingLeft: 12, margin: "12px 0", lineHeight: 1.9, fontSize: 14 }}>
-                  <b>{r.head.name}</b>（知略{r.head.wit}・統率{r.head.lead}）が申し出ております。<br />
+                  <b>{r.head.name}</b>（{r.head.age}歳・知略{r.head.wit}・統率{r.head.lead}）が申し出ております。<br />
                   <span style={{ color: U.dim }}>
                     「正面から当たっては勝ち目がござらぬ。
                     {r.target ? `${r.target.name}の本陣を衝きまする。` : "敵の本陣を衝きまする。"}」

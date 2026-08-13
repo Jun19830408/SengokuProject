@@ -191,7 +191,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
             <span className="mn" style={{ fontSize: 15 }}>{x.name}
               <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 5 }}>{rankName(x, g)}</span>
             </span>
-            <span className="num" style={{ color: U.dim, fontSize: 11 }}>統{x.lead} 武{x.valor} 知{x.wit}／直属{fmt(x.retinue)}</span>
+            <span className="num" style={{ color: U.dim, fontSize: 11 }}>{x.age}歳／統{x.lead} 武{x.valor} 知{x.wit}／直属{fmt(x.retinue)}</span>
           </label>
         ))}
         <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
@@ -272,7 +272,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
                       <span className="mn" style={{ fontSize: 14 }}>{x.name}</span>
                       <span style={{ fontSize: 10.5, color: U.dim }}>{x.rank}</span>
                       <span className="num" style={{ color: U.dim, fontSize: 11 }}>
-                        統{x.lead} 武{x.valor}／直属{fmt(x.retinue)}／率いられる上限{fmt(x.limit)}
+                        {x.age}歳／統{x.lead} 武{x.valor}／直属{fmt(x.retinue)}／率いられる上限{fmt(x.limit)}
                       </span>
                     </label>
                   ))}
@@ -366,7 +366,7 @@ export function SallyDialog({ g, castleId, foeId, onClose, onGo }) {
             <span className="mn" style={{ fontSize: 15 }}>{x.name}
               <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 5 }}>{rankName(x, g)}</span>
             </span>
-            <span className="num" style={{ color: U.dim, fontSize: 11 }}>統{x.lead} 武{x.valor}／直属{fmt(x.retinue)}</span>
+            <span className="num" style={{ color: U.dim, fontSize: 11 }}>{x.age}歳／統{x.lead} 武{x.valor}／直属{fmt(x.retinue)}</span>
           </label>
         ))}
 
@@ -458,7 +458,7 @@ export function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
                           ? v.gens.filter((y) => y !== x.id) : [...v.gens, x.id] })} />
                       <span className="mn" style={{ fontSize: 14 }}>{x.name}</span>
                       <span style={{ fontSize: 10.5, color: U.dim }}>{x.rank}</span>
-                      <span className="num" style={{ color: U.dim, fontSize: 11 }}>統{x.lead} 武{x.valor}／直属{fmt(x.retinue)}</span>
+                      <span className="num" style={{ color: U.dim, fontSize: 11 }}>{x.age}歳／統{x.lead} 武{x.valor}／直属{fmt(x.retinue)}</span>
                     </label>
                   ))}
                   <input type="range" min="0" max={上限} value={Math.min(v.local, 上限)}
@@ -665,7 +665,7 @@ export function GeneralList({ g, onClose }) {
               {x.name}
               {isNameless(x) && <span style={{ color: "#9B9384", fontSize: 10, marginLeft: 2 }}>〔伝〕</span>}
             </span>
-            <span className="num" style={{ color: U.dim, flex: 1 }}>統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{x.loyal}</span>
+            <span className="num" style={{ color: U.dim, flex: 1 }}>{x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{x.loyal}</span>
             <span style={{ color: U.dim }}>{x.at ? (g.castles.find((c) => c.id === x.at) || {}).name : "出征中"}</span>
             <span className="num">直属 {fmt(x.retinue)}</span>
           </div>
@@ -868,7 +868,7 @@ export function CaptiveDialog({ g, gen, onDone }) {
       <div className="card">
         <div className="mn" style={{ fontSize: 19 }}>{gen.name}を捕らえた</div>
         <div style={{ fontSize: 12.5, color: U.dim, marginTop: 6, lineHeight: 1.8 }}>
-          {from ? from.name : "旧主"}の家臣。統率{gen.lead}／武勇{gen.valor}／知略{gen.wit}／政務{gen.gov}<br />
+          {from ? from.name : "旧主"}の家臣。{gen.age}歳／統率{gen.lead}／武勇{gen.valor}／知略{gen.wit}／政務{gen.gov}<br />
           旧主への忠誠 <b>{Math.round(loy)}</b>
           {failed && <span style={{ color: "#B0483C" }}>　── 降ることを拒んだ</span>}
         </div>
