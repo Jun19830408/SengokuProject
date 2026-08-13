@@ -1,0 +1,19 @@
+{
+  "name": "sengoku",
+  "version": "0.2.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "戦国プロジェクト ─ 1546年（天文十五年）の日本を舞台とした戦国シミュレーション",
+  "scripts": {
+    "start": "node tools/serve.cjs",
+    "build": "node tools/build.cjs",
+    "test": "node tests/all.cjs",
+    "compare": "node tools/compare.cjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "jsdom": "^30.0.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}

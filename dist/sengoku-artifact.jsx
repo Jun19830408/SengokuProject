@@ -1,0 +1,15181 @@
+// 戦国プロジェクト ─ Artifacts に貼る形
+// これは src/ の折を一つに束ね直したものである。直すときは src/ のほうを直し、
+// npm run build で作り直すこと。この書き出しを直に編めば、次の書き出しで消える。
+// src/ui/App.jsx
+import React7, { useState as useState6, useEffect as useEffect5, useMemo as useMemo2 } from "react";
+
+// src/data/roads.js
+var ROADS = [
+  ["sannohe", "namioka", 65, "\u5C71\u9053"],
+  ["sannohe", "kunohe", 13, "\u8857\u9053"],
+  ["namioka", "oura", 19, "\u8857\u9053"],
+  ["oura", "hiyama", 60, "\u96E3\u6240"],
+  ["kunohe", "kozukata", 65, "\u8857\u9053"],
+  ["kozukata", "kosuiji", 16, "\u8857\u9053"],
+  ["kozukata", "minato", 90, "\u96E3\u6240"],
+  ["kosuiji", "yokota", 42, "\u5C71\u9053"],
+  ["kosuiji", "yokote", 56, "\u5C71\u9053"],
+  ["yokota", "teraike", 77, "\u96E3\u6240"],
+  ["teraike", "iwadeyama", 27, "\u8857\u9053"],
+  ["teraike", "sendai", 57, "\u8857\u9053"],
+  ["iwadeyama", "sendai", 50, "\u8857\u9053"],
+  ["iwadeyama", "tendo", 58, "\u96E3\u6240"],
+  ["iwadeyama", "yokote", 73, "\u96E3\u6240"],
+  ["sendai", "watari", 24, "\u8857\u9053"],
+  ["sendai", "tendo", 44, "\u5C71\u9053"],
+  ["watari", "shiroishi", 21, "\u8857\u9053"],
+  ["watari", "soma", 27, "\u8857\u9053"],
+  ["shiroishi", "nihonmatsu", 48, "\u5C71\u9053"],
+  ["shiroishi", "yonezawa", 47, "\u96E3\u6240"],
+  ["shiroishi", "yamagata", 38, "\u5C71\u9053"],
+  ["kurokawa", "inawashiro", 18, "\u8857\u9053"],
+  ["kurokawa", "shirakawa", 47, "\u5C71\u9053"],
+  ["kurokawa", "tochio", 86, "\u96E3\u6240"],
+  ["kurokawa", "sanjo", 87, "\u96E3\u6240"],
+  ["kurokawa", "shibata", 74, "\u5C71\u9053"],
+  ["inawashiro", "nihonmatsu", 28, "\u5C71\u9053"],
+  ["inawashiro", "sukagawa", 38, "\u5C71\u9053"],
+  ["inawashiro", "yonezawa", 39, "\u8857\u9053"],
+  ["nihonmatsu", "soma", 48, "\u5C71\u9053"],
+  ["nihonmatsu", "miharu", 18, "\u8857\u9053"],
+  ["nihonmatsu", "yonezawa", 45, "\u5C71\u9053"],
+  ["shirakawa", "sukagawa", 22, "\u8857\u9053"],
+  ["shirakawa", "karasuyama", 53, "\u5C71\u9053"],
+  ["sukagawa", "miharu", 20, "\u8857\u9053"],
+  ["yonezawa", "yamagata", 43, "\u5C71\u9053"],
+  ["yonezawa", "shibata", 68, "\u96E3\u6240"],
+  ["yonezawa", "murakami", 66, "\u96E3\u6240"],
+  ["yamagata", "tendo", 13, "\u8857\u9053"],
+  ["yamagata", "murakami", 75, "\u96E3\u6240"],
+  ["tendo", "ourayama", 60, "\u5C71\u9053"],
+  ["ourayama", "yokote", 93, "\u96E3\u6240"],
+  ["ourayama", "murakami", 61, "\u5C71\u9053"],
+  ["yokote", "minato", 63, "\u8857\u9053"],
+  ["minato", "hiyama", 44, "\u5C71\u9053"],
+  ["mito", "ota_hitachi", 19, "\u8857\u9053"],
+  ["mito", "makabe", 36, "\u8857\u9053"],
+  ["mito", "fuchu_hitachi", 21, "\u8857\u9053"],
+  ["ota_hitachi", "karasuyama", 37, "\u8857\u9053"],
+  ["oda", "makabe", 18, "\u8857\u9053"],
+  ["oda", "fuchu_hitachi", 33, "\u8857\u9053"],
+  ["oda", "motosakura", 47, "\u8857\u9053"],
+  ["oda", "usui", 46, "\u8857\u9053"],
+  ["oda", "sekiyado", 28, "\u6D77\u8DEF"],
+  ["makabe", "fuchu_hitachi", 34, "\u8857\u9053"],
+  ["makabe", "yuki", 20, "\u8857\u9053"],
+  ["makabe", "karasuyama", 41, "\u8857\u9053"],
+  ["fuchu_hitachi", "motosakura", 53, "\u8857\u9053"],
+  ["yuki", "koga", 20, "\u8857\u9053"],
+  ["yuki", "utsunomiya", 28, "\u8857\u9053"],
+  ["yuki", "karasawa", 25, "\u8857\u9053"],
+  ["koga", "karasawa", 22, "\u8857\u9053"],
+  ["koga", "oshi", 22, "\u8857\u9053"],
+  ["koga", "sekiyado", 16, "\u8857\u9053"],
+  ["utsunomiya", "karasawa", 31, "\u8857\u9053"],
+  ["utsunomiya", "karasuyama", 26, "\u8857\u9053"],
+  ["karasawa", "kanayama", 23, "\u8857\u9053"],
+  ["karasawa", "oshi", 30, "\u8857\u9053"],
+  ["minowa", "maebashi", 11, "\u8857\u9053"],
+  ["minowa", "numata", 27, "\u8857\u9053"],
+  ["minowa", "komoro", 47, "\u96E3\u6240"],
+  ["hirai", "maebashi", 22, "\u8857\u9053"],
+  ["hirai", "kanayama", 26, "\u8857\u9053"],
+  ["hirai", "hachigata", 30, "\u8857\u9053"],
+  ["maebashi", "numata", 29, "\u8857\u9053"],
+  ["maebashi", "kanayama", 29, "\u8857\u9053"],
+  ["maebashi", "fukaya", 29, "\u8857\u9053"],
+  ["numata", "tochio", 92, "\u96E3\u6240"],
+  ["kanayama", "oshi", 21, "\u8857\u9053"],
+  ["kanayama", "fukaya", 15, "\u8857\u9053"],
+  ["kawagoe", "iwatsuki", 15, "\u8857\u9053"],
+  ["kawagoe", "matsuyama_m", 14, "\u8857\u9053"],
+  ["kawagoe", "takiyama", 29, "\u8857\u9053"],
+  ["iwatsuki", "edo", 27, "\u8857\u9053"],
+  ["iwatsuki", "sekiyado", 21, "\u8857\u9053"],
+  ["oshi", "fukaya", 17, "\u8857\u9053"],
+  ["oshi", "matsuyama_m", 13, "\u8857\u9053"],
+  ["hachigata", "fukaya", 12, "\u8857\u9053"],
+  ["hachigata", "matsuyama_m", 19, "\u8857\u9053"],
+  ["fukaya", "matsuyama_m", 22, "\u8857\u9053"],
+  ["edo", "takiyama", 38, "\u8857\u9053"],
+  ["edo", "tamanawa", 44, "\u8857\u9053"],
+  ["edo", "sanuki", 48, "\u6D77\u8DEF"],
+  ["edo", "usui", 38, "\u8857\u9053"],
+  ["takiyama", "tsukui", 15, "\u8857\u9053"],
+  ["odawara", "tamanawa", 34, "\u8857\u9053"],
+  ["odawara", "tsukui", 39, "\u8857\u9053"],
+  ["odawara", "iwadono", 45, "\u8857\u9053"],
+  ["odawara", "kounkoji", 32, "\u8857\u9053"],
+  ["odawara", "nirayama", 29, "\u8857\u9053"],
+  ["tamanawa", "misaki", 23, "\u8857\u9053"],
+  ["tamanawa", "tsukui", 40, "\u8857\u9053"],
+  ["tamanawa", "sanuki", 34, "\u6D77\u8DEF"],
+  ["misaki", "sanuki", 27, "\u6D77\u8DEF"],
+  ["misaki", "tateyama", 28, "\u6D77\u8DEF"],
+  ["tsukui", "iwadono", 25, "\u8857\u9053"],
+  ["kururi", "otaki", 15, "\u8857\u9053"],
+  ["kururi", "sanuki", 19, "\u8857\u9053"],
+  ["kururi", "usui", 49, "\u8857\u9053"],
+  ["otaki", "motosakura", 50, "\u8857\u9053"],
+  ["otaki", "usui", 49, "\u8857\u9053"],
+  ["sanuki", "tateyama", 31, "\u8857\u9053"],
+  ["motosakura", "usui", 10, "\u8857\u9053"],
+  ["usui", "sekiyado", 51, "\u8857\u9053"],
+  ["tsutsujigasaki", "katsuyama_k", 11, "\u8857\u9053"],
+  ["tsutsujigasaki", "takato", 50, "\u96E3\u6240"],
+  ["tsutsujigasaki", "komoro", 73, "\u5C71\u9053"],
+  ["iwadono", "katsuyama_k", 27, "\u8857\u9053"],
+  ["iwadono", "kounkoji", 54, "\u8857\u9053"],
+  ["katsuyama_k", "kounkoji", 54, "\u8857\u9053"],
+  ["takato", "fukashi", 46, "\u5C71\u9053"],
+  ["takato", "iida", 42, "\u5C71\u9053"],
+  ["fukashi", "toishi", 33, "\u8857\u9053"],
+  ["kaizu", "katsurao", 9, "\u8857\u9053"],
+  ["kaizu", "kasugayama", 64, "\u8857\u9053"],
+  ["kaizu", "negoshi", 57, "\u8857\u9053"],
+  ["toishi", "katsurao", 10, "\u8857\u9053"],
+  ["toishi", "komoro", 17, "\u8857\u9053"],
+  ["iida", "inui", 59, "\u96E3\u6240"],
+  ["iida", "naegi", 31, "\u8857\u9053"],
+  ["kasugayama", "yoita", 68, "\u8857\u9053"],
+  ["kasugayama", "negoshi", 33, "\u8857\u9053"],
+  ["tochio", "sanjo", 18, "\u8857\u9053"],
+  ["tochio", "yoita", 11, "\u8857\u9053"],
+  ["sanjo", "yoita", 17, "\u8857\u9053"],
+  ["sanjo", "shibata", 48, "\u8857\u9053"],
+  ["sanjo", "kawarada", 69, "\u6D77\u8DEF"],
+  ["shibata", "murakami", 33, "\u8857\u9053"],
+  ["toyama", "masuyama", 20, "\u8857\u9053"],
+  ["toyama", "uozu", 23, "\u8857\u9053"],
+  ["toyama", "nanao", 43, "\u8857\u9053"],
+  ["toyama", "matsukura_h", 63, "\u8857\u9053"],
+  ["masuyama", "suemori_n", 28, "\u8857\u9053"],
+  ["masuyama", "kanazawa", 31, "\u8857\u9053"],
+  ["masuyama", "matsukura_h", 61, "\u8857\u9053"],
+  ["uozu", "matsukura", 3, "\u8857\u9053"],
+  ["uozu", "nanao", 46, "\u6D77\u8DEF"],
+  ["uozu", "miyazaki_e", 19, "\u8857\u9053"],
+  ["matsukura", "miyazaki_e", 18, "\u8857\u9053"],
+  ["nanao", "suemori_n", 24, "\u8857\u9053"],
+  ["suemori_n", "kanazawa", 33, "\u8857\u9053"],
+  ["kanazawa", "komatsu", 26, "\u8857\u9053"],
+  ["kanazawa", "torigoe", 27, "\u8857\u9053"],
+  ["komatsu", "torigoe", 17, "\u8857\u9053"],
+  ["komatsu", "kitanosho", 44, "\u8857\u9053"],
+  ["torigoe", "ichijodani", 45, "\u8857\u9053"],
+  ["torigoe", "kitanosho", 45, "\u8857\u9053"],
+  ["torigoe", "gujo", 71, "\u96E3\u6240"],
+  ["torigoe", "matsukura_h", 61, "\u5C71\u9053"],
+  ["ichijodani", "kitanosho", 10, "\u8857\u9053"],
+  ["ichijodani", "kanegasaki", 44, "\u8857\u9053"],
+  ["ichijodani", "gujo", 66, "\u96E3\u6240"],
+  ["kanegasaki", "kuniyoshi", 12, "\u8857\u9053"],
+  ["kanegasaki", "odani", 26, "\u8857\u9053"],
+  ["kanegasaki", "yamamotoyama", 27, "\u8857\u9053"],
+  ["kuniyoshi", "nochiseyama", 23, "\u8857\u9053"],
+  ["kuniyoshi", "yamamotoyama", 29, "\u8857\u9053"],
+  ["nochiseyama", "kannonji", 53, "\u8857\u9053"],
+  ["nochiseyama", "sakamoto", 49, "\u8857\u9053"],
+  ["nochiseyama", "kameyama_t", 56, "\u8857\u9053"],
+  ["nochiseyama", "miyazu", 50, "\u5C71\u9053"],
+  ["sunpu", "kakegawa", 41, "\u8857\u9053"],
+  ["sunpu", "kounkoji", 45, "\u5C71\u9053"],
+  ["sunpu", "inui", 46, "\u8857\u9053"],
+  ["kakegawa", "takatenjin", 9, "\u8857\u9053"],
+  ["kakegawa", "futamata", 22, "\u8857\u9053"],
+  ["kakegawa", "hikuma", 27, "\u8857\u9053"],
+  ["kounkoji", "nirayama", 16, "\u8857\u9053"],
+  ["nirayama", "shimoda", 41, "\u8857\u9053"],
+  ["futamata", "hikuma", 20, "\u8857\u9053"],
+  ["futamata", "inui", 14, "\u8857\u9053"],
+  ["futamata", "nagashino", 24, "\u8857\u9053"],
+  ["hikuma", "yoshida", 31, "\u8857\u9053"],
+  ["hikuma", "nagashino", 28, "\u8857\u9053"],
+  ["inui", "iwamura", 58, "\u8857\u9053"],
+  ["okazaki", "yoshida", 30, "\u8857\u9053"],
+  ["okazaki", "nishio", 14, "\u8857\u9053"],
+  ["okazaki", "nagashino", 37, "\u8857\u9053"],
+  ["okazaki", "kariya", 15, "\u8857\u9053"],
+  ["okazaki", "iwamura", 52, "\u8857\u9053"],
+  ["yoshida", "tahara", 18, "\u8857\u9053"],
+  ["yoshida", "nishio", 32, "\u8857\u9053"],
+  ["yoshida", "nagashino", 23, "\u8857\u9053"],
+  ["tahara", "nishio", 27, "\u6D77\u8DEF"],
+  ["tahara", "toba", 42, "\u6D77\u8DEF"],
+  ["nishio", "kariya", 15, "\u8857\u9053"],
+  ["nishio", "matsugashima", 54, "\u6D77\u8DEF"],
+  ["nishio", "toba", 47, "\u6D77\u8DEF"],
+  ["nagashino", "iwamura", 50, "\u8857\u9053"],
+  ["kariya", "narumi", 13, "\u8857\u9053"],
+  ["kiyosu", "nagoya", 6, "\u8857\u9053"],
+  ["kiyosu", "iwakura", 7, "\u8857\u9053"],
+  ["kiyosu", "shobata", 10, "\u8857\u9053"],
+  ["nagoya", "narumi", 11, "\u8857\u9053"],
+  ["iwakura", "inuyama", 13, "\u8857\u9053"],
+  ["iwakura", "inabayama", 19, "\u8857\u9053"],
+  ["iwakura", "sunomata", 20, "\u8857\u9053"],
+  ["inuyama", "inabayama", 15, "\u8857\u9053"],
+  ["inuyama", "gujo", 40, "\u8857\u9053"],
+  ["inuyama", "iwamura", 46, "\u8857\u9053"],
+  ["shobata", "ogaki", 19, "\u8857\u9053"],
+  ["shobata", "sunomata", 18, "\u8857\u9053"],
+  ["shobata", "nagashima", 14, "\u8857\u9053"],
+  ["narumi", "iwamura", 54, "\u8857\u9053"],
+  ["narumi", "kuwana", 24, "\u8857\u9053"],
+  ["narumi", "nagashima", 24, "\u8857\u9053"],
+  ["inabayama", "sunomata", 12, "\u8857\u9053"],
+  ["inabayama", "gujo", 39, "\u8857\u9053"],
+  ["ogaki", "sunomata", 6, "\u8857\u9053"],
+  ["ogaki", "odani", 34, "\u5C71\u9053"],
+  ["ogaki", "sawayama", 33, "\u5C71\u9053"],
+  ["gujo", "naegi", 54, "\u96E3\u6240"],
+  ["gujo", "matsukura_h", 49, "\u5C71\u9053"],
+  ["iwamura", "naegi", 18, "\u8857\u9053"],
+  ["naegi", "matsukura_h", 71, "\u5C71\u9053"],
+  ["kuwana", "nagashima", 4, "\u8857\u9053"],
+  ["kuwana", "kanbe", 25, "\u8857\u9053"],
+  ["nagashima", "sawayama", 43, "\u5C71\u9053"],
+  ["kanbe", "matsugashima", 30, "\u6D77\u8DEF"],
+  ["kanbe", "ueno_iga", 41, "\u5C71\u9053"],
+  ["kanbe", "kannonji", 49, "\u5C71\u9053"],
+  ["okochi", "matsugashima", 9, "\u8857\u9053"],
+  ["okochi", "toba", 28, "\u8857\u9053"],
+  ["okochi", "takatori", 67, "\u8857\u9053"],
+  ["matsugashima", "toba", 28, "\u8857\u9053"],
+  ["matsugashima", "ueno_iga", 44, "\u5C71\u9053"],
+  ["ueno_iga", "kannonji", 42, "\u5C71\u9053"],
+  ["ueno_iga", "sakamoto", 41, "\u8857\u9053"],
+  ["ueno_iga", "tamonyama", 28, "\u8857\u9053"],
+  ["kannonji", "sawayama", 18, "\u8857\u9053"],
+  ["kannonji", "sakamoto", 26, "\u8857\u9053"],
+  ["odani", "yamamotoyama", 8, "\u8857\u9053"],
+  ["sawayama", "yamamotoyama", 18, "\u8857\u9053"],
+  ["sakamoto", "nijo", 13, "\u8857\u9053"],
+  ["nijo", "shoryuji", 12, "\u8857\u9053"],
+  ["nijo", "kameyama_t", 16, "\u8857\u9053"],
+  ["shoryuji", "kameyama_t", 15, "\u8857\u9053"],
+  ["shoryuji", "akutagawa", 12, "\u8857\u9053"],
+  ["shoryuji", "tamonyama", 28, "\u8857\u9053"],
+  ["kameyama_t", "yagami", 33, "\u8857\u9053"],
+  ["kameyama_t", "akutagawa", 18, "\u8857\u9053"],
+  ["yagami", "yokoyama", 28, "\u5C71\u9053"],
+  ["yagami", "miki", 36, "\u8857\u9053"],
+  ["yagami", "itami", 36, "\u8857\u9053"],
+  ["yagami", "hanakuma", 42, "\u8857\u9053"],
+  ["yokoyama", "miyazu", 28, "\u8857\u9053"],
+  ["yokoyama", "takeda", 26, "\u8857\u9053"],
+  ["miyazu", "konosumi", 35, "\u8857\u9053"],
+  ["ishiyama", "iimoriyama", 12, "\u8857\u9053"],
+  ["ishiyama", "takaya", 17, "\u8857\u9053"],
+  ["ishiyama", "kishiwada", 29, "\u8857\u9053"],
+  ["ishiyama", "shigisan", 16, "\u8857\u9053"],
+  ["ishiyama", "itami", 15, "\u8857\u9053"],
+  ["iimoriyama", "akutagawa", 15, "\u8857\u9053"],
+  ["iimoriyama", "koriyama", 15, "\u8857\u9053"],
+  ["iimoriyama", "shigisan", 13, "\u8857\u9053"],
+  ["takaya", "kishiwada", 24, "\u8857\u9053"],
+  ["takaya", "shigisan", 9, "\u8857\u9053"],
+  ["takaya", "takatori", 24, "\u8857\u9053"],
+  ["kishiwada", "saika", 29, "\u8857\u9053"],
+  ["kishiwada", "hanakuma", 31, "\u6D77\u8DEF"],
+  ["akutagawa", "itami", 18, "\u8857\u9053"],
+  ["koriyama", "shigisan", 11, "\u8857\u9053"],
+  ["koriyama", "tamonyama", 7, "\u8857\u9053"],
+  ["koriyama", "takatori", 25, "\u8857\u9053"],
+  ["shigisan", "takatori", 25, "\u8857\u9053"],
+  ["takatori", "shingu", 81, "\u96E3\u6240"],
+  ["saika", "tetori", 36, "\u8857\u9053"],
+  ["saika", "yura", 22, "\u6D77\u8DEF"],
+  ["shingu", "tetori", 73, "\u96E3\u6240"],
+  ["tetori", "ushiki", 53, "\u6D77\u8DEF"],
+  ["himeji", "ojio", 11, "\u8857\u9053"],
+  ["himeji", "goshaku", 4, "\u8857\u9053"],
+  ["miki", "goshaku", 24, "\u8857\u9053"],
+  ["miki", "hanakuma", 21, "\u8857\u9053"],
+  ["miki", "sumoto", 52, "\u6D77\u8DEF"],
+  ["ojio", "takeda", 44, "\u5C71\u9053"],
+  ["ojio", "wakasa", 51, "\u5C71\u9053"],
+  ["ojio", "tenjinyama", 51, "\u8857\u9053"],
+  ["goshaku", "sumoto", 56, "\u6D77\u8DEF"],
+  ["itami", "hanakuma", 24, "\u8857\u9053"],
+  ["hanakuma", "sumoto", 47, "\u6D77\u8DEF"],
+  ["takeda", "konosumi", 20, "\u8857\u9053"],
+  ["takeda", "wakasa", 39, "\u5C71\u9053"],
+  ["konosumi", "wakasa", 41, "\u5C71\u9053"],
+  ["sumoto", "shozui", 43, "\u6D77\u8DEF"],
+  ["sumoto", "yura", 10, "\u6D77\u8DEF"],
+  ["tottori", "wakasa", 23, "\u8857\u9053"],
+  ["tottori", "shikano", 17, "\u8857\u9053"],
+  ["wakasa", "iwaya_m", 41, "\u5C71\u9053"],
+  ["shikano", "iwaya_m", 38, "\u5C71\u9053"],
+  ["shikano", "uyui", 8, "\u8857\u9053"],
+  ["yonago", "gassan", 14, "\u8857\u9053"],
+  ["yonago", "shiraga", 24, "\u8857\u9053"],
+  ["yonago", "takata_m", 45, "\u5C71\u9053"],
+  ["yonago", "oki", 86, "\u6D77\u8DEF"],
+  ["yonago", "uyui", 61, "\u8857\u9053"],
+  ["gassan", "shiraga", 19, "\u8857\u9053"],
+  ["gassan", "koriyama_a", 89, "\u96E3\u6240"],
+  ["gassan", "yamabuki", 74, "\u96E3\u6240"],
+  ["shiraga", "yamabuki", 73, "\u8857\u9053"],
+  ["tsuwano", "takamine", 42, "\u5C71\u9053"],
+  ["tsuwano", "wakayama_s", 47, "\u5C71\u9053"],
+  ["tsuwano", "miyake", 24, "\u5C71\u9053"],
+  ["tsuwano", "kuragake", 46, "\u5C71\u9053"],
+  ["ishiyama_bz", "tenjinyama", 27, "\u8857\u9053"],
+  ["ishiyama_bz", "sogo", 44, "\u6D77\u8DEF"],
+  ["ishiyama_bz", "amagiri", 48, "\u6D77\u8DEF"],
+  ["ishiyama_bz", "takamatsu_bc", 10, "\u8857\u9053"],
+  ["matsuyama_bc", "takata_m", 31, "\u8857\u9053"],
+  ["matsuyama_bc", "sarukake", 17, "\u8857\u9053"],
+  ["matsuyama_bc", "takamatsu_bc", 22, "\u8857\u9053"],
+  ["tenjinyama", "iwaya_m", 27, "\u8857\u9053"],
+  ["tenjinyama", "takamatsu_bc", 29, "\u8857\u9053"],
+  ["koriyama_a", "kanayama_a", 33, "\u8857\u9053"],
+  ["koriyama_a", "mihara", 45, "\u8857\u9053"],
+  ["koriyama_a", "takata_m", 90, "\u96E3\u6240"],
+  ["koriyama_a", "yamabuki", 54, "\u5C71\u9053"],
+  ["kanayama_a", "mihara", 55, "\u8857\u9053"],
+  ["kanayama_a", "sakurao", 20, "\u8857\u9053"],
+  ["mihara", "kawanoe", 62, "\u6D77\u8DEF"],
+  ["mihara", "kannabe", 31, "\u8857\u9053"],
+  ["mihara", "kokubunyama", 40, "\u6D77\u8DEF"],
+  ["ouchi", "takamine", 2, "\u8857\u9053"],
+  ["ouchi", "wakayama_s", 33, "\u8857\u9053"],
+  ["ouchi", "shimofuri", 25, "\u8857\u9053"],
+  ["takamine", "shimofuri", 25, "\u8857\u9053"],
+  ["wakayama_s", "funai", 91, "\u6D77\u8DEF"],
+  ["wakayama_s", "kuragake", 40, "\u8857\u9053"],
+  ["shozui", "ichinomiya", 8, "\u8857\u9053"],
+  ["shozui", "hiketa", 16, "\u8857\u9053"],
+  ["hakuchi", "sogo", 40, "\u8857\u9053"],
+  ["hakuchi", "kawanoe", 23, "\u8857\u9053"],
+  ["hakuchi", "okou", 53, "\u5C71\u9053"],
+  ["hakuchi", "aki", 59, "\u96E3\u6240"],
+  ["hakuchi", "amagiri", 27, "\u8857\u9053"],
+  ["ichinomiya", "aki", 80, "\u96E3\u6240"],
+  ["ichinomiya", "ushiki", 22, "\u8857\u9053"],
+  ["sogo", "hiketa", 29, "\u8857\u9053"],
+  ["sogo", "amagiri", 32, "\u8857\u9053"],
+  ["yuzuki", "kokubunyama", 29, "\u8857\u9053"],
+  ["yuzuki", "jizogatake", 44, "\u5C71\u9053"],
+  ["kagomori", "itajima", 5, "\u8857\u9053"],
+  ["kagomori", "nakamura", 41, "\u8857\u9053"],
+  ["kagomori", "jizogatake", 30, "\u8857\u9053"],
+  ["itajima", "usuki", 72, "\u6D77\u8DEF"],
+  ["kawanoe", "okou", 48, "\u5C71\u9053"],
+  ["kawanoe", "amagiri", 33, "\u8857\u9053"],
+  ["kawanoe", "kokubunyama", 53, "\u5C71\u9053"],
+  ["okou", "nakamura", 91, "\u96E3\u6240"],
+  ["okou", "aki", 28, "\u8857\u9053"],
+  ["tachibanayama", "iwaya", 20, "\u8857\u9053"],
+  ["tachibanayama", "kishitake", 51, "\u8857\u9053"],
+  ["tachibanayama", "kokura", 42, "\u8857\u9053"],
+  ["tachibanayama", "iki", 70, "\u6D77\u8DEF"],
+  ["iwaya", "akizuki", 13, "\u8857\u9053"],
+  ["iwaya", "kurume", 23, "\u8857\u9053"],
+  ["iwaya", "kishitake", 46, "\u8857\u9053"],
+  ["akizuki", "kurume", 27, "\u5C71\u9053"],
+  ["akizuki", "umagatake", 27, "\u8857\u9053"],
+  ["kurume", "yanagawa", 20, "\u8857\u9053"],
+  ["kurume", "saga", 21, "\u8857\u9053"],
+  ["yanagawa", "saga", 14, "\u8857\u9053"],
+  ["yanagawa", "hinoe", 50, "\u6D77\u8DEF"],
+  ["yanagawa", "kumamoto", 49, "\u8857\u9053"],
+  ["funai", "usuki", 22, "\u8857\u9053"],
+  ["funai", "oka", 37, "\u8857\u9053"],
+  ["funai", "umagatake", 80, "\u96E3\u6240"],
+  ["usuki", "oka", 42, "\u8857\u9053"],
+  ["usuki", "agata", 62, "\u8857\u9053"],
+  ["usuki", "jizogatake", 81, "\u6D77\u8DEF"],
+  ["oka", "kumamoto", 67, "\u5C71\u9053"],
+  ["oka", "agata", 49, "\u5C71\u9053"],
+  ["kishitake", "saga", 31, "\u8857\u9053"],
+  ["kishitake", "hirado", 46, "\u8857\u9053"],
+  ["kishitake", "omura", 58, "\u8857\u9053"],
+  ["kishitake", "iki", 49, "\u6D77\u8DEF"],
+  ["saga", "omura", 50, "\u8857\u9053"],
+  ["hirado", "iki", 47, "\u6D77\u8DEF"],
+  ["hinoe", "omura", 32, "\u6D77\u8DEF"],
+  ["hinoe", "kumamoto", 45, "\u6D77\u8DEF"],
+  ["hinoe", "yatsushiro", 44, "\u6D77\u8DEF"],
+  ["kanaishi", "iki", 62, "\u6D77\u8DEF"],
+  ["kumamoto", "yatsushiro", 35, "\u8857\u9053"],
+  ["hitoyoshi", "yatsushiro", 35, "\u8857\u9053"],
+  ["hitoyoshi", "tonokori", 64, "\u5C71\u9053"],
+  ["hitoyoshi", "kajiki", 54, "\u8857\u9053"],
+  ["hitoyoshi", "izumi", 41, "\u8857\u9053"],
+  ["yatsushiro", "izumi", 52, "\u8857\u9053"],
+  ["sadowara", "tonokori", 6, "\u8857\u9053"],
+  ["sadowara", "agata", 64, "\u8857\u9053"],
+  ["tonokori", "obi", 43, "\u8857\u9053"],
+  ["tonokori", "kajiki", 76, "\u96E3\u6240"],
+  ["obi", "shibushi", 28, "\u8857\u9053"],
+  ["uchijo", "kajiki", 18, "\u8857\u9053"],
+  ["kajiki", "izumi", 49, "\u8857\u9053"],
+  ["kajiki", "shibushi", 50, "\u8857\u9053"],
+  ["katsuyama_n", "shimofuri", 28, "\u8857\u9053"],
+  ["katsuyama_n", "kokura", 16, "\u6D77\u8DEF"],
+  ["kokura", "umagatake", 25, "\u8857\u9053"],
+  ["takata_m", "iwaya_m", 45, "\u5C71\u9053"],
+  ["takata_m", "uyui", 56, "\u96E3\u6240"],
+  ["iwaya_m", "uyui", 37, "\u5C71\u9053"],
+  ["yamabuki", "miyake", 72, "\u5C71\u9053"],
+  ["miyake", "sakurao", 55, "\u96E3\u6240"],
+  ["kannabe", "sarukake", 29, "\u8857\u9053"],
+  ["kannabe", "amagiri", 42, "\u6D77\u8DEF"],
+  ["sarukake", "amagiri", 44, "\u6D77\u8DEF"],
+  ["sarukake", "takamatsu_bc", 19, "\u8857\u9053"],
+  ["sakurao", "kuragake", 18, "\u8857\u9053"],
+  ["yura", "ushiki", 48, "\u6D77\u8DEF"],
+  ["negoshi", "miyazaki_e", 31, "\u8857\u9053"],
+  ["matsumae", "hakodate", 62, "\u6D77\u8DEF"],
+  ["matsumae", "esashi", 24, "\u8857\u9053"],
+  ["esashi", "oshamanbe", 42, "\u5C71\u9053"],
+  ["hakodate", "oshamanbe", 40, "\u5C71\u9053"],
+  ["oshamanbe", "otaru", 52, "\u5C71\u9053"],
+  ["otaru", "ishikari", 14, "\u8857\u9053"],
+  ["ishikari", "rumoi", 40, "\u8857\u9053"],
+  ["rumoi", "soya", 74, "\u96E3\u6240"],
+  ["ishikari", "sizunai", 62, "\u5C71\u9053"],
+  ["oshamanbe", "sizunai", 66, "\u5C71\u9053"],
+  ["sizunai", "kushiro", 72, "\u5C71\u9053"],
+  ["kushiro", "nemuro", 40, "\u8857\u9053"],
+  ["kushiro", "abashiri", 56, "\u96E3\u6240"],
+  ["abashiri", "nemuro", 62, "\u96E3\u6240"],
+  ["abashiri", "soya", 78, "\u96E3\u6240"],
+  ["ishikari", "abashiri", 96, "\u96E3\u6240"],
+  ["hakodate", "namioka", 96, "\u6D77\u8DEF"],
+  ["shurijo", "nakagusuku", 14, "\u8857\u9053"],
+  ["shurijo", "miyako", 250, "\u6D77\u8DEF"],
+  ["shurijo", "uchijo", 530, "\u6D77\u8DEF"],
+  ["shurijo", "izumi", 560, "\u6D77\u8DEF"]
+];
+var ROAD_SPEED = { \u8857\u9053: 1, \u5C71\u9053: 0.42, \u96E3\u6240: 0.18, \u6E21\u6CB3: 0.7, \u6D77\u8DEF: 0.62 };
+var MARCH_PER_MONTH = 46;
+var MOB_POLICY = [
+  { name: "\u5E73\u6642", per: 300, upkeep: 0.9 },
+  { name: "\u901A\u5E38", per: 380, upkeep: 1 },
+  { name: "\u6C7A\u6226", per: 450, upkeep: 1.15 },
+  { name: "\u7DCF\u52D5\u54E1", per: 500, upkeep: 1.35 }
+];
+var ARMS = [
+  { key: "yari", label: "\u69CD", ratio: 0.56 },
+  { key: "yumi", label: "\u5F13", ratio: 0.21 },
+  { key: "teppo", label: "\u9244\u7832", ratio: 0.03 },
+  { key: "kiba", label: "\u9A0E\u99AC", ratio: 0.2 }
+];
+
+// src/core/roster.js
+var ROSTER_SEQ = 0;
+function newRoster(total, tag) {
+  const r = [];
+  for (const a of ARMS) {
+    let men = Math.round(total * a.ratio);
+    while (men > 0) {
+      const m = Math.min(50, men);
+      r.push({ id: `${tag}-${++ROSTER_SEQ}`, t: a.key, m, max: 50 });
+      men -= m;
+    }
+  }
+  return r;
+}
+var rosterSum = (r) => (r || []).reduce((a, q) => a + q.m, 0);
+function rosterAdd(r, n, tag) {
+  if (!r || n <= 0) return r || [];
+  let left = Math.round(n);
+  for (const a of ARMS) {
+    const want = Math.round(n * a.ratio);
+    let give = want;
+    for (const q of r) {
+      if (give <= 0) break;
+      if (q.t !== a.key || q.m >= q.max) continue;
+      const add = Math.min(q.max - q.m, give);
+      q.m += add;
+      give -= add;
+      left -= add;
+    }
+    while (give > 0) {
+      const m = Math.min(50, give);
+      r.push({ id: `${tag}-${++ROSTER_SEQ}`, t: a.key, m, max: 50 });
+      give -= m;
+      left -= m;
+    }
+  }
+  if (left > 0) for (const q of r) {
+    if (left <= 0) break;
+    const add = Math.min(q.max - q.m, left);
+    q.m += add;
+    left -= add;
+  }
+  return r;
+}
+function rosterCut(r, n) {
+  let left = Math.round(n);
+  const order = [...r].sort((a, b) => a.m - b.m);
+  for (const q of order) {
+    if (left <= 0) break;
+    const take = Math.min(q.m, left);
+    q.m -= take;
+    left -= take;
+  }
+  return r.filter((q) => q.m > 0);
+}
+function rosterTake(src, n) {
+  const out = [];
+  let left = Math.round(n);
+  const order = [...src].sort((a, b) => b.m - a.m);
+  for (const q of order) {
+    if (left <= 0) break;
+    if (q.m <= left) {
+      out.push({ id: q.id, t: q.t, m: q.m, max: q.max });
+      left -= q.m;
+      q.m = 0;
+    } else {
+      out.push({ id: q.id + "b", t: q.t, m: left, max: q.max });
+      q.m -= left;
+      left = 0;
+    }
+  }
+  const rest = src.filter((q) => q.m > 0);
+  return { taken: out, rest };
+}
+function rosterSync(holder, key, total, tag) {
+  if (!holder[key] || !holder[key].length) holder[key] = newRoster(Math.max(0, total), tag);
+  const d = Math.round(total) - rosterSum(holder[key]);
+  if (d > 0) rosterAdd(holder[key], d, tag);
+  else if (d < 0) holder[key] = rosterCut(holder[key], -d);
+  return holder[key];
+}
+
+// src/core/util.js
+var U = {
+  paper: "#F4F1E8",
+  card: "#FFFFFF",
+  line: "#DED8CA",
+  line2: "#EDE8DC",
+  text: "#26262A",
+  dim: "#7C7668",
+  ink: "#1C1C1E",
+  sea: "#A9C4D6",
+  river: "#7FA8C4"
+};
+function hash2(x, y) {
+  let h = x * 374761393 + y * 668265263;
+  h = (h ^ h >> 13) * 1274126177;
+  return ((h ^ h >> 16) >>> 0) / 4294967295;
+}
+function vnoise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = hash2(xi, yi), b = hash2(xi + 1, yi), c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+  return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * (1 - u) * v + d * u * v;
+}
+function segDist(qx, qy, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1, L = dx * dx + dy * dy;
+  let t = L ? ((qx - x1) * dx + (qy - y1) * dy) / L : 0;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const ax = x1 + t * dx - qx, ay = y1 + t * dy - qy;
+  return Math.sqrt(ax * ax + ay * ay);
+}
+var clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+var fmt = (n) => Math.round(n).toLocaleString("ja-JP");
+var man = (n) => (n / 1e4).toFixed(1);
+var SEASON = (m) => m <= 2 || m === 12 ? "\u51AC" : m <= 5 ? "\u6625" : m <= 8 ? "\u590F" : "\u79CB";
+var monthsBetween = (y1, m1, y2, m2) => (y2 - y1) * 12 + (m2 - m1);
+function makeRng(seed) {
+  let x = seed || 1;
+  return () => {
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    x >>>= 0;
+    return x / 4294967296;
+  };
+}
+
+// src/data/newcomers.js
+var NEWCOMERS = [
+  {
+    id: "nagahide",
+    name: "\u4E39\u7FBD\u9577\u79C0",
+    faction: "oda",
+    y: 1550,
+    at: "nagoya",
+    lead: 82,
+    valor: 74,
+    wit: 80,
+    gov: 90,
+    retinue: 180,
+    retTrain: 64,
+    born: 1535
+  },
+  {
+    id: "toshiie",
+    name: "\u524D\u7530\u5229\u5BB6",
+    faction: "oda",
+    y: 1551,
+    at: "nagoya",
+    lead: 78,
+    valor: 90,
+    wit: 56,
+    gov: 60,
+    retinue: 140,
+    retTrain: 68,
+    born: 1538
+  },
+  {
+    id: "tsuneoki",
+    name: "\u6C60\u7530\u6052\u8208",
+    faction: "oda",
+    y: 1552,
+    at: "nagoya",
+    lead: 74,
+    valor: 80,
+    wit: 62,
+    gov: 64,
+    retinue: 160,
+    retTrain: 64,
+    born: 1536
+  },
+  {
+    id: "nagamasa2",
+    name: "\u4F50\u3005\u6210\u653F",
+    faction: "oda",
+    y: 1553,
+    at: "shobata",
+    lead: 76,
+    valor: 86,
+    wit: 62,
+    gov: 58,
+    retinue: 150,
+    retTrain: 68,
+    born: 1536
+  },
+  {
+    id: "hideyoshi",
+    name: "\u6728\u4E0B\u85E4\u5409\u90CE",
+    faction: "oda",
+    y: 1554,
+    at: "nagoya",
+    lead: 88,
+    valor: 66,
+    wit: 96,
+    gov: 97,
+    retinue: 120,
+    retTrain: 58,
+    born: 1537
+  },
+  {
+    id: "kazumasu",
+    name: "\u6EDD\u5DDD\u4E00\u76CA",
+    faction: "oda",
+    y: 1555,
+    at: "shobata",
+    lead: 84,
+    valor: 78,
+    wit: 84,
+    gov: 74,
+    retinue: 200,
+    retTrain: 66,
+    born: 1525
+  },
+  {
+    id: "mitsuhide",
+    name: "\u660E\u667A\u5149\u79C0",
+    faction: "oda",
+    y: 1566,
+    at: "nagoya",
+    lead: 90,
+    valor: 72,
+    wit: 94,
+    gov: 90,
+    retinue: 200,
+    retTrain: 66,
+    born: 1528
+  },
+  {
+    id: "hanbei",
+    name: "\u7AF9\u4E2D\u534A\u5175\u885B",
+    faction: "saito",
+    y: 1558,
+    at: "sunomata",
+    lead: 82,
+    valor: 46,
+    wit: 97,
+    gov: 82,
+    retinue: 120,
+    retTrain: 60,
+    born: 1544
+  },
+  {
+    id: "toshiharu",
+    name: "\u658E\u85E4\u5229\u6CBB",
+    faction: "saito",
+    y: 1557,
+    at: "inabayama",
+    lead: 72,
+    valor: 74,
+    wit: 66,
+    gov: 62,
+    retinue: 180,
+    retTrain: 66,
+    born: 1541
+  },
+  {
+    id: "ieyasu",
+    name: "\u677E\u5E73\u5143\u5EB7",
+    faction: "matsudaira",
+    y: 1557,
+    at: "okazaki",
+    lead: 92,
+    valor: 74,
+    wit: 92,
+    gov: 96,
+    retinue: 260,
+    retTrain: 70,
+    born: 1543
+  },
+  {
+    id: "tadakatsu",
+    name: "\u672C\u591A\u5FE0\u52DD",
+    faction: "matsudaira",
+    y: 1560,
+    at: "okazaki",
+    lead: 82,
+    valor: 96,
+    wit: 62,
+    gov: 60,
+    retinue: 180,
+    retTrain: 74,
+    born: 1548
+  },
+  {
+    id: "yasumasa",
+    name: "\u698A\u539F\u5EB7\u653F",
+    faction: "matsudaira",
+    y: 1561,
+    at: "okazaki",
+    lead: 80,
+    valor: 82,
+    wit: 74,
+    gov: 76,
+    retinue: 170,
+    retTrain: 70,
+    born: 1548
+  },
+  {
+    id: "naomasa",
+    name: "\u4E95\u4F0A\u76F4\u653F",
+    faction: "matsudaira",
+    y: 1575,
+    at: "okazaki",
+    lead: 84,
+    valor: 88,
+    wit: 72,
+    gov: 74,
+    retinue: 190,
+    retTrain: 74,
+    born: 1561
+  },
+  {
+    id: "katsuyori",
+    name: "\u6B66\u7530\u52DD\u983C",
+    faction: "takeda",
+    y: 1562,
+    at: "takato",
+    lead: 80,
+    valor: 88,
+    wit: 62,
+    gov: 58,
+    retinue: 300,
+    retTrain: 72,
+    born: 1546
+  },
+  {
+    id: "masayuki",
+    name: "\u771F\u7530\u660C\u5E78",
+    faction: "takeda",
+    y: 1560,
+    at: "komoro",
+    lead: 84,
+    valor: 70,
+    wit: 94,
+    gov: 84,
+    retinue: 200,
+    retTrain: 68,
+    born: 1547
+  },
+  {
+    id: "nagamasa",
+    name: "\u6D45\u4E95\u9577\u653F",
+    faction: "azai",
+    y: 1560,
+    at: "odani",
+    lead: 84,
+    valor: 84,
+    wit: 74,
+    gov: 76,
+    retinue: 300,
+    retTrain: 70,
+    born: 1545
+  },
+  {
+    id: "yoshikage",
+    name: "\u671D\u5009\u7FA9\u666F",
+    faction: "asakura",
+    y: 1553,
+    at: "ichijodani",
+    lead: 58,
+    valor: 52,
+    wit: 60,
+    gov: 66,
+    retinue: 400,
+    retTrain: 60,
+    born: 1533
+  },
+  {
+    id: "nagamasa3",
+    name: "\u8702\u9808\u8CC0\u6B63\u52DD",
+    faction: "oda",
+    y: 1556,
+    at: "shobata",
+    lead: 76,
+    valor: 74,
+    wit: 82,
+    gov: 70,
+    retinue: 160,
+    retTrain: 64,
+    born: 1526
+  },
+  {
+    id: "hanzo",
+    name: "\u670D\u90E8\u534A\u8535",
+    faction: "matsudaira",
+    y: 1563,
+    at: "okazaki",
+    lead: 68,
+    valor: 80,
+    wit: 84,
+    gov: 52,
+    retinue: 140,
+    retTrain: 70,
+    born: 1542
+  },
+  {
+    id: "kazumasa2",
+    name: "\u77F3\u5DDD\u6570\u6B63",
+    faction: "matsudaira",
+    y: 1558,
+    at: "okazaki",
+    lead: 76,
+    valor: 68,
+    wit: 80,
+    gov: 82,
+    retinue: 180,
+    retTrain: 66,
+    born: 1533
+  },
+  {
+    id: "tadatsugu2",
+    name: "\u9152\u4E95\u5FE0\u6B21",
+    faction: "matsudaira",
+    y: 1557,
+    at: "okazaki",
+    lead: 84,
+    valor: 78,
+    wit: 80,
+    gov: 76,
+    retinue: 220,
+    retTrain: 70,
+    born: 1527
+  },
+  {
+    id: "nobumori2",
+    name: "\u68EE\u9577\u53EF",
+    faction: "oda",
+    y: 1572,
+    at: "shobata",
+    lead: 76,
+    valor: 92,
+    wit: 56,
+    gov: 52,
+    retinue: 200,
+    retTrain: 74,
+    born: 1558
+  },
+  {
+    id: "ranmaru",
+    name: "\u68EE\u862D\u4E38",
+    faction: "oda",
+    y: 1578,
+    at: "nagoya",
+    lead: 62,
+    valor: 60,
+    wit: 76,
+    gov: 78,
+    retinue: 120,
+    retTrain: 62,
+    born: 1565
+  },
+  {
+    id: "hidenaga",
+    name: "\u7FBD\u67F4\u79C0\u9577",
+    faction: "oda",
+    y: 1564,
+    at: "nagoya",
+    lead: 82,
+    valor: 68,
+    wit: 84,
+    gov: 90,
+    retinue: 180,
+    retTrain: 66,
+    born: 1540
+  },
+  {
+    id: "kanbei",
+    name: "\u9ED2\u7530\u5B98\u5175\u885B",
+    faction: "oda",
+    y: 1575,
+    at: "nagoya",
+    lead: 82,
+    valor: 62,
+    wit: 96,
+    gov: 88,
+    retinue: 160,
+    retTrain: 64,
+    born: 1546
+  },
+  {
+    id: "masamune",
+    name: "\u771F\u7530\u4FE1\u7DB1",
+    faction: "takeda",
+    y: 1558,
+    at: "komoro",
+    lead: 76,
+    valor: 84,
+    wit: 66,
+    gov: 60,
+    retinue: 220,
+    retTrain: 70,
+    born: 1537
+  },
+  {
+    id: "katsuyori2",
+    name: "\u6B66\u7530\u4FE1\u8C4A",
+    faction: "takeda",
+    y: 1566,
+    at: "fukashi",
+    lead: 72,
+    valor: 74,
+    wit: 64,
+    gov: 62,
+    retinue: 240,
+    retTrain: 68,
+    born: 1549
+  },
+  {
+    id: "ujimasa",
+    name: "\u5317\u6761\u6C0F\u653F",
+    faction: "hojo",
+    y: 1559,
+    at: "nirayama",
+    lead: 70,
+    valor: 66,
+    wit: 70,
+    gov: 76,
+    retinue: 260,
+    retTrain: 66,
+    born: 1538
+  },
+  {
+    id: "nagamasa4",
+    name: "\u6D45\u4E95\u653F\u6F84",
+    faction: "azai",
+    y: 1562,
+    at: "odani",
+    lead: 66,
+    valor: 70,
+    wit: 60,
+    gov: 58,
+    retinue: 200,
+    retTrain: 64,
+    born: 1540
+  },
+  {
+    id: "kagetoshi2",
+    name: "\u671D\u5009\u666F\u93E1",
+    faction: "asakura",
+    y: 1556,
+    at: "ichijodani",
+    lead: 68,
+    valor: 66,
+    wit: 66,
+    gov: 64,
+    retinue: 260,
+    retTrain: 62,
+    born: 1525
+  },
+  {
+    id: "kenshin",
+    name: "\u4E0A\u6749\u653F\u864E",
+    faction: "nagao",
+    y: 1561,
+    at: "kasugayama",
+    lead: 97,
+    valor: 90,
+    wit: 86,
+    gov: 80,
+    retinue: 320,
+    retTrain: 78,
+    born: 1530
+  },
+  {
+    id: "kagekatsu",
+    name: "\u4E0A\u6749\u666F\u52DD",
+    faction: "nagao",
+    y: 1575,
+    at: "kasugayama",
+    lead: 78,
+    valor: 70,
+    wit: 74,
+    gov: 76,
+    retinue: 260,
+    retTrain: 70,
+    born: 1556
+  },
+  {
+    id: "kanetsugu",
+    name: "\u76F4\u6C5F\u517C\u7D9A",
+    faction: "nagao",
+    y: 1580,
+    at: "yoita",
+    lead: 82,
+    valor: 72,
+    wit: 88,
+    gov: 90,
+    retinue: 200,
+    retTrain: 70,
+    born: 1560
+  },
+  {
+    id: "ujimasa2",
+    name: "\u5317\u6761\u6C0F\u76F4",
+    faction: "hojo",
+    y: 1575,
+    at: "odawara",
+    lead: 70,
+    valor: 66,
+    wit: 70,
+    gov: 74,
+    retinue: 240,
+    retTrain: 68,
+    born: 1562
+  },
+  {
+    id: "mitsuhide2",
+    name: "\u8352\u6728\u6751\u91CD",
+    faction: "miyoshi",
+    y: 1565,
+    at: "itami",
+    lead: 76,
+    valor: 74,
+    wit: 74,
+    gov: 66,
+    retinue: 220,
+    retTrain: 66,
+    born: 1535
+  },
+  {
+    id: "hideyoshi2",
+    name: "\u9ED2\u7530\u8077\u9686",
+    faction: "akamatsu",
+    y: 1552,
+    at: "himeji",
+    lead: 70,
+    valor: 64,
+    wit: 76,
+    gov: 78,
+    retinue: 180,
+    retTrain: 60,
+    born: 1524
+  },
+  {
+    id: "nagachika2",
+    name: "\u660E\u667A\u79C0\u6E80",
+    faction: "ashikaga",
+    y: 1570,
+    at: "nijo",
+    lead: 74,
+    valor: 80,
+    wit: 70,
+    gov: 64,
+    retinue: 160,
+    retTrain: 66,
+    born: 1536
+  },
+  {
+    id: "terumoto",
+    name: "\u6BDB\u5229\u8F1D\u5143",
+    faction: "mori",
+    y: 1563,
+    at: "koriyama_a",
+    lead: 70,
+    valor: 64,
+    wit: 72,
+    gov: 76,
+    retinue: 300,
+    retTrain: 66,
+    born: 1553
+  },
+  {
+    id: "motoyasu_k",
+    name: "\u5C0F\u65E9\u5DDD\u79C0\u5305",
+    faction: "kobayakawa",
+    y: 1567,
+    at: "mihara",
+    lead: 72,
+    valor: 74,
+    wit: 68,
+    gov: 64,
+    retinue: 200,
+    retTrain: 66,
+    born: 1567
+  },
+  {
+    id: "muneshige",
+    name: "\u7ACB\u82B1\u5B97\u8302",
+    faction: "otomo",
+    y: 1580,
+    at: "funai",
+    lead: 88,
+    valor: 90,
+    wit: 82,
+    gov: 74,
+    retinue: 220,
+    retTrain: 74,
+    born: 1567
+  },
+  {
+    id: "jyoun",
+    name: "\u9AD8\u6A4B\u7D39\u904B",
+    faction: "otomo",
+    y: 1560,
+    at: "iwaya",
+    lead: 84,
+    valor: 84,
+    wit: 76,
+    gov: 68,
+    retinue: 280,
+    retTrain: 70,
+    born: 1548
+  },
+  {
+    id: "kanbei_k",
+    name: "\u9ED2\u7530\u5B5D\u9AD8",
+    faction: "akamatsu",
+    y: 1562,
+    at: "himeji",
+    lead: 82,
+    valor: 62,
+    wit: 96,
+    gov: 88,
+    retinue: 160,
+    retTrain: 64,
+    born: 1546
+  },
+  {
+    id: "nobuchika_c",
+    name: "\u9577\u5B97\u6211\u90E8\u4FE1\u89AA",
+    faction: "chosokabe",
+    y: 1580,
+    at: "okou",
+    lead: 78,
+    valor: 84,
+    wit: 70,
+    gov: 66,
+    retinue: 200,
+    retTrain: 70,
+    born: 1565
+  },
+  {
+    id: "hidekane",
+    name: "\u7ACB\u82B1\u76F4\u6B21",
+    faction: "otomo",
+    y: 1575,
+    at: "usuki",
+    lead: 74,
+    valor: 76,
+    wit: 70,
+    gov: 66,
+    retinue: 180,
+    retTrain: 66,
+    born: 1560
+  },
+  {
+    id: "masamune_d",
+    name: "\u4F0A\u9054\u653F\u5B97",
+    faction: "date",
+    y: 1581,
+    at: "yonezawa",
+    lead: 92,
+    valor: 84,
+    wit: 92,
+    gov: 86,
+    retinue: 240,
+    retTrain: 72,
+    born: 1567
+  },
+  {
+    id: "shigezane",
+    name: "\u4F0A\u9054\u6210\u5B9F",
+    faction: "date",
+    y: 1580,
+    at: "shiroishi",
+    lead: 82,
+    valor: 88,
+    wit: 72,
+    gov: 66,
+    retinue: 220,
+    retTrain: 72,
+    born: 1568
+  },
+  {
+    id: "naoe_k",
+    name: "\u672C\u5E84\u9855\u9577",
+    faction: "date",
+    y: 1570,
+    at: "watari",
+    lead: 70,
+    valor: 72,
+    wit: 64,
+    gov: 60,
+    retinue: 200,
+    retTrain: 64,
+    born: 1550
+  },
+  {
+    id: "mogami_x",
+    name: "\u6C0F\u5BB6\u5B88\u68DF",
+    faction: "mogami",
+    y: 1560,
+    at: "yamagata",
+    lead: 70,
+    valor: 64,
+    wit: 80,
+    gov: 76,
+    retinue: 200,
+    retTrain: 60,
+    born: 1534
+  },
+  {
+    id: "n_mitsuharu",
+    name: "\u660E\u667A\u79C0\u6E80",
+    faction: "oda",
+    y: 1570,
+    at: "nagoya",
+    lead: 76,
+    valor: 80,
+    wit: 72,
+    gov: 66,
+    retinue: 180,
+    retTrain: 66,
+    born: 1536
+  },
+  {
+    id: "n_nagamasa_k",
+    name: "\u52A0\u85E4\u6E05\u6B63",
+    faction: "oda",
+    y: 1578,
+    at: "nagoya",
+    lead: 80,
+    valor: 90,
+    wit: 66,
+    gov: 72,
+    retinue: 180,
+    retTrain: 70,
+    born: 1562
+  },
+  {
+    id: "n_masanori",
+    name: "\u798F\u5CF6\u6B63\u5247",
+    faction: "oda",
+    y: 1578,
+    at: "nagoya",
+    lead: 76,
+    valor: 90,
+    wit: 58,
+    gov: 58,
+    retinue: 180,
+    retTrain: 70,
+    born: 1561
+  },
+  {
+    id: "n_mitsunari",
+    name: "\u77F3\u7530\u4E09\u6210",
+    faction: "oda",
+    y: 1580,
+    at: "nagoya",
+    lead: 70,
+    valor: 54,
+    wit: 88,
+    gov: 96,
+    retinue: 160,
+    retTrain: 62,
+    born: 1560
+  },
+  {
+    id: "n_yoshitsugu",
+    name: "\u5927\u8C37\u5409\u7D99",
+    faction: "oda",
+    y: 1580,
+    at: "nagoya",
+    lead: 78,
+    valor: 66,
+    wit: 88,
+    gov: 88,
+    retinue: 160,
+    retTrain: 64,
+    born: 1559
+  },
+  {
+    id: "n_nagamori",
+    name: "\u5897\u7530\u9577\u76DB",
+    faction: "oda",
+    y: 1578,
+    at: "nagoya",
+    lead: 62,
+    valor: 54,
+    wit: 76,
+    gov: 86,
+    retinue: 140,
+    retTrain: 58,
+    born: 1545
+  },
+  {
+    id: "n_ieyasu2",
+    name: "\u5800\u79C0\u653F",
+    faction: "oda",
+    y: 1572,
+    at: "shobata",
+    lead: 78,
+    valor: 72,
+    wit: 80,
+    gov: 84,
+    retinue: 170,
+    retTrain: 66,
+    born: 1553
+  },
+  {
+    id: "n_kazutoyo",
+    name: "\u5C71\u5185\u4E00\u8C4A",
+    faction: "oda",
+    y: 1573,
+    at: "nagoya",
+    lead: 70,
+    valor: 72,
+    wit: 68,
+    gov: 76,
+    retinue: 150,
+    retTrain: 64,
+    born: 1545
+  },
+  {
+    id: "n_toshimasa",
+    name: "\u524D\u7530\u5229\u9577",
+    faction: "oda",
+    y: 1578,
+    at: "nagoya",
+    lead: 70,
+    valor: 72,
+    wit: 66,
+    gov: 70,
+    retinue: 170,
+    retTrain: 66,
+    born: 1562
+  },
+  {
+    id: "n_hidemasa",
+    name: "\u84B2\u751F\u6C0F\u90F7",
+    faction: "oda",
+    y: 1573,
+    at: "nagoya",
+    lead: 84,
+    valor: 84,
+    wit: 80,
+    gov: 84,
+    retinue: 190,
+    retTrain: 70,
+    born: 1556
+  },
+  {
+    id: "n_takatora",
+    name: "\u85E4\u5802\u9AD8\u864E",
+    faction: "oda",
+    y: 1580,
+    at: "nagoya",
+    lead: 78,
+    valor: 78,
+    wit: 80,
+    gov: 84,
+    retinue: 170,
+    retTrain: 66,
+    born: 1556
+  },
+  {
+    id: "n_nobutada",
+    name: "\u7E54\u7530\u4FE1\u5FE0",
+    faction: "oda",
+    y: 1572,
+    at: "nagoya",
+    lead: 76,
+    valor: 74,
+    wit: 70,
+    gov: 72,
+    retinue: 240,
+    retTrain: 68,
+    born: 1557
+  },
+  {
+    id: "n_nobukatsu",
+    name: "\u7E54\u7530\u4FE1\u96C4",
+    faction: "oda",
+    y: 1574,
+    at: "nagoya",
+    lead: 56,
+    valor: 58,
+    wit: 54,
+    gov: 58,
+    retinue: 200,
+    retTrain: 62,
+    born: 1558
+  },
+  {
+    id: "n_nobutaka",
+    name: "\u7E54\u7530\u4FE1\u5B5D",
+    faction: "oda",
+    y: 1574,
+    at: "shobata",
+    lead: 66,
+    valor: 70,
+    wit: 60,
+    gov: 60,
+    retinue: 180,
+    retTrain: 64,
+    born: 1558
+  },
+  {
+    id: "m_tadayo",
+    name: "\u5927\u4E45\u4FDD\u5FE0\u4E16",
+    faction: "matsudaira",
+    y: 1558,
+    at: "okazaki",
+    lead: 74,
+    valor: 78,
+    wit: 70,
+    gov: 66,
+    retinue: 180,
+    retTrain: 68,
+    born: 1532
+  },
+  {
+    id: "m_masanobu",
+    name: "\u672C\u591A\u6B63\u4FE1",
+    faction: "matsudaira",
+    y: 1565,
+    at: "okazaki",
+    lead: 62,
+    valor: 50,
+    wit: 92,
+    gov: 88,
+    retinue: 140,
+    retTrain: 58,
+    born: 1538
+  },
+  {
+    id: "m_naomasa2",
+    name: "\u9CE5\u5C45\u5143\u5FE0",
+    faction: "matsudaira",
+    y: 1558,
+    at: "okazaki",
+    lead: 74,
+    valor: 82,
+    wit: 64,
+    gov: 62,
+    retinue: 170,
+    retTrain: 68,
+    born: 1539
+  },
+  {
+    id: "m_yasushige",
+    name: "\u9AD8\u529B\u6E05\u9577",
+    faction: "matsudaira",
+    y: 1557,
+    at: "okazaki",
+    lead: 64,
+    valor: 62,
+    wit: 70,
+    gov: 80,
+    retinue: 150,
+    retTrain: 60,
+    born: 1530
+  },
+  {
+    id: "m_hidetada",
+    name: "\u5FB3\u5DDD\u79C0\u5FE0",
+    faction: "matsudaira",
+    y: 1595,
+    at: "okazaki",
+    lead: 66,
+    valor: 60,
+    wit: 70,
+    gov: 84,
+    retinue: 200,
+    retTrain: 64,
+    born: 1579
+  },
+  {
+    id: "m_tadateru",
+    name: "\u677E\u5E73\u4FE1\u5EB7",
+    faction: "matsudaira",
+    y: 1573,
+    at: "okazaki",
+    lead: 74,
+    valor: 80,
+    wit: 66,
+    gov: 62,
+    retinue: 200,
+    retTrain: 68,
+    born: 1559
+  },
+  {
+    id: "t_masatoyo2",
+    name: "\u6B66\u7530\u4FE1\u8C4A",
+    faction: "takeda",
+    y: 1566,
+    at: "tsutsujigasaki",
+    lead: 66,
+    valor: 66,
+    wit: 64,
+    gov: 62,
+    retinue: 180,
+    retTrain: 62,
+    born: 1550
+  },
+  {
+    id: "t_nobushige2",
+    name: "\u4E00\u6761\u4FE1\u9F8D",
+    faction: "takeda",
+    y: 1556,
+    at: "tsutsujigasaki",
+    lead: 70,
+    valor: 74,
+    wit: 64,
+    gov: 60,
+    retinue: 190,
+    retTrain: 64,
+    born: 1539
+  },
+  {
+    id: "t_masakage2",
+    name: "\u571F\u5C4B\u660C\u7D9A",
+    faction: "takeda",
+    y: 1561,
+    at: "fukashi",
+    lead: 72,
+    valor: 76,
+    wit: 68,
+    gov: 62,
+    retinue: 180,
+    retTrain: 66,
+    born: 1545
+  },
+  {
+    id: "n2_kagetora",
+    name: "\u4E0A\u6749\u666F\u864E",
+    faction: "nagao",
+    y: 1570,
+    at: "kasugayama",
+    lead: 70,
+    valor: 72,
+    wit: 66,
+    gov: 64,
+    retinue: 200,
+    retTrain: 66,
+    born: 1554
+  },
+  {
+    id: "n2_shigeie",
+    name: "\u65B0\u767A\u7530\u91CD\u5BB6",
+    faction: "agakita",
+    y: 1563,
+    at: "shibata",
+    lead: 74,
+    valor: 80,
+    wit: 66,
+    gov: 58,
+    retinue: 200,
+    retTrain: 66,
+    born: 1547
+  },
+  {
+    id: "h2_ujikuni2",
+    name: "\u5317\u6761\u6C0F\u5FE0",
+    faction: "hojo",
+    y: 1571,
+    at: "odawara",
+    lead: 66,
+    valor: 68,
+    wit: 64,
+    gov: 62,
+    retinue: 180,
+    retTrain: 64,
+    born: 1555
+  },
+  {
+    id: "h2_ujifusa",
+    name: "\u5317\u6761\u6C0F\u623F",
+    faction: "hojo",
+    y: 1581,
+    at: "iwatsuki",
+    lead: 66,
+    valor: 68,
+    wit: 64,
+    gov: 62,
+    retinue: 170,
+    retTrain: 64,
+    born: 1565
+  },
+  {
+    id: "mo_motoharu2",
+    name: "\u5409\u5DDD\u5143\u9577",
+    faction: "mori",
+    y: 1564,
+    at: "sakurao",
+    lead: 74,
+    valor: 74,
+    wit: 70,
+    gov: 66,
+    retinue: 200,
+    retTrain: 66,
+    born: 1548
+  },
+  {
+    id: "mo_takakage2",
+    name: "\u5C0F\u65E9\u5DDD\u7E41\u5E73",
+    faction: "kobayakawa",
+    y: 1576,
+    at: "mihara",
+    lead: 64,
+    valor: 64,
+    wit: 62,
+    gov: 64,
+    retinue: 180,
+    retTrain: 62,
+    born: 1560
+  },
+  {
+    id: "mo_hiroie",
+    name: "\u5409\u5DDD\u5E83\u5BB6",
+    faction: "mori",
+    y: 1577,
+    at: "sakurao",
+    lead: 72,
+    valor: 70,
+    wit: 76,
+    gov: 74,
+    retinue: 190,
+    retTrain: 66,
+    born: 1561
+  },
+  {
+    id: "uk_naoie2",
+    name: "\u5B87\u559C\u591A\u79C0\u5BB6",
+    faction: "uragami",
+    y: 1588,
+    at: "ishiyama_bz",
+    lead: 72,
+    valor: 72,
+    wit: 70,
+    gov: 72,
+    retinue: 200,
+    retTrain: 66,
+    born: 1572
+  },
+  {
+    id: "am_katsuhisa",
+    name: "\u5C3C\u5B50\u52DD\u4E45",
+    faction: "amago",
+    y: 1569,
+    at: "gassan",
+    lead: 66,
+    valor: 68,
+    wit: 64,
+    gov: 60,
+    retinue: 180,
+    retTrain: 62,
+    born: 1553
+  },
+  {
+    id: "am_shikanosuke",
+    name: "\u5C71\u4E2D\u9E7F\u4ECB",
+    faction: "amago",
+    y: 1561,
+    at: "gassan",
+    lead: 80,
+    valor: 88,
+    wit: 76,
+    gov: 60,
+    retinue: 180,
+    retTrain: 70,
+    born: 1545
+  },
+  {
+    id: "ck_chikamasa",
+    name: "\u9577\u5B97\u6211\u90E8\u89AA\u6CF0",
+    faction: "chosokabe",
+    y: 1559,
+    at: "okou",
+    lead: 74,
+    valor: 74,
+    wit: 72,
+    gov: 68,
+    retinue: 180,
+    retTrain: 66,
+    born: 1543
+  },
+  {
+    id: "ck_morichika",
+    name: "\u9577\u5B97\u6211\u90E8\u76DB\u89AA",
+    faction: "chosokabe",
+    y: 1591,
+    at: "okou",
+    lead: 68,
+    valor: 72,
+    wit: 62,
+    gov: 60,
+    retinue: 190,
+    retTrain: 64,
+    born: 1575
+  },
+  {
+    id: "ot_yoshimune",
+    name: "\u5927\u53CB\u7FA9\u7D71",
+    faction: "otomo",
+    y: 1574,
+    at: "funai",
+    lead: 58,
+    valor: 58,
+    wit: 58,
+    gov: 62,
+    retinue: 220,
+    retTrain: 62,
+    born: 1558
+  },
+  {
+    id: "ot_shigetane2",
+    name: "\u5409\u5F18\u93AE\u4FE1",
+    faction: "otomo",
+    y: 1563,
+    at: "funai",
+    lead: 70,
+    valor: 72,
+    wit: 66,
+    gov: 62,
+    retinue: 180,
+    retTrain: 64,
+    born: 1547
+  },
+  {
+    id: "rz_masaie",
+    name: "\u9F8D\u9020\u5BFA\u653F\u5BB6",
+    faction: "ryuzoji",
+    y: 1572,
+    at: "saga",
+    lead: 60,
+    valor: 60,
+    wit: 60,
+    gov: 62,
+    retinue: 190,
+    retTrain: 62,
+    born: 1556
+  },
+  {
+    id: "sz_toyohisa",
+    name: "\u5CF6\u6D25\u8C4A\u4E45",
+    faction: "shimazu",
+    y: 1586,
+    at: "shibushi",
+    lead: 76,
+    valor: 88,
+    wit: 64,
+    gov: 58,
+    retinue: 180,
+    retTrain: 70,
+    born: 1570
+  },
+  {
+    id: "sz_tadatsune",
+    name: "\u5CF6\u6D25\u5FE0\u6052",
+    faction: "shimazu",
+    y: 1592,
+    at: "uchijo",
+    lead: 70,
+    valor: 74,
+    wit: 66,
+    gov: 66,
+    retinue: 190,
+    retTrain: 66,
+    born: 1576
+  },
+  {
+    id: "sr_yorifusa",
+    name: "\u76F8\u826F\u983C\u623F",
+    faction: "sagara",
+    y: 1590,
+    at: "hitoyoshi",
+    lead: 66,
+    valor: 68,
+    wit: 64,
+    gov: 62,
+    retinue: 180,
+    retTrain: 62,
+    born: 1574
+  },
+  {
+    id: "it_sukekatsu",
+    name: "\u4F0A\u6771\u7950\u5175",
+    faction: "ito",
+    y: 1575,
+    at: "sadowara",
+    lead: 66,
+    valor: 70,
+    wit: 64,
+    gov: 62,
+    retinue: 170,
+    retTrain: 62,
+    born: 1559
+  },
+  {
+    id: "dt_kagetsuna2",
+    name: "\u4F0A\u9054\u5B9F\u5143",
+    faction: "date",
+    y: 1553,
+    at: "yonezawa",
+    lead: 68,
+    valor: 70,
+    wit: 66,
+    gov: 64,
+    retinue: 190,
+    retTrain: 64,
+    born: 1527
+  },
+  {
+    id: "mg_yoshiaki2",
+    name: "\u6700\u4E0A\u7FA9\u5EB7",
+    faction: "mogami",
+    y: 1591,
+    at: "yamagata",
+    lead: 66,
+    valor: 68,
+    wit: 64,
+    gov: 62,
+    retinue: 180,
+    retTrain: 64,
+    born: 1575
+  },
+  {
+    id: "nb_toshinao",
+    name: "\u5357\u90E8\u5229\u76F4",
+    faction: "nanbu",
+    y: 1592,
+    at: "sannohe",
+    lead: 68,
+    valor: 68,
+    wit: 68,
+    gov: 70,
+    retinue: 190,
+    retTrain: 64,
+    born: 1576
+  },
+  {
+    id: "or_nobuhira",
+    name: "\u6D25\u8EFD\u4FE1\u679A",
+    faction: "oura",
+    y: 1602,
+    at: "oura",
+    lead: 66,
+    valor: 66,
+    wit: 68,
+    gov: 70,
+    retinue: 180,
+    retTrain: 62,
+    born: 1586
+  },
+  {
+    id: "as_moritaka",
+    name: "\u8606\u540D\u76DB\u9686",
+    faction: "ashina",
+    y: 1577,
+    at: "kurokawa",
+    lead: 64,
+    valor: 64,
+    wit: 66,
+    gov: 66,
+    retinue: 180,
+    retTrain: 62,
+    born: 1561
+  },
+  {
+    id: "hm_kanetsugu2",
+    name: "\u672C\u5E84\u7E41\u9577",
+    faction: "agakita",
+    y: 1556,
+    at: "murakami",
+    lead: 78,
+    valor: 84,
+    wit: 68,
+    gov: 60,
+    retinue: 200,
+    retTrain: 68,
+    born: 1540
+  },
+  {
+    id: "e_tadaoki",
+    name: "\u7D30\u5DDD\u5FE0\u8208",
+    faction: "ashikaga",
+    y: 1578,
+    at: "nijo",
+    lead: 78,
+    valor: 80,
+    wit: 76,
+    gov: 74,
+    retinue: 190,
+    retTrain: 68,
+    born: 1563
+  },
+  {
+    id: "e_yukinaga",
+    name: "\u5C0F\u897F\u884C\u9577",
+    faction: "oda",
+    y: 1580,
+    at: "nagoya",
+    lead: 72,
+    valor: 66,
+    wit: 80,
+    gov: 80,
+    retinue: 170,
+    retTrain: 64,
+    born: 1558
+  },
+  {
+    id: "e_masamune2",
+    name: "\u4F0A\u9054\u5B97\u5B9F",
+    faction: "date",
+    y: 1595,
+    at: "yonezawa",
+    lead: 70,
+    valor: 74,
+    wit: 64,
+    gov: 60,
+    retinue: 180,
+    retTrain: 64,
+    born: 1580
+  },
+  {
+    id: "e_kagekatsu2",
+    name: "\u4E0A\u6749\u5B9A\u52DD",
+    faction: "nagao",
+    y: 1620,
+    at: "kasugayama",
+    lead: 64,
+    valor: 62,
+    wit: 66,
+    gov: 70,
+    retinue: 190,
+    retTrain: 62,
+    born: 1604
+  },
+  {
+    id: "e_yoshinao",
+    name: "\u5FB3\u5DDD\u7FA9\u76F4",
+    faction: "matsudaira",
+    y: 1615,
+    at: "okazaki",
+    lead: 66,
+    valor: 64,
+    wit: 70,
+    gov: 74,
+    retinue: 200,
+    retTrain: 64,
+    born: 1601
+  },
+  {
+    id: "e_yorinobu",
+    name: "\u5FB3\u5DDD\u983C\u5BA3",
+    faction: "matsudaira",
+    y: 1616,
+    at: "okazaki",
+    lead: 70,
+    valor: 70,
+    wit: 68,
+    gov: 72,
+    retinue: 200,
+    retTrain: 64,
+    born: 1602
+  },
+  {
+    id: "e_yorifusa",
+    name: "\u5FB3\u5DDD\u983C\u623F",
+    faction: "matsudaira",
+    y: 1618,
+    at: "okazaki",
+    lead: 68,
+    valor: 68,
+    wit: 70,
+    gov: 74,
+    retinue: 200,
+    retTrain: 64,
+    born: 1603
+  },
+  {
+    id: "e_masayuki",
+    name: "\u4FDD\u79D1\u6B63\u4E4B",
+    faction: "matsudaira",
+    y: 1626,
+    at: "okazaki",
+    lead: 72,
+    valor: 60,
+    wit: 82,
+    gov: 92,
+    retinue: 200,
+    retTrain: 62,
+    born: 1611
+  },
+  {
+    id: "e_iemitsu",
+    name: "\u5FB3\u5DDD\u5BB6\u5149",
+    faction: "matsudaira",
+    y: 1618,
+    at: "okazaki",
+    lead: 68,
+    valor: 64,
+    wit: 70,
+    gov: 80,
+    retinue: 220,
+    retTrain: 64,
+    born: 1604
+  },
+  {
+    id: "e_tadanaga",
+    name: "\u5FB3\u5DDD\u5FE0\u9577",
+    faction: "matsudaira",
+    y: 1620,
+    at: "okazaki",
+    lead: 60,
+    valor: 66,
+    wit: 56,
+    gov: 58,
+    retinue: 190,
+    retTrain: 62,
+    born: 1606
+  },
+  {
+    id: "e_naotaka",
+    name: "\u4E95\u4F0A\u76F4\u5B5D",
+    faction: "matsudaira",
+    y: 1605,
+    at: "okazaki",
+    lead: 78,
+    valor: 80,
+    wit: 72,
+    gov: 72,
+    retinue: 190,
+    retTrain: 68,
+    born: 1590
+  },
+  {
+    id: "e_masazumi",
+    name: "\u672C\u591A\u6B63\u7D14",
+    faction: "matsudaira",
+    y: 1580,
+    at: "okazaki",
+    lead: 64,
+    valor: 54,
+    wit: 84,
+    gov: 82,
+    retinue: 150,
+    retTrain: 58,
+    born: 1565
+  },
+  {
+    id: "e_tadakatsu2",
+    name: "\u672C\u591A\u5FE0\u653F",
+    faction: "matsudaira",
+    y: 1590,
+    at: "okazaki",
+    lead: 70,
+    valor: 74,
+    wit: 64,
+    gov: 64,
+    retinue: 180,
+    retTrain: 66,
+    born: 1575
+  },
+  {
+    id: "e_yasukatsu",
+    name: "\u698A\u539F\u5EB7\u52DD",
+    faction: "matsudaira",
+    y: 1605,
+    at: "okazaki",
+    lead: 68,
+    valor: 72,
+    wit: 64,
+    gov: 62,
+    retinue: 180,
+    retTrain: 64,
+    born: 1590
+  },
+  {
+    id: "e_masanori2",
+    name: "\u6C34\u91CE\u52DD\u6210",
+    faction: "mizuno",
+    y: 1580,
+    at: "kariya",
+    lead: 76,
+    valor: 84,
+    wit: 68,
+    gov: 68,
+    retinue: 170,
+    retTrain: 68,
+    born: 1564
+  },
+  {
+    id: "e_muneshige2",
+    name: "\u9AD8\u6A4B\u76F4\u6B21",
+    faction: "otomo",
+    y: 1585,
+    at: "funai",
+    lead: 74,
+    valor: 78,
+    wit: 68,
+    gov: 64,
+    retinue: 180,
+    retTrain: 66,
+    born: 1570
+  },
+  {
+    id: "e_kiyomasa2",
+    name: "\u52A0\u85E4\u5FE0\u5E83",
+    faction: "oda",
+    y: 1616,
+    at: "nagoya",
+    lead: 60,
+    valor: 62,
+    wit: 58,
+    gov: 60,
+    retinue: 180,
+    retTrain: 62,
+    born: 1601
+  },
+  {
+    id: "e_tadatoshi",
+    name: "\u7D30\u5DDD\u5FE0\u5229",
+    faction: "ashikaga",
+    y: 1601,
+    at: "nijo",
+    lead: 70,
+    valor: 68,
+    wit: 72,
+    gov: 76,
+    retinue: 180,
+    retTrain: 64,
+    born: 1586
+  },
+  {
+    id: "e_yoshihiro2",
+    name: "\u5CF6\u6D25\u4E45\u4FE1",
+    faction: "shimazu",
+    y: 1615,
+    at: "uchijo",
+    lead: 64,
+    valor: 66,
+    wit: 64,
+    gov: 66,
+    retinue: 190,
+    retTrain: 64,
+    born: 1600
+  },
+  {
+    id: "e_mitsuhisa",
+    name: "\u5CF6\u6D25\u5149\u4E45",
+    faction: "shimazu",
+    y: 1631,
+    at: "uchijo",
+    lead: 66,
+    valor: 66,
+    wit: 68,
+    gov: 72,
+    retinue: 190,
+    retTrain: 64,
+    born: 1616
+  },
+  {
+    id: "e_terumoto2",
+    name: "\u6BDB\u5229\u79C0\u5C31",
+    faction: "mori",
+    y: 1610,
+    at: "koriyama_a",
+    lead: 62,
+    valor: 62,
+    wit: 64,
+    gov: 68,
+    retinue: 190,
+    retTrain: 62,
+    born: 1595
+  },
+  {
+    id: "e_hidemoto",
+    name: "\u6BDB\u5229\u79C0\u5143",
+    faction: "mori",
+    y: 1594,
+    at: "koriyama_a",
+    lead: 74,
+    valor: 74,
+    wit: 74,
+    gov: 72,
+    retinue: 190,
+    retTrain: 66,
+    born: 1579
+  },
+  {
+    id: "e_nagamasa2",
+    name: "\u9ED2\u7530\u9577\u653F",
+    faction: "akamatsu",
+    y: 1583,
+    at: "himeji",
+    lead: 78,
+    valor: 80,
+    wit: 74,
+    gov: 74,
+    retinue: 180,
+    retTrain: 68,
+    born: 1568
+  },
+  {
+    id: "e_tadayuki",
+    name: "\u9ED2\u7530\u5FE0\u4E4B",
+    faction: "akamatsu",
+    y: 1617,
+    at: "himeji",
+    lead: 60,
+    valor: 62,
+    wit: 58,
+    gov: 60,
+    retinue: 180,
+    retTrain: 60,
+    born: 1602
+  },
+  {
+    id: "e_katsushige",
+    name: "\u934B\u5CF6\u52DD\u8302",
+    faction: "ryuzoji",
+    y: 1595,
+    at: "saga",
+    lead: 68,
+    valor: 68,
+    wit: 70,
+    gov: 74,
+    retinue: 180,
+    retTrain: 64,
+    born: 1580
+  },
+  {
+    id: "e_toshitsune",
+    name: "\u524D\u7530\u5229\u5E38",
+    faction: "oda",
+    y: 1608,
+    at: "nagoya",
+    lead: 70,
+    valor: 66,
+    wit: 78,
+    gov: 84,
+    retinue: 190,
+    retTrain: 64,
+    born: 1594
+  },
+  {
+    id: "e_masamune3",
+    name: "\u4F0A\u9054\u5FE0\u5B97",
+    faction: "date",
+    y: 1615,
+    at: "yonezawa",
+    lead: 66,
+    valor: 64,
+    wit: 68,
+    gov: 74,
+    retinue: 190,
+    retTrain: 62,
+    born: 1600
+  },
+  {
+    id: "e_kanetsugu3",
+    name: "\u76F4\u6C5F\u52DD\u5409",
+    faction: "nagao",
+    y: 1585,
+    at: "yoita",
+    lead: 68,
+    valor: 66,
+    wit: 72,
+    gov: 74,
+    retinue: 170,
+    retTrain: 64,
+    born: 1570
+  },
+  {
+    id: "e_shigenaga",
+    name: "\u672C\u5E84\u5145\u9577",
+    faction: "agakita",
+    y: 1585,
+    at: "murakami",
+    lead: 70,
+    valor: 74,
+    wit: 64,
+    gov: 60,
+    retinue: 180,
+    retTrain: 64,
+    born: 1570
+  },
+  {
+    id: "e_yoshiaki3",
+    name: "\u6700\u4E0A\u5BB6\u89AA",
+    faction: "mogami",
+    y: 1597,
+    at: "yamagata",
+    lead: 64,
+    valor: 64,
+    wit: 64,
+    gov: 66,
+    retinue: 180,
+    retTrain: 62,
+    born: 1582
+  },
+  {
+    id: "e_masamune4",
+    name: "\u5357\u90E8\u91CD\u76F4",
+    faction: "nanbu",
+    y: 1620,
+    at: "sannohe",
+    lead: 64,
+    valor: 64,
+    wit: 66,
+    gov: 68,
+    retinue: 180,
+    retTrain: 62,
+    born: 1606
+  },
+  {
+    id: "e_nobuyoshi",
+    name: "\u6D25\u8EFD\u4FE1\u7FA9",
+    faction: "oura",
+    y: 1634,
+    at: "oura",
+    lead: 62,
+    valor: 62,
+    wit: 64,
+    gov: 66,
+    retinue: 180,
+    retTrain: 60,
+    born: 1619
+  },
+  {
+    id: "e_shiro",
+    name: "\u5929\u8349\u56DB\u90CE",
+    faction: "ikko",
+    y: 1637,
+    at: "nagashima",
+    lead: 70,
+    valor: 66,
+    wit: 80,
+    gov: 66,
+    retinue: 160,
+    retTrain: 64,
+    born: 1621
+  },
+  {
+    id: "e_munefusa",
+    name: "\u677E\u5009\u52DD\u5BB6",
+    faction: "arima",
+    y: 1630,
+    at: "hinoe",
+    lead: 52,
+    valor: 58,
+    wit: 50,
+    gov: 48,
+    retinue: 170,
+    retTrain: 58,
+    born: 1597
+  },
+  {
+    id: "e_nobutsuna",
+    name: "\u677E\u5E73\u4FE1\u7DB1",
+    faction: "matsudaira",
+    y: 1630,
+    at: "okazaki",
+    lead: 68,
+    valor: 56,
+    wit: 88,
+    gov: 92,
+    retinue: 180,
+    retTrain: 60,
+    born: 1596
+  },
+  {
+    id: "e_masatoshi",
+    name: "\u5800\u7530\u6B63\u4FCA",
+    faction: "matsudaira",
+    y: 1650,
+    at: "okazaki",
+    lead: 64,
+    valor: 58,
+    wit: 76,
+    gov: 82,
+    retinue: 170,
+    retTrain: 58,
+    born: 1634
+  },
+  {
+    id: "e_mitsukuni",
+    name: "\u5FB3\u5DDD\u5149\u5700",
+    faction: "matsudaira",
+    y: 1643,
+    at: "okazaki",
+    lead: 66,
+    valor: 60,
+    wit: 80,
+    gov: 84,
+    retinue: 180,
+    retTrain: 60,
+    born: 1628
+  },
+  {
+    id: "e_tsunayoshi",
+    name: "\u5FB3\u5DDD\u7DB1\u5409",
+    faction: "matsudaira",
+    y: 1661,
+    at: "okazaki",
+    lead: 58,
+    valor: 54,
+    wit: 70,
+    gov: 72,
+    retinue: 190,
+    retTrain: 58,
+    born: 1646
+  },
+  {
+    id: "e_yoshiyasu",
+    name: "\u67F3\u6CA2\u5409\u4FDD",
+    faction: "matsudaira",
+    y: 1673,
+    at: "okazaki",
+    lead: 58,
+    valor: 52,
+    wit: 80,
+    gov: 82,
+    retinue: 160,
+    retTrain: 56,
+    born: 1658
+  },
+  {
+    id: "e_hakuseki",
+    name: "\u65B0\u4E95\u767D\u77F3",
+    faction: "matsudaira",
+    y: 1672,
+    at: "okazaki",
+    lead: 56,
+    valor: 46,
+    wit: 88,
+    gov: 86,
+    retinue: 120,
+    retTrain: 52,
+    born: 1657
+  },
+  {
+    id: "e_yoshimune",
+    name: "\u5FB3\u5DDD\u5409\u5B97",
+    faction: "matsudaira",
+    y: 1699,
+    at: "okazaki",
+    lead: 76,
+    valor: 70,
+    wit: 82,
+    gov: 90,
+    retinue: 200,
+    retTrain: 62,
+    born: 1684
+  },
+  {
+    id: "e_kuranosuke",
+    name: "\u5927\u77F3\u5185\u8535\u52A9",
+    faction: "akamatsu",
+    y: 1674,
+    at: "ojio",
+    lead: 72,
+    valor: 66,
+    wit: 84,
+    gov: 76,
+    retinue: 150,
+    retTrain: 62,
+    born: 1659
+  },
+  {
+    id: "e_naganori",
+    name: "\u6D45\u91CE\u9577\u77E9",
+    faction: "akamatsu",
+    y: 1682,
+    at: "ojio",
+    lead: 58,
+    valor: 62,
+    wit: 54,
+    gov: 58,
+    retinue: 170,
+    retTrain: 58,
+    born: 1667
+  },
+  {
+    id: "e_kozukenosuke",
+    name: "\u5409\u826F\u7FA9\u592E",
+    faction: "matsudaira",
+    y: 1656,
+    at: "okazaki",
+    lead: 56,
+    valor: 50,
+    wit: 72,
+    gov: 70,
+    retinue: 140,
+    retTrain: 54,
+    born: 1641
+  },
+  {
+    id: "e_soan",
+    name: "\u89D2\u5009\u7D20\u5EB5",
+    faction: "ashikaga",
+    y: 1590,
+    at: "nijo",
+    lead: 56,
+    valor: 44,
+    wit: 84,
+    gov: 88,
+    retinue: 120,
+    retTrain: 50,
+    born: 1571
+  },
+  {
+    id: "e_ryoi",
+    name: "\u89D2\u5009\u4E86\u4EE5",
+    faction: "ashikaga",
+    y: 1570,
+    at: "nijo",
+    lead: 58,
+    valor: 46,
+    wit: 86,
+    gov: 86,
+    retinue: 120,
+    retTrain: 50,
+    born: 1554
+  },
+  {
+    id: "e_sokun",
+    name: "\u5CF6\u4E95\u5B97\u5BA4",
+    faction: "ouchi",
+    y: 1560,
+    at: "tachibanayama",
+    lead: 54,
+    valor: 44,
+    wit: 82,
+    gov: 84,
+    retinue: 110,
+    retTrain: 48,
+    born: 1539
+  },
+  {
+    id: "e_soshitsu",
+    name: "\u795E\u5C4B\u5B97\u6E5B",
+    faction: "ouchi",
+    y: 1568,
+    at: "tachibanayama",
+    lead: 54,
+    valor: 42,
+    wit: 84,
+    gov: 86,
+    retinue: 110,
+    retTrain: 48,
+    born: 1553
+  },
+  {
+    id: "e_rikyu",
+    name: "\u5343\u5229\u4F11",
+    faction: "miyoshi",
+    y: 1537,
+    at: "ishiyama",
+    lead: 52,
+    valor: 40,
+    wit: 86,
+    gov: 80,
+    retinue: 100,
+    retTrain: 46,
+    born: 1522
+  },
+  {
+    id: "e_sokei",
+    name: "\u6D25\u7530\u5B97\u53CA",
+    faction: "miyoshi",
+    y: 1560,
+    at: "ishiyama",
+    lead: 52,
+    valor: 40,
+    wit: 82,
+    gov: 80,
+    retinue: 100,
+    retTrain: 46,
+    born: 1545
+  },
+  {
+    id: "e_musashi",
+    name: "\u5BAE\u672C\u6B66\u8535",
+    faction: "akamatsu",
+    y: 1599,
+    at: "himeji",
+    lead: 68,
+    valor: 96,
+    wit: 72,
+    gov: 52,
+    retinue: 140,
+    retTrain: 72,
+    born: 1584
+  },
+  {
+    id: "e_munenori",
+    name: "\u67F3\u751F\u5B97\u77E9",
+    faction: "tsutsui",
+    y: 1586,
+    at: "koriyama",
+    lead: 70,
+    valor: 88,
+    wit: 78,
+    gov: 70,
+    retinue: 150,
+    retTrain: 70,
+    born: 1571
+  },
+  {
+    id: "e_sekishusai",
+    name: "\u67F3\u751F\u5B97\u53B3",
+    faction: "tsutsui",
+    y: 1543,
+    at: "koriyama",
+    lead: 70,
+    valor: 92,
+    wit: 72,
+    gov: 62,
+    retinue: 160,
+    retTrain: 72,
+    born: 1529
+  },
+  {
+    id: "e_bokuden",
+    name: "\u585A\u539F\u535C\u4F1D",
+    faction: "satake",
+    y: 1504,
+    at: "ota_hitachi",
+    lead: 70,
+    valor: 94,
+    wit: 76,
+    gov: 58,
+    retinue: 150,
+    retTrain: 72,
+    born: 1489
+  },
+  {
+    id: "e_ittosai",
+    name: "\u4F0A\u85E4\u4E00\u5200\u658E",
+    faction: "hojo",
+    y: 1565,
+    at: "odawara",
+    lead: 66,
+    valor: 92,
+    wit: 70,
+    gov: 54,
+    retinue: 130,
+    retTrain: 70,
+    born: 1550
+  },
+  {
+    id: "junkei",
+    name: "\u7B52\u4E95\u9806\u6176",
+    faction: "tsutsui",
+    y: 1564,
+    at: "takatori",
+    lead: 76,
+    valor: 66,
+    wit: 78,
+    gov: 76,
+    retinue: 180,
+    retTrain: 58,
+    born: 1549
+  },
+  {
+    id: "saika3",
+    name: "\u9234\u6728\u91CD\u671D",
+    faction: "saika",
+    y: 1561,
+    at: "saika",
+    lead: 72,
+    valor: 78,
+    wit: 70,
+    gov: 58,
+    retinue: 200,
+    retTrain: 66,
+    born: 1546
+  },
+  {
+    id: "nagano2",
+    name: "\u9577\u91CE\u696D\u76DB",
+    faction: "nagano_k",
+    y: 1561,
+    at: "minowa",
+    lead: 72,
+    valor: 74,
+    wit: 66,
+    gov: 62,
+    retinue: 200,
+    retTrain: 64,
+    born: 1546
+  },
+  {
+    id: "yura2",
+    name: "\u7531\u826F\u56FD\u7E41",
+    faction: "yura",
+    y: 1564,
+    at: "kanayama",
+    lead: 66,
+    valor: 68,
+    wit: 62,
+    gov: 60,
+    retinue: 200,
+    retTrain: 60,
+    born: 1549
+  },
+  {
+    id: "sogo2",
+    name: "\u5341\u6CB3\u5B58\u4FDD",
+    faction: "miyoshi",
+    y: 1564,
+    at: "sogo",
+    lead: 74,
+    valor: 78,
+    wit: 64,
+    gov: 58,
+    retinue: 200,
+    retTrain: 62,
+    born: 1549
+  },
+  {
+    id: "iehisa",
+    name: "\u5CF6\u6D25\u5BB6\u4E45",
+    faction: "shimazu",
+    y: 1562,
+    at: "shibushi",
+    lead: 84,
+    valor: 86,
+    wit: 88,
+    gov: 64,
+    retinue: 200,
+    retTrain: 68,
+    born: 1547
+  },
+  {
+    id: "w_yura_a",
+    name: "\u5B89\u5B85\u4FE1\u5EB7",
+    faction: "miyoshi",
+    y: 1561,
+    at: "yura",
+    lead: 66,
+    valor: 66,
+    wit: 62,
+    gov: 58,
+    retinue: 240,
+    retTrain: 60,
+    born: 1546
+  },
+  {
+    id: "w_shimofuri",
+    name: "\u5185\u85E4\u9686\u6625",
+    faction: "ouchi",
+    y: 1562,
+    at: "shimofuri",
+    lead: 68,
+    valor: 66,
+    wit: 66,
+    gov: 64,
+    retinue: 240,
+    retTrain: 60,
+    born: 1547
+  },
+  {
+    id: "kagetsuna",
+    name: "\u7247\u5009\u666F\u7DB1",
+    faction: "date",
+    y: 1564,
+    at: "yonezawa",
+    lead: 74,
+    valor: 66,
+    wit: 84,
+    gov: 80,
+    retinue: 180,
+    retTrain: 62,
+    born: 1549
+  },
+  {
+    id: "nobunao",
+    name: "\u5357\u90E8\u4FE1\u76F4",
+    faction: "nanbu",
+    y: 1561,
+    at: "kozukata",
+    lead: 76,
+    valor: 70,
+    wit: 76,
+    gov: 74,
+    retinue: 220,
+    retTrain: 62,
+    born: 1546
+  },
+  {
+    id: "tamenobu",
+    name: "\u5927\u6D66\u70BA\u4FE1",
+    faction: "oura",
+    y: 1564,
+    at: "oura",
+    lead: 84,
+    valor: 78,
+    wit: 88,
+    gov: 76,
+    retinue: 240,
+    retTrain: 64,
+    born: 1549
+  },
+  {
+    id: "yoshiaki_m",
+    name: "\u6700\u4E0A\u7FA9\u5149",
+    faction: "mogami",
+    y: 1561,
+    at: "yamagata",
+    lead: 88,
+    valor: 80,
+    wit: 90,
+    gov: 82,
+    retinue: 200,
+    retTrain: 64,
+    born: 1546
+  },
+  {
+    id: "kakizaki2",
+    name: "\u8823\u5D0E\u6176\u5E83",
+    faction: "kakizaki",
+    y: 1563,
+    at: "hakodate",
+    lead: 70,
+    valor: 66,
+    wit: 76,
+    gov: 72,
+    retinue: 200,
+    retTrain: 58,
+    born: 1548
+  },
+  {
+    id: "ag_murakami2",
+    name: "\u8272\u90E8\u9577\u5B9F",
+    faction: "agakita",
+    y: 1562,
+    at: "murakami",
+    lead: 68,
+    valor: 70,
+    wit: 64,
+    gov: 60,
+    retinue: 240,
+    retTrain: 60,
+    born: 1547
+  },
+  {
+    id: "ms_miyake2",
+    name: "\u76CA\u7530\u5143\u7965",
+    faction: "masuda",
+    y: 1562,
+    at: "miyake",
+    lead: 68,
+    valor: 66,
+    wit: 70,
+    gov: 70,
+    retinue: 240,
+    retTrain: 60,
+    born: 1547
+  },
+  {
+    id: "az_akizuki2",
+    name: "\u79CB\u6708\u7A2E\u5B9F",
+    faction: "akizuki",
+    y: 1562,
+    at: "akizuki",
+    lead: 70,
+    valor: 70,
+    wit: 68,
+    gov: 62,
+    retinue: 240,
+    retTrain: 60,
+    born: 1547
+  },
+  {
+    id: "tadashige",
+    name: "\u6C34\u91CE\u5FE0\u91CD",
+    faction: "mizuno",
+    y: 1556,
+    at: "kariya",
+    lead: 64,
+    valor: 72,
+    wit: 54,
+    gov: 52,
+    retinue: 200,
+    retTrain: 58,
+    born: 1541
+  },
+  {
+    id: "tsunanari2",
+    name: "\u5317\u6761\u6C0F\u898F",
+    faction: "hojo",
+    y: 1560,
+    at: "nirayama",
+    lead: 74,
+    valor: 68,
+    wit: 78,
+    gov: 80,
+    retinue: 200,
+    retTrain: 66,
+    born: 1545
+  },
+  {
+    id: "yoshitaka",
+    name: "\u4E5D\u9B3C\u5609\u9686",
+    faction: "kuki",
+    y: 1557,
+    at: "toba",
+    lead: 80,
+    valor: 78,
+    wit: 76,
+    gov: 62,
+    retinue: 200,
+    retTrain: 68,
+    born: 1542
+  },
+  {
+    id: "ujiteru",
+    name: "\u5317\u6761\u6C0F\u7167",
+    faction: "hojo",
+    y: 1555,
+    at: "takiyama",
+    lead: 80,
+    valor: 76,
+    wit: 76,
+    gov: 72,
+    retinue: 300,
+    retTrain: 68,
+    born: 1540
+  },
+  {
+    id: "ujikuni",
+    name: "\u5317\u6761\u6C0F\u90A6",
+    faction: "hojo",
+    y: 1556,
+    at: "hachigata",
+    lead: 78,
+    valor: 78,
+    wit: 72,
+    gov: 70,
+    retinue: 280,
+    retTrain: 68,
+    born: 1541
+  },
+  {
+    id: "hisamichi",
+    name: "\u677E\u6C38\u4E45\u901A",
+    faction: "miyoshi",
+    y: 1558,
+    at: "shigisan",
+    lead: 62,
+    valor: 64,
+    wit: 66,
+    gov: 58,
+    retinue: 180,
+    retTrain: 58,
+    born: 1543
+  },
+  {
+    id: "tsutsui2",
+    name: "\u5CF6\u6E05\u8208",
+    faction: "tsutsui",
+    y: 1555,
+    at: "koriyama",
+    lead: 84,
+    valor: 88,
+    wit: 80,
+    gov: 64,
+    retinue: 200,
+    retTrain: 68,
+    born: 1540
+  },
+  {
+    id: "motochika",
+    name: "\u9577\u5B97\u6211\u90E8\u5143\u89AA",
+    faction: "chosokabe",
+    y: 1554,
+    at: "okou",
+    lead: 90,
+    valor: 84,
+    wit: 88,
+    gov: 80,
+    retinue: 220,
+    retTrain: 68,
+    born: 1539
+  },
+  {
+    id: "terumune",
+    name: "\u4F0A\u9054\u8F1D\u5B97",
+    faction: "date",
+    y: 1559,
+    at: "yonezawa",
+    lead: 76,
+    valor: 68,
+    wit: 78,
+    gov: 80,
+    retinue: 220,
+    retTrain: 62,
+    born: 1544
+  },
+  {
+    id: "chikasue",
+    name: "\u5B89\u6771\u611B\u5B63",
+    faction: "ando",
+    y: 1554,
+    at: "minato",
+    lead: 84,
+    valor: 74,
+    wit: 86,
+    gov: 82,
+    retinue: 240,
+    retTrain: 62,
+    born: 1539
+  },
+  {
+    id: "t_katsuyama2",
+    name: "\u5C0F\u5C71\u7530\u4FE1\u8302",
+    faction: "takeda",
+    y: 1554,
+    at: "katsuyama_k",
+    lead: 74,
+    valor: 76,
+    wit: 70,
+    gov: 64,
+    retinue: 240,
+    retTrain: 64,
+    born: 1539
+  },
+  {
+    id: "s_uozu2",
+    name: "\u6CB3\u7530\u9577\u89AA",
+    faction: "shiina",
+    y: 1558,
+    at: "uozu",
+    lead: 70,
+    valor: 68,
+    wit: 72,
+    gov: 68,
+    retinue: 230,
+    retTrain: 62,
+    born: 1543
+  },
+  {
+    id: "mm_matsuyama2",
+    name: "\u4E09\u6751\u5143\u89AA",
+    faction: "mimura",
+    y: 1557,
+    at: "matsuyama_bc",
+    lead: 70,
+    valor: 72,
+    wit: 64,
+    gov: 60,
+    retinue: 250,
+    retTrain: 62,
+    born: 1542
+  },
+  {
+    id: "nj_uyui2",
+    name: "\u5357\u6761\u5143\u7D9A",
+    faction: "nanjo",
+    y: 1555,
+    at: "uyui",
+    lead: 66,
+    valor: 68,
+    wit: 62,
+    gov: 58,
+    retinue: 240,
+    retTrain: 60,
+    born: 1540
+  },
+  {
+    id: "si_itajima3",
+    name: "\u571F\u5C45\u6E05\u826F",
+    faction: "saionji",
+    y: 1560,
+    at: "itajima",
+    lead: 70,
+    valor: 74,
+    wit: 66,
+    gov: 58,
+    retinue: 240,
+    retTrain: 62,
+    born: 1545
+  },
+  {
+    id: "sr_yatsushiro2",
+    name: "\u4E38\u76EE\u9577\u6075",
+    faction: "sagara",
+    y: 1555,
+    at: "yatsushiro",
+    lead: 68,
+    valor: 78,
+    wit: 62,
+    gov: 54,
+    retinue: 240,
+    retTrain: 64,
+    born: 1540
+  },
+  {
+    id: "kh_kunohe2",
+    name: "\u4E5D\u6238\u5B9F\u89AA",
+    faction: "kunohe",
+    y: 1555,
+    at: "kunohe",
+    lead: 66,
+    valor: 70,
+    wit: 62,
+    gov: 56,
+    retinue: 240,
+    retTrain: 62,
+    born: 1540
+  },
+  {
+    id: "td_tendo2",
+    name: "\u5929\u7AE5\u983C\u6F84",
+    faction: "tendo",
+    y: 1555,
+    at: "tendo",
+    lead: 64,
+    valor: 66,
+    wit: 60,
+    gov: 58,
+    retinue: 240,
+    retTrain: 60,
+    born: 1540
+  },
+  {
+    id: "tm_miharu2",
+    name: "\u7530\u6751\u6E05\u9855",
+    faction: "tamura",
+    y: 1555,
+    at: "miharu",
+    lead: 66,
+    valor: 68,
+    wit: 62,
+    gov: 58,
+    retinue: 240,
+    retTrain: 60,
+    born: 1540
+  }
+];
+var KANJI_TSUJI = [
+  "\u653F",
+  "\u79C0",
+  "\u5FE0",
+  "\u5EB7",
+  "\u9686",
+  "\u9577",
+  "\u5143",
+  "\u4FE1",
+  "\u7FA9",
+  "\u91CD",
+  "family",
+  "\uC885"
+].filter((x) => /^[一-龯]$/.test(x));
+var PARENT = {
+  nobunaga: "nobuhide",
+  nobuyuki: "nobuhide",
+  n_nobutada: "nobunaga",
+  n_nobukatsu: "nobunaga",
+  n_nobutaka: "nobunaga",
+  yoshitatsu: "dosan",
+  jikkyu: "nagayoshi",
+  fuyuyasu: "nagayoshi",
+  sogo: "nagayoshi",
+  // 三好の兄弟
+  ujizane: "yoshimoto",
+  nobushige: "shingen",
+  nobukado: "shingen",
+  katsuyori: "shingen",
+  katsuyori2: "nobushige",
+  ujiteru: "ujiyasu",
+  ujikuni: "ujiyasu",
+  ujimasa: "ujiyasu",
+  tsunanari2: "ujiyasu",
+  h2_ujikuni2: "ujiyasu",
+  h2_ujifusa: "ujimasa",
+  terumune: "harumune",
+  masamune_d: "terumune",
+  e_masamune3: "masamune_d",
+  yoshihisa: "takahisa",
+  yoshihiro_s: "takahisa",
+  toshihisa: "takahisa",
+  iehisa: "takahisa",
+  sz_tadatsune: "yoshihiro_s",
+  sz_toyohisa: "iehisa",
+  takamoto: "motonari",
+  motoharu: "motonari",
+  takakage_k: "motonari",
+  terumoto: "takamoto",
+  mo_motoharu2: "motoharu",
+  mo_hiroie: "motoharu",
+  motochika: "kunichika",
+  ck_chikamasa: "kunichika",
+  ck_morichika: "motochika",
+  nobuchika_c: "motochika",
+  yoshiaki_m: "yoshimori",
+  mg_yoshiaki2: "yoshiaki_m",
+  ot_yoshimune: "yoshishige",
+  nagamasa: "hisamasa",
+  yoshikage: "takakage",
+  junkei: "junsho",
+  ujizane2: "ujitane",
+  hisamichi: "hisahide",
+  kunihisa: "haruhisa",
+  ujihisa: "kunihisa",
+  ieyasu: "hirotada",
+  m_tadateru: "ieyasu",
+  m_hidetada: "ieyasu",
+  e_yoshinao: "ieyasu",
+  e_yorinobu: "ieyasu",
+  e_yorifusa: "ieyasu",
+  yoshihiro: "yoshitaka_s",
+  tomonori: "harutomo",
+  saneteru: "motozane",
+  shingai3: "saneteru",
+  // ── 家臣の家。父子が揃って登場する者を結ぶ。
+  e_nagamasa2: "kuroda",
+  // 黒田孝高 → 長政
+  kuroda: "ak_himeji2",
+  // 黒田職隆 → 孝高
+  e_tadayuki: "e_nagamasa2",
+  // 長政 → 忠之
+  muneshige: "shigetane",
+  // 高橋紹運 → 立花宗茂
+  e_muneshige2: "shigetane",
+  // 紹運 → 高橋直次
+  e_tadakatsu2: "tadakatsu",
+  // 本多忠勝 → 忠政
+  e_yasukatsu: "yasumasa",
+  // 榊原康政 → 康勝
+  e_naotaka: "naomasa",
+  // 井伊直政 → 直孝
+  e_masazumi: "m_masanobu",
+  // 本多正信 → 正純
+  e_tadatoshi: "e_tadaoki",
+  // 細川忠興 → 忠利
+  e_katsushige: "rz_saga2",
+  // 鍋島直茂 → 勝茂
+  e_hidemoto: "mo_motoharu2",
+  // 吉川元長 → （毛利秀元は別家だが縁者）
+  toshiie2: "toshiie",
+  // 前田利家 → 利長
+  n_toshimasa: "toshiie",
+  mitsuharu: "mitsuhide",
+  // 明智光秀 → 秀満（女婿）
+  e_kagekatsu2: "kagekatsu",
+  // 上杉景勝 → 定勝
+  hidetada2: "hideyoshi"
+};
+var FATED = { hirotada: 1549 };
+var LONG_LIVED = {
+  harukata_m: 87,
+  // 志道広良（毛利の宿老）
+  hironaka: 82,
+  // 相良武任
+  norikage: 79,
+  // 朝倉宗滴
+  harusumi: 82,
+  // 有馬晴純
+  e_bokuden: 82,
+  // 塚原卜伝
+  e_sekishusai: 78,
+  // 柳生宗厳
+  torii_t: 82,
+  // 鳥居忠吉
+  hojo_a: 97,
+  // 北条幻庵
+  masatane: 76,
+  // 原昌胤
+  nobutomo2: 77,
+  // 小幡虎盛
+  hisayuki: 79,
+  // 宇山久兼
+  o_ouchi2: 78,
+  // 陶隆満
+  yoshishige_s: 76
+  // 宗晴康
+};
+
+// src/core/house.js
+function emergeGenerals(s2) {
+  const out = [];
+  for (const n of NEWCOMERS) {
+    if (s2.year < n.y) continue;
+    if (s2.generals.some((x) => x.id === n.id)) continue;
+    if ((s2.emerged || []).includes(n.id)) continue;
+    const home = s2.castles.find((c) => c.id === n.at);
+    if (!home) continue;
+    const fid = home.faction;
+    const gen = {
+      id: n.id,
+      name: n.name,
+      faction: fid,
+      lead: n.lead,
+      valor: n.valor,
+      wit: n.wit,
+      gov: n.gov,
+      loyal: fid === n.faction ? 78 : 58,
+      age: s2.year - n.born,
+      at: home.id,
+      retinue: n.retinue,
+      retTrain: n.retTrain,
+      unity: clamp(n.retTrain + 8, 30, 100),
+      merit: 0,
+      fief: Math.round(fiefWanted(n) * 0.7),
+      rost: newRoster(n.retinue, `ret-${n.id}`)
+    };
+    s2.generals.push(gen);
+    s2.emerged = [...s2.emerged || [], n.id];
+    out.push(`${gen.name}\u304C${s2.factions[fid].name}\u306B\u4ED5\u3048\u305F\uFF08${home.name}\uFF09\u3002`);
+  }
+  return out;
+}
+var NAMELESS = /乙名$|按司$|城代$|留守居$|番頭$|代官$/;
+var isNameless = (g) => !!g && NAMELESS.test(g.name || "");
+function ruinedHouse(s2, fid) {
+  const all = s2.generals.filter((x) => x.faction === fid && !x.captive);
+  const lord = all.find((x) => x.lord) || null;
+  return { lord, retainers: all.filter((x) => x !== lord) };
+}
+var isKin = (a, b) => !!a && !!b && a.name.slice(0, 2) === b.name.slice(0, 2);
+function canRecruit(gen, lord) {
+  if (!gen) return { ok: false, why: "" };
+  if (lord && isKin(gen, lord)) return { ok: false, why: `${lord.name}\u3068\u8840\u3092\u5206\u3051\u305F\u4E00\u9580\u3002\u65E7\u4E3B\u3092\u6368\u3066\u3066\u4ED5\u3048\u308B\u3053\u3068\u306F\u306A\u3044` };
+  const loy = gen.loyal == null ? 60 : gen.loyal;
+  if (loy >= 95) return { ok: false, why: `\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0${Math.round(loy)}\u3002\u4E8C\u541B\u306B\u4ED5\u3048\u308B\u6C17\u306F\u306A\u3044\u3068\u3044\u3046` };
+  return { ok: true, why: "" };
+}
+function loyaltyAfterRecruit(gen) {
+  const loy = gen.loyal == null ? 60 : gen.loyal;
+  return clamp(Math.round(88 - loy * 0.62), 24, 78);
+}
+function isMainClan(s2, gen) {
+  if (!gen || gen.lord) return false;
+  const lord = s2.generals.find((x) => x.faction === gen.faction && x.lord && !x.captive);
+  if (!lord) return false;
+  return isClan(s2, gen, lord);
+}
+var hasHouse = (s2, gen) => !!gen && !gen.lord && !isMainClan(s2, gen) && (!!gen.house || stipendOf(s2, gen) >= HOUSE_RANK);
+var houseName = (gen) => gen ? gen.name.slice(0, 2) : "";
+function heirOfHouse(s2, gen) {
+  const kids = s2.generals.filter((x) => PARENT[x.id] === gen.id && !x.captive && x.faction === gen.faction);
+  if (kids.length) return [...kids].sort((a, b) => (b.age || 0) - (a.age || 0))[0];
+  const sur = houseName(gen);
+  const kin = s2.generals.filter((x) => x.id !== gen.id && !x.captive && x.faction === gen.faction && houseName(x) === sur && (x.age || 0) >= 12);
+  if (kin.length) return [...kin].sort((a, b) => (b.age || 0) - (a.age || 0))[0];
+  return null;
+}
+function bearChild(s2, gen) {
+  const sur = houseName(gen);
+  const k = Math.abs((gen.id + s2.year).split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7));
+  const t1 = KANJI_TSUJI[k % KANJI_TSUJI.length];
+  const t2 = gen.name.slice(-1);
+  const id = `${gen.id}_c${s2.year}`;
+  if (s2.generals.some((x) => x.id === id)) return null;
+  const mix = (a, b) => clamp(Math.round(a * 0.55 + b * 0.45 + (Math.random() * 22 - 11)), 30, 96);
+  const kid = {
+    id,
+    name: `${sur}${t1}${t2}`,
+    faction: gen.faction,
+    lead: mix(gen.lead, 62),
+    valor: mix(gen.valor, 62),
+    wit: mix(gen.wit, 60),
+    gov: mix(gen.gov, 60),
+    loyal: clamp((gen.loyal == null ? 70 : gen.loyal) - 4, 0, 100),
+    age: 1,
+    at: gen.at,
+    retinue: 60,
+    retTrain: 55,
+    unity: 60,
+    merit: 0,
+    fief: 200,
+    rost: newRoster(60, `ret-${id}`)
+  };
+  s2.generals.push(kid);
+  PARENT[id] = gen.id;
+  return kid;
+}
+function inheritHouse(s2, dead) {
+  if (!hasHouse(s2, dead)) return null;
+  const heir = heirOfHouse(s2, dead);
+  if (!heir) return null;
+  heir.fief = Math.max(heir.fief || 0, Math.round(fiefOf(dead) * 0.85));
+  heir.retinue += Math.round(dead.retinue * 0.6);
+  heir.house = true;
+  heir.at = dead.at;
+  if (heir.loyal != null) heir.loyal = clamp(heir.loyal + 6, 0, 100);
+  return heir;
+}
+var COMING_OF_AGE = 15;
+var needsGuardian = (gen) => !!gen && gen.lord && (gen.age || 30) < COMING_OF_AGE;
+function actingHead(s2, fid) {
+  const lord = s2.generals.find((x) => x.faction === fid && x.lord && !x.captive);
+  if (!lord) return null;
+  if (!needsGuardian(lord)) return lord;
+  const g = s2.generals.find((x) => x.id === lord.guardian && x.faction === fid && !x.captive);
+  return g || lord;
+}
+var isGuardian = (s2, gen) => {
+  if (!gen) return false;
+  const lord = s2.generals.find((x) => x.faction === gen.faction && x.lord && !x.captive);
+  return !!lord && needsGuardian(lord) && lord.guardian === gen.id;
+};
+function isClan(s2, a, b) {
+  if (!a || !b) return false;
+  if (a.id === b.id) return true;
+  const up = (g, n) => {
+    let x = g;
+    for (let i = 0; i < n && x; i++) x = s2.generals.find((y) => y.id === PARENT[x.id]);
+    return x;
+  };
+  for (let i = 0; i <= 2; i++) for (let j = 0; j <= 2; j++) {
+    const p = up(a, i), q = up(b, j);
+    if (p && q && p.id === q.id) return true;
+  }
+  return a.name.slice(0, 2) === b.name.slice(0, 2);
+}
+var childrenOf = (s2, gen) => s2.generals.filter((x) => PARENT[x.id] === gen.id && !x.captive);
+var LIFE_CAP = 80;
+var lifeSpan = (g) => g && LONG_LIVED[g.id] || LIFE_CAP;
+function heirCandidates(s2, dead) {
+  const kin = s2.generals.filter((x) => x.faction === dead.faction && x.id !== dead.id && !x.captive);
+  if (!kin.length) return [];
+  const sur = dead.name.slice(0, 2);
+  const kids = childrenOf(s2, dead).map((x) => x.id);
+  const scored = kin.map((x) => ({
+    gen: x,
+    child: kids.includes(x.id),
+    // 実の子
+    blood: kids.includes(x.id) || isClan(s2, x, dead),
+    able: x.lead + x.gov + x.wit
+  }));
+  scored.sort((a, b) => {
+    const ra = (a.child ? 4 : 0) + (a.blood ? 2 : 0) + (a.gen.age >= 15 ? 1 : 0);
+    const rb = (b.child ? 4 : 0) + (b.blood ? 2 : 0) + (b.gen.age >= 15 ? 1 : 0);
+    if (ra !== rb) return rb - ra;
+    if (a.child && b.child) return b.gen.age - a.gen.age;
+    if (a.blood && b.blood) return b.gen.age - a.gen.age;
+    return b.able - a.able;
+  });
+  return scored.slice(0, 6);
+}
+function pickHeir(s2, dead) {
+  const kin = s2.generals.filter((x) => x.faction === dead.faction && x.id !== dead.id && !x.captive);
+  if (!kin.length) return null;
+  const sur = dead.name.slice(0, 2);
+  const blood = kin.filter((x) => x.name.startsWith(sur) && x.age >= 8).sort((a, b) => (b.age >= 15 ? 1 : 0) - (a.age >= 15 ? 1 : 0) || a.age - b.age);
+  if (blood.length) return blood[0];
+  return [...kin].sort((a, b) => b.lead + b.gov + b.wit - (a.lead + a.gov + a.wit))[0];
+}
+function succeed(s2, dead, cause, heirId, retire) {
+  const heir = heirId ? s2.generals.find((x) => x.id === heirId && x.faction === dead.faction && !x.captive) || pickHeir(s2, dead) : pickHeir(s2, dead);
+  const fname = s2.factions[dead.faction] ? s2.factions[dead.faction].name : "\u5BB6";
+  if (!heir) {
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: `${dead.name}\u304C${cause}\u3002${fname}\u306F\u8DE1\u3092\u7D99\u3050\u8005\u306A\u304F\u7D76\u3048\u305F\u3002` });
+    return null;
+  }
+  heir.lord = true;
+  heir.retinue += Math.round(dead.retinue * (retire ? 0.45 : 0.6));
+  const blood = heir.name.startsWith(dead.name.slice(0, 2));
+  for (const x of s2.generals.filter((q) => q.faction === dead.faction && q.id !== heir.id && !q.captive)) {
+    let d = blood ? -2 : -9;
+    if (heir.age < 16) d -= 5;
+    if (retire) d = Math.round(d * 0.25) + 1;
+    if (x.loyal != null) x.loyal = clamp(x.loyal + d, 0, 100);
+  }
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: retire ? `${dead.name}\u306F\u5BB6\u7763\u3092${heir.name}\u306B\u8B72\u3063\u3066\u96A0\u5C45\u3057\u305F\u3002${dead.name}\u306F\u5F8C\u898B\u3068\u3057\u3066\u5BB6\u306B\u6B8B\u308B\u3002` : `${dead.name}\u304C${cause}\u3002${heir.name}\u304C${fname}\u306E\u5BB6\u7763\u3092\u7D99\u3044\u3060${heir.age < 16 ? "\uFF08\u5E7C\u5E74\u306E\u305F\u3081\u5BB6\u4E2D\u306B\u4E0D\u7A4F\u304C\u3042\u308B\uFF09" : ""}\u3002`
+  });
+  return heir;
+}
+var SURNAMES = ["\u6797", "\u4F50\u8107", "\u5CA9\u5BA4", "\u5C71\u53E3", "\u4E2D\u91CE", "\u5859", "\u6CB3\u5C3B", "\u6BDB\u5229", "\u8702\u5C4B", "\u751F\u99D2", "\u6881\u7530", "\u8D64\u5DDD"];
+var COMMON = ["\u6E90\u4E09", "\u53C8\u516B", "\u5C0F\u516D", "\u85E4\u4E03", "\u5F66\u4E5D\u90CE", "\u5B6B\u5E02", "\u4E94\u90CE\u5DE6", "\u534A\u52A9", "\u65B0\u4E03"];
+var CHARS = ["\u52DD", "\u8C9E", "\u79C0", "\u5FE0", "\u653F", "\u76DB", "\u901A", "\u76F4", "\u7DB1", "\u5143", "\u6CF0", "\u623F", "\u91CD", "\u5149", "\u5B9A"];
+var FEATS = ["\u6A4B\u969B\u3067\u5D29\u308C\u304B\u3051\u305F\u968A\u5217\u3092\u7ACB\u3066\u76F4\u3057\u3001\u6575\u306E\u6E21\u6CB3\u3092\u963B\u3093\u3060\u3002", "\u68EE\u306E\u4F0F\u5175\u3092\u3044\u3061\u65E9\u304F\u898B\u3064\u3051\u3001\u5473\u65B9\u306E\u5074\u9762\u3092\u6551\u3063\u305F\u3002", "\u9000\u304D\u53E3\u3092\u958B\u304D\u3001\u6BBF\u3092\u52D9\u3081\u3066\u4E3B\u5C06\u3092\u9003\u304C\u3057\u305F\u3002"];
+function makePromotion(lord, allGens) {
+  const sur = SURNAMES[Math.floor(Math.random() * SURNAMES.length)];
+  const common = COMMON[Math.floor(Math.random() * COMMON.length)];
+  const given = lord.name.slice(2);
+  const henki = given[Math.floor(Math.random() * given.length)] || "\u9577";
+  const used = new Set(allGens.map((x) => x.name));
+  const cands = [];
+  let guard = 0;
+  while (cands.length < 4 && guard++ < 60) {
+    const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
+    for (const n of [`${sur}${henki}${ch}`, `${sur}${ch}${henki}`]) if (!used.has(n) && !cands.includes(n)) cands.push(n);
+  }
+  if (!cands.length) cands.push(`${sur}${henki}\u52DD`);
+  return {
+    oldName: `${sur}${common}`,
+    lordName: lord.name,
+    henki,
+    candidates: cands.slice(0, 4),
+    feat: FEATS[Math.floor(Math.random() * FEATS.length)]
+  };
+}
+
+// src/data/castles.js
+var CASTLES = [
+  { id: "okazaki", name: "\u5CA1\u5D0E\u57CE", kuni: "\u4E09\u6CB3", faction: "matsudaira", lon: 137.159, lat: 34.955, koku: 51166, kokuMax: 57561, kokuCap: 63957, pop: 41956, food: 10745, def: 48, comm: 34, min: 76, hp: 5880, local: 1197, localTrain: 60 },
+  { id: "yoshida", name: "\u5409\u7530\u57CE", kuni: "\u4E09\u6CB3", faction: "imagawa", lon: 137.391, lat: 34.769, koku: 41863, kokuMax: 47096, kokuCap: 52329, pop: 34328, food: 8791, def: 52, comm: 32, min: 66, hp: 6120, local: 980, localTrain: 60 },
+  { id: "nishio", name: "\u897F\u5C3E\u57CE", kuni: "\u4E09\u6CB3", faction: "imagawa", lon: 137.062, lat: 34.859, koku: 30234, kokuMax: 34014, kokuCap: 37793, pop: 24792, food: 6349, def: 42, comm: 28, min: 66, hp: 5520, local: 707, localTrain: 56 },
+  { id: "tahara", name: "\u7530\u539F\u57CE", kuni: "\u4E09\u6CB3", faction: "imagawa", lon: 137.238, lat: 34.669, koku: 27909, kokuMax: 31397, kokuCap: 34886, pop: 22885, food: 5861, def: 44, comm: 26, min: 64, hp: 5640, local: 653, localTrain: 56 },
+  { id: "kariya", name: "\u5208\u8C37\u57CE", kuni: "\u4E09\u6CB3", faction: "mizuno", lon: 137, lat: 34.988, koku: 25583, kokuMax: 28781, kokuCap: 31979, pop: 20978, food: 5372, def: 42, comm: 30, min: 70, hp: 5520, local: 599, localTrain: 56 },
+  { id: "nagashino", name: "\u9577\u7BE0\u57CE", kuni: "\u4E09\u6CB3", faction: "imagawa", lon: 137.559, lat: 34.926, koku: 20931, kokuMax: 23548, kokuCap: 26164, pop: 17163, food: 4396, def: 46, comm: 18, min: 64, hp: 5760, local: 490, localTrain: 56 },
+  { id: "okochi", name: "\u5927\u6CB3\u5185\u57CE", kuni: "\u4F0A\u52E2", faction: "kitabatake", lon: 136.545, lat: 34.516, koku: 99810, kokuMax: 112287, kokuCap: 124763, pop: 81844, food: 20960, def: 56, comm: 34, min: 74, hp: 6360, local: 2336, localTrain: 60 },
+  { id: "matsugashima", name: "\u677E\u30F6\u5CF6\u57CE", kuni: "\u4F0A\u52E2", faction: "kitabatake", lon: 136.57, lat: 34.596, koku: 72590, kokuMax: 81663, kokuCap: 90737, pop: 59524, food: 15244, def: 48, comm: 36, min: 72, hp: 5880, local: 1699, localTrain: 58 },
+  { id: "kanbe", name: "\u795E\u6238\u57CE", kuni: "\u4F0A\u52E2", faction: "kanbe", lon: 136.56, lat: 34.868, koku: 68053, kokuMax: 76559, kokuCap: 85066, pop: 55803, food: 14291, def: 46, comm: 34, min: 70, hp: 5760, local: 1592, localTrain: 56 },
+  { id: "kuwana", name: "\u6851\u540D\u57CE", kuni: "\u4F0A\u52E2", faction: "kanbe", lon: 136.686, lat: 35.064, koku: 63516, kokuMax: 71456, kokuCap: 79395, pop: 52083, food: 13338, def: 44, comm: 44, min: 68, hp: 5640, local: 1486, localTrain: 54 },
+  { id: "nagashima", name: "\u9577\u5CF6\u57CE", kuni: "\u4F0A\u52E2", faction: "ikko", lon: 136.69, lat: 35.1, koku: 58979, kokuMax: 66352, kokuCap: 73724, pop: 48363, food: 12386, def: 58, comm: 30, min: 88, hp: 6480, local: 1380, localTrain: 58 },
+  { id: "nirayama", name: "\u97EE\u5C71\u57CE", kuni: "\u4F0A\u8C46", faction: "hojo", lon: 138.96, lat: 35.04, koku: 25698, kokuMax: 28911, kokuCap: 32123, pop: 21072, food: 5397, def: 58, comm: 30, min: 76, hp: 6480, local: 601, localTrain: 64 },
+  { id: "shimoda", name: "\u4E0B\u7530\u57CE", kuni: "\u4F0A\u8C46", faction: "hojo", lon: 138.945, lat: 34.673, koku: 12290, kokuMax: 13827, kokuCap: 15363, pop: 10078, food: 2581, def: 44, comm: 22, min: 72, hp: 5640, local: 288, localTrain: 58 },
+  { id: "fukashi", name: "\u6DF1\u5FD7\u57CE", kuni: "\u4FE1\u6FC3", faction: "takeda", lon: 137.969, lat: 36.238, koku: 58803, kokuMax: 66154, kokuCap: 73504, pop: 48218, food: 12349, def: 56, comm: 30, min: 64, hp: 6360, local: 1376, localTrain: 62 },
+  { id: "katsurao", name: "\u845B\u5C3E\u57CE", kuni: "\u4FE1\u6FC3", faction: "murakami", lon: 138.256, lat: 36.5, koku: 45736, kokuMax: 51453, kokuCap: 57170, pop: 37504, food: 9605, def: 58, comm: 20, min: 76, hp: 6480, local: 1070, localTrain: 62 },
+  { id: "takato", name: "\u9AD8\u9060\u57CE", kuni: "\u4FE1\u6FC3", faction: "takeda", lon: 138.062, lat: 35.833, koku: 42470, kokuMax: 47778, kokuCap: 53087, pop: 34825, food: 8919, def: 54, comm: 20, min: 66, hp: 6240, local: 994, localTrain: 62 },
+  { id: "iida", name: "\u98EF\u7530\u57CE", kuni: "\u4FE1\u6FC3", faction: "takeda", lon: 137.822, lat: 35.514, koku: 39202, kokuMax: 44103, kokuCap: 49003, pop: 32146, food: 8232, def: 48, comm: 22, min: 66, hp: 5880, local: 917, localTrain: 60 },
+  { id: "toishi", name: "\u7825\u77F3\u57CE", kuni: "\u4FE1\u6FC3", faction: "murakami", lon: 138.264, lat: 36.412, koku: 39202, kokuMax: 44103, kokuCap: 49003, pop: 32146, food: 8232, def: 62, comm: 16, min: 74, hp: 6720, local: 917, localTrain: 62 },
+  { id: "komoro", name: "\u5C0F\u8AF8\u57CE", kuni: "\u4FE1\u6FC3", faction: "takeda", lon: 138.421, lat: 36.322, koku: 35935, kokuMax: 40427, kokuCap: 44919, pop: 29467, food: 7546, def: 52, comm: 22, min: 66, hp: 6120, local: 841, localTrain: 60 },
+  { id: "kaizu", name: "\u6D77\u6D25\u57CE", kuni: "\u4FE1\u6FC3", faction: "murakami", lon: 138.208, lat: 36.573, koku: 32669, kokuMax: 36752, kokuCap: 40836, pop: 26789, food: 6860, def: 50, comm: 18, min: 72, hp: 6e3, local: 764, localTrain: 58 },
+  { id: "nagoya", name: "\u90A3\u53E4\u91CE\u57CE", kuni: "\u5C3E\u5F35", faction: "oda", lon: 136.9, lat: 35.185, koku: 91478, kokuMax: 102912, kokuCap: 114347, pop: 75012, food: 19210, def: 46, comm: 44, min: 74, hp: 5760, local: 2141, localTrain: 58 },
+  { id: "kiyosu", name: "\u6E05\u6D32\u57CE", kuni: "\u5C3E\u5F35", faction: "yamato", lon: 136.845, lat: 35.222, koku: 86904, kokuMax: 97767, kokuCap: 108630, pop: 71261, food: 18250, def: 54, comm: 50, min: 68, hp: 6240, local: 2034, localTrain: 56 },
+  { id: "iwakura", name: "\u5CA9\u5009\u57CE", kuni: "\u5C3E\u5F35", faction: "ise", lon: 136.87, lat: 35.283, koku: 64034, kokuMax: 72039, kokuCap: 80043, pop: 52508, food: 13447, def: 48, comm: 32, min: 70, hp: 5880, local: 1498, localTrain: 54 },
+  { id: "shobata", name: "\u52DD\u5E61\u57CE", kuni: "\u5C3E\u5F35", faction: "oda", lon: 136.735, lat: 35.219, koku: 54886, kokuMax: 61747, kokuCap: 68608, pop: 45007, food: 11526, def: 38, comm: 38, min: 78, hp: 5280, local: 1284, localTrain: 56 },
+  { id: "inuyama", name: "\u72AC\u5C71\u57CE", kuni: "\u5C3E\u5F35", faction: "ise", lon: 136.939, lat: 35.388, koku: 50313, kokuMax: 56602, kokuCap: 62891, pop: 41257, food: 10566, def: 50, comm: 30, min: 72, hp: 6e3, local: 1177, localTrain: 56 },
+  { id: "narumi", name: "\u9CF4\u6D77\u57CE", kuni: "\u5C3E\u5F35", faction: "oda", lon: 136.949, lat: 35.098, koku: 41165, kokuMax: 46310, kokuCap: 51456, pop: 33755, food: 8645, def: 42, comm: 34, min: 66, hp: 5520, local: 963, localTrain: 54 },
+  { id: "toba", name: "\u9CE5\u7FBD\u57CE", kuni: "\u5FD7\u6469", faction: "kuki", lon: 136.843, lat: 34.481, koku: 8570, kokuMax: 9641, kokuCap: 10712, pop: 7027, food: 1800, def: 48, comm: 30, min: 74, hp: 5880, local: 201, localTrain: 60 },
+  { id: "tsutsujigasaki", name: "\u8E91\u8E85\u30F6\u5D0E\u9928", kuni: "\u7532\u6590", faction: "takeda", lon: 138.577, lat: 35.678, koku: 98330, kokuMax: 110622, kokuCap: 122913, pop: 80631, food: 20649, def: 56, comm: 48, min: 80, hp: 6360, local: 2301, localTrain: 68 },
+  { id: "iwadono", name: "\u5CA9\u6BBF\u57CE", kuni: "\u7532\u6590", faction: "takeda", lon: 138.939, lat: 35.612, koku: 36418, kokuMax: 40971, kokuCap: 45523, pop: 29863, food: 7648, def: 62, comm: 20, min: 74, hp: 6720, local: 852, localTrain: 62 },
+  { id: "katsuyama_k", name: "\u52DD\u5C71\u57CE", kuni: "\u7532\u6590", faction: "takeda", lon: 138.64, lat: 35.596, koku: 25493, kokuMax: 28679, kokuCap: 31866, pop: 20904, food: 5354, def: 50, comm: 18, min: 72, hp: 6e3, local: 597, localTrain: 60 },
+  { id: "inabayama", name: "\u7A32\u8449\u5C71\u57CE", kuni: "\u7F8E\u6FC3", faction: "saito", lon: 136.782, lat: 35.434, koku: 112320, kokuMax: 126360, kokuCap: 140400, pop: 92102, food: 23587, def: 68, comm: 46, min: 72, hp: 7080, local: 2628, localTrain: 66 },
+  { id: "ogaki", name: "\u5927\u57A3\u57CE", kuni: "\u7F8E\u6FC3", faction: "saito", lon: 136.617, lat: 35.36, koku: 86400, kokuMax: 97200, kokuCap: 108e3, pop: 70848, food: 18144, def: 52, comm: 42, min: 70, hp: 6120, local: 2022, localTrain: 62 },
+  { id: "sunomata", name: "\u58A8\u4FE3\u57CE", kuni: "\u7F8E\u6FC3", faction: "saito", lon: 136.678, lat: 35.372, koku: 56160, kokuMax: 63180, kokuCap: 70200, pop: 46051, food: 11794, def: 40, comm: 30, min: 68, hp: 5400, local: 1314, localTrain: 58 },
+  { id: "gujo", name: "\u90E1\u4E0A\u516B\u5E61\u57CE", kuni: "\u7F8E\u6FC3", faction: "saito", lon: 136.96, lat: 35.751, koku: 38880, kokuMax: 43740, kokuCap: 48600, pop: 31882, food: 8165, def: 46, comm: 22, min: 66, hp: 5760, local: 910, localTrain: 56 },
+  { id: "iwamura", name: "\u5CA9\u6751\u57CE", kuni: "\u7F8E\u6FC3", faction: "saito", lon: 137.444, lat: 35.362, koku: 34560, kokuMax: 38880, kokuCap: 43200, pop: 28339, food: 7258, def: 54, comm: 20, min: 64, hp: 6240, local: 809, localTrain: 58 },
+  { id: "naegi", name: "\u82D7\u6728\u57CE", kuni: "\u7F8E\u6FC3", faction: "saito", lon: 137.48, lat: 35.52, koku: 25920, kokuMax: 29160, kokuCap: 32400, pop: 21254, food: 5443, def: 44, comm: 18, min: 62, hp: 5640, local: 607, localTrain: 54 },
+  { id: "nochiseyama", name: "\u5F8C\u702C\u5C71\u57CE", kuni: "\u82E5\u72ED", faction: "wakasa", lon: 135.75, lat: 35.494, koku: 35401, kokuMax: 39826, kokuCap: 44251, pop: 29029, food: 7434, def: 50, comm: 34, min: 70, hp: 6e3, local: 828, localTrain: 56 },
+  { id: "kuniyoshi", name: "\u56FD\u5409\u57CE", kuni: "\u82E5\u72ED", faction: "wakasa", lon: 135.966, lat: 35.607, koku: 16339, kokuMax: 18382, kokuCap: 20424, pop: 13398, food: 3431, def: 52, comm: 18, min: 72, hp: 6120, local: 382, localTrain: 58 },
+  { id: "ichijodani", name: "\u4E00\u4E57\u8C37\u57CE", kuni: "\u8D8A\u524D", faction: "asakura", lon: 136.301, lat: 36.007, koku: 167802, kokuMax: 188778, kokuCap: 209753, pop: 137598, food: 35238, def: 60, comm: 56, min: 78, hp: 6600, local: 3927, localTrain: 64 },
+  { id: "kitanosho", name: "\u5317\u30CE\u5E84", kuni: "\u8D8A\u524D", faction: "asakura", lon: 136.219, lat: 36.064, koku: 103878, kokuMax: 116862, kokuCap: 129847, pop: 85180, food: 21814, def: 48, comm: 44, min: 74, hp: 5880, local: 2431, localTrain: 60 },
+  { id: "kanegasaki", name: "\u91D1\u30F6\u5D0E\u57CE", kuni: "\u8D8A\u524D", faction: "asakura", lon: 136.078, lat: 35.658, koku: 63925, kokuMax: 71915, kokuCap: 79906, pop: 52418, food: 13424, def: 56, comm: 24, min: 72, hp: 6360, local: 1496, localTrain: 60 },
+  { id: "kannonji", name: "\u89B3\u97F3\u5BFA\u57CE", kuni: "\u8FD1\u6C5F", faction: "rokkaku", lon: 136.15, lat: 35.148, koku: 161279, kokuMax: 181439, kokuCap: 201599, pop: 132249, food: 33869, def: 62, comm: 52, min: 72, hp: 6720, local: 3774, localTrain: 60 },
+  { id: "odani", name: "\u5C0F\u8C37\u57CE", kuni: "\u8FD1\u6C5F", faction: "azai", lon: 136.276, lat: 35.484, koku: 111654, kokuMax: 125611, kokuCap: 139568, pop: 91556, food: 23447, def: 66, comm: 30, min: 78, hp: 6960, local: 2613, localTrain: 62 },
+  { id: "sawayama", name: "\u4F50\u548C\u5C71\u57CE", kuni: "\u8FD1\u6C5F", faction: "rokkaku", lon: 136.264, lat: 35.276, koku: 93046, kokuMax: 104676, kokuCap: 116307, pop: 76298, food: 19540, def: 54, comm: 38, min: 70, hp: 6240, local: 2177, localTrain: 58 },
+  { id: "sakamoto", name: "\u5742\u672C\u57CE", kuni: "\u8FD1\u6C5F", faction: "rokkaku", lon: 135.878, lat: 35.07, koku: 86842, kokuMax: 97698, kokuCap: 108553, pop: 71210, food: 18237, def: 46, comm: 46, min: 68, hp: 5760, local: 2032, localTrain: 56 },
+  { id: "yamamotoyama", name: "\u5C71\u672C\u5C71\u57CE", kuni: "\u8FD1\u6C5F", faction: "azai", lon: 136.213, lat: 35.437, koku: 62030, kokuMax: 69784, kokuCap: 77538, pop: 50865, food: 13026, def: 48, comm: 22, min: 74, hp: 5880, local: 1452, localTrain: 58 },
+  { id: "kakegawa", name: "\u639B\u5DDD\u57CE", kuni: "\u9060\u6C5F", faction: "imagawa", lon: 138.014, lat: 34.775, koku: 48990, kokuMax: 55114, kokuCap: 61238, pop: 40172, food: 10288, def: 54, comm: 34, min: 72, hp: 6240, local: 1146, localTrain: 62 },
+  { id: "hikuma", name: "\u5F15\u9593\u57CE", kuni: "\u9060\u6C5F", faction: "imagawa", lon: 137.725, lat: 34.711, koku: 40826, kokuMax: 45929, kokuCap: 51032, pop: 33477, food: 8573, def: 46, comm: 32, min: 70, hp: 5760, local: 955, localTrain: 58 },
+  { id: "takatenjin", name: "\u9AD8\u5929\u795E\u57CE", kuni: "\u9060\u6C5F", faction: "imagawa", lon: 138.062, lat: 34.7, koku: 32661, kokuMax: 36743, kokuCap: 40826, pop: 26782, food: 6859, def: 60, comm: 20, min: 68, hp: 6600, local: 764, localTrain: 60 },
+  { id: "futamata", name: "\u4E8C\u4FE3\u57CE", kuni: "\u9060\u6C5F", faction: "imagawa", lon: 137.812, lat: 34.876, koku: 26537, kokuMax: 29854, kokuCap: 33171, pop: 21760, food: 5573, def: 48, comm: 20, min: 68, hp: 5880, local: 621, localTrain: 58 },
+  { id: "inui", name: "\u72AC\u5C45\u57CE", kuni: "\u9060\u6C5F", faction: "imagawa", lon: 137.883, lat: 34.983, koku: 18371, kokuMax: 20668, kokuCap: 22964, pop: 15064, food: 3858, def: 44, comm: 14, min: 64, hp: 5640, local: 430, localTrain: 54 },
+  { id: "matsukura_h", name: "\u9AD8\u5C71\u677E\u5009\u57CE", kuni: "\u98DB\u9A28", faction: "anegakoji", lon: 137.243, lat: 36.129, koku: 18848, kokuMax: 21204, kokuCap: 23560, pop: 15455, food: 3958, def: 48, comm: 16, min: 70, hp: 5880, local: 441, localTrain: 54 },
+  { id: "sunpu", name: "\u99FF\u5E9C\u57CE", kuni: "\u99FF\u6CB3", faction: "imagawa", lon: 138.383, lat: 34.978, koku: 62400, kokuMax: 70200, kokuCap: 78e3, pop: 51168, food: 13104, def: 58, comm: 62, min: 80, hp: 6480, local: 1460, localTrain: 64 },
+  { id: "kounkoji", name: "\u8208\u56FD\u5BFA\u57CE", kuni: "\u99FF\u6CB3", faction: "imagawa", lon: 138.833, lat: 35.135, koku: 24e3, kokuMax: 27e3, kokuCap: 3e4, pop: 19680, food: 5040, def: 46, comm: 24, min: 70, hp: 5760, local: 562, localTrain: 58 },
+  { id: "nijo", name: "\u4E8C\u6761\u5FA1\u6240", kuni: "\u5C71\u57CE", faction: "ashikaga", lon: 135.752, lat: 35.014, koku: 61271, kokuMax: 68930, kokuCap: 76589, pop: 50242, food: 12867, def: 44, comm: 62, min: 62, hp: 5640, local: 1434, localTrain: 50 },
+  { id: "shoryuji", name: "\u52DD\u7ADC\u5BFA\u57CE", kuni: "\u5C71\u57CE", faction: "miyoshi", lon: 135.7, lat: 34.919, koku: 39646, kokuMax: 44602, kokuCap: 49558, pop: 32510, food: 8326, def: 50, comm: 44, min: 66, hp: 6e3, local: 928, localTrain: 60 },
+  { id: "akutagawa", name: "\u82A5\u5DDD\u5C71\u57CE", kuni: "\u6442\u6D25", faction: "miyoshi", lon: 135.598, lat: 34.855, koku: 74062, kokuMax: 83320, kokuCap: 92578, pop: 60731, food: 15553, def: 58, comm: 42, min: 68, hp: 6480, local: 1733, localTrain: 62 },
+  { id: "iimoriyama", name: "\u98EF\u76DB\u5C71\u57CE", kuni: "\u6CB3\u5185", faction: "miyoshi", lon: 135.646, lat: 34.727, koku: 65853, kokuMax: 74084, kokuCap: 82316, pop: 53999, food: 13829, def: 56, comm: 40, min: 68, hp: 6360, local: 1541, localTrain: 62 },
+  { id: "takaya", name: "\u9AD8\u5C4B\u57CE", kuni: "\u6CB3\u5185", faction: "miyoshi", lon: 135.605, lat: 34.552, koku: 46484, kokuMax: 52294, kokuCap: 58105, pop: 38117, food: 9762, def: 50, comm: 36, min: 66, hp: 6e3, local: 1088, localTrain: 58 },
+  { id: "itami", name: "\u6709\u5CA1\u57CE", kuni: "\u6442\u6D25", faction: "miyoshi", lon: 135.415, lat: 34.784, koku: 56971, kokuMax: 64093, kokuCap: 71214, pop: 46716, food: 11964, def: 52, comm: 44, min: 66, hp: 6120, local: 1333, localTrain: 58 },
+  { id: "hanakuma", name: "\u82B1\u9688\u57CE", kuni: "\u6442\u6D25", faction: "miyoshi", lon: 135.18, lat: 34.69, koku: 39880, kokuMax: 44865, kokuCap: 49850, pop: 32702, food: 8375, def: 44, comm: 46, min: 64, hp: 5640, local: 933, localTrain: 56 },
+  { id: "kishiwada", name: "\u5CB8\u548C\u7530\u57CE", kuni: "\u548C\u6CC9", faction: "miyoshi", lon: 135.371, lat: 34.46, koku: 33963, kokuMax: 38209, kokuCap: 42454, pop: 27850, food: 7132, def: 48, comm: 38, min: 66, hp: 5880, local: 795, localTrain: 58 },
+  { id: "ishiyama", name: "\u77F3\u5C71\u672C\u9858\u5BFA", kuni: "\u6442\u6D25", faction: "honganji", lon: 135.526, lat: 34.687, koku: 79759, kokuMax: 89729, kokuCap: 99699, pop: 65402, food: 16749, def: 72, comm: 58, min: 92, hp: 7320, local: 1866, localTrain: 62 },
+  { id: "koriyama", name: "\u90E1\u5C71\u57CE", kuni: "\u5927\u548C", faction: "tsutsui", lon: 135.784, lat: 34.652, koku: 86198, kokuMax: 96972, kokuCap: 107747, pop: 70682, food: 18102, def: 52, comm: 40, min: 70, hp: 6120, local: 2017, localTrain: 58 },
+  { id: "shigisan", name: "\u4FE1\u8CB4\u5C71\u57CE", kuni: "\u5927\u548C", faction: "miyoshi", lon: 135.669, lat: 34.611, koku: 64648, kokuMax: 72729, kokuCap: 80810, pop: 53011, food: 13576, def: 60, comm: 26, min: 64, hp: 6600, local: 1513, localTrain: 60 },
+  { id: "tamonyama", name: "\u591A\u805E\u5C71\u57CE", kuni: "\u5927\u548C", faction: "tsutsui", lon: 135.836, lat: 34.696, koku: 57465, kokuMax: 64648, kokuCap: 71831, pop: 47121, food: 12068, def: 54, comm: 34, min: 68, hp: 6240, local: 1345, localTrain: 58 },
+  { id: "takatori", name: "\u9AD8\u53D6\u57CE", kuni: "\u5927\u548C", faction: "tsutsui", lon: 135.822, lat: 34.427, koku: 50282, kokuMax: 56567, kokuCap: 62852, pop: 41231, food: 10559, def: 58, comm: 22, min: 68, hp: 6480, local: 1177, localTrain: 58 },
+  { id: "ueno_iga", name: "\u4F0A\u8CC0\u4E0A\u91CE", kuni: "\u4F0A\u8CC0", faction: "iga", lon: 136.132, lat: 34.768, koku: 41600, kokuMax: 46800, kokuCap: 52e3, pop: 34112, food: 8736, def: 46, comm: 30, min: 76, hp: 5760, local: 973, localTrain: 62 },
+  { id: "saika", name: "\u96D1\u8CC0\u57CE", kuni: "\u7D00\u4F0A", faction: "saika", lon: 135.208, lat: 34.235, koku: 50658, kokuMax: 56991, kokuCap: 63323, pop: 41540, food: 10638, def: 50, comm: 44, min: 84, hp: 6e3, local: 1185, localTrain: 66 },
+  { id: "shingu", name: "\u65B0\u5BAE\u57CE", kuni: "\u7D00\u4F0A", faction: "saika", lon: 135.985, lat: 33.715, koku: 31174, kokuMax: 35071, kokuCap: 38968, pop: 25563, food: 6547, def: 44, comm: 26, min: 74, hp: 5640, local: 729, localTrain: 58 },
+  { id: "tetori", name: "\u624B\u53D6\u57CE", kuni: "\u7D00\u4F0A", faction: "saika", lon: 135.23, lat: 33.91, koku: 23381, kokuMax: 26303, kokuCap: 29226, pop: 19172, food: 4910, def: 42, comm: 20, min: 72, hp: 5520, local: 547, localTrain: 56 },
+  { id: "yagami", name: "\u516B\u4E0A\u57CE", kuni: "\u4E39\u6CE2", faction: "hatano", lon: 135.223, lat: 35.062, koku: 63333, kokuMax: 71249, kokuCap: 79166, pop: 51933, food: 13300, def: 58, comm: 30, min: 72, hp: 6480, local: 1482, localTrain: 60 },
+  { id: "kameyama_t", name: "\u4E39\u6CE2\u4E80\u5C71\u57CE", kuni: "\u4E39\u6CE2", faction: "hatano", lon: 135.577, lat: 35.013, koku: 46444, kokuMax: 52250, kokuCap: 58055, pop: 38084, food: 9753, def: 50, comm: 34, min: 70, hp: 6e3, local: 1087, localTrain: 58 },
+  { id: "yokoyama", name: "\u6A2A\u5C71\u57CE", kuni: "\u4E39\u6CE2", faction: "hatano", lon: 135.116, lat: 35.296, koku: 33778, kokuMax: 38e3, kokuCap: 42222, pop: 27698, food: 7093, def: 46, comm: 24, min: 68, hp: 5760, local: 790, localTrain: 56 },
+  { id: "miyazu", name: "\u5BAE\u6D25\u57CE", kuni: "\u4E39\u5F8C", faction: "isshiki", lon: 135.196, lat: 35.535, koku: 38996, kokuMax: 43870, kokuCap: 48745, pop: 31977, food: 8189, def: 48, comm: 38, min: 70, hp: 5880, local: 913, localTrain: 56 },
+  { id: "konosumi", name: "\u6B64\u9685\u5C71\u57CE", kuni: "\u4F46\u99AC", faction: "yamana", lon: 134.813, lat: 35.478, koku: 31072, kokuMax: 34956, kokuCap: 38840, pop: 25479, food: 6525, def: 52, comm: 26, min: 70, hp: 6120, local: 727, localTrain: 56 },
+  { id: "takeda", name: "\u7AF9\u7530\u57CE", kuni: "\u4F46\u99AC", faction: "yamana", lon: 134.829, lat: 35.301, koku: 23761, kokuMax: 26731, kokuCap: 29701, pop: 19484, food: 4990, def: 62, comm: 22, min: 70, hp: 6720, local: 556, localTrain: 58 },
+  { id: "ojio", name: "\u7F6E\u5869\u57CE", kuni: "\u64AD\u78E8", faction: "akamatsu", lon: 134.657, lat: 34.929, koku: 68838, kokuMax: 77443, kokuCap: 86048, pop: 56447, food: 14456, def: 54, comm: 34, min: 68, hp: 6240, local: 1611, localTrain: 56 },
+  { id: "himeji", name: "\u59EB\u8DEF\u57CE", kuni: "\u64AD\u78E8", faction: "akamatsu", lon: 134.694, lat: 34.839, koku: 63102, kokuMax: 70989, kokuCap: 78877, pop: 51744, food: 13251, def: 50, comm: 46, min: 70, hp: 6e3, local: 1477, localTrain: 58 },
+  { id: "goshaku", name: "\u5FA1\u7740\u57CE", kuni: "\u64AD\u78E8", faction: "akamatsu", lon: 134.727, lat: 34.821, koku: 45892, kokuMax: 51628, kokuCap: 57365, pop: 37631, food: 9637, def: 46, comm: 34, min: 68, hp: 5760, local: 1074, localTrain: 56 },
+  { id: "miki", name: "\u4E09\u6728\u57CE", kuni: "\u64AD\u78E8", faction: "bessho", lon: 134.988, lat: 34.798, koku: 63102, kokuMax: 70989, kokuCap: 78877, pop: 51744, food: 13251, def: 58, comm: 36, min: 72, hp: 6480, local: 1477, localTrain: 60 },
+  { id: "kanazawa", name: "\u91D1\u6CA2\u5FA1\u5802", kuni: "\u52A0\u8CC0", faction: "kaga_ikko", lon: 136.659, lat: 36.566, koku: 113782, kokuMax: 128005, kokuCap: 142228, pop: 93301, food: 23894, def: 62, comm: 42, min: 90, hp: 6720, local: 2662, localTrain: 60 },
+  { id: "komatsu", name: "\u5C0F\u677E\u57CE", kuni: "\u52A0\u8CC0", faction: "kaga_ikko", lon: 136.451, lat: 36.409, koku: 68270, kokuMax: 76803, kokuCap: 85337, pop: 55981, food: 14337, def: 48, comm: 30, min: 84, hp: 5880, local: 1598, localTrain: 56 },
+  { id: "torigoe", name: "\u9CE5\u8D8A\u57CE", kuni: "\u52A0\u8CC0", faction: "kaga_ikko", lon: 136.607, lat: 36.323, koku: 45513, kokuMax: 51202, kokuCap: 56891, pop: 37321, food: 9558, def: 54, comm: 18, min: 86, hp: 6240, local: 1065, localTrain: 58 },
+  { id: "nanao", name: "\u4E03\u5C3E\u57CE", kuni: "\u80FD\u767B", faction: "hatakeyama", lon: 136.951, lat: 37.019, koku: 80640, kokuMax: 90720, kokuCap: 100800, pop: 66125, food: 16934, def: 64, comm: 38, min: 70, hp: 6840, local: 1887, localTrain: 58 },
+  { id: "suemori_n", name: "\u672B\u68EE\u57CE", kuni: "\u80FD\u767B", faction: "hatakeyama", lon: 136.797, lat: 36.842, koku: 36960, kokuMax: 41580, kokuCap: 46200, pop: 30307, food: 7762, def: 48, comm: 22, min: 68, hp: 5880, local: 865, localTrain: 56 },
+  { id: "toyama", name: "\u5BCC\u5C71\u57CE", kuni: "\u8D8A\u4E2D", faction: "jinbo", lon: 137.212, lat: 36.694, koku: 66933, kokuMax: 75299, kokuCap: 83666, pop: 54885, food: 14056, def: 50, comm: 36, min: 68, hp: 6e3, local: 1566, localTrain: 58 },
+  { id: "masuyama", name: "\u5897\u5C71\u57CE", kuni: "\u8D8A\u4E2D", faction: "jinbo", lon: 136.995, lat: 36.643, koku: 54763, kokuMax: 61609, kokuCap: 68454, pop: 44906, food: 11500, def: 56, comm: 22, min: 68, hp: 6360, local: 1281, localTrain: 58 },
+  { id: "matsukura", name: "\u677E\u5009\u57CE", kuni: "\u8D8A\u4E2D", faction: "shiina", lon: 137.435, lat: 36.815, koku: 54763, kokuMax: 61609, kokuCap: 68454, pop: 44906, food: 11500, def: 60, comm: 20, min: 70, hp: 6600, local: 1281, localTrain: 60 },
+  { id: "uozu", name: "\u9B5A\u6D25\u57CE", kuni: "\u8D8A\u4E2D", faction: "shiina", lon: 137.404, lat: 36.827, koku: 42594, kokuMax: 47918, kokuCap: 53242, pop: 34927, food: 8945, def: 48, comm: 26, min: 70, hp: 5880, local: 997, localTrain: 58 },
+  { id: "miyazaki_e", name: "\u5BAE\u5D0E\u57CE", kuni: "\u8D8A\u4E2D", faction: "shiina", lon: 137.545, lat: 36.955, koku: 30424, kokuMax: 34227, kokuCap: 38030, pop: 24948, food: 6389, def: 46, comm: 16, min: 68, hp: 5760, local: 712, localTrain: 56 },
+  { id: "kasugayama", name: "\u6625\u65E5\u5C71\u57CE", kuni: "\u8D8A\u5F8C", faction: "nagao", lon: 138.22, lat: 37.146, koku: 87533, kokuMax: 98474, kokuCap: 109416, pop: 71777, food: 18382, def: 70, comm: 46, min: 82, hp: 7200, local: 2048, localTrain: 70 },
+  { id: "tochio", name: "\u6803\u5C3E\u57CE", kuni: "\u8D8A\u5F8C", faction: "nagao", lon: 138.96, lat: 37.47, koku: 40640, kokuMax: 45720, kokuCap: 50800, pop: 33325, food: 8534, def: 56, comm: 22, min: 78, hp: 6360, local: 951, localTrain: 66 },
+  { id: "sanjo", name: "\u4E09\u6761\u57CE", kuni: "\u8D8A\u5F8C", faction: "nagao", lon: 138.96, lat: 37.635, koku: 37514, kokuMax: 42203, kokuCap: 46892, pop: 30761, food: 7878, def: 48, comm: 28, min: 74, hp: 5880, local: 878, localTrain: 62 },
+  { id: "yoita", name: "\u4E0E\u677F\u57CE", kuni: "\u8D8A\u5F8C", faction: "nagao", lon: 138.842, lat: 37.51, koku: 31262, kokuMax: 35169, kokuCap: 39077, pop: 25635, food: 6565, def: 50, comm: 24, min: 74, hp: 6e3, local: 732, localTrain: 62 },
+  { id: "shibata", name: "\u65B0\u767A\u7530\u57CE", kuni: "\u8D8A\u5F8C", faction: "agakita", lon: 139.328, lat: 37.951, koku: 43766, kokuMax: 49237, kokuCap: 54708, pop: 35888, food: 9191, def: 52, comm: 26, min: 70, hp: 6120, local: 1024, localTrain: 60 },
+  { id: "murakami", name: "\u6751\u4E0A\u57CE", kuni: "\u8D8A\u5F8C", faction: "agakita", lon: 139.475, lat: 38.226, koku: 37514, kokuMax: 42203, kokuCap: 46892, pop: 30761, food: 7878, def: 56, comm: 20, min: 70, hp: 6360, local: 878, localTrain: 60 },
+  { id: "negoshi", name: "\u6839\u77E5\u57CE", kuni: "\u8D8A\u5F8C", faction: "nagao", lon: 137.885, lat: 37.02, koku: 25010, kokuMax: 28136, kokuCap: 31262, pop: 20508, food: 5252, def: 50, comm: 14, min: 72, hp: 6e3, local: 585, localTrain: 60 },
+  { id: "odawara", name: "\u5C0F\u7530\u539F\u57CE", kuni: "\u76F8\u6A21", faction: "hojo", lon: 139.153, lat: 35.251, koku: 80830, kokuMax: 90934, kokuCap: 101038, pop: 66281, food: 16974, def: 76, comm: 58, min: 84, hp: 7560, local: 1891, localTrain: 70 },
+  { id: "tamanawa", name: "\u7389\u7E04\u57CE", kuni: "\u76F8\u6A21", faction: "hojo", lon: 139.517, lat: 35.336, koku: 31089, kokuMax: 34975, kokuCap: 38861, pop: 25493, food: 6529, def: 56, comm: 30, min: 76, hp: 6360, local: 727, localTrain: 64 },
+  { id: "misaki", name: "\u4E09\u5D0E\u57CE", kuni: "\u76F8\u6A21", faction: "hojo", lon: 139.618, lat: 35.145, koku: 24871, kokuMax: 27980, kokuCap: 31089, pop: 20394, food: 5223, def: 50, comm: 28, min: 74, hp: 6e3, local: 582, localTrain: 62 },
+  { id: "tsukui", name: "\u6D25\u4E45\u4E95\u57CE", kuni: "\u76F8\u6A21", faction: "hojo", lon: 139.219, lat: 35.601, koku: 18653, kokuMax: 20984, kokuCap: 23316, pop: 15295, food: 3917, def: 54, comm: 18, min: 74, hp: 6240, local: 436, localTrain: 62 },
+  { id: "edo", name: "\u6C5F\u6238\u57CE", kuni: "\u6B66\u8535", faction: "hojo", lon: 139.754, lat: 35.685, koku: 74718, kokuMax: 84058, kokuCap: 93398, pop: 61269, food: 15691, def: 52, comm: 44, min: 72, hp: 6120, local: 1748, localTrain: 62 },
+  { id: "kawagoe", name: "\u5DDD\u8D8A\u57CE", kuni: "\u6B66\u8535", faction: "hojo", lon: 139.487, lat: 35.925, koku: 85392, kokuMax: 96066, kokuCap: 106740, pop: 70021, food: 17932, def: 60, comm: 38, min: 72, hp: 6600, local: 1998, localTrain: 64 },
+  { id: "takiyama", name: "\u6EDD\u5C71\u57CE", kuni: "\u6B66\u8535", faction: "hojo", lon: 139.335, lat: 35.7, koku: 58707, kokuMax: 66046, kokuCap: 73384, pop: 48140, food: 12328, def: 54, comm: 24, min: 72, hp: 6240, local: 1374, localTrain: 62 },
+  { id: "matsuyama_m", name: "\u677E\u5C71\u57CE", kuni: "\u6B66\u8535", faction: "hojo", lon: 139.4, lat: 36.03, koku: 53370, kokuMax: 60042, kokuCap: 66713, pop: 43763, food: 11208, def: 56, comm: 22, min: 70, hp: 6360, local: 1249, localTrain: 62 },
+  { id: "iwatsuki", name: "\u5CA9\u4ED8\u57CE", kuni: "\u6B66\u8535", faction: "ota", lon: 139.657, lat: 35.917, koku: 69381, kokuMax: 78053, kokuCap: 86726, pop: 56892, food: 14570, def: 54, comm: 32, min: 74, hp: 6240, local: 1624, localTrain: 60 },
+  { id: "oshi", name: "\u5FCD\u57CE", kuni: "\u6B66\u8535", faction: "narita", lon: 139.457, lat: 36.14, koku: 64044, kokuMax: 72050, kokuCap: 80055, pop: 52516, food: 13449, def: 58, comm: 26, min: 76, hp: 6480, local: 1499, localTrain: 60 },
+  { id: "hachigata", name: "\u9262\u5F62\u57CE", kuni: "\u6B66\u8535", faction: "uesugi_y", lon: 139.209, lat: 36.111, koku: 69381, kokuMax: 78053, kokuCap: 86726, pop: 56892, food: 14570, def: 60, comm: 24, min: 70, hp: 6600, local: 1624, localTrain: 60 },
+  { id: "fukaya", name: "\u6DF1\u8C37\u57CE", kuni: "\u6B66\u8535", faction: "uesugi_y", lon: 139.281, lat: 36.198, koku: 58707, kokuMax: 66046, kokuCap: 73384, pop: 48140, food: 12328, def: 48, comm: 22, min: 70, hp: 5880, local: 1374, localTrain: 58 },
+  { id: "hirai", name: "\u5E73\u4E95\u57CE", kuni: "\u4E0A\u91CE", faction: "uesugi_y", lon: 139.096, lat: 36.243, koku: 89348, kokuMax: 100516, kokuCap: 111684, pop: 73265, food: 18763, def: 58, comm: 30, min: 72, hp: 6480, local: 2091, localTrain: 60 },
+  { id: "maebashi", name: "\u53A9\u6A4B\u57CE", kuni: "\u4E0A\u91CE", faction: "uesugi_y", lon: 139.061, lat: 36.389, koku: 95304, kokuMax: 107217, kokuCap: 119130, pop: 78149, food: 20014, def: 54, comm: 34, min: 72, hp: 6240, local: 2230, localTrain: 60 },
+  { id: "minowa", name: "\u7B95\u8F2A\u57CE", kuni: "\u4E0A\u91CE", faction: "nagano_k", lon: 138.937, lat: 36.415, koku: 103246, kokuMax: 116152, kokuCap: 129058, pop: 84662, food: 21682, def: 64, comm: 28, min: 78, hp: 6840, local: 2416, localTrain: 64 },
+  { id: "numata", name: "\u6CBC\u7530\u57CE", kuni: "\u4E0A\u91CE", faction: "uesugi_y", lon: 139.046, lat: 36.646, koku: 79420, kokuMax: 89348, kokuCap: 99275, pop: 65124, food: 16678, def: 56, comm: 22, min: 70, hp: 6360, local: 1858, localTrain: 60 },
+  { id: "kanayama", name: "\u91D1\u5C71\u57CE", kuni: "\u4E0A\u91CE", faction: "yura", lon: 139.372, lat: 36.313, koku: 87362, kokuMax: 98283, kokuCap: 109203, pop: 71637, food: 18346, def: 62, comm: 30, min: 72, hp: 6720, local: 2044, localTrain: 62 },
+  { id: "utsunomiya", name: "\u5B87\u90FD\u5BAE\u57CE", kuni: "\u4E0B\u91CE", faction: "utsunomiya", lon: 139.884, lat: 36.556, koku: 101750, kokuMax: 114469, kokuCap: 127188, pop: 83435, food: 21368, def: 54, comm: 36, min: 72, hp: 6240, local: 2381, localTrain: 58 },
+  { id: "karasawa", name: "\u5510\u6CA2\u5C71\u57CE", kuni: "\u4E0B\u91CE", faction: "sano", lon: 139.616, lat: 36.375, koku: 83794, kokuMax: 94269, kokuCap: 104743, pop: 68711, food: 17597, def: 62, comm: 26, min: 72, hp: 6720, local: 1961, localTrain: 60 },
+  { id: "karasuyama", name: "\u70CF\u5C71\u57CE", kuni: "\u4E0B\u91CE", faction: "nasu", lon: 140.152, lat: 36.657, koku: 71824, kokuMax: 80802, kokuCap: 89780, pop: 58896, food: 15083, def: 52, comm: 22, min: 70, hp: 6120, local: 1681, localTrain: 58 },
+  { id: "mito", name: "\u6C34\u6238\u57CE", kuni: "\u5E38\u9678", faction: "edo_h", lon: 140.479, lat: 36.374, koku: 101762, kokuMax: 114482, kokuCap: 127202, pop: 83445, food: 21370, def: 52, comm: 34, min: 70, hp: 6120, local: 2381, localTrain: 58 },
+  { id: "ota_hitachi", name: "\u5E38\u9678\u592A\u7530\u57CE", kuni: "\u5E38\u9678", faction: "satake", lon: 140.535, lat: 36.539, koku: 110242, kokuMax: 124022, kokuCap: 137802, pop: 90398, food: 23151, def: 58, comm: 30, min: 76, hp: 6480, local: 2580, localTrain: 62 },
+  { id: "oda", name: "\u5C0F\u7530\u57CE", kuni: "\u5E38\u9678", faction: "oda_h", lon: 140.093, lat: 36.128, koku: 84802, kokuMax: 95402, kokuCap: 106002, pop: 69538, food: 17808, def: 50, comm: 30, min: 70, hp: 6e3, local: 1984, localTrain: 56 },
+  { id: "makabe", name: "\u771F\u58C1\u57CE", kuni: "\u5E38\u9678", faction: "satake", lon: 140.096, lat: 36.291, koku: 59361, kokuMax: 66781, kokuCap: 74201, pop: 48676, food: 12466, def: 48, comm: 22, min: 72, hp: 5880, local: 1389, localTrain: 58 },
+  { id: "fuchu_hitachi", name: "\u5E38\u9678\u5E9C\u4E2D\u57CE", kuni: "\u5E38\u9678", faction: "edo_h", lon: 140.454, lat: 36.19, koku: 50881, kokuMax: 57241, kokuCap: 63601, pop: 41722, food: 10685, def: 46, comm: 28, min: 68, hp: 5760, local: 1191, localTrain: 56 },
+  { id: "tateyama", name: "\u9928\u5C71\u57CE", kuni: "\u5B89\u623F", faction: "satomi", lon: 139.855, lat: 34.985, koku: 22342, kokuMax: 25135, kokuCap: 27928, pop: 18320, food: 4692, def: 52, comm: 34, min: 76, hp: 6120, local: 523, localTrain: 62 },
+  { id: "kururi", name: "\u4E45\u7559\u91CC\u57CE", kuni: "\u4E0A\u7DCF", faction: "satomi", lon: 140.085, lat: 35.29, koku: 90934, kokuMax: 102301, kokuCap: 113668, pop: 74566, food: 19096, def: 58, comm: 26, min: 74, hp: 6480, local: 2128, localTrain: 62 },
+  { id: "otaki", name: "\u5C0F\u7530\u559C\u57CE", kuni: "\u4E0A\u7DCF", faction: "satomi", lon: 140.248, lat: 35.284, koku: 60622, kokuMax: 68200, kokuCap: 75778, pop: 49710, food: 12731, def: 52, comm: 20, min: 72, hp: 6120, local: 1419, localTrain: 60 },
+  { id: "sanuki", name: "\u4F50\u8CAB\u57CE", kuni: "\u4E0A\u7DCF", faction: "satomi", lon: 139.878, lat: 35.265, koku: 48498, kokuMax: 54561, kokuCap: 60623, pop: 39768, food: 10185, def: 50, comm: 24, min: 72, hp: 6e3, local: 1135, localTrain: 60 },
+  { id: "koga", name: "\u53E4\u6CB3\u57CE", kuni: "\u4E0B\u7DCF", faction: "koga", lon: 139.699, lat: 36.191, koku: 69213, kokuMax: 77864, kokuCap: 86516, pop: 56755, food: 14535, def: 54, comm: 34, min: 70, hp: 6240, local: 1620, localTrain: 56 },
+  { id: "yuki", name: "\u7D50\u57CE\u57CE", kuni: "\u4E0B\u7DCF", faction: "yuki", lon: 139.876, lat: 36.305, koku: 62921, kokuMax: 70786, kokuCap: 78651, pop: 51595, food: 13213, def: 52, comm: 30, min: 72, hp: 6120, local: 1472, localTrain: 58 },
+  { id: "motosakura", name: "\u672C\u4F50\u5009\u57CE", kuni: "\u4E0B\u7DCF", faction: "chiba", lon: 140.276, lat: 35.732, koku: 69213, kokuMax: 77864, kokuCap: 86516, pop: 56755, food: 14535, def: 54, comm: 30, min: 72, hp: 6240, local: 1620, localTrain: 58 },
+  { id: "usui", name: "\u81FC\u4E95\u57CE", kuni: "\u4E0B\u7DCF", faction: "chiba", lon: 140.17, lat: 35.723, koku: 44045, kokuMax: 49550, kokuCap: 55056, pop: 36117, food: 9249, def: 50, comm: 24, min: 70, hp: 6e3, local: 1031, localTrain: 56 },
+  { id: "sekiyado", name: "\u95A2\u5BBF\u57CE", kuni: "\u4E0B\u7DCF", faction: "koga", lon: 139.795, lat: 36.07, koku: 44045, kokuMax: 49550, kokuCap: 55056, pop: 36117, food: 9249, def: 56, comm: 28, min: 70, hp: 6360, local: 1031, localTrain: 58 },
+  { id: "sumoto", name: "\u6D32\u672C\u57CE", kuni: "\u6DE1\u8DEF", faction: "miyoshi", lon: 134.9, lat: 34.336, koku: 27822, kokuMax: 31300, kokuCap: 34778, pop: 22814, food: 5843, def: 52, comm: 34, min: 70, hp: 6120, local: 651, localTrain: 60 },
+  { id: "yura", name: "\u7531\u826F\u57CE", kuni: "\u6DE1\u8DEF", faction: "miyoshi", lon: 134.972, lat: 34.271, koku: 12918, kokuMax: 14532, kokuCap: 16147, pop: 10593, food: 2713, def: 44, comm: 28, min: 68, hp: 5640, local: 302, localTrain: 58 },
+  { id: "shozui", name: "\u52DD\u745E\u57CE", kuni: "\u963F\u6CE2", faction: "miyoshi", lon: 134.516, lat: 34.113, koku: 52848, kokuMax: 59454, kokuCap: 66060, pop: 43335, food: 11098, def: 56, comm: 44, min: 74, hp: 6360, local: 1237, localTrain: 64 },
+  { id: "ichinomiya", name: "\u4E00\u5BAE\u57CE", kuni: "\u963F\u6CE2", faction: "miyoshi", lon: 134.478, lat: 34.048, koku: 32296, kokuMax: 36333, kokuCap: 40370, pop: 26483, food: 6782, def: 58, comm: 26, min: 70, hp: 6480, local: 756, localTrain: 62 },
+  { id: "hakuchi", name: "\u767D\u5730\u57CE", kuni: "\u963F\u6CE2", faction: "miyoshi", lon: 133.803, lat: 34.026, koku: 20552, kokuMax: 23121, kokuCap: 25690, pop: 16853, food: 4316, def: 50, comm: 18, min: 68, hp: 6e3, local: 481, localTrain: 58 },
+  { id: "ushiki", name: "\u725B\u5C90\u57CE", kuni: "\u963F\u6CE2", faction: "shingai", lon: 134.658, lat: 33.925, koku: 23488, kokuMax: 26424, kokuCap: 29360, pop: 19260, food: 4932, def: 46, comm: 30, min: 72, hp: 5760, local: 550, localTrain: 58 },
+  { id: "sogo", name: "\u5341\u6CB3\u57CE", kuni: "\u8B83\u5C90", faction: "miyoshi", lon: 134.096, lat: 34.288, koku: 34326, kokuMax: 38617, kokuCap: 42908, pop: 28147, food: 7208, def: 52, comm: 32, min: 72, hp: 6120, local: 803, localTrain: 62 },
+  { id: "hiketa", name: "\u5F15\u7530\u57CE", kuni: "\u8B83\u5C90", faction: "miyoshi", lon: 134.402, lat: 34.226, koku: 20192, kokuMax: 22716, kokuCap: 25240, pop: 16557, food: 4240, def: 46, comm: 30, min: 70, hp: 5760, local: 472, localTrain: 58 },
+  { id: "amagiri", name: "\u5929\u9727\u57CE", kuni: "\u8B83\u5C90", faction: "kagawa", lon: 133.744, lat: 34.263, koku: 24230, kokuMax: 27259, kokuCap: 30288, pop: 19869, food: 5088, def: 54, comm: 26, min: 70, hp: 6240, local: 567, localTrain: 58 },
+  { id: "yuzuki", name: "\u6E6F\u7BC9\u57CE", kuni: "\u4F0A\u4E88", faction: "kono", lon: 132.786, lat: 33.844, koku: 76170, kokuMax: 85691, kokuCap: 95212, pop: 62459, food: 15996, def: 54, comm: 38, min: 72, hp: 6240, local: 1782, localTrain: 58 },
+  { id: "kokubunyama", name: "\u56FD\u5206\u5C71\u57CE", kuni: "\u4F0A\u4E88", faction: "kurushima", lon: 132.985, lat: 34.048, koku: 41014, kokuMax: 46141, kokuCap: 51268, pop: 33631, food: 8613, def: 50, comm: 34, min: 74, hp: 6e3, local: 960, localTrain: 64 },
+  { id: "itajima", name: "\u677F\u5CF6\u57CE", kuni: "\u4F0A\u4E88", faction: "saionji", lon: 132.566, lat: 33.22, koku: 41014, kokuMax: 46141, kokuCap: 51268, pop: 33631, food: 8613, def: 48, comm: 28, min: 70, hp: 5880, local: 960, localTrain: 58 },
+  { id: "jizogatake", name: "\u5730\u8535\u30F6\u5CB3\u57CE", kuni: "\u4F0A\u4E88", faction: "saionji", lon: 132.545, lat: 33.503, koku: 35155, kokuMax: 39550, kokuCap: 43944, pop: 28827, food: 7383, def: 52, comm: 22, min: 70, hp: 6120, local: 823, localTrain: 58 },
+  { id: "kagomori", name: "\u6CB3\u5F8C\u68EE\u57CE", kuni: "\u4F0A\u4E88", faction: "kono", lon: 132.611, lat: 33.243, koku: 35155, kokuMax: 39550, kokuCap: 43944, pop: 28827, food: 7383, def: 50, comm: 20, min: 70, hp: 6e3, local: 823, localTrain: 58 },
+  { id: "kawanoe", name: "\u5DDD\u4E4B\u6C5F\u57CE", kuni: "\u4F0A\u4E88", faction: "kono", lon: 133.559, lat: 34.008, koku: 29296, kokuMax: 32958, kokuCap: 36620, pop: 24023, food: 6152, def: 46, comm: 24, min: 68, hp: 5760, local: 686, localTrain: 56 },
+  { id: "nakamura", name: "\u4E2D\u6751\u57CE", kuni: "\u571F\u4F50", faction: "ichijo", lon: 132.936, lat: 32.988, koku: 31424, kokuMax: 35352, kokuCap: 39280, pop: 25768, food: 6599, def: 52, comm: 40, min: 76, hp: 6120, local: 735, localTrain: 56 },
+  { id: "okou", name: "\u5CA1\u8C4A\u57CE", kuni: "\u571F\u4F50", faction: "chosokabe", lon: 133.617, lat: 33.578, koku: 21997, kokuMax: 24746, kokuCap: 27496, pop: 18038, food: 4619, def: 54, comm: 24, min: 80, hp: 6240, local: 515, localTrain: 64 },
+  { id: "aki", name: "\u5B89\u82B8\u57CE", kuni: "\u571F\u4F50", faction: "aki", lon: 133.905, lat: 33.503, koku: 15712, kokuMax: 17676, kokuCap: 19640, pop: 12884, food: 3300, def: 48, comm: 22, min: 74, hp: 5880, local: 368, localTrain: 60 },
+  { id: "gassan", name: "\u6708\u5C71\u5BCC\u7530\u57CE", kuni: "\u51FA\u96F2", faction: "amago", lon: 133.194, lat: 35.359, koku: 92578, kokuMax: 104151, kokuCap: 115723, pop: 75914, food: 19441, def: 76, comm: 46, min: 80, hp: 7560, local: 2166, localTrain: 68 },
+  { id: "shiraga", name: "\u767D\u9E7F\u57CE", kuni: "\u51FA\u96F2", faction: "amago", lon: 133.078, lat: 35.5, koku: 32850, kokuMax: 36957, kokuCap: 41063, pop: 26937, food: 6898, def: 58, comm: 24, min: 74, hp: 6480, local: 769, localTrain: 62 },
+  { id: "yonago", name: "\u7C73\u5B50\u57CE", kuni: "\u4F2F\u8006", faction: "amago", lon: 133.328, lat: 35.427, koku: 27458, kokuMax: 30890, kokuCap: 34322, pop: 22516, food: 5766, def: 52, comm: 32, min: 70, hp: 6120, local: 643, localTrain: 60 },
+  { id: "uyui", name: "\u7FBD\u8863\u77F3\u57CE", kuni: "\u4F2F\u8006", faction: "nanjo", lon: 133.995, lat: 35.434, koku: 22612, kokuMax: 25438, kokuCap: 28265, pop: 18542, food: 4749, def: 50, comm: 24, min: 70, hp: 6e3, local: 529, localTrain: 58 },
+  { id: "tottori", name: "\u9CE5\u53D6\u57CE", kuni: "\u56E0\u5E61", faction: "yamana", lon: 134.253, lat: 35.507, koku: 26904, kokuMax: 30267, kokuCap: 33630, pop: 22061, food: 5650, def: 62, comm: 34, min: 70, hp: 6720, local: 630, localTrain: 58 },
+  { id: "wakasa", name: "\u82E5\u685C\u9B3C\u30F6\u57CE", kuni: "\u56E0\u5E61", faction: "yamana", lon: 134.4, lat: 35.339, koku: 15576, kokuMax: 17523, kokuCap: 19470, pop: 12772, food: 3271, def: 56, comm: 20, min: 70, hp: 6360, local: 364, localTrain: 58 },
+  { id: "shikano", name: "\u9E7F\u91CE\u57CE", kuni: "\u56E0\u5E61", faction: "yamana", lon: 134.078, lat: 35.446, koku: 11328, kokuMax: 12744, kokuCap: 14160, pop: 9289, food: 2379, def: 48, comm: 22, min: 68, hp: 5880, local: 265, localTrain: 56 },
+  { id: "oki", name: "\u96A0\u5C90\u5B88\u8B77\u6240", kuni: "\u96A0\u5C90", faction: "amago", lon: 133.32, lat: 36.202, koku: 2789, kokuMax: 3137, kokuCap: 3486, pop: 2287, food: 586, def: 36, comm: 16, min: 72, hp: 5160, local: 65, localTrain: 54 },
+  { id: "tsuwano", name: "\u4E09\u672C\u677E\u57CE", kuni: "\u77F3\u898B", faction: "yoshimi", lon: 131.769, lat: 34.469, koku: 30402, kokuMax: 34202, kokuCap: 38002, pop: 24930, food: 6384, def: 60, comm: 22, min: 74, hp: 6600, local: 711, localTrain: 60 },
+  { id: "yamabuki", name: "\u5C71\u5439\u57CE", kuni: "\u77F3\u898B", faction: "amago", lon: 132.437, lat: 35.106, koku: 21460, kokuMax: 24142, kokuCap: 26825, pop: 17597, food: 4507, def: 54, comm: 44, min: 70, hp: 6240, local: 502, localTrain: 58 },
+  { id: "miyake", name: "\u4E09\u5B85\u5FA1\u571F\u5C45", kuni: "\u77F3\u898B", faction: "masuda", lon: 131.845, lat: 34.678, koku: 19671, kokuMax: 22130, kokuCap: 24589, pop: 16130, food: 4131, def: 48, comm: 30, min: 70, hp: 5880, local: 460, localTrain: 58 },
+  { id: "takata_m", name: "\u9AD8\u7530\u57CE", kuni: "\u7F8E\u4F5C", faction: "amago", lon: 133.56, lat: 35.073, koku: 44644, kokuMax: 50224, kokuCap: 55805, pop: 36608, food: 9375, def: 54, comm: 26, min: 68, hp: 6240, local: 1045, localTrain: 60 },
+  { id: "iwaya_m", name: "\u5CA9\u5C4B\u57CE", kuni: "\u7F8E\u4F5C", faction: "amago", lon: 134.056, lat: 35.104, koku: 32739, kokuMax: 36832, kokuCap: 40924, pop: 26846, food: 6875, def: 58, comm: 20, min: 68, hp: 6480, local: 766, localTrain: 60 },
+  { id: "tenjinyama", name: "\u5929\u795E\u5C71\u57CE", kuni: "\u5099\u524D", faction: "uragami", lon: 134.109, lat: 34.867, koku: 60863, kokuMax: 68471, kokuCap: 76079, pop: 49908, food: 12781, def: 60, comm: 34, min: 70, hp: 6600, local: 1424, localTrain: 60 },
+  { id: "ishiyama_bz", name: "\u5CA1\u5C71\u57CE", kuni: "\u5099\u524D", faction: "uragami", lon: 133.936, lat: 34.665, koku: 42962, kokuMax: 48333, kokuCap: 53703, pop: 35229, food: 9022, def: 50, comm: 42, min: 70, hp: 6e3, local: 1005, localTrain: 58 },
+  { id: "matsuyama_bc", name: "\u5099\u4E2D\u677E\u5C71\u57CE", kuni: "\u5099\u4E2D", faction: "mimura", lon: 133.622, lat: 34.799, koku: 42463, kokuMax: 47771, kokuCap: 53079, pop: 34820, food: 8917, def: 68, comm: 28, min: 72, hp: 7080, local: 994, localTrain: 60 },
+  { id: "sarukake", name: "\u733F\u639B\u57CE", kuni: "\u5099\u4E2D", faction: "shoo", lon: 133.663, lat: 34.653, koku: 25478, kokuMax: 28662, kokuCap: 31847, pop: 20892, food: 5350, def: 52, comm: 22, min: 70, hp: 6120, local: 596, localTrain: 58 },
+  { id: "takamatsu_bc", name: "\u5099\u4E2D\u9AD8\u677E\u57CE", kuni: "\u5099\u4E2D", faction: "shimizu", lon: 133.849, lat: 34.723, koku: 22647, kokuMax: 25478, kokuCap: 28309, pop: 18571, food: 4756, def: 54, comm: 26, min: 74, hp: 6240, local: 530, localTrain: 58 },
+  { id: "kannabe", name: "\u795E\u8FBA\u57CE", kuni: "\u5099\u5F8C", faction: "ouchi", lon: 133.393, lat: 34.51, koku: 38719, kokuMax: 43559, kokuCap: 48399, pop: 31750, food: 8131, def: 56, comm: 30, min: 68, hp: 6360, local: 906, localTrain: 58 },
+  { id: "mihara", name: "\u4E09\u539F\u57CE", kuni: "\u5099\u5F8C", faction: "kobayakawa", lon: 133.078, lat: 34.399, koku: 35741, kokuMax: 40208, kokuCap: 44676, pop: 29308, food: 7506, def: 54, comm: 34, min: 74, hp: 6240, local: 836, localTrain: 62 },
+  { id: "koriyama_a", name: "\u5409\u7530\u90E1\u5C71\u57CE", kuni: "\u5B89\u82B8", faction: "mori", lon: 132.706, lat: 34.669, koku: 62128, kokuMax: 69894, kokuCap: 77660, pop: 50945, food: 13047, def: 64, comm: 32, min: 84, hp: 6840, local: 1454, localTrain: 68 },
+  { id: "kanayama_a", name: "\u9280\u5C71\u57CE", kuni: "\u5B89\u82B8", faction: "takeda_a", lon: 132.481, lat: 34.437, koku: 34170, kokuMax: 38442, kokuCap: 42713, pop: 28019, food: 7176, def: 56, comm: 30, min: 68, hp: 6360, local: 800, localTrain: 58 },
+  { id: "sakurao", name: "\u685C\u5C3E\u57CE", kuni: "\u5B89\u82B8", faction: "mori", lon: 132.293, lat: 34.354, koku: 27958, kokuMax: 31452, kokuCap: 34947, pop: 22926, food: 5871, def: 50, comm: 32, min: 76, hp: 6e3, local: 654, localTrain: 62 },
+  { id: "ouchi", name: "\u5927\u5185\u6C0F\u9928", kuni: "\u5468\u9632", faction: "ouchi", lon: 131.48, lat: 34.17, koku: 56387, kokuMax: 63436, kokuCap: 70484, pop: 46237, food: 11841, def: 58, comm: 62, min: 74, hp: 6480, local: 1319, localTrain: 62 },
+  { id: "takamine", name: "\u9AD8\u5DBA\u57CE", kuni: "\u5468\u9632", faction: "ouchi", lon: 131.47, lat: 34.184, koku: 29536, kokuMax: 33228, kokuCap: 36920, pop: 24220, food: 6203, def: 62, comm: 30, min: 72, hp: 6720, local: 691, localTrain: 62 },
+  { id: "wakayama_s", name: "\u82E5\u5C71\u57CE", kuni: "\u5468\u9632", faction: "ouchi", lon: 131.807, lat: 34.045, koku: 26851, kokuMax: 30208, kokuCap: 33564, pop: 22018, food: 5639, def: 58, comm: 26, min: 70, hp: 6480, local: 628, localTrain: 60 },
+  { id: "kuragake", name: "\u978D\u639B\u57CE", kuni: "\u5468\u9632", faction: "ouchi", lon: 132.176, lat: 34.226, koku: 16110, kokuMax: 18124, kokuCap: 20138, pop: 13210, food: 3383, def: 50, comm: 20, min: 68, hp: 6e3, local: 377, localTrain: 58 },
+  { id: "katsuyama_n", name: "\u52DD\u5C71\u57CE", kuni: "\u9577\u9580", faction: "ouchi", lon: 130.977, lat: 34.005, koku: 48083, kokuMax: 54094, kokuCap: 60104, pop: 39428, food: 10097, def: 54, comm: 36, min: 72, hp: 6240, local: 1125, localTrain: 60 },
+  { id: "shimofuri", name: "\u971C\u964D\u57CE", kuni: "\u9577\u9580", faction: "ouchi", lon: 131.281, lat: 34.019, koku: 25086, kokuMax: 28222, kokuCap: 31358, pop: 20571, food: 5268, def: 50, comm: 22, min: 70, hp: 6e3, local: 587, localTrain: 58 },
+  { id: "tachibanayama", name: "\u7ACB\u82B1\u5C71\u57CE", kuni: "\u7B51\u524D", faction: "ouchi", lon: 130.472, lat: 33.703, koku: 80640, kokuMax: 90720, kokuCap: 100800, pop: 66125, food: 16934, def: 62, comm: 46, min: 70, hp: 6720, local: 1887, localTrain: 62 },
+  { id: "iwaya", name: "\u5CA9\u5C4B\u57CE", kuni: "\u7B51\u524D", faction: "ouchi", lon: 130.523, lat: 33.531, koku: 53760, kokuMax: 60480, kokuCap: 67200, pop: 44083, food: 11290, def: 58, comm: 26, min: 68, hp: 6480, local: 1258, localTrain: 60 },
+  { id: "akizuki", name: "\u79CB\u6708\u57CE", kuni: "\u7B51\u524D", faction: "akizuki", lon: 130.665, lat: 33.52, koku: 48384, kokuMax: 54432, kokuCap: 60480, pop: 39675, food: 10161, def: 54, comm: 26, min: 72, hp: 6240, local: 1132, localTrain: 58 },
+  { id: "kokura", name: "\u5C0F\u5009\u57CE", kuni: "\u8C4A\u524D", faction: "ouchi", lon: 130.874, lat: 33.884, koku: 38080, kokuMax: 42840, kokuCap: 47600, pop: 31226, food: 7997, def: 52, comm: 40, min: 70, hp: 6120, local: 891, localTrain: 58 },
+  { id: "umagatake", name: "\u99AC\u30F6\u5CB3\u57CE", kuni: "\u8C4A\u524D", faction: "ouchi", lon: 130.907, lat: 33.658, koku: 26880, kokuMax: 30240, kokuCap: 33600, pop: 22042, food: 5645, def: 54, comm: 22, min: 68, hp: 6240, local: 629, localTrain: 58 },
+  { id: "kurume", name: "\u4E45\u7559\u7C73\u57CE", kuni: "\u7B51\u5F8C", faction: "otomo", lon: 130.508, lat: 33.32, koku: 46816, kokuMax: 52668, kokuCap: 58520, pop: 38389, food: 9831, def: 52, comm: 34, min: 70, hp: 6120, local: 1095, localTrain: 58 },
+  { id: "yanagawa", name: "\u67F3\u5DDD\u57CE", kuni: "\u7B51\u5F8C", faction: "kamachi", lon: 130.407, lat: 33.163, koku: 51072, kokuMax: 57456, kokuCap: 63840, pop: 41879, food: 10725, def: 58, comm: 32, min: 72, hp: 6480, local: 1195, localTrain: 58 },
+  { id: "funai", name: "\u5E9C\u5185\u9928", kuni: "\u8C4A\u5F8C", faction: "otomo", lon: 131.612, lat: 33.238, koku: 120474, kokuMax: 135534, kokuCap: 150593, pop: 98789, food: 25300, def: 58, comm: 62, min: 78, hp: 6480, local: 2819, localTrain: 64 },
+  { id: "usuki", name: "\u4E39\u751F\u5CF6\u57CE", kuni: "\u8C4A\u5F8C", faction: "otomo", lon: 131.807, lat: 33.124, koku: 73623, kokuMax: 82826, kokuCap: 92029, pop: 60371, food: 15461, def: 62, comm: 40, min: 74, hp: 6720, local: 1723, localTrain: 62 },
+  { id: "oka", name: "\u5CA1\u57CE", kuni: "\u8C4A\u5F8C", faction: "shiga", lon: 131.398, lat: 32.96, koku: 60237, kokuMax: 67766, kokuCap: 75296, pop: 49394, food: 12650, def: 70, comm: 22, min: 74, hp: 7200, local: 1410, localTrain: 62 },
+  { id: "saga", name: "\u6751\u4E2D\u57CE", kuni: "\u80A5\u524D", faction: "ryuzoji", lon: 130.298, lat: 33.245, koku: 54549, kokuMax: 61367, kokuCap: 68186, pop: 44730, food: 11455, def: 54, comm: 32, min: 72, hp: 6240, local: 1276, localTrain: 58 },
+  { id: "kishitake", name: "\u5CB8\u5CB3\u57CE", kuni: "\u80A5\u524D", faction: "hata", lon: 130.043, lat: 33.421, koku: 39672, kokuMax: 44631, kokuCap: 49590, pop: 32531, food: 8331, def: 56, comm: 26, min: 70, hp: 6360, local: 928, localTrain: 58 },
+  { id: "hirado", name: "\u5E73\u6238\u57CE", kuni: "\u80A5\u524D", faction: "matsura", lon: 129.554, lat: 33.368, koku: 39672, kokuMax: 44631, kokuCap: 49590, pop: 32531, food: 8331, def: 50, comm: 46, min: 74, hp: 6e3, local: 928, localTrain: 60 },
+  { id: "hinoe", name: "\u65E5\u91CE\u6C5F\u57CE", kuni: "\u80A5\u524D", faction: "arima", lon: 130.234, lat: 32.734, koku: 39672, kokuMax: 44631, kokuCap: 49590, pop: 32531, food: 8331, def: 52, comm: 34, min: 72, hp: 6120, local: 928, localTrain: 58 },
+  { id: "omura", name: "\u5927\u6751\u57CE", kuni: "\u80A5\u524D", faction: "omura", lon: 129.958, lat: 32.9, koku: 29754, kokuMax: 33473, kokuCap: 37192, pop: 24398, food: 6248, def: 48, comm: 32, min: 72, hp: 5880, local: 696, localTrain: 56 },
+  { id: "kumamoto", name: "\u9688\u672C\u57CE", kuni: "\u80A5\u5F8C", faction: "kikuchi", lon: 130.706, lat: 32.806, koku: 65514, kokuMax: 73704, kokuCap: 81893, pop: 53721, food: 13758, def: 54, comm: 34, min: 70, hp: 6240, local: 1533, localTrain: 58 },
+  { id: "yatsushiro", name: "\u53E4\u9E93\u57CE", kuni: "\u80A5\u5F8C", faction: "sagara", lon: 130.615, lat: 32.5, koku: 54595, kokuMax: 61420, kokuCap: 68244, pop: 44768, food: 11465, def: 52, comm: 30, min: 72, hp: 6120, local: 1278, localTrain: 58 },
+  { id: "hitoyoshi", name: "\u4EBA\u5409\u57CE", kuni: "\u80A5\u5F8C", faction: "sagara", lon: 130.76, lat: 32.209, koku: 60054, kokuMax: 67561, kokuCap: 75068, pop: 49244, food: 12611, def: 58, comm: 26, min: 80, hp: 6480, local: 1405, localTrain: 62 },
+  { id: "sadowara", name: "\u4F50\u571F\u539F\u57CE", kuni: "\u65E5\u5411", faction: "ito", lon: 131.451, lat: 32.032, koku: 26900, kokuMax: 30262, kokuCap: 33625, pop: 22058, food: 5649, def: 54, comm: 30, min: 74, hp: 6240, local: 629, localTrain: 60 },
+  { id: "tonokori", name: "\u90FD\u65BC\u90E1\u57CE", kuni: "\u65E5\u5411", faction: "ito", lon: 131.398, lat: 32.008, koku: 23057, kokuMax: 25939, kokuCap: 28821, pop: 18907, food: 4842, def: 58, comm: 24, min: 74, hp: 6480, local: 540, localTrain: 60 },
+  { id: "agata", name: "\u770C\u57CE", kuni: "\u65E5\u5411", faction: "tsuchimochi", lon: 131.665, lat: 32.582, koku: 15371, kokuMax: 17293, kokuCap: 19214, pop: 12604, food: 3228, def: 50, comm: 22, min: 70, hp: 6e3, local: 360, localTrain: 58 },
+  { id: "obi", name: "\u98EB\u80A5\u57CE", kuni: "\u65E5\u5411", faction: "shimazu", lon: 131.352, lat: 31.622, koku: 17293, kokuMax: 19454, kokuCap: 21616, pop: 14180, food: 3632, def: 62, comm: 26, min: 72, hp: 6720, local: 405, localTrain: 62 },
+  { id: "uchijo", name: "\u5185\u57CE", kuni: "\u85A9\u6469", faction: "shimazu", lon: 130.556, lat: 31.596, koku: 117929, kokuMax: 132670, kokuCap: 147411, pop: 96702, food: 24765, def: 60, comm: 40, min: 82, hp: 6600, local: 2760, localTrain: 68 },
+  { id: "izumi", name: "\u51FA\u6C34\u57CE", kuni: "\u85A9\u6469", faction: "shimazu", lon: 130.353, lat: 32.09, koku: 54429, kokuMax: 61232, kokuCap: 68036, pop: 44632, food: 11430, def: 56, comm: 26, min: 76, hp: 6360, local: 1274, localTrain: 64 },
+  { id: "kajiki", name: "\u52A0\u6CBB\u6728\u57CE", kuni: "\u5927\u9685", faction: "shimazu", lon: 130.658, lat: 31.735, koku: 42014, kokuMax: 47265, kokuCap: 52517, pop: 34451, food: 8823, def: 52, comm: 28, min: 74, hp: 6120, local: 983, localTrain: 62 },
+  { id: "shibushi", name: "\u5FD7\u5E03\u5FD7\u57CE", kuni: "\u5927\u9685", faction: "shimazu", lon: 131.099, lat: 31.485, koku: 33611, kokuMax: 37813, kokuCap: 42014, pop: 27561, food: 7058, def: 56, comm: 26, min: 74, hp: 6360, local: 786, localTrain: 62 },
+  { id: "iki", name: "\u58F1\u5C90\u89A9\u57CE", kuni: "\u58F1\u5C90", faction: "matsura", lon: 129.72, lat: 33.77, koku: 7200, kokuMax: 8100, kokuCap: 9e3, pop: 5904, food: 1512, def: 44, comm: 34, min: 72, hp: 5640, local: 168, localTrain: 58 },
+  { id: "kanaishi", name: "\u91D1\u77F3\u57CE", kuni: "\u5BFE\u99AC", faction: "so", lon: 129.288, lat: 34.203, koku: 5600, kokuMax: 6300, kokuCap: 7e3, pop: 4592, food: 1176, def: 46, comm: 40, min: 76, hp: 5760, local: 131, localTrain: 58 },
+  { id: "yonezawa", name: "\u7C73\u6CA2\u57CE", kuni: "\u51FA\u7FBD", faction: "date", lon: 140.104, lat: 37.907, koku: 76320, kokuMax: 85860, kokuCap: 95400, pop: 62582, food: 16027, def: 62, comm: 40, min: 78, hp: 6720, local: 1786, localTrain: 64 },
+  { id: "shiroishi", name: "\u767D\u77F3\u57CE", kuni: "\u9678\u5965", faction: "date", lon: 140.62, lat: 38.004, koku: 66912, kokuMax: 75276, kokuCap: 83640, pop: 54868, food: 14052, def: 52, comm: 24, min: 74, hp: 6120, local: 1566, localTrain: 60 },
+  { id: "watari", name: "\u4E98\u7406\u57CE", kuni: "\u9678\u5965", faction: "date", lon: 140.855, lat: 38.035, koku: 53530, kokuMax: 60221, kokuCap: 66912, pop: 43895, food: 11241, def: 50, comm: 26, min: 74, hp: 6e3, local: 1253, localTrain: 60 },
+  { id: "kurokawa", name: "\u4F1A\u6D25\u9ED2\u5DDD\u57CE", kuni: "\u9678\u5965", faction: "ashina", lon: 139.93, lat: 37.488, koku: 120442, kokuMax: 135498, kokuCap: 150553, pop: 98762, food: 25293, def: 66, comm: 44, min: 78, hp: 6960, local: 2818, localTrain: 62 },
+  { id: "inawashiro", name: "\u732A\u82D7\u4EE3\u57CE", kuni: "\u9678\u5965", faction: "ashina", lon: 140.113, lat: 37.56, koku: 53530, kokuMax: 60221, kokuCap: 66912, pop: 43895, food: 11241, def: 56, comm: 20, min: 74, hp: 6360, local: 1253, localTrain: 60 },
+  { id: "nihonmatsu", name: "\u4E8C\u672C\u677E\u57CE", kuni: "\u9678\u5965", faction: "nihonmatsu", lon: 140.432, lat: 37.598, koku: 66912, kokuMax: 75276, kokuCap: 83640, pop: 54868, food: 14052, def: 58, comm: 26, min: 74, hp: 6480, local: 1566, localTrain: 60 },
+  { id: "shirakawa", name: "\u767D\u6CB3\u5C0F\u5CF0\u57CE", kuni: "\u9678\u5965", faction: "shirakawa", lon: 140.213, lat: 37.132, koku: 66912, kokuMax: 75276, kokuCap: 83640, pop: 54868, food: 14052, def: 56, comm: 28, min: 72, hp: 6360, local: 1566, localTrain: 58 },
+  { id: "sukagawa", name: "\u9808\u8CC0\u5DDD\u57CE", kuni: "\u9678\u5965", faction: "nikaido", lon: 140.373, lat: 37.288, koku: 53530, kokuMax: 60221, kokuCap: 66912, pop: 43895, food: 11241, def: 52, comm: 26, min: 72, hp: 6120, local: 1253, localTrain: 58 },
+  { id: "miharu", name: "\u4E09\u6625\u57CE", kuni: "\u9678\u5965", faction: "tamura", lon: 140.492, lat: 37.442, koku: 53530, kokuMax: 60221, kokuCap: 66912, pop: 43895, food: 11241, def: 54, comm: 24, min: 74, hp: 6240, local: 1253, localTrain: 60 },
+  { id: "soma", name: "\u76F8\u99AC\u4E2D\u6751\u57CE", kuni: "\u9678\u5965", faction: "soma", lon: 140.919, lat: 37.797, koku: 66912, kokuMax: 75276, kokuCap: 83640, pop: 54868, food: 14052, def: 56, comm: 28, min: 78, hp: 6360, local: 1566, localTrain: 64 },
+  { id: "iwadeyama", name: "\u5CA9\u51FA\u5C71\u57CE", kuni: "\u9678\u5965", faction: "osaki", lon: 140.887, lat: 38.7, koku: 80294, kokuMax: 90331, kokuCap: 100368, pop: 65841, food: 16862, def: 54, comm: 26, min: 72, hp: 6240, local: 1879, localTrain: 58 },
+  { id: "sendai", name: "\u5343\u4EE3\u57CE", kuni: "\u9678\u5965", faction: "kokubun", lon: 140.856, lat: 38.252, koku: 53530, kokuMax: 60221, kokuCap: 66912, pop: 43895, food: 11241, def: 50, comm: 30, min: 72, hp: 6e3, local: 1253, localTrain: 58 },
+  { id: "teraike", name: "\u5BFA\u6C60\u57CE", kuni: "\u9678\u5965", faction: "kasai", lon: 141.198, lat: 38.685, koku: 66912, kokuMax: 75276, kokuCap: 83640, pop: 54868, food: 14052, def: 54, comm: 24, min: 72, hp: 6240, local: 1566, localTrain: 58 },
+  { id: "yokota", name: "\u9060\u91CE\u6A2A\u7530\u57CE", kuni: "\u9678\u5965", faction: "abe", lon: 141.532, lat: 39.328, koku: 40147, kokuMax: 45166, kokuCap: 50184, pop: 32921, food: 8431, def: 50, comm: 20, min: 72, hp: 6e3, local: 939, localTrain: 58 },
+  { id: "sannohe", name: "\u4E09\u6238\u57CE", kuni: "\u9678\u5965", faction: "nanbu", lon: 141.264, lat: 40.386, koku: 120442, kokuMax: 135498, kokuCap: 150553, pop: 98762, food: 25293, def: 60, comm: 30, min: 76, hp: 6600, local: 2818, localTrain: 62 },
+  { id: "kunohe", name: "\u4E5D\u6238\u57CE", kuni: "\u9678\u5965", faction: "kunohe", lon: 141.301, lat: 40.271, koku: 66912, kokuMax: 75276, kokuCap: 83640, pop: 54868, food: 14052, def: 62, comm: 22, min: 74, hp: 6720, local: 1566, localTrain: 62 },
+  { id: "kozukata", name: "\u4E0D\u6765\u65B9\u57CE", kuni: "\u9678\u5965", faction: "nanbu", lon: 141.155, lat: 39.7, koku: 53530, kokuMax: 60221, kokuCap: 66912, pop: 43895, food: 11241, def: 52, comm: 26, min: 72, hp: 6120, local: 1253, localTrain: 60 },
+  { id: "kosuiji", name: "\u9AD8\u6C34\u5BFA\u57CE", kuni: "\u9678\u5965", faction: "shiba", lon: 141.135, lat: 39.554, koku: 53530, kokuMax: 60221, kokuCap: 66912, pop: 43895, food: 11241, def: 52, comm: 22, min: 72, hp: 6120, local: 1253, localTrain: 58 },
+  { id: "namioka", name: "\u6D6A\u5CA1\u57CE", kuni: "\u9678\u5965", faction: "namioka", lon: 140.611, lat: 40.702, koku: 40147, kokuMax: 45166, kokuCap: 50184, pop: 32921, food: 8431, def: 48, comm: 26, min: 74, hp: 5880, local: 939, localTrain: 56 },
+  { id: "oura", name: "\u5927\u6D66\u57CE", kuni: "\u9678\u5965", faction: "oura", lon: 140.406, lat: 40.638, koku: 40147, kokuMax: 45166, kokuCap: 50184, pop: 32921, food: 8431, def: 50, comm: 22, min: 76, hp: 6e3, local: 939, localTrain: 60 },
+  { id: "yamagata", name: "\u5C71\u5F62\u57CE", kuni: "\u51FA\u7FBD", faction: "mogami", lon: 140.33, lat: 38.255, koku: 61056, kokuMax: 68688, kokuCap: 76320, pop: 50066, food: 12822, def: 58, comm: 38, min: 74, hp: 6480, local: 1429, localTrain: 60 },
+  { id: "tendo", name: "\u5929\u7AE5\u57CE", kuni: "\u51FA\u7FBD", faction: "tendo", lon: 140.377, lat: 38.362, koku: 30528, kokuMax: 34344, kokuCap: 38160, pop: 25033, food: 6411, def: 52, comm: 24, min: 72, hp: 6120, local: 714, localTrain: 58 },
+  { id: "ourayama", name: "\u5C3E\u6D66\u57CE", kuni: "\u51FA\u7FBD", faction: "daihoji", lon: 139.833, lat: 38.7, koku: 35616, kokuMax: 40068, kokuCap: 44520, pop: 29205, food: 7479, def: 54, comm: 30, min: 74, hp: 6240, local: 833, localTrain: 60 },
+  { id: "yokote", name: "\u6A2A\u624B\u57CE", kuni: "\u51FA\u7FBD", faction: "onodera", lon: 140.567, lat: 39.31, koku: 35616, kokuMax: 40068, kokuCap: 44520, pop: 29205, food: 7479, def: 56, comm: 24, min: 74, hp: 6360, local: 833, localTrain: 60 },
+  { id: "minato", name: "\u6E4A\u57CE", kuni: "\u51FA\u7FBD", faction: "ando", lon: 140.107, lat: 39.756, koku: 25440, kokuMax: 28620, kokuCap: 31800, pop: 20861, food: 5342, def: 50, comm: 40, min: 74, hp: 6e3, local: 595, localTrain: 58 },
+  { id: "hiyama", name: "\u6A9C\u5C71\u57CE", kuni: "\u51FA\u7FBD", faction: "ando", lon: 140.083, lat: 40.155, koku: 35616, kokuMax: 40068, kokuCap: 44520, pop: 29205, food: 7479, def: 58, comm: 26, min: 76, hp: 6480, local: 833, localTrain: 62 },
+  { id: "kawarada", name: "\u6CB3\u539F\u7530\u57CE", kuni: "\u4F50\u6E21", faction: "honma", lon: 138.35, lat: 38.02, koku: 9537, kokuMax: 10729, kokuCap: 11921, pop: 7820, food: 2003, def: 46, comm: 30, min: 74, hp: 5760, local: 223, localTrain: 56 },
+  { id: "matsumae", name: "\u5FB3\u5C71\u9928", kuni: "\u8766\u5937", faction: "kakizaki", lon: 140.108, lat: 41.43, koku: 16640, kokuMax: 18720, kokuCap: 20800, pop: 13645, food: 3494, def: 52, comm: 40, min: 76, hp: 6120, local: 389, localTrain: 58 },
+  { id: "hakodate", name: "\u5B87\u9808\u5CB8\u9928", kuni: "\u8766\u5937", faction: "kakizaki", lon: 140.72, lat: 41.78, koku: 8320, kokuMax: 9360, kokuCap: 10400, pop: 6822, food: 1747, def: 44, comm: 34, min: 72, hp: 5640, local: 195, localTrain: 56 },
+  { id: "esashi", name: "\u6A9C\u5C71\u9928", kuni: "\u8766\u5937", faction: "kakizaki", lon: 140.128, lat: 41.87, koku: 5760, kokuMax: 6480, kokuCap: 7200, pop: 4723, food: 1210, def: 44, comm: 36, min: 74, hp: 5640, local: 135, localTrain: 56 },
+  { id: "oshamanbe", name: "\u9577\u4E07\u90E8\u306E\u7826", kuni: "\u8766\u5937", faction: "ainu_w", lon: 140.38, lat: 42.515, koku: 3840, kokuMax: 4320, kokuCap: 4800, pop: 3149, food: 806, def: 38, comm: 20, min: 82, hp: 5280, local: 90, localTrain: 58 },
+  { id: "otaru", name: "\u5C0F\u6A3D\u5185\u306E\u7826", kuni: "\u8766\u5937", faction: "ainu_w", lon: 141, lat: 43.19, koku: 4480, kokuMax: 5040, kokuCap: 5600, pop: 3674, food: 941, def: 40, comm: 26, min: 84, hp: 5400, local: 105, localTrain: 58 },
+  { id: "ishikari", name: "\u77F3\u72E9\u306E\u7826", kuni: "\u8766\u5937", faction: "ainu_w", lon: 141.35, lat: 43.23, koku: 5120, kokuMax: 5760, kokuCap: 6400, pop: 4198, food: 1075, def: 42, comm: 24, min: 86, hp: 5520, local: 120, localTrain: 60 },
+  { id: "sizunai", name: "\u9759\u5185\u306E\u7826", kuni: "\u8766\u5937", faction: "ainu_e", lon: 142.37, lat: 42.335, koku: 4480, kokuMax: 5040, kokuCap: 5600, pop: 3674, food: 941, def: 46, comm: 18, min: 88, hp: 5760, local: 105, localTrain: 62 },
+  { id: "kushiro", name: "\u91E7\u8DEF\u306E\u7826", kuni: "\u8766\u5937", faction: "ainu_e", lon: 144.383, lat: 42.985, koku: 3200, kokuMax: 3600, kokuCap: 4e3, pop: 2624, food: 672, def: 38, comm: 20, min: 86, hp: 5280, local: 75, localTrain: 58 },
+  { id: "nemuro", name: "\u6839\u5BA4\u306E\u7826", kuni: "\u8766\u5937", faction: "ainu_e", lon: 145.583, lat: 43.33, koku: 2560, kokuMax: 2880, kokuCap: 3200, pop: 2099, food: 538, def: 34, comm: 22, min: 86, hp: 5040, local: 60, localTrain: 56 },
+  { id: "abashiri", name: "\u7DB2\u8D70\u306E\u7826", kuni: "\u8766\u5937", faction: "ainu_n", lon: 144.27, lat: 44.02, koku: 2880, kokuMax: 3240, kokuCap: 3600, pop: 2362, food: 605, def: 36, comm: 18, min: 84, hp: 5160, local: 68, localTrain: 56 },
+  { id: "soya", name: "\u5B97\u8C37\u306E\u7826", kuni: "\u8766\u5937", faction: "ainu_n", lon: 141.68, lat: 45.41, koku: 2240, kokuMax: 2520, kokuCap: 2800, pop: 1837, food: 470, def: 34, comm: 26, min: 84, hp: 5040, local: 53, localTrain: 56 },
+  { id: "rumoi", name: "\u7559\u840C\u306E\u7826", kuni: "\u8766\u5937", faction: "ainu_n", lon: 141.64, lat: 43.94, koku: 2560, kokuMax: 2880, kokuCap: 3200, pop: 2099, food: 538, def: 34, comm: 20, min: 84, hp: 5040, local: 60, localTrain: 56 },
+  { id: "shurijo", name: "\u9996\u91CC\u57CE", kuni: "\u7409\u7403", faction: "ryukyu", lon: 127.719, lat: 26.217, koku: 41336, kokuMax: 46503, kokuCap: 51670, pop: 33896, food: 8681, def: 62, comm: 62, min: 84, hp: 6720, local: 967, localTrain: 56 },
+  { id: "nakagusuku", name: "\u4E2D\u57CE\u57CE", kuni: "\u7409\u7403", faction: "ryukyu", lon: 127.797, lat: 26.286, koku: 17105, kokuMax: 19243, kokuCap: 21381, pop: 14026, food: 3592, def: 58, comm: 30, min: 80, hp: 6480, local: 400, localTrain: 56 },
+  { id: "miyako", name: "\u5BAE\u53E4\u306E\u7826", kuni: "\u7409\u7403", faction: "ryukyu", lon: 125.281, lat: 24.805, koku: 8552, kokuMax: 9621, kokuCap: 10690, pop: 7013, food: 1796, def: 44, comm: 26, min: 78, hp: 5640, local: 200, localTrain: 54 }
+];
+var TOWNS = [
+  // ── 尾張・伊勢湾
+  { id: "tsushima", name: "\u6D25\u5CF6", kind: "\u5546\u696D\u90FD\u5E02", lon: 136.74, lat: 35.176, owner: "oda" },
+  { id: "atsuta", name: "\u71B1\u7530", kind: "\u6E2F", lon: 136.907, lat: 35.128, owner: "oda" },
+  { id: "komaki", name: "\u5C0F\u7267", kind: "\u753A", lon: 136.928, lat: 35.29, owner: "ise" },
+  { id: "nagashima_t", name: "\u9577\u5CF6\u9858\u8A3C\u5BFA", kind: "\u5BFA\u793E", lon: 136.69, lat: 35.1, owner: null },
+  { id: "kawanami", name: "\u5DDD\u4E26\u8846", kind: "\u5FCD\u3073\u306E\u91CC", lon: 136.7, lat: 35.33, owner: null },
+  // ── 伊勢・志摩
+  { id: "kuwana_t", name: "\u6851\u540D", kind: "\u6E2F", lon: 136.69, lat: 35.062, owner: "kanbe" },
+  { id: "ominato", name: "\u5927\u6E4A", kind: "\u6E2F", lon: 136.716, lat: 34.51, owner: "kitabatake" },
+  { id: "yamada", name: "\u5C71\u7530\u4E09\u65B9", kind: "\u5BFA\u793E", lon: 136.72, lat: 34.487, owner: null },
+  { id: "shima_kaizoku", name: "\u5FD7\u6469\u6D77\u8CCA\u8846", kind: "\u6C34\u8ECD\u8846", lon: 136.845, lat: 34.48, owner: "kuki" },
+  // ── 三河・遠江・駿河
+  { id: "okazaki_t", name: "\u5CA1\u5D0E\u306E\u5E02", kind: "\u753A", lon: 137.17, lat: 34.955, owner: "matsudaira" },
+  { id: "imagire", name: "\u4ECA\u5207\u306E\u6E21\u3057", kind: "\u6E2F", lon: 137.61, lat: 34.7, owner: "imagawa" },
+  { id: "shimizu", name: "\u6E05\u6C34\u6E4A", kind: "\u6E2F", lon: 138.49, lat: 35.02, owner: "imagawa" },
+  { id: "fujisan", name: "\u5BCC\u58EB\u6D45\u9593\u793E", kind: "\u5BFA\u793E", lon: 138.61, lat: 35.36, owner: null },
+  // ── 近江・若狭・越前
+  { id: "sakamoto_t", name: "\u5742\u672C\u306E\u5E02", kind: "\u5546\u696D\u90FD\u5E02", lon: 135.87, lat: 35.07, owner: "rokkaku" },
+  { id: "otsu", name: "\u5927\u6D25", kind: "\u6E2F", lon: 135.865, lat: 35.01, owner: "rokkaku" },
+  { id: "kaizu_t", name: "\u6D77\u6D25", kind: "\u6E2F", lon: 136.04, lat: 35.4, owner: "azai" },
+  { id: "obama", name: "\u5C0F\u6D5C", kind: "\u6E2F", lon: 135.745, lat: 35.495, owner: "wakasa" },
+  { id: "tsuruga", name: "\u6566\u8CC0", kind: "\u6E2F", lon: 136.065, lat: 35.645, owner: "asakura" },
+  { id: "mikuni", name: "\u4E09\u56FD\u6E4A", kind: "\u6E2F", lon: 136.15, lat: 36.215, owner: "asakura" },
+  { id: "koga_shu", name: "\u7532\u8CC0\u8846", kind: "\u5FCD\u3073\u306E\u91CC", lon: 136.18, lat: 34.95, owner: null },
+  { id: "ishiyama_monto", name: "\u77F3\u5C71\u9580\u5F92", kind: "\u5BFA\u793E", lon: 135.72, lat: 34.985, owner: null },
+  // ── 美濃・飛騨・信濃・甲斐
+  { id: "kanou", name: "\u52A0\u7D0D\u306E\u5E02", kind: "\u5546\u696D\u90FD\u5E02", lon: 136.76, lat: 35.4, owner: "saito" },
+  { id: "takayama_t", name: "\u98DB\u9A28\u306E\u5320", kind: "\u753A", lon: 137.255, lat: 36.145, owner: "anegakoji" },
+  { id: "zenkoji", name: "\u5584\u5149\u5BFA", kind: "\u5BFA\u793E", lon: 138.187, lat: 36.661, owner: null },
+  { id: "kurokawa_kin", name: "\u9ED2\u5DDD\u91D1\u5C71", kind: "\u9271\u5C71", lon: 138.76, lat: 35.78, owner: "takeda" },
+  { id: "ikuno", name: "\u571F\u80A5\u91D1\u5C71", kind: "\u9271\u5C71", lon: 138.79, lat: 34.91, owner: "hojo" }
+];
+
+// src/data/geo.js
+var MAPW = 3700;
+var MAPH = 3900;
+var LON0 = 124.2;
+var LON1 = 146.2;
+var LAT0 = 24;
+var LAT1 = 45.8;
+var px = (lon) => (lon - LON0) / (LON1 - LON0) * MAPW;
+var py = (lat) => (LAT1 - lat) / (LAT1 - LAT0) * MAPH;
+var LAND_POLYS = [
+  [[1823, 1836], [1804, 1840], [1792, 1827], [1794, 1814], [1805, 1816], [1831, 1800], [1854, 1793], [1868, 1808], [1849, 1836], [1859, 1825], [1862, 1832], [1857, 1836], [1872, 1840], [1870, 1851], [1875, 1844], [1883, 1846], [1883, 1840], [1874, 1842], [1874, 1833], [1894, 1824], [1892, 1831], [1898, 1832], [1892, 1838], [1896, 1842], [1894, 1848], [1905, 1857], [1905, 1864], [1946, 1868], [1956, 1883], [1961, 1880], [1956, 1893], [1960, 1904], [1953, 1924], [1955, 1934], [1964, 1942], [1962, 1951], [1967, 1955], [1975, 1951], [1975, 1959], [1985, 1960], [1994, 1979], [1989, 1985], [1972, 1975], [1966, 1984], [1943, 1981], [1942, 1967], [1930, 1950], [1917, 1945], [1919, 1937], [1913, 1937], [1910, 1943], [1914, 1946], [1908, 1947], [1897, 1941], [1898, 1934], [1881, 1930], [1882, 1909], [1864, 1906], [1862, 1900], [1848, 1901], [1843, 1886], [1828, 1890], [1804, 1876], [1805, 1859], [1815, 1863], [1824, 1859], [1823, 1836]],
+  [[982, 2206], [1022, 2204], [1044, 2219], [1066, 2212], [1065, 2229], [1056, 2231], [1051, 2242], [1048, 2238], [1038, 2246], [1032, 2254], [1035, 2265], [1024, 2264], [1017, 2254], [1001, 2270], [996, 2268], [994, 2272], [1012, 2297], [990, 2294], [977, 2287], [962, 2274], [968, 2269], [966, 2261], [945, 2257], [944, 2247], [935, 2238], [940, 2229], [951, 2238], [946, 2230], [953, 2217], [939, 2209], [943, 2203], [948, 2210], [952, 2209], [947, 2205], [949, 2191], [954, 2198], [958, 2192], [968, 2195], [965, 2204], [970, 2209], [982, 2206]],
+  [[1162, 2257], [1188, 2294], [1187, 2309], [1199, 2320], [1188, 2321], [1183, 2336], [1163, 2354], [1162, 2365], [1152, 2364], [1146, 2371], [1147, 2390], [1162, 2410], [1151, 2424], [1162, 2440], [1146, 2438], [1139, 2447], [1103, 2451], [1093, 2450], [1077, 2435], [1066, 2444], [1043, 2447], [1036, 2437], [1043, 2427], [1049, 2426], [1047, 2422], [1058, 2416], [1053, 2410], [1060, 2405], [1058, 2403], [1072, 2391], [1067, 2380], [1072, 2378], [1066, 2373], [1086, 2356], [1053, 2360], [1053, 2356], [1078, 2341], [1075, 2332], [1079, 2327], [1074, 2318], [1050, 2305], [1045, 2289], [1060, 2289], [1059, 2281], [1073, 2269], [1086, 2270], [1090, 2259], [1142, 2286], [1148, 2274], [1140, 2265], [1142, 2257], [1162, 2257]],
+  [[1035, 2396], [1019, 2395], [1015, 2400], [1011, 2392], [1010, 2410], [1004, 2413], [1002, 2409], [999, 2416], [1003, 2416], [991, 2423], [988, 2431], [975, 2435], [977, 2426], [970, 2425], [977, 2415], [981, 2420], [980, 2415], [986, 2419], [987, 2415], [972, 2410], [983, 2381], [979, 2373], [983, 2377], [1007, 2371], [1009, 2389], [1029, 2376], [1040, 2375], [1041, 2380], [1053, 2374], [1043, 2398], [1035, 2401], [1035, 2396]],
+  [[1704, 2010], [1710, 2011], [1705, 2033], [1695, 2031], [1701, 2029], [1698, 2025], [1687, 2037], [1687, 2025], [1672, 2027], [1678, 2024], [1674, 2021], [1677, 2016], [1704, 2010]],
+  [[1671, 2084], [1669, 2090], [1657, 2090], [1648, 2098], [1638, 2090], [1620, 2094], [1594, 2109], [1581, 2103], [1587, 2098], [1589, 2076], [1574, 2064], [1593, 2067], [1593, 2071], [1619, 2053], [1618, 2048], [1624, 2047], [1620, 2053], [1629, 2050], [1631, 2042], [1661, 2049], [1663, 2042], [1669, 2046], [1671, 2039], [1676, 2053], [1684, 2045], [1693, 2051], [1692, 2060], [1712, 2064], [1722, 2074], [1718, 2083], [1707, 2078], [1671, 2084]],
+  [[2146, 1858], [2152, 1856], [2149, 1860], [2161, 1867], [2167, 1880], [2180, 1881], [2184, 1887], [2205, 1880], [2225, 1892], [2248, 1880], [2245, 1887], [2250, 1897], [2267, 1890], [2294, 1894], [2288, 1899], [2292, 1905], [2286, 1908], [2287, 1913], [2273, 1926], [2272, 1937], [2260, 1951], [2235, 1966], [2234, 1990], [2156, 2008], [2165, 1993], [2173, 1997], [2201, 1980], [2201, 1990], [2204, 1990], [2205, 1981], [2212, 1981], [2207, 1980], [2208, 1971], [2203, 1966], [2189, 1964], [2181, 1974], [2181, 1970], [2157, 1972], [2144, 1964], [2150, 1939], [2138, 1973], [2148, 1986], [2126, 1974], [2130, 1961], [2123, 1953], [2122, 1938], [2135, 1917], [2130, 1915], [2127, 1926], [2124, 1917], [2125, 1927], [2119, 1923], [2118, 1929], [2114, 1928], [2110, 1917], [2098, 1908], [2099, 1889], [2114, 1866], [2125, 1868], [2146, 1858]],
+  [[2651, 1547], [2680, 1555], [2692, 1570], [2699, 1570], [2700, 1616], [2707, 1626], [2694, 1630], [2701, 1661], [2688, 1682], [2679, 1679], [2653, 1685], [2642, 1699], [2632, 1698], [2627, 1710], [2611, 1717], [2601, 1716], [2594, 1704], [2567, 1705], [2550, 1685], [2562, 1670], [2560, 1662], [2570, 1649], [2544, 1640], [2552, 1620], [2548, 1615], [2557, 1605], [2548, 1601], [2549, 1596], [2566, 1580], [2627, 1559], [2626, 1553], [2635, 1548], [2651, 1547]],
+  [[2383, 1758], [2395, 1762], [2400, 1772], [2420, 1768], [2424, 1776], [2435, 1776], [2444, 1769], [2471, 1782], [2480, 1779], [2493, 1803], [2511, 1812], [2511, 1831], [2468, 1864], [2435, 1868], [2432, 1861], [2424, 1862], [2419, 1852], [2415, 1854], [2407, 1876], [2411, 1896], [2404, 1902], [2393, 1900], [2382, 1876], [2369, 1878], [2363, 1873], [2360, 1865], [2366, 1840], [2351, 1805], [2361, 1797], [2352, 1790], [2361, 1774], [2369, 1778], [2383, 1758]],
+  [[2010, 1807], [2032, 1814], [2033, 1821], [2039, 1822], [2038, 1834], [2047, 1832], [2052, 1837], [2050, 1845], [2059, 1863], [2054, 1866], [2048, 1889], [2061, 1905], [2054, 1936], [2046, 1949], [2027, 1958], [2003, 1950], [1999, 1954], [2006, 1957], [2e3, 1965], [1989, 1970], [1985, 1960], [1975, 1959], [1975, 1951], [1967, 1955], [1962, 1951], [1964, 1942], [1953, 1924], [1961, 1881], [1956, 1883], [1945, 1870], [1953, 1858], [1966, 1860], [1974, 1839], [1986, 1844], [1989, 1837], [2002, 1837], [2004, 1828], [2013, 1831], [2010, 1807]],
+  [[2429, 1680], [2403, 1681], [2388, 1675], [2393, 1647], [2409, 1637], [2407, 1630], [2443, 1617], [2454, 1620], [2460, 1615], [2459, 1607], [2477, 1604], [2476, 1595], [2486, 1594], [2483, 1578], [2497, 1577], [2505, 1564], [2530, 1587], [2555, 1590], [2548, 1601], [2557, 1605], [2548, 1615], [2552, 1620], [2544, 1640], [2570, 1649], [2560, 1662], [2562, 1670], [2550, 1685], [2567, 1705], [2594, 1704], [2602, 1715], [2594, 1720], [2588, 1716], [2566, 1719], [2549, 1708], [2544, 1712], [2511, 1703], [2496, 1730], [2482, 1731], [2460, 1747], [2448, 1747], [2441, 1756], [2427, 1748], [2429, 1732], [2418, 1723], [2428, 1722], [2422, 1703], [2431, 1699], [2429, 1680]],
+  [[2907, 1220], [2911, 1216], [2932, 1222], [2939, 1240], [2922, 1233], [2927, 1247], [2912, 1257], [2920, 1263], [2920, 1272], [2914, 1267], [2909, 1275], [2900, 1275], [2900, 1280], [2914, 1281], [2903, 1292], [2909, 1300], [2915, 1297], [2917, 1305], [2905, 1302], [2909, 1307], [2906, 1312], [2912, 1315], [2901, 1316], [2905, 1325], [2916, 1324], [2907, 1328], [2915, 1334], [2914, 1347], [2901, 1339], [2903, 1333], [2896, 1333], [2903, 1329], [2898, 1324], [2888, 1327], [2886, 1321], [2870, 1320], [2853, 1330], [2855, 1338], [2849, 1338], [2848, 1328], [2836, 1329], [2830, 1338], [2841, 1342], [2825, 1347], [2833, 1348], [2823, 1356], [2813, 1380], [2814, 1414], [2801, 1415], [2801, 1430], [2788, 1430], [2791, 1436], [2774, 1431], [2773, 1415], [2768, 1413], [2753, 1409], [2739, 1413], [2737, 1405], [2726, 1400], [2716, 1404], [2704, 1399], [2704, 1385], [2728, 1380], [2738, 1363], [2736, 1347], [2762, 1314], [2752, 1304], [2755, 1294], [2748, 1282], [2758, 1281], [2759, 1266], [2766, 1258], [2759, 1255], [2749, 1236], [2765, 1237], [2783, 1224], [2796, 1223], [2823, 1239], [2849, 1238], [2843, 1248], [2865, 1262], [2878, 1248], [2895, 1258], [2899, 1255], [2901, 1239], [2908, 1232], [2907, 1220]],
+  [[2358, 1817], [2366, 1840], [2360, 1865], [2363, 1873], [2369, 1878], [2381, 1875], [2388, 1896], [2395, 1900], [2404, 1902], [2411, 1896], [2407, 1876], [2411, 1859], [2419, 1852], [2424, 1862], [2432, 1861], [2435, 1868], [2489, 1861], [2492, 1873], [2485, 1890], [2494, 1905], [2508, 1907], [2501, 1922], [2506, 1924], [2505, 1936], [2514, 1944], [2497, 1974], [2489, 1978], [2487, 1993], [2480, 1990], [2463, 2003], [2445, 1988], [2451, 1976], [2447, 1964], [2451, 1958], [2448, 1953], [2454, 1949], [2449, 1939], [2452, 1929], [2471, 1929], [2473, 1924], [2460, 1913], [2436, 1906], [2414, 1914], [2404, 1926], [2406, 1935], [2406, 1929], [2411, 1930], [2408, 1935], [2381, 1947], [2372, 1973], [2359, 1981], [2354, 1991], [2359, 2005], [2332, 1993], [2287, 1996], [2234, 1990], [2235, 1966], [2260, 1951], [2272, 1937], [2273, 1926], [2287, 1913], [2292, 1894], [2345, 1866], [2341, 1852], [2348, 1848], [2345, 1833], [2353, 1829], [2358, 1817]],
+  [[2753, 1585], [2788, 1598], [2793, 1605], [2783, 1613], [2778, 1635], [2760, 1666], [2763, 1685], [2751, 1707], [2760, 1738], [2775, 1764], [2769, 1766], [2771, 1772], [2773, 1774], [2771, 1769], [2776, 1767], [2800, 1800], [2743, 1761], [2742, 1770], [2734, 1766], [2711, 1778], [2682, 1781], [2647, 1764], [2621, 1735], [2612, 1737], [2605, 1722], [2605, 1716], [2627, 1710], [2632, 1698], [2642, 1699], [2653, 1685], [2690, 1681], [2701, 1661], [2694, 1630], [2707, 1626], [2700, 1618], [2700, 1587], [2707, 1587], [2735, 1612], [2757, 1597], [2753, 1585]],
+  [[665, 3414], [683, 3386], [690, 3391], [694, 3407], [685, 3422], [678, 3429], [664, 3430], [664, 3435], [660, 3434], [662, 3443], [644, 3443], [648, 3449], [638, 3451], [630, 3464], [617, 3460], [610, 3465], [626, 3489], [616, 3481], [612, 3483], [598, 3506], [601, 3511], [609, 3508], [610, 3512], [593, 3526], [582, 3528], [580, 3516], [583, 3515], [578, 3507], [599, 3487], [590, 3463], [605, 3464], [613, 3452], [625, 3450], [636, 3440], [621, 3434], [619, 3415], [639, 3419], [636, 3426], [643, 3430], [660, 3425], [656, 3421], [665, 3414]],
+  [[425, 3480], [422, 3476], [434, 3472], [441, 3480], [439, 3490], [425, 3480]],
+  [[186, 3773], [177, 3765], [182, 3766], [177, 3758], [184, 3749], [177, 3737], [190, 3757], [213, 3771], [186, 3773]],
+  [[-5, 3841], [-15, 3835], [-10, 3826], [-20, 3826], [-21, 3819], [-14, 3820], [-15, 3814], [-11, 3821], [3, 3819], [4, 3811], [13, 3810], [18, 3791], [23, 3792], [8, 3817], [8, 3836], [-5, 3841]],
+  [[-55, 3855], [-91, 3845], [-87, 3841], [-83, 3844], [-84, 3838], [-76, 3844], [-77, 3830], [-70, 3822], [-65, 3830], [-55, 3828], [-44, 3835], [-55, 3855]],
+  [[2635, 1195], [2656, 1198], [2668, 1193], [2668, 1200], [2683, 1208], [2718, 1212], [2721, 1217], [2732, 1220], [2735, 1231], [2748, 1234], [2759, 1255], [2766, 1258], [2759, 1266], [2758, 1281], [2748, 1282], [2755, 1294], [2752, 1304], [2762, 1314], [2736, 1347], [2738, 1363], [2727, 1381], [2704, 1385], [2702, 1425], [2708, 1430], [2697, 1441], [2677, 1443], [2666, 1435], [2656, 1439], [2647, 1426], [2625, 1431], [2595, 1414], [2599, 1389], [2606, 1385], [2602, 1382], [2607, 1359], [2621, 1361], [2634, 1354], [2640, 1343], [2632, 1334], [2608, 1325], [2611, 1306], [2580, 1296], [2593, 1275], [2617, 1252], [2635, 1195]],
+  [[1905, 2048], [1926, 2042], [1930, 2061], [1939, 2069], [1935, 2074], [1925, 2072], [1908, 2093], [1923, 2113], [1917, 2127], [1920, 2134], [1932, 2128], [1959, 2130], [1960, 2144], [1975, 2158], [1986, 2160], [1981, 2174], [1974, 2175], [1976, 2179], [1972, 2182], [1977, 2186], [1951, 2201], [1949, 2212], [1943, 2212], [1944, 2203], [1916, 2201], [1891, 2192], [1882, 2184], [1882, 2176], [1872, 2170], [1884, 2161], [1856, 2150], [1841, 2132], [1826, 2132], [1828, 2123], [1836, 2118], [1828, 2115], [1845, 2105], [1830, 2098], [1836, 2090], [1841, 2091], [1837, 2087], [1852, 2084], [1827, 2064], [1829, 2057], [1842, 2062], [1873, 2051], [1905, 2048]],
+  [[1970, 2116], [1986, 2110], [1986, 2117], [1981, 2117], [1979, 2124], [1968, 2125], [1970, 2116]],
+  [[872, 2035], [868, 2033], [866, 2042], [874, 2037], [868, 2049], [874, 2051], [869, 2050], [871, 2055], [866, 2058], [867, 2044], [859, 2051], [859, 2041], [855, 2042], [856, 2050], [845, 2046], [854, 2044], [853, 2032], [860, 2028], [853, 2027], [865, 2016], [855, 2011], [861, 1995], [874, 1997], [883, 1985], [891, 1992], [885, 1994], [890, 1996], [888, 2e3], [880, 2e3], [888, 2005], [887, 2012], [869, 2030], [872, 2035]],
+  [[843, 2096], [843, 2091], [835, 2093], [842, 2052], [845, 2058], [854, 2056], [856, 2061], [852, 2052], [859, 2056], [859, 2061], [866, 2058], [855, 2088], [843, 2096]],
+  [[928, 2164], [915, 2153], [922, 2154], [916, 2146], [923, 2146], [920, 2140], [925, 2136], [937, 2139], [932, 2145], [941, 2149], [935, 2151], [941, 2154], [940, 2157], [930, 2158], [928, 2164]],
+  [[870, 2260], [867, 2253], [874, 2258], [872, 2249], [880, 2248], [875, 2242], [882, 2238], [881, 2228], [893, 2222], [895, 2226], [900, 2222], [894, 2219], [900, 2217], [903, 2226], [894, 2231], [897, 2234], [889, 2239], [892, 2243], [870, 2260]],
+  [[914, 2225], [920, 2218], [921, 2227], [940, 2224], [935, 2238], [944, 2247], [945, 2257], [966, 2261], [968, 2269], [962, 2274], [986, 2292], [1009, 2297], [1006, 2305], [991, 2315], [1007, 2319], [1025, 2312], [1032, 2316], [1039, 2330], [1034, 2348], [1004, 2363], [997, 2346], [1004, 2345], [1010, 2334], [1006, 2327], [989, 2327], [967, 2333], [957, 2351], [932, 2367], [945, 2352], [941, 2345], [948, 2346], [954, 2334], [945, 2340], [937, 2322], [925, 2320], [914, 2303], [921, 2272], [935, 2281], [931, 2292], [936, 2286], [945, 2293], [943, 2305], [939, 2299], [943, 2309], [940, 2314], [950, 2320], [955, 2311], [977, 2317], [964, 2304], [967, 2293], [962, 2284], [954, 2278], [945, 2283], [948, 2279], [936, 2276], [936, 2272], [936, 2281], [930, 2272], [939, 2264], [930, 2268], [925, 2261], [927, 2269], [919, 2272], [918, 2266], [924, 2265], [914, 2260], [918, 2257], [914, 2250], [913, 2256], [911, 2250], [900, 2251], [905, 2238], [912, 2234], [902, 2232], [903, 2222], [914, 2225]],
+  [[817, 2323], [814, 2306], [819, 2307], [812, 2304], [813, 2299], [806, 2300], [818, 2293], [815, 2285], [822, 2285], [826, 2261], [821, 2292], [835, 2288], [838, 2295], [831, 2301], [824, 2297], [824, 2315], [818, 2314], [817, 2323]],
+  [[812, 2318], [802, 2313], [801, 2307], [808, 2312], [804, 2302], [813, 2309], [812, 2318]],
+  [[797, 2326], [786, 2315], [788, 2312], [796, 2319], [794, 2313], [797, 2317], [800, 2313], [797, 2326]],
+  [[785, 2332], [779, 2326], [780, 2319], [786, 2326], [784, 2318], [792, 2326], [785, 2332]],
+  [[769, 2366], [763, 2360], [740, 2359], [742, 2353], [748, 2361], [751, 2356], [746, 2355], [753, 2349], [748, 2344], [751, 2329], [755, 2337], [766, 2331], [769, 2337], [775, 2326], [778, 2333], [774, 2334], [783, 2336], [780, 2341], [789, 2354], [768, 2354], [772, 2363], [769, 2366]],
+  [[2805, 946], [2802, 959], [2823, 961], [2825, 974], [2819, 975], [2816, 997], [2802, 1006], [2805, 1017], [2799, 1024], [2800, 1042], [2805, 1060], [2789, 1062], [2790, 1069], [2800, 1074], [2788, 1085], [2796, 1100], [2780, 1115], [2779, 1130], [2767, 1147], [2776, 1155], [2778, 1168], [2790, 1174], [2786, 1181], [2793, 1184], [2783, 1191], [2784, 1201], [2794, 1206], [2786, 1217], [2787, 1224], [2767, 1236], [2752, 1239], [2735, 1231], [2730, 1218], [2713, 1210], [2710, 1214], [2691, 1210], [2690, 1206], [2683, 1208], [2668, 1200], [2668, 1193], [2656, 1198], [2635, 1195], [2643, 1167], [2654, 1161], [2662, 1141], [2668, 1108], [2666, 1078], [2657, 1063], [2644, 1055], [2616, 1063], [2606, 1038], [2626, 1045], [2649, 1022], [2660, 998], [2662, 977], [2647, 961], [2661, 962], [2669, 954], [2675, 960], [2714, 959], [2723, 950], [2748, 966], [2757, 959], [2766, 965], [2781, 963], [2805, 946]],
+  [[1651, 1869], [1650, 1877], [1672, 1882], [1677, 1902], [1715, 1888], [1712, 1895], [1717, 1906], [1710, 1906], [1701, 1924], [1693, 1928], [1696, 1933], [1691, 1942], [1698, 1949], [1691, 1959], [1701, 1968], [1702, 1982], [1679, 1978], [1682, 1984], [1689, 1986], [1668, 2006], [1639, 2004], [1656, 2008], [1649, 2019], [1641, 2017], [1637, 2030], [1620, 2026], [1616, 2029], [1618, 2034], [1612, 2033], [1604, 2017], [1601, 2022], [1605, 2027], [1598, 2025], [1596, 2014], [1595, 2020], [1591, 2018], [1571, 2028], [1562, 2019], [1569, 2030], [1560, 2032], [1555, 2012], [1544, 2e3], [1548, 1991], [1540, 1980], [1544, 1967], [1530, 1952], [1534, 1931], [1525, 1923], [1528, 1915], [1548, 1912], [1549, 1899], [1568, 1899], [1565, 1891], [1574, 1888], [1580, 1870], [1605, 1875], [1620, 1888], [1637, 1872], [1651, 1869]],
+  [[1088, 2126], [1105, 2120], [1102, 2125], [1111, 2123], [1112, 2128], [1100, 2133], [1110, 2134], [1114, 2125], [1119, 2124], [1118, 2128], [1125, 2131], [1137, 2118], [1147, 2118], [1142, 2138], [1136, 2141], [1143, 2144], [1141, 2150], [1159, 2178], [1175, 2180], [1173, 2199], [1149, 2197], [1126, 2210], [1124, 2222], [1116, 2229], [1121, 2242], [1114, 2248], [1125, 2256], [1119, 2270], [1090, 2259], [1086, 2270], [1073, 2269], [1059, 2281], [1060, 2289], [1042, 2290], [1047, 2280], [1032, 2254], [1048, 2238], [1051, 2242], [1056, 2231], [1065, 2229], [1066, 2212], [1044, 2219], [1022, 2204], [983, 2206], [983, 2201], [1001, 2194], [1003, 2190], [995, 2192], [998, 2188], [990, 2185], [1e3, 2183], [1011, 2171], [1021, 2186], [1043, 2182], [1048, 2167], [1035, 2175], [1024, 2167], [1030, 2172], [1042, 2167], [1054, 2155], [1050, 2144], [1055, 2144], [1056, 2136], [1062, 2136], [1064, 2131], [1082, 2132], [1088, 2126]],
+  [[2162, 1687], [2180, 1671], [2187, 1677], [2205, 1670], [2205, 1677], [2218, 1671], [2221, 1677], [2239, 1678], [2261, 1692], [2262, 1702], [2249, 1714], [2253, 1722], [2246, 1728], [2245, 1734], [2256, 1740], [2253, 1751], [2233, 1772], [2217, 1773], [2208, 1786], [2230, 1796], [2244, 1816], [2239, 1824], [2259, 1841], [2259, 1848], [2252, 1852], [2259, 1861], [2249, 1861], [2254, 1872], [2225, 1892], [2205, 1880], [2184, 1887], [2180, 1881], [2167, 1880], [2161, 1867], [2149, 1860], [2151, 1856], [2125, 1868], [2114, 1866], [2099, 1889], [2097, 1908], [2093, 1902], [2088, 1905], [2074, 1886], [2054, 1893], [2048, 1889], [2054, 1866], [2059, 1863], [2050, 1845], [2053, 1840], [2047, 1832], [2038, 1834], [2039, 1822], [2031, 1815], [2039, 1804], [2039, 1795], [2048, 1790], [2070, 1798], [2073, 1791], [2117, 1789], [2124, 1779], [2123, 1772], [2107, 1754], [2113, 1724], [2128, 1709], [2118, 1700], [2124, 1698], [2131, 1687], [2132, 1692], [2144, 1691], [2149, 1704], [2161, 1694], [2162, 1687]],
+  [[2788, 821], [2798, 784], [2810, 770], [2811, 761], [2826, 772], [2844, 776], [2870, 795], [2888, 793], [2903, 782], [2891, 828], [2895, 903], [2908, 938], [2915, 943], [2922, 940], [2940, 957], [2924, 965], [2916, 975], [2900, 970], [2884, 978], [2879, 971], [2826, 999], [2817, 991], [2819, 975], [2825, 974], [2823, 961], [2802, 959], [2805, 946], [2781, 963], [2766, 965], [2757, 959], [2748, 966], [2723, 950], [2714, 959], [2675, 960], [2669, 954], [2661, 962], [2647, 961], [2648, 939], [2634, 928], [2645, 923], [2657, 904], [2666, 900], [2678, 905], [2699, 894], [2712, 850], [2711, 842], [2699, 835], [2711, 832], [2714, 812], [2735, 826], [2750, 818], [2763, 824], [2768, 868], [2781, 889], [2791, 888], [2802, 879], [2804, 868], [2798, 867], [2805, 857], [2817, 860], [2821, 871], [2843, 881], [2853, 878], [2863, 864], [2872, 831], [2863, 813], [2853, 809], [2835, 826], [2822, 823], [2794, 836], [2786, 833], [2788, 821]],
+  [[1879, 1924], [1881, 1930], [1899, 1934], [1897, 1941], [1908, 1947], [1914, 1946], [1910, 1943], [1913, 1937], [1919, 1937], [1917, 1945], [1925, 1945], [1942, 1967], [1936, 1971], [1926, 2002], [1931, 2006], [1926, 2014], [1930, 2017], [1931, 2038], [1902, 2051], [1898, 2046], [1835, 2062], [1832, 2055], [1853, 2049], [1880, 2026], [1880, 2016], [1882, 2021], [1889, 2016], [1891, 2011], [1885, 2011], [1884, 2004], [1887, 2009], [1895, 2006], [1888, 2005], [1892, 1996], [1886, 1994], [1888, 1987], [1884, 1987], [1894, 1980], [1886, 1964], [1891, 1950], [1887, 1948], [1895, 1945], [1875, 1938], [1876, 1928], [1872, 1926], [1879, 1924]],
+  [[2409, 1569], [2419, 1577], [2420, 1590], [2437, 1600], [2433, 1614], [2438, 1621], [2412, 1627], [2407, 1630], [2409, 1637], [2398, 1640], [2389, 1660], [2388, 1675], [2398, 1681], [2430, 1680], [2431, 1699], [2422, 1703], [2428, 1722], [2418, 1723], [2429, 1732], [2427, 1748], [2441, 1756], [2444, 1769], [2426, 1776], [2420, 1768], [2397, 1771], [2396, 1763], [2383, 1758], [2369, 1778], [2361, 1774], [2352, 1790], [2361, 1797], [2351, 1805], [2358, 1817], [2353, 1829], [2345, 1833], [2348, 1848], [2341, 1852], [2345, 1866], [2303, 1886], [2299, 1893], [2283, 1896], [2267, 1890], [2250, 1897], [2245, 1887], [2246, 1877], [2254, 1872], [2249, 1861], [2260, 1860], [2252, 1852], [2259, 1848], [2259, 1841], [2239, 1824], [2244, 1816], [2230, 1796], [2208, 1786], [2217, 1773], [2233, 1772], [2253, 1751], [2256, 1740], [2245, 1734], [2246, 1728], [2253, 1722], [2249, 1714], [2263, 1699], [2251, 1683], [2265, 1662], [2271, 1661], [2269, 1652], [2279, 1648], [2279, 1618], [2300, 1598], [2299, 1589], [2323, 1591], [2326, 1596], [2321, 1605], [2330, 1610], [2340, 1601], [2357, 1598], [2370, 1602], [2371, 1590], [2379, 1588], [2387, 1575], [2409, 1569]],
+  [[1235, 2169], [1250, 2168], [1260, 2175], [1268, 2190], [1268, 2207], [1262, 2217], [1249, 2215], [1253, 2221], [1243, 2228], [1228, 2225], [1230, 2242], [1243, 2246], [1260, 2240], [1271, 2247], [1295, 2242], [1278, 2267], [1295, 2266], [1287, 2274], [1297, 2278], [1302, 2273], [1307, 2279], [1312, 2273], [1314, 2280], [1300, 2281], [1293, 2291], [1305, 2300], [1312, 2297], [1312, 2302], [1317, 2298], [1326, 2302], [1308, 2304], [1309, 2310], [1314, 2310], [1302, 2319], [1313, 2321], [1307, 2327], [1293, 2325], [1290, 2336], [1286, 2335], [1288, 2322], [1273, 2319], [1263, 2331], [1239, 2334], [1230, 2331], [1223, 2319], [1204, 2325], [1188, 2312], [1188, 2294], [1160, 2256], [1142, 2257], [1140, 2265], [1148, 2274], [1142, 2286], [1117, 2272], [1125, 2256], [1114, 2248], [1121, 2242], [1116, 2229], [1124, 2222], [1131, 2204], [1149, 2197], [1173, 2199], [1175, 2180], [1216, 2187], [1227, 2170], [1235, 2169]],
+  [[2073, 1886], [2088, 1905], [2093, 1902], [2110, 1917], [2115, 1928], [2094, 1933], [2091, 1941], [2097, 1943], [2074, 1976], [2073, 1990], [2078, 1991], [2073, 2002], [2093, 2005], [2122, 2024], [2124, 2020], [2132, 2026], [2132, 2034], [2140, 2031], [2138, 2044], [2121, 2045], [2130, 2050], [2137, 2046], [2132, 2051], [2136, 2062], [2127, 2067], [2113, 2064], [2129, 2064], [2124, 2062], [2130, 2060], [2124, 2057], [2127, 2055], [2120, 2052], [2118, 2059], [2113, 2054], [2113, 2059], [2101, 2060], [2107, 2050], [2099, 2053], [2101, 2049], [2096, 2049], [2098, 2053], [2092, 2056], [2098, 2054], [2086, 2065], [2081, 2062], [2084, 2058], [2077, 2061], [2077, 2066], [2069, 2061], [2072, 2068], [2066, 2068], [2070, 2070], [2066, 2072], [2063, 2065], [2059, 2067], [2060, 2072], [2039, 2076], [2031, 2082], [2032, 2090], [2038, 2090], [2035, 2095], [2026, 2094], [2030, 2088], [2019, 2097], [2032, 2107], [2025, 2108], [2030, 2116], [2020, 2111], [2017, 2116], [2023, 2120], [2015, 2122], [2015, 2127], [2009, 2124], [1986, 2160], [1979, 2160], [1960, 2144], [1960, 2136], [1967, 2134], [1967, 2125], [1986, 2117], [1988, 2105], [2002, 2106], [2e3, 2076], [2007, 2066], [2001, 2057], [2006, 2054], [1996, 2041], [2001, 2033], [2019, 2031], [2023, 2023], [2021, 2017], [2013, 2018], [2011, 2011], [2004, 2013], [1993, 2007], [1997, 1997], [1991, 1992], [1999, 1990], [1988, 1970], [2e3, 1965], [2006, 1957], [1999, 1954], [2003, 1950], [2027, 1958], [2046, 1949], [2059, 1920], [2061, 1903], [2053, 1899], [2054, 1893], [2073, 1886]],
+  [[1456, 1915], [1522, 1918], [1534, 1931], [1529, 1949], [1544, 1967], [1540, 1980], [1548, 1991], [1544, 2e3], [1556, 2015], [1555, 2031], [1549, 2025], [1552, 2035], [1548, 2033], [1538, 2046], [1521, 2041], [1526, 2037], [1523, 2032], [1519, 2037], [1494, 2040], [1492, 2050], [1465, 2051], [1454, 2059], [1446, 2055], [1444, 2061], [1439, 2061], [1440, 2068], [1420, 2075], [1412, 2070], [1402, 2076], [1405, 2068], [1398, 2065], [1394, 2051], [1399, 2046], [1369, 2048], [1351, 2065], [1353, 2073], [1336, 2069], [1333, 2051], [1323, 2047], [1325, 2032], [1318, 2021], [1333, 2007], [1339, 1989], [1334, 1984], [1349, 1977], [1352, 1967], [1378, 1972], [1385, 1964], [1402, 1969], [1415, 1960], [1429, 1960], [1430, 1953], [1418, 1949], [1437, 1939], [1456, 1915]],
+  [[1384, 2088], [1389, 2080], [1385, 2076], [1384, 2080], [1374, 2065], [1383, 2065], [1391, 2074], [1391, 2067], [1384, 2066], [1385, 2060], [1392, 2058], [1394, 2086], [1384, 2088]],
+  [[1404, 2097], [1402, 2093], [1387, 2094], [1396, 2087], [1400, 2075], [1405, 2079], [1399, 2083], [1405, 2084], [1402, 2092], [1411, 2090], [1404, 2097]],
+  [[4060, 91], [4113, 47], [4130, 43], [4144, 44], [4153, 51], [4142, 62], [4150, 73], [4145, 82], [4109, 84], [4086, 97], [4054, 104], [4018, 124], [3987, 150], [3967, 152], [3957, 143], [3946, 143], [3938, 152], [3944, 157], [3933, 171], [3891, 194], [3869, 221], [3848, 222], [3827, 246], [3812, 242], [3813, 233], [3827, 223], [3826, 209], [3834, 218], [3840, 212], [3836, 204], [3851, 208], [3865, 199], [3868, 187], [3854, 183], [3853, 175], [3874, 178], [3879, 167], [3922, 143], [3924, 127], [3919, 123], [3945, 128], [3959, 108], [3981, 103], [3978, 78], [3987, 66], [3997, 68], [4010, 95], [4060, 91]],
+  [[2923, 111], [2922, 101], [2936, 81], [2934, 62], [2940, 71], [2959, 70], [2970, 65], [2976, 52], [2984, 50], [3002, 71], [3022, 82], [3079, 132], [3105, 171], [3161, 222], [3256, 277], [3313, 294], [3372, 302], [3380, 325], [3398, 332], [3464, 334], [3530, 287], [3554, 260], [3560, 276], [3514, 341], [3510, 366], [3523, 385], [3556, 396], [3556, 401], [3547, 402], [3555, 399], [3553, 395], [3531, 389], [3531, 394], [3544, 428], [3563, 449], [3581, 453], [3608, 431], [3627, 429], [3635, 435], [3594, 450], [3592, 462], [3583, 468], [3586, 471], [3566, 468], [3523, 475], [3513, 493], [3494, 504], [3477, 503], [3470, 498], [3474, 492], [3465, 490], [3452, 504], [3460, 513], [3406, 511], [3391, 506], [3391, 501], [3375, 500], [3317, 523], [3262, 565], [3227, 605], [3214, 633], [3218, 646], [3214, 670], [3206, 679], [3204, 693], [3156, 659], [3131, 654], [3075, 631], [3027, 600], [2999, 593], [2972, 574], [2932, 567], [2943, 562], [2884, 583], [2846, 605], [2826, 626], [2814, 620], [2827, 618], [2811, 614], [2804, 597], [2789, 590], [2777, 575], [2736, 575], [2710, 605], [2704, 624], [2706, 635], [2724, 641], [2749, 659], [2776, 655], [2785, 659], [2819, 694], [2850, 706], [2857, 715], [2820, 732], [2788, 720], [2775, 726], [2778, 714], [2765, 713], [2759, 726], [2732, 736], [2731, 759], [2726, 766], [2701, 772], [2691, 787], [2682, 782], [2672, 784], [2662, 776], [2655, 750], [2669, 715], [2678, 712], [2680, 684], [2662, 660], [2644, 656], [2637, 643], [2619, 633], [2621, 616], [2632, 597], [2628, 570], [2640, 558], [2665, 555], [2681, 545], [2689, 532], [2699, 542], [2709, 540], [2709, 532], [2723, 515], [2745, 502], [2746, 495], [2712, 461], [2716, 441], [2729, 442], [2741, 434], [2790, 466], [2828, 458], [2827, 467], [2853, 475], [2874, 465], [2897, 442], [2898, 426], [2886, 408], [2890, 396], [2881, 371], [2891, 357], [2920, 347], [2932, 329], [2934, 332], [2935, 266], [2951, 245], [2959, 207], [2947, 157], [2923, 111]],
+  [[2831, 94], [2820, 60], [2827, 65], [2831, 60], [2837, 67], [2831, 94]],
+  [[2851, 103], [2859, 97], [2872, 101], [2881, 116], [2864, 125], [2849, 114], [2851, 103]],
+  [[3624, 310], [3623, 303], [3665, 264], [3668, 254], [3688, 231], [3696, 230], [3722, 247], [3764, 240], [3749, 259], [3739, 255], [3717, 272], [3686, 275], [3674, 289], [3654, 298], [3643, 313], [3646, 318], [3635, 319], [3630, 334], [3598, 345], [3590, 383], [3590, 370], [3571, 372], [3566, 351], [3624, 310]],
+  [[3775, 375], [3772, 365], [3765, 368], [3769, 363], [3765, 356], [3792, 354], [3788, 349], [3805, 342], [3821, 351], [3775, 375]],
+  [[3686, 419], [3677, 407], [3688, 403], [3701, 405], [3699, 413], [3686, 419]],
+  [[2565, 671], [2560, 667], [2558, 648], [2583, 635], [2574, 662], [2565, 671]],
+  [[1794, 1814], [1792, 1827], [1804, 1840], [1822, 1836], [1824, 1841], [1824, 1859], [1815, 1863], [1805, 1859], [1804, 1876], [1828, 1890], [1843, 1886], [1848, 1901], [1862, 1900], [1864, 1906], [1882, 1909], [1883, 1919], [1872, 1926], [1876, 1928], [1875, 1938], [1895, 1946], [1887, 1948], [1891, 1950], [1886, 1964], [1894, 1980], [1882, 1989], [1884, 1986], [1879, 1989], [1871, 1981], [1848, 1988], [1847, 1995], [1826, 1999], [1758, 1970], [1728, 1976], [1727, 1966], [1726, 1974], [1717, 1981], [1708, 1977], [1702, 1982], [1701, 1968], [1692, 1963], [1692, 1953], [1698, 1949], [1691, 1943], [1696, 1933], [1693, 1928], [1701, 1924], [1710, 1906], [1717, 1906], [1713, 1892], [1735, 1883], [1734, 1869], [1728, 1864], [1729, 1856], [1722, 1853], [1717, 1840], [1719, 1831], [1710, 1822], [1738, 1812], [1753, 1818], [1777, 1811], [1794, 1814]],
+  [[1781, 2035], [1814, 2003], [1820, 2005], [1799, 2036], [1799, 2049], [1808, 2063], [1771, 2077], [1766, 2071], [1769, 2065], [1759, 2068], [1758, 2058], [1771, 2052], [1781, 2035]],
+  [[2620, 1737], [2647, 1764], [2683, 1781], [2711, 1778], [2734, 1766], [2742, 1770], [2743, 1761], [2804, 1804], [2803, 1808], [2797, 1805], [2767, 1809], [2746, 1824], [2726, 1849], [2722, 1899], [2710, 1908], [2678, 1911], [2654, 1930], [2650, 1944], [2638, 1950], [2616, 1938], [2633, 1932], [2625, 1925], [2631, 1917], [2626, 1900], [2635, 1890], [2631, 1880], [2620, 1876], [2630, 1872], [2631, 1865], [2640, 1868], [2641, 1855], [2661, 1849], [2668, 1835], [2679, 1830], [2672, 1830], [2677, 1825], [2655, 1815], [2655, 1808], [2646, 1811], [2647, 1817], [2636, 1820], [2644, 1807], [2637, 1795], [2640, 1777], [2620, 1737]],
+  [[2260, 1578], [2274, 1588], [2281, 1634], [2279, 1648], [2269, 1652], [2271, 1661], [2265, 1662], [2252, 1683], [2221, 1677], [2218, 1671], [2205, 1677], [2205, 1670], [2187, 1677], [2180, 1671], [2149, 1704], [2144, 1691], [2132, 1692], [2131, 1687], [2124, 1698], [2118, 1700], [2120, 1689], [2114, 1676], [2118, 1674], [2122, 1654], [2116, 1642], [2123, 1633], [2117, 1625], [2127, 1618], [2135, 1588], [2159, 1580], [2150, 1597], [2172, 1613], [2168, 1615], [2206, 1617], [2219, 1609], [2226, 1587], [2260, 1578]],
+  [[2480, 1779], [2493, 1772], [2540, 1783], [2555, 1796], [2580, 1788], [2576, 1795], [2581, 1797], [2597, 1789], [2613, 1792], [2616, 1787], [2627, 1786], [2639, 1792], [2644, 1807], [2636, 1818], [2623, 1821], [2622, 1815], [2617, 1815], [2614, 1827], [2616, 1832], [2621, 1830], [2622, 1838], [2607, 1836], [2601, 1827], [2584, 1819], [2577, 1817], [2573, 1824], [2567, 1820], [2565, 1824], [2574, 1829], [2569, 1829], [2568, 1842], [2556, 1828], [2530, 1824], [2525, 1817], [2493, 1803], [2480, 1779]],
+  [[2574, 2103], [2569, 2097], [2572, 2090], [2583, 2091], [2584, 2099], [2574, 2103]],
+  [[3031, 3357], [3025, 3356], [3028, 3348], [3025, 3345], [3033, 3350], [3031, 3357]],
+  [[2511, 1703], [2544, 1712], [2549, 1708], [2566, 1719], [2604, 1717], [2612, 1737], [2620, 1737], [2638, 1772], [2639, 1792], [2618, 1786], [2613, 1792], [2600, 1789], [2581, 1797], [2576, 1795], [2580, 1788], [2555, 1796], [2540, 1783], [2493, 1772], [2471, 1782], [2445, 1770], [2441, 1756], [2448, 1747], [2460, 1747], [2482, 1731], [2496, 1730], [2511, 1703]],
+  [[1260, 1989], [1266, 2008], [1256, 2021], [1261, 2033], [1277, 2033], [1272, 2043], [1274, 2051], [1283, 2057], [1298, 2051], [1305, 2056], [1314, 2044], [1311, 2034], [1323, 2027], [1323, 2047], [1333, 2051], [1336, 2069], [1353, 2073], [1353, 2085], [1345, 2090], [1348, 2110], [1343, 2118], [1331, 2120], [1338, 2139], [1331, 2141], [1332, 2133], [1319, 2127], [1322, 2125], [1307, 2126], [1289, 2110], [1277, 2113], [1280, 2117], [1272, 2115], [1283, 2106], [1275, 2106], [1278, 2100], [1268, 2102], [1270, 2098], [1246, 2107], [1244, 2103], [1234, 2112], [1223, 2104], [1217, 2114], [1214, 2108], [1210, 2114], [1214, 2107], [1208, 2102], [1203, 2117], [1188, 2125], [1183, 2124], [1184, 2120], [1174, 2123], [1172, 2112], [1150, 2101], [1127, 2126], [1122, 2120], [1130, 2120], [1129, 2100], [1120, 2091], [1132, 2073], [1121, 2060], [1127, 2046], [1131, 2050], [1149, 2045], [1146, 2039], [1132, 2041], [1139, 2032], [1147, 2037], [1166, 2036], [1170, 2044], [1177, 2040], [1180, 2045], [1181, 2041], [1195, 2042], [1200, 2036], [1213, 2035], [1210, 2029], [1221, 2024], [1220, 2017], [1234, 2010], [1237, 2001], [1245, 1999], [1245, 1993], [1253, 1996], [1260, 1989]],
+  [[1347, 2137], [1341, 2125], [1348, 2117], [1360, 2119], [1367, 2129], [1391, 2120], [1374, 2127], [1374, 2136], [1367, 2136], [1368, 2132], [1360, 2129], [1359, 2134], [1347, 2137]],
+  [[2704, 1400], [2716, 1404], [2726, 1400], [2737, 1405], [2739, 1413], [2753, 1409], [2773, 1415], [2773, 1429], [2780, 1434], [2801, 1432], [2801, 1415], [2808, 1413], [2823, 1427], [2833, 1488], [2830, 1532], [2820, 1580], [2795, 1591], [2789, 1600], [2761, 1591], [2754, 1585], [2757, 1597], [2735, 1612], [2698, 1584], [2699, 1570], [2692, 1570], [2680, 1555], [2641, 1547], [2629, 1551], [2627, 1559], [2602, 1564], [2566, 1580], [2555, 1590], [2528, 1586], [2532, 1545], [2517, 1532], [2528, 1513], [2522, 1501], [2525, 1495], [2556, 1492], [2561, 1482], [2587, 1483], [2581, 1458], [2595, 1451], [2600, 1439], [2614, 1428], [2604, 1423], [2608, 1421], [2625, 1431], [2647, 1426], [2656, 1439], [2666, 1435], [2677, 1443], [2697, 1441], [2708, 1430], [2702, 1425], [2704, 1400]],
+  [[2167, 1491], [2199, 1479], [2211, 1482], [2213, 1493], [2196, 1497], [2193, 1507], [2198, 1514], [2192, 1521], [2178, 1519], [2154, 1542], [2144, 1536], [2147, 1532], [2140, 1533], [2131, 1548], [2136, 1550], [2129, 1561], [2142, 1559], [2148, 1566], [2162, 1555], [2162, 1580], [2135, 1588], [2127, 1618], [2117, 1625], [2123, 1633], [2116, 1643], [2122, 1654], [2114, 1678], [2120, 1689], [2118, 1700], [2128, 1709], [2113, 1724], [2111, 1738], [2098, 1741], [2077, 1725], [2059, 1729], [2053, 1722], [2042, 1722], [2040, 1712], [2026, 1700], [2055, 1678], [2081, 1648], [2111, 1601], [2114, 1574], [2106, 1564], [2107, 1550], [2097, 1548], [2108, 1523], [2106, 1516], [2126, 1503], [2140, 1504], [2167, 1491]],
+  [[2144, 1558], [2136, 1547], [2140, 1551], [2147, 1547], [2154, 1550], [2159, 1544], [2162, 1547], [2159, 1553], [2144, 1558]],
+  [[2026, 1700], [2040, 1712], [2045, 1724], [2053, 1722], [2061, 1729], [2077, 1725], [2096, 1741], [2111, 1738], [2107, 1754], [2118, 1763], [2124, 1780], [2117, 1789], [2073, 1791], [2070, 1798], [2048, 1790], [2040, 1793], [2032, 1814], [2010, 1807], [2013, 1831], [2004, 1828], [2002, 1837], [1989, 1837], [1986, 1844], [1974, 1839], [1966, 1860], [1953, 1858], [1946, 1868], [1905, 1864], [1905, 1857], [1894, 1848], [1895, 1834], [1898, 1832], [1897, 1839], [1903, 1834], [1902, 1842], [1906, 1845], [1928, 1834], [1922, 1845], [1914, 1844], [1937, 1846], [1945, 1836], [1937, 1839], [1932, 1834], [1936, 1830], [1951, 1838], [1957, 1836], [1951, 1830], [1957, 1831], [1960, 1826], [1953, 1817], [1962, 1823], [1981, 1819], [1977, 1803], [1987, 1795], [1992, 1806], [1989, 1810], [1997, 1814], [2001, 1793], [1984, 1773], [1977, 1756], [2003, 1717], [2006, 1719], [2005, 1709], [2026, 1700]],
+  [[1473, 2077], [1470, 2074], [1479, 2066], [1474, 2064], [1484, 2058], [1490, 2072], [1473, 2077]],
+  [[1401, 2176], [1423, 2163], [1430, 2154], [1430, 2132], [1438, 2127], [1440, 2111], [1467, 2099], [1468, 2092], [1462, 2090], [1470, 2086], [1500, 2124], [1534, 2112], [1566, 2116], [1581, 2103], [1595, 2110], [1596, 2126], [1591, 2132], [1573, 2132], [1564, 2142], [1527, 2141], [1520, 2150], [1512, 2148], [1500, 2172], [1493, 2173], [1488, 2187], [1491, 2193], [1483, 2204], [1447, 2208], [1463, 2232], [1445, 2241], [1442, 2253], [1429, 2265], [1416, 2258], [1428, 2295], [1422, 2303], [1412, 2305], [1413, 2299], [1398, 2299], [1395, 2305], [1400, 2305], [1394, 2308], [1389, 2301], [1396, 2298], [1391, 2295], [1395, 2292], [1395, 2296], [1405, 2297], [1398, 2294], [1393, 2281], [1381, 2280], [1381, 2285], [1375, 2286], [1381, 2277], [1393, 2280], [1387, 2268], [1396, 2267], [1386, 2265], [1384, 2260], [1390, 2259], [1380, 2253], [1389, 2252], [1393, 2260], [1398, 2259], [1394, 2255], [1398, 2252], [1406, 2250], [1399, 2246], [1403, 2241], [1391, 2244], [1400, 2234], [1374, 2233], [1382, 2226], [1382, 2221], [1376, 2225], [1375, 2221], [1382, 2210], [1376, 2211], [1382, 2207], [1371, 2203], [1365, 2209], [1362, 2205], [1337, 2223], [1329, 2225], [1332, 2221], [1328, 2221], [1314, 2228], [1332, 2215], [1339, 2216], [1338, 2211], [1355, 2209], [1355, 2205], [1382, 2193], [1401, 2176]],
+  [[1936, 1971], [1943, 1981], [1959, 1985], [1966, 1984], [1972, 1975], [1987, 1984], [1994, 1979], [1999, 1990], [1991, 1992], [1997, 1997], [1993, 2007], [2004, 2013], [2011, 2011], [2013, 2018], [2021, 2017], [2023, 2023], [2019, 2031], [2001, 2033], [1996, 2041], [2006, 2054], [2001, 2057], [2007, 2066], [2e3, 2076], [2002, 2106], [1988, 2105], [1982, 2112], [1972, 2114], [1967, 2120], [1969, 2126], [1962, 2125], [1963, 2136], [1952, 2128], [1920, 2134], [1917, 2127], [1923, 2113], [1907, 2098], [1925, 2072], [1939, 2070], [1930, 2061], [1926, 2042], [1932, 2030], [1926, 2014], [1931, 2006], [1926, 2002], [1936, 1971]],
+  [[1522, 1724], [1521, 1719], [1511, 1715], [1510, 1702], [1527, 1691], [1545, 1705], [1542, 1716], [1537, 1718], [1538, 1713], [1531, 1717], [1537, 1723], [1527, 1720], [1522, 1724]],
+  [[1480, 1746], [1471, 1742], [1476, 1733], [1495, 1728], [1487, 1734], [1487, 1742], [1481, 1734], [1476, 1737], [1480, 1746]],
+  [[1491, 1747], [1491, 1735], [1502, 1733], [1500, 1738], [1506, 1740], [1496, 1740], [1491, 1747]],
+  [[1521, 1834], [1513, 1838], [1534, 1859], [1529, 1875], [1532, 1884], [1506, 1893], [1513, 1902], [1505, 1907], [1504, 1919], [1458, 1914], [1437, 1939], [1418, 1949], [1430, 1953], [1429, 1960], [1415, 1960], [1402, 1969], [1385, 1964], [1378, 1972], [1352, 1967], [1349, 1977], [1334, 1984], [1339, 1989], [1333, 2007], [1320, 2018], [1323, 2027], [1311, 2034], [1314, 2044], [1305, 2056], [1298, 2051], [1281, 2057], [1272, 2046], [1277, 2033], [1261, 2033], [1256, 2021], [1266, 2008], [1260, 1989], [1286, 1984], [1313, 1956], [1321, 1955], [1331, 1941], [1364, 1922], [1382, 1898], [1417, 1881], [1425, 1865], [1418, 1854], [1438, 1852], [1434, 1848], [1457, 1840], [1474, 1840], [1475, 1835], [1496, 1829], [1495, 1824], [1505, 1832], [1531, 1829], [1521, 1834]],
+  [[2923, 971], [2924, 965], [2940, 957], [2963, 989], [2966, 998], [2959, 1003], [2973, 1012], [2965, 1022], [2986, 1040], [2984, 1052], [2994, 1078], [2985, 1111], [2998, 1099], [2998, 1113], [3006, 1118], [2995, 1131], [2986, 1133], [2990, 1138], [3004, 1132], [3001, 1140], [2990, 1140], [2983, 1147], [2987, 1152], [2977, 1156], [2993, 1154], [2989, 1160], [2975, 1162], [2982, 1169], [2975, 1167], [2975, 1172], [2989, 1172], [2972, 1179], [2981, 1184], [2966, 1190], [2981, 1198], [2974, 1201], [2962, 1196], [2964, 1203], [2973, 1205], [2962, 1206], [2969, 1211], [2949, 1213], [2948, 1204], [2945, 1212], [2951, 1217], [2945, 1217], [2943, 1222], [2948, 1225], [2944, 1227], [2938, 1215], [2931, 1216], [2932, 1222], [2908, 1217], [2908, 1232], [2901, 1239], [2899, 1255], [2895, 1258], [2878, 1248], [2862, 1261], [2843, 1248], [2849, 1238], [2823, 1239], [2796, 1223], [2787, 1224], [2786, 1217], [2794, 1206], [2784, 1201], [2783, 1191], [2793, 1184], [2786, 1181], [2790, 1174], [2774, 1163], [2777, 1157], [2768, 1142], [2779, 1130], [2780, 1115], [2796, 1100], [2788, 1085], [2800, 1074], [2790, 1069], [2789, 1062], [2805, 1060], [2799, 1024], [2805, 1018], [2802, 1006], [2808, 999], [2818, 993], [2830, 998], [2879, 971], [2884, 978], [2900, 970], [2916, 975], [2923, 971]],
+  [[1710, 1822], [1719, 1831], [1717, 1840], [1722, 1853], [1729, 1856], [1728, 1864], [1734, 1869], [1735, 1883], [1726, 1890], [1714, 1887], [1702, 1896], [1692, 1895], [1677, 1902], [1672, 1882], [1650, 1877], [1651, 1869], [1637, 1872], [1620, 1888], [1605, 1875], [1580, 1870], [1574, 1888], [1565, 1891], [1568, 1899], [1547, 1900], [1548, 1912], [1530, 1914], [1525, 1922], [1503, 1920], [1505, 1907], [1513, 1902], [1506, 1893], [1532, 1884], [1529, 1875], [1534, 1859], [1517, 1846], [1513, 1838], [1516, 1834], [1525, 1833], [1521, 1836], [1524, 1843], [1546, 1851], [1575, 1837], [1610, 1842], [1649, 1836], [1661, 1839], [1690, 1833], [1710, 1822]],
+  [[1722, 2074], [1746, 2068], [1746, 2075], [1756, 2079], [1747, 2109], [1750, 2114], [1755, 2109], [1767, 2124], [1754, 2137], [1774, 2141], [1715, 2173], [1709, 2185], [1704, 2185], [1709, 2186], [1700, 2187], [1701, 2192], [1681, 2189], [1673, 2177], [1679, 2174], [1677, 2168], [1658, 2166], [1654, 2142], [1641, 2141], [1634, 2148], [1621, 2139], [1606, 2140], [1592, 2134], [1596, 2126], [1594, 2109], [1611, 2097], [1638, 2090], [1648, 2098], [1657, 2090], [1669, 2090], [1677, 2079], [1707, 2078], [1717, 2083], [1722, 2074]],
+  [[1002, 2453], [991, 2437], [996, 2433], [993, 2430], [1002, 2434], [1e3, 2430], [1005, 2428], [1011, 2441], [1002, 2453]],
+  [[1075, 2436], [1097, 2451], [1094, 2458], [1106, 2466], [1110, 2478], [1129, 2489], [1123, 2502], [1141, 2508], [1153, 2534], [1157, 2530], [1165, 2536], [1171, 2533], [1178, 2544], [1171, 2565], [1162, 2563], [1147, 2578], [1146, 2584], [1162, 2588], [1157, 2599], [1165, 2599], [1146, 2607], [1137, 2623], [1101, 2637], [1087, 2649], [1089, 2638], [1085, 2635], [1101, 2623], [1110, 2587], [1093, 2565], [1093, 2548], [1082, 2550], [1075, 2543], [1089, 2535], [1096, 2540], [1094, 2548], [1104, 2547], [1114, 2530], [1109, 2522], [1091, 2516], [1081, 2520], [1062, 2559], [1071, 2592], [1088, 2600], [1083, 2614], [1074, 2620], [1063, 2618], [1053, 2603], [1011, 2603], [1014, 2598], [1009, 2595], [1013, 2592], [1005, 2590], [1011, 2586], [993, 2574], [1002, 2569], [1013, 2576], [1021, 2571], [1031, 2548], [1028, 2530], [1018, 2517], [1007, 2514], [1003, 2506], [1013, 2485], [1009, 2471], [1005, 2470], [1010, 2458], [1005, 2450], [1013, 2446], [1027, 2449], [1036, 2439], [1052, 2449], [1073, 2441], [1075, 2436]],
+  [[954, 2504], [949, 2496], [953, 2494], [945, 2497], [948, 2490], [960, 2497], [960, 2492], [964, 2493], [963, 2501], [954, 2504]],
+  [[1135, 2713], [1134, 2707], [1153, 2677], [1157, 2686], [1153, 2718], [1137, 2741], [1138, 2760], [1122, 2765], [1118, 2743], [1132, 2729], [1135, 2713]],
+  [[1063, 2786], [1049, 2784], [1039, 2760], [1059, 2743], [1088, 2760], [1085, 2774], [1063, 2786]],
+  [[916, 3107], [916, 3101], [920, 3106], [916, 3095], [921, 3090], [928, 3099], [926, 3109], [910, 3113], [899, 3129], [885, 3131], [882, 3140], [876, 3140], [887, 3147], [875, 3150], [875, 3157], [864, 3154], [871, 3165], [857, 3158], [855, 3149], [851, 3152], [856, 3145], [850, 3143], [849, 3148], [830, 3139], [853, 3138], [856, 3134], [849, 3135], [843, 3130], [864, 3119], [874, 3121], [874, 3116], [883, 3116], [885, 3111], [891, 3116], [899, 3102], [912, 3099], [906, 3110], [911, 3104], [912, 3110], [916, 3107]],
+  [[861, 3173], [861, 3167], [855, 3173], [850, 3165], [844, 3171], [844, 3160], [837, 3151], [847, 3150], [841, 3152], [847, 3157], [852, 3155], [848, 3163], [853, 3159], [851, 3164], [865, 3164], [861, 3173]],
+  [[791, 3229], [789, 3206], [802, 3204], [802, 3217], [813, 3225], [811, 3235], [805, 3243], [797, 3245], [787, 3234], [791, 3229]],
+  [[736, 3292], [759, 3286], [734, 3305], [726, 3297], [729, 3291], [736, 3292]],
+  [[2581, 1296], [2611, 1306], [2608, 1325], [2632, 1334], [2640, 1346], [2621, 1361], [2609, 1358], [2604, 1365], [2606, 1385], [2599, 1389], [2594, 1410], [2600, 1420], [2614, 1428], [2600, 1439], [2595, 1451], [2581, 1458], [2587, 1483], [2561, 1482], [2556, 1492], [2527, 1494], [2522, 1501], [2528, 1513], [2517, 1532], [2532, 1545], [2530, 1585], [2519, 1581], [2505, 1564], [2497, 1577], [2483, 1578], [2486, 1594], [2476, 1595], [2477, 1604], [2459, 1607], [2459, 1617], [2443, 1617], [2439, 1621], [2433, 1614], [2437, 1600], [2420, 1590], [2416, 1571], [2407, 1569], [2387, 1575], [2379, 1588], [2371, 1590], [2370, 1602], [2357, 1598], [2340, 1601], [2330, 1610], [2321, 1605], [2326, 1596], [2323, 1591], [2299, 1589], [2300, 1598], [2281, 1616], [2272, 1584], [2260, 1578], [2306, 1564], [2338, 1543], [2357, 1544], [2364, 1537], [2363, 1542], [2414, 1507], [2425, 1488], [2447, 1466], [2462, 1429], [2501, 1404], [2528, 1396], [2552, 1376], [2565, 1353], [2566, 1325], [2581, 1296]],
+  [[2362, 1431], [2356, 1426], [2367, 1422], [2369, 1410], [2379, 1402], [2372, 1394], [2364, 1402], [2359, 1399], [2362, 1380], [2376, 1360], [2395, 1348], [2398, 1338], [2408, 1336], [2394, 1380], [2402, 1384], [2415, 1380], [2413, 1394], [2400, 1414], [2362, 1431]],
+  [[1578, 2135], [1589, 2132], [1606, 2140], [1621, 2139], [1634, 2148], [1641, 2141], [1654, 2142], [1658, 2166], [1677, 2168], [1679, 2174], [1673, 2177], [1681, 2189], [1700, 2191], [1683, 2219], [1678, 2246], [1637, 2203], [1603, 2194], [1575, 2200], [1574, 2191], [1572, 2197], [1577, 2201], [1539, 2215], [1557, 2215], [1538, 2219], [1533, 2226], [1529, 2217], [1519, 2232], [1524, 2234], [1520, 2237], [1524, 2244], [1515, 2257], [1517, 2263], [1509, 2263], [1496, 2286], [1482, 2287], [1482, 2311], [1471, 2316], [1483, 2339], [1474, 2338], [1475, 2330], [1469, 2328], [1458, 2332], [1457, 2327], [1447, 2335], [1431, 2326], [1417, 2332], [1422, 2316], [1433, 2311], [1431, 2303], [1422, 2303], [1428, 2295], [1416, 2258], [1429, 2265], [1442, 2253], [1445, 2241], [1463, 2232], [1447, 2208], [1483, 2204], [1491, 2193], [1488, 2187], [1493, 2173], [1500, 2172], [1512, 2148], [1520, 2150], [1527, 2141], [1564, 2142], [1571, 2133], [1578, 2135]],
+  [[1229, 2330], [1263, 2331], [1273, 2319], [1288, 2322], [1286, 2337], [1292, 2335], [1287, 2345], [1274, 2348], [1270, 2361], [1260, 2367], [1259, 2378], [1264, 2376], [1266, 2381], [1254, 2382], [1251, 2390], [1257, 2388], [1254, 2392], [1259, 2393], [1252, 2396], [1242, 2417], [1222, 2484], [1220, 2501], [1226, 2507], [1219, 2526], [1223, 2532], [1208, 2548], [1209, 2561], [1200, 2583], [1196, 2578], [1187, 2580], [1184, 2571], [1171, 2565], [1177, 2556], [1175, 2536], [1157, 2530], [1153, 2534], [1141, 2508], [1123, 2502], [1129, 2489], [1110, 2478], [1106, 2466], [1094, 2455], [1099, 2449], [1139, 2447], [1146, 2438], [1162, 2440], [1151, 2424], [1162, 2410], [1147, 2390], [1147, 2371], [1152, 2364], [1162, 2365], [1163, 2354], [1183, 2336], [1188, 2321], [1201, 2320], [1205, 2325], [1223, 2319], [1231, 2326], [1229, 2330]],
+  [[2511, 1812], [2532, 1824], [2556, 1828], [2568, 1842], [2569, 1829], [2574, 1829], [2565, 1823], [2573, 1824], [2577, 1817], [2601, 1827], [2607, 1836], [2622, 1838], [2595, 1849], [2605, 1854], [2594, 1861], [2600, 1865], [2600, 1871], [2594, 1873], [2600, 1873], [2596, 1879], [2615, 1887], [2600, 1899], [2603, 1907], [2592, 1907], [2590, 1897], [2595, 1894], [2585, 1880], [2563, 1875], [2531, 1880], [2514, 1889], [2516, 1907], [2494, 1905], [2485, 1890], [2492, 1873], [2489, 1861], [2475, 1859], [2478, 1852], [2508, 1836], [2511, 1812]]
+];
+var COAST = [
+  [[1823, 1836], [1804, 1840], [1792, 1827], [1794, 1814], [1805, 1816], [1831, 1800], [1854, 1793], [1868, 1808], [1849, 1836], [1859, 1825], [1862, 1832], [1857, 1836], [1872, 1840], [1870, 1851], [1875, 1844], [1883, 1846], [1883, 1840], [1874, 1842], [1874, 1833], [1894, 1824], [1892, 1831], [1898, 1832], [1892, 1838], [1896, 1842], [1894, 1848], [1905, 1857], [1905, 1864], [1946, 1868], [1956, 1883], [1961, 1880], [1956, 1893], [1960, 1904], [1953, 1924], [1955, 1934], [1964, 1942], [1962, 1951], [1967, 1955], [1975, 1951], [1975, 1959], [1985, 1960], [1994, 1979], [1989, 1985], [1972, 1975], [1966, 1984], [1943, 1981], [1942, 1967], [1930, 1950], [1917, 1945], [1919, 1937], [1913, 1937], [1910, 1943], [1914, 1946], [1908, 1947], [1897, 1941], [1898, 1934], [1881, 1930], [1882, 1909], [1864, 1906], [1862, 1900], [1848, 1901], [1843, 1886], [1828, 1890], [1804, 1876], [1805, 1859], [1815, 1863], [1824, 1859], [1823, 1836]],
+  [[982, 2206], [1022, 2204], [1044, 2219], [1066, 2212], [1065, 2229], [1056, 2231], [1051, 2242], [1048, 2238], [1038, 2246], [1032, 2254], [1035, 2265], [1024, 2264], [1017, 2254], [1001, 2270], [996, 2268], [994, 2272], [1012, 2297], [990, 2294], [977, 2287], [962, 2274], [968, 2269], [966, 2261], [945, 2257], [944, 2247], [935, 2238], [940, 2229], [951, 2238], [946, 2230], [953, 2217], [939, 2209], [943, 2203], [948, 2210], [952, 2209], [947, 2205], [949, 2191], [954, 2198], [958, 2192], [968, 2195], [965, 2204], [970, 2209], [982, 2206]],
+  [[1162, 2257], [1188, 2294], [1187, 2309], [1199, 2320], [1188, 2321], [1183, 2336], [1163, 2354], [1162, 2365], [1152, 2364], [1146, 2371], [1147, 2390], [1162, 2410], [1151, 2424], [1162, 2440], [1146, 2438], [1139, 2447], [1103, 2451], [1093, 2450], [1077, 2435], [1066, 2444], [1043, 2447], [1036, 2437], [1043, 2427], [1049, 2426], [1047, 2422], [1058, 2416], [1053, 2410], [1060, 2405], [1058, 2403], [1072, 2391], [1067, 2380], [1072, 2378], [1066, 2373], [1086, 2356], [1053, 2360], [1053, 2356], [1078, 2341], [1075, 2332], [1079, 2327], [1074, 2318], [1050, 2305], [1045, 2289], [1060, 2289], [1059, 2281], [1073, 2269], [1086, 2270], [1090, 2259], [1142, 2286], [1148, 2274], [1140, 2265], [1142, 2257], [1162, 2257]],
+  [[1035, 2396], [1019, 2395], [1015, 2400], [1011, 2392], [1010, 2410], [1004, 2413], [1002, 2409], [999, 2416], [1003, 2416], [991, 2423], [988, 2431], [975, 2435], [977, 2426], [970, 2425], [977, 2415], [981, 2420], [980, 2415], [986, 2419], [987, 2415], [972, 2410], [983, 2381], [979, 2373], [983, 2377], [1007, 2371], [1009, 2389], [1029, 2376], [1040, 2375], [1041, 2380], [1053, 2374], [1043, 2398], [1035, 2401], [1035, 2396]],
+  [[1704, 2010], [1710, 2011], [1705, 2033], [1695, 2031], [1701, 2029], [1698, 2025], [1687, 2037], [1687, 2025], [1672, 2027], [1678, 2024], [1674, 2021], [1677, 2016], [1704, 2010]],
+  [[1671, 2084], [1669, 2090], [1657, 2090], [1648, 2098], [1638, 2090], [1620, 2094], [1594, 2109], [1581, 2103], [1587, 2098], [1589, 2076], [1574, 2064], [1593, 2067], [1593, 2071], [1619, 2053], [1618, 2048], [1624, 2047], [1620, 2053], [1629, 2050], [1631, 2042], [1661, 2049], [1663, 2042], [1669, 2046], [1671, 2039], [1676, 2053], [1684, 2045], [1693, 2051], [1692, 2060], [1712, 2064], [1722, 2074], [1718, 2083], [1707, 2078], [1671, 2084]],
+  [[2146, 1858], [2152, 1856], [2149, 1860], [2161, 1867], [2167, 1880], [2180, 1881], [2184, 1887], [2205, 1880], [2225, 1892], [2248, 1880], [2245, 1887], [2250, 1897], [2267, 1890], [2294, 1894], [2288, 1899], [2292, 1905], [2286, 1908], [2287, 1913], [2273, 1926], [2272, 1937], [2260, 1951], [2235, 1966], [2234, 1990], [2156, 2008], [2165, 1993], [2173, 1997], [2201, 1980], [2201, 1990], [2204, 1990], [2205, 1981], [2212, 1981], [2207, 1980], [2208, 1971], [2203, 1966], [2189, 1964], [2181, 1974], [2181, 1970], [2157, 1972], [2144, 1964], [2150, 1939], [2138, 1973], [2148, 1986], [2126, 1974], [2130, 1961], [2123, 1953], [2122, 1938], [2135, 1917], [2130, 1915], [2127, 1926], [2124, 1917], [2125, 1927], [2119, 1923], [2118, 1929], [2114, 1928], [2110, 1917], [2098, 1908], [2099, 1889], [2114, 1866], [2125, 1868], [2146, 1858]],
+  [[2651, 1547], [2680, 1555], [2692, 1570], [2699, 1570], [2700, 1616], [2707, 1626], [2694, 1630], [2701, 1661], [2688, 1682], [2679, 1679], [2653, 1685], [2642, 1699], [2632, 1698], [2627, 1710], [2611, 1717], [2601, 1716], [2594, 1704], [2567, 1705], [2550, 1685], [2562, 1670], [2560, 1662], [2570, 1649], [2544, 1640], [2552, 1620], [2548, 1615], [2557, 1605], [2548, 1601], [2549, 1596], [2566, 1580], [2627, 1559], [2626, 1553], [2635, 1548], [2651, 1547]],
+  [[2383, 1758], [2395, 1762], [2400, 1772], [2420, 1768], [2424, 1776], [2435, 1776], [2444, 1769], [2471, 1782], [2480, 1779], [2493, 1803], [2511, 1812], [2511, 1831], [2468, 1864], [2435, 1868], [2432, 1861], [2424, 1862], [2419, 1852], [2415, 1854], [2407, 1876], [2411, 1896], [2404, 1902], [2393, 1900], [2382, 1876], [2369, 1878], [2363, 1873], [2360, 1865], [2366, 1840], [2351, 1805], [2361, 1797], [2352, 1790], [2361, 1774], [2369, 1778], [2383, 1758]],
+  [[2010, 1807], [2032, 1814], [2033, 1821], [2039, 1822], [2038, 1834], [2047, 1832], [2052, 1837], [2050, 1845], [2059, 1863], [2054, 1866], [2048, 1889], [2061, 1905], [2054, 1936], [2046, 1949], [2027, 1958], [2003, 1950], [1999, 1954], [2006, 1957], [2e3, 1965], [1989, 1970], [1985, 1960], [1975, 1959], [1975, 1951], [1967, 1955], [1962, 1951], [1964, 1942], [1953, 1924], [1961, 1881], [1956, 1883], [1945, 1870], [1953, 1858], [1966, 1860], [1974, 1839], [1986, 1844], [1989, 1837], [2002, 1837], [2004, 1828], [2013, 1831], [2010, 1807]],
+  [[2429, 1680], [2403, 1681], [2388, 1675], [2393, 1647], [2409, 1637], [2407, 1630], [2443, 1617], [2454, 1620], [2460, 1615], [2459, 1607], [2477, 1604], [2476, 1595], [2486, 1594], [2483, 1578], [2497, 1577], [2505, 1564], [2530, 1587], [2555, 1590], [2548, 1601], [2557, 1605], [2548, 1615], [2552, 1620], [2544, 1640], [2570, 1649], [2560, 1662], [2562, 1670], [2550, 1685], [2567, 1705], [2594, 1704], [2602, 1715], [2594, 1720], [2588, 1716], [2566, 1719], [2549, 1708], [2544, 1712], [2511, 1703], [2496, 1730], [2482, 1731], [2460, 1747], [2448, 1747], [2441, 1756], [2427, 1748], [2429, 1732], [2418, 1723], [2428, 1722], [2422, 1703], [2431, 1699], [2429, 1680]],
+  [[2907, 1220], [2911, 1216], [2932, 1222], [2939, 1240], [2922, 1233], [2927, 1247], [2912, 1257], [2920, 1263], [2920, 1272], [2914, 1267], [2909, 1275], [2900, 1275], [2900, 1280], [2914, 1281], [2903, 1292], [2909, 1300], [2915, 1297], [2917, 1305], [2905, 1302], [2909, 1307], [2906, 1312], [2912, 1315], [2901, 1316], [2905, 1325], [2916, 1324], [2907, 1328], [2915, 1334], [2914, 1347], [2901, 1339], [2903, 1333], [2896, 1333], [2903, 1329], [2898, 1324], [2888, 1327], [2886, 1321], [2870, 1320], [2853, 1330], [2855, 1338], [2849, 1338], [2848, 1328], [2836, 1329], [2830, 1338], [2841, 1342], [2825, 1347], [2833, 1348], [2823, 1356], [2813, 1380], [2814, 1414], [2801, 1415], [2801, 1430], [2788, 1430], [2791, 1436], [2774, 1431], [2773, 1415], [2768, 1413], [2753, 1409], [2739, 1413], [2737, 1405], [2726, 1400], [2716, 1404], [2704, 1399], [2704, 1385], [2728, 1380], [2738, 1363], [2736, 1347], [2762, 1314], [2752, 1304], [2755, 1294], [2748, 1282], [2758, 1281], [2759, 1266], [2766, 1258], [2759, 1255], [2749, 1236], [2765, 1237], [2783, 1224], [2796, 1223], [2823, 1239], [2849, 1238], [2843, 1248], [2865, 1262], [2878, 1248], [2895, 1258], [2899, 1255], [2901, 1239], [2908, 1232], [2907, 1220]],
+  [[2358, 1817], [2366, 1840], [2360, 1865], [2363, 1873], [2369, 1878], [2381, 1875], [2388, 1896], [2395, 1900], [2404, 1902], [2411, 1896], [2407, 1876], [2411, 1859], [2419, 1852], [2424, 1862], [2432, 1861], [2435, 1868], [2489, 1861], [2492, 1873], [2485, 1890], [2494, 1905], [2508, 1907], [2501, 1922], [2506, 1924], [2505, 1936], [2514, 1944], [2497, 1974], [2489, 1978], [2487, 1993], [2480, 1990], [2463, 2003], [2445, 1988], [2451, 1976], [2447, 1964], [2451, 1958], [2448, 1953], [2454, 1949], [2449, 1939], [2452, 1929], [2471, 1929], [2473, 1924], [2460, 1913], [2436, 1906], [2414, 1914], [2404, 1926], [2406, 1935], [2406, 1929], [2411, 1930], [2408, 1935], [2381, 1947], [2372, 1973], [2359, 1981], [2354, 1991], [2359, 2005], [2332, 1993], [2287, 1996], [2234, 1990], [2235, 1966], [2260, 1951], [2272, 1937], [2273, 1926], [2287, 1913], [2292, 1894], [2345, 1866], [2341, 1852], [2348, 1848], [2345, 1833], [2353, 1829], [2358, 1817]],
+  [[2753, 1585], [2788, 1598], [2793, 1605], [2783, 1613], [2778, 1635], [2760, 1666], [2763, 1685], [2751, 1707], [2760, 1738], [2775, 1764], [2769, 1766], [2771, 1772], [2773, 1774], [2771, 1769], [2776, 1767], [2800, 1800], [2743, 1761], [2742, 1770], [2734, 1766], [2711, 1778], [2682, 1781], [2647, 1764], [2621, 1735], [2612, 1737], [2605, 1722], [2605, 1716], [2627, 1710], [2632, 1698], [2642, 1699], [2653, 1685], [2690, 1681], [2701, 1661], [2694, 1630], [2707, 1626], [2700, 1618], [2700, 1587], [2707, 1587], [2735, 1612], [2757, 1597], [2753, 1585]],
+  [[665, 3414], [683, 3386], [690, 3391], [694, 3407], [685, 3422], [678, 3429], [664, 3430], [664, 3435], [660, 3434], [662, 3443], [644, 3443], [648, 3449], [638, 3451], [630, 3464], [617, 3460], [610, 3465], [626, 3489], [616, 3481], [612, 3483], [598, 3506], [601, 3511], [609, 3508], [610, 3512], [593, 3526], [582, 3528], [580, 3516], [583, 3515], [578, 3507], [599, 3487], [590, 3463], [605, 3464], [613, 3452], [625, 3450], [636, 3440], [621, 3434], [619, 3415], [639, 3419], [636, 3426], [643, 3430], [660, 3425], [656, 3421], [665, 3414]],
+  [[425, 3480], [422, 3476], [434, 3472], [441, 3480], [439, 3490], [425, 3480]],
+  [[186, 3773], [177, 3765], [182, 3766], [177, 3758], [184, 3749], [177, 3737], [190, 3757], [213, 3771], [186, 3773]],
+  [[-5, 3841], [-15, 3835], [-10, 3826], [-20, 3826], [-21, 3819], [-14, 3820], [-15, 3814], [-11, 3821], [3, 3819], [4, 3811], [13, 3810], [18, 3791], [23, 3792], [8, 3817], [8, 3836], [-5, 3841]],
+  [[-55, 3855], [-91, 3845], [-87, 3841], [-83, 3844], [-84, 3838], [-76, 3844], [-77, 3830], [-70, 3822], [-65, 3830], [-55, 3828], [-44, 3835], [-55, 3855]],
+  [[2635, 1195], [2656, 1198], [2668, 1193], [2668, 1200], [2683, 1208], [2718, 1212], [2721, 1217], [2732, 1220], [2735, 1231], [2748, 1234], [2759, 1255], [2766, 1258], [2759, 1266], [2758, 1281], [2748, 1282], [2755, 1294], [2752, 1304], [2762, 1314], [2736, 1347], [2738, 1363], [2727, 1381], [2704, 1385], [2702, 1425], [2708, 1430], [2697, 1441], [2677, 1443], [2666, 1435], [2656, 1439], [2647, 1426], [2625, 1431], [2595, 1414], [2599, 1389], [2606, 1385], [2602, 1382], [2607, 1359], [2621, 1361], [2634, 1354], [2640, 1343], [2632, 1334], [2608, 1325], [2611, 1306], [2580, 1296], [2593, 1275], [2617, 1252], [2635, 1195]],
+  [[1905, 2048], [1926, 2042], [1930, 2061], [1939, 2069], [1935, 2074], [1925, 2072], [1908, 2093], [1923, 2113], [1917, 2127], [1920, 2134], [1932, 2128], [1959, 2130], [1960, 2144], [1975, 2158], [1986, 2160], [1981, 2174], [1974, 2175], [1976, 2179], [1972, 2182], [1977, 2186], [1951, 2201], [1949, 2212], [1943, 2212], [1944, 2203], [1916, 2201], [1891, 2192], [1882, 2184], [1882, 2176], [1872, 2170], [1884, 2161], [1856, 2150], [1841, 2132], [1826, 2132], [1828, 2123], [1836, 2118], [1828, 2115], [1845, 2105], [1830, 2098], [1836, 2090], [1841, 2091], [1837, 2087], [1852, 2084], [1827, 2064], [1829, 2057], [1842, 2062], [1873, 2051], [1905, 2048]],
+  [[1970, 2116], [1986, 2110], [1986, 2117], [1981, 2117], [1979, 2124], [1968, 2125], [1970, 2116]],
+  [[872, 2035], [868, 2033], [866, 2042], [874, 2037], [868, 2049], [874, 2051], [869, 2050], [871, 2055], [866, 2058], [867, 2044], [859, 2051], [859, 2041], [855, 2042], [856, 2050], [845, 2046], [854, 2044], [853, 2032], [860, 2028], [853, 2027], [865, 2016], [855, 2011], [861, 1995], [874, 1997], [883, 1985], [891, 1992], [885, 1994], [890, 1996], [888, 2e3], [880, 2e3], [888, 2005], [887, 2012], [869, 2030], [872, 2035]],
+  [[843, 2096], [843, 2091], [835, 2093], [842, 2052], [845, 2058], [854, 2056], [856, 2061], [852, 2052], [859, 2056], [859, 2061], [866, 2058], [855, 2088], [843, 2096]],
+  [[928, 2164], [915, 2153], [922, 2154], [916, 2146], [923, 2146], [920, 2140], [925, 2136], [937, 2139], [932, 2145], [941, 2149], [935, 2151], [941, 2154], [940, 2157], [930, 2158], [928, 2164]],
+  [[870, 2260], [867, 2253], [874, 2258], [872, 2249], [880, 2248], [875, 2242], [882, 2238], [881, 2228], [893, 2222], [895, 2226], [900, 2222], [894, 2219], [900, 2217], [903, 2226], [894, 2231], [897, 2234], [889, 2239], [892, 2243], [870, 2260]],
+  [[914, 2225], [920, 2218], [921, 2227], [940, 2224], [935, 2238], [944, 2247], [945, 2257], [966, 2261], [968, 2269], [962, 2274], [986, 2292], [1009, 2297], [1006, 2305], [991, 2315], [1007, 2319], [1025, 2312], [1032, 2316], [1039, 2330], [1034, 2348], [1004, 2363], [997, 2346], [1004, 2345], [1010, 2334], [1006, 2327], [989, 2327], [967, 2333], [957, 2351], [932, 2367], [945, 2352], [941, 2345], [948, 2346], [954, 2334], [945, 2340], [937, 2322], [925, 2320], [914, 2303], [921, 2272], [935, 2281], [931, 2292], [936, 2286], [945, 2293], [943, 2305], [939, 2299], [943, 2309], [940, 2314], [950, 2320], [955, 2311], [977, 2317], [964, 2304], [967, 2293], [962, 2284], [954, 2278], [945, 2283], [948, 2279], [936, 2276], [936, 2272], [936, 2281], [930, 2272], [939, 2264], [930, 2268], [925, 2261], [927, 2269], [919, 2272], [918, 2266], [924, 2265], [914, 2260], [918, 2257], [914, 2250], [913, 2256], [911, 2250], [900, 2251], [905, 2238], [912, 2234], [902, 2232], [903, 2222], [914, 2225]],
+  [[817, 2323], [814, 2306], [819, 2307], [812, 2304], [813, 2299], [806, 2300], [818, 2293], [815, 2285], [822, 2285], [826, 2261], [821, 2292], [835, 2288], [838, 2295], [831, 2301], [824, 2297], [824, 2315], [818, 2314], [817, 2323]],
+  [[812, 2318], [802, 2313], [801, 2307], [808, 2312], [804, 2302], [813, 2309], [812, 2318]],
+  [[797, 2326], [786, 2315], [788, 2312], [796, 2319], [794, 2313], [797, 2317], [800, 2313], [797, 2326]],
+  [[785, 2332], [779, 2326], [780, 2319], [786, 2326], [784, 2318], [792, 2326], [785, 2332]],
+  [[769, 2366], [763, 2360], [740, 2359], [742, 2353], [748, 2361], [751, 2356], [746, 2355], [753, 2349], [748, 2344], [751, 2329], [755, 2337], [766, 2331], [769, 2337], [775, 2326], [778, 2333], [774, 2334], [783, 2336], [780, 2341], [789, 2354], [768, 2354], [772, 2363], [769, 2366]],
+  [[2805, 946], [2802, 959], [2823, 961], [2825, 974], [2819, 975], [2816, 997], [2802, 1006], [2805, 1017], [2799, 1024], [2800, 1042], [2805, 1060], [2789, 1062], [2790, 1069], [2800, 1074], [2788, 1085], [2796, 1100], [2780, 1115], [2779, 1130], [2767, 1147], [2776, 1155], [2778, 1168], [2790, 1174], [2786, 1181], [2793, 1184], [2783, 1191], [2784, 1201], [2794, 1206], [2786, 1217], [2787, 1224], [2767, 1236], [2752, 1239], [2735, 1231], [2730, 1218], [2713, 1210], [2710, 1214], [2691, 1210], [2690, 1206], [2683, 1208], [2668, 1200], [2668, 1193], [2656, 1198], [2635, 1195], [2643, 1167], [2654, 1161], [2662, 1141], [2668, 1108], [2666, 1078], [2657, 1063], [2644, 1055], [2616, 1063], [2606, 1038], [2626, 1045], [2649, 1022], [2660, 998], [2662, 977], [2647, 961], [2661, 962], [2669, 954], [2675, 960], [2714, 959], [2723, 950], [2748, 966], [2757, 959], [2766, 965], [2781, 963], [2805, 946]],
+  [[1651, 1869], [1650, 1877], [1672, 1882], [1677, 1902], [1715, 1888], [1712, 1895], [1717, 1906], [1710, 1906], [1701, 1924], [1693, 1928], [1696, 1933], [1691, 1942], [1698, 1949], [1691, 1959], [1701, 1968], [1702, 1982], [1679, 1978], [1682, 1984], [1689, 1986], [1668, 2006], [1639, 2004], [1656, 2008], [1649, 2019], [1641, 2017], [1637, 2030], [1620, 2026], [1616, 2029], [1618, 2034], [1612, 2033], [1604, 2017], [1601, 2022], [1605, 2027], [1598, 2025], [1596, 2014], [1595, 2020], [1591, 2018], [1571, 2028], [1562, 2019], [1569, 2030], [1560, 2032], [1555, 2012], [1544, 2e3], [1548, 1991], [1540, 1980], [1544, 1967], [1530, 1952], [1534, 1931], [1525, 1923], [1528, 1915], [1548, 1912], [1549, 1899], [1568, 1899], [1565, 1891], [1574, 1888], [1580, 1870], [1605, 1875], [1620, 1888], [1637, 1872], [1651, 1869]],
+  [[1088, 2126], [1105, 2120], [1102, 2125], [1111, 2123], [1112, 2128], [1100, 2133], [1110, 2134], [1114, 2125], [1119, 2124], [1118, 2128], [1125, 2131], [1137, 2118], [1147, 2118], [1142, 2138], [1136, 2141], [1143, 2144], [1141, 2150], [1159, 2178], [1175, 2180], [1173, 2199], [1149, 2197], [1126, 2210], [1124, 2222], [1116, 2229], [1121, 2242], [1114, 2248], [1125, 2256], [1119, 2270], [1090, 2259], [1086, 2270], [1073, 2269], [1059, 2281], [1060, 2289], [1042, 2290], [1047, 2280], [1032, 2254], [1048, 2238], [1051, 2242], [1056, 2231], [1065, 2229], [1066, 2212], [1044, 2219], [1022, 2204], [983, 2206], [983, 2201], [1001, 2194], [1003, 2190], [995, 2192], [998, 2188], [990, 2185], [1e3, 2183], [1011, 2171], [1021, 2186], [1043, 2182], [1048, 2167], [1035, 2175], [1024, 2167], [1030, 2172], [1042, 2167], [1054, 2155], [1050, 2144], [1055, 2144], [1056, 2136], [1062, 2136], [1064, 2131], [1082, 2132], [1088, 2126]],
+  [[2162, 1687], [2180, 1671], [2187, 1677], [2205, 1670], [2205, 1677], [2218, 1671], [2221, 1677], [2239, 1678], [2261, 1692], [2262, 1702], [2249, 1714], [2253, 1722], [2246, 1728], [2245, 1734], [2256, 1740], [2253, 1751], [2233, 1772], [2217, 1773], [2208, 1786], [2230, 1796], [2244, 1816], [2239, 1824], [2259, 1841], [2259, 1848], [2252, 1852], [2259, 1861], [2249, 1861], [2254, 1872], [2225, 1892], [2205, 1880], [2184, 1887], [2180, 1881], [2167, 1880], [2161, 1867], [2149, 1860], [2151, 1856], [2125, 1868], [2114, 1866], [2099, 1889], [2097, 1908], [2093, 1902], [2088, 1905], [2074, 1886], [2054, 1893], [2048, 1889], [2054, 1866], [2059, 1863], [2050, 1845], [2053, 1840], [2047, 1832], [2038, 1834], [2039, 1822], [2031, 1815], [2039, 1804], [2039, 1795], [2048, 1790], [2070, 1798], [2073, 1791], [2117, 1789], [2124, 1779], [2123, 1772], [2107, 1754], [2113, 1724], [2128, 1709], [2118, 1700], [2124, 1698], [2131, 1687], [2132, 1692], [2144, 1691], [2149, 1704], [2161, 1694], [2162, 1687]],
+  [[2788, 821], [2798, 784], [2810, 770], [2811, 761], [2826, 772], [2844, 776], [2870, 795], [2888, 793], [2903, 782], [2891, 828], [2895, 903], [2908, 938], [2915, 943], [2922, 940], [2940, 957], [2924, 965], [2916, 975], [2900, 970], [2884, 978], [2879, 971], [2826, 999], [2817, 991], [2819, 975], [2825, 974], [2823, 961], [2802, 959], [2805, 946], [2781, 963], [2766, 965], [2757, 959], [2748, 966], [2723, 950], [2714, 959], [2675, 960], [2669, 954], [2661, 962], [2647, 961], [2648, 939], [2634, 928], [2645, 923], [2657, 904], [2666, 900], [2678, 905], [2699, 894], [2712, 850], [2711, 842], [2699, 835], [2711, 832], [2714, 812], [2735, 826], [2750, 818], [2763, 824], [2768, 868], [2781, 889], [2791, 888], [2802, 879], [2804, 868], [2798, 867], [2805, 857], [2817, 860], [2821, 871], [2843, 881], [2853, 878], [2863, 864], [2872, 831], [2863, 813], [2853, 809], [2835, 826], [2822, 823], [2794, 836], [2786, 833], [2788, 821]],
+  [[1879, 1924], [1881, 1930], [1899, 1934], [1897, 1941], [1908, 1947], [1914, 1946], [1910, 1943], [1913, 1937], [1919, 1937], [1917, 1945], [1925, 1945], [1942, 1967], [1936, 1971], [1926, 2002], [1931, 2006], [1926, 2014], [1930, 2017], [1931, 2038], [1902, 2051], [1898, 2046], [1835, 2062], [1832, 2055], [1853, 2049], [1880, 2026], [1880, 2016], [1882, 2021], [1889, 2016], [1891, 2011], [1885, 2011], [1884, 2004], [1887, 2009], [1895, 2006], [1888, 2005], [1892, 1996], [1886, 1994], [1888, 1987], [1884, 1987], [1894, 1980], [1886, 1964], [1891, 1950], [1887, 1948], [1895, 1945], [1875, 1938], [1876, 1928], [1872, 1926], [1879, 1924]],
+  [[2409, 1569], [2419, 1577], [2420, 1590], [2437, 1600], [2433, 1614], [2438, 1621], [2412, 1627], [2407, 1630], [2409, 1637], [2398, 1640], [2389, 1660], [2388, 1675], [2398, 1681], [2430, 1680], [2431, 1699], [2422, 1703], [2428, 1722], [2418, 1723], [2429, 1732], [2427, 1748], [2441, 1756], [2444, 1769], [2426, 1776], [2420, 1768], [2397, 1771], [2396, 1763], [2383, 1758], [2369, 1778], [2361, 1774], [2352, 1790], [2361, 1797], [2351, 1805], [2358, 1817], [2353, 1829], [2345, 1833], [2348, 1848], [2341, 1852], [2345, 1866], [2303, 1886], [2299, 1893], [2283, 1896], [2267, 1890], [2250, 1897], [2245, 1887], [2246, 1877], [2254, 1872], [2249, 1861], [2260, 1860], [2252, 1852], [2259, 1848], [2259, 1841], [2239, 1824], [2244, 1816], [2230, 1796], [2208, 1786], [2217, 1773], [2233, 1772], [2253, 1751], [2256, 1740], [2245, 1734], [2246, 1728], [2253, 1722], [2249, 1714], [2263, 1699], [2251, 1683], [2265, 1662], [2271, 1661], [2269, 1652], [2279, 1648], [2279, 1618], [2300, 1598], [2299, 1589], [2323, 1591], [2326, 1596], [2321, 1605], [2330, 1610], [2340, 1601], [2357, 1598], [2370, 1602], [2371, 1590], [2379, 1588], [2387, 1575], [2409, 1569]],
+  [[1235, 2169], [1250, 2168], [1260, 2175], [1268, 2190], [1268, 2207], [1262, 2217], [1249, 2215], [1253, 2221], [1243, 2228], [1228, 2225], [1230, 2242], [1243, 2246], [1260, 2240], [1271, 2247], [1295, 2242], [1278, 2267], [1295, 2266], [1287, 2274], [1297, 2278], [1302, 2273], [1307, 2279], [1312, 2273], [1314, 2280], [1300, 2281], [1293, 2291], [1305, 2300], [1312, 2297], [1312, 2302], [1317, 2298], [1326, 2302], [1308, 2304], [1309, 2310], [1314, 2310], [1302, 2319], [1313, 2321], [1307, 2327], [1293, 2325], [1290, 2336], [1286, 2335], [1288, 2322], [1273, 2319], [1263, 2331], [1239, 2334], [1230, 2331], [1223, 2319], [1204, 2325], [1188, 2312], [1188, 2294], [1160, 2256], [1142, 2257], [1140, 2265], [1148, 2274], [1142, 2286], [1117, 2272], [1125, 2256], [1114, 2248], [1121, 2242], [1116, 2229], [1124, 2222], [1131, 2204], [1149, 2197], [1173, 2199], [1175, 2180], [1216, 2187], [1227, 2170], [1235, 2169]],
+  [[2073, 1886], [2088, 1905], [2093, 1902], [2110, 1917], [2115, 1928], [2094, 1933], [2091, 1941], [2097, 1943], [2074, 1976], [2073, 1990], [2078, 1991], [2073, 2002], [2093, 2005], [2122, 2024], [2124, 2020], [2132, 2026], [2132, 2034], [2140, 2031], [2138, 2044], [2121, 2045], [2130, 2050], [2137, 2046], [2132, 2051], [2136, 2062], [2127, 2067], [2113, 2064], [2129, 2064], [2124, 2062], [2130, 2060], [2124, 2057], [2127, 2055], [2120, 2052], [2118, 2059], [2113, 2054], [2113, 2059], [2101, 2060], [2107, 2050], [2099, 2053], [2101, 2049], [2096, 2049], [2098, 2053], [2092, 2056], [2098, 2054], [2086, 2065], [2081, 2062], [2084, 2058], [2077, 2061], [2077, 2066], [2069, 2061], [2072, 2068], [2066, 2068], [2070, 2070], [2066, 2072], [2063, 2065], [2059, 2067], [2060, 2072], [2039, 2076], [2031, 2082], [2032, 2090], [2038, 2090], [2035, 2095], [2026, 2094], [2030, 2088], [2019, 2097], [2032, 2107], [2025, 2108], [2030, 2116], [2020, 2111], [2017, 2116], [2023, 2120], [2015, 2122], [2015, 2127], [2009, 2124], [1986, 2160], [1979, 2160], [1960, 2144], [1960, 2136], [1967, 2134], [1967, 2125], [1986, 2117], [1988, 2105], [2002, 2106], [2e3, 2076], [2007, 2066], [2001, 2057], [2006, 2054], [1996, 2041], [2001, 2033], [2019, 2031], [2023, 2023], [2021, 2017], [2013, 2018], [2011, 2011], [2004, 2013], [1993, 2007], [1997, 1997], [1991, 1992], [1999, 1990], [1988, 1970], [2e3, 1965], [2006, 1957], [1999, 1954], [2003, 1950], [2027, 1958], [2046, 1949], [2059, 1920], [2061, 1903], [2053, 1899], [2054, 1893], [2073, 1886]],
+  [[1456, 1915], [1522, 1918], [1534, 1931], [1529, 1949], [1544, 1967], [1540, 1980], [1548, 1991], [1544, 2e3], [1556, 2015], [1555, 2031], [1549, 2025], [1552, 2035], [1548, 2033], [1538, 2046], [1521, 2041], [1526, 2037], [1523, 2032], [1519, 2037], [1494, 2040], [1492, 2050], [1465, 2051], [1454, 2059], [1446, 2055], [1444, 2061], [1439, 2061], [1440, 2068], [1420, 2075], [1412, 2070], [1402, 2076], [1405, 2068], [1398, 2065], [1394, 2051], [1399, 2046], [1369, 2048], [1351, 2065], [1353, 2073], [1336, 2069], [1333, 2051], [1323, 2047], [1325, 2032], [1318, 2021], [1333, 2007], [1339, 1989], [1334, 1984], [1349, 1977], [1352, 1967], [1378, 1972], [1385, 1964], [1402, 1969], [1415, 1960], [1429, 1960], [1430, 1953], [1418, 1949], [1437, 1939], [1456, 1915]],
+  [[1384, 2088], [1389, 2080], [1385, 2076], [1384, 2080], [1374, 2065], [1383, 2065], [1391, 2074], [1391, 2067], [1384, 2066], [1385, 2060], [1392, 2058], [1394, 2086], [1384, 2088]],
+  [[1404, 2097], [1402, 2093], [1387, 2094], [1396, 2087], [1400, 2075], [1405, 2079], [1399, 2083], [1405, 2084], [1402, 2092], [1411, 2090], [1404, 2097]],
+  [[3946, 143], [3938, 152], [3944, 157], [3933, 171], [3891, 194], [3869, 221], [3848, 222], [3827, 246], [3812, 242], [3813, 233], [3827, 223], [3826, 209], [3834, 218], [3840, 212], [3836, 204], [3851, 208], [3865, 199], [3868, 187], [3854, 183], [3853, 175], [3874, 178], [3879, 167], [3922, 143], [3924, 127], [3919, 123], [3945, 128]],
+  [[2923, 111], [2922, 101], [2936, 81], [2934, 62], [2940, 71], [2959, 70], [2970, 65], [2976, 52], [2984, 50], [3002, 71], [3022, 82], [3079, 132], [3105, 171], [3161, 222], [3256, 277], [3313, 294], [3372, 302], [3380, 325], [3398, 332], [3464, 334], [3530, 287], [3554, 260], [3560, 276], [3514, 341], [3510, 366], [3523, 385], [3556, 396], [3556, 401], [3547, 402], [3555, 399], [3553, 395], [3531, 389], [3531, 394], [3544, 428], [3563, 449], [3581, 453], [3608, 431], [3627, 429], [3635, 435], [3594, 450], [3592, 462], [3583, 468], [3586, 471], [3566, 468], [3523, 475], [3513, 493], [3494, 504], [3477, 503], [3470, 498], [3474, 492], [3465, 490], [3452, 504], [3460, 513], [3406, 511], [3391, 506], [3391, 501], [3375, 500], [3317, 523], [3262, 565], [3227, 605], [3214, 633], [3218, 646], [3214, 670], [3206, 679], [3204, 693], [3156, 659], [3131, 654], [3075, 631], [3027, 600], [2999, 593], [2972, 574], [2932, 567], [2943, 562], [2884, 583], [2846, 605], [2826, 626], [2814, 620], [2827, 618], [2811, 614], [2804, 597], [2789, 590], [2777, 575], [2736, 575], [2710, 605], [2704, 624], [2706, 635], [2724, 641], [2749, 659], [2776, 655], [2785, 659], [2819, 694], [2850, 706], [2857, 715], [2820, 732], [2788, 720], [2775, 726], [2778, 714], [2765, 713], [2759, 726], [2732, 736], [2731, 759], [2726, 766], [2701, 772], [2691, 787], [2682, 782], [2672, 784], [2662, 776], [2655, 750], [2669, 715], [2678, 712], [2680, 684], [2662, 660], [2644, 656], [2637, 643], [2619, 633], [2621, 616], [2632, 597], [2628, 570], [2640, 558], [2665, 555], [2681, 545], [2689, 532], [2699, 542], [2709, 540], [2709, 532], [2723, 515], [2745, 502], [2746, 495], [2712, 461], [2716, 441], [2729, 442], [2741, 434], [2790, 466], [2828, 458], [2827, 467], [2853, 475], [2874, 465], [2897, 442], [2898, 426], [2886, 408], [2890, 396], [2881, 371], [2891, 357], [2920, 347], [2932, 329], [2934, 332], [2935, 266], [2951, 245], [2959, 207], [2947, 157], [2923, 111]],
+  [[2831, 94], [2820, 60], [2827, 65], [2831, 60], [2837, 67], [2831, 94]],
+  [[2851, 103], [2859, 97], [2872, 101], [2881, 116], [2864, 125], [2849, 114], [2851, 103]],
+  [[3624, 310], [3623, 303], [3665, 264], [3668, 254], [3688, 231], [3696, 230], [3722, 247], [3764, 240], [3749, 259], [3739, 255], [3717, 272], [3686, 275], [3674, 289], [3654, 298], [3643, 313], [3646, 318], [3635, 319], [3630, 334], [3598, 345], [3590, 383], [3590, 370], [3571, 372], [3566, 351], [3624, 310]],
+  [[3775, 375], [3772, 365], [3765, 368], [3769, 363], [3765, 356], [3792, 354], [3788, 349], [3805, 342], [3821, 351], [3775, 375]],
+  [[3686, 419], [3677, 407], [3688, 403], [3701, 405], [3699, 413], [3686, 419]],
+  [[2565, 671], [2560, 667], [2558, 648], [2583, 635], [2574, 662], [2565, 671]],
+  [[1794, 1814], [1792, 1827], [1804, 1840], [1822, 1836], [1824, 1841], [1824, 1859], [1815, 1863], [1805, 1859], [1804, 1876], [1828, 1890], [1843, 1886], [1848, 1901], [1862, 1900], [1864, 1906], [1882, 1909], [1883, 1919], [1872, 1926], [1876, 1928], [1875, 1938], [1895, 1946], [1887, 1948], [1891, 1950], [1886, 1964], [1894, 1980], [1882, 1989], [1884, 1986], [1879, 1989], [1871, 1981], [1848, 1988], [1847, 1995], [1826, 1999], [1758, 1970], [1728, 1976], [1727, 1966], [1726, 1974], [1717, 1981], [1708, 1977], [1702, 1982], [1701, 1968], [1692, 1963], [1692, 1953], [1698, 1949], [1691, 1943], [1696, 1933], [1693, 1928], [1701, 1924], [1710, 1906], [1717, 1906], [1713, 1892], [1735, 1883], [1734, 1869], [1728, 1864], [1729, 1856], [1722, 1853], [1717, 1840], [1719, 1831], [1710, 1822], [1738, 1812], [1753, 1818], [1777, 1811], [1794, 1814]],
+  [[1781, 2035], [1814, 2003], [1820, 2005], [1799, 2036], [1799, 2049], [1808, 2063], [1771, 2077], [1766, 2071], [1769, 2065], [1759, 2068], [1758, 2058], [1771, 2052], [1781, 2035]],
+  [[2620, 1737], [2647, 1764], [2683, 1781], [2711, 1778], [2734, 1766], [2742, 1770], [2743, 1761], [2804, 1804], [2803, 1808], [2797, 1805], [2767, 1809], [2746, 1824], [2726, 1849], [2722, 1899], [2710, 1908], [2678, 1911], [2654, 1930], [2650, 1944], [2638, 1950], [2616, 1938], [2633, 1932], [2625, 1925], [2631, 1917], [2626, 1900], [2635, 1890], [2631, 1880], [2620, 1876], [2630, 1872], [2631, 1865], [2640, 1868], [2641, 1855], [2661, 1849], [2668, 1835], [2679, 1830], [2672, 1830], [2677, 1825], [2655, 1815], [2655, 1808], [2646, 1811], [2647, 1817], [2636, 1820], [2644, 1807], [2637, 1795], [2640, 1777], [2620, 1737]],
+  [[2260, 1578], [2274, 1588], [2281, 1634], [2279, 1648], [2269, 1652], [2271, 1661], [2265, 1662], [2252, 1683], [2221, 1677], [2218, 1671], [2205, 1677], [2205, 1670], [2187, 1677], [2180, 1671], [2149, 1704], [2144, 1691], [2132, 1692], [2131, 1687], [2124, 1698], [2118, 1700], [2120, 1689], [2114, 1676], [2118, 1674], [2122, 1654], [2116, 1642], [2123, 1633], [2117, 1625], [2127, 1618], [2135, 1588], [2159, 1580], [2150, 1597], [2172, 1613], [2168, 1615], [2206, 1617], [2219, 1609], [2226, 1587], [2260, 1578]],
+  [[2480, 1779], [2493, 1772], [2540, 1783], [2555, 1796], [2580, 1788], [2576, 1795], [2581, 1797], [2597, 1789], [2613, 1792], [2616, 1787], [2627, 1786], [2639, 1792], [2644, 1807], [2636, 1818], [2623, 1821], [2622, 1815], [2617, 1815], [2614, 1827], [2616, 1832], [2621, 1830], [2622, 1838], [2607, 1836], [2601, 1827], [2584, 1819], [2577, 1817], [2573, 1824], [2567, 1820], [2565, 1824], [2574, 1829], [2569, 1829], [2568, 1842], [2556, 1828], [2530, 1824], [2525, 1817], [2493, 1803], [2480, 1779]],
+  [[2574, 2103], [2569, 2097], [2572, 2090], [2583, 2091], [2584, 2099], [2574, 2103]],
+  [[3031, 3357], [3025, 3356], [3028, 3348], [3025, 3345], [3033, 3350], [3031, 3357]],
+  [[2511, 1703], [2544, 1712], [2549, 1708], [2566, 1719], [2604, 1717], [2612, 1737], [2620, 1737], [2638, 1772], [2639, 1792], [2618, 1786], [2613, 1792], [2600, 1789], [2581, 1797], [2576, 1795], [2580, 1788], [2555, 1796], [2540, 1783], [2493, 1772], [2471, 1782], [2445, 1770], [2441, 1756], [2448, 1747], [2460, 1747], [2482, 1731], [2496, 1730], [2511, 1703]],
+  [[1260, 1989], [1266, 2008], [1256, 2021], [1261, 2033], [1277, 2033], [1272, 2043], [1274, 2051], [1283, 2057], [1298, 2051], [1305, 2056], [1314, 2044], [1311, 2034], [1323, 2027], [1323, 2047], [1333, 2051], [1336, 2069], [1353, 2073], [1353, 2085], [1345, 2090], [1348, 2110], [1343, 2118], [1331, 2120], [1338, 2139], [1331, 2141], [1332, 2133], [1319, 2127], [1322, 2125], [1307, 2126], [1289, 2110], [1277, 2113], [1280, 2117], [1272, 2115], [1283, 2106], [1275, 2106], [1278, 2100], [1268, 2102], [1270, 2098], [1246, 2107], [1244, 2103], [1234, 2112], [1223, 2104], [1217, 2114], [1214, 2108], [1210, 2114], [1214, 2107], [1208, 2102], [1203, 2117], [1188, 2125], [1183, 2124], [1184, 2120], [1174, 2123], [1172, 2112], [1150, 2101], [1127, 2126], [1122, 2120], [1130, 2120], [1129, 2100], [1120, 2091], [1132, 2073], [1121, 2060], [1127, 2046], [1131, 2050], [1149, 2045], [1146, 2039], [1132, 2041], [1139, 2032], [1147, 2037], [1166, 2036], [1170, 2044], [1177, 2040], [1180, 2045], [1181, 2041], [1195, 2042], [1200, 2036], [1213, 2035], [1210, 2029], [1221, 2024], [1220, 2017], [1234, 2010], [1237, 2001], [1245, 1999], [1245, 1993], [1253, 1996], [1260, 1989]],
+  [[1347, 2137], [1341, 2125], [1348, 2117], [1360, 2119], [1367, 2129], [1391, 2120], [1374, 2127], [1374, 2136], [1367, 2136], [1368, 2132], [1360, 2129], [1359, 2134], [1347, 2137]],
+  [[2704, 1400], [2716, 1404], [2726, 1400], [2737, 1405], [2739, 1413], [2753, 1409], [2773, 1415], [2773, 1429], [2780, 1434], [2801, 1432], [2801, 1415], [2808, 1413], [2823, 1427], [2833, 1488], [2830, 1532], [2820, 1580], [2795, 1591], [2789, 1600], [2761, 1591], [2754, 1585], [2757, 1597], [2735, 1612], [2698, 1584], [2699, 1570], [2692, 1570], [2680, 1555], [2641, 1547], [2629, 1551], [2627, 1559], [2602, 1564], [2566, 1580], [2555, 1590], [2528, 1586], [2532, 1545], [2517, 1532], [2528, 1513], [2522, 1501], [2525, 1495], [2556, 1492], [2561, 1482], [2587, 1483], [2581, 1458], [2595, 1451], [2600, 1439], [2614, 1428], [2604, 1423], [2608, 1421], [2625, 1431], [2647, 1426], [2656, 1439], [2666, 1435], [2677, 1443], [2697, 1441], [2708, 1430], [2702, 1425], [2704, 1400]],
+  [[2167, 1491], [2199, 1479], [2211, 1482], [2213, 1493], [2196, 1497], [2193, 1507], [2198, 1514], [2192, 1521], [2178, 1519], [2154, 1542], [2144, 1536], [2147, 1532], [2140, 1533], [2131, 1548], [2136, 1550], [2129, 1561], [2142, 1559], [2148, 1566], [2162, 1555], [2162, 1580], [2135, 1588], [2127, 1618], [2117, 1625], [2123, 1633], [2116, 1643], [2122, 1654], [2114, 1678], [2120, 1689], [2118, 1700], [2128, 1709], [2113, 1724], [2111, 1738], [2098, 1741], [2077, 1725], [2059, 1729], [2053, 1722], [2042, 1722], [2040, 1712], [2026, 1700], [2055, 1678], [2081, 1648], [2111, 1601], [2114, 1574], [2106, 1564], [2107, 1550], [2097, 1548], [2108, 1523], [2106, 1516], [2126, 1503], [2140, 1504], [2167, 1491]],
+  [[2144, 1558], [2136, 1547], [2140, 1551], [2147, 1547], [2154, 1550], [2159, 1544], [2162, 1547], [2159, 1553], [2144, 1558]],
+  [[2026, 1700], [2040, 1712], [2045, 1724], [2053, 1722], [2061, 1729], [2077, 1725], [2096, 1741], [2111, 1738], [2107, 1754], [2118, 1763], [2124, 1780], [2117, 1789], [2073, 1791], [2070, 1798], [2048, 1790], [2040, 1793], [2032, 1814], [2010, 1807], [2013, 1831], [2004, 1828], [2002, 1837], [1989, 1837], [1986, 1844], [1974, 1839], [1966, 1860], [1953, 1858], [1946, 1868], [1905, 1864], [1905, 1857], [1894, 1848], [1895, 1834], [1898, 1832], [1897, 1839], [1903, 1834], [1902, 1842], [1906, 1845], [1928, 1834], [1922, 1845], [1914, 1844], [1937, 1846], [1945, 1836], [1937, 1839], [1932, 1834], [1936, 1830], [1951, 1838], [1957, 1836], [1951, 1830], [1957, 1831], [1960, 1826], [1953, 1817], [1962, 1823], [1981, 1819], [1977, 1803], [1987, 1795], [1992, 1806], [1989, 1810], [1997, 1814], [2001, 1793], [1984, 1773], [1977, 1756], [2003, 1717], [2006, 1719], [2005, 1709], [2026, 1700]],
+  [[1473, 2077], [1470, 2074], [1479, 2066], [1474, 2064], [1484, 2058], [1490, 2072], [1473, 2077]],
+  [[1401, 2176], [1423, 2163], [1430, 2154], [1430, 2132], [1438, 2127], [1440, 2111], [1467, 2099], [1468, 2092], [1462, 2090], [1470, 2086], [1500, 2124], [1534, 2112], [1566, 2116], [1581, 2103], [1595, 2110], [1596, 2126], [1591, 2132], [1573, 2132], [1564, 2142], [1527, 2141], [1520, 2150], [1512, 2148], [1500, 2172], [1493, 2173], [1488, 2187], [1491, 2193], [1483, 2204], [1447, 2208], [1463, 2232], [1445, 2241], [1442, 2253], [1429, 2265], [1416, 2258], [1428, 2295], [1422, 2303], [1412, 2305], [1413, 2299], [1398, 2299], [1395, 2305], [1400, 2305], [1394, 2308], [1389, 2301], [1396, 2298], [1391, 2295], [1395, 2292], [1395, 2296], [1405, 2297], [1398, 2294], [1393, 2281], [1381, 2280], [1381, 2285], [1375, 2286], [1381, 2277], [1393, 2280], [1387, 2268], [1396, 2267], [1386, 2265], [1384, 2260], [1390, 2259], [1380, 2253], [1389, 2252], [1393, 2260], [1398, 2259], [1394, 2255], [1398, 2252], [1406, 2250], [1399, 2246], [1403, 2241], [1391, 2244], [1400, 2234], [1374, 2233], [1382, 2226], [1382, 2221], [1376, 2225], [1375, 2221], [1382, 2210], [1376, 2211], [1382, 2207], [1371, 2203], [1365, 2209], [1362, 2205], [1337, 2223], [1329, 2225], [1332, 2221], [1328, 2221], [1314, 2228], [1332, 2215], [1339, 2216], [1338, 2211], [1355, 2209], [1355, 2205], [1382, 2193], [1401, 2176]],
+  [[1936, 1971], [1943, 1981], [1959, 1985], [1966, 1984], [1972, 1975], [1987, 1984], [1994, 1979], [1999, 1990], [1991, 1992], [1997, 1997], [1993, 2007], [2004, 2013], [2011, 2011], [2013, 2018], [2021, 2017], [2023, 2023], [2019, 2031], [2001, 2033], [1996, 2041], [2006, 2054], [2001, 2057], [2007, 2066], [2e3, 2076], [2002, 2106], [1988, 2105], [1982, 2112], [1972, 2114], [1967, 2120], [1969, 2126], [1962, 2125], [1963, 2136], [1952, 2128], [1920, 2134], [1917, 2127], [1923, 2113], [1907, 2098], [1925, 2072], [1939, 2070], [1930, 2061], [1926, 2042], [1932, 2030], [1926, 2014], [1931, 2006], [1926, 2002], [1936, 1971]],
+  [[1522, 1724], [1521, 1719], [1511, 1715], [1510, 1702], [1527, 1691], [1545, 1705], [1542, 1716], [1537, 1718], [1538, 1713], [1531, 1717], [1537, 1723], [1527, 1720], [1522, 1724]],
+  [[1480, 1746], [1471, 1742], [1476, 1733], [1495, 1728], [1487, 1734], [1487, 1742], [1481, 1734], [1476, 1737], [1480, 1746]],
+  [[1491, 1747], [1491, 1735], [1502, 1733], [1500, 1738], [1506, 1740], [1496, 1740], [1491, 1747]],
+  [[1521, 1834], [1513, 1838], [1534, 1859], [1529, 1875], [1532, 1884], [1506, 1893], [1513, 1902], [1505, 1907], [1504, 1919], [1458, 1914], [1437, 1939], [1418, 1949], [1430, 1953], [1429, 1960], [1415, 1960], [1402, 1969], [1385, 1964], [1378, 1972], [1352, 1967], [1349, 1977], [1334, 1984], [1339, 1989], [1333, 2007], [1320, 2018], [1323, 2027], [1311, 2034], [1314, 2044], [1305, 2056], [1298, 2051], [1281, 2057], [1272, 2046], [1277, 2033], [1261, 2033], [1256, 2021], [1266, 2008], [1260, 1989], [1286, 1984], [1313, 1956], [1321, 1955], [1331, 1941], [1364, 1922], [1382, 1898], [1417, 1881], [1425, 1865], [1418, 1854], [1438, 1852], [1434, 1848], [1457, 1840], [1474, 1840], [1475, 1835], [1496, 1829], [1495, 1824], [1505, 1832], [1531, 1829], [1521, 1834]],
+  [[2923, 971], [2924, 965], [2940, 957], [2963, 989], [2966, 998], [2959, 1003], [2973, 1012], [2965, 1022], [2986, 1040], [2984, 1052], [2994, 1078], [2985, 1111], [2998, 1099], [2998, 1113], [3006, 1118], [2995, 1131], [2986, 1133], [2990, 1138], [3004, 1132], [3001, 1140], [2990, 1140], [2983, 1147], [2987, 1152], [2977, 1156], [2993, 1154], [2989, 1160], [2975, 1162], [2982, 1169], [2975, 1167], [2975, 1172], [2989, 1172], [2972, 1179], [2981, 1184], [2966, 1190], [2981, 1198], [2974, 1201], [2962, 1196], [2964, 1203], [2973, 1205], [2962, 1206], [2969, 1211], [2949, 1213], [2948, 1204], [2945, 1212], [2951, 1217], [2945, 1217], [2943, 1222], [2948, 1225], [2944, 1227], [2938, 1215], [2931, 1216], [2932, 1222], [2908, 1217], [2908, 1232], [2901, 1239], [2899, 1255], [2895, 1258], [2878, 1248], [2862, 1261], [2843, 1248], [2849, 1238], [2823, 1239], [2796, 1223], [2787, 1224], [2786, 1217], [2794, 1206], [2784, 1201], [2783, 1191], [2793, 1184], [2786, 1181], [2790, 1174], [2774, 1163], [2777, 1157], [2768, 1142], [2779, 1130], [2780, 1115], [2796, 1100], [2788, 1085], [2800, 1074], [2790, 1069], [2789, 1062], [2805, 1060], [2799, 1024], [2805, 1018], [2802, 1006], [2808, 999], [2818, 993], [2830, 998], [2879, 971], [2884, 978], [2900, 970], [2916, 975], [2923, 971]],
+  [[1710, 1822], [1719, 1831], [1717, 1840], [1722, 1853], [1729, 1856], [1728, 1864], [1734, 1869], [1735, 1883], [1726, 1890], [1714, 1887], [1702, 1896], [1692, 1895], [1677, 1902], [1672, 1882], [1650, 1877], [1651, 1869], [1637, 1872], [1620, 1888], [1605, 1875], [1580, 1870], [1574, 1888], [1565, 1891], [1568, 1899], [1547, 1900], [1548, 1912], [1530, 1914], [1525, 1922], [1503, 1920], [1505, 1907], [1513, 1902], [1506, 1893], [1532, 1884], [1529, 1875], [1534, 1859], [1517, 1846], [1513, 1838], [1516, 1834], [1525, 1833], [1521, 1836], [1524, 1843], [1546, 1851], [1575, 1837], [1610, 1842], [1649, 1836], [1661, 1839], [1690, 1833], [1710, 1822]],
+  [[1722, 2074], [1746, 2068], [1746, 2075], [1756, 2079], [1747, 2109], [1750, 2114], [1755, 2109], [1767, 2124], [1754, 2137], [1774, 2141], [1715, 2173], [1709, 2185], [1704, 2185], [1709, 2186], [1700, 2187], [1701, 2192], [1681, 2189], [1673, 2177], [1679, 2174], [1677, 2168], [1658, 2166], [1654, 2142], [1641, 2141], [1634, 2148], [1621, 2139], [1606, 2140], [1592, 2134], [1596, 2126], [1594, 2109], [1611, 2097], [1638, 2090], [1648, 2098], [1657, 2090], [1669, 2090], [1677, 2079], [1707, 2078], [1717, 2083], [1722, 2074]],
+  [[1002, 2453], [991, 2437], [996, 2433], [993, 2430], [1002, 2434], [1e3, 2430], [1005, 2428], [1011, 2441], [1002, 2453]],
+  [[1075, 2436], [1097, 2451], [1094, 2458], [1106, 2466], [1110, 2478], [1129, 2489], [1123, 2502], [1141, 2508], [1153, 2534], [1157, 2530], [1165, 2536], [1171, 2533], [1178, 2544], [1171, 2565], [1162, 2563], [1147, 2578], [1146, 2584], [1162, 2588], [1157, 2599], [1165, 2599], [1146, 2607], [1137, 2623], [1101, 2637], [1087, 2649], [1089, 2638], [1085, 2635], [1101, 2623], [1110, 2587], [1093, 2565], [1093, 2548], [1082, 2550], [1075, 2543], [1089, 2535], [1096, 2540], [1094, 2548], [1104, 2547], [1114, 2530], [1109, 2522], [1091, 2516], [1081, 2520], [1062, 2559], [1071, 2592], [1088, 2600], [1083, 2614], [1074, 2620], [1063, 2618], [1053, 2603], [1011, 2603], [1014, 2598], [1009, 2595], [1013, 2592], [1005, 2590], [1011, 2586], [993, 2574], [1002, 2569], [1013, 2576], [1021, 2571], [1031, 2548], [1028, 2530], [1018, 2517], [1007, 2514], [1003, 2506], [1013, 2485], [1009, 2471], [1005, 2470], [1010, 2458], [1005, 2450], [1013, 2446], [1027, 2449], [1036, 2439], [1052, 2449], [1073, 2441], [1075, 2436]],
+  [[954, 2504], [949, 2496], [953, 2494], [945, 2497], [948, 2490], [960, 2497], [960, 2492], [964, 2493], [963, 2501], [954, 2504]],
+  [[1135, 2713], [1134, 2707], [1153, 2677], [1157, 2686], [1153, 2718], [1137, 2741], [1138, 2760], [1122, 2765], [1118, 2743], [1132, 2729], [1135, 2713]],
+  [[1063, 2786], [1049, 2784], [1039, 2760], [1059, 2743], [1088, 2760], [1085, 2774], [1063, 2786]],
+  [[916, 3107], [916, 3101], [920, 3106], [916, 3095], [921, 3090], [928, 3099], [926, 3109], [910, 3113], [899, 3129], [885, 3131], [882, 3140], [876, 3140], [887, 3147], [875, 3150], [875, 3157], [864, 3154], [871, 3165], [857, 3158], [855, 3149], [851, 3152], [856, 3145], [850, 3143], [849, 3148], [830, 3139], [853, 3138], [856, 3134], [849, 3135], [843, 3130], [864, 3119], [874, 3121], [874, 3116], [883, 3116], [885, 3111], [891, 3116], [899, 3102], [912, 3099], [906, 3110], [911, 3104], [912, 3110], [916, 3107]],
+  [[861, 3173], [861, 3167], [855, 3173], [850, 3165], [844, 3171], [844, 3160], [837, 3151], [847, 3150], [841, 3152], [847, 3157], [852, 3155], [848, 3163], [853, 3159], [851, 3164], [865, 3164], [861, 3173]],
+  [[791, 3229], [789, 3206], [802, 3204], [802, 3217], [813, 3225], [811, 3235], [805, 3243], [797, 3245], [787, 3234], [791, 3229]],
+  [[736, 3292], [759, 3286], [734, 3305], [726, 3297], [729, 3291], [736, 3292]],
+  [[2581, 1296], [2611, 1306], [2608, 1325], [2632, 1334], [2640, 1346], [2621, 1361], [2609, 1358], [2604, 1365], [2606, 1385], [2599, 1389], [2594, 1410], [2600, 1420], [2614, 1428], [2600, 1439], [2595, 1451], [2581, 1458], [2587, 1483], [2561, 1482], [2556, 1492], [2527, 1494], [2522, 1501], [2528, 1513], [2517, 1532], [2532, 1545], [2530, 1585], [2519, 1581], [2505, 1564], [2497, 1577], [2483, 1578], [2486, 1594], [2476, 1595], [2477, 1604], [2459, 1607], [2459, 1617], [2443, 1617], [2439, 1621], [2433, 1614], [2437, 1600], [2420, 1590], [2416, 1571], [2407, 1569], [2387, 1575], [2379, 1588], [2371, 1590], [2370, 1602], [2357, 1598], [2340, 1601], [2330, 1610], [2321, 1605], [2326, 1596], [2323, 1591], [2299, 1589], [2300, 1598], [2281, 1616], [2272, 1584], [2260, 1578], [2306, 1564], [2338, 1543], [2357, 1544], [2364, 1537], [2363, 1542], [2414, 1507], [2425, 1488], [2447, 1466], [2462, 1429], [2501, 1404], [2528, 1396], [2552, 1376], [2565, 1353], [2566, 1325], [2581, 1296]],
+  [[2362, 1431], [2356, 1426], [2367, 1422], [2369, 1410], [2379, 1402], [2372, 1394], [2364, 1402], [2359, 1399], [2362, 1380], [2376, 1360], [2395, 1348], [2398, 1338], [2408, 1336], [2394, 1380], [2402, 1384], [2415, 1380], [2413, 1394], [2400, 1414], [2362, 1431]],
+  [[1578, 2135], [1589, 2132], [1606, 2140], [1621, 2139], [1634, 2148], [1641, 2141], [1654, 2142], [1658, 2166], [1677, 2168], [1679, 2174], [1673, 2177], [1681, 2189], [1700, 2191], [1683, 2219], [1678, 2246], [1637, 2203], [1603, 2194], [1575, 2200], [1574, 2191], [1572, 2197], [1577, 2201], [1539, 2215], [1557, 2215], [1538, 2219], [1533, 2226], [1529, 2217], [1519, 2232], [1524, 2234], [1520, 2237], [1524, 2244], [1515, 2257], [1517, 2263], [1509, 2263], [1496, 2286], [1482, 2287], [1482, 2311], [1471, 2316], [1483, 2339], [1474, 2338], [1475, 2330], [1469, 2328], [1458, 2332], [1457, 2327], [1447, 2335], [1431, 2326], [1417, 2332], [1422, 2316], [1433, 2311], [1431, 2303], [1422, 2303], [1428, 2295], [1416, 2258], [1429, 2265], [1442, 2253], [1445, 2241], [1463, 2232], [1447, 2208], [1483, 2204], [1491, 2193], [1488, 2187], [1493, 2173], [1500, 2172], [1512, 2148], [1520, 2150], [1527, 2141], [1564, 2142], [1571, 2133], [1578, 2135]],
+  [[1229, 2330], [1263, 2331], [1273, 2319], [1288, 2322], [1286, 2337], [1292, 2335], [1287, 2345], [1274, 2348], [1270, 2361], [1260, 2367], [1259, 2378], [1264, 2376], [1266, 2381], [1254, 2382], [1251, 2390], [1257, 2388], [1254, 2392], [1259, 2393], [1252, 2396], [1242, 2417], [1222, 2484], [1220, 2501], [1226, 2507], [1219, 2526], [1223, 2532], [1208, 2548], [1209, 2561], [1200, 2583], [1196, 2578], [1187, 2580], [1184, 2571], [1171, 2565], [1177, 2556], [1175, 2536], [1157, 2530], [1153, 2534], [1141, 2508], [1123, 2502], [1129, 2489], [1110, 2478], [1106, 2466], [1094, 2455], [1099, 2449], [1139, 2447], [1146, 2438], [1162, 2440], [1151, 2424], [1162, 2410], [1147, 2390], [1147, 2371], [1152, 2364], [1162, 2365], [1163, 2354], [1183, 2336], [1188, 2321], [1201, 2320], [1205, 2325], [1223, 2319], [1231, 2326], [1229, 2330]],
+  [[2511, 1812], [2532, 1824], [2556, 1828], [2568, 1842], [2569, 1829], [2574, 1829], [2565, 1823], [2573, 1824], [2577, 1817], [2601, 1827], [2607, 1836], [2622, 1838], [2595, 1849], [2605, 1854], [2594, 1861], [2600, 1865], [2600, 1871], [2594, 1873], [2600, 1873], [2596, 1879], [2615, 1887], [2600, 1899], [2603, 1907], [2592, 1907], [2590, 1897], [2595, 1894], [2585, 1880], [2563, 1875], [2531, 1880], [2514, 1889], [2516, 1907], [2494, 1905], [2485, 1890], [2492, 1873], [2489, 1861], [2475, 1859], [2478, 1852], [2508, 1836], [2511, 1812]]
+];
+var KUNI_LINES = [
+  [[1170, 2562], [1176, 2555], [1176, 2545]],
+  [[1176, 2545], [1174, 2534], [1168, 2534]],
+  [[1148, 2527], [1148, 2521], [1142, 2510]],
+  [[1073, 2525], [1055, 2517], [1057, 2510]],
+  [[1142, 2510], [1140, 2506], [1121, 2502], [1123, 2495]],
+  [[1123, 2495], [1127, 2487], [1119, 2485], [1109, 2476]],
+  [[1061, 2495], [1063, 2482], [1073, 2476]],
+  [[1107, 2476], [1107, 2470], [1101, 2461], [1081, 2472]],
+  [[1095, 2457], [1093, 2452], [1097, 2448], [1093, 2448], [1081, 2437]],
+  [[1097, 2448], [1140, 2446], [1144, 2437], [1160, 2439], [1160, 2435]],
+  [[1059, 2444], [1071, 2442], [1073, 2435]],
+  [[1158, 2435], [1150, 2424], [1160, 2412], [1158, 2403]],
+  [[1156, 2403], [1152, 2394], [1146, 2390], [1148, 2366]],
+  [[1148, 2366], [1150, 2362], [1162, 2362], [1162, 2351], [1168, 2349], [1178, 2336]],
+  [[1178, 2336], [1182, 2336], [1188, 2319], [1202, 2319], [1204, 2324], [1208, 2324]],
+  [[1287, 2334], [1289, 2321], [1275, 2317], [1271, 2317], [1263, 2330], [1230, 2330], [1232, 2324], [1228, 2324], [1224, 2317], [1208, 2324]],
+  [[1196, 2319], [1186, 2311], [1186, 2300]],
+  [[1422, 2300], [1426, 2296], [1426, 2287], [1418, 2268]],
+  [[1186, 2300], [1184, 2287], [1170, 2272], [1170, 2268]],
+  [[1045, 2289], [1061, 2289], [1061, 2278], [1073, 2268]],
+  [[1140, 2285], [1144, 2285], [1148, 2276], [1146, 2268]],
+  [[1140, 2285], [1115, 2272], [1117, 2268]],
+  [[1130, 2268], [1134, 2268], [1140, 2261], [1146, 2268]],
+  [[1087, 2268], [1089, 2259], [1103, 2263]],
+  [[1117, 2268], [1123, 2257], [1117, 2248], [1113, 2248], [1119, 2242], [1117, 2233]],
+  [[1418, 2268], [1416, 2257], [1430, 2263], [1442, 2251], [1444, 2240], [1456, 2233]],
+  [[1037, 2263], [1033, 2251], [1045, 2238], [1053, 2238], [1053, 2233]],
+  [[1142, 2261], [1144, 2257], [1148, 2257]],
+  [[1152, 2255], [1154, 2251], [1162, 2248], [1180, 2233]],
+  [[1053, 2233], [1055, 2229], [1065, 2227], [1065, 2212], [1043, 2218], [1023, 2203], [982, 2205]],
+  [[1180, 2233], [1190, 2227], [1208, 2227]],
+  [[1456, 2233], [1460, 2233], [1460, 2227], [1456, 2225], [1446, 2205], [1463, 2205]],
+  [[1117, 2233], [1111, 2225], [1085, 2220], [1081, 2216]],
+  [[1208, 2227], [1218, 2225], [1238, 2201]],
+  [[1111, 2201], [1113, 2188], [1107, 2184], [1107, 2165]],
+  [[1483, 2201], [1489, 2195], [1487, 2184], [1491, 2173], [1499, 2171], [1501, 2165]],
+  [[1695, 2190], [1680, 2188], [1680, 2184], [1674, 2178], [1680, 2173], [1678, 2167], [1666, 2165]],
+  [[1501, 2165], [1509, 2150], [1521, 2148], [1523, 2141], [1563, 2141], [1567, 2135]],
+  [[1658, 2165], [1654, 2141], [1640, 2139], [1636, 2145], [1630, 2145], [1622, 2137], [1604, 2139], [1600, 2135]],
+  [[1107, 2165], [1107, 2152], [1083, 2139], [1083, 2135]],
+  [[1596, 2135], [1592, 2130], [1586, 2130]],
+  [[1959, 2135], [1955, 2128], [1919, 2132], [1917, 2124], [1923, 2111], [1909, 2098]],
+  [[1592, 2130], [1596, 2126], [1594, 2107], [1586, 2102]],
+  [[1967, 2124], [1973, 2113], [1985, 2109]],
+  [[1987, 2107], [2003, 2105], [2003, 2098]],
+  [[1907, 2098], [1907, 2094], [1913, 2090], [1913, 2085], [1925, 2070], [1939, 2068]],
+  [[2013, 2098], [2007, 2094], [2001, 2094], [2003, 2098]],
+  [[1646, 2096], [1654, 2090], [1668, 2090], [1674, 2079], [1715, 2079]],
+  [[1646, 2096], [1640, 2090], [1622, 2092]],
+  [[2001, 2094], [2001, 2072], [2005, 2068]],
+  [[1206, 2092], [1188, 2077], [1192, 2068]],
+  [[1715, 2081], [1719, 2079], [1721, 2072]],
+  [[1337, 2068], [1335, 2051], [1331, 2049]],
+  [[1937, 2068], [1935, 2064], [1929, 2062], [1925, 2042]],
+  [[1192, 2068], [1196, 2062], [1208, 2059]],
+  [[2005, 2068], [2007, 2064], [2001, 2057], [2005, 2055], [2005, 2049], [1999, 2044], [1997, 2038], [2001, 2032], [2013, 2029]],
+  [[1208, 2059], [1251, 2051], [1255, 2044], [1259, 2044], [1265, 2036], [1271, 2034], [1259, 2029]],
+  [[1442, 2059], [1442, 2042], [1446, 2029]],
+  [[1279, 2055], [1287, 2055], [1293, 2051], [1301, 2051], [1303, 2055], [1307, 2055], [1309, 2049], [1315, 2044], [1313, 2032], [1317, 2029]],
+  [[1279, 2055], [1271, 2044], [1275, 2038], [1275, 2032], [1271, 2032]],
+  [[1327, 2049], [1323, 2040], [1323, 2029]],
+  [[2088, 2047], [2088, 2042], [2094, 2036], [2098, 2036], [2100, 2029]],
+  [[1317, 2029], [1321, 2027], [1323, 2029]],
+  [[1446, 2029], [1456, 2019], [1463, 2017]],
+  [[2013, 2029], [2022, 2029], [2024, 2019], [2042, 2012], [2050, 2002]],
+  [[1259, 2029], [1255, 2019], [1265, 2008], [1263, 2002]],
+  [[1323, 2027], [1325, 2025], [1321, 2021], [1321, 2014], [1325, 2014], [1331, 2008]],
+  [[1931, 2029], [1925, 2014], [1925, 2010], [1929, 2008], [1927, 2002]],
+  [[1557, 2025], [1557, 2012], [1549, 2006], [1549, 2002]],
+  [[2024, 2019], [2013, 2017], [2011, 2010], [2003, 2012], [1995, 2008], [1995, 2002]],
+  [[1547, 2002], [1545, 1997], [1549, 1989], [1541, 1980], [1545, 1967], [1543, 1963]],
+  [[1616, 2002], [1636, 1982], [1636, 1976], [1632, 1974], [1628, 1963]],
+  [[1894, 2002], [1907, 2002], [1913, 1995], [1913, 1991], [1917, 1989], [1913, 1974], [1933, 1974], [1929, 1993], [1925, 1997], [1927, 2002]],
+  [[1335, 2002], [1339, 1993], [1339, 1986], [1335, 1982], [1347, 1978], [1354, 1967], [1380, 1971], [1386, 1963]],
+  [[1995, 2002], [1997, 1995], [1993, 1991], [1999, 1989], [1995, 1978], [1985, 1982], [1971, 1974], [1967, 1982]],
+  [[2050, 2002], [2052, 1995], [2044, 1963]],
+  [[1820, 1995], [1818, 1991], [1806, 1984], [1785, 1980]],
+  [[1701, 1980], [1701, 1967], [1695, 1963]],
+  [[1991, 1978], [1987, 1969], [1999, 1963]],
+  [[1396, 1967], [1406, 1967], [1408, 1963]],
+  [[1408, 1963], [1416, 1959], [1430, 1959], [1428, 1952], [1422, 1950], [1422, 1946], [1438, 1939], [1442, 1933]],
+  [[1473, 1963], [1473, 1939], [1469, 1933]],
+  [[1541, 1963], [1531, 1950], [1533, 1933]],
+  [[1626, 1963], [1618, 1946], [1644, 1946], [1668, 1933]],
+  [[1691, 1963], [1691, 1952], [1697, 1948], [1691, 1944], [1695, 1933]],
+  [[1842, 1963], [1846, 1961], [1848, 1950], [1838, 1946]],
+  [[1939, 1963], [1937, 1956], [1929, 1950], [1929, 1946], [1919, 1944], [1921, 1939], [1919, 1941]],
+  [[1999, 1963], [2003, 1959], [2003, 1954], [1999, 1954], [2001, 1948], [2024, 1956], [2040, 1950], [2044, 1963]],
+  [[2235, 1963], [2258, 1952], [2270, 1939], [2272, 1933]],
+  [[1985, 1963], [1985, 1959], [1975, 1959], [1973, 1952], [1967, 1954]],
+  [[1430, 1956], [1430, 1952], [1426, 1950]],
+  [[1965, 1954], [1961, 1950], [1963, 1939], [1959, 1935]],
+  [[1848, 1950], [1880, 1941], [1876, 1933]],
+  [[2040, 1950], [2046, 1948], [2052, 1933]],
+  [[1618, 1946], [1614, 1939], [1586, 1937]],
+  [[1836, 1946], [1834, 1941], [1828, 1939], [1828, 1933]],
+  [[1907, 1946], [1913, 1946], [1911, 1937], [1923, 1939], [1929, 1933]],
+  [[1907, 1946], [1898, 1941], [1900, 1933]],
+  [[2122, 1939], [2126, 1937], [2126, 1933]],
+  [[2449, 1937], [2459, 1937], [2464, 1933]],
+  [[1442, 1933], [1458, 1914], [1463, 1914]],
+  [[1533, 1933], [1535, 1929], [1527, 1920], [1475, 1916]],
+  [[1668, 1933], [1689, 1929], [1695, 1929], [1695, 1933]],
+  [[1826, 1933], [1826, 1922], [1820, 1916], [1814, 1901], [1755, 1905], [1745, 1896]],
+  [[1894, 1933], [1880, 1929], [1880, 1922]],
+  [[2126, 1933], [2131, 1929], [2175, 1916], [2193, 1896]],
+  [[2340, 1933], [2375, 1931], [2383, 1914], [2383, 1896]],
+  [[1876, 1933], [1874, 1924], [1878, 1922]],
+  [[1929, 1933], [1929, 1926], [1917, 1914], [1917, 1896]],
+  [[2052, 1933], [2058, 1922], [2060, 1909], [2060, 1901], [2052, 1896]],
+  [[2272, 1933], [2272, 1924], [2286, 1914], [2290, 1896]],
+  [[1693, 1929], [1701, 1924], [1707, 1907], [1715, 1905]],
+  [[1955, 1929], [1953, 1914], [1957, 1896]],
+  [[2114, 1926], [2112, 1918], [2100, 1905], [2088, 1901]],
+  [[1503, 1918], [1503, 1907], [1511, 1903], [1509, 1896]],
+  [[2472, 1914], [2470, 1907], [2474, 1907]],
+  [[1535, 1911], [1549, 1911], [1547, 1898], [1569, 1896]],
+  [[2474, 1907], [2488, 1903], [2508, 1905]],
+  [[2397, 1901], [2405, 1901], [2407, 1896]],
+  [[1507, 1896], [1505, 1894], [1507, 1890], [1531, 1883], [1529, 1866]],
+  [[1567, 1896], [1565, 1890], [1576, 1888], [1580, 1871], [1586, 1871]],
+  [[1814, 1896], [1818, 1894], [1822, 1883], [1806, 1877], [1806, 1866]],
+  [[2082, 1896], [2076, 1886], [2056, 1890], [2052, 1896]],
+  [[2250, 1896], [2264, 1890], [2290, 1896]],
+  [[2250, 1896], [2244, 1888], [2244, 1881]],
+  [[2488, 1896], [2484, 1888], [2492, 1873], [2490, 1866]],
+  [[1674, 1896], [1670, 1881], [1648, 1877], [1650, 1868], [1634, 1873], [1624, 1886], [1616, 1886], [1604, 1873], [1586, 1871]],
+  [[1691, 1894], [1705, 1894], [1711, 1888], [1715, 1888]],
+  [[2098, 1896], [2100, 1886], [2114, 1866]],
+  [[2193, 1896], [2199, 1881], [2183, 1886], [2177, 1879], [2165, 1879], [2161, 1866]],
+  [[2290, 1894], [2300, 1892], [2304, 1886]],
+  [[2383, 1896], [2383, 1879], [2387, 1890]],
+  [[2054, 1892], [2048, 1890], [2052, 1866]],
+  [[2219, 1890], [2217, 1886], [2205, 1879], [2199, 1881]],
+  [[1717, 1888], [1729, 1888], [1735, 1883], [1735, 1866]],
+  [[1959, 1888], [1959, 1881], [1953, 1881], [1945, 1871], [1947, 1866]],
+  [[2244, 1879], [2248, 1873], [2254, 1871], [2252, 1866]],
+  [[2383, 1879], [2383, 1875], [2369, 1877], [2363, 1871], [2363, 1866]],
+  [[1658, 1877], [1660, 1875], [1658, 1866]],
+  [[1529, 1866], [1533, 1858], [1519, 1849], [1513, 1841], [1513, 1834], [1525, 1832]],
+  [[1731, 1866], [1729, 1853], [1725, 1853], [1719, 1843], [1721, 1830]],
+  [[1806, 1866], [1806, 1860], [1818, 1862], [1826, 1858], [1826, 1838], [1824, 1834], [1804, 1838], [1798, 1830]],
+  [[1925, 1866], [1904, 1864], [1902, 1853], [1892, 1853], [1872, 1864], [1852, 1858], [1838, 1862]],
+  [[1947, 1866], [1953, 1858], [1967, 1858]],
+  [[2052, 1866], [2058, 1862], [2052, 1847], [2048, 1845], [2052, 1838], [2048, 1832], [2038, 1834], [2038, 1830]],
+  [[2126, 1866], [2145, 1858], [2161, 1866]],
+  [[2340, 1866], [2344, 1866], [2342, 1849], [2348, 1847], [2346, 1830]],
+  [[2361, 1866], [2367, 1845], [2365, 1830]],
+  [[2435, 1866], [2433, 1860], [2423, 1860], [2421, 1851], [2413, 1853], [2407, 1866]],
+  [[2252, 1866], [2250, 1860], [2258, 1860], [2252, 1853], [2258, 1847], [2258, 1838], [2252, 1836], [2248, 1830]],
+  [[2490, 1866], [2488, 1860], [2482, 1860]],
+  [[2589, 1862], [2570, 1851], [2566, 1836], [2560, 1830]],
+  [[1967, 1858], [1975, 1838], [1987, 1843], [1989, 1836], [2003, 1836], [2003, 1830]],
+  [[2476, 1858], [2478, 1849], [2506, 1836], [2508, 1830]],
+  [[1898, 1853], [1892, 1847], [1892, 1834], [1898, 1832]],
+  [[2007, 1830], [2013, 1830], [2011, 1808], [2026, 1810], [2034, 1819]],
+  [[2007, 1830], [2007, 1828], [2003, 1830]],
+  [[2246, 1830], [2244, 1825], [2237, 1823], [2244, 1817], [2244, 1813], [2235, 1806], [2233, 1800]],
+  [[2346, 1830], [2355, 1828], [2357, 1819], [2361, 1819], [2365, 1830]],
+  [[2558, 1830], [2556, 1825], [2540, 1825], [2530, 1823], [2526, 1819]],
+  [[2712, 1830], [2702, 1825], [2675, 1825]],
+  [[1997, 1830], [1983, 1810], [1983, 1806], [1977, 1802]],
+  [[2508, 1830], [2510, 1810], [2516, 1813]],
+  [[2359, 1819], [2359, 1813], [2353, 1806], [2355, 1800]],
+  [[2635, 1817], [2643, 1810], [2645, 1806], [2643, 1800]],
+  [[2030, 1813], [2034, 1813], [2038, 1800]],
+  [[2510, 1810], [2500, 1804], [2494, 1804], [2492, 1800]],
+  [[2197, 1800], [2185, 1787], [2185, 1783], [2173, 1772], [2126, 1765], [2120, 1765], [2124, 1780], [2118, 1789], [2088, 1789]],
+  [[2231, 1800], [2229, 1795], [2221, 1798]],
+  [[2355, 1800], [2361, 1798], [2361, 1793], [2355, 1791], [2355, 1785], [2361, 1778], [2361, 1774], [2369, 1778], [2381, 1761]],
+  [[2490, 1800], [2480, 1778], [2474, 1780]],
+  [[2038, 1800], [2040, 1793], [2046, 1789], [2068, 1798], [2074, 1789], [2088, 1789]],
+  [[2643, 1800], [2639, 1785], [2639, 1768], [2635, 1765], [2635, 1761]],
+  [[2797, 1798], [2778, 1783], [2774, 1783], [2772, 1778], [2768, 1778], [2766, 1774], [2762, 1774], [2760, 1770], [2756, 1770], [2754, 1765], [2750, 1765], [2748, 1761]],
+  [[2217, 1791], [2213, 1787], [2207, 1787], [2207, 1783], [2215, 1772], [2221, 1772]],
+  [[2468, 1780], [2447, 1770], [2437, 1772]],
+  [[2425, 1776], [2421, 1768], [2409, 1768]],
+  [[2221, 1772], [2231, 1772], [2240, 1761]],
+  [[2738, 1768], [2742, 1768], [2742, 1761]],
+  [[2738, 1768], [2728, 1765], [2726, 1761]],
+  [[2116, 1761], [2114, 1757], [2108, 1755], [2112, 1737], [2096, 1740], [2090, 1733]],
+  [[2240, 1761], [2252, 1750], [2256, 1740], [2248, 1733]],
+  [[2724, 1761], [2710, 1744], [2655, 1746], [2653, 1733]],
+  [[2441, 1761], [2439, 1755], [2445, 1746], [2459, 1746], [2474, 1735]],
+  [[2439, 1755], [2427, 1748], [2429, 1733]],
+  [[2244, 1733], [2246, 1727], [2252, 1722], [2248, 1712], [2262, 1699], [2260, 1695]],
+  [[2476, 1733], [2482, 1729], [2496, 1729], [2510, 1701], [2536, 1710], [2552, 1707], [2558, 1714], [2573, 1718]],
+  [[2611, 1733], [2607, 1716], [2593, 1716]],
+  [[2084, 1731], [2080, 1725], [2060, 1727], [2058, 1722], [2052, 1722]],
+  [[2112, 1733], [2114, 1722], [2129, 1710], [2118, 1699], [2120, 1695]],
+  [[2429, 1733], [2429, 1729], [2423, 1727], [2421, 1722], [2429, 1720], [2423, 1701], [2431, 1699], [2431, 1695]],
+  [[2653, 1733], [2651, 1716], [2655, 1714], [2655, 1695]],
+  [[2044, 1720], [2042, 1710], [2038, 1710], [2034, 1703], [2026, 1699]],
+  [[2601, 1716], [2601, 1710], [2593, 1703]],
+  [[2605, 1716], [2627, 1710], [2631, 1697], [2641, 1699], [2643, 1695]],
+  [[2147, 1703], [2151, 1703], [2157, 1695]],
+  [[2126, 1695], [2129, 1690], [2143, 1690], [2145, 1695]],
+  [[2258, 1695], [2258, 1690], [2252, 1684]],
+  [[2643, 1695], [2651, 1684], [2657, 1684], [2655, 1695]],
+  [[2120, 1695], [2120, 1684], [2114, 1677], [2116, 1673]],
+  [[2431, 1695], [2431, 1680], [2397, 1680], [2389, 1675], [2389, 1664]],
+  [[2560, 1695], [2552, 1686], [2552, 1680], [2562, 1671], [2562, 1664]],
+  [[2161, 1692], [2179, 1671], [2185, 1675], [2193, 1675], [2197, 1671], [2203, 1671], [2203, 1675], [2211, 1675], [2217, 1671], [2221, 1675]],
+  [[2252, 1682], [2258, 1677], [2264, 1664]],
+  [[2684, 1680], [2690, 1680], [2696, 1664]],
+  [[2118, 1664], [2122, 1658], [2122, 1649], [2118, 1645], [2122, 1628]],
+  [[2264, 1664], [2266, 1660], [2272, 1660], [2270, 1652], [2280, 1647], [2282, 1628]],
+  [[2696, 1664], [2700, 1662], [2700, 1654], [2694, 1628]],
+  [[2389, 1664], [2389, 1658], [2399, 1641]],
+  [[2562, 1664], [2560, 1660], [2568, 1654], [2570, 1647], [2548, 1641], [2548, 1628]],
+  [[2405, 1637], [2411, 1637], [2409, 1628]],
+  [[2120, 1628], [2120, 1622], [2100, 1615]],
+  [[2409, 1628], [2427, 1622], [2437, 1622], [2445, 1615]],
+  [[2548, 1628], [2552, 1622], [2550, 1611], [2558, 1604], [2548, 1598]],
+  [[2694, 1628], [2706, 1626], [2700, 1617], [2700, 1598]],
+  [[2282, 1628], [2280, 1615], [2284, 1615], [2298, 1598]],
+  [[2120, 1622], [2129, 1617], [2133, 1598]],
+  [[2437, 1619], [2433, 1615], [2435, 1598]],
+  [[2455, 1615], [2459, 1615], [2459, 1607], [2474, 1604]],
+  [[2734, 1611], [2738, 1611], [2740, 1607], [2754, 1598]],
+  [[2326, 1609], [2332, 1609], [2334, 1604], [2340, 1602]],
+  [[2326, 1609], [2320, 1604], [2322, 1598]],
+  [[2474, 1604], [2478, 1604], [2478, 1598]],
+  [[2298, 1598], [2300, 1589], [2322, 1589], [2324, 1591], [2322, 1598]],
+  [[2433, 1598], [2419, 1589], [2417, 1574], [2413, 1570]],
+  [[2548, 1598], [2554, 1594], [2554, 1589], [2536, 1587]],
+  [[2716, 1598], [2702, 1585], [2700, 1598]],
+  [[2754, 1598], [2758, 1596], [2756, 1587], [2766, 1594], [2788, 1598]],
+  [[2133, 1598], [2139, 1585], [2159, 1581]],
+  [[2276, 1598], [2272, 1583], [2260, 1576]],
+  [[2371, 1598], [2371, 1591], [2375, 1587], [2381, 1587], [2387, 1574], [2411, 1568]],
+  [[2478, 1598], [2478, 1594], [2486, 1594], [2484, 1576], [2498, 1576], [2504, 1566], [2508, 1566], [2518, 1581], [2534, 1585]],
+  [[2554, 1589], [2560, 1587], [2566, 1579], [2585, 1572]],
+  [[2700, 1585], [2698, 1568], [2692, 1570], [2686, 1561]],
+  [[2526, 1583], [2530, 1583], [2532, 1561]],
+  [[2684, 1561], [2681, 1555], [2677, 1553], [2647, 1546], [2629, 1549], [2629, 1557], [2619, 1559]],
+  [[2532, 1561], [2532, 1542], [2524, 1538], [2520, 1531]],
+  [[2518, 1531], [2524, 1518], [2528, 1516], [2528, 1508], [2524, 1503], [2526, 1493]],
+  [[2548, 1491], [2558, 1491], [2560, 1482], [2589, 1482], [2585, 1465]],
+  [[2585, 1465], [2583, 1456], [2593, 1452]],
+  [[2593, 1452], [2597, 1450], [2601, 1437], [2615, 1426]],
+  [[2675, 1441], [2698, 1439], [2706, 1430], [2706, 1426]],
+  [[2675, 1441], [2669, 1435], [2655, 1437], [2649, 1426]],
+  [[2611, 1426], [2605, 1420], [2623, 1426]],
+  [[2635, 1426], [2645, 1424], [2649, 1426]],
+  [[2702, 1426], [2700, 1422], [2704, 1396]],
+  [[2599, 1415], [2595, 1409], [2599, 1396]],
+  [[2599, 1396], [2601, 1388], [2607, 1385], [2605, 1375], [2607, 1360]],
+  [[2704, 1396], [2706, 1383], [2726, 1381]],
+  [[2726, 1381], [2738, 1366], [2738, 1360]],
+  [[2615, 1360], [2625, 1360], [2629, 1355]],
+  [[2738, 1360], [2738, 1345], [2748, 1334], [2748, 1330]],
+  [[2631, 1353], [2637, 1347], [2641, 1347], [2641, 1342], [2635, 1338], [2633, 1332], [2627, 1330]],
+  [[2621, 1330], [2609, 1325], [2611, 1304], [2593, 1300]],
+  [[2748, 1330], [2762, 1315], [2754, 1306], [2754, 1289]],
+  [[2752, 1289], [2748, 1280], [2760, 1280], [2760, 1265]],
+  [[2760, 1265], [2766, 1257], [2758, 1252], [2752, 1237], [2770, 1235], [2788, 1222]],
+  [[2786, 1222], [2784, 1214], [2792, 1205], [2782, 1201], [2782, 1196]],
+  [[2782, 1196], [2782, 1190], [2790, 1186], [2790, 1181], [2786, 1181], [2788, 1173], [2774, 1164], [2776, 1156]],
+  [[2768, 1145], [2768, 1139], [2776, 1130]],
+  [[2776, 1130], [2778, 1115], [2795, 1100], [2790, 1089]],
+  [[2788, 1089], [2786, 1083], [2799, 1074], [2790, 1070], [2788, 1063]],
+  [[2788, 1063], [2792, 1059], [2805, 1059], [2799, 1031], [2801, 1020]],
+  [[2801, 1020], [2805, 1018], [2801, 1005], [2805, 1003], [2807, 997]],
+  [[2807, 997], [2817, 993], [2817, 975], [2823, 973], [2823, 960], [2801, 958], [2803, 954]],
+  [[2746, 965], [2754, 960], [2760, 960], [2764, 965], [2782, 962], [2792, 954]],
+  [[2746, 965], [2734, 958], [2732, 954]],
+  [[2673, 958], [2716, 958], [2718, 954]],
+  [[2718, 954], [2722, 950], [2726, 952]],
+  [[2792, 954], [2799, 952], [2801, 947], [2803, 954]]
+];
+var MAP_RIDGES = [
+  [[3145, 215], [3145, 322], [3179, 394]],
+  [[3095, 340], [3145, 411], [3195, 465]],
+  [[3111, 483], [3145, 555], [3179, 626]],
+  [[2741, 626], [2708, 698], [2725, 751]],
+  [[2817, 823], [2800, 948], [2783, 1073], [2767, 1199], [2741, 1324], [2716, 1431], [2683, 1556]],
+  [[2708, 966], [2666, 1073], [2649, 1199], [2640, 1306]],
+  [[2935, 1038], [2918, 1145], [2910, 1234], [2893, 1324]],
+  [[2800, 1449], [2783, 1539], [2758, 1628]],
+  [[2649, 1342], [2624, 1395], [2603, 1440]],
+  [[2590, 1467], [2540, 1556], [2498, 1619], [2464, 1673]],
+  [[2489, 1592], [2439, 1646], [2397, 1691]],
+  [[2430, 1726], [2464, 1762], [2506, 1793]],
+  [[2254, 1601], [2257, 1673], [2270, 1735], [2257, 1789]],
+  [[2301, 1768], [2307, 1821], [2304, 1875]],
+  [[2368, 1768], [2358, 1825], [2375, 1878]],
+  [[2119, 1717], [2094, 1762], [2069, 1803]],
+  [[2060, 1893], [2052, 1932], [2040, 1963]],
+  [[2128, 1780], [2178, 1803], [2220, 1834]],
+  [[1892, 1864], [1850, 1893], [1808, 1914]],
+  [[1909, 2075], [1951, 2093], [1993, 2107], [1976, 2138]],
+  [[1724, 1875], [1623, 1896], [1522, 1929], [1421, 1964], [1320, 2e3], [1228, 2036], [1144, 2061]],
+  [[1690, 2125], [1606, 2143], [1522, 2161], [1455, 2183], [1413, 2209]],
+  [[1068, 2209], [1118, 2200], [1160, 2209]],
+  [[1202, 2299], [1160, 2335], [1127, 2388], [1169, 2415]]
+];
+var KUNI_LABELS = [
+  { name: "\u5927\u9685", x: 1117, y: 2576, on: true },
+  { name: "\u85A9\u6469", x: 1041, y: 2520, on: true },
+  { name: "\u65E5\u5411", x: 1193, y: 2434, on: true },
+  { name: "\u80A5\u5F8C", x: 1101, y: 2358, on: true },
+  { name: "\u80A5\u524D", x: 952, y: 2275, on: true },
+  { name: "\u571F\u4F50", x: 1539, y: 2215, on: true },
+  { name: "\u8C4A\u5F8C", x: 1234, y: 2273, on: true },
+  { name: "\u4F0A\u4E88", x: 1454, y: 2180, on: true },
+  { name: "\u7B51\u5F8C", x: 1075, y: 2249, on: true },
+  { name: "\u8C4A\u524D", x: 1158, y: 2195, on: true },
+  { name: "\u7B51\u524D", x: 1064, y: 2183, on: true },
+  { name: "\u7D00\u4F0A", x: 1911, y: 2128, on: true },
+  { name: "\u963F\u6CE2", x: 1688, y: 2124, on: true },
+  { name: "\u58F1\u5C90", x: 926, y: 2150, on: true },
+  { name: "\u5468\u9632", x: 1282, y: 2084, on: true },
+  { name: "\u5927\u548C", x: 1961, y: 2054, on: true },
+  { name: "\u9577\u9580", x: 1186, y: 2065, on: true },
+  { name: "\u8B83\u5C90", x: 1648, y: 2066, on: true },
+  { name: "\u4F0A\u52E2", x: 2056, y: 2002, on: true },
+  { name: "\u6B66\u8535", x: 2554, y: 1778, on: true },
+  { name: "\u5BFE\u99AC", x: 860, y: 2040, on: true },
+  { name: "\u5B89\u82B8", x: 1404, y: 2009, on: true },
+  { name: "\u6DE1\u8DEF", x: 1787, y: 2044, on: true },
+  { name: "\u5FD7\u6469", x: 2113, y: 2042, on: true },
+  { name: "\u5099\u5F8C", x: 1501, y: 1989, on: true },
+  { name: "\u548C\u6CC9", x: 1884, y: 2035, on: true },
+  { name: "\u77F3\u898B", x: 1337, y: 1973, on: true },
+  { name: "\u6CB3\u5185", x: 1918, y: 2006, on: true },
+  { name: "\u5099\u4E2D", x: 1581, y: 1978, on: true },
+  { name: "\u5099\u524D", x: 1655, y: 1976, on: true },
+  { name: "\u4F0A\u8CC0", x: 2019, y: 1985, on: true },
+  { name: "\u6442\u6D25", x: 1882, y: 1969, on: true },
+  { name: "\u4E09\u6CB3", x: 2205, y: 1939, on: true },
+  { name: "\u9060\u6C5F", x: 2319, y: 1935, on: true },
+  { name: "\u4F0A\u8C46", x: 2478, y: 1954, on: true },
+  { name: "\u64AD\u78E8", x: 1765, y: 1942, on: true },
+  { name: "\u5C71\u57CE", x: 1945, y: 1930, on: true },
+  { name: "\u8FD1\u6C5F", x: 2005, y: 1893, on: true },
+  { name: "\u99FF\u6CB3", x: 2425, y: 1901, on: true },
+  { name: "\u4E39\u6CE2", x: 1868, y: 1901, on: true },
+  { name: "\u5B89\u623F", x: 2642, y: 1927, on: true },
+  { name: "\u51FA\u96F2", x: 1465, y: 1881, on: true },
+  { name: "\u7F8E\u4F5C", x: 1623, y: 1910, on: true },
+  { name: "\u5C3E\u5F35", x: 2141, y: 1897, on: true },
+  { name: "\u4F2F\u8006", x: 1575, y: 1870, on: true },
+  { name: "\u4E0A\u7DCF", x: 2682, y: 1871, on: true },
+  { name: "\u4F46\u99AC", x: 1768, y: 1859, on: true },
+  { name: "\u76F8\u6A21", x: 2534, y: 1862, on: true },
+  { name: "\u56E0\u5E61", x: 1693, y: 1863, on: true },
+  { name: "\u7F8E\u6FC3", x: 2143, y: 1835, on: true },
+  { name: "\u7532\u6590", x: 2422, y: 1822, on: true },
+  { name: "\u4FE1\u6FC3", x: 2327, y: 1730, on: true },
+  { name: "\u4E39\u5F8C", x: 1844, y: 1832, on: true },
+  { name: "\u82E5\u72ED", x: 1946, y: 1843, on: true },
+  { name: "\u8D8A\u524D", x: 2040, y: 1763, on: true },
+  { name: "\u4E0B\u7DCF", x: 2692, y: 1778, on: true },
+  { name: "\u98DB\u9A28", x: 2187, y: 1731, on: true },
+  { name: "\u5E38\u9678", x: 2724, y: 1686, on: true },
+  { name: "\u4E0A\u91CE", x: 2485, y: 1662, on: true },
+  { name: "\u96A0\u5C90", x: 1516, y: 1715, on: true },
+  { name: "\u52A0\u8CC0", x: 2086, y: 1686, on: true },
+  { name: "\u4E0B\u91CE", x: 2625, y: 1629, on: true },
+  { name: "\u8D8A\u4E2D", x: 2197, y: 1640, on: true },
+  { name: "\u80FD\u767B", x: 2143, y: 1541, on: true },
+  { name: "\u8D8A\u5F8C", x: 2481, y: 1487, on: true },
+  { name: "\u9678\u5965", x: 2799, y: 1210, on: true },
+  { name: "\u51FA\u7FBD", x: 2701, y: 1186, on: true },
+  { name: "\u4F50\u6E21", x: 2385, y: 1388, on: true },
+  { name: "\u8766\u5937", x: 3096, y: 429, on: true },
+  { name: "\u8766\u5937", x: 3095, y: 429, on: true },
+  { name: "\u7409\u7403", x: 572, y: 3471, on: true }
+];
+var SEA_LABELS = [
+  { name: "\u4F0A\u52E2\u6E7E", x: 2116, y: 1982 },
+  { name: "\u99FF\u6CB3\u6E7E", x: 2413, y: 1959 },
+  { name: "\u82E5\u72ED\u6E7E", x: 1959, y: 1803 },
+  { name: "\u7435\u7436\u6E56", x: 2001, y: 1882 },
+  { name: "\u5927\u5742\u6E7E", x: 1833, y: 2031 },
+  { name: "\u64AD\u78E8\u7058", x: 1732, y: 2039 },
+  { name: "\u6C5F\u6238\u6E7E", x: 2632, y: 1878 },
+  { name: "\u9E7F\u5CF6\u7058", x: 2783, y: 1735 },
+  { name: "\u65E5\u672C\u6D77", x: 1648, y: 1360 },
+  { name: "\u592A\u5E73\u6D0B", x: 2926, y: 2397 },
+  { name: "\u702C\u6238\u5185\u6D77", x: 1514, y: 2084 },
+  { name: "\u8C4A\u5F8C\u6C34\u9053", x: 1329, y: 2272 },
+  { name: "\u7384\u754C\u7058", x: 1009, y: 2111 },
+  { name: "\u6709\u660E\u6D77", x: 1026, y: 2308 },
+  { name: "\u6771\u30B7\u30CA\u6D77", x: 605, y: 2916 },
+  { name: "\u571F\u4F50\u6E7E", x: 1564, y: 2272 },
+  { name: "\u9678\u5965\u6E7E", x: 2800, y: 850 },
+  { name: "\u6D25\u8EFD\u6D77\u5CE1", x: 2758, y: 751 },
+  { name: "\u4ED9\u53F0\u6E7E", x: 2926, y: 1360 },
+  { name: "\u4F50\u6E21", x: 2371, y: 1386 },
+  { name: "\u30AA\u30DB\u30FC\u30C4\u30AF\u6D77", x: 3431, y: 143 },
+  { name: "\u77F3\u72E9\u6E7E", x: 2809, y: 403 },
+  { name: "\u5185\u6D66\u6E7E", x: 2792, y: 626 },
+  { name: "\u6839\u5BA4\u6D77\u5CE1", x: 3565, y: 304 },
+  { name: "\u5357\u897F\u306E\u6D77", x: 219, y: 3578 }
+];
+var RIDGES = MAP_RIDGES.map((seg, i) => ({
+  pts: seg,
+  amp: 0.88 + i % 3 * 0.06,
+  w: 90 + i % 4 * 34
+}));
+var LAKES = [
+  { name: "\u7435\u7436\u6E56", pts: [
+    [136.09, 35.1],
+    [136.03, 35.2],
+    [136.02, 35.32],
+    [136.06, 35.42],
+    [136.12, 35.5],
+    [136.22, 35.53],
+    [136.28, 35.47],
+    [136.26, 35.36],
+    [136.2, 35.24],
+    [136.16, 35.12],
+    [136.12, 35.05]
+  ] },
+  { name: "\u6D5C\u540D\u6E56", pts: [[137.56, 34.68], [137.53, 34.75], [137.56, 34.81], [137.62, 34.8], [137.63, 34.72], [137.6, 34.67]] }
+];
+var RIVER_GEO = [
+  { name: "\u6728\u66FD\u5DDD", w: 5, pts: [[137.62, 35.92], [137.35, 35.68], [137.1, 35.52], [136.92, 35.38], [136.78, 35.28], [136.68, 35.12], [136.72, 35.02]] },
+  { name: "\u9577\u826F\u5DDD", w: 4, pts: [[136.9, 35.86], [136.8, 35.7], [136.72, 35.52], [136.68, 35.36], [136.72, 35.16], [136.75, 35.02]] },
+  { name: "\u63D6\u6590\u5DDD", w: 3.6, pts: [[136.5, 35.72], [136.52, 35.56], [136.6, 35.36], [136.68, 35.16], [136.74, 35]] },
+  { name: "\u5929\u7ADC\u5DDD", w: 4.4, pts: [[138, 36.05], [137.92, 35.72], [137.86, 35.44], [137.8, 35.1], [137.76, 34.8], [137.72, 34.62]] },
+  { name: "\u5927\u4E95\u5DDD", w: 3.4, pts: [[138.18, 35.52], [138.22, 35.26], [138.28, 34.96], [138.3, 34.72]] },
+  { name: "\u5BCC\u58EB\u5DDD", w: 3.6, pts: [[138.42, 35.86], [138.46, 35.58], [138.52, 35.28], [138.6, 35.1]] },
+  { name: "\u77E2\u4F5C\u5DDD", w: 3, pts: [[137.42, 35.3], [137.3, 35.1], [137.16, 34.94], [137.06, 34.82]] },
+  { name: "\u8C4A\u5DDD", w: 2.6, pts: [[137.62, 35.02], [137.48, 34.86], [137.38, 34.76]] },
+  { name: "\u5BAE\u5DDD", w: 2.6, pts: [[136.62, 34.4], [136.58, 34.52], [136.66, 34.62], [136.72, 34.72]] },
+  { name: "\u91CE\u6D32\u5DDD", w: 2.4, pts: [[136.28, 34.98], [136.14, 35.04], [136, 35.08], [135.92, 35.12]] },
+  { name: "\u59C9\u5DDD", w: 2.4, pts: [[136.34, 35.48], [136.24, 35.42], [136.16, 35.38]] },
+  { name: "\u4E5D\u982D\u7ADC\u5DDD", w: 3.4, pts: [[136.68, 36.06], [136.52, 36.08], [136.34, 36.14], [136.2, 36.2]] },
+  { name: "\u7280\u5DDD", w: 3, pts: [[137.86, 36.28], [138, 36.42], [138.16, 36.56]] },
+  { name: "\u5343\u66F2\u5DDD", w: 3.6, pts: [[138.44, 36.06], [138.32, 36.24], [138.22, 36.42], [138.2, 36.6]] },
+  { name: "\u91DC\u7121\u5DDD", w: 2.8, pts: [[138.28, 35.86], [138.36, 35.68], [138.44, 35.56]] },
+  { name: "\u72E9\u91CE\u5DDD", w: 2.4, pts: [[138.94, 34.92], [138.94, 35.06], [138.9, 35.16]] }
+];
+var RIVERS = RIVER_GEO.map((r) => ({
+  w: r.w,
+  name: r.name,
+  pts: r.pts.map(([lo, la]) => [Math.round(px(lo)), Math.round(py(la))])
+}));
+
+// src/core/paths.js
+var NODES = {};
+for (const t of TOWNS) NODES[t.id] = { ...t, x: px(t.lon), y: py(t.lat), type: "town" };
+for (const c of CASTLES) NODES[c.id] = { ...c, x: px(c.lon), y: py(c.lat), type: "castle" };
+function nodeById(id) {
+  return NODES[id];
+}
+var ROAD_ADJ = (() => {
+  const m = {};
+  for (const [a, b] of ROADS) {
+    (m[a] = m[a] || []).push(b);
+    (m[b] = m[b] || []).push(a);
+  }
+  return m;
+})();
+var PATH_CACHE = /* @__PURE__ */ new Map();
+var ROAD_MAP = (() => {
+  const m = {};
+  for (const r of ROADS) {
+    m[`${r[0]}|${r[1]}`] = r;
+    m[`${r[1]}|${r[0]}`] = r;
+  }
+  return m;
+})();
+var TREE_CACHE = /* @__PURE__ */ new Map();
+function pathTree(from) {
+  const got = TREE_CACHE.get(from);
+  if (got) return got;
+  const cost = /* @__PURE__ */ new Map([[from, 0]]), prev = /* @__PURE__ */ new Map([[from, null]]);
+  const seen = /* @__PURE__ */ new Set();
+  const heap = [[0, from]];
+  const push = (c2, id) => {
+    heap.push([c2, id]);
+    let i = heap.length - 1;
+    while (i > 0) {
+      const par = i - 1 >> 1;
+      if (heap[par][0] <= heap[i][0]) break;
+      [heap[par], heap[i]] = [heap[i], heap[par]];
+      i = par;
+    }
+  };
+  const pop = () => {
+    const top = heap[0], last = heap.pop();
+    if (heap.length) {
+      heap[0] = last;
+      let i = 0;
+      for (; ; ) {
+        const l = i * 2 + 1, r2 = l + 1;
+        let m = i;
+        if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+        if (r2 < heap.length && heap[r2][0] < heap[m][0]) m = r2;
+        if (m === i) break;
+        [heap[m], heap[i]] = [heap[i], heap[m]];
+        i = m;
+      }
+    }
+    return top;
+  };
+  while (heap.length) {
+    const [best, cur] = pop();
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    for (const nxt of ROAD_ADJ[cur] || []) {
+      const r = ROAD_MAP[`${cur}|${nxt}`];
+      const d = best + (r ? r[2] / (ROAD_SPEED[r[3]] || 1) : 20);
+      if (!cost.has(nxt) || d < cost.get(nxt)) {
+        cost.set(nxt, d);
+        prev.set(nxt, cur);
+        push(d, nxt);
+      }
+    }
+  }
+  const tree = { cost, prev };
+  TREE_CACHE.set(from, tree);
+  return tree;
+}
+function findPath(from, to) {
+  const key = `${from}>${to}`;
+  if (PATH_CACHE.has(key)) return PATH_CACHE.get(key);
+  const { cost, prev } = pathTree(from);
+  let out = null;
+  if (cost.has(to)) {
+    out = [];
+    for (let x = to; x != null; x = prev.get(x)) out.unshift(x);
+  }
+  PATH_CACHE.set(key, out);
+  return out;
+}
+var roadBetween = (a, b) => ROAD_MAP[`${a}|${b}`];
+function canAttack(g, targetId) {
+  const t = g.castles.find((c) => c.id === targetId);
+  if (!t || t.faction === g.player) return false;
+  return g.castles.some((c) => c.faction === g.player && roadBetween(c.id, targetId));
+}
+function marchMonths(from, to) {
+  const path = findPath(from, to);
+  if (!path) return null;
+  let d = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    const r = roadBetween(path[i], path[i + 1]);
+    d += r ? r[2] / ROAD_SPEED[r[3]] : 10;
+  }
+  return Math.max(1, Math.ceil(d / MARCH_PER_MONTH));
+}
+
+// src/core/naval.js
+var COASTAL = /* @__PURE__ */ new Map();
+function isCoastal(c) {
+  if (COASTAL.has(c.id)) return COASTAL.get(c.id);
+  let near = 1e9;
+  for (const seg of COAST) {
+    for (let i = 1; i < seg.length; i++) {
+      const [x1, y1] = seg[i - 1], [x2, y2] = seg[i];
+      const dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy;
+      const t = L2 ? clamp(((c.x - x1) * dx + (c.y - y1) * dy) / L2, 0, 1) : 0;
+      const d = Math.hypot(x1 + dx * t - c.x, y1 + dy * t - c.y);
+      if (d < near) near = d;
+    }
+    if (near < 9) break;
+  }
+  const ok = near < 13;
+  COASTAL.set(c.id, ok);
+  return ok;
+}
+function navalPower(s2, fid) {
+  let ships = 0, skill = 55;
+  for (const c of s2.castles.filter((x) => x.faction === fid)) {
+    if (!isCoastal(c)) continue;
+    const port = (TOWNS || []).some((t) => {
+      const st = s2.specials[t.id];
+      return (t.kind === "\u6E2F" || t.kind === "\u6C34\u8ECD\u8846") && st && st.owner === fid && Math.hypot(px(t.lon) - c.x, py(t.lat) - c.y) < 90;
+    });
+    ships += Math.round(c.comm / 100 * (port ? 22 : 6));
+  }
+  for (const t of TOWNS || []) {
+    if (t.kind !== "\u6C34\u8ECD\u8846") continue;
+    const st = s2.specials[t.id];
+    if (st && st.owner === fid && (st.state === "\u4FDD\u8B77" || st.state === "\u652F\u63F4")) {
+      ships += st.state === "\u652F\u63F4" ? 22 : 12;
+      skill += st.state === "\u652F\u63F4" ? 22 : 12;
+    }
+  }
+  return { ships: Math.max(2, ships), skill: clamp(skill, 30, 100) };
+}
+function seaInterception(s2, army, roadKind) {
+  if (roadKind !== "\u6D77\u8DEF") return null;
+  const foes = [...new Set(s2.castles.map((c) => c.faction))].filter((f) => f !== army.faction && !atPeace(s2, army.faction, f));
+  if (!foes.length) return null;
+  const mine = navalPower(s2, army.faction);
+  const A = nodeById(army.path[0]), B = nodeById(army.path[1]);
+  if (!A || !B) return null;
+  const nearRoute = (c) => {
+    const dx = B.x - A.x, dy = B.y - A.y, L2 = dx * dx + dy * dy;
+    const t = L2 ? clamp(((c.x - A.x) * dx + (c.y - A.y) * dy) / L2, 0, 1) : 0;
+    return Math.hypot(A.x + dx * t - c.x, A.y + dy * t - c.y);
+  };
+  let best = null;
+  for (const f of foes) {
+    const np = navalPower(s2, f);
+    if (np.ships < 3) continue;
+    const near = s2.castles.some((c) => c.faction === f && isCoastal(c) && nearRoute(c) < 120);
+    if (!near) continue;
+    const score = np.ships * (0.6 + np.skill / 160);
+    if (!best || score > best.score) best = { fid: f, np, score };
+  }
+  if (!best) return null;
+  if (best.score < mine.ships * (0.6 + mine.skill / 160) * 0.45) return null;
+  if (Math.random() > 0.2) return null;
+  return { by: best.fid, foe: best.np, mine };
+}
+function resolveSeaBattle(s2, army, inter) {
+  const a = inter.mine, d = inter.foe;
+  const av = Math.sqrt(a.ships) * (0.5 + a.skill / 110) * (0.72 + Math.random() * 0.56);
+  const dv = Math.sqrt(d.ships) * (0.5 + d.skill / 110) * (0.72 + Math.random() * 0.56);
+  const win = av > dv;
+  const r = Math.min(av, dv) / Math.max(av, dv);
+  const lost = Math.round(army.men * (win ? 0.04 + r * 0.05 : 0.16 + r * 0.16));
+  army.men = Math.max(0, army.men - lost);
+  army.local = Math.max(0, army.local - lost);
+  if (army.rost) rosterCut(army.rost, lost);
+  return { win, lost, foeName: s2.factions[inter.by].name };
+}
+
+// src/data/provinces.js
+var GOKINAI = ["\u5C71\u57CE", "\u5927\u548C", "\u6CB3\u5185", "\u548C\u6CC9", "\u6442\u6D25"];
+var KANTO_KEY = ["\u76F8\u6A21", "\u6B66\u8535"];
+var REGIONS = [
+  { name: "\u5965\u7FBD", kuni: ["\u9678\u5965", "\u51FA\u7FBD", "\u8766\u5937"] },
+  { name: "\u95A2\u6771", kuni: ["\u4E0A\u91CE", "\u6B66\u8535", "\u76F8\u6A21", "\u4E0B\u91CE", "\u5E38\u9678", "\u5B89\u623F", "\u4E0A\u7DCF", "\u4E0B\u7DCF", "\u4F0A\u8C46"] },
+  { name: "\u4E2D\u90E8", kuni: ["\u7532\u6590", "\u4FE1\u6FC3", "\u99FF\u6CB3", "\u9060\u6C5F", "\u4E09\u6CB3", "\u5C3E\u5F35", "\u7F8E\u6FC3", "\u98DB\u9A28", "\u4F50\u6E21", "\u8D8A\u5F8C", "\u8D8A\u4E2D", "\u80FD\u767B", "\u52A0\u8CC0", "\u8D8A\u524D", "\u82E5\u72ED"] },
+  { name: "\u757F\u5185", kuni: ["\u8FD1\u6C5F", "\u5C71\u57CE", "\u5927\u548C", "\u6CB3\u5185", "\u548C\u6CC9", "\u6442\u6D25", "\u4F0A\u8CC0", "\u4F0A\u52E2", "\u5FD7\u6469", "\u7D00\u4F0A", "\u4E39\u6CE2", "\u4E39\u5F8C"] },
+  { name: "\u4E2D\u56FD", kuni: ["\u4F46\u99AC", "\u64AD\u78E8", "\u56E0\u5E61", "\u4F2F\u8006", "\u51FA\u96F2", "\u77F3\u898B", "\u96A0\u5C90", "\u5099\u524D", "\u7F8E\u4F5C", "\u5099\u4E2D", "\u5099\u5F8C", "\u5B89\u82B8", "\u5468\u9632", "\u9577\u9580"] },
+  { name: "\u56DB\u56FD", kuni: ["\u6DE1\u8DEF", "\u963F\u6CE2", "\u8B83\u5C90", "\u4F0A\u4E88", "\u571F\u4F50"] },
+  { name: "\u4E5D\u5DDE", kuni: ["\u7B51\u524D", "\u7B51\u5F8C", "\u8C4A\u524D", "\u8C4A\u5F8C", "\u80A5\u524D", "\u80A5\u5F8C", "\u65E5\u5411", "\u85A9\u6469", "\u5927\u9685", "\u58F1\u5C90", "\u5BFE\u99AC", "\u7409\u7403"] }
+];
+
+// src/core/province.js
+function holdsProvince(s2, fid, kuni) {
+  const cs = s2.castles.filter((c) => c.kuni === kuni);
+  return cs.length > 0 && cs.every((c) => c.faction === fid);
+}
+function provincesHeld(s2, fid) {
+  const out = [];
+  for (const kuni of [...new Set(s2.castles.map((c) => c.kuni))]) {
+    if (kuni && holdsProvince(s2, fid, kuni)) out.push(kuni);
+  }
+  return out;
+}
+var kenchiDone = (s2, kuni) => (s2.kenchi || []).includes(kuni);
+function kenchiCost(s2, kuni) {
+  const cs = s2.castles.filter((c) => c.kuni === kuni);
+  const koku = cs.reduce((a, c) => a + c.koku, 0);
+  return { gold: Math.round(400 + koku / 260), months: Math.max(2, Math.min(6, cs.length)) };
+}
+function runKenchi(s2, fid, kuni, gov) {
+  const cs = s2.castles.filter((c) => c.kuni === kuni && c.faction === fid);
+  const skill = 0.75 + (gov || 60) / 240;
+  let before = 0, after = 0;
+  for (const c of cs) {
+    before += c.koku;
+    const cap = c.kokuCap || c.kokuMax;
+    c.koku = Math.round(Math.min(cap, c.koku + (cap - c.koku) * clamp(skill, 0.5, 1)));
+    c.kokuCap = Math.round(cap * (1 + 0.14 * clamp(skill, 0.5, 1.2)));
+    c.kokuMax = Math.max(c.kokuMax, c.koku);
+    c.pop = Math.round(c.pop * 1.04);
+    c.min = clamp(c.min - 9, 0, 100);
+    after += c.koku;
+  }
+  s2.kenchi = [...s2.kenchi || [], kuni];
+  return { cs, before, after, gain: after - before };
+}
+function provinceGrip(s2, fid, kuni) {
+  const cs = s2.castles.filter((c) => c.kuni === kuni);
+  if (!cs.length) return 1;
+  return cs.filter((c) => c.faction === fid).length / cs.length;
+}
+function courtRank(s2, fid) {
+  const gokinai = GOKINAI.every((k) => holdsProvince(s2, fid, k));
+  if (!gokinai) return null;
+  const kanto = KANTO_KEY.every((k) => holdsProvince(s2, fid, k));
+  const n = s2.castles.filter((c) => c.faction === fid).length;
+  if (kanto) return {
+    key: "\u5F81\u5937\u5927\u5C06\u8ECD",
+    desc: "\u5E55\u5E9C\u3092\u958B\u304D\u3001\u5929\u4E0B\u306B\u53F7\u4EE4\u3059\u308B",
+    troop: 1.45,
+    diplo: 22,
+    prestige: 30
+  };
+  if (n >= 40) return {
+    key: "\u5185\u5927\u81E3",
+    desc: "\u4E94\u757F\u3092\u5236\u3057\u3001\u671D\u5EF7\u3088\u308A\u5185\u5927\u81E3\u306B\u53D9\u305B\u3089\u308C\u305F",
+    troop: 1.3,
+    diplo: 16,
+    prestige: 22
+  };
+  return {
+    key: "\u53F3\u5927\u81E3",
+    desc: "\u4E94\u757F\u3092\u5236\u3057\u3001\u671D\u5EF7\u3088\u308A\u53F3\u5927\u81E3\u306B\u53D9\u305B\u3089\u308C\u305F",
+    troop: 1.22,
+    diplo: 12,
+    prestige: 16
+  };
+}
+var rankBonus = (s2, fid) => courtRank(s2, fid) || { troop: 1, diplo: 0, prestige: 0 };
+
+// src/core/rank.js
+var minGarrison = (c) => Math.round(c.def * 10 + (100 - c.min) * 5);
+var troopCap = (c, p, s2) => Math.round(c.koku / 1e4 * MOB_POLICY[p].per * (0.75 + (c.najimi == null ? 70 : c.najimi) / 400) * (s2 ? rankBonus(s2, c.faction).troop : 1));
+var foodDays = (food, troops) => troops > 0 ? Math.round(food / (troops * 0.08) * 30) : 999;
+var HOUSE_RANK = 8e3;
+var RANKS = [
+  { key: "\u5BBF\u8001", min: 2e4, desc: "\u5927\u540D\u306B\u4EE3\u308F\u3063\u3066\u7DCF\u5927\u5C06\u3092\u52D9\u3081\u3089\u308C\u308B", cap: 4e3 },
+  { key: "\u5BB6\u8001", min: 8e3, desc: "\u57CE\u3092\u4EFB\u3055\u308C\u3001\u305D\u306E\u57CE\u306E\u653F\u3092\u57F7\u308C\u308B", cap: 2500 },
+  { key: "\u4F8D\u5927\u5C06", min: 2500, desc: "\u5343\u4EBA\u3092\u8D85\u3048\u308B\u968A\u3092\u7387\u3044\u3089\u308C\u308B", cap: 1600 },
+  { key: "\u7269\u982D", min: 0, desc: "\u4E94\u767E\u4EBA\u307E\u3067\u306E\u968A\u3092\u9810\u304B\u308B", cap: 500 }
+];
+function rankOf(gen, s2) {
+  if (!gen) return RANKS[RANKS.length - 1];
+  if (gen.lord) return { key: "\u5F53\u4E3B", min: 0, desc: "\u4E00\u5BB6\u306E\u4E3B" };
+  if (s2 && isGuardian(s2, gen)) return { key: "\u5F8C\u898B", min: 0, desc: "\u5E7C\u304D\u5F53\u4E3B\u306B\u4EE3\u308F\u3063\u3066\u5BB6\u3092\u5DEE\u914D\u3059\u308B" };
+  const f = s2 ? stipendOf(s2, gen) : fiefOf(gen);
+  return RANKS.find((r) => f >= r.min) || RANKS[RANKS.length - 1];
+}
+var rankName = (gen, s2) => rankOf(gen, s2).key;
+function castellanOf(s2, c) {
+  const gs = s2.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+  if (!gs.length) return null;
+  const lord = gs.find((x) => x.lord);
+  if (lord) return lord;
+  const named = c.lordId && gs.find((x) => x.id === c.lordId);
+  if (named && stipendOf(s2, named) >= castleRankNeed(c)) return named;
+  return [...gs].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
+}
+function castleRankNeed(c) {
+  if (!c) return 8e3;
+  const own = c.koku + extraIncome(c);
+  return Math.min(8e3, Math.max(1200, Math.round(own * 0.16)));
+}
+function troopLimit(gen, s2) {
+  if (!gen) return 500;
+  if (gen.lord) return needsGuardian(gen) ? 800 : 99999;
+  if (s2 && isGuardian(s2, gen)) return 99999;
+  return (rankOf(gen, s2) || {}).cap || 500;
+}
+function fiefWanted(gen) {
+  const able = (gen.lead + gen.valor + gen.wit + gen.gov) / 4;
+  const base = Math.pow(Math.max(1, able - 42) / 12, 2.6) * 900;
+  return Math.round(400 + base + (gen.merit || 0) * 900);
+}
+function fiefOf(gen) {
+  return gen.fief == null ? 0 : gen.fief;
+}
+function extraIncome(c) {
+  if (!c) return 0;
+  const trade = c.comm * 95;
+  const sea = isCoastal(c) ? c.comm * 60 : 0;
+  const mountain = Math.max(0, 40 - c.comm) * 70;
+  return Math.min(Math.round(trade + sea + mountain), Math.round(c.koku * 0.55 + 4200));
+}
+function fiefBurden(s2, castleId) {
+  return s2.generals.filter((g) => g.at === castleId && !g.captive && !g.lord).reduce((a, g) => a + fiefOf(g), 0);
+}
+function stipendOf(s2, gen) {
+  if (!gen) return 0;
+  const age = gen.age == null ? 30 : gen.age;
+  const c = s2.castles.find((x) => x.id === gen.at);
+  if (!c) return fiefOf(gen);
+  const burden = fiefBurden(s2, c.id);
+  const share = burden > 0 ? fiefOf(gen) / burden : 0;
+  const raw = Math.round(fiefOf(gen) + extraIncome(c) * share);
+  if (gen.lord || age >= 20) return raw;
+  const capByAge = age < 13 ? 2400 : age < 15 ? 4e3 : age < 18 ? 9e3 : 16e3;
+  return Math.min(raw, capByAge);
+}
+function goryoOf(s2, fid) {
+  const cs = s2.castles.filter((c) => c.faction === fid);
+  let direct = 0, extra = 0;
+  for (const c of cs) {
+    direct += Math.max(0, c.koku - fiefBurden(s2, c.id));
+    extra += extraIncome(c);
+  }
+  return { direct, extra, total: direct + extra };
+}
+function loyaltyDrift(gen) {
+  const want = fiefWanted(gen), have = fiefOf(gen);
+  if (want <= 0) return 0;
+  const r = have / want;
+  if (r >= 1.25) return 0.7;
+  if (r >= 1) return 0.35;
+  if (r >= 0.75) return 0;
+  if (r >= 0.5) return -0.5;
+  return -1.2;
+}
+function fiefRoom(s2, fid) {
+  const koku = s2.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
+  const used = s2.generals.filter((x) => x.faction === fid && !x.captive).reduce((a, x) => a + fiefOf(x), 0);
+  return { cap: Math.round(koku * 0.4), used, left: Math.round(koku * 0.4) - used };
+}
+
+// src/data/diplo.js
+var SPECIAL_OPTIONS = {
+  \u5546\u696D\u90FD\u5E02: [
+    { key: "\u4FDD\u8B77", cost: 220, desc: "\u81EA\u6CBB\u3092\u8A8D\u3081\u308B\u3002\u91D1\u92AD\u306F\u5C11\u306A\u3044\u304C\u5546\u696D\u304C\u4F38\u3073\u7D9A\u3051\u308B\u3002", gold: 55, comm: 0.3, min: 0.1, anger: 0 },
+    { key: "\u652F\u63F4", cost: 600, desc: "\u6295\u8CC7\u3057\u3066\u6210\u9577\u3068\u4F9B\u7D66\u3092\u5F37\u5316\u3002\u7DAD\u6301\u8CBB\u304C\u304B\u304B\u308B\u3002", gold: 115, comm: 0.5, min: 0, anger: 0.1, upkeep: 60 },
+    { key: "\u652F\u914D", cost: 0, once: 900, desc: "\u76F4\u8F44\u5316\u3057\u3066\u5FB4\u7A0E\u3002\u6210\u9577\u306F\u920D\u308A\u3001\u53CD\u767A\u304C\u6B8B\u308B\u3002", gold: 130, comm: -0.15, min: -0.25, anger: 0.5 }
+  ],
+  \u6E2F: [
+    { key: "\u540C\u76DF", cost: 200, desc: "\u8F38\u9001\u3068\u6D77\u6226\u3092\u652F\u63F4\u3055\u305B\u308B\u3002", gold: 25, food: 260, anger: 0 },
+    { key: "\u5F93\u5C5E", cost: 320, desc: "\u7A4D\u6975\u7684\u306B\u53C2\u52A0\u3055\u305B\u308B\u304C\u7DAD\u6301\u8CBB\u304C\u8981\u308B\u3002", gold: 0, food: 420, upkeep: 70, anger: 0.1 },
+    { key: "\u5236\u5727", cost: 0, once: 600, desc: "\u6E2F\u3092\u76F4\u8F44\u3002\u719F\u7DF4\u306E\u6C34\u4E3B\u304C\u96E2\u6563\u3059\u308B\u3002", gold: 60, food: 150, anger: 0.6 }
+  ],
+  \u5BFA\u793E: [
+    { key: "\u4FDD\u8B77", cost: 260, desc: "\u6C11\u5FE0\u3068\u5A01\u4FE1\u304C\u4E0A\u304C\u308A\u3001\u4E00\u63C6\u3092\u6291\u3048\u308B\u3002", min: 0.55, prestige: 0.25, anger: -0.2 },
+    { key: "\u5F93\u5C5E", cost: 380, desc: "\u50E7\u5175\u3092\u5F97\u308B\u304C\u3001\u8CA0\u62C5\u3078\u306E\u53CD\u767A\u304C\u51FA\u308B\u3002", troops: 260, min: -0.1, anger: 0.35, upkeep: 50 },
+    { key: "\u653B\u6483", cost: 0, once: 1400, desc: "\u8CA1\u5B9D\u3092\u596A\u3046\u3002\u6C11\u5FE0\u30FB\u5A01\u4FE1\u3068\u4ED6\u5BFA\u793E\u306E\u95A2\u4FC2\u304C\u60AA\u5316\u3002", min: -0.7, prestige: -0.9, anger: 1 }
+  ],
+  \u5FCD\u3073\u306E\u91CC: [
+    { key: "\u4FDD\u8B77", cost: 180, desc: "\u6575\u60C5\u304C\u81EA\u7136\u306B\u5165\u308B\u3002\u5075\u5BDF\u306E\u9BAE\u5EA6\u304C\u4FDD\u305F\u308C\u308B\u3002", intel: 1, anger: 0 },
+    { key: "\u96C7\u7528", cost: 300, desc: "\u8ABF\u7565\u3068\u9632\u8ADC\u306B\u50CD\u304F\u3002\u7DAD\u6301\u8CBB\u304C\u8981\u308B\u3002", intel: 1, plot: 0.22, upkeep: 90, anger: 0.1 },
+    { key: "\u652F\u914D", cost: 0, once: 400, desc: "\u638C\u63E1\u3059\u308B\u304C\u9003\u6563\u3057\u3001\u80FD\u529B\u304C\u843D\u3061\u308B\u3002", intel: 1, plot: 0.05, anger: 0.7 }
+  ],
+  \u6C34\u8ECD\u8846: [
+    { key: "\u4FDD\u8B77", cost: 260, desc: "\u6E4A\u306E\u8B66\u56FA\u3092\u4EFB\u305B\u308B\u3002\u6D77\u8DEF\u306E\u5F80\u6765\u304C\u5B89\u3093\u3058\u308B\u3002", gold: 70, comm: 0.22, min: 0.1, anger: 0 },
+    { key: "\u652F\u63F4", cost: 700, desc: "\u8239\u3092\u4E0E\u3048\u3066\u6C34\u8ECD\u3068\u3059\u308B\u3002\u7DAD\u6301\u8CBB\u304C\u304B\u304B\u308B\u304C\u6D77\u8DEF\u3092\u63E1\u308B\u3002", gold: 60, comm: 0.34, troops: 320, anger: 0.1, upkeep: 80 },
+    { key: "\u653E\u7F6E", cost: 0, desc: "\u6368\u3066\u7F6E\u304F\u3002\u6D77\u8CCA\u50CD\u304D\u304C\u5546\u3044\u3092\u59A8\u3052\u308B\u3002", gold: 0, comm: -0.12, anger: 0.2 },
+    { key: "\u8A0E\u4F10", cost: 520, once: 700, desc: "\u6D77\u8CCA\u3092\u8A0E\u3064\u3002\u6D77\u8DEF\u306F\u9759\u307E\u308B\u304C\u8239\u624B\u3092\u5931\u3046\u3002", gold: 30, comm: 0.1, anger: 0.7 }
+  ],
+  \u9271\u5C71: [
+    { key: "\u4FDD\u8B77", cost: 200, desc: "\u5C71\u5E2B\u306B\u59D4\u306D\u308B\u3002\u7523\u51FA\u306F\u5C11\u306A\u3044\u304C\u672B\u9577\u304F\u7D9A\u304F\u3002", gold: 130, comm: 0.1, min: 0.05, anger: 0 },
+    { key: "\u652F\u63F4", cost: 640, desc: "\u4EBA\u3068\u9053\u5177\u3092\u5165\u308C\u3066\u6398\u308A\u9032\u3080\u3002\u7DAD\u6301\u8CBB\u304C\u304B\u304B\u308B\u3002", gold: 280, comm: 0.16, anger: 0.15, upkeep: 90 },
+    { key: "\u652F\u914D", cost: 0, once: 1200, desc: "\u76F4\u8F44\u3057\u3066\u6398\u308A\u5C3D\u304F\u3059\u3002\u7523\u51FA\u306F\u591A\u3044\u304C\u5C71\u306F\u75E9\u305B\u308B\u3002", gold: 340, comm: -0.1, min: -0.3, anger: 0.6 }
+  ],
+  \u753A: [
+    { key: "\u4FDD\u8B77", cost: 160, desc: "\u81EA\u6CBB\u3092\u8A8D\u3081\u308B\u3002\u5E02\u304C\u80B2\u3064\u3002", gold: 40, comm: 0.22, min: 0.1, anger: 0 },
+    { key: "\u652F\u63F4", cost: 420, desc: "\u666E\u8ACB\u3092\u5165\u308C\u3066\u5E02\u3092\u5E83\u3052\u308B\u3002", gold: 80, comm: 0.36, anger: 0.1, upkeep: 40 },
+    { key: "\u652F\u914D", cost: 0, once: 520, desc: "\u76F4\u8F44\u3057\u3066\u5FB4\u7A0E\u3002\u53CD\u767A\u304C\u6B8B\u308B\u3002", gold: 95, comm: -0.12, min: -0.2, anger: 0.45 }
+  ]
+};
+var SUBJECT = ["\u5F93\u5C5E", "\u81E3\u5F93"];
+var DIPLO = [
+  {
+    key: "\u89AA\u5584",
+    cost: 180,
+    why: "\u3044\u3064\u3067\u3082\u53EF\u80FD\u3002\u4E3B\u5BB6\u3068\u306E\u8ABC\u3092\u7BE4\u304F\u3082\u3067\u304D\u308B",
+    need: () => true
+  },
+  {
+    key: "\u4E0D\u53EF\u4FB5",
+    cost: 320,
+    months: 12,
+    why: "\u4FE1\u752855\u4EE5\u4E0A\u3002\u4E3B\u5BB6\u3068\u306E\u9593\u306B\u306F\u8981\u3089\u306C",
+    need: (r, me, you) => r.trust >= 55 && !(SUBJECT.includes(r.state) && you.koku > me.koku)
+  },
+  {
+    key: "\u540C\u76DF",
+    cost: 520,
+    months: 24,
+    why: "\u4FE1\u752872\u4EE5\u4E0A\u3002\u5F93\u5C5E\u30FB\u81E3\u5F93\u306E\u9593\u306F\u3001\u76F8\u624B\u3092\u4E0A\u56DE\u3089\u306D\u3070\u7D50\u3079\u306C",
+    need: (r, me, you) => r.trust >= 72 && !(SUBJECT.includes(r.state) && you.koku > me.koku * 0.9)
+  },
+  {
+    key: "\u5F93\u5C5E",
+    cost: 400,
+    why: "\u4FE1\u752860\u4EE5\u4E0A\u30FB\u76F8\u624B\u304C\u81EA\u52E2\u529B\u306E6\u5272\u672A\u6E80\u3002\u5B98\u4F4D\u304C\u3042\u308C\u3070\u7DE9\u3080",
+    need: (r, me, you) => r.trust >= 60 - (me.diplo || 0) && you.koku < me.koku * (0.6 + (me.diplo || 0) * 0.012) && !SUBJECT.includes(r.state)
+  },
+  {
+    key: "\u81E3\u5F93",
+    cost: 0,
+    why: "\u76F8\u624B\u304C\u81EA\u52E2\u529B\u306E1.8\u500D\u8D85\u3002\u65D7\u306E\u4E0B\u306B\u5B8C\u5168\u306B\u5165\u308A\u3001\u72EC\u7ACB\u306E\u671B\u307F\u3092\u6368\u3066\u308B",
+    need: (r, me, you) => you.koku > me.koku * 1.8 && !SUBJECT.includes(r.state)
+  },
+  {
+    key: "\u72EC\u7ACB",
+    cost: 0,
+    why: "\u5F93\u5C5E\u30FB\u81E3\u5F93\u3092\u7834\u3063\u3066\u81EA\u7ACB\u3059\u308B\u3002\u4FE1\u7528\u3068\u5A01\u4FE1\u3092\u5927\u304D\u304F\u640D\u306A\u3046",
+    need: (r, me, you) => SUBJECT.includes(r.state) && you.koku > me.koku
+  }
+];
+var PLOTS = [
+  // need は「まず確かに成る」ために要る知略。
+  // cap はどれほどの知略を以てしても超えられぬ天井。人の営みに絶対はない。
+  // hard は事の難しさ。民忠の高い城ほど、また難しい企てほど成りにくい。
+  {
+    key: "\u5075\u5BDF",
+    cost: 140,
+    months: 1,
+    need: 70,
+    cap: 0.95,
+    hard: 0.52,
+    desc: "\u5175\u6570\u30FB\u5175\u7CE7\u30FB\u57CE\u9632\u30FB\u6B66\u5C06\u3092\u77E5\u308B\u3002\u4EBA\u3092\u9063\u308B\u3060\u3051\u306E\u6613\u3057\u3044\u4E8B\u3002"
+  },
+  {
+    key: "\u6D41\u8A00",
+    cost: 220,
+    months: 2,
+    need: 78,
+    cap: 0.9,
+    hard: 0.6,
+    desc: "\u6C11\u5FE0\u3068\u6B66\u5C06\u5FE0\u8AA0\u3092\u4E0B\u3052\u308B\u3002\u5642\u3092\u6D41\u3059\u3060\u3051\u306A\u3089\u96E3\u3057\u304F\u306A\u3044\u3002"
+  },
+  {
+    key: "\u57CE\u5DE5\u4F5C",
+    cost: 300,
+    months: 2,
+    need: 84,
+    cap: 0.84,
+    hard: 0.66,
+    desc: "\u57CE\u9632\u30FB\u5175\u7CE7\u30FB\u6C11\u5FE0\u3092\u4E0B\u3052\u308B\u3002\u57CE\u5185\u306B\u624B\u306E\u8005\u3092\u5165\u308C\u306D\u3070\u306A\u3089\u306C\u3002"
+  },
+  {
+    key: "\u5BC6\u7D04",
+    cost: 380,
+    months: 3,
+    need: 88,
+    cap: 0.78,
+    hard: 0.7,
+    desc: "\u5BDD\u8FD4\u308A\u30FB\u57CE\u9580\u958B\u653E\u3092\u4ED5\u8FBC\u3080\u3002\u653B\u57CE\u6642\u306B\u52B9\u304F\u3002\u76F8\u624B\u306E\u8179\u3092\u63A2\u308B\u8981\u304C\u3042\u308B\u3002"
+  },
+  {
+    key: "\u5F15\u304D\u629C\u304D",
+    cost: 420,
+    months: 3,
+    need: 90,
+    cap: 0.72,
+    hard: 0.74,
+    desc: "\u6575\u6B66\u5C06\u3092\u5473\u65B9\u3078\u8FCE\u3048\u308B\u3002\u4EBA\u306E\u5FC3\u3092\u52D5\u304B\u3055\u306D\u3070\u306A\u3089\u306C\u3002"
+  },
+  {
+    key: "\u5185\u5FDC",
+    cost: 900,
+    months: 5,
+    need: 94,
+    cap: 0.6,
+    hard: 0.8,
+    desc: "\u57CE\u4E3B\u3092\u53E3\u8AAC\u304D\u3001\u57CE\u3054\u3068\u5473\u65B9\u306B\u4ED8\u3051\u308B\u3002\u5FE0\u8AA0\u306E\u4F4E\u3044\u57CE\u4E3B\u306B\u3057\u304B\u901A\u3058\u306C\u3002\u81F3\u96E3\u306E\u696D\u3002"
+  }
+];
+
+// src/data/factions.js
+var FACTIONS = {
+  oda: { id: "oda", name: "\u7E54\u7530\u5BB6", color: "#2F5D8C", mon: "\u6728\u74DC", playable: true, desc: "\u5C3E\u5F35\u4E0B\u56DB\u90E1\u306E\u4E00\u65CF\u3002\u7236\u4FE1\u79C0\u306E\u3082\u3068\u90A3\u53E4\u91CE\u306B\u62E0\u308B\u304C\u3001\u6E05\u6D32\u30FB\u5CA9\u5009\u306E\u540C\u65CF\u3068\u4E26\u3073\u7ACB\u3061\u3001\u6771\u306B\u4ECA\u5DDD\u3001\u5317\u306B\u658E\u85E4\u3092\u62B1\u3048\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  yamato: { id: "yamato", name: "\u7E54\u7530\u5927\u548C\u5B88\u5BB6", color: "#6E7FA0", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  ise: { id: "ise", name: "\u7E54\u7530\u4F0A\u52E2\u5B88\u5BB6", color: "#8894A8", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  saito: { id: "saito", name: "\u658E\u85E4\u5BB6", color: "#9B3A34", mon: "\u4E8C\u982D\u6CE2", playable: true, desc: "\u7F8E\u6FC3\u4E00\u56FD\u3092\u63E1\u308B\u9053\u4E09\u306E\u5BB6\u3002\u8001\u736A\u306A\u5F53\u4E3B\u306E\u3082\u3068\u5BCC\u307F\u6804\u3048\u308B\u304C\u3001\u5AE1\u5B50\u7FA9\u9F8D\u3068\u306E\u9593\u306B\u6697\u3044\u6E9D\u304C\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  imagawa: { id: "imagawa", name: "\u4ECA\u5DDD\u5BB6", color: "#4C6E3F", mon: "\u8D64\u9CE5", playable: true, desc: "\u99FF\u6CB3\u30FB\u9060\u6C5F\u30FB\u4E09\u6CB3\u306B\u307E\u305F\u304C\u308B\u6771\u6D77\u4E00\u306E\u5927\u8EAB\u3002\u7FA9\u5143\u3068\u96EA\u658E\u306E\u3082\u3068\u3001\u4E0A\u6D1B\u3092\u671B\u3080\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  matsudaira: { id: "matsudaira", name: "\u677E\u5E73\u5BB6", color: "#8A6B3A", mon: "\u8475", playable: true, desc: "\u4E09\u6CB3\u5CA1\u5D0E\u306E\u5C0F\u52E2\u529B\u3002\u4ECA\u5DDD\u306E\u5098\u4E0B\u306B\u7F6E\u304B\u308C\u3001\u5AE1\u5B50\u306F\u4EBA\u8CEA\u306B\u51FA\u3055\u308C\u3066\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  mizuno: { id: "mizuno", name: "\u6C34\u91CE\u5BB6", color: "#7A5C86", mon: "\u4E38\u306B\u5341", playable: true, desc: "\u4E09\u6CB3\u5208\u8C37\u306E\u5C0F\u52E2\u529B\u3002\u7E54\u7530\u3068\u4ECA\u5DDD\u306E\u9593\u3067\u53BB\u5C31\u3092\u8A08\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  takeda: { id: "takeda", name: "\u6B66\u7530\u5BB6", color: "#B03A2E", mon: "\u56DB\u3064\u83F1", playable: true, desc: "\u7532\u6590\u306E\u540D\u9580\u3002\u6674\u4FE1\u306E\u3082\u3068\u4FE1\u6FC3\u3092\u5207\u308A\u53D6\u308A\u3064\u3064\u3042\u308B\u304C\u3001\u5317\u306B\u6751\u4E0A\u7FA9\u6E05\u304C\u7ACB\u3061\u306F\u3060\u304B\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  murakami: { id: "murakami", name: "\u6751\u4E0A\u5BB6", color: "#5D7A8C", mon: "\u9DB4", playable: true, desc: "\u5317\u4FE1\u6FC3\u306E\u52C7\u3002\u6B66\u7530\u6674\u4FE1\u3092\u4E8C\u5EA6\u9000\u3051\u305F\u7FA9\u6E05\u304C\u5065\u5728\u3067\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  hojo: { id: "hojo", name: "\u5317\u6761\u5BB6", color: "#3B5A6B", mon: "\u4E09\u9C57", playable: true, desc: "\u3053\u306E\u76E4\u3067\u306F\u4F0A\u8C46\u4E8C\u57CE\u306E\u307F\u3002\u80CC\u5F8C\u306B\u76F8\u6A21\u30FB\u6B66\u8535\u306E\u672C\u56FD\u3092\u63A7\u3048\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  kitabatake: { id: "kitabatake", name: "\u5317\u7560\u5BB6", color: "#6B8E5A", mon: "\u6708", playable: true, desc: "\u4F0A\u52E2\u56FD\u53F8\u306E\u5BB6\u67C4\u3002\u5357\u4F0A\u52E2\u306B\u6839\u3092\u5F35\u308B\u304C\u3001\u5317\u4F0A\u52E2\u306F\u8AF8\u5BB6\u306B\u5206\u304B\u308C\u3066\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  kanbe: { id: "kanbe", name: "\u795E\u6238\u5BB6", color: "#8C7A4A", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
+  ikko: { id: "ikko", name: "\u9577\u5CF6\u4E00\u5411\u8846", color: "#8B5E3C", mon: "\u8F2A\u5B9D", gold: 2600, prestige: 50, mobilization: 1 },
+  kuki: { id: "kuki", name: "\u4E5D\u9B3C\u5BB6", color: "#4A7A8C", mon: "\u62B1\u304D\u6CA2\u7009", gold: 2600, prestige: 50, mobilization: 1 },
+  rokkaku: { id: "rokkaku", name: "\u516D\u89D2\u5BB6", color: "#A0522D", mon: "\u4E09\u3064\u76DB", playable: true, desc: "\u8FD1\u6C5F\u89B3\u97F3\u5BFA\u306B\u62E0\u308B\u540D\u9580\u3002\u77F3\u9AD8\u306F\u8C4A\u304B\u3060\u304C\u3001\u5317\u306E\u6D45\u4E95\u304C\u96E2\u308C\u3064\u3064\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  azai: { id: "azai", name: "\u6D45\u4E95\u5BB6", color: "#5A4A8C", mon: "\u4E09\u3064\u76DB", playable: true, desc: "\u5317\u8FD1\u6C5F\u5C0F\u8C37\u306E\u65B0\u8208\u3002\u516D\u89D2\u306B\u62BC\u3055\u3048\u3089\u308C\u3001\u5F53\u4E3B\u4E45\u653F\u306F\u5C48\u5F93\u3092\u9078\u3093\u3067\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  wakasa: { id: "wakasa", name: "\u82E5\u72ED\u6B66\u7530\u5BB6", color: "#7A8C5A", mon: "\u62B1\u304D\u6CA2\u7009", gold: 2600, prestige: 50, mobilization: 1 },
+  asakura: { id: "asakura", name: "\u671D\u5009\u5BB6", color: "#8C4A6B", mon: "\u7B39", playable: true, desc: "\u8D8A\u524D\u4E00\u4E57\u8C37\u306B\u6804\u3048\u308B\u6587\u306E\u5BB6\u3002\u8001\u5C06\u5B97\u6EF4\u306E\u6B66\u540D\u306F\u9AD8\u3044\u304C\u3001\u5F53\u4E3B\u306F\u6226\u3092\u597D\u307E\u306C\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  anegakoji: { id: "anegakoji", name: "\u59C9\u5C0F\u8DEF\u5BB6", color: "#6B6B5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  ashikaga: { id: "ashikaga", name: "\u8DB3\u5229\u5C06\u8ECD\u5BB6", color: "#B8A44A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  shingai: { id: "shingai", name: "\u65B0\u958B\u5BB6", color: "#5A7A6B", mon: "\u6728\u74DC", playable: true, desc: "\u963F\u6CE2\u725B\u5C90\u306E\u56FD\u4EBA\u3002\u4E09\u597D\u306B\u5F93\u3044\u3064\u3064\u3001\u90A3\u8CC0\u5DDD\u306E\u6C34\u904B\u3068\u6D77\u306B\u9762\u3057\u305F\u5730\u306E\u5229\u3067\u7D30\u304F\u4FDD\u3064\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  miyoshi: { id: "miyoshi", name: "\u4E09\u597D\u5BB6", color: "#8C3A5A", playable: true, desc: "\u757F\u5185\u3092\u63E1\u308B\u65B0\u8208\u306E\u5BB6\u3002\u5C06\u8ECD\u3092\u64C1\u3057\u3001\u8AF8\u56FD\u306B\u53F7\u4EE4\u3059\u308B\u304C\u3001\u5185\u306B\u306F\u677E\u6C38\u4E45\u79C0\u3092\u62B1\u3048\u308B\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  honganji: { id: "honganji", name: "\u672C\u9858\u5BFA", color: "#8B5E3C", playable: true, desc: "\u77F3\u5C71\u306B\u62E0\u308B\u9580\u5F92\u306E\u7DCF\u672C\u5C71\u3002\u6B66\u3067\u306F\u306A\u304F\u4FE1\u3067\u4EBA\u3092\u52D5\u304B\u3059\u3002", mon: "\u8F2A\u5B9D", gold: 2600, prestige: 50, mobilization: 1 },
+  tsutsui: { id: "tsutsui", name: "\u7B52\u4E95\u5BB6", color: "#6B7A4A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  iga: { id: "iga", name: "\u4F0A\u8CC0\u60E3\u56FD", color: "#5A6B7A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  saika: { id: "saika", name: "\u96D1\u8CC0\u8846", color: "#4A7A6B", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
+  hatano: { id: "hatano", name: "\u6CE2\u591A\u91CE\u5BB6", color: "#7A5A8C", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  isshiki: { id: "isshiki", name: "\u4E00\u8272\u5BB6", color: "#8C7A5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  yamana: { id: "yamana", name: "\u5C71\u540D\u5BB6", color: "#5A8C7A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  akamatsu: { id: "akamatsu", name: "\u8D64\u677E\u5BB6", color: "#A0644A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  bessho: { id: "bessho", name: "\u5225\u6240\u5BB6", color: "#6B5A8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  kaga_ikko: { id: "kaga_ikko", name: "\u52A0\u8CC0\u4E00\u5411\u8846", color: "#9B6B3C", mon: "\u8F2A\u5B9D", gold: 2600, prestige: 50, mobilization: 1 },
+  hatakeyama: { id: "hatakeyama", name: "\u80FD\u767B\u7560\u5C71\u5BB6", color: "#4A6B8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  jinbo: { id: "jinbo", name: "\u795E\u4FDD\u5BB6", color: "#7A6B4A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  shiina: { id: "shiina", name: "\u690E\u540D\u5BB6", color: "#5A7A5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  nagao: { id: "nagao", name: "\u9577\u5C3E\u5BB6", color: "#3A5A8C", playable: true, desc: "\u8D8A\u5F8C\u306E\u9F8D\u3002\u666F\u864E\u306E\u3082\u3068\u5175\u306F\u7CBE\u5F37\u3060\u304C\u3001\u56FD\u5185\u306F\u307E\u3068\u307E\u308A\u3092\u6B20\u304F\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  agakita: { id: "agakita", name: "\u63DA\u5317\u8846", color: "#6B8C9B", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  ota: { id: "ota", name: "\u592A\u7530\u5BB6", color: "#8C6B7A", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  narita: { id: "narita", name: "\u6210\u7530\u5BB6", color: "#7A8C6B", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  uesugi_y: { id: "uesugi_y", name: "\u5C71\u5185\u4E0A\u6749\u5BB6", color: "#5A5A8C", playable: true, desc: "\u95A2\u6771\u7BA1\u9818\u306E\u5BB6\u67C4\u3002\u540D\u306F\u91CD\u3044\u304C\u3001\u5317\u6761\u306B\u62BC\u3055\u308C\u3066\u8870\u3048\u3064\u3064\u3042\u308B\u3002", mon: "\u7B39", gold: 2600, prestige: 50, mobilization: 1 },
+  nagano_k: { id: "nagano_k", name: "\u9577\u91CE\u5BB6", color: "#8C5A4A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  yura: { id: "yura", name: "\u7531\u826F\u5BB6", color: "#6B4A5A", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  utsunomiya: { id: "utsunomiya", name: "\u5B87\u90FD\u5BAE\u5BB6", color: "#4A8C6B", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  sano: { id: "sano", name: "\u4F50\u91CE\u5BB6", color: "#8C8C4A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  nasu: { id: "nasu", name: "\u90A3\u9808\u5BB6", color: "#5A4A6B", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  edo_h: { id: "edo_h", name: "\u6C5F\u6238\u5BB6", color: "#7A4A8C", mon: "\u4E09\u9C57", gold: 2600, prestige: 50, mobilization: 1 },
+  satake: { id: "satake", name: "\u4F50\u7AF9\u5BB6", color: "#4A6B4A", mon: "\u6247", gold: 2600, prestige: 50, mobilization: 1 },
+  oda_h: { id: "oda_h", name: "\u5C0F\u7530\u5BB6", color: "#8C7A8C", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  satomi: { id: "satomi", name: "\u91CC\u898B\u5BB6", color: "#3C7A8C", playable: true, desc: "\u5B89\u623F\u306E\u6D77\u306E\u5BB6\u3002\u5317\u6761\u3068\u6D77\u3092\u631F\u3093\u3067\u4E89\u3046\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  koga: { id: "koga", name: "\u53E4\u6CB3\u516C\u65B9\u5BB6", color: "#A08C4A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  yuki: { id: "yuki", name: "\u7D50\u57CE\u5BB6", color: "#6B8C8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  chiba: { id: "chiba", name: "\u5343\u8449\u5BB6", color: "#8C4A7A", desc: "\u4E0B\u7DCF\u306E\u540D\u9580\u5343\u8449\u3002\u5317\u6761\u3068\u91CC\u898B\u306E\u9593\u3067\u63FA\u308C\u308B\u3002", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  kagawa: { id: "kagawa", name: "\u9999\u5DDD\u5BB6", color: "#7A6B8C", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  kono: { id: "kono", name: "\u6CB3\u91CE\u5BB6", color: "#4A8C8C", desc: "\u4F0A\u4E88\u6E6F\u7BC9\u306E\u6CB3\u91CE\u3002\u702C\u6238\u5185\u306E\u6C34\u8ECD\u3068\u7D50\u3073\u3001\u7D30\u304F\u9577\u304F\u4FDD\u3064\u3002", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  kurushima: { id: "kurushima", name: "\u6765\u5CF6\u6751\u4E0A\u5BB6", color: "#3C6B8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  saionji: { id: "saionji", name: "\u897F\u5712\u5BFA\u5BB6", color: "#8C6B4A", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  ichijo: { id: "ichijo", name: "\u571F\u4F50\u4E00\u6761\u5BB6", color: "#B8A44A", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  chosokabe: { id: "chosokabe", name: "\u9577\u5B97\u6211\u90E8\u5BB6", color: "#6B8C3C", desc: "\u571F\u4F50\u5CA1\u8C4A\u306E\u5C0F\u52E2\u529B\u3002\u56FD\u89AA\u3068\u82E5\u304D\u5143\u89AA\u306E\u3082\u3068\u3001\u56DB\u56FD\u306E\u7D71\u4E00\u3092\u5922\u898B\u308B\u3002", mon: "\u7B39", gold: 2600, prestige: 50, mobilization: 1 },
+  aki: { id: "aki", name: "\u5B89\u82B8\u5BB6", color: "#8C4A5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  amago: { id: "amago", name: "\u5C3C\u5B50\u5BB6", color: "#5A5A9B", desc: "\u51FA\u96F2\u6708\u5C71\u5BCC\u7530\u306E\u96C4\u3002\u5927\u5185\u3068\u5C71\u9670\u5C71\u967D\u3092\u4E89\u3046\u304C\u3001\u65B0\u5BAE\u515A\u3092\u62B1\u3048\u3066\u5BB6\u4E2D\u306F\u4E00\u679A\u5CA9\u3067\u306A\u3044\u3002", mon: "\u56DB\u3064\u83F1", gold: 2600, prestige: 50, mobilization: 1 },
+  nanjo: { id: "nanjo", name: "\u5357\u6761\u5BB6", color: "#7A8C5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  yoshimi: { id: "yoshimi", name: "\u5409\u898B\u5BB6", color: "#8C7A6B", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  masuda: { id: "masuda", name: "\u76CA\u7530\u5BB6", color: "#6B7A8C", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  uragami: { id: "uragami", name: "\u6D66\u4E0A\u5BB6", color: "#9B5A3C", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  mimura: { id: "mimura", name: "\u4E09\u6751\u5BB6", color: "#5A8C6B", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  shoo: { id: "shoo", name: "\u5E84\u5BB6", color: "#8C8C5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  shimizu: { id: "shimizu", name: "\u77F3\u5DDD\u5BB6", color: "#6B5A7A", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
+  ouchi: { id: "ouchi", name: "\u5927\u5185\u5BB6", color: "#B04A7A", desc: "\u5468\u9632\u5C71\u53E3\u306B\u6804\u3048\u308B\u897F\u56FD\u4E00\u306E\u5927\u8EAB\u3002\u6587\u7269\u306F\u90FD\u306B\u52A3\u3089\u306C\u304C\u3001\u5BB6\u4E2D\u306B\u4E0D\u7A4F\u304C\u3042\u308B\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  kobayakawa: { id: "kobayakawa", name: "\u5C0F\u65E9\u5DDD\u5BB6", color: "#4A7A5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  mori: { id: "mori", name: "\u6BDB\u5229\u5BB6", color: "#3C7A4A", desc: "\u5B89\u82B8\u5409\u7530\u306E\u56FD\u4EBA\u306B\u3059\u304E\u306C\u304C\u3001\u5143\u5C31\u3068\u4E09\u5B50\u3092\u64C1\u3059\u308B\u3002\u3053\u3053\u304B\u3089\u897F\u56FD\u304C\u52D5\u304F\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  takeda_a: { id: "takeda_a", name: "\u5B89\u82B8\u6B66\u7530\u5BB6", color: "#8C5A5A", mon: "\u56DB\u3064\u83F1", gold: 2600, prestige: 50, mobilization: 1 },
+  otomo: { id: "otomo", name: "\u5927\u53CB\u5BB6", color: "#B06B2E", desc: "\u8C4A\u5F8C\u5E9C\u5185\u306E\u5927\u53CB\u3002\u7FA9\u93AE\u3068\u7ACB\u82B1\u9053\u96EA\u3092\u64C1\u3057\u3001\u5317\u4E5D\u5DDE\u306B\u529B\u3092\u4F38\u3070\u3059\u3002", mon: "\u674F\u8449", gold: 2600, prestige: 50, mobilization: 1 },
+  akizuki: { id: "akizuki", name: "\u79CB\u6708\u5BB6", color: "#7A5A4A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  kamachi: { id: "kamachi", name: "\u84B2\u6C60\u5BB6", color: "#6B8C7A", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  shiga: { id: "shiga", name: "\u5FD7\u8CC0\u5BB6", color: "#5A6B4A", mon: "\u674F\u8449", gold: 2600, prestige: 50, mobilization: 1 },
+  ryuzoji: { id: "ryuzoji", name: "\u9F8D\u9020\u5BFA\u5BB6", color: "#4A5A8C", desc: "\u80A5\u524D\u4F50\u8CC0\u306E\u9F8D\u9020\u5BFA\u3002\u5C11\u5F10\u3092\u9000\u3051\u3066\u81EA\u7ACB\u3057\u3001\u5317\u4E5D\u5DDE\u306B\u7259\u3092\u5265\u304F\u3002", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  hata: { id: "hata", name: "\u6CE2\u591A\u5BB6", color: "#8C6B7A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  matsura: { id: "matsura", name: "\u677E\u6D66\u515A", color: "#3C8C8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  arima: { id: "arima", name: "\u6709\u99AC\u5BB6", color: "#8C4A8C", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  omura: { id: "omura", name: "\u5927\u6751\u5BB6", color: "#5A8C8C", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  kikuchi: { id: "kikuchi", name: "\u83CA\u6C60\u5BB6", color: "#8C7A3C", mon: "\u4E26\u3073\u9DF9", gold: 2600, prestige: 50, mobilization: 1 },
+  sagara: { id: "sagara", name: "\u76F8\u826F\u5BB6", color: "#6B4A7A", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  ito: { id: "ito", name: "\u4F0A\u6771\u5BB6", color: "#8C5A6B", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  tsuchimochi: { id: "tsuchimochi", name: "\u571F\u6301\u5BB6", color: "#7A7A5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  shimazu: { id: "shimazu", name: "\u5CF6\u6D25\u5BB6", color: "#8C2E2E", desc: "\u85A9\u6469\u5927\u9685\u306E\u5CF6\u6D25\u3002\u8CB4\u4E45\u306E\u3082\u3068\u56DB\u5144\u5F1F\u304C\u80B2\u3061\u3001\u4E5D\u5DDE\u7D71\u4E00\u306E\u82BD\u304C\u3042\u308B\u3002", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
+  so: { id: "so", name: "\u5B97\u5BB6", color: "#4A6B7A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  date: { id: "date", name: "\u4F0A\u9054\u5BB6", color: "#8C4A3C", desc: "\u5965\u5DDE\u4F0A\u9054\u3002\u6674\u5B97\u304C\u5BB6\u4E2D\u3092\u93AE\u3081\u3001\u5357\u5965\u306B\u529B\u3092\u84C4\u3048\u308B\u3002", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
+  ashina: { id: "ashina", name: "\u8606\u540D\u5BB6", color: "#4A7A8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  nihonmatsu: { id: "nihonmatsu", name: "\u4E8C\u672C\u677E\u7560\u5C71\u5BB6", color: "#6B7A5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  shirakawa: { id: "shirakawa", name: "\u767D\u6CB3\u7D50\u57CE\u5BB6", color: "#7A6B5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  nikaido: { id: "nikaido", name: "\u4E8C\u968E\u5802\u5BB6", color: "#8C7A6B", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  tamura: { id: "tamura", name: "\u7530\u6751\u5BB6", color: "#5A6B8C", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  soma: { id: "soma", name: "\u76F8\u99AC\u5BB6", color: "#8C5A7A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  osaki: { id: "osaki", name: "\u5927\u5D0E\u5BB6", color: "#6B5A4A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  kokubun: { id: "kokubun", name: "\u56FD\u5206\u5BB6", color: "#7A8C7A", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  kasai: { id: "kasai", name: "\u845B\u897F\u5BB6", color: "#5A8C5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  abe: { id: "abe", name: "\u963F\u66FD\u6CBC\u5BB6", color: "#8C8C6B", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  nanbu: { id: "nanbu", name: "\u5357\u90E8\u5BB6", color: "#3C5A7A", desc: "\u9678\u5965\u4E09\u6238\u306E\u5357\u90E8\u3002\u5317\u5965\u306B\u5E83\u5927\u306A\u5730\u3092\u6301\u3064\u304C\u3001\u4E5D\u6238\u3068\u5927\u6D66\u3092\u62B1\u3048\u308B\u3002", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  kunohe: { id: "kunohe", name: "\u4E5D\u6238\u5BB6", color: "#7A4A5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  shiba: { id: "shiba", name: "\u65AF\u6CE2\u5BB6", color: "#8C6B8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  namioka: { id: "namioka", name: "\u6D6A\u5CA1\u5317\u7560\u5BB6", color: "#6B8C8C", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  oura: { id: "oura", name: "\u5927\u6D66\u5BB6", color: "#4A8C7A", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  mogami: { id: "mogami", name: "\u6700\u4E0A\u5BB6", color: "#8C7A4A", desc: "\u51FA\u7FBD\u5C71\u5F62\u306E\u6700\u4E0A\u3002\u4F0A\u9054\u3068\u7E01\u3092\u7D50\u3073\u3064\u3064\u3001\u72EC\u7ACB\u3092\u4FDD\u3064\u3002", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
+  tendo: { id: "tendo", name: "\u5929\u7AE5\u5BB6", color: "#7A5A6B", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  daihoji: { id: "daihoji", name: "\u5927\u5B9D\u5BFA\u5BB6", color: "#5A7A6B", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
+  onodera: { id: "onodera", name: "\u5C0F\u91CE\u5BFA\u5BB6", color: "#6B6B8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  ando: { id: "ando", name: "\u5B89\u6771\u5BB6", color: "#3C7A8C", mon: "\u62B1\u304D\u6CA2\u7009", gold: 2600, prestige: 50, mobilization: 1 },
+  honma: { id: "honma", name: "\u672C\u9593\u5BB6", color: "#8C6B5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  ainu_w: { id: "ainu_w", name: "\u897F\u8766\u5937\u30A2\u30A4\u30CC", color: "#5A7A8C", mon: "\u8F2A\u5B9D", gold: 1200, prestige: 40, mobilization: 1 },
+  ainu_e: { id: "ainu_e", name: "\u6771\u8766\u5937\u30A2\u30A4\u30CC", color: "#6B8C7A", mon: "\u8F2A\u5B9D", gold: 1200, prestige: 40, mobilization: 1 },
+  ainu_n: { id: "ainu_n", name: "\u5317\u8766\u5937\u30A2\u30A4\u30CC", color: "#7A8C9B", mon: "\u8F2A\u5B9D", gold: 1e3, prestige: 38, mobilization: 1 },
+  kakizaki: { id: "kakizaki", name: "\u8823\u5D0E\u5BB6", color: "#5A8C4A", desc: "\u8766\u5937\u5730\u306E\u8823\u5D0E\u3002\u30A2\u30A4\u30CC\u3068\u306E\u4EA4\u6613\u3067\u7ACB\u3064\u3001\u65E5\u672C\u306E\u5317\u306E\u679C\u3066\u3002", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  ryukyu: { id: "ryukyu", name: "\u7409\u7403\u738B\u56FD", color: "#C8963C", desc: "\u7409\u7403\u738B\u56FD\u3002\u6B66\u306F\u306A\u3044\u304C\u3001\u660E\u30FB\u5357\u86EE\u3068\u306E\u4EA4\u6613\u3067\u5BCC\u3080\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 }
+};
+
+// src/data/generals.js
+var GENERALS = [
+  { id: "nobunaga", name: "\u7E54\u7530\u4FE1\u9577", faction: "oda", lead: 96, valor: 82, wit: 97, gov: 98, loyal: 100, age: 12, at: "nagoya", retinue: 520, retTrain: 62 },
+  { id: "nobuhide", name: "\u7E54\u7530\u4FE1\u79C0", faction: "oda", lead: 82, valor: 78, wit: 72, gov: 80, loyal: 100, age: 35, at: "nagoya", lord: true, retinue: 620, retTrain: 70 },
+  { id: "hirate", name: "\u5E73\u624B\u653F\u79C0", faction: "oda", lead: 52, valor: 40, wit: 76, gov: 92, loyal: 96, age: 54, at: "nagoya", retinue: 220, retTrain: 54 },
+  { id: "katsuie", name: "\u67F4\u7530\u52DD\u5BB6", faction: "oda", lead: 84, valor: 94, wit: 52, gov: 50, loyal: 72, age: 24, at: "shobata", retinue: 420, retTrain: 74 },
+  { id: "nobumori", name: "\u4F50\u4E45\u9593\u4FE1\u76DB", faction: "oda", lead: 74, valor: 64, wit: 66, gov: 70, loyal: 84, age: 18, at: "nagoya", retinue: 360, retTrain: 64 },
+  { id: "yoshinari", name: "\u68EE\u53EF\u6210", faction: "oda", lead: 78, valor: 86, wit: 58, gov: 54, loyal: 88, age: 23, at: "shobata", retinue: 340, retTrain: 72 },
+  { id: "hidesada", name: "\u6797\u79C0\u8C9E", faction: "oda", lead: 62, valor: 54, wit: 60, gov: 72, loyal: 66, age: 33, at: "nagoya", retinue: 280, retTrain: 56 },
+  { id: "noritsugu", name: "\u5C71\u53E3\u6559\u7D99", faction: "oda", lead: 66, valor: 68, wit: 66, gov: 56, loyal: 48, age: 40, at: "narumi", retinue: 300, retTrain: 60 },
+  { id: "nobutomo", name: "\u7E54\u7530\u4FE1\u53CB", faction: "yamato", lead: 52, valor: 50, wit: 44, gov: 48, loyal: 100, age: 26, at: "kiyosu", lord: true, retinue: 420, retTrain: 58 },
+  { id: "daizen", name: "\u5742\u4E95\u5927\u81B3", faction: "yamato", lead: 64, valor: 62, wit: 68, gov: 54, loyal: 80, age: 38, at: "kiyosu", retinue: 360, retTrain: 62 },
+  { id: "yoichi", name: "\u6CB3\u5C3B\u4E0E\u4E00", faction: "yamato", lead: 56, valor: 64, wit: 44, gov: 44, loyal: 76, age: 29, at: "kiyosu", retinue: 260, retTrain: 58 },
+  { id: "nobuyasu", name: "\u7E54\u7530\u4FE1\u5B89", faction: "ise", lead: 50, valor: 48, wit: 46, gov: 52, loyal: 100, age: 29, at: "iwakura", lord: true, retinue: 360, retTrain: 54 },
+  { id: "morotoyo", name: "\u5C71\u5185\u76DB\u8C4A", faction: "ise", lead: 64, valor: 62, wit: 60, gov: 62, loyal: 82, age: 35, at: "iwakura", retinue: 280, retTrain: 60 },
+  { id: "nobukiyo", name: "\u7E54\u7530\u4FE1\u6E05", faction: "ise", lead: 60, valor: 64, wit: 54, gov: 52, loyal: 70, age: 21, at: "inuyama", retinue: 300, retTrain: 60 },
+  { id: "dosan", name: "\u658E\u85E4\u9053\u4E09", faction: "saito", lead: 84, valor: 68, wit: 95, gov: 90, loyal: 100, age: 52, at: "inabayama", lord: true, retinue: 760, retTrain: 74 },
+  { id: "yoshitatsu", name: "\u658E\u85E4\u7FA9\u9F8D", faction: "saito", lead: 78, valor: 80, wit: 70, gov: 62, loyal: 52, age: 19, at: "inabayama", retinue: 560, retTrain: 70 },
+  { id: "yoshimichi", name: "\u7A32\u8449\u826F\u901A", faction: "saito", lead: 82, valor: 84, wit: 76, gov: 70, loyal: 78, age: 31, at: "ogaki", retinue: 460, retTrain: 72 },
+  { id: "naomoto", name: "\u6C0F\u5BB6\u76F4\u5143", faction: "saito", lead: 74, valor: 72, wit: 68, gov: 68, loyal: 74, age: 34, at: "ogaki", retinue: 400, retTrain: 68 },
+  { id: "morinari", name: "\u5B89\u85E4\u5B88\u5C31", faction: "saito", lead: 70, valor: 66, wit: 72, gov: 62, loyal: 64, age: 43, at: "ogaki", retinue: 380, retTrain: 66 },
+  { id: "shigemoto", name: "\u7AF9\u4E2D\u91CD\u5143", faction: "saito", lead: 66, valor: 56, wit: 82, gov: 72, loyal: 72, age: 36, at: "sunomata", retinue: 300, retTrain: 62 },
+  { id: "hineno", name: "\u65E5\u6839\u91CE\u5F18\u5C31", faction: "saito", lead: 66, valor: 80, wit: 62, gov: 50, loyal: 70, age: 28, at: "inabayama", retinue: 320, retTrain: 66 },
+  { id: "nagachika", name: "\u9060\u85E4\u6176\u9686", faction: "saito", lead: 62, valor: 66, wit: 58, gov: 56, loyal: 68, age: 26, at: "gujo", retinue: 260, retTrain: 60 },
+  { id: "kagetoshi", name: "\u9060\u5C71\u666F\u4EFB", faction: "saito", lead: 66, valor: 68, wit: 60, gov: 58, loyal: 60, age: 30, at: "iwamura", retinue: 280, retTrain: 62 },
+  { id: "yoshimoto", name: "\u4ECA\u5DDD\u7FA9\u5143", faction: "imagawa", lead: 88, valor: 62, wit: 90, gov: 94, loyal: 100, age: 28, at: "sunpu", lord: true, retinue: 900, retTrain: 72 },
+  { id: "sessai", name: "\u592A\u539F\u96EA\u658E", faction: "imagawa", lead: 90, valor: 48, wit: 96, gov: 92, loyal: 98, age: 50, at: "sunpu", retinue: 420, retTrain: 70 },
+  { id: "ujizane", name: "\u4ECA\u5DDD\u6C0F\u771F", faction: "imagawa", lead: 48, valor: 44, wit: 50, gov: 58, loyal: 90, age: 9, at: "sunpu", retinue: 260, retTrain: 52 },
+  { id: "ujitane", name: "\u671D\u6BD4\u5948\u6CF0\u80FD", faction: "imagawa", lead: 76, valor: 72, wit: 66, gov: 68, loyal: 86, age: 40, at: "kakegawa", retinue: 520, retTrain: 68 },
+  { id: "motonobu", name: "\u5CA1\u90E8\u5143\u4FE1", faction: "imagawa", lead: 78, valor: 82, wit: 62, gov: 56, loyal: 88, age: 32, at: "takatenjin", retinue: 460, retTrain: 70 },
+  { id: "ujizumi", name: "\u9D5C\u6BBF\u9577\u7167", faction: "imagawa", lead: 68, valor: 70, wit: 58, gov: 58, loyal: 80, age: 24, at: "yoshida", retinue: 380, retTrain: 64 },
+  { id: "ienaga", name: "\u845B\u5C71\u6C0F\u5143", faction: "imagawa", lead: 64, valor: 62, wit: 60, gov: 62, loyal: 74, age: 31, at: "kounkoji", retinue: 320, retTrain: 62 },
+  { id: "naomori", name: "\u4E95\u4F0A\u76F4\u76DB", faction: "imagawa", lead: 70, valor: 74, wit: 58, gov: 60, loyal: 66, age: 36, at: "hikuma", retinue: 340, retTrain: 64 },
+  { id: "sadayoshi", name: "\u5C0F\u539F\u93AE\u5B9F", faction: "imagawa", lead: 66, valor: 66, wit: 62, gov: 56, loyal: 78, age: 34, at: "nishio", retinue: 300, retTrain: 62 },
+  { id: "yasutomo", name: "\u83C5\u6CBC\u5B9A\u76C8", faction: "imagawa", lead: 62, valor: 68, wit: 56, gov: 54, loyal: 62, age: 22, at: "nagashino", retinue: 260, retTrain: 60 },
+  { id: "masatsura", name: "\u6238\u7530\u5BA3\u6210", faction: "imagawa", lead: 60, valor: 64, wit: 54, gov: 56, loyal: 64, age: 38, at: "tahara", retinue: 280, retTrain: 58 },
+  { id: "ujitoyo", name: "\u4E09\u6D66\u6C0F\u6E80", faction: "imagawa", lead: 64, valor: 62, wit: 58, gov: 58, loyal: 76, age: 33, at: "futamata", retinue: 300, retTrain: 60 },
+  { id: "tadatsugu", name: "\u5929\u91CE\u666F\u6CF0", faction: "imagawa", lead: 62, valor: 66, wit: 54, gov: 52, loyal: 70, age: 29, at: "inui", retinue: 240, retTrain: 58 },
+  { id: "hirotada", name: "\u677E\u5E73\u5E83\u5FE0", faction: "matsudaira", lead: 62, valor: 58, wit: 60, gov: 64, loyal: 100, age: 20, at: "okazaki", lord: true, retinue: 380, retTrain: 62 },
+  { id: "torii_t", name: "\u9CE5\u5C45\u5FE0\u5409", faction: "matsudaira", lead: 58, valor: 52, wit: 70, gov: 82, loyal: 96, age: 51, at: "okazaki", retinue: 380, retTrain: 62 },
+  { id: "tadayoshi", name: "\u9152\u4E95\u5FE0\u5C1A", faction: "matsudaira", lead: 66, valor: 70, wit: 56, gov: 54, loyal: 70, age: 32, at: "okazaki", retinue: 280, retTrain: 62 },
+  { id: "sadayoshi2", name: "\u77F3\u5DDD\u6E05\u517C", faction: "matsudaira", lead: 64, valor: 58, wit: 66, gov: 70, loyal: 84, age: 41, at: "okazaki", retinue: 240, retTrain: 58 },
+  { id: "nobumoto", name: "\u6C34\u91CE\u4FE1\u5143", faction: "mizuno", lead: 68, valor: 66, wit: 70, gov: 62, loyal: 100, age: 31, at: "kariya", lord: true, retinue: 420, retTrain: 62 },
+  { id: "shingen", name: "\u6B66\u7530\u6674\u4FE1", faction: "takeda", lead: 96, valor: 76, wit: 94, gov: 92, loyal: 100, age: 25, at: "tsutsujigasaki", lord: true, retinue: 980, retTrain: 78 },
+  { id: "nobushige", name: "\u6B66\u7530\u4FE1\u7E41", faction: "takeda", lead: 86, valor: 78, wit: 80, gov: 84, loyal: 98, age: 20, at: "tsutsujigasaki", retinue: 520, retTrain: 74 },
+  { id: "kansuke", name: "\u5C71\u672C\u52D8\u52A9", faction: "takeda", lead: 72, valor: 62, wit: 92, gov: 66, loyal: 92, age: 45, at: "tsutsujigasaki", retinue: 220, retTrain: 66 },
+  { id: "nobukata", name: "\u677F\u57A3\u4FE1\u65B9", faction: "takeda", lead: 82, valor: 80, wit: 70, gov: 72, loyal: 90, age: 47, at: "fukashi", retinue: 480, retTrain: 72 },
+  { id: "toramasa", name: "\u7518\u5229\u864E\u6CF0", faction: "takeda", lead: 78, valor: 78, wit: 66, gov: 68, loyal: 88, age: 46, at: "fukashi", retinue: 440, retTrain: 70 },
+  { id: "masakage", name: "\u99AC\u5834\u4FE1\u6625", faction: "takeda", lead: 86, valor: 84, wit: 74, gov: 66, loyal: 92, age: 31, at: "takato", retinue: 420, retTrain: 76 },
+  { id: "nobufusa", name: "\u98EF\u5BCC\u864E\u660C", faction: "takeda", lead: 82, valor: 88, wit: 62, gov: 58, loyal: 86, age: 42, at: "iwadono", retinue: 400, retTrain: 74 },
+  { id: "masatoyo", name: "\u5185\u85E4\u660C\u8C4A", faction: "takeda", lead: 84, valor: 76, wit: 78, gov: 76, loyal: 90, age: 24, at: "komoro", retinue: 360, retTrain: 72 },
+  { id: "nobutada", name: "\u5C0F\u5C71\u7530\u4FE1\u6709", faction: "takeda", lead: 68, valor: 70, wit: 62, gov: 60, loyal: 70, age: 34, at: "katsuyama_k", retinue: 300, retTrain: 64 },
+  { id: "masashige", name: "\u79CB\u5C71\u864E\u7E41", faction: "takeda", lead: 76, valor: 74, wit: 72, gov: 62, loyal: 84, age: 19, at: "iida", retinue: 320, retTrain: 68 },
+  { id: "yoshikiyo", name: "\u6751\u4E0A\u7FA9\u6E05", faction: "murakami", lead: 86, valor: 88, wit: 66, gov: 62, loyal: 100, age: 45, at: "katsurao", lord: true, retinue: 620, retTrain: 72 },
+  { id: "kiyoyoshi", name: "\u5C4B\u4EE3\u653F\u56FD", faction: "murakami", lead: 68, valor: 70, wit: 60, gov: 58, loyal: 76, age: 36, at: "toishi", retinue: 320, retTrain: 64 },
+  { id: "naoyori", name: "\u6E05\u91CE\u6E05\u79C0", faction: "murakami", lead: 64, valor: 66, wit: 58, gov: 56, loyal: 74, age: 32, at: "kaizu", retinue: 280, retTrain: 62 },
+  { id: "ujiyasu", name: "\u5317\u6761\u6C0F\u5EB7", faction: "hojo", lead: 94, valor: 78, wit: 92, gov: 96, loyal: 100, age: 31, at: "odawara", lord: true, retinue: 720, retTrain: 76 },
+  { id: "tsunashige", name: "\u5317\u6761\u7DB1\u6210", faction: "hojo", lead: 88, valor: 92, wit: 68, gov: 66, loyal: 96, age: 31, at: "shimoda", retinue: 480, retTrain: 76 },
+  { id: "harutomo", name: "\u5317\u7560\u6674\u5177", faction: "kitabatake", lead: 74, valor: 66, wit: 76, gov: 80, loyal: 100, age: 43, at: "okochi", lord: true, retinue: 520, retTrain: 64 },
+  { id: "tomonori", name: "\u5317\u7560\u5177\u6559", faction: "kitabatake", lead: 78, valor: 86, wit: 70, gov: 68, loyal: 94, age: 18, at: "matsugashima", retinue: 420, retTrain: 68 },
+  { id: "tomomori", name: "\u795E\u6238\u5177\u76DB", faction: "kanbe", lead: 62, valor: 60, wit: 58, gov: 60, loyal: 100, age: 36, at: "kanbe", lord: true, retinue: 360, retTrain: 58 },
+  { id: "ujiyoshi", name: "\u9577\u91CE\u85E4\u5B9A", faction: "kanbe", lead: 64, valor: 62, wit: 60, gov: 58, loyal: 78, age: 32, at: "kuwana", retinue: 300, retTrain: 58 },
+  { id: "shonyo", name: "\u8A3C\u5982", faction: "ikko", lead: 70, valor: 50, wit: 82, gov: 84, loyal: 100, age: 30, at: "nagashima", lord: true, retinue: 480, retTrain: 60 },
+  { id: "sumitaka", name: "\u4E5D\u9B3C\u6F84\u9686", faction: "kuki", lead: 70, valor: 74, wit: 68, gov: 58, loyal: 100, age: 24, at: "toba", lord: true, retinue: 320, retTrain: 66 },
+  { id: "yoshikata", name: "\u516D\u89D2\u7FA9\u8CE2", faction: "rokkaku", lead: 76, valor: 70, wit: 74, gov: 78, loyal: 100, age: 25, at: "kannonji", lord: true, retinue: 700, retTrain: 66 },
+  { id: "sadayori", name: "\u84B2\u751F\u5B9A\u79C0", faction: "rokkaku", lead: 72, valor: 68, wit: 74, gov: 78, loyal: 88, age: 38, at: "kannonji", retinue: 380, retTrain: 64 },
+  { id: "kagechika", name: "\u5F8C\u85E4\u8CE2\u8C4A", faction: "rokkaku", lead: 70, valor: 66, wit: 72, gov: 70, loyal: 84, age: 41, at: "sawayama", retinue: 340, retTrain: 62 },
+  { id: "naotsune", name: "\u6C38\u539F\u91CD\u8208", faction: "rokkaku", lead: 64, valor: 62, wit: 60, gov: 62, loyal: 76, age: 34, at: "sakamoto", retinue: 300, retTrain: 60 },
+  { id: "hisamasa", name: "\u6D45\u4E95\u4E45\u653F", faction: "azai", lead: 58, valor: 54, wit: 58, gov: 64, loyal: 100, age: 20, at: "odani", lord: true, retinue: 480, retTrain: 62 },
+  { id: "naohiro", name: "\u6D77\u5317\u7DB1\u89AA", faction: "azai", lead: 74, valor: 72, wit: 76, gov: 64, loyal: 88, age: 41, at: "odani", retinue: 320, retTrain: 66 },
+  { id: "katsumasa", name: "\u78EF\u91CE\u54E1\u660C", faction: "azai", lead: 78, valor: 84, wit: 62, gov: 58, loyal: 86, age: 23, at: "yamamotoyama", retinue: 300, retTrain: 68 },
+  { id: "nobutoyo", name: "\u6B66\u7530\u4FE1\u8C4A", faction: "wakasa", lead: 60, valor: 58, wit: 56, gov: 60, loyal: 100, age: 32, at: "nochiseyama", lord: true, retinue: 340, retTrain: 56 },
+  { id: "naganori", name: "\u7C9F\u5C4B\u52DD\u4E45", faction: "wakasa", lead: 66, valor: 70, wit: 58, gov: 56, loyal: 70, age: 26, at: "kuniyoshi", retinue: 260, retTrain: 60 },
+  { id: "takakage", name: "\u671D\u5009\u5B5D\u666F", faction: "asakura", lead: 78, valor: 70, wit: 78, gov: 84, loyal: 100, age: 53, at: "ichijodani", lord: true, retinue: 760, retTrain: 68 },
+  { id: "norikage", name: "\u671D\u5009\u5B97\u6EF4", faction: "asakura", lead: 92, valor: 84, wit: 88, gov: 78, loyal: 98, age: 69, at: "kanegasaki", retinue: 520, retTrain: 76 },
+  { id: "kagetaka", name: "\u671D\u5009\u666F\u9686", faction: "asakura", lead: 70, valor: 68, wit: 64, gov: 66, loyal: 86, age: 34, at: "kitanosho", retinue: 400, retTrain: 64 },
+  { id: "yoshiyori", name: "\u59C9\u5C0F\u8DEF\u826F\u983C", faction: "anegakoji", lead: 64, valor: 62, wit: 66, gov: 62, loyal: 100, age: 36, at: "matsukura_h", lord: true, retinue: 300, retTrain: 58 },
+  { id: "nobuyuki", name: "\u7E54\u7530\u4FE1\u884C", faction: "oda", lead: 58, valor: 56, wit: 54, gov: 62, loyal: 74, age: 10, at: "nagoya", retinue: 300, retTrain: 58 },
+  { id: "nobumitsu", name: "\u7E54\u7530\u4FE1\u5149", faction: "oda", lead: 74, valor: 78, wit: 64, gov: 60, loyal: 88, age: 30, at: "nagoya", retinue: 340, retTrain: 66 },
+  { id: "nobutsugu", name: "\u7E54\u7530\u4FE1\u6B21", faction: "oda", lead: 62, valor: 64, wit: 56, gov: 54, loyal: 78, age: 26, at: "shobata", retinue: 240, retTrain: 60 },
+  { id: "moritsugu", name: "\u6BDB\u5229\u9577\u79C0", faction: "oda", lead: 66, valor: 70, wit: 58, gov: 56, loyal: 76, age: 16, at: "nagoya", retinue: 200, retTrain: 62 },
+  { id: "iwamuro", name: "\u5CA9\u5BA4\u91CD\u4F11", faction: "oda", lead: 60, valor: 66, wit: 54, gov: 50, loyal: 80, age: 20, at: "narumi", retinue: 180, retTrain: 60 },
+  { id: "sadakatsu", name: "\u6751\u4E95\u8C9E\u52DD", faction: "oda", lead: 56, valor: 44, wit: 74, gov: 88, loyal: 86, age: 26, at: "nagoya", retinue: 160, retTrain: 54 },
+  { id: "hidetaka", name: "\u4F50\u4E45\u9593\u76DB\u91CD", faction: "oda", lead: 68, valor: 72, wit: 58, gov: 54, loyal: 82, age: 28, at: "narumi", retinue: 260, retTrain: 64 },
+  { id: "kuroda", name: "\u7C17\u7530\u653F\u7DB1", faction: "oda", lead: 64, valor: 62, wit: 78, gov: 60, loyal: 78, age: 29, at: "shobata", retinue: 200, retTrain: 60 },
+  { id: "hidetoshi", name: "\u7E54\u7530\u4FE1\u5EB7", faction: "yamato", lead: 54, valor: 58, wit: 48, gov: 46, loyal: 82, age: 32, at: "kiyosu", retinue: 220, retTrain: 56 },
+  { id: "nobumasa", name: "\u7E54\u7530\u5BDB\u8FD1", faction: "ise", lead: 56, valor: 54, wit: 50, gov: 54, loyal: 80, age: 37, at: "inuyama", retinue: 240, retTrain: 56 },
+  { id: "toshimasa", name: "\u9577\u4E95\u9053\u5229", faction: "saito", lead: 72, valor: 74, wit: 66, gov: 60, loyal: 70, age: 29, at: "sunomata", retinue: 320, retTrain: 66 },
+  { id: "kanamori", name: "\u91D1\u68EE\u9577\u8FD1", faction: "saito", lead: 70, valor: 68, wit: 70, gov: 74, loyal: 66, age: 22, at: "gujo", retinue: 240, retTrain: 64 },
+  { id: "ujiie2", name: "\u4E0D\u7834\u5149\u6CBB", faction: "saito", lead: 68, valor: 66, wit: 66, gov: 64, loyal: 72, age: 26, at: "ogaki", retinue: 280, retTrain: 64 },
+  { id: "takenaka2", name: "\u7AF9\u4E2D\u91CD\u77E9", faction: "saito", lead: 64, valor: 70, wit: 62, gov: 56, loyal: 74, age: 20, at: "sunomata", retinue: 220, retTrain: 62 },
+  { id: "endo2", name: "\u9060\u85E4\u76DB\u6570", faction: "saito", lead: 66, valor: 70, wit: 60, gov: 58, loyal: 68, age: 32, at: "gujo", retinue: 260, retTrain: 62 },
+  { id: "toyama2", name: "\u9060\u5C71\u76F4\u5EC9", faction: "saito", lead: 64, valor: 66, wit: 58, gov: 58, loyal: 66, age: 27, at: "naegi", retinue: 240, retTrain: 60 },
+  { id: "naotora", name: "\u4E95\u4F0A\u76F4\u864E", faction: "imagawa", lead: 66, valor: 48, wit: 76, gov: 78, loyal: 62, age: 11, at: "hikuma", retinue: 160, retTrain: 56 },
+  { id: "ujizane2", name: "\u671D\u6BD4\u5948\u6CF0\u671D", faction: "imagawa", lead: 74, valor: 76, wit: 62, gov: 60, loyal: 88, age: 16, at: "kakegawa", retinue: 340, retTrain: 66 },
+  { id: "nobutsuna", name: "\u5EB5\u539F\u5FE0\u80E4", faction: "imagawa", lead: 68, valor: 66, wit: 64, gov: 66, loyal: 84, age: 34, at: "sunpu", retinue: 300, retTrain: 64 },
+  { id: "motoyasu2", name: "\u677E\u4E95\u5B97\u4FE1", faction: "imagawa", lead: 70, valor: 74, wit: 58, gov: 56, loyal: 82, age: 36, at: "futamata", retinue: 280, retTrain: 64 },
+  { id: "sessai2", name: "\u702C\u540D\u6C0F\u4FCA", faction: "imagawa", lead: 66, valor: 64, wit: 62, gov: 62, loyal: 80, age: 30, at: "yoshida", retinue: 260, retTrain: 62 },
+  { id: "okabe2", name: "\u5CA1\u90E8\u6B63\u7DB1", faction: "imagawa", lead: 70, valor: 72, wit: 62, gov: 60, loyal: 84, age: 14, at: "kounkoji", retinue: 240, retTrain: 64 },
+  { id: "takane", name: "\u9AD8\u5929\u795E\u5C0F\u7B20\u539F", faction: "imagawa", lead: 66, valor: 70, wit: 58, gov: 56, loyal: 74, age: 31, at: "takatenjin", retinue: 260, retTrain: 62 },
+  { id: "kiyoyasu", name: "\u677E\u5E73\u4FE1\u5B5D", faction: "matsudaira", lead: 66, valor: 70, wit: 58, gov: 56, loyal: 72, age: 29, at: "okazaki", retinue: 240, retTrain: 62 },
+  { id: "motoyasu3", name: "\u677E\u5E73\u5EB7\u5FE0", faction: "matsudaira", lead: 62, valor: 66, wit: 56, gov: 58, loyal: 84, age: 21, at: "okazaki", retinue: 200, retTrain: 60 },
+  { id: "nobuchika", name: "\u6C34\u91CE\u5FE0\u653F", faction: "mizuno", lead: 66, valor: 62, wit: 66, gov: 68, loyal: 90, age: 54, at: "kariya", retinue: 280, retTrain: 60 },
+  { id: "nobukado", name: "\u6B66\u7530\u4FE1\u5EC9", faction: "takeda", lead: 68, valor: 62, wit: 72, gov: 74, loyal: 94, age: 14, at: "tsutsujigasaki", retinue: 300, retTrain: 66 },
+  { id: "torasada", name: "\u539F\u864E\u80E4", faction: "takeda", lead: 76, valor: 86, wit: 58, gov: 52, loyal: 88, age: 49, at: "fukashi", retinue: 340, retTrain: 72 },
+  { id: "masatane", name: "\u539F\u660C\u80E4", faction: "takeda", lead: 72, valor: 66, wit: 80, gov: 70, loyal: 90, age: 15, at: "komoro", retinue: 260, retTrain: 68 },
+  { id: "nobutomo2", name: "\u5C0F\u5E61\u864E\u76DB", faction: "takeda", lead: 72, valor: 80, wit: 60, gov: 54, loyal: 86, age: 55, at: "takato", retinue: 300, retTrain: 70 },
+  { id: "yamagata", name: "\u5C71\u770C\u660C\u666F", faction: "takeda", lead: 86, valor: 88, wit: 76, gov: 66, loyal: 92, age: 17, at: "iwadono", retinue: 280, retTrain: 74 },
+  { id: "obu2", name: "\u66FD\u6839\u660C\u4E16", faction: "takeda", lead: 68, valor: 62, wit: 78, gov: 70, loyal: 84, age: 18, at: "iida", retinue: 220, retTrain: 66 },
+  { id: "kojima", name: "\u5C0F\u5CF6\u6A29\u5175\u885B", faction: "murakami", lead: 64, valor: 72, wit: 54, gov: 50, loyal: 78, age: 28, at: "toishi", retinue: 260, retTrain: 62 },
+  { id: "ide", name: "\u4E95\u4E0A\u6E05\u653F", faction: "murakami", lead: 66, valor: 68, wit: 58, gov: 56, loyal: 76, age: 34, at: "kaizu", retinue: 240, retTrain: 62 },
+  { id: "kazama", name: "\u98A8\u9B54\u5C0F\u592A\u90CE", faction: "hojo", lead: 62, valor: 74, wit: 88, gov: 44, loyal: 90, age: 26, at: "shimoda", retinue: 160, retTrain: 68 },
+  { id: "kizawa", name: "\u6728\u9020\u5177\u653F", faction: "kitabatake", lead: 66, valor: 64, wit: 62, gov: 62, loyal: 74, age: 26, at: "matsugashima", retinue: 280, retTrain: 60 },
+  { id: "sakauchi", name: "\u5742\u5185\u5177\u623F", faction: "kitabatake", lead: 62, valor: 60, wit: 58, gov: 60, loyal: 78, age: 24, at: "okochi", retinue: 240, retTrain: 58 },
+  { id: "takigawa2", name: "\u95A2\u76DB\u4FE1", faction: "kanbe", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 76, age: 30, at: "kuwana", retinue: 260, retTrain: 58 },
+  { id: "ganshoji", name: "\u9858\u8A3C\u5BFA\u8A3C\u6075", faction: "ikko", lead: 66, valor: 46, wit: 78, gov: 80, loyal: 96, age: 34, at: "nagashima", retinue: 380, retTrain: 58 },
+  { id: "shimozuma", name: "\u4E0B\u9593\u983C\u65E6", faction: "ikko", lead: 70, valor: 64, wit: 72, gov: 66, loyal: 92, age: 31, at: "nagashima", retinue: 320, retTrain: 60 },
+  { id: "gamou", name: "\u84B2\u751F\u8CE2\u79C0", faction: "rokkaku", lead: 72, valor: 70, wit: 68, gov: 72, loyal: 86, age: 12, at: "kannonji", retinue: 300, retTrain: 64 },
+  { id: "mikumo", name: "\u4E09\u96F2\u6210\u6301", faction: "rokkaku", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 80, age: 26, at: "sawayama", retinue: 260, retTrain: 62 },
+  { id: "nagata", name: "\u6C38\u7530\u666F\u5F18", faction: "rokkaku", lead: 62, valor: 60, wit: 62, gov: 64, loyal: 78, age: 32, at: "sakamoto", retinue: 240, retTrain: 60 },
+  { id: "endo3", name: "\u9060\u85E4\u76F4\u7D4C", faction: "azai", lead: 70, valor: 78, wit: 72, gov: 56, loyal: 90, age: 21, at: "odani", retinue: 260, retTrain: 66 },
+  { id: "akao", name: "\u8D64\u5C3E\u6E05\u7DB1", faction: "azai", lead: 70, valor: 74, wit: 64, gov: 60, loyal: 92, age: 32, at: "odani", retinue: 280, retTrain: 66 },
+  { id: "amenomori", name: "\u96E8\u68EE\u5F25\u5175\u885B", faction: "azai", lead: 66, valor: 70, wit: 60, gov: 56, loyal: 84, age: 26, at: "yamamotoyama", retinue: 220, retTrain: 64 },
+  { id: "uryu", name: "\u9038\u898B\u660C\u7D4C", faction: "wakasa", lead: 64, valor: 66, wit: 58, gov: 54, loyal: 62, age: 24, at: "nochiseyama", retinue: 240, retTrain: 58 },
+  { id: "kagetake", name: "\u671D\u5009\u666F\u5065", faction: "asakura", lead: 68, valor: 66, wit: 62, gov: 62, loyal: 84, age: 17, at: "kitanosho", retinue: 320, retTrain: 62 },
+  { id: "yamazaki", name: "\u5C71\u5D0E\u5409\u5BB6", faction: "asakura", lead: 74, valor: 72, wit: 70, gov: 66, loyal: 88, age: 30, at: "ichijodani", retinue: 340, retTrain: 66 },
+  { id: "magara", name: "\u771F\u67C4\u76F4\u9686", faction: "asakura", lead: 66, valor: 90, wit: 48, gov: 44, loyal: 86, age: 22, at: "kanegasaki", retinue: 260, retTrain: 68 },
+  { id: "ema", name: "\u6C5F\u99AC\u6642\u76DB", faction: "anegakoji", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 68, age: 38, at: "matsukura_h", retinue: 240, retTrain: 58 },
+  { id: "yoshiteru", name: "\u8DB3\u5229\u7FA9\u8F1D", faction: "ashikaga", lead: 76, valor: 84, wit: 70, gov: 66, loyal: 100, age: 10, at: "nijo", lord: true, retinue: 320, retTrain: 62 },
+  { id: "fujitaka", name: "\u7D30\u5DDD\u85E4\u5B5D", faction: "ashikaga", lead: 76, valor: 68, wit: 84, gov: 86, loyal: 88, age: 12, at: "nijo", retinue: 220, retTrain: 62 },
+  { id: "nagayoshi", name: "\u4E09\u597D\u9577\u6176", faction: "miyoshi", lead: 90, valor: 74, wit: 90, gov: 92, loyal: 100, age: 24, at: "akutagawa", lord: true, retinue: 900, retTrain: 72 },
+  { id: "hisahide", name: "\u677E\u6C38\u4E45\u79C0", faction: "miyoshi", lead: 80, valor: 64, wit: 94, gov: 86, loyal: 52, age: 38, at: "shigisan", retinue: 480, retTrain: 66 },
+  { id: "jikkyu", name: "\u4E09\u597D\u5B9F\u4F11", faction: "miyoshi", lead: 82, valor: 80, wit: 74, gov: 70, loyal: 94, age: 19, at: "kishiwada", retinue: 520, retTrain: 70 },
+  { id: "fuyuyasu", name: "\u5B89\u5B85\u51AC\u5EB7", faction: "miyoshi", lead: 76, valor: 74, wit: 72, gov: 70, loyal: 92, age: 18, at: "hanakuma", retinue: 380, retTrain: 66 },
+  { id: "sogo", name: "\u5341\u6CB3\u4E00\u5B58", faction: "miyoshi", lead: 78, valor: 88, wit: 60, gov: 56, loyal: 92, age: 14, at: "takaya", retinue: 420, retTrain: 70 },
+  { id: "masanaga", name: "\u4E09\u597D\u653F\u5EB7", faction: "miyoshi", lead: 70, valor: 74, wit: 64, gov: 58, loyal: 84, age: 28, at: "shoryuji", retinue: 340, retTrain: 64 },
+  { id: "nagayasu", name: "\u4E09\u597D\u9577\u9038", faction: "miyoshi", lead: 72, valor: 70, wit: 68, gov: 62, loyal: 86, age: 34, at: "itami", retinue: 360, retTrain: 64 },
+  { id: "kennyo", name: "\u8A3C\u5982\uFF08\u672C\u9858\u5BFA\uFF09", faction: "honganji", lead: 74, valor: 50, wit: 86, gov: 88, loyal: 100, age: 30, at: "ishiyama", lord: true, retinue: 900, retTrain: 62 },
+  { id: "raijun", name: "\u4E0B\u9593\u983C\u7DCF", faction: "honganji", lead: 72, valor: 66, wit: 74, gov: 68, loyal: 94, age: 32, at: "ishiyama", retinue: 420, retTrain: 62 },
+  { id: "kaga1", name: "\u6749\u6D66\u7384\u4EFB", faction: "kaga_ikko", lead: 70, valor: 68, wit: 72, gov: 64, loyal: 96, age: 34, at: "kanazawa", lord: true, retinue: 620, retTrain: 60 },
+  { id: "kaga2", name: "\u4E03\u91CC\u983C\u5468", faction: "kaga_ikko", lead: 66, valor: 62, wit: 74, gov: 66, loyal: 94, age: 31, at: "komatsu", retinue: 380, retTrain: 58 },
+  { id: "junsho", name: "\u7B52\u4E95\u9806\u662D", faction: "tsutsui", lead: 72, valor: 68, wit: 70, gov: 70, loyal: 100, age: 24, at: "koriyama", lord: true, retinue: 460, retTrain: 60 },
+  { id: "hanzo_iga", name: "\u767E\u5730\u4E39\u6CE2", faction: "iga", lead: 66, valor: 72, wit: 90, gov: 52, loyal: 100, age: 40, at: "ueno_iga", lord: true, retinue: 340, retTrain: 66 },
+  { id: "magoichi", name: "\u9234\u6728\u4F50\u5927\u592B", faction: "saika", lead: 76, valor: 80, wit: 74, gov: 60, loyal: 100, age: 38, at: "saika", lord: true, retinue: 520, retTrain: 70 },
+  { id: "saika2", name: "\u571F\u6A4B\u5B88\u91CD", faction: "saika", lead: 70, valor: 74, wit: 68, gov: 58, loyal: 88, age: 32, at: "shingu", retinue: 300, retTrain: 64 },
+  { id: "hideharu", name: "\u6CE2\u591A\u91CE\u79C0\u5FE0", faction: "hatano", lead: 72, valor: 70, wit: 66, gov: 66, loyal: 100, age: 42, at: "yagami", lord: true, retinue: 480, retTrain: 60 },
+  { id: "yoshiyuki", name: "\u4E00\u8272\u7FA9\u5E78", faction: "isshiki", lead: 64, valor: 62, wit: 60, gov: 62, loyal: 100, age: 36, at: "miyazu", lord: true, retinue: 360, retTrain: 56 },
+  { id: "suketoyo", name: "\u5C71\u540D\u7950\u8C4A", faction: "yamana", lead: 66, valor: 62, wit: 64, gov: 68, loyal: 100, age: 35, at: "konosumi", lord: true, retinue: 420, retTrain: 56 },
+  { id: "harumasa", name: "\u8D64\u677E\u6674\u653F", faction: "akamatsu", lead: 62, valor: 60, wit: 58, gov: 62, loyal: 100, age: 33, at: "ojio", lord: true, retinue: 440, retTrain: 56 },
+  { id: "shigemune", name: "\u5225\u6240\u5C31\u6CBB", faction: "bessho", lead: 70, valor: 68, wit: 66, gov: 64, loyal: 100, age: 44, at: "miki", lord: true, retinue: 400, retTrain: 60 },
+  { id: "yoshitsugu", name: "\u7560\u5C71\u7FA9\u7D9A", faction: "hatakeyama", lead: 62, valor: 58, wit: 60, gov: 64, loyal: 100, age: 28, at: "nanao", lord: true, retinue: 520, retTrain: 58 },
+  { id: "nagatsuna", name: "\u9577\u7D9A\u9023", faction: "hatakeyama", lead: 70, valor: 68, wit: 66, gov: 66, loyal: 84, age: 31, at: "nanao", retinue: 320, retTrain: 60 },
+  { id: "nagamoto", name: "\u795E\u4FDD\u9577\u8077", faction: "jinbo", lead: 70, valor: 68, wit: 70, gov: 64, loyal: 100, age: 32, at: "toyama", lord: true, retinue: 420, retTrain: 60 },
+  { id: "yasutane", name: "\u690E\u540D\u5EB7\u80E4", faction: "shiina", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 100, age: 26, at: "matsukura", lord: true, retinue: 380, retTrain: 60 },
+  { id: "kagetora", name: "\u9577\u5C3E\u666F\u864E", faction: "nagao", lead: 97, valor: 88, wit: 86, gov: 80, loyal: 100, age: 16, at: "kasugayama", lord: true, retinue: 880, retTrain: 78 },
+  { id: "masakage_n", name: "\u67FF\u5D0E\u666F\u5BB6", faction: "nagao", lead: 84, valor: 90, wit: 62, gov: 58, loyal: 92, age: 33, at: "tochio", retinue: 480, retTrain: 74 },
+  { id: "kanetsugu0", name: "\u76F4\u6C5F\u5B9F\u7DB1", faction: "nagao", lead: 76, valor: 66, wit: 80, gov: 86, loyal: 94, age: 40, at: "yoita", retinue: 360, retTrain: 66 },
+  { id: "harunaga", name: "\u672C\u5E84\u7E41\u9577", faction: "agakita", lead: 80, valor: 86, wit: 68, gov: 60, loyal: 64, age: 6, at: "murakami", lord: true, retinue: 340, retTrain: 68 },
+  { id: "shigeie", name: "\u65B0\u767A\u7530\u7DB1\u8C9E", faction: "agakita", lead: 70, valor: 70, wit: 64, gov: 62, loyal: 72, age: 36, at: "shibata", retinue: 300, retTrain: 62 },
+  { id: "sukemasa", name: "\u592A\u7530\u8CC7\u6B63", faction: "ota", lead: 78, valor: 74, wit: 80, gov: 72, loyal: 100, age: 24, at: "iwatsuki", lord: true, retinue: 420, retTrain: 64 },
+  { id: "nagayasu_n", name: "\u6210\u7530\u9577\u6CF0", faction: "narita", lead: 68, valor: 66, wit: 64, gov: 66, loyal: 100, age: 31, at: "oshi", lord: true, retinue: 380, retTrain: 60 },
+  { id: "norimasa", name: "\u4E0A\u6749\u61B2\u653F", faction: "uesugi_y", lead: 58, valor: 54, wit: 56, gov: 62, loyal: 100, age: 23, at: "hirai", lord: true, retinue: 560, retTrain: 58 },
+  { id: "narimasa_n", name: "\u9577\u91CE\u696D\u6B63", faction: "nagano_k", lead: 86, valor: 80, wit: 80, gov: 72, loyal: 100, age: 55, at: "minowa", lord: true, retinue: 520, retTrain: 68 },
+  { id: "naritashige", name: "\u7531\u826F\u6210\u7E41", faction: "yura", lead: 70, valor: 68, wit: 70, gov: 66, loyal: 100, age: 40, at: "kanayama", lord: true, retinue: 420, retTrain: 62 },
+  { id: "hirotsuna", name: "\u5B87\u90FD\u5BAE\u5E83\u7DB1", faction: "utsunomiya", lead: 64, valor: 60, wit: 62, gov: 64, loyal: 100, age: 2, at: "utsunomiya", lord: true, retinue: 420, retTrain: 58 },
+  { id: "masatsuna", name: "\u4F50\u91CE\u660C\u7DB1", faction: "sano", lead: 72, valor: 74, wit: 66, gov: 60, loyal: 100, age: 17, at: "karasawa", lord: true, retinue: 400, retTrain: 62 },
+  { id: "masasuke", name: "\u90A3\u9808\u9AD8\u8CC7", faction: "nasu", lead: 68, valor: 70, wit: 62, gov: 58, loyal: 100, age: 29, at: "karasuyama", lord: true, retinue: 360, retTrain: 60 },
+  { id: "michifusa", name: "\u6C5F\u6238\u5FE0\u901A", faction: "edo_h", lead: 66, valor: 64, wit: 62, gov: 62, loyal: 100, age: 38, at: "mito", lord: true, retinue: 380, retTrain: 58 },
+  { id: "yoshiaki", name: "\u4F50\u7AF9\u7FA9\u662D", faction: "satake", lead: 78, valor: 70, wit: 78, gov: 76, loyal: 100, age: 16, at: "ota_hitachi", lord: true, retinue: 520, retTrain: 62 },
+  { id: "ujiharu", name: "\u5C0F\u7530\u6C0F\u6CBB", faction: "oda_h", lead: 56, valor: 66, wit: 50, gov: 54, loyal: 100, age: 13, at: "oda", lord: true, retinue: 380, retTrain: 56 },
+  { id: "yoshitaka_s", name: "\u91CC\u898B\u7FA9\u582F", faction: "satomi", lead: 82, valor: 76, wit: 82, gov: 74, loyal: 100, age: 39, at: "tateyama", lord: true, retinue: 560, retTrain: 64 },
+  { id: "yoshihiro", name: "\u91CC\u898B\u7FA9\u5F18", faction: "satomi", lead: 76, valor: 80, wit: 68, gov: 64, loyal: 96, age: 16, at: "kururi", retinue: 380, retTrain: 64 },
+  { id: "haruuji", name: "\u8DB3\u5229\u6674\u6C0F", faction: "koga", lead: 58, valor: 56, wit: 58, gov: 62, loyal: 100, age: 38, at: "koga", lord: true, retinue: 420, retTrain: 56 },
+  { id: "masakatsu", name: "\u7D50\u57CE\u653F\u52DD", faction: "yuki", lead: 66, valor: 62, wit: 68, gov: 70, loyal: 100, age: 43, at: "yuki", lord: true, retinue: 400, retTrain: 58 },
+  { id: "tanenobu", name: "\u5343\u8449\u5229\u80E4", faction: "chiba", lead: 62, valor: 60, wit: 58, gov: 60, loyal: 100, age: 32, at: "motosakura", lord: true, retinue: 400, retTrain: 56 },
+  { id: "ujinori2", name: "\u677E\u7530\u61B2\u79C0", faction: "hojo", lead: 68, valor: 64, wit: 70, gov: 72, loyal: 80, age: 31, at: "odawara", retinue: 320, retTrain: 62 },
+  { id: "kagetora2", name: "\u5927\u9053\u5BFA\u653F\u7E41", faction: "hojo", lead: 74, valor: 70, wit: 72, gov: 74, loyal: 90, age: 13, at: "kawagoe", retinue: 300, retTrain: 66 },
+  { id: "nagayori", name: "\u4E09\u597D\u9577\u864E", faction: "miyoshi", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 84, age: 30, at: "iimoriyama", retinue: 280, retTrain: 62 },
+  { id: "junkoku", name: "\u7B52\u4E95\u9806\u56FD", faction: "tsutsui", lead: 64, valor: 62, wit: 60, gov: 62, loyal: 86, age: 28, at: "tamonyama", retinue: 240, retTrain: 58 },
+  { id: "tedori", name: "\u7389\u7F6E\u76F4\u548C", faction: "saika", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 80, age: 31, at: "tetori", retinue: 220, retTrain: 58 },
+  { id: "kameyama", name: "\u6CE2\u591A\u91CE\u5143\u79C0", faction: "hatano", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 88, age: 22, at: "kameyama_t", retinue: 260, retTrain: 60 },
+  { id: "yokoyama", name: "\u837B\u91CE\u76F4\u6B63", faction: "hatano", lead: 72, valor: 78, wit: 66, gov: 56, loyal: 72, age: 11, at: "yokoyama", retinue: 240, retTrain: 62 },
+  { id: "takeda_t", name: "\u592A\u7530\u57A3\u671D\u5EF6", faction: "yamana", lead: 66, valor: 70, wit: 60, gov: 56, loyal: 82, age: 34, at: "takeda", retinue: 240, retTrain: 60 },
+  { id: "himeji_k", name: "\u9ED2\u7530\u91CD\u9686", faction: "akamatsu", lead: 70, valor: 62, wit: 78, gov: 80, loyal: 84, age: 38, at: "himeji", retinue: 260, retTrain: 60 },
+  { id: "gochaku", name: "\u5C0F\u5BFA\u653F\u8077", faction: "akamatsu", lead: 58, valor: 56, wit: 58, gov: 62, loyal: 80, age: 29, at: "goshaku", retinue: 240, retTrain: 56 },
+  { id: "torigoe", name: "\u9234\u6728\u51FA\u7FBD\u5B88", faction: "kaga_ikko", lead: 68, valor: 70, wit: 66, gov: 58, loyal: 92, age: 36, at: "torigoe", retinue: 280, retTrain: 60 },
+  { id: "suemori_n", name: "\u571F\u80A5\u89AA\u771F", faction: "hatakeyama", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 78, age: 26, at: "suemori_n", retinue: 240, retTrain: 58 },
+  { id: "masuyama", name: "\u5BFA\u5CF6\u8077\u5B9A", faction: "jinbo", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 80, age: 32, at: "masuyama", retinue: 240, retTrain: 58 },
+  { id: "uozu", name: "\u690E\u540D\u5EB7\u8CC7", faction: "shiina", lead: 64, valor: 68, wit: 58, gov: 54, loyal: 84, age: 20, at: "uozu", retinue: 220, retTrain: 58 },
+  { id: "miyazaki", name: "\u5BAE\u5D0E\u9577\u5EB7", faction: "shiina", lead: 62, valor: 64, wit: 56, gov: 54, loyal: 80, age: 36, at: "miyazaki_e", retinue: 200, retTrain: 56 },
+  { id: "sanjo", name: "\u5C71\u5409\u8C4A\u5B88", faction: "nagao", lead: 70, valor: 68, wit: 66, gov: 66, loyal: 90, age: 18, at: "sanjo", retinue: 280, retTrain: 64 },
+  { id: "nechi", name: "\u4E0A\u6749\u666F\u4FE1", faction: "nagao", lead: 72, valor: 74, wit: 64, gov: 60, loyal: 88, age: 22, at: "negoshi", retinue: 260, retTrain: 64 },
+  { id: "tamanawa", name: "\u5317\u6761\u7DB1\u9AD8", faction: "hojo", lead: 76, valor: 80, wit: 64, gov: 60, loyal: 92, age: 38, at: "tamanawa", retinue: 320, retTrain: 68 },
+  { id: "misaki", name: "\u671D\u6BD4\u5948\u6CF0\u77E5", faction: "hojo", lead: 68, valor: 70, wit: 62, gov: 58, loyal: 84, age: 31, at: "misaki", retinue: 260, retTrain: 62 },
+  { id: "tsukui", name: "\u5185\u85E4\u7DB1\u79C0", faction: "hojo", lead: 70, valor: 72, wit: 64, gov: 60, loyal: 88, age: 34, at: "tsukui", retinue: 280, retTrain: 64 },
+  { id: "edo_c", name: "\u9060\u5C71\u7DB1\u666F", faction: "hojo", lead: 72, valor: 70, wit: 68, gov: 66, loyal: 90, age: 40, at: "edo", retinue: 300, retTrain: 64 },
+  { id: "matsuyama_c", name: "\u4E0A\u7530\u671D\u76F4", faction: "hojo", lead: 68, valor: 66, wit: 66, gov: 64, loyal: 74, age: 28, at: "matsuyama_m", retinue: 280, retTrain: 62 },
+  { id: "hachigata", name: "\u85E4\u7530\u5EB7\u90A6", faction: "uesugi_y", lead: 68, valor: 68, wit: 62, gov: 60, loyal: 76, age: 36, at: "hachigata", retinue: 280, retTrain: 60 },
+  { id: "fukaya", name: "\u4E0A\u6749\u61B2\u8CE2", faction: "uesugi_y", lead: 62, valor: 60, wit: 58, gov: 60, loyal: 84, age: 32, at: "fukaya", retinue: 240, retTrain: 58 },
+  { id: "numata", name: "\u6CBC\u7530\u9855\u6CF0", faction: "uesugi_y", lead: 66, valor: 64, wit: 64, gov: 62, loyal: 72, age: 41, at: "numata", retinue: 260, retTrain: 60 },
+  { id: "makabe", name: "\u771F\u58C1\u4E45\u5E79", faction: "satake", lead: 74, valor: 84, wit: 62, gov: 56, loyal: 86, age: 24, at: "makabe", retinue: 280, retTrain: 66 },
+  { id: "fuchu", name: "\u5927\u63BE\u6176\u5E79", faction: "edo_h", lead: 64, valor: 62, wit: 60, gov: 60, loyal: 80, age: 30, at: "fuchu_hitachi", retinue: 240, retTrain: 58 },
+  { id: "otaki", name: "\u6B63\u6728\u6642\u8302", faction: "satomi", lead: 78, valor: 84, wit: 68, gov: 60, loyal: 88, age: 33, at: "otaki", retinue: 320, retTrain: 68 },
+  { id: "sanuki", name: "\u52A0\u85E4\u4FE1\u666F", faction: "satomi", lead: 66, valor: 68, wit: 60, gov: 56, loyal: 84, age: 29, at: "sanuki", retinue: 240, retTrain: 60 },
+  { id: "usui", name: "\u539F\u80E4\u8C9E", faction: "chiba", lead: 66, valor: 64, wit: 62, gov: 60, loyal: 84, age: 32, at: "usui", retinue: 240, retTrain: 58 },
+  { id: "sekiyado", name: "\u7C17\u7530\u6674\u52A9", faction: "koga", lead: 72, valor: 70, wit: 72, gov: 68, loyal: 86, age: 22, at: "sekiyado", retinue: 300, retTrain: 62 },
+  { id: "iwanari", name: "\u5CA9\u6210\u53CB\u901A", faction: "miyoshi", lead: 70, valor: 72, wit: 68, gov: 62, loyal: 84, age: 26, at: "shoryuji", retinue: 300, retTrain: 64 },
+  { id: "yasumasa2", name: "\u7BE0\u539F\u9577\u623F", faction: "miyoshi", lead: 76, valor: 70, wit: 80, gov: 78, loyal: 90, age: 25, at: "kishiwada", retinue: 340, retTrain: 66 },
+  { id: "shimozuma2", name: "\u4E0B\u9593\u983C\u5EC9", faction: "honganji", lead: 78, valor: 72, wit: 78, gov: 70, loyal: 96, age: 9, at: "ishiyama", retinue: 320, retTrain: 64 },
+  { id: "kaga3", name: "\u672C\u6298\u6176\u8ABE", faction: "kaga_ikko", lead: 66, valor: 64, wit: 68, gov: 62, loyal: 90, age: 30, at: "kanazawa", retinue: 300, retTrain: 58 },
+  { id: "iga2", name: "\u85E4\u6797\u9577\u9580", faction: "iga", lead: 64, valor: 70, wit: 88, gov: 50, loyal: 96, age: 36, at: "ueno_iga", retinue: 300, retTrain: 64 },
+  { id: "iga3", name: "\u4E0B\u67D8\u690D\u6728\u733F", faction: "iga", lead: 60, valor: 74, wit: 80, gov: 46, loyal: 92, age: 26, at: "ueno_iga", retinue: 220, retTrain: 64 },
+  { id: "akamatsu2", name: "\u5B87\u91CE\u653F\u983C", faction: "akamatsu", lead: 64, valor: 64, wit: 60, gov: 58, loyal: 78, age: 34, at: "ojio", retinue: 260, retTrain: 58 },
+  { id: "bessho2", name: "\u5225\u6240\u5B89\u6CBB", faction: "bessho", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 90, age: 8, at: "miki", retinue: 240, retTrain: 58 },
+  { id: "hatakeyama2", name: "\u904A\u4F50\u7D9A\u5149", faction: "hatakeyama", lead: 66, valor: 64, wit: 70, gov: 66, loyal: 62, age: 32, at: "nanao", retinue: 280, retTrain: 58 },
+  { id: "jinbo2", name: "\u5C0F\u5CF6\u8077\u93AE", faction: "jinbo", lead: 68, valor: 72, wit: 62, gov: 56, loyal: 82, age: 28, at: "toyama", retinue: 260, retTrain: 60 },
+  { id: "nagao2", name: "\u658E\u85E4\u671D\u4FE1", faction: "nagao", lead: 80, valor: 76, wit: 78, gov: 72, loyal: 92, age: 19, at: "kasugayama", retinue: 360, retTrain: 70 },
+  { id: "nagao3", name: "\u5B87\u4F50\u7F8E\u5B9A\u6E80", faction: "nagao", lead: 78, valor: 68, wit: 86, gov: 70, loyal: 88, age: 57, at: "tochio", retinue: 300, retTrain: 68 },
+  { id: "nagao4", name: "\u5317\u6761\u9AD8\u5E83", faction: "nagao", lead: 74, valor: 76, wit: 66, gov: 60, loyal: 58, age: 29, at: "yoita", retinue: 320, retTrain: 66 },
+  { id: "agakita2", name: "\u8272\u90E8\u52DD\u9577", faction: "agakita", lead: 72, valor: 74, wit: 64, gov: 60, loyal: 74, age: 33, at: "shibata", retinue: 280, retTrain: 62 },
+  { id: "hojo_a", name: "\u5317\u6761\u5E7B\u5EB5", faction: "hojo", lead: 70, valor: 60, wit: 84, gov: 82, loyal: 96, age: 53, at: "odawara", retinue: 280, retTrain: 64 },
+  { id: "hojo_b", name: "\u7B20\u539F\u4FE1\u70BA", faction: "hojo", lead: 68, valor: 64, wit: 70, gov: 72, loyal: 88, age: 41, at: "odawara", retinue: 260, retTrain: 62 },
+  { id: "hojo_c", name: "\u5BCC\u6C38\u76F4\u52DD", faction: "hojo", lead: 72, valor: 76, wit: 64, gov: 58, loyal: 88, age: 32, at: "edo", retinue: 280, retTrain: 64 },
+  { id: "uesugi2", name: "\u9577\u5C3E\u61B2\u666F", faction: "uesugi_y", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 80, age: 26, at: "hirai", retinue: 280, retTrain: 60 },
+  { id: "satake2", name: "\u5C0F\u91CE\u5D0E\u662D\u901A", faction: "satake", lead: 68, valor: 68, wit: 64, gov: 64, loyal: 84, age: 31, at: "ota_hitachi", retinue: 280, retTrain: 60 },
+  { id: "satake3", name: "\u548C\u7530\u662D\u70BA", faction: "satake", lead: 66, valor: 60, wit: 74, gov: 74, loyal: 88, age: 16, at: "ota_hitachi", retinue: 240, retTrain: 60 },
+  { id: "satomi2", name: "\u6B63\u6728\u6642\u5FE0", faction: "satomi", lead: 72, valor: 76, wit: 66, gov: 58, loyal: 80, age: 30, at: "tateyama", retinue: 300, retTrain: 64 },
+  { id: "utsunomiya2", name: "\u82B3\u8CC0\u9AD8\u5B9A", faction: "utsunomiya", lead: 70, valor: 66, wit: 74, gov: 70, loyal: 88, age: 34, at: "utsunomiya", retinue: 280, retTrain: 60 },
+  { id: "nasu2", name: "\u5927\u95A2\u9AD8\u5897", faction: "nasu", lead: 66, valor: 68, wit: 66, gov: 60, loyal: 70, age: 19, at: "karasuyama", retinue: 260, retTrain: 60 },
+  { id: "oda2", name: "\u83C5\u8C37\u653F\u8C9E", faction: "oda_h", lead: 70, valor: 72, wit: 66, gov: 60, loyal: 92, age: 28, at: "oda", retinue: 280, retTrain: 60 },
+  { id: "yuki2", name: "\u6C34\u8C37\u6B63\u6751", faction: "yuki", lead: 72, valor: 76, wit: 66, gov: 60, loyal: 84, age: 25, at: "yuki", retinue: 280, retTrain: 62 },
+  { id: "chiba2", name: "\u539F\u80E4\u6E05", faction: "chiba", lead: 64, valor: 62, wit: 62, gov: 62, loyal: 82, age: 46, at: "motosakura", retinue: 260, retTrain: 58 },
+  { id: "koga2", name: "\u7C17\u7530\u6301\u52A9", faction: "koga", lead: 66, valor: 64, wit: 66, gov: 64, loyal: 84, age: 40, at: "koga", retinue: 260, retTrain: 58 },
+  { id: "imagawa_x", name: "\u4E09\u6D66\u7FA9\u5C31", faction: "imagawa", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 82, age: 32, at: "kakegawa", retinue: 260, retTrain: 62 },
+  { id: "imagawa_y", name: "\u7531\u6BD4\u6B63\u4FE1", faction: "imagawa", lead: 64, valor: 62, wit: 60, gov: 62, loyal: 84, age: 36, at: "sunpu", retinue: 240, retTrain: 60 },
+  { id: "takeda_x", name: "\u8DE1\u90E8\u52DD\u8CC7", faction: "takeda", lead: 64, valor: 58, wit: 72, gov: 74, loyal: 86, age: 21, at: "tsutsujigasaki", retinue: 240, retTrain: 64 },
+  { id: "takeda_y", name: "\u99D2\u4E95\u9AD8\u767D\u658E", faction: "takeda", lead: 62, valor: 54, wit: 78, gov: 76, loyal: 90, age: 48, at: "tsutsujigasaki", retinue: 200, retTrain: 62 },
+  { id: "saito_x", name: "\u65E5\u6BD4\u91CE\u6E05\u5B9F", faction: "saito", lead: 66, valor: 72, wit: 58, gov: 54, loyal: 74, age: 31, at: "inabayama", retinue: 260, retTrain: 62 },
+  { id: "saito_y", name: "\u5800\u7530\u9053\u7A7A", faction: "saito", lead: 58, valor: 50, wit: 72, gov: 76, loyal: 80, age: 44, at: "inabayama", retinue: 180, retTrain: 56 },
+  { id: "oda_x", name: "\u4F50\u3005\u96BC\u4EBA\u6B63", faction: "oda", lead: 66, valor: 74, wit: 56, gov: 52, loyal: 84, age: 22, at: "nagoya", retinue: 220, retTrain: 64 },
+  { id: "oda_y", name: "\u4E39\u7FBD\u6C0F\u52DD", faction: "oda", lead: 64, valor: 66, wit: 58, gov: 58, loyal: 78, age: 24, at: "shobata", retinue: 220, retTrain: 60 },
+  { id: "rokkaku2", name: "\u9032\u85E4\u8CE2\u76DB", faction: "rokkaku", lead: 68, valor: 64, wit: 70, gov: 70, loyal: 84, age: 36, at: "kannonji", retinue: 280, retTrain: 60 },
+  { id: "azai2", name: "\u7530\u90A3\u90E8\u4E0E\u5DE6\u885B\u9580", faction: "azai", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 80, age: 30, at: "odani", retinue: 240, retTrain: 60 },
+  { id: "asakura2", name: "\u9B5A\u4F4F\u666F\u56FA", faction: "asakura", lead: 68, valor: 66, wit: 64, gov: 62, loyal: 84, age: 28, at: "kitanosho", retinue: 280, retTrain: 60 },
+  { id: "kitabatake2", name: "\u5927\u6CB3\u5185\u5FA1\u6240", faction: "kitabatake", lead: 64, valor: 62, wit: 62, gov: 62, loyal: 80, age: 26, at: "okochi", retinue: 260, retTrain: 58 },
+  { id: "wakasa2", name: "\u6B66\u85E4\u53CB\u76CA", faction: "wakasa", lead: 62, valor: 64, wit: 58, gov: 54, loyal: 66, age: 24, at: "nochiseyama", retinue: 220, retTrain: 58 },
+  { id: "murakami2", name: "\u9808\u7530\u4FE1\u6B63", faction: "murakami", lead: 66, valor: 68, wit: 60, gov: 58, loyal: 78, age: 29, at: "katsurao", retinue: 260, retTrain: 62 },
+  { id: "anegakoji2", name: "\u4E09\u6728\u826F\u983C", faction: "anegakoji", lead: 64, valor: 64, wit: 62, gov: 62, loyal: 72, age: 34, at: "matsukura_h", retinue: 240, retTrain: 58 },
+  { id: "kanbe2", name: "\u795E\u6238\u5229\u76DB", faction: "kanbe", lead: 62, valor: 60, wit: 58, gov: 58, loyal: 84, age: 26, at: "kanbe", retinue: 240, retTrain: 58 },
+  { id: "kuki2", name: "\u5C0F\u6D5C\u666F\u9686", faction: "kuki", lead: 70, valor: 72, wit: 66, gov: 56, loyal: 80, age: 18, at: "toba", retinue: 220, retTrain: 66 },
+  { id: "ikko2", name: "\u670D\u90E8\u53CB\u8C9E", faction: "ikko", lead: 68, valor: 70, wit: 66, gov: 58, loyal: 86, age: 28, at: "nagashima", retinue: 280, retTrain: 60 },
+  { id: "matsudaira2", name: "\u690D\u6751\u5BB6\u5B58", faction: "matsudaira", lead: 64, valor: 72, wit: 56, gov: 54, loyal: 90, age: 25, at: "okazaki", retinue: 200, retTrain: 62 },
+  { id: "mizuno2", name: "\u6C34\u91CE\u4FE1\u8FD1", faction: "mizuno", lead: 62, valor: 64, wit: 58, gov: 58, loyal: 88, age: 21, at: "kariya", retinue: 220, retTrain: 58 },
+  { id: "isshiki2", name: "\u5EF6\u6C38\u6625\u4FE1", faction: "isshiki", lead: 62, valor: 62, wit: 58, gov: 58, loyal: 80, age: 32, at: "miyazu", retinue: 240, retTrain: 56 },
+  { id: "yamana2", name: "\u57A3\u5C4B\u7D9A\u6210", faction: "yamana", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 78, age: 36, at: "konosumi", retinue: 260, retTrain: 58 },
+  { id: "ashikaga2", name: "\u4E09\u6DF5\u85E4\u82F1", faction: "ashikaga", lead: 70, valor: 68, wit: 70, gov: 70, loyal: 92, age: 20, at: "nijo", retinue: 240, retTrain: 60 },
+  { id: "narita2", name: "\u6210\u7530\u9577\u5FE0", faction: "narita", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 86, age: 16, at: "oshi", retinue: 240, retTrain: 58 },
+  { id: "ota_x", name: "\u592A\u7530\u8CC7\u9855", faction: "ota", lead: 66, valor: 66, wit: 64, gov: 62, loyal: 80, age: 28, at: "iwatsuki", retinue: 260, retTrain: 60 },
+  { id: "sano2", name: "\u4F50\u91CE\u8C4A\u7DB1", faction: "sano", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 82, age: 36, at: "karasawa", retinue: 260, retTrain: 60 },
+  { id: "motonari", name: "\u6BDB\u5229\u5143\u5C31", faction: "mori", lead: 96, valor: 72, wit: 98, gov: 92, loyal: 100, age: 49, at: "koriyama_a", lord: true, retinue: 620, retTrain: 72 },
+  { id: "takamoto", name: "\u6BDB\u5229\u9686\u5143", faction: "mori", lead: 72, valor: 66, wit: 70, gov: 78, loyal: 98, age: 22, at: "koriyama_a", retinue: 380, retTrain: 66 },
+  { id: "motoharu", name: "\u5409\u5DDD\u5143\u6625", faction: "mori", lead: 88, valor: 90, wit: 76, gov: 66, loyal: 98, age: 16, at: "sakurao", retinue: 340, retTrain: 72 },
+  { id: "takakage_k", name: "\u5C0F\u65E9\u5DDD\u9686\u666F", faction: "kobayakawa", lead: 90, valor: 72, wit: 94, gov: 88, loyal: 96, age: 13, at: "mihara", lord: true, retinue: 420, retTrain: 70 },
+  { id: "motokiyo", name: "\u798F\u539F\u8C9E\u4FCA", faction: "mori", lead: 74, valor: 70, wit: 72, gov: 70, loyal: 92, age: 28, at: "koriyama_a", retinue: 300, retTrain: 66 },
+  { id: "harukata_m", name: "\u5FD7\u9053\u5E83\u826F", faction: "mori", lead: 68, valor: 58, wit: 80, gov: 82, loyal: 94, age: 79, at: "koriyama_a", retinue: 220, retTrain: 60 },
+  { id: "motonobu_k", name: "\u718A\u8C37\u4FE1\u76F4", faction: "mori", lead: 74, valor: 78, wit: 66, gov: 60, loyal: 86, age: 39, at: "sakurao", retinue: 280, retTrain: 66 },
+  { id: "yoshitaka_o", name: "\u5927\u5185\u7FA9\u9686", faction: "ouchi", lead: 70, valor: 58, wit: 74, gov: 84, loyal: 100, age: 39, at: "ouchi", lord: true, retinue: 900, retTrain: 62 },
+  { id: "harukata", name: "\u9676\u6674\u8CE2", faction: "ouchi", lead: 84, valor: 86, wit: 74, gov: 64, loyal: 42, age: 25, at: "wakayama_s", retinue: 620, retTrain: 70 },
+  { id: "takafusa", name: "\u5185\u85E4\u8208\u76DB", faction: "ouchi", lead: 74, valor: 70, wit: 70, gov: 70, loyal: 86, age: 51, at: "katsuyama_n", retinue: 420, retTrain: 64 },
+  { id: "okifusa", name: "\u6749\u91CD\u77E9", faction: "ouchi", lead: 70, valor: 70, wit: 66, gov: 64, loyal: 60, age: 41, at: "takamine", retinue: 380, retTrain: 62 },
+  { id: "hironari", name: "\u76F8\u826F\u6B66\u4EFB", faction: "ouchi", lead: 56, valor: 44, wit: 76, gov: 84, loyal: 88, age: 48, at: "ouchi", retinue: 200, retTrain: 56 },
+  { id: "nagafusa", name: "\u51B7\u6CC9\u9686\u8C4A", faction: "ouchi", lead: 76, valor: 80, wit: 66, gov: 62, loyal: 96, age: 33, at: "takamine", retinue: 340, retTrain: 66 },
+  { id: "haruhisa", name: "\u5C3C\u5B50\u6674\u4E45", faction: "amago", lead: 80, valor: 72, wit: 74, gov: 72, loyal: 100, age: 32, at: "gassan", lord: true, retinue: 860, retTrain: 68 },
+  { id: "kunihisa", name: "\u5C3C\u5B50\u56FD\u4E45", faction: "amago", lead: 78, valor: 82, wit: 66, gov: 60, loyal: 58, age: 54, at: "shiraga", retinue: 440, retTrain: 68 },
+  { id: "makoto", name: "\u672C\u57CE\u5E38\u5149", faction: "amago", lead: 72, valor: 76, wit: 64, gov: 58, loyal: 68, age: 30, at: "yamabuki", retinue: 300, retTrain: 64 },
+  { id: "hisayuki", name: "\u5B87\u5C71\u4E45\u517C", faction: "amago", lead: 70, valor: 68, wit: 66, gov: 66, loyal: 90, age: 41, at: "gassan", retinue: 320, retTrain: 62 },
+  { id: "ujihisa", name: "\u5C3C\u5B50\u8AA0\u4E45", faction: "amago", lead: 72, valor: 78, wit: 60, gov: 56, loyal: 56, age: 28, at: "shiraga", retinue: 340, retTrain: 66 },
+  { id: "takanobu_y", name: "\u7C73\u539F\u7DB1\u5BDB", faction: "amago", lead: 70, valor: 72, wit: 64, gov: 58, loyal: 84, age: 22, at: "yonago", retinue: 300, retTrain: 62 },
+  { id: "munekage", name: "\u6D66\u4E0A\u5B97\u666F", faction: "uragami", lead: 74, valor: 68, wit: 76, gov: 70, loyal: 100, age: 21, at: "tenjinyama", lord: true, retinue: 520, retTrain: 62 },
+  { id: "masamune_u", name: "\u6D66\u4E0A\u653F\u5B97", faction: "uragami", lead: 68, valor: 62, wit: 66, gov: 64, loyal: 60, age: 34, at: "ishiyama_bz", retinue: 380, retTrain: 60 },
+  { id: "iemichi", name: "\u4E09\u6751\u5BB6\u89AA", faction: "mimura", lead: 74, valor: 72, wit: 70, gov: 66, loyal: 100, age: 29, at: "matsuyama_bc", lord: true, retinue: 460, retTrain: 62 },
+  { id: "takamoto_s", name: "\u5E84\u9AD8\u8CC7", faction: "shoo", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 100, age: 31, at: "sarukake", lord: true, retinue: 340, retTrain: 60 },
+  { id: "hisatsuna", name: "\u77F3\u5DDD\u4E45\u667A", faction: "shimizu", lead: 64, valor: 62, wit: 60, gov: 60, loyal: 100, age: 26, at: "takamatsu_bc", lord: true, retinue: 300, retTrain: 58 },
+  { id: "masayori", name: "\u5357\u6761\u5B97\u52DD", faction: "nanjo", lead: 68, valor: 66, wit: 66, gov: 64, loyal: 100, age: 28, at: "uyui", lord: true, retinue: 340, retTrain: 60 },
+  { id: "masayori_y", name: "\u5409\u898B\u6B63\u983C", faction: "yoshimi", lead: 72, valor: 70, wit: 68, gov: 66, loyal: 100, age: 33, at: "tsuwano", lord: true, retinue: 380, retTrain: 62 },
+  { id: "fujikane", name: "\u76CA\u7530\u85E4\u517C", faction: "masuda", lead: 68, valor: 66, wit: 66, gov: 66, loyal: 100, age: 17, at: "miyake", lord: true, retinue: 340, retTrain: 60 },
+  { id: "nobuzane", name: "\u6B66\u7530\u4FE1\u5B9F", faction: "takeda_a", lead: 64, valor: 68, wit: 58, gov: 56, loyal: 100, age: 26, at: "kanayama_a", lord: true, retinue: 360, retTrain: 60 },
+  { id: "kunichika", name: "\u9577\u5B97\u6211\u90E8\u56FD\u89AA", faction: "chosokabe", lead: 82, valor: 78, wit: 84, gov: 74, loyal: 100, age: 42, at: "okou", lord: true, retinue: 480, retTrain: 66 },
+  { id: "kanetsugu_i", name: "\u4E00\u6761\u623F\u57FA", faction: "ichijo", lead: 64, valor: 60, wit: 64, gov: 70, loyal: 100, age: 24, at: "nakamura", lord: true, retinue: 520, retTrain: 58 },
+  { id: "michinao", name: "\u6CB3\u91CE\u901A\u5BA3", faction: "kono", lead: 64, valor: 60, wit: 62, gov: 64, loyal: 100, age: 22, at: "yuzuki", lord: true, retinue: 460, retTrain: 58 },
+  { id: "michiyasu", name: "\u6751\u4E0A\u901A\u5EB7", faction: "kurushima", lead: 78, valor: 80, wit: 74, gov: 60, loyal: 90, age: 28, at: "kokubunyama", lord: true, retinue: 340, retTrain: 70 },
+  { id: "kinhiro", name: "\u897F\u5712\u5BFA\u516C\u5E83", faction: "saionji", lead: 62, valor: 58, wit: 64, gov: 68, loyal: 100, age: 9, at: "itajima", retinue: 320, retTrain: 56 },
+  { id: "kunitora", name: "\u5B89\u82B8\u56FD\u864E", faction: "aki", lead: 70, valor: 72, wit: 64, gov: 58, loyal: 100, age: 16, at: "aki", lord: true, retinue: 360, retTrain: 62 },
+  { id: "yukikage", name: "\u9999\u5DDD\u4E4B\u666F", faction: "kagawa", lead: 68, valor: 68, wit: 64, gov: 62, loyal: 100, age: 24, at: "amagiri", lord: true, retinue: 340, retTrain: 60 },
+  { id: "shozui", name: "\u7BE0\u539F\u81EA\u9041", faction: "miyoshi", lead: 66, valor: 64, wit: 68, gov: 64, loyal: 86, age: 26, at: "shozui", retinue: 320, retTrain: 62 },
+  { id: "yoshishige", name: "\u5927\u53CB\u7FA9\u93AE", faction: "otomo", lead: 78, valor: 66, wit: 82, gov: 84, loyal: 100, age: 16, at: "funai", lord: true, retinue: 820, retTrain: 64 },
+  { id: "dosetsu", name: "\u7ACB\u82B1\u9053\u96EA", faction: "otomo", lead: 92, valor: 86, wit: 86, gov: 72, loyal: 98, age: 33, at: "funai", retinue: 420, retTrain: 74 },
+  { id: "shigetane", name: "\u5409\u5F18\u9451\u7406", faction: "otomo", lead: 76, valor: 74, wit: 70, gov: 68, loyal: 94, age: 28, at: "usuki", retinue: 360, retTrain: 66 },
+  { id: "akitsura", name: "\u5FD7\u8CC0\u89AA\u5B88", faction: "shiga", lead: 70, valor: 68, wit: 68, gov: 68, loyal: 100, age: 36, at: "oka", lord: true, retinue: 340, retTrain: 62 },
+  { id: "chikazane", name: "\u84B2\u6C60\u9451\u76DB", faction: "kamachi", lead: 74, valor: 74, wit: 68, gov: 66, loyal: 100, age: 26, at: "yanagawa", lord: true, retinue: 400, retTrain: 62 },
+  { id: "tanezane", name: "\u79CB\u6708\u6587\u7A2E", faction: "akizuki", lead: 70, valor: 72, wit: 64, gov: 60, loyal: 100, age: 32, at: "akizuki", lord: true, retinue: 340, retTrain: 60 },
+  { id: "takanobu_r", name: "\u9F8D\u9020\u5BFA\u9686\u4FE1", faction: "ryuzoji", lead: 84, valor: 84, wit: 78, gov: 68, loyal: 100, age: 17, at: "saga", lord: true, retinue: 420, retTrain: 64 },
+  { id: "iesada", name: "\u6CE2\u591A\u89AA", faction: "hata", lead: 64, valor: 64, wit: 60, gov: 58, loyal: 100, age: 21, at: "kishitake", lord: true, retinue: 300, retTrain: 58 },
+  { id: "takanobu_m", name: "\u677E\u6D66\u9686\u4FE1", faction: "matsura", lead: 74, valor: 70, wit: 76, gov: 68, loyal: 100, age: 17, at: "hirado", lord: true, retinue: 380, retTrain: 62 },
+  { id: "harusumi", name: "\u6709\u99AC\u6674\u7D14", faction: "arima", lead: 70, valor: 66, wit: 70, gov: 68, loyal: 100, age: 63, at: "hinoe", lord: true, retinue: 340, retTrain: 60 },
+  { id: "sumitada", name: "\u5927\u6751\u7D14\u5FE0", faction: "omura", lead: 64, valor: 60, wit: 68, gov: 66, loyal: 100, age: 13, at: "omura", lord: true, retinue: 280, retTrain: 58 },
+  { id: "yoshitake", name: "\u83CA\u6C60\u7FA9\u6B66", faction: "kikuchi", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 100, age: 41, at: "kumamoto", lord: true, retinue: 380, retTrain: 58 },
+  { id: "yoriharu", name: "\u76F8\u826F\u6674\u5E83", faction: "sagara", lead: 70, valor: 66, wit: 72, gov: 72, loyal: 100, age: 33, at: "hitoyoshi", lord: true, retinue: 420, retTrain: 62 },
+  { id: "yoshisuke", name: "\u4F0A\u6771\u7FA9\u7950", faction: "ito", lead: 70, valor: 64, wit: 70, gov: 70, loyal: 100, age: 34, at: "sadowara", lord: true, retinue: 460, retTrain: 60 },
+  { id: "chikanari", name: "\u571F\u6301\u89AA\u6210", faction: "tsuchimochi", lead: 64, valor: 64, wit: 60, gov: 58, loyal: 100, age: 26, at: "agata", lord: true, retinue: 280, retTrain: 58 },
+  { id: "takahisa", name: "\u5CF6\u6D25\u8CB4\u4E45", faction: "shimazu", lead: 88, valor: 78, wit: 86, gov: 86, loyal: 100, age: 32, at: "uchijo", lord: true, retinue: 760, retTrain: 70 },
+  { id: "yoshihisa", name: "\u5CF6\u6D25\u7FA9\u4E45", faction: "shimazu", lead: 86, valor: 74, wit: 88, gov: 88, loyal: 98, age: 13, at: "uchijo", retinue: 320, retTrain: 68 },
+  { id: "yoshihiro_s", name: "\u5CF6\u6D25\u7FA9\u5F18", faction: "shimazu", lead: 90, valor: 94, wit: 80, gov: 68, loyal: 98, age: 11, at: "izumi", retinue: 300, retTrain: 72 },
+  { id: "toshihisa", name: "\u5CF6\u6D25\u6B73\u4E45", faction: "shimazu", lead: 78, valor: 76, wit: 82, gov: 72, loyal: 96, age: 9, at: "kajiki", retinue: 260, retTrain: 68 },
+  { id: "tadamoto", name: "\u65B0\u7D0D\u5FE0\u5143", faction: "shimazu", lead: 78, valor: 84, wit: 68, gov: 62, loyal: 94, age: 20, at: "obi", retinue: 320, retTrain: 70 },
+  { id: "shigehisa", name: "\u4F0A\u96C6\u9662\u5FE0\u6717", faction: "shimazu", lead: 74, valor: 72, wit: 70, gov: 68, loyal: 92, age: 46, at: "uchijo", retinue: 300, retTrain: 64 },
+  { id: "yoshishige_s", name: "\u5B97\u6674\u5EB7", faction: "so", lead: 64, valor: 62, wit: 68, gov: 66, loyal: 100, age: 54, at: "kanaishi", lord: true, retinue: 260, retTrain: 58 },
+  { id: "w_atagi", name: "\u5B89\u5B85\u51AC\u5EB7\uFF08\u6D32\u672C\uFF09", faction: "miyoshi", lead: 76, valor: 74, wit: 72, gov: 70, loyal: 92, age: 18, at: "sumoto", retinue: 340, retTrain: 64 },
+  { id: "w_ichinomiya", name: "\u4E00\u5BAE\u6210\u7950", faction: "miyoshi", lead: 68, valor: 70, wit: 62, gov: 58, loyal: 72, age: 28, at: "ichinomiya", retinue: 280, retTrain: 60 },
+  { id: "w_hakuchi", name: "\u5927\u897F\u899A\u990A", faction: "miyoshi", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 70, age: 26, at: "hakuchi", retinue: 240, retTrain: 58 },
+  { id: "motozane", name: "\u65B0\u958B\u5143\u5B9F", faction: "shingai", lead: 68, valor: 70, wit: 66, gov: 66, loyal: 100, age: 52, at: "ushiki", lord: true, retinue: 320, retTrain: 62 },
+  { id: "saneteru", name: "\u65B0\u958B\u5B9F\u7DB1", faction: "shingai", lead: 72, valor: 76, wit: 68, gov: 60, loyal: 96, age: 30, at: "ushiki", retinue: 260, retTrain: 64 },
+  { id: "shingai3", name: "\u65B0\u958B\u5FE0\u4E4B", faction: "shingai", lead: 62, valor: 66, wit: 58, gov: 56, loyal: 92, age: 8, at: "ushiki", retinue: 140, retTrain: 58 },
+  { id: "w_hiketa", name: "\u77E2\u91CE\u56FD\u6751", faction: "miyoshi", lead: 64, valor: 64, wit: 60, gov: 58, loyal: 78, age: 32, at: "hiketa", retinue: 240, retTrain: 58 },
+  { id: "w_jizogatake", name: "\u5B87\u90FD\u5BAE\u8C4A\u7DB1", faction: "saionji", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 74, age: 24, at: "jizogatake", retinue: 280, retTrain: 58 },
+  { id: "w_kagomori", name: "\u6E21\u8FBA\u6559\u5FE0", faction: "kono", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 76, age: 29, at: "kagomori", retinue: 240, retTrain: 58 },
+  { id: "w_kawanoe", name: "\u59BB\u9CE5\u91C7\u5973", faction: "kono", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 74, age: 31, at: "kawanoe", retinue: 220, retTrain: 56 },
+  { id: "w_tottori", name: "\u6B66\u7530\u9AD8\u4FE1", faction: "yamana", lead: 70, valor: 72, wit: 66, gov: 58, loyal: 58, age: 21, at: "tottori", retinue: 360, retTrain: 60 },
+  { id: "w_wakasa_o", name: "\u77E2\u90E8\u66B9\u6DBC", faction: "yamana", lead: 64, valor: 64, wit: 60, gov: 58, loyal: 78, age: 34, at: "wakasa", retinue: 260, retTrain: 58 },
+  { id: "w_shikano", name: "\u9E7F\u91CE\u5B89\u82B8\u5B88", faction: "yamana", lead: 62, valor: 62, wit: 58, gov: 56, loyal: 76, age: 30, at: "shikano", retinue: 220, retTrain: 56 },
+  { id: "w_oki", name: "\u96A0\u5C90\u70BA\u6E05", faction: "amago", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 80, age: 36, at: "oki", retinue: 180, retTrain: 54 },
+  { id: "w_takada", name: "\u4E09\u6D66\u8C9E\u5E83", faction: "amago", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 70, age: 16, at: "takata_m", retinue: 300, retTrain: 60 },
+  { id: "w_iwaya_m2", name: "\u4E2D\u6751\u5247\u6CBB", faction: "amago", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 74, age: 32, at: "iwaya_m", retinue: 260, retTrain: 58 },
+  { id: "w_kannabe", name: "\u6749\u539F\u7406\u8208", faction: "ouchi", lead: 68, valor: 68, wit: 64, gov: 62, loyal: 72, age: 36, at: "kannabe", retinue: 300, retTrain: 60 },
+  { id: "w_kuragake", name: "\u6749\u9686\u6CF0", faction: "ouchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 70, age: 28, at: "kuragake", retinue: 260, retTrain: 58 },
+  { id: "w_tachibana", name: "\u7ACB\u82B1\u9451\u8F09", faction: "ouchi", lead: 68, valor: 70, wit: 62, gov: 58, loyal: 60, age: 26, at: "tachibanayama", retinue: 320, retTrain: 60 },
+  { id: "w_iwaya_c2", name: "\u9AD8\u6A4B\u9451\u7A2E", faction: "ouchi", lead: 72, valor: 72, wit: 70, gov: 64, loyal: 58, age: 22, at: "iwaya", retinue: 300, retTrain: 62 },
+  { id: "w_ogura", name: "\u6749\u8208\u904B", faction: "ouchi", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 80, age: 34, at: "kokura", retinue: 280, retTrain: 58 },
+  { id: "w_umagatake", name: "\u9577\u91CE\u52A9\u76DB", faction: "ouchi", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 78, age: 31, at: "umagatake", retinue: 260, retTrain: 58 },
+  { id: "w_kurume", name: "\u554F\u6CE8\u6240\u9451\u8C4A", faction: "otomo", lead: 64, valor: 64, wit: 62, gov: 62, loyal: 84, age: 32, at: "kurume", retinue: 260, retTrain: 58 },
+  { id: "w_iki", name: "\u677E\u6D66\u76DB", faction: "matsura", lead: 62, valor: 64, wit: 60, gov: 58, loyal: 84, age: 28, at: "iki", retinue: 200, retTrain: 58 },
+  { id: "w_furumoto", name: "\u540D\u548C\u884C\u76F4", faction: "sagara", lead: 64, valor: 64, wit: 62, gov: 62, loyal: 80, age: 30, at: "yatsushiro", retinue: 260, retTrain: 58 },
+  { id: "w_tonokori", name: "\u4F0A\u6771\u7950\u5409", faction: "ito", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 88, age: 16, at: "tonokori", retinue: 280, retTrain: 60 },
+  { id: "harumune", name: "\u4F0A\u9054\u6674\u5B97", faction: "date", lead: 78, valor: 72, wit: 76, gov: 74, loyal: 100, age: 27, at: "yonezawa", lord: true, retinue: 680, retTrain: 64 },
+  { id: "moniwa", name: "\u8302\u5EAD\u826F\u76F4", faction: "date", lead: 72, valor: 74, wit: 66, gov: 64, loyal: 92, age: 33, at: "shiroishi", retinue: 300, retTrain: 64 },
+  { id: "watari", name: "\u4E98\u7406\u5143\u5B97", faction: "date", lead: 70, valor: 72, wit: 64, gov: 62, loyal: 90, age: 16, at: "watari", retinue: 280, retTrain: 62 },
+  { id: "moriuji", name: "\u8606\u540D\u76DB\u6C0F", faction: "ashina", lead: 82, valor: 74, wit: 82, gov: 78, loyal: 100, age: 25, at: "kurokawa", lord: true, retinue: 560, retTrain: 64 },
+  { id: "inawashiro", name: "\u732A\u82D7\u4EE3\u76DB\u56FD", faction: "ashina", lead: 68, valor: 70, wit: 62, gov: 58, loyal: 64, age: 30, at: "inawashiro", retinue: 300, retTrain: 60 },
+  { id: "nihonmatsu_g", name: "\u7560\u5C71\u7FA9\u56FD", faction: "nihonmatsu", lead: 64, valor: 64, wit: 60, gov: 60, loyal: 100, age: 32, at: "nihonmatsu", lord: true, retinue: 340, retTrain: 58 },
+  { id: "shirakawa_g", name: "\u7D50\u57CE\u6674\u7DB1", faction: "shirakawa", lead: 64, valor: 62, wit: 62, gov: 62, loyal: 100, age: 26, at: "shirakawa", lord: true, retinue: 340, retTrain: 58 },
+  { id: "nikaido_g", name: "\u4E8C\u968E\u5802\u7167\u884C", faction: "nikaido", lead: 64, valor: 62, wit: 64, gov: 62, loyal: 100, age: 34, at: "sukagawa", lord: true, retinue: 320, retTrain: 58 },
+  { id: "tamura_g", name: "\u7530\u6751\u9686\u9855", faction: "tamura", lead: 70, valor: 68, wit: 66, gov: 64, loyal: 100, age: 36, at: "miharu", lord: true, retinue: 340, retTrain: 60 },
+  { id: "moritane", name: "\u76F8\u99AC\u76DB\u80E4", faction: "soma", lead: 76, valor: 78, wit: 68, gov: 62, loyal: 100, age: 18, at: "soma", lord: true, retinue: 400, retTrain: 64 },
+  { id: "osaki_g", name: "\u5927\u5D0E\u7FA9\u76F4", faction: "osaki", lead: 64, valor: 62, wit: 60, gov: 62, loyal: 100, age: 38, at: "iwadeyama", lord: true, retinue: 360, retTrain: 58 },
+  { id: "kokubun_g", name: "\u56FD\u5206\u76DB\u6C0F", faction: "kokubun", lead: 62, valor: 62, wit: 58, gov: 58, loyal: 100, age: 31, at: "sendai", lord: true, retinue: 280, retTrain: 58 },
+  { id: "kasai_g", name: "\u845B\u897F\u6674\u4FE1", faction: "kasai", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 100, age: 12, at: "teraike", lord: true, retinue: 320, retTrain: 58 },
+  { id: "abe_g", name: "\u963F\u66FD\u6CBC\u5E83\u90F7", faction: "abe", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 100, age: 16, at: "yokota", lord: true, retinue: 260, retTrain: 58 },
+  { id: "harumasa_n", name: "\u5357\u90E8\u6674\u653F", faction: "nanbu", lead: 80, valor: 76, wit: 72, gov: 68, loyal: 100, age: 29, at: "sannohe", lord: true, retinue: 520, retTrain: 64 },
+  { id: "kunohe_g", name: "\u4E5D\u6238\u653F\u5B9F", faction: "kunohe", lead: 82, valor: 86, wit: 72, gov: 62, loyal: 54, age: 10, at: "kunohe", lord: true, retinue: 380, retTrain: 66 },
+  { id: "shiba_g", name: "\u65AF\u6CE2\u8A6E\u76F4", faction: "shiba", lead: 60, valor: 60, wit: 58, gov: 58, loyal: 100, age: 21, at: "kosuiji", lord: true, retinue: 280, retTrain: 56 },
+  { id: "namioka_g", name: "\u6D6A\u5CA1\u5177\u904B", faction: "namioka", lead: 62, valor: 60, wit: 64, gov: 64, loyal: 100, age: 28, at: "namioka", lord: true, retinue: 260, retTrain: 56 },
+  { id: "yoshimori", name: "\u6700\u4E0A\u7FA9\u5B88", faction: "mogami", lead: 70, valor: 66, wit: 70, gov: 70, loyal: 100, age: 25, at: "yamagata", lord: true, retinue: 480, retTrain: 60 },
+  { id: "tendo_g", name: "\u5929\u7AE5\u983C\u9577", faction: "tendo", lead: 64, valor: 64, wit: 60, gov: 58, loyal: 100, age: 26, at: "tendo", lord: true, retinue: 320, retTrain: 58 },
+  { id: "daihoji_g", name: "\u5927\u5B9D\u5BFA\u7FA9\u5897", faction: "daihoji", lead: 66, valor: 64, wit: 62, gov: 62, loyal: 100, age: 22, at: "ourayama", lord: true, retinue: 340, retTrain: 60 },
+  { id: "onodera_g", name: "\u5C0F\u91CE\u5BFA\u666F\u9053", faction: "onodera", lead: 70, valor: 68, wit: 66, gov: 64, loyal: 100, age: 12, at: "yokote", lord: true, retinue: 360, retTrain: 60 },
+  { id: "ando_g", name: "\u5B89\u6771\u821C\u5B63", faction: "ando", lead: 70, valor: 66, wit: 70, gov: 70, loyal: 100, age: 32, at: "hiyama", lord: true, retinue: 420, retTrain: 62 },
+  { id: "honma_g", name: "\u672C\u9593\u9AD8\u4FE1", faction: "honma", lead: 62, valor: 62, wit: 60, gov: 60, loyal: 100, age: 36, at: "kawarada", lord: true, retinue: 240, retTrain: 56 },
+  { id: "yoshihiro_k", name: "\u8823\u5D0E\u5B63\u5E83", faction: "kakizaki", lead: 72, valor: 66, wit: 78, gov: 74, loyal: 100, age: 39, at: "matsumae", lord: true, retinue: 320, retTrain: 58 },
+  { id: "shosei", name: "\u5C1A\u6E05\u738B", faction: "ryukyu", lead: 68, valor: 54, wit: 74, gov: 80, loyal: 100, age: 49, at: "shurijo", lord: true, retinue: 460, retTrain: 52 },
+  { id: "shogen", name: "\u5C1A\u5143\u738B", faction: "ryukyu", lead: 64, valor: 56, wit: 68, gov: 72, loyal: 98, age: 18, at: "nakagusuku", retinue: 260, retTrain: 52 },
+  { id: "miyako_g", name: "\u4EF2\u5B97\u6839\u8C4A\u898B\u89AA", faction: "ryukyu", lead: 62, valor: 64, wit: 62, gov: 60, loyal: 84, age: 36, at: "miyako", retinue: 200, retTrain: 54 },
+  { id: "ainu_w1", name: "\u30CF\u30B7\u30BF\u30A4\u30F3", faction: "ainu_w", lead: 74, valor: 78, wit: 70, gov: 60, loyal: 100, age: 40, at: "ishikari", lord: true, retinue: 340, retTrain: 62 },
+  { id: "ainu_w2", name: "\u30BB\u30BF\u30CA\u30A4\u4E59\u540D", faction: "ainu_w", lead: 66, valor: 70, wit: 62, gov: 56, loyal: 92, age: 34, at: "otaru", retinue: 240, retTrain: 60 },
+  { id: "ainu_w3", name: "\u30AF\u30F3\u30CC\u30A4\u4E59\u540D", faction: "ainu_w", lead: 64, valor: 72, wit: 58, gov: 54, loyal: 88, age: 31, at: "oshamanbe", retinue: 220, retTrain: 60 },
+  { id: "ainu_e1", name: "\u30BF\u30EA\u30B3\u30CA", faction: "ainu_e", lead: 76, valor: 82, wit: 66, gov: 58, loyal: 100, age: 37, at: "sizunai", lord: true, retinue: 320, retTrain: 64 },
+  { id: "ainu_e2", name: "\u30AF\u30B9\u30EA\u4E59\u540D", faction: "ainu_e", lead: 66, valor: 70, wit: 62, gov: 56, loyal: 90, age: 32, at: "kushiro", retinue: 220, retTrain: 60 },
+  { id: "ainu_e3", name: "\u30E1\u30CA\u30B7\u4E59\u540D", faction: "ainu_e", lead: 64, valor: 72, wit: 58, gov: 52, loyal: 88, age: 29, at: "nemuro", retinue: 200, retTrain: 60 },
+  { id: "ainu_n1", name: "\u30BD\u30A6\u30E4\u4E59\u540D", faction: "ainu_n", lead: 70, valor: 74, wit: 64, gov: 58, loyal: 100, age: 42, at: "soya", lord: true, retinue: 260, retTrain: 60 },
+  { id: "ainu_n2", name: "\u30A2\u30D0\u30B7\u30EA\u4E59\u540D", faction: "ainu_n", lead: 64, valor: 70, wit: 60, gov: 54, loyal: 90, age: 30, at: "abashiri", retinue: 200, retTrain: 58 },
+  { id: "ainu_n3", name: "\u30EB\u30E2\u30A4\u4E59\u540D", faction: "ainu_n", lead: 62, valor: 68, wit: 58, gov: 54, loyal: 90, age: 35, at: "rumoi", retinue: 190, retTrain: 58 },
+  { id: "kakizaki3", name: "\u8823\u5D0E\u57FA\u5E83", faction: "kakizaki", lead: 64, valor: 68, wit: 60, gov: 58, loyal: 74, age: 32, at: "esashi", retinue: 220, retTrain: 58 },
+  { id: "m_yasunaga", name: "\u4E09\u597D\u5EB7\u9577", faction: "miyoshi", lead: 76, valor: 74, wit: 72, gov: 68, loyal: 88, age: 26, at: "akutagawa", retinue: 320, retTrain: 64 },
+  { id: "m_masayasu", name: "\u4E09\u597D\u653F\u52DD", faction: "miyoshi", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 72, age: 30, at: "akutagawa", retinue: 280, retTrain: 62 },
+  { id: "m_yukiyasu", name: "\u4E09\u597D\u4E4B\u5EB7", faction: "miyoshi", lead: 70, valor: 72, wit: 66, gov: 62, loyal: 86, age: 24, at: "iimoriyama", retinue: 300, retTrain: 62 },
+  { id: "m_matsuyama", name: "\u677E\u5C71\u91CD\u6CBB", faction: "miyoshi", lead: 70, valor: 66, wit: 74, gov: 68, loyal: 84, age: 28, at: "iimoriyama", retinue: 260, retTrain: 62 },
+  { id: "m_kono", name: "\u9999\u897F\u9577\u4FE1", faction: "miyoshi", lead: 66, valor: 70, wit: 62, gov: 58, loyal: 80, age: 32, at: "takaya", retinue: 260, retTrain: 60 },
+  { id: "m_yui", name: "\u7D50\u57CE\u5FE0\u6B63", faction: "miyoshi", lead: 64, valor: 60, wit: 70, gov: 70, loyal: 80, age: 36, at: "takaya", retinue: 240, retTrain: 58 },
+  { id: "m_ibaraki", name: "\u8328\u6728\u9577\u9686", faction: "miyoshi", lead: 66, valor: 62, wit: 72, gov: 74, loyal: 82, age: 41, at: "itami", retinue: 260, retTrain: 60 },
+  { id: "m_iwanari2", name: "\u77F3\u6210\u53CB\u901A", faction: "miyoshi", lead: 68, valor: 70, wit: 66, gov: 60, loyal: 82, age: 25, at: "itami", retinue: 250, retTrain: 62 },
+  { id: "m_hatano", name: "\u6CE2\u591A\u91CE\u79C0\u89AA", faction: "miyoshi", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 74, age: 29, at: "hanakuma", retinue: 240, retTrain: 60 },
+  { id: "m_araki", name: "\u8352\u6728\u7FA9\u6751", faction: "miyoshi", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 80, age: 31, at: "hanakuma", retinue: 250, retTrain: 60 },
+  { id: "m_sogo3", name: "\u5341\u6CB3\u666F\u6ECB", faction: "miyoshi", lead: 70, valor: 76, wit: 60, gov: 56, loyal: 88, age: 34, at: "sogo", retinue: 280, retTrain: 64 },
+  { id: "m_yashima", name: "\u5B89\u5BCC\u76DB\u5B9A", faction: "miyoshi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 84, age: 36, at: "hiketa", retinue: 250, retTrain: 60 },
+  { id: "m_awa1", name: "\u52A0\u5730\u76DB\u6642", faction: "miyoshi", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 80, age: 30, at: "ichinomiya", retinue: 240, retTrain: 60 },
+  { id: "m_awa2", name: "\u68EE\u98DB\u9A28\u5B88", faction: "miyoshi", lead: 66, valor: 70, wit: 58, gov: 54, loyal: 78, age: 33, at: "hakuchi", retinue: 230, retTrain: 60 },
+  { id: "m_awa3", name: "\u77E2\u91CE\u864E\u6751", faction: "miyoshi", lead: 64, valor: 68, wit: 58, gov: 56, loyal: 80, age: 28, at: "shozui", retinue: 240, retTrain: 60 },
+  { id: "m_awaji1", name: "\u5B89\u5B85\u795E\u4E94\u90CE", faction: "miyoshi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 84, age: 22, at: "sumoto", retinue: 250, retTrain: 60 },
+  { id: "m_awaji2", name: "\u83C5\u9054\u9577", faction: "miyoshi", lead: 68, valor: 72, wit: 64, gov: 56, loyal: 82, age: 16, at: "sumoto", retinue: 240, retTrain: 62 },
+  { id: "m_yura2", name: "\u8239\u8D8A\u666F\u76F4", faction: "miyoshi", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 80, age: 20, at: "yura", retinue: 230, retTrain: 60 },
+  { id: "m_hiketa2", name: "\u5BD2\u5DDD\u5143\u96A3", faction: "miyoshi", lead: 62, valor: 64, wit: 60, gov: 58, loyal: 76, age: 32, at: "hiketa", retinue: 220, retTrain: 58 },
+  { id: "m_ushiki2", name: "\u7BE0\u539F\u9577\u91CD", faction: "miyoshi", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 82, age: 26, at: "ichinomiya", retinue: 240, retTrain: 60 },
+  { id: "o_sugi2", name: "\u6749\u91CD\u8F14", faction: "ouchi", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 72, age: 22, at: "takamine", retinue: 280, retTrain: 62 },
+  { id: "o_naito2", name: "\u5185\u85E4\u9686\u4E16", faction: "ouchi", lead: 66, valor: 68, wit: 62, gov: 60, loyal: 84, age: 14, at: "katsuyama_n", retinue: 260, retTrain: 60 },
+  { id: "o_sue2", name: "\u9676\u9686\u5EB7", faction: "ouchi", lead: 70, valor: 74, wit: 64, gov: 58, loyal: 80, age: 28, at: "wakayama_s", retinue: 280, retTrain: 64 },
+  { id: "o_niho", name: "\u4EC1\u4FDD\u9686\u6170", faction: "ouchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 82, age: 31, at: "wakayama_s", retinue: 250, retTrain: 60 },
+  { id: "o_hironaka", name: "\u5F18\u4E2D\u9686\u517C", faction: "ouchi", lead: 76, valor: 78, wit: 70, gov: 62, loyal: 88, age: 34, at: "kuragake", retinue: 280, retTrain: 64 },
+  { id: "o_sugihara", name: "\u6749\u539F\u76DB\u91CD", faction: "ouchi", lead: 72, valor: 74, wit: 68, gov: 62, loyal: 74, age: 16, at: "kannabe", retinue: 270, retTrain: 62 },
+  { id: "o_hirai", name: "\u5E73\u8CC0\u9686\u4FDD", faction: "ouchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 76, age: 20, at: "kannabe", retinue: 250, retTrain: 60 },
+  { id: "o_shimofuri2", name: "\u5E02\u5DDD\u7D4C\u597D", faction: "ouchi", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 84, age: 26, at: "shimofuri", retinue: 250, retTrain: 62 },
+  { id: "o_katsuyama2", name: "\u554F\u7530\u9686\u76DB", faction: "ouchi", lead: 64, valor: 66, wit: 62, gov: 60, loyal: 82, age: 34, at: "katsuyama_n", retinue: 240, retTrain: 60 },
+  { id: "o_kokura2", name: "\u6749\u91CD\u4FE1", faction: "ouchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 80, age: 30, at: "kokura", retinue: 250, retTrain: 60 },
+  { id: "o_umagatake2", name: "\u9577\u91CE\u52A9\u5B88", faction: "ouchi", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 28, at: "umagatake", retinue: 240, retTrain: 58 },
+  { id: "o_tachibana2", name: "\u7ACB\u82B1\u9451\u5149", faction: "ouchi", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 74, age: 32, at: "tachibanayama", retinue: 270, retTrain: 62 },
+  { id: "o_iwaya2", name: "\u9AD8\u6A4B\u9451\u5E83", faction: "ouchi", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 72, age: 26, at: "iwaya", retinue: 250, retTrain: 60 },
+  { id: "o_ouchi2", name: "\u9676\u9686\u6E80", faction: "ouchi", lead: 64, valor: 64, wit: 66, gov: 64, loyal: 80, age: 40, at: "ouchi", retinue: 240, retTrain: 58 },
+  { id: "o_ouchi3", name: "\u6749\u8208\u9023", faction: "ouchi", lead: 66, valor: 66, wit: 64, gov: 62, loyal: 82, age: 36, at: "ouchi", retinue: 250, retTrain: 60 },
+  { id: "o_takamine2", name: "\u51B7\u6CC9\u9686\u610F", faction: "ouchi", lead: 66, valor: 70, wit: 60, gov: 56, loyal: 86, age: 24, at: "takamine", retinue: 250, retTrain: 62 },
+  { id: "i_ihara", name: "\u5EB5\u539F\u5FE0\u5EB7", faction: "imagawa", lead: 70, valor: 70, wit: 64, gov: 62, loyal: 86, age: 26, at: "sunpu", retinue: 280, retTrain: 62 },
+  { id: "i_asahina3", name: "\u671D\u6BD4\u5948\u5143\u9577", faction: "imagawa", lead: 68, valor: 70, wit: 62, gov: 58, loyal: 86, age: 22, at: "kakegawa", retinue: 270, retTrain: 62 },
+  { id: "i_okabe3", name: "\u5CA1\u90E8\u771F\u5E78", faction: "imagawa", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 84, age: 28, at: "takatenjin", retinue: 260, retTrain: 62 },
+  { id: "i_udono2", name: "\u9D5C\u6BBF\u9577\u6301", faction: "imagawa", lead: 68, valor: 68, wit: 64, gov: 62, loyal: 84, age: 36, at: "yoshida", retinue: 270, retTrain: 62 },
+  { id: "i_toda2", name: "\u6238\u7530\u582F\u5149", faction: "imagawa", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 70, age: 30, at: "tahara", retinue: 250, retTrain: 60 },
+  { id: "i_ohara2", name: "\u5C0F\u539F\u8CC7\u826F", faction: "imagawa", lead: 66, valor: 66, wit: 62, gov: 58, loyal: 80, age: 32, at: "nishio", retinue: 250, retTrain: 60 },
+  { id: "i_suganuma2", name: "\u83C5\u6CBC\u5B9A\u6751", faction: "imagawa", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 74, age: 34, at: "nagashino", retinue: 240, retTrain: 60 },
+  { id: "i_ii2", name: "\u4E95\u4F0A\u76F4\u6E80", faction: "imagawa", lead: 68, valor: 72, wit: 62, gov: 58, loyal: 80, age: 32, at: "hikuma", retinue: 260, retTrain: 62 },
+  { id: "i_amano2", name: "\u5929\u91CE\u85E4\u79C0", faction: "imagawa", lead: 64, valor: 66, wit: 60, gov: 54, loyal: 76, age: 24, at: "inui", retinue: 240, retTrain: 58 },
+  { id: "i_miura2", name: "\u4E09\u6D66\u6B63\u4FCA", faction: "imagawa", lead: 68, valor: 70, wit: 62, gov: 58, loyal: 84, age: 30, at: "futamata", retinue: 260, retTrain: 62 },
+  { id: "i_kokokuji2", name: "\u845B\u5C71\u6C0F\u5E83", faction: "imagawa", lead: 64, valor: 66, wit: 62, gov: 60, loyal: 80, age: 36, at: "kounkoji", retinue: 250, retTrain: 60 },
+  { id: "i_sunpu3", name: "\u95A2\u53E3\u89AA\u6C38", faction: "imagawa", lead: 68, valor: 66, wit: 68, gov: 66, loyal: 86, age: 34, at: "sunpu", retinue: 270, retTrain: 62 },
+  { id: "i_nishio2", name: "\u7267\u91CE\u6210\u5B9A", faction: "imagawa", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 74, age: 26, at: "nishio", retinue: 240, retTrain: 60 },
+  { id: "i_tahara2", name: "\u6238\u7530\u91CD\u8C9E", faction: "imagawa", lead: 62, valor: 66, wit: 58, gov: 56, loyal: 72, age: 22, at: "tahara", retinue: 230, retTrain: 58 },
+  { id: "i_nagashino2", name: "\u83C5\u6CBC\u5B9A\u7D99", faction: "imagawa", lead: 62, valor: 64, wit: 60, gov: 56, loyal: 74, age: 28, at: "nagashino", retinue: 230, retTrain: 58 },
+  { id: "i_inui2", name: "\u5929\u91CE\u666F\u8CAB", faction: "imagawa", lead: 66, valor: 68, wit: 62, gov: 56, loyal: 74, age: 20, at: "inui", retinue: 240, retTrain: 60 },
+  { id: "i_hikuma2", name: "\u98EF\u5C3E\u9023\u9F8D", faction: "imagawa", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 68, age: 18, at: "hikuma", retinue: 240, retTrain: 60 },
+  { id: "i_kakegawa3", name: "\u671D\u6BD4\u5948\u6CF0\u79C0", faction: "imagawa", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 84, age: 26, at: "kakegawa", retinue: 240, retTrain: 60 },
+  { id: "h_odawara2", name: "\u6E05\u6C34\u5EB7\u82F1", faction: "hojo", lead: 70, valor: 72, wit: 66, gov: 62, loyal: 90, age: 21, at: "odawara", retinue: 270, retTrain: 64 },
+  { id: "h_tamanawa2", name: "\u5317\u6761\u7DB1\u623F", faction: "hojo", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 88, age: 26, at: "tamanawa", retinue: 260, retTrain: 62 },
+  { id: "h_tamanawa3", name: "\u7518\u7C95\u9577\u4FCA", faction: "hojo", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 32, at: "tamanawa", retinue: 240, retTrain: 60 },
+  { id: "h_misaki2", name: "\u5C71\u672C\u6B63\u6B21", faction: "hojo", lead: 64, valor: 68, wit: 60, gov: 56, loyal: 82, age: 28, at: "misaki", retinue: 240, retTrain: 60 },
+  { id: "h_misaki3", name: "\u68B6\u539F\u666F\u7E41", faction: "hojo", lead: 66, valor: 70, wit: 62, gov: 56, loyal: 84, age: 24, at: "misaki", retinue: 250, retTrain: 62 },
+  { id: "h_tsukui2", name: "\u5185\u85E4\u666F\u8C4A", faction: "hojo", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 22, at: "tsukui", retinue: 240, retTrain: 60 },
+  { id: "h_tsukui3", name: "\u4E2D\u5C71\u5BB6\u7BC4", faction: "hojo", lead: 68, valor: 74, wit: 62, gov: 56, loyal: 86, age: 16, at: "tsukui", retinue: 250, retTrain: 62 },
+  { id: "h_edo2", name: "\u5BCC\u6C38\u653F\u5BB6", faction: "hojo", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 86, age: 24, at: "edo", retinue: 250, retTrain: 62 },
+  { id: "h_edo3", name: "\u592A\u7530\u5EB7\u8CC7", faction: "hojo", lead: 70, valor: 74, wit: 66, gov: 60, loyal: 66, age: 15, at: "edo", retinue: 260, retTrain: 62 },
+  { id: "h_kawagoe2", name: "\u5927\u9053\u5BFA\u76DB\u660C", faction: "hojo", lead: 68, valor: 66, wit: 70, gov: 72, loyal: 88, age: 46, at: "kawagoe", retinue: 260, retTrain: 62 },
+  { id: "h_kawagoe3", name: "\u7B20\u539F\u5EB7\u52DD", faction: "hojo", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 86, age: 26, at: "kawagoe", retinue: 250, retTrain: 60 },
+  { id: "h_takiyama2", name: "\u72E9\u91CE\u4E00\u5EB5", faction: "hojo", lead: 64, valor: 66, wit: 64, gov: 62, loyal: 86, age: 36, at: "takiyama", retinue: 240, retTrain: 60 },
+  { id: "h_takiyama3", name: "\u8FD1\u85E4\u7DB1\u79C0", faction: "hojo", lead: 66, valor: 70, wit: 62, gov: 56, loyal: 84, age: 30, at: "takiyama", retinue: 250, retTrain: 62 },
+  { id: "h_matsuyama2", name: "\u72E9\u91CE\u6CF0\u5149", faction: "hojo", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 80, age: 32, at: "matsuyama_m", retinue: 240, retTrain: 60 },
+  { id: "h_matsuyama3", name: "\u4E0A\u7530\u653F\u5E83", faction: "hojo", lead: 64, valor: 68, wit: 60, gov: 56, loyal: 74, age: 24, at: "matsuyama_m", retinue: 240, retTrain: 60 },
+  { id: "h_shimoda2", name: "\u671D\u6BD4\u5948\u6CF0\u81F4", faction: "hojo", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 26, at: "shimoda", retinue: 240, retTrain: 60 },
+  { id: "h_nirayama2", name: "\u7B20\u539F\u7DB1\u4FE1", faction: "hojo", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 88, age: 30, at: "nirayama", retinue: 250, retTrain: 62 },
+  { id: "a_gassan3", name: "\u7ACB\u539F\u5E78\u9686", faction: "amago", lead: 70, valor: 72, wit: 66, gov: 62, loyal: 88, age: 22, at: "gassan", retinue: 270, retTrain: 64 },
+  { id: "a_gassan4", name: "\u4E80\u4E95\u79C0\u7DB1", faction: "amago", lead: 66, valor: 64, wit: 72, gov: 70, loyal: 84, age: 40, at: "gassan", retinue: 250, retTrain: 60 },
+  { id: "a_shiraga2", name: "\u5C3C\u5B50\u502B\u4E45", faction: "amago", lead: 70, valor: 72, wit: 64, gov: 60, loyal: 80, age: 16, at: "shiraga", retinue: 260, retTrain: 62 },
+  { id: "a_shiraga3", name: "\u677E\u7530\u8AA0\u4FDD", faction: "amago", lead: 66, valor: 70, wit: 62, gov: 56, loyal: 80, age: 26, at: "shiraga", retinue: 250, retTrain: 62 },
+  { id: "a_yonago2", name: "\u6E6F\u539F\u6625\u7DB1", faction: "amago", lead: 68, valor: 70, wit: 64, gov: 58, loyal: 84, age: 28, at: "yonago", retinue: 250, retTrain: 62 },
+  { id: "a_yonago3", name: "\u798F\u5C71\u8332\u6B63", faction: "amago", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 82, age: 32, at: "yonago", retinue: 240, retTrain: 60 },
+  { id: "a_yamabuki2", name: "\u725B\u5C3E\u5E78\u6E05", faction: "amago", lead: 66, valor: 70, wit: 62, gov: 56, loyal: 80, age: 30, at: "yamabuki", retinue: 250, retTrain: 62 },
+  { id: "a_yamabuki3", name: "\u4F50\u4E16\u6E05\u5B97", faction: "amago", lead: 68, valor: 68, wit: 66, gov: 62, loyal: 84, age: 34, at: "yamabuki", retinue: 250, retTrain: 62 },
+  { id: "a_takata2", name: "\u4E09\u6D66\u8C9E\u76DB", faction: "amago", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 74, age: 24, at: "takata_m", retinue: 250, retTrain: 60 },
+  { id: "a_takata3", name: "\u7267\u5C1A\u6625", faction: "amago", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 28, at: "takata_m", retinue: 240, retTrain: 60 },
+  { id: "a_iwaya2", name: "\u4E2D\u6751\u983C\u5B97", faction: "amago", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 30, at: "iwaya_m", retinue: 240, retTrain: 60 },
+  { id: "a_iwaya3", name: "\u6C5F\u898B\u4E45\u76DB", faction: "amago", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 76, age: 26, at: "iwaya_m", retinue: 230, retTrain: 58 },
+  { id: "a_oki2", name: "\u96A0\u5C90\u6E05\u5BB6", faction: "amago", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 80, age: 32, at: "oki", retinue: 200, retTrain: 56 },
+  { id: "a_oki3", name: "\u96A0\u5C90\u5B97\u6E05", faction: "amago", lead: 70, valor: 76, wit: 68, gov: 58, loyal: 64, age: 13, at: "oki", retinue: 220, retTrain: 64 },
+  { id: "t_katsuyama3", name: "\u52A0\u85E4\u4FE1\u90A6", faction: "takeda", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 30, at: "katsuyama_k", retinue: 240, retTrain: 60 },
+  { id: "t_takato3", name: "\u8ACF\u8A2A\u983C\u8C4A", faction: "takeda", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 76, age: 26, at: "takato", retinue: 250, retTrain: 62 },
+  { id: "t_iida3", name: "\u4E0B\u6761\u4FE1\u6C0F", faction: "takeda", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 78, age: 28, at: "iida", retinue: 240, retTrain: 60 },
+  { id: "t_komoro3", name: "\u771F\u7530\u5E78\u9686", faction: "takeda", lead: 82, valor: 72, wit: 92, gov: 80, loyal: 84, age: 33, at: "komoro", retinue: 280, retTrain: 66 },
+  { id: "t_iwadono3", name: "\u6817\u539F\u8A6E\u51AC", faction: "takeda", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 80, age: 32, at: "iwadono", retinue: 240, retTrain: 60 },
+  { id: "t_fukashi3", name: "\u99AC\u5834\u6C11\u90E8", faction: "takeda", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 84, age: 26, at: "fukashi", retinue: 250, retTrain: 62 },
+  { id: "t_tsutsuji4", name: "\u7A74\u5C71\u4FE1\u53CB", faction: "takeda", lead: 70, valor: 68, wit: 70, gov: 70, loyal: 80, age: 40, at: "tsutsujigasaki", retinue: 270, retTrain: 62 },
+  { id: "n_kasugayama3", name: "\u672C\u5E84\u5B9F\u4E43", faction: "nagao", lead: 70, valor: 68, wit: 74, gov: 74, loyal: 90, age: 34, at: "kasugayama", retinue: 270, retTrain: 64 },
+  { id: "n_kasugayama4", name: "\u5927\u718A\u671D\u79C0", faction: "nagao", lead: 68, valor: 68, wit: 68, gov: 66, loyal: 62, age: 30, at: "kasugayama", retinue: 260, retTrain: 62 },
+  { id: "n_tochio3", name: "\u5C71\u5409\u884C\u76DB", faction: "nagao", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 86, age: 24, at: "tochio", retinue: 250, retTrain: 62 },
+  { id: "n_yoita3", name: "\u76F4\u6C5F\u666F\u7DB1", faction: "nagao", lead: 74, valor: 68, wit: 80, gov: 84, loyal: 92, age: 37, at: "yoita", retinue: 270, retTrain: 64 },
+  { id: "n_sanjo2", name: "\u7518\u7C95\u666F\u6301", faction: "nagao", lead: 78, valor: 80, wit: 68, gov: 62, loyal: 88, age: 16, at: "sanjo", retinue: 260, retTrain: 64 },
+  { id: "n_sanjo3", name: "\u4E2D\u6761\u85E4\u8CC7", faction: "nagao", lead: 70, valor: 72, wit: 66, gov: 60, loyal: 80, age: 48, at: "sanjo", retinue: 250, retTrain: 62 },
+  { id: "n_negoshi2", name: "\u4E0A\u6749\u666F\u76F4", faction: "nagao", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 84, age: 21, at: "negoshi", retinue: 240, retTrain: 60 },
+  { id: "n_negoshi3", name: "\u6751\u5C71\u6176\u7DB1", faction: "nagao", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 82, age: 28, at: "negoshi", retinue: 240, retTrain: 60 },
+  { id: "u_hachigata2", name: "\u9577\u91CE\u696D\u56FA", faction: "uesugi_y", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 78, age: 26, at: "hachigata", retinue: 250, retTrain: 60 },
+  { id: "u_hachigata3", name: "\u7528\u571F\u696D\u7E41", faction: "uesugi_y", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 76, age: 22, at: "hachigata", retinue: 240, retTrain: 60 },
+  { id: "u_fukaya2", name: "\u4E0A\u6749\u61B2\u4FCA", faction: "uesugi_y", lead: 62, valor: 62, wit: 60, gov: 60, loyal: 82, age: 18, at: "fukaya", retinue: 240, retTrain: 58 },
+  { id: "u_fukaya3", name: "\u79CB\u5143\u666F\u671D", faction: "uesugi_y", lead: 64, valor: 64, wit: 64, gov: 62, loyal: 80, age: 30, at: "fukaya", retinue: 240, retTrain: 58 },
+  { id: "u_numata2", name: "\u6CBC\u7530\u671D\u61B2", faction: "uesugi_y", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 72, age: 24, at: "numata", retinue: 240, retTrain: 60 },
+  { id: "u_numata3", name: "\u91D1\u5B50\u6CF0\u6E05", faction: "uesugi_y", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 74, age: 32, at: "numata", retinue: 230, retTrain: 58 },
+  { id: "u_maebashi3", name: "\u90A3\u6CE2\u5B97\u4FCA", faction: "uesugi_y", lead: 66, valor: 66, wit: 64, gov: 62, loyal: 76, age: 36, at: "hirai", retinue: 250, retTrain: 60 },
+  { id: "mk_katsurao3", name: "\u96E8\u5BAE\u660C\u79C0", faction: "murakami", lead: 66, valor: 70, wit: 60, gov: 56, loyal: 84, age: 28, at: "katsurao", retinue: 250, retTrain: 62 },
+  { id: "mk_toishi3", name: "\u5BA4\u8CC0\u6E80\u6B63", faction: "murakami", lead: 64, valor: 68, wit: 60, gov: 56, loyal: 80, age: 30, at: "toishi", retinue: 240, retTrain: 60 },
+  { id: "mk_kaizu3", name: "\u4E95\u4E0A\u660C\u6E80", faction: "murakami", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 80, age: 26, at: "kaizu", retinue: 240, retTrain: 60 },
+  { id: "j_toyama3", name: "\u5BFA\u5CF6\u725B\u4ECB", faction: "jinbo", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 80, age: 28, at: "toyama", retinue: 240, retTrain: 60 },
+  { id: "j_masuyama2", name: "\u6C34\u8D8A\u52DD\u91CD", faction: "jinbo", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 80, age: 32, at: "masuyama", retinue: 240, retTrain: 60 },
+  { id: "j_masuyama3", name: "\u795E\u4FDD\u6C0F\u5F35", faction: "jinbo", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 82, age: 18, at: "masuyama", retinue: 240, retTrain: 60 },
+  { id: "s_matsukura2", name: "\u690E\u540D\u666F\u76F4", faction: "shiina", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 24, at: "matsukura", retinue: 240, retTrain: 60 },
+  { id: "s_matsukura3", name: "\u571F\u80A5\u653F\u7E41", faction: "shiina", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 80, age: 30, at: "matsukura", retinue: 240, retTrain: 60 },
+  { id: "s_uozu3", name: "\u5BFA\u5D0E\u76DB\u6C38", faction: "shiina", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 80, age: 32, at: "uozu", retinue: 230, retTrain: 60 },
+  { id: "s_miyazaki2", name: "\u5BAE\u5D0E\u9577\u983C", faction: "shiina", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 26, at: "miyazaki_e", retinue: 220, retTrain: 58 },
+  { id: "s_miyazaki3", name: "\u6C34\u5DFB\u983C\u666F", faction: "shiina", lead: 62, valor: 64, wit: 58, gov: 54, loyal: 78, age: 30, at: "miyazaki_e", retinue: 220, retTrain: 58 },
+  { id: "hy_nanao3", name: "\u6E29\u4E95\u7DCF\u8C9E", faction: "hatakeyama", lead: 66, valor: 64, wit: 72, gov: 68, loyal: 58, age: 40, at: "nanao", retinue: 250, retTrain: 60 },
+  { id: "hy_suemori2", name: "\u4E09\u5B85\u7DCF\u5E83", faction: "hatakeyama", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 76, age: 32, at: "suemori_n", retinue: 240, retTrain: 60 },
+  { id: "hy_suemori3", name: "\u5E73\u7DCF\u77E5", faction: "hatakeyama", lead: 62, valor: 64, wit: 60, gov: 56, loyal: 78, age: 28, at: "suemori_n", retinue: 230, retTrain: 58 },
+  { id: "ag_murakami3", name: "\u672C\u5E84\u623F\u9577", faction: "agakita", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 74, age: 40, at: "murakami", retinue: 240, retTrain: 60 },
+  { id: "ag_shibata3", name: "\u4E94\u5341\u516C\u91CE\u6CBB\u9577", faction: "agakita", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 76, age: 26, at: "shibata", retinue: 240, retTrain: 60 },
+  { id: "hm_kawarada2", name: "\u672C\u9593\u9AD8\u7D71", faction: "honma", lead: 62, valor: 62, wit: 60, gov: 58, loyal: 84, age: 28, at: "kawarada", retinue: 230, retTrain: 58 },
+  { id: "hm_kawarada3", name: "\u85CD\u539F\u91CD\u8F14", faction: "honma", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 82, age: 32, at: "kawarada", retinue: 220, retTrain: 56 },
+  { id: "sa_iwamura2", name: "\u9060\u5C71\u666F\u524D", faction: "saito", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 72, age: 38, at: "iwamura", retinue: 250, retTrain: 60 },
+  { id: "sa_iwamura3", name: "\u5EF6\u53CB\u4FE1\u5149", faction: "saito", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 74, age: 30, at: "iwamura", retinue: 240, retTrain: 60 },
+  { id: "sa_naegi2", name: "\u9060\u5C71\u53CB\u52DD", faction: "saito", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 74, age: 32, at: "naegi", retinue: 240, retTrain: 60 },
+  { id: "sa_naegi3", name: "\u82D7\u6728\u52D8\u592A\u90CE", faction: "saito", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 76, age: 26, at: "naegi", retinue: 230, retTrain: 58 },
+  { id: "sa_gujo3", name: "\u9060\u85E4\u80E4\u7E01", faction: "saito", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 72, age: 34, at: "gujo", retinue: 240, retTrain: 60 },
+  { id: "od_narumi2", name: "\u68B6\u5DDD\u9AD8\u79C0", faction: "oda", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 80, age: 28, at: "narumi", retinue: 240, retTrain: 60 },
+  { id: "od_shobata3", name: "\u7E54\u7530\u4FE1\u5E83", faction: "oda", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 70, age: 20, at: "shobata", retinue: 250, retTrain: 60 },
+  { id: "az_yamamoto2", name: "\u963F\u9589\u8C9E\u5F81", faction: "azai", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 72, age: 22, at: "yamamotoyama", retinue: 240, retTrain: 60 },
+  { id: "az_yamamoto3", name: "\u65B0\u5E84\u76F4\u983C", faction: "azai", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 76, age: 18, at: "yamamotoyama", retinue: 230, retTrain: 60 },
+  { id: "as_kanegasaki2", name: "\u671D\u5009\u666F\u6052", faction: "asakura", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 84, age: 20, at: "kanegasaki", retinue: 260, retTrain: 62 },
+  { id: "as_kanegasaki3", name: "\u758B\u58C7\u4E45\u4FDD", faction: "asakura", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 82, age: 30, at: "kanegasaki", retinue: 240, retTrain: 60 },
+  { id: "as_kitanosho3", name: "\u524D\u6CE2\u5409\u7D99", faction: "asakura", lead: 64, valor: 64, wit: 66, gov: 64, loyal: 72, age: 24, at: "kitanosho", retinue: 240, retTrain: 60 },
+  { id: "as_ichijodani3", name: "\u9CE5\u5C45\u666F\u8FD1", faction: "asakura", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 90, age: 22, at: "ichijodani", retinue: 250, retTrain: 62 },
+  { id: "rk_sawayama2", name: "\u767E\u3005\u76DB\u5B9F", faction: "rokkaku", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 82, age: 30, at: "sawayama", retinue: 250, retTrain: 60 },
+  { id: "rk_sawayama3", name: "\u5C0F\u5DDD\u5B6B\u4E00\u90CE", faction: "rokkaku", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 80, age: 26, at: "sawayama", retinue: 240, retTrain: 60 },
+  { id: "rk_sakamoto2", name: "\u5C71\u5CA1\u666F\u4E4B", faction: "rokkaku", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 80, age: 34, at: "sakamoto", retinue: 240, retTrain: 60 },
+  { id: "rk_sakamoto3", name: "\u99AC\u6DF5\u5EFA\u7DB1", faction: "rokkaku", lead: 64, valor: 64, wit: 62, gov: 60, loyal: 80, age: 32, at: "sakamoto", retinue: 240, retTrain: 60 },
+  { id: "wk_nochiseyama3", name: "\u718A\u8C37\u76F4\u4E4B", faction: "wakasa", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 72, age: 24, at: "nochiseyama", retinue: 240, retTrain: 60 },
+  { id: "wk_kuniyoshi2", name: "\u5185\u85E4\u91CD\u653F", faction: "wakasa", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 74, age: 28, at: "kuniyoshi", retinue: 240, retTrain: 60 },
+  { id: "wk_kuniyoshi3", name: "\u767D\u4E95\u5149\u80E4", faction: "wakasa", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 74, age: 32, at: "kuniyoshi", retinue: 230, retTrain: 58 },
+  { id: "ag_takayama2", name: "\u725B\u4E38\u89AA\u7DB1", faction: "anegakoji", lead: 62, valor: 64, wit: 60, gov: 58, loyal: 72, age: 30, at: "matsukura_h", retinue: 230, retTrain: 58 },
+  { id: "kb_kuwana2", name: "\u6EDD\u5DDD\u76CA\u91CD", faction: "kanbe", lead: 66, valor: 68, wit: 64, gov: 58, loyal: 78, age: 22, at: "kuwana", retinue: 240, retTrain: 60 },
+  { id: "kb_kanbe3", name: "\u795E\u6238\u53CB\u76DB", faction: "kanbe", lead: 62, valor: 64, wit: 60, gov: 58, loyal: 84, age: 20, at: "kanbe", retinue: 240, retTrain: 58 },
+  { id: "kk_toba3", name: "\u5C0F\u6D5C\u4E45\u592A\u90CE", faction: "kuki", lead: 64, valor: 66, wit: 60, gov: 54, loyal: 80, age: 22, at: "toba", retinue: 220, retTrain: 62 },
+  { id: "ik_nagashima3", name: "\u9858\u8A3C\u5BFA\u8A3C\u667A", faction: "ikko", lead: 64, valor: 58, wit: 72, gov: 72, loyal: 92, age: 24, at: "nagashima", retinue: 260, retTrain: 58 },
+  { id: "mz_kariya3", name: "\u6C34\u91CE\u85E4\u4E5D\u90CE", faction: "mizuno", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 86, age: 18, at: "kariya", retinue: 220, retTrain: 58 },
+  { id: "md_okazaki3", name: "\u5929\u91CE\u5EB7\u666F", faction: "matsudaira", lead: 64, valor: 62, wit: 68, gov: 70, loyal: 88, age: 9, at: "okazaki", retinue: 200, retTrain: 60 },
+  { id: "mo_koriyama4", name: "\u53E3\u7FBD\u901A\u826F", faction: "mori", lead: 70, valor: 68, wit: 74, gov: 70, loyal: 90, age: 33, at: "koriyama_a", retinue: 260, retTrain: 62 },
+  { id: "mo_koriyama5", name: "\u5150\u7389\u5C31\u5FE0", faction: "mori", lead: 66, valor: 64, wit: 70, gov: 72, loyal: 90, age: 26, at: "koriyama_a", retinue: 250, retTrain: 60 },
+  { id: "mo_sakurao3", name: "\u9999\u5DDD\u5149\u666F", faction: "mori", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 86, age: 24, at: "sakurao", retinue: 250, retTrain: 62 },
+  { id: "kb_mihara2", name: "\u4E43\u7F8E\u5B97\u52DD", faction: "kobayakawa", lead: 74, valor: 72, wit: 72, gov: 62, loyal: 88, age: 19, at: "mihara", retinue: 250, retTrain: 64 },
+  { id: "kb_mihara3", name: "\u6D66\u5B97\u52DD", faction: "kobayakawa", lead: 72, valor: 74, wit: 68, gov: 60, loyal: 88, age: 22, at: "mihara", retinue: 250, retTrain: 64 },
+  { id: "ur_tenjin2", name: "\u660E\u77F3\u884C\u96C4", faction: "uragami", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 80, age: 28, at: "tenjinyama", retinue: 250, retTrain: 60 },
+  { id: "ur_tenjin3", name: "\u5EF6\u539F\u666F\u80FD", faction: "uragami", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 80, age: 30, at: "tenjinyama", retinue: 240, retTrain: 60 },
+  { id: "ur_okayama2", name: "\u5B87\u559C\u591A\u76F4\u5BB6", faction: "uragami", lead: 84, valor: 72, wit: 94, gov: 80, loyal: 54, age: 16, at: "ishiyama_bz", retinue: 260, retTrain: 62 },
+  { id: "ur_okayama3", name: "\u4E2D\u5C71\u4FE1\u6B63", faction: "uragami", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 74, age: 36, at: "ishiyama_bz", retinue: 250, retTrain: 60 },
+  { id: "mm_matsuyama3", name: "\u77F3\u5DDD\u4E45\u5F0F", faction: "mimura", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 80, age: 26, at: "matsuyama_bc", retinue: 240, retTrain: 60 },
+  { id: "sh_sarukake2", name: "\u5E84\u52DD\u8CC7", faction: "shoo", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 22, at: "sarukake", retinue: 240, retTrain: 60 },
+  { id: "sh_sarukake3", name: "\u7A5D\u6240\u5143\u5E38", faction: "shoo", lead: 64, valor: 68, wit: 60, gov: 56, loyal: 78, age: 30, at: "sarukake", retinue: 240, retTrain: 60 },
+  { id: "sm_takamatsu2", name: "\u6E05\u6C34\u5B97\u5247", faction: "shimizu", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 24, at: "takamatsu_bc", retinue: 240, retTrain: 60 },
+  { id: "sm_takamatsu3", name: "\u96E3\u6CE2\u5B97\u5FE0", faction: "shimizu", lead: 62, valor: 64, wit: 60, gov: 58, loyal: 82, age: 28, at: "takamatsu_bc", retinue: 230, retTrain: 58 },
+  { id: "nj_uyui3", name: "\u5C0F\u9D28\u5143\u6E05", faction: "nanjo", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 84, age: 10, at: "uyui", retinue: 240, retTrain: 60 },
+  { id: "ys_tsuwano2", name: "\u5409\u898B\u5E83\u983C", faction: "yoshimi", lead: 66, valor: 68, wit: 62, gov: 60, loyal: 90, age: 10, at: "tsuwano", retinue: 250, retTrain: 60 },
+  { id: "ys_tsuwano3", name: "\u658E\u85E4\u5C31\u6B63", faction: "yoshimi", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 84, age: 28, at: "tsuwano", retinue: 240, retTrain: 60 },
+  { id: "ms_miyake3", name: "\u4E09\u9685\u9686\u7E41", faction: "masuda", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 80, age: 30, at: "miyake", retinue: 240, retTrain: 60 },
+  { id: "tka_kanayama2", name: "\u6B66\u7530\u5149\u548C", faction: "takeda_a", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 80, age: 32, at: "kanayama_a", retinue: 240, retTrain: 60 },
+  { id: "tka_kanayama3", name: "\u54C1\u5DDD\u5DE6\u4EAC\u4EAE", faction: "takeda_a", lead: 64, valor: 68, wit: 58, gov: 54, loyal: 78, age: 28, at: "kanayama_a", retinue: 240, retTrain: 60 },
+  { id: "ym_tottori2", name: "\u6B66\u7530\u56FD\u4FE1", faction: "yamana", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 72, age: 24, at: "tottori", retinue: 250, retTrain: 60 },
+  { id: "ym_tottori3", name: "\u4E2D\u6751\u6625\u7D9A", faction: "yamana", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 78, age: 22, at: "tottori", retinue: 250, retTrain: 60 },
+  { id: "ym_takeda2", name: "\u592A\u7530\u57A3\u8F1D\u5EF6", faction: "yamana", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 80, age: 20, at: "takeda", retinue: 240, retTrain: 60 },
+  { id: "ym_takeda3", name: "\u516B\u6728\u8C4A\u4FE1", faction: "yamana", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 78, age: 26, at: "takeda", retinue: 240, retTrain: 60 },
+  { id: "ym_wakasa2", name: "\u77E2\u90E8\u5B9A\u5229", faction: "yamana", lead: 62, valor: 64, wit: 60, gov: 56, loyal: 78, age: 30, at: "wakasa", retinue: 230, retTrain: 58 },
+  { id: "ym_wakasa3", name: "\u6BDB\u5229\u8C4A\u5143", faction: "yamana", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 76, age: 28, at: "wakasa", retinue: 230, retTrain: 58 },
+  { id: "ym_shikano2", name: "\u4F50\u3005\u6728\u9AD8\u6E05", faction: "yamana", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 78, age: 32, at: "shikano", retinue: 220, retTrain: 58 },
+  { id: "ym_shikano3", name: "\u65E5\u4E0B\u90E8\u517C\u5B9A", faction: "yamana", lead: 62, valor: 64, wit: 58, gov: 54, loyal: 78, age: 28, at: "shikano", retinue: 220, retTrain: 58 },
+  { id: "ym_konosumi3", name: "\u57A3\u5C4B\u5149\u6210", faction: "yamana", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 78, age: 22, at: "konosumi", retinue: 240, retTrain: 60 },
+  { id: "ak_himeji2", name: "\u9ED2\u7530\u8077\u9686", faction: "akamatsu", lead: 70, valor: 64, wit: 76, gov: 78, loyal: 86, age: 22, at: "himeji", retinue: 250, retTrain: 60 },
+  { id: "ak_himeji3", name: "\u6BCD\u91CC\u6B66\u5175\u885B", faction: "akamatsu", lead: 66, valor: 72, wit: 58, gov: 54, loyal: 84, age: 26, at: "himeji", retinue: 240, retTrain: 62 },
+  { id: "ak_goshaku2", name: "\u5C0F\u5BFA\u8077\u9686", faction: "akamatsu", lead: 64, valor: 64, wit: 64, gov: 62, loyal: 80, age: 30, at: "goshaku", retinue: 240, retTrain: 58 },
+  { id: "ak_goshaku3", name: "\u6C5F\u7530\u5584\u5175\u885B", faction: "akamatsu", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 78, age: 28, at: "goshaku", retinue: 230, retTrain: 58 },
+  { id: "ak_ojio3", name: "\u5B87\u91CE\u6751\u983C", faction: "akamatsu", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 80, age: 20, at: "ojio", retinue: 240, retTrain: 60 },
+  { id: "bs_miki3", name: "\u5225\u6240\u91CD\u5B97", faction: "bessho", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 88, age: 16, at: "miki", retinue: 240, retTrain: 60 },
+  { id: "cs_okou3", name: "\u5409\u7530\u91CD\u4FCA", faction: "chosokabe", lead: 70, valor: 72, wit: 66, gov: 60, loyal: 90, age: 28, at: "okou", retinue: 250, retTrain: 62 },
+  { id: "cs_okou4", name: "\u798F\u7559\u89AA\u653F", faction: "chosokabe", lead: 70, valor: 76, wit: 62, gov: 56, loyal: 90, age: 32, at: "okou", retinue: 250, retTrain: 64 },
+  { id: "ic_nakamura2", name: "\u571F\u5C45\u5B97\u73CA", faction: "ichijo", lead: 66, valor: 62, wit: 72, gov: 72, loyal: 88, age: 36, at: "nakamura", retinue: 250, retTrain: 60 },
+  { id: "ic_nakamura3", name: "\u70BA\u677E\u82E5\u72ED\u5B88", faction: "ichijo", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 84, age: 30, at: "nakamura", retinue: 240, retTrain: 60 },
+  { id: "ak_aki2", name: "\u5B89\u82B8\u56FD\u5EB7", faction: "aki", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 88, age: 20, at: "aki", retinue: 240, retTrain: 60 },
+  { id: "ak_aki3", name: "\u9ED2\u5CA9\u8D8A\u524D\u5B88", faction: "aki", lead: 64, valor: 68, wit: 58, gov: 54, loyal: 82, age: 28, at: "aki", retinue: 240, retTrain: 60 },
+  { id: "kn_yuzuki2", name: "\u5E73\u5CA1\u623F\u5B9F", faction: "kono", lead: 66, valor: 66, wit: 66, gov: 64, loyal: 84, age: 38, at: "yuzuki", retinue: 250, retTrain: 60 },
+  { id: "kn_yuzuki3", name: "\u5927\u91CE\u76F4\u4E4B", faction: "kono", lead: 66, valor: 70, wit: 64, gov: 56, loyal: 66, age: 16, at: "yuzuki", retinue: 250, retTrain: 60 },
+  { id: "kn_kagomori2", name: "\u571F\u5C45\u6E05\u5B97", faction: "kono", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 80, age: 32, at: "kagomori", retinue: 240, retTrain: 60 },
+  { id: "kn_kagomori3", name: "\u6E21\u8FBA\u623F", faction: "kono", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 26, at: "kagomori", retinue: 230, retTrain: 58 },
+  { id: "kn_kawanoe2", name: "\u77F3\u5DDD\u901A\u6E05", faction: "kono", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 78, age: 30, at: "kawanoe", retinue: 240, retTrain: 60 },
+  { id: "kn_kawanoe3", name: "\u59BB\u9CE5\u53CB\u6625", faction: "kono", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 78, age: 26, at: "kawanoe", retinue: 230, retTrain: 58 },
+  { id: "kr_kokubun2", name: "\u6751\u4E0A\u6B66\u5409", faction: "kurushima", lead: 80, valor: 80, wit: 78, gov: 62, loyal: 80, age: 13, at: "kokubunyama", retinue: 250, retTrain: 68 },
+  { id: "kr_kokubun3", name: "\u6751\u4E0A\u5409\u5145", faction: "kurushima", lead: 74, valor: 76, wit: 68, gov: 58, loyal: 84, age: 16, at: "kokubunyama", retinue: 240, retTrain: 66 },
+  { id: "si_itajima2", name: "\u897F\u5712\u5BFA\u5B9F\u5145", faction: "saionji", lead: 64, valor: 62, wit: 64, gov: 64, loyal: 100, age: 30, at: "itajima", lord: true, retinue: 240, retTrain: 58 },
+  { id: "si_jizo2", name: "\u5B87\u90FD\u5BAE\u623F\u7DB1", faction: "saionji", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 78, age: 26, at: "jizogatake", retinue: 240, retTrain: 60 },
+  { id: "si_jizo3", name: "\u6CD5\u83EF\u6D25\u524D\u5EF6", faction: "saionji", lead: 62, valor: 64, wit: 60, gov: 56, loyal: 80, age: 30, at: "jizogatake", retinue: 230, retTrain: 58 },
+  { id: "kg_amagiri2", name: "\u9999\u5DDD\u5143\u666F", faction: "kagawa", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 22, at: "amagiri", retinue: 240, retTrain: 60 },
+  { id: "kg_amagiri3", name: "\u7FBD\u5E8A\u8CC7\u8F09", faction: "kagawa", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 28, at: "amagiri", retinue: 240, retTrain: 60 },
+  { id: "sg_shingai", name: "\u65B0\u958B\u5B9F\u6B63", faction: "shingai", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 88, age: 24, at: "ushiki", retinue: 220, retTrain: 60 },
+  { id: "ot_funai3", name: "\u7531\u5E03\u60DF\u4FE1", faction: "otomo", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 88, age: 28, at: "funai", retinue: 250, retTrain: 62 },
+  { id: "ot_funai4", name: "\u81FC\u6775\u9451\u901F", faction: "otomo", lead: 70, valor: 66, wit: 74, gov: 74, loyal: 90, age: 32, at: "funai", retinue: 260, retTrain: 62 },
+  { id: "ot_usuki2", name: "\u5409\u5CA1\u9577\u5897", faction: "otomo", lead: 70, valor: 66, wit: 76, gov: 74, loyal: 90, age: 48, at: "usuki", retinue: 260, retTrain: 62 },
+  { id: "ot_usuki3", name: "\u7530\u539F\u89AA\u5B8F", faction: "otomo", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 74, age: 34, at: "usuki", retinue: 250, retTrain: 62 },
+  { id: "ot_kurume2", name: "\u554F\u6CE8\u6240\u7D71\u666F", faction: "otomo", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 82, age: 22, at: "kurume", retinue: 240, retTrain: 60 },
+  { id: "ot_kurume3", name: "\u661F\u91CE\u89AA\u5FE0", faction: "otomo", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 28, at: "kurume", retinue: 240, retTrain: 60 },
+  { id: "sg_oka2", name: "\u5FD7\u8CC0\u9053\u8F1D", faction: "shiga", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 86, age: 26, at: "oka", retinue: 250, retTrain: 62 },
+  { id: "sg_oka3", name: "\u5165\u7530\u89AA\u8AA0", faction: "shiga", lead: 64, valor: 64, wit: 64, gov: 62, loyal: 66, age: 36, at: "oka", retinue: 240, retTrain: 60 },
+  { id: "km_yanagawa2", name: "\u84B2\u6C60\u93AE\u6F23", faction: "kamachi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 88, age: 8, at: "yanagawa", retinue: 240, retTrain: 60 },
+  { id: "km_yanagawa3", name: "\u7530\u5C3B\u9451\u7A2E", faction: "kamachi", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 74, age: 24, at: "yanagawa", retinue: 240, retTrain: 60 },
+  { id: "az_akizuki3", name: "\u6075\u5229\u66A2\u582F", faction: "akizuki", lead: 64, valor: 64, wit: 66, gov: 62, loyal: 84, age: 28, at: "akizuki", retinue: 240, retTrain: 60 },
+  { id: "rz_saga2", name: "\u934B\u5CF6\u76F4\u8302", faction: "ryuzoji", lead: 80, valor: 72, wit: 84, gov: 84, loyal: 90, age: 8, at: "saga", retinue: 250, retTrain: 64 },
+  { id: "rz_saga3", name: "\u7D0D\u5BCC\u4FE1\u666F", faction: "ryuzoji", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 84, age: 26, at: "saga", retinue: 240, retTrain: 60 },
+  { id: "ht_kishitake2", name: "\u6CE2\u591A\u93AE", faction: "hata", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 84, age: 18, at: "kishitake", retinue: 240, retTrain: 60 },
+  { id: "ht_kishitake3", name: "\u65E5\u9AD8\u559C", faction: "hata", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 28, at: "kishitake", retinue: 230, retTrain: 58 },
+  { id: "mt_hirado2", name: "\u677E\u6D66\u4FE1\u5B9F", faction: "matsura", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 86, age: 22, at: "hirado", retinue: 240, retTrain: 60 },
+  { id: "mt_hirado3", name: "\u7C60\u624B\u7530\u5B89\u7D4C", faction: "matsura", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 84, age: 26, at: "hirado", retinue: 240, retTrain: 60 },
+  { id: "mt_iki2", name: "\u4F50\u5FD7\u9686", faction: "matsura", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 30, at: "iki", retinue: 220, retTrain: 58 },
+  { id: "mt_iki3", name: "\u65E5\u9AD8\u8CC7", faction: "matsura", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 80, age: 26, at: "iki", retinue: 210, retTrain: 58 },
+  { id: "ar_hinoe2", name: "\u6709\u99AC\u7FA9\u8C9E", faction: "arima", lead: 66, valor: 66, wit: 64, gov: 62, loyal: 90, age: 25, at: "hinoe", retinue: 250, retTrain: 60 },
+  { id: "ar_hinoe3", name: "\u5B89\u5BCC\u7D14\u6CF0", faction: "arima", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 82, age: 30, at: "hinoe", retinue: 240, retTrain: 60 },
+  { id: "om_omura2", name: "\u671D\u9577\u7D14\u5B89", faction: "omura", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 26, at: "omura", retinue: 230, retTrain: 58 },
+  { id: "om_omura3", name: "\u91DD\u5C3E\u4F0A\u8CC0\u5B88", faction: "omura", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 30, at: "omura", retinue: 220, retTrain: 58 },
+  { id: "kk_kumamoto2", name: "\u57CE\u89AA\u51AC", faction: "kikuchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 80, age: 30, at: "kumamoto", retinue: 250, retTrain: 60 },
+  { id: "kk_kumamoto3", name: "\u9688\u90E8\u89AA\u6C38", faction: "kikuchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 72, age: 22, at: "kumamoto", retinue: 250, retTrain: 60 },
+  { id: "sr_hitoyoshi2", name: "\u76F8\u826F\u983C\u623F", faction: "sagara", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 88, age: 26, at: "hitoyoshi", retinue: 250, retTrain: 60 },
+  { id: "sr_hitoyoshi3", name: "\u72AC\u7AE5\u983C\u5B89", faction: "sagara", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 88, age: 20, at: "hitoyoshi", retinue: 240, retTrain: 60 },
+  { id: "sr_yatsushiro3", name: "\u6DF1\u6C34\u9577\u667A", faction: "sagara", lead: 64, valor: 62, wit: 70, gov: 72, loyal: 88, age: 14, at: "yatsushiro", retinue: 240, retTrain: 58 },
+  { id: "it_sadowara2", name: "\u4F0A\u6771\u7950\u5175", faction: "ito", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 88, age: 22, at: "sadowara", retinue: 250, retTrain: 60 },
+  { id: "it_sadowara3", name: "\u7C73\u826F\u91CD\u65B9", faction: "ito", lead: 64, valor: 68, wit: 60, gov: 54, loyal: 84, age: 28, at: "sadowara", retinue: 240, retTrain: 60 },
+  { id: "it_tonokori2", name: "\u843D\u5408\u517C\u671D", faction: "ito", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 26, at: "tonokori", retinue: 240, retTrain: 60 },
+  { id: "it_tonokori3", name: "\u9577\u5009\u7950\u653F", faction: "ito", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 30, at: "tonokori", retinue: 230, retTrain: 58 },
+  { id: "tc_agata2", name: "\u571F\u6301\u89AA\u4F50", faction: "tsuchimochi", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 28, at: "agata", retinue: 230, retTrain: 58 },
+  { id: "tc_agata3", name: "\u7C73\u826F\u77E9\u91CD", faction: "tsuchimochi", lead: 62, valor: 64, wit: 58, gov: 54, loyal: 80, age: 26, at: "agata", retinue: 220, retTrain: 58 },
+  { id: "sz_uchijo4", name: "\u5DDD\u4E0A\u5FE0\u514B", faction: "shimazu", lead: 68, valor: 72, wit: 62, gov: 58, loyal: 90, age: 28, at: "uchijo", retinue: 250, retTrain: 64 },
+  { id: "sz_izumi2", name: "\u5CF6\u6D25\u5FE0\u5C06", faction: "shimazu", lead: 72, valor: 74, wit: 66, gov: 62, loyal: 92, age: 26, at: "izumi", retinue: 250, retTrain: 64 },
+  { id: "sz_izumi3", name: "\u672C\u7530\u89AA\u5B89", faction: "shimazu", lead: 66, valor: 70, wit: 62, gov: 58, loyal: 88, age: 30, at: "izumi", retinue: 240, retTrain: 62 },
+  { id: "sz_kajiki2", name: "\u809D\u4ED8\u517C\u6F14", faction: "shimazu", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 70, age: 36, at: "kajiki", retinue: 250, retTrain: 62 },
+  { id: "sz_kajiki3", name: "\u4F0A\u96C6\u9662\u5FE0\u5009", faction: "shimazu", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 88, age: 26, at: "kajiki", retinue: 240, retTrain: 62 },
+  { id: "sz_shibushi2", name: "\u79B0\u5BDD\u91CD\u9577", faction: "shimazu", lead: 66, valor: 70, wit: 62, gov: 58, loyal: 72, age: 10, at: "shibushi", retinue: 240, retTrain: 62 },
+  { id: "sz_shibushi3", name: "\u4E0A\u4E95\u899A\u517C", faction: "shimazu", lead: 64, valor: 66, wit: 62, gov: 60, loyal: 86, age: 24, at: "shibushi", retinue: 240, retTrain: 60 },
+  { id: "sz_obi2", name: "\u65B0\u7D0D\u5FE0\u582F", faction: "shimazu", lead: 66, valor: 70, wit: 62, gov: 56, loyal: 88, age: 26, at: "obi", retinue: 240, retTrain: 62 },
+  { id: "so_kanaishi2", name: "\u5B97\u8ABF\u89AA", faction: "so", lead: 62, valor: 62, wit: 62, gov: 60, loyal: 88, age: 22, at: "kanaishi", retinue: 230, retTrain: 58 },
+  { id: "so_kanaishi3", name: "\u67F3\u5DDD\u8ABF\u4FE1", faction: "so", lead: 62, valor: 60, wit: 66, gov: 64, loyal: 86, age: 18, at: "kanaishi", retinue: 220, retTrain: 56 },
+  { id: "dt_shiroishi2", name: "\u767D\u77F3\u5B97\u7DB1", faction: "date", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 86, age: 28, at: "shiroishi", retinue: 240, retTrain: 60 },
+  { id: "dt_shiroishi3", name: "\u5C0F\u6881\u5DDD\u5B97\u79C0", faction: "date", lead: 64, valor: 64, wit: 64, gov: 62, loyal: 88, age: 32, at: "shiroishi", retinue: 240, retTrain: 60 },
+  { id: "dt_watari2", name: "\u4E98\u7406\u91CD\u5B97", faction: "date", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 86, age: 22, at: "watari", retinue: 240, retTrain: 60 },
+  { id: "dt_watari3", name: "\u4E2D\u5CF6\u5B97\u6C42", faction: "date", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 84, age: 26, at: "watari", retinue: 230, retTrain: 58 },
+  { id: "as_kurokawa3", name: "\u5BCC\u7530\u9686\u5B9F", faction: "ashina", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 86, age: 24, at: "kurokawa", retinue: 250, retTrain: 62 },
+  { id: "as_inawashiro2", name: "\u732A\u82D7\u4EE3\u76DB\u80E4", faction: "ashina", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 72, age: 16, at: "inawashiro", retinue: 240, retTrain: 60 },
+  { id: "as_inawashiro3", name: "\u91DD\u751F\u76DB\u4FE1", faction: "ashina", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 78, age: 28, at: "inawashiro", retinue: 230, retTrain: 58 },
+  { id: "nb_sannohe2", name: "\u5317\u4FE1\u611B", faction: "nanbu", lead: 70, valor: 68, wit: 72, gov: 68, loyal: 88, age: 23, at: "sannohe", retinue: 250, retTrain: 62 },
+  { id: "nb_sannohe3", name: "\u5357\u9577\u7FA9", faction: "nanbu", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 84, age: 30, at: "sannohe", retinue: 250, retTrain: 62 },
+  { id: "nb_kozukata2", name: "\u798F\u58EB\u6176\u5584", faction: "nanbu", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 28, at: "kozukata", retinue: 240, retTrain: 60 },
+  { id: "nb_kozukata3", name: "\u6BDB\u99AC\u5185\u79C0\u7BC4", faction: "nanbu", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 24, at: "kozukata", retinue: 240, retTrain: 60 },
+  { id: "kh_kunohe3", name: "\u4E45\u6148\u653F\u5247", faction: "kunohe", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 80, age: 26, at: "kunohe", retinue: 240, retTrain: 60 },
+  { id: "mg_yamagata3", name: "\u6C0F\u5BB6\u5B9A\u76F4", faction: "mogami", lead: 66, valor: 66, wit: 66, gov: 64, loyal: 88, age: 40, at: "yamagata", retinue: 250, retTrain: 60 },
+  { id: "td_tendo3", name: "\u5EF6\u6CA2\u6E80\u5EF6", faction: "tendo", lead: 68, valor: 78, wit: 58, gov: 54, loyal: 80, age: 22, at: "tendo", retinue: 240, retTrain: 62 },
+  { id: "dh_ourayama2", name: "\u571F\u4F50\u6797\u7985\u68DF", faction: "daihoji", lead: 64, valor: 64, wit: 64, gov: 62, loyal: 74, age: 36, at: "ourayama", retinue: 240, retTrain: 60 },
+  { id: "dh_ourayama3", name: "\u6765\u6B21\u6C0F\u79C0", faction: "daihoji", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 28, at: "ourayama", retinue: 230, retTrain: 58 },
+  { id: "on_yokote2", name: "\u5C0F\u91CE\u5BFA\u8F1D\u9053", faction: "onodera", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 88, age: 12, at: "yokote", retinue: 240, retTrain: 60 },
+  { id: "on_yokote3", name: "\u516B\u67CF\u9053\u70BA", faction: "onodera", lead: 64, valor: 64, wit: 66, gov: 62, loyal: 86, age: 20, at: "yokote", retinue: 240, retTrain: 60 },
+  { id: "an_hiyama2", name: "\u5B89\u6771\u8302\u5B63", faction: "ando", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 86, age: 16, at: "hiyama", retinue: 240, retTrain: 60 },
+  { id: "an_hiyama3", name: "\u5357\u90E8\u5B63\u8CE2", faction: "ando", lead: 62, valor: 64, wit: 60, gov: 58, loyal: 82, age: 30, at: "hiyama", retinue: 230, retTrain: 58 },
+  { id: "an_minato2", name: "\u8C4A\u5CF6\u7384\u8543", faction: "ando", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 70, age: 28, at: "minato", retinue: 240, retTrain: 60 },
+  { id: "an_minato3", name: "\u6E4A\u9053\u5B63", faction: "ando", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 74, age: 24, at: "minato", retinue: 230, retTrain: 58 },
+  { id: "os_iwadeyama2", name: "\u6C0F\u5BB6\u76F4\u7D99", faction: "osaki", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 80, age: 30, at: "iwadeyama", retinue: 240, retTrain: 60 },
+  { id: "os_iwadeyama3", name: "\u53E4\u5DDD\u6301\u7199", faction: "osaki", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 78, age: 26, at: "iwadeyama", retinue: 230, retTrain: 58 },
+  { id: "kb_sendai2", name: "\u56FD\u5206\u76DB\u91CD", faction: "kokubun", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 84, age: 26, at: "sendai", retinue: 230, retTrain: 58 },
+  { id: "kb_sendai3", name: "\u5800\u6C5F\u6383\u90E8", faction: "kokubun", lead: 62, valor: 64, wit: 58, gov: 54, loyal: 82, age: 30, at: "sendai", retinue: 220, retTrain: 58 },
+  { id: "ks_teraike2", name: "\u845B\u897F\u89AA\u4FE1", faction: "kasai", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 86, age: 18, at: "teraike", retinue: 240, retTrain: 60 },
+  { id: "ks_teraike3", name: "\u67CF\u5C71\u660E\u52A9", faction: "kasai", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 80, age: 26, at: "teraike", retinue: 240, retTrain: 60 },
+  { id: "ab_yokota2", name: "\u963F\u66FD\u6CBC\u5E83\u9577", faction: "abe", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 86, age: 10, at: "yokota", retinue: 230, retTrain: 58 },
+  { id: "ab_yokota3", name: "\u9C52\u6CA2\u5E83\u52DD", faction: "abe", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 24, at: "yokota", retinue: 220, retTrain: 58 },
+  { id: "sb_kosuiji2", name: "\u65AF\u6CE2\u7D4C\u8A6E", faction: "shiba", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 84, age: 26, at: "kosuiji", retinue: 230, retTrain: 58 },
+  { id: "sb_kosuiji3", name: "\u5CA9\u6E05\u6C34\u7FA9\u6559", faction: "shiba", lead: 60, valor: 62, wit: 58, gov: 54, loyal: 82, age: 30, at: "kosuiji", retinue: 220, retTrain: 56 },
+  { id: "nm_namioka2", name: "\u6D6A\u5CA1\u9855\u7BC4", faction: "namioka", lead: 62, valor: 62, wit: 62, gov: 60, loyal: 86, age: 24, at: "namioka", retinue: 230, retTrain: 58 },
+  { id: "nm_namioka3", name: "\u5DDD\u539F\u5177\u4FE1", faction: "namioka", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 84, age: 28, at: "namioka", retinue: 220, retTrain: 56 },
+  { id: "or_oura2", name: "\u68EE\u5CA1\u4FE1\u5143", faction: "oura", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 26, at: "oura", retinue: 230, retTrain: 60 },
+  { id: "or_oura3", name: "\u5C0F\u7B20\u539F\u4FE1\u6D44", faction: "oura", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 30, at: "oura", retinue: 220, retTrain: 58 },
+  { id: "sm_soma2", name: "\u76F8\u99AC\u7FA9\u80E4", faction: "soma", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 88, age: 20, at: "soma", retinue: 250, retTrain: 62 },
+  { id: "sm_soma3", name: "\u9580\u99AC\u548C\u6CC9", faction: "soma", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 28, at: "soma", retinue: 240, retTrain: 60 },
+  { id: "nh_nihonmatsu2", name: "\u7560\u5C71\u7FA9\u7D99", faction: "nihonmatsu", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 86, age: 14, at: "nihonmatsu", retinue: 240, retTrain: 60 },
+  { id: "nh_nihonmatsu3", name: "\u904A\u4F50\u4E39\u6CE2", faction: "nihonmatsu", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 30, at: "nihonmatsu", retinue: 230, retTrain: 58 },
+  { id: "sw_shirakawa2", name: "\u7D50\u57CE\u7FA9\u89AA", faction: "shirakawa", lead: 64, valor: 64, wit: 62, gov: 60, loyal: 86, age: 16, at: "shirakawa", retinue: 240, retTrain: 60 },
+  { id: "sw_shirakawa3", name: "\u5C0F\u5CF0\u7FA9\u540D", faction: "shirakawa", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 28, at: "shirakawa", retinue: 230, retTrain: 58 },
+  { id: "nk_sukagawa2", name: "\u4E8C\u968E\u5802\u76DB\u7FA9", faction: "nikaido", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 88, age: 12, at: "sukagawa", retinue: 240, retTrain: 60 },
+  { id: "nk_sukagawa3", name: "\u4FDD\u571F\u539F\u884C\u85E4", faction: "nikaido", lead: 62, valor: 64, wit: 60, gov: 58, loyal: 84, age: 26, at: "sukagawa", retinue: 230, retTrain: 58 },
+  { id: "tm_miharu3", name: "\u6A4B\u672C\u9855\u5FB3", faction: "tamura", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 84, age: 28, at: "miharu", retinue: 230, retTrain: 58 },
+  { id: "kz_matsumae2", name: "\u8823\u5D0E\u821C\u5E83", faction: "kakizaki", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 10, at: "matsumae", retinue: 240, retTrain: 58 },
+  { id: "kz_matsumae3", name: "\u4E0B\u56FD\u5E2B\u5B63", faction: "kakizaki", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 26, at: "matsumae", retinue: 230, retTrain: 58 },
+  { id: "kz_hakodate2", name: "\u6CB3\u91CE\u5B63\u901A", faction: "kakizaki", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 28, at: "hakodate", retinue: 220, retTrain: 58 },
+  { id: "kz_hakodate3", name: "\u76F8\u539F\u5B63\u80E4", faction: "kakizaki", lead: 62, valor: 64, wit: 58, gov: 54, loyal: 80, age: 24, at: "hakodate", retinue: 220, retTrain: 58 },
+  { id: "kz_esashi2", name: "\u8FD1\u85E4\u5B63\u5E38", faction: "kakizaki", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 26, at: "esashi", retinue: 220, retTrain: 58 },
+  { id: "kz_esashi3", name: "\u5357\u6761\u5E83\u7D99", faction: "kakizaki", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 74, age: 30, at: "esashi", retinue: 220, retTrain: 58 },
+  { id: "aw2_osha2", name: "\u30B7\u30EA\u30D9\u30B7\u4E59\u540D", faction: "ainu_w", lead: 62, valor: 68, wit: 56, gov: 52, loyal: 86, age: 22, at: "oshamanbe", retinue: 210, retTrain: 58 },
+  { id: "aw2_osha3", name: "\u30E6\u30A6\u30D5\u30C4\u4E59\u540D", faction: "ainu_w", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 84, age: 30, at: "oshamanbe", retinue: 210, retTrain: 58 },
+  { id: "aw2_otaru2", name: "\u30E8\u30A4\u30C1\u4E59\u540D", faction: "ainu_w", lead: 64, valor: 68, wit: 58, gov: 54, loyal: 86, age: 26, at: "otaru", retinue: 220, retTrain: 58 },
+  { id: "aw2_otaru3", name: "\u30B7\u30E3\u30B3\u30BF\u30F3\u4E59\u540D", faction: "ainu_w", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 84, age: 32, at: "otaru", retinue: 210, retTrain: 58 },
+  { id: "aw2_ishikari2", name: "\u30B5\u30C3\u30DD\u30ED\u4E59\u540D", faction: "ainu_w", lead: 66, valor: 70, wit: 60, gov: 56, loyal: 88, age: 28, at: "ishikari", retinue: 230, retTrain: 60 },
+  { id: "aw2_ishikari3", name: "\u30C1\u30C8\u30BB\u4E59\u540D", faction: "ainu_w", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 86, age: 24, at: "ishikari", retinue: 210, retTrain: 58 },
+  { id: "ae2_sizunai2", name: "\u30A6\u30E9\u30AB\u30EF\u4E59\u540D", faction: "ainu_e", lead: 64, valor: 68, wit: 58, gov: 54, loyal: 86, age: 26, at: "sizunai", retinue: 220, retTrain: 60 },
+  { id: "ae2_sizunai3", name: "\u30DF\u30C4\u30A4\u30B7\u4E59\u540D", faction: "ainu_e", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 84, age: 30, at: "sizunai", retinue: 210, retTrain: 58 },
+  { id: "ae2_kushiro2", name: "\u30A2\u30C3\u30B1\u30B7\u4E59\u540D", faction: "ainu_e", lead: 64, valor: 68, wit: 58, gov: 54, loyal: 86, age: 24, at: "kushiro", retinue: 220, retTrain: 58 },
+  { id: "ae2_kushiro3", name: "\u30B7\u30E9\u30CC\u30AB\u4E59\u540D", faction: "ainu_e", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 84, age: 28, at: "kushiro", retinue: 210, retTrain: 58 },
+  { id: "ae2_nemuro2", name: "\u30CE\u30C3\u30B1\u4E59\u540D", faction: "ainu_e", lead: 62, valor: 66, wit: 58, gov: 52, loyal: 84, age: 26, at: "nemuro", retinue: 200, retTrain: 58 },
+  { id: "ae2_nemuro3", name: "\u30AF\u30CA\u30B7\u30EA\u4E59\u540D", faction: "ainu_e", lead: 62, valor: 68, wit: 56, gov: 52, loyal: 82, age: 30, at: "nemuro", retinue: 200, retTrain: 58 },
+  { id: "an2_abashiri2", name: "\u30B7\u30E3\u30EA\u4E59\u540D", faction: "ainu_n", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 84, age: 26, at: "abashiri", retinue: 200, retTrain: 58 },
+  { id: "an2_abashiri3", name: "\u30E2\u30F3\u30D9\u30C4\u4E59\u540D", faction: "ainu_n", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 82, age: 30, at: "abashiri", retinue: 200, retTrain: 58 },
+  { id: "an2_soya2", name: "\u30EA\u30B7\u30EA\u4E59\u540D", faction: "ainu_n", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 84, age: 24, at: "soya", retinue: 200, retTrain: 58 },
+  { id: "an2_soya3", name: "\u30EC\u30D6\u30F3\u4E59\u540D", faction: "ainu_n", lead: 60, valor: 64, wit: 58, gov: 54, loyal: 82, age: 28, at: "soya", retinue: 190, retTrain: 56 },
+  { id: "an2_rumoi2", name: "\u30C6\u30B7\u30AA\u4E59\u540D", faction: "ainu_n", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 84, age: 26, at: "rumoi", retinue: 200, retTrain: 58 },
+  { id: "an2_rumoi3", name: "\u30DE\u30B7\u30B1\u4E59\u540D", faction: "ainu_n", lead: 60, valor: 64, wit: 58, gov: 54, loyal: 82, age: 30, at: "rumoi", retinue: 190, retTrain: 56 },
+  { id: "ry_shuri2", name: "\u8B1D\u540D\u5229\u5C71", faction: "ryukyu", lead: 62, valor: 54, wit: 72, gov: 74, loyal: 90, age: 28, at: "shurijo", retinue: 240, retTrain: 54 },
+  { id: "ry_shuri3", name: "\u6D66\u6DFB\u6309\u53F8", faction: "ryukyu", lead: 64, valor: 60, wit: 66, gov: 66, loyal: 88, age: 32, at: "shurijo", retinue: 240, retTrain: 54 },
+  { id: "ry_naka2", name: "\u52DD\u9023\u6309\u53F8", faction: "ryukyu", lead: 64, valor: 62, wit: 64, gov: 62, loyal: 84, age: 30, at: "nakagusuku", retinue: 230, retTrain: 54 },
+  { id: "ry_naka3", name: "\u77E5\u5FF5\u6309\u53F8", faction: "ryukyu", lead: 62, valor: 60, wit: 62, gov: 62, loyal: 86, age: 26, at: "nakagusuku", retinue: 220, retTrain: 54 },
+  { id: "ry_miyako2", name: "\u516B\u91CD\u5C71\u6309\u53F8", faction: "ryukyu", lead: 62, valor: 62, wit: 60, gov: 58, loyal: 80, age: 30, at: "miyako", retinue: 200, retTrain: 54 },
+  { id: "ry_miyako3", name: "\u77F3\u57A3\u6309\u53F8", faction: "ryukyu", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 80, age: 26, at: "miyako", retinue: 190, retTrain: 54 },
+  { id: "m5_shoryuji2", name: "\u4E09\u597D\u70BA\u4E09", faction: "miyoshi", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 80, age: 22, at: "shoryuji", retinue: 240, retTrain: 60 },
+  { id: "m5_kishiwada2", name: "\u5BD2\u5DDD\u5143\u5BB6", faction: "miyoshi", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 82, age: 28, at: "kishiwada", retinue: 240, retTrain: 60 },
+  { id: "m5_shigisan2", name: "\u7AF9\u5185\u79C0\u52DD", faction: "miyoshi", lead: 64, valor: 64, wit: 66, gov: 64, loyal: 74, age: 30, at: "shigisan", retinue: 240, retTrain: 60 },
+  { id: "m5_yura3", name: "\u6C60\u7530\u6559\u6B63", faction: "miyoshi", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 80, age: 24, at: "yura", retinue: 230, retTrain: 60 },
+  { id: "m5_shozui2", name: "\u7BE0\u539F\u9577\u79C0", faction: "miyoshi", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 28, at: "shozui", retinue: 240, retTrain: 60 },
+  { id: "m5_hakuchi2", name: "\u5927\u897F\u983C\u5305", faction: "miyoshi", lead: 62, valor: 64, wit: 60, gov: 56, loyal: 80, age: 22, at: "hakuchi", retinue: 230, retTrain: 58 },
+  { id: "m5_sogo4", name: "\u4E09\u597D\u653F\u6210", faction: "miyoshi", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 86, age: 20, at: "sogo", retinue: 240, retTrain: 60 },
+  { id: "o5_kuragake2", name: "\u6749\u9686\u76F8", faction: "ouchi", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 26, at: "kuragake", retinue: 240, retTrain: 60 },
+  { id: "o5_shimofuri3", name: "\u5185\u85E4\u9686\u6642", faction: "ouchi", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 30, at: "shimofuri", retinue: 230, retTrain: 58 },
+  { id: "o5_tachibana3", name: "\u85A6\u91CE\u5897\u6642", faction: "ouchi", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 28, at: "tachibanayama", retinue: 240, retTrain: 60 },
+  { id: "o5_iwaya3", name: "\u5317\u539F\u93AE\u4E45", faction: "ouchi", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 76, age: 26, at: "iwaya", retinue: 230, retTrain: 58 },
+  { id: "o5_kokura3", name: "\u6749\u9023\u4E26", faction: "ouchi", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 78, age: 30, at: "kokura", retinue: 230, retTrain: 58 },
+  { id: "o5_umagatake3", name: "\u9577\u91CE\u7A2E\u4FE1", faction: "ouchi", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 76, age: 24, at: "umagatake", retinue: 230, retTrain: 58 },
+  { id: "sm5_tateyama3", name: "\u6B63\u6728\u6642\u901A", faction: "satomi", lead: 66, valor: 70, wit: 62, gov: 56, loyal: 86, age: 20, at: "tateyama", retinue: 240, retTrain: 62 },
+  { id: "sm5_kururi2", name: "\u571F\u5C90\u70BA\u983C", faction: "satomi", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 80, age: 26, at: "kururi", retinue: 240, retTrain: 60 },
+  { id: "sm5_kururi3", name: "\u5B89\u897F\u5B9F\u5143", faction: "satomi", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 84, age: 30, at: "kururi", retinue: 230, retTrain: 58 },
+  { id: "sm5_otaki2", name: "\u6B63\u6728\u61B2\u6642", faction: "satomi", lead: 64, valor: 68, wit: 58, gov: 54, loyal: 84, age: 22, at: "otaki", retinue: 240, retTrain: 60 },
+  { id: "sm5_otaki3", name: "\u4E07\u6728\u6642\u7DB1", faction: "satomi", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 28, at: "otaki", retinue: 230, retTrain: 58 },
+  { id: "sm5_sanuki2", name: "\u79CB\u5143\u7FA9\u6B63", faction: "satomi", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 26, at: "sanuki", retinue: 230, retTrain: 58 },
+  { id: "sm5_sanuki3", name: "\u4F50\u8CAB\u6642\u6625", faction: "satomi", lead: 62, valor: 64, wit: 58, gov: 54, loyal: 80, age: 30, at: "sanuki", retinue: 220, retTrain: 58 },
+  { id: "ts5_koriyama3", name: "\u677E\u5009\u91CD\u4FE1", faction: "tsutsui", lead: 68, valor: 68, wit: 70, gov: 64, loyal: 86, age: 13, at: "koriyama", retinue: 240, retTrain: 60 },
+  { id: "ts5_tamon2", name: "\u5E03\u65BD\u884C\u76DB", faction: "tsutsui", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 82, age: 26, at: "tamonyama", retinue: 240, retTrain: 60 },
+  { id: "ts5_tamon3", name: "\u68EE\u597D\u4E4B", faction: "tsutsui", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 30, at: "tamonyama", retinue: 230, retTrain: 58 },
+  { id: "ts5_takatori2", name: "\u8D8A\u667A\u5BB6\u79C0", faction: "tsutsui", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 28, at: "takatori", retinue: 240, retTrain: 60 },
+  { id: "ts5_takatori3", name: "\u7BB8\u5C3E\u70BA\u7DB1", faction: "tsutsui", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 78, age: 24, at: "takatori", retinue: 230, retTrain: 58 },
+  { id: "sk5_saika3", name: "\u5CA1\u5409\u6B63", faction: "saika", lead: 66, valor: 72, wit: 62, gov: 54, loyal: 86, age: 24, at: "saika", retinue: 230, retTrain: 64 },
+  { id: "sk5_shingu2", name: "\u5800\u5185\u6C0F\u5584", faction: "saika", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 26, at: "shingu", retinue: 240, retTrain: 60 },
+  { id: "sk5_shingu3", name: "\u5C0F\u5C71\u9686\u7DB1", faction: "saika", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 30, at: "shingu", retinue: 230, retTrain: 58 },
+  { id: "sk5_tetori2", name: "\u6E6F\u5DDD\u76F4\u6625", faction: "saika", lead: 66, valor: 70, wit: 62, gov: 56, loyal: 80, age: 18, at: "tetori", retinue: 240, retTrain: 62 },
+  { id: "sk5_tetori3", name: "\u7389\u7F6E\u6C38\u76F4", faction: "saika", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 28, at: "tetori", retinue: 230, retTrain: 58 },
+  { id: "ht5_yakami2", name: "\u6CE2\u591A\u91CE\u5B97\u9AD8", faction: "hatano", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 86, age: 20, at: "yagami", retinue: 240, retTrain: 60 },
+  { id: "ht5_yakami3", name: "\u8D64\u4E95\u6642\u5BB6", faction: "hatano", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 74, age: 34, at: "yagami", retinue: 240, retTrain: 60 },
+  { id: "ht5_kameyama2", name: "\u5185\u85E4\u56FD\u8C9E", faction: "hatano", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 74, age: 32, at: "kameyama_t", retinue: 240, retTrain: 60 },
+  { id: "ht5_kameyama3", name: "\u5DDD\u52DD\u7D99\u6C0F", faction: "hatano", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 78, age: 26, at: "kameyama_t", retinue: 230, retTrain: 58 },
+  { id: "ht5_yokoyama2", name: "\u8D64\u4E95\u5BB6\u6E05", faction: "hatano", lead: 64, valor: 68, wit: 58, gov: 54, loyal: 76, age: 28, at: "yokoyama", retinue: 240, retTrain: 60 },
+  { id: "ht5_yokoyama3", name: "\u837B\u91CE\u79CB\u6E05", faction: "hatano", lead: 62, valor: 64, wit: 58, gov: 54, loyal: 74, age: 32, at: "yokoyama", retinue: 230, retTrain: 58 },
+  { id: "ki5_kanazawa3", name: "\u8D85\u52DD\u5BFA\u5B9F\u7167", faction: "kaga_ikko", lead: 64, valor: 62, wit: 68, gov: 66, loyal: 90, age: 30, at: "kanazawa", retinue: 250, retTrain: 58 },
+  { id: "ki5_komatsu2", name: "\u82E5\u6797\u9577\u9580", faction: "kaga_ikko", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 88, age: 26, at: "komatsu", retinue: 240, retTrain: 58 },
+  { id: "ki5_komatsu3", name: "\u5CB8\u7530\u5E38\u5149", faction: "kaga_ikko", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 86, age: 30, at: "komatsu", retinue: 230, retTrain: 58 },
+  { id: "ki5_torigoe2", name: "\u9234\u6728\u91CD\u6CF0", faction: "kaga_ikko", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 88, age: 24, at: "torigoe", retinue: 240, retTrain: 58 },
+  { id: "ki5_torigoe3", name: "\u4E8C\u66F2\u5175\u5EAB", faction: "kaga_ikko", lead: 62, valor: 64, wit: 58, gov: 54, loyal: 86, age: 28, at: "torigoe", retinue: 230, retTrain: 58 },
+  { id: "is5_iwakura3", name: "\u7E54\u7530\u4FE1\u5BB6", faction: "ise", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 24, at: "iwakura", retinue: 240, retTrain: 58 },
+  { id: "is5_inuyama3", name: "\u4E2D\u5CF6\u8C4A\u5F8C\u5B88", faction: "ise", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 78, age: 30, at: "inuyama", retinue: 240, retTrain: 58 },
+  { id: "ed5_mito2", name: "\u6C5F\u6238\u901A\u6CF0", faction: "edo_h", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 86, age: 22, at: "mito", retinue: 240, retTrain: 58 },
+  { id: "ed5_mito3", name: "\u6625\u79CB\u8A6E\u80E4", faction: "edo_h", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 28, at: "mito", retinue: 230, retTrain: 58 },
+  { id: "ed5_fuchu2", name: "\u5927\u63BE\u8C9E\u56FD", faction: "edo_h", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 84, age: 26, at: "fuchu_hitachi", retinue: 230, retTrain: 58 },
+  { id: "ed5_fuchu3", name: "\u771F\u5D0E\u89AA\u5E79", faction: "edo_h", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 82, age: 30, at: "fuchu_hitachi", retinue: 220, retTrain: 56 },
+  { id: "kg5_koga3", name: "\u91CE\u7530\u666F\u7BC4", faction: "koga", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 84, age: 26, at: "koga", retinue: 230, retTrain: 58 },
+  { id: "kg5_sekiyado2", name: "\u7C17\u7530\u52A9\u7E04", faction: "koga", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 86, age: 20, at: "sekiyado", retinue: 240, retTrain: 60 },
+  { id: "kg5_sekiyado3", name: "\u6C34\u6D77\u5143\u5BB6", faction: "koga", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 28, at: "sekiyado", retinue: 230, retTrain: 58 },
+  { id: "cb5_motosakura3", name: "\u5186\u57CE\u5BFA\u5C1A\u6C38", faction: "chiba", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 24, at: "motosakura", retinue: 240, retTrain: 58 },
+  { id: "cb5_usui2", name: "\u539F\u80E4\u6804", faction: "chiba", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 86, age: 16, at: "usui", retinue: 240, retTrain: 58 },
+  { id: "cb5_usui3", name: "\u9AD8\u57CE\u80E4\u5409", faction: "chiba", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 36, at: "usui", retinue: 230, retTrain: 58 },
+  { id: "kt5_matsugashima3", name: "\u5927\u5BAE\u542B\u5FCD\u658E", faction: "kitabatake", lead: 64, valor: 64, wit: 64, gov: 62, loyal: 84, age: 32, at: "matsugashima", retinue: 240, retTrain: 58 },
+  { id: "is5_miyazu3", name: "\u5EF6\u6C38\u6570\u99AC", faction: "isshiki", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 28, at: "miyazu", retinue: 230, retTrain: 58 },
+  { id: "ot5_iwatsuki3", name: "\u592A\u7530\u8CC7\u6B66", faction: "ota", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 84, age: 18, at: "iwatsuki", retinue: 240, retTrain: 60 },
+  { id: "nr5_oshi3", name: "\u6210\u7530\u6CF0\u5B63", faction: "narita", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 84, age: 26, at: "oshi", retinue: 240, retTrain: 58 },
+  { id: "sn5_karasawa3", name: "\u4F50\u91CE\u5B97\u7DB1", faction: "sano", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 22, at: "karasawa", retinue: 240, retTrain: 60 },
+  { id: "ns5_karasuyama3", name: "\u5927\u7530\u539F\u8CC7\u6E05", faction: "nasu", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 78, age: 30, at: "karasuyama", retinue: 240, retTrain: 60 },
+  { id: "ut5_utsunomiya3", name: "\u58EC\u751F\u7DB1\u96C4", faction: "utsunomiya", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 70, age: 26, at: "utsunomiya", retinue: 240, retTrain: 60 },
+  { id: "od5_oda3", name: "\u83C5\u8C37\u52DD\u8C9E", faction: "oda_h", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 90, age: 40, at: "oda", retinue: 240, retTrain: 60 },
+  { id: "yk5_yuki3", name: "\u591A\u8CC0\u8C37\u653F\u7D4C", faction: "yuki", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 78, age: 28, at: "yuki", retinue: 240, retTrain: 60 },
+  { id: "ng5_minowa3", name: "\u4E0A\u6CC9\u4FE1\u7DB1", faction: "nagano_k", lead: 76, valor: 92, wit: 72, gov: 58, loyal: 90, age: 38, at: "minowa", retinue: 240, retTrain: 68 },
+  { id: "yr5_kanayama3", name: "\u6A2A\u702C\u6210\u7E41", faction: "yura", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 26, at: "kanayama", retinue: 240, retTrain: 60 },
+  { id: "sk5_shiba2", name: "\u9AD8\u6C34\u5BFA\u8A6E\u8C9E", faction: "shiba", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 82, age: 28, at: "kosuiji", retinue: 220, retTrain: 56 },
+  { id: "mr5_mogami2", name: "\u6C0F\u5BB6\u5149\u68DF", faction: "mogami", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 26, at: "yamagata", retinue: 240, retTrain: 60 },
+  { id: "hj5_odawara3", name: "\u77F3\u5DFB\u5BB6\u8C9E", faction: "hojo", lead: 64, valor: 64, wit: 66, gov: 66, loyal: 88, age: 36, at: "odawara", retinue: 240, retTrain: 60 },
+  { id: "mr5_koriyama6", name: "\u7C9F\u5C4B\u5143\u89AA", faction: "mori", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 86, age: 26, at: "koriyama_a", retinue: 240, retTrain: 60 },
+  { id: "mk_makabe5", name: "\u7530\u4E2D\u7FA9\u623F", faction: "satake", lead: 62, valor: 66, wit: 60, gov: 58, loyal: 84, age: 32, at: "makabe", retinue: 230, retTrain: 58 },
+  { id: "mk_makabe4", name: "\u771F\u58C1\u9053\u7121", faction: "satake", lead: 66, valor: 74, wit: 60, gov: 56, loyal: 88, age: 48, at: "makabe", retinue: 240, retTrain: 62 },
+  { id: "sz_obi4", name: "\u5C71\u7530\u6709\u4FE1", faction: "shimazu", lead: 70, valor: 76, wit: 64, gov: 60, loyal: 90, age: 30, at: "obi", retinue: 240, retTrain: 64 },
+  { id: "as_kurokawa5", name: "\u4F50\u702C\u7A2E\u5E38", faction: "ashina", lead: 64, valor: 66, wit: 62, gov: 60, loyal: 86, age: 36, at: "kurokawa", retinue: 240, retTrain: 60 },
+  { id: "ashikaga3", name: "\u7D30\u5DDD\u6674\u5143", faction: "ashikaga", lead: 66, valor: 60, wit: 70, gov: 68, loyal: 62, age: 32, at: "nijo", retinue: 300, retTrain: 60 },
+  { id: "kb_takakage0", name: "\u5C0F\u65E9\u5DDD\u6B63\u5E73", faction: "kobayakawa", lead: 66, valor: 66, wit: 64, gov: 64, loyal: 90, age: 34, at: "mihara", retinue: 280, retTrain: 62 },
+  { id: "on_michiyori", name: "\u5C0F\u91CE\u5BFA\u7A19\u9053", faction: "onodera", lead: 68, valor: 66, wit: 66, gov: 66, loyal: 96, age: 42, at: "yokote", retinue: 300, retTrain: 60 }
+];
+
+// src/core/state.js
+var relKey = (a, b) => [a, b].sort().join("|");
+function initState(player) {
+  const factions = JSON.parse(JSON.stringify(FACTIONS));
+  for (const f of Object.values(factions)) f.prestige = 50;
+  const relations = {};
+  const ids = Object.keys(factions);
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    relations[relKey(ids[i], ids[j])] = { trust: 45 + Math.round(Math.random() * 10), state: "\u4E2D\u7ACB", until: null };
+  }
+  const START_TIES = [
+    // ── 東国。河越夜戦の直後であり、北条は今川・武田と和を結んだばかり。
+    ["hojo", "takeda", "\u540C\u76DF", 74],
+    // 甲相同盟（天文十三年ごろ成立）
+    ["hojo", "imagawa", "\u4E0D\u53EF\u4FB5", 58],
+    // 第二次河東一乱の和睦（天文十四年十月）
+    ["takeda", "imagawa", "\u540C\u76DF", 76],
+    // 甲駿同盟。武田が今川・北条を調停した
+    ["hojo", "uesugi_y", "\u6575\u5BFE", 8],
+    // 河越夜戦で山内上杉を破ったばかり
+    ["hojo", "koga", "\u6575\u5BFE", 10],
+    // 古河公方も河越で北条に敗れた
+    ["uesugi_y", "koga", "\u540C\u76DF", 72],
+    // 関東管領と古河公方は連合していた
+    ["uesugi_y", "imagawa", "\u540C\u76DF", 66],
+    // 今川は上杉と通じて北条を挟撃した
+    ["hojo", "satomi", "\u6575\u5BFE", 12],
+    // 里見は房総で北条と争う
+    ["takeda", "murakami", "\u6575\u5BFE", 10],
+    // 武田は信濃で村上と争っていた
+    ["takeda", "nagao", "\u6575\u5BFE", 22],
+    // 信濃をめぐり長尾とも緊張
+    // ── 東海。松平は今川に従い、織田と争う。
+    ["matsudaira", "imagawa", "\u5F93\u5C5E", 64],
+    // 広忠は今川に依存を深めていた
+    ["matsudaira", "oda", "\u6575\u5BFE", 8],
+    // 第二次安城合戦のさなか
+    ["oda", "imagawa", "\u6575\u5BFE", 12],
+    // 三河をめぐる争い
+    ["oda", "yamato", "\u6575\u5BFE", 18],
+    // 織田三家は同族ながら相争う
+    ["oda", "ise", "\u6575\u5BFE", 22],
+    ["mizuno", "oda", "\u540C\u76DF", 68],
+    // 水野は織田方に転じていた
+    ["oda", "saito", "\u6575\u5BFE", 20],
+    // 美濃をめぐる争い
+    // ── 畿内・西国
+    ["ashikaga", "miyoshi", "\u5F93\u5C5E", 44],
+    // 将軍家は細川・三好に擁されていた
+    ["shingai", "miyoshi", "\u5F93\u5C5E", 78],
+    // 新開は三好に従う阿波の国人
+    ["kagawa", "miyoshi", "\u5F93\u5C5E", 70],
+    // 讃岐香川も三好の下にある
+    ["miyoshi", "honganji", "\u4E0D\u53EF\u4FB5", 56],
+    ["kobayakawa", "mori", "\u540C\u76DF", 82],
+    // 小早川は毛利の一族
+    ["mori", "ouchi", "\u5F93\u5C5E", 74],
+    // 毛利は大内に属する安芸の国人
+    ["takeda_a", "amago", "\u5F93\u5C5E", 62],
+    // 安芸武田は尼子を頼む
+    ["ouchi", "amago", "\u6575\u5BFE", 14],
+    // 大内と尼子は山陰山陽を争う
+    ["ouchi", "otomo", "\u6575\u5BFE", 26],
+    // 北九州をめぐる争い
+    ["ryuzoji", "otomo", "\u5F93\u5C5E", 52],
+    // 龍造寺は大友の傘下にあった
+    // ── 九州・四国
+    ["shimazu", "ito", "\u6575\u5BFE", 16],
+    // 日向をめぐる争い
+    ["chosokabe", "ichijo", "\u5F93\u5C5E", 58],
+    // 長宗我部は一条を頼っていた
+    ["kono", "ouchi", "\u4E0D\u53EF\u4FB5", 54],
+    // ── 奥羽
+    ["date", "ashina", "\u540C\u76DF", 66],
+    // 天文の乱を経て和した
+    ["nanbu", "kunohe", "\u5F93\u5C5E", 48],
+    // 九戸は南部の一族ながら不穏
+    ["nanbu", "oura", "\u5F93\u5C5E", 46],
+    // 大浦も南部に属する
+    ["mogami", "date", "\u5F93\u5C5E", 56]
+    // 最上は伊達と縁を結ぶ
+  ];
+  for (const [a, b, st, tr] of START_TIES) {
+    const k = relKey(a, b);
+    if (relations[k]) {
+      relations[k].state = st;
+      relations[k].trust = tr;
+      relations[k].until = null;
+    }
+  }
+  const specials = {};
+  for (const t of TOWNS) specials[t.id] = { state: "\u4E2D\u7ACB", faction: null, anger: 0, months: 0 };
+  return {
+    player,
+    year: 1546,
+    month: 4,
+    factions,
+    castles: assignKokuCap(CASTLES.map((c) => ({
+      ...c,
+      x: px(c.lon),
+      y: py(c.lat),
+      najimi: 70,
+      // 地域家臣団が現城主を受け入れる度合い（GDD 6.2）
+      rost: newRoster(c.local, `loc-${c.id}`),
+      // 地域家臣団の組の名簿
+      kokuBase: c.kokuMax,
+      // 治水の伸びを測るための元の上限
+      kokuCap: c.kokuMax,
+      // 国の検地に基づく限り（下でまとめて割り当てる）
+      well: 100,
+      // 井戸。城工作で傷むと籠城が続かない（GDD 9.2）
+      lordId: null,
+      intrigue: false
+    }))),
+    // 知行を定めてから、城を預かる者に身分を保証する
+    generals: assignRanks(CASTLES, fillKeepers(CASTLES, GENERALS).map((g) => ({
+      ...g,
+      unity: clamp(g.retTrain + 8, 30, 100),
+      merit: 0,
+      fief: Math.round(fiefWanted(g) * (0.72 + Math.random() * 0.34)),
+      rost: newRoster(g.retinue, `ret-${g.id}`)
+    }))),
+    armies: [],
+    orders: {},
+    ledger: [],
+    sieges: [],
+    promo: null,
+    campaigns: [],
+    relations,
+    specials,
+    plots: [],
+    intel: {},
+    prev: {},
+    chronicle: [{ y: 1546, m: 4, text: "\u5C3E\u5F35\u306F\u7E54\u7530\u4E09\u5BB6\u306B\u5206\u304B\u308C\u3001\u7F8E\u6FC3\u306F\u658E\u85E4\u9053\u4E09\u304C\u63E1\u308B\u3002\u5929\u4E0B\u306F\u307E\u3060\u9060\u3044\u3002" }]
+  };
+}
+function migrateRosters(s2) {
+  for (const c of s2.castles) if (!c.rost) c.rost = newRoster(Math.max(0, c.local), `loc-${c.id}`);
+  for (const gq of s2.generals) if (!gq.rost) gq.rost = newRoster(Math.max(0, gq.retinue), `ret-${gq.id}`);
+  for (const a of s2.armies || []) if (!a.rost) a.rost = newRoster(Math.max(0, a.local), `arm-${a.id}`);
+  return s2;
+}
+var KEEPER_NAMES = ["\u57CE\u4EE3", "\u7559\u5B88\u5C45", "\u756A\u982D", "\u4EE3\u5B98"];
+function fillKeepers(castles, generals) {
+  const out = [...generals];
+  for (const c of castles) {
+    if (out.some((g) => g.at === c.id && g.faction === c.faction)) continue;
+    const k = Math.abs(c.id.split("").reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7));
+    const nm = `${c.name.replace(/城$|御堂$|館$|本願寺$/, "")}${KEEPER_NAMES[k % KEEPER_NAMES.length]}`;
+    out.push({
+      id: `keeper-${c.id}`,
+      name: nm,
+      faction: c.faction,
+      lead: 52 + k % 13,
+      valor: 50 + k % 15,
+      wit: 46 + k % 12,
+      gov: 50 + k % 14,
+      loyal: 74 + k % 16,
+      age: 30 + k % 22,
+      at: c.id,
+      retinue: Math.round(140 + c.koku / 1e4 * 22),
+      retTrain: 52 + k % 10
+    });
+  }
+  return out;
+}
+function assignRanks(castles, generals) {
+  for (const fid of [...new Set(castles.map((c) => c.faction))]) {
+    const cs = castles.filter((c) => c.faction === fid);
+    const gs = generals.filter((g) => g.faction === fid);
+    if (!cs.length || !gs.length) continue;
+    const lord = gs.find((g) => g.lord);
+    const seatId = lord ? lord.at : null;
+    const need = cs.filter((c) => c.id !== seatId).length;
+    for (const c of cs) {
+      if (c.id === seatId) continue;
+      const here = gs.filter((g) => g.at === c.id && !g.lord);
+      if (!here.length) continue;
+      const head = [...here].sort((a, b) => b.lead + b.gov + b.wit - (a.lead + a.gov + a.wit))[0];
+      const extra = extraIncome(c);
+      const others = here.filter((x) => x !== head).reduce((t, x) => t + (x.fief || 0), 0);
+      let want = Math.max(head.fief || 0, 1e3);
+      for (let i = 0; i < 40; i++) {
+        const total = others + want;
+        const got = want + (total > 0 ? extra * (want / total) : 0);
+        if (got >= 8400) break;
+        want = Math.round(want * 1.15) + 300;
+        if (want > c.koku * 0.75) break;
+      }
+      head.fief = want;
+    }
+    if (lord) {
+      const koku = cs.reduce((t, c) => t + c.koku, 0);
+      lord.fief = Math.max(lord.fief || 0, Math.round(koku * 0.22));
+    }
+    const heads = cs.filter((c) => c.id !== seatId).map((c) => {
+      const here = gs.filter((g) => g.at === c.id && !g.lord);
+      return here.length ? [...here].sort((a, b) => (b.fief || 0) - (a.fief || 0))[0] : null;
+    }).filter(Boolean);
+    const nSenior = cs.length >= 4 ? Math.max(1, Math.floor(cs.length / 4)) : 0;
+    [...heads].sort((a, b) => b.lead + b.gov + b.wit - (a.lead + a.gov + a.wit)).slice(0, nSenior).forEach((g) => {
+      const c = castles.find((x) => x.id === g.at);
+      if (!c) return;
+      const extra = extraIncome(c);
+      const here = gs.filter((x) => x.at === c.id && !x.lord && x !== g);
+      const others = here.reduce((t, x) => t + (x.fief || 0), 0);
+      let want = g.fief || 0;
+      for (let i = 0; i < 40; i++) {
+        const total = others + want;
+        const got = want + (total > 0 ? extra * (want / total) : 0);
+        if (got >= 20600) break;
+        want = Math.round(want * 1.12) + 500;
+        if (want > c.koku * 0.8) break;
+      }
+      g.fief = want;
+    });
+  }
+  for (const fid of [...new Set(castles.map((c) => c.faction))]) {
+    const lord = generals.find((g) => g.lord && g.faction === fid);
+    if (!lord || (lord.age || 30) >= 15) continue;
+    let kin = generals.filter((g) => g.faction === fid && g.id !== lord.id && (g.age || 0) >= 25);
+    if (!kin.length) kin = generals.filter((g) => g.faction === fid && g.id !== lord.id && (g.age || 0) >= 18);
+    if (!kin.length) continue;
+    const sur = lord.name.slice(0, 2);
+    const pick = [...kin].sort((a, b) => (b.name.startsWith(sur) ? 1 : 0) - (a.name.startsWith(sur) ? 1 : 0) || b.lead + b.gov + b.wit - (a.lead + a.gov + a.wit))[0];
+    lord.guardian = pick.id;
+    pick.at = lord.at;
+  }
+  for (const c of castles) {
+    const lord = generals.find((g) => g.lord && g.faction === c.faction);
+    if (!lord) continue;
+    const kids = generals.filter((g) => PARENT[g.id] === lord.id && g.at === c.id && !g.lord);
+    if (!kids.length) continue;
+    const sorted = [...kids].sort((a, b) => (b.age || 0) - (a.age || 0));
+    sorted.forEach((k, i) => {
+      const floor = i === 0 ? Math.round(c.koku * 0.1) : Math.round(c.koku * 0.055);
+      k.fief = Math.max(k.fief || 0, floor);
+    });
+  }
+  for (const c of castles) {
+    const gs2 = generals.filter((g) => g.at === c.id && g.faction === c.faction && !g.lord);
+    const room = Math.round(c.koku * 0.8);
+    let sum = gs2.reduce((a, g) => a + (g.fief || 0), 0);
+    if (sum > room && sum > 0) {
+      const k = room / sum;
+      for (const g of gs2) g.fief = Math.round((g.fief || 0) * k);
+    }
+  }
+  return generals;
+}
+function assignKokuCap(castles) {
+  for (const c of castles) {
+    if (c.kokuCap == null) c.kokuCap = Math.round(c.kokuMax * 1.2);
+    c.province = c.kuni || null;
+  }
+  return castles;
+}
+var LEVELS = {
+  \u6613: {
+    name: "\u6613",
+    desc: "\u4ED6\u5BB6\u306F\u4F38\u3073\u304C\u9045\u304F\u3001\u653B\u3081\u3082\u614E\u91CD\u3002\u307E\u305A\u4ED5\u7D44\u307F\u3092\u899A\u3048\u305F\u3044\u3068\u304D\u306B\u3002",
+    aiGrow: 0.6,
+    // 他家の内政の効き
+    aiEager: 0.7,
+    // 他家が攻めに出る頻度
+    aiNeed: 1.35,
+    // 攻めに要する兵力の比
+    aiPlot: 0.5,
+    // 他家の調略の頻度
+    reliefP: 1.25,
+    // こちらへの後詰の来やすさ
+    tribute: 1.2
+    // こちらの収入
+  },
+  \u666E\u901A: {
+    name: "\u666E\u901A",
+    desc: "\u3053\u306E\u6642\u4EE3\u306E\u3042\u308A\u3088\u3046\u3092\u305D\u306E\u307E\u307E\u3002",
+    aiGrow: 1,
+    aiEager: 1,
+    aiNeed: 1.05,
+    aiPlot: 1,
+    reliefP: 1,
+    tribute: 1
+  },
+  \u96E3: {
+    name: "\u96E3",
+    desc: "\u4ED6\u5BB6\u306F\u901F\u3084\u304B\u306B\u56FD\u3092\u5BCC\u307E\u305B\u3001\u9699\u3042\u3089\u3070\u653B\u3081\u5BC4\u305B\u308B\u3002\u8B00\u3082\u7D76\u3048\u306C\u3002",
+    aiGrow: 1.5,
+    aiEager: 1.4,
+    aiNeed: 0.85,
+    aiPlot: 1.8,
+    reliefP: 0.8,
+    tribute: 0.88
+  }
+};
+var lv = (s2) => LEVELS[s2.level || "\u666E\u901A"];
+function forecast(s2, fid) {
+  const f = s2.factions[fid];
+  const mine = s2.castles.filter((c) => c.faction === fid);
+  const up = MOB_POLICY[f.mobilization].upkeep;
+  const nextMonth = s2.month === 12 ? 1 : s2.month + 1;
+  const harvest = [9, 10, 11].includes(nextMonth) ? 3 : 1;
+  let inGold = 0, outGold = 0, inFood = 0, outFood = 0, troops = 0, food = 0;
+  for (const c of mine) {
+    const ret = s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive).reduce((a, x) => a + x.retinue, 0);
+    const t = c.local + ret;
+    troops += t;
+    food += c.food;
+    inGold += c.comm * 4 + c.koku * 3e-3;
+    outGold += t * 0.075 * up;
+    inFood += Math.round(c.koku / 12 * 0.5 * harvest * (c.min / 80));
+    outFood += Math.round(t * 0.08 * up);
+  }
+  for (const a of s2.armies.filter((x) => x.faction === fid)) {
+    troops += a.men;
+    outFood += Math.round(a.men * 0.09);
+  }
+  const g = specialBonus(s2, fid, "gold") - specialBonus(s2, fid, "upkeep");
+  inGold += Math.max(0, g);
+  outGold += Math.max(0, -g);
+  const netFood = inFood - outFood;
+  let left = null;
+  if (netFood < 0) {
+    let sim = food, m = 0, mo = s2.month;
+    while (sim > 0 && m < 120) {
+      mo = mo === 12 ? 1 : mo + 1;
+      const h = [9, 10, 11].includes(mo) ? 3 : 1;
+      let gain = 0, loss = 0;
+      for (const c of mine) {
+        const ret = s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive).reduce((a, x) => a + x.retinue, 0);
+        gain += Math.round(c.koku / 12 * 0.5 * h * (c.min / 80));
+        loss += Math.round((c.local + ret) * 0.08 * up);
+      }
+      for (const a of s2.armies.filter((x) => x.faction === fid)) loss += Math.round(a.men * 0.09);
+      sim += gain - loss;
+      m++;
+    }
+    left = m >= 120 ? null : m;
+  }
+  return {
+    inGold: Math.round(inGold),
+    outGold: Math.round(outGold),
+    netGold: Math.round(inGold - outGold),
+    inFood,
+    outFood,
+    netFood,
+    gold: f.gold,
+    food,
+    troops,
+    months: left,
+    harvest: harvest > 1
+  };
+}
+var relOf = (g, a, b) => g.relations[relKey(a, b)] || { trust: 45, state: "\u4E2D\u7ACB", until: null };
+var atPeace = (g, a, b) => {
+  const r = relOf(g, a, b);
+  return r.state === "\u4E0D\u53EF\u4FB5" || r.state === "\u540C\u76DF" || r.state === "\u81E3\u5F93" || r.state === "\u5F93\u5C5E";
+};
+var intelFresh = (g, castleId) => {
+  const i = g.intel[castleId];
+  return !!i && monthsBetween(i.y, i.m, g.year, g.month) <= 12;
+};
+var specialBonus = (g, fid, key) => {
+  let v = 0;
+  for (const t of TOWNS) {
+    const st = g.specials[t.id];
+    if (!st || st.faction !== fid) continue;
+    const o = (SPECIAL_OPTIONS[t.kind] || []).find((x) => x.key === st.state);
+    if (o && o[key]) v += o[key];
+  }
+  return v;
+};
+var canSee = (g, c) => c.faction === g.player || intelFresh(g, c.id) || specialBonus(g, g.player, "intel") > 0;
+var factionKoku = (g, fid) => g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
+function isVassal(g, me, other) {
+  if (!me || !other || me === other) return false;
+  if (relOf(g, me, other).state !== "\u81E3\u5F93") return false;
+  return factionKoku(g, me) >= factionKoku(g, other);
+}
+var underMyBanner = (g, me, other) => me === other || isVassal(g, me, other);
+
+// src/core/terrainCanvas.js
+function buildTerrainCanvas() {
+  const RW = 500, RH = 534;
+  const sx = MAPW / RW, sy = MAPH / RH;
+  const H = new Float32Array(RW * RH);
+  for (let j = 0; j < RH; j++) {
+    const wy = j * sy;
+    for (let i = 0; i < RW; i++) {
+      const wx = i * sx;
+      let h = 0;
+      for (const r of RIDGES) {
+        let d = 1e9;
+        for (let k = 0; k < r.pts.length - 1; k++) {
+          const p = r.pts[k], q = r.pts[k + 1];
+          const dd = segDist(wx, wy, p[0], p[1], q[0], q[1]);
+          if (dd < d) d = dd;
+        }
+        const t = d / r.w;
+        if (t < 3) h = Math.max(h, r.amp * Math.exp(-t * t));
+      }
+      const n = vnoise(wx / 26, wy / 26) * 0.55 + vnoise(wx / 11, wy / 11) * 0.3 + vnoise(wx / 5, wy / 5) * 0.15;
+      H[j * RW + i] = Math.max(0, h * (0.72 + n * 0.56));
+    }
+  }
+  const RAMP = [
+    [0, [222, 228, 200]],
+    [0.04, [212, 222, 188]],
+    [0.12, [193, 210, 166]],
+    [0.28, [168, 194, 139]],
+    [0.48, [140, 175, 114]],
+    [0.7, [116, 156, 95]],
+    [1, [96, 138, 80]]
+  ];
+  const ramp = (h) => {
+    for (let i = 1; i < RAMP.length; i++) {
+      if (h <= RAMP[i][0]) {
+        const a = RAMP[i - 1], b = RAMP[i];
+        const t = (h - a[0]) / (b[0] - a[0] || 1);
+        return [a[1][0] + (b[1][0] - a[1][0]) * t, a[1][1] + (b[1][1] - a[1][1]) * t, a[1][2] + (b[1][2] - a[1][2]) * t];
+      }
+    }
+    return RAMP[RAMP.length - 1][1];
+  };
+  const small = document.createElement("canvas");
+  small.width = RW;
+  small.height = RH;
+  const sctx = small.getContext("2d");
+  const img = sctx.createImageData(RW, RH);
+  for (let j = 0; j < RH; j++) {
+    for (let i = 0; i < RW; i++) {
+      const h = H[j * RW + i];
+      const hx = H[j * RW + Math.min(RW - 1, i + 1)] - H[j * RW + Math.max(0, i - 1)];
+      const hy = H[Math.min(RH - 1, j + 1) * RW + i] - H[Math.max(0, j - 1) * RW + i];
+      let shade2 = 1 + (-hx - hy) * 3.6;
+      shade2 = Math.max(0.62, Math.min(1.34, shade2));
+      const c = ramp(Math.min(1, h));
+      const o = (j * RW + i) * 4;
+      img.data[o] = Math.min(255, c[0] * shade2);
+      img.data[o + 1] = Math.min(255, c[1] * shade2);
+      img.data[o + 2] = Math.min(255, c[2] * shade2);
+      img.data[o + 3] = 255;
+    }
+  }
+  sctx.putImageData(img, 0, 0);
+  const cv = document.createElement("canvas");
+  cv.width = MAPW;
+  cv.height = MAPH;
+  const ctx = cv.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(small, 0, 0, MAPW, MAPH);
+  ctx.fillStyle = U.sea;
+  ctx.fillRect(0, 0, MAPW, MAPH);
+  ctx.save();
+  ctx.beginPath();
+  for (const seg of LAND_POLYS) {
+    seg.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath();
+  }
+  ctx.clip();
+  ctx.drawImage(small, 0, 0, MAPW, MAPH);
+  ctx.restore();
+  ctx.strokeStyle = "rgba(96,130,152,0.75)";
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const seg of COAST) {
+    ctx.beginPath();
+    seg.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.stroke();
+  }
+  for (const lk of LAKES) {
+    ctx.fillStyle = U.sea;
+    ctx.beginPath();
+    lk.pts.forEach(([lo, la], i) => i ? ctx.lineTo(px(lo), py(la)) : ctx.moveTo(px(lo), py(la)));
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(96,130,152,0.6)";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(120,104,80,0.42)";
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([7, 5]);
+  for (const seg of KUNI_LINES) {
+    ctx.beginPath();
+    seg.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const [a, b, , kind] of ROADS) {
+    if (kind === "\u6D77\u8DEF") continue;
+    const A = nodeById(a), B = nodeById(b);
+    if (!A || !B) continue;
+    ctx.strokeStyle = kind === "\u8857\u9053" ? "rgba(176,138,96,0.85)" : kind === "\u96E3\u6240" ? "rgba(140,112,80,0.42)" : "rgba(176,138,96,0.5)";
+    ctx.lineWidth = kind === "\u8857\u9053" ? 2.6 : kind === "\u96E3\u6240" ? 1.4 : 2;
+    ctx.setLineDash(kind === "\u8857\u9053" ? [] : kind === "\u96E3\u6240" ? [3, 5] : [8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y);
+    ctx.lineTo(B.x, B.y);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(96,130,152,0.6)";
+  ctx.lineWidth = 1.8;
+  ctx.setLineDash([4, 5]);
+  for (const [a, b, , kind] of ROADS) {
+    if (kind !== "\u6D77\u8DEF") continue;
+    const A = nodeById(a), B = nodeById(b);
+    if (!A || !B) continue;
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y);
+    ctx.lineTo(B.x, B.y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  return cv;
+}
+
+// src/save/store.js
+var Artifacts\u306E\u8535 = {
+  \u540D: "Artifacts",
+  \u4F7F\u3048\u308B\u304B: () => typeof window !== "undefined" && !!window.storage,
+  \u8AAD\u3080: async (\u9375) => {
+    const r = await window.storage.get(\u9375);
+    return r && r.value ? r.value : null;
+  },
+  \u66F8\u304F: async (\u9375, \u6587) => {
+    await window.storage.set(\u9375, \u6587);
+    return true;
+  },
+  \u6D88\u3059: async (\u9375) => {
+    await window.storage.delete(\u9375);
+  }
+};
+var \u30D6\u30E9\u30A6\u30B6\u306E\u8A18\u61B6 = {
+  \u540D: "\u30D6\u30E9\u30A6\u30B6",
+  \u4F7F\u3048\u308B\u304B: () => {
+    try {
+      if (typeof window === "undefined" || !window.localStorage) return false;
+      window.localStorage.setItem("sengoku:\u8A66", "1");
+      window.localStorage.removeItem("sengoku:\u8A66");
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+  \u8AAD\u3080: async (\u9375) => window.localStorage.getItem(\u9375),
+  \u66F8\u304F: async (\u9375, \u6587) => {
+    window.localStorage.setItem(\u9375, \u6587);
+    return true;
+  },
+  \u6D88\u3059: async (\u9375) => {
+    window.localStorage.removeItem(\u9375);
+  }
+};
+var \u7F6E\u304D\u5834\u306A\u3057 = {
+  \u540D: "\u306A\u3057",
+  \u4F7F\u3048\u308B\u304B: () => true,
+  \u8AAD\u3080: async () => null,
+  \u66F8\u304F: async () => false,
+  \u6D88\u3059: async () => {
+  }
+};
+var \u7F6E\u304D\u5834\u4E00\u89A7 = [Artifacts\u306E\u8535, \u30D6\u30E9\u30A6\u30B6\u306E\u8A18\u61B6, \u7F6E\u304D\u5834\u306A\u3057];
+var \u9078\u3093\u3060 = null;
+function \u7F6E\u304D\u5834() {
+  if (\u9078\u3093\u3060) return \u9078\u3093\u3060;
+  for (const p of \u7F6E\u304D\u5834\u4E00\u89A7) {
+    try {
+      if (p.\u4F7F\u3048\u308B\u304B()) {
+        \u9078\u3093\u3060 = p;
+        break;
+      }
+    } catch (e) {
+    }
+  }
+  return \u9078\u3093\u3060 = \u9078\u3093\u3060 || \u7F6E\u304D\u5834\u306A\u3057;
+}
+
+// src/save/save.js
+var SAVE_KEY = "sengoku:save1";
+var \u7248 = 1;
+function \u5305\u3080(state) {
+  return JSON.stringify({ v: \u7248, at: Date.now(), state });
+}
+function \u89E3\u304F(\u6587) {
+  if (!\u6587) return null;
+  let d = null;
+  try {
+    d = JSON.parse(\u6587);
+  } catch (e) {
+    return null;
+  }
+  if (!d || !d.state || !Array.isArray(d.state.castles)) return null;
+  migrateRosters(d.state);
+  return d;
+}
+async function saveGame(state) {
+  try {
+    return await \u7F6E\u304D\u5834().\u66F8\u304F(SAVE_KEY, \u5305\u3080(state));
+  } catch (e) {
+    return false;
+  }
+}
+async function loadGame() {
+  try {
+    return \u89E3\u304F(await \u7F6E\u304D\u5834().\u8AAD\u3080(SAVE_KEY));
+  } catch (e) {
+    return null;
+  }
+}
+async function clearGame() {
+  try {
+    await \u7F6E\u304D\u5834().\u6D88\u3059(SAVE_KEY);
+  } catch (e) {
+  }
+}
+function \u63A7\u3048\u306E\u540D(state, \u5BB6\u540D) {
+  const y = state.year, m = state.month;
+  return `\u6226\u56FD_${y}\u5E74${String(m).padStart(2, "0")}\u6708_${\u5BB6\u540D || "\u7121\u540D"}.json`;
+}
+function exportSave(state, \u5BB6\u540D) {
+  if (typeof document === "undefined") return false;
+  const \u584A = new Blob([\u5305\u3080(state)], { type: "application/json" });
+  const url = URL.createObjectURL(\u584A);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = \u63A7\u3048\u306E\u540D(state, \u5BB6\u540D);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 4e3);
+  return true;
+}
+async function importSave(file) {
+  const \u6587 = await file.text();
+  const d = \u89E3\u304F(\u6587);
+  return d ? d.state : null;
+}
+
+// src/ui/DaimyoSelect.jsx
+import React, { useState, useRef, useEffect } from "react";
+function seatOf(castles, generals, fid) {
+  const cs = castles.filter((c) => c.faction === fid);
+  if (!cs.length) return null;
+  const lord = generals.find((g) => g.faction === fid && g.lord && !g.captive);
+  if (lord) {
+    const home = cs.find((c) => c.id === lord.at);
+    if (home) return home;
+  }
+  return [...cs].sort((a, b) => b.koku - a.koku)[0];
+}
+function regionOf(fid) {
+  const cs = CASTLES.filter((c) => c.faction === fid);
+  if (!cs.length) return "\u2015";
+  const seat = seatOf(CASTLES, GENERALS, fid);
+  const r = REGIONS.find((x) => x.kuni.includes(seat.kuni));
+  return r ? r.name : "\u2015";
+}
+function DaimyoSelect({
+  terrain,
+  land,
+  onBack,
+  onPick
+}) {
+  const [level, setLevel] = useState("\u666E\u901A");
+  const [region, setRegion] = useState("\u3059\u3079\u3066");
+  const [size, setSize] = useState("\u3059\u3079\u3066");
+  const [open, setOpen] = useState(null);
+  const [mv, setMv] = useState({ x: MAPW / 2, y: MAPH / 2, s: 1 });
+  const drag = useRef(null);
+  const cvRef = useRef(null);
+  useEffect(() => {
+    const cv = cvRef.current;
+    if (!cv || !terrain) return;
+    const ctx = cv.getContext("2d");
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    const base = W / MAPW;
+    const k = base * mv.s;
+    const S = (wx, wy) => [(wx - mv.x) * k + W / 2, (wy - mv.y) * k + H / 2];
+    ctx.drawImage(
+      terrain,
+      0,
+      0,
+      MAPW,
+      MAPH,
+      -mv.x * k + W / 2,
+      -mv.y * k + H / 2,
+      MAPW * k,
+      MAPH * k
+    );
+    const cs = CASTLES.map((c) => {
+      const [x, y] = S(px(c.lon), py(c.lat));
+      return {
+        x,
+        y,
+        col: (FACTIONS[c.faction] || {}).color || "#888",
+        w: 1 + Math.sqrt(c.koku / 1e4) * 0.34,
+        fid: c.faction
+      };
+    });
+    const cell = 6;
+    const reach = 26 * (k / base);
+    ctx.globalAlpha = 0.34;
+    for (let y = 0; y < H; y += cell) {
+      for (let x = 0; x < W; x += cell) {
+        let best = null, bd = 1e9;
+        for (const c of cs) {
+          const d = Math.hypot(c.x - x, c.y - y) / c.w;
+          if (d < bd) {
+            bd = d;
+            best = c;
+          }
+        }
+        if (!best || bd > reach) continue;
+        ctx.fillStyle = best.col;
+        ctx.fillRect(x, y, cell + 1, cell + 1);
+      }
+    }
+    ctx.globalAlpha = 1;
+    const big = mv.s > 1.8;
+    for (const c of CASTLES) {
+      const [x, y] = S(px(c.lon), py(c.lat));
+      if (x < -30 || x > W + 30 || y < -30 || y > H + 30) continue;
+      const on = open === c.faction;
+      const col = (FACTIONS[c.faction] || {}).color || "#888";
+      const r = (on ? 4.6 : 2.6) * (big ? 1.5 : 1);
+      ctx.fillStyle = on ? "#fff" : "rgba(255,255,255,.75)";
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 7);
+      ctx.fill();
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.68, 0, 7);
+      ctx.fill();
+      if (big) {
+        ctx.font = "600 11px 'Hiragino Sans',sans-serif";
+        const nm = c.name;
+        const w = ctx.measureText(nm).width;
+        ctx.fillStyle = "rgba(255,255,255,.82)";
+        ctx.fillRect(x - w / 2 - 3, y - r - 15, w + 6, 13);
+        ctx.fillStyle = "#2A2A28";
+        ctx.fillText(nm, x - w / 2, y - r - 5);
+      }
+    }
+    if (open) {
+      const seat = seatOf(CASTLES, GENERALS, open);
+      if (seat) {
+        const [x, y] = S(px(seat.lon), py(seat.lat));
+        ctx.strokeStyle = (FACTIONS[open] || {}).color || "#888";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(x, y, 11, 0, 7);
+        ctx.stroke();
+        const nm = (FACTIONS[open] || {}).name || "";
+        ctx.font = "600 13px 'Hiragino Sans',sans-serif";
+        const w = ctx.measureText(nm).width;
+        ctx.fillStyle = "rgba(255,255,255,.92)";
+        ctx.fillRect(x - w / 2 - 5, y - 30, w + 10, 18);
+        ctx.fillStyle = "#2A2A28";
+        ctx.fillText(nm, x - w / 2, y - 17);
+      }
+    }
+    ctx.fillStyle = "rgba(40,60,80,.5)";
+    ctx.font = `${Math.round(clamp(12 * mv.s, 11, 20))}px serif`;
+    for (const q of SEA_LABELS) {
+      const [x, y] = S(q.x, q.y);
+      if (x < -40 || x > W + 40 || y < -20 || y > H + 20) continue;
+      ctx.fillText(q.name, x - 20, y);
+    }
+  }, [terrain, open, mv]);
+  const mapXY = (cv, p) => {
+    const r = cv.getBoundingClientRect();
+    const W = cv.width, H = cv.height;
+    const sx = (p.clientX - r.left) / r.width * W;
+    const sy = (p.clientY - r.top) / r.height * H;
+    const k = W / MAPW * mv.s;
+    return [(sx - W / 2) / k + mv.x, (sy - H / 2) / k + mv.y];
+  };
+  const onMapDown = (e) => {
+    const cv = cvRef.current;
+    if (!cv) return;
+    if (e.cancelable) e.preventDefault();
+    if (e.touches && e.touches.length === 2) {
+      const [t1, t2] = [e.touches[0], e.touches[1]];
+      const r = cv.getBoundingClientRect();
+      const mx = ((t1.clientX + t2.clientX) / 2 - r.left) / r.width * cv.width;
+      const my = ((t1.clientY + t2.clientY) / 2 - r.top) / r.height * cv.height;
+      const k = cv.width / MAPW * mv.s;
+      drag.current = {
+        pinch: true,
+        moved: 99,
+        d0: Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY),
+        s0: mv.s,
+        wx: (mx - cv.width / 2) / k + mv.x,
+        wy: (my - cv.height / 2) / k + mv.y
+      };
+      return;
+    }
+    const p = e.touches ? e.touches[0] : e;
+    drag.current = { x: p.clientX, y: p.clientY, vx: mv.x, vy: mv.y, moved: 0 };
+  };
+  const onMapMove = (e) => {
+    const d = drag.current, cv = cvRef.current;
+    if (!d || !cv) return;
+    if (e.cancelable) e.preventDefault();
+    if (d.pinch) {
+      if (!e.touches || e.touches.length < 2) return;
+      const [t1, t2] = [e.touches[0], e.touches[1]];
+      const dd = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      if (!d.d0 || !dd) return;
+      const r2 = cv.getBoundingClientRect();
+      const mx = ((t1.clientX + t2.clientX) / 2 - r2.left) / r2.width * cv.width;
+      const my = ((t1.clientY + t2.clientY) / 2 - r2.top) / r2.height * cv.height;
+      const ns = clamp(d.s0 * (dd / d.d0), 1, 8);
+      const k2 = cv.width / MAPW * ns;
+      setMv({ s: ns, x: d.wx - (mx - cv.width / 2) / k2, y: d.wy - (my - cv.height / 2) / k2 });
+      return;
+    }
+    const p = e.touches ? e.touches[0] : e;
+    const r = cv.getBoundingClientRect();
+    const k = cv.width / MAPW * mv.s * (r.width / cv.width);
+    const dx = (p.clientX - d.x) / k, dy = (p.clientY - d.y) / k;
+    d.moved = Math.max(d.moved, Math.hypot(p.clientX - d.x, p.clientY - d.y));
+    setMv((v) => ({ ...v, x: clamp(d.vx - dx, 0, MAPW), y: clamp(d.vy - dy, 0, MAPH) }));
+  };
+  const onMapCancel = () => {
+    drag.current = null;
+  };
+  const onMapUp = (e) => {
+    const d = drag.current, cv = cvRef.current;
+    if (e.cancelable) e.preventDefault();
+    drag.current = null;
+    if (!d || !cv || d.moved > 8) return;
+    const p = e.changedTouches && e.changedTouches[0] || e;
+    const [mx, my] = mapXY(cv, p);
+    let best = null, bd = 1e9;
+    for (const c of CASTLES) {
+      const dd = Math.hypot(px(c.lon) - mx, py(c.lat) - my);
+      if (dd < bd) {
+        bd = dd;
+        best = c;
+      }
+    }
+    if (!best || bd > 170 / mv.s) return;
+    setOpen(best.faction);
+    setRegion("\u3059\u3079\u3066");
+    setSize("\u3059\u3079\u3066");
+  };
+  const mapZoom = (kk) => setMv((v) => ({ ...v, s: clamp(v.s * kk, 1, 8) }));
+  const mapWhole = () => setMv({ x: MAPW / 2, y: MAPH / 2, s: 1 });
+  const stat = (fid) => {
+    const cs = CASTLES.filter((c) => c.faction === fid);
+    const gs = GENERALS.filter((x) => x.faction === fid);
+    const seat = seatOf(CASTLES, GENERALS, fid);
+    const lord = gs.find((x) => x.lord) || [...gs].sort((a, b) => b.lead + b.gov - (a.lead + a.gov))[0];
+    return {
+      koku: cs.reduce((a, c) => a + c.koku, 0),
+      men: cs.reduce((a, c) => a + c.local, 0) + gs.reduce((a, x) => a + x.retinue, 0),
+      gen: gs.length,
+      castles: cs.length,
+      towns: TOWNS.filter((t) => t.owner === fid).length,
+      seat: seat ? `${seat.name}\uFF08${seat.kuni}\uFF09` : "\u2015",
+      lord: lord ? lord.name : "\u2015"
+    };
+  };
+  const list = Object.values(FACTIONS).map((f) => ({ f, st: stat(f.id) })).filter(({ f, st }) => st.castles > 0).filter(({ f }) => region === "\u3059\u3079\u3066" || regionOf(f.id) === region).filter(({ st }) => size === "\u3059\u3079\u3066" || size === "\u5927\u8EAB" && st.koku >= 25e4 || size === "\u4E2D\u5805" && st.koku >= 1e5 && st.koku < 25e4 || size === "\u5C0F\u52E2\u529B" && st.koku < 1e5).sort((a, b) => (b.f.id === open ? 1 : 0) - (a.f.id === open ? 1 : 0) || b.st.koku - a.st.koku);
+  return /* @__PURE__ */ React.createElement("div", { className: "sp", style: { height: "100dvh", overscrollBehavior: "none" } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", minHeight: 0, flexDirection: land ? "row" : "column" } }, /* @__PURE__ */ React.createElement("div", { style: {
+    flex: 1,
+    position: "relative",
+    background: "#DDE4C8",
+    overflow: "hidden",
+    touchAction: "none",
+    overscrollBehavior: "none"
+  } }, /* @__PURE__ */ React.createElement(
+    "canvas",
+    {
+      ref: cvRef,
+      width: 720,
+      height: 760,
+      style: { width: "100%", height: "100%", objectFit: "contain", cursor: "grab", touchAction: "none" },
+      onMouseDown: onMapDown,
+      onMouseMove: onMapMove,
+      onMouseUp: onMapUp,
+      onMouseLeave: () => {
+        drag.current = null;
+      },
+      onTouchStart: onMapDown,
+      onTouchMove: onMapMove,
+      onTouchEnd: onMapUp,
+      onTouchCancel: onMapCancel
+    }
+  ), /* @__PURE__ */ React.createElement("button", { className: "btn", style: { position: "absolute", left: 14, top: 14 }, onClick: onBack }, "\u2190 \u623B\u308B"), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", right: 12, top: 12, display: "flex", flexDirection: "column", gap: 6 } }, /* @__PURE__ */ React.createElement("button", { className: "btn sm", style: { padding: "7px 11px" }, onClick: () => mapZoom(1.5) }, "\uFF0B"), /* @__PURE__ */ React.createElement("button", { className: "btn sm", style: { padding: "7px 11px" }, onClick: () => mapZoom(1 / 1.5) }, "\uFF0D"), /* @__PURE__ */ React.createElement("button", { className: "btn sm", style: { padding: "7px 9px", fontSize: 11 }, onClick: mapWhole }, "\u5168\u56F3")), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: 0, right: 0, bottom: 10, textAlign: "center", pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("span", { style: {
+    background: "rgba(252,250,245,.92)",
+    padding: "6px 14px",
+    borderRadius: 14,
+    fontSize: 12.5,
+    color: U.dim,
+    boxShadow: "0 1px 4px rgba(0,0,0,.12)"
+  } }, open ? `${(FACTIONS[open] || {}).name} \u3092\u9078\u3093\u3067\u3044\u307E\u3059` : "\u5730\u56F3\u3092\u62BC\u3059\u3068\u3001\u305D\u306E\u5730\u306E\u5927\u540D\u304C\u9078\u3070\u308C\u307E\u3059\uFF08\u4E8C\u672C\u6307\u3067\u62E1\u3052\u7E2E\u3081\u30FB\u306A\u305E\u3063\u3066\u79FB\u52D5\uFF09"))), /* @__PURE__ */ React.createElement("div", { style: {
+    width: land ? 300 : "auto",
+    flex: land ? "0 0 300px" : "0 0 52%",
+    borderLeft: land ? `1px solid ${U.line}` : "none",
+    borderTop: land ? "none" : `1px solid ${U.line}`,
+    background: U.card,
+    overflowY: "auto",
+    padding: 16
+  } }, /* @__PURE__ */ React.createElement("div", { className: "sec" }, "\u96E3\u6613\u5EA6"), /* @__PURE__ */ React.createElement("div", { className: "g3", style: { marginBottom: 6 } }, Object.values(LEVELS).map((L) => /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      key: L.name,
+      className: `btn sm ${level === L.name ? "on" : ""}`,
+      onClick: () => setLevel(L.name)
+    },
+    L.name
+  ))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 14, lineHeight: 1.7 } }, (LEVELS[level] || LEVELS["\u666E\u901A"]).desc), /* @__PURE__ */ React.createElement("div", { className: "sec" }, "\u5927\u540D\u3092\u9078\u3076\uFF08", Object.keys(FACTIONS).length, "\u5BB6\uFF09"), /* @__PURE__ */ React.createElement("div", { className: "g2", style: { marginBottom: 8 } }, ["\u3059\u3079\u3066", "\u5927\u8EAB", "\u4E2D\u5805", "\u5C0F\u52E2\u529B"].map((k) => /* @__PURE__ */ React.createElement("button", { key: k, className: `btn sm ${size === k ? "on" : ""}`, onClick: () => setSize(k) }, k))), /* @__PURE__ */ React.createElement("div", { className: "g3", style: { marginBottom: 12 } }, ["\u3059\u3079\u3066", ...REGIONS.map((r) => r.name)].map((k) => /* @__PURE__ */ React.createElement("button", { key: k, className: `btn sm ${region === k ? "on" : ""}`, onClick: () => setRegion(k) }, k))), list.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: U.dim, padding: "16px 0" } }, "\u8A72\u5F53\u3059\u308B\u5BB6\u304C\u3042\u308A\u307E\u305B\u3093\u3002"), list.map(({ f, st }) => /* @__PURE__ */ React.createElement("div", { key: f.id, style: { borderBottom: `1px solid ${U.line2}`, padding: "10px 0" } }, /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer" },
+      onClick: () => setOpen(open === f.id ? null : f.id)
+    },
+    /* @__PURE__ */ React.createElement("span", { className: "dot", style: { background: f.color } }),
+    /* @__PURE__ */ React.createElement("span", { className: "mn", style: { fontSize: 17, flex: 1 } }, f.name),
+    /* @__PURE__ */ React.createElement("span", { className: "num", style: { fontSize: 11.5, color: U.dim } }, man(st.koku), "\u4E07\u77F3\uFF0F", st.castles, "\u57CE\uFF0F", st.gen, "\u540D")
+  ), open === f.id && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 8 } }, f.desc && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 8, lineHeight: 1.7 } }, f.desc), /* @__PURE__ */ React.createElement("div", { className: "tbl" }, /* @__PURE__ */ React.createElement("span", { className: "k" }, "\u77F3\u9AD8"), /* @__PURE__ */ React.createElement("span", { className: "v" }, man(st.koku), " \u4E07\u77F3"), /* @__PURE__ */ React.createElement("span", { className: "k" }, "\u5175\u6570"), /* @__PURE__ */ React.createElement("span", { className: "v" }, fmt(st.men)), /* @__PURE__ */ React.createElement("span", { className: "k" }, "\u6B66\u5C06"), /* @__PURE__ */ React.createElement("span", { className: "v" }, st.gen, " \u540D"), /* @__PURE__ */ React.createElement("span", { className: "k" }, "\u62E0\u70B9"), /* @__PURE__ */ React.createElement("span", { className: "v" }, st.castles, "\u57CE", st.towns ? `\u30FB${st.towns}\u90FD\u5E02` : ""), /* @__PURE__ */ React.createElement("span", { className: "k" }, "\u672C\u62E0"), /* @__PURE__ */ React.createElement("span", { className: "v" }, st.seat), /* @__PURE__ */ React.createElement("span", { className: "k" }, "\u5F53\u4E3B"), /* @__PURE__ */ React.createElement("span", { className: "v" }, st.lord)), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "btn",
+      style: { width: "100%", marginTop: 10, background: f.color, color: "#fff", borderColor: f.color },
+      onClick: () => onPick(f.id, false, level)
+    },
+    "\u3053\u306E\u52E2\u529B\u3067\u958B\u59CB"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "btn sm",
+      style: { width: "100%", marginTop: 4 },
+      onClick: () => onPick(f.id, true, level)
+    },
+    "\u3053\u306E\u52E2\u529B\u3092\u4EFB\u305B\u3066\u898B\u7269\u3059\u308B"
+  )))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, borderTop: `1px solid ${U.line2}`, paddingTop: 12, marginTop: 8 } }, "\u5BB6\u540D\u3092\u62BC\u3059\u3068\u8A73\u3057\u3044\u69D8\u5B50\u304C\u51FA\u307E\u3059\u3002\u9078\u3070\u306A\u304B\u3063\u305F\u5BB6\u306F\u3059\u3079\u3066AI\u304C\u62C5\u5F53\u3057\u307E\u3059\u3002"))));
+}
+
+// src/core/capture.js
+var CAPTURE_BASE = 0.06;
+function captureChance(gen) {
+  const able = (gen.lead + gen.valor + gen.wit) / 3;
+  const k = clamp(1.9 - able / 55, 0.25, 2.2);
+  return clamp(CAPTURE_BASE * k, 0.01, 0.2);
+}
+function ransomRank(gen) {
+  const t = gen.lead + gen.valor + gen.wit + gen.gov;
+  return t >= 300 ? "\u7532" : t >= 250 ? "\u4E59" : t >= 200 ? "\u4E19" : "\u4E01";
+}
+var RANSOM_DIV = { \u7532: 3, \u4E59: 5, \u4E19: 7, \u4E01: 9 };
+function ransomCost(s2, gen) {
+  const rank = ransomRank(gen);
+  const div = RANSOM_DIV[rank];
+  const payer = gen.captive ? gen.captive.from : gen.faction;
+  const gold = s2.factions[payer] ? s2.factions[payer].gold : 0;
+  const food = s2.castles.filter((c) => c.faction === payer).reduce((a, c) => a + c.food, 0);
+  return { rank, div, gold: Math.round(gold / div), food: Math.round(food / div), payer };
+}
+function ransomAccept(s2, gen) {
+  const { gold, food, payer } = ransomCost(s2, gen);
+  const f = s2.factions[payer];
+  if (!f) return false;
+  const canPay = f.gold >= gold && s2.castles.filter((c) => c.faction === payer).reduce((a, c) => a + c.food, 0) >= food;
+  if (!canPay) return false;
+  const worth = (gen.lead + gen.valor + gen.wit + gen.gov) / 400;
+  const loy = (gen.loyal == null ? 60 : gen.loyal) / 100;
+  return Math.random() < clamp(worth * 0.9 + loy * 0.5 - 0.25, 0.05, 0.95);
+}
+function payRansom(s2, gen) {
+  const { gold, food, payer } = ransomCost(s2, gen);
+  const f = s2.factions[payer];
+  if (!f) return false;
+  f.gold -= gold;
+  let left = food;
+  for (const c of s2.castles.filter((c2) => c2.faction === payer)) {
+    const take = Math.min(c.food, left);
+    c.food -= take;
+    left -= take;
+    if (left <= 0) break;
+  }
+  s2.factions[s2.player].gold += gold;
+  const mine = s2.castles.filter((c) => c.faction === s2.player);
+  if (mine.length) mine[0].food += food;
+  const home = s2.castles.find((c) => c.faction === payer) || s2.castles[0];
+  gen.captive = null;
+  gen.at = home.id;
+  gen.retinue = Math.round(180 + Math.random() * 120);
+  return { gold, food, home };
+}
+function makePrisoner(s2, gen, holderFaction, castleId) {
+  gen.captive = { by: holderFaction, from: gen.faction, at: castleId, since: `${s2.year}-${s2.month}` };
+  gen.at = castleId;
+  gen.retinue = 0;
+  return gen;
+}
+function persuadeResult(gen) {
+  const loy = gen.loyal == null ? 60 : gen.loyal;
+  if (loy <= 40) return true;
+  if (loy >= 71) return false;
+  return Math.random() < (71 - loy) / 40;
+}
+function captiveRecruit(s2, gen) {
+  if (!gen || !gen.captive) return { ok: false, why: "\u6355\u865C\u3067\u306F\u306A\u3044" };
+  const loy = gen.loyal == null ? 60 : gen.loyal;
+  const \u65E7\u4E3B = s2.generals.find((x) => x.faction === gen.captive.from && x.lord && !x.captive) || null;
+  const rec = canRecruit(gen, \u65E7\u4E3B);
+  if (!rec.ok) return rec;
+  if (loy > 40) return { ok: false, why: `\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0${Math.round(loy)}\u3002\u307E\u3060\u5FC3\u304C\u96E2\u308C\u3066\u3044\u306A\u3044\uFF0840\u4EE5\u4E0B\u3067\u964D\u308B\uFF09` };
+  return { ok: true, why: "" };
+}
+function takeAsPrisoner(s2, gen, winner, castleId) {
+  const g2 = s2.generals.find((x) => x.id === gen.id);
+  if (!g2) return;
+  g2.captive = { by: winner, from: g2.faction, at: castleId, since: { y: s2.year, m: s2.month }, ruin: true };
+  g2.lord = false;
+  g2.warLoyal = 0;
+  g2.retinue = Math.round(g2.retinue * 0.25);
+  g2.at = castleId;
+}
+
+// src/govern/commands.js
+function runCommand(prev, castleId, cmd, genId, g) {
+  const s2 = structuredClone(prev);
+  const c = s2.castles.find((x) => x.id === castleId);
+  if (c && s2.sieges.some((sg) => sg.castleId === c.id)) {
+    s2.msg = `${c.name}\u306F\u56F2\u307E\u308C\u3066\u3044\u308B\u3002\u57CE\u3092\u51FA\u3066\u4E8B\u3092\u884C\u3046\u3053\u3068\u306F\u3067\u304D\u306A\u3044\u3002`;
+    return s2;
+  }
+  const gen = s2.generals.find((x) => x.id === genId);
+  const f = s2.factions[c.faction];
+  const lines = [];
+  const rec = (label, before, after, unit = "") => lines.push({ label, before, after, unit });
+  const COST_OF = { \u958B\u58BE: 140, \u6CBB\u6C34: 180, \u5546\u696D: 160, \u7BC9\u57CE: 200, \u8A13\u7DF4: 120, \u5FB4\u52DF: 100 };
+  if (f.gold < (COST_OF[cmd] || 140)) {
+    s2.msg = `\u91D1\u304C\u8DB3\u308A\u306C\u3002${cmd}\u306B\u306F${COST_OF[cmd] || 140}\u8CAB\u304C\u8981\u308B\uFF08\u624B\u5143${fmt(Math.max(0, f.gold))}\u8CAB\uFF09\u3002`;
+    return s2;
+  }
+  let cost = 0;
+  if (cmd === "\u958B\u58BE") {
+    cost = 140;
+    const room = c.kokuMax - c.koku;
+    const labor = Math.min(1, c.pop / (c.kokuMax * 0.9));
+    const gain = Math.min(room, Math.round(room * 0.16 * (0.5 + gen.gov / 100) * labor));
+    rec("\u73FE\u5728\u77F3\u9AD8", c.koku, c.koku + gain, "\u77F3");
+    c.koku += gain;
+  } else if (cmd === "\u6CBB\u6C34") {
+    cost = 180;
+    const cap = c.kokuCap || c.kokuMax;
+    const room = Math.max(0, cap - c.kokuMax);
+    const d = Math.min(room, Math.round(c.kokuMax * 0.035 * (0.5 + gen.gov / 100)));
+    rec("\u6700\u5927\u77F3\u9AD8", c.kokuMax, c.kokuMax + d, "\u77F3");
+    c.kokuMax += d;
+    if (room <= 0) rec("\u3053\u306E\u5730\u306E\u9650\u308A", cap, cap, "\u77F3\uFF08\u3053\u308C\u4EE5\u4E0A\u306F\u958B\u3051\u306C\uFF09");
+    rec("\u6C11\u5FE0", Math.round(c.min), Math.min(100, Math.round(c.min) + 2));
+    c.min = Math.min(100, c.min + 2);
+  } else if (cmd === "\u5546\u696D") {
+    cost = 160;
+    const d = Math.round(3 * (0.5 + gen.gov / 100));
+    rec("\u5546\u696D", Math.round(c.comm), Math.min(100, Math.round(c.comm) + d));
+    c.comm = Math.min(100, c.comm + d);
+  } else if (cmd === "\u7BC9\u57CE") {
+    cost = 240;
+    const d = Math.round(3 * (0.5 + gen.gov / 100));
+    rec("\u57CE\u9632", Math.round(c.def), Math.min(100, Math.round(c.def) + d));
+    c.def = Math.min(100, c.def + d);
+    rec("\u8010\u4E45", c.hp, c.hp + 200);
+    c.hp += 200;
+  } else if (cmd === "\u8A13\u7DF4") {
+    cost = 110;
+    const d = Math.round(4 * (0.4 + gen.lead / 100));
+    rec("\u5730\u57DF\u5BB6\u81E3\u56E3 \u7DF4\u5EA6", Math.round(c.localTrain), Math.min(100, Math.round(c.localTrain) + d));
+    c.localTrain = Math.min(100, c.localTrain + d);
+    for (const x of s2.generals.filter((q) => q.at === c.id && q.faction === c.faction)) x.retTrain = Math.min(100, x.retTrain + Math.round(d * 0.7));
+    rec("\u76F4\u5C5E\u5BB6\u81E3\u56E3 \u7DF4\u5EA6\uFF08\u5728\u57CE\uFF09", gen.retTrain - Math.round(d * 0.7), gen.retTrain);
+  } else if (cmd === "\u5FB4\u52DF") {
+    const cap = troopCap(c, f.mobilization, g || s2);
+    const cur = c.local + s2.generals.filter((x) => x.at === c.id && x.faction === c.faction).reduce((a, x) => a + x.retinue, 0);
+    const n = Math.max(0, Math.min(cap - cur, Math.floor((f.gold - 60) / 0.45), Math.floor(c.pop * 0.012)));
+    cost = Math.round(n * 0.45);
+    rec("\u5730\u57DF\u5BB6\u81E3\u56E3", c.local, c.local + n, "\u4EBA");
+    rec("\u8ECD\u5F79\u4F59\u529B", Math.max(0, cap - cur), Math.max(0, cap - cur - n), "\u4EBA");
+    const old = c.local;
+    c.local += n;
+    rosterSync(c, "rost", c.local, `loc-${c.id}`);
+    c.localTrain = Math.round((c.localTrain * old + 30 * n) / Math.max(1, c.local));
+    c.pop -= Math.round(n * 0.2);
+  } else if (cmd === "\u8ABF\u7565") {
+    cost = 220;
+    const target = s2.castles.filter((x) => x.faction !== c.faction).sort((a, z) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(z.x - c.x, z.y - c.y))[0];
+    if (target) {
+      const eff = Math.round(4 * (0.4 + gen.wit / 100));
+      rec(`${target.name} \u6C11\u5FE0`, Math.round(target.min), Math.max(0, Math.round(target.min) - eff));
+      target.min = Math.max(0, target.min - eff);
+      rec(`${target.name} \u57CE\u9632`, Math.round(target.def), Math.max(0, Math.round(target.def) - Math.round(eff / 2)));
+      target.def = Math.max(0, target.def - Math.round(eff / 2));
+    }
+  }
+  if (f.gold < cost) {
+    s2.msg = `\u91D1\u304C\u8DB3\u308A\u306C\u3002${cmd}\u306B\u306F${fmt(cost)}\u8CAB\u304C\u8981\u308B\uFF08\u624B\u5143${fmt(Math.max(0, f.gold))}\u8CAB\uFF09\u3002`;
+    return prev;
+  }
+  f.gold -= cost;
+  s2.ledger = [{ cmd, cost, lines, castle: c.name, general: gen.name }, ...s2.ledger].slice(0, 6);
+  s2.orders[genId] = { cmd, castleId };
+  return s2;
+}
+function appoint(prev, castleId, genId) {
+  const s2 = structuredClone(prev);
+  const c = s2.castles.find((x) => x.id === castleId);
+  if (c.lordId && c.lordId !== genId) c.najimi = 25;
+  c.lordId = genId;
+  s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.generals.find((x) => x.id === genId).name}\u3092${c.name}\u306E\u57CE\u4E3B\u306B\u4EFB\u3058\u305F\u3002` });
+  return s2;
+}
+function doKenchi(prev, kuni, genId) {
+  const s2 = structuredClone(prev);
+  const f = s2.factions[s2.player];
+  if (!holdsProvince(s2, s2.player, kuni)) {
+    s2.msg = `${kuni}\u306B\u306F\u307E\u3060\u4ED6\u5BB6\u306E\u57CE\u304C\u6B8B\u3063\u3066\u3044\u308B\u3002`;
+    return s2;
+  }
+  if (kenchiDone(s2, kuni)) {
+    s2.msg = `${kuni}\u306B\u306F\u3059\u3067\u306B\u7AFF\u304C\u5165\u3063\u3066\u3044\u308B\u3002`;
+    return s2;
+  }
+  const cost = kenchiCost(s2, kuni);
+  if (f.gold < cost.gold) {
+    s2.msg = `\u691C\u5730\u306B\u306F\u91D1${fmt(cost.gold)}\u8CAB\u304C\u8981\u308B\u3002`;
+    return s2;
+  }
+  const gen = s2.generals.find((x) => x.id === genId);
+  if (!gen) return s2;
+  f.gold -= cost.gold;
+  s2.orders[genId] = { cmd: `${kuni}\u691C\u5730`, castleId: gen.at };
+  const r = runKenchi(s2, s2.player, kuni, gen.gov);
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${f.name}\u304C${kuni}\u306B\u7AFF\u3092\u5165\u308C\u305F\u3002\u77F3\u9AD8\u304C${fmt(r.before)}\u77F3\u3088\u308A${fmt(r.after)}\u77F3\u306B\u6539\u307E\u3063\u305F\u3002`
+  });
+  s2.msg = `${kuni}\u306E\u691C\u5730\u304C\u6210\u3063\u305F\u3002\u77F3\u9AD8${fmt(r.gain)}\u77F3\u306E\u5897\u3001\u9650\u308A\u3082\u4F38\u3073\u305F\u3002\u6C11\u5FE0\u306F\u4E0B\u304C\u3063\u3066\u3044\u308B\u3002`;
+  s2.ledger = [{
+    cmd: `${kuni}\u691C\u5730`,
+    cost: cost.gold,
+    castle: kuni,
+    general: gen.name,
+    lines: r.cs.map((c) => ({ label: `${c.name} \u77F3\u9AD8`, before: 0, after: c.koku, unit: "\u77F3" }))
+  }, ...s2.ledger].slice(0, 6);
+  return s2;
+}
+function settleCaptive(prev, genId, kind) {
+  const s2 = structuredClone(prev);
+  const g2 = s2.generals.find((x) => x.id === genId);
+  if (!g2 || !g2.captive) return s2;
+  const f = s2.factions[s2.player];
+  if (kind === "\u5207\u8179") {
+    s2.generals = s2.generals.filter((x) => x.id !== g2.id);
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: `${g2.name}\u306F\u5207\u8179\u3057\u3066\u679C\u3066\u305F\u3002` });
+    s2.msg = `${g2.name}\u306B\u8179\u3092\u5207\u3089\u305B\u305F\u3002`;
+  } else if (kind === "\u6276\u6301") {
+    if (g2.fed) {
+      s2.msg = "\u3053\u306E\u8005\u3078\u306E\u6276\u6301\u306F\u3001\u672C\u6708\u3059\u3067\u306B\u6E08\u3093\u3067\u3044\u308B\u3002";
+      return s2;
+    }
+    const cost = Math.round(120 + (g2.lead + g2.gov + g2.wit) * 1.4);
+    const food = Math.round(60 + g2.retinue * 0.4);
+    const home = s2.castles.find((c2) => c2.id === g2.at);
+    if (f.gold < cost || !home || home.food < food) {
+      s2.msg = `\u6276\u6301\u306B\u306F\u91D1${fmt(cost)}\u8CAB\u3068\u5175\u7CE7${fmt(food)}\u304C\u8981\u308B\u3002\u8DB3\u308A\u306C\u3002`;
+      return s2;
+    }
+    f.gold -= cost;
+    home.food -= food;
+    g2.fed = true;
+    g2.warLoyal = clamp((g2.warLoyal || 0) + 4, 0, 100);
+    s2.msg = `${g2.name}\u306B\u6276\u6301\u3092\u4E0E\u3048\u305F\uFF08\u5FE0\u8AA0${g2.warLoyal}\uFF09\u3002`;
+  } else if (kind === "\u767B\u7528") {
+    if ((g2.warLoyal || 0) < 50) {
+      s2.msg = "\u307E\u3060\u5FC3\u3092\u958B\u3044\u3066\u304A\u3089\u306C\u3002";
+      return s2;
+    }
+    const from = g2.captive.from;
+    g2.faction = s2.player;
+    g2.loyal = clamp(g2.warLoyal, 0, 100);
+    g2.captive = null;
+    g2.warLoyal = void 0;
+    g2.lord = false;
+    s2.chronicle.push({
+      y: s2.year,
+      m: s2.month,
+      text: `${g2.name}\u304C${f.name}\u306B\u4ED5\u3048\u305F\uFF08\u65E7${(s2.factions[from] || {}).name || ""}\u30FB\u5FE0\u8AA0${Math.round(g2.loyal)}\uFF09\u3002`
+    });
+    s2.msg = `${g2.name}\u3092\u53EC\u3057\u62B1\u3048\u305F\u3002\u5FE0\u8AA0${Math.round(g2.loyal)}\u3002`;
+  }
+  return s2;
+}
+function doRetire(prev, heirId) {
+  const s2 = structuredClone(prev);
+  const lord = s2.generals.find((x) => x.faction === s2.player && x.lord && !x.captive);
+  if (!lord) return s2;
+  const heir = s2.generals.find((x) => x.id === heirId);
+  if (!heir || heir.id === lord.id) return s2;
+  lord.lord = false;
+  lord.retired = true;
+  lord.loyal = 100;
+  succeed(s2, lord, "\u96A0\u5C45\u3057\u305F", heir.id, true);
+  lord.retinue = Math.max(60, Math.round(lord.retinue * 0.55));
+  s2.msg = `${lord.name}\u306F\u96A0\u5C45\u3057\u3001${heir.name}\u304C\u5BB6\u7763\u3092\u7D99\u3044\u3060\u3002\u5BB6\u4E2D\u306E\u52D5\u63FA\u306F\u307B\u3068\u3093\u3069\u306A\u3044\u3002`;
+  return s2;
+}
+function doCaptive(prev, genId, how) {
+  const s2 = structuredClone(prev);
+  const q = s2.generals.find((x) => x.id === genId);
+  if (!q || !q.captive) return s2;
+  const log = (t) => s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+  const loy = q.loyal == null ? 60 : q.loyal;
+  if (how === "\u767B\u7528") {
+    if (!captiveRecruit(s2, q).ok) return s2;
+    q.faction = s2.player;
+    q.captive = null;
+    q.loyal = clamp(45 + Math.random() * 15, 0, 100);
+    q.retinue = Math.round(140 + Math.random() * 120);
+    log(`${q.name}\u304C\u964D\u308A\u3001${s2.factions[s2.player].name}\u306B\u5C5E\u3057\u305F\u3002`);
+  } else if (how === "\u9003\u3059") {
+    const home = s2.castles.find((c) => c.faction === q.captive.from) || s2.castles[0];
+    const rel = s2.relations[relKey(s2.player, q.captive.from)];
+    if (rel) rel.trust = clamp(rel.trust + 6, 0, 100);
+    q.captive = null;
+    q.at = home.id;
+    q.retinue = Math.round(180 + Math.random() * 120);
+    q.loyal = clamp(loy + 6, 0, 100);
+    log(`${q.name}\u3092\u653E\u3063\u305F\u3002${home.name}\u3078\u5E30\u3063\u305F\u3002`);
+  } else if (how === "\u65AC\u9996") {
+    const rel = s2.relations[relKey(s2.player, q.captive.from)];
+    if (rel) rel.trust = clamp(rel.trust - 14, 0, 100);
+    s2.generals = s2.generals.filter((x) => x.id !== q.id);
+    log(`${q.name}\u3092\u65AC\u3063\u305F\u3002`);
+  } else if (how === "\u8EAB\u4EE3\u91D1") {
+    const cost = ransomCost(s2, q);
+    const from = s2.factions[q.captive.from];
+    if (ransomAccept(s2, q)) {
+      const paid = payRansom(s2, q);
+      const rel = s2.relations[relKey(s2.player, cost.payer)];
+      if (rel) rel.trust = clamp(rel.trust + 4, 0, 100);
+      log(`${from.name}\u304C\u8EAB\u4EE3\u91D1\u3092\u7D0D\u3081\u3001${q.name}\u3092\u5F15\u304D\u53D6\u3063\u305F\uFF08\u91D1${fmt(paid.gold)}\u8CAB\u30FB\u5175\u7CE7${fmt(paid.food)}\u77F3\uFF09\u3002`);
+      s2.msg = `${from.name}\u306F\u8EAB\u4EE3\u91D1\u306B\u5FDC\u3058\u305F\u3002\u91D1${fmt(paid.gold)}\u8CAB\u3068\u5175\u7CE7${fmt(paid.food)}\u77F3\u3092\u5F97\u305F\u3002`;
+    } else {
+      const rel = s2.relations[relKey(s2.player, cost.payer)];
+      if (rel) rel.trust = clamp(rel.trust - 3, 0, 100);
+      log(`${from.name}\u306F${q.name}\u306E\u8EAB\u4EE3\u91D1\u3092\u65AD\u3063\u305F\u3002`);
+      s2.msg = `${from.name}\u306F\u8EAB\u4EE3\u91D1\u306B\u5FDC\u3058\u306A\u304B\u3063\u305F\uFF08\u6C42\u3081\u305F\u984D\uFF1A\u91D1${fmt(cost.gold)}\u8CAB\u30FB\u5175\u7CE7${fmt(cost.food)}\u77F3\uFF09\u3002`;
+    }
+  }
+  return s2;
+}
+function doDiplo(prev, fid, key) {
+  const s2 = structuredClone(prev);
+  const me = s2.factions[s2.player], you = s2.factions[fid];
+  const r = s2.relations[relKey(s2.player, fid)];
+  const def = DIPLO.find((d) => d.key === key);
+  const stat = (id) => ({
+    koku: s2.castles.filter((c) => c.faction === id).reduce((a, c) => a + c.koku, 0),
+    diplo: rankBonus(s2, id).diplo
+    // 官位があれば交渉が通りやすい
+  });
+  if (!def || !def.need(r, stat(s2.player), stat(fid)) || me.gold < def.cost) return s2;
+  me.gold -= def.cost;
+  if (key === "\u89AA\u5584") {
+    r.trust = clamp(r.trust + 9, 0, 100);
+  } else if (key === "\u72EC\u7ACB") {
+    r.state = "\u6575\u5BFE";
+    r.until = null;
+    r.trust = clamp(r.trust - 45, 0, 100);
+    me.prestige = clamp((me.prestige || 50) - 12, 0, 100);
+    for (const x of s2.generals.filter((q) => q.faction === s2.player && !q.captive)) {
+      if (x.loyal != null) x.loyal = clamp(x.loyal - 6, 0, 100);
+    }
+    for (const k of Object.keys(s2.relations)) {
+      if (!k.includes(s2.player)) continue;
+      const r2 = s2.relations[k];
+      if (r2 !== r) r2.trust = clamp(r2.trust - 8, 0, 100);
+    }
+    s2.chronicle.push({
+      y: s2.year,
+      m: s2.month,
+      text: `${me.name}\u304C${you.name}\u3078\u306E\u5F93\u5C5E\u3092\u7834\u308A\u3001\u72EC\u7ACB\u3092\u5BA3\u3057\u305F\u3002\u8AF8\u5BB6\u306E\u4FE1\u3092\u640D\u306D\u305F\u3002`
+    });
+    s2.msg = `${you.name}\u3078\u306E\u5F93\u5C5E\u3092\u7834\u3063\u305F\u3002\u4EE5\u5F8C\u306F\u6575\u5BFE\u3067\u3042\u308B\u3002\u5BB6\u4E2D\u306E\u5FE0\u8AA0\u3082\u63FA\u308C\u3066\u3044\u308B\u3002`;
+  } else {
+    r.state = key;
+    r.until = def.months ? { y: s2.year + Math.floor((s2.month + def.months - 1) / 12), m: (s2.month + def.months - 1) % 12 + 1 } : null;
+    r.trust = clamp(r.trust + 5, 0, 100);
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: `${you.name}\u3068${key}\u304C\u6210\u3063\u305F\u3002` });
+  }
+  s2.ledger = [{
+    cmd: `\u5916\u4EA4\u30FB${key}`,
+    cost: def.cost,
+    castle: you.name,
+    general: "\u4F7F\u8005",
+    lines: [{ label: `${you.name} \u4FE1\u7528`, before: Math.round(r.trust - (key === "\u89AA\u5584" ? 9 : 5)), after: Math.round(r.trust), unit: "" }]
+  }, ...s2.ledger].slice(0, 6);
+  return s2;
+}
+function doPlot(prev, castleId, type, genId) {
+  const s2 = structuredClone(prev);
+  const def = PLOTS.find((x) => x.key === type);
+  const f = s2.factions[s2.player];
+  if (!def || f.gold < def.cost) {
+    s2.msg = "\u91D1\u304C\u8DB3\u308A\u306C\u3002";
+    return s2;
+  }
+  const target = s2.castles.find((x) => x.id === castleId);
+  if (!target) return s2;
+  f.gold -= def.cost;
+  s2.plots.push({ type, castleId, genId, faction: s2.player, monthsLeft: def.months });
+  s2.orders[genId] = { cmd: `\u8ABF\u7565\u30FB${type}`, castleId };
+  s2.ledger = [{
+    cmd: `\u8ABF\u7565\u30FB${type}`,
+    cost: def.cost,
+    castle: target ? target.name : "",
+    general: s2.generals.find((x) => x.id === genId).name,
+    lines: [{ label: "\u6210\u5426\u5224\u660E\u307E\u3067", before: 0, after: def.months, unit: "\u304B\u6708" }]
+  }, ...s2.ledger].slice(0, 6);
+  return s2;
+}
+function doSpecial(prev, townId, key) {
+  const s2 = structuredClone(prev);
+  const t = TOWNS.find((x) => x.id === townId);
+  const st = s2.specials[townId];
+  const o = (SPECIAL_OPTIONS[t.kind] || []).find((x) => x.key === key);
+  const f = s2.factions[s2.player];
+  if (!o || f.gold < (o.cost || 0)) return s2;
+  f.gold -= o.cost || 0;
+  if (o.once) f.gold += o.once;
+  st.state = key;
+  st.faction = s2.player;
+  st.months = 0;
+  st.anger = clamp((st.anger || 0) + (o.anger || 0) * 10, 0, 100);
+  const lines = [{ text: `${t.name}\u3068\u306E\u95A2\u4FC2\uFF1A\u4E2D\u7ACB \u2192 ${key}\u3000${o.desc}` }];
+  if (o.once) lines.push({ label: "\u91D1\u92AD", before: f.gold - o.once, after: f.gold, unit: "\u8CAB" });
+  if (o.troops) {
+    const near = s2.castles.filter((c) => c.faction === s2.player).sort((a, b) => Math.hypot(a.x - px(t.lon), a.y - py(t.lat)) - Math.hypot(b.x - px(t.lon), b.y - py(t.lat)))[0];
+    if (near) {
+      lines.push({ label: `${near.name} \u5730\u57DF\u5BB6\u81E3\u56E3`, before: near.local, after: near.local + o.troops, unit: "\u4EBA" });
+      near.local += o.troops;
+    }
+  }
+  if (o.prestige) lines.push({ label: "\u5A01\u4FE1", before: Math.round(f.prestige), after: Math.round(clamp(f.prestige + o.prestige * 10, 0, 100)), unit: "" });
+  if (o.prestige) f.prestige = clamp(f.prestige + o.prestige * 10, 0, 100);
+  if (key === "\u653B\u6483") for (const c of s2.castles.filter((x) => x.faction === s2.player)) c.min = Math.max(0, c.min - 8);
+  s2.ledger = [{ cmd: `\u7279\u6B8A\u52E2\u529B\u30FB${key}`, cost: o.cost || 0, castle: t.name, general: "\u2015", lines }, ...s2.ledger].slice(0, 6);
+  s2.chronicle.push({ y: s2.year, m: s2.month, text: `${t.name}\u3068\u306E\u95A2\u4FC2\u3092\u300C${key}\u300D\u3068\u3057\u305F\u3002` });
+  return s2;
+}
+function grantFief(prev, genId, delta) {
+  const s2 = structuredClone(prev);
+  const gen = s2.generals.find((x) => x.id === genId);
+  if (!gen || gen.captive) return s2;
+  const room = fiefRoom(s2, s2.player);
+  const d = delta > 0 ? Math.min(delta, room.left) : Math.max(delta, -fiefOf(gen));
+  if (!d) return s2;
+  const before = fiefOf(gen);
+  gen.fief = before + d;
+  if (d < 0) gen.loyal = clamp((gen.loyal == null ? 60 : gen.loyal) - 4, 0, 100);
+  s2.ledger = [{ cmd: "\u77E5\u884C", cost: 0, castle: "\u2015", general: gen.name, lines: [
+    { label: `${gen.name} \u77E5\u884C`, before, after: gen.fief, unit: "\u77F3" },
+    { label: "\u914D\u308C\u308B\u4F59\u5730", before: room.left, after: room.left - d, unit: "\u77F3" }
+  ] }, ...s2.ledger].slice(0, 6);
+  return s2;
+}
+function reward(prev, genId) {
+  const s2 = structuredClone(prev);
+  const f = s2.factions[s2.player];
+  if (f.gold < 300) return s2;
+  const gen = s2.generals.find((x) => x.id === genId);
+  f.gold -= 300;
+  const before = gen.loyal, beforeU = gen.unity;
+  gen.loyal = Math.min(100, gen.loyal + 8);
+  gen.unity = Math.min(100, gen.unity + 4);
+  s2.ledger = [{ cmd: "\u4EBA\u4E8B\u30FB\u8912\u8CDE", cost: 300, castle: "\u2015", general: gen.name, lines: [
+    { label: `${gen.name} \u5FE0\u8AA0`, before, after: gen.loyal, unit: "" },
+    { label: `${gen.name} \u76F4\u5C5E\u306E\u7D50\u675F`, before: beforeU, after: gen.unity, unit: "" }
+  ] }, ...s2.ledger].slice(0, 6);
+  return s2;
+}
+
+// src/core/ambush.js
+function ambushPlan(g, army, dest2) {
+  const atkIsPlayer = army.faction === g.player;
+  const mine = atkIsPlayer ? army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest2.id && x.faction === dest2.faction && !x.captive);
+  const theirs = atkIsPlayer ? g.generals.filter((x) => x.at === dest2.id && x.faction === dest2.faction && !x.captive) : army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+  if (!mine.length || !theirs.length) return null;
+  const myMen = atkIsPlayer ? army.men : dest2.local + mine.reduce((a, x) => a + x.retinue, 0);
+  const foeMen = atkIsPlayer ? dest2.local + theirs.reduce((a, x) => a + x.retinue, 0) : army.men;
+  const ratio = myMen / Math.max(1, foeMen);
+  if (ratio > 0.62) return null;
+  const head = [...mine].sort((a, b) => b.wit + b.lead - (a.wit + a.lead))[0];
+  if (!head || head.wit < 62) return null;
+  const wx = g.weather || "\u6674";
+  const terr = dest2.kuni === "\u4FE1\u6FC3" || dest2.kuni === "\u7532\u6590" || dest2.kuni === "\u98DB\u9A28" ? "hill" : "forest";
+  const p = ambushChance(head, wx, terr, ratio);
+  if (p < 0.06) return null;
+  const lord = [...theirs].sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead - a.lead)[0];
+  return { head, target: lord, p, myMen: Math.round(myMen), foeMen: Math.round(foeMen), weather: wx, terr, ratio };
+}
+function ambushChance(gen, weather, terrain, ratio) {
+  if (!gen) return 0;
+  let p = (gen.wit - 55) / 340 + (gen.lead - 55) / 620;
+  p *= weather === "\u96E8" ? 1.55 : weather === "\u96EA" ? 1.35 : weather === "\u66C7" ? 1.12 : 1;
+  p *= terrain === "forest" || terrain === "hill" ? 1.3 : 1;
+  p *= clamp(0.6 + (1 - ratio) * 1.4, 0.5, 2);
+  return clamp(p, 0, 0.52);
+}
+function tryAmbush(s2, army, castle, aGens, dGens, weather) {
+  const head = [...aGens].sort((a, b) => b.wit + b.lead - (a.wit + a.lead))[0];
+  const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
+  const ratio = army.men / Math.max(1, dMen);
+  if (ratio > 0.62) return null;
+  const terr = castle.kuni === "\u4FE1\u6FC3" || castle.kuni === "\u7532\u6590" || castle.kuni === "\u98DB\u9A28" ? "hill" : "forest";
+  const p = ambushChance(head, weather, terr, ratio);
+  if (Math.random() > p) return { ok: false, by: head, p };
+  const cand = dGens.filter((x) => x.faction === castle.faction && !x.captive);
+  const lord = [...cand].sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead - a.lead)[0];
+  return { ok: true, by: head, target: lord || null, p };
+}
+
+// src/govern/ai.js
+function factionTemper(fid) {
+  let h = 0;
+  for (let i = 0; i < fid.length; i++) h = h * 31 + fid.charCodeAt(i) >>> 0;
+  return ["\u9032\u53D6", "\u5805\u5B9F", "\u9670\u8B00"][h % 3];
+}
+function factionAim(s2, fid) {
+  const mine = s2.castles.filter((c) => c.faction === fid);
+  if (!mine.length) return null;
+  const \u57CE\u306E\u5175 = /* @__PURE__ */ new Map();
+  const \u5BB6\u306E\u5175 = /* @__PURE__ */ new Map();
+  for (const x of s2.generals) {
+    if (x.captive) continue;
+    \u5BB6\u306E\u5175.set(x.faction, (\u5BB6\u306E\u5175.get(x.faction) || 0) + x.retinue);
+    if (x.at != null && x.faction != null) {
+      const k = `${x.at}|${x.faction}`;
+      \u57CE\u306E\u5175.set(k, (\u57CE\u306E\u5175.get(k) || 0) + x.retinue);
+    }
+  }
+  const \u5BB6\u306E\u5730\u5175 = /* @__PURE__ */ new Map();
+  for (const c of s2.castles) \u5BB6\u306E\u5730\u5175.set(c.faction, (\u5BB6\u306E\u5730\u5175.get(c.faction) || 0) + c.local);
+  const myMen = mine.reduce((a, c) => a + c.local, 0) + (\u5BB6\u306E\u5175.get(fid) || 0);
+  const \u5BB6\u306E\u63A7\u3048 = /* @__PURE__ */ new Map();
+  const \u5BB6\u3092\u898B\u308B = (f) => {
+    let v = \u5BB6\u306E\u63A7\u3048.get(f);
+    if (v) return v;
+    const theirMen = (\u5BB6\u306E\u5730\u5175.get(f) || 0) + (\u5BB6\u306E\u5175.get(f) || 0);
+    v = {
+      \u548C\u7766: atPeace(s2, fid, f),
+      grudge: (() => {
+        const rel = s2.relations[relKey(fid, f)];
+        return rel ? (60 - rel.trust) / 60 : 0.4;
+      })(),
+      weak: clamp(1.6 - theirMen / Math.max(1, myMen), 0, 1.6)
+    };
+    \u5BB6\u306E\u63A7\u3048.set(f, v);
+    return v;
+  };
+  const best = { score: -1e9, target: null, from: null };
+  for (const c of mine) {
+    for (const t of s2.castles) {
+      if (t.faction === fid) continue;
+      const path = findPath(c.id, t.id);
+      if (!path) continue;
+      const \u76F8\u624B = \u5BB6\u3092\u898B\u308B(t.faction);
+      if (\u76F8\u624B.\u548C\u7766) continue;
+      const foe = t.local + (\u57CE\u306E\u5175.get(`${t.id}|${t.faction}`) || 0);
+      const worth = t.koku / 2e4 + t.comm / 40;
+      const ease = clamp(myMen / Math.max(1, foe * 1.3), 0, 2.4);
+      const far = path.length;
+      const score = worth * 1.1 + ease * 1.8 + \u76F8\u624B.grudge * 1.2 + \u76F8\u624B.weak * 2.2 - (far - 1) * 1.6;
+      if (score > best.score) {
+        best.score = score;
+        best.target = t.id;
+        best.from = c.id;
+      }
+    }
+  }
+  return best.target ? best : null;
+}
+function reviewAim(s2, fid) {
+  const f = s2.factions[fid];
+  f.temper = f.temper || factionTemper(fid);
+  const aim = factionAim(s2, fid);
+  if (!aim) {
+    f.aim = null;
+    return;
+  }
+  const stick = f.temper === "\u5805\u5B9F" ? 0.85 : f.temper === "\u9032\u53D6" ? 0.45 : 0.65;
+  if (f.aim && f.aim.target && Math.random() < stick) {
+    const t = s2.castles.find((c) => c.id === f.aim.target);
+    if (t && t.faction !== fid && !atPeace(s2, fid, t.faction)) return;
+  }
+  f.aim = { target: aim.target, from: aim.from, score: aim.score };
+}
+
+// src/govern/unify.js
+function \u4E3B\u5F93\u306E\u8868(s2) {
+  const koku = {};
+  for (const c of s2.castles) koku[c.faction] = (koku[c.faction] || 0) + c.koku;
+  const under = {};
+  for (const k of Object.keys(s2.relations)) {
+    const r = s2.relations[k];
+    if (r.state !== "\u5F93\u5C5E" && r.state !== "\u81E3\u5F93") continue;
+    const [a, b] = k.split("|");
+    const master = (koku[a] || 0) >= (koku[b] || 0) ? a : b;
+    const vassal = master === a ? b : a;
+    (under[master] = under[master] || []).push(vassal);
+  }
+  return under;
+}
+function \u65D7\u3092\u8FBF\u308B(under, fid) {
+  const set = /* @__PURE__ */ new Set([fid]);
+  const stack = [fid];
+  while (stack.length) {
+    const x = stack.pop();
+    for (const v of under[x] || []) if (!set.has(v)) {
+      set.add(v);
+      stack.push(v);
+    }
+  }
+  return set;
+}
+function checkUnified(s2) {
+  const alive = [...new Set(s2.castles.map((c) => c.faction))];
+  const under = \u4E3B\u5F93\u306E\u8868(s2);
+  for (const fid of alive) {
+    const banner = \u65D7\u3092\u8FBF\u308B(under, fid);
+    if (s2.castles.every((c) => banner.has(c.faction))) {
+      const vassals = [...banner].filter((x) => x !== fid);
+      const mine = s2.castles.filter((c) => c.faction === fid).length;
+      const grade = alive.length === 1 ? "\u4E00\u7D71" : mine / s2.castles.length >= 0.7 ? "\u5927\u6210" : mine / s2.castles.length >= 0.45 ? "\u8987" : "\u65D7\u4E0B";
+      return {
+        fid,
+        direct: alive.length === 1,
+        vassals,
+        grade,
+        mine,
+        total: s2.castles.length
+      };
+    }
+  }
+  return null;
+}
+
+// src/govern/war.js
+function reinforceOffers(g, from, target) {
+  const out = [];
+  for (const c of g.castles) {
+    if (c.id === from) continue;
+    const path = findPath(c.id, target);
+    if (!path) continue;
+    const legs = path.length - 1;
+    const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+    const avail = Math.max(0, c.local + gens.reduce((a, x) => a + x.retinue, 0) - minGarrison(c));
+    let kind = null, ratio = 0, chance = 1, \u6307\u56F3 = false;
+    if (c.faction === g.player) {
+      kind = "\u81EA\u9818";
+      ratio = 0.4;
+      \u6307\u56F3 = true;
+    } else if (isVassal(g, g.player, c.faction)) {
+      kind = "\u81E3\u5F93";
+      ratio = 0.35;
+      chance = 1;
+      \u6307\u56F3 = true;
+    } else {
+      const rel = relOf(g, g.player, c.faction);
+      if (rel.state === "\u5F93\u5C5E" || rel.state === "\u81E3\u5F93") {
+        kind = rel.state;
+        ratio = 0.35;
+        chance = 0.9;
+      } else if (rel.state === "\u540C\u76DF") {
+        kind = "\u540C\u76DF";
+        ratio = 0.25;
+        chance = clamp(rel.trust / 100, 0.2, 0.9);
+      } else continue;
+    }
+    const distPenalty = clamp(1 - (legs - 1) * 0.12, 0.4, 1);
+    const men = Math.floor(avail * ratio * distPenalty);
+    out.push({
+      castleId: c.id,
+      name: c.name,
+      faction: c.faction,
+      kind,
+      men,
+      legs,
+      chance,
+      \u6307\u56F3,
+      months: marchMonths(c.id, target) || Math.max(1, legs),
+      // 指図の通る城では、こちらが将と兵を選ぶ。そのための素材も添える。
+      gens: \u6307\u56F3 ? gens.map((x) => ({
+        id: x.id,
+        name: x.name,
+        lead: x.lead,
+        valor: x.valor,
+        wit: x.wit,
+        retinue: x.retinue,
+        rank: rankName(x, g),
+        limit: troopLimit(x, g)
+      })) : [],
+      local: c.local,
+      avail,
+      garrison: minGarrison(c),
+      reason: avail < 400 ? "\u5B88\u5099\u304C\u624B\u8584\u3067\u51FA\u305B\u306A\u3044" : men < 200 && !\u6307\u56F3 ? "\u51FA\u305B\u308B\u5175\u304C\u5C11\u306A\u3059\u304E\u308B" : null
+    });
+  }
+  return out.filter((o) => o.men > 0 || o.reason || o.\u6307\u56F3).sort((a, z) => (z.\u6307\u56F3 ? 1 : 0) - (a.\u6307\u56F3 ? 1 : 0) || a.legs - z.legs).slice(0, 10);
+}
+function \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle) {
+  const \u5408\u6D41 = () => {
+    castle.local += Math.max(0, army.local);
+    castle.food += Math.max(0, army.food || 0);
+    if (army.rost && army.rost.length) castle.rost = [...castle.rost || [], ...army.rost];
+    rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+    for (const gid of army.gens) {
+      const x = s2.generals.find((q) => q.id === gid);
+      if (x) x.at = castle.id;
+    }
+    s2.armies = s2.armies.filter((x) => x.id !== army.id);
+  };
+  const sg = s2.sieges.find((x) => x.castleId === castle.id);
+  const bes = sg && s2.armies.find((x) => x.id === sg.armyId);
+  if (!bes || bes.faction === army.faction) {
+    \u5408\u6D41();
+    return s2;
+  }
+  const \u5C06 = (ids) => ids.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
+  const \u7D71 = (gs) => gs.length ? gs.reduce((a, x) => a + x.lead, 0) / gs.length : 55;
+  const rG = \u5C06(army.gens), bG = \u5C06(bes.gens);
+  const \u5F8C\u8A70 = army.men * (0.85 + army.localTrain / 250) * (1 + \u7D71(rG) / 300) * (0.85 + Math.random() * 0.3);
+  const \u5BC4\u624B = bes.men * (0.8 + (bes.localTrain || 60) / 250) * (1 + \u7D71(bG) / 300) * (0.85 + Math.random() * 0.3);
+  const \u52DD = \u5F8C\u8A70 > \u5BC4\u624B;
+  const r = Math.min(\u5F8C\u8A70, \u5BC4\u624B) / Math.max(\u5F8C\u8A70, \u5BC4\u624B);
+  const \u5F8C\u8A70\u640D = Math.round(army.men * (\u52DD ? 0.14 * r + 0.05 : 0.28 + 0.2 * r));
+  const \u5BC4\u624B\u640D = Math.round(bes.men * (\u52DD ? 0.3 + 0.2 * r : 0.13 * r + 0.05));
+  army.men = Math.max(0, army.men - \u5F8C\u8A70\u640D);
+  army.local = Math.max(0, army.local - \u5F8C\u8A70\u640D);
+  bes.men = Math.max(0, bes.men - \u5BC4\u624B\u640D);
+  bes.local = Math.max(0, bes.local - \u5BC4\u624B\u640D);
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${castle.name}\u306E\u56F2\u307F\u3092\u89E3\u3053\u3046\u3068${s2.factions[army.faction].name}\u306E\u5F8C\u8A70\u304C${s2.factions[bes.faction].name}\u306E\u9663\u3092\u885D\u304D\u3001${\u52DD ? "\u56F2\u307F\u3092\u6253\u3061\u6255\u3063\u305F" : "\u9000\u3051\u3089\u308C\u305F"}\uFF08\u5F8C\u8A70${fmt(\u5F8C\u8A70\u640D)}\u4EBA\u30FB\u5BC4\u305B\u624B${fmt(\u5BC4\u624B\u640D)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
+  });
+  if (\u52DD) {
+    const \u672C\u56FD = s2.castles.find((x) => x.id === bes.from) || s2.castles.find((x) => x.faction === bes.faction);
+    if (\u672C\u56FD) {
+      \u672C\u56FD.local += Math.max(0, bes.local);
+      if (bes.rost && bes.rost.length) \u672C\u56FD.rost = [...\u672C\u56FD.rost || [], ...bes.rost];
+      rosterSync(\u672C\u56FD, "rost", \u672C\u56FD.local, `loc-${\u672C\u56FD.id}`);
+      for (const gid of bes.gens) {
+        const x = s2.generals.find((q) => q.id === gid);
+        if (x) x.at = \u672C\u56FD.id;
+      }
+    }
+    s2.armies = s2.armies.filter((x) => x.id !== bes.id);
+    s2.sieges = s2.sieges.filter((x) => x.castleId !== castle.id);
+    \u5408\u6D41();
+  } else {
+    const \u672C\u56FD = s2.castles.find((x) => x.id === army.from);
+    if (\u672C\u56FD && \u672C\u56FD.faction === army.faction) {
+      \u672C\u56FD.local += Math.max(0, army.local);
+      for (const gid of army.gens) {
+        const x = s2.generals.find((q) => q.id === gid);
+        if (x) x.at = \u672C\u56FD.id;
+      }
+    } else \u5408\u6D41();
+    s2.armies = s2.armies.filter((x) => x.id !== army.id);
+    if (sg) sg.relief = null;
+  }
+  return s2;
+}
+function sackCastle(s2, castle, army, hard) {
+  const lastOne = s2.castles.filter((c2) => c2.faction === castle.faction).length === 1;
+  const oldF = castle.faction;
+  const defGens = s2.generals.filter((x) => x.at === castle.id && x.faction === oldF && !x.captive);
+  const \u56DA\u4EBA = s2.generals.filter((x) => x.at === castle.id && x.captive);
+  const winner = army.faction;
+  const log = (t) => s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+  const oldLord = s2.generals.find((x) => x.faction === oldF && x.lord && !x.captive);
+  const \u6355\u3089\u3048\u308B = (gen, \u6587) => {
+    const \u5F53\u4E3B\u304B = !!gen.lord;
+    makePrisoner(s2, gen, winner, castle.id);
+    log(\u6587);
+    if (winner === s2.player) s2.captives = [...s2.captives || [], gen.id];
+    if (\u5F53\u4E3B\u304B) {
+      gen.lord = false;
+      succeed(s2, gen, "\u6575\u624B\u306B\u6355\u3089\u308F\u308C\u305F");
+    }
+  };
+  for (const gen of defGens) {
+    if (lastOne) continue;
+    const r = Math.random() + (hard ? 0.12 : 0) + gen.valor / 400 - gen.loyal / 320;
+    if (r > 0.86) {
+      s2.generals = s2.generals.filter((x) => x.id !== gen.id);
+      log(`${gen.name}\u306F${castle.name}\u306B\u8E0F\u307F\u3068\u3069\u307E\u308A\u8A0E\u6B7B\u3057\u305F\u3002`);
+    } else if (r > 0.7 && Math.random() < captureChance(gen) * 3.2) {
+      \u6355\u3089\u3048\u308B(gen, `${gen.name}\u306F\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
+    } else if (r > 0.7) {
+      const refuge = s2.castles.find((c2) => c2.faction === oldF && c2.id !== castle.id);
+      if (refuge) {
+        gen.at = refuge.id;
+        log(`${gen.name}\u306F\u56F2\u307F\u3092\u7834\u3063\u3066${refuge.name}\u3078\u9003\u308C\u305F\u3002`);
+      } else \u6355\u3089\u3048\u308B(gen, `${gen.name}\u306F\u9003\u308C\u308B\u5148\u306A\u304F\u3001\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
+    } else if (r > 0.48) {
+      const \u9761\u304F\u304B = !gen.lord && canRecruit(gen, oldLord).ok && persuadeResult(gen);
+      if (\u9761\u304F\u304B) {
+        gen.faction = winner;
+        gen.loyal = loyaltyAfterRecruit(gen);
+        gen.at = castle.id;
+        gen.retinue = Math.round(gen.retinue * 0.5);
+        log(`${gen.name}\u306F\u964D\u308A\u3001${s2.factions[winner].name}\u306B\u5C5E\u3057\u305F\u3002`);
+      } else {
+        \u6355\u3089\u3048\u308B(gen, gen.lord ? `${gen.name}\u306F\u57CE\u3092\u6795\u306B\u3059\u308B\u3053\u3068\u3082\u53F6\u308F\u305A\u3001\u751F\u3051\u6355\u308A\u306B\u3055\u308C\u305F\u3002` : `${gen.name}\u306F\u964D\u3089\u305A\u3001\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
+      }
+    } else {
+      const refuge = s2.castles.find((c) => c.faction === oldF && c.id !== castle.id);
+      const \u843D\u3061\u5EF6\u3073\u308B = refuge && (!gen.lord || Math.random() < 0.6);
+      if (\u843D\u3061\u5EF6\u3073\u308B) {
+        gen.at = refuge.id;
+        gen.retinue = Math.round(gen.retinue * 0.6);
+        log(`${gen.name}\u306F${refuge.name}\u3078\u843D\u3061\u5EF6\u3073\u305F\u3002`);
+      } else \u6355\u3089\u3048\u308B(gen, `${gen.name}\u306F\u843D\u3061\u5EF6\u3073\u308B\u5148\u306A\u304F\u3001\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
+    }
+  }
+  for (const q of \u56DA\u4EBA) {
+    if (q.faction === winner) {
+      q.captive = null;
+      q.warLoyal = void 0;
+      q.loyal = clamp((q.loyal == null ? 60 : q.loyal) + 8, 0, 100);
+      q.retinue = Math.round(120 + Math.random() * 100);
+      log(`${castle.name}\u306B\u56DA\u308F\u308C\u3066\u3044\u305F${q.name}\u304C\u89E3\u304D\u653E\u305F\u308C\u305F\u3002`);
+    } else if (q.captive.by !== winner) {
+      q.captive = { ...q.captive, by: winner, at: castle.id };
+      log(`${castle.name}\u306B\u56DA\u308F\u308C\u3066\u3044\u305F${q.name}\u306E\u8EAB\u67C4\u306F${s2.factions[winner].name}\u306B\u79FB\u3063\u305F\u3002`);
+      if (winner === s2.player) s2.captives = [...s2.captives || [], q.id];
+    }
+  }
+  const before = castle.local;
+  const min0 = castle.min;
+  const stay = Math.round(before * clamp(min0 / 260 + (hard ? 0 : 0.12), 0.05, 0.45));
+  const yield_ = Math.round(before * clamp(0.3 - min0 / 400, 0.05, 0.3));
+  const resist = Math.round(before * (hard ? 0.18 : 0.08));
+  const scatter = Math.max(0, before - stay - yield_ - resist);
+  log(`${castle.name}\u306E\u5730\u57DF\u5BB6\u81E3\u56E3${fmt(before)}\u4EBA\u306E\u3046\u3061\u3001${fmt(stay)}\u4EBA\u304C\u6B8B\u308A\u3001${fmt(yield_)}\u4EBA\u304C\u964D\u308A\u3001${fmt(resist)}\u4EBA\u304C\u6297\u3044\u3001${fmt(scatter)}\u4EBA\u304C\u6563\u3063\u305F\u3002`);
+  castle.faction = winner;
+  const keepN = stay + yield_;
+  castle.rost = rosterCut(castle.rost || newRoster(before, `loc-${castle.id}`), Math.max(0, before - keepN));
+  if (army.rost && army.rost.length) castle.rost = [...castle.rost, ...army.rost];
+  castle.local = stay + yield_ + Math.max(0, army.local);
+  rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+  castle.koku = Math.round(castle.koku * (hard ? 0.9 : 0.95));
+  castle.comm = Math.round(castle.comm * (hard ? 0.8 : 0.9));
+  castle.pop = Math.round(castle.pop * (hard ? 0.92 : 0.96));
+  castle.food = Math.round(castle.food * (hard ? 0.35 : 0.6));
+  castle.def = Math.round(castle.def * (hard ? 0.68 : 0.85));
+  castle.hp = Math.round(castle.hp * (hard ? 0.55 : 0.8));
+  castle.min = clamp(Math.round(min0 - (hard ? 28 : 16) - resist / Math.max(1, before) * 40), 8, 100);
+  castle.najimi = 18;
+  castle.lordId = null;
+  castle.intrigue = false;
+  castle.well = 100;
+  for (const gid of army.gens) {
+    const x = s2.generals.find((q) => q.id === gid);
+    if (x) x.at = castle.id;
+  }
+  s2.armies = s2.armies.filter((x) => x.id !== army.id);
+  for (const a2 of s2.armies.filter((x) => x.target === castle.id || x.at === castle.id)) {
+    if (a2.faction === oldF) continue;
+    const home = s2.castles.find((c2) => c2.id === a2.from) || s2.castles.find((c2) => c2.faction === a2.faction);
+    if (!home) continue;
+    home.local += Math.max(0, a2.local);
+    if (a2.rost && a2.rost.length) home.rost = [...home.rost || [], ...a2.rost];
+    rosterSync(home, "rost", home.local, `loc-${home.id}`);
+    for (const gid of a2.gens) {
+      const x = s2.generals.find((q) => q.id === gid);
+      if (x) x.at = home.id;
+    }
+    if (a2.faction === s2.player) {
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${castle.name}\u653B\u3081\u306B\u52A0\u308F\u3063\u305F\u5BC4\u9A0E\u306F${home.name}\u3078\u5E30\u9663\u3057\u305F\u3002`
+      });
+    }
+  }
+  s2.armies = s2.armies.filter((x) => !(x.target === castle.id || x.at === castle.id) || x.faction === oldF);
+  s2.sieges = s2.sieges.filter((x) => x.castleId !== castle.id);
+  s2.campaigns = (s2.campaigns || []).filter((x) => x.target !== castle.id);
+  log(`${castle.name}\u304C\u843D\u3061\u3001${s2.factions[winner].name}\u306E\u624B\u306B\u6E21\u3063\u305F\uFF08\u65E7\u9818\u4E3B\uFF1A${s2.factions[oldF].name}\uFF09\u3002`);
+  if (!s2.castles.some((c2) => c2.faction === oldF)) {
+    for (const a2 of s2.armies.filter((x) => x.faction === oldF)) {
+      for (const gid of a2.gens) {
+        const x = s2.generals.find((q) => q.id === gid);
+        if (x) x.at = castle.id;
+      }
+    }
+    s2.armies = s2.armies.filter((x) => x.faction !== oldF);
+    s2.sieges = s2.sieges.filter((x) => {
+      const bes = s2.armies.find((a3) => a3.id === x.armyId);
+      return !!bes;
+    });
+    s2.campaigns = (s2.campaigns || []).filter((x) => x.faction !== oldF);
+    for (const q of s2.generals.filter((x) => x.faction === oldF && x.captive && x.captive.by === winner)) {
+      q.captive = null;
+    }
+    const { lord, retainers } = ruinedHouse(s2, oldF);
+    if (winner === s2.player && (lord || retainers.length)) {
+      s2.warSettle = {
+        faction: oldF,
+        winner,
+        castleId: castle.id,
+        lordId: lord ? lord.id : null,
+        queue: [...lord ? [lord.id] : [], ...retainers.map((x) => x.id)]
+      };
+    } else {
+      for (const g2 of [lord, ...retainers].filter(Boolean)) {
+        const rec = canRecruit(g2, lord);
+        if (g2 === lord || !rec.ok || Math.random() < 0.25) {
+          if (Math.random() < 0.4) {
+            s2.generals = s2.generals.filter((x) => x.id !== g2.id);
+          } else takeAsPrisoner(s2, g2, winner, castle.id);
+        } else {
+          g2.faction = winner;
+          g2.loyal = loyaltyAfterRecruit(g2);
+          g2.lord = false;
+          g2.at = castle.id;
+        }
+      }
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${s2.factions[oldF].name}\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3044\u3001\u6EC5\u4EA1\u3057\u305F\u3002`
+      });
+    }
+    s2.ruined = [...s2.ruined || [], oldF];
+  }
+}
+function resolveOffscreen(prev, armyId, castleId) {
+  const s2 = structuredClone(prev);
+  const army = s2.armies.find((x) => x.id === armyId);
+  const castle = s2.castles.find((x) => x.id === castleId);
+  s2.pendingArrivals = (s2.pendingArrivals || []).slice(1);
+  if (!army || !castle) return s2;
+  if (army.faction === castle.faction) return \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle);
+  const aGens = army.gens.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
+  const dGens = s2.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
+  const lead = (gs) => gs.length ? gs.reduce((a, x) => a + x.lead, 0) / gs.length : 55;
+  const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
+  const wx = s2.weather || "\u6674";
+  const amb = tryAmbush(s2, army, castle, aGens, dGens, wx);
+  let atk = army.men * (0.8 + army.localTrain / 250) * (1 + lead(aGens) / 300) * (0.85 + Math.random() * 0.3);
+  let def = dMen * (0.85 + castle.localTrain / 250) * (1 + castle.def / 200 + lead(dGens) / 300) * (0.85 + Math.random() * 0.3);
+  if (amb && amb.ok) {
+    def *= 0.2;
+    atk *= 1.25;
+  } else if (amb && !amb.ok && army.faction === s2.player) {
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: `${amb.by.name}\u306F\u6575\u306E\u9699\u3092\u7ABA\u3063\u305F\u304C\u3001\u6A5F\u3092\u5F97\u306A\u304B\u3063\u305F\u3002` });
+  }
+  const atkWon = atk > def;
+  if (amb && amb.ok) {
+    const fell = atkWon && amb.target;
+    s2.chronicle.push({
+      y: s2.year,
+      m: s2.month,
+      text: fell ? `${amb.by.name}\u304C${castle.name}\u306E\u672C\u9663\u3092\u885D\u3044\u305F\u3002${amb.target.name}\u306F\u8A0E\u305F\u308C\u3001${s2.factions[castle.faction].name}\u306E\u8ECD\u306F\u74E6\u89E3\u3057\u305F\u3002` : `${amb.by.name}\u304C${castle.name}\u306E\u672C\u9663\u3092\u885D\u3044\u305F\u3002${s2.factions[castle.faction].name}\u306E\u5099\u3048\u306F\u4E71\u308C\u305F\u3002`
+    });
+    if (fell) {
+      const t2 = s2.generals.find((x) => x.id === amb.target.id);
+      if (t2) {
+        s2.generals = s2.generals.filter((x) => x.id !== t2.id);
+        if (t2.lord) {
+          const nx = s2.generals.filter((x) => x.faction === t2.faction && !x.captive).sort((a, z) => z.lead - a.lead)[0];
+          if (nx) nx.lord = true;
+        }
+      }
+      if (army.faction === s2.player) s2.msg = `${amb.by.name}\u304C\u6575\u306E\u672C\u9663\u3092\u885D\u304D\u3001${amb.target.name}\u3092\u8A0E\u3061\u53D6\u3063\u305F\u3002`;
+    }
+  }
+  const r = Math.min(atk, def) / Math.max(atk, def);
+  const aLoss = Math.round(army.men * (atkWon ? 0.16 * r + 0.06 : 0.3 + 0.2 * r));
+  const dLoss = Math.round(dMen * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
+  army.men = Math.max(0, army.men - aLoss);
+  army.local = Math.max(0, army.local - aLoss);
+  castle.local = Math.max(0, castle.local - dLoss);
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${castle.name}\u4E0B\u3067${s2.factions[army.faction].name}\u3068${s2.factions[castle.faction].name}\u304C\u6226\u3044\u3001${atkWon ? "\u653B\u3081\u624B" : "\u5B88\u308A\u624B"}\u304C\u52DD\u3063\u305F\uFF08\u653B${fmt(aLoss)}\u4EBA\u30FB\u5B88${fmt(dLoss)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
+  });
+  if (atkWon && castle.local < 200) {
+    sackCastle(s2, castle, army, true);
+  } else if (atkWon) {
+    army.sieging = true;
+    s2.sieges = [...s2.sieges.filter((x) => x.castleId !== castle.id), { castleId: castle.id, armyId: army.id, months: 0, decided: null }];
+  } else {
+    withdrawArmy(s2, army);
+  }
+  return s2;
+}
+function \u9053\u306E\u308A(path) {
+  let d = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    const r = roadBetween(path[i], path[i + 1]);
+    d += r ? r[2] / ROAD_SPEED[r[3]] : 10;
+  }
+  return d;
+}
+function \u6B8B\u308A\u306E\u9053\u306E\u308A(a) {
+  if (!a.path || a.path.length < 2) return 0;
+  let d = 0;
+  for (let i = 0; i < a.path.length - 1; i++) {
+    const r = roadBetween(a.path[i], a.path[i + 1]);
+    const seg = r ? r[2] / ROAD_SPEED[r[3]] : 10;
+    d += i === 0 ? seg * (1 - (a.prog || 0)) : seg;
+  }
+  return d;
+}
+function \u884C\u304D\u5408\u3046\u533A\u9593(path, at) {
+  let d = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    const r = roadBetween(path[i], path[i + 1]);
+    const seg = r ? r[2] / ROAD_SPEED[r[3]] : 10;
+    if (d + seg >= at || i === path.length - 2) return { u: path[i], v: path[i + 1] };
+    d += seg;
+  }
+  return { u: path[0], v: path[path.length - 1] };
+}
+var \u5730\u540D = (id) => {
+  const n = nodeById(id);
+  return n ? n.name : "";
+};
+function marchClashes(s2) {
+  const out = [];
+  const \u6E08 = /* @__PURE__ */ new Set();
+  const \u884C\u8ECD = (s2.armies || []).filter((a) => a.from && a.target && !a.sieging && !a.dead && a.path);
+  for (const a of \u884C\u8ECD) {
+    if (\u6E08.has(a.id)) continue;
+    const b = \u884C\u8ECD.find((x) => !\u6E08.has(x.id) && x.id !== a.id && x.faction !== a.faction && x.from === a.target && x.target === a.from);
+    if (!b) continue;
+    const pa = findPath(a.from, a.target), pb = findPath(b.from, b.target);
+    if (!pa || !pb || pa.length !== pb.length) continue;
+    if (!pa.every((id, i) => id === pb[pb.length - 1 - i])) continue;
+    const L = \u9053\u306E\u308A(pa);
+    const ra = \u6B8B\u308A\u306E\u9053\u306E\u308A(a), rb = \u6B8B\u308A\u306E\u9053\u306E\u308A(b);
+    const posA = L - ra, posB = rb;
+    if (posA < posB) continue;
+    const { u, v } = \u884C\u304D\u5408\u3046\u533A\u9593(pa, clamp((posA + posB) / 2, 0, L));
+    \u6E08.add(a.id);
+    \u6E08.add(b.id);
+    out.push({ aId: a.id, bId: b.id, u, v, place: `${\u5730\u540D(u)}\u3068${\u5730\u540D(v)}\u306E\u9593` });
+  }
+  return out;
+}
+function clashPower(s2, army) {
+  const gens = army.gens.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
+  const lead = gens.length ? gens.reduce((a, x) => a + x.lead, 0) / gens.length : 55;
+  return army.men * (0.85 + (army.localTrain || 60) / 250) * (1 + lead / 300) * (0.85 + Math.random() * 0.3);
+}
+function homeFor(s2, army) {
+  const \u5143 = s2.castles.find((x) => x.id === army.from);
+  if (\u5143 && \u5143.faction === army.faction) return \u5143;
+  const \u81EA\u9818 = s2.castles.filter((x) => x.faction === army.faction);
+  if (!\u81EA\u9818.length) return null;
+  const \u8FD1\u3044 = \u81EA\u9818.map((c) => ({ c, p: findPath(army.at || army.from, c.id) })).filter((x) => x.p).sort((a, z) => a.p.length - z.p.length)[0];
+  return \u8FD1\u3044 ? \u8FD1\u3044.c : \u81EA\u9818[0];
+}
+function withdrawArmy(s2, army) {
+  const home = homeFor(s2, army);
+  if (home) {
+    home.local += Math.max(0, army.local);
+    if (army.rost && army.rost.length) home.rost = [...home.rost || [], ...army.rost];
+    rosterSync(home, "rost", home.local, `loc-${home.id}`);
+  }
+  const \u7F6E\u304F = home || s2.castles.find((x) => x.id === army.at) || s2.castles[0];
+  for (const gid of army.gens) {
+    const x = s2.generals.find((q) => q.id === gid);
+    if (x && !x.captive) x.at = \u7F6E\u304F ? \u7F6E\u304F.id : x.at;
+  }
+  s2.armies = s2.armies.filter((x) => x.id !== army.id);
+  s2.sieges = s2.sieges.filter((x) => x.armyId !== army.id);
+  s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => id !== army.id);
+  s2.campaigns = (s2.campaigns || []).map((c) => ({
+    ...c,
+    armies: (c.armies || []).filter((id) => id !== army.id),
+    arrived: (c.arrived || []).filter((id) => id !== army.id)
+  })).filter((c) => c.armies.length);
+  return home;
+}
+function restoreStrays(s2) {
+  const \u51FA\u9663\u4E2D = /* @__PURE__ */ new Set();
+  for (const a of s2.armies) for (const gid of a.gens) \u51FA\u9663\u4E2D.add(gid);
+  const \u623B\u3057\u305F = [];
+  for (const q of s2.generals) {
+    if (q.captive || \u51FA\u9663\u4E2D.has(q.id)) continue;
+    if (q.at && s2.castles.some((c) => c.id === q.at)) continue;
+    const \u81EA\u9818 = s2.castles.filter((c) => c.faction === q.faction);
+    if (!\u81EA\u9818.length) continue;
+    q.at = \u81EA\u9818[0].id;
+    \u623B\u3057\u305F.push(q);
+  }
+  return \u623B\u3057\u305F;
+}
+function resolveClash(s2, aId, bId, place) {
+  const a = s2.armies.find((x) => x.id === aId), b = s2.armies.find((x) => x.id === bId);
+  if (!a || !b) return null;
+  const pa = clashPower(s2, a), pb = clashPower(s2, b);
+  const \u52DD = pa >= pb ? a : b, \u8CA0 = pa >= pb ? b : a;
+  const r = Math.min(pa, pb) / Math.max(pa, pb);
+  const \u52DD\u640D = Math.round(\u52DD.men * (0.13 * r + 0.05));
+  const \u8CA0\u640D = Math.round(\u8CA0.men * (0.3 + 0.2 * r));
+  for (const [army, loss] of [[\u52DD, \u52DD\u640D], [\u8CA0, \u8CA0\u640D]]) {
+    army.men = Math.max(0, army.men - loss);
+    army.local = Math.max(0, army.local - loss);
+    if (army.rost) rosterSync(army, "rost", army.local, `arm-${army.id}`);
+  }
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${place}\u3067${s2.factions[a.faction].name}\u3068${s2.factions[b.faction].name}\u306E\u8ECD\u304C\u884C\u304D\u5408\u3044\u3001\u91CE\u6226\u3068\u306A\u3063\u305F\u3002${s2.factions[\u52DD.faction].name}\u304C\u52DD\u3061\u3001${s2.factions[\u8CA0.faction].name}\u306F\u5175\u3092\u9000\u3044\u305F\uFF08\u52DD\u3061\u624B${fmt(\u52DD\u640D)}\u4EBA\u30FB\u8CA0\u3051\u624B${fmt(\u8CA0\u640D)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
+  });
+  const home = withdrawArmy(s2, \u8CA0);
+  if (home) s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${s2.factions[\u8CA0.faction].name}\u306E\u8ECD\u306F${home.name}\u3078\u9000\u304D\u3001${s2.factions[\u52DD.faction].name}\u306F${\u5730\u540D(\u52DD.target)}\u3078\u9053\u3092\u9032\u3081\u305F\u3002`
+  });
+  return \u52DD;
+}
+function resolveClashOffscreen(prev) {
+  const s2 = structuredClone(prev);
+  const cl = (s2.clashes || [])[0];
+  if (!cl) return s2;
+  s2.clashes = s2.clashes.slice(1);
+  const \u52DD = resolveClash(s2, cl.aId, cl.bId, cl.place);
+  if (\u52DD && (!\u52DD.path || \u52DD.path.length <= 1)) {
+    s2.pendingArrivals = [\u52DD.id, ...(s2.pendingArrivals || []).filter((id) => id !== \u52DD.id)];
+  }
+  return s2;
+}
+
+// src/govern/month.js
+function advanceMonth(prev, g) {
+  const s2 = structuredClone(prev);
+  const events = [];
+  {
+    const mo = s2.month;
+    const wet = [6, 7].includes(mo) ? 0.42 : [12, 1, 2].includes(mo) ? 0.34 : [9, 10].includes(mo) ? 0.3 : 0.2;
+    const r2 = Math.random();
+    s2.weather = r2 < wet ? [12, 1, 2].includes(mo) ? "\u96EA" : "\u96E8" : r2 < wet + 0.28 ? "\u66C7" : "\u6674";
+  }
+  const auto = (fid) => fid !== s2.player || !!s2.autoPlay;
+  s2.prev = {};
+  for (const c of s2.castles) {
+    s2.prev[c.id] = {
+      koku: c.koku,
+      pop: c.pop,
+      food: c.food,
+      min: c.min,
+      localTrain: c.localTrain,
+      men: c.local + s2.generals.filter((x) => x.at === c.id && x.faction === c.faction).reduce((a, x) => a + x.retinue, 0)
+    };
+  }
+  s2.prevGold = s2.factions[s2.player].gold;
+  for (const fid of Object.keys(s2.factions)) {
+    const f = s2.factions[fid];
+    let gold = 0;
+    for (const c of s2.castles.filter((x) => x.faction === fid)) {
+      const besieged = s2.sieges.some((sg) => sg.castleId === c.id);
+      if (besieged) {
+        const ret2 = s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive).reduce((a, x) => a + x.retinue, 0);
+        const up2 = MOB_POLICY[f.mobilization].upkeep;
+        c.food -= Math.round((c.local + ret2) * 0.08 * up2);
+        if (c.food < 0) {
+          c.food = 0;
+          c.min = Math.max(0, c.min - 6);
+          c.localTrain = Math.max(20, c.localTrain - 3);
+          const lost2 = Math.round(c.local * 0.05);
+          c.local -= lost2;
+          if (fid === s2.player) events.push(`${c.name}\u306F\u56F2\u307E\u308C\u3001\u5175\u7CE7\u304C\u5C3D\u304D\u3066${fmt(lost2)}\u4EBA\u304C\u8131\u8D70\u3057\u305F\u3002`);
+        }
+        c.min = Math.max(0, c.min - 1.2);
+        continue;
+      }
+      const harvest = [9, 10, 11].includes(s2.month) ? 3 : 1;
+      const ret = s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive).reduce((a, x) => a + x.retinue, 0);
+      const troops = c.local + ret;
+      const up = MOB_POLICY[f.mobilization].upkeep;
+      c.food += Math.round(c.koku / 12 * 0.5 * harvest * (c.min / 80)) - Math.round(troops * 0.08 * up);
+      gold += (c.comm * 4 + c.koku * 3e-3) * (fid === s2.player ? lv(s2).tribute : 1) - troops * 0.075 * up;
+      if (c.food < 0) {
+        c.food = 0;
+        c.min = Math.max(0, c.min - 4);
+        c.localTrain = Math.max(20, c.localTrain - 3);
+        const lost = Math.round(c.local * 0.04);
+        c.local -= lost;
+        if (fid === s2.player) events.push(`${c.name}\u3067\u5175\u7CE7\u304C\u5C3D\u304D\u3001${fmt(lost)}\u4EBA\u304C\u8131\u8D70\u3057\u305F\u3002`);
+      }
+      c.pop = Math.round(c.pop * (1 + 12e-4 * (c.min / 80)));
+      if (c.koku < c.kokuMax) c.koku = Math.min(c.kokuMax, c.koku + Math.round(c.kokuMax * 15e-4));
+      const grip = provinceGrip(s2, fid, c.kuni);
+      const rest = 42 + grip * 46;
+      const gap = rest - c.min;
+      const settle = clamp(gap * 0.05, -0.9, 0.7);
+      c.min = clamp(c.min + settle + specialBonus(s2, fid, "min"), 0, 100);
+      c.comm = clamp(c.comm + specialBonus(s2, fid, "comm"), 0, 100);
+      c.najimi = clamp((c.najimi == null ? 70 : c.najimi) + 1.4, 0, 100);
+    }
+    gold += specialBonus(s2, fid, "gold") - specialBonus(s2, fid, "upkeep");
+    f.prestige = clamp((f.prestige || 50) + specialBonus(s2, fid, "prestige"), 0, 100);
+    f.gold = Math.round(f.gold + gold);
+  }
+  for (const k of Object.keys(s2.relations)) {
+    const r = s2.relations[k];
+    if (r.until && monthsBetween(s2.year, s2.month, r.until.y, r.until.m) <= 0) {
+      r.until = null;
+      r.state = "\u4E2D\u7ACB";
+      if (k.includes(s2.player)) events.push(`${k.split("|").filter((x) => x !== s2.player).map((x) => s2.factions[x].name)}\u3068\u306E\u7D04\u675F\u306E\u671F\u9650\u304C\u5207\u308C\u305F\u3002`);
+    }
+    r.trust = clamp(r.trust + 0.4, 0, 100);
+  }
+  const plotBonus = specialBonus(s2, s2.player, "plot");
+  s2.plots = s2.plots.filter((pl) => {
+    pl.monthsLeft--;
+    if (pl.monthsLeft > 0) return true;
+    const target = s2.castles.find((x) => x.id === pl.castleId);
+    const gen = s2.generals.find((x) => x.id === pl.genId);
+    if (!target || !gen) return false;
+    const def2 = PLOTS.find((x) => x.key === pl.type) || { need: 85, hard: 1 };
+    const skill = gen.wit + (pl.faction === s2.player ? plotBonus * 100 : 0);
+    const need2 = def2.need + (target.min - 70) * def2.hard * 0.42 + (target.faction === s2.player ? 8 : 0);
+    const cap2 = def2.cap == null ? 0.85 : def2.cap;
+    const gap = skill - need2;
+    const base = gap >= 0 ? Math.min(cap2 + Math.max(0, gap) * 2e-3, cap2 + 0.04) : clamp(cap2 + gap * def2.hard * 0.055, 0.03, cap2);
+    const roll = Math.random();
+    const say = (t) => {
+      if (pl.faction === s2.player) events.push(t);
+      else s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+    };
+    if (roll > base + (1 - base) * 0.55) {
+      const rel = s2.relations[relKey(pl.faction, target.faction)];
+      if (rel) rel.trust = clamp(rel.trust - 12, 0, 100);
+      say(`${target.name}\u3078\u306E${pl.type}\u304C\u9732\u898B\u3057\u305F\u3002`);
+      return false;
+    }
+    if (roll > base) {
+      say(`${target.name}\u3078\u306E${pl.type}\u306F\u4E0D\u8ABF\u306B\u7D42\u308F\u3063\u305F\u3002`);
+      return false;
+    }
+    if (pl.type === "\u5185\u5FDC") {
+      const lordOf = s2.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.captive).sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
+      const loy = lordOf ? lordOf.loyal == null ? 60 : lordOf.loyal : 100;
+      const wit2 = gen.wit;
+      const chance = clamp((72 - loy) / 90 + (wit2 - 60) / 260, 0, 0.85);
+      if (!lordOf || loy > 72 || Math.random() > chance) {
+        say(`${target.name}\u306E${lordOf ? lordOf.name : "\u57CE\u65B9"}\u306F\u5185\u5FDC\u306B\u5FDC\u3058\u306A\u304B\u3063\u305F\u3002`);
+        const rel2 = s2.relations[relKey(pl.faction, target.faction)];
+        if (rel2) rel2.trust = clamp(rel2.trust - 8, 0, 100);
+        return false;
+      }
+      const oldF = target.faction;
+      target.faction = pl.faction;
+      target.najimi = 42;
+      target.min = Math.max(0, target.min - 8);
+      for (const x of s2.generals.filter((q) => q.at === target.id && q.faction === oldF && !q.captive)) {
+        if (x === lordOf || Math.random() < 0.55) {
+          x.faction = pl.faction;
+          x.loyal = clamp(48 + Math.random() * 18, 0, 100);
+        } else {
+          const ref = s2.castles.find((c2) => c2.faction === oldF && c2.id !== target.id);
+          if (ref) x.at = ref.id;
+          else s2.generals = s2.generals.filter((q) => q.id !== x.id);
+        }
+      }
+      const rel3 = s2.relations[relKey(pl.faction, oldF)];
+      if (rel3) rel3.trust = clamp(rel3.trust - 20, 0, 100);
+      say(`${lordOf.name}\u304C\u5185\u5FDC\u3057\u3001${target.name}\u306F\u6226\u308F\u305A\u3057\u3066${s2.factions[pl.faction].name}\u306E\u3082\u306E\u3068\u306A\u3063\u305F\u3002`);
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${target.name}\u57CE\u4E3B${lordOf.name}\u304C\u5185\u5FDC\u3002\u57CE\u306F${s2.factions[pl.faction].name}\u306B\u6E21\u3063\u305F\uFF08\u65E7\u4E3B\uFF1A${s2.factions[oldF].name}\uFF09\u3002`
+      });
+      if (!s2.castles.some((c2) => c2.faction === oldF)) {
+        for (const a2 of s2.armies.filter((x) => x.faction === oldF)) {
+          for (const gid of a2.gens) {
+            const x = s2.generals.find((q) => q.id === gid);
+            if (x) x.at = target.id;
+          }
+        }
+        s2.armies = s2.armies.filter((x) => x.faction !== oldF);
+        s2.sieges = s2.sieges.filter((x) => s2.armies.some((a3) => a3.id === x.armyId));
+        s2.campaigns = (s2.campaigns || []).filter((x) => x.faction !== oldF);
+        for (const q of s2.generals.filter((x) => x.faction === oldF && x.captive && x.captive.by === pl.faction)) q.captive = null;
+        const { lord: rl, retainers: rr } = ruinedHouse(s2, oldF);
+        if (pl.faction === s2.player && (rl || rr.length)) {
+          s2.warSettle = {
+            faction: oldF,
+            winner: pl.faction,
+            castleId: target.id,
+            lordId: rl ? rl.id : null,
+            queue: [...rl ? [rl.id] : [], ...rr.map((x) => x.id)]
+          };
+        } else {
+          for (const g2 of [rl, ...rr].filter(Boolean)) {
+            if (Math.random() < 0.4) s2.generals = s2.generals.filter((x) => x.id !== g2.id);
+            else takeAsPrisoner(s2, g2, pl.faction, target.id);
+          }
+          s2.chronicle.push({
+            y: s2.year,
+            m: s2.month,
+            text: `${s2.factions[oldF].name}\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3044\u3001\u6EC5\u4EA1\u3057\u305F\u3002`
+          });
+        }
+        s2.ruined = [...s2.ruined || [], oldF];
+      }
+      return false;
+    }
+    if (pl.type === "\u5075\u5BDF") {
+      s2.intel[target.id] = { y: s2.year, m: s2.month };
+      say(`${target.name}\u306E\u5185\u60C5\u3092\u63B4\u3093\u3060\u3002`);
+    } else if (pl.type === "\u6D41\u8A00") {
+      target.min = Math.max(0, target.min - 9);
+      for (const x of s2.generals.filter((q) => q.at === target.id)) x.loyal = Math.max(0, x.loyal - 6);
+      say(`${target.name}\u306B\u6D41\u8A00\u304C\u5E83\u304C\u308A\u3001\u6C11\u5FE0\u3068\u5FE0\u8AA0\u304C\u4E0B\u304C\u3063\u305F\u3002`);
+    } else if (pl.type === "\u57CE\u5DE5\u4F5C") {
+      const ways = ["\u6AD3\u3078\u306E\u653E\u706B", "\u5175\u7CE7\u5EAB\u306E\u7834\u58CA", "\u57CE\u9580\u306E\u9582\u3092\u6298\u308B", "\u4E95\u6238\u3078\u306E\u6295\u3052\u8FBC\u307F", "\u5800\u306E\u6C34\u3092\u843D\u3068\u3059"];
+      const w = ways[Math.floor(Math.random() * ways.length)];
+      target.def = Math.max(0, target.def - 6);
+      target.food = Math.round(target.food * (w === "\u5175\u7CE7\u5EAB\u306E\u7834\u58CA" ? 0.7 : 0.88));
+      target.min = Math.max(0, target.min - 4);
+      if (w === "\u4E95\u6238\u3078\u306E\u6295\u3052\u8FBC\u307F") target.well = Math.max(0, (target.well == null ? 100 : target.well) - 34);
+      if (w === "\u5800\u306E\u6C34\u3092\u843D\u3068\u3059") target.def = Math.max(0, target.def - 4);
+      say(`${target.name}\u3067\u57CE\u5DE5\u4F5C\u304C\u6210\u3063\u305F\uFF08${w}\uFF09\u3002\u57CE\u306E\u5099\u3048\u304C\u843D\u3061\u305F\u3002`);
+    } else if (pl.type === "\u5BC6\u7D04") {
+      target.intrigue = true;
+      say(`${target.name}\u306E\u5185\u5FDC\u8005\u3068\u5BC6\u7D04\u304C\u6210\u3063\u305F\u3002\u653B\u3081\u5BC4\u305B\u305F\u6642\u306B\u52B9\u304F\u3002`);
+    } else if (pl.type === "\u5F15\u304D\u629C\u304D") {
+      const cand = s2.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.lord).sort((a, b) => a.loyal - b.loyal)[0];
+      if (cand && cand.loyal < 70) {
+        cand.faction = pl.faction;
+        cand.loyal = 60;
+        const home = s2.castles.find((x) => x.faction === pl.faction);
+        cand.at = home ? home.id : cand.at;
+        say(`${cand.name}\u304C${s2.factions[pl.faction].name}\u3078\u5BDD\u8FD4\u3063\u305F\u3002`);
+      } else say(`${target.name}\u306E\u6B66\u5C06\u306F\u8A98\u3044\u306B\u5FDC\u3058\u306A\u304B\u3063\u305F\u3002`);
+    }
+    return false;
+  });
+  for (const fid of Object.keys(s2.factions)) {
+    if (fid === s2.player) continue;
+    const f = s2.factions[fid];
+    for (const c of s2.castles.filter((x) => x.faction === fid)) {
+      const gen = s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive).sort((a, b) => b.gov - a.gov)[0];
+      if (!gen || f.gold < 260) continue;
+      const cap = troopCap(c, f.mobilization, g || s2);
+      const cur = c.local + s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive).reduce((a, x) => a + x.retinue, 0);
+      if (cur < cap * 0.8 && f.gold > 900) {
+        const n = Math.min(Math.round((cap - cur) * 0.35), Math.floor((f.gold - 400) / 0.45), Math.floor(c.pop * 0.012));
+        if (n > 0) {
+          c.local += n;
+          f.gold -= Math.round(n * 0.45);
+          c.pop -= Math.round(n * 0.2);
+          rosterSync(c, "rost", c.local, `loc-${c.id}`);
+        }
+      } else if (c.koku < c.kokuMax * 0.92) {
+        c.koku = Math.min(c.kokuMax, c.koku + Math.round((c.kokuMax - c.koku) * 0.06 * (0.5 + gen.gov / 100)));
+        f.gold -= 140;
+      } else {
+        c.def = Math.min(100, c.def + 2);
+        f.gold -= 220;
+      }
+    }
+  }
+  const arrivals = [];
+  for (const a of s2.armies) {
+    let budget = MARCH_PER_MONTH * (a.food > 0 ? 1 : 0.5);
+    while (budget > 0 && a.path.length > 1) {
+      const r = roadBetween(a.path[0], a.path[1]);
+      const need = (r ? r[2] : 10) / ROAD_SPEED[r ? r[3] : "\u8857\u9053"];
+      const rem = need * (1 - a.prog);
+      if (r && r[3] === "\u6D77\u8DEF" && a.prog === 0 && !a.seaDone) {
+        a.seaDone = true;
+        const inter = seaInterception(s2, a, "\u6D77\u8DEF");
+        if (inter) {
+          const res = resolveSeaBattle(s2, a, inter);
+          const from = nodeById(a.path[0]), to = nodeById(a.path[1]);
+          const txt = res.win ? `${from.name}\u3068${to.name}\u306E\u9593\u306E\u6D77\u3067${s2.factions[a.faction].name}\u304C${res.foeName}\u306E\u6C34\u8ECD\u3092\u7834\u3063\u305F\uFF08${fmt(res.lost)}\u4EBA\u3092\u5931\u3046\uFF09\u3002` : `${from.name}\u3068${to.name}\u306E\u9593\u306E\u6D77\u3067${s2.factions[a.faction].name}\u304C${res.foeName}\u306E\u6C34\u8ECD\u306B\u6557\u308C\u305F\uFF08${fmt(res.lost)}\u4EBA\u304C\u6D77\u306B\u6C88\u3093\u3060\uFF09\u3002`;
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: txt });
+          if (a.faction === s2.player || inter.by === s2.player) events.push(txt);
+          if (!res.win && a.men < 200) {
+            const home = s2.castles.find((c2) => c2.id === a.from);
+            if (home) for (const gid of a.gens) {
+              const x = s2.generals.find((q) => q.id === gid);
+              if (x) x.at = home.id;
+            }
+            a.dead = true;
+            break;
+          }
+          if (!res.win && Math.random() < 0.45) {
+            const home = s2.castles.find((c2) => c2.id === a.from);
+            if (home) {
+              home.local += Math.max(0, a.local);
+              for (const gid of a.gens) {
+                const x = s2.generals.find((q) => q.id === gid);
+                if (x) x.at = home.id;
+              }
+            }
+            a.dead = true;
+            s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[a.faction].name}\u306E\u8ECD\u306F\u6E21\u6D77\u3092\u8AE6\u3081\u3001\u5F15\u304D\u8FD4\u3057\u305F\u3002` });
+            break;
+          }
+        }
+      }
+      if (budget >= rem) {
+        budget -= rem;
+        a.prog = 0;
+        a.path.shift();
+        a.at = a.path[0];
+        a.seaDone = false;
+      } else {
+        a.prog += budget / need;
+        budget = 0;
+      }
+    }
+    if (a.dead) continue;
+    a.food -= Math.round(a.men * 0.09);
+    if (a.faction === s2.player) {
+      const days = Math.round(a.food / Math.max(1, a.men * 0.09) * 30);
+      if (a.food <= 0) events.push(`\u9032\u8ECD\u4E2D\u306E\u8ECD\u306E\u5175\u7CE7\u304C\u5C3D\u304D\u305F\u3002\u58EB\u6C17\u3068\u5175\u304C\u843D\u3061\u3066\u3044\u308B\u3002`);
+      else if (days < 45) events.push(`\u9032\u8ECD\u4E2D\u306E\u8ECD\u306E\u5175\u7CE7\u304C\u6B8B\u308A\u7D04${days}\u65E5\u5206\u3002\u88DC\u7D66\u304C\u5207\u308C\u304B\u3051\u3066\u3044\u308B\u3002`);
+    }
+    if (a.food <= 0) {
+      a.food = 0;
+      a.men = Math.round(a.men * 0.96);
+    }
+    if (a.path.length === 1 && !a.sieging) arrivals.push(a);
+  }
+  s2.armies = s2.armies.filter((a) => !a.dead);
+  for (const a of [...s2.armies]) {
+    if (a.aid == null || a.path.length > 1) continue;
+    const host = s2.armies.find((h) => h !== a && h.at === a.at && h.target === a.target && h.aid == null && h.faction === a.faction);
+    if (!host) continue;
+    host.local += a.local;
+    host.men += a.men;
+    host.food += a.food;
+    host.gens = [...host.gens, ...a.gens];
+    if (a.rost) host.rost = [...host.rost || [], ...a.rost];
+    s2.armies = s2.armies.filter((x) => x.id !== a.id);
+    const idx = arrivals.indexOf(a);
+    if (idx >= 0) arrivals.splice(idx, 1);
+    if (host.faction === s2.player || a.aid === s2.player) {
+      events.push(`${s2.factions[a.faction].name}\u306E\u63F4\u8ECD${fmt(a.men)}\u4EBA\u304C\u672C\u968A\u3078\u5408\u6D41\u3057\u305F\u3002`);
+    }
+  }
+  s2.clashes = [];
+  const \u884C\u304D\u5408\u3044\u7559\u3081 = /* @__PURE__ */ new Set();
+  for (const cl of marchClashes(s2)) {
+    const fa = (s2.armies.find((x) => x.id === cl.aId) || {}).faction;
+    const fb = (s2.armies.find((x) => x.id === cl.bId) || {}).faction;
+    if (!s2.autoPlay && (fa === s2.player || fb === s2.player)) {
+      s2.clashes.push(cl);
+      \u884C\u304D\u5408\u3044\u7559\u3081.add(cl.aId);
+      \u884C\u304D\u5408\u3044\u7559\u3081.add(cl.bId);
+      events.push(`${cl.place}\u3067${s2.factions[fa].name}\u3068${s2.factions[fb].name}\u306E\u8ECD\u304C\u884C\u304D\u5408\u3063\u305F\u3002\u91CE\u6226\u306B\u306A\u308B\u3002`);
+      continue;
+    }
+    resolveClash(s2, cl.aId, cl.bId, cl.place);
+  }
+  for (const q of s2.generals) {
+    if (!q.captive || q.captive.by !== s2.player || s2.ransomOffer) continue;
+    const worth = (q.lead + q.valor + q.wit + q.gov) / 400;
+    if (Math.random() > 0.1 + worth * 0.18) continue;
+    const cost = ransomCost(s2, q);
+    const f = s2.factions[cost.payer];
+    const foodHave = s2.castles.filter((c2) => c2.faction === cost.payer).reduce((a, c2) => a + c2.food, 0);
+    if (!f || f.gold < cost.gold || foodHave < cost.food) continue;
+    s2.ransomOffer = { genId: q.id, gold: cost.gold, food: cost.food, rank: cost.rank, from: cost.payer };
+    break;
+  }
+  for (const q of s2.generals) {
+    if (!q.captive || !q.captive.ruin) continue;
+    q.warLoyal = clamp((q.warLoyal || 0) + 2, 0, 100);
+    q.fed = false;
+  }
+  if (s2.month === 4) {
+    for (const q of s2.generals) q.age = (q.age || 30) + 1;
+    for (const q of [...s2.generals]) {
+      const a = q.age;
+      const cap = lifeSpan(q);
+      const fated = FATED[q.id] && s2.year >= FATED[q.id];
+      const reached = fated || a >= cap;
+      if (!reached && a < 48) continue;
+      const p = reached ? 1 : a >= cap - 4 ? 0.34 : a >= 70 ? 0.16 : a >= 60 ? 0.075 : a >= 54 ? 0.035 : 0.015;
+      if (Math.random() > p) continue;
+      const wasLord = q.lord;
+      s2.generals = s2.generals.filter((x) => x.id !== q.id);
+      if (wasLord) {
+        if (q.faction === s2.player && !s2.autoPlay) {
+          s2.succession = { dead: q, cause: "\u75C5\u6CA1\u3057\u305F" };
+        } else succeed(s2, q, "\u75C5\u6CA1\u3057\u305F");
+      } else {
+        const h = inheritHouse(s2, q);
+        if (h) {
+          const txt = `${q.name}\u304C\u75C5\u6CA1\u3057\u305F\uFF08${a}\u6B73\uFF09\u3002${h.name}\u304C${houseName(q)}\u306E\u5BB6\u3092\u7D99\u3044\u3060\uFF08\u7984\u9AD8${fmt(stipendOf(s2, h))}\u77F3\uFF09\u3002`;
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: txt });
+          if (q.faction === s2.player) events.push(txt);
+        } else {
+          s2.chronicle.push({
+            y: s2.year,
+            m: s2.month,
+            text: `${q.name}\u304C\u75C5\u6CA1\u3057\u305F\uFF08${a}\u6B73\uFF09\u3002${hasHouse(s2, q) ? `${houseName(q)}\u306E\u5BB6\u306F\u8DE1\u3092\u7D99\u3050\u8005\u306A\u304F\u7D76\u3048\u305F\u3002` : ""}`
+          });
+        }
+      }
+      if (q.faction === s2.player) events.push(`${q.name}\u304C\u75C5\u6CA1\u3057\u305F\uFF08${a}\u6B73\uFF09\u3002`);
+    }
+  }
+  for (const fid of [...new Set(s2.armies.map((a) => a.faction))]) {
+    if (s2.castles.some((c) => c.faction === fid)) continue;
+    for (const a2 of s2.armies.filter((x) => x.faction === fid)) {
+      for (const gid of a2.gens) {
+        const x = s2.generals.find((q) => q.id === gid);
+        if (x && !s2.castles.some((c) => c.id === x.at)) {
+          const near = s2.castles[0];
+          if (near) x.at = near.id;
+        }
+      }
+    }
+    s2.armies = s2.armies.filter((x) => x.faction !== fid);
+    s2.sieges = s2.sieges.filter((x) => s2.armies.some((a3) => a3.id === x.armyId));
+    s2.campaigns = (s2.campaigns || []).filter((x) => x.faction !== fid);
+  }
+  for (const fid of Object.keys(s2.factions)) {
+    if (!s2.castles.some((c) => c.faction === fid)) continue;
+    const cr = courtRank(s2, fid);
+    const had = (s2.courtRanks || {})[fid];
+    if (!cr) {
+      if (had) {
+        s2.courtRanks = { ...s2.courtRanks || {}, [fid]: null };
+      }
+      continue;
+    }
+    if (had === cr.key) continue;
+    s2.courtRanks = { ...s2.courtRanks || {}, [fid]: cr.key };
+    const f4 = s2.factions[fid];
+    f4.prestige = clamp((f4.prestige || 50) + cr.prestige, 0, 100);
+    const txt = cr.key === "\u5F81\u5937\u5927\u5C06\u8ECD" ? `${f4.name}\u304C\u757F\u5185\u3088\u308A\u95A2\u6771\u307E\u3067\u3092\u5236\u3057\u3001\u5F81\u5937\u5927\u5C06\u8ECD\u306B\u4EFB\u305C\u3089\u308C\u305F\u3002\u5E55\u5E9C\u3092\u958B\u304D\u3001\u5929\u4E0B\u306B\u53F7\u4EE4\u3059\u308B\u3002` : `${f4.name}\u304C\u4E94\u757F\u3092\u3053\u3068\u3054\u3068\u304F\u5236\u3057\u3001\u671D\u5EF7\u3088\u308A${cr.key}\u306B\u53D9\u305B\u3089\u308C\u305F\u3002`;
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: txt });
+    events.push(txt);
+  }
+  for (const c of s2.castles) {
+    const grip = provinceGrip(s2, c.faction, c.kuni);
+    if (grip >= 0.999 || c.min >= 58) continue;
+    const p2 = clamp((58 - c.min) / 2400 * (1.4 - grip), 0, 0.012);
+    if (Math.random() > p2) continue;
+    const lost = Math.round(c.local * (0.06 + Math.random() * 0.08));
+    c.local = Math.max(0, c.local - lost);
+    c.koku = Math.round(c.koku * 0.97);
+    c.min = clamp(c.min - 4, 0, 100);
+    const txt = `${c.name}\u3067\u4E00\u63C6\u304C\u8D77\u304D\u305F\u3002${fmt(lost)}\u4EBA\u3092\u5931\u3044\u3001\u7530\u3082\u8352\u308C\u305F\u3002`;
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: txt });
+    if (c.faction === s2.player) events.push(txt);
+  }
+  for (const fid of Object.keys(s2.factions)) {
+    const lord = s2.generals.find((x) => x.faction === fid && x.lord && !x.captive);
+    if (!lord || !needsGuardian(lord)) continue;
+    const gd = s2.generals.find((x) => x.id === lord.guardian && !x.captive);
+    const drift = gd ? clamp(1.4 - (gd.lead + gd.gov) / 150, 0.1, 1.4) : 2.2;
+    for (const x of s2.generals.filter((q) => q.faction === fid && !q.lord && !q.captive)) {
+      if (x.id === lord.guardian) continue;
+      if (x.loyal != null) x.loyal = clamp(x.loyal - drift, 0, 100);
+    }
+    const f3 = s2.factions[fid];
+    if (f3) f3.prestige = clamp((f3.prestige || 50) - 0.3, 0, 100);
+  }
+  for (const q of s2.generals) {
+    if (q.captive) continue;
+    const d = loyaltyDrift(q);
+    q.loyal = clamp((q.loyal == null ? 60 : q.loyal) + d, 0, 100);
+    if (q.loyal <= 12 && !q.lord) {
+      const near = s2.castles.filter((c2) => c2.faction !== q.faction);
+      const to = near.length ? near[Math.floor(Math.random() * near.length)] : null;
+      if (Math.random() < 0.18) {
+        if (to) {
+          const oldF = q.faction;
+          q.faction = to.faction;
+          q.at = to.id;
+          q.loyal = 45;
+          q.fief = Math.round(fiefWanted(q) * 0.8);
+          const msg = `${q.name}\u304C${s2.factions[oldF].name}\u3092\u53BB\u308A\u3001${s2.factions[to.faction].name}\u306B\u8D70\u3063\u305F\u3002`;
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: msg });
+          if (oldF === s2.player || to.faction === s2.player) events.push(msg);
+        } else {
+          s2.generals = s2.generals.filter((x) => x.id !== q.id);
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${q.name}\u304C\u51FA\u5954\u3057\u305F\u3002` });
+          if (q.faction === s2.player) events.push(`${q.name}\u304C\u51FA\u5954\u3057\u305F\u3002`);
+        }
+      } else if (q.faction === s2.player) {
+        events.push(`${q.name}\u306E\u5FC3\u304C\u96E2\u308C\u3064\u3064\u3042\u308B\uFF08\u5FE0\u8AA0${Math.round(q.loyal)}\uFF09\u3002\u77E5\u884C\u3092\u898B\u76F4\u3059\u3079\u304D\u3067\u3042\u308B\u3002`);
+      }
+    }
+  }
+  for (const q of s2.generals) {
+    if (!q.captive) continue;
+    const home = s2.factions[q.captive.from];
+    if (!home || !s2.castles.some((c2) => c2.faction === q.captive.from)) {
+      if (!q.captive.ruin) {
+        q.captive = { ...q.captive, ruin: true };
+        q.lord = false;
+        q.warLoyal = q.warLoyal || 0;
+        const \u6587 = `${q.name}\u306F\u65E7\u4E3B\u3092\u5931\u3044\u3001${s2.factions[q.captive.by].name}\u306E\u624B\u306B\u6B8B\u3055\u308C\u305F\u3002`;
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+        if (q.captive.by === s2.player) events.push(`\u6355\u865C\u306E${q.name}\u306F\u65E7\u4E3B\u3092\u5931\u3063\u305F\u3002\u51E6\u9047\u3092\u6C7A\u3081\u3089\u308C\u308B\u3002`);
+      }
+      q.loyal = clamp((q.loyal == null ? 60 : q.loyal) - 1.6, 0, 100);
+      if (q.loyal <= 40 && !q.captive.ready) {
+        q.captive.ready = true;
+        if (q.captive.by === s2.player) events.push(`\u6355\u865C\u306E${q.name}\u304C\u5FC3\u3092\u79FB\u3057\u305F\u3002\u767B\u7528\u3067\u304D\u308B\u3002`);
+      }
+      continue;
+    }
+    if (q.captive.bond == null) {
+      q.captive.bond = q.loyal >= 78 ? 1 : q.loyal <= 45 ? -1 : 0;
+    }
+    const step = q.captive.bond > 0 ? 0.5 : q.captive.bond < 0 ? 1.8 : 1;
+    q.loyal = clamp((q.loyal == null ? 60 : q.loyal) - step, 0, 100);
+    if (q.loyal <= 40 && !q.captive.ready) {
+      q.captive.ready = true;
+      events.push(`\u6355\u865C\u306E${q.name}\u304C\u5FC3\u3092\u79FB\u3057\u305F\u3002\u767B\u7528\u3067\u304D\u308B\u3002`);
+    }
+  }
+  for (const a of s2.armies) {
+    if (!auto(a.faction) || a.aid) continue;
+    if (a.reinforced || a.path.length > 1) continue;
+    a.reinforced = true;
+    const tgt = s2.castles.find((c2) => c2.id === a.target);
+    if (!tgt) continue;
+    const dg3 = s2.generals.filter((x) => x.at === tgt.id && x.faction === tgt.faction && !x.captive);
+    const need = (tgt.local + dg3.reduce((t2, x) => t2 + x.retinue, 0)) * 1.5 - a.men;
+    if (need <= 0) continue;
+    let sent = 0;
+    for (const c2 of s2.castles.filter((x) => x.faction === a.faction && x.id !== a.from)) {
+      if (sent >= need) break;
+      const gs = s2.generals.filter((x) => x.at === c2.id && x.faction === a.faction && !x.captive);
+      const spare = c2.local + gs.reduce((t2, x) => t2 + x.retinue, 0) - minGarrison(c2);
+      if (spare < 400 || !gs.length) continue;
+      const take = [...gs].sort((x, y2) => y2.lead - x.lead).slice(0, 1);
+      const send = Math.min(Math.round(spare * 0.6), c2.local);
+      if (send < 200) continue;
+      c2.local -= send;
+      for (const t2 of take) t2.at = null;
+      const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
+      c2.rost = tk.rest;
+      s2.armies.push({
+        id: `r${Date.now()}${Math.round(Math.random() * 1e6)}`,
+        faction: a.faction,
+        from: c2.id,
+        gens: take.map((x) => x.id),
+        local: send,
+        localTrain: c2.localTrain,
+        rost: tk.taken,
+        men: send + take.reduce((t2, x) => t2 + x.retinue, 0),
+        at: c2.id,
+        path: findPath(c2.id, a.target),
+        prog: 0,
+        food: Math.round(send * 0.6),
+        target: a.target,
+        aid: a.faction
+      });
+      sent += send;
+    }
+    if (sent > 0) s2.chronicle.push({
+      y: s2.year,
+      m: s2.month,
+      text: `${s2.factions[a.faction].name}\u304C${tgt.name}\u653B\u3081\u3078\u5BC4\u9A0E${fmt(sent)}\u4EBA\u3092\u5411\u304B\u308F\u305B\u305F\u3002`
+    });
+  }
+  for (const sg2 of [...s2.sieges]) {
+    const bes = s2.armies.find((x) => x.id === sg2.armyId);
+    const cs = s2.castles.find((x) => x.id === sg2.castleId);
+    if (!bes || !cs) continue;
+    if (!s2.autoPlay && (bes.faction === s2.player || cs.faction === s2.player)) continue;
+    sg2.months = (sg2.months || 0) + 1;
+    if (sg2.months >= 3) {
+      cs.def = Math.max(10, cs.def - 1.5);
+      cs.localTrain = Math.max(25, cs.localTrain - 1.5);
+      cs.local = Math.max(0, cs.local - Math.round(cs.local * 0.03));
+      if (sg2.months >= 6 && Math.random() < 0.12) {
+        const turn = s2.generals.filter((x) => x.at === cs.id && x.faction === cs.faction && !x.captive && !x.lord).sort((a2, b2) => (a2.loyal || 60) - (b2.loyal || 60))[0];
+        if (turn && (turn.loyal || 60) < 55) {
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${cs.name}\u306E${turn.name}\u304C\u57CE\u3092\u958B\u3044\u3066\u5BDD\u8FD4\u3063\u305F\u3002` });
+          sackCastle(s2, cs, bes, false);
+          continue;
+        }
+      }
+    }
+    const dg2 = s2.generals.filter((x) => x.at === cs.id && x.faction === cs.faction && !x.captive);
+    const dMen2 = cs.local + dg2.reduce((a, x) => a + x.retinue, 0);
+    cs.food = Math.max(0, cs.food - Math.round(cs.local * 0.35 + 600));
+    cs.min = Math.max(0, cs.min - 5);
+    bes.food -= Math.round(bes.men * 0.09);
+    if (cs.food <= 0 || cs.min < 25) {
+      sackCastle(s2, cs, bes, false);
+      continue;
+    }
+    if (bes.food <= 0) {
+      withdrawArmy(s2, bes);
+      s2.sieges = s2.sieges.filter((x) => x !== sg2);
+      s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[bes.faction].name}\u306F${cs.name}\u306E\u56F2\u307F\u3092\u89E3\u3044\u305F\u3002` });
+      continue;
+    }
+    if (bes.men > dMen2 * 1.6 && Math.random() < 0.45) {
+      const aL = Math.round(bes.men * 0.14), dL = Math.round(dMen2 * 0.4);
+      bes.men = Math.max(0, bes.men - aL);
+      bes.local = Math.max(0, bes.local - aL);
+      cs.local = Math.max(0, cs.local - dL);
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${s2.factions[bes.faction].name}\u304C${cs.name}\u3078\u653B\u3081\u304B\u304B\u3063\u305F\uFF08\u653B${fmt(aL)}\u4EBA\u30FB\u5B88${fmt(dL)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
+      });
+      if (cs.local < 150) sackCastle(s2, cs, bes, true);
+    }
+  }
+  for (const sg2 of s2.sieges) {
+    const cs = s2.castles.find((x) => x.id === sg2.castleId);
+    const bes = s2.armies.find((x) => x.id === sg2.armyId);
+    if (!cs || !bes || sg2.relief) continue;
+    const enc = (sg2.enc == null ? 60 : sg2.enc) / 100;
+    if (enc > 0.75) continue;
+    if (Math.random() > 0.55 * (1 - enc)) continue;
+    const from = s2.castles.filter((c2) => c2.faction === cs.faction && c2.id !== cs.id).map((c2) => ({ c2, p: findPath(c2.id, cs.id) })).filter((x) => x.p).sort((a, b) => a.p.length - b.p.length)[0];
+    if (!from) continue;
+    const fg = s2.generals.filter((x) => x.at === from.c2.id && x.faction === from.c2.faction && !x.captive);
+    const avail = from.c2.local + fg.reduce((a, x) => a + x.retinue, 0) - minGarrison(from.c2);
+    if (avail < 500 || !fg.length) continue;
+    const take = [...fg].sort((a, b) => b.lead - a.lead).slice(0, 2);
+    const send = Math.min(Math.round(avail * 0.6), from.c2.local);
+    if (send < 200) continue;
+    from.c2.local -= send;
+    for (const t of take) t.at = null;
+    const rid = `f${Date.now()}${Math.round(Math.random() * 1e6)}`;
+    s2.armies.push({
+      id: rid,
+      faction: cs.faction,
+      from: from.c2.id,
+      gens: take.map((x) => x.id),
+      local: send,
+      localTrain: from.c2.localTrain,
+      rost: (() => {
+        const tk = rosterTake(from.c2.rost || newRoster(from.c2.local + send, `loc-${from.c2.id}`), send);
+        from.c2.rost = tk.rest;
+        return tk.taken;
+      })(),
+      men: send + take.reduce((a, x) => a + x.retinue, 0),
+      at: from.c2.id,
+      path: findPath(from.c2.id, cs.id),
+      prog: 0,
+      food: Math.round(send * 0.6),
+      target: cs.id,
+      relief: cs.id
+    });
+    sg2.relief = rid;
+    events.push(`${s2.factions[cs.faction].name}\u304C${cs.name}\u3078\u5F8C\u8A70\u3092\u5DEE\u3057\u5411\u3051\u305F\uFF08${from.c2.name}\u3088\u308A${fmt(send)}\u4EBA\uFF09\u3002`);
+  }
+  for (const fid of Object.keys(s2.factions)) {
+    if (!auto(fid)) continue;
+    const f2 = s2.factions[fid];
+    for (const c of s2.castles.filter((x) => x.faction === fid)) {
+      if (s2.sieges.some((sg) => sg.castleId === c.id)) continue;
+      const gens2 = s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive);
+      const gov2 = gens2.length ? Math.max(...gens2.map((x) => x.gov)) : 50;
+      if (f2.gold > 400 && Math.random() < 0.5 * lv(s2).aiGrow) {
+        const room = c.kokuMax - c.koku;
+        if (room > c.kokuMax * 0.04) {
+          c.koku += Math.round(room * 0.12 * (0.5 + gov2 / 100) * lv(s2).aiGrow);
+          f2.gold -= 140;
+        } else {
+          const cap2 = c.kokuCap || c.kokuMax;
+          const add = Math.min(Math.max(0, cap2 - c.kokuMax), Math.round(c.kokuMax * 0.03 * (0.5 + gov2 / 100)));
+          if (add > 0) {
+            c.kokuMax += add;
+            f2.gold -= 180;
+          }
+        }
+      }
+      const cap = troopCap(c, f2.mobilization, s2);
+      const cur = c.local + gens2.reduce((a, x) => a + x.retinue, 0);
+      if (!f2.kenchiTried || s2.month === 4) {
+        for (const kuni of provincesHeld(s2, fid)) {
+          if (kenchiDone(s2, kuni)) continue;
+          const cost2 = kenchiCost(s2, kuni);
+          if (f2.gold < cost2.gold * 1.6) continue;
+          const gov3 = Math.max(60, ...s2.generals.filter((x) => x.faction === fid && !x.captive).map((x) => x.gov));
+          f2.gold -= cost2.gold;
+          const r2 = runKenchi(s2, fid, kuni, gov3);
+          s2.chronicle.push({
+            y: s2.year,
+            m: s2.month,
+            text: `${f2.name}\u304C${kuni}\u306B\u7AFF\u3092\u5165\u308C\u305F\u3002\u77F3\u9AD8\u304C${fmt(r2.before)}\u77F3\u3088\u308A${fmt(r2.after)}\u77F3\u306B\u6539\u307E\u3063\u305F\u3002`
+          });
+          break;
+        }
+        f2.kenchiTried = true;
+      }
+      const want = Math.round(cap * 0.7);
+      if (f2.gold > 700 && cur < want) {
+        const n = Math.max(0, Math.min(want - cur, Math.floor((f2.gold - 500) / 0.45), Math.floor(c.pop * 0.01)));
+        if (n > 60) {
+          c.local += n;
+          f2.gold -= Math.round(n * 0.45);
+          rosterSync(c, "rost", c.local, `loc-${c.id}`);
+          c.pop -= Math.round(n * 0.2);
+        }
+      }
+      if (Math.random() < 0.25) c.localTrain = Math.min(100, c.localTrain + 2);
+    }
+  }
+  for (const fid of Object.keys(s2.factions)) {
+    if (!auto(fid)) continue;
+    reviewAim(s2, fid);
+    const fa = s2.factions[fid];
+    if (fa.temper === "\u9670\u8B00" && fa.aim && fa.gold > 500 && Math.random() < 0.3 * lv(s2).aiPlot) {
+      const t = s2.castles.find((c2) => c2.id === fa.aim.target);
+      if (t) {
+        fa.gold -= 220;
+        t.min = Math.max(0, t.min - 3);
+        for (const x of s2.generals.filter((q) => q.at === t.id && q.faction === t.faction && !q.captive)) {
+          x.loyal = Math.max(0, (x.loyal == null ? 60 : x.loyal) - 2);
+        }
+        if (t.faction === s2.player) events.push(`${s2.factions[fid].name}\u306E\u624B\u306E\u8005\u304C${t.name}\u3067\u6D41\u8A00\u3092\u5E83\u3081\u3066\u3044\u308B\u3002`);
+      }
+    }
+    if (fa.temper === "\u5805\u5B9F" && fa.gold > 600 && Math.random() < 0.35) {
+      const risk = s2.castles.filter((c2) => c2.faction === fid).sort((a, b) => a.def - b.def)[0];
+      if (risk) {
+        risk.def = Math.min(100, risk.def + 2);
+        risk.hp += 150;
+        fa.gold -= 240;
+      }
+    }
+  }
+  for (const fid of Object.keys(s2.factions)) {
+    if (!auto(fid) || s2.armies.some((a) => a.faction === fid)) continue;
+    const fa = s2.factions[fid];
+    const eager = (fa.temper === "\u9032\u53D6" ? 0.6 : fa.temper === "\u5805\u5B9F" ? 0.32 : 0.45) * lv(s2).aiEager;
+    if (Math.random() > eager) continue;
+    const aim = fa.aim;
+    const order = aim ? [s2.castles.find((x) => x.id === aim.from), ...s2.castles.filter((x) => x.faction === fid && x.id !== aim.from)] : s2.castles.filter((x) => x.faction === fid);
+    for (const c of order.filter(Boolean)) {
+      if (c.faction !== fid) continue;
+      if (s2.sieges.some((sg) => sg.castleId === c.id)) continue;
+      if (s2.armies.some((a2) => a2.faction !== fid && a2.target === c.id && (a2.at === c.id || !a2.path || a2.path.length <= 1))) continue;
+      const gens = s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive);
+      const avail = c.local + gens.reduce((a, x) => a + x.retinue, 0) - minGarrison(c);
+      if (avail < 700) continue;
+      const passable2 = (t2) => {
+        const path = findPath(c.id, t2.id);
+        if (!path) return false;
+        if ((marchMonths(c.id, t2.id) || 99) > 6) return false;
+        for (let i = 1; i < path.length - 1; i++) {
+          const mid = s2.castles.find((y) => y.id === path[i]);
+          if (!mid) return false;
+          if (mid.faction === fid) continue;
+          const st = relOf(s2, fid, mid.faction).state;
+          if (st !== "\u540C\u76DF" && st !== "\u5F93\u5C5E" && st !== "\u81E3\u5F93") return false;
+        }
+        return true;
+      };
+      const reach = s2.castles.filter((x) => x.faction !== fid && !atPeace(s2, fid, x.faction) && passable2(x));
+      const worth = (t2) => {
+        const cs2 = s2.castles.filter((x) => x.kuni === t2.kuni);
+        if (!cs2.length) return 0;
+        const rest = cs2.filter((x) => x.faction !== fid && x.id !== t2.id).length;
+        let w = rest === 0 ? 60 : rest === 1 ? 24 : rest === 2 ? 8 : 0;
+        if (GOKINAI.includes(t2.kuni)) {
+          const got = GOKINAI.filter((k) => holdsProvince(s2, fid, k)).length;
+          w += rest === 0 ? 40 + got * 22 : 10 + got * 6;
+        }
+        return w;
+      };
+      const scored2 = reach.map((x) => ({
+        x,
+        s2: worth(x) - findPath(c.id, x.id).length * 1.2 + (aim && aim.target === x.id ? 14 : 0)
+      })).sort((a, b) => b.s2 - a.s2);
+      const cand = scored2.length ? scored2[0].x : null;
+      if (!cand) continue;
+      const dg = s2.generals.filter((x) => x.at === cand.id && x.faction === cand.faction);
+      const foeMen2 = cand.local + dg.reduce((a, x) => a + x.retinue, 0);
+      let need = lv(s2).aiNeed;
+      const head2 = [...gens].sort((x, y2) => y2.wit + y2.lead - (x.wit + x.lead))[0];
+      if (head2 && head2.wit >= 78) {
+        const wet = s2.weather === "\u96E8" || s2.weather === "\u96EA" || s2.weather === "\u66C7";
+        const p2 = ambushChance(head2, s2.weather || "\u6674", "forest", avail / Math.max(1, foeMen2));
+        if (p2 > 0.22 && (wet || head2.wit >= 88)) need = 0.34;
+        else if (p2 > 0.15) need = 0.68;
+      }
+      if (avail < foeMen2 * need) continue;
+      const take = gens.sort((a, b) => b.lead - a.lead).slice(0, 3);
+      const send = Math.round(avail * 0.85);
+      const localSend = Math.max(0, Math.min(c.local, send - take.reduce((a, x) => a + x.retinue, 0)));
+      c.local -= localSend;
+      s2.armies.push({
+        id: `a${Date.now()}${Math.random()}`,
+        faction: fid,
+        from: c.id,
+        gens: take.map((x) => x.id),
+        local: localSend,
+        localTrain: c.localTrain,
+        men: localSend + take.reduce((a, x) => a + x.retinue, 0),
+        at: c.id,
+        path: findPath(c.id, cand.id),
+        prog: 0,
+        food: Math.round(send * 0.6),
+        target: cand.id
+      });
+      for (const t of take) t.at = null;
+      c.food -= Math.round(send * 0.6);
+      events.push(`${s2.factions[fid].name}\u304C${c.name}\u3088\u308A\u51FA\u9663\u3002${cand.name}\u3092\u76EE\u6307\u3059\u3002`);
+      break;
+    }
+  }
+  if (!s2.unified) {
+    const u = checkUnified(s2);
+    if (u) {
+      s2.unified = { fid: u.fid, y: s2.year, m: s2.month, vassals: u.vassals, direct: u.direct };
+      const nm = s2.factions[u.fid].name;
+      const how = u.direct ? "\u3059\u3079\u3066\u306E\u57CE\u3092\u63E1\u308A" : `${u.vassals.map((v) => s2.factions[v].name).join("\u30FB")}\u3092\u5F93\u3048`;
+      const gd = u.grade === "\u4E00\u7D71" ? "\u5929\u4E0B\u3053\u3068\u3054\u3068\u304F\u3092\u76F4\u306B\u6CBB\u3081\u3001\u8AF8\u5BB6\u306F\u4E00\u3064\u3082\u6B8B\u3089\u306A\u304B\u3063\u305F" : u.grade === "\u5927\u6210" ? `${u.mine}\u57CE\u3092\u76F4\u306B\u6CBB\u3081\u3001\u6B8B\u308B\u306F\u65D7\u4E0B\u306E\u5BB6\u3005\u3067\u3042\u308B` : u.grade === "\u8987" ? `${u.mine}\u57CE\u3092\u76F4\u306B\u6CBB\u3081\u3001\u306A\u304A\u591A\u304F\u306E\u5BB6\u3092\u5F93\u3048\u3066\u3044\u308B` : `${u.mine}\u57CE\u3092\u76F4\u306B\u6CBB\u3081\u308B\u306E\u307F\u3067\u3001\u5927\u534A\u306F\u5F93\u5C5E\u3059\u308B\u5BB6\u3005\u3067\u3042\u308B`;
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${nm}\u304C${how}\u3001\u3053\u306E\u5730\u306B\u5929\u4E0B\u3092\u5B9A\u3081\u305F\u3002${gd}\u3002`
+      });
+      events.push(u.fid === s2.player ? "\u5929\u4E0B\u304C\u5B9A\u307E\u3063\u305F\u3002\u3053\u306E\u5730\u306B\u4E26\u3076\u8005\u306F\u306A\u3044\u3002" : `${nm}\u304C\u3053\u306E\u5730\u3092\u7D71\u3079\u305F\u3002`);
+    }
+  }
+  s2.month++;
+  if (s2.month > 12) {
+    s2.month = 1;
+    s2.year++;
+    for (const q of s2.generals) {
+      if (!q.lord || !q.guardian) continue;
+      if ((q.age || 30) < COMING_OF_AGE) continue;
+      const gd = s2.generals.find((x) => x.id === q.guardian);
+      q.guardian = null;
+      const txt = `${q.name}\u304C\u5143\u670D\u3057\u3001\u307F\u305A\u304B\u3089\u5BB6\u7763\u3092\u57F7\u3063\u305F\u3002${gd ? `${gd.name}\u306E\u5F8C\u898B\u306F\u89E3\u3051\u305F\u3002` : ""}`;
+      s2.chronicle.push({ y: s2.year, m: s2.month, text: txt });
+      if (q.faction === s2.player) events.push(txt);
+    }
+    for (const q of [...s2.generals]) {
+      if (q.captive || q.lord) continue;
+      const a2 = q.age || 30;
+      if (a2 < 18 || a2 > 52) continue;
+      if (!hasHouse(s2, q)) continue;
+      const hasKid = s2.generals.some((x) => PARENT[x.id] === q.id && !x.captive) || NEWCOMERS.some((n) => PARENT[n.id] === q.id);
+      if (hasKid) continue;
+      if (Math.random() > 0.07) continue;
+      const kid = bearChild(s2, q);
+      if (kid && q.faction === s2.player) events.push(`${q.name}\u306B\u5B50\u304C\u751F\u307E\u308C\u305F\uFF08${kid.name}\uFF09\u3002`);
+    }
+    for (const t of emergeGenerals(s2)) {
+      s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+      events.push(t);
+    }
+  }
+  for (const q of restoreStrays(s2)) {
+    if (q.faction !== s2.player) continue;
+    events.push(`${q.name}\u306E\u6240\u5728\u304C\u77E5\u308C\u305A\u306B\u3044\u305F\u304C\u3001${(s2.castles.find((c) => c.id === q.at) || {}).name}\u306B\u623B\u3063\u305F\u3002`);
+  }
+  s2.orders = {};
+  s2.pendingArrivals = arrivals.filter((a) => !\u884C\u304D\u5408\u3044\u7559\u3081.has(a.id) && s2.armies.some((x) => x.id === a.id)).map((a) => a.id);
+  s2.monthEvents = events;
+  if (events.length) s2.chronicle.push(...events.map((t) => ({ y: s2.year, m: s2.month, text: t })));
+  if (s2.chronicle.length > 400) s2.chronicle = s2.chronicle.slice(-400);
+  return s2;
+}
+
+// src/ui/MapScreen.jsx
+import React5, { useState as useState5, useRef as useRef3, useEffect as useEffect4 } from "react";
+
+// src/battle/field.js
+var MAX_CORPS = 32;
+var MAX_CORPS_MEN = 3e4;
+var BASE = { w: 1080, h: 720 };
+var FIELD = { w: 1080, h: 720 };
+var RIVER = { top: 0, bot: 0, bridge: [0, 0], ford: [0, 0], wave: 0, ph: 0, k: 1 };
+function riverShift(x) {
+  if (!RIVER.wave) return 0;
+  return Math.sin(x * RIVER.k + RIVER.ph) * RIVER.wave;
+}
+var FORESTS = [];
+var WOODS = [];
+var HILLS = [];
+var MARSH = [];
+var FIELD_SEED = 0;
+function seedOf(aId, bId) {
+  const key = [String(aId || ""), String(bId || "")].sort().join("|");
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+function genTerrain(seed) {
+  const rnd = makeRng(seed);
+  const W = FIELD.w, H = FIELD.h;
+  RIVER.top = 0;
+  RIVER.bot = 0;
+  RIVER.bridge = [0, 0];
+  RIVER.ford = [0, 0];
+  RIVER.wave = 0;
+  FORESTS.length = 0;
+  WOODS.length = 0;
+  HILLS.length = 0;
+  MARSH.length = 0;
+  const kind = rnd();
+  if (kind > 0.4) {
+    const cy = H * (0.36 + rnd() * 0.28);
+    const wide = H * (0.045 + rnd() * 0.035);
+    RIVER.top = Math.round(cy - wide / 2);
+    RIVER.bot = Math.round(cy + wide / 2);
+    const bx = W * (0.15 + rnd() * 0.7), bw = W * 0.075;
+    RIVER.bridge = [Math.round(bx - bw / 2), Math.round(bx + bw / 2)];
+    let fx = W * (0.1 + rnd() * 0.8);
+    if (Math.abs(fx - bx) < W * 0.2) fx = bx > W / 2 ? bx - W * 0.28 : bx + W * 0.28;
+    const fw = W * 0.1;
+    RIVER.ford = [Math.round(clamp(fx - fw / 2, 10, W - fw - 10)), 0];
+    RIVER.ford[1] = Math.round(RIVER.ford[0] + fw);
+    RIVER.wave = H * (0.02 + rnd() * 0.05);
+    RIVER.k = (1.4 + rnd() * 1.6) * Math.PI / W;
+    RIVER.ph = rnd() * Math.PI * 2;
+  }
+  const put = (list, n, rMin, rMax) => {
+    for (let i = 0; i < n; i++) {
+      let x = 0, y = 0, ok = false;
+      const r0 = rMin + rnd() * (rMax - rMin);
+      const mx = r0 + 24, my = r0 + 24;
+      if (mx * 2 > W - 40 || my * 2 > H - 40) continue;
+      for (let k = 0; k < 24 && !ok; k++) {
+        x = mx + rnd() * (W - mx * 2);
+        y = my + rnd() * (H - my * 2);
+        if (RIVER.bot > RIVER.top && y > RIVER.top - 40 && y < RIVER.bot + 40) continue;
+        ok = ![...FORESTS, ...WOODS, ...HILLS, ...MARSH].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + r0 + 30);
+      }
+      if (ok) list.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r0) });
+    }
+  };
+  const sc = Math.min(1.6, FIELD.w / 1080);
+  put(HILLS, Math.floor(rnd() * 3), 80 * sc, 130 * sc);
+  put(FORESTS, Math.floor(rnd() * 4), 70 * sc, 115 * sc);
+  put(WOODS, Math.floor(rnd() * 3), 50 * sc, 85 * sc);
+  put(MARSH, rnd() > 0.6 ? 1 : 0, 65 * sc, 100 * sc);
+}
+var hasRiver = () => RIVER.bot > RIVER.top + 4;
+var nearestOf = (list, x, y) => list.length ? list.reduce((a, o) => Math.hypot(o.x - x, o.y - y) < Math.hypot(a.x - x, a.y - y) ? o : a, list[0]) : null;
+function layoutField(totalMen) {
+  const w = clamp(Math.round(1045 * Math.sqrt(Math.max(600, totalMen) / 3e3)), 900, 5600);
+  const h = Math.round(w * 0.667);
+  FIELD.w = w;
+  FIELD.h = h;
+  genTerrain(FIELD_SEED);
+}
+function setFieldSeed(aId, bId) {
+  FIELD_SEED = seedOf(aId, bId);
+}
+layoutField(3e3);
+var BLOCKED = { wall: 1, gate: 1 };
+function passable(x, y) {
+  return !BLOCKED[terrainAt(x, y)];
+}
+function passableFor(c, b, x, y) {
+  if (passable(x, y)) return true;
+  if (!b || !b.map || !c || c.side === b.attacker) return false;
+  if (c.sortie) return true;
+  if (terrainAt(x, y) !== "gate") return false;
+  const m = b.map;
+  return Math.hypot(x - m.cx, y - m.cy) < Math.hypot(c.x - m.cx, c.y - m.cy);
+}
+function terrainAt(x, y) {
+  if (MAP) return castleTerrainAt(x, y);
+  if (hasRiver()) {
+    const sh = riverShift(x);
+    if (y > RIVER.top + sh && y < RIVER.bot + sh) {
+      if (x > RIVER.bridge[0] && x < RIVER.bridge[1]) return "bridge";
+      if (x > RIVER.ford[0] && x < RIVER.ford[1]) return "ford";
+      return "deep";
+    }
+  }
+  for (const f of FORESTS) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.r ** 2) return "forest";
+  for (const f of WOODS) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.r ** 2) return "wood";
+  for (const m of MARSH) if ((x - m.x) ** 2 + (y - m.y) ** 2 < m.r ** 2) return "marsh";
+  for (const h of HILLS) if ((x - h.x) ** 2 + (y - h.y) ** 2 < h.r ** 2) return "hill";
+  return "plain";
+}
+var TERRAIN = {
+  plain: { speed: 1, fight: 1, cohesion: 0, sight: 260, horse: 1, charge: true, label: "\u5E73\u5730" },
+  forest: { speed: 0.65, fight: 0.85, cohesion: -6, sight: 95, horse: 0.6, charge: false, label: "\u68EE" },
+  wood: { speed: 0.82, fight: 0.92, cohesion: -3, sight: 165, horse: 0.85, charge: true, label: "\u6797" },
+  marsh: { speed: 0.5, fight: 0.8, cohesion: -9, sight: 240, horse: 0.45, charge: false, label: "\u6E7F\u5730" },
+  hill: { speed: 0.7, fight: 1.15, cohesion: -2, sight: 360, horse: 0.8, charge: true, label: "\u4E18" },
+  bridge: { speed: 0.95, fight: 0.85, cohesion: -5, sight: 260, horse: 0.9, charge: false, label: "\u6A4B" },
+  ford: { speed: 0.3, fight: 0.7, cohesion: -14, sight: 260, horse: 0.5, charge: false, label: "\u6D45\u702C" },
+  deep: { speed: 0.1, fight: 0.5, cohesion: -24, sight: 260, horse: 0.25, charge: false, label: "\u6DF1\u3044\u5DDD" },
+  wall: { speed: 0.01, fight: 1, cohesion: 0, sight: 300, horse: 0.1, charge: false, label: "\u57CE\u58C1" },
+  gate: { speed: 0.01, fight: 1, cohesion: 0, sight: 300, horse: 0.1, charge: false, label: "\u57CE\u9580" },
+  gateopen: { speed: 0.8, fight: 0.75, cohesion: -12, sight: 200, horse: 0.6, charge: false, label: "\u7834\u308C\u305F\u9580" },
+  moat: { speed: 0.28, fight: 0.65, cohesion: -16, sight: 260, horse: 0.3, charge: false, label: "\u5800" },
+  bridge2: { speed: 0.9, fight: 0.8, cohesion: -6, sight: 260, horse: 0.85, charge: false, label: "\u571F\u6A4B" },
+  tower: { speed: 0.55, fight: 1.3, cohesion: -2, sight: 430, horse: 0.3, charge: false, label: "\u6AD3" },
+  kuruwa: { speed: 0.92, fight: 1, cohesion: -3, sight: 210, horse: 0.75, charge: true, label: "\u66F2\u8F2A" },
+  honmaru: { speed: 0.88, fight: 1.12, cohesion: -3, sight: 230, horse: 0.7, charge: false, label: "\u672C\u4E38" }
+};
+var WEATHER = {
+  \u6674: { sight: 1, speed: 1, fatigue: 1, teppo: 1, note: "\u8996\u754C\u3082\u8DB3\u5834\u3082\u826F\u3044\u3002" },
+  \u66C7: { sight: 0.9, speed: 1, fatigue: 1.05, teppo: 1, note: "\u9060\u304F\u304C\u898B\u3048\u306B\u304F\u3044\u3002" },
+  \u96E8: { sight: 0.72, speed: 0.85, fatigue: 1.45, teppo: 0.12, note: "\u706B\u7E04\u304C\u6E7F\u308A\u3001\u9244\u7832\u304C\u307B\u307C\u4F7F\u3048\u306A\u3044\u3002\u8DB3\u5834\u3082\u60AA\u3044\u3002" }
+};
+var ARM_STATS = {
+  yari: { melee: 1.2, range: 0, rof: 0, vol: 0, speed: 34, color: "#6E7A55", label: "\u69CD" },
+  yumi: { melee: 0.45, range: 190, rof: 1.5, vol: 1, speed: 34, color: "#7E9A52", label: "\u5F13" },
+  teppo: { melee: 0.4, range: 150, rof: 4.2, vol: 3.2, speed: 30, color: "#B07B3A", label: "\u9244\u7832" },
+  kiba: { melee: 1.9, range: 0, rof: 0, vol: 0, speed: 56, color: "#A2604A", label: "\u9A0E\u99AC" }
+};
+var fieldScale = () => Math.max(1, FIELD.w / BASE.w);
+
+// src/battle/corps.js
+var FORMATIONS = ["\u6A2A\u9663", "\u9DB4\u7FFC", "\u9B5A\u9C57", "\u92D2\u77E2", "\u96C1\u884C", "\u65B9\u9663", "\u9577\u86C7"];
+var FORM_ROLE = {
+  \u6A2A\u9663: { yari: [0.35, 0.1], kiba: [0.9, 0.3], yumi: [0.3, 0.8], teppo: [0.2, 0.72] },
+  \u9DB4\u7FFC: { yari: [0.45, 0.15], kiba: [1, 0.45], yumi: [0.25, 0.7], teppo: [0.15, 0.62] },
+  \u9B5A\u9C57: { yari: [0.3, 0.08], kiba: [0.25, 0.05], yumi: [0.35, 0.85], teppo: [0.25, 0.75] },
+  \u92D2\u77E2: { yari: [0.2, 0.1], kiba: [0.1, 0.02], yumi: [0.45, 0.92], teppo: [0.35, 0.85] },
+  \u96C1\u884C: { yari: [0.35, 0.2], kiba: [0.95, 0.35], yumi: [0.3, 0.8], teppo: [0.2, 0.7] },
+  \u65B9\u9663: { yari: [0.9, 0.3], kiba: [0.55, 0.75], yumi: [0.2, 0.5], teppo: [0.15, 0.45] },
+  \u9577\u86C7: { yari: [0.4, 0.15], kiba: [0.4, 0.55], yumi: [0.35, 0.85], teppo: [0.3, 0.78] }
+};
+var reformTime = (gen) => clamp(7.6 - (gen ? gen.lead : 55) / 16, 2, 6);
+var FORM_NOTE = {
+  \u6A2A\u9663: "\u6B63\u9762\u304C\u5E83\u304F\u3001\u591A\u304F\u306E\u7D44\u304C\u540C\u6642\u306B\u69CD\u3092\u5408\u308F\u305B\u3089\u308C\u308B\u3002\u5074\u9762\u306F\u8584\u3044\u3002",
+  \u9DB4\u7FFC: "\u4E21\u7FFC\u3092\u524D\u3078\u5F35\u308A\u51FA\u3057\u3066\u6575\u3092\u5305\u307F\u8FBC\u3080\u3002\u4E2D\u592E\u306F\u8584\u304F\u3001\u62BC\u3057\u8FBC\u307E\u308C\u308B\u3068\u5D29\u308C\u3084\u3059\u3044\u3002",
+  \u9B5A\u9C57: "\u5148\u7AEF\u306B\u69CD\u3068\u9A0E\u99AC\u3092\u96C6\u3081\u3066\u4E00\u70B9\u3092\u7834\u308B\u3002\u6B63\u9762\u306F\u72ED\u304F\u3001\u5074\u9762\u3092\u7A81\u304B\u308C\u3084\u3059\u3044\u3002",
+  \u92D2\u77E2: "\u77E2\u5C3B\u306B\u9A0E\u99AC\u3092\u7F6E\u3044\u3066\u4E00\u70B9\u3078\u7A81\u304D\u5165\u308B\u7A81\u6483\u5C02\u7528\u306E\u9663\u3002\u7A81\u6483\u304C\u9577\u304F\u7D9A\u304D\u968A\u5217\u3082\u5D29\u308C\u306B\u304F\u3044\u304C\u3001\u5B88\u308A\u306F\u6700\u3082\u8584\u3044\u3002",
+  \u96C1\u884C: "\u659C\u3081\u306B\u69CB\u3048\u3001\u7247\u7FFC\u3092\u524D\u306B\u51FA\u3059\u3002\u79FB\u52D5\u3057\u306A\u304C\u3089\u5F53\u305F\u308B\u306E\u306B\u5411\u304F\u3002",
+  \u65B9\u9663: "\u56DB\u65B9\u306B\u69CD\u3092\u5411\u3051\u3066\u5BC6\u96C6\u3059\u308B\u3002\u5305\u56F2\u3084\u4E71\u6226\u306B\u5F37\u3044\u304C\u3001\u653B\u3081\u306F\u920D\u3044\u3002",
+  \u9577\u86C7: "\u7E26\u4E00\u5217\u3002\u72ED\u3044\u9053\u3084\u6E21\u6CB3\u306B\u306F\u5411\u304F\u304C\u3001\u6A2A\u304B\u3089\u7A81\u304B\u308C\u308B\u3068\u7DCF\u5D29\u308C\u306B\u306A\u308B\u3002"
+};
+function rot(sx, sy, th) {
+  const c = Math.cos(th), s2 = Math.sin(th);
+  return [-sx * s2 - sy * c, sx * c - sy * s2];
+}
+var KOMA = 5;
+var SP = 5 * KOMA + 2;
+var ROW = KOMA + 6;
+function layoutSlots(form, n) {
+  const s2 = [];
+  if (form === "\u6A2A\u9663") {
+    const want = clamp(Math.round(Math.sqrt(n * 2.2)), 3, 22);
+    const per = Math.max(3, Math.ceil(n / Math.max(1, Math.ceil(n / want))));
+    for (let i = 0; i < n; i++) {
+      const row = Math.floor(i / per), col = i % per, cols = Math.min(per, n - row * per);
+      s2.push({ x: (col - (cols - 1) / 2) * SP, y: row * ROW, row });
+    }
+  } else if (form === "\u9DB4\u7FFC") {
+    const per = clamp(Math.round(Math.sqrt(n * 3)), 4, 26);
+    for (let i = 0; i < n; i++) {
+      const row = Math.floor(i / per), idx = i % per, cols = Math.min(per, n - row * per);
+      const k = idx - (cols - 1) / 2;
+      s2.push({ x: k * SP, y: -Math.abs(k) * ROW * 0.62 + row * ROW * 1.2, row });
+    }
+  } else if (form === "\u92D2\u77E2") {
+    s2.push({ x: 0, y: 0, row: 0 });
+    let i = 1, row = 1;
+    while (i < n) {
+      const spread = Math.min(row, 4) * SP * 0.5;
+      for (const side of [-1, 1]) {
+        if (i >= n) break;
+        s2.push({ x: side * spread, y: row * ROW * 0.95, row });
+        i++;
+      }
+      if (i < n) {
+        s2.push({ x: 0, y: row * ROW * 0.95, row });
+        i++;
+      }
+      row++;
+    }
+  } else if (form === "\u9B5A\u9C57") {
+    let i = 0, row = 0;
+    while (i < n) {
+      const cnt = row + 1;
+      for (let j = 0; j < cnt && i < n; j++, i++) s2.push({ x: (j - (cnt - 1) / 2) * SP, y: row * ROW, row });
+      row++;
+    }
+  } else if (form === "\u96C1\u884C") {
+    const per = Math.min(10, n);
+    for (let i = 0; i < n; i++) {
+      const row = Math.floor(i / per), idx = i % per, cols = Math.min(per, n - row * per);
+      s2.push({ x: (idx - (cols - 1) / 2) * SP * 0.9, y: idx * ROW * 0.45 + row * ROW * 1.3, row });
+    }
+  } else if (form === "\u65B9\u9663") {
+    const side = Math.ceil(Math.sqrt(n));
+    for (let i = 0; i < n; i++) {
+      const r = Math.floor(i / side), c = i % side;
+      s2.push({ x: (c - (side - 1) / 2) * SP, y: (r - (side - 1) / 2) * ROW, row: r });
+    }
+  } else {
+    for (let i = 0; i < n; i++) s2.push({ x: 0, y: i * ROW, row: i });
+  }
+  return s2;
+}
+function makeCorps(side, gen, retinue, local, retTrain, localTrain, x, y, facing, color) {
+  const over = Math.max(0, retinue + local - MAX_CORPS_MEN);
+  if (over > 0) {
+    const cutLocal = Math.min(local, over);
+    local -= cutLocal;
+    retinue -= over - cutLocal;
+  }
+  const squads = [];
+  let sid = 0;
+  const build = (total, origin, train, rost) => {
+    const list = rost && rost.length ? rost.map((q) => ({ men: q.m, type: q.t, src: q.id })) : (() => {
+      const out = [];
+      for (const a of ARMS) {
+        let men = Math.round(total * a.ratio);
+        while (men > 0) {
+          const m = Math.min(50, men);
+          out.push({ men: m, type: a.key, src: null });
+          men -= m;
+        }
+      }
+      return out;
+    })();
+    for (const u of list) {
+      const m = u.men;
+      if (m <= 0) continue;
+      const ang = Math.random() * Math.PI * 2;
+      squads.push({
+        id: `${gen.id}-${sid++}`,
+        type: u.type,
+        men: m,
+        max: m,
+        origin,
+        src: u.src,
+        cohesion: clamp(train + (Math.random() * 12 - 6), 20, 100),
+        x,
+        y,
+        facing,
+        cool: 0,
+        engaged: false,
+        foe: null,
+        link: null,
+        aim: null,
+        // 乱れは毎フレーム無作為化せず、この固定した「乱れ目標」へ補間する（GDD 8.3）
+        jx: Math.cos(ang),
+        jy: Math.sin(ang),
+        ja: Math.random() * 2 - 1,
+        seed: Math.random() * 1e3
+      });
+    }
+  };
+  build(retinue, "\u76F4\u5C5E", retTrain, gen.rost);
+  build(local, "\u5730\u57DF", localTrain, gen.locRost);
+  return {
+    id: gen.id,
+    side,
+    gen,
+    name: gen.name,
+    color,
+    x,
+    y,
+    facing,
+    order: "\u5F85\u6A5F",
+    auto: true,
+    // 委任。大名は諸隊に差配を委ねて戦を始める
+    tx: x,
+    ty: y,
+    formation: "\u6A2A\u9663",
+    morale: 78 + gen.lead * 0.15,
+    squads,
+    routed: false,
+    dead: false,
+    destroyed: false,
+    ambush: false,
+    revealed: true,
+    lastSeen: null,
+    seen: false,
+    loss: { \u76F4\u5C5E: 0, \u5730\u57DF: 0 },
+    feats: [],
+    fatigue: 0,
+    chargeT: 0,
+    reformT: 0,
+    faceTo: null,
+    pending: null,
+    pinch: 0,
+    northStart: hasRiver() && y < RIVER.top,
+    bank0: hasRiver() ? y < (RIVER.top + RIVER.bot) / 2 + riverShift(x) ? -1 : 1 : 0,
+    detach: false,
+    parentId: null,
+    task: null,
+    autonomous: false,
+    boxed: false
+  };
+}
+var corpsMen = (c) => c.squads.reduce((s2, q) => s2 + q.men, 0);
+var corpsMax = (c) => c.squads.reduce((s2, q) => s2 + q.max, 0);
+function placeSquads(c, snap) {
+  const live = c.squads.filter((q) => q.men > 0).length;
+  const key = `${c.formation}|${live}|${c.order === "\u7A81\u6483" ? "c" : "n"}`;
+  if (!snap && c.slotKey === key) return;
+  c.slotKey = key;
+  const slots = layoutSlots(c.formation, c.squads.length);
+  const maxX = Math.max(1, ...slots.map((x) => Math.abs(x.x)));
+  const minY = Math.min(...slots.map((x) => x.y)), maxY = Math.max(...slots.map((x) => x.y));
+  const spanY = Math.max(1, maxY - minY);
+  const cy0 = slots.reduce((a, x) => a + x.y, 0) / Math.max(1, slots.length);
+  const feat = slots.map((sl) => ({
+    fx: Math.abs(sl.x) / maxX,
+    fy: (sl.y - minY) / spanY,
+    fd: Math.hypot(sl.x, sl.y - cy0) / Math.max(1, Math.hypot(maxX, spanY / 2))
+  }));
+  const CHARGE_ROLE = { yari: [0.4, 0.42], kiba: [0.44, 0.08], yumi: [0.34, 0.88], teppo: [0.3, 0.82] };
+  const role = c.order === "\u7A81\u6483" ? CHARGE_ROLE : FORM_ROLE[c.formation] || FORM_ROLE["\u6A2A\u9663"];
+  const cost = (q, i) => {
+    const w = role[q.type] || [0.4, 0.4];
+    const f = feat[i];
+    return (f.fx - w[0]) ** 2 + (f.fy - w[1]) ** 2 + (q.origin === "\u76F4\u5C5E" ? f.fd * 0.55 : -f.fd * 0.35);
+  };
+  const free = slots.map((_, i) => i);
+  const queue = [...c.squads].sort((a, z) => {
+    const pri = (q) => (q.origin === "\u76F4\u5C5E" ? 0 : 1) * 10 + (q.type === "yari" ? 0 : q.type === "kiba" ? 1 : 2);
+    return pri(a) - pri(z);
+  });
+  const order = [], slotOf = [];
+  for (const q of queue) {
+    let best = 0, bv = Infinity;
+    for (let k = 0; k < free.length; k++) {
+      const v = cost(q, free[k]);
+      if (v < bv) {
+        bv = v;
+        best = k;
+      }
+    }
+    const i = free.splice(best, 1)[0];
+    order.push(q);
+    slotOf.push(slots[i]);
+  }
+  const maxRow = slots.reduce((a, x) => Math.max(a, x.row || 0), 0);
+  order.forEach((q, i) => {
+    const s2 = slotOf[i] || { x: 0, y: 0, row: 0 };
+    q.reserve = maxRow >= 2 && (s2.row || 0) === maxRow && !c.forceAll;
+    const [rx, ry] = rot(s2.x, s2.y, c.facing);
+    const dis = clamp((78 - q.cohesion) / 78, 0, 1);
+    q.dis = dis;
+    const jit = Math.pow(dis, 1.7) * 4.5;
+    q.slotX = rx + q.jx * jit;
+    q.slotY = ry + q.jy * jit;
+    if (snap) {
+      q.x = c.x + q.slotX;
+      q.y = c.y + q.slotY;
+      q.facing = c.facing;
+    }
+  });
+}
+function commandCapacity(gen) {
+  const v = gen.lead * 0.6 + gen.wit * 0.4;
+  return v >= 74 ? 3 : v >= 60 ? 2 : 1;
+}
+var DETACH_DEFS = [
+  {
+    key: "\u9A0E\u99AC\u5074\u9762\u653B\u6483",
+    pick: (c) => c.squads.filter((q) => q.type === "kiba"),
+    need: (c, men) => men >= 100 && c.morale >= 50,
+    why: "\u9A0E\u99AC100\u4EE5\u4E0A\u30FB\u58EB\u6C1750\u4EE5\u4E0A"
+  },
+  {
+    key: "\u5F13\u9244\u7832\u9AD8\u5730\u5360\u62E0",
+    pick: (c) => c.squads.filter((q) => ARM_STATS[q.type].range > 0),
+    need: (c, men) => men >= 100 && HILLS.length > 0,
+    why: "\u9060\u9694\u5175100\u4EE5\u4E0A\u30FB\u5230\u9054\u53EF\u80FD\u306A\u9AD8\u5730"
+  },
+  {
+    key: "\u6A4B\u6E21\u6CB3\u70B9\u9632\u885B",
+    pick: (c) => c.squads.filter((q) => q.type === "yari").slice(0, 8),
+    need: (c, men) => corpsMen(c) >= 500 && men >= 100 && RIVER.bot > RIVER.top + 4,
+    why: "\u5175500\u4EE5\u4E0A\u30FB\u6A4B\u53C8\u306F\u6E21\u6CB3\u70B9"
+  },
+  {
+    key: "\u68EE\u6797\u5075\u5BDF",
+    pick: (c) => c.squads.filter((q) => q.type === "yumi").slice(0, 1),
+    need: (c, men) => c.gen.wit >= 60 && men >= 50 && FORESTS.length > 0,
+    why: "\u77E5\u756560\u4EE5\u4E0A\u30FB\u5075\u5BDF\u517550\u4EE5\u4E0A\u30FB\u68EE\u304C\u5FC5\u8981"
+  }
+];
+function detachOptions(b, parent) {
+  if (b.map) return [];
+  const used = b.corps.filter((x) => x.parentId === parent.id && !x.dead).length;
+  const cap = commandCapacity(parent.gen);
+  return DETACH_DEFS.map((d) => {
+    const sq = d.pick(parent);
+    const men = sq.reduce((a, q) => a + q.men, 0);
+    return { ...d, men, ok: used < cap && sq.length > 0 && d.need(parent, men), cap, used };
+  });
+}
+function makeDetachment(b, parent, key) {
+  const def = DETACH_DEFS.find((d) => d.key === key);
+  const squads = def.pick(parent);
+  if (!squads.length) return null;
+  parent.squads = parent.squads.filter((q) => !squads.includes(q));
+  const c = {
+    id: `${parent.id}#${key}`,
+    side: parent.side,
+    gen: parent.gen,
+    color: parent.color,
+    name: `${parent.gen.name}\u968A ${key}`,
+    x: parent.x,
+    y: parent.y,
+    facing: parent.facing,
+    order: "\u79FB\u52D5",
+    tx: parent.x,
+    ty: parent.y,
+    morale: parent.morale,
+    squads,
+    formation: key === "\u6A4B\u6E21\u6CB3\u70B9\u9632\u885B" ? "\u6A2A\u9663" : key === "\u9A0E\u99AC\u5074\u9762\u653B\u6483" ? "\u96C1\u884C" : "\u65B9\u9663",
+    routed: false,
+    dead: false,
+    destroyed: false,
+    ambush: false,
+    revealed: true,
+    lastSeen: { x: parent.x, y: parent.y, t: b.t },
+    seen: false,
+    loss: { \u76F4\u5C5E: 0, \u5730\u57DF: 0 },
+    feats: [],
+    fatigue: parent.fatigue,
+    detach: true,
+    parentId: parent.id,
+    task: key,
+    autonomous: false,
+    boxed: false
+  };
+  placeSquads(c, true);
+  b.corps.push(c);
+  b.log.push({ t: b.t, text: `${parent.name}\u968A\u3088\u308A${key}\u306E\u5206\u9063\u968A\u304C\u51FA\u305F\u3002` });
+  return c;
+}
+function sallyOut(b, c, MAP2) {
+  if (!c || c.side === b.attacker) return false;
+  const g2 = c.holdGate;
+  const foes = b.corps.filter((x) => x.side === b.attacker && !x.dead && !x.destroyed && !x.routed);
+  if (!foes.length) return false;
+  const t2 = [...foes].sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
+  c.sallied = true;
+  c.sallyAt = b.t;
+  c.manualSally = true;
+  issueOrder(b, c, { order: "\u63A5\u6226", tx: t2.x, ty: t2.y, target: t2.id });
+  b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C${g2 ? g2.key : "\u57CE"}\u3092\u958B\u3044\u3066\u8A0E\u3063\u3066\u51FA\u305F\u3002` });
+  return true;
+}
+function returnToGate(b, c, MAP2) {
+  if (!c || !MAP2) return false;
+  c.sallied = false;
+  c.chasing = false;
+  c.manualSally = false;
+  c.sallyLogged = false;
+  const g2 = c.holdGate;
+  if (g2) {
+    const l2 = MAP2.layers[g2.layer], a2 = axisOf(l2, g2);
+    const p2 = fromUV(MAP2, a2, g2.off, a2.half - 14);
+    issueOrder(b, c, { order: "\u79FB\u52D5", tx: p2.x, ty: p2.y });
+  } else {
+    issueOrder(b, c, { order: "\u79FB\u52D5", tx: MAP2.cx, ty: MAP2.cy });
+  }
+  b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306B\u57CE\u3078\u623B\u308B\u3088\u3046\u547D\u3058\u305F\u3002` });
+  return true;
+}
+function moveToGate(b, c, MAP2, gate) {
+  if (!c || !MAP2) return false;
+  c.sallied = false;
+  c.chasing = false;
+  c.manualSally = false;
+  if (gate === "\u672C\u4E38") {
+    c.holdGate = null;
+    issueOrder(b, c, { order: "\u79FB\u52D5", tx: MAP2.cx, ty: MAP2.cy });
+    b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F\u672C\u4E38\u3078\u79FB\u3063\u305F\u3002` });
+    return true;
+  }
+  c.holdGate = gate;
+  const l2 = MAP2.layers[gate.layer], a2 = axisOf(l2, gate);
+  const p2 = fromUV(MAP2, a2, gate.off, a2.half - 14);
+  issueOrder(b, c, { order: "\u79FB\u52D5", tx: p2.x, ty: p2.y });
+  b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F${gate.key}\u3078\u79FB\u3063\u305F\u3002` });
+  return true;
+}
+function recallDetachment(b, c) {
+  if (!c || !c.detach || c.dead) return false;
+  const parent = b.corps.find((x) => x.id === c.parentId);
+  if (!parent || parent.dead || parent.destroyed) return false;
+  c.task = "\u5E30\u9663";
+  c.detachT = 999;
+  c.autonomous = false;
+  c.order = "\u79FB\u52D5";
+  c.tx = parent.x;
+  c.ty = parent.y;
+  c.wp = null;
+  b.log.push({ t: b.t, text: `${c.name}\u306B\u5E30\u9663\u3092\u547D\u3058\u305F\u3002` });
+  return true;
+}
+function detachAI(b, c, alive) {
+  if (!c.task) return false;
+  const parent = b.corps.find((x) => x.id === c.parentId);
+  c.detachT = (c.detachT || 0) + 0.05;
+  const spent = c.detachT > 70 || corpsMen(c) < corpsMax(c) * 0.55 || c.morale < 40;
+  if (spent && parent && !parent.dead && !parent.destroyed) {
+    c.task = "\u5E30\u9663";
+    const d0 = Math.hypot(parent.x - c.x, parent.y - c.y);
+    if (d0 < 70) {
+      for (const q of c.squads) {
+        if (q.men > 0) parent.squads.push(q);
+      }
+      c.squads = [];
+      c.dead = true;
+      placeSquads(parent, false);
+      b.log.push({ t: b.t, text: `${c.name}\u304C\u672C\u968A\u3078\u5E30\u3063\u305F\u3002` });
+      return true;
+    }
+    c.tx = parent.x;
+    c.ty = parent.y;
+    c.order = "\u79FB\u52D5";
+    return true;
+  }
+  c.autonomous = !parent || parent.dead || Math.hypot(parent.x - c.x, parent.y - c.y) > 400;
+  const foes = alive.filter((o) => o.side !== c.side && (o.seen || !o.ambush));
+  const nearest = foes.length ? foes.reduce((a, o) => Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a, foes[0]) : null;
+  if (c.task === "\u9A0E\u99AC\u5074\u9762\u653B\u6483") {
+    if (!nearest) return true;
+    const d = Math.hypot(nearest.x - c.x, nearest.y - c.y);
+    if (d > 240) {
+      const side = c.x < nearest.x ? -1 : 1;
+      c.tx = nearest.x + side * 260;
+      c.ty = nearest.y;
+      c.order = "\u79FB\u52D5";
+    } else {
+      c.tx = nearest.x;
+      c.ty = nearest.y;
+      c.order = "\u63A5\u6226";
+    }
+    return true;
+  }
+  if (c.task === "\u5F13\u9244\u7832\u9AD8\u5730\u5360\u62E0") {
+    const h = nearestOf(HILLS, c.x, c.y);
+    if (!h) {
+      c.task = "\u5E30\u9663";
+      return true;
+    }
+    if (Math.hypot(h.x - c.x, h.y - c.y) > 40) {
+      c.tx = h.x;
+      c.ty = h.y;
+      c.order = "\u79FB\u52D5";
+    } else {
+      c.order = "\u5C04\u6483";
+      c.tx = c.x;
+      c.ty = c.y;
+    }
+    return true;
+  }
+  if (c.task === "\u6A4B\u6E21\u6CB3\u70B9\u9632\u885B") {
+    if (!hasRiver()) {
+      c.task = "\u5E30\u9663";
+      return true;
+    }
+    const gx = (RIVER.bridge[0] + RIVER.bridge[1]) / 2;
+    const sh = riverShift(gx);
+    const gy = c.y > (RIVER.top + RIVER.bot) / 2 + sh ? RIVER.bot + sh + 40 : RIVER.top + sh - 40;
+    if (Math.hypot(gx - c.x, gy - c.y) > 30) {
+      c.tx = gx;
+      c.ty = gy;
+      c.order = "\u79FB\u52D5";
+    } else {
+      c.order = "\u5F85\u6A5F";
+      c.tx = c.x;
+      c.ty = c.y;
+      if (!c.feats.includes("\u6A4B\u9632\u885B")) c.feats.push("\u6A4B\u9632\u885B");
+    }
+    return true;
+  }
+  if (c.task === "\u68EE\u6797\u5075\u5BDF") {
+    const f = nearestOf(FORESTS, c.x, c.y);
+    if (!f) {
+      c.task = "\u5E30\u9663";
+      return true;
+    }
+    if (Math.hypot(f.x - c.x, f.y - c.y) > 40) {
+      c.tx = f.x;
+      c.ty = f.y;
+      c.order = "\u79FB\u52D5";
+    } else {
+      c.order = "\u5F85\u6A5F";
+      c.tx = c.x;
+      c.ty = c.y;
+    }
+    return true;
+  }
+  return false;
+}
+var COURIER_SPEED = 260;
+function commandPost(b, side) {
+  const list = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.detach && !c.routed);
+  return list.find((c) => c.gen.lord) || list.sort((a, z) => z.gen.lead - a.gen.lead)[0] || null;
+}
+function commandRange(post) {
+  return (post ? 300 + post.gen.lead * 3 : 600) * fieldScale();
+}
+function commandDelay(b, c) {
+  const post = commandPost(b, c.side);
+  if (!post || post === c) return 0;
+  const d = Math.hypot(post.x - c.x, post.y - c.y);
+  const skill = 0.7 + post.gen.lead / 150;
+  return clamp(d / (COURIER_SPEED * fieldScale()) / skill + 0.3, 0, 9);
+}
+function outOfCommand(b, c) {
+  if (b.map) return false;
+  const post = commandPost(b, c.side);
+  if (!post || post === c) return false;
+  return Math.hypot(post.x - c.x, post.y - c.y) > commandRange(post);
+}
+function notify(b, text, kind) {
+  if (!b) return;
+  b.notices = b.notices || [];
+  b.notices.push({ text, kind: kind || "info", t: b.t });
+  if (b.notices.length > 6) b.notices.shift();
+  b.log.push({ t: b.t, text });
+}
+function issueOrder(b, c, patch) {
+  if (!c || c.dead || c.destroyed) return;
+  c.pinned = false;
+  if (!AI_ISSUING && c.side === "P") c.auto = false;
+  if (!patch.keepPath) c.wp = null;
+  const apply = () => Object.assign(c, patch);
+  if (b.phase === "deploy" || patch.order === c.order) {
+    apply();
+    c.pending = null;
+    return;
+  }
+  if (c.side === "P") {
+    apply();
+    c.pending = null;
+    return;
+  }
+  if (outOfCommand(b, c)) {
+    c.pending = null;
+    c.autonomous = true;
+    return;
+  }
+  if (c.pending && c.pending.patch.order === patch.order) {
+    c.pending.patch = patch;
+    return;
+  }
+  c.pending = { patch, t: commandDelay(b, c) };
+}
+var AI_ISSUING = false;
+function setAiIssuing(v) {
+  AI_ISSUING = v;
+}
+var delegated = (b, c) => c.side !== "P" || c.auto;
+
+// src/battle/castleMap.js
+var MAP = null;
+function setBattleMap(m) {
+  MAP = m;
+}
+var SIEGE_CORPS_CAP = 3e3;
+function siegeUnit() {
+  const sq = Math.ceil(SIEGE_CORPS_CAP / 50);
+  const side = Math.ceil(Math.sqrt(sq));
+  return { w: side * SP, d: side * ROW };
+}
+function buildCastleMap(castle) {
+  const U2 = siegeUnit();
+  const k = 0.88 + castle.def / 420;
+  const t = 10;
+  const n = castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2;
+  const names = n === 4 ? ["\u60E3\u69CB", "\u4E09\u306E\u4E38", "\u4E8C\u306E\u4E38", "\u672C\u4E38"] : n === 3 ? ["\u60E3\u69CB", "\u4E8C\u306E\u4E38", "\u672C\u4E38"] : ["\u4E8C\u306E\u4E38", "\u672C\u4E38"];
+  const base = 380 + castle.def * 8;
+  const gn0 = castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2;
+  const FACE = ["S", "N", "E", "W"];
+  const GNAME = { S: "\u5927\u624B\u9580", N: "\u6426\u624B\u9580", E: "\u6771\u8107\u9580", W: "\u897F\u8107\u9580" };
+  const INAME = { S: "\u8868\u9580", N: "\u88CF\u9580", E: "\u6771\u9580", W: "\u897F\u9580" };
+  const honW = U2.w * 1.2 * k, honH = U2.d * 2 * k;
+  const band = (U2.d * 1.5 + 74) * k;
+  const masu = 34 * k;
+  const layers = names.map((name, i) => {
+    const back = n - 1 - i;
+    const hw = honW + band * back, hh = honH + band * back;
+    const cnt = Math.max(1, gn0 - i);
+    const gates = FACE.slice(0, cnt).map((face, j) => {
+      const along = face === "S" || face === "N" ? "x" : "y";
+      const span = along === "x" ? hw : hh;
+      const w = (96 - i * 8) * k * (face === "S" ? 1 : 0.8);
+      const hp = Math.round(base * (1 - i * 0.06) * (face === "S" ? 1 : 0.76));
+      const nm = i === 0 ? GNAME[face] : INAME[face];
+      return {
+        face,
+        layer: i,
+        i: j,
+        name: nm,
+        key: `${name}${nm}`,
+        off: span * (0.34 - 0.1 * (j % 3)) * ((i + j) % 2 ? 1 : -1),
+        w,
+        hp,
+        max: hp,
+        broken: false,
+        masu,
+        open: (i + j) % 2 ? 1 : -1,
+        slot: null,
+        hold: null,
+        def: 0
+      };
+    });
+    return { name, i, hw, hh, masu, gates };
+  });
+  const fac = [];
+  layers.forEach((l, i) => {
+    if (i >= layers.length - 1) return;
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+      fac.push({
+        kind: "\u77E2\u5009",
+        name: `${l.name}\u77E2\u5009${sy > 0 ? "\u5357" : "\u5317"}${sx > 0 ? "\u6771" : "\u897F"}`,
+        x: sx * l.hw,
+        y: sy * l.hh,
+        r: 15,
+        hp: 260 + castle.def * 3,
+        max: 260 + castle.def * 3,
+        layer: i,
+        cool: 0
+      });
+    }
+    const nx = layers[i + 1];
+    fac.push({
+      kind: "\u9663\u9418\u6AD3",
+      name: `${l.name}\u9663\u9418`,
+      x: (i % 2 ? -1 : 1) * l.hw * 0.5,
+      y: -(l.hh + (nx ? nx.hh + t : 0)) / 2,
+      r: 14,
+      hp: 200 + castle.def * 2,
+      max: 200 + castle.def * 2,
+      layer: i,
+      cool: 0
+    });
+  });
+  return {
+    cx: 0,
+    cy: 0,
+    t,
+    layers,
+    moat: { band: 38 * k },
+    n,
+    gates: layers.flatMap((l) => l.gates),
+    fac,
+    unit: U2
+  };
+}
+function layoutCastleField(m) {
+  const o = m.layers[0];
+  const ext = { w: o.hw + m.t + o.masu + m.t + 8 + m.moat.band, h: o.hh + m.t + o.masu + m.t + 8 + m.moat.band };
+  FIELD.w = Math.round((ext.w + Math.max(m.unit.d * 2.4 + 160, ext.w * 0.6)) * 2);
+  FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 2.4 + 160, ext.h * 0.6)) * 2);
+  m.cx = FIELD.w / 2;
+  m.cy = FIELD.h / 2;
+  for (const f of m.fac) {
+    f.x += m.cx;
+    f.y += m.cy;
+  }
+  return m;
+}
+var inRect = (dx, dy, hw, hh) => Math.abs(dx) <= hw && Math.abs(dy) <= hh;
+function axisOf(l, g) {
+  const along = g.face === "S" || g.face === "N" ? "x" : "y";
+  return { along, half: along === "x" ? l.hh : l.hw, sgn: g.face === "S" || g.face === "E" ? 1 : -1 };
+}
+var toUV = (a, dx, dy) => a.along === "x" ? { u: dx, v: dy * a.sgn } : { u: dy, v: dx * a.sgn };
+var fromUV = (m, a, u, v) => a.along === "x" ? { x: m.cx + u, y: m.cy + a.sgn * v } : { x: m.cx + a.sgn * v, y: m.cy + u };
+var gatePos = (m, l, g) => {
+  const a = axisOf(l, g);
+  return fromUV(m, a, g.off, a.half + m.t / 2);
+};
+function gateOpenU(g) {
+  const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
+  const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
+  return from + g.w / 2;
+}
+function masuWall(m, l, g, dx, dy) {
+  if (g.broken) return false;
+  const a = axisOf(l, g), { u, v } = toUV(a, dx, dy), t = m.t;
+  const v0 = a.half + t, v1 = v0 + g.masu;
+  if (v < v0 - 1 || v > v1 + t) return false;
+  const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
+  if (v <= v1) return Math.abs(u - gL) <= t / 2 || Math.abs(u - gR) <= t / 2;
+  const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
+  return u > gL - g.w && u < gR + g.w && !(u > from && u < from + g.w);
+}
+function castleTerrainAt(x, y) {
+  const m = MAP, t = m.t;
+  const dx = x - m.cx, dy = y - m.cy;
+  for (const l of m.layers) for (const g of l.gates) if (masuWall(m, l, g, dx, dy)) return "wall";
+  for (const f of m.fac) {
+    if (f.hp > 0 && Math.hypot(x - f.x, y - f.y) < f.r * 1.5) return "tower";
+  }
+  for (const l of m.layers) {
+    if (inRect(dx, dy, l.hw + t, l.hh + t) && !inRect(dx, dy, l.hw, l.hh)) {
+      for (const g of l.gates) {
+        const a = axisOf(l, g), { u, v } = toUV(a, dx, dy);
+        if (v > a.half - 1 && Math.abs(u - g.off) <= g.w / 2 + (g.broken ? 10 : 0)) {
+          return g.broken ? "gateopen" : "gate";
+        }
+      }
+      return "wall";
+    }
+  }
+  const o = m.layers[0], band = m.moat.band, out = o.masu + t + 8;
+  if (!inRect(dx, dy, o.hw + t + out, o.hh + t + out) && inRect(dx, dy, o.hw + t + out + band, o.hh + t + out + band)) {
+    for (const g of o.gates) {
+      const a = axisOf(o, g), { u, v } = toUV(a, dx, dy);
+      if (v > 0 && Math.abs(u - gateOpenU(g)) <= g.w * 0.8) return "bridge";
+    }
+    return "moat";
+  }
+  const inner = m.layers[m.layers.length - 1];
+  if (inRect(dx, dy, inner.hw, inner.hh)) return "honmaru";
+  for (const l of m.layers) if (inRect(dx, dy, l.hw, l.hh)) return "kuruwa";
+  return "plain";
+}
+var SIEGE_KIT = {
+  \u306A\u3057: { gate: 1, guard: 1, note: "\u624B\u52E2\u306E\u307F\u3002" },
+  \u7834\u57CE\u69CC: { gate: 3, guard: 1, note: "\u9580\u306E\u7834\u58CA\u304C\u4E09\u500D\u3002\u69CD\u7D44\u306E\u4E00\u90E8\u3092\u5272\u304F\u3002" },
+  \u7AF9\u675F: { gate: 1, guard: 0.4, note: "\u57CE\u5185\u304B\u3089\u306E\u5C04\u6483\u3092\u56DB\u5272\u306B\u6291\u3048\u308B\u3002" },
+  \u4E95\u697C: { gate: 1.1, guard: 0.8, shoot: 1.7, note: "\u5840\u3054\u3057\u306B\u5C04\u304B\u3051\u3089\u308C\u3001\u6AD3\u3092\u5D29\u3057\u3084\u3059\u3044\u3002" }
+};
+function buildNav(m) {
+  const CS = 22;
+  const w = Math.ceil(FIELD.w / CS), h = Math.ceil(FIELD.h / CS);
+  const ok = new Uint8Array(w * h);
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      ok[j * w + i] = passable(i * CS + CS / 2, j * CS + CS / 2) ? 1 : 0;
+    }
+  }
+  m.nav = { CS, w, h, ok };
+  return m.nav;
+}
+function navPath(m, x0, y0, x1, y1) {
+  const nv = m.nav || buildNav(m);
+  const { CS, w, h, ok } = nv;
+  const ix = (x) => clamp(Math.floor(x / CS), 0, w - 1);
+  const iy = (y) => clamp(Math.floor(y / CS), 0, h - 1);
+  const near = (i0, j0) => {
+    if (ok[j0 * w + i0]) return j0 * w + i0;
+    for (let r = 1; r <= 6; r++) {
+      for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+        if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+        const i = i0 + di, j = j0 + dj;
+        if (i < 0 || j < 0 || i >= w || j >= h) continue;
+        if (ok[j * w + i]) return j * w + i;
+      }
+    }
+    return -1;
+  };
+  const S = near(ix(x0), iy(y0)), T = near(ix(x1), iy(y1));
+  if (S < 0 || T < 0) return null;
+  if (S === T) return [{ x: x1, y: y1, r: 24 }];
+  const N = w * h;
+  const g = new Float32Array(N).fill(Infinity);
+  const prev = new Int32Array(N).fill(-1);
+  const seen = new Uint8Array(N);
+  const tx = T % w, ty = T / w | 0;
+  const hOf = (k) => {
+    const i = k % w, j = k / w | 0;
+    const dx = Math.abs(i - tx), dy = Math.abs(j - ty);
+    return dx + dy + (Math.SQRT2 - 2) * Math.min(dx, dy);
+  };
+  const open = [{ k: S, f: hOf(S) }];
+  g[S] = 0;
+  let found = false, guard = 0;
+  while (open.length && guard++ < 6e4) {
+    let bi = 0;
+    for (let i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
+    const cur = open.splice(bi, 1)[0].k;
+    if (cur === T) {
+      found = true;
+      break;
+    }
+    if (seen[cur]) continue;
+    seen[cur] = 1;
+    const ci = cur % w, cj = cur / w | 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dj) continue;
+      const ni = ci + di, nj = cj + dj;
+      if (ni < 0 || nj < 0 || ni >= w || nj >= h) continue;
+      const nk = nj * w + ni;
+      if (!ok[nk] || seen[nk]) continue;
+      if (di && dj && (!ok[cj * w + ni] || !ok[nj * w + ci])) continue;
+      const cost = g[cur] + (di && dj ? Math.SQRT2 : 1);
+      if (cost < g[nk]) {
+        g[nk] = cost;
+        prev[nk] = cur;
+        open.push({ k: nk, f: cost + hOf(nk) });
+      }
+    }
+  }
+  if (!found) return null;
+  const cells = [];
+  for (let k = T; k !== -1; k = prev[k]) {
+    cells.push(k);
+    if (k === S) break;
+  }
+  cells.reverse();
+  const pts = [];
+  let lastDir = null;
+  for (let n = 1; n < cells.length; n++) {
+    const a = cells[n - 1], b2 = cells[n];
+    const d = `${b2 % w - a % w},${(b2 / w | 0) - (a / w | 0)}`;
+    if (d !== lastDir) {
+      lastDir = d;
+      pts.push({ x: a % w * CS + CS / 2, y: (a / w | 0) * CS + CS / 2, r: 30 });
+    }
+  }
+  pts.push({ x: x1, y: y1, r: 26 });
+  return pts;
+}
+function routeToCastleGate(m, g, cx, cy) {
+  const a = axisOf(m.layers[g.layer], g), t = m.t;
+  const open = fromUV(m, a, gateOpenU(g), a.half + t + g.masu + t + 12);
+  const tail = [
+    { ...fromUV(m, a, g.off, a.half + t + g.masu / 2), r: 24 },
+    { ...fromUV(m, a, g.off, a.half + t + 14), r: 20 }
+  ];
+  if (Math.hypot(cx - open.x, cy - open.y) < 46) return tail;
+  const path = navPath(m, cx, cy, open.x, open.y);
+  if (!path) return tail;
+  return [...path, ...tail];
+}
+var gateReachable = (m, g) => g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);
+function nearestOpenGate(m, x, y) {
+  const c = m.gates.filter((g) => !g.broken && gateReachable(m, g));
+  if (!c.length) return null;
+  const deepest = c.reduce((a, g) => Math.max(a, g.layer), 0);
+  const inner = c.filter((g) => g.layer === deepest);
+  return inner.sort((a, b) => {
+    const pa = gatePos(m, m.layers[a.layer], a), pb = gatePos(m, m.layers[b.layer], b);
+    return Math.hypot(pa.x - x, pa.y - y) - Math.hypot(pb.x - x, pb.y - y);
+  })[0];
+}
+
+// src/battle/draw.js
+var MY_HUE = "#2F5D8C";
+var FOE_HUE = "#B0483C";
+function shadeHex(hex, k) {
+  if (typeof hex !== "string" || hex[0] !== "#" || hex.length < 7) return hex;
+  const v = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  if (v.some((x) => Number.isNaN(x))) return hex;
+  const f = (x) => Math.max(0, Math.min(255, Math.round(k < 0 ? x * (1 + k) : x + (255 - x) * k)));
+  return "#" + v.map((x) => f(x).toString(16).padStart(2, "0")).join("");
+}
+function toward(hex, tgt, w) {
+  if (typeof hex !== "string" || hex.length < 7) return hex;
+  const a = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const b = [1, 3, 5].map((i) => parseInt(tgt.slice(i, i + 2), 16));
+  if (a.some((v) => Number.isNaN(v))) return hex;
+  return "#" + a.map((v, i) => Math.round(v * (1 - w) + b[i] * w).toString(16).padStart(2, "0")).join("");
+}
+var sideHue = (color, mine) => {
+  const base = toward(color, mine ? MY_HUE : FOE_HUE, 0.9);
+  if (typeof color !== "string" || color.length < 7) return base;
+  const v = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
+  if (v.some((x) => Number.isNaN(x))) return base;
+  const \u660E\u308B\u3055 = (v[0] * 0.3 + v[1] * 0.59 + v[2] * 0.11) / 255;
+  return shadeHex(base, (\u660E\u308B\u3055 - 0.45) * 0.36);
+};
+var sideColor = (c) => sideHue(c.color, c.side === "P");
+function drawMon(ctx, kind, x, y, r, col, sub) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = col;
+  ctx.strokeStyle = col;
+  ctx.lineWidth = Math.max(0.8, r * 0.13);
+  const circle = (cx, cy, rr, fill) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, 0, 7);
+    if (fill) ctx.fill();
+    else ctx.stroke();
+  };
+  const petal = (ang, rr, w) => {
+    ctx.save();
+    ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.moveTo(0, -rr);
+    ctx.quadraticCurveTo(w, -rr * 0.42, 0, 0);
+    ctx.quadraticCurveTo(-w, -rr * 0.42, 0, -rr);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  };
+  if (kind === "\u6728\u74DC") {
+    for (let i = 0; i < 5; i++) petal(i * Math.PI * 2 / 5, r * 0.92, r * 0.42);
+    ctx.fillStyle = sub || "#fff";
+    circle(0, 0, r * 0.26, true);
+  } else if (kind === "\u4E8C\u982D\u6CE2") {
+    for (let i = 0; i < 4; i++) petal(i * Math.PI * 2 / 4 + Math.PI / 4, r * 0.95, r * 0.5);
+    ctx.fillStyle = sub || "#fff";
+    circle(0, 0, r * 0.24, true);
+  } else if (kind === "\u8D64\u9CE5") {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.7, r * 0.5);
+    ctx.lineTo(0, -r * 0.85);
+    ctx.lineTo(r * 0.7, r * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = sub || "#fff";
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.3, r * 0.28);
+    ctx.lineTo(0, -r * 0.3);
+    ctx.lineTo(r * 0.3, r * 0.28);
+    ctx.closePath();
+    ctx.fill();
+  } else if (kind === "\u56DB\u3064\u83F1") {
+    for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+      ctx.beginPath();
+      ctx.moveTo(dx * r * 0.5, dy * r * 0.5 - r * 0.4 * Math.abs(dy) - r * 0.28 * Math.abs(dx) * 0);
+      const cx = dx * r * 0.48, cy = dy * r * 0.48;
+      ctx.moveTo(cx, cy - r * 0.4);
+      ctx.lineTo(cx + r * 0.26, cy);
+      ctx.lineTo(cx, cy + r * 0.4);
+      ctx.lineTo(cx - r * 0.26, cy);
+      ctx.closePath();
+      ctx.fill();
+    }
+  } else if (kind === "\u4E09\u9C57") {
+    for (const [dx, dy] of [[0, -0.42], [-0.42, 0.36], [0.42, 0.36]]) {
+      ctx.beginPath();
+      ctx.moveTo(dx * r, dy * r - r * 0.34);
+      ctx.lineTo(dx * r + r * 0.36, dy * r + r * 0.3);
+      ctx.lineTo(dx * r - r * 0.36, dy * r + r * 0.3);
+      ctx.closePath();
+      ctx.fill();
+    }
+  } else if (kind === "\u8475") {
+    for (let i = 0; i < 3; i++) {
+      ctx.save();
+      ctx.rotate(i * Math.PI * 2 / 3);
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.22);
+      ctx.bezierCurveTo(r * 0.55, -r * 0.9, r * 0.62, -r * 0.2, 0, -r * 0.22);
+      ctx.bezierCurveTo(-r * 0.62, -r * 0.2, -r * 0.55, -r * 0.9, 0, -r * 0.22);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  } else if (kind === "\u4E09\u3064\u76DB") {
+    for (const [dx, dy] of [[0, -0.44], [-0.42, 0.34], [0.42, 0.34]]) circle(dx * r, dy * r, r * 0.34, true);
+  } else if (kind === "\u7B39") {
+    for (const [dx, dy] of [[0, -0.42], [-0.4, 0.32], [0.4, 0.32]]) {
+      ctx.save();
+      ctx.translate(dx * r, dy * r);
+      for (let i = 0; i < 4; i++) petal(i * Math.PI * 2 / 4, r * 0.34, r * 0.17);
+      ctx.restore();
+    }
+  } else if (kind === "\u6708") {
+    circle(0, 0, r * 0.32, true);
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI * 2 / 8;
+      circle(Math.cos(a) * r * 0.66, Math.sin(a) * r * 0.66, r * 0.17, true);
+    }
+  } else if (kind === "\u4E38\u306B\u5341") {
+    circle(0, 0, r * 0.82, false);
+    ctx.lineWidth = Math.max(1, r * 0.2);
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.5);
+    ctx.lineTo(0, r * 0.5);
+    ctx.moveTo(-r * 0.5, 0);
+    ctx.lineTo(r * 0.5, 0);
+    ctx.stroke();
+  } else if (kind === "\u9DB4") {
+    circle(0, 0, r * 0.82, false);
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.46);
+    ctx.lineTo(r * 0.4, r * 0.34);
+    ctx.lineTo(-r * 0.4, r * 0.34);
+    ctx.closePath();
+    ctx.fill();
+  } else if (kind === "\u62B1\u304D\u6CA2\u7009") {
+    petal(0, r * 0.9, r * 0.34);
+    petal(Math.PI * 0.72, r * 0.66, r * 0.26);
+    petal(-Math.PI * 0.72, r * 0.66, r * 0.26);
+  } else if (kind === "\u8F2A\u5B9D") {
+    circle(0, 0, r * 0.78, false);
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI * 2 / 8;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * r * 0.3, Math.sin(a) * r * 0.3);
+      ctx.lineTo(Math.cos(a) * r * 0.78, Math.sin(a) * r * 0.78);
+      ctx.stroke();
+    }
+    circle(0, 0, r * 0.24, true);
+  } else {
+    circle(0, 0, r * 0.7, true);
+  }
+  ctx.restore();
+}
+var KOMA_SHAPE = {
+  yari: [[9, 0], [-2, 2.6], [-5, 0], [-2, -2.6]],
+  yumi: [[6.4, 0], [-1.6, 2.3], [-4.2, 1.6], [-1, 0], [-4.2, -1.6], [-1.6, -2.3]],
+  teppo: [[6, 3], [6, -3], [-4, -2], [-4, 2]],
+  kiba: [[12, 0], [1, 4.2], [-4, 2], [-8, 3.4], [-5, 0], [-8, -3.4], [-4, -2], [1, -4.2]],
+  fune: [[11, 0], [5, 4.4], [-7, 4], [-8.5, 0], [-7, -4], [5, -4.4]]
+};
+function drawKoma(ctx, x, y, f, type, fill, stroke, k) {
+  const m = (k || 1) * 0.46;
+  const pts = KOMA_SHAPE[type] || KOMA_SHAPE.yari;
+  const cs = Math.cos(f), sn = Math.sin(f);
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  for (let i = 0; i < pts.length; i++) {
+    const px2 = x + (pts[i][0] * cs - pts[i][1] * sn) * m;
+    const py2 = y + (pts[i][0] * sn + pts[i][1] * cs) * m;
+    if (i === 0) ctx.moveTo(px2, py2);
+    else ctx.lineTo(px2, py2);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+}
+function blobPath(ctx, o, tight) {
+  const n = 14;
+  ctx.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const a = i / n * Math.PI * 2;
+    const w = 0.86 + 0.14 * Math.sin(a * 3 + o.x * 0.03) * Math.cos(a * 2 + o.y * 0.02);
+    const r = o.r * (tight ? w * 0.97 : w);
+    const x = o.x + Math.cos(a) * r, y = o.y + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+function drawFieldTerrain(ctx) {
+  ctx.fillStyle = "#CBD8AC";
+  ctx.fillRect(0, 0, FIELD.w, FIELD.h);
+  ctx.strokeStyle = "rgba(120,130,90,0.09)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < FIELD.w; x += 60) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, FIELD.h);
+    ctx.stroke();
+  }
+  for (let y = 0; y < FIELD.h; y += 60) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(FIELD.w, y);
+    ctx.stroke();
+  }
+  for (const h of HILLS) {
+    ctx.fillStyle = "#BCCB93";
+    blobPath(ctx, h);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.45)";
+    ctx.lineWidth = 1.2;
+    for (const k of [0.68, 0.36]) {
+      blobPath(ctx, { x: h.x, y: h.y, r: h.r * k });
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(85,105,65,0.8)";
+    ctx.font = "15px 'Hiragino Mincho ProN',serif";
+    ctx.fillText("\u4E18", h.x - 7, h.y + 5);
+  }
+  for (const m of MARSH) {
+    ctx.fillStyle = "#A8C0A4";
+    blobPath(ctx, m);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(90,130,140,0.55)";
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < 26; i++) {
+      const a = i * 2.399, r = m.r * Math.sqrt((i + 0.5) / 26) * 0.9;
+      const tx = m.x + Math.cos(a) * r, ty = m.y + Math.sin(a) * r;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty + 4);
+      ctx.lineTo(tx, ty - 5);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(60,90,90,0.85)";
+    ctx.font = "14px 'Hiragino Mincho ProN',serif";
+    ctx.fillText("\u6E7F\u5730", m.x - 14, m.y + 5);
+  }
+  const trees = (f, fill, tone, n, label) => {
+    ctx.fillStyle = fill;
+    blobPath(ctx, f);
+    ctx.fill();
+    ctx.fillStyle = tone;
+    for (let i = 0; i < n; i++) {
+      const a = i * 2.399, r = f.r * Math.sqrt((i + 0.5) / n) * 0.92;
+      const tx = f.x + Math.cos(a) * r, ty = f.y + Math.sin(a) * r;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty - 8);
+      ctx.lineTo(tx + 5.5, ty + 4);
+      ctx.lineTo(tx - 5.5, ty + 4);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(45,70,40,0.75)";
+    ctx.font = "14px 'Hiragino Mincho ProN',serif";
+    ctx.fillText(label, f.x - label.length * 7, f.y + 5);
+  };
+  for (const f of FORESTS) trees(f, "#8EAD6F", "#5F8449", 34, "\u68EE");
+  for (const f of WOODS) trees(f, "#A9C288", "#7A9A5E", 14, "\u6797");
+  if (hasRiver()) {
+    const band = (x) => [RIVER.top + riverShift(x), RIVER.bot + riverShift(x)];
+    const strip = (x0, x1, color) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      for (let x = x0; x <= x1; x += 6) {
+        const [t] = band(x);
+        if (x === x0) ctx.moveTo(x, t);
+        else ctx.lineTo(x, t);
+      }
+      for (let x = x1; x >= x0; x -= 6) {
+        const [, bt] = band(x);
+        ctx.lineTo(x, bt);
+      }
+      ctx.closePath();
+      ctx.fill();
+    };
+    strip(0, FIELD.w, "#8FB4C7");
+    strip(RIVER.ford[0], RIVER.ford[1], "#AECBD8");
+    const [bt0, bb0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
+    ctx.fillStyle = "#C6A377";
+    ctx.fillRect(RIVER.bridge[0], bt0 - 6, RIVER.bridge[1] - RIVER.bridge[0], bb0 - bt0 + 12);
+    ctx.fillStyle = "rgba(120,90,60,0.5)";
+    for (let x = RIVER.bridge[0]; x < RIVER.bridge[1]; x += 13) ctx.fillRect(x, bt0 - 6, 2, bb0 - bt0 + 12);
+    ctx.fillStyle = "rgba(60,80,95,0.85)";
+    ctx.font = "13px 'Hiragino Mincho ProN',serif";
+    ctx.fillText("\u6A4B", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 8, bt0 - 12);
+    const [ft0] = band((RIVER.ford[0] + RIVER.ford[1]) / 2);
+    ctx.fillText("\u6D45\u702C", (RIVER.ford[0] + RIVER.ford[1]) / 2 - 16, ft0 - 12);
+    const [dt0] = band(60);
+    ctx.fillText("\u6DF1\u3044\u5DDD", 60, dt0 - 12);
+  }
+}
+function drawCastleTerrain(ctx, m) {
+  const t = m.t, cx = m.cx, cy = m.cy;
+  ctx.fillStyle = "#CBD8AC";
+  ctx.fillRect(0, 0, FIELD.w, FIELD.h);
+  ctx.strokeStyle = "rgba(120,130,90,0.09)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < FIELD.w; x += 60) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, FIELD.h);
+    ctx.stroke();
+  }
+  for (let y = 0; y < FIELD.h; y += 60) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(FIELD.w, y);
+    ctx.stroke();
+  }
+  const o = m.layers[0], band = m.moat.band;
+  const tone4 = ["#C6D2A8", "#C0CDA0", "#BACA98", "#B4C592"];
+  const ob = o.masu + t + 8;
+  ctx.fillStyle = "#8FB4C7";
+  ctx.fillRect(
+    cx - o.hw - t - ob - band,
+    cy - o.hh - t - ob - band,
+    (o.hw + t + ob + band) * 2,
+    (o.hh + t + ob + band) * 2
+  );
+  ctx.fillStyle = "#CBD8AC";
+  ctx.fillRect(cx - o.hw - t - ob, cy - o.hh - t - ob, (o.hw + t + ob) * 2, (o.hh + t + ob) * 2);
+  ctx.fillStyle = "#C6A377";
+  for (const g of o.gates) {
+    const a = axisOf(o, g);
+    const u0 = gateOpenU(g) - g.w * 0.8, v0 = (a.along === "x" ? o.hh : o.hw) + t + ob;
+    if (a.along === "x") ctx.fillRect(cx + u0, a.sgn > 0 ? cy + v0 : cy - v0 - band, g.w * 1.6, band);
+    else ctx.fillRect(a.sgn > 0 ? cx + v0 : cx - v0 - band, cy + u0, band, g.w * 1.6);
+  }
+  m.layers.forEach((l, i) => {
+    ctx.fillStyle = tone4[Math.min(3, Math.round(i / Math.max(1, m.layers.length - 1) * 3))];
+    ctx.fillRect(cx - l.hw, cy - l.hh, l.hw * 2, l.hh * 2);
+    const x0 = cx - l.hw - t, x1 = cx + l.hw + t, y0 = cy - l.hh - t, y1 = cy + l.hh + t;
+    ctx.fillStyle = "#AFA895";
+    for (const face of ["S", "N", "E", "W"]) {
+      const gs = l.gates.filter((g) => g.face === face).sort((p1, p2) => p1.off - p2.off);
+      const horiz = face === "S" || face === "N";
+      const fixed = face === "S" ? y1 - t : face === "N" ? y0 : face === "E" ? x1 - t : x0;
+      let cur = horiz ? x0 : y0;
+      const end = horiz ? x1 : y1;
+      for (const g of gs) {
+        const wid = g.w + (g.broken ? 20 : 0);
+        const c0 = (horiz ? cx : cy) + g.off - wid / 2;
+        if (horiz) ctx.fillRect(cur, fixed, Math.max(0, c0 - cur), t);
+        else ctx.fillRect(fixed, cur, t, Math.max(0, c0 - cur));
+        cur = c0 + wid;
+      }
+      if (horiz) ctx.fillRect(cur, fixed, Math.max(0, end - cur), t);
+      else ctx.fillRect(fixed, cur, t, Math.max(0, end - cur));
+    }
+    ctx.strokeStyle = "rgba(90,86,74,0.55)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    for (const g of l.gates) {
+      const a = axisOf(l, g);
+      const gp = gatePos(m, l, g);
+      const along = a.along === "x";
+      if (g.broken) {
+        ctx.fillStyle = "rgba(150,140,120,0.45)";
+        for (let k = 0; k < 9; k++) {
+          const q = fromUV(m, a, g.off + k * 17 % 23 - 11, a.half + t + 6 + Math.floor(k / 3) * (g.masu / 2.6));
+          ctx.fillRect(q.x - 3, q.y - 3, 6, 5);
+        }
+        continue;
+      }
+      ctx.fillStyle = "#8C6A45";
+      if (along) ctx.fillRect(gp.x - g.w / 2, gp.y - (t + 4) / 2, g.w, t + 4);
+      else ctx.fillRect(gp.x - (t + 4) / 2, gp.y - g.w / 2, t + 4, g.w);
+      const bp = fromUV(m, a, g.off, a.half + t + 9);
+      const r = g.hp / g.max;
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      if (along) ctx.fillRect(bp.x - g.w / 2, bp.y - 2, g.w, 4);
+      else ctx.fillRect(bp.x - 2, bp.y - g.w / 2, 4, g.w);
+      ctx.fillStyle = r > 0.5 ? "#5C8C4A" : r > 0.22 ? "#C89A3A" : "#B0483C";
+      if (along) ctx.fillRect(bp.x - g.w / 2, bp.y - 2, g.w * r, 4);
+      else ctx.fillRect(bp.x - 2, bp.y - g.w / 2, 4, g.w * r);
+      const put = (u, v, wu, wv) => {
+        const q = fromUV(m, a, u, v);
+        if (along) ctx.fillRect(q.x - wu / 2, a.sgn > 0 ? q.y : q.y - wv, wu, wv);
+        else ctx.fillRect(a.sgn > 0 ? q.x : q.x - wv, q.y - wu / 2, wv, wu);
+      };
+      ctx.fillStyle = "#AFA895";
+      put(g.off - g.w / 2, a.half + t, t, g.masu);
+      put(g.off + g.w / 2, a.half + t, t, g.masu);
+      const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
+      const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
+      const seg = (u0, u1) => {
+        if (u1 > u0) put((u0 + u1) / 2, a.half + t + g.masu, u1 - u0, t);
+      };
+      seg(g.off - g.w * 1.05, from);
+      seg(from + g.w, g.off + g.w * 1.05);
+      const lp = fromUV(m, a, g.off, a.half + t + g.masu + 17);
+      ctx.fillStyle = "rgba(70,66,58,0.8)";
+      ctx.font = `${Math.round(11 * (FIELD.w / BASE.w))}px sans-serif`;
+      ctx.fillText(g.name, lp.x - g.name.length * 5.5, lp.y + 4);
+    }
+    ctx.fillStyle = "rgba(70,72,58,0.75)";
+    ctx.font = "15px 'Hiragino Mincho ProN',serif";
+    ctx.fillText(l.name, cx - l.hw + 10, cy - l.hh + 22);
+  });
+  for (const f of m.fac) {
+    if (f.hp <= 0) {
+      ctx.fillStyle = "rgba(150,140,120,0.4)";
+      for (let k = 0; k < 7; k++) {
+        const ang = k * 2.4, r = f.r * 0.8 * ((k % 3 + 1) / 3);
+        ctx.fillRect(f.x + Math.cos(ang) * r - 3, f.y + Math.sin(ang) * r - 3, 7, 5);
+      }
+      continue;
+    }
+    ctx.fillStyle = f.kind === "\u77E2\u5009" ? "#9C9483" : "#B08A5A";
+    ctx.fillRect(f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
+    ctx.strokeStyle = "rgba(70,66,58,0.65)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2, 3);
+    ctx.fillStyle = f.hp / f.max > 0.5 ? "#5C8C4A" : f.hp / f.max > 0.25 ? "#C89A3A" : "#B0483C";
+    ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2 * (f.hp / f.max), 3);
+    if (f.r > 10) {
+      ctx.fillStyle = "rgba(60,58,50,0.85)";
+      ctx.font = `${Math.round(9 * (FIELD.w / BASE.w))}px sans-serif`;
+      ctx.fillText(f.kind === "\u77E2\u5009" ? "\u77E2" : "\u9418", f.x - f.r * 0.35, f.y + f.r * 0.35);
+    }
+  }
+  ctx.fillStyle = "rgba(60,80,95,0.8)";
+  ctx.font = "14px 'Hiragino Mincho ProN',serif";
+  ctx.fillText("\u5800", cx - o.hw - t - o.masu - band / 2 - 7, cy);
+}
+function ownZone(b) {
+  const face = b.face || "S", far = !!b.myFar;
+  const vertical = face === "N" || face === "S";
+  if (vertical) {
+    const bottom = face === "S" ? far : !far;
+    return bottom ? { x: 0, y: FIELD.h * 0.6, w: FIELD.w, h: FIELD.h * 0.4, vertical: true, bottom: true } : { x: 0, y: 0, w: FIELD.w, h: FIELD.h * 0.4, vertical: true, bottom: false };
+  }
+  const right = face === "E" ? far : !far;
+  return right ? { x: FIELD.w * 0.6, y: 0, w: FIELD.w * 0.4, h: FIELD.h, vertical: false, bottom: true } : { x: 0, y: 0, w: FIELD.w * 0.4, h: FIELD.h, vertical: false, bottom: false };
+}
+var inOwnZone = (b, x, y) => {
+  const z = ownZone(b);
+  return x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h;
+};
+function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  const S = (wx, wy) => [(wx - cam.x) * cam.s + W / 2, (wy - cam.y) * cam.s + H / 2];
+  ctx.save();
+  ctx.translate(W / 2 - cam.x * cam.s, H / 2 - cam.y * cam.s);
+  ctx.scale(cam.s, cam.s);
+  ctx.drawImage(terrainCanvas, 0, 0);
+  if (b.phase === "deploy") {
+    const z = ownZone(b);
+    ctx.fillStyle = "rgba(47,93,140,0.07)";
+    ctx.fillRect(z.x, z.y, z.w, z.h);
+    ctx.strokeStyle = "rgba(47,93,140,0.35)";
+    ctx.setLineDash([8, 6]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (z.vertical) {
+      const ly = z.bottom ? z.y : z.y + z.h;
+      ctx.moveTo(0, ly);
+      ctx.lineTo(FIELD.w, ly);
+    } else {
+      const lx = z.bottom ? z.x : z.x + z.w;
+      ctx.moveTo(lx, 0);
+      ctx.lineTo(lx, FIELD.h);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  const lod = cam.s >= 0.55 ? "koma" : cam.s >= 0.3 ? "squad" : "corps";
+  const shown = b.corps.filter((c) => !c.dead);
+  for (const c of shown) {
+    const isP = c.side === "P";
+    if (c.destroyed) continue;
+    if (!isP && !c.seen && b.phase === "fight") continue;
+    if (c.ambush && !c.revealed && !isP) continue;
+    const live = c.squads.filter((q) => q.men > 0);
+    if (!live.length) continue;
+    const side = sideColor(c);
+    const xs = live.map((q) => q.x), ys = live.map((q) => q.y);
+    const x0 = Math.min(...xs) - 12, x1 = Math.max(...xs) + 12;
+    const y0 = Math.min(...ys) - 12, y1 = Math.max(...ys) + 12;
+    const on = sel === c.id || selAll;
+    const rr = 10;
+    ctx.beginPath();
+    ctx.moveTo(x0 + rr, y0);
+    ctx.arcTo(x1, y0, x1, y1, rr);
+    ctx.arcTo(x1, y1, x0, y1, rr);
+    ctx.arcTo(x0, y1, x0, y0, rr);
+    ctx.arcTo(x0, y0, x1, y0, rr);
+    ctx.closePath();
+    ctx.fillStyle = side + (on ? "4A" : isP ? "22" : "14");
+    ctx.fill();
+    if (!isP) {
+      ctx.save();
+      ctx.clip();
+      ctx.strokeStyle = side + "3A";
+      ctx.lineWidth = 1.4 / cam.s;
+      for (let hx = x0 - (y1 - y0); hx < x1; hx += 9) {
+        ctx.beginPath();
+        ctx.moveTo(hx, y1);
+        ctx.lineTo(hx + (y1 - y0), y0);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.strokeStyle = on ? side : side + (isP ? "66" : "99");
+    ctx.lineWidth = (on ? 3.4 : isP ? 1.6 : 2.2) / cam.s;
+    if (!isP && !on) ctx.setLineDash([7 / cam.s, 5 / cam.s]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (lod === "corps") continue;
+    const bright = shadeHex(side, isP ? 0.18 : 0.16), dark = shadeHex(side, isP ? -0.3 : -0.22);
+    const edge = isP ? "rgba(255,255,255,0.95)" : "rgba(28,26,22,0.85)";
+    const edge2 = isP ? "rgba(20,20,18,0.55)" : "rgba(28,26,22,0.9)";
+    if (lod === "squad") {
+      for (const q of live) {
+        const fill = q.origin === "\u76F4\u5C5E" ? bright : dark;
+        const size = 3.2 + q.men / 50 * 4.2;
+        drawKoma(
+          ctx,
+          q.x,
+          q.y,
+          q.facing,
+          q.type,
+          fill,
+          q.origin === "\u76F4\u5C5E" ? edge : edge2,
+          size / 4.8
+        );
+        if (ARM_STATS[q.type].range > 0) {
+          ctx.strokeStyle = "rgba(255,255,255,0.55)";
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.arc(q.x, q.y, size * 0.75, 0, 7);
+          ctx.stroke();
+        }
+      }
+      continue;
+    }
+    for (const q of live) {
+      const rows = Math.ceil(Math.ceil(q.men / 10) / 5);
+      const hw = 2 * KOMA + 4, d0 = -4, d1 = (rows - 1) * KOMA + 4;
+      const pts = [[-hw, d0], [hw, d0], [hw, d1], [-hw, d1]].map(([a, bb]) => {
+        const [ox, oy] = rot(a, bb, q.facing);
+        return [q.x + ox, q.y + oy];
+      });
+      ctx.fillStyle = q.reserve ? side + "12" : side + "26";
+      ctx.beginPath();
+      pts.forEach((pt, i) => i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]));
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (lod === "koma" || lod === "squad") {
+      ctx.lineCap = "round";
+      for (const q of live) {
+        if (q.link) {
+          ctx.strokeStyle = "rgba(40,36,28,0.42)";
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(q.x, q.y);
+          ctx.lineTo(q.link.x, q.link.y);
+          ctx.stroke();
+          const mx = (q.x + q.link.x) / 2, my = (q.y + q.link.y) / 2;
+          const ang = Math.atan2(q.link.y - q.y, q.link.x - q.x) + Math.PI / 2;
+          ctx.strokeStyle = "rgba(255,255,255,0.6)";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(mx + Math.cos(ang) * 3.4, my + Math.sin(ang) * 3.4);
+          ctx.lineTo(mx - Math.cos(ang) * 3.4, my - Math.sin(ang) * 3.4);
+          ctx.stroke();
+        } else if (q.aim && b.t - q.aim.t < 1.6 && (sel === c.id || selAll)) {
+          ctx.strokeStyle = side + "44";
+          ctx.lineWidth = 0.8;
+          ctx.setLineDash([3, 4]);
+          ctx.beginPath();
+          ctx.moveTo(q.x, q.y);
+          ctx.lineTo(q.aim.x, q.aim.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+    for (const q of live) {
+      const n = Math.ceil(q.men / 10);
+      const dis = q.dis || 0;
+      const fill = shadeHex(q.origin === "\u76F4\u5C5E" ? bright : dark, on ? 0.16 : 0);
+      const stroke = q.origin === "\u76F4\u5C5E" ? edge : edge2;
+      const jit = Math.pow(dis, 1.8) * 2.2;
+      const spread = dis > 0.62 ? (dis - 0.62) * 2.6 : 0;
+      for (let i = 0; i < n; i++) {
+        const h1 = Math.sin(q.seed + i * 12.9898), h2 = Math.cos(q.seed + i * 78.233);
+        const [ox, oy] = rot((i % 5 - 2) * KOMA + h1 * jit, Math.floor(i / 5) * KOMA + h2 * jit, q.facing);
+        drawKoma(ctx, q.x + ox, q.y + oy, q.facing + h1 * spread * 2, q.type, fill, stroke, 1);
+      }
+      if (q.origin === "\u76F4\u5C5E") {
+        const [fx, fy] = rot(-2 * KOMA - 3, -3, q.facing);
+        const bx = q.x + fx, by = q.y + fy;
+        ctx.strokeStyle = "rgba(255,255,255,0.95)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx, by - 8);
+        ctx.stroke();
+        ctx.fillStyle = bright;
+        ctx.beginPath();
+        ctx.moveTo(bx, by - 8);
+        ctx.lineTo(bx + 5, by - 6.2);
+        ctx.lineTo(bx, by - 4.4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.85)";
+        ctx.stroke();
+      }
+    }
+  }
+  if (b.fx && b.fx.length) {
+    for (const f of b.fx) {
+      const a = 1 - f.t / f.life;
+      if (f.k === "arrow") {
+        ctx.globalAlpha = a * 0.5;
+        ctx.strokeStyle = "#5A5238";
+        ctx.lineWidth = 0.7;
+        const u = Math.min(1, f.t / f.life * 1.6);
+        const hx = f.x + (f.x2 - f.x) * u, hy = f.y + (f.y2 - f.y) * u;
+        const tx = f.x + (f.x2 - f.x) * Math.max(0, u - 0.22), ty = f.y + (f.y2 - f.y) * Math.max(0, u - 0.22);
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(hx, hy);
+        ctx.stroke();
+      } else if (f.k === "shot") {
+        ctx.globalAlpha = a * 0.75;
+        ctx.strokeStyle = "#FFF4D8";
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(f.x, f.y);
+        ctx.lineTo(f.x2, f.y2);
+        ctx.stroke();
+        ctx.globalAlpha = a * 0.4;
+        ctx.fillStyle = "#EFE9DC";
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 3 + (1 - a) * 5, 0, 7);
+        ctx.fill();
+      } else if (f.k === "clash") {
+        ctx.globalAlpha = a * 0.9;
+        ctx.strokeStyle = f.big ? "#E8B24A" : "#FFFFFF";
+        ctx.lineWidth = f.big ? 1.4 : 1;
+        const r = (f.big ? 5 : 3.5) + (1 - a) * 4;
+        for (let k = 0; k < 3; k++) {
+          const ang = f.x * 0.7 + f.y * 1.3 + k * 2.1;
+          ctx.beginPath();
+          ctx.moveTo(f.x + Math.cos(ang) * r * 0.4, f.y + Math.sin(ang) * r * 0.4);
+          ctx.lineTo(f.x + Math.cos(ang) * r, f.y + Math.sin(ang) * r);
+          ctx.stroke();
+        }
+      } else if (f.k === "dust") {
+        ctx.globalAlpha = a * 0.28;
+        ctx.fillStyle = "#B9A98A";
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 4 + (1 - a) * 9, 0, 7);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+  for (const c of shown) {
+    const isP = c.side === "P";
+    const side = sideColor(c);
+    const [x, y] = S(c.gx == null ? c.x : c.gx, c.gy == null ? c.y : c.gy);
+    if (c.destroyed) {
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.fillRect(x - 26, y - 10, 52, 19);
+      ctx.strokeStyle = side;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x - 26, y - 10, 52, 19);
+      ctx.fillStyle = "#8A8478";
+      ctx.font = "12px sans-serif";
+      ctx.fillText("\u58CA\u6EC5", x - 12, y + 4);
+      continue;
+    }
+    if (!isP && !c.seen && b.phase === "fight") {
+      if (c.lastSeen && b.t - c.lastSeen.t < 45) {
+        const [lx, ly2] = S(c.lastSeen.x, c.lastSeen.y);
+        ctx.strokeStyle = side + "88";
+        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(lx, ly2, 28, 0, 7);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = side;
+        ctx.font = "12px sans-serif";
+        ctx.fillText("\u6575\u5F71", lx - 13, ly2 + 4);
+      }
+      continue;
+    }
+    if (c.ambush && !c.revealed && !isP) continue;
+    ctx.globalAlpha = c.routed || c.withdraw ? 0.55 : 1;
+    const lord = c.gen.lord && !c.detach;
+    const H2 = lord ? 30 : 22;
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x, y - 3);
+    ctx.lineTo(x, y - H2);
+    ctx.stroke();
+    ctx.strokeStyle = "#3A382F";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x, y - 3);
+    ctx.lineTo(x, y - H2);
+    ctx.stroke();
+    const banner = (top, w2, h2) => {
+      ctx.fillStyle = side;
+      ctx.fillRect(x + 1, y - top, w2, h2);
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 1, y - top, w2, h2);
+    };
+    banner(H2, 11, 8);
+    if (lord) banner(H2 - 10, 11, 8);
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(x, y, sel === c.id ? 8 : 6.4, 0, 7);
+    ctx.fill();
+    ctx.fillStyle = side;
+    ctx.beginPath();
+    ctx.arc(x, y, sel === c.id ? 5.6 : 4.2, 0, 7);
+    ctx.fill();
+    if (lord) {
+      ctx.strokeStyle = "#D8B24A";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, 7);
+      ctx.stroke();
+    }
+    if (sel === c.id || selAll) {
+      ctx.fillStyle = side + "33";
+      ctx.beginPath();
+      ctx.arc(x, y, 20, 0, 7);
+      ctx.fill();
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(x, y, 16, 0, 7);
+      ctx.stroke();
+      ctx.strokeStyle = side;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.arc(x, y, 16, 0, 7);
+      ctx.stroke();
+      const fx2 = x + Math.cos(c.facing) * 24, fy2 = y + Math.sin(c.facing) * 24;
+      ctx.strokeStyle = side;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(c.facing) * 15, y + Math.sin(c.facing) * 15);
+      ctx.lineTo(fx2, fy2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(fx2, fy2);
+      ctx.lineTo(fx2 + Math.cos(c.facing + 2.5) * 6, fy2 + Math.sin(c.facing + 2.5) * 6);
+      ctx.lineTo(fx2 + Math.cos(c.facing - 2.5) * 6, fy2 + Math.sin(c.facing - 2.5) * 6);
+      ctx.closePath();
+      ctx.fillStyle = side;
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const label = c.detach ? `${c.task}${c.autonomous ? "\u30FB\u81EA\u5F8B" : ""}` : c.ally ? `${c.name}\uFF08${c.ally}\uFF09` : c.name;
+    ctx.font = c.detach ? "11px 'Hiragino Sans',sans-serif" : "600 13px 'Hiragino Sans',sans-serif";
+    const w = ctx.measureText(label).width;
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    const ly = (c.gen.lord && !c.detach ? 34 : 26) + 14;
+    ctx.fillRect(x - w / 2 - 4, y - ly, w + 8, 16);
+    ctx.fillStyle = c.detach ? "#5B5850" : "#33332F";
+    ctx.fillText(label, x - w / 2, y - ly + 12);
+    const coh = c.squads.length ? c.squads.reduce((a, q) => a + q.cohesion, 0) / c.squads.length : 0;
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.fillRect(x - 22, y + 12, 44, 8);
+    ctx.fillStyle = c.morale > 55 ? "#5C8C4A" : c.morale > 30 ? "#C89A3A" : "#B0483C";
+    ctx.fillRect(x - 22, y + 12, 44 * c.morale / 100, 4);
+    ctx.fillStyle = "#4A6E8A";
+    ctx.fillRect(x - 22, y + 16, 44 * coh / 100, 4);
+    if (c.fatigue > 45) {
+      ctx.fillStyle = "rgba(154,123,79,0.9)";
+      ctx.fillRect(x - 22, y + 21, 44 * c.fatigue / 100, 2);
+    }
+    const tag = c.routed ? ["\u6557\u8D70", "#B0483C"] : c.withdraw ? ["\u64A4\u9000\u4E2D", "#7C7668"] : c.boxed ? ["\u5BC6\u96C6\u9632\u5FA1", "#8A6A34"] : c.pinch >= 2 ? ["\u631F\u6483", "#B0483C"] : c.order === "\u5C04\u6483" ? ["\u5C04\u6483\u512A\u5148", "#4A6E8A"] : null;
+    if (tag) {
+      ctx.fillStyle = tag[1];
+      ctx.font = "11px sans-serif";
+      ctx.fillText(tag[0], x - tag[0].length * 5.5, y + 34);
+    }
+    if (c.ambush && !c.revealed && isP) {
+      ctx.strokeStyle = side;
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, 22, 0, 7);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = side;
+      ctx.font = "11px sans-serif";
+      ctx.fillText("\u4F0F\u5175", x - 11, y + 34);
+    }
+  }
+}
+
+// src/battle/ai.js
+function battleAI(b) {
+  setAiIssuing(true);
+  const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
+  for (const c of alive) if (c.detach && !c.routed) detachAI(b, c, alive);
+  for (const c of alive) {
+    if (!delegated(b, c) || c.detach || c.routed || c.detachTried) continue;
+    if (b.t > 25 || c.squads.some((q) => q.engaged) || c.morale < 60) {
+      c.detachTried = true;
+      continue;
+    }
+    if (b.t < 3) continue;
+    c.detachTried = true;
+    if (Math.random() > 0.5) continue;
+    const opt = detachOptions(b, c).filter((o) => o.ok);
+    if (opt.length) makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
+  }
+  for (const c of alive) {
+    if (!delegated(b, c) || c.routed || c.detach) continue;
+    const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
+    const foes = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
+    if (!foes.length) continue;
+    if (c.morale < 18 && corpsMen(c) < corpsMax(c) * 0.55) {
+      const help = alive.some((o) => o.side === mySide && o !== c && !o.routed && Math.hypot(o.x - c.x, o.y - c.y) < 220);
+      if (!help) {
+        c.order = "\u64A4\u9000";
+        c.withdraw = true;
+        c.tx = c.x;
+        c.ty = -80;
+        continue;
+      }
+    }
+    if (!c.formPicked) {
+      c.formPicked = true;
+      const mine = alive.filter((o) => o.side === mySide).reduce((a, o) => a + corpsMen(o), 0);
+      const foeMen = alive.filter((o) => o.side === foeSide).reduce((a, o) => a + corpsMen(o), 0);
+      const want = terrainAt(c.x, c.y) === "bridge" || terrainAt(c.x, c.y) === "ford" ? "\u9577\u86C7" : mine > foeMen * 1.25 ? "\u9DB4\u7FFC" : mine < foeMen * 0.8 ? "\u9B5A\u9C57" : "\u6A2A\u9663";
+      if (c.formation !== want) {
+        c.formation = want;
+        if (b.t > 2) c.reformT = reformTime(c.gen);
+        placeSquads(c, b.t <= 2);
+      }
+    }
+    const coh = c.squads.length ? c.squads.reduce((a, q) => a + q.cohesion, 0) / c.squads.length : 100;
+    if (c.reforming) {
+      if (coh > 72) c.reforming = false;
+      else {
+        c.order = "\u5F85\u6A5F";
+        c.tx = c.x;
+        c.ty = c.y;
+        continue;
+      }
+    }
+    if (hasRiver() && c.bank0 && !c.crossed) {
+      const mid = (RIVER.top + RIVER.bot) / 2 + riverShift(c.x);
+      const nowBank = c.y < mid ? -1 : 1;
+      if (nowBank !== c.bank0 && Math.abs(c.y - mid) > (RIVER.bot - RIVER.top) / 2 + 30) {
+        c.crossed = true;
+        if (coh < 62) {
+          c.reforming = true;
+          c.order = "\u5F85\u6A5F";
+          c.tx = c.x;
+          c.ty = c.y;
+          continue;
+        }
+      }
+    }
+    const tgt = foes.reduce((a, o) => Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a, foes[0]);
+    if (c.order === "\u63A5\u6226" && c.squads.some((q) => q.engaged)) continue;
+    if (MAP) {
+      const near = Math.hypot(tgt.x - c.x, tgt.y - c.y);
+      if (c.side !== b.attacker) {
+        const atkAll = b.corps.filter((x) => x.side === b.attacker && !x.dead && !x.destroyed);
+        const broken = atkAll.filter((x) => x.routed || x.withdraw).length;
+        const rate = atkAll.length ? broken / atkAll.length : 0;
+        const isLord = !!(c.gen && c.gen.lord);
+        const chaseNow = rate >= (isLord ? 0.8 : 0.6);
+        if (c.chasing) {
+          if (b.t - (c.chaseAt || 0) > 60 || c.morale < 50 || rate < 0.4) {
+            c.chasing = false;
+            b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F\u8FFD\u3044\u8A0E\u3061\u3092\u3084\u3081\u3001\u57CE\u3078\u5F15\u3044\u305F\u3002` });
+          } else {
+            const prey = atkAll.filter((x) => !x.routed).sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0] || atkAll.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
+            if (prey) {
+              issueOrder(b, c, { order: "\u63A5\u6226", tx: prey.x, ty: prey.y, target: prey.id });
+              continue;
+            }
+          }
+        } else if (chaseNow && c.morale > 55) {
+          c.chasing = true;
+          c.chaseAt = b.t;
+          b.log.push({
+            t: b.t,
+            text: `${c.gen.name}\u968A\u304C\u57CE\u3092\u51FA\u3066\u8FFD\u3044\u8A0E\u3061\u3092\u304B\u3051\u305F\uFF08\u5BC4\u305B\u624B\u306E${Math.round(rate * 100)}\u5206\u304C\u5D29\u308C\u305F\uFF09\u3002`
+          });
+          continue;
+        }
+        let g2 = c.holdGate;
+        const need = !g2 || g2.broken || g2.hp / g2.max < 0.1;
+        if (need) {
+          const \u6B8B\u308A = MAP.gates.filter((x) => !x.broken && (!g2 || x.layer > g2.layer));
+          if (\u6B8B\u308A.length) {
+            const \u8F2A = Math.min(...\u6B8B\u308A.map((x) => x.layer));
+            const \u5834 = (x) => gatePos(MAP, MAP.layers[x.layer], x);
+            const \u6B21 = \u6B8B\u308A.filter((x) => x.layer === \u8F2A).sort((x, y2) => {
+              const ga = \u5834(x), gb = \u5834(y2);
+              return Math.hypot(ga.x - c.x, ga.y - c.y) - Math.hypot(gb.x - c.x, gb.y - c.y);
+            })[0];
+            if (\u6B21 && \u6B21 !== g2) {
+              const \u4E0B\u304C\u308B = !!g2;
+              c.holdGate = \u6B21;
+              g2 = \u6B21;
+              b.log.push({
+                t: b.t,
+                text: \u4E0B\u304C\u308B ? `${c.gen.name}\u968A\u306F${\u6B21.key}\u306E\u5185\u3078\u4E0B\u304C\u3063\u305F\u3002` : `${c.gen.name}\u968A\u304C${\u6B21.key}\u3092\u56FA\u3081\u305F\u3002`
+              });
+            }
+          } else if (g2 && g2.broken) {
+            c.holdGate = null;
+            g2 = null;
+          }
+        }
+        if (g2 && !g2.broken) {
+          const l2 = MAP.layers[g2.layer], a2 = axisOf(l2, g2);
+          const p2 = fromUV(MAP, a2, g2.off, a2.half - 14);
+          const d2 = Math.hypot(c.x - p2.x, c.y - p2.y);
+          if (d2 > 34) {
+            issueOrder(b, c, { order: "\u79FB\u52D5", tx: p2.x, ty: p2.y });
+            continue;
+          }
+          const gp = gatePos(MAP, l2, g2);
+          const foes2 = b.corps.filter((x) => x.side === b.attacker && !x.dead && !x.destroyed && !x.routed && Math.hypot(x.x - gp.x, x.y - gp.y) < 170);
+          const foeMen = foes2.reduce((t, x) => t + corpsMen(x), 0);
+          const myMen = corpsMen(c);
+          const foeMor = foes2.length ? foes2.reduce((t, x) => t + x.morale, 0) / foes2.length : 100;
+          const myWorth = (c.gen.valor || 60) + (c.gen.lead || 60);
+          const foeWorth = foes2.length ? Math.max(...foes2.map((x) => (x.gen.valor || 60) + (x.gen.lead || 60))) : 999;
+          const fit = c.morale > 58 && myMen > corpsMax(c) * 0.45;
+          const chance = foes2.length && fit && (foeMor < 40 || foeMen < myMen / 3 || myWorth > foeWorth * 1.4);
+          if (c.sallied) {
+            if (b.t - (c.sallyAt || 0) > 40 || c.morale < 46) {
+              c.sallied = false;
+              c.sallyLogged = false;
+              b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C${g2.key}\u306E\u5185\u3078\u623B\u3063\u305F\u3002` });
+              issueOrder(b, c, { order: "\u79FB\u52D5", tx: p2.x, ty: p2.y });
+              continue;
+            }
+            const t2 = [...foes2].sort((x, y2) => corpsMen(x) - corpsMen(y2))[0];
+            if (t2) {
+              issueOrder(b, c, { order: "\u63A5\u6226", tx: t2.x, ty: t2.y, target: t2.id });
+              continue;
+            }
+            c.sallied = false;
+          } else if (chance) {
+            const t2 = [...foes2].sort((x, y2) => corpsMen(x) - corpsMen(y2))[0];
+            if (t2) {
+              c.sallied = true;
+              c.sallyAt = b.t;
+              issueOrder(b, c, { order: "\u63A5\u6226", tx: t2.x, ty: t2.y, target: t2.id });
+              if (!c.sallyLogged) {
+                c.sallyLogged = true;
+                b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C${g2.key}\u3092\u958B\u3044\u3066\u8A0E\u3063\u3066\u51FA\u305F\u3002` });
+              }
+              continue;
+            }
+          }
+          const shooter = c.squads.some((q) => q.men > 0 && (q.type === "yumi" || q.type === "teppo"));
+          if (shooter && foes2.length) {
+            const t3 = [...foes2].sort((x, y2) => Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
+            issueOrder(b, c, { order: "\u5C04\u6483", tx: t3.x, ty: t3.y, target: t3.id });
+            continue;
+          }
+          issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
+          continue;
+        }
+        if (!g2 || g2.broken) {
+          const keep = MAP.layers[MAP.layers.length - 1];
+          if (keep) {
+            const kx = MAP.cx, ky = MAP.cy;
+            if (Math.hypot(c.x - kx, c.y - ky) > 60) {
+              issueOrder(b, c, { order: "\u79FB\u52D5", tx: kx, ty: ky });
+            } else {
+              issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
+            }
+            continue;
+          }
+        }
+      }
+      if (c.side === b.attacker) {
+        const g = nearestOpenGate(MAP, c.x, c.y);
+        if (g && near > 130) {
+          if (!c.wp || !c.wp.length) {
+            const wp = routeToCastleGate(MAP, g, c.x, c.y);
+            if (wp.length) {
+              issueOrder(b, c, { order: "\u79FB\u52D5", tx: wp[0].x, ty: wp[0].y, keepPath: true });
+              c.wp = wp;
+            } else {
+              const a2 = axisOf(MAP.layers[g.layer], g);
+              const app = fromUV(MAP, a2, g.off, a2.half + MAP.t + 26);
+              issueOrder(b, c, { order: "\u79FB\u52D5", tx: app.x, ty: app.y });
+            }
+          }
+          continue;
+        }
+        if (!g) {
+          const h = MAP.layers[MAP.layers.length - 1];
+          if (!inRect(c.x - MAP.cx, c.y - MAP.cy, h.hw, h.hh) && near > 130) {
+            issueOrder(b, c, { order: "\u79FB\u52D5", tx: MAP.cx, ty: MAP.cy });
+            continue;
+          }
+        }
+      }
+    }
+    const ranged = c.squads.filter((q) => ARM_STATS[q.type].range > 0).reduce((s2, q) => s2 + q.men, 0);
+    if (ranged / Math.max(1, corpsMen(c)) > 0.55) {
+      const hill = nearestOf(HILLS, c.x, c.y);
+      if (!hill) {
+      } else if (Math.hypot(hill.x - c.x, hill.y - c.y) > 90 && terrainAt(c.x, c.y) !== "hill") {
+        issueOrder(b, c, { order: "\u79FB\u52D5", tx: hill.x, ty: hill.y });
+        continue;
+      }
+    }
+    if (hasRiver() && c.y < RIVER.top !== tgt.y < RIVER.top && Math.abs(c.y - RIVER.top) < 260) {
+      const gates = [
+        { x: (RIVER.bridge[0] + RIVER.bridge[1]) / 2, y: (RIVER.top + RIVER.bot) / 2 },
+        { x: (RIVER.ford[0] + RIVER.ford[1]) / 2, y: (RIVER.top + RIVER.bot) / 2 }
+      ];
+      const gt = gates.reduce((a, p) => Math.hypot(p.x - c.x, p.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? p : a, gates[0]);
+      if (Math.abs(c.y - gt.y) > 40) {
+        issueOrder(b, c, { order: "\u79FB\u52D5", tx: gt.x, ty: gt.y });
+        continue;
+      }
+    }
+    const dd = Math.hypot(c.x - tgt.x, c.y - tgt.y) || 1;
+    if (dd <= 42) issueOrder(b, c, { order: "\u63A5\u6226", tx: c.x, ty: c.y });
+    else issueOrder(b, c, { order: "\u63A5\u6226", tx: tgt.x + (c.x - tgt.x) / dd * 38, ty: tgt.y + (c.y - tgt.y) / dd * 38 });
+  }
+  setAiIssuing(false);
+}
+
+// src/battle/engine.js
+function createBattle(playerCorps, enemyCorps, attackerSide) {
+  const r = Math.random();
+  const weather = r < 0.18 ? "\u96E8" : r < 0.45 ? "\u66C7" : "\u6674";
+  const b = {
+    t: 0,
+    phase: "deploy",
+    corps: [...playerCorps, ...enemyCorps],
+    initial: { P: playerCorps.reduce((s2, c) => s2 + corpsMen(c), 0), E: enemyCorps.reduce((s2, c) => s2 + corpsMen(c), 0) },
+    log: [],
+    result: null,
+    attacker: attackerSide,
+    aiClock: 0,
+    weather,
+    dusk: 480,
+    retreat: null,
+    orderly: false,
+    fx: []
+  };
+  for (const c of b.corps) {
+    placeSquads(c, true);
+    c.lastSeen = { x: c.x, y: c.y, t: 0 };
+  }
+  return b;
+}
+function applyDamage(b, fCorps, e, dmg, flank, valor) {
+  const pinch = fCorps.pinch >= 3 ? 1.22 : fCorps.pinch === 2 ? 1.12 : 1;
+  const before = e.men;
+  e.men = Math.max(0, e.men - dmg * pinch);
+  const lost = before - e.men;
+  fCorps.loss[e.origin] += lost;
+  e.cohesion -= lost * 0.7 * flank * (0.55 + (valor || 60) / 100);
+  const share = lost / Math.max(1, corpsMax(fCorps));
+  fCorps.morale -= share * 100 * 2.2 * (1 + (flank - 1) * 0.8);
+}
+function stepBattle(b, dt) {
+  if (b.phase !== "fight") return;
+  b.t += dt;
+  b.aiClock -= dt;
+  for (const c of b.corps) {
+    if (!c.pending) continue;
+    c.pending.t -= dt;
+    if (c.pending.t <= 0) {
+      Object.assign(c, c.pending.patch);
+      c.pending = null;
+    }
+  }
+  if (b.fx.length) {
+    for (const f of b.fx) f.t += dt;
+    b.fx = b.fx.filter((f) => f.t < f.life);
+  }
+  if (b.aiClock <= 0) {
+    battleAI(b);
+    b.aiClock = 0.6;
+  }
+  const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
+  for (const c of alive) {
+    const foes = alive.filter((o) => o.side !== c.side);
+    let seen = false;
+    for (const f of foes) {
+      for (const q of f.squads) {
+        const t = TERRAIN[terrainAt(c.x, c.y)];
+        const sight = (c.ambush && !c.revealed ? 95 : t.sight) * WEATHER[b.weather].sight * fieldScale();
+        if (Math.hypot(q.x - c.x, q.y - c.y) < sight) {
+          seen = true;
+          break;
+        }
+      }
+      if (seen) break;
+    }
+    c.seen = seen;
+    if (seen) c.lastSeen = { x: c.x, y: c.y, t: b.t };
+    const dirs = /* @__PURE__ */ new Set();
+    for (const o of foes) {
+      if (o.destroyed || Math.hypot(o.x - c.x, o.y - c.y) > 190) continue;
+      dirs.add(Math.round((Math.atan2(o.y - c.y, o.x - c.x) + Math.PI) / (Math.PI / 2)) % 4);
+    }
+    c.pinch = dirs.size;
+    if (c.ambush && !c.revealed) {
+      for (const f of foes) {
+        if (Math.hypot(f.x - c.x, f.y - c.y) < 150) {
+          c.revealed = true;
+          f.morale -= 16;
+          for (const q of f.squads) q.cohesion -= 12;
+          b.log.push({ t: b.t, text: `${c.name}\u968A\u306E\u4F0F\u5175\u304C${f.name}\u968A\u306B\u73FE\u308C\u305F\u3002` });
+          c.feats.push("\u4F0F\u5175\u6210\u529F");
+        }
+      }
+    }
+  }
+  for (const c of alive) {
+    {
+      let mx2 = 0, my2 = 0, mn = 0;
+      for (const q of c.squads) {
+        if (q.men <= 0) continue;
+        mx2 += q.x * q.men;
+        my2 += q.y * q.men;
+        mn += q.men;
+      }
+      if (mn > 0) {
+        const cx2 = mx2 / mn, cy2 = my2 / mn;
+        let depth = 0;
+        for (const q of c.squads) {
+          if (q.men <= 0) continue;
+          const rel = (q.x - cx2) * Math.cos(c.facing) + (q.y - cy2) * Math.sin(c.facing);
+          if (-rel > depth) depth = -rel;
+        }
+        const back = Math.max(0, Math.min(depth, 90) - ROW * 1.6);
+        let gx2 = cx2 - Math.cos(c.facing) * back, gy2 = cy2 - Math.sin(c.facing) * back;
+        if (!passable(gx2, gy2)) {
+          gx2 = cx2;
+          gy2 = cy2;
+        }
+        c.gx = gx2;
+        c.gy = gy2;
+      }
+    }
+  }
+  for (const c of alive) {
+    if (c.detach || c.routed || c.withdraw || c.ambush && !c.revealed) continue;
+    const mates = alive.filter((o) => o !== c && o.side === c.side && !o.detach && !o.routed && !o.withdraw);
+    if (!mates.length) continue;
+    let sx = 0, sy = 0;
+    for (const o of mates) {
+      const d = Math.hypot(o.x - c.x, o.y - c.y);
+      if (d > 0.1 && d < 150) {
+        sx += (c.x - o.x) / d * (150 - d);
+        sy += (c.y - o.y) / d * (150 - d);
+      }
+    }
+    if (c.pinned) continue;
+    const cap = MAP ? 12 : 40;
+    const px2 = clamp(sx * (MAP ? 0.3 : 0.55), -cap, cap) * dt;
+    const py2 = clamp(sy * (MAP ? 0.3 : 0.55), -cap, cap) * dt;
+    if (passable(c.x + px2, c.y + py2)) {
+      c.x += px2;
+      c.y += py2;
+    } else if (passable(c.x + px2, c.y)) c.x += px2;
+    else if (passable(c.x, c.y + py2)) c.y += py2;
+  }
+  for (const c of alive) {
+    c.trailT = (c.trailT || 0) - dt;
+    if (c.trailT <= 0) {
+      c.trailT = 0.6;
+      c.trail = c.trail || [];
+      const last = c.trail[c.trail.length - 1];
+      if (!last || Math.hypot(last.x - c.x, last.y - c.y) > 18) c.trail.push({ x: c.x, y: c.y });
+      if (c.trail.length > 26) c.trail.shift();
+    }
+  }
+  for (const c of alive) {
+    if (MAP && !passable(c.x, c.y)) {
+      const ox = c.x - MAP.cx, oy = c.y - MAP.cy, od = Math.hypot(ox, oy) || 1;
+      for (let k = 1; k <= 12; k++) {
+        const nx = c.x + ox / od * k * 14, ny = c.y + oy / od * k * 14;
+        if (passable(nx, ny)) {
+          c.x = nx;
+          c.y = ny;
+          break;
+        }
+      }
+    }
+    const HOLD = c.order === "\u5F85\u6A5F" || c.order === "\u5B88\u5099" || c.order === "\u8EE2\u56DE";
+    if (c.wp && c.wp.length && !HOLD) {
+      const w0 = c.wp[0];
+      const d0 = Math.hypot(w0.x - c.x, w0.y - c.y);
+      if (d0 < (w0.r || 40)) {
+        c.wp.shift();
+        c.stuck = 0;
+        c.lastD = null;
+      } else {
+        if (c.lastD != null && d0 > c.lastD - 0.04) c.stuck = (c.stuck || 0) + dt;
+        else c.stuck = 0;
+        c.lastD = d0;
+        if (c.stuck > 8) {
+          c.stuck = 0;
+          c.lastD = null;
+          const gt2 = c.gate;
+          const re = MAP && gt2 && !gt2.broken && gateReachable(MAP, gt2) ? routeToCastleGate(MAP, gt2, c.x, c.y) : null;
+          if (re && re.length) c.wp = re;
+          else c.wp.shift();
+        }
+      }
+      if (c.wp.length) {
+        c.tx = c.wp[0].x;
+        c.ty = c.wp[0].y;
+      }
+    }
+    const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy);
+    if (dist > 6 && !HOLD && !(c.ambush && !c.revealed)) {
+      const terr = TERRAIN[terrainAt(c.x, c.y)];
+      const avgSpeed = c.squads.length ? c.squads.reduce((s2, q) => s2 + ARM_STATS[q.type].speed * q.men, 0) / Math.max(1, corpsMen(c)) : 30;
+      const engaged = c.squads.some((q) => q.engaged);
+      const W = WEATHER[b.weather];
+      const chg = (c.chargeT > 0 ? 1.35 : 1) * (c.reformT > 0 ? 0.55 : 1);
+      let far = 0, nq = 0;
+      for (const q of c.squads) {
+        if (q.men <= 0) continue;
+        nq++;
+        const dq = Math.hypot(q.x - c.x, q.y - c.y);
+        if (dq > far) far = dq;
+      }
+      const room = 60 + Math.sqrt(Math.max(1, nq)) * SP * 0.7;
+      const lag = engaged ? 1 : far <= room ? 1 : far > room * 1.8 ? 0.12 : 0.55;
+      const v = avgSpeed * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag;
+      const mvx = dx / dist * v * dt, mvy = dy / dist * v * dt;
+      if (passableFor(c, b, c.x + mvx, c.y + mvy)) {
+        c.x += mvx;
+        c.y += mvy;
+      } else if (passableFor(c, b, c.x + mvx, c.y)) c.x += mvx;
+      else if (passableFor(c, b, c.x, c.y + mvy)) c.y += mvy;
+      if (MAP && dist > 200) {
+        const R = 30;
+        const blocked = (ux, uy) => {
+          for (let k = 1; k <= 4; k++) if (!passable(c.x + ux * k / 4, c.y + uy * k / 4)) return true;
+          return false;
+        };
+        let rx = 0, ry = 0;
+        if (blocked(R, 0)) rx -= 1;
+        if (blocked(-R, 0)) rx += 1;
+        if (blocked(0, R)) ry -= 1;
+        if (blocked(0, -R)) ry += 1;
+        if (rx || ry) {
+          const rl = Math.hypot(rx, ry) || 1;
+          const ax2 = rx / rl * 26 * dt, ay2 = ry / rl * 26 * dt;
+          if (passable(c.x + ax2, c.y + ay2)) {
+            c.x += ax2;
+            c.y += ay2;
+          }
+        }
+      }
+      if (MAP && !passable(c.x + mvx, c.y + mvy) && !passable(c.x + mvx, c.y) && !passable(c.x, c.y + mvy)) {
+        const ox = c.x - MAP.cx, oy = c.y - MAP.cy, od = Math.hypot(ox, oy) || 1;
+        const px2 = c.x + ox / od * 12, py2 = c.y + oy / od * 12;
+        if (passable(px2 + mvx, py2 + mvy)) {
+          c.x = px2 + mvx;
+          c.y = py2 + mvy;
+        } else if (passable(px2 + mvx, py2)) {
+          c.x = px2 + mvx;
+          c.y = py2;
+        } else if (passable(px2, py2 + mvy)) {
+          c.x = px2;
+          c.y = py2 + mvy;
+        } else if (passable(px2, py2)) {
+          c.x = px2;
+          c.y = py2;
+        }
+      }
+      if (c.chargeT > 0 && b.fx.length < 160 && Math.random() < dt * 6 && (c.side === "P" || c.seen)) {
+        b.fx.push({ k: "dust", x: c.x - Math.cos(c.facing) * 14, y: c.y - Math.sin(c.facing) * 14, t: 0, life: 0.7 });
+      }
+      c.fatigue = Math.min(100, c.fatigue + (0.55 + (1 / Math.max(0.1, terr.speed) - 1) * 0.5) * W.fatigue * (c.chargeT > 0 ? 1.8 : 1) * dt);
+      const want = Math.atan2(dy, dx);
+      const diff = (want - c.facing + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+      c.facing += clamp(diff, -1.4 * dt, 1.4 * dt);
+      c.faceTo = null;
+    } else if (c.faceTo != null) {
+      const diff = (c.faceTo - c.facing + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+      const rate = 0.45 + c.gen.lead / 130;
+      if (Math.abs(diff) < 0.05) {
+        c.facing = c.faceTo;
+        c.faceTo = null;
+        if (c.order === "\u8EE2\u56DE") {
+          c.order = "\u5F85\u6A5F";
+          c.tx = c.x;
+          c.ty = c.y;
+        }
+      } else {
+        c.facing += clamp(diff, -rate * dt, rate * dt);
+        for (const q of c.squads) q.cohesion = Math.max(0, q.cohesion - 1.3 * dt);
+      }
+    }
+    placeSquads(c, false);
+    const aggressive = c.order === "\u63A5\u6226" || c.order === "\u7A81\u6483" || c.order === "\u524D\u9032" || c.order === "\u5C04\u6483";
+    for (const q of c.squads) {
+      let targetX = c.x + q.slotX, targetY = c.y + q.slotY;
+      const st0 = ARM_STATS[q.type];
+      if (aggressive && !c.routed && q.foe && !q.reserve) {
+        const want = st0.range > 0 ? st0.range * 0.75 : 15;
+        if (c.order === "\u5C04\u6483" && st0.range === 0) {
+        } else if (q.foe.d > want) {
+          const ux = (q.x - q.foe.x) / Math.max(1, q.foe.d), uy = (q.y - q.foe.y) / Math.max(1, q.foe.d);
+          targetX = q.foe.x + ux * want;
+          targetY = q.foe.y + uy * want;
+        }
+        const homeX = c.x + q.slotX, homeY = c.y + q.slotY;
+        const off = Math.hypot(targetX - homeX, targetY - homeY);
+        const leash = c.chargeT > 0 ? 24 : 14;
+        if (off > leash) {
+          targetX = homeX + (targetX - homeX) / off * leash;
+          targetY = homeY + (targetY - homeY) / off * leash;
+        }
+      }
+      const homeD = Math.hypot(q.x - targetX, q.y - targetY);
+      if (homeD > 110) q.lost = true;
+      else if (homeD < 40) q.lost = false;
+      if (homeD > 190) {
+        let put = null;
+        for (let k = 0; k < 18 && !put; k++) {
+          const ang = k * 2.399, rr = k === 0 ? 0 : 12 + k * 8;
+          const nx2 = targetX + Math.cos(ang) * rr, ny2 = targetY + Math.sin(ang) * rr;
+          if (passable(nx2, ny2)) put = { x: nx2, y: ny2 };
+        }
+        if (put) {
+          q.x = put.x;
+          q.y = put.y;
+          q.lost = false;
+          q.cohesion = Math.max(0, q.cohesion - 8);
+        }
+      }
+      if (q.lost && c.trail && c.trail.length) {
+        let bi = 0, bd = 1e9;
+        for (let k = 0; k < c.trail.length; k++) {
+          const d2 = Math.hypot(c.trail[k].x - q.x, c.trail[k].y - q.y);
+          if (d2 < bd) {
+            bd = d2;
+            bi = k;
+          }
+        }
+        const nx3 = c.trail[Math.min(c.trail.length - 1, bi + 1)];
+        if (bd > 26) {
+          targetX = c.trail[bi].x;
+          targetY = c.trail[bi].y;
+        } else {
+          targetX = nx3.x;
+          targetY = nx3.y;
+        }
+      }
+      const qd = Math.hypot(targetX - q.x, targetY - q.y);
+      const terr = TERRAIN[terrainAt(q.x, q.y)];
+      if (qd > 2 && !q.engaged) {
+        const v = st0.speed * fieldScale() * terr.speed * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
+        const sx = (targetX - q.x) / qd * Math.min(v * dt, qd);
+        const sy = (targetY - q.y) / qd * Math.min(v * dt, qd);
+        if (passableFor(c, b, q.x + sx, q.y + sy)) {
+          q.x += sx;
+          q.y += sy;
+        } else if (passableFor(c, b, q.x + sx, q.y)) q.x += sx;
+        else if (passableFor(c, b, q.x, q.y + sy)) q.y += sy;
+        const base = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
+        q.facing = base + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
+        q.cohesion += (terr.cohesion * 0.6 - 0.5) * dt;
+      } else {
+        const rec = (1.2 + c.gen.lead / 40) * (q.engaged ? 0.15 : 1) * (1 - c.fatigue / 200);
+        q.cohesion += (rec + terr.cohesion * 0.25) * dt;
+      }
+      q.cohesion = clamp(q.cohesion, 0, 100);
+      q.cool -= dt;
+      q.engaged = false;
+    }
+  }
+  if (MAP) {
+    for (const c of alive) {
+      let sx = 0, sy = 0, n2 = 0;
+      for (const q of c.squads) {
+        if (q.men <= 0) continue;
+        sx += q.x * q.men;
+        sy += q.y * q.men;
+        n2 += q.men;
+      }
+      c.mx = n2 ? sx / n2 : c.x;
+      c.my = n2 ? sy / n2 : c.y;
+    }
+    const atkC = alive.filter((c) => c.side === b.attacker && !c.routed && !c.withdraw);
+    const defC = alive.filter((c) => c.side !== b.attacker && !c.routed);
+    const attached = /* @__PURE__ */ new Set();
+    for (const l of MAP.layers) for (const g of l.gates) {
+      if (g.broken) {
+        g.slot = null;
+        g.hold = null;
+        g.def = 0;
+        continue;
+      }
+      const gp = gatePos(MAP, l, g);
+      const R = 104 * (FIELD.w / BASE.w);
+      const near = atkC.filter((c) => (c.gate === g || !c.gate) && Math.hypot((c.mx == null ? c.x : c.mx) - gp.x, (c.my == null ? c.y : c.my) - gp.y) < R);
+      const a2 = axisOf(l, g);
+      const ins = fromUV(MAP, a2, g.off, a2.half - 52 * (FIELD.w / BASE.w));
+      g.def = defC.filter((c) => Math.hypot((c.mx == null ? c.x : c.mx) - ins.x, (c.my == null ? c.y : c.my) - ins.y) < 120 * (FIELD.w / BASE.w)).reduce((t2, c) => t2 + corpsMen(c), 0);
+      if (!near.length) {
+        g.slot = null;
+        g.hold = null;
+        continue;
+      }
+      if (!g.slot || !near.some((c) => c.id === g.slot)) {
+        const pick = [...near].sort((x, y2) => (SIEGE_KIT[y2.kit] ? SIEGE_KIT[y2.kit].gate : 1) - (SIEGE_KIT[x.kit] ? SIEGE_KIT[x.kit].gate : 1) || (x.gateFat || 0) - (y2.gateFat || 0) || corpsMen(y2) - corpsMen(x))[0];
+        if (g.slot) b.log.push({ t: b.t, text: `${pick.gen.name}\u968A\u304C${g.key}\u306B\u53D6\u308A\u4ED8\u3044\u305F\u3002` });
+        g.slot = pick.id;
+      }
+      const holder = near.find((c) => c.id === g.slot);
+      if (!holder) continue;
+      attached.add(holder.id);
+      g.hold = holder.gen.name;
+      const a3 = axisOf(l, g);
+      const stand = fromUV(MAP, a3, g.off, a3.half + MAP.t + 22);
+      if (holder.gate === g && !holder.wp) {
+        holder.tx = stand.x;
+        holder.ty = stand.y;
+        holder.pinned = true;
+      }
+      holder.gateFat = Math.min(100, (holder.gateFat || 0) + 5 * dt);
+      holder.morale = Math.min(100, holder.morale + 0.4 * dt);
+      const men = corpsMen(holder);
+      const eff = 1 - holder.gateFat / 100 * 0.66;
+      const push = men / (men + g.def * 1.1);
+      const kit = SIEGE_KIT[holder.kit] || SIEGE_KIT["\u306A\u3057"];
+      g.hp -= men * 0.016 * kit.gate * eff * push * (b.gateParty ? 1.25 : 1) * dt;
+      if (g.def > 0) {
+        const a4 = axisOf(l, g);
+        const ins2 = fromUV(MAP, a4, g.off, a4.half - 52 * (FIELD.w / BASE.w));
+        const guards = defC.filter((c2) => Math.hypot(
+          (c2.mx == null ? c2.x : c2.mx) - ins2.x,
+          (c2.my == null ? c2.y : c2.my) - ins2.y
+        ) < 120 * (FIELD.w / BASE.w));
+        let hurt = men * 16e-4 * eff * dt;
+        for (const c2 of guards) {
+          const share = hurt / guards.length;
+          let left2 = share;
+          for (const q2 of c2.squads) {
+            if (left2 <= 0) break;
+            if (q2.men <= 0) continue;
+            const take = Math.min(q2.men, left2);
+            q2.men -= take;
+            left2 -= take;
+          }
+          c2.morale -= share / Math.max(1, corpsMax(c2)) * 90;
+        }
+      }
+      if (b.fx.length < 160 && Math.random() < dt * 3) b.fx.push({ k: "clash", x: gp.x, y: gp.y, t: 0, life: 0.3, big: true });
+      if (holder.gateFat > 70) {
+        const next = near.filter((c) => c.id !== holder.id && (c.gateFat || 0) < 32).sort((x, y2) => (SIEGE_KIT[y2.kit] ? SIEGE_KIT[y2.kit].gate : 1) - (SIEGE_KIT[x.kit] ? SIEGE_KIT[x.kit].gate : 1) || (x.gateFat || 0) - (y2.gateFat || 0))[0];
+        if (next) {
+          g.slot = next.id;
+          b.log.push({ t: b.t, text: `${holder.gen.name}\u968A\u304C\u75B2\u308C\u3001${next.gen.name}\u968A\u3068\u5165\u308C\u66FF\u308F\u3063\u305F\u3002` });
+        }
+      }
+      if (g.hp <= 0) {
+        g.hp = 0;
+        g.broken = true;
+        g.slot = null;
+        g.hold = null;
+        b.mapDirty = true;
+        MAP.nav = null;
+        notify(b, `${g.key}\u304C\u7834\u3089\u308C\u305F\u3002`, b.attacker === "P" ? "good" : "bad");
+        for (const o of alive) {
+          if (o.side !== b.attacker) o.morale -= 8;
+          else o.morale = Math.min(100, o.morale + 5);
+        }
+      }
+    }
+    for (const c of atkC) {
+      if (!attached.has(c.id)) {
+        c.gateFat = Math.max(0, (c.gateFat || 0) - 3.4 * dt);
+        c.pinned = false;
+      }
+    }
+    for (const c of atkC) {
+      if (c.side === "P" && !c.auto) continue;
+      const cur = c.gate;
+      if (cur && !cur.broken && gateReachable(MAP, cur)) continue;
+      const nx = nearestOpenGate(MAP, c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my);
+      if (!nx || nx === cur) continue;
+      c.gate = nx;
+      c.pinned = false;
+      const wp = routeToCastleGate(MAP, nx, c.x, c.y);
+      if (wp.length) {
+        c.wp = wp;
+        c.tx = wp[0].x;
+        c.ty = wp[0].y;
+        c.order = "\u524D\u9032";
+        c.stuck = 0;
+        c.lastD = null;
+      }
+      b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F${nx.key}\u3078\u5411\u304B\u3046\u3002` });
+    }
+    for (const c of atkC) {
+      if (c.wp && c.wp.length) continue;
+      const gt = c.gate;
+      if (!gt || gt.broken || !gateReachable(MAP, gt)) continue;
+      const gp = gatePos(MAP, MAP.layers[gt.layer], gt);
+      if (Math.hypot(c.x - gp.x, c.y - gp.y) < 130) continue;
+      c.reroute = (c.reroute || 0) - dt;
+      if (c.reroute > 0) continue;
+      c.reroute = 5;
+      const wp = routeToCastleGate(MAP, gt, c.x, c.y);
+      if (wp.length) {
+        c.wp = wp;
+        c.tx = wp[0].x;
+        c.ty = wp[0].y;
+        c.stuck = 0;
+        c.lastD = null;
+      }
+    }
+    const fsN = FIELD.w / BASE.w;
+    for (const f of MAP.fac) {
+      if (f.hp <= 0) continue;
+      if (f.kind === "\u77E2\u5009") {
+        f.cool -= dt;
+        if (f.cool <= 0) {
+          const tgt = atkC.filter((c) => Math.hypot(c.x - f.x, c.y - f.y) < 165 * fsN).sort((a, b2) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b2.x - f.x, b2.y - f.y))[0];
+          if (tgt) {
+            f.cool = 3.4;
+            const kit = SIEGE_KIT[tgt.kit] || SIEGE_KIT["\u306A\u3057"];
+            let hit = 9 * kit.guard;
+            const qs = tgt.squads.filter((q) => q.men > 0).sort((a, b2) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b2.x - f.x, b2.y - f.y));
+            for (const q of qs) {
+              if (hit <= 0) break;
+              const take = Math.min(q.men, hit);
+              q.men -= take;
+              hit -= take;
+              q.cohesion = Math.max(0, q.cohesion - 3);
+            }
+            tgt.morale -= 0.45;
+            if (b.fx.length < 160) b.fx.push({ k: "shot", x: f.x, y: f.y, x2: qs[0] ? qs[0].x : tgt.x, y2: qs[0] ? qs[0].y : tgt.y, t: 0, life: 0.28 });
+          }
+        }
+      } else if (!MAP.layers[f.layer].gates.some((g) => g.broken)) {
+        for (const c of defC) c.morale = Math.min(100, c.morale + 0.22 * dt);
+        for (const c of atkC) c.morale -= 0.045 * dt;
+      }
+      let dmg = 0;
+      for (const c of atkC) {
+        if (Math.hypot((c.mx == null ? c.x : c.mx) - f.x, (c.my == null ? c.y : c.my) - f.y) > 260 * fsN) continue;
+        const kit = SIEGE_KIT[c.kit] || SIEGE_KIT["\u306A\u3057"];
+        for (const q of c.squads) {
+          if (q.men <= 0) continue;
+          const dq = Math.hypot(q.x - f.x, q.y - f.y);
+          const st = ARM_STATS[q.type];
+          if (dq < f.r + 30 * fsN) dmg += q.men * 0.011 * dt;
+          else if (st.range > 0 && dq < st.range * 1.05) dmg += q.men * 42e-4 * (kit.shoot || 1) * dt;
+        }
+      }
+      if (dmg > 0) {
+        f.hp -= dmg;
+        if (f.hp <= 0) {
+          f.hp = 0;
+          b.mapDirty = true;
+          MAP.nav = null;
+          b.log.push({ t: b.t, text: `${f.name}\u3092\u5D29\u3057\u305F\u3002` });
+          if (f.kind === "\u77E2\u5009") {
+            for (const c of atkC) c.morale = Math.min(100, c.morale + 3);
+          } else {
+            for (const c of defC) c.morale -= 8;
+            for (const c of atkC) c.morale = Math.min(100, c.morale + 5);
+          }
+        }
+      }
+    }
+    let deepest = -1;
+    for (const l of MAP.layers) if (l.gates.some((g) => g.broken)) deepest = Math.max(deepest, l.i);
+    const bw = deepest + 1, tw = MAP.layers.length;
+    const hon = MAP.layers[MAP.layers.length - 1];
+    const inL = (i) => atkC.some((c) => inRect((c.mx == null ? c.x : c.mx) - MAP.cx, (c.my == null ? c.y : c.my) - MAP.cy, MAP.layers[i].hw, MAP.layers[i].hh));
+    const deep = inL(MAP.layers.length - 1) ? 0.44 : MAP.layers.length > 2 && inL(MAP.layers.length - 2) ? 0.22 : 0.06;
+    const fLost = MAP.fac.length ? MAP.fac.filter((f) => f.hp <= 0).length / MAP.fac.length : 0;
+    b.press = clamp(bw / tw * 0.52 + fLost * 0.14 + deep, 0, 1);
+    const cap = 100 - 82 * b.press;
+    for (const c of defC) {
+      c.morale = Math.min(c.morale, cap);
+      if (inL(MAP.layers.length - 1)) c.morale = Math.max(0, c.morale - 2.6 * dt);
+    }
+  }
+  const CS = 90;
+  const grids = { P: /* @__PURE__ */ new Map(), E: /* @__PURE__ */ new Map() };
+  for (const c of alive) {
+    if (c.ambush && !c.revealed) continue;
+    const gmap = grids[c.side];
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const k = (q.x / CS | 0) + "," + (q.y / CS | 0);
+      let arr = gmap.get(k);
+      if (!arr) {
+        arr = [];
+        gmap.set(k, arr);
+      }
+      arr.push([c, q]);
+    }
+  }
+  const wallBetween = (x1, y1, x2, y2) => {
+    if (!MAP) return false;
+    if (Math.abs(x2 - x1) + Math.abs(y2 - y1) < 22) return false;
+    for (let k = 1; k <= 2; k++) {
+      const t2 = k / 3;
+      const tt = terrainAt(x1 + (x2 - x1) * t2, y1 + (y2 - y1) * t2);
+      if (tt === "wall" || tt === "gate" || tt === "tower") return true;
+    }
+    return false;
+  };
+  const nearestFoeSquad = (c, q) => {
+    const gmap = grids[c.side === "P" ? "E" : "P"];
+    const cx = q.x / CS | 0, cy = q.y / CS | 0;
+    let best = null, bd = 1e9;
+    for (let ring = 0; ring <= 3; ring++) {
+      for (let dy = -ring; dy <= ring; dy++) for (let dx = -ring; dx <= ring; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+        const arr = gmap.get(cx + dx + "," + (cy + dy));
+        if (!arr) continue;
+        for (const [f, e] of arr) {
+          const d = Math.hypot(e.x - q.x, e.y - q.y);
+          if (d < bd) {
+            bd = d;
+            best = { f, e, d };
+          }
+        }
+      }
+      if (best && bd <= ring * CS) break;
+    }
+    if (best && MAP && wallBetween(q.x, q.y, best.e.x, best.e.y)) return [null, 1e9];
+    return best ? [best, bd] : [null, 1e9];
+  };
+  for (const c of alive) {
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const st = ARM_STATS[q.type];
+      const [melee, mdist] = nearestFoeSquad(c, q);
+      q.foe = melee ? { x: melee.e.x, y: melee.e.y, d: mdist } : null;
+      q.link = null;
+      if (!melee) continue;
+      const terr = TERRAIN[terrainAt(q.x, q.y)];
+      if (mdist < 22) {
+        q.engaged = true;
+        melee.e.engaged = true;
+        q.link = { x: melee.e.x, y: melee.e.y };
+        const pull = 2.2 * dt;
+        const ax = (melee.e.x - q.x) / Math.max(1, mdist) * pull;
+        const ay = (melee.e.y - q.y) / Math.max(1, mdist) * pull;
+        if (passable(q.x + ax, q.y + ay)) {
+          q.x += ax;
+          q.y += ay;
+        } else if (passable(q.x + ax, q.y)) q.x += ax;
+        else if (passable(q.x, q.y + ay)) q.y += ay;
+        if (b.fx.length < 160 && Math.random() < dt * 2.4 && (c.side === "P" || c.seen)) {
+          b.fx.push({
+            k: "clash",
+            x: (q.x + melee.e.x) / 2,
+            y: (q.y + melee.e.y) / 2,
+            t: 0,
+            life: 0.34,
+            big: c.chargeT > 0
+          });
+        }
+        const ang = Math.atan2(q.y - melee.e.y, q.x - melee.e.x);
+        const rel = Math.abs((ang - melee.e.facing + Math.PI * 3) % (Math.PI * 2) - Math.PI);
+        const flank = rel > 2.2 ? 2 : rel > 1.1 ? 1.45 : 1;
+        const charge = q.type === "kiba" && terr.charge ? 1 + c.gen.valor / 260 : 1;
+        const push = c.chargeT > 0 && terr.charge ? 1.3 : 1;
+        const guard = melee.f.order === "\u5B88\u5099" ? 0.85 : 1;
+        applyDamage(
+          b,
+          melee.f,
+          melee.e,
+          st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * (1 - c.fatigue / 260) * dt,
+          flank,
+          c.gen.valor * (c.chargeT > 0 ? 1.2 : 1)
+        );
+      } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
+        if (melee.f.seen || mdist < TERRAIN[terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
+          q.cool = st.rof;
+          q.aim = { x: melee.e.x, y: melee.e.y, t: b.t };
+          if (b.fx.length < 160 && (c.side === "P" || c.seen)) {
+            b.fx.push({
+              k: q.type === "teppo" ? "shot" : "arrow",
+              x: q.x,
+              y: q.y,
+              x2: melee.e.x,
+              y2: melee.e.y,
+              t: 0,
+              life: q.type === "teppo" ? 0.3 : 0.45
+            });
+          }
+          const wet = q.type === "teppo" ? WEATHER[b.weather].teppo : 1;
+          applyDamage(b, melee.f, melee.e, st.vol * wet * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor);
+        }
+      }
+    }
+  }
+  for (const c of alive) {
+    const ratio = corpsMen(c) / Math.max(1, corpsMax(c));
+    const fighting = c.squads.some((q) => q.engaged);
+    if (c.reformT > 0) {
+      c.reformT -= dt;
+      for (const q of c.squads) q.cohesion = Math.max(0, q.cohesion - 1.6 * dt);
+    }
+    if (c.chargeT > 0) {
+      c.chargeT -= dt;
+      const wear = c.formation === "\u92D2\u77E2" ? 1 : 2.2;
+      for (const q of c.squads) q.cohesion = Math.max(0, q.cohesion - wear * dt);
+      if (c.chargeT <= 0) {
+        c.chargeT = 0;
+        if (c.order === "\u7A81\u6483") c.order = "\u63A5\u6226";
+      }
+    }
+    if (c.order === "\u5B88\u5099") for (const q of c.squads) q.cohesion = Math.min(100, q.cohesion + 1.1 * dt);
+    const front = c.squads.filter((q) => !q.reserve && q.men > 0).length;
+    const res = c.squads.filter((q) => q.reserve && q.men > 0);
+    if (res.length && front < c.squads.filter((q) => !q.reserve).length * 0.55) {
+      res[0].reserve = false;
+      if (!c.feats.includes("\u4E88\u5099\u6295\u5165")) c.feats.push("\u4E88\u5099\u6295\u5165");
+    }
+    if (c.gen.lord && !c.detach) {
+      const near2 = alive.some((o) => o.side !== c.side && Math.hypot(o.x - c.x, o.y - c.y) < 190);
+      if (near2 || fighting) c.frontTime = (c.frontTime || 0) + dt;
+    }
+    c.fatigue = clamp(c.fatigue + (fighting ? 1.1 : c.order === "\u5F85\u6A5F" ? -1.4 : 0) * dt, 0, 100);
+    if (c.pinch >= 2) c.morale -= (c.pinch - 1) * 0.22 * dt;
+    const near = alive.some((o) => o.side === c.side && o.gen.lord && Math.hypot(o.x - c.x, o.y - c.y) < 260);
+    c.morale = clamp(c.morale + ((ratio - 0.6) * 1.2 + (near ? 0.35 : 0) + c.gen.lead / 300 - 0.25) * dt, 0, 100);
+    if (!c.routed && !c.boxed && fighting) {
+      if ((c.pinch || 0) >= 3) {
+        c.boxed = true;
+        c.formation = "\u65B9\u9663";
+        placeSquads(c, false);
+        b.log.push({ t: b.t, text: `${c.name}\u968A\u304C\u5305\u56F2\u3055\u308C\u304B\u3051\u3001\u65B9\u9663\u3067\u5BC6\u96C6\u9632\u5FA1\u306B\u79FB\u3063\u305F\u3002` });
+        c.feats.push("\u5BC6\u96C6\u9632\u5FA1");
+      }
+    }
+    if (!c.routed && (c.morale < 15 || ratio < 0.25)) {
+      c.routed = true;
+      c.order = "\u6557\u8D70";
+      notify(b, `${c.gen.name}\u968A\u304C\u5D29\u308C\u3001\u6557\u8D70\u3057\u305F\u3002`, c.side === "P" ? "bad" : "good");
+      c.tx = c.x;
+      c.ty = c.side === "P" ? FIELD.h + 120 : -120;
+      b.log.push({ t: b.t, text: `${c.name}\u968A\u304C\u5D29\u308C\u3001\u6557\u8D70\u306B\u79FB\u3063\u305F\u3002` });
+      for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 9;
+    }
+    if (c.routed || c.withdraw) {
+      c.ty = c.side === "P" ? FIELD.h + 120 : -120;
+      if (c.y > FIELD.h + 60 || c.y < -60 || c.x > FIELD.w + 60 || c.x < -60) c.dead = true;
+    }
+    if (corpsMen(c) <= 0 && !c.destroyed) {
+      c.destroyed = true;
+      c.order = "\u5F85\u6A5F";
+      notify(b, `${c.gen.name}\u968A\u306F\u58CA\u6EC5\u3057\u305F\u3002`, c.side === "P" ? "bad" : "good");
+      b.log.push({ t: b.t, text: `${c.name}\u968A\u306F\u58CA\u6EC5\u3057\u305F\u3002` });
+    }
+  }
+  const pm = b.corps.filter((c) => c.side === "P" && !c.dead && !c.routed && !c.withdraw).reduce((s2, c) => s2 + corpsMen(c), 0);
+  const em = b.corps.filter((c) => c.side === "E" && !c.dead && !c.routed && !c.withdraw).reduce((s2, c) => s2 + corpsMen(c), 0);
+  if (MAP) {
+    const h = MAP.layers[MAP.layers.length - 1];
+    const inHon = (c) => c.squads.some((q) => q.men > 0 && inRect(q.x - MAP.cx, q.y - MAP.cy, h.hw, h.hh));
+    const atk = b.corps.some((c) => !c.dead && !c.destroyed && !c.routed && c.side === b.attacker && inHon(c));
+    const def = b.corps.some((c) => !c.dead && !c.destroyed && !c.routed && c.side !== b.attacker && inHon(c));
+    if (atk && !def) {
+      b.hold = (b.hold || 0) + dt;
+      if (b.hold > 12) {
+        b.phase = "over";
+        b.result = b.attacker;
+        b.captured = true;
+        notify(b, "\u672C\u4E38\u3092\u62BC\u3055\u3048\u305F\u3002\u57CE\u306F\u843D\u3061\u305F\u3002", b.attacker === "P" ? "good" : "bad");
+        b.log.push({ t: b.t, text: "\u672C\u4E38\u3092\u62BC\u3055\u3048\u305F\u3002\u57CE\u306F\u843D\u3061\u305F\u3002" });
+        return;
+      }
+    } else b.hold = 0;
+  }
+  if (b.t >= b.dusk) {
+    b.phase = "over";
+    b.orderly = true;
+    if (MAP) {
+      b.result = b.attacker === "P" ? "E" : "P";
+      b.log.push({ t: b.t, text: "\u65E5\u304C\u66AE\u308C\u305F\u3002\u57CE\u306F\u843D\u3061\u305A\u3001\u5BC4\u305B\u624B\u306F\u56F2\u307F\u3078\u623B\u3063\u305F\u3002" });
+    } else {
+      b.result = "\u65E5\u6CA1";
+      b.log.push({ t: b.t, text: "\u65E5\u304C\u843D\u3061\u305F\u3002\u4E21\u8ECD\u3068\u3082\u5175\u3092\u9000\u3044\u305F\u3002" });
+    }
+    return;
+  }
+  if (b.retreat === "P" && pm === 0) {
+    b.phase = "over";
+    b.result = "E";
+    b.orderly = true;
+    return;
+  }
+  if (MAP) {
+    const atkSide = b.attacker, defSide = atkSide === "P" ? "E" : "P";
+    const atkEff = atkSide === "P" ? pm : em, defEff = atkSide === "P" ? em : pm;
+    const atk0 = atkSide === "P" ? b.initial.P : b.initial.E;
+    const def0 = atkSide === "P" ? b.initial.E : b.initial.P;
+    if (atkEff <= atk0 * 0.3 || atkEff === 0) {
+      b.phase = "over";
+      b.result = defSide;
+      b.orderly = true;
+      notify(b, "\u5BC4\u305B\u624B\u306F\u653B\u3081\u304D\u308C\u305A\u3001\u56F2\u307F\u3078\u9000\u3044\u305F\u3002", defSide === "P" ? "good" : "bad");
+      return;
+    }
+    if (defEff <= def0 * 0.22 || defEff === 0) {
+      b.phase = "over";
+      b.result = atkSide;
+      b.opened = true;
+      notify(b, "\u57CE\u65B9\u306F\u652F\u3048\u304D\u308C\u305A\u3001\u57CE\u3092\u958B\u3044\u305F\u3002", atkSide === "P" ? "good" : "bad");
+      return;
+    }
+    return;
+  }
+  if (pm <= b.initial.P * 0.3 || em <= b.initial.E * 0.3 || pm === 0 || em === 0) {
+    b.phase = "over";
+    b.result = pm > em ? "P" : "E";
+  }
+}
+
+// src/ui/BattleScreen.jsx
+import React3, { useState as useState3, useRef as useRef2, useEffect as useEffect3 } from "react";
+
+// src/ui/panels.jsx
+import React2, { useState as useState2, useEffect as useEffect2, useMemo } from "react";
+function SortieDialog({ g, from, onClose, onGo }) {
+  const c = g.castles.find((x) => x.id === from);
+  const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+  const tooLow = [];
+  const [picked, setPicked] = useState2(gens.slice(0, 2).map((x) => x.id));
+  const \u884C\u304D\u5148 = useMemo(() => {
+    return g.castles.filter((x) => x.id !== from && (underMyBanner(g, c.faction, x.faction) || canAttack(g, x.id))).map((x) => ({ x, m: marchMonths(from, x.id) || 99 })).filter(({ x, m }) => {
+      if (m > 6) return false;
+      if (underMyBanner(g, c.faction, x.faction)) return true;
+      const path2 = findPath(from, x.id);
+      if (!path2) return false;
+      for (let i = 1; i < path2.length - 1; i++) {
+        const mid = g.castles.find((y) => y.id === path2[i]);
+        if (!mid) return false;
+        if (mid.faction === c.faction) continue;
+        const st = relOf(g, c.faction, mid.faction).state;
+        if (st !== "\u540C\u76DF" && st !== "\u5F93\u5C5E" && st !== "\u81E3\u5F93") return false;
+      }
+      return true;
+    }).map(({ x, m }) => ({
+      x,
+      m,
+      \u5473\u65B9: underMyBanner(g, c.faction, x.faction),
+      \u81E3\u5F93: x.faction !== c.faction && underMyBanner(g, c.faction, x.faction),
+      peril: underMyBanner(g, c.faction, x.faction) && (g.sieges.some((sg) => sg.castleId === x.id) || g.armies.some((a) => a.target === x.id && a.faction !== x.faction))
+    })).sort((a, b) => (b.peril ? 1 : 0) - (a.peril ? 1 : 0) || a.m - b.m);
+  }, [g, from, c.faction]);
+  const [to, setTo] = useState2(() => {
+    const \u6025 = \u884C\u304D\u5148.find((o) => o.peril);
+    if (\u6025) return \u6025.x.id;
+    const \u6575 = \u884C\u304D\u5148.find((o) => !o.\u5473\u65B9);
+    return (\u6575 || \u884C\u304D\u5148[0] || { x: {} }).x.id;
+  });
+  useEffect2(() => {
+    if (!\u884C\u304D\u5148.length) return;
+    if (!\u884C\u304D\u5148.some((o) => o.x.id === to)) setTo(\u884C\u304D\u5148[0].x.id);
+  }, [\u884C\u304D\u5148, to]);
+  const garrison = minGarrison(c);
+  const retSum = picked.reduce((a, id) => {
+    const x = gens.find((q) => q.id === id);
+    return a + (x ? x.retinue : 0);
+  }, 0);
+  const cmdLimit = picked.reduce((a, id) => {
+    const x = gens.find((q) => q.id === id);
+    return a + (x ? troopLimit(x, g) : 0);
+  }, 0);
+  const availLocal = Math.max(0, Math.min(
+    c.local,
+    c.local + gens.reduce((a, x) => a + x.retinue, 0) - garrison - retSum,
+    Math.max(0, cmdLimit - retSum)
+    // 将の器を超えては率いられぬ
+  ));
+  const [local, setLocal] = useState2(0);
+  const [aid, setAid] = useState2([]);
+  useEffect2(() => {
+    setLocal(Math.round(availLocal * 0.6));
+  }, [picked.length]);
+  const offers = to ? reinforceOffers(g, from, to) : [];
+  const useLocal = Math.min(local, availLocal);
+  const men = retSum + useLocal;
+  const food = Math.round(men * 0.6);
+  const path = findPath(from, to);
+  const dist = path ? path.slice(1).reduce((a, n, i) => {
+    const r = roadBetween(path[i], n);
+    return a + (r ? r[2] / ROAD_SPEED[r[3]] : 10);
+  }, 0) : 0;
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, "\u51FA\u9663\u3000", c.name), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 10 } }, "\u7DCF\u5927\u5C06\u306F", c.name, "\u306E\u57CE\u4E3B\u3002\u76EE\u6A19\u306F\u81EA\u9818\u306E\u3044\u305A\u308C\u304B\u306E\u57CE\u3068\u8857\u9053\u3067\u3064\u306A\u304C\u308B\u57CE\u306B\u9650\u308B\u3002"), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u76EE\u6A19\u62E0\u70B9"), /* @__PURE__ */ React2.createElement("select", { className: "sel", style: { width: "100%" }, value: to, onChange: (e) => setTo(e.target.value) }, \u884C\u304D\u5148.map(({ x, m, peril, \u5473\u65B9, \u81E3\u5F93 }) => /* @__PURE__ */ React2.createElement("option", { key: x.id, value: x.id }, `${peril ? "\u3010\u6025\u3011" : \u81E3\u5F93 ? "\uFF3B\u81E3\u5F93\uFF3D" : \u5473\u65B9 ? "\uFF3B\u5473\u65B9\uFF3D" : "\uFF3B\u6575\uFF3D"}${x.name}\uFF08${g.factions[x.faction].name}\uFF09\u3000\u7D04${m}\u304B\u6708`))), !\u884C\u304D\u5148.length && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 6 } }, "\u5175\u3092\u51FA\u305B\u308B\u5148\u304C\u306A\u3044\u3002\u516D\u304B\u6708\u3088\u308A\u9060\u3044\u57CE\u3078\u306F\u3001\u307E\u305A\u624B\u524D\u3092\u62BC\u3055\u3048\u306D\u3070\u306A\u3089\u306C\u3002"), (() => {
+    const t2 = g.castles.find((x) => x.id === to);
+    if (!t2 || !underMyBanner(g, c.faction, t2.faction)) return null;
+    const sieged = g.sieges.some((sg) => sg.castleId === t2.id);
+    const coming = g.armies.filter((a) => a.target === t2.id && a.faction !== c.faction);
+    if (!sieged && !coming.length) return null;
+    return /* @__PURE__ */ React2.createElement("div", { style: {
+      fontSize: 12.5,
+      color: "#B0483C",
+      marginTop: 6,
+      lineHeight: 1.8,
+      borderLeft: "3px solid #B0483C",
+      paddingLeft: 10
+    } }, /* @__PURE__ */ React2.createElement("b", null, t2.name, "\u306F\u5371\u3046\u3044\u3002"), /* @__PURE__ */ React2.createElement("br", null), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, sieged ? "\u56F2\u307E\u308C\u3066\u3044\u307E\u3059\u3002\u7740\u3051\u3070\u56F2\u307F\u3092\u89E3\u304F\u305F\u3081\u306E\u91CE\u6226\u306B\u306A\u308A\u307E\u3059\u3002" : "", coming.length ? `${coming.map((a) => g.factions[a.faction].name).join("\u30FB")}\u306E\u8ECD\u304C\u5411\u304B\u3063\u3066\u3044\u307E\u3059\u3002` : "", /* @__PURE__ */ React2.createElement("br", null), "\u63F4\u8ECD\u3068\u3057\u3066\u5165\u308C\u3070\u3001\u57CE\u306E\u5B88\u308A\u306B\u52A0\u308F\u308A\u307E\u3059\u3002"));
+  })(), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, marginTop: 6 } }, "\u7D4C\u8DEF\uFF1A", path ? path.map((n) => nodeById(n).name).join(" \u2192 ") : "\u7D4C\u8DEF\u306A\u3057", "\u3000\uFF0F\u3000\u6240\u8981 \u7D04", Math.max(1, Math.ceil(dist / 300)), "\u304B\u6708"), (() => {
+    const t = g.castles.find((x) => x.id === to);
+    if (!t || !underMyBanner(g, c.faction, t.faction)) return null;
+    return /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 4 } }, t.faction === c.faction ? "\u5473\u65B9\u306E\u57CE\u3067\u3059\u3002\u5230\u7740\u3057\u3066\u3082\u5408\u6226\u306F\u8D77\u304D\u305A\u3001\u5175\u306F\u57CE\u3078\u5408\u6D41\u3057\u307E\u3059\u3002" : "\u81E3\u5F93\u306E\u5BB6\u306E\u57CE\u3067\u3059\u3002\u7740\u3044\u305F\u5175\u306F\u305D\u306E\u57CE\u306E\u5B88\u308A\u306B\u52A0\u308F\u308A\u3001\u5C06\u306F\u672C\u56FD\u3078\u5E30\u308A\u307E\u3059\u3002");
+  })(), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u53C2\u52A0\u6B66\u5C06\uFF08\u5148\u982D\u304C\u7DCF\u5927\u5C06\uFF09"), gens.map((x) => /* @__PURE__ */ React2.createElement("label", { key: x.id, style: { display: "flex", gap: 9, alignItems: "center", padding: "5px 0", fontSize: 13 } }, /* @__PURE__ */ React2.createElement(
+    "input",
+    {
+      type: "checkbox",
+      checked: picked.includes(x.id),
+      onChange: () => setPicked((p) => p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id])
+    }
+  ), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 5 } }, rankName(x, g))), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, "\u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, "\uFF0F\u76F4\u5C5E", fmt(x.retinue)))), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u7387\u3044\u3089\u308C\u308B\u5175\u306B\u306F\u8EAB\u5206\u306E\u9650\u308A\u304C\u3042\u308A\u307E\u3059\u3002 \u7269\u982D\u306F\u4E94\u767E\u4EBA\u3001\u4F8D\u5927\u5C06\u306F\u5343\u516D\u767E\u4EBA\u3001\u5BB6\u8001\u306F\u4E8C\u5343\u4E94\u767E\u4EBA\u3001\u5BBF\u8001\u306F\u56DB\u5343\u4EBA\u307E\u3067\u3002", (() => {
+    const sum = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean).reduce((a, x) => a + troopLimit(x, g), 0);
+    return /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("br", null), "\u9078\u3093\u3060\u5C06\u3067\u7387\u3044\u3089\u308C\u308B\u306E\u306F ", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, fmt(sum), "\u4EBA"), "\u307E\u3067\u3002");
+  })()), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5730\u57DF\u5BB6\u81E3\u56E3\u306E\u540C\u884C"), /* @__PURE__ */ React2.createElement("input", { type: "range", min: "0", max: availLocal, value: useLocal, onChange: (e) => setLocal(+e.target.value), style: { width: "100%" } }), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u540C\u884C"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(useLocal), " / ", fmt(availLocal), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306B\u6B8B\u308B\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(c.local - useLocal + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0)), " \u4EBA\uFF08\u6700\u4F4E ", fmt(garrison), "\uFF09")), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5BC4\u9A0E\u3092\u6C42\u3081\u308B\uFF08GDD 7.3\uFF09"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.6 } }, "\u4E00\u65B9\u306E\u9663\u306B\u4E26\u3079\u3089\u308C\u308B\u306E\u306F", MAX_CORPS, "\u968A\u307E\u3067\uFF08\u95A2\u30F6\u539F\u306E\u53C2\u9663\u6570\u306B\u5408\u308F\u305B\u305F\u4E0A\u9650\uFF09\u3002 \u672C\u968A\u3067", picked.length, "\u968A\u3092\u4F7F\u3046\u306E\u3067\u3001\u5BC4\u9A0E\u306F\u6B8B\u308A", Math.max(0, MAX_CORPS - picked.length), "\u968A\u307E\u3067\u52A0\u308F\u308C\u308B\u3002 \u4E00\u968A\u304C\u62B1\u3048\u3089\u308C\u308B\u5175\u306F", fmt(MAX_CORPS_MEN), "\u4EBA\u307E\u3067\u3067\u3001\u3042\u3075\u308C\u305F\u5206\u306F\u968A\u3068\u3057\u3066\u7ACB\u3066\u3089\u308C\u306A\u3044\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 } }, /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u81EA\u5BB6\u3068\u81E3\u5F93\u306E\u5BB6"), "\u306B\u306F\u4E0B\u77E5\u304C\u901A\u308A\u3001\u5FC5\u305A\u51FA\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u540C\u76DF\u30FB\u5F93\u5C5E\u306E\u5BB6"), "\u3078\u306F\u983C\u3080\u3060\u3051\u3067\u3001\u5FDC\u3058\u308B\u304B\u5426\u304B\u306F\u76F8\u624B\u304C\u6C7A\u3081\u307E\u3059\u3002"), offers.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u63F4\u8ECD\u3092\u6C42\u3081\u3089\u308C\u308B\u76F8\u624B\u304C\u3044\u306A\u3044\u3002"), offers.map((o) => /* @__PURE__ */ React2.createElement("label", { key: o.castleId, style: { display: "flex", gap: 8, alignItems: "flex-start", padding: "4px 0", fontSize: 12.5 } }, /* @__PURE__ */ React2.createElement(
+    "input",
+    {
+      type: "checkbox",
+      disabled: !!o.reason || !aid.includes(o.castleId) && picked.length + aid.length >= MAX_CORPS,
+      checked: aid.includes(o.castleId),
+      onChange: () => setAid((p2) => p2.includes(o.castleId) ? p2.filter((y) => y !== o.castleId) : [...p2, o.castleId])
+    }
+  ), /* @__PURE__ */ React2.createElement("span", null, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 14 } }, o.name), /* @__PURE__ */ React2.createElement("span", { className: "pill", style: { background: g.factions[o.faction].color, marginLeft: 6 } }, o.kind), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, marginLeft: 6 } }, o.reason ? o.reason : `\u7D04${fmt(o.men)}\u4EBA\uFF0F\u5230\u7740\u307E\u3067\u7D04${o.months}\u304B\u6708` + (o.\u6307\u56F3 ? "\uFF0F\u4E0B\u77E5\u304C\u901A\u308B" : `\uFF0F\u5FDC\u3058\u308B\u898B\u8FBC\u307F${Math.round(o.chance * 100)}%`))))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5175\u79D1\u5185\u8A33\uFF0850\u4EBA\u7D44\u306B\u5206\u5272\uFF09"), /* @__PURE__ */ React2.createElement("div", { className: "g2" }, ARMS.map((a) => /* @__PURE__ */ React2.createElement("div", { className: "row", key: a.key }, /* @__PURE__ */ React2.createElement("span", null, a.label), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(men * a.ratio), "\u4EBA\uFF0F", Math.ceil(men * a.ratio / 50), "\u7D44")))), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u643A\u884C\u5175\u7CE7"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(food), " \u77F3\uFF08\u57CE\u6B8B ", fmt(c.food - food), "\uFF09")), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 16 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onClose }, "\u53D6\u308A\u3084\u3081"), /* @__PURE__ */ React2.createElement(
+    "button",
+    {
+      className: "btn dark",
+      style: { flex: 2 },
+      disabled: !to || !path || !picked.length || men < 200 || c.food < food,
+      onClick: () => onGo({
+        from,
+        to,
+        gens: picked,
+        local: useLocal,
+        food,
+        reinforce: offers.filter((o) => aid.includes(o.castleId))
+      })
+    },
+    fmt(men),
+    "\u4EBA\u3067\u9032\u767A"
+  )), c.food < food && /* @__PURE__ */ React2.createElement("div", { style: { color: "#B0483C", fontSize: 12, marginTop: 7 } }, "\u5175\u7CE7\u304C\u8DB3\u308A\u306A\u3044\u3002\u53CE\u7A6B\u3092\u5F85\u3064\u304B\u3001\u958B\u58BE\u3092\u9032\u3081\u308B\u5FC5\u8981\u304C\u3042\u308B\u3002")));
+}
+function SallyDialog({ g, castleId, foeId, onClose, onGo }) {
+  const c = g.castles.find((x) => x.id === castleId);
+  const foe = g.armies.find((x) => x.id === foeId);
+  const gens = g.generals.filter((x) => x.at === castleId && x.faction === c.faction && !x.captive);
+  const [picked, setPicked] = useState2(gens.slice(0, 2).map((x) => x.id));
+  const \u5B88\u308A = minGarrison(c);
+  const retSum = picked.reduce((a, id) => {
+    const x = gens.find((q) => q.id === id);
+    return a + (x ? x.retinue : 0);
+  }, 0);
+  const \u9650\u308A = picked.reduce((a, id) => {
+    const x = gens.find((q) => q.id === id);
+    return a + (x ? troopLimit(x, g) : 0);
+  }, 0);
+  const \u51FA\u305B\u308B = Math.max(0, Math.min(
+    c.local,
+    c.local + gens.reduce((a, x) => a + x.retinue, 0) - \u5B88\u308A - retSum,
+    Math.max(0, \u9650\u308A - retSum)
+  ));
+  const [local, setLocal] = useState2(0);
+  useEffect2(() => {
+    setLocal(Math.round(\u51FA\u305B\u308B * 0.7));
+  }, [picked.length]);
+  const \u51FA\u3059 = Math.min(local, \u51FA\u305B\u308B);
+  const \u5175 = retSum + \u51FA\u3059;
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, c.name, "\u3000\u8A0E\u3063\u3066\u51FA\u308B\u304B"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 } }, "\u5F8C\u8A70\u304C\u56F2\u307F\u306E\u5916\u306B\u7740\u304D\u307E\u3057\u305F\u3002", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u3044\u307E\u9580\u3092\u958B\u3051\u3070\u3001\u5BC4\u305B\u624B\u3092\u5185\u3068\u5916\u304B\u3089\u631F\u3081\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("br", null), "\u57CE\u306B\u7C60\u3082\u3063\u305F\u307E\u307E\u3067\u3082\u69CB\u3044\u307E\u305B\u306C\u3002\u305D\u306E\u5834\u5408\u3001\u5F8C\u8A70\u3060\u3051\u3067\u56F2\u307F\u3092\u885D\u304D\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5BC4\u305B\u624B\uFF08", g.factions[foe ? foe.faction : c.faction].name, "\uFF09"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(foe ? foe.men : 0), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306E\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(c.local + gens.reduce((a, x) => a + x.retinue, 0)), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u8A0E\u3063\u3066\u51FA\u308B\u6B66\u5C06"), gens.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u57CE\u306B\u5C06\u304C\u3044\u306A\u3044\u3002"), gens.map((x) => /* @__PURE__ */ React2.createElement("label", { key: x.id, style: { display: "flex", gap: 9, alignItems: "center", padding: "5px 0", fontSize: 13 } }, /* @__PURE__ */ React2.createElement(
+    "input",
+    {
+      type: "checkbox",
+      checked: picked.includes(x.id),
+      onChange: () => setPicked((p) => p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id])
+    }
+  ), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 5 } }, rankName(x, g))), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, "\u7D71", x.lead, " \u6B66", x.valor, "\uFF0F\u76F4\u5C5E", fmt(x.retinue)))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u9023\u308C\u3066\u51FA\u308B\u5730\u57DF\u5BB6\u81E3\u56E3"), /* @__PURE__ */ React2.createElement("input", { type: "range", min: "0", max: \u51FA\u305B\u308B, value: \u51FA\u3059, onChange: (e) => setLocal(+e.target.value), style: { width: "100%" } }), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u9023\u308C\u3066\u51FA\u308B"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u51FA\u3059), " / ", fmt(\u51FA\u305B\u308B), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306B\u6B8B\u308B\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(c.local - \u51FA\u3059 + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0)), " \u4EBA\uFF08\u6700\u4F4E ", fmt(\u5B88\u308A), "\uFF09")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u5B88\u5099\u306E\u6700\u4F4E\u6570\u306F\u57CE\u306B\u6B8B\u308A\u307E\u3059\u3002\u9580\u3092\u958B\u3044\u3066\u51FA\u305F\u5175\u306F\u3001\u6226\u306E\u5F8C\u306B\u57CE\u3078\u623B\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 16 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onClose }, "\u7C60\u3082\u3063\u305F\u307E\u307E"), /* @__PURE__ */ React2.createElement(
+    "button",
+    {
+      className: "btn dark",
+      style: { flex: 2 },
+      disabled: !picked.length || \u5175 < 100,
+      onClick: () => onGo({ gens: picked, local: \u51FA\u3059 })
+    },
+    fmt(\u5175),
+    "\u4EBA\u3067\u8A0E\u3063\u3066\u51FA\u308B"
+  ))));
+}
+function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
+  const \u7684 = g.castles.find((x) => x.id === target) || nodeById(target) || {};
+  const offers = useMemo(() => reinforceOffers(g, target, target), [g, target]);
+  const \u6307\u56F3\u7D44 = offers.filter((o) => o.\u6307\u56F3);
+  const \u983C\u3080\u7D44 = offers.filter((o) => !o.\u6307\u56F3);
+  const [\u9078\u3073, set\u9078\u3073] = useState2(() => {
+    const m = {};
+    for (const o of \u6307\u56F3\u7D44) m[o.castleId] = { on: false, gens: o.gens.slice(0, 1).map((x) => x.id), local: 0 };
+    return m;
+  });
+  const [\u983C\u307F, set\u983C\u307F] = useState2([]);
+  const \u57CE\u306E\u5024 = (o) => \u9078\u3073[o.castleId] || { on: false, gens: [], local: 0 };
+  const \u76F4\u3059 = (id, p) => set\u9078\u3073((m) => ({ ...m, [id]: { ...m[id] || { on: false, gens: [], local: 0 }, ...p } }));
+  const \u51FA\u305B\u308B = (o) => {
+    const v = \u57CE\u306E\u5024(o);
+    const ret = o.gens.filter((x) => v.gens.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
+    const \u5668 = o.gens.filter((x) => v.gens.includes(x.id)).reduce((a, x) => a + x.limit, 0);
+    return Math.max(0, Math.min(o.local, o.avail - ret, Math.max(0, \u5668 - ret)));
+  };
+  const \u5175\u6570 = (o) => {
+    const v = \u57CE\u306E\u5024(o);
+    const ret = o.gens.filter((x) => v.gens.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
+    return ret + Math.min(v.local, \u51FA\u305B\u308B(o));
+  };
+  const \u7DCF\u52E2 = \u6307\u56F3\u7D44.filter((o) => \u57CE\u306E\u5024(o).on).reduce((a, o) => a + \u5175\u6570(o), 0);
+  const \u968A\u6570 = \u6307\u56F3\u7D44.filter((o) => \u57CE\u306E\u5024(o).on).reduce((a, o) => a + \u57CE\u306E\u5024(o).gens.length, 0) + \u983C\u307F.length;
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, title || `\u63F4\u8ECD\u3092\u547C\u3076\u3000${\u7684.name || ""}`), note && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 } }, note), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u4E0B\u77E5\u306E\u901A\u308B\u57CE\uFF08\u81EA\u5BB6\u30FB\u81E3\u5F93\uFF09"), \u6307\u56F3\u7D44.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u4E0B\u77E5\u306E\u901A\u308B\u57CE\u304C\u306A\u3044\u3002"), \u6307\u56F3\u7D44.map((o) => {
+    const v = \u57CE\u306E\u5024(o);
+    const \u4E0A\u9650 = \u51FA\u305B\u308B(o);
+    return /* @__PURE__ */ React2.createElement("div", { key: o.castleId, style: { borderLeft: `3px solid ${v.on ? U.text : U.line}`, paddingLeft: 10, margin: "8px 0" } }, /* @__PURE__ */ React2.createElement("label", { style: { display: "flex", gap: 9, alignItems: "center", fontSize: 13 } }, /* @__PURE__ */ React2.createElement("input", { type: "checkbox", checked: v.on, onChange: () => \u76F4\u3059(o.castleId, { on: !v.on }) }), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, o.name), /* @__PURE__ */ React2.createElement("span", { className: "pill", style: { background: g.factions[o.faction].color } }, o.kind), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, "\u5230\u7740\u307E\u3067\u7D04", o.months, "\u304B\u6708\uFF0F\u51FA\u305B\u308B\u5175 ", fmt(o.avail), "\u4EBA")), v.on && /* @__PURE__ */ React2.createElement("div", { style: { marginTop: 6 } }, o.gens.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: "#B0483C" } }, "\u3053\u306E\u57CE\u306B\u5C06\u304C\u3044\u306A\u3044\u3002"), o.gens.map((x) => /* @__PURE__ */ React2.createElement("label", { key: x.id, style: { display: "flex", gap: 8, alignItems: "center", padding: "3px 0", fontSize: 12.5 } }, /* @__PURE__ */ React2.createElement(
+      "input",
+      {
+        type: "checkbox",
+        checked: v.gens.includes(x.id),
+        onChange: () => \u76F4\u3059(o.castleId, { gens: v.gens.includes(x.id) ? v.gens.filter((y) => y !== x.id) : [...v.gens, x.id] })
+      }
+    ), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 14 } }, x.name), /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim } }, x.rank), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, "\u7D71", x.lead, " \u6B66", x.valor, "\uFF0F\u76F4\u5C5E", fmt(x.retinue)))), /* @__PURE__ */ React2.createElement(
+      "input",
+      {
+        type: "range",
+        min: "0",
+        max: \u4E0A\u9650,
+        value: Math.min(v.local, \u4E0A\u9650),
+        onChange: (e) => \u76F4\u3059(o.castleId, { local: +e.target.value }),
+        style: { width: "100%" }
+      }
+    ), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u9023\u308C\u3066\u884C\u304F\u5730\u57DF\u5BB6\u81E3\u56E3"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(Math.min(v.local, \u4E0A\u9650)), " / ", fmt(\u4E0A\u9650), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u3053\u306E\u57CE\u304B\u3089"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u5175\u6570(o)), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim } }, "\u5B88\u5099\u306E\u6700\u4F4E\u6570 ", fmt(o.garrison), "\u4EBA\u306F\u57CE\u306B\u6B8B\u308A\u307E\u3059\u3002")));
+  }), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u983C\u3080\u3060\u3051\u306E\u5BB6\uFF08\u540C\u76DF\u30FB\u5F93\u5C5E\uFF09"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 } }, "\u65D7\u306E\u4E0B\u306B\u306A\u3044\u5BB6\u306B\u306F\u3001\u3069\u306E\u5C06\u3092\u4F55\u4EBA\u3067\u3068\u307E\u3067\u306F\u6307\u56F3\u3067\u304D\u307E\u305B\u306C\u3002 \u5FDC\u3058\u308B\u304B\u5426\u304B\u3001\u3069\u308C\u3060\u3051\u51FA\u3059\u304B\u306F\u76F8\u624B\u304C\u6C7A\u3081\u307E\u3059\u3002"), \u983C\u3080\u7D44.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u983C\u3081\u308B\u76F8\u624B\u304C\u3044\u306A\u3044\u3002"), \u983C\u3080\u7D44.map((o) => /* @__PURE__ */ React2.createElement("label", { key: o.castleId, style: { display: "flex", gap: 8, alignItems: "flex-start", padding: "4px 0", fontSize: 12.5 } }, /* @__PURE__ */ React2.createElement(
+    "input",
+    {
+      type: "checkbox",
+      disabled: !!o.reason,
+      checked: \u983C\u307F.includes(o.castleId),
+      onChange: () => set\u983C\u307F((p) => p.includes(o.castleId) ? p.filter((y) => y !== o.castleId) : [...p, o.castleId])
+    }
+  ), /* @__PURE__ */ React2.createElement("span", null, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 14 } }, o.name), /* @__PURE__ */ React2.createElement("span", { className: "pill", style: { background: g.factions[o.faction].color, marginLeft: 6 } }, o.kind), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, marginLeft: 6 } }, o.reason ? o.reason : `\u7D04${fmt(o.men)}\u4EBA\uFF0F\u7D04${o.months}\u304B\u6708\uFF0F\u5FDC\u3058\u308B\u898B\u8FBC\u307F${Math.round(o.chance * 100)}%`)))), /* @__PURE__ */ React2.createElement("div", { className: "row", style: { marginTop: 10 } }, /* @__PURE__ */ React2.createElement("span", null, "\u5DEE\u3057\u5411\u3051\u308B\u7DCF\u52E2\uFF08\u4E0B\u77E5\u306E\u5206\uFF09"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u7DCF\u52E2), " \u4EBA\uFF0F", \u968A\u6570, "\u968A")), \u968A\u6570 > MAX_CORPS && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: "#B0483C" } }, "\u4E00\u65B9\u306E\u9663\u306B\u4E26\u3079\u3089\u308C\u308B\u306E\u306F", MAX_CORPS, "\u968A\u307E\u3067\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 16 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onClose }, "\u3084\u3081\u308B"), /* @__PURE__ */ React2.createElement(
+    "button",
+    {
+      className: "btn dark",
+      style: { flex: 2 },
+      disabled: \u7DCF\u52E2 < 100 && !\u983C\u307F.length,
+      onClick: () => onGo({
+        \u4E0B\u77E5: \u6307\u56F3\u7D44.filter((o) => \u57CE\u306E\u5024(o).on && \u5175\u6570(o) >= 100).map((o) => ({
+          castleId: o.castleId,
+          gens: \u57CE\u306E\u5024(o).gens,
+          local: Math.min(\u57CE\u306E\u5024(o).local, \u51FA\u305B\u308B(o))
+        })),
+        \u983C\u307F: \u983C\u3080\u7D44.filter((o) => \u983C\u307F.includes(o.castleId))
+      })
+    },
+    \u7DCF\u52E2 > 0 ? `${fmt(\u7DCF\u52E2)}\u4EBA\u3092\u5DEE\u3057\u5411\u3051\u308B` : "\u4F7F\u8005\u3092\u9001\u308B"
+  ))));
+}
+function MonthReport({ g, onClose }) {
+  const mine = g.castles.filter((c) => c.faction === g.player);
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, g.year, "\u5E74", g.month, "\u6708\u3000\u6708\u521D\u5831\u544A"), (() => {
+    const fc = forecast(g, g.player);
+    const warn = fc.months != null && fc.months <= 6;
+    return /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u6765\u6708\u306E\u898B\u901A\u3057"), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u91D1\u92AD"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, fmt(fc.gold), "\u8CAB", /* @__PURE__ */ React2.createElement("span", { style: { color: fc.netGold >= 0 ? "#3E7A3A" : "#B0483C" } }, fc.netGold >= 0 ? "\uFF0B" : "\u2212", fmt(Math.abs(fc.netGold))), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\uFF08\u5165", fmt(fc.inGold), "\uFF0F\u51FA", fmt(fc.outGold), "\uFF09"))), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5175\u7CE7"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, fmt(fc.food), "\u77F3", /* @__PURE__ */ React2.createElement("span", { style: { color: fc.netFood >= 0 ? "#3E7A3A" : "#B0483C" } }, fc.netFood >= 0 ? "\uFF0B" : "\u2212", fmt(Math.abs(fc.netFood))), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\uFF08\u5165", fmt(fc.inFood), "\uFF0F\u51FA", fmt(fc.outFood), "\uFF09"))), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u62B1\u3048\u308B\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, fmt(fc.troops), "\u4EBA")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: warn ? "#B0483C" : U.dim, marginTop: 4, lineHeight: 1.7 } }, fc.harvest ? "\u6765\u6708\u306F\u53CE\u7A6B\u306E\u6708\u3002\u5175\u7CE7\u304C\u4E09\u500D\u5165\u308B\u3002" : "", fc.months != null ? `\u3000\u3053\u306E\u307E\u307E\u306A\u3089\u5175\u7CE7\u306F\u7D04${fc.months}\u304B\u6708\u3067\u5C3D\u304D\u308B\u3002` : fc.netFood < 0 ? "\u3000\u5175\u7CE7\u306F\u5F53\u9762\u3082\u3064\u3002" : "\u3000\u5175\u7CE7\u306F\u5897\u3048\u3066\u3044\u308B\u3002"));
+  })(), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u9818\u5185"), mine.map((c) => {
+    const men = c.local + g.generals.filter((x) => x.at === c.id && x.faction === g.player).reduce((a, x) => a + x.retinue, 0);
+    const days = foodDays(c.food, men);
+    const pv = (g.prev || {})[c.id];
+    const D = (now, before, unit) => {
+      const d = before == null ? 0 : Math.round(now - before);
+      return /* @__PURE__ */ React2.createElement("span", { className: "num" }, fmt(now), unit, d !== 0 && /* @__PURE__ */ React2.createElement("span", { className: d < 0 ? "dn" : "up" }, " ", d > 0 ? "+" : "", fmt(d)));
+    };
+    return /* @__PURE__ */ React2.createElement("div", { key: c.id, style: { padding: "6px 0", borderBottom: `1px solid ${U.line2}` } }, /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13 } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, c.name), /* @__PURE__ */ React2.createElement("span", { style: { color: days < 60 ? "#B0483C" : U.dim, fontSize: 12 } }, "\u5175\u7CE7 ", days, " \u65E5\u5206")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, display: "flex", gap: 12, flexWrap: "wrap", marginTop: 3 } }, /* @__PURE__ */ React2.createElement("span", null, "\u77F3\u9AD8 ", D(c.koku, pv && pv.koku)), /* @__PURE__ */ React2.createElement("span", null, "\u4EBA\u53E3 ", D(c.pop, pv && pv.pop)), /* @__PURE__ */ React2.createElement("span", null, "\u5175\u7CE7 ", D(c.food, pv && pv.food)), /* @__PURE__ */ React2.createElement("span", null, "\u5175\u529B ", D(men, pv && pv.men)), /* @__PURE__ */ React2.createElement("span", null, "\u7DF4\u5EA6 ", D(Math.round(c.localTrain), pv && Math.round(pv.localTrain))), /* @__PURE__ */ React2.createElement("span", null, "\u6C11\u5FE0 ", D(Math.round(c.min), pv && Math.round(pv.min)))));
+  }), /* @__PURE__ */ React2.createElement("div", { className: "row", style: { borderTop: `1px solid ${U.line2}`, marginTop: 6, paddingTop: 6 } }, /* @__PURE__ */ React2.createElement("span", null, "\u91D1\u92AD"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, fmt(g.factions[g.player].gold), " \u8CAB", g.prevGold != null && g.factions[g.player].gold - g.prevGold !== 0 && /* @__PURE__ */ React2.createElement("span", { className: g.factions[g.player].gold - g.prevGold < 0 ? "dn" : "up" }, " ", g.factions[g.player].gold - g.prevGold > 0 ? "+" : "", fmt(g.factions[g.player].gold - g.prevGold)))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5831\u305B"), (g.monthEvents || []).length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u7279\u306B\u5831\u305B\u306F\u306A\u3044\u3002"), (g.monthEvents || []).map((e, i) => /* @__PURE__ */ React2.createElement("div", { key: i, style: { fontSize: 13, padding: "5px 0", borderBottom: `1px solid ${U.line2}` } }, e)), /* @__PURE__ */ React2.createElement("button", { className: "btn dark", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u8A55\u5B9A\u3092\u958B\u304F")));
+}
+function Chronicle({ g, onClose }) {
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 12 } }, "\u6226\u56FD\u8A18"), [...g.chronicle].reverse().map((c, i) => /* @__PURE__ */ React2.createElement("div", { key: i, style: { padding: "7px 0", borderBottom: `1px solid ${U.line2}`, fontSize: 13 } }, /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, marginRight: 10 } }, c.y, "\u5E74", c.m, "\u6708"), /* @__PURE__ */ React2.createElement("span", { className: "mn" }, c.text))), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")));
+}
+function FactionInfo({ g, onClose }) {
+  const rows = Object.values(g.factions).map((f) => {
+    const cs = g.castles.filter((c) => c.faction === f.id);
+    const gs = g.generals.filter((x) => x.faction === f.id);
+    return {
+      f,
+      koku: cs.reduce((a, c) => a + c.koku, 0),
+      men: cs.reduce((a, c) => a + c.local, 0) + gs.filter((x) => x.at).reduce((a, x) => a + x.retinue, 0),
+      castles: cs.length,
+      gens: gs.length
+    };
+  }).sort((a, b) => b.koku - a.koku);
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 12 } }, "\u52E2\u529B\u60C5\u5831"), rows.map((r) => /* @__PURE__ */ React2.createElement("div", { key: r.f.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: `1px solid ${U.line2}`, flexWrap: "wrap" } }, /* @__PURE__ */ React2.createElement("span", { className: "dot", style: { background: r.f.color } }), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 16, flex: 1 } }, r.f.full, r.f.id === g.player && /* @__PURE__ */ React2.createElement("span", { className: "pill", style: { background: r.f.color, marginLeft: 7 } }, "\u81EA\u52E2\u529B")), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { fontSize: 12, color: U.dim } }, man(r.koku), "\u4E07\u77F3\uFF0F\u5175", fmt(r.men), "\uFF0F", r.castles, "\u57CE\uFF0F\u6B66\u5C06", r.gens, "\u540D\uFF0F\u5A01\u4FE1", Math.round(r.f.prestige || 50), r.f.id !== g.player && (() => {
+    const rl = relOf(g, g.player, r.f.id);
+    return `\uFF0F${rl.state}\u30FB\u4FE1\u7528${Math.round(rl.trust)}${rl.until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, rl.until.y, rl.until.m)}\u304B\u6708\uFF09` : ""}`;
+  })()))), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")));
+}
+function GeneralList({ g, onClose }) {
+  const gs = g.generals.filter((x) => x.faction === g.player);
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 12 } }, "\u6B66\u5C06\u4E00\u89A7"), gs.map((x) => /* @__PURE__ */ React2.createElement("div", { key: x.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 100 } }, x.name, isNameless(x) && /* @__PURE__ */ React2.createElement("span", { style: { color: "#9B9384", fontSize: 10, marginLeft: 2 } }, "\u3014\u4F1D\u3015")), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, flex: 1 } }, "\u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, " \u653F", x.gov, " \u5FE0", x.loyal), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, x.at ? (g.castles.find((c) => c.id === x.at) || {}).name : "\u51FA\u5F81\u4E2D"), /* @__PURE__ */ React2.createElement("span", { className: "num" }, "\u76F4\u5C5E ", fmt(x.retinue)))), gs.some((x) => isNameless(x)) && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.7 } }, "\u3014\u4F1D\u3015\u306F\u540D\u306E\u4F1D\u308F\u3089\u306C\u5728\u5730\u306E\u9577\u3067\u3059\u3002\u5730\u540D\u306B\u300C\u4E59\u540D\u300D\u300C\u6309\u53F8\u300D\u3092\u6DFB\u3048\u305F\u547C\u3073\u540D\u3067\u3042\u308A\u3001\u5B9F\u5728\u306E\u4EBA\u540D\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")));
+}
+function GoalPanel({ g, onClose }) {
+  const mine = g.castles.filter((c) => c.faction === g.player);
+  const near = g.castles.filter((c) => c.faction !== g.player).map((r) => ({
+    r,
+    d: Math.min(...mine.map((m) => {
+      const p = findPath(m.id, r.id);
+      return p ? p.length : 99;
+    }))
+  })).sort((a, b) => a.d - b.d).slice(0, 4);
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 6 } }, "\u653B\u7565\u76EE\u6A19"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 12 } }, "\u5F53\u9762\u306E\u76EE\u6A19\u306F\u5C3E\u5F35\u30FB\u7F8E\u6FC3\u306E\u7D71\u4E00\u3002\u53F2\u5B9F\u306E\u9806\u5E8F\u306F\u5F37\u5236\u3055\u308C\u307E\u305B\u3093\u3002"), near.map(({ r, d }) => {
+    const men = r.local + g.generals.filter((x) => x.at === r.id && x.faction === r.faction).reduce((a, x) => a + x.retinue, 0);
+    return /* @__PURE__ */ React2.createElement("div", { key: r.id, className: "row" }, /* @__PURE__ */ React2.createElement("span", null, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, r.name), /* @__PURE__ */ React2.createElement("span", { className: "pill", style: { background: g.factions[r.faction].color, marginLeft: 7 } }, g.factions[r.faction].name)), /* @__PURE__ */ React2.createElement("span", { className: "v", style: { color: U.dim, fontSize: 12 } }, "\u5175", fmt(men), "\uFF0F\u57CE\u9632", Math.round(r.def), "\uFF0F\u8857\u9053", d - 1, "\u533A\u9593"));
+  }), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")));
+}
+function CampaignPanel({ g, camp, onAct }) {
+  const dest2 = g.castles.find((c) => c.id === camp.target);
+  if (!dest2) return null;
+  const arm = (id) => g.armies.find((x) => x.id === id);
+  const arrived = camp.arrived.map(arm).filter(Boolean);
+  const late = camp.armies.filter((id) => !camp.arrived.includes(id)).map(arm).filter(Boolean);
+  const men = arrived.reduce((a, x) => a + x.men, 0);
+  const lateMen = late.reduce((a, x) => a + x.men, 0);
+  const defGens = g.generals.filter((x) => x.at === dest2.id && x.faction === dest2.faction && !x.captive);
+  const defMen = dest2.local + defGens.reduce((a, x) => a + x.retinue, 0);
+  const nameOf = (a) => {
+    const gen = g.generals.find((x) => x.id === a.gens[0]);
+    const home = g.castles.find((c) => c.id === a.from);
+    return `${home ? home.name : "\u2015"}\u306E${gen ? gen.name : "\u624B\u52E2"}`;
+  };
+  const eta = (a) => {
+    const m = marchMonths(a.path[0], camp.target);
+    return m == null ? "?" : m;
+  };
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal" }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, dest2.name, "\u653B\u3081\u3000\u8ECD\u8B70"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 10 } }, "\u7DCF\u5927\u5C06 ", camp.leaderName, "\uFF08", (g.castles.find((c) => c.id === camp.from) || {}).name, "\uFF09 \uFF0F ", camp.y, "\u5E74", camp.m, "\u6708\u306B\u767A\u5411 \uFF0F \u5F85\u3063\u305F\u6708 ", camp.waited), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u7740\u9663\u3057\u305F\u8ECD"), arrived.map((a) => /* @__PURE__ */ React2.createElement("div", { className: "row", key: a.id }, /* @__PURE__ */ React2.createElement("span", null, nameOf(a)), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(a.men), "\u4EBA\uFF0F\u5175\u7CE7", Math.round(a.food / Math.max(1, a.men * 0.09) * 30), "\u65E5"))), /* @__PURE__ */ React2.createElement("div", { className: "row", style: { fontWeight: 600 } }, /* @__PURE__ */ React2.createElement("span", null, "\u7740\u9663\u306E\u5408\u8A08"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(men), "\u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u307E\u3060\u7740\u304B\u306C\u8ECD\uFF08\u5BC4\u9A0E\uFF09"), late.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u9045\u53C2\u306F\u306A\u3044\u3002\u5168\u8ECD\u304C\u305D\u308D\u3063\u3066\u3044\u308B\u3002"), late.map((a) => /* @__PURE__ */ React2.createElement("div", { className: "row", key: a.id }, /* @__PURE__ */ React2.createElement("span", null, nameOf(a)), /* @__PURE__ */ React2.createElement("span", { className: "v", style: { color: "#B0483C" } }, fmt(a.men), "\u4EBA\uFF0F\u3042\u3068\u7D04", eta(a), "\u304B\u6708"))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u57CE\u65B9"), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, dest2.name, "\uFF08", g.factions[dest2.faction].name, "\uFF09"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, canSee(g, dest2) ? `${fmt(defMen)}\u4EBA\uFF0F\u57CE\u9632${Math.round(dest2.def)}` : "\u5185\u60C5\u4E0D\u660E")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.7, margin: "12px 0" } }, "\u5F85\u3066\u3070", fmt(lateMen), "\u4EBA\u304C\u52A0\u308F\u308B\u304C\u3001\u57CE\u65B9\u306F\u6BCE\u6708\u5099\u3048\u3092\u56FA\u3081\u3001\u3053\u3061\u3089\u306F\u5175\u7CE7\u3092\u6E1B\u3089\u3059\u3002 \u5148\u306B\u653B\u3081\u304B\u304B\u308C\u3070\u6570\u306F\u52A3\u308B\u304C\u3001\u5099\u3048\u306E\u8584\u3044\u3046\u3061\u306B\u5F53\u305F\u308C\u308B\u3002\u6C7A\u3081\u308B\u306E\u306F\u7DCF\u5927\u5C06\u3067\u3042\u308B\u3002"), /* @__PURE__ */ React2.createElement("div", { className: "g3" }, /* @__PURE__ */ React2.createElement("button", { className: "btn dark", onClick: () => onAct(camp, "\u653B"), disabled: !arrived.length }, late.length ? "\u5F85\u305F\u305A\u306B\u653B\u3081\u304B\u304B\u308B" : "\u653B\u3081\u304B\u304B\u308B"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onAct(camp, "\u5F85"), disabled: !late.length }, "\u9045\u53C2\u3092\u5F85\u3064"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onAct(camp, "\u9000") }, "\u5175\u3092\u9000\u304F"))));
+}
+function SiegePanel({ g, sg, onChoose }) {
+  const [gate, setGate] = useState2(false);
+  const [kits, setKits] = useState2({});
+  const c = g.castles.find((x) => x.id === sg.castleId);
+  const a = g.armies.find((x) => x.id === sg.armyId);
+  if (!c || !a) return null;
+  const mine = a.faction === g.player;
+  const gateOK = a.men >= 540;
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 10 } }, c.name, "\u3000\u5305\u56F2\u4E2D\uFF08", sg.months, "\u304B\u6708\uFF09"), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u653B\u3081\u624B\uFF08", g.factions[a.faction].name, "\uFF09"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(a.men), "\u4EBA\uFF0F\u5175\u7CE7 ", fmt(a.food), "\u77F3")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5B88\u308A\u624B\uFF08", g.factions[c.faction].name, "\uFF09"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(c.local), "\u4EBA\uFF0F\u5175\u7CE7 ", fmt(c.food), "\u77F3")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u9632\uFF0F\u6C11\u5FE0\uFF0F\u8010\u4E45"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, Math.round(c.def), " / ", Math.round(c.min), " / ", fmt(c.hp))), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5305\u56F2\u7387"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, sg.enc == null ? "\u2015" : `${sg.enc}%`, sg.enc != null && sg.enc < 75 ? /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\u3000\u5F8C\u8A70\u304C\u5165\u308A\u5F97\u308B") : null)), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306E\u4E95\u6238"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, Math.round(c.well == null ? 100 : c.well), " / 100")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, margin: "12px 0" } }, "\u5F37\u653B\u3092\u9078\u3076\u3068\u3001\u57CE\u3068\u305D\u306E\u5468\u8FBA\u306E\u56F3\u3078\u79FB\u308A\u307E\u3059\u3002\u57CE\u9632\u306B\u5FDC\u3058\u3066\u66F2\u8F2A\u304C\u4E8C\u91CD\u304B\u3089\u56DB\u91CD\u306B\u306A\u308A\u3001 \u9580\u306E\u524D\u306B\u306F\u864E\u53E3\u304C\u69CB\u3048\u3066\u3044\u307E\u3059\u3002\u9580\u3092\u7834\u3063\u3066\u66F2\u8F2A\u3092\u9032\u307F\u3001\u672C\u4E38\u3092\u62BC\u3055\u3048\u308C\u3070\u843D\u57CE\u3067\u3059\u3002"), mine ? /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("label", { style: { display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12.5, marginBottom: 10, lineHeight: 1.6 } }, /* @__PURE__ */ React2.createElement("input", { type: "checkbox", checked: gate && gateOK, disabled: !gateOK, onChange: () => setGate((v) => !v) }), /* @__PURE__ */ React2.createElement("span", null, /* @__PURE__ */ React2.createElement("b", null, "\u57CE\u9580\u653B\u6483\u968A\u3092\u7DE8\u6210\u3059\u308B"), "\uFF08\u69CD\u30FB\u653B\u6483\u5175300\u4EE5\u4E0A\u304C\u5FC5\u8981\u3002\u73FE\u6709 ", fmt(a.men), "\u4EBA", gateOK ? "" : "\uFF0F\u4E0D\u8DB3", "\uFF09", /* @__PURE__ */ React2.createElement("br", null), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, "\u9580\u3092\u7834\u308C\u3070\u57CE\u9632\u306E\u52B9\u304D\u304C3\u5272\u843D\u3061\u3001\u5B88\u308A\u624B\u306E\u640D\u5BB3\u304C25%\u5897\u3048\u308B\u3002\u4EE3\u308F\u308A\u306B\u9580\u3078\u53D6\u308A\u4ED8\u3044\u305F300\u4EBA\u306E\u3046\u30614\u5206\u306E1\u304C\u5931\u308F\u308C\u308B\u3002"))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u653B\u57CE\u306E\u9053\u5177\uFF08\u5F37\u653B\u306E\u3068\u304D\u306B\u4F7F\u3046\uFF09"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.6 } }, "\u69CD\u7D44\u306E\u4E00\u90E8\u3092\u5272\u3044\u3066\u62C5\u304C\u305B\u308B\u3002\u52B9\u304F\u306E\u306F", /* @__PURE__ */ React2.createElement("b", null, "\u9580\u3092\u7834\u308B\u901F\u3055"), "\u3068", /* @__PURE__ */ React2.createElement("b", null, "\u57CE\u5185\u304B\u3089\u306E\u88AB\u5BB3"), "\u3060\u3051\u3067\u3001\u91CE\u6226\u306E\u50CD\u304D\u306F\u5909\u308F\u3089\u306A\u3044\u3002"), (a.gens || []).map((gid) => {
+    const gg = g.generals.find((x) => x.id === gid);
+    if (!gg) return null;
+    const cur = kits && kits[gid] || "\u306A\u3057";
+    return /* @__PURE__ */ React2.createElement("div", { key: gid, style: { marginBottom: 6 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 12.5 } }, gg.name), /* @__PURE__ */ React2.createElement("div", { className: "g4", style: { marginTop: 3 } }, Object.keys(SIEGE_KIT).map((k) => /* @__PURE__ */ React2.createElement(
+      "button",
+      {
+        key: k,
+        className: `btn sm ${cur === k ? "on" : ""}`,
+        onClick: () => setKits((v) => ({ ...v, [gid]: k }))
+      },
+      k
+    ))));
+  }), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginBottom: 8 } }, Object.entries(SIEGE_KIT).filter(([k]) => k !== "\u306A\u3057").map(([k, v]) => `${k}\uFF1A${v.note}`).join("\u3000")), /* @__PURE__ */ React2.createElement("div", { className: "g3" }, /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onChoose("\u5175\u7CE7\u653B\u3081") }, "\u5175\u7CE7\u653B\u3081"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onChoose("\u5F37\u653B", gate && gateOK, kits) }, "\u5F37\u653B"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onChoose("\u64A4\u9000") }, "\u64A4\u9000"))) : /* @__PURE__ */ React2.createElement("div", { className: "g2" }, /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onChoose("\u9632\u885B", false, false) }, "\u7C60\u57CE\u3057\u3066\u5F85\u3064"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onChoose("\u9632\u885B", false, true) }, "\u8A0E\u3063\u3066\u51FA\u308B"))));
+}
+function CaptiveDialog({ g, gen, onDone }) {
+  const [tried, setTried] = useState2(false);
+  const [failed, setFailed] = useState2(false);
+  const loy = gen.loyal == null ? 60 : gen.loyal;
+  const from = g.factions[gen.captive ? gen.captive.from : gen.faction];
+  const \u7E01 = canRecruit(gen, g.generals.find((x) => x.faction === (gen.captive ? gen.captive.from : gen.faction) && x.lord && !x.captive) || null);
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal" }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 19 } }, gen.name, "\u3092\u6355\u3089\u3048\u305F"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, marginTop: 6, lineHeight: 1.8 } }, from ? from.name : "\u65E7\u4E3B", "\u306E\u5BB6\u81E3\u3002\u7D71\u7387", gen.lead, "\uFF0F\u6B66\u52C7", gen.valor, "\uFF0F\u77E5\u7565", gen.wit, "\uFF0F\u653F\u52D9", gen.gov, /* @__PURE__ */ React2.createElement("br", null), "\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0 ", /* @__PURE__ */ React2.createElement("b", null, Math.round(loy)), failed && /* @__PURE__ */ React2.createElement("span", { style: { color: "#B0483C" } }, "\u3000\u2500\u2500 \u964D\u308B\u3053\u3068\u3092\u62D2\u3093\u3060")), !tried && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, margin: "8px 0", lineHeight: 1.7 } }, \u7E01.ok ? "\u5FE0\u8AA040\u4EE5\u4E0B\u306A\u3089\u964D\u308B\u300241\u304B\u308970\u306F\u904B\u306B\u3088\u308B\u300271\u4EE5\u4E0A\u306F\u6C7A\u3057\u3066\u964D\u3089\u306C\u3002" : \u7E01.why), /* @__PURE__ */ React2.createElement("div", { className: "g2", style: { marginTop: 10 } }, !tried && /* @__PURE__ */ React2.createElement("button", { className: "btn dark", disabled: !\u7E01.ok, title: \u7E01.ok ? "" : \u7E01.why, onClick: () => {
+    if (\u7E01.ok && persuadeResult(gen)) onDone("\u767B\u7528");
+    else {
+      setTried(true);
+      setFailed(true);
+    }
+  } }, "\u767B\u7528\u3059\u308B"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onDone("\u9003\u3059") }, "\u9003\u3059"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onDone("\u65AC\u9996") }, "\u65AC\u9996\u3059\u308B"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onDone("\u6355\u865C") }, "\u6355\u865C\u3068\u3059\u308B"))));
+}
+function PromotionDialog({ promo, onDone }) {
+  const [pick, setPick] = useState2(promo.candidates[0]);
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card", style: { maxWidth: 460 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 8 } }, "\u6B63\u5F0F\u6B66\u5C06\u3078\u306E\u6607\u9032"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 13, lineHeight: 1.8, marginBottom: 14 } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 17 } }, promo.oldName), " \u304C\u6226\u529F\u3092\u6319\u3052\u305F\u3002", /* @__PURE__ */ React2.createElement("br", null), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, promo.feat), /* @__PURE__ */ React2.createElement("br", null), promo.lordName, "\u3088\u308A\u504F\u8AF1\u300C", /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 19 } }, promo.henki), "\u300D\u306E\u4E00\u5B57\u3092\u4E0E\u3048\u3001\u8AF1\u3092\u5B9A\u3081\u308B\u3002"), /* @__PURE__ */ React2.createElement("div", { className: "g2" }, promo.candidates.map((n) => /* @__PURE__ */ React2.createElement("button", { key: n, className: `btn mn ${pick === n ? "on" : ""}`, style: { fontSize: 17 }, onClick: () => setPick(n) }, n))), /* @__PURE__ */ React2.createElement("button", { className: "btn dark", style: { width: "100%", marginTop: 14 }, onClick: () => onDone(pick) }, pick, " \u3068\u540D\u4E57\u3089\u305B\u308B")));
+}
+function FormationDiagram({ form, color, size }) {
+  const slots = layoutSlots(form, 12);
+  const xs = slots.map((s2) => s2.x), ys = slots.map((s2) => s2.y);
+  const x0 = Math.min(...xs) - 8, x1 = Math.max(...xs) + 8;
+  const y0 = Math.min(...ys) - 8, y1 = Math.max(...ys) + 8;
+  const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
+  return /* @__PURE__ */ React2.createElement(
+    "svg",
+    {
+      viewBox: `${x0} ${y0} ${w} ${h}`,
+      width: size,
+      height: size * 0.62,
+      preserveAspectRatio: "xMidYMid meet",
+      style: { display: "block" }
+    },
+    slots.map((s2, i) => /* @__PURE__ */ React2.createElement("circle", { key: i, cx: s2.x, cy: s2.y, r: 7, fill: color, opacity: 0.85 }))
+  );
+}
+function FormationPicker({ corps, onPick }) {
+  return /* @__PURE__ */ React2.createElement("div", { style: { width: "100%" } }, /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, margin: "2px 0 5px" } }, "\u9663\u5F62"), /* @__PURE__ */ React2.createElement("div", { className: "g3" }, FORMATIONS.map((f) => /* @__PURE__ */ React2.createElement(
+    "button",
+    {
+      key: f,
+      className: `btn sm ${corps.formation === f ? "on" : ""}`,
+      title: FORM_NOTE[f],
+      style: { padding: "5px 3px", lineHeight: 1.2 },
+      onClick: () => onPick(f)
+    },
+    /* @__PURE__ */ React2.createElement(FormationDiagram, { form: f, color: corps.color, size: 54 }),
+    /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 11.5 } }, f)
+  ))), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.6, marginTop: 5 } }, FORM_NOTE[corps.formation]));
+}
+
+// src/ui/BattleScreen.jsx
+function BattleScreen({ ctx, land, onEnd }) {
+  const canvasRef = useRef2(null), terrainRef = useRef2(null), bRef = useRef2(ctx.b), wrapRef = useRef2(null);
+  const [, force] = useState3(0);
+  const [sel, setSel] = useState3(null);
+  const [speed, setSpeedState] = useState3(0);
+  const [phase, setPhase] = useState3("deploy");
+  const [panel, setPanel] = useState3(true);
+  const [selAll, setSelAll] = useState3(false);
+  const [wide, setWide] = useState3(false);
+  const [faceMode, setFaceMode] = useState3(false);
+  const faceRef = useRef2(false);
+  const speedRef = useRef2(0), selRef = useRef2(null), uiRef = useRef2(0), allRef = useRef2(false);
+  const camRef = useRef2({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
+  const gesture = useRef2(null);
+  const setSpeed = (v) => {
+    speedRef.current = v;
+    setSpeedState(v);
+  };
+  const pickCorps = (v) => {
+    selRef.current = v;
+    setSel(v);
+    if (v) {
+      allRef.current = false;
+      setSelAll(false);
+    }
+  };
+  const setFace = (v) => {
+    faceRef.current = v;
+    setFaceMode(v);
+  };
+  const brokeRef = useRef2(-1);
+  const paintTerrain = () => {
+    const t = terrainRef.current || document.createElement("canvas");
+    t.width = FIELD.w;
+    t.height = FIELD.h;
+    const g2 = t.getContext("2d");
+    if (ctx.mode === "castle" && ctx.b.map) drawCastleTerrain(g2, ctx.b.map);
+    else drawFieldTerrain(g2);
+    terrainRef.current = t;
+  };
+  useEffect3(() => {
+    paintTerrain();
+    const t = terrainRef.current;
+    const w = wrapRef.current;
+    if (w && w.clientWidth) {
+      camRef.current.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h) * 0.98, 0.2, 3);
+    }
+  }, []);
+  useEffect3(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const block = (e) => e.preventDefault();
+    el.addEventListener("touchmove", block, { passive: false });
+    el.addEventListener("touchstart", block, { passive: false });
+    return () => {
+      el.removeEventListener("touchmove", block);
+      el.removeEventListener("touchstart", block);
+    };
+  }, [land, panel]);
+  useEffect3(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") pickCorps(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  const \u59D4\u306D\u308B\u6B69\u5E45 = 0.05;
+  const [\u59D4\u306D\u4E2D, set\u59D4\u306D\u4E2D] = useState3(false);
+  const \u59D4\u306DRef = useRef2(false);
+  const \u59D4\u306D\u308B = () => {
+    const b2 = bRef.current;
+    if (b2.phase === "over" || \u59D4\u306DRef.current) return;
+    for (const c of b2.corps) if (c.side === "P") c.auto = true;
+    if (b2.phase === "deploy") {
+      b2.phase = "fight";
+      setPhase("fight");
+    }
+    setSpeed(0);
+    \u59D4\u306DRef.current = true;
+    set\u59D4\u306D\u4E2D(true);
+  };
+  useEffect3(() => {
+    if (!\u59D4\u306D\u4E2D) return;
+    let \u6B62\u3081 = false;
+    const b2 = bRef.current;
+    const \u4E00\u533A\u5207\u308A = () => {
+      if (\u6B62\u3081) return;
+      const t0 = Date.now();
+      while (b2.phase === "fight" && Date.now() - t0 < 24) stepBattle(b2, \u59D4\u306D\u308B\u6B69\u5E45);
+      force((n) => (n + 1) % 1e3);
+      if (b2.phase === "fight") setTimeout(\u4E00\u533A\u5207\u308A, 0);
+      else {
+        \u59D4\u306DRef.current = false;
+        set\u59D4\u306D\u4E2D(false);
+      }
+    };
+    \u4E00\u533A\u5207\u308A();
+    return () => {
+      \u6B62\u3081 = true;
+    };
+  }, [\u59D4\u306D\u4E2D]);
+  useEffect3(() => {
+    let alive = true, handle = 0, last = 0;
+    const loop = (ts) => {
+      if (!alive) return;
+      const b2 = bRef.current;
+      const dt = last ? Math.min(0.05, (ts - last) / 1e3) : 0;
+      last = ts;
+      const sp = speedRef.current;
+      if (\u59D4\u306DRef.current) {
+        handle = requestAnimationFrame(loop);
+        return;
+      }
+      if (b2.phase === "fight" && sp > 0) stepBattle(b2, dt * sp);
+      if (b2.map) {
+        const bk = b2.map.gates.filter((g) => g.broken).length * 1e5 + b2.map.fac.filter((f) => f.hp <= 0).length * 3e3 + Math.round(b2.map.gates.reduce((a, g) => a + g.hp, 0) / 30);
+        if (bk !== brokeRef.current) {
+          brokeRef.current = bk;
+          paintTerrain();
+        }
+      }
+      const cv = canvasRef.current, wrap = wrapRef.current;
+      if (cv && wrap && terrainRef.current) {
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        const W = wrap.clientWidth || 800, H = wrap.clientHeight || 500;
+        if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
+          cv.width = Math.round(W * dpr);
+          cv.height = Math.round(H * dpr);
+        }
+        drawBattle(cv.getContext("2d"), b2, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current);
+      }
+      if (b2.phase === "over" && speedRef.current !== 0) setSpeed(0);
+      if (ts - uiRef.current > 100) {
+        uiRef.current = ts;
+        force((n) => (n + 1) % 1e3);
+      }
+      handle = requestAnimationFrame(loop);
+    };
+    handle = requestAnimationFrame(loop);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(handle);
+    };
+  }, []);
+  const b = bRef.current;
+  const selC = b.corps.find((c) => c.id === sel && !c.dead);
+  const toField = (clientX, clientY) => {
+    const wrap = wrapRef.current, r = wrap.getBoundingClientRect();
+    const cam = camRef.current;
+    return {
+      x: (clientX - r.left - r.width / 2) / cam.s + cam.x,
+      y: (clientY - r.top - r.height / 2) / cam.s + cam.y
+    };
+  };
+  const zoomAt = (k, clientX, clientY) => {
+    const cam = camRef.current;
+    const before = clientX == null ? null : toField(clientX, clientY);
+    cam.s = clamp(cam.s * k, 0.25, 3.2);
+    if (before) {
+      const after = toField(clientX, clientY);
+      cam.x += before.x - after.x;
+      cam.y += before.y - after.y;
+    }
+    force((n) => (n + 1) % 1e3);
+  };
+  const fitAll = () => {
+    const w = wrapRef.current;
+    const cam = camRef.current;
+    cam.x = FIELD.w / 2;
+    cam.y = FIELD.h / 2;
+    if (w) cam.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h) * 0.98, 0.2, 3.2);
+    force((n) => (n + 1) % 1e3);
+  };
+  const hitCorps = (p, ownOnly) => {
+    const sc = Math.max(0.25, camRef.current.s);
+    const cands = b.corps.filter((c) => !c.dead && !c.destroyed && (!ownOnly || c.side === "P"));
+    let best = null, bd = 1e9;
+    for (const c of cands) {
+      const lw = 46 / sc, lh = 13 / sc, ly = c.y - 30 / sc;
+      if (Math.abs(p.x - c.x) < lw && Math.abs(p.y - ly) < lh) return c;
+      let d = Math.hypot(c.x - p.x, c.y - p.y);
+      for (const q of c.squads) {
+        if (q.men <= 0) continue;
+        const dq = Math.hypot(q.x - p.x, q.y - p.y);
+        if (dq < d) d = dq;
+      }
+      const R = Math.max(26 / sc, 30);
+      if (d < R && d < bd) {
+        bd = d;
+        best = c;
+      }
+    }
+    return best;
+  };
+  const pointerOf = (e) => e.touches && e.touches.length ? e.touches[0] : e.changedTouches ? e.changedTouches[0] : e;
+  const onDown = (e) => {
+    if (e.touches && e.touches.length === 2) {
+      const [a, c2] = [e.touches[0], e.touches[1]];
+      gesture.current = { mode: "pinch", d: Math.hypot(a.clientX - c2.clientX, a.clientY - c2.clientY) };
+      return;
+    }
+    const p = pointerOf(e);
+    const f = toField(p.clientX, p.clientY);
+    const own = hitCorps(f, true);
+    gesture.current = {
+      mode: own ? "unit" : "camera",
+      corps: own || null,
+      moved: 0,
+      sx: p.clientX,
+      sy: p.clientY,
+      camX: camRef.current.x,
+      camY: camRef.current.y
+    };
+  };
+  const onMove = (e) => {
+    const g = gesture.current;
+    if (!g) return;
+    if (g.mode === "pinch" && e.touches && e.touches.length === 2) {
+      const [a, c2] = [e.touches[0], e.touches[1]];
+      const d = Math.hypot(a.clientX - c2.clientX, a.clientY - c2.clientY);
+      if (g.d > 0) zoomAt(d / g.d, (a.clientX + c2.clientX) / 2, (a.clientY + c2.clientY) / 2);
+      g.d = d;
+      return;
+    }
+    const p = pointerOf(e);
+    g.moved = Math.max(g.moved, Math.hypot(p.clientX - g.sx, p.clientY - g.sy));
+    if (g.mode === "camera") {
+      const cam = camRef.current;
+      cam.x = g.camX - (p.clientX - g.sx) / cam.s;
+      cam.y = g.camY - (p.clientY - g.sy) / cam.s;
+    }
+  };
+  const orderTo = (c, f, foe) => {
+    c.task = null;
+    if (faceRef.current) {
+      c.faceTo = Math.atan2(f.y - c.y, f.x - c.x);
+      c.order = "\u8EE2\u56DE";
+      c.tx = c.x;
+      c.ty = c.y;
+      setFace(false);
+      return;
+    }
+    if (b.phase === "deploy") {
+      if (inOwnZone(b, f.x, f.y)) {
+        c.x = f.x;
+        c.y = f.y;
+        c.tx = f.x;
+        c.ty = f.y;
+        placeSquads(c, true);
+      }
+      return;
+    }
+    if (foe) {
+      const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
+      const gx = foe.x + (c.x - foe.x) / d * 38, gy = foe.y + (c.y - foe.y) / d * 38;
+      issueOrder(b, c, { order: "\u63A5\u6226", tx: gx, ty: gy });
+    } else {
+      c.siegeAuto = false;
+      c.gate = null;
+      issueOrder(b, c, { order: "\u79FB\u52D5", tx: f.x, ty: f.y });
+    }
+  };
+  const onCancel = () => {
+    gesture.current = null;
+  };
+  const onUp = (e) => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g || g.mode === "pinch") return;
+    const p = pointerOf(e);
+    const f = toField(p.clientX, p.clientY);
+    if (g.mode === "unit" && g.moved > 8) {
+      orderTo(g.corps, f, null);
+      return;
+    }
+    if (g.moved > 8) return;
+    const own = hitCorps(f, true);
+    if (own && !allRef.current) {
+      pickCorps(sel === own.id ? null : own.id);
+      return;
+    }
+    const foe = b.corps.find((c) => !c.dead && !c.destroyed && c.side === "E" && c.seen && Math.hypot(c.x - f.x, c.y - f.y) < 42 / Math.max(0.4, camRef.current.s));
+    if (allRef.current) {
+      const live = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed && !c.routed);
+      const cx = live.reduce((a, c) => a + c.x, 0) / Math.max(1, live.length);
+      const cy = live.reduce((a, c) => a + c.y, 0) / Math.max(1, live.length);
+      for (const c of live) orderTo(c, { x: f.x + (c.x - cx), y: f.y + (c.y - cy) }, foe);
+      return;
+    }
+    if (!selC) return;
+    orderTo(selC, f, foe);
+  };
+  const allOrder = (o) => {
+    for (const c of b.corps) {
+      if (c.side !== "P" || c.dead || c.destroyed || c.routed) continue;
+      c.task = null;
+      if (o === "\u524D\u9032") {
+        c.order = "\u524D\u9032";
+        c.wp = null;
+        c.tx = c.x;
+        c.ty = Math.max(120, c.y - 260);
+      }
+      if (o === "\u63A5\u6226") {
+        c.order = "\u63A5\u6226";
+        const foes = b.corps.filter((x) => x.side === "E" && !x.dead && !x.destroyed && x.seen);
+        if (foes.length) {
+          const t = foes.reduce((a, x) => Math.hypot(x.x - c.x, x.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? x : a, foes[0]);
+          const d = Math.hypot(c.x - t.x, c.y - t.y) || 1;
+          c.tx = t.x + (c.x - t.x) / d * 38;
+          c.ty = t.y + (c.y - t.y) / d * 38;
+        }
+      }
+      if (o === "\u5C04\u6483") {
+        c.order = "\u5C04\u6483";
+        c.tx = c.x;
+        c.ty = c.y;
+      }
+      if (o === "\u5F85\u6A5F") {
+        c.order = "\u5F85\u6A5F";
+        c.tx = c.x;
+        c.ty = c.y;
+      }
+      if (o === "\u64A4\u9000") {
+        c.order = "\u64A4\u9000";
+        c.withdraw = true;
+        c.tx = c.x;
+        c.ty = FIELD.h + 120;
+      }
+    }
+    if (o === "\u64A4\u9000") {
+      b.retreat = "P";
+      b.orderly = true;
+      b.log.push({ t: b.t, text: "\u5168\u8ECD\u306B\u9000\u304D\u9266\u3002\u7D71\u5236\u3092\u4FDD\u3063\u3066\u6226\u5834\u3092\u96E2\u308C\u308B\u3002" });
+    }
+  };
+  const livingP = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed);
+  const pMen = livingP.reduce((s2, c) => s2 + corpsMen(c), 0);
+  const eMen = b.corps.filter((c) => c.side === "E" && !c.dead && !c.destroyed && (c.seen || !c.ambush)).reduce((s2, c) => s2 + corpsMen(c), 0);
+  const pMor = Math.round(livingP.reduce((s2, c) => s2 + c.morale, 0) / Math.max(1, livingP.length));
+  const opts = selC && !selC.detach ? detachOptions(b, selC) : [];
+  const stop = (e) => e.stopPropagation();
+  const nearestFoe = (c) => {
+    const foes = b.corps.filter((x) => x.side === "E" && !x.dead && !x.destroyed && x.seen);
+    if (!foes.length) return null;
+    return foes.reduce((a, x) => Math.hypot(x.x - c.x, x.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? x : a, foes[0]);
+  };
+  const corpsOrder = (c, o) => {
+    if (c && isCastle && o !== "\u5F85\u6A5F") {
+      c.siegeAuto = false;
+      c.gate = null;
+    }
+    if (!c || c.dead || c.destroyed || c.routed) return;
+    c.task = null;
+    const t = nearestFoe(c);
+    const standoff = (foe, gap) => {
+      const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
+      return { tx: foe.x + (c.x - foe.x) / d * gap, ty: foe.y + (c.y - foe.y) / d * gap };
+    };
+    let patch;
+    if (o === "\u524D\u9032") {
+      c.wp = null;
+      patch = { order: "\u524D\u9032", tx: c.x, ty: Math.max(60, c.y - 190) };
+    } else if (o === "\u63A5\u6226") patch = { order: "\u63A5\u6226", ...t ? standoff(t, 38) : { tx: c.tx, ty: c.ty } };
+    else if (o === "\u7A81\u6483") patch = { order: "\u7A81\u6483", chargeT: c.formation === "\u92D2\u77E2" ? 26 : 16, ...t ? standoff(t, 20) : {} };
+    else if (o === "\u5C04\u6483") patch = { order: "\u5C04\u6483", tx: c.x, ty: c.y };
+    else if (o === "\u5B88\u5099") patch = { order: "\u5B88\u5099", formation: "\u65B9\u9663", tx: c.x, ty: c.y, reformT: reformTime(c.gen) };
+    else if (o === "\u5F8C\u9000") {
+      if (t) {
+        const d = Math.hypot(c.x - t.x, c.y - t.y) || 1;
+        patch = { order: "\u79FB\u52D5", tx: c.x + (c.x - t.x) / d * 170, ty: c.y + (c.y - t.y) / d * 170 };
+      } else patch = { order: "\u79FB\u52D5", tx: c.x, ty: Math.min(FIELD.h - 40, c.y + 170) };
+    } else patch = { order: "\u5F85\u6A5F", tx: c.x, ty: c.y };
+    issueOrder(b, c, patch);
+    force((n) => (n + 1) % 1e3);
+  };
+  const changeForm = (c, f) => {
+    if (!c || c.formation === f) return;
+    c.formation = f;
+    c.reformT = reformTime(c.gen);
+    placeSquads(c, b.phase === "deploy");
+    force((n) => (n + 1) % 1e3);
+  };
+  const ORDERS = ["\u524D\u9032", "\u63A5\u6226", "\u7A81\u6483", "\u5C04\u6483", "\u5B88\u5099", "\u5F8C\u9000", "\u5F85\u6A5F"];
+  const isCastle = ctx.mode === "castle" && !!b.map;
+  const iAmAttacker = b.attacker === "P";
+  const castleGo = (c, kind, gate) => {
+    const m = b.map;
+    if (!m || !c) return;
+    if (kind === "\u9580\u3092\u7834\u308B") {
+      const gt = gate || (c.gate && !c.gate.broken && (c.gate.layer === 0 || m.layers[c.gate.layer - 1].gates.some((x) => x.broken)) ? c.gate : nearestOpenGate(m, c.x, c.y));
+      if (!gt) return;
+      c.gate = gt;
+      c.siegeAuto = true;
+      const l = m.layers[gt.layer], a = axisOf(l, gt);
+      const gp = gatePos(m, l, gt);
+      if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * (FIELD.w / BASE.w)) {
+        issueOrder(b, c, { order: "\u5F85\u6A5F" });
+        return;
+      }
+      const wp = routeToCastleGate(m, gt, c.x, c.y);
+      if (wp.length) {
+        issueOrder(b, c, { order: "\u524D\u9032", tx: wp[0].x, ty: wp[0].y, keepPath: true });
+        c.wp = wp;
+      } else {
+        const p = fromUV(m, a, gateOpenU(gt), a.half + m.t + gt.masu + m.t + 30);
+        issueOrder(b, c, { order: "\u524D\u9032", tx: p.x, ty: p.y });
+      }
+    } else if (kind === "\u672C\u4E38\u3078") {
+      c.siegeAuto = false;
+      const hon = m.layers[m.layers.length - 1];
+      if (hon.gates.some((x) => x.broken)) {
+        const hg = hon.gates.find((x) => x.broken);
+        const a2 = axisOf(hon, hg);
+        const wp = [
+          ...routeToCastleGate(m, hg, c.x, c.y),
+          fromUV(m, a2, hg.off, a2.half - 40),
+          { x: m.cx, y: m.cy }
+        ];
+        issueOrder(b, c, { order: "\u524D\u9032", tx: wp[0].x, ty: wp[0].y, keepPath: true });
+        c.wp = wp;
+      } else castleGo(c, "\u9580\u3092\u7834\u308B");
+    } else if (kind === "\u65BD\u8A2D\u3092\u5D29\u3059") {
+      c.siegeAuto = false;
+      const cand = m.fac.filter((f2) => f2.hp > 0 && (f2.layer === 0 ? m.layers[0].gates.some((x) => x.broken) : m.layers[f2.layer].gates.some((x) => x.broken) || m.layers[f2.layer - 1].gates.some((x) => x.broken)));
+      const f = cand.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
+      if (f) issueOrder(b, c, { order: "\u524D\u9032", tx: f.x, ty: f.y });
+      else castleGo(c, "\u9580\u3092\u7834\u308B");
+    }
+    force((n) => (n + 1) % 1e3);
+  };
+  const castleAll = (kind) => {
+    for (const c of b.corps) {
+      if (c.side !== "P" || c.dead || c.destroyed || c.routed || c.detach) continue;
+      castleGo(c, kind);
+    }
+  };
+  const CASTLE_ORDERS = ["\u9580\u3092\u7834\u308B", "\u672C\u4E38\u3078", "\u65BD\u8A2D\u3092\u5D29\u3059"];
+  const sortieOut = (c) => {
+    if (!c || !b.map || iAmAttacker) return;
+    const m = b.map;
+    let li = 0;
+    for (let i = m.layers.length - 1; i >= 0; i--) {
+      if (inRect(c.x - m.cx, c.y - m.cy, m.layers[i].hw, m.layers[i].hh)) {
+        li = i;
+        break;
+      }
+    }
+    const gt = m.layers[li].gates[0];
+    const a2 = axisOf(m.layers[li], gt);
+    const p2 = fromUV(m, a2, gt.off, a2.half + m.t + 90);
+    c.sortie = true;
+    c.holdGate = null;
+    issueOrder(b, c, { order: "\u79FB\u52D5", tx: p2.x, ty: p2.y });
+    notify(b, `${c.gen.name}\u968A\u304C\u57CE\u9580\u3092\u958B\u3044\u3066\u8A0E\u3063\u3066\u51FA\u305F\u3002`, "info");
+    force((n) => (n + 1) % 1e3);
+  };
+  const sortieBack = (c) => {
+    if (!c || !b.map) return;
+    c.sortie = false;
+    issueOrder(b, c, { order: "\u79FB\u52D5", tx: b.map.cx, ty: b.map.cy });
+    force((n) => (n + 1) % 1e3);
+  };
+  const orderHint = {
+    \u524D\u9032: "\u968A\u5217\u3092\u4FDD\u3063\u3066\u524D\u3078\u51FA\u308B\u3002",
+    \u63A5\u6226: "\u6700\u5BC4\u308A\u306E\u6575\u3068\u69CD\u3092\u5408\u308F\u305B\u308B\u3002",
+    \u7A81\u6483: "16\u79D2\u3060\u3051\u52E2\u3044\u3092\u3064\u3051\u3066\u5F53\u305F\u308B\u3002\u901F\u304F\u5F37\u3044\u304C\u968A\u5217\u3068\u75B2\u52B4\u3092\u5927\u304D\u304F\u640D\u306A\u3046\u3002",
+    \u8EE2\u56DE: "\u524D\u9032\u305B\u305A\u3001\u305D\u306E\u5834\u3067\u5411\u304D\u3060\u3051\u5909\u3048\u308B\u3002",
+    \u5C04\u6483: "\u524D\u3078\u51FA\u305A\u3001\u5F13\u3068\u9244\u7832\u3067\u5C04\u7A0B\u3092\u4FDD\u3064\u3002",
+    \u5B88\u5099: "\u65B9\u9663\u3067\u5BC6\u96C6\u3057\u3001\u53D7\u3051\u308B\u640D\u5BB3\u3092\u6291\u3048\u308B\u3002",
+    \u5F8C\u9000: "\u6575\u304B\u3089\u8DDD\u96E2\u3092\u53D6\u308A\u76F4\u3059\u3002",
+    \u5F85\u6A5F: "\u305D\u306E\u5834\u3067\u968A\u5217\u3092\u6574\u3048\u308B\u3002"
+  };
+  const panelBody = /* @__PURE__ */ React3.createElement(React3.Fragment, null, b.phase === "deploy" && /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", flexWrap: "wrap", width: "100%" } }, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.65, flex: 1 } }, ctx.mode === "castle" ? "\u5BC4\u305B\u624B\u306F\u5927\u624B\u53E3\u306E\u524D\u306B\u5E03\u9663\u3057\u3066\u3044\u307E\u3059\u3002\u9580\u306B\u53D6\u308A\u4ED8\u3051\u3070\u9580\u6249\u304C\u50B7\u307F\u3001\u7834\u308C\u3070\u6B21\u306E\u66F2\u8F2A\u3078\u9032\u3081\u307E\u3059\u3002\u672C\u4E38\u3092\u62BC\u3055\u3048\u308C\u3070\u57CE\u306F\u843D\u3061\u307E\u3059\u3002" : "\u968A\u3092\u9078\u3073\u3001\u81EA\u9663\uFF08\u9752\u3044\u5E2F\u306E\u4E2D\uFF09\u3092\u30BF\u30C3\u30D7\u304B\u30C9\u30E9\u30C3\u30B0\u3057\u3066\u5E03\u9663\u3002\u68EE\u306B\u7F6E\u3044\u305F\u968A\u306F\u4F0F\u5175\u306B\u3067\u304D\u307E\u3059\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u99D2\uFF1D10\u4EBA\u3002", /* @__PURE__ */ React3.createElement("b", { style: { color: ctx.pColor } }, "\u85CD\uFF1D\u81EA\u8ECD"), "\uFF0F", /* @__PURE__ */ React3.createElement("b", { style: { color: ctx.eColor } }, "\u6731\uFF1D\u6575\u8ECD"), "\u3001", /* @__PURE__ */ React3.createElement("b", null, "\u660E\u308B\u304F\u767D\u7E01\uFF1D\u76F4\u5C5E"), "\uFF0F", /* @__PURE__ */ React3.createElement("b", null, "\u6697\u304F\u9ED2\u7E01\uFF1D\u5730\u57DF"), "\u3001", /* @__PURE__ */ React3.createElement("b", null, "\u5F62\uFF1D\u5175\u79D1"), "\uFF08\u69CD\u306F\u4E09\u89D2\u3001\u9A0E\u99AC\u306F\u7D30\u9577\u3001\u5F13\u306F\u80CC\u304C\u51F9\u3080\u3001\u9244\u7832\u306F\u4E2D\u592E\u306B\u70B9\uFF09\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u6700\u5F8C\u5C3E\u306E\u6BB5\u306F\u4E88\u5099\u968A\u3067\u3001\u524D\u7DDA\u304C\u8584\u304F\u306A\u308B\u307E\u3067\u524D\u3078\u51FA\u307E\u305B\u3093\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u5929\u5019\u306F", /* @__PURE__ */ React3.createElement("b", null, b.weather), "\uFF1A", WEATHER[b.weather].note), selC && /* @__PURE__ */ React3.createElement(React3.Fragment, null, isCastle && selC.side !== b.attacker && (() => {
+    const MAPX = MAP;
+    if (!MAPX) return null;
+    const held = selC.holdGate;
+    const gates = MAPX.gates.filter((g) => !g.broken && g !== held);
+    return /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 4 } }, "\u57CE\u65B9\u306E\u6307\u56F3\u3000", held ? `\u3044\u307E ${held.key}` : "\u672C\u4E38", selC.sallied ? "\u30FB\u51FA\u6483\u4E2D" : selC.chasing ? "\u30FB\u8FFD\u3044\u8A0E\u3061\u4E2D" : ""), /* @__PURE__ */ React3.createElement("div", { className: "g2" }, /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: "btn sm",
+        disabled: !!selC.sallied,
+        onClick: () => {
+          sallyOut(b, selC, MAPX);
+          force((n) => (n + 1) % 1e3);
+        }
+      },
+      "\u6253\u3063\u3066\u51FA\u308B"
+    ), /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: "btn sm",
+        onClick: () => {
+          returnToGate(b, selC, MAPX);
+          force((n) => (n + 1) % 1e3);
+        }
+      },
+      "\u57CE\u3078\u623B\u308B"
+    )), /* @__PURE__ */ React3.createElement(
+      "select",
+      {
+        className: "sel",
+        style: { width: "100%", marginTop: 4, fontSize: 12 },
+        value: "",
+        onChange: (e) => {
+          const v = e.target.value;
+          if (!v) return;
+          const g = v === "\u672C\u4E38" ? "\u672C\u4E38" : MAPX.gates.find((x) => x.key === v);
+          if (g) {
+            moveToGate(b, selC, MAPX, g);
+            force((n) => (n + 1) % 1e3);
+          }
+          e.target.value = "";
+        }
+      },
+      /* @__PURE__ */ React3.createElement("option", { value: "" }, "\u4ED6\u306E\u6301\u3061\u5834\u3078\u79FB\u308B\u2026"),
+      gates.map((g) => /* @__PURE__ */ React3.createElement("option", { key: g.key, value: g.key }, g.key, "\uFF08", Math.round(g.hp / g.max * 100), "%\uFF09")),
+      /* @__PURE__ */ React3.createElement("option", { value: "\u672C\u4E38" }, "\u672C\u4E38\u306B\u7ACB\u3066\u7C60\u308B")
+    ));
+  })(), /* @__PURE__ */ React3.createElement(FormationPicker, { corps: selC, onPick: (f) => changeForm(selC, f) }), /* @__PURE__ */ React3.createElement(
+    "button",
+    {
+      className: `btn sm ${selC.ambush ? "on" : ""}`,
+      disabled: terrainAt(selC.x, selC.y) !== "forest",
+      onClick: () => {
+        selC.ambush = !selC.ambush;
+        selC.revealed = !selC.ambush;
+      }
+    },
+    "\u4F0F\u5175\u306B\u7F6E\u304F"
+  )), /* @__PURE__ */ React3.createElement("button", { className: "btn dark", onClick: () => {
+    b.phase = "fight";
+    setPhase("fight");
+    setSpeed(0.3);
+  } }, "\u5408\u6226\u958B\u59CB"), /* @__PURE__ */ React3.createElement("button", { className: "btn", onClick: \u59D4\u306D\u308B }, "\u59D4\u306D\u3066\u7D50\u679C\u3092\u898B\u308B")), b.phase === "fight" && /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7, width: "100%" } }, /* @__PURE__ */ React3.createElement("button", { className: "btn", onClick: \u59D4\u306D\u308B, disabled: \u59D4\u306D\u4E2D }, \u59D4\u306D\u4E2D ? "\u59D4\u306D\u3066\u3044\u308B\u2026" : "\u59D4\u306D\u3066\u7D50\u679C\u3092\u898B\u308B"), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim } }, "\u4E00\u62EC\u547D\u4EE4"), /* @__PURE__ */ React3.createElement("div", { className: "g4" }, /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => {
+    for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) c.auto = true;
+    force((n) => (n + 1) % 1e3);
+  } }, "\u5168\u8ECD\u59D4\u4EFB"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => {
+    for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) {
+      c.auto = false;
+      issueOrder(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
+    }
+    force((n) => (n + 1) % 1e3);
+  } }, "\u5168\u8ECD\u59D4\u4EFB\u89E3\u9664"), /* @__PURE__ */ React3.createElement(
+    "button",
+    {
+      className: `btn sm ${selAll ? "on" : ""}`,
+      onClick: () => {
+        const v = !allRef.current;
+        allRef.current = v;
+        setSelAll(v);
+        if (v) {
+          selRef.current = null;
+          setSel(null);
+        }
+      }
+    },
+    "\u5168\u90E8\u968A\u9078\u629E"
+  ), isCastle && iAmAttacker ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => castleAll("\u9580\u3092\u7834\u308B") }, "\u5168\u8ECD\u9580\u3092\u7834\u308B"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => castleAll("\u65BD\u8A2D\u3092\u5D29\u3059") }, "\u5168\u8ECD\u65BD\u8A2D\u3092\u5D29\u3059"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => castleAll("\u672C\u4E38\u3078") }, "\u5168\u8ECD\u672C\u4E38\u3078"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => allOrder("\u63A5\u6226") }, "\u5168\u8ECD\u63A5\u6226"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => allOrder("\u64A4\u9000") }, "\u5168\u8ECD\u64A4\u9000")) : /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => allOrder("\u524D\u9032") }, "\u5168\u8ECD\u524D\u9032"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => allOrder("\u63A5\u6226") }, "\u5168\u8ECD\u63A5\u6226"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => allOrder("\u5C04\u6483") }, "\u5168\u8ECD\u5F13\u512A\u5148"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => allOrder("\u5F85\u6A5F") }, "\u5168\u8ECD\u5F85\u6A5F"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => allOrder("\u64A4\u9000") }, "\u5168\u8ECD\u64A4\u9000"))), isCastle && /* @__PURE__ */ React3.createElement("div", { style: { borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim } }, "\u57CE\u9580\u306E\u62BC\u3057\u5408\u3044\uFF08\u57CE\u306E\u50BE\u304D ", Math.round((b.press || 0) * 100), "%\uFF09"), b.map.gates.filter((gt) => !gt.broken && (gt.layer === 0 || b.map.layers[gt.layer - 1].gates.some((x) => x.broken))).map((gt) => {
+    const gp = gatePos(b.map, b.map.layers[gt.layer], gt);
+    const q = b.corps.filter((c) => c.side === b.attacker && corpsMen(c) > 0 && c.id !== gt.slot && Math.hypot(c.x - gp.x, c.y - gp.y) < 104 * (FIELD.w / BASE.w)).length;
+    return /* @__PURE__ */ React3.createElement("div", { key: gt.key, style: { borderBottom: `1px solid ${U.line2}`, padding: "4px 0" } }, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 12 } }, /* @__PURE__ */ React3.createElement("span", null, gt.key), /* @__PURE__ */ React3.createElement("span", { className: "num" }, Math.round(gt.hp / gt.max * 100), "%")), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, color: U.dim } }, gt.hold ? `\u53D6\u4ED8 ${gt.hold}${q ? `\uFF0F\u63A7\u3048${q}\u968A` : ""}` : "\u53D6\u308A\u4ED8\u3044\u3066\u3044\u308B\u968A\u306F\u306A\u3044", gt.def ? `\u3000\u5185\u306B\u57CE\u5175${fmt(Math.round(gt.def))}` : ""), selC && iAmAttacker && /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: "btn sm",
+        style: { width: "100%", marginTop: 3 },
+        onClick: () => castleGo(selC, "\u9580\u3092\u7834\u308B", gt)
+      },
+      selC.gen.name,
+      "\u3092\u3053\u306E\u9580\u3078"
+    ));
+  }), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 6 } }, "\u57CE\u5185\u306E\u65BD\u8A2D"), b.map.fac.map((f) => /* @__PURE__ */ React3.createElement("div", { key: f.name, style: { display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "1px 0" } }, /* @__PURE__ */ React3.createElement("span", { style: { color: f.hp <= 0 ? U.dim : U.text } }, f.name), /* @__PURE__ */ React3.createElement("span", { className: "num", style: { color: f.hp <= 0 ? U.dim : U.text } }, f.hp <= 0 ? "\u5D29\u843D" : `${Math.round(f.hp / f.max * 100)}%`)))), selC ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, selC.detach ? `${selC.gen.name}\u968A ${selC.task || "\u5206\u9063"}` : selC.name, " \u306E\u547D\u4EE4"), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(selC)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(selC.morale), "\uFF0F\u9663\u5F62", Math.round(selC.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, selC.squads.length)), "\uFF0F \u75B2\u52B4", Math.round(selC.fatigue), "\uFF0F", TERRAIN[terrainAt(selC.x, selC.y)].label, selC.chargeT > 0 ? `\uFF0F\u7A81\u6483\u4E2D \u6B8B${Math.ceil(selC.chargeT)}\u79D2` : "", selC.reformT > 0 ? `\uFF0F\u9663\u5F62\u66FF\u3048\u4E2D \u6B8B${Math.ceil(selC.reformT)}\u79D2` : "", selC.faceTo != null ? "\uFF0F\u56DE\u982D\u4E2D" : "", selC.pending ? `\uFF0F\u4F1D\u4EE4\u4E2D \u6B8B${Math.ceil(selC.pending.t)}\u79D2` : "", outOfCommand(b, selC) ? "\uFF0F\u6307\u63EE\u570F\u5916\uFF08\u547D\u4EE4\u304C\u5C4A\u304B\u306A\u3044\uFF09" : "", selC.pinch >= 2 ? `\uFF0F${selC.pinch}\u65B9\u5411\u304B\u3089\u631F\u6483\u3092\u53D7\u3051\u3066\u3044\u308B` : "", isCastle && selC.kit && selC.kit !== "\u306A\u3057" ? `\uFF0F${selC.kit}` : "", isCastle && selC.gateFat > 3 ? `\uFF0F\u9580\u653B\u3081\u306E\u75B2\u308C${Math.round(selC.gateFat)}` : ""), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.text, lineHeight: 1.6 } }, "\u7D71\u7387 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.lead), "\u3000\u6B66\u52C7 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.valor), "\u3000\u77E5\u7565 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.wit), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF08\u7D71\u7387\uFF1D\u6307\u63EE\u570F\u3068\u4F1D\u4EE4\u30FB\u9663\u5F62\u66FF\u3048\u306E\u901F\u3055\u3001\u6B66\u52C7\uFF1D\u767D\u5175\u306E\u5F37\u3055\u3001\u77E5\u7565\uFF1D\u4F0F\u5175\u3068\u5206\u9063\u306E\u5224\u65AD\uFF09")), isCastle && iAmAttacker && /* @__PURE__ */ React3.createElement("div", { className: "g4" }, CASTLE_ORDERS.map((o) => /* @__PURE__ */ React3.createElement("button", { key: o, className: "btn sm", onClick: () => castleGo(selC, o) }, o))), isCastle && !iAmAttacker && /* @__PURE__ */ React3.createElement("div", { className: "g2" }, /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => sortieOut(selC) }, "\u6253\u3063\u3066\u51FA\u308B"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => sortieBack(selC) }, "\u57CE\u5185\u3078\u623B\u308B")), /* @__PURE__ */ React3.createElement(
+    "button",
+    {
+      className: `btn sm ${selC.auto ? "on" : ""}`,
+      style: { width: "100%", marginBottom: 5 },
+      onClick: () => {
+        selC.auto = !selC.auto;
+        if (!selC.auto) issueOrder(b, selC, { order: "\u5F85\u6A5F", tx: selC.x, ty: selC.y });
+        force((n) => (n + 1) % 1e3);
+      }
+    },
+    selC.auto ? "\u59D4\u4EFB\u4E2D\uFF08\u62BC\u3059\u3068\u89E3\u9664\uFF09" : "\u3053\u306E\u968A\u306B\u59D4\u4EFB\u3059\u308B"
+  ), /* @__PURE__ */ React3.createElement("div", { className: "g4" }, ORDERS.map((o) => /* @__PURE__ */ React3.createElement(
+    "button",
+    {
+      key: o,
+      className: `btn sm ${selC.order === o || o === "\u7A81\u6483" && selC.chargeT > 0 ? "on" : ""}`,
+      title: orderHint[o],
+      onClick: () => {
+        setFace(false);
+        corpsOrder(selC, o);
+      }
+    },
+    o
+  )), /* @__PURE__ */ React3.createElement(
+    "button",
+    {
+      className: `btn sm ${faceMode ? "on" : ""}`,
+      title: "\u524D\u9032\u305B\u305A\u3001\u305D\u306E\u5834\u3067\u5411\u304D\u3060\u3051\u5909\u3048\u3066\u9663\u5F62\u3092\u7D44\u307F\u76F4\u3059",
+      onClick: () => setFace(!faceMode)
+    },
+    "\u8EE2\u56DE"
+  )), faceMode && /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: "#4A6E8A", lineHeight: 1.6 } }, "\u5411\u3051\u305F\u3044\u65B9\u89D2\u3092\u30BF\u30C3\u30D7\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u305D\u306E\u5834\u3067\u56DE\u982D\u3057\u3001\u9663\u5F62\u3092\u7D44\u307F\u76F4\u3057\u307E\u3059\u3002\u7D71\u7387\u304C\u9AD8\u3044\u307B\u3069\u901F\u304F\u636E\u308F\u308A\u307E\u3059\u3002"), isCastle && selC.side !== b.attacker && (() => {
+    const MAPX = MAP;
+    if (!MAPX) return null;
+    const held = selC.holdGate;
+    const gates = MAPX.gates.filter((g) => !g.broken && g !== held);
+    return /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 4 } }, "\u57CE\u65B9\u306E\u6307\u56F3\u3000", held ? `\u3044\u307E ${held.key}` : "\u672C\u4E38", selC.sallied ? "\u30FB\u51FA\u6483\u4E2D" : selC.chasing ? "\u30FB\u8FFD\u3044\u8A0E\u3061\u4E2D" : ""), /* @__PURE__ */ React3.createElement("div", { className: "g2" }, /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: "btn sm",
+        disabled: !!selC.sallied,
+        onClick: () => {
+          sallyOut(b, selC, MAPX);
+          force((n) => (n + 1) % 1e3);
+        }
+      },
+      "\u6253\u3063\u3066\u51FA\u308B"
+    ), /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: "btn sm",
+        onClick: () => {
+          returnToGate(b, selC, MAPX);
+          force((n) => (n + 1) % 1e3);
+        }
+      },
+      "\u57CE\u3078\u623B\u308B"
+    )), /* @__PURE__ */ React3.createElement(
+      "select",
+      {
+        className: "sel",
+        style: { width: "100%", marginTop: 4, fontSize: 12 },
+        value: "",
+        onChange: (e) => {
+          const v = e.target.value;
+          if (!v) return;
+          const g = v === "\u672C\u4E38" ? "\u672C\u4E38" : MAPX.gates.find((x) => x.key === v);
+          if (g) {
+            moveToGate(b, selC, MAPX, g);
+            force((n) => (n + 1) % 1e3);
+          }
+          e.target.value = "";
+        }
+      },
+      /* @__PURE__ */ React3.createElement("option", { value: "" }, "\u4ED6\u306E\u6301\u3061\u5834\u3078\u79FB\u308B\u2026"),
+      gates.map((g) => /* @__PURE__ */ React3.createElement("option", { key: g.key, value: g.key }, g.key, "\uFF08", Math.round(g.hp / g.max * 100), "%\uFF09")),
+      /* @__PURE__ */ React3.createElement("option", { value: "\u672C\u4E38" }, "\u672C\u4E38\u306B\u7ACB\u3066\u7C60\u308B")
+    ));
+  })(), /* @__PURE__ */ React3.createElement(FormationPicker, { corps: selC, onPick: (f) => changeForm(selC, f) }), !selC.detach && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim } }, "\u5206\u9063 ", opts[0] ? `${opts[0].used}\uFF0F${opts[0].cap}` : ""), /* @__PURE__ */ React3.createElement("div", { className: "g2" }, opts.map((o) => /* @__PURE__ */ React3.createElement(
+    "button",
+    {
+      key: o.key,
+      className: "btn sm",
+      disabled: !o.ok,
+      title: o.why,
+      onClick: () => {
+        makeDetachment(b, selC, o.key);
+        force((n) => (n + 1) % 1e3);
+      }
+    },
+    o.key
+  ))), (() => {
+    const mine = b.corps.filter((x) => x.detach && !x.dead && x.parentId === selC.id);
+    if (!mine.length) return null;
+    return /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 4 } }, "\u51FA\u3057\u3066\u3044\u308B\u5206\u9063"), mine.map((x) => /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        key: x.id,
+        className: "btn sm",
+        style: { width: "100%", marginBottom: 3 },
+        disabled: x.task === "\u5E30\u9663",
+        onClick: () => {
+          recallDetachment(b, x);
+          force((n) => (n + 1) % 1e3);
+        }
+      },
+      x.task === "\u5E30\u9663" ? "\u5E30\u9663\u4E2D" : `${x.task || "\u5206\u9063"}\u3092\u672C\u968A\u3078\u623B\u3059`,
+      /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 10, color: U.dim, marginLeft: 5 } }, fmt(corpsMen(x)), "\u4EBA")
+    )));
+  })()), selC.detach && selC.task !== "\u5E30\u9663" && /* @__PURE__ */ React3.createElement(
+    "button",
+    {
+      className: "btn sm",
+      style: { width: "100%" },
+      onClick: () => {
+        recallDetachment(b, selC);
+        force((n) => (n + 1) % 1e3);
+      }
+    },
+    "\u672C\u968A\u3078\u623B\u3059"
+  ), selC.detach && selC.task === "\u5E30\u9663" && /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim } }, "\u672C\u968A\u3078\u5E30\u9663\u4E2D\u3002")) : /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6, borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, "\u968A\u3092\u30BF\u30C3\u30D7\u3057\u3066\u9078\u3076\u3068\u3001\u305D\u306E\u968A\u3060\u3051\u306B\u524D\u9032\u30FB\u63A5\u6226\u30FB\u7A81\u6483\u30FB\u5C04\u6483\u30FB\u5B88\u5099\u30FB\u5F8C\u9000\u3092\u51FA\u305B\u307E\u3059\u3002 \u5730\u9762\u3084\u6575\u3092\u30BF\u30C3\u30D7\u304B\u30C9\u30E9\u30C3\u30B0\u3067\u3082\u547D\u4EE4\u3067\u304D\u307E\u3059\u3002Esc\u3067\u9078\u629E\u89E3\u9664\u3002"), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11, color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, b.log.length ? b.log[b.log.length - 1].text : "\u3000")), b.phase === "over" && /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", width: "100%" } }, /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { fontSize: 19, color: b.result === "P" ? "#3E7A3A" : b.result === "\u65E5\u6CA1" ? "#7C7668" : "#B0483C" } }, b.result === "P" ? "\u52DD\u5229" : b.result === "\u65E5\u6CA1" ? "\u65E5\u6CA1\u30FB\u4E21\u8ECD\u64A4\u53CE" : b.orderly ? "\u64A4\u9000" : "\u6557\u5317"), /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 12, color: U.dim, flex: 1 } }, "\u640D\u5BB3\u3000\u76F4\u5C5E ", fmt(b.corps.filter((c) => c.side === "P").reduce((a, c) => a + c.loss["\u76F4\u5C5E"], 0)), "\u4EBA\uFF0F \u5730\u57DF ", fmt(b.corps.filter((c) => c.side === "P").reduce((a, c) => a + c.loss["\u5730\u57DF"], 0)), "\u4EBA"), /* @__PURE__ */ React3.createElement("button", { className: "btn dark", onClick: () => onEnd(b) }, "\u6226\u5834\u3092\u96E2\u308C\u308B")));
+  return /* @__PURE__ */ React3.createElement("div", { className: "sp", style: { height: "100dvh", background: U.paper, overscrollBehavior: "none" }, onMouseDown: stop, onMouseUp: stop }, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 } }, !wide && /* @__PURE__ */ React3.createElement("div", { className: "bar", style: { padding: "6px 10px", gap: 10, fontSize: 12 } }, /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.pName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(pMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u58EB\u6C17 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, pMor)), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { color: U.dim } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.eName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(eMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, ctx.place, ctx.mode === "castle" ? "\u57CE\u653B\u3081" : ctx.mode === "clash" ? "\u306E\u91CE\u6226" : "\u4E0B", "\u30FB", b.weather), ctx.mode === "castle" && b.map && b.map.gates.map((gt) => /* @__PURE__ */ React3.createElement("span", { key: gt.key, style: { fontSize: 11, color: U.dim } }, gt.key, /* @__PURE__ */ React3.createElement("b", { style: { color: gt.broken ? "#B0483C" : gt.hp / gt.max > 0.4 ? U.text : "#C89A3A" } }, gt.broken ? "\u7834" : `${Math.round(gt.hp / gt.max * 100)}%`))), ctx.mode === "castle" && b.map && b.press != null && /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 11, color: U.dim } }, "\u57CE\u306E\u50BE\u304D", /* @__PURE__ */ React3.createElement("b", { style: { color: b.press > 0.6 ? "#B0483C" : U.text } }, Math.round(b.press * 100), "%")), /* @__PURE__ */ React3.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React3.createElement("span", { className: "kv num" }, Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF0F\u65E5\u6CA1\u307E\u3067", Math.max(0, Math.ceil((b.dusk - b.t) / 60)), "\u5206")), phase === "fight" && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0 ? "on" : ""}`, onClick: () => setSpeed(0) }, "\u505C\u6B62"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.12 ? "on" : ""}`, onClick: () => setSpeed(0.12) }, "\u5FAE\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.3 ? "on" : ""}`, onClick: () => setSpeed(0.3) }, "\u4F4E\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.6 ? "on" : ""}`, onClick: () => setSpeed(0.6) }, "\u901A\u5E38"))), /* @__PURE__ */ React3.createElement("div", { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" } }, /* @__PURE__ */ React3.createElement(
+    "div",
+    {
+      ref: wrapRef,
+      className: "fieldwrap",
+      style: { flex: 1, minWidth: 0, minHeight: 0, position: "relative", background: "#B9C99C", overflow: "hidden" },
+      onMouseDown: onDown,
+      onMouseMove: onMove,
+      onMouseUp: onUp,
+      onMouseLeave: () => gesture.current = null,
+      onTouchStart: onDown,
+      onTouchMove: onMove,
+      onTouchEnd: onUp,
+      onTouchCancel: onCancel,
+      onWheel: (e) => zoomAt(e.deltaY < 0 ? 1.12 : 0.89, e.clientX, e.clientY)
+    },
+    /* @__PURE__ */ React3.createElement("canvas", { ref: canvasRef, style: { width: "100%", height: "100%", display: "block", touchAction: "none" } }),
+    \u59D4\u306D\u4E2D && /* @__PURE__ */ React3.createElement("div", { style: {
+      position: "absolute",
+      inset: 0,
+      zIndex: 20,
+      background: "rgba(244,241,232,.92)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 14
+    } }, /* @__PURE__ */ React3.createElement("div", { className: "mn", style: { fontSize: 22 } }, "\u8AF8\u5C06\u306B\u59D4\u306D\u3066\u3044\u308B"), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u6226\u5834\u306E\u523B\u3000", Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), "\uFF0F\u3000\u65E5\u6CA1\u307E\u3067 ", Math.max(0, Math.round((b.dusk - b.t) / 60)), " \u5206"), /* @__PURE__ */ React3.createElement("div", { style: { width: 240, height: 6, background: "#EEEBE2", borderRadius: 3, overflow: "hidden" } }, /* @__PURE__ */ React3.createElement("div", { style: { width: `${Math.min(100, b.t / b.dusk * 100)}%`, height: "100%", background: U.ink } })), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor, marginRight: 5 } }), fmt(pMen), /* @__PURE__ */ React3.createElement("span", { style: { margin: "0 8px" } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor, marginRight: 5 } }), fmt(eMen))),
+    (b.notices || []).filter((n) => b.t - n.t < 6).slice(-3).map((n, i) => /* @__PURE__ */ React3.createElement(
+      "div",
+      {
+        key: `${n.t}-${i}`,
+        className: "mn",
+        style: {
+          position: "absolute",
+          left: "50%",
+          transform: "translateX(-50%)",
+          top: 12 + i * 34,
+          padding: "7px 16px",
+          borderRadius: 8,
+          fontSize: 15,
+          whiteSpace: "nowrap",
+          background: n.kind === "bad" ? "rgba(176,72,60,0.93)" : n.kind === "good" ? "rgba(62,122,58,0.93)" : "rgba(40,40,36,0.9)",
+          color: "#fff",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+          pointerEvents: "none",
+          zIndex: 5
+        }
+      },
+      n.text
+    )),
+    wide && /* @__PURE__ */ React3.createElement(
+      "div",
+      {
+        style: {
+          position: "absolute",
+          right: 10,
+          top: 10,
+          zIndex: 6,
+          display: "flex",
+          gap: 6,
+          alignItems: "center",
+          background: "rgba(255,255,255,.94)",
+          border: `1px solid ${U.line}`,
+          borderRadius: 18,
+          padding: "5px 10px",
+          fontSize: 11.5
+        },
+        onMouseDown: stop,
+        onMouseUp: stop
+      },
+      /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor } }),
+      /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(pMen)),
+      /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\u5BFE"),
+      /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor } }),
+      /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(eMen)),
+      /* @__PURE__ */ React3.createElement("span", { className: "num", style: { color: U.dim } }, Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0")),
+      phase === "fight" && [["\u505C", 0], ["\u5FAE", 0.12], ["\u4F4E", 0.3], ["\u901A", 0.6]].map(([lb, v]) => /* @__PURE__ */ React3.createElement(
+        "button",
+        {
+          key: lb,
+          className: `btn sm ${speed === v ? "on" : ""}`,
+          style: { padding: "3px 6px" },
+          onClick: () => setSpeed(v)
+        },
+        lb
+      ))
+    ),
+    /* @__PURE__ */ React3.createElement("div", { className: "mapctl l", onMouseDown: stop, onMouseUp: stop, onTouchStart: stop, onTouchEnd: stop }, /* @__PURE__ */ React3.createElement("div", { className: "mbtn", onClick: () => zoomAt(1.3, null) }, /* @__PURE__ */ React3.createElement("b", null, "\uFF0B"), "\u62E1\u5927"), /* @__PURE__ */ React3.createElement("div", { className: "mbtn", onClick: () => zoomAt(0.77, null) }, /* @__PURE__ */ React3.createElement("b", null, "\u2212"), "\u7E2E\u5C0F"), /* @__PURE__ */ React3.createElement("div", { className: "mbtn", onClick: fitAll }, /* @__PURE__ */ React3.createElement("b", null, "\u26F6"), "\u5168\u4F53"), /* @__PURE__ */ React3.createElement("div", { className: "mbtn", onClick: () => setPanel((v) => !v) }, /* @__PURE__ */ React3.createElement("b", null, "\u25A4"), panel ? "\u53CE\u7D0D" : "\u5C55\u958B"), /* @__PURE__ */ React3.createElement("div", { className: `mbtn ${wide ? "on" : ""}`, onClick: () => setWide((v) => !v) }, /* @__PURE__ */ React3.createElement("b", null, wide ? "\u25A4" : "\u2922"), wide ? "\u623B\u3059" : "\u5E83\u304F"))
+  ), panel && /* @__PURE__ */ React3.createElement(
+    "div",
+    {
+      className: "bpanel",
+      onMouseDown: stop,
+      onMouseUp: stop,
+      onTouchStart: stop,
+      onTouchEnd: stop,
+      style: {
+        flex: "0 0 auto",
+        background: U.card,
+        padding: "8px 10px",
+        overflowY: "auto",
+        width: land ? wide ? 200 : 246 : "auto",
+        maxHeight: land ? "none" : "40%",
+        borderLeft: land ? `1px solid ${U.line}` : "none",
+        borderTop: land ? "none" : `1px solid ${U.line}`
+      }
+    },
+    panelBody
+  ))));
+}
+
+// src/ui/CastleSheet.jsx
+import React4, { useState as useState4 } from "react";
+function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
+  const f = g.factions[c.faction];
+  const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+  const ret = gens.reduce((a, x) => a + x.retinue, 0);
+  const total = c.local + ret;
+  const mine = c.faction === g.player;
+  const lord = castellanOf(g, c);
+  const [cmd, setCmd] = useState4("\u958B\u58BE");
+  const [genId, setGenId] = useState4(null);
+  const [plot, setPlot] = useState4("\u5075\u5BDF");
+  const [plotTarget, setPlotTarget] = useState4(null);
+  const [diploTarget, setDiploTarget] = useState4(null);
+  const cur = genId && gens.some((x) => x.id === genId) ? genId : gens[0] && gens[0].id;
+  const busy = (id) => !!g.orders[id];
+  const freeGens = gens.filter((x) => !busy(x.id) && !x.captive);
+  const done = freeGens.length === 0;
+  const garrison = minGarrison(c);
+  const cap = troopCap(c, f.mobilization, g || s);
+  const open = mine || canSee(g, c);
+  const V = (v, unit) => open ? `${fmt(v)}${unit || ""}` : "\uFF1F";
+  const N = (v) => open ? Math.round(v) : "\uFF1F";
+  const stop = (e) => e.stopPropagation();
+  const myCastles = g.castles.filter((x) => x.faction === g.player);
+  const distTo = (fid) => {
+    const cs = g.castles.filter((x) => x.faction === fid);
+    if (!cs.length || !myCastles.length) return 1e9;
+    let best = 1e9;
+    for (const a of myCastles) for (const b of cs) {
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < best) best = d;
+    }
+    return best;
+  };
+  const foeFactions = Object.values(g.factions).filter((x) => x.id !== g.player && g.castles.some((c2) => c2.faction === x.id)).map((x) => ({ ...x, dist: distTo(x.id) })).sort((a, b) => a.dist - b.dist).map((x) => ({ ...x, full: `${x.name}\uFF08${g.castles.filter((c2) => c2.faction === x.id).length}\u57CE\u30FB${relOf(g, g.player, x.id).state}\uFF09` }));
+  const dt = diploTarget && foeFactions.some((x) => x.id === diploTarget) ? diploTarget : foeFactions[0] ? foeFactions[0].id : g.player;
+  const rel = relOf(g, g.player, dt);
+  const myKoku = g.castles.filter((x) => x.faction === g.player).reduce((a, x) => a + x.koku, 0);
+  const youKoku = g.castles.filter((x) => x.faction === dt).reduce((a, x) => a + x.koku, 0);
+  const foeCastles = g.castles.filter((x) => x.faction !== g.player).map((x) => ({ ...x, dist: myCastles.length ? Math.min(...myCastles.map((a) => Math.hypot(a.x - x.x, a.y - x.y))) : 0 })).sort((a, b) => a.dist - b.dist);
+  const pt = plotTarget && foeCastles.some((x) => x.id === plotTarget) ? plotTarget : foeCastles[0] && foeCastles[0].id;
+  const running = g.plots.filter((x) => x.faction === g.player);
+  const nearTowns = TOWNS.slice().sort((a, z) => Math.hypot(px(a.lon) - c.x, py(a.lat) - c.y) - Math.hypot(px(z.lon) - c.x, py(z.lat) - c.y));
+  return /* @__PURE__ */ React4.createElement(
+    "div",
+    {
+      className: "sheet",
+      onMouseDown: stop,
+      onMouseUp: stop,
+      onTouchStart: stop,
+      onTouchEnd: stop,
+      onWheel: stop,
+      style: land ? {
+        left: "auto",
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: 390,
+        maxHeight: "100%",
+        borderRadius: 0,
+        borderTop: "none",
+        borderLeft: `1px solid ${U.line}`,
+        boxShadow: "-6px 0 24px rgba(0,0,0,.10)"
+      } : void 0
+    },
+    /* @__PURE__ */ React4.createElement("div", { className: "sheet-h" }, /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: onClose }, "\u2190 \u623B\u308B"), /* @__PURE__ */ React4.createElement("span", { className: "mn", style: { fontSize: 22 } }, c.name), /* @__PURE__ */ React4.createElement("span", { className: "pill", style: { background: f.color } }, f.name), !mine && /* @__PURE__ */ React4.createElement("span", { className: "pill", style: { background: open ? "#5C8C4A" : "#8A8478" } }, open ? "\u5075\u5BDF\u6E08\u307F" : "\u5185\u60C5\u4E0D\u660E"), !mine && relOf(g, g.player, c.faction).state !== "\u4E2D\u7ACB" && /* @__PURE__ */ React4.createElement("span", { className: "pill", style: { background: "#4A6E8A" } }, relOf(g, g.player, c.faction).state, relOf(g, g.player, c.faction).until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, relOf(g, g.player, c.faction).until.y, relOf(g, g.player, c.faction).until.m)}\u304B\u6708\uFF09` : ""), /* @__PURE__ */ React4.createElement("span", { style: { flex: 1 } }), mine && /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 11, color: U.dim } }, done ? "\u672C\u6708\u306E\u52D9\u3081\u306F\u6E08\u3093\u3060" : `\u50CD\u3051\u308B\u8005 ${freeGens.length}\u540D`)),
+    /* @__PURE__ */ React4.createElement("div", { className: "split", style: land ? { flexDirection: "column", gap: 10 } : void 0 }, /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("div", { className: "tbl" }, /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u57CE\u4E3B"), /* @__PURE__ */ React4.createElement("span", { className: "v mn" }, open ? lord ? lord.name : "\u2015" : "\uFF1F", open && lord && /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, lord.lord ? needsGuardian(lord) ? `\uFF08\u5F53\u4E3B\u30FB${lord.age}\u6B73\uFF09` : "\uFF08\u5F53\u4E3B\uFF09" : isGuardian(g, lord) ? "\uFF08\u5F8C\u898B\uFF09" : `\uFF08${rankName(lord, g)}\u30FB\u7984\u9AD8${fmt(stipendOf(g, lord))}\u77F3\uFF09`)), /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u57CE\u4E3B\u306E\u683C"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, open ? /* @__PURE__ */ React4.createElement(React4.Fragment, null, "\u7984\u9AD8 ", fmt(castleRankNeed(c)), "\u77F3 \u4EE5\u4E0A") : "\uFF1F", open && /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, "\uFF08\u3053\u306E\u57CE\u306E\u8EAB\u4EE3\u306B\u5FDC\u3058\u305F\u683C\uFF09")), /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u77F3\u9AD8"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, V(c.koku), " / ", V(c.kokuMax), " \u77F3"), /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u4EBA\u53E3"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, V(c.pop)), /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u5175\u6570"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, V(total)), /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u6B66\u5C06"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, open ? `${gens.length} \u540D` : "\uFF1F"), /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u5175\u7CE7"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, open ? `${fmt(c.food)} \u77F3\uFF08${foodDays(c.food, total)} \u65E5\u5206\uFF09` : "\uFF1F")), /* @__PURE__ */ React4.createElement("div", { style: { height: 10 } }), /* @__PURE__ */ React4.createElement("div", { className: "tbl" }, /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u57CE\u9632"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, N(c.def), " / 100"), /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u5546\u696D"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, N(c.comm), " / 100"), /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u6C11\u5FE0"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, N(c.min), " / 100"), /* @__PURE__ */ React4.createElement("span", { className: "k" }, "\u8010\u4E45"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, V(c.hp))), !open && /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, marginTop: 10, lineHeight: 1.6 } }, "\u5185\u60C5\u306F\u63B4\u3081\u3066\u3044\u306A\u3044\u3002\u8ABF\u7565\u306E\u300C\u5075\u5BDF\u300D\u3092\u884C\u3046\u304B\u3001\u5FCD\u3073\u306E\u91CC\u3092\u5473\u65B9\u306B\u3064\u3051\u308C\u3070\u5206\u304B\u308B\u3002"), open && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u5175\u529B\u306E\u5185\u8A33"), /* @__PURE__ */ React4.createElement("div", { className: "row" }, /* @__PURE__ */ React4.createElement("span", null, "\u76F4\u5C5E\u5BB6\u81E3\u56E3"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, fmt(ret), " \u4EBA")), /* @__PURE__ */ React4.createElement("div", { className: "row" }, /* @__PURE__ */ React4.createElement("span", null, "\u5730\u57DF\u5BB6\u81E3\u56E3\uFF08\u7DF4\u5EA6 ", Math.round(c.localTrain), "\uFF09"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, fmt(c.local), " \u4EBA")), /* @__PURE__ */ React4.createElement("div", { className: "row" }, /* @__PURE__ */ React4.createElement("span", null, "\u5730\u57DF\u5BB6\u81E3\u56E3\u306E\u99B4\u67D3"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, Math.round(c.najimi == null ? 70 : c.najimi), " / 100")), /* @__PURE__ */ React4.createElement("div", { className: "row" }, /* @__PURE__ */ React4.createElement("span", null, "\u5B88\u5099\u6700\u4F4E\u6570"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, fmt(garrison), " \u4EBA")), /* @__PURE__ */ React4.createElement("div", { className: "row", style: { color: f.color, fontWeight: 600 } }, /* @__PURE__ */ React4.createElement("span", null, "\u51FA\u5F81\u53EF\u80FD\u5175"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, fmt(Math.max(0, total - garrison)), " \u4EBA")), /* @__PURE__ */ React4.createElement("div", { className: "meter" }, /* @__PURE__ */ React4.createElement("i", { style: { width: `${Math.min(100, total / Math.max(1, cap) * 100)}%`, background: f.color } })), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 4 } }, "\u8ECD\u5F79\u4E0A\u9650 ", fmt(cap), " \u4EBA\uFF08\u99B4\u67D3\u304C\u4F4E\u3044\u3068\u52D5\u54E1\u3082\u843D\u3061\u308B\uFF09"), c.intrigue && /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: "#8A6A34", marginTop: 6 } }, "\u3053\u306E\u57CE\u306B\u306F\u5185\u5FDC\u306E\u5BC6\u7D04\u304C\u4ED5\u8FBC\u307E\u308C\u3066\u3044\u308B\u3002"))), /* @__PURE__ */ React4.createElement("div", null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u6240\u5C5E\u6B66\u5C06"), !open && /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u4E0D\u660E\u3002"), open && gens.length === 0 && /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u5728\u57CE\u306E\u6B66\u5C06\u306F\u3044\u306A\u3044\u3002"), open && gens.map((x) => /* @__PURE__ */ React4.createElement("div", { key: x.id, style: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${U.line2}`, fontSize: 13, gap: 8 } }, /* @__PURE__ */ React4.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, x.lord ? /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("span", { className: "pill", style: { background: f.color, marginLeft: 6 } }, "\u5F53\u4E3B"), needsGuardian(x) && /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 10.5, color: "#B0483C", marginLeft: 4 } }, "\u5E7C\u5E74\uFF08", x.age, "\u6B73\uFF09")) : isGuardian(g, x) ? /* @__PURE__ */ React4.createElement("span", { className: "pill", style: { background: "#8A7A5A", marginLeft: 6 } }, "\u5F8C\u898B") : /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 6 } }, rankName(x, g))), /* @__PURE__ */ React4.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, "\u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, " \u653F", x.gov, " \u5FE0", x.loyal, "\uFF0F", x.lord ? `\u5FA1\u6599${fmt(goryoOf(g, x.faction).total)}\u77F3` : `\u7984\u9AD8${fmt(stipendOf(g, x))}\u77F3`, "\u30FB\u76F4\u5C5E", fmt(x.retinue)))), open && (() => {
+      const pris = g.generals.filter((x) => x.at === c.id && x.captive && x.captive.by === c.faction);
+      if (!pris.length) return null;
+      return /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, margin: "10px 0 4px" } }, "\u3053\u306E\u57CE\u306B\u7559\u3081\u7F6E\u304B\u308C\u3066\u3044\u308B\u8005\uFF08\u7528\u3044\u308B\u3053\u3068\u306F\u3067\u304D\u307E\u305B\u3093\uFF09"), pris.map((x) => /* @__PURE__ */ React4.createElement("div", { key: x.id, style: {
+        display: "flex",
+        justifyContent: "space-between",
+        padding: "6px 0",
+        borderBottom: `1px solid ${U.line2}`,
+        fontSize: 13,
+        gap: 8,
+        opacity: 0.62
+      } }, /* @__PURE__ */ React4.createElement("span", { className: "mn", style: { fontSize: 15 } }, /* @__PURE__ */ React4.createElement("span", { className: "pill", style: { background: "#8A7A6A", marginRight: 6 } }, "\u56DA"), x.name, /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, "\u65E7", (g.factions[x.captive.from] || {}).name)), /* @__PURE__ */ React4.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, "\u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, " \u653F", x.gov, x.captive.ruin ? `\uFF0F\u5FC3 ${x.warLoyal || 0}\uFF0F50` : `\uFF0F\u5FE0${Math.round(x.loyal == null ? 60 : x.loyal)}`))));
+    })(), mine && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u547D\u4EE4"), /* @__PURE__ */ React4.createElement("div", { className: "g4", style: { marginBottom: 10 } }, ["\u5185\u653F", "\u8ECD\u4E8B", "\u4EBA\u4E8B", "\u5916\u4EA4", "\u8ABF\u7565", "\u7279\u6B8A\u52E2\u529B"].map((k) => /* @__PURE__ */ React4.createElement("button", { key: k, className: `btn sm ${tab === k ? "on" : ""}`, onClick: () => setTab(k) }, k))), tab === "\u5185\u653F" && (done ? /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u3053\u306E\u57CE\u306E\u8005\u306F\u307F\u306A\u672C\u6708\u306E\u52D9\u3081\u3092\u679C\u305F\u3057\u305F\u3002\u6B21\u6708\u3078\u9032\u3081\u3070\u3001\u307E\u305F\u50CD\u3051\u308B\u3002") : /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6 } }, "\u624B\u306E\u7A7A\u3044\u3066\u3044\u308B\u8005 ", freeGens.length, "\u540D\uFF0F\u5728\u57CE ", gens.filter((x) => !x.captive).length, "\u540D\u3002 \u4E00\u4EBA\u304C\u4E00\u3064\u306E\u52D9\u3081\u306B\u3042\u305F\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("div", { className: "g4", style: { marginBottom: 8 } }, ["\u958B\u58BE", "\u6CBB\u6C34", "\u5546\u696D", "\u7BC9\u57CE", "\u8A13\u7DF4", "\u5FB4\u52DF"].map((k) => /* @__PURE__ */ React4.createElement("button", { key: k, className: `btn sm ${cmd === k ? "on" : ""}`, onClick: () => setCmd(k) }, k))), /* @__PURE__ */ React4.createElement(
+      "select",
+      {
+        className: "sel",
+        style: { width: "100%", marginBottom: 8 },
+        value: freeGens.some((x) => x.id === cur) ? cur : (freeGens[0] || {}).id || "",
+        onChange: (e) => setGenId(e.target.value)
+      },
+      freeGens.map((x) => /* @__PURE__ */ React4.createElement("option", { key: x.id, value: x.id }, `\u62C5\u5F53\uFF1A${x.name}\uFF08\u7D71${x.lead} \u653F${x.gov} \u77E5${x.wit}\uFF09`))
+    ), /* @__PURE__ */ React4.createElement(
+      "button",
+      {
+        className: "btn dark",
+        style: { width: "100%" },
+        disabled: !freeGens.length,
+        onClick: () => onCommand(c.id, cmd, freeGens.some((x) => x.id === cur) ? cur : freeGens[0].id)
+      },
+      cmd,
+      "\u3092\u5B9F\u884C"
+    ), (() => {
+      if (!mine) return null;
+      const kuni = c.kuni;
+      if (!kuni) return null;
+      const holds = holdsProvince(g, g.player, kuni);
+      const done2 = kenchiDone(g, kuni);
+      const cs = g.castles.filter((x) => x.kuni === kuni);
+      const mineN = cs.filter((x) => x.faction === g.player).length;
+      const cost = kenchiCost(g, kuni);
+      const who = freeGens.length ? [...freeGens].sort((a, b) => b.gov - a.gov)[0] : null;
+      return /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u691C\u5730"), done2 ? /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, lineHeight: 1.7 } }, kuni, "\u306B\u306F\u3059\u3067\u306B\u7AFF\u304C\u5165\u3063\u3066\u3044\u308B\u3002") : !holds ? /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, lineHeight: 1.7 } }, kuni, "\u306E", cs.length, "\u57CE\u306E\u3046\u3061\u3001\u5F53\u5BB6\u306E\u3082\u306E\u306F", mineN, "\u57CE\u3002", /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("b", { style: { color: "#B0483C" } }, "\u4E00\u56FD\u3092\u4E38\u3054\u3068\u62BC\u3055\u3048\u306D\u3070\u3001\u7AFF\u306F\u5165\u308C\u3089\u308C\u306A\u3044\u3002"), /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 11 } }, "\u56FD\u5883\u3092\u307E\u305F\u3044\u3067\u691C\u5730\u306F\u3067\u304D\u305A\u3001\u4ED6\u5BB6\u306E\u57CE\u304C\u4E00\u3064\u3067\u3082\u6B8B\u308C\u3070\u5E33\u7C3F\u306F\u6539\u307E\u308A\u307E\u305B\u3093\u3002")) : /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 8, lineHeight: 1.8 } }, /* @__PURE__ */ React4.createElement("b", { style: { color: "#3E7A3A" } }, kuni, "\u4E00\u56FD\u3092\u62BC\u3055\u3048\u305F\u3002\u7AFF\u3092\u5165\u308C\u3089\u308C\u308B\u3002"), /* @__PURE__ */ React4.createElement("br", null), "\u56FD\u4E2D", cs.length, "\u57CE\u306E\u5B9F\u308A\u304C\u6539\u307E\u308A\u3001", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, "\u77F3\u9AD8\u306E\u9650\u308A\u3082\u4F38\u3073\u307E\u3059"), "\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u8CBB\u7528 \u91D1", fmt(cost.gold), "\u8CAB\uFF0F\u6C11\u5FE0\u306F\u4E5D\u3064\u4E0B\u304C\u308A\u307E\u3059\u3002", who && `\u3000\u5949\u884C\uFF1A${who.name}\uFF08\u653F\u52D9${who.gov}\uFF09`), /* @__PURE__ */ React4.createElement(
+        "button",
+        {
+          className: "btn dark",
+          style: { width: "100%" },
+          disabled: !who || g.factions[g.player].gold < cost.gold,
+          onClick: () => onKenchi(kuni, who.id)
+        },
+        kuni,
+        "\u306B\u7AFF\u3092\u5165\u308C\u308B"
+      )));
+    })(), gens.filter((x) => busy(x.id)).length > 0 && /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 8, lineHeight: 1.6 } }, "\u672C\u6708\u3059\u3067\u306B\u52D9\u3081\u305F\u8005\uFF1A", gens.filter((x) => busy(x.id)).map((x) => `${x.name}\uFF08${g.orders[x.id].cmd}\uFF09`).join("\u3001")))), tab === "\u8ECD\u4E8B" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 8 } }, "\u51FA\u5F81\u53EF\u80FD\u5175 ", fmt(Math.max(0, total - garrison)), " \u4EBA\u3002\u5B88\u5099\u6700\u4F4E\u6570\u306F\u57CE\u306B\u6B8B\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("button", { className: "btn dark", style: { width: "100%" }, disabled: total - garrison < 200 || !gens.length, onClick: onSortie }, "\u51FA\u9663"), (() => {
+      if (c.faction !== g.player) return null;
+      const \u56F2\u307E\u308C = g.sieges.some((sg) => sg.castleId === c.id);
+      const \u8FEB\u308B = g.armies.filter((a) => a.target === c.id && a.faction !== c.faction && !g.relations[[a.faction, c.faction].sort().join("|")]?.state?.match(/同盟|不可侵|従属|臣従/));
+      if (!\u56F2\u307E\u308C && !\u8FEB\u308B.length) return null;
+      return /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: {
+        fontSize: 12.5,
+        color: "#B0483C",
+        marginTop: 12,
+        lineHeight: 1.8,
+        borderLeft: "3px solid #B0483C",
+        paddingLeft: 10
+      } }, /* @__PURE__ */ React4.createElement("b", null, c.name, "\u306F\u5371\u3046\u3044\u3002"), /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, \u56F2\u307E\u308C ? "\u56F2\u307E\u308C\u3066\u3044\u307E\u3059\u3002" : "", \u8FEB\u308B.length ? `${\u8FEB\u308B.map((a) => g.factions[a.faction].name).join("\u30FB")}\u306E\u8ECD\u304C\u5411\u304B\u3063\u3066\u3044\u307E\u3059\u3002` : "")), /* @__PURE__ */ React4.createElement("button", { className: "btn", style: { width: "100%", marginTop: 8 }, onClick: () => onCallAid(c.id) }, "\u63F4\u8ECD\u3092\u547C\u3076"));
+    })()), tab === "\u4EBA\u4E8B" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 8 } }, "\u57CE\u4E3B\u3092\u5B9A\u3081\u307E\u3059\u3002\u57CE\u4E3B\u304C\u4EE3\u308F\u308B\u3068\u5730\u57DF\u5BB6\u81E3\u56E3\u306E\u99B4\u67D3\u306F\u4E0B\u304C\u308A\u3001\u6708\u3054\u3068\u306B\u623B\u308A\u307E\u3059\u3002"), (() => {
+      const pris = g.generals.filter((x) => x.captive && x.captive.ruin && x.captive.by === g.player && x.at === c.id);
+      if (!pris.length) return null;
+      return /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u6226\u5F8C\u306E\u59CB\u672B"), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.7 } }, "\u6EC5\u307C\u3057\u305F\u5BB6\u304B\u3089\u6355\u3089\u3048\u305F\u8005\u3067\u3059\u3002\u56DA\u308F\u308C\u306E\u6708\u3092\u91CD\u306D\u308B\u3054\u3068\u306B\u5FC3\u304C\u307B\u3050\u308C\uFF08\u6708\u306B\u4E8C\uFF09\u3001 \u6276\u6301\u3092\u4E0E\u3048\u308C\u3070\u3055\u3089\u306B\u958B\u304D\u307E\u3059\uFF08\u6708\u306B\u4E00\u5EA6\u30FB\u56DB\uFF09\u3002", /* @__PURE__ */ React4.createElement("b", null, "\u4E94\u5341\u306B\u9054\u3059\u308C\u3070\u53EC\u3057\u62B1\u3048\u3089\u308C\u307E\u3059\u3002")), pris.map((x) => {
+        const wl = x.warLoyal || 0;
+        const cost = Math.round(120 + (x.lead + x.gov + x.wit) * 1.4);
+        const food = Math.round(60 + x.retinue * 0.4);
+        return /* @__PURE__ */ React4.createElement("div", { key: x.id, style: { borderBottom: `1px solid ${U.line2}`, padding: "8px 0" } }, /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } }, /* @__PURE__ */ React4.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, "\u65E7", (g.factions[x.captive.from] || {}).name)), /* @__PURE__ */ React4.createElement("span", { className: "num", style: { fontSize: 12, color: wl >= 50 ? "#3E7A3A" : U.dim } }, "\u5FC3 ", wl, "\uFF0F50")), /* @__PURE__ */ React4.createElement("div", { className: "num", style: { fontSize: 11, color: U.dim, marginTop: 2 } }, "\u7D71", x.lead, "\u30FB\u6B66", x.valor, "\u30FB\u77E5", x.wit, "\u30FB\u653F", x.gov), /* @__PURE__ */ React4.createElement("div", { className: "g3", style: { marginTop: 6 } }, /* @__PURE__ */ React4.createElement(
+          "button",
+          {
+            className: "btn sm",
+            disabled: wl < 50,
+            onClick: () => onSettle(x.id, "\u767B\u7528")
+          },
+          "\u53EC\u3057\u62B1\u3048\u308B"
+        ), /* @__PURE__ */ React4.createElement(
+          "button",
+          {
+            className: "btn sm",
+            disabled: x.fed,
+            onClick: () => onSettle(x.id, "\u6276\u6301")
+          },
+          "\u6276\u6301",
+          x.fed ? "\u6E08" : ""
+        ), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onSettle(x.id, "\u5207\u8179") }, "\u5207\u8179")), !x.fed && /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 10.5, color: U.dim, marginTop: 3 } }, "\u6276\u6301\u306B\u306F\u91D1", fmt(cost), "\u8CAB\u30FB\u5175\u7CE7", fmt(food)));
+      }));
+    })(), (() => {
+      const lord2 = g.generals.find((x) => x.faction === g.player && x.lord && !x.captive);
+      if (!lord2 || lord2.at !== c.id) return null;
+      const cands = heirCandidates(g, lord2).filter(({ gen }) => gen.age >= 12);
+      if (!cands.length) return null;
+      return /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u5BB6\u7763\u3092\u8B72\u308B\uFF08\u96A0\u5C45\uFF09"), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 } }, "\u5B58\u547D\u306E\u3046\u3061\u306B\u8B72\u308C\u3070\u3001\u5148\u4EE3\u304C\u5F8C\u898B\u306B\u7ACB\u3064\u305F\u3081", /* @__PURE__ */ React4.createElement("b", null, "\u5BB6\u4E2D\u306F\u307B\u3068\u3093\u3069\u63FA\u308C\u307E\u305B\u3093"), "\u3002 \u6CA1\u3057\u3066\u304B\u3089\u7D99\u304C\u305B\u308B\u3068\u3001\u8840\u7B4B\u3067\u306A\u3044\u8005\u306A\u3089\u5FE0\u8AA0\u304C\u4E5D\u3064\u3001\u5E7C\u5E74\u306A\u3089\u3055\u3089\u306B\u4E94\u3064\u4E0B\u304C\u308A\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u5148\u4EE3\uFF08", lord2.name, "\u30FB", lord2.age, "\u6B73\uFF09\u306F\u5BB6\u81E3\u3068\u3057\u3066\u6B8B\u308A\u3001\u76F4\u5C5E\u306E\u534A\u3070\u3092\u65B0\u5F53\u4E3B\u306B\u6E21\u3057\u307E\u3059\u3002"), cands.slice(0, 4).map(({ gen, blood }) => /* @__PURE__ */ React4.createElement(
+        "button",
+        {
+          key: gen.id,
+          className: "btn sm",
+          style: { width: "100%", textAlign: "left", marginBottom: 4 },
+          onClick: () => onRetire(gen.id)
+        },
+        gen.name,
+        "\u306B\u8B72\u308B",
+        /* @__PURE__ */ React4.createElement("span", { style: { color: blood ? "#3E7A3A" : "#B0483C", fontSize: 11 } }, blood ? "\u8840\u7B4B" : "\u4ED6\u5BB6\u306E\u51FA", gen.age < 16 ? "\u30FB\u5E7C\u5E74" : ""),
+        /* @__PURE__ */ React4.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, gen.age, "\u6B73\uFF0F\u7D71", gen.lead, "\u30FB\u6B66", gen.valor, "\u30FB\u77E5", gen.wit, "\u30FB\u653F", gen.gov)
+      )));
+    })(), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.7 } }, "\u3053\u306E\u57CE\u306E\u77F3\u9AD8 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, fmt(c.koku), "\u77F3"), "\uFF08\u914D\u308C\u308B\u77E5\u884C\u306E\u9650\u308A\uFF09\uFF0F \u5BB6\u81E3\u306B\u914D\u3063\u305F\u77E5\u884C ", fmt(fiefBurden(g, c.id)), "\u77F3", /* @__PURE__ */ React4.createElement("br", null), "\u3053\u306E\u57CE\u306E\u4F59\u7984 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, fmt(extraIncome(c)), "\u77F3"), "\uFF08\u6E4A\u306E\u904B\u4E0A\u30FB\u5E02\u306E\u5F79\u92AD\u30FB\u5C71\u306E\u7523\uFF09", /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 11 } }, "\u77E5\u884C\u306B\u4F59\u7984\u306E\u5206\u3051\u524D\u3092\u52A0\u3048\u305F\u3082\u306E\u304C", /* @__PURE__ */ React4.createElement("b", null, "\u7984\u9AD8"), "\u3067\u3001\u8EAB\u5206\u306F\u3053\u308C\u3067\u5B9A\u307E\u308A\u307E\u3059\u3002 \u77F3\u9AD8\u304C\u5897\u3048\u308C\u3070\u3001\u914D\u308C\u308B\u77E5\u884C\u3082\u5897\u3048\u307E\u3059\u3002")), (() => {
+      const rm = fiefRoom(g, g.player);
+      return /* @__PURE__ */ React4.createElement("div", { className: "row", style: { borderBottom: `1px solid ${U.line2}`, paddingBottom: 4 } }, /* @__PURE__ */ React4.createElement("span", null, "\u914D\u308C\u308B\u77E5\u884C"), /* @__PURE__ */ React4.createElement("span", { className: "v num" }, fmt(rm.left), "\u77F3 ", /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\uFF08\u77F3\u9AD8\u306E\u56DB\u5272 ", fmt(rm.cap), "\u77F3\u306E\u3046\u3061 ", fmt(rm.used), "\u77F3\u3092\u914D\u5206\u6E08\uFF09")));
+    })(), gens.filter((x) => !x.captive).map((x) => {
+      const want = fiefWanted(x), have = fiefOf(x);
+      const r = have / Math.max(1, want);
+      const mood = r >= 1 ? "\u6E80\u3061\u3066\u3044\u308B" : r >= 0.75 ? "\u4E0D\u8DB3\u306F\u306A\u3044" : r >= 0.5 ? "\u4E0D\u6E80\u304C\u3042\u308B" : "\u5F37\u3044\u4E0D\u6E80";
+      const col = r >= 0.75 ? U.dim : r >= 0.5 ? "#C89A3A" : "#B0483C";
+      return /* @__PURE__ */ React4.createElement("div", { key: x.id, style: { borderBottom: `1px solid ${U.line2}`, padding: "6px 0" } }, /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React4.createElement(
+        "button",
+        {
+          className: `btn sm ${lord && lord.id === x.id ? "on" : ""}`,
+          style: { flex: 1, textAlign: "left" },
+          onClick: () => onAppoint(c.id, x.id)
+        },
+        x.name,
+        " \u3092\u57CE\u4E3B\u306B"
+      ), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onReward(x.id) }, "\u8912\u8CDE300\u8CAB")), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, marginTop: 2 } }, /* @__PURE__ */ React4.createElement("span", { style: { color: "#8A7A5A" } }, rankName(x, g)), !x.lord && (() => {
+        if (x.lord) return /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, marginLeft: 6 } }, "\u3000\u5FA1\u6599", fmt(goryoOf(g, x.faction).total), "\u77F3");
+        const st = stipendOf(g, x);
+        const nx = RANKS.filter((r2) => r2.min > st).sort((a, b) => a.min - b.min)[0];
+        return nx ? /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, marginLeft: 6 } }, "\u7984\u9AD8", fmt(st), "\u77F3\uFF08\u3042\u3068", fmt(nx.min - st), "\u77F3\u3067", nx.key, "\uFF09") : /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, marginLeft: 6 } }, "\u3000\u7984\u9AD8", fmt(st), "\u77F3");
+      })()), /* @__PURE__ */ React4.createElement("div", { className: "num", style: { fontSize: 11.5, color: col, marginTop: 3 } }, isNameless(x) ? /* @__PURE__ */ React4.createElement("span", { style: { color: "#9B9384" }, title: "\u540D\u306E\u4F1D\u308F\u3089\u306C\u5728\u5730\u306E\u9577\u3002\u5B9F\u5728\u306E\u4EBA\u540D\u3067\u306F\u3042\u308A\u307E\u305B\u3093" }, "\u3014\u4F1D\u3015") : null, x.retired ? /* @__PURE__ */ React4.createElement("span", { style: { color: "#8A7A5A" } }, "\u3010\u96A0\u5C45\u3011") : null, x.lord ? /* @__PURE__ */ React4.createElement("span", { style: { color: "#C8A44A" } }, "\u3010\u5F53\u4E3B\u3011") : null, "\u5FE0\u8AA0", Math.round(x.loyal == null ? 60 : x.loyal), "\uFF0F\u77E5\u884C ", fmt(have), "\u77F3 \uFF08\u671B\u3080\u3068\u3053\u308D ", fmt(want), "\u77F3\u30FB", mood, "\uFF09"), /* @__PURE__ */ React4.createElement("div", { className: "g4", style: { marginTop: 3 } }, [500, 1500, 4e3].map((n) => /* @__PURE__ */ React4.createElement("button", { key: n, className: "btn sm", onClick: () => onFief(x.id, n) }, "\uFF0B", fmt(n), "\u77F3")), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onFief(x.id, -1500) }, "\u22121,500\u77F3")));
+    }), g.generals.filter((x) => x.captive && x.captive.at === c.id && x.captive.by === c.faction).length > 0 && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u3053\u306E\u57CE\u306B\u7559\u3081\u7F6E\u304F\u6355\u865C"), g.generals.filter((x) => x.captive && x.captive.at === c.id && x.captive.by === c.faction).map((x) => /* @__PURE__ */ React4.createElement("div", { key: x.id, style: {
+      display: "flex",
+      justifyContent: "space-between",
+      color: "#A9A499",
+      fontSize: 12.5,
+      padding: "4px 0"
+    } }, /* @__PURE__ */ React4.createElement("span", null, "\u3010\u6355\u865C\u3011", x.name), /* @__PURE__ */ React4.createElement("span", { className: "num" }, "\u7D71", x.lead, "\uFF0F\u6B66", x.valor, "\uFF0F\u77E5", x.wit, "\uFF0F\u653F", x.gov, "\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0 ", Math.round(x.loyal == null ? 60 : x.loyal)))), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 4 } }, "\u6355\u865C\u306F\u57CE\u4E3B\u306B\u3082\u8912\u8CDE\u306B\u3082\u4E0E\u308C\u306A\u3044\u3002\u51E6\u9047\u306F\u5916\u4EA4\u306E\u300C\u6355\u865C\u300D\u3067\u6C7A\u3081\u308B\u3002"))), tab === "\u5916\u4EA4" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("select", { className: "sel", style: { width: "100%", marginBottom: 8 }, value: dt, onChange: (e) => setDiploTarget(e.target.value) }, foeFactions.map((x) => /* @__PURE__ */ React4.createElement("option", { key: x.id, value: x.id }, x.full))), /* @__PURE__ */ React4.createElement("div", { className: "row" }, /* @__PURE__ */ React4.createElement("span", null, "\u73FE\u5728\u306E\u95A2\u4FC2"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, rel.state, rel.until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, rel.until.y, rel.until.m)}\u304B\u6708\uFF09` : "")), /* @__PURE__ */ React4.createElement("div", { className: "row" }, /* @__PURE__ */ React4.createElement("span", null, "\u4FE1\u7528"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, Math.round(rel.trust), " / 100")), /* @__PURE__ */ React4.createElement("div", { className: "meter" }, /* @__PURE__ */ React4.createElement("i", { style: { width: `${rel.trust}%`, background: "#4A6E8A" } })), /* @__PURE__ */ React4.createElement("div", { className: "g3", style: { marginTop: 10 } }, DIPLO.map((d) => {
+      const ok = d.need(rel, { koku: myKoku }, { koku: youKoku }) && g.factions[g.player].gold >= d.cost;
+      return /* @__PURE__ */ React4.createElement(
+        "button",
+        {
+          key: d.key,
+          className: "btn sm",
+          disabled: !ok,
+          title: d.why,
+          onClick: () => onDiplo(dt, d.key)
+        },
+        d.key
+      );
+    })), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 8, lineHeight: 1.7 } }, "\u89AA\u5584180\u8CAB\uFF0F\u4E0D\u53EF\u4FB5320\u8CAB\u30FB12\u304B\u6708\uFF0F\u540C\u76DF520\u8CAB\u30FB24\u304B\u6708\uFF0F\u5F93\u5C5E400\u8CAB\uFF0F\u81E3\u5F93\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u7D04\u675F\u3092\u7834\u3063\u3066\u653B\u3081\u308C\u3070\u88CF\u5207\u308A\u3068\u306A\u308A\u3001\u4FE1\u7528\u30FB\u5A01\u4FE1\u30FB\u5BB6\u81E3\u306E\u5FE0\u8AA0\u304C\u4E0B\u304C\u308A\u307E\u3059\u3002"), (() => {
+      const held = g.generals.filter((x) => x.captive && x.captive.by === g.player);
+      if (!held.length) {
+        return /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u6355\u865C\uFF080\u540D\uFF09"), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.7 } }, "\u6355\u3089\u3048\u305F\u6B66\u5C06\u306F\u3044\u307E\u305B\u3093\u3002\u5408\u6226\u3084\u57CE\u653B\u3081\u3067\u6575\u5C06\u3092\u6355\u3089\u3048\u308B\u3068\u3001\u3053\u3053\u3067 \u767B\u7528\u30FB\u9003\u3059\u30FB\u65AC\u9996\u30FB\u8EAB\u4EE3\u91D1\u3092\u9078\u3079\u307E\u3059\u3002"));
+      }
+      return /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u6355\u865C\uFF08", held.length, "\u540D\uFF09"), held.map((x) => {
+        const loy = Math.round(x.loyal == null ? 60 : x.loyal);
+        const from = g.factions[x.captive.from];
+        const bond = x.captive.bond || 0;
+        return /* @__PURE__ */ React4.createElement("div", { key: x.id, style: { borderBottom: `1px solid ${U.line2}`, padding: "6px 0" } }, /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 12.5 } }, /* @__PURE__ */ React4.createElement("span", null, "\u3010\u6355\u865C\u3011", x.name), /* @__PURE__ */ React4.createElement("span", { className: "num", style: { color: U.dim } }, from ? from.name : "\u65E7\u4E3B", "\u3078\u306E\u5FE0\u8AA0 ", loy)), /* @__PURE__ */ React4.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, marginTop: 2 } }, "\u7D71\u7387", x.lead, "\uFF0F\u6B66\u52C7", x.valor, "\uFF0F\u77E5\u7565", x.wit, "\uFF0F\u653F\u52D9", x.gov, bond > 0 ? "\u3000\u65E7\u4E3B\u3068\u539A\u3044\u7E01\uFF08\u5FE0\u8AA0\u304C\u4E0B\u304C\u308A\u306B\u304F\u3044\uFF09" : bond < 0 ? "\u3000\u65E7\u4E3B\u306B\u542B\u3080\u3068\u3053\u308D\u3042\u308A\uFF08\u5FE0\u8AA0\u304C\u4E0B\u304C\u308A\u3084\u3059\u3044\uFF09" : ""), /* @__PURE__ */ React4.createElement("div", { className: "g4", style: { marginTop: 4 } }, (() => {
+          const \u53EF = captiveRecruit(g, x);
+          return /* @__PURE__ */ React4.createElement(
+            "button",
+            {
+              className: "btn sm",
+              disabled: !\u53EF.ok,
+              title: \u53EF.why,
+              onClick: () => onCaptive(x.id, "\u767B\u7528")
+            },
+            "\u767B\u7528"
+          );
+        })(), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onCaptive(x.id, "\u9003\u3059") }, "\u9003\u3059"), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onCaptive(x.id, "\u65AC\u9996") }, "\u65AC\u9996"), /* @__PURE__ */ React4.createElement(
+          "button",
+          {
+            className: "btn sm",
+            onClick: () => onCaptive(x.id, "\u8EAB\u4EE3\u91D1"),
+            title: `${ransomRank(x)}\u306E\u5668\u91CF\u3002\u65E7\u4E3B\u306E\u91D1\u92AD\u30FB\u5175\u7CE7\u306E${RANSOM_DIV[ransomRank(x)]}\u5206\u306E1\u3092\u6C42\u3081\u308B`
+          },
+          "\u8EAB\u4EE3\u91D1\uFF08",
+          ransomRank(x),
+          "\uFF09"
+        )));
+      }), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u6355\u865C\u306F\u6708\u3054\u3068\u306B\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0\u3092\u5931\u3044\u307E\u3059\u300240\u4EE5\u4E0B\u306B\u306A\u308C\u3070\u964D\u308A\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u305F\u3060\u3057\u65E7\u4E3B\u3068\u8840\u3092\u5206\u3051\u305F\u4E00\u9580\u306F\u3001\u5FE0\u8AA0\u304C\u4E0B\u304C\u3063\u3066\u3082\u964D\u308A\u307E\u305B\u3093\u3002"));
+    })()), tab === "\u8ABF\u7565" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("select", { className: "sel", style: { width: "100%", marginBottom: 8 }, value: pt || "", onChange: (e) => setPlotTarget(e.target.value) }, foeCastles.slice(0, 30).map((x) => /* @__PURE__ */ React4.createElement("option", { key: x.id, value: x.id }, `${x.name}\uFF08${g.factions[x.faction].name}\uFF09\u3000\u7D04${marchMonths(c.id, x.id) || "?"}\u304B\u6708`))), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginBottom: 8 } }, "\u8FD1\u3044\u57CE\u304B\u3089\u9806\u306B\u4E09\u5341\u307E\u3067\u793A\u3057\u307E\u3059\u3002\u624B\u306E\u8005\u306F\u9060\u56FD\u3078\u306F\u5BB9\u6613\u306B\u5165\u308C\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React4.createElement("div", { className: "g3", style: { marginBottom: 8 } }, PLOTS.map((x) => /* @__PURE__ */ React4.createElement("button", { key: x.key, className: `btn sm ${plot === x.key ? "on" : ""}`, onClick: () => setPlot(x.key) }, x.key))), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 8, lineHeight: 1.8 } }, (PLOTS.find((x) => x.key === plot) || {}).desc, /* @__PURE__ */ React4.createElement("br", null), "\u8CBB\u7528", (PLOTS.find((x) => x.key === plot) || {}).cost, "\u8CAB\uFF0F \u5224\u660E\u307E\u3067", (PLOTS.find((x) => x.key === plot) || {}).months, "\u304B\u6708\uFF0F \u8981\u3059\u308B\u77E5\u7565 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, (PLOTS.find((x) => x.key === plot) || {}).need), "\uFF0F \u898B\u8FBC\u307F\u306E\u4E0A\u9650 ", Math.round(((PLOTS.find((x) => x.key === plot) || {}).cap || 0.85) * 100), "\uFF05"), (() => {
+      const d2 = PLOTS.find((x) => x.key === plot);
+      const who = freeGens.some((x) => x.id === cur) ? freeGens.find((x) => x.id === cur) : freeGens[0];
+      const tgt = g.castles.find((x) => x.id === pt);
+      if (!d2 || !who || !tgt) return null;
+      const need2 = d2.need + (tgt.min - 70) * d2.hard * 0.42;
+      const cap2 = d2.cap == null ? 0.85 : d2.cap;
+      const gap = who.wit - need2;
+      const p2 = gap >= 0 ? Math.min(cap2 + Math.max(0, gap) * 2e-3, cap2 + 0.04) : clamp(cap2 + gap * d2.hard * 0.055, 0.03, cap2);
+      const pct = Math.round(p2 * 100);
+      return /* @__PURE__ */ React4.createElement("div", { style: {
+        fontSize: 12.5,
+        marginBottom: 8,
+        lineHeight: 1.8,
+        borderLeft: `3px solid ${pct >= 80 ? "#3E7A3A" : pct >= 45 ? "#C89A3A" : "#B0483C"}`,
+        paddingLeft: 10
+      } }, who.name, "\uFF08\u77E5\u7565", who.wit, "\uFF09\u304C", tgt.name, "\u3078\u4ED5\u639B\u3051\u308B\u898B\u8FBC\u307F", /* @__PURE__ */ React4.createElement("b", { style: { fontSize: 16, color: pct >= 80 ? "#3E7A3A" : pct >= 45 ? "#C89A3A" : "#B0483C" } }, pct, "\uFF05"), /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, "\u3053\u306E\u57CE\u306F\u6C11\u5FE0", Math.round(tgt.min), "\u3002\u5805\u3044\u57CE\u307B\u3069\u4F59\u5206\u306B\u77E5\u7565\u3092\u8981\u3057\u307E\u3059\u3002 \u3057\u304F\u3058\u308C\u3070\u534A\u3070\u306F\u9732\u898B\u3057\u3001\u4FE1\u7528\u304C\u4E0B\u304C\u308A\u307E\u3059\u3002"));
+    })(), /* @__PURE__ */ React4.createElement(
+      "select",
+      {
+        className: "sel",
+        style: { width: "100%", marginBottom: 8 },
+        value: freeGens.some((x) => x.id === cur) ? cur : (freeGens[0] || {}).id || "",
+        onChange: (e) => setGenId(e.target.value)
+      },
+      freeGens.map((x) => /* @__PURE__ */ React4.createElement("option", { key: x.id, value: x.id }, `\u62C5\u5F53\uFF1A${x.name}\uFF08\u77E5${x.wit}\uFF09`))
+    ), /* @__PURE__ */ React4.createElement(
+      "button",
+      {
+        className: "btn dark",
+        style: { width: "100%" },
+        disabled: !freeGens.length || !pt,
+        onClick: () => onPlot(pt, plot, freeGens.some((x) => x.id === cur) ? cur : freeGens[0].id)
+      },
+      plot,
+      "\u3092\u4ED5\u639B\u3051\u308B"
+    ), !freeGens.length && /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 8, lineHeight: 1.7 } }, "\u3053\u306E\u57CE\u306E\u8005\u306F\u307F\u306A\u672C\u6708\u306E\u52D9\u3081\u306B\u5C31\u3044\u3066\u304A\u308A\u3001\u8ABF\u7565\u306B\u624B\u3092\u56DE\u305B\u306A\u3044\u3002", /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, "\u5185\u653F\u3068\u8ABF\u7565\u306F\u540C\u3058\u624B\u3092\u4F7F\u3046\u3002\u8B00\u3092\u5DE1\u3089\u3059\u306A\u3089\u3001\u8AB0\u304B\u306E\u624B\u3092\u7A7A\u3051\u3066\u304A\u304F\u3053\u3068\u3002")), running.length > 0 && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u9032\u884C\u4E2D\u306E\u8ABF\u7565"), running.map((x, i) => /* @__PURE__ */ React4.createElement("div", { className: "row", key: i }, /* @__PURE__ */ React4.createElement("span", null, (g.castles.find((y) => y.id === x.castleId) || {}).name, "\uFF0F", x.type), /* @__PURE__ */ React4.createElement("span", { className: "v" }, "\u3042\u3068", x.monthsLeft, "\u304B\u6708"))))), tab === "\u7279\u6B8A\u52E2\u529B" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, nearTowns.map((t) => {
+      const st = g.specials[t.id] || {};
+      const opts = SPECIAL_OPTIONS[t.kind] || [];
+      return /* @__PURE__ */ React4.createElement("div", { key: t.id, style: { borderBottom: `1px solid ${U.line2}`, paddingBottom: 8, marginBottom: 8 } }, /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React4.createElement("span", { className: "mn", style: { fontSize: 15 } }, t.name), /* @__PURE__ */ React4.createElement("span", { className: "pill", style: { background: "#8A8478" } }, t.kind), /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 12, color: U.dim } }, st.faction === g.player ? `\u95A2\u4FC2\uFF1A${st.state}` : st.faction ? `\u4ED6\u52E2\u529B\u304C${st.state}` : "\u4E2D\u7ACB", st.anger > 0 ? `\uFF0F\u53CD\u767A${Math.round(st.anger)}` : "")), /* @__PURE__ */ React4.createElement("div", { className: "g3", style: { marginTop: 6 } }, opts.map((o) => /* @__PURE__ */ React4.createElement(
+        "button",
+        {
+          key: o.key,
+          className: `btn sm ${st.faction === g.player && st.state === o.key ? "on" : ""}`,
+          title: o.desc,
+          disabled: g.factions[g.player].gold < (o.cost || 0),
+          onClick: () => onSpecial(t.id, o.key)
+        },
+        o.key
+      ))), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 4, lineHeight: 1.6 } }, opts.map((o) => `${o.key}\uFF1A${o.desc}`).join("\u3000")));
+    })), g.ledger.length > 0 && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u5B9F\u884C\u524D \u2192 \u5B9F\u884C\u5F8C"), g.ledger.slice(0, 3).map((l, i) => /* @__PURE__ */ React4.createElement("div", { className: "led", key: i }, /* @__PURE__ */ React4.createElement("div", { style: { marginBottom: 3 } }, /* @__PURE__ */ React4.createElement("b", null, l.castle, "\uFF0F", l.cmd), "\u3000\u62C5\u5F53 ", l.general, "\u3000\u8CBB\u7528 ", fmt(l.cost), "\u8CAB"), l.lines.map((x, j) => {
+      if (x.text) return /* @__PURE__ */ React4.createElement("div", { key: j }, x.text);
+      const d = x.after - x.before;
+      return /* @__PURE__ */ React4.createElement("div", { key: j, className: "num" }, x.label, "\u3000", fmt(x.before), " \u2192 ", fmt(x.after), x.unit, d !== 0 && /* @__PURE__ */ React4.createElement("span", { className: d < 0 ? "dn" : "up" }, "\u3000", d > 0 ? "+" : "", fmt(d)));
+    })))))))
+  );
+}
+
+// src/ui/MapScreen.jsx
+function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
+  const cvRef = useRef3(null), miniRef = useRef3(null), wrapRef = useRef3(null);
+  const [view, setView] = useState5(() => {
+    const seat = seatOf(g.castles, g.generals, g.player);
+    return seat ? { x: seat.x, y: seat.y, s: 2.4 } : { x: MAPW / 2, y: MAPH / 2, s: 0.9 };
+  });
+  const [sel, setSel] = useState5(null);
+  const [tab, setTab] = useState5("\u5185\u653F");
+  const [modal, setModal] = useState5(null);
+  const [battle, setBattle] = useState5(null);
+  const [raid, setRaid] = useState5(null);
+  const [sally, setSally] = useState5(null);
+  const [callAid, setCallAid] = useState5(null);
+  const [rotate, setRotate] = useState5(true);
+  const [savedMsg, setSavedMsg] = useState5("");
+  const [wide, setWide] = useState5(false);
+  const drag = useRef3(null);
+  const lastSave = useRef3("");
+  useEffect4(() => {
+    const key = `${g.year}-${g.month}`;
+    if (lastSave.current === key || battle) return;
+    lastSave.current = key;
+    setTimeout(() => onSave(g), 0);
+  }, [g.year, g.month, battle]);
+  const pf = g.factions[g.player];
+  const mine = g.castles.filter((c) => c.faction === g.player);
+  const myGens = g.generals.filter((x) => x.faction === g.player);
+  const draw = () => {
+    const cv = cvRef.current, wrap = wrapRef.current;
+    if (!cv || !wrap || !terrain) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = wrap.clientWidth, H = wrap.clientHeight;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
+      cv.width = Math.round(W * dpr);
+      cv.height = Math.round(H * dpr);
+    }
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const { x: vx, y: vy, s: s2 } = view;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(terrain, -vx * s2 + W / 2, -vy * s2 + H / 2, MAPW * s2, MAPH * s2);
+    const S = (wx, wy) => [(wx - vx) * s2 + W / 2, (wy - vy) * s2 + H / 2];
+    {
+      const cell = 20;
+      ctx.save();
+      ctx.globalAlpha = 0.19;
+      const cs = g.castles.map((c) => ({
+        x: c.x,
+        y: c.y,
+        col: g.factions[c.faction].color,
+        w: 1 + Math.sqrt(c.koku / 1e4) * 0.34
+      }));
+      for (let sy = 0; sy < H; sy += cell) {
+        for (let sx = 0; sx < W; sx += cell) {
+          const wx = (sx + cell / 2 - W / 2) / s2 + vx, wy = (sy + cell / 2 - H / 2) / s2 + vy;
+          let best = null, bd = 1e9;
+          for (const c of cs) {
+            const d2 = Math.hypot(c.x - wx, c.y - wy) / c.w;
+            if (d2 < bd) {
+              bd = d2;
+              best = c;
+            }
+          }
+          if (!best || bd > 230) continue;
+          ctx.fillStyle = best.col;
+          ctx.fillRect(sx, sy, cell + 1, cell + 1);
+        }
+      }
+      ctx.restore();
+    }
+    ctx.textAlign = "center";
+    for (const q of KUNI_LABELS) {
+      const [a, b2] = S(q.x, q.y);
+      if (a < -60 || a > W + 60 || b2 < -40 || b2 > H + 40) continue;
+      const sz = Math.round(clamp(15 + s2 * 9, 14, 30));
+      ctx.font = `${sz}px 'Hiragino Mincho ProN',serif`;
+      ctx.fillStyle = q.on ? `rgba(96,86,66,${clamp(0.2 + s2 * 0.16, 0.2, 0.42)})` : `rgba(140,134,120,${clamp(0.12 + s2 * 0.08, 0.12, 0.24)})`;
+      ctx.fillText(q.name, a, b2);
+    }
+    ctx.fillStyle = `rgba(70,104,128,${clamp(0.3 + s2 * 0.2, 0.3, 0.6)})`;
+    for (const q of SEA_LABELS) {
+      const [a, b2] = S(q.x, q.y);
+      if (a < -60 || a > W + 60 || b2 < -40 || b2 > H + 40) continue;
+      ctx.font = `${Math.round(clamp(13 + s2 * 6, 12, 22))}px 'Hiragino Mincho ProN',serif`;
+      ctx.fillText(q.name, a, b2);
+    }
+    ctx.textAlign = "left";
+    if (s2 > 0.72) {
+      ctx.font = "13px 'Hiragino Mincho ProN',serif";
+      ctx.fillStyle = "rgba(56,96,124,.9)";
+      for (const r of RIVERS) {
+        const p = r.pts[Math.floor(r.pts.length / 2)];
+        const [a, b2] = S(p[0] + 8, p[1]);
+        ctx.fillText(r.name, a, b2);
+      }
+    }
+    for (const a of g.armies) {
+      const n0 = nodeById(a.path[0]), n1 = a.path.length > 1 ? nodeById(a.path[1]) : n0;
+      const [ax, ay] = S(n0.x + (n1.x - n0.x) * a.prog, n0.y + (n1.y - n0.y) * a.prog);
+      const dst = nodeById(a.target);
+      const [dx2, dy2] = S(dst.x, dst.y);
+      const col = g.factions[a.faction].color;
+      ctx.strokeStyle = col + "77";
+      ctx.setLineDash([5, 5]);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(dx2, dy2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(ax, ay, 11, 0, 7);
+      ctx.fill();
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(ax, ay, 8.5, 0, 7);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "600 10px sans-serif";
+      ctx.fillText("\u8ECD", ax - 5, ay + 3.5);
+      ctx.fillStyle = "#33332F";
+      ctx.font = "11px sans-serif";
+      ctx.fillText(`${fmt(a.men)}`, ax + 14, ay + 4);
+    }
+    for (const t of TOWNS) {
+      const [x, y] = S(t.x, t.y);
+      ctx.fillStyle = "#55524A";
+      ctx.beginPath();
+      ctx.arc(x, y, 3.6, 0, 7);
+      ctx.fill();
+      if (s2 > 0.6) {
+        ctx.font = "12px 'Hiragino Sans',sans-serif";
+        const w = ctx.measureText(t.name).width;
+        ctx.fillStyle = "rgba(255,255,255,.78)";
+        ctx.fillRect(x - w / 2 - 3, y + 6, w + 6, 15);
+        ctx.fillStyle = "#3B3A35";
+        ctx.fillText(t.name, x - w / 2, y + 18);
+        if (s2 > 1.1) {
+          ctx.fillStyle = U.dim;
+          ctx.font = "10px sans-serif";
+          ctx.fillText(`\uFF08${t.kind}\uFF09`, x - 22, y + 31);
+        }
+      }
+    }
+    for (const c of g.castles) {
+      const [x, y] = S(c.x, c.y);
+      const col = g.factions[c.faction].color;
+      const big = clamp(4.4 + Math.sqrt(c.koku / 1e4) * 1.5, 4.4, 11);
+      const besieged = g.sieges.some((sg) => sg.castleId === c.id);
+      if (sel === c.id) {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(x, y, big + 11, 0, 7);
+        ctx.stroke();
+      }
+      if (besieged) {
+        ctx.strokeStyle = "rgba(176,72,60,0.85)";
+        ctx.lineWidth = 2.4;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(x, y, big + 7, 0, 7);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.fillStyle = "rgba(0,0,0,0.16)";
+      ctx.beginPath();
+      ctx.arc(x + 1, y + 1.5, big + 3.2, 0, 7);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(x, y, big + 3, 0, 7);
+      ctx.fill();
+      const mon = (g.factions[c.faction] || {}).mon;
+      if (mon && big >= 6.5) drawMon(ctx, mon, x, y, big, col, "#fff");
+      else {
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.arc(x, y, big * 0.82, 0, 7);
+        ctx.fill();
+      }
+      const isSeat = g.generals.some((q) => q.at === c.id && q.faction === c.faction && q.lord && !q.captive);
+      if (isSeat) {
+        ctx.strokeStyle = "#C8A44A";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(x, y, big + 4.2, 0, 7);
+        ctx.stroke();
+      }
+      if (s2 > 0.5) {
+        ctx.font = `600 ${Math.round(clamp(11 + s2 * 3, 11, 15))}px 'Hiragino Sans',sans-serif`;
+        const w = ctx.measureText(c.name).width;
+        ctx.fillStyle = "rgba(255,255,255,.88)";
+        ctx.fillRect(x - w / 2 - 4, y - big - 22, w + 8, 17);
+        ctx.fillStyle = "#2A2A28";
+        ctx.fillText(c.name, x - w / 2, y - big - 9);
+      }
+      if (s2 > 1.05) {
+        const men = c.local + g.generals.filter((q) => q.at === c.id && q.faction === c.faction && !q.captive).reduce((a, q) => a + q.retinue, 0);
+        ctx.font = "11px sans-serif";
+        ctx.fillStyle = col;
+        ctx.fillText(`${fmt(men)}`, x + big + 5, y + 12);
+      }
+    }
+    const mv = miniRef.current;
+    if (mv) {
+      const mc = mv.getContext("2d");
+      if (mv.width !== 130) {
+        mv.width = 130;
+        mv.height = 139;
+      }
+      mc.clearRect(0, 0, 130, 139);
+      mc.drawImage(terrain, 0, 0, MAPW, MAPH, 0, 0, 130, 139);
+      const k = 130 / MAPW;
+      mc.strokeStyle = "#fff";
+      mc.lineWidth = 2;
+      mc.strokeRect((vx - W / 2 / s2) * k, (vy - H / 2 / s2) * k, W / s2 * k, H / s2 * k);
+    }
+  };
+  useEffect4(draw);
+  useEffect4(() => {
+    const on = () => draw();
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  });
+  useEffect4(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const block = (e) => {
+      if (e.target === cvRef.current) e.preventDefault();
+    };
+    el.addEventListener("touchmove", block, { passive: false });
+    el.addEventListener("touchstart", block, { passive: false });
+    return () => {
+      el.removeEventListener("touchmove", block);
+      el.removeEventListener("touchstart", block);
+    };
+  }, []);
+  const onDown = (e) => {
+    if (e.target !== cvRef.current) {
+      drag.current = null;
+      return;
+    }
+    if (e.touches && e.touches.length === 2) {
+      const [t1, t2] = [e.touches[0], e.touches[1]];
+      const r = wrapRef.current.getBoundingClientRect();
+      const mx = (t1.clientX + t2.clientX) / 2 - r.left - r.width / 2;
+      const my = (t1.clientY + t2.clientY) / 2 - r.top - r.height / 2;
+      drag.current = {
+        pinch: true,
+        moved: 99,
+        d0: Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY),
+        s0: view.s,
+        vx: view.x,
+        vy: view.y,
+        wx: mx / view.s + view.x,
+        wy: my / view.s + view.y
+        // 指の間にある土地
+      };
+      return;
+    }
+    const p = e.touches ? e.touches[0] : e;
+    drag.current = { x: p.clientX, y: p.clientY, vx: view.x, vy: view.y, moved: 0 };
+  };
+  const onMove = (e) => {
+    const d = drag.current;
+    if (!d) return;
+    if (d.pinch) {
+      if (!e.touches || e.touches.length < 2) return;
+      const [t1, t2] = [e.touches[0], e.touches[1]];
+      const dd = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      if (!d.d0 || !dd) return;
+      const r = wrapRef.current.getBoundingClientRect();
+      const mx = (t1.clientX + t2.clientX) / 2 - r.left - r.width / 2;
+      const my = (t1.clientY + t2.clientY) / 2 - r.top - r.height / 2;
+      const ns = clamp(d.s0 * (dd / d.d0), 0.28, 3.2);
+      setView(() => ({ x: d.wx - mx / ns, y: d.wy - my / ns, s: ns }));
+      return;
+    }
+    const p = e.touches ? e.touches[0] : e;
+    const dx = p.clientX - d.x, dy = p.clientY - d.y;
+    d.moved = Math.max(d.moved, Math.hypot(dx, dy));
+    const vx = d.vx, vy = d.vy;
+    setView((v) => ({ ...v, x: vx - dx / v.s, y: vy - dy / v.s }));
+  };
+  const onCancel = () => {
+    drag.current = null;
+  };
+  const onUp = (e) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d || d.moved > 6 || e.target !== cvRef.current) return;
+    const wrap = wrapRef.current, r = wrap.getBoundingClientRect();
+    const p = e.changedTouches ? e.changedTouches[0] : e;
+    const wx = (p.clientX - r.left - r.width / 2) / view.s + view.x;
+    const wy = (p.clientY - r.top - r.height / 2) / view.s + view.y;
+    let hit = null, best = 26 / view.s;
+    for (const c of g.castles) {
+      const dd = Math.hypot(c.x - wx, c.y - wy);
+      if (dd < best) {
+        best = dd;
+        hit = c.id;
+      }
+    }
+    if (hit) {
+      setSel(hit);
+      setTab("\u5185\u653F");
+    } else setSel(null);
+  };
+  const zoom = (k) => setView((v) => ({ ...v, s: clamp(v.s * k, 0.28, 3.2) }));
+  const focus = (id) => {
+    const n = nodeById(id);
+    if (n) setView((v) => ({ ...v, x: n.x, y: n.y, s: Math.max(1.2, v.s) }));
+  };
+  const whole = () => setView({ x: MAPW / 2, y: MAPH / 2, s: 0.3 });
+  const runCommand2 = (castleId, cmd, genId) => {
+    setG((prev) => runCommand(prev, castleId, cmd, genId, g));
+  };
+  const appoint2 = (castleId, genId) => setG((prev) => appoint(prev, castleId, genId));
+  const doKenchi2 = (kuni, genId) => setG((prev) => doKenchi(prev, kuni, genId));
+  const settleCaptive2 = (genId, kind) => setG((prev) => settleCaptive(prev, genId, kind));
+  const doRetire2 = (heirId) => setG((prev) => doRetire(prev, heirId));
+  const doCaptive2 = (genId, how) => setG((prev) => doCaptive(prev, genId, how));
+  const doDiplo2 = (fid, key) => setG((prev) => doDiplo(prev, fid, key));
+  const doPlot2 = (castleId, type, genId) => setG((prev) => doPlot(prev, castleId, type, genId));
+  const doSpecial2 = (townId, key) => setG((prev) => doSpecial(prev, townId, key));
+  const grantFief2 = (genId, delta) => setG((prev) => grantFief(prev, genId, delta));
+  const reward2 = (genId) => setG((prev) => reward(prev, genId));
+  const nextMonth = () => {
+    setG((prev) => advanceMonth(prev, g));
+    setModal("report");
+  };
+  useEffect4(() => {
+    if (!g.clashes || !g.clashes.length || battle) return;
+    const cl = g.clashes[0];
+    const a = g.armies.find((x) => x.id === cl.aId);
+    const b = g.armies.find((x) => x.id === cl.bId);
+    if (!a || !b) {
+      setG((p) => ({ ...p, clashes: (p.clashes || []).slice(1) }));
+      return;
+    }
+    if (g.autoPlay || a.faction !== g.player && b.faction !== g.player) {
+      setG((prev) => resolveClashOffscreen(prev));
+      return;
+    }
+    const mine2 = a.faction === g.player ? a : b;
+    startClash(mine2, mine2 === a ? b : a, cl);
+  }, [g.clashes, battle]);
+  useEffect4(() => {
+    if (g.clashes && g.clashes.length) return;
+    if (!g.pendingArrivals || !g.pendingArrivals.length || battle) return;
+    const a = g.armies.find((x) => x.id === g.pendingArrivals[0]);
+    const dest2 = a && g.castles.find((c) => c.id === a.at);
+    if (!a || !dest2) {
+      setG((p) => ({ ...p, pendingArrivals: p.pendingArrivals.slice(1) }));
+      return;
+    }
+    if (g.autoPlay || a.faction !== g.player && dest2.faction !== g.player) {
+      autoResolve(a.id, dest2.id);
+      return;
+    }
+    if (a.relief) {
+      const sg2 = g.sieges.find((x) => x.castleId === a.relief);
+      const bes = sg2 && g.armies.find((x) => x.id === sg2.armyId);
+      if (bes) {
+        if (a.faction === g.player && underMyBanner(g, g.player, dest2.faction)) {
+          setSally({ armyId: a.id, castleId: dest2.id, foeId: bes.id });
+        } else if (bes.faction === g.player || a.faction === g.player) {
+          startBattle(a, { ...dest2, name: `${dest2.name}\u306E\u56F2\u307F` }, null, void 0, bes);
+        } else autoResolve(a.id, dest2.id);
+        return;
+      }
+    }
+    const camp = (g.campaigns || []).find((c) => c.armies.includes(a.id) && c.target === a.at);
+    if (camp && !camp.arrived.includes(a.id)) {
+      setG((p2) => {
+        const s2 = structuredClone(p2);
+        const cc = s2.campaigns.find((x) => x.id === camp.id);
+        if (cc && !cc.arrived.includes(a.id)) {
+          cc.arrived.push(a.id);
+          const ar = s2.armies.find((x) => x.id === a.id);
+          if (ar) ar.sieging = true;
+          const late = cc.armies.filter((id) => !cc.arrived.includes(id) && s2.armies.some((x) => x.id === id));
+          s2.monthEvents = [
+            ...s2.monthEvents || [],
+            `${nodeById(cc.target).name}\u306E\u624B\u524D\u306B\u7740\u9663\u3057\u305F\u3002${late.length ? `\u9045\u53C2${late.length}\u968A\u3092\u5F85\u3064\u304B\u3001\u5148\u306B\u653B\u3081\u304B\u304B\u308B\u304B\u3092\u6C7A\u3081\u308B\u3002` : "\u5168\u8ECD\u304C\u305D\u308D\u3063\u305F\u3002"}`
+          ];
+        }
+        s2.pendingArrivals = s2.pendingArrivals.slice(1);
+        return s2;
+      });
+      return;
+    }
+    if (underMyBanner(g, a.faction, dest2.faction)) {
+      setG((p) => {
+        const s2 = structuredClone(p);
+        const ar = s2.armies.find((x) => x.id === a.id);
+        const c = s2.castles.find((x) => x.id === ar.at);
+        c.local += ar.local;
+        c.food += ar.food;
+        if (ar.rost && ar.rost.length) {
+          c.rost = [...c.rost || [], ...ar.rost];
+        }
+        rosterSync(c, "rost", c.local, `loc-${c.id}`);
+        const \u4ED6\u5BB6 = c.faction !== ar.faction;
+        const \u672C\u56FD = \u4ED6\u5BB6 ? s2.castles.find((x) => x.id === ar.from && x.faction === ar.faction) || s2.castles.find((x) => x.faction === ar.faction) : null;
+        for (const gid of ar.gens) {
+          const x = s2.generals.find((q) => q.id === gid);
+          if (x) x.at = \u4ED6\u5BB6 ? \u672C\u56FD ? \u672C\u56FD.id : c.id : c.id;
+        }
+        s2.armies = s2.armies.filter((x) => x.id !== ar.id);
+        s2.pendingArrivals = s2.pendingArrivals.slice(1);
+        if (ar.faction === s2.player) {
+          const msg = \u4ED6\u5BB6 ? `${c.name}\uFF08${s2.factions[c.faction].name}\uFF09\u3078\u63F4\u8ECD${fmt(ar.local)}\u4EBA\u3092\u5165\u308C\u305F\u3002\u5C06\u306F${\u672C\u56FD ? \u672C\u56FD.name : "\u672C\u56FD"}\u3078\u5E30\u9663\u3057\u305F\u3002` : `${c.name}\u306B\u5230\u7740\u3057\u3001\u8ECD\u306F\u57CE\u3078\u5408\u6D41\u3057\u305F\uFF08\u5473\u65B9\u306E\u57CE\u306E\u305F\u3081\u5408\u6226\u306F\u8D77\u304D\u306A\u3044\uFF09\u3002`;
+          s2.monthEvents = [...s2.monthEvents || [], msg];
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: msg });
+        }
+        return s2;
+      });
+      return;
+    }
+    startBattle(a, dest2);
+  }, [g.pendingArrivals, g.clashes, battle]);
+  const autoResolve = (armyId, castleId) => setG((prev) => resolveOffscreen(prev, armyId, castleId));
+  const startAssault = (sg, gateParty, kits) => {
+    if (g.autoPlay) return;
+    const army = g.armies.find((x) => x.id === sg.armyId);
+    const castle = g.castles.find((x) => x.id === sg.castleId);
+    if (!army || !castle) return;
+    const map = layoutCastleField(buildCastleMap(castle));
+    setBattleMap(map);
+    const atkGens = army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+    const defGens = g.generals.filter((x) => x.at === castle.id && x.faction === castle.faction);
+    const nAtk = Math.max(1, Math.min(atkGens.length, MAX_CORPS));
+    const retSum = atkGens.slice(0, nAtk).reduce((a2, x) => a2 + x.retinue, 0);
+    const room = Math.max(0, SIEGE_CORPS_CAP * nAtk - retSum);
+    const useLocal = Math.min(Math.max(0, army.local), room);
+    const reserveMen = Math.max(0, army.local - useLocal);
+    let reserveRost = [];
+    let commitRost = army.rost || null;
+    if (army.rost && reserveMen > 0) {
+      const cp = JSON.parse(JSON.stringify(army.rost));
+      const tk = rosterTake(cp, useLocal);
+      commitRost = tk.taken;
+      reserveRost = tk.rest;
+    }
+    const playerIsAtk = army.faction === g.player;
+    const atkColor = g.factions[army.faction].color, defColor = g.factions[castle.faction].color;
+    const atkSide = playerIsAtk ? "P" : "E", defSide = playerIsAtk ? "E" : "P";
+    const mk = (gens0, local, train, side, color, spots, srcRost) => {
+      const gens = (gens0.length ? gens0 : [{ id: `gar-${castle.id}-${side}`, name: `${castle.name}\u5B88\u5099\u968A`, lead: 52, valor: 50, wit: 45, gov: 45, retinue: 0, retTrain: train }]).slice(0, MAX_CORPS);
+      const n = gens.length, per = Math.floor(local / n);
+      let pool = srcRost && srcRost.length ? JSON.parse(JSON.stringify(srcRost)) : null;
+      return gens.map((gen, i) => {
+        const sp = spots(i, n);
+        const slice = pool ? (() => {
+          const tk = rosterTake(pool, per);
+          pool = tk.rest;
+          return tk.taken;
+        })() : null;
+        return makeCorps(
+          side,
+          { ...gen, locRost: slice },
+          gen.retinue,
+          per,
+          Math.round(gen.retTrain * 0.7 + (gen.unity || 60) * 0.3),
+          Math.round(train * 0.7 + (castle.najimi == null ? 70 : castle.najimi) * 0.3),
+          sp.x,
+          sp.y,
+          sp.f,
+          color
+        );
+      });
+    };
+    const outer = map.layers[0], og = outer.gates;
+    const atk = mk(atkGens, useLocal, army.localTrain, atkSide, atkColor, (i, n) => {
+      const gt = og[i % og.length];
+      const a = axisOf(outer, gt);
+      const rank = Math.floor(i / og.length);
+      const back = map.moat.band + outer.masu + map.t + 96 + rank * 76;
+      const side = (rank % 2 ? 1 : -1) * (rank ? 44 : 0);
+      const p = fromUV(map, a, gateOpenU(gt) + side, a.half + back);
+      return { x: p.x, y: p.y, f: Math.atan2(map.cy - p.y, map.cx - p.x) };
+    }, commitRost);
+    const guard = [];
+    for (const l of map.layers) for (const gt of l.gates) {
+      const a = axisOf(l, gt);
+      const nx = map.layers[l.i + 1];
+      const innerEdge = nx ? (a.along === "x" ? nx.hh : nx.hw) + map.t : 0;
+      const band = Math.max(20, a.half - innerEdge);
+      const inset = Math.min(44 * (FIELD.w / BASE.w), band * 0.5);
+      const p = fromUV(map, a, gt.off, a.half - inset);
+      guard.push({ x: p.x, y: p.y, f: Math.atan2(p.y - map.cy, p.x - map.cx) + Math.PI, gate: gt });
+    }
+    guard.push({ x: map.cx, y: map.cy, f: Math.PI / 2, gate: null });
+    const def = mk(
+      defGens,
+      Math.max(0, castle.local),
+      castle.localTrain,
+      defSide,
+      defColor,
+      (i, n) => {
+        const sp = guard[Math.min(guard.length - 1, i)];
+        return { x: sp.x, y: sp.y, f: sp.f };
+      },
+      castle.rost
+    );
+    def.forEach((c, i) => {
+      const sp = guard[Math.min(guard.length - 1, i)];
+      if (sp && sp.gate) c.holdGate = sp.gate;
+    });
+    if (kits) for (const c of atk) {
+      const k = kits[c.id];
+      if (k && SIEGE_KIT[k]) c.kit = k;
+    }
+    const P = playerIsAtk ? atk : def, E = playerIsAtk ? def : atk;
+    const bb = createBattle(P, E, atkSide);
+    bb.mode = "castle";
+    bb.map = map;
+    bb.dusk = 1080;
+    for (const c of atk) {
+      c.formation = "\u65B9\u9663";
+      placeSquads(c, true);
+    }
+    bb.gateParty = !!gateParty;
+    const dMen = def.reduce((a, c) => a + corpsMen(c), 0);
+    const aMen = atk.reduce((a, c) => a + corpsMen(c), 0);
+    bb.sortie = playerIsAtk ? dMen > aMen * 0.85 : !!sg.sortie;
+    bb.log.push({ t: 0, text: bb.sortie ? "\u5B88\u308A\u624B\u306F\u57CE\u9580\u3092\u958B\u3044\u3066\u8A0E\u3063\u3066\u51FA\u305F\u3002" : "\u5B88\u308A\u624B\u306F\u66F2\u8F2A\u306B\u7C60\u3063\u3066\u5BC4\u305B\u624B\u3092\u5F85\u3064\u3002" });
+    if (castle.intrigue && playerIsAtk) {
+      for (const c of bb.corps) if (c.side === defSide) {
+        c.morale -= 20;
+        for (const q of c.squads) q.cohesion -= 12;
+      }
+      const l0 = map.layers[0].gates[0];
+      l0.hp = 0;
+      l0.broken = true;
+      bb.log.push({ t: 0, text: "\u5185\u5FDC\u306E\u624B\u5F15\u304D\u3067\u5927\u624B\u9580\u304C\u958B\u304B\u308C\u3066\u3044\u308B\u3002" });
+    }
+    setBattle({
+      b: bb,
+      armyId: army.id,
+      castleId: castle.id,
+      playerIsAtk,
+      mode: "castle",
+      reserveMen,
+      reserveRost,
+      pName: g.factions[playerIsAtk ? army.faction : castle.faction].name,
+      eName: g.factions[playerIsAtk ? castle.faction : army.faction].name,
+      pColor: sideHue(playerIsAtk ? atkColor : defColor, true),
+      eColor: sideHue(playerIsAtk ? defColor : atkColor, false),
+      place: castle.name
+    });
+  };
+  const campaignAct = (camp, act) => {
+    if (act === "\u653B") {
+      const list = camp.arrived.map((id) => g.armies.find((x) => x.id === id)).filter(Boolean);
+      if (!list.length) return;
+      const dest2 = g.castles.find((c) => c.id === camp.target);
+      const main = list.find((a) => a.id === camp.armies[0]) || list[0];
+      setG((p2) => {
+        const s2 = structuredClone(p2);
+        const cc = s2.campaigns.find((x) => x.id === camp.id);
+        if (cc) cc.decided = `${s2.year}-${s2.month}`;
+        return s2;
+      });
+      startBattle(main, dest2, camp);
+      return;
+    }
+    setG((prev) => {
+      const s2 = structuredClone(prev);
+      const cc = s2.campaigns.find((x) => x.id === camp.id);
+      if (!cc) return s2;
+      cc.decided = `${s2.year}-${s2.month}`;
+      const castle = s2.castles.find((c) => c.id === cc.target);
+      if (act === "\u5F85") {
+        cc.waited++;
+        castle.def = Math.min(100, castle.def + 2);
+        castle.food = Math.round(castle.food * 1.02);
+        castle.localTrain = Math.min(100, castle.localTrain + 1.5);
+        for (const id of cc.arrived) {
+          const a = s2.armies.find((x) => x.id === id);
+          if (!a) continue;
+          a.food -= Math.round(a.men * 0.11);
+          if (a.food < 0) {
+            a.food = 0;
+            a.men = Math.round(a.men * 0.97);
+            a.local = Math.round(a.local * 0.97);
+          }
+        }
+        s2.chronicle.push({
+          y: s2.year,
+          m: s2.month,
+          text: `${cc.leaderName}\u306F\u9045\u53C2\u3092\u5F85\u3063\u305F\u3002${castle.name}\u306E\u5099\u3048\u306F\u56FA\u304F\u306A\u3063\u305F\uFF08${cc.waited}\u304B\u6708\u76EE\uFF09\u3002`
+        });
+      } else {
+        for (const id of [...cc.armies]) {
+          const a = s2.armies.find((x) => x.id === id);
+          if (!a) continue;
+          withdrawArmy(s2, a);
+        }
+        s2.campaigns = s2.campaigns.filter((x) => x.id !== cc.id);
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: `${cc.leaderName}\u306F\u5175\u3092\u9000\u3044\u305F\u3002${castle.name}\u306E\u653B\u7565\u306F\u6210\u3089\u306A\u304B\u3063\u305F\u3002` });
+      }
+      return s2;
+    });
+  };
+  const attackFace = (fromId, toId) => {
+    const a = nodeById(fromId), t = nodeById(toId);
+    if (!a || !t) return "S";
+    const dx = a.x - t.x, dy = a.y - t.y;
+    return Math.abs(dx) > Math.abs(dy) ? dx > 0 ? "E" : "W" : dy > 0 ? "S" : "N";
+  };
+  const startBattle = (army, dest2, camp, ambush, foe, sally2) => {
+    if (g.autoPlay) {
+      if (foe) setG((prev) => resolveClashOffscreen(prev));
+      else autoResolve(army.id, dest2.id);
+      return;
+    }
+    if (ambush === void 0) {
+      const plan = ambushPlan(g, army, dest2);
+      if (plan) {
+        setRaid({ plan, army, dest: dest2, camp });
+        return;
+      }
+    }
+    setBattleMap(null);
+    setFieldSeed(army.from, dest2.id);
+    const atkGens = army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+    const defGens = foe ? foe.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest2.id && x.faction === dest2.faction && !x.captive);
+    const playerIsAtk = army.faction === g.player;
+    const defLocal = foe ? Math.max(0, foe.local) : Math.max(0, dest2.local - Math.round(minGarrison(dest2) * 0.4));
+    const aidMen = foe ? 0 : g.armies.filter((a) => a.id !== army.id && a.at === dest2.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))).reduce((t, a) => t + a.men, 0);
+    layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0));
+    const face = attackFace(army.from, dest2.id);
+    const lineup = (isAtk, i, n) => {
+      const near = 0.14, far = 0.86;
+      const t2 = (i - (n - 1) / 2) * Math.round(175 * (FIELD.w / BASE.w));
+      const put = (ax, ay, f2) => ({ x: ax, y: ay, f: f2 });
+      const S = () => put(FIELD.w / 2 + t2, isAtk ? FIELD.h * far : FIELD.h * near, isAtk ? -Math.PI / 2 : Math.PI / 2);
+      const N = () => put(FIELD.w / 2 + t2, isAtk ? FIELD.h * near : FIELD.h * far, isAtk ? Math.PI / 2 : -Math.PI / 2);
+      const E2 = () => put(isAtk ? FIELD.w * far : FIELD.w * near, FIELD.h / 2 + t2 * 0.66, isAtk ? Math.PI : 0);
+      const W = () => put(isAtk ? FIELD.w * near : FIELD.w * far, FIELD.h / 2 + t2 * 0.66, isAtk ? 0 : Math.PI);
+      return face === "N" ? N() : face === "E" ? E2() : face === "W" ? W() : S();
+    };
+    const build = (gens0, local, train, side, yBase, facing, color, srcRost, isAtk) => {
+      const gens = (gens0.length ? gens0 : [{ id: `gar-${dest2.id}-${side}`, name: `${dest2.name}\u5B88\u5099\u968A`, lead: 52, valor: 50, wit: 45, gov: 45, retinue: 0, retTrain: train }]).slice(0, MAX_CORPS);
+      const n = gens.length, per = Math.floor(local / n);
+      const najimi = dest2.najimi == null ? 70 : dest2.najimi;
+      let pool = srcRost && srcRost.length ? JSON.parse(JSON.stringify(srcRost)) : null;
+      return gens.map((gen, i) => makeCorps(
+        side,
+        { ...gen, locRost: pool ? (() => {
+          const tk = rosterTake(pool, per);
+          pool = tk.rest;
+          return tk.taken;
+        })() : null },
+        gen.retinue,
+        per,
+        Math.round(gen.retTrain * 0.7 + (gen.unity || 60) * 0.3),
+        // 直属は結束が効く
+        Math.round(train * 0.7 + najimi * 0.3),
+        ...(() => {
+          const p2 = lineup(isAtk, i, n);
+          return [p2.x, p2.y, p2.f];
+        })(),
+        color
+      ));
+    };
+    const atkColor = g.factions[army.faction].color, defColor = g.factions[dest2.faction].color;
+    const betray = dest2.intrigue && army.faction === g.player;
+    const allies = [
+      ...foe ? [] : g.armies.filter((a) => a.id !== army.id && a.at === dest2.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))),
+      // 城方が討って出るなら、寄せ手の背を衝く形で同じ側に立つ（GDD 9.2）
+      ...sally2 ? [sally2] : []
+    ];
+    const atkSide = playerIsAtk ? "P" : "E";
+    const atkCorpsList = build(
+      atkGens,
+      army.local,
+      army.localTrain,
+      atkSide,
+      playerIsAtk ? FIELD.h * 0.875 : FIELD.h * 0.14,
+      playerIsAtk ? -Math.PI / 2 : Math.PI / 2,
+      atkColor,
+      army.rost,
+      true
+    );
+    let off = 1;
+    let slots = MAX_CORPS - atkCorpsList.length;
+    for (const a of allies) {
+      if (slots <= 0) break;
+      const ag = a.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+      const col = g.factions[a.faction].color;
+      const kind = a.faction === army.faction ? "\u81EA\u9818\u63F4\u8ECD" : relOf(g, army.faction, a.faction).state === "\u540C\u76DF" ? "\u540C\u76DF\u8ECD" : "\u5F93\u5C5E\u8ECD";
+      const list = build(
+        ag.slice(0, slots),
+        a.local,
+        a.localTrain,
+        atkSide,
+        playerIsAtk ? FIELD.h * 0.875 : FIELD.h * 0.14,
+        playerIsAtk ? -Math.PI / 2 : Math.PI / 2,
+        col
+      );
+      slots -= list.length;
+      list.forEach((c, i) => {
+        c.x = FIELD.w / 2 + (off + i) * Math.round(175 * (FIELD.w / BASE.w)) * (off % 2 ? 1 : -1);
+        c.ally = kind;
+        c.allyFaction = a.faction;
+        c.armyId = a.id;
+        placeSquads(c, true);
+      });
+      off++;
+      atkCorpsList.push(...list);
+    }
+    const defList = build(
+      defGens,
+      defLocal,
+      dest2.localTrain,
+      playerIsAtk ? "E" : "P",
+      playerIsAtk ? FIELD.h * 0.14 : FIELD.h * 0.875,
+      playerIsAtk ? Math.PI / 2 : -Math.PI / 2,
+      defColor,
+      dest2.rost,
+      false
+    );
+    const P = playerIsAtk ? atkCorpsList : defList;
+    const E = playerIsAtk ? defList : atkCorpsList;
+    const bb = createBattle(P, E, playerIsAtk ? "P" : "E");
+    bb.face = face;
+    bb.myFar = playerIsAtk;
+    if (betray) {
+      for (const c of bb.corps) if (c.side === "E") {
+        c.morale -= 18;
+        for (const q of c.squads) q.cohesion -= 10;
+      }
+      bb.log.push({ t: 0, text: "\u57CE\u5185\u306E\u5185\u5FDC\u8005\u304C\u52D5\u304D\u3001\u5B88\u308A\u624B\u306E\u58EB\u6C17\u304C\u4E71\u308C\u3066\u3044\u308B\u3002" });
+    }
+    if (ambush && ambush.done) {
+      const mySide = ambush.atkIsPlayer ? "P" : "E";
+      const foeSide = mySide === "P" ? "E" : "P";
+      if (ambush.hit) {
+        const tgt = ambush.target && bb.corps.find((c) => c.side === foeSide && c.id === ambush.target.id);
+        if (tgt) {
+          tgt.destroyed = true;
+          tgt.order = "\u5F85\u6A5F";
+          for (const q of tgt.squads) q.men = 0;
+        }
+        for (const c of bb.corps) {
+          if (c.side !== foeSide || c === tgt) continue;
+          c.morale = clamp(c.morale - 42, 5, 100);
+          for (const q of c.squads) q.cohesion = clamp(q.cohesion - 26, 0, 100);
+        }
+        for (const c of bb.corps) if (c.side === mySide) c.morale = Math.min(100, c.morale + 12);
+        bb.notices = [{
+          t: 0,
+          kind: mySide === "P" ? "good" : "bad",
+          text: `${ambush.head.name}\u304C\u672C\u9663\u3092\u885D\u3044\u305F${ambush.target ? `\u3002${ambush.target.name}\u8A0E\u6B7B` : ""}`
+        }];
+        bb.log.push({ t: 0, text: `${ambush.head.name}\u304C\u6575\u306E\u672C\u9663\u3092\u885D\u3044\u305F\u3002${ambush.target ? `${ambush.target.name}\u306F\u8A0E\u305F\u308C\u3001` : ""}\u6575\u8ECD\u306F\u5D29\u308C\u3066\u3044\u308B\u3002` });
+        bb.ambushHit = true;
+      } else {
+        for (const c of bb.corps) {
+          if (c.side !== mySide) continue;
+          c.morale = clamp(c.morale - 20, 5, 100);
+          for (const q of c.squads) q.cohesion = clamp(q.cohesion - 10, 0, 100);
+        }
+        bb.notices = [{ t: 0, kind: mySide === "P" ? "bad" : "good", text: "\u4F0F\u52E2\u304C\u9732\u898B\u3057\u305F" }];
+        bb.log.push({ t: 0, text: `${ambush.head.name}\u306E\u4F0F\u52E2\u306F\u9732\u898B\u3057\u305F\u3002\u5473\u65B9\u306E\u58EB\u6C17\u304C\u843D\u3061\u3066\u3044\u308B\u3002` });
+      }
+    }
+    setBattle({
+      b: bb,
+      armyId: army.id,
+      castleId: dest2.id,
+      playerIsAtk,
+      campId: camp ? camp.id : null,
+      mode: foe ? "clash" : void 0,
+      foeId: foe ? foe.id : null,
+      sally: sally2 ? { castleId: sally2.castleId, gens: sally2.gens, local: sally2.local } : null,
+      pName: g.factions[playerIsAtk ? army.faction : dest2.faction].name,
+      eName: g.factions[playerIsAtk ? dest2.faction : army.faction].name,
+      // 上部に出す目印は、盤の駒と同じ色にする（自軍は藍、敵軍は朱）。
+      // ここだけ家の色のままだと、数を見比べるときにどちらが自軍か紛れる。
+      pColor: sideHue(playerIsAtk ? atkColor : defColor, true),
+      eColor: sideHue(playerIsAtk ? defColor : atkColor, false),
+      place: dest2.name
+    });
+  };
+  const startClash = (mine2, foe, cl) => {
+    startBattle(mine2, {
+      id: cl.v,
+      name: cl.place,
+      faction: foe.faction,
+      local: Math.max(0, foe.local),
+      localTrain: foe.localTrain || 60,
+      najimi: 70,
+      def: 0,
+      min: 60,
+      hp: 0,
+      rost: foe.rost,
+      intrigue: false
+    }, null, null, foe);
+  };
+  const finishAssault = (b, ctx) => {
+    setBattleMap(null);
+    setG((prev) => {
+      const s2 = structuredClone(prev);
+      const army = s2.armies.find((x) => x.id === ctx.armyId);
+      const castle = s2.castles.find((x) => x.id === ctx.castleId);
+      if (!castle) {
+        setBattle(null);
+        return s2;
+      }
+      const atkSide = ctx.playerIsAtk ? "P" : "E";
+      const won = !!b.captured || b.result === atkSide;
+      const atkCorps = b.corps.filter((c) => c.side === atkSide);
+      const defCorps = b.corps.filter((c) => c.side !== atkSide);
+      writeBackRosters(s2, b, [...atkCorps, ...defCorps], army, castle);
+      for (const c of [...atkCorps, ...defCorps]) {
+        const gen = s2.generals.find((x) => x.id === c.id);
+        if (gen && !gen.rost) gen.retinue = Math.max(0, Math.round(gen.retinue - c.loss["\u76F4\u5C5E"]));
+      }
+      const left = (corps) => Math.round(corps.reduce((a, c) => a + c.squads.filter((q) => q.origin === "\u5730\u57DF").reduce((t, q) => t + q.men, 0), 0));
+      const aLeft = left(atkCorps), dLeft = left(defCorps);
+      const back = ctx.reserveMen || 0;
+      if (army) {
+        if (ctx.reserveRost && ctx.reserveRost.length) army.rost = [...army.rost || [], ...ctx.reserveRost];
+        army.local = aLeft + back;
+        if (army.rost) rosterSync(army, "rost", army.local, `arm-${army.id}`);
+        army.men = army.local + atkCorps.reduce((a, c) => a + (s2.generals.find((x) => x.id === c.id)?.retinue || 0), 0);
+      }
+      castle.local = Math.max(0, dLeft);
+      if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+      const broke = b.map.gates.filter((gt) => gt.broken).length;
+      castle.hp = Math.max(0, castle.hp - Math.round(castle.hp * 0.15 * broke));
+      castle.def = Math.max(0, Math.round(castle.def * (1 - 0.08 * broke)));
+      const aLoss = atkCorps.reduce((a, c) => a + c.loss["\u76F4\u5C5E"] + c.loss["\u5730\u57DF"], 0) | 0;
+      const dLoss = defCorps.reduce((a, c) => a + c.loss["\u76F4\u5C5E"] + c.loss["\u5730\u57DF"], 0) | 0;
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${castle.name}\u3078\u306E\u5F37\u653B\u3002${broke}\u3064\u306E\u9580\u304C\u7834\u308C\u3001\u5BC4\u305B\u624B${fmt(aLoss)}\u4EBA\u30FB\u5B88\u308A\u624B${fmt(dLoss)}\u4EBA\u3092\u5931\u3063\u305F\u3002${won ? "\u57CE\u306F\u843D\u3061\u305F\u3002" : "\u5BC4\u305B\u624B\u306F\u9000\u3051\u3089\u308C\u305F\u3002"}`
+      });
+      if (won && army) {
+        army.local = aLeft;
+        sackCastle(s2, castle, army, true);
+      }
+      for (const c of [...atkCorps, ...defCorps]) {
+        const gen = s2.generals.find((x) => x.id === c.id);
+        if (!gen || c.detach) continue;
+        const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
+        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0) - gen.valor / 420 + Math.random() * 0.3 - 0.15;
+        if (risk <= 0.66) continue;
+        if (risk > 0.78) {
+          notify(b, `${gen.name}\u3001\u8A0E\u6B7B\u3002`, c.side === "P" ? "bad" : "good");
+          const heir = s2.generals.find((x) => x.faction === gen.faction && x.id !== gen.id && !x.captive);
+          if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
+          const wasLord = gen.lord;
+          s2.generals = s2.generals.filter((x) => x.id !== gen.id);
+          if (wasLord) {
+            if (gen.faction === s2.player) s2.succession = { dead: gen, cause: "\u8A0E\u6B7B\u3057\u305F" };
+            else succeed(s2, gen, "\u8A0E\u6B7B\u3057\u305F");
+          } else s2.chronicle.push({ y: s2.year, m: s2.month, text: `${gen.name}\u304C\u8A0E\u6B7B\u3057\u305F\u3002` });
+        } else {
+          const winner = c.side === "P" ? ctx.playerIsAtk ? dest.faction : army.faction : ctx.playerIsAtk ? army.faction : dest.faction;
+          const g2 = s2.generals.find((x) => x.id === gen.id);
+          if (!g2) continue;
+          notify(b, `${gen.name}\u3001\u6355\u7E1B\u3002`, c.side === "P" ? "bad" : "good");
+          g2.captive = { by: winner, from: g2.faction, at: dest.id, since: { y: s2.year, m: s2.month } };
+          g2.retinue = Math.round(g2.retinue * 0.3);
+          g2.at = dest.id;
+          s2.chronicle.push({
+            y: s2.year,
+            m: s2.month,
+            text: `${gen.name}\u306F${s2.factions[winner].name}\u306B\u6355\u3089\u3048\u3089\u308C\u305F\u3002`
+          });
+        }
+      }
+      if (b.result === "P" && !ctx.playerIsAtk) {
+        const hero = b.corps.filter((c) => c.side === "P").find((c) => c.feats.length || c.loss["\u76F4\u5C5E"] > 60);
+        const lord = hero && s2.generals.find((x) => x.id === hero.id);
+        if (lord && Math.random() < 0.6) s2.promo = makePromotion(lord, s2.generals);
+      }
+      return s2;
+    });
+    setBattle(null);
+  };
+  const writeBackRosters = (s2, b, corpsList, army, castle) => {
+    const survive = /* @__PURE__ */ new Map();
+    for (const c of corpsList) for (const q of c.squads) {
+      if (!q.src) continue;
+      survive.set(q.src, (survive.get(q.src) || 0) + Math.max(0, Math.round(q.men)));
+    }
+    const apply = (rost) => {
+      if (!rost) return [];
+      for (const q of rost) if (survive.has(q.id)) q.m = survive.get(q.id);
+      return rost.filter((q) => q.m > 0);
+    };
+    for (const c of corpsList) {
+      const gen = s2.generals.find((x) => x.id === c.id);
+      if (gen && gen.rost) {
+        gen.rost = apply(gen.rost);
+        gen.retinue = rosterSum(gen.rost);
+      }
+    }
+    if (army && army.rost) {
+      army.rost = apply(army.rost);
+      army.local = rosterSum(army.rost);
+    }
+    if (castle && castle.rost) {
+      castle.rost = apply(castle.rost);
+    }
+  };
+  const finishClash = (b, ctx) => {
+    setG((prev) => {
+      const s2 = structuredClone(prev);
+      const mine2 = s2.armies.find((x) => x.id === ctx.armyId);
+      const foe = s2.armies.find((x) => x.id === ctx.foeId);
+      s2.clashes = (s2.clashes || []).filter((x) => !(x.aId === ctx.armyId || x.bId === ctx.armyId));
+      if (!mine2 || !foe) return s2;
+      const mySide = ctx.playerIsAtk ? "P" : "E", foeSide = ctx.playerIsAtk ? "E" : "P";
+      const myCorps = b.corps.filter((c) => c.side === mySide);
+      const foeCorps = b.corps.filter((c) => c.side === foeSide);
+      writeBackRosters(s2, b, [...myCorps, ...foeCorps], mine2, null);
+      writeBackRosters(s2, b, [...myCorps, ...foeCorps], foe, null);
+      for (const c of [...myCorps, ...foeCorps]) {
+        const gen = s2.generals.find((x) => x.id === c.id);
+        if (gen && !gen.rost) gen.retinue = Math.max(0, Math.round(gen.retinue - c.loss["\u76F4\u5C5E"]));
+      }
+      const left = (corps) => Math.round(corps.reduce((a, c) => a + c.squads.filter((q) => q.origin === "\u5730\u57DF").reduce((t, q) => t + q.men, 0), 0));
+      const ret = (corps) => corps.reduce((a, c) => a + (s2.generals.find((x) => x.id === c.id)?.retinue || 0), 0);
+      const \u51FA\u6483 = ctx.sally || null;
+      const \u51FA\u6483\u968A = \u51FA\u6483 ? myCorps.filter((c) => \u51FA\u6483.gens.includes(c.id)) : [];
+      const \u672C\u968A = \u51FA\u6483 ? myCorps.filter((c) => !\u51FA\u6483.gens.includes(c.id)) : myCorps;
+      mine2.local = left(\u672C\u968A);
+      mine2.men = mine2.local + ret(\u672C\u968A);
+      foe.local = left(foeCorps);
+      foe.men = foe.local + ret(foeCorps);
+      if (\u51FA\u6483) {
+        const \u57CE = s2.castles.find((x) => x.id === \u51FA\u6483.castleId);
+        if (\u57CE) {
+          const \u751F\u9084 = left(\u51FA\u6483\u968A);
+          const \u5931\u3063\u305F = Math.max(0, \u51FA\u6483.local - \u751F\u9084);
+          \u57CE.local = Math.max(0, \u57CE.local - \u5931\u3063\u305F);
+          if (\u57CE.rost) rosterSync(\u57CE, "rost", \u57CE.local, `loc-${\u57CE.id}`);
+          s2.chronicle.push({
+            y: s2.year,
+            m: s2.month,
+            text: `${\u57CE.name}\u306E\u57CE\u65B9\u306F\u9580\u3092\u958B\u3044\u3066\u8A0E\u3063\u3066\u51FA\u305F\uFF08${fmt(\u51FA\u6483.local)}\u4EBA\u306E\u3046\u3061${fmt(\u5931\u3063\u305F)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
+          });
+        }
+      }
+      const draw2 = b.result === "\u65E5\u6CA1";
+      const winSide = draw2 ? null : b.result;
+      const \u52DD = winSide == null ? null : winSide === mySide ? mine2 : foe;
+      const \u8CA0 = \u52DD == null ? null : \u52DD === mine2 ? foe : mine2;
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: draw2 ? `${ctx.place}\u3067${s2.factions[mine2.faction].name}\u3068${s2.factions[foe.faction].name}\u306E\u8ECD\u304C\u884C\u304D\u5408\u3063\u305F\u304C\u3001\u65E5\u6CA1\u306B\u3088\u308A\u6C7A\u7740\u305B\u305A\u3001\u4E21\u8ECD\u304C\u5175\u3092\u9000\u3044\u305F\uFF08\u5929\u5019\uFF1A${b.weather}\uFF09\u3002` : `${ctx.place}\u3067${s2.factions[mine2.faction].name}\u3068${s2.factions[foe.faction].name}\u306E\u8ECD\u304C\u884C\u304D\u5408\u3044\u3001\u91CE\u6226\u3068\u306A\u3063\u305F\u3002${s2.factions[\u52DD.faction].name}\u304C\u52DD\u3063\u305F\uFF08\u5929\u5019\uFF1A${b.weather}${b.orderly ? "\u30FB\u7D71\u5236\u64A4\u9000" : ""}\uFF09\u3002`
+      });
+      const \u52DD\u5BB6 = \u52DD ? \u52DD.faction : null;
+      const \u53CE\u3081\u308B\u57CE = () => {
+        if (!\u52DD\u5BB6) return null;
+        const home = s2.castles.find((x) => x.id === \u52DD.from && x.faction === \u52DD\u5BB6) || s2.castles.find((x) => x.faction === \u52DD\u5BB6);
+        return home ? home.id : null;
+      };
+      for (const c of [...myCorps, ...foeCorps]) {
+        const gen = s2.generals.find((x) => x.id === c.id);
+        if (!gen || c.detach) continue;
+        const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
+        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0) + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
+        risk += Math.random() * 0.3 - 0.15;
+        let fate = null;
+        if (risk > 0.78) fate = "\u8A0E\u6B7B";
+        else if (\u52DD\u5BB6 && risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0))) fate = "\u6355\u7E1B";
+        if (fate) notify(b, `${gen.name}\u3001${fate}\u3002`, c.side === "P" ? "bad" : "good");
+        else if (risk > 0.52) fate = "\u91CD\u50B7";
+        else if (risk > 0.34) fate = "\u8EFD\u50B7";
+        if (!fate) continue;
+        if (fate === "\u6355\u7E1B") {
+          const hold = \u53CE\u3081\u308B\u57CE();
+          if (!hold) {
+            gen.hurt = 3;
+            continue;
+          }
+          const heir = s2.generals.find((x) => x.faction === gen.faction && x.id !== gen.id && !x.captive);
+          if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
+          if (gen.lord) {
+            const next = s2.generals.filter((x) => x.faction === gen.faction && x.id !== gen.id && !x.captive).sort((a, z) => z.lead - a.lead)[0];
+            if (next) {
+              next.lord = true;
+              gen.lord = false;
+            }
+          }
+          makePrisoner(s2, gen, \u52DD\u5BB6, hold);
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${gen.name}\u304C\u6355\u3089\u3048\u3089\u308C\u305F\u3002` });
+          if (\u52DD\u5BB6 === s2.player) s2.captives = [...s2.captives || [], gen.id];
+        } else if (fate === "\u8A0E\u6B7B") {
+          const heir = s2.generals.find((x) => x.faction === gen.faction && x.id !== gen.id);
+          if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
+          s2.generals = s2.generals.filter((x) => x.id !== gen.id);
+          if (gen.lord) {
+            if (gen.faction === s2.player) s2.succession = { dead: gen, cause: "\u8A0E\u6B7B\u3057\u305F" };
+            else succeed(s2, gen, "\u8A0E\u6B7B\u3057\u305F");
+          } else s2.chronicle.push({ y: s2.year, m: s2.month, text: `${gen.name}\u304C\u8A0E\u6B7B\u3057\u305F\u3002` });
+        } else if (fate === "\u91CD\u50B7") {
+          gen.hurt = 3;
+          gen.unity = Math.max(20, (gen.unity || 60) - 8);
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${gen.name}\u304C\u91CD\u50B7\u3092\u8CA0\u3044\u3001\u3057\u3070\u3089\u304F\u6226\u3048\u306A\u3044\u3002` });
+        } else {
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${gen.name}\u304C\u8EFD\u50B7\u3092\u8CA0\u3063\u305F\u3002` });
+        }
+      }
+      if (draw2) {
+        for (const a of [mine2, foe]) {
+          const home = withdrawArmy(s2, a);
+          if (home) s2.chronicle.push({
+            y: s2.year,
+            m: s2.month,
+            text: `${s2.factions[a.faction].name}\u306E\u8ECD\u306F${home.name}\u3078\u9000\u3044\u305F\u3002`
+          });
+        }
+      } else {
+        const home = withdrawArmy(s2, \u8CA0);
+        s2.chronicle.push({
+          y: s2.year,
+          m: s2.month,
+          text: `${s2.factions[\u8CA0.faction].name}\u306E\u8ECD\u306F${home ? home.name : "\u672C\u56FD"}\u3078\u9000\u304D\u3001${s2.factions[\u52DD.faction].name}\u306F${(nodeById(\u52DD.target) || {}).name || ""}\u3078\u9053\u3092\u9032\u3081\u305F\u3002`
+        });
+        if (!\u52DD.path || \u52DD.path.length <= 1) {
+          s2.pendingArrivals = [\u52DD.id, ...(s2.pendingArrivals || []).filter((id) => id !== \u52DD.id)];
+        }
+        s2.monthEvents = [
+          ...s2.monthEvents || [],
+          \u52DD.faction === s2.player ? `${ctx.place}\u306E\u91CE\u6226\u306B\u52DD\u3063\u305F\u3002\u8ECD\u306F\u305D\u306E\u307E\u307E${(nodeById(\u52DD.target) || {}).name || ""}\u3078\u5411\u304B\u3046\u3002` : `${ctx.place}\u306E\u91CE\u6226\u306B\u6557\u308C\u3001\u8ECD\u306F\u9000\u3044\u305F\u3002`
+        ];
+      }
+      if (b.result === "P") {
+        const hero = b.corps.filter((c) => c.side === "P").find((c) => c.feats.length || c.loss["\u76F4\u5C5E"] > 60);
+        const lord = hero && s2.generals.find((x) => x.id === hero.id);
+        if (lord && Math.random() < 0.7) s2.promo = makePromotion(lord, s2.generals);
+      }
+      return s2;
+    });
+    setBattle(null);
+  };
+  const finishBattle = (b, ctx) => {
+    if (ctx.mode === "castle") return finishAssault(b, ctx);
+    if (ctx.mode === "clash") return finishClash(b, ctx);
+    setG((prev) => {
+      const s2 = structuredClone(prev);
+      const army = s2.armies.find((x) => x.id === ctx.armyId);
+      const castle = s2.castles.find((x) => x.id === ctx.castleId);
+      const draw2 = b.result === "\u65E5\u6CA1";
+      const playerWon = b.result === "P";
+      const atkWon = draw2 ? false : ctx.playerIsAtk ? playerWon : !playerWon;
+      const side = (sd) => b.corps.filter((c) => c.side === sd);
+      const atkCorps = ctx.playerIsAtk ? side("P") : side("E");
+      const defCorps = ctx.playerIsAtk ? side("E") : side("P");
+      writeBackRosters(s2, b, [...atkCorps, ...defCorps], army, castle);
+      for (const c of [...atkCorps, ...defCorps]) {
+        const gen = s2.generals.find((x) => x.id === c.id);
+        if (gen && !gen.rost) gen.retinue = Math.max(0, Math.round(gen.retinue - c.loss["\u76F4\u5C5E"]));
+      }
+      const left = (corps) => Math.round(corps.reduce((a, c) => a + c.squads.filter((q) => q.origin === "\u5730\u57DF").reduce((t, q) => t + q.men, 0), 0));
+      const atkLeft = left(atkCorps), defLeft = left(defCorps);
+      if (army) {
+        army.local = atkLeft;
+        army.men = atkLeft + atkCorps.reduce((a, c) => a + (s2.generals.find((x) => x.id === c.id)?.retinue || 0), 0);
+      }
+      const keep = Math.round(minGarrison(castle) * 0.4);
+      castle.local = Math.max(0, keep + defLeft);
+      if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: draw2 ? `${castle.name}\u4E0B\u306E\u91CE\u6226\u306F\u65E5\u6CA1\u306B\u3088\u308A\u6C7A\u7740\u305B\u305A\u3001\u4E21\u8ECD\u304C\u5175\u3092\u9000\u3044\u305F\uFF08\u5929\u5019\uFF1A${b.weather}\uFF09\u3002` : `${castle.name}\u4E0B\u306E\u91CE\u6226\u3002${atkWon ? "\u653B\u3081\u624B" : "\u5B88\u308A\u624B"}\u304C\u52DD\u5229\u3057\u305F\uFF08\u5929\u5019\uFF1A${b.weather}${b.orderly ? "\u30FB\u7D71\u5236\u64A4\u9000" : ""}\uFF09\u3002`
+      });
+      for (const c of [...atkCorps, ...defCorps]) {
+        const gen = s2.generals.find((x) => x.id === c.id);
+        if (!gen || c.detach) continue;
+        const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
+        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0) + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
+        risk += Math.random() * 0.3 - 0.15;
+        let fate = null;
+        if (risk > 0.78) fate = "\u8A0E\u6B7B";
+        else if (risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0))) fate = "\u6355\u7E1B";
+        if (fate) notify(b, `${gen.name}\u3001${fate}\u3002`, c.side === "P" ? "bad" : "good");
+        else if (risk > 0.52) fate = "\u91CD\u50B7";
+        else if (risk > 0.34) fate = "\u8EFD\u50B7";
+        if (!fate) continue;
+        if (fate === "\u6355\u7E1B") {
+          const winner = b.result === "P" ? ctx.playerIsAtk ? army.faction : castle.faction : ctx.playerIsAtk ? castle.faction : army.faction;
+          const hold = winner === castle.faction ? castle.id : (s2.castles.find((x) => x.faction === winner) || castle).id;
+          const heir = s2.generals.find((x) => x.faction === gen.faction && x.id !== gen.id && !x.captive);
+          if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
+          if (gen.lord) {
+            const next = s2.generals.filter((x) => x.faction === gen.faction && x.id !== gen.id && !x.captive).sort((a, z) => z.lead - a.lead)[0];
+            if (next) {
+              next.lord = true;
+              gen.lord = false;
+            }
+          }
+          makePrisoner(s2, gen, winner, hold);
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${gen.name}\u304C\u6355\u3089\u3048\u3089\u308C\u305F\u3002` });
+          if (winner === s2.player) s2.captives = [...s2.captives || [], gen.id];
+        } else if (fate === "\u8A0E\u6B7B") {
+          const heir = s2.generals.find((x) => x.faction === gen.faction && x.id !== gen.id);
+          if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
+          s2.generals = s2.generals.filter((x) => x.id !== gen.id);
+          if (gen.lord) {
+            if (gen.faction === s2.player) s2.succession = { dead: gen, cause: "\u8A0E\u6B7B\u3057\u305F" };
+            else succeed(s2, gen, "\u8A0E\u6B7B\u3057\u305F");
+          } else s2.chronicle.push({ y: s2.year, m: s2.month, text: `${gen.name}\u304C\u8A0E\u6B7B\u3057\u305F\u3002` });
+        } else if (fate === "\u91CD\u50B7") {
+          gen.hurt = 3;
+          gen.unity = Math.max(20, (gen.unity || 60) - 8);
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${gen.name}\u304C\u91CD\u50B7\u3092\u8CA0\u3044\u3001\u3057\u3070\u3089\u304F\u6226\u3048\u306A\u3044\u3002` });
+        } else {
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${gen.name}\u304C\u8EFD\u50B7\u3092\u8CA0\u3063\u305F\u3002` });
+        }
+      }
+      if (atkWon && army) {
+        if (castle.local < 200) {
+          army.local = atkLeft;
+          sackCastle(s2, castle, army, true);
+        } else {
+          army.sieging = true;
+          s2.sieges = [...s2.sieges.filter((x) => x.castleId !== castle.id), { castleId: castle.id, armyId: army.id, months: 0, decided: null }];
+        }
+      } else if (army) {
+        army.local = atkLeft;
+        const home = withdrawArmy(s2, army);
+        s2.chronicle.push({
+          y: s2.year,
+          m: s2.month,
+          text: home ? `${s2.factions[army.faction].name}\u306E\u8ECD\u306F${home.name}\u3078\u9000\u3044\u305F\uFF08${fmt(Math.max(0, atkLeft))}\u4EBA\uFF09\u3002` : `${s2.factions[army.faction].name}\u306E\u8ECD\u306F\u9000\u3044\u305F\u304C\u3001\u5E30\u308B\u57CE\u304C\u306A\u304B\u3063\u305F\u3002`
+        });
+      }
+      for (const a of [...s2.armies]) {
+        const corpsOf = b.corps.filter((c) => c.armyId === a.id);
+        if (!corpsOf.length) continue;
+        const men = corpsOf.reduce((t, c) => t + c.squads.filter((q) => q.origin === "\u5730\u57DF").reduce((u, q) => u + q.men, 0), 0);
+        a.local = Math.round(men);
+        const home = withdrawArmy(s2, a);
+        s2.chronicle.push({
+          y: s2.year,
+          m: s2.month,
+          text: `${s2.factions[a.faction].name}\u306E\u63F4\u8ECD\u306F${Math.round(men)}\u4EBA\u3092\u6B8B\u3057\u3066${home ? `${home.name}\u3078` : ""}\u5F15\u304D\u63DA\u3052\u305F\u3002`
+        });
+      }
+      if (playerWon) {
+        const hero = side("P").find((c) => c.feats.length || c.loss["\u76F4\u5C5E"] > 60);
+        const lord = hero && s2.generals.find((x) => x.id === hero.id);
+        if (lord && Math.random() < 0.7) s2.promo = makePromotion(lord, s2.generals);
+      }
+      s2.pendingArrivals = (s2.pendingArrivals || []).slice(1);
+      if (ctx.campId) s2.campaigns = (s2.campaigns || []).filter((x) => x.id !== ctx.campId);
+      return s2;
+    });
+    setBattle(null);
+  };
+  const resolveSiege = (mode, gate, kits) => {
+    setG((prev) => {
+      const s2 = structuredClone(prev);
+      const key = `${s2.year}-${s2.month}`;
+      for (const other of s2.sieges) {
+        const a2 = s2.armies.find((x) => x.id === other.armyId);
+        const c2 = s2.castles.find((x) => x.id === other.castleId);
+        if (a2 && c2 && a2.faction !== s2.player && c2.faction !== s2.player) other.decided = key;
+      }
+      const sg = s2.sieges.find((x) => x.decided !== key);
+      if (!sg) return s2;
+      sg.decided = key;
+      const castle = s2.castles.find((x) => x.id === sg.castleId);
+      const army = s2.armies.find((x) => x.id === sg.armyId);
+      if (!army) {
+        s2.sieges = s2.sieges.filter((x) => x !== sg);
+        return s2;
+      }
+      army.sieging = true;
+      if (mode === "\u5175\u7CE7\u653B\u3081") {
+        sg.months++;
+        const besieging = s2.armies.filter((x) => x.target === castle.id && x.sieging);
+        const dGens = s2.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
+        const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
+        const enc = clamp(0.28 + 0.18 * besieging.length + 0.36 * Math.min(1, army.men / Math.max(1, dMen * 1.5)), 0.2, 1);
+        sg.enc = Math.round(enc * 100);
+        castle.food = Math.max(0, castle.food - Math.round((castle.local * 0.35 + 600) * (0.6 + enc) * (castle.intrigue ? 1.8 : 1)));
+        const well = castle.well == null ? 100 : castle.well;
+        const thirst = well < 50 ? (50 - well) / 12 : 0;
+        castle.min = Math.max(0, castle.min - (castle.intrigue ? 11 : 5) - thirst);
+        if (thirst > 0 && sg.months % 2 === 0) {
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${castle.name}\u306F\u6C34\u306B\u7AAE\u3057\u3066\u3044\u308B\uFF08\u4E95\u6238${Math.round(well)}\uFF09\u3002` });
+        }
+        if (Math.random() < 0.045 * sg.months * (1.4 - enc)) {
+          const a1 = Math.round(army.men * (0.04 + Math.random() * 0.05));
+          const d1 = Math.round(castle.local * (0.05 + Math.random() * 0.06));
+          army.men -= a1;
+          army.local = Math.max(0, army.local - a1);
+          castle.local = Math.max(0, castle.local - d1);
+          castle.min = Math.max(0, castle.min - 4);
+          s2.chronicle.push({
+            y: s2.year,
+            m: s2.month,
+            text: `${castle.name}\u306E\u56F2\u307F\u306B\u75AB\u75C5\u304C\u51FA\u305F\u3002\u5BC4\u305B\u624B${fmt(a1)}\u4EBA\u3001\u57CE\u65B9${fmt(d1)}\u4EBA\u3092\u5931\u3063\u305F\u3002`
+          });
+        }
+        army.food -= Math.round(army.men * 0.09);
+        if (castle.food <= 0 || castle.min < 25) {
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `\u5175\u7CE7\u5C3D\u304D\u3001${castle.name}\u306F\u958B\u57CE\u3057\u305F\u3002` });
+          sackCastle(s2, castle, army, false);
+        }
+      } else if (mode === "\u5F37\u653B") {
+        const gateOK = gate && army.men >= 540;
+        const defPower = castle.local + castle.def * 14 * (gateOK ? 0.7 : 1);
+        const ratio = army.men / Math.max(1, defPower);
+        let aL = Math.round(army.men * clamp(0.34 / ratio, 0.08, 0.55));
+        if (gateOK) aL = Math.round(aL * 0.85 + 300 * 0.25);
+        const dL = Math.round(castle.local * clamp(0.5 * ratio, 0.1, 0.85) * (gateOK ? 1.25 : 1));
+        army.men -= aL;
+        army.local = Math.max(0, army.local - aL);
+        castle.local = Math.max(0, castle.local - dL);
+        castle.hp = Math.max(0, castle.hp - Math.round(dL * 1.5 * (gateOK ? 1.6 : 1)));
+        if (gateOK) s2.chronicle.push({ y: s2.year, m: s2.month, text: `${castle.name}\u306E\u57CE\u9580\u3078\u653B\u6483\u968A\u3092\u5DEE\u3057\u5411\u3051\u305F\u3002` });
+        if (castle.local < 120) {
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${castle.name}\u3001\u5F37\u653B\u306B\u3088\u308A\u9665\u843D\u3002\u653B\u3081\u624B${fmt(aL)}\u4EBA\u3001\u5B88\u308A\u624B${fmt(dL)}\u4EBA\u3092\u5931\u3063\u305F\u3002` });
+          sackCastle(s2, castle, army, true);
+        } else {
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${castle.name}\u3078\u306E\u5F37\u653B\u306F\u9000\u3051\u3089\u308C\u305F\u3002\u653B\u3081\u624B${fmt(aL)}\u4EBA\u3092\u5931\u3063\u305F\u3002` });
+        }
+      } else {
+        withdrawArmy(s2, army);
+        s2.sieges = s2.sieges.filter((x) => x !== sg);
+      }
+      return s2;
+    });
+  };
+  const onSiegeChoice = (mode, gate, extra) => {
+    const kits = mode === "\u5F37\u653B" ? extra : null;
+    const sortie = mode === "\u9632\u885B" ? extra : null;
+    const sg = g.sieges.find((x) => {
+      if (x.decided === `${g.year}-${g.month}`) return false;
+      const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);
+      return a2 && c2 && (a2.faction === g.player || c2.faction === g.player);
+    });
+    if (!sg) return;
+    const army = g.armies.find((x) => x.id === sg.armyId);
+    const mark = () => setG((p) => {
+      const s2 = structuredClone(p);
+      const x = s2.sieges.find((y) => y.castleId === sg.castleId);
+      if (x) x.decided = `${s2.year}-${s2.month}`;
+      return s2;
+    });
+    if (mode === "\u5F37\u653B" && army && army.faction === g.player) {
+      mark();
+      startAssault(sg, gate, kits);
+      return;
+    }
+    if (mode === "\u9632\u885B") {
+      mark();
+      if (Math.random() < 0.34) {
+        startAssault({ ...sg, sortie }, army && army.men >= 540);
+        return;
+      }
+      resolveSiege("\u5175\u7CE7\u653B\u3081");
+      return;
+    }
+    resolveSiege(mode, gate, kits);
+  };
+  const sendAid = (target, plan) => setG((prev) => {
+    const s2 = structuredClone(prev);
+    const \u7684 = s2.castles.find((x) => x.id === target);
+    if (!\u7684) return s2;
+    const \u56F2\u307E\u308C\u3066\u3044\u308B = s2.sieges.some((sg) => sg.castleId === target);
+    let \u51FA\u305F = 0;
+    for (const req of plan.\u4E0B\u77E5 || []) {
+      const c2 = s2.castles.find((x) => x.id === req.castleId);
+      if (!c2) continue;
+      const gens = req.gens.map((id) => s2.generals.find((x) => x.id === id)).filter((x) => x && x.at === c2.id && !x.captive);
+      const send = Math.max(0, Math.min(req.local, c2.local));
+      const men = send + gens.reduce((a, x) => a + x.retinue, 0);
+      if (men < 100) continue;
+      c2.local -= send;
+      c2.food -= Math.round(send * 0.6);
+      for (const t of gens) t.at = null;
+      const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
+      c2.rost = tk.rest;
+      s2.armies.push({
+        id: `aid${Date.now()}${Math.round(Math.random() * 1e6)}`,
+        faction: c2.faction,
+        from: c2.id,
+        gens: gens.map((x) => x.id),
+        local: send,
+        localTrain: c2.localTrain,
+        rost: tk.taken,
+        men,
+        at: c2.id,
+        path: findPath(c2.id, target),
+        prog: 0,
+        food: Math.round(send * 0.6),
+        target,
+        aid: s2.player,
+        ...\u56F2\u307E\u308C\u3066\u3044\u308B ? { relief: target } : {}
+      });
+      \u51FA\u305F += men;
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${c2.name}\u3088\u308A\u63F4\u8ECD${fmt(men)}\u4EBA\uFF08${gens.map((x) => x.name).join("\u30FB") || "\u5C06\u306A\u3057"}\uFF09\u304C${\u7684.name}\u3078\u5411\u304B\u3046\u3002`
+      });
+    }
+    for (const req of plan.\u983C\u307F || []) {
+      const c2 = s2.castles.find((x) => x.id === req.castleId);
+      if (!c2) continue;
+      if (req.reason) {
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: `${c2.name}\u306F\u5175\u3092\u51FA\u305B\u306A\u304B\u3063\u305F\uFF08${req.reason}\uFF09\u3002` });
+        continue;
+      }
+      if (Math.random() > req.chance) {
+        const rel = s2.relations[relKey(s2.player, c2.faction)];
+        if (rel) rel.trust = clamp(rel.trust - 4, 0, 100);
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[c2.faction].name}\u306F\u63F4\u8ECD\u306E\u6C42\u3081\u306B\u5FDC\u3058\u306A\u304B\u3063\u305F\u3002` });
+        continue;
+      }
+      const rgens = s2.generals.filter((x) => x.at === c2.id && x.faction === c2.faction && !x.captive);
+      const send = Math.min(req.men, Math.max(0, c2.local));
+      if (send < 100 || !rgens.length) continue;
+      const take = [...rgens].sort((a, z) => z.lead - a.lead).slice(0, 1);
+      c2.local -= send;
+      c2.food -= Math.round(send * 0.6);
+      for (const t of take) t.at = null;
+      const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
+      c2.rost = tk.rest;
+      s2.armies.push({
+        id: `aid${Date.now()}${Math.round(Math.random() * 1e6)}`,
+        faction: c2.faction,
+        from: c2.id,
+        gens: take.map((x) => x.id),
+        local: send,
+        localTrain: c2.localTrain,
+        rost: tk.taken,
+        men: send + take.reduce((a, x) => a + x.retinue, 0),
+        at: c2.id,
+        path: findPath(c2.id, target),
+        prog: 0,
+        food: Math.round(send * 0.6),
+        target,
+        aid: s2.player,
+        ...\u56F2\u307E\u308C\u3066\u3044\u308B ? { relief: target } : {}
+      });
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${s2.factions[c2.faction].name}\u304C${c2.name}\u3088\u308A\u63F4\u8ECD${fmt(send)}\u4EBA\u3092${\u7684.name}\u3078\u5DEE\u3057\u5411\u3051\u305F\u3002`
+      });
+    }
+    s2.msg = \u51FA\u305F > 0 ? `${\u7684.name}\u3078\u63F4\u8ECD${fmt(\u51FA\u305F)}\u4EBA\u3092\u5DEE\u3057\u5411\u3051\u305F\u3002` : "\u63F4\u8ECD\u306E\u4F7F\u8005\u3092\u9001\u3063\u305F\u3002";
+    return s2;
+  });
+  const launchSortie = (p) => {
+    if (!p.to || !findPath(p.from, p.to)) return;
+    setG((prev) => {
+      const s2 = structuredClone(prev);
+      for (const req of p.reinforce || []) {
+        const rc2 = s2.castles.find((x) => x.id === req.castleId);
+        if (!rc2) continue;
+        if (req.reason) {
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${rc2.name}\u306F\u5175\u3092\u51FA\u305B\u306A\u304B\u3063\u305F\uFF08${req.reason}\uFF09\u3002` });
+          continue;
+        }
+        if (Math.random() > req.chance) {
+          const rel = s2.relations[relKey(s2.player, rc2.faction)];
+          if (rel) rel.trust = clamp(rel.trust - 4, 0, 100);
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[rc2.faction].name}\u306F\u5BC4\u9A0E\u306E\u6C42\u3081\u306B\u5FDC\u3058\u306A\u304B\u3063\u305F\u3002` });
+          continue;
+        }
+        const rgens = s2.generals.filter((x) => x.at === rc2.id && x.faction === rc2.faction && !x.captive);
+        const send = Math.min(req.men, Math.max(0, rc2.local));
+        if (send < 100 || !rgens.length) continue;
+        const take = [...rgens].sort((a, z) => z.lead - a.lead).slice(0, 1);
+        rc2.local -= send;
+        rc2.food -= Math.round(send * 0.6);
+        for (const t of take) t.at = null;
+        const path = findPath(rc2.id, p.to);
+        s2.armies.push({
+          id: `r${Date.now()}${Math.round(Math.random() * 1e6)}`,
+          faction: rc2.faction,
+          from: rc2.id,
+          gens: take.map((x) => x.id),
+          local: send,
+          localTrain: rc2.localTrain,
+          rost: (() => {
+            const tk = rosterTake(rc2.rost || newRoster(rc2.local + send, `loc-${rc2.id}`), send);
+            rc2.rost = tk.rest;
+            return tk.taken;
+          })(),
+          men: send + take.reduce((a, x) => a + x.retinue, 0),
+          at: rc2.id,
+          path,
+          prog: 0,
+          food: Math.round(send * 0.6),
+          target: p.to,
+          aid: s2.player
+        });
+        s2.chronicle.push({
+          y: s2.year,
+          m: s2.month,
+          text: `${rc2.name}\u3088\u308A\u5BC4\u9A0E${fmt(send)}\u4EBA\uFF08${take[0].name}\uFF09\u304C${nodeById(p.to).name}\u3078\u5411\u304B\u3046\uFF08\u7D04${req.months}\u304B\u6708\uFF09\u3002`
+        });
+      }
+      const c = s2.castles.find((x) => x.id === p.from);
+      const dest2 = s2.castles.find((x) => x.id === p.to);
+      if (dest2 && dest2.faction !== s2.player && atPeace(s2, s2.player, dest2.faction)) {
+        const r = s2.relations[relKey(s2.player, dest2.faction)];
+        r.state = "\u4E2D\u7ACB";
+        r.until = null;
+        r.trust = 0;
+        for (const k of Object.keys(s2.relations)) if (k.includes(s2.player)) s2.relations[k].trust = clamp(s2.relations[k].trust - 15, 0, 100);
+        s2.factions[s2.player].prestige = clamp(s2.factions[s2.player].prestige - 12, 0, 100);
+        for (const x of s2.generals.filter((q) => q.faction === s2.player && !q.lord)) x.loyal = Math.max(0, x.loyal - 5);
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[dest2.faction].name}\u3068\u306E\u7D04\u675F\u3092\u7834\u3063\u3066\u5175\u3092\u51FA\u3057\u305F\u3002\u88CF\u5207\u308A\u3068\u3057\u3066\u5468\u8FBA\u52E2\u529B\u306E\u8B66\u6212\u3092\u62DB\u3044\u305F\u3002` });
+      }
+      c.local -= p.local;
+      c.food -= p.food;
+      const mainId = `a${Date.now()}`;
+      const takeMain = rosterTake(c.rost || newRoster(c.local + p.local, `loc-${c.id}`), p.local);
+      c.rost = takeMain.rest;
+      const \u6551\u3046 = dest2 && dest2.faction === s2.player && s2.sieges.some((sg) => sg.castleId === dest2.id);
+      s2.armies.push({
+        id: mainId,
+        faction: s2.player,
+        from: p.from,
+        gens: p.gens,
+        local: p.local,
+        rost: takeMain.taken,
+        localTrain: c.localTrain,
+        men: p.local + p.gens.reduce((a, id) => a + s2.generals.find((x) => x.id === id).retinue, 0),
+        at: p.from,
+        path: findPath(p.from, p.to),
+        prog: 0,
+        food: p.food,
+        target: p.to,
+        ...\u6551\u3046 ? { relief: p.to } : {}
+      });
+      for (const gid of p.gens) s2.generals.find((x) => x.id === gid).at = null;
+      if (\u6551\u3046) {
+        const sg = s2.sieges.find((x) => x.castleId === p.to);
+        if (sg) sg.relief = mainId;
+        s2.chronicle.push({
+          y: s2.year,
+          m: s2.month,
+          text: `${c.name}\u3088\u308A\u5F8C\u8A70\u304C\u767A\u3057\u305F\u3002${dest2.name}\u306E\u56F2\u307F\u3092\u89E3\u304D\u306B\u5411\u304B\u3046\u3002`
+        });
+        return s2;
+      }
+      const lead = s2.generals.find((x) => x.id === (c.lordId || p.gens[0]));
+      const camp = {
+        id: `c${Date.now()}`,
+        target: p.to,
+        from: p.from,
+        leader: lead ? lead.id : p.gens[0],
+        leaderName: lead ? lead.name : "\u7DCF\u5927\u5C06",
+        armies: [mainId],
+        arrived: [],
+        y: s2.year,
+        m: s2.month,
+        decided: null,
+        waited: 0
+      };
+      for (const a of s2.armies) if (a.aid === s2.player && a.target === p.to && !camp.armies.includes(a.id)) camp.armies.push(a.id);
+      s2.campaigns = [...s2.campaigns || [], camp];
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${c.name}\u3088\u308A\u51FA\u9663\u3002\u7DCF\u5927\u5C06\u306F${camp.leaderName}\u3002${nodeById(p.to).name}\u3092\u653B\u3081\u308B\u3002`
+      });
+      return s2;
+    });
+    setModal(null);
+  };
+  const totalMen = mine.reduce((a, c) => a + c.local, 0) + myGens.filter((x) => x.at).reduce((a, x) => a + x.retinue, 0) + g.armies.filter((a) => a.faction === g.player).reduce((a, x) => a + x.men, 0);
+  const openCamp = (g.campaigns || []).find((c) => c.decided !== `${g.year}-${g.month}` && c.arrived.length > 0);
+  const openSiege = g.sieges.find((x) => {
+    if (x.decided === `${g.year}-${g.month}`) return false;
+    const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);
+    return a2 && c2 && (a2.faction === g.player || c2.faction === g.player);
+  });
+  const selCastle = g.castles.find((c) => c.id === sel);
+  if (battle) return /* @__PURE__ */ React5.createElement(BattleScreen, { key: battle.armyId, ctx: battle, land, onEnd: (bb) => finishBattle(bb, battle) });
+  return /* @__PURE__ */ React5.createElement("div", { className: "sp", style: { height: "100dvh" } }, !wide && /* @__PURE__ */ React5.createElement("div", { className: "bar" }, /* @__PURE__ */ React5.createElement("span", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React5.createElement("span", { className: "dot", style: { background: pf.color } }), /* @__PURE__ */ React5.createElement("b", { className: "mn", style: { fontSize: 16 } }, pf.name)), /* @__PURE__ */ React5.createElement("span", { className: "kv num" }, /* @__PURE__ */ React5.createElement("b", null, g.year, "\u5E74 ", g.month, "\u6708"), /* @__PURE__ */ React5.createElement("span", { style: { background: "#EFEDE4", borderRadius: 3, padding: "1px 6px", fontSize: 11 } }, SEASON(g.month))), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, "\u77F3\u9AD8 ", /* @__PURE__ */ React5.createElement("b", { className: "num" }, man(mine.reduce((a, c) => a + c.koku, 0)), " \u4E07\u77F3")), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, "\u5175\u6570 ", /* @__PURE__ */ React5.createElement("b", { className: "num" }, fmt(totalMen))), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, "\u91D1\u92AD ", /* @__PURE__ */ React5.createElement("b", { className: "num" }, fmt(pf.gold), " \u8CAB")), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, "\u62E0\u70B9 ", /* @__PURE__ */ React5.createElement("b", { className: "num" }, mine.length, " \u57CE")), (() => {
+    const cr = courtRank(g, g.player);
+    if (!cr) return null;
+    return /* @__PURE__ */ React5.createElement("span", { className: "kv", style: { color: "#8A6A2A" } }, /* @__PURE__ */ React5.createElement("b", null, cr.key), "\uFF08\u5175\xD7", cr.troop, "\uFF09");
+  })(), (() => {
+    const lord = g.generals.find((x) => x.faction === g.player && x.lord && !x.captive);
+    if (!lord || !needsGuardian(lord)) return null;
+    const gd = actingHead(g, g.player);
+    return /* @__PURE__ */ React5.createElement("span", { className: "kv", style: { color: "#8A5A3A" } }, "\u5F53\u4E3B ", /* @__PURE__ */ React5.createElement("b", null, lord.name), "\uFF08", lord.age, "\u6B73\uFF09\u306F\u5E7C\u5E74\u3002", gd && gd.id !== lord.id ? /* @__PURE__ */ React5.createElement(React5.Fragment, null, " ", /* @__PURE__ */ React5.createElement("b", null, gd.name), "\u304C\u5F8C\u898B") : " \u5F8C\u898B\u306A\u3057");
+  })(), /* @__PURE__ */ React5.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React5.createElement(
+    "select",
+    {
+      className: "sel",
+      value: pf.mobilization,
+      onChange: (e) => setG((p) => {
+        const s2 = structuredClone(p);
+        s2.factions[s2.player].mobilization = +e.target.value;
+        return s2;
+      })
+    },
+    MOB_POLICY.map((m, i) => /* @__PURE__ */ React5.createElement("option", { key: m.name, value: i }, `\u52D5\u54E1\uFF1A${m.name}\uFF08\u4E00\u4E07\u77F3 ${m.per}\u4EBA\uFF09`))
+  ), /* @__PURE__ */ React5.createElement("button", { className: "btn sm", onClick: () => setModal("chronicle") }, "\u6226\u56FD\u8A18"), /* @__PURE__ */ React5.createElement("button", { className: "btn sm", onClick: async () => {
+    const ok = await onSave(g);
+    setSavedMsg(ok ? "\u8A18\u9332\u3057\u305F" : "\u8A18\u9332\u3067\u304D\u306A\u3044\u74B0\u5883");
+    setTimeout(() => setSavedMsg(""), 2e3);
+  } }, "\u8A18\u9332", savedMsg ? `\uFF1A${savedMsg}` : ""), /* @__PURE__ */ React5.createElement("button", { className: "btn sm", onClick: onTitle }, "\u30BF\u30A4\u30C8\u30EB"), /* @__PURE__ */ React5.createElement("button", { className: "btn dark sm", disabled: !!battle || !!openSiege, onClick: nextMonth }, "\u6B21\u6708\u3078")), /* @__PURE__ */ React5.createElement(
+    "div",
+    {
+      className: "mapwrap",
+      ref: wrapRef,
+      onMouseDown: onDown,
+      onMouseMove: onMove,
+      onMouseUp: onUp,
+      onMouseLeave: () => drag.current = null,
+      onTouchStart: onDown,
+      onTouchMove: onMove,
+      onTouchEnd: onUp,
+      onTouchCancel: onCancel,
+      onWheel: (e) => {
+        if (e.target === cvRef.current) zoom(e.deltaY < 0 ? 1.12 : 0.89);
+      }
+    },
+    /* @__PURE__ */ React5.createElement("canvas", { ref: cvRef, style: { width: "100%", height: "100%", display: "block", touchAction: "none" } }),
+    /* @__PURE__ */ React5.createElement("div", { className: "mapctl l", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React5.createElement("div", { className: "mbtn", onClick: () => zoom(1.25) }, /* @__PURE__ */ React5.createElement("b", null, "\uFF0B"), "\u62E1\u5927"), /* @__PURE__ */ React5.createElement("div", { className: "mbtn", onClick: () => zoom(0.8) }, /* @__PURE__ */ React5.createElement("b", null, "\u2212"), "\u7E2E\u5C0F"), /* @__PURE__ */ React5.createElement("div", { className: "mbtn", onClick: () => focus(mine[0] && mine[0].id) }, /* @__PURE__ */ React5.createElement("b", null, "\u25CE"), "\u672C\u62E0"), /* @__PURE__ */ React5.createElement("div", { className: "mbtn", onClick: whole }, /* @__PURE__ */ React5.createElement("b", null, "\u26F6"), "\u5168\u4F53\u56F3"), /* @__PURE__ */ React5.createElement("div", { className: `mbtn ${wide ? "on" : ""}`, onClick: () => setWide((v) => !v) }, /* @__PURE__ */ React5.createElement("b", null, wide ? "\u25A4" : "\u2922"), wide ? "\u623B\u3059" : "\u5E83\u304F")),
+    !wide && /* @__PURE__ */ React5.createElement("div", { className: "mapctl r", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React5.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("factions") }, /* @__PURE__ */ React5.createElement("b", null, "\u2691"), "\u52E2\u529B\u60C5\u5831"), /* @__PURE__ */ React5.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("generals") }, /* @__PURE__ */ React5.createElement("b", null, "\u2617"), "\u6B66\u5C06\u4E00\u89A7"), /* @__PURE__ */ React5.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("goal") }, /* @__PURE__ */ React5.createElement("b", null, "\u25C8"), "\u653B\u7565\u76EE\u6A19"), /* @__PURE__ */ React5.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("chronicle") }, /* @__PURE__ */ React5.createElement("b", null, "\u25A4"), "\u5C65\u6B74")),
+    !wide && /* @__PURE__ */ React5.createElement("canvas", { className: "mini", ref: miniRef, onClick: whole }),
+    wide && /* @__PURE__ */ React5.createElement("div", { style: {
+      position: "absolute",
+      left: 12,
+      bottom: 12,
+      zIndex: 6,
+      display: "flex",
+      gap: 8,
+      alignItems: "center",
+      background: "rgba(255,255,255,.94)",
+      border: `1px solid ${U.line}`,
+      borderRadius: 20,
+      padding: "6px 12px",
+      fontSize: 12
+    } }, /* @__PURE__ */ React5.createElement("span", { className: "dot", style: { background: pf.color } }), /* @__PURE__ */ React5.createElement("b", { className: "mn" }, pf.name), /* @__PURE__ */ React5.createElement("span", { className: "num" }, g.year, "\u5E74", g.month, "\u6708"), /* @__PURE__ */ React5.createElement("span", { className: "num" }, "\u5175", fmt(totalMen)), /* @__PURE__ */ React5.createElement("button", { className: "btn sm", disabled: !!battle || !!openSiege || !!openCamp, onClick: nextMonth }, "\u6B21\u6708\u3078")),
+    !sel && !wide && /* @__PURE__ */ React5.createElement("div", { className: "hint" }, "\u57CE\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u8A73\u7D30\u304C\u958B\u304D\u307E\u3059"),
+    selCastle && /* @__PURE__ */ React5.createElement(
+      CastleSheet,
+      {
+        g,
+        castle: selCastle,
+        land,
+        tab,
+        setTab,
+        onClose: () => setSel(null),
+        onCommand: runCommand2,
+        onAppoint: appoint2,
+        onSortie: () => setModal("sortie"),
+        onCallAid: (id) => setCallAid(id),
+        onDiplo: doDiplo2,
+        onPlot: doPlot2,
+        onSpecial: doSpecial2,
+        onReward: reward2,
+        onCaptive: doCaptive2,
+        onFief: grantFief2,
+        onRetire: doRetire2,
+        onSettle: settleCaptive2,
+        onKenchi: doKenchi2
+      }
+    ),
+    modal === "sortie" && selCastle && /* @__PURE__ */ React5.createElement(SortieDialog, { g, from: selCastle.id, onClose: () => setModal(null), onGo: launchSortie }),
+    modal === "report" && /* @__PURE__ */ React5.createElement(MonthReport, { g, onClose: () => setModal(null) }),
+    modal === "chronicle" && /* @__PURE__ */ React5.createElement(Chronicle, { g, onClose: () => setModal(null) }),
+    modal === "factions" && /* @__PURE__ */ React5.createElement(FactionInfo, { g, onClose: () => setModal(null) }),
+    modal === "generals" && /* @__PURE__ */ React5.createElement(GeneralList, { g, onClose: () => setModal(null) }),
+    modal === "goal" && /* @__PURE__ */ React5.createElement(GoalPanel, { g, onClose: () => setModal(null) }),
+    openCamp && !battle && /* @__PURE__ */ React5.createElement(CampaignPanel, { g, camp: openCamp, onAct: campaignAct }),
+    openSiege && !battle && !openCamp && /* @__PURE__ */ React5.createElement(SiegePanel, { g, sg: openSiege, onChoose: onSiegeChoice }),
+    (g.captives || []).length > 0 && (() => {
+      const gen = g.generals.find((x) => x.id === g.captives[0]);
+      if (!gen) {
+        setG((p) => {
+          const s2 = structuredClone(p);
+          s2.captives = s2.captives.slice(1);
+          return s2;
+        });
+        return null;
+      }
+      return /* @__PURE__ */ React5.createElement(CaptiveDialog, { g, gen, onDone: (how) => setG((p) => {
+        const s2 = structuredClone(p);
+        const q = s2.generals.find((x) => x.id === gen.id);
+        s2.captives = (s2.captives || []).filter((id) => id !== gen.id);
+        if (!q) return s2;
+        const log = (t) => s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+        if (how === "\u767B\u7528") {
+          q.faction = s2.player;
+          q.captive = null;
+          q.loyal = clamp(45 + Math.random() * 20, 0, 100);
+          q.retinue = Math.round(140 + Math.random() * 120);
+          log(`${q.name}\u304C\u964D\u308A\u3001${s2.factions[s2.player].name}\u306B\u5C5E\u3057\u305F\u3002`);
+        } else if (how === "\u9003\u3059") {
+          const home = s2.castles.find((c) => c.faction === q.captive.from) || s2.castles[0];
+          q.captive = null;
+          q.at = home.id;
+          q.retinue = Math.round(180 + Math.random() * 120);
+          q.loyal = clamp((q.loyal == null ? 60 : q.loyal) + 6, 0, 100);
+          log(`${q.name}\u3092\u653E\u3063\u305F\u3002${home.name}\u3078\u5E30\u3063\u305F\u3002`);
+        } else if (how === "\u65AC\u9996") {
+          s2.generals = s2.generals.filter((x) => x.id !== q.id);
+          log(`${q.name}\u3092\u65AC\u3063\u305F\u3002`);
+        } else {
+          log(`${q.name}\u3092\u6355\u865C\u3068\u3057\u3066\u7559\u3081\u7F6E\u3044\u305F\u3002`);
+        }
+        return s2;
+      }) });
+    })(),
+    g.ransomOffer && (() => {
+      const o = g.ransomOffer;
+      const gen = g.generals.find((x) => x.id === o.genId);
+      if (!gen) {
+        setG((p) => {
+          const s2 = structuredClone(p);
+          s2.ransomOffer = null;
+          return s2;
+        });
+        return null;
+      }
+      const from = g.factions[o.from];
+      return /* @__PURE__ */ React5.createElement("div", { className: "modal" }, /* @__PURE__ */ React5.createElement("div", { className: "card" }, /* @__PURE__ */ React5.createElement("div", { className: "mn", style: { fontSize: 18 } }, from.name, "\u3088\u308A\u8EAB\u4EE3\u91D1\u306E\u7533\u3057\u51FA"), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12.5, color: U.dim, marginTop: 8, lineHeight: 1.9 } }, "\u6355\u865C\u306E", /* @__PURE__ */ React5.createElement("b", null, gen.name), "\uFF08", o.rank, "\u306E\u5668\u91CF\uFF09\u3092\u8FD4\u3057\u3066\u307B\u3057\u3044\u3068\u3044\u3046\u3002", /* @__PURE__ */ React5.createElement("br", null), "\u5DEE\u3057\u51FA\u3059\u8EAB\u4EE3\u91D1\u306F", /* @__PURE__ */ React5.createElement("b", null, "\u91D1 ", fmt(o.gold), "\u8CAB"), "\u3068", /* @__PURE__ */ React5.createElement("b", null, "\u5175\u7CE7 ", fmt(o.food), "\u77F3"), "\u3002"), /* @__PURE__ */ React5.createElement("div", { className: "g2", style: { marginTop: 12 } }, /* @__PURE__ */ React5.createElement("button", { className: "btn dark", onClick: () => setG((p) => {
+        const s2 = structuredClone(p);
+        const q = s2.generals.find((x) => x.id === o.genId);
+        if (q && q.captive) {
+          const paid = payRansom(s2, q);
+          const rel = s2.relations[relKey(s2.player, o.from)];
+          if (rel) rel.trust = clamp(rel.trust + 5, 0, 100);
+          s2.chronicle.push({
+            y: s2.year,
+            m: s2.month,
+            text: `${s2.factions[o.from].name}\u3088\u308A\u8EAB\u4EE3\u91D1\u3092\u53D7\u3051\u3001${q.name}\u3092\u8FD4\u3057\u305F\uFF08\u91D1${fmt(paid.gold)}\u8CAB\u30FB\u5175\u7CE7${fmt(paid.food)}\u77F3\uFF09\u3002`
+          });
+        }
+        s2.ransomOffer = null;
+        return s2;
+      }) }, "\u53D7\u3051\u308B"), /* @__PURE__ */ React5.createElement("button", { className: "btn", onClick: () => setG((p) => {
+        const s2 = structuredClone(p);
+        const rel = s2.relations[relKey(s2.player, o.from)];
+        if (rel) rel.trust = clamp(rel.trust - 6, 0, 100);
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[o.from].name}\u306E\u8EAB\u4EE3\u91D1\u306E\u7533\u3057\u51FA\u3092\u9000\u3051\u305F\u3002` });
+        s2.ransomOffer = null;
+        return s2;
+      }) }, "\u9000\u3051\u308B"))));
+    })(),
+    callAid && /* @__PURE__ */ React5.createElement(
+      ReinforceDialog,
+      {
+        g,
+        target: callAid,
+        title: `\u63F4\u8ECD\u3092\u547C\u3076\u3000${(g.castles.find((x) => x.id === callAid) || {}).name || ""}`,
+        note: g.sieges.some((sg) => sg.castleId === callAid) ? "\u3053\u306E\u57CE\u306F\u56F2\u307E\u308C\u3066\u3044\u307E\u3059\u3002\u7740\u3044\u305F\u63F4\u8ECD\u306F\u3001\u56F2\u307F\u3092\u89E3\u304F\u305F\u3081\u306E\u91CE\u6226\u306B\u5411\u304B\u3044\u307E\u3059\u3002" : "\u6575\u304C\u5411\u304B\u3063\u3066\u3044\u307E\u3059\u3002\u7740\u3044\u305F\u63F4\u8ECD\u306F\u57CE\u306E\u5B88\u308A\u306B\u52A0\u308F\u308A\u307E\u3059\u3002",
+        onClose: () => setCallAid(null),
+        onGo: (plan) => {
+          sendAid(callAid, plan);
+          setCallAid(null);
+        }
+      }
+    ),
+    sally && (() => {
+      const \u8ECD = g.armies.find((x) => x.id === sally.armyId);
+      const \u57CE = g.castles.find((x) => x.id === sally.castleId);
+      const \u5BC4\u624B = g.armies.find((x) => x.id === sally.foeId);
+      if (!\u8ECD || !\u57CE || !\u5BC4\u624B) {
+        setSally(null);
+        return null;
+      }
+      const \u59CB\u3081\u308B = (\u51FA\u6483) => {
+        setSally(null);
+        startBattle(
+          \u8ECD,
+          { ...\u57CE, name: `${\u57CE.name}\u306E\u56F2\u307F` },
+          null,
+          void 0,
+          \u5BC4\u624B,
+          \u51FA\u6483 ? {
+            id: `sally-${\u57CE.id}`,
+            castleId: \u57CE.id,
+            faction: \u57CE.faction,
+            gens: \u51FA\u6483.gens,
+            local: \u51FA\u6483.local,
+            localTrain: \u57CE.localTrain,
+            rost: null
+          } : null
+        );
+      };
+      return /* @__PURE__ */ React5.createElement(
+        SallyDialog,
+        {
+          g,
+          castleId: sally.castleId,
+          foeId: sally.foeId,
+          onClose: () => \u59CB\u3081\u308B(null),
+          onGo: \u59CB\u3081\u308B
+        }
+      );
+    })(),
+    raid && (() => {
+      const r = raid.plan;
+      const atkIsPlayer = raid.army.faction === g.player;
+      const pct = Math.round(r.p * 100);
+      const wx = r.weather === "\u96E8" ? "\u96E8\u304C\u964D\u3063\u3066\u3044\u308B" : r.weather === "\u96EA" ? "\u96EA\u304C\u821E\u3063\u3066\u3044\u308B" : r.weather === "\u66C7" ? "\u7A7A\u306F\u66C7\u3063\u3066\u3044\u308B" : "\u7A7A\u306F\u6674\u308C\u3066\u3044\u308B";
+      const tr = r.terr === "hill" ? "\u5C71\u304C\u3061\u306E\u5730" : "\u68EE\u306E\u591A\u3044\u5730";
+      return /* @__PURE__ */ React5.createElement("div", { className: "modal" }, /* @__PURE__ */ React5.createElement("div", { className: "card" }, /* @__PURE__ */ React5.createElement("div", { className: "mn", style: { fontSize: 20 } }, raid.dest.name, "\u4E0B\u30FB\u8ECD\u8B70"), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 13, color: U.dim, margin: "10px 0", lineHeight: 1.9 } }, "\u5473\u65B9 ", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, fmt(r.myMen), "\u4EBA"), "\u3000\u5BFE \u6575 ", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, fmt(r.foeMen), "\u4EBA"), "\uFF08", (r.ratio * 10).toFixed(1), "\u5272\u306E\u5175\uFF09", /* @__PURE__ */ React5.createElement("br", null), wx, "\u3002", tr, "\u3067\u3042\u308B\u3002"), /* @__PURE__ */ React5.createElement("div", { style: { borderLeft: `3px solid ${U.line}`, paddingLeft: 12, margin: "12px 0", lineHeight: 1.9, fontSize: 14 } }, /* @__PURE__ */ React5.createElement("b", null, r.head.name), "\uFF08\u77E5\u7565", r.head.wit, "\u30FB\u7D71\u7387", r.head.lead, "\uFF09\u304C\u7533\u3057\u51FA\u3066\u304A\u308A\u307E\u3059\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("span", { style: { color: U.dim } }, "\u300C\u6B63\u9762\u304B\u3089\u5F53\u305F\u3063\u3066\u306F\u52DD\u3061\u76EE\u304C\u3054\u3056\u3089\u306C\u3002", r.target ? `${r.target.name}\u306E\u672C\u9663\u3092\u885D\u304D\u307E\u3059\u308B\u3002` : "\u6575\u306E\u672C\u9663\u3092\u885D\u304D\u307E\u3059\u308B\u3002", "\u300D")), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 13, lineHeight: 1.9 } }, "\u6210\u7B97\u306F", /* @__PURE__ */ React5.createElement("b", { style: { color: pct >= 30 ? "#3E7A3A" : pct >= 15 ? "#C89A3A" : "#B0483C", fontSize: 17 } }, "\u304A\u3088\u305D", pct, "\uFF05"), "\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("span", { style: { color: U.dim, fontSize: 12.5 } }, "\u5F53\u305F\u308C\u3070\u6575\u306E\u7DCF\u5927\u5C06\u3092\u8A0E\u3061\u3001\u6575\u8ECD\u306F\u5D29\u308C\u305F\u5F62\u3067\u5408\u6226\u304C\u59CB\u307E\u308B\u3002", /* @__PURE__ */ React5.createElement("br", null), "\u5916\u305B\u3070\u4F0F\u52E2\u304C\u9732\u898B\u3057\u3001\u5473\u65B9\u306E\u58EB\u6C17\u304C\u843D\u3061\u305F\u307E\u307E\u6226\u3046\u3053\u3068\u306B\u306A\u308B\u3002")), /* @__PURE__ */ React5.createElement("div", { className: "g2", style: { marginTop: 16 } }, /* @__PURE__ */ React5.createElement("button", { className: "btn dark", onClick: () => {
+        const hit = Math.random() < r.p;
+        const { army, dest: dest2, camp } = raid;
+        setRaid(null);
+        if (hit && r.target) {
+          setG((p2) => {
+            const s2 = structuredClone(p2);
+            const t2 = s2.generals.find((x) => x.id === r.target.id);
+            if (t2) {
+              s2.generals = s2.generals.filter((x) => x.id !== t2.id);
+              if (t2.lord) {
+                const nx = s2.generals.filter((x) => x.faction === t2.faction && !x.captive).sort((a, z) => z.lead - a.lead)[0];
+                if (nx) nx.lord = true;
+              }
+              s2.chronicle.push({
+                y: s2.year,
+                m: s2.month,
+                text: `${r.head.name}\u304C${dest2.name}\u306E\u672C\u9663\u3092\u885D\u304D\u3001${t2.name}\u3092\u8A0E\u3061\u53D6\u3063\u305F\u3002`
+              });
+            }
+            return s2;
+          });
+        }
+        startBattle(army, dest2, camp, { done: true, hit, head: r.head, target: r.target, atkIsPlayer });
+      } }, "\u672C\u9663\u3092\u885D\u304F"), /* @__PURE__ */ React5.createElement("button", { className: "btn", onClick: () => {
+        const { army, dest: dest2, camp } = raid;
+        setRaid(null);
+        startBattle(army, dest2, camp, null);
+      } }, "\u6B63\u9762\u304B\u3089\u5F53\u305F\u308B"))));
+    })(),
+    g.warSettle && (() => {
+      const ws = g.warSettle;
+      const gen = g.generals.find((x) => x.id === ws.queue[0]);
+      const lord = ws.lordId ? g.generals.find((x) => x.id === ws.lordId) : null;
+      const fname = (g.factions[ws.faction] || {}).name || "";
+      if (!gen) {
+        setG((p2) => {
+          const s2 = structuredClone(p2);
+          s2.warSettle = null;
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${fname}\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3044\u3001\u6EC5\u4EA1\u3057\u305F\u3002` });
+          s2.monthEvents = [...s2.monthEvents || [], `${fname}\u3092\u6EC5\u307C\u3057\u305F\u3002`];
+          s2.msg = `${fname}\u306F\u6EC5\u4EA1\u3057\u305F\u3002`;
+          return s2;
+        });
+        return null;
+      }
+      const isLord = gen.id === ws.lordId;
+      const rec = isLord ? { ok: false, why: `${fname}\u3092\u80CC\u8CA0\u3063\u305F\u5F53\u4E3B\u3002\u964D\u3063\u3066\u4EBA\u306B\u4ED5\u3048\u308B\u8EAB\u3067\u306F\u306A\u3044` } : canRecruit(gen, lord);
+      const nextOne = (s2) => {
+        s2.warSettle = { ...s2.warSettle, queue: s2.warSettle.queue.slice(1) };
+        if (!s2.warSettle.queue.length) {
+          s2.warSettle = null;
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${fname}\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3044\u3001\u6EC5\u4EA1\u3057\u305F\u3002` });
+          s2.monthEvents = [...s2.monthEvents || [], `${fname}\u3092\u6EC5\u307C\u3057\u305F\u3002`];
+          s2.msg = `${fname}\u306F\u6EC5\u4EA1\u3057\u305F\u3002`;
+        }
+      };
+      const act2 = (kind) => setG((p2) => {
+        const s2 = structuredClone(p2);
+        const g2 = s2.generals.find((x) => x.id === gen.id);
+        if (!g2) {
+          nextOne(s2);
+          return s2;
+        }
+        if (kind === "\u65AC") {
+          s2.generals = s2.generals.filter((x) => x.id !== g2.id);
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${g2.name}\u306F\u65AC\u3089\u308C\u305F\u3002` });
+        } else if (kind === "\u6355") {
+          takeAsPrisoner(s2, g2, ws.winner, ws.castleId);
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${g2.name}\u306F\u6355\u3089\u308F\u308C\u3001${(s2.castles.find((c2) => c2.id === ws.castleId) || {}).name}\u306B\u7559\u3081\u7F6E\u304B\u308C\u305F\u3002` });
+        } else {
+          g2.faction = ws.winner;
+          g2.lord = false;
+          g2.captive = null;
+          g2.loyal = loyaltyAfterRecruit(g2);
+          g2.at = ws.castleId;
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${g2.name}\u306F${s2.factions[ws.winner].name}\u306B\u4ED5\u3048\u305F\uFF08\u5FE0\u8AA0${Math.round(g2.loyal)}\uFF09\u3002` });
+        }
+        nextOne(s2);
+        return s2;
+      });
+      return /* @__PURE__ */ React5.createElement("div", { className: "modal" }, /* @__PURE__ */ React5.createElement("div", { className: "card" }, /* @__PURE__ */ React5.createElement("div", { className: "mn", style: { fontSize: 20 } }, fname, "\u3001\u6EC5\u4EA1"), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: U.dim, margin: "6px 0 12px" } }, "\u6B8B\u308B", ws.queue.length, "\u540D\u306E\u8EAB\u306E\u632F\u308A\u65B9\u3092\u5B9A\u3081\u307E\u3059\u3002"), /* @__PURE__ */ React5.createElement("div", { style: { borderLeft: `3px solid ${isLord ? "#C8A44A" : U.line}`, paddingLeft: 12, marginBottom: 12, lineHeight: 1.9 } }, /* @__PURE__ */ React5.createElement("b", { style: { fontSize: 16 } }, gen.name), isLord && /* @__PURE__ */ React5.createElement("span", { style: { color: "#C8A44A", fontSize: 12, marginLeft: 6 } }, "\u3010\u65E7\u5F53\u4E3B\u3011"), /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("span", { className: "num", style: { fontSize: 12, color: U.dim } }, gen.age, "\u6B73\uFF0F\u7D71", gen.lead, "\u30FB\u6B66", gen.valor, "\u30FB\u77E5", gen.wit, "\u30FB\u653F", gen.gov, isLord ? `\uFF0F${fname}\u5F53\u4E3B` : `\uFF0F\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0 ${Math.round(gen.loyal == null ? 60 : gen.loyal)}`), !rec.ok && rec.why && /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 6 } }, rec.why, "\u3002"), rec.ok && /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: "#3E7A3A", marginTop: 6 } }, "\u53EC\u3057\u62B1\u3048\u308C\u3070\u3001\u5FE0\u8AA0", loyaltyAfterRecruit(gen), "\u306B\u3066\u4ED5\u3048\u307E\u3057\u3087\u3046\u3002")), rec.ok && /* @__PURE__ */ React5.createElement("button", { className: "btn dark", style: { width: "100%", marginBottom: 6 }, onClick: () => act2("\u767B") }, "\u53EC\u3057\u62B1\u3048\u308B"), /* @__PURE__ */ React5.createElement("div", { className: "g2" }, /* @__PURE__ */ React5.createElement("button", { className: "btn", onClick: () => act2("\u6355") }, "\u6355\u865C\u3068\u3059\u308B"), /* @__PURE__ */ React5.createElement("button", { className: "btn", onClick: () => act2("\u65AC") }, "\u65AC\u308B")), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.7 } }, "\u6355\u865C\u3068\u3059\u308C\u3070\u3001\u57CE\u306E\u300C\u6226\u5F8C\u306E\u59CB\u672B\u300D\u3067\u6276\u6301\u3092\u4E0E\u3048\u3001\u5FC3\u3092\u958B\u304B\u305B\u3066\u53EC\u3057\u62B1\u3048\u308B\u9053\u304C\u958B\u3051\u307E\u3059\u3002")));
+    })(),
+    g.succession && (() => {
+      const su = g.succession;
+      const cands = heirCandidates(g, su.dead);
+      if (!cands.length) {
+        setG((p2) => {
+          const s2 = structuredClone(p2);
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${su.dead.name}\u304C${su.cause}\u3002\u8DE1\u3092\u7D99\u3050\u8005\u306A\u304F\u3001\u5BB6\u306F\u7D76\u3048\u305F\u3002` });
+          s2.succession = null;
+          return s2;
+        });
+        return null;
+      }
+      return /* @__PURE__ */ React5.createElement("div", { className: "modal" }, /* @__PURE__ */ React5.createElement("div", { className: "card" }, /* @__PURE__ */ React5.createElement("div", { className: "mn", style: { fontSize: 20 } }, su.dead.name, "\u3001", su.cause), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12.5, color: U.dim, margin: "8px 0 12px", lineHeight: 1.8 } }, "\u8DE1\u76EE\u3092\u5B9A\u3081\u306D\u3070\u306A\u3089\u306C\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11.5 } }, "\u8840\u7B4B\u306E\u8005\u304C\u7D99\u3052\u3070\u5BB6\u4E2D\u306F\u843D\u3061\u7740\u304F\u3002\u4ED6\u5BB6\u306E\u51FA\u3067\u3042\u308C\u3070\u5FE0\u8AA0\u304C\u5927\u304D\u304F\u4E0B\u304C\u308A\u3001 \u5E7C\u5E74\u3067\u3042\u308C\u3070\u3055\u3089\u306B\u4FAE\u3089\u308C\u308B\u3002")), cands.map(({ gen, blood }) => /* @__PURE__ */ React5.createElement(
+        "button",
+        {
+          key: gen.id,
+          className: "btn",
+          style: { width: "100%", textAlign: "left", marginBottom: 6, padding: "9px 12px" },
+          onClick: () => setG((p2) => {
+            const s2 = structuredClone(p2);
+            const d2 = s2.generals.find((x) => x.id === su.dead.id);
+            succeed(s2, d2 || su.dead, su.cause, gen.id, false);
+            s2.generals = s2.generals.filter((x) => x.id !== su.dead.id);
+            s2.succession = null;
+            return s2;
+          })
+        },
+        /* @__PURE__ */ React5.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } }, /* @__PURE__ */ React5.createElement("span", { className: "mn", style: { fontSize: 15 } }, gen.name, /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11, color: blood ? "#3E7A3A" : "#B0483C", marginLeft: 8 } }, blood ? "\u8840\u7B4B" : "\u4ED6\u5BB6\u306E\u51FA", gen.age < 16 ? "\u30FB\u5E7C\u5E74" : "")), /* @__PURE__ */ React5.createElement("span", { className: "num", style: { fontSize: 11.5, color: U.dim } }, gen.age, "\u6B73\uFF0F\u7D71", gen.lead, "\u30FB\u6B66", gen.valor, "\u30FB\u77E5", gen.wit, "\u30FB\u653F", gen.gov))
+      ))));
+    })(),
+    g.promo && /* @__PURE__ */ React5.createElement(PromotionDialog, { promo: g.promo, onDone: (name) => setG((p) => {
+      const s2 = structuredClone(p);
+      s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.promo.oldName}\u3001\u6226\u529F\u306B\u3088\u308A\u6B63\u5F0F\u306A\u6B66\u5C06\u306B\u5217\u3057\u3001${s2.promo.lordName}\u3088\u308A\u504F\u8AF1\u3092\u8CDC\u3063\u3066${name}\u3068\u540D\u4E57\u308B\u3002` });
+      s2.promo = null;
+      return s2;
+    }) })
+  ));
+}
+
+// src/ui/Title.jsx
+import React6, { useRef as useRef4 } from "react";
+function Title({ saved, onStart, onContinue, onErase, onExport, onImport }) {
+  const \u63A7\u3048\u53E3 = useRef4(null);
+  return /* @__PURE__ */ React6.createElement("div", { className: "sp", style: { height: "100dvh", alignItems: "center", justifyContent: "center", position: "relative" } }, /* @__PURE__ */ React6.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)" } }), /* @__PURE__ */ React6.createElement("div", { style: { position: "relative", textAlign: "center" } }, /* @__PURE__ */ React6.createElement("div", { className: "mn", style: { fontSize: 46, letterSpacing: ".06em" } }, "\u6226\u56FD\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8"), /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 11, letterSpacing: ".42em", color: U.dim, marginTop: 8 } }, "SENGOKU PROJECT"), /* @__PURE__ */ React6.createElement("div", { style: { marginTop: 36, display: "flex", flexDirection: "column", gap: 11, width: 280 } }, saved && /* @__PURE__ */ React6.createElement("button", { className: "btn dark", style: { padding: "13px" }, onClick: onContinue }, "\u7D9A\u304D\u304B\u3089\uFF08", saved.state.year, "\u5E74", saved.state.month, "\u6708\u30FB", (FACTIONS[saved.state.player] || {}).name, "\uFF09"), /* @__PURE__ */ React6.createElement("button", { className: `btn ${saved ? "" : "dark"}`, style: { padding: "13px" }, onClick: onStart }, saved ? "\u65B0\u3057\u304F\u306F\u3058\u3081\u308B" : "\u30B2\u30FC\u30E0\u3092\u306F\u3058\u3081\u308B"), /* @__PURE__ */ React6.createElement("div", { style: { display: "flex", gap: 8 } }, saved && /* @__PURE__ */ React6.createElement(
+    "button",
+    {
+      className: "btn",
+      style: { padding: "9px", fontSize: 12, flex: 1 },
+      onClick: onExport
+    },
+    "\u63A7\u3048\u3092\u66F8\u304D\u51FA\u3059"
+  ), /* @__PURE__ */ React6.createElement(
+    "button",
+    {
+      className: "btn",
+      style: { padding: "9px", fontSize: 12, flex: 1 },
+      onClick: () => \u63A7\u3048\u53E3.current && \u63A7\u3048\u53E3.current.click()
+    },
+    "\u63A7\u3048\u304B\u3089\u623B\u3059"
+  )), /* @__PURE__ */ React6.createElement(
+    "input",
+    {
+      ref: \u63A7\u3048\u53E3,
+      type: "file",
+      accept: "application/json,.json",
+      style: { display: "none" },
+      onChange: (e) => {
+        const f = e.target.files && e.target.files[0];
+        e.target.value = "";
+        if (f) onImport(f);
+      }
+    }
+  ), saved && /* @__PURE__ */ React6.createElement(
+    "button",
+    {
+      className: "btn",
+      style: { padding: "9px", fontSize: 12 },
+      onClick: () => {
+        if (window.confirm("\u8A18\u9332\u3092\u6D88\u3057\u307E\u3059\u3002\u3088\u308D\u3057\u3044\u3067\u3059\u304B\u3002")) onErase();
+      }
+    },
+    "\u8A18\u9332\u3092\u6D88\u3059"
+  ))), /* @__PURE__ */ React6.createElement("div", { style: { position: "absolute", left: 20, bottom: 16, fontSize: 11, color: U.dim } }, "ver.0.2.0", typeof window !== "undefined" && window.__BUILD__ ? `\u3000\u66F8\u304D\u51FA\u3057 ${window.__BUILD__}` : ""));
+}
+
+// src/ui/css.js
+var css = `
+*{box-sizing:border-box}
+.sp{background:${U.paper};color:${U.text};height:100%;display:flex;flex-direction:column;overflow:hidden;
+ overscroll-behavior:none;touch-action:manipulation;user-select:none;-webkit-user-select:none;
+ font-family:'Hiragino Sans','Yu Gothic UI','Meiryo',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+.sp .mn{font-family:'Hiragino Mincho ProN','Yu Mincho','MS Mincho',serif}
+.sp .num{font-variant-numeric:tabular-nums}
+.bar{display:flex;align-items:center;gap:14px;padding:9px 14px;background:${U.card};
+ border-bottom:1px solid ${U.line};flex:0 0 auto;flex-wrap:wrap;font-size:13px}
+.bar .kv{display:flex;align-items:center;gap:5px;color:${U.dim}}
+.bar .kv b{color:${U.text};font-weight:600}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.btn{background:${U.card};color:${U.text};border:1px solid ${U.line};border-radius:6px;
+ padding:8px 13px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn:hover{background:#FAF8F2}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.dark{background:${U.ink};color:#fff;border-color:${U.ink}}
+.btn.on{background:#EEF2F7;border-color:${U.text}}
+.btn.sm{padding:5px 9px;font-size:12px;border-radius:5px}
+.pill{border-radius:4px;font-size:11px;padding:2px 7px;color:#fff}
+.mapwrap{flex:1;position:relative;min-height:0;overflow:hidden;background:#DDE4C8;touch-action:none;overscroll-behavior:none}
+.fieldwrap{touch-action:none;overscroll-behavior:none}
+.bpanel .g2,.bpanel .g4{gap:6px}
+.bpanel .btn.sm{padding:6px 6px;font-size:12px}
+.mapctl{position:absolute;display:flex;flex-direction:column;gap:6px;z-index:5}
+.mapctl.l{left:12px;top:12px}
+.mapctl.r{right:12px;top:12px}
+.mbtn{width:60px;background:rgba(255,255,255,.94);border:1px solid ${U.line};border-radius:7px;
+ padding:7px 4px;font-size:10px;text-align:center;cursor:pointer;line-height:1.5;color:${U.text}}
+.mbtn b{display:block;font-size:16px;font-weight:500}
+.mbtn:hover{background:#fff}
+.mini{position:absolute;right:12px;bottom:12px;width:130px;height:139px;border:1px solid ${U.line};
+ border-radius:6px;overflow:hidden;background:#fff;z-index:5;cursor:pointer}
+.hint{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(255,255,255,.94);
+ border:1px solid ${U.line};border-radius:20px;padding:7px 18px;font-size:12px;color:${U.dim};z-index:4}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:${U.card};border-top:1px solid ${U.line};
+ border-radius:14px 14px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.10);z-index:10;max-height:78%;overflow-y:auto;padding:14px 16px 18px}
+.sheet-h{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.tbl{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13px}
+.tbl .k{color:${U.dim}}
+.tbl .v{text-align:right;font-variant-numeric:tabular-nums}
+.sec{font-size:11px;letter-spacing:.16em;color:${U.dim};margin:16px 0 7px;
+ border-bottom:1px solid ${U.line2};padding-bottom:5px}
+.sec:first-child{margin-top:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.g4{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:7px}
+.row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+.row .v{font-variant-numeric:tabular-nums}
+.meter{height:6px;background:#EEEBE2;border-radius:3px;overflow:hidden;margin-top:4px}
+.meter>i{display:block;height:100%}
+.led{font-size:12px;border-left:3px solid #9BAF7A;background:#F7F9F1;padding:8px 10px;margin:7px 0;border-radius:0 5px 5px 0}
+.led .up{color:#4E7A3E}.led .dn{color:#B0483C}
+.battlefull{position:fixed;inset:0;z-index:100}
+.modal{position:absolute;inset:0;background:rgba(40,40,36,.55);display:flex;align-items:center;
+ justify-content:center;padding:16px;z-index:60}
+.card{background:${U.card};border-radius:12px;max-width:620px;width:100%;max-height:88%;overflow-y:auto;padding:20px}
+.sel{border:1px solid ${U.line};border-radius:6px;padding:7px;font-family:inherit;font-size:13px;background:#fff;color:${U.text}}
+.split{display:flex;gap:20px}
+.split>div{flex:1;min-width:0}
+@media(max-width:760px){.split{flex-direction:column;gap:10px}.mini{width:96px;height:103px}}
+
+/* ---------------------------------------------------------- \u643A\u5E2F\u3067\u904A\u3076\u305F\u3081\u306B
+
+   \u4E00\u3001\u753B\u9762\u306E\u7E01\u3092\u907F\u3051\u308B\u3002iPhone \u306F\u4E0A\u306B\u5207\u308A\u6B20\u304D\u3001\u4E0B\u306B\u6A2A\u68D2\u304C\u3042\u308A\u3001
+       \u305D\u3053\u3078\u5B57\u3084\u91E6\u3092\u7F6E\u304F\u3068\u96A0\u308C\u308B\u304B\u3001\u62BC\u3057\u3065\u3089\u3044\u3002
+   \u4E8C\u3001\u6307\u3067\u62BC\u3059\u91E6\u306F\u3001\u722A\u306E\u5148\u307B\u3069\u3067\u306F\u8DB3\u308A\u306C\u3002\u62BC\u3057\u6240\u3092\u5E83\u304F\u53D6\u308B\u3002 */
+.bar{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right));
+ padding-top:max(9px,env(safe-area-inset-top))}
+.mapctl.l{left:max(12px,env(safe-area-inset-left))}
+.mapctl.r{right:max(12px,env(safe-area-inset-right))}
+.mini{right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom))}
+.hint{bottom:max(16px,calc(env(safe-area-inset-bottom) + 8px))}
+.sheet{padding-bottom:max(18px,calc(env(safe-area-inset-bottom) + 10px))}
+
+/* \u6307\u3067\u64CD\u308B\u7AEF\u672B\u3067\u306F\u3001\u62BC\u3057\u6240\u3092\u5E83\u3052\u308B\uFF08\u30DE\u30A6\u30B9\u306E\u74B0\u5883\u306F\u5143\u306E\u307E\u307E\uFF09 */
+@media(pointer:coarse){
+  .btn{padding:11px 15px;font-size:14px}
+  .btn.sm{padding:9px 11px;font-size:13px}
+  .mbtn{width:66px;padding:9px 4px;font-size:11px}
+  .mbtn b{font-size:18px}
+  .sel{padding:10px;font-size:14px}
+}
+`;
+
+// src/ui/App.jsx
+function useLandscape() {
+  const [land, setLand] = useState6(true);
+  useEffect5(() => {
+    const on = () => setLand(window.innerWidth >= window.innerHeight * 1.05);
+    on();
+    window.addEventListener("resize", on);
+    window.addEventListener("orientationchange", on);
+    return () => {
+      window.removeEventListener("resize", on);
+      window.removeEventListener("orientationchange", on);
+    };
+  }, []);
+  return land;
+}
+function App() {
+  const [screen, setScreen] = useState6("title");
+  const [g, setG] = useState6(null);
+  const [saved, setSaved] = useState6(null);
+  const land = useLandscape();
+  const terrain = useMemo2(() => typeof document === "undefined" ? null : buildTerrainCanvas(), []);
+  useEffect5(() => {
+    loadGame().then((d) => setSaved(d));
+  }, []);
+  const doSave = async (st) => {
+    const ok = await saveGame(st);
+    const d = ok ? { v: 1, at: Date.now(), state: st } : null;
+    if (d) setSaved(d);
+    return ok;
+  };
+  const \u63A7\u3048\u304B\u3089\u623B\u3059 = async (file) => {
+    let st = null;
+    try {
+      st = await importSave(file);
+    } catch (e) {
+      st = null;
+    }
+    if (!st) {
+      window.alert("\u3053\u306E\u63A7\u3048\u306F\u8AAD\u3081\u306A\u304B\u3063\u305F\u3002\u6226\u56FD\u306E\u8A18\u9332\u3067\u306F\u306A\u3044\u304B\u3082\u3057\u308C\u306C\u3002");
+      return;
+    }
+    await doSave(st);
+    setG(st);
+    setScreen("map");
+  };
+  if (screen === "title") return /* @__PURE__ */ React7.createElement(React7.Fragment, null, /* @__PURE__ */ React7.createElement("style", null, css), /* @__PURE__ */ React7.createElement(
+    Title,
+    {
+      saved,
+      onStart: () => setScreen("select"),
+      onContinue: () => {
+        setG(saved.state);
+        setScreen("map");
+      },
+      onErase: async () => {
+        await clearGame();
+        setSaved(null);
+      },
+      onExport: () => saved && exportSave(saved.state, (FACTIONS[saved.state.player] || {}).name),
+      onImport: \u63A7\u3048\u304B\u3089\u623B\u3059
+    }
+  ));
+  if (screen === "select") return /* @__PURE__ */ React7.createElement(React7.Fragment, null, /* @__PURE__ */ React7.createElement("style", null, css), /* @__PURE__ */ React7.createElement(
+    DaimyoSelect,
+    {
+      terrain,
+      land,
+      onBack: () => setScreen("title"),
+      onPick: (f, watch, lvl) => {
+        const st = initState(f);
+        st.level = lvl || "\u666E\u901A";
+        if (watch) st.autoPlay = true;
+        setG(st);
+        setScreen("map");
+      }
+    }
+  ));
+  return /* @__PURE__ */ React7.createElement(React7.Fragment, null, /* @__PURE__ */ React7.createElement("style", null, css), /* @__PURE__ */ React7.createElement(
+    MapScreen,
+    {
+      g,
+      setG,
+      terrain,
+      land,
+      onSave: doSave,
+      savedAt: saved ? saved.at : null,
+      onTitle: () => setScreen("title")
+    }
+  ));
+}
+
+// src/index.jsx
+var index_default = App;
+export {
+  index_default as default
+};

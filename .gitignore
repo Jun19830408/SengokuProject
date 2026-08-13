@@ -1,0 +1,10 @@
+# 道具が作るもの。持ち歩く必要はない。
+node_modules/
+build/
+
+# 書き出し。dist は Netlify に上げるので残す（消さない）
+# dist/
+
+# こまごま
+.DS_Store
+*.log
