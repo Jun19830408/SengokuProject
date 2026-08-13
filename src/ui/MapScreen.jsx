@@ -46,6 +46,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
   const [modal, setModal] = useState(null);
   const [battle, setBattle] = useState(null);
   const [raid, setRaid] = useState(null);        // 合戦前の奇襲の献策
+  const [breakVow, setBreakVow] = useState(null); // 約束を交わした相手へ兵を出すときの問い
   const [sally, setSally] = useState(null);      // 囲まれた城が討って出るかの問い
   const [callAid, setCallAid] = useState(null);  // 援軍を呼ぶ画面（攻められた城）
   const [rotate, setRotate] = useState(true);
@@ -1259,6 +1260,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
 
   const launchSortie = (p) => {
     if (!p.to || !findPath(p.from, p.to)) return;      // 行けない目標は受け付けない
+    /* 約束を交わした相手へ兵を出そうとしていないか（GDD 11.1）。
+
+       同盟・従属・臣従・不可侵の相手の城へ兵を出せば、それは援軍ではなく攻撃である。
+       着いた月に合戦が始まり、約束は破れ、周辺の家々の信用も落ちる。
+       これまでは黙って実行し、あとから戦国記に「裏切りとして……」と出るだけだった。
+       取り返しがつかぬので、出す前に一度問う。
+       （旗の下の城＝自家と臣従の家の城へ送るのは後詰であって、攻撃ではない。問わない。） */
+    const 目標 = g.castles.find((x) => x.id === p.to);
+    if (!p.覚悟 && 目標 && !underMyBanner(g, g.player, 目標.faction)
+      && atPeace(g, g.player, 目標.faction)) {
+      setBreakVow({ p, castle: 目標, state: relOf(g, g.player, 目標.faction).state });
+      return;
+    }
     setG((prev) => {
       const s = structuredClone(prev);
       // 寄騎（援軍）を出す。各城は守備最低数と距離、従属度から派遣を決める（GDD 7.3）
@@ -1276,9 +1290,17 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
           continue;
         }
         const rgens = s.generals.filter((x) => x.at === rc2.id && x.faction === rc2.faction && !x.captive);
-        const send = Math.min(req.men, Math.max(0, rc2.local));
-        if (send < 100 || !rgens.length) continue;
-        const take = [...rgens].sort((a, z) => z.lead - a.lead).slice(0, 1);
+        if (!rgens.length) continue;
+        /* 誰を何人で出すか。指図の通る城では、遊ぶ側が出陣の画面で選んでいる。
+           選ばれていなければ（同盟・従属へ頼んだ場合）、相手が将と数を決める。 */
+        const 指名 = req.genId ? rgens.find((x) => x.id === req.genId) : null;
+        const take = 指名 ? [指名] : [...rgens].sort((a, z) => z.lead - a.lead).slice(0, 1);
+        const send = Math.min(Math.max(0, req.men), Math.max(0, rc2.local));
+        const 総勢 = send + take.reduce((a, x) => a + x.retinue, 0);
+        if (総勢 < 100) {
+          s.chronicle.push({ y: s.year, m: s.month, text: `${rc2.name}の寄騎は数が足らず、取りやめとなった。` });
+          continue;
+        }
         rc2.local -= send;
         rc2.food -= Math.round(send * 0.6);
         for (const t of take) t.at = null;
@@ -1291,7 +1313,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
           path, prog: 0, food: Math.round(send * 0.6), target: p.to, aid: s.player,
         });
         s.chronicle.push({ y: s.year, m: s.month,
-          text: `${rc2.name}より寄騎${fmt(send)}人（${take[0].name}）が${nodeById(p.to).name}へ向かう（約${req.months}か月）。` });
+          text: `${rc2.name}より寄騎${fmt(総勢)}人（${take[0].name}）が${nodeById(p.to).name}へ向かう（約${req.months}か月）。` });
       }
       const c = s.castles.find((x) => x.id === p.from);
       const dest = s.castles.find((x) => x.id === p.to);
@@ -1460,6 +1482,46 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
             onSpecial={doSpecial} onReward={reward} onCaptive={doCaptive} onFief={grantFief} onRetire={doRetire} onSettle={settleCaptive} onKenchi={doKenchi} />
         )}
         {modal === "sortie" && selCastle && <SortieDialog g={g} from={selCastle.id} onClose={() => setModal(null)} onGo={launchSortie} />}
+        {/* 約束を交わした相手へ兵を出す前の問い（GDD 11.1）。
+            取り返しがつかぬ手なので、何が失われるかを数で示してから選ばせる。 */}
+        {breakVow && (() => {
+          const bv = breakVow;
+          const f = g.factions[bv.castle.faction];
+          const rel = relOf(g, g.player, bv.castle.faction);
+          const 味方 = Object.keys(g.relations)
+            .filter((k) => k.includes(g.player) && g.relations[k].trust >= 40).length;
+          return (
+            <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+              <div className="card" style={{ maxWidth: 470 }}>
+                <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>
+                  {f.name}は{bv.state}の間柄にある
+                </div>
+                <div style={{ fontSize: 12.5, lineHeight: 1.95, marginTop: 8 }}>
+                  <b>{bv.castle.name}</b>へ兵を出せば、それは後詰ではなく<b>攻撃</b>です。
+                  着いた月に合戦が始まり、{f.name}とは<b>敵対</b>することになります。
+                </div>
+                <div style={{ margin: "12px 0", padding: "10px 12px", background: "rgba(176,72,60,0.08)",
+                  borderLeft: "3px solid #B0483C", fontSize: 12, lineHeight: 1.95 }}>
+                  <b style={{ color: "#B0483C" }}>失うもの</b><br />
+                  ・{f.name}との<b>{bv.state}</b>は破れ、中立に戻る（いまの信用 {Math.round(rel.trust)}　→　0）<br />
+                  ・<b>威信</b>が下がる（{Math.round(g.factions[g.player].prestige)} → {Math.round(Math.max(0, g.factions[g.player].prestige - 12))}）<br />
+                  ・<b>他家すべての信用</b>が15下がる（いま信用40以上の相手 {味方} 家）<br />
+                  ・<b>家臣の忠誠</b>が5下がる。義に悖る主とみなされます
+                </div>
+                <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 12 }}>
+                  一度破った約束は戻りません。結び直すには、改めて金銭と年月を要します。
+                </div>
+                <div style={{ display: "flex", gap: 9 }}>
+                  <button className="btn" style={{ flex: 1 }} onClick={() => setBreakVow(null)}>取りやめる</button>
+                  <button className="btn dark" style={{ flex: 1 }}
+                    onClick={() => { const q = bv.p; setBreakVow(null); launchSortie({ ...q, 覚悟: true }); }}>
+                    承知のうえで出陣する
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
         {modal === "report" && <MonthReport g={g} onClose={() => setModal(null)} />}
         {modal === "chronicle" && <Chronicle g={g} onClose={() => setModal(null)} />}
         {modal === "factions" && <FactionInfo g={g} onClose={() => setModal(null)} />}
