@@ -262,9 +262,14 @@ export function sackCastle(s, castle, army, hard) {
       return !!bes;
     });
     s.campaigns = (s.campaigns || []).filter((x) => x.faction !== oldF);
-    // 捕虜になった者も、この時点で改めて処遇を問う
-    for (const q of s.generals.filter((x) => x.faction === oldF && x.captive && x.captive.by === winner)) {
-      q.captive = null;
+    /* 捕虜になった者も、この時点で改めて処遇を問う。
+       ただし「捕虜の処遇」と「滅亡の始末」の両方に載せてはならない。
+       同じ者を二度問うことになるので、捕虜の列からは落とす。 */
+    const 戻す = s.generals.filter((x) => x.faction === oldF && x.captive && x.captive.by === winner);
+    for (const q of 戻す) q.captive = null;
+    if (戻す.length) {
+      const 済 = new Set(戻す.map((q) => q.id));
+      s.captives = (s.captives || []).filter((id) => !済.has(id));
     }
     const { lord, retainers } = ruinedHouse(s, oldF);
     if (winner === s.player && (lord || retainers.length)) {

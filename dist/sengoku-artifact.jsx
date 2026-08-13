@@ -7292,19 +7292,19 @@ function reward(prev, genId) {
 }
 
 // src/core/ambush.js
-function ambushPlan(g, army, dest2) {
+function ambushPlan(g, army, dest) {
   const atkIsPlayer = army.faction === g.player;
-  const mine = atkIsPlayer ? army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest2.id && x.faction === dest2.faction && !x.captive);
-  const theirs = atkIsPlayer ? g.generals.filter((x) => x.at === dest2.id && x.faction === dest2.faction && !x.captive) : army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+  const mine = atkIsPlayer ? army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
+  const theirs = atkIsPlayer ? g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive) : army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
   if (!mine.length || !theirs.length) return null;
-  const myMen = atkIsPlayer ? army.men : dest2.local + mine.reduce((a, x) => a + x.retinue, 0);
-  const foeMen = atkIsPlayer ? dest2.local + theirs.reduce((a, x) => a + x.retinue, 0) : army.men;
+  const myMen = atkIsPlayer ? army.men : dest.local + mine.reduce((a, x) => a + x.retinue, 0);
+  const foeMen = atkIsPlayer ? dest.local + theirs.reduce((a, x) => a + x.retinue, 0) : army.men;
   const ratio = myMen / Math.max(1, foeMen);
   if (ratio > 0.62) return null;
   const head = [...mine].sort((a, b) => b.wit + b.lead - (a.wit + a.lead))[0];
   if (!head || head.wit < 62) return null;
   const wx = g.weather || "\u6674";
-  const terr = dest2.kuni === "\u4FE1\u6FC3" || dest2.kuni === "\u7532\u6590" || dest2.kuni === "\u98DB\u9A28" ? "hill" : "forest";
+  const terr = dest.kuni === "\u4FE1\u6FC3" || dest.kuni === "\u7532\u6590" || dest.kuni === "\u98DB\u9A28" ? "hill" : "forest";
   const p = ambushChance(head, wx, terr, ratio);
   if (p < 0.06) return null;
   const lord = [...theirs].sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead - a.lead)[0];
@@ -7714,8 +7714,11 @@ function sackCastle(s2, castle, army, hard) {
       return !!bes;
     });
     s2.campaigns = (s2.campaigns || []).filter((x) => x.faction !== oldF);
-    for (const q of s2.generals.filter((x) => x.faction === oldF && x.captive && x.captive.by === winner)) {
-      q.captive = null;
+    const \u623B\u3059 = s2.generals.filter((x) => x.faction === oldF && x.captive && x.captive.by === winner);
+    for (const q of \u623B\u3059) q.captive = null;
+    if (\u623B\u3059.length) {
+      const \u6E08 = new Set(\u623B\u3059.map((q) => q.id));
+      s2.captives = (s2.captives || []).filter((id) => !\u6E08.has(id));
     }
     const { lord, retainers } = ruinedHouse(s2, oldF);
     if (winner === s2.player && (lord || retainers.length)) {
@@ -11973,15 +11976,15 @@ function GoalPanel({ g, onClose }) {
   }), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")));
 }
 function CampaignPanel({ g, camp, onAct }) {
-  const dest2 = g.castles.find((c) => c.id === camp.target);
-  if (!dest2) return null;
+  const dest = g.castles.find((c) => c.id === camp.target);
+  if (!dest) return null;
   const arm = (id) => g.armies.find((x) => x.id === id);
   const arrived = camp.arrived.map(arm).filter(Boolean);
   const late = camp.armies.filter((id) => !camp.arrived.includes(id)).map(arm).filter(Boolean);
   const men = arrived.reduce((a, x) => a + x.men, 0);
   const lateMen = late.reduce((a, x) => a + x.men, 0);
-  const defGens = g.generals.filter((x) => x.at === dest2.id && x.faction === dest2.faction && !x.captive);
-  const defMen = dest2.local + defGens.reduce((a, x) => a + x.retinue, 0);
+  const defGens = g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
+  const defMen = dest.local + defGens.reduce((a, x) => a + x.retinue, 0);
   const nameOf = (a) => {
     const gen = g.generals.find((x) => x.id === a.gens[0]);
     const home = g.castles.find((c) => c.id === a.from);
@@ -11991,7 +11994,7 @@ function CampaignPanel({ g, camp, onAct }) {
     const m = marchMonths(a.path[0], camp.target);
     return m == null ? "?" : m;
   };
-  return /* @__PURE__ */ React2.createElement("div", { className: "modal" }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, dest2.name, "\u653B\u3081\u3000\u8ECD\u8B70"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 10 } }, "\u7DCF\u5927\u5C06 ", camp.leaderName, "\uFF08", (g.castles.find((c) => c.id === camp.from) || {}).name, "\uFF09 \uFF0F ", camp.y, "\u5E74", camp.m, "\u6708\u306B\u767A\u5411 \uFF0F \u5F85\u3063\u305F\u6708 ", camp.waited), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u7740\u9663\u3057\u305F\u8ECD"), arrived.map((a) => /* @__PURE__ */ React2.createElement("div", { className: "row", key: a.id }, /* @__PURE__ */ React2.createElement("span", null, nameOf(a)), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(a.men), "\u4EBA\uFF0F\u5175\u7CE7", Math.round(a.food / Math.max(1, a.men * 0.09) * 30), "\u65E5"))), /* @__PURE__ */ React2.createElement("div", { className: "row", style: { fontWeight: 600 } }, /* @__PURE__ */ React2.createElement("span", null, "\u7740\u9663\u306E\u5408\u8A08"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(men), "\u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u307E\u3060\u7740\u304B\u306C\u8ECD\uFF08\u5BC4\u9A0E\uFF09"), late.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u9045\u53C2\u306F\u306A\u3044\u3002\u5168\u8ECD\u304C\u305D\u308D\u3063\u3066\u3044\u308B\u3002"), late.map((a) => /* @__PURE__ */ React2.createElement("div", { className: "row", key: a.id }, /* @__PURE__ */ React2.createElement("span", null, nameOf(a)), /* @__PURE__ */ React2.createElement("span", { className: "v", style: { color: "#B0483C" } }, fmt(a.men), "\u4EBA\uFF0F\u3042\u3068\u7D04", eta(a), "\u304B\u6708"))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u57CE\u65B9"), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, dest2.name, "\uFF08", g.factions[dest2.faction].name, "\uFF09"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, canSee(g, dest2) ? `${fmt(defMen)}\u4EBA\uFF0F\u57CE\u9632${Math.round(dest2.def)}` : "\u5185\u60C5\u4E0D\u660E")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.7, margin: "12px 0" } }, "\u5F85\u3066\u3070", fmt(lateMen), "\u4EBA\u304C\u52A0\u308F\u308B\u304C\u3001\u57CE\u65B9\u306F\u6BCE\u6708\u5099\u3048\u3092\u56FA\u3081\u3001\u3053\u3061\u3089\u306F\u5175\u7CE7\u3092\u6E1B\u3089\u3059\u3002 \u5148\u306B\u653B\u3081\u304B\u304B\u308C\u3070\u6570\u306F\u52A3\u308B\u304C\u3001\u5099\u3048\u306E\u8584\u3044\u3046\u3061\u306B\u5F53\u305F\u308C\u308B\u3002\u6C7A\u3081\u308B\u306E\u306F\u7DCF\u5927\u5C06\u3067\u3042\u308B\u3002"), /* @__PURE__ */ React2.createElement("div", { className: "g3" }, /* @__PURE__ */ React2.createElement("button", { className: "btn dark", onClick: () => onAct(camp, "\u653B"), disabled: !arrived.length }, late.length ? "\u5F85\u305F\u305A\u306B\u653B\u3081\u304B\u304B\u308B" : "\u653B\u3081\u304B\u304B\u308B"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onAct(camp, "\u5F85"), disabled: !late.length }, "\u9045\u53C2\u3092\u5F85\u3064"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onAct(camp, "\u9000") }, "\u5175\u3092\u9000\u304F"))));
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal" }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, dest.name, "\u653B\u3081\u3000\u8ECD\u8B70"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 10 } }, "\u7DCF\u5927\u5C06 ", camp.leaderName, "\uFF08", (g.castles.find((c) => c.id === camp.from) || {}).name, "\uFF09 \uFF0F ", camp.y, "\u5E74", camp.m, "\u6708\u306B\u767A\u5411 \uFF0F \u5F85\u3063\u305F\u6708 ", camp.waited), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u7740\u9663\u3057\u305F\u8ECD"), arrived.map((a) => /* @__PURE__ */ React2.createElement("div", { className: "row", key: a.id }, /* @__PURE__ */ React2.createElement("span", null, nameOf(a)), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(a.men), "\u4EBA\uFF0F\u5175\u7CE7", Math.round(a.food / Math.max(1, a.men * 0.09) * 30), "\u65E5"))), /* @__PURE__ */ React2.createElement("div", { className: "row", style: { fontWeight: 600 } }, /* @__PURE__ */ React2.createElement("span", null, "\u7740\u9663\u306E\u5408\u8A08"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(men), "\u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u307E\u3060\u7740\u304B\u306C\u8ECD\uFF08\u5BC4\u9A0E\uFF09"), late.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u9045\u53C2\u306F\u306A\u3044\u3002\u5168\u8ECD\u304C\u305D\u308D\u3063\u3066\u3044\u308B\u3002"), late.map((a) => /* @__PURE__ */ React2.createElement("div", { className: "row", key: a.id }, /* @__PURE__ */ React2.createElement("span", null, nameOf(a)), /* @__PURE__ */ React2.createElement("span", { className: "v", style: { color: "#B0483C" } }, fmt(a.men), "\u4EBA\uFF0F\u3042\u3068\u7D04", eta(a), "\u304B\u6708"))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u57CE\u65B9"), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, dest.name, "\uFF08", g.factions[dest.faction].name, "\uFF09"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, canSee(g, dest) ? `${fmt(defMen)}\u4EBA\uFF0F\u57CE\u9632${Math.round(dest.def)}` : "\u5185\u60C5\u4E0D\u660E")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.7, margin: "12px 0" } }, "\u5F85\u3066\u3070", fmt(lateMen), "\u4EBA\u304C\u52A0\u308F\u308B\u304C\u3001\u57CE\u65B9\u306F\u6BCE\u6708\u5099\u3048\u3092\u56FA\u3081\u3001\u3053\u3061\u3089\u306F\u5175\u7CE7\u3092\u6E1B\u3089\u3059\u3002 \u5148\u306B\u653B\u3081\u304B\u304B\u308C\u3070\u6570\u306F\u52A3\u308B\u304C\u3001\u5099\u3048\u306E\u8584\u3044\u3046\u3061\u306B\u5F53\u305F\u308C\u308B\u3002\u6C7A\u3081\u308B\u306E\u306F\u7DCF\u5927\u5C06\u3067\u3042\u308B\u3002"), /* @__PURE__ */ React2.createElement("div", { className: "g3" }, /* @__PURE__ */ React2.createElement("button", { className: "btn dark", onClick: () => onAct(camp, "\u653B"), disabled: !arrived.length }, late.length ? "\u5F85\u305F\u305A\u306B\u653B\u3081\u304B\u304B\u308B" : "\u653B\u3081\u304B\u304B\u308B"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onAct(camp, "\u5F85"), disabled: !late.length }, "\u9045\u53C2\u3092\u5F85\u3064"), /* @__PURE__ */ React2.createElement("button", { className: "btn", onClick: () => onAct(camp, "\u9000") }, "\u5175\u3092\u9000\u304F"))));
 }
 function SiegePanel({ g, sg, onChoose }) {
   const [gate, setGate] = useState2(false);
@@ -13538,28 +13541,28 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
     if (g.clashes && g.clashes.length) return;
     if (!g.pendingArrivals || !g.pendingArrivals.length || battle) return;
     const a = g.armies.find((x) => x.id === g.pendingArrivals[0]);
-    const dest2 = a && g.castles.find((c) => c.id === a.at);
-    if (!a || !dest2) {
+    const dest = a && g.castles.find((c) => c.id === a.at);
+    if (!a || !dest) {
       setG((p) => ({ ...p, pendingArrivals: p.pendingArrivals.slice(1) }));
       return;
     }
-    if (g.autoPlay || a.faction !== g.player && dest2.faction !== g.player) {
-      autoResolve(a.id, dest2.id);
+    if (g.autoPlay || a.faction !== g.player && dest.faction !== g.player) {
+      autoResolve(a.id, dest.id);
       return;
     }
     if (a.relief) {
       const sg2 = g.sieges.find((x) => x.castleId === a.relief);
       const bes = sg2 && g.armies.find((x) => x.id === sg2.armyId);
       if (bes) {
-        if (a.faction === g.player && underMyBanner(g, g.player, dest2.faction)) {
-          setSally({ armyId: a.id, castleId: dest2.id, foeId: bes.id });
+        if (a.faction === g.player && underMyBanner(g, g.player, dest.faction)) {
+          setSally({ armyId: a.id, castleId: dest.id, foeId: bes.id });
         } else if (bes.faction === g.player || a.faction === g.player) {
-          startBattle(a, { ...dest2, name: `${dest2.name}\u306E\u56F2\u307F` }, null, void 0, bes);
-        } else autoResolve(a.id, dest2.id);
+          startBattle(a, { ...dest, name: `${dest.name}\u306E\u56F2\u307F` }, null, void 0, bes);
+        } else autoResolve(a.id, dest.id);
         return;
       }
     }
-    if (underMyBanner(g, a.faction, dest2.faction)) {
+    if (underMyBanner(g, a.faction, dest.faction)) {
       setG((p) => {
         const s2 = structuredClone(p);
         const ar = s2.armies.find((x) => x.id === a.id);
@@ -13607,7 +13610,7 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
       });
       return;
     }
-    startBattle(a, dest2);
+    startBattle(a, dest);
   }, [g.pendingArrivals, g.clashes, battle]);
   const autoResolve = (armyId, castleId) => setG((prev) => resolveOffscreen(prev, armyId, castleId));
   const startAssault = (sg, gateParty, kits) => {
@@ -13744,7 +13747,7 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
     if (act === "\u653B") {
       const list = camp.arrived.map((id) => g.armies.find((x) => x.id === id)).filter(Boolean);
       if (!list.length) return;
-      const dest2 = g.castles.find((c) => c.id === camp.target);
+      const dest = g.castles.find((c) => c.id === camp.target);
       const main = list.find((a) => a.id === camp.armies[0]) || list[0];
       setG((p2) => {
         const s2 = structuredClone(p2);
@@ -13752,7 +13755,7 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         if (cc) cc.decided = `${s2.year}-${s2.month}`;
         return s2;
       });
-      startBattle(main, dest2, camp);
+      startBattle(main, dest, camp);
       return;
     }
     setG((prev) => {
@@ -13799,28 +13802,28 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
     const dx = a.x - t.x, dy = a.y - t.y;
     return Math.abs(dx) > Math.abs(dy) ? dx > 0 ? "E" : "W" : dy > 0 ? "S" : "N";
   };
-  const startBattle = (army, dest2, camp, ambush, foe, sally2) => {
+  const startBattle = (army, dest, camp, ambush, foe, sally2) => {
     if (g.autoPlay) {
       if (foe) setG((prev) => resolveClashOffscreen(prev));
-      else autoResolve(army.id, dest2.id);
+      else autoResolve(army.id, dest.id);
       return;
     }
     if (ambush === void 0) {
-      const plan = ambushPlan(g, army, dest2);
+      const plan = ambushPlan(g, army, dest);
       if (plan) {
-        setRaid({ plan, army, dest: dest2, camp });
+        setRaid({ plan, army, dest, camp });
         return;
       }
     }
     setBattleMap(null);
-    setFieldSeed(army.from, dest2.id);
+    setFieldSeed(army.from, dest.id);
     const atkGens = army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
-    const defGens = foe ? foe.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest2.id && x.faction === dest2.faction && !x.captive);
+    const defGens = foe ? foe.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
     const playerIsAtk = army.faction === g.player;
-    const defLocal = foe ? Math.max(0, foe.local) : Math.max(0, dest2.local - Math.round(minGarrison(dest2) * 0.4));
-    const aidMen = foe ? 0 : g.armies.filter((a) => a.id !== army.id && a.at === dest2.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))).reduce((t, a) => t + a.men, 0);
+    const defLocal = foe ? Math.max(0, foe.local) : Math.max(0, dest.local - Math.round(minGarrison(dest) * 0.4));
+    const aidMen = foe ? 0 : g.armies.filter((a) => a.id !== army.id && a.at === dest.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))).reduce((t, a) => t + a.men, 0);
     layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0));
-    const face = attackFace(army.from, dest2.id);
+    const face = attackFace(army.from, dest.id);
     const lineup = (isAtk, i, n) => {
       const near = 0.14, far = 0.86;
       const t2 = (i - (n - 1) / 2) * Math.round(175 * (FIELD.w / BASE.w));
@@ -13832,9 +13835,9 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
       return face === "N" ? N() : face === "E" ? E2() : face === "W" ? W() : S();
     };
     const build = (gens0, local, train, side, yBase, facing, color, srcRost, isAtk) => {
-      const gens = (gens0.length ? gens0 : [{ id: `gar-${dest2.id}-${side}`, name: `${dest2.name}\u5B88\u5099\u968A`, lead: 52, valor: 50, wit: 45, gov: 45, retinue: 0, retTrain: train }]).slice(0, MAX_CORPS);
+      const gens = (gens0.length ? gens0 : [{ id: `gar-${dest.id}-${side}`, name: `${dest.name}\u5B88\u5099\u968A`, lead: 52, valor: 50, wit: 45, gov: 45, retinue: 0, retTrain: train }]).slice(0, MAX_CORPS);
       const n = gens.length, per = Math.floor(local / n);
-      const najimi = dest2.najimi == null ? 70 : dest2.najimi;
+      const najimi = dest.najimi == null ? 70 : dest.najimi;
       let pool = srcRost && srcRost.length ? JSON.parse(JSON.stringify(srcRost)) : null;
       return gens.map((gen, i) => makeCorps(
         side,
@@ -13855,10 +13858,10 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         color
       ));
     };
-    const atkColor = g.factions[army.faction].color, defColor = g.factions[dest2.faction].color;
-    const betray = dest2.intrigue && army.faction === g.player;
+    const atkColor = g.factions[army.faction].color, defColor = g.factions[dest.faction].color;
+    const betray = dest.intrigue && army.faction === g.player;
     const allies = [
-      ...foe ? [] : g.armies.filter((a) => a.id !== army.id && a.at === dest2.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))),
+      ...foe ? [] : g.armies.filter((a) => a.id !== army.id && a.at === dest.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))),
       // 城方が討って出るなら、寄せ手の背を衝く形で同じ側に立つ（GDD 9.2）
       ...sally2 ? [sally2] : []
     ];
@@ -13904,12 +13907,12 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
     const defList = build(
       defGens,
       defLocal,
-      dest2.localTrain,
+      dest.localTrain,
       playerIsAtk ? "E" : "P",
       playerIsAtk ? FIELD.h * 0.14 : FIELD.h * 0.875,
       playerIsAtk ? Math.PI / 2 : -Math.PI / 2,
       defColor,
-      dest2.rost,
+      dest.rost,
       false
     );
     const P = playerIsAtk ? atkCorpsList : defList;
@@ -13960,19 +13963,19 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
     setBattle({
       b: bb,
       armyId: army.id,
-      castleId: dest2.id,
+      castleId: dest.id,
       playerIsAtk,
       campId: camp ? camp.id : null,
       mode: foe ? "clash" : void 0,
       foeId: foe ? foe.id : null,
       sally: sally2 ? { castleId: sally2.castleId, gens: sally2.gens, local: sally2.local } : null,
-      pName: g.factions[playerIsAtk ? army.faction : dest2.faction].name,
-      eName: g.factions[playerIsAtk ? dest2.faction : army.faction].name,
+      pName: g.factions[playerIsAtk ? army.faction : dest.faction].name,
+      eName: g.factions[playerIsAtk ? dest.faction : army.faction].name,
       // 上部に出す目印は、盤の駒と同じ色にする（自軍は藍、敵軍は朱）。
       // ここだけ家の色のままだと、数を見比べるときにどちらが自軍か紛れる。
       pColor: sideHue(playerIsAtk ? atkColor : defColor, true),
       eColor: sideHue(playerIsAtk ? defColor : atkColor, false),
-      place: dest2.name
+      place: dest.name
     });
   };
   const startClash = (mine2, foe, cl) => {
@@ -14030,10 +14033,6 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         m: s2.month,
         text: `${castle.name}\u3078\u306E\u5F37\u653B\u3002${broke}\u3064\u306E\u9580\u304C\u7834\u308C\u3001\u5BC4\u305B\u624B${fmt(aLoss)}\u4EBA\u30FB\u5B88\u308A\u624B${fmt(dLoss)}\u4EBA\u3092\u5931\u3063\u305F\u3002${won ? "\u57CE\u306F\u843D\u3061\u305F\u3002" : "\u5BC4\u305B\u624B\u306F\u9000\u3051\u3089\u308C\u305F\u3002"}`
       });
-      if (won && army) {
-        army.local = aLeft;
-        sackCastle(s2, castle, army, true);
-      }
       for (const c of [...atkCorps, ...defCorps]) {
         const gen = s2.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
@@ -14051,19 +14050,30 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
             else succeed(s2, gen, "\u8A0E\u6B7B\u3057\u305F");
           } else s2.chronicle.push({ y: s2.year, m: s2.month, text: `${gen.name}\u304C\u8A0E\u6B7B\u3057\u305F\u3002` });
         } else {
-          const winner = c.side === "P" ? ctx.playerIsAtk ? dest.faction : army.faction : ctx.playerIsAtk ? army.faction : dest.faction;
+          const winner = c.side === "P" ? ctx.playerIsAtk ? castle.faction : army.faction : ctx.playerIsAtk ? army.faction : castle.faction;
           const g2 = s2.generals.find((x) => x.id === gen.id);
           if (!g2) continue;
           notify(b, `${gen.name}\u3001\u6355\u7E1B\u3002`, c.side === "P" ? "bad" : "good");
-          g2.captive = { by: winner, from: g2.faction, at: dest.id, since: { y: s2.year, m: s2.month } };
+          makePrisoner(s2, g2, winner, castle.id);
           g2.retinue = Math.round(g2.retinue * 0.3);
-          g2.at = dest.id;
+          if (g2.lord) {
+            const next = s2.generals.filter((x) => x.faction === g2.faction && x.id !== g2.id && !x.captive).sort((a, z) => z.lead - a.lead)[0];
+            if (next) {
+              next.lord = true;
+              g2.lord = false;
+            }
+          }
           s2.chronicle.push({
             y: s2.year,
             m: s2.month,
             text: `${gen.name}\u306F${s2.factions[winner].name}\u306B\u6355\u3089\u3048\u3089\u308C\u305F\u3002`
           });
+          if (winner === s2.player) s2.captives = [...s2.captives || [], g2.id];
         }
+      }
+      if (won && army) {
+        army.local = aLeft;
+        sackCastle(s2, castle, army, true);
       }
       if (b.result === "P" && !ctx.playerIsAtk) {
         const hero = b.corps.filter((c) => c.side === "P").find((c) => c.feats.length || c.loss["\u76F4\u5C5E"] > 60);
@@ -14611,23 +14621,23 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         });
       }
       const c = s2.castles.find((x) => x.id === p.from);
-      const dest2 = s2.castles.find((x) => x.id === p.to);
-      if (dest2 && dest2.faction !== s2.player && atPeace(s2, s2.player, dest2.faction)) {
-        const r = s2.relations[relKey(s2.player, dest2.faction)];
+      const dest = s2.castles.find((x) => x.id === p.to);
+      if (dest && dest.faction !== s2.player && atPeace(s2, s2.player, dest.faction)) {
+        const r = s2.relations[relKey(s2.player, dest.faction)];
         r.state = "\u4E2D\u7ACB";
         r.until = null;
         r.trust = 0;
         for (const k of Object.keys(s2.relations)) if (k.includes(s2.player)) s2.relations[k].trust = clamp(s2.relations[k].trust - 15, 0, 100);
         s2.factions[s2.player].prestige = clamp(s2.factions[s2.player].prestige - 12, 0, 100);
         for (const x of s2.generals.filter((q) => q.faction === s2.player && !q.lord)) x.loyal = Math.max(0, x.loyal - 5);
-        s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[dest2.faction].name}\u3068\u306E\u7D04\u675F\u3092\u7834\u3063\u3066\u5175\u3092\u51FA\u3057\u305F\u3002\u88CF\u5207\u308A\u3068\u3057\u3066\u5468\u8FBA\u52E2\u529B\u306E\u8B66\u6212\u3092\u62DB\u3044\u305F\u3002` });
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[dest.faction].name}\u3068\u306E\u7D04\u675F\u3092\u7834\u3063\u3066\u5175\u3092\u51FA\u3057\u305F\u3002\u88CF\u5207\u308A\u3068\u3057\u3066\u5468\u8FBA\u52E2\u529B\u306E\u8B66\u6212\u3092\u62DB\u3044\u305F\u3002` });
       }
       c.local -= p.local;
       c.food -= p.food;
       const mainId = `a${Date.now()}`;
       const takeMain = rosterTake(c.rost || newRoster(c.local + p.local, `loc-${c.id}`), p.local);
       c.rost = takeMain.rest;
-      const \u6551\u3046 = dest2 && dest2.faction === s2.player && s2.sieges.some((sg) => sg.castleId === dest2.id);
+      const \u6551\u3046 = dest && dest.faction === s2.player && s2.sieges.some((sg) => sg.castleId === dest.id);
       s2.armies.push({
         id: mainId,
         faction: s2.player,
@@ -14651,15 +14661,15 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         s2.chronicle.push({
           y: s2.year,
           m: s2.month,
-          text: `${c.name}\u3088\u308A\u5F8C\u8A70\u304C\u767A\u3057\u305F\u3002${dest2.name}\u306E\u56F2\u307F\u3092\u89E3\u304D\u306B\u5411\u304B\u3046\u3002`
+          text: `${c.name}\u3088\u308A\u5F8C\u8A70\u304C\u767A\u3057\u305F\u3002${dest.name}\u306E\u56F2\u307F\u3092\u89E3\u304D\u306B\u5411\u304B\u3046\u3002`
         });
         return s2;
       }
-      if (underMyBanner(s2, s2.player, dest2 ? dest2.faction : null)) {
+      if (underMyBanner(s2, s2.player, dest ? dest.faction : null)) {
         s2.chronicle.push({
           y: s2.year,
           m: s2.month,
-          text: dest2.faction === s2.player ? `${c.name}\u3088\u308A${dest2.name}\u3078\u5175\u3092\u79FB\u3059\uFF08${fmt(p.local + p.gens.reduce((a2, id) => a2 + (s2.generals.find((x) => x.id === id) || {}).retinue || 0, 0))}\u4EBA\uFF09\u3002` : `${c.name}\u3088\u308A${s2.factions[dest2.faction].name}\u306E${dest2.name}\u3078\u63F4\u8ECD\u3092\u9001\u308B\u3002`
+          text: dest.faction === s2.player ? `${c.name}\u3088\u308A${dest.name}\u3078\u5175\u3092\u79FB\u3059\uFF08${fmt(p.local + p.gens.reduce((a2, id) => a2 + (s2.generals.find((x) => x.id === id) || {}).retinue || 0, 0))}\u4EBA\uFF09\u3002` : `${c.name}\u3088\u308A${s2.factions[dest.faction].name}\u306E${dest.name}\u3078\u63F4\u8ECD\u3092\u9001\u308B\u3002`
         });
         return s2;
       }
@@ -14954,7 +14964,7 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
       const tr = r.terr === "hill" ? "\u5C71\u304C\u3061\u306E\u5730" : "\u68EE\u306E\u591A\u3044\u5730";
       return /* @__PURE__ */ React5.createElement("div", { className: "modal" }, /* @__PURE__ */ React5.createElement("div", { className: "card" }, /* @__PURE__ */ React5.createElement("div", { className: "mn", style: { fontSize: 20 } }, raid.dest.name, "\u4E0B\u30FB\u8ECD\u8B70"), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 13, color: U.dim, margin: "10px 0", lineHeight: 1.9 } }, "\u5473\u65B9 ", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, fmt(r.myMen), "\u4EBA"), "\u3000\u5BFE \u6575 ", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, fmt(r.foeMen), "\u4EBA"), "\uFF08", (r.ratio * 10).toFixed(1), "\u5272\u306E\u5175\uFF09", /* @__PURE__ */ React5.createElement("br", null), wx, "\u3002", tr, "\u3067\u3042\u308B\u3002"), /* @__PURE__ */ React5.createElement("div", { style: { borderLeft: `3px solid ${U.line}`, paddingLeft: 12, margin: "12px 0", lineHeight: 1.9, fontSize: 14 } }, /* @__PURE__ */ React5.createElement("b", null, r.head.name), "\uFF08\u77E5\u7565", r.head.wit, "\u30FB\u7D71\u7387", r.head.lead, "\uFF09\u304C\u7533\u3057\u51FA\u3066\u304A\u308A\u307E\u3059\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("span", { style: { color: U.dim } }, "\u300C\u6B63\u9762\u304B\u3089\u5F53\u305F\u3063\u3066\u306F\u52DD\u3061\u76EE\u304C\u3054\u3056\u3089\u306C\u3002", r.target ? `${r.target.name}\u306E\u672C\u9663\u3092\u885D\u304D\u307E\u3059\u308B\u3002` : "\u6575\u306E\u672C\u9663\u3092\u885D\u304D\u307E\u3059\u308B\u3002", "\u300D")), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 13, lineHeight: 1.9 } }, "\u6210\u7B97\u306F", /* @__PURE__ */ React5.createElement("b", { style: { color: pct >= 30 ? "#3E7A3A" : pct >= 15 ? "#C89A3A" : "#B0483C", fontSize: 17 } }, "\u304A\u3088\u305D", pct, "\uFF05"), "\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("span", { style: { color: U.dim, fontSize: 12.5 } }, "\u5F53\u305F\u308C\u3070\u6575\u306E\u7DCF\u5927\u5C06\u3092\u8A0E\u3061\u3001\u6575\u8ECD\u306F\u5D29\u308C\u305F\u5F62\u3067\u5408\u6226\u304C\u59CB\u307E\u308B\u3002", /* @__PURE__ */ React5.createElement("br", null), "\u5916\u305B\u3070\u4F0F\u52E2\u304C\u9732\u898B\u3057\u3001\u5473\u65B9\u306E\u58EB\u6C17\u304C\u843D\u3061\u305F\u307E\u307E\u6226\u3046\u3053\u3068\u306B\u306A\u308B\u3002")), /* @__PURE__ */ React5.createElement("div", { className: "g2", style: { marginTop: 16 } }, /* @__PURE__ */ React5.createElement("button", { className: "btn dark", onClick: () => {
         const hit = Math.random() < r.p;
-        const { army, dest: dest2, camp } = raid;
+        const { army, dest, camp } = raid;
         setRaid(null);
         if (hit && r.target) {
           setG((p2) => {
@@ -14969,24 +14979,29 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
               s2.chronicle.push({
                 y: s2.year,
                 m: s2.month,
-                text: `${r.head.name}\u304C${dest2.name}\u306E\u672C\u9663\u3092\u885D\u304D\u3001${t2.name}\u3092\u8A0E\u3061\u53D6\u3063\u305F\u3002`
+                text: `${r.head.name}\u304C${dest.name}\u306E\u672C\u9663\u3092\u885D\u304D\u3001${t2.name}\u3092\u8A0E\u3061\u53D6\u3063\u305F\u3002`
               });
             }
             return s2;
           });
         }
-        startBattle(army, dest2, camp, { done: true, hit, head: r.head, target: r.target, atkIsPlayer });
+        startBattle(army, dest, camp, { done: true, hit, head: r.head, target: r.target, atkIsPlayer });
       } }, "\u672C\u9663\u3092\u885D\u304F"), /* @__PURE__ */ React5.createElement("button", { className: "btn", onClick: () => {
-        const { army, dest: dest2, camp } = raid;
+        const { army, dest, camp } = raid;
         setRaid(null);
-        startBattle(army, dest2, camp, null);
+        startBattle(army, dest, camp, null);
       } }, "\u6B63\u9762\u304B\u3089\u5F53\u305F\u308B"))));
     })(),
     g.warSettle && (() => {
       const ws = g.warSettle;
-      const gen = g.generals.find((x) => x.id === ws.queue[0]);
+      const \u6B8B\u308A = ws.queue.filter((id) => g.generals.some((x) => x.id === id));
+      const gen = g.generals.find((x) => x.id === \u6B8B\u308A[0]);
       const lord = ws.lordId ? g.generals.find((x) => x.id === ws.lordId) : null;
       const fname = (g.factions[ws.faction] || {}).name || "";
+      if (gen && \u6B8B\u308A.length !== ws.queue.length) {
+        setG((p2) => ({ ...p2, warSettle: { ...p2.warSettle, queue: \u6B8B\u308A } }));
+        return null;
+      }
       if (!gen) {
         setG((p2) => {
           const s2 = structuredClone(p2);

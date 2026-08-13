@@ -771,8 +771,14 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
       const dLoss = defCorps.reduce((a, c) => a + c.loss["直属"] + c.loss["地域"], 0) | 0;
       s.chronicle.push({ y: s.year, m: s.month,
         text: `${castle.name}への強攻。${broke}つの門が破れ、寄せ手${fmt(aLoss)}人・守り手${fmt(dLoss)}人を失った。${won ? "城は落ちた。" : "寄せ手は退けられた。"}` });
-      if (won && army) { army.local = aLeft; sackCastle(s, castle, army, true); }
-      // 武将の生死（GDD 12.3）
+      /* 武将の生死（GDD 12.3）。
+
+         これは城が落ちる前に裁く。順序が肝心である。
+           ・落城のあとでは城主が入れ替わっており、誰が誰を捕らえたのか判らなくなる
+           ・落城のあとでは「滅亡の始末」の列が既に組まれている。そこから討死者を
+             抜くと列の先頭が欠け、身の振り方を問う画面が丸ごと出なくなる
+         かつては sackCastle のあとに置いていたため、大名を滅ぼしても
+         登用の問いが出ない、ということが起きていた。 */
       for (const c of [...atkCorps, ...defCorps]) {
         const gen = s.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
@@ -791,20 +797,29 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
             else succeed(s, gen, "討死した");
           } else s.chronicle.push({ y: s.year, m: s.month, text: `${gen.name}が討死した。` });
         } else {
-          // 捕縛。盤上から消さず、捕虜として相手の手に落ちる（GDD 12.3）。
+          /* 捕縛。盤上から消さず、捕虜として相手の手に落ちる（GDD 12.3）。
+             ここは castle を見る。かつては dest という在りもしない名を書いていたため、
+             城攻めで誰かが捕らわれるたびに例外が起き、決着の始末が丸ごと流れていた。 */
           const winner = c.side === "P"
-            ? (ctx.playerIsAtk ? dest.faction : army.faction)
-            : (ctx.playerIsAtk ? army.faction : dest.faction);
+            ? (ctx.playerIsAtk ? castle.faction : army.faction)
+            : (ctx.playerIsAtk ? army.faction : castle.faction);
           const g2 = s.generals.find((x) => x.id === gen.id);
           if (!g2) continue;
           notify(b, `${gen.name}、捕縛。`, c.side === "P" ? "bad" : "good");
-          g2.captive = { by: winner, from: g2.faction, at: dest.id, since: { y: s.year, m: s.month } };
+          makePrisoner(s, g2, winner, castle.id);
           g2.retinue = Math.round(g2.retinue * 0.3);
-          g2.at = dest.id;
+          if (g2.lord) {
+            const next = s.generals.filter((x) => x.faction === g2.faction && x.id !== g2.id && !x.captive)
+              .sort((a, z) => z.lead - a.lead)[0];
+            if (next) { next.lord = true; g2.lord = false; }
+          }
           s.chronicle.push({ y: s.year, m: s.month,
             text: `${gen.name}は${s.factions[winner].name}に捕らえられた。` });
+          // 捕らえたのが遊ぶ側なら、処遇を問う（野戦の側では前からそうしている）
+          if (winner === s.player) s.captives = [...(s.captives || []), g2.id];
         }
       }
+      if (won && army) { army.local = aLeft; sackCastle(s, castle, army, true); }
       if (b.result === "P" && !ctx.playerIsAtk) {
         const hero = b.corps.filter((c) => c.side === "P").find((c) => c.feats.length || c.loss["直属"] > 60);
         const lord = hero && s.generals.find((x) => x.id === hero.id);
@@ -1685,9 +1700,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
         })()}
         {g.warSettle && (() => {
           const ws = g.warSettle;
-          const gen = g.generals.find((x) => x.id === ws.queue[0]);
+          /* 列の先頭から順に問う。ただし、もう盤にいない者は飛ばす。
+             討死した者や、別のところで始末のついた者が先頭に残っていると、
+             かつては「すべて片づいた」と見なして問いそのものを閉じてしまい、
+             残る家臣の身の振り方を問えなくなっていた。 */
+          const 残り = ws.queue.filter((id) => g.generals.some((x) => x.id === id));
+          const gen = g.generals.find((x) => x.id === 残り[0]);
           const lord = ws.lordId ? g.generals.find((x) => x.id === ws.lordId) : null;
           const fname = (g.factions[ws.faction] || {}).name || "";
+          if (gen && 残り.length !== ws.queue.length) {
+            // 欠けた者を落として組み直す。次の描き直しで先頭から問う。
+            setG((p2) => ({ ...p2, warSettle: { ...p2.warSettle, queue: 残り } }));
+            return null;
+          }
           if (!gen) {
             // すべて片づいた。滅亡を知らせて政務へ戻る。
             setG((p2) => {
