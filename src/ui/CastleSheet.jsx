@@ -441,7 +441,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       <span>配れる知行</span>
                       <span className="v num" style={{ color: rm.left <= 0 ? "#B0483C" : U.text }}>
                         {rm.left > 0 ? `${fmt(rm.left)}石` : "なし"} <span style={{ color: U.dim, fontSize: 11 }}>
-                        （石高の四割 {fmt(rm.cap)}石のうち {fmt(rm.used)}石を配分済
+                        （石高 {fmt(rm.cap)}石のうち {fmt(rm.used)}石を配分済
                         {rm.left < 0 ? `／${fmt(-rm.left)}石の配りすぎ` : ""}）</span></span>
                     </div>
                   ); })()}

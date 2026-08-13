@@ -4772,7 +4772,7 @@ function castellanOf(s2, c) {
   const lord = gs.find((x) => x.lord);
   if (lord) return lord;
   const named = c.lordId && gs.find((x) => x.id === c.lordId);
-  if (named && stipendOf(s2, named) >= castleRankNeed(c)) return named;
+  if (named && canHoldCastle(named, s2, c)) return named;
   return [...gs].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
 }
 function castleRankNeed(c) {
@@ -4784,6 +4784,7 @@ var canHoldCastle = (gen, s2, c) => {
   if (!gen) return false;
   if (gen.lord) return true;
   if (s2 && isGuardian(s2, gen)) return true;
+  if (s2 && isMainClan(s2, gen)) return true;
   const need = c ? castleRankNeed(c) : 8e3;
   return (s2 ? stipendOf(s2, gen) : fiefOf(gen)) >= need;
 };
@@ -4843,10 +4844,12 @@ function loyaltyDrift(gen) {
   if (r >= 0.5) return -0.5;
   return -1.2;
 }
+var FIEF_SHARE = 1;
 function fiefRoom(s2, fid) {
   const koku = s2.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
   const used = s2.generals.filter((x) => x.faction === fid && !x.captive).reduce((a, x) => a + fiefOf(x), 0);
-  return { cap: Math.round(koku * 0.4), used, left: Math.round(koku * 0.4) - used };
+  const cap = Math.round(koku * FIEF_SHARE);
+  return { cap, used, left: cap - used };
 }
 
 // src/data/diplo.js
@@ -7311,7 +7314,7 @@ function grantFief(prev, genId, delta) {
   const \u4F59\u5730 = Math.max(0, room.left);
   const d = delta > 0 ? Math.min(delta, \u4F59\u5730) : Math.max(delta, -fiefOf(gen));
   if (!d) {
-    if (delta > 0) s2.msg = `\u914D\u308C\u308B\u77E5\u884C\u304C\u6B8B\u3063\u3066\u3044\u306A\u3044\uFF08\u77F3\u9AD8\u306E\u56DB\u5272 ${fmt(room.cap)}\u77F3\u306E\u3046\u3061 ${fmt(room.used)}\u77F3\u3092\u914D\u5206\u6E08\uFF09\u3002`;
+    if (delta > 0) s2.msg = `\u914D\u308C\u308B\u77E5\u884C\u304C\u6B8B\u3063\u3066\u3044\u306A\u3044\uFF08\u77F3\u9AD8 ${fmt(room.cap)}\u77F3\u306E\u3046\u3061 ${fmt(room.used)}\u77F3\u3092\u914D\u5206\u6E08\uFF09\u3002`;
     return s2;
   }
   const before = fiefOf(gen);
@@ -13134,7 +13137,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onAp
       )));
     })(), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.7 } }, "\u3053\u306E\u57CE\u3092\u9810\u304B\u308C\u308B\u7984\u9AD8 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, fmt(castleRankNeed(c)), "\u77F3"), "\u4EE5\u4E0A\uFF08\u57CE\u4E3B\u306E\u8CC7\u683C\uFF09", /* @__PURE__ */ React4.createElement("br", null), "\u3053\u306E\u57CE\u306E\u77F3\u9AD8 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, fmt(c.koku), "\u77F3"), "\uFF08\u914D\u308C\u308B\u77E5\u884C\u306E\u9650\u308A\uFF09\uFF0F \u5BB6\u81E3\u306B\u914D\u3063\u305F\u77E5\u884C ", fmt(fiefBurden(g, c.id)), "\u77F3", /* @__PURE__ */ React4.createElement("br", null), "\u3053\u306E\u57CE\u306E\u4F59\u7984 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, fmt(extraIncome(c)), "\u77F3"), "\uFF08\u6E4A\u306E\u904B\u4E0A\u30FB\u5E02\u306E\u5F79\u92AD\u30FB\u5C71\u306E\u7523\uFF09", /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 11 } }, "\u77E5\u884C\u306B\u4F59\u7984\u306E\u5206\u3051\u524D\u3092\u52A0\u3048\u305F\u3082\u306E\u304C", /* @__PURE__ */ React4.createElement("b", null, "\u7984\u9AD8"), "\u3067\u3001\u8EAB\u5206\u306F\u3053\u308C\u3067\u5B9A\u307E\u308A\u307E\u3059\u3002 \u77F3\u9AD8\u304C\u5897\u3048\u308C\u3070\u3001\u914D\u308C\u308B\u77E5\u884C\u3082\u5897\u3048\u307E\u3059\u3002")), (() => {
       const rm = fiefRoom(g, g.player);
-      return /* @__PURE__ */ React4.createElement("div", { className: "row", style: { borderBottom: `1px solid ${U.line2}`, paddingBottom: 4 } }, /* @__PURE__ */ React4.createElement("span", null, "\u914D\u308C\u308B\u77E5\u884C"), /* @__PURE__ */ React4.createElement("span", { className: "v num", style: { color: rm.left <= 0 ? "#B0483C" : U.text } }, rm.left > 0 ? `${fmt(rm.left)}\u77F3` : "\u306A\u3057", " ", /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\uFF08\u77F3\u9AD8\u306E\u56DB\u5272 ", fmt(rm.cap), "\u77F3\u306E\u3046\u3061 ", fmt(rm.used), "\u77F3\u3092\u914D\u5206\u6E08", rm.left < 0 ? `\uFF0F${fmt(-rm.left)}\u77F3\u306E\u914D\u308A\u3059\u304E` : "", "\uFF09")));
+      return /* @__PURE__ */ React4.createElement("div", { className: "row", style: { borderBottom: `1px solid ${U.line2}`, paddingBottom: 4 } }, /* @__PURE__ */ React4.createElement("span", null, "\u914D\u308C\u308B\u77E5\u884C"), /* @__PURE__ */ React4.createElement("span", { className: "v num", style: { color: rm.left <= 0 ? "#B0483C" : U.text } }, rm.left > 0 ? `${fmt(rm.left)}\u77F3` : "\u306A\u3057", " ", /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\uFF08\u77F3\u9AD8 ", fmt(rm.cap), "\u77F3\u306E\u3046\u3061 ", fmt(rm.used), "\u77F3\u3092\u914D\u5206\u6E08", rm.left < 0 ? `\uFF0F${fmt(-rm.left)}\u77F3\u306E\u914D\u308A\u3059\u304E` : "", "\uFF09")));
     })(), gens.filter((x) => !x.captive).map((x) => {
       const want = fiefWanted(x), have = fiefOf(x);
       const r = have / Math.max(1, want);

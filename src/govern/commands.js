@@ -353,7 +353,7 @@ export function grantFief(prev, genId, delta) {
     const 余地 = Math.max(0, room.left);
     const d = delta > 0 ? Math.min(delta, 余地) : Math.max(delta, -fiefOf(gen));
     if (!d) {
-      if (delta > 0) s.msg = `配れる知行が残っていない（石高の四割 ${fmt(room.cap)}石のうち ${fmt(room.used)}石を配分済）。`;
+      if (delta > 0) s.msg = `配れる知行が残っていない（石高 ${fmt(room.cap)}石のうち ${fmt(room.used)}石を配分済）。`;
       return s;
     }
     const before = fiefOf(gen);

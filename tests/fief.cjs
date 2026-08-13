@@ -35,12 +35,17 @@ const 確 = (名, 可, 添 = '') => {
 {
   const s = A.initState('oda');
   const r = A.fiefRoom(s, s.player);
-  確('初めから配りすぎている（この状況で不具合が出ていた）', r.left < 0,
-    `四割の限り ${r.cap}石／配分済 ${r.used}石／余地 ${r.left}石`);
+  確('初めから加増できる余地がある', r.left > 0,
+    `限り ${r.cap}石／配分済 ${r.used}石／余地 ${r.left}石`);
 
-  const q = s.generals.find((x) => x.faction === s.player && !x.lord && A.fiefOf(x) > 1000);
+  // 配りすぎの局面（城を失って石高が減った形）でも、加増が没収に化けないこと
+  const u = A.initState('oda');
+  for (const c of u.castles.filter((x) => x.faction === u.player)) c.koku = Math.round(c.koku * 0.2);
+  const r2 = A.fiefRoom(u, u.player);
+  確('石高が減れば余地は負になりうる', r2.left < 0, `余地 ${r2.left}石`);
+  const q = u.generals.find((x) => x.faction === u.player && !x.lord && A.fiefOf(x) > 1000);
   const 前 = A.fiefOf(q);
-  const t = A.grantFief(s, q.id, 4000);
+  const t = A.grantFief(u, q.id, 4000);
   const 後 = A.fiefOf(t.generals.find((x) => x.id === q.id));
   確('配りすぎのとき、加増しても減らない', 後 >= 前, `${q.name} ${前} → ${後}石`);
   確('知行が負にならない', 後 >= 0, `${後}石`);
@@ -82,7 +87,11 @@ const 確 = (名, 可, 添 = '') => {
 /* --------------------------- 三、城主に任じられるのは身代に見合う者だけ */
 {
   const s = A.initState('oda');
-  const c = s.castles.find((x) => x.faction === s.player);
+  /* 当主のいない城を選ぶ。
+     castellanOf は「当主のいる城は当主が城主である」と定めているので、
+     当主の座す城で任命の効きめを測ることはできない。 */
+  const c = s.castles.find((x) => x.faction === s.player
+    && !s.generals.some((y) => y.lord && y.at === x.id && y.faction === s.player));
   const 要る = A.castleRankNeed(c);
   const ここ = s.generals.filter((x) => x.at === c.id && x.faction === s.player && !x.captive);
   const 足りる = ここ.find((x) => A.canHoldCastle(x, s, c) && !x.lord);
@@ -107,6 +116,38 @@ const 確 = (名, 可, 添 = '') => {
     確('任じた者が、実際にその城の城主とみなされる',
       (A.castellanOf(t, c2) || {}).id === 足りる.id);
   } else console.log('  （この城には禄高の足りる家臣がいないので、その確かめは省く）');
+}
+
+/* ------------------------------- 四、大名の一門は禄高を問わず城を預かれる
+
+   血を分けた者は、禄高が伴わずとも家の名代として城を預かった。
+   織田信長が十三で那古野を預かったのは、二千四百石だからではなく織田の子だからである。 */
+{
+  const s = A.initState('oda');
+  // ここも当主のいない城を使う（当主の座す城は当主が城主となるため）
+  const c = s.castles.find((x) => x.faction === s.player
+    && !s.generals.some((y) => y.lord && y.at === x.id && y.faction === s.player));
+  const 信長 = s.generals.find((x) => x.name === '織田信長');
+  if (信長) 信長.at = c.id;                      // 一門をその城へ移す
+  const 要る = A.castleRankNeed(c);
+  確('一門は禄高が足りずとも預かれる',
+    !!信長 && A.stipendOf(s, 信長) < 要る && A.canHoldCastle(信長, s, c),
+    信長 ? `${信長.name} ${信長.age}歳／禄高${A.stipendOf(s, 信長)}石（要る禄高${要る}石）` : '');
+  const t = A.appoint(s, c.id, 信長.id);
+  const c2 = t.castles.find((x) => x.id === c.id);
+  確('一門を城主に任じられる', c2.lordId === 信長.id);
+  確('任じた一門が、実際にその城の城主とみなされる',
+    (A.castellanOf(t, c2) || {}).id === 信長.id);
+  確('戦国記に残る', (t.chronicle || []).some((x) => x.text.includes(`${信長.name}を${c.name}の城主に任じた`)));
+
+  // 一門でも他家でもない者は、これまで通り禄高で測る
+  const 他 = s.generals.find((x) => x.at === c.id && x.faction === s.player && !x.lord
+    && !A.canHoldCastle(x, s, c));
+  if (他) {
+    const u = A.appoint(s, c.id, 他.id);
+    確('一門でない者は、なお禄高が要る', u.castles.find((x) => x.id === c.id).lordId !== 他.id,
+      `${他.name}（禄高${A.stipendOf(s, 他)}石）`);
+  } else console.log('  （この城には禄高の足りぬ一門外の将がいないので、その確かめは省く）');
 }
 
 console.log('');

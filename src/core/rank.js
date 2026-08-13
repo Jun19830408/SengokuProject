@@ -2,6 +2,7 @@ import { isGuardian, needsGuardian } from "./house.js";
 import { isCoastal } from "./naval.js";
 import { rankBonus } from "./province.js";
 import { MOB_POLICY } from "../data/roads.js";
+import { isMainClan } from "./house.js";
 
 export const minGarrison = (c) => Math.round(c.def * 10 + (100 - c.min) * 5);
 
@@ -46,8 +47,10 @@ export function castellanOf(s, c) {
   if (!gs.length) return null;
   const lord = gs.find((x) => x.lord);
   if (lord) return lord;                       // 当主のいる城は当主が城主である
+  // 任じた者が預かれるかは canHoldCastle で判ずる。ここだけ禄高で測っていたため、
+  // 一門を任じても黙って別の者が城主とみなされていた。
   const named = c.lordId && gs.find((x) => x.id === c.lordId);
-  if (named && stipendOf(s, named) >= castleRankNeed(c)) return named;
+  if (named && canHoldCastle(named, s, c)) return named;
   return [...gs].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
 }
 
@@ -59,10 +62,17 @@ export function castleRankNeed(c) {
   return Math.min(8000, Math.max(1200, Math.round(own * 0.16)));
 }
 
+/* 城を預かれるか（GDD 6.4 / 12.1）。
+
+   本来は、その城の身代に見合う禄高が要る。ただし大名の一門は別である。
+   血を分けた者は、禄高が伴わずとも家の名代として城を預かった。
+   織田信長が十三で那古野を預かったのは、二千四百石だからではなく
+   織田の子だからである。 */
 export const canHoldCastle = (gen, s, c) => {
   if (!gen) return false;
   if (gen.lord) return true;
   if (s && isGuardian(s, gen)) return true;
+  if (s && isMainClan(s, gen)) return true;      // 大名の一門は無条件
   const need = c ? castleRankNeed(c) : 8000;
   return (s ? stipendOf(s, gen) : fiefOf(gen)) >= need;
 };
@@ -181,10 +191,24 @@ export function loyaltyDrift(gen) {
   return -1.2;
 }
 
-// 勢力が配れる知行の総量（石高の四割まで）
+/* 勢力が配れる知行の総量。
+
+   知行は城の石高から分け与える田の高であるから、配れるのは石高までである。
+   すぐ上の fiefCapacity が「城が配れる知行の限り＝その城の石高」と定めているのに、
+   ここだけ四割で切っていた。同じ折の中で食い違っていたことになる。
+
+   四割で切っていたころは、初手から二倍以上を配っている家がほとんどで
+   （織田家は限り75,012石に対し157,728石）、一石も加増できなかった。
+   知行を配るという仕組みそのものが、始めから使えぬ状態だった。
+
+   十割まで配れば大名の直轄（御料）は無くなる。配りすぎれば自らの取り分が消える、
+   という釣り合いで縛るのが筋であって、線引きで縛るものではない。 */
+export const FIEF_SHARE = 1.0;                   // 配れるのは石高の十割まで
+
 export function fiefRoom(s, fid) {
   const koku = s.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
   const used = s.generals.filter((x) => x.faction === fid && !x.captive).reduce((a, x) => a + fiefOf(x), 0);
-  return { cap: Math.round(koku * 0.4), used, left: Math.round(koku * 0.4) - used };
+  const cap = Math.round(koku * FIEF_SHARE);
+  return { cap, used, left: cap - used };
 }
 
