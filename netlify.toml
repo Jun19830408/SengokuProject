@@ -11,7 +11,7 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "24"
 
 # 住所の末尾に何も付けずに開いたら、index.html を返す
 [[redirects]]
