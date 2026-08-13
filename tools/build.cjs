@@ -25,11 +25,27 @@ const 束 = esbuild.buildSync({
 // <script> の中に置くので、閉じ札に見える並びだけは逃がす
 const 中身 = 束.replace(/<\/script/gi, '<\\/script');
 
-// 書き出した日時。題名の画面に出して、置き場のものが古いままかを見分ける。
+/* 書き出した日時。題名の画面に出して、置き場のものが古いままかを見分ける。
+
+   必ず日本時間で刻む。手元では日本時間、Netlify の組み立て機では UTC、と
+   ばらばらに刻んでいたため、配られたものが九時間古く見えた。
+   「21時に送ったのに 12:00 と出る」では、新しいかどうかを判じられない。
+
+   併せて、どの記録（commit）から作られたかも残す。
+   Netlify は COMMIT_REF に入れてくれる。手元では git に尋ねる。 */
 const 刻印 = (() => {
-  const d = new Date();
   const z = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  const d = new Date(Date.now() + 9 * 3600 * 1000);      // UTC＋九時間＝日本時間
+  const 時 = `${d.getUTCFullYear()}-${z(d.getUTCMonth() + 1)}-${z(d.getUTCDate())}`
+    + ` ${z(d.getUTCHours())}:${z(d.getUTCMinutes())} JST`;
+  let 印 = process.env.COMMIT_REF || '';
+  if (!印) {
+    try {
+      印 = require('child_process')
+        .execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
+    } catch (e) { 印 = ''; }
+  }
+  return 印 ? `${時}　${印.slice(0, 7)}` : 時;
 })();
 
 const html = `<!doctype html>
