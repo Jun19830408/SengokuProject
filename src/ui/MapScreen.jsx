@@ -362,24 +362,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
       }
     }
     // 自勢力の戦役なら、着いた軍を集結として記録し、開戦の判断は総大将に委ねる
-    const camp = (g.campaigns || []).find((c) => c.armies.includes(a.id) && c.target === a.at);
-    if (camp && !camp.arrived.includes(a.id)) {
-      setG((p2) => {
-        const s = structuredClone(p2);
-        const cc = s.campaigns.find((x) => x.id === camp.id);
-        if (cc && !cc.arrived.includes(a.id)) {
-          cc.arrived.push(a.id);
-          const ar = s.armies.find((x) => x.id === a.id);
-          if (ar) ar.sieging = true;              // 到着後は毎月の再判定に回さない
-          const late = cc.armies.filter((id) => !cc.arrived.includes(id) && s.armies.some((x) => x.id === id));
-          s.monthEvents = [...(s.monthEvents || []),
-            `${nodeById(cc.target).name}の手前に着陣した。${late.length ? `遅参${late.length}隊を待つか、先に攻めかかるかを決める。` : "全軍がそろった。"}`];
-        }
-        s.pendingArrivals = s.pendingArrivals.slice(1);
-        return s;
-      });
-      return;
-    }
+    // 旗の下の城なら、軍議にはかけない。味方に向かって軍議を開く筋はない。
     // 旗の下の城へ着いた軍は、味方と戦わない。
     // 自家の城なら将もそこへ入る。臣従の家の城なら、兵だけ守りに加え、将は本国へ帰る。
     if (underMyBanner(g, a.faction, dest.faction)) {
@@ -407,6 +390,24 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
           s.monthEvents = [...(s.monthEvents || []), msg];
           s.chronicle.push({ y: s.year, m: s.month, text: msg });
         }
+        return s;
+      });
+      return;
+    }
+    const camp = (g.campaigns || []).find((c) => c.armies.includes(a.id) && c.target === a.at);
+    if (camp && !camp.arrived.includes(a.id)) {
+      setG((p2) => {
+        const s = structuredClone(p2);
+        const cc = s.campaigns.find((x) => x.id === camp.id);
+        if (cc && !cc.arrived.includes(a.id)) {
+          cc.arrived.push(a.id);
+          const ar = s.armies.find((x) => x.id === a.id);
+          if (ar) ar.sieging = true;              // 到着後は毎月の再判定に回さない
+          const late = cc.armies.filter((id) => !cc.arrived.includes(id) && s.armies.some((x) => x.id === id));
+          s.monthEvents = [...(s.monthEvents || []),
+            `${nodeById(cc.target).name}の手前に着陣した。${late.length ? `遅参${late.length}隊を待つか、先に攻めかかるかを決める。` : "全軍がそろった。"}`];
+        }
+        s.pendingArrivals = s.pendingArrivals.slice(1);
         return s;
       });
       return;
@@ -1322,6 +1323,16 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
         if (sg) sg.relief = mainId;
         s.chronicle.push({ y: s.year, m: s.month,
           text: `${c.name}より後詰が発した。${dest.name}の囲みを解きに向かう。` });
+        return s;
+      }
+      /* 旗の下の城へ向かうのは、攻めではない。援軍であり、持ち場替えである。
+         ここで戦役を起こすと、着いた先で「攻めかかるか」と軍議が開かれ、
+         味方の城を攻めることになってしまう。戦役は敵城へ向かうときだけ起こす。 */
+      if (underMyBanner(s, s.player, dest ? dest.faction : null)) {
+        s.chronicle.push({ y: s.year, m: s.month,
+          text: dest.faction === s.player
+            ? `${c.name}より${dest.name}へ兵を移す（${fmt(p.local + p.gens.reduce((a2, id) => a2 + (s.generals.find((x) => x.id === id) || {}).retinue || 0, 0))}人）。`
+            : `${c.name}より${s.factions[dest.faction].name}の${dest.name}へ援軍を送る。` });
         return s;
       }
       // 戦役を起こす。総大将は出陣を発した城の城主。

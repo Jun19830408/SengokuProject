@@ -124,6 +124,38 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
     確('味方の城を選んでも進発できる', !!進発 && !進発.disabled, 進発 ? 進発.textContent.trim() : 'なし');
   }
 
+  /* ここからが肝心。選べるだけでは足りぬ。
+     味方の城へ着いたとき、軍議（攻めかかる）が開かれてはならない。
+     以前はここを見ておらず、味方を攻める形になっていた。 */
+  const 移す先 = [...sel.options].find((o) => /［味方］/.test(o.textContent));
+  if (移す先) {
+    await act(async () => { sel.value = 移す先.value; sel.dispatchEvent(new dom.window.Event('change', { bubbles: true })); });
+    await flush();
+    const 出た = await rc('人で進発');
+    確('味方の城へ進発できる', 出た);
+
+    // 戦国記に「攻める」と書かれていないこと
+    await rc('戦国記'); await flush();
+    const 記 = (document.querySelector('.card') || { textContent: '' }).textContent.replace(/\s+/g, ' ');
+    const 攻めると書かれた = /を攻める。/.test(記);
+    確('記録に「攻める」と書かれない', !攻めると書かれた, 記.slice(0, 100));
+    await rc('閉じる'); await flush();
+
+    // 着くまで月を送り、軍議が出ないこと・合流できることを見る
+    let 着 = false, 軍議 = false;
+    for (let m = 0; m < 8 && !着; m++) {
+      for (const t of ['籠城して待つ']) if (await rc(t)) break;
+      if (!(await rc('次月へ'))) break;
+      await flush(); await flush();
+      const t = document.body.textContent;
+      if (/攻めかかる/.test(t)) { 軍議 = true; break; }
+      if (/城へ合流した|援軍.*を入れた/.test(t)) { 着 = true; break; }
+      for (const b of ['閉じる', '了']) if (await rc(b)) break;
+    }
+    確('味方の城で軍議（攻めかかる）が開かれない', !軍議);
+    確('味方の城へ着いて合流する', 着);
+  }
+
   console.log('確かめ:', 咎 ? `★${咎}件が通らなかった` : 'すべて通った');
   console.log('エラー:', errs.length ? errs.slice(0, 2).join(' | ') : 'なし');
   process.exit(咎 ? 1 : 0);

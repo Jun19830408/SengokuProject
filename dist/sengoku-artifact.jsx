@@ -13485,26 +13485,6 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         return;
       }
     }
-    const camp = (g.campaigns || []).find((c) => c.armies.includes(a.id) && c.target === a.at);
-    if (camp && !camp.arrived.includes(a.id)) {
-      setG((p2) => {
-        const s2 = structuredClone(p2);
-        const cc = s2.campaigns.find((x) => x.id === camp.id);
-        if (cc && !cc.arrived.includes(a.id)) {
-          cc.arrived.push(a.id);
-          const ar = s2.armies.find((x) => x.id === a.id);
-          if (ar) ar.sieging = true;
-          const late = cc.armies.filter((id) => !cc.arrived.includes(id) && s2.armies.some((x) => x.id === id));
-          s2.monthEvents = [
-            ...s2.monthEvents || [],
-            `${nodeById(cc.target).name}\u306E\u624B\u524D\u306B\u7740\u9663\u3057\u305F\u3002${late.length ? `\u9045\u53C2${late.length}\u968A\u3092\u5F85\u3064\u304B\u3001\u5148\u306B\u653B\u3081\u304B\u304B\u308B\u304B\u3092\u6C7A\u3081\u308B\u3002` : "\u5168\u8ECD\u304C\u305D\u308D\u3063\u305F\u3002"}`
-          ];
-        }
-        s2.pendingArrivals = s2.pendingArrivals.slice(1);
-        return s2;
-      });
-      return;
-    }
     if (underMyBanner(g, a.faction, dest2.faction)) {
       setG((p) => {
         const s2 = structuredClone(p);
@@ -13529,6 +13509,26 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
           s2.monthEvents = [...s2.monthEvents || [], msg];
           s2.chronicle.push({ y: s2.year, m: s2.month, text: msg });
         }
+        return s2;
+      });
+      return;
+    }
+    const camp = (g.campaigns || []).find((c) => c.armies.includes(a.id) && c.target === a.at);
+    if (camp && !camp.arrived.includes(a.id)) {
+      setG((p2) => {
+        const s2 = structuredClone(p2);
+        const cc = s2.campaigns.find((x) => x.id === camp.id);
+        if (cc && !cc.arrived.includes(a.id)) {
+          cc.arrived.push(a.id);
+          const ar = s2.armies.find((x) => x.id === a.id);
+          if (ar) ar.sieging = true;
+          const late = cc.armies.filter((id) => !cc.arrived.includes(id) && s2.armies.some((x) => x.id === id));
+          s2.monthEvents = [
+            ...s2.monthEvents || [],
+            `${nodeById(cc.target).name}\u306E\u624B\u524D\u306B\u7740\u9663\u3057\u305F\u3002${late.length ? `\u9045\u53C2${late.length}\u968A\u3092\u5F85\u3064\u304B\u3001\u5148\u306B\u653B\u3081\u304B\u304B\u308B\u304B\u3092\u6C7A\u3081\u308B\u3002` : "\u5168\u8ECD\u304C\u305D\u308D\u3063\u305F\u3002"}`
+          ];
+        }
+        s2.pendingArrivals = s2.pendingArrivals.slice(1);
         return s2;
       });
       return;
@@ -14567,6 +14567,14 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
           y: s2.year,
           m: s2.month,
           text: `${c.name}\u3088\u308A\u5F8C\u8A70\u304C\u767A\u3057\u305F\u3002${dest2.name}\u306E\u56F2\u307F\u3092\u89E3\u304D\u306B\u5411\u304B\u3046\u3002`
+        });
+        return s2;
+      }
+      if (underMyBanner(s2, s2.player, dest2 ? dest2.faction : null)) {
+        s2.chronicle.push({
+          y: s2.year,
+          m: s2.month,
+          text: dest2.faction === s2.player ? `${c.name}\u3088\u308A${dest2.name}\u3078\u5175\u3092\u79FB\u3059\uFF08${fmt(p.local + p.gens.reduce((a2, id) => a2 + (s2.generals.find((x) => x.id === id) || {}).retinue || 0, 0))}\u4EBA\uFF09\u3002` : `${c.name}\u3088\u308A${s2.factions[dest2.faction].name}\u306E${dest2.name}\u3078\u63F4\u8ECD\u3092\u9001\u308B\u3002`
         });
         return s2;
       }
