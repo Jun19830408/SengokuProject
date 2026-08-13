@@ -101,7 +101,7 @@ export function captiveRecruit(s, gen) {
   const 旧主 = s.generals.find((x) => x.faction === gen.captive.from && x.lord && !x.captive) || null;
   const rec = canRecruit(gen, 旧主);
   if (!rec.ok) return rec;                       // 一門、あるいは旧主への忠誠が篤すぎる
-  if (loy > 40) return { ok: false, why: `旧主への忠誠${Math.round(loy)}。まだ心が離れていない（40以下で降る）` };
+  if (loy > 40) return { ok: false, why: `旧主への忠誠${Math.floor(loy)}。まだ心が離れていない（40以下で降る）` };
   return { ok: true, why: "" };
 }
 

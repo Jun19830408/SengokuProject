@@ -9,6 +9,7 @@ import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
+import { 忠誠 } from "../core/rank.js";
 /* ==========================================================================
    政務 ─ 城と家中への下知
    いずれも「いまの盤の様子（prev）を受け取り、改めた盤の様子を返す」だけの処理。
@@ -162,8 +163,8 @@ export function settleCaptive(prev, genId, kind) {
       g2.loyal = clamp(g2.warLoyal, 0, 100);
       g2.captive = null; g2.warLoyal = undefined; g2.lord = false;
       s.chronicle.push({ y: s.year, m: s.month,
-        text: `${g2.name}が${f.name}に仕えた（旧${(s.factions[from] || {}).name || ""}・忠誠${Math.round(g2.loyal)}）。` });
-      s.msg = `${g2.name}を召し抱えた。忠誠${Math.round(g2.loyal)}。`;
+        text: `${g2.name}が${f.name}に仕えた（旧${(s.factions[from] || {}).name || ""}・忠誠${忠誠(g2)}）。` });
+      s.msg = `${g2.name}を召し抱えた。忠誠${忠誠(g2)}。`;
     }
     return s;
 }

@@ -17,6 +17,7 @@ import { checkUnified } from "./unify.js";
 import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy } from "./war.js";
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
+import { 忠誠 } from "../core/rank.js";
 /* ==========================================================================
    月送り ─ 天下じゅうの一月
    この一手で、諸家の内政・調略・出陣・包囲・寿命・一揆・官位までが動く。
@@ -468,7 +469,7 @@ export function advanceMonth(prev, g) {
               if (q.faction === s.player) events.push(`${q.name}が出奔した。`);
             }
           } else if (q.faction === s.player) {
-            events.push(`${q.name}の心が離れつつある（忠誠${Math.round(q.loyal)}）。知行を見直すべきである。`);
+            events.push(`${q.name}の心が離れつつある（忠誠${忠誠(q)}）。知行を見直すべきである。`);
           }
         }
       }

@@ -1,4 +1,4 @@
-// 武将の値に齢が並んでいるかを見る試験。
+// 武将の値の見え方を見る試験（齢が並ぶこと、忠誠に小数が出ないこと）。
 //
 // 齢は前から盤の上にはあった（寿命・元服・子の誕生に使っている）。
 // ただし画面に出ていたのは家督を継ぐ者を選ぶときと、滅んだ家の始末のときだけで、
@@ -24,7 +24,7 @@ Object.defineProperty(dom.window.HTMLElement.prototype, 'clientHeight', { get() 
 dom.window.HTMLElement.prototype.getBoundingClientRect = function () { return { left: 0, top: 0, width: 900, height: 600, right: 900, bottom: 600 }; };
 dom.window.storage = { get: async () => null, set: async (k, v) => ({ key: k, value: v }), delete: async () => ({}) };
 const errs = []; console.error = (...a) => errs.push(String(a[0]).slice(0, 180));
-const { createRoot, act, App, React, initState } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
+const { createRoot, act, App, React, initState, advanceMonth, 忠誠 } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
 const 咎 = [];
 const 確 = (名, 可, 添 = '') => {
@@ -106,6 +106,38 @@ const 齢が出るか = (範囲) => /\d{1,2}歳/.test(範囲);
       } else 確('寄騎の欄がある', false);
       await rc('取りやめ'); await flush();
     } else 確('出陣の画面を開ける', false);
+  }
+
+  /* ------------------------------------- 四、忠誠に小数が出ないこと
+
+     忠誠は月ごとに小数で動く（知行の過不足、幼き当主のもとでの揺れ）。
+     生のまま出していたため「忠68.09999999999997」のような字が画面に出ていた。 */
+  {
+    let t = initState('oda');
+    for (let i = 0; i < 6; i++) t = advanceMonth(t, t);
+    const 小数 = t.generals.filter((x) => x.loyal != null && x.loyal % 1 !== 0);
+    確('盤の上では忠誠が小数で動いている（丸めていない）', 小数.length > 0,
+      `${小数.length}名／例 ${小数[0] ? 小数[0].loyal : ''}`);
+    確('表に出す忠誠は整数になる',
+      小数.every((x) => Number.isInteger(忠誠(x))),
+      小数[0] ? `${小数[0].loyal} → ${忠誠(小数[0])}` : '');
+    確('切り捨てである（実の値より高く見せない）',
+      忠誠({ loyal: 39.6 }) === 39 && 忠誠({ loyal: 40.9 }) === 40,
+      '39.6→39／40.9→40');
+    確('値の無い者は既定の60とみなす', 忠誠({}) === 60 && 忠誠(null) === 60);
+  }
+
+  // 画面に小数が出ていないこと（武将一覧をもう一度開いて字を見る）
+  {
+    if (await rc('武将一覧')) {
+      await flush();
+      const 札 = document.querySelector('.modal .card');
+      const 中 = 札 ? 札.textContent.replace(/\s+/g, ' ') : '';
+      const 小数の字 = 中.match(/忠\d+\.\d+/g) || [];
+      確('武将一覧に小数の忠誠が出ない', 小数の字.length === 0,
+        小数の字.length ? `★${小数の字.slice(0, 2).join(' / ')}` : (中.match(/忠\d+/) || [])[0] || '');
+      await rc('閉じる'); await flush();
+    }
   }
 
   console.log('');

@@ -57,7 +57,7 @@ export function canRecruit(gen, lord) {
   if (!gen) return { ok: false, why: "" };
   if (lord && isKin(gen, lord)) return { ok: false, why: `${lord.name}と血を分けた一門。旧主を捨てて仕えることはない` };
   const loy = gen.loyal == null ? 60 : gen.loyal;
-  if (loy >= 95) return { ok: false, why: `旧主への忠誠${Math.round(loy)}。二君に仕える気はないという` };
+  if (loy >= 95) return { ok: false, why: `旧主への忠誠${Math.floor(loy)}。二君に仕える気はないという` };
   return { ok: true, why: "" };
 }
 

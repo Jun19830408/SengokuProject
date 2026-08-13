@@ -11,6 +11,7 @@ import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { captiveRecruit } from "../core/capture.js";
 import { houseAlive } from "../core/state.js";
+import { 忠誠 } from "../core/rank.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
 export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
@@ -182,7 +183,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                 )}
               </span>
               <span className="num" style={{ color: U.dim, fontSize: 11 }}>
-                {x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{x.loyal}／
+                {x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{忠誠(x)}／
                 {x.lord ? `御料${fmt(goryoOf(g, x.faction).total)}石` : `禄高${fmt(stipendOf(g, x))}石`}
                 ・直属{fmt(x.retinue)}
               </span>
@@ -209,7 +210,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     </span>
                     <span className="num" style={{ color: U.dim, fontSize: 11 }}>
                       {x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov}
-                      {x.captive.ruin ? `／心 ${x.warLoyal || 0}／50` : `／忠${Math.round(x.loyal == null ? 60 : x.loyal)}`}
+                      {x.captive.ruin ? `／心 ${x.warLoyal || 0}／50` : `／忠${忠誠(x)}`}
                     </span>
                   </div>
                 ))}
@@ -467,7 +468,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                           {isNameless(x) ? <span style={{ color: "#9B9384" }} title="名の伝わらぬ在地の長。実在の人名ではありません">〔伝〕</span> : null}
                           {x.retired ? <span style={{ color: "#8A7A5A" }}>【隠居】</span> : null}
                           {x.lord ? <span style={{ color: "#C8A44A" }}>【当主】</span> : null}
-                          忠誠{Math.round(x.loyal == null ? 60 : x.loyal)}／知行 {fmt(have)}石
+                          忠誠{忠誠(x)}／知行 {fmt(have)}石
                           （望むところ {fmt(want)}石・{mood}）
                         </div>
                         <div className="g4" style={{ marginTop: 3 }}>
@@ -488,7 +489,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                           <span>【捕虜】{x.name}</span>
                           <span className="num">
                             {x.age}歳／統{x.lead}／武{x.valor}／知{x.wit}／政{x.gov}　
-                            旧主への忠誠 {Math.round(x.loyal == null ? 60 : x.loyal)}
+                            旧主への忠誠 {忠誠(x)}
                           </span>
                         </div>
                       ))}
@@ -537,7 +538,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       <>
                         <div className="sec">捕虜（{held.length}名）</div>
                         {held.map((x) => {
-                          const loy = Math.round(x.loyal == null ? 60 : x.loyal);
+                          const loy = 忠誠(x);
                           const from = g.factions[x.captive.from];
                           const bond = x.captive.bond || 0;
                           return (

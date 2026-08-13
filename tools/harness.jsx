@@ -10,6 +10,8 @@ export { React, createRoot, act, App };
 // 試験によっては盤を直に組み立て、記録として仕込んでから「続きから」で開く。
 export { initState } from "../src/core/state.js";
 export { findPath } from "../src/core/paths.js";
+export { advanceMonth } from "../src/govern/month.js";
+export { 忠誠 } from "../src/core/rank.js";
 // 合戦の中身を直に動かすための取り出し口。
 // 画面を通すと、戦況の記録が流れて肝心の一行を取り逃がす。
 // 隊がどの門を受け持ち、何の下知を受けているかは、ここから直に見るほかない。

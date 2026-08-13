@@ -33,6 +33,7 @@ import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, Goal
 import { SallyDialog } from "./panels.jsx";
 import { ReinforceDialog } from "./panels.jsx";
 import { underMyBanner } from "../core/state.js";
+import { 忠誠 } from "../core/rank.js";
 
 /* ============================================================ 政略マップ */
 export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
@@ -1758,7 +1759,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
             } else {
               g2.faction = ws.winner; g2.lord = false; g2.captive = null;
               g2.loyal = loyaltyAfterRecruit(g2); g2.at = ws.castleId;
-              s2.chronicle.push({ y: s2.year, m: s2.month, text: `${g2.name}は${s2.factions[ws.winner].name}に仕えた（忠誠${Math.round(g2.loyal)}）。` });
+              s2.chronicle.push({ y: s2.year, m: s2.month, text: `${g2.name}は${s2.factions[ws.winner].name}に仕えた（忠誠${忠誠(g2)}）。` });
             }
             nextOne(s2);
             return s2;
@@ -1776,7 +1777,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
                   <br />
                   <span className="num" style={{ fontSize: 12, color: U.dim }}>
                     {gen.age}歳／統{gen.lead}・武{gen.valor}・知{gen.wit}・政{gen.gov}
-                    {isLord ? `／${fname}当主` : `／旧主への忠誠 ${Math.round(gen.loyal == null ? 60 : gen.loyal)}`}
+                    {isLord ? `／${fname}当主` : `／旧主への忠誠 ${忠誠(gen)}`}
                   </span>
                   {!rec.ok && rec.why && (
                     <div style={{ fontSize: 12, color: "#B0483C", marginTop: 6 }}>{rec.why}。</div>

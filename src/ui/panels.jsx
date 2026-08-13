@@ -13,6 +13,7 @@ import { reinforceOffers } from "../govern/war.js";
 import { canRecruit } from "../core/house.js";
 import { underMyBanner } from "../core/state.js";
 import { atPeace } from "../core/state.js";
+import { 忠誠 } from "../core/rank.js";
 
 export function SortieDialog({ g, from, onClose, onGo }) {
   const c = g.castles.find((x) => x.id === from);
@@ -665,7 +666,7 @@ export function GeneralList({ g, onClose }) {
               {x.name}
               {isNameless(x) && <span style={{ color: "#9B9384", fontSize: 10, marginLeft: 2 }}>〔伝〕</span>}
             </span>
-            <span className="num" style={{ color: U.dim, flex: 1 }}>{x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{x.loyal}</span>
+            <span className="num" style={{ color: U.dim, flex: 1 }}>{x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{忠誠(x)}</span>
             <span style={{ color: U.dim }}>{x.at ? (g.castles.find((c) => c.id === x.at) || {}).name : "出征中"}</span>
             <span className="num">直属 {fmt(x.retinue)}</span>
           </div>
@@ -856,7 +857,7 @@ export function SiegePanel({ g, sg, onChoose }) {
 export function CaptiveDialog({ g, gen, onDone }) {
   const [tried, setTried] = useState(false);
   const [failed, setFailed] = useState(false);
-  const loy = gen.loyal == null ? 60 : gen.loyal;
+  const loy = 忠誠(gen);
   const from = g.factions[gen.captive ? gen.captive.from : gen.faction];
   /* 旧主との縁。一門であれば、忠誠がいくら下がっていても降らぬ。
      ここを見ずに persuadeResult だけで判じていたため、
@@ -869,7 +870,7 @@ export function CaptiveDialog({ g, gen, onDone }) {
         <div className="mn" style={{ fontSize: 19 }}>{gen.name}を捕らえた</div>
         <div style={{ fontSize: 12.5, color: U.dim, marginTop: 6, lineHeight: 1.8 }}>
           {from ? from.name : "旧主"}の家臣。{gen.age}歳／統率{gen.lead}／武勇{gen.valor}／知略{gen.wit}／政務{gen.gov}<br />
-          旧主への忠誠 <b>{Math.round(loy)}</b>
+          旧主への忠誠 <b>{loy}</b>
           {failed && <span style={{ color: "#B0483C" }}>　── 降ることを拒んだ</span>}
         </div>
         {!tried && (
