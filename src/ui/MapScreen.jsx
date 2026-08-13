@@ -1308,8 +1308,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
         if (!rgens.length) continue;
         /* 誰を何人で出すか。指図の通る城では、遊ぶ側が出陣の画面で選んでいる。
            選ばれていなければ（同盟・従属へ頼んだ場合）、相手が将と数を決める。 */
-        const 指名 = req.genId ? rgens.find((x) => x.id === req.genId) : null;
-        const take = 指名 ? [指名] : [...rgens].sort((a, z) => z.lead - a.lead).slice(0, 1);
+        const 指名 = (req.genIds || []).map((id) => rgens.find((x) => x.id === id)).filter(Boolean);
+        const take = 指名.length ? 指名 : [...rgens].sort((a, z) => z.lead - a.lead).slice(0, 1);
         const send = Math.min(Math.max(0, req.men), Math.max(0, rc2.local));
         const 総勢 = send + take.reduce((a, x) => a + x.retinue, 0);
         if (総勢 < 100) {
@@ -1328,7 +1328,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
           path, prog: 0, food: Math.round(send * 0.6), target: p.to, aid: s.player,
         });
         s.chronicle.push({ y: s.year, m: s.month,
-          text: `${rc2.name}より寄騎${fmt(総勢)}人（${take[0].name}）が${nodeById(p.to).name}へ向かう（約${req.months}か月）。` });
+          text: `${rc2.name}より寄騎${fmt(総勢)}人（${take.map((x) => x.name).join("・")}）が${nodeById(p.to).name}へ向かう（約${req.months}か月）。` });
       }
       const c = s.castles.find((x) => x.id === p.from);
       const dest = s.castles.find((x) => x.id === p.to);

@@ -12,6 +12,7 @@ import { ARMS, ROAD_SPEED } from "../data/roads.js";
 import { reinforceOffers } from "../govern/war.js";
 import { canRecruit } from "../core/house.js";
 import { underMyBanner } from "../core/state.js";
+import { atPeace } from "../core/state.js";
 
 export function SortieDialog({ g, from, onClose, onGo }) {
   const c = g.castles.find((x) => x.id === from);
@@ -91,17 +92,35 @@ export function SortieDialog({ g, from, onClose, onGo }) {
   // 目標を変えると呼べる先も変わる。前の目標の選びを引きずらせない。
   useEffect(() => { setAid({}); }, [to]);
   const aidIds = Object.keys(aid);
-  // その城から出せる兵の上限。将が自ら率いる分と、城に残さねばならぬ守備を差し引く。
-  const 出せる上限 = (o, 将) => {
-    if (!将) return 0;
-    return Math.max(0, Math.min(o.local, o.avail - 将.retinue, 将.limit - 将.retinue));
+  /* その城から出せる兵の上限。
+     選んだ将が自ら率いる直属を差し引き、城に残さねばならぬ守備も残す。
+     将の器（率いられる上限）も超えられぬ。援軍の画面と同じ理屈で数える。 */
+  const 出せる上限 = (o, 将ら) => {
+    const 直属 = 将ら.reduce((a, x) => a + x.retinue, 0);
+    const 器 = 将ら.reduce((a, x) => a + x.limit, 0);
+    return Math.max(0, Math.min(o.local, o.avail - 直属, Math.max(0, 器 - 直属)));
   };
-  const 既定の将 = (o) => (o.gens.length ? [...o.gens].sort((a, z) => z.lead - a.lead)[0] : null);
+  const 選ばれた将 = (o) => {
+    const v = aid[o.castleId];
+    return v ? o.gens.filter((x) => (v.genIds || []).includes(x.id)) : [];
+  };
+  const 寄騎の総勢 = (o) => {
+    const 将ら = 選ばれた将(o);
+    if (!将ら.length) return 0;
+    const v = aid[o.castleId];
+    return 将ら.reduce((a, x) => a + x.retinue, 0) + Math.min(v.men, 出せる上限(o, 将ら));
+  };
   const useLocal = Math.min(local, availLocal);
   const men = retSum + useLocal;
   const food = Math.round(men * 0.6);
   const path = findPath(from, to);
   const dist = path ? path.slice(1).reduce((a, n, i) => { const r = roadBetween(path[i], n); return a + (r ? r[2] / ROAD_SPEED[r[3]] : 10); }, 0) : 0;
+  /* 約束を交わした相手の城を狙っていないか。
+     進発を押したあとにも問いを出すが、押す前からここに出しておく。
+     押してはじめて知らされるのでは、遅い。 */
+  const 的 = g.castles.find((x) => x.id === to);
+  const 約束 = 的 && !underMyBanner(g, c.faction, 的.faction) && atPeace(g, c.faction, 的.faction)
+    ? relOf(g, c.faction, 的.faction).state : null;
 
   return (
     <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
@@ -144,6 +163,16 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         <div style={{ fontSize: 12, color: U.dim, marginTop: 6 }}>
           経路：{path ? path.map((n) => nodeById(n).name).join(" → ") : "経路なし"}　／　所要 約{Math.max(1, Math.ceil(dist / 300))}か月
         </div>
+        {約束 && (
+          <div style={{ marginTop: 8, padding: "9px 11px", background: "rgba(176,72,60,0.10)",
+            borderLeft: "3px solid #B0483C", fontSize: 12.5, lineHeight: 1.85 }}>
+            <b style={{ color: "#B0483C" }}>{g.factions[的.faction].name}とは{約束}の間柄です。</b><br />
+            <span style={{ color: U.dim }}>
+              ここへ兵を出せば後詰ではなく<b>攻撃</b>となり、{約束}は破れて敵対します。
+              威信と、諸家からの信用と、家臣の忠誠を失います。
+            </span>
+          </div>
+        )}
         {(() => {
           const t = g.castles.find((x) => x.id === to);
           if (!t || !underMyBanner(g, c.faction, t.faction)) return null;
@@ -194,47 +223,60 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         {offers.length === 0 && <div style={{ fontSize: 12, color: U.dim }}>援軍を求められる相手がいない。</div>}
         {offers.map((o) => {
           const 選 = aid[o.castleId];
-          const 将 = 選 ? o.gens.find((x) => x.id === 選.genId) : null;
-          const 上限 = 出せる上限(o, 将);
+          const 将ら = 選ばれた将(o);
+          const 上限 = 出せる上限(o, 将ら);
           const 兵 = 選 ? Math.min(選.men, 上限) : 0;
+          const 総勢 = 寄騎の総勢(o);
           const 使えぬ = !!o.reason || (o.指図 && !o.gens.length);
-          const 満杯 = !選 && picked.length + aidIds.length >= MAX_CORPS;
+          const 隊数 = aidIds.reduce((a, id) => {
+            const v = aid[id];
+            const oo = offers.find((x) => x.castleId === id);
+            return a + (oo && oo.指図 ? (v.genIds || []).length : 1);
+          }, 0);
+          const 満杯 = !選 && picked.length + 隊数 >= MAX_CORPS;
           return (
             <div key={o.castleId} className="aidrow" style={{ padding: "5px 0", borderBottom: `1px solid ${U.line2}` }}>
               <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12.5 }}>
                 <input type="checkbox" disabled={使えぬ || 満杯} checked={!!選}
                   onChange={() => setAid((p2) => {
                     if (p2[o.castleId]) { const n = { ...p2 }; delete n[o.castleId]; return n; }
-                    const g0 = 既定の将(o);
-                    // 既定は「いちばん統率の高い将」と「出せる上限の六割」。そこから加減する。
-                    return { ...p2, [o.castleId]: { genId: g0 ? g0.id : null,
-                      men: Math.round(出せる上限(o, g0) * 0.6) } };
+                    // 既定は「いちばん統率の高い将ひとり」と「出せる上限の六割」。そこから加減する。
+                    const g0 = o.gens.length ? [...o.gens].sort((a, z) => z.lead - a.lead)[0] : null;
+                    return { ...p2, [o.castleId]: { genIds: g0 ? [g0.id] : [],
+                      men: Math.round(出せる上限(o, g0 ? [g0] : []) * 0.6) } };
                   })} />
                 <span>
                   <span className="mn" style={{ fontSize: 14 }}>{o.name}</span>
                   <span className="pill" style={{ background: g.factions[o.faction].color, marginLeft: 6 }}>{o.kind}</span>
                   <span style={{ color: U.dim, marginLeft: 6 }}>
                     {o.reason ? o.reason
-                      : (o.指図 ? `将を選べる／到着まで約${o.months}か月／下知が通る`
+                      : (o.指図 ? `将と兵を選べる／到着まで約${o.months}か月／出せる兵 ${fmt(o.avail)}人`
                         : `約${fmt(o.men)}人／到着まで約${o.months}か月／応じる見込み${Math.round(o.chance * 100)}%`)}
                   </span>
                 </span>
               </label>
-              {/* 指図の通る城だけ、誰を何人で出すかを決められる（GDD 7.3） */}
+              {/* 下知の通る城（自家・臣従）だけ、誰を何人で出すかを決められる（GDD 7.3）。
+                  同盟・従属へは頼むだけで、誰を何人出すかは相手の大名が決める。 */}
               {選 && o.指図 && (
                 <div style={{ margin: "4px 0 2px 24px" }}>
-                  <select className="sel" style={{ width: "100%", fontSize: 12 }} value={選.genId || ""}
-                    onChange={(e) => setAid((p2) => {
-                      const g2 = o.gens.find((x) => x.id === e.target.value);
-                      return { ...p2, [o.castleId]: { genId: e.target.value,
-                        men: Math.min(p2[o.castleId].men, 出せる上限(o, g2)) } };
-                    })}>
-                    {o.gens.map((x) => (
-                      <option key={x.id} value={x.id}>
-                        {`${x.name}（${x.rank}）統率${x.lead}／武勇${x.valor}／直属${fmt(x.retinue)}人　率いられる上限${fmt(x.limit)}人`}
-                      </option>
-                    ))}
-                  </select>
+                  {o.gens.map((x) => (
+                    <label key={x.id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "3px 0", fontSize: 12.5 }}>
+                      <input type="checkbox" checked={(選.genIds || []).includes(x.id)}
+                        onChange={() => setAid((p2) => {
+                          const now = p2[o.castleId].genIds || [];
+                          const next = now.includes(x.id) ? now.filter((y) => y !== x.id) : [...now, x.id];
+                          const 将2 = o.gens.filter((q) => next.includes(q.id));
+                          return { ...p2, [o.castleId]: { genIds: next,
+                            men: Math.min(p2[o.castleId].men, 出せる上限(o, 将2)) } };
+                        })} />
+                      <span className="mn" style={{ fontSize: 14 }}>{x.name}</span>
+                      <span style={{ fontSize: 10.5, color: U.dim }}>{x.rank}</span>
+                      <span className="num" style={{ color: U.dim, fontSize: 11 }}>
+                        統{x.lead} 武{x.valor}／直属{fmt(x.retinue)}／率いられる上限{fmt(x.limit)}
+                      </span>
+                    </label>
+                  ))}
+                  {!将ら.length && <div style={{ fontSize: 11.5, color: "#B0483C" }}>将を一人は選ばねば出せない。</div>}
                   <input type="range" min="0" max={Math.max(0, 上限)} value={兵} style={{ width: "100%" }}
                     onChange={(e) => setAid((p2) => ({ ...p2, [o.castleId]: { ...p2[o.castleId], men: +e.target.value } }))} />
                   <div className="row" style={{ fontSize: 11.5 }}>
@@ -243,7 +285,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
                   </div>
                   <div className="row" style={{ fontSize: 11.5 }}>
                     <span>この寄騎の総勢</span>
-                    <span className="v">{fmt(兵 + (将 ? 将.retinue : 0))} 人{兵 + (将 ? 将.retinue : 0) < 100 ? "（少なすぎて出せぬ）" : ""}</span>
+                    <span className="v">{fmt(総勢)} 人{総勢 < 100 ? "（少なすぎて出せぬ）" : ""}</span>
                   </div>
                   <div className="row" style={{ fontSize: 11.5, color: U.dim }}>
                     <span>{o.name}に残る兵</span>
@@ -269,9 +311,9 @@ export function SortieDialog({ g, from, onClose, onGo }) {
             onClick={() => onGo({ from, to, gens: picked, local: useLocal, food,
               // 指図の通る城は、選んだ将と兵数を添える。頼むだけの城は相手の言い値のまま。
               reinforce: offers.filter((o) => aid[o.castleId]).map((o) => (o.指図
-                ? { ...o, genId: aid[o.castleId].genId,
-                    men: Math.min(aid[o.castleId].men, 出せる上限(o, o.gens.find((x) => x.id === aid[o.castleId].genId))) }
-                : o)) })}>{fmt(men)}人で進発</button>
+                ? { ...o, genIds: aid[o.castleId].genIds || [],
+                    men: Math.min(aid[o.castleId].men, 出せる上限(o, 選ばれた将(o))) }
+                : o)) })}>{約束 ? `約束を破って${fmt(men)}人で進発` : `${fmt(men)}人で進発`}</button>
         </div>
         {c.food < food && <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7 }}>兵糧が足りない。収穫を待つか、開墾を進める必要がある。</div>}
       </div>

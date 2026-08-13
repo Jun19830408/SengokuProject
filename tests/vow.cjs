@@ -47,13 +47,16 @@ for (const a of 自城) {
     && s.castles.some((d) => d.faction !== s.player && findPath(a.id, d.id) && findPath(a.id, d.id).length === 2)) { 出陣元 = a; break; }
 }
 if (!出陣元) 出陣元 = 自城[0];
-// 隣り合う敵城を一つ選び、同盟を結んでおく
+/* 隣り合う城を一つ選び、約束を結んでおく。
+   どの間柄で試すかは、外から VOW_STATE で指定できる（既定は同盟）。
+   同盟・従属・不可侵・臣従、いずれでも同じように問われねばならない。 */
+const 間柄 = process.env.VOW_STATE || '同盟';
 const 隣敵 = s.castles.find((d) => d.faction !== s.player
   && findPath(出陣元.id, d.id) && findPath(出陣元.id, d.id).length === 2);
 const 盟主 = 隣敵 ? 隣敵.faction : null;
 if (盟主) {
   const k = [s.player, 盟主].sort().join('|');
-  s.relations[k] = { state: '同盟', trust: 70, until: { y: 1560, m: 1 } };
+  s.relations[k] = { state: 間柄, trust: 70, until: { y: 1560, m: 1 } };
 }
 // 出陣元と、寄騎を出す城に十分な兵を置く
 出陣元.local = 6000; 出陣元.food = 90000;
@@ -65,7 +68,7 @@ dom.window.storage = {
   set: async (k, v) => { 蔵.set(k, v); return { key: k, value: v }; },
   delete: async (k) => { 蔵.delete(k); return {}; },
 };
-console.log(`仕込み: ${出陣元.name}（自家）から出陣。${隣敵 ? `隣の ${隣敵.name}（${s.factions[盟主].name}）とは同盟` : '隣に敵城なし'}`);
+console.log(`仕込み: ${出陣元.name}（自家）から出陣。${隣敵 ? `隣の ${隣敵.name}（${s.factions[盟主].name}）とは${間柄}` : '隣に敵城なし'}`);
 
 const root = createRoot(document.getElementById('r'));
 const flush = async () => { await act(async () => { await new Promise((r) => setTimeout(r, 5)); }); };
@@ -112,7 +115,34 @@ const txt = () => {
       sel.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
     });
     await flush();
-    確('同盟相手の城を目標にできる', sel.value === 隣敵.id, 隣敵.name);
+    確(`${間柄}相手の城を目標にできる`, sel.value === 隣敵.id, 隣敵.name);
+    /* 進発を押す前から、画面の中に断りが出ていること。
+       押してはじめて知らされるのでは遅い。「警告が出ない」と映るのもここである。 */
+    const 文0 = txt();
+    確('押す前から画面に断りが出る', new RegExp(`${間柄}の間柄です`).test(文0));
+    確('攻撃になる旨が押す前に読める', /後詰ではなく/.test(文0) && /攻撃/.test(文0));
+    const 釦 = [...document.querySelectorAll('.modal button')].find((b) => /進発/.test(b.textContent));
+    確('進発の釦にも約束を破る旨が出る', !!釦 && /約束を破って/.test(釦.textContent),
+      釦 ? 釦.textContent.trim() : 'なし');
+  }
+
+  /* 同盟・従属の城は「頼むだけ」で、誰を何人出すかは相手が決める。
+     こちらが将を選べてしまってはならない（GDD 7.3）。 */
+  {
+    const 全行 = [...document.querySelectorAll('.modal .aidrow')];
+    const 頼む行 = 全行.filter((r) => /同盟|従属/.test(r.textContent));
+    for (const r of 頼む行) {
+      const c0 = r.querySelector('input[type=checkbox]');
+      if (c0 && !c0.disabled) { await act(async () => { c0.click(); }); await flush(); }
+    }
+    const 選べる = 頼む行.filter((r) => r.querySelectorAll('input[type=checkbox]').length > 1
+      || r.querySelector('input[type=range]'));
+    確('同盟・従属へは将も兵数も指図できない', 選べる.length === 0,
+      `頼むだけの城 ${頼む行.length}城`);
+    for (const r of 頼む行) {
+      const c0 = r.querySelector('input[type=checkbox]');
+      if (c0 && c0.checked) { await act(async () => { c0.click(); }); await flush(); }
+    }
   }
 
   /* ------------------------------------------- 一、寄騎の将と兵数を選ぶ */
@@ -122,15 +152,14 @@ const txt = () => {
   確('寄騎を求める欄がある', 寄騎行.length > 0, `${寄騎行.length}城（うち下知の通る城 ${指図の行.length}）`);
   if (指図の行.length) {
     const 行 = 指図の行[0];
-    const 前の選択欄 = document.querySelectorAll('.modal select').length;
+    const 前の札 = 行.querySelectorAll('input[type=checkbox]').length;
     await act(async () => { 行.querySelector('input[type=checkbox]').click(); }); await flush();
-    const 後の選択欄 = document.querySelectorAll('.modal select').length;
-    確('寄騎を選ぶと、将を選ぶ欄が現れる', 後の選択欄 > 前の選択欄, `選択欄 ${前の選択欄}→${後の選択欄}`);
-
-    const 将欄 = 行.querySelector('select');
-    確('将の候補が複数ある', !!将欄 && 将欄.options.length >= 1,
-      将欄 ? `${将欄.options.length}名（先頭 ${将欄.options[0].textContent.slice(0, 14)}）` : 'なし');
-    確('将ごとの統率と直属が読める', !!将欄 && /統率\d+.*直属/.test(将欄.options[0].textContent));
+    // 将は複数選べる。城の札のほかに、将ごとの札が並ぶ。
+    const 将の札 = [...行.querySelectorAll('input[type=checkbox]')].slice(1);
+    確('寄騎を選ぶと、将を選ぶ札が現れる', 将の札.length > 0, `札 ${前の札}→${前の札 + 将の札.length}`);
+    確('将の候補が複数ある', 将の札.length >= 1, `${将の札.length}名`);
+    確('将ごとの統率と直属が読める', /統\d+ 武\d+／直属/.test(行.textContent));
+    確('率いられる上限も示される', /率いられる上限/.test(行.textContent));
 
     const 寄騎の目盛 = 行.querySelector('input[type=range]');
     確('兵数の目盛が現れる', !!寄騎の目盛,
@@ -147,15 +176,13 @@ const txt = () => {
     await flush();
     確('選んだ兵数が画面に出る', txt().includes('連れて行く地域家臣団'));
     確('残る守備兵が示される', /に残る兵/.test(txt()));
-    // 将を替えられること
-    if (将欄 && 将欄.options.length > 1) {
-      await act(async () => {
-        const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLSelectElement.prototype, 'value').set;
-        setter.call(将欄, 将欄.options[1].value);
-        将欄.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
-      });
-      await flush();
-      確('将を替えられる', 将欄.value === 将欄.options[1].value);
+    // 二人目の将も加えられること（援軍の画面と同じく、複数を率いさせられる）
+    if (将の札.length > 1) {
+      const 前の総勢 = (行.textContent.match(/この寄騎の総勢\s*([\d,]+)/) || [])[1];
+      await act(async () => { 将の札[1].click(); }); await flush();
+      const 後の総勢 = (行.textContent.match(/この寄騎の総勢\s*([\d,]+)/) || [])[1];
+      確('二人目の将を加えられる', 行.querySelectorAll('input[type=checkbox]:checked').length >= 3,
+        `総勢 ${前の総勢} → ${後の総勢}`);
     }
   }
 
@@ -166,7 +193,7 @@ const txt = () => {
     if (進発) {
       await click(進発);
       const 文 = txt();
-      確('「同盟の間柄にある」と問われる', /同盟の間柄にある/.test(文));
+      確(`「${間柄}の間柄にある」と問われる`, new RegExp(`${間柄}の間柄にある`).test(文));
       確('攻撃になる旨が示される', /後詰ではなく/.test(文) && /敵対/.test(文));
       確('失うものが数で示される', /威信/.test(文) && /家臣の忠誠/.test(文));
       確('取りやめられる', !!btn('取りやめる'));
@@ -181,11 +208,14 @@ const txt = () => {
       const 進発2 = [...document.querySelectorAll('.modal button')].find((b) => /人で進発/.test(b.textContent));
       if (進発2) {
         // 寄騎の選びが、実際にその将・その兵数で出るか。戦国記に人数と将の名が載る。
+        // 選んだ将の名を控えておく（印のついた札の並びから拾う）
         const 選んだ将 = (() => {
-          const s2 = document.querySelector('.modal .aidrow select');
-          if (!s2) return null;
-          const o = [...s2.options].find((x) => x.value === s2.value);
-          return o ? o.textContent.split('（')[0] : null;
+          const 行2 = document.querySelector('.modal .aidrow');
+          if (!行2) return null;
+          const 名 = [...行2.querySelectorAll('label')].slice(1)
+            .filter((l) => l.querySelector('input[type=checkbox]:checked'))
+            .map((l) => (l.querySelector('.mn') || {}).textContent);
+          return 名.length ? 名 : null;
         })();
         await click(進発2);
         await rc('承知のうえで出陣する'); await flush(); await flush();
@@ -197,7 +227,8 @@ const txt = () => {
         const 寄騎の行 = (記.match(/より寄騎[\d,]+人（[^）]+）が[^。]+。/g) || []);
         確('寄騎が出た旨が記される', 寄騎の行.length > 0, 寄騎の行[0] || 'なし');
         if (選んだ将 && 寄騎の行.length) {
-          確('選んだ将が率いている', 寄騎の行.some((x) => x.includes(選んだ将)), `選んだ将 ${選んだ将}`);
+          確('選んだ将が率いている', 選んだ将.every((n) => 寄騎の行.some((x) => x.includes(n))),
+            `選んだ将 ${選んだ将.join('・')}`);
         }
       }
     }
