@@ -4780,6 +4780,13 @@ function castleRankNeed(c) {
   const own = c.koku + extraIncome(c);
   return Math.min(8e3, Math.max(1200, Math.round(own * 0.16)));
 }
+var canHoldCastle = (gen, s2, c) => {
+  if (!gen) return false;
+  if (gen.lord) return true;
+  if (s2 && isGuardian(s2, gen)) return true;
+  const need = c ? castleRankNeed(c) : 8e3;
+  return (s2 ? stipendOf(s2, gen) : fiefOf(gen)) >= need;
+};
 function troopLimit(gen, s2) {
   if (!gen) return 500;
   if (gen.lord) return needsGuardian(gen) ? 800 : 99999;
@@ -4792,7 +4799,7 @@ function fiefWanted(gen) {
   return Math.round(400 + base + (gen.merit || 0) * 900);
 }
 function fiefOf(gen) {
-  return gen.fief == null ? 0 : gen.fief;
+  return Math.max(0, gen && gen.fief != null ? gen.fief : 0);
 }
 function extraIncome(c) {
   if (!c) return 0;
@@ -6284,6 +6291,9 @@ function \u7ACB\u305F\u306C\u7533\u3057\u9001\u308A\u3092\u843D\u3068\u3059(s2) 
       return !!q && !!q.captive;
     });
   }
+  for (const q of s2.generals || []) {
+    if (typeof q.fief === "number" && q.fief < 0) q.fief = 0;
+  }
   if (s2.warSettle && Array.isArray(s2.warSettle.queue)) {
     const \u6B8B\u308A = s2.warSettle.queue.filter((id) => (s2.generals || []).some((x) => x.id === id));
     s2.warSettle = \u6B8B\u308A.length ? { ...s2.warSettle, queue: \u6B8B\u308A } : null;
@@ -7035,6 +7045,11 @@ function runCommand(prev, castleId, cmd, genId, g) {
 function appoint(prev, castleId, genId) {
   const s2 = structuredClone(prev);
   const c = s2.castles.find((x) => x.id === castleId);
+  const gen = s2.generals.find((x) => x.id === genId);
+  if (!gen || !canHoldCastle(gen, s2, c)) {
+    s2.msg = gen ? `${gen.name}\u306E\u7984\u9AD8\u3067\u306F${c.name}\u3092\u9810\u304B\u308C\u306A\u3044\uFF08${fmt(castleRankNeed(c))}\u77F3\u304C\u8981\u308B\uFF0F\u3044\u307E${fmt(stipendOf(s2, gen))}\u77F3\uFF09\u3002` : "\u305D\u306E\u8005\u306F\u3044\u306A\u3044\u3002";
+    return s2;
+  }
   if (c.lordId && c.lordId !== genId) c.najimi = 25;
   c.lordId = genId;
   s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.generals.find((x) => x.id === genId).name}\u3092${c.name}\u306E\u57CE\u4E3B\u306B\u4EFB\u3058\u305F\u3002` });
@@ -7293,8 +7308,12 @@ function grantFief(prev, genId, delta) {
   const gen = s2.generals.find((x) => x.id === genId);
   if (!gen || gen.captive) return s2;
   const room = fiefRoom(s2, s2.player);
-  const d = delta > 0 ? Math.min(delta, room.left) : Math.max(delta, -fiefOf(gen));
-  if (!d) return s2;
+  const \u4F59\u5730 = Math.max(0, room.left);
+  const d = delta > 0 ? Math.min(delta, \u4F59\u5730) : Math.max(delta, -fiefOf(gen));
+  if (!d) {
+    if (delta > 0) s2.msg = `\u914D\u308C\u308B\u77E5\u884C\u304C\u6B8B\u3063\u3066\u3044\u306A\u3044\uFF08\u77F3\u9AD8\u306E\u56DB\u5272 ${fmt(room.cap)}\u77F3\u306E\u3046\u3061 ${fmt(room.used)}\u77F3\u3092\u914D\u5206\u6E08\uFF09\u3002`;
+    return s2;
+  }
   const before = fiefOf(gen);
   gen.fief = before + d;
   if (d < 0) gen.loyal = clamp((gen.loyal == null ? 60 : gen.loyal) - 4, 0, 100);
@@ -13113,24 +13132,31 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onAp
         /* @__PURE__ */ React4.createElement("span", { style: { color: blood ? "#3E7A3A" : "#B0483C", fontSize: 11 } }, blood ? "\u8840\u7B4B" : "\u4ED6\u5BB6\u306E\u51FA", gen.age < 16 ? "\u30FB\u5E7C\u5E74" : ""),
         /* @__PURE__ */ React4.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, gen.age, "\u6B73\uFF0F\u7D71", gen.lead, "\u30FB\u6B66", gen.valor, "\u30FB\u77E5", gen.wit, "\u30FB\u653F", gen.gov)
       )));
-    })(), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.7 } }, "\u3053\u306E\u57CE\u306E\u77F3\u9AD8 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, fmt(c.koku), "\u77F3"), "\uFF08\u914D\u308C\u308B\u77E5\u884C\u306E\u9650\u308A\uFF09\uFF0F \u5BB6\u81E3\u306B\u914D\u3063\u305F\u77E5\u884C ", fmt(fiefBurden(g, c.id)), "\u77F3", /* @__PURE__ */ React4.createElement("br", null), "\u3053\u306E\u57CE\u306E\u4F59\u7984 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, fmt(extraIncome(c)), "\u77F3"), "\uFF08\u6E4A\u306E\u904B\u4E0A\u30FB\u5E02\u306E\u5F79\u92AD\u30FB\u5C71\u306E\u7523\uFF09", /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 11 } }, "\u77E5\u884C\u306B\u4F59\u7984\u306E\u5206\u3051\u524D\u3092\u52A0\u3048\u305F\u3082\u306E\u304C", /* @__PURE__ */ React4.createElement("b", null, "\u7984\u9AD8"), "\u3067\u3001\u8EAB\u5206\u306F\u3053\u308C\u3067\u5B9A\u307E\u308A\u307E\u3059\u3002 \u77F3\u9AD8\u304C\u5897\u3048\u308C\u3070\u3001\u914D\u308C\u308B\u77E5\u884C\u3082\u5897\u3048\u307E\u3059\u3002")), (() => {
+    })(), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.7 } }, "\u3053\u306E\u57CE\u3092\u9810\u304B\u308C\u308B\u7984\u9AD8 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, fmt(castleRankNeed(c)), "\u77F3"), "\u4EE5\u4E0A\uFF08\u57CE\u4E3B\u306E\u8CC7\u683C\uFF09", /* @__PURE__ */ React4.createElement("br", null), "\u3053\u306E\u57CE\u306E\u77F3\u9AD8 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, fmt(c.koku), "\u77F3"), "\uFF08\u914D\u308C\u308B\u77E5\u884C\u306E\u9650\u308A\uFF09\uFF0F \u5BB6\u81E3\u306B\u914D\u3063\u305F\u77E5\u884C ", fmt(fiefBurden(g, c.id)), "\u77F3", /* @__PURE__ */ React4.createElement("br", null), "\u3053\u306E\u57CE\u306E\u4F59\u7984 ", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, fmt(extraIncome(c)), "\u77F3"), "\uFF08\u6E4A\u306E\u904B\u4E0A\u30FB\u5E02\u306E\u5F79\u92AD\u30FB\u5C71\u306E\u7523\uFF09", /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 11 } }, "\u77E5\u884C\u306B\u4F59\u7984\u306E\u5206\u3051\u524D\u3092\u52A0\u3048\u305F\u3082\u306E\u304C", /* @__PURE__ */ React4.createElement("b", null, "\u7984\u9AD8"), "\u3067\u3001\u8EAB\u5206\u306F\u3053\u308C\u3067\u5B9A\u307E\u308A\u307E\u3059\u3002 \u77F3\u9AD8\u304C\u5897\u3048\u308C\u3070\u3001\u914D\u308C\u308B\u77E5\u884C\u3082\u5897\u3048\u307E\u3059\u3002")), (() => {
       const rm = fiefRoom(g, g.player);
-      return /* @__PURE__ */ React4.createElement("div", { className: "row", style: { borderBottom: `1px solid ${U.line2}`, paddingBottom: 4 } }, /* @__PURE__ */ React4.createElement("span", null, "\u914D\u308C\u308B\u77E5\u884C"), /* @__PURE__ */ React4.createElement("span", { className: "v num" }, fmt(rm.left), "\u77F3 ", /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\uFF08\u77F3\u9AD8\u306E\u56DB\u5272 ", fmt(rm.cap), "\u77F3\u306E\u3046\u3061 ", fmt(rm.used), "\u77F3\u3092\u914D\u5206\u6E08\uFF09")));
+      return /* @__PURE__ */ React4.createElement("div", { className: "row", style: { borderBottom: `1px solid ${U.line2}`, paddingBottom: 4 } }, /* @__PURE__ */ React4.createElement("span", null, "\u914D\u308C\u308B\u77E5\u884C"), /* @__PURE__ */ React4.createElement("span", { className: "v num", style: { color: rm.left <= 0 ? "#B0483C" : U.text } }, rm.left > 0 ? `${fmt(rm.left)}\u77F3` : "\u306A\u3057", " ", /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\uFF08\u77F3\u9AD8\u306E\u56DB\u5272 ", fmt(rm.cap), "\u77F3\u306E\u3046\u3061 ", fmt(rm.used), "\u77F3\u3092\u914D\u5206\u6E08", rm.left < 0 ? `\uFF0F${fmt(-rm.left)}\u77F3\u306E\u914D\u308A\u3059\u304E` : "", "\uFF09")));
     })(), gens.filter((x) => !x.captive).map((x) => {
       const want = fiefWanted(x), have = fiefOf(x);
       const r = have / Math.max(1, want);
       const mood = r >= 1 ? "\u6E80\u3061\u3066\u3044\u308B" : r >= 0.75 ? "\u4E0D\u8DB3\u306F\u306A\u3044" : r >= 0.5 ? "\u4E0D\u6E80\u304C\u3042\u308B" : "\u5F37\u3044\u4E0D\u6E80";
       const col = r >= 0.75 ? U.dim : r >= 0.5 ? "#C89A3A" : "#B0483C";
-      return /* @__PURE__ */ React4.createElement("div", { key: x.id, style: { borderBottom: `1px solid ${U.line2}`, padding: "6px 0" } }, /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React4.createElement(
-        "button",
-        {
-          className: `btn sm ${lord && lord.id === x.id ? "on" : ""}`,
-          style: { flex: 1, textAlign: "left" },
-          onClick: () => onAppoint(c.id, x.id)
-        },
-        x.name,
-        " \u3092\u57CE\u4E3B\u306B"
-      ), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onReward(x.id) }, "\u8912\u8CDE300\u8CAB")), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, marginTop: 2 } }, /* @__PURE__ */ React4.createElement("span", { style: { color: "#8A7A5A" } }, rankName(x, g)), !x.lord && (() => {
+      return /* @__PURE__ */ React4.createElement("div", { key: x.id, style: { borderBottom: `1px solid ${U.line2}`, padding: "6px 0" } }, /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", gap: 6 } }, (() => {
+        const \u9810\u304B\u308C\u308B = canHoldCastle(x, g, c);
+        const \u8981\u308B = castleRankNeed(c), \u3044\u307E = stipendOf(g, x);
+        return /* @__PURE__ */ React4.createElement(
+          "button",
+          {
+            className: `btn sm ${lord && lord.id === x.id ? "on" : ""}`,
+            style: { flex: 1, textAlign: "left" },
+            disabled: !\u9810\u304B\u308C\u308B,
+            title: \u9810\u304B\u308C\u308B ? "" : `${c.name}\u3092\u9810\u304B\u308B\u306B\u306F\u7984\u9AD8${fmt(\u8981\u308B)}\u77F3\u304C\u8981\u308B\uFF08\u3044\u307E${fmt(\u3044\u307E)}\u77F3\uFF09`,
+            onClick: () => onAppoint(c.id, x.id)
+          },
+          x.name,
+          " \u3092\u57CE\u4E3B\u306B",
+          !\u9810\u304B\u308C\u308B && /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 10.5, color: "#B0483C", marginLeft: 6 } }, "\u7984\u9AD8\u3042\u3068", fmt(Math.max(0, \u8981\u308B - \u3044\u307E)), "\u77F3")
+        );
+      })(), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => onReward(x.id) }, "\u8912\u8CDE300\u8CAB")), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, marginTop: 2 } }, /* @__PURE__ */ React4.createElement("span", { style: { color: "#8A7A5A" } }, rankName(x, g)), !x.lord && (() => {
         if (x.lord) return /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, marginLeft: 6 } }, "\u3000\u5FA1\u6599", fmt(goryoOf(g, x.faction).total), "\u77F3");
         const st = stipendOf(g, x);
         const nx = RANKS.filter((r2) => r2.min > st).sort((a, b) => a.min - b.min)[0];

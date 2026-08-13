@@ -12,6 +12,7 @@ import { px, py } from "../data/geo.js";
 import { captiveRecruit } from "../core/capture.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
+import { canHoldCastle } from "../core/rank.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
 export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
@@ -425,6 +426,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     );
                   })()}
                   <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.7 }}>
+                    この城を預かれる禄高 <b style={{ color: U.text }}>{fmt(castleRankNeed(c))}石</b>以上（城主の資格）<br />
                     この城の石高 <b style={{ color: U.text }}>{fmt(c.koku)}石</b>（配れる知行の限り）／
                     家臣に配った知行 {fmt(fiefBurden(g, c.id))}石<br />
                     この城の余禄 <b style={{ color: U.text }}>{fmt(extraIncome(c))}石</b>
@@ -437,8 +439,10 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                   {(() => { const rm = fiefRoom(g, g.player); return (
                     <div className="row" style={{ borderBottom: `1px solid ${U.line2}`, paddingBottom: 4 }}>
                       <span>配れる知行</span>
-                      <span className="v num">{fmt(rm.left)}石 <span style={{ color: U.dim, fontSize: 11 }}>
-                        （石高の四割 {fmt(rm.cap)}石のうち {fmt(rm.used)}石を配分済）</span></span>
+                      <span className="v num" style={{ color: rm.left <= 0 ? "#B0483C" : U.text }}>
+                        {rm.left > 0 ? `${fmt(rm.left)}石` : "なし"} <span style={{ color: U.dim, fontSize: 11 }}>
+                        （石高の四割 {fmt(rm.cap)}石のうち {fmt(rm.used)}石を配分済
+                        {rm.left < 0 ? `／${fmt(-rm.left)}石の配りすぎ` : ""}）</span></span>
                     </div>
                   ); })()}
                   {gens.filter((x) => !x.captive).map((x) => {
@@ -449,8 +453,23 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     return (
                       <div key={x.id} style={{ borderBottom: `1px solid ${U.line2}`, padding: "6px 0" }}>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button className={`btn sm ${lord && lord.id === x.id ? "on" : ""}`} style={{ flex: 1, textAlign: "left" }}
-                            onClick={() => onAppoint(c.id, x.id)}>{x.name} を城主に</button>
+                          {(() => {
+                            // 城を預かれる禄高に届いているか。届かねば押せぬようにし、
+                            // どれだけ足りぬかを添える（押せたのに任じられぬ、を無くす）
+                            const 預かれる = canHoldCastle(x, g, c);
+                            const 要る = castleRankNeed(c), いま = stipendOf(g, x);
+                            return (
+                              <button className={`btn sm ${lord && lord.id === x.id ? "on" : ""}`}
+                                style={{ flex: 1, textAlign: "left" }} disabled={!預かれる}
+                                title={預かれる ? "" : `${c.name}を預かるには禄高${fmt(要る)}石が要る（いま${fmt(いま)}石）`}
+                                onClick={() => onAppoint(c.id, x.id)}>
+                                {x.name} を城主に
+                                {!預かれる && <span style={{ fontSize: 10.5, color: "#B0483C", marginLeft: 6 }}>
+                                  禄高あと{fmt(Math.max(0, 要る - いま))}石
+                                </span>}
+                              </button>
+                            );
+                          })()}
                           <button className="btn sm" onClick={() => onReward(x.id)}>褒賞300貫</button>
                         </div>
                         <div style={{ fontSize: 11, marginTop: 2 }}>

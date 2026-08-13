@@ -414,7 +414,11 @@ export function 立たぬ申し送りを落とす(s) {
       return !!q && !!q.captive;
     });
   }
-  // 三、滅亡の始末を問う列。討死などで盤を去った者は飛ばす。
+  // 三、負の知行。加増が没収に化ける不具合で、負を抱えた記録が残っている。
+  for (const q of s.generals || []) {
+    if (typeof q.fief === "number" && q.fief < 0) q.fief = 0;
+  }
+  // 四、滅亡の始末を問う列。討死などで盤を去った者は飛ばす。
   if (s.warSettle && Array.isArray(s.warSettle.queue)) {
     const 残り = s.warSettle.queue.filter((id) => (s.generals || []).some((x) => x.id === id));
     s.warSettle = 残り.length ? { ...s.warSettle, queue: 残り } : null;

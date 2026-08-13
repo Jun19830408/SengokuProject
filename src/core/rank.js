@@ -93,7 +93,10 @@ export function fiefWanted(gen) {
   return Math.round(400 + base + (gen.merit || 0) * 900);
 }
 
-export function fiefOf(gen) { return gen.fief == null ? 0 : gen.fief; }
+/* 知行。負の値は取らない。
+   加増が没収に化ける不具合で、負の知行を抱えた記録が残っている。
+   そのまま数えると、勢力全体の配分済も禄高も狂う。 */
+export function fiefOf(gen) { return Math.max(0, gen && gen.fief != null ? gen.fief : 0); }
 
 /* 禄高（GDD 6.4）
    知行は、城の石高から分け与えられる田の高である。城の石高がその限り。

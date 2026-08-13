@@ -10,6 +10,7 @@ import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
+import { canHoldCastle, castleRankNeed, stipendOf } from "../core/rank.js";
 /* ==========================================================================
    政務 ─ 城と家中への下知
    いずれも「いまの盤の様子（prev）を受け取り、改めた盤の様子を返す」だけの処理。
@@ -105,6 +106,17 @@ export function runCommand(prev, castleId, cmd, genId, g) {
 export function appoint(prev, castleId, genId) {
     const s = structuredClone(prev);
     const c = s.castles.find((x) => x.id === castleId);
+    const gen = s.generals.find((x) => x.id === genId);
+    /* 城を預かれるのは、その城の身代に見合う禄高を持つ者だけである（GDD 6.4）。
+       ここを通していなかったため、届かぬ者を任じても castellanOf が黙って
+       禄高の高い別の者を城主とみなし、「任じた」と戦国記に残るのに
+       実際の城主は違う、という食い違いが起きていた。 */
+    if (!gen || !canHoldCastle(gen, s, c)) {
+      s.msg = gen
+        ? `${gen.name}の禄高では${c.name}を預かれない（${fmt(castleRankNeed(c))}石が要る／いま${fmt(stipendOf(s, gen))}石）。`
+        : "その者はいない。";
+      return s;
+    }
     if (c.lordId && c.lordId !== genId) c.najimi = 25;   // 城主が代われば馴染は低い状態から始まる
     c.lordId = genId;
     s.chronicle.push({ y: s.year, m: s.month, text: `${s.generals.find((x) => x.id === genId).name}を${c.name}の城主に任じた。` });
@@ -331,8 +343,19 @@ export function grantFief(prev, genId, delta) {
     const gen = s.generals.find((x) => x.id === genId);
     if (!gen || gen.captive) return s;
     const room = fiefRoom(s, s.player);
-    const d = delta > 0 ? Math.min(delta, room.left) : Math.max(delta, -fiefOf(gen));
-    if (!d) return s;
+    /* 加増が没収に化けぬようにする。
+
+       配れる余地（石高の四割 − 配分済）は負にもなる。城を失って石高が減れば
+       すぐそうなるし、初めから配りすぎている家もある。
+       そこへ Math.min(加増, 余地) と書いていたため、余地が負のときに
+       「四千石を与える」が「八万石を召し上げる」に化けていた。
+       与えるほうは、余地が無ければ何も起こさない。 */
+    const 余地 = Math.max(0, room.left);
+    const d = delta > 0 ? Math.min(delta, 余地) : Math.max(delta, -fiefOf(gen));
+    if (!d) {
+      if (delta > 0) s.msg = `配れる知行が残っていない（石高の四割 ${fmt(room.cap)}石のうち ${fmt(room.used)}石を配分済）。`;
+      return s;
+    }
     const before = fiefOf(gen);
     gen.fief = before + d;
     if (d < 0) gen.loyal = clamp((gen.loyal == null ? 60 : gen.loyal) - 4, 0, 100);

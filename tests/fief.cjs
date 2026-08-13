@@ -1,0 +1,115 @@
+// 知行と城主の仕来りを見る試験。
+//
+// 一、加増が没収に化けないこと
+//   配れる余地（石高の四割 − 配分済）は負にもなる。城を失えばすぐそうなるし、
+//   初めから配りすぎている家もある。そこへ Math.min(加増, 余地) と書いていたため、
+//   余地が負のときに「四千石を与える」が「八万石を召し上げる」に化けていた。
+//
+// 二、城主に任じられるのは、その城の身代に見合う禄高を持つ者だけであること
+//   決まり（canHoldCastle）は前からあったのに、任じる側で通していなかった。
+//   届かぬ者を任じても castellanOf が黙って別の者を城主とみなすので、
+//   「任じた」と戦国記に残るのに実際の城主は違う、という食い違いになっていた。
+const path = require('path');
+const fs = require('fs');
+const esbuild = require('esbuild');
+
+const ROOT = path.join(__dirname, '..');
+const entry = path.join(ROOT, 'build', 'fief-entry.js');
+fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
+fs.writeFileSync(entry,
+  'export { initState, migrateSave } from "../src/core/state.js";\n'
++ 'export { fiefRoom, fiefOf, stipendOf, castleRankNeed, canHoldCastle, castellanOf } from "../src/core/rank.js";\n'
++ 'export { grantFief, appoint } from "../src/govern/commands.js";\n');
+const out = path.join(ROOT, 'build', 'fief.cjs');
+esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
+  loader: { '.jsx': 'jsx' }, logLevel: 'error' });
+const A = require(out);
+
+const 咎 = [];
+const 確 = (名, 可, 添 = '') => {
+  console.log(`  ${可 ? '○' : '★'} ${名}${添 ? '　' + 添 : ''}`);
+  if (!可) 咎.push(名);
+};
+
+/* ------------------------------------------- 一、加増が没収に化けないこと */
+{
+  const s = A.initState('oda');
+  const r = A.fiefRoom(s, s.player);
+  確('初めから配りすぎている（この状況で不具合が出ていた）', r.left < 0,
+    `四割の限り ${r.cap}石／配分済 ${r.used}石／余地 ${r.left}石`);
+
+  const q = s.generals.find((x) => x.faction === s.player && !x.lord && A.fiefOf(x) > 1000);
+  const 前 = A.fiefOf(q);
+  const t = A.grantFief(s, q.id, 4000);
+  const 後 = A.fiefOf(t.generals.find((x) => x.id === q.id));
+  確('配りすぎのとき、加増しても減らない', 後 >= 前, `${q.name} ${前} → ${後}石`);
+  確('知行が負にならない', 後 >= 0, `${後}石`);
+  確('なぜ配れぬかを報せる', /配れる知行が残っていない/.test(t.msg || ''), t.msg || '（報せなし）');
+}
+
+/* ------------------------------- 余地があるときは、これまで通り加増できる */
+{
+  const s = A.initState('oda');
+  for (const x of s.generals.filter((y) => y.faction === s.player)) x.fief = 0;
+  const q = s.generals.find((x) => x.faction === s.player && !x.lord);
+  確('余地があれば加増できる', (() => {
+    const t = A.grantFief(s, q.id, 4000);
+    return A.fiefOf(t.generals.find((x) => x.id === q.id)) === 4000;
+  })(), '＋4,000石');
+  確('減らすこともできる', (() => {
+    let t = A.grantFief(s, q.id, 4000);
+    t = A.grantFief(t, q.id, -1500);
+    return A.fiefOf(t.generals.find((x) => x.id === q.id)) === 2500;
+  })(), '−1,500石');
+  確('持ち高より多くは召し上げられない', (() => {
+    let t = A.grantFief(s, q.id, 1000);
+    t = A.grantFief(t, q.id, -4000);
+    return A.fiefOf(t.generals.find((x) => x.id === q.id)) === 0;
+  })(), '0石で止まる');
+}
+
+/* ------------------------- 二、負の知行を抱えた古い記録を、読み込みで繕う */
+{
+  const s = A.initState('oda');
+  const q = s.generals.find((x) => x.faction === s.player && !x.lord);
+  q.fief = -9360;                                  // 直す前の不具合が書き込んだ値
+  const t = A.migrateSave(JSON.parse(JSON.stringify(s)));
+  const 後 = t.generals.find((x) => x.id === q.id);
+  確('負の知行は読み込みで零に繕われる', 後.fief === 0, `-9,360 → ${後.fief}石`);
+  確('繕ったあと禄高も負にならない', A.stipendOf(t, 後) >= 0, `${A.stipendOf(t, 後)}石`);
+}
+
+/* --------------------------- 三、城主に任じられるのは身代に見合う者だけ */
+{
+  const s = A.initState('oda');
+  const c = s.castles.find((x) => x.faction === s.player);
+  const 要る = A.castleRankNeed(c);
+  const ここ = s.generals.filter((x) => x.at === c.id && x.faction === s.player && !x.captive);
+  const 足りる = ここ.find((x) => A.canHoldCastle(x, s, c) && !x.lord);
+  const 足りぬ = ここ.find((x) => !A.canHoldCastle(x, s, c));
+  console.log(`  （${c.name}を預かるには禄高 ${要る}石が要る）`);
+
+  if (足りぬ) {
+    const t = A.appoint(s, c.id, 足りぬ.id);
+    const c2 = t.castles.find((x) => x.id === c.id);
+    確('禄高の足りぬ者は城主に任じられない', c2.lordId !== 足りぬ.id,
+      `${足りぬ.name}（禄高${A.stipendOf(s, 足りぬ)}石）`);
+    確('なぜ任じられぬかを報せる', /預かれない/.test(t.msg || ''), t.msg || '（報せなし）');
+    確('任じられなかったのに戦国記へ書かない',
+      !(t.chronicle || []).some((x) => x.text.includes(`${足りぬ.name}を${c.name}の城主に任じた`)));
+  } else console.log('  （この城には禄高の足りぬ者がいないので、その確かめは省く）');
+
+  if (足りる) {
+    const t = A.appoint(s, c.id, 足りる.id);
+    const c2 = t.castles.find((x) => x.id === c.id);
+    確('禄高の足りる者は城主に任じられる', c2.lordId === 足りる.id,
+      `${足りる.name}（禄高${A.stipendOf(s, 足りる)}石）`);
+    確('任じた者が、実際にその城の城主とみなされる',
+      (A.castellanOf(t, c2) || {}).id === 足りる.id);
+  } else console.log('  （この城には禄高の足りる家臣がいないので、その確かめは省く）');
+}
+
+console.log('');
+if (咎.length) { console.log('★背いた事:'); for (const x of 咎) console.log('   ' + x); }
+console.log('エラー:', 咎.length ? `${咎.length}件` : 'なし');
+process.exit(咎.length ? 1 : 0);
