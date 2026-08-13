@@ -8,7 +8,8 @@
     "start": "node tools/serve.cjs",
     "build": "node tools/build.cjs",
     "test": "node tests/all.cjs",
-    "compare": "node tools/compare.cjs"
+    "compare": "node tools/compare.cjs",
+    "deploy": "node tools/publish-pages.cjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.12",
