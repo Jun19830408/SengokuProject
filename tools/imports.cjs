@@ -46,10 +46,17 @@ function strip(src) {
 // 性質の参照（obj.name / obj?.name）は名として数えない。
 // 名には日本語も使う（旗の下を狙う戦役を落とす、など）。英字だけを見ていては取り逃がす。
 const 名の綴り = '[\\p{L}_$][\\p{L}\\p{N}_$]*';
+/* 性質の参照（obj.name / obj?.name）は名として数えない。
+
+   ただし、広げ書き（...名）の三つ目の点を性質の参照と読み違えてはならない。
+   { ...既定の兵科 } のように広げて使っている名を取り逃がし、
+   「足すべき取り込みはなかった」と出たまま、束ねたあとに
+   「既定の兵科 is not defined」で倒れる、ということが起きた。
+   点の直前がまた点であれば、それは広げ書きであって性質の参照ではない。 */
 function usedNames(text) {
   const s = strip(text);
   const out = new Set();
-  const re = new RegExp(`((?:\\?\\.|\\.)\\s*)?(${名の綴り})`, 'gu');
+  const re = new RegExp(`((?:\\?\\.|(?<![.])\\.)\\s*)?(${名の綴り})`, 'gu');
   let m;
   while ((m = re.exec(s))) if (!m[1]) out.add(m[2]);
   return out;

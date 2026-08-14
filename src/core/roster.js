@@ -5,9 +5,48 @@ import { ARMS } from "../data/roads.js";
    合戦の損害はこの名簿に書き戻され、補充されない限り欠けたまま次の戦へ持ち越す。 */
 export let ROSTER_SEQ = 0;
 
-export function newRoster(total, tag) {
+/* 五十人組の名簿を作る。
+
+   mix を渡せば、その兵科の割り（一割きざみの百分率）で組を立てる。
+   渡さなければ、これまで通り ARMS の定めの割りになる。
+   隊の強さは兵科で変わる（騎馬は槍より白兵に強く、弓鉄砲は遠くへ届く）ので、
+   割りを変えれば、そのまま盤の上の駒の形も戦い方も変わる。 */
+export function 兵科の割り(mix) {
+  if (!mix) return ARMS;
+  const 和 = ARMS.reduce((a, x) => a + Math.max(0, mix[x.key] || 0), 0);
+  if (和 <= 0) return ARMS;
+  return ARMS.map((x) => ({ ...x, ratio: Math.max(0, mix[x.key] || 0) / 和 }));
+}
+
+/* 城の蓄えで、その兵科をどこまで立てられるか（GDD 6.3）。
+
+   槍と弓は村々の百姓が自前で携えて出るので、いくらでも立つ。
+   騎馬は馬が、鉄砲は鉄砲がなければ立たない。
+   割りをそのまま呑めぬときは、足りぬぶんを槍に振り替える。 */
+export function 蓄えに合わせる(mix, 人数, 蓄え) {
+  const m = { yari: 0, yumi: 0, teppo: 0, kiba: 0, ...(mix || {}) };
+  const 和 = ["yari", "yumi", "teppo", "kiba"].reduce((a, k) => a + Math.max(0, m[k]), 0) || 1;
+  const 人 = (k) => Math.round(人数 * Math.max(0, m[k]) / 和);
+  const 馬 = Math.max(0, Math.floor((蓄え && 蓄え.horse) || 0));
+  const 砲 = Math.max(0, Math.floor((蓄え && 蓄え.gun) || 0));
+  const 騎 = Math.min(人("kiba"), 馬);
+  const 鉄 = Math.min(人("teppo"), 砲);
+  const 弓 = 人("yumi");
+  const 槍 = Math.max(0, 人数 - 騎 - 鉄 - 弓);      // 足りぬぶんは槍が埋める
+  return { yari: 槍, yumi: 弓, teppo: 鉄, kiba: 騎,
+    足りぬ馬: Math.max(0, 人("kiba") - 騎), 足りぬ鉄砲: Math.max(0, 人("teppo") - 鉄) };
+}
+
+// 名簿に含まれる兵科ごとの人数
+export function rosterArms(rost) {
+  const out = { yari: 0, yumi: 0, teppo: 0, kiba: 0 };
+  for (const q of rost || []) if (out[q.t] != null) out[q.t] += q.m;
+  return out;
+}
+
+export function newRoster(total, tag, mix) {
   const r = [];
-  for (const a of ARMS) {
+  for (const a of 兵科の割り(mix)) {
     let men = Math.round(total * a.ratio);
     while (men > 0) {
       const m = Math.min(50, men);

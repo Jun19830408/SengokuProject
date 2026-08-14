@@ -11,6 +11,7 @@ import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { canHoldCastle, castleRankNeed, stipendOf } from "../core/rank.js";
+import { 基準値, 売値, 買値 } from "../data/market.js";
 /* ==========================================================================
    政務 ─ 城と家中への下知
    いずれも「いまの盤の様子（prev）を受け取り、改めた盤の様子を返す」だけの処理。
@@ -379,4 +380,48 @@ export function reward(prev, genId) {
       { label: `${gen.name} 忠誠`, before, after: gen.loyal, unit: "" },
       { label: `${gen.name} 直属の結束`, before: beforeU, after: gen.unity, unit: "" }] }, ...s.ledger].slice(0, 6);
     return s;
+}
+
+/* ------------------------------------------------------ 商人（GDD 5.x）
+
+   城下の市で、兵糧・馬・鉄砲を金で売り買いする。
+   槍と弓は村々の百姓が自前で携えて出るので、ここでは商わない。
+
+   値は月で動く。取り入れのあとの兵糧は安く、端境には高い。
+   売るときは商人の口銭を引かれるので、買ってすぐ売れば損をする。 */
+export function doTrade(prev, castleId, kind, n) {
+  const s = structuredClone(prev);
+  const c = s.castles.find((x) => x.id === castleId);
+  if (!c || c.faction !== s.player) return s;
+  const 品 = 基準値[kind];
+  if (!品 || !n) return s;
+  const f = s.factions[s.player];
+  const 持ち高 = () => (kind === "food" ? c.food : kind === "horse" ? (c.horse || 0) : (c.gun || 0));
+  const 足す = (d) => {
+    if (kind === "food") c.food = Math.max(0, Math.round(c.food + d));
+    else if (kind === "horse") c.horse = Math.max(0, Math.round((c.horse || 0) + d));
+    else c.gun = Math.max(0, Math.round((c.gun || 0) + d));
+  };
+  if (n > 0) {                                   // 買う
+    const 金 = 買値(s, c, kind, n);
+    if (f.gold < 金) {
+      s.msg = `金が足りない（${品.名}${fmt(n)}${品.単位}に${fmt(金)}貫が要る／手元は${fmt(f.gold)}貫）。`;
+      return s;
+    }
+    f.gold -= 金; 足す(n);
+    s.msg = `${c.name}の市で${品.名}を${fmt(n)}${品.単位}買い入れた（${fmt(金)}貫）。`;
+    s.ledger = [{ cmd: "商い", cost: 金, castle: c.name, general: "―", lines: [
+      { label: `${品.名}`, before: 持ち高() - n, after: 持ち高(), unit: 品.単位 },
+      { label: "金銭", before: f.gold + 金, after: f.gold, unit: "貫" }] }, ...s.ledger].slice(0, 6);
+  } else {                                       // 売る
+    const 数 = Math.min(-n, 持ち高());
+    if (数 <= 0) { s.msg = `売る${品.名}がない。`; return s; }
+    const 金 = 売値(s, c, kind, 数);
+    足す(-数); f.gold += 金;
+    s.msg = `${c.name}の市で${品.名}を${fmt(数)}${品.単位}売り払った（${fmt(金)}貫）。`;
+    s.ledger = [{ cmd: "商い", cost: -金, castle: c.name, general: "―", lines: [
+      { label: `${品.名}`, before: 持ち高() + 数, after: 持ち高(), unit: 品.単位 },
+      { label: "金銭", before: f.gold - 金, after: f.gold, unit: "貫" }] }, ...s.ledger].slice(0, 6);
+  }
+  return s;
 }

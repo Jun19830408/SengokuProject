@@ -11,6 +11,7 @@ import { succeed } from "../core/house.js";
 import { ROAD_SPEED } from "../data/roads.js";
 import { rankName, troopLimit } from "../core/rank.js";
 import { isVassal } from "../core/state.js";
+import { rosterArms } from "../core/roster.js";
 
 // ------------------------------------------------ 援軍（GDD 7.3 / 7.4）
 // 各城・各勢力は「守備最低数・距離・従属度」から派遣・減員・遅参・拒否を判断する。
@@ -472,6 +473,10 @@ export function withdrawArmy(s, army) {
   const home = homeFor(s, army);
   if (home) {
     home.local += Math.max(0, army.local);
+    // 生き残った騎馬と鉄砲の数だけ、馬と鉄砲が城へ戻る（GDD 6.3）
+    const 残 = rosterArms(army.rost);
+    home.horse = Math.max(0, (home.horse || 0) + 残.kiba);
+    home.gun = Math.max(0, (home.gun || 0) + 残.teppo);
     if (army.rost && army.rost.length) home.rost = [...(home.rost || []), ...army.rost];
     rosterSync(home, "rost", home.local, `loc-${home.id}`);
   }

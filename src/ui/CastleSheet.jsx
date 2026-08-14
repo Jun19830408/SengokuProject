@@ -13,9 +13,10 @@ import { captiveRecruit } from "../core/capture.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { canHoldCastle } from "../core/rank.js";
+import { 基準値, 売値, 相場, 買値 } from "../data/market.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
-export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
+export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
@@ -255,6 +256,52 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     onClick={() => onCommand(c.id, cmd, freeGens.some((x) => x.id === cur) ? cur : freeGens[0].id)}>
                     {cmd}を実行
                   </button>
+
+                  {/* --------------------------------------- 商人（GDD 5.x）
+
+                      城下の市で、兵糧・馬・鉄砲を金で売り買いする。
+                      槍と弓は村々の百姓が自前で携えて出るので、ここでは商わない。
+                      値は月で動く。取り入れのあとの兵糧は安く、端境には高い。 */}
+                  {mine && (
+                    <>
+                      <div className="sec">商人</div>
+                      <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
+                        市が立っています。<b style={{ color: U.text }}>{g.year}年{g.month}月</b>の相場です。
+                        売るときは商人の口銭を引かれます（買ってすぐ売れば損をします）。
+                        槍と弓は百姓が自前で携えるので、商いません。
+                      </div>
+                      {["food", "horse", "gun"].map((k) => {
+                        const b2 = 基準値[k];
+                        const r = 相場(g, c, k);
+                        const 持 = k === "food" ? c.food : k === "horse" ? (c.horse || 0) : (c.gun || 0);
+                        return (
+                          <div key={k} style={{ borderBottom: `1px solid ${U.line2}`, padding: "5px 0" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}>
+                              <span><b>{b2.名}</b>　<span className="num" style={{ color: U.dim }}>
+                                手持ち {fmt(持)}{b2.単位}</span></span>
+                              <span className="num" style={{ color: U.dim, fontSize: 11 }}>
+                                買 {r.buy < 1 ? `${fmt(Math.ceil(r.buy * 1000))}貫/千${b2.単位}` : `${r.buy.toFixed(1)}貫/${b2.単位}`}
+                                ／売 {r.sell < 1 ? `${fmt(Math.floor(r.sell * 1000))}貫/千${b2.単位}` : `${r.sell.toFixed(1)}貫/${b2.単位}`}
+                              </span>
+                            </div>
+                            <div className="g4" style={{ marginTop: 3 }}>
+                              {b2.刻み.map((n) => (
+                                <button key={`b${n}`} className="btn sm"
+                                  disabled={g.factions[g.player].gold < 買値(g, c, k, n)}
+                                  title={`${fmt(買値(g, c, k, n))}貫`}
+                                  onClick={() => onTrade(c.id, k, n)}>買{fmt(n)}</button>
+                              ))}
+                              <button className="btn sm" disabled={持 <= 0}
+                                title={`${fmt(売値(g, c, k, Math.min(持, b2.刻み[1])))}貫`}
+                                onClick={() => onTrade(c.id, k, -Math.min(持, b2.刻み[1]))}>
+                                売{fmt(Math.min(持, b2.刻み[1]))}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
                   {/* 検地。一国を丸ごと押さえてはじめて行える（GDD 4.6） */}
                   {(() => {
                     if (!mine) return null;

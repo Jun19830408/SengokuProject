@@ -8,6 +8,7 @@ import { GENERALS } from "../data/generals.js";
 import { px, py } from "../data/geo.js";
 import { PARENT } from "../data/newcomers.js";
 import { MOB_POLICY } from "../data/roads.js";
+import { 城の馬, 城の鉄砲 } from "../data/arms.js";
 
 export const relKey = (a, b) => [a, b].sort().join("|");
 
@@ -72,7 +73,7 @@ export function initState(player) {
   return {
     player, year: 1546, month: 4,
     factions,
-    castles: assignKokuCap(CASTLES.map((c) => ({
+    castles: 馬と鉄砲を配る(assignKokuCap(CASTLES.map((c) => ({
       ...c, x: px(c.lon), y: py(c.lat),
       najimi: 70,            // 地域家臣団が現城主を受け入れる度合い（GDD 6.2）
       rost: newRoster(c.local, `loc-${c.id}`),   // 地域家臣団の組の名簿
@@ -80,7 +81,7 @@ export function initState(player) {
       kokuCap: c.kokuMax,                          // 国の検地に基づく限り（下でまとめて割り当てる）
       well: 100,             // 井戸。城工作で傷むと籠城が続かない（GDD 9.2）
       lordId: null, intrigue: false,
-    }))),
+    })))),
     // 知行を定めてから、城を預かる者に身分を保証する
     generals: assignRanks(CASTLES, fillKeepers(CASTLES, GENERALS).map((g) => ({
       ...g, unity: clamp(g.retTrain + 8, 30, 100), merit: 0,
@@ -221,6 +222,21 @@ export function assignRanks(castles, generals) {
     }
   }
   return generals;
+}
+
+/* 馬と鉄砲を城へ配る（GDD 6.3）。
+
+   槍と弓は村々の百姓が自前で携えて出るので数えない。
+   馬は牧のある国に多く、鉄砲は伝来まもないので持つ家が限られる。
+   数の拠りどころは data/arms.js に置いた。 */
+export function 馬と鉄砲を配る(castles) {
+  const 家の石高 = {};
+  for (const c of castles) 家の石高[c.faction] = (家の石高[c.faction] || 0) + c.koku;
+  for (const c of castles) {
+    if (c.horse == null) c.horse = 城の馬(c);
+    if (c.gun == null) c.gun = 城の鉄砲(c, 家の石高[c.faction] || 0);
+  }
+  return castles;
 }
 
 export function assignKokuCap(castles) {

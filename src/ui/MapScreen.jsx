@@ -34,6 +34,7 @@ import { SallyDialog } from "./panels.jsx";
 import { ReinforceDialog } from "./panels.jsx";
 import { underMyBanner } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
+import { 蓄えに合わせる } from "../core/roster.js";
 
 /* ============================================================ 政略マップ */
 export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
@@ -1205,8 +1206,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
   /* 援軍を差し向ける（GDD 7.3 / 7.4）。
      下知の通る城（自家・臣従）からは、選んだ将と兵をそのまま出す。
      頼むだけの家（同盟・従属）は、応じるか否かを相手が決める。 */
-  const sendAid = (target, plan) => setG((prev) => {
-    const s = structuredClone(prev);
+  /* 援軍を差し向ける。盤を直に扱う形にしてある。
+     画面から呼ぶときは sendAid、月送りの下知に応じるときはここを直に呼ぶ。 */
+  const sendAidState = (s, target, plan) => {
     const 的 = s.castles.find((x) => x.id === target);
     if (!的) return s;
     const 囲まれている = s.sieges.some((sg) => sg.castleId === target);
@@ -1271,8 +1273,36 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
     }
 
     s.msg = 出た > 0 ? `${的.name}へ援軍${fmt(出た)}人を差し向けた。` : "援軍の使者を送った。";
+    // 応じれば信用が増す（GDD 11.1）
+    if (的.faction !== s.player && 出た > 0) {
+      const rel = s.relations[relKey(s.player, 的.faction)];
+      if (rel) rel.trust = clamp(rel.trust + 12, 0, 100);
+    }
     return s;
-  });
+  };
+
+  const sendAid = (target, plan) => setG((prev) => sendAidState(structuredClone(prev), target, plan));
+
+  /* 臣従している相手からの下知に応じる。誰をどれだけ出すかは向こうが決めるので、
+     こちらは最寄りの城から、守備を残せるだけの兵を出すほかない。 */
+  const 臣従の供出 = (s, target) => {
+    const 下知 = [];
+    const 候補 = s.castles.filter((c2) => c2.faction === s.player)
+      .map((c2) => ({ c2, p: findPath(c2.id, target) })).filter((x) => x.p)
+      .sort((a, z) => a.p.length - z.p.length);
+    for (const { c2 } of 候補) {
+      const gens = s.generals.filter((x) => x.at === c2.id && x.faction === s.player && !x.captive);
+      if (!gens.length) continue;
+      const 余 = c2.local + gens.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
+      if (余 < 500) continue;
+      const 将 = [...gens].sort((a, z) => z.lead - a.lead).slice(0, 1);
+      const 兵 = Math.max(0, Math.min(c2.local, Math.round(余 * 0.5)));
+      if (兵 + 将[0].retinue < 100) continue;
+      下知.push({ castleId: c2.id, gens: 将.map((x) => x.id), local: 兵 });
+      break;                                   // 下知に応じるのは一手で足りる
+    }
+    return { 下知 };
+  };
 
   const launchSortie = (p) => {
     if (!p.to || !findPath(p.from, p.to)) return;      // 行けない目標は受け付けない
@@ -1344,8 +1374,20 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
       }
       c.local -= p.local; c.food -= p.food;
       const mainId = `a${Date.now()}`;
-      const takeMain = rosterTake(c.rost || newRoster(c.local + p.local, `loc-${c.id}`), p.local);
-      c.rost = takeMain.rest;
+      /* 兵科の割りに従って隊を仕立てる（GDD 8.1）。
+
+         槍と弓は村々の百姓が自前で携えて出るが、騎馬には馬が、鉄砲には鉄砲が要る。
+         城の蓄えを超えては立てられぬので、足りぬぶんは槍が埋める。
+         連れて行った馬と鉄砲は城から出る。帰ってくれば、生き残ったぶんだけ戻る。 */
+      const 割 = 蓄えに合わせる(p.mix, p.local, { horse: c.horse || 0, gun: c.gun || 0 });
+      c.rost = rosterTake(c.rost || newRoster(c.local + p.local, `loc-${c.id}`), p.local).rest;
+      const takeMain = { taken: newRoster(p.local, `arm-${mainId}`, 割) };
+      c.horse = Math.max(0, (c.horse || 0) - 割.kiba);
+      c.gun = Math.max(0, (c.gun || 0) - 割.teppo);
+      if (割.足りぬ馬 || 割.足りぬ鉄砲) {
+        s.chronicle.push({ y: s.year, m: s.month,
+          text: `${c.name}では${[割.足りぬ馬 ? `馬が${fmt(割.足りぬ馬)}頭` : "", 割.足りぬ鉄砲 ? `鉄砲が${fmt(割.足りぬ鉄砲)}挺` : ""].filter(Boolean).join("・")}足りず、そのぶんは槍で立てた。` });
+      }
       // 味方の城が囲まれているなら、これは後詰である。着けば囲みを解くための野戦になる。
       const 救う = dest && dest.faction === s.player && s.sieges.some((sg) => sg.castleId === dest.id);
       s.armies.push({
@@ -1494,6 +1536,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
         {selCastle && (
           <CastleSheet g={g} castle={selCastle} land={land} tab={tab} setTab={setTab}
             onClose={() => setSel(null)} onCommand={runCommand} onAppoint={appoint}
+            onTrade={(id, kind, n) => setG((prev) => 政務.doTrade(prev, id, kind, n))}
             onSortie={() => setModal("sortie")} onCallAid={(id) => setCallAid(id)} onDiplo={doDiplo} onPlot={doPlot}
             onSpecial={doSpecial} onReward={reward} onCaptive={doCaptive} onFief={grantFief} onRetire={doRetire} onSettle={settleCaptive} onKenchi={doKenchi} />
         )}
@@ -1613,6 +1656,79 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
                     s.chronicle.push({ y: s.year, m: s.month, text: `${s.factions[o.from].name}の身代金の申し出を退けた。` });
                     s.ransomOffer = null; return s;
                   })}>退ける</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+        {/* --------------------------------- 盟友からの援軍の要請（GDD 7.4）
+
+            同盟・従属の相手からは「頼み」であり、応じるか否かも、誰をどれだけ
+            出すかもこちらが決める。臣従している相手からは「下知」であって、
+            断る筋はなく、誰を出すかも向こうが決める。 */}
+        {g.aidCall && !battle && (() => {
+          const ac = g.aidCall;
+          const 的 = g.castles.find((x) => x.id === ac.castleId);
+          const f = g.factions[ac.faction];
+          if (!的 || !f) { setG((p2) => ({ ...p2, aidCall: null })); return null; }
+          const 閉 = (s2) => { s2.aidCall = null; return s2; };
+          if (ac.下知) {
+            // 下知。向こうが将と兵を決める。こちらは受けるだけ。
+            const 出す = () => setG((prev) => {
+              const s2 = structuredClone(prev);
+              const plan = 臣従の供出(s2, ac.castleId);
+              const t = plan.下知.length ? sendAidState(s2, ac.castleId, plan) : s2;
+              if (!plan.下知.length) t.msg = `${f.name}の下知に応じたが、出せる兵がなかった。`;
+              return 閉(t);
+            });
+            return (
+              <div className="modal">
+                <div className="card" style={{ maxWidth: 460 }}>
+                  <div className="mn" style={{ fontSize: 20 }}>{f.name}よりの下知</div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.95, marginTop: 8 }}>
+                    <b>{的.name}</b>が{ac.囲まれ ? "囲まれている" : "攻められようとしている"}。
+                    ただちに援軍を差し向けよ、との下知です。<br />
+                    <span style={{ color: U.dim }}>
+                      こちらは{f.name}に<b>臣従</b>しています。断る筋はなく、
+                      誰をどれだけ出すかも{f.name}が決めます。
+                    </span>
+                  </div>
+                  <div style={{ margin: "12px 0", padding: "9px 11px", background: "rgba(74,110,138,0.10)",
+                    borderLeft: "3px solid #4A6E8A", fontSize: 12, lineHeight: 1.9 }}>
+                    最寄りの城から、守備を残せるだけの兵を出します。
+                  </div>
+                  <button className="btn dark" style={{ width: "100%" }} onClick={出す}>下知を承る</button>
+                </div>
+              </div>
+            );
+          }
+          // 頼み。応じるか否かも、誰をどれだけ出すかもこちらが決める。
+          return (
+            <div className="modal">
+              <div className="card" style={{ maxWidth: 470 }}>
+                <div className="mn" style={{ fontSize: 20 }}>{f.name}よりの援軍の求め</div>
+                <div style={{ fontSize: 12.5, lineHeight: 1.95, marginTop: 8 }}>
+                  <b>{的.name}</b>が{ac.囲まれ ? "囲まれています" : "攻められようとしています"}
+                  {ac.寄せ手.length ? `（${ac.寄せ手.map((x) => (g.factions[x] || {}).name).join("・")}）` : ""}。
+                  {ac.state}の誼をもって、援軍を求めてきました。
+                </div>
+                <div style={{ fontSize: 11.5, color: U.dim, margin: "10px 0", lineHeight: 1.8 }}>
+                  応じれば信用が増します。断れば減ります。<br />
+                  放っておけばこの家は削られ、やがて隣に強い敵が立ちます。
+                </div>
+                <div style={{ display: "flex", gap: 9 }}>
+                  <button className="btn" style={{ flex: 1 }} onClick={() => setG((prev) => {
+                    const s2 = structuredClone(prev);
+                    const rel = s2.relations[relKey(s2.player, ac.faction)];
+                    if (rel) rel.trust = clamp(rel.trust - 10, 0, 100);
+                    s2.chronicle.push({ y: s2.year, m: s2.month,
+                      text: `${f.name}の援軍の求めを断った。` });
+                    return 閉(s2);
+                  })}>断る</button>
+                  <button className="btn dark" style={{ flex: 1 }}
+                    onClick={() => { setG((p2) => ({ ...p2, aidCall: null })); setCallAid(ac.castleId); }}>
+                    誰を出すか決める
+                  </button>
                 </div>
               </div>
             </div>

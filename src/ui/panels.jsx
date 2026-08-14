@@ -14,6 +14,10 @@ import { canRecruit } from "../core/house.js";
 import { underMyBanner } from "../core/state.js";
 import { atPeace } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
+import { 兵科の割り, 蓄えに合わせる } from "../core/roster.js";
+import { clamp } from "../core/util.js";
+import { 既定の兵科 } from "../data/arms.js";
+
 
 export function SortieDialog({ g, from, onClose, onGo }) {
   const c = g.castles.find((x) => x.id === from);
@@ -84,6 +88,25 @@ export function SortieDialog({ g, from, onClose, onGo }) {
     Math.max(0, cmdLimit - retSum),          // 将の器を超えては率いられぬ
   ));
   const [local, setLocal] = useState(0);
+  /* 兵科の割り（GDD 8.1）。一割きざみで選ぶ。
+     槍と弓は村々の百姓が自前で携えて出るが、騎馬には馬が、鉄砲には鉄砲が要る。
+     城の蓄えを超えては立てられぬので、足りぬぶんは槍が埋める。 */
+  const [mix, setMix] = useState({ ...既定の兵科 });
+  const 割を動かす = (k, d) => setMix((m) => {
+    const v = clamp((m[k] || 0) + d, 0, 100);
+    const 他 = ARMS.map((a) => a.key).filter((x) => x !== k);
+    const 残 = 100 - v;
+    const 今の他 = 他.reduce((a, x) => a + (m[x] || 0), 0);
+    const n = { ...m, [k]: v };
+    // 残りは、いまの割りに応じて他の兵科へ振り分ける（合計は必ず十割）
+    let 配 = 残;
+    他.forEach((x, i) => {
+      const q = i === 他.length - 1 ? 配
+        : Math.round(今の他 > 0 ? 残 * ((m[x] || 0) / 今の他) / 10 : 残 / 他.length / 10) * 10;
+      n[x] = Math.max(0, Math.min(配, q)); 配 -= n[x];
+    });
+    return n;
+  });
   /* 寄騎の求め。城ごとに { 将, 兵 } を控える。
      指図の通る城（自家・臣従）では、誰を何人で出すかをこちらが決められる。
      同盟・従属へは頼むだけなので、相手の言い値をそのまま受ける。 */
@@ -211,6 +234,47 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         <div className="row"><span>城に残る兵</span>
           <span className="v">{fmt(c.local - useLocal + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0))} 人（最低 {fmt(garrison)}）</span></div>
 
+        {/* ------------------------------------------- 兵科の割り（GDD 8.1） */}
+        <div className="sec">兵科の割り</div>
+        {(() => {
+          const 蓄 = 蓄えに合わせる(mix, useLocal, { horse: c.horse || 0, gun: c.gun || 0 });
+          const 名 = { yari: "槍", yumi: "弓", teppo: "鉄砲", kiba: "騎馬" };
+          const 断 = { yari: "村々の百姓が自前で携える", yumi: "同じく自前で携える",
+            teppo: `城の蓄え ${fmt(c.gun || 0)}挺`, kiba: `城の蓄え ${fmt(c.horse || 0)}頭` };
+          return (
+            <>
+              <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
+                連れて行く{fmt(useLocal)}人を、どの兵科で立てるかを決めます。
+                槍と弓はいくらでも立ちますが、<b style={{ color: U.text }}>騎馬には馬が、鉄砲には鉄砲が要ります</b>。
+                足りぬぶんは槍で埋めます。
+              </div>
+              {ARMS.map((a) => (
+                <div key={a.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0", fontSize: 12.5 }}>
+                  <span style={{ width: 34 }}>{名[a.key]}</span>
+                  <button className="btn sm" style={{ padding: "2px 8px" }}
+                    onClick={() => 割を動かす(a.key, -10)}>−</button>
+                  <span className="num" style={{ width: 44, textAlign: "center" }}>{mix[a.key] || 0}%</span>
+                  <button className="btn sm" style={{ padding: "2px 8px" }}
+                    onClick={() => 割を動かす(a.key, 10)}>＋</button>
+                  <span className="num" style={{ width: 62, textAlign: "right",
+                    color: (a.key === "kiba" && 蓄.足りぬ馬) || (a.key === "teppo" && 蓄.足りぬ鉄砲) ? "#B0483C" : U.text }}>
+                    {fmt(蓄[a.key])}人
+                  </span>
+                  <span style={{ color: U.dim, fontSize: 11, flex: 1 }}>{断[a.key]}</span>
+                </div>
+              ))}
+              {(蓄.足りぬ馬 > 0 || 蓄.足りぬ鉄砲 > 0) && (
+                <div style={{ fontSize: 11.5, color: "#B0483C", marginTop: 4, lineHeight: 1.7 }}>
+                  {蓄.足りぬ馬 > 0 ? `馬が${fmt(蓄.足りぬ馬)}頭` : ""}
+                  {蓄.足りぬ馬 > 0 && 蓄.足りぬ鉄砲 > 0 ? "・" : ""}
+                  {蓄.足りぬ鉄砲 > 0 ? `鉄砲が${fmt(蓄.足りぬ鉄砲)}挺` : ""}
+                  足りません。そのぶんは槍で立てます（商人から買い足せます）。
+                </div>
+              )}
+            </>
+          );
+        })()}
+
         <div className="sec">寄騎を求める（GDD 7.3）</div>
         <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.6 }}>
           一方の陣に並べられるのは{MAX_CORPS}隊まで（関ヶ原の参陣数に合わせた上限）。
@@ -309,7 +373,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>取りやめ</button>
           <button className="btn dark" style={{ flex: 2 }} disabled={!to || !path || !picked.length || men < 200 || c.food < food}
-            onClick={() => onGo({ from, to, gens: picked, local: useLocal, food,
+            onClick={() => onGo({ from, to, gens: picked, local: useLocal, food, mix,
               // 指図の通る城は、選んだ将と兵数を添える。頼むだけの城は相手の言い値のまま。
               reinforce: offers.filter((o) => aid[o.castleId]).map((o) => (o.指図
                 ? { ...o, genIds: aid[o.castleId].genIds || [],

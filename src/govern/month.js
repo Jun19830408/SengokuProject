@@ -18,6 +18,7 @@ import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy } f
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
+import { isVassal, underMyBanner } from "../core/state.js";
 /* ==========================================================================
    月送り ─ 天下じゅうの一月
    この一手で、諸家の内政・調略・出陣・包囲・寿命・一揆・官位までが動く。
@@ -327,6 +328,51 @@ export function advanceMonth(prev, g) {
         // 末尾で pendingArrivals を組むときに自ずと外れ、城攻めには進まない。
         resolveClash(s, cl.aId, cl.bId, cl.place);
       }
+      /* ------------------------------- 盟友からの援軍の要請（GDD 7.4）
+
+         約束を交わした家の城が攻められれば、使者が来る。囲まれているか、
+         敵の軍が向かっているか。放っておけば、その家は削られ、やがて隣に
+         強い敵が立つ。
+
+         こちらが同盟・従属の間柄なら、応じるか否かも、誰をどれだけ出すかも
+         こちらが決める。対等な間柄だからである。
+         こちらが臣従している相手からの要請は、下知である。断る筋はない。 */
+      if (!s.aidCall && !s.autoPlay) {
+        for (const c of s.castles) {
+          if (c.faction === s.player) continue;
+          const st = relOf(s, s.player, c.faction).state;
+          if (st !== "同盟" && st !== "従属" && st !== "臣従") continue;
+          if (underMyBanner(s, s.player, c.faction)) continue;   // 旗の下の家は自分で守る
+          const 囲まれ = s.sieges.some((sg) => sg.castleId === c.id);
+          const 迫る = s.armies.filter((a) => a.target === c.id && a.faction !== c.faction
+            && !atPeace(s, c.faction, a.faction));
+          if (!囲まれ && !迫る.length) continue;
+          // 同じ城について何度も使者を寄越さない
+          if ((s.aidAsked || []).includes(c.id)) continue;
+          // こちらが臣従している相手なら下知。そうでなければ頼みである。
+          const 下知 = st === "臣従" && isVassal(s, c.faction, s.player);
+          s.aidCall = {
+            castleId: c.id, faction: c.faction, state: st, 下知,
+            囲まれ, 寄せ手: [...new Set(迫る.map((a) => a.faction))],
+            y: s.year, m: s.month,
+          };
+          s.aidAsked = [...(s.aidAsked || []), c.id];
+          events.push(下知
+            ? `${s.factions[c.faction].name}より${c.name}への援軍の下知が届いた。`
+            : `${s.factions[c.faction].name}より${c.name}への援軍を求められた。`);
+          break;
+        }
+      }
+      // 危うさが去った城は、また改めて使者を寄越しうる
+      if ((s.aidAsked || []).length) {
+        s.aidAsked = s.aidAsked.filter((id) => {
+          const c = s.castles.find((x) => x.id === id);
+          if (!c) return false;
+          return s.sieges.some((sg) => sg.castleId === id)
+            || s.armies.some((a) => a.target === id && a.faction !== c.faction);
+        });
+      }
+
       // 相手方から身代金の申し出。こちらが捕らえている武将について月ごとに起こりうる。
       for (const q of s.generals) {
         if (!q.captive || q.captive.by !== s.player || s.ransomOffer) continue;
