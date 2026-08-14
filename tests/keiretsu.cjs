@@ -20,7 +20,8 @@ fs.writeFileSync(entry,
   'export { layoutField, setFieldSeed, FIELD } from "../src/battle/field.js";\n'
 + 'export { makeCorps, placeSquads, issueOrder } from "../src/battle/corps.js";\n'
 + 'export { buildCastleMap, layoutCastleField, axisOf, fromUV } from "../src/battle/castleMap.js";\n'
-+ 'export { battleAI } from "../src/battle/ai.js";\n'
++ 'export { battleAI, 岸 } from "../src/battle/ai.js";\n'
++ 'export { RIVER, hasRiver, terrainAt, riverShift } from "../src/battle/field.js";\n'
 + 'export { createBattle, stepBattle } from "../src/battle/engine.js";\n'
 + 'export { setBattleMap } from "../src/battle/castleMap.js";\n');
 const out = path.join(ROOT, 'build', 'keiretsu.cjs');
@@ -182,6 +183,59 @@ for (const 陣 of ['横陣', '魚鱗', '鶴翼', '方陣']) {
   if (間隔 < 55) 咎.push(`城攻めで組が震える（一折り返しあたり ${間隔.toFixed(1)}px）`);
   if (隊折返 > 200) 咎.push(`城攻めで隊が左右に流れる（折り返し ${隊折返}回）`);
   A.setBattleMap(null);
+}
+
+/* ------------------------------ 川を避けて進むこと（GDD 8.1）
+
+   川は足を三割にし、陣形を十四も削り、戦う力を七割に落とす。深みならなお悪い。
+   川の中で当たれば、まず負ける。委任した隊が真っ直ぐ川へ踏み込んでいくのは、
+   将の分別として有り得ない。橋か浅瀬を回るべきである。
+
+   「川の中で過ごした時（組×瞬）の割」と「川の中で槍を合わせた割」で測る。
+   零にはならない。渡らねば攻められぬ局面はあるし、半渡を撃たれることもある。 */
+{
+  Math.random = (() => { let z = 20260815 >>> 0;                 // 天候で測りがぶれるため
+    return () => { z = (z + 0x6D2B79F5) | 0; let t = Math.imul(z ^ (z >>> 15), 1 | z);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
+  A.setBattleMap(null);
+  let 川の野 = 0, 総 = 0, 中 = 0, 戦総 = 0, 戦中 = 0;
+  for (let seed = 1; seed <= 24; seed++) {
+    A.setFieldSeed(seed); A.layoutField(4200);
+    if (!A.hasRiver()) continue;
+    川の野++;
+    const midx = A.FIELD.w / 2, 上 = A.FIELD.h * 0.10, 下 = A.FIELD.h * 0.90;
+    const P = [], E = [];
+    for (let i = 0; i < 3; i++) P.push(A.makeCorps('P', 将(i), 700, 700, 80, 80, midx - 200 + i * 200, 上, Math.PI / 2, '#2F5D8C'));
+    for (let i = 0; i < 3; i++) E.push(A.makeCorps('E', 将(10 + i), 700, 700, 80, 80, midx - 200 + i * 200, 下, -Math.PI / 2, '#B0483C'));
+    const b = A.createBattle(P, E, 'P');
+    b.mode = 'field'; b.dusk = 1200; b.phase = 'fight';
+    for (const c of [...P, ...E]) A.placeSquads(c, true);
+    for (let k = 0; k < 2400; k++) {
+      A.stepBattle(b, 0.25);
+      if (k % 4 === 0) A.battleAI(b);
+      for (const c of [...P, ...E]) {
+        if (c.dead || c.destroyed) continue;
+        for (const q of c.squads) {
+          if (q.men <= 0) continue;
+          const t = A.terrainAt(q.x, q.y), 水 = t === 'ford' || t === 'deep';
+          総++; if (水) 中++;
+          if (q.engaged) { 戦総++; if (水) 戦中++; }
+        }
+      }
+      if (b.result) break;
+    }
+  }
+  const 居 = 100 * 中 / Math.max(1, 総), 戦 = 100 * 戦中 / Math.max(1, 戦総);
+  /* この九つの野で、直す前は 30.3% / 51.5%、直したあとは 21.9% / 36.2%。
+     （盤いっぱいに広く展開させた六十の野で測ると 26.4→13.3% / 43.2→26.3% になる。
+       ここは試験を軽くするため二十四の種に絞っているので、値そのものは重くなる。）
+     戦の運びが変われば数も動く。まず種を変えて測り直し、それから壊れを疑うこと。 */
+  console.log(`  ${川の野 >= 8 ? '○' : '★'} 川のある野で測る　${川の野}／24`);
+  console.log(`  ${居 <= 25 ? '○' : '★'} 川の中で過ごさない　${居.toFixed(1)}%（直す前 30.3%）`);
+  console.log(`  ${戦 <= 43 ? '○' : '★'} 川の中で槍を合わせない　${戦.toFixed(1)}%（直す前 51.5%）`);
+  if (川の野 < 8) 咎.push('川のある野が足りず、測れていない');
+  if (居 > 25) 咎.push(`隊が川の中で過ごしすぎる（${居.toFixed(1)}%）`);
+  if (戦 > 43) 咎.push(`川の中で槍を合わせすぎる（${戦.toFixed(1)}%）`);
 }
 
 console.log('');

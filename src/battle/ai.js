@@ -2,6 +2,42 @@ import { MAP, axisOf, fromUV, gatePos, inRect, nearestOpenGate, routeToCastleGat
 import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime } from "./corps.js";
 import { ARM_STATS, HILLS, RIVER, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
 
+/* ------------------------------------------------ 川を避ける（GDD 8.1）
+
+   川は速さを削り、隊列を乱し、戦う力も落とす。
+     浅瀬 … 足 0.3倍・陣形維持 −14・戦う力 0.7倍
+     深み … 足 0.1倍・陣形維持 −24・戦う力 0.5倍
+   川の中で当たれば、まず負ける。渡るなら橋か浅瀬を通るのが道理である。
+
+   これまでも渡り場を目指す道理はあったが、二つ穴があった。
+     一、岸の別を RIVER.top だけで測っていた。川は蛇行するので、
+         場所によっては岸を取り違える。
+     二、いったん川へ踏み込むと「自分は向こう岸にいる」と判ぜられ、
+         迂回そのものが解けて、そのまま押し渡ってしまう。
+   岸の別は蛇行を含めて測り、川の中にいるときは「渡り切る」ことを目指す。 */
+export function 岸(x, y) {
+  if (!hasRiver()) return 0;
+  const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(x);
+  const 半 = (RIVER.bot - RIVER.top) / 2;
+  if (y < 中 - 半) return -1;                 // 上の岸
+  if (y > 中 + 半) return 1;                  // 下の岸
+  return 0;                                   // 川の中
+}
+
+// 川の中に入っている点か
+export const 川の中 = (x, y) => hasRiver() && 岸(x, y) === 0;
+
+
+/* いちばん通りやすい渡り場。
+   橋は足も落ちず隊も乱れにくいので、多少遠くても橋を選ぶ。 */
+export function 渡り場(x) {
+  const 橋 = (RIVER.bridge[0] + RIVER.bridge[1]) / 2;
+  const 瀬 = (RIVER.ford[0] + RIVER.ford[1]) / 2;
+  const 候補 = [{ x: 橋, 重み: 0.55, 名: "橋" }, { x: 瀬, 重み: 1.0, 名: "浅瀬" }]
+    .map((p) => ({ ...p, 遠さ: Math.abs(p.x - x) * p.重み }));
+  return 候補.sort((a, z) => a.遠さ - z.遠さ)[0];
+}
+
 export function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
@@ -235,19 +271,59 @@ export function battleAI(b) {
       if (!hill) { /* 高地のない野では丘取りをしない */ } else
       if (Math.hypot(hill.x - c.x, hill.y - c.y) > 90 && terrainAt(c.x, c.y) !== "hill") { issueOrder(b, c, { order: "移動", tx: hill.x, ty: hill.y }); continue; }
     }
-    if (hasRiver() && (c.y < RIVER.top) !== (tgt.y < RIVER.top) && Math.abs(c.y - RIVER.top) < 260) {
-      const gates = [
-        { x: (RIVER.bridge[0] + RIVER.bridge[1]) / 2, y: (RIVER.top + RIVER.bot) / 2 },
-        { x: (RIVER.ford[0] + RIVER.ford[1]) / 2, y: (RIVER.top + RIVER.bot) / 2 },
-      ];
-      const gt = gates.reduce((a, p) => (Math.hypot(p.x - c.x, p.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? p : a), gates[0]);
-      if (Math.abs(c.y - gt.y) > 40) { issueOrder(b, c, { order: "移動", tx: gt.x, ty: gt.y }); continue; }
+    /* 川を渡るなら、橋か浅瀬を通る。川の中で戦う目は極力なくす。
+
+       ただし塞ぐのではない。渡り場が遠すぎて、押し渡ったほうが早いのなら、
+       それはそれで一つの決断である。回り道が直の三倍を超えるなら、そのまま渡る。 */
+    if (hasRiver() && !c.routed && !c.withdraw) {
+      const 自岸 = 岸(c.x, c.y), 敵岸 = 岸(tgt.x, tgt.y);
+      /* 渡らねばならぬのは、川の中にいるときと、岸が違うとき。
+         敵が川の中にいるだけなら渡らない。岸で待って撃てばよい。
+
+         （道筋そのものが淵を通るかも検めてみたが、蛇行の際で
+           「渡り場へ戻れ」と「敵へ向かえ」が入れ替わり、隊が水際を
+           行き来した。水の中で噛み合う割は三割から四割四分に増えた。
+           岸の別だけで測るほうがよい。） */
+      const 渡る要 = 自岸 === 0 || (敵岸 !== 0 && 自岸 !== 敵岸);
+      if (渡る要) {
+        const 場 = 渡り場(c.x);
+        const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(場.x);
+        const 半 = (RIVER.bot - RIVER.top) / 2;
+        const 向こう = 敵岸 !== 0 ? 敵岸 : (自岸 === -1 ? 1 : -1);
+        /* 岸から十分に離れた先を目指す。
+           水際で止まると、先頭は陸でも後ろの組は川の中に残る。
+           隊の深さ（およそ百歩）だけ抜けた先で足を止めさせる。 */
+        const 出口 = { x: 場.x, y: 中 + 向こう * (半 + 150) };
+        const 直 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
+        const 回 = Math.hypot(出口.x - c.x, 出口.y - c.y) + Math.hypot(tgt.x - 出口.x, tgt.y - 出口.y);
+        if (回 <= 直 * 3 + 200) {
+          /* 受け手は川を渡らない。渡り場のこちら岸で待ち、
+             敵が水から上がってくるところを叩く。半渡を撃つ、という。
+
+             両軍とも渡り場を目指すと、双方が同じ瀬へ集まって水の中で噛み合う。
+             それでは川を避けた甲斐がない。攻め手だけが渡り、受け手は岸で待つ。 */
+          const 待つ = c.side !== b.attacker && 自岸 !== 0;
+          const 先 = 待つ ? { x: 場.x, y: 中 + 自岸 * (半 + 168) } : 出口;
+          issueOrder(b, c, { order: "移動", tx: 先.x, ty: 先.y });
+          continue;
+        }
+        // 回り道が過ぎる。押し渡るほかない。
+      }
     }
     // 接敵はプレイヤーと同じ間合いで止まり、命令伝達も同じ遅延を受ける（GDD 13.2）。
     // すでに間合いに入っていれば、狙いを直しても後ろへは下がらない。
     const dd = Math.hypot(c.x - tgt.x, c.y - tgt.y) || 1;
-    if (dd <= 42) issueOrder(b, c, { order: "接戦", tx: c.x, ty: c.y });
-    else issueOrder(b, c, { order: "接戦", tx: tgt.x + ((c.x - tgt.x) / dd) * 38, ty: tgt.y + ((c.y - tgt.y) / dd) * 38 });
+    let sx = dd <= 42 ? c.x : tgt.x + ((c.x - tgt.x) / dd) * 38;
+    let sy = dd <= 42 ? c.y : tgt.y + ((c.y - tgt.y) / dd) * 38;
+    /* 足を止める先が川の中なら、岸まで引く。
+       川の中で当たれば、足も陣形も戦う力も削がれて、まず負ける。 */
+    if (川の中(sx, sy)) {
+      const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(sx);
+      const 半 = (RIVER.bot - RIVER.top) / 2;
+      const 岸へ = 岸(c.x, c.y) !== 0 ? 岸(c.x, c.y) : (c.y < 中 ? -1 : 1);
+      sy = 中 + 岸へ * (半 + 26);
+    }
+    issueOrder(b, c, { order: "接戦", tx: sx, ty: sy });
   }
   setAiIssuing(false);
 }

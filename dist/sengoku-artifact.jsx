@@ -10858,6 +10858,21 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
 }
 
 // src/battle/ai.js
+function \u5CB8(x, y) {
+  if (!hasRiver()) return 0;
+  const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(x);
+  const \u534A = (RIVER.bot - RIVER.top) / 2;
+  if (y < \u4E2D - \u534A) return -1;
+  if (y > \u4E2D + \u534A) return 1;
+  return 0;
+}
+var \u5DDD\u306E\u4E2D = (x, y) => hasRiver() && \u5CB8(x, y) === 0;
+function \u6E21\u308A\u5834(x) {
+  const \u6A4B = (RIVER.bridge[0] + RIVER.bridge[1]) / 2;
+  const \u702C = (RIVER.ford[0] + RIVER.ford[1]) / 2;
+  const \u5019\u88DC = [{ x: \u6A4B, \u91CD\u307F: 0.55, \u540D: "\u6A4B" }, { x: \u702C, \u91CD\u307F: 1, \u540D: "\u6D45\u702C" }].map((p) => ({ ...p, \u9060\u3055: Math.abs(p.x - x) * p.\u91CD\u307F }));
+  return \u5019\u88DC.sort((a, z) => a.\u9060\u3055 - z.\u9060\u3055)[0];
+}
 function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
@@ -11081,20 +11096,35 @@ function battleAI(b) {
         continue;
       }
     }
-    if (hasRiver() && c.y < RIVER.top !== tgt.y < RIVER.top && Math.abs(c.y - RIVER.top) < 260) {
-      const gates = [
-        { x: (RIVER.bridge[0] + RIVER.bridge[1]) / 2, y: (RIVER.top + RIVER.bot) / 2 },
-        { x: (RIVER.ford[0] + RIVER.ford[1]) / 2, y: (RIVER.top + RIVER.bot) / 2 }
-      ];
-      const gt = gates.reduce((a, p) => Math.hypot(p.x - c.x, p.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? p : a, gates[0]);
-      if (Math.abs(c.y - gt.y) > 40) {
-        issueOrder(b, c, { order: "\u79FB\u52D5", tx: gt.x, ty: gt.y });
-        continue;
+    if (hasRiver() && !c.routed && !c.withdraw) {
+      const \u81EA\u5CB8 = \u5CB8(c.x, c.y), \u6575\u5CB8 = \u5CB8(tgt.x, tgt.y);
+      const \u6E21\u308B\u8981 = \u81EA\u5CB8 === 0 || \u6575\u5CB8 !== 0 && \u81EA\u5CB8 !== \u6575\u5CB8;
+      if (\u6E21\u308B\u8981) {
+        const \u5834 = \u6E21\u308A\u5834(c.x);
+        const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(\u5834.x);
+        const \u534A = (RIVER.bot - RIVER.top) / 2;
+        const \u5411\u3053\u3046 = \u6575\u5CB8 !== 0 ? \u6575\u5CB8 : \u81EA\u5CB8 === -1 ? 1 : -1;
+        const \u51FA\u53E3 = { x: \u5834.x, y: \u4E2D + \u5411\u3053\u3046 * (\u534A + 150) };
+        const \u76F4 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
+        const \u56DE = Math.hypot(\u51FA\u53E3.x - c.x, \u51FA\u53E3.y - c.y) + Math.hypot(tgt.x - \u51FA\u53E3.x, tgt.y - \u51FA\u53E3.y);
+        if (\u56DE <= \u76F4 * 3 + 200) {
+          const \u5F85\u3064 = c.side !== b.attacker && \u81EA\u5CB8 !== 0;
+          const \u5148 = \u5F85\u3064 ? { x: \u5834.x, y: \u4E2D + \u81EA\u5CB8 * (\u534A + 168) } : \u51FA\u53E3;
+          issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u5148.x, ty: \u5148.y });
+          continue;
+        }
       }
     }
     const dd = Math.hypot(c.x - tgt.x, c.y - tgt.y) || 1;
-    if (dd <= 42) issueOrder(b, c, { order: "\u63A5\u6226", tx: c.x, ty: c.y });
-    else issueOrder(b, c, { order: "\u63A5\u6226", tx: tgt.x + (c.x - tgt.x) / dd * 38, ty: tgt.y + (c.y - tgt.y) / dd * 38 });
+    let sx = dd <= 42 ? c.x : tgt.x + (c.x - tgt.x) / dd * 38;
+    let sy = dd <= 42 ? c.y : tgt.y + (c.y - tgt.y) / dd * 38;
+    if (\u5DDD\u306E\u4E2D(sx, sy)) {
+      const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(sx);
+      const \u534A = (RIVER.bot - RIVER.top) / 2;
+      const \u5CB8\u3078 = \u5CB8(c.x, c.y) !== 0 ? \u5CB8(c.x, c.y) : c.y < \u4E2D ? -1 : 1;
+      sy = \u4E2D + \u5CB8\u3078 * (\u534A + 26);
+    }
+    issueOrder(b, c, { order: "\u63A5\u6226", tx: sx, ty: sy });
   }
   setAiIssuing(false);
 }
