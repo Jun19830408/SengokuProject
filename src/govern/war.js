@@ -12,6 +12,7 @@ import { ROAD_SPEED } from "../data/roads.js";
 import { rankName, troopLimit } from "../core/rank.js";
 import { isVassal } from "../core/state.js";
 import { rosterArms } from "../core/roster.js";
+import { holdsProvince } from "../core/province.js";
 
 // ------------------------------------------------ 援軍（GDD 7.3 / 7.4）
 // 各城・各勢力は「守備最低数・距離・従属度」から派遣・減員・遅参・拒否を判断する。
@@ -247,6 +248,21 @@ export function sackCastle(s, castle, army, hard) {
   s.sieges = s.sieges.filter((x) => x.castleId !== castle.id);
   s.campaigns = (s.campaigns || []).filter((x) => x.target !== castle.id);
   log(`${castle.name}が落ち、${s.factions[winner].name}の手に渡った（旧領主：${s.factions[oldF].name}）。`);
+
+  /* 一国を丸ごと押さえたら、その場で知らせる（GDD 12.5）。
+
+     国がまとまってはじめて民は落ち着き、竿を入れられ、官位の目も出てくる。
+     区切りとして大きいのに、これまでは何も出ず、月送りの民忠の動きから
+     察するほかなかった。最後の城を取ったその時に告げる。 */
+  if (castle.kuni && holdsProvince(s, winner, castle.kuni)) {
+    const 国の城 = s.castles.filter((x) => x.kuni === castle.kuni);
+    log(`${s.factions[winner].name}が${castle.kuni}を一国残らず手中にした（${国の城.length}城）。`);
+    if (winner === s.player) {
+      s.monthEvents = [...(s.monthEvents || []),
+        `${castle.kuni}を平定した。国がまとまれば民は落ち着き、竿を入れられる。`];
+      s.国平定 = { kuni: castle.kuni, castleId: castle.id, 城数: 国の城.length, y: s.year, m: s.month };
+    }
+  }
   // すべての城を失えば家は滅ぶ。残った者の始末は勝った側が決める（GDD 12.4）
   if (!s.castles.some((c2) => c2.faction === oldF)) {
     // 拠るべき城を失えば、野に出ている軍も散る。

@@ -9,6 +9,7 @@ import { px, py } from "../data/geo.js";
 import { PARENT } from "../data/newcomers.js";
 import { MOB_POLICY } from "../data/roads.js";
 import { 城の馬, 城の鉄砲 } from "../data/arms.js";
+import { 直属の兵科 } from "../data/arms.js";
 
 export const relKey = (a, b) => [a, b].sort().join("|");
 
@@ -86,7 +87,7 @@ export function initState(player) {
     generals: assignRanks(CASTLES, fillKeepers(CASTLES, GENERALS).map((g) => ({
       ...g, unity: clamp(g.retTrain + 8, 30, 100), merit: 0,
       fief: Math.round(fiefWanted(g) * (0.72 + Math.random() * 0.34)),
-      rost: newRoster(g.retinue, `ret-${g.id}`) }))),
+      rost: newRoster(g.retinue, `ret-${g.id}`, 直属の兵科) }))),
     armies: [], orders: {}, ledger: [], sieges: [], promo: null, campaigns: [],
     relations, specials, plots: [], intel: {}, prev: {},
     chronicle: [{ y: 1546, m: 4, text: "尾張は織田三家に分かれ、美濃は斎藤道三が握る。天下はまだ遠い。" }],
@@ -96,7 +97,7 @@ export function initState(player) {
 // 旧いセーブには名簿がない。読み込み時に作る。
 export function migrateRosters(s) {
   for (const c of s.castles) if (!c.rost) c.rost = newRoster(Math.max(0, c.local), `loc-${c.id}`);
-  for (const gq of s.generals) if (!gq.rost) gq.rost = newRoster(Math.max(0, gq.retinue), `ret-${gq.id}`);
+  for (const gq of s.generals) if (!gq.rost) gq.rost = newRoster(Math.max(0, gq.retinue), `ret-${gq.id}`, 直属の兵科);
   for (const a of s.armies || []) if (!a.rost) a.rost = newRoster(Math.max(0, a.local), `arm-${a.id}`);
   return s;
 }

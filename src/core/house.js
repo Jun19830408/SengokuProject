@@ -2,6 +2,7 @@ import { HOUSE_RANK, fiefOf, fiefWanted, stipendOf } from "./rank.js";
 import { newRoster } from "./roster.js";
 import { clamp } from "./util.js";
 import { KANJI_TSUJI, LONG_LIVED, NEWCOMERS, PARENT } from "../data/newcomers.js";
+import { 直属の兵科 } from "../data/arms.js";
 
 // その年に世に出る者を招く。仕えるべき家が滅んでいれば、代わりにその城の主へ仕える。
 export function emergeGenerals(s) {
@@ -20,7 +21,7 @@ export function emergeGenerals(s) {
       retinue: n.retinue, retTrain: n.retTrain,
       unity: clamp(n.retTrain + 8, 30, 100), merit: 0,
       fief: Math.round(fiefWanted(n) * 0.7),
-      rost: newRoster(n.retinue, `ret-${n.id}`),
+      rost: newRoster(n.retinue, `ret-${n.id}`, 直属の兵科),
     };
     s.generals.push(gen);
     s.emerged = [...(s.emerged || []), n.id];

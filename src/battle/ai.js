@@ -125,7 +125,15 @@ export function battleAI(b) {
           // 門のすぐ内側に立つ。奥へ引っ込んでは門を支えられない。
           const p2 = fromUV(MAP, a2, g2.off, a2.half - 14);
           const d2 = Math.hypot(c.x - p2.x, c.y - p2.y);
-          if (d2 > 34) { issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y }); continue; }
+          /* 持ち場へ寄る。ただし「三十四を超えたら動く」だけでは、ちょうどその際で
+             毎瞬「動け」と「そこで守れ」が入れ替わり、隊がその場で震えて見える。
+             動き出す間合いと、着いたとみなす間合いを分ける。 */
+          if (d2 > (c.持ち場に着いた ? 46 : 30)) {
+            c.持ち場に着いた = false;
+            issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y });
+            continue;
+          }
+          c.持ち場に着いた = true;
           // 門の外に取り付いている寄せ手を見る
           const gp = gatePos(MAP, l2, g2);
           const foes = b.corps.filter((x) => x.side === b.attacker && !x.dead && !x.destroyed

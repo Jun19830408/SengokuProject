@@ -3370,6 +3370,74 @@ var LONG_LIVED = {
   // 宗晴康
 };
 
+// src/data/arms.js
+var \u99AC\u306E\u7523\u5730 = {
+  \u9678\u5965: 2.4,
+  \u51FA\u7FBD: 2,
+  // 南部馬・奥州馬の産地
+  \u7532\u6590: 2.2,
+  \u4FE1\u6FC3: 2,
+  // 木曽馬。武田の騎馬はここに拠る
+  \u8D8A\u5F8C: 1.6,
+  \u4E0A\u91CE: 1.5,
+  \u4E0B\u91CE: 1.4,
+  \u5E38\u9678: 1.3,
+  // 関東の牧
+  \u76F8\u6A21: 1.2,
+  \u6B66\u8535: 1.2,
+  \u5B89\u623F: 1.1,
+  \u4E0B\u7DCF: 1.1,
+  \u99FF\u6CB3: 1.1,
+  \u9060\u6C5F: 1.1,
+  \u4E09\u6CB3: 1,
+  \u5C3E\u5F35: 1,
+  \u8FD1\u6C5F: 1,
+  \u7F8E\u6FC3: 1.1,
+  \u98DB\u9A28: 1.2,
+  // 西国は概ね乏しい（既定は 0.7）
+  \u85A9\u6469: 1.1,
+  \u5927\u9685: 1.1,
+  \u65E5\u5411: 1.2
+  // 南九州にも牧があった
+};
+var \u99AC\u306E\u65E2\u5B9A = 0.7;
+var \u9244\u7832\u306E\u5BB6 = {
+  shimazu: 90,
+  // 種子島。伝来の地
+  saika: 80,
+  // 雑賀衆・根来衆
+  miyoshi: 60,
+  // 堺
+  honganji: 50,
+  // 大坂
+  rokkaku: 40,
+  // 国友
+  otomo: 40,
+  // 豊後府内の南蛮船
+  ouchi: 30,
+  // 山口
+  ashikaga: 12,
+  // 将軍家。数は少ないが早くから知る
+  azai: 8,
+  // 国友の隣
+  negoro: 60
+  // 根来（別の家として在れば）
+};
+var \u99AC\u306E\u57FA\u6E96 = 42;
+function \u57CE\u306E\u99AC(c) {
+  const k = \u99AC\u306E\u7523\u5730[c.kuni] == null ? \u99AC\u306E\u65E2\u5B9A : \u99AC\u306E\u7523\u5730[c.kuni];
+  return Math.round(c.koku / 1e4 * \u99AC\u306E\u57FA\u6E96 * k);
+}
+function \u57CE\u306E\u9244\u7832(c, \u5BB6\u306E\u7DCF\u77F3\u9AD8) {
+  const n = \u9244\u7832\u306E\u5BB6[c.faction];
+  if (!n) return 0;
+  const \u5272 = \u5BB6\u306E\u7DCF\u77F3\u9AD8 > 0 ? c.koku / \u5BB6\u306E\u7DCF\u77F3\u9AD8 : 1;
+  return Math.max(1, Math.round(n * \u5272));
+}
+var \u65E2\u5B9A\u306E\u5175\u79D1 = { yari: 50, yumi: 20, teppo: 0, kiba: 30 };
+var \u76F4\u5C5E\u306E\u5175\u79D1 = { yari: 55, yumi: 17, teppo: 3, kiba: 25 };
+var \u76F4\u5C5E\u306E\u9A0E\u99AC = \u76F4\u5C5E\u306E\u5175\u79D1.kiba / 100;
+
 // src/core/house.js
 function emergeGenerals(s2) {
   const out = [];
@@ -3396,7 +3464,7 @@ function emergeGenerals(s2) {
       unity: clamp(n.retTrain + 8, 30, 100),
       merit: 0,
       fief: Math.round(fiefWanted(n) * 0.7),
-      rost: newRoster(n.retinue, `ret-${n.id}`)
+      rost: newRoster(n.retinue, `ret-${n.id}`, \u76F4\u5C5E\u306E\u5175\u79D1)
     };
     s2.generals.push(gen);
     s2.emerged = [...s2.emerged || [], n.id];
@@ -5923,72 +5991,6 @@ var GENERALS = [
   { id: "on_michiyori", name: "\u5C0F\u91CE\u5BFA\u7A19\u9053", faction: "onodera", lead: 68, valor: 66, wit: 66, gov: 66, loyal: 96, age: 42, at: "yokote", retinue: 300, retTrain: 60 }
 ];
 
-// src/data/arms.js
-var \u99AC\u306E\u7523\u5730 = {
-  \u9678\u5965: 2.4,
-  \u51FA\u7FBD: 2,
-  // 南部馬・奥州馬の産地
-  \u7532\u6590: 2.2,
-  \u4FE1\u6FC3: 2,
-  // 木曽馬。武田の騎馬はここに拠る
-  \u8D8A\u5F8C: 1.6,
-  \u4E0A\u91CE: 1.5,
-  \u4E0B\u91CE: 1.4,
-  \u5E38\u9678: 1.3,
-  // 関東の牧
-  \u76F8\u6A21: 1.2,
-  \u6B66\u8535: 1.2,
-  \u5B89\u623F: 1.1,
-  \u4E0B\u7DCF: 1.1,
-  \u99FF\u6CB3: 1.1,
-  \u9060\u6C5F: 1.1,
-  \u4E09\u6CB3: 1,
-  \u5C3E\u5F35: 1,
-  \u8FD1\u6C5F: 1,
-  \u7F8E\u6FC3: 1.1,
-  \u98DB\u9A28: 1.2,
-  // 西国は概ね乏しい（既定は 0.7）
-  \u85A9\u6469: 1.1,
-  \u5927\u9685: 1.1,
-  \u65E5\u5411: 1.2
-  // 南九州にも牧があった
-};
-var \u99AC\u306E\u65E2\u5B9A = 0.7;
-var \u9244\u7832\u306E\u5BB6 = {
-  shimazu: 90,
-  // 種子島。伝来の地
-  saika: 80,
-  // 雑賀衆・根来衆
-  miyoshi: 60,
-  // 堺
-  honganji: 50,
-  // 大坂
-  rokkaku: 40,
-  // 国友
-  otomo: 40,
-  // 豊後府内の南蛮船
-  ouchi: 30,
-  // 山口
-  ashikaga: 12,
-  // 将軍家。数は少ないが早くから知る
-  azai: 8,
-  // 国友の隣
-  negoro: 60
-  // 根来（別の家として在れば）
-};
-var \u99AC\u306E\u57FA\u6E96 = 42;
-function \u57CE\u306E\u99AC(c) {
-  const k = \u99AC\u306E\u7523\u5730[c.kuni] == null ? \u99AC\u306E\u65E2\u5B9A : \u99AC\u306E\u7523\u5730[c.kuni];
-  return Math.round(c.koku / 1e4 * \u99AC\u306E\u57FA\u6E96 * k);
-}
-function \u57CE\u306E\u9244\u7832(c, \u5BB6\u306E\u7DCF\u77F3\u9AD8) {
-  const n = \u9244\u7832\u306E\u5BB6[c.faction];
-  if (!n) return 0;
-  const \u5272 = \u5BB6\u306E\u7DCF\u77F3\u9AD8 > 0 ? c.koku / \u5BB6\u306E\u7DCF\u77F3\u9AD8 : 1;
-  return Math.max(1, Math.round(n * \u5272));
-}
-var \u65E2\u5B9A\u306E\u5175\u79D1 = { yari: 50, yumi: 20, teppo: 0, kiba: 30 };
-
 // src/core/state.js
 var relKey = (a, b) => [a, b].sort().join("|");
 function initState(player) {
@@ -6109,7 +6111,7 @@ function initState(player) {
       unity: clamp(g.retTrain + 8, 30, 100),
       merit: 0,
       fief: Math.round(fiefWanted(g) * (0.72 + Math.random() * 0.34)),
-      rost: newRoster(g.retinue, `ret-${g.id}`)
+      rost: newRoster(g.retinue, `ret-${g.id}`, \u76F4\u5C5E\u306E\u5175\u79D1)
     }))),
     armies: [],
     orders: {},
@@ -6127,7 +6129,7 @@ function initState(player) {
 }
 function migrateRosters(s2) {
   for (const c of s2.castles) if (!c.rost) c.rost = newRoster(Math.max(0, c.local), `loc-${c.id}`);
-  for (const gq of s2.generals) if (!gq.rost) gq.rost = newRoster(Math.max(0, gq.retinue), `ret-${gq.id}`);
+  for (const gq of s2.generals) if (!gq.rost) gq.rost = newRoster(Math.max(0, gq.retinue), `ret-${gq.id}`, \u76F4\u5C5E\u306E\u5175\u79D1);
   for (const a of s2.armies || []) if (!a.rost) a.rost = newRoster(Math.max(0, a.local), `arm-${a.id}`);
   return s2;
 }
@@ -7929,6 +7931,17 @@ function sackCastle(s2, castle, army, hard) {
   s2.sieges = s2.sieges.filter((x) => x.castleId !== castle.id);
   s2.campaigns = (s2.campaigns || []).filter((x) => x.target !== castle.id);
   log(`${castle.name}\u304C\u843D\u3061\u3001${s2.factions[winner].name}\u306E\u624B\u306B\u6E21\u3063\u305F\uFF08\u65E7\u9818\u4E3B\uFF1A${s2.factions[oldF].name}\uFF09\u3002`);
+  if (castle.kuni && holdsProvince(s2, winner, castle.kuni)) {
+    const \u56FD\u306E\u57CE = s2.castles.filter((x) => x.kuni === castle.kuni);
+    log(`${s2.factions[winner].name}\u304C${castle.kuni}\u3092\u4E00\u56FD\u6B8B\u3089\u305A\u624B\u4E2D\u306B\u3057\u305F\uFF08${\u56FD\u306E\u57CE.length}\u57CE\uFF09\u3002`);
+    if (winner === s2.player) {
+      s2.monthEvents = [
+        ...s2.monthEvents || [],
+        `${castle.kuni}\u3092\u5E73\u5B9A\u3057\u305F\u3002\u56FD\u304C\u307E\u3068\u307E\u308C\u3070\u6C11\u306F\u843D\u3061\u7740\u304D\u3001\u7AFF\u3092\u5165\u308C\u3089\u308C\u308B\u3002`
+      ];
+      s2.\u56FD\u5E73\u5B9A = { kuni: castle.kuni, castleId: castle.id, \u57CE\u6570: \u56FD\u306E\u57CE.length, y: s2.year, m: s2.month };
+    }
+  }
   if (!s2.castles.some((c2) => c2.faction === oldF)) {
     for (const a2 of s2.armies.filter((x) => x.faction === oldF)) {
       for (const gid of a2.gens) {
@@ -10970,10 +10983,12 @@ function battleAI(b) {
           const l2 = MAP.layers[g2.layer], a2 = axisOf(l2, g2);
           const p2 = fromUV(MAP, a2, g2.off, a2.half - 14);
           const d2 = Math.hypot(c.x - p2.x, c.y - p2.y);
-          if (d2 > 34) {
+          if (d2 > (c.\u6301\u3061\u5834\u306B\u7740\u3044\u305F ? 46 : 30)) {
+            c.\u6301\u3061\u5834\u306B\u7740\u3044\u305F = false;
             issueOrder(b, c, { order: "\u79FB\u52D5", tx: p2.x, ty: p2.y });
             continue;
           }
+          c.\u6301\u3061\u5834\u306B\u7740\u3044\u305F = true;
           const gp = gatePos(MAP, l2, g2);
           const foes2 = b.corps.filter((x) => x.side === b.attacker && !x.dead && !x.destroyed && !x.routed && Math.hypot(x.x - gp.x, x.y - gp.y) < 170);
           const foeMen = foes2.reduce((t, x) => t + corpsMen(x), 0);
@@ -11293,12 +11308,14 @@ function stepBattle(b, dt) {
       const \u968A\u306E\u8DB3 = engaged ? avgSpeed : Math.min(avgSpeed, \u6700\u3082\u9045\u3044\u8DB3 * 1.12);
       const v = \u968A\u306E\u8DB3 * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag;
       const mvx = dx / dist * v * dt, mvy = dy / dist * v * dt;
+      let \u9032\u3081\u305F = true;
       if (passableFor(c, b, c.x + mvx, c.y + mvy)) {
         c.x += mvx;
         c.y += mvy;
       } else if (passableFor(c, b, c.x + mvx, c.y)) c.x += mvx;
       else if (passableFor(c, b, c.x, c.y + mvy)) c.y += mvy;
-      if (MAP && dist > 200) {
+      else \u9032\u3081\u305F = false;
+      if (MAP && !\u9032\u3081\u305F) {
         const R = 30;
         const blocked = (ux, uy) => {
           for (let k = 1; k <= 4; k++) if (!passable(c.x + ux * k / 4, c.y + uy * k / 4)) return true;
@@ -11311,7 +11328,7 @@ function stepBattle(b, dt) {
         if (blocked(0, -R)) ry += 1;
         if (rx || ry) {
           const rl = Math.hypot(rx, ry) || 1;
-          const ax2 = rx / rl * 26 * dt, ay2 = ry / rl * 26 * dt;
+          const ax2 = rx / rl * 18 * dt, ay2 = ry / rl * 18 * dt;
           if (passable(c.x + ax2, c.y + ay2)) {
             c.x += ax2;
             c.y += ay2;
@@ -15316,6 +15333,30 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         s2.ransomOffer = null;
         return s2;
       }) }, "\u9000\u3051\u308B"))));
+    })(),
+    g.\u56FD\u5E73\u5B9A && !battle && (() => {
+      const k = g.\u56FD\u5E73\u5B9A;
+      const \u57CE = g.castles.find((x) => x.id === k.castleId);
+      const \u56FD\u306E\u57CE = g.castles.filter((x) => x.kuni === k.kuni);
+      const \u77F3 = \u56FD\u306E\u57CE.reduce((a, x) => a + x.koku, 0);
+      const \u5168\u56FD = provincesHeld(g, g.player) || [];
+      return /* @__PURE__ */ React5.createElement("div", { className: "modal" }, /* @__PURE__ */ React5.createElement("div", { className: "card", style: { maxWidth: 440, textAlign: "center" } }, /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: U.dim, letterSpacing: ".3em" } }, "\u4E00\u56FD\u5E73\u5B9A"), /* @__PURE__ */ React5.createElement("div", { className: "mn", style: { fontSize: 32, margin: "10px 0 4px" } }, k.kuni), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12.5, color: U.dim, lineHeight: 1.9 } }, \u57CE ? `${\u57CE.name}\u3092\u843D\u3068\u3057\u3001` : "", k.kuni, "\u306E", k.\u57CE\u6570, "\u57CE\u3092\u3053\u3068\u3054\u3068\u304F\u624B\u4E2D\u306B\u3057\u307E\u3057\u305F\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("span", { className: "num" }, "\u77F3\u9AD8 ", fmt(\u77F3), "\u77F3")), /* @__PURE__ */ React5.createElement("div", { style: {
+        margin: "14px 0",
+        padding: "10px 12px",
+        background: "rgba(74,110,138,0.08)",
+        borderLeft: "3px solid #4A6E8A",
+        fontSize: 12,
+        lineHeight: 1.95,
+        textAlign: "left"
+      } }, "\u56FD\u304C\u307E\u3068\u307E\u308C\u3070\u3001\u6C11\u306F\u843D\u3061\u7740\u304D\u307E\u3059\uFF08\u6C11\u5FE0\u306E\u843D\u3061\u7740\u304F\u5148\u304C\u4E0A\u304C\u308A\u307E\u3059\uFF09\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("b", null, "\u691C\u5730"), "\u304C\u884C\u3048\u308B\u3088\u3046\u306B\u306A\u308A\u3001\u77F3\u9AD8\u3092\u6539\u3081\u3089\u308C\u307E\u3059\u3002", /* @__PURE__ */ React5.createElement("br", null), GOKINAI.includes(k.kuni) ? "\u4E94\u757F\u306E\u4E00\u56FD\u3067\u3059\u3002\u3059\u3079\u3066\u62BC\u3055\u3048\u308C\u3070\u671D\u5EF7\u3088\u308A\u5B98\u4F4D\u3092\u8CDC\u308A\u307E\u3059\u3002" : ""), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 12 } }, "\u5E73\u5B9A\u3057\u305F\u56FD\uFF1A", \u5168\u56FD.length, "\u56FD\uFF08", \u5168\u56FD.slice(0, 8).join("\u30FB"), \u5168\u56FD.length > 8 ? "\u307B\u304B" : "", "\uFF09"), /* @__PURE__ */ React5.createElement(
+        "button",
+        {
+          className: "btn dark",
+          style: { width: "100%" },
+          onClick: () => setG((p2) => ({ ...p2, \u56FD\u5E73\u5B9A: null }))
+        },
+        "\u4E86"
+      )));
     })(),
     g.aidCall && !battle && (() => {
       const ac = g.aidCall;

@@ -19,6 +19,8 @@ fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { layoutField, setFieldSeed, FIELD } from "../src/battle/field.js";\n'
 + 'export { makeCorps, placeSquads, issueOrder } from "../src/battle/corps.js";\n'
++ 'export { buildCastleMap, layoutCastleField, axisOf, fromUV } from "../src/battle/castleMap.js";\n'
++ 'export { battleAI } from "../src/battle/ai.js";\n'
 + 'export { createBattle, stepBattle } from "../src/battle/engine.js";\n'
 + 'export { setBattleMap } from "../src/battle/castleMap.js";\n');
 const out = path.join(ROOT, 'build', 'keiretsu.cjs');
@@ -106,6 +108,80 @@ for (const 陣 of ['横陣', '魚鱗', '鶴翼', '方陣']) {
   }
   console.log(`  ${噛んだ ? '○' : '★'} 前進すれば敵と噛み合う（足並みを揃えても戦になる）　刻 ${Math.round(b.t)}秒`);
   if (!噛んだ) 咎.push('足並みを揃えたせいで敵と噛み合わなくなった');
+}
+
+/* --------------------------- 城攻めで隊が震えないこと（GDD 8.2 / 9.3）
+
+   城内は壁だらけである。かつては「遠くへ向かう途中」ならば毎瞬、壁から
+   押し返す力を掛けていた。行き先へ引く力と押し返す力が押し合うので、
+   隊は横へじりじりと流れ、その場に留まっていても左右に震えて見えた。
+
+   震えは「一歩ごとの進む向きが逆へ折り返した回数」で測れる。
+   整然と進むなら、折り返しはまばらにしか起きない。 */
+{
+  const 城 = { id: 'x', name: '試の城', def: 60, local: 600, localTrain: 70, najimi: 70, rost: null };
+  const 図 = A.layoutCastleField(A.buildCastleMap(城));
+  A.setBattleMap(図);
+  const 外 = 図.layers[0];
+  const 寄 = 外.gates.slice(0, 3).map((gt, i) => {
+    const a = A.axisOf(外, gt);
+    const p = A.fromUV(図, a, gt.off, a.half + 図.moat.band + 外.masu + 図.t + 96);
+    return A.makeCorps('P', 将(i), 400, 900, 75, 75, p.x, p.y, Math.atan2(図.cy - p.y, 図.cx - p.x), '#2F5D8C');
+  });
+  const 持 = [];
+  for (const l of 図.layers) for (const gt of l.gates) {
+    const a = A.axisOf(l, gt);
+    const p = A.fromUV(図, a, gt.off, a.half - 30);
+    持.push({ x: p.x, y: p.y, f: Math.atan2(p.y - 図.cy, p.x - 図.cx) + Math.PI, gate: gt });
+  }
+  const 守 = 持.slice(0, 4).map((sp, i) => {
+    const c = A.makeCorps('E', 将(100 + i), 300, 300, 70, 70, sp.x, sp.y, sp.f, '#B0483C');
+    c.holdGate = sp.gate; return c;
+  });
+  const b = A.createBattle(寄, 守, 'P');
+  b.mode = 'castle'; b.map = 図; b.dusk = 1080; b.phase = 'fight';
+  for (const c of 寄) { c.formation = '方陣'; A.placeSquads(c, true); }
+
+  const 前 = new Map(), 折返 = new Map(), 歩 = new Map();
+  let 隊折返 = 0;
+  const 隊前 = new Map();
+  for (let k = 0; k < 1600; k++) {
+    const 位 = new Map(), 隊位 = new Map();
+    for (const c of [...寄, ...守]) { 隊位.set(c, { x: c.x, y: c.y }); for (const q of c.squads) 位.set(q, { x: q.x, y: q.y }); }
+    A.stepBattle(b, 0.25);
+    if (k % 4 === 0) A.battleAI(b);
+    for (const c of [...寄, ...守]) {
+      if (c.dead || c.destroyed) continue;
+      for (const q of c.squads) {
+        if (q.men <= 0) continue;
+        const p0 = 位.get(q); if (!p0) continue;
+        const vx = q.x - p0.x, vy = q.y - p0.y, d = Math.hypot(vx, vy);
+        if (d < 0.02) continue;
+        歩.set(q, (歩.get(q) || 0) + d);
+        const pv = 前.get(q);
+        if (pv && (pv.x * vx + pv.y * vy) < 0) 折返.set(q, (折返.get(q) || 0) + 1);
+        前.set(q, { x: vx / d, y: vy / d });
+      }
+      const cp = 隊位.get(c);
+      const cvx = c.x - cp.x, cvy = c.y - cp.y, cd = Math.hypot(cvx, cvy);
+      if (cd >= 0.02) {
+        const pv = 隊前.get(c);
+        if (pv && (pv.x * cvx + pv.y * cvy) < 0) 隊折返++;
+        隊前.set(c, { x: cvx / cd, y: cvy / cd });
+      }
+    }
+    if (b.result) break;
+  }
+  const 総折返 = [...折返.values()].reduce((a, x) => a + x, 0) || 1;
+  const 総歩 = [...歩.values()].reduce((a, x) => a + x, 0);
+  const 間隔 = 総歩 / 総折返;
+  // 一折り返しあたり何px歩けているか。震えていると数pxごとに折り返す。
+  // 直す前は 42.7px、隊そのものの折り返しは五百四十五回だった。
+  console.log(`  ${間隔 >= 55 ? '○' : '★'} 組は震えずに進む　一折り返しあたり ${間隔.toFixed(1)}px`);
+  console.log(`  ${隊折返 <= 200 ? '○' : '★'} 隊そのものが左右に流れない　折り返し ${隊折返}回`);
+  if (間隔 < 55) 咎.push(`城攻めで組が震える（一折り返しあたり ${間隔.toFixed(1)}px）`);
+  if (隊折返 > 200) 咎.push(`城攻めで隊が左右に流れる（折り返し ${隊折返}回）`);
+  A.setBattleMap(null);
 }
 
 console.log('');

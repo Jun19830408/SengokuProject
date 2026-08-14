@@ -12,7 +12,9 @@ fs.writeFileSync(entry,
 + 'export { newRoster, rosterArms, 蓄えに合わせる } from "../src/core/roster.js";\n'
 + 'export { doTrade } from "../src/govern/commands.js";\n'
 + 'export { 相場, 買値, 売値 } from "../src/data/market.js";\n'
-+ 'export { ARM_STATS } from "../src/battle/field.js";\n');
++ 'export { ARM_STATS } from "../src/battle/field.js";\n'
++ 'export { sackCastle } from "../src/govern/war.js";\n'
++ 'export { holdsProvince } from "../src/core/province.js";\n');
 const out = path.join(ROOT, 'build', 'arms.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
   loader: { '.jsx': 'jsx' }, logLevel: 'error' });
@@ -126,6 +128,47 @@ const 確 = (名, 可, 添 = '') => {
   s.aidCall = null;
   s = A.advanceMonth(s, s);
   確('同じ城で繰り返し求められない', !s.aidCall || s.aidCall.castleId !== 前.castleId);
+}
+
+/* --------------------------------------- 五、直属の供回りには必ず馬が付く
+
+   直属は武将が自前で養う手勢である。地域家臣団の割りをどう選ぼうと、
+   供回りの騎馬は変わらない。騎馬の一騎もいない武将というものはいない。 */
+{
+  const s = A.initState('oda');
+  const 手勢 = s.generals.filter((x) => x.retinue >= 50);
+  const 無し = 手勢.filter((x) => A.rosterArms(x.rost).kiba === 0);
+  確('直属五十人以上の武将に、騎馬のいない者はいない', 無し.length === 0,
+    `${手勢.length}名を検めた`);
+  const q = s.generals.find((x) => x.name === '織田信長');
+  const r = A.rosterArms(q.rost);
+  確('直属のうち二割五分ほどが騎馬',
+    r.kiba / Math.max(1, q.retinue) > 0.2 && r.kiba / Math.max(1, q.retinue) < 0.3,
+    `${q.name} 直属${q.retinue}人中 騎馬${r.kiba}・槍${r.yari}・弓${r.yumi}・鉄砲${r.teppo}`);
+}
+
+/* ------------------------------------- 六、一国を平定したら、その場で知らせる */
+{
+  const s = A.initState('oda');
+  // 尾張の城を、最後の一つを残してすべて織田のものにする
+  const 尾張 = s.castles.filter((c) => c.kuni === '尾張');
+  const 最後 = 尾張.find((c) => c.faction !== s.player);
+  for (const c of 尾張) if (c !== 最後) c.faction = s.player;
+  確('最後の一城を残した時点では、まだ平定していない',
+    !A.holdsProvince(s, s.player, '尾張'), `${尾張.length}城中 ${尾張.length - 1}城`);
+  const army = { id: 'A', faction: s.player, from: s.castles.find((c) => c.faction === s.player).id,
+    gens: [], local: 4000, men: 4000, rost: null, at: 最後.id, path: [最後.id],
+    prog: 0, food: 9999, target: 最後.id };
+  s.armies.push(army);
+  A.sackCastle(s, 最後, army, true);
+  確('最後の一城を落とすと平定になる', A.holdsProvince(s, s.player, '尾張'));
+  確('その場で知らせが立つ', !!s.国平定 && s.国平定.kuni === '尾張',
+    s.国平定 ? `${s.国平定.kuni}・${s.国平定.城数}城` : '★立たない');
+  確('戦国記にも残る',
+    (s.chronicle || []).some((x) => /尾張を一国残らず手中にした/.test(x.text)),
+    (s.chronicle.find((x) => /一国残らず/.test(x.text)) || {}).text || '');
+  確('月次の報せにも載る',
+    (s.monthEvents || []).some((x) => /尾張を平定した/.test(x)));
 }
 
 console.log('');

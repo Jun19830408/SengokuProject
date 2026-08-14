@@ -1666,6 +1666,38 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
             同盟・従属の相手からは「頼み」であり、応じるか否かも、誰をどれだけ
             出すかもこちらが決める。臣従している相手からは「下知」であって、
             断る筋はなく、誰を出すかも向こうが決める。 */}
+        {/* 一国を平定したときの知らせ（GDD 12.5）。
+            最後の城を取ったその時に、はっきり告げる。 */}
+        {g.国平定 && !battle && (() => {
+          const k = g.国平定;
+          const 城 = g.castles.find((x) => x.id === k.castleId);
+          const 国の城 = g.castles.filter((x) => x.kuni === k.kuni);
+          const 石 = 国の城.reduce((a, x) => a + x.koku, 0);
+          const 全国 = provincesHeld(g, g.player) || [];
+          return (
+            <div className="modal">
+              <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
+                <div style={{ fontSize: 12, color: U.dim, letterSpacing: ".3em" }}>一国平定</div>
+                <div className="mn" style={{ fontSize: 32, margin: "10px 0 4px" }}>{k.kuni}</div>
+                <div style={{ fontSize: 12.5, color: U.dim, lineHeight: 1.9 }}>
+                  {城 ? `${城.name}を落とし、` : ""}{k.kuni}の{k.城数}城をことごとく手中にしました。<br />
+                  <span className="num">石高 {fmt(石)}石</span>
+                </div>
+                <div style={{ margin: "14px 0", padding: "10px 12px", background: "rgba(74,110,138,0.08)",
+                  borderLeft: "3px solid #4A6E8A", fontSize: 12, lineHeight: 1.95, textAlign: "left" }}>
+                  国がまとまれば、民は落ち着きます（民忠の落ち着く先が上がります）。<br />
+                  <b>検地</b>が行えるようになり、石高を改められます。<br />
+                  {GOKINAI.includes(k.kuni) ? "五畿の一国です。すべて押さえれば朝廷より官位を賜ります。" : ""}
+                </div>
+                <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 12 }}>
+                  平定した国：{全国.length}国（{全国.slice(0, 8).join("・")}{全国.length > 8 ? "ほか" : ""}）
+                </div>
+                <button className="btn dark" style={{ width: "100%" }}
+                  onClick={() => setG((p2) => ({ ...p2, 国平定: null }))}>了</button>
+              </div>
+            </div>
+          );
+        })()}
         {g.aidCall && !battle && (() => {
           const ac = g.aidCall;
           const 的 = g.castles.find((x) => x.id === ac.castleId);
