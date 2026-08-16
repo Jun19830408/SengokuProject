@@ -395,6 +395,29 @@ export function canAskAid(g, me, other) {
   return false;
 }
 
+/* ------------------------------------------- 援軍として着いた軍か（GDD 7.4）
+
+   援けに行った先で、援けるはずの相手と戦っていた。
+
+   着いた城と戦うか否かを「旗の下か（underMyBanner ＝ 自家か臣従の家）」だけで
+   測っていた。同盟はそこに入らない。対等の間柄であって、指図の通る相手ではない
+   からである。そのため、同盟国の求めに応じて援軍を出すと、着いた月にその同盟国と
+   野戦が始まった。
+
+   かといって「和を結んでいる家の城なら攻めない」とは決められない。不可侵の相手へ
+   覚悟のうえで攻めかかる、という筋はあるからである（約束を破る問いを経て出陣する）。
+   決め手は着いた先ではなく、出したときの心づもりである。
+   援軍として出した軍には助勢の印をつけ、その印を見て判ずる。
+
+   寄騎（敵城を攻める本隊に付ける援軍）にも aid の印はつくが、助勢はつかない。
+   本隊とはぐれて単騎で敵城へ着いても、これまで通り攻める。 */
+export function 援けに着く(g, army, castle) {
+  if (!army || !castle) return false;
+  if (army.faction === castle.faction) return true;      // 自家の城
+  if (!army.助勢) return false;                          // 攻めるために出た軍
+  return atPeace(g, army.faction, castle.faction);
+}
+
 /* ------------------------------------------------ 旧い記録を繕う
 
    かつては味方の城へ向かうときにも「戦役」を起こしていた。戦役は敵城を攻める
@@ -439,6 +462,17 @@ export function 立たぬ申し送りを落とす(s) {
   if (s.warSettle && Array.isArray(s.warSettle.queue)) {
     const 残り = s.warSettle.queue.filter((id) => (s.generals || []).some((x) => x.id === id));
     s.warSettle = 残り.length ? { ...s.warSettle, queue: 残り } : null;
+  }
+  /* 五、道中の援軍に助勢の印をつける。
+     印を見て「攻めるか援けるか」を判ずるようにしたが、直す前に出した軍には
+     印がない。そのまま着けば、援けに行った先で同盟国と戦うことになる。
+     いま道中にある軍のうち、援軍として出され（aid）、向かう先が和を結んでいる
+     家の城であるものに、遡って印をつける。 */
+  for (const a of s.armies || []) {
+    if (a.助勢 != null || a.aid == null) continue;
+    const 的 = (s.castles || []).find((x) => x.id === a.target);
+    if (!的) continue;
+    if (的.faction !== a.faction && atPeace(s, a.faction, 的.faction)) a.助勢 = true;
   }
   return s;
 }

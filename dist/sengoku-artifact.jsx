@@ -6381,6 +6381,12 @@ function isVassal(g, me, other) {
   return factionKoku(g, me) >= factionKoku(g, other);
 }
 var underMyBanner = (g, me, other) => me === other || isVassal(g, me, other);
+function \u63F4\u3051\u306B\u7740\u304F(g, army, castle) {
+  if (!army || !castle) return false;
+  if (army.faction === castle.faction) return true;
+  if (!army.\u52A9\u52E2) return false;
+  return atPeace(g, army.faction, castle.faction);
+}
 function \u65D7\u306E\u4E0B\u3092\u72D9\u3046\u6226\u5F79\u3092\u843D\u3068\u3059(s2) {
   if (!Array.isArray(s2.campaigns)) return s2;
   s2.campaigns = s2.campaigns.filter((c) => {
@@ -6407,6 +6413,12 @@ function \u7ACB\u305F\u306C\u7533\u3057\u9001\u308A\u3092\u843D\u3068\u3059(s2) 
   if (s2.warSettle && Array.isArray(s2.warSettle.queue)) {
     const \u6B8B\u308A = s2.warSettle.queue.filter((id) => (s2.generals || []).some((x) => x.id === id));
     s2.warSettle = \u6B8B\u308A.length ? { ...s2.warSettle, queue: \u6B8B\u308A } : null;
+  }
+  for (const a of s2.armies || []) {
+    if (a.\u52A9\u52E2 != null || a.aid == null) continue;
+    const \u7684 = (s2.castles || []).find((x) => x.id === a.target);
+    if (!\u7684) continue;
+    if (\u7684.faction !== a.faction && atPeace(s2, a.faction, \u7684.faction)) a.\u52A9\u52E2 = true;
   }
   return s2;
 }
@@ -7755,9 +7767,11 @@ function \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle) {
     castle.food += Math.max(0, army.food || 0);
     if (army.rost && army.rost.length) castle.rost = [...castle.rost || [], ...army.rost];
     rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+    const \u4ED6\u5BB6 = castle.faction !== army.faction;
+    const \u672C\u56FD = \u4ED6\u5BB6 ? s2.castles.find((x) => x.id === army.from && x.faction === army.faction) || s2.castles.find((x) => x.faction === army.faction) : null;
     for (const gid of army.gens) {
       const x = s2.generals.find((q) => q.id === gid);
-      if (x) x.at = castle.id;
+      if (x) x.at = \u4ED6\u5BB6 ? \u672C\u56FD ? \u672C\u56FD.id : castle.id : castle.id;
     }
     s2.armies = s2.armies.filter((x) => x.id !== army.id);
   };
@@ -7999,7 +8013,9 @@ function resolveOffscreen(prev, armyId, castleId) {
   const castle = s2.castles.find((x) => x.id === castleId);
   s2.pendingArrivals = (s2.pendingArrivals || []).slice(1);
   if (!army || !castle) return s2;
-  if (army.faction === castle.faction) return \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle);
+  if (\u63F4\u3051\u306B\u7740\u304F(s2, army, castle) || underMyBanner(s2, army.faction, castle.faction)) {
+    return \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle);
+  }
   const aGens = army.gens.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
   const dGens = s2.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
   const lead = (gs) => gs.length ? gs.reduce((a, x) => a + x.lead, 0) / gs.length : 55;
@@ -13987,7 +14003,7 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         return;
       }
     }
-    if (underMyBanner(g, a.faction, dest.faction)) {
+    if (underMyBanner(g, a.faction, dest.faction) || \u63F4\u3051\u306B\u7740\u304F(g, a, dest)) {
       setG((p) => {
         const s2 = structuredClone(p);
         const ar = s2.armies.find((x) => x.id === a.id);
@@ -14925,6 +14941,7 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         food: Math.round(send * 0.6),
         target,
         aid: s2.player,
+        \u52A9\u52E2: true,
         ...\u56F2\u307E\u308C\u3066\u3044\u308B ? { relief: target } : {}
       });
       \u51FA\u305F += men;
@@ -14971,6 +14988,7 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
         food: Math.round(send * 0.6),
         target,
         aid: s2.player,
+        \u52A9\u52E2: true,
         ...\u56F2\u307E\u308C\u3066\u3044\u308B ? { relief: target } : {}
       });
       s2.chronicle.push({

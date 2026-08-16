@@ -35,6 +35,7 @@ import { ReinforceDialog } from "./panels.jsx";
 import { underMyBanner } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { 蓄えに合わせる } from "../core/roster.js";
+import { 援けに着く } from "../core/state.js";
 
 /* ============================================================ 政略マップ */
 export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
@@ -368,7 +369,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
     // 旗の下の城なら、軍議にはかけない。味方に向かって軍議を開く筋はない。
     // 旗の下の城へ着いた軍は、味方と戦わない。
     // 自家の城なら将もそこへ入る。臣従の家の城なら、兵だけ守りに加え、将は本国へ帰る。
-    if (underMyBanner(g, a.faction, dest.faction)) {
+    if (underMyBanner(g, a.faction, dest.faction) || 援けに着く(g, a, dest)) {
       setG((p) => {
         const s = structuredClone(p);
         const ar = s.armies.find((x) => x.id === a.id);
@@ -1204,6 +1205,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
   };
 
   /* 援軍を差し向ける（GDD 7.3 / 7.4）。
+     出す軍には助勢の印をつける。着いた先を攻めるか援けるかは、この印で判ずる。
+     印がないと、同盟の城は「旗の下」に入らないので、攻撃として扱われてしまう。
      下知の通る城（自家・臣従）からは、選んだ将と兵をそのまま出す。
      頼むだけの家（同盟・従属）は、応じるか否かを相手が決める。 */
   /* 援軍を差し向ける。盤を直に扱う形にしてある。
@@ -1231,7 +1234,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
         id: `aid${Date.now()}${Math.round(Math.random() * 1e6)}`, faction: c2.faction, from: c2.id,
         gens: gens.map((x) => x.id), local: send, localTrain: c2.localTrain, rost: tk.taken,
         men, at: c2.id, path: findPath(c2.id, target), prog: 0, food: Math.round(send * 0.6),
-        target, aid: s.player, ...(囲まれている ? { relief: target } : {}),
+        target, aid: s.player, 助勢: true, ...(囲まれている ? { relief: target } : {}),
       });
       出た += men;
       s.chronicle.push({ y: s.year, m: s.month,
@@ -1266,7 +1269,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
         gens: take.map((x) => x.id), local: send, localTrain: c2.localTrain, rost: tk.taken,
         men: send + take.reduce((a, x) => a + x.retinue, 0), at: c2.id,
         path: findPath(c2.id, target), prog: 0, food: Math.round(send * 0.6),
-        target, aid: s.player, ...(囲まれている ? { relief: target } : {}),
+        target, aid: s.player, 助勢: true, ...(囲まれている ? { relief: target } : {}),
       });
       s.chronicle.push({ y: s.year, m: s.month,
         text: `${s.factions[c2.faction].name}が${c2.name}より援軍${fmt(send)}人を${的.name}へ差し向けた。` });

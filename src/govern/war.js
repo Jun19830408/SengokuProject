@@ -13,6 +13,7 @@ import { rankName, troopLimit } from "../core/rank.js";
 import { isVassal } from "../core/state.js";
 import { rosterArms } from "../core/roster.js";
 import { holdsProvince } from "../core/province.js";
+import { underMyBanner, 援けに着く } from "../core/state.js";
 
 // ------------------------------------------------ 援軍（GDD 7.3 / 7.4）
 // 各城・各勢力は「守備最低数・距離・従属度」から派遣・減員・遅参・拒否を判断する。
@@ -70,7 +71,17 @@ function 味方の城へ着く(s, army, castle) {
     castle.food += Math.max(0, army.food || 0);
     if (army.rost && army.rost.length) castle.rost = [...(castle.rost || []), ...army.rost];
     rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
-    for (const gid of army.gens) { const x = s.generals.find((q) => q.id === gid); if (x) x.at = castle.id; }
+    /* 他家の城であれば、兵だけ守りに加え、将は本国へ帰す。
+       援軍のつもりで送った将を、そのまま他家の城へ預けてしまってはいけない。 */
+    const 他家 = castle.faction !== army.faction;
+    const 本国 = 他家
+      ? (s.castles.find((x) => x.id === army.from && x.faction === army.faction)
+        || s.castles.find((x) => x.faction === army.faction))
+      : null;
+    for (const gid of army.gens) {
+      const x = s.generals.find((q) => q.id === gid);
+      if (x) x.at = 他家 ? (本国 ? 本国.id : castle.id) : castle.id;
+    }
     s.armies = s.armies.filter((x) => x.id !== army.id);
   };
 
@@ -323,9 +334,14 @@ export function resolveOffscreen(prev, armyId, castleId) {
     s.pendingArrivals = (s.pendingArrivals || []).slice(1);
     if (!army || !castle) return s;
 
-    // 味方の城に着いた軍は、味方と戦わない。
-    // 後詰であれば囲みを打ち払う戦になり、そうでなければ城へ合流する。
-    if (army.faction === castle.faction) return 味方の城へ着く(s, army, castle);
+    /* 味方の城に着いた軍は、味方と戦わない。
+       後詰であれば囲みを打ち払う戦になり、そうでなければ城へ合流する。
+
+       同盟の家へ差し向けた援軍もここに入る。faction を比べるだけでは
+       他家の城なので、盤の外でも同盟国と戦うことになっていた。 */
+    if (援けに着く(s, army, castle) || underMyBanner(s, army.faction, castle.faction)) {
+      return 味方の城へ着く(s, army, castle);
+    }
 
     const aGens = army.gens.map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
     const dGens = s.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
