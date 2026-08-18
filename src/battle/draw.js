@@ -373,6 +373,38 @@ function 木立を描く(ctx, f, 濃, n, label) {
   ctx.fillText(label, f.x - label.length * 7.5, f.y + 6);
 }
 
+/* 木立の梢だけを、もう一度描く。
+   地も幹も描かない。駒の上に被せて、木の下に入った隊を葉に紛れさせるのに使う。
+   木立を描くときと同じ種から起こすので、下に敷いた木とぴたりと重なる。 */
+export function 木の梢だけ(ctx, f, 濃, n) {
+  const 丈 = Math.max(7, f.r * (濃 ? 0.17 : 0.15));
+  const 梢 = 濃 ? "#537A44" : "#6E9553";
+  const 明 = 濃 ? "#79A15C" : "#93B76E";
+  const rnd = 種乱数((f.seed || 7) * 104729);
+  const 木 = [];
+  for (let i = 0; i < n; i++) {
+    const a = i * 2.399 + rnd() * 0.6;
+    const r = f.r * Math.pow((i + 0.6) / n, 0.42) * (0.92 + rnd() * 0.20);
+    木.push({ x: f.x + Math.cos(a) * r, y: f.y + Math.sin(a) * r * 0.84,
+      s: 丈 * (0.80 + rnd() * 0.46) });
+  }
+  木.sort((a, b) => a.y - b.y);
+  for (const t of 木) {
+    ctx.fillStyle = 梢;
+    for (const [dx, dy, k] of [[0.30, -0.28, 0.56], [0.06, -0.20, 0.60], [-0.34, -0.30, 0.52]]) {
+      ctx.beginPath();
+      ctx.ellipse(t.x + t.s * dx, t.y + t.s * dy, t.s * k, t.s * k * 0.90, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = 明;
+    for (const [dx, dy, k] of [[-0.22, -0.56, 0.46], [0.10, -0.62, 0.40]]) {
+      ctx.beginPath();
+      ctx.ellipse(t.x + t.s * dx, t.y + t.s * dy, t.s * k, t.s * k * 0.88, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
 /* ------------------------------------------------------------------ 湿地 */
 function 湿地を描く(ctx, m) {
   ctx.fillStyle = "#9FB9A2"; ゆらぎ形(ctx, m, 1.0, 0.20); ctx.fill();
@@ -563,37 +595,229 @@ export function drawFieldTerrain(ctx) {
 }
 
 
+/* ==========================================================================
+   城郭図（GDD 9.3）
+
+   これまでは、石垣も櫓も一色の四角だった。破れかけの門と堅い門の見分けは
+   下に引いた細い帯だけで、どこを衝いているのかが読み取りにくい。
+
+   野の地形と同じ筋で組む。本物の三次元にはせず、光を左上から当て、影を右下へ
+   落とし、面ごとに濃淡を分ける。城郭図も戦のはじめに一度だけ焼く帳なので、
+   描き込みを増やしても合戦は重くならない。
+
+   当たり判定に使う形（castleMap の l.hw・l.hh・t・gates）には一切触れない。
+   見えるものと当たるものが食い違ってはならない。 */
+
+// 石垣。天端を明るく、根元を暗く。石の目地を刻み、影を落とす。
+function 石垣を描く(ctx, x, y, w, h, t) {
+  if (w <= 0 || h <= 0) return;
+  const 横 = w >= h;
+  ctx.fillStyle = "rgba(74,72,62,0.30)";                      // 落ちる影
+  ctx.fillRect(x + 影.x * 0.55, y + 影.y * 0.55, w, h);
+  const g = 横
+    ? ctx.createLinearGradient(0, y, 0, y + h)
+    : ctx.createLinearGradient(x, 0, x + w, 0);
+  g.addColorStop(0.00, "#C6BFA9");                            // 天端（光の側）
+  g.addColorStop(0.42, "#ADA593");
+  g.addColorStop(1.00, "#8B8474");                            // 根元（陰の側）
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+
+  // 石の目地。横に段を刻み、段ごとに縦目地をずらす
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.strokeStyle = "rgba(96,92,80,0.34)"; ctx.lineWidth = 0.8;
+  /* 石の割り。はじめは細かく刻んだが、城壁は厚みが十歩ほどしかないので、
+     縦目地が詰まって梯子のように見えた。石は長手に寝かせ、目地は粗く取る。 */
+  const 段 = (横 ? h : w) < 9 ? 2 : 3;
+  const 石 = Math.max(11, t * 2.4);
+  for (let k = 1; k < 段; k++) {
+    const p = (横 ? h : w) * (k / 段);
+    ctx.beginPath();
+    if (横) { ctx.moveTo(x, y + p); ctx.lineTo(x + w, y + p); }
+    else { ctx.moveTo(x + p, y); ctx.lineTo(x + p, y + h); }
+    ctx.stroke();
+  }
+  for (let k = 0; k < 段; k++) {
+    const ずれ = (k % 2) * 石 * 0.5;
+    for (let u = ずれ; u < (横 ? w : h); u += 石) {
+      const p0 = (横 ? h : w) * (k / 段), p1 = (横 ? h : w) * ((k + 1) / 段);
+      ctx.beginPath();
+      if (横) { ctx.moveTo(x + u, y + p0); ctx.lineTo(x + u, y + p1); }
+      else { ctx.moveTo(x + p0, y + u); ctx.lineTo(x + p1, y + u); }
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+  // 天端の照り
+  ctx.fillStyle = "rgba(255,255,255,0.30)";
+  if (横) ctx.fillRect(x, y, w, 1.6); else ctx.fillRect(x, y, 1.6, h);
+  ctx.strokeStyle = "rgba(72,68,58,0.5)"; ctx.lineWidth = 0.9;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+  /* 狭間。矢と鉄砲を撃つ穴。
+     壁が薄いうちは点が並ぶだけで、かえって煩い。厚みのある壁にだけ開ける。 */
+  if (t >= 9) {
+    ctx.fillStyle = "rgba(48,46,40,0.58)";
+    const 間 = t * 3.4;
+    if (横) { for (let u = 間 * 0.5; u < w - 4; u += 間) ctx.fillRect(x + u, y + h * 0.30, 1.8, h * 0.28); }
+    else { for (let u = 間 * 0.5; u < h - 4; u += 間) ctx.fillRect(x + w * 0.30, y + u, w * 0.28, 1.8); }
+  }
+}
+
+/* 門。二枚の扉に板と乳金物を打ち、上に門櫓の屋根を載せる。
+   壊れ具合は扉そのものの色に出す。細い帯を読むより早い。 */
+function 門を描く(ctx, gp, 横, w, t, 割) {
+  const 厚 = t + 4;
+  const x = gp.x - (横 ? w / 2 : 厚 / 2), y = gp.y - (横 ? 厚 / 2 : w / 2);
+  const bw = 横 ? w : 厚, bh = 横 ? 厚 : w;
+  ctx.fillStyle = "rgba(60,50,38,0.34)";
+  ctx.fillRect(x + 影.x * 0.5, y + 影.y * 0.5, bw, bh);
+  // 傷むほど黒ずむ
+  ctx.fillStyle = 混("#4A3524", "#8C6A45", Math.max(0, Math.min(1, 割)));
+  ctx.fillRect(x, y, bw, bh);
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, bw, bh); ctx.clip();
+  // 板目
+  ctx.strokeStyle = "rgba(38,28,18,0.45)"; ctx.lineWidth = 1;
+  for (let u = 6; u < (横 ? bw : bh); u += 6) {
+    ctx.beginPath();
+    if (横) { ctx.moveTo(x + u, y); ctx.lineTo(x + u, y + bh); }
+    else { ctx.moveTo(x, y + u); ctx.lineTo(x + bw, y + u); }
+    ctx.stroke();
+  }
+  // 乳金物
+  ctx.fillStyle = "rgba(226,214,182,0.55)";
+  for (let u = 8; u < (横 ? bw : bh); u += 13) {
+    for (const v of [0.32, 0.68]) {
+      const px2 = 横 ? x + u : x + bw * v, py2 = 横 ? y + bh * v : y + u;
+      ctx.beginPath(); ctx.arc(px2, py2, 1.3, 0, 7); ctx.fill();
+    }
+  }
+  // 中央の合わせ目（二枚扉）
+  ctx.strokeStyle = "rgba(24,18,12,0.7)"; ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  if (横) { ctx.moveTo(gp.x, y); ctx.lineTo(gp.x, y + bh); }
+  else { ctx.moveTo(x, gp.y); ctx.lineTo(x + bw, gp.y); }
+  ctx.stroke();
+  ctx.restore();
+  // 冠木（門の上に渡す横木）
+  ctx.fillStyle = "#6B5136";
+  if (横) ctx.fillRect(x - 3, y - 2.5, bw + 6, 2.8); else ctx.fillRect(x - 2.5, y - 3, 2.8, bh + 6);
+  ctx.strokeStyle = "rgba(40,30,20,0.6)"; ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, bw - 1, bh - 1);
+}
+
+/* 櫓。石垣の上に建つ。土台と白壁と屋根を、少しずつ上へずらして重ねる。
+   ずらすことで、平らな四角が「建っているもの」に見える。 */
+function 櫓を描く(ctx, f) {
+  const r = f.r, 高 = r * 0.55;
+  ctx.fillStyle = "rgba(70,66,56,0.34)";                      // 落ちる影
+  ctx.fillRect(f.x - r + 影.x * 0.8, f.y - r + 影.y * 0.8, r * 2, r * 2);
+  // 石の土台
+  ctx.fillStyle = "#9C9483";
+  ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2);
+  ctx.strokeStyle = "rgba(66,62,54,0.6)"; ctx.lineWidth = 1;
+  ctx.strokeRect(f.x - r, f.y - r, r * 2, r * 2);
+  // 白漆喰の壁。土台より一回り小さく、上へずらす
+  const w2 = r * 1.5;
+  ctx.fillStyle = "rgba(60,56,48,0.28)";
+  ctx.fillRect(f.x - w2 / 2 + 2, f.y - 高 - w2 / 2 + 2, w2, w2);
+  const g = ctx.createLinearGradient(f.x - w2 / 2, 0, f.x + w2 / 2, 0);
+  g.addColorStop(0, "#EDE7D8"); g.addColorStop(1, "#C3BBA8");
+  ctx.fillStyle = g;
+  ctx.fillRect(f.x - w2 / 2, f.y - 高 - w2 / 2, w2, w2);
+  // 窓（矢狭間）
+  ctx.fillStyle = "rgba(46,42,36,0.75)";
+  const n = Math.max(2, Math.round(w2 / 7));
+  for (let k = 0; k < n; k++) {
+    ctx.fillRect(f.x - w2 / 2 + 3 + k * (w2 - 6) / n, f.y - 高 - w2 * 0.16, 2.2, w2 * 0.26);
+  }
+  // 屋根。四方へ流れる寄棟。稜線を入れて立体に見せる
+  const rw = r * 1.9;
+  ctx.fillStyle = "#6E6A5E";
+  ctx.beginPath();
+  ctx.moveTo(f.x - rw / 2, f.y - 高 - w2 / 2 + 1);
+  ctx.lineTo(f.x + rw / 2, f.y - 高 - w2 / 2 + 1);
+  ctx.lineTo(f.x + rw * 0.22, f.y - 高 - w2 / 2 - rw * 0.30);
+  ctx.lineTo(f.x - rw * 0.22, f.y - 高 - w2 / 2 - rw * 0.30);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#87826F";                                  // 光の当たる流れ
+  ctx.beginPath();
+  ctx.moveTo(f.x - rw / 2, f.y - 高 - w2 / 2 + 1);
+  ctx.lineTo(f.x - rw * 0.22, f.y - 高 - w2 / 2 - rw * 0.30);
+  ctx.lineTo(f.x, f.y - 高 - w2 / 2 - rw * 0.30);
+  ctx.lineTo(f.x, f.y - 高 - w2 / 2 + 1);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "rgba(48,44,38,0.65)"; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(f.x - rw * 0.22, f.y - 高 - w2 / 2 - rw * 0.30);
+  ctx.lineTo(f.x + rw * 0.22, f.y - 高 - w2 / 2 - rw * 0.30);
+  ctx.stroke();
+}
+
 export function drawCastleTerrain(ctx, m) {
   const t = m.t, cx = m.cx, cy = m.cy;
   ctx.fillStyle = "#CBD8AC"; ctx.fillRect(0, 0, FIELD.w, FIELD.h);
-  ctx.strokeStyle = "rgba(120,130,90,0.09)"; ctx.lineWidth = 1;
-  for (let x = 0; x < FIELD.w; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, FIELD.h); ctx.stroke(); }
-  for (let y = 0; y < FIELD.h; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(FIELD.w, y); ctx.stroke(); }
+  // 城の外は田畑。野の図と同じ地にする
+  const rnd0 = 種乱数(777 + Math.round(FIELD.w));
+  for (let i = 0; i < Math.round((FIELD.w * FIELD.h) / 46000); i++) {
+    const x = rnd0() * FIELD.w, y = rnd0() * FIELD.h;
+    const w = 52 + rnd0() * 86, h = 34 + rnd0() * 52;
+    ctx.save(); ctx.translate(x, y); ctx.rotate((rnd0() - 0.5) * 0.5);
+    ctx.fillStyle = `rgba(${196 + rnd0() * 18 | 0},${210 + rnd0() * 14 | 0},${158 + rnd0() * 20 | 0},0.18)`;
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.strokeStyle = "rgba(150,156,116,0.12)"; ctx.lineWidth = 1;
+    ctx.strokeRect(-w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
 
   const o = m.layers[0], band = m.moat.band;
   const tone4 = ["#C6D2A8", "#C0CDA0", "#BACA98", "#B4C592"];
-  // 堀。虎口の外側を回す。
+
+  /* 堀。野の川と同じ手で深さを出す。岸の砂、浅い縁、深いところ。 */
   const ob = o.masu + t + 8;
-  ctx.fillStyle = "#8FB4C7";
-  ctx.fillRect(cx - o.hw - t - ob - band, cy - o.hh - t - ob - band,
-    (o.hw + t + ob + band) * 2, (o.hh + t + ob + band) * 2);
-  ctx.fillStyle = "#CBD8AC";
-  ctx.fillRect(cx - o.hw - t - ob, cy - o.hh - t - ob, (o.hw + t + ob) * 2, (o.hh + t + ob) * 2);
-  // 各門の土橋
-  ctx.fillStyle = "#C6A377";
+  const 堀外 = { x: cx - o.hw - t - ob - band, y: cy - o.hh - t - ob - band,
+    w: (o.hw + t + ob + band) * 2, h: (o.hh + t + ob + band) * 2 };
+  const 堀内 = { x: cx - o.hw - t - ob, y: cy - o.hh - t - ob,
+    w: (o.hw + t + ob) * 2, h: (o.hh + t + ob) * 2 };
+  const 環 = (r0, 色) => {
+    ctx.fillStyle = 色;
+    ctx.fillRect(堀外.x - r0, 堀外.y - r0, 堀外.w + r0 * 2, 堀外.h + r0 * 2);
+  };
+  ctx.fillStyle = "#C9C3A4";                                   // 岸の砂
+  ctx.fillRect(堀外.x - 5, 堀外.y - 5, 堀外.w + 10, 堀外.h + 10);
+  ctx.fillStyle = "#9FC0CE"; ctx.fillRect(堀外.x, 堀外.y, 堀外.w, 堀外.h);
+  ctx.fillStyle = "#7FA9BE";
+  ctx.fillRect(堀外.x + band * 0.24, 堀外.y + band * 0.24, 堀外.w - band * 0.48, 堀外.h - band * 0.48);
+  ctx.fillStyle = "#6B97AF";
+  ctx.fillRect(堀外.x + band * 0.42, 堀外.y + band * 0.42, 堀外.w - band * 0.84, 堀外.h - band * 0.84);
+  // 水面の照り
+  ctx.strokeStyle = "rgba(255,255,255,0.24)"; ctx.lineWidth = 1;
+  for (const k of [0.32, 0.62]) {
+    ctx.strokeRect(堀外.x + band * k, 堀外.y + band * k, 堀外.w - band * k * 2, 堀外.h - band * k * 2);
+  }
+  ctx.fillStyle = "#CBD8AC"; ctx.fillRect(堀内.x, 堀内.y, 堀内.w, 堀内.h);
+
+  // 各門の土橋。板を渡し、水面へ影を落とす
   for (const g of o.gates) {
     const a = axisOf(o, g);
     const u0 = gateOpenU(g) - g.w * 0.8, v0 = (a.along === "x" ? o.hh : o.hw) + t + ob;
-    if (a.along === "x") ctx.fillRect(cx + u0, a.sgn > 0 ? cy + v0 : cy - v0 - band, g.w * 1.6, band);
-    else ctx.fillRect(a.sgn > 0 ? cx + v0 : cx - v0 - band, cy + u0, band, g.w * 1.6);
+    const rect = a.along === "x"
+      ? { x: cx + u0, y: a.sgn > 0 ? cy + v0 : cy - v0 - band, w: g.w * 1.6, h: band }
+      : { x: a.sgn > 0 ? cx + v0 : cx - v0 - band, y: cy + u0, w: band, h: g.w * 1.6 };
+    ctx.fillStyle = "rgba(40,60,70,0.32)";
+    ctx.fillRect(rect.x + 影.x * 0.5, rect.y + 影.y * 0.5, rect.w, rect.h);
+    ctx.fillStyle = "#C2A177"; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.fillStyle = "rgba(120,90,60,0.42)";                    // 板の目
+    if (a.along === "x") { for (let x = rect.x; x < rect.x + rect.w; x += 11) ctx.fillRect(x, rect.y, 2, rect.h); }
+    else { for (let y = rect.y; y < rect.y + rect.h; y += 11) ctx.fillRect(rect.x, y, rect.w, 2); }
+    ctx.strokeStyle = "rgba(110,86,58,0.7)"; ctx.lineWidth = 1;
+    ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
   }
 
   m.layers.forEach((l, i) => {
     ctx.fillStyle = tone4[Math.min(3, Math.round((i / Math.max(1, m.layers.length - 1)) * 3))];
     ctx.fillRect(cx - l.hw, cy - l.hh, l.hw * 2, l.hh * 2);
-    // 城壁（門の分を抜く）
+    // 城壁（門の分を抜く）。一色の四角ではなく、石垣として積む
     const x0 = cx - l.hw - t, x1 = cx + l.hw + t, y0 = cy - l.hh - t, y1 = cy + l.hh + t;
-    ctx.fillStyle = "#AFA895";
     for (const face of ["S", "N", "E", "W"]) {
       const gs = l.gates.filter((g) => g.face === face).sort((p1, p2) => p1.off - p2.off);
       const horiz = face === "S" || face === "N";
@@ -603,89 +827,105 @@ export function drawCastleTerrain(ctx, m) {
       for (const g of gs) {
         const wid = g.w + (g.broken ? 20 : 0);
         const c0 = (horiz ? cx : cy) + g.off - wid / 2;
-        if (horiz) ctx.fillRect(cur, fixed, Math.max(0, c0 - cur), t);
-        else ctx.fillRect(fixed, cur, t, Math.max(0, c0 - cur));
+        if (horiz) 石垣を描く(ctx, cur, fixed, Math.max(0, c0 - cur), t, t);
+        else 石垣を描く(ctx, fixed, cur, t, Math.max(0, c0 - cur), t);
         cur = c0 + wid;
       }
-      if (horiz) ctx.fillRect(cur, fixed, Math.max(0, end - cur), t);
-      else ctx.fillRect(fixed, cur, t, Math.max(0, end - cur));
+      if (horiz) 石垣を描く(ctx, cur, fixed, Math.max(0, end - cur), t, t);
+      else 石垣を描く(ctx, fixed, cur, t, Math.max(0, end - cur), t);
     }
-    ctx.strokeStyle = "rgba(90,86,74,0.55)"; ctx.lineWidth = 1;
-    ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
     // 門と虎口
     for (const g of l.gates) {
       const a = axisOf(l, g);
       const gp = gatePos(m, l, g);
       const along = a.along === "x";
       if (g.broken) {
-        // 破れた門は虎口ごと崩れ、瓦礫だけが残る
-        ctx.fillStyle = "rgba(150,140,120,0.45)";
-        for (let k = 0; k < 9; k++) {
-          const q = fromUV(m, a, g.off + ((k * 17) % 23) - 11, a.half + t + 6 + Math.floor(k / 3) * (g.masu / 2.6));
-          ctx.fillRect(q.x - 3, q.y - 3, 6, 5);
+        // 破れた門は虎口ごと崩れ、瓦礫だけが残る。焦げも残す
+        for (let k = 0; k < 14; k++) {
+          const q = fromUV(m, a, g.off + ((k * 17) % 27) - 13, a.half + t + 4 + Math.floor(k / 3) * (g.masu / 3.2));
+          ctx.fillStyle = k % 4 === 0 ? "rgba(70,58,46,0.55)" : "rgba(154,145,126,0.62)";
+          ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(k * 1.1);
+          ctx.fillRect(-3.5, -2.5, 7, 5);
+          ctx.restore();
         }
         continue;
       }
-      ctx.fillStyle = "#8C6A45";
-      if (along) ctx.fillRect(gp.x - g.w / 2, gp.y - (t + 4) / 2, g.w, t + 4);
-      else ctx.fillRect(gp.x - (t + 4) / 2, gp.y - g.w / 2, t + 4, g.w);
-      const bp = fromUV(m, a, g.off, a.half + t + 9);
+      門を描く(ctx, gp, along, g.w, t, g.hp / g.max);
+      // 傷み具合の帯
+      const bp = fromUV(m, a, g.off, a.half + t + 11);
       const r = g.hp / g.max;
-      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
       if (along) ctx.fillRect(bp.x - g.w / 2, bp.y - 2, g.w, 4); else ctx.fillRect(bp.x - 2, bp.y - g.w / 2, 4, g.w);
       ctx.fillStyle = r > 0.5 ? "#5C8C4A" : r > 0.22 ? "#C89A3A" : "#B0483C";
       if (along) ctx.fillRect(bp.x - g.w / 2, bp.y - 2, g.w * r, 4); else ctx.fillRect(bp.x - 2, bp.y - g.w / 2, 4, g.w * r);
-      // 虎口の袖壁と正面壁
+      // 虎口の袖壁と正面壁も石垣で積む
       const put = (u, v, wu, wv) => {
         const q = fromUV(m, a, u, v);
-        if (along) ctx.fillRect(q.x - wu / 2, a.sgn > 0 ? q.y : q.y - wv, wu, wv);
-        else ctx.fillRect(a.sgn > 0 ? q.x : q.x - wv, q.y - wu / 2, wv, wu);
+        if (along) 石垣を描く(ctx, q.x - wu / 2, a.sgn > 0 ? q.y : q.y - wv, wu, wv, t);
+        else 石垣を描く(ctx, a.sgn > 0 ? q.x : q.x - wv, q.y - wu / 2, wv, wu, t);
       };
-      ctx.fillStyle = "#AFA895";
       put(g.off - g.w / 2, a.half + t, t, g.masu);
       put(g.off + g.w / 2, a.half + t, t, g.masu);
       const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
       const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
       const seg = (u0, u1) => { if (u1 > u0) put((u0 + u1) / 2, a.half + t + g.masu, u1 - u0, t); };
       seg(g.off - g.w * 1.05, from); seg(from + g.w, g.off + g.w * 1.05);
-      const lp = fromUV(m, a, g.off, a.half + t + g.masu + 17);
-      ctx.fillStyle = "rgba(70,66,58,0.8)"; ctx.font = `${Math.round(11 * (FIELD.w / BASE.w))}px sans-serif`;
+      const lp = fromUV(m, a, g.off, a.half + t + g.masu + 18);
+      ctx.font = `${Math.round(11 * (FIELD.w / BASE.w))}px sans-serif`;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3;
+      ctx.strokeText(g.name, lp.x - g.name.length * 5.5, lp.y + 4);
+      ctx.fillStyle = "rgba(58,54,46,0.95)";
       ctx.fillText(g.name, lp.x - g.name.length * 5.5, lp.y + 4);
     }
-    ctx.fillStyle = "rgba(70,72,58,0.75)"; ctx.font = "15px 'Hiragino Mincho ProN',serif";
+    ctx.font = "15px 'Hiragino Mincho ProN',serif";
+    ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 3;
+    ctx.strokeText(l.name, cx - l.hw + 10, cy - l.hh + 22);
+    ctx.fillStyle = "rgba(62,64,50,0.9)";
     ctx.fillText(l.name, cx - l.hw + 10, cy - l.hh + 22);
   });
-  // 施設。崩れたものは瓦礫にする。
+
+  // 施設。崩れたものは瓦礫にする
   for (const f of m.fac) {
     if (f.hp <= 0) {
-      ctx.fillStyle = "rgba(150,140,120,0.4)";
-      for (let k = 0; k < 7; k++) {
-        const ang = k * 2.4, r = f.r * 0.8 * (((k % 3) + 1) / 3);
-        ctx.fillRect(f.x + Math.cos(ang) * r - 3, f.y + Math.sin(ang) * r - 3, 7, 5);
+      for (let k = 0; k < 10; k++) {
+        const ang = k * 2.4, r = f.r * 0.9 * (((k % 3) + 1) / 3);
+        ctx.fillStyle = k % 4 === 0 ? "rgba(70,58,46,0.5)" : "rgba(152,143,124,0.55)";
+        ctx.save(); ctx.translate(f.x + Math.cos(ang) * r, f.y + Math.sin(ang) * r); ctx.rotate(k);
+        ctx.fillRect(-3.5, -2.5, 7, 5); ctx.restore();
       }
       continue;
     }
-    ctx.fillStyle = f.kind === "矢倉" ? "#9C9483" : "#B08A5A";
-    ctx.fillRect(f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
-    ctx.strokeStyle = "rgba(70,66,58,0.65)"; ctx.lineWidth = 1;
-    ctx.strokeRect(f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
-    ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2, 3);
+    if (f.kind === "矢倉") 櫓を描く(ctx, f);
+    else {
+      // 鐘楼。柱を立てて屋根を載せる
+      ctx.fillStyle = "rgba(70,66,56,0.30)";
+      ctx.fillRect(f.x - f.r + 影.x * 0.7, f.y - f.r + 影.y * 0.7, f.r * 2, f.r * 2);
+      ctx.fillStyle = "#B08A5A"; ctx.fillRect(f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
+      ctx.fillStyle = "#6E6A5E";
+      ctx.beginPath();
+      ctx.moveTo(f.x - f.r * 1.15, f.y - f.r * 0.5);
+      ctx.lineTo(f.x + f.r * 1.15, f.y - f.r * 0.5);
+      ctx.lineTo(f.x, f.y - f.r * 1.5);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = "rgba(66,62,54,0.6)"; ctx.lineWidth = 1;
+      ctx.strokeRect(f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
+    }
+    // 傷み具合の帯
+    ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2, 3);
     ctx.fillStyle = f.hp / f.max > 0.5 ? "#5C8C4A" : f.hp / f.max > 0.25 ? "#C89A3A" : "#B0483C";
     ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2 * (f.hp / f.max), 3);
-    if (f.r > 10) {
-      ctx.fillStyle = "rgba(60,58,50,0.85)"; ctx.font = `${Math.round(9 * (FIELD.w / BASE.w))}px sans-serif`;
-      ctx.fillText(f.kind === "矢倉" ? "矢" : "鐘", f.x - f.r * 0.35, f.y + f.r * 0.35);
-    }
   }
-  ctx.fillStyle = "rgba(60,80,95,0.8)"; ctx.font = "14px 'Hiragino Mincho ProN',serif";
+  ctx.font = "14px 'Hiragino Mincho ProN',serif";
+  ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 3;
+  ctx.strokeText("堀", cx - o.hw - t - o.masu - band / 2 - 7, cy);
+  ctx.fillStyle = "rgba(46,66,80,0.95)";
   ctx.fillText("堀", cx - o.hw - t - o.masu - band / 2 - 7, cy);
 }
 
 
-// 布陣できる範囲。攻め口の方角と、寄せ手か守り手かで決まる。
+/* 布陣できる自陣の範囲。寄せ手は遠い側、守り手は近い側から入る。 */
 export function ownZone(b) {
   const face = b.face || "S", far = !!b.myFar;
-  // 寄せ手は遠い側、守り手は近い側から入る。攻め口の方角で自陣が変わる。
   const vertical = face === "N" || face === "S";
   if (vertical) {
     const bottom = face === "S" ? far : !far;
@@ -699,13 +939,10 @@ export function ownZone(b) {
     : { x: 0, y: 0, w: FIELD.w * 0.4, h: FIELD.h, vertical: false, bottom: false };
 }
 
-
 export const inOwnZone = (b, x, y) => {
   const z = ownZone(b);
   return x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h;
 };
-
-
 
 export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -880,12 +1117,77 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
           ctx.stroke();
         }
       } else if (f.k === "dust") {
-        ctx.globalAlpha = a * 0.28;
+        // 立ち上がって薄れる土煙。上へ流れる
+        ctx.globalAlpha = a * a * 0.30;
         ctx.fillStyle = "#B9A98A";
-        ctx.beginPath(); ctx.arc(f.x, f.y, 4 + (1 - a) * 9, 0, 7); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(f.x, f.y - (1 - a) * 5, (f.r0 || 4) + (1 - a) * 11, 0, 7);
+        ctx.fill();
+      } else if (f.k === "splash") {
+        /* 水飛沫。足元の輪と、跳ね上がる粒。
+           白い弧が一つだけだと水滴に見えないので、輪と粒を重ねる。 */
+        const r = (f.big ? 5.5 : 4) + (1 - a) * (f.big ? 10 : 7);
+        ctx.globalAlpha = a * 0.7;
+        ctx.strokeStyle = "#F0F7FA"; ctx.lineWidth = 1.3;
+        ctx.beginPath(); ctx.ellipse(f.x, f.y, r, r * 0.42, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = a * 0.85;
+        ctx.fillStyle = "#FFFFFF";
+        for (let k = 0; k < 4; k++) {
+          const ang = f.x * 0.9 + f.y * 1.7 + k * 1.57;
+          const d = r * (0.5 + k * 0.14);
+          ctx.beginPath();
+          ctx.arc(f.x + Math.cos(ang) * d, f.y + Math.sin(ang) * d * 0.5 - (1 - a) * 6, 1.5, 0, 7);
+          ctx.fill();
+        }
+      } else if (f.k === "gate") {
+        // 門扉への打ち込み。閃きが横一文字に走る
+        ctx.globalAlpha = a * 0.9;
+        ctx.strokeStyle = "#FFE8B0"; ctx.lineWidth = 2.2;
+        const r = 8 + (1 - a) * 10;
+        ctx.beginPath();
+        ctx.moveTo(f.x - Math.cos(f.a) * r, f.y - Math.sin(f.a) * r);
+        ctx.lineTo(f.x + Math.cos(f.a) * r, f.y + Math.sin(f.a) * r);
+        ctx.stroke();
+        ctx.globalAlpha = a * 0.45;
+        ctx.fillStyle = "#FFF2CE";
+        ctx.beginPath(); ctx.arc(f.x, f.y, 4 + (1 - a) * 7, 0, 7); ctx.fill();
+      } else if (f.k === "chip") {
+        // 飛び散る木屑。撃たれた向きへ飛び、落ちる
+        const u = f.t;
+        ctx.globalAlpha = a * 0.85;
+        ctx.fillStyle = "#8A6B45";
+        const cx2 = f.x + f.vx * u, cy2 = f.y + f.vy * u + 130 * u * u;
+        ctx.save(); ctx.translate(cx2, cy2); ctx.rotate(u * 9 + f.x);
+        ctx.fillRect(-1.6, -0.9, 3.2, 1.8);
+        ctx.restore();
       }
     }
     ctx.globalAlpha = 1;
+  }
+
+  /* 木の下に入った隊は、梢に隠れる（GDD 8.1）。
+
+     森に入れば視界は二百六十歩から九十五歩に狭まる。この決まりは前からあり、
+     見えぬ敵は盤から落としてもいた。ただ、味方が森へ入っても見た目は野にいる
+     ときと変わらないので、「木立に潜んだ」という手応えがまるでなかった。
+
+     駒を先に描き、そのあとで梢をもう一度、透かして被せる。
+     木の下にいる隊は葉に紛れ、木を出れば元通りはっきり見える。
+     隠す絵と隠れる決まりが、同じ木立を指すことになる。 */
+  if (!b.map && (FORESTS.length || WOODS.length)) {
+    for (const f of [...WOODS, ...FORESTS]) {
+      const 濃 = FORESTS.includes(f);
+      ctx.save();
+      ゆらぎ形(ctx, f, 0.96, 0.18);
+      ctx.clip();
+      /* 濃さの加減。六割まで被せると、木の下の隊がほとんど読めなくなった。
+         下知を出す側が自分の隊を見失っては本末転倒である。
+         「葉の間から覗いている」ところで止める。 */
+      ctx.globalAlpha = 濃 ? 0.42 : 0.26;
+      木の梢だけ(ctx, f, 濃, 濃 ? 48 : 22);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
   }
   ctx.restore();
 

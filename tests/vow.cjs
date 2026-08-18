@@ -17,7 +17,11 @@ global.IS_REACT_ACT_ENVIRONMENT = true; dom.window.IS_REACT_ACT_ENVIRONMENT = tr
 const ctxStub = new Proxy({}, { get: (t, p) => {
   if (p === 'measureText') return () => ({ width: 30 });
   if (p === 'createImageData') return (w, h) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h });
-  if (p === 'createRadialGradient') return () => ({ addColorStop: () => {} });
+  // 濃淡（gradient）は jsdom にないので、addColorStop を持つ張りぼてを返す。
+  // これが欠けていると、石垣や丘を描いた瞬間に「addColorStop が無い」で落ちる。
+  if (p === 'createRadialGradient' || p === 'createLinearGradient' || p === 'createConicGradient') {
+    return () => ({ addColorStop: () => {} });
+  }
   return () => {};
 } });
 dom.window.HTMLCanvasElement.prototype.getContext = () => ctxStub;

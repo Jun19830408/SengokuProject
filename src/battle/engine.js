@@ -248,6 +248,20 @@ export function stepBattle(b, dt) {
       if (c.chargeT > 0 && b.fx.length < 160 && Math.random() < dt * 6 && (c.side === "P" || c.seen)) {
         b.fx.push({ k: "dust", x: c.x - Math.cos(c.facing) * 14, y: c.y - Math.sin(c.facing) * 14, t: 0, life: 0.7 });
       }
+      /* 水飛沫。川の中を進む組の足元から上がる（GDD 8.1）。
+
+         川は足を三割に落とし、陣形を十四も削る。その重さが盤の上から読めなかった。
+         泥濘を漕いでいるのだと目で分かれば、渡り場を選ぶ手が生きてくる。 */
+      if (b.fx.length < 200 && (c.side === "P" || c.seen)) {
+        for (const q of c.squads) {
+          if (q.men <= 0) continue;
+          const t2 = terrainAt(q.x, q.y);
+          if (t2 !== "ford" && t2 !== "deep" && t2 !== "moat") continue;
+          if (Math.random() > dt * (t2 === "deep" ? 2.4 : 1.8)) continue;
+          b.fx.push({ k: "splash", x: q.x + (Math.random() - 0.5) * 12, y: q.y + (Math.random() - 0.5) * 8,
+            t: 0, life: 0.5 + Math.random() * 0.25, big: t2 === "deep" });
+        }
+      }
       // 疲労：移動・登坂・渡渉・悪天候で増える（GDD 8.8）
       c.fatigue = Math.min(100, c.fatigue + (0.55 + (1 / Math.max(0.1, terr.speed) - 1) * 0.5) * W.fatigue * (c.chargeT > 0 ? 1.8 : 1) * dt);
       const want = Math.atan2(dy, dx);
@@ -433,7 +447,16 @@ export function stepBattle(b, dt) {
           c2.morale -= share / Math.max(1, corpsMax(c2)) * 90;
         }
       }
-      if (b.fx.length < 160 && Math.random() < dt * 3) b.fx.push({ k: "clash", x: gp.x, y: gp.y, t: 0, life: 0.3, big: true });
+      /* 門を叩く。火花だけでは「木の扉を破ろうとしている」ことが伝わらない。
+         打ち込みの閃きと、飛び散る木屑を出す。 */
+      if (b.fx.length < 200 && Math.random() < dt * 3) {
+        b.fx.push({ k: "gate", x: gp.x, y: gp.y, t: 0, life: 0.42, a: Math.random() * 7 });
+        for (let i = 0; i < 3; i++) {
+          const a2 = Math.random() * Math.PI * 2, v = 26 + Math.random() * 46;
+          b.fx.push({ k: "chip", x: gp.x, y: gp.y, vx: Math.cos(a2) * v, vy: Math.sin(a2) * v - 18,
+            t: 0, life: 0.5 + Math.random() * 0.3 });
+        }
+      }
       if (holder.gateFat > 70) {
         const next = near.filter((c) => c.id !== holder.id && (c.gateFat || 0) < 32)
           .sort((x, y2) => ((SIEGE_KIT[y2.kit] ? SIEGE_KIT[y2.kit].gate : 1) - (SIEGE_KIT[x.kit] ? SIEGE_KIT[x.kit].gate : 1))
@@ -618,9 +641,17 @@ export function stepBattle(b, dt) {
         else if (passable(q.x + ax, q.y)) q.x += ax;
         else if (passable(q.x, q.y + ay)) q.y += ay;
         // 接戦の火花。見づらくならないよう間引いて出す。
-        if (b.fx.length < 160 && Math.random() < dt * 2.4 && (c.side === "P" || c.seen)) {
-          b.fx.push({ k: "clash", x: (q.x + melee.e.x) / 2, y: (q.y + melee.e.y) / 2, t: 0,
-            life: 0.34, big: c.chargeT > 0 });
+        if (b.fx.length < 200 && (c.side === "P" || c.seen)) {
+          const mx2 = (q.x + melee.e.x) / 2, my2 = (q.y + melee.e.y) / 2;
+          if (Math.random() < dt * 2.4) {
+            b.fx.push({ k: "clash", x: mx2, y: my2, t: 0, life: 0.34, big: c.chargeT > 0 });
+          }
+          /* 土煙。火花だけでは、遠目にどこで槍を合わせているのか読めない。
+             踏み荒らされた地から土が立つ。長く残し、薄く広げる。 */
+          if (Math.random() < dt * 1.5) {
+            b.fx.push({ k: "dust", x: mx2 + (Math.random() - 0.5) * 16, y: my2 + (Math.random() - 0.5) * 16,
+              t: 0, life: 1.1 + Math.random() * 0.6, r0: 5 + Math.random() * 4 });
+          }
         }
         const ang = Math.atan2(q.y - melee.e.y, q.x - melee.e.x);
         const rel = Math.abs(((ang - melee.e.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
