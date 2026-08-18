@@ -4,6 +4,16 @@ import { rankBonus } from "./province.js";
 import { MOB_POLICY } from "../data/roads.js";
 import { isMainClan } from "./house.js";
 
+/* 外交の掛け合いに効く、家の格ひと揃い（GDD 12.1）。
+   画面と処理で別々に組み立てると、押せるのに成らぬ、が起きる。ここ一つに拠る。 */
+export function diploStat(g, fid) {
+  return {
+    koku: g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0),
+    diplo: rankBonus(g, fid).diplo,
+    prestige: ((g.factions || {})[fid] || {}).prestige == null ? 50 : g.factions[fid].prestige,
+  };
+}
+
 export const minGarrison = (c) => Math.round(c.def * 10 + (100 - c.min) * 5);
 
 export const troopCap = (c, p, s) => Math.round((c.koku / 10000) * MOB_POLICY[p].per

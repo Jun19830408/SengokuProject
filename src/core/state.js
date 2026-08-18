@@ -10,6 +10,7 @@ import { PARENT } from "../data/newcomers.js";
 import { MOB_POLICY } from "../data/roads.js";
 import { 城の馬, 城の鉄砲 } from "../data/arms.js";
 import { 直属の兵科 } from "../data/arms.js";
+import { SUBJECT, masterOf } from "../data/diplo.js";
 
 export const relKey = (a, b) => [a, b].sort().join("|");
 
@@ -376,11 +377,29 @@ export const hid = (g, c, v, digits) => (canSee(g, c) ? (digits === 0 ? Math.rou
    どの城からどれだけ兵を出すかまで指図できる立場にない。 */
 export const factionKoku = (g, fid) => g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
 
-// その家は自分に臣従しているか
+/* 上下のある間柄で、上に立っているのはどの家か（GDD 12.1）。
+   結んだときに r.master へ書き留めてある。古い記録には無いので石高で見当をつける。 */
+export function 主家(g, a, b) {
+  const r = relOf(g, a, b);
+  return masterOf(r, a, b, factionKoku(g, a), factionKoku(g, b));
+}
+
+/* その家は自分に臣従しているか。
+
+   かつては「臣従の間柄で、石高の大きいほうが主」と決めていた。
+   そのため、膝を屈した相手の石高をこちらが追い越した途端、
+   主従がひとりでに裏返っていた。書き留めた向きで判ずる。 */
 export function isVassal(g, me, other) {
   if (!me || !other || me === other) return false;
   if (relOf(g, me, other).state !== "臣従") return false;
-  return factionKoku(g, me) >= factionKoku(g, other);   // 石高の大きいほうが主
+  return 主家(g, me, other) === me;
+}
+
+// 自分がその家の下に立っているか（従属・臣従のいずれでも）
+export function 膝を屈している(g, me, other) {
+  if (!me || !other || me === other) return false;
+  if (!SUBJECT.includes(relOf(g, me, other).state)) return false;
+  return 主家(g, me, other) === other;
 }
 
 // 指図の通る間柄か（自家、または臣従の家）
@@ -391,7 +410,7 @@ export function canAskAid(g, me, other) {
   if (!me || !other || me === other) return false;
   const st = relOf(g, me, other).state;
   if (st === "同盟") return true;
-  if (st === "従属" || st === "臣従") return !isVassal(g, me, other);   // 相手が上、または対等
+  if (SUBJECT.includes(st)) return 主家(g, me, other) !== me;   // 相手が上（下知が来る側）
   return false;
 }
 
@@ -463,7 +482,17 @@ export function 立たぬ申し送りを落とす(s) {
     const 残り = s.warSettle.queue.filter((id) => (s.generals || []).some((x) => x.id === id));
     s.warSettle = 残り.length ? { ...s.warSettle, queue: 残り } : null;
   }
-  /* 五、道中の援軍に助勢の印をつける。
+  /* 五、上下のある盟約に、どちらが上かを書き入れる。
+     かつては書き留めず、そのときどきの石高で上下を決めていた。読み込むときに、
+     いまの石高で見当をつけて書き留める。以後は石高が動いても向きは変わらない。 */
+  for (const k of Object.keys(s.relations || {})) {
+    const r = s.relations[k];
+    if (!r || !SUBJECT.includes(r.state) || r.master) continue;
+    const [a1, b1] = k.split("|");
+    const koku = (fid) => (s.castles || []).filter((c) => c.faction === fid).reduce((t, c) => t + c.koku, 0);
+    r.master = koku(a1) >= koku(b1) ? a1 : b1;
+  }
+  /* 六、道中の援軍に助勢の印をつける。
      印を見て「攻めるか援けるか」を判ずるようにしたが、直す前に出した軍には
      印がない。そのまま着けば、援けに行った先で同盟国と戦うことになる。
      いま道中にある軍のうち、援軍として出され（aid）、向かう先が和を結んでいる

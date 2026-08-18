@@ -12,6 +12,8 @@ import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { canHoldCastle, castleRankNeed, stipendOf } from "../core/rank.js";
 import { 基準値, 売値, 買値 } from "../data/market.js";
+import { diploStat } from "../core/rank.js";
+import { 主家 } from "../core/state.js";
 /* ==========================================================================
    政務 ─ 城と家中への下知
    いずれも「いまの盤の様子（prev）を受け取り、改めた盤の様子を返す」だけの処理。
@@ -252,43 +254,62 @@ export function doCaptive(prev, genId, how) {
     return s;
 }
 
-// 外交（親善・不可侵・同盟・従属・臣従・独立）
+/* 外交（GDD 12.1）。
+
+   命の名に向きが入った。「従属させる」は相手を従える命、「従属する」は自らが
+   膝を屈する命である。結んだときに、どちらが上かを盟約へ書き留める。 */
 export function doDiplo(prev, fid, key) {
     const s = structuredClone(prev);
     const me = s.factions[s.player], you = s.factions[fid];
     const r = s.relations[relKey(s.player, fid)];
     const def = DIPLO.find((d) => d.key === key);
-    const stat = (id) => ({
-      koku: s.castles.filter((c) => c.faction === id).reduce((a, c) => a + c.koku, 0),
-      diplo: rankBonus(s, id).diplo,          // 官位があれば交渉が通りやすい
-    });
-    if (!def || !def.need(r, stat(s.player), stat(fid)) || me.gold < def.cost) return s;
+    if (!def) return s;
+    // 上下のある間柄なら、いま自分が下にいるのか上にいるのか
+    const 主 = 主家(s, s.player, fid);
+    const 下 = 主 == null ? null : 主 !== s.player;
+    if (!def.need(r, diploStat(s, s.player), diploStat(s, fid), 下) || me.gold < def.cost) return s;
     me.gold -= def.cost;
+
     if (key === "親善") { r.trust = clamp(r.trust + 9, 0, 100); }
     else if (key === "独立") {
       // 膝を屈していた家が旗を翻す。信義を捨てるのだから、代償は大きい。
-      r.state = "敵対";
-      r.until = null;
+      r.state = "敵対"; r.until = null; r.master = null;
       r.trust = clamp(r.trust - 45, 0, 100);
-      me.prestige = clamp((me.prestige || 50) - 12, 0, 100);
+      me.prestige = clamp((me.prestige == null ? 50 : me.prestige) - 12, 0, 100);
       for (const x of s.generals.filter((q) => q.faction === s.player && !q.captive)) {
         if (x.loyal != null) x.loyal = clamp(x.loyal - 6, 0, 100);
       }
-      // 他家からも信を失う
-      for (const k of Object.keys(s.relations)) {
+      for (const k of Object.keys(s.relations)) {                 // 他家からも信を失う
         if (!k.includes(s.player)) continue;
         const r2 = s.relations[k];
         if (r2 !== r) r2.trust = clamp(r2.trust - 8, 0, 100);
       }
       s.chronicle.push({ y: s.year, m: s.month,
-        text: `${me.name}が${you.name}への従属を破り、独立を宣した。諸家の信を損ねた。` });
+        text: `${me.name}が${you.name}への${prev.relations[relKey(s.player, fid)].state}を破り、独立を宣した。諸家の信を損ねた。` });
       s.msg = `${you.name}への従属を破った。以後は敵対である。家中の忠誠も揺れている。`;
     }
+    else if (key === "解き放つ") {
+      /* 上に立つ側が、自ら上下を解く。信義にかなうので、代償はない。
+         むしろ寛大とみなされ、信用は増す。 */
+      r.state = "中立"; r.until = null; r.master = null;
+      r.trust = clamp(r.trust + 10, 0, 100);
+      me.prestige = clamp((me.prestige == null ? 50 : me.prestige) + 3, 0, 100);
+      s.chronicle.push({ y: s.year, m: s.month, text: `${me.name}が${you.name}を上下から解き、中立に戻した。` });
+      s.msg = `${you.name}を解き放った。以後は中立である。`;
+    }
     else {
-      r.state = key;
-      r.until = def.months ? { y: s.year + Math.floor((s.month + def.months - 1) / 12), m: ((s.month + def.months - 1) % 12) + 1 } : null;
+      r.state = def.state || key;
+      r.until = def.months
+        ? { y: s.year + Math.floor((s.month + def.months - 1) / 12), m: ((s.month + def.months - 1) % 12) + 1 }
+        : null;
+      // 上下のある間柄なら、どちらが上かを書き留める。以後、石高が動いても裏返らない。
+      r.master = def.dir === "上" ? s.player : def.dir === "下" ? fid : null;
       r.trust = clamp(r.trust + 5, 0, 100);
-      s.chronicle.push({ y: s.year, m: s.month, text: `${you.name}と${key}が成った。` });
+      const 文 = def.dir === "上" ? `${you.name}が${me.name}に${r.state}した。`
+        : def.dir === "下" ? `${me.name}が${you.name}に${r.state}した。`
+        : `${you.name}と${r.state}が成った。`;
+      s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+      s.msg = 文;
     }
     s.ledger = [{ cmd: `外交・${key}`, cost: def.cost, castle: you.name, general: "使者",
       lines: [{ label: `${you.name} 信用`, before: Math.round(r.trust - (key === "親善" ? 9 : 5)), after: Math.round(r.trust), unit: "" }] }, ...s.ledger].slice(0, 6);
@@ -296,15 +317,25 @@ export function doDiplo(prev, fid, key) {
 }
 
 // 調略を仕掛ける
-export function doPlot(prev, castleId, type, genId) {
+export function doPlot(prev, castleId, type, genId, matoId) {
     const s = structuredClone(prev);
     const def = PLOTS.find((x) => x.key === type);
     const f = s.factions[s.player];
     if (!def || f.gold < def.cost) { s.msg = "金が足りぬ。"; return s; }
     const target = s.castles.find((x) => x.id === castleId);
     if (!target) return s;
+    /* 誰に仕掛けるか。人の心を動かす企ては、相手を定めねば始まらない。
+       選ばれた者がその城にいなければ、企ては立たない。 */
+    const 的 = matoId ? s.generals.find((x) => x.id === matoId) : null;
+    if (def.mato === "要" || def.mato === "城主") {
+      if (!的 || 的.at !== target.id || 的.faction !== target.faction || 的.captive) {
+        s.msg = "誰に仕掛けるかを定めねばならぬ。";
+        return s;
+      }
+    }
     f.gold -= def.cost;
-    s.plots.push({ type, castleId, genId, faction: s.player, monthsLeft: def.months });
+    s.plots.push({ type, castleId, genId, faction: s.player, monthsLeft: def.months,
+      matoId: 的 ? 的.id : null });
     s.orders[genId] = { cmd: `調略・${type}`, castleId };   // 調略も月の務めである
     s.ledger = [{ cmd: `調略・${type}`, cost: def.cost, castle: target ? target.name : "", general: s.generals.find((x) => x.id === genId).name,
       lines: [{ label: "成否判明まで", before: 0, after: def.months, unit: "か月" }] }, ...s.ledger].slice(0, 6);

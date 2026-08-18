@@ -13,7 +13,10 @@ export { findPath } from "../src/core/paths.js";
 export { 援けに着く, migrateSave, atPeace, relOf } from "../src/core/state.js";
 export { resolveOffscreen } from "../src/govern/war.js";
 export { advanceMonth } from "../src/govern/month.js";
-export { 忠誠 } from "../src/core/rank.js";
+export { 忠誠, diploStat } from "../src/core/rank.js";
+export { 主家, isVassal, 膝を屈している, canAskAid, underMyBanner } from "../src/core/state.js";
+export { doDiplo, doPlot } from "../src/govern/commands.js";
+export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 合戦の中身を直に動かすための取り出し口。
 // 画面を通すと、戦況の記録が流れて肝心の一行を取り逃がす。
 // 隊がどの門を受け持ち、何の下知を受けているかは、ここから直に見るほかない。

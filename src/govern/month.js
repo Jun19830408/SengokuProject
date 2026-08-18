@@ -135,9 +135,12 @@ export function advanceMonth(prev, g) {
         }
         if (roll > base) { say(`${target.name}への${pl.type}は不調に終わった。`); return false; }
         if (pl.type === "内応") {
-          // 城主の心が離れていなければ通じない。城ごと寝返らせる。
-          const lordOf = s.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.captive)
-            .sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
+          /* 城主の心が離れていなければ通じない。城ごと寝返らせる。
+             誰を口説くかは仕掛けるときに選んである。選ばれた者がすでに城を
+             去っていれば（討たれた、移された）、城中で最も心の離れた者に当たる。 */
+          const 城中 = s.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.captive);
+          const 名指し = pl.matoId ? 城中.find((x) => x.id === pl.matoId) : null;
+          const lordOf = 名指し || 城中.sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
           const loy = lordOf ? (lordOf.loyal == null ? 60 : lordOf.loyal) : 100;
           const wit2 = gen.wit;
           const chance = clamp((72 - loy) / 90 + (wit2 - 60) / 260, 0, 0.85);
@@ -195,9 +198,20 @@ export function advanceMonth(prev, g) {
         }
         if (pl.type === "偵察") { s.intel[target.id] = { y: s.year, m: s.month }; say(`${target.name}の内情を掴んだ。`); }
         else if (pl.type === "流言") {
-          target.min = Math.max(0, target.min - 9);
-          for (const x of s.generals.filter((q) => q.at === target.id)) x.loyal = Math.max(0, x.loyal - 6);
-          say(`${target.name}に流言が広がり、民忠と忠誠が下がった。`);
+          /* 一人に絞れば深く刺さり、城中に広く撒けば浅く広がる。
+             噂は的を絞るほど効く。誰それが敵に通じている、という形になるからである。 */
+          const 名指し = pl.matoId
+            ? s.generals.find((x) => x.id === pl.matoId && x.at === target.id && !x.captive)
+            : null;
+          if (名指し) {
+            target.min = Math.max(0, target.min - 4);
+            名指し.loyal = Math.max(0, (名指し.loyal == null ? 60 : 名指し.loyal) - 18);
+            say(`${target.name}に${名指し.name}を疑う噂が流れた（忠誠 ${Math.round(名指し.loyal)}）。`);
+          } else {
+            target.min = Math.max(0, target.min - 9);
+            for (const x of s.generals.filter((q) => q.at === target.id)) x.loyal = Math.max(0, x.loyal - 6);
+            say(`${target.name}に流言が広がり、民忠と武将の忠誠が下がった。`);
+          }
         } else if (pl.type === "城工作") {
           const ways = ["櫓への放火", "兵糧庫の破壊", "城門の閂を折る", "井戸への投げ込み", "堀の水を落とす"];
           const w = ways[Math.floor(Math.random() * ways.length)];
@@ -209,16 +223,28 @@ export function advanceMonth(prev, g) {
           say(`${target.name}で城工作が成った（${w}）。城の備えが落ちた。`);
         } else if (pl.type === "密約") {
           target.intrigue = true;
-          say(`${target.name}の内応者と密約が成った。攻め寄せた時に効く。`);
+          const 者 = pl.matoId ? s.generals.find((x) => x.id === pl.matoId) : null;
+          target.intrigueBy = 者 ? 者.id : null;
+          say(者
+            ? `${target.name}の${者.name}と密約が成った。攻め寄せた時に門を開く。`
+            : `${target.name}の内応者と密約が成った。攻め寄せた時に効く。`);
         } else if (pl.type === "引き抜き") {
-          const cand = s.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.lord)
-            .sort((a, b) => a.loyal - b.loyal)[0];
-          if (cand && cand.loyal < 70) {
+          /* 誰を誘うかは仕掛けるときに選んである。
+             選んだ者の心が離れていなければ、いくら手を尽くしても応じない。
+             選ばれた者が城を去っていれば、城中で最も心の離れた者に当たる。 */
+          const 城中 = s.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.lord && !x.captive);
+          const cand = (pl.matoId ? 城中.find((x) => x.id === pl.matoId) : null)
+            || [...城中].sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
+          if (cand && (cand.loyal == null ? 60 : cand.loyal) < 70) {
             cand.faction = pl.faction; cand.loyal = 60;
             const home = s.castles.find((x) => x.faction === pl.faction);
             cand.at = home ? home.id : cand.at;
             say(`${cand.name}が${s.factions[pl.faction].name}へ寝返った。`);
-          } else say(`${target.name}の武将は誘いに応じなかった。`);
+          } else {
+            say(cand
+              ? `${cand.name}は誘いに応じなかった（忠誠${Math.round(cand.loyal == null ? 60 : cand.loyal)}。70を下回らねば動かぬ）。`
+              : `${target.name}に誘える武将がいなかった。`);
+          }
         }
         return false;
       });

@@ -14,6 +14,8 @@ import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { canHoldCastle } from "../core/rank.js";
 import { 基準値, 売値, 相場, 買値 } from "../data/market.js";
+import { diploStat } from "../core/rank.js";
+import { 主家 } from "../core/state.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
 export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
@@ -27,6 +29,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
   const [genId, setGenId] = useState(null);
   const [plot, setPlot] = useState("偵察");
   const [plotTarget, setPlotTarget] = useState(null);
+  const [plotMato, setPlotMato] = useState(null);   // 調略を仕掛ける相手の武将
   const [diploTarget, setDiploTarget] = useState(null);
   const cur = genId && gens.some((x) => x.id === genId) ? genId : (gens[0] && gens[0].id);
   // 月の働きは武将ごとに数える。手の空いている者がいれば、まだ命じられる。
@@ -572,19 +575,66 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                   <select className="sel" style={{ width: "100%", marginBottom: 8 }} value={dt} onChange={(e) => setDiploTarget(e.target.value)}>
                     {foeFactions.map((x) => <option key={x.id} value={x.id}>{x.full}</option>)}
                   </select>
-                  <div className="row"><span>現在の関係</span>
-                    <span className="v">{rel.state}{rel.until ? `（残${monthsBetween(g.year, g.month, rel.until.y, rel.until.m)}か月）` : ""}</span></div>
+                  {(() => {
+                    /* 上下のある間柄では、どちらが上かをはっきり示す。
+                       これまでは「従属」とだけ出ていたので、従えているのか
+                       従っているのか、画面から読み取れなかった。 */
+                    const 主 = 主家(g, g.player, dt);
+                    const 向き = 主 == null ? "" : 主 === g.player ? "（こちらが上）" : "（こちらが下）";
+                    return (
+                      <div className="row"><span>現在の関係</span>
+                        <span className="v">{rel.state}{向き}
+                          {rel.until ? `（残${monthsBetween(g.year, g.month, rel.until.y, rel.until.m)}か月）` : ""}</span></div>
+                    );
+                  })()}
                   <div className="row"><span>信用</span><span className="v">{Math.round(rel.trust)} / 100</span></div>
                   <div className="meter"><i style={{ width: `${rel.trust}%`, background: "#4A6E8A" }} /></div>
-                  <div className="g3" style={{ marginTop: 10 }}>
-                    {DIPLO.map((d) => {
-                      const ok = d.need(rel, { koku: myKoku }, { koku: youKoku }) && g.factions[g.player].gold >= d.cost;
-                      return <button key={d.key} className="btn sm" disabled={!ok} title={d.why}
-                        onClick={() => onDiplo(dt, d.key)}>{d.key}</button>;
-                    })}
-                  </div>
-                  <div style={{ fontSize: 11, color: U.dim, marginTop: 8, lineHeight: 1.7 }}>
-                    親善180貫／不可侵320貫・12か月／同盟520貫・24か月／従属400貫／臣従。<br />
+                  {(() => {
+                    // 石高の比と威信は、上下を結べるかの要になる。表に出しておく。
+                    const 私 = diploStat(g, g.player), 敵 = diploStat(g, dt);
+                    const 比 = 私.koku > 0 ? 敵.koku / 私.koku : 9;
+                    return (
+                      <div className="num" style={{ fontSize: 11.5, color: U.dim, marginTop: 6, lineHeight: 1.8 }}>
+                        石高　自家 {fmt(Math.round(私.koku))}石 ／ {g.factions[dt].name} {fmt(Math.round(敵.koku))}石
+                        （<b style={{ color: U.text }}>自家の{Math.round(比 * 100)}％</b>）<br />
+                        威信 {Math.round(私.prestige)}／官位の験 {私.diplo}
+                        　<span style={{ color: U.dim }}>威信が高いほど、要る信用が緩みます</span>
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    const 主 = 主家(g, g.player, dt);
+                    const 下 = 主 == null ? null : 主 !== g.player;
+                    const 私 = diploStat(g, g.player), 敵 = diploStat(g, dt);
+                    const 群 = [
+                      { 名: "誼を通じる", 列: ["親善", "不可侵", "同盟"] },
+                      { 名: "相手を従える", 列: ["従属させる", "臣従させる", "解き放つ"] },
+                      { 名: "自らが膝を屈する", 列: ["従属する", "臣従する", "独立"] },
+                    ];
+                    return 群.map((grp) => (
+                      <div key={grp.名} style={{ marginTop: 10 }}>
+                        <div style={{ fontSize: 11, color: U.dim, marginBottom: 4 }}>{grp.名}</div>
+                        <div className="g3">
+                          {grp.列.map((k) => {
+                            const d = DIPLO.find((x) => x.key === k);
+                            if (!d) return null;
+                            const 成る = d.need(rel, 私, 敵, 下);
+                            const 金 = g.factions[g.player].gold >= d.cost;
+                            return (
+                              <button key={d.key} className="btn sm" disabled={!成る || !金}
+                                title={`${d.why}${d.cost ? `／${d.cost}貫` : "／金は要らぬ"}${!成る ? "" : !金 ? "　【金が足りぬ】" : ""}`}
+                                onClick={() => onDiplo(dt, d.key)}>{d.key}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                  <div style={{ fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.8 }}>
+                    <b style={{ color: U.text }}>従える</b>には、相手が十分に小さく、かつ誼が篤いことが要ります
+                    （従属＝6割未満・信用60／臣従＝35％未満・信用72。官位と威信で緩みます）。<br />
+                    <b style={{ color: U.text }}>膝を屈する</b>のに金も信用も要りません。相手が十分に大きければ、
+                    いつでも降れます（従属＝1.7倍超／臣従＝2.6倍超）。攻め滅ぼされる前の道です。<br />
                     約束を破って攻めれば裏切りとなり、信用・威信・家臣の忠誠が下がります。
                   </div>
                   {(() => {
@@ -709,16 +759,94 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       </div>
                     );
                   })()}
+                  {(() => {
+                    /* 誰に仕掛けるか（GDD 11.2）。
+
+                       流言・密約・引き抜き・内応は、城ではなく人に仕掛けるものである。
+                       これまでは城を指すだけで、実際に誰が寝返るかは盤が勝手に決めていた
+                       （忠誠の最も低い者）。忠誠を検めて狙いを定める、という調略の
+                       いちばん面白いところが、遊ぶ側の手から漏れていた。
+
+                       内情を掴んでいなければ、城中の顔ぶれも忠誠も知れない。
+                       まず偵察を入れること。 */
+                    const d3 = PLOTS.find((x) => x.key === plot);
+                    const tgt = g.castles.find((x) => x.id === pt);
+                    if (!d3 || !tgt || d3.mato === "無") return null;
+                    const 知れる = !!(g.intel || {})[tgt.id];
+                    const 城中 = g.generals.filter((x) => x.at === tgt.id && x.faction === tgt.faction && !x.captive);
+                    const 城主 = castellanOf(g, tgt);
+                    const 列 = d3.mato === "城主"
+                      ? 城中.filter((x) => 城主 && x.id === 城主.id)
+                      : d3.mato === "要" ? 城中.filter((x) => !x.lord) : 城中;
+                    const 選 = 列.some((x) => x.id === plotMato) ? plotMato : (列[0] || {}).id || "";
+                    if (選 !== plotMato) setTimeout(() => setPlotMato(選), 0);
+                    return (
+                      <>
+                        <div style={{ fontSize: 11, color: U.dim, marginBottom: 4 }}>
+                          誰に仕掛けるか
+                          {d3.mato === "任意" && "（選ばねば城中へ広く撒く。一人に絞るほうが深く刺さる）"}
+                          {d3.mato === "城主" && "（城を明け渡せるのは城を預かる者だけ）"}
+                        </div>
+                        {!知れる && (
+                          <div style={{ fontSize: 11.5, color: "#C89A3A", marginBottom: 6, lineHeight: 1.7 }}>
+                            この城の内情はまだ掴んでいません。忠誠は当てになりません。まず偵察を。
+                          </div>
+                        )}
+                        {列.length ? (
+                          <select className="sel" style={{ width: "100%", marginBottom: 8 }}
+                            value={d3.mato === "任意" && plotMato === "" ? "" : 選}
+                            onChange={(e) => setPlotMato(e.target.value)}>
+                            {d3.mato === "任意" && <option value="">城中へ広く撒く（民忠−9・皆の忠誠−6）</option>}
+                            {列.map((x) => (
+                              <option key={x.id} value={x.id}>
+                                {`${x.name}（${x.age}歳・知${x.wit}・忠誠${知れる ? 忠誠(x) : "？"}${x.lord ? "・当主" : 城主 && x.id === 城主.id ? "・城主" : ""}）`}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div style={{ fontSize: 12, color: "#B0483C", marginBottom: 8, lineHeight: 1.7 }}>
+                            {d3.mato === "城主" ? "この城に城主がいません。内応は通じません。"
+                              : "この城に仕掛けられる武将がいません。"}
+                          </div>
+                        )}
+                        {(() => {
+                          const 的 = 列.find((x) => x.id === 選);
+                          if (!的 || !知れる) return null;
+                          const loy = 忠誠(的);
+                          const 見 = plot === "引き抜き"
+                            ? (loy < 70 ? `忠誠${loy}。70を下回っているので、企てが成れば応じます。` : `忠誠${loy}。70を下回らねば、企てが成っても応じません。`)
+                            : plot === "内応"
+                            ? (loy > 72 ? `忠誠${loy}。72を超える城主は城を売りません。まず流言で崩すこと。`
+                              : `忠誠${loy}。応じる見込みは約${Math.round(Math.min(0.85, Math.max(0, (72 - loy) / 90)) * 100)}％です。`)
+                            : plot === "流言" ? `忠誠${loy} → ${Math.max(0, loy - 18)} まで落ちます。`
+                            : `忠誠${loy}。`;
+                          return (
+                            <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.8 }}>
+                              {的.name}：{見}
+                            </div>
+                          );
+                        })()}
+                      </>
+                    );
+                  })()}
                   <select className="sel" style={{ width: "100%", marginBottom: 8 }}
                     value={freeGens.some((x) => x.id === cur) ? cur : (freeGens[0] || {}).id || ""}
                     onChange={(e) => setGenId(e.target.value)}>
                     {freeGens.map((x) => <option key={x.id} value={x.id}>{`担当：${x.name}（知${x.wit}）`}</option>)}
                   </select>
-                  <button className="btn dark" style={{ width: "100%" }}
-                    disabled={!freeGens.length || !pt}
-                    onClick={() => onPlot(pt, plot, freeGens.some((x) => x.id === cur) ? cur : freeGens[0].id)}>
-                    {plot}を仕掛ける
-                  </button>
+                  {(() => {
+                    const d3 = PLOTS.find((x) => x.key === plot);
+                    const 要る = d3 && (d3.mato === "要" || d3.mato === "城主");
+                    const 立つ = !要る || !!plotMato;
+                    return (
+                      <button className="btn dark" style={{ width: "100%" }}
+                        disabled={!freeGens.length || !pt || !立つ}
+                        onClick={() => onPlot(pt, plot, freeGens.some((x) => x.id === cur) ? cur : freeGens[0].id,
+                          d3 && d3.mato !== "無" ? plotMato : null)}>
+                        {立つ ? `${plot}を仕掛ける` : `${plot}は相手を定めねば仕掛けられぬ`}
+                      </button>
+                    );
+                  })()}
                   {!freeGens.length && (
                     <div style={{ fontSize: 12, color: "#B0483C", marginTop: 8, lineHeight: 1.7 }}>
                       この城の者はみな本月の務めに就いており、調略に手を回せない。<br />
@@ -732,7 +860,8 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       <div className="sec">進行中の調略</div>
                       {running.map((x, i) => (
                         <div className="row" key={i}>
-                          <span>{(g.castles.find((y) => y.id === x.castleId) || {}).name}／{x.type}</span>
+                          <span>{(g.castles.find((y) => y.id === x.castleId) || {}).name}／{x.type}
+                            {x.matoId && `／${(g.generals.find((y) => y.id === x.matoId) || {}).name || "―"}`}</span>
                           <span className="v">あと{x.monthsLeft}か月</span>
                         </div>
                       ))}

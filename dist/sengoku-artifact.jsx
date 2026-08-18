@@ -4846,6 +4846,13 @@ function courtRank(s2, fid) {
 var rankBonus = (s2, fid) => courtRank(s2, fid) || { troop: 1, diplo: 0, prestige: 0 };
 
 // src/core/rank.js
+function diploStat(g, fid) {
+  return {
+    koku: g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0),
+    diplo: rankBonus(g, fid).diplo,
+    prestige: ((g.factions || {})[fid] || {}).prestige == null ? 50 : g.factions[fid].prestige
+  };
+}
 var minGarrison = (c) => Math.round(c.def * 10 + (100 - c.min) * 5);
 var troopCap = (c, p, s2) => Math.round(c.koku / 1e4 * MOB_POLICY[p].per * (0.75 + (c.najimi == null ? 70 : c.najimi) / 400) * (s2 ? rankBonus(s2, c.faction).troop : 1));
 var foodDays = (food, troops) => troops > 0 ? Math.round(food / (troops * 0.08) * 30) : 999;
@@ -4990,6 +4997,12 @@ var SPECIAL_OPTIONS = {
   ]
 };
 var SUBJECT = ["\u5F93\u5C5E", "\u81E3\u5F93"];
+function masterOf(r, aId, bId, aKoku, bKoku) {
+  if (!r || !SUBJECT.includes(r.state)) return null;
+  if (r.master === aId || r.master === bId) return r.master;
+  return aKoku >= bKoku ? aId : bId;
+}
+var \u5A01\u4FE1\u306E\u52B9\u304D = (me) => ((me.prestige == null ? 50 : me.prestige) - 50) * 0.2;
 var DIPLO = [
   {
     key: "\u89AA\u5584",
@@ -5001,33 +5014,67 @@ var DIPLO = [
     key: "\u4E0D\u53EF\u4FB5",
     cost: 320,
     months: 12,
-    why: "\u4FE1\u752855\u4EE5\u4E0A\u3002\u4E3B\u5BB6\u3068\u306E\u9593\u306B\u306F\u8981\u3089\u306C",
-    need: (r, me, you) => r.trust >= 55 && !(SUBJECT.includes(r.state) && you.koku > me.koku)
+    state: "\u4E0D\u53EF\u4FB5",
+    why: "\u4FE1\u752855\u4EE5\u4E0A\u3002\u4E0A\u4E0B\u306E\u3042\u308B\u9593\u67C4\u3067\u306F\u8981\u3089\u306C",
+    need: (r, me, you) => r.trust >= 55 && !SUBJECT.includes(r.state)
   },
   {
     key: "\u540C\u76DF",
     cost: 520,
     months: 24,
-    why: "\u4FE1\u752872\u4EE5\u4E0A\u3002\u5F93\u5C5E\u30FB\u81E3\u5F93\u306E\u9593\u306F\u3001\u76F8\u624B\u3092\u4E0A\u56DE\u3089\u306D\u3070\u7D50\u3079\u306C",
-    need: (r, me, you) => r.trust >= 72 && !(SUBJECT.includes(r.state) && you.koku > me.koku * 0.9)
+    state: "\u540C\u76DF",
+    why: "\u4FE1\u752872\u4EE5\u4E0A\u3002\u4E0A\u4E0B\u306E\u3042\u308B\u9593\u67C4\u3067\u306F\u7D50\u3079\u306C\uFF08\u307E\u305A\u72EC\u7ACB\u3059\u308B\u304B\u3001\u76F8\u624B\u3092\u89E3\u304D\u653E\u3064\u3053\u3068\uFF09",
+    need: (r, me, you) => r.trust >= 72 && !SUBJECT.includes(r.state)
   },
+  /* ------------------------------------------------ 相手を従える */
   {
-    key: "\u5F93\u5C5E",
+    key: "\u5F93\u5C5E\u3055\u305B\u308B",
     cost: 400,
-    why: "\u4FE1\u752860\u4EE5\u4E0A\u30FB\u76F8\u624B\u304C\u81EA\u52E2\u529B\u306E6\u5272\u672A\u6E80\u3002\u5B98\u4F4D\u304C\u3042\u308C\u3070\u7DE9\u3080",
-    need: (r, me, you) => r.trust >= 60 - (me.diplo || 0) && you.koku < me.koku * (0.6 + (me.diplo || 0) * 0.012) && !SUBJECT.includes(r.state)
+    state: "\u5F93\u5C5E",
+    dir: "\u4E0A",
+    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E6\u5272\u672A\u6E80\u30FB\u4FE1\u752860\u4EE5\u4E0A\u3002\u5B98\u4F4D\u3068\u5A01\u4FE1\u304C\u3042\u308C\u3070\u7DE9\u3080",
+    need: (r, me, you) => !SUBJECT.includes(r.state) && you.koku < me.koku * (0.6 + (me.diplo || 0) * 0.012) && r.trust >= 60 - (me.diplo || 0) - \u5A01\u4FE1\u306E\u52B9\u304D(me)
   },
   {
-    key: "\u81E3\u5F93",
-    cost: 0,
-    why: "\u76F8\u624B\u304C\u81EA\u52E2\u529B\u306E1.8\u500D\u8D85\u3002\u65D7\u306E\u4E0B\u306B\u5B8C\u5168\u306B\u5165\u308A\u3001\u72EC\u7ACB\u306E\u671B\u307F\u3092\u6368\u3066\u308B",
-    need: (r, me, you) => you.koku > me.koku * 1.8 && !SUBJECT.includes(r.state)
+    key: "\u81E3\u5F93\u3055\u305B\u308B",
+    cost: 900,
+    state: "\u81E3\u5F93",
+    dir: "\u4E0A",
+    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E35\uFF05\u672A\u6E80\u30FB\u4FE1\u752872\u4EE5\u4E0A\u3002\u65D7\u306E\u4E0B\u306B\u5B8C\u5168\u306B\u5165\u308C\u308B",
+    need: (r, me, you) => !SUBJECT.includes(r.state) && you.koku < me.koku * (0.35 + (me.diplo || 0) * 0.01) && r.trust >= 72 - (me.diplo || 0) - \u5A01\u4FE1\u306E\u52B9\u304D(me)
   },
+  /* --------------------------------- 自らが膝を屈する（弱小の家の生き残る道）
+  
+       頭を下げるのに金は要らない。要るのは相手が十分に大きいことだけである。
+       信用は問わない。攻め滅ぼされる前に降るのだから、誼の篤さは関わらない。 */
+  {
+    key: "\u5F93\u5C5E\u3059\u308B",
+    cost: 0,
+    state: "\u5F93\u5C5E",
+    dir: "\u4E0B",
+    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E1.7\u500D\u8D85\u3002\u8CA2\u3092\u7D0D\u3081\u308B\u304B\u308F\u308A\u306B\u653B\u3081\u3089\u308C\u306B\u304F\u304F\u306A\u308B",
+    need: (r, me, you) => !SUBJECT.includes(r.state) && you.koku > me.koku * 1.7
+  },
+  {
+    key: "\u81E3\u5F93\u3059\u308B",
+    cost: 0,
+    state: "\u81E3\u5F93",
+    dir: "\u4E0B",
+    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E2.6\u500D\u8D85\u3002\u65D7\u306E\u4E0B\u306B\u5165\u308A\u3001\u72EC\u7ACB\u306E\u671B\u307F\u3092\u6368\u3066\u308B",
+    need: (r, me, you) => !SUBJECT.includes(r.state) && you.koku > me.koku * 2.6
+  },
+  /* ------------------------------------------------ 上下を解く */
   {
     key: "\u72EC\u7ACB",
     cost: 0,
-    why: "\u5F93\u5C5E\u30FB\u81E3\u5F93\u3092\u7834\u3063\u3066\u81EA\u7ACB\u3059\u308B\u3002\u4FE1\u7528\u3068\u5A01\u4FE1\u3092\u5927\u304D\u304F\u640D\u306A\u3046",
-    need: (r, me, you) => SUBJECT.includes(r.state) && you.koku > me.koku
+    why: "\u81EA\u3089\u304C\u4E0B\u306B\u3044\u308B\u3068\u304D\u3001\u3053\u308C\u3092\u7834\u3063\u3066\u81EA\u7ACB\u3059\u308B\u3002\u4FE1\u7528\u3068\u5A01\u4FE1\u3092\u5927\u304D\u304F\u640D\u306A\u3046",
+    need: (r, me, you, \u4E0B) => \u4E0B === true
+  },
+  {
+    key: "\u89E3\u304D\u653E\u3064",
+    cost: 0,
+    why: "\u81EA\u3089\u304C\u4E0A\u306B\u3044\u308B\u3068\u304D\u3001\u76F8\u624B\u3092\u4E0A\u4E0B\u304B\u3089\u89E3\u3044\u3066\u4E2D\u7ACB\u306B\u623B\u3059",
+    need: (r, me, you, \u4E0B) => \u4E0B === false
   }
 ];
 var PLOTS = [
@@ -5041,6 +5088,7 @@ var PLOTS = [
     need: 70,
     cap: 0.95,
     hard: 0.52,
+    mato: "\u7121",
     desc: "\u5175\u6570\u30FB\u5175\u7CE7\u30FB\u57CE\u9632\u30FB\u6B66\u5C06\u3092\u77E5\u308B\u3002\u4EBA\u3092\u9063\u308B\u3060\u3051\u306E\u6613\u3057\u3044\u4E8B\u3002"
   },
   {
@@ -5050,6 +5098,7 @@ var PLOTS = [
     need: 78,
     cap: 0.9,
     hard: 0.6,
+    mato: "\u4EFB\u610F",
     desc: "\u6C11\u5FE0\u3068\u6B66\u5C06\u5FE0\u8AA0\u3092\u4E0B\u3052\u308B\u3002\u5642\u3092\u6D41\u3059\u3060\u3051\u306A\u3089\u96E3\u3057\u304F\u306A\u3044\u3002"
   },
   {
@@ -5059,6 +5108,7 @@ var PLOTS = [
     need: 84,
     cap: 0.84,
     hard: 0.66,
+    mato: "\u7121",
     desc: "\u57CE\u9632\u30FB\u5175\u7CE7\u30FB\u6C11\u5FE0\u3092\u4E0B\u3052\u308B\u3002\u57CE\u5185\u306B\u624B\u306E\u8005\u3092\u5165\u308C\u306D\u3070\u306A\u3089\u306C\u3002"
   },
   {
@@ -5068,6 +5118,7 @@ var PLOTS = [
     need: 88,
     cap: 0.78,
     hard: 0.7,
+    mato: "\u8981",
     desc: "\u5BDD\u8FD4\u308A\u30FB\u57CE\u9580\u958B\u653E\u3092\u4ED5\u8FBC\u3080\u3002\u653B\u57CE\u6642\u306B\u52B9\u304F\u3002\u76F8\u624B\u306E\u8179\u3092\u63A2\u308B\u8981\u304C\u3042\u308B\u3002"
   },
   {
@@ -5077,6 +5128,7 @@ var PLOTS = [
     need: 90,
     cap: 0.72,
     hard: 0.74,
+    mato: "\u8981",
     desc: "\u6575\u6B66\u5C06\u3092\u5473\u65B9\u3078\u8FCE\u3048\u308B\u3002\u4EBA\u306E\u5FC3\u3092\u52D5\u304B\u3055\u306D\u3070\u306A\u3089\u306C\u3002"
   },
   {
@@ -5086,6 +5138,7 @@ var PLOTS = [
     need: 94,
     cap: 0.6,
     hard: 0.8,
+    mato: "\u57CE\u4E3B",
     desc: "\u57CE\u4E3B\u3092\u53E3\u8AAC\u304D\u3001\u57CE\u3054\u3068\u5473\u65B9\u306B\u4ED8\u3051\u308B\u3002\u5FE0\u8AA0\u306E\u4F4E\u3044\u57CE\u4E3B\u306B\u3057\u304B\u901A\u3058\u306C\u3002\u81F3\u96E3\u306E\u696D\u3002"
   }
 ];
@@ -6375,10 +6428,14 @@ var specialBonus = (g, fid, key) => {
 };
 var canSee = (g, c) => c.faction === g.player || intelFresh(g, c.id) || specialBonus(g, g.player, "intel") > 0;
 var factionKoku = (g, fid) => g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
+function \u4E3B\u5BB6(g, a, b) {
+  const r = relOf(g, a, b);
+  return masterOf(r, a, b, factionKoku(g, a), factionKoku(g, b));
+}
 function isVassal(g, me, other) {
   if (!me || !other || me === other) return false;
   if (relOf(g, me, other).state !== "\u81E3\u5F93") return false;
-  return factionKoku(g, me) >= factionKoku(g, other);
+  return \u4E3B\u5BB6(g, me, other) === me;
 }
 var underMyBanner = (g, me, other) => me === other || isVassal(g, me, other);
 function \u63F4\u3051\u306B\u7740\u304F(g, army, castle) {
@@ -6413,6 +6470,13 @@ function \u7ACB\u305F\u306C\u7533\u3057\u9001\u308A\u3092\u843D\u3068\u3059(s2) 
   if (s2.warSettle && Array.isArray(s2.warSettle.queue)) {
     const \u6B8B\u308A = s2.warSettle.queue.filter((id) => (s2.generals || []).some((x) => x.id === id));
     s2.warSettle = \u6B8B\u308A.length ? { ...s2.warSettle, queue: \u6B8B\u308A } : null;
+  }
+  for (const k of Object.keys(s2.relations || {})) {
+    const r = s2.relations[k];
+    if (!r || !SUBJECT.includes(r.state) || r.master) continue;
+    const [a1, b1] = k.split("|");
+    const koku = (fid) => (s2.castles || []).filter((c) => c.faction === fid).reduce((t, c) => t + c.koku, 0);
+    r.master = koku(a1) >= koku(b1) ? a1 : b1;
   }
   for (const a of s2.armies || []) {
     if (a.\u52A9\u52E2 != null || a.aid == null) continue;
@@ -7359,20 +7423,19 @@ function doDiplo(prev, fid, key) {
   const me = s2.factions[s2.player], you = s2.factions[fid];
   const r = s2.relations[relKey(s2.player, fid)];
   const def = DIPLO.find((d) => d.key === key);
-  const stat = (id) => ({
-    koku: s2.castles.filter((c) => c.faction === id).reduce((a, c) => a + c.koku, 0),
-    diplo: rankBonus(s2, id).diplo
-    // 官位があれば交渉が通りやすい
-  });
-  if (!def || !def.need(r, stat(s2.player), stat(fid)) || me.gold < def.cost) return s2;
+  if (!def) return s2;
+  const \u4E3B = \u4E3B\u5BB6(s2, s2.player, fid);
+  const \u4E0B = \u4E3B == null ? null : \u4E3B !== s2.player;
+  if (!def.need(r, diploStat(s2, s2.player), diploStat(s2, fid), \u4E0B) || me.gold < def.cost) return s2;
   me.gold -= def.cost;
   if (key === "\u89AA\u5584") {
     r.trust = clamp(r.trust + 9, 0, 100);
   } else if (key === "\u72EC\u7ACB") {
     r.state = "\u6575\u5BFE";
     r.until = null;
+    r.master = null;
     r.trust = clamp(r.trust - 45, 0, 100);
-    me.prestige = clamp((me.prestige || 50) - 12, 0, 100);
+    me.prestige = clamp((me.prestige == null ? 50 : me.prestige) - 12, 0, 100);
     for (const x of s2.generals.filter((q) => q.faction === s2.player && !q.captive)) {
       if (x.loyal != null) x.loyal = clamp(x.loyal - 6, 0, 100);
     }
@@ -7384,14 +7447,25 @@ function doDiplo(prev, fid, key) {
     s2.chronicle.push({
       y: s2.year,
       m: s2.month,
-      text: `${me.name}\u304C${you.name}\u3078\u306E\u5F93\u5C5E\u3092\u7834\u308A\u3001\u72EC\u7ACB\u3092\u5BA3\u3057\u305F\u3002\u8AF8\u5BB6\u306E\u4FE1\u3092\u640D\u306D\u305F\u3002`
+      text: `${me.name}\u304C${you.name}\u3078\u306E${prev.relations[relKey(s2.player, fid)].state}\u3092\u7834\u308A\u3001\u72EC\u7ACB\u3092\u5BA3\u3057\u305F\u3002\u8AF8\u5BB6\u306E\u4FE1\u3092\u640D\u306D\u305F\u3002`
     });
     s2.msg = `${you.name}\u3078\u306E\u5F93\u5C5E\u3092\u7834\u3063\u305F\u3002\u4EE5\u5F8C\u306F\u6575\u5BFE\u3067\u3042\u308B\u3002\u5BB6\u4E2D\u306E\u5FE0\u8AA0\u3082\u63FA\u308C\u3066\u3044\u308B\u3002`;
+  } else if (key === "\u89E3\u304D\u653E\u3064") {
+    r.state = "\u4E2D\u7ACB";
+    r.until = null;
+    r.master = null;
+    r.trust = clamp(r.trust + 10, 0, 100);
+    me.prestige = clamp((me.prestige == null ? 50 : me.prestige) + 3, 0, 100);
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: `${me.name}\u304C${you.name}\u3092\u4E0A\u4E0B\u304B\u3089\u89E3\u304D\u3001\u4E2D\u7ACB\u306B\u623B\u3057\u305F\u3002` });
+    s2.msg = `${you.name}\u3092\u89E3\u304D\u653E\u3063\u305F\u3002\u4EE5\u5F8C\u306F\u4E2D\u7ACB\u3067\u3042\u308B\u3002`;
   } else {
-    r.state = key;
+    r.state = def.state || key;
     r.until = def.months ? { y: s2.year + Math.floor((s2.month + def.months - 1) / 12), m: (s2.month + def.months - 1) % 12 + 1 } : null;
+    r.master = def.dir === "\u4E0A" ? s2.player : def.dir === "\u4E0B" ? fid : null;
     r.trust = clamp(r.trust + 5, 0, 100);
-    s2.chronicle.push({ y: s2.year, m: s2.month, text: `${you.name}\u3068${key}\u304C\u6210\u3063\u305F\u3002` });
+    const \u6587 = def.dir === "\u4E0A" ? `${you.name}\u304C${me.name}\u306B${r.state}\u3057\u305F\u3002` : def.dir === "\u4E0B" ? `${me.name}\u304C${you.name}\u306B${r.state}\u3057\u305F\u3002` : `${you.name}\u3068${r.state}\u304C\u6210\u3063\u305F\u3002`;
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+    s2.msg = \u6587;
   }
   s2.ledger = [{
     cmd: `\u5916\u4EA4\u30FB${key}`,
@@ -7402,7 +7476,7 @@ function doDiplo(prev, fid, key) {
   }, ...s2.ledger].slice(0, 6);
   return s2;
 }
-function doPlot(prev, castleId, type, genId) {
+function doPlot(prev, castleId, type, genId, matoId) {
   const s2 = structuredClone(prev);
   const def = PLOTS.find((x) => x.key === type);
   const f = s2.factions[s2.player];
@@ -7412,8 +7486,22 @@ function doPlot(prev, castleId, type, genId) {
   }
   const target = s2.castles.find((x) => x.id === castleId);
   if (!target) return s2;
+  const \u7684 = matoId ? s2.generals.find((x) => x.id === matoId) : null;
+  if (def.mato === "\u8981" || def.mato === "\u57CE\u4E3B") {
+    if (!\u7684 || \u7684.at !== target.id || \u7684.faction !== target.faction || \u7684.captive) {
+      s2.msg = "\u8AB0\u306B\u4ED5\u639B\u3051\u308B\u304B\u3092\u5B9A\u3081\u306D\u3070\u306A\u3089\u306C\u3002";
+      return s2;
+    }
+  }
   f.gold -= def.cost;
-  s2.plots.push({ type, castleId, genId, faction: s2.player, monthsLeft: def.months });
+  s2.plots.push({
+    type,
+    castleId,
+    genId,
+    faction: s2.player,
+    monthsLeft: def.months,
+    matoId: \u7684 ? \u7684.id : null
+  });
   s2.orders[genId] = { cmd: `\u8ABF\u7565\u30FB${type}`, castleId };
   s2.ledger = [{
     cmd: `\u8ABF\u7565\u30FB${type}`,
@@ -8324,7 +8412,9 @@ function advanceMonth(prev, g) {
       return false;
     }
     if (pl.type === "\u5185\u5FDC") {
-      const lordOf = s2.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.captive).sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
+      const \u57CE\u4E2D = s2.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.captive);
+      const \u540D\u6307\u3057 = pl.matoId ? \u57CE\u4E2D.find((x) => x.id === pl.matoId) : null;
+      const lordOf = \u540D\u6307\u3057 || \u57CE\u4E2D.sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
       const loy = lordOf ? lordOf.loyal == null ? 60 : lordOf.loyal : 100;
       const wit2 = gen.wit;
       const chance = clamp((72 - loy) / 90 + (wit2 - 60) / 260, 0, 0.85);
@@ -8395,9 +8485,16 @@ function advanceMonth(prev, g) {
       s2.intel[target.id] = { y: s2.year, m: s2.month };
       say(`${target.name}\u306E\u5185\u60C5\u3092\u63B4\u3093\u3060\u3002`);
     } else if (pl.type === "\u6D41\u8A00") {
-      target.min = Math.max(0, target.min - 9);
-      for (const x of s2.generals.filter((q) => q.at === target.id)) x.loyal = Math.max(0, x.loyal - 6);
-      say(`${target.name}\u306B\u6D41\u8A00\u304C\u5E83\u304C\u308A\u3001\u6C11\u5FE0\u3068\u5FE0\u8AA0\u304C\u4E0B\u304C\u3063\u305F\u3002`);
+      const \u540D\u6307\u3057 = pl.matoId ? s2.generals.find((x) => x.id === pl.matoId && x.at === target.id && !x.captive) : null;
+      if (\u540D\u6307\u3057) {
+        target.min = Math.max(0, target.min - 4);
+        \u540D\u6307\u3057.loyal = Math.max(0, (\u540D\u6307\u3057.loyal == null ? 60 : \u540D\u6307\u3057.loyal) - 18);
+        say(`${target.name}\u306B${\u540D\u6307\u3057.name}\u3092\u7591\u3046\u5642\u304C\u6D41\u308C\u305F\uFF08\u5FE0\u8AA0 ${Math.round(\u540D\u6307\u3057.loyal)}\uFF09\u3002`);
+      } else {
+        target.min = Math.max(0, target.min - 9);
+        for (const x of s2.generals.filter((q) => q.at === target.id)) x.loyal = Math.max(0, x.loyal - 6);
+        say(`${target.name}\u306B\u6D41\u8A00\u304C\u5E83\u304C\u308A\u3001\u6C11\u5FE0\u3068\u6B66\u5C06\u306E\u5FE0\u8AA0\u304C\u4E0B\u304C\u3063\u305F\u3002`);
+      }
     } else if (pl.type === "\u57CE\u5DE5\u4F5C") {
       const ways = ["\u6AD3\u3078\u306E\u653E\u706B", "\u5175\u7CE7\u5EAB\u306E\u7834\u58CA", "\u57CE\u9580\u306E\u9582\u3092\u6298\u308B", "\u4E95\u6238\u3078\u306E\u6295\u3052\u8FBC\u307F", "\u5800\u306E\u6C34\u3092\u843D\u3068\u3059"];
       const w = ways[Math.floor(Math.random() * ways.length)];
@@ -8409,16 +8506,21 @@ function advanceMonth(prev, g) {
       say(`${target.name}\u3067\u57CE\u5DE5\u4F5C\u304C\u6210\u3063\u305F\uFF08${w}\uFF09\u3002\u57CE\u306E\u5099\u3048\u304C\u843D\u3061\u305F\u3002`);
     } else if (pl.type === "\u5BC6\u7D04") {
       target.intrigue = true;
-      say(`${target.name}\u306E\u5185\u5FDC\u8005\u3068\u5BC6\u7D04\u304C\u6210\u3063\u305F\u3002\u653B\u3081\u5BC4\u305B\u305F\u6642\u306B\u52B9\u304F\u3002`);
+      const \u8005 = pl.matoId ? s2.generals.find((x) => x.id === pl.matoId) : null;
+      target.intrigueBy = \u8005 ? \u8005.id : null;
+      say(\u8005 ? `${target.name}\u306E${\u8005.name}\u3068\u5BC6\u7D04\u304C\u6210\u3063\u305F\u3002\u653B\u3081\u5BC4\u305B\u305F\u6642\u306B\u9580\u3092\u958B\u304F\u3002` : `${target.name}\u306E\u5185\u5FDC\u8005\u3068\u5BC6\u7D04\u304C\u6210\u3063\u305F\u3002\u653B\u3081\u5BC4\u305B\u305F\u6642\u306B\u52B9\u304F\u3002`);
     } else if (pl.type === "\u5F15\u304D\u629C\u304D") {
-      const cand = s2.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.lord).sort((a, b) => a.loyal - b.loyal)[0];
-      if (cand && cand.loyal < 70) {
+      const \u57CE\u4E2D = s2.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.lord && !x.captive);
+      const cand = (pl.matoId ? \u57CE\u4E2D.find((x) => x.id === pl.matoId) : null) || [...\u57CE\u4E2D].sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
+      if (cand && (cand.loyal == null ? 60 : cand.loyal) < 70) {
         cand.faction = pl.faction;
         cand.loyal = 60;
         const home = s2.castles.find((x) => x.faction === pl.faction);
         cand.at = home ? home.id : cand.at;
         say(`${cand.name}\u304C${s2.factions[pl.faction].name}\u3078\u5BDD\u8FD4\u3063\u305F\u3002`);
-      } else say(`${target.name}\u306E\u6B66\u5C06\u306F\u8A98\u3044\u306B\u5FDC\u3058\u306A\u304B\u3063\u305F\u3002`);
+      } else {
+        say(cand ? `${cand.name}\u306F\u8A98\u3044\u306B\u5FDC\u3058\u306A\u304B\u3063\u305F\uFF08\u5FE0\u8AA0${Math.round(cand.loyal == null ? 60 : cand.loyal)}\u300270\u3092\u4E0B\u56DE\u3089\u306D\u3070\u52D5\u304B\u306C\uFF09\u3002` : `${target.name}\u306B\u8A98\u3048\u308B\u6B66\u5C06\u304C\u3044\u306A\u304B\u3063\u305F\u3002`);
+      }
     }
     return false;
   });
@@ -13293,6 +13395,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
   const [genId, setGenId] = useState4(null);
   const [plot, setPlot] = useState4("\u5075\u5BDF");
   const [plotTarget, setPlotTarget] = useState4(null);
+  const [plotMato, setPlotMato] = useState4(null);
   const [diploTarget, setDiploTarget] = useState4(null);
   const cur = genId && gens.some((x) => x.id === genId) ? genId : gens[0] && gens[0].id;
   const busy = (id) => !!g.orders[id];
@@ -13518,20 +13621,41 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
       color: "#A9A499",
       fontSize: 12.5,
       padding: "4px 0"
-    } }, /* @__PURE__ */ React4.createElement("span", null, "\u3010\u6355\u865C\u3011", x.name), /* @__PURE__ */ React4.createElement("span", { className: "num" }, x.age, "\u6B73\uFF0F\u7D71", x.lead, "\uFF0F\u6B66", x.valor, "\uFF0F\u77E5", x.wit, "\uFF0F\u653F", x.gov, "\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0 ", \u5FE0\u8AA0(x)))), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 4 } }, "\u6355\u865C\u306F\u57CE\u4E3B\u306B\u3082\u8912\u8CDE\u306B\u3082\u4E0E\u308C\u306A\u3044\u3002\u51E6\u9047\u306F\u5916\u4EA4\u306E\u300C\u6355\u865C\u300D\u3067\u6C7A\u3081\u308B\u3002"))), tab === "\u5916\u4EA4" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("select", { className: "sel", style: { width: "100%", marginBottom: 8 }, value: dt, onChange: (e) => setDiploTarget(e.target.value) }, foeFactions.map((x) => /* @__PURE__ */ React4.createElement("option", { key: x.id, value: x.id }, x.full))), /* @__PURE__ */ React4.createElement("div", { className: "row" }, /* @__PURE__ */ React4.createElement("span", null, "\u73FE\u5728\u306E\u95A2\u4FC2"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, rel.state, rel.until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, rel.until.y, rel.until.m)}\u304B\u6708\uFF09` : "")), /* @__PURE__ */ React4.createElement("div", { className: "row" }, /* @__PURE__ */ React4.createElement("span", null, "\u4FE1\u7528"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, Math.round(rel.trust), " / 100")), /* @__PURE__ */ React4.createElement("div", { className: "meter" }, /* @__PURE__ */ React4.createElement("i", { style: { width: `${rel.trust}%`, background: "#4A6E8A" } })), /* @__PURE__ */ React4.createElement("div", { className: "g3", style: { marginTop: 10 } }, DIPLO.map((d) => {
-      const ok = d.need(rel, { koku: myKoku }, { koku: youKoku }) && g.factions[g.player].gold >= d.cost;
-      return /* @__PURE__ */ React4.createElement(
-        "button",
-        {
-          key: d.key,
-          className: "btn sm",
-          disabled: !ok,
-          title: d.why,
-          onClick: () => onDiplo(dt, d.key)
-        },
-        d.key
-      );
-    })), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 8, lineHeight: 1.7 } }, "\u89AA\u5584180\u8CAB\uFF0F\u4E0D\u53EF\u4FB5320\u8CAB\u30FB12\u304B\u6708\uFF0F\u540C\u76DF520\u8CAB\u30FB24\u304B\u6708\uFF0F\u5F93\u5C5E400\u8CAB\uFF0F\u81E3\u5F93\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u7D04\u675F\u3092\u7834\u3063\u3066\u653B\u3081\u308C\u3070\u88CF\u5207\u308A\u3068\u306A\u308A\u3001\u4FE1\u7528\u30FB\u5A01\u4FE1\u30FB\u5BB6\u81E3\u306E\u5FE0\u8AA0\u304C\u4E0B\u304C\u308A\u307E\u3059\u3002"), (() => {
+    } }, /* @__PURE__ */ React4.createElement("span", null, "\u3010\u6355\u865C\u3011", x.name), /* @__PURE__ */ React4.createElement("span", { className: "num" }, x.age, "\u6B73\uFF0F\u7D71", x.lead, "\uFF0F\u6B66", x.valor, "\uFF0F\u77E5", x.wit, "\uFF0F\u653F", x.gov, "\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0 ", \u5FE0\u8AA0(x)))), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 4 } }, "\u6355\u865C\u306F\u57CE\u4E3B\u306B\u3082\u8912\u8CDE\u306B\u3082\u4E0E\u308C\u306A\u3044\u3002\u51E6\u9047\u306F\u5916\u4EA4\u306E\u300C\u6355\u865C\u300D\u3067\u6C7A\u3081\u308B\u3002"))), tab === "\u5916\u4EA4" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("select", { className: "sel", style: { width: "100%", marginBottom: 8 }, value: dt, onChange: (e) => setDiploTarget(e.target.value) }, foeFactions.map((x) => /* @__PURE__ */ React4.createElement("option", { key: x.id, value: x.id }, x.full))), (() => {
+      const \u4E3B = \u4E3B\u5BB6(g, g.player, dt);
+      const \u5411\u304D = \u4E3B == null ? "" : \u4E3B === g.player ? "\uFF08\u3053\u3061\u3089\u304C\u4E0A\uFF09" : "\uFF08\u3053\u3061\u3089\u304C\u4E0B\uFF09";
+      return /* @__PURE__ */ React4.createElement("div", { className: "row" }, /* @__PURE__ */ React4.createElement("span", null, "\u73FE\u5728\u306E\u95A2\u4FC2"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, rel.state, \u5411\u304D, rel.until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, rel.until.y, rel.until.m)}\u304B\u6708\uFF09` : ""));
+    })(), /* @__PURE__ */ React4.createElement("div", { className: "row" }, /* @__PURE__ */ React4.createElement("span", null, "\u4FE1\u7528"), /* @__PURE__ */ React4.createElement("span", { className: "v" }, Math.round(rel.trust), " / 100")), /* @__PURE__ */ React4.createElement("div", { className: "meter" }, /* @__PURE__ */ React4.createElement("i", { style: { width: `${rel.trust}%`, background: "#4A6E8A" } })), (() => {
+      const \u79C1 = diploStat(g, g.player), \u6575 = diploStat(g, dt);
+      const \u6BD4 = \u79C1.koku > 0 ? \u6575.koku / \u79C1.koku : 9;
+      return /* @__PURE__ */ React4.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, marginTop: 6, lineHeight: 1.8 } }, "\u77F3\u9AD8\u3000\u81EA\u5BB6 ", fmt(Math.round(\u79C1.koku)), "\u77F3 \uFF0F ", g.factions[dt].name, " ", fmt(Math.round(\u6575.koku)), "\u77F3 \uFF08", /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, "\u81EA\u5BB6\u306E", Math.round(\u6BD4 * 100), "\uFF05"), "\uFF09", /* @__PURE__ */ React4.createElement("br", null), "\u5A01\u4FE1 ", Math.round(\u79C1.prestige), "\uFF0F\u5B98\u4F4D\u306E\u9A13 ", \u79C1.diplo, /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim } }, "\u5A01\u4FE1\u304C\u9AD8\u3044\u307B\u3069\u3001\u8981\u308B\u4FE1\u7528\u304C\u7DE9\u307F\u307E\u3059"));
+    })(), (() => {
+      const \u4E3B = \u4E3B\u5BB6(g, g.player, dt);
+      const \u4E0B = \u4E3B == null ? null : \u4E3B !== g.player;
+      const \u79C1 = diploStat(g, g.player), \u6575 = diploStat(g, dt);
+      const \u7FA4 = [
+        { \u540D: "\u8ABC\u3092\u901A\u3058\u308B", \u5217: ["\u89AA\u5584", "\u4E0D\u53EF\u4FB5", "\u540C\u76DF"] },
+        { \u540D: "\u76F8\u624B\u3092\u5F93\u3048\u308B", \u5217: ["\u5F93\u5C5E\u3055\u305B\u308B", "\u81E3\u5F93\u3055\u305B\u308B", "\u89E3\u304D\u653E\u3064"] },
+        { \u540D: "\u81EA\u3089\u304C\u819D\u3092\u5C48\u3059\u308B", \u5217: ["\u5F93\u5C5E\u3059\u308B", "\u81E3\u5F93\u3059\u308B", "\u72EC\u7ACB"] }
+      ];
+      return \u7FA4.map((grp) => /* @__PURE__ */ React4.createElement("div", { key: grp.\u540D, style: { marginTop: 10 } }, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginBottom: 4 } }, grp.\u540D), /* @__PURE__ */ React4.createElement("div", { className: "g3" }, grp.\u5217.map((k) => {
+        const d = DIPLO.find((x) => x.key === k);
+        if (!d) return null;
+        const \u6210\u308B = d.need(rel, \u79C1, \u6575, \u4E0B);
+        const \u91D1 = g.factions[g.player].gold >= d.cost;
+        return /* @__PURE__ */ React4.createElement(
+          "button",
+          {
+            key: d.key,
+            className: "btn sm",
+            disabled: !\u6210\u308B || !\u91D1,
+            title: `${d.why}${d.cost ? `\uFF0F${d.cost}\u8CAB` : "\uFF0F\u91D1\u306F\u8981\u3089\u306C"}${!\u6210\u308B ? "" : !\u91D1 ? "\u3000\u3010\u91D1\u304C\u8DB3\u308A\u306C\u3011" : ""}`,
+            onClick: () => onDiplo(dt, d.key)
+          },
+          d.key
+        );
+      }))));
+    })(), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.8 } }, /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, "\u5F93\u3048\u308B"), "\u306B\u306F\u3001\u76F8\u624B\u304C\u5341\u5206\u306B\u5C0F\u3055\u304F\u3001\u304B\u3064\u8ABC\u304C\u7BE4\u3044\u3053\u3068\u304C\u8981\u308A\u307E\u3059 \uFF08\u5F93\u5C5E\uFF1D6\u5272\u672A\u6E80\u30FB\u4FE1\u752860\uFF0F\u81E3\u5F93\uFF1D35\uFF05\u672A\u6E80\u30FB\u4FE1\u752872\u3002\u5B98\u4F4D\u3068\u5A01\u4FE1\u3067\u7DE9\u307F\u307E\u3059\uFF09\u3002", /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("b", { style: { color: U.text } }, "\u819D\u3092\u5C48\u3059\u308B"), "\u306E\u306B\u91D1\u3082\u4FE1\u7528\u3082\u8981\u308A\u307E\u305B\u3093\u3002\u76F8\u624B\u304C\u5341\u5206\u306B\u5927\u304D\u3051\u308C\u3070\u3001 \u3044\u3064\u3067\u3082\u964D\u308C\u307E\u3059\uFF08\u5F93\u5C5E\uFF1D1.7\u500D\u8D85\uFF0F\u81E3\u5F93\uFF1D2.6\u500D\u8D85\uFF09\u3002\u653B\u3081\u6EC5\u307C\u3055\u308C\u308B\u524D\u306E\u9053\u3067\u3059\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u7D04\u675F\u3092\u7834\u3063\u3066\u653B\u3081\u308C\u3070\u88CF\u5207\u308A\u3068\u306A\u308A\u3001\u4FE1\u7528\u30FB\u5A01\u4FE1\u30FB\u5BB6\u81E3\u306E\u5FE0\u8AA0\u304C\u4E0B\u304C\u308A\u307E\u3059\u3002"), (() => {
       const held = g.generals.filter((x) => x.captive && x.captive.by === g.player);
       if (!held.length) {
         return /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u6355\u865C\uFF080\u540D\uFF09"), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.7 } }, "\u6355\u3089\u3048\u305F\u6B66\u5C06\u306F\u3044\u307E\u305B\u3093\u3002\u5408\u6226\u3084\u57CE\u653B\u3081\u3067\u6575\u5C06\u3092\u6355\u3089\u3048\u308B\u3068\u3001\u3053\u3053\u3067 \u767B\u7528\u30FB\u9003\u3059\u30FB\u65AC\u9996\u30FB\u8EAB\u4EE3\u91D1\u3092\u9078\u3079\u307E\u3059\u3002"));
@@ -13585,6 +13709,33 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
         borderLeft: `3px solid ${pct >= 80 ? "#3E7A3A" : pct >= 45 ? "#C89A3A" : "#B0483C"}`,
         paddingLeft: 10
       } }, who.name, "\uFF08\u77E5\u7565", who.wit, "\uFF09\u304C", tgt.name, "\u3078\u4ED5\u639B\u3051\u308B\u898B\u8FBC\u307F", /* @__PURE__ */ React4.createElement("b", { style: { fontSize: 16, color: pct >= 80 ? "#3E7A3A" : pct >= 45 ? "#C89A3A" : "#B0483C" } }, pct, "\uFF05"), /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, "\u3053\u306E\u57CE\u306F\u6C11\u5FE0", Math.round(tgt.min), "\u3002\u5805\u3044\u57CE\u307B\u3069\u4F59\u5206\u306B\u77E5\u7565\u3092\u8981\u3057\u307E\u3059\u3002 \u3057\u304F\u3058\u308C\u3070\u534A\u3070\u306F\u9732\u898B\u3057\u3001\u4FE1\u7528\u304C\u4E0B\u304C\u308A\u307E\u3059\u3002"));
+    })(), (() => {
+      const d3 = PLOTS.find((x) => x.key === plot);
+      const tgt = g.castles.find((x) => x.id === pt);
+      if (!d3 || !tgt || d3.mato === "\u7121") return null;
+      const \u77E5\u308C\u308B = !!(g.intel || {})[tgt.id];
+      const \u57CE\u4E2D = g.generals.filter((x) => x.at === tgt.id && x.faction === tgt.faction && !x.captive);
+      const \u57CE\u4E3B = castellanOf(g, tgt);
+      const \u5217 = d3.mato === "\u57CE\u4E3B" ? \u57CE\u4E2D.filter((x) => \u57CE\u4E3B && x.id === \u57CE\u4E3B.id) : d3.mato === "\u8981" ? \u57CE\u4E2D.filter((x) => !x.lord) : \u57CE\u4E2D;
+      const \u9078 = \u5217.some((x) => x.id === plotMato) ? plotMato : (\u5217[0] || {}).id || "";
+      if (\u9078 !== plotMato) setTimeout(() => setPlotMato(\u9078), 0);
+      return /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11, color: U.dim, marginBottom: 4 } }, "\u8AB0\u306B\u4ED5\u639B\u3051\u308B\u304B", d3.mato === "\u4EFB\u610F" && "\uFF08\u9078\u3070\u306D\u3070\u57CE\u4E2D\u3078\u5E83\u304F\u6492\u304F\u3002\u4E00\u4EBA\u306B\u7D5E\u308B\u307B\u3046\u304C\u6DF1\u304F\u523A\u3055\u308B\uFF09", d3.mato === "\u57CE\u4E3B" && "\uFF08\u57CE\u3092\u660E\u3051\u6E21\u305B\u308B\u306E\u306F\u57CE\u3092\u9810\u304B\u308B\u8005\u3060\u3051\uFF09"), !\u77E5\u308C\u308B && /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: "#C89A3A", marginBottom: 6, lineHeight: 1.7 } }, "\u3053\u306E\u57CE\u306E\u5185\u60C5\u306F\u307E\u3060\u63B4\u3093\u3067\u3044\u307E\u305B\u3093\u3002\u5FE0\u8AA0\u306F\u5F53\u3066\u306B\u306A\u308A\u307E\u305B\u3093\u3002\u307E\u305A\u5075\u5BDF\u3092\u3002"), \u5217.length ? /* @__PURE__ */ React4.createElement(
+        "select",
+        {
+          className: "sel",
+          style: { width: "100%", marginBottom: 8 },
+          value: d3.mato === "\u4EFB\u610F" && plotMato === "" ? "" : \u9078,
+          onChange: (e) => setPlotMato(e.target.value)
+        },
+        d3.mato === "\u4EFB\u610F" && /* @__PURE__ */ React4.createElement("option", { value: "" }, "\u57CE\u4E2D\u3078\u5E83\u304F\u6492\u304F\uFF08\u6C11\u5FE0\u22129\u30FB\u7686\u306E\u5FE0\u8AA0\u22126\uFF09"),
+        \u5217.map((x) => /* @__PURE__ */ React4.createElement("option", { key: x.id, value: x.id }, `${x.name}\uFF08${x.age}\u6B73\u30FB\u77E5${x.wit}\u30FB\u5FE0\u8AA0${\u77E5\u308C\u308B ? \u5FE0\u8AA0(x) : "\uFF1F"}${x.lord ? "\u30FB\u5F53\u4E3B" : \u57CE\u4E3B && x.id === \u57CE\u4E3B.id ? "\u30FB\u57CE\u4E3B" : ""}\uFF09`))
+      ) : /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginBottom: 8, lineHeight: 1.7 } }, d3.mato === "\u57CE\u4E3B" ? "\u3053\u306E\u57CE\u306B\u57CE\u4E3B\u304C\u3044\u307E\u305B\u3093\u3002\u5185\u5FDC\u306F\u901A\u3058\u307E\u305B\u3093\u3002" : "\u3053\u306E\u57CE\u306B\u4ED5\u639B\u3051\u3089\u308C\u308B\u6B66\u5C06\u304C\u3044\u307E\u305B\u3093\u3002"), (() => {
+        const \u7684 = \u5217.find((x) => x.id === \u9078);
+        if (!\u7684 || !\u77E5\u308C\u308B) return null;
+        const loy = \u5FE0\u8AA0(\u7684);
+        const \u898B = plot === "\u5F15\u304D\u629C\u304D" ? loy < 70 ? `\u5FE0\u8AA0${loy}\u300270\u3092\u4E0B\u56DE\u3063\u3066\u3044\u308B\u306E\u3067\u3001\u4F01\u3066\u304C\u6210\u308C\u3070\u5FDC\u3058\u307E\u3059\u3002` : `\u5FE0\u8AA0${loy}\u300270\u3092\u4E0B\u56DE\u3089\u306D\u3070\u3001\u4F01\u3066\u304C\u6210\u3063\u3066\u3082\u5FDC\u3058\u307E\u305B\u3093\u3002` : plot === "\u5185\u5FDC" ? loy > 72 ? `\u5FE0\u8AA0${loy}\u300272\u3092\u8D85\u3048\u308B\u57CE\u4E3B\u306F\u57CE\u3092\u58F2\u308A\u307E\u305B\u3093\u3002\u307E\u305A\u6D41\u8A00\u3067\u5D29\u3059\u3053\u3068\u3002` : `\u5FE0\u8AA0${loy}\u3002\u5FDC\u3058\u308B\u898B\u8FBC\u307F\u306F\u7D04${Math.round(Math.min(0.85, Math.max(0, (72 - loy) / 90)) * 100)}\uFF05\u3067\u3059\u3002` : plot === "\u6D41\u8A00" ? `\u5FE0\u8AA0${loy} \u2192 ${Math.max(0, loy - 18)} \u307E\u3067\u843D\u3061\u307E\u3059\u3002` : `\u5FE0\u8AA0${loy}\u3002`;
+        return /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.8 } }, \u7684.name, "\uFF1A", \u898B);
+      })());
     })(), /* @__PURE__ */ React4.createElement(
       "select",
       {
@@ -13594,17 +13745,26 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
         onChange: (e) => setGenId(e.target.value)
       },
       freeGens.map((x) => /* @__PURE__ */ React4.createElement("option", { key: x.id, value: x.id }, `\u62C5\u5F53\uFF1A${x.name}\uFF08\u77E5${x.wit}\uFF09`))
-    ), /* @__PURE__ */ React4.createElement(
-      "button",
-      {
-        className: "btn dark",
-        style: { width: "100%" },
-        disabled: !freeGens.length || !pt,
-        onClick: () => onPlot(pt, plot, freeGens.some((x) => x.id === cur) ? cur : freeGens[0].id)
-      },
-      plot,
-      "\u3092\u4ED5\u639B\u3051\u308B"
-    ), !freeGens.length && /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 8, lineHeight: 1.7 } }, "\u3053\u306E\u57CE\u306E\u8005\u306F\u307F\u306A\u672C\u6708\u306E\u52D9\u3081\u306B\u5C31\u3044\u3066\u304A\u308A\u3001\u8ABF\u7565\u306B\u624B\u3092\u56DE\u305B\u306A\u3044\u3002", /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, "\u5185\u653F\u3068\u8ABF\u7565\u306F\u540C\u3058\u624B\u3092\u4F7F\u3046\u3002\u8B00\u3092\u5DE1\u3089\u3059\u306A\u3089\u3001\u8AB0\u304B\u306E\u624B\u3092\u7A7A\u3051\u3066\u304A\u304F\u3053\u3068\u3002")), running.length > 0 && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u9032\u884C\u4E2D\u306E\u8ABF\u7565"), running.map((x, i) => /* @__PURE__ */ React4.createElement("div", { className: "row", key: i }, /* @__PURE__ */ React4.createElement("span", null, (g.castles.find((y) => y.id === x.castleId) || {}).name, "\uFF0F", x.type), /* @__PURE__ */ React4.createElement("span", { className: "v" }, "\u3042\u3068", x.monthsLeft, "\u304B\u6708"))))), tab === "\u7279\u6B8A\u52E2\u529B" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, nearTowns.map((t) => {
+    ), (() => {
+      const d3 = PLOTS.find((x) => x.key === plot);
+      const \u8981\u308B = d3 && (d3.mato === "\u8981" || d3.mato === "\u57CE\u4E3B");
+      const \u7ACB\u3064 = !\u8981\u308B || !!plotMato;
+      return /* @__PURE__ */ React4.createElement(
+        "button",
+        {
+          className: "btn dark",
+          style: { width: "100%" },
+          disabled: !freeGens.length || !pt || !\u7ACB\u3064,
+          onClick: () => onPlot(
+            pt,
+            plot,
+            freeGens.some((x) => x.id === cur) ? cur : freeGens[0].id,
+            d3 && d3.mato !== "\u7121" ? plotMato : null
+          )
+        },
+        \u7ACB\u3064 ? `${plot}\u3092\u4ED5\u639B\u3051\u308B` : `${plot}\u306F\u76F8\u624B\u3092\u5B9A\u3081\u306D\u3070\u4ED5\u639B\u3051\u3089\u308C\u306C`
+      );
+    })(), !freeGens.length && /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 8, lineHeight: 1.7 } }, "\u3053\u306E\u57CE\u306E\u8005\u306F\u307F\u306A\u672C\u6708\u306E\u52D9\u3081\u306B\u5C31\u3044\u3066\u304A\u308A\u3001\u8ABF\u7565\u306B\u624B\u3092\u56DE\u305B\u306A\u3044\u3002", /* @__PURE__ */ React4.createElement("br", null), /* @__PURE__ */ React4.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, "\u5185\u653F\u3068\u8ABF\u7565\u306F\u540C\u3058\u624B\u3092\u4F7F\u3046\u3002\u8B00\u3092\u5DE1\u3089\u3059\u306A\u3089\u3001\u8AB0\u304B\u306E\u624B\u3092\u7A7A\u3051\u3066\u304A\u304F\u3053\u3068\u3002")), running.length > 0 && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { className: "sec" }, "\u9032\u884C\u4E2D\u306E\u8ABF\u7565"), running.map((x, i) => /* @__PURE__ */ React4.createElement("div", { className: "row", key: i }, /* @__PURE__ */ React4.createElement("span", null, (g.castles.find((y) => y.id === x.castleId) || {}).name, "\uFF0F", x.type, x.matoId && `\uFF0F${(g.generals.find((y) => y.id === x.matoId) || {}).name || "\u2015"}`), /* @__PURE__ */ React4.createElement("span", { className: "v" }, "\u3042\u3068", x.monthsLeft, "\u304B\u6708"))))), tab === "\u7279\u6B8A\u52E2\u529B" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, nearTowns.map((t) => {
       const st = g.specials[t.id] || {};
       const opts = SPECIAL_OPTIONS[t.kind] || [];
       return /* @__PURE__ */ React4.createElement("div", { key: t.id, style: { borderBottom: `1px solid ${U.line2}`, paddingBottom: 8, marginBottom: 8 } }, /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React4.createElement("span", { className: "mn", style: { fontSize: 15 } }, t.name), /* @__PURE__ */ React4.createElement("span", { className: "pill", style: { background: "#8A8478" } }, t.kind), /* @__PURE__ */ React4.createElement("span", { style: { fontSize: 12, color: U.dim } }, st.faction === g.player ? `\u95A2\u4FC2\uFF1A${st.state}` : st.faction ? `\u4ED6\u52E2\u529B\u304C${st.state}` : "\u4E2D\u7ACB", st.anger > 0 ? `\uFF0F\u53CD\u767A${Math.round(st.anger)}` : "")), /* @__PURE__ */ React4.createElement("div", { className: "g3", style: { marginTop: 6 } }, opts.map((o) => /* @__PURE__ */ React4.createElement(
@@ -13954,7 +14114,7 @@ function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
   const doRetire2 = (heirId) => setG((prev) => doRetire(prev, heirId));
   const doCaptive2 = (genId, how) => setG((prev) => doCaptive(prev, genId, how));
   const doDiplo2 = (fid, key) => setG((prev) => doDiplo(prev, fid, key));
-  const doPlot2 = (castleId, type, genId) => setG((prev) => doPlot(prev, castleId, type, genId));
+  const doPlot2 = (castleId, type, genId, matoId) => setG((prev) => doPlot(prev, castleId, type, genId, matoId));
   const doSpecial2 = (townId, key) => setG((prev) => doSpecial(prev, townId, key));
   const grantFief2 = (genId, delta) => setG((prev) => grantFief(prev, genId, delta));
   const reward2 = (genId) => setG((prev) => reward(prev, genId));

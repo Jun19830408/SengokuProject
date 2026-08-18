@@ -309,7 +309,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
   const doDiplo = (fid, key) => setG((prev) => 政務.doDiplo(prev, fid, key));
 
   // 調略（GDD 11.2）。接触から成立・拒否・露見まで数か月かかる。
-  const doPlot = (castleId, type, genId) => setG((prev) => 政務.doPlot(prev, castleId, type, genId));
+  const doPlot = (castleId, type, genId, matoId) => setG((prev) => 政務.doPlot(prev, castleId, type, genId, matoId));
 
   // 特殊勢力（GDD 11.3）
   const doSpecial = (townId, key) => setG((prev) => 政務.doSpecial(prev, townId, key));
