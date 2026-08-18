@@ -36,6 +36,7 @@ import { underMyBanner } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
+import { 難を逃れる } from "../core/capture.js";
 
 /* ============================================================ 政略マップ */
 export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
@@ -917,8 +918,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
         let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0)
           + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
         risk += Math.random() * 0.3 - 0.15;
+        /* 討死。当主と器量者は、配下に守られ、あるいは自らの手で斬り抜けて
+           戦場を離れる（難を逃れる）。大名が野戦で討たれるのは稀な事である。 */
         let fate = null;
-        if (risk > 0.78) fate = "討死";
+        if (risk > 0.78 && Math.random() < 難を逃れる(gen)) fate = "討死";
         else if (勝家 && risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0))) fate = "捕縛";
         if (fate) notify(b, `${gen.name}、${fate}。`, c.side === "P" ? "bad" : "good");
         else if (risk > 0.52) fate = "重傷"; else if (risk > 0.34) fate = "軽傷";
@@ -1018,8 +1021,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
         let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0)
           + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
         risk += Math.random() * 0.3 - 0.15;
+        /* 討死。当主と器量者は、配下に守られ、あるいは自らの手で斬り抜けて
+           戦場を離れる（難を逃れる）。大名が野戦で討たれるのは稀な事である。 */
         let fate = null;
-        if (risk > 0.78) fate = "討死";
+        if (risk > 0.78 && Math.random() < 難を逃れる(gen)) fate = "討死";
         else if (risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0))) fate = "捕縛";
         if (fate) notify(b, `${gen.name}、${fate}。`, c.side === "P" ? "bad" : "good");
         else if (risk > 0.52) fate = "重傷"; else if (risk > 0.34) fate = "軽傷";

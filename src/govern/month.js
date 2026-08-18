@@ -921,6 +921,26 @@ export function advanceMonth(prev, g) {
       s.pendingArrivals = arrivals
         .filter((a) => !行き合い留め.has(a.id) && s.armies.some((x) => x.id === a.id))
         .map((a) => a.id);
+      /* 代替わりの報せ（GDD 6.3）。
+
+         succeed は月送りのあちこちから呼ばれる（寿命、討死、捕縛、内応、隠居）。
+         そのつど戦国記に一行残るだけだったので、自家の当主が替わっても気づかぬ
+         ことがあった。家の大事であるから、月送りの報せに必ず立てる。 */
+      for (const k of s.代替わり || []) {
+        const fn = (s.factions[k.faction] || {}).name || "家";
+        if (k.faction === s.player) {
+          events.push(k.retire
+            ? `【代替わり】${k.先代}が隠居し、${k.当主}が当主となった。`
+            : `【代替わり】${k.先代}が${k.cause}。${k.当主}（${k.age}歳）が家督を継いだ。`
+              + `${k.blood ? "" : "血筋の者ではなく、家中は揺れている。"}`);
+          if (k.改名) events.push(`【家名】${k.改名.前}を改め、以後${k.改名.後}と称する。`);
+        } else {
+          events.push(k.改名
+            ? `${k.改名.前}で代替わりがあり、${k.当主}が継いで${k.改名.後}と称した。`
+            : `${fn}で代替わりがあり、${k.当主}が家督を継いだ。`);
+        }
+      }
+      s.代替わり = [];
       s.monthEvents = events;
       if (events.length) s.chronicle.push(...events.map((t) => ({ y: s.year, m: s.month, text: t })));
       if (s.chronicle.length > 400) s.chronicle = s.chronicle.slice(-400);   // 古い記録は流す

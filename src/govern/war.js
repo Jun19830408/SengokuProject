@@ -14,6 +14,7 @@ import { isVassal } from "../core/state.js";
 import { rosterArms } from "../core/roster.js";
 import { holdsProvince } from "../core/province.js";
 import { underMyBanner, 援けに着く } from "../core/state.js";
+import { 難を逃れる } from "../core/capture.js";
 
 // ------------------------------------------------ 援軍（GDD 7.3 / 7.4）
 // 各城・各勢力は「守備最低数・距離・従属度」から派遣・減員・遅参・拒否を判断する。
@@ -159,7 +160,10 @@ export function sackCastle(s, castle, army, hard) {
     if (lastOne) continue;
     // 統率・武勇が高いほど討死や抵抗に傾き、忠誠が低いほど降る
     const r = Math.random() + (hard ? 0.12 : 0) + gen.valor / 400 - gen.loyal / 320;
-    if (r > 0.86) {
+    /* 討死。踏みとどまる気概があっても、当主と器量者はそこで果てない。
+       配下が殿を務めて落ち延びさせ、あるいは自らの手で斬り抜ける（難を逃れる）。
+       ここを免れた者も、なお捕縛と落ち延びの判じには回る。 */
+    if (r > 0.86 && Math.random() < 難を逃れる(gen)) {
       s.generals = s.generals.filter((x) => x.id !== gen.id);
       log(`${gen.name}は${castle.name}に踏みとどまり討死した。`);
     } else if (r > 0.70 && Math.random() < captureChance(gen) * 3.2) {

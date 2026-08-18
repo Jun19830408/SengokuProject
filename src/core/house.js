@@ -39,6 +39,11 @@ export const NAMELESS = /乙名$|按司$|城代$|留守居$|番頭$|代官$/;
 
 export const isNameless = (g) => !!g && NAMELESS.test(g.name || "");
 
+/* 架空の人物か（GDD 6.7）。
+   遊びの中で生まれた子は史実の人物ではない。id にも生年の印が残っている
+   （親の id ＋ "_c" ＋ 年）ので、印の無い古い記録もここで拾える。 */
+export const is架空 = (g) => !!g && (g.架空 === true || /_c\d{4}$/.test(g.id || ""));
+
 
 /* ------------------------------------------- 家の滅亡と戦後の始末（GDD 12.4）
    すべての城を失えば、家は滅びる。
@@ -109,6 +114,11 @@ export function bearChild(s, gen) {
     loyal: clamp((gen.loyal == null ? 70 : gen.loyal) - 4, 0, 100),
     age: 1, at: gen.at, retinue: 60, retTrain: 55,
     unity: 60, merit: 0, fief: 200, rost: newRoster(60, `ret-${id}`),
+    /* 遊びの中で生まれた子は、史実の人物ではない（GDD 6.7）。
+       史実に子のある者には、その子が後年ここへ現れるので、重ねては生まれない。
+       つまり、ここで生まれる者はみな架空である。
+       武将の欄で〔架空〕と添え、史実の人物と混ぜないようにする。 */
+    架空: true,
   };
   s.generals.push(kid);
   PARENT[id] = gen.id;
@@ -256,10 +266,40 @@ export function succeed(s, dead, cause, heirId, retire) {
     if (retire) d = Math.round(d * 0.25) + 1;      // 隠居であれば揺れは小さい
     if (x.loyal != null) x.loyal = clamp(x.loyal + d, 0, 100);
   }
-  s.chronicle.push({ y: s.year, m: s.month,
-    text: retire
-      ? `${dead.name}は家督を${heir.name}に譲って隠居した。${dead.name}は後見として家に残る。`
-      : `${dead.name}が${cause}。${heir.name}が${fname}の家督を継いだ${heir.age < 16 ? "（幼年のため家中に不穏がある）" : ""}。` });
+  /* 家の名（GDD 6.3 / 12.4）。
+
+     血の絶えた家を、姓の違う者が継ぐことがある。六角の家督が松永久秀に移り、
+     それでも盤の上は「六角家」のままであった。当主が松永で家が六角、というのは
+     名としておかしい。継いだ者の姓に改める。
+
+     一門が継いだのなら姓は変わらないので、名もそのままである。
+     家名に「守」「介」などの官名が入る家（織田大和守家）も、継ぐ者が同じ姓なら
+     触らない。姓ごと変わったときだけ、新しい姓に「家」を付けて立て直す。 */
+  const f = s.factions[dead.faction];
+  let 改名 = null;
+  if (f && !blood) {
+    const 新姓 = houseName(heir);
+    const 旧姓 = houseName(dead);
+    if (新姓 && 旧姓 && 新姓 !== 旧姓 && !f.name.startsWith(新姓)) {
+      改名 = { 前: f.name, 後: `${新姓}家` };
+      f.name = 改名.後;
+      f.改名 = [...(f.改名 || []), { y: s.year, m: s.month, 前: 改名.前, 後: 改名.後, 継: heir.name }];
+    }
+  }
+  const 継いだ = retire
+    ? `${dead.name}は家督を${heir.name}に譲って隠居した。${dead.name}は後見として家に残る。`
+    : `${dead.name}が${cause}。${heir.name}が${fname}の家督を継いだ${heir.age < 16 ? "（幼年のため家中に不穏がある）" : ""}。`;
+  s.chronicle.push({ y: s.year, m: s.month, text: 継いだ });
+  if (改名) {
+    s.chronicle.push({ y: s.year, m: s.month,
+      text: `${改名.前}は${heir.name}が継ぎ、以後${改名.後}と称する。` });
+  }
+  /* 代替わりは家の大事である。月送りの報せに必ず立てる。
+     これまでは戦国記に一行残るだけで、自家の当主が替わっても気づかぬことがあった。 */
+  s.代替わり = [...(s.代替わり || []), {
+    faction: dead.faction, 先代: dead.name, 当主: heir.name, cause, retire: !!retire,
+    blood, age: heir.age, 改名, y: s.year, m: s.month,
+  }];
   return heir;
 }
 

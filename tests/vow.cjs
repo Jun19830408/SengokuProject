@@ -22,7 +22,7 @@ const ctxStub = new Proxy({}, { get: (t, p) => {
   if (p === 'createRadialGradient' || p === 'createLinearGradient' || p === 'createConicGradient') {
     return () => ({ addColorStop: () => {} });
   }
-  return () => {};
+  return () => ({ addColorStop: () => {} });
 } });
 dom.window.HTMLCanvasElement.prototype.getContext = () => ctxStub;
 Object.defineProperty(dom.window.HTMLElement.prototype, 'clientWidth', { get() { return 900; } });

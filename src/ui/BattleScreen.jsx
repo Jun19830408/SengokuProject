@@ -18,6 +18,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const [selAll, setSelAll] = useState(false);
   const [wide, setWide] = useState(false);
   const [faceMode, setFaceMode] = useState(false);
+  const [foeSel, setFoeSel] = useState(null);        // 押した敵の隊（帳面を見る／名指しで狙う）
+  const [退き確認, set退き確認] = useState(null);     // 撤退の念押し
   const faceRef = useRef(false);
   const speedRef = useRef(0), selRef = useRef(null), uiRef = useRef(0), allRef = useRef(false);
   const camRef = useRef({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
@@ -250,9 +252,15 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (g.mode === "unit" && g.moved > 8) { orderTo(g.corps, f, null); return; }   // 部隊ドラッグ＝移動／布陣
     if (g.moved > 8) return;                                                       // カメラ移動だった
     const own = hitCorps(f, true);
-    if (own && !allRef.current) { pickCorps(sel === own.id ? null : own.id); return; }  // 再タップで解除
+    if (own && !allRef.current) { pickCorps(sel === own.id ? null : own.id); setFoeSel(null); return; }  // 再タップで解除
     const foe = b.corps.find((c) => !c.dead && !c.destroyed && c.side === "E" && c.seen
       && Math.hypot(c.x - f.x, c.y - f.y) < 42 / Math.max(0.4, camRef.current.s));
+    /* 敵の隊を押したら、その隊の帳面を開く（GDD 8.2）。
+       これまでは、自隊を選んでいるときだけ「そこへ攻めかかれ」の意味しか持たず、
+       何も選んでいなければただの移動先になっていた。敵の様子を検めてから
+       どの隊をぶつけるか決める、という手が打てなかった。 */
+    if (foe) setFoeSel(foe.id); else setFoeSel(null);
+    if (foe && !selC && !allRef.current) return;         // 自隊を選んでいなければ、見るだけ
     if (allRef.current) {
       // 全部隊選択中は、まとまりを保ったまま全隊へ同じ目標を与える
       const live = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed && !c.routed);
@@ -304,6 +312,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (c && isCastle && o !== "待機") { c.siegeAuto = false; c.gate = null; }
     if (!c || c.dead || c.destroyed || c.routed) return;
     c.task = null;
+    c.狙い = null;                       // 別の命令を出せば、名指しの狙いは解ける
     const t = nearestFoe(c);
     const standoff = (foe, gap) => {
       const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
@@ -323,6 +332,22 @@ export function BattleScreen({ ctx, land, onEnd }) {
     issueOrder(b, c, patch);
     force((n) => (n + 1) % 1000);
   };
+  /* 名指しで攻めかかる（GDD 8.2）。
+     この隊は、あの敵の隊に当たれ、という命令。敵が動けば狙いも動く（ai.js）。 */
+  const 狙って命じる = (c, foe, o) => {
+    if (!c || !foe || c.dead || c.destroyed || c.routed) return;
+    c.task = null; c.狙い = foe.id;
+    if (isCastle) { c.siegeAuto = false; c.gate = null; }
+    const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
+    const 間 = o === "突撃" ? 20 : o === "射撃" ? Math.min(d, 150) : 38;
+    const patch = { order: o, target: foe.id, 狙い: foe.id,
+      tx: foe.x + ((c.x - foe.x) / d) * 間, ty: foe.y + ((c.y - foe.y) / d) * 間 };
+    if (o === "突撃") patch.chargeT = c.formation === "鋒矢" ? 26 : 16;
+    issueOrder(b, c, patch);
+    notify(b, `${c.gen.name}隊が${foe.gen.name}隊へ${o}。`, "info");
+    force((n) => (n + 1) % 1000);
+  };
+
   const changeForm = (c, f) => {
     if (!c || c.formation === f) return;
     c.formation = f;
@@ -506,7 +531,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <button className="btn sm" onClick={() => castleAll("施設を崩す")}>全軍施設を崩す</button>
                 <button className="btn sm" onClick={() => castleAll("本丸へ")}>全軍本丸へ</button>
                 <button className="btn sm" onClick={() => allOrder("接戦")}>全軍接戦</button>
-                <button className="btn sm" onClick={() => allOrder("撤退")}>全軍撤退</button>
+                <button className="btn sm" onClick={() => set退き確認({ 全軍: true })}>全軍撤退</button>
               </>
             ) : (
               <>
@@ -514,7 +539,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <button className="btn sm" onClick={() => allOrder("接戦")}>全軍接戦</button>
                 <button className="btn sm" onClick={() => allOrder("射撃")}>全軍弓優先</button>
                 <button className="btn sm" onClick={() => allOrder("待機")}>全軍待機</button>
-                <button className="btn sm" onClick={() => allOrder("撤退")}>全軍撤退</button>
+                <button className="btn sm" onClick={() => set退き確認({ 全軍: true })}>全軍撤退</button>
               </>
             )}
           </div>
@@ -555,6 +580,61 @@ export function BattleScreen({ ctx, land, onEnd }) {
             </div>
           )}
 
+          {/* 押した敵の隊（GDD 8.2）。
+              様子を検め、そのまま名指しで攻めかからせる。 */}
+          {(() => {
+            const foe = foeSel && b.corps.find((c) => c.id === foeSel);
+            if (!foe || foe.dead || foe.destroyed || !foe.seen) return null;
+            const coh = Math.round(foe.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, foe.squads.length));
+            const 兵科 = { yari: "槍", yumi: "弓", teppo: "鉄砲", kiba: "騎馬" };
+            const 内訳 = ["kiba", "teppo", "yumi", "yari"]
+              .map((k) => [兵科[k], foe.squads.filter((q) => q.type === k).reduce((a, q) => a + q.men, 0)])
+              .filter(([, v]) => v > 0).map(([k, v]) => `${k}${fmt(Math.round(v))}`).join("・");
+            return (
+              <div style={{ borderTop: `2px solid ${ctx.eColor}`, paddingTop: 6, marginTop: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 10.5, letterSpacing: ".14em", color: ctx.eColor }}>敵の隊</span>
+                  <span className="mn" style={{ fontSize: 15, flex: 1 }}>{foe.gen.name}隊</span>
+                  <button className="btn sm" style={{ padding: "1px 8px" }} onClick={() => setFoeSel(null)}>閉じる</button>
+                </div>
+                <div className="num" style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.6 }}>
+                  {fmt(corpsMen(foe))}人／士気{Math.round(foe.morale)}／陣形{coh}／疲労{Math.round(foe.fatigue)}／
+                  {foe.formation || "―"}／{TERRAIN[terrainAt(foe.x, foe.y)].label}
+                  {foe.routed ? "／敗走中" : ""}{foe.withdraw ? "／退却中" : ""}
+                  {foe.chargeT > 0 ? "／突撃中" : ""}
+                  {foe.squads.some((q) => q.engaged) ? "／交戦中" : ""}
+                </div>
+                <div className="num" style={{ fontSize: 11.5, color: U.text, lineHeight: 1.6 }}>
+                  {foe.gen.age ? <>齢 <b>{foe.gen.age}</b>　</> : null}
+                  統率 <b>{foe.gen.lead}</b>　武勇 <b>{foe.gen.valor}</b>　知略 <b>{foe.gen.wit}</b>
+                  {foe.gen.lord ? <span style={{ color: ctx.eColor }}>　【総大将】</span> : null}
+                </div>
+                {内訳 && <div className="num" style={{ fontSize: 11.5, color: U.dim }}>兵科　{内訳}</div>}
+                {selC && !selC.routed && !selC.detach ? (
+                  <>
+                    <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 5 }}>
+                      {selC.gen.name}隊を{foe.gen.name}隊へ差し向ける
+                    </div>
+                    <div className="g3">
+                      {["接戦", "突撃", "射撃"].map((o) => (
+                        <button key={o} className={`btn sm ${selC.狙い === foe.id && selC.order === o ? "on" : ""}`}
+                          onClick={() => 狙って命じる(selC, foe, o)}>{o}</button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 11, color: U.dim, lineHeight: 1.7, marginTop: 3 }}>
+                      名指しで命じた隊は、その敵が動いても追います。槍を合わせている間は狙いを変えません。
+                      ほかの命令を出せば、名指しは解けます。
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: 11, color: U.dim, lineHeight: 1.7, marginTop: 4 }}>
+                    自軍の隊を選べば、この隊へ名指しで攻めかからせられます。
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {selC ? (
             <>
               <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
@@ -570,6 +650,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 {selC.pending ? `／伝令中 残${Math.ceil(selC.pending.t)}秒` : ""}
                 {outOfCommand(b, selC) ? "／指揮圏外（命令が届かない）" : ""}
                 {selC.pinch >= 2 ? `／${selC.pinch}方向から挟撃を受けている` : ""}
+                {(() => {
+                  const t = selC.狙い && b.corps.find((x) => x.id === selC.狙い);
+                  return t && !t.destroyed ? `／${t.gen.name}隊を狙っている` : "";
+                })()}
                 {isCastle && selC.kit && selC.kit !== "なし" ? `／${selC.kit}` : ""}
                 {isCastle && selC.gateFat > 3 ? `／門攻めの疲れ${Math.round(selC.gateFat)}` : ""}
               </div>
@@ -607,6 +691,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 ))}
                 <button className={`btn sm ${faceMode ? "on" : ""}`} title="前進せず、その場で向きだけ変えて陣形を組み直す"
                   onClick={() => setFace(!faceMode)}>転回</button>
+                <button className="btn sm" title="この隊だけ戦場を離れる。一度退いた隊は戻せない"
+                  onClick={() => set退き確認({ corps: selC })}>撤退</button>
               </div>
               {faceMode && (
                 <div style={{ fontSize: 11.5, color: "#4A6E8A", lineHeight: 1.6 }}>
@@ -729,8 +815,60 @@ export function BattleScreen({ ctx, land, onEnd }) {
     </>
   );
 
+  /* 撤退の念押し（GDD 8.2）。
+
+     撤退は取り返しがつかない。一括命令の並びに「全軍撤退」があり、その隣は
+     「全軍待機」である。指の下で一つずれれば、押した瞬間に全軍が戦場を離れる。
+     押したら必ず問い、了解を得てから退く。 */
+  const 退き実行 = () => {
+    const k = 退き確認;
+    set退き確認(null);
+    if (!k) return;
+    if (k.全軍) allOrder("撤退");
+    else if (k.corps) {
+      const c = k.corps;
+      c.task = null; c.狙い = null; c.withdraw = true;
+      issueOrder(b, c, { order: "撤退", tx: c.x, ty: FIELD.h + 120 });
+      b.log.push({ t: b.t, text: `${c.gen.name}隊が戦場を離れる。` });
+    }
+    force((n) => (n + 1) % 1000);
+  };
+  const 退きの札 = 退き確認 && (() => {
+    const 全 = !!退き確認.全軍;
+    const c = 退き確認.corps;
+    const 兵 = 全 ? pMen : c ? corpsMen(c) : 0;
+    const 隊数 = b.corps.filter((x) => x.side === "P" && !x.dead && !x.destroyed && !x.routed).length;
+    return (
+      <div className="modal" onMouseDown={stop} onMouseUp={stop}>
+        <div className="card" style={{ maxWidth: 430 }}>
+          <div className="mn" style={{ fontSize: 20, marginBottom: 6 }}>
+            {全 ? "全軍を退かせますか" : `${c.gen.name}隊を退かせますか`}
+          </div>
+          <div style={{ fontSize: 12.5, lineHeight: 1.95 }}>
+            {全
+              ? <>退き鉦を鳴らし、<b>{隊数}隊{fmt(兵)}人</b>が戦場を離れます。この合戦は<b>撤退</b>として終わります。</>
+              : <><b>{fmt(兵)}人</b>が戦場を離れます。一度退いた隊は、この合戦には戻せません。</>}
+          </div>
+          <div style={{ margin: "10px 0", padding: "9px 11px", background: "rgba(176,72,60,0.08)",
+            borderLeft: "3px solid #B0483C", fontSize: 11.5, lineHeight: 1.9 }}>
+            {全
+              ? "統制を保って退くので、追い討ちの損は小さく済みます。ただし城は落ちず、兵と兵糧は費えます。"
+              : "残る隊だけで戦うことになります。手薄になった側面を衝かれぬよう気をつけてください。"}
+          </div>
+          <div style={{ display: "flex", gap: 9 }}>
+            <button className="btn" style={{ flex: 1 }} onClick={() => set退き確認(null)}>取りやめる</button>
+            <button className="btn dark" style={{ flex: 1 }} onClick={退き実行}>
+              {全 ? "承知。全軍退く" : "承知。この隊を退かせる"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  })();
+
   return (
     <div className="sp" style={{ height: "100dvh", background: U.paper, overscrollBehavior: "none" }} onMouseDown={stop} onMouseUp={stop}>
+      {退きの札}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 }}>
         {!wide && (
         <div className="bar" style={{ padding: "6px 10px", gap: 10, fontSize: 12 }}>

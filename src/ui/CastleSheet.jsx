@@ -16,6 +16,7 @@ import { canHoldCastle } from "../core/rank.js";
 import { 基準値, 売値, 相場, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
+import { is架空 } from "../core/house.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
 export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
@@ -535,6 +536,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                         </div>
                         <div className="num" style={{ fontSize: 11.5, color: col, marginTop: 3 }}>
                           {isNameless(x) ? <span style={{ color: "#9B9384" }} title="名の伝わらぬ在地の長。実在の人名ではありません">〔伝〕</span> : null}
+                          {is架空(x) ? <span style={{ color: "#9B9384" }} title="遊びの中で生まれた者。史実の人物ではありません">〔架空〕</span> : null}
                           {x.retired ? <span style={{ color: "#8A7A5A" }}>【隠居】</span> : null}
                           {x.lord ? <span style={{ color: "#C8A44A" }}>【当主】</span> : null}
                           忠誠{忠誠(x)}／知行 {fmt(have)}石

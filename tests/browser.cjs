@@ -22,7 +22,7 @@ global.window = w; global.document = w.document; global.navigator = w.navigator;
 const ctxStub = new Proxy({}, { get: (t, p) => {
   if (p === 'measureText') return () => ({ width: 30 });
   if (p === 'createImageData') return (a, b) => ({ data: new Uint8ClampedArray(a * b * 4), width: a, height: b });
-  return () => {};
+  return () => ({ addColorStop: () => {} });
 } });
 w.HTMLCanvasElement.prototype.getContext = () => ctxStub;
 Object.defineProperty(w.HTMLElement.prototype, 'clientWidth', { get() { return 1200; } });

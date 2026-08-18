@@ -44,7 +44,11 @@ export function ambushChance(gen, weather, terrain, ratio) {
 
 // 奇襲の首尾。当たれば敵の総大将を討ち、軍を瓦解させる。
 export function tryAmbush(s, army, castle, aGens, dGens, weather) {
+  /* 奇襲を企てる者。将のいない軍は奇襲を仕掛けられない。
+     将がみな討たれ、あるいは捕らわれた軍が城へ着くことはある。
+     そのとき head が無いまま「機を得なかった」と書こうとして倒れていた。 */
   const head = [...aGens].sort((a, b) => (b.wit + b.lead) - (a.wit + a.lead))[0];
+  if (!head) return null;
   const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
   const ratio = army.men / Math.max(1, dMen);
   if (ratio > 0.62) return null;                    // 互角に近ければ正面から戦う

@@ -14,7 +14,9 @@ export { 援けに着く, migrateSave, atPeace, relOf } from "../src/core/state.
 export { resolveOffscreen } from "../src/govern/war.js";
 export { advanceMonth } from "../src/govern/month.js";
 export { 忠誠, diploStat } from "../src/core/rank.js";
-export { 主家, isVassal, 膝を屈している, canAskAid, underMyBanner } from "../src/core/state.js";
+export { 難を逃れる, captureChance } from "../src/core/capture.js";
+export { succeed, is架空, bearChild, pickHeir } from "../src/core/house.js";
+export { houseAlive, 主家, isVassal, 膝を屈している, canAskAid, underMyBanner } from "../src/core/state.js";
 export { doDiplo, doPlot } from "../src/govern/commands.js";
 export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 合戦の中身を直に動かすための取り出し口。

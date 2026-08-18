@@ -7,7 +7,7 @@ global.requestAnimationFrame=cb=>{rafId++;rafMap.set(rafId,cb);return rafId;};
 global.cancelAnimationFrame=id=>rafMap.delete(id);
 global.IS_REACT_ACT_ENVIRONMENT=true; dom.window.IS_REACT_ACT_ENVIRONMENT=true;
 const ctxStub=new Proxy({},{get:(t,p)=>{if(p==='measureText')return()=>({width:30});
- if(p==='createImageData')return(w,h)=>({data:new Uint8ClampedArray(w*h*4),width:w,height:h});return()=>{};}});
+ if(p==='createImageData')return(w,h)=>({data:new Uint8ClampedArray(w*h*4),width:w,height:h});return()=>({addColorStop:()=>{}});}});
 dom.window.HTMLCanvasElement.prototype.getContext=()=>ctxStub;
 Object.defineProperty(dom.window.HTMLElement.prototype,'clientWidth',{get(){return 1200;}});
 Object.defineProperty(dom.window.HTMLElement.prototype,'clientHeight',{get(){return 800;}});

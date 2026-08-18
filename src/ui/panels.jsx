@@ -17,6 +17,8 @@ import { 忠誠 } from "../core/rank.js";
 import { 兵科の割り, 蓄えに合わせる } from "../core/roster.js";
 import { clamp } from "../core/util.js";
 import { 既定の兵科 } from "../data/arms.js";
+import { 主家 } from "../core/state.js";
+import { is架空 } from "../core/house.js";
 
 
 export function SortieDialog({ g, from, onClose, onGo }) {
@@ -582,10 +584,35 @@ export function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
   );
 }
 
+/* 窓の外を押したら閉じる（GDD 13.1）。
+
+   一覧の窓を開くと、いちばん下の「閉じる」まで巻き下ろさねば閉じられなかった。
+   長い一覧では、開いて中を見て、また下まで戻る、という手数が要る。
+   外の暗がりを押せば閉じるようにする。
+
+   押し始めと押し終わりの両方が外でなければ閉じない。窓の中から外へ指を滑らせて
+   離したときに閉じてしまうと、なぞって読んでいるだけで窓が消える。
+
+   確かめを要する問い（出陣・捕虜の処遇・身代金・約束を破る・援軍の要請）には
+   付けない。外を押して流れてしまっては、決めたはずのことが決まらない。 */
+export const 外を押して閉じる = (onClose) => ({
+  onMouseDown: (e) => {
+    e.stopPropagation();
+    if (e.target === e.currentTarget) e.currentTarget.dataset.soto = "1";
+    else delete e.currentTarget.dataset.soto;
+  },
+  onMouseUp: (e) => {
+    e.stopPropagation();
+    const 外で始めた = e.currentTarget.dataset.soto === "1";
+    delete e.currentTarget.dataset.soto;
+    if (外で始めた && e.target === e.currentTarget && onClose) onClose();
+  },
+});
+
 export function MonthReport({ g, onClose }) {
   const mine = g.castles.filter((c) => c.faction === g.player);
   return (
-    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+    <div className="modal" {...外を押して閉じる(onClose)}>
       <div className="card">
         <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>{g.year}年{g.month}月　月初報告</div>
         {(() => {
@@ -667,7 +694,7 @@ export function MonthReport({ g, onClose }) {
 
 export function Chronicle({ g, onClose }) {
   return (
-    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+    <div className="modal" {...外を押して閉じる(onClose)}>
       <div className="card">
         <div className="mn" style={{ fontSize: 21, marginBottom: 12 }}>戦国記</div>
         {[...g.chronicle].reverse().map((c, i) => (
@@ -684,33 +711,75 @@ export function Chronicle({ g, onClose }) {
 
 
 export function FactionInfo({ g, onClose }) {
-  const rows = Object.values(g.factions).map((f) => {
+  /* 勢力一覧（GDD 12.4）。
+
+     家の名を r.f.full で出していたが、勢力の値にそんな欄はない。
+     どの行も名が空のまま並んでいた（城の欄で組み立てている別物と取り違えていた）。
+     家の名と、いまの当主の名を並べる。
+
+     また、城を一つも持たぬ家は滅んだものとして扱う。当主が捕らわれて身の振り方が
+     決まらぬうちは家の記録が残るが、拠るべき城が一つも無ければ、その家はもう無い。
+     生きている家に混ぜて並べては、天下の形が読めない。 */
+  const 立つ = [], 絶えた = [];
+  for (const f of Object.values(g.factions)) {
     const cs = g.castles.filter((c) => c.faction === f.id);
-    const gs = g.generals.filter((x) => x.faction === f.id);
-    return {
+    const gs = g.generals.filter((x) => x.faction === f.id && !x.captive);
+    const 当主 = g.generals.find((x) => x.faction === f.id && x.lord && !x.captive);
+    const 囚 = g.generals.find((x) => x.faction === f.id && x.captive);
+    const row = {
       f, koku: cs.reduce((a, c) => a + c.koku, 0),
       men: cs.reduce((a, c) => a + c.local, 0) + gs.filter((x) => x.at).reduce((a, x) => a + x.retinue, 0),
-      castles: cs.length, gens: gs.length,
+      castles: cs.length, gens: gs.length, 当主, 囚,
     };
-  }).sort((a, b) => b.koku - a.koku);
+    (cs.length ? 立つ : 絶えた).push(row);
+  }
+  立つ.sort((a, b) => b.koku - a.koku);
+  絶えた.sort((a, b) => (a.f.name < b.f.name ? -1 : 1));
   return (
-    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+    <div className="modal" {...外を押して閉じる(onClose)}>
       <div className="card">
-        <div className="mn" style={{ fontSize: 21, marginBottom: 12 }}>勢力情報</div>
-        {rows.map((r) => (
-          <div key={r.f.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: `1px solid ${U.line2}`, flexWrap: "wrap" }}>
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>勢力情報</div>
+        <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 10 }}>
+          城を持つ家 {立つ.length}家／滅んだ家 {絶えた.length}家
+        </div>
+        {立つ.map((r, i) => (
+          <div key={r.f.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0",
+            borderBottom: `1px solid ${U.line2}`, flexWrap: "wrap" }}>
+            <span className="num" style={{ fontSize: 11.5, color: U.dim, width: 22, textAlign: "right" }}>{i + 1}</span>
             <span className="dot" style={{ background: r.f.color }} />
-            <span className="mn" style={{ fontSize: 16, flex: 1 }}>{r.f.full}
-              {r.f.id === g.player && <span className="pill" style={{ background: r.f.color, marginLeft: 7 }}>自勢力</span>}</span>
-            <span className="num" style={{ fontSize: 12, color: U.dim }}>
+            <span className="mn" style={{ fontSize: 16 }}>{r.f.name}</span>
+            <span style={{ fontSize: 12.5, color: U.dim, flex: 1 }}>
+              {r.当主 ? `当主 ${r.当主.name}（${r.当主.age}歳）` : "当主不在"}
+            </span>
+            {r.f.id === g.player && <span className="pill" style={{ background: r.f.color }}>自勢力</span>}
+            <span className="num" style={{ fontSize: 12, color: U.dim, width: "100%", paddingLeft: 32 }}>
               {man(r.koku)}万石／兵{fmt(r.men)}／{r.castles}城／武将{r.gens}名／威信{Math.round(r.f.prestige || 50)}
               {r.f.id !== g.player && (() => {
                 const rl = relOf(g, g.player, r.f.id);
-                return `／${rl.state}・信用${Math.round(rl.trust)}${rl.until ? `（残${monthsBetween(g.year, g.month, rl.until.y, rl.until.m)}か月）` : ""}`;
+                const 主 = 主家(g, g.player, r.f.id);
+                const 向 = 主 == null ? "" : 主 === g.player ? "（こちらが上）" : "（こちらが下）";
+                return `／${rl.state}${向}・信用${Math.round(rl.trust)}${rl.until ? `（残${monthsBetween(g.year, g.month, rl.until.y, rl.until.m)}か月）` : ""}`;
               })()}
             </span>
           </div>
         ))}
+        {絶えた.length > 0 && (
+          <>
+            <div className="sec" style={{ marginTop: 14 }}>滅んだ家（{絶えた.length}家）</div>
+            <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 6 }}>
+              城を一つも持たぬ家です。当主が捕らわれて身の振り方が決まらずとも、
+              拠るべき城が無ければ家は立ちません。
+            </div>
+            <div style={{ fontSize: 12.5, lineHeight: 2, color: U.dim }}>
+              {絶えた.map((r) => (
+                <span key={r.f.id} style={{ marginRight: 12, whiteSpace: "nowrap" }}>
+                  <span className="dot" style={{ background: r.f.color, opacity: 0.5 }} />
+                  {r.f.name}{r.囚 ? `（${r.囚.name}は捕虜）` : ""}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
         <button className="btn" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>閉じる</button>
       </div>
     </div>
@@ -721,7 +790,7 @@ export function FactionInfo({ g, onClose }) {
 export function GeneralList({ g, onClose }) {
   const gs = g.generals.filter((x) => x.faction === g.player);
   return (
-    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+    <div className="modal" {...外を押して閉じる(onClose)}>
       <div className="card">
         <div className="mn" style={{ fontSize: 21, marginBottom: 12 }}>武将一覧</div>
         {gs.map((x) => (
@@ -729,12 +798,19 @@ export function GeneralList({ g, onClose }) {
             <span className="mn" style={{ fontSize: 15, width: 100 }}>
               {x.name}
               {isNameless(x) && <span style={{ color: "#9B9384", fontSize: 10, marginLeft: 2 }}>〔伝〕</span>}
+              {is架空(x) && <span style={{ color: "#9B9384", fontSize: 10, marginLeft: 2 }}
+                title="遊びの中で生まれた者。史実の人物ではありません">〔架空〕</span>}
             </span>
             <span className="num" style={{ color: U.dim, flex: 1 }}>{x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{忠誠(x)}</span>
             <span style={{ color: U.dim }}>{x.at ? (g.castles.find((c) => c.id === x.at) || {}).name : "出征中"}</span>
             <span className="num">直属 {fmt(x.retinue)}</span>
           </div>
         ))}
+        {gs.some((x) => is架空(x)) && (
+          <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
+            〔架空〕… 遊びの中で生まれた者です。史実の人物ではありません。
+          </div>
+        )}
         {gs.some((x) => isNameless(x)) && (
           <div style={{ fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.7 }}>
             〔伝〕は名の伝わらぬ在地の長です。地名に「乙名」「按司」を添えた呼び名であり、実在の人名ではありません。
@@ -753,7 +829,7 @@ export function GoalPanel({ g, onClose }) {
     r, d: Math.min(...mine.map((m) => { const p = findPath(m.id, r.id); return p ? p.length : 99; })),
   })).sort((a, b) => a.d - b.d).slice(0, 4);
   return (
-    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+    <div className="modal" {...外を押して閉じる(onClose)}>
       <div className="card">
         <div className="mn" style={{ fontSize: 21, marginBottom: 6 }}>攻略目標</div>
         <div style={{ fontSize: 12, color: U.dim, marginBottom: 12 }}>

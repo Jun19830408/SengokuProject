@@ -53,6 +53,27 @@ export function battleAI(b) {
     const opt = detachOptions(b, c).filter((o) => o.ok);
     if (opt.length) makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
   }
+  /* 名指しの目標（GDD 8.2）。
+
+     「柴田勝家隊は今川義元隊に当たれ」と名指しで命じたときは、委任していなくても
+     その敵に食らいつく。据え置きの座標へ向かうだけでは、敵が動いた途端に空を衝く。
+     隊が動くのに合わせて、狙いを付け直してやる。
+
+     槍を合わせている間は動かさない。噛み合っているのに狙いを直すと、
+     側面を晒して回り込むことになる。 */
+  for (const c of alive) {
+    if (!c.狙い || c.routed || c.withdraw || c.detach) continue;
+    const 追う命 = c.order === "接戦" || c.order === "突撃" || c.order === "射撃";
+    const t = alive.find((o) => o.id === c.狙い);
+    if (!t || t.destroyed || !追う命 || (c.side === "P" && t.ambush && !t.revealed)) { c.狙い = null; continue; }
+    if (c.squads.some((q) => q.engaged)) continue;
+    const d = Math.hypot(c.x - t.x, c.y - t.y) || 1;
+    // 射撃は間合いを取って撃つ。近すぎれば下がらず、その場で構える。
+    const 間 = c.order === "突撃" ? 20 : c.order === "射撃" ? Math.min(d, 150) : 38;
+    issueOrder(b, c, { order: c.order, target: t.id, 狙い: c.狙い,
+      tx: t.x + ((c.x - t.x) / d) * 間, ty: t.y + ((c.y - t.y) / d) * 間 });
+  }
+
   for (const c of alive) {
     if (!delegated(b, c) || c.routed || c.detach) continue;
     const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
