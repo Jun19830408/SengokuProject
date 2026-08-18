@@ -9206,6 +9206,7 @@ var FORESTS = [];
 var WOODS = [];
 var HILLS = [];
 var MARSH = [];
+var VILLAGES = [];
 var FIELD_SEED = 0;
 function seedOf(aId, bId) {
   const key = [String(aId || ""), String(bId || "")].sort().join("|");
@@ -9228,6 +9229,7 @@ function genTerrain(seed) {
   WOODS.length = 0;
   HILLS.length = 0;
   MARSH.length = 0;
+  VILLAGES.length = 0;
   const kind = rnd();
   if (kind > 0.4) {
     const cy = H * (0.36 + rnd() * 0.28);
@@ -9257,7 +9259,7 @@ function genTerrain(seed) {
         if (RIVER.bot > RIVER.top && y > RIVER.top - 40 && y < RIVER.bot + 40) continue;
         ok = ![...FORESTS, ...WOODS, ...HILLS, ...MARSH].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + r0 + 30);
       }
-      if (ok) list.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r0) });
+      if (ok) list.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r0), seed: Math.floor(rnd() * 1e9) });
     }
   };
   const sc = Math.min(1.6, FIELD.w / 1080);
@@ -9265,6 +9267,8 @@ function genTerrain(seed) {
   put(FORESTS, Math.floor(rnd() * 4), 70 * sc, 115 * sc);
   put(WOODS, Math.floor(rnd() * 3), 50 * sc, 85 * sc);
   put(MARSH, rnd() > 0.6 ? 1 : 0, 65 * sc, 100 * sc);
+  put(VILLAGES, Math.floor(rnd() * 3), 34 * sc, 58 * sc);
+  for (const h of HILLS) h.rise = Math.round(h.r * (0.2 + h.seed % 100 / 100 * 0.14));
 }
 var hasRiver = () => RIVER.bot > RIVER.top + 4;
 var nearestOf = (list, x, y) => list.length ? list.reduce((a, o) => Math.hypot(o.x - x, o.y - y) < Math.hypot(a.x - x, a.y - y) ? o : a, list[0]) : null;
@@ -10343,121 +10347,353 @@ function drawKoma(ctx, x, y, f, type, fill, stroke, k) {
   ctx.lineWidth = 0.7;
   ctx.stroke();
 }
-function blobPath(ctx, o, tight) {
-  const n = 14;
+var \u5149 = { x: -0.62, y: -0.78 };
+var \u5F71 = { x: 7, y: 9 };
+function \u7A2E\u4E71\u6570(seed) {
+  let t = (seed >>> 0) + 1831565813;
+  return () => {
+    t = t + 1831565813 | 0;
+    let x = Math.imul(t ^ t >>> 15, 1 | t);
+    x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x;
+    return ((x ^ x >>> 14) >>> 0) / 4294967296;
+  };
+}
+function \u3086\u3089\u304E\u5F62(ctx, o, k = 1, \u632F\u308C = 0.14) {
+  const rnd = \u7A2E\u4E71\u6570((o.seed || 1) * 7919);
+  const n = 14, \u7BC0 = [];
+  for (let i = 0; i < n; i++) \u7BC0.push(1 - \u632F\u308C / 2 + rnd() * \u632F\u308C);
   ctx.beginPath();
-  for (let i = 0; i <= n; i++) {
-    const a = i / n * Math.PI * 2;
-    const w = 0.86 + 0.14 * Math.sin(a * 3 + o.x * 0.03) * Math.cos(a * 2 + o.y * 0.02);
-    const r = o.r * (tight ? w * 0.97 : w);
-    const x = o.x + Math.cos(a) * r, y = o.y + Math.sin(a) * r;
+  for (let i = 0; i <= n * 3; i++) {
+    const a = i / (n * 3) * Math.PI * 2;
+    const f = i / 3, i0 = Math.floor(f) % n, t = f - Math.floor(f);
+    const e = \u7BC0[i0] * (1 - t) + \u7BC0[(i0 + 1) % n] * t;
+    const r = o.r * k * e;
+    const x = o.x + Math.cos(a) * r, y = o.y + Math.sin(a) * r * 0.86;
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
   ctx.closePath();
 }
+function \u4E18\u3092\u63CF\u304F(ctx, h) {
+  const \u9AD8 = h.rise || Math.round(h.r * 0.24);
+  ctx.fillStyle = "rgba(92,106,70,0.26)";
+  \u3086\u3089\u304E\u5F62(ctx, { ...h, x: h.x + \u5F71.x * 1.5, y: h.y + \u5F71.y * 1.1 }, 1.02);
+  ctx.fill();
+  const \u9802x = h.x + \u5149.x * h.r * 0.34, \u9802y = h.y + \u5149.y * h.r * 0.3 - \u9AD8 * 0.5;
+  const g = ctx.createRadialGradient(\u9802x, \u9802y, h.r * 0.06, h.x, h.y, h.r * 1.06);
+  g.addColorStop(0, "#D3DEA3");
+  g.addColorStop(0.3, "#BCCD8C");
+  g.addColorStop(0.66, "#A2B675");
+  g.addColorStop(1, "#7E9560");
+  ctx.fillStyle = g;
+  \u3086\u3089\u304E\u5F62(ctx, h, 1);
+  ctx.fill();
+  ctx.save();
+  \u3086\u3089\u304E\u5F62(ctx, h, 1);
+  ctx.clip();
+  ctx.strokeStyle = "rgba(84,100,62,0.52)";
+  ctx.lineWidth = 5;
+  \u3086\u3089\u304E\u5F62(ctx, { ...h, x: h.x - 3, y: h.y - 5 }, 1);
+  ctx.stroke();
+  ctx.lineWidth = 1.1;
+  for (const k of [0.72, 0.48, 0.26]) {
+    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    \u3086\u3089\u304E\u5F62(ctx, { ...h, y: h.y - \u9AD8 * (1 - k) * 0.85 }, k);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(110,126,80,0.22)";
+    \u3086\u3089\u304E\u5F62(ctx, { ...h, y: h.y - \u9AD8 * (1 - k) * 0.85 + 2 }, k);
+    ctx.stroke();
+  }
+  ctx.restore();
+  const rnd = \u7A2E\u4E71\u6570((h.seed || 3) * 31 + 5);
+  ctx.strokeStyle = "rgba(122,140,88,0.55)";
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < 14; i++) {
+    const a = rnd() * Math.PI * 2, r = h.r * 0.3 * Math.sqrt(rnd());
+    const tx = h.x + Math.cos(a) * r, ty = h.y - \u9AD8 * 0.7 + Math.sin(a) * r * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty + 4);
+    ctx.lineTo(tx + (rnd() - 0.5) * 5, ty - 5);
+    ctx.stroke();
+  }
+  ctx.font = "15px 'Hiragino Mincho ProN',serif";
+  ctx.strokeStyle = "rgba(250,252,236,0.9)";
+  ctx.lineWidth = 3.4;
+  ctx.strokeText("\u4E18", h.x - 7.5, h.y - \u9AD8 * 0.7 + 6);
+  ctx.fillStyle = "rgba(60,78,44,0.95)";
+  ctx.fillText("\u4E18", h.x - 7.5, h.y - \u9AD8 * 0.7 + 6);
+}
+function \u6728\u7ACB\u3092\u63CF\u304F(ctx, f, \u6FC3, n, label) {
+  const \u4E08 = Math.max(7, f.r * (\u6FC3 ? 0.17 : 0.15));
+  const \u5730 = \u6FC3 ? "#6F9155" : "#8CAC69";
+  const \u68A2 = \u6FC3 ? "#537A44" : "#6E9553";
+  const \u660E = \u6FC3 ? "#79A15C" : "#93B76E";
+  ctx.fillStyle = "rgba(64,84,50,0.24)";
+  \u3086\u3089\u304E\u5F62(ctx, { ...f, x: f.x + \u5F71.x, y: f.y + \u5F71.y * 0.8 }, 0.99, 0.18);
+  ctx.fill();
+  ctx.fillStyle = \u5730;
+  \u3086\u3089\u304E\u5F62(ctx, f, 0.96, 0.18);
+  ctx.fill();
+  const rnd = \u7A2E\u4E71\u6570((f.seed || 7) * 104729);
+  const \u6728 = [];
+  for (let i = 0; i < n; i++) {
+    const a = i * 2.399 + rnd() * 0.6;
+    const r = f.r * Math.pow((i + 0.6) / n, 0.42) * (0.92 + rnd() * 0.2);
+    \u6728.push({
+      x: f.x + Math.cos(a) * r,
+      y: f.y + Math.sin(a) * r * 0.84,
+      s: \u4E08 * (0.8 + rnd() * 0.46)
+    });
+  }
+  \u6728.sort((a, b) => a.y - b.y);
+  for (const t of \u6728) {
+    ctx.fillStyle = "rgba(48,64,40,0.30)";
+    ctx.beginPath();
+    ctx.ellipse(t.x + t.s * 0.5, t.y + t.s * 0.34, t.s * 0.68, t.s * 0.26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#6A5940";
+    ctx.lineWidth = Math.max(1.2, t.s * 0.17);
+    ctx.beginPath();
+    ctx.moveTo(t.x, t.y + t.s * 0.2);
+    ctx.lineTo(t.x, t.y - t.s * 0.34);
+    ctx.stroke();
+    ctx.fillStyle = \u68A2;
+    for (const [dx, dy, k] of [[0.3, -0.28, 0.56], [0.06, -0.2, 0.6], [-0.34, -0.3, 0.52]]) {
+      ctx.beginPath();
+      ctx.ellipse(t.x + t.s * dx, t.y + t.s * dy, t.s * k, t.s * k * 0.9, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = \u660E;
+    for (const [dx, dy, k] of [[-0.22, -0.56, 0.46], [0.1, -0.62, 0.4]]) {
+      ctx.beginPath();
+      ctx.ellipse(t.x + t.s * dx, t.y + t.s * dy, t.s * k, t.s * k * 0.88, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(226,240,196,0.34)";
+    ctx.beginPath();
+    ctx.ellipse(t.x - t.s * 0.24, t.y - t.s * 0.72, t.s * 0.26, t.s * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.font = "15px 'Hiragino Mincho ProN',serif";
+  ctx.strokeStyle = "rgba(255,255,255,0.82)";
+  ctx.lineWidth = 3.4;
+  ctx.strokeText(label, f.x - label.length * 7.5, f.y + 6);
+  ctx.fillStyle = "rgba(38,58,34,0.95)";
+  ctx.fillText(label, f.x - label.length * 7.5, f.y + 6);
+}
+function \u6E7F\u5730\u3092\u63CF\u304F(ctx, m) {
+  ctx.fillStyle = "#9FB9A2";
+  \u3086\u3089\u304E\u5F62(ctx, m, 1, 0.2);
+  ctx.fill();
+  const rnd = \u7A2E\u4E71\u6570((m.seed || 11) * 65537);
+  for (let i = 0; i < 9; i++) {
+    const a = rnd() * Math.PI * 2, r = m.r * 0.72 * Math.sqrt(rnd());
+    const wx = m.x + Math.cos(a) * r, wy = m.y + Math.sin(a) * r * 0.86;
+    const ww = m.r * (0.12 + rnd() * 0.16);
+    ctx.fillStyle = "rgba(126,164,172,0.55)";
+    ctx.beginPath();
+    ctx.ellipse(wx, wy, ww, ww * 0.42, rnd() * 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(wx, wy - 1, ww * 0.8, ww * 0.3, 0, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(96,130,110,0.8)";
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < 40; i++) {
+    const a = i * 2.399, r = m.r * Math.sqrt((i + 0.5) / 40) * 0.92;
+    const tx = m.x + Math.cos(a) * r, ty = m.y + Math.sin(a) * r * 0.86;
+    const \u4E08 = 6 + rnd() * 5;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty + 3);
+    ctx.quadraticCurveTo(tx + 2, ty - \u4E08 * 0.5, tx + (rnd() - 0.5) * 5, ty - \u4E08);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.font = "13px 'Hiragino Mincho ProN',serif";
+  ctx.strokeStyle = "rgba(48,78,74,0.75)";
+  ctx.lineWidth = 3;
+  ctx.strokeText("\u6E7F\u5730", m.x - 19, m.y + 5);
+  ctx.fillText("\u6E7F\u5730", m.x - 19, m.y + 5);
+}
+function \u96C6\u843D\u3092\u63CF\u304F(ctx, v) {
+  const rnd = \u7A2E\u4E71\u6570((v.seed || 13) * 2654435761);
+  const \u5BB6 = [];
+  const n = 6 + Math.floor(rnd() * 5);
+  for (let i = 0; i < n; i++) {
+    const a = rnd() * Math.PI * 2, r = v.r * 0.72 * Math.sqrt(rnd());
+    \u5BB6.push({
+      x: v.x + Math.cos(a) * r,
+      y: v.y + Math.sin(a) * r * 0.8,
+      w: 26 + rnd() * 15,
+      h: 18 + rnd() * 9
+    });
+  }
+  ctx.fillStyle = "rgba(196,184,146,0.40)";
+  \u3086\u3089\u304E\u5F62(ctx, { ...v, seed: (v.seed || 13) + 3 }, 1.05, 0.22);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(150,146,98,0.26)";
+  ctx.lineWidth = 1.4;
+  for (let i = -4; i <= 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(v.x - v.r, v.y + i * 10 + v.r * 0.2);
+    ctx.lineTo(v.x + v.r, v.y + i * 10 + v.r * 0.2 - v.r * 0.12);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(190,178,140,0.42)";
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(v.x - v.r * 1.7, v.y + v.r * 0.42);
+  ctx.quadraticCurveTo(v.x, v.y + v.r * 0.14, v.x + v.r * 1.7, v.y + v.r * 0.5);
+  ctx.stroke();
+  \u5BB6.sort((a, b) => a.y - b.y);
+  for (const h of \u5BB6) {
+    ctx.fillStyle = "rgba(90,90,70,0.28)";
+    ctx.beginPath();
+    ctx.ellipse(h.x + \u5F71.x * 0.5, h.y + h.h * 0.5 + 2, h.w * 0.62, h.h * 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#B9A98C";
+    ctx.fillRect(h.x - h.w / 2, h.y - h.h * 0.1, h.w, h.h * 0.6);
+    ctx.fillStyle = "#8A7A5E";
+    ctx.beginPath();
+    ctx.moveTo(h.x - h.w * 0.62, h.y);
+    ctx.lineTo(h.x, h.y - h.h);
+    ctx.lineTo(h.x + h.w * 0.62, h.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#A6957A";
+    ctx.beginPath();
+    ctx.moveTo(h.x - h.w * 0.62, h.y);
+    ctx.lineTo(h.x, h.y - h.h);
+    ctx.lineTo(h.x, h.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(64,54,40,0.55)";
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(h.x, h.y - h.h);
+    ctx.lineTo(h.x, h.y);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(64,54,40,0.42)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(h.x - h.w * 0.62, h.y);
+    ctx.lineTo(h.x + h.w * 0.62, h.y);
+    ctx.stroke();
+  }
+}
+function \u5DDD\u3092\u63CF\u304F(ctx) {
+  const band = (x) => [RIVER.top + riverShift(x), RIVER.bot + riverShift(x)];
+  const \u5E2F = (x0, x1, \u4E0A\u305A\u308C, \u4E0B\u305A\u308C, \u8272) => {
+    ctx.fillStyle = \u8272;
+    ctx.beginPath();
+    for (let x = x0; x <= x1; x += 5) {
+      const [t] = band(x);
+      if (x === x0) ctx.moveTo(x, t + \u4E0A\u305A\u308C);
+      else ctx.lineTo(x, t + \u4E0A\u305A\u308C);
+    }
+    for (let x = x1; x >= x0; x -= 5) {
+      const [, bt] = band(x);
+      ctx.lineTo(x, bt + \u4E0B\u305A\u308C);
+    }
+    ctx.closePath();
+    ctx.fill();
+  };
+  const \u5E45 = RIVER.bot - RIVER.top;
+  \u5E2F(0, FIELD.w, -5, 5, "#C9C3A4");
+  \u5E2F(0, FIELD.w, 0, 0, "#9FC0CE");
+  \u5E2F(0, FIELD.w, \u5E45 * 0.22, -\u5E45 * 0.22, "#7FA9BE");
+  \u5E2F(0, FIELD.w, \u5E45 * 0.4, -\u5E45 * 0.4, "#6B97AF");
+  ctx.strokeStyle = "rgba(255,255,255,0.30)";
+  ctx.lineWidth = 1.1;
+  for (const k of [0.28, 0.52, 0.74]) {
+    ctx.beginPath();
+    for (let x = 0; x <= FIELD.w; x += 6) {
+      const [t] = band(x);
+      const y = t + \u5E45 * k + Math.sin(x * 0.05 + k * 9) * 1.8;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  if (RIVER.ford[1] > RIVER.ford[0]) {
+    \u5E2F(RIVER.ford[0], RIVER.ford[1], 1, -1, "#B6D0DA");
+    const rnd = \u7A2E\u4E71\u6570(4242);
+    for (let i = 0; i < 26; i++) {
+      const x = RIVER.ford[0] + rnd() * (RIVER.ford[1] - RIVER.ford[0]);
+      const [t] = band(x);
+      const y = t + 3 + rnd() * (\u5E45 - 6);
+      const r = 1.6 + rnd() * 2.2;
+      ctx.fillStyle = "rgba(120,120,105,0.55)";
+      ctx.beginPath();
+      ctx.ellipse(x, y, r, r * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.beginPath();
+      ctx.ellipse(x - r * 0.25, y - r * 0.22, r * 0.45, r * 0.26, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  if (RIVER.bridge[1] > RIVER.bridge[0]) {
+    const [bt0, bb0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
+    const x0 = RIVER.bridge[0], x1 = RIVER.bridge[1], \u4E0A = bt0 - 7, \u4E0B = bb0 + 7;
+    ctx.fillStyle = "rgba(40,60,70,0.30)";
+    ctx.fillRect(x0 + \u5F71.x * 0.5, \u4E0A + \u5F71.y * 0.4, x1 - x0, \u4E0B - \u4E0A);
+    ctx.fillStyle = "#C2A177";
+    ctx.fillRect(x0, \u4E0A, x1 - x0, \u4E0B - \u4E0A);
+    ctx.fillStyle = "rgba(120,90,60,0.45)";
+    for (let x = x0; x < x1; x += 12) ctx.fillRect(x, \u4E0A, 2, \u4E0B - \u4E0A);
+    ctx.fillStyle = "#D8BC94";
+    ctx.fillRect(x0, \u4E0A - 3, x1 - x0, 3.5);
+    ctx.fillStyle = "#9A7C57";
+    ctx.fillRect(x0, \u4E0B - 0.5, x1 - x0, 3.5);
+    ctx.fillStyle = "#8A6B48";
+    for (const bx of [x0 + (x1 - x0) * 0.34, x0 + (x1 - x0) * 0.66]) ctx.fillRect(bx - 2, \u4E0A, 4, \u4E0B - \u4E0A);
+  }
+  const \u672D = (t, x, y) => {
+    ctx.font = "13px 'Hiragino Mincho ProN',serif";
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = 3;
+    ctx.strokeText(t, x, y);
+    ctx.fillStyle = "rgba(46,66,80,0.95)";
+    ctx.fillText(t, x, y);
+  };
+  if (RIVER.bridge[1] > RIVER.bridge[0]) {
+    const [bt0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
+    \u672D("\u6A4B", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 7, bt0 - 14);
+  }
+  if (RIVER.ford[1] > RIVER.ford[0]) {
+    const [ft0] = band((RIVER.ford[0] + RIVER.ford[1]) / 2);
+    \u672D("\u6D45\u702C", (RIVER.ford[0] + RIVER.ford[1]) / 2 - 14, ft0 - 12);
+  }
+  const [dt0] = band(64);
+  \u672D("\u6DF1\u3044\u5DDD", 64, dt0 - 12);
+}
 function drawFieldTerrain(ctx) {
   ctx.fillStyle = "#CBD8AC";
   ctx.fillRect(0, 0, FIELD.w, FIELD.h);
-  ctx.strokeStyle = "rgba(120,130,90,0.09)";
-  ctx.lineWidth = 1;
-  for (let x = 0; x < FIELD.w; x += 60) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, FIELD.h);
-    ctx.stroke();
+  const rnd = \u7A2E\u4E71\u6570(20260818);
+  for (let i = 0; i < Math.round(FIELD.w * FIELD.h / 46e3); i++) {
+    const x = rnd() * FIELD.w, y = rnd() * FIELD.h;
+    const w = 52 + rnd() * 86, h = 34 + rnd() * 52;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate((rnd() - 0.5) * 0.5);
+    ctx.fillStyle = `rgba(${196 + rnd() * 18 | 0},${210 + rnd() * 14 | 0},${158 + rnd() * 20 | 0},0.20)`;
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.strokeStyle = "rgba(150,156,116,0.14)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-w / 2, -h / 2, w, h);
+    ctx.restore();
   }
-  for (let y = 0; y < FIELD.h; y += 60) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(FIELD.w, y);
-    ctx.stroke();
-  }
-  for (const h of HILLS) {
-    ctx.fillStyle = "#BCCB93";
-    blobPath(ctx, h);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.45)";
-    ctx.lineWidth = 1.2;
-    for (const k of [0.68, 0.36]) {
-      blobPath(ctx, { x: h.x, y: h.y, r: h.r * k });
-      ctx.stroke();
-    }
-    ctx.fillStyle = "rgba(85,105,65,0.8)";
-    ctx.font = "15px 'Hiragino Mincho ProN',serif";
-    ctx.fillText("\u4E18", h.x - 7, h.y + 5);
-  }
-  for (const m of MARSH) {
-    ctx.fillStyle = "#A8C0A4";
-    blobPath(ctx, m);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(90,130,140,0.55)";
-    ctx.lineWidth = 1.4;
-    for (let i = 0; i < 26; i++) {
-      const a = i * 2.399, r = m.r * Math.sqrt((i + 0.5) / 26) * 0.9;
-      const tx = m.x + Math.cos(a) * r, ty = m.y + Math.sin(a) * r;
-      ctx.beginPath();
-      ctx.moveTo(tx, ty + 4);
-      ctx.lineTo(tx, ty - 5);
-      ctx.stroke();
-    }
-    ctx.fillStyle = "rgba(60,90,90,0.85)";
-    ctx.font = "14px 'Hiragino Mincho ProN',serif";
-    ctx.fillText("\u6E7F\u5730", m.x - 14, m.y + 5);
-  }
-  const trees = (f, fill, tone, n, label) => {
-    ctx.fillStyle = fill;
-    blobPath(ctx, f);
-    ctx.fill();
-    ctx.fillStyle = tone;
-    for (let i = 0; i < n; i++) {
-      const a = i * 2.399, r = f.r * Math.sqrt((i + 0.5) / n) * 0.92;
-      const tx = f.x + Math.cos(a) * r, ty = f.y + Math.sin(a) * r;
-      ctx.beginPath();
-      ctx.moveTo(tx, ty - 8);
-      ctx.lineTo(tx + 5.5, ty + 4);
-      ctx.lineTo(tx - 5.5, ty + 4);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.fillStyle = "rgba(45,70,40,0.75)";
-    ctx.font = "14px 'Hiragino Mincho ProN',serif";
-    ctx.fillText(label, f.x - label.length * 7, f.y + 5);
-  };
-  for (const f of FORESTS) trees(f, "#8EAD6F", "#5F8449", 34, "\u68EE");
-  for (const f of WOODS) trees(f, "#A9C288", "#7A9A5E", 14, "\u6797");
-  if (hasRiver()) {
-    const band = (x) => [RIVER.top + riverShift(x), RIVER.bot + riverShift(x)];
-    const strip = (x0, x1, color) => {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      for (let x = x0; x <= x1; x += 6) {
-        const [t] = band(x);
-        if (x === x0) ctx.moveTo(x, t);
-        else ctx.lineTo(x, t);
-      }
-      for (let x = x1; x >= x0; x -= 6) {
-        const [, bt] = band(x);
-        ctx.lineTo(x, bt);
-      }
-      ctx.closePath();
-      ctx.fill();
-    };
-    strip(0, FIELD.w, "#8FB4C7");
-    strip(RIVER.ford[0], RIVER.ford[1], "#AECBD8");
-    const [bt0, bb0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
-    ctx.fillStyle = "#C6A377";
-    ctx.fillRect(RIVER.bridge[0], bt0 - 6, RIVER.bridge[1] - RIVER.bridge[0], bb0 - bt0 + 12);
-    ctx.fillStyle = "rgba(120,90,60,0.5)";
-    for (let x = RIVER.bridge[0]; x < RIVER.bridge[1]; x += 13) ctx.fillRect(x, bt0 - 6, 2, bb0 - bt0 + 12);
-    ctx.fillStyle = "rgba(60,80,95,0.85)";
-    ctx.font = "13px 'Hiragino Mincho ProN',serif";
-    ctx.fillText("\u6A4B", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 8, bt0 - 12);
-    const [ft0] = band((RIVER.ford[0] + RIVER.ford[1]) / 2);
-    ctx.fillText("\u6D45\u702C", (RIVER.ford[0] + RIVER.ford[1]) / 2 - 16, ft0 - 12);
-    const [dt0] = band(60);
-    ctx.fillText("\u6DF1\u3044\u5DDD", 60, dt0 - 12);
-  }
+  for (const v of VILLAGES) \u96C6\u843D\u3092\u63CF\u304F(ctx, v);
+  for (const m of MARSH) \u6E7F\u5730\u3092\u63CF\u304F(ctx, m);
+  for (const h of HILLS) \u4E18\u3092\u63CF\u304F(ctx, h);
+  for (const f of WOODS) \u6728\u7ACB\u3092\u63CF\u304F(ctx, f, false, 22, "\u6797");
+  for (const f of FORESTS) \u6728\u7ACB\u3092\u63CF\u304F(ctx, f, true, 48, "\u68EE");
+  if (hasRiver()) \u5DDD\u3092\u63CF\u304F(ctx);
 }
 function drawCastleTerrain(ctx, m) {
   const t = m.t, cx = m.cx, cy = m.cy;

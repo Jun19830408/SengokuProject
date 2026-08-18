@@ -2,6 +2,7 @@ import { axisOf, fromUV, gateOpenU, gatePos } from "./castleMap.js";
 import { KOMA, rot } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, RIVER, WOODS, hasRiver, riverShift } from "./field.js";
 import { px, py } from "../data/geo.js";
+import { VILLAGES } from "./field.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
 
@@ -205,68 +206,360 @@ export function blobPath(ctx, o, tight) {
   ctx.closePath();
 }
 
-export function drawFieldTerrain(ctx) {
-  ctx.fillStyle = "#CBD8AC"; ctx.fillRect(0, 0, FIELD.w, FIELD.h);
-  ctx.strokeStyle = "rgba(120,130,90,0.09)"; ctx.lineWidth = 1;
-  for (let x = 0; x < FIELD.w; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, FIELD.h); ctx.stroke(); }
-  for (let y = 0; y < FIELD.h; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(FIELD.w, y); ctx.stroke(); }
+/* ==========================================================================
+   野の地形（GDD 8.1）
 
-  for (const h of HILLS) {
-    ctx.fillStyle = "#BCCB93"; blobPath(ctx, h); ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = 1.2;
-    for (const k of [0.68, 0.36]) { blobPath(ctx, { x: h.x, y: h.y, r: h.r * k }); ctx.stroke(); }
-    ctx.fillStyle = "rgba(85,105,65,0.8)"; ctx.font = "15px 'Hiragino Mincho ProN',serif";
-    ctx.fillText("丘", h.x - 7, h.y + 5);
-  }
-  for (const m of MARSH) {
-    ctx.fillStyle = "#A8C0A4"; blobPath(ctx, m); ctx.fill();
-    ctx.strokeStyle = "rgba(90,130,140,0.55)"; ctx.lineWidth = 1.4;
-    for (let i = 0; i < 26; i++) {
-      const a = i * 2.399, r = m.r * Math.sqrt((i + 0.5) / 26) * 0.9;
-      const tx = m.x + Math.cos(a) * r, ty = m.y + Math.sin(a) * r;
-      ctx.beginPath(); ctx.moveTo(tx, ty + 4); ctx.lineTo(tx, ty - 5); ctx.stroke();
-    }
-    ctx.fillStyle = "rgba(60,90,90,0.85)"; ctx.font = "14px 'Hiragino Mincho ProN',serif";
-    ctx.fillText("湿地", m.x - 14, m.y + 5);
-  }
-  const trees = (f, fill, tone, n, label) => {
-    ctx.fillStyle = fill; blobPath(ctx, f); ctx.fill();
-    ctx.fillStyle = tone;
-    for (let i = 0; i < n; i++) {
-      const a = i * 2.399, r = f.r * Math.sqrt((i + 0.5) / n) * 0.92;
-      const tx = f.x + Math.cos(a) * r, ty = f.y + Math.sin(a) * r;
-      ctx.beginPath(); ctx.moveTo(tx, ty - 8); ctx.lineTo(tx + 5.5, ty + 4); ctx.lineTo(tx - 5.5, ty + 4); ctx.closePath(); ctx.fill();
-    }
-    ctx.fillStyle = "rgba(45,70,40,0.75)"; ctx.font = "14px 'Hiragino Mincho ProN',serif";
-    ctx.fillText(label, f.x - (label.length * 7), f.y + 5);
+   これまでは、丘も森も「輪郭を塗って、真ん中に『丘』『森』と字を置く」だけ
+   だった。地形の効きは前からあったのに（森に入れば視界が九十五歩に狭まり、
+   丘に拠れば戦う力が一割五分増す）、盤の上でそれが読み取れない。
+   森が森に見えないので、敵が消えたのが伏兵なのか森なのか分からない。
+
+   本物の三次元にはしない。地形は毎瞬描くものではなく、戦のはじめに一度だけ
+   別の帳に焼いて、あとはそれを貼るだけである。だから描き込みをいくら増やしても
+   合戦そのものは重くならない。逆に、駒や陣形の見分けやすさは俯瞰の図であって
+   こそ保たれる。斜めから光を当て、影を落とし、段を積む――紙に描いた合戦図に
+   奥行きを持たせる、という筋で組む。
+
+   光は左上から差す。影は右下へ落とす。この二つを野じゅうで揃える。
+   ========================================================================== */
+
+const 光 = { x: -0.62, y: -0.78 };                  // 左上から差す
+const 影 = { x: 7, y: 9 };                          // 影の落ちる向き
+
+// 野ごとに同じ絵になるよう、地物ごとの種から乱数を作る
+function 種乱数(seed) {
+  let t = (seed >>> 0) + 0x6D2B79F5;
+  return () => {
+    t = (t + 0x6D2B79F5) | 0;
+    let x = Math.imul(t ^ (t >>> 15), 1 | t);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
   };
-  for (const f of FORESTS) trees(f, "#8EAD6F", "#5F8449", 34, "森");
-  for (const f of WOODS) trees(f, "#A9C288", "#7A9A5E", 14, "林");
+}
 
-  if (hasRiver()) {
-    const band = (x) => [RIVER.top + riverShift(x), RIVER.bot + riverShift(x)];
-    const strip = (x0, x1, color) => {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      for (let x = x0; x <= x1; x += 6) { const [t] = band(x); if (x === x0) ctx.moveTo(x, t); else ctx.lineTo(x, t); }
-      for (let x = x1; x >= x0; x -= 6) { const [, bt] = band(x); ctx.lineTo(x, bt); }
-      ctx.closePath(); ctx.fill();
-    };
-    strip(0, FIELD.w, "#8FB4C7");                                   // 深い川
-    strip(RIVER.ford[0], RIVER.ford[1], "#AECBD8");                 // 浅瀬
-    // 橋は板を渡す
-    const [bt0, bb0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
-    ctx.fillStyle = "#C6A377";
-    ctx.fillRect(RIVER.bridge[0], bt0 - 6, RIVER.bridge[1] - RIVER.bridge[0], bb0 - bt0 + 12);
-    ctx.fillStyle = "rgba(120,90,60,0.5)";
-    for (let x = RIVER.bridge[0]; x < RIVER.bridge[1]; x += 13) ctx.fillRect(x, bt0 - 6, 2, bb0 - bt0 + 12);
-    ctx.fillStyle = "rgba(60,80,95,0.85)"; ctx.font = "13px 'Hiragino Mincho ProN',serif";
-    ctx.fillText("橋", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 8, bt0 - 12);
-    const [ft0] = band((RIVER.ford[0] + RIVER.ford[1]) / 2);
-    ctx.fillText("浅瀬", (RIVER.ford[0] + RIVER.ford[1]) / 2 - 16, ft0 - 12);
-    const [dt0] = band(60);
-    ctx.fillText("深い川", 60, dt0 - 12);
+// 揺らぎのある輪郭。同じ地物なら毎度同じ形になる。
+function ゆらぎ形(ctx, o, k = 1, 振れ = 0.14) {
+  const rnd = 種乱数((o.seed || 1) * 7919);
+  const n = 14, 節 = [];
+  for (let i = 0; i < n; i++) 節.push(1 - 振れ / 2 + rnd() * 振れ);
+  ctx.beginPath();
+  for (let i = 0; i <= n * 3; i++) {
+    const a = (i / (n * 3)) * Math.PI * 2;
+    const f = i / 3, i0 = Math.floor(f) % n, t = f - Math.floor(f);
+    const e = 節[i0] * (1 - t) + 節[(i0 + 1) % n] * t;
+    const r = o.r * k * e;
+    const x = o.x + Math.cos(a) * r, y = o.y + Math.sin(a) * r * 0.86;   // 俯瞰なので縦を潰す
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
+  ctx.closePath();
+}
+
+const 混 = (a, b, t) => {
+  const p = (c) => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
+  const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b);
+  return `rgb(${Math.round(r1 + (r2 - r1) * t)},${Math.round(g1 + (g2 - g1) * t)},${Math.round(b1 + (b2 - b1) * t)})`;
+};
+
+/* ------------------------------------------------------------------ 丘
+
+   段を積んで等高線に見せる、という手を先に試したが、輪が均等に並ぶので
+   玉ねぎの断面のようになった。高さではなく模様に見える。
+
+   丘が丘に見えるのは、光の当たる側と陰になる側があるからである。
+   左上から差す光を面に当て、右下へ影を落とす。等高線はその補いとして、
+   数を絞って薄く置く。 */
+function 丘を描く(ctx, h) {
+  const 高 = h.rise || Math.round(h.r * 0.24);
+
+  ctx.fillStyle = "rgba(92,106,70,0.26)";                     // 落ちる影
+  ゆらぎ形(ctx, { ...h, x: h.x + 影.x * 1.5, y: h.y + 影.y * 1.1 }, 1.02);
+  ctx.fill();
+
+  // 光の当たる側から陰の側へ。頂は光の側へ寄せる
+  const 頂x = h.x + 光.x * h.r * 0.34, 頂y = h.y + 光.y * h.r * 0.30 - 高 * 0.5;
+  const g = ctx.createRadialGradient(頂x, 頂y, h.r * 0.06, h.x, h.y, h.r * 1.06);
+  g.addColorStop(0.00, "#D3DEA3");                            // 陽の当たる頂
+  g.addColorStop(0.30, "#BCCD8C");
+  g.addColorStop(0.66, "#A2B675");
+  g.addColorStop(1.00, "#7E9560");                            // 陰になる裾
+  ctx.fillStyle = g;
+  ゆらぎ形(ctx, h, 1.0);
+  ctx.fill();
+
+  // 稜。陰の側の縁を締めると、盛り上がりがはっきりする
+  ctx.save(); ゆらぎ形(ctx, h, 1.0); ctx.clip();
+  ctx.strokeStyle = "rgba(84,100,62,0.52)"; ctx.lineWidth = 5;
+  ゆらぎ形(ctx, { ...h, x: h.x - 3, y: h.y - 5 }, 1.0); ctx.stroke();
+  // 等高線は三本だけ。上へずらして重ねると、斜面の向きが読める
+  ctx.lineWidth = 1.1;
+  for (const k of [0.72, 0.48, 0.26]) {
+    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    ゆらぎ形(ctx, { ...h, y: h.y - 高 * (1 - k) * 0.85 }, k); ctx.stroke();
+    ctx.strokeStyle = "rgba(110,126,80,0.22)";
+    ゆらぎ形(ctx, { ...h, y: h.y - 高 * (1 - k) * 0.85 + 2 }, k); ctx.stroke();
+  }
+  ctx.restore();
+
+  // 頂の草叢
+  const rnd = 種乱数((h.seed || 3) * 31 + 5);
+  ctx.strokeStyle = "rgba(122,140,88,0.55)"; ctx.lineWidth = 1.2;
+  for (let i = 0; i < 14; i++) {
+    const a = rnd() * Math.PI * 2, r = h.r * 0.3 * Math.sqrt(rnd());
+    const tx = h.x + Math.cos(a) * r, ty = h.y - 高 * 0.7 + Math.sin(a) * r * 0.7;
+    ctx.beginPath(); ctx.moveTo(tx, ty + 4); ctx.lineTo(tx + (rnd() - 0.5) * 5, ty - 5); ctx.stroke();
+  }
+  ctx.font = "15px 'Hiragino Mincho ProN',serif";
+  ctx.strokeStyle = "rgba(250,252,236,0.9)"; ctx.lineWidth = 3.4;
+  ctx.strokeText("丘", h.x - 7.5, h.y - 高 * 0.7 + 6);
+  ctx.fillStyle = "rgba(60,78,44,0.95)"; ctx.fillText("丘", h.x - 7.5, h.y - 高 * 0.7 + 6);
+}
+
+/* ------------------------------------------------------------------ 森・林
+
+   一本ずつ立てる。木ごとに影を落とし、梢の左上を明るくする。
+   奥（上）の木から手前（下）の木へ順に描くので、手前の木が奥に重なる。
+
+   縁の木は輪郭からわざとはみ出させる。丸く塗った塊のままでは、
+   どこまで木立が続いているのか読めないからである。 */
+function 木立を描く(ctx, f, 濃, n, label) {
+  const 丈 = Math.max(7, f.r * (濃 ? 0.17 : 0.15));
+  const 地 = 濃 ? "#6F9155" : "#8CAC69";
+  const 梢 = 濃 ? "#537A44" : "#6E9553";
+  const 明 = 濃 ? "#79A15C" : "#93B76E";
+
+  ctx.fillStyle = "rgba(64,84,50,0.24)";                      // 木立ごとの落ちる影
+  ゆらぎ形(ctx, { ...f, x: f.x + 影.x, y: f.y + 影.y * 0.8 }, 0.99, 0.18);
+  ctx.fill();
+  ctx.fillStyle = 地; ゆらぎ形(ctx, f, 0.96, 0.18); ctx.fill();
+
+  const rnd = 種乱数((f.seed || 7) * 104729);
+  const 木 = [];
+  for (let i = 0; i < n; i++) {
+    const a = i * 2.399 + rnd() * 0.6;
+    // 平方根で並べると内が詰まる。縁まで木を回し、はみ出させる
+    const r = f.r * Math.pow((i + 0.6) / n, 0.42) * (0.92 + rnd() * 0.20);
+    木.push({ x: f.x + Math.cos(a) * r, y: f.y + Math.sin(a) * r * 0.84,
+      s: 丈 * (0.80 + rnd() * 0.46) });
+  }
+  木.sort((a, b) => a.y - b.y);
+  for (const t of 木) {
+    ctx.fillStyle = "rgba(48,64,40,0.30)";
+    ctx.beginPath();
+    ctx.ellipse(t.x + t.s * 0.5, t.y + t.s * 0.34, t.s * 0.68, t.s * 0.26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#6A5940"; ctx.lineWidth = Math.max(1.2, t.s * 0.17);
+    ctx.beginPath(); ctx.moveTo(t.x, t.y + t.s * 0.20); ctx.lineTo(t.x, t.y - t.s * 0.34); ctx.stroke();
+    ctx.fillStyle = 梢;                                       // 陰の側の梢
+    for (const [dx, dy, k] of [[0.30, -0.28, 0.56], [0.06, -0.20, 0.60], [-0.34, -0.30, 0.52]]) {
+      ctx.beginPath();
+      ctx.ellipse(t.x + t.s * dx, t.y + t.s * dy, t.s * k, t.s * k * 0.90, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = 明;                                       // 光の当たる側の梢
+    for (const [dx, dy, k] of [[-0.22, -0.56, 0.46], [0.10, -0.62, 0.40]]) {
+      ctx.beginPath();
+      ctx.ellipse(t.x + t.s * dx, t.y + t.s * dy, t.s * k, t.s * k * 0.88, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(226,240,196,0.34)";                 // 梢の照り
+    ctx.beginPath();
+    ctx.ellipse(t.x - t.s * 0.24, t.y - t.s * 0.72, t.s * 0.26, t.s * 0.20, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.font = "15px 'Hiragino Mincho ProN',serif";
+  ctx.strokeStyle = "rgba(255,255,255,0.82)"; ctx.lineWidth = 3.4;
+  ctx.strokeText(label, f.x - label.length * 7.5, f.y + 6);
+  ctx.fillStyle = "rgba(38,58,34,0.95)";
+  ctx.fillText(label, f.x - label.length * 7.5, f.y + 6);
+}
+
+/* ------------------------------------------------------------------ 湿地 */
+function 湿地を描く(ctx, m) {
+  ctx.fillStyle = "#9FB9A2"; ゆらぎ形(ctx, m, 1.0, 0.20); ctx.fill();
+  const rnd = 種乱数((m.seed || 11) * 65537);
+  // 水溜まり
+  for (let i = 0; i < 9; i++) {
+    const a = rnd() * Math.PI * 2, r = m.r * 0.72 * Math.sqrt(rnd());
+    const wx = m.x + Math.cos(a) * r, wy = m.y + Math.sin(a) * r * 0.86;
+    const ww = m.r * (0.12 + rnd() * 0.16);
+    ctx.fillStyle = "rgba(126,164,172,0.55)";
+    ctx.beginPath(); ctx.ellipse(wx, wy, ww, ww * 0.42, rnd() * 3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(wx, wy - 1, ww * 0.8, ww * 0.3, 0, Math.PI, Math.PI * 2); ctx.stroke();
+  }
+  // 葦
+  ctx.strokeStyle = "rgba(96,130,110,0.8)"; ctx.lineWidth = 1.2;
+  for (let i = 0; i < 40; i++) {
+    const a = i * 2.399, r = m.r * Math.sqrt((i + 0.5) / 40) * 0.92;
+    const tx = m.x + Math.cos(a) * r, ty = m.y + Math.sin(a) * r * 0.86;
+    const 丈 = 6 + rnd() * 5;
+    ctx.beginPath(); ctx.moveTo(tx, ty + 3); ctx.quadraticCurveTo(tx + 2, ty - 丈 * 0.5, tx + (rnd() - 0.5) * 5, ty - 丈); ctx.stroke();
+  }
+  ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.font = "13px 'Hiragino Mincho ProN',serif";
+  ctx.strokeStyle = "rgba(48,78,74,0.75)"; ctx.lineWidth = 3;
+  ctx.strokeText("湿地", m.x - 19, m.y + 5); ctx.fillText("湿地", m.x - 19, m.y + 5);
+}
+
+/* ------------------------------------------------------------------ 集落
+
+   屋根に光を当て、影を落とす。見た目だけのもので、地形としての効きはない。 */
+function 集落を描く(ctx, v) {
+  const rnd = 種乱数((v.seed || 13) * 2654435761);
+  const 家 = [];
+  const n = 6 + Math.floor(rnd() * 5);
+  for (let i = 0; i < n; i++) {
+    const a = rnd() * Math.PI * 2, r = v.r * 0.72 * Math.sqrt(rnd());
+    家.push({ x: v.x + Math.cos(a) * r, y: v.y + Math.sin(a) * r * 0.8,
+      w: 26 + rnd() * 15, h: 18 + rnd() * 9 });
+  }
+  // 村の地。踏み固められて土が出ている
+  ctx.fillStyle = "rgba(196,184,146,0.40)";
+  ゆらぎ形(ctx, { ...v, seed: (v.seed || 13) + 3 }, 1.05, 0.22); ctx.fill();
+  // 畑の畝
+  ctx.strokeStyle = "rgba(150,146,98,0.26)"; ctx.lineWidth = 1.4;
+  for (let i = -4; i <= 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(v.x - v.r, v.y + i * 10 + v.r * 0.2);
+    ctx.lineTo(v.x + v.r, v.y + i * 10 + v.r * 0.2 - v.r * 0.12);
+    ctx.stroke();
+  }
+  // 里へ通じる道
+  ctx.strokeStyle = "rgba(190,178,140,0.42)"; ctx.lineWidth = 3.5;
+  ctx.beginPath(); ctx.moveTo(v.x - v.r * 1.7, v.y + v.r * 0.42);
+  ctx.quadraticCurveTo(v.x, v.y + v.r * 0.14, v.x + v.r * 1.7, v.y + v.r * 0.5); ctx.stroke();
+  家.sort((a, b) => a.y - b.y);
+  for (const h of 家) {
+    ctx.fillStyle = "rgba(90,90,70,0.28)";                    // 影
+    ctx.beginPath();
+    ctx.ellipse(h.x + 影.x * 0.5, h.y + h.h * 0.5 + 2, h.w * 0.62, h.h * 0.32, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#B9A98C";                                // 壁
+    ctx.fillRect(h.x - h.w / 2, h.y - h.h * 0.1, h.w, h.h * 0.6);
+    ctx.fillStyle = "#8A7A5E";                                // 茅葺きの屋根（陰の側）
+    ctx.beginPath();
+    ctx.moveTo(h.x - h.w * 0.62, h.y); ctx.lineTo(h.x, h.y - h.h);
+    ctx.lineTo(h.x + h.w * 0.62, h.y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#A6957A";                                // 光の当たる側
+    ctx.beginPath();
+    ctx.moveTo(h.x - h.w * 0.62, h.y); ctx.lineTo(h.x, h.y - h.h);
+    ctx.lineTo(h.x, h.y); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(64,54,40,0.55)"; ctx.lineWidth = 1.1;   // 棟
+    ctx.beginPath(); ctx.moveTo(h.x, h.y - h.h); ctx.lineTo(h.x, h.y); ctx.stroke();
+    ctx.strokeStyle = "rgba(64,54,40,0.42)"; ctx.lineWidth = 1;      // 軒
+    ctx.beginPath(); ctx.moveTo(h.x - h.w * 0.62, h.y); ctx.lineTo(h.x + h.w * 0.62, h.y); ctx.stroke();
+  }
+}
+
+/* ------------------------------------------------------------------ 川
+
+   深みは濃く、岸へ寄るほど淡く。岸には砂の縁を置く。
+   浅瀬には石が覗き、橋は板を渡して水面へ影を落とす。 */
+function 川を描く(ctx) {
+  const band = (x) => [RIVER.top + riverShift(x), RIVER.bot + riverShift(x)];
+  const 帯 = (x0, x1, 上ずれ, 下ずれ, 色) => {
+    ctx.fillStyle = 色;
+    ctx.beginPath();
+    for (let x = x0; x <= x1; x += 5) { const [t] = band(x); if (x === x0) ctx.moveTo(x, t + 上ずれ); else ctx.lineTo(x, t + 上ずれ); }
+    for (let x = x1; x >= x0; x -= 5) { const [, bt] = band(x); ctx.lineTo(x, bt + 下ずれ); }
+    ctx.closePath(); ctx.fill();
+  };
+  const 幅 = RIVER.bot - RIVER.top;
+  帯(0, FIELD.w, -5, 5, "#C9C3A4");                            // 砂の岸
+  帯(0, FIELD.w, 0, 0, "#9FC0CE");                             // 浅い縁
+  帯(0, FIELD.w, 幅 * 0.22, -幅 * 0.22, "#7FA9BE");             // 中ほど
+  帯(0, FIELD.w, 幅 * 0.40, -幅 * 0.40, "#6B97AF");             // いちばん深いところ
+
+  // 流れの筋
+  ctx.strokeStyle = "rgba(255,255,255,0.30)"; ctx.lineWidth = 1.1;
+  for (const k of [0.28, 0.52, 0.74]) {
+    ctx.beginPath();
+    for (let x = 0; x <= FIELD.w; x += 6) {
+      const [t] = band(x);
+      const y = t + 幅 * k + Math.sin(x * 0.05 + k * 9) * 1.8;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // 浅瀬。淡く、石が覗く
+  if (RIVER.ford[1] > RIVER.ford[0]) {
+    帯(RIVER.ford[0], RIVER.ford[1], 1, -1, "#B6D0DA");
+    const rnd = 種乱数(4242);
+    for (let i = 0; i < 26; i++) {
+      const x = RIVER.ford[0] + rnd() * (RIVER.ford[1] - RIVER.ford[0]);
+      const [t] = band(x);
+      const y = t + 3 + rnd() * (幅 - 6);
+      const r = 1.6 + rnd() * 2.2;
+      ctx.fillStyle = "rgba(120,120,105,0.55)";
+      ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.beginPath(); ctx.ellipse(x - r * 0.25, y - r * 0.22, r * 0.45, r * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // 橋。水面へ影を落とし、欄干を立てる
+  if (RIVER.bridge[1] > RIVER.bridge[0]) {
+    const [bt0, bb0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
+    const x0 = RIVER.bridge[0], x1 = RIVER.bridge[1], 上 = bt0 - 7, 下 = bb0 + 7;
+    ctx.fillStyle = "rgba(40,60,70,0.30)";
+    ctx.fillRect(x0 + 影.x * 0.5, 上 + 影.y * 0.4, x1 - x0, 下 - 上);
+    ctx.fillStyle = "#C2A177"; ctx.fillRect(x0, 上, x1 - x0, 下 - 上);
+    ctx.fillStyle = "rgba(120,90,60,0.45)";                    // 板の目
+    for (let x = x0; x < x1; x += 12) ctx.fillRect(x, 上, 2, 下 - 上);
+    ctx.fillStyle = "#D8BC94";                                 // 欄干（光の側）
+    ctx.fillRect(x0, 上 - 3, x1 - x0, 3.5);
+    ctx.fillStyle = "#9A7C57";                                 // 欄干（影の側）
+    ctx.fillRect(x0, 下 - 0.5, x1 - x0, 3.5);
+    ctx.fillStyle = "#8A6B48";                                 // 橋脚
+    for (const bx of [x0 + (x1 - x0) * 0.34, x0 + (x1 - x0) * 0.66]) ctx.fillRect(bx - 2, 上, 4, 下 - 上);
+  }
+
+  // 字は輪郭を付けて、水の上でも読めるようにする
+  const 札 = (t, x, y) => {
+    ctx.font = "13px 'Hiragino Mincho ProN',serif";
+    ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3;
+    ctx.strokeText(t, x, y);
+    ctx.fillStyle = "rgba(46,66,80,0.95)"; ctx.fillText(t, x, y);
+  };
+  if (RIVER.bridge[1] > RIVER.bridge[0]) {
+    const [bt0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
+    札("橋", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 7, bt0 - 14);
+  }
+  if (RIVER.ford[1] > RIVER.ford[0]) {
+    const [ft0] = band((RIVER.ford[0] + RIVER.ford[1]) / 2);
+    札("浅瀬", (RIVER.ford[0] + RIVER.ford[1]) / 2 - 14, ft0 - 12);
+  }
+  const [dt0] = band(64);
+  札("深い川", 64, dt0 - 12);
+}
+
+export function drawFieldTerrain(ctx) {
+  // 野の地。畦で区切られた田畑が広がる
+  ctx.fillStyle = "#CBD8AC"; ctx.fillRect(0, 0, FIELD.w, FIELD.h);
+  /* 田畑。畦で区切られた区画が広がる。
+     はじめは濃く置いたが、四角がそのまま浮いて見えて、地形ではなく
+     画面の部品のようになった。淡く、数を絞る。地の彩りにとどめる。 */
+  const rnd = 種乱数(20260818);
+  for (let i = 0; i < Math.round((FIELD.w * FIELD.h) / 46000); i++) {
+    const x = rnd() * FIELD.w, y = rnd() * FIELD.h;
+    const w = 52 + rnd() * 86, h = 34 + rnd() * 52;
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate((rnd() - 0.5) * 0.5);
+    ctx.fillStyle = `rgba(${196 + rnd() * 18 | 0},${210 + rnd() * 14 | 0},${158 + rnd() * 20 | 0},0.20)`;
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.strokeStyle = "rgba(150,156,116,0.14)"; ctx.lineWidth = 1;
+    ctx.strokeRect(-w / 2, -h / 2, w, h);
+    /* 畦の筋も引いてみたが、罫線の入った紙のようになって地形より目立った。
+       区画の縁だけにとどめる。 */
+    ctx.restore();
+  }
+
+  for (const v of VILLAGES) 集落を描く(ctx, v);
+  for (const m of MARSH) 湿地を描く(ctx, m);
+  for (const h of HILLS) 丘を描く(ctx, h);
+  for (const f of WOODS) 木立を描く(ctx, f, false, 22, "林");
+  for (const f of FORESTS) 木立を描く(ctx, f, true, 48, "森");
+  if (hasRiver()) 川を描く(ctx);
 }
 
 

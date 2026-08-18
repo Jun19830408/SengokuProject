@@ -28,6 +28,14 @@ export function riverShift(x) {
 
 export const FORESTS = [], WOODS = [], HILLS = [], MARSH = [];
 
+/* 集落。野には人が住んでいる。
+
+   いまのところ見た目だけのもので、地形としての効きは持たない
+   （terrainAt は集落の上でも「平地」を返す）。屋根と生垣を描くだけである。
+   隠れられる・馬の足が鈍る・焼ける、といった効きを持たせるなら、
+   TERRAIN に一つ足し、terrainAt と AI の両方を直す要がある。 */
+export const VILLAGES = [];
+
 export let FIELD_SEED = 0;
 
 // 城の名から種を作る（同じ街道なら何度戦っても同じ野になる）
@@ -43,7 +51,7 @@ export function genTerrain(seed) {
   const rnd = makeRng(seed);
   const W = FIELD.w, H = FIELD.h;
   RIVER.top = 0; RIVER.bot = 0; RIVER.bridge = [0, 0]; RIVER.ford = [0, 0]; RIVER.wave = 0;
-  FORESTS.length = 0; WOODS.length = 0; HILLS.length = 0; MARSH.length = 0;
+  FORESTS.length = 0; WOODS.length = 0; HILLS.length = 0; MARSH.length = 0; VILLAGES.length = 0;
   const kind = rnd();
   // 川。六割の野に一本流れる。橋と浅瀬の位置も野ごとに違う。
   if (kind > 0.4) {
@@ -74,7 +82,7 @@ export function genTerrain(seed) {
         if (RIVER.bot > RIVER.top && y > RIVER.top - 40 && y < RIVER.bot + 40) continue;
         ok = ![...FORESTS, ...WOODS, ...HILLS, ...MARSH].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + r0 + 30);
       }
-      if (ok) list.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r0) });
+      if (ok) list.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r0), seed: Math.floor(rnd() * 1e9) });
     }
   };
   const sc = Math.min(1.6, FIELD.w / 1080);
@@ -82,6 +90,11 @@ export function genTerrain(seed) {
   put(FORESTS, Math.floor(rnd() * 4), 70 * sc, 115 * sc);      // 0〜3
   put(WOODS, Math.floor(rnd() * 3), 50 * sc, 85 * sc);         // 0〜2
   put(MARSH, rnd() > 0.6 ? 1 : 0, 65 * sc, 100 * sc);          // 0〜1
+  put(VILLAGES, Math.floor(rnd() * 3), 34 * sc, 58 * sc);      // 0〜2
+
+  /* 丘の高さ。裾の広い丘ほど高く盛り上がる。
+     地形としてはどれも「丘」であって、効きは変わらない。見た目の起伏だけである。 */
+  for (const h of HILLS) h.rise = Math.round(h.r * (0.20 + (h.seed % 100) / 100 * 0.14));
 }
 
 export const hasRiver = () => RIVER.bot > RIVER.top + 4;
