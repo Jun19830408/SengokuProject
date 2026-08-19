@@ -4743,6 +4743,66 @@ function marchMonths(from, to) {
   return Math.max(1, Math.ceil(d / MARCH_PER_MONTH));
 }
 
+// src/data/ships.js
+var SHIPS = {
+  atake: {
+    \u540D: "\u5B89\u5B85\u8239",
+    \u7565: "\u5B89",
+    \u4E57: 90,
+    hp: 130,
+    \u901F: 20,
+    \u7684: 22,
+    \u5C04: 165,
+    \u77E2: 5,
+    \u7119: 0,
+    \u4E57\u8FBC: 1.35,
+    \u6D88\u706B: 1.25,
+    \u5E06: 1.15,
+    \u8AAC: "\u7DCF\u77E2\u5009\u306E\u5927\u8239\u3002\u920D\u3044\u304C\u843D\u3061\u306A\u3044\u3002\u77E2\u7389\u304C\u591A\u304F\u3001\u4E57\u308A\u624B\u3082\u591A\u3044\u3002"
+  },
+  seki: {
+    \u540D: "\u95A2\u8239",
+    \u7565: "\u95A2",
+    \u4E57: 48,
+    hp: 62,
+    \u901F: 33,
+    \u7684: 15,
+    \u5C04: 140,
+    \u77E2: 2.2,
+    \u7119: 0.5,
+    \u4E57\u8FBC: 1,
+    \u6D88\u706B: 1,
+    \u5E06: 1,
+    \u8AAC: "\u6C34\u8ECD\u306E\u4E3B\u529B\u3002\u901F\u3055\u3068\u539A\u307F\u304C\u91E3\u308A\u5408\u3046\u3002"
+  },
+  kobaya: {
+    \u540D: "\u5C0F\u65E9",
+    \u7565: "\u65E9",
+    \u4E57: 20,
+    hp: 26,
+    \u901F: 46,
+    \u7684: 10,
+    \u5C04: 95,
+    \u77E2: 0.7,
+    \u7119: 1.6,
+    \u4E57\u8FBC: 0.62,
+    \u6D88\u706B: 0.7,
+    \u5E06: 0.85,
+    \u8AAC: "\u5C0F\u3055\u304F\u901F\u3044\u3002\u7119\u70D9\u3092\u6295\u3052\u3001\u7D20\u65E9\u304F\u56DE\u308A\u8FBC\u3080\u3002\u5F53\u305F\u308C\u3070\u8106\u3044\u3002"
+  }
+};
+var SHIP_KINDS = ["atake", "seki", "kobaya"];
+function \u8239\u306E\u5272\u308A(skill) {
+  const t = Math.max(0, Math.min(1, (skill - 40) / 55));
+  return {
+    atake: 0.04 + t * 0.13,
+    seki: 0.36 + t * 0.16,
+    kobaya: 0.6 - t * 0.29
+  };
+}
+var \u98A8\u306E\u540D = ["\u5317", "\u5317\u6771", "\u6771", "\u5357\u6771", "\u5357", "\u5357\u897F", "\u897F", "\u5317\u897F"];
+var \u6F6E\u306E\u5F37\u3055 = 6;
+
 // src/core/naval.js
 var COASTAL = /* @__PURE__ */ new Map();
 var \u6D77\u8DEF\u306E\u57CE = /* @__PURE__ */ new Set();
@@ -4794,15 +4854,42 @@ function navalPower(s2, fid) {
   }
   return { ships: Math.max(2, ships), skill: clamp(skill, 30, 100) };
 }
+var \u4E00\u8258\u306E\u4E57\u308A = 55;
+var \u8239\u306E\u9650\u308A = 90;
+var \u5FB4\u3057\u305F\u8239\u306E\u6280\u91CF = 34;
+var \u8239\u306E\u683C = { atake: 3.2, seki: 1.6, kobaya: 0.6 };
+function \u8239\u7ACB\u3066\u306E\u529B(\u7ACB) {
+  if (!\u7ACB) return 0;
+  const n = \u7ACB.\u5185\u8A33 || {};
+  const \u6226 = (n.atake || 0) * \u8239\u306E\u683C.atake + (n.seki || 0) * \u8239\u306E\u683C.seki + (n.kobaya || 0) * \u8239\u306E\u683C.kobaya;
+  return \u6226 * (0.55 + (\u7ACB.skill || 50) / 140);
+}
+function \u7ACB\u3066\u308B(np, \u8258, \u4E0A\u9650) {
+  const \u8981 = clamp(Math.round(\u8258), 4, \u4E0A\u9650 || \u8239\u306E\u9650\u308A);
+  const \u8ECD = Math.min(Math.round(np.ships), \u8981);
+  const \u96D1 = Math.max(0, \u8981 - \u8ECD);
+  const w = \u8239\u306E\u5272\u308A(np.skill);
+  const \u548C = w.atake + w.seki + w.kobaya;
+  const n = { atake: Math.round(\u8ECD * w.atake / \u548C), seki: Math.round(\u8ECD * w.seki / \u548C), kobaya: 0 };
+  n.kobaya = Math.max(0, \u8ECD - n.atake - n.seki) + \u96D1;
+  const skill = Math.round((np.skill * \u8ECD + \u5FB4\u3057\u305F\u8239\u306E\u6280\u91CF * \u96D1) / Math.max(1, \u8981));
+  const \u8ECD\u529B = (n.atake * \u8239\u306E\u683C.atake + n.seki * \u8239\u306E\u683C.seki + Math.max(0, n.kobaya - \u96D1) * \u8239\u306E\u683C.kobaya) * (0.55 + np.skill / 140);
+  return { \u5185\u8A33: n, ships: \u8981, \u8258: \u8981, skill: clamp(skill, 30, 100), \u8ECD\u8239: \u8ECD, \u5FB4\u8239: \u96D1, \u8ECD\u529B };
+}
+function \u6E21\u6D77\u306E\u8239\u7ACB\u3066(s2, fid, men) {
+  return \u7ACB\u3066\u308B(navalPower(s2, fid), Math.ceil(Math.max(600, men || 0) / \u4E00\u8258\u306E\u4E57\u308A));
+}
+function \u8FCE\u3048\u6483\u3064\u8239\u7ACB\u3066(s2, fid, \u57CE) {
+  const np = navalPower(s2, fid);
+  const \u6D66 = \u57CE ? Math.round((\u57CE.local || 0) / 320) : 0;
+  return \u7ACB\u3066\u308B(np, np.ships + \u6D66);
+}
 function seaInterception(s2, army, roadKind) {
   if (roadKind !== "\u6D77\u8DEF") return null;
   const \u7684 = (s2.castles || []).find((c) => c.id === army.target);
   const \u5B88 = \u7684 ? \u7684.faction : null;
   if (!\u5B88 || \u5B88 === army.faction) return null;
   if (atPeace(s2, army.faction, \u5B88)) return null;
-  const mine = navalPower(s2, army.faction);
-  const np = navalPower(s2, \u5B88);
-  if (np.ships < 3) return null;
   const A = nodeById(army.path[0]), B = nodeById(army.path[1]);
   if (!A || !B) return null;
   const nearRoute = (c) => {
@@ -4811,18 +4898,14 @@ function seaInterception(s2, army, roadKind) {
     return Math.hypot(A.x + dx * t - c.x, A.y + dy * t - c.y);
   };
   if (!s2.castles.some((c) => c.faction === \u5B88 && isCoastal(c) && nearRoute(c) < 120)) return null;
-  const \u6211 = mine.ships * (0.6 + mine.skill / 160);
-  const \u5F7C = np.ships * (0.6 + np.skill / 160);
-  if (\u5F7C < \u6211 * 0.45) return null;
-  const \u5272 = \u5F7C / (\u5F7C + \u6211);
-  const p = clamp(0.1 + (\u5272 - 0.3) * 1.45, 0.06, 0.82);
-  if (Math.random() > p) return null;
-  return { by: \u5B88, foe: np, mine, p };
+  const mine = \u6E21\u6D77\u306E\u8239\u7ACB\u3066(s2, army.faction, army.men);
+  const foe = \u8FCE\u3048\u6483\u3064\u8239\u7ACB\u3066(s2, \u5B88, \u7684);
+  if (foe.\u8ECD\u529B < mine.\u8ECD\u529B * 0.42) return null;
+  return { by: \u5B88, foe, mine, \u6211: \u8239\u7ACB\u3066\u306E\u529B(mine), \u5F7C: \u8239\u7ACB\u3066\u306E\u529B(foe) };
 }
 function resolveSeaBattle(s2, army, inter) {
-  const a = inter.mine, d = inter.foe;
-  const av = Math.sqrt(a.ships) * (0.5 + a.skill / 110) * (0.72 + Math.random() * 0.56);
-  const dv = Math.sqrt(d.ships) * (0.5 + d.skill / 110) * (0.72 + Math.random() * 0.56);
+  const av = Math.sqrt(\u8239\u7ACB\u3066\u306E\u529B(inter.mine)) * (0.72 + Math.random() * 0.56);
+  const dv = Math.sqrt(\u8239\u7ACB\u3066\u306E\u529B(inter.foe)) * (0.72 + Math.random() * 0.56);
   const win = av > dv;
   const r = Math.min(av, dv) / Math.max(av, dv);
   const lost = Math.round(army.men * (win ? 0.04 + r * 0.05 : 0.16 + r * 0.16));
@@ -8763,26 +8846,20 @@ function advanceMonth(prev, g) {
           const txt = res.win ? `${from.name}\u3068${to.name}\u306E\u9593\u306E\u6D77\u3067${s2.factions[a.faction].name}\u304C${res.foeName}\u306E\u6C34\u8ECD\u3092\u7834\u3063\u305F\uFF08${fmt(res.lost)}\u4EBA\u3092\u5931\u3046\uFF09\u3002` : `${from.name}\u3068${to.name}\u306E\u9593\u306E\u6D77\u3067${s2.factions[a.faction].name}\u304C${res.foeName}\u306E\u6C34\u8ECD\u306B\u6557\u308C\u305F\uFF08${fmt(res.lost)}\u4EBA\u304C\u6D77\u306B\u6C88\u3093\u3060\uFF09\u3002`;
           s2.chronicle.push({ y: s2.year, m: s2.month, text: txt });
           if (a.faction === s2.player || inter.by === s2.player) events.push(txt);
-          if (!res.win && a.men < 200) {
-            const home = s2.castles.find((c2) => c2.id === a.from);
-            if (home) for (const gid of a.gens) {
-              const x = s2.generals.find((q) => q.id === gid);
-              if (x) x.at = home.id;
-            }
-            a.dead = true;
-            break;
-          }
-          if (!res.win && Math.random() < 0.45) {
+          if (!res.win) {
             const home = s2.castles.find((c2) => c2.id === a.from);
             if (home) {
               home.local += Math.max(0, a.local);
+              home.food += Math.max(0, a.food || 0);
+              if (a.rost && a.rost.length) home.rost = [...home.rost || [], ...a.rost];
+              rosterSync(home, "rost", home.local, `loc-${home.id}`);
               for (const gid of a.gens) {
                 const x = s2.generals.find((q) => q.id === gid);
                 if (x) x.at = home.id;
               }
             }
+            s2.campaigns = (s2.campaigns || []).filter((c2) => !(c2.armies || []).includes(a.id));
             a.dead = true;
-            s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[a.faction].name}\u306E\u8ECD\u306F\u6E21\u6D77\u3092\u8AE6\u3081\u3001\u5F15\u304D\u8FD4\u3057\u305F\u3002` });
             break;
           }
         }
@@ -14398,66 +14475,6 @@ function BattleScreen({ ctx, land, onEnd }) {
 // src/ui/SeaScreen.jsx
 import React4, { useEffect as useEffect4, useRef as useRef3, useState as useState4 } from "react";
 
-// src/data/ships.js
-var SHIPS = {
-  atake: {
-    \u540D: "\u5B89\u5B85\u8239",
-    \u7565: "\u5B89",
-    \u4E57: 90,
-    hp: 130,
-    \u901F: 20,
-    \u7684: 22,
-    \u5C04: 165,
-    \u77E2: 5,
-    \u7119: 0,
-    \u4E57\u8FBC: 1.35,
-    \u6D88\u706B: 1.25,
-    \u5E06: 1.15,
-    \u8AAC: "\u7DCF\u77E2\u5009\u306E\u5927\u8239\u3002\u920D\u3044\u304C\u843D\u3061\u306A\u3044\u3002\u77E2\u7389\u304C\u591A\u304F\u3001\u4E57\u308A\u624B\u3082\u591A\u3044\u3002"
-  },
-  seki: {
-    \u540D: "\u95A2\u8239",
-    \u7565: "\u95A2",
-    \u4E57: 48,
-    hp: 62,
-    \u901F: 33,
-    \u7684: 15,
-    \u5C04: 140,
-    \u77E2: 2.2,
-    \u7119: 0.5,
-    \u4E57\u8FBC: 1,
-    \u6D88\u706B: 1,
-    \u5E06: 1,
-    \u8AAC: "\u6C34\u8ECD\u306E\u4E3B\u529B\u3002\u901F\u3055\u3068\u539A\u307F\u304C\u91E3\u308A\u5408\u3046\u3002"
-  },
-  kobaya: {
-    \u540D: "\u5C0F\u65E9",
-    \u7565: "\u65E9",
-    \u4E57: 20,
-    hp: 26,
-    \u901F: 46,
-    \u7684: 10,
-    \u5C04: 95,
-    \u77E2: 0.7,
-    \u7119: 1.6,
-    \u4E57\u8FBC: 0.62,
-    \u6D88\u706B: 0.7,
-    \u5E06: 0.85,
-    \u8AAC: "\u5C0F\u3055\u304F\u901F\u3044\u3002\u7119\u70D9\u3092\u6295\u3052\u3001\u7D20\u65E9\u304F\u56DE\u308A\u8FBC\u3080\u3002\u5F53\u305F\u308C\u3070\u8106\u3044\u3002"
-  }
-};
-var SHIP_KINDS = ["atake", "seki", "kobaya"];
-function \u8239\u306E\u5272\u308A(skill) {
-  const t = Math.max(0, Math.min(1, (skill - 40) / 55));
-  return {
-    atake: 0.04 + t * 0.13,
-    seki: 0.36 + t * 0.16,
-    kobaya: 0.6 - t * 0.29
-  };
-}
-var \u98A8\u306E\u540D = ["\u5317", "\u5317\u6771", "\u6771", "\u5357\u6771", "\u5357", "\u5357\u897F", "\u897F", "\u5317\u897F"];
-var \u6F6E\u306E\u5F37\u3055 = 6;
-
 // src/battle/sea.js
 var SEA = { w: 1200, h: 800 };
 var \u6D77\u306E\u72B6 = {
@@ -14493,8 +14510,8 @@ function \u8239\u3092\u4E26\u3079\u308B(\u8258, skill) {
   return n;
 }
 var \u901A\u3057 = 0;
-function makeFleet(side, gen, \u8258, skill, x, y, facing, color) {
-  const n = \u8239\u3092\u4E26\u3079\u308B(Math.max(1, Math.round(\u8258)), skill);
+function makeFleet(side, gen, \u8258, skill, x, y, facing, color, \u5185\u8A33) {
+  const n = \u5185\u8A33 ? { atake: \u5185\u8A33.atake || 0, seki: \u5185\u8A33.seki || 0, kobaya: \u5185\u8A33.kobaya || 0 } : \u8239\u3092\u4E26\u3079\u308B(Math.max(1, Math.round(\u8258)), skill);
   const ships = [];
   let i = 0;
   for (const t of SHIP_KINDS) {
@@ -14767,7 +14784,8 @@ function stepSeaBattle(b, dt) {
     const live = fleetShips(f);
     const \u5272 = live / Math.max(1, f.ships.length);
     const \u71C3 = f.ships.filter((s2) => !s2.sunk && s2.fire > 30).length;
-    f.morale = clamp(f.morale - ((1 - \u5272) * 2.4 + \u71C3 * 0.32) * dt * \u624B\u52A0\u6E1B + 0.12 * dt, 0, 100);
+    const \u71C3\u5272 = \u71C3 / Math.max(1, live);
+    f.morale = clamp(f.morale - ((1 - \u5272) * 2.4 + \u71C3\u5272 * 7) * dt * \u624B\u52A0\u6E1B + 0.12 * dt, 0, 100);
     if (!f.routed && (f.morale < 16 || \u5272 < 0.3)) {
       f.routed = true;
       f.order = "\u9000\u304F";
@@ -15410,7 +15428,10 @@ function SeaScreen({ ctx, land, onEnd }) {
     gap: 6,
     maxHeight: land ? "42%" : "50%",
     overflow: "auto"
-  } }, b.phase === "deploy" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, lineHeight: 1.7 } }, /* @__PURE__ */ React4.createElement("b", null, ctx.place), "\u3067", ctx.eName, "\u306E\u6C34\u8ECD\u3068\u884C\u304D\u5408\u3044\u307E\u3057\u305F\u3002\u6E21\u6D77\u3092\u963B\u307E\u308C\u3066\u3044\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u98A8\u306F", /* @__PURE__ */ React4.createElement("b", null, \u98A8\u306E\u547C\u3073\u540D()), "\u3002\u8FFD\u3044\u98A8\u306A\u3089\u901F\u304F\u3001\u5411\u304B\u3044\u98A8\u306A\u3089\u920D\u3044\u3002", /* @__PURE__ */ React4.createElement("b", null, "\u7119\u70D9\u306F\u98A8\u4E0A\u304B\u3089\u6295\u3052\u306D\u3070\u3001\u5DF1\u306E\u8239\u3078\u706B\u304C\u8FD4\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("br", null), "\u8239\u56E3\u3092\u62BC\u3057\u3066\u9078\u3073\u3001\u6D77\u3092\u62BC\u3057\u3066\u884C\u304D\u5148\u3092\u4E0E\u3048\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("b", null, "\u521D\u3081\u306F\u6C34\u4E3B\u306B\u59D4\u306D\u3066\u3042\u308A\u307E\u3059\u3002"), "\u624B\u305A\u304B\u3089\u4E0B\u77E5\u3092\u51FA\u305B\u3070\u3001\u305D\u306E\u8239\u56E3\u306E\u59D4\u4EFB\u306F\u89E3\u3051\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React4.createElement(
+  } }, b.phase === "deploy" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, lineHeight: 1.7 } }, /* @__PURE__ */ React4.createElement("b", null, ctx.place), "\u3067", ctx.eName, "\u306E\u6C34\u8ECD\u3068\u884C\u304D\u5408\u3044\u307E\u3057\u305F\u3002\u6E21\u6D77\u3092\u963B\u307E\u308C\u3066\u3044\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("br", null), ctx.\u7ACB\u3066 && (() => {
+    const m = ctx.\u7ACB\u3066.mine, f2 = ctx.\u7ACB\u3066.foe;
+    return /* @__PURE__ */ React4.createElement(React4.Fragment, null, "\u3053\u3061\u3089\u306E\u8239\u7ACB\u3066\u3000\u8ECD\u8239", m.\u8ECD\u8239, "\u8258\u30FB\u5FB4\u3057\u305F\u5C0F\u821F", m.\u5FB4\u8239, "\u8258\uFF08\u6C34\u4E3B\u306E\u6280\u91CF", m.skill, "\uFF09", /* @__PURE__ */ React4.createElement("br", null), m.\u5FB4\u8239 > m.\u8ECD\u8239 && /* @__PURE__ */ React4.createElement("b", { style: { color: "#B0483C" } }, "\u8239\u306E\u591A\u304F\u306F\u6D66\u304B\u3089\u5FB4\u3057\u305F\u5C0F\u821F\u3067\u3059\u3002\u6F15\u3050\u306E\u306F\u5175\u3067\u3042\u3063\u3066\u6C34\u4E3B\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), m.\u5FB4\u8239 > m.\u8ECD\u8239 && /* @__PURE__ */ React4.createElement("br", null), eName, "\u306E\u8239\u7ACB\u3066\u3000\u8ECD\u8239", f2.\u8ECD\u8239, "\u8258\u30FB\u5C0F\u821F", f2.\u5FB4\u8239, "\u8258\uFF08\u6280\u91CF", f2.skill, "\uFF09", /* @__PURE__ */ React4.createElement("br", null));
+  })(), "\u98A8\u306F", /* @__PURE__ */ React4.createElement("b", null, \u98A8\u306E\u547C\u3073\u540D()), "\u3002\u8FFD\u3044\u98A8\u306A\u3089\u901F\u304F\u3001\u5411\u304B\u3044\u98A8\u306A\u3089\u920D\u3044\u3002", /* @__PURE__ */ React4.createElement("b", null, "\u7119\u70D9\u306F\u98A8\u4E0A\u304B\u3089\u6295\u3052\u306D\u3070\u3001\u5DF1\u306E\u8239\u3078\u706B\u304C\u8FD4\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("br", null), "\u8239\u56E3\u3092\u62BC\u3057\u3066\u9078\u3073\u3001\u6D77\u3092\u62BC\u3057\u3066\u884C\u304D\u5148\u3092\u4E0E\u3048\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("b", null, "\u521D\u3081\u306F\u6C34\u4E3B\u306B\u59D4\u306D\u3066\u3042\u308A\u307E\u3059\u3002"), "\u624B\u305A\u304B\u3089\u4E0B\u77E5\u3092\u51FA\u305B\u3070\u3001\u305D\u306E\u8239\u56E3\u306E\u59D4\u4EFB\u306F\u89E3\u3051\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React4.createElement(
     "button",
     {
       className: "btn dark",
@@ -15464,46 +15485,58 @@ function SeaScreen({ ctx, land, onEnd }) {
   })() : /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.7 } }, "\u8239\u56E3\u3092\u62BC\u3057\u3066\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u6575\u306E\u8239\u56E3\u3092\u62BC\u305B\u3070\u3001\u305D\u306E\u69D8\u5B50\u304C\u8AAD\u3081\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("div", { style: { borderTop: `1px solid ${U.line2}`, paddingTop: 4, maxHeight: 78, overflow: "auto" } }, b.log.slice(-6).reverse().map((l, i) => /* @__PURE__ */ React4.createElement("div", { key: i, style: { fontSize: 11, color: U.dim } }, l.text)))), b.phase === "over" && (() => {
     const \u52DD = b.result === "P";
     const \u6C88 = ctx.\u521D\u3081.P - \u6211\u8258, \u6575\u6C88 = ctx.\u521D\u3081.E - \u6575\u8258;
-    return /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7 } }, /* @__PURE__ */ React4.createElement("div", { className: "mn", style: { fontSize: 22 } }, b.result === "\u65E5\u6CA1" ? "\u65E5\u66AE\u308C\u30FB\u4E21\u8ECD\u304C\u96E2\u308C\u305F" : \u52DD ? "\u52DD\u3061\u9B28" : "\u6557\u308C\u305F"), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.9 } }, ctx.place, "\u306E\u6D77\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u81EA\u8ECD ", ctx.\u521D\u3081.P, "\u8258 \u2192 ", /* @__PURE__ */ React4.createElement("b", null, \u6211\u8258, "\u8258"), "\uFF08", \u6C88, "\u8258\u3092\u5931\u3046\uFF09\uFF0F", ctx.eName, " ", ctx.\u521D\u3081.E, "\u8258 \u2192 ", /* @__PURE__ */ React4.createElement("b", null, \u6575\u8258, "\u8258"), "\uFF08", \u6575\u6C88, "\u8258\u3092\u5931\u3046\uFF09"), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8 } }, \u52DD ? "\u6D77\u8DEF\u306F\u958B\u3044\u305F\u3002\u8239\u3092\u9032\u3081\u308B\u3002" : b.result === "\u65E5\u6CA1" ? "\u65E5\u304C\u66AE\u308C\u3001\u4E21\u8ECD\u3068\u3082\u5175\u3092\u9000\u3044\u305F\u3002\u6E21\u6D77\u306F\u6210\u308B\u3002" : "\u6D77\u8DEF\u3092\u963B\u307E\u308C\u305F\u3002\u5175\u306E\u591A\u304F\u304C\u6D77\u306B\u6C88\u3093\u3060\u3002"), /* @__PURE__ */ React4.createElement("button", { className: "btn dark", style: { padding: 12 }, onClick: () => onEnd(b) }, "\u9663\u3078\u623B\u308B"));
+    return /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7 } }, /* @__PURE__ */ React4.createElement("div", { className: "mn", style: { fontSize: 22 } }, b.result === "\u65E5\u6CA1" ? "\u65E5\u66AE\u308C\u30FB\u4E21\u8ECD\u304C\u96E2\u308C\u305F" : \u52DD ? "\u52DD\u3061\u9B28" : "\u6557\u308C\u305F"), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.9 } }, ctx.place, "\u306E\u6D77\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u81EA\u8ECD ", ctx.\u521D\u3081.P, "\u8258 \u2192 ", /* @__PURE__ */ React4.createElement("b", null, \u6211\u8258, "\u8258"), "\uFF08", \u6C88, "\u8258\u3092\u5931\u3046\uFF09\uFF0F", ctx.eName, " ", ctx.\u521D\u3081.E, "\u8258 \u2192 ", /* @__PURE__ */ React4.createElement("b", null, \u6575\u8258, "\u8258"), "\uFF08", \u6575\u6C88, "\u8258\u3092\u5931\u3046\uFF09"), /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8 } }, \u52DD ? "\u6D77\u8DEF\u306F\u958B\u3044\u305F\u3002\u3053\u306E\u307E\u307E\u6E21\u308A\u3001\u5CB8\u3078\u4E0A\u304C\u308B\u3002" : b.result === "\u65E5\u6CA1" ? "\u65E5\u304C\u66AE\u308C\u3001\u4E21\u8ECD\u3068\u3082\u5175\u3092\u9000\u3044\u305F\u3002\u591C\u306E\u3046\u3061\u306B\u6E21\u308A\u5207\u308B\u3002" : "\u6D77\u8DEF\u3092\u963B\u307E\u308C\u305F\u3002\u6E21\u6D77\u306F\u6210\u3089\u305A\u3001\u56FD\u5143\u3078\u5F15\u304D\u8FD4\u3059\u307B\u304B\u306A\u3044\u3002"), /* @__PURE__ */ React4.createElement("button", { className: "btn dark", style: { padding: 12 }, onClick: () => onEnd(b) }, "\u9663\u3078\u623B\u308B"));
   })())));
 }
-function \u6D77\u6226\u3092\u4ED5\u7ACB\u3066\u308B(s2, army, inter, \u5730\u540D2, pColor, eColor, pName, eName) {
+function \u5206\u3051\u308B(\u5185\u8A33, \u5272) {
+  const \u51FA = [];
+  const \u6B8B = { ...\u5185\u8A33 };
+  for (let i = 0; i < \u5272; i++) {
+    const \u6700\u5F8C = i === \u5272 - 1;
+    const n = {};
+    for (const k of ["atake", "seki", "kobaya"]) {
+      n[k] = \u6700\u5F8C ? \u6B8B[k] : Math.round((\u5185\u8A33[k] || 0) / \u5272);
+      \u6B8B[k] -= n[k];
+    }
+    \u51FA.push(n);
+  }
+  return \u51FA.filter((n) => n.atake + n.seki + n.kobaya > 0);
+}
+function \u6D77\u6226\u3092\u4ED5\u7ACB\u3066\u308B(s2, army, inter, \u5730\u540D2, pColor, eColor, pName, eName2) {
   layoutSea((army.id || "x").split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, army.men);
   const \u5C06 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
   const \u982D = \u5C06.length ? \u5C06 : [{ id: "x", name: "\u8239\u624B\u8846", lead: 55, valor: 55, wit: 55 }];
   const P = [], E = [];
-  const \u6211\u8258 = Math.max(3, inter.mine.ships);
-  const \u5272 = Math.min(3, \u982D.length);
-  for (let i = 0; i < \u5272; i++) {
-    const \u8258 = Math.round(\u6211\u8258 / \u5272) + (i === 0 ? \u6211\u8258 % \u5272 : 0);
+  const \u6211\u5272 = \u5206\u3051\u308B(inter.mine.\u5185\u8A33, Math.min(3, \u982D.length));
+  \u6211\u5272.forEach((n, i) => {
     P.push(makeFleet(
       "P",
-      \u982D[i],
-      \u8258,
+      \u982D[i] || \u982D[0],
+      0,
       inter.mine.skill,
-      SEA.w * (0.28 + i * 0.22),
+      SEA.w * (0.5 + (i - (\u6211\u5272.length - 1) / 2) * 0.26),
       SEA.h * 0.8,
       -Math.PI / 2,
-      pColor
+      pColor,
+      n
     ));
-  }
+  });
   const \u6575\u5C06 = s2.generals.filter((x) => x.faction === inter.by && !x.captive).sort((a, c) => c.lead + c.wit - (a.lead + a.wit)).slice(0, 3);
   const \u6575\u982D = \u6575\u5C06.length ? \u6575\u5C06 : [{ id: "e", name: "\u6C34\u8ECD\u8846", lead: 60, valor: 60, wit: 60 }];
-  const \u6575\u8258 = Math.max(3, inter.foe.ships);
-  const \u6575\u5272 = Math.min(3, \u6575\u982D.length);
-  for (let i = 0; i < \u6575\u5272; i++) {
-    const \u8258 = Math.round(\u6575\u8258 / \u6575\u5272) + (i === 0 ? \u6575\u8258 % \u6575\u5272 : 0);
+  const \u6575\u5272 = \u5206\u3051\u308B(inter.foe.\u5185\u8A33, Math.min(3, \u6575\u982D.length));
+  \u6575\u5272.forEach((n, i) => {
     E.push(makeFleet(
       "E",
-      \u6575\u982D[i],
-      \u8258,
+      \u6575\u982D[i] || \u6575\u982D[0],
+      0,
       inter.foe.skill,
-      SEA.w * (0.28 + i * 0.22),
+      SEA.w * (0.5 + (i - (\u6575\u5272.length - 1) / 2) * 0.26),
       SEA.h * 0.2,
       Math.PI / 2,
-      eColor
+      eColor,
+      n
     ));
-  }
+  });
   const b = createSeaBattle(P, E, "P", {});
   return {
     b,
@@ -15511,7 +15544,8 @@ function \u6D77\u6226\u3092\u4ED5\u7ACB\u3066\u308B(s2, army, inter, \u5730\u540
     pColor,
     eColor,
     pName,
-    eName,
+    eName: eName2,
+    \u7ACB\u3066: { mine: inter.mine, foe: inter.foe },
     \u521D\u3081: { P: P.reduce((a, f) => a + fleetShips(f), 0), E: E.reduce((a, f) => a + fleetShips(f), 0) }
   };
 }
@@ -16303,14 +16337,24 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       s2.monthEvents = [...s2.monthEvents || [], \u6587];
       const rel = s2.relations[relKey(s2.player, call.by)];
       if (rel) rel.trust = clamp(rel.trust - 10, 0, 100);
-      if (!\u52DD && a.men < 200) {
+      if (!\u52DD && bb.result !== "\u65E5\u6CA1") {
         const home = s2.castles.find((c2) => c2.id === a.from);
-        if (home) for (const gid of a.gens) {
-          const x = s2.generals.find((q) => q.id === gid);
-          if (x) x.at = home.id;
+        if (home) {
+          home.local += Math.max(0, a.local);
+          home.food += Math.max(0, a.food || 0);
+          if (a.rost && a.rost.length) home.rost = [...home.rost || [], ...a.rost];
+          rosterSync(home, "rost", home.local, `loc-${home.id}`);
+          for (const gid of a.gens) {
+            const x = s2.generals.find((q) => q.id === gid);
+            if (x) x.at = home.id;
+          }
         }
         s2.armies = s2.armies.filter((x) => x.id !== a.id);
-        s2.monthEvents = [...s2.monthEvents || [], "\u8239\u3092\u5931\u3044\u3001\u6E21\u6D77\u306F\u6210\u3089\u306A\u304B\u3063\u305F\u3002"];
+        s2.campaigns = (s2.campaigns || []).filter((c2) => !(c2.armies || []).includes(a.id));
+        s2.monthEvents = [
+          ...s2.monthEvents || [],
+          `\u6D77\u8DEF\u3092\u963B\u307E\u308C\u3001\u6E21\u6D77\u306F\u6210\u3089\u306A\u304B\u3063\u305F\u3002${home ? `${home.name}\u3078\u5F15\u304D\u8FD4\u3057\u305F\u3002` : ""}`
+        ];
       }
       return s2;
     });

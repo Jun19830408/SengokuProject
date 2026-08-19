@@ -12,7 +12,7 @@ export { saveGame, loadGame, clearGame, 記録を並べる, 記録の見出し, 
 export { initState } from "../src/core/state.js";
 export { layoutSea, makeFleet, createSeaBattle, stepSeaBattle, seaAI, 海戦を裁く, fleetShips, fleetCrew, 風向き, SEA, 海の状 } from "../src/battle/sea.js";
 export { SHIPS, 船の割り } from "../src/data/ships.js";
-export { navalPower, isCoastal, seaInterception, resolveSeaBattle, 湊の主 } from "../src/core/naval.js";
+export { navalPower, isCoastal, seaInterception, resolveSeaBattle, 湊の主, 渡海の船立て, 迎え撃つ船立て, 船立ての力, 一艘の乗り } from "../src/core/naval.js";
 export { TOWNS } from "../src/data/castles.js";
 export { roadBetween } from "../src/core/paths.js";
 export { findPath } from "../src/core/paths.js";

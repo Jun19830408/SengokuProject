@@ -296,22 +296,22 @@ export function advanceMonth(prev, g) {
                 : `${from.name}と${to.name}の間の海で${s.factions[a.faction].name}が${res.foeName}の水軍に敗れた（${fmt(res.lost)}人が海に沈んだ）。`;
               s.chronicle.push({ y: s.year, m: s.month, text: txt });
               if (a.faction === s.player || inter.by === s.player) events.push(txt);
-              if (!res.win && a.men < 200) {            // 船を失い、渡海は成らなかった
-                const home = s.castles.find((c2) => c2.id === a.from);
-                if (home) for (const gid of a.gens) { const x = s.generals.find((q) => q.id === gid); if (x) x.at = home.id; }
-                a.dead = true;
-                break;
-              }
-              if (!res.win && Math.random() < 0.45) {    // 引き返す
+              // 敗れれば渡海は成らない（盤の上で戦うときと同じ筋）
+              if (!res.win) {
+                // 兵も将も国元へ戻す。海の上に置き去りにはしない。
                 const home = s.castles.find((c2) => c2.id === a.from);
                 if (home) {
                   home.local += Math.max(0, a.local);
+                  home.food += Math.max(0, a.food || 0);
+                  if (a.rost && a.rost.length) home.rost = [...(home.rost || []), ...a.rost];
+                  rosterSync(home, "rost", home.local, `loc-${home.id}`);
                   for (const gid of a.gens) { const x = s.generals.find((q) => q.id === gid); if (x) x.at = home.id; }
                 }
+                s.campaigns = (s.campaigns || []).filter((c2) => !(c2.armies || []).includes(a.id));
                 a.dead = true;
-                s.chronicle.push({ y: s.year, m: s.month, text: `${s.factions[a.faction].name}の軍は渡海を諦め、引き返した。` });
                 break;
               }
+
             }
           }
           if (budget >= rem) {

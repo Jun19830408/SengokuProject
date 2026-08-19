@@ -252,6 +252,17 @@ export function SeaScreen({ ctx, land, onEnd }) {
             <>
               <div style={{ fontSize: 12, color: U.dim, lineHeight: 1.7 }}>
                 <b>{ctx.place}</b>で{ctx.eName}の水軍と行き合いました。渡海を阻まれています。<br />
+                {ctx.立て && (() => {
+                  const m = ctx.立て.mine, f2 = ctx.立て.foe;
+                  return (
+                    <>
+                      こちらの船立て　軍船{m.軍船}艘・徴した小舟{m.徴船}艘（水主の技量{m.skill}）<br />
+                      {m.徴船 > m.軍船 && <b style={{ color: "#B0483C" }}>船の多くは浦から徴した小舟です。漕ぐのは兵であって水主ではありません。</b>}
+                      {m.徴船 > m.軍船 && <br />}
+                      {eName}の船立て　軍船{f2.軍船}艘・小舟{f2.徴船}艘（技量{f2.skill}）<br />
+                    </>
+                  );
+                })()}
                 風は<b>{風の呼び名()}</b>。追い風なら速く、向かい風なら鈍い。
                 <b>焙烙は風上から投げねば、己の船へ火が返ります。</b><br />
                 船団を押して選び、海を押して行き先を与えます。
@@ -375,9 +386,9 @@ export function SeaScreen({ ctx, land, onEnd }) {
                   {ctx.eName} {ctx.初め.E}艘 → <b>{敵艘}艘</b>（{敵沈}艘を失う）
                 </div>
                 <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8 }}>
-                  {勝 ? "海路は開いた。船を進める。"
-                    : b.result === "日没" ? "日が暮れ、両軍とも兵を退いた。渡海は成る。"
-                    : "海路を阻まれた。兵の多くが海に沈んだ。"}
+                  {勝 ? "海路は開いた。このまま渡り、岸へ上がる。"
+                    : b.result === "日没" ? "日が暮れ、両軍とも兵を退いた。夜のうちに渡り切る。"
+                    : "海路を阻まれた。渡海は成らず、国元へ引き返すほかない。"}
                 </div>
                 <button className="btn dark" style={{ padding: 12 }} onClick={() => onEnd(b)}>陣へ戻る</button>
               </div>
@@ -390,32 +401,48 @@ export function SeaScreen({ ctx, land, onEnd }) {
 }
 
 /* 海戦を組み立てる。渡る側と、迎え撃つ側。
-   将は軍に従う者から選び、船は水軍の力から出す。 */
+
+   船立て（naval.js）がそのまま船団になる。軍船に足りぬぶんを浦の小舟で
+   埋めてあるので、水軍を持たぬ家は小早ばかりの船団で戦うことになる。
+   将が三人いれば三つに分ける。船も将のあいだで按分する。 */
+function 分ける(内訳, 割) {
+  const 出 = [];
+  const 残 = { ...内訳 };
+  for (let i = 0; i < 割; i++) {
+    const 最後 = i === 割 - 1;
+    const n = {};
+    for (const k of ["atake", "seki", "kobaya"]) {
+      n[k] = 最後 ? 残[k] : Math.round((内訳[k] || 0) / 割);
+      残[k] -= n[k];
+    }
+    出.push(n);
+  }
+  // 一艘も無い船団を作らない
+  return 出.filter((n) => n.atake + n.seki + n.kobaya > 0);
+}
+
 export function 海戦を仕立てる(s, army, inter, 地名, pColor, eColor, pName, eName) {
   layoutSea((army.id || "x").split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, army.men);
   const 将 = (army.gens || []).map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
   const 頭 = 将.length ? 将 : [{ id: "x", name: "船手衆", lead: 55, valor: 55, wit: 55 }];
   const P = [], E = [];
-  const 我艘 = Math.max(3, inter.mine.ships);
-  const 割 = Math.min(3, 頭.length);
-  for (let i = 0; i < 割; i++) {
-    const 艘 = Math.round(我艘 / 割) + (i === 0 ? 我艘 % 割 : 0);
-    P.push(makeFleet("P", 頭[i], 艘, inter.mine.skill,
-      SEA.w * (0.28 + i * 0.22), SEA.h * 0.80, -Math.PI / 2, pColor));
-  }
+  const 我割 = 分ける(inter.mine.内訳, Math.min(3, 頭.length));
+  我割.forEach((n, i) => {
+    P.push(makeFleet("P", 頭[i] || 頭[0], 0, inter.mine.skill,
+      SEA.w * (0.5 + (i - (我割.length - 1) / 2) * 0.26), SEA.h * 0.80, -Math.PI / 2, pColor, n));
+  });
   const 敵将 = s.generals.filter((x) => x.faction === inter.by && !x.captive)
     .sort((a, c) => (c.lead + c.wit) - (a.lead + a.wit)).slice(0, 3);
   const 敵頭 = 敵将.length ? 敵将 : [{ id: "e", name: "水軍衆", lead: 60, valor: 60, wit: 60 }];
-  const 敵艘 = Math.max(3, inter.foe.ships);
-  const 敵割 = Math.min(3, 敵頭.length);
-  for (let i = 0; i < 敵割; i++) {
-    const 艘 = Math.round(敵艘 / 敵割) + (i === 0 ? 敵艘 % 敵割 : 0);
-    E.push(makeFleet("E", 敵頭[i], 艘, inter.foe.skill,
-      SEA.w * (0.28 + i * 0.22), SEA.h * 0.20, Math.PI / 2, eColor));
-  }
+  const 敵割 = 分ける(inter.foe.内訳, Math.min(3, 敵頭.length));
+  敵割.forEach((n, i) => {
+    E.push(makeFleet("E", 敵頭[i] || 敵頭[0], 0, inter.foe.skill,
+      SEA.w * (0.5 + (i - (敵割.length - 1) / 2) * 0.26), SEA.h * 0.20, Math.PI / 2, eColor, n));
+  });
   const b = createSeaBattle(P, E, "P", {});
   return {
     b, place: 地名, pColor, eColor, pName, eName,
+    立て: { mine: inter.mine, foe: inter.foe },
     初め: { P: P.reduce((a, f) => a + fleetShips(f), 0), E: E.reduce((a, f) => a + fleetShips(f), 0) },
   };
 }

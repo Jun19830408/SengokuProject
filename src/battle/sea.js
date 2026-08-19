@@ -54,9 +54,15 @@ export function 船を並べる(艘, skill) {
 
 let 通し = 0;
 
-/* 船団を立てる。将が一人、船が幾艘。 */
-export function makeFleet(side, gen, 艘, skill, x, y, facing, color) {
-  const n = 船を並べる(Math.max(1, Math.round(艘)), skill);
+/* 船団を立てる。将が一人、船が幾艘。
+
+   内訳を渡せばその通りに仕立てる。渡さなければ艘数と技量から割り出す。
+   軍船に足りぬぶんを浦の小舟で埋める、という勘定は naval.js が持っており、
+   その結果をそのまま受け取れるようにしてある。 */
+export function makeFleet(side, gen, 艘, skill, x, y, facing, color, 内訳) {
+  const n = 内訳
+    ? { atake: 内訳.atake || 0, seki: 内訳.seki || 0, kobaya: 内訳.kobaya || 0 }
+    : 船を並べる(Math.max(1, Math.round(艘)), skill);
   const ships = [];
   let i = 0;
   for (const t of SHIP_KINDS) {
@@ -307,7 +313,11 @@ export function stepSeaBattle(b, dt) {
     const live = fleetShips(f);
     const 割 = live / Math.max(1, f.ships.length);
     const 燃 = f.ships.filter((s) => !s.sunk && s.fire > 30).length;
-    f.morale = clamp(f.morale - ((1 - 割) * 2.4 + 燃 * 0.32) * dt * 手加減 + 0.12 * dt, 0, 100);
+    /* 燃えている船の「数」で士気を引いていた。そのため、船が多いほど早く崩れる。
+       九十艘を仕立てた船団が十八秒で崩れ、船戦にならなかった。
+       目に映るのは何艘燃えているかではなく、どれだけ燃えているかである。割で引く。 */
+    const 燃割 = 燃 / Math.max(1, live);
+    f.morale = clamp(f.morale - ((1 - 割) * 2.4 + 燃割 * 7.0) * dt * 手加減 + 0.12 * dt, 0, 100);
     if (!f.routed && (f.morale < 16 || 割 < 0.3)) {
       f.routed = true; f.order = "退く";
       const p = 退く先(b, f);

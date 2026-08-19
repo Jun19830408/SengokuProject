@@ -108,48 +108,58 @@ const 名 = (f) => (s.factions[f] || {}).name || f;
     `小早川が三好の海を併せると ${H.navalPower(t, 三原.faction).ships}艘。河野は湊に留まる`);
 }
 
-/* --------------------- 六、海を扼する家の前を素通りできないこと */
-{
-  /* 水軍を擁する家を攻めれば、まず迎え撃たれる。
-     洲本から三木（別所）を攻める例では、別所に船が無いので船戦にならない。
-     渡られる家に船があるかどうかで決まる、というのが直したあとの筋である。 */
-  const 淡路 = s.castles.find((x) => x.id === 'sumoto');
-  const army = { faction: 'oda', men: 6000, local: 6000,
-    path: ['miki', 'sumoto'], target: 'sumoto', rost: null };
-  let 出た = 0; const 回 = 4000;
-  for (let i = 0; i < 回; i++) if (H.seaInterception(s, army, '海路')) 出た++;
-  const 割 = 100 * 出た / 回;
-  確('水軍を擁する家（三好）の島へ渡れば、まず迎え撃たれる', 割 >= 55,
-    `三木→洲本を織田が渡るとき ${割.toFixed(1)}%（三好 ${H.navalPower(s, 'miyoshi').ships}艘）`);
+/* ------------- 六、どの家も渡海のときは船を出すこと（船が無いほうが得、を直す）
 
-  // 船を持たぬ家の城へ渡るなら、船戦にはならない
-  const 逆 = { faction: 'oda', men: 6000, local: 6000,
-    path: ['sumoto', 'miki'], target: 'miki', rost: null };
-  let 出た3 = 0;
-  for (let i = 0; i < 2000; i++) if (H.seaInterception(s, 逆, '海路')) 出た3++;
-  確('船を持たぬ家（別所）へ渡るなら船戦にならない', 出た3 === 0,
-    `別所 ${H.navalPower(s, 'bessho').ships}艘。湊から出られない`);
+   水軍が三艘に満たなければ迎え撃たれず、そのまま渡って陸で戦えた。
+   船が無いほうが得をするのでは、仕組みとして逆さまである。
+
+   実際には、どの家も海を渡るときは船を出す。軍船が足りなければ浦の漁船を徴し、
+   とにかく浮くものへ兵を乗せて渡った。だから船戦は必ず起きる。中身が違うだけである。 */
+{
+  const 淡路 = s.castles.find((x) => x.id === 'sumoto');
+  const 別所立 = H.渡海の船立て(s, 'bessho', 6000);
+  const 三好立 = H.迎え撃つ船立て(s, 'miyoshi', 淡路);
+  確('船を持たぬ家でも、渡るなら船を出す', 別所立.艘 > 40,
+    `別所 ${別所立.艘}艘（軍船${別所立.軍船}・徴した小舟${別所立.徴船}）技量${別所立.skill}`);
+  確('徴した小舟ばかりでは、水主の技量が上がらない', 別所立.skill <= 40, `技量${別所立.skill}`);
+  確('船の数は兵の数でも決まる', H.渡海の船立て(s, 'bessho', 1500).艘 < 別所立.艘 * 0.5,
+    `兵1500で${H.渡海の船立て(s, 'bessho', 1500).艘}艘 ／ 兵6000で${別所立.艘}艘`);
+  確('船立ての力は、艘数ではなく船の格で測る',
+    H.船立ての力(別所立) < H.船立ての力(三好立),
+    `別所${別所立.艘}艘の力 ${Math.round(H.船立ての力(別所立))} ＜ 三好${三好立.艘}艘の力 ${Math.round(H.船立ての力(三好立))}`);
+  確('海を握っているかは、軍船だけで測る（漁船は海を制しない）',
+    別所立.軍力 < 三好立.軍力 * 0.1,
+    `別所の軍力 ${Math.round(別所立.軍力)} ／ 三好の軍力 ${Math.round(三好立.軍力)}`);
+
+  const 別所軍 = { faction: 'bessho', men: 6000, local: 6000, path: ['miki', 'sumoto'], target: 'sumoto' };
+  let 出1 = 0;
+  for (let i = 0; i < 400; i++) if (H.seaInterception(s, 別所軍, '海路')) 出1++;
+  確('船を持たぬ家が海を握る家へ渡れば、必ず阻まれる', 出1 === 400,
+    `別所→洲本 ${(100 * 出1 / 400).toFixed(0)}%`);
+
+  const 三好軍 = { faction: 'miyoshi', men: 6000, local: 6000, path: ['sumoto', 'miki'], target: 'miki' };
+  let 出2 = 0;
+  for (let i = 0; i < 400; i++) if (H.seaInterception(s, 三好軍, '海路')) 出2++;
+  確('海を握る家が渡るなら、船は出てこない', 出2 === 0, `三好→三木 ${(100 * 出2 / 400).toFixed(0)}%`);
+
+  // 互いに水軍を持つ家どうしは、どちらから渡っても阻まれる
+  const 往 = { faction: 'kobayakawa', men: 4000, local: 4000, path: ['mihara', 'kawanoe'], target: 'kawanoe' };
+  const 復 = { faction: 'kono', men: 4000, local: 4000, path: ['kawanoe', 'mihara'], target: 'mihara' };
+  let 出3 = 0, 出4 = 0;
+  for (let i = 0; i < 400; i++) { if (H.seaInterception(s, 往, '海路')) 出3++; if (H.seaInterception(s, 復, '海路')) 出4++; }
+  確('水軍を持つ家どうしは、どちらから渡っても船戦になる', 出3 === 400 && 出4 === 400,
+    `小早川→河野 ${(100 * 出3 / 400).toFixed(0)}% ／ 河野→小早川 ${(100 * 出4 / 400).toFixed(0)}%`);
 
   // 陸の道では海戦は起きない
-  const 陸 = { faction: 'oda', men: 6000, local: 6000,
-    path: ['nagoya', 'kiyosu'], target: 'kiyosu', rost: null };
+  const 陸 = { faction: 'oda', men: 6000, local: 6000, path: ['nagoya', 'kiyosu'], target: 'kiyosu' };
   確('街道では海戦は起きない', !H.seaInterception(s, 陸, '街道'));
-
-  // 力の差で見込みが動く
-  const t = JSON.parse(JSON.stringify(s));
-  for (const c of t.castles.filter((x) => x.faction === 'miyoshi' && x.id !== 'sumoto')) c.faction = 'oda';
-  let 出た2 = 0;
-  for (let i = 0; i < 2000; i++) if (H.seaInterception(t, { ...army }, '海路')) 出た2++;
-  確('こちらが海を握れば、出てくる者はいない', 100 * 出た2 / 2000 < 割 * 0.5,
-    `三好の湊をあらかた奪った後 ${(100 * 出た2 / 2000).toFixed(1)}%`);
 }
 
 /* ------------------------------------- 七、海戦の帰趨 */
 {
   const army = { faction: 'oda', men: 6000, local: 6000,
     path: ['miki', 'sumoto'], target: 'sumoto', rost: null };
-  let inter = null;
-  for (let i = 0; i < 200 && !inter; i++) inter = H.seaInterception(s, army, '海路');
+  const inter = H.seaInterception(s, army, '海路');
   確('迎え撃ちの中身が読める', !!inter && !!inter.foe && !!inter.mine,
     inter ? `${名(inter.by)} ${inter.foe.ships}艘 対 織田 ${inter.mine.ships}艘` : '');
   if (inter) {

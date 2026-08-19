@@ -380,12 +380,25 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       s.monthEvents = [...(s.monthEvents || []), 文];
       const rel = s.relations[relKey(s.player, call.by)];
       if (rel) rel.trust = clamp(rel.trust - 10, 0, 100);
-      // 大敗して兵が残らねば、渡海は成らない。国元へ引き返す。
-      if (!勝 && a.men < 200) {
+      /* 船戦に敗れれば、渡海は成らない。国元へ引き返す。
+
+         これを入れずにいたため、海で打ち負かされても兵を減らしただけで
+         そのまま上陸できていた。それでは「海路を阻む」ということの意味がない。
+         海の上に退き場はなく、押し通ることもできない。
+         日暮れで両軍が離れたのなら、渡ることはできる。 */
+      if (!勝 && bb.result !== "日没") {
         const home = s.castles.find((c2) => c2.id === a.from);
-        if (home) for (const gid of a.gens) { const x = s.generals.find((q) => q.id === gid); if (x) x.at = home.id; }
+        if (home) {
+          home.local += Math.max(0, a.local);
+          home.food += Math.max(0, a.food || 0);
+          if (a.rost && a.rost.length) home.rost = [...(home.rost || []), ...a.rost];
+          rosterSync(home, "rost", home.local, `loc-${home.id}`);
+          for (const gid of a.gens) { const x = s.generals.find((q) => q.id === gid); if (x) x.at = home.id; }
+        }
         s.armies = s.armies.filter((x) => x.id !== a.id);
-        s.monthEvents = [...(s.monthEvents || []), "船を失い、渡海は成らなかった。"];
+        s.campaigns = (s.campaigns || []).filter((c2) => !(c2.armies || []).includes(a.id));
+        s.monthEvents = [...(s.monthEvents || []),
+          `海路を阻まれ、渡海は成らなかった。${home ? `${home.name}へ引き返した。` : ""}`];
       }
       return s;
     });
