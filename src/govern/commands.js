@@ -14,7 +14,7 @@ import { canHoldCastle, castleRankNeed, stipendOf } from "../core/rank.js";
 import { 基準値, 売値, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
-import { 特殊勢力の可否 } from "../core/naval.js";
+import { 特殊勢力の可否 } from "../core/town.js";
 /* ==========================================================================
    政務 ─ 城と家中への下知
    いずれも「いまの盤の様子（prev）を受け取り、改めた盤の様子を返す」だけの処理。

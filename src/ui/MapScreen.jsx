@@ -41,6 +41,8 @@ import { 難を逃れる } from "../core/capture.js";
 import { 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
 import { rosterCut } from "../core/roster.js";
+import { drawTownMark, 町の様子 } from "../core/town.js";
+import { 特殊勢力の可否 } from "../core/town.js";
 
 /* ============================================================ 政略マップ */
 export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
@@ -54,6 +56,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [modal, setModal] = useState(null);
   const [battle, setBattle] = useState(null);
   const [sea, setSea] = useState(null);        // 盤の上の海戦
+  const [townSel, setTownSel] = useState(null); // 押した特殊勢力
   const [raid, setRaid] = useState(null);        // 合戦前の奇襲の献策
   const [breakVow, setBreakVow] = useState(null); // 約束を交わした相手へ兵を出すときの問い
   const [sally, setSally] = useState(null);      // 囲まれた城が討って出るかの問い
@@ -155,15 +158,35 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       ctx.fillStyle = "#fff"; ctx.font = "600 10px sans-serif"; ctx.fillText("軍", ax - 5, ay + 3.5);
       ctx.fillStyle = "#33332F"; ctx.font = "11px sans-serif"; ctx.fillText(`${fmt(a.men)}`, ax + 14, ay + 4);
     }
+    /* 特殊勢力（GDD 5.4 / 13.1）。
+       これまではどの町も同じ灰色の点で、名を読まねば湊か寺社か分からなかった。
+       種ごとの形にし、誼を通じた家があればその家の色で塗る。 */
     for (const t of TOWNS) {
       const [x, y] = S(t.x, t.y);
-      ctx.fillStyle = "#55524A"; ctx.beginPath(); ctx.arc(x, y, 3.6, 0, 7); ctx.fill();
+      const 様 = 町の様子(g, t);
+      const r = 様.誼 ? 6.6 : 5.4;
+      ctx.fillStyle = "rgba(0,0,0,0.14)";
+      ctx.beginPath(); ctx.arc(x + 0.8, y + 1.2, r + 2.6, 0, 7); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, r + 2.4, 0, 7); ctx.fill();
+      if (様.誼) {                              // 誼を通じた家があれば、その色の輪をかける
+        ctx.strokeStyle = 様.色; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.arc(x, y, r + 2.4, 0, 7); ctx.stroke();
+      }
+      if (townSel === t.id) {
+        ctx.strokeStyle = 様.色; ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.arc(x, y, r + 8, 0, 7); ctx.stroke();
+      }
+      drawTownMark(ctx, t.kind, x, y, r, 様.色);
       if (s > 0.6) {
         ctx.font = "12px 'Hiragino Sans',sans-serif";
         const w = ctx.measureText(t.name).width;
-        ctx.fillStyle = "rgba(255,255,255,.78)"; ctx.fillRect(x - w / 2 - 3, y + 6, w + 6, 15);
-        ctx.fillStyle = "#3B3A35"; ctx.fillText(t.name, x - w / 2, y + 18);
-        if (s > 1.1) { ctx.fillStyle = U.dim; ctx.font = "10px sans-serif"; ctx.fillText(`（${t.kind}）`, x - 22, y + 31); }
+        ctx.fillStyle = "rgba(255,255,255,.78)"; ctx.fillRect(x - w / 2 - 3, y + r + 4, w + 6, 15);
+        ctx.fillStyle = "#3B3A35"; ctx.fillText(t.name, x - w / 2, y + r + 16);
+        if (s > 1.1) {
+          ctx.fillStyle = U.dim; ctx.font = "10px sans-serif";
+          const k = `（${t.kind}${様.主名 ? `・${様.主名}` : ""}）`;
+          ctx.fillText(k, x - ctx.measureText(k).width / 2, y + r + 29);
+        }
       }
     }
     // 城。石高の大きさを丸の大きさで表し、囲まれていれば赤い環を添える。
@@ -288,7 +311,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const wy = (p.clientY - r.top - r.height / 2) / view.s + view.y;
     let hit = null, best = 26 / view.s;
     for (const c of g.castles) { const dd = Math.hypot(c.x - wx, c.y - wy); if (dd < best) { best = dd; hit = c.id; } }
-    if (hit) { setSel(hit); setTab("内政"); } else setSel(null);
+    if (hit) { setSel(hit); setTownSel(null); setTab("内政"); return; }
+    // 特殊勢力を押したら、その帳を開く（城より狭い当たり）
+    let ht = null, bt = 20 / view.s;
+    for (const t of TOWNS) { const dd = Math.hypot(t.x - wx, t.y - wy); if (dd < bt) { bt = dd; ht = t.id; } }
+    if (ht) { setTownSel(ht); setSel(null); return; }
+    setSel(null); setTownSel(null);
   };
   const zoom = (k) => setView((v) => ({ ...v, s: clamp(v.s * k, 0.28, 3.2) }));
   const focus = (id) => { const n = nodeById(id); if (n) setView((v) => ({ ...v, x: n.x, y: n.y, s: Math.max(1.2, v.s) })); };
@@ -1710,6 +1738,68 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                   );
                 })}
                 <button className="btn" style={{ width: "100%", marginTop: 8 }} onClick={() => setModal(null)}>閉じる</button>
+              </div>
+            </div>
+          );
+        })()}
+        {townSel && !battle && !sea && (() => {
+          /* 特殊勢力の帳（GDD 5.4）。
+             地図の印を押したら、それが何をする所で、いま誰に付いていて、
+             こちらから手が届くのかどうかを、その場で読めるようにする。 */
+          const t = TOWNS.find((x) => x.id === townSel);
+          if (!t) { setTownSel(null); return null; }
+          const 様 = 町の様子(g, t);
+          const 可 = 特殊勢力の可否(g, t, g.player);
+          const opts = SPECIAL_OPTIONS[t.kind] || [];
+          const 隣 = 可.隣;
+          return (
+            <div className="modal" {...外を押して閉じる(() => setTownSel(null))}>
+              <div className="card" style={{ maxWidth: 430 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 6 }}>
+                  <span className="dot" style={{ background: 様.色 }} />
+                  <span className="mn" style={{ fontSize: 21 }}>{t.name}</span>
+                  <span className="pill" style={{ background: 様.色 }}>{t.kind}</span>
+                </div>
+                <div className="row"><span>いまの関係</span>
+                  <span className="v">{様.誼 ? `${様.主名}と${様.誼.state}` : "中立"}</span></div>
+                {様.st.anger > 0 && (
+                  <div className="row"><span>反発</span><span className="v">{Math.round(様.st.anger)}</span></div>
+                )}
+                {隣 && (
+                  <div className="row"><span>いちばん近い城</span>
+                    <span className="v">{隣.name}（{g.factions[隣.faction].name}）</span></div>
+                )}
+                <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginTop: 8 }}>
+                  {t.kind === "港" && "船を出し、兵糧を運ぶ。海路を渡る軍の支えとなる。"}
+                  {t.kind === "水軍衆" && "海に生きる者たち。抱えれば軍船が増え、水主の技量も上がる。"}
+                  {t.kind === "商業都市" && "諸国の品と金の集まる所。押さえれば金が回る。"}
+                  {t.kind === "町" && "市の立つ在所。商いがわずかに伸びる。"}
+                  {t.kind === "寺社" && "門徒と僧兵を抱える。民の心もここに寄る。"}
+                  {t.kind === "忍びの里" && "人を潜ませ、敵情を探る。調略の助けとなる。"}
+                  {t.kind === "鉱山" && "金銀を掘る。掘れば掘るほど金になる。"}
+                </div>
+                <div className="sec">できること</div>
+                {opts.map((o) => (
+                  <div key={o.key} style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8 }}>
+                    <b style={{ color: U.text }}>{o.key}</b>
+                    {o.cost ? `（${o.cost}貫）` : o.once ? `（${o.once}貫を得る）` : ""}
+                    　{o.desc}
+                  </div>
+                ))}
+                <div style={{ marginTop: 10, padding: "9px 11px", fontSize: 12, lineHeight: 1.85,
+                  background: 可.ok ? "rgba(62,122,58,0.10)" : "rgba(176,72,60,0.10)",
+                  borderLeft: `3px solid ${可.ok ? "#3E7A3A" : "#B0483C"}` }}>
+                  {可.ok
+                    ? <>手が届きます。<b>{隣 ? 隣.name : "近くの城"}</b>の帳面の「特殊勢力」から誼を通じられます。</>
+                    : <><b style={{ color: "#B0483C" }}>手が届きません。</b>{可.why}。</>}
+                  <br />
+                  <span style={{ color: U.dim, fontSize: 11 }}>
+                    湊も寺社も忍びの里も、その土地に根を張っています。いちばん近い城を
+                    押さえている家だけが、その町と誼を通じられます。
+                  </span>
+                </div>
+                <button className="btn" style={{ width: "100%", marginTop: 12 }}
+                  onClick={() => setTownSel(null)}>閉じる</button>
               </div>
             </div>
           );

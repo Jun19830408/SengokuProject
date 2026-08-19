@@ -57,12 +57,25 @@ export const sideColor = (c) => sideHue(c.color, c.side === "P");
 
 /* ------------------------------------------------------------ 家紋
    図案は輪郭で描く。城の丸の中に収まる大きさで、勢力の色で塗る。 */
+/* ==========================================================================
+   家紋（GDD 13.1）
+
+   はじめは十六の型を百十三家で分け合っていた。三十五家が「三つ盛」、二十家が
+   「鶴」、伊達と島津が同じ「丸に十」、尼子が武田菱を掲げていた。
+   紋は家の顔である。分かるものは正しく描く。
+
+   ここに置いた型は、史料に残る家紋を写したものである。
+   ただし小さな家のいくつかは伝わりが定かでない。それらには家格に見合う
+   ありふれた型（引両・巴など）を当てた。確かめのつかぬものを、
+   さも確かなように描くわけにもいかない。
+   ========================================================================== */
 export function drawMon(ctx, kind, x, y, r, col, sub) {
   ctx.save();
   ctx.translate(x, y);
   ctx.fillStyle = col;
   ctx.strokeStyle = col;
   ctx.lineWidth = Math.max(0.8, r * 0.13);
+  const 白 = sub || "#fff";
   const circle = (cx, cy, rr, fill) => {
     ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 7);
     if (fill) ctx.fill(); else ctx.stroke();
@@ -76,87 +89,413 @@ export function drawMon(ctx, kind, x, y, r, col, sub) {
     ctx.closePath(); ctx.fill();
     ctx.restore();
   };
-  if (kind === "木瓜") {                       // 織田・織田庶家
-    for (let i = 0; i < 5; i++) petal((i * Math.PI * 2) / 5, r * 0.92, r * 0.42);
-    ctx.fillStyle = sub || "#fff"; circle(0, 0, r * 0.26, true);
-  } else if (kind === "二頭波") {              // 斎藤（撫子を模す）
-    for (let i = 0; i < 4; i++) petal((i * Math.PI * 2) / 4 + Math.PI / 4, r * 0.95, r * 0.5);
-    ctx.fillStyle = sub || "#fff"; circle(0, 0, r * 0.24, true);
-  } else if (kind === "赤鳥") {                // 今川
+  // 菱形ひとつ
+  const 菱 = (cx, cy, w, h, fill) => {
     ctx.beginPath();
-    ctx.moveTo(-r * 0.7, r * 0.5); ctx.lineTo(0, -r * 0.85); ctx.lineTo(r * 0.7, r * 0.5);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle = sub || "#fff";
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.3, r * 0.28); ctx.lineTo(0, -r * 0.3); ctx.lineTo(r * 0.3, r * 0.28);
-    ctx.closePath(); ctx.fill();
-  } else if (kind === "四つ菱") {              // 武田
-    for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
-      ctx.beginPath();
-      ctx.moveTo(dx * r * 0.5, dy * r * 0.5 - r * 0.4 * Math.abs(dy) - r * 0.28 * Math.abs(dx) * 0);
-      const cx = dx * r * 0.48, cy = dy * r * 0.48;
-      ctx.moveTo(cx, cy - r * 0.4); ctx.lineTo(cx + r * 0.26, cy);
-      ctx.lineTo(cx, cy + r * 0.4); ctx.lineTo(cx - r * 0.26, cy);
-      ctx.closePath(); ctx.fill();
+    ctx.moveTo(cx, cy - h); ctx.lineTo(cx + w, cy);
+    ctx.lineTo(cx, cy + h); ctx.lineTo(cx - w, cy);
+    ctx.closePath();
+    if (fill === false) ctx.stroke(); else ctx.fill();
+  };
+  // 引両（横一文字の帯）。本数で家が分かれる
+  const 引両 = (n) => {
+    circle(0, 0, r * 0.9, false);
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * 0.9, 0, 7); ctx.clip();
+    const 幅 = r * (n === 1 ? 0.34 : n === 2 ? 0.24 : 0.18);
+    const 間 = r * (n === 1 ? 0 : n === 2 ? 0.42 : 0.5);
+    for (let i = 0; i < n; i++) {
+      const cy = (i - (n - 1) / 2) * 間;
+      ctx.fillRect(-r, cy - 幅 / 2, r * 2, 幅);
     }
-  } else if (kind === "三鱗") {                // 北条
-    for (const [dx, dy] of [[0, -0.42], [-0.42, 0.36], [0.42, 0.36]]) {
-      ctx.beginPath();
-      ctx.moveTo(dx * r, dy * r - r * 0.34);
-      ctx.lineTo(dx * r + r * 0.36, dy * r + r * 0.3);
-      ctx.lineTo(dx * r - r * 0.36, dy * r + r * 0.3);
-      ctx.closePath(); ctx.fill();
+    ctx.restore();
+  };
+  // 目結（四角い升）。四つ目結・平四つ目結
+  const 目結 = (平) => {
+    const w = r * 0.36, d = 平 ? r * 0.44 : r * 0.42;
+    for (const [dx, dy] of 平 ? [[-1, 0], [1, 0], [0, -1], [0, 1]] : [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      ctx.save(); ctx.translate(dx * d, dy * d); ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-w / 2, -w / 2, w, w);
+      ctx.fillStyle = 白; ctx.fillRect(-w * 0.22, -w * 0.22, w * 0.44, w * 0.44);
+      ctx.fillStyle = col;
+      ctx.restore();
     }
-  } else if (kind === "葵") {                  // 松平
-    for (let i = 0; i < 3; i++) {
-      ctx.save(); ctx.rotate((i * Math.PI * 2) / 3);
+  };
+  /* 巴（勾玉が渦を巻く）。三十四家がこれを掲げるので、いちばん形が大事である。
+     頭は丸く、尾は細く、中心へ巻き込む。はじめは丸と三角を継いで描いたが、
+     勾玉に見えず、団子に棒が刺さったような形になった。一筆で描く。 */
+  const 巴 = (n) => {
+    for (let i = 0; i < n; i++) {
+      ctx.save(); ctx.rotate((i * Math.PI * 2) / n);
       ctx.beginPath();
-      ctx.moveTo(0, -r * 0.22);
-      ctx.bezierCurveTo(r * 0.55, -r * 0.9, r * 0.62, -r * 0.2, 0, -r * 0.22);
-      ctx.bezierCurveTo(-r * 0.62, -r * 0.2, -r * 0.55, -r * 0.9, 0, -r * 0.22);
+      // 頭（外側の丸）から
+      ctx.arc(0, -r * 0.44, r * 0.31, -Math.PI * 0.5, Math.PI * 0.72);
+      // 尾。外を回りながら細くなり、中心へ吸い込まれる
+      ctx.bezierCurveTo(r * 0.34, r * 0.16, r * 0.2, r * 0.36, 0, r * 0.3);
+      ctx.bezierCurveTo(-r * 0.05, r * 0.2, r * 0.02, r * 0.06, -r * 0.02, -r * 0.06);
+      ctx.bezierCurveTo(-r * 0.16, -r * 0.16, -r * 0.29, -r * 0.28, -r * 0.29, -r * 0.44);
       ctx.closePath(); ctx.fill();
       ctx.restore();
     }
-  } else if (kind === "三つ盛") {              // 浅井・六角など
-    for (const [dx, dy] of [[0, -0.44], [-0.42, 0.34], [0.42, 0.34]]) circle(dx * r, dy * r, r * 0.34, true);
-  } else if (kind === "笹") {                  // 朝倉（三つ盛木瓜を簡略）
-    for (const [dx, dy] of [[0, -0.42], [-0.4, 0.32], [0.4, 0.32]]) {
-      ctx.save(); ctx.translate(dx * r, dy * r);
-      for (let i = 0; i < 4; i++) petal((i * Math.PI * 2) / 4, r * 0.34, r * 0.17);
+  };
+  // 星（丸）を並べる
+  const 星 = (pts, rr) => { for (const [cx, cy] of pts) circle(cx * r, cy * r, rr * r, true); };
+
+  switch (kind) {
+    /* ── 織田・その庶流 */
+    case "木瓜":                                   // 織田木瓜
+      for (let i = 0; i < 5; i++) petal((i * Math.PI * 2) / 5, r * 0.92, r * 0.42);
+      ctx.fillStyle = 白; circle(0, 0, r * 0.26, true);
+      break;
+    case "横木瓜":                                 // 波多野・由良
+      ctx.save(); ctx.scale(1.18, 0.86);
+      for (let i = 0; i < 5; i++) petal((i * Math.PI * 2) / 5, r * 0.86, r * 0.4);
       ctx.restore();
-    }
-  } else if (kind === "月") {                  // 北畠（九曜を模す）
-    circle(0, 0, r * 0.32, true);
-    for (let i = 0; i < 8; i++) {
-      const a = (i * Math.PI * 2) / 8;
-      circle(Math.cos(a) * r * 0.66, Math.sin(a) * r * 0.66, r * 0.17, true);
-    }
-  } else if (kind === "丸に十") {              // 水野・神戸など
-    circle(0, 0, r * 0.82, false);
-    ctx.lineWidth = Math.max(1, r * 0.2);
-    ctx.beginPath(); ctx.moveTo(0, -r * 0.5); ctx.lineTo(0, r * 0.5);
-    ctx.moveTo(-r * 0.5, 0); ctx.lineTo(r * 0.5, 0); ctx.stroke();
-  } else if (kind === "鶴") {                  // 村上・姉小路など
-    circle(0, 0, r * 0.82, false);
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 0.46); ctx.lineTo(r * 0.4, r * 0.34); ctx.lineTo(-r * 0.4, r * 0.34);
-    ctx.closePath(); ctx.fill();
-  } else if (kind === "抱き沢瀉") {            // 九鬼・若狭武田など
-    petal(0, r * 0.9, r * 0.34);
-    petal(Math.PI * 0.72, r * 0.66, r * 0.26);
-    petal(-Math.PI * 0.72, r * 0.66, r * 0.26);
-  } else if (kind === "輪宝") {                // 一向衆・寺社
-    circle(0, 0, r * 0.78, false);
-    for (let i = 0; i < 8; i++) {
-      const a = (i * Math.PI * 2) / 8;
+      ctx.fillStyle = 白; circle(0, 0, r * 0.24, true);
+      break;
+    case "三つ盛木瓜":                             // 朝倉
+      for (const [dx, dy] of [[0, -0.42], [-0.4, 0.32], [0.4, 0.32]]) {
+        ctx.save(); ctx.translate(dx * r, dy * r);
+        for (let i = 0; i < 4; i++) petal((i * Math.PI * 2) / 4, r * 0.34, r * 0.17);
+        ctx.restore();
+      }
+      break;
+
+    /* ── 引両。足利とその一門、そして守護の家に多い */
+    case "一つ引両": 引両(1); break;
+    case "二つ引両": 引両(2); break;              // 足利将軍家・一色・赤松・最上・里見
+    case "三つ引両": 引両(3); break;              // 蘆名・成田・吉川
+
+    /* ── 目結。佐々木一門 */
+    case "四つ目結": 目結(false); break;          // 六角・京極
+    case "平四つ目結": 目結(true); break;         // 尼子・宗
+
+    /* ── 巴 */
+    case "三つ巴": 巴(3); break;                  // 宇都宮・小早川・佐野・結城
+    case "二つ巴": 巴(2); break;
+
+    /* ── 星と曜 */
+    case "一文字三星":                             // 毛利
+      星([[0, 0.42], [-0.46, 0.42], [0.46, 0.42]], 0.2);
+      ctx.fillRect(-r * 0.62, -r * 0.62, r * 1.24, r * 0.22);
+      break;
+    case "三つ星": 星([[0, -0.42], [-0.44, 0.34], [0.44, 0.34]], 0.24); break;   // 松浦
+    case "月星":                                   // 千葉
       ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * r * 0.3, Math.sin(a) * r * 0.3);
-      ctx.lineTo(Math.cos(a) * r * 0.78, Math.sin(a) * r * 0.78);
-      ctx.stroke();
-    }
-    circle(0, 0, r * 0.24, true);
-  } else {                                     // 定めのない家は丸
-    circle(0, 0, r * 0.7, true);
+      ctx.arc(0, r * 0.12, r * 0.62, Math.PI * 0.15, Math.PI * 0.85, true);
+      ctx.arc(r * 0.16, r * 0.02, r * 0.5, Math.PI * 0.85, Math.PI * 0.15);
+      ctx.closePath(); ctx.fill();
+      circle(0, -r * 0.52, r * 0.22, true);
+      break;
+    case "七曜":                                   // 九鬼
+      circle(0, 0, r * 0.28, true);
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI * 2) / 6 - Math.PI / 2;
+        circle(Math.cos(a) * r * 0.62, Math.sin(a) * r * 0.62, r * 0.2, true);
+      }
+      break;
+    case "九曜":                                   // 細川・長尾
+      circle(0, 0, r * 0.3, true);
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI * 2) / 8;
+        circle(Math.cos(a) * r * 0.66, Math.sin(a) * r * 0.66, r * 0.17, true);
+      }
+      break;
+
+    /* ── 菱 */
+    case "四つ割菱":                               // 武田
+      for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) 菱(dx * r * 0.46, dy * r * 0.46, r * 0.26, r * 0.4);
+      break;
+    case "割り菱":                                 // 北畠
+      菱(0, 0, r * 0.86, r * 0.9, false);
+      菱(0, -r * 0.44, r * 0.24, r * 0.34); 菱(0, r * 0.44, r * 0.24, r * 0.34);
+      菱(-r * 0.44, 0, r * 0.24, r * 0.34); 菱(r * 0.44, 0, r * 0.24, r * 0.34);
+      break;
+    case "大内菱":                                 // 大内
+      菱(0, 0, r * 0.9, r * 0.92);
+      ctx.fillStyle = 白; 菱(0, 0, r * 0.5, r * 0.52);
+      ctx.fillStyle = col; 菱(0, 0, r * 0.24, r * 0.26);
+      break;
+    case "三階菱":                                 // 三好
+      菱(0, -r * 0.5, r * 0.3, r * 0.28);
+      菱(0, 0, r * 0.5, r * 0.28);
+      菱(0, r * 0.5, r * 0.7, r * 0.28);
+      break;
+
+    /* ── 草花 */
+    case "葵":                                     // 松平（三つ葉葵）
+      for (let i = 0; i < 3; i++) {
+        ctx.save(); ctx.rotate((i * Math.PI * 2) / 3);
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.22);
+        ctx.bezierCurveTo(r * 0.55, -r * 0.9, r * 0.62, -r * 0.2, 0, -r * 0.22);
+        ctx.bezierCurveTo(-r * 0.62, -r * 0.2, -r * 0.55, -r * 0.9, 0, -r * 0.22);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      break;
+    case "酢漿草":                                 // 長宗我部（七つ酢漿草）
+      for (let i = 0; i < 7; i++) {
+        const a = (i * Math.PI * 2) / 7;
+        ctx.save(); ctx.rotate(a);
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.52, r * 0.22, r * 0.34, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.restore();
+      }
+      circle(0, 0, r * 0.16, true);
+      break;
+    case "下がり藤":                               // 本願寺
+      ctx.beginPath(); ctx.moveTo(-r * 0.6, -r * 0.78); ctx.lineTo(r * 0.6, -r * 0.78); ctx.stroke();
+      for (const sgn of [-1, 1]) {
+        for (let i = 0; i < 3; i++) {
+          const cx = sgn * (r * 0.2 + i * r * 0.16), cy = -r * 0.5 + i * r * 0.3;
+          ctx.beginPath(); ctx.ellipse(cx, cy, r * 0.15, r * 0.24, sgn * 0.4, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      break;
+    case "梅鉢":                                   // 筒井・相良
+      circle(0, 0, r * 0.26, true);
+      for (let i = 0; i < 5; i++) {
+        const a = (i * Math.PI * 2) / 5 - Math.PI / 2;
+        circle(Math.cos(a) * r * 0.6, Math.sin(a) * r * 0.6, r * 0.26, true);
+      }
+      break;
+    case "撫子":                                   // 秋月（三つ撫子）
+      for (let i = 0; i < 5; i++) {
+        ctx.save(); ctx.rotate((i * Math.PI * 2) / 5);
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.9);
+        ctx.lineTo(r * 0.16, -r * 0.5); ctx.lineTo(0, -r * 0.62); ctx.lineTo(-r * 0.16, -r * 0.5);
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      circle(0, 0, r * 0.2, true);
+      break;
+    case "桐":                                     // 山名（五七桐）
+      for (const [dx, n, h] of [[-0.44, 3, 0.5], [0, 5, 0.72], [0.44, 3, 0.5]]) {
+        for (let i = 0; i < n; i++) {
+          const cx = dx * r + (i - (n - 1) / 2) * r * 0.12;
+          ctx.beginPath();
+          ctx.ellipse(cx, -r * (0.2 + h * 0.5), r * 0.05, r * h * 0.34, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.beginPath();
+        ctx.ellipse(dx * r, r * 0.34, r * 0.24, r * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+      }
+      break;
+    case "沢瀉":                                   // 水野
+      petal(0, r * 0.9, r * 0.34);
+      petal(Math.PI * 0.72, r * 0.66, r * 0.26);
+      petal(-Math.PI * 0.72, r * 0.66, r * 0.26);
+      break;
+    case "桔梗":                                   // 太田
+      for (let i = 0; i < 5; i++) {
+        const a = (i * Math.PI * 2) / 5 - Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a - 0.34) * r * 0.9, Math.sin(a - 0.34) * r * 0.9);
+        ctx.lineTo(Math.cos(a) * r * 0.95, Math.sin(a) * r * 0.95);
+        ctx.lineTo(Math.cos(a + 0.34) * r * 0.9, Math.sin(a + 0.34) * r * 0.9);
+        ctx.closePath(); ctx.fill();
+      }
+      break;
+    case "柏":                                     // 葛西（三つ柏）
+      for (let i = 0; i < 3; i++) {
+        ctx.save(); ctx.rotate((i * Math.PI * 2) / 3);
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.2);
+        ctx.bezierCurveTo(r * 0.4, -r * 0.5, r * 0.36, -r * 0.95, 0, -r * 0.88);
+        ctx.bezierCurveTo(-r * 0.36, -r * 0.95, -r * 0.4, -r * 0.5, 0, -r * 0.2);
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      break;
+    case "唐花":                                   // 有馬（五瓜に唐花）
+      for (let i = 0; i < 5; i++) petal((i * Math.PI * 2) / 5, r * 0.92, r * 0.44);
+      ctx.fillStyle = 白; circle(0, 0, r * 0.34, true);
+      ctx.fillStyle = col;
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI * 2) / 4;
+        circle(Math.cos(a) * r * 0.17, Math.sin(a) * r * 0.17, r * 0.11, true);
+      }
+      break;
+
+    /* ── 器物・鳥獣 */
+    case "赤鳥":                                   // 今川
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.7, r * 0.5); ctx.lineTo(0, -r * 0.85); ctx.lineTo(r * 0.7, r * 0.5);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 白;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.3, r * 0.28); ctx.lineTo(0, -r * 0.3); ctx.lineTo(r * 0.3, r * 0.28);
+      ctx.closePath(); ctx.fill();
+      break;
+    case "三つ鱗":                                 // 北条
+      for (const [dx, dy] of [[0, -0.42], [-0.42, 0.36], [0.42, 0.36]]) {
+        ctx.beginPath();
+        ctx.moveTo(dx * r, dy * r - r * 0.34);
+        ctx.lineTo(dx * r + r * 0.36, dy * r + r * 0.3);
+        ctx.lineTo(dx * r - r * 0.36, dy * r + r * 0.3);
+        ctx.closePath(); ctx.fill();
+      }
+      break;
+    case "丸に十":                                 // 島津
+      circle(0, 0, r * 0.86, false);
+      ctx.lineWidth = Math.max(1, r * 0.2);
+      ctx.beginPath(); ctx.moveTo(0, -r * 0.52); ctx.lineTo(0, r * 0.52);
+      ctx.moveTo(-r * 0.52, 0); ctx.lineTo(r * 0.52, 0); ctx.stroke();
+      break;
+    case "扇":                                     // 佐竹（五本骨扇に月丸）
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.72);
+      ctx.arc(0, r * 0.72, r * 1.4, -Math.PI * 0.78, -Math.PI * 0.22);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 白; ctx.lineWidth = Math.max(0.8, r * 0.1);
+      for (let i = 0; i < 4; i++) {
+        const a = -Math.PI * 0.78 + (i + 1) * (Math.PI * 0.56 / 5);
+        ctx.beginPath(); ctx.moveTo(0, r * 0.72);
+        ctx.lineTo(Math.cos(a) * r * 1.4, r * 0.72 + Math.sin(a) * r * 1.4); ctx.stroke();
+      }
+      ctx.fillStyle = 白; circle(0, -r * 0.24, r * 0.2, true);
+      break;
+    case "檜扇":                                   // 長野・安東
+      for (let i = 0; i < 6; i++) {
+        const a = -Math.PI * 0.72 + i * (Math.PI * 0.44 / 5);
+        ctx.save(); ctx.translate(0, r * 0.6); ctx.rotate(a + Math.PI / 2);
+        ctx.fillRect(-r * 0.07, -r * 1.3, r * 0.14, r * 1.3);
+        ctx.restore();
+      }
+      circle(0, r * 0.6, r * 0.14, true);
+      break;
+    case "折敷に三文字":                           // 河野
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.82, -r * 0.7); ctx.lineTo(r * 0.82, -r * 0.7);
+      ctx.lineTo(r * 0.62, r * 0.78); ctx.lineTo(-r * 0.62, r * 0.78);
+      ctx.closePath(); ctx.stroke();
+      for (let i = 0; i < 3; i++) ctx.fillRect(-r * 0.4, -r * 0.42 + i * r * 0.38, r * 0.8, r * 0.15);
+      break;
+    case "日足":                                   // 龍造寺（十二日足）
+      circle(0, 0, r * 0.3, true);
+      for (let i = 0; i < 12; i++) {
+        const a = (i * Math.PI * 2) / 12;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r * 0.3, Math.sin(a) * r * 0.3);
+        ctx.lineTo(Math.cos(a - 0.13) * r * 0.95, Math.sin(a - 0.13) * r * 0.95);
+        ctx.lineTo(Math.cos(a + 0.13) * r * 0.95, Math.sin(a + 0.13) * r * 0.95);
+        ctx.closePath(); ctx.fill();
+      }
+      break;
+    case "杏葉":                                   // 大友（抱き杏葉）
+      for (const sgn of [-1, 1]) {
+        ctx.save(); ctx.scale(sgn, 1);
+        ctx.beginPath();
+        ctx.moveTo(r * 0.1, r * 0.72);
+        ctx.bezierCurveTo(r * 0.85, r * 0.2, r * 0.7, -r * 0.8, r * 0.06, -r * 0.5);
+        ctx.bezierCurveTo(r * 0.34, -r * 0.2, r * 0.3, r * 0.3, r * 0.1, r * 0.72);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      break;
+    case "二頭立波":                               // 斎藤（道三）
+      for (const dy of [-0.34, 0.3]) {
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.9, r * (dy + 0.3));
+        ctx.bezierCurveTo(-r * 0.4, r * (dy - 0.5), r * 0.4, r * (dy + 0.5), r * 0.9, r * (dy - 0.3));
+        ctx.lineTo(r * 0.9, r * (dy + 0.1));
+        ctx.bezierCurveTo(r * 0.4, r * (dy + 0.7), -r * 0.4, r * (dy - 0.3), -r * 0.9, r * (dy + 0.5));
+        ctx.closePath(); ctx.fill();
+      }
+      break;
+    case "竹に雀":                                 // 伊達・上杉
+      circle(0, 0, r * 0.9, false);
+      ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r * 0.9, 0, 7); ctx.clip();
+      for (const sgn of [-1, 1]) {
+        ctx.lineWidth = Math.max(0.9, r * 0.12);
+        ctx.beginPath();
+        ctx.moveTo(sgn * r * 0.62, r * 0.9);
+        ctx.quadraticCurveTo(sgn * r * 0.5, -r * 0.2, sgn * r * 0.16, -r * 0.86);
+        ctx.stroke();
+      }
+      ctx.beginPath(); ctx.ellipse(0, r * 0.12, r * 0.3, r * 0.22, -0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.26, r * 0.06); ctx.lineTo(-r * 0.56, -r * 0.16); ctx.lineTo(-r * 0.24, -r * 0.14);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+      break;
+    case "繋ぎ馬":                                 // 相馬
+      /* 馬。胴・首・頭・四肢・尾を分けて描く。
+         はじめは胴に三角を継いだだけで、鳥のように見えた。 */
+      ctx.beginPath();                             // 胴
+      ctx.ellipse(-r * 0.08, r * 0.06, r * 0.46, r * 0.26, -0.06, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();                             // 首
+      ctx.moveTo(r * 0.2, -r * 0.06);
+      ctx.quadraticCurveTo(r * 0.56, -r * 0.28, r * 0.6, -r * 0.66);
+      ctx.lineTo(r * 0.78, -r * 0.6);
+      ctx.quadraticCurveTo(r * 0.74, -r * 0.16, r * 0.36, r * 0.16);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();                             // 頭
+      ctx.ellipse(r * 0.72, -r * 0.72, r * 0.2, r * 0.12, -0.5, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = Math.max(1, r * 0.11);       // 四肢
+      for (const [dx, sw] of [[-0.42, -0.08], [-0.24, 0.04], [0.1, -0.06], [0.28, 0.06]]) {
+        ctx.beginPath(); ctx.moveTo(dx * r, r * 0.24);
+        ctx.lineTo((dx + sw) * r, r * 0.82); ctx.stroke();
+      }
+      ctx.beginPath();                             // 尾
+      ctx.moveTo(-r * 0.5, -r * 0.08);
+      ctx.quadraticCurveTo(-r * 0.86, r * 0.06, -r * 0.8, r * 0.5);
+      ctx.quadraticCurveTo(-r * 0.66, r * 0.16, -r * 0.44, r * 0.14);
+      ctx.closePath(); ctx.fill();
+      break;
+    case "州浜":                                   // 小田
+      for (const [dx, dy, rr] of [[0, -0.3, 0.42], [-0.46, 0.3, 0.36], [0.46, 0.3, 0.36]]) {
+        circle(dx * r, dy * r, rr * r, true);
+      }
+      break;
+    case "亀甲":                                   // 神戸・二階堂
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI * 2) / 6 - Math.PI / 2;
+        const px2 = Math.cos(a) * r * 0.88, py2 = Math.sin(a) * r * 0.88;
+        if (i === 0) ctx.moveTo(px2, py2); else ctx.lineTo(px2, py2);
+      }
+      ctx.closePath(); ctx.stroke();
+      菱(0, 0, r * 0.3, r * 0.34);
+      break;
+    case "鷹の羽":                                 // 菊池ほか（並び鷹の羽）
+      for (const sgn of [-1, 1]) {
+        ctx.save(); ctx.translate(sgn * r * 0.28, 0); ctx.rotate(sgn * 0.16);
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.9);
+        ctx.quadraticCurveTo(r * 0.26, -r * 0.1, r * 0.06, r * 0.86);
+        ctx.quadraticCurveTo(-r * 0.2, -r * 0.1, 0, -r * 0.9);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      break;
+    case "輪宝":                                   // 一向衆・寺社
+      circle(0, 0, r * 0.78, false);
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI * 2) / 8;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r * 0.3, Math.sin(a) * r * 0.3);
+        ctx.lineTo(Math.cos(a) * r * 0.78, Math.sin(a) * r * 0.78);
+        ctx.stroke();
+      }
+      circle(0, 0, r * 0.24, true);
+      break;
+    case "八咫烏":                                 // 雑賀衆
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.1, r * 0.1, r * 0.46, r * 0.32, -0.3, 0, Math.PI * 2); ctx.fill();
+      circle(r * 0.36, -r * 0.3, r * 0.24, true);
+      ctx.beginPath();
+      ctx.moveTo(r * 0.56, -r * 0.34); ctx.lineTo(r * 0.92, -r * 0.24); ctx.lineTo(r * 0.56, -r * 0.14);
+      ctx.closePath(); ctx.fill();
+      ctx.lineWidth = Math.max(0.9, r * 0.1);
+      for (const dx of [-0.34, -0.06]) {
+        ctx.beginPath(); ctx.moveTo(dx * r, r * 0.34); ctx.lineTo(dx * r - r * 0.04, r * 0.86); ctx.stroke();
+      }
+      break;
+    default:                                       // 伝わりの定かでない家
+      circle(0, 0, r * 0.72, false);
+      circle(0, 0, r * 0.3, true);
+      break;
   }
   ctx.restore();
 }

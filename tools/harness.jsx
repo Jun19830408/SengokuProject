@@ -13,8 +13,11 @@ export { saveGame, loadGame, clearGame, 記録を並べる, 記録の見出し, 
 export { initState } from "../src/core/state.js";
 export { layoutSea, makeFleet, createSeaBattle, stepSeaBattle, seaAI, 海戦を裁く, fleetShips, fleetCrew, 風向き, SEA, 海の状 } from "../src/battle/sea.js";
 export { SHIPS, 船の割り } from "../src/data/ships.js";
-export { navalPower, isCoastal, seaInterception, resolveSeaBattle, 湊の主, 特殊勢力の可否, 渡海の船立て, 迎え撃つ船立て, 船立ての力, 一艘の乗り } from "../src/core/naval.js";
+export { navalPower, isCoastal, seaInterception, resolveSeaBattle, 湊の主, 渡海の船立て, 迎え撃つ船立て, 船立ての力, 一艘の乗り } from "../src/core/naval.js";
 export { TOWNS } from "../src/data/castles.js";
+export { 特殊勢力の可否, drawTownMark, 町の様子 } from "../src/core/town.js";
+export { FACTIONS } from "../src/data/factions.js";
+export { px, py } from "../src/data/geo.js";
 export { roadBetween } from "../src/core/paths.js";
 export { findPath } from "../src/core/paths.js";
 export { 援けに着く, migrateSave, atPeace, relOf } from "../src/core/state.js";
@@ -34,4 +37,4 @@ export { layoutField, setFieldSeed, FIELD, terrainAt, TERRAIN } from "../src/bat
 export { makeCorps, corpsMen, placeSquads, issueOrder, 退かせる, 退き先 } from "../src/battle/corps.js";
 export { createBattle, stepBattle } from "../src/battle/engine.js";
 export { battleAI } from "../src/battle/ai.js";
-export { sideColor, ownZone } from "../src/battle/draw.js";
+export { sideColor, ownZone, drawMon } from "../src/battle/draw.js";

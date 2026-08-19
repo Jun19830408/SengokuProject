@@ -4837,22 +4837,6 @@ function \u6E4A\u306E\u4E3B(s2, t) {
   if (t.owner && (s2.castles || []).some((c) => c.faction === t.owner)) return t.owner;
   return null;
 }
-var \u624B\u306E\u5C4A\u304F\u9593 = 130;
-function \u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(g, t, fid) {
-  const tx = px(t.lon), ty = py(t.lat);
-  let \u96A3 = null, bd = 1e9;
-  for (const c of g.castles || []) {
-    const d = Math.hypot(c.x - tx, c.y - ty);
-    if (d < bd) {
-      bd = d;
-      \u96A3 = c;
-    }
-  }
-  if (!\u96A3 || bd > \u624B\u306E\u5C4A\u304F\u9593) return { ok: false, why: "\u8FD1\u304F\u306B\u57CE\u304C\u306A\u304F\u3001\u8A71\u3092\u901A\u3059\u7B4B\u304C\u306A\u3044" };
-  if (\u96A3.faction === fid) return { ok: true, why: "", \u96A3 };
-  const \u540D = ((g.factions || {})[\u96A3.faction] || {}).name || "\u4ED6\u5BB6";
-  return { ok: false, why: `${\u96A3.name}\u3092\u62BC\u3055\u3048\u308B${\u540D}\u306E\u571F\u5730\u3002${\u96A3.name}\u3092\u843D\u3068\u3055\u306D\u3070\u8A71\u306F\u901A\u3089\u306A\u3044`, \u96A3 };
-}
 function navalPower(s2, fid) {
   let ships = 0, skill = 55;
   for (const c of s2.castles.filter((x) => x.faction === fid)) {
@@ -5316,116 +5300,116 @@ var FACTIONS = {
   oda: { id: "oda", name: "\u7E54\u7530\u5BB6", color: "#2F5D8C", mon: "\u6728\u74DC", playable: true, desc: "\u5C3E\u5F35\u4E0B\u56DB\u90E1\u306E\u4E00\u65CF\u3002\u7236\u4FE1\u79C0\u306E\u3082\u3068\u90A3\u53E4\u91CE\u306B\u62E0\u308B\u304C\u3001\u6E05\u6D32\u30FB\u5CA9\u5009\u306E\u540C\u65CF\u3068\u4E26\u3073\u7ACB\u3061\u3001\u6771\u306B\u4ECA\u5DDD\u3001\u5317\u306B\u658E\u85E4\u3092\u62B1\u3048\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   yamato: { id: "yamato", name: "\u7E54\u7530\u5927\u548C\u5B88\u5BB6", color: "#6E7FA0", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
   ise: { id: "ise", name: "\u7E54\u7530\u4F0A\u52E2\u5B88\u5BB6", color: "#8894A8", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
-  saito: { id: "saito", name: "\u658E\u85E4\u5BB6", color: "#9B3A34", mon: "\u4E8C\u982D\u6CE2", playable: true, desc: "\u7F8E\u6FC3\u4E00\u56FD\u3092\u63E1\u308B\u9053\u4E09\u306E\u5BB6\u3002\u8001\u736A\u306A\u5F53\u4E3B\u306E\u3082\u3068\u5BCC\u307F\u6804\u3048\u308B\u304C\u3001\u5AE1\u5B50\u7FA9\u9F8D\u3068\u306E\u9593\u306B\u6697\u3044\u6E9D\u304C\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  saito: { id: "saito", name: "\u658E\u85E4\u5BB6", color: "#9B3A34", mon: "\u4E8C\u982D\u7ACB\u6CE2", playable: true, desc: "\u7F8E\u6FC3\u4E00\u56FD\u3092\u63E1\u308B\u9053\u4E09\u306E\u5BB6\u3002\u8001\u736A\u306A\u5F53\u4E3B\u306E\u3082\u3068\u5BCC\u307F\u6804\u3048\u308B\u304C\u3001\u5AE1\u5B50\u7FA9\u9F8D\u3068\u306E\u9593\u306B\u6697\u3044\u6E9D\u304C\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   imagawa: { id: "imagawa", name: "\u4ECA\u5DDD\u5BB6", color: "#4C6E3F", mon: "\u8D64\u9CE5", playable: true, desc: "\u99FF\u6CB3\u30FB\u9060\u6C5F\u30FB\u4E09\u6CB3\u306B\u307E\u305F\u304C\u308B\u6771\u6D77\u4E00\u306E\u5927\u8EAB\u3002\u7FA9\u5143\u3068\u96EA\u658E\u306E\u3082\u3068\u3001\u4E0A\u6D1B\u3092\u671B\u3080\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   matsudaira: { id: "matsudaira", name: "\u677E\u5E73\u5BB6", color: "#8A6B3A", mon: "\u8475", playable: true, desc: "\u4E09\u6CB3\u5CA1\u5D0E\u306E\u5C0F\u52E2\u529B\u3002\u4ECA\u5DDD\u306E\u5098\u4E0B\u306B\u7F6E\u304B\u308C\u3001\u5AE1\u5B50\u306F\u4EBA\u8CEA\u306B\u51FA\u3055\u308C\u3066\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  mizuno: { id: "mizuno", name: "\u6C34\u91CE\u5BB6", color: "#7A5C86", mon: "\u4E38\u306B\u5341", playable: true, desc: "\u4E09\u6CB3\u5208\u8C37\u306E\u5C0F\u52E2\u529B\u3002\u7E54\u7530\u3068\u4ECA\u5DDD\u306E\u9593\u3067\u53BB\u5C31\u3092\u8A08\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  takeda: { id: "takeda", name: "\u6B66\u7530\u5BB6", color: "#B03A2E", mon: "\u56DB\u3064\u83F1", playable: true, desc: "\u7532\u6590\u306E\u540D\u9580\u3002\u6674\u4FE1\u306E\u3082\u3068\u4FE1\u6FC3\u3092\u5207\u308A\u53D6\u308A\u3064\u3064\u3042\u308B\u304C\u3001\u5317\u306B\u6751\u4E0A\u7FA9\u6E05\u304C\u7ACB\u3061\u306F\u3060\u304B\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  murakami: { id: "murakami", name: "\u6751\u4E0A\u5BB6", color: "#5D7A8C", mon: "\u9DB4", playable: true, desc: "\u5317\u4FE1\u6FC3\u306E\u52C7\u3002\u6B66\u7530\u6674\u4FE1\u3092\u4E8C\u5EA6\u9000\u3051\u305F\u7FA9\u6E05\u304C\u5065\u5728\u3067\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  hojo: { id: "hojo", name: "\u5317\u6761\u5BB6", color: "#3B5A6B", mon: "\u4E09\u9C57", playable: true, desc: "\u3053\u306E\u76E4\u3067\u306F\u4F0A\u8C46\u4E8C\u57CE\u306E\u307F\u3002\u80CC\u5F8C\u306B\u76F8\u6A21\u30FB\u6B66\u8535\u306E\u672C\u56FD\u3092\u63A7\u3048\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  kitabatake: { id: "kitabatake", name: "\u5317\u7560\u5BB6", color: "#6B8E5A", mon: "\u6708", playable: true, desc: "\u4F0A\u52E2\u56FD\u53F8\u306E\u5BB6\u67C4\u3002\u5357\u4F0A\u52E2\u306B\u6839\u3092\u5F35\u308B\u304C\u3001\u5317\u4F0A\u52E2\u306F\u8AF8\u5BB6\u306B\u5206\u304B\u308C\u3066\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  kanbe: { id: "kanbe", name: "\u795E\u6238\u5BB6", color: "#8C7A4A", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
+  mizuno: { id: "mizuno", name: "\u6C34\u91CE\u5BB6", color: "#7A5C86", mon: "\u6CA2\u7009", playable: true, desc: "\u4E09\u6CB3\u5208\u8C37\u306E\u5C0F\u52E2\u529B\u3002\u7E54\u7530\u3068\u4ECA\u5DDD\u306E\u9593\u3067\u53BB\u5C31\u3092\u8A08\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  takeda: { id: "takeda", name: "\u6B66\u7530\u5BB6", color: "#B03A2E", mon: "\u56DB\u3064\u5272\u83F1", playable: true, desc: "\u7532\u6590\u306E\u540D\u9580\u3002\u6674\u4FE1\u306E\u3082\u3068\u4FE1\u6FC3\u3092\u5207\u308A\u53D6\u308A\u3064\u3064\u3042\u308B\u304C\u3001\u5317\u306B\u6751\u4E0A\u7FA9\u6E05\u304C\u7ACB\u3061\u306F\u3060\u304B\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  murakami: { id: "murakami", name: "\u6751\u4E0A\u5BB6", color: "#5D7A8C", mon: "\u4E00\u3064\u5F15\u4E21", playable: true, desc: "\u5317\u4FE1\u6FC3\u306E\u52C7\u3002\u6B66\u7530\u6674\u4FE1\u3092\u4E8C\u5EA6\u9000\u3051\u305F\u7FA9\u6E05\u304C\u5065\u5728\u3067\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  hojo: { id: "hojo", name: "\u5317\u6761\u5BB6", color: "#3B5A6B", mon: "\u4E09\u3064\u9C57", playable: true, desc: "\u3053\u306E\u76E4\u3067\u306F\u4F0A\u8C46\u4E8C\u57CE\u306E\u307F\u3002\u80CC\u5F8C\u306B\u76F8\u6A21\u30FB\u6B66\u8535\u306E\u672C\u56FD\u3092\u63A7\u3048\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  kitabatake: { id: "kitabatake", name: "\u5317\u7560\u5BB6", color: "#6B8E5A", mon: "\u5272\u308A\u83F1", playable: true, desc: "\u4F0A\u52E2\u56FD\u53F8\u306E\u5BB6\u67C4\u3002\u5357\u4F0A\u52E2\u306B\u6839\u3092\u5F35\u308B\u304C\u3001\u5317\u4F0A\u52E2\u306F\u8AF8\u5BB6\u306B\u5206\u304B\u308C\u3066\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  kanbe: { id: "kanbe", name: "\u795E\u6238\u5BB6", color: "#8C7A4A", mon: "\u4E80\u7532", gold: 2600, prestige: 50, mobilization: 1 },
   ikko: { id: "ikko", name: "\u9577\u5CF6\u4E00\u5411\u8846", color: "#8B5E3C", mon: "\u8F2A\u5B9D", gold: 2600, prestige: 50, mobilization: 1 },
-  kuki: { id: "kuki", name: "\u4E5D\u9B3C\u5BB6", color: "#4A7A8C", mon: "\u62B1\u304D\u6CA2\u7009", gold: 2600, prestige: 50, mobilization: 1 },
-  rokkaku: { id: "rokkaku", name: "\u516D\u89D2\u5BB6", color: "#A0522D", mon: "\u4E09\u3064\u76DB", playable: true, desc: "\u8FD1\u6C5F\u89B3\u97F3\u5BFA\u306B\u62E0\u308B\u540D\u9580\u3002\u77F3\u9AD8\u306F\u8C4A\u304B\u3060\u304C\u3001\u5317\u306E\u6D45\u4E95\u304C\u96E2\u308C\u3064\u3064\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  azai: { id: "azai", name: "\u6D45\u4E95\u5BB6", color: "#5A4A8C", mon: "\u4E09\u3064\u76DB", playable: true, desc: "\u5317\u8FD1\u6C5F\u5C0F\u8C37\u306E\u65B0\u8208\u3002\u516D\u89D2\u306B\u62BC\u3055\u3048\u3089\u308C\u3001\u5F53\u4E3B\u4E45\u653F\u306F\u5C48\u5F93\u3092\u9078\u3093\u3067\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  wakasa: { id: "wakasa", name: "\u82E5\u72ED\u6B66\u7530\u5BB6", color: "#7A8C5A", mon: "\u62B1\u304D\u6CA2\u7009", gold: 2600, prestige: 50, mobilization: 1 },
-  asakura: { id: "asakura", name: "\u671D\u5009\u5BB6", color: "#8C4A6B", mon: "\u7B39", playable: true, desc: "\u8D8A\u524D\u4E00\u4E57\u8C37\u306B\u6804\u3048\u308B\u6587\u306E\u5BB6\u3002\u8001\u5C06\u5B97\u6EF4\u306E\u6B66\u540D\u306F\u9AD8\u3044\u304C\u3001\u5F53\u4E3B\u306F\u6226\u3092\u597D\u307E\u306C\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  anegakoji: { id: "anegakoji", name: "\u59C9\u5C0F\u8DEF\u5BB6", color: "#6B6B5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  ashikaga: { id: "ashikaga", name: "\u8DB3\u5229\u5C06\u8ECD\u5BB6", color: "#B8A44A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  shingai: { id: "shingai", name: "\u65B0\u958B\u5BB6", color: "#5A7A6B", mon: "\u6728\u74DC", playable: true, desc: "\u963F\u6CE2\u725B\u5C90\u306E\u56FD\u4EBA\u3002\u4E09\u597D\u306B\u5F93\u3044\u3064\u3064\u3001\u90A3\u8CC0\u5DDD\u306E\u6C34\u904B\u3068\u6D77\u306B\u9762\u3057\u305F\u5730\u306E\u5229\u3067\u7D30\u304F\u4FDD\u3064\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  miyoshi: { id: "miyoshi", name: "\u4E09\u597D\u5BB6", color: "#8C3A5A", playable: true, desc: "\u757F\u5185\u3092\u63E1\u308B\u65B0\u8208\u306E\u5BB6\u3002\u5C06\u8ECD\u3092\u64C1\u3057\u3001\u8AF8\u56FD\u306B\u53F7\u4EE4\u3059\u308B\u304C\u3001\u5185\u306B\u306F\u677E\u6C38\u4E45\u79C0\u3092\u62B1\u3048\u308B\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  honganji: { id: "honganji", name: "\u672C\u9858\u5BFA", color: "#8B5E3C", playable: true, desc: "\u77F3\u5C71\u306B\u62E0\u308B\u9580\u5F92\u306E\u7DCF\u672C\u5C71\u3002\u6B66\u3067\u306F\u306A\u304F\u4FE1\u3067\u4EBA\u3092\u52D5\u304B\u3059\u3002", mon: "\u8F2A\u5B9D", gold: 2600, prestige: 50, mobilization: 1 },
-  tsutsui: { id: "tsutsui", name: "\u7B52\u4E95\u5BB6", color: "#6B7A4A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  iga: { id: "iga", name: "\u4F0A\u8CC0\u60E3\u56FD", color: "#5A6B7A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  saika: { id: "saika", name: "\u96D1\u8CC0\u8846", color: "#4A7A6B", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
-  hatano: { id: "hatano", name: "\u6CE2\u591A\u91CE\u5BB6", color: "#7A5A8C", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
-  isshiki: { id: "isshiki", name: "\u4E00\u8272\u5BB6", color: "#8C7A5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  yamana: { id: "yamana", name: "\u5C71\u540D\u5BB6", color: "#5A8C7A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  akamatsu: { id: "akamatsu", name: "\u8D64\u677E\u5BB6", color: "#A0644A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  bessho: { id: "bessho", name: "\u5225\u6240\u5BB6", color: "#6B5A8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
+  kuki: { id: "kuki", name: "\u4E5D\u9B3C\u5BB6", color: "#4A7A8C", mon: "\u4E03\u66DC", gold: 2600, prestige: 50, mobilization: 1 },
+  rokkaku: { id: "rokkaku", name: "\u516D\u89D2\u5BB6", color: "#A0522D", mon: "\u56DB\u3064\u76EE\u7D50", playable: true, desc: "\u8FD1\u6C5F\u89B3\u97F3\u5BFA\u306B\u62E0\u308B\u540D\u9580\u3002\u77F3\u9AD8\u306F\u8C4A\u304B\u3060\u304C\u3001\u5317\u306E\u6D45\u4E95\u304C\u96E2\u308C\u3064\u3064\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  azai: { id: "azai", name: "\u6D45\u4E95\u5BB6", color: "#5A4A8C", mon: "\u4E09\u3064\u76DB\u6728\u74DC", playable: true, desc: "\u5317\u8FD1\u6C5F\u5C0F\u8C37\u306E\u65B0\u8208\u3002\u516D\u89D2\u306B\u62BC\u3055\u3048\u3089\u308C\u3001\u5F53\u4E3B\u4E45\u653F\u306F\u5C48\u5F93\u3092\u9078\u3093\u3067\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  wakasa: { id: "wakasa", name: "\u82E5\u72ED\u6B66\u7530\u5BB6", color: "#7A8C5A", mon: "\u5272\u308A\u83F1", gold: 2600, prestige: 50, mobilization: 1 },
+  asakura: { id: "asakura", name: "\u671D\u5009\u5BB6", color: "#8C4A6B", mon: "\u4E09\u3064\u76DB\u6728\u74DC", playable: true, desc: "\u8D8A\u524D\u4E00\u4E57\u8C37\u306B\u6804\u3048\u308B\u6587\u306E\u5BB6\u3002\u8001\u5C06\u5B97\u6EF4\u306E\u6B66\u540D\u306F\u9AD8\u3044\u304C\u3001\u5F53\u4E3B\u306F\u6226\u3092\u597D\u307E\u306C\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  anegakoji: { id: "anegakoji", name: "\u59C9\u5C0F\u8DEF\u5BB6", color: "#6B6B5A", mon: "\u4E00\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  ashikaga: { id: "ashikaga", name: "\u8DB3\u5229\u5C06\u8ECD\u5BB6", color: "#B8A44A", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  shingai: { id: "shingai", name: "\u65B0\u958B\u5BB6", color: "#5A7A6B", mon: "\u4E09\u3064\u5DF4", playable: true, desc: "\u963F\u6CE2\u725B\u5C90\u306E\u56FD\u4EBA\u3002\u4E09\u597D\u306B\u5F93\u3044\u3064\u3064\u3001\u90A3\u8CC0\u5DDD\u306E\u6C34\u904B\u3068\u6D77\u306B\u9762\u3057\u305F\u5730\u306E\u5229\u3067\u7D30\u304F\u4FDD\u3064\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  miyoshi: { id: "miyoshi", name: "\u4E09\u597D\u5BB6", color: "#8C3A5A", playable: true, desc: "\u757F\u5185\u3092\u63E1\u308B\u65B0\u8208\u306E\u5BB6\u3002\u5C06\u8ECD\u3092\u64C1\u3057\u3001\u8AF8\u56FD\u306B\u53F7\u4EE4\u3059\u308B\u304C\u3001\u5185\u306B\u306F\u677E\u6C38\u4E45\u79C0\u3092\u62B1\u3048\u308B\u3002", mon: "\u4E09\u968E\u83F1", gold: 2600, prestige: 50, mobilization: 1 },
+  honganji: { id: "honganji", name: "\u672C\u9858\u5BFA", color: "#8B5E3C", playable: true, desc: "\u77F3\u5C71\u306B\u62E0\u308B\u9580\u5F92\u306E\u7DCF\u672C\u5C71\u3002\u6B66\u3067\u306F\u306A\u304F\u4FE1\u3067\u4EBA\u3092\u52D5\u304B\u3059\u3002", mon: "\u4E0B\u304C\u308A\u85E4", gold: 2600, prestige: 50, mobilization: 1 },
+  tsutsui: { id: "tsutsui", name: "\u7B52\u4E95\u5BB6", color: "#6B7A4A", mon: "\u6885\u9262", gold: 2600, prestige: 50, mobilization: 1 },
+  iga: { id: "iga", name: "\u4F0A\u8CC0\u60E3\u56FD", color: "#5A6B7A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  saika: { id: "saika", name: "\u96D1\u8CC0\u8846", color: "#4A7A6B", mon: "\u516B\u54AB\u70CF", gold: 2600, prestige: 50, mobilization: 1 },
+  hatano: { id: "hatano", name: "\u6CE2\u591A\u91CE\u5BB6", color: "#7A5A8C", mon: "\u6A2A\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  isshiki: { id: "isshiki", name: "\u4E00\u8272\u5BB6", color: "#8C7A5A", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  yamana: { id: "yamana", name: "\u5C71\u540D\u5BB6", color: "#5A8C7A", mon: "\u6850", gold: 2600, prestige: 50, mobilization: 1 },
+  akamatsu: { id: "akamatsu", name: "\u8D64\u677E\u5BB6", color: "#A0644A", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  bessho: { id: "bessho", name: "\u5225\u6240\u5BB6", color: "#6B5A8C", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
   kaga_ikko: { id: "kaga_ikko", name: "\u52A0\u8CC0\u4E00\u5411\u8846", color: "#9B6B3C", mon: "\u8F2A\u5B9D", gold: 2600, prestige: 50, mobilization: 1 },
-  hatakeyama: { id: "hatakeyama", name: "\u80FD\u767B\u7560\u5C71\u5BB6", color: "#4A6B8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  jinbo: { id: "jinbo", name: "\u795E\u4FDD\u5BB6", color: "#7A6B4A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  shiina: { id: "shiina", name: "\u690E\u540D\u5BB6", color: "#5A7A5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  nagao: { id: "nagao", name: "\u9577\u5C3E\u5BB6", color: "#3A5A8C", playable: true, desc: "\u8D8A\u5F8C\u306E\u9F8D\u3002\u666F\u864E\u306E\u3082\u3068\u5175\u306F\u7CBE\u5F37\u3060\u304C\u3001\u56FD\u5185\u306F\u307E\u3068\u307E\u308A\u3092\u6B20\u304F\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  agakita: { id: "agakita", name: "\u63DA\u5317\u8846", color: "#6B8C9B", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  ota: { id: "ota", name: "\u592A\u7530\u5BB6", color: "#8C6B7A", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
-  narita: { id: "narita", name: "\u6210\u7530\u5BB6", color: "#7A8C6B", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  uesugi_y: { id: "uesugi_y", name: "\u5C71\u5185\u4E0A\u6749\u5BB6", color: "#5A5A8C", playable: true, desc: "\u95A2\u6771\u7BA1\u9818\u306E\u5BB6\u67C4\u3002\u540D\u306F\u91CD\u3044\u304C\u3001\u5317\u6761\u306B\u62BC\u3055\u308C\u3066\u8870\u3048\u3064\u3064\u3042\u308B\u3002", mon: "\u7B39", gold: 2600, prestige: 50, mobilization: 1 },
-  nagano_k: { id: "nagano_k", name: "\u9577\u91CE\u5BB6", color: "#8C5A4A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  yura: { id: "yura", name: "\u7531\u826F\u5BB6", color: "#6B4A5A", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
-  utsunomiya: { id: "utsunomiya", name: "\u5B87\u90FD\u5BAE\u5BB6", color: "#4A8C6B", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  sano: { id: "sano", name: "\u4F50\u91CE\u5BB6", color: "#8C8C4A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  nasu: { id: "nasu", name: "\u90A3\u9808\u5BB6", color: "#5A4A6B", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  edo_h: { id: "edo_h", name: "\u6C5F\u6238\u5BB6", color: "#7A4A8C", mon: "\u4E09\u9C57", gold: 2600, prestige: 50, mobilization: 1 },
+  hatakeyama: { id: "hatakeyama", name: "\u80FD\u767B\u7560\u5C71\u5BB6", color: "#4A6B8C", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  jinbo: { id: "jinbo", name: "\u795E\u4FDD\u5BB6", color: "#7A6B4A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  shiina: { id: "shiina", name: "\u690E\u540D\u5BB6", color: "#5A7A5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  nagao: { id: "nagao", name: "\u9577\u5C3E\u5BB6", color: "#3A5A8C", playable: true, desc: "\u8D8A\u5F8C\u306E\u9F8D\u3002\u666F\u864E\u306E\u3082\u3068\u5175\u306F\u7CBE\u5F37\u3060\u304C\u3001\u56FD\u5185\u306F\u307E\u3068\u307E\u308A\u3092\u6B20\u304F\u3002", mon: "\u4E5D\u66DC", gold: 2600, prestige: 50, mobilization: 1 },
+  agakita: { id: "agakita", name: "\u63DA\u5317\u8846", color: "#6B8C9B", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  ota: { id: "ota", name: "\u592A\u7530\u5BB6", color: "#8C6B7A", mon: "\u6854\u6897", gold: 2600, prestige: 50, mobilization: 1 },
+  narita: { id: "narita", name: "\u6210\u7530\u5BB6", color: "#7A8C6B", mon: "\u4E09\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  uesugi_y: { id: "uesugi_y", name: "\u5C71\u5185\u4E0A\u6749\u5BB6", color: "#5A5A8C", playable: true, desc: "\u95A2\u6771\u7BA1\u9818\u306E\u5BB6\u67C4\u3002\u540D\u306F\u91CD\u3044\u304C\u3001\u5317\u6761\u306B\u62BC\u3055\u308C\u3066\u8870\u3048\u3064\u3064\u3042\u308B\u3002", mon: "\u7AF9\u306B\u96C0", gold: 2600, prestige: 50, mobilization: 1 },
+  nagano_k: { id: "nagano_k", name: "\u9577\u91CE\u5BB6", color: "#8C5A4A", mon: "\u6A9C\u6247", gold: 2600, prestige: 50, mobilization: 1 },
+  yura: { id: "yura", name: "\u7531\u826F\u5BB6", color: "#6B4A5A", mon: "\u6A2A\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  utsunomiya: { id: "utsunomiya", name: "\u5B87\u90FD\u5BAE\u5BB6", color: "#4A8C6B", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  sano: { id: "sano", name: "\u4F50\u91CE\u5BB6", color: "#8C8C4A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  nasu: { id: "nasu", name: "\u90A3\u9808\u5BB6", color: "#5A4A6B", mon: "\u4E00\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  edo_h: { id: "edo_h", name: "\u6C5F\u6238\u5BB6", color: "#7A4A8C", mon: "\u4E09\u3064\u9C57", gold: 2600, prestige: 50, mobilization: 1 },
   satake: { id: "satake", name: "\u4F50\u7AF9\u5BB6", color: "#4A6B4A", mon: "\u6247", gold: 2600, prestige: 50, mobilization: 1 },
-  oda_h: { id: "oda_h", name: "\u5C0F\u7530\u5BB6", color: "#8C7A8C", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
-  satomi: { id: "satomi", name: "\u91CC\u898B\u5BB6", color: "#3C7A8C", playable: true, desc: "\u5B89\u623F\u306E\u6D77\u306E\u5BB6\u3002\u5317\u6761\u3068\u6D77\u3092\u631F\u3093\u3067\u4E89\u3046\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  koga: { id: "koga", name: "\u53E4\u6CB3\u516C\u65B9\u5BB6", color: "#A08C4A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  yuki: { id: "yuki", name: "\u7D50\u57CE\u5BB6", color: "#6B8C8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  chiba: { id: "chiba", name: "\u5343\u8449\u5BB6", color: "#8C4A7A", desc: "\u4E0B\u7DCF\u306E\u540D\u9580\u5343\u8449\u3002\u5317\u6761\u3068\u91CC\u898B\u306E\u9593\u3067\u63FA\u308C\u308B\u3002", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  kagawa: { id: "kagawa", name: "\u9999\u5DDD\u5BB6", color: "#7A6B8C", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  kono: { id: "kono", name: "\u6CB3\u91CE\u5BB6", color: "#4A8C8C", desc: "\u4F0A\u4E88\u6E6F\u7BC9\u306E\u6CB3\u91CE\u3002\u702C\u6238\u5185\u306E\u6C34\u8ECD\u3068\u7D50\u3073\u3001\u7D30\u304F\u9577\u304F\u4FDD\u3064\u3002", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  kurushima: { id: "kurushima", name: "\u6765\u5CF6\u6751\u4E0A\u5BB6", color: "#3C6B8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  saionji: { id: "saionji", name: "\u897F\u5712\u5BFA\u5BB6", color: "#8C6B4A", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  ichijo: { id: "ichijo", name: "\u571F\u4F50\u4E00\u6761\u5BB6", color: "#B8A44A", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
-  chosokabe: { id: "chosokabe", name: "\u9577\u5B97\u6211\u90E8\u5BB6", color: "#6B8C3C", desc: "\u571F\u4F50\u5CA1\u8C4A\u306E\u5C0F\u52E2\u529B\u3002\u56FD\u89AA\u3068\u82E5\u304D\u5143\u89AA\u306E\u3082\u3068\u3001\u56DB\u56FD\u306E\u7D71\u4E00\u3092\u5922\u898B\u308B\u3002", mon: "\u7B39", gold: 2600, prestige: 50, mobilization: 1 },
-  aki: { id: "aki", name: "\u5B89\u82B8\u5BB6", color: "#8C4A5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  amago: { id: "amago", name: "\u5C3C\u5B50\u5BB6", color: "#5A5A9B", desc: "\u51FA\u96F2\u6708\u5C71\u5BCC\u7530\u306E\u96C4\u3002\u5927\u5185\u3068\u5C71\u9670\u5C71\u967D\u3092\u4E89\u3046\u304C\u3001\u65B0\u5BAE\u515A\u3092\u62B1\u3048\u3066\u5BB6\u4E2D\u306F\u4E00\u679A\u5CA9\u3067\u306A\u3044\u3002", mon: "\u56DB\u3064\u83F1", gold: 2600, prestige: 50, mobilization: 1 },
-  nanjo: { id: "nanjo", name: "\u5357\u6761\u5BB6", color: "#7A8C5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  yoshimi: { id: "yoshimi", name: "\u5409\u898B\u5BB6", color: "#8C7A6B", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  masuda: { id: "masuda", name: "\u76CA\u7530\u5BB6", color: "#6B7A8C", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  uragami: { id: "uragami", name: "\u6D66\u4E0A\u5BB6", color: "#9B5A3C", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
-  mimura: { id: "mimura", name: "\u4E09\u6751\u5BB6", color: "#5A8C6B", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  shoo: { id: "shoo", name: "\u5E84\u5BB6", color: "#8C8C5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  shimizu: { id: "shimizu", name: "\u77F3\u5DDD\u5BB6", color: "#6B5A7A", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
-  ouchi: { id: "ouchi", name: "\u5927\u5185\u5BB6", color: "#B04A7A", desc: "\u5468\u9632\u5C71\u53E3\u306B\u6804\u3048\u308B\u897F\u56FD\u4E00\u306E\u5927\u8EAB\u3002\u6587\u7269\u306F\u90FD\u306B\u52A3\u3089\u306C\u304C\u3001\u5BB6\u4E2D\u306B\u4E0D\u7A4F\u304C\u3042\u308B\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  kobayakawa: { id: "kobayakawa", name: "\u5C0F\u65E9\u5DDD\u5BB6", color: "#4A7A5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  mori: { id: "mori", name: "\u6BDB\u5229\u5BB6", color: "#3C7A4A", desc: "\u5B89\u82B8\u5409\u7530\u306E\u56FD\u4EBA\u306B\u3059\u304E\u306C\u304C\u3001\u5143\u5C31\u3068\u4E09\u5B50\u3092\u64C1\u3059\u308B\u3002\u3053\u3053\u304B\u3089\u897F\u56FD\u304C\u52D5\u304F\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  takeda_a: { id: "takeda_a", name: "\u5B89\u82B8\u6B66\u7530\u5BB6", color: "#8C5A5A", mon: "\u56DB\u3064\u83F1", gold: 2600, prestige: 50, mobilization: 1 },
+  oda_h: { id: "oda_h", name: "\u5C0F\u7530\u5BB6", color: "#8C7A8C", mon: "\u5DDE\u6D5C", gold: 2600, prestige: 50, mobilization: 1 },
+  satomi: { id: "satomi", name: "\u91CC\u898B\u5BB6", color: "#3C7A8C", playable: true, desc: "\u5B89\u623F\u306E\u6D77\u306E\u5BB6\u3002\u5317\u6761\u3068\u6D77\u3092\u631F\u3093\u3067\u4E89\u3046\u3002", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  koga: { id: "koga", name: "\u53E4\u6CB3\u516C\u65B9\u5BB6", color: "#A08C4A", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  yuki: { id: "yuki", name: "\u7D50\u57CE\u5BB6", color: "#6B8C8C", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  chiba: { id: "chiba", name: "\u5343\u8449\u5BB6", color: "#8C4A7A", desc: "\u4E0B\u7DCF\u306E\u540D\u9580\u5343\u8449\u3002\u5317\u6761\u3068\u91CC\u898B\u306E\u9593\u3067\u63FA\u308C\u308B\u3002", mon: "\u6708\u661F", gold: 2600, prestige: 50, mobilization: 1 },
+  kagawa: { id: "kagawa", name: "\u9999\u5DDD\u5BB6", color: "#7A6B8C", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  kono: { id: "kono", name: "\u6CB3\u91CE\u5BB6", color: "#4A8C8C", desc: "\u4F0A\u4E88\u6E6F\u7BC9\u306E\u6CB3\u91CE\u3002\u702C\u6238\u5185\u306E\u6C34\u8ECD\u3068\u7D50\u3073\u3001\u7D30\u304F\u9577\u304F\u4FDD\u3064\u3002", mon: "\u6298\u6577\u306B\u4E09\u6587\u5B57", gold: 2600, prestige: 50, mobilization: 1 },
+  kurushima: { id: "kurushima", name: "\u6765\u5CF6\u6751\u4E0A\u5BB6", color: "#3C6B8C", mon: "\u6298\u6577\u306B\u4E09\u6587\u5B57", gold: 2600, prestige: 50, mobilization: 1 },
+  saionji: { id: "saionji", name: "\u897F\u5712\u5BFA\u5BB6", color: "#8C6B4A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  ichijo: { id: "ichijo", name: "\u571F\u4F50\u4E00\u6761\u5BB6", color: "#B8A44A", mon: "\u6850", gold: 2600, prestige: 50, mobilization: 1 },
+  chosokabe: { id: "chosokabe", name: "\u9577\u5B97\u6211\u90E8\u5BB6", color: "#6B8C3C", desc: "\u571F\u4F50\u5CA1\u8C4A\u306E\u5C0F\u52E2\u529B\u3002\u56FD\u89AA\u3068\u82E5\u304D\u5143\u89AA\u306E\u3082\u3068\u3001\u56DB\u56FD\u306E\u7D71\u4E00\u3092\u5922\u898B\u308B\u3002", mon: "\u9162\u6F3F\u8349", gold: 2600, prestige: 50, mobilization: 1 },
+  aki: { id: "aki", name: "\u5B89\u82B8\u5BB6", color: "#8C4A5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  amago: { id: "amago", name: "\u5C3C\u5B50\u5BB6", color: "#5A5A9B", desc: "\u51FA\u96F2\u6708\u5C71\u5BCC\u7530\u306E\u96C4\u3002\u5927\u5185\u3068\u5C71\u9670\u5C71\u967D\u3092\u4E89\u3046\u304C\u3001\u65B0\u5BAE\u515A\u3092\u62B1\u3048\u3066\u5BB6\u4E2D\u306F\u4E00\u679A\u5CA9\u3067\u306A\u3044\u3002", mon: "\u5E73\u56DB\u3064\u76EE\u7D50", gold: 2600, prestige: 50, mobilization: 1 },
+  nanjo: { id: "nanjo", name: "\u5357\u6761\u5BB6", color: "#7A8C5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  yoshimi: { id: "yoshimi", name: "\u5409\u898B\u5BB6", color: "#8C7A6B", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  masuda: { id: "masuda", name: "\u76CA\u7530\u5BB6", color: "#6B7A8C", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  uragami: { id: "uragami", name: "\u6D66\u4E0A\u5BB6", color: "#9B5A3C", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  mimura: { id: "mimura", name: "\u4E09\u6751\u5BB6", color: "#5A8C6B", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  shoo: { id: "shoo", name: "\u5E84\u5BB6", color: "#8C8C5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  shimizu: { id: "shimizu", name: "\u77F3\u5DDD\u5BB6", color: "#6B5A7A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  ouchi: { id: "ouchi", name: "\u5927\u5185\u5BB6", color: "#B04A7A", desc: "\u5468\u9632\u5C71\u53E3\u306B\u6804\u3048\u308B\u897F\u56FD\u4E00\u306E\u5927\u8EAB\u3002\u6587\u7269\u306F\u90FD\u306B\u52A3\u3089\u306C\u304C\u3001\u5BB6\u4E2D\u306B\u4E0D\u7A4F\u304C\u3042\u308B\u3002", mon: "\u5927\u5185\u83F1", gold: 2600, prestige: 50, mobilization: 1 },
+  kobayakawa: { id: "kobayakawa", name: "\u5C0F\u65E9\u5DDD\u5BB6", color: "#4A7A5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  mori: { id: "mori", name: "\u6BDB\u5229\u5BB6", color: "#3C7A4A", desc: "\u5B89\u82B8\u5409\u7530\u306E\u56FD\u4EBA\u306B\u3059\u304E\u306C\u304C\u3001\u5143\u5C31\u3068\u4E09\u5B50\u3092\u64C1\u3059\u308B\u3002\u3053\u3053\u304B\u3089\u897F\u56FD\u304C\u52D5\u304F\u3002", mon: "\u4E00\u6587\u5B57\u4E09\u661F", gold: 2600, prestige: 50, mobilization: 1 },
+  takeda_a: { id: "takeda_a", name: "\u5B89\u82B8\u6B66\u7530\u5BB6", color: "#8C5A5A", mon: "\u56DB\u3064\u5272\u83F1", gold: 2600, prestige: 50, mobilization: 1 },
   otomo: { id: "otomo", name: "\u5927\u53CB\u5BB6", color: "#B06B2E", desc: "\u8C4A\u5F8C\u5E9C\u5185\u306E\u5927\u53CB\u3002\u7FA9\u93AE\u3068\u7ACB\u82B1\u9053\u96EA\u3092\u64C1\u3057\u3001\u5317\u4E5D\u5DDE\u306B\u529B\u3092\u4F38\u3070\u3059\u3002", mon: "\u674F\u8449", gold: 2600, prestige: 50, mobilization: 1 },
-  akizuki: { id: "akizuki", name: "\u79CB\u6708\u5BB6", color: "#7A5A4A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  kamachi: { id: "kamachi", name: "\u84B2\u6C60\u5BB6", color: "#6B8C7A", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  akizuki: { id: "akizuki", name: "\u79CB\u6708\u5BB6", color: "#7A5A4A", mon: "\u64AB\u5B50", gold: 2600, prestige: 50, mobilization: 1 },
+  kamachi: { id: "kamachi", name: "\u84B2\u6C60\u5BB6", color: "#6B8C7A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
   shiga: { id: "shiga", name: "\u5FD7\u8CC0\u5BB6", color: "#5A6B4A", mon: "\u674F\u8449", gold: 2600, prestige: 50, mobilization: 1 },
-  ryuzoji: { id: "ryuzoji", name: "\u9F8D\u9020\u5BFA\u5BB6", color: "#4A5A8C", desc: "\u80A5\u524D\u4F50\u8CC0\u306E\u9F8D\u9020\u5BFA\u3002\u5C11\u5F10\u3092\u9000\u3051\u3066\u81EA\u7ACB\u3057\u3001\u5317\u4E5D\u5DDE\u306B\u7259\u3092\u5265\u304F\u3002", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  hata: { id: "hata", name: "\u6CE2\u591A\u5BB6", color: "#8C6B7A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  matsura: { id: "matsura", name: "\u677E\u6D66\u515A", color: "#3C8C8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  arima: { id: "arima", name: "\u6709\u99AC\u5BB6", color: "#8C4A8C", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
-  omura: { id: "omura", name: "\u5927\u6751\u5BB6", color: "#5A8C8C", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  kikuchi: { id: "kikuchi", name: "\u83CA\u6C60\u5BB6", color: "#8C7A3C", mon: "\u4E26\u3073\u9DF9", gold: 2600, prestige: 50, mobilization: 1 },
-  sagara: { id: "sagara", name: "\u76F8\u826F\u5BB6", color: "#6B4A7A", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  ito: { id: "ito", name: "\u4F0A\u6771\u5BB6", color: "#8C5A6B", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  tsuchimochi: { id: "tsuchimochi", name: "\u571F\u6301\u5BB6", color: "#7A7A5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
+  ryuzoji: { id: "ryuzoji", name: "\u9F8D\u9020\u5BFA\u5BB6", color: "#4A5A8C", desc: "\u80A5\u524D\u4F50\u8CC0\u306E\u9F8D\u9020\u5BFA\u3002\u5C11\u5F10\u3092\u9000\u3051\u3066\u81EA\u7ACB\u3057\u3001\u5317\u4E5D\u5DDE\u306B\u7259\u3092\u5265\u304F\u3002", mon: "\u65E5\u8DB3", gold: 2600, prestige: 50, mobilization: 1 },
+  hata: { id: "hata", name: "\u6CE2\u591A\u5BB6", color: "#8C6B7A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  matsura: { id: "matsura", name: "\u677E\u6D66\u515A", color: "#3C8C8C", mon: "\u4E09\u3064\u661F", gold: 2600, prestige: 50, mobilization: 1 },
+  arima: { id: "arima", name: "\u6709\u99AC\u5BB6", color: "#8C4A8C", mon: "\u5510\u82B1", gold: 2600, prestige: 50, mobilization: 1 },
+  omura: { id: "omura", name: "\u5927\u6751\u5BB6", color: "#5A8C8C", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  kikuchi: { id: "kikuchi", name: "\u83CA\u6C60\u5BB6", color: "#8C7A3C", mon: "\u9DF9\u306E\u7FBD", gold: 2600, prestige: 50, mobilization: 1 },
+  sagara: { id: "sagara", name: "\u76F8\u826F\u5BB6", color: "#6B4A7A", mon: "\u6885\u9262", gold: 2600, prestige: 50, mobilization: 1 },
+  ito: { id: "ito", name: "\u4F0A\u6771\u5BB6", color: "#8C5A6B", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
+  tsuchimochi: { id: "tsuchimochi", name: "\u571F\u6301\u5BB6", color: "#7A7A5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
   shimazu: { id: "shimazu", name: "\u5CF6\u6D25\u5BB6", color: "#8C2E2E", desc: "\u85A9\u6469\u5927\u9685\u306E\u5CF6\u6D25\u3002\u8CB4\u4E45\u306E\u3082\u3068\u56DB\u5144\u5F1F\u304C\u80B2\u3061\u3001\u4E5D\u5DDE\u7D71\u4E00\u306E\u82BD\u304C\u3042\u308B\u3002", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
-  so: { id: "so", name: "\u5B97\u5BB6", color: "#4A6B7A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  date: { id: "date", name: "\u4F0A\u9054\u5BB6", color: "#8C4A3C", desc: "\u5965\u5DDE\u4F0A\u9054\u3002\u6674\u5B97\u304C\u5BB6\u4E2D\u3092\u93AE\u3081\u3001\u5357\u5965\u306B\u529B\u3092\u84C4\u3048\u308B\u3002", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
-  ashina: { id: "ashina", name: "\u8606\u540D\u5BB6", color: "#4A7A8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  nihonmatsu: { id: "nihonmatsu", name: "\u4E8C\u672C\u677E\u7560\u5C71\u5BB6", color: "#6B7A5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  shirakawa: { id: "shirakawa", name: "\u767D\u6CB3\u7D50\u57CE\u5BB6", color: "#7A6B5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  nikaido: { id: "nikaido", name: "\u4E8C\u968E\u5802\u5BB6", color: "#8C7A6B", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  tamura: { id: "tamura", name: "\u7530\u6751\u5BB6", color: "#5A6B8C", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
-  soma: { id: "soma", name: "\u76F8\u99AC\u5BB6", color: "#8C5A7A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  osaki: { id: "osaki", name: "\u5927\u5D0E\u5BB6", color: "#6B5A4A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  kokubun: { id: "kokubun", name: "\u56FD\u5206\u5BB6", color: "#7A8C7A", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  kasai: { id: "kasai", name: "\u845B\u897F\u5BB6", color: "#5A8C5A", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  abe: { id: "abe", name: "\u963F\u66FD\u6CBC\u5BB6", color: "#8C8C6B", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  nanbu: { id: "nanbu", name: "\u5357\u90E8\u5BB6", color: "#3C5A7A", desc: "\u9678\u5965\u4E09\u6238\u306E\u5357\u90E8\u3002\u5317\u5965\u306B\u5E83\u5927\u306A\u5730\u3092\u6301\u3064\u304C\u3001\u4E5D\u6238\u3068\u5927\u6D66\u3092\u62B1\u3048\u308B\u3002", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  kunohe: { id: "kunohe", name: "\u4E5D\u6238\u5BB6", color: "#7A4A5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  shiba: { id: "shiba", name: "\u65AF\u6CE2\u5BB6", color: "#8C6B8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  namioka: { id: "namioka", name: "\u6D6A\u5CA1\u5317\u7560\u5BB6", color: "#6B8C8C", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  oura: { id: "oura", name: "\u5927\u6D66\u5BB6", color: "#4A8C7A", mon: "\u6728\u74DC", gold: 2600, prestige: 50, mobilization: 1 },
-  mogami: { id: "mogami", name: "\u6700\u4E0A\u5BB6", color: "#8C7A4A", desc: "\u51FA\u7FBD\u5C71\u5F62\u306E\u6700\u4E0A\u3002\u4F0A\u9054\u3068\u7E01\u3092\u7D50\u3073\u3064\u3064\u3001\u72EC\u7ACB\u3092\u4FDD\u3064\u3002", mon: "\u4E38\u306B\u5341", gold: 2600, prestige: 50, mobilization: 1 },
-  tendo: { id: "tendo", name: "\u5929\u7AE5\u5BB6", color: "#7A5A6B", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  daihoji: { id: "daihoji", name: "\u5927\u5B9D\u5BFA\u5BB6", color: "#5A7A6B", mon: "\u6708", gold: 2600, prestige: 50, mobilization: 1 },
-  onodera: { id: "onodera", name: "\u5C0F\u91CE\u5BFA\u5BB6", color: "#6B6B8C", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 },
-  ando: { id: "ando", name: "\u5B89\u6771\u5BB6", color: "#3C7A8C", mon: "\u62B1\u304D\u6CA2\u7009", gold: 2600, prestige: 50, mobilization: 1 },
-  honma: { id: "honma", name: "\u672C\u9593\u5BB6", color: "#8C6B5A", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  ainu_w: { id: "ainu_w", name: "\u897F\u8766\u5937\u30A2\u30A4\u30CC", color: "#5A7A8C", mon: "\u8F2A\u5B9D", gold: 1200, prestige: 40, mobilization: 1 },
-  ainu_e: { id: "ainu_e", name: "\u6771\u8766\u5937\u30A2\u30A4\u30CC", color: "#6B8C7A", mon: "\u8F2A\u5B9D", gold: 1200, prestige: 40, mobilization: 1 },
-  ainu_n: { id: "ainu_n", name: "\u5317\u8766\u5937\u30A2\u30A4\u30CC", color: "#7A8C9B", mon: "\u8F2A\u5B9D", gold: 1e3, prestige: 38, mobilization: 1 },
-  kakizaki: { id: "kakizaki", name: "\u8823\u5D0E\u5BB6", color: "#5A8C4A", desc: "\u8766\u5937\u5730\u306E\u8823\u5D0E\u3002\u30A2\u30A4\u30CC\u3068\u306E\u4EA4\u6613\u3067\u7ACB\u3064\u3001\u65E5\u672C\u306E\u5317\u306E\u679C\u3066\u3002", mon: "\u9DB4", gold: 2600, prestige: 50, mobilization: 1 },
-  ryukyu: { id: "ryukyu", name: "\u7409\u7403\u738B\u56FD", color: "#C8963C", desc: "\u7409\u7403\u738B\u56FD\u3002\u6B66\u306F\u306A\u3044\u304C\u3001\u660E\u30FB\u5357\u86EE\u3068\u306E\u4EA4\u6613\u3067\u5BCC\u3080\u3002", mon: "\u4E09\u3064\u76DB", gold: 2600, prestige: 50, mobilization: 1 }
+  so: { id: "so", name: "\u5B97\u5BB6", color: "#4A6B7A", mon: "\u5E73\u56DB\u3064\u76EE\u7D50", gold: 2600, prestige: 50, mobilization: 1 },
+  date: { id: "date", name: "\u4F0A\u9054\u5BB6", color: "#8C4A3C", desc: "\u5965\u5DDE\u4F0A\u9054\u3002\u6674\u5B97\u304C\u5BB6\u4E2D\u3092\u93AE\u3081\u3001\u5357\u5965\u306B\u529B\u3092\u84C4\u3048\u308B\u3002", mon: "\u7AF9\u306B\u96C0", gold: 2600, prestige: 50, mobilization: 1 },
+  ashina: { id: "ashina", name: "\u8606\u540D\u5BB6", color: "#4A7A8C", mon: "\u4E09\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  nihonmatsu: { id: "nihonmatsu", name: "\u4E8C\u672C\u677E\u7560\u5C71\u5BB6", color: "#6B7A5A", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  shirakawa: { id: "shirakawa", name: "\u767D\u6CB3\u7D50\u57CE\u5BB6", color: "#7A6B5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  nikaido: { id: "nikaido", name: "\u4E8C\u968E\u5802\u5BB6", color: "#8C7A6B", mon: "\u4E80\u7532", gold: 2600, prestige: 50, mobilization: 1 },
+  tamura: { id: "tamura", name: "\u7530\u6751\u5BB6", color: "#5A6B8C", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  soma: { id: "soma", name: "\u76F8\u99AC\u5BB6", color: "#8C5A7A", mon: "\u7E4B\u304E\u99AC", gold: 2600, prestige: 50, mobilization: 1 },
+  osaki: { id: "osaki", name: "\u5927\u5D0E\u5BB6", color: "#6B5A4A", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  kokubun: { id: "kokubun", name: "\u56FD\u5206\u5BB6", color: "#7A8C7A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  kasai: { id: "kasai", name: "\u845B\u897F\u5BB6", color: "#5A8C5A", mon: "\u67CF", gold: 2600, prestige: 50, mobilization: 1 },
+  abe: { id: "abe", name: "\u963F\u66FD\u6CBC\u5BB6", color: "#8C8C6B", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  nanbu: { id: "nanbu", name: "\u5357\u90E8\u5BB6", color: "#3C5A7A", desc: "\u9678\u5965\u4E09\u6238\u306E\u5357\u90E8\u3002\u5317\u5965\u306B\u5E83\u5927\u306A\u5730\u3092\u6301\u3064\u304C\u3001\u4E5D\u6238\u3068\u5927\u6D66\u3092\u62B1\u3048\u308B\u3002", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  kunohe: { id: "kunohe", name: "\u4E5D\u6238\u5BB6", color: "#7A4A5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  shiba: { id: "shiba", name: "\u65AF\u6CE2\u5BB6", color: "#8C6B8C", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  namioka: { id: "namioka", name: "\u6D6A\u5CA1\u5317\u7560\u5BB6", color: "#6B8C8C", mon: "\u5272\u308A\u83F1", gold: 2600, prestige: 50, mobilization: 1 },
+  oura: { id: "oura", name: "\u5927\u6D66\u5BB6", color: "#4A8C7A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  mogami: { id: "mogami", name: "\u6700\u4E0A\u5BB6", color: "#8C7A4A", desc: "\u51FA\u7FBD\u5C71\u5F62\u306E\u6700\u4E0A\u3002\u4F0A\u9054\u3068\u7E01\u3092\u7D50\u3073\u3064\u3064\u3001\u72EC\u7ACB\u3092\u4FDD\u3064\u3002", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  tendo: { id: "tendo", name: "\u5929\u7AE5\u5BB6", color: "#7A5A6B", mon: "\u4E8C\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
+  daihoji: { id: "daihoji", name: "\u5927\u5B9D\u5BFA\u5BB6", color: "#5A7A6B", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  onodera: { id: "onodera", name: "\u5C0F\u91CE\u5BFA\u5BB6", color: "#6B6B8C", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  ando: { id: "ando", name: "\u5B89\u6771\u5BB6", color: "#3C7A8C", mon: "\u6A9C\u6247", gold: 2600, prestige: 50, mobilization: 1 },
+  honma: { id: "honma", name: "\u672C\u9593\u5BB6", color: "#8C6B5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  ainu_w: { id: "ainu_w", name: "\u897F\u8766\u5937\u30A2\u30A4\u30CC", color: "#5A7A8C", mon: "", gold: 1200, prestige: 40, mobilization: 1 },
+  ainu_e: { id: "ainu_e", name: "\u6771\u8766\u5937\u30A2\u30A4\u30CC", color: "#6B8C7A", mon: "", gold: 1200, prestige: 40, mobilization: 1 },
+  ainu_n: { id: "ainu_n", name: "\u5317\u8766\u5937\u30A2\u30A4\u30CC", color: "#7A8C9B", mon: "", gold: 1e3, prestige: 38, mobilization: 1 },
+  kakizaki: { id: "kakizaki", name: "\u8823\u5D0E\u5BB6", color: "#5A8C4A", desc: "\u8766\u5937\u5730\u306E\u8823\u5D0E\u3002\u30A2\u30A4\u30CC\u3068\u306E\u4EA4\u6613\u3067\u7ACB\u3064\u3001\u65E5\u672C\u306E\u5317\u306E\u679C\u3066\u3002", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  ryukyu: { id: "ryukyu", name: "\u7409\u7403\u738B\u56FD", color: "#C8963C", desc: "\u7409\u7403\u738B\u56FD\u3002\u6B66\u306F\u306A\u3044\u304C\u3001\u660E\u30FB\u5357\u86EE\u3068\u306E\u4EA4\u6613\u3067\u5BCC\u3080\u3002", mon: "", gold: 2600, prestige: 50, mobilization: 1 }
 };
 
 // src/data/generals.js
@@ -7454,6 +7438,149 @@ function \u76F8\u5834(s2, c, kind) {
 }
 var \u8CB7\u5024 = (s2, c, kind, n) => Math.ceil(\u76F8\u5834(s2, c, kind).buy * Math.max(0, n));
 var \u58F2\u5024 = (s2, c, kind, n) => Math.floor(\u76F8\u5834(s2, c, kind).sell * Math.max(0, n));
+
+// src/core/town.js
+var \u624B\u306E\u5C4A\u304F\u9593 = 130;
+function \u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(g, t, fid) {
+  const tx = px(t.lon), ty = py(t.lat);
+  let \u96A3 = null, bd = 1e9;
+  for (const c of g.castles || []) {
+    const d = Math.hypot(c.x - tx, c.y - ty);
+    if (d < bd) {
+      bd = d;
+      \u96A3 = c;
+    }
+  }
+  if (!\u96A3 || bd > \u624B\u306E\u5C4A\u304F\u9593) return { ok: false, why: "\u8FD1\u304F\u306B\u57CE\u304C\u306A\u304F\u3001\u8A71\u3092\u901A\u3059\u7B4B\u304C\u306A\u3044" };
+  if (\u96A3.faction === fid) return { ok: true, why: "", \u96A3 };
+  const \u540D = ((g.factions || {})[\u96A3.faction] || {}).name || "\u4ED6\u5BB6";
+  return { ok: false, why: `${\u96A3.name}\u3092\u62BC\u3055\u3048\u308B${\u540D}\u306E\u571F\u5730\u3002${\u96A3.name}\u3092\u843D\u3068\u3055\u306D\u3070\u8A71\u306F\u901A\u3089\u306A\u3044`, \u96A3 };
+}
+var \u753A\u306E\u8272 = {
+  \u6E2F: "#3C6E8C",
+  \u6C34\u8ECD\u8846: "#2F5D8C",
+  \u5546\u696D\u90FD\u5E02: "#B08A3A",
+  \u753A: "#8A7A5E",
+  \u5BFA\u793E: "#8C5A6E",
+  \u5FCD\u3073\u306E\u91CC: "#5A6E5A",
+  \u9271\u5C71: "#6E6A5E"
+};
+function drawTownMark(ctx, kind, x, y, r, col) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = col;
+  ctx.strokeStyle = col;
+  ctx.lineWidth = Math.max(0.9, r * 0.18);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  if (kind === "\u6E2F" || kind === "\u6C34\u8ECD\u8846") {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.85, -r * 0.05);
+    ctx.lineTo(r * 0.85, -r * 0.05);
+    ctx.lineTo(r * 0.5, r * 0.5);
+    ctx.lineTo(-r * 0.5, r * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    if (kind === "\u6C34\u8ECD\u8846") {
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.12);
+      ctx.lineTo(0, -r * 0.95);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(r * 0.06, -r * 0.9);
+      ctx.lineTo(r * 0.72, -r * 0.62);
+      ctx.lineTo(r * 0.06, -r * 0.38);
+      ctx.closePath();
+      ctx.fill();
+    }
+  } else if (kind === "\u5546\u696D\u90FD\u5E02") {
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.85, 0, 7);
+    ctx.fill();
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.rect(-r * 0.26, -r * 0.26, r * 0.52, r * 0.52);
+    ctx.fill();
+    ctx.restore();
+  } else if (kind === "\u753A") {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.95, r * 0.25);
+    ctx.lineTo(-r * 0.35, -r * 0.55);
+    ctx.lineTo(r * 0.25, r * 0.25);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.15, r * 0.55);
+    ctx.lineTo(r * 0.4, -r * 0.15);
+    ctx.lineTo(r * 0.95, r * 0.55);
+    ctx.closePath();
+    ctx.fill();
+  } else if (kind === "\u5BFA\u793E") {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.95, -r * 0.55);
+    ctx.lineTo(r * 0.95, -r * 0.55);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.75, -r * 0.22);
+    ctx.lineTo(r * 0.75, -r * 0.22);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.5, -r * 0.5);
+    ctx.lineTo(-r * 0.62, r * 0.8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(r * 0.5, -r * 0.5);
+    ctx.lineTo(r * 0.62, r * 0.8);
+    ctx.stroke();
+  } else if (kind === "\u5FCD\u3073\u306E\u91CC") {
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4;
+      const rr = i % 2 ? r * 0.3 : r * 0.95;
+      const px2 = Math.cos(a) * rr, py2 = Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(px2, py2);
+      else ctx.lineTo(px2, py2);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.2, 0, 7);
+    ctx.fill();
+    ctx.restore();
+  } else if (kind === "\u9271\u5C71") {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.95, r * 0.6);
+    ctx.lineTo(-r * 0.15, -r * 0.7);
+    ctx.lineTo(r * 0.4, r * 0.05);
+    ctx.lineTo(r * 0.95, r * 0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.42, r * 0.6);
+    ctx.lineTo(-r * 0.42, r * 0.12);
+    ctx.arc(-r * 0.18, r * 0.12, r * 0.24, Math.PI, 0);
+    ctx.lineTo(r * 0.06, r * 0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  } else {
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.7, 0, 7);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+function \u753A\u306E\u69D8\u5B50(g, t) {
+  const st = (g.specials || {})[t.id] || {};
+  const \u8ABC = st.faction && st.state && st.state !== "\u4E2D\u7ACB" ? st : null;
+  const \u540D = \u8ABC ? ((g.factions || {})[\u8ABC.faction] || {}).name : null;
+  return { st, \u8ABC, \u4E3B\u540D: \u540D, \u8272: \u8ABC ? ((g.factions || {})[\u8ABC.faction] || {}).color : \u753A\u306E\u8272[t.kind] || "#55524A" };
+}
 
 // src/govern/commands.js
 function runCommand(prev, castleId, cmd, genId, g) {
@@ -10546,6 +10673,7 @@ function drawMon(ctx, kind, x, y, r, col, sub) {
   ctx.fillStyle = col;
   ctx.strokeStyle = col;
   ctx.lineWidth = Math.max(0.8, r * 0.13);
+  const \u767D = sub || "#fff";
   const circle = (cx, cy, rr, fill) => {
     ctx.beginPath();
     ctx.arc(cx, cy, rr, 0, 7);
@@ -10563,109 +10691,509 @@ function drawMon(ctx, kind, x, y, r, col, sub) {
     ctx.fill();
     ctx.restore();
   };
-  if (kind === "\u6728\u74DC") {
-    for (let i = 0; i < 5; i++) petal(i * Math.PI * 2 / 5, r * 0.92, r * 0.42);
-    ctx.fillStyle = sub || "#fff";
-    circle(0, 0, r * 0.26, true);
-  } else if (kind === "\u4E8C\u982D\u6CE2") {
-    for (let i = 0; i < 4; i++) petal(i * Math.PI * 2 / 4 + Math.PI / 4, r * 0.95, r * 0.5);
-    ctx.fillStyle = sub || "#fff";
-    circle(0, 0, r * 0.24, true);
-  } else if (kind === "\u8D64\u9CE5") {
+  const \u83F1 = (cx, cy, w, h, fill) => {
     ctx.beginPath();
-    ctx.moveTo(-r * 0.7, r * 0.5);
-    ctx.lineTo(0, -r * 0.85);
-    ctx.lineTo(r * 0.7, r * 0.5);
+    ctx.moveTo(cx, cy - h);
+    ctx.lineTo(cx + w, cy);
+    ctx.lineTo(cx, cy + h);
+    ctx.lineTo(cx - w, cy);
     ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = sub || "#fff";
+    if (fill === false) ctx.stroke();
+    else ctx.fill();
+  };
+  const \u5F15\u4E21 = (n) => {
+    circle(0, 0, r * 0.9, false);
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(-r * 0.3, r * 0.28);
-    ctx.lineTo(0, -r * 0.3);
-    ctx.lineTo(r * 0.3, r * 0.28);
-    ctx.closePath();
-    ctx.fill();
-  } else if (kind === "\u56DB\u3064\u83F1") {
-    for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
-      ctx.beginPath();
-      ctx.moveTo(dx * r * 0.5, dy * r * 0.5 - r * 0.4 * Math.abs(dy) - r * 0.28 * Math.abs(dx) * 0);
-      const cx = dx * r * 0.48, cy = dy * r * 0.48;
-      ctx.moveTo(cx, cy - r * 0.4);
-      ctx.lineTo(cx + r * 0.26, cy);
-      ctx.lineTo(cx, cy + r * 0.4);
-      ctx.lineTo(cx - r * 0.26, cy);
-      ctx.closePath();
-      ctx.fill();
+    ctx.arc(0, 0, r * 0.9, 0, 7);
+    ctx.clip();
+    const \u5E45 = r * (n === 1 ? 0.34 : n === 2 ? 0.24 : 0.18);
+    const \u9593 = r * (n === 1 ? 0 : n === 2 ? 0.42 : 0.5);
+    for (let i = 0; i < n; i++) {
+      const cy = (i - (n - 1) / 2) * \u9593;
+      ctx.fillRect(-r, cy - \u5E45 / 2, r * 2, \u5E45);
     }
-  } else if (kind === "\u4E09\u9C57") {
-    for (const [dx, dy] of [[0, -0.42], [-0.42, 0.36], [0.42, 0.36]]) {
-      ctx.beginPath();
-      ctx.moveTo(dx * r, dy * r - r * 0.34);
-      ctx.lineTo(dx * r + r * 0.36, dy * r + r * 0.3);
-      ctx.lineTo(dx * r - r * 0.36, dy * r + r * 0.3);
-      ctx.closePath();
-      ctx.fill();
-    }
-  } else if (kind === "\u8475") {
-    for (let i = 0; i < 3; i++) {
+    ctx.restore();
+  };
+  const \u76EE\u7D50 = (\u5E73) => {
+    const w = r * 0.36, d = \u5E73 ? r * 0.44 : r * 0.42;
+    for (const [dx, dy] of \u5E73 ? [[-1, 0], [1, 0], [0, -1], [0, 1]] : [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
       ctx.save();
-      ctx.rotate(i * Math.PI * 2 / 3);
+      ctx.translate(dx * d, dy * d);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-w / 2, -w / 2, w, w);
+      ctx.fillStyle = \u767D;
+      ctx.fillRect(-w * 0.22, -w * 0.22, w * 0.44, w * 0.44);
+      ctx.fillStyle = col;
+      ctx.restore();
+    }
+  };
+  const \u5DF4 = (n) => {
+    for (let i = 0; i < n; i++) {
+      ctx.save();
+      ctx.rotate(i * Math.PI * 2 / n);
       ctx.beginPath();
-      ctx.moveTo(0, -r * 0.22);
-      ctx.bezierCurveTo(r * 0.55, -r * 0.9, r * 0.62, -r * 0.2, 0, -r * 0.22);
-      ctx.bezierCurveTo(-r * 0.62, -r * 0.2, -r * 0.55, -r * 0.9, 0, -r * 0.22);
+      ctx.arc(0, -r * 0.44, r * 0.31, -Math.PI * 0.5, Math.PI * 0.72);
+      ctx.bezierCurveTo(r * 0.34, r * 0.16, r * 0.2, r * 0.36, 0, r * 0.3);
+      ctx.bezierCurveTo(-r * 0.05, r * 0.2, r * 0.02, r * 0.06, -r * 0.02, -r * 0.06);
+      ctx.bezierCurveTo(-r * 0.16, -r * 0.16, -r * 0.29, -r * 0.28, -r * 0.29, -r * 0.44);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
     }
-  } else if (kind === "\u4E09\u3064\u76DB") {
-    for (const [dx, dy] of [[0, -0.44], [-0.42, 0.34], [0.42, 0.34]]) circle(dx * r, dy * r, r * 0.34, true);
-  } else if (kind === "\u7B39") {
-    for (const [dx, dy] of [[0, -0.42], [-0.4, 0.32], [0.4, 0.32]]) {
+  };
+  const \u661F = (pts, rr) => {
+    for (const [cx, cy] of pts) circle(cx * r, cy * r, rr * r, true);
+  };
+  switch (kind) {
+    /* ── 織田・その庶流 */
+    case "\u6728\u74DC":
+      for (let i = 0; i < 5; i++) petal(i * Math.PI * 2 / 5, r * 0.92, r * 0.42);
+      ctx.fillStyle = \u767D;
+      circle(0, 0, r * 0.26, true);
+      break;
+    case "\u6A2A\u6728\u74DC":
       ctx.save();
-      ctx.translate(dx * r, dy * r);
-      for (let i = 0; i < 4; i++) petal(i * Math.PI * 2 / 4, r * 0.34, r * 0.17);
+      ctx.scale(1.18, 0.86);
+      for (let i = 0; i < 5; i++) petal(i * Math.PI * 2 / 5, r * 0.86, r * 0.4);
       ctx.restore();
-    }
-  } else if (kind === "\u6708") {
-    circle(0, 0, r * 0.32, true);
-    for (let i = 0; i < 8; i++) {
-      const a = i * Math.PI * 2 / 8;
-      circle(Math.cos(a) * r * 0.66, Math.sin(a) * r * 0.66, r * 0.17, true);
-    }
-  } else if (kind === "\u4E38\u306B\u5341") {
-    circle(0, 0, r * 0.82, false);
-    ctx.lineWidth = Math.max(1, r * 0.2);
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 0.5);
-    ctx.lineTo(0, r * 0.5);
-    ctx.moveTo(-r * 0.5, 0);
-    ctx.lineTo(r * 0.5, 0);
-    ctx.stroke();
-  } else if (kind === "\u9DB4") {
-    circle(0, 0, r * 0.82, false);
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 0.46);
-    ctx.lineTo(r * 0.4, r * 0.34);
-    ctx.lineTo(-r * 0.4, r * 0.34);
-    ctx.closePath();
-    ctx.fill();
-  } else if (kind === "\u62B1\u304D\u6CA2\u7009") {
-    petal(0, r * 0.9, r * 0.34);
-    petal(Math.PI * 0.72, r * 0.66, r * 0.26);
-    petal(-Math.PI * 0.72, r * 0.66, r * 0.26);
-  } else if (kind === "\u8F2A\u5B9D") {
-    circle(0, 0, r * 0.78, false);
-    for (let i = 0; i < 8; i++) {
-      const a = i * Math.PI * 2 / 8;
+      ctx.fillStyle = \u767D;
+      circle(0, 0, r * 0.24, true);
+      break;
+    case "\u4E09\u3064\u76DB\u6728\u74DC":
+      for (const [dx, dy] of [[0, -0.42], [-0.4, 0.32], [0.4, 0.32]]) {
+        ctx.save();
+        ctx.translate(dx * r, dy * r);
+        for (let i = 0; i < 4; i++) petal(i * Math.PI * 2 / 4, r * 0.34, r * 0.17);
+        ctx.restore();
+      }
+      break;
+    /* ── 引両。足利とその一門、そして守護の家に多い */
+    case "\u4E00\u3064\u5F15\u4E21":
+      \u5F15\u4E21(1);
+      break;
+    case "\u4E8C\u3064\u5F15\u4E21":
+      \u5F15\u4E21(2);
+      break;
+    // 足利将軍家・一色・赤松・最上・里見
+    case "\u4E09\u3064\u5F15\u4E21":
+      \u5F15\u4E21(3);
+      break;
+    // 蘆名・成田・吉川
+    /* ── 目結。佐々木一門 */
+    case "\u56DB\u3064\u76EE\u7D50":
+      \u76EE\u7D50(false);
+      break;
+    // 六角・京極
+    case "\u5E73\u56DB\u3064\u76EE\u7D50":
+      \u76EE\u7D50(true);
+      break;
+    // 尼子・宗
+    /* ── 巴 */
+    case "\u4E09\u3064\u5DF4":
+      \u5DF4(3);
+      break;
+    // 宇都宮・小早川・佐野・結城
+    case "\u4E8C\u3064\u5DF4":
+      \u5DF4(2);
+      break;
+    /* ── 星と曜 */
+    case "\u4E00\u6587\u5B57\u4E09\u661F":
+      \u661F([[0, 0.42], [-0.46, 0.42], [0.46, 0.42]], 0.2);
+      ctx.fillRect(-r * 0.62, -r * 0.62, r * 1.24, r * 0.22);
+      break;
+    case "\u4E09\u3064\u661F":
+      \u661F([[0, -0.42], [-0.44, 0.34], [0.44, 0.34]], 0.24);
+      break;
+    // 松浦
+    case "\u6708\u661F":
       ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * r * 0.3, Math.sin(a) * r * 0.3);
-      ctx.lineTo(Math.cos(a) * r * 0.78, Math.sin(a) * r * 0.78);
+      ctx.arc(0, r * 0.12, r * 0.62, Math.PI * 0.15, Math.PI * 0.85, true);
+      ctx.arc(r * 0.16, r * 0.02, r * 0.5, Math.PI * 0.85, Math.PI * 0.15);
+      ctx.closePath();
+      ctx.fill();
+      circle(0, -r * 0.52, r * 0.22, true);
+      break;
+    case "\u4E03\u66DC":
+      circle(0, 0, r * 0.28, true);
+      for (let i = 0; i < 6; i++) {
+        const a = i * Math.PI * 2 / 6 - Math.PI / 2;
+        circle(Math.cos(a) * r * 0.62, Math.sin(a) * r * 0.62, r * 0.2, true);
+      }
+      break;
+    case "\u4E5D\u66DC":
+      circle(0, 0, r * 0.3, true);
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI * 2 / 8;
+        circle(Math.cos(a) * r * 0.66, Math.sin(a) * r * 0.66, r * 0.17, true);
+      }
+      break;
+    /* ── 菱 */
+    case "\u56DB\u3064\u5272\u83F1":
+      for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) \u83F1(dx * r * 0.46, dy * r * 0.46, r * 0.26, r * 0.4);
+      break;
+    case "\u5272\u308A\u83F1":
+      \u83F1(0, 0, r * 0.86, r * 0.9, false);
+      \u83F1(0, -r * 0.44, r * 0.24, r * 0.34);
+      \u83F1(0, r * 0.44, r * 0.24, r * 0.34);
+      \u83F1(-r * 0.44, 0, r * 0.24, r * 0.34);
+      \u83F1(r * 0.44, 0, r * 0.24, r * 0.34);
+      break;
+    case "\u5927\u5185\u83F1":
+      \u83F1(0, 0, r * 0.9, r * 0.92);
+      ctx.fillStyle = \u767D;
+      \u83F1(0, 0, r * 0.5, r * 0.52);
+      ctx.fillStyle = col;
+      \u83F1(0, 0, r * 0.24, r * 0.26);
+      break;
+    case "\u4E09\u968E\u83F1":
+      \u83F1(0, -r * 0.5, r * 0.3, r * 0.28);
+      \u83F1(0, 0, r * 0.5, r * 0.28);
+      \u83F1(0, r * 0.5, r * 0.7, r * 0.28);
+      break;
+    /* ── 草花 */
+    case "\u8475":
+      for (let i = 0; i < 3; i++) {
+        ctx.save();
+        ctx.rotate(i * Math.PI * 2 / 3);
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.22);
+        ctx.bezierCurveTo(r * 0.55, -r * 0.9, r * 0.62, -r * 0.2, 0, -r * 0.22);
+        ctx.bezierCurveTo(-r * 0.62, -r * 0.2, -r * 0.55, -r * 0.9, 0, -r * 0.22);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      break;
+    case "\u9162\u6F3F\u8349":
+      for (let i = 0; i < 7; i++) {
+        const a = i * Math.PI * 2 / 7;
+        ctx.save();
+        ctx.rotate(a);
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.52, r * 0.22, r * 0.34, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      circle(0, 0, r * 0.16, true);
+      break;
+    case "\u4E0B\u304C\u308A\u85E4":
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.6, -r * 0.78);
+      ctx.lineTo(r * 0.6, -r * 0.78);
       ctx.stroke();
-    }
-    circle(0, 0, r * 0.24, true);
-  } else {
-    circle(0, 0, r * 0.7, true);
+      for (const sgn of [-1, 1]) {
+        for (let i = 0; i < 3; i++) {
+          const cx = sgn * (r * 0.2 + i * r * 0.16), cy = -r * 0.5 + i * r * 0.3;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, r * 0.15, r * 0.24, sgn * 0.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      break;
+    case "\u6885\u9262":
+      circle(0, 0, r * 0.26, true);
+      for (let i = 0; i < 5; i++) {
+        const a = i * Math.PI * 2 / 5 - Math.PI / 2;
+        circle(Math.cos(a) * r * 0.6, Math.sin(a) * r * 0.6, r * 0.26, true);
+      }
+      break;
+    case "\u64AB\u5B50":
+      for (let i = 0; i < 5; i++) {
+        ctx.save();
+        ctx.rotate(i * Math.PI * 2 / 5);
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.9);
+        ctx.lineTo(r * 0.16, -r * 0.5);
+        ctx.lineTo(0, -r * 0.62);
+        ctx.lineTo(-r * 0.16, -r * 0.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      circle(0, 0, r * 0.2, true);
+      break;
+    case "\u6850":
+      for (const [dx, n, h] of [[-0.44, 3, 0.5], [0, 5, 0.72], [0.44, 3, 0.5]]) {
+        for (let i = 0; i < n; i++) {
+          const cx = dx * r + (i - (n - 1) / 2) * r * 0.12;
+          ctx.beginPath();
+          ctx.ellipse(cx, -r * (0.2 + h * 0.5), r * 0.05, r * h * 0.34, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.beginPath();
+        ctx.ellipse(dx * r, r * 0.34, r * 0.24, r * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    case "\u6CA2\u7009":
+      petal(0, r * 0.9, r * 0.34);
+      petal(Math.PI * 0.72, r * 0.66, r * 0.26);
+      petal(-Math.PI * 0.72, r * 0.66, r * 0.26);
+      break;
+    case "\u6854\u6897":
+      for (let i = 0; i < 5; i++) {
+        const a = i * Math.PI * 2 / 5 - Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a - 0.34) * r * 0.9, Math.sin(a - 0.34) * r * 0.9);
+        ctx.lineTo(Math.cos(a) * r * 0.95, Math.sin(a) * r * 0.95);
+        ctx.lineTo(Math.cos(a + 0.34) * r * 0.9, Math.sin(a + 0.34) * r * 0.9);
+        ctx.closePath();
+        ctx.fill();
+      }
+      break;
+    case "\u67CF":
+      for (let i = 0; i < 3; i++) {
+        ctx.save();
+        ctx.rotate(i * Math.PI * 2 / 3);
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.2);
+        ctx.bezierCurveTo(r * 0.4, -r * 0.5, r * 0.36, -r * 0.95, 0, -r * 0.88);
+        ctx.bezierCurveTo(-r * 0.36, -r * 0.95, -r * 0.4, -r * 0.5, 0, -r * 0.2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      break;
+    case "\u5510\u82B1":
+      for (let i = 0; i < 5; i++) petal(i * Math.PI * 2 / 5, r * 0.92, r * 0.44);
+      ctx.fillStyle = \u767D;
+      circle(0, 0, r * 0.34, true);
+      ctx.fillStyle = col;
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI * 2 / 4;
+        circle(Math.cos(a) * r * 0.17, Math.sin(a) * r * 0.17, r * 0.11, true);
+      }
+      break;
+    /* ── 器物・鳥獣 */
+    case "\u8D64\u9CE5":
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.7, r * 0.5);
+      ctx.lineTo(0, -r * 0.85);
+      ctx.lineTo(r * 0.7, r * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = \u767D;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.3, r * 0.28);
+      ctx.lineTo(0, -r * 0.3);
+      ctx.lineTo(r * 0.3, r * 0.28);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "\u4E09\u3064\u9C57":
+      for (const [dx, dy] of [[0, -0.42], [-0.42, 0.36], [0.42, 0.36]]) {
+        ctx.beginPath();
+        ctx.moveTo(dx * r, dy * r - r * 0.34);
+        ctx.lineTo(dx * r + r * 0.36, dy * r + r * 0.3);
+        ctx.lineTo(dx * r - r * 0.36, dy * r + r * 0.3);
+        ctx.closePath();
+        ctx.fill();
+      }
+      break;
+    case "\u4E38\u306B\u5341":
+      circle(0, 0, r * 0.86, false);
+      ctx.lineWidth = Math.max(1, r * 0.2);
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.52);
+      ctx.lineTo(0, r * 0.52);
+      ctx.moveTo(-r * 0.52, 0);
+      ctx.lineTo(r * 0.52, 0);
+      ctx.stroke();
+      break;
+    case "\u6247":
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.72);
+      ctx.arc(0, r * 0.72, r * 1.4, -Math.PI * 0.78, -Math.PI * 0.22);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = \u767D;
+      ctx.lineWidth = Math.max(0.8, r * 0.1);
+      for (let i = 0; i < 4; i++) {
+        const a = -Math.PI * 0.78 + (i + 1) * (Math.PI * 0.56 / 5);
+        ctx.beginPath();
+        ctx.moveTo(0, r * 0.72);
+        ctx.lineTo(Math.cos(a) * r * 1.4, r * 0.72 + Math.sin(a) * r * 1.4);
+        ctx.stroke();
+      }
+      ctx.fillStyle = \u767D;
+      circle(0, -r * 0.24, r * 0.2, true);
+      break;
+    case "\u6A9C\u6247":
+      for (let i = 0; i < 6; i++) {
+        const a = -Math.PI * 0.72 + i * (Math.PI * 0.44 / 5);
+        ctx.save();
+        ctx.translate(0, r * 0.6);
+        ctx.rotate(a + Math.PI / 2);
+        ctx.fillRect(-r * 0.07, -r * 1.3, r * 0.14, r * 1.3);
+        ctx.restore();
+      }
+      circle(0, r * 0.6, r * 0.14, true);
+      break;
+    case "\u6298\u6577\u306B\u4E09\u6587\u5B57":
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.82, -r * 0.7);
+      ctx.lineTo(r * 0.82, -r * 0.7);
+      ctx.lineTo(r * 0.62, r * 0.78);
+      ctx.lineTo(-r * 0.62, r * 0.78);
+      ctx.closePath();
+      ctx.stroke();
+      for (let i = 0; i < 3; i++) ctx.fillRect(-r * 0.4, -r * 0.42 + i * r * 0.38, r * 0.8, r * 0.15);
+      break;
+    case "\u65E5\u8DB3":
+      circle(0, 0, r * 0.3, true);
+      for (let i = 0; i < 12; i++) {
+        const a = i * Math.PI * 2 / 12;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r * 0.3, Math.sin(a) * r * 0.3);
+        ctx.lineTo(Math.cos(a - 0.13) * r * 0.95, Math.sin(a - 0.13) * r * 0.95);
+        ctx.lineTo(Math.cos(a + 0.13) * r * 0.95, Math.sin(a + 0.13) * r * 0.95);
+        ctx.closePath();
+        ctx.fill();
+      }
+      break;
+    case "\u674F\u8449":
+      for (const sgn of [-1, 1]) {
+        ctx.save();
+        ctx.scale(sgn, 1);
+        ctx.beginPath();
+        ctx.moveTo(r * 0.1, r * 0.72);
+        ctx.bezierCurveTo(r * 0.85, r * 0.2, r * 0.7, -r * 0.8, r * 0.06, -r * 0.5);
+        ctx.bezierCurveTo(r * 0.34, -r * 0.2, r * 0.3, r * 0.3, r * 0.1, r * 0.72);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      break;
+    case "\u4E8C\u982D\u7ACB\u6CE2":
+      for (const dy of [-0.34, 0.3]) {
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.9, r * (dy + 0.3));
+        ctx.bezierCurveTo(-r * 0.4, r * (dy - 0.5), r * 0.4, r * (dy + 0.5), r * 0.9, r * (dy - 0.3));
+        ctx.lineTo(r * 0.9, r * (dy + 0.1));
+        ctx.bezierCurveTo(r * 0.4, r * (dy + 0.7), -r * 0.4, r * (dy - 0.3), -r * 0.9, r * (dy + 0.5));
+        ctx.closePath();
+        ctx.fill();
+      }
+      break;
+    case "\u7AF9\u306B\u96C0":
+      circle(0, 0, r * 0.9, false);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.9, 0, 7);
+      ctx.clip();
+      for (const sgn of [-1, 1]) {
+        ctx.lineWidth = Math.max(0.9, r * 0.12);
+        ctx.beginPath();
+        ctx.moveTo(sgn * r * 0.62, r * 0.9);
+        ctx.quadraticCurveTo(sgn * r * 0.5, -r * 0.2, sgn * r * 0.16, -r * 0.86);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.12, r * 0.3, r * 0.22, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.26, r * 0.06);
+      ctx.lineTo(-r * 0.56, -r * 0.16);
+      ctx.lineTo(-r * 0.24, -r * 0.14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      break;
+    case "\u7E4B\u304E\u99AC":
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.08, r * 0.06, r * 0.46, r * 0.26, -0.06, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(r * 0.2, -r * 0.06);
+      ctx.quadraticCurveTo(r * 0.56, -r * 0.28, r * 0.6, -r * 0.66);
+      ctx.lineTo(r * 0.78, -r * 0.6);
+      ctx.quadraticCurveTo(r * 0.74, -r * 0.16, r * 0.36, r * 0.16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(r * 0.72, -r * 0.72, r * 0.2, r * 0.12, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = Math.max(1, r * 0.11);
+      for (const [dx, sw] of [[-0.42, -0.08], [-0.24, 0.04], [0.1, -0.06], [0.28, 0.06]]) {
+        ctx.beginPath();
+        ctx.moveTo(dx * r, r * 0.24);
+        ctx.lineTo((dx + sw) * r, r * 0.82);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.5, -r * 0.08);
+      ctx.quadraticCurveTo(-r * 0.86, r * 0.06, -r * 0.8, r * 0.5);
+      ctx.quadraticCurveTo(-r * 0.66, r * 0.16, -r * 0.44, r * 0.14);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case "\u5DDE\u6D5C":
+      for (const [dx, dy, rr] of [[0, -0.3, 0.42], [-0.46, 0.3, 0.36], [0.46, 0.3, 0.36]]) {
+        circle(dx * r, dy * r, rr * r, true);
+      }
+      break;
+    case "\u4E80\u7532":
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = i * Math.PI * 2 / 6 - Math.PI / 2;
+        const px2 = Math.cos(a) * r * 0.88, py2 = Math.sin(a) * r * 0.88;
+        if (i === 0) ctx.moveTo(px2, py2);
+        else ctx.lineTo(px2, py2);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      \u83F1(0, 0, r * 0.3, r * 0.34);
+      break;
+    case "\u9DF9\u306E\u7FBD":
+      for (const sgn of [-1, 1]) {
+        ctx.save();
+        ctx.translate(sgn * r * 0.28, 0);
+        ctx.rotate(sgn * 0.16);
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.9);
+        ctx.quadraticCurveTo(r * 0.26, -r * 0.1, r * 0.06, r * 0.86);
+        ctx.quadraticCurveTo(-r * 0.2, -r * 0.1, 0, -r * 0.9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      break;
+    case "\u8F2A\u5B9D":
+      circle(0, 0, r * 0.78, false);
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI * 2 / 8;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r * 0.3, Math.sin(a) * r * 0.3);
+        ctx.lineTo(Math.cos(a) * r * 0.78, Math.sin(a) * r * 0.78);
+        ctx.stroke();
+      }
+      circle(0, 0, r * 0.24, true);
+      break;
+    case "\u516B\u54AB\u70CF":
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.1, r * 0.1, r * 0.46, r * 0.32, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      circle(r * 0.36, -r * 0.3, r * 0.24, true);
+      ctx.beginPath();
+      ctx.moveTo(r * 0.56, -r * 0.34);
+      ctx.lineTo(r * 0.92, -r * 0.24);
+      ctx.lineTo(r * 0.56, -r * 0.14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.lineWidth = Math.max(0.9, r * 0.1);
+      for (const dx of [-0.34, -0.06]) {
+        ctx.beginPath();
+        ctx.moveTo(dx * r, r * 0.34);
+        ctx.lineTo(dx * r - r * 0.04, r * 0.86);
+        ctx.stroke();
+      }
+      break;
+    default:
+      circle(0, 0, r * 0.72, false);
+      circle(0, 0, r * 0.3, true);
+      break;
   }
   ctx.restore();
 }
@@ -15991,6 +16519,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [modal, setModal] = useState6(null);
   const [battle, setBattle] = useState6(null);
   const [sea, setSea] = useState6(null);
+  const [townSel, setTownSel] = useState6(null);
   const [raid, setRaid] = useState6(null);
   const [breakVow, setBreakVow] = useState6(null);
   const [sally, setSally] = useState6(null);
@@ -16110,21 +16639,43 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     for (const t of TOWNS) {
       const [x, y] = S(t.x, t.y);
-      ctx.fillStyle = "#55524A";
+      const \u69D8 = \u753A\u306E\u69D8\u5B50(g, t);
+      const r = \u69D8.\u8ABC ? 6.6 : 5.4;
+      ctx.fillStyle = "rgba(0,0,0,0.14)";
       ctx.beginPath();
-      ctx.arc(x, y, 3.6, 0, 7);
+      ctx.arc(x + 0.8, y + 1.2, r + 2.6, 0, 7);
       ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(x, y, r + 2.4, 0, 7);
+      ctx.fill();
+      if (\u69D8.\u8ABC) {
+        ctx.strokeStyle = \u69D8.\u8272;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(x, y, r + 2.4, 0, 7);
+        ctx.stroke();
+      }
+      if (townSel === t.id) {
+        ctx.strokeStyle = \u69D8.\u8272;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(x, y, r + 8, 0, 7);
+        ctx.stroke();
+      }
+      drawTownMark(ctx, t.kind, x, y, r, \u69D8.\u8272);
       if (s2 > 0.6) {
         ctx.font = "12px 'Hiragino Sans',sans-serif";
         const w = ctx.measureText(t.name).width;
         ctx.fillStyle = "rgba(255,255,255,.78)";
-        ctx.fillRect(x - w / 2 - 3, y + 6, w + 6, 15);
+        ctx.fillRect(x - w / 2 - 3, y + r + 4, w + 6, 15);
         ctx.fillStyle = "#3B3A35";
-        ctx.fillText(t.name, x - w / 2, y + 18);
+        ctx.fillText(t.name, x - w / 2, y + r + 16);
         if (s2 > 1.1) {
           ctx.fillStyle = U.dim;
           ctx.font = "10px sans-serif";
-          ctx.fillText(`\uFF08${t.kind}\uFF09`, x - 22, y + 31);
+          const k = `\uFF08${t.kind}${\u69D8.\u4E3B\u540D ? `\u30FB${\u69D8.\u4E3B\u540D}` : ""}\uFF09`;
+          ctx.fillText(k, x - ctx.measureText(k).width / 2, y + r + 29);
         }
       }
     }
@@ -16290,8 +16841,25 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     if (hit) {
       setSel(hit);
+      setTownSel(null);
       setTab("\u5185\u653F");
-    } else setSel(null);
+      return;
+    }
+    let ht = null, bt = 20 / view.s;
+    for (const t of TOWNS) {
+      const dd = Math.hypot(t.x - wx, t.y - wy);
+      if (dd < bt) {
+        bt = dd;
+        ht = t.id;
+      }
+    }
+    if (ht) {
+      setTownSel(ht);
+      setSel(null);
+      return;
+    }
+    setSel(null);
+    setTownSel(null);
   };
   const zoom = (k) => setView((v) => ({ ...v, s: clamp(v.s * k, 0.28, 3.2) }));
   const focus = (id) => {
@@ -17743,6 +18311,33 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           h ? /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("b", { className: "mn" }, h.\u5BB6), /* @__PURE__ */ React6.createElement("span", { className: "num", style: { color: U.dim, marginLeft: 6 } }, h.\u5E74, "\u5E74", h.\u6708, "\u6708\uFF0F", h.\u57CE\u6570, "\u57CE\u30FB", h.\u4E07\u77F3, "\u4E07\u77F3"), /* @__PURE__ */ React6.createElement("span", { style: { color: "#B0483C", marginLeft: 6, fontSize: 11 } }, "\u4E0A\u66F8\u304D")) : /* @__PURE__ */ React6.createElement("span", { style: { color: U.dim } }, "\u7A7A\u304D")
         );
       }), /* @__PURE__ */ React6.createElement("button", { className: "btn", style: { width: "100%", marginTop: 8 }, onClick: () => setModal(null) }, "\u9589\u3058\u308B")));
+    })(),
+    townSel && !battle && !sea && (() => {
+      const t = TOWNS.find((x) => x.id === townSel);
+      if (!t) {
+        setTownSel(null);
+        return null;
+      }
+      const \u69D8 = \u753A\u306E\u69D8\u5B50(g, t);
+      const \u53EF = \u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(g, t, g.player);
+      const opts = SPECIAL_OPTIONS[t.kind] || [];
+      const \u96A3 = \u53EF.\u96A3;
+      return /* @__PURE__ */ React6.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(() => setTownSel(null)) }, /* @__PURE__ */ React6.createElement("div", { className: "card", style: { maxWidth: 430 } }, /* @__PURE__ */ React6.createElement("div", { style: { display: "flex", alignItems: "center", gap: 9, marginBottom: 6 } }, /* @__PURE__ */ React6.createElement("span", { className: "dot", style: { background: \u69D8.\u8272 } }), /* @__PURE__ */ React6.createElement("span", { className: "mn", style: { fontSize: 21 } }, t.name), /* @__PURE__ */ React6.createElement("span", { className: "pill", style: { background: \u69D8.\u8272 } }, t.kind)), /* @__PURE__ */ React6.createElement("div", { className: "row" }, /* @__PURE__ */ React6.createElement("span", null, "\u3044\u307E\u306E\u95A2\u4FC2"), /* @__PURE__ */ React6.createElement("span", { className: "v" }, \u69D8.\u8ABC ? `${\u69D8.\u4E3B\u540D}\u3068${\u69D8.\u8ABC.state}` : "\u4E2D\u7ACB")), \u69D8.st.anger > 0 && /* @__PURE__ */ React6.createElement("div", { className: "row" }, /* @__PURE__ */ React6.createElement("span", null, "\u53CD\u767A"), /* @__PURE__ */ React6.createElement("span", { className: "v" }, Math.round(\u69D8.st.anger))), \u96A3 && /* @__PURE__ */ React6.createElement("div", { className: "row" }, /* @__PURE__ */ React6.createElement("span", null, "\u3044\u3061\u3070\u3093\u8FD1\u3044\u57CE"), /* @__PURE__ */ React6.createElement("span", { className: "v" }, \u96A3.name, "\uFF08", g.factions[\u96A3.faction].name, "\uFF09")), /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginTop: 8 } }, t.kind === "\u6E2F" && "\u8239\u3092\u51FA\u3057\u3001\u5175\u7CE7\u3092\u904B\u3076\u3002\u6D77\u8DEF\u3092\u6E21\u308B\u8ECD\u306E\u652F\u3048\u3068\u306A\u308B\u3002", t.kind === "\u6C34\u8ECD\u8846" && "\u6D77\u306B\u751F\u304D\u308B\u8005\u305F\u3061\u3002\u62B1\u3048\u308C\u3070\u8ECD\u8239\u304C\u5897\u3048\u3001\u6C34\u4E3B\u306E\u6280\u91CF\u3082\u4E0A\u304C\u308B\u3002", t.kind === "\u5546\u696D\u90FD\u5E02" && "\u8AF8\u56FD\u306E\u54C1\u3068\u91D1\u306E\u96C6\u307E\u308B\u6240\u3002\u62BC\u3055\u3048\u308C\u3070\u91D1\u304C\u56DE\u308B\u3002", t.kind === "\u753A" && "\u5E02\u306E\u7ACB\u3064\u5728\u6240\u3002\u5546\u3044\u304C\u308F\u305A\u304B\u306B\u4F38\u3073\u308B\u3002", t.kind === "\u5BFA\u793E" && "\u9580\u5F92\u3068\u50E7\u5175\u3092\u62B1\u3048\u308B\u3002\u6C11\u306E\u5FC3\u3082\u3053\u3053\u306B\u5BC4\u308B\u3002", t.kind === "\u5FCD\u3073\u306E\u91CC" && "\u4EBA\u3092\u6F5C\u307E\u305B\u3001\u6575\u60C5\u3092\u63A2\u308B\u3002\u8ABF\u7565\u306E\u52A9\u3051\u3068\u306A\u308B\u3002", t.kind === "\u9271\u5C71" && "\u91D1\u9280\u3092\u6398\u308B\u3002\u6398\u308C\u3070\u6398\u308B\u307B\u3069\u91D1\u306B\u306A\u308B\u3002"), /* @__PURE__ */ React6.createElement("div", { className: "sec" }, "\u3067\u304D\u308B\u3053\u3068"), opts.map((o) => /* @__PURE__ */ React6.createElement("div", { key: o.key, style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8 } }, /* @__PURE__ */ React6.createElement("b", { style: { color: U.text } }, o.key), o.cost ? `\uFF08${o.cost}\u8CAB\uFF09` : o.once ? `\uFF08${o.once}\u8CAB\u3092\u5F97\u308B\uFF09` : "", o.desc)), /* @__PURE__ */ React6.createElement("div", { style: {
+        marginTop: 10,
+        padding: "9px 11px",
+        fontSize: 12,
+        lineHeight: 1.85,
+        background: \u53EF.ok ? "rgba(62,122,58,0.10)" : "rgba(176,72,60,0.10)",
+        borderLeft: `3px solid ${\u53EF.ok ? "#3E7A3A" : "#B0483C"}`
+      } }, \u53EF.ok ? /* @__PURE__ */ React6.createElement(React6.Fragment, null, "\u624B\u304C\u5C4A\u304D\u307E\u3059\u3002", /* @__PURE__ */ React6.createElement("b", null, \u96A3 ? \u96A3.name : "\u8FD1\u304F\u306E\u57CE"), "\u306E\u5E33\u9762\u306E\u300C\u7279\u6B8A\u52E2\u529B\u300D\u304B\u3089\u8ABC\u3092\u901A\u3058\u3089\u308C\u307E\u3059\u3002") : /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("b", { style: { color: "#B0483C" } }, "\u624B\u304C\u5C4A\u304D\u307E\u305B\u3093\u3002"), \u53EF.why, "\u3002"), /* @__PURE__ */ React6.createElement("br", null), /* @__PURE__ */ React6.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\u6E4A\u3082\u5BFA\u793E\u3082\u5FCD\u3073\u306E\u91CC\u3082\u3001\u305D\u306E\u571F\u5730\u306B\u6839\u3092\u5F35\u3063\u3066\u3044\u307E\u3059\u3002\u3044\u3061\u3070\u3093\u8FD1\u3044\u57CE\u3092 \u62BC\u3055\u3048\u3066\u3044\u308B\u5BB6\u3060\u3051\u304C\u3001\u305D\u306E\u753A\u3068\u8ABC\u3092\u901A\u3058\u3089\u308C\u307E\u3059\u3002")), /* @__PURE__ */ React6.createElement(
+        "button",
+        {
+          className: "btn",
+          style: { width: "100%", marginTop: 12 },
+          onClick: () => setTownSel(null)
+        },
+        "\u9589\u3058\u308B"
+      )));
     })(),
     modal === "report" && /* @__PURE__ */ React6.createElement(MonthReport, { g, onClose: () => setModal(null) }),
     modal === "chronicle" && /* @__PURE__ */ React6.createElement(Chronicle, { g, onClose: () => setModal(null) }),
