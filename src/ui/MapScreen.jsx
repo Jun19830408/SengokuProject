@@ -625,7 +625,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const bb = createBattle(P, E, atkSide);
     bb.mode = "castle";
     bb.map = map;
-    bb.dusk = 1080;                 // 城攻めは一日がかり（十八分）
+    // 城攻めは一日がかり。盤の広さに合わせて伸ばす（山城は坂を登る道のりが長い）
+    bb.dusk = Math.round(1080 * clamp(Math.pow(FIELD.w / 1600, 0.62), 1, 3.2));
     for (const c of atk) { c.formation = "方陣"; placeSquads(c, true); }   // 狭い道を寄せるので固まる
     bb.gateParty = !!gateParty;
     // 守り手が打って出るか籠るか。優勢なら討って出る。

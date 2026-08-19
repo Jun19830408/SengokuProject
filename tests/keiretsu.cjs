@@ -20,8 +20,8 @@ fs.writeFileSync(entry,
   'export { layoutField, setFieldSeed, FIELD } from "../src/battle/field.js";\n'
 + 'export { makeCorps, placeSquads, issueOrder } from "../src/battle/corps.js";\n'
 + 'export { buildCastleMap, layoutCastleField, axisOf, fromUV } from "../src/battle/castleMap.js";\n'
-+ 'export { battleAI, 岸 } from "../src/battle/ai.js";\n'
-+ 'export { RIVER, hasRiver, terrainAt, riverShift } from "../src/battle/field.js";\n'
++ 'export { battleAI, 岸, 隘路にかかる } from "../src/battle/ai.js";\n'
++ 'export { RIVER, hasRiver, terrainAt, riverShift, HILLS, FORESTS, WOODS, MARSH, VILLAGES } from "../src/battle/field.js";\n'
 + 'export { createBattle, stepBattle } from "../src/battle/engine.js";\n'
 + 'export { setBattleMap } from "../src/battle/castleMap.js";\n');
 const out = path.join(ROOT, 'build', 'keiretsu.cjs');
@@ -39,6 +39,10 @@ Math.random = function () {
 };
 
 const 咎 = [];
+const 確 = (名, 可, 添 = '') => {
+  console.log(`  ${可 ? '○' : '★'} ${名}${添 ? '　' + 添 : ''}`);
+  if (!可) 咎.push(名);
+};
 const 将 = (i) => ({ id: `g${i}`, name: `将${i}`, lead: 62, valor: 60, wit: 55, gov: 55, retinue: 400, retTrain: 70, unity: 60 });
 const 隔たり = (c) => {
   const live = c.squads.filter((q) => q.men > 0);
@@ -52,8 +56,19 @@ for (const 陣 of ['横陣', '魚鱗', '鶴翼', '方陣']) {
   /* 川も森も湿地もない平地を選ぶ。
      悪路で隊形が乱れるのは仕来りどおりなので、ここでは測らない。
      測りたいのは「良い地を歩くだけで崩れてしまわないか」である。 */
+  /* 野を掃いて、何もない平地にする。
+
+     もとは「川も森もない種」を決め打ちで選んでいた。ところが広い野には
+     必ず地物を置くようにしたので、そんな種はもう無い。探しても見つからない。
+
+     測りたいのは「良い地を歩くだけで隊形が崩れてしまわないか」である。
+     悪路で乱れるのも、隘路で列を細めるのも、どちらも仕来りどおりであって、
+     ここで測るものではない。地物を取り払ってから測る。 */
   A.setFieldSeed('s82', 't82');
-  A.layoutField(9000);
+  A.layoutField(9000, 2);
+  A.HILLS.length = 0; A.FORESTS.length = 0; A.WOODS.length = 0;
+  A.MARSH.length = 0; A.VILLAGES.length = 0;
+  A.RIVER.top = 0; A.RIVER.bot = 0;
   const mk = (side, i, x, y, f) => A.makeCorps(side, 将(i), 400, 1400, 70, 70, x, y, f,
     side === 'P' ? '#2F5D8C' : '#B0483C');
   const P = [0, 1, 2].map((i) => mk('P', i, A.FIELD.w / 2 + (i - 1) * 190, A.FIELD.h * 0.88, -Math.PI / 2));
@@ -189,13 +204,15 @@ for (const 陣 of ['横陣', '魚鱗', '鶴翼', '方陣']) {
      押し返しを毎瞬かける古い決まりで 43.6px、いまの決まりで 46.8px――
      ほとんど差がない。隊が壁際にいる時が減り、坂を登っている時が増えたためである。
 
-     隊の測りは、いまも効いている。古い決まりで一折り返しあたり30.9px、
-     いまの決まりで51.8px。震えを見るならこちらである。
+     隊の測りは、いまも効いている。古い決まりで一折り返しあたり21.8px、
+     いまの決まりで38.4px。震えを見るならこちらである。
+     （隘路で長蛇に組み替えるようにしたので、堀を渡るときに隊が組み替わり、
+       そのぶん折り返しが増えた。これは震えではなく、道理どおりの動きである。）
      組の測りは、ひどい震えを拾う下限としてだけ残す。 */
   console.log(`  ${間隔 >= 35 ? '○' : '★'} 組は震えずに進む　一折り返しあたり ${間隔.toFixed(1)}px（下限。押し返しを毎瞬かけても43.6pxで、ここは効きが鈍い）`);
-  console.log(`  ${隊間隔 >= 40 ? '○' : '★'} 隊そのものが左右に流れない　一折り返しあたり ${隊間隔.toFixed(1)}px（毎瞬かけると30.9px）`);
+  console.log(`  ${隊間隔 >= 33 ? '○' : '★'} 隊そのものが左右に流れない　一折り返しあたり ${隊間隔.toFixed(1)}px（毎瞬かけると21.8px）`);
   if (間隔 < 35) 咎.push(`城攻めで組が震える（一折り返しあたり ${間隔.toFixed(1)}px）`);
-  if (隊間隔 < 40) 咎.push(`城攻めで隊が左右に流れる（一折り返しあたり ${隊間隔.toFixed(1)}px）`);
+  if (隊間隔 < 33) 咎.push(`城攻めで隊が左右に流れる（一折り返しあたり ${隊間隔.toFixed(1)}px）`);
   A.setBattleMap(null);
 }
 
@@ -258,6 +275,75 @@ for (const 陣 of ['横陣', '魚鱗', '鶴翼', '方陣']) {
   if (川の野 < 8) 咎.push('川のある野が足りず、測れていない');
   if (居 > 30) 咎.push(`隊が川の中で過ごしすぎる（${居.toFixed(1)}%）`);
   if (戦 > 62) 咎.push(`川の中で槍を合わせすぎる（${戦.toFixed(1)}%）`);
+}
+
+/* ------------------------------ 隘路は縦陣で抜けること（GDD 8.3）
+
+   橋を渡るとき、浅瀬を越すとき、森や丘の脇をすり抜けるとき、隊は横に広がった
+   まま突っ込んでいた。翼が水に浸かり、木立に食い込み、足が鈍って隊列が崩れる。
+   渡り場を選んだ甲斐がない。狭い所へ来れば列を細める。行軍の常である。
+
+   あわせて、橋そのものの幅も検める。盤の幅の何割、として取っていたので、
+   野を広げたら橋が一隊の二.五倍になった。隊がそのまま横に並んで渡れる橋は、
+   もはや橋ではない。 */
+{
+  A.setBattleMap(null);
+  let 種 = null;
+  for (let i = 1; i < 60 && 種 === null; i++) {
+    A.setFieldSeed('bridge' + i, 'x'); A.layoutField(9000, 6);
+    if (A.hasRiver()) 種 = i;
+  }
+  const 橋幅 = A.RIVER.bridge[1] - A.RIVER.bridge[0];
+  const 瀬幅 = A.RIVER.ford[1] - A.RIVER.ford[0];
+  console.log(`  （野 ${A.FIELD.w}×${A.FIELD.h}／橋${Math.round(橋幅)}歩・浅瀬${Math.round(瀬幅)}歩／一隊の幅は約216歩）`);
+  確('橋は一隊より狭い（隘路である）', 橋幅 < 216 * 0.9,
+    `橋 ${Math.round(橋幅)}歩＝一隊の${(橋幅 / 216).toFixed(2)}倍`);
+  確('浅瀬は橋より広いが、なお隘路である', 瀬幅 > 橋幅 && 瀬幅 < 216 * 2,
+    `浅瀬 ${Math.round(瀬幅)}歩＝一隊の${(瀬幅 / 216).toFixed(2)}倍`);
+  // 広い野でも橋が広がらないこと
+  A.setFieldSeed('bridge' + 種, 'x'); A.layoutField(9000, 6);
+  const 狭い野の橋 = A.RIVER.bridge[1] - A.RIVER.bridge[0];
+  let 広い野の橋 = 狭い野の橋;
+  for (let i = 1; i < 60; i++) {
+    A.setFieldSeed('bridge' + i, 'x'); A.layoutField(40000, 20);
+    if (A.hasRiver()) { 広い野の橋 = A.RIVER.bridge[1] - A.RIVER.bridge[0]; break; }
+  }
+  確('野を広げても、橋はさほど広がらない', 広い野の橋 < 狭い野の橋 * 2.2,
+    `${Math.round(狭い野の橋)}歩 → ${Math.round(広い野の橋)}歩（野は${A.FIELD.w}歩）`);
+
+  // 橋の上に置いた隊が、縦陣に組み替えること
+  A.setFieldSeed('bridge' + 種, 'x'); A.layoutField(9000, 6); A.setBattleMap(null);
+  const bx = (A.RIVER.bridge[0] + A.RIVER.bridge[1]) / 2;
+  const by = (A.RIVER.top + A.RIVER.bot) / 2 + A.riverShift(bx);
+  const c = A.makeCorps('P', 将(1), 700, 900, 80, 80, bx, by, -Math.PI / 2, '#2F5D8C');
+  c.formation = '横陣'; A.placeSquads(c, true);
+  確('橋の上は隘路と判ぜられる', A.隘路にかかる(c) === '橋', A.隘路にかかる(c) || 'かからない');
+  // 抜けたと決めるまでには猶予がある（林の縁で陣形が行き来せぬように）
+  const e = A.makeCorps('E', 将(9), 700, 900, 80, 80, bx, by - 700, Math.PI / 2, '#B0483C');
+  const b2 = A.createBattle([c], [e], 'P');
+  b2.mode = 'field'; b2.dusk = 9999; b2.phase = 'fight'; b2.face = 'S'; b2.myFar = false;
+  A.placeSquads(c, true); A.placeSquads(e, true);
+  c.auto = true;
+  A.battleAI(b2);
+  確('橋にかかれば縦陣に組み替える', c.formation === '長蛇', c.formation);
+  確('元の陣形を覚えている', c.元の陣 === '横陣', c.元の陣 || 'なし');
+
+  // 野へ出れば元へ戻ること
+  c.x = bx; c.y = by + 620;
+  A.placeSquads(c, true);
+  確('野へ出れば隘路ではない', !A.隘路にかかる(c), A.隘路にかかる(c) || '');
+  A.battleAI(b2);
+  確('一度離れただけでは戻さない（縁で行き来しない）', c.formation === '長蛇', c.formation);
+  for (let i = 0; i < 5; i++) A.battleAI(b2);
+  確('開けた地が続けば元の陣形へ戻る', c.formation === '横陣', c.formation);
+
+  // 槍を合わせている隊は組み替えない（側面を晒すため）
+  c.x = bx; c.y = by; A.placeSquads(c, true);
+  c.formation = '横陣'; c.元の陣 = null;
+  for (const q of c.squads) q.engaged = true;
+  A.battleAI(b2);
+  確('槍を合わせている隊は、隘路でも組み替えない', c.formation === '横陣', c.formation);
+  for (const q of c.squads) q.engaged = false;
 }
 
 console.log('');

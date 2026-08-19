@@ -9816,15 +9816,17 @@ function genTerrain(seed) {
   VILLAGES.length = 0;
   const kind = rnd();
   if (kind > 0.4) {
+    const \u5E45\u500D = clamp(Math.pow(W / 1080, 0.3), 1, 1.7);
     const cy = H * (0.36 + rnd() * 0.28);
-    const wide = H * (0.045 + rnd() * 0.035);
+    const wide = clamp(H * (0.045 + rnd() * 0.035), 52, 190);
     RIVER.top = Math.round(cy - wide / 2);
     RIVER.bot = Math.round(cy + wide / 2);
-    const bx = W * (0.15 + rnd() * 0.7), bw = W * 0.075;
+    const bw = (74 + rnd() * 26) * \u5E45\u500D;
+    const bx = W * (0.15 + rnd() * 0.7);
     RIVER.bridge = [Math.round(bx - bw / 2), Math.round(bx + bw / 2)];
     let fx = W * (0.1 + rnd() * 0.8);
     if (Math.abs(fx - bx) < W * 0.2) fx = bx > W / 2 ? bx - W * 0.28 : bx + W * 0.28;
-    const fw = W * 0.1;
+    const fw = (150 + rnd() * 60) * \u5E45\u500D;
     RIVER.ford = [Math.round(clamp(fx - fw / 2, 10, W - fw - 10)), 0];
     RIVER.ford[1] = Math.round(RIVER.ford[0] + fw);
     RIVER.wave = H * (0.02 + rnd() * 0.05);
@@ -10570,7 +10572,7 @@ function buildCastleMap(castle) {
     return ((x ^ x >>> 14) >>> 0) / 4294967296;
   })(\u7A2E >>> 0);
   const \u69CB = \u57CE\u306E\u69CB\u3048(castle);
-  const \u7656 = \u69CB === "\u5C71\u57CE" ? { \u7E26\u6A2A: 0.42 + rnd() * 0.24, \u9580: -1, \u5800: 0.55, \u5E83\u3055: 0.86, \u7A7A\u5800: true } : \u69CB === "\u5E73\u5C71\u57CE" ? { \u7E26\u6A2A: 0.72 + rnd() * 0.3, \u9580: 0, \u5800: 0.9, \u5E83\u3055: 1, \u7A7A\u5800: false } : { \u7E26\u6A2A: 0.94 + rnd() * 0.26, \u9580: 1, \u5800: 1.35, \u5E83\u3055: 1.18, \u7A7A\u5800: false };
+  const \u7656 = \u69CB === "\u5C71\u57CE" ? { \u7E26\u6A2A: 0.42 + rnd() * 0.24, \u9580: -1, \u5800: 0.55, \u5E83\u3055: 0.86, \u7A7A\u5800: true } : \u69CB === "\u5E73\u5C71\u57CE" ? { \u7E26\u6A2A: 0.72 + rnd() * 0.3, \u9580: 0, \u5800: 0.9, \u5E83\u3055: 1, \u7A7A\u5800: false } : { \u7E26\u6A2A: 0.94 + rnd() * 0.26, \u9580: 0, \u5800: 1.35, \u5E83\u3055: 1.18, \u7A7A\u5800: false };
   const \u6A2A\u9577 = rnd() < 0.5;
   const n = castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2;
   const names = n === 4 ? ["\u60E3\u69CB", "\u4E09\u306E\u4E38", "\u4E8C\u306E\u4E38", "\u672C\u4E38"] : n === 3 ? ["\u60E3\u69CB", "\u4E8C\u306E\u4E38", "\u672C\u4E38"] : ["\u4E8C\u306E\u4E38", "\u672C\u4E38"];
@@ -10663,9 +10665,9 @@ function buildCastleMap(castle) {
 function layoutCastleField(m) {
   const o = m.layers[0];
   const ext = { w: o.hw + m.t + o.masu + m.t + 8 + m.moat.band, h: o.hh + m.t + o.masu + m.t + 8 + m.moat.band };
-  const \u4F59 = m.\u5742 >= 1 ? 1.15 : m.\u5742 > 0 ? 0.95 : 0.82;
-  FIELD.w = Math.round((ext.w + Math.max(m.unit.d * 3.4 + 240, ext.w * \u4F59)) * 2);
-  FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 3.4 + 240, ext.h * \u4F59)) * 2);
+  const \u4F59 = m.\u5742 >= 1 ? 0.68 : 0.6;
+  FIELD.w = Math.round((ext.w + Math.max(m.unit.d * 2.4 + 160, ext.w * \u4F59)) * 2);
+  FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 2.4 + 160, ext.h * \u4F59)) * 2);
   m.cx = FIELD.w / 2;
   m.cy = FIELD.h / 2;
   for (const f of m.fac) {
@@ -12665,6 +12667,42 @@ function \u6E21\u308A\u5834(x) {
   const \u5019\u88DC = [{ x: \u6A4B, \u91CD\u307F: 0.55, \u540D: "\u6A4B" }, { x: \u702C, \u91CD\u307F: 1, \u540D: "\u6D45\u702C" }].map((p) => ({ ...p, \u9060\u3055: Math.abs(p.x - x) * p.\u91CD\u307F }));
   return \u5019\u88DC.sort((a, z) => a.\u9060\u3055 - z.\u9060\u3055)[0];
 }
+function \u9698\u8DEF\u306B\u304B\u304B\u308B(c) {
+  const \u5E45 = 78;
+  const \u524D = 26;
+  const cosF = Math.cos(c.facing), sinF = Math.sin(c.facing);
+  let \u6C34 = null, \u969C = 0, \u958B = 0, \u969C\u540D = null;
+  for (const [u, v] of [
+    [-\u5E45, 0],
+    [-\u5E45 * 0.5, 0],
+    [0, 0],
+    [\u5E45 * 0.5, 0],
+    [\u5E45, 0],
+    [-\u5E45, \u524D],
+    [0, \u524D],
+    [\u5E45, \u524D]
+  ]) {
+    const x = c.x + -sinF * u + cosF * v;
+    const y = c.y + cosF * u + sinF * v;
+    const t = terrainAt(x, y);
+    if (t === "bridge") \u6C34 = "\u6A4B";
+    else if (t === "ford") \u6C34 = \u6C34 || "\u6D45\u702C";
+    else if (t === "deep") \u6C34 = \u6C34 || "\u5DDD";
+    else if (t === "moat") \u6C34 = \u6C34 || "\u5800";
+    else if (t === "forest" || t === "wood") {
+      \u969C++;
+      \u969C\u540D = \u969C\u540D || "\u6728\u7ACB";
+    } else if (t === "marsh") {
+      \u969C++;
+      \u969C\u540D = \u969C\u540D || "\u6E7F\u5730";
+    } else if (t === "hill") {
+      \u969C++;
+      \u969C\u540D = \u969C\u540D || "\u5C71\u969B";
+    } else \u958B++;
+  }
+  if (\u6C34) return \u6C34;
+  return \u969C > 0 && \u958B > 0 ? \u969C\u540D : null;
+}
 function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
@@ -12680,6 +12718,27 @@ function battleAI(b) {
     if (Math.random() > 0.5) continue;
     const opt = detachOptions(b, c).filter((o) => o.ok);
     if (opt.length) makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
+  }
+  for (const c of alive) {
+    if (c.detach || c.routed || c.withdraw || c.destroyed) continue;
+    if (c.squads.some((q) => q.engaged)) continue;
+    const \u72ED\u3044 = \u9698\u8DEF\u306B\u304B\u304B\u308B(c);
+    if (\u72ED\u3044) {
+      c.\u9698\u8DEF = 4;
+      if (c.formation !== "\u9577\u86C7") {
+        c.\u5143\u306E\u9663 = c.formation;
+        c.formation = "\u9577\u86C7";
+        placeSquads(c, false);
+        if (c.side === "P") b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C\u5217\u3092\u7D30\u3081\u3066${\u72ED\u3044}\u306B\u304B\u304B\u308B\u3002` });
+      }
+    } else if (c.\u5143\u306E\u9663 && c.formation === "\u9577\u86C7") {
+      c.\u9698\u8DEF = (c.\u9698\u8DEF || 0) - 1;
+      if (c.\u9698\u8DEF <= 0) {
+        c.formation = c.\u5143\u306E\u9663;
+        c.\u5143\u306E\u9663 = null;
+        placeSquads(c, false);
+      }
+    }
   }
   for (const c of alive) {
     if (!c.\u72D9\u3044 || c.routed || c.withdraw || c.detach) continue;
@@ -12953,8 +13012,13 @@ function createBattle(playerCorps, enemyCorps, attackerSide) {
     result: null,
     attacker: attackerSide,
     aiClock: 0,
+    /* 日没までの刻。盤の広さに合わせる。
+    
+           野を広げたので、寄せ合うだけで刻を食うようになった。四百八十秒のままでは、
+           両軍が触れる前に日が暮れる。広い野を与えておきながら、渡り切る時を
+           与えないのでは、広げた意味がない。 */
     weather,
-    dusk: 480,
+    dusk: Math.round(480 * clamp(Math.pow(FIELD.w / 1080, 0.62), 1, 3.2)),
     retreat: null,
     orderly: false,
     fx: []
@@ -17415,7 +17479,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const bb = createBattle(P, E, atkSide);
     bb.mode = "castle";
     bb.map = map;
-    bb.dusk = 1080;
+    bb.dusk = Math.round(1080 * clamp(Math.pow(FIELD.w / 1600, 0.62), 1, 3.2));
     for (const c of atk) {
       c.formation = "\u65B9\u9663";
       placeSquads(c, true);

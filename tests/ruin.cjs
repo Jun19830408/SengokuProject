@@ -99,7 +99,10 @@ const txt = () => {
   確('城郭図に入る', /城攻め/.test(txt()));
   if (!(await rc('合戦開始'))) { console.log('エラー: 合戦を始められない'); process.exit(1); }
   await rc('委ねて結果を見る');
-  for (let k = 0; k < 6000; k++) {
+  /* 委ねたあとは絵を描かずに進む。一コマで0.05秒ぶん進むので、
+     日没（盤の広さで伸びる）まで見届けるには、それだけのコマ数が要る。
+     六千コマ＝三百秒では、広い城郭図の決着に届かない。 */
+  for (let k = 0; k < 40000; k++) {
     const q = [...rafMap.entries()]; rafMap.clear();
     if (q.length) await act(async () => { q.forEach(([, cb]) => cb(2000 + k * 90)); });
     else await flush();

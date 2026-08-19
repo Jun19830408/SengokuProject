@@ -55,14 +55,27 @@ export function genTerrain(seed) {
   const kind = rnd();
   // 川。六割の野に一本流れる。橋と浅瀬の位置も野ごとに違う。
   if (kind > 0.4) {
+    /* 川と、その渡り場（GDD 8.1）。
+
+       橋も浅瀬も、盤の幅の何割、として取っていた。標準の野が千八十歩だった
+       ころは橋が八十九歩で、一隊の幅（二百十六歩）の半ばに満たない――
+       つまり隘路であった。ところが野を広げたので、七千歩の野では橋が
+       五百四十歩、一隊の二.五倍になった。隊がそのまま横に並んで渡れる橋は、
+       もはや橋ではない。ただの平地である。
+
+       橋は隘路でなければならない。盤がどれだけ広がろうと、板を渡した幅は
+       変わらない。ほぼ絶対の寸法で取り、野の広さぶんは僅かに効かせるに留める。
+       川幅も同じ考えで、際限なく広がらぬよう歯止めを入れる。 */
+    const 幅倍 = clamp(Math.pow(W / 1080, 0.3), 1, 1.7);
     const cy = H * (0.36 + rnd() * 0.28);
-    const wide = H * (0.045 + rnd() * 0.035);
+    const wide = clamp(H * (0.045 + rnd() * 0.035), 52, 190);
     RIVER.top = Math.round(cy - wide / 2); RIVER.bot = Math.round(cy + wide / 2);
-    const bx = W * (0.15 + rnd() * 0.7), bw = W * 0.075;
+    const bw = (74 + rnd() * 26) * 幅倍;               // 橋。一隊の半ばに満たない
+    const bx = W * (0.15 + rnd() * 0.7);
     RIVER.bridge = [Math.round(bx - bw / 2), Math.round(bx + bw / 2)];
     let fx = W * (0.1 + rnd() * 0.8);
     if (Math.abs(fx - bx) < W * 0.2) fx = bx > W / 2 ? bx - W * 0.28 : bx + W * 0.28;
-    const fw = W * 0.1;
+    const fw = (150 + rnd() * 60) * 幅倍;              // 浅瀬。橋より広いが、なお狭い
     RIVER.ford = [Math.round(clamp(fx - fw / 2, 10, W - fw - 10)), 0];
     RIVER.ford[1] = Math.round(RIVER.ford[0] + fw);
     RIVER.wave = H * (0.02 + rnd() * 0.05);          // 蛇行の振れ

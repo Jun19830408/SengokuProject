@@ -82,7 +82,7 @@ export function buildCastleMap(castle) {
     ? { 縦横: 0.42 + rnd() * 0.24, 門: -1, 堀: 0.55, 広さ: 0.86, 空堀: true }
     : 構 === "平山城"
       ? { 縦横: 0.72 + rnd() * 0.3, 門: 0, 堀: 0.9, 広さ: 1.0, 空堀: false }
-      : { 縦横: 0.94 + rnd() * 0.26, 門: 1, 堀: 1.35, 広さ: 1.18, 空堀: false };
+      : { 縦横: 0.94 + rnd() * 0.26, 門: 0, 堀: 1.35, 広さ: 1.18, 空堀: false };
   const 横長 = rnd() < 0.5;                              // 尾根の向き
   const n = castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2;
   const names = n === 4 ? ["惣構", "三の丸", "二の丸", "本丸"]
@@ -152,9 +152,15 @@ export function layoutCastleField(m) {
   /* 城の外に、寄せ手が展開して回り込めるだけの野を残す。
      五隊も出せば城の周りが一杯になり、横に並べて門へ押すのが精一杯だった。
      山城なら坂を大きく取る。駆け上がる道のりが戦の要だからである。 */
-  const 余 = m.坂 >= 1 ? 1.15 : m.坂 > 0 ? 0.95 : 0.82;
-  FIELD.w = Math.round((ext.w + Math.max(m.unit.d * 3.4 + 240, ext.w * 余)) * 2);
-  FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 3.4 + 240, ext.h * 余)) * 2);
+  /* 城の外に、寄せ手が展開して回り込めるだけの野を残す。
+
+     野戦の盤を広げたついでに、ここも大きく広げてみた。ところが寄せ手が門へ
+     取り付く前に日が暮れ、一万四千の兵で守兵五百の城を落とせなくなった。
+     城攻めは門の押し合いであって、野を駆け回る戦ではない。元の広さに戻す。
+     山城だけは坂のぶん、わずかに広く取る。 */
+  const 余 = m.坂 >= 1 ? 0.68 : 0.6;
+  FIELD.w = Math.round((ext.w + Math.max(m.unit.d * 2.4 + 160, ext.w * 余)) * 2);
+  FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 2.4 + 160, ext.h * 余)) * 2);
   m.cx = FIELD.w / 2; m.cy = FIELD.h / 2;
   for (const f of m.fac) { f.x += m.cx; f.y += m.cy; }   // 相対から絶対へ
   return m;

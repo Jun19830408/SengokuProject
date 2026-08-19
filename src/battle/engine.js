@@ -13,7 +13,13 @@ export function createBattle(playerCorps, enemyCorps, attackerSide) {
     t: 0, phase: "deploy", corps: [...playerCorps, ...enemyCorps],
     initial: { P: playerCorps.reduce((s, c) => s + corpsMen(c), 0), E: enemyCorps.reduce((s, c) => s + corpsMen(c), 0) },
     log: [], result: null, attacker: attackerSide, aiClock: 0,
-    weather, dusk: 480, retreat: null, orderly: false, fx: [],
+    /* 日没までの刻。盤の広さに合わせる。
+
+       野を広げたので、寄せ合うだけで刻を食うようになった。四百八十秒のままでは、
+       両軍が触れる前に日が暮れる。広い野を与えておきながら、渡り切る時を
+       与えないのでは、広げた意味がない。 */
+    weather, dusk: Math.round(480 * clamp(Math.pow(FIELD.w / 1080, 0.62), 1, 3.2)),
+    retreat: null, orderly: false, fx: [],
   };
   for (const c of b.corps) { placeSquads(c, true); c.lastSeen = { x: c.x, y: c.y, t: 0 }; }
   return b;

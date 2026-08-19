@@ -38,6 +38,38 @@ export function 渡り場(x) {
   return 候補.sort((a, z) => a.遠さ - z.遠さ)[0];
 }
 
+/* いま隘路にかかっているか。かかっているならその名を返す。
+
+   隊の前と、隊の幅いっぱいの左右を検める。真ん中だけを見ていては、
+   翼が水に浸かっていることに気づけない。
+
+   水（橋・浅瀬・淵・堀）は、かかっていれば隘路である。渡るとはそういうことである。
+   木立や丘は、隊の一部だけがかかっているときに限る。全部が森の中なら、
+   そこは隘路ではなく、森である。森を突っ切ると決めたのなら横に広がったままでよい。 */
+export function 隘路にかかる(c) {
+  const 幅 = 78;                                        // 隊の半幅ほど
+  const 前 = 26;
+  const cosF = Math.cos(c.facing), sinF = Math.sin(c.facing);
+  let 水 = null, 障 = 0, 開 = 0, 障名 = null;
+  for (const [u, v] of [[-幅, 0], [-幅 * 0.5, 0], [0, 0], [幅 * 0.5, 0], [幅, 0],
+    [-幅, 前], [0, 前], [幅, 前]]) {
+    const x = c.x + (-sinF) * u + cosF * v;
+    const y = c.y + cosF * u + sinF * v;
+    const t = terrainAt(x, y);
+    // 橋を先に見る。橋の上に立てば両脇は淵だが、渡っているのは橋である。
+    if (t === "bridge") 水 = "橋";
+    else if (t === "ford") 水 = 水 || "浅瀬";
+    else if (t === "deep") 水 = 水 || "川";
+    else if (t === "moat") 水 = 水 || "堀";
+    else if (t === "forest" || t === "wood") { 障++; 障名 = 障名 || "木立"; }
+    else if (t === "marsh") { 障++; 障名 = 障名 || "湿地"; }
+    else if (t === "hill") { 障++; 障名 = 障名 || "山際"; }
+    else 開++;
+  }
+  if (水) return 水;
+  return 障 > 0 && 開 > 0 ? 障名 : null;
+}
+
 export function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
@@ -53,6 +85,41 @@ export function battleAI(b) {
     const opt = detachOptions(b, c).filter((o) => o.ok);
     if (opt.length) makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
   }
+  /* 隘路は縦陣で抜ける（GDD 8.3）。
+
+     橋を渡るとき、浅瀬を越すとき、森や丘の脇をすり抜けるとき――隊は横に
+     広がったまま突っ込んでいた。そのため翼が水に浸かり、木立に食い込み、
+     足が鈍って隊列が崩れる。渡り場を選んだ甲斐がない。
+
+     行軍する者は、狭い所へ来れば列を細める。当たり前のことである。
+     隘路にかかる隊は長蛇（縦一列）に組み替え、抜けたら元の陣形へ戻す。
+
+     組み替えの手間は掛けない。これは戦のための陣替えではなく、道なりの
+     行軍だからである。横から突かれれば脆いという長蛇の弱みは、そのまま残る。 */
+  for (const c of alive) {
+    if (c.detach || c.routed || c.withdraw || c.destroyed) continue;
+    if (c.squads.some((q) => q.engaged)) continue;      // 槍を合わせている隊は組み替えない
+    const 狭い = 隘路にかかる(c);
+    if (狭い) {
+      c.隘路 = 4;                                       // 抜けたと決めるまでの猶予
+      if (c.formation !== "長蛇") {
+        c.元の陣 = c.formation;
+        c.formation = "長蛇";
+        placeSquads(c, false);
+        if (c.side === "P") b.log.push({ t: b.t, text: `${c.gen.name}隊が列を細めて${狭い}にかかる。` });
+      }
+    } else if (c.元の陣 && c.formation === "長蛇") {
+      /* 抜けたと決めるのは、しばらく開けた地が続いてからにする。
+         一瞬でも木立を離れたら戻す、では、林の縁で陣形が行き来してしまう。 */
+      c.隘路 = (c.隘路 || 0) - 1;
+      if (c.隘路 <= 0) {
+        c.formation = c.元の陣;
+        c.元の陣 = null;
+        placeSquads(c, false);
+      }
+    }
+  }
+
   /* 名指しの目標（GDD 8.2）。
 
      「柴田勝家隊は今川義元隊に当たれ」と名指しで命じたときは、委任していなくても
