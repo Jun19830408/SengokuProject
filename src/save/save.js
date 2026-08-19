@@ -23,6 +23,8 @@ export const 枠の鍵 = (i) => `sengoku:slot${i}`;   // 一〜五
 export const 枠一覧 = () => [
   { key: SAVE_KEY, 名: "自動", 自動: true },
   ...Array.from({ length: 枠の数 }, (_, i) => ({ key: 枠の鍵(i + 1), 名: `記録 ${"一二三四五"[i]}`, 自動: false })),
+  // 上書きから拾い上げた盤。空き枠が無かったときの逃げ場である。
+  { key: "sengoku:hirogi", 名: "救出", 救出: true },
 ];
 const 版 = 1;
 
@@ -41,10 +43,52 @@ function 解く(文) {
   return d;
 }
 
-export async function saveGame(state, key) {
-  try { return await 置き場().書く(key || SAVE_KEY, 包む(state)); }
-  catch (e) { return false; }              // 置き場が使えないときは黙って諦める
+/* 別の遊びの上へ書こうとしていないか（GDD 15.3）。
+
+   画面のどこか一箇所を直しても、同じ穴はまた開く。書き込む道は幾つもあり、
+   後から増えもする。だから、守るのは置き場の側でなければならない。
+
+   盤には卓の印がある。いまその枠に入っている盤と印が違うなら、それは
+   「別の遊び」である。上書きする前に、空いている枠へ写して逃がす。
+   空きが無ければ、拾い上げの棚（救い出した記録）へ置く。棚は一つきりだが、
+   何も残らないよりはるかによい。
+
+   これで、どの道から書き込もうと、遊びがひとつ黙って消えることはなくなる。 */
+export const 拾い上げの鍵 = "sengoku:hirogi";
+
+async function 別の遊びを逃がす(key, 新) {
+  let 有 = null;
+  try { 有 = 解く(await 置き場().読む(key)); } catch (e) { 有 = null; }
+  if (!有 || !有.state) return null;
+  const 旧印 = 有.state.卓, 新印 = 新 && 新.卓;
+  if (!旧印 || !新印 || 旧印 === 新印) return null;      // 同じ遊びの続き。上書きしてよい
+  // 空いている手記録を探す
+  for (let i = 1; i <= 枠の数; i++) {
+    const k = 枠の鍵(i);
+    if (k === key) continue;
+    let x = null;
+    try { x = 解く(await 置き場().読む(k)); } catch (e) { x = null; }
+    if (x) continue;
+    try { await 置き場().書く(k, 包む(有.state)); } catch (e) { break; }
+    return { 逃がした: k, 名: `記録 ${"一二三四五"[i - 1]}`, d: 有 };
+  }
+  // 空きが無い。拾い上げの棚へ置く
+  try { await 置き場().書く(拾い上げの鍵, 包む(有.state)); } catch (e) { return { 失敗: true, d: 有 }; }
+  return { 逃がした: 拾い上げの鍵, 名: "救い出した記録", d: 有 };
 }
+
+export async function saveGame(state, key) {
+  const k = key || SAVE_KEY;
+  try {
+    const 逃 = await 別の遊びを逃がす(k, state);
+    if (逃 && 逃.逃がした) 直近の避難 = 逃;
+    return await 置き場().書く(k, 包む(state));
+  } catch (e) { return false; }            // 置き場が使えないときは黙って諦める
+}
+
+/* 直近に逃がしたもの。画面が拾って「移しました」と告げるのに使う。 */
+export let 直近の避難 = null;
+export const 避難を読む = () => { const v = 直近の避難; 直近の避難 = null; return v; };
 
 export async function loadGame(key) {
   try { return 解く(await 置き場().読む(key || SAVE_KEY)); }

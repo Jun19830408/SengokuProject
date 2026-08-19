@@ -77,9 +77,12 @@ export function SeaScreen({ ctx, land, onEnd }) {
       raf = requestAnimationFrame(tick);
       const dt = last ? Math.min(0.12, (ts - last) / 1000) : 0;
       last = ts;
-      // 並で実時間の一.二倍ほど。海戦は互角なら百秒ばかり続くので、
-      // 十二倍では三十秒たらずで終わってしまい、下知を出す間がない。
-      if (speedRef.current > 0 && b.phase === "fight") stepSeaBattle(b, dt * speedRef.current * 4);
+      /* 刻みは陸の合戦と同じにする（BattleScreen も dt × 速さ で進める）。
+
+         はじめは十二倍、次に四倍で進めていたが、どちらも速すぎた。
+         船が寄り合って火が回るまでを見ている間がない。
+         陸の野戦と同じ手応えにする。停止・微速・低速・通常も同じ四つ。 */
+      if (speedRef.current > 0 && b.phase === "fight") stepSeaBattle(b, dt * speedRef.current);
       const c = cv.current, w = wrap.current;
       if (!c || !w) return;
       const dpr = Math.min(2, (typeof window !== "undefined" && window.devicePixelRatio) || 1);
@@ -262,10 +265,8 @@ export function SeaScreen({ ctx, land, onEnd }) {
           {b.phase === "fight" && (
             <>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                {[0, 0.3, 0.7, 1.4].map((v) => (
-                  <button key={v} className={`btn sm ${speed === v ? "on" : ""}`} onClick={() => setSpeed(v)}>
-                    {v === 0 ? "止" : v === 0.3 ? "並" : v === 0.7 ? "早" : "疾"}
-                  </button>
+                {[[0, "停止"], [0.12, "微速"], [0.3, "低速"], [0.6, "通常"]].map(([v, 名]) => (
+                  <button key={v} className={`btn sm ${speed === v ? "on" : ""}`} onClick={() => setSpeed(v)}>{名}</button>
                 ))}
                 <button className="btn sm" onClick={委ねる}>委ねて結果を見る</button>
                 <span style={{ flex: 1 }} />

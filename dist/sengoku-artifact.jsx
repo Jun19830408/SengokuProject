@@ -6210,6 +6210,12 @@ function initState(player) {
   const specials = {};
   for (const t of TOWNS) specials[t.id] = { state: "\u4E2D\u7ACB", faction: null, anger: 0, months: 0 };
   return {
+    /* 卓（GDD 15.3）。ひとつの遊びを見分ける印。
+    
+           これが無いと、記録の置き場は「別の遊びで上書きしようとしている」ことに
+           気づけない。実際、新しく始めただけで、進めていた盤が黙って消えた。
+           盤ごとに違う印を持たせ、置き場の側で守る。 */
+    \u5353: `t${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`,
     player,
     year: 1546,
     month: 4,
@@ -6560,6 +6566,7 @@ function \u7ACB\u305F\u306C\u7533\u3057\u9001\u308A\u3092\u843D\u3068\u3059(s2) 
   return s2;
 }
 function migrateSave(s2) {
+  if (!s2.\u5353) s2.\u5353 = `t${s2.player || "x"}${s2.year || 0}-\u65E7`;
   migrateRosters(s2);
   \u65D7\u306E\u4E0B\u3092\u72D9\u3046\u6226\u5F79\u3092\u843D\u3068\u3059(s2);
   \u7ACB\u305F\u306C\u7533\u3057\u9001\u308A\u3092\u843D\u3068\u3059(s2);
@@ -6773,7 +6780,9 @@ var \u67A0\u306E\u6570 = 5;
 var \u67A0\u306E\u9375 = (i) => `sengoku:slot${i}`;
 var \u67A0\u4E00\u89A7 = () => [
   { key: SAVE_KEY, \u540D: "\u81EA\u52D5", \u81EA\u52D5: true },
-  ...Array.from({ length: \u67A0\u306E\u6570 }, (_, i) => ({ key: \u67A0\u306E\u9375(i + 1), \u540D: `\u8A18\u9332 ${"\u4E00\u4E8C\u4E09\u56DB\u4E94"[i]}`, \u81EA\u52D5: false }))
+  ...Array.from({ length: \u67A0\u306E\u6570 }, (_, i) => ({ key: \u67A0\u306E\u9375(i + 1), \u540D: `\u8A18\u9332 ${"\u4E00\u4E8C\u4E09\u56DB\u4E94"[i]}`, \u81EA\u52D5: false })),
+  // 上書きから拾い上げた盤。空き枠が無かったときの逃げ場である。
+  { key: "sengoku:hirogi", \u540D: "\u6551\u51FA", \u6551\u51FA: true }
 ];
 var \u7248 = 1;
 function \u5305\u3080(state) {
@@ -6791,13 +6800,52 @@ function \u89E3\u304F(\u6587) {
   migrateSave(d.state);
   return d;
 }
-async function saveGame(state, key) {
+var \u62FE\u3044\u4E0A\u3052\u306E\u9375 = "sengoku:hirogi";
+async function \u5225\u306E\u904A\u3073\u3092\u9003\u304C\u3059(key, \u65B0) {
+  let \u6709 = null;
   try {
-    return await \u7F6E\u304D\u5834().\u66F8\u304F(key || SAVE_KEY, \u5305\u3080(state));
+    \u6709 = \u89E3\u304F(await \u7F6E\u304D\u5834().\u8AAD\u3080(key));
+  } catch (e) {
+    \u6709 = null;
+  }
+  if (!\u6709 || !\u6709.state) return null;
+  const \u65E7\u5370 = \u6709.state.\u5353, \u65B0\u5370 = \u65B0 && \u65B0.\u5353;
+  if (!\u65E7\u5370 || !\u65B0\u5370 || \u65E7\u5370 === \u65B0\u5370) return null;
+  for (let i = 1; i <= \u67A0\u306E\u6570; i++) {
+    const k = \u67A0\u306E\u9375(i);
+    if (k === key) continue;
+    let x = null;
+    try {
+      x = \u89E3\u304F(await \u7F6E\u304D\u5834().\u8AAD\u3080(k));
+    } catch (e) {
+      x = null;
+    }
+    if (x) continue;
+    try {
+      await \u7F6E\u304D\u5834().\u66F8\u304F(k, \u5305\u3080(\u6709.state));
+    } catch (e) {
+      break;
+    }
+    return { \u9003\u304C\u3057\u305F: k, \u540D: `\u8A18\u9332 ${"\u4E00\u4E8C\u4E09\u56DB\u4E94"[i - 1]}`, d: \u6709 };
+  }
+  try {
+    await \u7F6E\u304D\u5834().\u66F8\u304F(\u62FE\u3044\u4E0A\u3052\u306E\u9375, \u5305\u3080(\u6709.state));
+  } catch (e) {
+    return { \u5931\u6557: true, d: \u6709 };
+  }
+  return { \u9003\u304C\u3057\u305F: \u62FE\u3044\u4E0A\u3052\u306E\u9375, \u540D: "\u6551\u3044\u51FA\u3057\u305F\u8A18\u9332", d: \u6709 };
+}
+async function saveGame(state, key) {
+  const k = key || SAVE_KEY;
+  try {
+    const \u9003 = await \u5225\u306E\u904A\u3073\u3092\u9003\u304C\u3059(k, state);
+    if (\u9003 && \u9003.\u9003\u304C\u3057\u305F) \u76F4\u8FD1\u306E\u907F\u96E3 = \u9003;
+    return await \u7F6E\u304D\u5834().\u66F8\u304F(k, \u5305\u3080(state));
   } catch (e) {
     return false;
   }
 }
+var \u76F4\u8FD1\u306E\u907F\u96E3 = null;
 async function loadGame(key) {
   try {
     return \u89E3\u304F(await \u7F6E\u304D\u5834().\u8AAD\u3080(key || SAVE_KEY));
@@ -15188,7 +15236,7 @@ function SeaScreen({ ctx, land, onEnd }) {
       raf = requestAnimationFrame(tick);
       const dt = last ? Math.min(0.12, (ts - last) / 1e3) : 0;
       last = ts;
-      if (speedRef.current > 0 && b.phase === "fight") stepSeaBattle(b, dt * speedRef.current * 4);
+      if (speedRef.current > 0 && b.phase === "fight") stepSeaBattle(b, dt * speedRef.current);
       const c = cv.current, w = wrap.current;
       if (!c || !w) return;
       const dpr = Math.min(2, typeof window !== "undefined" && window.devicePixelRatio || 1);
@@ -15372,7 +15420,7 @@ function SeaScreen({ ctx, land, onEnd }) {
       }
     },
     "\u8239\u6226\u3092\u59CB\u3081\u308B"
-  ), /* @__PURE__ */ React4.createElement("button", { className: "btn", style: { flex: 1 }, onClick: \u59D4\u306D\u308B }, "\u6C34\u4E3B\u306B\u59D4\u306D\u3066\u7D50\u679C\u3092\u898B\u308B"))), b.phase === "fight" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, [0, 0.3, 0.7, 1.4].map((v) => /* @__PURE__ */ React4.createElement("button", { key: v, className: `btn sm ${speed === v ? "on" : ""}`, onClick: () => setSpeed(v) }, v === 0 ? "\u6B62" : v === 0.3 ? "\u4E26" : v === 0.7 ? "\u65E9" : "\u75BE")), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: \u59D4\u306D\u308B }, "\u59D4\u306D\u3066\u7D50\u679C\u3092\u898B\u308B"), /* @__PURE__ */ React4.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => {
+  ), /* @__PURE__ */ React4.createElement("button", { className: "btn", style: { flex: 1 }, onClick: \u59D4\u306D\u308B }, "\u6C34\u4E3B\u306B\u59D4\u306D\u3066\u7D50\u679C\u3092\u898B\u308B"))), b.phase === "fight" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, [[0, "\u505C\u6B62"], [0.12, "\u5FAE\u901F"], [0.3, "\u4F4E\u901F"], [0.6, "\u901A\u5E38"]].map(([v, \u540D]) => /* @__PURE__ */ React4.createElement("button", { key: v, className: `btn sm ${speed === v ? "on" : ""}`, onClick: () => setSpeed(v) }, \u540D)), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: \u59D4\u306D\u308B }, "\u59D4\u306D\u3066\u7D50\u679C\u3092\u898B\u308B"), /* @__PURE__ */ React4.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React4.createElement("button", { className: "btn sm", onClick: () => {
     for (const f of b.fleets) if (f.side === "P" && !f.dead && !f.destroyed) f.auto = true;
     force((n) => (n + 1) % 1e3);
   } }, "\u5168\u8ECD\u59D4\u4EFB")), foeF && (() => {

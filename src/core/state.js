@@ -73,6 +73,12 @@ export function initState(player) {
   const specials = {};
   for (const t of TOWNS) specials[t.id] = { state: "中立", faction: null, anger: 0, months: 0 };
   return {
+    /* 卓（GDD 15.3）。ひとつの遊びを見分ける印。
+
+       これが無いと、記録の置き場は「別の遊びで上書きしようとしている」ことに
+       気づけない。実際、新しく始めただけで、進めていた盤が黙って消えた。
+       盤ごとに違う印を持たせ、置き場の側で守る。 */
+    卓: `t${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`,
     player, year: 1546, month: 4,
     factions,
     castles: 馬と鉄砲を配る(assignKokuCap(CASTLES.map((c) => ({
@@ -507,6 +513,8 @@ export function 立たぬ申し送りを落とす(s) {
 }
 
 export function migrateSave(s) {
+  // 卓の印の無い古い記録には、いま与える（以後、置き場が守れるようになる）
+  if (!s.卓) s.卓 = `t${(s.player || "x")}${s.year || 0}-旧`;
   migrateRosters(s);
   旗の下を狙う戦役を落とす(s);
   立たぬ申し送りを落とす(s);
