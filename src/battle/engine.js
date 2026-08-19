@@ -4,6 +4,7 @@ import { ROW, SP, corpsMax, corpsMen, notify, placeSquads } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt } from "./field.js";
 import { clamp } from "../core/util.js";
 import { px, py } from "../data/geo.js";
+import { 退き先 } from "./corps.js";
 
 export function createBattle(playerCorps, enemyCorps, attackerSide) {
   const r = Math.random();
@@ -187,8 +188,15 @@ export function stepBattle(b, dt) {
         if (dq > far) far = dq;
       }
       const room = 60 + Math.sqrt(Math.max(1, nq)) * SP * 0.7;
-      // 交戦中は隊が広がるのが当たり前なので、伸びを理由に足を止めない
-      const lag = engaged ? 1 : far <= room ? 1 : far > room * 1.8 ? 0.12 : 0.55;
+      /* 隊が伸びきっていたら足を緩めて組の追いつきを待つ。
+         ただし交戦中は隊が広がるのが当たり前なので、伸びを理由に足を止めない。
+
+         退いている隊も待たせない。槍を合わせていた組は散らばっているので、
+         この足かせを掛けると lag が0.12まで落ちる。撤退を命じても這うようにしか
+         下がらず、盤の外へ出るまでに何十分もかかっていた。
+         退き口とは、隊形を捨てて離れることである。遅れた者は自力で追う。 */
+      const lag = (engaged || c.withdraw || c.routed) ? 1
+        : far <= room ? 1 : far > room * 1.8 ? 0.12 : 0.55;
       /* 隊は、いちばん遅い兵科の足に合わせて進む。
 
          これまでは兵科の平均（男数で重みをつけたもの）で進んでいた。
@@ -333,7 +341,10 @@ export function stepBattle(b, dt) {
       }
       const qd = Math.hypot(targetX - q.x, targetY - q.y);
       const terr = TERRAIN[terrainAt(q.x, q.y)];
-      if (qd > 2 && !q.engaged) {
+      /* 退いている隊の組は、噛み合っていても動く。
+         そうでないと、組は動かず、隊の代表点は組の重心へ引き戻され、
+         撤退を命じても一歩も退けない（corps.js の退かせる を参照）。 */
+      if (qd > 2 && (!q.engaged || c.withdraw || c.routed)) {
         /* 持ち場へ追いつくための足（GDD 8.3）。
 
            組は自分の兵科の速さでしか歩けなかった。ところが隊そのものは
@@ -631,15 +642,23 @@ export function stepBattle(b, dt) {
       if (!melee) continue;
       const terr = TERRAIN[terrainAt(q.x, q.y)];
       if (mdist < 22) {
-        q.engaged = true; melee.e.engaged = true;
-        q.link = { x: melee.e.x, y: melee.e.y };        // 組み合っている相手
-        // 接戦中の組は互いへ少し詰め寄る。隊列は保ったまま噛み合いが見えるようにする。
-        const pull = 2.2 * dt;
-        const ax = ((melee.e.x - q.x) / Math.max(1, mdist)) * pull;
-        const ay = ((melee.e.y - q.y) / Math.max(1, mdist)) * pull;
-        if (passable(q.x + ax, q.y + ay)) { q.x += ax; q.y += ay; }
-        else if (passable(q.x + ax, q.y)) q.x += ax;
-        else if (passable(q.x, q.y + ay)) q.y += ay;
+        /* 退いている隊は組み合わない。背を向けて離れていく。
+           相手を掴み直すこともしないし、相手からも掴まれない。
+           ただし離れきるまでは追い討ちの刃を受ける（下の applyDamage は通る）。 */
+        const 引く = c.withdraw || c.routed;
+        const 相手も引く = melee.f.withdraw || melee.f.routed;
+        if (!引く) {
+          q.engaged = true;
+          if (!相手も引く) melee.e.engaged = true;
+          q.link = { x: melee.e.x, y: melee.e.y };      // 組み合っている相手
+          // 接戦中の組は互いへ少し詰め寄る。隊列は保ったまま噛み合いが見えるようにする。
+          const pull = 2.2 * dt;
+          const ax = ((melee.e.x - q.x) / Math.max(1, mdist)) * pull;
+          const ay = ((melee.e.y - q.y) / Math.max(1, mdist)) * pull;
+          if (passable(q.x + ax, q.y + ay)) { q.x += ax; q.y += ay; }
+          else if (passable(q.x + ax, q.y)) q.x += ax;
+          else if (passable(q.x, q.y + ay)) q.y += ay;
+        }
         // 接戦の火花。見づらくならないよう間引いて出す。
         if (b.fx.length < 200 && (c.side === "P" || c.seen)) {
           const mx2 = (q.x + melee.e.x) / 2, my2 = (q.y + melee.e.y) / 2;
@@ -720,12 +739,15 @@ export function stepBattle(b, dt) {
     }
     if (!c.routed && (c.morale < 15 || ratio < 0.25)) {
       c.routed = true; c.order = "敗走";
-      notify(b, `${c.gen.name}隊が崩れ、敗走した。`, c.side === "P" ? "bad" : "good"); c.tx = c.x; c.ty = c.side === "P" ? FIELD.h + 120 : -120;
+      for (const q of c.squads) { q.engaged = false; q.link = null; }   // 崩れた者は掴み合いを解いて走る
+      notify(b, `${c.gen.name}隊が崩れ、敗走した。`, c.side === "P" ? "bad" : "good");
+      { const p2 = 退き先(b, c); c.tx = p2.x; c.ty = p2.y; }
       b.log.push({ t: b.t, text: `${c.name}隊が崩れ、敗走に移った。` });
       for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 9;
     }
     if (c.routed || c.withdraw) {
-      c.ty = c.side === "P" ? FIELD.h + 120 : -120;
+      // 退く先は自陣の側。決め打ちの「南」では、自陣が北にある戦で敵陣へ歩いてしまう。
+      const p2 = 退き先(b, c); c.tx = p2.x; c.ty = p2.y;
       // 戦場の外へ落ち延びた隊は退場させる。横に抜けた場合も見落とさない。
       if (c.y > FIELD.h + 60 || c.y < -60 || c.x > FIELD.w + 60 || c.x < -60) c.dead = true;
     }

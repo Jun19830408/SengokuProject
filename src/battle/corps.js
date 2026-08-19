@@ -2,6 +2,7 @@ import { MAP, axisOf, fromUV } from "./castleMap.js";
 import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, fieldScale, hasRiver, nearestOf, riverShift } from "./field.js";
 import { clamp } from "../core/util.js";
 import { ARMS } from "../data/roads.js";
+import { FIELD } from "./field.js";
 
 export const FORMATIONS = ["横陣", "鶴翼", "魚鱗", "鋒矢", "雁行", "方陣", "長蛇"];
 
@@ -438,6 +439,76 @@ export function issueOrder(b, c, patch) {
   c.pending = { patch, t: commandDelay(b, c) };
 }
 
+
+/* 退く先（GDD 8.2）。
+
+   これまでは「遊ぶ側は南、敵は北」と決め打ちしていた。
+     c.ty = c.side === "P" ? FIELD.h + 120 : -120
+
+   ところが自陣がどちらに寄るかは、攻め口の方角（b.face）と、寄せ手か守り手か
+   （b.myFar）で決まる。北から攻めれば自陣は盤の北にあり、東西の街道なら
+   自陣は左右にある。決め打ちのままでは、撤退を命じた隊が敵陣へ向かって
+   歩き出すことになる。押しても退かぬように見えるのは、これである。
+   進んだ先には敵がいるので、すぐまた噛み合って、その場から動かなくなる。
+
+   布陣の範囲を決めている ownZone と同じ拠りどころ（face と myFar）から、
+   自陣の側を割り出して、そちらの盤外へ落ちる。
+
+   城攻めでは方角ではなく、城の中心から離れる向きへ退く。
+   寄せ手は囲みを解いて外へ、城方も同じく城から離れる。 */
+export function 退き先(b, c) {
+  if (b && b.map) {
+    const ox = c.x - b.map.cx, oy = c.y - b.map.cy, od = Math.hypot(ox, oy) || 1;
+    return { x: c.x + (ox / od) * (FIELD.w + FIELD.h), y: c.y + (oy / od) * (FIELD.w + FIELD.h) };
+  }
+  const face = (b && b.face) || "S", far = !!(b && b.myFar);
+  const 縦 = face === "N" || face === "S";
+  // ownZone と同じ決め方。true なら遊ぶ側の陣は下（縦のとき）／右（横のとき）
+  const 遊ぶ側 = 縦 ? (face === "S" ? far : !far) : (face === "E" ? far : !far);
+  const こちら = c.side === "P" ? 遊ぶ側 : !遊ぶ側;
+  return 縦
+    ? { x: c.x, y: こちら ? FIELD.h + 120 : -120 }
+    : { x: こちら ? FIELD.w + 120 : -120, y: c.y };
+}
+
+/* 退き口（GDD 8.2）。
+
+   槍を合わせている隊を退かせるのは、戦のうちで最も難しい事である。
+   仕組みの上でも、そこが抜けていた。
+
+   組は「持ち場から離れていて、かつ噛み合っていなければ」持ち場へ寄る
+   （engine の qd > 2 && !q.engaged）。噛み合った組はその場を動かない。
+   一方、隊の代表点は組の重心へ引き戻される。だから、噛み合った隊に撤退を
+   命じても、組は動かず、代表点も動かず、一歩も退けなかった。
+   百秒待たせて、ただの一歩も動かなかった。
+
+   城攻めでは離れた場所から取り付くので動けたが、野戦では槍を合わせた途端に
+   撤退が効かなくなる。これを直す。
+
+   ただし、ただで退けるようにはしない。背を向ければ追い討ちの一撃を受ける。
+   統制を保って一斉に退けば（全軍撤退）軽く済み、一隊だけ勝手に抜ければ重い。 */
+export function 退かせる(b, c, 統制) {
+  if (!c || c.dead || c.destroyed) return null;
+  const 噛んでいた = c.squads.filter((q) => q.men > 0 && q.engaged).length;
+  c.task = null; c.狙い = null; c.withdraw = true;
+  c.pinned = false; c.gate = null; c.siegeAuto = false; c.wp = null;
+  for (const q of c.squads) { q.engaged = false; q.link = null; }
+  let 損 = 0;
+  if (噛んでいた) {
+    const 割 = (統制 ? 0.045 : 0.075)
+      * Math.min(1, 噛んでいた / Math.max(1, c.squads.length) + 0.3);
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const 落 = Math.round(q.men * 割);
+      q.men = Math.max(0, q.men - 落); 損 += 落;
+      q.cohesion = Math.max(0, q.cohesion - (統制 ? 10 : 20));
+    }
+    c.morale = Math.max(0, c.morale - (統制 ? 6 : 12));
+  }
+  const 先 = 退き先(b, c);
+  issueOrder(b, c, { order: "撤退", tx: 先.x, ty: 先.y });
+  return { 噛んでいた, 損 };
+}
 
 export let AI_ISSUING = false;                 // AIが出している命令か（委任を解かないため）
 // 折を分けたため、合戦AIからはこの口を通して上げ下げする。

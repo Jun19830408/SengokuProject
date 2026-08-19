@@ -6,6 +6,7 @@ import { stepBattle } from "../battle/engine.js";
 import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
+import { 退かせる } from "../battle/corps.js";
 
 /* --------------------------------------------------------------- 合戦画面 */
 export function BattleScreen({ ctx, land, onEnd }) {
@@ -289,7 +290,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       }
       if (o === "射撃") { c.order = "射撃"; c.tx = c.x; c.ty = c.y; }
       if (o === "待機") { c.order = "待機"; c.tx = c.x; c.ty = c.y; }
-      if (o === "撤退") { c.order = "撤退"; c.withdraw = true; c.tx = c.x; c.ty = FIELD.h + 120; }
+      if (o === "撤退") 退かせる(b, c, true);      // 一斉に退けば統制は保たれる
     }
     if (o === "撤退") { b.retreat = "P"; b.orderly = true; b.log.push({ t: b.t, text: "全軍に退き鉦。統制を保って戦場を離れる。" }); }
   };
@@ -827,9 +828,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (k.全軍) allOrder("撤退");
     else if (k.corps) {
       const c = k.corps;
-      c.task = null; c.狙い = null; c.withdraw = true;
-      issueOrder(b, c, { order: "撤退", tx: c.x, ty: FIELD.h + 120 });
-      b.log.push({ t: b.t, text: `${c.gen.name}隊が戦場を離れる。` });
+      const r = 退かせる(b, c, false);            // 一隊だけ抜けるので追い討ちは重い
+      b.log.push({ t: b.t, text: r && r.損
+        ? `${c.gen.name}隊が槍を引いて戦場を離れる。背を追われ${fmt(r.損)}人を失った。`
+        : `${c.gen.name}隊が戦場を離れる。` });
+      if (r && r.損) notify(b, `${c.gen.name}隊、退き口で${fmt(r.損)}人を失う。`, "bad");
     }
     force((n) => (n + 1) % 1000);
   };
@@ -852,8 +855,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
           <div style={{ margin: "10px 0", padding: "9px 11px", background: "rgba(176,72,60,0.08)",
             borderLeft: "3px solid #B0483C", fontSize: 11.5, lineHeight: 1.9 }}>
             {全
-              ? "統制を保って退くので、追い討ちの損は小さく済みます。ただし城は落ちず、兵と兵糧は費えます。"
-              : "残る隊だけで戦うことになります。手薄になった側面を衝かれぬよう気をつけてください。"}
+              ? "一斉に退き鉦を鳴らすので統制は保たれ、追い討ちの損は小さく済みます（槍を合わせている隊は兵の四分ほどを失います）。ただし城は落ちず、兵と兵糧は費えます。"
+              : "一隊だけ槍を引くので、背を追われます（槍を合わせていれば兵の七分ほどを失い、士気と隊列も崩れます）。残る隊だけで戦うことになります。"}
           </div>
           <div style={{ display: "flex", gap: 9 }}>
             <button className="btn" style={{ flex: 1 }} onClick={() => set退き確認(null)}>取りやめる</button>

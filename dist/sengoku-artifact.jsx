@@ -9925,6 +9925,47 @@ function issueOrder(b, c, patch) {
   }
   c.pending = { patch, t: commandDelay(b, c) };
 }
+function \u9000\u304D\u5148(b, c) {
+  if (b && b.map) {
+    const ox = c.x - b.map.cx, oy = c.y - b.map.cy, od = Math.hypot(ox, oy) || 1;
+    return { x: c.x + ox / od * (FIELD.w + FIELD.h), y: c.y + oy / od * (FIELD.w + FIELD.h) };
+  }
+  const face = b && b.face || "S", far = !!(b && b.myFar);
+  const \u7E26 = face === "N" || face === "S";
+  const \u904A\u3076\u5074 = \u7E26 ? face === "S" ? far : !far : face === "E" ? far : !far;
+  const \u3053\u3061\u3089 = c.side === "P" ? \u904A\u3076\u5074 : !\u904A\u3076\u5074;
+  return \u7E26 ? { x: c.x, y: \u3053\u3061\u3089 ? FIELD.h + 120 : -120 } : { x: \u3053\u3061\u3089 ? FIELD.w + 120 : -120, y: c.y };
+}
+function \u9000\u304B\u305B\u308B(b, c, \u7D71\u5236) {
+  if (!c || c.dead || c.destroyed) return null;
+  const \u565B\u3093\u3067\u3044\u305F = c.squads.filter((q) => q.men > 0 && q.engaged).length;
+  c.task = null;
+  c.\u72D9\u3044 = null;
+  c.withdraw = true;
+  c.pinned = false;
+  c.gate = null;
+  c.siegeAuto = false;
+  c.wp = null;
+  for (const q of c.squads) {
+    q.engaged = false;
+    q.link = null;
+  }
+  let \u640D = 0;
+  if (\u565B\u3093\u3067\u3044\u305F) {
+    const \u5272 = (\u7D71\u5236 ? 0.045 : 0.075) * Math.min(1, \u565B\u3093\u3067\u3044\u305F / Math.max(1, c.squads.length) + 0.3);
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const \u843D = Math.round(q.men * \u5272);
+      q.men = Math.max(0, q.men - \u843D);
+      \u640D += \u843D;
+      q.cohesion = Math.max(0, q.cohesion - (\u7D71\u5236 ? 10 : 20));
+    }
+    c.morale = Math.max(0, c.morale - (\u7D71\u5236 ? 6 : 12));
+  }
+  const \u5148 = \u9000\u304D\u5148(b, c);
+  issueOrder(b, c, { order: "\u64A4\u9000", tx: \u5148.x, ty: \u5148.y });
+  return { \u565B\u3093\u3067\u3044\u305F, \u640D };
+}
 var AI_ISSUING = false;
 function setAiIssuing(v) {
   AI_ISSUING = v;
@@ -12057,7 +12098,7 @@ function stepBattle(b, dt) {
         if (dq > far) far = dq;
       }
       const room = 60 + Math.sqrt(Math.max(1, nq)) * SP * 0.7;
-      const lag = engaged ? 1 : far <= room ? 1 : far > room * 1.8 ? 0.12 : 0.55;
+      const lag = engaged || c.withdraw || c.routed ? 1 : far <= room ? 1 : far > room * 1.8 ? 0.12 : 0.55;
       const \u751F\u304D\u305F\u7D44 = c.squads.filter((q) => q.men > 0);
       const \u6700\u3082\u9045\u3044\u8DB3 = \u751F\u304D\u305F\u7D44.length ? Math.min(...\u751F\u304D\u305F\u7D44.map((q) => ARM_STATS[q.type].speed)) : avgSpeed;
       const \u968A\u306E\u8DB3 = engaged ? avgSpeed : Math.min(avgSpeed, \u6700\u3082\u9045\u3044\u8DB3 * 1.12);
@@ -12205,7 +12246,7 @@ function stepBattle(b, dt) {
       }
       const qd = Math.hypot(targetX - q.x, targetY - q.y);
       const terr = TERRAIN[terrainAt(q.x, q.y)];
-      if (qd > 2 && !q.engaged) {
+      if (qd > 2 && (!q.engaged || c.withdraw || c.routed)) {
         const \u9045\u308C = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
         const \u8FFD\u3044\u3064\u304D = c.routed ? 1 : clamp(1 + \u9045\u308C / 34, 1, 2.4);
         const v = st0.speed * \u8FFD\u3044\u3064\u304D * fieldScale() * terr.speed * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
@@ -12512,17 +12553,21 @@ function stepBattle(b, dt) {
       if (!melee) continue;
       const terr = TERRAIN[terrainAt(q.x, q.y)];
       if (mdist < 22) {
-        q.engaged = true;
-        melee.e.engaged = true;
-        q.link = { x: melee.e.x, y: melee.e.y };
-        const pull = 2.2 * dt;
-        const ax = (melee.e.x - q.x) / Math.max(1, mdist) * pull;
-        const ay = (melee.e.y - q.y) / Math.max(1, mdist) * pull;
-        if (passable(q.x + ax, q.y + ay)) {
-          q.x += ax;
-          q.y += ay;
-        } else if (passable(q.x + ax, q.y)) q.x += ax;
-        else if (passable(q.x, q.y + ay)) q.y += ay;
+        const \u5F15\u304F = c.withdraw || c.routed;
+        const \u76F8\u624B\u3082\u5F15\u304F = melee.f.withdraw || melee.f.routed;
+        if (!\u5F15\u304F) {
+          q.engaged = true;
+          if (!\u76F8\u624B\u3082\u5F15\u304F) melee.e.engaged = true;
+          q.link = { x: melee.e.x, y: melee.e.y };
+          const pull = 2.2 * dt;
+          const ax = (melee.e.x - q.x) / Math.max(1, mdist) * pull;
+          const ay = (melee.e.y - q.y) / Math.max(1, mdist) * pull;
+          if (passable(q.x + ax, q.y + ay)) {
+            q.x += ax;
+            q.y += ay;
+          } else if (passable(q.x + ax, q.y)) q.x += ax;
+          else if (passable(q.x, q.y + ay)) q.y += ay;
+        }
         if (b.fx.length < 200 && (c.side === "P" || c.seen)) {
           const mx2 = (q.x + melee.e.x) / 2, my2 = (q.y + melee.e.y) / 2;
           if (Math.random() < dt * 2.4) {
@@ -12617,14 +12662,23 @@ function stepBattle(b, dt) {
     if (!c.routed && (c.morale < 15 || ratio < 0.25)) {
       c.routed = true;
       c.order = "\u6557\u8D70";
+      for (const q of c.squads) {
+        q.engaged = false;
+        q.link = null;
+      }
       notify(b, `${c.gen.name}\u968A\u304C\u5D29\u308C\u3001\u6557\u8D70\u3057\u305F\u3002`, c.side === "P" ? "bad" : "good");
-      c.tx = c.x;
-      c.ty = c.side === "P" ? FIELD.h + 120 : -120;
+      {
+        const p2 = \u9000\u304D\u5148(b, c);
+        c.tx = p2.x;
+        c.ty = p2.y;
+      }
       b.log.push({ t: b.t, text: `${c.name}\u968A\u304C\u5D29\u308C\u3001\u6557\u8D70\u306B\u79FB\u3063\u305F\u3002` });
       for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 9;
     }
     if (c.routed || c.withdraw) {
-      c.ty = c.side === "P" ? FIELD.h + 120 : -120;
+      const p2 = \u9000\u304D\u5148(b, c);
+      c.tx = p2.x;
+      c.ty = p2.y;
       if (c.y > FIELD.h + 60 || c.y < -60 || c.x > FIELD.w + 60 || c.x < -60) c.dead = true;
     }
     if (corpsMen(c) <= 0 && !c.destroyed) {
@@ -13585,12 +13639,7 @@ function BattleScreen({ ctx, land, onEnd }) {
         c.tx = c.x;
         c.ty = c.y;
       }
-      if (o === "\u64A4\u9000") {
-        c.order = "\u64A4\u9000";
-        c.withdraw = true;
-        c.tx = c.x;
-        c.ty = FIELD.h + 120;
-      }
+      if (o === "\u64A4\u9000") \u9000\u304B\u305B\u308B(b, c, true);
     }
     if (o === "\u64A4\u9000") {
       b.retreat = "P";
@@ -14012,11 +14061,9 @@ function BattleScreen({ ctx, land, onEnd }) {
     if (k.\u5168\u8ECD) allOrder("\u64A4\u9000");
     else if (k.corps) {
       const c = k.corps;
-      c.task = null;
-      c.\u72D9\u3044 = null;
-      c.withdraw = true;
-      issueOrder(b, c, { order: "\u64A4\u9000", tx: c.x, ty: FIELD.h + 120 });
-      b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C\u6226\u5834\u3092\u96E2\u308C\u308B\u3002` });
+      const r = \u9000\u304B\u305B\u308B(b, c, false);
+      b.log.push({ t: b.t, text: r && r.\u640D ? `${c.gen.name}\u968A\u304C\u69CD\u3092\u5F15\u3044\u3066\u6226\u5834\u3092\u96E2\u308C\u308B\u3002\u80CC\u3092\u8FFD\u308F\u308C${fmt(r.\u640D)}\u4EBA\u3092\u5931\u3063\u305F\u3002` : `${c.gen.name}\u968A\u304C\u6226\u5834\u3092\u96E2\u308C\u308B\u3002` });
+      if (r && r.\u640D) notify(b, `${c.gen.name}\u968A\u3001\u9000\u304D\u53E3\u3067${fmt(r.\u640D)}\u4EBA\u3092\u5931\u3046\u3002`, "bad");
     }
     force((n) => (n + 1) % 1e3);
   };
@@ -14032,7 +14079,7 @@ function BattleScreen({ ctx, land, onEnd }) {
       borderLeft: "3px solid #B0483C",
       fontSize: 11.5,
       lineHeight: 1.9
-    } }, \u5168 ? "\u7D71\u5236\u3092\u4FDD\u3063\u3066\u9000\u304F\u306E\u3067\u3001\u8FFD\u3044\u8A0E\u3061\u306E\u640D\u306F\u5C0F\u3055\u304F\u6E08\u307F\u307E\u3059\u3002\u305F\u3060\u3057\u57CE\u306F\u843D\u3061\u305A\u3001\u5175\u3068\u5175\u7CE7\u306F\u8CBB\u3048\u307E\u3059\u3002" : "\u6B8B\u308B\u968A\u3060\u3051\u3067\u6226\u3046\u3053\u3068\u306B\u306A\u308A\u307E\u3059\u3002\u624B\u8584\u306B\u306A\u3063\u305F\u5074\u9762\u3092\u885D\u304B\u308C\u306C\u3088\u3046\u6C17\u3092\u3064\u3051\u3066\u304F\u3060\u3055\u3044\u3002"), /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", gap: 9 } }, /* @__PURE__ */ React3.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => set\u9000\u304D\u78BA\u8A8D(null) }, "\u53D6\u308A\u3084\u3081\u308B"), /* @__PURE__ */ React3.createElement("button", { className: "btn dark", style: { flex: 1 }, onClick: \u9000\u304D\u5B9F\u884C }, \u5168 ? "\u627F\u77E5\u3002\u5168\u8ECD\u9000\u304F" : "\u627F\u77E5\u3002\u3053\u306E\u968A\u3092\u9000\u304B\u305B\u308B"))));
+    } }, \u5168 ? "\u4E00\u6589\u306B\u9000\u304D\u9266\u3092\u9CF4\u3089\u3059\u306E\u3067\u7D71\u5236\u306F\u4FDD\u305F\u308C\u3001\u8FFD\u3044\u8A0E\u3061\u306E\u640D\u306F\u5C0F\u3055\u304F\u6E08\u307F\u307E\u3059\uFF08\u69CD\u3092\u5408\u308F\u305B\u3066\u3044\u308B\u968A\u306F\u5175\u306E\u56DB\u5206\u307B\u3069\u3092\u5931\u3044\u307E\u3059\uFF09\u3002\u305F\u3060\u3057\u57CE\u306F\u843D\u3061\u305A\u3001\u5175\u3068\u5175\u7CE7\u306F\u8CBB\u3048\u307E\u3059\u3002" : "\u4E00\u968A\u3060\u3051\u69CD\u3092\u5F15\u304F\u306E\u3067\u3001\u80CC\u3092\u8FFD\u308F\u308C\u307E\u3059\uFF08\u69CD\u3092\u5408\u308F\u305B\u3066\u3044\u308C\u3070\u5175\u306E\u4E03\u5206\u307B\u3069\u3092\u5931\u3044\u3001\u58EB\u6C17\u3068\u968A\u5217\u3082\u5D29\u308C\u307E\u3059\uFF09\u3002\u6B8B\u308B\u968A\u3060\u3051\u3067\u6226\u3046\u3053\u3068\u306B\u306A\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", gap: 9 } }, /* @__PURE__ */ React3.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => set\u9000\u304D\u78BA\u8A8D(null) }, "\u53D6\u308A\u3084\u3081\u308B"), /* @__PURE__ */ React3.createElement("button", { className: "btn dark", style: { flex: 1 }, onClick: \u9000\u304D\u5B9F\u884C }, \u5168 ? "\u627F\u77E5\u3002\u5168\u8ECD\u9000\u304F" : "\u627F\u77E5\u3002\u3053\u306E\u968A\u3092\u9000\u304B\u305B\u308B"))));
   })();
   return /* @__PURE__ */ React3.createElement("div", { className: "sp", style: { height: "100dvh", background: U.paper, overscrollBehavior: "none" }, onMouseDown: stop, onMouseUp: stop }, \u9000\u304D\u306E\u672D, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 } }, !wide && /* @__PURE__ */ React3.createElement("div", { className: "bar", style: { padding: "6px 10px", gap: 10, fontSize: 12 } }, /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.pName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(pMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u58EB\u6C17 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, pMor)), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { color: U.dim } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.eName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(eMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, ctx.place, ctx.mode === "castle" ? "\u57CE\u653B\u3081" : ctx.mode === "clash" ? "\u306E\u91CE\u6226" : "\u4E0B", "\u30FB", b.weather), ctx.mode === "castle" && b.map && b.map.gates.map((gt) => /* @__PURE__ */ React3.createElement("span", { key: gt.key, style: { fontSize: 11, color: U.dim } }, gt.key, /* @__PURE__ */ React3.createElement("b", { style: { color: gt.broken ? "#B0483C" : gt.hp / gt.max > 0.4 ? U.text : "#C89A3A" } }, gt.broken ? "\u7834" : `${Math.round(gt.hp / gt.max * 100)}%`))), ctx.mode === "castle" && b.map && b.press != null && /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 11, color: U.dim } }, "\u57CE\u306E\u50BE\u304D", /* @__PURE__ */ React3.createElement("b", { style: { color: b.press > 0.6 ? "#B0483C" : U.text } }, Math.round(b.press * 100), "%")), /* @__PURE__ */ React3.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React3.createElement("span", { className: "kv num" }, Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF0F\u65E5\u6CA1\u307E\u3067", Math.max(0, Math.ceil((b.dusk - b.t) / 60)), "\u5206")), phase === "fight" && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0 ? "on" : ""}`, onClick: () => setSpeed(0) }, "\u505C\u6B62"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.12 ? "on" : ""}`, onClick: () => setSpeed(0.12) }, "\u5FAE\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.3 ? "on" : ""}`, onClick: () => setSpeed(0.3) }, "\u4F4E\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.6 ? "on" : ""}`, onClick: () => setSpeed(0.6) }, "\u901A\u5E38"))), /* @__PURE__ */ React3.createElement("div", { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" } }, /* @__PURE__ */ React3.createElement(
     "div",
