@@ -85,12 +85,28 @@ export function genTerrain(seed) {
       if (ok) list.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r0), seed: Math.floor(rnd() * 1e9) });
     }
   };
-  const sc = Math.min(1.6, FIELD.w / 1080);
-  put(HILLS, Math.floor(rnd() * 3), 80 * sc, 130 * sc);        // 0〜2
-  put(FORESTS, Math.floor(rnd() * 4), 70 * sc, 115 * sc);      // 0〜3
-  put(WOODS, Math.floor(rnd() * 3), 50 * sc, 85 * sc);         // 0〜2
-  put(MARSH, rnd() > 0.6 ? 1 : 0, 65 * sc, 100 * sc);          // 0〜1
-  put(VILLAGES, Math.floor(rnd() * 3), 34 * sc, 58 * sc);      // 0〜2
+  /* 地物の大きさと数（GDD 8.1）。
+
+     野の広さに合わせる。かつては一.六倍で頭打ちにしていた。標準の野が
+     千八十歩だったころはそれでよかったが、隊数で野を広げたので、
+     七千歩の野に百三十歩の丘が点在するという有様になった。
+     遠目には見えず、隊の脇をすり抜けてしまう。
+
+     頭打ちを外し、野の広さにそのまま比例させる。数も増やす。
+     広い野に地物が二つ三つでは、ただ広いだけの原っぱである。
+     回り込む目印になり、伏せる場所になり、拠って戦う高みになってこそ、
+     広さが効いてくる。 */
+  const sc = clamp(FIELD.w / 1080, 1, 4.6);
+  /* 広い野には、必ずいくらか地物を置く。
+     倍を掛けるだけでは、賽が零を出した野は七千歩の原っぱになる。
+     見渡す限り何も無い野では、回り込む目印も、伏せる場所もない。 */
+  const 底 = sc >= 2.4 ? 2 : sc >= 1.6 ? 1 : 0;
+  const 数 = (基, 要) => Math.max(要 ? 底 : 0, Math.round(基 * (0.6 + sc * 0.62)));
+  put(HILLS, 数(Math.floor(rnd() * 3), true), 80 * sc, 130 * sc);
+  put(FORESTS, 数(Math.floor(rnd() * 4), true), 70 * sc, 115 * sc);
+  put(WOODS, 数(Math.floor(rnd() * 3) + 1), 50 * sc, 85 * sc);
+  put(MARSH, 数(rnd() > 0.6 ? 1 : 0), 65 * sc, 100 * sc);
+  put(VILLAGES, 数(Math.floor(rnd() * 3)), 34 * sc, 58 * sc);
 
   /* 丘の高さ。裾の広い丘ほど高く盛り上がる。
      地形としてはどれも「丘」であって、効きは変わらない。見た目の起伏だけである。 */

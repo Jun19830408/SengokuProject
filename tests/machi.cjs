@@ -209,6 +209,27 @@ const 町 = (id) => H.TOWNS.find((x) => x.id === id);
   H.layoutField(6000, 6);
   確('六隊なら一隊あたり四十万歩²以上ある', 六 / 6 > 400000,
     `一隊あたり ${Math.round(六 / 6 / 1000)}千歩²`);
+
+  /* 地物は野の広さに合わせて大きくなること。
+     かつては一.六倍で頭打ちだったので、七千歩の野に百三十歩の丘が点在した。
+     遠目には見えず、隊の脇をすり抜けてしまう。 */
+  const 測 = (men, n, seed) => {
+    H.setFieldSeed('m' + seed, 'n' + seed); H.layoutField(men, n);
+    const 丘 = H.HILLS[0] ? H.HILLS[0].r * 2 / H.FIELD.w : 0;
+    return { 割: 丘, 数: H.HILLS.length + H.FORESTS.length + H.WOODS.length, w: H.FIELD.w };
+  };
+  const 小 = 測(3000, 2, 1), 大 = 測(20000, 10, 1);
+  確('丘の大きさは、野に対する割で見れば変わらない',
+    大.割 > 小.割 * 0.6 && 大.割 < 小.割 * 1.7,
+    `小さい野で${(小.割 * 100).toFixed(1)}%／広い野で${(大.割 * 100).toFixed(1)}%`);
+  確('広い野ほど地物が多い', 大.数 > 小.数,
+    `${小.w}歩の野で${小.数}か所／${大.w}歩の野で${大.数}か所`);
+  let 空 = 0;
+  for (let i = 1; i <= 40; i++) {
+    H.setFieldSeed('z' + i, 'w' + i); H.layoutField(6000 + i * 400, 4 + (i % 7));
+    if (!H.HILLS.length && !H.FORESTS.length) 空++;
+  }
+  確('広い野が、丘も森も無い原っぱにならない', 空 === 0, `四十の野を検めた`);
 }
 
 console.log('');

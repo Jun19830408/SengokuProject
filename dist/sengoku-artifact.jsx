@@ -9846,12 +9846,14 @@ function genTerrain(seed) {
       if (ok) list.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r0), seed: Math.floor(rnd() * 1e9) });
     }
   };
-  const sc = Math.min(1.6, FIELD.w / 1080);
-  put(HILLS, Math.floor(rnd() * 3), 80 * sc, 130 * sc);
-  put(FORESTS, Math.floor(rnd() * 4), 70 * sc, 115 * sc);
-  put(WOODS, Math.floor(rnd() * 3), 50 * sc, 85 * sc);
-  put(MARSH, rnd() > 0.6 ? 1 : 0, 65 * sc, 100 * sc);
-  put(VILLAGES, Math.floor(rnd() * 3), 34 * sc, 58 * sc);
+  const sc = clamp(FIELD.w / 1080, 1, 4.6);
+  const \u5E95 = sc >= 2.4 ? 2 : sc >= 1.6 ? 1 : 0;
+  const \u6570 = (\u57FA, \u8981) => Math.max(\u8981 ? \u5E95 : 0, Math.round(\u57FA * (0.6 + sc * 0.62)));
+  put(HILLS, \u6570(Math.floor(rnd() * 3), true), 80 * sc, 130 * sc);
+  put(FORESTS, \u6570(Math.floor(rnd() * 4), true), 70 * sc, 115 * sc);
+  put(WOODS, \u6570(Math.floor(rnd() * 3) + 1), 50 * sc, 85 * sc);
+  put(MARSH, \u6570(rnd() > 0.6 ? 1 : 0), 65 * sc, 100 * sc);
+  put(VILLAGES, \u6570(Math.floor(rnd() * 3)), 34 * sc, 58 * sc);
   for (const h of HILLS) h.rise = Math.round(h.r * (0.2 + h.seed % 100 / 100 * 0.14));
 }
 var hasRiver = () => RIVER.bot > RIVER.top + 4;
@@ -11437,6 +11439,7 @@ function drawKoma(ctx, x, y, f, type, fill, stroke, k) {
 }
 var \u5149 = { x: -0.62, y: -0.78 };
 var \u5F71 = { x: 7, y: 9 };
+var \u672D\u306E\u500D = () => clamp(FIELD.w / 1080, 1, 5);
 function \u7A2E\u4E71\u6570(seed) {
   let t = (seed >>> 0) + 1831565813;
   return () => {
@@ -11509,12 +11512,13 @@ function \u4E18\u3092\u63CF\u304F(ctx, h) {
     ctx.lineTo(tx + (rnd() - 0.5) * 5, ty - 5);
     ctx.stroke();
   }
-  ctx.font = "15px 'Hiragino Mincho ProN',serif";
+  const \u5B57 = Math.round(15 * \u672D\u306E\u500D());
+  ctx.font = `${\u5B57}px 'Hiragino Mincho ProN',serif`;
   ctx.strokeStyle = "rgba(250,252,236,0.9)";
-  ctx.lineWidth = 3.4;
-  ctx.strokeText("\u4E18", h.x - 7.5, h.y - \u9AD8 * 0.7 + 6);
+  ctx.lineWidth = \u5B57 * 0.23;
+  ctx.strokeText("\u4E18", h.x - \u5B57 * 0.5, h.y - \u9AD8 * 0.7 + \u5B57 * 0.4);
   ctx.fillStyle = "rgba(60,78,44,0.95)";
-  ctx.fillText("\u4E18", h.x - 7.5, h.y - \u9AD8 * 0.7 + 6);
+  ctx.fillText("\u4E18", h.x - \u5B57 * 0.5, h.y - \u9AD8 * 0.7 + \u5B57 * 0.4);
 }
 function \u6728\u7ACB\u3092\u63CF\u304F(ctx, f, \u6FC3, n, label) {
   const \u4E08 = Math.max(7, f.r * (\u6FC3 ? 0.17 : 0.15));
@@ -11567,12 +11571,13 @@ function \u6728\u7ACB\u3092\u63CF\u304F(ctx, f, \u6FC3, n, label) {
     ctx.ellipse(t.x - t.s * 0.24, t.y - t.s * 0.72, t.s * 0.26, t.s * 0.2, 0, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.font = "15px 'Hiragino Mincho ProN',serif";
+  const \u5B57 = Math.round(15 * \u672D\u306E\u500D());
+  ctx.font = `${\u5B57}px 'Hiragino Mincho ProN',serif`;
   ctx.strokeStyle = "rgba(255,255,255,0.82)";
-  ctx.lineWidth = 3.4;
-  ctx.strokeText(label, f.x - label.length * 7.5, f.y + 6);
+  ctx.lineWidth = \u5B57 * 0.23;
+  ctx.strokeText(label, f.x - label.length * \u5B57 * 0.5, f.y + \u5B57 * 0.4);
   ctx.fillStyle = "rgba(38,58,34,0.95)";
-  ctx.fillText(label, f.x - label.length * 7.5, f.y + 6);
+  ctx.fillText(label, f.x - label.length * \u5B57 * 0.5, f.y + \u5B57 * 0.4);
 }
 function \u6728\u306E\u68A2\u3060\u3051(ctx, f, \u6FC3, n) {
   const \u4E08 = Math.max(7, f.r * (\u6FC3 ? 0.17 : 0.15));
@@ -11635,12 +11640,13 @@ function \u6E7F\u5730\u3092\u63CF\u304F(ctx, m) {
     ctx.quadraticCurveTo(tx + 2, ty - \u4E08 * 0.5, tx + (rnd() - 0.5) * 5, ty - \u4E08);
     ctx.stroke();
   }
-  ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.font = "13px 'Hiragino Mincho ProN',serif";
+  const \u5B57 = Math.round(14 * \u672D\u306E\u500D());
+  ctx.font = `${\u5B57}px 'Hiragino Mincho ProN',serif`;
   ctx.strokeStyle = "rgba(48,78,74,0.75)";
-  ctx.lineWidth = 3;
-  ctx.strokeText("\u6E7F\u5730", m.x - 19, m.y + 5);
-  ctx.fillText("\u6E7F\u5730", m.x - 19, m.y + 5);
+  ctx.lineWidth = \u5B57 * 0.22;
+  ctx.strokeText("\u6E7F\u5730", m.x - \u5B57, m.y + \u5B57 * 0.36);
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillText("\u6E7F\u5730", m.x - \u5B57, m.y + \u5B57 * 0.36);
 }
 function \u96C6\u843D\u3092\u63CF\u304F(ctx, v) {
   const rnd = \u7A2E\u4E71\u6570((v.seed || 13) * 2654435761);
@@ -11776,24 +11782,25 @@ function \u5DDD\u3092\u63CF\u304F(ctx) {
     ctx.fillStyle = "#8A6B48";
     for (const bx of [x0 + (x1 - x0) * 0.34, x0 + (x1 - x0) * 0.66]) ctx.fillRect(bx - 2, \u4E0A, 4, \u4E0B - \u4E0A);
   }
+  const \u5B57 = Math.round(14 * \u672D\u306E\u500D());
   const \u672D = (t, x, y) => {
-    ctx.font = "13px 'Hiragino Mincho ProN',serif";
+    ctx.font = `${\u5B57}px 'Hiragino Mincho ProN',serif`;
     ctx.strokeStyle = "rgba(255,255,255,0.85)";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = \u5B57 * 0.22;
     ctx.strokeText(t, x, y);
     ctx.fillStyle = "rgba(46,66,80,0.95)";
     ctx.fillText(t, x, y);
   };
   if (RIVER.bridge[1] > RIVER.bridge[0]) {
     const [bt0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
-    \u672D("\u6A4B", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 7, bt0 - 14);
+    \u672D("\u6A4B", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - \u5B57 * 0.5, bt0 - \u5B57);
   }
   if (RIVER.ford[1] > RIVER.ford[0]) {
     const [ft0] = band((RIVER.ford[0] + RIVER.ford[1]) / 2);
-    \u672D("\u6D45\u702C", (RIVER.ford[0] + RIVER.ford[1]) / 2 - 14, ft0 - 12);
+    \u672D("\u6D45\u702C", (RIVER.ford[0] + RIVER.ford[1]) / 2 - \u5B57, ft0 - \u5B57 * 0.9);
   }
   const [dt0] = band(64);
-  \u672D("\u6DF1\u3044\u5DDD", 64, dt0 - 12);
+  \u672D("\u6DF1\u3044\u5DDD", 64, dt0 - \u5B57 * 0.9);
 }
 function drawFieldTerrain(ctx) {
   ctx.fillStyle = "#CBD8AC";
@@ -14441,7 +14448,8 @@ function BattleScreen({ ctx, land, onEnd }) {
     const t = terrainRef.current;
     const w = wrapRef.current;
     if (w && w.clientWidth) {
-      camRef.current.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h) * 0.98, 0.2, 3);
+      const \u53CE = Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h);
+      camRef.current.s = clamp(\u53CE * 0.98, Math.min(0.2, \u53CE * 0.9), 3);
     }
   }, []);
   useEffect3(() => {
@@ -14550,10 +14558,16 @@ function BattleScreen({ ctx, land, onEnd }) {
       y: (clientY - r.top - r.height / 2) / cam.s + cam.y
     };
   };
+  const \u7E2E\u307F\u306E\u9650\u308A = () => {
+    const w = wrapRef.current;
+    if (!w || !w.clientWidth) return 0.25;
+    const \u53CE\u307E\u308B = Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h);
+    return Math.min(0.25, \u53CE\u307E\u308B * 0.9);
+  };
   const zoomAt = (k, clientX, clientY) => {
     const cam = camRef.current;
     const before = clientX == null ? null : toField(clientX, clientY);
-    cam.s = clamp(cam.s * k, 0.25, 3.2);
+    cam.s = clamp(cam.s * k, \u7E2E\u307F\u306E\u9650\u308A(), 3.2);
     if (before) {
       const after = toField(clientX, clientY);
       cam.x += before.x - after.x;
@@ -14566,7 +14580,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     const cam = camRef.current;
     cam.x = FIELD.w / 2;
     cam.y = FIELD.h / 2;
-    if (w) cam.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h) * 0.98, 0.2, 3.2);
+    if (w) cam.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h) * 0.98, \u7E2E\u307F\u306E\u9650\u308A(), 3.2);
     force((n) => (n + 1) % 1e3);
   };
   const hitCorps = (p, ownOnly) => {
@@ -16032,6 +16046,11 @@ function SeaScreen({ ctx, land, onEnd }) {
     paint();
     fit();
   }, []);
+  const \u7E2E\u307F\u306E\u9650\u308A = () => {
+    const w = wrap.current;
+    if (!w || !w.clientWidth) return 0.3;
+    return Math.min(0.3, Math.min(w.clientWidth / SEA.w, w.clientHeight / SEA.h) * 0.9);
+  };
   const fit = () => {
     const w = wrap.current;
     const cam = camRef.current;
@@ -16045,11 +16064,11 @@ function SeaScreen({ ctx, land, onEnd }) {
       const y0 = Math.min(...\u8239.map((s2) => s2.y)) - 90, y1 = Math.max(...\u8239.map((s2) => s2.y)) + 90;
       cam.x = (x0 + x1) / 2;
       cam.y = (y0 + y1) / 2;
-      if (w) cam.s = clamp(Math.min(w.clientWidth / (x1 - x0), w.clientHeight / (y1 - y0)), 0.3, 2.2);
+      if (w) cam.s = clamp(Math.min(w.clientWidth / (x1 - x0), w.clientHeight / (y1 - y0)), \u7E2E\u307F\u306E\u9650\u308A(), 2.2);
     } else {
       cam.x = SEA.w / 2;
       cam.y = SEA.h / 2;
-      if (w) cam.s = clamp(Math.min(w.clientWidth / SEA.w, w.clientHeight / SEA.h) * 0.98, 0.2, 3);
+      if (w) cam.s = clamp(Math.min(w.clientWidth / SEA.w, w.clientHeight / SEA.h) * 0.98, \u7E2E\u307F\u306E\u9650\u308A(), 3);
     }
     force((n) => (n + 1) % 1e3);
   };
@@ -16116,7 +16135,7 @@ function SeaScreen({ ctx, land, onEnd }) {
     if (gz.mode === "pinch" && e.touches && e.touches.length === 2) {
       const [a, c2] = [e.touches[0], e.touches[1]];
       const d = Math.hypot(a.clientX - c2.clientX, a.clientY - c2.clientY);
-      camRef.current.s = clamp(camRef.current.s * (d / gz.d), 0.2, 3);
+      camRef.current.s = clamp(camRef.current.s * (d / gz.d), \u7E2E\u307F\u306E\u9650\u308A(), 3);
       gz.d = d;
       return;
     }

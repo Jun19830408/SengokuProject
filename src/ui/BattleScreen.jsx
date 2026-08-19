@@ -43,7 +43,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const t = terrainRef.current;
     const w = wrapRef.current;
     if (w && w.clientWidth) {
-      camRef.current.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h) * 0.98, 0.2, 3);
+      // 初めから全体が映るようにする（盤が広いときは 0.2 では収まらない）
+      const 収 = Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h);
+      camRef.current.s = clamp(収 * 0.98, Math.min(0.2, 収 * 0.9), 3);
     }
   }, []);
 
@@ -147,10 +149,22 @@ export function BattleScreen({ ctx, land, onEnd }) {
       y: (clientY - r.top - r.height / 2) / cam.s + cam.y,
     };
   };
+  /* 縮められる限りは、盤の広さで決める。
+
+     二割五分で頭打ちにしていた。標準の野なら全体が映るが、隊数で野を広げたので、
+     いちばん縮めても盤の一部しか見えなくなった。全体を見渡せぬのでは、
+     どこへ回り込むかも決められない。
+     盤が枠に収まる倍率の、さらに九割まで縮められるようにする。 */
+  const 縮みの限り = () => {
+    const w = wrapRef.current;
+    if (!w || !w.clientWidth) return 0.25;
+    const 収まる = Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h);
+    return Math.min(0.25, 収まる * 0.9);
+  };
   const zoomAt = (k, clientX, clientY) => {
     const cam = camRef.current;
     const before = clientX == null ? null : toField(clientX, clientY);
-    cam.s = clamp(cam.s * k, 0.25, 3.2);
+    cam.s = clamp(cam.s * k, 縮みの限り(), 3.2);
     if (before) {
       const after = toField(clientX, clientY);
       cam.x += before.x - after.x; cam.y += before.y - after.y;
@@ -161,7 +175,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const w = wrapRef.current;
     const cam = camRef.current;
     cam.x = FIELD.w / 2; cam.y = FIELD.h / 2;
-    if (w) cam.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h) * 0.98, 0.2, 3.2);
+    if (w) cam.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h) * 0.98, 縮みの限り(), 3.2);
     force((n) => (n + 1) % 1000);
   };
   // 隊のどこを押しても選べるようにする。50人組の広がりと、頭上の武将名の札を当たり判定にする。

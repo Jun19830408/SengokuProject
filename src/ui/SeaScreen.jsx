@@ -51,6 +51,14 @@ export function SeaScreen({ ctx, land, onEnd }) {
   };
   useEffect(() => { paint(); fit(); }, []);
 
+  /* 縮められる限りは、海の広さで決める。艘数で海を広げたので、
+     決め打ちの下限では全体が映らなくなった（陸の盤と同じ直しである）。 */
+  const 縮みの限り = () => {
+    const w = wrap.current;
+    if (!w || !w.clientWidth) return 0.3;
+    return Math.min(0.3, Math.min(w.clientWidth / SEA.w, w.clientHeight / SEA.h) * 0.9);
+  };
+
   /* 全体を映す。盤いっぱいではなく、船のいるところを枠に収める。
      海は広く、船団はその一角で噛み合う。盤に合わせると、空の海ばかりが映る。 */
   const fit = () => {
@@ -62,10 +70,10 @@ export function SeaScreen({ ctx, land, onEnd }) {
       const x0 = Math.min(...船.map((s2) => s2.x)) - 90, x1 = Math.max(...船.map((s2) => s2.x)) + 90;
       const y0 = Math.min(...船.map((s2) => s2.y)) - 90, y1 = Math.max(...船.map((s2) => s2.y)) + 90;
       cam.x = (x0 + x1) / 2; cam.y = (y0 + y1) / 2;
-      if (w) cam.s = clamp(Math.min(w.clientWidth / (x1 - x0), w.clientHeight / (y1 - y0)), 0.3, 2.2);
+      if (w) cam.s = clamp(Math.min(w.clientWidth / (x1 - x0), w.clientHeight / (y1 - y0)), 縮みの限り(), 2.2);
     } else {
       cam.x = SEA.w / 2; cam.y = SEA.h / 2;
-      if (w) cam.s = clamp(Math.min(w.clientWidth / SEA.w, w.clientHeight / SEA.h) * 0.98, 0.2, 3);
+      if (w) cam.s = clamp(Math.min(w.clientWidth / SEA.w, w.clientHeight / SEA.h) * 0.98, 縮みの限り(), 3);
     }
     force((n) => (n + 1) % 1000);
   };
@@ -127,7 +135,7 @@ export function SeaScreen({ ctx, land, onEnd }) {
     if (gz.mode === "pinch" && e.touches && e.touches.length === 2) {
       const [a, c2] = [e.touches[0], e.touches[1]];
       const d = Math.hypot(a.clientX - c2.clientX, a.clientY - c2.clientY);
-      camRef.current.s = clamp(camRef.current.s * (d / gz.d), 0.2, 3);
+      camRef.current.s = clamp(camRef.current.s * (d / gz.d), 縮みの限り(), 3);
       gz.d = d; return;
     }
     const p = pointerOf(e);

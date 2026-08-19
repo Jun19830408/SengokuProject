@@ -34,7 +34,7 @@ export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 画面を通すと、戦況の記録が流れて肝心の一行を取り逃がす。
 // 隊がどの門を受け持ち、何の下知を受けているかは、ここから直に見るほかない。
 export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, gatePos, 城の構え } from "../src/battle/castleMap.js";
-export { layoutField, setFieldSeed, FIELD, terrainAt, TERRAIN } from "../src/battle/field.js";
+export { layoutField, setFieldSeed, FIELD, terrainAt, TERRAIN, HILLS, FORESTS, WOODS, MARSH, VILLAGES, RIVER, hasRiver } from "../src/battle/field.js";
 export { makeCorps, corpsMen, placeSquads, issueOrder, 退かせる, 退き先 } from "../src/battle/corps.js";
 export { createBattle, stepBattle } from "../src/battle/engine.js";
 export { battleAI } from "../src/battle/ai.js";

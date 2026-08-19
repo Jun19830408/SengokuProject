@@ -3,6 +3,7 @@ import { KOMA, rot } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, RIVER, WOODS, hasRiver, riverShift } from "./field.js";
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
+import { clamp } from "../core/util.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
 
@@ -565,6 +566,11 @@ export function blobPath(ctx, o, tight) {
 const 光 = { x: -0.62, y: -0.78 };                  // 左上から差す
 const 影 = { x: 7, y: 9 };                          // 影の落ちる向き
 
+/* 名札の倍。野が広がれば字も大きくする。
+   広い野で十五pxの「森」は、全体を映したときに読めない。
+   ただし際限なく大きくはしない。地物より札が目立っては本末転倒である。 */
+const 札の倍 = () => clamp(FIELD.w / 1080, 1, 5);
+
 // 野ごとに同じ絵になるよう、地物ごとの種から乱数を作る
 function 種乱数(seed) {
   let t = (seed >>> 0) + 0x6D2B79F5;
@@ -647,10 +653,12 @@ function 丘を描く(ctx, h) {
     const tx = h.x + Math.cos(a) * r, ty = h.y - 高 * 0.7 + Math.sin(a) * r * 0.7;
     ctx.beginPath(); ctx.moveTo(tx, ty + 4); ctx.lineTo(tx + (rnd() - 0.5) * 5, ty - 5); ctx.stroke();
   }
-  ctx.font = "15px 'Hiragino Mincho ProN',serif";
-  ctx.strokeStyle = "rgba(250,252,236,0.9)"; ctx.lineWidth = 3.4;
-  ctx.strokeText("丘", h.x - 7.5, h.y - 高 * 0.7 + 6);
-  ctx.fillStyle = "rgba(60,78,44,0.95)"; ctx.fillText("丘", h.x - 7.5, h.y - 高 * 0.7 + 6);
+  /* 名札も野の広さに合わせる。広い野で十五pxでは、遠目にただの緑になる。 */
+  const 字 = Math.round(15 * 札の倍());
+  ctx.font = `${字}px 'Hiragino Mincho ProN',serif`;
+  ctx.strokeStyle = "rgba(250,252,236,0.9)"; ctx.lineWidth = 字 * 0.23;
+  ctx.strokeText("丘", h.x - 字 * 0.5, h.y - 高 * 0.7 + 字 * 0.4);
+  ctx.fillStyle = "rgba(60,78,44,0.95)"; ctx.fillText("丘", h.x - 字 * 0.5, h.y - 高 * 0.7 + 字 * 0.4);
 }
 
 /* ------------------------------------------------------------------ 森・林
@@ -705,11 +713,12 @@ function 木立を描く(ctx, f, 濃, n, label) {
     ctx.ellipse(t.x - t.s * 0.24, t.y - t.s * 0.72, t.s * 0.26, t.s * 0.20, 0, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.font = "15px 'Hiragino Mincho ProN',serif";
-  ctx.strokeStyle = "rgba(255,255,255,0.82)"; ctx.lineWidth = 3.4;
-  ctx.strokeText(label, f.x - label.length * 7.5, f.y + 6);
+  const 字 = Math.round(15 * 札の倍());
+  ctx.font = `${字}px 'Hiragino Mincho ProN',serif`;
+  ctx.strokeStyle = "rgba(255,255,255,0.82)"; ctx.lineWidth = 字 * 0.23;
+  ctx.strokeText(label, f.x - label.length * 字 * 0.5, f.y + 字 * 0.4);
   ctx.fillStyle = "rgba(38,58,34,0.95)";
-  ctx.fillText(label, f.x - label.length * 7.5, f.y + 6);
+  ctx.fillText(label, f.x - label.length * 字 * 0.5, f.y + 字 * 0.4);
 }
 
 /* 木立の梢だけを、もう一度描く。
@@ -766,9 +775,11 @@ function 湿地を描く(ctx, m) {
     const 丈 = 6 + rnd() * 5;
     ctx.beginPath(); ctx.moveTo(tx, ty + 3); ctx.quadraticCurveTo(tx + 2, ty - 丈 * 0.5, tx + (rnd() - 0.5) * 5, ty - 丈); ctx.stroke();
   }
-  ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.font = "13px 'Hiragino Mincho ProN',serif";
-  ctx.strokeStyle = "rgba(48,78,74,0.75)"; ctx.lineWidth = 3;
-  ctx.strokeText("湿地", m.x - 19, m.y + 5); ctx.fillText("湿地", m.x - 19, m.y + 5);
+  const 字 = Math.round(14 * 札の倍());
+  ctx.font = `${字}px 'Hiragino Mincho ProN',serif`;
+  ctx.strokeStyle = "rgba(48,78,74,0.75)"; ctx.lineWidth = 字 * 0.22;
+  ctx.strokeText("湿地", m.x - 字, m.y + 字 * 0.36);
+  ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillText("湿地", m.x - 字, m.y + 字 * 0.36);
 }
 
 /* ------------------------------------------------------------------ 集落
@@ -886,22 +897,23 @@ function 川を描く(ctx) {
   }
 
   // 字は輪郭を付けて、水の上でも読めるようにする
+  const 字 = Math.round(14 * 札の倍());
   const 札 = (t, x, y) => {
-    ctx.font = "13px 'Hiragino Mincho ProN',serif";
-    ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3;
+    ctx.font = `${字}px 'Hiragino Mincho ProN',serif`;
+    ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 字 * 0.22;
     ctx.strokeText(t, x, y);
     ctx.fillStyle = "rgba(46,66,80,0.95)"; ctx.fillText(t, x, y);
   };
   if (RIVER.bridge[1] > RIVER.bridge[0]) {
     const [bt0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
-    札("橋", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 7, bt0 - 14);
+    札("橋", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 字 * 0.5, bt0 - 字);
   }
   if (RIVER.ford[1] > RIVER.ford[0]) {
     const [ft0] = band((RIVER.ford[0] + RIVER.ford[1]) / 2);
-    札("浅瀬", (RIVER.ford[0] + RIVER.ford[1]) / 2 - 14, ft0 - 12);
+    札("浅瀬", (RIVER.ford[0] + RIVER.ford[1]) / 2 - 字, ft0 - 字 * 0.9);
   }
   const [dt0] = band(64);
-  札("深い川", 64, dt0 - 12);
+  札("深い川", 64, dt0 - 字 * 0.9);
 }
 
 export function drawFieldTerrain(ctx) {
