@@ -19,6 +19,7 @@ import { clamp } from "../core/util.js";
 import { 既定の兵科 } from "../data/arms.js";
 import { 主家 } from "../core/state.js";
 import { is架空 } from "../core/house.js";
+import { isCoastal, navalPower } from "../core/naval.js";
 
 
 export function SortieDialog({ g, from, onClose, onGo }) {
@@ -187,8 +188,84 @@ export function SortieDialog({ g, from, onClose, onGo }) {
           );
         })()}
         <div style={{ fontSize: 12, color: U.dim, marginTop: 6 }}>
-          経路：{path ? path.map((n) => nodeById(n).name).join(" → ") : "経路なし"}　／　所要 約{Math.max(1, Math.ceil(dist / 300))}か月
+          経路：{path ? path.map((n, i) => {
+            const 前 = i > 0 ? path[i - 1] : null;
+            const r = 前 ? roadBetween(前, n) : null;
+            return (
+              <span key={n}>
+                {i > 0 && (r && r[3] === "海路"
+                  ? <b style={{ color: "#3C6E8C" }}> ⇒（海路）⇒ </b>
+                  : " → ")}
+                {nodeById(n).name}
+              </span>
+            );
+          }) : "経路なし"}　／　所要 約{Math.max(1, Math.ceil(dist / 300))}か月
         </div>
+        {(() => {
+          /* 海路を渡るなら、そう告げる（GDD 10章）。
+
+             海路は街道と同じ顔をして並んでいた。淡路から播磨へ渡るのに、
+             船で渡るという実感がまるでない。渡る先で誰が海を扼しているのかも、
+             出してみるまで分からなかった。
+             渡る前に、こちらの船と、待ち構える水軍を並べて示す。 */
+          if (!path || path.length < 2) return null;
+          const 海 = [];
+          for (let i = 1; i < path.length; i++) {
+            const r = roadBetween(path[i - 1], path[i]);
+            if (r && r[3] === "海路") 海.push([path[i - 1], path[i]]);
+          }
+          if (!海.length) return null;
+          const 我 = navalPower(g, c.faction);
+          // その航路のそばに船を出せる敵家を並べる
+          const 敵 = [];
+          for (const [a1, b1] of 海) {
+            const A = nodeById(a1), B = nodeById(b1);
+            if (!A || !B) continue;
+            for (const f of Object.keys(g.factions)) {
+              if (f === c.faction || 敵.some((x) => x.f === f)) continue;
+              if (atPeace(g, c.faction, f)) continue;
+              const np = navalPower(g, f);
+              if (np.ships < 3) continue;
+              const 近い = g.castles.some((x) => {
+                if (x.faction !== f || !isCoastal(x)) return false;
+                const dx = B.x - A.x, dy = B.y - A.y, L2 = dx * dx + dy * dy;
+                const t = L2 ? Math.max(0, Math.min(1, ((x.x - A.x) * dx + (x.y - A.y) * dy) / L2)) : 0;
+                return Math.hypot(A.x + dx * t - x.x, A.y + dy * t - x.y) < 120;
+              });
+              if (近い) 敵.push({ f, np });
+            }
+          }
+          敵.sort((a1, b1) => b1.np.ships - a1.np.ships);
+          const 主 = 敵[0];
+          const 我score = 我.ships * (0.6 + 我.skill / 160);
+          const 敵score = 主 ? 主.np.ships * (0.6 + 主.np.skill / 160) : 0;
+          const 割 = 主 ? 敵score / (敵score + 我score) : 0;
+          const p = 主 && 敵score >= 我score * 0.45
+            ? Math.max(6, Math.min(82, Math.round((0.10 + (割 - 0.3) * 1.45) * 100))) : 0;
+          return (
+            <div style={{ marginTop: 8, padding: "9px 11px", background: "rgba(60,110,140,0.10)",
+              borderLeft: "3px solid #3C6E8C", fontSize: 12.5, lineHeight: 1.85 }}>
+              <b style={{ color: "#3C6E8C" }}>海路を{海.length}度渡ります。</b>
+              　<span style={{ color: U.dim, fontSize: 11.5 }}>
+                {海.map(([a1, b1]) => `${nodeById(a1).name}〜${nodeById(b1).name}`).join("／")}
+              </span><br />
+              <span className="num">自家の水軍　{我.ships}艘・技量{我.skill}</span><br />
+              {主 ? (
+                <>
+                  <span className="num">
+                    海を扼するは{g.factions[主.f].name}　{主.np.ships}艘・技量{主.np.skill}
+                  </span><br />
+                  <span style={{ color: p >= 50 ? "#B0483C" : p >= 20 ? "#C89A3A" : U.dim }}>
+                    {p ? <>迎え撃たれる見込み <b>{p}%</b>。</> : "こちらが海を握っており、まず出てきません。"}
+                    {p ? "海の上に退き場はありません。敗れれば兵は沈みます。" : ""}
+                  </span>
+                </>
+              ) : (
+                <span style={{ color: U.dim }}>この航路に船を出せる敵はいません。渡海は安んじます。</span>
+              )}
+            </div>
+          );
+        })()}
         {約束 && (
           <div style={{ marginTop: 8, padding: "9px 11px", background: "rgba(176,72,60,0.10)",
             borderLeft: "3px solid #B0483C", fontSize: 12.5, lineHeight: 1.85 }}>

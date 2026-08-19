@@ -3,6 +3,7 @@ import { rosterCut } from "./roster.js";
 import { atPeace } from "./state.js";
 import { clamp } from "./util.js";
 import { TOWNS } from "../data/castles.js";
+import { ROADS } from "../data/roads.js";
 import { COAST, px, py } from "../data/geo.js";
 
 /* ------------------------------------------------------ 海戦（GDD 10章）
@@ -11,12 +12,23 @@ import { COAST, px, py } from "../data/geo.js";
    船戦は陸戦と別物で、兵の数より船と水主の技量がものを言う。 */
 export const SEA_UNIT = { name: "船手", per: 60 };        // 一艘あたりの乗り手
 
-// 海に面した城かどうかは、実際の海岸線からの近さで判ずる。
-// 海路が引かれていなくとも、岸に近ければ船は出せる。
+/* 海に面した城かどうか（GDD 10章）。
+
+   はじめは海岸線からの近さだけで判じていた。ところが盤の海岸線は粗い。
+   測ってみると、内陸の稲葉山城が十一・七で「海に面する」に入り、
+   伊予の湯築城が十三・三で外れていた。大内十一城はすべて外れ、河野三城も
+   すべて外れる。瀬戸内と九州の家に船が一艘も無いことになっていた。
+
+   拠りどころを二つにする。第一は海路である。その城から船の道が引かれているなら、
+   湊があるということであって、それ以上の詮索は要らない。
+   第二は従来どおり岸からの近さで、海路の引かれていない小さな浦を拾う。 */
 export const COASTAL = new Map();
+const 海路の城 = new Set();
+for (const r of ROADS) if (r[3] === "海路") { 海路の城.add(r[0]); 海路の城.add(r[1]); }
 
 export function isCoastal(c) {
   if (COASTAL.has(c.id)) return COASTAL.get(c.id);
+  if (海路の城.has(c.id)) { COASTAL.set(c.id, true); return true; }
   // 海岸線の点は粗いので、線分への距離で測る
   let near = 1e9;
   for (const seg of COAST) {
@@ -29,11 +41,30 @@ export function isCoastal(c) {
     }
     if (near < 9) break;
   }
-  const ok = near < 13;
+  /* 岸からどれだけ近ければ湊と見るか。盤の海岸線は粗いので、十三では
+     尾張の那古野（十七・〇）や伊予の湯築（十三・三）が外れてしまう。
+     海路を第一の拠りどころにしたうえで、ここは十八まで緩める。 */
+  const ok = near < 18;
   COASTAL.set(c.id, ok);
   return ok;
 }
 
+
+/* 湊や水軍衆は、いまどの家に付いているか。
+
+   これまでは s.specials[t.id].owner を見ていた。ところが盤の記録に owner という
+   欄はない。誼を通じた家は st.faction に書かれる（commands.js の doSpecial）。
+   つまり、この判じは常に偽であった。湊の験も、水軍衆の験も、一度も効いていない。
+   海に面した城の商いから出る僅かな船だけで海の力を測っていたことになる。
+
+   誼を通じた家があればその家。なければ、もとからの持ち主（t.owner）に付く。
+   その家が滅んでいれば、誰のものでもない。 */
+export function 湊の主(s, t) {
+  const st = s.specials[t.id];
+  if (st && st.faction && st.state && st.state !== "中立") return st.faction;
+  if (t.owner && (s.castles || []).some((c) => c.faction === t.owner)) return t.owner;
+  return null;
+}
 
 // その勢力が持つ水軍の力。水軍衆を従えていれば大きい。
 export function navalPower(s, fid) {
@@ -41,21 +72,19 @@ export function navalPower(s, fid) {
   // 海に面した城でなければ船は出せぬ。山国に水軍はない。
   for (const c of s.castles.filter((x) => x.faction === fid)) {
     if (!isCoastal(c)) continue;
-    const port = (TOWNS || []).some((t) => {
-      const st = s.specials[t.id];
-      return (t.kind === "港" || t.kind === "水軍衆") && st && st.owner === fid
-        && Math.hypot(px(t.lon) - c.x, py(t.lat) - c.y) < 90;
-    });
+    const port = (TOWNS || []).some((t) => (t.kind === "港" || t.kind === "水軍衆")
+      && 湊の主(s, t) === fid && Math.hypot(px(t.lon) - c.x, py(t.lat) - c.y) < 90);
     ships += Math.round((c.comm / 100) * (port ? 22 : 6));
   }
   // 水軍衆を抱えていれば技量が上がる
   for (const t of TOWNS || []) {
     if (t.kind !== "水軍衆") continue;
-    const st = s.specials[t.id];
-    if (st && st.owner === fid && (st.state === "保護" || st.state === "支援")) {
-      ships += st.state === "支援" ? 22 : 12;
-      skill += st.state === "支援" ? 22 : 12;
-    }
+    if (湊の主(s, t) !== fid) continue;
+    const st = s.specials[t.id] || {};
+    // 進んで船を出させているなら大きい。もとからの縁だけなら、その半ばほど。
+    const 厚 = st.state === "支援" ? 1 : st.state === "保護" ? 0.55 : 0.4;
+    ships += Math.round(22 * 厚);
+    skill += Math.round(22 * 厚);
   }
   return { ships: Math.max(2, ships), skill: clamp(skill, 30, 100) };
 }
@@ -87,10 +116,18 @@ export function seaInterception(s, army, roadKind) {
     if (!best || score > best.score) best = { fid: f, np, score };
   }
   if (!best) return null;
+  const 我 = mine.ships * (0.6 + mine.skill / 160);
   // 相手が明らかに弱ければ出てこない
-  if (best.score < mine.ships * (0.6 + mine.skill / 160) * 0.45) return null;
-  if (Math.random() > 0.20) return null;               // 海で待ち伏せるのは容易でない
-  return { by: best.fid, foe: best.np, mine };
+  if (best.score < 我 * 0.45) return null;
+  /* 迎え撃つ見込み。
+
+     かつては力の差に関わらず一律二割であった。海を扼している家の目の前を、
+     八割がた素通りできることになる。それでは海路が街道と変わらない。
+     海の力の差で決める。相手が海を握っていれば、まず捕まる。 */
+  const 割 = best.score / (best.score + 我);            // 0.31〜1 のあいだ
+  const p = clamp(0.10 + (割 - 0.3) * 1.45, 0.06, 0.82);
+  if (Math.random() > p) return null;
+  return { by: best.fid, foe: best.np, mine, p };
 }
 
 // 海戦の帰趨。船と水主の技量で決まり、負ければ兵が海に沈む。

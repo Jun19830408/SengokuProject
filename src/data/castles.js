@@ -288,6 +288,35 @@ export const TOWNS = [
   { id: "zenkoji", name: "善光寺", kind: "寺社", lon: 138.187, lat: 36.661, owner: null },
   { id: "kurokawa_kin", name: "黒川金山", kind: "鉱山", lon: 138.760, lat: 35.780, owner: "takeda" },
   { id: "ikuno", name: "土肥金山", kind: "鉱山", lon: 138.790, lat: 34.910, owner: "hojo" },
+
+  /* ── 畿内・瀬戸内・西国の海（GDD 10章）
+
+     ここには湊も水軍衆も一つも置いていなかった。全国で港十・水軍衆一、
+     それも尾張から越前までの東国に固まっていた。
+     瀬戸内は戦国の海のうち最も船の行き交う海である。村上・塩飽・安宅がいて、
+     堺と博多が富を集めていた。そこが空白では、海路を渡っても誰も出てこない。
+     淡路と播磨のあいだを兵が素通りしていたのは、これである。 */
+
+  // 畿内・紀伊
+  { id: "sakai_t", name: "堺", kind: "商業都市", lon: 135.480, lat: 34.575, owner: null },
+  { id: "hyogo_t", name: "兵庫津", kind: "港", lon: 135.180, lat: 34.670, owner: "miyoshi" },
+  { id: "ataka_sui", name: "安宅水軍", kind: "水軍衆", lon: 134.760, lat: 34.250, owner: "miyoshi" },
+  { id: "saika_t", name: "雑賀の湊", kind: "港", lon: 135.160, lat: 34.220, owner: "saika" },
+
+  // 瀬戸内
+  { id: "shiwaku", name: "塩飽衆", kind: "水軍衆", lon: 133.800, lat: 34.380, owner: null },
+  { id: "noshima", name: "能島村上衆", kind: "水軍衆", lon: 133.010, lat: 34.130, owner: null },
+  { id: "innoshima", name: "因島村上衆", kind: "水軍衆", lon: 133.180, lat: 34.300, owner: "kobayakawa" },
+  { id: "onomichi", name: "尾道", kind: "港", lon: 133.200, lat: 34.410, owner: "kobayakawa" },
+  { id: "mitsuhama", name: "三津浜", kind: "港", lon: 132.720, lat: 33.870, owner: "kono" },
+
+  // 山陰・北九州・南九州
+  { id: "akamagaseki", name: "赤間関", kind: "港", lon: 130.945, lat: 33.955, owner: "ouchi" },
+  { id: "hakata_t", name: "博多", kind: "商業都市", lon: 130.410, lat: 33.595, owner: "ouchi" },
+  { id: "mihonoseki", name: "美保関", kind: "港", lon: 133.235, lat: 35.565, owner: "amago" },
+  { id: "funai_t", name: "府内", kind: "港", lon: 131.610, lat: 33.235, owner: "otomo" },
+  { id: "bounotsu", name: "坊津", kind: "港", lon: 130.200, lat: 31.260, owner: "shimazu" },
+  { id: "matsuura_sui", name: "松浦党", kind: "水軍衆", lon: 129.720, lat: 33.360, owner: "matsuura" },
 ];
 
 

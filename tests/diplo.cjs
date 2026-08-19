@@ -168,7 +168,16 @@ const 押せる = (s, fid, key) => {
   const pl = t.plots[t.plots.length - 1];
   確('選んだ相手が企てに記される', pl && pl.matoId === 選.id);
 
-  // 月を送って落着させる（きっと成るよう、手の者の知略を上げておく）
+  /* 月を送って落着させる。
+
+     手の者の知略を百に上げても、企ての成否は運が絡む（流言は九割四分で成り、
+     六分は不調か露見に終わる）。二十回に一度ほど、成らずに試験が咎めていた。
+     測りたいのは「成ったとき、名指しの一人に深く刺さるか」であって、
+     成否の運ではない。ここだけ乱数を固定する。 */
+  const 元の乱 = Math.random;
+  let z = 20260820 >>> 0;
+  Math.random = () => { z = (z + 0x6D2B79F5) | 0; let x = Math.imul(z ^ (z >>> 15), 1 | z);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
   let u = JSON.parse(JSON.stringify(t));
   u.generals.find((x) => x.id === 手.id).wit = 100;
   u.plots[u.plots.length - 1].monthsLeft = 1;
@@ -182,6 +191,8 @@ const 押せる = (s, fid, key) => {
     `${選.name} 忠${Math.round(前選)} → ${Math.round(後選)}（−${Math.round(落ちた)}）`);
   確('選ばなかった者の忠誠は、流言では落ちない', 後低 >= 前低 - 1,
     `${低.name} 忠${Math.round(前低)} → ${Math.round(後低)}`);
+
+  Math.random = 元の乱;
 
   // 的が要る企ては、相手を定めねば立たない
   const v = H.doPlot(s, 的城.id, '引き抜き', 手.id, null);

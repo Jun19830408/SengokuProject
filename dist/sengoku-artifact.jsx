@@ -3974,7 +3974,32 @@ var TOWNS = [
   { id: "takayama_t", name: "\u98DB\u9A28\u306E\u5320", kind: "\u753A", lon: 137.255, lat: 36.145, owner: "anegakoji" },
   { id: "zenkoji", name: "\u5584\u5149\u5BFA", kind: "\u5BFA\u793E", lon: 138.187, lat: 36.661, owner: null },
   { id: "kurokawa_kin", name: "\u9ED2\u5DDD\u91D1\u5C71", kind: "\u9271\u5C71", lon: 138.76, lat: 35.78, owner: "takeda" },
-  { id: "ikuno", name: "\u571F\u80A5\u91D1\u5C71", kind: "\u9271\u5C71", lon: 138.79, lat: 34.91, owner: "hojo" }
+  { id: "ikuno", name: "\u571F\u80A5\u91D1\u5C71", kind: "\u9271\u5C71", lon: 138.79, lat: 34.91, owner: "hojo" },
+  /* ── 畿内・瀬戸内・西国の海（GDD 10章）
+  
+       ここには湊も水軍衆も一つも置いていなかった。全国で港十・水軍衆一、
+       それも尾張から越前までの東国に固まっていた。
+       瀬戸内は戦国の海のうち最も船の行き交う海である。村上・塩飽・安宅がいて、
+       堺と博多が富を集めていた。そこが空白では、海路を渡っても誰も出てこない。
+       淡路と播磨のあいだを兵が素通りしていたのは、これである。 */
+  // 畿内・紀伊
+  { id: "sakai_t", name: "\u583A", kind: "\u5546\u696D\u90FD\u5E02", lon: 135.48, lat: 34.575, owner: null },
+  { id: "hyogo_t", name: "\u5175\u5EAB\u6D25", kind: "\u6E2F", lon: 135.18, lat: 34.67, owner: "miyoshi" },
+  { id: "ataka_sui", name: "\u5B89\u5B85\u6C34\u8ECD", kind: "\u6C34\u8ECD\u8846", lon: 134.76, lat: 34.25, owner: "miyoshi" },
+  { id: "saika_t", name: "\u96D1\u8CC0\u306E\u6E4A", kind: "\u6E2F", lon: 135.16, lat: 34.22, owner: "saika" },
+  // 瀬戸内
+  { id: "shiwaku", name: "\u5869\u98FD\u8846", kind: "\u6C34\u8ECD\u8846", lon: 133.8, lat: 34.38, owner: null },
+  { id: "noshima", name: "\u80FD\u5CF6\u6751\u4E0A\u8846", kind: "\u6C34\u8ECD\u8846", lon: 133.01, lat: 34.13, owner: null },
+  { id: "innoshima", name: "\u56E0\u5CF6\u6751\u4E0A\u8846", kind: "\u6C34\u8ECD\u8846", lon: 133.18, lat: 34.3, owner: "kobayakawa" },
+  { id: "onomichi", name: "\u5C3E\u9053", kind: "\u6E2F", lon: 133.2, lat: 34.41, owner: "kobayakawa" },
+  { id: "mitsuhama", name: "\u4E09\u6D25\u6D5C", kind: "\u6E2F", lon: 132.72, lat: 33.87, owner: "kono" },
+  // 山陰・北九州・南九州
+  { id: "akamagaseki", name: "\u8D64\u9593\u95A2", kind: "\u6E2F", lon: 130.945, lat: 33.955, owner: "ouchi" },
+  { id: "hakata_t", name: "\u535A\u591A", kind: "\u5546\u696D\u90FD\u5E02", lon: 130.41, lat: 33.595, owner: "ouchi" },
+  { id: "mihonoseki", name: "\u7F8E\u4FDD\u95A2", kind: "\u6E2F", lon: 133.235, lat: 35.565, owner: "amago" },
+  { id: "funai_t", name: "\u5E9C\u5185", kind: "\u6E2F", lon: 131.61, lat: 33.235, owner: "otomo" },
+  { id: "bounotsu", name: "\u574A\u6D25", kind: "\u6E2F", lon: 130.2, lat: 31.26, owner: "shimazu" },
+  { id: "matsuura_sui", name: "\u677E\u6D66\u515A", kind: "\u6C34\u8ECD\u8846", lon: 129.72, lat: 33.36, owner: "matsuura" }
 ];
 
 // src/data/geo.js
@@ -4720,8 +4745,17 @@ function marchMonths(from, to) {
 
 // src/core/naval.js
 var COASTAL = /* @__PURE__ */ new Map();
+var \u6D77\u8DEF\u306E\u57CE = /* @__PURE__ */ new Set();
+for (const r of ROADS) if (r[3] === "\u6D77\u8DEF") {
+  \u6D77\u8DEF\u306E\u57CE.add(r[0]);
+  \u6D77\u8DEF\u306E\u57CE.add(r[1]);
+}
 function isCoastal(c) {
   if (COASTAL.has(c.id)) return COASTAL.get(c.id);
+  if (\u6D77\u8DEF\u306E\u57CE.has(c.id)) {
+    COASTAL.set(c.id, true);
+    return true;
+  }
   let near = 1e9;
   for (const seg of COAST) {
     for (let i = 1; i < seg.length; i++) {
@@ -4733,27 +4767,30 @@ function isCoastal(c) {
     }
     if (near < 9) break;
   }
-  const ok = near < 13;
+  const ok = near < 18;
   COASTAL.set(c.id, ok);
   return ok;
+}
+function \u6E4A\u306E\u4E3B(s2, t) {
+  const st = s2.specials[t.id];
+  if (st && st.faction && st.state && st.state !== "\u4E2D\u7ACB") return st.faction;
+  if (t.owner && (s2.castles || []).some((c) => c.faction === t.owner)) return t.owner;
+  return null;
 }
 function navalPower(s2, fid) {
   let ships = 0, skill = 55;
   for (const c of s2.castles.filter((x) => x.faction === fid)) {
     if (!isCoastal(c)) continue;
-    const port = (TOWNS || []).some((t) => {
-      const st = s2.specials[t.id];
-      return (t.kind === "\u6E2F" || t.kind === "\u6C34\u8ECD\u8846") && st && st.owner === fid && Math.hypot(px(t.lon) - c.x, py(t.lat) - c.y) < 90;
-    });
+    const port = (TOWNS || []).some((t) => (t.kind === "\u6E2F" || t.kind === "\u6C34\u8ECD\u8846") && \u6E4A\u306E\u4E3B(s2, t) === fid && Math.hypot(px(t.lon) - c.x, py(t.lat) - c.y) < 90);
     ships += Math.round(c.comm / 100 * (port ? 22 : 6));
   }
   for (const t of TOWNS || []) {
     if (t.kind !== "\u6C34\u8ECD\u8846") continue;
-    const st = s2.specials[t.id];
-    if (st && st.owner === fid && (st.state === "\u4FDD\u8B77" || st.state === "\u652F\u63F4")) {
-      ships += st.state === "\u652F\u63F4" ? 22 : 12;
-      skill += st.state === "\u652F\u63F4" ? 22 : 12;
-    }
+    if (\u6E4A\u306E\u4E3B(s2, t) !== fid) continue;
+    const st = s2.specials[t.id] || {};
+    const \u539A = st.state === "\u652F\u63F4" ? 1 : st.state === "\u4FDD\u8B77" ? 0.55 : 0.4;
+    ships += Math.round(22 * \u539A);
+    skill += Math.round(22 * \u539A);
   }
   return { ships: Math.max(2, ships), skill: clamp(skill, 30, 100) };
 }
@@ -4779,9 +4816,12 @@ function seaInterception(s2, army, roadKind) {
     if (!best || score > best.score) best = { fid: f, np, score };
   }
   if (!best) return null;
-  if (best.score < mine.ships * (0.6 + mine.skill / 160) * 0.45) return null;
-  if (Math.random() > 0.2) return null;
-  return { by: best.fid, foe: best.np, mine };
+  const \u6211 = mine.ships * (0.6 + mine.skill / 160);
+  if (best.score < \u6211 * 0.45) return null;
+  const \u5272 = best.score / (best.score + \u6211);
+  const p = clamp(0.1 + (\u5272 - 0.3) * 1.45, 0.06, 0.82);
+  if (Math.random() > p) return null;
+  return { by: best.fid, foe: best.np, mine, p };
 }
 function resolveSeaBattle(s2, army, inter) {
   const a = inter.mine, d = inter.foe;
@@ -12873,7 +12913,52 @@ function SortieDialog({ g, from, onClose, onGo }) {
       borderLeft: "3px solid #B0483C",
       paddingLeft: 10
     } }, /* @__PURE__ */ React2.createElement("b", null, t2.name, "\u306F\u5371\u3046\u3044\u3002"), /* @__PURE__ */ React2.createElement("br", null), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, sieged ? "\u56F2\u307E\u308C\u3066\u3044\u307E\u3059\u3002\u7740\u3051\u3070\u56F2\u307F\u3092\u89E3\u304F\u305F\u3081\u306E\u91CE\u6226\u306B\u306A\u308A\u307E\u3059\u3002" : "", coming.length ? `${coming.map((a) => g.factions[a.faction].name).join("\u30FB")}\u306E\u8ECD\u304C\u5411\u304B\u3063\u3066\u3044\u307E\u3059\u3002` : "", /* @__PURE__ */ React2.createElement("br", null), "\u63F4\u8ECD\u3068\u3057\u3066\u5165\u308C\u3070\u3001\u57CE\u306E\u5B88\u308A\u306B\u52A0\u308F\u308A\u307E\u3059\u3002"));
-  })(), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, marginTop: 6 } }, "\u7D4C\u8DEF\uFF1A", path ? path.map((n) => nodeById(n).name).join(" \u2192 ") : "\u7D4C\u8DEF\u306A\u3057", "\u3000\uFF0F\u3000\u6240\u8981 \u7D04", Math.max(1, Math.ceil(dist / 300)), "\u304B\u6708"), \u7D04\u675F && /* @__PURE__ */ React2.createElement("div", { style: {
+  })(), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, marginTop: 6 } }, "\u7D4C\u8DEF\uFF1A", path ? path.map((n, i) => {
+    const \u524D = i > 0 ? path[i - 1] : null;
+    const r = \u524D ? roadBetween(\u524D, n) : null;
+    return /* @__PURE__ */ React2.createElement("span", { key: n }, i > 0 && (r && r[3] === "\u6D77\u8DEF" ? /* @__PURE__ */ React2.createElement("b", { style: { color: "#3C6E8C" } }, " \u21D2\uFF08\u6D77\u8DEF\uFF09\u21D2 ") : " \u2192 "), nodeById(n).name);
+  }) : "\u7D4C\u8DEF\u306A\u3057", "\u3000\uFF0F\u3000\u6240\u8981 \u7D04", Math.max(1, Math.ceil(dist / 300)), "\u304B\u6708"), (() => {
+    if (!path || path.length < 2) return null;
+    const \u6D77 = [];
+    for (let i = 1; i < path.length; i++) {
+      const r = roadBetween(path[i - 1], path[i]);
+      if (r && r[3] === "\u6D77\u8DEF") \u6D77.push([path[i - 1], path[i]]);
+    }
+    if (!\u6D77.length) return null;
+    const \u6211 = navalPower(g, c.faction);
+    const \u6575 = [];
+    for (const [a1, b1] of \u6D77) {
+      const A = nodeById(a1), B = nodeById(b1);
+      if (!A || !B) continue;
+      for (const f of Object.keys(g.factions)) {
+        if (f === c.faction || \u6575.some((x) => x.f === f)) continue;
+        if (atPeace(g, c.faction, f)) continue;
+        const np = navalPower(g, f);
+        if (np.ships < 3) continue;
+        const \u8FD1\u3044 = g.castles.some((x) => {
+          if (x.faction !== f || !isCoastal(x)) return false;
+          const dx = B.x - A.x, dy = B.y - A.y, L2 = dx * dx + dy * dy;
+          const t = L2 ? Math.max(0, Math.min(1, ((x.x - A.x) * dx + (x.y - A.y) * dy) / L2)) : 0;
+          return Math.hypot(A.x + dx * t - x.x, A.y + dy * t - x.y) < 120;
+        });
+        if (\u8FD1\u3044) \u6575.push({ f, np });
+      }
+    }
+    \u6575.sort((a1, b1) => b1.np.ships - a1.np.ships);
+    const \u4E3B = \u6575[0];
+    const \u6211score = \u6211.ships * (0.6 + \u6211.skill / 160);
+    const \u6575score = \u4E3B ? \u4E3B.np.ships * (0.6 + \u4E3B.np.skill / 160) : 0;
+    const \u5272 = \u4E3B ? \u6575score / (\u6575score + \u6211score) : 0;
+    const p = \u4E3B && \u6575score >= \u6211score * 0.45 ? Math.max(6, Math.min(82, Math.round((0.1 + (\u5272 - 0.3) * 1.45) * 100))) : 0;
+    return /* @__PURE__ */ React2.createElement("div", { style: {
+      marginTop: 8,
+      padding: "9px 11px",
+      background: "rgba(60,110,140,0.10)",
+      borderLeft: "3px solid #3C6E8C",
+      fontSize: 12.5,
+      lineHeight: 1.85
+    } }, /* @__PURE__ */ React2.createElement("b", { style: { color: "#3C6E8C" } }, "\u6D77\u8DEF\u3092", \u6D77.length, "\u5EA6\u6E21\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, \u6D77.map(([a1, b1]) => `${nodeById(a1).name}\u301C${nodeById(b1).name}`).join("\uFF0F")), /* @__PURE__ */ React2.createElement("br", null), /* @__PURE__ */ React2.createElement("span", { className: "num" }, "\u81EA\u5BB6\u306E\u6C34\u8ECD\u3000", \u6211.ships, "\u8258\u30FB\u6280\u91CF", \u6211.skill), /* @__PURE__ */ React2.createElement("br", null), \u4E3B ? /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("span", { className: "num" }, "\u6D77\u3092\u627C\u3059\u308B\u306F", g.factions[\u4E3B.f].name, "\u3000", \u4E3B.np.ships, "\u8258\u30FB\u6280\u91CF", \u4E3B.np.skill), /* @__PURE__ */ React2.createElement("br", null), /* @__PURE__ */ React2.createElement("span", { style: { color: p >= 50 ? "#B0483C" : p >= 20 ? "#C89A3A" : U.dim } }, p ? /* @__PURE__ */ React2.createElement(React2.Fragment, null, "\u8FCE\u3048\u6483\u305F\u308C\u308B\u898B\u8FBC\u307F ", /* @__PURE__ */ React2.createElement("b", null, p, "%"), "\u3002") : "\u3053\u3061\u3089\u304C\u6D77\u3092\u63E1\u3063\u3066\u304A\u308A\u3001\u307E\u305A\u51FA\u3066\u304D\u307E\u305B\u3093\u3002", p ? "\u6D77\u306E\u4E0A\u306B\u9000\u304D\u5834\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u6557\u308C\u308C\u3070\u5175\u306F\u6C88\u307F\u307E\u3059\u3002" : "")) : /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, "\u3053\u306E\u822A\u8DEF\u306B\u8239\u3092\u51FA\u305B\u308B\u6575\u306F\u3044\u307E\u305B\u3093\u3002\u6E21\u6D77\u306F\u5B89\u3093\u3058\u307E\u3059\u3002"));
+  })(), \u7D04\u675F && /* @__PURE__ */ React2.createElement("div", { style: {
     marginTop: 8,
     padding: "9px 11px",
     background: "rgba(176,72,60,0.10)",
