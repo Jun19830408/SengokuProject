@@ -155,7 +155,57 @@ const 名 = (f) => (s.factions[f] || {}).name || f;
   確('街道では海戦は起きない', !H.seaInterception(s, 陸, '街道'));
 }
 
-/* ------------------------------------- 七、海戦の帰趨 */
+/* ------------- 七、特殊勢力は、その土地を押さえた者だけが動かせること
+
+   「別所で開始早々に兵庫津を保護し、安宅水軍を支援したら、圧倒的に別所が
+     強くなり、海戦も起こらなくなった」との報せ。
+
+   町の一覧を距離で並べるだけで、絞り込んでいなかった。播磨の三木城に座ったまま、
+   淡路の安宅水軍（三好の身内）と摂津の兵庫津（三好の湊）へ金を積めた。
+
+   決まりは一つでよい。その町のいちばん近くの城を押さえている家が、その町と
+   誼を通じられる。隣の城を持たぬ者の話を、誰が聞くだろうか。 */
+{
+  const b2 = H.initState("bessho");
+  const 町 = (id) => H.TOWNS.find((x) => x.id === id);
+  const 可 = (st, fid, id) => H.特殊勢力の可否(st, 町(id), fid);
+
+  確('別所は初手で安宅水軍に手を出せない', !可(b2, "bessho", "ataka_sui").ok,
+    可(b2, "bessho", "ataka_sui").why);
+  確('別所は初手で兵庫津にも手を出せない', !可(b2, "bessho", "hyogo_t").ok,
+    可(b2, "bessho", "hyogo_t").why);
+  確('三好は自らの湊と水軍衆を動かせる',
+    可(b2, "miyoshi", "ataka_sui").ok && 可(b2, "miyoshi", "hyogo_t").ok);
+  確('織田は自らの湊（熱田・津島）を動かせる',
+    可(b2, "oda", "atsuta").ok && 可(b2, "oda", "tsushima").ok);
+  確('織田は淡路の水軍衆に手を出せない', !可(b2, "oda", "ataka_sui").ok);
+
+  // 隣の城を落とせば、手が届く
+  const 取 = JSON.parse(JSON.stringify(b2));
+  取.castles.find((c) => c.id === "sumoto").faction = "bessho";
+  確('洲本を落とせば、安宅水軍に手が届く', 可(取, "bessho", "ataka_sui").ok,
+    "淡路の水軍衆は、淡路を取った者のもの");
+  確('それでも兵庫津には手が届かない（摂津は三好のまま）',
+    !可(取, "bessho", "hyogo_t").ok, 可(取, "bessho", "hyogo_t").why);
+
+  /* 実際に誼を通じる道（doSpecial）も、同じ一つで判ずること。
+     画面だけで塞いでも、道が増えれば抜けられる。 */
+  const 前 = H.navalPower(b2, "bessho").ships;
+  const t3 = H.doSpecial(b2, "ataka_sui", "支援");
+  確('画面を通さず命じても、手の届かぬ町は動かせない',
+    H.navalPower(t3, "bessho").ships === 前 && /誼を通じられぬ/.test(t3.msg || ""),
+    t3.msg || "（報せなし）");
+  確('金も取られない', t3.factions.bessho.gold === b2.factions.bessho.gold,
+    `${t3.factions.bessho.gold}貫`);
+
+  // 落としたあとなら、ちゃんと効く
+  const t4 = H.doSpecial(取, "ataka_sui", "支援");
+  確('隣の城を落としたあとなら、水軍衆は応じる',
+    H.navalPower(t4, "bessho").ships > H.navalPower(取, "bessho").ships,
+    `${H.navalPower(取, "bessho").ships}艘 → ${H.navalPower(t4, "bessho").ships}艘`);
+}
+
+/* ------------------------------------- 八、海戦の帰趨 */
 {
   const army = { faction: 'oda', men: 6000, local: 6000,
     path: ['miki', 'sumoto'], target: 'sumoto', rost: null };

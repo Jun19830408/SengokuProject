@@ -14,6 +14,7 @@ import { canHoldCastle, castleRankNeed, stipendOf } from "../core/rank.js";
 import { 基準値, 売値, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
+import { 特殊勢力の可否 } from "../core/naval.js";
 /* ==========================================================================
    政務 ─ 城と家中への下知
    いずれも「いまの盤の様子（prev）を受け取り、改めた盤の様子を返す」だけの処理。
@@ -350,6 +351,10 @@ export function doSpecial(prev, townId, key) {
     const o = (SPECIAL_OPTIONS[t.kind] || []).find((x) => x.key === key);
     const f = s.factions[s.player];
     if (!o || f.gold < (o.cost || 0)) return s;
+    /* 手が届くか。画面の可否と、実際の処し方を同じ一つで判ずる。
+       画面だけで塞いでも、道が増えれば抜けられる。 */
+    const 可 = 特殊勢力の可否(s, t, s.player);
+    if (!可.ok) { s.msg = `${t.name}とは誼を通じられぬ。${可.why}。`; return s; }
     f.gold -= o.cost || 0;
     if (o.once) f.gold += o.once;
     st.state = key; st.faction = s.player; st.months = 0;

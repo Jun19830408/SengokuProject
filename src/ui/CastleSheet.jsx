@@ -17,6 +17,7 @@ import { 基準値, 売値, 相場, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
 import { is架空 } from "../core/house.js";
+import { 特殊勢力の可否 } from "../core/naval.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
 export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
@@ -73,8 +74,13 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
   const pt = (plotTarget && foeCastles.some((x) => x.id === plotTarget))
     ? plotTarget : (foeCastles[0] && foeCastles[0].id);
   const running = g.plots.filter((x) => x.faction === g.player);
-  const nearTowns = TOWNS.slice().sort((a, z) =>
-    Math.hypot(px(a.lon) - c.x, py(a.lat) - c.y) - Math.hypot(px(z.lon) - c.x, py(z.lat) - c.y));
+  /* 手の届く町だけを並べる。全国の町を距離で並べるだけでは、播磨に座ったまま
+     淡路の水軍衆へ金を積める。手の届かぬ町は、なぜ届かぬかを添えて末に置く。 */
+  const nearTowns = TOWNS.slice()
+    .map((t) => ({ t, 可: 特殊勢力の可否(g, t, g.player),
+      d: Math.hypot(px(t.lon) - c.x, py(t.lat) - c.y) }))
+    .sort((a, z) => (a.可.ok === z.可.ok ? a.d - z.d : (a.可.ok ? -1 : 1)))
+    .filter((x) => x.可.ok || x.d < 260);
 
   return (
     <div className="sheet" onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop} onWheel={stop}
@@ -874,9 +880,15 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
 
               {tab === "特殊勢力" && (
                 <>
-                  {nearTowns.map((t) => {
+                  <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 8 }}>
+                    湊も水軍衆も寺社も、その土地に根を張っています。誰と誼を通じるかは、
+                    その土地を誰が押さえているかで決まります。<br />
+                    近くに自家の城が無ければ話を持ちかける筋がなく、
+                    他家の勢力圏であれば、その家を退けねば手は出せません。
+                  </div>
+                  {nearTowns.map(({ t, 可 }) => {
                     const st = g.specials[t.id] || {};
-                    const opts = SPECIAL_OPTIONS[t.kind] || [];
+                    const opts = 可.ok ? (SPECIAL_OPTIONS[t.kind] || []) : [];
                     return (
                       <div key={t.id} style={{ borderBottom: `1px solid ${U.line2}`, paddingBottom: 8, marginBottom: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -887,16 +899,24 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                             {st.anger > 0 ? `／反発${Math.round(st.anger)}` : ""}
                           </span>
                         </div>
-                        <div className="g3" style={{ marginTop: 6 }}>
-                          {opts.map((o) => (
-                            <button key={o.key} className={`btn sm ${st.faction === g.player && st.state === o.key ? "on" : ""}`}
-                              title={o.desc} disabled={g.factions[g.player].gold < (o.cost || 0)}
-                              onClick={() => onSpecial(t.id, o.key)}>{o.key}</button>
-                          ))}
-                        </div>
-                        <div style={{ fontSize: 11, color: U.dim, marginTop: 4, lineHeight: 1.6 }}>
-                          {opts.map((o) => `${o.key}：${o.desc}`).join("　")}
-                        </div>
+                        {可.ok ? (
+                          <>
+                            <div className="g3" style={{ marginTop: 6 }}>
+                              {opts.map((o) => (
+                                <button key={o.key} className={`btn sm ${st.faction === g.player && st.state === o.key ? "on" : ""}`}
+                                  title={o.desc} disabled={g.factions[g.player].gold < (o.cost || 0)}
+                                  onClick={() => onSpecial(t.id, o.key)}>{o.key}</button>
+                              ))}
+                            </div>
+                            <div style={{ fontSize: 11, color: U.dim, marginTop: 4, lineHeight: 1.6 }}>
+                              {opts.map((o) => `${o.key}：${o.desc}`).join("　")}
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{ fontSize: 11.5, color: "#B0483C", marginTop: 5, lineHeight: 1.7 }}>
+                            手が届きません。{可.why}。
+                          </div>
+                        )}
                       </div>
                     );
                   })}

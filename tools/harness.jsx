@@ -13,7 +13,7 @@ export { saveGame, loadGame, clearGame, 記録を並べる, 記録の見出し, 
 export { initState } from "../src/core/state.js";
 export { layoutSea, makeFleet, createSeaBattle, stepSeaBattle, seaAI, 海戦を裁く, fleetShips, fleetCrew, 風向き, SEA, 海の状 } from "../src/battle/sea.js";
 export { SHIPS, 船の割り } from "../src/data/ships.js";
-export { navalPower, isCoastal, seaInterception, resolveSeaBattle, 湊の主, 渡海の船立て, 迎え撃つ船立て, 船立ての力, 一艘の乗り } from "../src/core/naval.js";
+export { navalPower, isCoastal, seaInterception, resolveSeaBattle, 湊の主, 特殊勢力の可否, 渡海の船立て, 迎え撃つ船立て, 船立ての力, 一艘の乗り } from "../src/core/naval.js";
 export { TOWNS } from "../src/data/castles.js";
 export { roadBetween } from "../src/core/paths.js";
 export { findPath } from "../src/core/paths.js";
@@ -24,7 +24,7 @@ export { 忠誠, diploStat } from "../src/core/rank.js";
 export { 難を逃れる, captureChance } from "../src/core/capture.js";
 export { succeed, is架空, bearChild, pickHeir } from "../src/core/house.js";
 export { houseAlive, 主家, isVassal, 膝を屈している, canAskAid, underMyBanner } from "../src/core/state.js";
-export { doDiplo, doPlot } from "../src/govern/commands.js";
+export { doDiplo, doPlot, doSpecial } from "../src/govern/commands.js";
 export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 合戦の中身を直に動かすための取り出し口。
 // 画面を通すと、戦況の記録が流れて肝心の一行を取り逃がす。

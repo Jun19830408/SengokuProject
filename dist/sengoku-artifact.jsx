@@ -4837,6 +4837,22 @@ function \u6E4A\u306E\u4E3B(s2, t) {
   if (t.owner && (s2.castles || []).some((c) => c.faction === t.owner)) return t.owner;
   return null;
 }
+var \u624B\u306E\u5C4A\u304F\u9593 = 130;
+function \u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(g, t, fid) {
+  const tx = px(t.lon), ty = py(t.lat);
+  let \u96A3 = null, bd = 1e9;
+  for (const c of g.castles || []) {
+    const d = Math.hypot(c.x - tx, c.y - ty);
+    if (d < bd) {
+      bd = d;
+      \u96A3 = c;
+    }
+  }
+  if (!\u96A3 || bd > \u624B\u306E\u5C4A\u304F\u9593) return { ok: false, why: "\u8FD1\u304F\u306B\u57CE\u304C\u306A\u304F\u3001\u8A71\u3092\u901A\u3059\u7B4B\u304C\u306A\u3044" };
+  if (\u96A3.faction === fid) return { ok: true, why: "", \u96A3 };
+  const \u540D = ((g.factions || {})[\u96A3.faction] || {}).name || "\u4ED6\u5BB6";
+  return { ok: false, why: `${\u96A3.name}\u3092\u62BC\u3055\u3048\u308B${\u540D}\u306E\u571F\u5730\u3002${\u96A3.name}\u3092\u843D\u3068\u3055\u306D\u3070\u8A71\u306F\u901A\u3089\u306A\u3044`, \u96A3 };
+}
 function navalPower(s2, fid) {
   let ships = 0, skill = 55;
   for (const c of s2.castles.filter((x) => x.faction === fid)) {
@@ -7788,6 +7804,11 @@ function doSpecial(prev, townId, key) {
   const o = (SPECIAL_OPTIONS[t.kind] || []).find((x) => x.key === key);
   const f = s2.factions[s2.player];
   if (!o || f.gold < (o.cost || 0)) return s2;
+  const \u53EF = \u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(s2, t, s2.player);
+  if (!\u53EF.ok) {
+    s2.msg = `${t.name}\u3068\u306F\u8ABC\u3092\u901A\u3058\u3089\u308C\u306C\u3002${\u53EF.why}\u3002`;
+    return s2;
+  }
   f.gold -= o.cost || 0;
   if (o.once) f.gold += o.once;
   st.state = key;
@@ -15594,7 +15615,11 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
   const foeCastles = g.castles.filter((x) => x.faction !== g.player).map((x) => ({ ...x, dist: myCastles.length ? Math.min(...myCastles.map((a) => Math.hypot(a.x - x.x, a.y - x.y))) : 0 })).sort((a, b) => a.dist - b.dist);
   const pt = plotTarget && foeCastles.some((x) => x.id === plotTarget) ? plotTarget : foeCastles[0] && foeCastles[0].id;
   const running = g.plots.filter((x) => x.faction === g.player);
-  const nearTowns = TOWNS.slice().sort((a, z) => Math.hypot(px(a.lon) - c.x, py(a.lat) - c.y) - Math.hypot(px(z.lon) - c.x, py(z.lat) - c.y));
+  const nearTowns = TOWNS.slice().map((t) => ({
+    t,
+    \u53EF: \u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(g, t, g.player),
+    d: Math.hypot(px(t.lon) - c.x, py(t.lat) - c.y)
+  })).sort((a, z) => a.\u53EF.ok === z.\u53EF.ok ? a.d - z.d : a.\u53EF.ok ? -1 : 1).filter((x) => x.\u53EF.ok || x.d < 260);
   return /* @__PURE__ */ React5.createElement(
     "div",
     {
@@ -15932,10 +15957,10 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
         },
         \u7ACB\u3064 ? `${plot}\u3092\u4ED5\u639B\u3051\u308B` : `${plot}\u306F\u76F8\u624B\u3092\u5B9A\u3081\u306D\u3070\u4ED5\u639B\u3051\u3089\u308C\u306C`
       );
-    })(), !freeGens.length && /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 8, lineHeight: 1.7 } }, "\u3053\u306E\u57CE\u306E\u8005\u306F\u307F\u306A\u672C\u6708\u306E\u52D9\u3081\u306B\u5C31\u3044\u3066\u304A\u308A\u3001\u8ABF\u7565\u306B\u624B\u3092\u56DE\u305B\u306A\u3044\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, "\u5185\u653F\u3068\u8ABF\u7565\u306F\u540C\u3058\u624B\u3092\u4F7F\u3046\u3002\u8B00\u3092\u5DE1\u3089\u3059\u306A\u3089\u3001\u8AB0\u304B\u306E\u624B\u3092\u7A7A\u3051\u3066\u304A\u304F\u3053\u3068\u3002")), running.length > 0 && /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("div", { className: "sec" }, "\u9032\u884C\u4E2D\u306E\u8ABF\u7565"), running.map((x, i) => /* @__PURE__ */ React5.createElement("div", { className: "row", key: i }, /* @__PURE__ */ React5.createElement("span", null, (g.castles.find((y) => y.id === x.castleId) || {}).name, "\uFF0F", x.type, x.matoId && `\uFF0F${(g.generals.find((y) => y.id === x.matoId) || {}).name || "\u2015"}`), /* @__PURE__ */ React5.createElement("span", { className: "v" }, "\u3042\u3068", x.monthsLeft, "\u304B\u6708"))))), tab === "\u7279\u6B8A\u52E2\u529B" && /* @__PURE__ */ React5.createElement(React5.Fragment, null, nearTowns.map((t) => {
+    })(), !freeGens.length && /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 8, lineHeight: 1.7 } }, "\u3053\u306E\u57CE\u306E\u8005\u306F\u307F\u306A\u672C\u6708\u306E\u52D9\u3081\u306B\u5C31\u3044\u3066\u304A\u308A\u3001\u8ABF\u7565\u306B\u624B\u3092\u56DE\u305B\u306A\u3044\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("span", { style: { color: U.dim, fontSize: 11.5 } }, "\u5185\u653F\u3068\u8ABF\u7565\u306F\u540C\u3058\u624B\u3092\u4F7F\u3046\u3002\u8B00\u3092\u5DE1\u3089\u3059\u306A\u3089\u3001\u8AB0\u304B\u306E\u624B\u3092\u7A7A\u3051\u3066\u304A\u304F\u3053\u3068\u3002")), running.length > 0 && /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("div", { className: "sec" }, "\u9032\u884C\u4E2D\u306E\u8ABF\u7565"), running.map((x, i) => /* @__PURE__ */ React5.createElement("div", { className: "row", key: i }, /* @__PURE__ */ React5.createElement("span", null, (g.castles.find((y) => y.id === x.castleId) || {}).name, "\uFF0F", x.type, x.matoId && `\uFF0F${(g.generals.find((y) => y.id === x.matoId) || {}).name || "\u2015"}`), /* @__PURE__ */ React5.createElement("span", { className: "v" }, "\u3042\u3068", x.monthsLeft, "\u304B\u6708"))))), tab === "\u7279\u6B8A\u52E2\u529B" && /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 8 } }, "\u6E4A\u3082\u6C34\u8ECD\u8846\u3082\u5BFA\u793E\u3082\u3001\u305D\u306E\u571F\u5730\u306B\u6839\u3092\u5F35\u3063\u3066\u3044\u307E\u3059\u3002\u8AB0\u3068\u8ABC\u3092\u901A\u3058\u308B\u304B\u306F\u3001 \u305D\u306E\u571F\u5730\u3092\u8AB0\u304C\u62BC\u3055\u3048\u3066\u3044\u308B\u304B\u3067\u6C7A\u307E\u308A\u307E\u3059\u3002", /* @__PURE__ */ React5.createElement("br", null), "\u8FD1\u304F\u306B\u81EA\u5BB6\u306E\u57CE\u304C\u7121\u3051\u308C\u3070\u8A71\u3092\u6301\u3061\u304B\u3051\u308B\u7B4B\u304C\u306A\u304F\u3001 \u4ED6\u5BB6\u306E\u52E2\u529B\u570F\u3067\u3042\u308C\u3070\u3001\u305D\u306E\u5BB6\u3092\u9000\u3051\u306D\u3070\u624B\u306F\u51FA\u305B\u307E\u305B\u3093\u3002"), nearTowns.map(({ t, \u53EF }) => {
       const st = g.specials[t.id] || {};
-      const opts = SPECIAL_OPTIONS[t.kind] || [];
-      return /* @__PURE__ */ React5.createElement("div", { key: t.id, style: { borderBottom: `1px solid ${U.line2}`, paddingBottom: 8, marginBottom: 8 } }, /* @__PURE__ */ React5.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React5.createElement("span", { className: "mn", style: { fontSize: 15 } }, t.name), /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: "#8A8478" } }, t.kind), /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 12, color: U.dim } }, st.faction === g.player ? `\u95A2\u4FC2\uFF1A${st.state}` : st.faction ? `\u4ED6\u52E2\u529B\u304C${st.state}` : "\u4E2D\u7ACB", st.anger > 0 ? `\uFF0F\u53CD\u767A${Math.round(st.anger)}` : "")), /* @__PURE__ */ React5.createElement("div", { className: "g3", style: { marginTop: 6 } }, opts.map((o) => /* @__PURE__ */ React5.createElement(
+      const opts = \u53EF.ok ? SPECIAL_OPTIONS[t.kind] || [] : [];
+      return /* @__PURE__ */ React5.createElement("div", { key: t.id, style: { borderBottom: `1px solid ${U.line2}`, paddingBottom: 8, marginBottom: 8 } }, /* @__PURE__ */ React5.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React5.createElement("span", { className: "mn", style: { fontSize: 15 } }, t.name), /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: "#8A8478" } }, t.kind), /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 12, color: U.dim } }, st.faction === g.player ? `\u95A2\u4FC2\uFF1A${st.state}` : st.faction ? `\u4ED6\u52E2\u529B\u304C${st.state}` : "\u4E2D\u7ACB", st.anger > 0 ? `\uFF0F\u53CD\u767A${Math.round(st.anger)}` : "")), \u53EF.ok ? /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("div", { className: "g3", style: { marginTop: 6 } }, opts.map((o) => /* @__PURE__ */ React5.createElement(
         "button",
         {
           key: o.key,
@@ -15945,7 +15970,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
           onClick: () => onSpecial(t.id, o.key)
         },
         o.key
-      ))), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 4, lineHeight: 1.6 } }, opts.map((o) => `${o.key}\uFF1A${o.desc}`).join("\u3000")));
+      ))), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 4, lineHeight: 1.6 } }, opts.map((o) => `${o.key}\uFF1A${o.desc}`).join("\u3000"))) : /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: "#B0483C", marginTop: 5, lineHeight: 1.7 } }, "\u624B\u304C\u5C4A\u304D\u307E\u305B\u3093\u3002", \u53EF.why, "\u3002"));
     })), g.ledger.length > 0 && /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("div", { className: "sec" }, "\u5B9F\u884C\u524D \u2192 \u5B9F\u884C\u5F8C"), g.ledger.slice(0, 3).map((l, i) => /* @__PURE__ */ React5.createElement("div", { className: "led", key: i }, /* @__PURE__ */ React5.createElement("div", { style: { marginBottom: 3 } }, /* @__PURE__ */ React5.createElement("b", null, l.castle, "\uFF0F", l.cmd), "\u3000\u62C5\u5F53 ", l.general, "\u3000\u8CBB\u7528 ", fmt(l.cost), "\u8CAB"), l.lines.map((x, j) => {
       if (x.text) return /* @__PURE__ */ React5.createElement("div", { key: j }, x.text);
       const d = x.after - x.before;
