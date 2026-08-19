@@ -162,9 +162,14 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
        これまではどの町も同じ灰色の点で、名を読まねば湊か寺社か分からなかった。
        種ごとの形にし、誼を通じた家があればその家の色で塗る。 */
     for (const t of TOWNS) {
-      const [x, y] = S(t.x, t.y);
+      /* 町の座標は lon/lat のままで、x/y は入っていない（paths.js が別に
+         NODES へ写しているだけである）。そのため S(t.x, t.y) は NaN を返し、
+         町は一つも描かれていなかった。印を種ごとの形にしても、
+         そもそも描かれていなければ意味がない。ここで地図の座標へ直す。 */
+      const [x, y] = S(px(t.lon), py(t.lat));
       const 様 = 町の様子(g, t);
-      const r = 様.誼 ? 6.6 : 5.4;
+      // 城より控えめにする。町は城の合間にあるので、同じ重さで描くと図が煩い。
+      const r = 様.誼 ? 5.6 : 4.6;
       ctx.fillStyle = "rgba(0,0,0,0.14)";
       ctx.beginPath(); ctx.arc(x + 0.8, y + 1.2, r + 2.6, 0, 7); ctx.fill();
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, r + 2.4, 0, 7); ctx.fill();
@@ -177,15 +182,17 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         ctx.beginPath(); ctx.arc(x, y, r + 8, 0, 7); ctx.stroke();
       }
       drawTownMark(ctx, t.kind, x, y, r, 様.色);
-      if (s > 0.6) {
-        ctx.font = "12px 'Hiragino Sans',sans-serif";
+      /* 町の名は、寄せたときだけ出す。城の名札と重なって図が読めなくなるからである。
+         印そのものは遠目にも出しておく。何かがそこに在る、とだけ分かればよい。 */
+      if (s > 0.85) {
+        ctx.font = "11.5px 'Hiragino Sans',sans-serif";
         const w = ctx.measureText(t.name).width;
-        ctx.fillStyle = "rgba(255,255,255,.78)"; ctx.fillRect(x - w / 2 - 3, y + r + 4, w + 6, 15);
-        ctx.fillStyle = "#3B3A35"; ctx.fillText(t.name, x - w / 2, y + r + 16);
-        if (s > 1.1) {
+        ctx.fillStyle = "rgba(255,255,255,.72)"; ctx.fillRect(x - w / 2 - 3, y + r + 4, w + 6, 14);
+        ctx.fillStyle = "#4A4840"; ctx.fillText(t.name, x - w / 2, y + r + 15);
+        if (s > 1.45) {
           ctx.fillStyle = U.dim; ctx.font = "10px sans-serif";
           const k = `（${t.kind}${様.主名 ? `・${様.主名}` : ""}）`;
-          ctx.fillText(k, x - ctx.measureText(k).width / 2, y + r + 29);
+          ctx.fillText(k, x - ctx.measureText(k).width / 2, y + r + 27);
         }
       }
     }
@@ -314,7 +321,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     if (hit) { setSel(hit); setTownSel(null); setTab("内政"); return; }
     // 特殊勢力を押したら、その帳を開く（城より狭い当たり）
     let ht = null, bt = 20 / view.s;
-    for (const t of TOWNS) { const dd = Math.hypot(t.x - wx, t.y - wy); if (dd < bt) { bt = dd; ht = t.id; } }
+    for (const t of TOWNS) {
+      const dd = Math.hypot(px(t.lon) - wx, py(t.lat) - wy);
+      if (dd < bt) { bt = dd; ht = t.id; }
+    }
     if (ht) { setTownSel(ht); setSel(null); return; }
     setSel(null); setTownSel(null);
   };

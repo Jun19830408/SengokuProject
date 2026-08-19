@@ -58,6 +58,37 @@ const 町 = (id) => H.TOWNS.find((x) => x.id === id);
   }
 }
 
+/* ------------------ 一の二、町が地図に描ける座標を持つこと
+
+   特殊勢力の印を種ごとの形にしたのに、地図には何も出なかった。
+   町は lon/lat しか持たず、x/y は入っていない（paths.js が別に NODES へ
+   写しているだけである）。地図は S(t.x, t.y) を呼んでいたので、NaN が返り、
+   一つも描かれていなかった。印を凝っても、描かれなければ意味がない。
+
+   ここでは、地図が使う座標が数として成り立っていることを確かめる。 */
+{
+  const 悪 = [];
+  for (const t of H.TOWNS) {
+    const x = H.px(t.lon), y = H.py(t.lat);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) 悪.push(`${t.name}(${x},${y})`);
+  }
+  確('すべての町が、地図に置ける座標を持つ', 悪.length === 0, 悪.slice(0, 5).join('・') || `${H.TOWNS.length}か所`);
+  確('町そのものには x/y が入っていない（lon/lat から出す）',
+    H.TOWNS.every((t) => t.x === undefined),
+    'S(t.x, t.y) と書けば NaN になる。px(t.lon) を通すこと');
+
+  // 押した所から町を拾う勘定も、同じ座標で行われること
+  const 津島 = H.TOWNS.find((t) => t.id === 'tsushima');
+  const wx = H.px(津島.lon) + 3, wy = H.py(津島.lat) - 2;    // 印のすぐ脇を押す
+  let 当 = null, bd = 20;
+  for (const t of H.TOWNS) {
+    const d = Math.hypot(H.px(t.lon) - wx, H.py(t.lat) - wy);
+    if (d < bd) { bd = d; 当 = t; }
+  }
+  確('印のそばを押せば、その町が拾える', 当 && 当.id === 'tsushima',
+    当 ? `${当.name}（${bd.toFixed(1)}歩）` : '拾えない');
+}
+
 /* ------------------------ 二、家紋 */
 {
   const 家 = Object.values(H.FACTIONS);

@@ -16638,9 +16638,9 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       ctx.fillText(`${fmt(a.men)}`, ax + 14, ay + 4);
     }
     for (const t of TOWNS) {
-      const [x, y] = S(t.x, t.y);
+      const [x, y] = S(px(t.lon), py(t.lat));
       const \u69D8 = \u753A\u306E\u69D8\u5B50(g, t);
-      const r = \u69D8.\u8ABC ? 6.6 : 5.4;
+      const r = \u69D8.\u8ABC ? 5.6 : 4.6;
       ctx.fillStyle = "rgba(0,0,0,0.14)";
       ctx.beginPath();
       ctx.arc(x + 0.8, y + 1.2, r + 2.6, 0, 7);
@@ -16664,18 +16664,18 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         ctx.stroke();
       }
       drawTownMark(ctx, t.kind, x, y, r, \u69D8.\u8272);
-      if (s2 > 0.6) {
-        ctx.font = "12px 'Hiragino Sans',sans-serif";
+      if (s2 > 0.85) {
+        ctx.font = "11.5px 'Hiragino Sans',sans-serif";
         const w = ctx.measureText(t.name).width;
-        ctx.fillStyle = "rgba(255,255,255,.78)";
-        ctx.fillRect(x - w / 2 - 3, y + r + 4, w + 6, 15);
-        ctx.fillStyle = "#3B3A35";
-        ctx.fillText(t.name, x - w / 2, y + r + 16);
-        if (s2 > 1.1) {
+        ctx.fillStyle = "rgba(255,255,255,.72)";
+        ctx.fillRect(x - w / 2 - 3, y + r + 4, w + 6, 14);
+        ctx.fillStyle = "#4A4840";
+        ctx.fillText(t.name, x - w / 2, y + r + 15);
+        if (s2 > 1.45) {
           ctx.fillStyle = U.dim;
           ctx.font = "10px sans-serif";
           const k = `\uFF08${t.kind}${\u69D8.\u4E3B\u540D ? `\u30FB${\u69D8.\u4E3B\u540D}` : ""}\uFF09`;
-          ctx.fillText(k, x - ctx.measureText(k).width / 2, y + r + 29);
+          ctx.fillText(k, x - ctx.measureText(k).width / 2, y + r + 27);
         }
       }
     }
@@ -16847,7 +16847,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     let ht = null, bt = 20 / view.s;
     for (const t of TOWNS) {
-      const dd = Math.hypot(t.x - wx, t.y - wy);
+      const dd = Math.hypot(px(t.lon) - wx, py(t.lat) - wy);
       if (dd < bt) {
         bt = dd;
         ht = t.id;
