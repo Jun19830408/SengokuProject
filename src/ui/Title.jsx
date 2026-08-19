@@ -59,6 +59,11 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
           <button className={`btn ${最新 ? "" : "dark"}`} style={{ padding: "13px" }} onClick={onStart}>
             {最新 ? "新しくはじめる" : "ゲームをはじめる"}
           </button>
+          {在る.some((w) => w.自動) && (
+            <div style={{ fontSize: 11, color: U.dim, lineHeight: 1.7, textAlign: "left", marginTop: -3 }}>
+              新しく始めると、いま「自動」にある盤は空いている枠へ移して取っておきます。
+            </div>
+          )}
 
           <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 6, textAlign: "left" }}>
             記録所　（押せばその盤から始まります）

@@ -67,6 +67,29 @@ export async function 記録を並べる() {
   return out;
 }
 
+/* 自動の枠を、空いている手記録へ逃がす（GDD 15.3）。
+
+   新しく始めると、最初の月送りで自動の枠が黙って上書きされていた。
+   遊ぶ側から見れば、既にある記録が勝手に消える。実際、iPhone で天文二十二年
+   まで進めた織田家の盤がこれで失われた。取り返しのつかない損である。
+
+   新しく始める前、控えから戻す前に、いま自動の枠にある盤を空き枠へ写しておく。
+   空き枠が一つも無ければ写せないので、そのときは呼ぶ側が問うこと。 */
+export async function 自動を逃がす() {
+  let d = null;
+  try { d = 解く(await 置き場().読む(SAVE_KEY)); } catch (e) { d = null; }
+  if (!d) return { 要らぬ: true };
+  for (let i = 1; i <= 枠の数; i++) {
+    const k = 枠の鍵(i);
+    let 有 = null;
+    try { 有 = 解く(await 置き場().読む(k)); } catch (e) { 有 = null; }
+    if (有) continue;
+    try { await 置き場().書く(k, 包む(d.state)); } catch (e) { return { 失敗: true, d }; }
+    return { 逃がした: k, 名: `記録 ${"一二三四五"[i - 1]}`, d };
+  }
+  return { 空きなし: true, d };
+}
+
 // 記録の見出し。年月・家・石高・城数を一行にまとめる。
 export function 記録の見出し(d, FACTIONS) {
   if (!d || !d.state) return null;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { initState } from "../core/state.js";
 import { buildTerrainCanvas } from "../core/terrainCanvas.js";
-import { SAVE_KEY, clearGame, loadGame, saveGame, 記録を並べる } from "../save/save.js";
+import { SAVE_KEY, clearGame, loadGame, saveGame, 自動を逃がす, 記録の見出し, 記録を並べる } from "../save/save.js";
 import { DaimyoSelect } from "./DaimyoSelect.jsx";
 import { MapScreen } from "./MapScreen.jsx";
 import { Title } from "./Title.jsx";
@@ -43,8 +43,37 @@ export default function App() {
     let st = null;
     try { st = await importSave(file); } catch (e) { st = null; }
     if (!st) { window.alert("この控えは読めなかった。戦国の記録ではないかもしれぬ。"); return; }
+    // 控えを入れるときも、いまの自動の枠を逃がしてから
+    const r = await 自動を逃がす();
+    if (r.空きなし || r.失敗) {
+      if (!window.confirm("空いている枠が無いため、「自動」の記録は失われます。よろしいですか。")) return;
+    }
     await doSave(st, SAVE_KEY);
     setG(st); setScreen("map");
+  };
+
+  /* 新しく始める前に、いま自動の枠にある盤を空き枠へ逃がす（GDD 15.3）。
+
+     これをせずにいたため、新しく始めた途端――正しくは最初の月送りの折に――
+     自動の枠が黙って上書きされ、進めていた盤が失われた。
+     逃がせないとき（空き枠が無いとき）は、消える旨を告げて確かめる。 */
+  const 新しく始める = async () => {
+    const r = await 自動を逃がす();
+    await 並べ直す();
+    if (r.空きなし || r.失敗) {
+      const h = 記録の見出し(r.d, FACTIONS);
+      const 文 = h
+        ? `いま「自動」には ${h.家}・${h.年}年${h.月}月（${h.城数}城）の記録があります。\n`
+          + "空いている枠が無いため、新しく始めるとこの記録は失われます。\n\n"
+          + "取っておきたいなら、取りやめて、要らない枠を消すか、控えを書き出してください。"
+        : "「自動」の記録が失われます。よろしいですか。";
+      if (!window.confirm(文)) return;
+    } else if (r.逃がした) {
+      const h = 記録の見出し(r.d, FACTIONS);
+      window.alert(`いままでの盤（${h ? `${h.家}・${h.年}年${h.月}月` : "自動の記録"}）を「${r.名}」へ移しました。\n`
+        + "新しく始めても消えません。");
+    }
+    setScreen("select");
   };
 
   // 枠を選んで、その盤から始める
@@ -55,7 +84,7 @@ export default function App() {
   };
 
   if (screen === "title") return (<><style>{css}</style>
-    <Title saves={saves} onStart={() => setScreen("select")}
+    <Title saves={saves} onStart={新しく始める}
       onLoad={記録から始める}
       onErase={async (key) => { await clearGame(key); await 並べ直す(); }}
       onExport={async (key) => {

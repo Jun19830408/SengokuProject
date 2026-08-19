@@ -6824,6 +6824,32 @@ async function \u8A18\u9332\u3092\u4E26\u3079\u308B() {
   }
   return out;
 }
+async function \u81EA\u52D5\u3092\u9003\u304C\u3059() {
+  let d = null;
+  try {
+    d = \u89E3\u304F(await \u7F6E\u304D\u5834().\u8AAD\u3080(SAVE_KEY));
+  } catch (e) {
+    d = null;
+  }
+  if (!d) return { \u8981\u3089\u306C: true };
+  for (let i = 1; i <= \u67A0\u306E\u6570; i++) {
+    const k = \u67A0\u306E\u9375(i);
+    let \u6709 = null;
+    try {
+      \u6709 = \u89E3\u304F(await \u7F6E\u304D\u5834().\u8AAD\u3080(k));
+    } catch (e) {
+      \u6709 = null;
+    }
+    if (\u6709) continue;
+    try {
+      await \u7F6E\u304D\u5834().\u66F8\u304F(k, \u5305\u3080(d.state));
+    } catch (e) {
+      return { \u5931\u6557: true, d };
+    }
+    return { \u9003\u304C\u3057\u305F: k, \u540D: `\u8A18\u9332 ${"\u4E00\u4E8C\u4E09\u56DB\u4E94"[i - 1]}`, d };
+  }
+  return { \u7A7A\u304D\u306A\u3057: true, d };
+}
 function \u8A18\u9332\u306E\u898B\u51FA\u3057(d, FACTIONS2) {
   if (!d || !d.state) return null;
   const st = d.state;
@@ -14938,7 +14964,7 @@ function drawShip(ctx, s2, col, mine) {
     ctx.fillRect(s2.x - st.\u7684, s2.y + st.\u7684 * 0.9, st.\u7684 * 2 * r, 2);
   }
 }
-function drawSea(ctx, b, sel, terrainCanvas, cam, W, H, dpr, sideColor2) {
+function drawSea(ctx, b, sel, terrainCanvas, cam, W, H, dpr, side\u8272) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
   const S = (wx, wy) => [(wx - cam.x) * cam.s + W / 2, (wy - cam.y) * cam.s + H / 2];
@@ -14948,7 +14974,7 @@ function drawSea(ctx, b, sel, terrainCanvas, cam, W, H, dpr, sideColor2) {
   ctx.drawImage(terrainCanvas, 0, 0);
   const alive = b.fleets.filter((f) => !f.dead);
   for (const f of alive) {
-    const col = sideColor2(f);
+    const col = side\u8272(f);
     const on = sel === f.id;
     const live = f.ships.filter((s2) => !s2.sunk);
     if (!live.length) continue;
@@ -15027,7 +15053,7 @@ function drawSea(ctx, b, sel, terrainCanvas, cam, W, H, dpr, sideColor2) {
   ctx.restore();
   for (const f of alive) {
     if (f.destroyed) continue;
-    const col = sideColor2(f);
+    const col = side\u8272(f);
     const [x, y] = S(f.x, f.y);
     const H2 = f.gen.lord ? 28 : 21;
     ctx.strokeStyle = "rgba(255,255,255,0.9)";
@@ -17985,7 +18011,7 @@ function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
   const \u63A7\u3048\u53E3 = useRef5(null);
   const \u5728\u308B = (saves || []).filter((w) => w.d);
   const \u6700\u65B0 = \u5728\u308B.length ? \u5728\u308B.reduce((a, w) => (w.d.at || 0) > (a.d.at || 0) ? w : a, \u5728\u308B[0]) : null;
-  return /* @__PURE__ */ React7.createElement("div", { className: "sp", style: { height: "100dvh", alignItems: "center", justifyContent: "center", position: "relative", overflow: "auto" } }, /* @__PURE__ */ React7.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)" } }), /* @__PURE__ */ React7.createElement("div", { style: { position: "relative", textAlign: "center", padding: "24px 0" } }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 42, letterSpacing: ".06em" } }, "\u6226\u56FD\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11, letterSpacing: ".42em", color: U.dim, marginTop: 6 } }, "SENGOKU PROJECT"), /* @__PURE__ */ React7.createElement("div", { style: { marginTop: 24, display: "flex", flexDirection: "column", gap: 9, width: 360, maxWidth: "92vw" } }, \u6700\u65B0 && /* @__PURE__ */ React7.createElement("button", { className: "btn dark", style: { padding: "13px" }, onClick: () => onLoad(\u6700\u65B0.key) }, "\u7D9A\u304D\u304B\u3089\uFF08", \u6700\u65B0.\u540D, "\u30FB", \u6700\u65B0.d.state.year, "\u5E74", \u6700\u65B0.d.state.month, "\u6708\u30FB", (FACTIONS[\u6700\u65B0.d.state.player] || {}).name, "\uFF09"), /* @__PURE__ */ React7.createElement("button", { className: `btn ${\u6700\u65B0 ? "" : "dark"}`, style: { padding: "13px" }, onClick: onStart }, \u6700\u65B0 ? "\u65B0\u3057\u304F\u306F\u3058\u3081\u308B" : "\u30B2\u30FC\u30E0\u3092\u306F\u3058\u3081\u308B"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 6, textAlign: "left" } }, "\u8A18\u9332\u6240\u3000\uFF08\u62BC\u305B\u3070\u305D\u306E\u76E4\u304B\u3089\u59CB\u307E\u308A\u307E\u3059\uFF09"), /* @__PURE__ */ React7.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5 } }, (saves || []).map((w) => /* @__PURE__ */ React7.createElement(\u8A18\u9332\u306E\u672D, { key: w.key, \u67A0: w, onLoad, onErase }))), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 10.5, color: U.dim, lineHeight: 1.7, textAlign: "left" } }, "\u300C\u81EA\u52D5\u300D\u306F\u6708\u304C\u66FF\u308F\u308B\u305F\u3073\u306B\u52DD\u624B\u306B\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\u3002\u53D6\u3063\u3066\u304A\u304D\u305F\u3044\u76E4\u306F\u3001 \u904A\u3073\u306E\u4E2D\u306E\u300C\u8A18\u9332\u300D\u304B\u3089\u4E00\u301C\u4E94\u306E\u3069\u308C\u304B\u3078\u53CE\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), /* @__PURE__ */ React7.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } }, \u6700\u65B0 && /* @__PURE__ */ React7.createElement(
+  return /* @__PURE__ */ React7.createElement("div", { className: "sp", style: { height: "100dvh", alignItems: "center", justifyContent: "center", position: "relative", overflow: "auto" } }, /* @__PURE__ */ React7.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)" } }), /* @__PURE__ */ React7.createElement("div", { style: { position: "relative", textAlign: "center", padding: "24px 0" } }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 42, letterSpacing: ".06em" } }, "\u6226\u56FD\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11, letterSpacing: ".42em", color: U.dim, marginTop: 6 } }, "SENGOKU PROJECT"), /* @__PURE__ */ React7.createElement("div", { style: { marginTop: 24, display: "flex", flexDirection: "column", gap: 9, width: 360, maxWidth: "92vw" } }, \u6700\u65B0 && /* @__PURE__ */ React7.createElement("button", { className: "btn dark", style: { padding: "13px" }, onClick: () => onLoad(\u6700\u65B0.key) }, "\u7D9A\u304D\u304B\u3089\uFF08", \u6700\u65B0.\u540D, "\u30FB", \u6700\u65B0.d.state.year, "\u5E74", \u6700\u65B0.d.state.month, "\u6708\u30FB", (FACTIONS[\u6700\u65B0.d.state.player] || {}).name, "\uFF09"), /* @__PURE__ */ React7.createElement("button", { className: `btn ${\u6700\u65B0 ? "" : "dark"}`, style: { padding: "13px" }, onClick: onStart }, \u6700\u65B0 ? "\u65B0\u3057\u304F\u306F\u3058\u3081\u308B" : "\u30B2\u30FC\u30E0\u3092\u306F\u3058\u3081\u308B"), \u5728\u308B.some((w) => w.\u81EA\u52D5) && /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, textAlign: "left", marginTop: -3 } }, "\u65B0\u3057\u304F\u59CB\u3081\u308B\u3068\u3001\u3044\u307E\u300C\u81EA\u52D5\u300D\u306B\u3042\u308B\u76E4\u306F\u7A7A\u3044\u3066\u3044\u308B\u67A0\u3078\u79FB\u3057\u3066\u53D6\u3063\u3066\u304A\u304D\u307E\u3059\u3002"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 6, textAlign: "left" } }, "\u8A18\u9332\u6240\u3000\uFF08\u62BC\u305B\u3070\u305D\u306E\u76E4\u304B\u3089\u59CB\u307E\u308A\u307E\u3059\uFF09"), /* @__PURE__ */ React7.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5 } }, (saves || []).map((w) => /* @__PURE__ */ React7.createElement(\u8A18\u9332\u306E\u672D, { key: w.key, \u67A0: w, onLoad, onErase }))), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 10.5, color: U.dim, lineHeight: 1.7, textAlign: "left" } }, "\u300C\u81EA\u52D5\u300D\u306F\u6708\u304C\u66FF\u308F\u308B\u305F\u3073\u306B\u52DD\u624B\u306B\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\u3002\u53D6\u3063\u3066\u304A\u304D\u305F\u3044\u76E4\u306F\u3001 \u904A\u3073\u306E\u4E2D\u306E\u300C\u8A18\u9332\u300D\u304B\u3089\u4E00\u301C\u4E94\u306E\u3069\u308C\u304B\u3078\u53CE\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), /* @__PURE__ */ React7.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } }, \u6700\u65B0 && /* @__PURE__ */ React7.createElement(
     "button",
     {
       className: "btn",
@@ -18144,9 +18170,30 @@ function App() {
       window.alert("\u3053\u306E\u63A7\u3048\u306F\u8AAD\u3081\u306A\u304B\u3063\u305F\u3002\u6226\u56FD\u306E\u8A18\u9332\u3067\u306F\u306A\u3044\u304B\u3082\u3057\u308C\u306C\u3002");
       return;
     }
+    const r = await \u81EA\u52D5\u3092\u9003\u304C\u3059();
+    if (r.\u7A7A\u304D\u306A\u3057 || r.\u5931\u6557) {
+      if (!window.confirm("\u7A7A\u3044\u3066\u3044\u308B\u67A0\u304C\u7121\u3044\u305F\u3081\u3001\u300C\u81EA\u52D5\u300D\u306E\u8A18\u9332\u306F\u5931\u308F\u308C\u307E\u3059\u3002\u3088\u308D\u3057\u3044\u3067\u3059\u304B\u3002")) return;
+    }
     await doSave(st, SAVE_KEY);
     setG(st);
     setScreen("map");
+  };
+  const \u65B0\u3057\u304F\u59CB\u3081\u308B = async () => {
+    const r = await \u81EA\u52D5\u3092\u9003\u304C\u3059();
+    await \u4E26\u3079\u76F4\u30592();
+    if (r.\u7A7A\u304D\u306A\u3057 || r.\u5931\u6557) {
+      const h = \u8A18\u9332\u306E\u898B\u51FA\u3057(r.d, FACTIONS);
+      const \u6587 = h ? `\u3044\u307E\u300C\u81EA\u52D5\u300D\u306B\u306F ${h.\u5BB6}\u30FB${h.\u5E74}\u5E74${h.\u6708}\u6708\uFF08${h.\u57CE\u6570}\u57CE\uFF09\u306E\u8A18\u9332\u304C\u3042\u308A\u307E\u3059\u3002
+\u7A7A\u3044\u3066\u3044\u308B\u67A0\u304C\u7121\u3044\u305F\u3081\u3001\u65B0\u3057\u304F\u59CB\u3081\u308B\u3068\u3053\u306E\u8A18\u9332\u306F\u5931\u308F\u308C\u307E\u3059\u3002
+
+\u53D6\u3063\u3066\u304A\u304D\u305F\u3044\u306A\u3089\u3001\u53D6\u308A\u3084\u3081\u3066\u3001\u8981\u3089\u306A\u3044\u67A0\u3092\u6D88\u3059\u304B\u3001\u63A7\u3048\u3092\u66F8\u304D\u51FA\u3057\u3066\u304F\u3060\u3055\u3044\u3002` : "\u300C\u81EA\u52D5\u300D\u306E\u8A18\u9332\u304C\u5931\u308F\u308C\u307E\u3059\u3002\u3088\u308D\u3057\u3044\u3067\u3059\u304B\u3002";
+      if (!window.confirm(\u6587)) return;
+    } else if (r.\u9003\u304C\u3057\u305F) {
+      const h = \u8A18\u9332\u306E\u898B\u51FA\u3057(r.d, FACTIONS);
+      window.alert(`\u3044\u307E\u307E\u3067\u306E\u76E4\uFF08${h ? `${h.\u5BB6}\u30FB${h.\u5E74}\u5E74${h.\u6708}\u6708` : "\u81EA\u52D5\u306E\u8A18\u9332"}\uFF09\u3092\u300C${r.\u540D}\u300D\u3078\u79FB\u3057\u307E\u3057\u305F\u3002
+\u65B0\u3057\u304F\u59CB\u3081\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002`);
+    }
+    setScreen("select");
   };
   const \u8A18\u9332\u304B\u3089\u59CB\u3081\u308B = async (key) => {
     const d = await loadGame(key);
@@ -18161,7 +18208,7 @@ function App() {
     Title,
     {
       saves,
-      onStart: () => setScreen("select"),
+      onStart: \u65B0\u3057\u304F\u59CB\u3081\u308B,
       onLoad: \u8A18\u9332\u304B\u3089\u59CB\u3081\u308B,
       onErase: async (key) => {
         await clearGame(key);

@@ -165,7 +165,7 @@ export function drawShip(ctx, s, col, mine) {
   }
 }
 
-export function drawSea(ctx, b, sel, terrainCanvas, cam, W, H, dpr, sideColor) {
+export function drawSea(ctx, b, sel, terrainCanvas, cam, W, H, dpr, side色) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
   const S = (wx, wy) => [(wx - cam.x) * cam.s + W / 2, (wy - cam.y) * cam.s + H / 2];
@@ -177,7 +177,7 @@ export function drawSea(ctx, b, sel, terrainCanvas, cam, W, H, dpr, sideColor) {
 
   const alive = b.fleets.filter((f) => !f.dead);
   for (const f of alive) {
-    const col = sideColor(f);
+    const col = side色(f);
     const on = sel === f.id;
     const live = f.ships.filter((s) => !s.sunk);
     if (!live.length) continue;
@@ -251,7 +251,7 @@ export function drawSea(ctx, b, sel, terrainCanvas, cam, W, H, dpr, sideColor) {
   // 将の印と名は画面座標で
   for (const f of alive) {
     if (f.destroyed) continue;
-    const col = sideColor(f);
+    const col = side色(f);
     const [x, y] = S(f.x, f.y);
     const H2 = f.gen.lord ? 28 : 21;
     ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 3;

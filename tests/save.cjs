@@ -72,11 +72,52 @@ const rc=async(t)=>{const el=[...document.querySelectorAll('button,.mbtn')].find
     `${(全文.match(/空き/g)||[]).length}つ空き`);
   確('続きからは、いちばん新しい枠を指す', /続きから（記録 三/.test(全文.replace(/\(/g,'（')),
     (全文.match(/続きから[^）]*）/)||[''])[0]);
+
+  /* 新しく始めても、いままでの盤が消えないこと（GDD 15.3）。
+
+     ここが抜けていた。新しく始めると、最初の月送りで自動の枠が黙って
+     上書きされる。遊ぶ側から見れば、既にある記録が勝手に消える。
+     実際、iPhone で天文二十二年まで進めた盤がこれで失われた。 */
+  console.log("── 新しく始めても消えないこと");
+  const 前 = store.get('sengoku:save1');
+  const 前見 = JSON.parse(前).state;
+  確('いま自動の枠に盤がある', !!前見, `${前見.player} ${前見.year}年${前見.month}月`);
+  dom.window.confirm = () => true; dom.window.alert = () => {};
+  await rc('新しくはじめる'); await flush();
+  const 逃 = ['slot1','slot2','slot4','slot5'].map(k=>'sengoku:'+k).filter(k=>store.has(k));
+  確('自動の盤が空き枠へ逃げている', 逃.length >= 1, 逃.join('／'));
+  if (逃.length) {
+    const d = JSON.parse(store.get(逃[0])).state;
+    確('逃がした先の中身が、逃がす前と同じ盤である',
+      d.player === 前見.player && d.year === 前見.year && d.month === 前見.month,
+      `${d.player} ${d.year}年${d.month}月`);
+  }
+  // 新しい家で始めて月を送り、自動が上書きされても、逃がした枠は残る
+  await openFaction('武田家'); await rc('この勢力で開始');
+  await rc('次月へ'); await rc('評定を開く');
+  const 自動後 = JSON.parse(store.get('sengoku:save1')).state;
+  確('自動の枠は新しい盤で上書きされる', 自動後.player === 'takeda', 自動後.player);
+  if (逃.length) {
+    const d2 = JSON.parse(store.get(逃[0])).state;
+    確('逃がした枠は、そのまま残っている', d2.player === 前見.player && d2.year === 前見.year,
+      `${d2.player} ${d2.year}年${d2.month}月`);
+  }
+  確('収めておいた記録 三も無事', store.has('sengoku:slot3')
+    && JSON.parse(store.get('sengoku:slot3')).state.player === 'oda');
+  // 逃がした枠から、ちゃんと元の盤へ戻れること
+  await rc('タイトル'); await flush();
+  const 札2 = [...document.querySelectorAll('.modal, button')].map(b=>b.textContent.replace(/\s+/g,' ').trim());
+  確('タイトルへ戻れば、逃がした枠も並ぶ',
+    document.body.textContent.replace(/\s+/g,' ').includes('織田家'));
+  const 織 = [...document.querySelectorAll('button')].find(b=>/織田家/.test(b.textContent));
+  if (織) {
+    for(const t of ['mousedown','mouseup','click']) await act(async()=>{M(t,織);});
+    await flush(); await flush();
+    確('逃がした盤から遊びを続けられる',
+      /織田家/.test(document.querySelector('.bar')?.textContent||''),
+      (document.querySelector('.bar')?.textContent||'').replace(/\s+/g,' ').slice(0,40));
+  }
   if(咎) console.log(`  ★記録所で${咎}件が通らなかった`);
-  const cont=[...document.querySelectorAll('button')].map(b=>b.textContent.trim()).find(t=>/続きから/.test(t));
-  console.log("タイトルの表示:", cont||"★続きからが出ない");
-  await rc('続きから'); await flush();
-  console.log("復帰後:", document.querySelector('.bar')?.textContent.replace(/\s+/g,' ').slice(0,60));
   console.log("エラー:", 咎 ? `記録所で${咎}件` : errs.length?errs.slice(0,3).join(" | "):"なし");
   process.exit(咎?1:0);
 })().catch(e=>{console.log("例外:",e.message);process.exit(1);});
