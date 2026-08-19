@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { act } from "react";
 import App from "../src/index.jsx";
 export { React, createRoot, act, App };
+export { SeaScreen, 海戦を仕立てる } from "../src/ui/SeaScreen.jsx";
 // 盤をこしらえるための道具も差し出す。
 // 画面を延々と押して所定の局面まで持っていくのは当てにならないので、
 // 試験によっては盤を直に組み立て、記録として仕込んでから「続きから」で開く。

@@ -259,7 +259,7 @@ export function SeaScreen({ ctx, land, onEnd }) {
                       こちらの船立て　軍船{m.軍船}艘・徴した小舟{m.徴船}艘（水主の技量{m.skill}）<br />
                       {m.徴船 > m.軍船 && <b style={{ color: "#B0483C" }}>船の多くは浦から徴した小舟です。漕ぐのは兵であって水主ではありません。</b>}
                       {m.徴船 > m.軍船 && <br />}
-                      {eName}の船立て　軍船{f2.軍船}艘・小舟{f2.徴船}艘（技量{f2.skill}）<br />
+                      {ctx.eName}の船立て　軍船{f2.軍船}艘・小舟{f2.徴船}艘（技量{f2.skill}）<br />
                     </>
                   );
                 })()}
