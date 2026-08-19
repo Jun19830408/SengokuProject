@@ -277,6 +277,17 @@ export function advanceMonth(prev, g) {
           if (r && r[3] === "海路" && a.prog === 0 && !a.seaDone) {
             a.seaDone = true;
             const inter = seaInterception(s, a, "海路");
+            /* 遊ぶ側の軍が阻まれたなら、盤の上で船戦をする（GDD 10章）。
+               ここでは決着させず、申し送りに積んで月送りを止める。
+               画面が受け取り、海戦が終わってから続きを進める。
+               見物のときと、他家どうしの海戦は、これまで通りその場で解く。 */
+            if (inter && a.faction === s.player && !s.autoPlay) {
+              s.seaCall = {
+                armyId: a.id, by: inter.by, from: a.path[0], to: a.path[1],
+                mine: inter.mine, foe: inter.foe,
+              };
+              break;
+            }
             if (inter) {
               const res = resolveSeaBattle(s, a, inter);
               const from = nodeById(a.path[0]), to = nodeById(a.path[1]);

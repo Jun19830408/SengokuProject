@@ -27,6 +27,7 @@ import { reviewAim } from "../govern/ai.js";
 import { checkUnified } from "../govern/unify.js";
 import { sackCastle } from "../govern/war.js";
 import { BattleScreen } from "./BattleScreen.jsx";
+import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
 import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog } from "./panels.jsx";
@@ -39,6 +40,7 @@ import { 援けに着く } from "../core/state.js";
 import { 難を逃れる } from "../core/capture.js";
 import { 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
+import { rosterCut } from "../core/roster.js";
 
 /* ============================================================ 政略マップ */
 export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
@@ -51,6 +53,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [tab, setTab] = useState("内政");
   const [modal, setModal] = useState(null);
   const [battle, setBattle] = useState(null);
+  const [sea, setSea] = useState(null);        // 盤の上の海戦
   const [raid, setRaid] = useState(null);        // 合戦前の奇襲の献策
   const [breakVow, setBreakVow] = useState(null); // 約束を交わした相手へ兵を出すときの問い
   const [sally, setSally] = useState(null);      // 囲まれた城が討って出るかの問い
@@ -325,6 +328,67 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const nextMonth = () => {
     setG((prev) => 月送り.advanceMonth(prev, g));
     setModal("report");
+  };
+
+  /* 海路での行き合い（GDD 10章）。
+
+     渡海を阻まれたら、盤の上で船戦をする。月送りはそこで止めてあるので
+     （month.js が s.seaCall を積んで break する）、決着したら続きを進める。 */
+  useEffect(() => {
+    if (!g.seaCall || sea || battle) return;
+    const call = g.seaCall;
+    const army = g.armies.find((x) => x.id === call.armyId);
+    if (!army) { setG((p) => ({ ...p, seaCall: null })); return; }
+    const 地 = `${nodeById(call.from).name}〜${nodeById(call.to).name}`;
+    const ctx2 = 海戦を仕立てる(g, army, { by: call.by, mine: call.mine, foe: call.foe },
+      地, g.factions[g.player].color, g.factions[call.by].color,
+      g.factions[g.player].name, g.factions[call.by].name);
+    setSea({ ...ctx2, key: call.armyId, call });
+  }, [g.seaCall, sea, battle]); // eslint-disable-line
+
+  /* 船戦の始末。盤の帰趨を、そのまま軍と海の記録へ移す。 */
+  const 海戦を終える = (bb) => {
+    const ctx2 = sea;
+    setSea(null);
+    setG((prev) => {
+      const s = structuredClone(prev);
+      const call = s.seaCall || (ctx2 && ctx2.call);
+      s.seaCall = null;
+      const a = s.armies.find((x) => x.id === (call && call.armyId));
+      if (!a) return s;
+      const 我残 = bb.fleets.filter((f) => f.side === "P" && !f.dead)
+        .reduce((t, f) => t + f.ships.filter((x) => !x.sunk).length, 0);
+      const 初 = ctx2.初め.P || 1;
+      const 沈 = Math.max(0, 初 - 我残);
+      const 敵残 = bb.fleets.filter((f) => f.side === "E" && !f.dead)
+        .reduce((t, f) => t + f.ships.filter((x) => !x.sunk).length, 0);
+      /* 沈んだ船の割だけ、兵が海に沈む。船に乗せて渡っているのだから、
+         船を失えば人も失う。勝っても無傷では済まない。 */
+      const 割 = clamp(沈 / 初, 0, 1);
+      const 失 = Math.round(a.men * clamp(割 * 0.9, 0, 0.85));
+      a.men = Math.max(0, a.men - 失);
+      a.local = Math.max(0, a.local - 失);
+      if (a.rost) rosterCut(a.rost, 失);
+      const 勝 = bb.result === "P";
+      const 地 = `${nodeById(call.from).name}と${nodeById(call.to).name}の間の海`;
+      const 文 = 勝
+        ? `${地}で${s.factions[s.player].name}が${s.factions[call.by].name}の水軍を破った（船${沈}艘・${fmt(失)}人を失う）。`
+        : bb.result === "日没"
+          ? `${地}で${s.factions[call.by].name}の水軍と渡り合い、日暮れに互いが離れた（船${沈}艘・${fmt(失)}人を失う）。`
+          : `${地}で${s.factions[s.player].name}が${s.factions[call.by].name}の水軍に敗れた（船${沈}艘・${fmt(失)}人が海に沈んだ）。`;
+      s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+      s.monthEvents = [...(s.monthEvents || []), 文];
+      const rel = s.relations[relKey(s.player, call.by)];
+      if (rel) rel.trust = clamp(rel.trust - 10, 0, 100);
+      // 大敗して兵が残らねば、渡海は成らない。国元へ引き返す。
+      if (!勝 && a.men < 200) {
+        const home = s.castles.find((c2) => c2.id === a.from);
+        if (home) for (const gid of a.gens) { const x = s.generals.find((q) => q.id === gid); if (x) x.at = home.id; }
+        s.armies = s.armies.filter((x) => x.id !== a.id);
+        s.monthEvents = [...(s.monthEvents || []), "船を失い、渡海は成らなかった。"];
+      }
+      return s;
+    });
   };
 
   /* 街道での行き合い（GDD 9.1）。
@@ -1457,6 +1521,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const selCastle = g.castles.find((c) => c.id === sel);
 
   // 合戦中は戦略画面の帯を出さず、画面全体を戦場にする（GDD 15.1）
+  if (sea) return <SeaScreen key={sea.key} ctx={sea} land={land} onEnd={(bb) => 海戦を終える(bb)} />;
   if (battle) return <BattleScreen key={battle.armyId} ctx={battle} land={land} onEnd={(bb) => finishBattle(bb, battle)} />;
 
   return (
