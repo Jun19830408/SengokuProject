@@ -89,15 +89,32 @@ export function navalPower(s, fid) {
   return { ships: Math.max(2, ships), skill: clamp(skill, 30, 100) };
 }
 
-// 海路を渡る軍が迎え撃たれるか。相手が海に面していて水軍を持つなら起こる。
+/* 海路を渡る軍が迎え撃たれるか（GDD 10章）。
+
+   はじめは「その海域に船を出せる家のうち、もっとも水軍の強い家が迎え撃つ」と
+   していた。そのため、小早川が三原から川之江の河野を攻めるのに、関わりのない
+   三好の水軍が出てきて船戦になった。三好は畿内の海を扼しているが、この戦の
+   当事者ではない。第三者がいちいち割って入るのでは、誰と戦っているのか
+   分からなくなる。
+
+   船戦は、渡る側と、渡られる側のあいだで起きる。
+     ・攻める側が海を握っているなら、迎え撃つ船が出てこない。そのまま渡り、
+       陸で戦う
+     ・そうでなければ、攻められる家が船を出して阻む
+   これが道理である。 */
 export function seaInterception(s, army, roadKind) {
   if (roadKind !== "海路") return null;
-  const foes = [...new Set(s.castles.map((c) => c.faction))]
-    .filter((f) => f !== army.faction && !atPeace(s, army.faction, f));
-  if (!foes.length) return null;
+  // 迎え撃つのは、攻められる家である。第三者は割って入らない。
+  const 的 = (s.castles || []).find((c) => c.id === army.target);
+  const 守 = 的 ? 的.faction : null;
+  if (!守 || 守 === army.faction) return null;
+  if (atPeace(s, army.faction, 守)) return null;
+
   const mine = navalPower(s, army.faction);
-  // その海域に船を出せる家のうち、もっとも水軍の強い家が迎え撃つ。
-  // 航路の両端を結ぶ線の近くに湊を持たぬ家は、そこまで船を出せない。
+  const np = navalPower(s, 守);
+  if (np.ships < 3) return null;                      // 船が無ければ出られない
+
+  // その航路のそばに湊がなければ、そこまで船を出せない
   const A = nodeById(army.path[0]), B = nodeById(army.path[1]);
   if (!A || !B) return null;
   const nearRoute = (c) => {
@@ -105,29 +122,21 @@ export function seaInterception(s, army, roadKind) {
     const t = L2 ? clamp(((c.x - A.x) * dx + (c.y - A.y) * dy) / L2, 0, 1) : 0;
     return Math.hypot(A.x + dx * t - c.x, A.y + dy * t - c.y);
   };
-  let best = null;
-  for (const f of foes) {
-    const np = navalPower(s, f);
-    if (np.ships < 3) continue;
-    // 航路のそばに海の城を持つ家だけが出てこられる
-    const near = s.castles.some((c) => c.faction === f && isCoastal(c) && nearRoute(c) < 120);
-    if (!near) continue;
-    const score = np.ships * (0.6 + np.skill / 160);
-    if (!best || score > best.score) best = { fid: f, np, score };
-  }
-  if (!best) return null;
-  const 我 = mine.ships * (0.6 + mine.skill / 160);
-  // 相手が明らかに弱ければ出てこない
-  if (best.score < 我 * 0.45) return null;
-  /* 迎え撃つ見込み。
+  if (!s.castles.some((c) => c.faction === 守 && isCoastal(c) && nearRoute(c) < 120)) return null;
 
-     かつては力の差に関わらず一律二割であった。海を扼している家の目の前を、
-     八割がた素通りできることになる。それでは海路が街道と変わらない。
-     海の力の差で決める。相手が海を握っていれば、まず捕まる。 */
-  const 割 = best.score / (best.score + 我);            // 0.31〜1 のあいだ
+  const 我 = mine.ships * (0.6 + mine.skill / 160);
+  const 彼 = np.ships * (0.6 + np.skill / 160);
+  /* 攻める側が海を握っているなら、出てこない。
+     船を並べても打ち払われるだけであって、湊に留めておくほうが理に適う。 */
+  if (彼 < 我 * 0.45) return null;
+
+  /* 迎え撃つ見込み。海の力の差で決める。
+     かつては力の差に関わらず一律二割で、海を扼している家の目の前を
+     八割がた素通りできた。それでは海路が街道と変わらない。 */
+  const 割 = 彼 / (彼 + 我);
   const p = clamp(0.10 + (割 - 0.3) * 1.45, 0.06, 0.82);
   if (Math.random() > p) return null;
-  return { by: best.fid, foe: best.np, mine, p };
+  return { by: 守, foe: np, mine, p };
 }
 
 // 海戦の帰趨。船と水主の技量で決まり、負ければ兵が海に沈む。

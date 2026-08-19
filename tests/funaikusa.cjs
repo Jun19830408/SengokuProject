@@ -140,6 +140,39 @@ function 一戦(我艘, 我技, 敵艘, 敵技, seed) {
   確('鉤縄は切り離される', f.ships.every((s) => !s.boarding));
 }
 
+/* ------------------- 七、初めから委任であること、委ねれば決着すること
+
+   陸の隊は初めから委任になっている（corps.js の makeCorps）。船団だけが
+   そうなっていなかったので、下知を出すまで一艘も動かなかった。
+   さらに「委ねて結果を見る」を布陣のまま押すと、stepSeaBattle は fight の
+   ときしか動かないので、四千回まわして何も起きず、日没引き分けで終わっていた。 */
+{
+  種(77);
+  H.layoutSea(77, 5000);
+  const P = [H.makeFleet('P', 将('我', 62), 14, 60, H.SEA.w * 0.4, H.SEA.h * 0.8, -Math.PI / 2, '#2F5D8C')];
+  const E = [H.makeFleet('E', 将('敵', 70), 14, 64, H.SEA.w * 0.4, H.SEA.h * 0.2, Math.PI / 2, '#B0483C')];
+  確('船団は初めから委任になっている', P[0].auto === true && E[0].auto === true);
+
+  const b = H.createSeaBattle(P, E, 'P', {});
+  確('作りたては布陣の最中', b.phase === 'deploy');
+  const y0 = P[0].y;
+  H.海戦を裁く(b);                                   // 布陣のまま委ねる
+  確('布陣のまま委ねても、ちゃんと戦になる', b.phase === 'over' && b.result !== '日没',
+    `${b.result}／${b.t | 0}秒`);
+  確('船団が動いている', Math.abs(P[0].y - y0) > 50 || P[0].dead,
+    `y ${y0 | 0} → ${P[0].y | 0}`);
+  確('どちらかの船が沈んでいる', H.fleetShips(P[0]) < 14 || H.fleetShips(E[0]) < 14,
+    `我${H.fleetShips(P[0])}艘 対 敵${H.fleetShips(E[0])}艘`);
+
+  // 下知を出せば、その船団の委任は解ける
+  種(78);
+  H.layoutSea(78, 5000);
+  const f = H.makeFleet('P', 将('某', 60), 8, 60, 100, 100, 0, '#2F5D8C');
+  確('初めは委任', f.auto === true);
+  f.auto = false;
+  確('手ずから命じれば委任は解ける', f.auto === false);
+}
+
 console.log('');
 if (咎.length) { console.log('★背いた事:'); for (const x of 咎) console.log('   ' + x); }
 console.log('エラー:', 咎.length ? `${咎.length}件` : 'なし');

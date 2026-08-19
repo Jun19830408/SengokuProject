@@ -77,7 +77,10 @@ export function makeFleet(side, gen, 艘, skill, x, y, facing, color) {
     ships, skill: clamp(skill, 30, 100),
     order: "待機", tx: x, ty: y, target: null, 狙い: null,
     morale: 100, routed: false, withdraw: false, dead: false, destroyed: false,
-    auto: side !== "P", seen: true, log: 0,
+    /* 初めは委任にしておく。陸の隊（corps.js の makeCorps）と同じである。
+       委任でないと、下知を出すまで一艘も動かない。船を並べただけで
+       にらみ合ったまま日が暮れる、ということが起きていた。 */
+    auto: true, seen: true, log: 0,
   };
   並べ直す(f);
   return f;
@@ -375,6 +378,11 @@ export function seaAI(b) {
 export function 海戦を裁く(b, 刻 = 0.5) {
   // 盤の外で解くのだから、どちらの船団も水主の差配に任せる。
   for (const f of b.fleets) f.auto = true;
+  /* まだ船を並べている最中（deploy）なら、まず戦を始める。
+     stepSeaBattle は fight のときしか動かないので、これを忘れると
+     四千回まわして何も起きず、日没引き分けで終わる。実際そうなっていた。
+     陸の合戦の「委ねる」も同じことをしている（BattleScreen）。 */
+  if (b.phase === "deploy") b.phase = "fight";
   let guard = 0;
   while (b.phase === "fight" && guard++ < 4000) stepSeaBattle(b, 刻);
   if (b.phase !== "over") { b.phase = "over"; b.result = "日没"; b.orderly = true; }

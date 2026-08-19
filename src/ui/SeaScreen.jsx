@@ -187,7 +187,9 @@ export function SeaScreen({ ctx, land, onEnd }) {
   };
 
   const 委ねる = () => {
-    for (const f of b.fleets) if (f.side === "P") f.auto = true;
+    if (b.phase === "over") return;
+    for (const f of b.fleets) f.auto = true;
+    if (b.phase === "deploy") b.phase = "fight";
     海戦を裁く(b);
     setSpeed(0);
     force((n) => (n + 1) % 1000);
@@ -253,6 +255,7 @@ export function SeaScreen({ ctx, land, onEnd }) {
                 風は<b>{風の呼び名()}</b>。追い風なら速く、向かい風なら鈍い。
                 <b>焙烙は風上から投げねば、己の船へ火が返ります。</b><br />
                 船団を押して選び、海を押して行き先を与えます。
+                <b>初めは水主に委ねてあります。</b>手ずから下知を出せば、その船団の委任は解けます。
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button className="btn dark" style={{ flex: 1 }}

@@ -4796,9 +4796,13 @@ function navalPower(s2, fid) {
 }
 function seaInterception(s2, army, roadKind) {
   if (roadKind !== "\u6D77\u8DEF") return null;
-  const foes = [...new Set(s2.castles.map((c) => c.faction))].filter((f) => f !== army.faction && !atPeace(s2, army.faction, f));
-  if (!foes.length) return null;
+  const \u7684 = (s2.castles || []).find((c) => c.id === army.target);
+  const \u5B88 = \u7684 ? \u7684.faction : null;
+  if (!\u5B88 || \u5B88 === army.faction) return null;
+  if (atPeace(s2, army.faction, \u5B88)) return null;
   const mine = navalPower(s2, army.faction);
+  const np = navalPower(s2, \u5B88);
+  if (np.ships < 3) return null;
   const A = nodeById(army.path[0]), B = nodeById(army.path[1]);
   if (!A || !B) return null;
   const nearRoute = (c) => {
@@ -4806,22 +4810,14 @@ function seaInterception(s2, army, roadKind) {
     const t = L2 ? clamp(((c.x - A.x) * dx + (c.y - A.y) * dy) / L2, 0, 1) : 0;
     return Math.hypot(A.x + dx * t - c.x, A.y + dy * t - c.y);
   };
-  let best = null;
-  for (const f of foes) {
-    const np = navalPower(s2, f);
-    if (np.ships < 3) continue;
-    const near = s2.castles.some((c) => c.faction === f && isCoastal(c) && nearRoute(c) < 120);
-    if (!near) continue;
-    const score = np.ships * (0.6 + np.skill / 160);
-    if (!best || score > best.score) best = { fid: f, np, score };
-  }
-  if (!best) return null;
+  if (!s2.castles.some((c) => c.faction === \u5B88 && isCoastal(c) && nearRoute(c) < 120)) return null;
   const \u6211 = mine.ships * (0.6 + mine.skill / 160);
-  if (best.score < \u6211 * 0.45) return null;
-  const \u5272 = best.score / (best.score + \u6211);
+  const \u5F7C = np.ships * (0.6 + np.skill / 160);
+  if (\u5F7C < \u6211 * 0.45) return null;
+  const \u5272 = \u5F7C / (\u5F7C + \u6211);
   const p = clamp(0.1 + (\u5272 - 0.3) * 1.45, 0.06, 0.82);
   if (Math.random() > p) return null;
-  return { by: best.fid, foe: best.np, mine, p };
+  return { by: \u5B88, foe: np, mine, p };
 }
 function resolveSeaBattle(s2, army, inter) {
   const a = inter.mine, d = inter.foe;
@@ -14546,7 +14542,10 @@ function makeFleet(side, gen, \u8258, skill, x, y, facing, color) {
     withdraw: false,
     dead: false,
     destroyed: false,
-    auto: side !== "P",
+    /* 初めは委任にしておく。陸の隊（corps.js の makeCorps）と同じである。
+       委任でないと、下知を出すまで一艘も動かない。船を並べただけで
+       にらみ合ったまま日が暮れる、ということが起きていた。 */
+    auto: true,
     seen: true,
     log: 0
   };
@@ -14853,6 +14852,7 @@ function seaAI(b) {
 }
 function \u6D77\u6226\u3092\u88C1\u304F(b, \u523B = 0.5) {
   for (const f of b.fleets) f.auto = true;
+  if (b.phase === "deploy") b.phase = "fight";
   let guard = 0;
   while (b.phase === "fight" && guard++ < 4e3) stepSeaBattle(b, \u523B);
   if (b.phase !== "over") {
@@ -15373,7 +15373,9 @@ function SeaScreen({ ctx, land, onEnd }) {
     force((n) => (n + 1) % 1e3);
   };
   const \u59D4\u306D\u308B = () => {
-    for (const f of b.fleets) if (f.side === "P") f.auto = true;
+    if (b.phase === "over") return;
+    for (const f of b.fleets) f.auto = true;
+    if (b.phase === "deploy") b.phase = "fight";
     \u6D77\u6226\u3092\u88C1\u304F(b);
     setSpeed(0);
     force((n) => (n + 1) % 1e3);
@@ -15408,7 +15410,7 @@ function SeaScreen({ ctx, land, onEnd }) {
     gap: 6,
     maxHeight: land ? "42%" : "50%",
     overflow: "auto"
-  } }, b.phase === "deploy" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, lineHeight: 1.7 } }, /* @__PURE__ */ React4.createElement("b", null, ctx.place), "\u3067", ctx.eName, "\u306E\u6C34\u8ECD\u3068\u884C\u304D\u5408\u3044\u307E\u3057\u305F\u3002\u6E21\u6D77\u3092\u963B\u307E\u308C\u3066\u3044\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u98A8\u306F", /* @__PURE__ */ React4.createElement("b", null, \u98A8\u306E\u547C\u3073\u540D()), "\u3002\u8FFD\u3044\u98A8\u306A\u3089\u901F\u304F\u3001\u5411\u304B\u3044\u98A8\u306A\u3089\u920D\u3044\u3002", /* @__PURE__ */ React4.createElement("b", null, "\u7119\u70D9\u306F\u98A8\u4E0A\u304B\u3089\u6295\u3052\u306D\u3070\u3001\u5DF1\u306E\u8239\u3078\u706B\u304C\u8FD4\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("br", null), "\u8239\u56E3\u3092\u62BC\u3057\u3066\u9078\u3073\u3001\u6D77\u3092\u62BC\u3057\u3066\u884C\u304D\u5148\u3092\u4E0E\u3048\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React4.createElement(
+  } }, b.phase === "deploy" && /* @__PURE__ */ React4.createElement(React4.Fragment, null, /* @__PURE__ */ React4.createElement("div", { style: { fontSize: 12, color: U.dim, lineHeight: 1.7 } }, /* @__PURE__ */ React4.createElement("b", null, ctx.place), "\u3067", ctx.eName, "\u306E\u6C34\u8ECD\u3068\u884C\u304D\u5408\u3044\u307E\u3057\u305F\u3002\u6E21\u6D77\u3092\u963B\u307E\u308C\u3066\u3044\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("br", null), "\u98A8\u306F", /* @__PURE__ */ React4.createElement("b", null, \u98A8\u306E\u547C\u3073\u540D()), "\u3002\u8FFD\u3044\u98A8\u306A\u3089\u901F\u304F\u3001\u5411\u304B\u3044\u98A8\u306A\u3089\u920D\u3044\u3002", /* @__PURE__ */ React4.createElement("b", null, "\u7119\u70D9\u306F\u98A8\u4E0A\u304B\u3089\u6295\u3052\u306D\u3070\u3001\u5DF1\u306E\u8239\u3078\u706B\u304C\u8FD4\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("br", null), "\u8239\u56E3\u3092\u62BC\u3057\u3066\u9078\u3073\u3001\u6D77\u3092\u62BC\u3057\u3066\u884C\u304D\u5148\u3092\u4E0E\u3048\u307E\u3059\u3002", /* @__PURE__ */ React4.createElement("b", null, "\u521D\u3081\u306F\u6C34\u4E3B\u306B\u59D4\u306D\u3066\u3042\u308A\u307E\u3059\u3002"), "\u624B\u305A\u304B\u3089\u4E0B\u77E5\u3092\u51FA\u305B\u3070\u3001\u305D\u306E\u8239\u56E3\u306E\u59D4\u4EFB\u306F\u89E3\u3051\u307E\u3059\u3002"), /* @__PURE__ */ React4.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React4.createElement(
     "button",
     {
       className: "btn dark",
