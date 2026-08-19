@@ -37,9 +37,11 @@ import { 忠誠 } from "../core/rank.js";
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 難を逃れる } from "../core/capture.js";
+import { 記録の見出し } from "../save/save.js";
+import { 外を押して閉じる } from "./panels.jsx";
 
 /* ============================================================ 政略マップ */
-export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) {
+export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const cvRef = useRef(null), miniRef = useRef(null), wrapRef = useRef(null);
   const [view, setView] = useState(() => {
     const seat = seatOf(g.castles, g.generals, g.player);
@@ -1497,7 +1499,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
           {MOB_POLICY.map((m, i) => <option key={m.name} value={i}>{`動員：${m.name}（一万石 ${m.per}人）`}</option>)}
         </select>
         <button className="btn sm" onClick={() => setModal("chronicle")}>戦国記</button>
-        <button className="btn sm" onClick={async () => { const ok = await onSave(g); setSavedMsg(ok ? "記録した" : "記録できない環境"); setTimeout(() => setSavedMsg(""), 2000); }}>
+        <button className="btn sm" onClick={() => setModal("save")}>
           記録{savedMsg ? `：${savedMsg}` : ""}
         </button>
         <button className="btn sm" onClick={onTitle}>タイトル</button>
@@ -1585,6 +1587,51 @@ export function MapScreen({ g, setG, terrain, land, onSave, savedAt, onTitle }) 
                     承知のうえで出陣する
                   </button>
                 </div>
+              </div>
+            </div>
+          );
+        })()}
+        {modal === "save" && (() => {
+          /* 記録所（GDD 15.3）。
+
+             記録が一つきりだと、分かれ道を試したくても、いまの歩みを捨てるほかない。
+             五つの枠を設けた。自動の枠は月が替わるたびに勝手に上書きされるので、
+             取っておきたい盤は、ここで一〜五のどれかへ収める。 */
+          const 収める = async (key, 名) => {
+            const ok = await onSave(g, key);
+            setSavedMsg(ok ? `${名}へ記録した` : "記録できない環境");
+            setTimeout(() => setSavedMsg(""), 2600);
+            setModal(null);
+          };
+          return (
+            <div className="modal" {...外を押して閉じる(() => setModal(null))}>
+              <div className="card" style={{ maxWidth: 460 }}>
+                <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>記録所</div>
+                <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 }}>
+                  いまの盤は{g.year}年{g.month}月（{g.factions[g.player].name}／
+                  {g.castles.filter((c) => c.faction === g.player).length}城）。収める枠を選んでください。<br />
+                  「自動」は月が替わるたびに上書きされます。取っておきたい盤は一〜五へ。
+                </div>
+                {(saves || []).map((w) => {
+                  const h = 記録の見出し(w.d, g.factions);
+                  return (
+                    <button key={w.key} className="btn" style={{ width: "100%", textAlign: "left",
+                      padding: "9px 11px", marginBottom: 5, fontSize: 12.5 }}
+                      onClick={() => 収める(w.key, w.名)}>
+                      <span style={{ fontSize: 10.5, color: U.dim, letterSpacing: ".08em" }}>{w.名}</span>
+                      　{h
+                        ? <>
+                            <b className="mn">{h.家}</b>
+                            <span className="num" style={{ color: U.dim, marginLeft: 6 }}>
+                              {h.年}年{h.月}月／{h.城数}城・{h.万石}万石
+                            </span>
+                            <span style={{ color: "#B0483C", marginLeft: 6, fontSize: 11 }}>上書き</span>
+                          </>
+                        : <span style={{ color: U.dim }}>空き</span>}
+                    </button>
+                  );
+                })}
+                <button className="btn" style={{ width: "100%", marginTop: 8 }} onClick={() => setModal(null)}>閉じる</button>
               </div>
             </div>
           );

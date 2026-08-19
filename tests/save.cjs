@@ -41,12 +41,42 @@ const rc=async(t)=>{const el=[...document.querySelectorAll('button,.mbtn')].find
   await rc('ゲームをはじめる'); await openFaction('織田家'); await rc('この勢力で開始');
   for(let i=0;i<3;i++){ await rc('次月へ'); await rc('評定を開く'); }
   console.log("自動保存:", store.has('sengoku:save1')?"あり":"★なし");
-  console.log("手動記録:", await rc('記録')?"押せた":"★不可");
+  /* 記録所（GDD 15.3）。五つの枠へ収められること。 */
+  let 咎=0; const 確=(n,ok,t='')=>{console.log(`  ${ok?'○':'★'} ${n}${t?'　'+t:''}`);if(!ok)咎++;};
+  console.log("── 記録所");
+  確('「記録」で記録所が開く', await rc('記録') && /記録所/.test(document.body.textContent));
+  const 枠 = [...document.querySelectorAll('.modal .card button')]
+    .filter(b=>/自動|記録 [一二三四五]/.test(b.textContent));
+  確('自動と一〜五の六つの枠が並ぶ', 枠.length===6, `${枠.length}つ`);
+  const 三 = 枠.find(b=>/記録 三/.test(b.textContent));
+  確('空いている枠は「空き」と出る', /空き/.test(三.textContent));
+  for(const t of ['mousedown','mouseup','click']) await act(async()=>{M(t,三);});
+  await flush(); await flush();
+  確('選んだ枠へ収まる', store.has('sengoku:slot3'), [...store.keys()].join('／'));
+  確('自動の枠は別に残る', store.has('sengoku:save1'));
+  // 収めた枠は、次からは「上書き」と出る
+  await rc('記録'); await flush();
+  const 三2 = [...document.querySelectorAll('.modal .card button')].find(b=>/記録 三/.test(b.textContent));
+  確('収めた枠は中身が読める', /織田家/.test(三2.textContent) && /上書き/.test(三2.textContent),
+    三2.textContent.replace(/\s+/g,' ').slice(0,60));
+  await rc('閉じる'); await flush();
+
   await rc('タイトル'); await flush();
+  // 枠の名は札の見出し（span）に出る。押せる button の中ではない。
+  const 名札 = [...document.querySelectorAll('span')]
+    .map(e=>e.textContent.trim()).filter(t=>/^(自動|記録 [一二三四五])$/.test(t));
+  確('タイトルに六つの枠が並ぶ', new Set(名札).size === 6, [...new Set(名札)].join('／'));
+  const 全文 = document.body.textContent.replace(/\s+/g,' ');
+  確('収めた枠がタイトルにも出る', /記録 三/.test(全文) && /織田家/.test(全文));
+  確('空いている枠は「空き」と出る（タイトル）', (全文.match(/空き/g)||[]).length >= 4,
+    `${(全文.match(/空き/g)||[]).length}つ空き`);
+  確('続きからは、いちばん新しい枠を指す', /続きから（記録 三/.test(全文.replace(/\(/g,'（')),
+    (全文.match(/続きから[^）]*）/)||[''])[0]);
+  if(咎) console.log(`  ★記録所で${咎}件が通らなかった`);
   const cont=[...document.querySelectorAll('button')].map(b=>b.textContent.trim()).find(t=>/続きから/.test(t));
   console.log("タイトルの表示:", cont||"★続きからが出ない");
   await rc('続きから'); await flush();
   console.log("復帰後:", document.querySelector('.bar')?.textContent.replace(/\s+/g,' ').slice(0,60));
-  console.log("エラー:", errs.length?errs.slice(0,3).join(" | "):"なし");
-  process.exit(0);
+  console.log("エラー:", 咎 ? `記録所で${咎}件` : errs.length?errs.slice(0,3).join(" | "):"なし");
+  process.exit(咎?1:0);
 })().catch(e=>{console.log("例外:",e.message);process.exit(1);});
