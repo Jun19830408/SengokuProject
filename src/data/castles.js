@@ -287,7 +287,7 @@ export const TOWNS = [
   { id: "takayama_t", name: "飛騨の匠", kind: "町", lon: 137.255, lat: 36.145, owner: "anegakoji" },
   { id: "zenkoji", name: "善光寺", kind: "寺社", lon: 138.187, lat: 36.661, owner: null },
   { id: "kurokawa_kin", name: "黒川金山", kind: "鉱山", lon: 138.760, lat: 35.780, owner: "takeda" },
-  { id: "ikuno", name: "土肥金山", kind: "鉱山", lon: 138.790, lat: 34.910, owner: "hojo" },
+  { id: "toi_kin", name: "土肥金山", kind: "鉱山", lon: 138.790, lat: 34.910, owner: "hojo" },
 
   /* ── 畿内・瀬戸内・西国の海（GDD 10章）
 
@@ -316,7 +316,92 @@ export const TOWNS = [
   { id: "mihonoseki", name: "美保関", kind: "港", lon: 133.235, lat: 35.565, owner: "amago" },
   { id: "funai_t", name: "府内", kind: "港", lon: 131.610, lat: 33.235, owner: "otomo" },
   { id: "bounotsu", name: "坊津", kind: "港", lon: 130.200, lat: 31.260, owner: "shimazu" },
-  { id: "matsuura_sui", name: "松浦党", kind: "水軍衆", lon: 129.720, lat: 33.360, owner: "matsuura" },
+  { id: "matsuura_sui", name: "松浦党", kind: "水軍衆", lon: 129.720, lat: 33.360, owner: "matsura" },
+  /* ── 全国の湊・市・寺社・鉱山・牧・鉄砲鍛冶
+
+     東国と奥羽が手薄だった。畿内と東海に固まっていて、関東の大名も奥羽の大名も、
+     動かせる特殊勢力をほとんど持たなかった。金山も銀山も、名の通った市も湊も、
+     馬の牧も、鉄砲の鍛冶も、天文十五年に在ったものは置いておく。
+
+     牧と鉄砲鍛冶は新しく立てた種である。馬と鉄砲は城の蓄えとして数えているが
+     （GDD 6.3）、その出どころが盤の上に無かった。南部の糠部、信濃の望月、
+     近江の国友、紀伊の根来――それらを押さえることが、騎馬と鉄砲を揃える道になる。 */
+
+  // ── 鉱山
+  { id: "iwami_gin", name: "石見銀山", kind: "鉱山", lon: 132.437, lat: 35.113, owner: "ouchi" },
+  { id: "ikuno_gin", name: "生野銀山", kind: "鉱山", lon: 134.808, lat: 35.165, owner: "yamana" },
+  { id: "tsurushi_gin", name: "鶴子銀山", kind: "鉱山", lon: 138.290, lat: 37.980, owner: "honma" },
+  { id: "nobesawa_gin", name: "延沢銀山", kind: "鉱山", lon: 140.470, lat: 38.600, owner: "mogami" },
+  { id: "handa_gin", name: "半田銀山", kind: "鉱山", lon: 140.470, lat: 37.830, owner: "date" },
+  { id: "osarizawa", name: "尾去沢銅山", kind: "鉱山", lon: 140.760, lat: 40.230, owner: "nanbu" },
+  { id: "ashio", name: "足尾", kind: "鉱山", lon: 139.450, lat: 36.640, owner: "utsunomiya" },
+  { id: "naganobori", name: "長登銅山", kind: "鉱山", lon: 131.290, lat: 34.230, owner: "ouchi" },
+
+  // ── 湊
+  { id: "tosaminato", name: "十三湊", kind: "港", lon: 140.320, lat: 40.900, owner: "oura" },
+  { id: "sakata", name: "酒田", kind: "港", lon: 139.840, lat: 38.910, owner: "daihoji" },
+  { id: "naoetsu", name: "直江津", kind: "港", lon: 138.240, lat: 37.180, owner: "nagao" },
+  { id: "ishinomaki", name: "石巻", kind: "港", lon: 141.300, lat: 38.430, owner: "kasai" },
+  { id: "shinagawa", name: "品川湊", kind: "港", lon: 139.740, lat: 35.610, owner: "hojo" },
+  { id: "mutsura", name: "六浦", kind: "港", lon: 139.630, lat: 35.340, owner: "hojo" },
+  { id: "nakaminato", name: "那珂湊", kind: "港", lon: 140.590, lat: 36.320, owner: "satake" },
+  { id: "choshi", name: "銚子", kind: "港", lon: 140.830, lat: 35.730, owner: "chiba" },
+  { id: "tsuchizaki", name: "土崎湊", kind: "港", lon: 140.090, lat: 39.750, owner: "ando" },
+  { id: "ogi", name: "小木", kind: "港", lon: 138.280, lat: 37.810, owner: "honma" },
+  { id: "anotsu", name: "安濃津", kind: "港", lon: 136.510, lat: 34.720, owner: "kitabatake" },
+  { id: "tomonoura", name: "鞆の浦", kind: "港", lon: 133.380, lat: 34.380, owner: "kobayakawa" },
+  { id: "kuchinotsu", name: "口之津", kind: "港", lon: 130.190, lat: 32.610, owner: "arima" },
+
+  // ── 市・町
+  { id: "kamakura", name: "鎌倉", kind: "商業都市", lon: 139.550, lat: 35.320, owner: "hojo" },
+  { id: "odawara_t", name: "小田原の市", kind: "商業都市", lon: 139.155, lat: 35.250, owner: "hojo" },
+  { id: "fuchu_echigo", name: "府中の市", kind: "商業都市", lon: 138.250, lat: 37.150, owner: "nagao" },
+  { id: "aizu_t", name: "黒川の市", kind: "商業都市", lon: 139.930, lat: 37.490, owner: "ashina" },
+  { id: "yonezawa_t", name: "米沢の市", kind: "町", lon: 140.110, lat: 37.910, owner: "date" },
+  { id: "hiraizumi", name: "平泉", kind: "町", lon: 141.110, lat: 38.990, owner: "kasai" },
+  { id: "kiryu", name: "桐生", kind: "町", lon: 139.330, lat: 36.400, owner: "yura" },
+  { id: "yuki_t", name: "結城の市", kind: "町", lon: 139.880, lat: 36.300, owner: "yuki" },
+
+  // ── 寺社
+  { id: "hieizan", name: "比叡山延暦寺", kind: "寺社", lon: 135.840, lat: 35.070, owner: null },
+  { id: "koyasan", name: "高野山", kind: "寺社", lon: 135.585, lat: 34.213, owner: null },
+  { id: "kumano", name: "熊野三山", kind: "寺社", lon: 135.775, lat: 33.840, owner: null },
+  { id: "kofukuji", name: "興福寺", kind: "寺社", lon: 135.830, lat: 34.685, owner: null },
+  { id: "ashikaga_g", name: "足利学校", kind: "寺社", lon: 139.450, lat: 36.340, owner: null },
+  { id: "kashima", name: "鹿島神宮", kind: "寺社", lon: 140.630, lat: 35.970, owner: "satake" },
+  { id: "katori", name: "香取神宮", kind: "寺社", lon: 140.530, lat: 35.890, owner: "chiba" },
+  { id: "nikko", name: "日光山", kind: "寺社", lon: 139.600, lat: 36.760, owner: "utsunomiya" },
+  { id: "chusonji", name: "中尊寺", kind: "寺社", lon: 141.100, lat: 39.000, owner: "kasai" },
+  { id: "haguro", name: "羽黒山", kind: "寺社", lon: 139.970, lat: 38.700, owner: "daihoji" },
+  { id: "shiogama", name: "塩竈神社", kind: "寺社", lon: 141.020, lat: 38.320, owner: "kokubun" },
+  { id: "tsurugaoka", name: "鶴岡八幡宮", kind: "寺社", lon: 139.556, lat: 35.326, owner: "hojo" },
+  { id: "mishima", name: "三嶋大社", kind: "寺社", lon: 138.920, lat: 35.120, owner: "hojo" },
+  { id: "suwa", name: "諏訪大社", kind: "寺社", lon: 138.120, lat: 36.000, owner: "takeda" },
+  { id: "risshakuji", name: "立石寺", kind: "寺社", lon: 140.440, lat: 38.310, owner: "mogami" },
+  { id: "itsukushima", name: "厳島神社", kind: "寺社", lon: 132.320, lat: 34.295, owner: "ouchi" },
+  { id: "izumo", name: "出雲大社", kind: "寺社", lon: 132.685, lat: 35.402, owner: "amago" },
+  { id: "dazaifu", name: "太宰府天満宮", kind: "寺社", lon: 130.535, lat: 33.520, owner: "ouchi" },
+  { id: "usa", name: "宇佐八幡宮", kind: "寺社", lon: 131.375, lat: 33.525, owner: "otomo" },
+
+  /* ── 牧（馬の産地）
+     馬は買うものであり、育てるものでもある。奥州の糠部、信濃の望月と木曽、
+     甲斐の三崎。ここを押さえれば騎馬が揃う。 */
+  { id: "nukanobu", name: "糠部の牧", kind: "牧", lon: 141.220, lat: 40.520, owner: "nanbu" },
+  { id: "mochizuki", name: "望月の牧", kind: "牧", lon: 138.320, lat: 36.290, owner: "takeda" },
+  { id: "kiso_maki", name: "木曽の牧", kind: "牧", lon: 137.690, lat: 35.840, owner: "takeda" },
+  { id: "misaki_maki", name: "三崎の牧", kind: "牧", lon: 138.560, lat: 35.640, owner: "takeda" },
+  { id: "soma_maki", name: "相馬の野馬", kind: "牧", lon: 140.960, lat: 37.800, owner: "soma" },
+  { id: "kobayashi_maki", name: "小林の牧", kind: "牧", lon: 139.980, lat: 36.150, owner: "oda_h" },
+  { id: "toi_maki", name: "都井の牧", kind: "牧", lon: 131.350, lat: 31.380, owner: "ito" },
+
+  /* ── 鉄砲鍛冶
+     天文十二年に種子島へ伝わり、堺・根来・国友で打ち始めた。
+     鉄砲は商人から買うほかないが、鍛冶を抱えれば自ら打てる。 */
+  { id: "kunitomo", name: "国友の鍛冶", kind: "鉄砲鍛冶", lon: 136.270, lat: 35.390, owner: "azai" },
+  { id: "negoro_ka", name: "根来の鍛冶", kind: "鉄砲鍛冶", lon: 135.290, lat: 34.280, owner: "saika" },
+  { id: "sakai_ka", name: "堺の鍛冶", kind: "鉄砲鍛冶", lon: 135.470, lat: 34.590, owner: "miyoshi" },
+  { id: "tanegashima", name: "種子島の鍛冶", kind: "鉄砲鍛冶", lon: 130.980, lat: 30.600, owner: "shimazu" },
+  { id: "hino_ka", name: "日野の鍛冶", kind: "鉄砲鍛冶", lon: 136.230, lat: 35.010, owner: "rokkaku" },
 ];
 
 

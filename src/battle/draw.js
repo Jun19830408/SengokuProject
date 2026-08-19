@@ -1121,17 +1121,50 @@ export function drawCastleTerrain(ctx, m) {
     ctx.fillStyle = 色;
     ctx.fillRect(堀外.x - r0, 堀外.y - r0, 堀外.w + r0 * 2, 堀外.h + r0 * 2);
   };
-  ctx.fillStyle = "#C9C3A4";                                   // 岸の砂
-  ctx.fillRect(堀外.x - 5, 堀外.y - 5, 堀外.w + 10, 堀外.h + 10);
-  ctx.fillStyle = "#9FC0CE"; ctx.fillRect(堀外.x, 堀外.y, 堀外.w, 堀外.h);
-  ctx.fillStyle = "#7FA9BE";
-  ctx.fillRect(堀外.x + band * 0.24, 堀外.y + band * 0.24, 堀外.w - band * 0.48, 堀外.h - band * 0.48);
-  ctx.fillStyle = "#6B97AF";
-  ctx.fillRect(堀外.x + band * 0.42, 堀外.y + band * 0.42, 堀外.w - band * 0.84, 堀外.h - band * 0.84);
-  // 水面の照り
-  ctx.strokeStyle = "rgba(255,255,255,0.24)"; ctx.lineWidth = 1;
-  for (const k of [0.32, 0.62]) {
-    ctx.strokeRect(堀外.x + band * k, 堀外.y + band * k, 堀外.w - band * k * 2, 堀外.h - band * k * 2);
+  /* 峰の坂（GDD 9.3）。山城の外は斜面である。等高線を回して、登ることを示す。
+     平城には坂がない。城下がそのまま門の前まで続く。 */
+  if (m.坂 > 0) {
+    const 段 = m.坂 >= 1 ? 6 : 3;
+    for (let i = 段; i >= 1; i--) {
+      const e = i * (m.坂 >= 1 ? 108 : 74);
+      ctx.fillStyle = m.坂 >= 1
+        ? `rgba(150,166,110,${0.10 + (段 - i) * 0.05})`
+        : `rgba(160,174,120,${0.07 + (段 - i) * 0.035})`;
+      ctx.fillRect(堀外.x - band - e, 堀外.y - band - e,
+        堀外.w + (band + e) * 2, 堀外.h + (band + e) * 2);
+      ctx.strokeStyle = "rgba(110,126,80,0.26)"; ctx.lineWidth = 1.2;
+      ctx.strokeRect(堀外.x - band - e, 堀外.y - band - e,
+        堀外.w + (band + e) * 2, 堀外.h + (band + e) * 2);
+    }
+    ctx.font = "14px 'Hiragino Mincho ProN',serif";
+    ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 3;
+    const 名 = m.坂 >= 1 ? "峰の坂" : "緩い坂";
+    ctx.strokeText(名, 堀外.x - band - 60, 堀外.y - band - 20);
+    ctx.fillStyle = "rgba(74,92,56,0.95)";
+    ctx.fillText(名, 堀外.x - band - 60, 堀外.y - band - 20);
+  }
+  if (m.moat.空堀) {
+    /* 空堀。水は無く、切岸を掘り下げただけの溝である。
+       山城の堀はたいていこれで、水を張る術がない。 */
+    ctx.fillStyle = "#B7A98A";
+    ctx.fillRect(堀外.x, 堀外.y, 堀外.w, 堀外.h);
+    ctx.fillStyle = "#9A8C6E";
+    ctx.fillRect(堀外.x + band * 0.3, 堀外.y + band * 0.3, 堀外.w - band * 0.6, 堀外.h - band * 0.6);
+    ctx.strokeStyle = "rgba(90,80,58,0.5)"; ctx.lineWidth = 1;
+    ctx.strokeRect(堀外.x + 0.5, 堀外.y + 0.5, 堀外.w - 1, 堀外.h - 1);
+  } else {
+    ctx.fillStyle = "#C9C3A4";                                 // 岸の砂
+    ctx.fillRect(堀外.x - 5, 堀外.y - 5, 堀外.w + 10, 堀外.h + 10);
+    ctx.fillStyle = "#9FC0CE"; ctx.fillRect(堀外.x, 堀外.y, 堀外.w, 堀外.h);
+    ctx.fillStyle = "#7FA9BE";
+    ctx.fillRect(堀外.x + band * 0.24, 堀外.y + band * 0.24, 堀外.w - band * 0.48, 堀外.h - band * 0.48);
+    ctx.fillStyle = "#6B97AF";
+    ctx.fillRect(堀外.x + band * 0.42, 堀外.y + band * 0.42, 堀外.w - band * 0.84, 堀外.h - band * 0.84);
+    // 水面の照り
+    ctx.strokeStyle = "rgba(255,255,255,0.24)"; ctx.lineWidth = 1;
+    for (const k of [0.32, 0.62]) {
+      ctx.strokeRect(堀外.x + band * k, 堀外.y + band * k, 堀外.w - band * k * 2, 堀外.h - band * k * 2);
+    }
   }
   ctx.fillStyle = "#CBD8AC"; ctx.fillRect(堀内.x, 堀内.y, 堀内.w, 堀内.h);
 
@@ -1257,8 +1290,9 @@ export function drawCastleTerrain(ctx, m) {
   ctx.font = "14px 'Hiragino Mincho ProN',serif";
   ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 3;
   ctx.strokeText("堀", cx - o.hw - t - o.masu - band / 2 - 7, cy);
-  ctx.fillStyle = "rgba(46,66,80,0.95)";
-  ctx.fillText("堀", cx - o.hw - t - o.masu - band / 2 - 7, cy);
+  ctx.fillStyle = m.moat.空堀 ? "rgba(84,72,50,0.95)" : "rgba(46,66,80,0.95)";
+  ctx.fillText(m.moat.空堀 ? "空堀" : "堀",
+    cx - o.hw - t - o.masu - band / 2 - (m.moat.空堀 ? 14 : 7), cy);
 }
 
 

@@ -107,10 +107,21 @@ export const nearestOf = (list, x, y) => (list.length
   ? list.reduce((a, o) => (Math.hypot(o.x - x, o.y - y) < Math.hypot(a.x - x, a.y - y) ? o : a), list[0])
   : null);
 
-export function layoutField(totalMen) {
-  // 3千人を標準とし、兵数の平方根に比例して広げる。
-  // 関ヶ原（両軍あわせて約16万）で東西約4km・南北約3kmの盆地に相当する広さになる。
-  const w = clamp(Math.round(1045 * Math.sqrt(Math.max(600, totalMen) / 3000)), 900, 5600);
+export function layoutField(totalMen, 隊数) {
+  /* 野の広さ（GDD 8.1）。
+
+     兵数だけで決めていたが、それでは狭すぎた。五隊も出せば戦場が一杯になり、
+     横に並べて前へ出るのが精一杯で、回り込むことも取っておくこともできない。
+
+     戦の面白さは、兵の数ではなく隊の数で決まる。隊が多いほど、翼を伸ばし、
+     伏せ、迂回する余地が要る。隊数でも広げる。
+
+     三千人・二隊を標準とし、
+       兵数の平方根に比例して広げ（大軍ほど広い野が要る）、
+       隊数の平方根にも比例して広げる（五隊なら一.六倍、八隊なら二倍）。 */
+  const 隊 = clamp(隊数 || 2, 2, 24);
+  const 隊広 = Math.sqrt(隊 / 2);
+  const w = clamp(Math.round(1180 * Math.sqrt(Math.max(600, totalMen) / 3000) * 隊広), 1100, 7200);
   const h = Math.round(w * 0.667);
   FIELD.w = w; FIELD.h = h;
   genTerrain(FIELD_SEED);
@@ -166,6 +177,12 @@ export const TERRAIN = {
   gate: { speed: 0.01, fight: 1.0, cohesion: 0, sight: 300, horse: 0.1, charge: false, label: "城門" },
   gateopen: { speed: 0.8, fight: 0.75, cohesion: -12, sight: 200, horse: 0.6, charge: false, label: "破れた門" },
   moat: { speed: 0.28, fight: 0.65, cohesion: -16, sight: 260, horse: 0.3, charge: false, label: "堀" },
+  // 空堀。水は無いが、切岸を登り降りせねばならない。水堀ほどではないが足は鈍る。
+  karabori: { speed: 0.42, fight: 0.78, cohesion: -10, sight: 260, horse: 0.45, charge: false, label: "空堀" },
+  /* 峰の坂（GDD 9.3）。山城の外はこれである。
+     駆け上がる側の足は半ばに落ち、隊列も崩れる。守る側は上から見下ろす。 */
+  sakamichi: { speed: 0.52, fight: 0.86, cohesion: -8, sight: 300, horse: 0.5, charge: false, label: "坂" },
+  surface: { speed: 0.82, fight: 0.95, cohesion: -3, sight: 280, horse: 0.85, charge: true, label: "緩斜面" },
   bridge2: { speed: 0.9, fight: 0.8, cohesion: -6, sight: 260, horse: 0.85, charge: false, label: "土橋" },
   tower: { speed: 0.55, fight: 1.3, cohesion: -2, sight: 430, horse: 0.3, charge: false, label: "櫓" },
   kuruwa: { speed: 0.92, fight: 1.0, cohesion: -3, sight: 210, horse: 0.75, charge: true, label: "曲輪" },

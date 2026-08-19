@@ -23,21 +23,87 @@ export function siegeUnit() {
   return { w: side * SP, d: side * ROW };                // 216 × 88
 }
 
+/* ------------------------------------------------ 城の構え（GDD 9.3）
+
+   これまで、どの城も同じ正方形の三重であった。山城も平城も、堀の広さも
+   門の数も同じで、地形との関わりがまるでない。
+
+   城の構えは三つに分ける。
+
+     山城   … 峰の上。曲輪は尾根に沿って細長く、門は少ない。堀は空堀。
+              寄せ手は坂を駆け上がることになる（足が鈍り、城方が有利になる）
+     平山城 … 丘の上。細長さも堀も中くらい。城下を抱える
+     平城   … 平地。曲輪は広く四角く、門は多く、水堀が広く回る
+
+   どれに当たるかは、城の名と防備から判ずる。標高（geo.js の elevationAt）でも
+   測ってみたが、盤の稜線が粗く、平地の小田原城が〇.七八、清洲城が〇.六五と出て
+   使いものにならなかった。名は嘘をつかない。「〜山城」と名乗る城は山城である。
+
+   いくつかの名の知れた城は、史実に合わせて名指しで直す。 */
+const 構えの例外 = {
+  odawara: "平山城",        // 相模。丘城だが城下を抱える大城
+  ishiyama: "平城",          // 石山本願寺。寺内町であって山城ではない
+  gassan: "山城", kannonji: "山城", nanao: "山城", odani: "山城",
+  iwamura: "山城", takato: "山城", tsukiyama: "山城", yoshida: "山城",
+  kasugayama: "山城", inabayama: "山城", takeda_i: "山城",
+  tsutsujigasaki: "平城", nijo: "平城", kiyosu: "平城", nagoya: "平城",
+  sunpu: "平城", edo: "平城", kofu: "平城",
+};
+
+export function 城の構え(castle) {
+  if (構えの例外[castle.id]) return 構えの例外[castle.id];
+  const n = castle.name || "";
+  if (/館$|御所$|居館|寺$|本願寺/.test(n)) return "平城";
+  if (/山城$|ヶ城$|嶽|岳|城山|山$/.test(n)) return "山城";
+  const d = castle.def || 50;
+  return d >= 66 ? "山城" : d >= 50 ? "平山城" : "平城";
+}
+
 export function buildCastleMap(castle) {
   const U = siegeUnit();
   const k = 0.88 + castle.def / 420;                     // 城防で一割ほど前後する
   const t = 10;
+  /* 城ごとに同じ形にならぬよう、城の名から種を起こす。
+     同じ城を何度攻めても、いつも同じ縄張りである。 */
+  const 種 = Math.abs(String(castle.id || castle.name || "x").split("")
+    .reduce((a2, c) => (a2 * 33 + c.charCodeAt(0)) | 0, 7));
+  const rnd = ((z) => () => {
+    z = (z + 0x6D2B79F5) | 0;
+    let x = Math.imul(z ^ (z >>> 15), 1 | z);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  })(種 >>> 0);
+  const 構 = 城の構え(castle);
+  /* 縄張りの癖。
+       細長さ … 山城は尾根に沿って細長い。平城は四角い
+       門の数 … 山城は少ない。平城は四方に開く
+       堀     … 山城は空堀で狭く、平城は水堀が広く回る */
+  const 癖 = 構 === "山城"
+    ? { 縦横: 0.42 + rnd() * 0.24, 門: -1, 堀: 0.55, 広さ: 0.86, 空堀: true }
+    : 構 === "平山城"
+      ? { 縦横: 0.72 + rnd() * 0.3, 門: 0, 堀: 0.9, 広さ: 1.0, 空堀: false }
+      : { 縦横: 0.94 + rnd() * 0.26, 門: 1, 堀: 1.35, 広さ: 1.18, 空堀: false };
+  const 横長 = rnd() < 0.5;                              // 尾根の向き
   const n = castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2;
   const names = n === 4 ? ["惣構", "三の丸", "二の丸", "本丸"]
     : n === 3 ? ["惣構", "二の丸", "本丸"] : ["二の丸", "本丸"];
   const base = 380 + castle.def * 8;
-  const gn0 = castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2;
+  const gn0 = clamp((castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2) + 癖.門, 1, 4);
   const FACE = ["S", "N", "E", "W"];
   const GNAME = { S: "大手門", N: "搦手門", E: "東脇門", W: "西脇門" };
   const INAME = { S: "表門", N: "裏門", E: "東門", W: "西門" };
   // 本丸は一隊が数隊入れる広さ。曲輪の帯幅は一隊の奥行きより広く取る。
-  const honW = U.w * 1.2 * k, honH = U.d * 2.0 * k;
-  const band = (U.d * 1.5 + 74) * k;
+  /* 本丸の広さと曲輪の帯。構えによって細長さが変わる。
+     山城は尾根に沿って細く長く、平城は広く四角い。 */
+  const 基W = U.w * 1.2 * k * 癖.広さ, 基H = U.d * 2.0 * k * 癖.広さ;
+  /* 細長さには歯止めが要る。
+     初めは山城を尾根なりに細くしたところ、本丸が千十歩×百四十五歩になった。
+     一隊は幅二百十六・奥行八十八であるから、これでは隊がまともに入らない。
+     どの向きにも、一隊が二つ並ぶだけの幅は残す。 */
+  const 下限W = U.w * 1.1, 下限H = U.d * 2.2;
+  const honW = Math.max(下限W, 横長 ? 基W / 癖.縦横 : 基W * 癖.縦横);
+  const honH = Math.max(下限H, 横長 ? 基H * 癖.縦横 : 基H / 癖.縦横);
+  const band = (U.d * 1.5 + 74) * k * (0.86 + 癖.広さ * 0.2);
   const masu = 34 * k;
   const layers = names.map((name, i) => {
     const back = (n - 1 - i);                            // 外側ほど大きい
@@ -51,7 +117,8 @@ export function buildCastleMap(castle) {
       const nm = i === 0 ? GNAME[face] : INAME[face];
       return {
         face, layer: i, i: j, name: nm, key: `${name}${nm}`,
-        off: span * (0.34 - 0.1 * (j % 3)) * ((i + j) % 2 ? 1 : -1),
+        // 門の位置。城ごとに散らす。いつも同じ所に開いていては縄張りにならない。
+        off: span * (0.40 - 0.13 * ((j + 種) % 3)) * ((i + j + 種) % 2 ? 1 : -1),
         w, hp, max: hp, broken: false, masu, open: (i + j) % 2 ? 1 : -1,
         slot: null, hold: null, def: 0,
       };
@@ -72,7 +139,8 @@ export function buildCastleMap(castle) {
       r: 14, hp: 200 + castle.def * 2, max: 200 + castle.def * 2, layer: i, cool: 0 });
   });
   // 中心は戦場を決めたあとに据える（施設は相対座標で持っておく）
-  return { cx: 0, cy: 0, t, layers, moat: { band: 38 * k }, n,
+  return { cx: 0, cy: 0, t, layers, moat: { band: 38 * k * 癖.堀, 空堀: 癖.空堀 }, n,
+    構: 構, 横長, 坂: 構 === "山城" ? 1 : 構 === "平山城" ? 0.55 : 0,
     gates: layers.flatMap((l) => l.gates), fac, unit: U };
 }
 
@@ -81,8 +149,12 @@ export function layoutCastleField(m) {
   const o = m.layers[0];
   const ext = { w: o.hw + m.t + o.masu + m.t + 8 + m.moat.band, h: o.hh + m.t + o.masu + m.t + 8 + m.moat.band };
   // 城の外に、寄せ手が展開して回り込めるだけの野を残す
-  FIELD.w = Math.round((ext.w + Math.max(m.unit.d * 2.4 + 160, ext.w * 0.6)) * 2);
-  FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 2.4 + 160, ext.h * 0.6)) * 2);
+  /* 城の外に、寄せ手が展開して回り込めるだけの野を残す。
+     五隊も出せば城の周りが一杯になり、横に並べて門へ押すのが精一杯だった。
+     山城なら坂を大きく取る。駆け上がる道のりが戦の要だからである。 */
+  const 余 = m.坂 >= 1 ? 1.15 : m.坂 > 0 ? 0.95 : 0.82;
+  FIELD.w = Math.round((ext.w + Math.max(m.unit.d * 3.4 + 240, ext.w * 余)) * 2);
+  FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 3.4 + 240, ext.h * 余)) * 2);
   m.cx = FIELD.w / 2; m.cy = FIELD.h / 2;
   for (const f of m.fac) { f.x += m.cx; f.y += m.cy; }   // 相対から絶対へ
   return m;
@@ -148,7 +220,14 @@ export function castleTerrainAt(x, y) {
       const a = axisOf(o, g), { u, v } = toUV(a, dx, dy);
       if (v > 0 && Math.abs(u - gateOpenU(g)) <= g.w * 0.8) return "bridge";
     }
-    return "moat";
+    return m.moat.空堀 ? "karabori" : "moat";
+  }
+  /* 山城の坂（GDD 9.3）。
+     堀の外は峰の斜面である。寄せ手は駆け上がることになるので足が鈍い。
+     平城には坂がない。城下がそのまま城門の前まで続く。 */
+  if (m.坂 > 0) {
+    const b2 = o.hw + t + out + band;
+    if (!inRect(dx, dy, b2, o.hh + t + out + band)) return m.坂 >= 1 ? "sakamichi" : "surface";
   }
   const inner = m.layers[m.layers.length - 1];
   if (inRect(dx, dy, inner.hw, inner.hh)) return "honmaru";

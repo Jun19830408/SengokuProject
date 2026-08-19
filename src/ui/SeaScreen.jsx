@@ -422,7 +422,8 @@ function 分ける(内訳, 割) {
 }
 
 export function 海戦を仕立てる(s, army, inter, 地名, pColor, eColor, pName, eName) {
-  layoutSea((army.id || "x").split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, army.men);
+  const 総艘 = (inter.mine.艘 || 0) + (inter.foe.艘 || 0);
+  layoutSea((army.id || "x").split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, army.men, 総艘);
   const 将 = (army.gens || []).map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
   const 頭 = 将.length ? 将 : [{ id: "x", name: "船手衆", lead: 55, valor: 55, wit: 55 }];
   const P = [], E = [];

@@ -1,3 +1,4 @@
+import { segDist } from "../core/util.js";
 
 
 /* ------------------------------------------------- 投影（実座標→地図座標） */
@@ -656,3 +657,26 @@ export const RIVERS = RIVER_GEO.map((r) => ({
 }));
 
 
+
+
+/* ------------------------------------------------ 標高（GDD 9.3）
+
+   政務の図の陰影を作るのに、稜線（RIDGES）から高さを起こしている
+   （core/terrainCanvas.js）。同じ式を城郭図でも使う。
+   城がどれだけ高い所に建っているかで、山城・平山城・平城を分ける。
+
+   返す値は零から一ほど。〇.二五を超えれば平山城、〇.五を超えれば山城とみる。 */
+export function elevationAt(x, y) {
+  let h = 0;
+  for (const r of RIDGES) {
+    let d = 1e9;
+    for (let k = 0; k < r.pts.length - 1; k++) {
+      const p = r.pts[k], q = r.pts[k + 1];
+      const dd = segDist(x, y, p[0], p[1], q[0], q[1]);
+      if (dd < d) d = dd;
+    }
+    const t = d / r.w;
+    if (t < 3) h = Math.max(h, r.amp * Math.exp(-t * t));
+  }
+  return h;
+}

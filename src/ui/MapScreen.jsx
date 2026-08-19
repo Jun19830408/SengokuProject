@@ -731,7 +731,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     // 出てくる兵の総数から戦場の広さを決める
     const aidMen = foe ? 0 : g.armies.filter((a) => a.id !== army.id && a.at === dest.id
       && (a.aid === army.faction || (camp && camp.arrived.includes(a.id)))).reduce((t, a) => t + a.men, 0);
-    layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0));
+    /* 野の広さは、兵の数と隊の数で決める。隊が多いほど、翼を伸ばし、伏せ、
+       迂回する余地が要る。兵数だけで決めていたころは、五隊も出せば戦場が
+       一杯になり、横に並べて前へ出るのが精一杯であった。 */
+    const 出る将 = (army.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+    const 隊数 = Math.max(2, 出る将.length + Math.max(1, defGens.length));
+    layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0), 隊数);
     // 攻め口の方角に応じ、盤の四辺のどこから寄せるかを決める（GDD 8.1）
     const face = attackFace(army.from, dest.id);
     const lineup = (isAtk, i, n) => {
@@ -1787,6 +1792,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                   {t.kind === "寺社" && "門徒と僧兵を抱える。民の心もここに寄る。"}
                   {t.kind === "忍びの里" && "人を潜ませ、敵情を探る。調略の助けとなる。"}
                   {t.kind === "鉱山" && "金銀を掘る。掘れば掘るほど金になる。"}
+                  {t.kind === "牧" && "馬を育てる所。押さえれば毎年、春に馬が届く。騎馬を揃える道である。"}
+                  {t.kind === "鉄砲鍛冶" && "鉄砲を打つ里。抱えれば毎年、春に鉄砲が届く。商人から買わずに済む。"}
                 </div>
                 <div className="sec">できること</div>
                 {opts.map((o) => (

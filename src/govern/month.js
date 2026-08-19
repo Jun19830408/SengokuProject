@@ -432,6 +432,24 @@ export function advanceMonth(prev, g) {
         q.warLoyal = clamp((q.warLoyal || 0) + 2, 0, 100);
         q.fed = false;                        // 扶持は月に一度
       }
+      /* 牧と鉄砲鍛冶の実り（GDD 6.3）。
+         年に一度、春に届く。近い城の蓄えへ積む。
+         馬も鉄砲も城の蓄えとして数えているのに、その出どころが盤の上に
+         無かった。牧を押さえれば騎馬が揃い、鍛冶を抱えれば鉄砲が揃う。 */
+      if (s.month === 4) {
+        for (const fid of Object.keys(s.factions)) {
+          const 馬 = specialBonus(s, fid, "horse"), 砲 = specialBonus(s, fid, "gun");
+          if (!馬 && !砲) continue;
+          const 城 = s.castles.filter((c) => c.faction === fid);
+          if (!城.length) continue;
+          const 本 = 城.find((c) => s.generals.some((q) => q.lord && q.at === c.id && q.faction === fid)) || 城[0];
+          if (馬) 本.horse = (本.horse || 0) + 馬;
+          if (砲) 本.gun = (本.gun || 0) + 砲;
+          if (fid === s.player) {
+            events.push(`牧と鍛冶より${馬 ? `馬${馬}頭` : ""}${馬 && 砲 ? "・" : ""}${砲 ? `鉄砲${砲}挺` : ""}が${本.name}へ届いた。`);
+          }
+        }
+      }
       // 人は年を取る。春（四月）を年の改まりとし、皆ひとつ齢を加える。
       if (s.month === 4) {
         for (const q of s.generals) q.age = (q.age || 30) + 1;

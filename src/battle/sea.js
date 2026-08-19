@@ -27,11 +27,16 @@ export const 海の状 = {
 };
 
 // 海を設える。渡る海路ごとに、同じ風と潮が立つ。
-export function layoutSea(seed, men) {
+export function layoutSea(seed, men, 艘) {
   const rnd = makeRng(seed >>> 0);
-  /* 海の広さ。はじめは陸の野と同じ勘定で取ったが、船は隊より数が少ないので、
-     広い海に船団がぽつんと浮くだけになった。船が見える広さまで詰める。 */
-  const w = clamp(Math.round(760 * Math.sqrt(Math.max(600, men || 3000) / 3000)), 700, 1500);
+  /* 海の広さ。
+
+     はじめは陸の野と同じ勘定で取ったが、船が見えぬほど広かった。詰めたところ、
+     こんどは九十艘を並べると窮屈になった。艘数で決めるのが素直である。
+     一艘あたりの水面を取り、そのぶんだけ広げる。二十艘なら千歩、
+     九十艘なら二千歩ばかりの海になる。 */
+  const n = clamp(艘 || Math.ceil(Math.max(600, men || 3000) / 120), 8, 200);
+  const w = clamp(Math.round(620 + Math.sqrt(n) * 155), 800, 2600);
   SEA.w = w; SEA.h = Math.round(w * 0.68);
   海の状.seed = seed >>> 0;
   海の状.wind = Math.floor(rnd() * 8) * (Math.PI / 4);

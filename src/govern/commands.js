@@ -361,6 +361,23 @@ export function doSpecial(prev, townId, key) {
     st.anger = clamp((st.anger || 0) + (o.anger || 0) * 10, 0, 100);
     const lines = [{ text: `${t.name}との関係：中立 → ${key}　${o.desc}` }];
     if (o.once) lines.push({ label: "金銭", before: f.gold - o.once, after: f.gold, unit: "貫" });
+    /* 牧と鉄砲鍛冶。馬と鉄砲は城の蓄えなので、近い城へ入れる（GDD 6.3）。
+       誼を結んだその年に一度、まとまって届く。以後は月送りが毎年運ぶ。 */
+    if (o.horse || o.gun) {
+      const 近 = s.castles.filter((c) => c.faction === s.player)
+        .sort((a2, b2) => Math.hypot(a2.x - px(t.lon), a2.y - py(t.lat))
+          - Math.hypot(b2.x - px(t.lon), b2.y - py(t.lat)))[0];
+      if (近) {
+        if (o.horse) {
+          lines.push({ label: `${近.name} 馬`, before: 近.horse || 0, after: (近.horse || 0) + o.horse, unit: "頭" });
+          近.horse = (近.horse || 0) + o.horse;
+        }
+        if (o.gun) {
+          lines.push({ label: `${近.name} 鉄砲`, before: 近.gun || 0, after: (近.gun || 0) + o.gun, unit: "挺" });
+          近.gun = (近.gun || 0) + o.gun;
+        }
+      }
+    }
     if (o.troops) {
       const near = s.castles.filter((c) => c.faction === s.player)
         .sort((a, b) => Math.hypot(a.x - px(t.lon), a.y - py(t.lat)) - Math.hypot(b.x - px(t.lon), b.y - py(t.lat)))[0];

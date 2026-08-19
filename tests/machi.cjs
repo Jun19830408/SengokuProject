@@ -20,7 +20,7 @@ const 町 = (id) => H.TOWNS.find((x) => x.id === id);
 /* ------------------------ 一、決まりは全ての種に及ぶこと */
 {
   const 種 = [...new Set(H.TOWNS.map((t) => t.kind))];
-  確('特殊勢力は七種ある', 種.length === 7, 種.join('・'));
+  確('特殊勢力は九種ある', 種.length === 9, 種.join('・'));
 
   // 種ごとに、遠い家は手が出せず、隣の城を持つ家は手が出せる
   let 通 = 0;
@@ -38,7 +38,7 @@ const 町 = (id) => H.TOWNS.find((x) => x.id === id);
     if (主.ok && !余.ok) 通++;
     else console.log(`    ★ ${kind}（${t.name}）で通らない`);
   }
-  確('七種すべてで「隣の城を持つ家だけ」が効く', 通 === 種.length, `${通}/${種.length}種`);
+  確('九種すべてで「隣の城を持つ家だけ」が効く', 通 === 種.length, `${通}/${種.length}種`);
 
   // 種を問わず、遠い町へは手が出せない
   const 遠 = H.TOWNS.filter((t) => !H.特殊勢力の可否(s, t, 'oda').ok);
@@ -46,6 +46,18 @@ const 町 = (id) => H.TOWNS.find((x) => x.id === id);
     `${遠.length}/${H.TOWNS.length}か所は手が届かない`);
   const 届 = H.TOWNS.filter((t) => H.特殊勢力の可否(s, t, 'oda').ok);
   確('尾張の湊と市には手が届く', 届.length >= 2, 届.map((t) => `${t.name}(${t.kind})`).join('・'));
+
+  /* 東国と奥羽が手薄だった。地方ごとに、動かせる特殊勢力があること。 */
+  const 帯 = [['九州', 0, 131.5], ['中国四国', 131.5, 135], ['畿内', 135, 136.5],
+    ['東海', 136.5, 138.5], ['関東甲信', 138.5, 140.3], ['奥羽', 140.3, 150]];
+  const 数え = 帯.map(([n, a2, b2]) => [n, H.TOWNS.filter((t) => t.lon >= a2 && t.lon < b2).length]);
+  確('どの地方にも十か所以上ある', 数え.every(([, n]) => n >= 10),
+    数え.map(([n, v]) => `${n}${v}`).join('／'));
+  確('馬の牧と鉄砲の鍛冶が置かれている',
+    H.TOWNS.some((t) => t.kind === '牧') && H.TOWNS.some((t) => t.kind === '鉄砲鍛冶'),
+    `牧${H.TOWNS.filter((t) => t.kind === '牧').length}・鍛冶${H.TOWNS.filter((t) => t.kind === '鉄砲鍛冶').length}`);
+  確('石見銀山と国友の鍛冶がある',
+    H.TOWNS.some((t) => t.id === 'iwami_gin') && H.TOWNS.some((t) => t.id === 'kunitomo'));
 
   // 寺社と忍びの里でも、処理そのものが塞がれること（画面を通さず叩く）
   for (const [id, key] of [['ishiyama_monto', '保護'], ['koga_shu', '雇用']]) {
@@ -139,12 +151,64 @@ const 町 = (id) => H.TOWNS.find((x) => x.id === id);
   確('どの紋も例外なく描ける', 描け.length === 0, 描け.join(' / ') || `${描}種を描いた`);
 
   // 特殊勢力の印も同じく
-  const 印 = ['港', '水軍衆', '商業都市', '町', '寺社', '忍びの里', '鉱山'];
+  const 印 = ['港', '水軍衆', '商業都市', '町', '寺社', '忍びの里', '鉱山', '牧', '鉄砲鍛冶'];
   let 印け = [];
   for (const k of 印) {
     try { H.drawTownMark(落, k, 0, 0, 10, '#000'); } catch (e) { 印け.push(`${k}：${e.message}`); }
   }
   確('特殊勢力の印も例外なく描ける', 印け.length === 0, 印け.join(' / ') || `${印.length}種`);
+}
+
+/* ------------------------ 三、城の構えと、盤の広さ
+
+   どの城も同じ正方形の三重で、山城も平城も、堀の広さも門の数も同じだった。
+   五隊も出せば城の周りが一杯になり、横に並べて門へ押すのが精一杯であった。 */
+{
+  const 城 = (n) => H.CASTLES.find((x) => x.name === n);
+  const 構 = {};
+  for (const c of H.CASTLES) 構[H.城の構え(c)] = (構[H.城の構え(c)] || 0) + 1;
+  確('城は三つの構えに分かれる', Object.keys(構).length === 3,
+    Object.entries(構).map(([k, v]) => `${k}${v}`).join('／'));
+  確('名の知れた山城が山城とされる',
+    ['稲葉山城', '月山富田城', '春日山城', '小谷城', '七尾城', '観音寺城']
+      .every((n) => H.城の構え(城(n)) === '山城'));
+  確('平地の館が平城とされる',
+    ['躑躅ヶ崎館', '二条御所', '清洲城'].every((n) => H.城の構え(城(n)) === '平城'));
+
+  const 見 = (n) => { const m = H.layoutCastleField(H.buildCastleMap(城(n)));
+    const o = m.layers[0], h = m.layers[m.layers.length - 1];
+    return { m, 縦横: (o.hw / o.hh), 門: m.gates.length, 盤: H.FIELD.w * H.FIELD.h,
+      本: Math.min(h.hw * 2, h.hh * 2) }; };
+  const 山 = 見('月山富田城'), 平 = 見('清洲城');
+  確('山城は空堀、平城は水堀', 山.m.moat.空堀 === true && 平.m.moat.空堀 === false);
+  確('山城には坂があり、平城にはない', 山.m.坂 >= 1 && 平.m.坂 === 0,
+    `山城 坂${山.m.坂} ／ 平城 坂${平.m.坂}`);
+  確('平城のほうが門が多い', 平.門 > 山.門, `平城${平.門}門 ／ 山城${山.門}門`);
+
+  // 縄張りが城ごとに違うこと
+  const 比 = ['稲葉山城', '月山富田城', '小田原城', '清洲城', '岡崎城', '三木城']
+    .map((n) => 見(n).縦横);
+  確('城ごとに縄張りの形が違う', new Set(比.map((v) => v.toFixed(2))).size >= 5,
+    比.map((v) => v.toFixed(2)).join('／'));
+
+  // どの城でも、本丸に隊が入るだけの広さがある
+  let 狭 = 0;
+  for (const c of H.CASTLES) {
+    const m = H.layoutCastleField(H.buildCastleMap(c));
+    const h = m.layers[m.layers.length - 1];
+    if (h.hw * 2 < 230 || h.hh * 2 < 190) 狭++;
+  }
+  確('どの城の本丸にも隊が入る', 狭 === 0, `${H.CASTLES.length}城を検めた`);
+
+  /* 野の広さは隊の数でも決まること。
+     兵数だけで決めていたころは、五隊も出せば戦場が一杯になった。 */
+  H.layoutField(6000, 2); const 二 = H.FIELD.w * H.FIELD.h;
+  H.layoutField(6000, 6); const 六 = H.FIELD.w * H.FIELD.h;
+  確('隊が増えれば野も広がる', 六 > 二 * 2.5,
+    `二隊 ${H.FIELD.w && Math.round(二 / 1e6)}百万歩² → 六隊 ${Math.round(六 / 1e6)}百万歩²`);
+  H.layoutField(6000, 6);
+  確('六隊なら一隊あたり四十万歩²以上ある', 六 / 6 > 400000,
+    `一隊あたり ${Math.round(六 / 6 / 1000)}千歩²`);
 }
 
 console.log('');

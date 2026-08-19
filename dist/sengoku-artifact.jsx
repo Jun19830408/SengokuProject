@@ -3974,7 +3974,7 @@ var TOWNS = [
   { id: "takayama_t", name: "\u98DB\u9A28\u306E\u5320", kind: "\u753A", lon: 137.255, lat: 36.145, owner: "anegakoji" },
   { id: "zenkoji", name: "\u5584\u5149\u5BFA", kind: "\u5BFA\u793E", lon: 138.187, lat: 36.661, owner: null },
   { id: "kurokawa_kin", name: "\u9ED2\u5DDD\u91D1\u5C71", kind: "\u9271\u5C71", lon: 138.76, lat: 35.78, owner: "takeda" },
-  { id: "ikuno", name: "\u571F\u80A5\u91D1\u5C71", kind: "\u9271\u5C71", lon: 138.79, lat: 34.91, owner: "hojo" },
+  { id: "toi_kin", name: "\u571F\u80A5\u91D1\u5C71", kind: "\u9271\u5C71", lon: 138.79, lat: 34.91, owner: "hojo" },
   /* ── 畿内・瀬戸内・西国の海（GDD 10章）
   
        ここには湊も水軍衆も一つも置いていなかった。全国で港十・水軍衆一、
@@ -3999,7 +3999,86 @@ var TOWNS = [
   { id: "mihonoseki", name: "\u7F8E\u4FDD\u95A2", kind: "\u6E2F", lon: 133.235, lat: 35.565, owner: "amago" },
   { id: "funai_t", name: "\u5E9C\u5185", kind: "\u6E2F", lon: 131.61, lat: 33.235, owner: "otomo" },
   { id: "bounotsu", name: "\u574A\u6D25", kind: "\u6E2F", lon: 130.2, lat: 31.26, owner: "shimazu" },
-  { id: "matsuura_sui", name: "\u677E\u6D66\u515A", kind: "\u6C34\u8ECD\u8846", lon: 129.72, lat: 33.36, owner: "matsuura" }
+  { id: "matsuura_sui", name: "\u677E\u6D66\u515A", kind: "\u6C34\u8ECD\u8846", lon: 129.72, lat: 33.36, owner: "matsura" },
+  /* ── 全国の湊・市・寺社・鉱山・牧・鉄砲鍛冶
+  
+       東国と奥羽が手薄だった。畿内と東海に固まっていて、関東の大名も奥羽の大名も、
+       動かせる特殊勢力をほとんど持たなかった。金山も銀山も、名の通った市も湊も、
+       馬の牧も、鉄砲の鍛冶も、天文十五年に在ったものは置いておく。
+  
+       牧と鉄砲鍛冶は新しく立てた種である。馬と鉄砲は城の蓄えとして数えているが
+       （GDD 6.3）、その出どころが盤の上に無かった。南部の糠部、信濃の望月、
+       近江の国友、紀伊の根来――それらを押さえることが、騎馬と鉄砲を揃える道になる。 */
+  // ── 鉱山
+  { id: "iwami_gin", name: "\u77F3\u898B\u9280\u5C71", kind: "\u9271\u5C71", lon: 132.437, lat: 35.113, owner: "ouchi" },
+  { id: "ikuno_gin", name: "\u751F\u91CE\u9280\u5C71", kind: "\u9271\u5C71", lon: 134.808, lat: 35.165, owner: "yamana" },
+  { id: "tsurushi_gin", name: "\u9DB4\u5B50\u9280\u5C71", kind: "\u9271\u5C71", lon: 138.29, lat: 37.98, owner: "honma" },
+  { id: "nobesawa_gin", name: "\u5EF6\u6CA2\u9280\u5C71", kind: "\u9271\u5C71", lon: 140.47, lat: 38.6, owner: "mogami" },
+  { id: "handa_gin", name: "\u534A\u7530\u9280\u5C71", kind: "\u9271\u5C71", lon: 140.47, lat: 37.83, owner: "date" },
+  { id: "osarizawa", name: "\u5C3E\u53BB\u6CA2\u9285\u5C71", kind: "\u9271\u5C71", lon: 140.76, lat: 40.23, owner: "nanbu" },
+  { id: "ashio", name: "\u8DB3\u5C3E", kind: "\u9271\u5C71", lon: 139.45, lat: 36.64, owner: "utsunomiya" },
+  { id: "naganobori", name: "\u9577\u767B\u9285\u5C71", kind: "\u9271\u5C71", lon: 131.29, lat: 34.23, owner: "ouchi" },
+  // ── 湊
+  { id: "tosaminato", name: "\u5341\u4E09\u6E4A", kind: "\u6E2F", lon: 140.32, lat: 40.9, owner: "oura" },
+  { id: "sakata", name: "\u9152\u7530", kind: "\u6E2F", lon: 139.84, lat: 38.91, owner: "daihoji" },
+  { id: "naoetsu", name: "\u76F4\u6C5F\u6D25", kind: "\u6E2F", lon: 138.24, lat: 37.18, owner: "nagao" },
+  { id: "ishinomaki", name: "\u77F3\u5DFB", kind: "\u6E2F", lon: 141.3, lat: 38.43, owner: "kasai" },
+  { id: "shinagawa", name: "\u54C1\u5DDD\u6E4A", kind: "\u6E2F", lon: 139.74, lat: 35.61, owner: "hojo" },
+  { id: "mutsura", name: "\u516D\u6D66", kind: "\u6E2F", lon: 139.63, lat: 35.34, owner: "hojo" },
+  { id: "nakaminato", name: "\u90A3\u73C2\u6E4A", kind: "\u6E2F", lon: 140.59, lat: 36.32, owner: "satake" },
+  { id: "choshi", name: "\u929A\u5B50", kind: "\u6E2F", lon: 140.83, lat: 35.73, owner: "chiba" },
+  { id: "tsuchizaki", name: "\u571F\u5D0E\u6E4A", kind: "\u6E2F", lon: 140.09, lat: 39.75, owner: "ando" },
+  { id: "ogi", name: "\u5C0F\u6728", kind: "\u6E2F", lon: 138.28, lat: 37.81, owner: "honma" },
+  { id: "anotsu", name: "\u5B89\u6FC3\u6D25", kind: "\u6E2F", lon: 136.51, lat: 34.72, owner: "kitabatake" },
+  { id: "tomonoura", name: "\u9786\u306E\u6D66", kind: "\u6E2F", lon: 133.38, lat: 34.38, owner: "kobayakawa" },
+  { id: "kuchinotsu", name: "\u53E3\u4E4B\u6D25", kind: "\u6E2F", lon: 130.19, lat: 32.61, owner: "arima" },
+  // ── 市・町
+  { id: "kamakura", name: "\u938C\u5009", kind: "\u5546\u696D\u90FD\u5E02", lon: 139.55, lat: 35.32, owner: "hojo" },
+  { id: "odawara_t", name: "\u5C0F\u7530\u539F\u306E\u5E02", kind: "\u5546\u696D\u90FD\u5E02", lon: 139.155, lat: 35.25, owner: "hojo" },
+  { id: "fuchu_echigo", name: "\u5E9C\u4E2D\u306E\u5E02", kind: "\u5546\u696D\u90FD\u5E02", lon: 138.25, lat: 37.15, owner: "nagao" },
+  { id: "aizu_t", name: "\u9ED2\u5DDD\u306E\u5E02", kind: "\u5546\u696D\u90FD\u5E02", lon: 139.93, lat: 37.49, owner: "ashina" },
+  { id: "yonezawa_t", name: "\u7C73\u6CA2\u306E\u5E02", kind: "\u753A", lon: 140.11, lat: 37.91, owner: "date" },
+  { id: "hiraizumi", name: "\u5E73\u6CC9", kind: "\u753A", lon: 141.11, lat: 38.99, owner: "kasai" },
+  { id: "kiryu", name: "\u6850\u751F", kind: "\u753A", lon: 139.33, lat: 36.4, owner: "yura" },
+  { id: "yuki_t", name: "\u7D50\u57CE\u306E\u5E02", kind: "\u753A", lon: 139.88, lat: 36.3, owner: "yuki" },
+  // ── 寺社
+  { id: "hieizan", name: "\u6BD4\u53E1\u5C71\u5EF6\u66A6\u5BFA", kind: "\u5BFA\u793E", lon: 135.84, lat: 35.07, owner: null },
+  { id: "koyasan", name: "\u9AD8\u91CE\u5C71", kind: "\u5BFA\u793E", lon: 135.585, lat: 34.213, owner: null },
+  { id: "kumano", name: "\u718A\u91CE\u4E09\u5C71", kind: "\u5BFA\u793E", lon: 135.775, lat: 33.84, owner: null },
+  { id: "kofukuji", name: "\u8208\u798F\u5BFA", kind: "\u5BFA\u793E", lon: 135.83, lat: 34.685, owner: null },
+  { id: "ashikaga_g", name: "\u8DB3\u5229\u5B66\u6821", kind: "\u5BFA\u793E", lon: 139.45, lat: 36.34, owner: null },
+  { id: "kashima", name: "\u9E7F\u5CF6\u795E\u5BAE", kind: "\u5BFA\u793E", lon: 140.63, lat: 35.97, owner: "satake" },
+  { id: "katori", name: "\u9999\u53D6\u795E\u5BAE", kind: "\u5BFA\u793E", lon: 140.53, lat: 35.89, owner: "chiba" },
+  { id: "nikko", name: "\u65E5\u5149\u5C71", kind: "\u5BFA\u793E", lon: 139.6, lat: 36.76, owner: "utsunomiya" },
+  { id: "chusonji", name: "\u4E2D\u5C0A\u5BFA", kind: "\u5BFA\u793E", lon: 141.1, lat: 39, owner: "kasai" },
+  { id: "haguro", name: "\u7FBD\u9ED2\u5C71", kind: "\u5BFA\u793E", lon: 139.97, lat: 38.7, owner: "daihoji" },
+  { id: "shiogama", name: "\u5869\u7AC8\u795E\u793E", kind: "\u5BFA\u793E", lon: 141.02, lat: 38.32, owner: "kokubun" },
+  { id: "tsurugaoka", name: "\u9DB4\u5CA1\u516B\u5E61\u5BAE", kind: "\u5BFA\u793E", lon: 139.556, lat: 35.326, owner: "hojo" },
+  { id: "mishima", name: "\u4E09\u5D8B\u5927\u793E", kind: "\u5BFA\u793E", lon: 138.92, lat: 35.12, owner: "hojo" },
+  { id: "suwa", name: "\u8ACF\u8A2A\u5927\u793E", kind: "\u5BFA\u793E", lon: 138.12, lat: 36, owner: "takeda" },
+  { id: "risshakuji", name: "\u7ACB\u77F3\u5BFA", kind: "\u5BFA\u793E", lon: 140.44, lat: 38.31, owner: "mogami" },
+  { id: "itsukushima", name: "\u53B3\u5CF6\u795E\u793E", kind: "\u5BFA\u793E", lon: 132.32, lat: 34.295, owner: "ouchi" },
+  { id: "izumo", name: "\u51FA\u96F2\u5927\u793E", kind: "\u5BFA\u793E", lon: 132.685, lat: 35.402, owner: "amago" },
+  { id: "dazaifu", name: "\u592A\u5BB0\u5E9C\u5929\u6E80\u5BAE", kind: "\u5BFA\u793E", lon: 130.535, lat: 33.52, owner: "ouchi" },
+  { id: "usa", name: "\u5B87\u4F50\u516B\u5E61\u5BAE", kind: "\u5BFA\u793E", lon: 131.375, lat: 33.525, owner: "otomo" },
+  /* ── 牧（馬の産地）
+     馬は買うものであり、育てるものでもある。奥州の糠部、信濃の望月と木曽、
+     甲斐の三崎。ここを押さえれば騎馬が揃う。 */
+  { id: "nukanobu", name: "\u7CE0\u90E8\u306E\u7267", kind: "\u7267", lon: 141.22, lat: 40.52, owner: "nanbu" },
+  { id: "mochizuki", name: "\u671B\u6708\u306E\u7267", kind: "\u7267", lon: 138.32, lat: 36.29, owner: "takeda" },
+  { id: "kiso_maki", name: "\u6728\u66FD\u306E\u7267", kind: "\u7267", lon: 137.69, lat: 35.84, owner: "takeda" },
+  { id: "misaki_maki", name: "\u4E09\u5D0E\u306E\u7267", kind: "\u7267", lon: 138.56, lat: 35.64, owner: "takeda" },
+  { id: "soma_maki", name: "\u76F8\u99AC\u306E\u91CE\u99AC", kind: "\u7267", lon: 140.96, lat: 37.8, owner: "soma" },
+  { id: "kobayashi_maki", name: "\u5C0F\u6797\u306E\u7267", kind: "\u7267", lon: 139.98, lat: 36.15, owner: "oda_h" },
+  { id: "toi_maki", name: "\u90FD\u4E95\u306E\u7267", kind: "\u7267", lon: 131.35, lat: 31.38, owner: "ito" },
+  /* ── 鉄砲鍛冶
+     天文十二年に種子島へ伝わり、堺・根来・国友で打ち始めた。
+     鉄砲は商人から買うほかないが、鍛冶を抱えれば自ら打てる。 */
+  { id: "kunitomo", name: "\u56FD\u53CB\u306E\u935B\u51B6", kind: "\u9244\u7832\u935B\u51B6", lon: 136.27, lat: 35.39, owner: "azai" },
+  { id: "negoro_ka", name: "\u6839\u6765\u306E\u935B\u51B6", kind: "\u9244\u7832\u935B\u51B6", lon: 135.29, lat: 34.28, owner: "saika" },
+  { id: "sakai_ka", name: "\u583A\u306E\u935B\u51B6", kind: "\u9244\u7832\u935B\u51B6", lon: 135.47, lat: 34.59, owner: "miyoshi" },
+  { id: "tanegashima", name: "\u7A2E\u5B50\u5CF6\u306E\u935B\u51B6", kind: "\u9244\u7832\u935B\u51B6", lon: 130.98, lat: 30.6, owner: "shimazu" },
+  { id: "hino_ka", name: "\u65E5\u91CE\u306E\u935B\u51B6", kind: "\u9244\u7832\u935B\u51B6", lon: 136.23, lat: 35.01, owner: "rokkaku" }
 ];
 
 // src/data/geo.js
@@ -5136,6 +5215,20 @@ var SPECIAL_OPTIONS = {
     { key: "\u652F\u63F4", cost: 700, desc: "\u8239\u3092\u4E0E\u3048\u3066\u6C34\u8ECD\u3068\u3059\u308B\u3002\u7DAD\u6301\u8CBB\u304C\u304B\u304B\u308B\u304C\u6D77\u8DEF\u3092\u63E1\u308B\u3002", gold: 60, comm: 0.34, troops: 320, anger: 0.1, upkeep: 80 },
     { key: "\u653E\u7F6E", cost: 0, desc: "\u6368\u3066\u7F6E\u304F\u3002\u6D77\u8CCA\u50CD\u304D\u304C\u5546\u3044\u3092\u59A8\u3052\u308B\u3002", gold: 0, comm: -0.12, anger: 0.2 },
     { key: "\u8A0E\u4F10", cost: 520, once: 700, desc: "\u6D77\u8CCA\u3092\u8A0E\u3064\u3002\u6D77\u8DEF\u306F\u9759\u307E\u308B\u304C\u8239\u624B\u3092\u5931\u3046\u3002", gold: 30, comm: 0.1, anger: 0.7 }
+  ],
+  /* 牧（GDD 6.3）。馬は買うものであり、育てるものでもある。
+     ここを押さえれば、城の蓄えに馬が積み増される。 */
+  \u7267: [
+    { key: "\u4FDD\u8B77", cost: 240, desc: "\u7267\u58EB\u306B\u4EFB\u305B\u308B\u3002\u6BCE\u5E74\u3044\u304F\u3089\u304B\u306E\u99AC\u304C\u5C4A\u304F\u3002", horse: 26, comm: 0.06, min: 0.08, anger: 0 },
+    { key: "\u652F\u63F4", cost: 660, desc: "\u98FC\u8449\u3068\u4EBA\u3092\u5165\u308C\u3066\u5897\u3084\u3059\u3002\u7DAD\u6301\u8CBB\u304C\u304B\u304B\u308B\u304C\u99AC\u304C\u63C3\u3046\u3002", horse: 62, comm: 0.1, anger: 0.1, upkeep: 70 },
+    { key: "\u63A5\u53CE", cost: 0, once: 500, desc: "\u99AC\u3092\u6B8B\u3089\u305A\u5FB4\u3059\u3002\u4ECA\u5E74\u306F\u591A\u3044\u304C\u3001\u7267\u306F\u8352\u308C\u308B\u3002", horse: 120, min: -0.3, anger: 0.7 }
+  ],
+  /* 鉄砲鍛冶（GDD 6.3）。天文十五年、鉄砲を打てるのは堺・根来・国友くらいである。
+     鍛冶を抱えれば、商人から買わずとも鉄砲が揃う。 */
+  \u9244\u7832\u935B\u51B6: [
+    { key: "\u4FDD\u8B77", cost: 300, desc: "\u935B\u51B6\u3092\u5E87\u8B77\u3059\u308B\u3002\u6BCE\u5E74\u3044\u304F\u3089\u304B\u306E\u9244\u7832\u304C\u5C4A\u304F\u3002", gun: 4, comm: 0.08, min: 0.06, anger: 0 },
+    { key: "\u652F\u63F4", cost: 820, desc: "\u9244\u3068\u785D\u77F3\u3092\u5165\u308C\u3066\u6253\u305F\u305B\u308B\u3002\u7DAD\u6301\u8CBB\u304C\u304B\u304B\u308B\u304C\u6570\u304C\u63C3\u3046\u3002", gun: 11, comm: 0.12, anger: 0.1, upkeep: 110 },
+    { key: "\u53EC\u3057\u62B1\u3048", cost: 0, once: 400, desc: "\u935B\u51B6\u3092\u57CE\u4E0B\u3078\u79FB\u3059\u3002\u6570\u306F\u5897\u3048\u308B\u304C\u3001\u91CC\u306E\u6280\u306F\u7D76\u3048\u308B\u3002", gun: 16, min: -0.35, anger: 0.75 }
   ],
   \u9271\u5C71: [
     { key: "\u4FDD\u8B77", cost: 200, desc: "\u5C71\u5E2B\u306B\u59D4\u306D\u308B\u3002\u7523\u51FA\u306F\u5C11\u306A\u3044\u304C\u672B\u9577\u304F\u7D9A\u304F\u3002", gold: 130, comm: 0.1, min: 0.05, anger: 0 },
@@ -7463,7 +7556,9 @@ var \u753A\u306E\u8272 = {
   \u753A: "#8A7A5E",
   \u5BFA\u793E: "#8C5A6E",
   \u5FCD\u3073\u306E\u91CC: "#5A6E5A",
-  \u9271\u5C71: "#6E6A5E"
+  \u9271\u5C71: "#6E6A5E",
+  \u7267: "#7A6A4A",
+  \u9244\u7832\u935B\u51B6: "#8C4A3A"
 };
 function drawTownMark(ctx, kind, x, y, r, col) {
   ctx.save();
@@ -7567,6 +7662,35 @@ function drawTownMark(ctx, kind, x, y, r, col) {
     ctx.lineTo(r * 0.06, r * 0.6);
     ctx.closePath();
     ctx.fill();
+    ctx.restore();
+  } else if (kind === "\u7267") {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.5, r * 0.9);
+    ctx.lineTo(-r * 0.32, -r * 0.1);
+    ctx.quadraticCurveTo(-r * 0.2, -r * 0.72, r * 0.34, -r * 0.78);
+    ctx.lineTo(r * 0.86, -r * 0.5);
+    ctx.quadraticCurveTo(r * 0.3, -r * 0.34, r * 0.22, r * 0.06);
+    ctx.lineTo(r * 0.14, r * 0.9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.arc(r * 0.3, -r * 0.54, r * 0.1, 0, 7);
+    ctx.fill();
+    ctx.restore();
+  } else if (kind === "\u9244\u7832\u935B\u51B6") {
+    ctx.save();
+    ctx.rotate(-0.28);
+    ctx.fillRect(-r * 0.95, -r * 0.16, r * 1.5, r * 0.22);
+    ctx.beginPath();
+    ctx.moveTo(r * 0.55, -r * 0.2);
+    ctx.lineTo(r * 0.95, -r * 0.08);
+    ctx.lineTo(r * 0.95, r * 0.16);
+    ctx.lineTo(r * 0.4, r * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(-r * 0.2, r * 0.02, r * 0.14, r * 0.42);
     ctx.restore();
   } else {
     ctx.beginPath();
@@ -7944,6 +8068,19 @@ function doSpecial(prev, townId, key) {
   st.anger = clamp((st.anger || 0) + (o.anger || 0) * 10, 0, 100);
   const lines = [{ text: `${t.name}\u3068\u306E\u95A2\u4FC2\uFF1A\u4E2D\u7ACB \u2192 ${key}\u3000${o.desc}` }];
   if (o.once) lines.push({ label: "\u91D1\u92AD", before: f.gold - o.once, after: f.gold, unit: "\u8CAB" });
+  if (o.horse || o.gun) {
+    const \u8FD1 = s2.castles.filter((c) => c.faction === s2.player).sort((a2, b2) => Math.hypot(a2.x - px(t.lon), a2.y - py(t.lat)) - Math.hypot(b2.x - px(t.lon), b2.y - py(t.lat)))[0];
+    if (\u8FD1) {
+      if (o.horse) {
+        lines.push({ label: `${\u8FD1.name} \u99AC`, before: \u8FD1.horse || 0, after: (\u8FD1.horse || 0) + o.horse, unit: "\u982D" });
+        \u8FD1.horse = (\u8FD1.horse || 0) + o.horse;
+      }
+      if (o.gun) {
+        lines.push({ label: `${\u8FD1.name} \u9244\u7832`, before: \u8FD1.gun || 0, after: (\u8FD1.gun || 0) + o.gun, unit: "\u633A" });
+        \u8FD1.gun = (\u8FD1.gun || 0) + o.gun;
+      }
+    }
+  }
   if (o.troops) {
     const near = s2.castles.filter((c) => c.faction === s2.player).sort((a, b) => Math.hypot(a.x - px(t.lon), a.y - py(t.lat)) - Math.hypot(b.x - px(t.lon), b.y - py(t.lat)))[0];
     if (near) {
@@ -9118,6 +9255,20 @@ function advanceMonth(prev, g) {
     q.fed = false;
   }
   if (s2.month === 4) {
+    for (const fid of Object.keys(s2.factions)) {
+      const \u99AC = specialBonus(s2, fid, "horse"), \u7832 = specialBonus(s2, fid, "gun");
+      if (!\u99AC && !\u7832) continue;
+      const \u57CE = s2.castles.filter((c) => c.faction === fid);
+      if (!\u57CE.length) continue;
+      const \u672C = \u57CE.find((c) => s2.generals.some((q) => q.lord && q.at === c.id && q.faction === fid)) || \u57CE[0];
+      if (\u99AC) \u672C.horse = (\u672C.horse || 0) + \u99AC;
+      if (\u7832) \u672C.gun = (\u672C.gun || 0) + \u7832;
+      if (fid === s2.player) {
+        events.push(`\u7267\u3068\u935B\u51B6\u3088\u308A${\u99AC ? `\u99AC${\u99AC}\u982D` : ""}${\u99AC && \u7832 ? "\u30FB" : ""}${\u7832 ? `\u9244\u7832${\u7832}\u633A` : ""}\u304C${\u672C.name}\u3078\u5C4A\u3044\u305F\u3002`);
+      }
+    }
+  }
+  if (s2.month === 4) {
     for (const q of s2.generals) q.age = (q.age || 30) + 1;
     for (const q of [...s2.generals]) {
       const a = q.age;
@@ -9705,8 +9856,10 @@ function genTerrain(seed) {
 }
 var hasRiver = () => RIVER.bot > RIVER.top + 4;
 var nearestOf = (list, x, y) => list.length ? list.reduce((a, o) => Math.hypot(o.x - x, o.y - y) < Math.hypot(a.x - x, a.y - y) ? o : a, list[0]) : null;
-function layoutField(totalMen) {
-  const w = clamp(Math.round(1045 * Math.sqrt(Math.max(600, totalMen) / 3e3)), 900, 5600);
+function layoutField(totalMen, \u968A\u6570) {
+  const \u968A = clamp(\u968A\u6570 || 2, 2, 24);
+  const \u968A\u5E83 = Math.sqrt(\u968A / 2);
+  const w = clamp(Math.round(1180 * Math.sqrt(Math.max(600, totalMen) / 3e3) * \u968A\u5E83), 1100, 7200);
   const h = Math.round(w * 0.667);
   FIELD.w = w;
   FIELD.h = h;
@@ -9757,6 +9910,12 @@ var TERRAIN = {
   gate: { speed: 0.01, fight: 1, cohesion: 0, sight: 300, horse: 0.1, charge: false, label: "\u57CE\u9580" },
   gateopen: { speed: 0.8, fight: 0.75, cohesion: -12, sight: 200, horse: 0.6, charge: false, label: "\u7834\u308C\u305F\u9580" },
   moat: { speed: 0.28, fight: 0.65, cohesion: -16, sight: 260, horse: 0.3, charge: false, label: "\u5800" },
+  // 空堀。水は無いが、切岸を登り降りせねばならない。水堀ほどではないが足は鈍る。
+  karabori: { speed: 0.42, fight: 0.78, cohesion: -10, sight: 260, horse: 0.45, charge: false, label: "\u7A7A\u5800" },
+  /* 峰の坂（GDD 9.3）。山城の外はこれである。
+     駆け上がる側の足は半ばに落ち、隊列も崩れる。守る側は上から見下ろす。 */
+  sakamichi: { speed: 0.52, fight: 0.86, cohesion: -8, sight: 300, horse: 0.5, charge: false, label: "\u5742" },
+  surface: { speed: 0.82, fight: 0.95, cohesion: -3, sight: 280, horse: 0.85, charge: true, label: "\u7DE9\u659C\u9762" },
   bridge2: { speed: 0.9, fight: 0.8, cohesion: -6, sight: 260, horse: 0.85, charge: false, label: "\u571F\u6A4B" },
   tower: { speed: 0.55, fight: 1.3, cohesion: -2, sight: 430, horse: 0.3, charge: false, label: "\u6AD3" },
   kuruwa: { speed: 0.92, fight: 1, cohesion: -3, sight: 210, horse: 0.75, charge: true, label: "\u66F2\u8F2A" },
@@ -10365,19 +10524,64 @@ function siegeUnit() {
   const side = Math.ceil(Math.sqrt(sq));
   return { w: side * SP, d: side * ROW };
 }
+var \u69CB\u3048\u306E\u4F8B\u5916 = {
+  odawara: "\u5E73\u5C71\u57CE",
+  // 相模。丘城だが城下を抱える大城
+  ishiyama: "\u5E73\u57CE",
+  // 石山本願寺。寺内町であって山城ではない
+  gassan: "\u5C71\u57CE",
+  kannonji: "\u5C71\u57CE",
+  nanao: "\u5C71\u57CE",
+  odani: "\u5C71\u57CE",
+  iwamura: "\u5C71\u57CE",
+  takato: "\u5C71\u57CE",
+  tsukiyama: "\u5C71\u57CE",
+  yoshida: "\u5C71\u57CE",
+  kasugayama: "\u5C71\u57CE",
+  inabayama: "\u5C71\u57CE",
+  takeda_i: "\u5C71\u57CE",
+  tsutsujigasaki: "\u5E73\u57CE",
+  nijo: "\u5E73\u57CE",
+  kiyosu: "\u5E73\u57CE",
+  nagoya: "\u5E73\u57CE",
+  sunpu: "\u5E73\u57CE",
+  edo: "\u5E73\u57CE",
+  kofu: "\u5E73\u57CE"
+};
+function \u57CE\u306E\u69CB\u3048(castle) {
+  if (\u69CB\u3048\u306E\u4F8B\u5916[castle.id]) return \u69CB\u3048\u306E\u4F8B\u5916[castle.id];
+  const n = castle.name || "";
+  if (/館$|御所$|居館|寺$|本願寺/.test(n)) return "\u5E73\u57CE";
+  if (/山城$|ヶ城$|嶽|岳|城山|山$/.test(n)) return "\u5C71\u57CE";
+  const d = castle.def || 50;
+  return d >= 66 ? "\u5C71\u57CE" : d >= 50 ? "\u5E73\u5C71\u57CE" : "\u5E73\u57CE";
+}
 function buildCastleMap(castle) {
   const U2 = siegeUnit();
   const k = 0.88 + castle.def / 420;
   const t = 10;
+  const \u7A2E = Math.abs(String(castle.id || castle.name || "x").split("").reduce((a2, c) => a2 * 33 + c.charCodeAt(0) | 0, 7));
+  const rnd = /* @__PURE__ */ ((z) => () => {
+    z = z + 1831565813 | 0;
+    let x = Math.imul(z ^ z >>> 15, 1 | z);
+    x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x;
+    return ((x ^ x >>> 14) >>> 0) / 4294967296;
+  })(\u7A2E >>> 0);
+  const \u69CB = \u57CE\u306E\u69CB\u3048(castle);
+  const \u7656 = \u69CB === "\u5C71\u57CE" ? { \u7E26\u6A2A: 0.42 + rnd() * 0.24, \u9580: -1, \u5800: 0.55, \u5E83\u3055: 0.86, \u7A7A\u5800: true } : \u69CB === "\u5E73\u5C71\u57CE" ? { \u7E26\u6A2A: 0.72 + rnd() * 0.3, \u9580: 0, \u5800: 0.9, \u5E83\u3055: 1, \u7A7A\u5800: false } : { \u7E26\u6A2A: 0.94 + rnd() * 0.26, \u9580: 1, \u5800: 1.35, \u5E83\u3055: 1.18, \u7A7A\u5800: false };
+  const \u6A2A\u9577 = rnd() < 0.5;
   const n = castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2;
   const names = n === 4 ? ["\u60E3\u69CB", "\u4E09\u306E\u4E38", "\u4E8C\u306E\u4E38", "\u672C\u4E38"] : n === 3 ? ["\u60E3\u69CB", "\u4E8C\u306E\u4E38", "\u672C\u4E38"] : ["\u4E8C\u306E\u4E38", "\u672C\u4E38"];
   const base = 380 + castle.def * 8;
-  const gn0 = castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2;
+  const gn0 = clamp((castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2) + \u7656.\u9580, 1, 4);
   const FACE = ["S", "N", "E", "W"];
   const GNAME = { S: "\u5927\u624B\u9580", N: "\u6426\u624B\u9580", E: "\u6771\u8107\u9580", W: "\u897F\u8107\u9580" };
   const INAME = { S: "\u8868\u9580", N: "\u88CF\u9580", E: "\u6771\u9580", W: "\u897F\u9580" };
-  const honW = U2.w * 1.2 * k, honH = U2.d * 2 * k;
-  const band = (U2.d * 1.5 + 74) * k;
+  const \u57FAW = U2.w * 1.2 * k * \u7656.\u5E83\u3055, \u57FAH = U2.d * 2 * k * \u7656.\u5E83\u3055;
+  const \u4E0B\u9650W = U2.w * 1.1, \u4E0B\u9650H = U2.d * 2.2;
+  const honW = Math.max(\u4E0B\u9650W, \u6A2A\u9577 ? \u57FAW / \u7656.\u7E26\u6A2A : \u57FAW * \u7656.\u7E26\u6A2A);
+  const honH = Math.max(\u4E0B\u9650H, \u6A2A\u9577 ? \u57FAH * \u7656.\u7E26\u6A2A : \u57FAH / \u7656.\u7E26\u6A2A);
+  const band = (U2.d * 1.5 + 74) * k * (0.86 + \u7656.\u5E83\u3055 * 0.2);
   const masu = 34 * k;
   const layers = names.map((name, i) => {
     const back = n - 1 - i;
@@ -10395,7 +10599,8 @@ function buildCastleMap(castle) {
         i: j,
         name: nm,
         key: `${name}${nm}`,
-        off: span * (0.34 - 0.1 * (j % 3)) * ((i + j) % 2 ? 1 : -1),
+        // 門の位置。城ごとに散らす。いつも同じ所に開いていては縄張りにならない。
+        off: span * (0.4 - 0.13 * ((j + \u7A2E) % 3)) * ((i + j + \u7A2E) % 2 ? 1 : -1),
         w,
         hp,
         max: hp,
@@ -10443,8 +10648,11 @@ function buildCastleMap(castle) {
     cy: 0,
     t,
     layers,
-    moat: { band: 38 * k },
+    moat: { band: 38 * k * \u7656.\u5800, \u7A7A\u5800: \u7656.\u7A7A\u5800 },
     n,
+    \u69CB,
+    \u6A2A\u9577,
+    \u5742: \u69CB === "\u5C71\u57CE" ? 1 : \u69CB === "\u5E73\u5C71\u57CE" ? 0.55 : 0,
     gates: layers.flatMap((l) => l.gates),
     fac,
     unit: U2
@@ -10453,8 +10661,9 @@ function buildCastleMap(castle) {
 function layoutCastleField(m) {
   const o = m.layers[0];
   const ext = { w: o.hw + m.t + o.masu + m.t + 8 + m.moat.band, h: o.hh + m.t + o.masu + m.t + 8 + m.moat.band };
-  FIELD.w = Math.round((ext.w + Math.max(m.unit.d * 2.4 + 160, ext.w * 0.6)) * 2);
-  FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 2.4 + 160, ext.h * 0.6)) * 2);
+  const \u4F59 = m.\u5742 >= 1 ? 1.15 : m.\u5742 > 0 ? 0.95 : 0.82;
+  FIELD.w = Math.round((ext.w + Math.max(m.unit.d * 3.4 + 240, ext.w * \u4F59)) * 2);
+  FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 3.4 + 240, ext.h * \u4F59)) * 2);
   m.cx = FIELD.w / 2;
   m.cy = FIELD.h / 2;
   for (const f of m.fac) {
@@ -10513,7 +10722,11 @@ function castleTerrainAt(x, y) {
       const a = axisOf(o, g), { u, v } = toUV(a, dx, dy);
       if (v > 0 && Math.abs(u - gateOpenU(g)) <= g.w * 0.8) return "bridge";
     }
-    return "moat";
+    return m.moat.\u7A7A\u5800 ? "karabori" : "moat";
+  }
+  if (m.\u5742 > 0) {
+    const b2 = o.hw + t + out + band;
+    if (!inRect(dx, dy, b2, o.hh + t + out + band)) return m.\u5742 >= 1 ? "sakamichi" : "surface";
   }
   const inner = m.layers[m.layers.length - 1];
   if (inRect(dx, dy, inner.hw, inner.hh)) return "honmaru";
@@ -11805,18 +12018,56 @@ function drawCastleTerrain(ctx, m) {
     ctx.fillStyle = \u8272;
     ctx.fillRect(\u5800\u5916.x - r0, \u5800\u5916.y - r0, \u5800\u5916.w + r0 * 2, \u5800\u5916.h + r0 * 2);
   };
-  ctx.fillStyle = "#C9C3A4";
-  ctx.fillRect(\u5800\u5916.x - 5, \u5800\u5916.y - 5, \u5800\u5916.w + 10, \u5800\u5916.h + 10);
-  ctx.fillStyle = "#9FC0CE";
-  ctx.fillRect(\u5800\u5916.x, \u5800\u5916.y, \u5800\u5916.w, \u5800\u5916.h);
-  ctx.fillStyle = "#7FA9BE";
-  ctx.fillRect(\u5800\u5916.x + band * 0.24, \u5800\u5916.y + band * 0.24, \u5800\u5916.w - band * 0.48, \u5800\u5916.h - band * 0.48);
-  ctx.fillStyle = "#6B97AF";
-  ctx.fillRect(\u5800\u5916.x + band * 0.42, \u5800\u5916.y + band * 0.42, \u5800\u5916.w - band * 0.84, \u5800\u5916.h - band * 0.84);
-  ctx.strokeStyle = "rgba(255,255,255,0.24)";
-  ctx.lineWidth = 1;
-  for (const k of [0.32, 0.62]) {
-    ctx.strokeRect(\u5800\u5916.x + band * k, \u5800\u5916.y + band * k, \u5800\u5916.w - band * k * 2, \u5800\u5916.h - band * k * 2);
+  if (m.\u5742 > 0) {
+    const \u6BB5 = m.\u5742 >= 1 ? 6 : 3;
+    for (let i = \u6BB5; i >= 1; i--) {
+      const e = i * (m.\u5742 >= 1 ? 108 : 74);
+      ctx.fillStyle = m.\u5742 >= 1 ? `rgba(150,166,110,${0.1 + (\u6BB5 - i) * 0.05})` : `rgba(160,174,120,${0.07 + (\u6BB5 - i) * 0.035})`;
+      ctx.fillRect(
+        \u5800\u5916.x - band - e,
+        \u5800\u5916.y - band - e,
+        \u5800\u5916.w + (band + e) * 2,
+        \u5800\u5916.h + (band + e) * 2
+      );
+      ctx.strokeStyle = "rgba(110,126,80,0.26)";
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(
+        \u5800\u5916.x - band - e,
+        \u5800\u5916.y - band - e,
+        \u5800\u5916.w + (band + e) * 2,
+        \u5800\u5916.h + (band + e) * 2
+      );
+    }
+    ctx.font = "14px 'Hiragino Mincho ProN',serif";
+    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = 3;
+    const \u540D = m.\u5742 >= 1 ? "\u5CF0\u306E\u5742" : "\u7DE9\u3044\u5742";
+    ctx.strokeText(\u540D, \u5800\u5916.x - band - 60, \u5800\u5916.y - band - 20);
+    ctx.fillStyle = "rgba(74,92,56,0.95)";
+    ctx.fillText(\u540D, \u5800\u5916.x - band - 60, \u5800\u5916.y - band - 20);
+  }
+  if (m.moat.\u7A7A\u5800) {
+    ctx.fillStyle = "#B7A98A";
+    ctx.fillRect(\u5800\u5916.x, \u5800\u5916.y, \u5800\u5916.w, \u5800\u5916.h);
+    ctx.fillStyle = "#9A8C6E";
+    ctx.fillRect(\u5800\u5916.x + band * 0.3, \u5800\u5916.y + band * 0.3, \u5800\u5916.w - band * 0.6, \u5800\u5916.h - band * 0.6);
+    ctx.strokeStyle = "rgba(90,80,58,0.5)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(\u5800\u5916.x + 0.5, \u5800\u5916.y + 0.5, \u5800\u5916.w - 1, \u5800\u5916.h - 1);
+  } else {
+    ctx.fillStyle = "#C9C3A4";
+    ctx.fillRect(\u5800\u5916.x - 5, \u5800\u5916.y - 5, \u5800\u5916.w + 10, \u5800\u5916.h + 10);
+    ctx.fillStyle = "#9FC0CE";
+    ctx.fillRect(\u5800\u5916.x, \u5800\u5916.y, \u5800\u5916.w, \u5800\u5916.h);
+    ctx.fillStyle = "#7FA9BE";
+    ctx.fillRect(\u5800\u5916.x + band * 0.24, \u5800\u5916.y + band * 0.24, \u5800\u5916.w - band * 0.48, \u5800\u5916.h - band * 0.48);
+    ctx.fillStyle = "#6B97AF";
+    ctx.fillRect(\u5800\u5916.x + band * 0.42, \u5800\u5916.y + band * 0.42, \u5800\u5916.w - band * 0.84, \u5800\u5916.h - band * 0.84);
+    ctx.strokeStyle = "rgba(255,255,255,0.24)";
+    ctx.lineWidth = 1;
+    for (const k of [0.32, 0.62]) {
+      ctx.strokeRect(\u5800\u5916.x + band * k, \u5800\u5916.y + band * k, \u5800\u5916.w - band * k * 2, \u5800\u5916.h - band * k * 2);
+    }
   }
   ctx.fillStyle = "#CBD8AC";
   ctx.fillRect(\u5800\u5185.x, \u5800\u5185.y, \u5800\u5185.w, \u5800\u5185.h);
@@ -11951,8 +12202,12 @@ function drawCastleTerrain(ctx, m) {
   ctx.strokeStyle = "rgba(255,255,255,0.8)";
   ctx.lineWidth = 3;
   ctx.strokeText("\u5800", cx - o.hw - t - o.masu - band / 2 - 7, cy);
-  ctx.fillStyle = "rgba(46,66,80,0.95)";
-  ctx.fillText("\u5800", cx - o.hw - t - o.masu - band / 2 - 7, cy);
+  ctx.fillStyle = m.moat.\u7A7A\u5800 ? "rgba(84,72,50,0.95)" : "rgba(46,66,80,0.95)";
+  ctx.fillText(
+    m.moat.\u7A7A\u5800 ? "\u7A7A\u5800" : "\u5800",
+    cx - o.hw - t - o.masu - band / 2 - (m.moat.\u7A7A\u5800 ? 14 : 7),
+    cy
+  );
 }
 function ownZone(b) {
   const face = b.face || "S", far = !!b.myFar;
@@ -15035,9 +15290,10 @@ var \u6D77\u306E\u72B6 = {
   // 潮の向き（radian）
   seed: 1
 };
-function layoutSea(seed, men) {
+function layoutSea(seed, men, \u8258) {
   const rnd = makeRng(seed >>> 0);
-  const w = clamp(Math.round(760 * Math.sqrt(Math.max(600, men || 3e3) / 3e3)), 700, 1500);
+  const n = clamp(\u8258 || Math.ceil(Math.max(600, men || 3e3) / 120), 8, 200);
+  const w = clamp(Math.round(620 + Math.sqrt(n) * 155), 800, 2600);
   SEA.w = w;
   SEA.h = Math.round(w * 0.68);
   \u6D77\u306E\u72B6.seed = seed >>> 0;
@@ -16052,7 +16308,8 @@ function \u5206\u3051\u308B(\u5185\u8A33, \u5272) {
   return \u51FA.filter((n) => n.atake + n.seki + n.kobaya > 0);
 }
 function \u6D77\u6226\u3092\u4ED5\u7ACB\u3066\u308B(s2, army, inter, \u5730\u540D2, pColor, eColor, pName, eName) {
-  layoutSea((army.id || "x").split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, army.men);
+  const \u7DCF\u8258 = (inter.mine.\u8258 || 0) + (inter.foe.\u8258 || 0);
+  layoutSea((army.id || "x").split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, army.men, \u7DCF\u8258);
   const \u5C06 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
   const \u982D = \u5C06.length ? \u5C06 : [{ id: "x", name: "\u8239\u624B\u8846", lead: 55, valor: 55, wit: 55 }];
   const P = [], E = [];
@@ -17253,7 +17510,9 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const playerIsAtk = army.faction === g.player;
     const defLocal = foe ? Math.max(0, foe.local) : Math.max(0, dest.local - Math.round(minGarrison(dest) * 0.4));
     const aidMen = foe ? 0 : g.armies.filter((a) => a.id !== army.id && a.at === dest.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))).reduce((t, a) => t + a.men, 0);
-    layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0));
+    const \u51FA\u308B\u5C06 = (army.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+    const \u968A\u6570 = Math.max(2, \u51FA\u308B\u5C06.length + Math.max(1, defGens.length));
+    layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0), \u968A\u6570);
     const face = attackFace(army.from, dest.id);
     const lineup = (isAtk, i, n) => {
       const near = 0.14, far = 0.86;
@@ -18322,7 +18581,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const \u53EF = \u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(g, t, g.player);
       const opts = SPECIAL_OPTIONS[t.kind] || [];
       const \u96A3 = \u53EF.\u96A3;
-      return /* @__PURE__ */ React6.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(() => setTownSel(null)) }, /* @__PURE__ */ React6.createElement("div", { className: "card", style: { maxWidth: 430 } }, /* @__PURE__ */ React6.createElement("div", { style: { display: "flex", alignItems: "center", gap: 9, marginBottom: 6 } }, /* @__PURE__ */ React6.createElement("span", { className: "dot", style: { background: \u69D8.\u8272 } }), /* @__PURE__ */ React6.createElement("span", { className: "mn", style: { fontSize: 21 } }, t.name), /* @__PURE__ */ React6.createElement("span", { className: "pill", style: { background: \u69D8.\u8272 } }, t.kind)), /* @__PURE__ */ React6.createElement("div", { className: "row" }, /* @__PURE__ */ React6.createElement("span", null, "\u3044\u307E\u306E\u95A2\u4FC2"), /* @__PURE__ */ React6.createElement("span", { className: "v" }, \u69D8.\u8ABC ? `${\u69D8.\u4E3B\u540D}\u3068${\u69D8.\u8ABC.state}` : "\u4E2D\u7ACB")), \u69D8.st.anger > 0 && /* @__PURE__ */ React6.createElement("div", { className: "row" }, /* @__PURE__ */ React6.createElement("span", null, "\u53CD\u767A"), /* @__PURE__ */ React6.createElement("span", { className: "v" }, Math.round(\u69D8.st.anger))), \u96A3 && /* @__PURE__ */ React6.createElement("div", { className: "row" }, /* @__PURE__ */ React6.createElement("span", null, "\u3044\u3061\u3070\u3093\u8FD1\u3044\u57CE"), /* @__PURE__ */ React6.createElement("span", { className: "v" }, \u96A3.name, "\uFF08", g.factions[\u96A3.faction].name, "\uFF09")), /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginTop: 8 } }, t.kind === "\u6E2F" && "\u8239\u3092\u51FA\u3057\u3001\u5175\u7CE7\u3092\u904B\u3076\u3002\u6D77\u8DEF\u3092\u6E21\u308B\u8ECD\u306E\u652F\u3048\u3068\u306A\u308B\u3002", t.kind === "\u6C34\u8ECD\u8846" && "\u6D77\u306B\u751F\u304D\u308B\u8005\u305F\u3061\u3002\u62B1\u3048\u308C\u3070\u8ECD\u8239\u304C\u5897\u3048\u3001\u6C34\u4E3B\u306E\u6280\u91CF\u3082\u4E0A\u304C\u308B\u3002", t.kind === "\u5546\u696D\u90FD\u5E02" && "\u8AF8\u56FD\u306E\u54C1\u3068\u91D1\u306E\u96C6\u307E\u308B\u6240\u3002\u62BC\u3055\u3048\u308C\u3070\u91D1\u304C\u56DE\u308B\u3002", t.kind === "\u753A" && "\u5E02\u306E\u7ACB\u3064\u5728\u6240\u3002\u5546\u3044\u304C\u308F\u305A\u304B\u306B\u4F38\u3073\u308B\u3002", t.kind === "\u5BFA\u793E" && "\u9580\u5F92\u3068\u50E7\u5175\u3092\u62B1\u3048\u308B\u3002\u6C11\u306E\u5FC3\u3082\u3053\u3053\u306B\u5BC4\u308B\u3002", t.kind === "\u5FCD\u3073\u306E\u91CC" && "\u4EBA\u3092\u6F5C\u307E\u305B\u3001\u6575\u60C5\u3092\u63A2\u308B\u3002\u8ABF\u7565\u306E\u52A9\u3051\u3068\u306A\u308B\u3002", t.kind === "\u9271\u5C71" && "\u91D1\u9280\u3092\u6398\u308B\u3002\u6398\u308C\u3070\u6398\u308B\u307B\u3069\u91D1\u306B\u306A\u308B\u3002"), /* @__PURE__ */ React6.createElement("div", { className: "sec" }, "\u3067\u304D\u308B\u3053\u3068"), opts.map((o) => /* @__PURE__ */ React6.createElement("div", { key: o.key, style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8 } }, /* @__PURE__ */ React6.createElement("b", { style: { color: U.text } }, o.key), o.cost ? `\uFF08${o.cost}\u8CAB\uFF09` : o.once ? `\uFF08${o.once}\u8CAB\u3092\u5F97\u308B\uFF09` : "", o.desc)), /* @__PURE__ */ React6.createElement("div", { style: {
+      return /* @__PURE__ */ React6.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(() => setTownSel(null)) }, /* @__PURE__ */ React6.createElement("div", { className: "card", style: { maxWidth: 430 } }, /* @__PURE__ */ React6.createElement("div", { style: { display: "flex", alignItems: "center", gap: 9, marginBottom: 6 } }, /* @__PURE__ */ React6.createElement("span", { className: "dot", style: { background: \u69D8.\u8272 } }), /* @__PURE__ */ React6.createElement("span", { className: "mn", style: { fontSize: 21 } }, t.name), /* @__PURE__ */ React6.createElement("span", { className: "pill", style: { background: \u69D8.\u8272 } }, t.kind)), /* @__PURE__ */ React6.createElement("div", { className: "row" }, /* @__PURE__ */ React6.createElement("span", null, "\u3044\u307E\u306E\u95A2\u4FC2"), /* @__PURE__ */ React6.createElement("span", { className: "v" }, \u69D8.\u8ABC ? `${\u69D8.\u4E3B\u540D}\u3068${\u69D8.\u8ABC.state}` : "\u4E2D\u7ACB")), \u69D8.st.anger > 0 && /* @__PURE__ */ React6.createElement("div", { className: "row" }, /* @__PURE__ */ React6.createElement("span", null, "\u53CD\u767A"), /* @__PURE__ */ React6.createElement("span", { className: "v" }, Math.round(\u69D8.st.anger))), \u96A3 && /* @__PURE__ */ React6.createElement("div", { className: "row" }, /* @__PURE__ */ React6.createElement("span", null, "\u3044\u3061\u3070\u3093\u8FD1\u3044\u57CE"), /* @__PURE__ */ React6.createElement("span", { className: "v" }, \u96A3.name, "\uFF08", g.factions[\u96A3.faction].name, "\uFF09")), /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginTop: 8 } }, t.kind === "\u6E2F" && "\u8239\u3092\u51FA\u3057\u3001\u5175\u7CE7\u3092\u904B\u3076\u3002\u6D77\u8DEF\u3092\u6E21\u308B\u8ECD\u306E\u652F\u3048\u3068\u306A\u308B\u3002", t.kind === "\u6C34\u8ECD\u8846" && "\u6D77\u306B\u751F\u304D\u308B\u8005\u305F\u3061\u3002\u62B1\u3048\u308C\u3070\u8ECD\u8239\u304C\u5897\u3048\u3001\u6C34\u4E3B\u306E\u6280\u91CF\u3082\u4E0A\u304C\u308B\u3002", t.kind === "\u5546\u696D\u90FD\u5E02" && "\u8AF8\u56FD\u306E\u54C1\u3068\u91D1\u306E\u96C6\u307E\u308B\u6240\u3002\u62BC\u3055\u3048\u308C\u3070\u91D1\u304C\u56DE\u308B\u3002", t.kind === "\u753A" && "\u5E02\u306E\u7ACB\u3064\u5728\u6240\u3002\u5546\u3044\u304C\u308F\u305A\u304B\u306B\u4F38\u3073\u308B\u3002", t.kind === "\u5BFA\u793E" && "\u9580\u5F92\u3068\u50E7\u5175\u3092\u62B1\u3048\u308B\u3002\u6C11\u306E\u5FC3\u3082\u3053\u3053\u306B\u5BC4\u308B\u3002", t.kind === "\u5FCD\u3073\u306E\u91CC" && "\u4EBA\u3092\u6F5C\u307E\u305B\u3001\u6575\u60C5\u3092\u63A2\u308B\u3002\u8ABF\u7565\u306E\u52A9\u3051\u3068\u306A\u308B\u3002", t.kind === "\u9271\u5C71" && "\u91D1\u9280\u3092\u6398\u308B\u3002\u6398\u308C\u3070\u6398\u308B\u307B\u3069\u91D1\u306B\u306A\u308B\u3002", t.kind === "\u7267" && "\u99AC\u3092\u80B2\u3066\u308B\u6240\u3002\u62BC\u3055\u3048\u308C\u3070\u6BCE\u5E74\u3001\u6625\u306B\u99AC\u304C\u5C4A\u304F\u3002\u9A0E\u99AC\u3092\u63C3\u3048\u308B\u9053\u3067\u3042\u308B\u3002", t.kind === "\u9244\u7832\u935B\u51B6" && "\u9244\u7832\u3092\u6253\u3064\u91CC\u3002\u62B1\u3048\u308C\u3070\u6BCE\u5E74\u3001\u6625\u306B\u9244\u7832\u304C\u5C4A\u304F\u3002\u5546\u4EBA\u304B\u3089\u8CB7\u308F\u305A\u306B\u6E08\u3080\u3002"), /* @__PURE__ */ React6.createElement("div", { className: "sec" }, "\u3067\u304D\u308B\u3053\u3068"), opts.map((o) => /* @__PURE__ */ React6.createElement("div", { key: o.key, style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8 } }, /* @__PURE__ */ React6.createElement("b", { style: { color: U.text } }, o.key), o.cost ? `\uFF08${o.cost}\u8CAB\uFF09` : o.once ? `\uFF08${o.once}\u8CAB\u3092\u5F97\u308B\uFF09` : "", o.desc)), /* @__PURE__ */ React6.createElement("div", { style: {
         marginTop: 10,
         padding: "9px 11px",
         fontSize: 12,

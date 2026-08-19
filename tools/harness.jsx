@@ -17,6 +17,7 @@ export { navalPower, isCoastal, seaInterception, resolveSeaBattle, 湊の主, �
 export { TOWNS } from "../src/data/castles.js";
 export { 特殊勢力の可否, drawTownMark, 町の様子 } from "../src/core/town.js";
 export { FACTIONS } from "../src/data/factions.js";
+export { CASTLES } from "../src/data/castles.js";
 export { px, py } from "../src/data/geo.js";
 export { roadBetween } from "../src/core/paths.js";
 export { findPath } from "../src/core/paths.js";
@@ -32,7 +33,7 @@ export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 合戦の中身を直に動かすための取り出し口。
 // 画面を通すと、戦況の記録が流れて肝心の一行を取り逃がす。
 // 隊がどの門を受け持ち、何の下知を受けているかは、ここから直に見るほかない。
-export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, gatePos } from "../src/battle/castleMap.js";
+export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, gatePos, 城の構え } from "../src/battle/castleMap.js";
 export { layoutField, setFieldSeed, FIELD, terrainAt, TERRAIN } from "../src/battle/field.js";
 export { makeCorps, corpsMen, placeSquads, issueOrder, 退かせる, 退き先 } from "../src/battle/corps.js";
 export { createBattle, stepBattle } from "../src/battle/engine.js";

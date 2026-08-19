@@ -62,6 +62,7 @@ export function 特殊勢力の可否(g, t, fid) {
 export const 町の色 = {
   港: "#3C6E8C", 水軍衆: "#2F5D8C", 商業都市: "#B08A3A", 町: "#8A7A5E",
   寺社: "#8C5A6E", 忍びの里: "#5A6E5A", 鉱山: "#6E6A5E",
+  牧: "#7A6A4A", 鉄砲鍛冶: "#8C4A3A",
 };
 
 export function drawTownMark(ctx, kind, x, y, r, col) {
@@ -134,6 +135,29 @@ export function drawTownMark(ctx, kind, x, y, r, col) {
     ctx.arc(-r * 0.18, r * 0.12, r * 0.24, Math.PI, 0);
     ctx.lineTo(r * 0.06, r * 0.6);
     ctx.closePath(); ctx.fill();
+    ctx.restore();
+  } else if (kind === "牧") {
+    // 馬の首。牧は馬を育てる所である
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.5, r * 0.9);
+    ctx.lineTo(-r * 0.32, -r * 0.1);
+    ctx.quadraticCurveTo(-r * 0.2, -r * 0.72, r * 0.34, -r * 0.78);
+    ctx.lineTo(r * 0.86, -r * 0.5);
+    ctx.quadraticCurveTo(r * 0.3, -r * 0.34, r * 0.22, r * 0.06);
+    ctx.lineTo(r * 0.14, r * 0.9);
+    ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath(); ctx.arc(r * 0.3, -r * 0.54, r * 0.1, 0, 7); ctx.fill();
+    ctx.restore();
+  } else if (kind === "鉄砲鍛冶") {
+    // 鉄砲。銃身と台木
+    ctx.save(); ctx.rotate(-0.28);
+    ctx.fillRect(-r * 0.95, -r * 0.16, r * 1.5, r * 0.22);
+    ctx.beginPath();
+    ctx.moveTo(r * 0.55, -r * 0.2); ctx.lineTo(r * 0.95, -r * 0.08);
+    ctx.lineTo(r * 0.95, r * 0.16); ctx.lineTo(r * 0.4, r * 0.3);
+    ctx.closePath(); ctx.fill();
+    ctx.fillRect(-r * 0.2, r * 0.02, r * 0.14, r * 0.42);   // 火挟み
     ctx.restore();
   } else {
     ctx.beginPath(); ctx.arc(0, 0, r * 0.7, 0, 7); ctx.fill();
