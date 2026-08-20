@@ -451,8 +451,8 @@ var ROADS = [
   ["shurijo", "uchijo", 530, "\u6D77\u8DEF"],
   ["shurijo", "izumi", 560, "\u6D77\u8DEF"]
 ];
-var ROAD_SPEED = { \u8857\u9053: 1, \u5C71\u9053: 0.42, \u96E3\u6240: 0.18, \u6E21\u6CB3: 0.7, \u6D77\u8DEF: 0.62 };
-var MARCH_PER_MONTH = 46;
+var ROAD_SPEED = { \u8857\u9053: 1, \u5C71\u9053: 0.55, \u96E3\u6240: 0.35, \u6E21\u6CB3: 0.85, \u6D77\u8DEF: 0.95 };
+var MARCH_PER_MONTH = 130;
 var MOB_POLICY = [
   { name: "\u5E73\u6642", per: 300, upkeep: 0.9 },
   { name: "\u901A\u5E38", per: 380, upkeep: 1 },

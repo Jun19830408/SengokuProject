@@ -39,8 +39,15 @@ const 通れる = (s, fid) => (id) => {
   const 新 = H.findPathVia("koriyama_a", "gassan", 通れる(s, "mori"));
   確('通れる所だけを通れば、直の道が見つかる', !!新 && 新.length === 2,
     新 ? 新.map(名).join("→") : "（なし）");
-  確('その道のりは難所ぶんだけ長い', H.marchMonthsOf(新) >= 6,
-    `${H.marchMonthsOf(新)}か月（難所は足が〇.一八）`);
+  /* 道のりは難所ぶんだけ長いが、法外ではないこと。
+
+     もとは十一か月と出ていた。八十九kmの峠道――歩けば一日で着く道のりに、
+     軍勢が一年近くかける道理はない。一月に進める行程を四十六kmから百三十kmに
+     改めた（一日一.五kmでは、荷を負うた老人にも追い越される）。 */
+  確('峠越えのぶん、街道より長くかかる', H.marchMonthsOf(新) >= 2,
+    `${H.marchMonthsOf(新)}か月`);
+  確('とはいえ法外な月数にはならない', H.marchMonthsOf(新) <= 4,
+    `八十九kmの難所で${H.marchMonthsOf(新)}か月`);
 }
 
 /* --------------- 二、全国に同じところが幾つあったか */
@@ -96,6 +103,51 @@ const 通れる = (s, fid) => (id) => {
   const 隣 = H.findPathVia("nagoya", "kiyosu", 通れる(s, "oda"));
   確('隣の城へは、これまで通り道が見つかる', !!隣 && 隣.length === 2,
     隣 ? 隣.length - 1 + "区間" : "（なし）");
+}
+
+/* --------------- 四、全国の行軍日数が法外でないこと
+
+   一月に四十六kmしか進めぬ勘定だったので、十一か月・十二か月・二十か月という
+   道のりが二十本以上あった。街道の長さは実際の距離（km）で入れてあるのだから、
+   歩いて数日の道に一年近くかかるのは、どう見ても釣り合わない。 */
+{
+  const s = H.initState('oda');
+  const 城 = {};
+  for (const c of s.castles) 城[c.id] = c;
+  const 月 = [];
+  for (const r of H.ROADS) {
+    if (!城[r[0]] || !城[r[1]]) continue;
+    月.push({ m: H.marchMonthsOf([r[0], r[1]]), km: r[2], 種: r[3],
+      名: `${城[r[0]].name}→${城[r[1]].name}` });
+  }
+  const 長い = 月.filter((x) => x.m > 5).sort((a, b) => b.m - a.m);
+  確('一年近くかかる街道は無い', 長い.length === 0,
+    長い.length ? 長い.slice(0, 4).map((x) => `${x.名}${x.m}か月`).join('／') : `${月.length}本を検めた`);
+  const 一 = 月.filter((x) => x.m === 1).length;
+  確('隣り合う城のほとんどは一月で着く', 一 > 月.length * 0.85,
+    `${一}／${月.length}本`);
+  確('それでも遠近の差は残る', 月.some((x) => x.m >= 2),
+    `二月以上かかる街道 ${月.filter((x) => x.m >= 2).length}本`);
+
+  /* 街道の長さが実距離（km）であること。単位が狂うと、すべての勘定が狂う。 */
+  const km = (a, b) => {
+    const R = 6371, r = Math.PI / 180;
+    return Math.hypot((b.lat - a.lat) * r, (b.lon - a.lon) * r
+      * Math.cos((a.lat + b.lat) / 2 * r)) * R;
+  };
+  const 比 = [];
+  for (const r of H.ROADS) {
+    if (!城[r[0]] || !城[r[1]]) continue;
+    const d = km(城[r[0]], 城[r[1]]);
+    if (d > 5) 比.push(r[2] / d);
+  }
+  比.sort((a, b) => a - b);
+  const 中 = 比[比.length >> 1];
+  確('街道の長さは実際の距離（km）である', 中 > 0.85 && 中 < 1.2,
+    `長さ÷実km の中央値 ${中.toFixed(2)}`);
+  確('一月に進める行程が、人の歩みとして無理のない数である',
+    H.MARCH_PER_MONTH >= 90 && H.MARCH_PER_MONTH <= 260,
+    `一月 ${H.MARCH_PER_MONTH}km＝一日 ${(H.MARCH_PER_MONTH / 30).toFixed(1)}km`);
 }
 
 console.log('');
