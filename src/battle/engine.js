@@ -1,7 +1,7 @@
 import { battleAI } from "./ai.js";
 import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inRect, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads } from "./corps.js";
-import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt } from "./field.js";
+import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 踏み込んだ地, 隊の地 } from "./field.js";
 import { clamp } from "../core/util.js";
 import { px, py } from "../data/geo.js";
 import { 退き先 } from "./corps.js";
@@ -54,12 +54,21 @@ export function stepBattle(b, dt) {
   if (b.aiClock <= 0) { battleAI(b); b.aiClock = 0.6; }
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
 
+  /* この刻、どの隊・どの組がどの地にかかっているかを、はじめに一度だけ判ずる。
+     一点で測るのではなく、踏み場の大半がその地であるときに限る（field.js を参照）。
+     以降の足・疲れ・戦う力・視界は、すべてこの判じを使う。 */
+  for (const c of alive) {
+    for (const q of c.squads) q.地 = 踏み込んだ地(q.x, q.y);
+    c.地芯 = 踏み込んだ地(c.x, c.y);
+    c.地 = 隊の地(c);
+  }
+
   for (const c of alive) {
     const foes = alive.filter((o) => o.side !== c.side);
     let seen = false;
     for (const f of foes) {
       for (const q of f.squads) {
-        const t = TERRAIN[terrainAt(c.x, c.y)];
+        const t = TERRAIN[c.地];
         const sight = (c.ambush && !c.revealed ? 95 : t.sight) * WEATHER[b.weather].sight * fieldScale();
         if (Math.hypot(q.x - c.x, q.y - c.y) < sight) { seen = true; break; }
       }
@@ -179,7 +188,7 @@ export function stepBattle(b, dt) {
     }
     const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy);
     if (dist > 6 && !HOLD && !(c.ambush && !c.revealed)) {
-      const terr = TERRAIN[terrainAt(c.x, c.y)];
+      const terr = TERRAIN[c.地];
       const avgSpeed = c.squads.length ? c.squads.reduce((s, q) => s + ARM_STATS[q.type].speed * q.men, 0) / Math.max(1, corpsMen(c)) : 30;
       const engaged = c.squads.some((q) => q.engaged);
       const W = WEATHER[b.weather];
@@ -269,7 +278,7 @@ export function stepBattle(b, dt) {
       if (b.fx.length < 200 && (c.side === "P" || c.seen)) {
         for (const q of c.squads) {
           if (q.men <= 0) continue;
-          const t2 = terrainAt(q.x, q.y);
+          const t2 = q.地;
           if (t2 !== "ford" && t2 !== "deep" && t2 !== "moat") continue;
           if (Math.random() > dt * (t2 === "deep" ? 2.4 : 1.8)) continue;
           b.fx.push({ k: "splash", x: q.x + (Math.random() - 0.5) * 12, y: q.y + (Math.random() - 0.5) * 8,
@@ -346,7 +355,7 @@ export function stepBattle(b, dt) {
         else { targetX = nx3.x; targetY = nx3.y; }
       }
       const qd = Math.hypot(targetX - q.x, targetY - q.y);
-      const terr = TERRAIN[terrainAt(q.x, q.y)];
+      const terr = TERRAIN[q.地];
       /* 退いている隊の組は、噛み合っていても動く。
          そうでないと、組は動かず、隊の代表点は組の重心へ引き戻され、
          撤退を命じても一歩も退けない（corps.js の退かせる を参照）。 */
@@ -646,7 +655,7 @@ export function stepBattle(b, dt) {
       q.foe = melee ? { x: melee.e.x, y: melee.e.y, d: mdist } : null;
       q.link = null;
       if (!melee) continue;
-      const terr = TERRAIN[terrainAt(q.x, q.y)];
+      const terr = TERRAIN[q.地];
       if (mdist < 22) {
         /* 退いている隊は組み合わない。背を向けて離れていく。
            相手を掴み直すこともしないし、相手からも掴まれない。
@@ -689,7 +698,7 @@ export function stepBattle(b, dt) {
           * terr.fight * flank * charge * push * guard * (1 - c.fatigue / 260) * dt,
           flank, c.gen.valor * (c.chargeT > 0 ? 1.2 : 1));
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
-        if (melee.f.seen || mdist < TERRAIN[terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
+        if (melee.f.seen || mdist < TERRAIN[melee.e.地 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
           q.cool = st.rof;
           q.aim = { x: melee.e.x, y: melee.e.y, t: b.t };   // 狙っている相手
           if (b.fx.length < 160 && (c.side === "P" || c.seen)) {

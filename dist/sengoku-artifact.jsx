@@ -9965,6 +9965,38 @@ function terrainAt(x, y) {
   for (const h of HILLS) if ((x - h.x) ** 2 + (y - h.y) ** 2 < h.r ** 2) return "hill";
   return "plain";
 }
+var \u8E0F\u307F\u5834 = 13;
+function \u8E0F\u307F\u8FBC\u3093\u3060\u5730(x, y, r = \u8E0F\u307F\u5834) {
+  if (MAP) return terrainAt(x, y);
+  const \u82AF = terrainAt(x, y);
+  if (\u82AF === "bridge") return \u82AF;
+  let \u5916 = 0;
+  for (let k = 0; k < 6; k++) {
+    const a = Math.PI * k / 3;
+    if (terrainAt(x + Math.cos(a) * r, y + Math.sin(a) * r) !== \u82AF) \u5916++;
+  }
+  return \u5916 <= 1 ? \u82AF : "plain";
+}
+var \u968A\u306E\u304B\u304B\u308A = 0.4;
+function \u968A\u306E\u5730(c) {
+  const \u82AF = c.\u5730\u82AF !== void 0 ? c.\u5730\u82AF : \u8E0F\u307F\u8FBC\u3093\u3060\u5730(c.x, c.y);
+  if (\u82AF !== "plain") return \u82AF;
+  let \u7DCF = 0;
+  const \u5225 = {};
+  for (const q of c.squads || []) {
+    if (q.men <= 0) continue;
+    \u7DCF += q.men;
+    const t = q.\u5730 !== void 0 ? q.\u5730 : \u8E0F\u307F\u8FBC\u3093\u3060\u5730(q.x, q.y);
+    if (t !== "plain") \u5225[t] = (\u5225[t] || 0) + q.men;
+  }
+  if (!\u7DCF) return "plain";
+  let \u540D = "plain", \u591A = 0;
+  for (const k in \u5225) if (\u5225[k] > \u591A) {
+    \u591A = \u5225[k];
+    \u540D = k;
+  }
+  return \u591A / \u7DCF >= \u968A\u306E\u304B\u304B\u308A ? \u540D : "plain";
+}
 var TERRAIN = {
   plain: { speed: 1, fight: 1, cohesion: 0, sight: 260, horse: 1, charge: true, label: "\u5E73\u5730" },
   forest: { speed: 0.65, fight: 0.85, cohesion: -6, sight: 95, horse: 0.6, charge: false, label: "\u68EE" },
@@ -12731,42 +12763,6 @@ function \u6E21\u308A\u5834(x) {
   const \u5019\u88DC = [{ x: \u6A4B, \u91CD\u307F: 0.55, \u540D: "\u6A4B" }, { x: \u702C, \u91CD\u307F: 1, \u540D: "\u6D45\u702C" }].map((p) => ({ ...p, \u9060\u3055: Math.abs(p.x - x) * p.\u91CD\u307F }));
   return \u5019\u88DC.sort((a, z) => a.\u9060\u3055 - z.\u9060\u3055)[0];
 }
-function \u9698\u8DEF\u306B\u304B\u304B\u308B(c) {
-  const \u5E45 = 78;
-  const \u524D = 26;
-  const cosF = Math.cos(c.facing), sinF = Math.sin(c.facing);
-  let \u6C34 = null, \u969C = 0, \u958B = 0, \u969C\u540D = null;
-  for (const [u, v] of [
-    [-\u5E45, 0],
-    [-\u5E45 * 0.5, 0],
-    [0, 0],
-    [\u5E45 * 0.5, 0],
-    [\u5E45, 0],
-    [-\u5E45, \u524D],
-    [0, \u524D],
-    [\u5E45, \u524D]
-  ]) {
-    const x = c.x + -sinF * u + cosF * v;
-    const y = c.y + cosF * u + sinF * v;
-    const t = terrainAt(x, y);
-    if (t === "bridge") \u6C34 = "\u6A4B";
-    else if (t === "ford") \u6C34 = \u6C34 || "\u6D45\u702C";
-    else if (t === "deep") \u6C34 = \u6C34 || "\u5DDD";
-    else if (t === "moat") \u6C34 = \u6C34 || "\u5800";
-    else if (t === "forest" || t === "wood") {
-      \u969C++;
-      \u969C\u540D = \u969C\u540D || "\u6728\u7ACB";
-    } else if (t === "marsh") {
-      \u969C++;
-      \u969C\u540D = \u969C\u540D || "\u6E7F\u5730";
-    } else if (t === "hill") {
-      \u969C++;
-      \u969C\u540D = \u969C\u540D || "\u5C71\u969B";
-    } else \u958B++;
-  }
-  if (\u6C34) return \u6C34;
-  return \u969C > 0 && \u958B > 0 ? \u969C\u540D : null;
-}
 function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
@@ -12782,27 +12778,6 @@ function battleAI(b) {
     if (Math.random() > 0.5) continue;
     const opt = detachOptions(b, c).filter((o) => o.ok);
     if (opt.length) makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
-  }
-  for (const c of alive) {
-    if (c.detach || c.routed || c.withdraw || c.destroyed) continue;
-    if (c.squads.some((q) => q.engaged)) continue;
-    const \u72ED\u3044 = \u9698\u8DEF\u306B\u304B\u304B\u308B(c);
-    if (\u72ED\u3044) {
-      c.\u9698\u8DEF = 4;
-      if (c.formation !== "\u9577\u86C7") {
-        c.\u5143\u306E\u9663 = c.formation;
-        c.formation = "\u9577\u86C7";
-        placeSquads(c, false);
-        if (c.side === "P") b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C\u5217\u3092\u7D30\u3081\u3066${\u72ED\u3044}\u306B\u304B\u304B\u308B\u3002` });
-      }
-    } else if (c.\u5143\u306E\u9663 && c.formation === "\u9577\u86C7") {
-      c.\u9698\u8DEF = (c.\u9698\u8DEF || 0) - 1;
-      if (c.\u9698\u8DEF <= 0) {
-        c.formation = c.\u5143\u306E\u9663;
-        c.\u5143\u306E\u9663 = null;
-        placeSquads(c, false);
-      }
-    }
   }
   for (const c of alive) {
     if (!c.\u72D9\u3044 || c.routed || c.withdraw || c.detach) continue;
@@ -13125,11 +13100,16 @@ function stepBattle(b, dt) {
   }
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
   for (const c of alive) {
+    for (const q of c.squads) q.\u5730 = \u8E0F\u307F\u8FBC\u3093\u3060\u5730(q.x, q.y);
+    c.\u5730\u82AF = \u8E0F\u307F\u8FBC\u3093\u3060\u5730(c.x, c.y);
+    c.\u5730 = \u968A\u306E\u5730(c);
+  }
+  for (const c of alive) {
     const foes = alive.filter((o) => o.side !== c.side);
     let seen = false;
     for (const f of foes) {
       for (const q of f.squads) {
-        const t = TERRAIN[terrainAt(c.x, c.y)];
+        const t = TERRAIN[c.\u5730];
         const sight = (c.ambush && !c.revealed ? 95 : t.sight) * WEATHER[b.weather].sight * fieldScale();
         if (Math.hypot(q.x - c.x, q.y - c.y) < sight) {
           seen = true;
@@ -13258,7 +13238,7 @@ function stepBattle(b, dt) {
     }
     const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy);
     if (dist > 6 && !HOLD && !(c.ambush && !c.revealed)) {
-      const terr = TERRAIN[terrainAt(c.x, c.y)];
+      const terr = TERRAIN[c.\u5730];
       const avgSpeed = c.squads.length ? c.squads.reduce((s2, q) => s2 + ARM_STATS[q.type].speed * q.men, 0) / Math.max(1, corpsMen(c)) : 30;
       const engaged = c.squads.some((q) => q.engaged);
       const W = WEATHER[b.weather];
@@ -13327,7 +13307,7 @@ function stepBattle(b, dt) {
       if (b.fx.length < 200 && (c.side === "P" || c.seen)) {
         for (const q of c.squads) {
           if (q.men <= 0) continue;
-          const t2 = terrainAt(q.x, q.y);
+          const t2 = q.\u5730;
           if (t2 !== "ford" && t2 !== "deep" && t2 !== "moat") continue;
           if (Math.random() > dt * (t2 === "deep" ? 2.4 : 1.8)) continue;
           b.fx.push({
@@ -13418,7 +13398,7 @@ function stepBattle(b, dt) {
         }
       }
       const qd = Math.hypot(targetX - q.x, targetY - q.y);
-      const terr = TERRAIN[terrainAt(q.x, q.y)];
+      const terr = TERRAIN[q.\u5730];
       if (qd > 2 && (!q.engaged || c.withdraw || c.routed)) {
         const \u9045\u308C = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
         const \u8FFD\u3044\u3064\u304D = c.routed ? 1 : clamp(1 + \u9045\u308C / 34, 1, 2.4);
@@ -13724,7 +13704,7 @@ function stepBattle(b, dt) {
       q.foe = melee ? { x: melee.e.x, y: melee.e.y, d: mdist } : null;
       q.link = null;
       if (!melee) continue;
-      const terr = TERRAIN[terrainAt(q.x, q.y)];
+      const terr = TERRAIN[q.\u5730];
       if (mdist < 22) {
         const \u5F15\u304F = c.withdraw || c.routed;
         const \u76F8\u624B\u3082\u5F15\u304F = melee.f.withdraw || melee.f.routed;
@@ -13772,7 +13752,7 @@ function stepBattle(b, dt) {
           c.gen.valor * (c.chargeT > 0 ? 1.2 : 1)
         );
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
-        if (melee.f.seen || mdist < TERRAIN[terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
+        if (melee.f.seen || mdist < TERRAIN[melee.e.\u5730 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
           q.cool = st.rof;
           q.aim = { x: melee.e.x, y: melee.e.y, t: b.t };
           if (b.fx.length < 160 && (c.side === "P" || c.seen)) {
@@ -15085,7 +15065,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     "button",
     {
       className: `btn sm ${selC.ambush ? "on" : ""}`,
-      disabled: terrainAt(selC.x, selC.y) !== "forest",
+      disabled: (selC.\u5730 || terrainAt(selC.x, selC.y)) !== "forest",
       onClick: () => {
         selC.ambush = !selC.ambush;
         selC.revealed = !selC.ambush;
@@ -15139,7 +15119,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     const coh = Math.round(foe.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, foe.squads.length));
     const \u5175\u79D1 = { yari: "\u69CD", yumi: "\u5F13", teppo: "\u9244\u7832", kiba: "\u9A0E\u99AC" };
     const \u5185\u8A33 = ["kiba", "teppo", "yumi", "yari"].map((k) => [\u5175\u79D1[k], foe.squads.filter((q) => q.type === k).reduce((a, q) => a + q.men, 0)]).filter(([, v]) => v > 0).map(([k, v]) => `${k}${fmt(Math.round(v))}`).join("\u30FB");
-    return /* @__PURE__ */ React3.createElement("div", { style: { borderTop: `2px solid ${ctx.eColor}`, paddingTop: 6, marginTop: 4 } }, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 10.5, letterSpacing: ".14em", color: ctx.eColor } }, "\u6575\u306E\u968A"), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { fontSize: 15, flex: 1 } }, foe.gen.name, "\u968A"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", style: { padding: "1px 8px" }, onClick: () => setFoeSel(null) }, "\u9589\u3058\u308B")), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(foe)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(foe.morale), "\uFF0F\u9663\u5F62", coh, "\uFF0F\u75B2\u52B4", Math.round(foe.fatigue), "\uFF0F", foe.formation || "\u2015", "\uFF0F", TERRAIN[terrainAt(foe.x, foe.y)].label, foe.routed ? "\uFF0F\u6557\u8D70\u4E2D" : "", foe.withdraw ? "\uFF0F\u9000\u5374\u4E2D" : "", foe.chargeT > 0 ? "\uFF0F\u7A81\u6483\u4E2D" : "", foe.squads.some((q) => q.engaged) ? "\uFF0F\u4EA4\u6226\u4E2D" : ""), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.text, lineHeight: 1.6 } }, foe.gen.age ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9F62 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.age), "\u3000") : null, "\u7D71\u7387 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.lead), "\u3000\u6B66\u52C7 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.valor), "\u3000\u77E5\u7565 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.wit), foe.gen.lord ? /* @__PURE__ */ React3.createElement("span", { style: { color: ctx.eColor } }, "\u3000\u3010\u7DCF\u5927\u5C06\u3011") : null), \u5185\u8A33 && /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim } }, "\u5175\u79D1\u3000", \u5185\u8A33), selC && !selC.routed && !selC.detach ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 5 } }, selC.gen.name, "\u968A\u3092", foe.gen.name, "\u968A\u3078\u5DEE\u3057\u5411\u3051\u308B"), /* @__PURE__ */ React3.createElement("div", { className: "g3" }, ["\u63A5\u6226", "\u7A81\u6483", "\u5C04\u6483"].map((o) => /* @__PURE__ */ React3.createElement(
+    return /* @__PURE__ */ React3.createElement("div", { style: { borderTop: `2px solid ${ctx.eColor}`, paddingTop: 6, marginTop: 4 } }, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 10.5, letterSpacing: ".14em", color: ctx.eColor } }, "\u6575\u306E\u968A"), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { fontSize: 15, flex: 1 } }, foe.gen.name, "\u968A"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", style: { padding: "1px 8px" }, onClick: () => setFoeSel(null) }, "\u9589\u3058\u308B")), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(foe)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(foe.morale), "\uFF0F\u9663\u5F62", coh, "\uFF0F\u75B2\u52B4", Math.round(foe.fatigue), "\uFF0F", foe.formation || "\u2015", "\uFF0F", TERRAIN[foe.\u5730 || terrainAt(foe.x, foe.y)].label, foe.routed ? "\uFF0F\u6557\u8D70\u4E2D" : "", foe.withdraw ? "\uFF0F\u9000\u5374\u4E2D" : "", foe.chargeT > 0 ? "\uFF0F\u7A81\u6483\u4E2D" : "", foe.squads.some((q) => q.engaged) ? "\uFF0F\u4EA4\u6226\u4E2D" : ""), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.text, lineHeight: 1.6 } }, foe.gen.age ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9F62 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.age), "\u3000") : null, "\u7D71\u7387 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.lead), "\u3000\u6B66\u52C7 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.valor), "\u3000\u77E5\u7565 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.wit), foe.gen.lord ? /* @__PURE__ */ React3.createElement("span", { style: { color: ctx.eColor } }, "\u3000\u3010\u7DCF\u5927\u5C06\u3011") : null), \u5185\u8A33 && /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim } }, "\u5175\u79D1\u3000", \u5185\u8A33), selC && !selC.routed && !selC.detach ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 5 } }, selC.gen.name, "\u968A\u3092", foe.gen.name, "\u968A\u3078\u5DEE\u3057\u5411\u3051\u308B"), /* @__PURE__ */ React3.createElement("div", { className: "g3" }, ["\u63A5\u6226", "\u7A81\u6483", "\u5C04\u6483"].map((o) => /* @__PURE__ */ React3.createElement(
       "button",
       {
         key: o,
@@ -15148,7 +15128,7 @@ function BattleScreen({ ctx, land, onEnd }) {
       },
       o
     ))), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, marginTop: 3 } }, "\u540D\u6307\u3057\u3067\u547D\u3058\u305F\u968A\u306F\u3001\u305D\u306E\u6575\u304C\u52D5\u3044\u3066\u3082\u8FFD\u3044\u307E\u3059\u3002\u69CD\u3092\u5408\u308F\u305B\u3066\u3044\u308B\u9593\u306F\u72D9\u3044\u3092\u5909\u3048\u307E\u305B\u3093\u3002 \u307B\u304B\u306E\u547D\u4EE4\u3092\u51FA\u305B\u3070\u3001\u540D\u6307\u3057\u306F\u89E3\u3051\u307E\u3059\u3002")) : /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, marginTop: 4 } }, "\u81EA\u8ECD\u306E\u968A\u3092\u9078\u3079\u3070\u3001\u3053\u306E\u968A\u3078\u540D\u6307\u3057\u3067\u653B\u3081\u304B\u304B\u3089\u305B\u3089\u308C\u307E\u3059\u3002"));
-  })(), selC ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, selC.detach ? `${selC.gen.name}\u968A ${selC.task || "\u5206\u9063"}` : selC.name, " \u306E\u547D\u4EE4"), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(selC)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(selC.morale), "\uFF0F\u9663\u5F62", Math.round(selC.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, selC.squads.length)), "\uFF0F \u75B2\u52B4", Math.round(selC.fatigue), "\uFF0F", TERRAIN[terrainAt(selC.x, selC.y)].label, selC.chargeT > 0 ? `\uFF0F\u7A81\u6483\u4E2D \u6B8B${Math.ceil(selC.chargeT)}\u79D2` : "", selC.reformT > 0 ? `\uFF0F\u9663\u5F62\u66FF\u3048\u4E2D \u6B8B${Math.ceil(selC.reformT)}\u79D2` : "", selC.faceTo != null ? "\uFF0F\u56DE\u982D\u4E2D" : "", selC.pending ? `\uFF0F\u4F1D\u4EE4\u4E2D \u6B8B${Math.ceil(selC.pending.t)}\u79D2` : "", outOfCommand(b, selC) ? "\uFF0F\u6307\u63EE\u570F\u5916\uFF08\u547D\u4EE4\u304C\u5C4A\u304B\u306A\u3044\uFF09" : "", selC.pinch >= 2 ? `\uFF0F${selC.pinch}\u65B9\u5411\u304B\u3089\u631F\u6483\u3092\u53D7\u3051\u3066\u3044\u308B` : "", (() => {
+  })(), selC ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, selC.detach ? `${selC.gen.name}\u968A ${selC.task || "\u5206\u9063"}` : selC.name, " \u306E\u547D\u4EE4"), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(selC)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(selC.morale), "\uFF0F\u9663\u5F62", Math.round(selC.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, selC.squads.length)), "\uFF0F \u75B2\u52B4", Math.round(selC.fatigue), "\uFF0F", TERRAIN[selC.\u5730 || terrainAt(selC.x, selC.y)].label, selC.chargeT > 0 ? `\uFF0F\u7A81\u6483\u4E2D \u6B8B${Math.ceil(selC.chargeT)}\u79D2` : "", selC.reformT > 0 ? `\uFF0F\u9663\u5F62\u66FF\u3048\u4E2D \u6B8B${Math.ceil(selC.reformT)}\u79D2` : "", selC.faceTo != null ? "\uFF0F\u56DE\u982D\u4E2D" : "", selC.pending ? `\uFF0F\u4F1D\u4EE4\u4E2D \u6B8B${Math.ceil(selC.pending.t)}\u79D2` : "", outOfCommand(b, selC) ? "\uFF0F\u6307\u63EE\u570F\u5916\uFF08\u547D\u4EE4\u304C\u5C4A\u304B\u306A\u3044\uFF09" : "", selC.pinch >= 2 ? `\uFF0F${selC.pinch}\u65B9\u5411\u304B\u3089\u631F\u6483\u3092\u53D7\u3051\u3066\u3044\u308B` : "", (() => {
     const t = selC.\u72D9\u3044 && b.corps.find((x) => x.id === selC.\u72D9\u3044);
     return t && !t.destroyed ? `\uFF0F${t.gen.name}\u968A\u3092\u72D9\u3063\u3066\u3044\u308B` : "";
   })(), isCastle && selC.kit && selC.kit !== "\u306A\u3057" ? `\uFF0F${selC.kit}` : "", isCastle && selC.gateFat > 3 ? `\uFF0F\u9580\u653B\u3081\u306E\u75B2\u308C${Math.round(selC.gateFat)}` : ""), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.text, lineHeight: 1.6 } }, selC.gen.age ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9F62 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.age), "\u3000") : null, "\u7D71\u7387 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.lead), "\u3000\u6B66\u52C7 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.valor), "\u3000\u77E5\u7565 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.wit), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF08\u7D71\u7387\uFF1D\u6307\u63EE\u570F\u3068\u4F1D\u4EE4\u30FB\u9663\u5F62\u66FF\u3048\u306E\u901F\u3055\u3001\u6B66\u52C7\uFF1D\u767D\u5175\u306E\u5F37\u3055\u3001\u77E5\u7565\uFF1D\u4F0F\u5175\u3068\u5206\u9063\u306E\u5224\u65AD\uFF09")), isCastle && iAmAttacker && /* @__PURE__ */ React3.createElement("div", { className: "g4" }, CASTLE_ORDERS.map((o) => /* @__PURE__ */ React3.createElement("button", { key: o, className: "btn sm", onClick: () => castleGo(selC, o) }, o))), isCastle && !iAmAttacker && /* @__PURE__ */ React3.createElement("div", { className: "g2" }, /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => sortieOut(selC) }, "\u6253\u3063\u3066\u51FA\u308B"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => sortieBack(selC) }, "\u57CE\u5185\u3078\u623B\u308B")), /* @__PURE__ */ React3.createElement(

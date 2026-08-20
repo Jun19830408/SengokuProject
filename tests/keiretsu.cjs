@@ -20,8 +20,8 @@ fs.writeFileSync(entry,
   'export { layoutField, setFieldSeed, FIELD } from "../src/battle/field.js";\n'
 + 'export { makeCorps, placeSquads, issueOrder } from "../src/battle/corps.js";\n'
 + 'export { buildCastleMap, layoutCastleField, axisOf, fromUV } from "../src/battle/castleMap.js";\n'
-+ 'export { battleAI, 岸, 隘路にかかる } from "../src/battle/ai.js";\n'
-+ 'export { RIVER, hasRiver, terrainAt, riverShift, HILLS, FORESTS, WOODS, MARSH, VILLAGES } from "../src/battle/field.js";\n'
++ 'export { battleAI, 岸 } from "../src/battle/ai.js";\n'
++ 'export { RIVER, hasRiver, terrainAt, riverShift, HILLS, FORESTS, WOODS, MARSH, VILLAGES, 踏み込んだ地, 隊の地, 踏み場 } from "../src/battle/field.js";\n'
 + 'export { createBattle, stepBattle } from "../src/battle/engine.js";\n'
 + 'export { setBattleMap } from "../src/battle/castleMap.js";\n');
 const out = path.join(ROOT, 'build', 'keiretsu.cjs');
@@ -277,11 +277,15 @@ for (const 陣 of ['横陣', '魚鱗', '鶴翼', '方陣']) {
   if (戦 > 62) 咎.push(`川の中で槍を合わせすぎる（${戦.toFixed(1)}%）`);
 }
 
-/* ------------------------------ 隘路は縦陣で抜けること（GDD 8.3）
+/* ------------------------ 地物に踏み込んだと判ずる目（GDD 8.6）
 
-   橋を渡るとき、浅瀬を越すとき、森や丘の脇をすり抜けるとき、隊は横に広がった
-   まま突っ込んでいた。翼が水に浸かり、木立に食い込み、足が鈍って隊列が崩れる。
-   渡り場を選んだ甲斐がない。狭い所へ来れば列を細める。行軍の常である。
+   もとは一点で判じていた。組の代表点が川の帯に一歩でも掛かれば、その組は
+   「川の中」となり、足が三割に落ちる。組は五十人の塊であって点ではない。
+   翼の一組が爪先を濡らしただけで、隊が渡渉しているとは言えない。
+
+   これを繕うために、隘路にかかった隊を長蛇へ組み替える仕掛けを入れていたが、
+   委任した隊の陣形がプレイヤーの指図と食い違うので取り止めた。かわりに、
+   踏み込んだと判ずる目そのものを厳しくする。
 
    あわせて、橋そのものの幅も検める。盤の幅の何割、として取っていたので、
    野を広げたら橋が一隊の二.五倍になった。隊がそのまま横に並んで渡れる橋は、
@@ -311,39 +315,80 @@ for (const 陣 of ['横陣', '魚鱗', '鶴翼', '方陣']) {
   確('野を広げても、橋はさほど広がらない', 広い野の橋 < 狭い野の橋 * 2.2,
     `${Math.round(狭い野の橋)}歩 → ${Math.round(広い野の橋)}歩（野は${A.FIELD.w}歩）`);
 
-  // 橋の上に置いた隊が、縦陣に組み替えること
   A.setFieldSeed('bridge' + 種, 'x'); A.layoutField(9000, 6); A.setBattleMap(null);
   const bx = (A.RIVER.bridge[0] + A.RIVER.bridge[1]) / 2;
-  const by = (A.RIVER.top + A.RIVER.bot) / 2 + A.riverShift(bx);
-  const c = A.makeCorps('P', 将(1), 700, 900, 80, 80, bx, by, -Math.PI / 2, '#2F5D8C');
-  c.formation = '横陣'; A.placeSquads(c, true);
-  確('橋の上は隘路と判ぜられる', A.隘路にかかる(c) === '橋', A.隘路にかかる(c) || 'かからない');
-  // 抜けたと決めるまでには猶予がある（林の縁で陣形が行き来せぬように）
+  const 岸上 = (x) => A.RIVER.top + A.riverShift(x);
+  const 岸下 = (x) => A.RIVER.bot + A.riverShift(x);
+  const by = (岸上(bx) + 岸下(bx)) / 2;
+
+  // 一、点で見た地と、踏み込んで見た地
+  const 縁 = { x: bx + 4000, y: 岸上(bx + 4000) + 3 };        // 川の帯に三歩だけ掛かった所
+  const 芯 = { x: bx + 4000, y: (岸上(bx + 4000) + 岸下(bx + 4000)) / 2 };
+  確('点で見れば、縁に触れただけでも川である', A.terrainAt(縁.x, 縁.y) === 'deep',
+    A.terrainAt(縁.x, 縁.y));
+  確('踏み込んで見れば、縁に触れただけでは野である', A.踏み込んだ地(縁.x, 縁.y) === 'plain',
+    A.踏み込んだ地(縁.x, 縁.y));
+  確('川なかほどは、踏み込んで見ても川である', A.踏み込んだ地(芯.x, 芯.y) === 'deep',
+    A.踏み込んだ地(芯.x, 芯.y));
+  確('橋の上は、両脇が淵でも橋と判ずる', A.踏み込んだ地(bx, by) === 'bridge',
+    A.踏み込んだ地(bx, by));
+
+  /* 二、隊としての判じ。隊長か、隊の四割が踏み込んで初めて川である。 */
+  const 立てる = (x, y, 陣) => {
+    const c = A.makeCorps('P', 将(1), 700, 900, 80, 80, x, y, -Math.PI / 2, '#2F5D8C');
+    c.formation = 陣; A.placeSquads(c, true);
+    for (const q of c.squads) q.地 = A.踏み込んだ地(q.x, q.y);
+    c.地芯 = A.踏み込んだ地(c.x, c.y);
+    return c;
+  };
+  const 濡れ = (c) => c.squads.filter((q) => q.men > 0 && q.地 !== 'plain')
+    .reduce((a, q) => a + q.men, 0) / c.squads.reduce((a, q) => a + q.men, 0);
+
+  // 岸に沿って横陣で並び、翼だけが水に掛かっている隊
+  const 翼 = 立てる(bx + 4000, 岸上(bx + 4000) - 26, '横陣');
+  確('翼が水を跳ねる程度では、隊は川にいない', A.隊の地(翼) === 'plain',
+    `濡れた組 ${Math.round(濡れ(翼) * 100)}％／判じ ${A.隊の地(翼)}`);
+
+  // 隊長が川に踏み込んだ隊
+  const 将入 = 立てる(bx + 4000, (岸上(bx + 4000) + 岸下(bx + 4000)) / 2, '横陣');
+  確('隊長が踏み込めば、隊は川にいる', A.隊の地(将入) === 'deep', A.隊の地(将入));
+
+  // 隊長は岸にいるが、四割以上が水に入っている隊
+  let 半 = null;
+  for (let d = 0; d < 120 && !半; d += 4) {
+    const c = 立てる(bx + 4000, 岸上(bx + 4000) - d, '横陣');
+    if (濡れ(c) >= 0.4 && A.踏み込んだ地(c.x, c.y) === 'plain') 半 = c;
+  }
+  if (半) {
+    確('隊の四割が浸かっていれば、隊長が岸にいても川である', A.隊の地(半) === 'deep',
+      `濡れた組 ${Math.round(濡れ(半) * 100)}％／判じ ${A.隊の地(半)}`);
+  } else {
+    確('隊の四割が浸かる形を作れる', false, '仕込めなかった');
+  }
+
+  /* 三、委任した隊の陣形を、勝手に組み替えないこと（この節の眼目）
+
+     橋にかかると長蛇へ組み替える仕掛けがあった。プレイヤーが鶴翼を命じても、
+     委任している限り橋の手前で長蛇に変わり、いつ戻るかも分からなかった。 */
+  const c = 立てる(bx, by, '鶴翼');
   const e = A.makeCorps('E', 将(9), 700, 900, 80, 80, bx, by - 700, Math.PI / 2, '#B0483C');
   const b2 = A.createBattle([c], [e], 'P');
   b2.mode = 'field'; b2.dusk = 9999; b2.phase = 'fight'; b2.face = 'S'; b2.myFar = false;
   A.placeSquads(c, true); A.placeSquads(e, true);
-  c.auto = true;
-  A.battleAI(b2);
-  確('橋にかかれば縦陣に組み替える', c.formation === '長蛇', c.formation);
-  確('元の陣形を覚えている', c.元の陣 === '横陣', c.元の陣 || 'なし');
+  c.auto = true; c.formPicked = true; e.formPicked = true;
+  for (let i = 0; i < 6; i++) A.battleAI(b2);
+  確('委任した隊は、橋にかかっても命じられた陣形のまま', c.formation === '鶴翼', c.formation);
+  確('元の陣を覚えておく必要もない', !c.元の陣, c.元の陣 || 'なし');
 
-  // 野へ出れば元へ戻ること
-  c.x = bx; c.y = by + 620;
-  A.placeSquads(c, true);
-  確('野へ出れば隘路ではない', !A.隘路にかかる(c), A.隘路にかかる(c) || '');
-  A.battleAI(b2);
-  確('一度離れただけでは戻さない（縁で行き来しない）', c.formation === '長蛇', c.formation);
-  for (let i = 0; i < 5; i++) A.battleAI(b2);
-  確('開けた地が続けば元の陣形へ戻る', c.formation === '横陣', c.formation);
-
-  // 槍を合わせている隊は組み替えない（側面を晒すため）
-  c.x = bx; c.y = by; A.placeSquads(c, true);
-  c.formation = '横陣'; c.元の陣 = null;
-  for (const q of c.squads) q.engaged = true;
-  A.battleAI(b2);
-  確('槍を合わせている隊は、隘路でも組み替えない', c.formation === '横陣', c.formation);
-  for (const q of c.squads) q.engaged = false;
+  // 森の中でも同じこと
+  if (A.FORESTS.length) {
+    const f = A.FORESTS[0];
+    const c2 = 立てる(f.x, f.y, '魚鱗');
+    c2.auto = true; c2.formPicked = true;
+    b2.corps.push(c2); c2.side = 'P';
+    for (let i = 0; i < 6; i++) A.battleAI(b2);
+    確('森にかかっても陣形は変わらない', c2.formation === '魚鱗', c2.formation);
+  }
 }
 
 console.log('');

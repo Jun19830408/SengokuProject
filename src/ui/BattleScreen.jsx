@@ -510,7 +510,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 );
               })()}
               <FormationPicker corps={selC} onPick={(f) => changeForm(selC, f)} />
-              <button className={`btn sm ${selC.ambush ? "on" : ""}`} disabled={terrainAt(selC.x, selC.y) !== "forest"}
+              <button className={`btn sm ${selC.ambush ? "on" : ""}`} disabled={(selC.地 || terrainAt(selC.x, selC.y)) !== "forest"}
                 onClick={() => { selC.ambush = !selC.ambush; selC.revealed = !selC.ambush; }}>伏兵に置く</button>
             </>
           )}
@@ -614,7 +614,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 </div>
                 <div className="num" style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.6 }}>
                   {fmt(corpsMen(foe))}人／士気{Math.round(foe.morale)}／陣形{coh}／疲労{Math.round(foe.fatigue)}／
-                  {foe.formation || "―"}／{TERRAIN[terrainAt(foe.x, foe.y)].label}
+                  {foe.formation || "―"}／{TERRAIN[foe.地 || terrainAt(foe.x, foe.y)].label}
                   {foe.routed ? "／敗走中" : ""}{foe.withdraw ? "／退却中" : ""}
                   {foe.chargeT > 0 ? "／突撃中" : ""}
                   {foe.squads.some((q) => q.engaged) ? "／交戦中" : ""}
@@ -658,7 +658,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
               <div className="num" style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.6 }}>
                 {fmt(corpsMen(selC))}人／士気{Math.round(selC.morale)}／陣形
                 {Math.round(selC.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, selC.squads.length))}／
-                疲労{Math.round(selC.fatigue)}／{TERRAIN[terrainAt(selC.x, selC.y)].label}
+                疲労{Math.round(selC.fatigue)}／{TERRAIN[selC.地 || terrainAt(selC.x, selC.y)].label}
                 {selC.chargeT > 0 ? `／突撃中 残${Math.ceil(selC.chargeT)}秒` : ""}
                 {selC.reformT > 0 ? `／陣形替え中 残${Math.ceil(selC.reformT)}秒` : ""}
                 {selC.faceTo != null ? "／回頭中" : ""}

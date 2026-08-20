@@ -192,6 +192,59 @@ export function terrainAt(x, y) {
   return "plain";
 }
 
+/* ------------------------------------------- 地物に踏み込んだか（GDD 8.6）
+
+   これまでは一点で判じていた。組の代表点が川の帯に一歩でも掛かれば、その組は
+   「川の中」となり、足が三割に落ち、陣形が十四削られる。組は五十人の塊であって
+   点ではないのだから、爪先が水に触れただけで隊が渡渉しているとは言えない。
+
+   林の縁をかすめただけで足が鈍り、隊が伸び、伸びたがゆえに隊全体が待たされる。
+   盤の上では「避けて通ったはずなのに、なぜか遅い」としか見えなかった。
+
+   そこで、組の踏み場（半径十三歩ほど）を見て、それが丸ごとその地に収まって
+   初めて、その地にいると判ずる。爪先や踵が野に残っているうちは、まだ入って
+   いない。地物の縁を十三歩ばかり内へ詰めた、と考えればよい。
+
+   橋だけは別に扱う。橋は狭く、両脇はすぐ淵であるから、割で測れば決して
+   「橋の上」にならない。芯が橋なら、渡っているのは橋である。
+
+   城内（MAP）はこの限りではない。塀も門も堀も薄く、割で測れば消えてしまう。
+   石垣の内と外は、一歩の違いが生死を分ける。点で判ずるままとする。 */
+export const 踏み場 = 13;
+export function 踏み込んだ地(x, y, r = 踏み場) {
+  if (MAP) return terrainAt(x, y);
+  const 芯 = terrainAt(x, y);
+  if (芯 === "bridge") return 芯;
+  let 外 = 0;
+  for (let k = 0; k < 6; k++) {
+    const a = (Math.PI * k) / 3;
+    if (terrainAt(x + Math.cos(a) * r, y + Math.sin(a) * r) !== 芯) 外++;
+  }
+  return 外 <= 1 ? 芯 : "plain";               // 踏み場がおおむね収まっていること
+}
+
+/* 隊がその地にかかっているか。
+
+   隊長が踏み込んでいるか、隊の四割が踏み込んでいれば、隊はその地にかかっている。
+   翼の一組が水を跳ねているだけでは、隊が川を渡っているとは言わない。 */
+export const 隊のかかり = 0.4;
+export function 隊の地(c) {
+  const 芯 = c.地芯 !== undefined ? c.地芯 : 踏み込んだ地(c.x, c.y);
+  if (芯 !== "plain") return 芯;                    // 隊長が踏み込んでいる
+  let 総 = 0;
+  const 別 = {};
+  for (const q of c.squads || []) {
+    if (q.men <= 0) continue;
+    総 += q.men;
+    const t = q.地 !== undefined ? q.地 : 踏み込んだ地(q.x, q.y);
+    if (t !== "plain") 別[t] = (別[t] || 0) + q.men;
+  }
+  if (!総) return "plain";
+  let 名 = "plain", 多 = 0;
+  for (const k in 別) if (別[k] > 多) { 多 = 別[k]; 名 = k; }
+  return 多 / 総 >= 隊のかかり ? 名 : "plain";
+}
+
 // 速度・戦闘力・陣形維持・視界・騎馬適性を一つの表で管理する（GDD 8.6）
 export const TERRAIN = {
   plain: { speed: 1.0, fight: 1.0, cohesion: 0, sight: 260, horse: 1.0, charge: true, label: "平地" },
