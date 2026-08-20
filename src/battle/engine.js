@@ -224,8 +224,24 @@ export function stepBattle(b, dt) {
       const 最も遅い足 = 生きた組.length
         ? Math.min(...生きた組.map((q) => ARM_STATS[q.type].speed)) : avgSpeed;
       const 隊の足 = engaged ? avgSpeed : Math.min(avgSpeed, 最も遅い足 * 1.12);
+      /* 寄せ道の足（GDD 9.3）。
+
+         城攻めの寄せ手は、城の外を渡るあいだ足を緩める。楯を並べ、隊列を
+         整え、矢を防ぎながら寄せるからである。駆けて行けば的になる。
+
+         これを入れないと、盤が広がるほど足も速くなる決まり（fieldScale）の
+         せいで、どれだけ遠くに構えても数秒で城門に着いてしまい、
+         坂を登ることにも、射かけられることにも意味が無くなる。
+
+         曲輪の中へ入れば常の足に戻る。そこは槍と刀の間合いである。 */
+      let 寄せ道 = 1;
+      if (MAP && c.side === b.attacker && !engaged && !c.withdraw && !c.routed) {
+        const o = MAP.layers[0];
+        const 外 = !inLayer(MAP, o, c.x, c.y, MAP.t + o.masu + MAP.t + 8);
+        if (外) 寄せ道 = 0.6;
+      }
       const v = 隊の足 * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1)
-        * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag;
+        * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * 寄せ道;
       const mvx = (dx / dist) * v * dt, mvy = (dy / dist) * v * dt;
       // 城壁と閉じた門は通れない。ぶつかったら壁沿いに滑る。
       let 進めた = true;
@@ -542,18 +558,20 @@ export function stepBattle(b, dt) {
           const tgt = atkC.filter((c) => Math.hypot(c.x - f.x, c.y - f.y) < 165 * fsN)
             .sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y))[0];
           if (tgt) {
-            f.cool = 3.4;
+            f.cool = 2.6;
             const kit = SIEGE_KIT[tgt.kit] || SIEGE_KIT["なし"];
-            let hit = 9 * kit.guard;
+            let hit = 11 * kit.guard;
             const qs = tgt.squads.filter((q) => q.men > 0)
               .sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y));
             for (const q of qs) {
               if (hit <= 0) break;
               const take = Math.min(q.men, hit);
               q.men -= take; hit -= take;
+              b.射損 = (b.射損 || 0) + take;          // 城から射かけて削った兵（試験と記録のため）
               q.cohesion = Math.max(0, q.cohesion - 3);
             }
             tgt.morale -= 0.45;
+            b.射気 = (b.射気 || 0) + 0.45;
             if (b.fx.length < 160) b.fx.push({ k: "shot", x: f.x, y: f.y, x2: qs[0] ? qs[0].x : tgt.x, y2: qs[0] ? qs[0].y : tgt.y, t: 0, life: 0.28 });
           }
         }
@@ -585,6 +603,53 @@ export function stepBattle(b, dt) {
         }
       }
     }
+    /* 狭間からの射撃（GDD 9.3）。
+
+       塀には狭間が切ってある。城方は壁の内に立ったまま、寄せて来る敵へ矢と
+       鉄砲を放つ。これまでは矢倉だけが射ており、塀の兵は寄せ手が門に取り付く
+       まで何もしなかった。野を渡って来る敵を黙って見ている城方はいない。
+
+       坂を登る寄せ手が削られるのはここである。遠くから寄せるほど長く撃たれる。
+       竹束を担いだ隊は被害が四割に収まるので、道具を選ぶ意味が出る。
+
+       曲輪の中まで攻め込まれた相手には撃たない。そこは槍と刀の間合いであり、
+       常の戦いの決まりが働く。二重に削ってはならない。 */
+    for (const c of defC) {
+      c.狭間 = (c.狭間 || 0) - dt;
+      if (c.狭間 > 0) continue;
+      const 射手 = c.squads.reduce((a2, q) => (q.men > 0 && ARM_STATS[q.type].range > 0 ? a2 + q.men : a2), 0);
+      if (射手 < 20) { c.狭間 = 2.6; continue; }
+      const 層 = MAP.layers[c.holdGate ? c.holdGate.layer : MAP.layers.length - 1];
+      const R = 235 * fsN;
+      const 的 = atkC
+        .filter((x) => {
+          const ax = x.mx == null ? x.x : x.mx, ay = x.my == null ? x.y : x.my;
+          if (Math.hypot(ax - c.x, ay - c.y) > R) return false;
+          if (attached.has(x.id)) return false;      // 門に取り付いた隊は門の押し合いで削れる
+          return !inLayer(MAP, 層, ax, ay);          // 曲輪の中の敵は常の戦いに任せる
+        })
+        .sort((x, y2) => Math.hypot((x.mx == null ? x.x : x.mx) - c.x, (x.my == null ? x.y : x.my) - c.y)
+          - Math.hypot((y2.mx == null ? y2.x : y2.mx) - c.x, (y2.my == null ? y2.y : y2.my) - c.y))[0];
+      if (!的) { c.狭間 = 1.4; continue; }
+      c.狭間 = 3.0;
+      const kit = SIEGE_KIT[的.kit] || SIEGE_KIT["なし"];
+      let hit = 射手 * 0.0095 * kit.guard;
+      const qs = 的.squads.filter((q) => q.men > 0)
+        .sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y));
+      for (const q of qs) {
+        if (hit <= 0) break;
+        const take = Math.min(q.men, hit);
+        q.men -= take; hit -= take;
+        b.射損 = (b.射損 || 0) + take;
+        q.cohesion = Math.max(0, q.cohesion - 2);
+      }
+      的.morale -= 0.3;
+      b.射気 = (b.射気 || 0) + 0.3;
+      if (b.fx.length < 170 && qs[0]) {
+        b.fx.push({ k: "shot", x: c.x, y: c.y, x2: qs[0].x, y2: qs[0].y, t: 0, life: 0.28 });
+      }
+    }
+
     // 城の傾き。門と曲輪を失うほど城方は士気を保てない（GDD 9.3）
     // どの曲輪まで抜かれたかで測る。同じ曲輪の門をいくつ破っても、深さは変わらない。
     let deepest = -1;

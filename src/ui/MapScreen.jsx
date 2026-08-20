@@ -2,7 +2,7 @@ import * as 政務 from "../govern/commands.js";
 import * as 月送り from "../govern/month.js";
 import * as 合戦裁定 from "../govern/war.js";
 import React, { useState, useRef, useEffect } from "react";
-import { SIEGE_CORPS_CAP, SIEGE_KIT, axisOf, buildCastleMap, fromUV, gateOpenU, layoutCastleField, setBattleMap } from "../battle/castleMap.js";
+import { SIEGE_CORPS_CAP, SIEGE_KIT, axisOf, buildCastleMap, fromUV, gateOpenU, layoutCastleField, setBattleMap, 寄せ口 } from "../battle/castleMap.js";
 import { corpsMax, corpsMen, makeCorps, notify, placeSquads } from "../battle/corps.js";
 import { drawMon, sideHue } from "../battle/draw.js";
 import { createBattle } from "../battle/engine.js";
@@ -583,16 +583,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           sp.x, sp.y, sp.f, color);
       });
     };
-    // 寄せ手は惣構の各門へ順に割り振り、その門の外に構える
+    /* 寄せ手は野から寄せる。構える所は castleMap の 寄せ口 が決める（GDD 9.3）。 */
     const outer = map.layers[0], og = outer.gates;
     const atk = mk(atkGens, useLocal, army.localTrain, atkSide, atkColor, (i, n) => {
       const gt = og[i % og.length];
-      const a = axisOf(outer, gt);
-      const rank = Math.floor(i / og.length);                 // 同じ門の何番目か
-      const back = map.moat.band + outer.masu + map.t + 96 + rank * 76;
-      const side = ((rank % 2) ? 1 : -1) * (rank ? 44 : 0);
-      const p = fromUV(map, a, gateOpenU(gt) + side, a.half + back);
-      return { x: p.x, y: p.y, f: Math.atan2(map.cy - p.y, map.cx - p.x) };
+      return 寄せ口(map, gt, Math.floor(i / og.length));
     }, commitRost);
     // 守り手は門の内側から順に詰める。門の数だけ受け持ちがある。
     const guard = [];

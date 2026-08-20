@@ -269,6 +269,27 @@ export function layoutCastleField(m) {
   return m;
 }
 
+/* 寄せ手が構える所（GDD 9.3）。
+
+   これまでは堀の際――門まで九十六歩の所に湧いて出ていた。野戦から移って
+   来たのだから、まずは遠くに陣を敷き、そこから城へ寄せるのが順である。
+   山城なら坂を登ることになり、足は鈍る。その間、櫓と狭間から矢と鉄砲を浴びる。
+
+   構えるのは、堀の外に残された余地の七割ほど退がった所。盤の縁までは
+   下がらない。縁に貼りつくと回り込む道が無くなって隊が重なるためである。
+   同じ門を目指す二番手・三番手は、さらに退がって列を成す。 */
+export function 寄せ口(m, gt, rank = 0) {
+  const o = m.layers[0], a = axisOf(o, gt);
+  const 外構 = m.moat.band + o.masu + m.t + 96;
+  const 端 = (a.along === "x" ? FIELD.h : FIELD.w) / 2
+    - Math.abs(a.along === "x" ? a.oy : a.ox);
+  const 余地 = Math.max(0, 端 - (a.half + 外構));
+  const back = 外構 + Math.min(余地 * 0.94, 余地 * 0.72 + rank * 76);
+  const 横 = ((rank % 2) ? 1 : -1) * (rank ? 44 : 0);
+  const p = fromUV(m, a, gateOpenU(gt) + 横, a.half + back);
+  return { x: p.x, y: p.y, f: Math.atan2(m.cy - p.y, m.cx - p.x), 隔たり: back - a.half * 0 };
+}
+
 export const inRect = (dx, dy, hw, hh) => Math.abs(dx) <= hw && Math.abs(dy) <= hh;
 
 // その曲輪の中にいるか。曲輪の寄せを差し引いて測る。

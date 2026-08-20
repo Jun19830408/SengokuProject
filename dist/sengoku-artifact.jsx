@@ -10852,6 +10852,16 @@ function layoutCastleField(m) {
   }
   return m;
 }
+function \u5BC4\u305B\u53E3(m, gt, rank = 0) {
+  const o = m.layers[0], a = axisOf(o, gt);
+  const \u5916\u69CB = m.moat.band + o.masu + m.t + 96;
+  const \u7AEF = (a.along === "x" ? FIELD.h : FIELD.w) / 2 - Math.abs(a.along === "x" ? a.oy : a.ox);
+  const \u4F59\u5730 = Math.max(0, \u7AEF - (a.half + \u5916\u69CB));
+  const back = \u5916\u69CB + Math.min(\u4F59\u5730 * 0.94, \u4F59\u5730 * 0.72 + rank * 76);
+  const \u6A2A = (rank % 2 ? 1 : -1) * (rank ? 44 : 0);
+  const p = fromUV(m, a, gateOpenU(gt) + \u6A2A, a.half + back);
+  return { x: p.x, y: p.y, f: Math.atan2(m.cy - p.y, m.cx - p.x), \u9694\u305F\u308A: back - a.half * 0 };
+}
 var inRect = (dx, dy, hw, hh) => Math.abs(dx) <= hw && Math.abs(dy) <= hh;
 var inLayer = (m, l, x, y, pad = 0) => inRect(x - m.cx - (l.ox || 0), y - m.cy - (l.oy || 0), l.hw + pad, l.hh + pad);
 function axisOf(l, g) {
@@ -13376,7 +13386,13 @@ function stepBattle(b, dt) {
       const \u751F\u304D\u305F\u7D44 = c.squads.filter((q) => q.men > 0);
       const \u6700\u3082\u9045\u3044\u8DB3 = \u751F\u304D\u305F\u7D44.length ? Math.min(...\u751F\u304D\u305F\u7D44.map((q) => ARM_STATS[q.type].speed)) : avgSpeed;
       const \u968A\u306E\u8DB3 = engaged ? avgSpeed : Math.min(avgSpeed, \u6700\u3082\u9045\u3044\u8DB3 * 1.12);
-      const v = \u968A\u306E\u8DB3 * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag;
+      let \u5BC4\u305B\u9053 = 1;
+      if (MAP && c.side === b.attacker && !engaged && !c.withdraw && !c.routed) {
+        const o = MAP.layers[0];
+        const \u5916 = !inLayer(MAP, o, c.x, c.y, MAP.t + o.masu + MAP.t + 8);
+        if (\u5916) \u5BC4\u305B\u9053 = 0.6;
+      }
+      const v = \u968A\u306E\u8DB3 * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * \u5BC4\u305B\u9053;
       const mvx = dx / dist * v * dt, mvy = dy / dist * v * dt;
       let \u9032\u3081\u305F = true;
       if (passableFor(c, b, c.x + mvx, c.y + mvy)) {
@@ -13708,18 +13724,20 @@ function stepBattle(b, dt) {
         if (f.cool <= 0) {
           const tgt = atkC.filter((c) => Math.hypot(c.x - f.x, c.y - f.y) < 165 * fsN).sort((a, b2) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b2.x - f.x, b2.y - f.y))[0];
           if (tgt) {
-            f.cool = 3.4;
+            f.cool = 2.6;
             const kit = SIEGE_KIT[tgt.kit] || SIEGE_KIT["\u306A\u3057"];
-            let hit = 9 * kit.guard;
+            let hit = 11 * kit.guard;
             const qs = tgt.squads.filter((q) => q.men > 0).sort((a, b2) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b2.x - f.x, b2.y - f.y));
             for (const q of qs) {
               if (hit <= 0) break;
               const take = Math.min(q.men, hit);
               q.men -= take;
               hit -= take;
+              b.\u5C04\u640D = (b.\u5C04\u640D || 0) + take;
               q.cohesion = Math.max(0, q.cohesion - 3);
             }
             tgt.morale -= 0.45;
+            b.\u5C04\u6C17 = (b.\u5C04\u6C17 || 0) + 0.45;
             if (b.fx.length < 160) b.fx.push({ k: "shot", x: f.x, y: f.y, x2: qs[0] ? qs[0].x : tgt.x, y2: qs[0] ? qs[0].y : tgt.y, t: 0, life: 0.28 });
           }
         }
@@ -13753,6 +13771,44 @@ function stepBattle(b, dt) {
             for (const c of atkC) c.morale = Math.min(100, c.morale + 5);
           }
         }
+      }
+    }
+    for (const c of defC) {
+      c.\u72ED\u9593 = (c.\u72ED\u9593 || 0) - dt;
+      if (c.\u72ED\u9593 > 0) continue;
+      const \u5C04\u624B = c.squads.reduce((a2, q) => q.men > 0 && ARM_STATS[q.type].range > 0 ? a2 + q.men : a2, 0);
+      if (\u5C04\u624B < 20) {
+        c.\u72ED\u9593 = 2.6;
+        continue;
+      }
+      const \u5C64 = MAP.layers[c.holdGate ? c.holdGate.layer : MAP.layers.length - 1];
+      const R = 235 * fsN;
+      const \u7684 = atkC.filter((x) => {
+        const ax = x.mx == null ? x.x : x.mx, ay = x.my == null ? x.y : x.my;
+        if (Math.hypot(ax - c.x, ay - c.y) > R) return false;
+        if (attached.has(x.id)) return false;
+        return !inLayer(MAP, \u5C64, ax, ay);
+      }).sort((x, y2) => Math.hypot((x.mx == null ? x.x : x.mx) - c.x, (x.my == null ? x.y : x.my) - c.y) - Math.hypot((y2.mx == null ? y2.x : y2.mx) - c.x, (y2.my == null ? y2.y : y2.my) - c.y))[0];
+      if (!\u7684) {
+        c.\u72ED\u9593 = 1.4;
+        continue;
+      }
+      c.\u72ED\u9593 = 3;
+      const kit = SIEGE_KIT[\u7684.kit] || SIEGE_KIT["\u306A\u3057"];
+      let hit = \u5C04\u624B * 95e-4 * kit.guard;
+      const qs = \u7684.squads.filter((q) => q.men > 0).sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y));
+      for (const q of qs) {
+        if (hit <= 0) break;
+        const take = Math.min(q.men, hit);
+        q.men -= take;
+        hit -= take;
+        b.\u5C04\u640D = (b.\u5C04\u640D || 0) + take;
+        q.cohesion = Math.max(0, q.cohesion - 2);
+      }
+      \u7684.morale -= 0.3;
+      b.\u5C04\u6C17 = (b.\u5C04\u6C17 || 0) + 0.3;
+      if (b.fx.length < 170 && qs[0]) {
+        b.fx.push({ k: "shot", x: c.x, y: c.y, x2: qs[0].x, y2: qs[0].y, t: 0, life: 0.28 });
       }
     }
     let deepest = -1;
@@ -17604,12 +17660,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const outer = map.layers[0], og = outer.gates;
     const atk = mk(atkGens, useLocal, army.localTrain, atkSide, atkColor, (i, n) => {
       const gt = og[i % og.length];
-      const a = axisOf(outer, gt);
-      const rank = Math.floor(i / og.length);
-      const back = map.moat.band + outer.masu + map.t + 96 + rank * 76;
-      const side = (rank % 2 ? 1 : -1) * (rank ? 44 : 0);
-      const p = fromUV(map, a, gateOpenU(gt) + side, a.half + back);
-      return { x: p.x, y: p.y, f: Math.atan2(map.cy - p.y, map.cx - p.x) };
+      return \u5BC4\u305B\u53E3(map, gt, Math.floor(i / og.length));
     }, commitRost);
     const guard = [];
     for (const l of map.layers) for (const gt of l.gates) {
