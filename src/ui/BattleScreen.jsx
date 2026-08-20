@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MAP, axisOf, fromUV, gateOpenU, gatePos, inRect, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
+import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut } from "../battle/corps.js";
 import { drawBattle, drawCastleTerrain, drawFieldTerrain, inOwnZone } from "../battle/draw.js";
 import { stepBattle } from "../battle/engine.js";
@@ -428,7 +428,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const m = b.map;
     let li = 0;
     for (let i = m.layers.length - 1; i >= 0; i--) {
-      if (inRect(c.x - m.cx, c.y - m.cy, m.layers[i].hw, m.layers[i].hh)) { li = i; break; }
+      if (inLayer(m, m.layers[i], c.x, c.y)) { li = i; break; }
     }
     const gt = m.layers[li].gates[0];
     const a2 = axisOf(m.layers[li], gt);

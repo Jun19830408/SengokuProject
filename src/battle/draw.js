@@ -1198,10 +1198,13 @@ export function drawCastleTerrain(ctx, m) {
   }
 
   m.layers.forEach((l, i) => {
+    /* 曲輪ごとに寄せ（縄張り）がある。連郭式なら一列に、梯郭式なら一隅に寄る。
+       描くほうも、その層の中心を見て描かねばならない。 */
+    const lx = cx + (l.ox || 0), ly = cy + (l.oy || 0);
     ctx.fillStyle = tone4[Math.min(3, Math.round((i / Math.max(1, m.layers.length - 1)) * 3))];
-    ctx.fillRect(cx - l.hw, cy - l.hh, l.hw * 2, l.hh * 2);
+    ctx.fillRect(lx - l.hw, ly - l.hh, l.hw * 2, l.hh * 2);
     // 城壁（門の分を抜く）。一色の四角ではなく、石垣として積む
-    const x0 = cx - l.hw - t, x1 = cx + l.hw + t, y0 = cy - l.hh - t, y1 = cy + l.hh + t;
+    const x0 = lx - l.hw - t, x1 = lx + l.hw + t, y0 = ly - l.hh - t, y1 = ly + l.hh + t;
     for (const face of ["S", "N", "E", "W"]) {
       const gs = l.gates.filter((g) => g.face === face).sort((p1, p2) => p1.off - p2.off);
       const horiz = face === "S" || face === "N";
@@ -1210,7 +1213,7 @@ export function drawCastleTerrain(ctx, m) {
       const end = horiz ? x1 : y1;
       for (const g of gs) {
         const wid = g.w + (g.broken ? 20 : 0);
-        const c0 = (horiz ? cx : cy) + g.off - wid / 2;
+        const c0 = (horiz ? lx : ly) + g.off - wid / 2;
         if (horiz) 石垣を描く(ctx, cur, fixed, Math.max(0, c0 - cur), t, t);
         else 石垣を描く(ctx, fixed, cur, t, Math.max(0, c0 - cur), t);
         cur = c0 + wid;
@@ -1263,9 +1266,9 @@ export function drawCastleTerrain(ctx, m) {
     }
     ctx.font = "15px 'Hiragino Mincho ProN',serif";
     ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 3;
-    ctx.strokeText(l.name, cx - l.hw + 10, cy - l.hh + 22);
+    ctx.strokeText(l.name, lx - l.hw + 10, ly - l.hh + 22);
     ctx.fillStyle = "rgba(62,64,50,0.9)";
-    ctx.fillText(l.name, cx - l.hw + 10, cy - l.hh + 22);
+    ctx.fillText(l.name, lx - l.hw + 10, ly - l.hh + 22);
   });
 
   // 施設。崩れたものは瓦礫にする

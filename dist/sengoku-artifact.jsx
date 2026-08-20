@@ -10640,6 +10640,13 @@ var \u69CB\u3048\u306E\u4F8B\u5916 = {
   kasugayama: "\u5C71\u57CE",
   inabayama: "\u5C71\u57CE",
   takeda_i: "\u5C71\u57CE",
+  /* 「〜山城」と名乗っていても山城とは限らない。名の末で測る仕掛けが
+     取り違える城を、名指しで直す。岡山も富山も、平地に近い城である。 */
+  ishiyama_bz: "\u5E73\u5C71\u57CE",
+  toyama: "\u5E73\u57CE",
+  inuyama: "\u5E73\u5C71\u57CE",
+  koriyama: "\u5E73\u5C71\u57CE",
+  matsuyama_m: "\u5E73\u5C71\u57CE",
   tsutsujigasaki: "\u5E73\u57CE",
   nijo: "\u5E73\u57CE",
   kiyosu: "\u5E73\u57CE",
@@ -10648,6 +10655,46 @@ var \u69CB\u3048\u306E\u4F8B\u5916 = {
   edo: "\u5E73\u57CE",
   kofu: "\u5E73\u57CE"
 };
+var \u7E04\u5F35\u306E\u4F8B\u5916 = {
+  nijo: "\u8F2A\u90ED\u5F0F",
+  sunpu: "\u8F2A\u90ED\u5F0F",
+  yamagata: "\u8F2A\u90ED\u5F0F",
+  fukashi: "\u8F2A\u90ED\u5F0F",
+  ishiyama: "\u8F2A\u90ED\u5F0F",
+  kishiwada: "\u8F2A\u90ED\u5F0F",
+  tsutsujigasaki: "\u8F2A\u90ED\u5F0F",
+  gassan: "\u9023\u90ED\u5F0F",
+  nanao: "\u9023\u90ED\u5F0F",
+  odani: "\u9023\u90ED\u5F0F",
+  kasugayama: "\u9023\u90ED\u5F0F",
+  kannonji: "\u9023\u90ED\u5F0F",
+  takeda: "\u9023\u90ED\u5F0F",
+  inabayama: "\u9023\u90ED\u5F0F",
+  takato: "\u9023\u90ED\u5F0F",
+  iwamura: "\u9023\u90ED\u5F0F",
+  mito: "\u9023\u90ED\u5F0F",
+  kozukata: "\u9023\u90ED\u5F0F",
+  matsuyama_bc: "\u9023\u90ED\u5F0F",
+  koriyama_a: "\u9023\u90ED\u5F0F",
+  tottori: "\u9023\u90ED\u5F0F",
+  shigisan: "\u9023\u90ED\u5F0F",
+  ishiyama_bz: "\u68AF\u90ED\u5F0F",
+  kumamoto: "\u68AF\u90ED\u5F0F",
+  kurokawa: "\u68AF\u90ED\u5F0F",
+  okazaki: "\u68AF\u90ED\u5F0F",
+  odawara: "\u68AF\u90ED\u5F0F",
+  oka: "\u68AF\u90ED\u5F0F",
+  hitoyoshi: "\u68AF\u90ED\u5F0F",
+  himeji: "\u6E26\u90ED\u5F0F",
+  edo: "\u6E26\u90ED\u5F0F"
+};
+function \u57CE\u306E\u7E04\u5F35(castle, \u69CB) {
+  if (\u7E04\u5F35\u306E\u4F8B\u5916[castle.id]) return \u7E04\u5F35\u306E\u4F8B\u5916[castle.id];
+  const h = Math.abs(String(castle.id || castle.name || "x").split("").reduce((a, ch) => a * 31 + ch.charCodeAt(0) | 0, 5));
+  if (\u69CB === "\u5C71\u57CE") return h % 4 === 0 ? "\u68AF\u90ED\u5F0F" : "\u9023\u90ED\u5F0F";
+  if (\u69CB === "\u5E73\u5C71\u57CE") return h % 3 === 0 ? "\u8F2A\u90ED\u5F0F" : h % 3 === 1 ? "\u9023\u90ED\u5F0F" : "\u68AF\u90ED\u5F0F";
+  return h % 5 === 0 ? "\u68AF\u90ED\u5F0F" : "\u8F2A\u90ED\u5F0F";
+}
 function \u57CE\u306E\u69CB\u3048(castle) {
   if (\u69CB\u3048\u306E\u4F8B\u5916[castle.id]) return \u69CB\u3048\u306E\u4F8B\u5916[castle.id];
   const n = castle.name || "";
@@ -10681,8 +10728,13 @@ function buildCastleMap(castle) {
   const \u4E0B\u9650W = U2.w * 1.1, \u4E0B\u9650H = U2.d * 2.2;
   const honW = Math.max(\u4E0B\u9650W, \u6A2A\u9577 ? \u57FAW / \u7656.\u7E26\u6A2A : \u57FAW * \u7656.\u7E26\u6A2A);
   const honH = Math.max(\u4E0B\u9650H, \u6A2A\u9577 ? \u57FAH * \u7656.\u7E26\u6A2A : \u57FAH / \u7656.\u7E26\u6A2A);
-  const band = (U2.d * 1.5 + 74) * k * (0.86 + \u7656.\u5E83\u3055 * 0.2);
+  const \u5E2F = (U2.d * 1.5 + 74) * k * (0.86 + \u7656.\u5E83\u3055 * 0.2);
   const masu = 34 * k;
+  const \u7E04\u5F35 = \u57CE\u306E\u7E04\u5F35(castle, \u69CB);
+  const \u9699 = t * 2 + masu + U2.d + 24;
+  const \u592A = 0.6;
+  const \u5BC4 = \u7E04\u5F35 === "\u8F2A\u90ED\u5F0F" ? 0 : Math.max(0, Math.min(\u5E2F * 0.7, (\u5E2F - \u9699) / (1 - \u592A)));
+  const band = \u5E2F + \u5BC4 * \u592A;
   const layers = names.map((name, i) => {
     const back = n - 1 - i;
     const hw = honW + band * back, hh = honH + band * back;
@@ -10712,17 +10764,38 @@ function buildCastleMap(castle) {
         def: 0
       };
     });
-    return { name, i, hw, hh, masu, gates };
+    return { name, i, hw, hh, masu, gates, ox: 0, oy: 0 };
+  });
+  const \u5411x = rnd() < 0.5 ? 1 : -1, \u5411y = rnd() < 0.5 ? 1 : -1;
+  const \u6E26 = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  let ox = 0, oy = 0;
+  layers.forEach((l, i) => {
+    if (i > 0) {
+      if (\u7E04\u5F35 === "\u9023\u90ED\u5F0F") {
+        if (\u6A2A\u9577) ox += \u5BC4 * \u5411x;
+        else oy += \u5BC4 * \u5411y;
+      } else if (\u7E04\u5F35 === "\u68AF\u90ED\u5F0F") {
+        ox += \u5BC4 * \u5411x;
+        oy += \u5BC4 * \u5411y;
+      } else if (\u7E04\u5F35 === "\u6E26\u90ED\u5F0F") {
+        const d = \u6E26[(i - 1 + \u7A2E % 4) % 4];
+        ox += \u5BC4 * d[0];
+        oy += \u5BC4 * d[1];
+      }
+    }
+    l.ox = ox;
+    l.oy = oy;
   });
   const fac = [];
   layers.forEach((l, i) => {
     if (i >= layers.length - 1) return;
+    const \u5F15 = 24;
     for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
       fac.push({
         kind: "\u77E2\u5009",
         name: `${l.name}\u77E2\u5009${sy > 0 ? "\u5357" : "\u5317"}${sx > 0 ? "\u6771" : "\u897F"}`,
-        x: sx * l.hw,
-        y: sy * l.hh,
+        x: l.ox + sx * Math.max(8, l.hw - \u5F15),
+        y: l.oy + sy * Math.max(8, l.hh - \u5F15),
         r: 15,
         hp: 260 + castle.def * 3,
         max: 260 + castle.def * 3,
@@ -10731,11 +10804,17 @@ function buildCastleMap(castle) {
       });
     }
     const nx = layers[i + 1];
+    const \u5E2F2 = [
+      { x: (l.ox + nx.ox) / 2, y: (l.oy - l.hh + nx.oy - nx.hh) / 2, \u5E45: nx.oy - nx.hh - (l.oy - l.hh) },
+      { x: (l.ox + nx.ox) / 2, y: (l.oy + l.hh + nx.oy + nx.hh) / 2, \u5E45: l.oy + l.hh - (nx.oy + nx.hh) },
+      { x: (l.ox - l.hw + nx.ox - nx.hw) / 2, y: (l.oy + nx.oy) / 2, \u5E45: nx.ox - nx.hw - (l.ox - l.hw) },
+      { x: (l.ox + l.hw + nx.ox + nx.hw) / 2, y: (l.oy + nx.oy) / 2, \u5E45: l.ox + l.hw - (nx.ox + nx.hw) }
+    ].sort((a, z) => z.\u5E45 - a.\u5E45)[0];
     fac.push({
       kind: "\u9663\u9418\u6AD3",
       name: `${l.name}\u9663\u9418`,
-      x: (i % 2 ? -1 : 1) * l.hw * 0.5,
-      y: -(l.hh + (nx ? nx.hh + t : 0)) / 2,
+      x: \u5E2F2.x,
+      y: \u5E2F2.y,
       r: 14,
       hp: 200 + castle.def * 2,
       max: 200 + castle.def * 2,
@@ -10751,6 +10830,7 @@ function buildCastleMap(castle) {
     moat: { band: 38 * k * \u7656.\u5800, \u7A7A\u5800: \u7656.\u7A7A\u5800 },
     n,
     \u69CB,
+    \u7E04\u5F35,
     \u6A2A\u9577,
     \u5742: \u69CB === "\u5C71\u57CE" ? 1 : \u69CB === "\u5E73\u5C71\u57CE" ? 0.55 : 0,
     gates: layers.flatMap((l) => l.gates),
@@ -10773,12 +10853,22 @@ function layoutCastleField(m) {
   return m;
 }
 var inRect = (dx, dy, hw, hh) => Math.abs(dx) <= hw && Math.abs(dy) <= hh;
+var inLayer = (m, l, x, y, pad = 0) => inRect(x - m.cx - (l.ox || 0), y - m.cy - (l.oy || 0), l.hw + pad, l.hh + pad);
 function axisOf(l, g) {
   const along = g.face === "S" || g.face === "N" ? "x" : "y";
-  return { along, half: along === "x" ? l.hh : l.hw, sgn: g.face === "S" || g.face === "E" ? 1 : -1 };
+  return {
+    along,
+    half: along === "x" ? l.hh : l.hw,
+    sgn: g.face === "S" || g.face === "E" ? 1 : -1,
+    ox: l.ox || 0,
+    oy: l.oy || 0
+  };
 }
-var toUV = (a, dx, dy) => a.along === "x" ? { u: dx, v: dy * a.sgn } : { u: dy, v: dx * a.sgn };
-var fromUV = (m, a, u, v) => a.along === "x" ? { x: m.cx + u, y: m.cy + a.sgn * v } : { x: m.cx + a.sgn * v, y: m.cy + u };
+var toUV = (a, dx, dy) => {
+  const ex = dx - (a.ox || 0), ey = dy - (a.oy || 0);
+  return a.along === "x" ? { u: ex, v: ey * a.sgn } : { u: ey, v: ex * a.sgn };
+};
+var fromUV = (m, a, u, v) => a.along === "x" ? { x: m.cx + (a.ox || 0) + u, y: m.cy + (a.oy || 0) + a.sgn * v } : { x: m.cx + (a.ox || 0) + a.sgn * v, y: m.cy + (a.oy || 0) + u };
 var gatePos = (m, l, g) => {
   const a = axisOf(l, g);
   return fromUV(m, a, g.off, a.half + m.t / 2);
@@ -10806,7 +10896,8 @@ function castleTerrainAt(x, y) {
     if (f.hp > 0 && Math.hypot(x - f.x, y - f.y) < f.r * 1.5) return "tower";
   }
   for (const l of m.layers) {
-    if (inRect(dx, dy, l.hw + t, l.hh + t) && !inRect(dx, dy, l.hw, l.hh)) {
+    const lx = dx - l.ox, ly = dy - l.oy;
+    if (inRect(lx, ly, l.hw + t, l.hh + t) && !inRect(lx, ly, l.hw, l.hh)) {
       for (const g of l.gates) {
         const a = axisOf(l, g), { u, v } = toUV(a, dx, dy);
         if (v > a.half - 1 && Math.abs(u - g.off) <= g.w / 2 + (g.broken ? 10 : 0)) {
@@ -10829,8 +10920,8 @@ function castleTerrainAt(x, y) {
     if (!inRect(dx, dy, b2, o.hh + t + out + band)) return m.\u5742 >= 1 ? "sakamichi" : "surface";
   }
   const inner = m.layers[m.layers.length - 1];
-  if (inRect(dx, dy, inner.hw, inner.hh)) return "honmaru";
-  for (const l of m.layers) if (inRect(dx, dy, l.hw, l.hh)) return "kuruwa";
+  if (inRect(dx - inner.ox, dy - inner.oy, inner.hw, inner.hh)) return "honmaru";
+  for (const l of m.layers) if (inRect(dx - l.ox, dy - l.oy, l.hw, l.hh)) return "kuruwa";
   return "plain";
 }
 var SIEGE_KIT = {
@@ -10840,7 +10931,7 @@ var SIEGE_KIT = {
   \u4E95\u697C: { gate: 1.1, guard: 0.8, shoot: 1.7, note: "\u5840\u3054\u3057\u306B\u5C04\u304B\u3051\u3089\u308C\u3001\u6AD3\u3092\u5D29\u3057\u3084\u3059\u3044\u3002" }
 };
 function buildNav(m) {
-  const CS = 22;
+  const CS = 22, \u523B = 5;
   const w = Math.ceil(FIELD.w / CS), h = Math.ceil(FIELD.h / CS);
   const ok = new Uint8Array(w * h);
   for (let j = 0; j < h; j++) {
@@ -10848,12 +10939,36 @@ function buildNav(m) {
       ok[j * w + i] = passable(i * CS + CS / 2, j * CS + CS / 2) ? 1 : 0;
     }
   }
-  m.nav = { CS, w, h, ok };
+  const \u6E21\u308C\u308B = (x0, y0, x1, y1) => {
+    const n = Math.max(2, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / \u523B));
+    for (let k = 1; k < n; k++) {
+      if (!passable(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n)) return 0;
+    }
+    return 1;
+  };
+  const eR = new Uint8Array(w * h), eD = new Uint8Array(w * h);
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const k = j * w + i;
+      if (!ok[k]) continue;
+      const x = i * CS + CS / 2, y = j * CS + CS / 2;
+      if (i + 1 < w && ok[k + 1]) eR[k] = \u6E21\u308C\u308B(x, y, x + CS, y);
+      if (j + 1 < h && ok[k + w]) eD[k] = \u6E21\u308C\u308B(x, y, x, y + CS);
+    }
+  }
+  m.nav = { CS, w, h, ok, eR, eD };
   return m.nav;
 }
 function navPath(m, x0, y0, x1, y1) {
   const nv = m.nav || buildNav(m);
-  const { CS, w, h, ok } = nv;
+  const { CS, w, h, ok, eR, eD } = nv;
+  const \u7D99 = (i, j, di, dj) => {
+    if (di > 0 && !eR[j * w + i]) return false;
+    if (di < 0 && !eR[j * w + i - 1]) return false;
+    if (dj > 0 && !eD[j * w + i]) return false;
+    if (dj < 0 && !eD[(j - 1) * w + i]) return false;
+    return true;
+  };
   const ix = (x) => clamp(Math.floor(x / CS), 0, w - 1);
   const iy = (y) => clamp(Math.floor(y / CS), 0, h - 1);
   const near = (i0, j0) => {
@@ -10902,6 +11017,11 @@ function navPath(m, x0, y0, x1, y1) {
       const nk = nj * w + ni;
       if (!ok[nk] || seen[nk]) continue;
       if (di && dj && (!ok[cj * w + ni] || !ok[nj * w + ci])) continue;
+      if (di && dj) {
+        const \u7E26\u6A2A = \u7D99(ci, cj, di, 0) && \u7D99(ni, cj, 0, dj);
+        const \u6A2A\u7E26 = \u7D99(ci, cj, 0, dj) && \u7D99(ci, nj, di, 0);
+        if (!\u7E26\u6A2A && !\u6A2A\u7E26) continue;
+      } else if (!\u7D99(ci, cj, di, dj)) continue;
       const cost = g[cur] + (di && dj ? Math.SQRT2 : 1);
       if (cost < g[nk]) {
         g[nk] = cost;
@@ -10920,11 +11040,11 @@ function navPath(m, x0, y0, x1, y1) {
   const pts = [];
   let lastDir = null;
   for (let n = 1; n < cells.length; n++) {
-    const a = cells[n - 1], b2 = cells[n];
-    const d = `${b2 % w - a % w},${(b2 / w | 0) - (a / w | 0)}`;
+    const a2 = cells[n - 1], b2 = cells[n];
+    const d = `${b2 % w - a2 % w},${(b2 / w | 0) - (a2 / w | 0)}`;
     if (d !== lastDir) {
       lastDir = d;
-      pts.push({ x: a % w * CS + CS / 2, y: (a / w | 0) * CS + CS / 2, r: 30 });
+      pts.push({ x: a2 % w * CS + CS / 2, y: (a2 / w | 0) * CS + CS / 2, r: 30 });
     }
   }
   pts.push({ x: x1, y: y1, r: 26 });
@@ -12195,9 +12315,10 @@ function drawCastleTerrain(ctx, m) {
     ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
   }
   m.layers.forEach((l, i) => {
+    const lx = cx + (l.ox || 0), ly = cy + (l.oy || 0);
     ctx.fillStyle = tone4[Math.min(3, Math.round(i / Math.max(1, m.layers.length - 1) * 3))];
-    ctx.fillRect(cx - l.hw, cy - l.hh, l.hw * 2, l.hh * 2);
-    const x0 = cx - l.hw - t, x1 = cx + l.hw + t, y0 = cy - l.hh - t, y1 = cy + l.hh + t;
+    ctx.fillRect(lx - l.hw, ly - l.hh, l.hw * 2, l.hh * 2);
+    const x0 = lx - l.hw - t, x1 = lx + l.hw + t, y0 = ly - l.hh - t, y1 = ly + l.hh + t;
     for (const face of ["S", "N", "E", "W"]) {
       const gs = l.gates.filter((g) => g.face === face).sort((p1, p2) => p1.off - p2.off);
       const horiz = face === "S" || face === "N";
@@ -12206,7 +12327,7 @@ function drawCastleTerrain(ctx, m) {
       const end = horiz ? x1 : y1;
       for (const g of gs) {
         const wid = g.w + (g.broken ? 20 : 0);
-        const c0 = (horiz ? cx : cy) + g.off - wid / 2;
+        const c0 = (horiz ? lx : ly) + g.off - wid / 2;
         if (horiz) \u77F3\u57A3\u3092\u63CF\u304F(ctx, cur, fixed, Math.max(0, c0 - cur), t, t);
         else \u77F3\u57A3\u3092\u63CF\u304F(ctx, fixed, cur, t, Math.max(0, c0 - cur), t);
         cur = c0 + wid;
@@ -12264,9 +12385,9 @@ function drawCastleTerrain(ctx, m) {
     ctx.font = "15px 'Hiragino Mincho ProN',serif";
     ctx.strokeStyle = "rgba(255,255,255,0.7)";
     ctx.lineWidth = 3;
-    ctx.strokeText(l.name, cx - l.hw + 10, cy - l.hh + 22);
+    ctx.strokeText(l.name, lx - l.hw + 10, ly - l.hh + 22);
     ctx.fillStyle = "rgba(62,64,50,0.9)";
-    ctx.fillText(l.name, cx - l.hw + 10, cy - l.hh + 22);
+    ctx.fillText(l.name, lx - l.hw + 10, ly - l.hh + 22);
   });
   for (const f of m.fac) {
     if (f.hp <= 0) {
@@ -12989,8 +13110,8 @@ function battleAI(b) {
         }
         if (!g) {
           const h = MAP.layers[MAP.layers.length - 1];
-          if (!inRect(c.x - MAP.cx, c.y - MAP.cy, h.hw, h.hh) && near > 130) {
-            issueOrder(b, c, { order: "\u79FB\u52D5", tx: MAP.cx, ty: MAP.cy });
+          if (!inLayer(MAP, h, c.x, c.y) && near > 130) {
+            issueOrder(b, c, { order: "\u79FB\u52D5", tx: MAP.cx + h.ox, ty: MAP.cy + h.oy });
             continue;
           }
         }
@@ -13638,7 +13759,7 @@ function stepBattle(b, dt) {
     for (const l of MAP.layers) if (l.gates.some((g) => g.broken)) deepest = Math.max(deepest, l.i);
     const bw = deepest + 1, tw = MAP.layers.length;
     const hon = MAP.layers[MAP.layers.length - 1];
-    const inL = (i) => atkC.some((c) => inRect((c.mx == null ? c.x : c.mx) - MAP.cx, (c.my == null ? c.y : c.my) - MAP.cy, MAP.layers[i].hw, MAP.layers[i].hh));
+    const inL = (i) => atkC.some((c) => inLayer(MAP, MAP.layers[i], c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my));
     const deep = inL(MAP.layers.length - 1) ? 0.44 : MAP.layers.length > 2 && inL(MAP.layers.length - 2) ? 0.22 : 0.06;
     const fLost = MAP.fac.length ? MAP.fac.filter((f) => f.hp <= 0).length / MAP.fac.length : 0;
     b.press = clamp(bw / tw * 0.52 + fLost * 0.14 + deep, 0, 1);
@@ -13845,7 +13966,7 @@ function stepBattle(b, dt) {
   const em = b.corps.filter((c) => c.side === "E" && !c.dead && !c.routed && !c.withdraw).reduce((s2, c) => s2 + corpsMen(c), 0);
   if (MAP) {
     const h = MAP.layers[MAP.layers.length - 1];
-    const inHon = (c) => c.squads.some((q) => q.men > 0 && inRect(q.x - MAP.cx, q.y - MAP.cy, h.hw, h.hh));
+    const inHon = (c) => c.squads.some((q) => q.men > 0 && inLayer(MAP, h, q.x, q.y));
     const atk = b.corps.some((c) => !c.dead && !c.destroyed && !c.routed && c.side === b.attacker && inHon(c));
     const def = b.corps.some((c) => !c.dead && !c.destroyed && !c.routed && c.side !== b.attacker && inHon(c));
     if (atk && !def) {
@@ -14984,7 +15105,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     const m = b.map;
     let li = 0;
     for (let i = m.layers.length - 1; i >= 0; i--) {
-      if (inRect(c.x - m.cx, c.y - m.cy, m.layers[i].hw, m.layers[i].hh)) {
+      if (inLayer(m, m.layers[i], c.x, c.y)) {
         li = i;
         break;
       }

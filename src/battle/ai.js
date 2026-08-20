@@ -1,4 +1,4 @@
-import { MAP, axisOf, fromUV, gatePos, inRect, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
+import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
 import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime } from "./corps.js";
 import { ARM_STATS, HILLS, RIVER, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
 
@@ -291,8 +291,8 @@ export function battleAI(b) {
         }
         if (!g) {
           const h = MAP.layers[MAP.layers.length - 1];
-          if (!inRect(c.x - MAP.cx, c.y - MAP.cy, h.hw, h.hh) && near > 130) {
-            issueOrder(b, c, { order: "移動", tx: MAP.cx, ty: MAP.cy });
+          if (!inLayer(MAP, h, c.x, c.y) && near > 130) {
+            issueOrder(b, c, { order: "移動", tx: MAP.cx + h.ox, ty: MAP.cy + h.oy });
             continue;
           }
         }

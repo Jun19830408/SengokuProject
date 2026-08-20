@@ -23,7 +23,7 @@ fs.writeFileSync(entry,
 + 'export { battleAI, 岸 } from "../src/battle/ai.js";\n'
 + 'export { RIVER, hasRiver, terrainAt, riverShift, HILLS, FORESTS, WOODS, MARSH, VILLAGES, 踏み込んだ地, 隊の地, 踏み場 } from "../src/battle/field.js";\n'
 + 'export { createBattle, stepBattle } from "../src/battle/engine.js";\n'
-+ 'export { setBattleMap } from "../src/battle/castleMap.js";\n');
++ 'export { setBattleMap, buildNav } from "../src/battle/castleMap.js";\n');
 const out = path.join(ROOT, 'build', 'keiretsu.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
   loader: { '.jsx': 'jsx' }, logLevel: 'error' });
@@ -132,87 +132,91 @@ for (const 陣 of ['横陣', '魚鱗', '鶴翼', '方陣']) {
    押し返す力を掛けていた。行き先へ引く力と押し返す力が押し合うので、
    隊は横へじりじりと流れ、その場に留まっていても左右に震えて見えた。
 
-   震えは「一歩ごとの進む向きが逆へ折り返した回数」で測れる。
-   整然と進むなら、折り返しはまばらにしか起きない。 */
+   震えは「一歩ごとの進む向きが逆へ折り返した回数」で測る。整然と進むなら
+   折り返しはまばらにしか起きないので、一折り返しあたりに歩いた距離で見る。
+
+   一つの城で測っていたが、それでは戦の転がり方に振り回される。同じ決まりの
+   まま曲輪の寄せを変えるだけで、二十六歩とも六十一歩とも出た。
+   八つの城を三つの賽で攻め、平均で見る。こうすると数字が落ち着く。
+
+     いまの決まり（貼りついたときだけ押し返す） … 八十〜百八歩
+     古い決まり（毎瞬押し返す）                 … 十二歩前後
+
+   縄張りを入れて曲輪を隅へ寄せると、帯が痩せるぶん、わずかに折り返しが増える
+   （九十七歩→八十歩）。これは壁ぎわを回る道が増えたためで、震えではない。 */
 {
-  const 城 = { id: 'x', name: '試の城', def: 60, local: 600, localTrain: 70, najimi: 70, rost: null };
-  const 図 = A.layoutCastleField(A.buildCastleMap(城));
-  A.setBattleMap(図);
-  const 外 = 図.layers[0];
-  const 寄 = 外.gates.slice(0, 3).map((gt, i) => {
-    const a = A.axisOf(外, gt);
-    const p = A.fromUV(図, a, gt.off, a.half + 図.moat.band + 外.masu + 図.t + 96);
-    return A.makeCorps('P', 将(i), 400, 900, 75, 75, p.x, p.y, Math.atan2(図.cy - p.y, 図.cx - p.x), '#2F5D8C');
-  });
-  const 持 = [];
-  for (const l of 図.layers) for (const gt of l.gates) {
-    const a = A.axisOf(l, gt);
-    const p = A.fromUV(図, a, gt.off, a.half - 30);
-    持.push({ x: p.x, y: p.y, f: Math.atan2(p.y - 図.cy, p.x - 図.cx) + Math.PI, gate: gt });
-  }
-  const 守 = 持.slice(0, 4).map((sp, i) => {
-    const c = A.makeCorps('E', 将(100 + i), 300, 300, 70, 70, sp.x, sp.y, sp.f, '#B0483C');
-    c.holdGate = sp.gate; return c;
-  });
-  const b = A.createBattle(寄, 守, 'P');
-  b.mode = 'castle'; b.map = 図; b.dusk = 1080; b.phase = 'fight';
-  for (const c of 寄) { c.formation = '方陣'; A.placeSquads(c, true); }
-
-  const 前 = new Map(), 折返 = new Map(), 歩 = new Map();
-  let 隊折返 = 0;
-  const 隊前 = new Map(), 隊歩み = new Map();
-  for (let k = 0; k < 1600; k++) {
-    const 位 = new Map(), 隊位 = new Map();
-    for (const c of [...寄, ...守]) { 隊位.set(c, { x: c.x, y: c.y }); for (const q of c.squads) 位.set(q, { x: q.x, y: q.y }); }
-    A.stepBattle(b, 0.25);
-    if (k % 4 === 0) A.battleAI(b);
-    for (const c of [...寄, ...守]) {
-      if (c.dead || c.destroyed) continue;
-      for (const q of c.squads) {
-        if (q.men <= 0) continue;
-        const p0 = 位.get(q); if (!p0) continue;
-        const vx = q.x - p0.x, vy = q.y - p0.y, d = Math.hypot(vx, vy);
-        if (d < 0.02) continue;
-        歩.set(q, (歩.get(q) || 0) + d);
-        const pv = 前.get(q);
-        if (pv && (pv.x * vx + pv.y * vy) < 0) 折返.set(q, (折返.get(q) || 0) + 1);
-        前.set(q, { x: vx / d, y: vy / d });
-      }
-      const cp = 隊位.get(c);
-      const cvx = c.x - cp.x, cvy = c.y - cp.y, cd = Math.hypot(cvx, cvy);
-      if (cd >= 0.02) {
-        隊歩み.set(c, (隊歩み.get(c) || 0) + cd);
-        const pv = 隊前.get(c);
-        if (pv && (pv.x * cvx + pv.y * cvy) < 0) 隊折返++;
-        隊前.set(c, { x: cvx / cd, y: cvy / cd });
-      }
+  const 将2 = (i) => ({ id: `h${i}`, name: `武将${i}`, lead: 62, valor: 60, wit: 55, gov: 55, retinue: 400, retTrain: 70, unity: 60 });
+  const 一戦 = (id, def) => {
+    const 図 = A.buildCastleMap({ id, name: `${id}城`, def, local: 600, localTrain: 70, najimi: 70, rost: null });
+    A.layoutCastleField(図); A.setBattleMap(図);
+    const 外 = 図.layers[0];
+    const 寄 = 外.gates.slice(0, 3).map((gt, i) => {
+      const a = A.axisOf(外, gt);
+      const p = A.fromUV(図, a, gt.off, a.half + 図.moat.band + 外.masu + 図.t + 96);
+      return A.makeCorps('P', 将2(i), 400, 900, 75, 75, p.x, p.y, Math.atan2(図.cy - p.y, 図.cx - p.x), '#2F5D8C');
+    });
+    const 持 = [];
+    for (const l of 図.layers) for (const gt of l.gates) {
+      const a = A.axisOf(l, gt), p = A.fromUV(図, a, gt.off, a.half - 30);
+      持.push({ x: p.x, y: p.y, f: Math.atan2(p.y - 図.cy, p.x - 図.cx) + Math.PI, gate: gt });
     }
-    if (b.result) break;
+    const 守 = 持.slice(0, 4).map((sp, i) => {
+      const c = A.makeCorps('E', 将2(100 + i), 300, 300, 70, 70, sp.x, sp.y, sp.f, '#B0483C');
+      c.holdGate = sp.gate; return c;
+    });
+    const b = A.createBattle(寄, 守, 'P');
+    b.mode = 'castle'; b.map = 図; b.dusk = 1080; b.phase = 'fight';
+    for (const c of 寄) { c.formation = '方陣'; A.placeSquads(c, true); }
+    let 折 = 0, 歩 = 0, 組折 = 0, 組歩 = 0;
+    const 前 = new Map(), 組前 = new Map();
+    for (let k = 0; k < 1400; k++) {
+      const 位 = new Map(), 組位 = new Map();
+      for (const c of [...寄, ...守]) {
+        位.set(c, { x: c.x, y: c.y });
+        for (const q of c.squads) 組位.set(q, { x: q.x, y: q.y });
+      }
+      A.stepBattle(b, 0.25);
+      if (k % 4 === 0) A.battleAI(b);
+      for (const c of [...寄, ...守]) {
+        if (c.dead || c.destroyed) continue;
+        const p0 = 位.get(c), vx = c.x - p0.x, vy = c.y - p0.y, d = Math.hypot(vx, vy);
+        if (d >= 0.02) {
+          歩 += d;
+          const pv = 前.get(c);
+          if (pv && pv.x * vx + pv.y * vy < 0) 折++;
+          前.set(c, { x: vx / d, y: vy / d });
+        }
+        for (const q of c.squads) {
+          if (q.men <= 0) continue;
+          const r0 = 組位.get(q); if (!r0) continue;
+          const ux = q.x - r0.x, uy = q.y - r0.y, e = Math.hypot(ux, uy);
+          if (e < 0.02) continue;
+          組歩 += e;
+          const pu = 組前.get(q);
+          if (pu && pu.x * ux + pu.y * uy < 0) 組折++;
+          組前.set(q, { x: ux / e, y: uy / e });
+        }
+      }
+      if (b.result) break;
+    }
+    return { 隊: 歩 / Math.max(1, 折), 組: 組歩 / Math.max(1, 組折), 形: 図.縄張, 落: b.result ? 1 : 0 };
+  };
+  const 城々 = [['a', 60], ['bb', 72], ['ccc', 45], ['dddd', 66], ['ee', 38], ['fff', 80], ['gg', 52], ['hhhh', 58]];
+  let 隊和 = 0, 組和 = 0, n = 0, 落 = 0;
+  const 形 = {};
+  for (const [id, def] of 城々) for (const sd of [0x1111, 0x2222, 0x3333]) {
+    種 = sd;
+    const r = 一戦(id, def);
+    隊和 += r.隊; 組和 += r.組; n++; 落 += r.落;
+    形[r.形] = (形[r.形] || 0) + 1;
   }
-  const 総折返 = [...折返.values()].reduce((a, x) => a + x, 0) || 1;
-  const 総歩 = [...歩.values()].reduce((a, x) => a + x, 0);
-  const 間隔 = 総歩 / 総折返;
-  /* 隊の折り返しも、回数ではなく「何px歩くごとに一度か」で測る。
-     回数で測っていたが、盤を広げたら道のりが伸び、当然のように増えた。
-     広さに依らない尺度でなければ、盤を変えるたびに測り直すことになる。 */
-  const 隊歩 = [...隊歩み.values()].reduce((a, x) => a + x, 0);
-  const 隊間隔 = 隊歩 / Math.max(1, 隊折返);
-  /* 一折り返しあたり何px歩けているか。震えていると数pxごとに折り返す。
-
-     測る場所を二つ持っている。組（squad）と隊（corps）である。
-     城の盤を広げ、山城に坂を入れたところ、組の測りは効きが鈍った。
-     押し返しを毎瞬かける古い決まりで 43.6px、いまの決まりで 46.8px――
-     ほとんど差がない。隊が壁際にいる時が減り、坂を登っている時が増えたためである。
-
-     隊の測りは、いまも効いている。古い決まりで一折り返しあたり21.8px、
-     いまの決まりで38.4px。震えを見るならこちらである。
-     （隘路で長蛇に組み替えるようにしたので、堀を渡るときに隊が組み替わり、
-       そのぶん折り返しが増えた。これは震えではなく、道理どおりの動きである。）
-     組の測りは、ひどい震えを拾う下限としてだけ残す。 */
-  console.log(`  ${間隔 >= 35 ? '○' : '★'} 組は震えずに進む　一折り返しあたり ${間隔.toFixed(1)}px（下限。押し返しを毎瞬かけても43.6pxで、ここは効きが鈍い）`);
-  console.log(`  ${隊間隔 >= 33 ? '○' : '★'} 隊そのものが左右に流れない　一折り返しあたり ${隊間隔.toFixed(1)}px（毎瞬かけると21.8px）`);
-  if (間隔 < 35) 咎.push(`城攻めで組が震える（一折り返しあたり ${間隔.toFixed(1)}px）`);
-  if (隊間隔 < 33) 咎.push(`城攻めで隊が左右に流れる（一折り返しあたり ${隊間隔.toFixed(1)}px）`);
+  const 隊間隔 = 隊和 / n, 間隔 = 組和 / n;
+  console.log(`  （${n}戦を平均。縄張りの内訳 ${JSON.stringify(形)}）`);
+  確('城攻めで隊が左右に流れない', 隊間隔 >= 55,
+    `一折り返しあたり ${隊間隔.toFixed(1)}px（毎瞬押し返す古い決まりでは12.2px）`);
+  確('組も震えずに進む', 間隔 >= 30,
+    `一折り返しあたり ${間隔.toFixed(1)}px（下限。ここは効きが鈍い）`);
+  確('それでも城は落ちる（動けなくなっていない）', 落 >= n * 0.7, `${落}／${n}戦で落城`);
   A.setBattleMap(null);
 }
 

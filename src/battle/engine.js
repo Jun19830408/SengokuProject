@@ -1,5 +1,5 @@
 import { battleAI } from "./ai.js";
-import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inRect, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
+import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 踏み込んだ地, 隊の地 } from "./field.js";
 import { clamp } from "../core/util.js";
@@ -591,7 +591,7 @@ export function stepBattle(b, dt) {
     for (const l of MAP.layers) if (l.gates.some((g) => g.broken)) deepest = Math.max(deepest, l.i);
     const bw = deepest + 1, tw = MAP.layers.length;
     const hon = MAP.layers[MAP.layers.length - 1];
-    const inL = (i) => atkC.some((c) => inRect((c.mx == null ? c.x : c.mx) - MAP.cx, (c.my == null ? c.y : c.my) - MAP.cy, MAP.layers[i].hw, MAP.layers[i].hh));
+    const inL = (i) => atkC.some((c) => inLayer(MAP, MAP.layers[i], c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my));
     const deep = inL(MAP.layers.length - 1) ? 0.44 : MAP.layers.length > 2 && inL(MAP.layers.length - 2) ? 0.22 : 0.06;
     const fLost = MAP.fac.length ? MAP.fac.filter((f) => f.hp <= 0).length / MAP.fac.length : 0;
     b.press = clamp((bw / tw) * 0.52 + fLost * 0.14 + deep, 0, 1);
@@ -779,7 +779,7 @@ export function stepBattle(b, dt) {
   if (MAP) {
     const h = MAP.layers[MAP.layers.length - 1];
     // 本丸に「兵が」入っているかで見る。隊の代表点だけでは壁の内と外を取り違える。
-    const inHon = (c) => c.squads.some((q) => q.men > 0 && inRect(q.x - MAP.cx, q.y - MAP.cy, h.hw, h.hh));
+    const inHon = (c) => c.squads.some((q) => q.men > 0 && inLayer(MAP, h, q.x, q.y));
     const atk = b.corps.some((c) => !c.dead && !c.destroyed && !c.routed && c.side === b.attacker && inHon(c));
     const def = b.corps.some((c) => !c.dead && !c.destroyed && !c.routed && c.side !== b.attacker && inHon(c));
     if (atk && !def) {
