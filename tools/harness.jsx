@@ -19,7 +19,8 @@ export { 特殊勢力の可否, drawTownMark, 町の様子 } from "../src/core/t
 export { FACTIONS } from "../src/data/factions.js";
 export { CASTLES } from "../src/data/castles.js";
 export { px, py } from "../src/data/geo.js";
-export { roadBetween } from "../src/core/paths.js";
+export { roadBetween, marchMonths, marchMonthsOf, findPathVia, nodeById } from "../src/core/paths.js";
+export { ROADS } from "../src/data/roads.js";
 export { findPath } from "../src/core/paths.js";
 export { 援けに着く, migrateSave, atPeace, relOf } from "../src/core/state.js";
 export { resolveOffscreen } from "../src/govern/war.js";

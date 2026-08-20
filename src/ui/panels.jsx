@@ -20,6 +20,7 @@ import { 既定の兵科 } from "../data/arms.js";
 import { 主家 } from "../core/state.js";
 import { is架空 } from "../core/house.js";
 import { isCoastal, navalPower } from "../core/naval.js";
+import { findPathVia, marchMonthsOf } from "../core/paths.js";
 
 
 export function SortieDialog({ g, from, onClose, onGo }) {
@@ -38,22 +39,38 @@ export function SortieDialog({ g, from, onClose, onGo }) {
       // 兵を出せる先は、自家の城、臣従の家の城（援軍）、そして攻められる敵城。
       .filter((x) => x.id !== from
         && (underMyBanner(g, c.faction, x.faction) || canAttack(g, x.id)))
-      .map((x) => ({ x, m: marchMonths(from, x.id) || 99 }))
-      // 隣り合う城か、味方の城を伝って辿れる先にしか兵は出せぬ。
-      // 遠国へ攻め入るには、まずその手前を切り取らねばならない。
-      .filter(({ x, m }) => {
-        if (m > 6) return false;
-        if (underMyBanner(g, c.faction, x.faction)) return true;   // 旗の下の城へは寄せられる
-        const path = findPath(from, x.id);
-        if (!path) return false;
-        // 途中の城がすべて味方（または同盟）でなければ通れない
-        for (let i = 1; i < path.length - 1; i++) {
-          const mid = g.castles.find((y) => y.id === path[i]);
-          if (!mid) return false;
-          if (mid.faction === c.faction) continue;
+      /* 隣り合う城か、味方の城を伝って辿れる先にしか兵は出せぬ。
+         遠国へ攻め入るには、まずその手前を切り取らねばならない。
+
+         かつては「いちばん安い道を探してから、その途中が通れるかを問う」と
+         していた。順が逆である。安い道が通れなくとも、通れる道が別にあれば
+         兵は出せる。実際、吉田郡山城から月山富田城へは難所で直に結ばれて
+         いるのに、安い迂回路（尼子の城を二つ通る）を見て弾いていた。
+         はじめから、通れる所だけを通って道を探す。 */
+      .map((x) => {
+        const 通れる = (id) => {
+          const mid = g.castles.find((y) => y.id === id);
+          if (!mid) return true;                     // 城でない中継（湊・宿）は通れる
+          if (mid.faction === c.faction) return true;
           const st = relOf(g, c.faction, mid.faction).state;
-          if (st !== "同盟" && st !== "従属" && st !== "臣従") return false;
-        }
+          return st === "同盟" || st === "従属" || st === "臣従";
+        };
+        const 道 = underMyBanner(g, c.faction, x.faction)
+          ? findPath(from, x.id)                     // 旗の下の城へは、どこを通っても寄せられる
+          : findPathVia(from, x.id, 通れる);
+        return { x, m: 道 ? (marchMonthsOf(道) || 99) : 99, 道 };
+      })
+      .filter(({ x, m, 道 }) => {
+        if (!道) return false;
+        /* 直に街道で結ばれた城へは、月数を問わず兵を出せる。
+
+           六か月の締めは「遠国へいきなり攻め入るな」という決まりであって、
+           隣の城へ出せぬようにするためのものではない。
+           吉田郡山城から月山富田城へは難所で直に結ばれているが、
+           難所は足が〇.一八にしかならぬので十一か月と出る。それでも隣は隣である。
+           尼子と毛利が長らく境を争ったのは、まさにこの峠であった。 */
+        if (roadBetween(from, x.id)) return true;
+        if (m > 6) return false;
         return true;
       })
       // 攻められている自城を先に並べる。救わねばならぬ城が埋もれては困る。

@@ -4806,6 +4806,70 @@ function findPath(from, to) {
   return out;
 }
 var roadBetween = (a, b) => ROAD_MAP[`${a}|${b}`];
+function findPathVia(from, to, \u901A\u308C\u308B) {
+  if (from === to) return [from];
+  if (!\u901A\u308C\u308B) return findPath(from, to);
+  const cost = /* @__PURE__ */ new Map([[from, 0]]);
+  const prev = /* @__PURE__ */ new Map([[from, null]]);
+  const seen = /* @__PURE__ */ new Set();
+  const heap = [[0, from]];
+  const push = (d, n) => {
+    heap.push([d, n]);
+    let i = heap.length - 1;
+    while (i > 0) {
+      const p2 = i - 1 >> 1;
+      if (heap[p2][0] <= heap[i][0]) break;
+      [heap[p2], heap[i]] = [heap[i], heap[p2]];
+      i = p2;
+    }
+  };
+  const pop = () => {
+    const top = heap[0], last = heap.pop();
+    if (heap.length) {
+      heap[0] = last;
+      let i = 0;
+      for (; ; ) {
+        const l = i * 2 + 1, r2 = l + 1;
+        let m = i;
+        if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+        if (r2 < heap.length && heap[r2][0] < heap[m][0]) m = r2;
+        if (m === i) break;
+        [heap[m], heap[i]] = [heap[i], heap[m]];
+        i = m;
+      }
+    }
+    return top;
+  };
+  while (heap.length) {
+    const [best, cur] = pop();
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    if (cur === to) break;
+    if (cur !== from && cur !== to && !\u901A\u308C\u308B(cur)) continue;
+    for (const nxt of ROAD_ADJ[cur] || []) {
+      const r = ROAD_MAP[`${cur}|${nxt}`];
+      const d = best + (r ? r[2] / (ROAD_SPEED[r[3]] || 1) : 20);
+      if (!cost.has(nxt) || d < cost.get(nxt)) {
+        cost.set(nxt, d);
+        prev.set(nxt, cur);
+        push(d, nxt);
+      }
+    }
+  }
+  if (!cost.has(to)) return null;
+  const out = [];
+  for (let x = to; x != null; x = prev.get(x)) out.unshift(x);
+  return out;
+}
+function marchMonthsOf(path) {
+  if (!path || path.length < 2) return path ? 1 : null;
+  let d = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    const r = roadBetween(path[i], path[i + 1]);
+    d += r ? r[2] / ROAD_SPEED[r[3]] : 10;
+  }
+  return Math.max(1, Math.ceil(d / MARCH_PER_MONTH));
+}
 function canAttack(g, targetId) {
   const t = g.castles.find((c) => c.id === targetId);
   if (!t || t.faction === g.player) return false;
@@ -13872,18 +13936,20 @@ function SortieDialog({ g, from, onClose, onGo }) {
   const tooLow = [];
   const [picked, setPicked] = useState2(gens.slice(0, 2).map((x) => x.id));
   const \u884C\u304D\u5148 = useMemo(() => {
-    return g.castles.filter((x) => x.id !== from && (underMyBanner(g, c.faction, x.faction) || canAttack(g, x.id))).map((x) => ({ x, m: marchMonths(from, x.id) || 99 })).filter(({ x, m }) => {
-      if (m > 6) return false;
-      if (underMyBanner(g, c.faction, x.faction)) return true;
-      const path2 = findPath(from, x.id);
-      if (!path2) return false;
-      for (let i = 1; i < path2.length - 1; i++) {
-        const mid = g.castles.find((y) => y.id === path2[i]);
-        if (!mid) return false;
-        if (mid.faction === c.faction) continue;
+    return g.castles.filter((x) => x.id !== from && (underMyBanner(g, c.faction, x.faction) || canAttack(g, x.id))).map((x) => {
+      const \u901A\u308C\u308B = (id) => {
+        const mid = g.castles.find((y) => y.id === id);
+        if (!mid) return true;
+        if (mid.faction === c.faction) return true;
         const st = relOf(g, c.faction, mid.faction).state;
-        if (st !== "\u540C\u76DF" && st !== "\u5F93\u5C5E" && st !== "\u81E3\u5F93") return false;
-      }
+        return st === "\u540C\u76DF" || st === "\u5F93\u5C5E" || st === "\u81E3\u5F93";
+      };
+      const \u9053 = underMyBanner(g, c.faction, x.faction) ? findPath(from, x.id) : findPathVia(from, x.id, \u901A\u308C\u308B);
+      return { x, m: \u9053 ? marchMonthsOf(\u9053) || 99 : 99, \u9053 };
+    }).filter(({ x, m, \u9053 }) => {
+      if (!\u9053) return false;
+      if (roadBetween(from, x.id)) return true;
+      if (m > 6) return false;
       return true;
     }).map(({ x, m }) => ({
       x,
@@ -18353,6 +18419,18 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     return { \u4E0B\u77E5 };
   };
+  const \u51FA\u9663\u306E\u9053 = (s2, from, to) => {
+    const \u7684 = s2.castles.find((x) => x.id === to);
+    if (\u7684 && underMyBanner(s2, s2.player, \u7684.faction)) return findPath(from, to);
+    const \u901A\u308C\u308B = (id) => {
+      const mid = s2.castles.find((y) => y.id === id);
+      if (!mid) return true;
+      if (mid.faction === s2.player) return true;
+      const st = relOf(s2, s2.player, mid.faction).state;
+      return st === "\u540C\u76DF" || st === "\u5F93\u5C5E" || st === "\u81E3\u5F93";
+    };
+    return findPathVia(from, to, \u901A\u308C\u308B) || findPath(from, to);
+  };
   const launchSortie = (p) => {
     if (!p.to || !findPath(p.from, p.to)) return;
     const \u76EE\u6A19 = g.castles.find((x) => x.id === p.to);
@@ -18453,7 +18531,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         localTrain: c.localTrain,
         men: p.local + p.gens.reduce((a, id) => a + s2.generals.find((x) => x.id === id).retinue, 0),
         at: p.from,
-        path: findPath(p.from, p.to),
+        path: \u51FA\u9663\u306E\u9053(s2, p.from, p.to),
         prog: 0,
         food: p.food,
         target: p.to,

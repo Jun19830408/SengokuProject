@@ -43,6 +43,7 @@ import { 外を押して閉じる } from "./panels.jsx";
 import { rosterCut } from "../core/roster.js";
 import { drawTownMark, 町の様子 } from "../core/town.js";
 import { 特殊勢力の可否 } from "../core/town.js";
+import { findPathVia } from "../core/paths.js";
 
 /* ============================================================ 政略マップ */
 export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
@@ -1435,6 +1436,23 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     return { 下知 };
   };
 
+  /* 出陣の道。出陣先を選ぶときと同じ道を、実際にも進ませる（GDD 7.1）。
+
+     選ぶときは「通れる所だけを通る道」で判じておきながら、進むときは
+     いちばん安い道を辿っていた。それでは、通れぬはずの他家の城を素通りする。 */
+  const 出陣の道 = (s, from, to) => {
+    const 的 = s.castles.find((x) => x.id === to);
+    if (的 && underMyBanner(s, s.player, 的.faction)) return findPath(from, to);
+    const 通れる = (id) => {
+      const mid = s.castles.find((y) => y.id === id);
+      if (!mid) return true;
+      if (mid.faction === s.player) return true;
+      const st = relOf(s, s.player, mid.faction).state;
+      return st === "同盟" || st === "従属" || st === "臣従";
+    };
+    return findPathVia(from, to, 通れる) || findPath(from, to);
+  };
+
   const launchSortie = (p) => {
     if (!p.to || !findPath(p.from, p.to)) return;      // 行けない目標は受け付けない
     /* 約束を交わした相手へ兵を出そうとしていないか（GDD 11.1）。
@@ -1524,7 +1542,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       s.armies.push({
         id: mainId, faction: s.player, from: p.from, gens: p.gens, local: p.local, rost: takeMain.taken,
         localTrain: c.localTrain, men: p.local + p.gens.reduce((a, id) => a + s.generals.find((x) => x.id === id).retinue, 0),
-        at: p.from, path: findPath(p.from, p.to), prog: 0, food: p.food, target: p.to,
+        at: p.from, path: 出陣の道(s, p.from, p.to), prog: 0, food: p.food, target: p.to,
         ...(救う ? { relief: p.to } : {}),
       });
       for (const gid of p.gens) s.generals.find((x) => x.id === gid).at = null;
