@@ -36,6 +36,18 @@ export function createBattle(playerCorps, enemyCorps, attackerSide) {
     retreat: null, orderly: false, fx: [],
   };
   for (const c of b.corps) { placeSquads(c, true); c.lastSeen = { x: c.x, y: c.y, t: 0 }; }
+  /* 両軍の布陣の中心を覚えておく（GDD 8.5）。
+
+     分遣を出すか否かは、どこで出すかによる。自陣のそばで森を探っても、
+     敵がいるはずがない。敵陣のそばで橋を守っても、守るべきものがない。
+     「自陣の側か、敵陣の側か」を測るために、初めの布陣を控えておく。 */
+  const 中 = (arr) => {
+    const 生 = arr.filter((c) => corpsMen(c) > 0);
+    const n = 生.length || 1;
+    return { x: 生.reduce((a, c) => a + c.x, 0) / n, y: 生.reduce((a, c) => a + c.y, 0) / n };
+  };
+  b.陣 = { P: 中(playerCorps), E: 中(enemyCorps) };
+  b.陣間 = Math.max(200, Math.hypot(b.陣.P.x - b.陣.E.x, b.陣.P.y - b.陣.E.y));
   return b;
 }
 
@@ -848,6 +860,8 @@ export function stepBattle(b, dt) {
       const near = alive.some((o) => o.side !== c.side && Math.hypot(o.x - c.x, o.y - c.y) < 190);
       if (near || fighting) c.frontTime = (c.frontTime || 0) + dt;
     }
+    // 槍を合わせている刻。分遣（騎馬の回り込み）を出す頃合いを測るのに使う。
+    c.噛み刻 = fighting ? (c.噛み刻 || 0) + dt : 0;
     c.fatigue = clamp(c.fatigue + (fighting ? 1.1 : c.order === "待機" ? -1.4 : 0) * dt, 0, 100);
     if (c.pinch >= 2) c.morale -= (c.pinch - 1) * 0.22 * dt;   // 挟まれると士気がじわりと落ちる
     // 押し引きの覚え。刻とともに褪せる（半減およそ七秒）
@@ -908,14 +922,14 @@ export function stepBattle(b, dt) {
        これまでは盤の外へ走り去って、そのまま退場した。八割の兵を抱えたまま
        戦場から消えるので、野戦も城攻めも尻すぼみに終わっていた。
 
-       いまは、いくさ場のうち敵のいない所まで退いて息をつく。士気が四十五まで
+       いまは、いくさ場のうち敵のいない所まで退いて息をつく。士気が三十四まで
        戻れば戦列に復する。ただし逃げ場がなく、追われて士気も兵も尽きたときは、
        盤の外へ落ちるほかない（潰走）。落ちた隊の将は捕らわれやすい。 */
     if (c.routed && !c.潰) {
       if (c.morale <= 0 || corpsMen(c) <= 0) {
         c.潰 = true;
         b.log.push({ t: b.t, text: `${c.name}隊は支えを失い、戦場を落ちていった。` });
-      } else if (c.morale >= 38) {
+      } else if (c.morale >= 34) {
         c.routed = false; c.潰 = false; c.立て直し = null;
         c.order = "待機"; c.tx = c.x; c.ty = c.y;
         for (const q of c.squads) q.cohesion = Math.max(q.cohesion, 40);

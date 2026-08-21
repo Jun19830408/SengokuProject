@@ -224,6 +224,86 @@ export const DETACH_DEFS = [
   },
 ];
 
+/* 分遣を出す頃合い（GDD 8.5）。
+
+   これまでは戦の初めの二十五秒のうちに、賽の目ひとつで分遣が出ていた。
+   橋を見つければ飛びつき、丘を見つければ飛びつき、敵もおらぬのに騎馬が
+   側面へ回り、自陣のそばの森を偵察していた。策ではなく、癖である。
+
+   分遣とは、そこに用があるから割くものである。用があるかどうかは、
+   誰が、いつ、どこで、を見て判ずる。
+
+     騎馬側面攻撃 … 槍を合わせてから回り込む。ただし統率・武勇・知略の
+                    いずれも七十五を超える将は、当たる少し前に回り始める。
+                    そういう芸当ができるのは、そういう将だけである。
+     弓鉄砲高地占拠 … 受け手は初めから近くの高みへ。寄せ手は敵陣の間近まで
+                      進んで、まだ誰も取っていない高みが目に入ったときだけ。
+     橋渡河点防衛 … 受け手だけ。しかも渡り場が自陣の側にあるときだけ。
+                    敵陣の際の橋を守っても、守るべきものがない。
+     森林偵察 … 敵陣の側の森を探る。自陣のそばの森に敵はおらぬ。
+                ただし敵の姿を見失っているなら、伏せられている見込みがある。 */
+export function 分遣の頃合い(b, c, key) {
+  if (b.map || !b.陣) return false;
+  const 味方陣 = b.陣[c.side], 敵陣 = b.陣[c.side === "P" ? "E" : "P"];
+  if (!味方陣 || !敵陣) return false;
+  const 間 = b.陣間 || 800;
+  const 敵陣まで = Math.hypot(敵陣.x - c.x, 敵陣.y - c.y);
+  const 自陣まで = Math.hypot(味方陣.x - c.x, 味方陣.y - c.y);
+  const 攻め手 = c.side === b.attacker;
+  const 生きた敵 = b.corps.filter((o) => !o.dead && !o.destroyed && !o.routed && o.side !== c.side);
+  const 近い敵 = 生きた敵.reduce((a, o) => Math.min(a, Math.hypot(o.x - c.x, o.y - c.y)), 1e9);
+
+  if (key === "騎馬側面攻撃") {
+    const g = c.gen || {};
+    const 名将 = (g.lead || 0) >= 75 && (g.valor || 0) >= 75 && (g.wit || 0) >= 75;
+    // 噛み合ってしばらく――正面が支えられると見てから、騎馬を回す。
+    // 出会い頭に割いては、正面が薄いまま当たることになる。
+    if ((c.噛み刻 || 0) > 6) return true;
+    return 名将 && 近い敵 < 520;                              // 当たる少し前に動ける将
+  }
+
+  if (key === "弓鉄砲高地占拠") {
+    if (!HILLS.length) return false;
+    const 丘 = nearestOf(HILLS, c.x, c.y);
+    if (!丘) return false;
+    const 丘まで = Math.hypot(丘.x - c.x, 丘.y - c.y);
+    // すでに誰かが取っている高みへは出さない
+    const 取られた = b.corps.some((o) => !o.dead && !o.destroyed && o !== c
+      && Math.hypot(o.x - 丘.x, o.y - 丘.y) < 丘.r * 0.6);
+    if (取られた) return false;
+    if (!攻め手) {
+      // 受け手は初めから。ただし近い高みに限る（遠い丘へ兵を割いても戦列が薄くなるだけ）
+      return 丘まで < 間 * 0.5 && 丘まで < 700
+        && Math.hypot(丘.x - 味方陣.x, 丘.y - 味方陣.y) <= Math.hypot(丘.x - 敵陣.x, 丘.y - 敵陣.y);
+    }
+    // 寄せ手は敵陣の間近まで進んでから
+    return 敵陣まで < 間 * 0.55 && 丘まで < 520;
+  }
+
+  if (key === "橋渡河点防衛") {
+    if (!hasRiver() || 攻め手) return false;                  // 守るのは受け手の役目
+    const 橋 = (RIVER.bridge[0] + RIVER.bridge[1]) / 2;
+    const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(橋);
+    // 渡り場が自陣の側にあるときだけ守る
+    return Math.hypot(橋 - 味方陣.x, 中 - 味方陣.y) < Math.hypot(橋 - 敵陣.x, 中 - 敵陣.y)
+      && Math.hypot(橋 - c.x, 中 - c.y) < 間 * 0.6;
+  }
+
+  if (key === "森林偵察") {
+    if (!FORESTS.length) return false;
+    const 森 = nearestOf(FORESTS, c.x, c.y);
+    if (!森) return false;
+    const 森まで = Math.hypot(森.x - c.x, 森.y - c.y);
+    if (森まで > 460) return false;
+    // その森が敵陣の側にあること
+    const 敵側の森 = Math.hypot(森.x - 敵陣.x, 森.y - 敵陣.y) < Math.hypot(森.x - 味方陣.x, 森.y - 味方陣.y);
+    // 敵の姿を見失っているなら、自陣の側でも探る値打ちがある（伏兵の見込み）
+    const 見失い = 生きた敵.some((o) => !o.seen);
+    return (敵側の森 && 敵陣まで < 間 * 0.75) || (見失い && 森まで < 320);
+  }
+  return false;
+}
+
 export function detachOptions(b, parent) {
   if (b.map) return [];        // 城攻めに渡河防衛や高地占拠はない
   const used = b.corps.filter((x) => x.parentId === parent.id && !x.dead).length;
@@ -341,12 +421,16 @@ export function detachAI(b, c, alive) {
     return true;
   }
   c.autonomous = !parent || parent.dead || Math.hypot(parent.x - c.x, parent.y - c.y) > 400;
-  const foes = alive.filter((o) => o.side !== c.side && (o.seen || !o.ambush));
+  /* 分遣も、崩れた敵は追わない。本隊の采配と同じ理である。
+     追い回すと、退いて息をついている隊を狩り尽くすことになり、
+     立て直す間もなく盤から消える。測ったところ、崩れた五十八隊のうち
+     三十七隊が盤を落ちていた。追わぬようにすると三十三隊に減った。 */
+  const foes = alive.filter((o) => o.side !== c.side && !o.routed && (o.seen || !o.ambush));
   const nearest = foes.length
     ? foes.reduce((a, o) => (Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a), foes[0])
     : null;
   if (c.task === "騎馬側面攻撃") {
-    if (!nearest) return true;
+    if (!nearest) { c.task = "帰陣"; return true; }   // 当たる相手がおらぬなら本隊へ戻る
     const d = Math.hypot(nearest.x - c.x, nearest.y - c.y);
     if (d > 240) {  // まず側面へ回り込む
       const side = c.x < nearest.x ? -1 : 1;

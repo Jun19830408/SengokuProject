@@ -1,5 +1,5 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
-import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime } from "./corps.js";
+import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 分遣の頃合い } from "./corps.js";
 import { ARM_STATS, HILLS, RIVER, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { clamp } from "../core/util.js";
@@ -135,15 +135,25 @@ export function battleAI(b) {
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
   // 分遣隊は所属を問わず割り当てられた任務を自律遂行する（GDD 8.5）
   for (const c of alive) if (c.detach && !c.routed) detachAI(b, c, alive);
-  // 敵側の分遣は接敵前に一度だけ決める。乱戦の最中に隊を割いて自壊しないようにする。
+  /* 分遣（GDD 8.5）。
+
+     これまでは戦の初めの二十五秒のうちに、賽の目ひとつで分遣が出ていた。
+     橋を見つければ飛びつき、丘を見つければ飛びつき、敵もおらぬのに騎馬が
+     側面へ回り、自陣のそばの森を偵察していた。策ではなく、癖である。
+
+     いまは戦のあいだ折を見て検め、用のあるものだけを出す（corps.js の
+     分遣の頃合い）。誰が、いつ、どこで――その三つが揃ったときだけである。
+     崩れかけた隊は割かない。手薄になれば、そこから崩れる。 */
   for (const c of alive) {
-    if (!delegated(b, c) || c.detach || c.routed || c.detachTried) continue;
-    if (b.t > 25 || c.squads.some((q) => q.engaged) || c.morale < 60) { c.detachTried = true; continue; }
+    if (!delegated(b, c) || c.detach || c.routed || c.withdraw) continue;
+    if (c.morale < 55 || corpsMen(c) < corpsMax(c) * 0.5) continue;
     if (b.t < 3) continue;                       // 布陣直後は様子を見る
-    c.detachTried = true;
-    if (Math.random() > 0.5) continue;
-    const opt = detachOptions(b, c).filter((o) => o.ok);
-    if (opt.length) makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
+    if (b.t < (c.分遣を検めた || 0) + 5) continue;
+    c.分遣を検めた = b.t;
+    const opt = detachOptions(b, c).filter((o) => o.ok && 分遣の頃合い(b, c, o.key));
+    if (!opt.length) continue;
+    if (Math.random() > 0.3) continue;           // 頃合いでも、必ず割くわけではない
+    makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
   }
   /* 名指しの目標（GDD 8.2）。
 

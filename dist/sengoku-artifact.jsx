@@ -10327,6 +10327,52 @@ var DETACH_DEFS = [
     why: "\u77E5\u756560\u4EE5\u4E0A\u30FB\u5075\u5BDF\u517550\u4EE5\u4E0A\u30FB\u68EE\u304C\u5FC5\u8981"
   }
 ];
+function \u5206\u9063\u306E\u9803\u5408\u3044(b, c, key) {
+  if (b.map || !b.\u9663) return false;
+  const \u5473\u65B9\u9663 = b.\u9663[c.side], \u6575\u9663 = b.\u9663[c.side === "P" ? "E" : "P"];
+  if (!\u5473\u65B9\u9663 || !\u6575\u9663) return false;
+  const \u9593 = b.\u9663\u9593 || 800;
+  const \u6575\u9663\u307E\u3067 = Math.hypot(\u6575\u9663.x - c.x, \u6575\u9663.y - c.y);
+  const \u81EA\u9663\u307E\u3067 = Math.hypot(\u5473\u65B9\u9663.x - c.x, \u5473\u65B9\u9663.y - c.y);
+  const \u653B\u3081\u624B = c.side === b.attacker;
+  const \u751F\u304D\u305F\u6575 = b.corps.filter((o) => !o.dead && !o.destroyed && !o.routed && o.side !== c.side);
+  const \u8FD1\u3044\u6575 = \u751F\u304D\u305F\u6575.reduce((a, o) => Math.min(a, Math.hypot(o.x - c.x, o.y - c.y)), 1e9);
+  if (key === "\u9A0E\u99AC\u5074\u9762\u653B\u6483") {
+    const g = c.gen || {};
+    const \u540D\u5C06 = (g.lead || 0) >= 75 && (g.valor || 0) >= 75 && (g.wit || 0) >= 75;
+    if ((c.\u565B\u307F\u523B || 0) > 6) return true;
+    return \u540D\u5C06 && \u8FD1\u3044\u6575 < 520;
+  }
+  if (key === "\u5F13\u9244\u7832\u9AD8\u5730\u5360\u62E0") {
+    if (!HILLS.length) return false;
+    const \u4E18 = nearestOf(HILLS, c.x, c.y);
+    if (!\u4E18) return false;
+    const \u4E18\u307E\u3067 = Math.hypot(\u4E18.x - c.x, \u4E18.y - c.y);
+    const \u53D6\u3089\u308C\u305F = b.corps.some((o) => !o.dead && !o.destroyed && o !== c && Math.hypot(o.x - \u4E18.x, o.y - \u4E18.y) < \u4E18.r * 0.6);
+    if (\u53D6\u3089\u308C\u305F) return false;
+    if (!\u653B\u3081\u624B) {
+      return \u4E18\u307E\u3067 < \u9593 * 0.5 && \u4E18\u307E\u3067 < 700 && Math.hypot(\u4E18.x - \u5473\u65B9\u9663.x, \u4E18.y - \u5473\u65B9\u9663.y) <= Math.hypot(\u4E18.x - \u6575\u9663.x, \u4E18.y - \u6575\u9663.y);
+    }
+    return \u6575\u9663\u307E\u3067 < \u9593 * 0.55 && \u4E18\u307E\u3067 < 520;
+  }
+  if (key === "\u6A4B\u6E21\u6CB3\u70B9\u9632\u885B") {
+    if (!hasRiver() || \u653B\u3081\u624B) return false;
+    const \u6A4B = (RIVER.bridge[0] + RIVER.bridge[1]) / 2;
+    const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(\u6A4B);
+    return Math.hypot(\u6A4B - \u5473\u65B9\u9663.x, \u4E2D - \u5473\u65B9\u9663.y) < Math.hypot(\u6A4B - \u6575\u9663.x, \u4E2D - \u6575\u9663.y) && Math.hypot(\u6A4B - c.x, \u4E2D - c.y) < \u9593 * 0.6;
+  }
+  if (key === "\u68EE\u6797\u5075\u5BDF") {
+    if (!FORESTS.length) return false;
+    const \u68EE = nearestOf(FORESTS, c.x, c.y);
+    if (!\u68EE) return false;
+    const \u68EE\u307E\u3067 = Math.hypot(\u68EE.x - c.x, \u68EE.y - c.y);
+    if (\u68EE\u307E\u3067 > 460) return false;
+    const \u6575\u5074\u306E\u68EE = Math.hypot(\u68EE.x - \u6575\u9663.x, \u68EE.y - \u6575\u9663.y) < Math.hypot(\u68EE.x - \u5473\u65B9\u9663.x, \u68EE.y - \u5473\u65B9\u9663.y);
+    const \u898B\u5931\u3044 = \u751F\u304D\u305F\u6575.some((o) => !o.seen);
+    return \u6575\u5074\u306E\u68EE && \u6575\u9663\u307E\u3067 < \u9593 * 0.75 || \u898B\u5931\u3044 && \u68EE\u307E\u3067 < 320;
+  }
+  return false;
+}
 function detachOptions(b, parent) {
   if (b.map) return [];
   const used = b.corps.filter((x) => x.parentId === parent.id && !x.dead).length;
@@ -10464,10 +10510,13 @@ function detachAI(b, c, alive) {
     return true;
   }
   c.autonomous = !parent || parent.dead || Math.hypot(parent.x - c.x, parent.y - c.y) > 400;
-  const foes = alive.filter((o) => o.side !== c.side && (o.seen || !o.ambush));
+  const foes = alive.filter((o) => o.side !== c.side && !o.routed && (o.seen || !o.ambush));
   const nearest = foes.length ? foes.reduce((a, o) => Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a, foes[0]) : null;
   if (c.task === "\u9A0E\u99AC\u5074\u9762\u653B\u6483") {
-    if (!nearest) return true;
+    if (!nearest) {
+      c.task = "\u5E30\u9663";
+      return true;
+    }
     const d = Math.hypot(nearest.x - c.x, nearest.y - c.y);
     if (d > 240) {
       const side = c.x < nearest.x ? -1 : 1;
@@ -13145,16 +13194,15 @@ function battleAI(b) {
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
   for (const c of alive) if (c.detach && !c.routed) detachAI(b, c, alive);
   for (const c of alive) {
-    if (!delegated(b, c) || c.detach || c.routed || c.detachTried) continue;
-    if (b.t > 25 || c.squads.some((q) => q.engaged) || c.morale < 60) {
-      c.detachTried = true;
-      continue;
-    }
+    if (!delegated(b, c) || c.detach || c.routed || c.withdraw) continue;
+    if (c.morale < 55 || corpsMen(c) < corpsMax(c) * 0.5) continue;
     if (b.t < 3) continue;
-    c.detachTried = true;
-    if (Math.random() > 0.5) continue;
-    const opt = detachOptions(b, c).filter((o) => o.ok);
-    if (opt.length) makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
+    if (b.t < (c.\u5206\u9063\u3092\u691C\u3081\u305F || 0) + 5) continue;
+    c.\u5206\u9063\u3092\u691C\u3081\u305F = b.t;
+    const opt = detachOptions(b, c).filter((o) => o.ok && \u5206\u9063\u306E\u9803\u5408\u3044(b, c, o.key));
+    if (!opt.length) continue;
+    if (Math.random() > 0.3) continue;
+    makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
   }
   for (const c of alive) {
     if (!c.\u72D9\u3044 || c.routed || c.withdraw || c.detach) continue;
@@ -13464,6 +13512,13 @@ function createBattle(playerCorps, enemyCorps, attackerSide) {
     placeSquads(c, true);
     c.lastSeen = { x: c.x, y: c.y, t: 0 };
   }
+  const \u4E2D = (arr) => {
+    const \u751F = arr.filter((c) => corpsMen(c) > 0);
+    const n = \u751F.length || 1;
+    return { x: \u751F.reduce((a, c) => a + c.x, 0) / n, y: \u751F.reduce((a, c) => a + c.y, 0) / n };
+  };
+  b.\u9663 = { P: \u4E2D(playerCorps), E: \u4E2D(enemyCorps) };
+  b.\u9663\u9593 = Math.max(200, Math.hypot(b.\u9663.P.x - b.\u9663.E.x, b.\u9663.P.y - b.\u9663.E.y));
   return b;
 }
 function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps) {
@@ -14257,6 +14312,7 @@ function stepBattle(b, dt) {
       const near2 = alive.some((o) => o.side !== c.side && Math.hypot(o.x - c.x, o.y - c.y) < 190);
       if (near2 || fighting) c.frontTime = (c.frontTime || 0) + dt;
     }
+    c.\u565B\u307F\u523B = fighting ? (c.\u565B\u307F\u523B || 0) + dt : 0;
     c.fatigue = clamp(c.fatigue + (fighting ? 1.1 : c.order === "\u5F85\u6A5F" ? -1.4 : 0) * dt, 0, 100);
     if (c.pinch >= 2) c.morale -= (c.pinch - 1) * 0.22 * dt;
     const \u892A = Math.pow(0.905, dt);
@@ -14302,7 +14358,7 @@ function stepBattle(b, dt) {
       if (c.morale <= 0 || corpsMen(c) <= 0) {
         c.\u6F70 = true;
         b.log.push({ t: b.t, text: `${c.name}\u968A\u306F\u652F\u3048\u3092\u5931\u3044\u3001\u6226\u5834\u3092\u843D\u3061\u3066\u3044\u3063\u305F\u3002` });
-      } else if (c.morale >= 38) {
+      } else if (c.morale >= 34) {
         c.routed = false;
         c.\u6F70 = false;
         c.\u7ACB\u3066\u76F4\u3057 = null;
