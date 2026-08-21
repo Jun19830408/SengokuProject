@@ -30,13 +30,18 @@ export const FORESTS = [], WOODS = [], HILLS = [], MARSH = [];
 
 /* 集落。野には人が住んでいる。
 
-   いまのところ見た目だけのもので、地形としての効きは持たない
-   （terrainAt は集落の上でも「平地」を返す）。屋根と生垣を描くだけである。
-   隠れられる・馬の足が鈍る・焼ける、といった効きを持たせるなら、
-   TERRAIN に一つ足し、terrainAt と AI の両方を直す要がある。 */
+   長らく見た目だけのものであったが、地形として効かせることにした。
+   垣と屋根と畦が入り組んでいるので足は鈍り、隊列も少し乱れる。
+   そのかわり身を隠せる（見通しが平地の半ばに落ちる）。
+   委任した隊は、林や森と同じく、好んでは入らない。 */
 export const VILLAGES = [];
 
 export let FIELD_SEED = 0;
+
+/* 野を組み直した回数。道さがしの網（route.js）は、これが変わったら張り直す。
+   盤の広さだけを見ていると、同じ広さで地形だけ変わったときに古い網が残る。 */
+let 代 = 0;
+export const 地形の代 = () => 代;
 
 // 城の名から種を作る（同じ街道なら何度戦っても同じ野になる）
 export function seedOf(aId, bId) {
@@ -48,6 +53,7 @@ export function seedOf(aId, bId) {
 
 // 街道の性格から野を組み立てる（GDD 8.1）
 export function genTerrain(seed) {
+  代++;
   const rnd = makeRng(seed);
   const W = FIELD.w, H = FIELD.h;
   RIVER.top = 0; RIVER.bot = 0; RIVER.bridge = [0, 0]; RIVER.ford = [0, 0]; RIVER.wave = 0;
@@ -189,6 +195,7 @@ export function terrainAt(x, y) {
   for (const f of WOODS) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.r ** 2) return "wood";
   for (const m of MARSH) if ((x - m.x) ** 2 + (y - m.y) ** 2 < m.r ** 2) return "marsh";
   for (const h of HILLS) if ((x - h.x) ** 2 + (y - h.y) ** 2 < h.r ** 2) return "hill";
+  for (const v of VILLAGES) if ((x - v.x) ** 2 + (y - v.y) ** 2 < v.r ** 2) return "village";
   return "plain";
 }
 
@@ -252,6 +259,7 @@ export const TERRAIN = {
   wood: { speed: 0.82, fight: 0.92, cohesion: -3, sight: 165, horse: 0.85, charge: true, label: "林" },
   marsh: { speed: 0.5, fight: 0.8, cohesion: -9, sight: 240, horse: 0.45, charge: false, label: "湿地" },
   hill: { speed: 0.7, fight: 1.15, cohesion: -2, sight: 360, horse: 0.8, charge: true, label: "丘" },
+  village: { speed: 0.78, fight: 0.95, cohesion: -3, sight: 130, horse: 0.7, charge: false, label: "集落" },
   bridge: { speed: 0.95, fight: 0.85, cohesion: -5, sight: 260, horse: 0.9, charge: false, label: "橋" },
   ford: { speed: 0.3, fight: 0.7, cohesion: -14, sight: 260, horse: 0.5, charge: false, label: "浅瀬" },
   deep: { speed: 0.1, fight: 0.5, cohesion: -24, sight: 260, horse: 0.25, charge: false, label: "深い川" },

@@ -1,6 +1,7 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
 import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime } from "./corps.js";
 import { ARM_STATS, HILLS, RIVER, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
+import { 道のり, 野の道 } from "./route.js";
 
 /* ------------------------------------------------ 川を避ける（GDD 8.1）
 
@@ -49,6 +50,84 @@ export function 渡り場(x) {
    ただし陣形は、命じられたものを保つ。
    そのかわり、地物に「かかった」と判ずる目を厳しくした（field.js の 踏み込んだ地）。
    翼が水を跳ねた程度では渡渉とせず、隊長か隊の四割が踏み込んで初めて川である。 */
+
+/* ------------------------------------------ 地物を避けて寄せる（GDD 8.6）
+
+   委任した隊は、行き先まで真っすぐ歩いていた。あいだに川があれば押し渡り、
+   森があれば突っ切る。足は落ち、隊列は乱れ、川の中で槍を合わせて負ける。
+
+   道理で曲がるのをやめ、道を引くことにした（route.js）。野を升目に割り、
+   地物ごとに通りにくさを与えて、いちばん安い道を探す。橋が近ければ橋を、
+   遠ければ浅瀬を通り、森も丘も湿地も同じ勘定で避ける。
+
+   これは寄せ手にも受け手にも等しく効く。片側だけが賢いのでは戦にならない。
+
+   道を引き直すのは、行き先が大きく変わったときと、六秒ごと。毎瞬引き直すと
+   升目の目地で道が揺れ、隊が左右に振れる。 */
+function 寄せ道を引く(b, c, sx, sy) {
+  const 直 = Math.hypot(sx - c.x, sy - c.y);
+  /* 目前なら道は要らない――ただし、その目と鼻の先が淵であれば話は別である。
+     十歩先の水を渡るにも、瀬は瀬である。近いからと真っすぐ入れば、
+     隊は水の中で噛み合うことになる。 */
+  if (直 < 150 && !淵を跨ぐ(c.x, c.y, sx, sy)) return null;
+  if (c.squads.some((q) => q.engaged)) return null;  // 噛み合っている隊は動かさない
+  if (c.wp && c.wp.length && c.道の的
+      && Math.hypot(c.道の的.x - sx, c.道の的.y - sy) < 150
+      && b.t - (c.道刻 || 0) < 6) return "続行";
+  const 押 = !!(c.押し渡る && b.t < c.押し渡る);
+  const 道 = 野の道(c.x, c.y, sx, sy, { 押し渡る: 押 });
+  if (!道 || !道.length) return null;
+  /* 回り道が法外なら、道さがしを捨てて真っすぐ行く。渡り場が遥かに遠い野もある。
+     はじめは直の三.二倍で切っていたが、それでは橋が野の端にある野で押し渡る隊が
+     出た。橋まで回るのは、たいてい直の三倍から四倍になる。四.五倍まで許す。 */
+  if (道のり(道, c.x, c.y) > 直 * 4.5 + 400) return null;
+  c.道の的 = { x: sx, y: sy }; c.道刻 = b.t;
+  return 道;
+}
+
+// 二点を結ぶ線が淵を跨ぐか。近間でも、水を挟むなら道を引く。
+function 淵を跨ぐ(x0, y0, x1, y1) {
+  if (!hasRiver()) return false;
+  const n = 6;
+  for (let k = 0; k <= n; k++) {
+    if (terrainAt(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n) === "deep") return true;
+  }
+  return false;
+}
+
+/* 橋の順番待ち（GDD 8.1）。
+
+   渡り場は狭い。皆が同じ橋を目指せば、当然そこで詰まる。それでも並んで
+   待つのが常道であって、待ちきれずに淵へ乗り入れるのは愚である。
+
+   ただし知略に富む将は別である。八十を超える将は、水馴れた渡り方を心得て
+   いるので足がさほど落ちない（engine の 水馴れ）。その将が、橋の先頭でもなく、
+   長らく詰まっているのなら、瀬を押し渡るという判断がありうる。
+
+   詰まりは「渡り場の袂に居ながら、まだ渡っていない刻」で測る。行き先までの
+   隔たりで測ってみたが、混んでいても隊はじりじり進むので、いつまでも
+   「進んでいる」ことになって詰まりを拾えなかった。 */
+function 橋待ちを見る(b, c, sx, sy) {
+  if (!hasRiver() || c.押し渡る) return;
+  const 自岸 = 岸(c.x, c.y);
+  const 場 = 渡り場(c.x);
+  const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(場.x);
+  const 私 = Math.hypot(場.x - c.x, 中 - c.y);
+  /* 渡り場の袂に居るか、渡り場の上に居て、まだ向こう岸へ着いていない――
+     これが「順番を待っている」姿である。袂だけを見ていては拾えなかった。
+     隊は袂に立ち止まらず、そのまま水へ入って、そこでつかえるからである。 */
+  const 着いた = 自岸 !== 0 && 自岸 === 岸(sx, sy);
+  if (着いた || 私 > 340) { c.橋待ち = 0; return; }
+  c.橋待ち = (c.橋待ち || 0) + 0.6;                   // 采配は〇.六秒ごと
+  if (c.橋待ち < 8) return;
+  if ((c.gen.wit || 55) < 80) return;                // 待つのが常道である
+  const 先 = b.corps.filter((o) => !o.dead && !o.destroyed && o.side === c.side && o !== c
+    && Math.hypot(場.x - o.x, 中 - o.y) < 私).length;
+  if (!先) { c.橋待ち = 4; return; }                 // 先頭なら待つ。詰めているのは自分である
+  c.押し渡る = b.t + 70;
+  c.橋待ち = 0; c.wp = null;
+  b.log.push({ t: b.t, text: `${c.gen.name}隊は橋の混みを嫌い、瀬を押し渡る。` });
+}
 
 export function battleAI(b) {
   setAiIssuing(true);
@@ -111,8 +190,15 @@ export function battleAI(b) {
       }
     }
     const coh = c.squads.length ? c.squads.reduce((a, q) => a + q.cohesion, 0) / c.squads.length : 100;
+    /* 渡り終えたあとの再編。
+
+       「隊列が七十二まで戻るまで待つ」とだけ決めていたので、戻らぬ所で待つと
+       永久に待った。淵の中で再編を始めた隊は、水が隊列を削るので二度と七十二に
+       届かない。丘の上で七十一のまま止まった隊もあった。測ったところ、
+       二十四戦のうち二戦が、この待ちぼうけのまま日暮れを迎えていた。
+       整うか、三十秒経つか、どちらか早いほうで切り上げる。 */
     if (c.reforming) {
-      if (coh > 72) c.reforming = false;
+      if (coh > 72 || b.t > (c.再編まで || 0)) { c.reforming = false; c.再編まで = 0; }
       else { c.order = "待機"; c.tx = c.x; c.ty = c.y; continue; }
     }
     // 実際に川を渡った隊だけが渡河後の再編を行う（南から始まった隊は対象外）
@@ -123,7 +209,11 @@ export function battleAI(b) {
       const nowBank = c.y < mid ? -1 : 1;
       if (nowBank !== c.bank0 && Math.abs(c.y - mid) > (RIVER.bot - RIVER.top) / 2 + 30) {
         c.crossed = true;
-        if (coh < 62) { c.reforming = true; c.order = "待機"; c.tx = c.x; c.ty = c.y; continue; }
+        // 水の中では整わない。上がりきってから整える。
+        if (coh < 62 && !川の中(c.x, c.y)) {
+          c.reforming = true; c.再編まで = b.t + 30;
+          c.order = "待機"; c.tx = c.x; c.ty = c.y; continue;
+        }
       }
     }
     const tgt = foes.reduce((a, o) => (Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a), foes[0]);
@@ -298,49 +388,36 @@ export function battleAI(b) {
         }
       }
     }
-    const ranged = c.squads.filter((q) => ARM_STATS[q.type].range > 0).reduce((s, q) => s + q.men, 0);
-    if (ranged / Math.max(1, corpsMen(c)) > 0.55) {
-      const hill = nearestOf(HILLS, c.x, c.y);
-      if (!hill) { /* 高地のない野では丘取りをしない */ } else
-      if (Math.hypot(hill.x - c.x, hill.y - c.y) > 90 && terrainAt(c.x, c.y) !== "hill") { issueOrder(b, c, { order: "移動", tx: hill.x, ty: hill.y }); continue; }
-    }
-    /* 川を渡るなら、橋か浅瀬を通る。川の中で戦う目は極力なくす。
+    /* 高みを取る（GDD 8.6）。
 
-       ただし塞ぐのではない。渡り場が遠すぎて、押し渡ったほうが早いのなら、
-       それはそれで一つの決断である。回り道が直の三倍を超えるなら、そのまま渡る。 */
-    if (hasRiver() && !c.routed && !c.withdraw) {
-      const 自岸 = 岸(c.x, c.y), 敵岸 = 岸(tgt.x, tgt.y);
-      /* 渡らねばならぬのは、川の中にいるときと、岸が違うとき。
-         敵が川の中にいるだけなら渡らない。岸で待って撃てばよい。
+       丘は足を鈍らせるが、登りきれば見晴らしが利き（見通し三百六十）、
+       戦う力も一割五分増す。受け手は、近くに丘があるなら先に登って備える。
+       寄せ手も、射手を多く抱える隊は高みを取りたがる。
 
-         （道筋そのものが淵を通るかも検めてみたが、蛇行の際で
-           「渡り場へ戻れ」と「敵へ向かえ」が入れ替わり、隊が水際を
-           行き来した。水の中で噛み合う割は三割から四割四分に増えた。
-           岸の別だけで測るほうがよい。） */
-      const 渡る要 = 自岸 === 0 || (敵岸 !== 0 && 自岸 !== 敵岸);
-      if (渡る要) {
-        const 場 = 渡り場(c.x);
-        const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(場.x);
-        const 半 = (RIVER.bot - RIVER.top) / 2;
-        const 向こう = 敵岸 !== 0 ? 敵岸 : (自岸 === -1 ? 1 : -1);
-        /* 岸から十分に離れた先を目指す。
-           水際で止まると、先頭は陸でも後ろの組は川の中に残る。
-           隊の深さ（およそ百歩）だけ抜けた先で足を止めさせる。 */
-        const 出口 = { x: 場.x, y: 中 + 向こう * (半 + 150) };
-        const 直 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
-        const 回 = Math.hypot(出口.x - c.x, 出口.y - c.y) + Math.hypot(tgt.x - 出口.x, tgt.y - 出口.y);
-        if (回 <= 直 * 3 + 200) {
-          /* 受け手は川を渡らない。渡り場のこちら岸で待ち、
-             敵が水から上がってくるところを叩く。半渡を撃つ、という。
-
-             両軍とも渡り場を目指すと、双方が同じ瀬へ集まって水の中で噛み合う。
-             それでは川を避けた甲斐がない。攻め手だけが渡り、受け手は岸で待つ。 */
-          const 待つ = c.side !== b.attacker && 自岸 !== 0;
-          const 先 = 待つ ? { x: 場.x, y: 中 + 自岸 * (半 + 168) } : 出口;
-          issueOrder(b, c, { order: "移動", tx: 先.x, ty: 先.y });
+       川向こうの丘は取りに行かない。丘ひとつのために渡河しては元も子もない。
+       すでに敵と間近であれば登らない。背を見せて登る隙はない。 */
+    if (!MAP && HILLS.length && !c.squads.some((q) => q.engaged)) {
+      const 射 = c.squads.filter((q) => ARM_STATS[q.type].range > 0).reduce((a, q) => a + q.men, 0);
+      const 守勢 = c.side !== b.attacker;
+      const 欲しい = 守勢 || 射 / Math.max(1, corpsMen(c)) > 0.55;
+      const 敵まで = Math.hypot(tgt.x - c.x, tgt.y - c.y);
+      const 丘 = 欲しい ? nearestOf(HILLS, c.x, c.y) : null;
+      if (丘 && 敵まで > 260) {
+        const 遠さ = Math.hypot(丘.x - c.x, 丘.y - c.y);
+        const 間 = 守勢 ? 540 : 320;
+        if (遠さ > 90 && 遠さ < 間 && terrainAt(c.x, c.y) !== "hill"
+            && 岸(c.x, c.y) === 岸(丘.x, 丘.y)) {
+          const 道 = 寄せ道を引く(b, c, 丘.x, 丘.y);
+          if (道 === "続行") continue;
+          if (道) { c.wp = 道; issueOrder(b, c, { order: "移動", tx: 道[0].x, ty: 道[0].y, keepPath: true }); continue; }
+          issueOrder(b, c, { order: "移動", tx: 丘.x, ty: 丘.y });
           continue;
         }
-        // 回り道が過ぎる。押し渡るほかない。
+        // 高みに就いた受け手は、そこで待ち受ける。降りて出迎える理由がない。
+        if (守勢 && terrainAt(c.x, c.y) === "hill") {
+          issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
+          continue;
+        }
       }
     }
     // 接敵はプレイヤーと同じ間合いで止まり、命令伝達も同じ遅延を受ける（GDD 13.2）。
@@ -348,13 +425,41 @@ export function battleAI(b) {
     const dd = Math.hypot(c.x - tgt.x, c.y - tgt.y) || 1;
     let sx = dd <= 42 ? c.x : tgt.x + ((c.x - tgt.x) / dd) * 38;
     let sy = dd <= 42 ? c.y : tgt.y + ((c.y - tgt.y) / dd) * 38;
-    /* 足を止める先が川の中なら、岸まで引く。
-       川の中で当たれば、足も陣形も戦う力も削がれて、まず負ける。 */
-    if (川の中(sx, sy)) {
+    /* 川ごしの向き合い方（GDD 8.1）。
+
+       受け手は川を渡らない。渡り場のこちら岸で待ち、敵が水から上がってくる
+       ところを叩く。半渡を撃つ、という。両軍とも渡り場を目指せば、双方が同じ
+       瀬へ集まって水の中で噛み合う。それでは川を避けた甲斐がない。
+
+       攻め手は渡る。ここで気をつけるのは、止まる先が水だからといって手前の岸へ
+       引き戻さないことである。引き戻すと、行き先が足元になって道が引けず、
+       両軍が岸を挟んで睨み合ったまま日が暮れた。二十四戦のうち三戦がこれで
+       あった。向こう岸を目指させておけば、道さがしが橋なり瀬なりへ導く。
+
+       岸が同じなのに止まる先だけが水にかかるとき（蛇行の際）は、岸へ引く。 */
+    const 自岸 = 岸(c.x, c.y), 的岸 = 岸(tgt.x, tgt.y);
+    const 渡る要 = !MAP && hasRiver() && 的岸 !== 0 && 自岸 !== 的岸;
+    if (!MAP && hasRiver() && !c.routed && !c.withdraw && 渡る要 && c.side !== b.attacker && 自岸 !== 0) {
+      const 場 = 渡り場(c.x);
+      const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(場.x);
+      const 半 = (RIVER.bot - RIVER.top) / 2;
+      sx = 場.x; sy = 中 + 自岸 * (半 + 168);
+    } else if (川の中(sx, sy) && !渡る要) {
       const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(sx);
       const 半 = (RIVER.bot - RIVER.top) / 2;
-      const 岸へ = 岸(c.x, c.y) !== 0 ? 岸(c.x, c.y) : (c.y < 中 ? -1 : 1);
+      const 岸へ = 自岸 !== 0 ? 自岸 : (c.y < 中 ? -1 : 1);
       sy = 中 + 岸へ * (半 + 26);
+    }
+    if (渡る要 && c.side === b.attacker) 橋待ちを見る(b, c, sx, sy);
+    /* 地物を避けて寄せる。道が引ければそれを辿り、引けなければ真っすぐ行く。 */
+    if (!MAP && !c.routed && !c.withdraw) {
+      const 道 = 寄せ道を引く(b, c, sx, sy);
+      if (道 === "続行") continue;
+      if (道) {
+        c.wp = 道;
+        issueOrder(b, c, { order: "移動", tx: 道[0].x, ty: 道[0].y, keepPath: true });
+        continue;
+      }
     }
     issueOrder(b, c, { order: "接戦", tx: sx, ty: sy });
   }

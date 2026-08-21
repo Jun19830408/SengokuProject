@@ -9856,6 +9856,8 @@ var HILLS = [];
 var MARSH = [];
 var VILLAGES = [];
 var FIELD_SEED = 0;
+var \u4EE3 = 0;
+var \u5730\u5F62\u306E\u4EE3 = () => \u4EE3;
 function seedOf(aId, bId) {
   const key = [String(aId || ""), String(bId || "")].sort().join("|");
   let h = 2166136261;
@@ -9866,6 +9868,7 @@ function seedOf(aId, bId) {
   return h >>> 0;
 }
 function genTerrain(seed) {
+  \u4EE3++;
   const rnd = makeRng(seed);
   const W = FIELD.w, H = FIELD.h;
   RIVER.top = 0;
@@ -9963,6 +9966,7 @@ function terrainAt(x, y) {
   for (const f of WOODS) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.r ** 2) return "wood";
   for (const m of MARSH) if ((x - m.x) ** 2 + (y - m.y) ** 2 < m.r ** 2) return "marsh";
   for (const h of HILLS) if ((x - h.x) ** 2 + (y - h.y) ** 2 < h.r ** 2) return "hill";
+  for (const v of VILLAGES) if ((x - v.x) ** 2 + (y - v.y) ** 2 < v.r ** 2) return "village";
   return "plain";
 }
 var \u8E0F\u307F\u5834 = 13;
@@ -10003,6 +10007,7 @@ var TERRAIN = {
   wood: { speed: 0.82, fight: 0.92, cohesion: -3, sight: 165, horse: 0.85, charge: true, label: "\u6797" },
   marsh: { speed: 0.5, fight: 0.8, cohesion: -9, sight: 240, horse: 0.45, charge: false, label: "\u6E7F\u5730" },
   hill: { speed: 0.7, fight: 1.15, cohesion: -2, sight: 360, horse: 0.8, charge: true, label: "\u4E18" },
+  village: { speed: 0.78, fight: 0.95, cohesion: -3, sight: 130, horse: 0.7, charge: false, label: "\u96C6\u843D" },
   bridge: { speed: 0.95, fight: 0.85, cohesion: -5, sight: 260, horse: 0.9, charge: false, label: "\u6A4B" },
   ford: { speed: 0.3, fight: 0.7, cohesion: -14, sight: 260, horse: 0.5, charge: false, label: "\u6D45\u702C" },
   deep: { speed: 0.1, fight: 0.5, cohesion: -24, sight: 260, horse: 0.25, charge: false, label: "\u6DF1\u3044\u5DDD" },
@@ -12878,6 +12883,151 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
   }
 }
 
+// src/battle/route.js
+var \u901A\u308A\u306B\u304F\u3055 = {
+  plain: 1,
+  bridge: 1.15,
+  village: 1.6,
+  wood: 1.7,
+  hill: 2,
+  forest: 2.6,
+  marsh: 4,
+  ford: 3.2,
+  deep: 26
+};
+var \u62BC\u3057\u6E21\u308B\u76EE = { ...\u901A\u308A\u306B\u304F\u3055, deep: 2.2, ford: 1.4 };
+var \u8CBB = (t, \u76EE) => \u76EE[t] || (TERRAIN[t] ? 1 / Math.max(0.08, TERRAIN[t].speed) : 1);
+var \u5347 = 48;
+var \u7DB2 = null;
+var \u7DB2\u306E\u5370 = "";
+function \u7DB2\u3092\u5F35\u308B() {
+  const \u5370 = `${FIELD.w}x${FIELD.h}:${\u5730\u5F62\u306E\u4EE3()}`;
+  if (\u7DB2 && \u7DB2\u306E\u5370 === \u5370) return \u7DB2;
+  const w = Math.ceil(FIELD.w / \u5347), h = Math.ceil(FIELD.h / \u5347);
+  const \u5730 = new Array(w * h);
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) \u5730[j * w + i] = terrainAt(i * \u5347 + \u5347 / 2, j * \u5347 + \u5347 / 2);
+  }
+  \u7DB2 = { w, h, \u5730 };
+  \u7DB2\u306E\u5370 = \u5370;
+  return \u7DB2;
+}
+function \u30D2\u30FC\u30D7() {
+  const k = [], f = [];
+  return {
+    len: () => k.length,
+    push(key, val) {
+      k.push(key);
+      f.push(val);
+      let i = k.length - 1;
+      while (i > 0) {
+        const p = i - 1 >> 1;
+        if (f[p] <= f[i]) break;
+        [k[p], k[i]] = [k[i], k[p]];
+        [f[p], f[i]] = [f[i], f[p]];
+        i = p;
+      }
+    },
+    pop() {
+      const top = k[0];
+      const lk = k.pop(), lf = f.pop();
+      if (k.length) {
+        k[0] = lk;
+        f[0] = lf;
+        let i = 0;
+        for (; ; ) {
+          const l = i * 2 + 1, r = l + 1;
+          let m = i;
+          if (l < k.length && f[l] < f[m]) m = l;
+          if (r < k.length && f[r] < f[m]) m = r;
+          if (m === i) break;
+          [k[m], k[i]] = [k[i], k[m]];
+          [f[m], f[i]] = [f[i], f[m]];
+          i = m;
+        }
+      }
+      return top;
+    }
+  };
+}
+function \u91CE\u306E\u9053(x0, y0, x1, y1, opt = {}) {
+  const g = \u7DB2\u3092\u5F35\u308B();
+  const { w, h, \u5730 } = g;
+  const \u76EE = opt.\u62BC\u3057\u6E21\u308B ? \u62BC\u3057\u6E21\u308B\u76EE : \u901A\u308A\u306B\u304F\u3055;
+  const ix = (x) => Math.max(0, Math.min(w - 1, Math.floor(x / \u5347)));
+  const iy = (y) => Math.max(0, Math.min(h - 1, Math.floor(y / \u5347)));
+  const S = iy(y0) * w + ix(x0), T = iy(y1) * w + ix(x1);
+  if (S === T) return null;
+  const N = w * h;
+  const gc = new Float32Array(N).fill(Infinity);
+  const prev = new Int32Array(N).fill(-1);
+  const \u6E08 = new Uint8Array(N);
+  const tx = T % w, ty = T / w | 0;
+  const \u898B = (k) => {
+    const i = k % w, j = k / w | 0;
+    const dx = Math.abs(i - tx), dy = Math.abs(j - ty);
+    return dx + dy + (Math.SQRT2 - 2) * Math.min(dx, dy);
+  };
+  const \u958B = \u30D2\u30FC\u30D7();
+  gc[S] = 0;
+  \u958B.push(S, \u898B(S));
+  let \u7740 = false, \u756A = 0;
+  while (\u958B.len() && \u756A++ < 4e4) {
+    const cur = \u958B.pop();
+    if (cur === T) {
+      \u7740 = true;
+      break;
+    }
+    if (\u6E08[cur]) continue;
+    \u6E08[cur] = 1;
+    const ci = cur % w, cj = cur / w | 0;
+    for (let dj = -1; dj <= 1; dj++) {
+      for (let di = -1; di <= 1; di++) {
+        if (!di && !dj) continue;
+        const ni = ci + di, nj = cj + dj;
+        if (ni < 0 || nj < 0 || ni >= w || nj >= h) continue;
+        const nk = nj * w + ni;
+        if (\u6E08[nk]) continue;
+        const \u6B69 = di && dj ? Math.SQRT2 : 1;
+        const c2 = gc[cur] + (\u8CBB(\u5730[cur], \u76EE) + \u8CBB(\u5730[nk], \u76EE)) / 2 * \u6B69;
+        if (c2 < gc[nk]) {
+          gc[nk] = c2;
+          prev[nk] = cur;
+          \u958B.push(nk, c2 + \u898B(nk));
+        }
+      }
+    }
+  }
+  if (!\u7740) return null;
+  const \u5217 = [];
+  for (let k = T; k !== -1; k = prev[k]) {
+    \u5217.push(k);
+    if (k === S) break;
+  }
+  \u5217.reverse();
+  const \u9053 = [];
+  let \u524D\u306E\u5411\u304D = null;
+  for (let n = 1; n < \u5217.length; n++) {
+    const a = \u5217[n - 1], z = \u5217[n];
+    const v = `${z % w - a % w},${(z / w | 0) - (a / w | 0)}`;
+    if (v !== \u524D\u306E\u5411\u304D) {
+      \u524D\u306E\u5411\u304D = v;
+      \u9053.push({ x: z % w * \u5347 + \u5347 / 2, y: (z / w | 0) * \u5347 + \u5347 / 2, r: 52 });
+    }
+  }
+  \u9053.push({ x: x1, y: y1, r: 40 });
+  return \u9053;
+}
+function \u9053\u306E\u308A2(\u9053, x0, y0) {
+  let d = 0, px2 = x0, py2 = y0;
+  for (const p of \u9053) {
+    d += Math.hypot(p.x - px2, p.y - py2);
+    px2 = p.x;
+    py2 = p.y;
+  }
+  return d;
+}
+
 // src/battle/ai.js
 function \u5CB8(x, y) {
   if (!hasRiver()) return 0;
@@ -12893,6 +13043,51 @@ function \u6E21\u308A\u5834(x) {
   const \u702C = (RIVER.ford[0] + RIVER.ford[1]) / 2;
   const \u5019\u88DC = [{ x: \u6A4B, \u91CD\u307F: 0.55, \u540D: "\u6A4B" }, { x: \u702C, \u91CD\u307F: 1, \u540D: "\u6D45\u702C" }].map((p) => ({ ...p, \u9060\u3055: Math.abs(p.x - x) * p.\u91CD\u307F }));
   return \u5019\u88DC.sort((a, z) => a.\u9060\u3055 - z.\u9060\u3055)[0];
+}
+function \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, sx, sy) {
+  const \u76F4 = Math.hypot(sx - c.x, sy - c.y);
+  if (\u76F4 < 150 && !\u6DF5\u3092\u8DE8\u3050(c.x, c.y, sx, sy)) return null;
+  if (c.squads.some((q) => q.engaged)) return null;
+  if (c.wp && c.wp.length && c.\u9053\u306E\u7684 && Math.hypot(c.\u9053\u306E\u7684.x - sx, c.\u9053\u306E\u7684.y - sy) < 150 && b.t - (c.\u9053\u523B || 0) < 6) return "\u7D9A\u884C";
+  const \u62BC = !!(c.\u62BC\u3057\u6E21\u308B && b.t < c.\u62BC\u3057\u6E21\u308B);
+  const \u9053 = \u91CE\u306E\u9053(c.x, c.y, sx, sy, { \u62BC\u3057\u6E21\u308B: \u62BC });
+  if (!\u9053 || !\u9053.length) return null;
+  if (\u9053\u306E\u308A2(\u9053, c.x, c.y) > \u76F4 * 4.5 + 400) return null;
+  c.\u9053\u306E\u7684 = { x: sx, y: sy };
+  c.\u9053\u523B = b.t;
+  return \u9053;
+}
+function \u6DF5\u3092\u8DE8\u3050(x0, y0, x1, y1) {
+  if (!hasRiver()) return false;
+  const n = 6;
+  for (let k = 0; k <= n; k++) {
+    if (terrainAt(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n) === "deep") return true;
+  }
+  return false;
+}
+function \u6A4B\u5F85\u3061\u3092\u898B\u308B(b, c, sx, sy) {
+  if (!hasRiver() || c.\u62BC\u3057\u6E21\u308B) return;
+  const \u81EA\u5CB8 = \u5CB8(c.x, c.y);
+  const \u5834 = \u6E21\u308A\u5834(c.x);
+  const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(\u5834.x);
+  const \u79C1 = Math.hypot(\u5834.x - c.x, \u4E2D - c.y);
+  const \u7740\u3044\u305F = \u81EA\u5CB8 !== 0 && \u81EA\u5CB8 === \u5CB8(sx, sy);
+  if (\u7740\u3044\u305F || \u79C1 > 340) {
+    c.\u6A4B\u5F85\u3061 = 0;
+    return;
+  }
+  c.\u6A4B\u5F85\u3061 = (c.\u6A4B\u5F85\u3061 || 0) + 0.6;
+  if (c.\u6A4B\u5F85\u3061 < 8) return;
+  if ((c.gen.wit || 55) < 80) return;
+  const \u5148 = b.corps.filter((o) => !o.dead && !o.destroyed && o.side === c.side && o !== c && Math.hypot(\u5834.x - o.x, \u4E2D - o.y) < \u79C1).length;
+  if (!\u5148) {
+    c.\u6A4B\u5F85\u3061 = 4;
+    return;
+  }
+  c.\u62BC\u3057\u6E21\u308B = b.t + 70;
+  c.\u6A4B\u5F85\u3061 = 0;
+  c.wp = null;
+  b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F\u6A4B\u306E\u6DF7\u307F\u3092\u5ACC\u3044\u3001\u702C\u3092\u62BC\u3057\u6E21\u308B\u3002` });
 }
 function battleAI(b) {
   setAiIssuing(true);
@@ -12957,8 +13152,10 @@ function battleAI(b) {
     }
     const coh = c.squads.length ? c.squads.reduce((a, q) => a + q.cohesion, 0) / c.squads.length : 100;
     if (c.reforming) {
-      if (coh > 72) c.reforming = false;
-      else {
+      if (coh > 72 || b.t > (c.\u518D\u7DE8\u307E\u3067 || 0)) {
+        c.reforming = false;
+        c.\u518D\u7DE8\u307E\u3067 = 0;
+      } else {
         c.order = "\u5F85\u6A5F";
         c.tx = c.x;
         c.ty = c.y;
@@ -12970,8 +13167,9 @@ function battleAI(b) {
       const nowBank = c.y < mid ? -1 : 1;
       if (nowBank !== c.bank0 && Math.abs(c.y - mid) > (RIVER.bot - RIVER.top) / 2 + 30) {
         c.crossed = true;
-        if (coh < 62) {
+        if (coh < 62 && !\u5DDD\u306E\u4E2D(c.x, c.y)) {
           c.reforming = true;
+          c.\u518D\u7DE8\u307E\u3067 = b.t + 30;
           c.order = "\u5F85\u6A5F";
           c.tx = c.x;
           c.ty = c.y;
@@ -13127,30 +13325,28 @@ function battleAI(b) {
         }
       }
     }
-    const ranged = c.squads.filter((q) => ARM_STATS[q.type].range > 0).reduce((s2, q) => s2 + q.men, 0);
-    if (ranged / Math.max(1, corpsMen(c)) > 0.55) {
-      const hill = nearestOf(HILLS, c.x, c.y);
-      if (!hill) {
-      } else if (Math.hypot(hill.x - c.x, hill.y - c.y) > 90 && terrainAt(c.x, c.y) !== "hill") {
-        issueOrder(b, c, { order: "\u79FB\u52D5", tx: hill.x, ty: hill.y });
-        continue;
-      }
-    }
-    if (hasRiver() && !c.routed && !c.withdraw) {
-      const \u81EA\u5CB8 = \u5CB8(c.x, c.y), \u6575\u5CB8 = \u5CB8(tgt.x, tgt.y);
-      const \u6E21\u308B\u8981 = \u81EA\u5CB8 === 0 || \u6575\u5CB8 !== 0 && \u81EA\u5CB8 !== \u6575\u5CB8;
-      if (\u6E21\u308B\u8981) {
-        const \u5834 = \u6E21\u308A\u5834(c.x);
-        const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(\u5834.x);
-        const \u534A = (RIVER.bot - RIVER.top) / 2;
-        const \u5411\u3053\u3046 = \u6575\u5CB8 !== 0 ? \u6575\u5CB8 : \u81EA\u5CB8 === -1 ? 1 : -1;
-        const \u51FA\u53E3 = { x: \u5834.x, y: \u4E2D + \u5411\u3053\u3046 * (\u534A + 150) };
-        const \u76F4 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
-        const \u56DE = Math.hypot(\u51FA\u53E3.x - c.x, \u51FA\u53E3.y - c.y) + Math.hypot(tgt.x - \u51FA\u53E3.x, tgt.y - \u51FA\u53E3.y);
-        if (\u56DE <= \u76F4 * 3 + 200) {
-          const \u5F85\u3064 = c.side !== b.attacker && \u81EA\u5CB8 !== 0;
-          const \u5148 = \u5F85\u3064 ? { x: \u5834.x, y: \u4E2D + \u81EA\u5CB8 * (\u534A + 168) } : \u51FA\u53E3;
-          issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u5148.x, ty: \u5148.y });
+    if (!MAP && HILLS.length && !c.squads.some((q) => q.engaged)) {
+      const \u5C04 = c.squads.filter((q) => ARM_STATS[q.type].range > 0).reduce((a, q) => a + q.men, 0);
+      const \u5B88\u52E2 = c.side !== b.attacker;
+      const \u6B32\u3057\u3044 = \u5B88\u52E2 || \u5C04 / Math.max(1, corpsMen(c)) > 0.55;
+      const \u6575\u307E\u3067 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
+      const \u4E18 = \u6B32\u3057\u3044 ? nearestOf(HILLS, c.x, c.y) : null;
+      if (\u4E18 && \u6575\u307E\u3067 > 260) {
+        const \u9060\u3055 = Math.hypot(\u4E18.x - c.x, \u4E18.y - c.y);
+        const \u9593 = \u5B88\u52E2 ? 540 : 320;
+        if (\u9060\u3055 > 90 && \u9060\u3055 < \u9593 && terrainAt(c.x, c.y) !== "hill" && \u5CB8(c.x, c.y) === \u5CB8(\u4E18.x, \u4E18.y)) {
+          const \u9053 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, \u4E18.x, \u4E18.y);
+          if (\u9053 === "\u7D9A\u884C") continue;
+          if (\u9053) {
+            c.wp = \u9053;
+            issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u9053[0].x, ty: \u9053[0].y, keepPath: true });
+            continue;
+          }
+          issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u4E18.x, ty: \u4E18.y });
+          continue;
+        }
+        if (\u5B88\u52E2 && terrainAt(c.x, c.y) === "hill") {
+          issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
           continue;
         }
       }
@@ -13158,11 +13354,29 @@ function battleAI(b) {
     const dd = Math.hypot(c.x - tgt.x, c.y - tgt.y) || 1;
     let sx = dd <= 42 ? c.x : tgt.x + (c.x - tgt.x) / dd * 38;
     let sy = dd <= 42 ? c.y : tgt.y + (c.y - tgt.y) / dd * 38;
-    if (\u5DDD\u306E\u4E2D(sx, sy)) {
+    const \u81EA\u5CB8 = \u5CB8(c.x, c.y), \u7684\u5CB8 = \u5CB8(tgt.x, tgt.y);
+    const \u6E21\u308B\u8981 = !MAP && hasRiver() && \u7684\u5CB8 !== 0 && \u81EA\u5CB8 !== \u7684\u5CB8;
+    if (!MAP && hasRiver() && !c.routed && !c.withdraw && \u6E21\u308B\u8981 && c.side !== b.attacker && \u81EA\u5CB8 !== 0) {
+      const \u5834 = \u6E21\u308A\u5834(c.x);
+      const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(\u5834.x);
+      const \u534A = (RIVER.bot - RIVER.top) / 2;
+      sx = \u5834.x;
+      sy = \u4E2D + \u81EA\u5CB8 * (\u534A + 168);
+    } else if (\u5DDD\u306E\u4E2D(sx, sy) && !\u6E21\u308B\u8981) {
       const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(sx);
       const \u534A = (RIVER.bot - RIVER.top) / 2;
-      const \u5CB8\u3078 = \u5CB8(c.x, c.y) !== 0 ? \u5CB8(c.x, c.y) : c.y < \u4E2D ? -1 : 1;
+      const \u5CB8\u3078 = \u81EA\u5CB8 !== 0 ? \u81EA\u5CB8 : c.y < \u4E2D ? -1 : 1;
       sy = \u4E2D + \u5CB8\u3078 * (\u534A + 26);
+    }
+    if (\u6E21\u308B\u8981 && c.side === b.attacker) \u6A4B\u5F85\u3061\u3092\u898B\u308B(b, c, sx, sy);
+    if (!MAP && !c.routed && !c.withdraw) {
+      const \u9053 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, sx, sy);
+      if (\u9053 === "\u7D9A\u884C") continue;
+      if (\u9053) {
+        c.wp = \u9053;
+        issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u9053[0].x, ty: \u9053[0].y, keepPath: true });
+        continue;
+      }
     }
     issueOrder(b, c, { order: "\u63A5\u6226", tx: sx, ty: sy });
   }
@@ -13170,6 +13384,13 @@ function battleAI(b) {
 }
 
 // src/battle/engine.js
+function \u6C34\u99B4\u308C\u306E\u8DB3(c, \u5730, \u8DB3) {
+  if (\u5730 !== "deep" && \u5730 !== "ford" && \u5730 !== "moat" && \u5730 !== "karabori") return \u8DB3;
+  const \u77E5 = c.gen && c.gen.wit || 55;
+  if (\u77E5 < 80) return \u8DB3;
+  const k = 0.45 + Math.min(1, (\u77E5 - 80) / 20) * 0.25;
+  return \u8DB3 + (1 - \u8DB3) * k;
+}
 function createBattle(playerCorps, enemyCorps, attackerSide) {
   const r = Math.random();
   const weather = r < 0.18 ? "\u96E8" : r < 0.45 ? "\u66C7" : "\u6674";
@@ -13386,13 +13607,23 @@ function stepBattle(b, dt) {
       const \u751F\u304D\u305F\u7D44 = c.squads.filter((q) => q.men > 0);
       const \u6700\u3082\u9045\u3044\u8DB3 = \u751F\u304D\u305F\u7D44.length ? Math.min(...\u751F\u304D\u305F\u7D44.map((q) => ARM_STATS[q.type].speed)) : avgSpeed;
       const \u968A\u306E\u8DB3 = engaged ? avgSpeed : Math.min(avgSpeed, \u6700\u3082\u9045\u3044\u8DB3 * 1.12);
+      let \u6DF7\u307F = 1;
+      if (!MAP && (c.\u5730 === "bridge" || c.\u5730 === "ford") && dist > 6) {
+        let \u524D = 0;
+        for (const o of alive) {
+          if (o === c || o.side !== c.side || o.\u5730 !== c.\u5730) continue;
+          if (Math.hypot(o.x - c.x, o.y - c.y) > 130) continue;
+          if (Math.hypot(c.tx - o.x, c.ty - o.y) < Math.hypot(c.tx - c.x, c.ty - c.y)) \u524D++;
+        }
+        if (\u524D) \u6DF7\u307F = Math.max(0.3, 1 - \u524D * 0.3);
+      }
       let \u5BC4\u305B\u9053 = 1;
       if (MAP && c.side === b.attacker && !engaged && !c.withdraw && !c.routed) {
         const o = MAP.layers[0];
         const \u5916 = !inLayer(MAP, o, c.x, c.y, MAP.t + o.masu + MAP.t + 8);
         if (\u5916) \u5BC4\u305B\u9053 = 0.6;
       }
-      const v = \u968A\u306E\u8DB3 * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * \u5BC4\u305B\u9053;
+      const v = \u968A\u306E\u8DB3 * fieldScale() * \u6C34\u99B4\u308C\u306E\u8DB3(c, c.\u5730, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * \u5BC4\u305B\u9053 * \u6DF7\u307F;
       const mvx = dx / dist * v * dt, mvy = dy / dist * v * dt;
       let \u9032\u3081\u305F = true;
       if (passableFor(c, b, c.x + mvx, c.y + mvy)) {
@@ -13539,7 +13770,7 @@ function stepBattle(b, dt) {
       if (qd > 2 && (!q.engaged || c.withdraw || c.routed)) {
         const \u9045\u308C = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
         const \u8FFD\u3044\u3064\u304D = c.routed ? 1 : clamp(1 + \u9045\u308C / 34, 1, 2.4);
-        const v = st0.speed * \u8FFD\u3044\u3064\u304D * fieldScale() * terr.speed * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
+        const v = st0.speed * \u8FFD\u3044\u3064\u304D * fieldScale() * \u6C34\u99B4\u308C\u306E\u8DB3(c, q.\u5730, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = (targetX - q.x) / qd * Math.min(v * dt, qd);
         const sy = (targetY - q.y) / qd * Math.min(v * dt, qd);
         if (passableFor(c, b, q.x + sx, q.y + sy)) {

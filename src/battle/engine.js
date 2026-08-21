@@ -6,6 +6,20 @@ import { clamp } from "../core/util.js";
 import { px, py } from "../data/geo.js";
 import { 退き先 } from "./corps.js";
 
+/* 水馴れ（GDD 8.1）。
+
+   知略八十を超える将は、瀬の踏み場・渡る間合い・馬の入れ方を心得ている。
+   同じ淵を渡っても足がさほど落ちない。ただし戦う力は落ちたままである。
+   水の中で当たれば不利、というところは動かさない。渡り方の巧拙であって、
+   水の中で強くなるわけではない。 */
+export function 水馴れの足(c, 地, 足) {
+  if (地 !== "deep" && 地 !== "ford" && 地 !== "moat" && 地 !== "karabori") return 足;
+  const 知 = (c.gen && c.gen.wit) || 55;
+  if (知 < 80) return 足;
+  const k = 0.45 + Math.min(1, (知 - 80) / 20) * 0.25;   // 知略八十で四割五分、百で七割ぶん埋める
+  return 足 + (1 - 足) * k;
+}
+
 export function createBattle(playerCorps, enemyCorps, attackerSide) {
   const r = Math.random();
   const weather = r < 0.18 ? "雨" : r < 0.45 ? "曇" : "晴";
@@ -234,14 +248,31 @@ export function stepBattle(b, dt) {
          坂を登ることにも、射かけられることにも意味が無くなる。
 
          曲輪の中へ入れば常の足に戻る。そこは槍と刀の間合いである。 */
+      /* 橋の混み（GDD 8.1）。
+
+         橋は狭い。同じ板の上に幾隊も乗れば、当然つかえる。これまで隊は互いを
+         擦り抜けていたので、渡り場に何隊集まろうと誰も待たなかった。それでは
+         「橋が混んでいるから瀬を押し渡る」という判断が生まれようがない。
+
+         自分より先に渡っている味方の数だけ足を落とす。押し合いへし合いである。 */
+      let 混み = 1;
+      if (!MAP && (c.地 === "bridge" || c.地 === "ford") && dist > 6) {
+        let 前 = 0;
+        for (const o of alive) {
+          if (o === c || o.side !== c.side || o.地 !== c.地) continue;
+          if (Math.hypot(o.x - c.x, o.y - c.y) > 130) continue;
+          if (Math.hypot(c.tx - o.x, c.ty - o.y) < Math.hypot(c.tx - c.x, c.ty - c.y)) 前++;
+        }
+        if (前) 混み = Math.max(0.3, 1 - 前 * 0.3);
+      }
       let 寄せ道 = 1;
       if (MAP && c.side === b.attacker && !engaged && !c.withdraw && !c.routed) {
         const o = MAP.layers[0];
         const 外 = !inLayer(MAP, o, c.x, c.y, MAP.t + o.masu + MAP.t + 8);
         if (外) 寄せ道 = 0.6;
       }
-      const v = 隊の足 * fieldScale() * terr.speed * W.speed * chg * (engaged ? 0.35 : 1)
-        * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * 寄せ道;
+      const v = 隊の足 * fieldScale() * 水馴れの足(c, c.地, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1)
+        * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * 寄せ道 * 混み;
       const mvx = (dx / dist) * v * dt, mvy = (dy / dist) * v * dt;
       // 城壁と閉じた門は通れない。ぶつかったら壁沿いに滑る。
       let 進めた = true;
@@ -388,7 +419,7 @@ export function stepBattle(b, dt) {
            行き過ぎることもない（歩幅は残りの隔たりで頭打ちにしてある）。 */
         const 遅れ = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
         const 追いつき = c.routed ? 1 : clamp(1 + 遅れ / 34, 1, 2.4);
-        const v = st0.speed * 追いつき * fieldScale() * terr.speed * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
+        const v = st0.speed * 追いつき * fieldScale() * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = ((targetX - q.x) / qd) * Math.min(v * dt, qd);
         const sy = ((targetY - q.y) / qd) * Math.min(v * dt, qd);
         if (passableFor(c, b, q.x + sx, q.y + sy)) { q.x += sx; q.y += sy; }
