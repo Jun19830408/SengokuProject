@@ -4,7 +4,7 @@ import { ROW, SP, corpsMax, corpsMen, notify, placeSquads } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 踏み込んだ地, 隊の地 } from "./field.js";
 import { clamp } from "../core/util.js";
 import { px, py } from "../data/geo.js";
-import { 退き場, 退き先 } from "./corps.js";
+import { 内の門へ退く, 退き場, 退き先 } from "./corps.js";
 
 /* 水馴れ（GDD 8.1）。
 
@@ -952,7 +952,7 @@ export function stepBattle(b, dt) {
        二割二分に戻す。三隊のうち二隊を失えば、その隊はもう戦列を保てない。 */
     if (!c.routed && (c.morale <= 15 || ratio < 0.22)) {
       c.routed = true; c.order = "敗走";
-      c.立て直し = null; c.崩れた刻 = b.t;
+      c.立て直し = null; c.退き門 = null; c.崩れた刻 = b.t;
       for (const q of c.squads) { q.engaged = false; q.link = null; }   // 崩れた者は掴み合いを解いて走る
       notify(b, `${c.gen.name}隊が崩れ、退いた。`, c.side === "P" ? "bad" : "good");
       b.log.push({ t: b.t, text: `${c.name}隊が崩れ、戦線を離れた。` });
@@ -997,11 +997,32 @@ export function stepBattle(b, dt) {
            たいてい敵の目の前である。留まった隊は追い立てられ、士気が戻るどころか
            尽きて盤を落ちた。六十五隊が崩れて、立ち直ったのは十隊しかなかった。
            崩れたら、まず走る。走った先で息をつく。 */
-        const 迫る = (p) => alive.some((o) => o.side !== c.side && !o.routed && !o.destroyed
-          && Math.hypot(o.x - p.x, o.y - p.y) < 260);
-        const 着いた = c.立て直し && Math.hypot(c.立て直し.x - c.x, c.立て直し.y - c.y) < 70;
-        if (!c.立て直し || 迫る(c.立て直し) || (着いた && 迫る(c))) c.立て直し = 退き場(b, c);
-        c.tx = c.立て直し.x; c.ty = c.立て直し.y;
+        if (MAP && c.side !== b.attacker) {
+          /* 城方はひとつ内の門へ下がる（GDD 9.3）。
+
+             野なら敵の来ない所まで走ればよいが、城の中でそれをやると、
+             壁を背にした隅で息をつくことになり、門はがら空きになる。
+             城方が崩れたら、内の曲輪へ下がって門を背に息をつき、立ち直ったら
+             そのままその門を守る。それが城の戦い方である。
+
+             選び直すのは、受け持ちの門が破れたときだけ。敵が近いからと
+             選び直していては、壁ごしの敵に押されて奥へ奥へと下がってしまう。 */
+          if (!c.立て直し || !c.退き門 || c.退き門.broken) {
+            const 先 = 内の門へ退く(b, c);
+            if (先) {
+              c.立て直し = 先.場; c.退き門 = 先.門;
+              if (先.門) c.holdGate = 先.門;          // 立ち直ったらこの門を守る
+              b.log.push({ t: b.t, text: `${c.name}隊は${先.名}の内へ下がって立て直す。` });
+            }
+          }
+          if (c.立て直し) { c.tx = c.立て直し.x; c.ty = c.立て直し.y; }
+        } else {
+          const 迫る = (p) => alive.some((o) => o.side !== c.side && !o.routed && !o.destroyed
+            && Math.hypot(o.x - p.x, o.y - p.y) < 260);
+          const 着いた = c.立て直し && Math.hypot(c.立て直し.x - c.x, c.立て直し.y - c.y) < 70;
+          if (!c.立て直し || 迫る(c.立て直し) || (着いた && 迫る(c))) c.立て直し = 退き場(b, c);
+          c.tx = c.立て直し.x; c.ty = c.立て直し.y;
+        }
       }
     }
     if (c.潰 || c.withdraw) {

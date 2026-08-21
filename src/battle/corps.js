@@ -1,4 +1,4 @@
-import { MAP, axisOf, fromUV } from "./castleMap.js";
+import { MAP, axisOf, fromUV, gatePos } from "./castleMap.js";
 import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, VILLAGES, WOODS, fieldScale, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
 import { clamp } from "../core/util.js";
 import { ARMS } from "../data/roads.js";
@@ -627,6 +627,35 @@ export function 退き場(b, c) {
   }
   return best || { x: clamp(c.x + (向.x / 長) * 420, 60, FIELD.w - 60),
     y: clamp(c.y + (向.y / 長) * 420, 60, FIELD.h - 60) };
+}
+
+/* 城方が崩れたときの退き先（GDD 9.3）。
+
+   野なら敵の来ない所まで走ればよいが、城の中はそうはいかない。城方が崩れたら、
+   ひとつ内の曲輪へ下がるのが定石である。門を背にして息をつき、立ち直ったら
+   そのままその門を守る。外へ逃げ出す道理はない。
+
+   受け持ちの門より内で、まだ破れていない門のうち、いちばん外の輪を選ぶ。
+   同じ輪なら手近な門。破れていない門が尽きたなら、本丸へ籠る。 */
+export function 内の門へ退く(b, c) {
+  const m = b && b.map;
+  if (!m) return null;
+  const 今 = c.holdGate;
+  const 内 = m.gates.filter((g) => !g.broken && (!今 || g.layer > 今.layer));
+  const 候補 = 内.length ? 内 : m.gates.filter((g) => !g.broken);
+  if (!候補.length) {
+    const h = m.layers[m.layers.length - 1];
+    return { 場: { x: m.cx + (h.ox || 0), y: m.cy + (h.oy || 0) }, 門: null, 名: "本丸" };
+  }
+  const 輪 = Math.min(...候補.map((g) => g.layer));
+  const 選 = 候補.filter((g) => g.layer === 輪).sort((x, z) => {
+    const px = gatePos(m, m.layers[x.layer], x), pz = gatePos(m, m.layers[z.layer], z);
+    return Math.hypot(px.x - c.x, px.y - c.y) - Math.hypot(pz.x - c.x, pz.y - c.y);
+  })[0];
+  const l = m.layers[選.layer], a = axisOf(l, 選);
+  // 門のすぐ内。ここで息をつき、立ち直ったらそのまま門を守る。
+  const p = fromUV(m, a, 選.off, a.half - 40);
+  return { 場: { x: p.x, y: p.y }, 門: 選, 名: 選.key };
 }
 
 export function 退き先(b, c) {

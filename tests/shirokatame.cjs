@@ -130,6 +130,62 @@ function 城を攻める(i, opt = {}) {
     出.every((r) => r.終 > 120 || r.b.captured), `いちばん短い戦 ${Math.round(Math.min(...出.map((r) => r.終)))}秒`);
 }
 
+/* ------------- 二のニ、崩れた城方は、内の門へ下がって立て直す（GDD 9.3）
+
+   野なら敵の来ない所まで走ればよいが、城の中でそれをやると、壁を背にした隅で
+   息をつくことになり、門はがら空きになる。城方が崩れたら、内の曲輪へ下がって
+   門を背に息をつき、立ち直ったらそのままその門を守る。 */
+{
+  let 崩 = 0, 内へ = 0, 門を受け持つ = 0;
+  for (let i = 0; i < 8; i++) {
+    種 = 0xB000 + i * 419;
+    const map = A.layoutCastleField(A.buildCastleMap(
+      { id: `u${i}`, name: `城${i}`, def: 66, local: 2600, localTrain: 70, najimi: 70, rost: null }));
+    A.setBattleMap(map);
+    const 外 = map.layers[0], og = 外.gates;
+    const atk = [0, 1, 2].map((k) => {
+      const sp = A.寄せ口(map, og[k % og.length], 0);
+      const c = A.makeCorps('P', 将(k), 400, 2200, 75, 75, sp.x, sp.y, sp.f, '#2F5D8C');
+      c.formation = '方陣'; A.placeSquads(c, true); c.auto = true; return c;
+    });
+    const 持 = [];
+    for (const l of map.layers) for (const gt of l.gates) {
+      const a = A.axisOf(l, gt), p = A.fromUV(map, a, gt.off, a.half - 40);
+      持.push({ x: p.x, y: p.y, f: 0, gate: gt });
+    }
+    const def = [0, 1, 2, 3].map((k) => {
+      const sp = 持[Math.min(持.length - 1, k)];
+      const c = A.makeCorps('E', 将(10 + k), 300, 650, 70, 70, sp.x, sp.y, sp.f, '#B0483C');
+      c.holdGate = sp.gate; A.placeSquads(c, true); c.auto = true; return c;
+    });
+    const b = A.createBattle(atk, def, 'P');
+    b.mode = 'castle'; b.map = map; b.phase = 'fight'; b.dusk = 1700;
+    for (let k = 0; k < 9000; k++) {
+      A.stepBattle(b, 0.25);
+      if (k % 3 === 0) A.battleAI(b);
+      for (const c of def) {
+        if (c.routed && !c.見た) {
+          c.見た = true; 崩++;
+          c.崩れ位置 = Math.hypot(c.x - map.cx, c.y - map.cy);
+        }
+        if (c.見た && !c.測った && c.立て直し) {
+          c.測った = true;
+          const d = Math.hypot(c.立て直し.x - map.cx, c.立て直し.y - map.cy);
+          if (d < c.崩れ位置 - 20) 内へ++;
+          if (c.holdGate) 門を受け持つ++;
+        }
+      }
+      if (b.result) break;
+    }
+  }
+  確('城方が崩れる戦がある（測れている）', 崩 > 0, `${崩}隊`);
+  確('崩れた城方は、内へ下がって立て直す', 崩 === 0 || 内へ === 崩,
+    `${内へ}／${崩}隊が城の中心へ寄った`);
+  確('下がった先の門を受け持つ', 崩 === 0 || 門を受け持つ === 崩,
+    `${門を受け持つ}／${崩}隊`);
+  A.setBattleMap(null);
+}
+
 /* --------------- 三、脆い城は早く破れ、堅い城は容易には破れない */
 {
   const 破るまで = (def) => {

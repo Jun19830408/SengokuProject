@@ -10921,6 +10921,25 @@ function \u9000\u304D\u5834(b, c) {
     y: clamp(c.y + \u5411.y / \u9577 * 420, 60, FIELD.h - 60)
   };
 }
+function \u5185\u306E\u9580\u3078\u9000\u304F(b, c) {
+  const m = b && b.map;
+  if (!m) return null;
+  const \u4ECA = c.holdGate;
+  const \u5185 = m.gates.filter((g) => !g.broken && (!\u4ECA || g.layer > \u4ECA.layer));
+  const \u5019\u88DC = \u5185.length ? \u5185 : m.gates.filter((g) => !g.broken);
+  if (!\u5019\u88DC.length) {
+    const h = m.layers[m.layers.length - 1];
+    return { \u5834: { x: m.cx + (h.ox || 0), y: m.cy + (h.oy || 0) }, \u9580: null, \u540D: "\u672C\u4E38" };
+  }
+  const \u8F2A = Math.min(...\u5019\u88DC.map((g) => g.layer));
+  const \u9078 = \u5019\u88DC.filter((g) => g.layer === \u8F2A).sort((x, z) => {
+    const px2 = gatePos(m, m.layers[x.layer], x), pz = gatePos(m, m.layers[z.layer], z);
+    return Math.hypot(px2.x - c.x, px2.y - c.y) - Math.hypot(pz.x - c.x, pz.y - c.y);
+  })[0];
+  const l = m.layers[\u9078.layer], a = axisOf(l, \u9078);
+  const p = fromUV(m, a, \u9078.off, a.half - 40);
+  return { \u5834: { x: p.x, y: p.y }, \u9580: \u9078, \u540D: \u9078.key };
+}
 function \u9000\u304D\u5148(b, c) {
   if (b && b.map) {
     const ox = c.x - b.map.cx, oy = c.y - b.map.cy, od = Math.hypot(ox, oy) || 1;
@@ -14659,6 +14678,7 @@ function stepBattle(b, dt) {
       c.routed = true;
       c.order = "\u6557\u8D70";
       c.\u7ACB\u3066\u76F4\u3057 = null;
+      c.\u9000\u304D\u9580 = null;
       c.\u5D29\u308C\u305F\u523B = b.t;
       for (const q of c.squads) {
         q.engaged = false;
@@ -14684,11 +14704,27 @@ function stepBattle(b, dt) {
         notify(b, `${c.gen.name}\u968A\u304C\u7ACB\u3061\u76F4\u308A\u3001\u6226\u5217\u306B\u623B\u3063\u305F\u3002`, c.side === "P" ? "good" : "bad");
         b.log.push({ t: b.t, text: `${c.name}\u968A\u304C\u7ACB\u3061\u76F4\u3063\u305F\u3002` });
       } else {
-        const \u8FEB\u308B = (p) => alive.some((o) => o.side !== c.side && !o.routed && !o.destroyed && Math.hypot(o.x - p.x, o.y - p.y) < 260);
-        const \u7740\u3044\u305F = c.\u7ACB\u3066\u76F4\u3057 && Math.hypot(c.\u7ACB\u3066\u76F4\u3057.x - c.x, c.\u7ACB\u3066\u76F4\u3057.y - c.y) < 70;
-        if (!c.\u7ACB\u3066\u76F4\u3057 || \u8FEB\u308B(c.\u7ACB\u3066\u76F4\u3057) || \u7740\u3044\u305F && \u8FEB\u308B(c)) c.\u7ACB\u3066\u76F4\u3057 = \u9000\u304D\u5834(b, c);
-        c.tx = c.\u7ACB\u3066\u76F4\u3057.x;
-        c.ty = c.\u7ACB\u3066\u76F4\u3057.y;
+        if (MAP && c.side !== b.attacker) {
+          if (!c.\u7ACB\u3066\u76F4\u3057 || !c.\u9000\u304D\u9580 || c.\u9000\u304D\u9580.broken) {
+            const \u5148 = \u5185\u306E\u9580\u3078\u9000\u304F(b, c);
+            if (\u5148) {
+              c.\u7ACB\u3066\u76F4\u3057 = \u5148.\u5834;
+              c.\u9000\u304D\u9580 = \u5148.\u9580;
+              if (\u5148.\u9580) c.holdGate = \u5148.\u9580;
+              b.log.push({ t: b.t, text: `${c.name}\u968A\u306F${\u5148.\u540D}\u306E\u5185\u3078\u4E0B\u304C\u3063\u3066\u7ACB\u3066\u76F4\u3059\u3002` });
+            }
+          }
+          if (c.\u7ACB\u3066\u76F4\u3057) {
+            c.tx = c.\u7ACB\u3066\u76F4\u3057.x;
+            c.ty = c.\u7ACB\u3066\u76F4\u3057.y;
+          }
+        } else {
+          const \u8FEB\u308B = (p) => alive.some((o) => o.side !== c.side && !o.routed && !o.destroyed && Math.hypot(o.x - p.x, o.y - p.y) < 260);
+          const \u7740\u3044\u305F = c.\u7ACB\u3066\u76F4\u3057 && Math.hypot(c.\u7ACB\u3066\u76F4\u3057.x - c.x, c.\u7ACB\u3066\u76F4\u3057.y - c.y) < 70;
+          if (!c.\u7ACB\u3066\u76F4\u3057 || \u8FEB\u308B(c.\u7ACB\u3066\u76F4\u3057) || \u7740\u3044\u305F && \u8FEB\u308B(c)) c.\u7ACB\u3066\u76F4\u3057 = \u9000\u304D\u5834(b, c);
+          c.tx = c.\u7ACB\u3066\u76F4\u3057.x;
+          c.ty = c.\u7ACB\u3066\u76F4\u3057.y;
+        }
       }
     }
     if (c.\u6F70 || c.withdraw) {
