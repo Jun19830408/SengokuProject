@@ -1056,25 +1056,49 @@ export function stepBattle(b, dt) {
     return;
   }
   if (b.retreat === "P" && pm === 0) { b.phase = "over"; b.result = "E"; b.orderly = true; return; }
-  // 城攻めの決着は野戦とは違う。城が落ちるか、寄せ手が攻めきれずに退くか。
-  if (MAP) {
-    const atkSide = b.attacker, defSide = atkSide === "P" ? "E" : "P";
-    const atkEff = atkSide === "P" ? pm : em, defEff = atkSide === "P" ? em : pm;
-    const atk0 = atkSide === "P" ? b.initial.P : b.initial.E;
-    const def0 = atkSide === "P" ? b.initial.E : b.initial.P;
-    if (atkEff <= atk0 * 0.3 || atkEff === 0) {
-      b.phase = "over"; b.result = defSide; b.orderly = true;
-      notify(b, "寄せ手は攻めきれず、囲みへ退いた。", defSide === "P" ? "good" : "bad");
-      return;
-    }
-    if (defEff <= def0 * 0.22 || defEff === 0) {
-      b.phase = "over"; b.result = atkSide; b.opened = true;
-      notify(b, "城方は支えきれず、城を開いた。", atkSide === "P" ? "good" : "bad");
-      return;
-    }
-    return;
-  }
-  if (pm <= b.initial.P * 0.3 || em <= b.initial.E * 0.3 || pm === 0 || em === 0) {
-    b.phase = "over"; b.result = pm > em ? "P" : "E";
+
+  /* 戦の終わり（GDD 8.8 / 9.3）。
+
+     これまでは「兵が三割を切ったら攻めきれず退く」「二割二分を切ったら城を開く」
+     としていた。日はまだ高く、士気も七割あるのに、勝手に囲みを解いてしまう。
+     退くか退かぬかは、采配を預かる者の決めることであって、盤が決めることでは
+     ない。それに、兵が三割減っただけで軍が消えるのでは、戦にならない。
+
+     終わるのは、次のいずれかに限る。
+       一、日が暮れる
+       二、片方の兵が尽きる（盤の上に一兵も残らない）
+       三、片方の士気が尽きる（残る隊がみな士気零）
+       四、片方の隊がひとつ残らず盤を去る（撤退・潰走・壊滅）
+         、あるいは残る隊がみな崩れたまま三十秒が過ぎる（総崩れ）
+     城攻めではこれに「本丸を押さえる」が加わる（上で見た）。 */
+  if (!b.総崩れ) b.総崩れ = {};
+  const 尽きた = (side) => {
+    const 生 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.潰 && !c.withdraw);
+    if (!生.length) return "隊が尽きた";                     // 四
+    const 兵 = 生.reduce((a, c) => a + corpsMen(c), 0);
+    if (兵 <= 0) return "兵が尽きた";                        // 二
+    const 気 = 生.reduce((a, c) => a + c.morale * corpsMen(c), 0) / Math.max(1, 兵);
+    if (気 <= 0.5) return "士気が尽きた";                    // 三
+    /* 残る隊がひとつ残らず崩れているとき（総崩れ）。
+
+       崩れた隊は盤の上で息をついているので、右の三つには当たらない。
+       ところが采配は崩れた隊を狙わないので、勝った側は立ち尽くし、負けた側は
+       休んだまま、日が暮れるまで何も起こらない。それは戦ではない。
+       三十秒それが続いたら、戦列は無いものとみなす。 */
+    if (生.every((c) => c.routed)) {
+      if (!b.総崩れ[side]) b.総崩れ[side] = b.t;
+      if (b.t - b.総崩れ[side] > 30) return "総崩れ";
+    } else b.総崩れ[side] = 0;
+    return null;
+  };
+  const P尽 = 尽きた("P"), E尽 = 尽きた("E");
+  if (P尽 || E尽) {
+    b.phase = "over";
+    b.result = P尽 && E尽 ? (pm > em ? "P" : "E") : (P尽 ? "E" : "P");
+    const 負 = P尽 ? "P" : "E";
+    const 名 = 負 === b.attacker ? "寄せ手" : MAP ? "城方" : "受け手";
+    if (MAP && b.result === b.attacker) b.opened = true;
+    b.log.push({ t: b.t, text: `${名}は${P尽 || E尽}。` });
+    notify(b, `${名}は${P尽 || E尽}。`, (b.result === "P") ? "good" : "bad");
   }
 }

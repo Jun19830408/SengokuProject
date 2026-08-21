@@ -78,14 +78,14 @@ function 一戦(i) {
     W * (0.3 + k * 0.2), H * 0.14, Math.PI / 2, '#B0483C'));
   for (const c of [...P, ...E]) { c.formation = '横陣'; A.placeSquads(c, true); c.auto = true; }
   const b = A.createBattle(P, E, 'P');
-  b.mode = 'field'; b.phase = 'fight'; b.dusk = 4000; b.face = 'S'; b.myFar = false;
+  b.mode = 'field'; b.phase = 'fight'; b.dusk = 1300; b.face = 'S'; b.myFar = false;
   let 刻 = 0, 水刻 = 0, 淵刻 = 0, 障刻 = 0, 丘刻 = 0, 水戦 = 0, 戦 = 0;
   /* 受け手が丘に就いたかは、槍を合わせた時点で見る。戦の終わりで見ると、
      崩れて退き場へ走った隊が丘を降りているぶん、低く出る。 */
   let 丘の守 = 0, 守 = 0, 触 = false;
   const 岸0 = new Map(), 渡り = [];
   for (const c of [...P, ...E]) 岸0.set(c, A.岸(c.x, c.y));
-  for (let k = 0; k < 3000; k++) {
+  for (let k = 0; k < 6000; k++) {
     A.stepBattle(b, 0.25);
     if (k % 3 === 0) A.battleAI(b);
     for (const c of [...P, ...E]) {
@@ -101,7 +101,9 @@ function 一戦(i) {
       if (A.hasRiver()) {
         if (今 === 0 && c.渡ったx == null) c.渡ったx = c.x;
         if (今 !== 0 && 岸0.get(c) !== 0 && 今 !== 岸0.get(c)) {
-          渡り.push(c.渡ったx == null ? c.x : c.渡ったx);
+          /* 崩れた隊が逃げるために渡った川は数えない。追われて水へ飛び込むのは
+             道さがしの働きではなく、そうするしかなかったというだけである。 */
+          if (!c.routed) 渡り.push(c.渡ったx == null ? c.x : c.渡ったx);
           岸0.set(c, 今);
         }
         if (今 !== 0) c.渡ったx = null;
@@ -146,8 +148,12 @@ function 一戦(i) {
     `${(和((r) => r.水戦) / Math.max(1, 和((r) => r.戦)) * 100).toFixed(1)}%（直す前は12.1%）`);
   確('受け手は近くの丘を取って備える', 和((r) => r.丘の守) > 和((r) => r.守) * 0.45,
     `槍を合わせた時に ${和((r) => r.丘の守)}／${和((r) => r.守)}隊（直す前は14／66隊）`);
-  確('地物を避けても日暮れまでに決着がつく', 出.every((r) => r.決),
-    `${出.filter((r) => r.決).length}／${出.length}戦`);
+  /* 戦の終わりを「兵が三割を切ったら退く」から「日暮れ・兵尽き・士気尽き・
+     総崩れ」に改めたので、野戦は日暮れまでもつれることが増えた。
+     ここで見たいのは「地物を避けたせいで戦にならない」ことが無いか、である。
+     日が暮れる前に槍を合わせているなら、それでよい。 */
+  確('地物を避けても、日暮れまでには決着か日没を迎える', 出.every((r) => r.決 || r.戦 > 0),
+    `決着${出.filter((r) => r.決).length}／${出.length}戦（残りは日没）`);
 }
 
 /* --------------- 一のニ、兵で優る受け手は丘を取らない（GDD 8.6）

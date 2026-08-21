@@ -895,9 +895,35 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       castle.local = Math.max(0, dLeft);
       if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
-      const broke = b.map.gates.filter((gt) => gt.broken).length;
+      /* 城の傷み（GDD 9.3）。
+
+         門は次の攻めまでに直る。焼けた板を張り替え、閂を打ち直せばよい。
+         ところが、石垣を崩され、櫓を焼かれ、堀を埋められた城は、そう容易には
+         元に戻らない。直せるのはその城の防備なりのものである――防備を上げて
+         おかねば、脆い門しか建て直せない。
+
+         そこで、攻めのあいだに壊された割に応じて、城の防備そのものを下げる。
+         門の傷み（残った耐えの割）を七割五分、崩れた櫓の割を二割五分で見て、
+         その半ばぶんを防備から引く。丸ごと壊された城は防備が半ばになる。
+         次にこの城を攻めれば、門はそのぶん脆い（門の堅さ＝百十＋防備×十六）。
+
+         もとは「破れた門一つにつき八分」であった。門を九分どおり削っても、
+         破りきらなければ城は無傷のままで、攻めた甲斐がなかった。 */
+      const 門ら = b.map.gates;
+      const 総 = 門ら.reduce((a, g) => a + g.max, 0);
+      const 残 = 門ら.reduce((a, g) => a + Math.max(0, g.hp), 0);
+      const 門の傷 = 総 ? 1 - 残 / 総 : 0;
+      const 櫓の傷 = b.map.fac.length ? b.map.fac.filter((f) => f.hp <= 0).length / b.map.fac.length : 0;
+      const 崩れ = Math.max(0, Math.min(1, 門の傷 * 0.75 + 櫓の傷 * 0.25));
+      const broke = 門ら.filter((gt) => gt.broken).length;
+      const 前の防備 = Math.round(castle.def);
       castle.hp = Math.max(0, castle.hp - Math.round(castle.hp * 0.15 * broke));
-      castle.def = Math.max(0, Math.round(castle.def * (1 - 0.08 * broke)));
+      castle.def = Math.max(6, Math.round(castle.def * (1 - 崩れ * 0.5)));
+      if (前の防備 - castle.def >= 1) {
+        s.chronicle.push({ y: s.year, m: s.month,
+          text: `${castle.name}は門と櫓を破られ、防備が${前の防備}から${castle.def}に落ちた。`
+            + `普請で建て直さねば、次の寄せ手には脆い門しか向けられない。` });
+      }
       const aLoss = atkCorps.reduce((a, c) => a + c.loss["直属"] + c.loss["地域"], 0) | 0;
       const dLoss = defCorps.reduce((a, c) => a + c.loss["直属"] + c.loss["地域"], 0) | 0;
       s.chronicle.push({ y: s.year, m: s.month,

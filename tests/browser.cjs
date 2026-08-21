@@ -3,6 +3,16 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const esbuild = require('esbuild');
+
+/* 記録は圧して収めてある（save/pack.js）。画面を通さずに中身を検めるので、
+   解す手だてをここで用意する。 */
+const 包み口 = path.join(__dirname, '..', 'build', 'browser-pack-entry.js');
+fs.mkdirSync(path.join(__dirname, '..', 'build'), { recursive: true });
+fs.writeFileSync(包み口, 'export { 解す } from "../src/save/pack.js";\n');
+const 包み出 = path.join(__dirname, '..', 'build', 'browser-pack.cjs');
+esbuild.buildSync({ entryPoints: [包み口], bundle: true, format: 'cjs', outfile: 包み出, logLevel: 'error' });
+const 包み = require(包み出);
 
 const HTML = path.join(__dirname, '..', 'dist', '戦国.html');
 if (!fs.existsSync(HTML)) { console.log('★dist/戦国.html がない。先に npm run build を。'); process.exit(1); }
@@ -94,8 +104,11 @@ const 家を開く = async (名) => {
   const 記録 = w.localStorage.getItem('sengoku:save1');
   確かめる('記録がブラウザに残る', !!記録);
   if (記録) {
+    /* 記録は圧して収めてある（save/pack.js）。頭に z1: の印がある。
+       画面を通さずに中身を見るときは、こちらで解かねばならない。 */
+    確かめる('記録は圧して収められている', 記録.startsWith('z1:'), 記録.slice(0, 3));
     let d = null;
-    try { d = JSON.parse(記録); } catch (e) { /* 読めぬ */ }
+    try { d = JSON.parse(包み.解す(記録)); } catch (e) { /* 読めぬ */ }
     確かめる('記録の中身が読める', !!(d && d.state && d.state.year === 1546));
     確かめる('記録に城が入っている', !!(d && d.state && d.state.castles && d.state.castles.length > 200));
   }

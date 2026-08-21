@@ -11074,7 +11074,7 @@ function buildCastleMap(castle) {
   const \u6A2A\u9577 = rnd() < 0.5;
   const n = castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2;
   const names = n === 4 ? ["\u60E3\u69CB", "\u4E09\u306E\u4E38", "\u4E8C\u306E\u4E38", "\u672C\u4E38"] : n === 3 ? ["\u60E3\u69CB", "\u4E8C\u306E\u4E38", "\u672C\u4E38"] : ["\u4E8C\u306E\u4E38", "\u672C\u4E38"];
-  const base = 380 + castle.def * 8;
+  const base = 110 + castle.def * 16;
   const gn0 = clamp((castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2) + \u7656.\u9580, 1, 4);
   const FACE = ["S", "N", "E", "W"];
   const GNAME = { S: "\u5927\u624B\u9580", N: "\u6426\u624B\u9580", E: "\u6771\u8107\u9580", W: "\u897F\u8107\u9580" };
@@ -14741,30 +14741,29 @@ function stepBattle(b, dt) {
     b.orderly = true;
     return;
   }
-  if (MAP) {
-    const atkSide = b.attacker, defSide = atkSide === "P" ? "E" : "P";
-    const atkEff = atkSide === "P" ? pm : em, defEff = atkSide === "P" ? em : pm;
-    const atk0 = atkSide === "P" ? b.initial.P : b.initial.E;
-    const def0 = atkSide === "P" ? b.initial.E : b.initial.P;
-    if (atkEff <= atk0 * 0.3 || atkEff === 0) {
-      b.phase = "over";
-      b.result = defSide;
-      b.orderly = true;
-      notify(b, "\u5BC4\u305B\u624B\u306F\u653B\u3081\u304D\u308C\u305A\u3001\u56F2\u307F\u3078\u9000\u3044\u305F\u3002", defSide === "P" ? "good" : "bad");
-      return;
-    }
-    if (defEff <= def0 * 0.22 || defEff === 0) {
-      b.phase = "over";
-      b.result = atkSide;
-      b.opened = true;
-      notify(b, "\u57CE\u65B9\u306F\u652F\u3048\u304D\u308C\u305A\u3001\u57CE\u3092\u958B\u3044\u305F\u3002", atkSide === "P" ? "good" : "bad");
-      return;
-    }
-    return;
-  }
-  if (pm <= b.initial.P * 0.3 || em <= b.initial.E * 0.3 || pm === 0 || em === 0) {
+  if (!b.\u7DCF\u5D29\u308C) b.\u7DCF\u5D29\u308C = {};
+  const \u5C3D\u304D\u305F = (side) => {
+    const \u751F = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.\u6F70 && !c.withdraw);
+    if (!\u751F.length) return "\u968A\u304C\u5C3D\u304D\u305F";
+    const \u5175 = \u751F.reduce((a, c) => a + corpsMen(c), 0);
+    if (\u5175 <= 0) return "\u5175\u304C\u5C3D\u304D\u305F";
+    const \u6C17 = \u751F.reduce((a, c) => a + c.morale * corpsMen(c), 0) / Math.max(1, \u5175);
+    if (\u6C17 <= 0.5) return "\u58EB\u6C17\u304C\u5C3D\u304D\u305F";
+    if (\u751F.every((c) => c.routed)) {
+      if (!b.\u7DCF\u5D29\u308C[side]) b.\u7DCF\u5D29\u308C[side] = b.t;
+      if (b.t - b.\u7DCF\u5D29\u308C[side] > 30) return "\u7DCF\u5D29\u308C";
+    } else b.\u7DCF\u5D29\u308C[side] = 0;
+    return null;
+  };
+  const P\u5C3D = \u5C3D\u304D\u305F("P"), E\u5C3D = \u5C3D\u304D\u305F("E");
+  if (P\u5C3D || E\u5C3D) {
     b.phase = "over";
-    b.result = pm > em ? "P" : "E";
+    b.result = P\u5C3D && E\u5C3D ? pm > em ? "P" : "E" : P\u5C3D ? "E" : "P";
+    const \u8CA0 = P\u5C3D ? "P" : "E";
+    const \u540D = \u8CA0 === b.attacker ? "\u5BC4\u305B\u624B" : MAP ? "\u57CE\u65B9" : "\u53D7\u3051\u624B";
+    if (MAP && b.result === b.attacker) b.opened = true;
+    b.log.push({ t: b.t, text: `${\u540D}\u306F${P\u5C3D || E\u5C3D}\u3002` });
+    notify(b, `${\u540D}\u306F${P\u5C3D || E\u5C3D}\u3002`, b.result === "P" ? "good" : "bad");
   }
 }
 
@@ -18734,9 +18733,23 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       castle.local = Math.max(0, dLeft);
       if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
-      const broke = b.map.gates.filter((gt) => gt.broken).length;
+      const \u9580\u3089 = b.map.gates;
+      const \u7DCF = \u9580\u3089.reduce((a, g2) => a + g2.max, 0);
+      const \u6B8B = \u9580\u3089.reduce((a, g2) => a + Math.max(0, g2.hp), 0);
+      const \u9580\u306E\u50B7 = \u7DCF ? 1 - \u6B8B / \u7DCF : 0;
+      const \u6AD3\u306E\u50B7 = b.map.fac.length ? b.map.fac.filter((f) => f.hp <= 0).length / b.map.fac.length : 0;
+      const \u5D29\u308C = Math.max(0, Math.min(1, \u9580\u306E\u50B7 * 0.75 + \u6AD3\u306E\u50B7 * 0.25));
+      const broke = \u9580\u3089.filter((gt) => gt.broken).length;
+      const \u524D\u306E\u9632\u5099 = Math.round(castle.def);
       castle.hp = Math.max(0, castle.hp - Math.round(castle.hp * 0.15 * broke));
-      castle.def = Math.max(0, Math.round(castle.def * (1 - 0.08 * broke)));
+      castle.def = Math.max(6, Math.round(castle.def * (1 - \u5D29\u308C * 0.5)));
+      if (\u524D\u306E\u9632\u5099 - castle.def >= 1) {
+        s2.chronicle.push({
+          y: s2.year,
+          m: s2.month,
+          text: `${castle.name}\u306F\u9580\u3068\u6AD3\u3092\u7834\u3089\u308C\u3001\u9632\u5099\u304C${\u524D\u306E\u9632\u5099}\u304B\u3089${castle.def}\u306B\u843D\u3061\u305F\u3002\u666E\u8ACB\u3067\u5EFA\u3066\u76F4\u3055\u306D\u3070\u3001\u6B21\u306E\u5BC4\u305B\u624B\u306B\u306F\u8106\u3044\u9580\u3057\u304B\u5411\u3051\u3089\u308C\u306A\u3044\u3002`
+        });
+      }
       const aLoss = atkCorps.reduce((a, c) => a + c.loss["\u76F4\u5C5E"] + c.loss["\u5730\u57DF"], 0) | 0;
       const dLoss = defCorps.reduce((a, c) => a + c.loss["\u76F4\u5C5E"] + c.loss["\u5730\u57DF"], 0) | 0;
       s2.chronicle.push({
