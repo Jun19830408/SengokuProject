@@ -6,7 +6,7 @@ import { stepBattle } from "../battle/engine.js";
 import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
-import { 伏兵に置ける, 伏兵の策士, 退かせる } from "../battle/corps.js";
+import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる } from "../battle/corps.js";
 
 /* --------------------------------------------------------------- 合戦画面 */
 export function BattleScreen({ ctx, land, onEnd }) {
@@ -81,6 +81,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const b2 = bRef.current;
     if (b2.phase === "over" || 委ねRef.current) return;
     for (const c of b2.corps) if (c.side === "P") c.auto = true;   // 全軍を委任する
+    b2.委ねた = true;                                              // 伏兵の判断まで任せる
     if (b2.phase === "deploy") { b2.phase = "fight"; setPhase("fight"); }
     setSpeed(0);
     委ねRef.current = true; set委ね中(true);
@@ -323,6 +324,56 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (!foes.length) return null;
     return foes.reduce((a, x) => (Math.hypot(x.x - c.x, x.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? x : a), foes[0]);
   };
+  /* 伏兵の釦（GDD 8.7）。
+
+     もとは布陣の帳にしかなく、しかも「いま森の上に立っているとき」だけ押せた。
+     布陣のとき隊は横に並べて置かれるので、たまたま森に立っていることは稀である。
+     押せる目のないまま、委ねた隊が采配の判断で勝手に伏せられていた。
+     プレイヤーが選べぬのに強いられるのでは、策とは言えない。
+
+     いまは、
+       ・森・林・集落のうち自軍に近い半分にいるなら、その場で伏せる
+       ・そうでないなら、手近な伏せ場へ向かわせる（着いたら伏せる）
+       ・伏せている隊は、押せば解ける。解いた隊を采配が伏せ直すことはない
+     合戦中の帳にも同じ釦を出す。 */
+  const 伏兵の釦 = (c) => {
+    if (!c || isCastle) return null;
+    const 策 = 伏兵の策士(b, c.side);
+    const 伏せ中 = c.ambush && !c.revealed;
+    const 向かい中 = !!c.伏せ場;
+    const ここで置ける = 伏兵に置ける(b, c);
+    const 場 = 策 && !ここで置ける ? 伏せ場を探す(b, c, 1200) : null;
+    const 訳 = !策 ? "知略七十八以上の将が軍におらぬ"
+      : 伏せ中 ? "押すと伏兵を解く"
+        : 向かい中 ? "伏せ場へ向かっている。押すと取りやめる"
+          : ここで置ける ? `${策.name}の献策：この木立に伏せる`
+            : 場 ? `${策.name}の献策：手近な木立へ回って伏せる`
+              : "自軍に近い半分に、伏せられる森・林・集落がない";
+    const 押せる = !!策 && (伏せ中 || 向かい中 || ここで置ける || !!場);
+    return (
+      <button className={`btn sm ${伏せ中 || 向かい中 ? "on" : ""}`}
+        disabled={!押せる} title={訳}
+        onClick={() => {
+          if (伏せ中 || 向かい中) {
+            c.ambush = false; c.revealed = true; c.伏せ場 = null;
+            c.伏兵無用 = true;                     // 采配が伏せ直さぬように
+            issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y });
+          } else if (ここで置ける) {
+            c.ambush = true; c.revealed = false; c.伏せ場 = null; c.伏兵無用 = false;
+            issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y });
+            b.log.push({ t: b.t, text: `${c.gen.name}隊が木立に伏せた。` });
+          } else if (場) {
+            c.伏せ場 = 場; c.伏兵無用 = false;
+            issueOrder(b, c, { order: "移動", tx: 場.x, ty: 場.y });
+            b.log.push({ t: b.t, text: `${c.gen.name}隊が木立へ回り、身をひそめる。` });
+          }
+          force((n) => (n + 1) % 1000);
+        }}>
+        {伏せ中 ? "伏兵を解く" : 向かい中 ? "伏せ場へ向かう（押すと取消）" : "伏兵に置く"}
+      </button>
+    );
+  };
+
   const corpsOrder = (c, o) => {
     if (c && isCastle && o !== "待機") { c.siegeAuto = false; c.gate = null; }
     if (!c || c.dead || c.destroyed || c.routed) return;
@@ -510,22 +561,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 );
               })()}
               <FormationPicker corps={selC} onPick={(f) => changeForm(selC, f)} />
-              {/* 伏兵（GDD 8.7）。知略七十八以上の将が軍にいて初めて献策される。
-                  伏せられるのは、森・林・集落のうち自軍に近い半分にある所。 */}
-              {(() => {
-                const 策 = 伏兵の策士(b, selC.side);
-                const 置ける = 伏兵に置ける(b, selC);
-                const 訳 = !策 ? "知略七十八以上の将がおらぬ"
-                  : 置ける ? `${策.name}の献策：この木立に伏せる`
-                    : "森・林・集落のうち、自軍に近い半分でのみ伏せられる";
-                return (
-                  <button className={`btn sm ${selC.ambush ? "on" : ""}`}
-                    disabled={!selC.ambush && !置ける} title={訳}
-                    onClick={() => { selC.ambush = !selC.ambush; selC.revealed = !selC.ambush; }}>
-                    伏兵に置く
-                  </button>
-                );
-              })()}
+              {伏兵の釦(selC)}
             </>
           )}
           <button className="btn dark" onClick={() => { b.phase = "fight"; setPhase("fight"); setSpeed(0.3); }}>合戦開始</button>
@@ -544,6 +580,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
           <div className="g4">
             <button className="btn sm" onClick={() => {
               for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) c.auto = true;
+              b.委ねた = true;              // 采配に伏兵まで任せるのは、こう命じたときだけ
               force((n) => (n + 1) % 1000);
             }}>全軍委任</button>
             <button className="btn sm" onClick={() => {
@@ -722,6 +759,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                   onClick={() => setFace(!faceMode)}>転回</button>
                 <button className="btn sm" title="この隊だけ戦場を離れる。一度退いた隊は戻せない"
                   onClick={() => set退き確認({ corps: selC })}>撤退</button>
+                {伏兵の釦(selC)}
               </div>
               {faceMode && (
                 <div style={{ fontSize: 11.5, color: "#4A6E8A", lineHeight: 1.6 }}>

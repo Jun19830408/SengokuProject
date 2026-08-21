@@ -13250,11 +13250,12 @@ function battleAI(b) {
     if (!b.\u4F0F\u5175\u56F3) b.\u4F0F\u5175\u56F3 = {};
     for (const side of ["P", "E"]) {
       if (b.\u4F0F\u5175\u56F3[side]) continue;
+      if (side === "P" && !b.\u59D4\u306D\u305F) continue;
       if (!\u4F0F\u5175\u306E\u7B56\u58EB(b, side)) {
         b.\u4F0F\u5175\u56F3[side] = "\u7B56\u58EB\u306A\u3057";
         continue;
       }
-      const \u5019\u88DC = alive.filter((c) => c.side === side && delegated(b, c) && !c.detach && !c.routed && !c.withdraw && !c.ambush && !c.\u4F0F\u305B\u5834 && !c.squads.some((q) => q.engaged));
+      const \u5019\u88DC = alive.filter((c) => c.side === side && delegated(b, c) && !c.detach && !c.routed && !c.withdraw && !c.ambush && !c.\u4F0F\u305B\u5834 && !c.\u4F0F\u5175\u7121\u7528 && !c.squads.some((q) => q.engaged));
       const \u624B\u52E2 = alive.filter((c) => c.side === side && !c.detach);
       if (\u624B\u52E2.length < 2 || !\u5019\u88DC.length) continue;
       let \u9078 = null, \u5834 = null, bd = 1e9;
@@ -13312,6 +13313,9 @@ function battleAI(b) {
   for (const c of alive) {
     if (!delegated(b, c) || c.routed || c.detach) continue;
     if (c.ambush && !c.revealed) continue;
+    if (c.\u4F0F\u5175\u7121\u7528) {
+      c.\u4F0F\u305B\u5834 = null;
+    }
     if (c.\u4F0F\u305B\u5834 && !c.ambush) {
       const d = Math.hypot(c.\u4F0F\u305B\u5834.x - c.x, c.\u4F0F\u305B\u5834.y - c.y);
       if (d > 60) {
@@ -15240,6 +15244,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     const b2 = bRef.current;
     if (b2.phase === "over" || \u59D4\u306DRef.current) return;
     for (const c of b2.corps) if (c.side === "P") c.auto = true;
+    b2.\u59D4\u306D\u305F = true;
     if (b2.phase === "deploy") {
       b2.phase = "fight";
       setPhase("fight");
@@ -15518,6 +15523,47 @@ function BattleScreen({ ctx, land, onEnd }) {
     if (!foes.length) return null;
     return foes.reduce((a, x) => Math.hypot(x.x - c.x, x.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? x : a, foes[0]);
   };
+  const \u4F0F\u5175\u306E\u91E6 = (c) => {
+    if (!c || isCastle) return null;
+    const \u7B56 = \u4F0F\u5175\u306E\u7B56\u58EB(b, c.side);
+    const \u4F0F\u305B\u4E2D = c.ambush && !c.revealed;
+    const \u5411\u304B\u3044\u4E2D = !!c.\u4F0F\u305B\u5834;
+    const \u3053\u3053\u3067\u7F6E\u3051\u308B = \u4F0F\u5175\u306B\u7F6E\u3051\u308B(b, c);
+    const \u5834 = \u7B56 && !\u3053\u3053\u3067\u7F6E\u3051\u308B ? \u4F0F\u305B\u5834\u3092\u63A2\u3059(b, c, 1200) : null;
+    const \u8A33 = !\u7B56 ? "\u77E5\u7565\u4E03\u5341\u516B\u4EE5\u4E0A\u306E\u5C06\u304C\u8ECD\u306B\u304A\u3089\u306C" : \u4F0F\u305B\u4E2D ? "\u62BC\u3059\u3068\u4F0F\u5175\u3092\u89E3\u304F" : \u5411\u304B\u3044\u4E2D ? "\u4F0F\u305B\u5834\u3078\u5411\u304B\u3063\u3066\u3044\u308B\u3002\u62BC\u3059\u3068\u53D6\u308A\u3084\u3081\u308B" : \u3053\u3053\u3067\u7F6E\u3051\u308B ? `${\u7B56.name}\u306E\u732E\u7B56\uFF1A\u3053\u306E\u6728\u7ACB\u306B\u4F0F\u305B\u308B` : \u5834 ? `${\u7B56.name}\u306E\u732E\u7B56\uFF1A\u624B\u8FD1\u306A\u6728\u7ACB\u3078\u56DE\u3063\u3066\u4F0F\u305B\u308B` : "\u81EA\u8ECD\u306B\u8FD1\u3044\u534A\u5206\u306B\u3001\u4F0F\u305B\u3089\u308C\u308B\u68EE\u30FB\u6797\u30FB\u96C6\u843D\u304C\u306A\u3044";
+    const \u62BC\u305B\u308B = !!\u7B56 && (\u4F0F\u305B\u4E2D || \u5411\u304B\u3044\u4E2D || \u3053\u3053\u3067\u7F6E\u3051\u308B || !!\u5834);
+    return /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: `btn sm ${\u4F0F\u305B\u4E2D || \u5411\u304B\u3044\u4E2D ? "on" : ""}`,
+        disabled: !\u62BC\u305B\u308B,
+        title: \u8A33,
+        onClick: () => {
+          if (\u4F0F\u305B\u4E2D || \u5411\u304B\u3044\u4E2D) {
+            c.ambush = false;
+            c.revealed = true;
+            c.\u4F0F\u305B\u5834 = null;
+            c.\u4F0F\u5175\u7121\u7528 = true;
+            issueOrder(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
+          } else if (\u3053\u3053\u3067\u7F6E\u3051\u308B) {
+            c.ambush = true;
+            c.revealed = false;
+            c.\u4F0F\u305B\u5834 = null;
+            c.\u4F0F\u5175\u7121\u7528 = false;
+            issueOrder(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
+            b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C\u6728\u7ACB\u306B\u4F0F\u305B\u305F\u3002` });
+          } else if (\u5834) {
+            c.\u4F0F\u305B\u5834 = \u5834;
+            c.\u4F0F\u5175\u7121\u7528 = false;
+            issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u5834.x, ty: \u5834.y });
+            b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C\u6728\u7ACB\u3078\u56DE\u308A\u3001\u8EAB\u3092\u3072\u305D\u3081\u308B\u3002` });
+          }
+          force((n) => (n + 1) % 1e3);
+        }
+      },
+      \u4F0F\u305B\u4E2D ? "\u4F0F\u5175\u3092\u89E3\u304F" : \u5411\u304B\u3044\u4E2D ? "\u4F0F\u305B\u5834\u3078\u5411\u304B\u3046\uFF08\u62BC\u3059\u3068\u53D6\u6D88\uFF09" : "\u4F0F\u5175\u306B\u7F6E\u304F"
+    );
+  };
   const corpsOrder = (c, o) => {
     if (c && isCastle && o !== "\u5F85\u6A5F") {
       c.siegeAuto = false;
@@ -15714,29 +15760,13 @@ function BattleScreen({ ctx, land, onEnd }) {
       gates.map((g) => /* @__PURE__ */ React3.createElement("option", { key: g.key, value: g.key }, g.key, "\uFF08", Math.round(g.hp / g.max * 100), "%\uFF09")),
       /* @__PURE__ */ React3.createElement("option", { value: "\u672C\u4E38" }, "\u672C\u4E38\u306B\u7ACB\u3066\u7C60\u308B")
     ));
-  })(), /* @__PURE__ */ React3.createElement(FormationPicker, { corps: selC, onPick: (f) => changeForm(selC, f) }), (() => {
-    const \u7B56 = \u4F0F\u5175\u306E\u7B56\u58EB(b, selC.side);
-    const \u7F6E\u3051\u308B = \u4F0F\u5175\u306B\u7F6E\u3051\u308B(b, selC);
-    const \u8A33 = !\u7B56 ? "\u77E5\u7565\u4E03\u5341\u516B\u4EE5\u4E0A\u306E\u5C06\u304C\u304A\u3089\u306C" : \u7F6E\u3051\u308B ? `${\u7B56.name}\u306E\u732E\u7B56\uFF1A\u3053\u306E\u6728\u7ACB\u306B\u4F0F\u305B\u308B` : "\u68EE\u30FB\u6797\u30FB\u96C6\u843D\u306E\u3046\u3061\u3001\u81EA\u8ECD\u306B\u8FD1\u3044\u534A\u5206\u3067\u306E\u307F\u4F0F\u305B\u3089\u308C\u308B";
-    return /* @__PURE__ */ React3.createElement(
-      "button",
-      {
-        className: `btn sm ${selC.ambush ? "on" : ""}`,
-        disabled: !selC.ambush && !\u7F6E\u3051\u308B,
-        title: \u8A33,
-        onClick: () => {
-          selC.ambush = !selC.ambush;
-          selC.revealed = !selC.ambush;
-        }
-      },
-      "\u4F0F\u5175\u306B\u7F6E\u304F"
-    );
-  })()), /* @__PURE__ */ React3.createElement("button", { className: "btn dark", onClick: () => {
+  })(), /* @__PURE__ */ React3.createElement(FormationPicker, { corps: selC, onPick: (f) => changeForm(selC, f) }), \u4F0F\u5175\u306E\u91E6(selC)), /* @__PURE__ */ React3.createElement("button", { className: "btn dark", onClick: () => {
     b.phase = "fight";
     setPhase("fight");
     setSpeed(0.3);
   } }, "\u5408\u6226\u958B\u59CB"), /* @__PURE__ */ React3.createElement("button", { className: "btn", onClick: \u59D4\u306D\u308B }, "\u59D4\u306D\u3066\u7D50\u679C\u3092\u898B\u308B")), b.phase === "fight" && /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7, width: "100%" } }, /* @__PURE__ */ React3.createElement("button", { className: "btn", onClick: \u59D4\u306D\u308B, disabled: \u59D4\u306D\u4E2D }, \u59D4\u306D\u4E2D ? "\u59D4\u306D\u3066\u3044\u308B\u2026" : "\u59D4\u306D\u3066\u7D50\u679C\u3092\u898B\u308B"), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim } }, "\u4E00\u62EC\u547D\u4EE4"), /* @__PURE__ */ React3.createElement("div", { className: "g4" }, /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => {
     for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) c.auto = true;
+    b.\u59D4\u306D\u305F = true;
     force((n) => (n + 1) % 1e3);
   } }, "\u5168\u8ECD\u59D4\u4EFB"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => {
     for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) {
@@ -15830,7 +15860,7 @@ function BattleScreen({ ctx, land, onEnd }) {
       onClick: () => set\u9000\u304D\u78BA\u8A8D({ corps: selC })
     },
     "\u64A4\u9000"
-  )), faceMode && /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: "#4A6E8A", lineHeight: 1.6 } }, "\u5411\u3051\u305F\u3044\u65B9\u89D2\u3092\u30BF\u30C3\u30D7\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u305D\u306E\u5834\u3067\u56DE\u982D\u3057\u3001\u9663\u5F62\u3092\u7D44\u307F\u76F4\u3057\u307E\u3059\u3002\u7D71\u7387\u304C\u9AD8\u3044\u307B\u3069\u901F\u304F\u636E\u308F\u308A\u307E\u3059\u3002"), isCastle && selC.side !== b.attacker && (() => {
+  ), \u4F0F\u5175\u306E\u91E6(selC)), faceMode && /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: "#4A6E8A", lineHeight: 1.6 } }, "\u5411\u3051\u305F\u3044\u65B9\u89D2\u3092\u30BF\u30C3\u30D7\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u305D\u306E\u5834\u3067\u56DE\u982D\u3057\u3001\u9663\u5F62\u3092\u7D44\u307F\u76F4\u3057\u307E\u3059\u3002\u7D71\u7387\u304C\u9AD8\u3044\u307B\u3069\u901F\u304F\u636E\u308F\u308A\u307E\u3059\u3002"), isCastle && selC.side !== b.attacker && (() => {
     const MAPX = MAP;
     if (!MAPX) return null;
     const held = selC.holdGate;

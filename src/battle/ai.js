@@ -146,9 +146,15 @@ export function battleAI(b) {
     if (!b.伏兵図) b.伏兵図 = {};
     for (const side of ["P", "E"]) {
       if (b.伏兵図[side]) continue;
+      /* 遊ぶ側の隊を勝手に伏せない。
+
+         隊はもともと委任の形で始まるので、そのまま伏せると「選んでもいないのに
+         伏兵にされた」ことになる。伏兵はプレイヤーが選ぶ策である。
+         采配に任せるのは、全軍委任（あるいは委ねて結果を見る）と命じたときだけ。 */
+      if (side === "P" && !b.委ねた) continue;
       if (!伏兵の策士(b, side)) { b.伏兵図[side] = "策士なし"; continue; }
       const 候補 = alive.filter((c) => c.side === side && delegated(b, c)
-        && !c.detach && !c.routed && !c.withdraw && !c.ambush && !c.伏せ場
+        && !c.detach && !c.routed && !c.withdraw && !c.ambush && !c.伏せ場 && !c.伏兵無用
         && !c.squads.some((q) => q.engaged));
       const 手勢 = alive.filter((c) => c.side === side && !c.detach);
       if (手勢.length < 2 || !候補.length) continue;      // 全隊を伏せはしない
@@ -217,6 +223,7 @@ export function battleAI(b) {
        伏せ場へ着いたら身をひそめる。ひそめた隊には、以後なにも命じない。
        命じれば動き、動けば見つかる。 */
     if (c.ambush && !c.revealed) continue;
+    if (c.伏兵無用) { c.伏せ場 = null; }
     if (c.伏せ場 && !c.ambush) {
       const d = Math.hypot(c.伏せ場.x - c.x, c.伏せ場.y - c.y);
       if (d > 60) { issueOrder(b, c, { order: "移動", tx: c.伏せ場.x, ty: c.伏せ場.y }); continue; }

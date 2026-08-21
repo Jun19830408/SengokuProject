@@ -70,6 +70,7 @@ function 一戦(i, 知) {
   for (const c of [...P, ...E]) { c.formation = '横陣'; A.placeSquads(c, true); c.auto = true; }
   const b = A.createBattle(P, E, 'P');
   b.mode = 'field'; b.phase = 'fight'; b.dusk = 1100; b.face = 'S'; b.myFar = false;
+  b.委ねた = true;                       // 全軍委任を命じた戦とみなす
   const 地 = [], 側 = {};
   let 伏せた = 0, 自陣側 = 0;
   for (let k = 0; k < 3000; k++) {
@@ -111,6 +112,42 @@ function 一戦(i, 知) {
     `味方${知.側.P || 0}隊・敵${知.側.E || 0}隊`);
   確('全隊を伏せはしない（一軍に一隊まで）', 知.伏 <= 14 * 2,
     `十四戦・両軍で${知.伏}隊`);
+}
+
+/* ------------- 一のニ、委ねていない味方の隊を、采配が勝手に伏せないこと
+
+   隊はもともと委任の形で始まる。そのまま采配が伏せると、「選んでもいないのに
+   伏兵にされた」ことになる。伏兵はプレイヤーが選ぶ策である。
+   采配に任せるのは、全軍委任（委ねて結果を見る）と命じたときだけ。 */
+{
+  const 走る = (委ねた) => {
+    種 = 0x7000;
+    A.setBattleMap(null); A.setFieldSeed('f0', 'x'); A.layoutField(9000, 6);
+    const W = A.FIELD.w, H = A.FIELD.h;
+    const P = [0, 1, 2].map((k) => A.makeCorps('P', 将(k, k === 0 ? 85 : 55), 400, 1100, 75, 75,
+      W * (0.3 + k * 0.2), H * 0.84, -Math.PI / 2, '#2F5D8C'));
+    const E = [0, 1, 2].map((k) => A.makeCorps('E', 将(10 + k, k === 0 ? 85 : 55), 400, 1100, 75, 75,
+      W * (0.3 + k * 0.2), H * 0.16, Math.PI / 2, '#B0483C'));
+    for (const c of [...P, ...E]) { c.formation = '横陣'; A.placeSquads(c, true); c.auto = true; }
+    const b = A.createBattle(P, E, 'P');
+    b.mode = 'field'; b.phase = 'fight'; b.dusk = 1100; b.face = 'S'; b.myFar = false;
+    if (委ねた) b.委ねた = true;
+    let 味方 = 0, 敵 = 0;
+    for (let k = 0; k < 900; k++) {
+      A.stepBattle(b, 0.25);
+      if (k % 3 === 0) A.battleAI(b);
+      for (const c of b.corps) {
+        if ((c.ambush || c.伏せ場) && !c.数えた) { c.数えた = true; (c.side === 'P' ? 味方 : 敵); if (c.side === 'P') 味方++; else 敵++; }
+      }
+      if (b.result) break;
+    }
+    return { 味方, 敵 };
+  };
+  const 任せず = 走る(false), 任せた = 走る(true);
+  確('全軍委任を命じていなければ、味方の隊は勝手に伏せられない', 任せず.味方 === 0,
+    `味方${任せず.味方}隊`);
+  確('それでも敵は伏兵を用いる', 任せず.敵 > 0, `敵${任せず.敵}隊`);
+  確('全軍委任を命じれば、采配が味方の隊も伏せる', 任せた.味方 > 0, `味方${任せた.味方}隊`);
 }
 
 /* ------------------------------- 二、伏兵の可否（釦の判じもこれで決まる） */
