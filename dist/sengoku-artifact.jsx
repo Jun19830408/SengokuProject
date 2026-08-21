@@ -13327,7 +13327,10 @@ function battleAI(b) {
     }
     if (!MAP && HILLS.length && !c.squads.some((q) => q.engaged)) {
       const \u5C04 = c.squads.filter((q) => ARM_STATS[q.type].range > 0).reduce((a, q) => a + q.men, 0);
-      const \u5B88\u52E2 = c.side !== b.attacker;
+      const \u5473\u65B9 = alive.filter((o) => o.side === mySide && !o.routed).reduce((a, o) => a + corpsMen(o) * (0.7 + o.morale / 330), 0);
+      const \u6575\u52E2 = alive.filter((o) => o.side === foeSide && !o.routed).reduce((a, o) => a + corpsMen(o) * (0.7 + o.morale / 330), 0);
+      const \u62BC\u305B\u308B = \u5473\u65B9 > \u6575\u52E2 * 1.2;
+      const \u5B88\u52E2 = c.side !== b.attacker && !\u62BC\u305B\u308B;
       const \u6B32\u3057\u3044 = \u5B88\u52E2 || \u5C04 / Math.max(1, corpsMen(c)) > 0.55;
       const \u6575\u307E\u3067 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
       const \u4E18 = \u6B32\u3057\u3044 ? nearestOf(HILLS, c.x, c.y) : null;

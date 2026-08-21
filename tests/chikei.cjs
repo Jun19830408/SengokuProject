@@ -141,6 +141,55 @@ function 一戦(i) {
     `${出.filter((r) => r.決).length}／${出.length}戦`);
 }
 
+/* --------------- 一のニ、兵で優る受け手は丘を取らない（GDD 8.6）
+
+   高みは弱者の頼りである。数で押せる側が坂の上で待てば、相手に整える暇を与え、
+   こちらは足の鈍る地に留まるだけで、せっかくの数が生きない。押して出て、
+   野で決するほうがよい。優劣は隊ごとではなく、軍全体の兵力（士気ぶんの色を
+   付けたもの）で測る。丘取りは軍としての構えだからである。 */
+function 丘取りを測る(守の倍) {
+  let 丘 = 0, 隊 = 0, 進 = 0, 戦 = 0;
+  for (let i = 0; i < 12; i++) {
+    種 = 0x3000 + i * 641;
+    A.setBattleMap(null); A.setFieldSeed('h' + i, 'x'); A.layoutField(9000, 6);
+    if (!A.HILLS.length) continue;
+    戦++;
+    const W = A.FIELD.w, H = A.FIELD.h;
+    const P = [0, 1, 2].map((k) => A.makeCorps('P', 将(k), 400, 1100, 75, 75,
+      W * (0.3 + k * 0.2), H * 0.86, -Math.PI / 2, '#2F5D8C'));
+    const E = [0, 1, 2].map((k) => A.makeCorps('E', 将(10 + k),
+      Math.round(400 * 守の倍), Math.round(1100 * 守の倍), 75, 75,
+      W * (0.3 + k * 0.2), H * 0.14, Math.PI / 2, '#B0483C'));
+    for (const c of [...P, ...E]) { c.formation = '横陣'; A.placeSquads(c, true); c.auto = true; }
+    const b = A.createBattle(P, E, 'P');
+    b.mode = 'field'; b.phase = 'fight'; b.dusk = 4000; b.face = 'S'; b.myFar = false;
+    const y0 = E.reduce((a, c) => a + c.y, 0) / E.length;
+    let 触 = false;
+    for (let k = 0; k < 2000 && !触; k++) {
+      A.stepBattle(b, 0.25);
+      if (k % 3 === 0) A.battleAI(b);
+      if ([...P, ...E].some((c) => c.squads.some((q) => q.engaged))) {
+        触 = true;
+        const 生 = E.filter((c) => !c.dead && !c.destroyed);
+        for (const c of 生) { 隊++; if ((c.地 || A.terrainAt(c.x, c.y)) === 'hill') 丘++; }
+        進 += (生.reduce((a, c) => a + c.y, 0) / Math.max(1, 生.length)) - y0;
+      }
+      if (b.result) break;
+    }
+  }
+  return { 丘率: 丘 / Math.max(1, 隊), 進: 進 / Math.max(1, 戦), 丘, 隊, 戦 };
+}
+{
+  const 五分 = 丘取りを測る(1.0);
+  const 優勢 = 丘取りを測る(1.8);
+  確('兵が五分なら、受け手は丘を取って備える', 五分.丘率 > 0.45,
+    `${五分.丘}／${五分.隊}隊が丘に就いた`);
+  確('兵で優る受け手は、敢えて丘を取らない', 優勢.丘率 < 五分.丘率 * 0.7,
+    `${優勢.丘}／${優勢.隊}隊（五分なら${(五分.丘率 * 100).toFixed(0)}％、優勢なら${(優勢.丘率 * 100).toFixed(0)}％）`);
+  確('その代わり前へ出て、野で決しにかかる', 優勢.進 > 五分.進 * 1.25,
+    `敵方へ 五分 ${Math.round(五分.進)}歩 ／ 優勢 ${Math.round(優勢.進)}歩`);
+}
+
 /* --------------------------------- 二、道さがしそのものを検める */
 {
   種 = 0x99;

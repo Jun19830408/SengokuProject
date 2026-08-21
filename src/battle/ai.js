@@ -395,10 +395,20 @@ export function battleAI(b) {
        寄せ手も、射手を多く抱える隊は高みを取りたがる。
 
        川向こうの丘は取りに行かない。丘ひとつのために渡河しては元も子もない。
-       すでに敵と間近であれば登らない。背を見せて登る隙はない。 */
+       すでに敵と間近であれば登らない。背を見せて登る隙はない。
+
+       兵で優る受け手は丘を取らない。高みは弱者の頼りである。数で押せる側が
+       坂の上で待てば、相手に整える暇を与え、こちらは足の鈍る地に留まるだけで、
+       せっかくの数が生きない。押して出て、野で決するほうがよい。
+       優劣は隊ごとではなく、軍全体の兵力で測る。丘取りは軍としての構えである。 */
     if (!MAP && HILLS.length && !c.squads.some((q) => q.engaged)) {
       const 射 = c.squads.filter((q) => ARM_STATS[q.type].range > 0).reduce((a, q) => a + q.men, 0);
-      const 守勢 = c.side !== b.attacker;
+      const 味方 = alive.filter((o) => o.side === mySide && !o.routed)
+        .reduce((a, o) => a + corpsMen(o) * (0.7 + o.morale / 330), 0);
+      const 敵勢 = alive.filter((o) => o.side === foeSide && !o.routed)
+        .reduce((a, o) => a + corpsMen(o) * (0.7 + o.morale / 330), 0);
+      const 押せる = 味方 > 敵勢 * 1.2;
+      const 守勢 = c.side !== b.attacker && !押せる;
       const 欲しい = 守勢 || 射 / Math.max(1, corpsMen(c)) > 0.55;
       const 敵まで = Math.hypot(tgt.x - c.x, tgt.y - c.y);
       const 丘 = 欲しい ? nearestOf(HILLS, c.x, c.y) : null;
