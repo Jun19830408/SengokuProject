@@ -7769,6 +7769,27 @@ function \u753A\u306E\u69D8\u5B50(g, t) {
   const \u540D = \u8ABC ? ((g.factions || {})[\u8ABC.faction] || {}).name : null;
   return { st, \u8ABC, \u4E3B\u540D: \u540D, \u8272: \u8ABC ? ((g.factions || {})[\u8ABC.faction] || {}).color : \u753A\u306E\u8272[t.kind] || "#55524A" };
 }
+function \u753A\u306E\u5370\u306E\u4F4D\u7F6E(t, \u57CE\u3089, px2, py2) {
+  const x = px2(t.lon), y = py2(t.lat);
+  let \u8FD1 = null, bd = 1e9;
+  for (const c of \u57CE\u3089 || []) {
+    if (c.x == null || c.y == null) continue;
+    const d = Math.hypot(c.x - x, c.y - y);
+    if (d < bd) {
+      bd = d;
+      \u8FD1 = c;
+    }
+  }
+  if (!\u8FD1 || bd > 15) return { x, y };
+  let a;
+  if (bd > 0.6) a = Math.atan2(y - \u8FD1.y, x - \u8FD1.x);
+  else {
+    let h = 7;
+    for (const ch of String(t.id || t.name || "x")) h = h * 33 + ch.charCodeAt(0) | 0;
+    a = Math.abs(h) % 360 * Math.PI / 180;
+  }
+  return { x: x + Math.cos(a) * 15, y: y + Math.sin(a) * 15 };
+}
 
 // src/govern/commands.js
 function runCommand(prev, castleId, cmd, genId, g) {
@@ -10571,6 +10592,36 @@ function issueOrder(b, c, patch) {
   }
   c.pending = { patch, t: commandDelay(b, c) };
 }
+function \u9000\u304D\u5834(b, c) {
+  const \u6575 = b.corps.filter((o) => !o.dead && !o.destroyed && o.side !== c.side && !o.routed);
+  const \u7AEF = \u9000\u304D\u5148(b, c);
+  const \u5411 = { x: \u7AEF.x - c.x, y: \u7AEF.y - c.y };
+  const \u9577 = Math.hypot(\u5411.x, \u5411.y) || 1;
+  let best = null, bs = -1e9;
+  for (const \u8DDD of [260, 420, 600, 820]) {
+    for (const \u6A2A of [-0.5, -0.22, 0, 0.22, 0.5]) {
+      const ux = \u5411.x / \u9577, uy = \u5411.y / \u9577;
+      const x = c.x + ux * \u8DDD - uy * \u8DDD * \u6A2A;
+      const y = c.y + uy * \u8DDD + ux * \u8DDD * \u6A2A;
+      if (b.map) {
+        if (x < 40 || y < 40 || x > FIELD.w - 40 || y > FIELD.h - 40) continue;
+        if (!passable(x, y)) continue;
+      } else if (x < 60 || y < 60 || x > FIELD.w - 60 || y > FIELD.h - 60) continue;
+      let \u8FD1 = 1e9;
+      for (const o of \u6575) \u8FD1 = Math.min(\u8FD1, Math.hypot(o.x - x, o.y - y));
+      if (\u8FD1 === 1e9) \u8FD1 = 900;
+      const \u70B9 = Math.min(\u8FD1, 900) - \u8DDD * 0.45;
+      if (\u70B9 > bs) {
+        bs = \u70B9;
+        best = { x, y };
+      }
+    }
+  }
+  return best || {
+    x: clamp(c.x + \u5411.x / \u9577 * 420, 60, FIELD.w - 60),
+    y: clamp(c.y + \u5411.y / \u9577 * 420, 60, FIELD.h - 60)
+  };
+}
 function \u9000\u304D\u5148(b, c) {
   if (b && b.map) {
     const ox = c.x - b.map.cx, oy = c.y - b.map.cy, od = Math.hypot(ox, oy) || 1;
@@ -13129,16 +13180,6 @@ function battleAI(b) {
     const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
     const foes = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
     if (!foes.length) continue;
-    if (c.morale < 18 && corpsMen(c) < corpsMax(c) * 0.55) {
-      const help = alive.some((o) => o.side === mySide && o !== c && !o.routed && Math.hypot(o.x - c.x, o.y - c.y) < 220);
-      if (!help) {
-        c.order = "\u64A4\u9000";
-        c.withdraw = true;
-        c.tx = c.x;
-        c.ty = -80;
-        continue;
-      }
-    }
     if (!c.formPicked) {
       c.formPicked = true;
       const mine = alive.filter((o) => o.side === mySide).reduce((a, o) => a + corpsMen(o), 0);
@@ -13423,7 +13464,7 @@ function createBattle(playerCorps, enemyCorps, attackerSide) {
   }
   return b;
 }
-function applyDamage(b, fCorps, e, dmg, flank, valor) {
+function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps) {
   const pinch = fCorps.pinch >= 3 ? 1.22 : fCorps.pinch === 2 ? 1.12 : 1;
   const before = e.men;
   e.men = Math.max(0, e.men - dmg * pinch);
@@ -13431,7 +13472,10 @@ function applyDamage(b, fCorps, e, dmg, flank, valor) {
   fCorps.loss[e.origin] += lost;
   e.cohesion = Math.max(0, e.cohesion - lost * 0.7 * flank * (0.55 + (valor || 60) / 100));
   const share = lost / Math.max(1, corpsMax(fCorps));
-  fCorps.morale -= share * 100 * 2.2 * (1 + (flank - 1) * 0.8);
+  const \u582A\u3048 = clamp(1.3 - (fCorps.gen && fCorps.gen.lead || 60) / 200, 0.8, 1.2);
+  fCorps.morale -= share * 100 * 1.15 * (1 + (flank - 1) * 0.8) * \u582A\u3048;
+  fCorps.\u640D = (fCorps.\u640D || 0) + lost;
+  if (byCorps) byCorps.\u529F = (byCorps.\u529F || 0) + lost;
 }
 function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
@@ -14160,7 +14204,8 @@ function stepBattle(b, dt) {
           melee.e,
           st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * (1 - c.fatigue / 260) * dt,
           flank,
-          c.gen.valor * (c.chargeT > 0 ? 1.2 : 1)
+          c.gen.valor * (c.chargeT > 0 ? 1.2 : 1),
+          c
         );
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
         if (melee.f.seen || mdist < TERRAIN[melee.e.\u5730 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
@@ -14178,7 +14223,7 @@ function stepBattle(b, dt) {
             });
           }
           const wet = q.type === "teppo" ? WEATHER[b.weather].teppo : 1;
-          applyDamage(b, melee.f, melee.e, st.vol * wet * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor);
+          applyDamage(b, melee.f, melee.e, st.vol * wet * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c);
         }
       }
     }
@@ -14212,8 +14257,24 @@ function stepBattle(b, dt) {
     }
     c.fatigue = clamp(c.fatigue + (fighting ? 1.1 : c.order === "\u5F85\u6A5F" ? -1.4 : 0) * dt, 0, 100);
     if (c.pinch >= 2) c.morale -= (c.pinch - 1) * 0.22 * dt;
+    const \u892A = Math.pow(0.905, dt);
+    c.\u529F = (c.\u529F || 0) * \u892A;
+    c.\u640D = (c.\u640D || 0) * \u892A;
+    const \u5668\u91CF = (c.gen.lead || 60) * 0.5 + (c.gen.valor || 60) * 0.3 + (c.gen.wit || 60) * 0.2;
+    const \u7ACB\u3061\u76F4\u308A = 0.3 + clamp((\u5668\u91CF - 45) / 55, 0, 1.1) * 0.45;
+    const \u6575\u8FD1 = alive.some((o) => o.side !== c.side && !o.routed && Math.hypot(o.x - c.x, o.y - c.y) < 240);
+    let \u52D5 = 0;
+    if (fighting) {
+      const \u62BC\u3057 = ((c.\u529F || 0) - (c.\u640D || 0)) / Math.max(70, corpsMax(c) * 0.05);
+      \u52D5 = clamp(\u62BC\u3057, -1.1, 1.1) * 0.6;
+    } else if (\u6575\u8FD1) {
+      \u52D5 = \u7ACB\u3061\u76F4\u308A * 0.3;
+    } else {
+      \u52D5 = \u7ACB\u3061\u76F4\u308A * (c.routed ? 1.6 : 1);
+    }
+    if (c.routed && \u6575\u8FD1) \u52D5 -= 0.4;
     const near = alive.some((o) => o.side === c.side && o.gen.lord && Math.hypot(o.x - c.x, o.y - c.y) < 260);
-    c.morale = clamp(c.morale + ((ratio - 0.6) * 1.2 + (near ? 0.35 : 0) + c.gen.lead / 300 - 0.25) * dt, 0, 100);
+    c.morale = clamp(c.morale + (\u52D5 + (ratio - 0.45) * 0.35 + (near ? 0.3 : 0)) * dt, 0, 100);
     if (!c.routed && !c.boxed && fighting) {
       if ((c.pinch || 0) >= 3) {
         c.boxed = true;
@@ -14223,23 +14284,41 @@ function stepBattle(b, dt) {
         c.feats.push("\u5BC6\u96C6\u9632\u5FA1");
       }
     }
-    if (!c.routed && (c.morale < 15 || ratio < 0.25)) {
+    if (!c.routed && (c.morale <= 15 || ratio < 0.15)) {
       c.routed = true;
       c.order = "\u6557\u8D70";
+      c.\u7ACB\u3066\u76F4\u3057 = null;
       for (const q of c.squads) {
         q.engaged = false;
         q.link = null;
       }
-      notify(b, `${c.gen.name}\u968A\u304C\u5D29\u308C\u3001\u6557\u8D70\u3057\u305F\u3002`, c.side === "P" ? "bad" : "good");
-      {
-        const p2 = \u9000\u304D\u5148(b, c);
-        c.tx = p2.x;
-        c.ty = p2.y;
-      }
-      b.log.push({ t: b.t, text: `${c.name}\u968A\u304C\u5D29\u308C\u3001\u6557\u8D70\u306B\u79FB\u3063\u305F\u3002` });
-      for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 9;
+      notify(b, `${c.gen.name}\u968A\u304C\u5D29\u308C\u3001\u9000\u3044\u305F\u3002`, c.side === "P" ? "bad" : "good");
+      b.log.push({ t: b.t, text: `${c.name}\u968A\u304C\u5D29\u308C\u3001\u6226\u7DDA\u3092\u96E2\u308C\u305F\u3002` });
+      for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 6;
     }
-    if (c.routed || c.withdraw) {
+    if (c.routed && !c.\u6F70) {
+      if (c.morale <= 0 || corpsMen(c) <= 0) {
+        c.\u6F70 = true;
+        b.log.push({ t: b.t, text: `${c.name}\u968A\u306F\u652F\u3048\u3092\u5931\u3044\u3001\u6226\u5834\u3092\u843D\u3061\u3066\u3044\u3063\u305F\u3002` });
+      } else if (c.morale >= 38) {
+        c.routed = false;
+        c.\u6F70 = false;
+        c.\u7ACB\u3066\u76F4\u3057 = null;
+        c.order = "\u5F85\u6A5F";
+        c.tx = c.x;
+        c.ty = c.y;
+        for (const q of c.squads) q.cohesion = Math.max(q.cohesion, 40);
+        notify(b, `${c.gen.name}\u968A\u304C\u7ACB\u3061\u76F4\u308A\u3001\u6226\u5217\u306B\u623B\u3063\u305F\u3002`, c.side === "P" ? "good" : "bad");
+        b.log.push({ t: b.t, text: `${c.name}\u968A\u304C\u7ACB\u3061\u76F4\u3063\u305F\u3002` });
+      } else {
+        const \u8FEB\u308B = (p) => alive.some((o) => o.side !== c.side && !o.routed && !o.destroyed && Math.hypot(o.x - p.x, o.y - p.y) < 260);
+        const \u7740\u3044\u305F = c.\u7ACB\u3066\u76F4\u3057 && Math.hypot(c.\u7ACB\u3066\u76F4\u3057.x - c.x, c.\u7ACB\u3066\u76F4\u3057.y - c.y) < 70;
+        if (!c.\u7ACB\u3066\u76F4\u3057 || \u8FEB\u308B(c.\u7ACB\u3066\u76F4\u3057) || \u7740\u3044\u305F && \u8FEB\u308B(c)) c.\u7ACB\u3066\u76F4\u3057 = \u9000\u304D\u5834(b, c);
+        c.tx = c.\u7ACB\u3066\u76F4\u3057.x;
+        c.ty = c.\u7ACB\u3066\u76F4\u3057.y;
+      }
+    }
+    if (c.\u6F70 || c.withdraw) {
       const p2 = \u9000\u304D\u5148(b, c);
       c.tx = p2.x;
       c.ty = p2.y;
@@ -14252,8 +14331,8 @@ function stepBattle(b, dt) {
       b.log.push({ t: b.t, text: `${c.name}\u968A\u306F\u58CA\u6EC5\u3057\u305F\u3002` });
     }
   }
-  const pm = b.corps.filter((c) => c.side === "P" && !c.dead && !c.routed && !c.withdraw).reduce((s2, c) => s2 + corpsMen(c), 0);
-  const em = b.corps.filter((c) => c.side === "E" && !c.dead && !c.routed && !c.withdraw).reduce((s2, c) => s2 + corpsMen(c), 0);
+  const \u52D8 = (side) => b.corps.filter((c) => c.side === side && !c.dead && !c.\u6F70 && !c.withdraw).reduce((s2, c) => s2 + corpsMen(c) * (c.routed ? 0.5 : 1), 0);
+  const pm = \u52D8("P"), em = \u52D8("E");
   if (MAP) {
     const h = MAP.layers[MAP.layers.length - 1];
     const inHon = (c) => c.squads.some((q) => q.men > 0 && inLayer(MAP, h, q.x, q.y));
@@ -17435,7 +17514,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       ctx.fillText(`${fmt(a.men)}`, ax + 14, ay + 4);
     }
     for (const t of TOWNS) {
-      const [x, y] = S(px(t.lon), py(t.lat));
+      const \u5370 = \u753A\u306E\u5370\u306E\u4F4D\u7F6E(t, g.castles, px, py);
+      const [x, y] = S(\u5370.x, \u5370.y);
       const \u69D8 = \u753A\u306E\u69D8\u5B50(g, t);
       const r = \u69D8.\u8ABC ? 5.6 : 4.6;
       ctx.fillStyle = "rgba(0,0,0,0.14)";
@@ -17607,7 +17687,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const r = wrapRef.current.getBoundingClientRect();
       const mx = (t1.clientX + t2.clientX) / 2 - r.left - r.width / 2;
       const my = (t1.clientY + t2.clientY) / 2 - r.top - r.height / 2;
-      const ns = clamp(d.s0 * (dd / d.d0), 0.28, 3.2);
+      const ns = clamp(d.s0 * (dd / d.d0), 0.28, 12);
       setView(() => ({ x: d.wx - mx / ns, y: d.wy - my / ns, s: ns }));
       return;
     }
@@ -17644,7 +17724,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     let ht = null, bt = 20 / view.s;
     for (const t of TOWNS) {
-      const dd = Math.hypot(px(t.lon) - wx, py(t.lat) - wy);
+      const \u5370 = \u753A\u306E\u5370\u306E\u4F4D\u7F6E(t, g.castles, px, py);
+      const dd = Math.hypot(\u5370.x - wx, \u5370.y - wy);
       if (dd < bt) {
         bt = dd;
         ht = t.id;
@@ -17658,7 +17739,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     setSel(null);
     setTownSel(null);
   };
-  const zoom = (k) => setView((v) => ({ ...v, s: clamp(v.s * k, 0.28, 3.2) }));
+  const zoom = (k) => setView((v) => ({ ...v, s: clamp(v.s * k, 0.28, 12) }));
   const focus = (id) => {
     const n = nodeById(id);
     if (n) setView((v) => ({ ...v, x: n.x, y: n.y, s: Math.max(1.2, v.s) }));
@@ -18262,7 +18343,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const gen = s2.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0) - gen.valor / 420 + Math.random() * 0.3 - 0.15;
+        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.\u6F70 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0) - gen.valor / 420 + Math.random() * 0.3 - 0.15;
         if (risk <= 0.66) continue;
         if (risk > 0.78) {
           notify(b, `${gen.name}\u3001\u8A0E\u6B7B\u3002`, c.side === "P" ? "bad" : "good");
@@ -18393,11 +18474,11 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const gen = s2.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0) + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
+        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.\u6F70 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0) + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
         risk += Math.random() * 0.3 - 0.15;
         let fate = null;
         if (risk > 0.78 && Math.random() < \u96E3\u3092\u9003\u308C\u308B(gen)) fate = "\u8A0E\u6B7B";
-        else if (\u52DD\u5BB6 && risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0))) fate = "\u6355\u7E1B";
+        else if (\u52DD\u5BB6 && risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0) + (c.\u6F70 ? 1.2 : 0))) fate = "\u6355\u7E1B";
         if (fate) notify(b, `${gen.name}\u3001${fate}\u3002`, c.side === "P" ? "bad" : "good");
         else if (risk > 0.52) fate = "\u91CD\u50B7";
         else if (risk > 0.34) fate = "\u8EFD\u50B7";
@@ -18505,11 +18586,11 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const gen = s2.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0) + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
+        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.\u6F70 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0) + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
         risk += Math.random() * 0.3 - 0.15;
         let fate = null;
         if (risk > 0.78 && Math.random() < \u96E3\u3092\u9003\u308C\u308B(gen)) fate = "\u8A0E\u6B7B";
-        else if (risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0))) fate = "\u6355\u7E1B";
+        else if (risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0) + (c.\u6F70 ? 1.2 : 0))) fate = "\u6355\u7E1B";
         if (fate) notify(b, `${gen.name}\u3001${fate}\u3002`, c.side === "P" ? "bad" : "good");
         else if (risk > 0.52) fate = "\u91CD\u50B7";
         else if (risk > 0.34) fate = "\u8EFD\u50B7";

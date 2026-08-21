@@ -4,7 +4,7 @@ import { ROW, SP, corpsMax, corpsMen, notify, placeSquads } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 踏み込んだ地, 隊の地 } from "./field.js";
 import { clamp } from "../core/util.js";
 import { px, py } from "../data/geo.js";
-import { 退き先 } from "./corps.js";
+import { 退き場, 退き先 } from "./corps.js";
 
 /* 水馴れ（GDD 8.1）。
 
@@ -39,7 +39,7 @@ export function createBattle(playerCorps, enemyCorps, attackerSide) {
   return b;
 }
 
-export function applyDamage(b, fCorps, e, dmg, flank, valor) {
+export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps) {
   // 挟撃を受けている隊は受ける損害がやや増える（二方向1.12倍、三方向以上1.22倍）
   const pinch = fCorps.pinch >= 3 ? 1.22 : fCorps.pinch === 2 ? 1.12 : 1;
   const before = e.men;
@@ -49,8 +49,20 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor) {
   // 武勇は「相手の陣形を崩す圧力」として効く。士気そのものは下げない（GDD 8.3）
   // 零より下へは落とさぬ。負のまま持ち越すと、戦のあと整え直すのに際限がなくなる。
   e.cohesion = Math.max(0, e.cohesion - lost * 0.7 * flank * (0.55 + (valor || 60) / 100));
+  /* 損害による士気の削れ（GDD 8.7）。
+
+     もとは「失った兵の割 × 二.二」であった。一割を失えば士気が二十二も落ちる
+     ので、五分の勝負をしているうちに士気が十五を切り、まだ八割の兵を抱えた隊が
+     崩れて盤から消えた。戦がそこで終わってしまう。
+
+     削れを半ばに緩め、統率で堪えられるようにした。統率九十の将なら、
+     同じ損害でも九分ほどしか響かない。 */
   const share = lost / Math.max(1, corpsMax(fCorps));
-  fCorps.morale -= share * 100 * 2.2 * (1 + (flank - 1) * 0.8);
+  const 堪え = clamp(1.3 - ((fCorps.gen && fCorps.gen.lead) || 60) / 200, 0.8, 1.2);
+  fCorps.morale -= share * 100 * 1.15 * (1 + (flank - 1) * 0.8) * 堪え;
+  // 押しているか押されているかを数える（士気の上げ下げに使う。刻ごとに褪せる）
+  fCorps.損 = (fCorps.損 || 0) + lost;
+  if (byCorps) byCorps.功 = (byCorps.功 || 0) + lost;
 }
 
 export function stepBattle(b, dt) {
@@ -792,7 +804,7 @@ export function stepBattle(b, dt) {
         applyDamage(b, melee.f, melee.e,
           st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200)
           * terr.fight * flank * charge * push * guard * (1 - c.fatigue / 260) * dt,
-          flank, c.gen.valor * (c.chargeT > 0 ? 1.2 : 1));
+          flank, c.gen.valor * (c.chargeT > 0 ? 1.2 : 1), c);
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
         if (melee.f.seen || mdist < TERRAIN[melee.e.地 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
           q.cool = st.rof;
@@ -802,7 +814,7 @@ export function stepBattle(b, dt) {
               x2: melee.e.x, y2: melee.e.y, t: 0, life: q.type === "teppo" ? 0.3 : 0.45 });
           }
           const wet = q.type === "teppo" ? WEATHER[b.weather].teppo : 1;
-          applyDamage(b, melee.f, melee.e, st.vol * wet * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor);
+          applyDamage(b, melee.f, melee.e, st.vol * wet * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c);
         }
       }
     }
@@ -838,9 +850,39 @@ export function stepBattle(b, dt) {
     }
     c.fatigue = clamp(c.fatigue + (fighting ? 1.1 : c.order === "待機" ? -1.4 : 0) * dt, 0, 100);
     if (c.pinch >= 2) c.morale -= (c.pinch - 1) * 0.22 * dt;   // 挟まれると士気がじわりと落ちる
+    // 押し引きの覚え。刻とともに褪せる（半減およそ七秒）
+    const 褪 = Math.pow(0.905, dt);
+    c.功 = (c.功 || 0) * 褪; c.損 = (c.損 || 0) * 褪;
+    /* 士気の上げ下げ（GDD 8.7）。
+
+       もとは兵の残りだけで決めていた。押していようが押されていようが、兵さえ
+       残っていれば上がり、減れば下がる。戦の綾がまるで映らない。
+
+       改めて、次の三つで動かす。
+         一、槍を合わせている間は、押していれば上がり、押されていれば下がる。
+             押し引きは、この十秒ばかりに討った兵と討たれた兵の差で測る。
+         二、戦っていなければ、少しずつ戻る。将の器量が高いほど早く戻る
+             （統率五分・武勇三分・知略二分。将が立て直すのは、この三つの技である）。
+             敵が間近で睨み合っているうちは、戻りは鈍い。
+         三、崩れた隊は、敵の目の届かぬ所まで退けば、より早く戻る。
+             敵に追われていれば、逆に削られる。 */
+    const 器量 = ((c.gen.lead || 60) * 0.5 + (c.gen.valor || 60) * 0.3 + (c.gen.wit || 60) * 0.2);
+    const 立ち直り = 0.30 + clamp((器量 - 45) / 55, 0, 1.1) * 0.45;
+    const 敵近 = alive.some((o) => o.side !== c.side && !o.routed
+      && Math.hypot(o.x - c.x, o.y - c.y) < 240);
+    let 動 = 0;
+    if (fighting) {
+      const 押し = ((c.功 || 0) - (c.損 || 0)) / Math.max(70, corpsMax(c) * 0.05);
+      動 = clamp(押し, -1.1, 1.1) * 0.6;
+    } else if (敵近) {
+      動 = 立ち直り * 0.3;
+    } else {
+      動 = 立ち直り * (c.routed ? 1.6 : 1);
+    }
+    if (c.routed && 敵近) 動 -= 0.4;                    // 追われている崩れ隊は削られる
     // 総大将が前線に出れば全軍の士気が上がる（GDD 8.7）
     const near = alive.some((o) => o.side === c.side && o.gen.lord && Math.hypot(o.x - c.x, o.y - c.y) < 260);
-    c.morale = clamp(c.morale + ((ratio - 0.6) * 1.2 + (near ? 0.35 : 0) + c.gen.lead / 300 - 0.25) * dt, 0, 100);
+    c.morale = clamp(c.morale + (動 + (ratio - 0.45) * 0.35 + (near ? 0.3 : 0)) * dt, 0, 100);
     if (!c.routed && !c.boxed && fighting) {
       if ((c.pinch || 0) >= 3) {
         c.boxed = true; c.formation = "方陣"; placeSquads(c, false);
@@ -848,15 +890,52 @@ export function stepBattle(b, dt) {
         c.feats.push("密集防御");
       }
     }
-    if (!c.routed && (c.morale < 15 || ratio < 0.25)) {
+    /* 崩れ（GDD 8.7）。
+
+       士気が十五を切れば、その隊はもう戦えない。掴み合いを解いて退く。
+       兵の残りでも崩れるが、こちらは十五分の一を切ったときだけとした。
+       もとは四分の一で崩れていたので、まだ戦える隊が次々に盤から消えた。 */
+    if (!c.routed && (c.morale <= 15 || ratio < 0.15)) {
       c.routed = true; c.order = "敗走";
+      c.立て直し = null;
       for (const q of c.squads) { q.engaged = false; q.link = null; }   // 崩れた者は掴み合いを解いて走る
-      notify(b, `${c.gen.name}隊が崩れ、敗走した。`, c.side === "P" ? "bad" : "good");
-      { const p2 = 退き先(b, c); c.tx = p2.x; c.ty = p2.y; }
-      b.log.push({ t: b.t, text: `${c.name}隊が崩れ、敗走に移った。` });
-      for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 9;
+      notify(b, `${c.gen.name}隊が崩れ、退いた。`, c.side === "P" ? "bad" : "good");
+      b.log.push({ t: b.t, text: `${c.name}隊が崩れ、戦線を離れた。` });
+      for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 6;
     }
-    if (c.routed || c.withdraw) {
+    /* 崩れた隊の行方。
+
+       これまでは盤の外へ走り去って、そのまま退場した。八割の兵を抱えたまま
+       戦場から消えるので、野戦も城攻めも尻すぼみに終わっていた。
+
+       いまは、いくさ場のうち敵のいない所まで退いて息をつく。士気が四十五まで
+       戻れば戦列に復する。ただし逃げ場がなく、追われて士気も兵も尽きたときは、
+       盤の外へ落ちるほかない（潰走）。落ちた隊の将は捕らわれやすい。 */
+    if (c.routed && !c.潰) {
+      if (c.morale <= 0 || corpsMen(c) <= 0) {
+        c.潰 = true;
+        b.log.push({ t: b.t, text: `${c.name}隊は支えを失い、戦場を落ちていった。` });
+      } else if (c.morale >= 38) {
+        c.routed = false; c.潰 = false; c.立て直し = null;
+        c.order = "待機"; c.tx = c.x; c.ty = c.y;
+        for (const q of c.squads) q.cohesion = Math.max(q.cohesion, 40);
+        notify(b, `${c.gen.name}隊が立ち直り、戦列に戻った。`, c.side === "P" ? "good" : "bad");
+        b.log.push({ t: b.t, text: `${c.name}隊が立ち直った。` });
+      } else {
+        /* 退き場へ走る。着いて、敵が寄って来なければ、そこで息をつく。
+
+           はじめは「敵が近くになければその場に留まる」としていたが、崩れた所は
+           たいてい敵の目の前である。留まった隊は追い立てられ、士気が戻るどころか
+           尽きて盤を落ちた。六十五隊が崩れて、立ち直ったのは十隊しかなかった。
+           崩れたら、まず走る。走った先で息をつく。 */
+        const 迫る = (p) => alive.some((o) => o.side !== c.side && !o.routed && !o.destroyed
+          && Math.hypot(o.x - p.x, o.y - p.y) < 260);
+        const 着いた = c.立て直し && Math.hypot(c.立て直し.x - c.x, c.立て直し.y - c.y) < 70;
+        if (!c.立て直し || 迫る(c.立て直し) || (着いた && 迫る(c))) c.立て直し = 退き場(b, c);
+        c.tx = c.立て直し.x; c.ty = c.立て直し.y;
+      }
+    }
+    if (c.潰 || c.withdraw) {
       // 退く先は自陣の側。決め打ちの「南」では、自陣が北にある戦で敵陣へ歩いてしまう。
       const p2 = 退き先(b, c); c.tx = p2.x; c.ty = p2.y;
       // 戦場の外へ落ち延びた隊は退場させる。横に抜けた場合も見落とさない。
@@ -869,8 +948,14 @@ export function stepBattle(b, dt) {
     }
   }
 
-  const pm = b.corps.filter((c) => c.side === "P" && !c.dead && !c.routed && !c.withdraw).reduce((s, c) => s + corpsMen(c), 0);
-  const em = b.corps.filter((c) => c.side === "E" && !c.dead && !c.routed && !c.withdraw).reduce((s, c) => s + corpsMen(c), 0);
+  /* 手勢の勘定。
+
+     崩れた隊を丸ごと除いていたので、一隊崩れただけで勝敗が決することがあった。
+     崩れても盤の上にいて、立ち直れば戦列に戻るのだから、半ばに数える。
+     盤を落ちた隊（潰走）と、手ずから退かせた隊だけを除く。 */
+  const 勘 = (side) => b.corps.filter((c) => c.side === side && !c.dead && !c.潰 && !c.withdraw)
+    .reduce((s, c) => s + corpsMen(c) * (c.routed ? 0.5 : 1), 0);
+  const pm = 勘("P"), em = 勘("E");
   // 本丸を押さえれば城は落ちる（GDD 9.3）
   if (MAP) {
     const h = MAP.layers[MAP.layers.length - 1];

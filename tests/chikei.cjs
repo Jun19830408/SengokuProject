@@ -80,6 +80,9 @@ function 一戦(i) {
   const b = A.createBattle(P, E, 'P');
   b.mode = 'field'; b.phase = 'fight'; b.dusk = 4000; b.face = 'S'; b.myFar = false;
   let 刻 = 0, 水刻 = 0, 淵刻 = 0, 障刻 = 0, 丘刻 = 0, 水戦 = 0, 戦 = 0;
+  /* 受け手が丘に就いたかは、槍を合わせた時点で見る。戦の終わりで見ると、
+     崩れて退き場へ走った隊が丘を降りているぶん、低く出る。 */
+  let 丘の守 = 0, 守 = 0, 触 = false;
   const 岸0 = new Map(), 渡り = [];
   for (const c of [...P, ...E]) 岸0.set(c, A.岸(c.x, c.y));
   for (let k = 0; k < 3000; k++) {
@@ -104,10 +107,16 @@ function 一戦(i) {
         if (今 !== 0) c.渡ったx = null;
       }
     }
+    if (!触 && [...P, ...E].some((c) => c.squads.some((q) => q.engaged))) {
+      触 = true;
+      for (const c of E) {
+        if (c.dead || c.destroyed) continue;
+        守++; if ((c.地 || A.terrainAt(c.x, c.y)) === 'hill') 丘の守++;
+      }
+    }
     if (b.result) break;
   }
-  let 丘の守 = 0, 守 = 0;
-  for (const c of E) { if (c.dead || c.destroyed) continue; 守++; if ((c.地 || A.terrainAt(c.x, c.y)) === 'hill') 丘の守++; }
+  if (!触) for (const c of E) { if (c.dead || c.destroyed) continue; 守++; if ((c.地 || A.terrainAt(c.x, c.y)) === 'hill') 丘の守++; }
   let 渡り場 = 0;
   if (A.hasRiver()) {
     for (const x of 渡り) {
@@ -136,7 +145,7 @@ function 一戦(i) {
     和((r) => r.戦) === 0 || 和((r) => r.水戦) / 和((r) => r.戦) < 0.105,
     `${(和((r) => r.水戦) / Math.max(1, 和((r) => r.戦)) * 100).toFixed(1)}%（直す前は12.1%）`);
   確('受け手は近くの丘を取って備える', 和((r) => r.丘の守) > 和((r) => r.守) * 0.45,
-    `${和((r) => r.丘の守)}／${和((r) => r.守)}隊（直す前は14／66隊）`);
+    `槍を合わせた時に ${和((r) => r.丘の守)}／${和((r) => r.守)}隊（直す前は14／66隊）`);
   確('地物を避けても日暮れまでに決着がつく', 出.every((r) => r.決),
     `${出.filter((r) => r.決).length}／${出.length}戦`);
 }

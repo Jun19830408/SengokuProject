@@ -170,11 +170,10 @@ export function battleAI(b) {
     const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
     const foes = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
     if (!foes.length) continue;
-    // 崩壊寸前で支えもないときだけ退く。プレイヤー側の崩壊点（士気15）に近い基準にする。
-    if (c.morale < 18 && corpsMen(c) < corpsMax(c) * 0.55) {
-      const help = alive.some((o) => o.side === mySide && o !== c && !o.routed && Math.hypot(o.x - c.x, o.y - c.y) < 220);
-      if (!help) { c.order = "撤退"; c.withdraw = true; c.tx = c.x; c.ty = -80; continue; }
-    }
+    /* かつては「士気十八・兵五割五分を切り、助けもなければ盤の外へ退く」という
+       決まりを置いていた。いまは崩れ（engine の 敗走）が同じ役目を果たす。
+       崩れた隊は盤の外へは出ず、敵の来ない所まで退いて息をつき、立ち直れば
+       戦列に戻る。二重に退かせると、まだ戦える隊が野を去ってしまう。 */
     // 兵力差と地形から陣形を選び直す。プレイヤーと同じ陣形・同じ手間で行う。
     if (!c.formPicked) {
       c.formPicked = true;

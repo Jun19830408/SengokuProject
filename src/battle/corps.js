@@ -2,7 +2,7 @@ import { MAP, axisOf, fromUV } from "./castleMap.js";
 import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, fieldScale, hasRiver, nearestOf, riverShift } from "./field.js";
 import { clamp } from "../core/util.js";
 import { ARMS } from "../data/roads.js";
-import { FIELD } from "./field.js";
+import { FIELD, passable } from "./field.js";
 
 export const FORMATIONS = ["横陣", "鶴翼", "魚鱗", "鋒矢", "雁行", "方陣", "長蛇"];
 
@@ -456,6 +456,43 @@ export function issueOrder(b, c, patch) {
 
    城攻めでは方角ではなく、城の中心から離れる向きへ退く。
    寄せ手は囲みを解いて外へ、城方も同じく城から離れる。 */
+/* 立て直す場所（GDD 8.7）。
+
+   崩れた隊は、これまで盤の外へ走り去って二度と戻らなかった。十分な兵を
+   抱えたまま戦場から消えるので、戦がそこで終わってしまう。
+
+   崩れるとは、その場で戦えなくなることであって、国へ帰ることではない。
+   いくさ場のうち、敵のいない所まで退いて息をつき、士気が戻れば戦列に戻る。
+
+   退き場は、自陣の側で、敵からいちばん遠く、かつ遠すぎない所を選ぶ。
+   遠くへ走らせすぎると、立ち直っても戦に戻れずに日が暮れる。 */
+export function 退き場(b, c) {
+  const 敵 = b.corps.filter((o) => !o.dead && !o.destroyed && o.side !== c.side && !o.routed);
+  const 端 = 退き先(b, c);
+  const 向 = { x: 端.x - c.x, y: 端.y - c.y };
+  const 長 = Math.hypot(向.x, 向.y) || 1;
+  let best = null, bs = -1e9;
+  for (const 距 of [260, 420, 600, 820]) {
+    for (const 横 of [-0.5, -0.22, 0, 0.22, 0.5]) {
+      const ux = 向.x / 長, uy = 向.y / 長;
+      const x = c.x + ux * 距 - uy * 距 * 横;
+      const y = c.y + uy * 距 + ux * 距 * 横;
+      if (b.map) {
+        if (x < 40 || y < 40 || x > FIELD.w - 40 || y > FIELD.h - 40) continue;
+        if (!passable(x, y)) continue;              // 城内は塀だらけ。壁の中は退き場にならない
+      } else if (x < 60 || y < 60 || x > FIELD.w - 60 || y > FIELD.h - 60) continue;
+      let 近 = 1e9;
+      for (const o of 敵) 近 = Math.min(近, Math.hypot(o.x - x, o.y - y));
+      if (近 === 1e9) 近 = 900;
+      // 敵から遠いほどよい。ただし走る道のりは短いほどよい。
+      const 点 = Math.min(近, 900) - 距 * 0.45;
+      if (点 > bs) { bs = 点; best = { x, y }; }
+    }
+  }
+  return best || { x: clamp(c.x + (向.x / 長) * 420, 60, FIELD.w - 60),
+    y: clamp(c.y + (向.y / 長) * 420, 60, FIELD.h - 60) };
+}
+
 export function 退き先(b, c) {
   if (b && b.map) {
     const ox = c.x - b.map.cx, oy = c.y - b.map.cy, od = Math.hypot(ox, oy) || 1;

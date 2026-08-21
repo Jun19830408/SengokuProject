@@ -41,7 +41,7 @@ import { 難を逃れる } from "../core/capture.js";
 import { 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
 import { rosterCut } from "../core/roster.js";
-import { drawTownMark, 町の様子 } from "../core/town.js";
+import { drawTownMark, 町の印の位置, 町の様子 } from "../core/town.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 import { findPathVia } from "../core/paths.js";
 
@@ -167,7 +167,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
          NODES へ写しているだけである）。そのため S(t.x, t.y) は NaN を返し、
          町は一つも描かれていなかった。印を種ごとの形にしても、
          そもそも描かれていなければ意味がない。ここで地図の座標へ直す。 */
-      const [x, y] = S(px(t.lon), py(t.lat));
+      const 印 = 町の印の位置(t, g.castles, px, py);
+      const [x, y] = S(印.x, 印.y);
       const 様 = 町の様子(g, t);
       // 城より控えめにする。町は城の合間にあるので、同じ重さで描くと図が煩い。
       const r = 様.誼 ? 5.6 : 4.6;
@@ -295,7 +296,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const r = wrapRef.current.getBoundingClientRect();
       const mx = (t1.clientX + t2.clientX) / 2 - r.left - r.width / 2;
       const my = (t1.clientY + t2.clientY) / 2 - r.top - r.height / 2;
-      const ns = clamp(d.s0 * (dd / d.d0), 0.28, 3.2);
+      const ns = clamp(d.s0 * (dd / d.d0), 0.28, 12);
       // 指の間にある土地が動かないように、見ている中心をずらす
       setView(() => ({ x: d.wx - mx / ns, y: d.wy - my / ns, s: ns }));
       return;
@@ -323,13 +324,20 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     // 特殊勢力を押したら、その帳を開く（城より狭い当たり）
     let ht = null, bt = 20 / view.s;
     for (const t of TOWNS) {
-      const dd = Math.hypot(px(t.lon) - wx, py(t.lat) - wy);
+      const 印 = 町の印の位置(t, g.castles, px, py);
+      const dd = Math.hypot(印.x - wx, 印.y - wy);
       if (dd < bt) { bt = dd; ht = t.id; }
     }
     if (ht) { setTownSel(ht); setSel(null); return; }
     setSel(null); setTownSel(null);
   };
-  const zoom = (k) => setView((v) => ({ ...v, s: clamp(v.s * k, 0.28, 3.2) }));
+  /* 拡げられる限り（GDD 13.1）。
+
+     三.二倍までしか拡げられなかったので、近い城どうし――大内氏館と高嶺城
+     （三歩）、松倉城と魚津城（五.六歩）、姫路城と御着城（六.四歩）――の印が
+     重なったまま離れなかった。二十六歩ぶん離すには八.六倍が要る。
+     九倍まで拡げられるようにした。 */
+  const zoom = (k) => setView((v) => ({ ...v, s: clamp(v.s * k, 0.28, 12) }));
   const focus = (id) => { const n = nodeById(id); if (n) setView((v) => ({ ...v, x: n.x, y: n.y, s: Math.max(1.2, v.s) })); };
   const whole = () => setView({ x: MAPW / 2, y: MAPH / 2, s: 0.30 });
 
@@ -906,7 +914,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const gen = s.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0) - gen.valor / 420 + Math.random() * 0.3 - 0.15;
+        /* 潰走（士気も兵も尽きて戦場を落ちた隊）の将は、逃れる術が乏しい。
+           捕らわれる目は大きく上げ、討たれる目はわずかに上げるにとどめる。
+           討死ばかりでは、遊んでいて面白くない。 */
+        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.潰 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0)
+          - gen.valor / 420 + Math.random() * 0.3 - 0.15;
         if (risk <= 0.66) continue;
         if (risk > 0.78) {
           // 討死。跡目は家督の定めに従う。
@@ -1034,14 +1046,18 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const gen = s.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0)
+        /* 潰走（士気も兵も尽きて戦場を落ちた隊）の将は、逃れる術が乏しい。
+           捕らわれる目は大きく上げ、討たれる目はわずかに上げるにとどめる。
+           討死ばかりでは、遊んでいて面白くない。 */
+        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.潰 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0)
           + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
         risk += Math.random() * 0.3 - 0.15;
         /* 討死。当主と器量者は、配下に守られ、あるいは自らの手で斬り抜けて
            戦場を離れる（難を逃れる）。大名が野戦で討たれるのは稀な事である。 */
         let fate = null;
         if (risk > 0.78 && Math.random() < 難を逃れる(gen)) fate = "討死";
-        else if (勝家 && risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0))) fate = "捕縛";
+        else if (勝家 && risk > 0.58
+          && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0) + (c.潰 ? 1.2 : 0))) fate = "捕縛";
         if (fate) notify(b, `${gen.name}、${fate}。`, c.side === "P" ? "bad" : "good");
         else if (risk > 0.52) fate = "重傷"; else if (risk > 0.34) fate = "軽傷";
         if (!fate) continue;
@@ -1137,14 +1153,18 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const gen = s.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.destroyed ? 0.3 : 0)
+        /* 潰走（士気も兵も尽きて戦場を落ちた隊）の将は、逃れる術が乏しい。
+           捕らわれる目は大きく上げ、討たれる目はわずかに上げるにとどめる。
+           討死ばかりでは、遊んでいて面白くない。 */
+        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.潰 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0)
           + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
         risk += Math.random() * 0.3 - 0.15;
         /* 討死。当主と器量者は、配下に守られ、あるいは自らの手で斬り抜けて
            戦場を離れる（難を逃れる）。大名が野戦で討たれるのは稀な事である。 */
         let fate = null;
         if (risk > 0.78 && Math.random() < 難を逃れる(gen)) fate = "討死";
-        else if (risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0))) fate = "捕縛";
+        else if (risk > 0.58
+          && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0) + (c.潰 ? 1.2 : 0))) fate = "捕縛";
         if (fate) notify(b, `${gen.name}、${fate}。`, c.side === "P" ? "bad" : "good");
         else if (risk > 0.52) fate = "重傷"; else if (risk > 0.34) fate = "軽傷";
         if (!fate) continue;

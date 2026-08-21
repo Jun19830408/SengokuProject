@@ -172,3 +172,35 @@ export function 町の様子(g, t) {
   const 名 = 誼 ? ((g.factions || {})[誼.faction] || {}).name : null;
   return { st, 誼, 主名: 名, 色: 誼 ? ((g.factions || {})[誼.faction] || {}).color : (町の色[t.kind] || "#55524A") };
 }
+
+/* 町の印を置く所（GDD 13.1）。
+
+   町と城が同じ土地にあることは珍しくない。長島城と長島願証寺、会津黒川城と
+   黒川の市、小田原城と小田原の市――いずれも経緯度がほとんど同じである。
+   そのまま描くと印が重なり、どれだけ拡げても離れない。押しても城しか取れない。
+
+   そこで、近くに城があるときだけ、印を城の反対側へ少しずらす。ずらす向きは
+   町の名から起こすので、同じ町はいつも同じ所に出る。地図の幅は三千七百なので、
+   十四ばかりのずれは、目で見て「その城のかたわら」に収まる。
+
+   描くほうも押すほうも、この座標を使わねばならない。片方だけを直すと、
+   見えている印と当たり判定がずれる。 */
+export function 町の印の位置(t, 城ら, px, py) {
+  const x = px(t.lon), y = py(t.lat);
+  let 近 = null, bd = 1e9;
+  for (const c of 城ら || []) {
+    if (c.x == null || c.y == null) continue;
+    const d = Math.hypot(c.x - x, c.y - y);
+    if (d < bd) { bd = d; 近 = c; }
+  }
+  if (!近 || bd > 15) return { x, y };
+  let a;
+  if (bd > 0.6) a = Math.atan2(y - 近.y, x - 近.x);            // 城の反対側へ
+  else {
+    // まったく同じ所にある町は、名から向きを起こす
+    let h = 7;
+    for (const ch of String(t.id || t.name || "x")) h = (h * 33 + ch.charCodeAt(0)) | 0;
+    a = ((Math.abs(h) % 360) * Math.PI) / 180;
+  }
+  return { x: x + Math.cos(a) * 15, y: y + Math.sin(a) * 15 };
+}
