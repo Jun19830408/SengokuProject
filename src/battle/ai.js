@@ -2,6 +2,7 @@ import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGa
 import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime } from "./corps.js";
 import { ARM_STATS, HILLS, RIVER, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
+import { clamp } from "../core/util.js";
 
 /* ------------------------------------------------ 川を避ける（GDD 8.1）
 
@@ -410,20 +411,28 @@ export function battleAI(b) {
       const 守勢 = c.side !== b.attacker && !押せる;
       const 欲しい = 守勢 || 射 / Math.max(1, corpsMen(c)) > 0.55;
       const 敵まで = Math.hypot(tgt.x - c.x, tgt.y - c.y);
-      const 丘 = 欲しい ? nearestOf(HILLS, c.x, c.y) : null;
+      /* どの丘を目指すか。
+
+         いま足を掛けている丘があるなら、その丘の頂を目指す。無ければ手近な丘。
+         これを分けないと、麓に立った隊が「自分は丘にいる」と判じて、そこで
+         守りに就いてしまう。斜面の裾は高みではない。見晴らしも利かず、
+         寄せ手と同じ高さで槍を合わせることになる。盤の上でも、丘の手前で
+         ぴたりと止まって動かぬ隊として見えていた。 */
+      const 立つ丘 = HILLS.find((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
+      const 丘 = 欲しい ? (立つ丘 || nearestOf(HILLS, c.x, c.y)) : null;
       if (丘 && 敵まで > 260) {
         const 遠さ = Math.hypot(丘.x - c.x, 丘.y - c.y);
-        const 間 = 守勢 ? 540 : 320;
-        if (遠さ > 90 && 遠さ < 間 && terrainAt(c.x, c.y) !== "hill"
-            && 岸(c.x, c.y) === 岸(丘.x, 丘.y)) {
+        const 頂 = clamp(丘.r * 0.45, 60, 120);            // ここまで登れば頂とみなす
+        const 間 = (守勢 ? 540 : 320) + 丘.r * 0.8;         // 大きな丘ほど遠くからでも目指す
+        if (遠さ > 頂 && 遠さ < 間 && 岸(c.x, c.y) === 岸(丘.x, 丘.y)) {
           const 道 = 寄せ道を引く(b, c, 丘.x, 丘.y);
           if (道 === "続行") continue;
           if (道) { c.wp = 道; issueOrder(b, c, { order: "移動", tx: 道[0].x, ty: 道[0].y, keepPath: true }); continue; }
           issueOrder(b, c, { order: "移動", tx: 丘.x, ty: 丘.y });
           continue;
         }
-        // 高みに就いた受け手は、そこで待ち受ける。降りて出迎える理由がない。
-        if (守勢 && terrainAt(c.x, c.y) === "hill") {
+        // 頂に就いた受け手は、そこで待ち受ける。降りて出迎える理由がない。
+        if (守勢 && 遠さ <= 頂) {
           issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
           continue;
         }

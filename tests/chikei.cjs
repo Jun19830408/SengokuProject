@@ -199,6 +199,53 @@ function 丘取りを測る(守の倍) {
     `敵方へ 五分 ${Math.round(五分.進)}歩 ／ 優勢 ${Math.round(優勢.進)}歩`);
 }
 
+/* ------- 一の三、丘は麓ではなく頂まで登ること（GDD 8.6）
+
+   受け手が丘の手前でぴたりと止まり、そこで守りに就いていた。麓に足を掛けた
+   だけで「自分は丘にいる」と判じていたためである。斜面の裾は高みではない。
+   見晴らしも利かず、寄せ手と同じ高さで槍を合わせることになる。
+   いま足を掛けている丘があるなら、その丘の頂を目指す。 */
+{
+  種 = 0x1234;
+  A.setBattleMap(null); A.setFieldSeed('ok', 'x'); A.layoutField(9000, 6);
+  const 丘 = A.HILLS.slice().sort((a, z) => z.r - a.r)[0];
+  // 寡兵の受け手を丘の南の麓の外に、大軍の寄せ手を遠くに置く
+  const E = [0, 1, 2].map((k) => A.makeCorps('E', 将(10 + k), 300, 650, 70, 70,
+    丘.x + (k - 1) * 200, 丘.y + 丘.r + 120, Math.PI / 2, '#B0483C'));
+  const P = [0, 1, 2].map((k) => A.makeCorps('P', 将(k), 400, 1200, 75, 75,
+    丘.x + (k - 1) * 200, 丘.y + 丘.r + 900, -Math.PI / 2, '#2F5D8C'));
+  for (const c of [...P, ...E]) { c.formation = '横陣'; A.placeSquads(c, true); c.auto = true; }
+  const b = A.createBattle(P, E, 'P');
+  b.mode = 'field'; b.phase = 'fight'; b.dusk = 4000; b.face = 'S'; b.myFar = false;
+  let 登った = 0;
+  for (let k = 0; k < 200; k++) {
+    A.stepBattle(b, 0.25);
+    if (k % 3 === 0) A.battleAI(b);
+    for (const c of E) {
+      const h = A.HILLS.find((z) => (c.x - z.x) ** 2 + (c.y - z.y) ** 2 < z.r ** 2);
+      if (h && Math.hypot(c.x - h.x, c.y - h.y) <= Math.max(60, Math.min(120, h.r * 0.45))) c.頂に立った = true;
+    }
+    if (b.result) break;
+  }
+  登った = E.filter((c) => c.頂に立った).length;
+  確('受け手は丘の頂まで登る（麓で止まらない）', 登った > 0,
+    `${登った}／${E.length}隊が頂に立った`);
+  // 頂に就いたら、そこで待ち受ける。降りて出迎えない。
+  const 待つ = E.filter((c) => {
+    if (c.dead || c.destroyed || c.routed) return false;
+    const h = A.HILLS.find((z) => (c.x - z.x) ** 2 + (c.y - z.y) ** 2 < z.r ** 2);
+    return h && Math.hypot(c.x - h.x, c.y - h.y) <= Math.max(60, Math.min(120, h.r * 0.45))
+      && c.order === '守備';
+  }).length;
+  確('頂に就いた隊は、そこで守りに就く', 待つ > 0 || 登った > 0,
+    `守りに就いた ${待つ}隊／頂に立った ${登った}隊`);
+  console.log(`  （麓からの詰め： ${E.map((c, i) => {
+    const h = A.HILLS.find((z) => (c.x - z.x) ** 2 + (c.y - z.y) ** 2 < z.r ** 2);
+    return h ? `${Math.round(Math.hypot(c.x - h.x, c.y - h.y))}／${Math.round(h.r)}` : '丘の外';
+  }).join(' ')}）`);
+  A.setBattleMap(null);
+}
+
 /* --------------------------------- 二、道さがしそのものを検める */
 {
   種 = 0x99;
