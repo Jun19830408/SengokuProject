@@ -69,9 +69,22 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps) {
 
      削れを半ばに緩め、統率で堪えられるようにした。統率九十の将なら、
      同じ損害でも九分ほどしか響かない。 */
-  const share = lost / Math.max(1, corpsMax(fCorps));
+  /* 損害の割は、隊の大きさで割る。ところが城方の隊は小さく（九百人ほど）、
+     寄せ手は大きい（二千四百人ほど）。同じ人数を失っても、小さい隊は割が
+     二倍半にも出るので、士気の落ち方がまるで違ってくる。城攻めで城方だけが
+     次々に崩れていたのは、主にこれである。
+     千二百人を下限に置き、小さい隊が割を食いすぎぬようにする。 */
+  const share = lost / Math.max(1200, corpsMax(fCorps));
   const 堪え = clamp(1.3 - ((fCorps.gen && fCorps.gen.lead) || 60) / 200, 0.8, 1.2);
-  fCorps.morale -= share * 100 * 1.15 * (1 + (flank - 1) * 0.8) * 堪え;
+  /* 削れをさらに緩める。二.二 → 一.一五 → 〇.六。
+
+     一.一五でも、槍を合わせている隊は毎秒二つ三つと士気を落としていた。
+     半刻もせずに十五を切って崩れ、退いて戻り、また崩れる。盤の上では
+     旗が上がったり下がったりし続けて、戦の綾がまるで読めない。
+
+     削れた量はここでは引かず、いったん溜める。一秒あたりに落ちる幅に
+     歯止めを掛けるためである（engine の 士気の目減り）。 */
+  fCorps.士気の溜 = (fCorps.士気の溜 || 0) + share * 100 * 0.6 * (1 + (flank - 1) * 0.8) * 堪え;
   // 押しているか押されているかを数える（士気の上げ下げに使う。刻ごとに褪せる）
   fCorps.損 = (fCorps.損 || 0) + lost;
   if (byCorps) byCorps.功 = (byCorps.功 || 0) + lost;
@@ -517,7 +530,9 @@ export function stepBattle(b, dt) {
         holder.pinned = true;
       }
       holder.gateFat = Math.min(100, (holder.gateFat || 0) + 5.0 * dt);
-      holder.morale = Math.min(100, holder.morale + 0.40 * dt);   // 破れる手応えが士気を支える
+      // 破れる手応えが士気を支える。ただし〇.四では、門を押すだけで士気が
+      // 満ちきってしまい、寄せ手が終始百のまま崩れなくなる。
+      holder.morale = Math.min(100, holder.morale + 0.16 * dt);
       const men = corpsMen(holder);
       const eff = 1 - (holder.gateFat / 100) * 0.66;
       // 内から支える兵が門を保たせる。ただし支える側も無傷では済まない。
@@ -715,10 +730,19 @@ export function stepBattle(b, dt) {
     const deep = inL(MAP.layers.length - 1) ? 0.44 : MAP.layers.length > 2 && inL(MAP.layers.length - 2) ? 0.22 : 0.06;
     const fLost = MAP.fac.length ? MAP.fac.filter((f) => f.hp <= 0).length / MAP.fac.length : 0;
     b.press = clamp((bw / tw) * 0.52 + fLost * 0.14 + deep, 0, 1);
-    const cap = 100 - 82 * b.press;
+    /* 城の傾きで城方の士気を抑える。
+
+       もとは上限を一気に八十二も下げ、しかもその場で切り落としていた。
+       門がひとつ破れた瞬間に、城中の隊の士気が二十も三十も消える。
+       城攻めでの士気の落ち方が異常に見えたのは、主にこれである。
+
+       下げ幅を五十五に緩め、切り落とすのをやめて、じわりと近づける
+       （一秒に一.六まで）。落城の気配が士気を蝕むことに変わりはないが、
+       階段ではなく坂になる。 */
+    const cap = 100 - 55 * b.press;
     for (const c of defC) {
-      c.morale = Math.min(c.morale, cap);
-      if (inL(MAP.layers.length - 1)) c.morale = Math.max(0, c.morale - 2.6 * dt);
+      if (c.morale > cap) c.morale = Math.max(cap, c.morale - 1.6 * dt);
+      if (inL(MAP.layers.length - 1)) c.morale = Math.max(0, c.morale - 1.4 * dt);
     }
   }
 
@@ -884,10 +908,25 @@ export function stepBattle(b, dt) {
     const 立ち直り = 0.30 + clamp((器量 - 45) / 55, 0, 1.1) * 0.45;
     const 敵近 = alive.some((o) => o.side !== c.side && !o.routed
       && Math.hypot(o.x - c.x, o.y - c.y) < 240);
+    /* 溜めた削れを、少しずつ効かせる（GDD 8.7）。
+
+       一撃ごとにその場で引くと、大きな損害を受けた刻に士気が階段状に落ちる。
+       一秒に一.二までとし、残りは次の刻へ持ち越す。落ちる速さに歯止めが
+       掛かるので、崩れるときも崩れ方が緩やかになる。 */
+    if (c.士気の溜 > 0) {
+      /* 城攻めはさらに緩める。門の押し合いは、小さな城方の隊にとって
+         損害の割が大きく出るので、同じ削れでも士気の落ち方が急になる。
+         測ってみると、城方は毎秒一.二ずつ落ち、五十秒で八十八から十四まで
+         下がっていた。門ひとつの攻防で城中の隊が総崩れになる勘定である。 */
+      const 早さ = MAP ? 0.7 : 1.2;
+      const 引く = Math.min(c.士気の溜, 早さ * dt);
+      c.morale -= 引く; c.士気の溜 -= 引く;
+      if (c.士気の溜 < 0.01) c.士気の溜 = 0;
+    }
     let 動 = 0;
     if (fighting) {
       const 押し = ((c.功 || 0) - (c.損 || 0)) / Math.max(70, corpsMax(c) * 0.05);
-      動 = clamp(押し, -1.1, 1.1) * 0.6;
+      動 = clamp(押し, -1.1, 1.1) * 0.35;
     } else if (敵近) {
       動 = 立ち直り * 0.3;
     } else {
@@ -907,11 +946,13 @@ export function stepBattle(b, dt) {
     /* 崩れ（GDD 8.7）。
 
        士気が十五を切れば、その隊はもう戦えない。掴み合いを解いて退く。
-       兵の残りでも崩れるが、こちらは十五分の一を切ったときだけとした。
-       もとは四分の一で崩れていたので、まだ戦える隊が次々に盤から消えた。 */
-    if (!c.routed && (c.morale <= 15 || ratio < 0.15)) {
+       兵の残りでも崩れる。もとは四分の一で崩れ、まだ戦える隊が盤から消えるので
+       十五分の一まで下げたが、下げすぎた。士気の落ち方を緩めたところ、隊は
+       士気では崩れなくなり、兵が一割四分になるまで戦って全滅同然になった。
+       二割二分に戻す。三隊のうち二隊を失えば、その隊はもう戦列を保てない。 */
+    if (!c.routed && (c.morale <= 15 || ratio < 0.22)) {
       c.routed = true; c.order = "敗走";
-      c.立て直し = null;
+      c.立て直し = null; c.崩れた刻 = b.t;
       for (const q of c.squads) { q.engaged = false; q.link = null; }   // 崩れた者は掴み合いを解いて走る
       notify(b, `${c.gen.name}隊が崩れ、退いた。`, c.side === "P" ? "bad" : "good");
       b.log.push({ t: b.t, text: `${c.name}隊が崩れ、戦線を離れた。` });
@@ -929,7 +970,21 @@ export function stepBattle(b, dt) {
       if (c.morale <= 0 || corpsMen(c) <= 0) {
         c.潰 = true;
         b.log.push({ t: b.t, text: `${c.name}隊は支えを失い、戦場を落ちていった。` });
-      } else if (c.morale >= 34) {
+      } else if (c.morale >= 40 && ratio >= 0.26
+        && b.t - (c.崩れた刻 || 0) > 30 && !(c.立ち直り数 >= 1)) {
+        /* 兵が戻らぬ隊は立ち直らない。
+
+           崩れる目は二つある――士気が十五を切ること、兵が十五分の一を割ること。
+           士気は休めば戻るが、兵は戻らない。それを見ずに戦列へ返していたので、
+           返した刻にもう一度「兵が足りぬ」で崩れ、また退き、また返る。
+           立ち直ってから再び崩れるまでの間を測ったら、平均〇秒であった。
+           これが「敗走と復帰をすぐに繰り返す」の正体である。 */
+        /* 立ち直れるのは一度きり。
+
+           二度三度と戻れるようにしたところ、崩れては戻り、戻っては崩れる隊が
+           出た。盤の上では旗が上がったり下がったりし続け、戦の綾が読めない。
+           一度崩れて持ち直した隊が、もう一度崩れたなら、その日はもう戦えない。 */
+        c.立ち直り数 = (c.立ち直り数 || 0) + 1;
         c.routed = false; c.潰 = false; c.立て直し = null;
         c.order = "待機"; c.tx = c.x; c.ty = c.y;
         for (const q of c.squads) q.cohesion = Math.max(q.cohesion, 40);

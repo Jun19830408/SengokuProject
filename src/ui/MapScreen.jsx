@@ -38,7 +38,7 @@ import { 忠誠 } from "../core/rank.js";
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 難を逃れる } from "../core/capture.js";
-import { 記録の見出し } from "../save/save.js";
+import { 記録の訳を読む, 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
 import { rosterCut } from "../core/roster.js";
 import { drawTownMark, 町の印の位置, 町の様子 } from "../core/town.js";
@@ -1754,7 +1754,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
              取っておきたい盤は、ここで一〜五のどれかへ収める。 */
           const 収める = async (key, 名) => {
             const ok = await onSave(g, key);
-            setSavedMsg(ok ? `${名}へ記録した` : "記録できない環境");
+            /* 収まらなかった訳をそのまま出す。「記録できない環境」と一括りにすると、
+               棚が一杯なだけのときも「この端末では無理」と読めてしまい、
+               古い枠を消せばよい、ということが分からない。 */
+            const 訳 = 記録の訳を読む();
+            setSavedMsg(ok ? `${名}へ記録した${訳 ? `（${訳}）` : ""}` : (訳 || "記録できない環境"));
             setTimeout(() => setSavedMsg(""), 2600);
             setModal(null);
           };

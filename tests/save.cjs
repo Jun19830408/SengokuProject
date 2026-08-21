@@ -17,7 +17,9 @@ const store=new Map();
 dom.window.storage={ get:async k=>store.has(k)?{key:k,value:store.get(k)}:null,
   set:async(k,v)=>{store.set(k,v);return{key:k,value:v};}, delete:async k=>{store.delete(k);return{key:k,deleted:true};} };
 const errs=[]; console.error=(...a)=>errs.push(String(a[0]));
-const {createRoot,act,App,React}=require(require('path').join(__dirname,'..','build','harness.cjs'));
+const H=require(require('path').join(__dirname,'..','build','harness.cjs'));
+const {createRoot,act,App,React}=H;
+const 解 = (v) => JSON.parse(H.解す(v));   // 記録は圧して収めてある（save/pack.js）
 const root=createRoot(document.getElementById('r'));
 const flush=async()=>{await act(async()=>{await new Promise(r=>setTimeout(r,20));});};
 const M=(t,el)=>el.dispatchEvent(new dom.window.MouseEvent(t,{bubbles:true,clientX:1120,clientY:760}));
@@ -80,14 +82,14 @@ const rc=async(t)=>{const el=[...document.querySelectorAll('button,.mbtn')].find
      実際、iPhone で天文二十二年まで進めた盤がこれで失われた。 */
   console.log("── 新しく始めても消えないこと");
   const 前 = store.get('sengoku:save1');
-  const 前見 = JSON.parse(前).state;
+  const 前見 = 解(前).state;
   確('いま自動の枠に盤がある', !!前見, `${前見.player} ${前見.year}年${前見.month}月`);
   dom.window.confirm = () => true; dom.window.alert = () => {};
   await rc('新しくはじめる'); await flush();
   const 逃 = ['slot1','slot2','slot4','slot5'].map(k=>'sengoku:'+k).filter(k=>store.has(k));
   確('自動の盤が空き枠へ逃げている', 逃.length >= 1, 逃.join('／'));
   if (逃.length) {
-    const d = JSON.parse(store.get(逃[0])).state;
+    const d = 解(store.get(逃[0])).state;
     確('逃がした先の中身が、逃がす前と同じ盤である',
       d.player === 前見.player && d.year === 前見.year && d.month === 前見.month,
       `${d.player} ${d.year}年${d.month}月`);
@@ -95,15 +97,15 @@ const rc=async(t)=>{const el=[...document.querySelectorAll('button,.mbtn')].find
   // 新しい家で始めて月を送り、自動が上書きされても、逃がした枠は残る
   await openFaction('武田家'); await rc('この勢力で開始');
   await rc('次月へ'); await rc('評定を開く');
-  const 自動後 = JSON.parse(store.get('sengoku:save1')).state;
+  const 自動後 = 解(store.get('sengoku:save1')).state;
   確('自動の枠は新しい盤で上書きされる', 自動後.player === 'takeda', 自動後.player);
   if (逃.length) {
-    const d2 = JSON.parse(store.get(逃[0])).state;
+    const d2 = 解(store.get(逃[0])).state;
     確('逃がした枠は、そのまま残っている', d2.player === 前見.player && d2.year === 前見.year,
       `${d2.player} ${d2.year}年${d2.month}月`);
   }
   確('収めておいた記録 三も無事', store.has('sengoku:slot3')
-    && JSON.parse(store.get('sengoku:slot3')).state.player === 'oda');
+    && 解(store.get('sengoku:slot3')).state.player === 'oda');
   // 逃がした枠から、ちゃんと元の盤へ戻れること
   await rc('タイトル'); await flush();
   const 札2 = [...document.querySelectorAll('.modal, button')].map(b=>b.textContent.replace(/\s+/g,' ').trim());

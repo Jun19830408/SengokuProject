@@ -32,8 +32,10 @@ global.window.storage = {
 };
 
 const 盤 = (f, y, m) => { const s = H.initState(f); s.year = y; s.month = m; return s; };
-const 中身 = (k) => { const v = 蔵.get(k); return v ? JSON.parse(v).state : null; };
-const 遊びの数 = () => new Set([...蔵.values()].map((v) => JSON.parse(v).state.卓)).size;
+// 記録は圧して収めてある（save/pack.js）ので、解いてから読む
+const 解 = (v) => JSON.parse(H.解す(v));
+const 中身 = (k) => { const v = 蔵.get(k); return v ? 解(v).state : null; };
+const 遊びの数 = () => new Set([...蔵.values()].map((v) => 解(v).state.卓)).size;
 const 並び = () => [...蔵.keys()].sort().map((k) => {
   const s = 中身(k); return `${k.replace('sengoku:', '')}=${s.player}${s.year}`;
 }).join(' ');
@@ -99,7 +101,7 @@ const 並び = () => [...蔵.keys()].sort().map((k) => {
     await H.saveGame(盤('mori', 1546, 4), 'sengoku:slot2');   // 別の遊びを同じ枠へ
     確('手記録の枠でも、別の遊びは逃がされる', 遊びの数() === 2, 並び());
     確('逃げた盤はそのまま', [...蔵.values()].some((v) => {
-      const s = JSON.parse(v).state; return s.player === 前.player && s.year === 前.year;
+      const s = 解(v).state; return s.player === 前.player && s.year === 前.year;
     }));
   }
 
@@ -122,7 +124,7 @@ const 並び = () => [...蔵.keys()].sort().map((k) => {
   {
     const s = 盤('oda', 1551, 8);
     const 包 = JSON.stringify({ v: 1, at: Date.now(), state: s });
-    const 戻 = JSON.parse(包).state;
+    const 戻 = 解(包).state;
     H.migrateSave(戻);
     確('控えを通しても、卓の印が保たれる', 戻.卓 === s.卓, s.卓);
     確('控えを通しても、年月と城が保たれる',

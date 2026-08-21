@@ -7010,6 +7010,164 @@ function \u7F6E\u304D\u5834() {
   return \u9078\u3093\u3060 = \u9078\u3093\u3060 || \u7F6E\u304D\u5834\u306A\u3057;
 }
 
+// src/save/pack.js
+var \u5727\u3057\u306E\u5370 = "z1:";
+var \u7D42 = 256;
+var \u5E45 = 15;
+var \u5E95 = 32;
+function \u6587\u3092byte\u306B(\u6587) {
+  if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(\u6587);
+  const out = [];
+  for (let i = 0; i < \u6587.length; i++) {
+    let c = \u6587.codePointAt(i);
+    if (c > 65535) i++;
+    if (c < 128) out.push(c);
+    else if (c < 2048) out.push(192 | c >> 6, 128 | c & 63);
+    else if (c < 65536) out.push(224 | c >> 12, 128 | c >> 6 & 63, 128 | c & 63);
+    else out.push(240 | c >> 18, 128 | c >> 12 & 63, 128 | c >> 6 & 63, 128 | c & 63);
+  }
+  return Uint8Array.from(out);
+}
+function byte\u3092\u6587\u306B(b) {
+  if (typeof TextDecoder !== "undefined") return new TextDecoder().decode(b);
+  let s2 = "";
+  for (let i = 0; i < b.length; ) {
+    const c = b[i];
+    if (c < 128) {
+      s2 += String.fromCharCode(c);
+      i += 1;
+    } else if (c < 224) {
+      s2 += String.fromCharCode((c & 31) << 6 | b[i + 1] & 63);
+      i += 2;
+    } else if (c < 240) {
+      s2 += String.fromCharCode((c & 15) << 12 | (b[i + 1] & 63) << 6 | b[i + 2] & 63);
+      i += 3;
+    } else {
+      const cp = (c & 7) << 18 | (b[i + 1] & 63) << 12 | (b[i + 2] & 63) << 6 | b[i + 3] & 63;
+      s2 += String.fromCodePoint(cp);
+      i += 4;
+    }
+  }
+  return s2;
+}
+function \u5727\u3059(\u6587) {
+  if (\u6587 == null) return "";
+  const b = \u6587\u3092byte\u306B(\u6587);
+  const \u51FA = [];
+  let \u6E9C = 0, \u6E9C\u6570 = 0;
+  const \u5410\u304F = (\u5024, \u30D3\u30C3\u30C82) => {
+    for (let i = \u30D3\u30C3\u30C82 - 1; i >= 0; i--) {
+      \u6E9C = \u6E9C << 1 | \u5024 >> i & 1;
+      if (++\u6E9C\u6570 === \u5E45) {
+        \u51FA.push(String.fromCharCode(\u6E9C + \u5E95));
+        \u6E9C = 0;
+        \u6E9C\u6570 = 0;
+      }
+    }
+  };
+  const \u8F9E\u66F8 = /* @__PURE__ */ new Map();
+  let \u6B21 = 257, \u30D3\u30C3\u30C8 = 9;
+  let \u524D = -1;
+  for (let i = 0; i < b.length; i++) {
+    const x = b[i];
+    if (\u524D < 0) {
+      \u524D = x;
+      continue;
+    }
+    const \u9375 = \u524D * 256 + x;
+    const \u6709 = \u8F9E\u66F8.get(\u9375);
+    if (\u6709 !== void 0) {
+      \u524D = \u6709;
+      continue;
+    }
+    \u5410\u304F(\u524D, \u30D3\u30C3\u30C8);
+    if (\u6B21 < 65536) {
+      \u8F9E\u66F8.set(\u9375, \u6B21++);
+      if (\u6B21 === 1 << \u30D3\u30C3\u30C8 && \u30D3\u30C3\u30C8 < 16) \u30D3\u30C3\u30C8++;
+    }
+    \u524D = x;
+  }
+  if (\u524D >= 0) \u5410\u304F(\u524D, \u30D3\u30C3\u30C8);
+  \u5410\u304F(\u7D42, \u30D3\u30C3\u30C8);
+  while (\u6E9C\u6570 > 0) {
+    \u6E9C <<= 1;
+    if (++\u6E9C\u6570 === \u5E45) {
+      \u51FA.push(String.fromCharCode(\u6E9C + \u5E95));
+      \u6E9C\u6570 = 0;
+    }
+  }
+  return \u5727\u3057\u306E\u5370 + \u51FA.join("");
+}
+function \u89E3\u3059(\u6587) {
+  if (\u6587 == null) return null;
+  if (typeof \u6587 !== "string" || !\u6587.startsWith(\u5727\u3057\u306E\u5370)) return \u6587;
+  const \u4F53 = \u6587.slice(\u5727\u3057\u306E\u5370.length);
+  let \u4F4D = 0, \u6E9C = 0, \u6E9C\u6570 = 0;
+  const \u8AAD\u3080 = (\u30D3\u30C3\u30C82) => {
+    let v = 0;
+    for (let i = 0; i < \u30D3\u30C3\u30C82; i++) {
+      if (\u6E9C\u6570 === 0) {
+        if (\u4F4D >= \u4F53.length) return -1;
+        \u6E9C = \u4F53.charCodeAt(\u4F4D++) - \u5E95;
+        \u6E9C\u6570 = \u5E45;
+      }
+      \u6E9C\u6570--;
+      v = v << 1 | \u6E9C >> \u6E9C\u6570 & 1;
+    }
+    return v;
+  };
+  const \u89AA = new Int32Array(65536).fill(-1);
+  const \u5C3E = new Uint8Array(65536);
+  const \u4E08 = new Int32Array(65536);
+  for (let i = 0; i < 256; i++) {
+    \u5C3E[i] = i;
+    \u4E08[i] = 1;
+  }
+  let \u6B21 = 257, \u30D3\u30C3\u30C8 = 9;
+  const \u584A = [];
+  let \u7DCF = 0;
+  const \u7D44\u3080 = (\u7B26) => {
+    const n = \u4E08[\u7B26];
+    const a = new Uint8Array(n);
+    let k = n - 1, c = \u7B26;
+    while (c >= 0 && k >= 0) {
+      a[k--] = \u5C3E[c];
+      c = \u89AA[c];
+    }
+    return a;
+  };
+  let \u524D = -1, \u524D\u306E\u4E26\u3073 = null;
+  for (; ; ) {
+    const v = \u8AAD\u3080(\u30D3\u30C3\u30C8);
+    if (v < 0 || v === \u7D42) break;
+    let \u4E26\u3073;
+    if (v < 256 || \u4E08[v] > 0) \u4E26\u3073 = \u7D44\u3080(v);
+    else if (\u524D >= 0 && v === \u6B21 && \u524D\u306E\u4E26\u3073) {
+      \u4E26\u3073 = new Uint8Array(\u524D\u306E\u4E26\u3073.length + 1);
+      \u4E26\u3073.set(\u524D\u306E\u4E26\u3073);
+      \u4E26\u3073[\u524D\u306E\u4E26\u3073.length] = \u524D\u306E\u4E26\u3073[0];
+    } else break;
+    \u584A.push(\u4E26\u3073);
+    \u7DCF += \u4E26\u3073.length;
+    if (\u524D >= 0 && \u6B21 < 65536) {
+      \u89AA[\u6B21] = \u524D;
+      \u5C3E[\u6B21] = \u4E26\u3073[0];
+      \u4E08[\u6B21] = \u4E08[\u524D] + 1;
+      \u6B21++;
+      if (\u6B21 + 1 === 1 << \u30D3\u30C3\u30C8 && \u30D3\u30C3\u30C8 < 16) \u30D3\u30C3\u30C8++;
+    }
+    \u524D = v < 65536 && (v < 256 || \u4E08[v] > 0) ? v : \u6B21 - 1;
+    \u524D\u306E\u4E26\u3073 = \u4E26\u3073;
+  }
+  const b = new Uint8Array(\u7DCF);
+  let p = 0;
+  for (const a of \u584A) {
+    b.set(a, p);
+    p += a.length;
+  }
+  return byte\u3092\u6587\u306B(b);
+}
+
 // src/save/save.js
 var SAVE_KEY = "sengoku:save1";
 var \u67A0\u306E\u6570 = 5;
@@ -7022,13 +7180,13 @@ var \u67A0\u4E00\u89A7 = () => [
 ];
 var \u7248 = 1;
 function \u5305\u3080(state) {
-  return JSON.stringify({ v: \u7248, at: Date.now(), state });
+  return \u5727\u3059(JSON.stringify({ v: \u7248, at: Date.now(), state }));
 }
 function \u89E3\u304F(\u6587) {
   if (!\u6587) return null;
   let d = null;
   try {
-    d = JSON.parse(\u6587);
+    d = JSON.parse(\u89E3\u3059(\u6587));
   } catch (e) {
     return null;
   }
@@ -7071,13 +7229,52 @@ async function \u5225\u306E\u904A\u3073\u3092\u9003\u304C\u3059(key, \u65B0) {
   }
   return { \u9003\u304C\u3057\u305F: \u62FE\u3044\u4E0A\u3052\u306E\u9375, \u540D: "\u6551\u3044\u51FA\u3057\u305F\u8A18\u9332", d: \u6709 };
 }
+async function \u68DA\u3092\u8A70\u3081\u76F4\u3059(\u9664\u304F) {
+  let \u8A70\u3081\u305F = 0;
+  for (const w of \u67A0\u4E00\u89A7()) {
+    if (w.key === \u9664\u304F) continue;
+    let \u6587 = null;
+    try {
+      \u6587 = await \u7F6E\u304D\u5834().\u8AAD\u3080(w.key);
+    } catch (e) {
+      continue;
+    }
+    if (!\u6587 || \u6587.startsWith("z1:")) continue;
+    const d = \u89E3\u304F(\u6587);
+    if (!d || !d.state) continue;
+    try {
+      await \u7F6E\u304D\u5834().\u66F8\u304F(w.key, \u5727\u3059(JSON.stringify({ v: d.v || \u7248, at: d.at || Date.now(), state: d.state })));
+      \u8A70\u3081\u305F++;
+    } catch (e) {
+    }
+  }
+  return \u8A70\u3081\u305F;
+}
+var \u8A18\u9332\u306E\u8A33 = "";
+var \u8A18\u9332\u306E\u8A33\u3092\u8AAD\u3080 = () => \u8A18\u9332\u306E\u8A33;
 async function saveGame(state, key) {
   const k = key || SAVE_KEY;
+  \u8A18\u9332\u306E\u8A33 = "";
+  let \u5305\u307F = null;
   try {
     const \u9003 = await \u5225\u306E\u904A\u3073\u3092\u9003\u304C\u3059(k, state);
     if (\u9003 && \u9003.\u9003\u304C\u3057\u305F) \u76F4\u8FD1\u306E\u907F\u96E3 = \u9003;
-    return await \u7F6E\u304D\u5834().\u66F8\u304F(k, \u5305\u3080(state));
+    \u5305\u307F = \u5305\u3080(state);
+    const ok = await \u7F6E\u304D\u5834().\u66F8\u304F(k, \u5305\u307F);
+    if (ok) return true;
+    \u8A18\u9332\u306E\u8A33 = "\u3053\u306E\u7AEF\u672B\u3067\u306F\u8A18\u9332\u3092\u6B8B\u305B\u307E\u305B\u3093";
+    return false;
   } catch (e) {
+    try {
+      const \u8A70 = await \u68DA\u3092\u8A70\u3081\u76F4\u3059(k);
+      const ok2 = await \u7F6E\u304D\u5834().\u66F8\u304F(k, \u5305\u307F || \u5305\u3080(state));
+      if (ok2) {
+        \u8A18\u9332\u306E\u8A33 = \u8A70 ? `\u68DA\u3092\u8A70\u3081\u76F4\u3057\u3066\u53CE\u3081\u307E\u3057\u305F\uFF08${\u8A70}\u67A0\uFF09` : "";
+        return true;
+      }
+    } catch (e2) {
+    }
+    \u8A18\u9332\u306E\u8A33 = "\u8A18\u9332\u306E\u7A7A\u304D\u304C\u8DB3\u308A\u307E\u305B\u3093\u3002\u8A18\u9332\u6240\u3067\u53E4\u3044\u67A0\u3092\u6D88\u3057\u3066\u304F\u3060\u3055\u3044";
     return false;
   }
 }
@@ -9957,8 +10154,8 @@ function genTerrain(seed) {
     }
   };
   const sc = clamp(FIELD.w / 1080, 1, 4.6);
-  const \u5E95 = sc >= 2.4 ? 2 : sc >= 1.6 ? 1 : 0;
-  const \u6570 = (\u57FA, \u8981) => Math.max(\u8981 ? \u5E95 : 0, Math.round(\u57FA * (0.6 + sc * 0.62)));
+  const \u5E952 = sc >= 2.4 ? 2 : sc >= 1.6 ? 1 : 0;
+  const \u6570 = (\u57FA, \u8981) => Math.max(\u8981 ? \u5E952 : 0, Math.round(\u57FA * (0.6 + sc * 0.62)));
   put(HILLS, \u6570(Math.floor(rnd() * 3), true), 80 * sc, 130 * sc);
   put(FORESTS, \u6570(Math.floor(rnd() * 4), true), 70 * sc, 115 * sc);
   put(WOODS, \u6570(Math.floor(rnd() * 3) + 1), 50 * sc, 85 * sc);
@@ -11308,11 +11505,11 @@ function drawMon(ctx, kind, x, y, r, col, sub) {
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.9, 0, 7);
     ctx.clip();
-    const \u5E45 = r * (n === 1 ? 0.34 : n === 2 ? 0.24 : 0.18);
+    const \u5E452 = r * (n === 1 ? 0.34 : n === 2 ? 0.24 : 0.18);
     const \u9593 = r * (n === 1 ? 0 : n === 2 ? 0.42 : 0.5);
     for (let i = 0; i < n; i++) {
       const cy = (i - (n - 1) / 2) * \u9593;
-      ctx.fillRect(-r, cy - \u5E45 / 2, r * 2, \u5E45);
+      ctx.fillRect(-r, cy - \u5E452 / 2, r * 2, \u5E452);
     }
     ctx.restore();
   };
@@ -12117,18 +12314,18 @@ function \u5DDD\u3092\u63CF\u304F(ctx) {
     ctx.closePath();
     ctx.fill();
   };
-  const \u5E45 = RIVER.bot - RIVER.top;
+  const \u5E452 = RIVER.bot - RIVER.top;
   \u5E2F(0, FIELD.w, -5, 5, "#C9C3A4");
   \u5E2F(0, FIELD.w, 0, 0, "#9FC0CE");
-  \u5E2F(0, FIELD.w, \u5E45 * 0.22, -\u5E45 * 0.22, "#7FA9BE");
-  \u5E2F(0, FIELD.w, \u5E45 * 0.4, -\u5E45 * 0.4, "#6B97AF");
+  \u5E2F(0, FIELD.w, \u5E452 * 0.22, -\u5E452 * 0.22, "#7FA9BE");
+  \u5E2F(0, FIELD.w, \u5E452 * 0.4, -\u5E452 * 0.4, "#6B97AF");
   ctx.strokeStyle = "rgba(255,255,255,0.30)";
   ctx.lineWidth = 1.1;
   for (const k of [0.28, 0.52, 0.74]) {
     ctx.beginPath();
     for (let x = 0; x <= FIELD.w; x += 6) {
       const [t] = band(x);
-      const y = t + \u5E45 * k + Math.sin(x * 0.05 + k * 9) * 1.8;
+      const y = t + \u5E452 * k + Math.sin(x * 0.05 + k * 9) * 1.8;
       if (x === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
@@ -12140,7 +12337,7 @@ function \u5DDD\u3092\u63CF\u304F(ctx) {
     for (let i = 0; i < 26; i++) {
       const x = RIVER.ford[0] + rnd() * (RIVER.ford[1] - RIVER.ford[0]);
       const [t] = band(x);
-      const y = t + 3 + rnd() * (\u5E45 - 6);
+      const y = t + 3 + rnd() * (\u5E452 - 6);
       const r = 1.6 + rnd() * 2.2;
       ctx.fillStyle = "rgba(120,120,105,0.55)";
       ctx.beginPath();
@@ -13637,9 +13834,9 @@ function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps) {
   const lost = before - e.men;
   fCorps.loss[e.origin] += lost;
   e.cohesion = Math.max(0, e.cohesion - lost * 0.7 * flank * (0.55 + (valor || 60) / 100));
-  const share = lost / Math.max(1, corpsMax(fCorps));
+  const share = lost / Math.max(1200, corpsMax(fCorps));
   const \u582A\u3048 = clamp(1.3 - (fCorps.gen && fCorps.gen.lead || 60) / 200, 0.8, 1.2);
-  fCorps.morale -= share * 100 * 1.15 * (1 + (flank - 1) * 0.8) * \u582A\u3048;
+  fCorps.\u58EB\u6C17\u306E\u6E9C = (fCorps.\u58EB\u6C17\u306E\u6E9C || 0) + share * 100 * 0.6 * (1 + (flank - 1) * 0.8) * \u582A\u3048;
   fCorps.\u640D = (fCorps.\u640D || 0) + lost;
   if (byCorps) byCorps.\u529F = (byCorps.\u529F || 0) + lost;
 }
@@ -14054,7 +14251,7 @@ function stepBattle(b, dt) {
         holder.pinned = true;
       }
       holder.gateFat = Math.min(100, (holder.gateFat || 0) + 5 * dt);
-      holder.morale = Math.min(100, holder.morale + 0.4 * dt);
+      holder.morale = Math.min(100, holder.morale + 0.16 * dt);
       const men = corpsMen(holder);
       const eff = 1 - holder.gateFat / 100 * 0.66;
       const push = men / (men + g.def * 1.1);
@@ -14263,10 +14460,10 @@ function stepBattle(b, dt) {
     const deep = inL(MAP.layers.length - 1) ? 0.44 : MAP.layers.length > 2 && inL(MAP.layers.length - 2) ? 0.22 : 0.06;
     const fLost = MAP.fac.length ? MAP.fac.filter((f) => f.hp <= 0).length / MAP.fac.length : 0;
     b.press = clamp(bw / tw * 0.52 + fLost * 0.14 + deep, 0, 1);
-    const cap = 100 - 82 * b.press;
+    const cap = 100 - 55 * b.press;
     for (const c of defC) {
-      c.morale = Math.min(c.morale, cap);
-      if (inL(MAP.layers.length - 1)) c.morale = Math.max(0, c.morale - 2.6 * dt);
+      if (c.morale > cap) c.morale = Math.max(cap, c.morale - 1.6 * dt);
+      if (inL(MAP.layers.length - 1)) c.morale = Math.max(0, c.morale - 1.4 * dt);
     }
   }
   const CS = 90;
@@ -14430,10 +14627,17 @@ function stepBattle(b, dt) {
     const \u5668\u91CF = (c.gen.lead || 60) * 0.5 + (c.gen.valor || 60) * 0.3 + (c.gen.wit || 60) * 0.2;
     const \u7ACB\u3061\u76F4\u308A = 0.3 + clamp((\u5668\u91CF - 45) / 55, 0, 1.1) * 0.45;
     const \u6575\u8FD1 = alive.some((o) => o.side !== c.side && !o.routed && Math.hypot(o.x - c.x, o.y - c.y) < 240);
+    if (c.\u58EB\u6C17\u306E\u6E9C > 0) {
+      const \u65E9\u3055 = MAP ? 0.7 : 1.2;
+      const \u5F15\u304F = Math.min(c.\u58EB\u6C17\u306E\u6E9C, \u65E9\u3055 * dt);
+      c.morale -= \u5F15\u304F;
+      c.\u58EB\u6C17\u306E\u6E9C -= \u5F15\u304F;
+      if (c.\u58EB\u6C17\u306E\u6E9C < 0.01) c.\u58EB\u6C17\u306E\u6E9C = 0;
+    }
     let \u52D5 = 0;
     if (fighting) {
       const \u62BC\u3057 = ((c.\u529F || 0) - (c.\u640D || 0)) / Math.max(70, corpsMax(c) * 0.05);
-      \u52D5 = clamp(\u62BC\u3057, -1.1, 1.1) * 0.6;
+      \u52D5 = clamp(\u62BC\u3057, -1.1, 1.1) * 0.35;
     } else if (\u6575\u8FD1) {
       \u52D5 = \u7ACB\u3061\u76F4\u308A * 0.3;
     } else {
@@ -14451,10 +14655,11 @@ function stepBattle(b, dt) {
         c.feats.push("\u5BC6\u96C6\u9632\u5FA1");
       }
     }
-    if (!c.routed && (c.morale <= 15 || ratio < 0.15)) {
+    if (!c.routed && (c.morale <= 15 || ratio < 0.22)) {
       c.routed = true;
       c.order = "\u6557\u8D70";
       c.\u7ACB\u3066\u76F4\u3057 = null;
+      c.\u5D29\u308C\u305F\u523B = b.t;
       for (const q of c.squads) {
         q.engaged = false;
         q.link = null;
@@ -14467,7 +14672,8 @@ function stepBattle(b, dt) {
       if (c.morale <= 0 || corpsMen(c) <= 0) {
         c.\u6F70 = true;
         b.log.push({ t: b.t, text: `${c.name}\u968A\u306F\u652F\u3048\u3092\u5931\u3044\u3001\u6226\u5834\u3092\u843D\u3061\u3066\u3044\u3063\u305F\u3002` });
-      } else if (c.morale >= 34) {
+      } else if (c.morale >= 40 && ratio >= 0.26 && b.t - (c.\u5D29\u308C\u305F\u523B || 0) > 30 && !(c.\u7ACB\u3061\u76F4\u308A\u6570 >= 1)) {
+        c.\u7ACB\u3061\u76F4\u308A\u6570 = (c.\u7ACB\u3061\u76F4\u308A\u6570 || 0) + 1;
         c.routed = false;
         c.\u6F70 = false;
         c.\u7ACB\u3066\u76F4\u3057 = null;
@@ -19373,7 +19579,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     modal === "save" && (() => {
       const \u53CE\u3081\u308B = async (key, \u540D) => {
         const ok = await onSave(g, key);
-        setSavedMsg(ok ? `${\u540D}\u3078\u8A18\u9332\u3057\u305F` : "\u8A18\u9332\u3067\u304D\u306A\u3044\u74B0\u5883");
+        const \u8A33 = \u8A18\u9332\u306E\u8A33\u3092\u8AAD\u3080();
+        setSavedMsg(ok ? `${\u540D}\u3078\u8A18\u9332\u3057\u305F${\u8A33 ? `\uFF08${\u8A33}\uFF09` : ""}` : \u8A33 || "\u8A18\u9332\u3067\u304D\u306A\u3044\u74B0\u5883");
         setTimeout(() => setSavedMsg(""), 2600);
         setModal(null);
       };

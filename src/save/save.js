@@ -1,5 +1,6 @@
 import { migrateSave } from "../core/state.js";
 import { 置き場 } from "./store.js";
+import { 圧す, 解す } from "./pack.js";
 import { FACTIONS } from "../data/factions.js";
 
 /* ==========================================================================
@@ -28,16 +29,24 @@ export const 枠一覧 = () => [
 ];
 const 版 = 1;
 
-// 記録の包み。年月と家名を添えておくと、書き出した控えを人が見て分かる。
+/* 記録の包み。年月と家名を添えておくと、書き出した控えを人が見て分かる。
+
+   盤ひとつは一.二六MBある。ブラウザに預けられる量は iPhone の Safari で
+   五MBほどしかないので、七枠（自動・一〜五・救出）をそのまま置くと八.六MBと
+   なって収まらない。三つ四つ収めたところで棚が一杯になり、以後どの枠へ
+   書こうとしても「記録できない環境」と出る――実際にそうなった。
+
+   収める前に圧す（pack.js）。一.二六MBが二百三十KBほどになるので、
+   七枠でも一.六MBに収まる。 */
 function 包む(state) {
-  return JSON.stringify({ v: 版, at: Date.now(), state });
+  return 圧す(JSON.stringify({ v: 版, at: Date.now(), state }));
 }
 
-// 包みを解く。中身が盤の様子でなければ null を返す。
+// 包みを解く。圧してあれば解し、昔ながらの生の記録はそのまま読む。
 function 解く(文) {
   if (!文) return null;
   let d = null;
-  try { d = JSON.parse(文); } catch (e) { return null; }
+  try { d = JSON.parse(解す(文)); } catch (e) { return null; }
   if (!d || !d.state || !Array.isArray(d.state.castles)) return null;
   migrateSave(d.state);                    // 旧い記録を繕う（名簿、旗の下を狙う戦役）
   return d;
@@ -77,13 +86,62 @@ async function 別の遊びを逃がす(key, 新) {
   return { 逃がした: 拾い上げの鍵, 名: "救い出した記録", d: 有 };
 }
 
+/* 棚が一杯になったときの繕い（GDD 15.3）。
+
+   圧すようにする前の記録は、一枠で一.二六MBある。それが三つ四つ入ったままだと、
+   新しく書こうとしても棚に空きがなく、書き込みが撥ねられる。
+
+   撥ねられたら、まず棚を詰め直す。生のまま入っている記録を読み出し、圧して
+   置き直す。中身は一字も変えない。詰め直せば四分の一以下になるので、たいていは
+   これで空きができる。そのうえで、もう一度だけ書いてみる。 */
+async function 棚を詰め直す(除く) {
+  let 詰めた = 0;
+  for (const w of 枠一覧()) {
+    if (w.key === 除く) continue;
+    let 文 = null;
+    try { 文 = await 置き場().読む(w.key); } catch (e) { continue; }
+    if (!文 || 文.startsWith("z1:")) continue;          // すでに圧してある
+    const d = 解く(文);
+    if (!d || !d.state) continue;                       // 読めぬものは触らない
+    try {
+      await 置き場().書く(w.key, 圧す(JSON.stringify({ v: d.v || 版, at: d.at || Date.now(), state: d.state })));
+      詰めた++;
+    } catch (e) { /* この枠は諦めて次へ */ }
+  }
+  return 詰めた;
+}
+
+/* 収める。うまくいけば true、駄目なら訳を添えて false を返す。
+   「記録できない環境」と一括りにしていたので、棚が一杯なだけのときも
+   「この端末では記録できない」と読めてしまい、手の打ちようが分からなかった。 */
+let 記録の訳 = "";
+export const 記録の訳を読む = () => 記録の訳;
+
 export async function saveGame(state, key) {
   const k = key || SAVE_KEY;
+  記録の訳 = "";
+  let 包み = null;
   try {
     const 逃 = await 別の遊びを逃がす(k, state);
     if (逃 && 逃.逃がした) 直近の避難 = 逃;
-    return await 置き場().書く(k, 包む(state));
-  } catch (e) { return false; }            // 置き場が使えないときは黙って諦める
+    包み = 包む(state);
+    const ok = await 置き場().書く(k, 包み);
+    if (ok) return true;
+    記録の訳 = "この端末では記録を残せません";
+    return false;
+  } catch (e) {
+    // 棚が一杯。詰め直して、もう一度だけ試す。
+    try {
+      const 詰 = await 棚を詰め直す(k);
+      const ok2 = await 置き場().書く(k, 包み || 包む(state));
+      if (ok2) {
+        記録の訳 = 詰 ? `棚を詰め直して収めました（${詰}枠）` : "";
+        return true;
+      }
+    } catch (e2) { /* まだ入らない */ }
+    記録の訳 = "記録の空きが足りません。記録所で古い枠を消してください";
+    return false;
+  }
 }
 
 /* 直近に逃がしたもの。画面が拾って「移しました」と告げるのに使う。 */
