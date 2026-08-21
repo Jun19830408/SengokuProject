@@ -487,7 +487,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
 
    後詰が囲みの外に着いた。城方が門を開いて背後を衝けば、寄せ手は内と外から
    挟まれる。ただし城を空にしてはならぬ。守備の最低数は必ず残す。 */
-export function SallyDialog({ g, castleId, foeId, onClose, onGo }) {
+export function SallyDialog({ g, castleId, foeId, onClose, onGo, 城下 }) {
   const c = g.castles.find((x) => x.id === castleId);
   const foe = g.armies.find((x) => x.id === foeId);
   const gens = g.generals.filter((x) => x.at === castleId && x.faction === c.faction && !x.captive);
@@ -511,8 +511,13 @@ export function SallyDialog({ g, castleId, foeId, onClose, onGo }) {
       <div className="card">
         <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>{c.name}　討って出るか</div>
         <div style={{ fontSize: 12.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 }}>
-          後詰が囲みの外に着きました。<b style={{ color: U.text }}>いま門を開けば、寄せ手を内と外から挟めます。</b><br />
-          城に籠もったままでも構いませぬ。その場合、後詰だけで囲みを衝きます。
+          {城下
+            ? <>敵の軍が城下に着き、同じ月に味方の援軍も着きました。
+              <b style={{ color: U.text }}>いま門を開けば、援軍とともに城下で迎え撃てます。</b><br />
+              城に籠もったままでも構いませぬ。その場合、援軍だけで敵に当たります。</>
+            : <>後詰が囲みの外に着きました。
+              <b style={{ color: U.text }}>いま門を開けば、寄せ手を内と外から挟めます。</b><br />
+              城に籠もったままでも構いませぬ。その場合、後詰だけで囲みを衝きます。</>}
         </div>
         <div className="row"><span>寄せ手（{g.factions[foe ? foe.faction : c.faction].name}）</span>
           <span className="v">{fmt(foe ? foe.men : 0)} 人</span></div>
@@ -703,7 +708,7 @@ export const 外を押して閉じる = (onClose) => ({
   },
 });
 
-export function MonthReport({ g, onClose }) {
+export function MonthReport({ g, onClose, onAid }) {
   const mine = g.castles.filter((c) => c.faction === g.player);
   return (
     <div className="modal" {...外を押して閉じる(onClose)}>
@@ -779,6 +784,30 @@ export function MonthReport({ g, onClose }) {
         <div className="sec">報せ</div>
         {(g.monthEvents || []).length === 0 && <div style={{ fontSize: 12, color: U.dim }}>特に報せはない。</div>}
         {(g.monthEvents || []).map((e, i) => <div key={i} style={{ fontSize: 13, padding: "5px 0", borderBottom: `1px solid ${U.line2}` }}>{e}</div>)}
+        {/* 危急の城には、その場で援軍を出せるようにする（GDD 9.2）。
+            行軍はどれも一月はかかるので、着いてから出したのでは間に合わない。 */}
+        {onAid && (g.危急 || []).length > 0 && (
+          <>
+            <div className="sec">援軍</div>
+            {(g.危急 || []).map((k) => {
+              const c = g.castles.find((x) => x.id === k.castleId);
+              if (!c) return null;
+              return (
+                <div key={k.armyId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
+                  <span style={{ fontSize: 12.5, flex: 1, lineHeight: 1.7 }}>
+                    <b className="mn" style={{ fontSize: 15 }}>{c.name}</b>
+                    <span style={{ color: U.dim }}>　{(g.factions[k.家] || {}).name}の軍 {fmt(k.men)}人／約{k.月}ヶ月後</span>
+                  </span>
+                  <button className="btn sm" onClick={() => onAid(k.castleId)}>援軍を出す</button>
+                </div>
+              );
+            })}
+            <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginTop: 4 }}>
+              敵が着く月に援軍も着けば、城下で野戦になります（城方も門を開いて加われます）。
+              間に合わなければ、援軍は城の守りに加わります。
+            </div>
+          </>
+        )}
         <button className="btn dark" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>評定を開く</button>
       </div>
     </div>

@@ -2,7 +2,7 @@ import { ambushChance } from "../core/ambush.js";
 import { ransomCost, takeAsPrisoner } from "../core/capture.js";
 import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, lifeSpan, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
-import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
+import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
@@ -18,7 +18,7 @@ import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy } f
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { isVassal, underMyBanner } from "../core/state.js";
+import { isVassal, underMyBanner, 援けに着く } from "../core/state.js";
 /* ==========================================================================
    月送り ─ 天下じゅうの一月
    この一手で、諸家の内政・調略・出陣・包囲・寿命・一揆・官位までが動く。
@@ -944,11 +944,44 @@ export function advanceMonth(prev, g) {
         if (q.faction !== s.player) continue;
         events.push(`${q.name}の所在が知れずにいたが、${(s.castles.find((c) => c.id === q.at) || {}).name}に戻った。`);
       }
+      /* 危急の報せ（GDD 7.4 / 9.2）。
+
+         自家の城へ敵の軍が向かっているなら、着く前に告げる。行軍はどれも
+         一月はかかるのだから、着いてから援軍を出しても間に合わない。
+         出すか出さぬかを決められるのは、いましかない。
+
+         着いた月に味方の援軍も着けば、城下の野戦になる（MapScreen の後詰の野戦）。 */
+      if (!s.autoPlay) {
+        s.危急 = [];
+        for (const a of s.armies) {
+          if (!a.target || a.sieging) continue;
+          if (underMyBanner(s, a.faction, s.player)) continue;      // 味方の軍
+          const c = s.castles.find((x) => x.id === a.target);
+          if (!c || !underMyBanner(s, s.player, c.faction)) continue;
+          const 月 = Math.max(1, marchMonthsOf(a.path || []) || 1);
+          s.危急.push({ castleId: c.id, armyId: a.id, 家: a.faction, men: a.men, 月 });
+          events.push(`【急報】${c.name}へ${s.factions[a.faction].name}の軍${fmt(a.men)}人が向かっている`
+            + `（およそ${月}ヶ月で着く）。援軍を出すなら、いま他の城から${c.name}へ出陣させよ。`);
+        }
+      }
       s.orders = {};
       // 行き合いの野戦を控えている軍は、決着がつくまで城攻めに進ませない。
       // 退いた軍もここで落ちる。
+      /* 着いた順（GDD 9.2）。
+
+         同じ城へ、敵の軍と味方の援軍が同じ月に着くことがある。このとき味方を先に
+         処理すると、援軍は黙って入城してしまい、そのあとの野戦には出られない。
+         援軍を出したのに間に合わなかったようにしか見えない。
+
+         敵の到着を先に処理する。そうすれば、まだ入城していない味方の援軍を見つけて、
+         城下の野戦（後詰）に持ち込める。 */
+      const 敵地 = (a) => {
+        const c = s.castles.find((x) => x.id === a.at);
+        return c && !underMyBanner(s, a.faction, c.faction) && !援けに着く(s, a, c) ? 0 : 1;
+      };
       s.pendingArrivals = arrivals
         .filter((a) => !行き合い留め.has(a.id) && s.armies.some((x) => x.id === a.id))
+        .sort((x, y) => 敵地(x) - 敵地(y))
         .map((a) => a.id);
       /* 代替わりの報せ（GDD 6.3）。
 

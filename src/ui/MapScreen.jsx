@@ -492,11 +492,47 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         return;
       }
     }
+    /* 後詰の野戦（GDD 9.2）。
+
+       敵の軍が自家の城へ着いた月に、こちらも他の城から援軍を出していたなら、
+       その援軍は城下で敵と当たるべきである。それが後詰というものである。
+
+       これまでは、敵の到着と味方の到着が別々に処理されていた。味方の援軍は
+       「味方の城へ着いた軍」として黙って入城し、野戦には出ない。そして野戦に
+       敗れて城攻めに移ってから、城の中の守兵として現れる。これでは援軍を出した
+       意味がない。援軍を出したのに、間に合わなかったようにしか見えない。
+
+       敵が着いたとき、同じ城へ向かっている味方の軍があれば、そちらを主として
+       城下の野戦にする。城方に討って出る機会も与える（囲みを解く後詰と同じ形）。 */
+    if (dest.faction === g.player && !underMyBanner(g, a.faction, dest.faction) && !援けに着く(g, a, dest)) {
+      const 待つ = new Set(g.pendingArrivals || []);
+      const 後詰 = g.armies.find((x) => x.id !== a.id && x.at === dest.id
+        && (!x.path || x.path.length <= 1) && !x.sieging
+        && underMyBanner(g, x.faction, dest.faction) && 待つ.has(x.id));
+      if (後詰) {
+        setSally({ armyId: 後詰.id, castleId: dest.id, foeId: a.id, 城下: true });
+        return;
+      }
+    }
     // 自勢力の戦役なら、着いた軍を集結として記録し、開戦の判断は総大将に委ねる
     // 旗の下の城なら、軍議にはかけない。味方に向かって軍議を開く筋はない。
     // 旗の下の城へ着いた軍は、味方と戦わない。
     // 自家の城なら将もそこへ入る。臣従の家の城なら、兵だけ守りに加え、将は本国へ帰る。
     if (underMyBanner(g, a.faction, dest.faction) || 援けに着く(g, a, dest)) {
+      /* 入城する前に、同じ城へ敵の軍も着いていないかを見る。
+
+         着いているなら、そちらを先に捌く。ここで黙って入城してしまうと、
+         そのあとの野戦には出られず、「援軍を出したのに間に合わなかった」形に
+         なる。捌く順を入れ替えるだけで、城下の野戦（後詰）に持ち込める。 */
+      const 待ち = new Set(g.pendingArrivals || []);
+      const 寄せ手 = g.armies.find((x) => x.id !== a.id && x.at === dest.id
+        && (!x.path || x.path.length <= 1) && !x.sieging && 待ち.has(x.id)
+        && !underMyBanner(g, x.faction, dest.faction) && !援けに着く(g, x, dest));
+      if (寄せ手 && dest.faction === g.player) {
+        setG((p) => ({ ...p,
+          pendingArrivals: [寄せ手.id, ...(p.pendingArrivals || []).filter((id) => id !== 寄せ手.id)] }));
+        return;
+      }
       setG((p) => {
         const s = structuredClone(p);
         const ar = s.armies.find((x) => x.id === a.id);
@@ -1885,7 +1921,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             </div>
           );
         })()}
-        {modal === "report" && <MonthReport g={g} onClose={() => setModal(null)} />}
+        {modal === "report" && <MonthReport g={g} onClose={() => setModal(null)}
+          onAid={(id) => { setModal(null); setCallAid(id); }} />}
         {modal === "chronicle" && <Chronicle g={g} onClose={() => setModal(null)} />}
         {modal === "factions" && <FactionInfo g={g} onClose={() => setModal(null)} />}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)} />}
@@ -2075,7 +2112,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             title={`援軍を呼ぶ　${(g.castles.find((x) => x.id === callAid) || {}).name || ""}`}
             note={g.sieges.some((sg) => sg.castleId === callAid)
               ? "この城は囲まれています。着いた援軍は、囲みを解くための野戦に向かいます。"
-              : "敵が向かっています。着いた援軍は城の守りに加わります。"}
+              : "敵が向かっています。敵と同じ月に着けば、城下の野戦で迎え撃ちます"
+                + "（城方も門を開いて加われます）。間に合わなければ、城の守りに加わります。"}
             onClose={() => setCallAid(null)}
             onGo={(plan) => { sendAid(callAid, plan); setCallAid(null); }} />
         )}
@@ -2086,11 +2124,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           if (!軍 || !城 || !寄手) { setSally(null); return null; }
           const 始める = (出撃) => {
             setSally(null);
-            startBattle(軍, { ...城, name: `${城.name}の囲み` }, null, undefined, 寄手,
+            // 囲みを解く後詰なら「囲み」、着いたばかりの敵を迎え撃つなら「城下」
+            startBattle(軍, { ...城, name: `${城.name}${sally.城下 ? "城下" : "の囲み"}` }, null, undefined, 寄手,
               出撃 ? { id: `sally-${城.id}`, castleId: 城.id, faction: 城.faction,
                 gens: 出撃.gens, local: 出撃.local, localTrain: 城.localTrain, rost: null } : null);
           };
-          return <SallyDialog g={g} castleId={sally.castleId} foeId={sally.foeId}
+          return <SallyDialog g={g} castleId={sally.castleId} foeId={sally.foeId} 城下={!!sally.城下}
             onClose={() => 始める(null)} onGo={始める} />;
         })()}
         {raid && (() => {
