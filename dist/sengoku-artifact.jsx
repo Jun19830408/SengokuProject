@@ -8286,6 +8286,14 @@ function ambushChance(gen, weather, terrain, ratio) {
   p *= clamp(0.6 + (1 - ratio) * 1.4, 0.5, 2);
   return clamp(p, 0, 0.52);
 }
+function \u5947\u8972\u306E\u6BB5(wit) {
+  const w = wit || 0;
+  if (w >= 90) return { \u4F4D: "\u5927\u5C06\u8A0E\u6B7B", \u5927\u5C06\u8A0E\u6B7B: true, \u5927\u5C06\u5099\u3048: 0, \u5168\u4F53\u6B20\u3051: 0, \u4E71\u308C: 0.25, \u52E2\u3044: 1.25 };
+  if (w >= 85) return { \u4F4D: "\u672C\u9663\u58CA\u6EC5", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u9000\u304F: true, \u5927\u5C06\u5099\u3048: 0, \u5168\u4F53\u6B20\u3051: 0.5, \u4E71\u308C: 0.5, \u52E2\u3044: 1.18 };
+  if (w >= 80) return { \u4F4D: "\u672C\u9663\u5D29\u3057", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u5099\u3048: 0.25, \u5168\u4F53\u6B20\u3051: 0.25, \u4E71\u308C: 0.72, \u52E2\u3044: 1.12 };
+  if (w >= 70) return { \u4F4D: "\u672C\u9663\u885D\u304D", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u5099\u3048: 0.5, \u5168\u4F53\u6B20\u3051: 1 / 6, \u4E71\u308C: 0.84, \u52E2\u3044: 1.08 };
+  return { \u4F4D: "\u9663\u6255\u3044", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u5099\u3048: 1, \u5168\u4F53\u6B20\u3051: 1 / 8, \u4E71\u308C: 0.92, \u52E2\u3044: 1.05 };
+}
 function tryAmbush(s2, army, castle, aGens, dGens, weather) {
   const head = [...aGens].sort((a, b) => b.wit + b.lead - (a.wit + a.lead))[0];
   if (!head) return null;
@@ -8297,7 +8305,7 @@ function tryAmbush(s2, army, castle, aGens, dGens, weather) {
   if (Math.random() > p) return { ok: false, by: head, p };
   const cand = dGens.filter((x) => x.faction === castle.faction && !x.captive);
   const lord = [...cand].sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead - a.lead)[0];
-  return { ok: true, by: head, target: lord || null, p };
+  return { ok: true, by: head, target: lord || null, p, \u6BB5: \u5947\u8972\u306E\u6BB5(head.wit) };
 }
 
 // src/govern/ai.js
@@ -8750,37 +8758,49 @@ function resolveOffscreen(prev, armyId, castleId) {
   const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
   const wx = s2.weather || "\u6674";
   const amb = tryAmbush(s2, army, castle, aGens, dGens, wx);
-  let atk = army.men * (0.8 + army.localTrain / 250) * (1 + lead(aGens) / 300) * (0.85 + Math.random() * 0.3);
-  let def = dMen * (0.85 + castle.localTrain / 250) * (1 + castle.def / 200 + lead(dGens) / 300) * (0.85 + Math.random() * 0.3);
+  let \u4E71\u308C = 1, \u52E2\u3044 = 1;
   if (amb && amb.ok) {
-    def *= 0.2;
-    atk *= 1.25;
+    const \u6BB5 = amb.\u6BB5;
+    \u4E71\u308C = \u6BB5.\u4E71\u308C;
+    \u52E2\u3044 = \u6BB5.\u52E2\u3044;
+    const \u4E3B = amb.target ? s2.generals.find((x) => x.id === amb.target.id) : null;
+    if (\u4E3B && \u6BB5.\u5927\u5C06\u5099\u3048 < 1) \u4E3B.retinue = Math.round(\u4E3B.retinue * \u6BB5.\u5927\u5C06\u5099\u3048);
+    if (\u6BB5.\u5168\u4F53\u6B20\u3051 > 0) {
+      const \u6B8B = 1 - \u6BB5.\u5168\u4F53\u6B20\u3051;
+      castle.local = Math.max(0, Math.round(castle.local * \u6B8B));
+      for (const x of dGens) {
+        if (\u4E3B && x.id === \u4E3B.id && \u6BB5.\u5927\u5C06\u5099\u3048 < 1) continue;
+        x.retinue = Math.round(x.retinue * \u6B8B);
+      }
+    }
+    let \u6587 = `${amb.by.name}\u304C${castle.name}\u306E\u672C\u9663\u3092\u885D\u3044\u305F\u3002`;
+    if (\u6BB5.\u5927\u5C06\u8A0E\u6B7B && \u4E3B) {
+      s2.generals = s2.generals.filter((x) => x.id !== \u4E3B.id);
+      if (\u4E3B.lord) {
+        const nx = s2.generals.filter((x) => x.faction === \u4E3B.faction && !x.captive).sort((a, z) => z.lead - a.lead)[0];
+        if (nx) nx.lord = true;
+      }
+      \u6587 += `${\u4E3B.name}\u306F\u8A0E\u305F\u308C\u3001${s2.factions[castle.faction].name}\u306E\u8ECD\u306F\u74E6\u89E3\u3057\u305F\u3002`;
+      if (army.faction === s2.player) s2.msg = `${amb.by.name}\u304C\u6575\u306E\u672C\u9663\u3092\u885D\u304D\u3001${\u4E3B.name}\u3092\u8A0E\u3061\u53D6\u3063\u305F\u3002`;
+    } else if (\u6BB5.\u5927\u5C06\u9000\u304F && \u4E3B) {
+      const \u843D\u3061\u5148 = s2.castles.filter((x) => x.faction === \u4E3B.faction && x.id !== castle.id).sort((a, z) => Math.hypot(a.lon - castle.lon, a.lat - castle.lat) - Math.hypot(z.lon - castle.lon, z.lat - castle.lat))[0];
+      if (\u843D\u3061\u5148) \u4E3B.at = \u843D\u3061\u5148.id;
+      \u6587 += `${\u4E3B.name}\u306E\u5099\u3048\u306F\u58CA\u6EC5\u3057\u3001\u672C\u4EBA\u306F\u672C\u9663\u3092\u6368\u3066\u3066\u9000\u3044\u305F\u3002`;
+    } else {
+      \u6587 += `${s2.factions[castle.faction].name}\u306E\u5099\u3048\u306F\u4E71\u308C\u305F\u3002`;
+    }
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
   } else if (amb && !amb.ok && army.faction === s2.player) {
     s2.chronicle.push({ y: s2.year, m: s2.month, text: `${amb.by.name}\u306F\u6575\u306E\u9699\u3092\u7ABA\u3063\u305F\u304C\u3001\u6A5F\u3092\u5F97\u306A\u304B\u3063\u305F\u3002` });
   }
+  const dGens2 = s2.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
+  const dMen2 = castle.local + dGens2.reduce((a, x) => a + x.retinue, 0);
+  let atk = army.men * (0.8 + army.localTrain / 250) * (1 + lead(aGens) / 300) * (0.85 + Math.random() * 0.3) * \u52E2\u3044;
+  let def = dMen2 * (0.85 + castle.localTrain / 250) * (1 + castle.def / 200 + lead(dGens2) / 300) * (0.85 + Math.random() * 0.3) * \u4E71\u308C;
   const atkWon = atk > def;
-  if (amb && amb.ok) {
-    const fell = atkWon && amb.target;
-    s2.chronicle.push({
-      y: s2.year,
-      m: s2.month,
-      text: fell ? `${amb.by.name}\u304C${castle.name}\u306E\u672C\u9663\u3092\u885D\u3044\u305F\u3002${amb.target.name}\u306F\u8A0E\u305F\u308C\u3001${s2.factions[castle.faction].name}\u306E\u8ECD\u306F\u74E6\u89E3\u3057\u305F\u3002` : `${amb.by.name}\u304C${castle.name}\u306E\u672C\u9663\u3092\u885D\u3044\u305F\u3002${s2.factions[castle.faction].name}\u306E\u5099\u3048\u306F\u4E71\u308C\u305F\u3002`
-    });
-    if (fell) {
-      const t2 = s2.generals.find((x) => x.id === amb.target.id);
-      if (t2) {
-        s2.generals = s2.generals.filter((x) => x.id !== t2.id);
-        if (t2.lord) {
-          const nx = s2.generals.filter((x) => x.faction === t2.faction && !x.captive).sort((a, z) => z.lead - a.lead)[0];
-          if (nx) nx.lord = true;
-        }
-      }
-      if (army.faction === s2.player) s2.msg = `${amb.by.name}\u304C\u6575\u306E\u672C\u9663\u3092\u885D\u304D\u3001${amb.target.name}\u3092\u8A0E\u3061\u53D6\u3063\u305F\u3002`;
-    }
-  }
   const r = Math.min(atk, def) / Math.max(atk, def);
   const aLoss = Math.round(army.men * (atkWon ? 0.16 * r + 0.06 : 0.3 + 0.2 * r));
-  const dLoss = Math.round(dMen * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
+  const dLoss = Math.round(dMen2 * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
   army.men = Math.max(0, army.men - aLoss);
   army.local = Math.max(0, army.local - aLoss);
   castle.local = Math.max(0, castle.local - dLoss);
@@ -10327,6 +10347,39 @@ var DETACH_DEFS = [
     why: "\u77E5\u756560\u4EE5\u4E0A\u30FB\u5075\u5BDF\u517550\u4EE5\u4E0A\u30FB\u68EE\u304C\u5FC5\u8981"
   }
 ];
+var \u4F0F\u5175\u306E\u77E5\u7565 = 78;
+function \u4F0F\u5175\u306E\u7B56\u58EB(b, side) {
+  const \u7686 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && c.gen);
+  const \u9996 = [...\u7686].sort((a, z) => (z.gen.wit || 0) - (a.gen.wit || 0))[0];
+  return \u9996 && (\u9996.gen.wit || 0) >= \u4F0F\u5175\u306E\u77E5\u7565 ? \u9996.gen : null;
+}
+function \u4F0F\u305B\u3089\u308C\u308B\u5730(b, x, y, side) {
+  if (b.map || !b.\u9663) return false;
+  const t = terrainAt(x, y);
+  if (t !== "forest" && t !== "wood" && t !== "village") return false;
+  const \u5473\u65B9 = b.\u9663[side], \u6575 = b.\u9663[side === "P" ? "E" : "P"];
+  if (!\u5473\u65B9 || !\u6575) return false;
+  return Math.hypot(x - \u5473\u65B9.x, y - \u5473\u65B9.y) < Math.hypot(x - \u6575.x, y - \u6575.y);
+}
+function \u4F0F\u5175\u306B\u7F6E\u3051\u308B(b, c) {
+  if (!c || c.detach || c.routed || c.withdraw || c.dead || c.destroyed) return false;
+  if (!\u4F0F\u5175\u306E\u7B56\u58EB(b, c.side)) return false;
+  return \u4F0F\u305B\u3089\u308C\u308B\u5730(b, c.x, c.y, c.side);
+}
+function \u4F0F\u305B\u5834\u3092\u63A2\u3059(b, c, \u9650\u308A = 900) {
+  if (b.map || !b.\u9663) return null;
+  let best = null, bd = \u9650\u308A;
+  for (const \u7FA4 of [FORESTS, WOODS, VILLAGES]) {
+    for (const f of \u7FA4) {
+      const d = Math.hypot(f.x - c.x, f.y - c.y);
+      if (d >= bd) continue;
+      if (!\u4F0F\u305B\u3089\u308C\u308B\u5730(b, f.x, f.y, c.side)) continue;
+      bd = d;
+      best = { x: f.x, y: f.y };
+    }
+  }
+  return best;
+}
 function \u5206\u9063\u306E\u9803\u5408\u3044(b, c, key) {
   if (b.map || !b.\u9663) return false;
   const \u5473\u65B9\u9663 = b.\u9663[c.side], \u6575\u9663 = b.\u9663[c.side === "P" ? "E" : "P"];
@@ -13193,6 +13246,39 @@ function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
   for (const c of alive) if (c.detach && !c.routed) detachAI(b, c, alive);
+  if (!MAP && b.t > 2 && b.t < 45) {
+    if (!b.\u4F0F\u5175\u56F3) b.\u4F0F\u5175\u56F3 = {};
+    for (const side of ["P", "E"]) {
+      if (b.\u4F0F\u5175\u56F3[side]) continue;
+      if (!\u4F0F\u5175\u306E\u7B56\u58EB(b, side)) {
+        b.\u4F0F\u5175\u56F3[side] = "\u7B56\u58EB\u306A\u3057";
+        continue;
+      }
+      const \u5019\u88DC = alive.filter((c) => c.side === side && delegated(b, c) && !c.detach && !c.routed && !c.withdraw && !c.ambush && !c.\u4F0F\u305B\u5834 && !c.squads.some((q) => q.engaged));
+      const \u624B\u52E2 = alive.filter((c) => c.side === side && !c.detach);
+      if (\u624B\u52E2.length < 2 || !\u5019\u88DC.length) continue;
+      let \u9078 = null, \u5834 = null, bd = 1e9;
+      for (const c of \u5019\u88DC) {
+        const p = \u4F0F\u305B\u5834\u3092\u63A2\u3059(b, c);
+        if (!p) continue;
+        const d = Math.hypot(p.x - c.x, p.y - c.y);
+        const \u76EE\u65B9 = d + corpsMen(c) * 0.12;
+        if (\u76EE\u65B9 < bd) {
+          bd = \u76EE\u65B9;
+          \u9078 = c;
+          \u5834 = p;
+        }
+      }
+      if (!\u9078) {
+        b.\u4F0F\u5175\u56F3[side] = "\u4F0F\u305B\u5834\u306A\u3057";
+        continue;
+      }
+      b.\u4F0F\u5175\u56F3[side] = true;
+      \u9078.\u4F0F\u305B\u5834 = \u5834;
+      issueOrder(b, \u9078, { order: "\u79FB\u52D5", tx: \u5834.x, ty: \u5834.y });
+      b.log.push({ t: b.t, text: `${\u9078.gen.name}\u968A\u304C\u6728\u7ACB\u3078\u56DE\u308A\u3001\u8EAB\u3092\u3072\u305D\u3081\u308B\u3002` });
+    }
+  }
   for (const c of alive) {
     if (!delegated(b, c) || c.detach || c.routed || c.withdraw) continue;
     if (c.morale < 55 || corpsMen(c) < corpsMax(c) * 0.5) continue;
@@ -13225,6 +13311,25 @@ function battleAI(b) {
   }
   for (const c of alive) {
     if (!delegated(b, c) || c.routed || c.detach) continue;
+    if (c.ambush && !c.revealed) continue;
+    if (c.\u4F0F\u305B\u5834 && !c.ambush) {
+      const d = Math.hypot(c.\u4F0F\u305B\u5834.x - c.x, c.\u4F0F\u305B\u5834.y - c.y);
+      if (d > 60) {
+        issueOrder(b, c, { order: "\u79FB\u52D5", tx: c.\u4F0F\u305B\u5834.x, ty: c.\u4F0F\u305B\u5834.y });
+        continue;
+      }
+      if (\u4F0F\u305B\u3089\u308C\u308B\u5730(b, c.x, c.y, c.side)) {
+        c.ambush = true;
+        c.revealed = false;
+        c.\u4F0F\u305B\u5834 = null;
+        c.order = "\u5F85\u6A5F";
+        c.tx = c.x;
+        c.ty = c.y;
+        b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C\u6728\u7ACB\u306B\u4F0F\u305B\u305F\u3002` });
+        continue;
+      }
+      c.\u4F0F\u305B\u5834 = null;
+    }
     const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
     const foes = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
     if (!foes.length) continue;
@@ -15609,18 +15714,24 @@ function BattleScreen({ ctx, land, onEnd }) {
       gates.map((g) => /* @__PURE__ */ React3.createElement("option", { key: g.key, value: g.key }, g.key, "\uFF08", Math.round(g.hp / g.max * 100), "%\uFF09")),
       /* @__PURE__ */ React3.createElement("option", { value: "\u672C\u4E38" }, "\u672C\u4E38\u306B\u7ACB\u3066\u7C60\u308B")
     ));
-  })(), /* @__PURE__ */ React3.createElement(FormationPicker, { corps: selC, onPick: (f) => changeForm(selC, f) }), /* @__PURE__ */ React3.createElement(
-    "button",
-    {
-      className: `btn sm ${selC.ambush ? "on" : ""}`,
-      disabled: (selC.\u5730 || terrainAt(selC.x, selC.y)) !== "forest",
-      onClick: () => {
-        selC.ambush = !selC.ambush;
-        selC.revealed = !selC.ambush;
-      }
-    },
-    "\u4F0F\u5175\u306B\u7F6E\u304F"
-  )), /* @__PURE__ */ React3.createElement("button", { className: "btn dark", onClick: () => {
+  })(), /* @__PURE__ */ React3.createElement(FormationPicker, { corps: selC, onPick: (f) => changeForm(selC, f) }), (() => {
+    const \u7B56 = \u4F0F\u5175\u306E\u7B56\u58EB(b, selC.side);
+    const \u7F6E\u3051\u308B = \u4F0F\u5175\u306B\u7F6E\u3051\u308B(b, selC);
+    const \u8A33 = !\u7B56 ? "\u77E5\u7565\u4E03\u5341\u516B\u4EE5\u4E0A\u306E\u5C06\u304C\u304A\u3089\u306C" : \u7F6E\u3051\u308B ? `${\u7B56.name}\u306E\u732E\u7B56\uFF1A\u3053\u306E\u6728\u7ACB\u306B\u4F0F\u305B\u308B` : "\u68EE\u30FB\u6797\u30FB\u96C6\u843D\u306E\u3046\u3061\u3001\u81EA\u8ECD\u306B\u8FD1\u3044\u534A\u5206\u3067\u306E\u307F\u4F0F\u305B\u3089\u308C\u308B";
+    return /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: `btn sm ${selC.ambush ? "on" : ""}`,
+        disabled: !selC.ambush && !\u7F6E\u3051\u308B,
+        title: \u8A33,
+        onClick: () => {
+          selC.ambush = !selC.ambush;
+          selC.revealed = !selC.ambush;
+        }
+      },
+      "\u4F0F\u5175\u306B\u7F6E\u304F"
+    );
+  })()), /* @__PURE__ */ React3.createElement("button", { className: "btn dark", onClick: () => {
     b.phase = "fight";
     setPhase("fight");
     setSpeed(0.3);

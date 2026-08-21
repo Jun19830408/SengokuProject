@@ -1,5 +1,5 @@
 import { MAP, axisOf, fromUV } from "./castleMap.js";
-import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, fieldScale, hasRiver, nearestOf, riverShift } from "./field.js";
+import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, VILLAGES, WOODS, fieldScale, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
 import { clamp } from "../core/util.js";
 import { ARMS } from "../data/roads.js";
 import { FIELD, passable } from "./field.js";
@@ -223,6 +223,58 @@ export const DETACH_DEFS = [
     need: (c, men) => (c.gen.wit >= 60 && men >= 50) && FORESTS.length > 0, why: "知略60以上・偵察兵50以上・森が必要",
   },
 ];
+
+/* ------------------------------------------------ 伏兵（GDD 8.7）
+
+   森に兵を伏せ、寄せて来る敵の脇腹へ現れる。当たれば相手の士気は十六、
+   隊列は十二削れる。桶狭間も、厳島も、要はこれである。
+
+   ただし誰にでもできる芸ではない。伏せるとは、戦の前に戦場を読み、当たる所を
+   見切って兵を置くことであるから、それだけの知恵者が軍にいなければ献策すら
+   出ない。知略七十八以上――一国に数人という将である。
+
+   伏せられるのは、森・林・集落のうち、自軍に近い半分にある所。敵陣の際に
+   伏せても、着く前に見つかる。 */
+export const 伏兵の知略 = 78;
+
+export function 伏兵の策士(b, side) {
+  const 皆 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && c.gen);
+  const 首 = [...皆].sort((a, z) => ((z.gen.wit || 0) - (a.gen.wit || 0)))[0];
+  return 首 && (首.gen.wit || 0) >= 伏兵の知略 ? 首.gen : null;
+}
+
+// 伏せられる地か（森・林・集落で、自軍に近い半分）
+export function 伏せられる地(b, x, y, side) {
+  if (b.map || !b.陣) return false;
+  const t = terrainAt(x, y);
+  if (t !== "forest" && t !== "wood" && t !== "village") return false;
+  const 味方 = b.陣[side], 敵 = b.陣[side === "P" ? "E" : "P"];
+  if (!味方 || !敵) return false;
+  return Math.hypot(x - 味方.x, y - 味方.y) < Math.hypot(x - 敵.x, y - 敵.y);
+}
+
+// その隊は、いまいる所で伏せられるか（プレイヤーの釦の可否もこれで決める）
+export function 伏兵に置ける(b, c) {
+  if (!c || c.detach || c.routed || c.withdraw || c.dead || c.destroyed) return false;
+  if (!伏兵の策士(b, c.side)) return false;
+  return 伏せられる地(b, c.x, c.y, c.side);
+}
+
+/* 伏せ場を探す。自軍に近い半分の、森・林・集落のうち手近な所。
+   遠い伏せ場は選ばない。着くまでに戦が始まってしまう。 */
+export function 伏せ場を探す(b, c, 限り = 900) {
+  if (b.map || !b.陣) return null;
+  let best = null, bd = 限り;
+  for (const 群 of [FORESTS, WOODS, VILLAGES]) {
+    for (const f of 群) {
+      const d = Math.hypot(f.x - c.x, f.y - c.y);
+      if (d >= bd) continue;
+      if (!伏せられる地(b, f.x, f.y, c.side)) continue;
+      bd = d; best = { x: f.x, y: f.y };
+    }
+  }
+  return best;
+}
 
 /* 分遣を出す頃合い（GDD 8.5）。
 

@@ -1,5 +1,5 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
-import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 分遣の頃合い } from "./corps.js";
+import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い } from "./corps.js";
 import { ARM_STATS, HILLS, RIVER, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { clamp } from "../core/util.js";
@@ -135,6 +135,40 @@ export function battleAI(b) {
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
   // 分遣隊は所属を問わず割り当てられた任務を自律遂行する（GDD 8.5）
   for (const c of alive) if (c.detach && !c.routed) detachAI(b, c, alive);
+  /* 伏兵（GDD 8.7）。
+
+     森に兵を伏せ、寄せて来る敵の脇腹へ現れる。知略七十八以上の将が軍にいて
+     初めて出る策である。これまでプレイヤーだけの手であったが、敵も、委ねられた
+     味方も同じように用いる。片側だけの技では戦にならない。
+
+     一軍に一隊まで。全隊を伏せては戦列が空になる。 */
+  if (!MAP && b.t > 2 && b.t < 45) {
+    if (!b.伏兵図) b.伏兵図 = {};
+    for (const side of ["P", "E"]) {
+      if (b.伏兵図[side]) continue;
+      if (!伏兵の策士(b, side)) { b.伏兵図[side] = "策士なし"; continue; }
+      const 候補 = alive.filter((c) => c.side === side && delegated(b, c)
+        && !c.detach && !c.routed && !c.withdraw && !c.ambush && !c.伏せ場
+        && !c.squads.some((q) => q.engaged));
+      const 手勢 = alive.filter((c) => c.side === side && !c.detach);
+      if (手勢.length < 2 || !候補.length) continue;      // 全隊を伏せはしない
+      let 選 = null, 場 = null, bd = 1e9;
+      for (const c of 候補) {
+        const p = 伏せ場を探す(b, c);
+        if (!p) continue;
+        const d = Math.hypot(p.x - c.x, p.y - c.y);
+        // 小さい隊から伏せる。本隊を欠くわけにはいかない。
+        const 目方 = d + corpsMen(c) * 0.12;
+        if (目方 < bd) { bd = 目方; 選 = c; 場 = p; }
+      }
+      if (!選) { b.伏兵図[side] = "伏せ場なし"; continue; }
+      b.伏兵図[side] = true;
+      選.伏せ場 = 場;
+      issueOrder(b, 選, { order: "移動", tx: 場.x, ty: 場.y });
+      b.log.push({ t: b.t, text: `${選.gen.name}隊が木立へ回り、身をひそめる。` });
+    }
+  }
+
   /* 分遣（GDD 8.5）。
 
      これまでは戦の初めの二十五秒のうちに、賽の目ひとつで分遣が出ていた。
@@ -178,6 +212,22 @@ export function battleAI(b) {
 
   for (const c of alive) {
     if (!delegated(b, c) || c.routed || c.detach) continue;
+    /* 伏せに向かう隊と、伏せている隊。
+
+       伏せ場へ着いたら身をひそめる。ひそめた隊には、以後なにも命じない。
+       命じれば動き、動けば見つかる。 */
+    if (c.ambush && !c.revealed) continue;
+    if (c.伏せ場 && !c.ambush) {
+      const d = Math.hypot(c.伏せ場.x - c.x, c.伏せ場.y - c.y);
+      if (d > 60) { issueOrder(b, c, { order: "移動", tx: c.伏せ場.x, ty: c.伏せ場.y }); continue; }
+      if (伏せられる地(b, c.x, c.y, c.side)) {
+        c.ambush = true; c.revealed = false; c.伏せ場 = null;
+        c.order = "待機"; c.tx = c.x; c.ty = c.y;
+        b.log.push({ t: b.t, text: `${c.gen.name}隊が木立に伏せた。` });
+        continue;
+      }
+      c.伏せ場 = null;                       // 着いてみたら伏せられぬ地であった
+    }
     const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
     const foes = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
     if (!foes.length) continue;

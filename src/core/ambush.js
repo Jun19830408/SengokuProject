@@ -42,7 +42,31 @@ export function ambushChance(gen, weather, terrain, ratio) {
   return clamp(p, 0, 0.52);
 }
 
-// 奇襲の首尾。当たれば敵の総大将を討ち、軍を瓦解させる。
+/* 奇襲の首尾は、企てた将の知略で段が分かれる（GDD 8.7）。
+
+   総大将が必ず討たれるのでは、桶狭間が毎年起こることになる。当たっても、
+   たいていは本陣を突き崩して混乱させるまでである。首を取るのは、よほどの
+   将が、よほどの機を得たときだけである。
+
+     知略九十以上 … 総大将を討ち取る。軍は瓦解する
+     知略八十五以上 … 総大将の備えは壊滅し、本人は本陣を捨てて退く。
+                      相手の兵は半ばに減る
+     知略八十以上 … 総大将の備えは四分の一に。相手の兵は四分の一を失う
+     知略七十以上 … 総大将の備えは半ばに。相手の兵は六分の一を失う
+     知略六十二以上 … 総大将の備えも含めて、相手の兵は八分の一を失う
+
+   乱れ（守りの利かなさ）と勢い（寄せ手の勢い）は、段が上ほど大きい。
+   兵の目減りは別に効くので、ここは控えめにしてある。 */
+export function 奇襲の段(wit) {
+  const w = wit || 0;
+  if (w >= 90) return { 位: "大将討死", 大将討死: true, 大将備え: 0, 全体欠け: 0, 乱れ: 0.25, 勢い: 1.25 };
+  if (w >= 85) return { 位: "本陣壊滅", 大将討死: false, 大将退く: true, 大将備え: 0, 全体欠け: 0.5, 乱れ: 0.5, 勢い: 1.18 };
+  if (w >= 80) return { 位: "本陣崩し", 大将討死: false, 大将備え: 0.25, 全体欠け: 0.25, 乱れ: 0.72, 勢い: 1.12 };
+  if (w >= 70) return { 位: "本陣衝き", 大将討死: false, 大将備え: 0.5, 全体欠け: 1 / 6, 乱れ: 0.84, 勢い: 1.08 };
+  return { 位: "陣払い", 大将討死: false, 大将備え: 1, 全体欠け: 1 / 8, 乱れ: 0.92, 勢い: 1.05 };
+}
+
+// 奇襲の首尾。当たれば敵の本陣を衝く。首まで取れるかは、企てた将の知略による。
 export function tryAmbush(s, army, castle, aGens, dGens, weather) {
   /* 奇襲を企てる者。将のいない軍は奇襲を仕掛けられない。
      将がみな討たれ、あるいは捕らわれた軍が城へ着くことはある。
@@ -55,9 +79,9 @@ export function tryAmbush(s, army, castle, aGens, dGens, weather) {
   const terr = (castle.kuni === "信濃" || castle.kuni === "甲斐" || castle.kuni === "飛騨") ? "hill" : "forest";
   const p = ambushChance(head, weather, terr, ratio);
   if (Math.random() > p) return { ok: false, by: head, p };
-  // 総大将を討った。守り手の大将と、その直属が崩れる。
+  // 本陣を衝いた。どこまで及ぶかは、企てた将の知略による。
   const cand = dGens.filter((x) => x.faction === castle.faction && !x.captive);
   const lord = [...cand].sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead - a.lead)[0];
-  return { ok: true, by: head, target: lord || null, p };
+  return { ok: true, by: head, target: lord || null, p, 段: 奇襲の段(head.wit) };
 }
 

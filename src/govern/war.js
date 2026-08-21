@@ -354,36 +354,61 @@ export function resolveOffscreen(prev, armyId, castleId) {
     // 寡兵ならば奇襲を試みる。総大将を討てば、兵力比は意味を失う。
     const wx = s.weather || "晴";
     const amb = tryAmbush(s, army, castle, aGens, dGens, wx);
-    let atk = army.men * (0.8 + army.localTrain / 250) * (1 + lead(aGens) / 300) * (0.85 + Math.random() * 0.3);
-    let def = dMen * (0.85 + castle.localTrain / 250) * (1 + castle.def / 200 + lead(dGens) / 300) * (0.85 + Math.random() * 0.3);
+    /* 奇襲が当たったときの始末（GDD 8.7）。
+
+       もとは当たれば必ず総大将が討たれた。桶狭間が毎年起こることになる。
+       当たっても、たいていは本陣を突き崩して混乱させるまでである。首を取るのは、
+       よほどの将が、よほどの機を得たときだけである（core/ambush.js の 奇襲の段）。
+
+       兵の目減りは戦の前に効かせる。奇襲とは、当たる前に相手を削ることだからである。 */
+    let 乱れ = 1, 勢い = 1;
     if (amb && amb.ok) {
-      def *= 0.20;                                   // 大将を失い、備えが崩れた
-      atk *= 1.25;                                   // 寄せ手は勢いに乗る
+      const 段 = amb.段;
+      乱れ = 段.乱れ; 勢い = 段.勢い;
+      const 主 = amb.target ? s.generals.find((x) => x.id === amb.target.id) : null;
+      // 総大将の備え
+      if (主 && 段.大将備え < 1) 主.retinue = Math.round(主.retinue * 段.大将備え);
+      // 相手の兵ぜんたい（城の兵と、諸将の手勢）
+      if (段.全体欠け > 0) {
+        const 残 = 1 - 段.全体欠け;
+        castle.local = Math.max(0, Math.round(castle.local * 残));
+        for (const x of dGens) {
+          if (主 && x.id === 主.id && 段.大将備え < 1) continue;   // 総大将は別に数えた
+          x.retinue = Math.round(x.retinue * 残);
+        }
+      }
+      let 文 = `${amb.by.name}が${castle.name}の本陣を衝いた。`;
+      if (段.大将討死 && 主) {
+        s.generals = s.generals.filter((x) => x.id !== 主.id);
+        if (主.lord) {
+          const nx = s.generals.filter((x) => x.faction === 主.faction && !x.captive).sort((a, z) => z.lead - a.lead)[0];
+          if (nx) nx.lord = true;
+        }
+        文 += `${主.name}は討たれ、${s.factions[castle.faction].name}の軍は瓦解した。`;
+        if (army.faction === s.player) s.msg = `${amb.by.name}が敵の本陣を衝き、${主.name}を討ち取った。`;
+      } else if (段.大将退く && 主) {
+        // 本陣は壊滅し、大将は身一つで退く。近い自領の城へ落ちる。
+        const 落ち先 = s.castles.filter((x) => x.faction === 主.faction && x.id !== castle.id)
+          .sort((a, z) => Math.hypot(a.lon - castle.lon, a.lat - castle.lat)
+            - Math.hypot(z.lon - castle.lon, z.lat - castle.lat))[0];
+        if (落ち先) 主.at = 落ち先.id;
+        文 += `${主.name}の備えは壊滅し、本人は本陣を捨てて退いた。`;
+      } else {
+        文 += `${s.factions[castle.faction].name}の備えは乱れた。`;
+      }
+      s.chronicle.push({ y: s.year, m: s.month, text: 文 });
     } else if (amb && !amb.ok && army.faction === s.player) {
       s.chronicle.push({ y: s.year, m: s.month, text: `${amb.by.name}は敵の隙を窺ったが、機を得なかった。` });
     }
+    // 奇襲で削れたあとの兵で戦う
+    const dGens2 = s.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
+    const dMen2 = castle.local + dGens2.reduce((a, x) => a + x.retinue, 0);
+    let atk = army.men * (0.8 + army.localTrain / 250) * (1 + lead(aGens) / 300) * (0.85 + Math.random() * 0.3) * 勢い;
+    let def = dMen2 * (0.85 + castle.localTrain / 250) * (1 + castle.def / 200 + lead(dGens2) / 300) * (0.85 + Math.random() * 0.3) * 乱れ;
     const atkWon = atk > def;
-    if (amb && amb.ok) {
-      const fell = atkWon && amb.target;
-      s.chronicle.push({ y: s.year, m: s.month,
-        text: fell
-          ? `${amb.by.name}が${castle.name}の本陣を衝いた。${amb.target.name}は討たれ、${s.factions[castle.faction].name}の軍は瓦解した。`
-          : `${amb.by.name}が${castle.name}の本陣を衝いた。${s.factions[castle.faction].name}の備えは乱れた。` });
-      if (fell) {
-        const t2 = s.generals.find((x) => x.id === amb.target.id);
-        if (t2) {
-          s.generals = s.generals.filter((x) => x.id !== t2.id);
-          if (t2.lord) {
-            const nx = s.generals.filter((x) => x.faction === t2.faction && !x.captive).sort((a, z) => z.lead - a.lead)[0];
-            if (nx) nx.lord = true;
-          }
-        }
-        if (army.faction === s.player) s.msg = `${amb.by.name}が敵の本陣を衝き、${amb.target.name}を討ち取った。`;
-      }
-    }
     const r = Math.min(atk, def) / Math.max(atk, def);
     const aLoss = Math.round(army.men * (atkWon ? 0.16 * r + 0.06 : 0.3 + 0.2 * r));
-    const dLoss = Math.round(dMen * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
+    const dLoss = Math.round(dMen2 * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
     army.men = Math.max(0, army.men - aLoss); army.local = Math.max(0, army.local - aLoss);
     castle.local = Math.max(0, castle.local - dLoss);
     s.chronicle.push({ y: s.year, m: s.month,

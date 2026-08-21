@@ -6,7 +6,7 @@ import { stepBattle } from "../battle/engine.js";
 import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
-import { 退かせる } from "../battle/corps.js";
+import { 伏兵に置ける, 伏兵の策士, 退かせる } from "../battle/corps.js";
 
 /* --------------------------------------------------------------- 合戦画面 */
 export function BattleScreen({ ctx, land, onEnd }) {
@@ -510,8 +510,22 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 );
               })()}
               <FormationPicker corps={selC} onPick={(f) => changeForm(selC, f)} />
-              <button className={`btn sm ${selC.ambush ? "on" : ""}`} disabled={(selC.地 || terrainAt(selC.x, selC.y)) !== "forest"}
-                onClick={() => { selC.ambush = !selC.ambush; selC.revealed = !selC.ambush; }}>伏兵に置く</button>
+              {/* 伏兵（GDD 8.7）。知略七十八以上の将が軍にいて初めて献策される。
+                  伏せられるのは、森・林・集落のうち自軍に近い半分にある所。 */}
+              {(() => {
+                const 策 = 伏兵の策士(b, selC.side);
+                const 置ける = 伏兵に置ける(b, selC);
+                const 訳 = !策 ? "知略七十八以上の将がおらぬ"
+                  : 置ける ? `${策.name}の献策：この木立に伏せる`
+                    : "森・林・集落のうち、自軍に近い半分でのみ伏せられる";
+                return (
+                  <button className={`btn sm ${selC.ambush ? "on" : ""}`}
+                    disabled={!selC.ambush && !置ける} title={訳}
+                    onClick={() => { selC.ambush = !selC.ambush; selC.revealed = !selC.ambush; }}>
+                    伏兵に置く
+                  </button>
+                );
+              })()}
             </>
           )}
           <button className="btn dark" onClick={() => { b.phase = "fight"; setPhase("fight"); setSpeed(0.3); }}>合戦開始</button>
