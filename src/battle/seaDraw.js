@@ -108,7 +108,30 @@ export function drawShip(ctx, s, col, mine) {
   ctx.lineTo(L * 0.16, W * 0.5);
   ctx.closePath(); ctx.stroke();
 
-  if (s.t === "atake" || s.t === "seki") {
+  if (s.t === "tekko") {
+    /* 鉄甲船。総矢倉に鉄板を張り、大筒の狭間を開ける。
+       白木ではなく黒鉄の色で描く。海の上ではこれだけが黒い。 */
+    const bw = L * 0.58, bh = W * 0.84;
+    ctx.fillStyle = "#4A4E52";
+    ctx.fillRect(-bw / 2 - L * 0.04, -bh / 2, bw, bh);
+    ctx.fillStyle = "rgba(0,0,0,0.26)";
+    ctx.fillRect(-bw / 2 - L * 0.04, 0, bw, bh / 2);
+    ctx.strokeStyle = "rgba(20,22,24,0.85)"; ctx.lineWidth = 1.2;
+    ctx.strokeRect(-bw / 2 - L * 0.04, -bh / 2, bw, bh);
+    // 鉄板の鋲
+    ctx.fillStyle = "rgba(200,206,210,0.55)";
+    for (let k = 0; k < 5; k++) for (const yy of [-bh / 2 + 2.5, bh / 2 - 2.5]) {
+      ctx.fillRect(-bw / 2 - L * 0.04 + 3 + k * (bw - 6) / 5, yy - 0.6, 1.4, 1.4);
+    }
+    // 大筒。舷から突き出る
+    ctx.strokeStyle = "rgba(24,26,28,0.9)"; ctx.lineWidth = 2;
+    for (const k of [-0.16, 0.06]) {
+      ctx.beginPath();
+      ctx.moveTo(L * k, -bh / 2); ctx.lineTo(L * k, -bh / 2 - W * 0.22);
+      ctx.moveTo(L * k, bh / 2); ctx.lineTo(L * k, bh / 2 + W * 0.22);
+      ctx.stroke();
+    }
+  } else if (s.t === "atake" || s.t === "seki") {
     // 矢倉・屋形。白木の板を張り、狭間を開ける
     const bw = s.t === "atake" ? L * 0.52 : L * 0.34;
     const bh = s.t === "atake" ? W * 0.78 : W * 0.56;

@@ -5,7 +5,7 @@ import { clamp } from "./util.js";
 import { TOWNS } from "../data/castles.js";
 import { ROADS } from "../data/roads.js";
 import { COAST, px, py } from "../data/geo.js";
-import { 船の割り } from "../data/ships.js";
+import { 船の割り, 鉄甲 } from "../data/ships.js";
 
 /* ------------------------------------------------------ 海戦（GDD 10章）
    海を渡る軍は、渡りきるまで岸に足をつけられぬ。
@@ -87,7 +87,9 @@ export function navalPower(s, fid) {
     ships += Math.round(22 * 厚);
     skill += Math.round(22 * 厚);
   }
-  return { ships: Math.max(2, ships), skill: clamp(skill, 30, 100) };
+  // 造ってある鉄甲船（家の宝である。数は家に控えてある）
+  const 鉄数 = Math.min(鉄甲.限り, Math.round((s.factions[fid] || {}).鉄甲船 || 0));
+  return { ships: Math.max(2, ships) + 鉄数, skill: clamp(skill, 30, 100), tekko: 鉄数 };
 }
 
 /* ------------------------------------------------ 渡海の船立て（GDD 10章）
@@ -111,26 +113,31 @@ export const 船の限り = 90;            // 盤に並べられる艘数の上�
 export const 徴した船の技量 = 34;      // 漕ぐのが兵では、水主の技量は望めない
 
 // 船の格。海の戦は数ではなく、船の格と水主の技量で決まる。
-export const 船の格 = { atake: 3.2, seki: 1.6, kobaya: 0.6 };
+export const 船の格 = { tekko: 9.0, atake: 3.2, seki: 1.6, kobaya: 0.6 };
 
 // 船立ての戦力。艘数をそのまま比べては、徴した小舟が軍船と同じ重みになる。
 export function 船立ての力(立) {
   if (!立) return 0;
   const n = 立.内訳 || {};
-  const 戦 = (n.atake || 0) * 船の格.atake + (n.seki || 0) * 船の格.seki + (n.kobaya || 0) * 船の格.kobaya;
+  const 戦 = (n.tekko || 0) * 船の格.tekko + (n.atake || 0) * 船の格.atake + (n.seki || 0) * 船の格.seki + (n.kobaya || 0) * 船の格.kobaya;
   return 戦 * (0.55 + (立.skill || 50) / 140);
 }
 
 /* 軍船に足りぬぶんを、徴した小舟で埋める。 */
 function 立てる(np, 艘, 上限) {
   const 要 = clamp(Math.round(艘), 4, 上限 || 船の限り);
-  const 軍 = Math.min(Math.round(np.ships), 要);
-  const 雑 = Math.max(0, 要 - 軍);
+  /* 鉄甲船は船の割りの外にある（GDD 10.5）。
+     割りで湧いてくるものではなく、金と歳月をかけて造ったものであるから、
+     持っていれば必ず出す。六艘までしかない。 */
+  const 鉄 = Math.max(0, Math.min(np.tekko || 0, 鉄甲.限り, 要));
+  const 残 = Math.max(0, 要 - 鉄);
+  const 軍 = Math.min(Math.max(0, Math.round(np.ships) - 鉄), 残);
+  const 雑 = Math.max(0, 残 - 軍);
   const w = 船の割り(np.skill);
   const 和 = w.atake + w.seki + w.kobaya;
-  const n = { atake: Math.round(軍 * w.atake / 和), seki: Math.round(軍 * w.seki / 和), kobaya: 0 };
+  const n = { tekko: 鉄, atake: Math.round(軍 * w.atake / 和), seki: Math.round(軍 * w.seki / 和), kobaya: 0 };
   n.kobaya = Math.max(0, 軍 - n.atake - n.seki) + 雑;
-  const skill = Math.round((np.skill * 軍 + 徴した船の技量 * 雑) / Math.max(1, 要));
+  const skill = Math.round((np.skill * (軍 + 鉄) + 徴した船の技量 * 雑) / Math.max(1, 要));
   /* 軍船だけの力も持たせる。
 
      海を握っているかどうかは、軍船で測らねばならない。
@@ -138,9 +145,10 @@ function 立てる(np, 艘, 上限) {
      なってしまう。実際そうなっていた。小早川が漁船五十七艘を連れて渡ると、
      軍船九艘の河野が湊から出てこない、という始末である。
      漁船は兵を運ぶものであって、海を制するものではない。 */
-  const 軍力 = (n.atake * 船の格.atake + n.seki * 船の格.seki
+  const 軍力 = (n.tekko * 船の格.tekko + n.atake * 船の格.atake + n.seki * 船の格.seki
     + Math.max(0, n.kobaya - 雑) * 船の格.kobaya) * (0.55 + np.skill / 140);
-  return { 内訳: n, ships: 要, 艘: 要, skill: clamp(skill, 30, 100), 軍船: 軍, 徴船: 雑, 軍力 };
+  return { 内訳: n, ships: 要, 艘: 要, skill: clamp(skill, 30, 100),
+    軍船: 軍 + 鉄, 鉄甲: 鉄, 徴船: 雑, 軍力 };
 }
 
 // 渡る側。兵を乗せるだけの船が要る。
@@ -207,3 +215,44 @@ export function resolveSeaBattle(s, army, inter) {
   return { win, lost, foeName: s.factions[inter.by].name };
 }
 
+
+/* ------------------------------------------------ 鉄甲船を造る（GDD 10.5）
+
+   天正六年（一五七八）、九鬼嘉隆が伊勢で六艘を造った。舷に鉄を張った大船で、
+   焙烙も火矢も通らなかったと伝わる。木津川口で毛利の船を退けたのはこの船である。
+
+   誰にでも造れるものではない。海に面した城で、湊か水軍衆を抱えていること。
+   金と歳月がかかる（普請を積み重ねる）。そして六艘より多くは造れない。 */
+export function 鉄甲船を造れるか(s, c) {
+  if (!c) return { ok: false, why: "" };
+  const f = s.factions[c.faction];
+  if (!f) return { ok: false, why: "" };
+  if (s.year < 鉄甲.始まりの年) {
+    return { ok: false, why: `鉄を張った船を思いつく者はまだいない（${鉄甲.始まりの年}年より）` };
+  }
+  if ((f.鉄甲船 || 0) >= 鉄甲.限り) return { ok: false, why: `鉄甲船は${鉄甲.限り}艘が限りである` };
+  if (!isCoastal(c)) return { ok: false, why: "海に面した城でなければ船は造れない" };
+  const 湊 = (TOWNS || []).some((t) => (t.kind === "港" || t.kind === "水軍衆")
+    && 湊の主(s, t) === c.faction && Math.hypot(px(t.lon) - c.x, py(t.lat) - c.y) < 90);
+  if (!湊) return { ok: false, why: "湊か水軍衆を抱えていなければ、これほどの船は造れない" };
+  if (f.gold < 鉄甲.手間) return { ok: false, why: `${鉄甲.手間}貫が要る` };
+  return { ok: true, why: "" };
+}
+
+// 造船の下知ひとたび。政務の高い者ほど早く進む。積み上がれば一艘できあがる。
+export function 鉄甲船の普請(s, c, gen) {
+  const 可 = 鉄甲船を造れるか(s, c);
+  if (!可.ok) return { ok: false, why: 可.why };
+  const f = s.factions[c.faction];
+  f.gold -= 鉄甲.手間;
+  const 進 = Math.round(18 + (gen ? gen.gov : 60) / 5);
+  const 前 = Math.round(f.鉄甲普請 || 0);
+  f.鉄甲普請 = 前 + 進;
+  let 成 = false;
+  if (f.鉄甲普請 >= 鉄甲.普請) {
+    f.鉄甲普請 -= 鉄甲.普請;
+    f.鉄甲船 = (f.鉄甲船 || 0) + 1;
+    成 = true;
+  }
+  return { ok: true, 進, 前, 後: Math.round(f.鉄甲普請), 成, 数: f.鉄甲船 || 0 };
+}

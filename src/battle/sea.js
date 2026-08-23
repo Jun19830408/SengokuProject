@@ -66,7 +66,7 @@ let 通し = 0;
    その結果をそのまま受け取れるようにしてある。 */
 export function makeFleet(side, gen, 艘, skill, x, y, facing, color, 内訳) {
   const n = 内訳
-    ? { atake: 内訳.atake || 0, seki: 内訳.seki || 0, kobaya: 内訳.kobaya || 0 }
+    ? { tekko: 内訳.tekko || 0, atake: 内訳.atake || 0, seki: 内訳.seki || 0, kobaya: 内訳.kobaya || 0 }
     : 船を並べる(Math.max(1, Math.round(艘)), skill);
   const ships = [];
   let i = 0;
@@ -248,7 +248,9 @@ export function stepSeaBattle(b, dt) {
           const 傷 = st.矢 * (2.4 + Math.random() * 2.2) * (0.6 + f.skill / 150) * 手加減;
           的.e.hp -= 傷;
           的.e.crew -= 傷 * 0.28;
-          if (Math.random() < 0.34) 的.e.fire += 4 + Math.random() * 7;   // 火矢が帆に付く
+          // 火矢が帆に付く。鉄を張った舷には付かない（SHIPS の 焼け）。
+          const 焼 = SHIPS[的.e.t].焼け == null ? 1 : SHIPS[的.e.t].焼け;
+          if (Math.random() < 0.34) 的.e.fire += (4 + Math.random() * 7) * 焼;
           if (b.fx.length < 240) b.fx.push({ k: "arrow", x: s.x, y: s.y, x2: 的.e.x, y2: 的.e.y, t: 0, life: 0.42 });
         }
       }
@@ -259,7 +261,8 @@ export function stepSeaBattle(b, dt) {
         const 風 = 風向き(向);                        // 1なら追い風＝風上から投げている
         if (風 > -0.2 && Math.random() < 0.5) {
           const 効 = st.焙 * (0.5 + 風 * 0.7) * (0.6 + f.skill / 140);
-          的.e.fire += (9 + Math.random() * 13) * 効 * 0.45;
+          const 焼2 = SHIPS[的.e.t].焼け == null ? 1 : SHIPS[的.e.t].焼け;
+          的.e.fire += (9 + Math.random() * 13) * 効 * 0.45 * 焼2;
           的.e.hp -= 3 * 効 * 手加減;
           if (b.fx.length < 240) b.fx.push({ k: "horo", x: 的.e.x, y: 的.e.y, t: 0, life: 0.6 });
           b.log.push({ t: b.t, text: `${f.gen.name}の小早が焙烙を投げた。` });

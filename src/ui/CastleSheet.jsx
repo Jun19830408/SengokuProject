@@ -6,6 +6,8 @@ import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
 import { RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap } from "../core/rank.js";
 import { canSee, relOf } from "../core/state.js";
 import { 城の姫 } from "../core/hime.js";
+import { 鉄甲船を造れるか } from "../core/naval.js";
+import { 鉄甲 } from "../data/ships.js";
 import { U, clamp, fmt, monthsBetween } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
@@ -270,7 +272,21 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     {["開墾", "治水", "商業", "築城", "訓練", "徴募"].map((k) => (
                       <button key={k} className={`btn sm ${cmd === k ? "on" : ""}`} onClick={() => setCmd(k)}>{k}</button>
                     ))}
+                    {/* 鉄甲船（GDD 10.5）。造れる城でだけ出す。 */}
+                    {鉄甲船を造れるか(g, c).ok && (
+                      <button className={`btn sm ${cmd === "造船" ? "on" : ""}`} onClick={() => setCmd("造船")}>造船</button>
+                    )}
                   </div>
+                  {(cmd === "造船" || (g.factions[c.faction].鉄甲船 || 0) > 0
+                    || (g.factions[c.faction].鉄甲普請 || 0) > 0) && 鉄甲船を造れるか(g, c).ok && (
+                    <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginBottom: 8 }}>
+                      鉄甲船 <b style={{ color: U.text }}>{g.factions[c.faction].鉄甲船 || 0}</b>／{鉄甲.限り}艘
+                      　普請 {Math.round(g.factions[c.faction].鉄甲普請 || 0)}／{鉄甲.普請}
+                      （一度の下知で{鉄甲.手間}貫）<br />
+                      舷に鉄を張った大船。火矢も焙烙も通らず、大筒を遠くまで撃つ。
+                      ただし極めて鈍く、風にも乗らない。海戦のときは必ず出る。
+                    </div>
+                  )}
                   <select className="sel" style={{ width: "100%", marginBottom: 8 }}
                     value={freeGens.some((x) => x.id === cur) ? cur : (freeGens[0] || {}).id || ""}
                     onChange={(e) => setGenId(e.target.value)}>

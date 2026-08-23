@@ -4,6 +4,8 @@ import { holdsProvince, kenchiCost, kenchiDone, rankBonus, runKenchi } from "../
 import { fiefOf, fiefRoom, troopCap } from "../core/rank.js";
 import { rosterSync } from "../core/roster.js";
 import { relKey } from "../core/state.js";
+import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
+import { 鉄甲 } from "../data/ships.js";
 import { clamp, fmt } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
@@ -34,7 +36,7 @@ export function runCommand(prev, castleId, cmd, genId, g) {
       const lines = [];
       const rec = (label, before, after, unit = "") => lines.push({ label, before, after, unit });
       // 金がなければ何も命じられぬ。無い袖は振れぬ。
-      const COST_OF = { 開墾: 140, 治水: 180, 商業: 160, 築城: 200, 訓練: 120, 徴募: 100 };
+      const COST_OF = { 開墾: 140, 治水: 180, 商業: 160, 築城: 200, 訓練: 120, 徴募: 100, 造船: 鉄甲.手間 };
       if (f.gold < (COST_OF[cmd] || 140)) {
         s.msg = `金が足りぬ。${cmd}には${COST_OF[cmd] || 140}貫が要る（手元${fmt(Math.max(0, f.gold))}貫）。`;
         return s;
@@ -83,6 +85,19 @@ export function runCommand(prev, castleId, cmd, genId, g) {
         rosterSync(c, "rost", c.local, `loc-${c.id}`);   // 新兵を組に入れる
         c.localTrain = Math.round((c.localTrain * old + 30 * n) / Math.max(1, c.local));
         c.pop -= Math.round(n * 0.2);
+      } else if (cmd === "造船") {
+        /* 鉄甲船（GDD 10.5）。舷に鉄を張った大船を造る。
+           金と歳月がかかり、六艘より多くは造れない。 */
+        const r = 鉄甲船の普請(s, c, gen);
+        if (!r.ok) { s.msg = r.why; return prev; }
+        cost = 0;                                   // 金は 鉄甲船の普請 の中で払っている
+        rec("鉄甲船の普請", r.前, r.成 ? 鉄甲.普請 : r.後, `／${鉄甲.普請}`);
+        if (r.成) {
+          rec("鉄甲船", r.数 - 1, r.数, "艘");
+          const 文 = `${c.name}で鉄甲船が一艘できあがった（${r.数}艘目）。舷に鉄を張った大船である。`;
+          s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+          s.msg = 文;
+        }
       } else if (cmd === "調略") {
         cost = 220;
         const target = s.castles.filter((x) => x.faction !== c.faction)

@@ -1,6 +1,8 @@
 import { ambushChance } from "../core/ambush.js";
 import { ransomCost, takeAsPrisoner } from "../core/capture.js";
 import { 姫を整える, 姫の年送り, 姫の居場所, 使者の帰り, 姫の采配 } from "../core/hime.js";
+import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
+import { 鉄甲 } from "../data/ships.js";
 import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, lifeSpan, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
@@ -801,6 +803,22 @@ export function advanceMonth(prev, g) {
           });
         }
         const fa = s.factions[fid];
+        /* 鉄甲船を造る（GDD 10.5）。天正六年よりのち、湊を持ち、蓄えのある家は
+           鉄を張った大船を仕立てる。賽は振らない（振れば他の出来事の目がずれる）。
+           金がかかるので、蓄えの薄い家は手を出せない。 */
+        if (s.year >= 鉄甲.始まりの年 && fa.gold > 2600 && (fa.鉄甲船 || 0) < 鉄甲.限り) {
+          const 湊城 = s.castles.filter((c2) => c2.faction === fid)
+            .find((c2) => 鉄甲船を造れるか(s, c2).ok);
+          if (湊城) {
+            const 匠 = s.generals.filter((q) => q.at === 湊城.id && q.faction === fid && !q.captive)
+              .sort((a, b) => b.gov - a.gov)[0];
+            const r = 鉄甲船の普請(s, 湊城, 匠);
+            if (r.ok && r.成) {
+              s.chronicle.push({ y: s.year, m: s.month,
+                text: `${湊城.name}で${fa.name}が鉄甲船を一艘仕立てた（${r.数}艘目）。` });
+            }
+          }
+        }
         // 気性ごとの振る舞い
         if (fa.temper === "陰謀" && fa.aim && fa.gold > 500 && Math.random() < 0.3 * lv(s).aiPlot) {
           const t = s.castles.find((c2) => c2.id === fa.aim.target);

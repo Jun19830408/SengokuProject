@@ -66,10 +66,11 @@ for (const [t, 名] of [['yari', '槍'], ['yumi', '弓'], ['teppo', '鉄砲'], [
 }
 
 /* 二、船 */
-for (const t of ['atake', 'seki', 'kobaya']) {
+for (const t of ['tekko', 'atake', 'seki', 'kobaya']) {
   const p = 版(150, 96);
   p.ctx.fillStyle = '#9FC0CE'; p.ctx.fillRect(0, 0, 150, 96);
-  const 倍 = 1.9;                                // 三種とも同じ倍率。大小の差が見えるように
+  const 倍 = 1.42;                               // 四種とも同じ倍率。大小の差が見えるように
+  // （鉄甲船は的三十と大きい。倍率を上げると大筒が枠から出てしまう）
   p.ctx.save(); p.ctx.translate(75, 48); p.ctx.scale(倍, 倍); p.ctx.translate(-75, -48);
   Z.drawShip(p.ctx, { t, x: 75, y: 48, facing: 0, hp: 1, men: 10, burn: 0 }, 青, true);
   p.ctx.restore();

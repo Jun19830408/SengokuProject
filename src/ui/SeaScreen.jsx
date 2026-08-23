@@ -207,7 +207,7 @@ export function SeaScreen({ ctx, land, onEnd }) {
   const 敵艘 = b.fleets.filter((f) => f.side === "E" && !f.dead).reduce((a, f) => a + fleetShips(f), 0);
 
   const 帳 = (f) => {
-    const n = { atake: 0, seki: 0, kobaya: 0 };
+    const n = { tekko: 0, atake: 0, seki: 0, kobaya: 0 };
     for (const s of f.ships) if (!s.sunk) n[s.t]++;
     const 燃 = f.ships.filter((s) => !s.sunk && s.fire > 8).length;
     return { n, 燃 };
@@ -308,7 +308,7 @@ export function SeaScreen({ ctx, land, onEnd }) {
                       <button className="btn sm" style={{ padding: "1px 8px" }} onClick={() => setFoeSel(null)}>閉じる</button>
                     </div>
                     <div className="num" style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.6 }}>
-                      {fleetShips(foeF)}艘（安宅{n.atake}・関船{n.seki}・小早{n.kobaya}）／
+                      {fleetShips(foeF)}艘（{n.tekko ? `鉄甲${n.tekko}・` : ""}安宅{n.atake}・関船{n.seki}・小早{n.kobaya}）／
                       乗り手{fmt(Math.round(fleetCrew(foeF)))}人／士気{Math.round(foeF.morale)}／技量{foeF.skill}
                       {燃 ? `／${燃}艘炎上中` : ""}{foeF.routed ? "／崩れている" : ""}
                     </div>
@@ -339,7 +339,7 @@ export function SeaScreen({ ctx, land, onEnd }) {
                       {selF.gen.name}の船団 の下知
                     </div>
                     <div className="num" style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.6 }}>
-                      {fleetShips(selF)}艘（安宅{n.atake}・関船{n.seki}・小早{n.kobaya}）／
+                      {fleetShips(selF)}艘（{n.tekko ? `鉄甲${n.tekko}・` : ""}安宅{n.atake}・関船{n.seki}・小早{n.kobaya}）／
                       乗り手{fmt(Math.round(fleetCrew(selF)))}人／士気{Math.round(selF.morale)}／技量{selF.skill}
                       {燃 ? `／${燃}艘炎上中` : ""}
                       {向 && !向.dead ? `／${向.gen.name}を狙っている` : ""}
@@ -415,18 +415,18 @@ export function SeaScreen({ ctx, land, onEnd }) {
    将が三人いれば三つに分ける。船も将のあいだで按分する。 */
 function 分ける(内訳, 割) {
   const 出 = [];
-  const 残 = { ...内訳 };
+  const 残 = { tekko: 0, ...内訳 };
   for (let i = 0; i < 割; i++) {
     const 最後 = i === 割 - 1;
     const n = {};
-    for (const k of ["atake", "seki", "kobaya"]) {
+    for (const k of ["tekko", "atake", "seki", "kobaya"]) {
       n[k] = 最後 ? 残[k] : Math.round((内訳[k] || 0) / 割);
       残[k] -= n[k];
     }
     出.push(n);
   }
   // 一艘も無い船団を作らない
-  return 出.filter((n) => n.atake + n.seki + n.kobaya > 0);
+  return 出.filter((n) => (n.tekko || 0) + n.atake + n.seki + n.kobaya > 0);
 }
 
 export function 海戦を仕立てる(s, army, inter, 地名, pColor, eColor, pName, eName) {
