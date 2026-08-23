@@ -1,10 +1,13 @@
 import { HIME, HIME_NAMES } from "../data/hime.js";
-import { clamp } from "./util.js";
+import { clamp, 籤 } from "./util.js";
 
 /* state.js からは借りない。あちらがこちらを呼ぶので、行き来させると輪になる。
    どれも一行で済むものである。 */
 const factionKoku = (s, fid) => s.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
 const relKey = (a, b) => [a, b].sort().join("|");
+/* 印は "a|b" という字である。字として含まれるかで見ると、"so"（宗家）が
+   "chosokabe|ichijo" に引っかかる。区切りで分けて突き合わせる。 */
+const 己の盟約 = (k, fid) => { const p = k.split("|"); return p[0] === fid || p[1] === fid; };
 const relOf = (s, a, b) => s.relations[relKey(a, b)] || { trust: 45, state: "中立", until: null };
 
 /* ==========================================================================
@@ -82,22 +85,6 @@ function 姫の名(s, 城, 引く) {
 }
 
 // 名の伝わらぬ姫を一人つくる
-/* 姫の籤（くじ）。
-
-   ここで Math.random を回さない。盤を作るときに何度も回すと、
-   同じ種から始めたはずの他の出来事（合戦の行方まで）が一斉にずれる。
-   卓の印と家と年から籤を起こせば、遊びごとには違い、同じ盤では必ず同じになる。 */
-function 籤(...種) {
-  let h = 2166136261;
-  for (const t of 種.join("|")) h = Math.imul(h ^ t.charCodeAt(0), 16777619);
-  return () => {
-    h |= 0; h = (h + 0x6D2B79F5) | 0;
-    let t = Math.imul(h ^ (h >>> 15), 1 | h);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 export function 姫を仕立てる(s, fid, 年) {
   const 城 = 本城(s, fid);
   if (!城) return null;
@@ -366,7 +353,7 @@ export function 姫の采配(s, fid, { 告げる, 申し込む } = {}) {
   const 引く = 籤(s.卓 || "卓", "采配", fid, s.year);
 
   // すでに縁で結んだ家があるか（縁は一つに限る）
-  const 縁あり = Object.keys(s.relations).some((k) => k.includes(fid)
+  const 縁あり = Object.keys(s.relations).some((k) => 己の盟約(k, fid)
     && s.relations[k].婚姻 && (s.hime || []).some((h) => h.id === s.relations[k].婚姻 && !h.死));
 
   // 隣の家。城の近さで測る。
@@ -417,7 +404,7 @@ export function 姫の采配(s, fid, { 告げる, 申し込む } = {}) {
   if (縁あり) {
     for (const k of Object.keys(s.relations)) {
       const r = s.relations[k];
-      if (!k.includes(fid) || !r.婚姻) continue;
+      if (!己の盟約(k, fid) || !r.婚姻) continue;
       const h = (s.hime || []).find((x) => x.id === r.婚姻 && !x.死);
       if (!h || h.faction !== fid) continue;           // 嫁がせた側だけが切れる
       const 相 = k.split("|").find((x) => x !== fid);

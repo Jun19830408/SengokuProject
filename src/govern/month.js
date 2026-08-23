@@ -9,13 +9,14 @@ import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
-import { atPeace, lv, relKey, relOf, specialBonus } from "../core/state.js";
+import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手 } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
 import { PLOTS } from "../data/diplo.js";
 import { FATED, NEWCOMERS, PARENT } from "../data/newcomers.js";
 import { GOKINAI } from "../data/provinces.js";
 import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "./ai.js";
+import { 外交の采配, 調略の采配, 特殊勢力の采配 } from "./aiDiplo.js";
 import { checkUnified } from "./unify.js";
 import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy } from "./war.js";
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
@@ -101,7 +102,8 @@ export function advanceMonth(prev, g) {
         const r = s.relations[k];
         if (r.until && monthsBetween(s.year, s.month, r.until.y, r.until.m) <= 0) {
           r.until = null; r.state = "中立";
-          if (k.includes(s.player)) events.push(`${k.split("|").filter((x) => x !== s.player).map((x) => s.factions[x].name)}との約束の期限が切れた。`);
+          const 相手 = 盟約の相手(k, s.player);
+          if (相手 && s.factions[相手]) events.push(`${s.factions[相手].name}との約束の期限が切れた。`);
         }
         r.trust = clamp(r.trust + 0.4, 0, 100);
       }
@@ -141,7 +143,12 @@ export function advanceMonth(prev, g) {
           /* 城主の心が離れていなければ通じない。城ごと寝返らせる。
              誰を口説くかは仕掛けるときに選んである。選ばれた者がすでに城を
              去っていれば（討たれた、移された）、城中で最も心の離れた者に当たる。 */
-          const 城中 = s.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.captive);
+          /* 当主は内応の的にならない（引き抜きと同じ理である）。
+             家そのものである者が、その家を裏切って城ごと敵に渡す筋はない。
+             ここを塞いでいなかったため、当主が城ごと寝返って一つの家に当主が
+             二人並ぶ、ということが起きていた。 */
+          const 城中 = s.generals.filter((x) => x.at === target.id && x.faction === target.faction
+            && !x.lord && !x.captive);
           const 名指し = pl.matoId ? 城中.find((x) => x.id === pl.matoId) : null;
           const lordOf = 名指し || 城中.sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
           const loy = lordOf ? (lordOf.loyal == null ? 60 : lordOf.loyal) : 100;
@@ -159,6 +166,13 @@ export function advanceMonth(prev, g) {
           target.najimi = 42;                       // 新しい主に馴染むには時が要る
           target.min = Math.max(0, target.min - 8);
           for (const x of s.generals.filter((q) => q.at === target.id && q.faction === oldF && !q.captive)) {
+            /* 当主は城を明け渡さない。城が寝返っても、当主だけは家に残る
+               （他の城へ落ちる。行き場がなければ、その家はそこで絶える）。 */
+            if (x.lord) {
+              const ref0 = s.castles.find((c2) => c2.faction === oldF && c2.id !== target.id);
+              if (ref0) x.at = ref0.id;
+              continue;
+            }
             if (x === lordOf || Math.random() < 0.55) { x.faction = pl.faction; x.loyal = clamp(48 + Math.random() * 18, 0, 100); }
             else {
               const ref = s.castles.find((c2) => c2.faction === oldF && c2.id !== target.id);
@@ -818,6 +832,16 @@ export function advanceMonth(prev, g) {
                 text: `${湊城.name}で${fa.name}が鉄甲船を一艘仕立てた（${r.数}艘目）。` });
             }
           }
+        }
+        /* 外交と調略（GDD 12.1 / 11.2）。他家も遊ぶ側と同じ手を打つ。
+           膝を屈し、従え、誼を通じ、旗を翻し、狙う城へ手の者を入れる。
+           報せに出すのは、遊ぶ側に関わるものだけである。 */
+        {
+          const 我 = s.factions[s.player] ? s.factions[s.player].name : "";
+          const 関 = (t) => t.includes(我);
+          外交の采配(s, fid, { 告げる: (t) => { if (関(t)) events.push(t); } });
+          調略の采配(s, fid, { 告げる: (t) => { if (関(t)) events.push(t); } });
+          特殊勢力の采配(s, fid, { 告げる: (t) => { if (関(t)) events.push(t); } });
         }
         // 気性ごとの振る舞い
         if (fa.temper === "陰謀" && fa.aim && fa.gold > 500 && Math.random() < 0.3 * lv(s).aiPlot) {

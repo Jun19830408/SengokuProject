@@ -638,6 +638,10 @@ export function stepBattle(b, dt) {
               const take = Math.min(q.men, hit);
               q.men -= take; hit -= take;
               b.射損 = (b.射損 || 0) + take;          // 城から射かけて削った兵（試験と記録のため）
+              /* 隊の損害帳にも付ける。ここを落としていたため、城から射かけて
+                 削った兵が「損害」に一人も出ず、戦のあとで兵だけが減っていた。
+                 遊ぶ側からは、勝ったのに兵が消えたようにしか見えない。 */
+              tgt.loss[q.origin] = (tgt.loss[q.origin] || 0) + take;
               q.cohesion = Math.max(0, q.cohesion - 3);
             }
             tgt.morale -= 0.45;
@@ -691,11 +695,22 @@ export function stepBattle(b, dt) {
       if (射手 < 20) { c.狭間 = 2.6; continue; }
       const 層 = MAP.layers[c.holdGate ? c.holdGate.layer : MAP.layers.length - 1];
       const R = 235 * fsN;
+      /* 射かけられるのは、己の受け持つ塀の外にいる敵だけである。
+         曲輪をぐるりと回った向こう側、角の陰にいる敵には矢は届かない。
+         すべての門に守備隊を置くようにしてから、裏の門の兵まで表の寄せ手を
+         射ていた。城の四方の兵が一点へ撃ち込む勘定になり、寄せ手が異様に削れた。 */
+      const 面 = Math.atan2(c.y - MAP.cy, c.x - MAP.cx);
+      const 角の内 = (ax, ay) => {
+        const 向 = Math.atan2(ay - MAP.cy, ax - MAP.cx);
+        const d = Math.abs(((向 - 面 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+        return d <= Math.PI * 0.42;                  // 七十六度まで。それより向こうは角の陰
+      };
       const 的 = atkC
         .filter((x) => {
           const ax = x.mx == null ? x.x : x.mx, ay = x.my == null ? x.y : x.my;
           if (Math.hypot(ax - c.x, ay - c.y) > R) return false;
           if (attached.has(x.id)) return false;      // 門に取り付いた隊は門の押し合いで削れる
+          if (!角の内(ax, ay)) return false;
           return !inLayer(MAP, 層, ax, ay);          // 曲輪の中の敵は常の戦いに任せる
         })
         .sort((x, y2) => Math.hypot((x.mx == null ? x.x : x.mx) - c.x, (x.my == null ? x.y : x.my) - c.y)
@@ -711,6 +726,7 @@ export function stepBattle(b, dt) {
         const take = Math.min(q.men, hit);
         q.men -= take; hit -= take;
         b.射損 = (b.射損 || 0) + take;
+        的.loss[q.origin] = (的.loss[q.origin] || 0) + take;   // 狭間の射も損害帳に付ける
         q.cohesion = Math.max(0, q.cohesion - 2);
       }
       的.morale -= 0.3;

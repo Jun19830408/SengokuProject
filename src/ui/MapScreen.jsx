@@ -36,7 +36,7 @@ import { SallyDialog } from "./panels.jsx";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
 import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer } from "./panels.jsx";
-import { underMyBanner } from "../core/state.js";
+import { underMyBanner, 己の盟約 } from "../core/state.js";
 import { 忠誠, 守備隊の統率, castellanOf } from "../core/rank.js";
 import { 守りの割り付け } from "../core/garrison.js";
 import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を受ける, 縁談を断る } from "../core/hime.js";
@@ -1067,7 +1067,14 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           if (winner === s.player) s.captives = [...(s.captives || []), g2.id];
         }
       }
-      if (won && army) { army.local = aLeft; sackCastle(s, castle, army, true); }
+      /* 城が落ちた（GDD 9.3）。
+
+         ここで army.local を aLeft（盤に立っていた隊の生き残り）で上書きしていた。
+         戦場の外に控えていた後詰（back）が、勝った途端に消えていたことになる。
+         一隊三千を超える兵は盤に出ないから、大軍で攻めるほど大きく消えた。
+         二万で寄せて城を落とすと、一万二千が忽然と失せる。
+         上（後詰を戻す件）で足したものを、そのまま捨ててはならない。 */
+      if (won && army) { army.local = aLeft + back; sackCastle(s, castle, army, true); }
       if (b.result === "P" && !ctx.playerIsAtk) {
         const 功 = 手柄の隊(s, b.corps.filter((c) => c.side === "P"), castle);
         if (功 && Math.random() < 0.6) s.promo = makePromotion(功.lord, s.generals, 功);
@@ -1641,7 +1648,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       if (dest && dest.faction !== s.player && atPeace(s, s.player, dest.faction)) {
         const r = s.relations[relKey(s.player, dest.faction)];
         r.state = "中立"; r.until = null; r.trust = 0;
-        for (const k of Object.keys(s.relations)) if (k.includes(s.player)) s.relations[k].trust = clamp(s.relations[k].trust - 15, 0, 100);
+        for (const k of Object.keys(s.relations)) if (己の盟約(k, s.player)) s.relations[k].trust = clamp(s.relations[k].trust - 15, 0, 100);
         s.factions[s.player].prestige = clamp(s.factions[s.player].prestige - 12, 0, 100);
         for (const x of s.generals.filter((q) => q.faction === s.player && !q.lord)) x.loyal = Math.max(0, x.loyal - 5);
         s.chronicle.push({ y: s.year, m: s.month, text: `${s.factions[dest.faction].name}との約束を破って兵を出した。裏切りとして周辺勢力の警戒を招いた。` });
@@ -1815,7 +1822,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           <CastleSheet g={g} castle={selCastle} land={land} tab={tab} setTab={setTab}
             onClose={() => setSel(null)} onCommand={runCommand} onAppoint={appoint}
             onTrade={(id, kind, n) => setG((prev) => 政務.doTrade(prev, id, kind, n))}
-            onSortie={() => setModal("sortie")} onCallAid={(id) => setCallAid(id)} onDiplo={doDiplo} onPlot={doPlot}
+            onSortie={() => setModal("sortie")} onCallAid={(id) => setCallAid(id)} onDiplo={doDiplo} onHime={() => setModal("hime")} onPlot={doPlot}
             onSpecial={doSpecial} onReward={reward} onCaptive={doCaptive} onFief={grantFief} onRetire={doRetire} onSettle={settleCaptive} onKenchi={doKenchi} />
         )}
         {modal === "sortie" && selCastle && <SortieDialog g={g} from={selCastle.id} onClose={() => setModal(null)} onGo={launchSortie} />}
@@ -1826,7 +1833,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           const f = g.factions[bv.castle.faction];
           const rel = relOf(g, g.player, bv.castle.faction);
           const 味方 = Object.keys(g.relations)
-            .filter((k) => k.includes(g.player) && g.relations[k].trust >= 40).length;
+            .filter((k) => 己の盟約(k, g.player) && g.relations[k].trust >= 40).length;
           return (
             <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
               <div className="card" style={{ maxWidth: 470 }}>

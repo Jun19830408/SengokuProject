@@ -5,7 +5,7 @@ import { marchMonths } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
 import { RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap } from "../core/rank.js";
 import { canSee, relOf } from "../core/state.js";
-import { 城の姫 } from "../core/hime.js";
+import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
 import { U, clamp, fmt, monthsBetween } from "../core/util.js";
@@ -23,7 +23,7 @@ import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
-export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
+export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
@@ -670,6 +670,35 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                         </div>
                       </div>
                     ));
+                  })()}
+                  {/* 姫の縁（GDD 6.8）。輿入れと使者は姫の帳から出す。
+                      外交の欄を開いた者が、姫のことに気づけるようにしておく。 */}
+                  {(() => {
+                    const 姫ら = (g.hime || []).filter((h) => h.faction === g.player && !h.死 && 使える姫(g, h));
+                    const 縁 = rel.婚姻 ? (g.hime || []).find((h) => h.id === rel.婚姻) : null;
+                    return (
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ fontSize: 11, color: U.dim, marginBottom: 4 }}>姫の縁</div>
+                        {縁 && (
+                          <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 5 }}>
+                            この家とは<b style={{ color: U.text }}>{縁.name}</b>の縁で結ばれています
+                            （{縁.死 ? "すでに世を去りました" : "存命のあいだ同盟は続きます"}）。
+                          </div>
+                        )}
+                        <button className="btn sm" style={{ width: "100%" }}
+                          disabled={!姫ら.length || !onHime}
+                          onClick={() => onHime && onHime()}>
+                          {姫ら.length
+                            ? `姫を使う（輿入れ・使者）　いま ${姫ら.length}人`
+                            : "使える姫がいません"}
+                        </button>
+                        <div style={{ fontSize: 11, color: U.dim, marginTop: 5, lineHeight: 1.8 }}>
+                          <b style={{ color: U.text }}>輿入れ</b>＝姫を嫁がせて同盟を結ぶ。期限は無く、
+                          その姫が世を去るまで続きます（信用は{婚姻の要る信用({ dip: 60 }, rel)}ほど要り、姫の外交で緩みます）。<br />
+                          <b style={{ color: U.text }}>使者</b>＝姫が使いに立てば、親善より遙かに信用が上がります（三月戻りません）。
+                        </div>
+                      </div>
+                    );
                   })()}
                   <div style={{ fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.8 }}>
                     <b style={{ color: U.text }}>従える</b>には、相手が十分に小さく、かつ誼が篤いことが要ります

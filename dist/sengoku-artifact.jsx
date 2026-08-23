@@ -623,6 +623,17 @@ function makeRng(seed) {
     return x / 4294967296;
   };
 }
+function \u7C64(...\u7A2E) {
+  let h = 2166136261;
+  for (const t of \u7A2E.join("|")) h = Math.imul(h ^ t.charCodeAt(0), 16777619);
+  return () => {
+    h |= 0;
+    h = h + 1831565813 | 0;
+    let t = Math.imul(h ^ h >>> 15, 1 | h);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
 
 // src/data/newcomers.js
 var NEWCOMERS = [
@@ -5730,6 +5741,10 @@ var HIME_NAMES = [
 // src/core/hime.js
 var factionKoku = (s2, fid) => s2.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
 var relKey = (a, b) => [a, b].sort().join("|");
+var \u5DF1\u306E\u76DF\u7D04 = (k, fid) => {
+  const p = k.split("|");
+  return p[0] === fid || p[1] === fid;
+};
 var relOf = (s2, a, b) => s2.relations[relKey(a, b)] || { trust: 45, state: "\u4E2D\u7ACB", until: null };
 var \u5143\u670D\u306E\u9F62 = 15;
 var \u59EB\u306E\u9650\u308A = 10;
@@ -5772,17 +5787,6 @@ function \u59EB\u306E\u540D(s2, \u57CE, \u5F15\u304F) {
     if (!\u4F7F\u7528.has(n)) return n;
   }
   return `${\u5730}\u306E\u59EB`;
-}
-function \u7C64(...\u7A2E) {
-  let h = 2166136261;
-  for (const t of \u7A2E.join("|")) h = Math.imul(h ^ t.charCodeAt(0), 16777619);
-  return () => {
-    h |= 0;
-    h = h + 1831565813 | 0;
-    let t = Math.imul(h ^ h >>> 15, 1 | h);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
 }
 function \u59EB\u3092\u4ED5\u7ACB\u3066\u308B(s2, fid, \u5E74) {
   const \u57CE = \u672C\u57CE(s2, fid);
@@ -6009,7 +6013,7 @@ function \u59EB\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B, \u7533\u3057\u8
   const \u59EB\u3089 = \u5BB6\u306E\u59EB(s2, fid).filter((h) => \u4F7F\u3048\u308B\u59EB(s2, h) && !h.\u5AC1);
   if (!\u59EB\u3089.length) return null;
   const \u5F15\u304F = \u7C64(s2.\u5353 || "\u5353", "\u91C7\u914D", fid, s2.year);
-  const \u7E01\u3042\u308A = Object.keys(s2.relations).some((k) => k.includes(fid) && s2.relations[k].\u5A5A\u59FB && (s2.hime || []).some((h) => h.id === s2.relations[k].\u5A5A\u59FB && !h.\u6B7B));
+  const \u7E01\u3042\u308A = Object.keys(s2.relations).some((k) => \u5DF1\u306E\u76DF\u7D04(k, fid) && s2.relations[k].\u5A5A\u59FB && (s2.hime || []).some((h) => h.id === s2.relations[k].\u5A5A\u59FB && !h.\u6B7B));
   const \u9694 = {};
   for (const c of s2.castles) {
     if (c.faction === fid) continue;
@@ -6045,7 +6049,7 @@ function \u59EB\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B, \u7533\u3057\u8
   if (\u7E01\u3042\u308A) {
     for (const k of Object.keys(s2.relations)) {
       const r = s2.relations[k];
-      if (!k.includes(fid) || !r.\u5A5A\u59FB) continue;
+      if (!\u5DF1\u306E\u76DF\u7D04(k, fid) || !r.\u5A5A\u59FB) continue;
       const h = (s2.hime || []).find((x) => x.id === r.\u5A5A\u59FB && !x.\u6B7B);
       if (!h || h.faction !== fid) continue;
       const \u76F8 = k.split("|").find((x) => x !== fid);
@@ -7209,6 +7213,11 @@ var GENERALS = [
 
 // src/core/state.js
 var relKey2 = (a, b) => [a, b].sort().join("|");
+var \u76DF\u7D04\u306E\u76F8\u624B = (k, fid) => {
+  const p = k.split("|");
+  return p[0] === fid ? p[1] : p[1] === fid ? p[0] : null;
+};
+var \u5DF1\u306E\u76DF\u7D042 = (k, fid) => \u76DF\u7D04\u306E\u76F8\u624B(k, fid) != null;
 function initState(player) {
   const factions = JSON.parse(JSON.stringify(FACTIONS));
   for (const f of Object.values(factions)) f.prestige = 50;
@@ -9112,61 +9121,74 @@ function doCaptive(prev, genId, how) {
   }
   return s2;
 }
-function doDiplo(prev, fid, key) {
-  const s2 = structuredClone(prev);
-  const me = s2.factions[s2.player], you = s2.factions[fid];
-  const r = s2.relations[relKey2(s2.player, fid)];
+function \u5916\u4EA4\u3092\u7D50\u3076(s2, actor, fid, key) {
+  const me = s2.factions[actor], you = s2.factions[fid];
+  if (!me || !you || actor === fid) return { ok: false, why: "" };
+  const k = relKey2(actor, fid);
+  const r = s2.relations[k] || (s2.relations[k] = { trust: 45, state: "\u4E2D\u7ACB", until: null });
   const def = DIPLO.find((d) => d.key === key);
-  if (!def) return s2;
-  const \u4E3B = \u4E3B\u5BB6(s2, s2.player, fid);
-  const \u4E0B = \u4E3B == null ? null : \u4E3B !== s2.player;
-  if (!def.need(r, diploStat(s2, s2.player), diploStat(s2, fid), \u4E0B) || me.gold < def.cost) return s2;
+  if (!def) return { ok: false, why: "" };
+  const \u4E3B = \u4E3B\u5BB6(s2, actor, fid);
+  const \u4E0B = \u4E3B == null ? null : \u4E3B !== actor;
+  if (!def.need(r, diploStat(s2, actor), diploStat(s2, fid), \u4E0B)) return { ok: false, why: "\u7B4B\u304C\u7ACB\u305F\u306C" };
+  if (me.gold < def.cost) return { ok: false, why: "\u91D1\u304C\u8DB3\u308A\u306C" };
   me.gold -= def.cost;
+  const \u524D\u306E\u9593\u67C4 = r.state;
+  let \u6587 = "";
   if (key === "\u89AA\u5584") {
     r.trust = clamp(r.trust + 9, 0, 100);
+    \u6587 = `${me.name}\u304C${you.name}\u3078\u8ABC\u3092\u901A\u3058\u305F\u3002`;
   } else if (key === "\u72EC\u7ACB") {
     r.state = "\u6575\u5BFE";
     r.until = null;
     r.master = null;
     r.trust = clamp(r.trust - 45, 0, 100);
     me.prestige = clamp((me.prestige == null ? 50 : me.prestige) - 12, 0, 100);
-    for (const x of s2.generals.filter((q) => q.faction === s2.player && !q.captive)) {
+    for (const x of s2.generals.filter((q) => q.faction === actor && !q.captive)) {
       if (x.loyal != null) x.loyal = clamp(x.loyal - 6, 0, 100);
     }
-    for (const k of Object.keys(s2.relations)) {
-      if (!k.includes(s2.player)) continue;
-      const r2 = s2.relations[k];
+    for (const k2 of Object.keys(s2.relations)) {
+      if (!\u5DF1\u306E\u76DF\u7D042(k2, actor)) continue;
+      const r2 = s2.relations[k2];
       if (r2 !== r) r2.trust = clamp(r2.trust - 8, 0, 100);
     }
-    s2.chronicle.push({
-      y: s2.year,
-      m: s2.month,
-      text: `${me.name}\u304C${you.name}\u3078\u306E${prev.relations[relKey2(s2.player, fid)].state}\u3092\u7834\u308A\u3001\u72EC\u7ACB\u3092\u5BA3\u3057\u305F\u3002\u8AF8\u5BB6\u306E\u4FE1\u3092\u640D\u306D\u305F\u3002`
-    });
-    s2.msg = `${you.name}\u3078\u306E\u5F93\u5C5E\u3092\u7834\u3063\u305F\u3002\u4EE5\u5F8C\u306F\u6575\u5BFE\u3067\u3042\u308B\u3002\u5BB6\u4E2D\u306E\u5FE0\u8AA0\u3082\u63FA\u308C\u3066\u3044\u308B\u3002`;
+    \u6587 = `${me.name}\u304C${you.name}\u3078\u306E${\u524D\u306E\u9593\u67C4}\u3092\u7834\u308A\u3001\u72EC\u7ACB\u3092\u5BA3\u3057\u305F\u3002\u8AF8\u5BB6\u306E\u4FE1\u3092\u640D\u306D\u305F\u3002`;
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
   } else if (key === "\u89E3\u304D\u653E\u3064") {
     r.state = "\u4E2D\u7ACB";
     r.until = null;
     r.master = null;
     r.trust = clamp(r.trust + 10, 0, 100);
     me.prestige = clamp((me.prestige == null ? 50 : me.prestige) + 3, 0, 100);
-    s2.chronicle.push({ y: s2.year, m: s2.month, text: `${me.name}\u304C${you.name}\u3092\u4E0A\u4E0B\u304B\u3089\u89E3\u304D\u3001\u4E2D\u7ACB\u306B\u623B\u3057\u305F\u3002` });
-    s2.msg = `${you.name}\u3092\u89E3\u304D\u653E\u3063\u305F\u3002\u4EE5\u5F8C\u306F\u4E2D\u7ACB\u3067\u3042\u308B\u3002`;
+    \u6587 = `${me.name}\u304C${you.name}\u3092\u4E0A\u4E0B\u304B\u3089\u89E3\u304D\u3001\u4E2D\u7ACB\u306B\u623B\u3057\u305F\u3002`;
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
   } else {
     r.state = def.state || key;
     r.until = def.months ? { y: s2.year + Math.floor((s2.month + def.months - 1) / 12), m: (s2.month + def.months - 1) % 12 + 1 } : null;
-    r.master = def.dir === "\u4E0A" ? s2.player : def.dir === "\u4E0B" ? fid : null;
+    r.master = def.dir === "\u4E0A" ? actor : def.dir === "\u4E0B" ? fid : null;
     r.trust = clamp(r.trust + 5, 0, 100);
-    const \u6587 = def.dir === "\u4E0A" ? `${you.name}\u304C${me.name}\u306B${r.state}\u3057\u305F\u3002` : def.dir === "\u4E0B" ? `${me.name}\u304C${you.name}\u306B${r.state}\u3057\u305F\u3002` : `${you.name}\u3068${r.state}\u304C\u6210\u3063\u305F\u3002`;
+    \u6587 = def.dir === "\u4E0A" ? `${you.name}\u304C${me.name}\u306B${r.state}\u3057\u305F\u3002` : def.dir === "\u4E0B" ? `${me.name}\u304C${you.name}\u306B${r.state}\u3057\u305F\u3002` : `${you.name}\u3068${me.name}\u306E\u3042\u3044\u3060\u306B${r.state}\u304C\u6210\u3063\u305F\u3002`;
     s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
-    s2.msg = \u6587;
   }
+  return { ok: true, \u6587, cost: def.cost, trust: r.trust };
+}
+function doDiplo(prev, fid, key) {
+  const s2 = structuredClone(prev);
+  const r0 = s2.relations[relKey2(s2.player, fid)];
+  const \u524D\u306E\u4FE1 = r0 ? Math.round(r0.trust) : 45;
+  const out = \u5916\u4EA4\u3092\u7D50\u3076(s2, s2.player, fid, key);
+  if (!out.ok) return s2;
+  const you = s2.factions[fid];
+  const def = DIPLO.find((d) => d.key === key);
+  if (key === "\u72EC\u7ACB") s2.msg = `${you.name}\u3078\u306E\u5F93\u5C5E\u3092\u7834\u3063\u305F\u3002\u4EE5\u5F8C\u306F\u6575\u5BFE\u3067\u3042\u308B\u3002\u5BB6\u4E2D\u306E\u5FE0\u8AA0\u3082\u63FA\u308C\u3066\u3044\u308B\u3002`;
+  else if (key === "\u89E3\u304D\u653E\u3064") s2.msg = `${you.name}\u3092\u89E3\u304D\u653E\u3063\u305F\u3002\u4EE5\u5F8C\u306F\u4E2D\u7ACB\u3067\u3042\u308B\u3002`;
+  else s2.msg = out.\u6587;
   s2.ledger = [{
     cmd: `\u5916\u4EA4\u30FB${key}`,
     cost: def.cost,
     castle: you.name,
     general: "\u4F7F\u8005",
-    lines: [{ label: `${you.name} \u4FE1\u7528`, before: Math.round(r.trust - (key === "\u89AA\u5584" ? 9 : 5)), after: Math.round(r.trust), unit: "" }]
+    lines: [{ label: `${you.name} \u4FE1\u7528`, before: \u524D\u306E\u4FE1, after: Math.round(out.trust), unit: "" }]
   }, ...s2.ledger].slice(0, 6);
   return s2;
 }
@@ -9206,28 +9228,25 @@ function doPlot(prev, castleId, type, genId, matoId) {
   }, ...s2.ledger].slice(0, 6);
   return s2;
 }
-function doSpecial(prev, townId, key) {
-  const s2 = structuredClone(prev);
+function \u7279\u6B8A\u52E2\u529B\u3068\u7D50\u3076(s2, actor, townId, key) {
   const t = TOWNS.find((x) => x.id === townId);
   const st = s2.specials[townId];
-  const o = (SPECIAL_OPTIONS[t.kind] || []).find((x) => x.key === key);
-  const f = s2.factions[s2.player];
-  if (!o || f.gold < (o.cost || 0)) return s2;
-  const \u53EF = \u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(s2, t, s2.player);
-  if (!\u53EF.ok) {
-    s2.msg = `${t.name}\u3068\u306F\u8ABC\u3092\u901A\u3058\u3089\u308C\u306C\u3002${\u53EF.why}\u3002`;
-    return s2;
-  }
+  const o = t && (SPECIAL_OPTIONS[t.kind] || []).find((x) => x.key === key);
+  const f = s2.factions[actor];
+  if (!t || !st || !o || !f) return { ok: false, why: "" };
+  if (f.gold < (o.cost || 0)) return { ok: false, why: "\u91D1\u304C\u8DB3\u308A\u306C" };
+  const \u53EF = \u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(s2, t, actor);
+  if (!\u53EF.ok) return { ok: false, why: \u53EF.why };
   f.gold -= o.cost || 0;
   if (o.once) f.gold += o.once;
   st.state = key;
-  st.faction = s2.player;
+  st.faction = actor;
   st.months = 0;
   st.anger = clamp((st.anger || 0) + (o.anger || 0) * 10, 0, 100);
   const lines = [{ text: `${t.name}\u3068\u306E\u95A2\u4FC2\uFF1A\u4E2D\u7ACB \u2192 ${key}\u3000${o.desc}` }];
   if (o.once) lines.push({ label: "\u91D1\u92AD", before: f.gold - o.once, after: f.gold, unit: "\u8CAB" });
   if (o.horse || o.gun) {
-    const \u8FD1 = s2.castles.filter((c) => c.faction === s2.player).sort((a2, b2) => Math.hypot(a2.x - px(t.lon), a2.y - py(t.lat)) - Math.hypot(b2.x - px(t.lon), b2.y - py(t.lat)))[0];
+    const \u8FD1 = s2.castles.filter((c) => c.faction === actor).sort((a2, b2) => Math.hypot(a2.x - px(t.lon), a2.y - py(t.lat)) - Math.hypot(b2.x - px(t.lon), b2.y - py(t.lat)))[0];
     if (\u8FD1) {
       if (o.horse) {
         lines.push({ label: `${\u8FD1.name} \u99AC`, before: \u8FD1.horse || 0, after: (\u8FD1.horse || 0) + o.horse, unit: "\u982D" });
@@ -9240,7 +9259,7 @@ function doSpecial(prev, townId, key) {
     }
   }
   if (o.troops) {
-    const near = s2.castles.filter((c) => c.faction === s2.player).sort((a, b) => Math.hypot(a.x - px(t.lon), a.y - py(t.lat)) - Math.hypot(b.x - px(t.lon), b.y - py(t.lat)))[0];
+    const near = s2.castles.filter((c) => c.faction === actor).sort((a, b) => Math.hypot(a.x - px(t.lon), a.y - py(t.lat)) - Math.hypot(b.x - px(t.lon), b.y - py(t.lat)))[0];
     if (near) {
       lines.push({ label: `${near.name} \u5730\u57DF\u5BB6\u81E3\u56E3`, before: near.local, after: near.local + o.troops, unit: "\u4EBA" });
       near.local += o.troops;
@@ -9248,9 +9267,23 @@ function doSpecial(prev, townId, key) {
   }
   if (o.prestige) lines.push({ label: "\u5A01\u4FE1", before: Math.round(f.prestige), after: Math.round(clamp(f.prestige + o.prestige * 10, 0, 100)), unit: "" });
   if (o.prestige) f.prestige = clamp(f.prestige + o.prestige * 10, 0, 100);
-  if (key === "\u653B\u6483") for (const c of s2.castles.filter((x) => x.faction === s2.player)) c.min = Math.max(0, c.min - 8);
-  s2.ledger = [{ cmd: `\u7279\u6B8A\u52E2\u529B\u30FB${key}`, cost: o.cost || 0, castle: t.name, general: "\u2015", lines }, ...s2.ledger].slice(0, 6);
-  s2.chronicle.push({ y: s2.year, m: s2.month, text: `${t.name}\u3068\u306E\u95A2\u4FC2\u3092\u300C${key}\u300D\u3068\u3057\u305F\u3002` });
+  if (key === "\u653B\u6483") for (const c of s2.castles.filter((x) => x.faction === actor)) c.min = Math.max(0, c.min - 8);
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${f.name}\u304C${t.name}\u3068\u306E\u95A2\u4FC2\u3092\u300C${key}\u300D\u3068\u3057\u305F\u3002`
+  });
+  return { ok: true, lines, cost: o.cost || 0, \u540D: t.name };
+}
+function doSpecial(prev, townId, key) {
+  const s2 = structuredClone(prev);
+  const t = TOWNS.find((x) => x.id === townId);
+  const out = \u7279\u6B8A\u52E2\u529B\u3068\u7D50\u3076(s2, s2.player, townId, key);
+  if (!out.ok) {
+    if (out.why) s2.msg = `${t ? t.name : ""}\u3068\u306F\u8ABC\u3092\u901A\u3058\u3089\u308C\u306C\u3002${out.why}\u3002`;
+    return s2;
+  }
+  s2.ledger = [{ cmd: `\u7279\u6B8A\u52E2\u529B\u30FB${key}`, cost: out.cost, castle: out.\u540D, general: "\u2015", lines: out.lines }, ...s2.ledger].slice(0, 6);
   return s2;
 }
 function grantFief(prev, genId, delta) {
@@ -9455,6 +9488,199 @@ function reviewAim(s2, fid) {
     if (t && t.faction !== fid && !atPeace(s2, fid, t.faction)) return;
   }
   f.aim = { target: aim.target, from: aim.from, score: aim.score };
+}
+
+// src/govern/aiDiplo.js
+var \u96A3\u306E\u9593 = 150;
+var \u899A\u3048 = { \u5370: "", \u8868: null };
+function \u6708\u306E\u4E0B\u8ABF\u3079(s2) {
+  const \u5370 = `${s2.\u5353 || ""}|${s2.year}-${s2.month}|${s2.castles.length}`;
+  if (\u899A\u3048.\u5370 === \u5370 && \u899A\u3048.\u8868) return \u899A\u3048.\u8868;
+  const \u9694 = {};
+  const \u77F3 = {};
+  const cs = s2.castles;
+  for (const c of cs) \u77F3[c.faction] = (\u77F3[c.faction] || 0) + c.koku;
+  for (let i = 0; i < cs.length; i++) {
+    for (let j = i + 1; j < cs.length; j++) {
+      const a = cs[i], b = cs[j];
+      if (a.faction === b.faction) continue;
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d >= \u96A3\u306E\u9593) continue;
+      \u9694[a.faction] = \u9694[a.faction] || {};
+      \u9694[b.faction] = \u9694[b.faction] || {};
+      if (\u9694[a.faction][b.faction] == null || d < \u9694[a.faction][b.faction]) \u9694[a.faction][b.faction] = d;
+      if (\u9694[b.faction][a.faction] == null || d < \u9694[b.faction][a.faction]) \u9694[b.faction][a.faction] = d;
+    }
+  }
+  const \u753A = {};
+  for (const t of TOWNS) {
+    const tx = px(t.lon), ty = py(t.lat);
+    let \u8FD1 = null, bd = 1e9;
+    for (const c of cs) {
+      const d = Math.hypot(c.x - tx, c.y - ty);
+      if (d < bd) {
+        bd = d;
+        \u8FD1 = c;
+      }
+    }
+    \u753A[t.id] = { \u96A3: \u8FD1, d: bd };
+  }
+  \u899A\u3048 = { \u5370, \u8868: { \u9694, \u77F3, \u753A } };
+  return \u899A\u3048.\u8868;
+}
+function \u96A3\u5BB6(s2, fid) {
+  const { \u9694, \u77F3 } = \u6708\u306E\u4E0B\u8ABF\u3079(s2);
+  const \u8868 = \u9694[fid] || {};
+  return Object.keys(\u8868).filter((x) => s2.factions[x]).map((x) => ({ \u5148: x, d: \u8868[x], koku: \u77F3[x] || 0, r: relOf2(s2, fid, x) })).sort((a, b) => a.d - b.d);
+}
+function \u65D7\u306E\u4E0B\u306B\u3044\u308B\u304B(s2, fid) {
+  for (const k of Object.keys(s2.relations)) {
+    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B(k, fid);
+    if (!\u76F8) continue;
+    const r = s2.relations[k];
+    if (!["\u5F93\u5C5E", "\u81E3\u5F93"].includes(r.state)) continue;
+    if (r.master === fid) continue;
+    return \u76F8;
+  }
+  return null;
+}
+var \u7D50\u3079\u308B\u304B = (s2, fid, \u76F8, key) => {
+  const def = DIPLO.find((d) => d.key === key);
+  if (!def) return false;
+  const r = relOf2(s2, fid, \u76F8);
+  const \u4E3B = \u4E3B\u5BB6(s2, fid, \u76F8);
+  const \u4E0B = \u4E3B == null ? null : \u4E3B !== fid;
+  return def.need(r, diploStat(s2, fid), diploStat(s2, \u76F8), \u4E0B) && s2.factions[fid].gold >= def.cost;
+};
+function \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B } = {}) {
+  const f = s2.factions[fid];
+  const \u81EA\u57CE = s2.castles.filter((c) => c.faction === fid);
+  if (!f || !\u81EA\u57CE.length) return null;
+  const \u5F15\u304F = \u7C64(s2.\u5353 || "\u5353", "\u5916\u4EA4", fid, s2.year, s2.month);
+  if (\u5F15\u304F() > 0.16) return null;
+  const \u6211\u77F3 = factionKoku2(s2, fid);
+  const \u96A3 = \u96A3\u5BB6(s2, fid);
+  if (!\u96A3.length) return null;
+  const \u6253\u3064 = (\u76F8, key) => {
+    if (!\u7D50\u3079\u308B\u304B(s2, fid, \u76F8, key)) return null;
+    const r = \u5916\u4EA4\u3092\u7D50\u3076(s2, fid, \u76F8, key);
+    if (r.ok && \u544A\u3052\u308B) \u544A\u3052\u308B(r.\u6587);
+    return r.ok ? { \u624B: key, \u5148: \u76F8 } : null;
+  };
+  for (const x of \u96A3) {
+    if (!["\u5F93\u5C5E", "\u81E3\u5F93"].includes(x.r.state)) continue;
+    const \u4E3B = \u4E3B\u5BB6(s2, fid, x.\u5148);
+    if (\u4E3B !== x.\u5148) continue;
+    if (\u6211\u77F3 < x.koku * 1.35) continue;
+    if (\u5F15\u304F() > 0.45) continue;
+    const r = \u6253\u3064(x.\u5148, "\u72EC\u7ACB");
+    if (r) return r;
+  }
+  const \u4E3B\u3042\u308A = \u65D7\u306E\u4E0B\u306B\u3044\u308B\u304B(s2, fid);
+  const \u5927\u7269 = \u4E3B\u3042\u308A ? null : \u96A3.filter((x) => !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(x.r.state)).sort((a, b) => b.koku - a.koku)[0];
+  if (\u5927\u7269) {
+    const \u5DEE = \u5927\u7269.koku / Math.max(1, \u6211\u77F3);
+    const \u7D30\u3044 = \u81EA\u57CE.length <= 2;
+    if (\u5DEE >= 2.6 && (\u7D30\u3044 || \u5F15\u304F() < 0.5)) {
+      const r = \u6253\u3064(\u5927\u7269.\u5148, "\u81E3\u5F93\u3059\u308B");
+      if (r) return r;
+    }
+    if (\u5DEE >= 1.7 && (\u7D30\u3044 || \u5F15\u304F() < 0.35)) {
+      const r = \u6253\u3064(\u5927\u7269.\u5148, "\u5F93\u5C5E\u3059\u308B");
+      if (r) return r;
+    }
+  }
+  const \u5C0F\u7269 = \u96A3.filter((x) => !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(x.r.state) && x.koku < \u6211\u77F3 * 0.6 && !\u65D7\u306E\u4E0B\u306B\u3044\u308B\u304B(s2, x.\u5148)).sort((a, b) => b.r.trust - a.r.trust)[0];
+  if (\u5C0F\u7269 && \u5F15\u304F() < 0.5) {
+    for (const key of ["\u81E3\u5F93\u3055\u305B\u308B", "\u5F93\u5C5E\u3055\u305B\u308B"]) {
+      const r = \u6253\u3064(\u5C0F\u7269.\u5148, key);
+      if (r) return r;
+    }
+  }
+  const \u72D9 = f.aim ? (s2.castles.find((c) => c.id === f.aim.target) || {}).faction : null;
+  const \u80CC\u5F8C = \u96A3.filter((x) => x.\u5148 !== \u72D9 && !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(x.r.state)).sort((a, b) => b.koku - a.koku)[0];
+  if (\u80CC\u5F8C) {
+    if (\u80CC\u5F8C.r.trust >= 72 && \u5F15\u304F() < 0.5) {
+      const r2 = \u6253\u3064(\u80CC\u5F8C.\u5148, "\u540C\u76DF") || \u6253\u3064(\u80CC\u5F8C.\u5148, "\u4E0D\u53EF\u4FB5");
+      if (r2) return r2;
+    }
+    if (\u80CC\u5F8C.r.trust >= 46 && \u5F15\u304F() < 0.6) {
+      const r2 = \u6253\u3064(\u80CC\u5F8C.\u5148, "\u4E0D\u53EF\u4FB5");
+      if (r2) return r2;
+    }
+    const r = \u6253\u3064(\u80CC\u5F8C.\u5148, "\u89AA\u5584");
+    if (r) return r;
+  }
+  return null;
+}
+function \u8ABF\u7565\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B } = {}) {
+  const f = s2.factions[fid];
+  if (!f) return null;
+  const \u5F15\u304F = \u7C64(s2.\u5353 || "\u5353", "\u8ABF\u7565", fid, s2.year, s2.month);
+  if (\u5F15\u304F() > 0.22) return null;
+  if ((s2.plots || []).some((p) => p.faction === fid)) return null;
+  const \u81EA\u57CE = s2.castles.filter((c) => c.faction === fid);
+  if (!\u81EA\u57CE.length) return null;
+  let \u7684 = f.aim ? s2.castles.find((c) => c.id === f.aim.target) : null;
+  if (!\u7684 || \u7684.faction === fid) {
+    const \u96A3 = \u96A3\u5BB6(s2, fid).filter((x) => !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(x.r.state))[0];
+    \u7684 = \u96A3 && s2.castles.filter((c) => c.faction === \u96A3.\u5148).map((c) => ({ c, d: Math.min(...\u81EA\u57CE.map((m) => Math.hypot(m.x - c.x, m.y - c.y))) })).sort((a, b) => a.d - b.d).map((x) => x.c)[0];
+  }
+  if (!\u7684) return null;
+  const rel = relOf2(s2, fid, \u7684.faction);
+  if (["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(rel.state)) return null;
+  const \u624B = s2.generals.filter((x) => x.faction === fid && x.at && !x.captive && !(s2.orders || {})[x.id]).sort((a, b) => b.wit - a.wit)[0];
+  if (!\u624B) return null;
+  const \u57CE\u4E2D = s2.generals.filter((x) => x.at === \u7684.id && x.faction === \u7684.faction && !x.lord && !x.captive);
+  const \u5FC3\u306E\u96E2\u308C\u305F = [...\u57CE\u4E2D].sort((a, b) => (a.loyal == null ? 60 : a.loyal) - (b.loyal == null ? 60 : b.loyal))[0];
+  const \u57CE\u4E3B = \u57CE\u4E2D.length ? [...\u57CE\u4E2D].sort((a, b) => b.lead + b.gov - (a.lead + a.gov))[0] : null;
+  const \u5019\u88DC = [];
+  if (\u5FC3\u306E\u96E2\u308C\u305F && (\u5FC3\u306E\u96E2\u308C\u305F.loyal == null ? 60 : \u5FC3\u306E\u96E2\u308C\u305F.loyal) < 62) \u5019\u88DC.push(["\u5185\u5FDC", \u57CE\u4E3B], ["\u5F15\u304D\u629C\u304D", \u5FC3\u306E\u96E2\u308C\u305F]);
+  \u5019\u88DC.push(["\u5BC6\u7D04", \u57CE\u4E3B], ["\u57CE\u5DE5\u4F5C", null], ["\u6D41\u8A00", null], ["\u5075\u5BDF", null]);
+  for (const [key, mato] of \u5019\u88DC) {
+    const def = PLOTS.find((x) => x.key === key);
+    if (!def || f.gold < def.cost * 1.4) continue;
+    if (\u624B.wit < def.need - 14) continue;
+    if ((def.mato === "\u8981" || def.mato === "\u57CE\u4E3B") && (!mato || mato.at !== \u7684.id)) continue;
+    f.gold -= def.cost;
+    s2.plots.push({
+      type: key,
+      castleId: \u7684.id,
+      genId: \u624B.id,
+      faction: fid,
+      monthsLeft: def.months,
+      matoId: mato ? mato.id : null
+    });
+    s2.orders[\u624B.id] = { cmd: `\u8ABF\u7565\u30FB${key}`, castleId: \u624B.at };
+    if (\u544A\u3052\u308B) \u544A\u3052\u308B(`${f.name}\u304C${\u7684.name}\u3078${key}\u3092\u4ED5\u639B\u3051\u305F\u3002`);
+    return { \u624B: key, \u5148: \u7684.id };
+  }
+  return null;
+}
+function \u7279\u6B8A\u52E2\u529B\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B } = {}) {
+  const f = s2.factions[fid];
+  if (!f || f.gold < 400) return null;
+  const \u5F15\u304F = \u7C64(s2.\u5353 || "\u5353", "\u7279\u6B8A", fid, s2.year, s2.month);
+  if (\u5F15\u304F() > 0.18) return null;
+  const \u8352 = ["\u653B\u6483", "\u8A0E\u4F10", "\u652F\u914D", "\u5236\u5727", "\u653E\u7F6E"];
+  const { \u753A } = \u6708\u306E\u4E0B\u8ABF\u3079(s2);
+  for (const t of TOWNS) {
+    const st = s2.specials[t.id];
+    if (!st || st.state && st.state !== "\u4E2D\u7ACB") continue;
+    const \u8FD1 = \u753A[t.id];
+    if (!\u8FD1 || !\u8FD1.\u96A3 || \u8FD1.d > \u624B\u306E\u5C4A\u304F\u9593 || \u8FD1.\u96A3.faction !== fid) continue;
+    if (!\u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(s2, t, fid).ok) continue;
+    const \u5217 = (SPECIAL_OPTIONS[t.kind] || []).filter((o) => !\u8352.includes(o.key));
+    if (!\u5217.length) continue;
+    const \u9078 = [...\u5217].sort((a, b) => (b.cost || 0) - (a.cost || 0)).find((o) => f.gold >= (o.cost || 0) * 2.2);
+    if (!\u9078) continue;
+    const r = \u7279\u6B8A\u52E2\u529B\u3068\u7D50\u3076(s2, fid, t.id, \u9078.key);
+    if (r.ok) {
+      if (\u544A\u3052\u308B) \u544A\u3052\u308B(`${f.name}\u304C${t.name}\u3068\u300C${\u9078.key}\u300D\u3092\u7D50\u3093\u3060\u3002`);
+      return { \u624B: \u9078.key, \u5148: t.id };
+    }
+  }
+  return null;
 }
 
 // src/govern/unify.js
@@ -10112,7 +10338,8 @@ function advanceMonth(prev, g) {
     if (r.until && monthsBetween(s2.year, s2.month, r.until.y, r.until.m) <= 0) {
       r.until = null;
       r.state = "\u4E2D\u7ACB";
-      if (k.includes(s2.player)) events.push(`${k.split("|").filter((x) => x !== s2.player).map((x) => s2.factions[x].name)}\u3068\u306E\u7D04\u675F\u306E\u671F\u9650\u304C\u5207\u308C\u305F\u3002`);
+      const \u76F8\u624B = \u76DF\u7D04\u306E\u76F8\u624B(k, s2.player);
+      if (\u76F8\u624B && s2.factions[\u76F8\u624B]) events.push(`${s2.factions[\u76F8\u624B].name}\u3068\u306E\u7D04\u675F\u306E\u671F\u9650\u304C\u5207\u308C\u305F\u3002`);
     }
     r.trust = clamp(r.trust + 0.4, 0, 100);
   }
@@ -10145,7 +10372,7 @@ function advanceMonth(prev, g) {
       return false;
     }
     if (pl.type === "\u5185\u5FDC") {
-      const \u57CE\u4E2D = s2.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.captive);
+      const \u57CE\u4E2D = s2.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.lord && !x.captive);
       const \u540D\u6307\u3057 = pl.matoId ? \u57CE\u4E2D.find((x) => x.id === pl.matoId) : null;
       const lordOf = \u540D\u6307\u3057 || \u57CE\u4E2D.sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
       const loy = lordOf ? lordOf.loyal == null ? 60 : lordOf.loyal : 100;
@@ -10162,6 +10389,11 @@ function advanceMonth(prev, g) {
       target.najimi = 42;
       target.min = Math.max(0, target.min - 8);
       for (const x of s2.generals.filter((q) => q.at === target.id && q.faction === oldF && !q.captive)) {
+        if (x.lord) {
+          const ref0 = s2.castles.find((c2) => c2.faction === oldF && c2.id !== target.id);
+          if (ref0) x.at = ref0.id;
+          continue;
+        }
         if (x === lordOf || Math.random() < 0.55) {
           x.faction = pl.faction;
           x.loyal = clamp(48 + Math.random() * 18, 0, 100);
@@ -10813,6 +11045,19 @@ function advanceMonth(prev, g) {
           });
         }
       }
+    }
+    {
+      const \u6211 = s2.factions[s2.player] ? s2.factions[s2.player].name : "";
+      const \u95A2 = (t) => t.includes(\u6211);
+      \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B: (t) => {
+        if (\u95A2(t)) events.push(t);
+      } });
+      \u8ABF\u7565\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B: (t) => {
+        if (\u95A2(t)) events.push(t);
+      } });
+      \u7279\u6B8A\u52E2\u529B\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B: (t) => {
+        if (\u95A2(t)) events.push(t);
+      } });
     }
     if (fa.temper === "\u9670\u8B00" && fa.aim && fa.gold > 500 && Math.random() < 0.3 * lv(s2).aiPlot) {
       const t = s2.castles.find((c2) => c2.id === fa.aim.target);
@@ -15441,6 +15686,7 @@ function stepBattle(b, dt) {
               q.men -= take;
               hit -= take;
               b.\u5C04\u640D = (b.\u5C04\u640D || 0) + take;
+              tgt.loss[q.origin] = (tgt.loss[q.origin] || 0) + take;
               q.cohesion = Math.max(0, q.cohesion - 3);
             }
             tgt.morale -= 0.45;
@@ -15490,10 +15736,17 @@ function stepBattle(b, dt) {
       }
       const \u5C64 = MAP.layers[c.holdGate ? c.holdGate.layer : MAP.layers.length - 1];
       const R = 235 * fsN;
+      const \u9762 = Math.atan2(c.y - MAP.cy, c.x - MAP.cx);
+      const \u89D2\u306E\u5185 = (ax, ay) => {
+        const \u5411 = Math.atan2(ay - MAP.cy, ax - MAP.cx);
+        const d = Math.abs((\u5411 - \u9762 + Math.PI * 3) % (Math.PI * 2) - Math.PI);
+        return d <= Math.PI * 0.42;
+      };
       const \u7684 = atkC.filter((x) => {
         const ax = x.mx == null ? x.x : x.mx, ay = x.my == null ? x.y : x.my;
         if (Math.hypot(ax - c.x, ay - c.y) > R) return false;
         if (attached.has(x.id)) return false;
+        if (!\u89D2\u306E\u5185(ax, ay)) return false;
         return !inLayer(MAP, \u5C64, ax, ay);
       }).sort((x, y2) => Math.hypot((x.mx == null ? x.x : x.mx) - c.x, (x.my == null ? x.y : x.my) - c.y) - Math.hypot((y2.mx == null ? y2.x : y2.mx) - c.x, (y2.my == null ? y2.y : y2.my) - c.y))[0];
       if (!\u7684) {
@@ -15510,6 +15763,7 @@ function stepBattle(b, dt) {
         q.men -= take;
         hit -= take;
         b.\u5C04\u640D = (b.\u5C04\u640D || 0) + take;
+        \u7684.loss[q.origin] = (\u7684.loss[q.origin] || 0) + take;
         q.cohesion = Math.max(0, q.cohesion - 2);
       }
       \u7684.morale -= 0.3;
@@ -18706,7 +18960,7 @@ function \u6D77\u6226\u3092\u4ED5\u7ACB\u3066\u308B(s2, army, inter, \u5730\u540
 
 // src/ui/CastleSheet.jsx
 import React5, { useState as useState5 } from "react";
-function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi }) {
+function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
@@ -18985,6 +19239,19 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
           d.key
         );
       }))));
+    })(), (() => {
+      const \u59EB\u3089 = (g.hime || []).filter((h) => h.faction === g.player && !h.\u6B7B && \u4F7F\u3048\u308B\u59EB(g, h));
+      const \u7E01 = rel.\u5A5A\u59FB ? (g.hime || []).find((h) => h.id === rel.\u5A5A\u59FB) : null;
+      return /* @__PURE__ */ React5.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11, color: U.dim, marginBottom: 4 } }, "\u59EB\u306E\u7E01"), \u7E01 && /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 5 } }, "\u3053\u306E\u5BB6\u3068\u306F", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, \u7E01.name), "\u306E\u7E01\u3067\u7D50\u3070\u308C\u3066\u3044\u307E\u3059 \uFF08", \u7E01.\u6B7B ? "\u3059\u3067\u306B\u4E16\u3092\u53BB\u308A\u307E\u3057\u305F" : "\u5B58\u547D\u306E\u3042\u3044\u3060\u540C\u76DF\u306F\u7D9A\u304D\u307E\u3059", "\uFF09\u3002"), /* @__PURE__ */ React5.createElement(
+        "button",
+        {
+          className: "btn sm",
+          style: { width: "100%" },
+          disabled: !\u59EB\u3089.length || !onHime,
+          onClick: () => onHime && onHime()
+        },
+        \u59EB\u3089.length ? `\u59EB\u3092\u4F7F\u3046\uFF08\u8F3F\u5165\u308C\u30FB\u4F7F\u8005\uFF09\u3000\u3044\u307E ${\u59EB\u3089.length}\u4EBA` : "\u4F7F\u3048\u308B\u59EB\u304C\u3044\u307E\u305B\u3093"
+      ), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 5, lineHeight: 1.8 } }, /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, "\u8F3F\u5165\u308C"), "\uFF1D\u59EB\u3092\u5AC1\u304C\u305B\u3066\u540C\u76DF\u3092\u7D50\u3076\u3002\u671F\u9650\u306F\u7121\u304F\u3001 \u305D\u306E\u59EB\u304C\u4E16\u3092\u53BB\u308B\u307E\u3067\u7D9A\u304D\u307E\u3059\uFF08\u4FE1\u7528\u306F", \u5A5A\u59FB\u306E\u8981\u308B\u4FE1\u7528({ dip: 60 }, rel), "\u307B\u3069\u8981\u308A\u3001\u59EB\u306E\u5916\u4EA4\u3067\u7DE9\u307F\u307E\u3059\uFF09\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, "\u4F7F\u8005"), "\uFF1D\u59EB\u304C\u4F7F\u3044\u306B\u7ACB\u3066\u3070\u3001\u89AA\u5584\u3088\u308A\u9059\u304B\u306B\u4FE1\u7528\u304C\u4E0A\u304C\u308A\u307E\u3059\uFF08\u4E09\u6708\u623B\u308A\u307E\u305B\u3093\uFF09\u3002"));
     })(), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.8 } }, /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, "\u5F93\u3048\u308B"), "\u306B\u306F\u3001\u76F8\u624B\u304C\u5341\u5206\u306B\u5C0F\u3055\u304F\u3001\u304B\u3064\u8ABC\u304C\u7BE4\u3044\u3053\u3068\u304C\u8981\u308A\u307E\u3059 \uFF08\u5F93\u5C5E\uFF1D6\u5272\u672A\u6E80\u30FB\u4FE1\u752860\uFF0F\u81E3\u5F93\uFF1D35\uFF05\u672A\u6E80\u30FB\u4FE1\u752872\u3002\u5B98\u4F4D\u3068\u5A01\u4FE1\u3067\u7DE9\u307F\u307E\u3059\uFF09\u3002", /* @__PURE__ */ React5.createElement("br", null), /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, "\u819D\u3092\u5C48\u3059\u308B"), "\u306E\u306B\u91D1\u3082\u4FE1\u7528\u3082\u8981\u308A\u307E\u305B\u3093\u3002\u76F8\u624B\u304C\u5341\u5206\u306B\u5927\u304D\u3051\u308C\u3070\u3001 \u3044\u3064\u3067\u3082\u964D\u308C\u307E\u3059\uFF08\u5F93\u5C5E\uFF1D1.7\u500D\u8D85\uFF0F\u81E3\u5F93\uFF1D2.6\u500D\u8D85\uFF09\u3002\u653B\u3081\u6EC5\u307C\u3055\u308C\u308B\u524D\u306E\u9053\u3067\u3059\u3002", /* @__PURE__ */ React5.createElement("br", null), "\u7D04\u675F\u3092\u7834\u3063\u3066\u653B\u3081\u308C\u3070\u88CF\u5207\u308A\u3068\u306A\u308A\u3001\u4FE1\u7528\u30FB\u5A01\u4FE1\u30FB\u5BB6\u81E3\u306E\u5FE0\u8AA0\u304C\u4E0B\u304C\u308A\u307E\u3059\u3002"), (() => {
       const held = g.generals.filter((x) => x.captive && x.captive.by === g.player);
       if (!held.length) {
@@ -19202,7 +19469,17 @@ var \u8AAC\u660E\u66F8 = [
           "\u5916\u4EA4\u3067\u306F\u3001\u89AA\u5584\u30FB\u540C\u76DF\u30FB\u4E0D\u53EF\u4FB5\u30FB\u5F93\u5C5E\u30FB\u81E3\u5F93\u306A\u3069\u3092\u7D50\u3076\u3002\u4FE1\u7528\u304C\u8DB3\u308A\u306D\u3070\u76F8\u624B\u306F\u5FDC\u3058\u306A\u3044",
           "\u300C\u5F93\u3048\u308B\u300D\u304B\u300C\u964D\u308B\u300D\u304B\u306F\u3001\u5BB6\u306E\u5927\u304D\u3055\u3067\u6C7A\u307E\u308B\u3002\u5C0F\u3055\u3044\u5BB6\u304C\u5927\u304D\u3044\u5BB6\u3092\u5F93\u3048\u308B\u3053\u3068\u306F\u3067\u304D\u306A\u3044",
           "\u8ABF\u7565\u3067\u306F\u3001\u6575\u57CE\u306E\u6B66\u5C06\u3092\u540D\u6307\u3057\u3067\u72D9\u3048\u308B\uFF08\u6D41\u8A00\u30FB\u5185\u5FDC\u30FB\u5BDD\u8FD4\u308A\uFF09\u3002\u77E5\u7565\u304C\u3082\u306E\u3092\u8A00\u3046",
-          "\u6355\u865C\u306E\u51E6\u9047\uFF08\u8FD4\u3059\u30FB\u53EC\u3057\u62B1\u3048\u308B\u30FB\u65AC\u308B\uFF09\u3082\u5916\u4EA4\u304B\u3089\u6C7A\u3081\u308B"
+          "\u5F53\u4E3B\u306F\u5185\u5FDC\u306B\u3082\u5F15\u304D\u629C\u304D\u306B\u3082\u5FDC\u3058\u306A\u3044\u3002\u5BB6\u305D\u306E\u3082\u306E\u3067\u3042\u308B\u8005\u304C\u5BB6\u3092\u58F2\u308B\u7B4B\u306F\u306A\u3044",
+          "\u6355\u865C\u306E\u51E6\u9047\uFF08\u8FD4\u3059\u30FB\u53EC\u3057\u62B1\u3048\u308B\u30FB\u65AC\u308B\uFF09\u3082\u5916\u4EA4\u304B\u3089\u6C7A\u3081\u308B",
+          "\u59EB\u304C\u3044\u308C\u3070\u3001\u5916\u4EA4\u306E\u6B04\u304B\u3089\u8F3F\u5165\u308C\uFF08\u5A5A\u59FB\u540C\u76DF\uFF09\u3068\u4F7F\u8005\u306B\u7ACB\u3066\u308B\u3053\u3068\u304C\u3067\u304D\u308B"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u4ED6\u5BB6\u3082\u5916\u4EA4\u3092\u3059\u308B",
+        \u6587: [
+          "\u4ED6\u5BB6\u3082\u540C\u3058\u624B\u3092\u6253\u3064\u3002\u5DF1\u3088\u308A\u9059\u304B\u306B\u5927\u304D\u3044\u96A3\u5BB6\u306B\u306F\u819D\u3092\u5C48\u3057\u3001\u5C0F\u3055\u3044\u96A3\u5BB6\u306F\u5F93\u3048\u3001\u80CC\u5F8C\u306E\u5BB6\u3068\u306F\u8ABC\u3092\u901A\u3058\u3001\u4FE1\u7528\u304C\u7BE4\u3051\u308C\u3070\u4E0D\u53EF\u4FB5\u304B\u540C\u76DF\u3092\u7D50\u3076\u3002\u5F93\u3063\u3066\u3044\u308B\u5BB6\u3088\u308A\u5927\u304D\u304F\u306A\u308C\u3070\u65D7\u3092\u7FFB\u3059\u3002\u72D9\u3046\u57CE\u306B\u306F\u624B\u306E\u8005\u3092\u5165\u308C\u308B\u3002",
+          "\u4E8C\u4EBA\u306E\u4E3B\u306B\u4ED5\u3048\u308B\u3053\u3068\u306F\u306A\u3044\u3002\u3059\u3067\u306B\u4ED6\u5BB6\u306E\u65D7\u306E\u4E0B\u306B\u3042\u308B\u5BB6\u3092\u3001\u6A2A\u304B\u3089\u5F93\u3048\u308B\u3053\u3068\u3082\u3067\u304D\u306A\u3044\u3002",
+          "\u540C\u76DF\u3068\u65D7\u306E\u4E0B\u306F\u653B\u3081\u3092\u5C01\u3058\u308B\u3002\u96A3\u304C\u307F\u306A\u4ED6\u5BB6\u3068\u7D50\u3093\u3067\u3057\u307E\u3046\u524D\u306B\u52D5\u304F\u304B\u3001\u3053\u3061\u3089\u304B\u3089\u7E01\u3092\u7D50\u3093\u3067\u56F2\u307F\u3092\u5D29\u3059\u304B\u2015\u2015\u5916\u4EA4\u306F\u305D\u3046\u3044\u3046\u7AF6\u308A\u5408\u3044\u3067\u3042\u308B\u3002"
         ]
       },
       {
@@ -20700,7 +20977,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         }
       }
       if (won && army) {
-        army.local = aLeft;
+        army.local = aLeft + back;
         sackCastle(s2, castle, army, true);
       }
       if (b.result === "P" && !ctx.playerIsAtk) {
@@ -21286,7 +21563,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         r.state = "\u4E2D\u7ACB";
         r.until = null;
         r.trust = 0;
-        for (const k of Object.keys(s2.relations)) if (k.includes(s2.player)) s2.relations[k].trust = clamp(s2.relations[k].trust - 15, 0, 100);
+        for (const k of Object.keys(s2.relations)) if (\u5DF1\u306E\u76DF\u7D042(k, s2.player)) s2.relations[k].trust = clamp(s2.relations[k].trust - 15, 0, 100);
         s2.factions[s2.player].prestige = clamp(s2.factions[s2.player].prestige - 12, 0, 100);
         for (const x of s2.generals.filter((q) => q.faction === s2.player && !q.lord)) x.loyal = Math.max(0, x.loyal - 5);
         s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[dest.faction].name}\u3068\u306E\u7D04\u675F\u3092\u7834\u3063\u3066\u5175\u3092\u51FA\u3057\u305F\u3002\u88CF\u5207\u308A\u3068\u3057\u3066\u5468\u8FBA\u52E2\u529B\u306E\u8B66\u6212\u3092\u62DB\u3044\u305F\u3002` });
@@ -21453,6 +21730,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         onSortie: () => setModal("sortie"),
         onCallAid: (id) => setCallAid(id),
         onDiplo: doDiplo2,
+        onHime: () => setModal("hime"),
         onPlot: doPlot2,
         onSpecial: doSpecial2,
         onReward: reward2,
@@ -21468,7 +21746,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const bv = breakVow;
       const f = g.factions[bv.castle.faction];
       const rel = relOf2(g, g.player, bv.castle.faction);
-      const \u5473\u65B9 = Object.keys(g.relations).filter((k) => k.includes(g.player) && g.relations[k].trust >= 40).length;
+      const \u5473\u65B9 = Object.keys(g.relations).filter((k) => \u5DF1\u306E\u76DF\u7D042(k, g.player) && g.relations[k].trust >= 40).length;
       return /* @__PURE__ */ React8.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React8.createElement("div", { className: "card", style: { maxWidth: 470 } }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, f.name, "\u306F", bv.state, "\u306E\u9593\u67C4\u306B\u3042\u308B"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginTop: 8 } }, /* @__PURE__ */ React8.createElement("b", null, bv.castle.name), "\u3078\u5175\u3092\u51FA\u305B\u3070\u3001\u305D\u308C\u306F\u5F8C\u8A70\u3067\u306F\u306A\u304F", /* @__PURE__ */ React8.createElement("b", null, "\u653B\u6483"), "\u3067\u3059\u3002 \u7740\u3044\u305F\u6708\u306B\u5408\u6226\u304C\u59CB\u307E\u308A\u3001", f.name, "\u3068\u306F", /* @__PURE__ */ React8.createElement("b", null, "\u6575\u5BFE"), "\u3059\u308B\u3053\u3068\u306B\u306A\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("div", { style: {
         margin: "12px 0",
         padding: "10px 12px",

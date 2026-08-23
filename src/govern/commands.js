@@ -3,7 +3,7 @@ import { succeed } from "../core/house.js";
 import { holdsProvince, kenchiCost, kenchiDone, rankBonus, runKenchi } from "../core/province.js";
 import { fiefOf, fiefRoom, troopCap } from "../core/rank.js";
 import { rosterSync } from "../core/roster.js";
-import { relKey } from "../core/state.js";
+import { relKey, 己の盟約 } from "../core/state.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
 import { clamp, fmt } from "../core/util.js";
@@ -274,61 +274,79 @@ export function doCaptive(prev, genId, how) {
 
    命の名に向きが入った。「従属させる」は相手を従える命、「従属する」は自らが
    膝を屈する命である。結んだときに、どちらが上かを盟約へ書き留める。 */
-export function doDiplo(prev, fid, key) {
-    const s = structuredClone(prev);
-    const me = s.factions[s.player], you = s.factions[fid];
-    const r = s.relations[relKey(s.player, fid)];
-    const def = DIPLO.find((d) => d.key === key);
-    if (!def) return s;
-    // 上下のある間柄なら、いま自分が下にいるのか上にいるのか
-    const 主 = 主家(s, s.player, fid);
-    const 下 = 主 == null ? null : 主 !== s.player;
-    if (!def.need(r, diploStat(s, s.player), diploStat(s, fid), 下) || me.gold < def.cost) return s;
-    me.gold -= def.cost;
+/* 外交の実（GDD 12.1）。
 
-    if (key === "親善") { r.trust = clamp(r.trust + 9, 0, 100); }
+   遊ぶ側だけの仕組みにしてあったので、他家は始めに定まった間柄のまま
+   最後まで動かなかった。誰が結ぶのかを引数に取り、盤を直に書き換える形に改める。
+   遊ぶ側の下知（doDiplo）も、他家の采配（govern/aiDiplo.js）も、ここを通る。
+   同じ関門（DIPLO の need と費え）をくぐるので、二つの理屈が食い違うことがない。 */
+export function 外交を結ぶ(s, actor, fid, key) {
+    const me = s.factions[actor], you = s.factions[fid];
+    if (!me || !you || actor === fid) return { ok: false, why: "" };
+    const k = relKey(actor, fid);
+    const r = s.relations[k] || (s.relations[k] = { trust: 45, state: "中立", until: null });
+    const def = DIPLO.find((d) => d.key === key);
+    if (!def) return { ok: false, why: "" };
+    const 主 = 主家(s, actor, fid);
+    const 下 = 主 == null ? null : 主 !== actor;
+    if (!def.need(r, diploStat(s, actor), diploStat(s, fid), 下)) return { ok: false, why: "筋が立たぬ" };
+    if (me.gold < def.cost) return { ok: false, why: "金が足りぬ" };
+    me.gold -= def.cost;
+    const 前の間柄 = r.state;
+    let 文 = "";
+
+    if (key === "親善") { r.trust = clamp(r.trust + 9, 0, 100); 文 = `${me.name}が${you.name}へ誼を通じた。`; }
     else if (key === "独立") {
       // 膝を屈していた家が旗を翻す。信義を捨てるのだから、代償は大きい。
       r.state = "敵対"; r.until = null; r.master = null;
       r.trust = clamp(r.trust - 45, 0, 100);
       me.prestige = clamp((me.prestige == null ? 50 : me.prestige) - 12, 0, 100);
-      for (const x of s.generals.filter((q) => q.faction === s.player && !q.captive)) {
+      for (const x of s.generals.filter((q) => q.faction === actor && !q.captive)) {
         if (x.loyal != null) x.loyal = clamp(x.loyal - 6, 0, 100);
       }
-      for (const k of Object.keys(s.relations)) {                 // 他家からも信を失う
-        if (!k.includes(s.player)) continue;
-        const r2 = s.relations[k];
+      for (const k2 of Object.keys(s.relations)) {                // 他家からも信を失う
+        if (!己の盟約(k2, actor)) continue;
+        const r2 = s.relations[k2];
         if (r2 !== r) r2.trust = clamp(r2.trust - 8, 0, 100);
       }
-      s.chronicle.push({ y: s.year, m: s.month,
-        text: `${me.name}が${you.name}への${prev.relations[relKey(s.player, fid)].state}を破り、独立を宣した。諸家の信を損ねた。` });
-      s.msg = `${you.name}への従属を破った。以後は敵対である。家中の忠誠も揺れている。`;
+      文 = `${me.name}が${you.name}への${前の間柄}を破り、独立を宣した。諸家の信を損ねた。`;
+      s.chronicle.push({ y: s.year, m: s.month, text: 文 });
     }
     else if (key === "解き放つ") {
-      /* 上に立つ側が、自ら上下を解く。信義にかなうので、代償はない。
-         むしろ寛大とみなされ、信用は増す。 */
       r.state = "中立"; r.until = null; r.master = null;
       r.trust = clamp(r.trust + 10, 0, 100);
       me.prestige = clamp((me.prestige == null ? 50 : me.prestige) + 3, 0, 100);
-      s.chronicle.push({ y: s.year, m: s.month, text: `${me.name}が${you.name}を上下から解き、中立に戻した。` });
-      s.msg = `${you.name}を解き放った。以後は中立である。`;
+      文 = `${me.name}が${you.name}を上下から解き、中立に戻した。`;
+      s.chronicle.push({ y: s.year, m: s.month, text: 文 });
     }
     else {
       r.state = def.state || key;
       r.until = def.months
         ? { y: s.year + Math.floor((s.month + def.months - 1) / 12), m: ((s.month + def.months - 1) % 12) + 1 }
         : null;
-      // 上下のある間柄なら、どちらが上かを書き留める。以後、石高が動いても裏返らない。
-      r.master = def.dir === "上" ? s.player : def.dir === "下" ? fid : null;
+      r.master = def.dir === "上" ? actor : def.dir === "下" ? fid : null;
       r.trust = clamp(r.trust + 5, 0, 100);
-      const 文 = def.dir === "上" ? `${you.name}が${me.name}に${r.state}した。`
+      文 = def.dir === "上" ? `${you.name}が${me.name}に${r.state}した。`
         : def.dir === "下" ? `${me.name}が${you.name}に${r.state}した。`
-        : `${you.name}と${r.state}が成った。`;
+        : `${you.name}と${me.name}のあいだに${r.state}が成った。`;
       s.chronicle.push({ y: s.year, m: s.month, text: 文 });
-      s.msg = 文;
     }
+    return { ok: true, 文, cost: def.cost, trust: r.trust };
+}
+
+export function doDiplo(prev, fid, key) {
+    const s = structuredClone(prev);
+    const r0 = s.relations[relKey(s.player, fid)];
+    const 前の信 = r0 ? Math.round(r0.trust) : 45;
+    const out = 外交を結ぶ(s, s.player, fid, key);
+    if (!out.ok) return s;
+    const you = s.factions[fid];
+    const def = DIPLO.find((d) => d.key === key);
+    if (key === "独立") s.msg = `${you.name}への従属を破った。以後は敵対である。家中の忠誠も揺れている。`;
+    else if (key === "解き放つ") s.msg = `${you.name}を解き放った。以後は中立である。`;
+    else s.msg = out.文;
     s.ledger = [{ cmd: `外交・${key}`, cost: def.cost, castle: you.name, general: "使者",
-      lines: [{ label: `${you.name} 信用`, before: Math.round(r.trust - (key === "親善" ? 9 : 5)), after: Math.round(r.trust), unit: "" }] }, ...s.ledger].slice(0, 6);
+      lines: [{ label: `${you.name} 信用`, before: 前の信, after: Math.round(out.trust), unit: "" }] }, ...s.ledger].slice(0, 6);
     return s;
 }
 
@@ -359,27 +377,27 @@ export function doPlot(prev, castleId, type, genId, matoId) {
 }
 
 // 寺社・商人・水軍衆との取引
-export function doSpecial(prev, townId, key) {
-    const s = structuredClone(prev);
+/* 特殊勢力との取引（GDD 13.1）。
+   遊ぶ側も他家も、同じ関門（手が届くか・費え）をくぐってここを通る。 */
+export function 特殊勢力と結ぶ(s, actor, townId, key) {
     const t = TOWNS.find((x) => x.id === townId);
     const st = s.specials[townId];
-    const o = (SPECIAL_OPTIONS[t.kind] || []).find((x) => x.key === key);
-    const f = s.factions[s.player];
-    if (!o || f.gold < (o.cost || 0)) return s;
-    /* 手が届くか。画面の可否と、実際の処し方を同じ一つで判ずる。
-       画面だけで塞いでも、道が増えれば抜けられる。 */
-    const 可 = 特殊勢力の可否(s, t, s.player);
-    if (!可.ok) { s.msg = `${t.name}とは誼を通じられぬ。${可.why}。`; return s; }
+    const o = t && (SPECIAL_OPTIONS[t.kind] || []).find((x) => x.key === key);
+    const f = s.factions[actor];
+    if (!t || !st || !o || !f) return { ok: false, why: "" };
+    if (f.gold < (o.cost || 0)) return { ok: false, why: "金が足りぬ" };
+    const 可 = 特殊勢力の可否(s, t, actor);
+    if (!可.ok) return { ok: false, why: 可.why };
     f.gold -= o.cost || 0;
     if (o.once) f.gold += o.once;
-    st.state = key; st.faction = s.player; st.months = 0;
+    st.state = key; st.faction = actor; st.months = 0;
     st.anger = clamp((st.anger || 0) + (o.anger || 0) * 10, 0, 100);
     const lines = [{ text: `${t.name}との関係：中立 → ${key}　${o.desc}` }];
     if (o.once) lines.push({ label: "金銭", before: f.gold - o.once, after: f.gold, unit: "貫" });
     /* 牧と鉄砲鍛冶。馬と鉄砲は城の蓄えなので、近い城へ入れる（GDD 6.3）。
        誼を結んだその年に一度、まとまって届く。以後は月送りが毎年運ぶ。 */
     if (o.horse || o.gun) {
-      const 近 = s.castles.filter((c) => c.faction === s.player)
+      const 近 = s.castles.filter((c) => c.faction === actor)
         .sort((a2, b2) => Math.hypot(a2.x - px(t.lon), a2.y - py(t.lat))
           - Math.hypot(b2.x - px(t.lon), b2.y - py(t.lat)))[0];
       if (近) {
@@ -394,15 +412,24 @@ export function doSpecial(prev, townId, key) {
       }
     }
     if (o.troops) {
-      const near = s.castles.filter((c) => c.faction === s.player)
+      const near = s.castles.filter((c) => c.faction === actor)
         .sort((a, b) => Math.hypot(a.x - px(t.lon), a.y - py(t.lat)) - Math.hypot(b.x - px(t.lon), b.y - py(t.lat)))[0];
       if (near) { lines.push({ label: `${near.name} 地域家臣団`, before: near.local, after: near.local + o.troops, unit: "人" }); near.local += o.troops; }
     }
     if (o.prestige) lines.push({ label: "威信", before: Math.round(f.prestige), after: Math.round(clamp(f.prestige + o.prestige * 10, 0, 100)), unit: "" });
     if (o.prestige) f.prestige = clamp(f.prestige + o.prestige * 10, 0, 100);
-    if (key === "攻撃") for (const c of s.castles.filter((x) => x.faction === s.player)) c.min = Math.max(0, c.min - 8);
-    s.ledger = [{ cmd: `特殊勢力・${key}`, cost: o.cost || 0, castle: t.name, general: "―", lines }, ...s.ledger].slice(0, 6);
-    s.chronicle.push({ y: s.year, m: s.month, text: `${t.name}との関係を「${key}」とした。` });
+    if (key === "攻撃") for (const c of s.castles.filter((x) => x.faction === actor)) c.min = Math.max(0, c.min - 8);
+    s.chronicle.push({ y: s.year, m: s.month,
+      text: `${f.name}が${t.name}との関係を「${key}」とした。` });
+    return { ok: true, lines, cost: o.cost || 0, 名: t.name };
+}
+
+export function doSpecial(prev, townId, key) {
+    const s = structuredClone(prev);
+    const t = TOWNS.find((x) => x.id === townId);
+    const out = 特殊勢力と結ぶ(s, s.player, townId, key);
+    if (!out.ok) { if (out.why) s.msg = `${t ? t.name : ""}とは誼を通じられぬ。${out.why}。`; return s; }
+    s.ledger = [{ cmd: `特殊勢力・${key}`, cost: out.cost, castle: out.名, general: "―", lines: out.lines }, ...s.ledger].slice(0, 6);
     return s;
 }
 

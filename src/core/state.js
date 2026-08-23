@@ -16,6 +16,20 @@ import { SUBJECT, masterOf } from "../data/diplo.js";
 export const relKey = (a, b) => [a, b].sort().join("|");
 
 
+/* 盟約の印から相手を取り出す（GDD 12.1）。
+
+   これまで「印にその家の名が含まれるか」で見ていた。印は "a|b" という字であるから、
+   字として含まれるかを見ると、"so"（宗家）が "chosokabe|ichijo" に、
+   "iga"（伊賀惣国）が "ouchi|shiga" に、"oda"（織田家）が "oda_h|…"（小田家）に、
+   それぞれ引っかかる。他家の盟約が自家のものとして数えられていた。
+   区切りで分けて、名そのものと突き合わせる。 */
+export const 盟約の相手 = (k, fid) => {
+  const p = k.split("|");
+  return p[0] === fid ? p[1] : p[1] === fid ? p[0] : null;
+};
+export const 己の盟約 = (k, fid) => 盟約の相手(k, fid) != null;
+
+
 export function initState(player) {
   const factions = JSON.parse(JSON.stringify(FACTIONS));
   for (const f of Object.values(factions)) f.prestige = 50;
