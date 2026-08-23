@@ -227,6 +227,75 @@ const 確 = (名, 可, 添 = '') => {
     !(t.generals || []).some((x) => (t.hime || []).some((h) => h.id === x.id)), '');
 }
 
+/* ---------------------------------------------- 八の一、他家も姫を使う
+
+   これまで遊ぶ側でない家は外交をしなかった。始めに定まった間柄がそのまま
+   最後まで続いた。姫はその最初の一手である。 */
+{
+  const s = A.initState('oda');
+  // 弱い隣家（松平）が、大きな隣家（今川）を恐れて縁を結ぶ形を作る
+  const 弱 = 'matsudaira', 強 = 'imagawa';
+  const k = [弱, 強].sort().join('|');
+  s.relations[k] = { trust: 92, state: '中立', until: null };
+  s.factions[弱].gold = 4000;
+  s.卓 = '試の卓';                                   // 采配の籤を定める（毎度同じ手になる）
+  const h = A.家の姫(s, 弱)[0];
+  h.dip = 80;
+  /* 采配は年に一度、四度に一度ほどしか動かない（家々が片端から縁を結べば
+     盤から戦が消える）。年を替えて繰り返せば、いずれ動く。 */
+  let 手 = null;
+  for (let i = 0; i < 20 && s.relations[k].state !== '同盟'; i++) { s.year++; 手 = A.姫の采配(s, 弱, {}) || 手; }
+  確('他家も己より大きい隣家と縁を結ぶ', s.relations[k].state === '同盟',
+    手 ? `${手.手}（${h.name}）` : '何もしない');
+  確('その縁も姫の存命のあいだ続く', s.relations[k].until === null && !!s.relations[k].婚姻, '');
+
+  // 縁は一つに限る（家々が片端から結べば、盤から戦が消える）
+  const 他 = 'oda';
+  const k2 = [弱, 他].sort().join('|');
+  s.relations[k2] = { trust: 95, state: '中立', until: null };
+  A.姫の采配(s, 弱, {});
+  確('縁は一つに限る', s.relations[k2].state !== '同盟', s.relations[k2].state);
+}
+
+/* ---------------------------------------------- 八の二、遊ぶ側へは縁談として申し込む */
+{
+  const s = A.initState('oda');
+  // 遊ぶ側（織田）を大きくして、隣家に恐れさせる
+  for (const c of s.castles.filter((x) => x.faction === 'yamato' || x.faction === 'ise')) c.faction = 'oda';
+  const 弱 = 'mizuno';
+  const k = [弱, 'oda'].sort().join('|');
+  s.relations[k] = { trust: 95, state: '中立', until: null };
+  s.factions[弱].gold = 4000;
+  s.卓 = '試の卓';
+  const h = A.家の姫(s, 弱)[0];
+  h.dip = 84;
+  let 談 = null;
+  for (let i = 0; i < 20 && !談; i++) { s.year++; A.姫の采配(s, 弱, { 申し込む: (x) => { 談 = x; } }); }
+  確('遊ぶ側へはこちらから決めず、縁談として申し込む',
+    !!談 && s.relations[k].state !== '同盟', 談 ? `${s.factions[談.fid].name}より` : '申し込まれない');
+  if (談) {
+    const 断 = A.縁談を断る(structuredClone(s), 談);
+    確('断れば信用が下がる', 断.ok, 断.文 || '');
+    const r = A.縁談を受ける(s, 談);
+    確('受ければ婚姻同盟になる', r.ok && s.relations[k].state === '同盟' && s.relations[k].until === null, '');
+  }
+}
+
+/* ---------------------------------------------- 八の三、月を送れば他家が姫を使う */
+{
+  let t = A.initState('oda');
+  t.autoPlay = true;
+  for (let i = 0; i < 12 * 22; i++) t = A.advanceMonth(t, t);
+  const 婚 = Object.values(t.relations).filter((r) => r.婚姻).length;
+  const 一門 = (t.generals || []).filter((x) => x.一門).length;
+  確('二十二年のうちに、他家が縁を結ぶ', 婚 > 0, `${婚}組`);
+  確('他家が家臣に姫を嫁がせて家中を固める', 一門 > 0, `${一門}人`);
+  /* 家々が片端から縁を結べば、盤の上のどの家も攻められなくなる。
+     結ぶ家は一部にとどまっていること。 */
+  const 家数 = new Set(t.castles.map((c) => c.faction)).size;
+  確('縁を結ぶ家は一部にとどまる', 婚 < 家数 * 0.5, `${婚}組／${家数}家`);
+}
+
 /* ---------------------------------------------- 八、画面から姫を使えること */
 const H = require(path.join(ROOT, 'build', 'harness.cjs'));
 const { createRoot, act, App, React } = H;

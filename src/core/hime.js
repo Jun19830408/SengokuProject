@@ -76,8 +76,8 @@ function 姫の名(s, 城, 引く) {
   const 候補 = [];
   for (const f of 形) for (const c of HIME_NAMES) { const n = f(c); if (!使用.has(n)) 候補.push(n); }
   if (候補.length) return 候補[Math.floor(引く() * 候補.length)];
-  const 地 = 城 ? 城.name.replace(/城$/, "") : "";
-  for (const c of HIME_NAMES) { const n = `${地}の${c}姫`; if (!使用.has(n)) return n; }
+  const 地 = 城 ? 城.name.replace(/(城|砦|館|御所|の砦|氏館)$/, "") : "";
+  for (const c of HIME_NAMES) { const n = `${地}の${c}`; if (!使用.has(n)) return n; }
   return `${地}の姫`;
 }
 
@@ -166,7 +166,7 @@ export function 姫の年送り(s, { 告げる } = {}) {
     const p = a >= 80 ? 1 : a >= 76 ? 0.34 : a >= 70 ? 0.16 : a >= 60 ? 0.075 : a >= 54 ? 0.035 : a >= 48 ? 0.015 : 0;
     if (!p || 籤(s.卓 || "卓", h.id, s.year)() > p) continue;
     h.死 = true;
-    const 文 = `${s.factions[h.faction] ? s.factions[h.faction].name : ""}の姫${h.name}が没した。`;
+    const 文 = `${s.factions[h.faction] ? s.factions[h.faction].name : ""}の${h.name}が没した。`;
     s.chronicle.push({ y: s.year, m: s.month, text: 文 });
     if (告げる && (h.faction === s.player || (h.嫁 && h.嫁.先 === s.player))) 告げる(文);
     縁を解く(s, h, { 告げる });
@@ -199,7 +199,7 @@ export function 使者の帰り(s, { 告げる } = {}) {
     if (s.year < 迄.y || (s.year === 迄.y && s.month < 迄.m)) continue;
     const 先 = s.factions[h.務め.先];
     h.務め = null;
-    if (告げる && h.faction === s.player) 告げる(`姫${h.name}が${先 ? 先.name : ""}よりの使いを終えて戻った。`);
+    if (告げる && h.faction === s.player) 告げる(`${h.name}が${先 ? 先.name : ""}よりの使いを終えて戻った。`);
   }
 }
 
@@ -223,7 +223,7 @@ export function 使者に立てる(s, himeId, fid) {
   me.prestige = clamp((me.prestige ?? 50) + 1, 0, 100);
   const 迄 = { y: s.year + (s.month + 3 > 12 ? 1 : 0), m: ((s.month + 3 - 1) % 12) + 1 };
   h.務め = { 先: fid, 迄 };
-  const 文 = `${me.name}は姫${h.name}を${s.factions[fid].name}への使者に立てた（信用＋${効}）。`;
+  const 文 = `${me.name}は${h.name}を${s.factions[fid].name}への使者に立てた（信用＋${効}）。`;
   s.chronicle.push({ y: s.year, m: s.month, text: 文 });
   return { ok: true, 文, 効 };
 }
@@ -264,7 +264,7 @@ export function 婚姻を結ぶ(s, himeId, fid) {
   me.prestige = clamp((me.prestige ?? 50) + 2, 0, 100);
   h.嫁 = { 種: "婚姻", 先: fid, y: s.year, m: s.month };
   h.at = null;                                       // 輿入れした姫は盤を離れる
-  const 文 = `${me.name}は姫${h.name}を${s.factions[fid].name}へ輿入れさせ、同盟を結んだ。`
+  const 文 = `${me.name}は${h.name}を${s.factions[fid].name}へ輿入れさせ、同盟を結んだ。`
     + `この縁は${h.name}の存命のあいだ続く。`;
   s.chronicle.push({ y: s.year, m: s.month, text: 文 });
   return { ok: true, 文 };
@@ -293,7 +293,7 @@ export function 家臣に嫁がせる(s, himeId, genId) {
   gen.loyal = Math.max(gen.loyal == null ? 60 : gen.loyal, 92);
   h.嫁 = { 種: "家臣", 先: gen.id, y: s.year, m: s.month };
   h.at = gen.at;                                     // 婿の城に入る
-  const 文 = `${s.factions[h.faction].name}は姫${h.name}を${gen.name}に嫁がせた。${gen.name}は一門に列した。`;
+  const 文 = `${s.factions[h.faction].name}は${h.name}を${gen.name}に嫁がせた。${gen.name}は一門に列した。`;
   s.chronicle.push({ y: s.year, m: s.month, text: 文 });
   return { ok: true, 文 };
 }
@@ -304,8 +304,15 @@ export function 姫の居場所(s, { 告げる } = {}) {
   for (const h of s.hime || []) {
     if (h.死 || (h.嫁 && h.嫁.種 === "婚姻")) continue;
     if (h.嫁 && h.嫁.種 === "家臣") {
+      /* 婿のある姫は婿に従う。ただし婿が出陣していれば、姫まで盤から消えてしまう。
+         奥は城に残るものである。婿の城が定まらぬあいだは、いまの城に留める。 */
       const gen = s.generals.find((x) => x.id === h.嫁.先);
-      if (gen && !gen.captive) { h.faction = gen.faction; h.at = gen.at; continue; }
+      if (gen && !gen.captive) {
+        h.faction = gen.faction;
+        if (gen.at) { h.at = gen.at; continue; }
+        const 今 = s.castles.find((c) => c.id === h.at);
+        if (今 && 今.faction === h.faction) continue;      // いまの城のままでよい
+      }
     }
     const 城 = s.castles.find((c) => c.id === h.at);
     if (城 && 城.faction === h.faction) continue;
@@ -313,7 +320,7 @@ export function 姫の居場所(s, { 告げる } = {}) {
     if (落) {
       h.at = 落.id;
       if (城) {
-        const 文 = `${city(城)}の姫${h.name}は${落.name}へ落ち延びた。`;
+        const 文 = `${city(城)}の${h.name}は${落.name}へ落ち延びた。`;
         s.chronicle.push({ y: s.year, m: s.month, text: 文 });
         if (告げる && h.faction === s.player) 告げる(文);
       }
@@ -327,3 +334,148 @@ export function 姫の居場所(s, { 告げる } = {}) {
   }
 }
 const city = (c) => (c ? c.name : "");
+
+/* ==========================================================================
+   姫の采配（GDD 6.8）— 遊ぶ側でない家も、姫を使う
+
+   これまで他家は外交をしなかった。始めに定まった間柄がそのまま最後まで続き、
+   縁を結ぶことも、切ることもなかった。姫はその最初の一手である。
+
+   考え方は単純である。家は、己より大きい隣家を恐れる。
+     ・恐れる相手と信用が足りていれば、姫を輿入れさせて縁を結ぶ
+     ・足りなければ、姫を使者に立てて信用を積む
+     ・恐れる相手がなければ、心の離れた家臣に姫を嫁がせて家中を固める
+
+   縁は一つに限る。家がいくつも婚姻同盟を結べば、盤の上から戦が消える。
+   遊ぶ側へ嫁がせるときは、こちらから決めない。縁談として申し込む。
+
+   賽は卓の印から起こす（Math.random を回さない）。同じ盤なら同じ手を打つ。
+   ========================================================================== */
+
+/* 縁を結ぶのは隣国までである。盤の上で百三十歩――尾張から見て三河・美濃・
+   北伊勢あたりまで。遠国の家と縁を結ぶことが無いではないが、常のことではない。
+   ここを広く取ると、三河の松平が畿内の三好と縁を結ぶ、という話になる。 */
+export const 縁の遠さ = 130;
+
+export function 姫の采配(s, fid, { 告げる, 申し込む } = {}) {
+  const f = s.factions[fid];
+  const 自城 = s.castles.filter((c) => c.faction === fid);
+  if (!f || !自城.length) return null;
+  const 姫ら = 家の姫(s, fid).filter((h) => 使える姫(s, h) && !h.嫁);
+  if (!姫ら.length) return null;
+  const 引く = 籤(s.卓 || "卓", "采配", fid, s.year);
+
+  // すでに縁で結んだ家があるか（縁は一つに限る）
+  const 縁あり = Object.keys(s.relations).some((k) => k.includes(fid)
+    && s.relations[k].婚姻 && (s.hime || []).some((h) => h.id === s.relations[k].婚姻 && !h.死));
+
+  // 隣の家。城の近さで測る。
+  const 隔 = {};
+  for (const c of s.castles) {
+    if (c.faction === fid) continue;
+    const d = Math.min(...自城.map((m) => Math.hypot(m.x - c.x, m.y - c.y)));
+    if (隔[c.faction] == null || d < 隔[c.faction]) 隔[c.faction] = d;
+  }
+  const 我石 = factionKoku(s, fid);
+  const 恐 = Object.keys(隔)
+    .filter((x) => s.factions[x] && 隔[x] < 縁の遠さ && factionKoku(s, x) > 我石 * 1.5)
+    .map((x) => ({ 先: x, d: 隔[x], koku: factionKoku(s, x), r: relOf(s, fid, x) }))
+    .filter((x) => !["同盟", "臣従", "従属"].includes(x.r.state))
+    .sort((a, b) => b.koku - a.koku)[0];
+
+  /* 一、恐れる隣家があり、縁がまだ無いなら、姫を輿入れさせる。
+
+     年に一度、四度に一度ほどしか動かない。家々が片端から縁を結べば、
+     盤の上のどの家も攻められなくなる（同盟は攻めを封じる）。
+     縁組は最後の手立てであって、常の手ではない。 */
+  if (恐 && !縁あり) {
+    const h = [...姫ら].sort((a, b) => (b.dip || 50) - (a.dip || 50))[0];
+    if (婚姻できるか(s, h, 恐.先).ok) {
+      if (引く() >= 0.25) return null;                // 今年は動かない
+      if (恐.先 === s.player) {
+        // 遊ぶ側とは、こちらだけで決めない。縁談として申し込む。
+        if (申し込む) 申し込む({ fid, himeId: h.id, y: s.year, m: s.month });
+        return { 手: "縁談", h, 先: 恐.先 };
+      }
+      const r = 婚姻を結ぶ(s, h.id, 恐.先);
+      if (r.ok) { if (告げる) 告げる(r.文); return { 手: "輿入れ", h, 先: 恐.先 }; }
+      return null;
+    }
+    // 信用が足りぬなら、使者を立てて積む
+    if (f.gold >= 使者の礼 && 引く() < 0.55) {
+      const r = 使者に立てる(s, h.id, 恐.先);
+      if (r.ok) { if (告げる) 告げる(r.文); return { 手: "使者", h, 先: 恐.先 }; }
+    }
+    return null;
+  }
+
+  /* 二、縁を切る。
+
+     結んだ縁が永く続くとは限らない。信長は妹お市を浅井に嫁がせ、
+     その浅井を滅ぼした。相手より遙かに大きくなれば、縁は重石でしかない。
+     切れば信を失う（信用と威信が下がる）。姫は生家へ戻される。 */
+  if (縁あり) {
+    for (const k of Object.keys(s.relations)) {
+      const r = s.relations[k];
+      if (!k.includes(fid) || !r.婚姻) continue;
+      const h = (s.hime || []).find((x) => x.id === r.婚姻 && !x.死);
+      if (!h || h.faction !== fid) continue;           // 嫁がせた側だけが切れる
+      const 相 = k.split("|").find((x) => x !== fid);
+      if (!相 || !s.factions[相]) continue;
+      if (我石 <= factionKoku(s, 相) * 2.5) continue;   // まだ相手のほうが重い
+      if (引く() >= 0.2) continue;
+      r.state = "中立"; r.until = null; r.婚姻 = null;
+      r.trust = clamp((r.trust || 45) - 22, 0, 100);
+      f.prestige = clamp((f.prestige ?? 50) - 3, 0, 100);
+      h.嫁 = null;
+      const 城 = 本城(s, fid);
+      h.at = 城 ? 城.id : null;
+      const 文 = `${f.name}は${s.factions[相].name}との縁を切った。${h.name}は生家へ戻された。`;
+      s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+      if (告げる) 告げる(文);
+      return { 手: "縁切り", h, 先: 相 };
+    }
+  }
+
+  // 三、恐れる相手がなければ、心の離れた家臣に嫁がせて家中を固める
+  if (姫ら.length && 引く() < 0.45) {
+    const 婿 = s.generals
+      .filter((x) => x.faction === fid && 嫁がせられるか(s, 姫ら[0], x).ok)
+      .filter((x) => (x.loyal == null ? 60 : x.loyal) < 74)
+      .sort((a, b) => (b.lead + b.valor + b.wit) - (a.lead + a.valor + a.wit))[0];
+    if (婿) {
+      const h = [...姫ら].sort((a, b) => (b.lead || 50) - (a.lead || 50))[0];
+      const r = 家臣に嫁がせる(s, h.id, 婿.id);
+      if (r.ok) { if (告げる) 告げる(r.文); return { 手: "縁組", h, 先: 婿.id }; }
+    }
+  }
+  return null;
+}
+
+/* 遊ぶ側への縁談。受ければ婚姻同盟、断れば信用がいくらか下がる。 */
+export function 縁談を受ける(s, 談) {
+  const h = (s.hime || []).find((x) => x.id === 談.himeId);
+  if (!h || h.死 || h.嫁) return { ok: false, why: "その話はもう流れた" };
+  const k = relKey(h.faction, s.player);
+  const r = s.relations[k] || (s.relations[k] = { trust: 45, state: "中立", until: null });
+  r.state = "同盟"; r.until = null; r.master = null;
+  r.trust = clamp((r.trust || 45) + 14, 0, 100);
+  r.婚姻 = h.id;
+  h.嫁 = { 種: "婚姻", 先: s.player, y: s.year, m: s.month };
+  h.at = null;
+  const 文 = `${s.factions[h.faction].name}より${h.name}を迎え、同盟を結んだ。`
+    + `この縁は${h.name}の存命のあいだ続く。`;
+  s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+  return { ok: true, 文 };
+}
+
+export function 縁談を断る(s, 談) {
+  const h = (s.hime || []).find((x) => x.id === 談.himeId);
+  if (!h) return { ok: false, why: "" };
+  const k = relKey(h.faction, s.player);
+  const r = s.relations[k] || (s.relations[k] = { trust: 45, state: "中立", until: null });
+  r.trust = clamp((r.trust || 45) - 8, 0, 100);
+  const 文 = `${s.factions[h.faction].name}よりの縁談を断った。`;
+  s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+  return { ok: true, 文 };
+}

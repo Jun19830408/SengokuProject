@@ -35,11 +35,11 @@ import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, Goal
 import { SallyDialog } from "./panels.jsx";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
-import { ReinforceDialog, GateDeployDialog, HimeList } from "./panels.jsx";
+import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer } from "./panels.jsx";
 import { underMyBanner } from "../core/state.js";
 import { 忠誠, 守備隊の統率, castellanOf } from "../core/rank.js";
 import { 守りの割り付け } from "../core/garrison.js";
-import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる } from "../core/hime.js";
+import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を受ける, 縁談を断る } from "../core/hime.js";
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 難を逃れる } from "../core/capture.js";
@@ -1984,6 +1984,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {modal === "chronicle" && <Chronicle g={g} onClose={() => setModal(null)} />}
         {modal === "factions" && <FactionInfo g={g} onClose={() => setModal(null)} />}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)} />}
+        {g.縁談 && !battle && (
+          <MarriageOffer g={g} 談={g.縁談}
+            onTake={() => 姫の下知((s) => { const r = 縁談を受ける(s, s.縁談); s.縁談 = null; return r; })}
+            onPass={() => 姫の下知((s) => { const r = 縁談を断る(s, s.縁談); s.縁談 = null; return r; })} />
+        )}
         {modal === "hime" && (
           <HimeList g={g} onClose={() => setModal(null)}
             onEnvoy={(hid, fid) => 姫の下知((s) => 使者に立てる(s, hid, fid))}

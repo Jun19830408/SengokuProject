@@ -1045,6 +1045,40 @@ export function GeneralList({ g, onClose }) {
 }
 
 
+/* 縁談（GDD 6.8）。他家から姫を迎えるかどうかを問う。
+   受ければ婚姻同盟。期限は無く、その姫が世を去るまで続く。
+   断れば信用がいくらか下がる。答えぬままにはできない。 */
+export function MarriageOffer({ g, 談, onTake, onPass }) {
+  const h = (g.hime || []).find((x) => x.id === 談.himeId);
+  const f = g.factions[談.fid];
+  if (!h || !f) return null;
+  const r = relOf(g, g.player, 談.fid);
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card">
+        <div className="mn" style={{ fontSize: 21, marginBottom: 6 }}>縁談</div>
+        <div style={{ fontSize: 13.5, lineHeight: 2, marginBottom: 10 }}>
+          <b>{f.name}</b>より、<b className="mn" style={{ fontSize: 16 }}>{h.name}</b>
+          （{姫の齢(g, h)}歳・外交{h.dip}・統率{h.lead}）を
+          こちらへ輿入れさせたい、との申し入れがあった。
+        </div>
+        {h.伝 && <div style={{ fontSize: 12, color: U.dim, marginBottom: 8 }}>{h.伝}</div>}
+        <div className="row"><span>いまの間柄</span><span className="v">{r.state}・信用{Math.round(r.trust)}</span></div>
+        <div style={{ fontSize: 12, color: U.dim, lineHeight: 1.9, marginTop: 8 }}>
+          受ければ<b style={{ color: U.text }}>同盟</b>となる。期限は無く、
+          この縁は{h.name}が世を去るまで続く。<br />
+          同盟のあいだ、この家を攻めることはできない。断れば信用が下がる。
+        </div>
+        <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
+          <button className="btn" style={{ flex: 1 }} onClick={onPass}>断る</button>
+          <button className="btn dark" style={{ flex: 1 }} onClick={onTake}>縁を結ぶ</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 /* ------------------------------------------------------ 姫（GDD 6.8）
 
    大名家には姫がいる。武将としては数えず、戦場にも出ない。

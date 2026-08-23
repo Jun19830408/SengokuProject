@@ -5689,9 +5689,9 @@ function \u59EB\u306E\u540D(s2, \u57CE, \u5F15\u304F) {
     if (!\u4F7F\u7528.has(n)) \u5019\u88DC.push(n);
   }
   if (\u5019\u88DC.length) return \u5019\u88DC[Math.floor(\u5F15\u304F() * \u5019\u88DC.length)];
-  const \u5730 = \u57CE ? \u57CE.name.replace(/城$/, "") : "";
+  const \u5730 = \u57CE ? \u57CE.name.replace(/(城|砦|館|御所|の砦|氏館)$/, "") : "";
   for (const c of HIME_NAMES) {
-    const n = `${\u5730}\u306E${c}\u59EB`;
+    const n = `${\u5730}\u306E${c}`;
     if (!\u4F7F\u7528.has(n)) return n;
   }
   return `${\u5730}\u306E\u59EB`;
@@ -5773,7 +5773,7 @@ function \u59EB\u306E\u5E74\u9001\u308A(s2, { \u544A\u3052\u308B } = {}) {
     const p = a >= 80 ? 1 : a >= 76 ? 0.34 : a >= 70 ? 0.16 : a >= 60 ? 0.075 : a >= 54 ? 0.035 : a >= 48 ? 0.015 : 0;
     if (!p || \u7C64(s2.\u5353 || "\u5353", h.id, s2.year)() > p) continue;
     h.\u6B7B = true;
-    const \u6587 = `${s2.factions[h.faction] ? s2.factions[h.faction].name : ""}\u306E\u59EB${h.name}\u304C\u6CA1\u3057\u305F\u3002`;
+    const \u6587 = `${s2.factions[h.faction] ? s2.factions[h.faction].name : ""}\u306E${h.name}\u304C\u6CA1\u3057\u305F\u3002`;
     s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
     if (\u544A\u3052\u308B && (h.faction === s2.player || h.\u5AC1 && h.\u5AC1.\u5148 === s2.player)) \u544A\u3052\u308B(\u6587);
     \u7E01\u3092\u89E3\u304F(s2, h, { \u544A\u3052\u308B });
@@ -5803,7 +5803,7 @@ function \u4F7F\u8005\u306E\u5E30\u308A(s2, { \u544A\u3052\u308B } = {}) {
     if (s2.year < \u8FC4.y || s2.year === \u8FC4.y && s2.month < \u8FC4.m) continue;
     const \u5148 = s2.factions[h.\u52D9\u3081.\u5148];
     h.\u52D9\u3081 = null;
-    if (\u544A\u3052\u308B && h.faction === s2.player) \u544A\u3052\u308B(`\u59EB${h.name}\u304C${\u5148 ? \u5148.name : ""}\u3088\u308A\u306E\u4F7F\u3044\u3092\u7D42\u3048\u3066\u623B\u3063\u305F\u3002`);
+    if (\u544A\u3052\u308B && h.faction === s2.player) \u544A\u3052\u308B(`${h.name}\u304C${\u5148 ? \u5148.name : ""}\u3088\u308A\u306E\u4F7F\u3044\u3092\u7D42\u3048\u3066\u623B\u3063\u305F\u3002`);
   }
 }
 var \u4F7F\u8005\u306E\u793C = 120;
@@ -5822,7 +5822,7 @@ function \u4F7F\u8005\u306B\u7ACB\u3066\u308B(s2, himeId, fid) {
   me.prestige = clamp((me.prestige ?? 50) + 1, 0, 100);
   const \u8FC4 = { y: s2.year + (s2.month + 3 > 12 ? 1 : 0), m: (s2.month + 3 - 1) % 12 + 1 };
   h.\u52D9\u3081 = { \u5148: fid, \u8FC4 };
-  const \u6587 = `${me.name}\u306F\u59EB${h.name}\u3092${s2.factions[fid].name}\u3078\u306E\u4F7F\u8005\u306B\u7ACB\u3066\u305F\uFF08\u4FE1\u7528\uFF0B${\u52B9}\uFF09\u3002`;
+  const \u6587 = `${me.name}\u306F${h.name}\u3092${s2.factions[fid].name}\u3078\u306E\u4F7F\u8005\u306B\u7ACB\u3066\u305F\uFF08\u4FE1\u7528\uFF0B${\u52B9}\uFF09\u3002`;
   s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
   return { ok: true, \u6587, \u52B9 };
 }
@@ -5860,7 +5860,7 @@ function \u5A5A\u59FB\u3092\u7D50\u3076(s2, himeId, fid) {
   me.prestige = clamp((me.prestige ?? 50) + 2, 0, 100);
   h.\u5AC1 = { \u7A2E: "\u5A5A\u59FB", \u5148: fid, y: s2.year, m: s2.month };
   h.at = null;
-  const \u6587 = `${me.name}\u306F\u59EB${h.name}\u3092${s2.factions[fid].name}\u3078\u8F3F\u5165\u308C\u3055\u305B\u3001\u540C\u76DF\u3092\u7D50\u3093\u3060\u3002\u3053\u306E\u7E01\u306F${h.name}\u306E\u5B58\u547D\u306E\u3042\u3044\u3060\u7D9A\u304F\u3002`;
+  const \u6587 = `${me.name}\u306F${h.name}\u3092${s2.factions[fid].name}\u3078\u8F3F\u5165\u308C\u3055\u305B\u3001\u540C\u76DF\u3092\u7D50\u3093\u3060\u3002\u3053\u306E\u7E01\u306F${h.name}\u306E\u5B58\u547D\u306E\u3042\u3044\u3060\u7D9A\u304F\u3002`;
   s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
   return { ok: true, \u6587 };
 }
@@ -5884,7 +5884,7 @@ function \u5BB6\u81E3\u306B\u5AC1\u304C\u305B\u308B(s2, himeId, genId) {
   gen.loyal = Math.max(gen.loyal == null ? 60 : gen.loyal, 92);
   h.\u5AC1 = { \u7A2E: "\u5BB6\u81E3", \u5148: gen.id, y: s2.year, m: s2.month };
   h.at = gen.at;
-  const \u6587 = `${s2.factions[h.faction].name}\u306F\u59EB${h.name}\u3092${gen.name}\u306B\u5AC1\u304C\u305B\u305F\u3002${gen.name}\u306F\u4E00\u9580\u306B\u5217\u3057\u305F\u3002`;
+  const \u6587 = `${s2.factions[h.faction].name}\u306F${h.name}\u3092${gen.name}\u306B\u5AC1\u304C\u305B\u305F\u3002${gen.name}\u306F\u4E00\u9580\u306B\u5217\u3057\u305F\u3002`;
   s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
   return { ok: true, \u6587 };
 }
@@ -5895,8 +5895,12 @@ function \u59EB\u306E\u5C45\u5834\u6240(s2, { \u544A\u3052\u308B } = {}) {
       const gen = s2.generals.find((x) => x.id === h.\u5AC1.\u5148);
       if (gen && !gen.captive) {
         h.faction = gen.faction;
-        h.at = gen.at;
-        continue;
+        if (gen.at) {
+          h.at = gen.at;
+          continue;
+        }
+        const \u4ECA = s2.castles.find((c) => c.id === h.at);
+        if (\u4ECA && \u4ECA.faction === h.faction) continue;
       }
     }
     const \u57CE = s2.castles.find((c) => c.id === h.at);
@@ -5905,7 +5909,7 @@ function \u59EB\u306E\u5C45\u5834\u6240(s2, { \u544A\u3052\u308B } = {}) {
     if (\u843D) {
       h.at = \u843D.id;
       if (\u57CE) {
-        const \u65872 = `${city(\u57CE)}\u306E\u59EB${h.name}\u306F${\u843D.name}\u3078\u843D\u3061\u5EF6\u3073\u305F\u3002`;
+        const \u65872 = `${city(\u57CE)}\u306E${h.name}\u306F${\u843D.name}\u3078\u843D\u3061\u5EF6\u3073\u305F\u3002`;
         s2.chronicle.push({ y: s2.year, m: s2.month, text: \u65872 });
         if (\u544A\u3052\u308B && h.faction === s2.player) \u544A\u3052\u308B(\u65872);
       }
@@ -5920,6 +5924,110 @@ function \u59EB\u306E\u5C45\u5834\u6240(s2, { \u544A\u3052\u308B } = {}) {
   }
 }
 var city = (c) => c ? c.name : "";
+var \u7E01\u306E\u9060\u3055 = 130;
+function \u59EB\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B, \u7533\u3057\u8FBC\u3080 } = {}) {
+  const f = s2.factions[fid];
+  const \u81EA\u57CE = s2.castles.filter((c) => c.faction === fid);
+  if (!f || !\u81EA\u57CE.length) return null;
+  const \u59EB\u3089 = \u5BB6\u306E\u59EB(s2, fid).filter((h) => \u4F7F\u3048\u308B\u59EB(s2, h) && !h.\u5AC1);
+  if (!\u59EB\u3089.length) return null;
+  const \u5F15\u304F = \u7C64(s2.\u5353 || "\u5353", "\u91C7\u914D", fid, s2.year);
+  const \u7E01\u3042\u308A = Object.keys(s2.relations).some((k) => k.includes(fid) && s2.relations[k].\u5A5A\u59FB && (s2.hime || []).some((h) => h.id === s2.relations[k].\u5A5A\u59FB && !h.\u6B7B));
+  const \u9694 = {};
+  for (const c of s2.castles) {
+    if (c.faction === fid) continue;
+    const d = Math.min(...\u81EA\u57CE.map((m) => Math.hypot(m.x - c.x, m.y - c.y)));
+    if (\u9694[c.faction] == null || d < \u9694[c.faction]) \u9694[c.faction] = d;
+  }
+  const \u6211\u77F3 = factionKoku(s2, fid);
+  const \u6050 = Object.keys(\u9694).filter((x) => s2.factions[x] && \u9694[x] < \u7E01\u306E\u9060\u3055 && factionKoku(s2, x) > \u6211\u77F3 * 1.5).map((x) => ({ \u5148: x, d: \u9694[x], koku: factionKoku(s2, x), r: relOf(s2, fid, x) })).filter((x) => !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(x.r.state)).sort((a, b) => b.koku - a.koku)[0];
+  if (\u6050 && !\u7E01\u3042\u308A) {
+    const h = [...\u59EB\u3089].sort((a, b) => (b.dip || 50) - (a.dip || 50))[0];
+    if (\u5A5A\u59FB\u3067\u304D\u308B\u304B(s2, h, \u6050.\u5148).ok) {
+      if (\u5F15\u304F() >= 0.25) return null;
+      if (\u6050.\u5148 === s2.player) {
+        if (\u7533\u3057\u8FBC\u3080) \u7533\u3057\u8FBC\u3080({ fid, himeId: h.id, y: s2.year, m: s2.month });
+        return { \u624B: "\u7E01\u8AC7", h, \u5148: \u6050.\u5148 };
+      }
+      const r = \u5A5A\u59FB\u3092\u7D50\u3076(s2, h.id, \u6050.\u5148);
+      if (r.ok) {
+        if (\u544A\u3052\u308B) \u544A\u3052\u308B(r.\u6587);
+        return { \u624B: "\u8F3F\u5165\u308C", h, \u5148: \u6050.\u5148 };
+      }
+      return null;
+    }
+    if (f.gold >= \u4F7F\u8005\u306E\u793C && \u5F15\u304F() < 0.55) {
+      const r = \u4F7F\u8005\u306B\u7ACB\u3066\u308B(s2, h.id, \u6050.\u5148);
+      if (r.ok) {
+        if (\u544A\u3052\u308B) \u544A\u3052\u308B(r.\u6587);
+        return { \u624B: "\u4F7F\u8005", h, \u5148: \u6050.\u5148 };
+      }
+    }
+    return null;
+  }
+  if (\u7E01\u3042\u308A) {
+    for (const k of Object.keys(s2.relations)) {
+      const r = s2.relations[k];
+      if (!k.includes(fid) || !r.\u5A5A\u59FB) continue;
+      const h = (s2.hime || []).find((x) => x.id === r.\u5A5A\u59FB && !x.\u6B7B);
+      if (!h || h.faction !== fid) continue;
+      const \u76F8 = k.split("|").find((x) => x !== fid);
+      if (!\u76F8 || !s2.factions[\u76F8]) continue;
+      if (\u6211\u77F3 <= factionKoku(s2, \u76F8) * 2.5) continue;
+      if (\u5F15\u304F() >= 0.2) continue;
+      r.state = "\u4E2D\u7ACB";
+      r.until = null;
+      r.\u5A5A\u59FB = null;
+      r.trust = clamp((r.trust || 45) - 22, 0, 100);
+      f.prestige = clamp((f.prestige ?? 50) - 3, 0, 100);
+      h.\u5AC1 = null;
+      const \u57CE = \u672C\u57CE(s2, fid);
+      h.at = \u57CE ? \u57CE.id : null;
+      const \u6587 = `${f.name}\u306F${s2.factions[\u76F8].name}\u3068\u306E\u7E01\u3092\u5207\u3063\u305F\u3002${h.name}\u306F\u751F\u5BB6\u3078\u623B\u3055\u308C\u305F\u3002`;
+      s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+      if (\u544A\u3052\u308B) \u544A\u3052\u308B(\u6587);
+      return { \u624B: "\u7E01\u5207\u308A", h, \u5148: \u76F8 };
+    }
+  }
+  if (\u59EB\u3089.length && \u5F15\u304F() < 0.45) {
+    const \u5A7F = s2.generals.filter((x) => x.faction === fid && \u5AC1\u304C\u305B\u3089\u308C\u308B\u304B(s2, \u59EB\u3089[0], x).ok).filter((x) => (x.loyal == null ? 60 : x.loyal) < 74).sort((a, b) => b.lead + b.valor + b.wit - (a.lead + a.valor + a.wit))[0];
+    if (\u5A7F) {
+      const h = [...\u59EB\u3089].sort((a, b) => (b.lead || 50) - (a.lead || 50))[0];
+      const r = \u5BB6\u81E3\u306B\u5AC1\u304C\u305B\u308B(s2, h.id, \u5A7F.id);
+      if (r.ok) {
+        if (\u544A\u3052\u308B) \u544A\u3052\u308B(r.\u6587);
+        return { \u624B: "\u7E01\u7D44", h, \u5148: \u5A7F.id };
+      }
+    }
+  }
+  return null;
+}
+function \u7E01\u8AC7\u3092\u53D7\u3051\u308B(s2, \u8AC7) {
+  const h = (s2.hime || []).find((x) => x.id === \u8AC7.himeId);
+  if (!h || h.\u6B7B || h.\u5AC1) return { ok: false, why: "\u305D\u306E\u8A71\u306F\u3082\u3046\u6D41\u308C\u305F" };
+  const k = relKey(h.faction, s2.player);
+  const r = s2.relations[k] || (s2.relations[k] = { trust: 45, state: "\u4E2D\u7ACB", until: null });
+  r.state = "\u540C\u76DF";
+  r.until = null;
+  r.master = null;
+  r.trust = clamp((r.trust || 45) + 14, 0, 100);
+  r.\u5A5A\u59FB = h.id;
+  h.\u5AC1 = { \u7A2E: "\u5A5A\u59FB", \u5148: s2.player, y: s2.year, m: s2.month };
+  h.at = null;
+  const \u6587 = `${s2.factions[h.faction].name}\u3088\u308A${h.name}\u3092\u8FCE\u3048\u3001\u540C\u76DF\u3092\u7D50\u3093\u3060\u3002\u3053\u306E\u7E01\u306F${h.name}\u306E\u5B58\u547D\u306E\u3042\u3044\u3060\u7D9A\u304F\u3002`;
+  s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+  return { ok: true, \u6587 };
+}
+function \u7E01\u8AC7\u3092\u65AD\u308B(s2, \u8AC7) {
+  const h = (s2.hime || []).find((x) => x.id === \u8AC7.himeId);
+  if (!h) return { ok: false, why: "" };
+  const k = relKey(h.faction, s2.player);
+  const r = s2.relations[k] || (s2.relations[k] = { trust: 45, state: "\u4E2D\u7ACB", until: null });
+  r.trust = clamp((r.trust || 45) - 8, 0, 100);
+  const \u6587 = `${s2.factions[h.faction].name}\u3088\u308A\u306E\u7E01\u8AC7\u3092\u65AD\u3063\u305F\u3002`;
+  s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+  return { ok: true, \u6587 };
+}
 
 // src/data/diplo.js
 var SPECIAL_OPTIONS = {
@@ -10586,6 +10694,20 @@ function advanceMonth(prev, g) {
   for (const fid of Object.keys(s2.factions)) {
     if (!auto(fid)) continue;
     reviewAim(s2, fid);
+    if (s2.month === 4) {
+      \u59EB\u306E\u91C7\u914D(s2, fid, {
+        // 事の記録は姫の側で戦国記に残す。ここでは遊ぶ側に関わるものだけ報せる。
+        \u544A\u3052\u308B: (t) => {
+          if (t.includes(s2.factions[s2.player].name)) events.push(t);
+        },
+        \u7533\u3057\u8FBC\u3080: (\u8AC7) => {
+          if (!s2.\u7E01\u8AC7) {
+            s2.\u7E01\u8AC7 = \u8AC7;
+            events.push(`${s2.factions[\u8AC7.fid].name}\u3088\u308A\u7E01\u8AC7\u306E\u7533\u3057\u5165\u308C\u304C\u3042\u3063\u305F\u3002`);
+          }
+        }
+      });
+    }
     const fa = s2.factions[fid];
     if (fa.temper === "\u9670\u8B00" && fa.aim && fa.gold > 500 && Math.random() < 0.3 * lv(s2).aiPlot) {
       const t = s2.castles.find((c2) => c2.id === fa.aim.target);
@@ -16182,6 +16304,13 @@ function GeneralList({ g, onClose }) {
     "\u3014\u67B6\u7A7A\u3015"
   )), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, flex: 1 } }, x.age, "\u6B73 \u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, " \u653F", x.gov, " \u5FE0", \u5FE0\u8AA0(x)), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, x.at ? (g.castles.find((c) => c.id === x.at) || {}).name : "\u51FA\u5F81\u4E2D"), /* @__PURE__ */ React2.createElement("span", { className: "num" }, "\u76F4\u5C5E ", fmt(x.retinue)))), gs.some((x) => is\u67B6\u7A7A(x)) && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u3014\u67B6\u7A7A\u3015\u2026 \u904A\u3073\u306E\u4E2D\u3067\u751F\u307E\u308C\u305F\u8005\u3067\u3059\u3002\u53F2\u5B9F\u306E\u4EBA\u7269\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), gs.some((x) => isNameless(x)) && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.7 } }, "\u3014\u4F1D\u3015\u306F\u540D\u306E\u4F1D\u308F\u3089\u306C\u5728\u5730\u306E\u9577\u3067\u3059\u3002\u5730\u540D\u306B\u300C\u4E59\u540D\u300D\u300C\u6309\u53F8\u300D\u3092\u6DFB\u3048\u305F\u547C\u3073\u540D\u3067\u3042\u308A\u3001\u5B9F\u5728\u306E\u4EBA\u540D\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")));
 }
+function MarriageOffer({ g, \u8AC7, onTake, onPass }) {
+  const h = (g.hime || []).find((x) => x.id === \u8AC7.himeId);
+  const f = g.factions[\u8AC7.fid];
+  if (!h || !f) return null;
+  const r = relOf2(g, g.player, \u8AC7.fid);
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 6 } }, "\u7E01\u8AC7"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 13.5, lineHeight: 2, marginBottom: 10 } }, /* @__PURE__ */ React2.createElement("b", null, f.name), "\u3088\u308A\u3001", /* @__PURE__ */ React2.createElement("b", { className: "mn", style: { fontSize: 16 } }, h.name), "\uFF08", \u59EB\u306E\u9F62(g, h), "\u6B73\u30FB\u5916\u4EA4", h.dip, "\u30FB\u7D71\u7387", h.lead, "\uFF09\u3092 \u3053\u3061\u3089\u3078\u8F3F\u5165\u308C\u3055\u305B\u305F\u3044\u3001\u3068\u306E\u7533\u3057\u5165\u308C\u304C\u3042\u3063\u305F\u3002"), h.\u4F1D && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 8 } }, h.\u4F1D), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u3044\u307E\u306E\u9593\u67C4"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, r.state, "\u30FB\u4FE1\u7528", Math.round(r.trust))), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim, lineHeight: 1.9, marginTop: 8 } }, "\u53D7\u3051\u308C\u3070", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u540C\u76DF"), "\u3068\u306A\u308B\u3002\u671F\u9650\u306F\u7121\u304F\u3001 \u3053\u306E\u7E01\u306F", h.name, "\u304C\u4E16\u3092\u53BB\u308B\u307E\u3067\u7D9A\u304F\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u540C\u76DF\u306E\u3042\u3044\u3060\u3001\u3053\u306E\u5BB6\u3092\u653B\u3081\u308B\u3053\u3068\u306F\u3067\u304D\u306A\u3044\u3002\u65AD\u308C\u3070\u4FE1\u7528\u304C\u4E0B\u304C\u308B\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 16 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onPass }, "\u65AD\u308B"), /* @__PURE__ */ React2.createElement("button", { className: "btn dark", style: { flex: 1 }, onClick: onTake }, "\u7E01\u3092\u7D50\u3076"))));
+}
 function HimeList({ g, onClose, onEnvoy, onWed, onMarry }) {
   const [sel, setSel] = useState2(null);
   const [mode, setMode] = useState2(null);
@@ -19272,7 +19401,10 @@ var \u8AAC\u660E\u66F8 = [
         \u7B87\u6761: [
           "\u8F3F\u5165\u308C\u3057\u305F\u59EB\u304C\u4E16\u3092\u53BB\u308C\u3070\u3001\u305D\u306E\u7E01\u3067\u7D50\u3093\u3060\u540C\u76DF\u3082\u89E3\u3051\u308B",
           "\u57CE\u304C\u843D\u3061\u308C\u3070\u3001\u59EB\u306F\u5BB6\u306E\u4ED6\u306E\u57CE\u3078\u843D\u3061\u5EF6\u3073\u308B\u3002\u5BB6\u304C\u6EC5\u3079\u3070\u884C\u65B9\u306F\u77E5\u308C\u306A\u304F\u306A\u308B",
-          "\u59EB\u6B66\u5C06\u306F\u3044\u306A\u3044\u3002\u59EB\u304C\u76E4\u306E\u4E0A\u306B\u99D2\u3068\u3057\u3066\u51FA\u308B\u3053\u3068\u306F\u306A\u3044"
+          "\u59EB\u6B66\u5C06\u306F\u3044\u306A\u3044\u3002\u59EB\u304C\u76E4\u306E\u4E0A\u306B\u99D2\u3068\u3057\u3066\u51FA\u308B\u3053\u3068\u306F\u306A\u3044",
+          "\u4ED6\u5BB6\u3082\u59EB\u3092\u4F7F\u3046\u3002\u5DF1\u3088\u308A\u5927\u304D\u3044\u96A3\u5BB6\u3092\u6050\u308C\u308C\u3070\u7E01\u3092\u7D50\u3073\u306B\u884C\u304D\u3001\u6050\u308C\u308B\u76F8\u624B\u304C\u306A\u3051\u308C\u3070\u5BB6\u81E3\u306B\u5AC1\u304C\u305B\u3066\u5BB6\u4E2D\u3092\u56FA\u3081\u308B",
+          "\u4ED6\u5BB6\u304B\u3089\u3053\u3061\u3089\u3078\u7E01\u8AC7\u304C\u6765\u308B\u3053\u3068\u304C\u3042\u308B\u3002\u53D7\u3051\u308C\u3070\u540C\u76DF\u3001\u65AD\u308C\u3070\u4FE1\u7528\u304C\u4E0B\u304C\u308B",
+          "\u7D50\u3093\u3060\u7E01\u304C\u6C38\u304F\u7D9A\u304F\u3068\u306F\u9650\u3089\u306A\u3044\u3002\u76F8\u624B\u3088\u308A\u9059\u304B\u306B\u5927\u304D\u304F\u306A\u3063\u305F\u5BB6\u306F\u3001\u7E01\u3092\u5207\u3063\u3066\u59EB\u3092\u751F\u5BB6\u3078\u623B\u3059\u3053\u3068\u304C\u3042\u308B\uFF08\u4FE1\u7528\u3068\u5A01\u4FE1\u3092\u5931\u3046\uFF09"
         ]
       }
     ]
@@ -21298,6 +21430,23 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     modal === "chronicle" && /* @__PURE__ */ React8.createElement(Chronicle, { g, onClose: () => setModal(null) }),
     modal === "factions" && /* @__PURE__ */ React8.createElement(FactionInfo, { g, onClose: () => setModal(null) }),
     modal === "generals" && /* @__PURE__ */ React8.createElement(GeneralList, { g, onClose: () => setModal(null) }),
+    g.\u7E01\u8AC7 && !battle && /* @__PURE__ */ React8.createElement(
+      MarriageOffer,
+      {
+        g,
+        \u8AC7: g.\u7E01\u8AC7,
+        onTake: () => \u59EB\u306E\u4E0B\u77E5((s2) => {
+          const r = \u7E01\u8AC7\u3092\u53D7\u3051\u308B(s2, s2.\u7E01\u8AC7);
+          s2.\u7E01\u8AC7 = null;
+          return r;
+        }),
+        onPass: () => \u59EB\u306E\u4E0B\u77E5((s2) => {
+          const r = \u7E01\u8AC7\u3092\u65AD\u308B(s2, s2.\u7E01\u8AC7);
+          s2.\u7E01\u8AC7 = null;
+          return r;
+        })
+      }
+    ),
     modal === "hime" && /* @__PURE__ */ React8.createElement(
       HimeList,
       {

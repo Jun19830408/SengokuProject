@@ -1,6 +1,6 @@
 import { ambushChance } from "../core/ambush.js";
 import { ransomCost, takeAsPrisoner } from "../core/capture.js";
-import { 姫を整える, 姫の年送り, 姫の居場所, 使者の帰り } from "../core/hime.js";
+import { 姫を整える, 姫の年送り, 姫の居場所, 使者の帰り, 姫の采配 } from "../core/hime.js";
 import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, lifeSpan, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
@@ -787,6 +787,19 @@ export function advanceMonth(prev, g) {
       for (const fid of Object.keys(s.factions)) {
         if (!auto(fid)) continue;
         reviewAim(s, fid);
+        /* 姫の采配（GDD 6.8）。年に一度、家ごとに一手だけ。
+           己より大きい隣家を恐れれば縁を結びに行き、恐れる相手がなければ
+           家中を固める。遊ぶ側への輿入れは、こちらから決めず縁談として申し込む。 */
+        if (s.month === 4) {
+          姫の采配(s, fid, {
+            // 事の記録は姫の側で戦国記に残す。ここでは遊ぶ側に関わるものだけ報せる。
+            告げる: (t) => { if (t.includes(s.factions[s.player].name)) events.push(t); },
+            申し込む: (談) => {
+              // 縁談は一度に一つだけ受け付ける。返事をするまで次は来ない。
+              if (!s.縁談) { s.縁談 = 談; events.push(`${s.factions[談.fid].name}より縁談の申し入れがあった。`); }
+            },
+          });
+        }
         const fa = s.factions[fid];
         // 気性ごとの振る舞い
         if (fa.temper === "陰謀" && fa.aim && fa.gold > 500 && Math.random() < 0.3 * lv(s).aiPlot) {
