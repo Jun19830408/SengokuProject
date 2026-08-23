@@ -64,6 +64,36 @@ export function castellanOf(s, c) {
   return [...gs].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
 }
 
+/* ------------------------------------------- 城門の守備隊（GDD 9.3）
+
+   城攻めでは、武将のいない城門にも兵は詰めている。門番、足軽小頭、寺に籠った
+   僧兵――名は伝わらぬが、そこに人はいる。これまでは武将の数だけしか隊が立たず、
+   残りの門はがら空きであった。
+
+   守備隊の器量は、その城を預かる者の統率だけを映す。誰の下で守るかで、
+   門の固さは変わる。武勇と知略は最低限とする。名も無き兵に、将の武辺や
+   謀は望めない。
+
+   城主がいなければ、位の高い者から選ぶ。同じ位なら家に長く仕えた者
+   （仕えた年を控えていない古い盤では、齢の高いほうを古参とみなす）、
+   それも同じなら能力の高い者。将が一人もおらず姫がいるなら、姫の統率を映す。
+   誰もいなければ、四十とする。城代のいない城は、それだけ脆い。 */
+export function 守備隊の統率(s, c) {
+  const gs = s.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+  if (gs.length) {
+    const 主 = castellanOf(s, c);
+    if (主) return 主.lead;
+    const 位 = (x) => RANKS.findIndex((r) => r.key === rankOf(x, s).key);
+    const 順 = [...gs].sort((a, b) => 位(b) - 位(a)
+      || ((b.仕官 != null && a.仕官 != null) ? a.仕官 - b.仕官 : (b.age || 0) - (a.age || 0))
+      || (b.lead + b.valor + b.wit) - (a.lead + a.valor + a.wit));
+    return 順[0].lead;
+  }
+  const 姫 = (s.hime || []).filter((h) => h.at === c.id && h.faction === c.faction && !h.死);
+  if (姫.length) return Math.max(...姫.map((h) => h.lead || 50));
+  return 40;
+}
+
 // 城を預かれるのは家老以上。ただし小城は、その城の身代に見合う禄高で足る。
 // 一万石に満たぬ砦の主に八千石を求めるのは筋が通らない。
 export function castleRankNeed(c) {

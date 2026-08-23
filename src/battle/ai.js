@@ -186,6 +186,7 @@ export function battleAI(b) {
      崩れかけた隊は割かない。手薄になれば、そこから崩れる。 */
   for (const c of alive) {
     if (!delegated(b, c) || c.detach || c.routed || c.withdraw) continue;
+    if (c.守備隊) continue;                            // 名も無き守備隊は兵を割かない
     if (c.morale < 55 || corpsMen(c) < corpsMax(c) * 0.5) continue;
     if (b.t < 3) continue;                       // 布陣直後は様子を見る
     if (b.t < (c.分遣を検めた || 0) + 5) continue;
@@ -382,6 +383,17 @@ export function battleAI(b) {
               || foeMen < myMen / 3              // 寄せ手が三分の一を割った
               || myWorth > foeWorth * 1.4        // 将の器量で大きく上回る
             );
+            if (c.守備隊) {
+              /* 守備隊は討って出ない（GDD 9.3）。門を支え、外へ射かけるだけである。
+                 名も無き足軽小頭に、門を開いて野へ出よとは言えない。 */
+              const 射手 = c.squads.some((q) => q.men > 0 && (q.type === "yumi" || q.type === "teppo"));
+              if (射手 && foes.length) {
+                const t4 = [...foes].sort((x, y2) =>
+                  Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
+                issueOrder(b, c, { order: "射撃", tx: t4.x, ty: t4.y, target: t4.id });
+              } else issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
+              continue;
+            }
             if (c.sallied) {
               // 打って出た後は四十秒で城へ戻る
               if (b.t - (c.sallyAt || 0) > 40 || c.morale < 46) {

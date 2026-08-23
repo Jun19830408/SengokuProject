@@ -314,7 +314,10 @@ export const CHARS = ["勝", "貞", "秀", "忠", "政", "盛", "通", "直", "�
 export const FEATS = ["橋際で崩れかけた隊列を立て直し、敵の渡河を阻んだ。", "森の伏兵をいち早く見つけ、味方の側面を救った。", "退き口を開き、殿を務めて主将を逃がした。"];
 
 
-export function makePromotion(lord, allGens) {
+/* 戦功による取り立て（GDD 6.7）。
+   名も無き者が手柄を立て、主から偏諱の一字を賜って武将に列する。
+   opts で仕える先を渡すと、名を選んだあとに実際の武将として召し抱えられる。 */
+export function makePromotion(lord, allGens, opts = {}) {
   const sur = SURNAMES[Math.floor(Math.random() * SURNAMES.length)];
   const common = COMMON[Math.floor(Math.random() * COMMON.length)];
   const given = lord.name.slice(2);
@@ -327,9 +330,35 @@ export function makePromotion(lord, allGens) {
     for (const n of [`${sur}${henki}${ch}`, `${sur}${ch}${henki}`]) if (!used.has(n) && !cands.includes(n)) cands.push(n);
   }
   if (!cands.length) cands.push(`${sur}${henki}勝`);
+  const r = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  /* 取り立てられた者の器量。名の知られた武将には及ばぬが、戦場で立った者である。
+     門を守り抜いた者（守備隊）は、堪える力（統率）がいくらか高い。 */
+  const 守 = !!opts.守備隊;
   return {
     oldName: `${sur}${common}`, lordName: lord.name, henki,
     candidates: cands.slice(0, 4), feat: FEATS[Math.floor(Math.random() * FEATS.length)],
+    仕官: {
+      faction: opts.faction || lord.faction, at: opts.at || lord.at,
+      lead: 守 ? r(46, 62) : r(38, 56), valor: 守 ? r(44, 64) : r(48, 70),
+      wit: r(28, 52), gov: r(26, 50), age: r(19, 34),
+      retinue: r(0, 3) * 20, retTrain: r(44, 62),
+    },
   };
+}
+
+/* 名の定まった者を家中に加える（makePromotion の続き）。 */
+export function 取り立てる(s, promo, name) {
+  const o = promo && promo.仕官;
+  if (!o || !s.factions[o.faction]) return null;
+  const id = `promo-${o.faction}-${s.year}-${s.month}-${s.generals.length}`;
+  const gen = {
+    id, name, faction: o.faction, lead: o.lead, valor: o.valor, wit: o.wit, gov: o.gov,
+    loyal: 82, age: o.age, at: o.at, retinue: o.retinue, retTrain: o.retTrain,
+    unity: clamp(o.retTrain + 6, 30, 100), merit: 6, 架空: true,
+    fief: 0, rost: newRoster(o.retinue, `ret-${id}`, 直属の兵科),
+  };
+  gen.fief = Math.round(fiefWanted(gen) * 0.5);
+  s.generals.push(gen);
+  return gen;
 }
 

@@ -8,6 +8,7 @@ import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core
 import { foodDays, minGarrison, rankName, troopLimit } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
+import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
 import { ARMS, ROAD_SPEED } from "../data/roads.js";
 import { reinforceOffers } from "../govern/war.js";
 import { canRecruit } from "../core/house.js";
@@ -550,6 +551,103 @@ export function SallyDialog({ g, castleId, foeId, onClose, onGo, 城下 }) {
           <button className="btn dark" style={{ flex: 2 }} disabled={!picked.length || 兵 < 100}
             onClick={() => onGo({ gens: picked, local: 出す })}>{fmt(兵)}人で討って出る</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------ 城門の割り付け（GDD 9.3）
+
+   城攻めが始まる前に、どの門に誰を置き、兵をどう分けるかを決める。
+   武将のいない門は「◯◯城守備隊」が守る。守備隊の器量は、その城を預かる者の
+   統率だけを映す（武勇と知略は最低限）。
+
+   遊ぶ側が城方のときだけ開く。采配（敵方）は同じ案を自動で用いる。 */
+export function GateDeployDialog({ g, castle, gates, 寄せ手, onClose, onGo }) {
+  const 将 = useMemo(() => g.generals
+    .filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive)
+    .sort((a, b) => (b.lead * 1.4 + b.valor) - (a.lead * 1.4 + a.valor)), [g, castle]);
+  const 順 = useMemo(() => [...gates].sort((a, b) => a.layer - b.layer || 門の重み(b) - 門の重み(a)), [gates]);
+  const [割, set割] = useState(() => 守りの割り付け(g, castle, gates));
+  const 兵 = Math.max(0, Math.round(castle.local));
+  const 使 = 割り付けの兵(割);
+  const 余 = 兵 - 使;
+  const 統 = 割.統;
+
+  const 置く = (key, genId) => set割((p) => {
+    const n = { ...p, 門: { ...p.門 } };
+    // 同じ将を二つの門には置けない。先に置いていた門は空ける。
+    for (const k in n.門) if (genId && n.門[k].genId === genId) n.門[k] = { ...n.門[k], genId: null };
+    n.門[key] = { ...n.門[key], genId: genId || null };
+    return n;
+  });
+  const 兵を = (key, v) => set割((p) => ({ ...p, 門: { ...p.門, [key]: { ...p.門[key], men: Math.max(0, v) } } }));
+
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card">
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>{castle.name}　城門の割り付け</div>
+        <div style={{ fontSize: 12.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 }}>
+          寄せ手 <b style={{ color: U.text }}>{fmt(寄せ手 ? 寄せ手.men : 0)}人</b>が城下に迫っています。
+          どの門に誰を置くかを決めてください。<br />
+          武将のいない門は<b style={{ color: U.text }}>{castle.name}守備隊</b>が守ります
+          （統率{統}・武勇と知略は最低限。門を支えて射かけるだけで、討って出ません）。
+        </div>
+        <div className="row"><span>城の兵</span>
+          <span className="v">{fmt(使)} / {fmt(兵)} 人
+            <span style={{ color: 余 < 0 ? "#B0483C" : U.dim, marginLeft: 8 }}>
+              {余 < 0 ? `${fmt(-余)}人 多い` : `残り ${fmt(余)}人`}
+            </span>
+          </span>
+        </div>
+
+        <div className="sec">門ごとの備え</div>
+        {順.map((gt) => {
+          const 決 = 割.門[gt.key] || { genId: null, men: 0 };
+          const gen = 決.genId ? 将.find((x) => x.id === 決.genId) : null;
+          return (
+            <div key={gt.key} style={{ padding: "7px 0", borderBottom: `1px solid ${U.line2}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="mn" style={{ fontSize: 14, flex: "0 0 34%" }}>{gt.key}
+                  <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 5 }}>
+                    {gt.layer === 0 ? "外の輪" : `${gt.layer}つ内`}
+                  </span>
+                </span>
+                <select className="sel" style={{ flex: 1 }} value={決.genId || ""}
+                  onChange={(e) => 置く(gt.key, e.target.value)}>
+                  <option value="">（守備隊にまかせる）</option>
+                  {将.map((x) => (
+                    <option key={x.id} value={x.id}>{x.name}（統{x.lead} 武{x.valor}）</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
+                <input type="range" min="0" max={兵} step="10" value={Math.min(決.men, 兵)}
+                  onChange={(e) => 兵を(gt.key, +e.target.value)} style={{ flex: 1 }} />
+                <span className="num" style={{ fontSize: 12, width: 96, textAlign: "right" }}>
+                  {fmt(決.men)}人{gen ? `＋直属${fmt(gen.retinue)}` : ""}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+
+        {将.length > 順.length && (
+          <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginTop: 8 }}>
+            門に置ききれない将は本丸に控えます（{将.filter((x) => !Object.values(割.門).some((d) => d.genId === x.id))
+              .map((x) => x.name).join("・") || "なし"}）。
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
+          <button className="btn" style={{ flex: 1 }}
+            onClick={() => set割(守りの割り付け(g, castle, gates))}>任せる（案に戻す）</button>
+          <button className="btn dark" style={{ flex: 2 }} disabled={余 < 0}
+            onClick={() => onGo(割)}>この備えで迎え撃つ</button>
+        </div>
+        <button className="btn sm" style={{ width: "100%", marginTop: 7 }} onClick={onClose}>
+          すべて任せる
+        </button>
       </div>
     </div>
   );

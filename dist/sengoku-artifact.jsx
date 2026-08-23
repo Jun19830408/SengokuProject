@@ -3669,7 +3669,7 @@ var SURNAMES = ["\u6797", "\u4F50\u8107", "\u5CA9\u5BA4", "\u5C71\u53E3", "\u4E2
 var COMMON = ["\u6E90\u4E09", "\u53C8\u516B", "\u5C0F\u516D", "\u85E4\u4E03", "\u5F66\u4E5D\u90CE", "\u5B6B\u5E02", "\u4E94\u90CE\u5DE6", "\u534A\u52A9", "\u65B0\u4E03"];
 var CHARS = ["\u52DD", "\u8C9E", "\u79C0", "\u5FE0", "\u653F", "\u76DB", "\u901A", "\u76F4", "\u7DB1", "\u5143", "\u6CF0", "\u623F", "\u91CD", "\u5149", "\u5B9A"];
 var FEATS = ["\u6A4B\u969B\u3067\u5D29\u308C\u304B\u3051\u305F\u968A\u5217\u3092\u7ACB\u3066\u76F4\u3057\u3001\u6575\u306E\u6E21\u6CB3\u3092\u963B\u3093\u3060\u3002", "\u68EE\u306E\u4F0F\u5175\u3092\u3044\u3061\u65E9\u304F\u898B\u3064\u3051\u3001\u5473\u65B9\u306E\u5074\u9762\u3092\u6551\u3063\u305F\u3002", "\u9000\u304D\u53E3\u3092\u958B\u304D\u3001\u6BBF\u3092\u52D9\u3081\u3066\u4E3B\u5C06\u3092\u9003\u304C\u3057\u305F\u3002"];
-function makePromotion(lord, allGens) {
+function makePromotion(lord, allGens, opts = {}) {
   const sur = SURNAMES[Math.floor(Math.random() * SURNAMES.length)];
   const common = COMMON[Math.floor(Math.random() * COMMON.length)];
   const given = lord.name.slice(2);
@@ -3682,13 +3682,53 @@ function makePromotion(lord, allGens) {
     for (const n of [`${sur}${henki}${ch}`, `${sur}${ch}${henki}`]) if (!used.has(n) && !cands.includes(n)) cands.push(n);
   }
   if (!cands.length) cands.push(`${sur}${henki}\u52DD`);
+  const r = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const \u5B88 = !!opts.\u5B88\u5099\u968A;
   return {
     oldName: `${sur}${common}`,
     lordName: lord.name,
     henki,
     candidates: cands.slice(0, 4),
-    feat: FEATS[Math.floor(Math.random() * FEATS.length)]
+    feat: FEATS[Math.floor(Math.random() * FEATS.length)],
+    \u4ED5\u5B98: {
+      faction: opts.faction || lord.faction,
+      at: opts.at || lord.at,
+      lead: \u5B88 ? r(46, 62) : r(38, 56),
+      valor: \u5B88 ? r(44, 64) : r(48, 70),
+      wit: r(28, 52),
+      gov: r(26, 50),
+      age: r(19, 34),
+      retinue: r(0, 3) * 20,
+      retTrain: r(44, 62)
+    }
   };
+}
+function \u53D6\u308A\u7ACB\u3066\u308B(s2, promo, name) {
+  const o = promo && promo.\u4ED5\u5B98;
+  if (!o || !s2.factions[o.faction]) return null;
+  const id = `promo-${o.faction}-${s2.year}-${s2.month}-${s2.generals.length}`;
+  const gen = {
+    id,
+    name,
+    faction: o.faction,
+    lead: o.lead,
+    valor: o.valor,
+    wit: o.wit,
+    gov: o.gov,
+    loyal: 82,
+    age: o.age,
+    at: o.at,
+    retinue: o.retinue,
+    retTrain: o.retTrain,
+    unity: clamp(o.retTrain + 6, 30, 100),
+    merit: 6,
+    \u67B6\u7A7A: true,
+    fief: 0,
+    rost: newRoster(o.retinue, `ret-${id}`, \u76F4\u5C5E\u306E\u5175\u79D1)
+  };
+  gen.fief = Math.round(fiefWanted(gen) * 0.5);
+  s2.generals.push(gen);
+  return gen;
 }
 
 // src/data/castles.js
@@ -5174,6 +5214,19 @@ function castellanOf(s2, c) {
   const named = c.lordId && gs.find((x) => x.id === c.lordId);
   if (named && canHoldCastle(named, s2, c)) return named;
   return [...gs].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
+}
+function \u5B88\u5099\u968A\u306E\u7D71\u7387(s2, c) {
+  const gs = s2.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+  if (gs.length) {
+    const \u4E3B = castellanOf(s2, c);
+    if (\u4E3B) return \u4E3B.lead;
+    const \u4F4D = (x) => RANKS.findIndex((r) => r.key === rankOf(x, s2).key);
+    const \u9806 = [...gs].sort((a, b) => \u4F4D(b) - \u4F4D(a) || (b.\u4ED5\u5B98 != null && a.\u4ED5\u5B98 != null ? a.\u4ED5\u5B98 - b.\u4ED5\u5B98 : (b.age || 0) - (a.age || 0)) || b.lead + b.valor + b.wit - (a.lead + a.valor + a.wit));
+    return \u9806[0].lead;
+  }
+  const \u59EB = (s2.hime || []).filter((h) => h.at === c.id && h.faction === c.faction && !h.\u6B7B);
+  if (\u59EB.length) return Math.max(...\u59EB.map((h) => h.lead || 50));
+  return 40;
 }
 function castleRankNeed(c) {
   if (!c) return 8e3;
@@ -11483,6 +11536,107 @@ function nearestOpenGate(m, x, y) {
   })[0];
 }
 
+// src/core/garrison.js
+var \u9580\u306E\u91CD\u307F = (gt) => (gt.layer === 0 ? 3.6 : gt.layer === 1 ? 1.5 : 0.85) * (gt.face === "S" ? 1.3 : gt.face === "N" ? 1 : 0.85);
+function \u5B88\u308A\u306E\u5272\u308A\u4ED8\u3051(s2, castle, gates) {
+  const \u9806 = [...gates].sort((a, b) => a.layer - b.layer || \u9580\u306E\u91CD\u307F(b) - \u9580\u306E\u91CD\u307F(a));
+  const \u5C06 = s2.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive).sort((a, b) => b.lead * 1.4 + b.valor - (a.lead * 1.4 + a.valor));
+  const \u5175 = Math.max(0, Math.round(castle.local));
+  const \u91CD = \u9806.map(\u9580\u306E\u91CD\u307F);
+  const \u548C = \u91CD.reduce((a, x) => a + x, 0) || 1;
+  const \u9580 = {};
+  let \u6B8B = \u5175;
+  \u9806.forEach((gt, i) => {
+    const n = i === \u9806.length - 1 ? \u6B8B : Math.min(\u6B8B, Math.round(\u5175 * \u91CD[i] / \u548C));
+    \u6B8B -= n;
+    \u9580[gt.key] = { genId: \u5C06[i] ? \u5C06[i].id : null, men: Math.max(0, n) };
+  });
+  const \u672C\u4E38 = {};
+  for (let i = \u9806.length; i < \u5C06.length; i++) \u672C\u4E38[\u5C06[i].id] = 0;
+  return { \u9580, \u672C\u4E38, \u7D71: \u5B88\u5099\u968A\u306E\u7D71\u7387(s2, castle) };
+}
+var \u5272\u308A\u4ED8\u3051\u306E\u5175 = (\u5272) => {
+  if (!\u5272) return 0;
+  let n = 0;
+  for (const k in \u5272.\u9580 || {}) n += Math.max(0, Math.round(\u5272.\u9580[k].men || 0));
+  for (const k in \u5272.\u672C\u4E38 || {}) n += Math.max(0, Math.round(\u5272.\u672C\u4E38[k] || 0));
+  return n;
+};
+
+// src/battle/defense.js
+function \u6301\u3061\u5834\u3092\u4E26\u3079\u308B(map) {
+  const guard = [];
+  for (const l of map.layers) for (const gt of l.gates) {
+    const a = axisOf(l, gt);
+    const nx = map.layers[l.i + 1];
+    const innerEdge = nx ? (a.along === "x" ? nx.hh : nx.hw) + map.t : 0;
+    const band = Math.max(20, a.half - innerEdge);
+    const inset = Math.min(44 * (FIELD.w / BASE.w), band * 0.5);
+    const p = fromUV(map, a, gt.off, a.half - inset);
+    guard.push({ x: p.x, y: p.y, f: Math.atan2(p.y - map.cy, p.x - map.cx) + Math.PI, gate: gt });
+  }
+  guard.push({ x: map.cx, y: map.cy, f: Math.PI / 2, gate: null });
+  return guard;
+}
+function \u57CE\u65B9\u306E\u968A\u3092\u7ACB\u3066\u308B(s2, castle, map, { defGens, \u5272\u308A\u4ED8\u3051, side, color }) {
+  const guard = \u6301\u3061\u5834\u3092\u4E26\u3079\u308B(map);
+  const \u9580\u3089 = guard.filter((x) => x.gate);
+  const \u672C\u4E38 = guard[guard.length - 1];
+  const \u5B88\u7D71 = \u5B88\u5099\u968A\u306E\u7D71\u7387(s2, castle);
+  const \u5272 = \u5272\u308A\u4ED8\u3051 && \u5272\u308A\u4ED8\u3051.\u9580 ? \u5272\u308A\u4ED8\u3051 : \u5B88\u308A\u306E\u5272\u308A\u4ED8\u3051(s2, castle, \u9580\u3089.map((x) => x.gate));
+  const \u914D = [];
+  for (const sp of \u9580\u3089) {
+    const \u6C7A = \u5272.\u9580[sp.gate.key] || {};
+    const gen = \u6C7A.genId ? defGens.find((x) => x.id === \u6C7A.genId) || null : null;
+    \u914D.push({ gen, \u5175: Math.max(0, Math.round(\u6C7A.men || 0)), \u5834: sp });
+  }
+  const \u7F6E\u3044\u305F = new Set(\u914D.filter((x) => x.gen).map((x) => x.gen.id));
+  for (const gen of defGens) {
+    if (\u7F6E\u3044\u305F.has(gen.id)) continue;
+    \u914D.push({ gen, \u5175: Math.max(0, Math.round(\u5272.\u672C\u4E38 && \u5272.\u672C\u4E38[gen.id] || 0)), \u5834: \u672C\u4E38 });
+  }
+  let \u540D\u7C3F = castle.rost && castle.rost.length ? JSON.parse(JSON.stringify(castle.rost)) : null;
+  const def = [];
+  for (const \u53E3 of \u914D) {
+    const \u5175 = Math.max(0, \u53E3.\u5175);
+    if (!\u53E3.gen && \u5175 < 40) continue;
+    const slice = \u540D\u7C3F ? (() => {
+      const tk = rosterTake(\u540D\u7C3F, \u5175);
+      \u540D\u7C3F = tk.rest;
+      return tk.taken;
+    })() : null;
+    const \u5C06 = \u53E3.gen || {
+      id: `gar-${castle.id}-${\u53E3.\u5834.gate ? \u53E3.\u5834.gate.key : "\u672C\u4E38"}`,
+      name: `${castle.name}\u5B88\u5099\u968A`,
+      lead: \u5B88\u7D71,
+      valor: 30,
+      wit: 28,
+      gov: 30,
+      retinue: 0,
+      retTrain: Math.max(30, (castle.localTrain || 60) - 12),
+      unity: 45,
+      \u5B88\u5099\u968A: true
+    };
+    const c = makeCorps(
+      side,
+      { ...\u5C06, locRost: slice },
+      \u5C06.retinue || 0,
+      \u5175,
+      Math.round((\u5C06.retTrain || 60) * 0.7 + (\u5C06.unity || 60) * 0.3),
+      Math.round((castle.localTrain || 60) * 0.7 + (castle.najimi == null ? 70 : castle.najimi) * 0.3),
+      \u53E3.\u5834.x,
+      \u53E3.\u5834.y,
+      \u53E3.\u5834.f,
+      color
+    );
+    c.\u5B88\u5099\u968A = !\u53E3.gen;
+    if (\u53E3.\u5834.gate) c.holdGate = \u53E3.\u5834.gate;
+    def.push(c);
+    if (def.length >= MAX_CORPS) break;
+  }
+  return def;
+}
+
 // src/battle/draw.js
 var MY_HUE = "#2F5D8C";
 var FOE_HUE = "#B0483C";
@@ -13523,6 +13677,7 @@ function battleAI(b) {
   }
   for (const c of alive) {
     if (!delegated(b, c) || c.detach || c.routed || c.withdraw) continue;
+    if (c.\u5B88\u5099\u968A) continue;
     if (c.morale < 55 || corpsMen(c) < corpsMax(c) * 0.5) continue;
     if (b.t < 3) continue;
     if (b.t < (c.\u5206\u9063\u3092\u691C\u3081\u305F || 0) + 5) continue;
@@ -13690,6 +13845,14 @@ function battleAI(b) {
           const foeWorth = foes2.length ? Math.max(...foes2.map((x) => (x.gen.valor || 60) + (x.gen.lead || 60))) : 999;
           const fit = c.morale > 58 && myMen > corpsMax(c) * 0.45;
           const chance = foes2.length && fit && (foeMor < 40 || foeMen < myMen / 3 || myWorth > foeWorth * 1.4);
+          if (c.\u5B88\u5099\u968A) {
+            const \u5C04\u624B = c.squads.some((q) => q.men > 0 && (q.type === "yumi" || q.type === "teppo"));
+            if (\u5C04\u624B && foes2.length) {
+              const t4 = [...foes2].sort((x, y2) => Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
+              issueOrder(b, c, { order: "\u5C04\u6483", tx: t4.x, ty: t4.y, target: t4.id });
+            } else issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
+            continue;
+          }
           if (c.sallied) {
             if (b.t - (c.sallyAt || 0) > 40 || c.morale < 46) {
               c.sallied = false;
@@ -15172,6 +15335,65 @@ function SallyDialog({ g, castleId, foeId, onClose, onGo, \u57CE\u4E0B }) {
     fmt(\u5175),
     "\u4EBA\u3067\u8A0E\u3063\u3066\u51FA\u308B"
   ))));
+}
+function GateDeployDialog({ g, castle, gates, \u5BC4\u305B\u624B, onClose, onGo }) {
+  const \u5C06 = useMemo(() => g.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive).sort((a, b) => b.lead * 1.4 + b.valor - (a.lead * 1.4 + a.valor)), [g, castle]);
+  const \u9806 = useMemo(() => [...gates].sort((a, b) => a.layer - b.layer || \u9580\u306E\u91CD\u307F(b) - \u9580\u306E\u91CD\u307F(a)), [gates]);
+  const [\u5272, set\u5272] = useState2(() => \u5B88\u308A\u306E\u5272\u308A\u4ED8\u3051(g, castle, gates));
+  const \u5175 = Math.max(0, Math.round(castle.local));
+  const \u4F7F = \u5272\u308A\u4ED8\u3051\u306E\u5175(\u5272);
+  const \u4F59 = \u5175 - \u4F7F;
+  const \u7D71 = \u5272.\u7D71;
+  const \u7F6E\u304F = (key, genId) => set\u5272((p) => {
+    const n = { ...p, \u9580: { ...p.\u9580 } };
+    for (const k in n.\u9580) if (genId && n.\u9580[k].genId === genId) n.\u9580[k] = { ...n.\u9580[k], genId: null };
+    n.\u9580[key] = { ...n.\u9580[key], genId: genId || null };
+    return n;
+  });
+  const \u5175\u3092 = (key, v) => set\u5272((p) => ({ ...p, \u9580: { ...p.\u9580, [key]: { ...p.\u9580[key], men: Math.max(0, v) } } }));
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, castle.name, "\u3000\u57CE\u9580\u306E\u5272\u308A\u4ED8\u3051"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 } }, "\u5BC4\u305B\u624B ", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, fmt(\u5BC4\u305B\u624B ? \u5BC4\u305B\u624B.men : 0), "\u4EBA"), "\u304C\u57CE\u4E0B\u306B\u8FEB\u3063\u3066\u3044\u307E\u3059\u3002 \u3069\u306E\u9580\u306B\u8AB0\u3092\u7F6E\u304F\u304B\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u6B66\u5C06\u306E\u3044\u306A\u3044\u9580\u306F", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, castle.name, "\u5B88\u5099\u968A"), "\u304C\u5B88\u308A\u307E\u3059 \uFF08\u7D71\u7387", \u7D71, "\u30FB\u6B66\u52C7\u3068\u77E5\u7565\u306F\u6700\u4F4E\u9650\u3002\u9580\u3092\u652F\u3048\u3066\u5C04\u304B\u3051\u308B\u3060\u3051\u3067\u3001\u8A0E\u3063\u3066\u51FA\u307E\u305B\u3093\uFF09\u3002"), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306E\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u4F7F), " / ", fmt(\u5175), " \u4EBA", /* @__PURE__ */ React2.createElement("span", { style: { color: \u4F59 < 0 ? "#B0483C" : U.dim, marginLeft: 8 } }, \u4F59 < 0 ? `${fmt(-\u4F59)}\u4EBA \u591A\u3044` : `\u6B8B\u308A ${fmt(\u4F59)}\u4EBA`))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u9580\u3054\u3068\u306E\u5099\u3048"), \u9806.map((gt) => {
+    const \u6C7A = \u5272.\u9580[gt.key] || { genId: null, men: 0 };
+    const gen = \u6C7A.genId ? \u5C06.find((x) => x.id === \u6C7A.genId) : null;
+    return /* @__PURE__ */ React2.createElement("div", { key: gt.key, style: { padding: "7px 0", borderBottom: `1px solid ${U.line2}` } }, /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 14, flex: "0 0 34%" } }, gt.key, /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 5 } }, gt.layer === 0 ? "\u5916\u306E\u8F2A" : `${gt.layer}\u3064\u5185`)), /* @__PURE__ */ React2.createElement(
+      "select",
+      {
+        className: "sel",
+        style: { flex: 1 },
+        value: \u6C7A.genId || "",
+        onChange: (e) => \u7F6E\u304F(gt.key, e.target.value)
+      },
+      /* @__PURE__ */ React2.createElement("option", { value: "" }, "\uFF08\u5B88\u5099\u968A\u306B\u307E\u304B\u305B\u308B\uFF09"),
+      \u5C06.map((x) => /* @__PURE__ */ React2.createElement("option", { key: x.id, value: x.id }, x.name, "\uFF08\u7D71", x.lead, " \u6B66", x.valor, "\uFF09"))
+    )), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 5 } }, /* @__PURE__ */ React2.createElement(
+      "input",
+      {
+        type: "range",
+        min: "0",
+        max: \u5175,
+        step: "10",
+        value: Math.min(\u6C7A.men, \u5175),
+        onChange: (e) => \u5175\u3092(gt.key, +e.target.value),
+        style: { flex: 1 }
+      }
+    ), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { fontSize: 12, width: 96, textAlign: "right" } }, fmt(\u6C7A.men), "\u4EBA", gen ? `\uFF0B\u76F4\u5C5E${fmt(gen.retinue)}` : "")));
+  }), \u5C06.length > \u9806.length && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginTop: 8 } }, "\u9580\u306B\u7F6E\u304D\u304D\u308C\u306A\u3044\u5C06\u306F\u672C\u4E38\u306B\u63A7\u3048\u307E\u3059\uFF08", \u5C06.filter((x) => !Object.values(\u5272.\u9580).some((d) => d.genId === x.id)).map((x) => x.name).join("\u30FB") || "\u306A\u3057", "\uFF09\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 16 } }, /* @__PURE__ */ React2.createElement(
+    "button",
+    {
+      className: "btn",
+      style: { flex: 1 },
+      onClick: () => set\u5272(\u5B88\u308A\u306E\u5272\u308A\u4ED8\u3051(g, castle, gates))
+    },
+    "\u4EFB\u305B\u308B\uFF08\u6848\u306B\u623B\u3059\uFF09"
+  ), /* @__PURE__ */ React2.createElement(
+    "button",
+    {
+      className: "btn dark",
+      style: { flex: 2 },
+      disabled: \u4F59 < 0,
+      onClick: () => onGo(\u5272)
+    },
+    "\u3053\u306E\u5099\u3048\u3067\u8FCE\u3048\u6483\u3064"
+  )), /* @__PURE__ */ React2.createElement("button", { className: "btn sm", style: { width: "100%", marginTop: 7 }, onClick: onClose }, "\u3059\u3079\u3066\u4EFB\u305B\u308B")));
 }
 function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
   const \u7684 = g.castles.find((x) => x.id === target) || nodeById(target) || {};
@@ -18147,6 +18369,21 @@ var \u8AAC\u660E\u66F8 = [
         ]
       },
       {
+        \u898B\u51FA\u3057: "\u9580\u306E\u5B88\u5099\u968A",
+        \u6587: [
+          "\u57CE\u306E\u9580\u306B\u306F\u3001\u3059\u3079\u3066\u5B88\u308A\u304C\u7F6E\u304B\u308C\u308B\u3002\u6B66\u5C06\u306E\u3044\u306A\u3044\u9580\u306F\u300C\u25EF\u25EF\u57CE\u5B88\u5099\u968A\u300D\u304C\u5B88\u308B\u3002\u9580\u756A\u3001\u8DB3\u8EFD\u5C0F\u982D\u3001\u99C6\u308A\u51FA\u3055\u308C\u305F\u5730\u4F8D\u2015\u2015\u540D\u306F\u4F1D\u308F\u3089\u306C\u304C\u3001\u305D\u3053\u306B\u4EBA\u306F\u3044\u308B\u3002",
+          "\u5B88\u5099\u968A\u306E\u7D71\u7387\u306F\u305D\u306E\u57CE\u3092\u9810\u304B\u308B\u8005\uFF08\u57CE\u4E3B\uFF09\u306E\u7D71\u7387\u304C\u305D\u306E\u307E\u307E\u6620\u308B\u3002\u6B66\u52C7\u3068\u77E5\u7565\u306F\u4F4E\u3044\u3002\u9580\u306B\u5F35\u308A\u4ED8\u3044\u3066\u5C04\u304B\u3051\u308B\u3060\u3051\u3067\u3001\u9580\u3092\u958B\u3044\u3066\u8A0E\u3063\u3066\u51FA\u308B\u3053\u3068\u306F\u306A\u304F\u3001\u5206\u9063\u3082\u51FA\u3055\u306A\u3044\u3002\u91CE\u6226\u306B\u306F\u51FA\u306A\u3044\uFF08\u57CE\u306E\u9580\u3092\u5B88\u308B\u8005\u305F\u3061\u3060\u304B\u3089\u3067\u3042\u308B\uFF09\u3002",
+          "\u81EA\u5BB6\u306E\u57CE\u304C\u653B\u3081\u3089\u308C\u305F\u3068\u304D\u306F\u3001\u57CE\u653B\u3081\u306E\u524D\u306B\u300C\u57CE\u9580\u306E\u5272\u308A\u4ED8\u3051\u300D\u3092\u554F\u308F\u308C\u308B\u3002\u3069\u306E\u9580\u306B\u8AB0\u3092\u7F6E\u304D\u3001\u5175\u3092\u3069\u3046\u5272\u308B\u304B\u3092\u6C7A\u3081\u308B\u3002\u4EFB\u305B\u308C\u3070\u3001\u5916\u306E\u8F2A\u306E\u9580\u3092\u539A\u304F\u3057\u3001\u5927\u624B\u9580\u3092\u6426\u624B\u3088\u308A\u539A\u304F\u3057\u3001\u5668\u91CF\u306E\u9AD8\u3044\u5C06\u304B\u3089\u539A\u3044\u9580\u306B\u7F6E\u304F\u6848\u304C\u305D\u306E\u307E\u307E\u7528\u3044\u3089\u308C\u308B\u3002",
+          "\u5B88\u5099\u968A\u306E\u968A\u306B\u3082\u6B66\u529F\u306F\u3042\u308B\u3002\u624B\u67C4\u3092\u7ACB\u3066\u308C\u3070\u3001\u305D\u3053\u304B\u3089\u65B0\u305F\u306A\u6B66\u5C06\u304C\u53D6\u308A\u7ACB\u3066\u3089\u308C\u308B\u3002"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u5C06\u306E\u3044\u306A\u3044\u57CE",
+        \u6587: [
+          "\u57CE\u306B\u6B66\u5C06\u304C\u4E00\u4EBA\u3082\u3044\u306A\u3051\u308C\u3070\u3001\u57CE\u4E0B\u306E\u91CE\u6226\u306F\u8D77\u304D\u306A\u3044\u3002\u5C06\u306E\u3044\u306A\u3044\u57CE\u304C\u9580\u3092\u958B\u3044\u3066\u91CE\u3067\u5F53\u305F\u308B\u9053\u7406\u306F\u306A\u3044\u304B\u3089\u3067\u3042\u308B\u3002\u5BC4\u305B\u624B\u304C\u7740\u3044\u305F\u305D\u306E\u6708\u304B\u3089\u3001\u305D\u306E\u307E\u307E\u56F2\u307F\u306B\u5165\u308B\u3002"
+        ]
+      },
+      {
         \u898B\u51FA\u3057: "\u57CE\u65B9\u306E\u6226\u3044\u65B9",
         \u7B87\u6761: [
           "\u9580\u306E\u3059\u3050\u5185\u306B\u5F35\u308A\u4ED8\u3044\u3066\u9580\u3092\u652F\u3048\u3001\u5916\u306E\u5BC4\u305B\u624B\u3078\u5C04\u304B\u3051\u308B",
@@ -18331,6 +18568,16 @@ function Ending({ g, onClose, onTitle }) {
 }
 
 // src/ui/MapScreen.jsx
+function \u624B\u67C4\u306E\u968A(s2, corps, castle) {
+  const hero = corps.find((c) => c.feats.length || c.loss["\u76F4\u5C5E"] > 60);
+  if (!hero) return null;
+  const gen = s2.generals.find((x) => x.id === hero.id);
+  if (gen) return { lord: gen, at: gen.at, faction: gen.faction, \u5B88\u5099\u968A: false };
+  if (!hero.\u5B88\u5099\u968A || !castle) return null;
+  const \u4E3B = castellanOf(s2, castle) || s2.generals.find((x) => x.faction === castle.faction && x.id === (s2.factions[castle.faction] || {}).lord);
+  if (!\u4E3B) return null;
+  return { lord: \u4E3B, at: castle.id, faction: castle.faction, \u5B88\u5099\u968A: true };
+}
 function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const cvRef = useRef4(null), miniRef = useRef4(null), wrapRef = useRef4(null);
   const [view, setView] = useState7(() => {
@@ -18884,9 +19131,42 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       });
       return;
     }
+    const \u57CE\u5C06 = g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
+    if (!\u57CE\u5C06.length && !dest.intrigue) {
+      setG((p) => {
+        const s2 = structuredClone(p);
+        const ar = s2.armies.find((x) => x.id === a.id);
+        const c = s2.castles.find((x) => x.id === dest.id);
+        s2.pendingArrivals = (s2.pendingArrivals || []).slice(1);
+        if (!ar || !c) return s2;
+        ar.sieging = true;
+        s2.sieges = [
+          ...s2.sieges.filter((x) => x.castleId !== c.id),
+          { castleId: c.id, armyId: ar.id, months: 0, decided: null }
+        ];
+        const \u6587 = `${c.name}\u306B\u306F\u5C06\u304C\u304A\u3089\u305A\u3001\u57CE\u65B9\u306F\u7C60\u3063\u3066\u9580\u3092\u9589\u3056\u3057\u305F\u3002${s2.factions[ar.faction].name}\u306E\u8ECD\u304C\u3053\u308C\u3092\u56F2\u3093\u3060\u3002`;
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+        if (ar.faction === s2.player || c.faction === s2.player) {
+          s2.monthEvents = [...s2.monthEvents || [], \u6587];
+        }
+        return s2;
+      });
+      return;
+    }
     startBattle(a, dest);
   }, [g.pendingArrivals, g.clashes, battle]);
   const autoResolve = (armyId, castleId) => setG((prev) => resolveOffscreen(prev, armyId, castleId));
+  const [\u9580\u306E\u5E33, set\u9580\u306E\u5E33] = useState7(null);
+  const \u9580\u306E\u5099\u3048\u3092\u554F\u3046 = (sg, gateParty, kits) => {
+    const castle = g.castles.find((x) => x.id === sg.castleId);
+    if (!castle || castle.faction !== g.player || g.autoPlay) {
+      startAssault(sg, gateParty, kits);
+      return;
+    }
+    const map = buildCastleMap(castle);
+    const gates = map.layers.flatMap((l) => l.gates);
+    set\u9580\u306E\u5E33({ sg, gateParty, kits, castle, gates });
+  };
   const startAssault = (sg, gateParty, kits) => {
     if (g.autoPlay) return;
     const army = g.armies.find((x) => x.id === sg.armyId);
@@ -18942,32 +19222,11 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const gt = og[i % og.length];
       return \u5BC4\u305B\u53E3(map, gt, Math.floor(i / og.length));
     }, commitRost);
-    const guard = [];
-    for (const l of map.layers) for (const gt of l.gates) {
-      const a = axisOf(l, gt);
-      const nx = map.layers[l.i + 1];
-      const innerEdge = nx ? (a.along === "x" ? nx.hh : nx.hw) + map.t : 0;
-      const band = Math.max(20, a.half - innerEdge);
-      const inset = Math.min(44 * (FIELD.w / BASE.w), band * 0.5);
-      const p = fromUV(map, a, gt.off, a.half - inset);
-      guard.push({ x: p.x, y: p.y, f: Math.atan2(p.y - map.cy, p.x - map.cx) + Math.PI, gate: gt });
-    }
-    guard.push({ x: map.cx, y: map.cy, f: Math.PI / 2, gate: null });
-    const def = mk(
+    const def = \u57CE\u65B9\u306E\u968A\u3092\u7ACB\u3066\u308B(g, castle, map, {
       defGens,
-      Math.max(0, castle.local),
-      castle.localTrain,
-      defSide,
-      defColor,
-      (i, n) => {
-        const sp = guard[Math.min(guard.length - 1, i)];
-        return { x: sp.x, y: sp.y, f: sp.f };
-      },
-      castle.rost
-    );
-    def.forEach((c, i) => {
-      const sp = guard[Math.min(guard.length - 1, i)];
-      if (sp && sp.gate) c.holdGate = sp.gate;
+      \u5272\u308A\u4ED8\u3051: sg.\u5272\u308A\u4ED8\u3051 || null,
+      side: defSide,
+      color: defColor
     });
     if (kits) for (const c of atk) {
       const k = kits[c.id];
@@ -19361,9 +19620,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         sackCastle(s2, castle, army, true);
       }
       if (b.result === "P" && !ctx.playerIsAtk) {
-        const hero = b.corps.filter((c) => c.side === "P").find((c) => c.feats.length || c.loss["\u76F4\u5C5E"] > 60);
-        const lord = hero && s2.generals.find((x) => x.id === hero.id);
-        if (lord && Math.random() < 0.6) s2.promo = makePromotion(lord, s2.generals);
+        const \u529F = \u624B\u67C4\u306E\u968A(s2, b.corps.filter((c) => c.side === "P"), castle);
+        if (\u529F && Math.random() < 0.6) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
       }
       return s2;
     });
@@ -19521,9 +19779,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         ];
       }
       if (b.result === "P") {
-        const hero = b.corps.filter((c) => c.side === "P").find((c) => c.feats.length || c.loss["\u76F4\u5C5E"] > 60);
-        const lord = hero && s2.generals.find((x) => x.id === hero.id);
-        if (lord && Math.random() < 0.7) s2.promo = makePromotion(lord, s2.generals);
+        const \u529F = \u624B\u67C4\u306E\u968A(s2, b.corps.filter((c) => c.side === "P"), null);
+        if (\u529F && Math.random() < 0.7) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
       }
       return s2;
     });
@@ -19635,9 +19892,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         });
       }
       if (playerWon) {
-        const hero = side("P").find((c) => c.feats.length || c.loss["\u76F4\u5C5E"] > 60);
-        const lord = hero && s2.generals.find((x) => x.id === hero.id);
-        if (lord && Math.random() < 0.7) s2.promo = makePromotion(lord, s2.generals);
+        const \u529F = \u624B\u67C4\u306E\u968A(s2, side("P"), castle);
+        if (\u529F && Math.random() < 0.7) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
       }
       s2.pendingArrivals = (s2.pendingArrivals || []).slice(1);
       if (ctx.campId) s2.campaigns = (s2.campaigns || []).filter((x) => x.id !== ctx.campId);
@@ -19745,7 +20001,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     if (mode === "\u9632\u885B") {
       mark();
       if (Math.random() < 0.34) {
-        startAssault({ ...sg, sortie }, army && army.men >= 540);
+        \u9580\u306E\u5099\u3048\u3092\u554F\u3046({ ...sg, sortie }, army && army.men >= 540);
         return;
       }
       resolveSiege("\u5175\u7CE7\u653B\u3081");
@@ -20232,6 +20488,25 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     modal === "goal" && /* @__PURE__ */ React8.createElement(GoalPanel, { g, onClose: () => setModal(null) }),
     openCamp && !battle && /* @__PURE__ */ React8.createElement(CampaignPanel, { g, camp: openCamp, onAct: campaignAct }),
     openSiege && !battle && !openCamp && /* @__PURE__ */ React8.createElement(SiegePanel, { g, sg: openSiege, onChoose: onSiegeChoice }),
+    \u9580\u306E\u5E33 && !battle && /* @__PURE__ */ React8.createElement(
+      GateDeployDialog,
+      {
+        g,
+        castle: \u9580\u306E\u5E33.castle,
+        gates: \u9580\u306E\u5E33.gates,
+        \u5BC4\u305B\u624B: g.armies.find((x) => x.id === \u9580\u306E\u5E33.sg.armyId),
+        onClose: () => {
+          const t = \u9580\u306E\u5E33;
+          set\u9580\u306E\u5E33(null);
+          startAssault(t.sg, t.gateParty, t.kits);
+        },
+        onGo: (\u5272) => {
+          const t = \u9580\u306E\u5E33;
+          set\u9580\u306E\u5E33(null);
+          startAssault({ ...t.sg, \u5272\u308A\u4ED8\u3051: \u5272 }, t.gateParty, t.kits);
+        }
+      }
+    ),
     (g.captives || []).length > 0 && (() => {
       const gen = g.generals.find((x) => x.id === g.captives[0]);
       if (!gen) {
@@ -20565,7 +20840,9 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     })(),
     g.promo && /* @__PURE__ */ React8.createElement(PromotionDialog, { promo: g.promo, onDone: (name) => setG((p) => {
       const s2 = structuredClone(p);
-      s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.promo.oldName}\u3001\u6226\u529F\u306B\u3088\u308A\u6B63\u5F0F\u306A\u6B66\u5C06\u306B\u5217\u3057\u3001${s2.promo.lordName}\u3088\u308A\u504F\u8AF1\u3092\u8CDC\u3063\u3066${name}\u3068\u540D\u4E57\u308B\u3002` });
+      const \u65B0 = \u53D6\u308A\u7ACB\u3066\u308B(s2, s2.promo, name);
+      const \u57CE = \u65B0 && s2.castles.find((c) => c.id === \u65B0.at);
+      s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.promo.oldName}\u3001\u6226\u529F\u306B\u3088\u308A\u6B63\u5F0F\u306A\u6B66\u5C06\u306B\u5217\u3057\u3001${s2.promo.lordName}\u3088\u308A\u504F\u8AF1\u3092\u8CDC\u3063\u3066${name}\u3068\u540D\u4E57\u308B\u3002${\u57CE ? `\uFF08${\u57CE.name}\uFF09` : ""}` });
       s2.promo = null;
       return s2;
     }) })

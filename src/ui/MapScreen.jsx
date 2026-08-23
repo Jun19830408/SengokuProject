@@ -4,12 +4,13 @@ import * as 合戦裁定 from "../govern/war.js";
 import React, { useState, useRef, useEffect } from "react";
 import { SIEGE_CORPS_CAP, SIEGE_KIT, axisOf, buildCastleMap, fromUV, gateOpenU, layoutCastleField, setBattleMap, 寄せ口 } from "../battle/castleMap.js";
 import { corpsMax, corpsMen, makeCorps, notify, placeSquads } from "../battle/corps.js";
+import { 城方の隊を立てる } from "../battle/defense.js";
 import { drawMon, sideHue } from "../battle/draw.js";
 import { createBattle } from "../battle/engine.js";
 import { BASE, FIELD, MAX_CORPS, layoutField, setFieldSeed } from "../battle/field.js";
 import { ambushChance, ambushPlan, tryAmbush } from "../core/ambush.js";
 import { captureChance, makePrisoner, payRansom, ransomAccept, ransomCost, takeAsPrisoner } from "../core/capture.js";
-import { COMING_OF_AGE, actingHead, bearChild, canRecruit, emergeGenerals, hasHouse, heirCandidates, houseName, inheritHouse, lifeSpan, loyaltyAfterRecruit, makePromotion, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
+import { 取り立てる, COMING_OF_AGE, actingHead, bearChild, canRecruit, emergeGenerals, hasHouse, heirCandidates, houseName, inheritHouse, lifeSpan, loyaltyAfterRecruit, makePromotion, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
@@ -34,9 +35,10 @@ import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, Goal
 import { SallyDialog } from "./panels.jsx";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
-import { ReinforceDialog } from "./panels.jsx";
+import { ReinforceDialog, GateDeployDialog } from "./panels.jsx";
 import { underMyBanner } from "../core/state.js";
-import { 忠誠 } from "../core/rank.js";
+import { 忠誠, 守備隊の統率, castellanOf } from "../core/rank.js";
+import { 守りの割り付け } from "../core/garrison.js";
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 難を逃れる } from "../core/capture.js";
@@ -48,6 +50,24 @@ import { 特殊勢力の可否 } from "../core/town.js";
 import { findPathVia } from "../core/paths.js";
 
 /* ============================================================ 政略マップ */
+/* 武功による取り立て（GDD 6.7 / 9.3）。
+
+   手柄を立てた隊の主が、名も無き者を武将に取り立てる。
+   隊が「◯◯城守備隊」であっても武功は武功である。名は伝わらぬが、
+   門を守り抜いたのはその者たちである。その場合は城を預かる者の名で取り立て、
+   取り立てられた者はその城に留まる。 */
+function 手柄の隊(s, corps, castle) {
+  const hero = corps.find((c) => c.feats.length || c.loss["直属"] > 60);
+  if (!hero) return null;
+  const gen = s.generals.find((x) => x.id === hero.id);
+  if (gen) return { lord: gen, at: gen.at, faction: gen.faction, 守備隊: false };
+  if (!hero.守備隊 || !castle) return null;
+  const 主 = castellanOf(s, castle)
+    || s.generals.find((x) => x.faction === castle.faction && x.id === (s.factions[castle.faction] || {}).lord);
+  if (!主) return null;
+  return { lord: 主, at: castle.id, faction: castle.faction, 守備隊: true };
+}
+
 export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const cvRef = useRef(null), miniRef = useRef(null), wrapRef = useRef(null);
   const [view, setView] = useState(() => {
@@ -582,11 +602,50 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       });
       return;
     }
+    /* 将のいない城は、城下の野戦をしない（GDD 9.2）。
+
+       いままでは守備隊だけが野へ出て陣を敷いていた。将のいない城が門を開いて
+       野で当たる道理はない。城兵は城に籠るだけである。
+       そういう城へ着いたら、野戦を飛ばしてそのまま囲みに入る。
+
+       姫がいても同じである。姫は戦場に出ない（統率だけが守備隊に及ぶ）。 */
+    const 城将 = g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
+    if (!城将.length && !dest.intrigue) {
+      setG((p) => {
+        const s = structuredClone(p);
+        const ar = s.armies.find((x) => x.id === a.id);
+        const c = s.castles.find((x) => x.id === dest.id);
+        s.pendingArrivals = (s.pendingArrivals || []).slice(1);
+        if (!ar || !c) return s;
+        ar.sieging = true;
+        s.sieges = [...s.sieges.filter((x) => x.castleId !== c.id),
+          { castleId: c.id, armyId: ar.id, months: 0, decided: null }];
+        const 文 = `${c.name}には将がおらず、城方は籠って門を閉ざした。${s.factions[ar.faction].name}の軍がこれを囲んだ。`;
+        s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+        if (ar.faction === s.player || c.faction === s.player) {
+          s.monthEvents = [...(s.monthEvents || []), 文];
+        }
+        return s;
+      });
+      return;
+    }
     startBattle(a, dest);
   }, [g.pendingArrivals, g.clashes, battle]); // eslint-disable-line
 
   // 画面外の合戦。兵数・練度・統率・城防から勝敗と損害を出し、結果だけを記録する。
   const autoResolve = (armyId, castleId) => setG((prev) => 合戦裁定.resolveOffscreen(prev, armyId, castleId));
+
+  /* 城方が遊ぶ側のときは、城攻めの前に門の備えを問う（GDD 9.3）。
+     どの門に誰を置くか、兵をどう割るかを決めてから戦が始まる。
+     「すべて任せる」を選べば采配の案がそのまま用いられる。 */
+  const [門の帳, set門の帳] = useState(null);
+  const 門の備えを問う = (sg, gateParty, kits) => {
+    const castle = g.castles.find((x) => x.id === sg.castleId);
+    if (!castle || castle.faction !== g.player || g.autoPlay) { startAssault(sg, gateParty, kits); return; }
+    const map = buildCastleMap(castle);
+    const gates = map.layers.flatMap((l) => l.gates);
+    set門の帳({ sg, gateParty, kits, castle, gates });
+  };
 
   // 強攻＝城郭図の上での2D戦（GDD 9.3）
   const startAssault = (sg, gateParty, kits) => {
@@ -636,32 +695,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const gt = og[i % og.length];
       return 寄せ口(map, gt, Math.floor(i / og.length));
     }, commitRost);
-    // 守り手は門の内側から順に詰める。門の数だけ受け持ちがある。
-    const guard = [];
-    for (const l of map.layers) for (const gt of l.gates) {
-      const a = axisOf(l, gt);
-      // 自分の壁と、一つ内側の曲輪の壁との間に立つ
-      const nx = map.layers[l.i + 1];
-      const innerEdge = nx ? (a.along === "x" ? nx.hh : nx.hw) + map.t : 0;
-      const band = Math.max(20, a.half - innerEdge);
-      const inset = Math.min(44 * (FIELD.w / BASE.w), band * 0.5);
-      const p = fromUV(map, a, gt.off, a.half - inset);
-      // 立たせた場所だけでなく、受け持ちの門そのものを控えておく。
-      // これを渡さないと、城方は戦の始まりに持ち場を捨てて奥へ引いてしまう。
-      guard.push({ x: p.x, y: p.y, f: Math.atan2(p.y - map.cy, p.x - map.cx) + Math.PI, gate: gt });
-    }
-    guard.push({ x: map.cx, y: map.cy, f: Math.PI / 2, gate: null });   // 余った隊は本丸に控える
-    const def = mk(defGens, Math.max(0, castle.local), castle.localTrain, defSide, defColor,
-      (i, n) => {
-        // 外の門から順に受け持たせ、余れば本丸へ
-        const sp = guard[Math.min(guard.length - 1, i)];
-        return { x: sp.x, y: sp.y, f: sp.f };
-      }, castle.rost);
-    // 受け持ちの門を隊に持たせる。以後、その門を支えて外の寄せ手へ射かける（GDD 9.3）。
-    def.forEach((c, i) => {
-      const sp = guard[Math.min(guard.length - 1, i)];
-      if (sp && sp.gate) c.holdGate = sp.gate;
-    });
+    /* 城方の隊立ては battle/defense.js に置いてある（門ごとの守備隊もそこで立つ）。 */
+    const def = 城方の隊を立てる(g, castle, map, {
+      defGens, 割り付け: sg.割り付け || null, side: defSide, color: defColor });
 
     if (kits) for (const c of atk) { const k = kits[c.id]; if (k && SIEGE_KIT[k]) c.kit = k; }
     const P = playerIsAtk ? atk : def, E = playerIsAtk ? def : atk;
@@ -1021,9 +1057,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       if (won && army) { army.local = aLeft; sackCastle(s, castle, army, true); }
       if (b.result === "P" && !ctx.playerIsAtk) {
-        const hero = b.corps.filter((c) => c.side === "P").find((c) => c.feats.length || c.loss["直属"] > 60);
-        const lord = hero && s.generals.find((x) => x.id === hero.id);
-        if (lord && Math.random() < 0.6) s.promo = makePromotion(lord, s.generals);
+        const 功 = 手柄の隊(s, b.corps.filter((c) => c.side === "P"), castle);
+        if (功 && Math.random() < 0.6) s.promo = makePromotion(功.lord, s.generals, 功);
       }
       return s;
     });
@@ -1176,9 +1211,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             : `${ctx.place}の野戦に敗れ、軍は退いた。`];
       }
       if (b.result === "P") {
-        const hero = b.corps.filter((c) => c.side === "P").find((c) => c.feats.length || c.loss["直属"] > 60);
-        const lord = hero && s.generals.find((x) => x.id === hero.id);
-        if (lord && Math.random() < 0.7) s.promo = makePromotion(lord, s.generals);
+        const 功 = 手柄の隊(s, b.corps.filter((c) => c.side === "P"), null);
+        if (功 && Math.random() < 0.7) s.promo = makePromotion(功.lord, s.generals, 功);
       }
       return s;
     });
@@ -1298,9 +1332,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           text: `${s.factions[a.faction].name}の援軍は${Math.round(men)}人を残して${home ? `${home.name}へ` : ""}引き揚げた。` });
       }
       if (playerWon) {
-        const hero = side("P").find((c) => c.feats.length || c.loss["直属"] > 60);
-        const lord = hero && s.generals.find((x) => x.id === hero.id);
-        if (lord && Math.random() < 0.7) s.promo = makePromotion(lord, s.generals);
+        const 功 = 手柄の隊(s, side("P"), castle);
+        if (功 && Math.random() < 0.7) s.promo = makePromotion(功.lord, s.generals, 功);
       }
       s.pendingArrivals = (s.pendingArrivals || []).slice(1);
       if (ctx.campId) s.campaigns = (s.campaigns || []).filter((x) => x.id !== ctx.campId);
@@ -1406,7 +1439,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     if (mode === "防衛") {
       mark();
       // 寄せ手が攻めかかるかは向こうの判断。三度に一度ほど城壁に取り付く。
-      if (Math.random() < 0.34) { startAssault({ ...sg, sortie }, army && army.men >= 540); return; }
+      if (Math.random() < 0.34) { 門の備えを問う({ ...sg, sortie }, army && army.men >= 540); return; }
       resolveSiege("兵糧攻め");
       return;
     }
@@ -1941,6 +1974,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {modal === "goal" && <GoalPanel g={g} onClose={() => setModal(null)} />}
         {openCamp && !battle && <CampaignPanel g={g} camp={openCamp} onAct={campaignAct} />}
         {openSiege && !battle && !openCamp && <SiegePanel g={g} sg={openSiege} onChoose={onSiegeChoice} />}
+        {門の帳 && !battle && (
+          <GateDeployDialog g={g} castle={門の帳.castle} gates={門の帳.gates}
+            寄せ手={g.armies.find((x) => x.id === 門の帳.sg.armyId)}
+            onClose={() => { const t = 門の帳; set門の帳(null); startAssault(t.sg, t.gateParty, t.kits); }}
+            onGo={(割) => { const t = 門の帳; set門の帳(null); startAssault({ ...t.sg, 割り付け: 割 }, t.gateParty, t.kits); }} />
+        )}
         {(g.captives || []).length > 0 && (() => {
           const gen = g.generals.find((x) => x.id === g.captives[0]);
           if (!gen) { setG((p) => { const s = structuredClone(p); s.captives = s.captives.slice(1); return s; }); return null; }
@@ -2355,7 +2394,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         })()}
         {g.promo && <PromotionDialog promo={g.promo} onDone={(name) => setG((p) => {
           const s = structuredClone(p);
-          s.chronicle.push({ y: s.year, m: s.month, text: `${s.promo.oldName}、戦功により正式な武将に列し、${s.promo.lordName}より偏諱を賜って${name}と名乗る。` });
+          /* 名が定まれば、その者は家中に加わる。これまでは記録に一行残るだけで、
+             どこにも仕えぬままであった。取り立てとは、人が増えることである。 */
+          const 新 = 取り立てる(s, s.promo, name);
+          const 城 = 新 && s.castles.find((c) => c.id === 新.at);
+          s.chronicle.push({ y: s.year, m: s.month, text: `${s.promo.oldName}、戦功により正式な武将に列し、${s.promo.lordName}より偏諱を賜って${name}と名乗る。${城 ? `（${城.name}）` : ""}` });
           s.promo = null; return s;
         })} />}
       </div>
