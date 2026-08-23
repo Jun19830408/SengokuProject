@@ -51,7 +51,7 @@ const 宿 = http.createServer((req, res) => {
   }
   console.log('');
   console.log('═══════════════════════════════════════════════');
-  console.log('  戦国プロジェクト　宿を立てました');
+  console.log('  センゴク盤　宿を立てました');
   console.log('═══════════════════════════════════════════════');
   console.log('');
   console.log('  このパソコンで見るなら');

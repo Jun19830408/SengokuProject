@@ -3,10 +3,11 @@
   "version": "0.2.0",
   "private": true,
   "type": "commonjs",
-  "description": "戦国プロジェクト ─ 1546年（天文十五年）の日本を舞台とした戦国シミュレーション",
+  "description": "センゴク盤 ─ 1546年（天文十五年）の日本を舞台とした戦国シミュレーション",
   "scripts": {
     "start": "node tools/serve.cjs",
     "build": "node tools/build.cjs",
+    "manual": "node tools/manual.cjs",
     "test": "node tests/all.cjs",
     "compare": "node tools/compare.cjs",
     "deploy": "node tools/publish-pages.cjs"

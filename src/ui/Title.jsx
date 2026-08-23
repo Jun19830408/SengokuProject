@@ -1,4 +1,5 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
+import { Manual } from "./Manual.jsx";
 import { U } from "../core/util.js";
 import { FACTIONS } from "../data/factions.js";
 import { 記録の見出し } from "../save/save.js";
@@ -39,6 +40,7 @@ function 記録の札({ 枠, onLoad, onErase }) {
 }
 
 export function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
+  const [遊び方, set遊び方] = useState(false);
   const 控え口 = useRef(null);
   const 在る = (saves || []).filter((w) => w.d);
   const 最新 = 在る.length
@@ -47,8 +49,10 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
     <div className="sp" style={{ height: "100dvh", alignItems: "center", justifyContent: "center", position: "relative", overflow: "auto" }}>
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)" }} />
       <div style={{ position: "relative", textAlign: "center", padding: "24px 0" }}>
-        <div className="mn" style={{ fontSize: 42, letterSpacing: ".06em" }}>戦国プロジェクト</div>
-        <div style={{ fontSize: 11, letterSpacing: ".42em", color: U.dim, marginTop: 6 }}>SENGOKU PROJECT</div>
+        {/* 題（GDD 1.1）。絵の題字が入るまでは、字で置く。
+            絵が来たら、この二行を差し替えるだけで済むようにしてある。 */}
+        <div className="mn" style={{ fontSize: 42, letterSpacing: ".06em" }}>センゴク盤</div>
+        <div style={{ fontSize: 11, letterSpacing: ".42em", color: U.dim, marginTop: 6 }}>SENGOKU BAN</div>
         <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 9, width: 360, maxWidth: "92vw" }}>
           {最新 && (
             <button className="btn dark" style={{ padding: "13px" }} onClick={() => onLoad(最新.key)}>
@@ -59,6 +63,8 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
           <button className={`btn ${最新 ? "" : "dark"}`} style={{ padding: "13px" }} onClick={onStart}>
             {最新 ? "新しくはじめる" : "ゲームをはじめる"}
           </button>
+          {/* 初めて開いた人が、まず読めるように。遊びの中からも同じものが開ける。 */}
+          <button className="btn" style={{ padding: "11px" }} onClick={() => set遊び方(true)}>遊び方を読む</button>
           {在る.some((w) => w.自動) && (
             <div style={{ fontSize: 11, color: U.dim, lineHeight: 1.7, textAlign: "left", marginTop: -3 }}>
               新しく始めると、いま「自動」にある盤は空いている枠へ移して取っておきます。
@@ -99,6 +105,7 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
         ver.0.2.0
         {typeof window !== "undefined" && window.__BUILD__ ? `　書き出し ${window.__BUILD__}` : ""}
       </div>
+      {遊び方 && <Manual onClose={() => set遊び方(false)} />}
     </div>
   );
 }

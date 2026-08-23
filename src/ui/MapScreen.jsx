@@ -32,6 +32,7 @@ import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
 import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog } from "./panels.jsx";
 import { SallyDialog } from "./panels.jsx";
+import { Manual } from "./Manual.jsx";
 import { ReinforceDialog } from "./panels.jsx";
 import { underMyBanner } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
@@ -1715,6 +1716,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           onChange={(e) => setG((p) => { const s = structuredClone(p); s.factions[s.player].mobilization = +e.target.value; return s; })}>
           {MOB_POLICY.map((m, i) => <option key={m.name} value={i}>{`動員：${m.name}（一万石 ${m.per}人）`}</option>)}
         </select>
+        <button className="btn sm" onClick={() => setModal("manual")}>遊び方</button>
         <button className="btn sm" onClick={() => setModal("chronicle")}>戦国記</button>
         <button className="btn sm" onClick={() => setModal("save")}>
           記録{savedMsg ? `：${savedMsg}` : ""}
@@ -1743,6 +1745,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("factions")}><b>⚑</b>勢力情報</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("generals")}><b>☗</b>武将一覧</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("goal")}><b>◈</b>攻略目標</div>
+            <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("manual")}><b>？</b>遊び方</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("chronicle")}><b>▤</b>履歴</div>
           </div>
         )}
@@ -1923,6 +1926,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         })()}
         {modal === "report" && <MonthReport g={g} onClose={() => setModal(null)}
           onAid={(id) => { setModal(null); setCallAid(id); }} />}
+        {modal === "manual" && <Manual onClose={() => setModal(null)} />}
         {modal === "chronicle" && <Chronicle g={g} onClose={() => setModal(null)} />}
         {modal === "factions" && <FactionInfo g={g} onClose={() => setModal(null)} />}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)} />}

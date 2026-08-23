@@ -53,11 +53,11 @@ const html = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<title>戦国プロジェクト</title>
+<title>センゴク盤</title>
 <!-- 「ホーム画面に追加」で、住所欄のない一枚の画面として開くための断り -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="戦国">
+<meta name="apple-mobile-web-app-title" content="センゴク盤">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#F4F1E8">
 <!-- 石高や兵数を電話番号と見なして繋いでしまうのを止める -->
@@ -111,7 +111,7 @@ const 貼る形 = esbuild.buildSync({
   logLevel: 'error',
 }).outputFiles[0].text;
 
-const 前書き = `// 戦国プロジェクト ─ Artifacts に貼る形
+const 前書き = `// センゴク盤 ─ Artifacts に貼る形
 // これは src/ の折を一つに束ね直したものである。直すときは src/ のほうを直し、
 // npm run build で作り直すこと。この書き出しを直に編めば、次の書き出しで消える。
 `;
@@ -122,3 +122,8 @@ const 万 = (n) => (n / 1024).toFixed(0);
 console.log(`dist/戦国.html              ${万(Buffer.byteLength(html))} KB  … 開けば遊べる`);
 console.log(`dist/index.html             ${万(Buffer.byteLength(html))} KB  … 同じもの。ネットに置くならこちら`);
 console.log(`dist/sengoku-artifact.jsx   ${万(Buffer.byteLength(前書き + 貼る形))} KB  … Artifacts に貼る`);
+
+/* 説明書も一緒に作り直す。遊びの中の「遊び方」と同じ表から作るので、
+   直したときに紙のほうだけが古くなることがない。 */
+try { require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'manual.cjs')], { stdio: 'inherit' }); }
+catch (e) { console.log('（説明書は作れなかった：' + e.message.slice(0, 60) + '）'); }
