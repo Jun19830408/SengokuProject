@@ -2,7 +2,7 @@
 // これは src/ の折を一つに束ね直したものである。直すときは src/ のほうを直し、
 // npm run build で作り直すこと。この書き出しを直に編めば、次の書き出しで消える。
 // src/ui/App.jsx
-import React9, { useState as useState9, useEffect as useEffect6, useMemo as useMemo2 } from "react";
+import React10, { useState as useState9, useEffect as useEffect6, useMemo as useMemo2 } from "react";
 
 // src/data/roads.js
 var ROADS = [
@@ -10009,6 +10009,15 @@ function advanceMonth(prev, g) {
     }
   }
   \u65D7\u306E\u4E0B\u3092\u72D9\u3046\u6226\u5F79\u3092\u843D\u3068\u3059(s2);
+  if (!s2.\u6EC5\u3073 && !s2.castles.some((c) => c.faction === s2.player)) {
+    s2.\u6EC5\u3073 = { y: s2.year, m: s2.month };
+    events.push("\u62E0\u308B\u3079\u304D\u57CE\u304C\u4E00\u3064\u3082\u6B8B\u3089\u306A\u304B\u3063\u305F\u3002\u5BB6\u306F\u3053\u3053\u306B\u7D76\u3048\u308B\u3002");
+    s2.chronicle.push({
+      y: s2.year,
+      m: s2.month,
+      text: `${(s2.factions[s2.player] || {}).name || "\u5F53\u5BB6"}\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3044\u3001\u7D76\u3048\u305F\u3002`
+    });
+  }
   if (!s2.unified) {
     const u = checkUnified(s2);
     if (u) {
@@ -10092,7 +10101,7 @@ function advanceMonth(prev, g) {
 }
 
 // src/ui/MapScreen.jsx
-import React7, { useState as useState7, useRef as useRef4, useEffect as useEffect5 } from "react";
+import React8, { useState as useState7, useRef as useRef4, useEffect as useEffect5 } from "react";
 
 // src/battle/field.js
 var MAX_CORPS = 32;
@@ -18083,6 +18092,48 @@ var \u8AAC\u660E\u66F8 = [
     ]
   },
   {
+    \u984C: "\u4E00\u5C40\u306E\u7D42\u308F\u308A",
+    \u7BC0: [
+      {
+        \u898B\u51FA\u3057: "\u7D42\u308F\u308B\u3068\u304D",
+        \u6587: [
+          "\u4E00\u5C40\u304C\u7D42\u308F\u308B\u306E\u306F\u4E8C\u3064\u3002\u5929\u4E0B\u304C\u5B9A\u307E\u308B\u304B\u3001\u5BB6\u304C\u7D76\u3048\u308B\u304B\u3067\u3042\u308B\u3002\u3069\u3061\u3089\u306E\u3068\u304D\u3082\u300C\u7D42\u5E55\u300D\u304C\u544A\u3052\u3089\u308C\u308B\u3002\u9589\u3058\u308C\u3070\u76E4\u3078\u623B\u308C\u308B\u306E\u3067\u3001\u5929\u4E0B\u3092\u5B9A\u3081\u305F\u3042\u3068\u306E\u6383\u9664\u3092\u7D9A\u3051\u3066\u3082\u3001\u7D76\u3048\u305F\u3042\u3068\u306E\u76E4\u3092\u773A\u3081\u3066\u3082\u69CB\u308F\u306A\u3044\u3002"
+        ],
+        \u8868: [
+          ["\u5929\u4E0B\u304C\u5B9A\u307E\u308B", "\u3059\u3079\u3066\u306E\u57CE\u304C\u3001\u81EA\u5BB6\u306E\u65D7\u306E\u4E0B\u306B\u5165\u3063\u305F\u3068\u304D"],
+          ["\u5BB6\u304C\u7D76\u3048\u308B", "\u62E0\u308B\u3079\u304D\u57CE\u3092\u4E00\u3064\u3082\u6301\u305F\u306A\u304F\u306A\u3063\u305F\u3068\u304D"]
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u65D7\u306E\u4E0B\u3068\u306F",
+        \u6587: [
+          "\u65D7\u306E\u4E0B\u3068\u306F\u3001\u81EA\u5BB6\u306E\u57CE\u3060\u3051\u3067\u306F\u306A\u3044\u3002\u5F93\u5C5E\u3055\u305B\u305F\u5BB6\u3001\u81E3\u5F93\u3092\u53D7\u3051\u305F\u5BB6\u3082\u3001\u305D\u306E\u307E\u305F\u5F93\u5C5E\u306E\u5BB6\u3082\u3001\u307F\u306A\u65D7\u306E\u4E0B\u3067\u3042\u308B\u3002\u3059\u3079\u3066\u306E\u57CE\u306E\u4E3B\u304C\u81EA\u5BB6\u306E\u65D7\u306E\u4E0B\u306B\u5165\u308C\u3070\u3001\u5929\u4E0B\u306F\u5B9A\u307E\u308B\u3002",
+          "\u3064\u307E\u308A\u3001\u56DB\u65B9\u3092\u653B\u3081\u6F70\u3055\u305A\u3068\u3082\u5929\u4E0B\u306F\u53D6\u308C\u308B\u3002\u653B\u3081\u308B\u304B\u3001\u5F93\u3048\u308B\u304B\u3001\u3069\u3061\u3089\u306E\u9053\u3067\u3082\u3088\u3044\u3002\u305F\u3060\u3057\u3001\u305D\u306E\u5DEE\u306F\u300C\u4F4D\u300D\u306B\u51FA\u308B\u3002"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u5929\u4E0B\u306E\u4F4D\uFF08\u56DB\u3064\uFF09",
+        \u6587: ["\u540C\u3058\u5929\u4E0B\u3067\u3082\u3001\u3069\u308C\u3060\u3051\u3092\u81EA\u3089\u6CBB\u3081\u305F\u304B\u3067\u4F4D\u304C\u5206\u304B\u308C\u308B\u3002"],
+        \u8868: [
+          ["\u4E00\u7D71", "\u4ED6\u5BB6\u304C\u4E00\u3064\u3082\u6B8B\u3089\u306A\u3044\u3002\u3059\u3079\u3066\u306E\u57CE\u3092\u76F4\u306B\u6CBB\u3081\u305F"],
+          ["\u5927\u6210", "\u57CE\u306E\u4E03\u5272\u4EE5\u4E0A\u3092\u76F4\u306B\u6CBB\u3081\u3001\u6B8B\u308B\u306F\u65D7\u306E\u4E0B\u306E\u5BB6\u3005"],
+          ["\u8987", "\u57CE\u306E\u56DB\u5272\u4E94\u5206\u4EE5\u4E0A\u3092\u76F4\u306B\u6CBB\u3081\u3001\u306A\u304A\u591A\u304F\u306E\u5BB6\u3092\u5F93\u3048\u3066\u3044\u308B"],
+          ["\u65D7\u4E0B", "\u76F4\u306B\u6CBB\u3081\u308B\u57CE\u306F\u591A\u304F\u306A\u3044\u304C\u3001\u3059\u3079\u3066\u306E\u5BB6\u304C\u65D7\u306E\u4E0B\u306B\u5165\u3063\u305F"]
+        ],
+        \u7B87\u6761: [
+          "\u4F4D\u306F\u7D42\u5E55\u306E\u753B\u9762\u3068\u6226\u56FD\u8A18\u306B\u6B8B\u308B",
+          "\u5F93\u5C5E\u30FB\u81E3\u5F93\u3067\u5F93\u3048\u305F\u5BB6\u306F\u3001\u3044\u3064\u307E\u3067\u3082\u65D7\u306E\u4E0B\u306B\u3044\u308B\u3068\u306F\u9650\u3089\u306A\u3044\u3002\u80CC\u3051\u3070\u5929\u4E0B\u306F\u5D29\u308C\u308B"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u5F53\u4E3B\u3092\u5931\u3063\u305F\u3068\u304D",
+        \u6587: [
+          "\u5F53\u4E3B\u304C\u8A0E\u305F\u308C\u3001\u3042\u308B\u3044\u306F\u6355\u3089\u308F\u308C\u3066\u3082\u3001\u8DE1\u76EE\u3092\u7D99\u3050\u8005\u304C\u3042\u308C\u3070\u5BB6\u306F\u7D9A\u304F\u3002\u8840\u7B4B\u306E\u8005\u304C\u306A\u3051\u308C\u3070\u5BB6\u4E2D\u306F\u63FA\u308C\u3001\u5BB6\u540D\u304C\u5909\u308F\u308B\u3053\u3068\u3082\u3042\u308B\u3002\u7D99\u3050\u8005\u304C\u4E00\u4EBA\u3082\u306A\u304F\u3001\u57CE\u3082\u7121\u3051\u308C\u3070\u3001\u305D\u3053\u3067\u5BB6\u306F\u7D76\u3048\u308B\u3002"
+        ]
+      }
+    ]
+  },
+  {
     \u984C: "\u6B66\u5C06",
     \u7BC0: [
       {
@@ -18138,6 +18189,23 @@ function Manual({ onClose, \u7AE0 = 0 }) {
   } }, /* @__PURE__ */ React6.createElement("span", { className: "mn", style: { flex: "0 0 34%", fontSize: 13 } }, a), /* @__PURE__ */ React6.createElement("span", { style: { flex: 1, color: U.dim } }, b)))), (s2.\u7B87\u6761 || []).map((t, k) => /* @__PURE__ */ React6.createElement("div", { key: k, style: { display: "flex", gap: 7, fontSize: 12.5, lineHeight: 1.9, padding: "2px 0" } }, /* @__PURE__ */ React6.createElement("span", { style: { color: U.dim } }, "\u30FB"), /* @__PURE__ */ React6.createElement("span", null, t)))))), /* @__PURE__ */ React6.createElement("button", { className: "btn dark", style: { width: "100%", marginTop: 12 }, onClick: onClose }, "\u9589\u3058\u308B")));
 }
 
+// src/ui/Ending.jsx
+import React7 from "react";
+var \u4F4D\u306E\u8AAC\u304D = {
+  \u4E00\u7D71: "\u5929\u4E0B\u3053\u3068\u3054\u3068\u304F\u3092\u76F4\u306B\u6CBB\u3081\u305F\u3002\u4E26\u3076\u5BB6\u306F\u4E00\u3064\u3082\u6B8B\u3089\u306A\u3044\u3002",
+  \u5927\u6210: "\u4E03\u5272\u3092\u8D85\u3048\u308B\u57CE\u3092\u76F4\u306B\u6CBB\u3081\u3001\u6B8B\u308B\u306F\u65D7\u306E\u4E0B\u306E\u5BB6\u3005\u3067\u3042\u308B\u3002",
+  \u8987: "\u56DB\u5272\u4E94\u5206\u3092\u8D85\u3048\u308B\u57CE\u3092\u76F4\u306B\u6CBB\u3081\u3001\u306A\u304A\u591A\u304F\u306E\u5BB6\u3092\u5F93\u3048\u3066\u3044\u308B\u3002",
+  \u65D7\u4E0B: "\u76F4\u306B\u6CBB\u3081\u308B\u57CE\u306F\u591A\u304F\u306A\u3044\u304C\u3001\u3059\u3079\u3066\u306E\u5BB6\u304C\u65D7\u306E\u4E0B\u306B\u5165\u3063\u305F\u3002"
+};
+function Ending({ g, onClose, onTitle }) {
+  const \u5929\u4E0B = g.unified && g.unified.fid === g.player ? g.unified : null;
+  const \u7D76 = g.\u6EC5\u3073 || null;
+  if (!\u5929\u4E0B && !\u7D76) return null;
+  const \u5BB6 = (g.factions[g.player] || {}).name || "\u5F53\u5BB6";
+  const \u57CE = g.castles.filter((c) => c.faction === g.player).length;
+  return /* @__PURE__ */ React7.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(onClose) }, /* @__PURE__ */ React7.createElement("div", { className: "card", style: { maxWidth: 460 } }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 26, letterSpacing: ".08em", marginBottom: 2 } }, \u5929\u4E0B ? "\u5929\u4E0B\u3001\u5B9A\u307E\u308B" : "\u5BB6\u3001\u7D76\u3086"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11, color: U.dim, letterSpacing: ".2em", marginBottom: 12 } }, \u5929\u4E0B ? `${\u5929\u4E0B.y}\u5E74${\u5929\u4E0B.m}\u6708` : `${\u7D76.y}\u5E74${\u7D76.m}\u6708`), \u5929\u4E0B ? /* @__PURE__ */ React7.createElement(React7.Fragment, null, /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 14, lineHeight: 2.1 } }, \u5BB6, "\u306E\u65D7\u306E\u4E0B\u306B\u3001\u3059\u3079\u3066\u306E\u57CE\u304C\u5165\u3063\u305F\u3002"), /* @__PURE__ */ React7.createElement("div", { className: "sec" }, "\u4F4D\u3000", \u5929\u4E0B.grade || "\u65D7\u4E0B"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 13, lineHeight: 2, color: U.dim } }, \u4F4D\u306E\u8AAC\u304D[\u5929\u4E0B.grade] || \u4F4D\u306E\u8AAC\u304D.\u65D7\u4E0B), /* @__PURE__ */ React7.createElement("div", { className: "row", style: { marginTop: 10 } }, /* @__PURE__ */ React7.createElement("span", null, "\u76F4\u306B\u6CBB\u3081\u308B\u57CE"), /* @__PURE__ */ React7.createElement("span", { className: "v" }, \u5929\u4E0B.mine ?? \u57CE, " \uFF0F ", \u5929\u4E0B.total ?? g.castles.length, " \u57CE")), /* @__PURE__ */ React7.createElement("div", { className: "row" }, /* @__PURE__ */ React7.createElement("span", null, "\u65D7\u306E\u4E0B\u306E\u5BB6"), /* @__PURE__ */ React7.createElement("span", { className: "v" }, (\u5929\u4E0B.vassals || []).length, " \u5BB6")), /* @__PURE__ */ React7.createElement("div", { className: "row" }, /* @__PURE__ */ React7.createElement("span", null, "\u59CB\u3081\u3066\u304B\u3089"), /* @__PURE__ */ React7.createElement("span", { className: "v" }, \u5929\u4E0B.y - 1546, "\u5E74", \u5929\u4E0B.m - 4 >= 0 ? \u5929\u4E0B.m - 4 : \u5929\u4E0B.m + 8, "\u304B\u6708"))) : /* @__PURE__ */ React7.createElement(React7.Fragment, null, /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 14, lineHeight: 2.1 } }, \u5BB6, "\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3063\u305F\u3002\u62E0\u308B\u3079\u304D\u57CE\u304C\u7121\u3051\u308C\u3070\u3001\u5BB6\u306F\u7ACB\u305F\u306A\u3044\u3002"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12.5, color: U.dim, lineHeight: 2, marginTop: 8 } }, "\u6B8B\u3063\u305F\u8005\u306F\u6563\u308A\u3001\u3042\u308B\u3044\u306F\u6355\u3089\u308F\u308C\u3001\u3042\u308B\u3044\u306F\u4ED6\u5BB6\u306B\u4ED5\u3048\u308B\u3002 \u3053\u3053\u3067\u4E00\u5C40\u306F\u7D42\u308F\u308A\u3067\u3042\u308B\u3002")), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginTop: 14 } }, "\u9589\u3058\u308C\u3070\u76E4\u3078\u623B\u308A\u307E\u3059\u3002", \u5929\u4E0B ? "\u3053\u306E\u307E\u307E\u5929\u4E0B\u306E\u6383\u9664\u3092\u7D9A\u3051\u3066\u3082\u69CB\u3044\u307E\u305B\u3093\u3002" : "\u898B\u7269\u3068\u3057\u3066\u76E4\u3092\u773A\u3081\u308B\u3053\u3068\u306F\u3067\u304D\u307E\u3059\u3002"), /* @__PURE__ */ React7.createElement("div", { className: "g2", style: { marginTop: 12 } }, /* @__PURE__ */ React7.createElement("button", { className: "btn", onClick: onClose }, "\u76E4\u3078\u623B\u308B"), /* @__PURE__ */ React7.createElement("button", { className: "btn dark", onClick: onTitle }, "\u30BF\u30A4\u30C8\u30EB\u3078"))));
+}
+
 // src/ui/MapScreen.jsx
 function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const cvRef = useRef4(null), miniRef = useRef4(null), wrapRef = useRef4(null);
@@ -18155,6 +18223,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [breakVow, setBreakVow] = useState7(null);
   const [sally, setSally] = useState7(null);
   const [callAid, setCallAid] = useState7(null);
+  const \u7D42\u5E55\u3092\u898B\u305F = !!g.\u7D42\u5E55\u3092\u898B\u305F;
   const [rotate, setRotate] = useState7(true);
   const [savedMsg, setSavedMsg] = useState7("");
   const [wide, setWide] = useState7(false);
@@ -19846,18 +19915,18 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     return a2 && c2 && (a2.faction === g.player || c2.faction === g.player);
   });
   const selCastle = g.castles.find((c) => c.id === sel);
-  if (sea) return /* @__PURE__ */ React7.createElement(SeaScreen, { key: sea.key, ctx: sea, land, onEnd: (bb) => \u6D77\u6226\u3092\u7D42\u3048\u308B(bb) });
-  if (battle) return /* @__PURE__ */ React7.createElement(BattleScreen, { key: battle.armyId, ctx: battle, land, onEnd: (bb) => finishBattle(bb, battle) });
-  return /* @__PURE__ */ React7.createElement("div", { className: "sp", style: { height: "100dvh" } }, !wide && /* @__PURE__ */ React7.createElement("div", { className: "bar" }, /* @__PURE__ */ React7.createElement("span", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React7.createElement("span", { className: "dot", style: { background: pf.color } }), /* @__PURE__ */ React7.createElement("b", { className: "mn", style: { fontSize: 16 } }, pf.name)), /* @__PURE__ */ React7.createElement("span", { className: "kv num" }, /* @__PURE__ */ React7.createElement("b", null, g.year, "\u5E74 ", g.month, "\u6708"), /* @__PURE__ */ React7.createElement("span", { style: { background: "#EFEDE4", borderRadius: 3, padding: "1px 6px", fontSize: 11 } }, SEASON(g.month))), /* @__PURE__ */ React7.createElement("span", { className: "kv" }, "\u77F3\u9AD8 ", /* @__PURE__ */ React7.createElement("b", { className: "num" }, man(mine.reduce((a, c) => a + c.koku, 0)), " \u4E07\u77F3")), /* @__PURE__ */ React7.createElement("span", { className: "kv" }, "\u5175\u6570 ", /* @__PURE__ */ React7.createElement("b", { className: "num" }, fmt(totalMen))), /* @__PURE__ */ React7.createElement("span", { className: "kv" }, "\u91D1\u92AD ", /* @__PURE__ */ React7.createElement("b", { className: "num" }, fmt(pf.gold), " \u8CAB")), /* @__PURE__ */ React7.createElement("span", { className: "kv" }, "\u62E0\u70B9 ", /* @__PURE__ */ React7.createElement("b", { className: "num" }, mine.length, " \u57CE")), (() => {
+  if (sea) return /* @__PURE__ */ React8.createElement(SeaScreen, { key: sea.key, ctx: sea, land, onEnd: (bb) => \u6D77\u6226\u3092\u7D42\u3048\u308B(bb) });
+  if (battle) return /* @__PURE__ */ React8.createElement(BattleScreen, { key: battle.armyId, ctx: battle, land, onEnd: (bb) => finishBattle(bb, battle) });
+  return /* @__PURE__ */ React8.createElement("div", { className: "sp", style: { height: "100dvh" } }, !wide && /* @__PURE__ */ React8.createElement("div", { className: "bar" }, /* @__PURE__ */ React8.createElement("span", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React8.createElement("span", { className: "dot", style: { background: pf.color } }), /* @__PURE__ */ React8.createElement("b", { className: "mn", style: { fontSize: 16 } }, pf.name)), /* @__PURE__ */ React8.createElement("span", { className: "kv num" }, /* @__PURE__ */ React8.createElement("b", null, g.year, "\u5E74 ", g.month, "\u6708"), /* @__PURE__ */ React8.createElement("span", { style: { background: "#EFEDE4", borderRadius: 3, padding: "1px 6px", fontSize: 11 } }, SEASON(g.month))), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u77F3\u9AD8 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, man(mine.reduce((a, c) => a + c.koku, 0)), " \u4E07\u77F3")), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u5175\u6570 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, fmt(totalMen))), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u91D1\u92AD ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, fmt(pf.gold), " \u8CAB")), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u62E0\u70B9 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, mine.length, " \u57CE")), (() => {
     const cr = courtRank(g, g.player);
     if (!cr) return null;
-    return /* @__PURE__ */ React7.createElement("span", { className: "kv", style: { color: "#8A6A2A" } }, /* @__PURE__ */ React7.createElement("b", null, cr.key), "\uFF08\u5175\xD7", cr.troop, "\uFF09");
+    return /* @__PURE__ */ React8.createElement("span", { className: "kv", style: { color: "#8A6A2A" } }, /* @__PURE__ */ React8.createElement("b", null, cr.key), "\uFF08\u5175\xD7", cr.troop, "\uFF09");
   })(), (() => {
     const lord = g.generals.find((x) => x.faction === g.player && x.lord && !x.captive);
     if (!lord || !needsGuardian(lord)) return null;
     const gd = actingHead(g, g.player);
-    return /* @__PURE__ */ React7.createElement("span", { className: "kv", style: { color: "#8A5A3A" } }, "\u5F53\u4E3B ", /* @__PURE__ */ React7.createElement("b", null, lord.name), "\uFF08", lord.age, "\u6B73\uFF09\u306F\u5E7C\u5E74\u3002", gd && gd.id !== lord.id ? /* @__PURE__ */ React7.createElement(React7.Fragment, null, " ", /* @__PURE__ */ React7.createElement("b", null, gd.name), "\u304C\u5F8C\u898B") : " \u5F8C\u898B\u306A\u3057");
-  })(), /* @__PURE__ */ React7.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React7.createElement(
+    return /* @__PURE__ */ React8.createElement("span", { className: "kv", style: { color: "#8A5A3A" } }, "\u5F53\u4E3B ", /* @__PURE__ */ React8.createElement("b", null, lord.name), "\uFF08", lord.age, "\u6B73\uFF09\u306F\u5E7C\u5E74\u3002", gd && gd.id !== lord.id ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, " ", /* @__PURE__ */ React8.createElement("b", null, gd.name), "\u304C\u5F8C\u898B") : " \u5F8C\u898B\u306A\u3057");
+  })(), /* @__PURE__ */ React8.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React8.createElement(
     "select",
     {
       className: "sel",
@@ -19868,8 +19937,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         return s2;
       })
     },
-    MOB_POLICY.map((m, i) => /* @__PURE__ */ React7.createElement("option", { key: m.name, value: i }, `\u52D5\u54E1\uFF1A${m.name}\uFF08\u4E00\u4E07\u77F3 ${m.per}\u4EBA\uFF09`))
-  ), /* @__PURE__ */ React7.createElement("button", { className: "btn sm", onClick: () => setModal("manual") }, "\u904A\u3073\u65B9"), /* @__PURE__ */ React7.createElement("button", { className: "btn sm", onClick: () => setModal("chronicle") }, "\u6226\u56FD\u8A18"), /* @__PURE__ */ React7.createElement("button", { className: "btn sm", onClick: () => setModal("save") }, "\u8A18\u9332", savedMsg ? `\uFF1A${savedMsg}` : ""), /* @__PURE__ */ React7.createElement("button", { className: "btn sm", onClick: onTitle }, "\u30BF\u30A4\u30C8\u30EB"), /* @__PURE__ */ React7.createElement("button", { className: "btn dark sm", disabled: !!battle || !!openSiege, onClick: nextMonth }, "\u6B21\u6708\u3078")), /* @__PURE__ */ React7.createElement(
+    MOB_POLICY.map((m, i) => /* @__PURE__ */ React8.createElement("option", { key: m.name, value: i }, `\u52D5\u54E1\uFF1A${m.name}\uFF08\u4E00\u4E07\u77F3 ${m.per}\u4EBA\uFF09`))
+  ), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("manual") }, "\u904A\u3073\u65B9"), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("chronicle") }, "\u6226\u56FD\u8A18"), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("save") }, "\u8A18\u9332", savedMsg ? `\uFF1A${savedMsg}` : ""), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: onTitle }, "\u30BF\u30A4\u30C8\u30EB"), /* @__PURE__ */ React8.createElement("button", { className: "btn dark sm", disabled: !!battle || !!openSiege, onClick: nextMonth }, "\u6B21\u6708\u3078")), /* @__PURE__ */ React8.createElement(
     "div",
     {
       className: "mapwrap",
@@ -19886,11 +19955,11 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         if (e.target === cvRef.current) zoom(e.deltaY < 0 ? 1.12 : 0.89);
       }
     },
-    /* @__PURE__ */ React7.createElement("canvas", { ref: cvRef, style: { width: "100%", height: "100%", display: "block", touchAction: "none" } }),
-    /* @__PURE__ */ React7.createElement("div", { className: "mapctl l", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React7.createElement("div", { className: "mbtn", onClick: () => zoom(1.25) }, /* @__PURE__ */ React7.createElement("b", null, "\uFF0B"), "\u62E1\u5927"), /* @__PURE__ */ React7.createElement("div", { className: "mbtn", onClick: () => zoom(0.8) }, /* @__PURE__ */ React7.createElement("b", null, "\u2212"), "\u7E2E\u5C0F"), /* @__PURE__ */ React7.createElement("div", { className: "mbtn", onClick: () => focus(mine[0] && mine[0].id) }, /* @__PURE__ */ React7.createElement("b", null, "\u25CE"), "\u672C\u62E0"), /* @__PURE__ */ React7.createElement("div", { className: "mbtn", onClick: whole }, /* @__PURE__ */ React7.createElement("b", null, "\u26F6"), "\u5168\u4F53\u56F3"), /* @__PURE__ */ React7.createElement("div", { className: `mbtn ${wide ? "on" : ""}`, onClick: () => setWide((v) => !v) }, /* @__PURE__ */ React7.createElement("b", null, wide ? "\u25A4" : "\u2922"), wide ? "\u623B\u3059" : "\u5E83\u304F")),
-    !wide && /* @__PURE__ */ React7.createElement("div", { className: "mapctl r", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React7.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("factions") }, /* @__PURE__ */ React7.createElement("b", null, "\u2691"), "\u52E2\u529B\u60C5\u5831"), /* @__PURE__ */ React7.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("generals") }, /* @__PURE__ */ React7.createElement("b", null, "\u2617"), "\u6B66\u5C06\u4E00\u89A7"), /* @__PURE__ */ React7.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("goal") }, /* @__PURE__ */ React7.createElement("b", null, "\u25C8"), "\u653B\u7565\u76EE\u6A19"), /* @__PURE__ */ React7.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("manual") }, /* @__PURE__ */ React7.createElement("b", null, "\uFF1F"), "\u904A\u3073\u65B9"), /* @__PURE__ */ React7.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("chronicle") }, /* @__PURE__ */ React7.createElement("b", null, "\u25A4"), "\u5C65\u6B74")),
-    !wide && /* @__PURE__ */ React7.createElement("canvas", { className: "mini", ref: miniRef, onClick: whole }),
-    wide && /* @__PURE__ */ React7.createElement("div", { style: {
+    /* @__PURE__ */ React8.createElement("canvas", { ref: cvRef, style: { width: "100%", height: "100%", display: "block", touchAction: "none" } }),
+    /* @__PURE__ */ React8.createElement("div", { className: "mapctl l", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React8.createElement("div", { className: "mbtn", onClick: () => zoom(1.25) }, /* @__PURE__ */ React8.createElement("b", null, "\uFF0B"), "\u62E1\u5927"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", onClick: () => zoom(0.8) }, /* @__PURE__ */ React8.createElement("b", null, "\u2212"), "\u7E2E\u5C0F"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", onClick: () => focus(mine[0] && mine[0].id) }, /* @__PURE__ */ React8.createElement("b", null, "\u25CE"), "\u672C\u62E0"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", onClick: whole }, /* @__PURE__ */ React8.createElement("b", null, "\u26F6"), "\u5168\u4F53\u56F3"), /* @__PURE__ */ React8.createElement("div", { className: `mbtn ${wide ? "on" : ""}`, onClick: () => setWide((v) => !v) }, /* @__PURE__ */ React8.createElement("b", null, wide ? "\u25A4" : "\u2922"), wide ? "\u623B\u3059" : "\u5E83\u304F")),
+    !wide && /* @__PURE__ */ React8.createElement("div", { className: "mapctl r", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("factions") }, /* @__PURE__ */ React8.createElement("b", null, "\u2691"), "\u52E2\u529B\u60C5\u5831"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("generals") }, /* @__PURE__ */ React8.createElement("b", null, "\u2617"), "\u6B66\u5C06\u4E00\u89A7"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("goal") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C8"), "\u653B\u7565\u76EE\u6A19"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("manual") }, /* @__PURE__ */ React8.createElement("b", null, "\uFF1F"), "\u904A\u3073\u65B9"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("chronicle") }, /* @__PURE__ */ React8.createElement("b", null, "\u25A4"), "\u5C65\u6B74")),
+    !wide && /* @__PURE__ */ React8.createElement("canvas", { className: "mini", ref: miniRef, onClick: whole }),
+    wide && /* @__PURE__ */ React8.createElement("div", { style: {
       position: "absolute",
       left: 12,
       bottom: 12,
@@ -19903,9 +19972,9 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       borderRadius: 20,
       padding: "6px 12px",
       fontSize: 12
-    } }, /* @__PURE__ */ React7.createElement("span", { className: "dot", style: { background: pf.color } }), /* @__PURE__ */ React7.createElement("b", { className: "mn" }, pf.name), /* @__PURE__ */ React7.createElement("span", { className: "num" }, g.year, "\u5E74", g.month, "\u6708"), /* @__PURE__ */ React7.createElement("span", { className: "num" }, "\u5175", fmt(totalMen)), /* @__PURE__ */ React7.createElement("button", { className: "btn sm", disabled: !!battle || !!openSiege || !!openCamp, onClick: nextMonth }, "\u6B21\u6708\u3078")),
-    !sel && !wide && /* @__PURE__ */ React7.createElement("div", { className: "hint" }, "\u57CE\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u8A73\u7D30\u304C\u958B\u304D\u307E\u3059"),
-    selCastle && /* @__PURE__ */ React7.createElement(
+    } }, /* @__PURE__ */ React8.createElement("span", { className: "dot", style: { background: pf.color } }), /* @__PURE__ */ React8.createElement("b", { className: "mn" }, pf.name), /* @__PURE__ */ React8.createElement("span", { className: "num" }, g.year, "\u5E74", g.month, "\u6708"), /* @__PURE__ */ React8.createElement("span", { className: "num" }, "\u5175", fmt(totalMen)), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", disabled: !!battle || !!openSiege || !!openCamp, onClick: nextMonth }, "\u6B21\u6708\u3078")),
+    !sel && !wide && /* @__PURE__ */ React8.createElement("div", { className: "hint" }, "\u57CE\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u8A73\u7D30\u304C\u958B\u304D\u307E\u3059"),
+    selCastle && /* @__PURE__ */ React8.createElement(
       CastleSheet,
       {
         g,
@@ -19930,20 +19999,20 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         onKenchi: doKenchi2
       }
     ),
-    modal === "sortie" && selCastle && /* @__PURE__ */ React7.createElement(SortieDialog, { g, from: selCastle.id, onClose: () => setModal(null), onGo: launchSortie }),
+    modal === "sortie" && selCastle && /* @__PURE__ */ React8.createElement(SortieDialog, { g, from: selCastle.id, onClose: () => setModal(null), onGo: launchSortie }),
     breakVow && (() => {
       const bv = breakVow;
       const f = g.factions[bv.castle.faction];
       const rel = relOf(g, g.player, bv.castle.faction);
       const \u5473\u65B9 = Object.keys(g.relations).filter((k) => k.includes(g.player) && g.relations[k].trust >= 40).length;
-      return /* @__PURE__ */ React7.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React7.createElement("div", { className: "card", style: { maxWidth: 470 } }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, f.name, "\u306F", bv.state, "\u306E\u9593\u67C4\u306B\u3042\u308B"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginTop: 8 } }, /* @__PURE__ */ React7.createElement("b", null, bv.castle.name), "\u3078\u5175\u3092\u51FA\u305B\u3070\u3001\u305D\u308C\u306F\u5F8C\u8A70\u3067\u306F\u306A\u304F", /* @__PURE__ */ React7.createElement("b", null, "\u653B\u6483"), "\u3067\u3059\u3002 \u7740\u3044\u305F\u6708\u306B\u5408\u6226\u304C\u59CB\u307E\u308A\u3001", f.name, "\u3068\u306F", /* @__PURE__ */ React7.createElement("b", null, "\u6575\u5BFE"), "\u3059\u308B\u3053\u3068\u306B\u306A\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React7.createElement("div", { style: {
+      return /* @__PURE__ */ React8.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React8.createElement("div", { className: "card", style: { maxWidth: 470 } }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, f.name, "\u306F", bv.state, "\u306E\u9593\u67C4\u306B\u3042\u308B"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginTop: 8 } }, /* @__PURE__ */ React8.createElement("b", null, bv.castle.name), "\u3078\u5175\u3092\u51FA\u305B\u3070\u3001\u305D\u308C\u306F\u5F8C\u8A70\u3067\u306F\u306A\u304F", /* @__PURE__ */ React8.createElement("b", null, "\u653B\u6483"), "\u3067\u3059\u3002 \u7740\u3044\u305F\u6708\u306B\u5408\u6226\u304C\u59CB\u307E\u308A\u3001", f.name, "\u3068\u306F", /* @__PURE__ */ React8.createElement("b", null, "\u6575\u5BFE"), "\u3059\u308B\u3053\u3068\u306B\u306A\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("div", { style: {
         margin: "12px 0",
         padding: "10px 12px",
         background: "rgba(176,72,60,0.08)",
         borderLeft: "3px solid #B0483C",
         fontSize: 12,
         lineHeight: 1.95
-      } }, /* @__PURE__ */ React7.createElement("b", { style: { color: "#B0483C" } }, "\u5931\u3046\u3082\u306E"), /* @__PURE__ */ React7.createElement("br", null), "\u30FB", f.name, "\u3068\u306E", /* @__PURE__ */ React7.createElement("b", null, bv.state), "\u306F\u7834\u308C\u3001\u4E2D\u7ACB\u306B\u623B\u308B\uFF08\u3044\u307E\u306E\u4FE1\u7528 ", Math.round(rel.trust), "\u3000\u2192\u30000\uFF09", /* @__PURE__ */ React7.createElement("br", null), "\u30FB", /* @__PURE__ */ React7.createElement("b", null, "\u5A01\u4FE1"), "\u304C\u4E0B\u304C\u308B\uFF08", Math.round(g.factions[g.player].prestige), " \u2192 ", Math.round(Math.max(0, g.factions[g.player].prestige - 12)), "\uFF09", /* @__PURE__ */ React7.createElement("br", null), "\u30FB", /* @__PURE__ */ React7.createElement("b", null, "\u4ED6\u5BB6\u3059\u3079\u3066\u306E\u4FE1\u7528"), "\u304C15\u4E0B\u304C\u308B\uFF08\u3044\u307E\u4FE1\u752840\u4EE5\u4E0A\u306E\u76F8\u624B ", \u5473\u65B9, " \u5BB6\uFF09", /* @__PURE__ */ React7.createElement("br", null), "\u30FB", /* @__PURE__ */ React7.createElement("b", null, "\u5BB6\u81E3\u306E\u5FE0\u8AA0"), "\u304C5\u4E0B\u304C\u308B\u3002\u7FA9\u306B\u6096\u308B\u4E3B\u3068\u307F\u306A\u3055\u308C\u307E\u3059"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 12 } }, "\u4E00\u5EA6\u7834\u3063\u305F\u7D04\u675F\u306F\u623B\u308A\u307E\u305B\u3093\u3002\u7D50\u3073\u76F4\u3059\u306B\u306F\u3001\u6539\u3081\u3066\u91D1\u92AD\u3068\u5E74\u6708\u3092\u8981\u3057\u307E\u3059\u3002"), /* @__PURE__ */ React7.createElement("div", { style: { display: "flex", gap: 9 } }, /* @__PURE__ */ React7.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => setBreakVow(null) }, "\u53D6\u308A\u3084\u3081\u308B"), /* @__PURE__ */ React7.createElement(
+      } }, /* @__PURE__ */ React8.createElement("b", { style: { color: "#B0483C" } }, "\u5931\u3046\u3082\u306E"), /* @__PURE__ */ React8.createElement("br", null), "\u30FB", f.name, "\u3068\u306E", /* @__PURE__ */ React8.createElement("b", null, bv.state), "\u306F\u7834\u308C\u3001\u4E2D\u7ACB\u306B\u623B\u308B\uFF08\u3044\u307E\u306E\u4FE1\u7528 ", Math.round(rel.trust), "\u3000\u2192\u30000\uFF09", /* @__PURE__ */ React8.createElement("br", null), "\u30FB", /* @__PURE__ */ React8.createElement("b", null, "\u5A01\u4FE1"), "\u304C\u4E0B\u304C\u308B\uFF08", Math.round(g.factions[g.player].prestige), " \u2192 ", Math.round(Math.max(0, g.factions[g.player].prestige - 12)), "\uFF09", /* @__PURE__ */ React8.createElement("br", null), "\u30FB", /* @__PURE__ */ React8.createElement("b", null, "\u4ED6\u5BB6\u3059\u3079\u3066\u306E\u4FE1\u7528"), "\u304C15\u4E0B\u304C\u308B\uFF08\u3044\u307E\u4FE1\u752840\u4EE5\u4E0A\u306E\u76F8\u624B ", \u5473\u65B9, " \u5BB6\uFF09", /* @__PURE__ */ React8.createElement("br", null), "\u30FB", /* @__PURE__ */ React8.createElement("b", null, "\u5BB6\u81E3\u306E\u5FE0\u8AA0"), "\u304C5\u4E0B\u304C\u308B\u3002\u7FA9\u306B\u6096\u308B\u4E3B\u3068\u307F\u306A\u3055\u308C\u307E\u3059"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 12 } }, "\u4E00\u5EA6\u7834\u3063\u305F\u7D04\u675F\u306F\u623B\u308A\u307E\u305B\u3093\u3002\u7D50\u3073\u76F4\u3059\u306B\u306F\u3001\u6539\u3081\u3066\u91D1\u92AD\u3068\u5E74\u6708\u3092\u8981\u3057\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("div", { style: { display: "flex", gap: 9 } }, /* @__PURE__ */ React8.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => setBreakVow(null) }, "\u53D6\u308A\u3084\u3081\u308B"), /* @__PURE__ */ React8.createElement(
         "button",
         {
           className: "btn dark",
@@ -19965,9 +20034,9 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         setTimeout(() => setSavedMsg(""), 2600);
         setModal(null);
       };
-      return /* @__PURE__ */ React7.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(() => setModal(null)) }, /* @__PURE__ */ React7.createElement("div", { className: "card", style: { maxWidth: 460 } }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, "\u8A18\u9332\u6240"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 } }, "\u3044\u307E\u306E\u76E4\u306F", g.year, "\u5E74", g.month, "\u6708\uFF08", g.factions[g.player].name, "\uFF0F", g.castles.filter((c) => c.faction === g.player).length, "\u57CE\uFF09\u3002\u53CE\u3081\u308B\u67A0\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002", /* @__PURE__ */ React7.createElement("br", null), "\u300C\u81EA\u52D5\u300D\u306F\u6708\u304C\u66FF\u308F\u308B\u305F\u3073\u306B\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\u3002\u53D6\u3063\u3066\u304A\u304D\u305F\u3044\u76E4\u306F\u4E00\u301C\u4E94\u3078\u3002"), (saves || []).map((w) => {
+      return /* @__PURE__ */ React8.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(() => setModal(null)) }, /* @__PURE__ */ React8.createElement("div", { className: "card", style: { maxWidth: 460 } }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, "\u8A18\u9332\u6240"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 } }, "\u3044\u307E\u306E\u76E4\u306F", g.year, "\u5E74", g.month, "\u6708\uFF08", g.factions[g.player].name, "\uFF0F", g.castles.filter((c) => c.faction === g.player).length, "\u57CE\uFF09\u3002\u53CE\u3081\u308B\u67A0\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002", /* @__PURE__ */ React8.createElement("br", null), "\u300C\u81EA\u52D5\u300D\u306F\u6708\u304C\u66FF\u308F\u308B\u305F\u3073\u306B\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\u3002\u53D6\u3063\u3066\u304A\u304D\u305F\u3044\u76E4\u306F\u4E00\u301C\u4E94\u3078\u3002"), (saves || []).map((w) => {
         const h = \u8A18\u9332\u306E\u898B\u51FA\u3057(w.d, g.factions);
-        return /* @__PURE__ */ React7.createElement(
+        return /* @__PURE__ */ React8.createElement(
           "button",
           {
             key: w.key,
@@ -19981,10 +20050,10 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             },
             onClick: () => \u53CE\u3081\u308B(w.key, w.\u540D)
           },
-          /* @__PURE__ */ React7.createElement("span", { style: { fontSize: 10.5, color: U.dim, letterSpacing: ".08em" } }, w.\u540D),
-          h ? /* @__PURE__ */ React7.createElement(React7.Fragment, null, /* @__PURE__ */ React7.createElement("b", { className: "mn" }, h.\u5BB6), /* @__PURE__ */ React7.createElement("span", { className: "num", style: { color: U.dim, marginLeft: 6 } }, h.\u5E74, "\u5E74", h.\u6708, "\u6708\uFF0F", h.\u57CE\u6570, "\u57CE\u30FB", h.\u4E07\u77F3, "\u4E07\u77F3"), /* @__PURE__ */ React7.createElement("span", { style: { color: "#B0483C", marginLeft: 6, fontSize: 11 } }, "\u4E0A\u66F8\u304D")) : /* @__PURE__ */ React7.createElement("span", { style: { color: U.dim } }, "\u7A7A\u304D")
+          /* @__PURE__ */ React8.createElement("span", { style: { fontSize: 10.5, color: U.dim, letterSpacing: ".08em" } }, w.\u540D),
+          h ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement("b", { className: "mn" }, h.\u5BB6), /* @__PURE__ */ React8.createElement("span", { className: "num", style: { color: U.dim, marginLeft: 6 } }, h.\u5E74, "\u5E74", h.\u6708, "\u6708\uFF0F", h.\u57CE\u6570, "\u57CE\u30FB", h.\u4E07\u77F3, "\u4E07\u77F3"), /* @__PURE__ */ React8.createElement("span", { style: { color: "#B0483C", marginLeft: 6, fontSize: 11 } }, "\u4E0A\u66F8\u304D")) : /* @__PURE__ */ React8.createElement("span", { style: { color: U.dim } }, "\u7A7A\u304D")
         );
-      }), /* @__PURE__ */ React7.createElement("button", { className: "btn", style: { width: "100%", marginTop: 8 }, onClick: () => setModal(null) }, "\u9589\u3058\u308B")));
+      }), /* @__PURE__ */ React8.createElement("button", { className: "btn", style: { width: "100%", marginTop: 8 }, onClick: () => setModal(null) }, "\u9589\u3058\u308B")));
     })(),
     townSel && !battle && !sea && (() => {
       const t = TOWNS.find((x) => x.id === townSel);
@@ -19996,14 +20065,14 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const \u53EF = \u7279\u6B8A\u52E2\u529B\u306E\u53EF\u5426(g, t, g.player);
       const opts = SPECIAL_OPTIONS[t.kind] || [];
       const \u96A3 = \u53EF.\u96A3;
-      return /* @__PURE__ */ React7.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(() => setTownSel(null)) }, /* @__PURE__ */ React7.createElement("div", { className: "card", style: { maxWidth: 430 } }, /* @__PURE__ */ React7.createElement("div", { style: { display: "flex", alignItems: "center", gap: 9, marginBottom: 6 } }, /* @__PURE__ */ React7.createElement("span", { className: "dot", style: { background: \u69D8.\u8272 } }), /* @__PURE__ */ React7.createElement("span", { className: "mn", style: { fontSize: 21 } }, t.name), /* @__PURE__ */ React7.createElement("span", { className: "pill", style: { background: \u69D8.\u8272 } }, t.kind)), /* @__PURE__ */ React7.createElement("div", { className: "row" }, /* @__PURE__ */ React7.createElement("span", null, "\u3044\u307E\u306E\u95A2\u4FC2"), /* @__PURE__ */ React7.createElement("span", { className: "v" }, \u69D8.\u8ABC ? `${\u69D8.\u4E3B\u540D}\u3068${\u69D8.\u8ABC.state}` : "\u4E2D\u7ACB")), \u69D8.st.anger > 0 && /* @__PURE__ */ React7.createElement("div", { className: "row" }, /* @__PURE__ */ React7.createElement("span", null, "\u53CD\u767A"), /* @__PURE__ */ React7.createElement("span", { className: "v" }, Math.round(\u69D8.st.anger))), \u96A3 && /* @__PURE__ */ React7.createElement("div", { className: "row" }, /* @__PURE__ */ React7.createElement("span", null, "\u3044\u3061\u3070\u3093\u8FD1\u3044\u57CE"), /* @__PURE__ */ React7.createElement("span", { className: "v" }, \u96A3.name, "\uFF08", g.factions[\u96A3.faction].name, "\uFF09")), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginTop: 8 } }, t.kind === "\u6E2F" && "\u8239\u3092\u51FA\u3057\u3001\u5175\u7CE7\u3092\u904B\u3076\u3002\u6D77\u8DEF\u3092\u6E21\u308B\u8ECD\u306E\u652F\u3048\u3068\u306A\u308B\u3002", t.kind === "\u6C34\u8ECD\u8846" && "\u6D77\u306B\u751F\u304D\u308B\u8005\u305F\u3061\u3002\u62B1\u3048\u308C\u3070\u8ECD\u8239\u304C\u5897\u3048\u3001\u6C34\u4E3B\u306E\u6280\u91CF\u3082\u4E0A\u304C\u308B\u3002", t.kind === "\u5546\u696D\u90FD\u5E02" && "\u8AF8\u56FD\u306E\u54C1\u3068\u91D1\u306E\u96C6\u307E\u308B\u6240\u3002\u62BC\u3055\u3048\u308C\u3070\u91D1\u304C\u56DE\u308B\u3002", t.kind === "\u753A" && "\u5E02\u306E\u7ACB\u3064\u5728\u6240\u3002\u5546\u3044\u304C\u308F\u305A\u304B\u306B\u4F38\u3073\u308B\u3002", t.kind === "\u5BFA\u793E" && "\u9580\u5F92\u3068\u50E7\u5175\u3092\u62B1\u3048\u308B\u3002\u6C11\u306E\u5FC3\u3082\u3053\u3053\u306B\u5BC4\u308B\u3002", t.kind === "\u5FCD\u3073\u306E\u91CC" && "\u4EBA\u3092\u6F5C\u307E\u305B\u3001\u6575\u60C5\u3092\u63A2\u308B\u3002\u8ABF\u7565\u306E\u52A9\u3051\u3068\u306A\u308B\u3002", t.kind === "\u9271\u5C71" && "\u91D1\u9280\u3092\u6398\u308B\u3002\u6398\u308C\u3070\u6398\u308B\u307B\u3069\u91D1\u306B\u306A\u308B\u3002", t.kind === "\u7267" && "\u99AC\u3092\u80B2\u3066\u308B\u6240\u3002\u62BC\u3055\u3048\u308C\u3070\u6BCE\u5E74\u3001\u6625\u306B\u99AC\u304C\u5C4A\u304F\u3002\u9A0E\u99AC\u3092\u63C3\u3048\u308B\u9053\u3067\u3042\u308B\u3002", t.kind === "\u9244\u7832\u935B\u51B6" && "\u9244\u7832\u3092\u6253\u3064\u91CC\u3002\u62B1\u3048\u308C\u3070\u6BCE\u5E74\u3001\u6625\u306B\u9244\u7832\u304C\u5C4A\u304F\u3002\u5546\u4EBA\u304B\u3089\u8CB7\u308F\u305A\u306B\u6E08\u3080\u3002"), /* @__PURE__ */ React7.createElement("div", { className: "sec" }, "\u3067\u304D\u308B\u3053\u3068"), opts.map((o) => /* @__PURE__ */ React7.createElement("div", { key: o.key, style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8 } }, /* @__PURE__ */ React7.createElement("b", { style: { color: U.text } }, o.key), o.cost ? `\uFF08${o.cost}\u8CAB\uFF09` : o.once ? `\uFF08${o.once}\u8CAB\u3092\u5F97\u308B\uFF09` : "", o.desc)), /* @__PURE__ */ React7.createElement("div", { style: {
+      return /* @__PURE__ */ React8.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(() => setTownSel(null)) }, /* @__PURE__ */ React8.createElement("div", { className: "card", style: { maxWidth: 430 } }, /* @__PURE__ */ React8.createElement("div", { style: { display: "flex", alignItems: "center", gap: 9, marginBottom: 6 } }, /* @__PURE__ */ React8.createElement("span", { className: "dot", style: { background: \u69D8.\u8272 } }), /* @__PURE__ */ React8.createElement("span", { className: "mn", style: { fontSize: 21 } }, t.name), /* @__PURE__ */ React8.createElement("span", { className: "pill", style: { background: \u69D8.\u8272 } }, t.kind)), /* @__PURE__ */ React8.createElement("div", { className: "row" }, /* @__PURE__ */ React8.createElement("span", null, "\u3044\u307E\u306E\u95A2\u4FC2"), /* @__PURE__ */ React8.createElement("span", { className: "v" }, \u69D8.\u8ABC ? `${\u69D8.\u4E3B\u540D}\u3068${\u69D8.\u8ABC.state}` : "\u4E2D\u7ACB")), \u69D8.st.anger > 0 && /* @__PURE__ */ React8.createElement("div", { className: "row" }, /* @__PURE__ */ React8.createElement("span", null, "\u53CD\u767A"), /* @__PURE__ */ React8.createElement("span", { className: "v" }, Math.round(\u69D8.st.anger))), \u96A3 && /* @__PURE__ */ React8.createElement("div", { className: "row" }, /* @__PURE__ */ React8.createElement("span", null, "\u3044\u3061\u3070\u3093\u8FD1\u3044\u57CE"), /* @__PURE__ */ React8.createElement("span", { className: "v" }, \u96A3.name, "\uFF08", g.factions[\u96A3.faction].name, "\uFF09")), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginTop: 8 } }, t.kind === "\u6E2F" && "\u8239\u3092\u51FA\u3057\u3001\u5175\u7CE7\u3092\u904B\u3076\u3002\u6D77\u8DEF\u3092\u6E21\u308B\u8ECD\u306E\u652F\u3048\u3068\u306A\u308B\u3002", t.kind === "\u6C34\u8ECD\u8846" && "\u6D77\u306B\u751F\u304D\u308B\u8005\u305F\u3061\u3002\u62B1\u3048\u308C\u3070\u8ECD\u8239\u304C\u5897\u3048\u3001\u6C34\u4E3B\u306E\u6280\u91CF\u3082\u4E0A\u304C\u308B\u3002", t.kind === "\u5546\u696D\u90FD\u5E02" && "\u8AF8\u56FD\u306E\u54C1\u3068\u91D1\u306E\u96C6\u307E\u308B\u6240\u3002\u62BC\u3055\u3048\u308C\u3070\u91D1\u304C\u56DE\u308B\u3002", t.kind === "\u753A" && "\u5E02\u306E\u7ACB\u3064\u5728\u6240\u3002\u5546\u3044\u304C\u308F\u305A\u304B\u306B\u4F38\u3073\u308B\u3002", t.kind === "\u5BFA\u793E" && "\u9580\u5F92\u3068\u50E7\u5175\u3092\u62B1\u3048\u308B\u3002\u6C11\u306E\u5FC3\u3082\u3053\u3053\u306B\u5BC4\u308B\u3002", t.kind === "\u5FCD\u3073\u306E\u91CC" && "\u4EBA\u3092\u6F5C\u307E\u305B\u3001\u6575\u60C5\u3092\u63A2\u308B\u3002\u8ABF\u7565\u306E\u52A9\u3051\u3068\u306A\u308B\u3002", t.kind === "\u9271\u5C71" && "\u91D1\u9280\u3092\u6398\u308B\u3002\u6398\u308C\u3070\u6398\u308B\u307B\u3069\u91D1\u306B\u306A\u308B\u3002", t.kind === "\u7267" && "\u99AC\u3092\u80B2\u3066\u308B\u6240\u3002\u62BC\u3055\u3048\u308C\u3070\u6BCE\u5E74\u3001\u6625\u306B\u99AC\u304C\u5C4A\u304F\u3002\u9A0E\u99AC\u3092\u63C3\u3048\u308B\u9053\u3067\u3042\u308B\u3002", t.kind === "\u9244\u7832\u935B\u51B6" && "\u9244\u7832\u3092\u6253\u3064\u91CC\u3002\u62B1\u3048\u308C\u3070\u6BCE\u5E74\u3001\u6625\u306B\u9244\u7832\u304C\u5C4A\u304F\u3002\u5546\u4EBA\u304B\u3089\u8CB7\u308F\u305A\u306B\u6E08\u3080\u3002"), /* @__PURE__ */ React8.createElement("div", { className: "sec" }, "\u3067\u304D\u308B\u3053\u3068"), opts.map((o) => /* @__PURE__ */ React8.createElement("div", { key: o.key, style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8 } }, /* @__PURE__ */ React8.createElement("b", { style: { color: U.text } }, o.key), o.cost ? `\uFF08${o.cost}\u8CAB\uFF09` : o.once ? `\uFF08${o.once}\u8CAB\u3092\u5F97\u308B\uFF09` : "", o.desc)), /* @__PURE__ */ React8.createElement("div", { style: {
         marginTop: 10,
         padding: "9px 11px",
         fontSize: 12,
         lineHeight: 1.85,
         background: \u53EF.ok ? "rgba(62,122,58,0.10)" : "rgba(176,72,60,0.10)",
         borderLeft: `3px solid ${\u53EF.ok ? "#3E7A3A" : "#B0483C"}`
-      } }, \u53EF.ok ? /* @__PURE__ */ React7.createElement(React7.Fragment, null, "\u624B\u304C\u5C4A\u304D\u307E\u3059\u3002", /* @__PURE__ */ React7.createElement("b", null, \u96A3 ? \u96A3.name : "\u8FD1\u304F\u306E\u57CE"), "\u306E\u5E33\u9762\u306E\u300C\u7279\u6B8A\u52E2\u529B\u300D\u304B\u3089\u8ABC\u3092\u901A\u3058\u3089\u308C\u307E\u3059\u3002") : /* @__PURE__ */ React7.createElement(React7.Fragment, null, /* @__PURE__ */ React7.createElement("b", { style: { color: "#B0483C" } }, "\u624B\u304C\u5C4A\u304D\u307E\u305B\u3093\u3002"), \u53EF.why, "\u3002"), /* @__PURE__ */ React7.createElement("br", null), /* @__PURE__ */ React7.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\u6E4A\u3082\u5BFA\u793E\u3082\u5FCD\u3073\u306E\u91CC\u3082\u3001\u305D\u306E\u571F\u5730\u306B\u6839\u3092\u5F35\u3063\u3066\u3044\u307E\u3059\u3002\u3044\u3061\u3070\u3093\u8FD1\u3044\u57CE\u3092 \u62BC\u3055\u3048\u3066\u3044\u308B\u5BB6\u3060\u3051\u304C\u3001\u305D\u306E\u753A\u3068\u8ABC\u3092\u901A\u3058\u3089\u308C\u307E\u3059\u3002")), /* @__PURE__ */ React7.createElement(
+      } }, \u53EF.ok ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, "\u624B\u304C\u5C4A\u304D\u307E\u3059\u3002", /* @__PURE__ */ React8.createElement("b", null, \u96A3 ? \u96A3.name : "\u8FD1\u304F\u306E\u57CE"), "\u306E\u5E33\u9762\u306E\u300C\u7279\u6B8A\u52E2\u529B\u300D\u304B\u3089\u8ABC\u3092\u901A\u3058\u3089\u308C\u307E\u3059\u3002") : /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement("b", { style: { color: "#B0483C" } }, "\u624B\u304C\u5C4A\u304D\u307E\u305B\u3093\u3002"), \u53EF.why, "\u3002"), /* @__PURE__ */ React8.createElement("br", null), /* @__PURE__ */ React8.createElement("span", { style: { color: U.dim, fontSize: 11 } }, "\u6E4A\u3082\u5BFA\u793E\u3082\u5FCD\u3073\u306E\u91CC\u3082\u3001\u305D\u306E\u571F\u5730\u306B\u6839\u3092\u5F35\u3063\u3066\u3044\u307E\u3059\u3002\u3044\u3061\u3070\u3093\u8FD1\u3044\u57CE\u3092 \u62BC\u3055\u3048\u3066\u3044\u308B\u5BB6\u3060\u3051\u304C\u3001\u305D\u306E\u753A\u3068\u8ABC\u3092\u901A\u3058\u3089\u308C\u307E\u3059\u3002")), /* @__PURE__ */ React8.createElement(
         "button",
         {
           className: "btn",
@@ -20013,7 +20082,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         "\u9589\u3058\u308B"
       )));
     })(),
-    modal === "report" && /* @__PURE__ */ React7.createElement(
+    modal === "report" && /* @__PURE__ */ React8.createElement(
       MonthReport,
       {
         g,
@@ -20024,13 +20093,21 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         }
       }
     ),
-    modal === "manual" && /* @__PURE__ */ React7.createElement(Manual, { onClose: () => setModal(null) }),
-    modal === "chronicle" && /* @__PURE__ */ React7.createElement(Chronicle, { g, onClose: () => setModal(null) }),
-    modal === "factions" && /* @__PURE__ */ React7.createElement(FactionInfo, { g, onClose: () => setModal(null) }),
-    modal === "generals" && /* @__PURE__ */ React7.createElement(GeneralList, { g, onClose: () => setModal(null) }),
-    modal === "goal" && /* @__PURE__ */ React7.createElement(GoalPanel, { g, onClose: () => setModal(null) }),
-    openCamp && !battle && /* @__PURE__ */ React7.createElement(CampaignPanel, { g, camp: openCamp, onAct: campaignAct }),
-    openSiege && !battle && !openCamp && /* @__PURE__ */ React7.createElement(SiegePanel, { g, sg: openSiege, onChoose: onSiegeChoice }),
+    modal === "manual" && /* @__PURE__ */ React8.createElement(Manual, { onClose: () => setModal(null) }),
+    !\u7D42\u5E55\u3092\u898B\u305F && (g.unified && g.unified.fid === g.player || g.\u6EC5\u3073) && /* @__PURE__ */ React8.createElement(
+      Ending,
+      {
+        g,
+        onTitle,
+        onClose: () => setG((p) => ({ ...p, \u7D42\u5E55\u3092\u898B\u305F: true }))
+      }
+    ),
+    modal === "chronicle" && /* @__PURE__ */ React8.createElement(Chronicle, { g, onClose: () => setModal(null) }),
+    modal === "factions" && /* @__PURE__ */ React8.createElement(FactionInfo, { g, onClose: () => setModal(null) }),
+    modal === "generals" && /* @__PURE__ */ React8.createElement(GeneralList, { g, onClose: () => setModal(null) }),
+    modal === "goal" && /* @__PURE__ */ React8.createElement(GoalPanel, { g, onClose: () => setModal(null) }),
+    openCamp && !battle && /* @__PURE__ */ React8.createElement(CampaignPanel, { g, camp: openCamp, onAct: campaignAct }),
+    openSiege && !battle && !openCamp && /* @__PURE__ */ React8.createElement(SiegePanel, { g, sg: openSiege, onChoose: onSiegeChoice }),
     (g.captives || []).length > 0 && (() => {
       const gen = g.generals.find((x) => x.id === g.captives[0]);
       if (!gen) {
@@ -20041,7 +20118,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         });
         return null;
       }
-      return /* @__PURE__ */ React7.createElement(CaptiveDialog, { g, gen, onDone: (how) => setG((p) => {
+      return /* @__PURE__ */ React8.createElement(CaptiveDialog, { g, gen, onDone: (how) => setG((p) => {
         const s2 = structuredClone(p);
         const q = s2.generals.find((x) => x.id === gen.id);
         s2.captives = (s2.captives || []).filter((id) => id !== gen.id);
@@ -20081,7 +20158,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         return null;
       }
       const from = g.factions[o.from];
-      return /* @__PURE__ */ React7.createElement("div", { className: "modal" }, /* @__PURE__ */ React7.createElement("div", { className: "card" }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 18 } }, from.name, "\u3088\u308A\u8EAB\u4EE3\u91D1\u306E\u7533\u3057\u51FA"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12.5, color: U.dim, marginTop: 8, lineHeight: 1.9 } }, "\u6355\u865C\u306E", /* @__PURE__ */ React7.createElement("b", null, gen.name), "\uFF08", o.rank, "\u306E\u5668\u91CF\uFF09\u3092\u8FD4\u3057\u3066\u307B\u3057\u3044\u3068\u3044\u3046\u3002", /* @__PURE__ */ React7.createElement("br", null), "\u5DEE\u3057\u51FA\u3059\u8EAB\u4EE3\u91D1\u306F", /* @__PURE__ */ React7.createElement("b", null, "\u91D1 ", fmt(o.gold), "\u8CAB"), "\u3068", /* @__PURE__ */ React7.createElement("b", null, "\u5175\u7CE7 ", fmt(o.food), "\u77F3"), "\u3002"), /* @__PURE__ */ React7.createElement("div", { className: "g2", style: { marginTop: 12 } }, /* @__PURE__ */ React7.createElement("button", { className: "btn dark", onClick: () => setG((p) => {
+      return /* @__PURE__ */ React8.createElement("div", { className: "modal" }, /* @__PURE__ */ React8.createElement("div", { className: "card" }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 18 } }, from.name, "\u3088\u308A\u8EAB\u4EE3\u91D1\u306E\u7533\u3057\u51FA"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12.5, color: U.dim, marginTop: 8, lineHeight: 1.9 } }, "\u6355\u865C\u306E", /* @__PURE__ */ React8.createElement("b", null, gen.name), "\uFF08", o.rank, "\u306E\u5668\u91CF\uFF09\u3092\u8FD4\u3057\u3066\u307B\u3057\u3044\u3068\u3044\u3046\u3002", /* @__PURE__ */ React8.createElement("br", null), "\u5DEE\u3057\u51FA\u3059\u8EAB\u4EE3\u91D1\u306F", /* @__PURE__ */ React8.createElement("b", null, "\u91D1 ", fmt(o.gold), "\u8CAB"), "\u3068", /* @__PURE__ */ React8.createElement("b", null, "\u5175\u7CE7 ", fmt(o.food), "\u77F3"), "\u3002"), /* @__PURE__ */ React8.createElement("div", { className: "g2", style: { marginTop: 12 } }, /* @__PURE__ */ React8.createElement("button", { className: "btn dark", onClick: () => setG((p) => {
         const s2 = structuredClone(p);
         const q = s2.generals.find((x) => x.id === o.genId);
         if (q && q.captive) {
@@ -20100,7 +20177,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         }
         s2.ransomOffer = null;
         return s2;
-      }) }, "\u53D7\u3051\u308B"), /* @__PURE__ */ React7.createElement("button", { className: "btn", onClick: () => setG((p) => {
+      }) }, "\u53D7\u3051\u308B"), /* @__PURE__ */ React8.createElement("button", { className: "btn", onClick: () => setG((p) => {
         const s2 = structuredClone(p);
         const rel = s2.relations[relKey(s2.player, o.from)];
         if (rel) rel.trust = clamp(rel.trust - 6, 0, 100);
@@ -20115,7 +20192,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const \u56FD\u306E\u57CE = g.castles.filter((x) => x.kuni === k.kuni);
       const \u77F3 = \u56FD\u306E\u57CE.reduce((a, x) => a + x.koku, 0);
       const \u5168\u56FD = provincesHeld(g, g.player) || [];
-      return /* @__PURE__ */ React7.createElement("div", { className: "modal" }, /* @__PURE__ */ React7.createElement("div", { className: "card", style: { maxWidth: 440, textAlign: "center" } }, /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12, color: U.dim, letterSpacing: ".3em" } }, "\u4E00\u56FD\u5E73\u5B9A"), /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 32, margin: "10px 0 4px" } }, k.kuni), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12.5, color: U.dim, lineHeight: 1.9 } }, \u57CE ? `${\u57CE.name}\u3092\u843D\u3068\u3057\u3001` : "", k.kuni, "\u306E", k.\u57CE\u6570, "\u57CE\u3092\u3053\u3068\u3054\u3068\u304F\u624B\u4E2D\u306B\u3057\u307E\u3057\u305F\u3002", /* @__PURE__ */ React7.createElement("br", null), /* @__PURE__ */ React7.createElement("span", { className: "num" }, "\u77F3\u9AD8 ", fmt(\u77F3), "\u77F3")), /* @__PURE__ */ React7.createElement("div", { style: {
+      return /* @__PURE__ */ React8.createElement("div", { className: "modal" }, /* @__PURE__ */ React8.createElement("div", { className: "card", style: { maxWidth: 440, textAlign: "center" } }, /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12, color: U.dim, letterSpacing: ".3em" } }, "\u4E00\u56FD\u5E73\u5B9A"), /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 32, margin: "10px 0 4px" } }, k.kuni), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12.5, color: U.dim, lineHeight: 1.9 } }, \u57CE ? `${\u57CE.name}\u3092\u843D\u3068\u3057\u3001` : "", k.kuni, "\u306E", k.\u57CE\u6570, "\u57CE\u3092\u3053\u3068\u3054\u3068\u304F\u624B\u4E2D\u306B\u3057\u307E\u3057\u305F\u3002", /* @__PURE__ */ React8.createElement("br", null), /* @__PURE__ */ React8.createElement("span", { className: "num" }, "\u77F3\u9AD8 ", fmt(\u77F3), "\u77F3")), /* @__PURE__ */ React8.createElement("div", { style: {
         margin: "14px 0",
         padding: "10px 12px",
         background: "rgba(74,110,138,0.08)",
@@ -20123,7 +20200,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         fontSize: 12,
         lineHeight: 1.95,
         textAlign: "left"
-      } }, "\u56FD\u304C\u307E\u3068\u307E\u308C\u3070\u3001\u6C11\u306F\u843D\u3061\u7740\u304D\u307E\u3059\uFF08\u6C11\u5FE0\u306E\u843D\u3061\u7740\u304F\u5148\u304C\u4E0A\u304C\u308A\u307E\u3059\uFF09\u3002", /* @__PURE__ */ React7.createElement("br", null), /* @__PURE__ */ React7.createElement("b", null, "\u691C\u5730"), "\u304C\u884C\u3048\u308B\u3088\u3046\u306B\u306A\u308A\u3001\u77F3\u9AD8\u3092\u6539\u3081\u3089\u308C\u307E\u3059\u3002", /* @__PURE__ */ React7.createElement("br", null), GOKINAI.includes(k.kuni) ? "\u4E94\u757F\u306E\u4E00\u56FD\u3067\u3059\u3002\u3059\u3079\u3066\u62BC\u3055\u3048\u308C\u3070\u671D\u5EF7\u3088\u308A\u5B98\u4F4D\u3092\u8CDC\u308A\u307E\u3059\u3002" : ""), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 12 } }, "\u5E73\u5B9A\u3057\u305F\u56FD\uFF1A", \u5168\u56FD.length, "\u56FD\uFF08", \u5168\u56FD.slice(0, 8).join("\u30FB"), \u5168\u56FD.length > 8 ? "\u307B\u304B" : "", "\uFF09"), /* @__PURE__ */ React7.createElement(
+      } }, "\u56FD\u304C\u307E\u3068\u307E\u308C\u3070\u3001\u6C11\u306F\u843D\u3061\u7740\u304D\u307E\u3059\uFF08\u6C11\u5FE0\u306E\u843D\u3061\u7740\u304F\u5148\u304C\u4E0A\u304C\u308A\u307E\u3059\uFF09\u3002", /* @__PURE__ */ React8.createElement("br", null), /* @__PURE__ */ React8.createElement("b", null, "\u691C\u5730"), "\u304C\u884C\u3048\u308B\u3088\u3046\u306B\u306A\u308A\u3001\u77F3\u9AD8\u3092\u6539\u3081\u3089\u308C\u307E\u3059\u3002", /* @__PURE__ */ React8.createElement("br", null), GOKINAI.includes(k.kuni) ? "\u4E94\u757F\u306E\u4E00\u56FD\u3067\u3059\u3002\u3059\u3079\u3066\u62BC\u3055\u3048\u308C\u3070\u671D\u5EF7\u3088\u308A\u5B98\u4F4D\u3092\u8CDC\u308A\u307E\u3059\u3002" : ""), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 12 } }, "\u5E73\u5B9A\u3057\u305F\u56FD\uFF1A", \u5168\u56FD.length, "\u56FD\uFF08", \u5168\u56FD.slice(0, 8).join("\u30FB"), \u5168\u56FD.length > 8 ? "\u307B\u304B" : "", "\uFF09"), /* @__PURE__ */ React8.createElement(
         "button",
         {
           className: "btn dark",
@@ -20153,16 +20230,16 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           if (!plan.\u4E0B\u77E5.length) t.msg = `${f.name}\u306E\u4E0B\u77E5\u306B\u5FDC\u3058\u305F\u304C\u3001\u51FA\u305B\u308B\u5175\u304C\u306A\u304B\u3063\u305F\u3002`;
           return \u9589(t);
         });
-        return /* @__PURE__ */ React7.createElement("div", { className: "modal" }, /* @__PURE__ */ React7.createElement("div", { className: "card", style: { maxWidth: 460 } }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 20 } }, f.name, "\u3088\u308A\u306E\u4E0B\u77E5"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginTop: 8 } }, /* @__PURE__ */ React7.createElement("b", null, \u7684.name), "\u304C", ac.\u56F2\u307E\u308C ? "\u56F2\u307E\u308C\u3066\u3044\u308B" : "\u653B\u3081\u3089\u308C\u3088\u3046\u3068\u3057\u3066\u3044\u308B", "\u3002 \u305F\u3060\u3061\u306B\u63F4\u8ECD\u3092\u5DEE\u3057\u5411\u3051\u3088\u3001\u3068\u306E\u4E0B\u77E5\u3067\u3059\u3002", /* @__PURE__ */ React7.createElement("br", null), /* @__PURE__ */ React7.createElement("span", { style: { color: U.dim } }, "\u3053\u3061\u3089\u306F", f.name, "\u306B", /* @__PURE__ */ React7.createElement("b", null, "\u81E3\u5F93"), "\u3057\u3066\u3044\u307E\u3059\u3002\u65AD\u308B\u7B4B\u306F\u306A\u304F\u3001 \u8AB0\u3092\u3069\u308C\u3060\u3051\u51FA\u3059\u304B\u3082", f.name, "\u304C\u6C7A\u3081\u307E\u3059\u3002")), /* @__PURE__ */ React7.createElement("div", { style: {
+        return /* @__PURE__ */ React8.createElement("div", { className: "modal" }, /* @__PURE__ */ React8.createElement("div", { className: "card", style: { maxWidth: 460 } }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 20 } }, f.name, "\u3088\u308A\u306E\u4E0B\u77E5"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginTop: 8 } }, /* @__PURE__ */ React8.createElement("b", null, \u7684.name), "\u304C", ac.\u56F2\u307E\u308C ? "\u56F2\u307E\u308C\u3066\u3044\u308B" : "\u653B\u3081\u3089\u308C\u3088\u3046\u3068\u3057\u3066\u3044\u308B", "\u3002 \u305F\u3060\u3061\u306B\u63F4\u8ECD\u3092\u5DEE\u3057\u5411\u3051\u3088\u3001\u3068\u306E\u4E0B\u77E5\u3067\u3059\u3002", /* @__PURE__ */ React8.createElement("br", null), /* @__PURE__ */ React8.createElement("span", { style: { color: U.dim } }, "\u3053\u3061\u3089\u306F", f.name, "\u306B", /* @__PURE__ */ React8.createElement("b", null, "\u81E3\u5F93"), "\u3057\u3066\u3044\u307E\u3059\u3002\u65AD\u308B\u7B4B\u306F\u306A\u304F\u3001 \u8AB0\u3092\u3069\u308C\u3060\u3051\u51FA\u3059\u304B\u3082", f.name, "\u304C\u6C7A\u3081\u307E\u3059\u3002")), /* @__PURE__ */ React8.createElement("div", { style: {
           margin: "12px 0",
           padding: "9px 11px",
           background: "rgba(74,110,138,0.10)",
           borderLeft: "3px solid #4A6E8A",
           fontSize: 12,
           lineHeight: 1.9
-        } }, "\u6700\u5BC4\u308A\u306E\u57CE\u304B\u3089\u3001\u5B88\u5099\u3092\u6B8B\u305B\u308B\u3060\u3051\u306E\u5175\u3092\u51FA\u3057\u307E\u3059\u3002"), /* @__PURE__ */ React7.createElement("button", { className: "btn dark", style: { width: "100%" }, onClick: \u51FA\u3059 }, "\u4E0B\u77E5\u3092\u627F\u308B")));
+        } }, "\u6700\u5BC4\u308A\u306E\u57CE\u304B\u3089\u3001\u5B88\u5099\u3092\u6B8B\u305B\u308B\u3060\u3051\u306E\u5175\u3092\u51FA\u3057\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("button", { className: "btn dark", style: { width: "100%" }, onClick: \u51FA\u3059 }, "\u4E0B\u77E5\u3092\u627F\u308B")));
       }
-      return /* @__PURE__ */ React7.createElement("div", { className: "modal" }, /* @__PURE__ */ React7.createElement("div", { className: "card", style: { maxWidth: 470 } }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 20 } }, f.name, "\u3088\u308A\u306E\u63F4\u8ECD\u306E\u6C42\u3081"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginTop: 8 } }, /* @__PURE__ */ React7.createElement("b", null, \u7684.name), "\u304C", ac.\u56F2\u307E\u308C ? "\u56F2\u307E\u308C\u3066\u3044\u307E\u3059" : "\u653B\u3081\u3089\u308C\u3088\u3046\u3068\u3057\u3066\u3044\u307E\u3059", ac.\u5BC4\u305B\u624B.length ? `\uFF08${ac.\u5BC4\u305B\u624B.map((x) => (g.factions[x] || {}).name).join("\u30FB")}\uFF09` : "", "\u3002", ac.state, "\u306E\u8ABC\u3092\u3082\u3063\u3066\u3001\u63F4\u8ECD\u3092\u6C42\u3081\u3066\u304D\u307E\u3057\u305F\u3002"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11.5, color: U.dim, margin: "10px 0", lineHeight: 1.8 } }, "\u5FDC\u3058\u308C\u3070\u4FE1\u7528\u304C\u5897\u3057\u307E\u3059\u3002\u65AD\u308C\u3070\u6E1B\u308A\u307E\u3059\u3002", /* @__PURE__ */ React7.createElement("br", null), "\u653E\u3063\u3066\u304A\u3051\u3070\u3053\u306E\u5BB6\u306F\u524A\u3089\u308C\u3001\u3084\u304C\u3066\u96A3\u306B\u5F37\u3044\u6575\u304C\u7ACB\u3061\u307E\u3059\u3002"), /* @__PURE__ */ React7.createElement("div", { style: { display: "flex", gap: 9 } }, /* @__PURE__ */ React7.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => setG((prev) => {
+      return /* @__PURE__ */ React8.createElement("div", { className: "modal" }, /* @__PURE__ */ React8.createElement("div", { className: "card", style: { maxWidth: 470 } }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 20 } }, f.name, "\u3088\u308A\u306E\u63F4\u8ECD\u306E\u6C42\u3081"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginTop: 8 } }, /* @__PURE__ */ React8.createElement("b", null, \u7684.name), "\u304C", ac.\u56F2\u307E\u308C ? "\u56F2\u307E\u308C\u3066\u3044\u307E\u3059" : "\u653B\u3081\u3089\u308C\u3088\u3046\u3068\u3057\u3066\u3044\u307E\u3059", ac.\u5BC4\u305B\u624B.length ? `\uFF08${ac.\u5BC4\u305B\u624B.map((x) => (g.factions[x] || {}).name).join("\u30FB")}\uFF09` : "", "\u3002", ac.state, "\u306E\u8ABC\u3092\u3082\u3063\u3066\u3001\u63F4\u8ECD\u3092\u6C42\u3081\u3066\u304D\u307E\u3057\u305F\u3002"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 11.5, color: U.dim, margin: "10px 0", lineHeight: 1.8 } }, "\u5FDC\u3058\u308C\u3070\u4FE1\u7528\u304C\u5897\u3057\u307E\u3059\u3002\u65AD\u308C\u3070\u6E1B\u308A\u307E\u3059\u3002", /* @__PURE__ */ React8.createElement("br", null), "\u653E\u3063\u3066\u304A\u3051\u3070\u3053\u306E\u5BB6\u306F\u524A\u3089\u308C\u3001\u3084\u304C\u3066\u96A3\u306B\u5F37\u3044\u6575\u304C\u7ACB\u3061\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("div", { style: { display: "flex", gap: 9 } }, /* @__PURE__ */ React8.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => setG((prev) => {
         const s2 = structuredClone(prev);
         const rel = s2.relations[relKey(s2.player, ac.faction)];
         if (rel) rel.trust = clamp(rel.trust - 10, 0, 100);
@@ -20172,7 +20249,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           text: `${f.name}\u306E\u63F4\u8ECD\u306E\u6C42\u3081\u3092\u65AD\u3063\u305F\u3002`
         });
         return \u9589(s2);
-      }) }, "\u65AD\u308B"), /* @__PURE__ */ React7.createElement(
+      }) }, "\u65AD\u308B"), /* @__PURE__ */ React8.createElement(
         "button",
         {
           className: "btn dark",
@@ -20185,7 +20262,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         "\u8AB0\u3092\u51FA\u3059\u304B\u6C7A\u3081\u308B"
       ))));
     })(),
-    callAid && /* @__PURE__ */ React7.createElement(
+    callAid && /* @__PURE__ */ React8.createElement(
       ReinforceDialog,
       {
         g,
@@ -20226,7 +20303,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           } : null
         );
       };
-      return /* @__PURE__ */ React7.createElement(
+      return /* @__PURE__ */ React8.createElement(
         SallyDialog,
         {
           g,
@@ -20244,7 +20321,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const pct = Math.round(r.p * 100);
       const wx = r.weather === "\u96E8" ? "\u96E8\u304C\u964D\u3063\u3066\u3044\u308B" : r.weather === "\u96EA" ? "\u96EA\u304C\u821E\u3063\u3066\u3044\u308B" : r.weather === "\u66C7" ? "\u7A7A\u306F\u66C7\u3063\u3066\u3044\u308B" : "\u7A7A\u306F\u6674\u308C\u3066\u3044\u308B";
       const tr = r.terr === "hill" ? "\u5C71\u304C\u3061\u306E\u5730" : "\u68EE\u306E\u591A\u3044\u5730";
-      return /* @__PURE__ */ React7.createElement("div", { className: "modal" }, /* @__PURE__ */ React7.createElement("div", { className: "card" }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 20 } }, raid.dest.name, "\u4E0B\u30FB\u8ECD\u8B70"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 13, color: U.dim, margin: "10px 0", lineHeight: 1.9 } }, "\u5473\u65B9 ", /* @__PURE__ */ React7.createElement("b", { style: { color: U.text } }, fmt(r.myMen), "\u4EBA"), "\u3000\u5BFE \u6575 ", /* @__PURE__ */ React7.createElement("b", { style: { color: U.text } }, fmt(r.foeMen), "\u4EBA"), "\uFF08", (r.ratio * 10).toFixed(1), "\u5272\u306E\u5175\uFF09", /* @__PURE__ */ React7.createElement("br", null), wx, "\u3002", tr, "\u3067\u3042\u308B\u3002"), /* @__PURE__ */ React7.createElement("div", { style: { borderLeft: `3px solid ${U.line}`, paddingLeft: 12, margin: "12px 0", lineHeight: 1.9, fontSize: 14 } }, /* @__PURE__ */ React7.createElement("b", null, r.head.name), "\uFF08", r.head.age, "\u6B73\u30FB\u77E5\u7565", r.head.wit, "\u30FB\u7D71\u7387", r.head.lead, "\uFF09\u304C\u7533\u3057\u51FA\u3066\u304A\u308A\u307E\u3059\u3002", /* @__PURE__ */ React7.createElement("br", null), /* @__PURE__ */ React7.createElement("span", { style: { color: U.dim } }, "\u300C\u6B63\u9762\u304B\u3089\u5F53\u305F\u3063\u3066\u306F\u52DD\u3061\u76EE\u304C\u3054\u3056\u3089\u306C\u3002", r.target ? `${r.target.name}\u306E\u672C\u9663\u3092\u885D\u304D\u307E\u3059\u308B\u3002` : "\u6575\u306E\u672C\u9663\u3092\u885D\u304D\u307E\u3059\u308B\u3002", "\u300D")), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 13, lineHeight: 1.9 } }, "\u6210\u7B97\u306F", /* @__PURE__ */ React7.createElement("b", { style: { color: pct >= 30 ? "#3E7A3A" : pct >= 15 ? "#C89A3A" : "#B0483C", fontSize: 17 } }, "\u304A\u3088\u305D", pct, "\uFF05"), "\u3002", /* @__PURE__ */ React7.createElement("br", null), /* @__PURE__ */ React7.createElement("span", { style: { color: U.dim, fontSize: 12.5 } }, "\u5F53\u305F\u308C\u3070\u6575\u306E\u7DCF\u5927\u5C06\u3092\u8A0E\u3061\u3001\u6575\u8ECD\u306F\u5D29\u308C\u305F\u5F62\u3067\u5408\u6226\u304C\u59CB\u307E\u308B\u3002", /* @__PURE__ */ React7.createElement("br", null), "\u5916\u305B\u3070\u4F0F\u52E2\u304C\u9732\u898B\u3057\u3001\u5473\u65B9\u306E\u58EB\u6C17\u304C\u843D\u3061\u305F\u307E\u307E\u6226\u3046\u3053\u3068\u306B\u306A\u308B\u3002")), /* @__PURE__ */ React7.createElement("div", { className: "g2", style: { marginTop: 16 } }, /* @__PURE__ */ React7.createElement("button", { className: "btn dark", onClick: () => {
+      return /* @__PURE__ */ React8.createElement("div", { className: "modal" }, /* @__PURE__ */ React8.createElement("div", { className: "card" }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 20 } }, raid.dest.name, "\u4E0B\u30FB\u8ECD\u8B70"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 13, color: U.dim, margin: "10px 0", lineHeight: 1.9 } }, "\u5473\u65B9 ", /* @__PURE__ */ React8.createElement("b", { style: { color: U.text } }, fmt(r.myMen), "\u4EBA"), "\u3000\u5BFE \u6575 ", /* @__PURE__ */ React8.createElement("b", { style: { color: U.text } }, fmt(r.foeMen), "\u4EBA"), "\uFF08", (r.ratio * 10).toFixed(1), "\u5272\u306E\u5175\uFF09", /* @__PURE__ */ React8.createElement("br", null), wx, "\u3002", tr, "\u3067\u3042\u308B\u3002"), /* @__PURE__ */ React8.createElement("div", { style: { borderLeft: `3px solid ${U.line}`, paddingLeft: 12, margin: "12px 0", lineHeight: 1.9, fontSize: 14 } }, /* @__PURE__ */ React8.createElement("b", null, r.head.name), "\uFF08", r.head.age, "\u6B73\u30FB\u77E5\u7565", r.head.wit, "\u30FB\u7D71\u7387", r.head.lead, "\uFF09\u304C\u7533\u3057\u51FA\u3066\u304A\u308A\u307E\u3059\u3002", /* @__PURE__ */ React8.createElement("br", null), /* @__PURE__ */ React8.createElement("span", { style: { color: U.dim } }, "\u300C\u6B63\u9762\u304B\u3089\u5F53\u305F\u3063\u3066\u306F\u52DD\u3061\u76EE\u304C\u3054\u3056\u3089\u306C\u3002", r.target ? `${r.target.name}\u306E\u672C\u9663\u3092\u885D\u304D\u307E\u3059\u308B\u3002` : "\u6575\u306E\u672C\u9663\u3092\u885D\u304D\u307E\u3059\u308B\u3002", "\u300D")), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 13, lineHeight: 1.9 } }, "\u6210\u7B97\u306F", /* @__PURE__ */ React8.createElement("b", { style: { color: pct >= 30 ? "#3E7A3A" : pct >= 15 ? "#C89A3A" : "#B0483C", fontSize: 17 } }, "\u304A\u3088\u305D", pct, "\uFF05"), "\u3002", /* @__PURE__ */ React8.createElement("br", null), /* @__PURE__ */ React8.createElement("span", { style: { color: U.dim, fontSize: 12.5 } }, "\u5F53\u305F\u308C\u3070\u6575\u306E\u7DCF\u5927\u5C06\u3092\u8A0E\u3061\u3001\u6575\u8ECD\u306F\u5D29\u308C\u305F\u5F62\u3067\u5408\u6226\u304C\u59CB\u307E\u308B\u3002", /* @__PURE__ */ React8.createElement("br", null), "\u5916\u305B\u3070\u4F0F\u52E2\u304C\u9732\u898B\u3057\u3001\u5473\u65B9\u306E\u58EB\u6C17\u304C\u843D\u3061\u305F\u307E\u307E\u6226\u3046\u3053\u3068\u306B\u306A\u308B\u3002")), /* @__PURE__ */ React8.createElement("div", { className: "g2", style: { marginTop: 16 } }, /* @__PURE__ */ React8.createElement("button", { className: "btn dark", onClick: () => {
         const hit = Math.random() < r.p;
         const { army, dest, camp } = raid;
         setRaid(null);
@@ -20268,7 +20345,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           });
         }
         startBattle(army, dest, camp, { done: true, hit, head: r.head, target: r.target, atkIsPlayer });
-      } }, "\u672C\u9663\u3092\u885D\u304F"), /* @__PURE__ */ React7.createElement("button", { className: "btn", onClick: () => {
+      } }, "\u672C\u9663\u3092\u885D\u304F"), /* @__PURE__ */ React8.createElement("button", { className: "btn", onClick: () => {
         const { army, dest, camp } = raid;
         setRaid(null);
         startBattle(army, dest, camp, null);
@@ -20330,7 +20407,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         nextOne(s2);
         return s2;
       });
-      return /* @__PURE__ */ React7.createElement("div", { className: "modal" }, /* @__PURE__ */ React7.createElement("div", { className: "card" }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 20 } }, fname, "\u3001\u6EC5\u4EA1"), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12, color: U.dim, margin: "6px 0 12px" } }, "\u6B8B\u308B", ws.queue.length, "\u540D\u306E\u8EAB\u306E\u632F\u308A\u65B9\u3092\u5B9A\u3081\u307E\u3059\u3002"), /* @__PURE__ */ React7.createElement("div", { style: { borderLeft: `3px solid ${isLord ? "#C8A44A" : U.line}`, paddingLeft: 12, marginBottom: 12, lineHeight: 1.9 } }, /* @__PURE__ */ React7.createElement("b", { style: { fontSize: 16 } }, gen.name), isLord && /* @__PURE__ */ React7.createElement("span", { style: { color: "#C8A44A", fontSize: 12, marginLeft: 6 } }, "\u3010\u65E7\u5F53\u4E3B\u3011"), /* @__PURE__ */ React7.createElement("br", null), /* @__PURE__ */ React7.createElement("span", { className: "num", style: { fontSize: 12, color: U.dim } }, gen.age, "\u6B73\uFF0F\u7D71", gen.lead, "\u30FB\u6B66", gen.valor, "\u30FB\u77E5", gen.wit, "\u30FB\u653F", gen.gov, isLord ? `\uFF0F${fname}\u5F53\u4E3B` : `\uFF0F\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0 ${\u5FE0\u8AA0(gen)}`), !rec.ok && rec.why && /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 6 } }, rec.why, "\u3002"), rec.ok && /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12, color: "#3E7A3A", marginTop: 6 } }, "\u53EC\u3057\u62B1\u3048\u308C\u3070\u3001\u5FE0\u8AA0", loyaltyAfterRecruit(gen), "\u306B\u3066\u4ED5\u3048\u307E\u3057\u3087\u3046\u3002")), rec.ok && /* @__PURE__ */ React7.createElement("button", { className: "btn dark", style: { width: "100%", marginBottom: 6 }, onClick: () => act2("\u767B") }, "\u53EC\u3057\u62B1\u3048\u308B"), /* @__PURE__ */ React7.createElement("div", { className: "g2" }, /* @__PURE__ */ React7.createElement("button", { className: "btn", onClick: () => act2("\u6355") }, "\u6355\u865C\u3068\u3059\u308B"), /* @__PURE__ */ React7.createElement("button", { className: "btn", onClick: () => act2("\u65AC") }, "\u65AC\u308B")), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.7 } }, "\u6355\u865C\u3068\u3059\u308C\u3070\u3001\u57CE\u306E\u300C\u6226\u5F8C\u306E\u59CB\u672B\u300D\u3067\u6276\u6301\u3092\u4E0E\u3048\u3001\u5FC3\u3092\u958B\u304B\u305B\u3066\u53EC\u3057\u62B1\u3048\u308B\u9053\u304C\u958B\u3051\u307E\u3059\u3002")));
+      return /* @__PURE__ */ React8.createElement("div", { className: "modal" }, /* @__PURE__ */ React8.createElement("div", { className: "card" }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 20 } }, fname, "\u3001\u6EC5\u4EA1"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12, color: U.dim, margin: "6px 0 12px" } }, "\u6B8B\u308B", ws.queue.length, "\u540D\u306E\u8EAB\u306E\u632F\u308A\u65B9\u3092\u5B9A\u3081\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("div", { style: { borderLeft: `3px solid ${isLord ? "#C8A44A" : U.line}`, paddingLeft: 12, marginBottom: 12, lineHeight: 1.9 } }, /* @__PURE__ */ React8.createElement("b", { style: { fontSize: 16 } }, gen.name), isLord && /* @__PURE__ */ React8.createElement("span", { style: { color: "#C8A44A", fontSize: 12, marginLeft: 6 } }, "\u3010\u65E7\u5F53\u4E3B\u3011"), /* @__PURE__ */ React8.createElement("br", null), /* @__PURE__ */ React8.createElement("span", { className: "num", style: { fontSize: 12, color: U.dim } }, gen.age, "\u6B73\uFF0F\u7D71", gen.lead, "\u30FB\u6B66", gen.valor, "\u30FB\u77E5", gen.wit, "\u30FB\u653F", gen.gov, isLord ? `\uFF0F${fname}\u5F53\u4E3B` : `\uFF0F\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0 ${\u5FE0\u8AA0(gen)}`), !rec.ok && rec.why && /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 6 } }, rec.why, "\u3002"), rec.ok && /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12, color: "#3E7A3A", marginTop: 6 } }, "\u53EC\u3057\u62B1\u3048\u308C\u3070\u3001\u5FE0\u8AA0", loyaltyAfterRecruit(gen), "\u306B\u3066\u4ED5\u3048\u307E\u3057\u3087\u3046\u3002")), rec.ok && /* @__PURE__ */ React8.createElement("button", { className: "btn dark", style: { width: "100%", marginBottom: 6 }, onClick: () => act2("\u767B") }, "\u53EC\u3057\u62B1\u3048\u308B"), /* @__PURE__ */ React8.createElement("div", { className: "g2" }, /* @__PURE__ */ React8.createElement("button", { className: "btn", onClick: () => act2("\u6355") }, "\u6355\u865C\u3068\u3059\u308B"), /* @__PURE__ */ React8.createElement("button", { className: "btn", onClick: () => act2("\u65AC") }, "\u65AC\u308B")), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.7 } }, "\u6355\u865C\u3068\u3059\u308C\u3070\u3001\u57CE\u306E\u300C\u6226\u5F8C\u306E\u59CB\u672B\u300D\u3067\u6276\u6301\u3092\u4E0E\u3048\u3001\u5FC3\u3092\u958B\u304B\u305B\u3066\u53EC\u3057\u62B1\u3048\u308B\u9053\u304C\u958B\u3051\u307E\u3059\u3002")));
     })(),
     g.succession && (() => {
       const su = g.succession;
@@ -20344,7 +20421,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         });
         return null;
       }
-      return /* @__PURE__ */ React7.createElement("div", { className: "modal" }, /* @__PURE__ */ React7.createElement("div", { className: "card" }, /* @__PURE__ */ React7.createElement("div", { className: "mn", style: { fontSize: 20 } }, su.dead.name, "\u3001", su.cause), /* @__PURE__ */ React7.createElement("div", { style: { fontSize: 12.5, color: U.dim, margin: "8px 0 12px", lineHeight: 1.8 } }, "\u8DE1\u76EE\u3092\u5B9A\u3081\u306D\u3070\u306A\u3089\u306C\u3002", /* @__PURE__ */ React7.createElement("br", null), /* @__PURE__ */ React7.createElement("span", { style: { fontSize: 11.5 } }, "\u8840\u7B4B\u306E\u8005\u304C\u7D99\u3052\u3070\u5BB6\u4E2D\u306F\u843D\u3061\u7740\u304F\u3002\u4ED6\u5BB6\u306E\u51FA\u3067\u3042\u308C\u3070\u5FE0\u8AA0\u304C\u5927\u304D\u304F\u4E0B\u304C\u308A\u3001 \u5E7C\u5E74\u3067\u3042\u308C\u3070\u3055\u3089\u306B\u4FAE\u3089\u308C\u308B\u3002")), cands.map(({ gen, blood }) => /* @__PURE__ */ React7.createElement(
+      return /* @__PURE__ */ React8.createElement("div", { className: "modal" }, /* @__PURE__ */ React8.createElement("div", { className: "card" }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 20 } }, su.dead.name, "\u3001", su.cause), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12.5, color: U.dim, margin: "8px 0 12px", lineHeight: 1.8 } }, "\u8DE1\u76EE\u3092\u5B9A\u3081\u306D\u3070\u306A\u3089\u306C\u3002", /* @__PURE__ */ React8.createElement("br", null), /* @__PURE__ */ React8.createElement("span", { style: { fontSize: 11.5 } }, "\u8840\u7B4B\u306E\u8005\u304C\u7D99\u3052\u3070\u5BB6\u4E2D\u306F\u843D\u3061\u7740\u304F\u3002\u4ED6\u5BB6\u306E\u51FA\u3067\u3042\u308C\u3070\u5FE0\u8AA0\u304C\u5927\u304D\u304F\u4E0B\u304C\u308A\u3001 \u5E7C\u5E74\u3067\u3042\u308C\u3070\u3055\u3089\u306B\u4FAE\u3089\u308C\u308B\u3002")), cands.map(({ gen, blood }) => /* @__PURE__ */ React8.createElement(
         "button",
         {
           key: gen.id,
@@ -20359,10 +20436,10 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             return s2;
           })
         },
-        /* @__PURE__ */ React7.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } }, /* @__PURE__ */ React7.createElement("span", { className: "mn", style: { fontSize: 15 } }, gen.name, /* @__PURE__ */ React7.createElement("span", { style: { fontSize: 11, color: blood ? "#3E7A3A" : "#B0483C", marginLeft: 8 } }, blood ? "\u8840\u7B4B" : "\u4ED6\u5BB6\u306E\u51FA", gen.age < 16 ? "\u30FB\u5E7C\u5E74" : "")), /* @__PURE__ */ React7.createElement("span", { className: "num", style: { fontSize: 11.5, color: U.dim } }, gen.age, "\u6B73\uFF0F\u7D71", gen.lead, "\u30FB\u6B66", gen.valor, "\u30FB\u77E5", gen.wit, "\u30FB\u653F", gen.gov))
+        /* @__PURE__ */ React8.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } }, /* @__PURE__ */ React8.createElement("span", { className: "mn", style: { fontSize: 15 } }, gen.name, /* @__PURE__ */ React8.createElement("span", { style: { fontSize: 11, color: blood ? "#3E7A3A" : "#B0483C", marginLeft: 8 } }, blood ? "\u8840\u7B4B" : "\u4ED6\u5BB6\u306E\u51FA", gen.age < 16 ? "\u30FB\u5E7C\u5E74" : "")), /* @__PURE__ */ React8.createElement("span", { className: "num", style: { fontSize: 11.5, color: U.dim } }, gen.age, "\u6B73\uFF0F\u7D71", gen.lead, "\u30FB\u6B66", gen.valor, "\u30FB\u77E5", gen.wit, "\u30FB\u653F", gen.gov))
       ))));
     })(),
-    g.promo && /* @__PURE__ */ React7.createElement(PromotionDialog, { promo: g.promo, onDone: (name) => setG((p) => {
+    g.promo && /* @__PURE__ */ React8.createElement(PromotionDialog, { promo: g.promo, onDone: (name) => setG((p) => {
       const s2 = structuredClone(p);
       s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.promo.oldName}\u3001\u6226\u529F\u306B\u3088\u308A\u6B63\u5F0F\u306A\u6B66\u5C06\u306B\u5217\u3057\u3001${s2.promo.lordName}\u3088\u308A\u504F\u8AF1\u3092\u8CDC\u3063\u3066${name}\u3068\u540D\u4E57\u308B\u3002` });
       s2.promo = null;
@@ -20372,11 +20449,11 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
 }
 
 // src/ui/Title.jsx
-import React8, { useRef as useRef5, useState as useState8 } from "react";
+import React9, { useRef as useRef5, useState as useState8 } from "react";
 function \u8A18\u9332\u306E\u672D({ \u67A0, onLoad, onErase }) {
   const h = \u8A18\u9332\u306E\u898B\u51FA\u3057(\u67A0.d, FACTIONS);
   const \u65E5\u6642 = h && h.at ? new Date(h.at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
-  return /* @__PURE__ */ React8.createElement("div", { style: {
+  return /* @__PURE__ */ React9.createElement("div", { style: {
     display: "flex",
     alignItems: "center",
     gap: 8,
@@ -20384,17 +20461,17 @@ function \u8A18\u9332\u306E\u672D({ \u67A0, onLoad, onErase }) {
     border: `1px solid ${h ? U.line : U.line2}`,
     borderRadius: 6,
     background: h ? "rgba(255,255,255,0.5)" : "transparent"
-  } }, /* @__PURE__ */ React8.createElement("span", { style: { fontSize: 10.5, color: U.dim, width: 44, letterSpacing: ".08em" } }, \u67A0.\u540D), h ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement("span", { className: "dot", style: { background: h.\u8272 } }), /* @__PURE__ */ React8.createElement(
+  } }, /* @__PURE__ */ React9.createElement("span", { style: { fontSize: 10.5, color: U.dim, width: 44, letterSpacing: ".08em" } }, \u67A0.\u540D), h ? /* @__PURE__ */ React9.createElement(React9.Fragment, null, /* @__PURE__ */ React9.createElement("span", { className: "dot", style: { background: h.\u8272 } }), /* @__PURE__ */ React9.createElement(
     "button",
     {
       className: "btn",
       style: { flex: 1, padding: "7px 9px", textAlign: "left", fontSize: 12.5 },
       onClick: () => onLoad(\u67A0.key)
     },
-    /* @__PURE__ */ React8.createElement("b", { className: "mn", style: { fontSize: 14 } }, h.\u5BB6),
-    /* @__PURE__ */ React8.createElement("span", { className: "num", style: { color: U.dim, marginLeft: 7 } }, h.\u5E74, "\u5E74", h.\u6708, "\u6708\uFF0F", h.\u57CE\u6570, "\u57CE\u30FB", h.\u4E07\u77F3, "\u4E07\u77F3", h.\u898B\u7269 ? "\uFF0F\u898B\u7269" : ""),
-    \u65E5\u6642 && /* @__PURE__ */ React8.createElement("span", { style: { color: U.dim, fontSize: 10.5, marginLeft: 7 } }, \u65E5\u6642)
-  ), /* @__PURE__ */ React8.createElement(
+    /* @__PURE__ */ React9.createElement("b", { className: "mn", style: { fontSize: 14 } }, h.\u5BB6),
+    /* @__PURE__ */ React9.createElement("span", { className: "num", style: { color: U.dim, marginLeft: 7 } }, h.\u5E74, "\u5E74", h.\u6708, "\u6708\uFF0F", h.\u57CE\u6570, "\u57CE\u30FB", h.\u4E07\u77F3, "\u4E07\u77F3", h.\u898B\u7269 ? "\uFF0F\u898B\u7269" : ""),
+    \u65E5\u6642 && /* @__PURE__ */ React9.createElement("span", { style: { color: U.dim, fontSize: 10.5, marginLeft: 7 } }, \u65E5\u6642)
+  ), /* @__PURE__ */ React9.createElement(
     "button",
     {
       className: "btn",
@@ -20405,14 +20482,14 @@ function \u8A18\u9332\u306E\u672D({ \u67A0, onLoad, onErase }) {
       }
     },
     "\u6D88"
-  )) : /* @__PURE__ */ React8.createElement("span", { style: { flex: 1, fontSize: 12, color: U.dim, padding: "7px 0" } }, "\u7A7A\u304D"));
+  )) : /* @__PURE__ */ React9.createElement("span", { style: { flex: 1, fontSize: 12, color: U.dim, padding: "7px 0" } }, "\u7A7A\u304D"));
 }
 function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
   const [\u904A\u3073\u65B9, set\u904A\u3073\u65B9] = useState8(false);
   const \u63A7\u3048\u53E3 = useRef5(null);
   const \u5728\u308B = (saves || []).filter((w) => w.d);
   const \u6700\u65B0 = \u5728\u308B.length ? \u5728\u308B.reduce((a, w) => (w.d.at || 0) > (a.d.at || 0) ? w : a, \u5728\u308B[0]) : null;
-  return /* @__PURE__ */ React8.createElement("div", { className: "sp", style: { height: "100dvh", alignItems: "center", justifyContent: "center", position: "relative", overflow: "auto" } }, /* @__PURE__ */ React8.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)" } }), /* @__PURE__ */ React8.createElement("div", { style: { position: "relative", textAlign: "center", padding: "24px 0" } }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 42, letterSpacing: ".06em" } }, "\u30BB\u30F3\u30B4\u30AF\u76E4"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 11, letterSpacing: ".42em", color: U.dim, marginTop: 6 } }, "SENGOKU BAN"), /* @__PURE__ */ React8.createElement("div", { style: { marginTop: 24, display: "flex", flexDirection: "column", gap: 9, width: 360, maxWidth: "92vw" } }, \u6700\u65B0 && /* @__PURE__ */ React8.createElement("button", { className: "btn dark", style: { padding: "13px" }, onClick: () => onLoad(\u6700\u65B0.key) }, "\u7D9A\u304D\u304B\u3089\uFF08", \u6700\u65B0.\u540D, "\u30FB", \u6700\u65B0.d.state.year, "\u5E74", \u6700\u65B0.d.state.month, "\u6708\u30FB", (FACTIONS[\u6700\u65B0.d.state.player] || {}).name, "\uFF09"), /* @__PURE__ */ React8.createElement("button", { className: `btn ${\u6700\u65B0 ? "" : "dark"}`, style: { padding: "13px" }, onClick: onStart }, \u6700\u65B0 ? "\u65B0\u3057\u304F\u306F\u3058\u3081\u308B" : "\u30B2\u30FC\u30E0\u3092\u306F\u3058\u3081\u308B"), /* @__PURE__ */ React8.createElement("button", { className: "btn", style: { padding: "11px" }, onClick: () => set\u904A\u3073\u65B9(true) }, "\u904A\u3073\u65B9\u3092\u8AAD\u3080"), \u5728\u308B.some((w) => w.\u81EA\u52D5) && /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, textAlign: "left", marginTop: -3 } }, "\u65B0\u3057\u304F\u59CB\u3081\u308B\u3068\u3001\u3044\u307E\u300C\u81EA\u52D5\u300D\u306B\u3042\u308B\u76E4\u306F\u7A7A\u3044\u3066\u3044\u308B\u67A0\u3078\u79FB\u3057\u3066\u53D6\u3063\u3066\u304A\u304D\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 6, textAlign: "left" } }, "\u8A18\u9332\u6240\u3000\uFF08\u62BC\u305B\u3070\u305D\u306E\u76E4\u304B\u3089\u59CB\u307E\u308A\u307E\u3059\uFF09"), /* @__PURE__ */ React8.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5 } }, (saves || []).map((w) => /* @__PURE__ */ React8.createElement(\u8A18\u9332\u306E\u672D, { key: w.key, \u67A0: w, onLoad, onErase }))), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 10.5, color: U.dim, lineHeight: 1.7, textAlign: "left" } }, "\u300C\u81EA\u52D5\u300D\u306F\u6708\u304C\u66FF\u308F\u308B\u305F\u3073\u306B\u52DD\u624B\u306B\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\u3002\u53D6\u3063\u3066\u304A\u304D\u305F\u3044\u76E4\u306F\u3001 \u904A\u3073\u306E\u4E2D\u306E\u300C\u8A18\u9332\u300D\u304B\u3089\u4E00\u301C\u4E94\u306E\u3069\u308C\u304B\u3078\u53CE\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), /* @__PURE__ */ React8.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } }, \u6700\u65B0 && /* @__PURE__ */ React8.createElement(
+  return /* @__PURE__ */ React9.createElement("div", { className: "sp", style: { height: "100dvh", alignItems: "center", justifyContent: "center", position: "relative", overflow: "auto" } }, /* @__PURE__ */ React9.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)" } }), /* @__PURE__ */ React9.createElement("div", { style: { position: "relative", textAlign: "center", padding: "24px 0" } }, /* @__PURE__ */ React9.createElement("div", { className: "mn", style: { fontSize: 42, letterSpacing: ".06em" } }, "\u30BB\u30F3\u30B4\u30AF\u76E4"), /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 11, letterSpacing: ".42em", color: U.dim, marginTop: 6 } }, "SENGOKU BAN"), /* @__PURE__ */ React9.createElement("div", { style: { marginTop: 24, display: "flex", flexDirection: "column", gap: 9, width: 360, maxWidth: "92vw" } }, \u6700\u65B0 && /* @__PURE__ */ React9.createElement("button", { className: "btn dark", style: { padding: "13px" }, onClick: () => onLoad(\u6700\u65B0.key) }, "\u7D9A\u304D\u304B\u3089\uFF08", \u6700\u65B0.\u540D, "\u30FB", \u6700\u65B0.d.state.year, "\u5E74", \u6700\u65B0.d.state.month, "\u6708\u30FB", (FACTIONS[\u6700\u65B0.d.state.player] || {}).name, "\uFF09"), /* @__PURE__ */ React9.createElement("button", { className: `btn ${\u6700\u65B0 ? "" : "dark"}`, style: { padding: "13px" }, onClick: onStart }, \u6700\u65B0 ? "\u65B0\u3057\u304F\u306F\u3058\u3081\u308B" : "\u30B2\u30FC\u30E0\u3092\u306F\u3058\u3081\u308B"), /* @__PURE__ */ React9.createElement("button", { className: "btn", style: { padding: "11px" }, onClick: () => set\u904A\u3073\u65B9(true) }, "\u904A\u3073\u65B9\u3092\u8AAD\u3080"), \u5728\u308B.some((w) => w.\u81EA\u52D5) && /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, textAlign: "left", marginTop: -3 } }, "\u65B0\u3057\u304F\u59CB\u3081\u308B\u3068\u3001\u3044\u307E\u300C\u81EA\u52D5\u300D\u306B\u3042\u308B\u76E4\u306F\u7A7A\u3044\u3066\u3044\u308B\u67A0\u3078\u79FB\u3057\u3066\u53D6\u3063\u3066\u304A\u304D\u307E\u3059\u3002"), /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 6, textAlign: "left" } }, "\u8A18\u9332\u6240\u3000\uFF08\u62BC\u305B\u3070\u305D\u306E\u76E4\u304B\u3089\u59CB\u307E\u308A\u307E\u3059\uFF09"), /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5 } }, (saves || []).map((w) => /* @__PURE__ */ React9.createElement(\u8A18\u9332\u306E\u672D, { key: w.key, \u67A0: w, onLoad, onErase }))), /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 10.5, color: U.dim, lineHeight: 1.7, textAlign: "left" } }, "\u300C\u81EA\u52D5\u300D\u306F\u6708\u304C\u66FF\u308F\u308B\u305F\u3073\u306B\u52DD\u624B\u306B\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\u3002\u53D6\u3063\u3066\u304A\u304D\u305F\u3044\u76E4\u306F\u3001 \u904A\u3073\u306E\u4E2D\u306E\u300C\u8A18\u9332\u300D\u304B\u3089\u4E00\u301C\u4E94\u306E\u3069\u308C\u304B\u3078\u53CE\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } }, \u6700\u65B0 && /* @__PURE__ */ React9.createElement(
     "button",
     {
       className: "btn",
@@ -20420,7 +20497,7 @@ function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
       onClick: () => onExport(\u6700\u65B0.key)
     },
     "\u63A7\u3048\u3092\u66F8\u304D\u51FA\u3059"
-  ), /* @__PURE__ */ React8.createElement(
+  ), /* @__PURE__ */ React9.createElement(
     "button",
     {
       className: "btn",
@@ -20428,7 +20505,7 @@ function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
       onClick: () => \u63A7\u3048\u53E3.current && \u63A7\u3048\u53E3.current.click()
     },
     "\u63A7\u3048\u304B\u3089\u623B\u3059"
-  )), /* @__PURE__ */ React8.createElement(
+  )), /* @__PURE__ */ React9.createElement(
     "input",
     {
       ref: \u63A7\u3048\u53E3,
@@ -20441,7 +20518,7 @@ function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
         if (f) onImport(f);
       }
     }
-  ))), /* @__PURE__ */ React8.createElement("div", { style: { position: "absolute", left: 20, bottom: 16, fontSize: 11, color: U.dim } }, "ver.0.2.0", typeof window !== "undefined" && window.__BUILD__ ? `\u3000\u66F8\u304D\u51FA\u3057 ${window.__BUILD__}` : ""), \u904A\u3073\u65B9 && /* @__PURE__ */ React8.createElement(Manual, { onClose: () => set\u904A\u3073\u65B9(false) }));
+  ))), /* @__PURE__ */ React9.createElement("div", { style: { position: "absolute", left: 20, bottom: 16, fontSize: 11, color: U.dim } }, "ver.0.2.0", typeof window !== "undefined" && window.__BUILD__ ? `\u3000\u66F8\u304D\u51FA\u3057 ${window.__BUILD__}` : ""), \u904A\u3073\u65B9 && /* @__PURE__ */ React9.createElement(Manual, { onClose: () => set\u904A\u3073\u65B9(false) }));
 }
 
 // src/ui/css.js
@@ -20605,7 +20682,7 @@ function App() {
     setG(d.state);
     setScreen("map");
   };
-  if (screen === "title") return /* @__PURE__ */ React9.createElement(React9.Fragment, null, /* @__PURE__ */ React9.createElement("style", null, css), /* @__PURE__ */ React9.createElement(
+  if (screen === "title") return /* @__PURE__ */ React10.createElement(React10.Fragment, null, /* @__PURE__ */ React10.createElement("style", null, css), /* @__PURE__ */ React10.createElement(
     Title,
     {
       saves,
@@ -20622,7 +20699,7 @@ function App() {
       onImport: \u63A7\u3048\u304B\u3089\u623B\u3059
     }
   ));
-  if (screen === "select") return /* @__PURE__ */ React9.createElement(React9.Fragment, null, /* @__PURE__ */ React9.createElement("style", null, css), /* @__PURE__ */ React9.createElement(
+  if (screen === "select") return /* @__PURE__ */ React10.createElement(React10.Fragment, null, /* @__PURE__ */ React10.createElement("style", null, css), /* @__PURE__ */ React10.createElement(
     DaimyoSelect,
     {
       terrain,
@@ -20637,7 +20714,7 @@ function App() {
       }
     }
   ));
-  return /* @__PURE__ */ React9.createElement(React9.Fragment, null, /* @__PURE__ */ React9.createElement("style", null, css), /* @__PURE__ */ React9.createElement(
+  return /* @__PURE__ */ React10.createElement(React10.Fragment, null, /* @__PURE__ */ React10.createElement("style", null, css), /* @__PURE__ */ React10.createElement(
     MapScreen,
     {
       g,

@@ -888,6 +888,17 @@ export function advanceMonth(prev, g) {
          寝返りや従属で、狙っていた城が味方になることがある。
          そのまま残せば、味方に向かって軍議が開かれる。 */
       旗の下を狙う戦役を落とす(s);
+      /* 家が絶えたか（GDD 12.4）。
+
+         拠るべき城が無ければ家は立たない。遊ぶ側の城が一つも残らなければ、
+         そこで一局が終わる。これまでは何も告げず、城のない地図が残るだけであった。
+         いつ終わったのかも分からぬのでは、遊びとして収まりがつかない。 */
+      if (!s.滅び && !s.castles.some((c) => c.faction === s.player)) {
+        s.滅び = { y: s.year, m: s.month };
+        events.push("拠るべき城が一つも残らなかった。家はここに絶える。");
+        s.chronicle.push({ y: s.year, m: s.month,
+          text: `${(s.factions[s.player] || {}).name || "当家"}は最後の城を失い、絶えた。` });
+      }
       // 天下が定まったか（報せに載せるため、月を進める前に判ずる）
       if (!s.unified) {
         const u = checkUnified(s);

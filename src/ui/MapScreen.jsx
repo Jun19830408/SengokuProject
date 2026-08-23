@@ -33,6 +33,7 @@ import { seatOf } from "./DaimyoSelect.jsx";
 import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog } from "./panels.jsx";
 import { SallyDialog } from "./panels.jsx";
 import { Manual } from "./Manual.jsx";
+import { Ending } from "./Ending.jsx";
 import { ReinforceDialog } from "./panels.jsx";
 import { underMyBanner } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
@@ -63,6 +64,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [breakVow, setBreakVow] = useState(null); // 約束を交わした相手へ兵を出すときの問い
   const [sally, setSally] = useState(null);      // 囲まれた城が討って出るかの問い
   const [callAid, setCallAid] = useState(null);  // 援軍を呼ぶ画面（攻められた城）
+  const 終幕を見た = !!g.終幕を見た;
   const [rotate, setRotate] = useState(true);
   const [savedMsg, setSavedMsg] = useState("");
   const [wide, setWide] = useState(false);
@@ -1927,6 +1929,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {modal === "report" && <MonthReport g={g} onClose={() => setModal(null)}
           onAid={(id) => { setModal(null); setCallAid(id); }} />}
         {modal === "manual" && <Manual onClose={() => setModal(null)} />}
+        {/* 終幕（GDD 15.5）。天下が定まるか、家が絶えたら一度だけ告げる。
+            閉じれば盤へ戻れる。見たかどうかは盤に控えておく（記録にも残る）。 */}
+        {!終幕を見た && ((g.unified && g.unified.fid === g.player) || g.滅び) && (
+          <Ending g={g} onTitle={onTitle}
+            onClose={() => setG((p) => ({ ...p, 終幕を見た: true }))} />
+        )}
         {modal === "chronicle" && <Chronicle g={g} onClose={() => setModal(null)} />}
         {modal === "factions" && <FactionInfo g={g} onClose={() => setModal(null)} />}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)} />}
