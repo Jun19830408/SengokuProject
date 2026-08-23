@@ -35,8 +35,8 @@ import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, Goal
 import { SallyDialog } from "./panels.jsx";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
-import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer } from "./panels.jsx";
-import { underMyBanner, 己の盟約 } from "../core/state.js";
+import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer, DiploOffer } from "./panels.jsx";
+import { underMyBanner, 己の盟約, 主家 } from "../core/state.js";
 import { 忠誠, 守備隊の統率, castellanOf } from "../core/rank.js";
 import { 守りの割り付け } from "../core/garrison.js";
 import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を受ける, 縁談を断る } from "../core/hime.js";
@@ -242,6 +242,34 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const mon = (g.factions[c.faction] || {}).mon;
       if (mon && big >= 6.5) drawMon(ctx, mon, x, y, big, col, "#fff");
       else { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, big * 0.82, 0, 7); ctx.fill(); }
+      /* 間柄の印（GDD 12.1 / 12.2）。自家との結びを、城の下に小さな帯で示す。
+         青＝不可侵、緑＝同盟、金の帯＝こちらの旗の下（従属・臣従）、
+         金の枠＝こちらが膝を屈している相手。地図を見ただけで境が読める。 */
+      if (c.faction !== g.player) {
+        const rel = relOf(g, g.player, c.faction);
+        const 下 = ["従属", "臣従"].includes(rel.state) ? (主家(g, g.player, c.faction) === g.player ? "下" : "上") : null;
+        const 印 = 下 === "下" ? { c: "#C8A44A", t: rel.state === "臣従" ? "臣" : "属" }
+          : 下 === "上" ? { c: "#8A6B3A", t: rel.state === "臣従" ? "臣" : "属" }
+          : rel.state === "同盟" ? { c: "#3E7A3A", t: "盟" }
+          : rel.state === "不可侵" ? { c: "#4A6E8A", t: "侵" }
+          : null;
+        if (印) {
+          // 城を囲む輪。旗の下（従属・臣従）は太く、誼（同盟・不可侵）は細く。
+          ctx.strokeStyle = 印.c; ctx.lineWidth = 下 ? 3.0 : 2.0;
+          if (!下) ctx.setLineDash([3.2, 2.6]);
+          ctx.beginPath(); ctx.arc(x, y, big + 5.6, 0, 7); ctx.stroke();
+          ctx.setLineDash([]);
+          if (big >= 6.2) {                          // 近づけば字を添える
+            const bx = x + big + 4.6, by = y + big + 3.2;
+            ctx.fillStyle = 印.c;
+            ctx.beginPath(); ctx.arc(bx, by, 5.4, 0, 7); ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 1.2; ctx.stroke();
+            ctx.fillStyle = "#fff"; ctx.font = "700 7.4px system-ui, sans-serif";
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText(印.t, bx, by + 0.4);
+          }
+        }
+      }
       // 本城には金の輪をつける
       const isSeat = g.generals.some((q) => q.at === c.id && q.faction === c.faction && q.lord && !q.captive);
       if (isSeat) {
@@ -875,8 +903,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       if (slots <= 0) break;
       const ag = a.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
       const col = g.factions[a.faction].color;
-      const kind = a.faction === army.faction ? "自領援軍"
-        : relOf(g, army.faction, a.faction).state === "同盟" ? "同盟軍" : "従属軍";
+      /* 誰の兵として立っているのか（GDD 7.4 / 12.2）。
+         同盟の援軍か、旗の下から出た兵か、主家から来た兵か――
+         盤の上で見分けがつくよう、隊に印を付ける。 */
+      const kind = (() => {
+        if (a.faction === army.faction) return "自領援軍";
+        const st = relOf(g, army.faction, a.faction).state;
+        if (st === "同盟") return "同盟軍";
+        if (st === "臣従" || st === "従属") {
+          return 主家(g, army.faction, a.faction) === army.faction
+            ? `${st}軍` : `主家（${g.factions[a.faction].name}）の援軍`;
+        }
+        return "援軍";
+      })();
       const list = build(ag.slice(0, slots), a.local, a.localTrain, atkSide,
         playerIsAtk ? FIELD.h * 0.875 : FIELD.h * 0.14,
         playerIsAtk ? -Math.PI / 2 : Math.PI / 2, col);
@@ -1672,7 +1711,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       // 味方の城が囲まれているなら、これは後詰である。着けば囲みを解くための野戦になる。
       const 救う = dest && dest.faction === s.player && s.sieges.some((sg) => sg.castleId === dest.id);
       s.armies.push({
-        id: mainId, faction: s.player, from: p.from, gens: p.gens, local: p.local, rost: takeMain.taken,
+        /* 出す家。臣従した家の城から出すなら、その家の軍である（GDD 12.2）。
+           旗の下の軍であるから、着いた先の扱い（後詰か攻めか）は自家と同じに読む。 */
+        id: mainId, faction: (s.castles.find((c2) => c2.id === p.from) || {}).faction || s.player, from: p.from, gens: p.gens, local: p.local, rost: takeMain.taken,
         localTrain: c.localTrain, men: p.local + p.gens.reduce((a, id) => a + s.generals.find((x) => x.id === id).retinue, 0),
         at: p.from, path: 出陣の道(s, p.from, p.to), prog: 0, food: p.food, target: p.to,
         ...(救う ? { relief: p.to } : {}),
@@ -1991,6 +2032,28 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {modal === "chronicle" && <Chronicle g={g} onClose={() => setModal(null)} />}
         {modal === "factions" && <FactionInfo g={g} onClose={() => setModal(null)} />}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)} />}
+        {g.申し入れ && !battle && (
+          <DiploOffer g={g} 申={g.申し入れ}
+            onTake={() => setG((prev) => {
+              const s = structuredClone(prev);
+              const 申 = s.申し入れ; s.申し入れ = null;
+              const r = 政務.外交を結ぶ(s, 申.fid, s.player, 申.key);
+              s.msg = r.ok ? r.文 : (r.why || "その話は流れた");
+              if (r.ok) s.monthEvents = [...(s.monthEvents || []), r.文];
+              return s;
+            })}
+            onPass={() => setG((prev) => {
+              const s = structuredClone(prev);
+              const 申 = s.申し入れ; s.申し入れ = null;
+              const k = [s.player, 申.fid].sort().join("|");
+              const rel = s.relations[k];
+              if (rel) rel.trust = Math.max(0, rel.trust - 6);
+              const 文 = `${s.factions[申.fid].name}よりの「${申.key}」を断った。`;
+              s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+              s.msg = 文;
+              return s;
+            })} />
+        )}
         {g.縁談 && !battle && (
           <MarriageOffer g={g} 談={g.縁談}
             onTake={() => 姫の下知((s) => { const r = 縁談を受ける(s, s.縁談); s.縁談 = null; return r; })}

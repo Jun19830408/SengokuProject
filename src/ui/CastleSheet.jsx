@@ -4,7 +4,7 @@ import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/h
 import { marchMonths } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
 import { RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap } from "../core/rank.js";
-import { canSee, relOf } from "../core/state.js";
+import { canSee, relOf, isVassal, 主を探す } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
@@ -29,6 +29,10 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
   const total = c.local + ret;
   const mine = c.faction === g.player;
+  /* 臣従した家の城は、自家の城と同じように差配できる（GDD 12.2）。
+     内政も軍事も調略もこちらの下知で動く。ただし所領は安堵されているので、
+     その家の者を自家の城へ移すことはできない（出陣の行き先で縛ってある）。 */
+  const 差配 = mine || isVassal(g, g.player, c.faction);
   const lord = castellanOf(g, c);
   const [cmd, setCmd] = useState("開墾");
   const [genId, setGenId] = useState(null);
@@ -249,11 +253,18 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
             );
           })()}
 
-          {mine && (
+          {差配 && (
             <>
               <div className="sec">命令</div>
+              {!mine && (
+                <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 6 }}>
+                  <b style={{ color: U.text }}>{f.name}</b>は旗の下にあります（臣従）。
+                  内政も軍事も調略も、こちらの下知で動きます。ただし所領は安堵されており、
+                  この家の者を自家の城へ移すことはできません。
+                </div>
+              )}
               <div className="g4" style={{ marginBottom: 10 }}>
-                {["内政", "軍事", "人事", "外交", "調略", "特殊勢力"].map((k) => (
+                {(mine ? ["内政", "軍事", "人事", "外交", "調略", "特殊勢力"] : ["内政", "軍事", "調略"]).map((k) => (
                   <button key={k} className={`btn sm ${tab === k ? "on" : ""}`} onClick={() => setTab(k)}>{k}</button>
                 ))}
               </div>

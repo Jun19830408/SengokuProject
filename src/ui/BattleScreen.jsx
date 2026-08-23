@@ -705,6 +705,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
             <>
               <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
                 {selC.detach ? `${selC.gen.name}隊 ${selC.task || "分遣"}` : selC.name} の命令
+                {selC.ally && selC.ally !== "自領援軍" && (
+                  <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 6 }}>〔{selC.ally}〕</span>
+                )}
               </div>
               <div className="num" style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.6 }}>
                 {fmt(corpsMen(selC))}人／士気{Math.round(selC.morale)}／陣形

@@ -3,12 +3,12 @@ import { succeed } from "../core/house.js";
 import { holdsProvince, kenchiCost, kenchiDone, rankBonus, runKenchi } from "../core/province.js";
 import { fiefOf, fiefRoom, troopCap } from "../core/rank.js";
 import { rosterSync } from "../core/roster.js";
-import { relKey, 己の盟約 } from "../core/state.js";
+import { relKey, 己の盟約, 主を探す, 旗の下に入る, relOf } from "../core/state.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
 import { clamp, fmt } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
-import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
+import { DIPLO, PLOTS, SPECIAL_OPTIONS, SUBJECT } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
@@ -285,12 +285,47 @@ export function 外交を結ぶ(s, actor, fid, key) {
     if (!me || !you || actor === fid) return { ok: false, why: "" };
     const k = relKey(actor, fid);
     const r = s.relations[k] || (s.relations[k] = { trust: 45, state: "中立", until: null });
-    const def = DIPLO.find((d) => d.key === key);
+    let def = DIPLO.find((d) => d.key === key);
     if (!def) return { ok: false, why: "" };
     const 主 = 主家(s, actor, fid);
     const 下 = 主 == null ? null : 主 !== actor;
     if (!def.need(r, diploStat(s, actor), diploStat(s, fid), 下)) return { ok: false, why: "筋が立たぬ" };
     if (me.gold < def.cost) return { ok: false, why: "金が足りぬ" };
+
+    /* 旗の下の掟（GDD 12.2）。
+
+       一、二人の主は持てない。主を替えるには、まず独立せねばならない
+       二、下にある家が自ら結べるのは不可侵まで。同盟も上下も主のものに従う
+       ここを塞いでいなかったころは、すでに他家に臣従している家が横から
+       従属させられ、一つの家が三家にも四家にも膝を屈していた。 */
+    if (SUBJECT.includes(def.state || "")) {
+      const 下側 = def.dir === "上" ? fid : actor;
+      const 上側 = def.dir === "上" ? actor : fid;
+      const 既主 = 主を探す(s, 下側);
+      if (既主 && 既主 !== 上側) {
+        return { ok: false, why: `${s.factions[下側].name}は${s.factions[既主].name}の旗の下にある。まず独立せねばならぬ` };
+      }
+    }
+    if (["同盟", "従属させる", "臣従させる", "従属する", "臣従する"].includes(key)) {
+      const 我主 = 主を探す(s, actor);
+      if (我主 && 我主 !== fid) {
+        return { ok: false, why: `${s.factions[我主].name}の旗の下にある身では、自ら結べぬ（不可侵まで）` };
+      }
+    }
+    if (key === "同盟") {
+      // 旗の下にある家とは同盟できない。その家の外交は主のものである。
+      const 相手の主 = 主を探す(s, fid);
+      if (相手の主 && 相手の主 !== actor) {
+        return { ok: false, why: `${s.factions[fid].name}は${s.factions[相手の主].name}の旗の下にある。同盟は主と結ぶもの` };
+      }
+    }
+    if (key === "不可侵") {
+      // 主が敵と見ている家とは結べない。旗の下の外交は主の外交に反しない範囲である。
+      const 我主 = 主を探す(s, actor);
+      if (我主 && relOf(s, 我主, fid).state === "敵対") {
+        return { ok: false, why: `${s.factions[我主].name}が敵と見ている家とは結べぬ` };
+      }
+    }
     me.gold -= def.cost;
     const 前の間柄 = r.state;
     let 文 = "";
@@ -321,6 +356,9 @@ export function 外交を結ぶ(s, actor, fid, key) {
     }
     else {
       r.state = def.state || key;
+      /* 上下の間柄に期限はない。膝を屈するのは一生の決めごとであって、
+         二年で自然に解けるようなものではない（独立するか、解き放たれるかである）。 */
+      if (SUBJECT.includes(r.state)) def = { ...def, months: null };
       r.until = def.months
         ? { y: s.year + Math.floor((s.month + def.months - 1) / 12), m: ((s.month + def.months - 1) % 12) + 1 }
         : null;
@@ -329,6 +367,16 @@ export function 外交を結ぶ(s, actor, fid, key) {
       文 = def.dir === "上" ? `${you.name}が${me.name}に${r.state}した。`
         : def.dir === "下" ? `${me.name}が${you.name}に${r.state}した。`
         : `${you.name}と${me.name}のあいだに${r.state}が成った。`;
+      // 旗の下に入った家は、それまでの誼を解く。以後の外交は主のものに従う。
+      if (SUBJECT.includes(r.state)) {
+        const 下側 = def.dir === "上" ? fid : actor;
+        const 上側 = def.dir === "上" ? actor : fid;
+        const 解 = [];
+        旗の下に入る(s, 下側, 上側, (相, 前) => 解.push(`${s.factions[相] ? s.factions[相].name : ""}との${前}`));
+        if (解.length) {
+          文 += `${s.factions[下側].name}は${解.join("・")}を解いた。`;
+        }
+      }
       s.chronicle.push({ y: s.year, m: s.month, text: 文 });
     }
     return { ok: true, 文, cost: def.cost, trust: r.trust };

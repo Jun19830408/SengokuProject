@@ -9,7 +9,7 @@ import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
-import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手 } from "../core/state.js";
+import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
 import { PLOTS } from "../data/diplo.js";
 import { FATED, NEWCOMERS, PARENT } from "../data/newcomers.js";
@@ -95,6 +95,39 @@ export function advanceMonth(prev, g) {
         }
         gold += specialBonus(s, fid, "gold") - specialBonus(s, fid, "upkeep");
         f.prestige = clamp((f.prestige || 50) + specialBonus(s, fid, "prestige"), 0, 100);
+        /* 貢（GDD 12.2）。旗の下にある家は、毎月の実入りのうちいくらかを主へ納める。
+           従属は四分の一、臣従は四割。米も同じ割りで蔵から移す。
+           納めるほうは痩せ、納められるほうは肥える。これが旗の下に入るということである。 */
+        const 主 = 主を探す(s, fid);
+        if (主 && s.factions[主] && gold > 0) {
+          const st = relOf(s, fid, 主).state;
+          const 割 = st === "臣従" ? 0.40 : 0.25;
+          const 貢 = Math.round(gold * 割);
+          if (貢 > 0) {
+            gold -= 貢;
+            s.factions[主].gold = Math.round((s.factions[主].gold || 0) + 貢);
+            f.貢 = 貢;
+            if (主 === s.player || fid === s.player) {
+              const 蔵 = s.castles.filter((c2) => c2.faction === 主);
+              if (蔵.length) {
+                // 米は主の本拠へ入れる（城の蔵から蔵へ移す）
+                const 米 = Math.round(s.castles.filter((c2) => c2.faction === fid)
+                  .reduce((a, c2) => a + c2.food, 0) * 割 * 0.02);
+                if (米 > 0) {
+                  let 残 = 米;
+                  for (const c2 of s.castles.filter((c3) => c3.faction === fid)) {
+                    const 出 = Math.min(c2.food, Math.round(米 / Math.max(1, s.castles.filter((c3) => c3.faction === fid).length)));
+                    c2.food -= 出; 残 -= 出;
+                  }
+                  蔵[0].food += 米 - Math.max(0, 残);
+                }
+                events.push(主 === s.player
+                  ? `${f.name}より貢が届いた（金${fmt(貢)}貫・米${fmt(米)}石）。`
+                  : `${s.factions[主].name}へ貢を納めた（金${fmt(貢)}貫・米${fmt(米)}石）。`);
+              }
+            }
+          }
+        }
         f.gold = Math.round(f.gold + gold);
       }
       // 外交の残り期間（GDD 11.1）
@@ -839,7 +872,17 @@ export function advanceMonth(prev, g) {
         {
           const 我 = s.factions[s.player] ? s.factions[s.player].name : "";
           const 関 = (t) => t.includes(我);
-          外交の采配(s, fid, { 告げる: (t) => { if (関(t)) events.push(t); } });
+          外交の采配(s, fid, {
+            告げる: (t) => { if (関(t)) events.push(t); },
+            申し入れる: (申) => {
+              /* 他家からの申し入れは、一度に一つだけ受け付ける。
+                 返事をするまで次は来ない（返事を待たずに勝手には結ばれない）。 */
+              if (!s.申し入れ) {
+                s.申し入れ = 申;
+                events.push(`${s.factions[申.fid].name}より「${申.key}」の申し入れがあった。`);
+              }
+            },
+          });
           調略の采配(s, fid, { 告げる: (t) => { if (関(t)) events.push(t); } });
           特殊勢力の采配(s, fid, { 告げる: (t) => { if (関(t)) events.push(t); } });
         }

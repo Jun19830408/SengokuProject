@@ -39,8 +39,15 @@ export function SortieDialog({ g, from, onClose, onGo }) {
   const 行き先 = useMemo(() => {
     return g.castles
       // 兵を出せる先は、自家の城、臣従の家の城（援軍）、そして攻められる敵城。
+      /* 領地安堵（GDD 12.2）。臣従した家の城から兵を出すとき、味方の城として
+         行けるのはその家自身の城だけである。旗の下に入れても、その家の者を
+         自家の城へ引き上げることはできない。所領はその家のものであり、
+         人もその所領に留まる――これが臣従と、家臣であることの違いである。
+         （敵城へ攻め入るのは差し支えない。軍事の差配は主のものである） */
       .filter((x) => x.id !== from
         && (underMyBanner(g, c.faction, x.faction) || canAttack(g, x.id)))
+      .filter((x) => c.faction === g.player || x.faction === c.faction
+        || !underMyBanner(g, g.player, x.faction))
       /* 隣り合う城か、味方の城を伝って辿れる先にしか兵は出せぬ。
          遠国へ攻め入るには、まずその手前を切り取らねばならない。
 
@@ -1039,6 +1046,56 @@ export function GeneralList({ g, onClose }) {
           </div>
         )}
         <button className="btn" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  );
+}
+
+
+/* 外交の申し入れ（GDD 12.1 / 12.2）。
+
+   他家からの申し出は、こちらの諾否を経ずに成らない。
+   これを塞いでいなかったころは、隣国を平らげた途端に神戸と北畠が勝手に臣従してきた。
+   旗の下に入れるかどうかは、こちらの決めることである。 */
+export function DiploOffer({ g, 申, onTake, onPass }) {
+  const f = g.factions[申.fid];
+  if (!f) return null;
+  const r = relOf(g, g.player, 申.fid);
+  const 石 = (fid) => g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
+  const 我 = 石(g.player), 彼 = 石(申.fid);
+  const 城 = g.castles.filter((c) => c.faction === 申.fid).length;
+  const 説 = {
+    親善: "誼を通じたいという。受ければ信用が上がる。ほかに縛りはない。",
+    不可侵: "十二か月のあいだ、互いに攻めない。期限が切れれば元に戻る。",
+    同盟: "二十四か月の同盟。互いに援軍を頼めるが、そのあいだ攻めることはできない。",
+    従属する: "旗の下に入りたいという。毎月の実入りの四分の一を貢として納め、"
+      + "求めれば兵を出す。こちらは、その家と隣り合う他家へ攻め入れるようになる。"
+      + "そのかわり、この家を攻めることはできなくなる。",
+    臣従する: "完全に旗の下へ入りたいという。城々の内政も軍も、こちらの差配となる"
+      + "（ただし家中の者は、その家の城の間でしか動かせない――領地安堵である）。"
+      + "実入りの四割が貢として入る。この家を攻めることはできなくなる。",
+    従属させる: "こちらを従属させたいという。受ければ毎月の実入りの四分の一を納め、"
+      + "求められれば兵を出すことになる。外交は主の外交に従う。",
+    臣従させる: "こちらを旗の下に入れたいという。受ければ独立の望みを捨てることになる。",
+  }[申.key] || "";
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card">
+        <div className="mn" style={{ fontSize: 21, marginBottom: 6 }}>{f.name}よりの申し入れ</div>
+        <div style={{ fontSize: 15, marginBottom: 8 }}>
+          <b className="mn" style={{ fontSize: 18 }}>{申.key}</b>
+        </div>
+        <div style={{ fontSize: 12.5, color: U.dim, lineHeight: 1.95, marginBottom: 10 }}>{説}</div>
+        <div className="row"><span>いまの間柄</span><span className="v">{r.state}・信用{Math.round(r.trust)}</span></div>
+        <div className="row"><span>石高</span>
+          <span className="v">自家 {fmt(Math.round(我 / 10000))}万石 ／ {f.name} {fmt(Math.round(彼 / 10000))}万石（{城}城）</span></div>
+        <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginTop: 8 }}>
+          断っても戦にはなりませんが、信用はいくらか下がります。
+        </div>
+        <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
+          <button className="btn" style={{ flex: 1 }} onClick={onPass}>断る</button>
+          <button className="btn dark" style={{ flex: 1 }} onClick={onTake}>受ける</button>
+        </div>
       </div>
     </div>
   );

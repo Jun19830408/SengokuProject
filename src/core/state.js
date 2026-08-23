@@ -77,13 +77,21 @@ export function initState(player) {
     ["kono", "ouchi", "不可侵", 54],
     // ── 奥羽
     ["date", "ashina", "同盟", 66],         // 天文の乱を経て和した
-    ["nanbu", "kunohe", "従属", 48],        // 九戸は南部の一族ながら不穏
-    ["nanbu", "oura", "従属", 46],          // 大浦も南部に属する
+    ["nanbu", "kunohe", "従属", 48, "nanbu"],   // 九戸は南部の一族ながら不穏（主は南部）
+    ["nanbu", "oura", "従属", 46, "nanbu"],     // 大浦も南部に属する（主は南部）
     ["mogami", "date", "従属", 56],         // 最上は伊達と縁を結ぶ
   ];
-  for (const [a, b, st, tr] of START_TIES) {
+  /* 上下のある間柄には、どちらが上かを書き留めておく（GDD 12.2）。
+
+     書き留めていなかったころは、石高で見当をつけるほかなかった。
+     見当は石高の上下でひっくり返るので、三好に従っていた足利将軍家が、
+     いつのまにか「三好の主」と読まれ、三好が二人の主に仕えていることになった。
+     並びは（下、上）を常とし、逆のものだけ主を書き添えてある。 */
+  for (const [a, b, st, tr, 主] of START_TIES) {
     const k = relKey(a, b);
-    if (relations[k]) { relations[k].state = st; relations[k].trust = tr; relations[k].until = null; }
+    if (!relations[k]) continue;
+    relations[k].state = st; relations[k].trust = tr; relations[k].until = null;
+    if (SUBJECT.includes(st)) relations[k].master = 主 || b;
   }
   const specials = {};
   for (const t of TOWNS) specials[t.id] = { state: "中立", faction: null, anger: 0, months: 0 };
@@ -424,6 +432,50 @@ export function 膝を屈している(g, me, other) {
   if (!me || !other || me === other) return false;
   if (!SUBJECT.includes(relOf(g, me, other).state)) return false;
   return 主家(g, me, other) === other;
+}
+
+/* ------------------------------------------- 旗の下（GDD 12.2）
+
+   膝を屈するのは、その家にとって一生の決めごとである。二人の主は持てない。
+   主を替えるには、いったん旗を翻して（独立して）からでなければならない。
+
+   主に付けば、それまで他家と結んでいた誼は解ける。以後、外交は主のものに従う。
+   下にある家が自ら結べるのは不可侵まで（主が敵と見ている家とは結べない）。 */
+export function 主を探す(g, fid) {
+  for (const k of Object.keys(g.relations || {})) {
+    const 相 = 盟約の相手(k, fid);
+    if (!相) continue;
+    const r = g.relations[k];
+    if (!SUBJECT.includes(r.state)) continue;
+    if (r.master === fid) continue;                 // 自分が上に立っている
+    return 相;                                      // 疑わしきは下とみなす
+  }
+  return null;
+}
+
+// その家が旗の下に置いている家々
+export const 旗の下の家 = (g, fid) => Object.keys(g.relations || {})
+  .map((k) => ({ k, 相: 盟約の相手(k, fid) }))
+  .filter((x) => x.相 && SUBJECT.includes(g.relations[x.k].state) && g.relations[x.k].master === fid)
+  .map((x) => x.相);
+
+/* 下に付いた家が、それまで結んでいた誼を解く。
+   同盟も不可侵も、主の外交に吸い込まれる。縁組の同盟であれば姫は生家へ戻る。 */
+export function 旗の下に入る(g, 下, 上, 解いた) {
+  for (const k of Object.keys(g.relations)) {
+    const 相 = 盟約の相手(k, 下);
+    if (!相 || 相 === 上) continue;
+    const r = g.relations[k];
+    if (!["同盟", "不可侵"].includes(r.state)) continue;
+    const 前 = r.state;
+    r.state = "中立"; r.until = null;
+    if (r.婚姻) {
+      const h = (g.hime || []).find((x) => x.id === r.婚姻);
+      if (h) { h.嫁 = null; const 城 = g.castles.find((c) => c.faction === h.faction); if (城) h.at = 城.id; }
+      r.婚姻 = null;
+    }
+    if (解いた) 解いた(相, 前);
+  }
 }
 
 // 指図の通る間柄か（自家、または臣従の家）

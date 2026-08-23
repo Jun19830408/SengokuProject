@@ -5745,6 +5745,21 @@ var \u5DF1\u306E\u76DF\u7D04 = (k, fid) => {
   const p = k.split("|");
   return p[0] === fid || p[1] === fid;
 };
+var \u76DF\u7D04\u306E\u76F8\u624B = (k, fid) => {
+  const p = k.split("|");
+  return p[0] === fid ? p[1] : p[1] === fid ? p[0] : null;
+};
+var \u4E3B\u3092\u63A2\u3059 = (s2, fid) => {
+  for (const k of Object.keys(s2.relations || {})) {
+    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B(k, fid);
+    if (!\u76F8) continue;
+    const r = s2.relations[k];
+    if (!["\u5F93\u5C5E", "\u81E3\u5F93"].includes(r.state)) continue;
+    if (r.master === fid) continue;
+    return \u76F8;
+  }
+  return null;
+};
 var relOf = (s2, a, b) => s2.relations[relKey(a, b)] || { trust: 45, state: "\u4E2D\u7ACB", until: null };
 var \u5143\u670D\u306E\u9F62 = 15;
 var \u59EB\u306E\u9650\u308A = 10;
@@ -5920,6 +5935,10 @@ function \u5A5A\u59FB\u3067\u304D\u308B\u304B(s2, h, fid) {
   const r = relOf(s2, h.faction, fid);
   if (r.state === "\u81E3\u5F93" || r.state === "\u5F93\u5C5E") return { ok: false, why: "\u4E0A\u4E0B\u306E\u3042\u308B\u9593\u67C4\u306B\u5A5A\u5100\u306F\u8981\u3089\u306A\u3044" };
   if (r.state === "\u540C\u76DF") return { ok: false, why: "\u3059\u3067\u306B\u540C\u76DF\u3057\u3066\u3044\u308B" };
+  const \u6211\u4E3B = \u4E3B\u3092\u63A2\u3059(s2, h.faction);
+  if (\u6211\u4E3B) return { ok: false, why: `${(s2.factions[\u6211\u4E3B] || {}).name || ""}\u306E\u65D7\u306E\u4E0B\u306B\u3042\u308B\u8EAB\u3067\u306F\u3001\u7E01\u3092\u7D50\u3079\u306A\u3044` };
+  const \u76F8\u4E3B = \u4E3B\u3092\u63A2\u3059(s2, fid);
+  if (\u76F8\u4E3B) return { ok: false, why: `${s2.factions[fid].name}\u306F${(s2.factions[\u76F8\u4E3B] || {}).name || ""}\u306E\u65D7\u306E\u4E0B\u306B\u3042\u308B` };
   const \u8981 = \u5A5A\u59FB\u306E\u8981\u308B\u4FE1\u7528(h, r);
   if ((r.trust || 45) < \u8981) return { ok: false, why: `\u4FE1\u7528\u304C\u8DB3\u308A\u306A\u3044\uFF08\u8981 ${\u8981}\uFF09` };
   if (s2.factions[h.faction].gold < \u5A5A\u5100\u306E\u793C) return { ok: false, why: "\u652F\u5EA6\u306E\u91D1\u304C\u8DB3\u308A\u306A\u3044" };
@@ -7213,11 +7232,11 @@ var GENERALS = [
 
 // src/core/state.js
 var relKey2 = (a, b) => [a, b].sort().join("|");
-var \u76DF\u7D04\u306E\u76F8\u624B = (k, fid) => {
+var \u76DF\u7D04\u306E\u76F8\u624B2 = (k, fid) => {
   const p = k.split("|");
   return p[0] === fid ? p[1] : p[1] === fid ? p[0] : null;
 };
-var \u5DF1\u306E\u76DF\u7D042 = (k, fid) => \u76DF\u7D04\u306E\u76F8\u624B(k, fid) != null;
+var \u5DF1\u306E\u76DF\u7D042 = (k, fid) => \u76DF\u7D04\u306E\u76F8\u624B2(k, fid) != null;
 function initState(player) {
   const factions = JSON.parse(JSON.stringify(FACTIONS));
   for (const f of Object.values(factions)) f.prestige = 50;
@@ -7291,20 +7310,20 @@ function initState(player) {
     // ── 奥羽
     ["date", "ashina", "\u540C\u76DF", 66],
     // 天文の乱を経て和した
-    ["nanbu", "kunohe", "\u5F93\u5C5E", 48],
-    // 九戸は南部の一族ながら不穏
-    ["nanbu", "oura", "\u5F93\u5C5E", 46],
-    // 大浦も南部に属する
+    ["nanbu", "kunohe", "\u5F93\u5C5E", 48, "nanbu"],
+    // 九戸は南部の一族ながら不穏（主は南部）
+    ["nanbu", "oura", "\u5F93\u5C5E", 46, "nanbu"],
+    // 大浦も南部に属する（主は南部）
     ["mogami", "date", "\u5F93\u5C5E", 56]
     // 最上は伊達と縁を結ぶ
   ];
-  for (const [a, b, st, tr] of START_TIES) {
+  for (const [a, b, st, tr, \u4E3B] of START_TIES) {
     const k = relKey2(a, b);
-    if (relations[k]) {
-      relations[k].state = st;
-      relations[k].trust = tr;
-      relations[k].until = null;
-    }
+    if (!relations[k]) continue;
+    relations[k].state = st;
+    relations[k].trust = tr;
+    relations[k].until = null;
+    if (SUBJECT.includes(st)) relations[k].master = \u4E3B || b;
   }
   const specials = {};
   for (const t of TOWNS) specials[t.id] = { state: "\u4E2D\u7ACB", faction: null, anger: 0, months: 0 };
@@ -7618,6 +7637,38 @@ function isVassal(g, me, other) {
   if (!me || !other || me === other) return false;
   if (relOf2(g, me, other).state !== "\u81E3\u5F93") return false;
   return \u4E3B\u5BB6(g, me, other) === me;
+}
+function \u4E3B\u3092\u63A2\u30592(g, fid) {
+  for (const k of Object.keys(g.relations || {})) {
+    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B2(k, fid);
+    if (!\u76F8) continue;
+    const r = g.relations[k];
+    if (!SUBJECT.includes(r.state)) continue;
+    if (r.master === fid) continue;
+    return \u76F8;
+  }
+  return null;
+}
+function \u65D7\u306E\u4E0B\u306B\u5165\u308B(g, \u4E0B, \u4E0A, \u89E3\u3044\u305F) {
+  for (const k of Object.keys(g.relations)) {
+    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B2(k, \u4E0B);
+    if (!\u76F8 || \u76F8 === \u4E0A) continue;
+    const r = g.relations[k];
+    if (!["\u540C\u76DF", "\u4E0D\u53EF\u4FB5"].includes(r.state)) continue;
+    const \u524D = r.state;
+    r.state = "\u4E2D\u7ACB";
+    r.until = null;
+    if (r.\u5A5A\u59FB) {
+      const h = (g.hime || []).find((x) => x.id === r.\u5A5A\u59FB);
+      if (h) {
+        h.\u5AC1 = null;
+        const \u57CE = g.castles.find((c) => c.faction === h.faction);
+        if (\u57CE) h.at = \u57CE.id;
+      }
+      r.\u5A5A\u59FB = null;
+    }
+    if (\u89E3\u3044\u305F) \u89E3\u3044\u305F(\u76F8, \u524D);
+  }
 }
 var underMyBanner = (g, me, other) => me === other || isVassal(g, me, other);
 function \u63F4\u3051\u306B\u7740\u304F(g, army, castle) {
@@ -9126,12 +9177,38 @@ function \u5916\u4EA4\u3092\u7D50\u3076(s2, actor, fid, key) {
   if (!me || !you || actor === fid) return { ok: false, why: "" };
   const k = relKey2(actor, fid);
   const r = s2.relations[k] || (s2.relations[k] = { trust: 45, state: "\u4E2D\u7ACB", until: null });
-  const def = DIPLO.find((d) => d.key === key);
+  let def = DIPLO.find((d) => d.key === key);
   if (!def) return { ok: false, why: "" };
   const \u4E3B = \u4E3B\u5BB6(s2, actor, fid);
   const \u4E0B = \u4E3B == null ? null : \u4E3B !== actor;
   if (!def.need(r, diploStat(s2, actor), diploStat(s2, fid), \u4E0B)) return { ok: false, why: "\u7B4B\u304C\u7ACB\u305F\u306C" };
   if (me.gold < def.cost) return { ok: false, why: "\u91D1\u304C\u8DB3\u308A\u306C" };
+  if (SUBJECT.includes(def.state || "")) {
+    const \u4E0B\u5074 = def.dir === "\u4E0A" ? fid : actor;
+    const \u4E0A\u5074 = def.dir === "\u4E0A" ? actor : fid;
+    const \u65E2\u4E3B = \u4E3B\u3092\u63A2\u30592(s2, \u4E0B\u5074);
+    if (\u65E2\u4E3B && \u65E2\u4E3B !== \u4E0A\u5074) {
+      return { ok: false, why: `${s2.factions[\u4E0B\u5074].name}\u306F${s2.factions[\u65E2\u4E3B].name}\u306E\u65D7\u306E\u4E0B\u306B\u3042\u308B\u3002\u307E\u305A\u72EC\u7ACB\u305B\u306D\u3070\u306A\u3089\u306C` };
+    }
+  }
+  if (["\u540C\u76DF", "\u5F93\u5C5E\u3055\u305B\u308B", "\u81E3\u5F93\u3055\u305B\u308B", "\u5F93\u5C5E\u3059\u308B", "\u81E3\u5F93\u3059\u308B"].includes(key)) {
+    const \u6211\u4E3B = \u4E3B\u3092\u63A2\u30592(s2, actor);
+    if (\u6211\u4E3B && \u6211\u4E3B !== fid) {
+      return { ok: false, why: `${s2.factions[\u6211\u4E3B].name}\u306E\u65D7\u306E\u4E0B\u306B\u3042\u308B\u8EAB\u3067\u306F\u3001\u81EA\u3089\u7D50\u3079\u306C\uFF08\u4E0D\u53EF\u4FB5\u307E\u3067\uFF09` };
+    }
+  }
+  if (key === "\u540C\u76DF") {
+    const \u76F8\u624B\u306E\u4E3B = \u4E3B\u3092\u63A2\u30592(s2, fid);
+    if (\u76F8\u624B\u306E\u4E3B && \u76F8\u624B\u306E\u4E3B !== actor) {
+      return { ok: false, why: `${s2.factions[fid].name}\u306F${s2.factions[\u76F8\u624B\u306E\u4E3B].name}\u306E\u65D7\u306E\u4E0B\u306B\u3042\u308B\u3002\u540C\u76DF\u306F\u4E3B\u3068\u7D50\u3076\u3082\u306E` };
+    }
+  }
+  if (key === "\u4E0D\u53EF\u4FB5") {
+    const \u6211\u4E3B = \u4E3B\u3092\u63A2\u30592(s2, actor);
+    if (\u6211\u4E3B && relOf2(s2, \u6211\u4E3B, fid).state === "\u6575\u5BFE") {
+      return { ok: false, why: `${s2.factions[\u6211\u4E3B].name}\u304C\u6575\u3068\u898B\u3066\u3044\u308B\u5BB6\u3068\u306F\u7D50\u3079\u306C` };
+    }
+  }
   me.gold -= def.cost;
   const \u524D\u306E\u9593\u67C4 = r.state;
   let \u6587 = "";
@@ -9164,10 +9241,20 @@ function \u5916\u4EA4\u3092\u7D50\u3076(s2, actor, fid, key) {
     s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
   } else {
     r.state = def.state || key;
+    if (SUBJECT.includes(r.state)) def = { ...def, months: null };
     r.until = def.months ? { y: s2.year + Math.floor((s2.month + def.months - 1) / 12), m: (s2.month + def.months - 1) % 12 + 1 } : null;
     r.master = def.dir === "\u4E0A" ? actor : def.dir === "\u4E0B" ? fid : null;
     r.trust = clamp(r.trust + 5, 0, 100);
     \u6587 = def.dir === "\u4E0A" ? `${you.name}\u304C${me.name}\u306B${r.state}\u3057\u305F\u3002` : def.dir === "\u4E0B" ? `${me.name}\u304C${you.name}\u306B${r.state}\u3057\u305F\u3002` : `${you.name}\u3068${me.name}\u306E\u3042\u3044\u3060\u306B${r.state}\u304C\u6210\u3063\u305F\u3002`;
+    if (SUBJECT.includes(r.state)) {
+      const \u4E0B\u5074 = def.dir === "\u4E0A" ? fid : actor;
+      const \u4E0A\u5074 = def.dir === "\u4E0A" ? actor : fid;
+      const \u89E3 = [];
+      \u65D7\u306E\u4E0B\u306B\u5165\u308B(s2, \u4E0B\u5074, \u4E0A\u5074, (\u76F8, \u524D) => \u89E3.push(`${s2.factions[\u76F8] ? s2.factions[\u76F8].name : ""}\u3068\u306E${\u524D}`));
+      if (\u89E3.length) {
+        \u6587 += `${s2.factions[\u4E0B\u5074].name}\u306F${\u89E3.join("\u30FB")}\u3092\u89E3\u3044\u305F\u3002`;
+      }
+    }
     s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
   }
   return { ok: true, \u6587, cost: def.cost, trust: r.trust };
@@ -9535,7 +9622,7 @@ function \u96A3\u5BB6(s2, fid) {
 }
 function \u65D7\u306E\u4E0B\u306B\u3044\u308B\u304B(s2, fid) {
   for (const k of Object.keys(s2.relations)) {
-    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B(k, fid);
+    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B2(k, fid);
     if (!\u76F8) continue;
     const r = s2.relations[k];
     if (!["\u5F93\u5C5E", "\u81E3\u5F93"].includes(r.state)) continue;
@@ -9552,7 +9639,7 @@ var \u7D50\u3079\u308B\u304B = (s2, fid, \u76F8, key) => {
   const \u4E0B = \u4E3B == null ? null : \u4E3B !== fid;
   return def.need(r, diploStat(s2, fid), diploStat(s2, \u76F8), \u4E0B) && s2.factions[fid].gold >= def.cost;
 };
-function \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B } = {}) {
+function \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B, \u7533\u3057\u5165\u308C\u308B } = {}) {
   const f = s2.factions[fid];
   const \u81EA\u57CE = s2.castles.filter((c) => c.faction === fid);
   if (!f || !\u81EA\u57CE.length) return null;
@@ -9563,35 +9650,45 @@ function \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B } = {}) {
   if (!\u96A3.length) return null;
   const \u6253\u3064 = (\u76F8, key) => {
     if (!\u7D50\u3079\u308B\u304B(s2, fid, \u76F8, key)) return null;
+    if (\u76F8 === s2.player) {
+      if (\u7533\u3057\u5165\u308C\u308B) \u7533\u3057\u5165\u308C\u308B({ fid, key, y: s2.year, m: s2.month });
+      return { \u624B: `\u7533\u3057\u5165\u308C\u30FB${key}`, \u5148: \u76F8 };
+    }
     const r = \u5916\u4EA4\u3092\u7D50\u3076(s2, fid, \u76F8, key);
     if (r.ok && \u544A\u3052\u308B) \u544A\u3052\u308B(r.\u6587);
     return r.ok ? { \u624B: key, \u5148: \u76F8 } : null;
   };
-  for (const x of \u96A3) {
-    if (!["\u5F93\u5C5E", "\u81E3\u5F93"].includes(x.r.state)) continue;
-    const \u4E3B = \u4E3B\u5BB6(s2, fid, x.\u5148);
-    if (\u4E3B !== x.\u5148) continue;
-    if (\u6211\u77F3 < x.koku * 1.35) continue;
-    if (\u5F15\u304F() > 0.45) continue;
-    const r = \u6253\u3064(x.\u5148, "\u72EC\u7ACB");
-    if (r) return r;
+  const \u6211\u4E3B = \u65D7\u306E\u4E0B\u306B\u3044\u308B\u304B(s2, fid);
+  if (\u6211\u4E3B) {
+    const x = \u96A3.find((y) => y.\u5148 === \u6211\u4E3B) || { \u5148: \u6211\u4E3B, koku: factionKoku2(s2, \u6211\u4E3B) };
+    if (\u6211\u77F3 >= x.koku * 1.5 && \u5F15\u304F() < 0.35) {
+      const r = \u6253\u3064(\u6211\u4E3B, "\u72EC\u7ACB");
+      if (r) return r;
+    }
+    const \u96A3\u3067\u6575 = \u96A3.filter((y) => y.\u5148 !== \u6211\u4E3B && y.r.state === "\u6575\u5BFE" && y.r.trust >= 55)[0];
+    if (\u96A3\u3067\u6575 && \u5F15\u304F() < 0.4) {
+      const r = \u6253\u3064(\u96A3\u3067\u6575.\u5148, "\u4E0D\u53EF\u4FB5");
+      if (r) return r;
+    }
+    return null;
   }
-  const \u4E3B\u3042\u308A = \u65D7\u306E\u4E0B\u306B\u3044\u308B\u304B(s2, fid);
-  const \u5927\u7269 = \u4E3B\u3042\u308A ? null : \u96A3.filter((x) => !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(x.r.state)).sort((a, b) => b.koku - a.koku)[0];
+  const \u5927\u7269 = \u96A3.filter((x) => !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(x.r.state)).sort((a, b) => b.koku - a.koku)[0];
   if (\u5927\u7269) {
     const \u5DEE = \u5927\u7269.koku / Math.max(1, \u6211\u77F3);
+    const \u72D9\u308F\u308C = (s2.factions[\u5927\u7269.\u5148].aim || {}).target && (s2.castles.find((c) => c.id === s2.factions[\u5927\u7269.\u5148].aim.target) || {}).faction === fid;
     const \u7D30\u3044 = \u81EA\u57CE.length <= 2;
-    if (\u5DEE >= 2.6 && (\u7D30\u3044 || \u5F15\u304F() < 0.5)) {
+    const \u702C\u6238\u969B = \u81EA\u57CE.length <= 1 || \u81EA\u57CE.length <= 2 && \u72D9\u308F\u308C;
+    if (\u5DEE >= 3.4 && \u702C\u6238\u969B && \u5927\u7269.r.trust >= 60 && \u5F15\u304F() < 0.1) {
       const r = \u6253\u3064(\u5927\u7269.\u5148, "\u81E3\u5F93\u3059\u308B");
       if (r) return r;
     }
-    if (\u5DEE >= 1.7 && (\u7D30\u3044 || \u5F15\u304F() < 0.35)) {
+    if (\u5DEE >= 2.4 && (\u7D30\u3044 ? \u72D9\u308F\u308C || \u5DEE >= 3 : \u72D9\u308F\u308C && \u5DEE >= 3) && \u5927\u7269.r.trust >= 50 && \u5F15\u304F() < 0.15) {
       const r = \u6253\u3064(\u5927\u7269.\u5148, "\u5F93\u5C5E\u3059\u308B");
       if (r) return r;
     }
   }
-  const \u5C0F\u7269 = \u96A3.filter((x) => !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(x.r.state) && x.koku < \u6211\u77F3 * 0.6 && !\u65D7\u306E\u4E0B\u306B\u3044\u308B\u304B(s2, x.\u5148)).sort((a, b) => b.r.trust - a.r.trust)[0];
-  if (\u5C0F\u7269 && \u5F15\u304F() < 0.5) {
+  const \u5C0F\u7269 = \u96A3.filter((x) => !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(x.r.state) && x.koku < \u6211\u77F3 * 0.5 && !\u65D7\u306E\u4E0B\u306B\u3044\u308B\u304B(s2, x.\u5148)).sort((a, b) => b.r.trust - a.r.trust)[0];
+  if (\u5C0F\u7269 && \u5C0F\u7269.r.trust >= 66 && \u5F15\u304F() < 0.3) {
     for (const key of ["\u81E3\u5F93\u3055\u305B\u308B", "\u5F93\u5C5E\u3055\u305B\u308B"]) {
       const r = \u6253\u3064(\u5C0F\u7269.\u5148, key);
       if (r) return r;
@@ -10331,6 +10428,33 @@ function advanceMonth(prev, g) {
     }
     gold += specialBonus(s2, fid, "gold") - specialBonus(s2, fid, "upkeep");
     f.prestige = clamp((f.prestige || 50) + specialBonus(s2, fid, "prestige"), 0, 100);
+    const \u4E3B = \u4E3B\u3092\u63A2\u30592(s2, fid);
+    if (\u4E3B && s2.factions[\u4E3B] && gold > 0) {
+      const st = relOf2(s2, fid, \u4E3B).state;
+      const \u5272 = st === "\u81E3\u5F93" ? 0.4 : 0.25;
+      const \u8CA2 = Math.round(gold * \u5272);
+      if (\u8CA2 > 0) {
+        gold -= \u8CA2;
+        s2.factions[\u4E3B].gold = Math.round((s2.factions[\u4E3B].gold || 0) + \u8CA2);
+        f.\u8CA2 = \u8CA2;
+        if (\u4E3B === s2.player || fid === s2.player) {
+          const \u8535 = s2.castles.filter((c2) => c2.faction === \u4E3B);
+          if (\u8535.length) {
+            const \u7C73 = Math.round(s2.castles.filter((c2) => c2.faction === fid).reduce((a, c2) => a + c2.food, 0) * \u5272 * 0.02);
+            if (\u7C73 > 0) {
+              let \u6B8B = \u7C73;
+              for (const c2 of s2.castles.filter((c3) => c3.faction === fid)) {
+                const \u51FA = Math.min(c2.food, Math.round(\u7C73 / Math.max(1, s2.castles.filter((c3) => c3.faction === fid).length)));
+                c2.food -= \u51FA;
+                \u6B8B -= \u51FA;
+              }
+              \u8535[0].food += \u7C73 - Math.max(0, \u6B8B);
+            }
+            events.push(\u4E3B === s2.player ? `${f.name}\u3088\u308A\u8CA2\u304C\u5C4A\u3044\u305F\uFF08\u91D1${fmt(\u8CA2)}\u8CAB\u30FB\u7C73${fmt(\u7C73)}\u77F3\uFF09\u3002` : `${s2.factions[\u4E3B].name}\u3078\u8CA2\u3092\u7D0D\u3081\u305F\uFF08\u91D1${fmt(\u8CA2)}\u8CAB\u30FB\u7C73${fmt(\u7C73)}\u77F3\uFF09\u3002`);
+          }
+        }
+      }
+    }
     f.gold = Math.round(f.gold + gold);
   }
   for (const k of Object.keys(s2.relations)) {
@@ -10338,7 +10462,7 @@ function advanceMonth(prev, g) {
     if (r.until && monthsBetween(s2.year, s2.month, r.until.y, r.until.m) <= 0) {
       r.until = null;
       r.state = "\u4E2D\u7ACB";
-      const \u76F8\u624B = \u76DF\u7D04\u306E\u76F8\u624B(k, s2.player);
+      const \u76F8\u624B = \u76DF\u7D04\u306E\u76F8\u624B2(k, s2.player);
       if (\u76F8\u624B && s2.factions[\u76F8\u624B]) events.push(`${s2.factions[\u76F8\u624B].name}\u3068\u306E\u7D04\u675F\u306E\u671F\u9650\u304C\u5207\u308C\u305F\u3002`);
     }
     r.trust = clamp(r.trust + 0.4, 0, 100);
@@ -11049,9 +11173,17 @@ function advanceMonth(prev, g) {
     {
       const \u6211 = s2.factions[s2.player] ? s2.factions[s2.player].name : "";
       const \u95A2 = (t) => t.includes(\u6211);
-      \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B: (t) => {
-        if (\u95A2(t)) events.push(t);
-      } });
+      \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, {
+        \u544A\u3052\u308B: (t) => {
+          if (\u95A2(t)) events.push(t);
+        },
+        \u7533\u3057\u5165\u308C\u308B: (\u7533) => {
+          if (!s2.\u7533\u3057\u5165\u308C) {
+            s2.\u7533\u3057\u5165\u308C = \u7533;
+            events.push(`${s2.factions[\u7533.fid].name}\u3088\u308A\u300C${\u7533.key}\u300D\u306E\u7533\u3057\u5165\u308C\u304C\u3042\u3063\u305F\u3002`);
+          }
+        }
+      });
       \u8ABF\u7565\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B: (t) => {
         if (\u95A2(t)) events.push(t);
       } });
@@ -16115,7 +16247,7 @@ function SortieDialog({ g, from, onClose, onGo }) {
   const tooLow = [];
   const [picked, setPicked] = useState2(gens.slice(0, 2).map((x) => x.id));
   const \u884C\u304D\u5148 = useMemo(() => {
-    return g.castles.filter((x) => x.id !== from && (underMyBanner(g, c.faction, x.faction) || canAttack(g, x.id))).map((x) => {
+    return g.castles.filter((x) => x.id !== from && (underMyBanner(g, c.faction, x.faction) || canAttack(g, x.id))).filter((x) => c.faction === g.player || x.faction === c.faction || !underMyBanner(g, g.player, x.faction)).map((x) => {
       const \u901A\u308C\u308B = (id) => {
         const mid = g.castles.find((y) => y.id === id);
         if (!mid) return true;
@@ -16662,6 +16794,24 @@ function GeneralList({ g, onClose }) {
     },
     "\u3014\u67B6\u7A7A\u3015"
   )), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, flex: 1 } }, x.age, "\u6B73 \u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, " \u653F", x.gov, " \u5FE0", \u5FE0\u8AA0(x)), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, x.at ? (g.castles.find((c) => c.id === x.at) || {}).name : "\u51FA\u5F81\u4E2D"), /* @__PURE__ */ React2.createElement("span", { className: "num" }, "\u76F4\u5C5E ", fmt(x.retinue)))), gs.some((x) => is\u67B6\u7A7A(x)) && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u3014\u67B6\u7A7A\u3015\u2026 \u904A\u3073\u306E\u4E2D\u3067\u751F\u307E\u308C\u305F\u8005\u3067\u3059\u3002\u53F2\u5B9F\u306E\u4EBA\u7269\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), gs.some((x) => isNameless(x)) && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.7 } }, "\u3014\u4F1D\u3015\u306F\u540D\u306E\u4F1D\u308F\u3089\u306C\u5728\u5730\u306E\u9577\u3067\u3059\u3002\u5730\u540D\u306B\u300C\u4E59\u540D\u300D\u300C\u6309\u53F8\u300D\u3092\u6DFB\u3048\u305F\u547C\u3073\u540D\u3067\u3042\u308A\u3001\u5B9F\u5728\u306E\u4EBA\u540D\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")));
+}
+function DiploOffer({ g, \u7533, onTake, onPass }) {
+  const f = g.factions[\u7533.fid];
+  if (!f) return null;
+  const r = relOf2(g, g.player, \u7533.fid);
+  const \u77F3 = (fid) => g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
+  const \u6211 = \u77F3(g.player), \u5F7C = \u77F3(\u7533.fid);
+  const \u57CE = g.castles.filter((c) => c.faction === \u7533.fid).length;
+  const \u8AAC = {
+    \u89AA\u5584: "\u8ABC\u3092\u901A\u3058\u305F\u3044\u3068\u3044\u3046\u3002\u53D7\u3051\u308C\u3070\u4FE1\u7528\u304C\u4E0A\u304C\u308B\u3002\u307B\u304B\u306B\u7E1B\u308A\u306F\u306A\u3044\u3002",
+    \u4E0D\u53EF\u4FB5: "\u5341\u4E8C\u304B\u6708\u306E\u3042\u3044\u3060\u3001\u4E92\u3044\u306B\u653B\u3081\u306A\u3044\u3002\u671F\u9650\u304C\u5207\u308C\u308C\u3070\u5143\u306B\u623B\u308B\u3002",
+    \u540C\u76DF: "\u4E8C\u5341\u56DB\u304B\u6708\u306E\u540C\u76DF\u3002\u4E92\u3044\u306B\u63F4\u8ECD\u3092\u983C\u3081\u308B\u304C\u3001\u305D\u306E\u3042\u3044\u3060\u653B\u3081\u308B\u3053\u3068\u306F\u3067\u304D\u306A\u3044\u3002",
+    \u5F93\u5C5E\u3059\u308B: "\u65D7\u306E\u4E0B\u306B\u5165\u308A\u305F\u3044\u3068\u3044\u3046\u3002\u6BCE\u6708\u306E\u5B9F\u5165\u308A\u306E\u56DB\u5206\u306E\u4E00\u3092\u8CA2\u3068\u3057\u3066\u7D0D\u3081\u3001\u6C42\u3081\u308C\u3070\u5175\u3092\u51FA\u3059\u3002\u3053\u3061\u3089\u306F\u3001\u305D\u306E\u5BB6\u3068\u96A3\u308A\u5408\u3046\u4ED6\u5BB6\u3078\u653B\u3081\u5165\u308C\u308B\u3088\u3046\u306B\u306A\u308B\u3002\u305D\u306E\u304B\u308F\u308A\u3001\u3053\u306E\u5BB6\u3092\u653B\u3081\u308B\u3053\u3068\u306F\u3067\u304D\u306A\u304F\u306A\u308B\u3002",
+    \u81E3\u5F93\u3059\u308B: "\u5B8C\u5168\u306B\u65D7\u306E\u4E0B\u3078\u5165\u308A\u305F\u3044\u3068\u3044\u3046\u3002\u57CE\u3005\u306E\u5185\u653F\u3082\u8ECD\u3082\u3001\u3053\u3061\u3089\u306E\u5DEE\u914D\u3068\u306A\u308B\uFF08\u305F\u3060\u3057\u5BB6\u4E2D\u306E\u8005\u306F\u3001\u305D\u306E\u5BB6\u306E\u57CE\u306E\u9593\u3067\u3057\u304B\u52D5\u304B\u305B\u306A\u3044\u2015\u2015\u9818\u5730\u5B89\u5835\u3067\u3042\u308B\uFF09\u3002\u5B9F\u5165\u308A\u306E\u56DB\u5272\u304C\u8CA2\u3068\u3057\u3066\u5165\u308B\u3002\u3053\u306E\u5BB6\u3092\u653B\u3081\u308B\u3053\u3068\u306F\u3067\u304D\u306A\u304F\u306A\u308B\u3002",
+    \u5F93\u5C5E\u3055\u305B\u308B: "\u3053\u3061\u3089\u3092\u5F93\u5C5E\u3055\u305B\u305F\u3044\u3068\u3044\u3046\u3002\u53D7\u3051\u308C\u3070\u6BCE\u6708\u306E\u5B9F\u5165\u308A\u306E\u56DB\u5206\u306E\u4E00\u3092\u7D0D\u3081\u3001\u6C42\u3081\u3089\u308C\u308C\u3070\u5175\u3092\u51FA\u3059\u3053\u3068\u306B\u306A\u308B\u3002\u5916\u4EA4\u306F\u4E3B\u306E\u5916\u4EA4\u306B\u5F93\u3046\u3002",
+    \u81E3\u5F93\u3055\u305B\u308B: "\u3053\u3061\u3089\u3092\u65D7\u306E\u4E0B\u306B\u5165\u308C\u305F\u3044\u3068\u3044\u3046\u3002\u53D7\u3051\u308C\u3070\u72EC\u7ACB\u306E\u671B\u307F\u3092\u6368\u3066\u308B\u3053\u3068\u306B\u306A\u308B\u3002"
+  }[\u7533.key] || "";
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 6 } }, f.name, "\u3088\u308A\u306E\u7533\u3057\u5165\u308C"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 15, marginBottom: 8 } }, /* @__PURE__ */ React2.createElement("b", { className: "mn", style: { fontSize: 18 } }, \u7533.key)), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, lineHeight: 1.95, marginBottom: 10 } }, \u8AAC), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u3044\u307E\u306E\u9593\u67C4"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, r.state, "\u30FB\u4FE1\u7528", Math.round(r.trust))), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u77F3\u9AD8"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, "\u81EA\u5BB6 ", fmt(Math.round(\u6211 / 1e4)), "\u4E07\u77F3 \uFF0F ", f.name, " ", fmt(Math.round(\u5F7C / 1e4)), "\u4E07\u77F3\uFF08", \u57CE, "\u57CE\uFF09")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginTop: 8 } }, "\u65AD\u3063\u3066\u3082\u6226\u306B\u306F\u306A\u308A\u307E\u305B\u3093\u304C\u3001\u4FE1\u7528\u306F\u3044\u304F\u3089\u304B\u4E0B\u304C\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 16 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onPass }, "\u65AD\u308B"), /* @__PURE__ */ React2.createElement("button", { className: "btn dark", style: { flex: 1 }, onClick: onTake }, "\u53D7\u3051\u308B"))));
 }
 function MarriageOffer({ g, \u8AC7, onTake, onPass }) {
   const h = (g.hime || []).find((x) => x.id === \u8AC7.himeId);
@@ -17576,7 +17726,7 @@ function BattleScreen({ ctx, land, onEnd }) {
       },
       o
     ))), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, marginTop: 3 } }, "\u540D\u6307\u3057\u3067\u547D\u3058\u305F\u968A\u306F\u3001\u305D\u306E\u6575\u304C\u52D5\u3044\u3066\u3082\u8FFD\u3044\u307E\u3059\u3002\u69CD\u3092\u5408\u308F\u305B\u3066\u3044\u308B\u9593\u306F\u72D9\u3044\u3092\u5909\u3048\u307E\u305B\u3093\u3002 \u307B\u304B\u306E\u547D\u4EE4\u3092\u51FA\u305B\u3070\u3001\u540D\u6307\u3057\u306F\u89E3\u3051\u307E\u3059\u3002")) : /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, marginTop: 4 } }, "\u81EA\u8ECD\u306E\u968A\u3092\u9078\u3079\u3070\u3001\u3053\u306E\u968A\u3078\u540D\u6307\u3057\u3067\u653B\u3081\u304B\u304B\u3089\u305B\u3089\u308C\u307E\u3059\u3002"));
-  })(), selC ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, selC.detach ? `${selC.gen.name}\u968A ${selC.task || "\u5206\u9063"}` : selC.name, " \u306E\u547D\u4EE4"), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(selC)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(selC.morale), "\uFF0F\u9663\u5F62", Math.round(selC.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, selC.squads.length)), "\uFF0F \u75B2\u52B4", Math.round(selC.fatigue), "\uFF0F", TERRAIN[selC.\u5730 || terrainAt(selC.x, selC.y)].label, selC.chargeT > 0 ? `\uFF0F\u7A81\u6483\u4E2D \u6B8B${Math.ceil(selC.chargeT)}\u79D2` : "", selC.reformT > 0 ? `\uFF0F\u9663\u5F62\u66FF\u3048\u4E2D \u6B8B${Math.ceil(selC.reformT)}\u79D2` : "", selC.faceTo != null ? "\uFF0F\u56DE\u982D\u4E2D" : "", selC.pending ? `\uFF0F\u4F1D\u4EE4\u4E2D \u6B8B${Math.ceil(selC.pending.t)}\u79D2` : "", outOfCommand(b, selC) ? "\uFF0F\u6307\u63EE\u570F\u5916\uFF08\u547D\u4EE4\u304C\u5C4A\u304B\u306A\u3044\uFF09" : "", selC.pinch >= 2 ? `\uFF0F${selC.pinch}\u65B9\u5411\u304B\u3089\u631F\u6483\u3092\u53D7\u3051\u3066\u3044\u308B` : "", (() => {
+  })(), selC ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, selC.detach ? `${selC.gen.name}\u968A ${selC.task || "\u5206\u9063"}` : selC.name, " \u306E\u547D\u4EE4", selC.ally && selC.ally !== "\u81EA\u9818\u63F4\u8ECD" && /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 6 } }, "\u3014", selC.ally, "\u3015")), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(selC)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(selC.morale), "\uFF0F\u9663\u5F62", Math.round(selC.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, selC.squads.length)), "\uFF0F \u75B2\u52B4", Math.round(selC.fatigue), "\uFF0F", TERRAIN[selC.\u5730 || terrainAt(selC.x, selC.y)].label, selC.chargeT > 0 ? `\uFF0F\u7A81\u6483\u4E2D \u6B8B${Math.ceil(selC.chargeT)}\u79D2` : "", selC.reformT > 0 ? `\uFF0F\u9663\u5F62\u66FF\u3048\u4E2D \u6B8B${Math.ceil(selC.reformT)}\u79D2` : "", selC.faceTo != null ? "\uFF0F\u56DE\u982D\u4E2D" : "", selC.pending ? `\uFF0F\u4F1D\u4EE4\u4E2D \u6B8B${Math.ceil(selC.pending.t)}\u79D2` : "", outOfCommand(b, selC) ? "\uFF0F\u6307\u63EE\u570F\u5916\uFF08\u547D\u4EE4\u304C\u5C4A\u304B\u306A\u3044\uFF09" : "", selC.pinch >= 2 ? `\uFF0F${selC.pinch}\u65B9\u5411\u304B\u3089\u631F\u6483\u3092\u53D7\u3051\u3066\u3044\u308B` : "", (() => {
     const t = selC.\u72D9\u3044 && b.corps.find((x) => x.id === selC.\u72D9\u3044);
     return t && !t.destroyed ? `\uFF0F${t.gen.name}\u968A\u3092\u72D9\u3063\u3066\u3044\u308B` : "";
   })(), isCastle && selC.kit && selC.kit !== "\u306A\u3057" ? `\uFF0F${selC.kit}` : "", isCastle && selC.gateFat > 3 ? `\uFF0F\u9580\u653B\u3081\u306E\u75B2\u308C${Math.round(selC.gateFat)}` : ""), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.text, lineHeight: 1.6 } }, selC.gen.age ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9F62 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.age), "\u3000") : null, "\u7D71\u7387 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.lead), "\u3000\u6B66\u52C7 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.valor), "\u3000\u77E5\u7565 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.wit), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF08\u7D71\u7387\uFF1D\u6307\u63EE\u570F\u3068\u4F1D\u4EE4\u30FB\u9663\u5F62\u66FF\u3048\u306E\u901F\u3055\u3001\u6B66\u52C7\uFF1D\u767D\u5175\u306E\u5F37\u3055\u3001\u77E5\u7565\uFF1D\u4F0F\u5175\u3068\u5206\u9063\u306E\u5224\u65AD\uFF09")), isCastle && iAmAttacker && /* @__PURE__ */ React3.createElement("div", { className: "g4" }, CASTLE_ORDERS.map((o) => /* @__PURE__ */ React3.createElement("button", { key: o, className: "btn sm", onClick: () => castleGo(selC, o) }, o))), isCastle && !iAmAttacker && /* @__PURE__ */ React3.createElement("div", { className: "g2" }, /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => sortieOut(selC) }, "\u6253\u3063\u3066\u51FA\u308B"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => sortieBack(selC) }, "\u57CE\u5185\u3078\u623B\u308B")), /* @__PURE__ */ React3.createElement(
@@ -18966,6 +19116,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
   const total = c.local + ret;
   const mine = c.faction === g.player;
+  const \u5DEE\u914D = mine || isVassal(g, g.player, c.faction);
   const lord = castellanOf(g, c);
   const [cmd, setCmd] = useState5("\u958B\u58BE");
   const [genId, setGenId] = useState5(null);
@@ -19046,7 +19197,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
         gap: 8,
         opacity: 0.62
       } }, /* @__PURE__ */ React5.createElement("span", { className: "mn", style: { fontSize: 15 } }, /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: "#8A7A6A", marginRight: 6 } }, "\u56DA"), x.name, /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, "\u65E7", (g.factions[x.captive.from] || {}).name)), /* @__PURE__ */ React5.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, x.age, "\u6B73 \u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, " \u653F", x.gov, x.captive.ruin ? `\uFF0F\u5FC3 ${x.warLoyal || 0}\uFF0F50` : `\uFF0F\u5FE0${\u5FE0\u8AA0(x)}`))));
-    })(), mine && /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("div", { className: "sec" }, "\u547D\u4EE4"), /* @__PURE__ */ React5.createElement("div", { className: "g4", style: { marginBottom: 10 } }, ["\u5185\u653F", "\u8ECD\u4E8B", "\u4EBA\u4E8B", "\u5916\u4EA4", "\u8ABF\u7565", "\u7279\u6B8A\u52E2\u529B"].map((k) => /* @__PURE__ */ React5.createElement("button", { key: k, className: `btn sm ${tab === k ? "on" : ""}`, onClick: () => setTab(k) }, k))), tab === "\u5185\u653F" && (done ? /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u3053\u306E\u57CE\u306E\u8005\u306F\u307F\u306A\u672C\u6708\u306E\u52D9\u3081\u3092\u679C\u305F\u3057\u305F\u3002\u6B21\u6708\u3078\u9032\u3081\u3070\u3001\u307E\u305F\u50CD\u3051\u308B\u3002") : /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6 } }, "\u624B\u306E\u7A7A\u3044\u3066\u3044\u308B\u8005 ", freeGens.length, "\u540D\uFF0F\u5728\u57CE ", gens.filter((x) => !x.captive).length, "\u540D\u3002 \u4E00\u4EBA\u304C\u4E00\u3064\u306E\u52D9\u3081\u306B\u3042\u305F\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React5.createElement("div", { className: "g4", style: { marginBottom: 8 } }, ["\u958B\u58BE", "\u6CBB\u6C34", "\u5546\u696D", "\u7BC9\u57CE", "\u8A13\u7DF4", "\u5FB4\u52DF"].map((k) => /* @__PURE__ */ React5.createElement("button", { key: k, className: `btn sm ${cmd === k ? "on" : ""}`, onClick: () => setCmd(k) }, k)), \u9244\u7532\u8239\u3092\u9020\u308C\u308B\u304B(g, c).ok && /* @__PURE__ */ React5.createElement("button", { className: `btn sm ${cmd === "\u9020\u8239" ? "on" : ""}`, onClick: () => setCmd("\u9020\u8239") }, "\u9020\u8239")), (cmd === "\u9020\u8239" || (g.factions[c.faction].\u9244\u7532\u8239 || 0) > 0 || (g.factions[c.faction].\u9244\u7532\u666E\u8ACB || 0) > 0) && \u9244\u7532\u8239\u3092\u9020\u308C\u308B\u304B(g, c).ok && /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginBottom: 8 } }, "\u9244\u7532\u8239 ", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, g.factions[c.faction].\u9244\u7532\u8239 || 0), "\uFF0F", \u9244\u7532.\u9650\u308A, "\u8258 \u666E\u8ACB ", Math.round(g.factions[c.faction].\u9244\u7532\u666E\u8ACB || 0), "\uFF0F", \u9244\u7532.\u666E\u8ACB, "\uFF08\u4E00\u5EA6\u306E\u4E0B\u77E5\u3067", \u9244\u7532.\u624B\u9593, "\u8CAB\uFF09", /* @__PURE__ */ React5.createElement("br", null), "\u8237\u306B\u9244\u3092\u5F35\u3063\u305F\u5927\u8239\u3002\u706B\u77E2\u3082\u7119\u70D9\u3082\u901A\u3089\u305A\u3001\u5927\u7B52\u3092\u9060\u304F\u307E\u3067\u6483\u3064\u3002 \u305F\u3060\u3057\u6975\u3081\u3066\u920D\u304F\u3001\u98A8\u306B\u3082\u4E57\u3089\u306A\u3044\u3002\u6D77\u6226\u306E\u3068\u304D\u306F\u5FC5\u305A\u51FA\u308B\u3002"), /* @__PURE__ */ React5.createElement(
+    })(), \u5DEE\u914D && /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("div", { className: "sec" }, "\u547D\u4EE4"), !mine && /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 6 } }, /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, f.name), "\u306F\u65D7\u306E\u4E0B\u306B\u3042\u308A\u307E\u3059\uFF08\u81E3\u5F93\uFF09\u3002 \u5185\u653F\u3082\u8ECD\u4E8B\u3082\u8ABF\u7565\u3082\u3001\u3053\u3061\u3089\u306E\u4E0B\u77E5\u3067\u52D5\u304D\u307E\u3059\u3002\u305F\u3060\u3057\u6240\u9818\u306F\u5B89\u5835\u3055\u308C\u3066\u304A\u308A\u3001 \u3053\u306E\u5BB6\u306E\u8005\u3092\u81EA\u5BB6\u306E\u57CE\u3078\u79FB\u3059\u3053\u3068\u306F\u3067\u304D\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React5.createElement("div", { className: "g4", style: { marginBottom: 10 } }, (mine ? ["\u5185\u653F", "\u8ECD\u4E8B", "\u4EBA\u4E8B", "\u5916\u4EA4", "\u8ABF\u7565", "\u7279\u6B8A\u52E2\u529B"] : ["\u5185\u653F", "\u8ECD\u4E8B", "\u8ABF\u7565"]).map((k) => /* @__PURE__ */ React5.createElement("button", { key: k, className: `btn sm ${tab === k ? "on" : ""}`, onClick: () => setTab(k) }, k))), tab === "\u5185\u653F" && (done ? /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u3053\u306E\u57CE\u306E\u8005\u306F\u307F\u306A\u672C\u6708\u306E\u52D9\u3081\u3092\u679C\u305F\u3057\u305F\u3002\u6B21\u6708\u3078\u9032\u3081\u3070\u3001\u307E\u305F\u50CD\u3051\u308B\u3002") : /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6 } }, "\u624B\u306E\u7A7A\u3044\u3066\u3044\u308B\u8005 ", freeGens.length, "\u540D\uFF0F\u5728\u57CE ", gens.filter((x) => !x.captive).length, "\u540D\u3002 \u4E00\u4EBA\u304C\u4E00\u3064\u306E\u52D9\u3081\u306B\u3042\u305F\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React5.createElement("div", { className: "g4", style: { marginBottom: 8 } }, ["\u958B\u58BE", "\u6CBB\u6C34", "\u5546\u696D", "\u7BC9\u57CE", "\u8A13\u7DF4", "\u5FB4\u52DF"].map((k) => /* @__PURE__ */ React5.createElement("button", { key: k, className: `btn sm ${cmd === k ? "on" : ""}`, onClick: () => setCmd(k) }, k)), \u9244\u7532\u8239\u3092\u9020\u308C\u308B\u304B(g, c).ok && /* @__PURE__ */ React5.createElement("button", { className: `btn sm ${cmd === "\u9020\u8239" ? "on" : ""}`, onClick: () => setCmd("\u9020\u8239") }, "\u9020\u8239")), (cmd === "\u9020\u8239" || (g.factions[c.faction].\u9244\u7532\u8239 || 0) > 0 || (g.factions[c.faction].\u9244\u7532\u666E\u8ACB || 0) > 0) && \u9244\u7532\u8239\u3092\u9020\u308C\u308B\u304B(g, c).ok && /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginBottom: 8 } }, "\u9244\u7532\u8239 ", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, g.factions[c.faction].\u9244\u7532\u8239 || 0), "\uFF0F", \u9244\u7532.\u9650\u308A, "\u8258 \u666E\u8ACB ", Math.round(g.factions[c.faction].\u9244\u7532\u666E\u8ACB || 0), "\uFF0F", \u9244\u7532.\u666E\u8ACB, "\uFF08\u4E00\u5EA6\u306E\u4E0B\u77E5\u3067", \u9244\u7532.\u624B\u9593, "\u8CAB\uFF09", /* @__PURE__ */ React5.createElement("br", null), "\u8237\u306B\u9244\u3092\u5F35\u3063\u305F\u5927\u8239\u3002\u706B\u77E2\u3082\u7119\u70D9\u3082\u901A\u3089\u305A\u3001\u5927\u7B52\u3092\u9060\u304F\u307E\u3067\u6483\u3064\u3002 \u305F\u3060\u3057\u6975\u3081\u3066\u920D\u304F\u3001\u98A8\u306B\u3082\u4E57\u3089\u306A\u3044\u3002\u6D77\u6226\u306E\u3068\u304D\u306F\u5FC5\u305A\u51FA\u308B\u3002"), /* @__PURE__ */ React5.createElement(
       "select",
       {
         className: "sel",
@@ -19475,10 +19626,21 @@ var \u8AAC\u660E\u66F8 = [
         ]
       },
       {
+        \u898B\u51FA\u3057: "\u65D7\u306E\u4E0B\uFF08\u5F93\u5C5E\u3068\u81E3\u5F93\uFF09",
+        \u6587: [
+          "\u819D\u3092\u5C48\u3059\u308B\u306E\u306F\u3001\u305D\u306E\u5BB6\u306E\u4E00\u751F\u3092\u6C7A\u3081\u308B\u3053\u3068\u3067\u3059\u3002\u671F\u9650\u306F\u306A\u304F\u3001\u4E8C\u4EBA\u306E\u4E3B\u306F\u6301\u3066\u307E\u305B\u3093\u3002\u4E3B\u3092\u66FF\u3048\u308B\u306B\u306F\u3001\u3044\u3063\u305F\u3093\u65D7\u3092\u7FFB\u3059\uFF08\u72EC\u7ACB\u3059\u308B\uFF09\u307B\u304B\u3042\u308A\u307E\u305B\u3093\u3002",
+          "\u65D7\u306E\u4E0B\u306B\u5165\u3063\u305F\u5BB6\u306F\u3001\u305D\u308C\u307E\u3067\u306E\u540C\u76DF\u30FB\u4E0D\u53EF\u4FB5\u3092\u3059\u3079\u3066\u89E3\u304D\u307E\u3059\u3002\u4EE5\u5F8C\u306E\u5916\u4EA4\u306F\u4E3B\u306E\u3082\u306E\u306B\u5F93\u3044\u3001\u81EA\u3089\u7D50\u3079\u308B\u306E\u306F\u4E0D\u53EF\u4FB5\u307E\u3067\uFF08\u4E3B\u304C\u6575\u3068\u898B\u3066\u3044\u308B\u5BB6\u3068\u306F\u7D50\u3079\u307E\u305B\u3093\uFF09\u3002\u6BCE\u6708\u306E\u5B9F\u5165\u308A\u304B\u3089\u8CA2\u3092\u7D0D\u3081\u307E\u3059\uFF08\u5F93\u5C5E\u306F\u56DB\u5206\u306E\u4E00\u3001\u81E3\u5F93\u306F\u56DB\u5272\uFF09\u3002",
+          "\u5F93\u5C5E\u3055\u305B\u305F\u5BB6\u306F\u3001\u81EA\u5206\u3067\u5185\u653F\u3082\u8ECD\u4E8B\u3082\u8ABF\u7565\u3082\u884C\u3044\u307E\u3059\u3002\u305D\u306E\u5BB6\u3068\u96A3\u308A\u5408\u3046\u4ED6\u5BB6\u3078\u306F\u3001\u3053\u3061\u3089\u304B\u3089\u653B\u3081\u5165\u308C\u308B\u3088\u3046\u306B\u306A\u308A\u307E\u3059\u3002",
+          "\u81E3\u5F93\u3055\u305B\u305F\u5BB6\u306E\u57CE\u306F\u3001\u81EA\u5BB6\u306E\u57CE\u3068\u540C\u3058\u3088\u3046\u306B\u5DEE\u914D\u3067\u304D\u307E\u3059\uFF08\u5185\u653F\u30FB\u8ECD\u4E8B\u30FB\u8ABF\u7565\uFF09\u3002\u305F\u3060\u3057\u6240\u9818\u306F\u5B89\u5835\u3055\u308C\u3066\u3044\u308B\u306E\u3067\u3001\u305D\u306E\u5BB6\u306E\u8005\u3092\u81EA\u5BB6\u306E\u57CE\u3078\u79FB\u3059\u3053\u3068\u306F\u3067\u304D\u307E\u305B\u3093\u3002\u305D\u306E\u5BB6\u306E\u57CE\u306E\u9593\u3067\u306A\u3089\u52D5\u304B\u305B\u307E\u3059\u3002",
+          "\u5730\u56F3\u3067\u306F\u3001\u57CE\u306E\u307E\u308F\u308A\u306E\u8F2A\u3067\u9593\u67C4\u304C\u8AAD\u3081\u307E\u3059\uFF08\u91D1\uFF1D\u3053\u3061\u3089\u306E\u65D7\u306E\u4E0B\u3001\u8336\uFF1D\u3053\u3061\u3089\u304C\u819D\u3092\u5C48\u3057\u3066\u3044\u308B\u76F8\u624B\u3001\u7DD1\u306E\u7834\u7DDA\uFF1D\u540C\u76DF\u3001\u9752\u306E\u7834\u7DDA\uFF1D\u4E0D\u53EF\u4FB5\uFF09\u3002\u5408\u6226\u306E\u76E4\u3067\u3082\u3001\u968A\u3092\u9078\u3079\u3070\u3014\u540C\u76DF\u8ECD\u3015\u3014\u5F93\u5C5E\u8ECD\u3015\u3014\u81E3\u5F93\u8ECD\u3015\u306E\u5225\u304C\u51FA\u307E\u3059\u3002"
+        ]
+      },
+      {
         \u898B\u51FA\u3057: "\u4ED6\u5BB6\u3082\u5916\u4EA4\u3092\u3059\u308B",
         \u6587: [
           "\u4ED6\u5BB6\u3082\u540C\u3058\u624B\u3092\u6253\u3064\u3002\u5DF1\u3088\u308A\u9059\u304B\u306B\u5927\u304D\u3044\u96A3\u5BB6\u306B\u306F\u819D\u3092\u5C48\u3057\u3001\u5C0F\u3055\u3044\u96A3\u5BB6\u306F\u5F93\u3048\u3001\u80CC\u5F8C\u306E\u5BB6\u3068\u306F\u8ABC\u3092\u901A\u3058\u3001\u4FE1\u7528\u304C\u7BE4\u3051\u308C\u3070\u4E0D\u53EF\u4FB5\u304B\u540C\u76DF\u3092\u7D50\u3076\u3002\u5F93\u3063\u3066\u3044\u308B\u5BB6\u3088\u308A\u5927\u304D\u304F\u306A\u308C\u3070\u65D7\u3092\u7FFB\u3059\u3002\u72D9\u3046\u57CE\u306B\u306F\u624B\u306E\u8005\u3092\u5165\u308C\u308B\u3002",
           "\u4E8C\u4EBA\u306E\u4E3B\u306B\u4ED5\u3048\u308B\u3053\u3068\u306F\u306A\u3044\u3002\u3059\u3067\u306B\u4ED6\u5BB6\u306E\u65D7\u306E\u4E0B\u306B\u3042\u308B\u5BB6\u3092\u3001\u6A2A\u304B\u3089\u5F93\u3048\u308B\u3053\u3068\u3082\u3067\u304D\u306A\u3044\u3002",
+          "\u4ED6\u5BB6\u304C\u3053\u3061\u3089\u306B\u4F55\u304B\u3092\u6C42\u3081\u3066\u304D\u305F\u3068\u304D\u306F\u3001\u53D7\u3051\u308B\u304B\u65AD\u308B\u304B\u3092\u554F\u308F\u308C\u308B\u3002\u52DD\u624B\u306B\u7D50\u3070\u308C\u308B\u3053\u3068\u306F\u306A\u3044\u3002",
           "\u540C\u76DF\u3068\u65D7\u306E\u4E0B\u306F\u653B\u3081\u3092\u5C01\u3058\u308B\u3002\u96A3\u304C\u307F\u306A\u4ED6\u5BB6\u3068\u7D50\u3093\u3067\u3057\u307E\u3046\u524D\u306B\u52D5\u304F\u304B\u3001\u3053\u3061\u3089\u304B\u3089\u7E01\u3092\u7D50\u3093\u3067\u56F2\u307F\u3092\u5D29\u3059\u304B\u2015\u2015\u5916\u4EA4\u306F\u305D\u3046\u3044\u3046\u7AF6\u308A\u5408\u3044\u3067\u3042\u308B\u3002"
         ]
       },
@@ -20138,6 +20300,35 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         ctx.arc(x, y, big * 0.82, 0, 7);
         ctx.fill();
       }
+      if (c.faction !== g.player) {
+        const rel = relOf2(g, g.player, c.faction);
+        const \u4E0B = ["\u5F93\u5C5E", "\u81E3\u5F93"].includes(rel.state) ? \u4E3B\u5BB6(g, g.player, c.faction) === g.player ? "\u4E0B" : "\u4E0A" : null;
+        const \u5370 = \u4E0B === "\u4E0B" ? { c: "#C8A44A", t: rel.state === "\u81E3\u5F93" ? "\u81E3" : "\u5C5E" } : \u4E0B === "\u4E0A" ? { c: "#8A6B3A", t: rel.state === "\u81E3\u5F93" ? "\u81E3" : "\u5C5E" } : rel.state === "\u540C\u76DF" ? { c: "#3E7A3A", t: "\u76DF" } : rel.state === "\u4E0D\u53EF\u4FB5" ? { c: "#4A6E8A", t: "\u4FB5" } : null;
+        if (\u5370) {
+          ctx.strokeStyle = \u5370.c;
+          ctx.lineWidth = \u4E0B ? 3 : 2;
+          if (!\u4E0B) ctx.setLineDash([3.2, 2.6]);
+          ctx.beginPath();
+          ctx.arc(x, y, big + 5.6, 0, 7);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          if (big >= 6.2) {
+            const bx = x + big + 4.6, by = y + big + 3.2;
+            ctx.fillStyle = \u5370.c;
+            ctx.beginPath();
+            ctx.arc(bx, by, 5.4, 0, 7);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.95)";
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            ctx.fillStyle = "#fff";
+            ctx.font = "700 7.4px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(\u5370.t, bx, by + 0.4);
+          }
+        }
+      }
       const isSeat = g.generals.some((q) => q.at === c.id && q.faction === c.faction && q.lord && !q.captive);
       if (isSeat) {
         ctx.strokeStyle = "#C8A44A";
@@ -20774,7 +20965,15 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       if (slots <= 0) break;
       const ag = a.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
       const col = g.factions[a.faction].color;
-      const kind = a.faction === army.faction ? "\u81EA\u9818\u63F4\u8ECD" : relOf2(g, army.faction, a.faction).state === "\u540C\u76DF" ? "\u540C\u76DF\u8ECD" : "\u5F93\u5C5E\u8ECD";
+      const kind = (() => {
+        if (a.faction === army.faction) return "\u81EA\u9818\u63F4\u8ECD";
+        const st = relOf2(g, army.faction, a.faction).state;
+        if (st === "\u540C\u76DF") return "\u540C\u76DF\u8ECD";
+        if (st === "\u81E3\u5F93" || st === "\u5F93\u5C5E") {
+          return \u4E3B\u5BB6(g, army.faction, a.faction) === army.faction ? `${st}\u8ECD` : `\u4E3B\u5BB6\uFF08${g.factions[a.faction].name}\uFF09\u306E\u63F4\u8ECD`;
+        }
+        return "\u63F4\u8ECD";
+      })();
       const list = build(
         ag.slice(0, slots),
         a.local,
@@ -21585,8 +21784,10 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       const \u6551\u3046 = dest && dest.faction === s2.player && s2.sieges.some((sg) => sg.castleId === dest.id);
       s2.armies.push({
+        /* 出す家。臣従した家の城から出すなら、その家の軍である（GDD 12.2）。
+           旗の下の軍であるから、着いた先の扱い（後詰か攻めか）は自家と同じに読む。 */
         id: mainId,
-        faction: s2.player,
+        faction: (s2.castles.find((c2) => c2.id === p.from) || {}).faction || s2.player,
         from: p.from,
         gens: p.gens,
         local: p.local,
@@ -21847,6 +22048,34 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     modal === "chronicle" && /* @__PURE__ */ React8.createElement(Chronicle, { g, onClose: () => setModal(null) }),
     modal === "factions" && /* @__PURE__ */ React8.createElement(FactionInfo, { g, onClose: () => setModal(null) }),
     modal === "generals" && /* @__PURE__ */ React8.createElement(GeneralList, { g, onClose: () => setModal(null) }),
+    g.\u7533\u3057\u5165\u308C && !battle && /* @__PURE__ */ React8.createElement(
+      DiploOffer,
+      {
+        g,
+        \u7533: g.\u7533\u3057\u5165\u308C,
+        onTake: () => setG((prev) => {
+          const s2 = structuredClone(prev);
+          const \u7533 = s2.\u7533\u3057\u5165\u308C;
+          s2.\u7533\u3057\u5165\u308C = null;
+          const r = \u5916\u4EA4\u3092\u7D50\u3076(s2, \u7533.fid, s2.player, \u7533.key);
+          s2.msg = r.ok ? r.\u6587 : r.why || "\u305D\u306E\u8A71\u306F\u6D41\u308C\u305F";
+          if (r.ok) s2.monthEvents = [...s2.monthEvents || [], r.\u6587];
+          return s2;
+        }),
+        onPass: () => setG((prev) => {
+          const s2 = structuredClone(prev);
+          const \u7533 = s2.\u7533\u3057\u5165\u308C;
+          s2.\u7533\u3057\u5165\u308C = null;
+          const k = [s2.player, \u7533.fid].sort().join("|");
+          const rel = s2.relations[k];
+          if (rel) rel.trust = Math.max(0, rel.trust - 6);
+          const \u6587 = `${s2.factions[\u7533.fid].name}\u3088\u308A\u306E\u300C${\u7533.key}\u300D\u3092\u65AD\u3063\u305F\u3002`;
+          s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+          s2.msg = \u6587;
+          return s2;
+        })
+      }
+    ),
     g.\u7E01\u8AC7 && !battle && /* @__PURE__ */ React8.createElement(
       MarriageOffer,
       {

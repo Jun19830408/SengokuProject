@@ -8,6 +8,20 @@ const relKey = (a, b) => [a, b].sort().join("|");
 /* 印は "a|b" という字である。字として含まれるかで見ると、"so"（宗家）が
    "chosokabe|ichijo" に引っかかる。区切りで分けて突き合わせる。 */
 const 己の盟約 = (k, fid) => { const p = k.split("|"); return p[0] === fid || p[1] === fid; };
+const 盟約の相手 = (k, fid) => { const p = k.split("|"); return p[0] === fid ? p[1] : p[1] === fid ? p[0] : null; };
+/* 旗の下にあるか（従属・臣従の下側か）。state.js の 主を探す と同じ理である。
+   あちらを呼ぶと輪になるので、ここにも短く置く。 */
+const 主を探す = (s, fid) => {
+  for (const k of Object.keys(s.relations || {})) {
+    const 相 = 盟約の相手(k, fid);
+    if (!相) continue;
+    const r = s.relations[k];
+    if (!["従属", "臣従"].includes(r.state)) continue;
+    if (r.master === fid) continue;
+    return 相;
+  }
+  return null;
+};
 const relOf = (s, a, b) => s.relations[relKey(a, b)] || { trust: 45, state: "中立", until: null };
 
 /* ==========================================================================
@@ -231,6 +245,14 @@ export function 婚姻できるか(s, h, fid) {
   const r = relOf(s, h.faction, fid);
   if (r.state === "臣従" || r.state === "従属") return { ok: false, why: "上下のある間柄に婚儀は要らない" };
   if (r.state === "同盟") return { ok: false, why: "すでに同盟している" };
+  /* 旗の下にある家の外交は、主のものである（GDD 12.2）。
+     婚姻同盟も同盟であるから、下にある家は自らの縁で結べない。
+     ここを塞いでいなかったころ、臣従した家が姫の縁で他家と同盟し、
+     「旗の下にありながら他家と同盟している家」が四十を超えていた。 */
+  const 我主 = 主を探す(s, h.faction);
+  if (我主) return { ok: false, why: `${(s.factions[我主] || {}).name || ""}の旗の下にある身では、縁を結べない` };
+  const 相主 = 主を探す(s, fid);
+  if (相主) return { ok: false, why: `${s.factions[fid].name}は${(s.factions[相主] || {}).name || ""}の旗の下にある` };
   const 要 = 婚姻の要る信用(h, r);
   if ((r.trust || 45) < 要) return { ok: false, why: `信用が足りない（要 ${要}）` };
   if (s.factions[h.faction].gold < 婚儀の礼) return { ok: false, why: "支度の金が足りない" };

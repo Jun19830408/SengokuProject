@@ -51,7 +51,15 @@ const 押せる = (s, fid, key) => {
 {
   const s = H.initState('oda');
   // 相手を十分に小さくする（自家の二割）
-  const 敵 = s.castles.find((x) => x.faction !== s.player).faction;
+  /* 旗の下にある家は、横から従えることができない（GDD 12.2）。
+     どこの旗の下にもいない家を相手に選ぶ。 */
+  const 旗下 = (fid) => Object.keys(s.relations).some((k) => {
+    const p = k.split('|'); const 相 = p[0] === fid ? p[1] : p[1] === fid ? p[0] : null;
+    if (!相) return false;
+    const r0 = s.relations[k];
+    return ['従属', '臣従'].includes(r0.state) && r0.master !== fid;
+  });
+  const 敵 = s.castles.find((x) => x.faction !== s.player && !旗下(x.faction)).faction;
   for (const c of s.castles.filter((x) => x.faction === 敵)) c.koku = Math.round(c.koku * 0.1);
   const r = s.relations[[s.player, 敵].sort().join('|')];
   r.trust = 90; r.state = '中立';
@@ -74,7 +82,15 @@ const 押せる = (s, fid, key) => {
 /* ---------------------------- 三、弱小の家は、自ら他家に降ることができる */
 {
   const s = H.initState('oda');
-  const 敵 = s.castles.find((x) => x.faction !== s.player).faction;
+  /* 旗の下にある家は、横から従えることができない（GDD 12.2）。
+     どこの旗の下にもいない家を相手に選ぶ。 */
+  const 旗下 = (fid) => Object.keys(s.relations).some((k) => {
+    const p = k.split('|'); const 相 = p[0] === fid ? p[1] : p[1] === fid ? p[0] : null;
+    if (!相) return false;
+    const r0 = s.relations[k];
+    return ['従属', '臣従'].includes(r0.state) && r0.master !== fid;
+  });
+  const 敵 = s.castles.find((x) => x.faction !== s.player && !旗下(x.faction)).faction;
   // こちらを十分に小さくする
   for (const c of s.castles.filter((x) => x.faction === s.player)) c.koku = Math.round(c.koku * 0.05);
   const r = s.relations[[s.player, 敵].sort().join('|')];
@@ -114,7 +130,15 @@ const 押せる = (s, fid, key) => {
 {
   const 作 = (威信) => {
     const s = H.initState('oda');
-    const 敵 = s.castles.find((x) => x.faction !== s.player).faction;
+    /* 旗の下にある家は、横から従えることができない（GDD 12.2）。
+     どこの旗の下にもいない家を相手に選ぶ。 */
+  const 旗下 = (fid) => Object.keys(s.relations).some((k) => {
+    const p = k.split('|'); const 相 = p[0] === fid ? p[1] : p[1] === fid ? p[0] : null;
+    if (!相) return false;
+    const r0 = s.relations[k];
+    return ['従属', '臣従'].includes(r0.state) && r0.master !== fid;
+  });
+  const 敵 = s.castles.find((x) => x.faction !== s.player && !旗下(x.faction)).faction;
     for (const c of s.castles.filter((x) => x.faction === 敵)) c.koku = Math.round(c.koku * 0.1);
     s.relations[[s.player, 敵].sort().join('|')] = { trust: 55, state: '中立', until: null };
     s.factions[s.player].gold = 99999;
@@ -129,7 +153,15 @@ const 押せる = (s, fid, key) => {
 /* ------------------------------------ 五、古い記録に上下を書き入れること */
 {
   const s = H.initState('oda');
-  const 敵 = s.castles.find((x) => x.faction !== s.player).faction;
+  /* 旗の下にある家は、横から従えることができない（GDD 12.2）。
+     どこの旗の下にもいない家を相手に選ぶ。 */
+  const 旗下 = (fid) => Object.keys(s.relations).some((k) => {
+    const p = k.split('|'); const 相 = p[0] === fid ? p[1] : p[1] === fid ? p[0] : null;
+    if (!相) return false;
+    const r0 = s.relations[k];
+    return ['従属', '臣従'].includes(r0.state) && r0.master !== fid;
+  });
+  const 敵 = s.castles.find((x) => x.faction !== s.player && !旗下(x.faction)).faction;
   for (const c of s.castles.filter((x) => x.faction === s.player)) c.koku = Math.round(c.koku * 0.05);
   // 直す前の記録。state だけあって master がない
   s.relations[[s.player, 敵].sort().join('|')] = { trust: 60, state: '臣従', until: null };

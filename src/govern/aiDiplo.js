@@ -109,7 +109,7 @@ const 結べるか = (s, fid, 相, key) => {
 /* --------------------------------------------------------- 外交の采配
 
    月に一度、家ごとに一手まで。四月とは限らない（外交は年中行事ではない）。 */
-export function 外交の采配(s, fid, { 告げる } = {}) {
+export function 外交の采配(s, fid, { 告げる, 申し入れる } = {}) {
   const f = s.factions[fid];
   const 自城 = s.castles.filter((c) => c.faction === fid);
   if (!f || !自城.length) return null;
@@ -119,48 +119,70 @@ export function 外交の采配(s, fid, { 告げる } = {}) {
   const 我石 = factionKoku(s, fid);
   const 隣 = 隣家(s, fid);
   if (!隣.length) return null;
+
+  /* 遊ぶ側へは、こちらだけで決めない。申し入れて諾否を待つ。
+     これを塞いでいなかったころは、隣国を平らげた途端に神戸と北畠が
+     勝手に臣従してきて、遊ぶ側の意思が入る余地がなかった。 */
   const 打つ = (相, key) => {
     if (!結べるか(s, fid, 相, key)) return null;
+    if (相 === s.player) {
+      if (申し入れる) 申し入れる({ fid, key, y: s.year, m: s.month });
+      return { 手: `申し入れ・${key}`, 先: 相 };
+    }
     const r = 外交を結ぶ(s, fid, 相, key);
     if (r.ok && 告げる) 告げる(r.文);
     return r.ok ? { 手: key, 先: 相 } : null;
   };
 
+  const 我主 = 旗の下にいるか(s, fid);
+
   /* 一、旗を翻す。従っている相手より大きくなったなら、いつまでも下にはいない。
-     信を失うので、よほど差がついてからにする。 */
-  for (const x of 隣) {
-    if (!["従属", "臣従"].includes(x.r.state)) continue;
-    const 主 = 主家(s, fid, x.先);
-    if (主 !== x.先) continue;                    // 下にいるときだけ
-    if (我石 < x.koku * 1.35) continue;
-    if (引く() > 0.45) continue;
-    const r = 打つ(x.先, "独立");
-    if (r) return r;
+     信を失い、家中の忠誠も揺れるので、よほど差がついてからにする。 */
+  if (我主) {
+    const x = 隣.find((y) => y.先 === 我主) || { 先: 我主, koku: factionKoku(s, 我主) };
+    if (我石 >= x.koku * 1.5 && 引く() < 0.35) {
+      const r = 打つ(我主, "独立");
+      if (r) return r;
+    }
+    /* 旗の下にある家が自ら結べるのは不可侵まで。それも主の外交に反しない範囲。
+       主のある家は、ここで手仕舞いである。 */
+    const 隣で敵 = 隣.filter((y) => y.先 !== 我主 && y.r.state === "敵対" && y.r.trust >= 55)[0];
+    if (隣で敵 && 引く() < 0.4) { const r = 打つ(隣で敵.先, "不可侵"); if (r) return r; }
+    return null;
   }
 
-  /* 二、膝を屈する。隣に遙かに大きい家があり、こちらが小さければ、
-     滅ぼされるより従うほうがよい。城が少ないほど切実である。 */
-  const 主あり = 旗の下にいるか(s, fid);
-  const 大物 = 主あり ? null : 隣.filter((x) => !["同盟", "臣従", "従属"].includes(x.r.state))
+  /* 二、膝を屈する（GDD 12.2）。
+
+     これは家の一生を決める。貢を納め、兵を出し、外交を主に預け、独立の望みを捨てる。
+     追い詰められた家だけが選ぶ道であって、隣が少し大きいから、では選ばない。
+     一、相手が桁違いに大きい（従属で二.四倍、臣従で三.四倍）
+     二、こちらが細い（城が三つ以下。臣従は二つ以下）か、その相手に狙われている
+     三、誼がある（信用五十以上）。見ず知らずの家に頭は下げられない
+     四、それでも躊躇う（十度に一度ほどしか踏み切らない） */
+  const 大物 = 隣.filter((x) => !["同盟", "臣従", "従属"].includes(x.r.state))
     .sort((a, b) => b.koku - a.koku)[0];
   if (大物) {
     const 差 = 大物.koku / Math.max(1, 我石);
+    const 狙われ = (s.factions[大物.先].aim || {}).target
+      && (s.castles.find((c) => c.id === s.factions[大物.先].aim.target) || {}).faction === fid;
     const 細い = 自城.length <= 2;
-    if (差 >= 2.6 && (細い || 引く() < 0.5)) {
+    const 瀬戸際 = 自城.length <= 1 || (自城.length <= 2 && 狙われ);
+    if (差 >= 3.4 && 瀬戸際 && 大物.r.trust >= 60 && 引く() < 0.10) {
       const r = 打つ(大物.先, "臣従する");
       if (r) return r;
     }
-    if (差 >= 1.7 && (細い || 引く() < 0.35)) {
+    if (差 >= 2.4 && (細い ? 狙われ || 差 >= 3.0 : 狙われ && 差 >= 3.0)
+        && 大物.r.trust >= 50 && 引く() < 0.15) {
       const r = 打つ(大物.先, "従属する");
       if (r) return r;
     }
   }
 
-  /* 三、従える。小さい隣家は旗の下に入れる。戦をせずに国を広げる道である。 */
+  /* 三、従える。小さい隣家を旗の下に入れる。相手にも旨みが要るので、誼が篤いこと。 */
   const 小物 = 隣.filter((x) => !["同盟", "臣従", "従属"].includes(x.r.state)
-    && x.koku < 我石 * 0.6 && !旗の下にいるか(s, x.先))     // すでに他家の旗の下にある家は取れない
+    && x.koku < 我石 * 0.5 && !旗の下にいるか(s, x.先))
     .sort((a, b) => b.r.trust - a.r.trust)[0];
-  if (小物 && 引く() < 0.5) {
+  if (小物 && 小物.r.trust >= 66 && 引く() < 0.30) {
     for (const key of ["臣従させる", "従属させる"]) {
       const r = 打つ(小物.先, key);
       if (r) return r;
