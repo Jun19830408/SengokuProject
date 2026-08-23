@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { 説明書, 題名, 副題 } from "../data/manual.js";
+import { 写し } from "../data/shots.js";
 import { U } from "../core/util.js";
 import { 外を押して閉じる } from "./panels.jsx";
 
@@ -36,6 +37,21 @@ export function Manual({ onClose, 章 = 0 }) {
           {今.節.map((s, i) => (
             <div key={i} style={{ marginBottom: 14 }}>
               {s.見出し && <div className="sec" style={{ marginTop: i ? 12 : 0 }}>{s.見出し}</div>}
+              {/* 実際の画面の写し（tools/shots.cjs が撮る）。絵を先に見せ、説きを添える。 */}
+              {s.絵 && 写し[s.絵] && (
+                <figure style={{ margin: "4px 0 10px" }}>
+                  <img src={写し[s.絵]} alt={s.絵の説 || ""}
+                    /* 縦長の写しが帳を埋め尽くさぬよう、丈に頭打ちを置く */
+                    style={{ width: "100%", maxHeight: "40vh", objectFit: "contain",
+                      display: "block", border: `1px solid ${U.line}`, borderRadius: 3,
+                      background: "#EFEBE2" }} />
+                  {s.絵の説 && (
+                    <figcaption style={{ fontSize: 11, color: U.dim, lineHeight: 1.7, marginTop: 4 }}>
+                      {s.絵の説}
+                    </figcaption>
+                  )}
+                </figure>
+              )}
               {(s.文 || []).map((t, k) => (
                 <div key={k} style={{ fontSize: 13, lineHeight: 1.95, marginBottom: 6 }}>{t}</div>
               ))}

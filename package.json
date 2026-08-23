@@ -8,6 +8,7 @@
     "start": "node tools/serve.cjs",
     "build": "node tools/build.cjs",
     "manual": "node tools/manual.cjs",
+    "shots": "node tools/shots.cjs",
     "test": "node tests/all.cjs",
     "compare": "node tools/compare.cjs",
     "deploy": "node tools/publish-pages.cjs"

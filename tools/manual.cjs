@@ -30,9 +30,22 @@ const { 説明書, 題名, 副題 } = require(束);
 
 const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+/* 絵は data URI で埋め込む。紙に落とすとき、外のファイルを見に行かせない。
+   絵が無ければ、その節は字だけで出る。 */
+const 絵の道 = (key) => path.join(DIST, 'tebiki', '大', `${key}.jpg`);
+const 絵を組む = (s) => {
+  if (!s.絵) return '';
+  const f = 絵の道(s.絵);
+  if (!fs.existsSync(f)) return '';
+  const b64 = fs.readFileSync(f).toString('base64');
+  return `<figure><img src="data:image/jpeg;base64,${b64}">`
+    + (s.絵の説 ? `<figcaption>${esc(s.絵の説)}</figcaption>` : '') + '</figure>';
+};
+
 const 節を組む = (s) => {
   const out = [];
   if (s.見出し) out.push(`<h3>${esc(s.見出し)}</h3>`);
+  out.push(絵を組む(s));
   for (const t of s.文 || []) out.push(`<p>${esc(t)}</p>`);
   if ((s.表 || []).length) {
     out.push('<table>' + s.表.map(([a, b]) =>
@@ -81,6 +94,9 @@ const html = `<!doctype html>
   th { text-align: left; width: 34%; font-weight: 600; vertical-align: top;
        padding: 1.6mm 3mm 1.6mm 0; border-bottom: .4pt solid #D8D2C4; }
   td { padding: 1.6mm 0; color: #4A4640; border-bottom: .4pt solid #D8D2C4; }
+  figure { margin: 2mm 0 4mm; page-break-inside: avoid; }
+  figure img { width: 100%; border: .5pt solid #C8C2B4; display: block; }
+  figcaption { font-size: 8.5pt; color: #6E6A62; margin-top: 1.2mm; line-height: 1.7; }
 </style></head>
 <body>
   <div class="cover">
