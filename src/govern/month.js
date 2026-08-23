@@ -1,5 +1,6 @@
 import { ambushChance } from "../core/ambush.js";
 import { ransomCost, takeAsPrisoner } from "../core/capture.js";
+import { 姫を整える, 姫の年送り, 姫の居場所, 使者の帰り } from "../core/hime.js";
 import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, lifeSpan, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
@@ -453,6 +454,8 @@ export function advanceMonth(prev, g) {
       // 人は年を取る。春（四月）を年の改まりとし、皆ひとつ齢を加える。
       if (s.month === 4) {
         for (const q of s.generals) q.age = (q.age || 30) + 1;
+        // 姫も老いる（齢は生年から数えるので、加えるのは死の判じだけである）
+        姫の年送り(s, { 告げる: (t) => events.push(t) });
         for (const q of [...s.generals]) {
           const a = q.age;
           const cap = lifeSpan(q);
@@ -552,7 +555,10 @@ export function advanceMonth(prev, g) {
       for (const q of s.generals) {
         if (q.captive) continue;
         const d = loyaltyDrift(q);
-        q.loyal = clamp((q.loyal == null ? 60 : q.loyal) + d, 0, 100);
+        /* 一門は禄の多寡で心が離れない。姫を娶った婿も同じである（GDD 6.8）。
+           家の内の者であるから、下がるにも底がある。 */
+        const 底 = q.一門 ? 70 : 0;
+        q.loyal = clamp((q.loyal == null ? 60 : q.loyal) + d, 底, 100);
         if (q.loyal <= 12 && !q.lord) {
           // 出奔。あるいは近隣の家へ走る。
           const near = s.castles.filter((c2) => c2.faction !== q.faction);
@@ -947,7 +953,17 @@ export function advanceMonth(prev, g) {
           s.chronicle.push({ y: s.year, m: s.month, text: t });
           events.push(t);
         }
+        /* 姫も世に出る（GDD 6.8）。名の伝わる姫は齢十五に達した年に、
+           そのほかは家の石高に応じた数だけ。 */
+        姫を整える(s, { 告げる: (t, h) => {
+          s.chronicle.push({ y: s.year, m: s.month, text: t });
+          if (h.faction === s.player) events.push(t);
+        } });
       }
+      // 使いに出た姫が戻る／落城した城の姫を他の城へ移す（GDD 6.8）
+      使者の帰り(s, { 告げる: (t) => events.push(t) });
+      姫の居場所(s, { 告げる: (t) => events.push(t) });
+
       /* 迷子の見回り。軍にも属さず城にもいない将を、自領へ戻す。
          落とし穴は一つずつ塞いだが、見落としがあっても、ここで月ごとに拾う。
          将が盤のどこにもいない、という状態だけは残してはならない。 */

@@ -79,18 +79,24 @@ export function castellanOf(s, c) {
    それも同じなら能力の高い者。将が一人もおらず姫がいるなら、姫の統率を映す。
    誰もいなければ、四十とする。城代のいない城は、それだけ脆い。 */
 export function 守備隊の統率(s, c) {
+  /* 姫の家中統率（GDD 6.8）。城にある姫は、奥を束ね、門の兵をも束ねる。
+     将のいない城では姫がそのまま守備隊の統率となり、将のいる城でも、
+     その姫が城を預かる者より人を束ねるなら、高いほうを取る。
+     姫は盤には出ない。数だけが門に残る。 */
+  const 姫 = (s.hime || []).filter((h) => h.at === c.id && h.faction === c.faction && !h.死
+    && !(h.嫁 && h.嫁.種 === "婚姻"));
+  const 奥 = 姫.length ? Math.max(...姫.map((h) => h.lead || 50)) : 0;
   const gs = s.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   if (gs.length) {
     const 主 = castellanOf(s, c);
-    if (主) return 主.lead;
+    if (主) return Math.max(主.lead, 奥);
     const 位 = (x) => RANKS.findIndex((r) => r.key === rankOf(x, s).key);
     const 順 = [...gs].sort((a, b) => 位(b) - 位(a)
       || ((b.仕官 != null && a.仕官 != null) ? a.仕官 - b.仕官 : (b.age || 0) - (a.age || 0))
       || (b.lead + b.valor + b.wit) - (a.lead + a.valor + a.wit));
-    return 順[0].lead;
+    return Math.max(順[0].lead, 奥);
   }
-  const 姫 = (s.hime || []).filter((h) => h.at === c.id && h.faction === c.faction && !h.死);
-  if (姫.length) return Math.max(...姫.map((h) => h.lead || 50));
+  if (奥) return 奥;
   return 40;
 }
 

@@ -9,6 +9,7 @@ import { foodDays, minGarrison, rankName, troopLimit } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
+import { 元服の齢, 姫の役, 姫の枠, 姫の齢, 婚姻できるか, 婚姻の要る信用, 嫁がせられるか, 婚儀の礼, 使者の礼, 使える姫 } from "../core/hime.js";
 import { ARMS, ROAD_SPEED } from "../data/roads.js";
 import { reinforceOffers } from "../govern/war.js";
 import { canRecruit } from "../core/house.js";
@@ -1037,6 +1038,190 @@ export function GeneralList({ g, onClose }) {
             〔伝〕は名の伝わらぬ在地の長です。地名に「乙名」「按司」を添えた呼び名であり、実在の人名ではありません。
           </div>
         )}
+        <button className="btn" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------ 姫（GDD 6.8）
+
+   大名家には姫がいる。武将としては数えず、戦場にも出ない。
+   けれども、家と家を結ぶのは多く姫の縁である。
+
+   この帳では姫の一覧と、三つの使い道を扱う。
+     輿入れ … 他家へ嫁いで同盟を結ぶ。縁は姫の存命のあいだ続く
+     使者   … 姫が使いに立てば、ただの使者より遙かに重い（三月戻らない）
+     縁組   … 家臣に嫁がせる。婿は一門となり、家督にも連なる
+
+   四つめの「家中の統率」は、姫が城にいるだけで効く。何も選ばなくてよい。 */
+export function HimeList({ g, onClose, onEnvoy, onWed, onMarry }) {
+  const [sel, setSel] = useState(null);            // 選んだ姫の id
+  const [mode, setMode] = useState(null);          // "使者" | "輿入れ" | "縁組"
+  const mine = (g.hime || []).filter((h) => h.faction === g.player && !h.死);
+  const 嫁いだ = (g.hime || []).filter((h) => h.faction === g.player && !h.死
+    && h.嫁 && h.嫁.種 === "婚姻");
+  const h = sel ? (g.hime || []).find((x) => x.id === sel) : null;
+  const 城名 = (cid) => (g.castles.find((c) => c.id === cid) || {}).name || "";
+  const 枠 = 姫の枠(g.castles.filter((c) => c.faction === g.player).reduce((a, c) => a + c.koku, 0));
+  const 金 = g.factions[g.player].gold;
+
+  /* 縁を結ぶ相手は、近い家から並べる。
+     遠国の家と縁を結ぶことはあっても、まず目に入るべきは隣国である。 */
+  const 隔たり = useMemo(() => {
+    const 自 = g.castles.filter((c) => c.faction === g.player);
+    const 表 = {};
+    for (const c of g.castles) {
+      if (c.faction === g.player) continue;
+      const d = Math.min(...自.map((m) => Math.hypot(m.x - c.x, m.y - c.y)));
+      if (表[c.faction] == null || d < 表[c.faction]) 表[c.faction] = d;
+    }
+    return 表;
+  }, [g]);
+  const 近い順 = useMemo(() => Object.keys(g.factions)
+    .filter((fid) => fid !== g.player && g.castles.some((c) => c.faction === fid))
+    .sort((a, b) => (隔たり[a] ?? 9e9) - (隔たり[b] ?? 9e9)), [g, 隔たり]);
+
+  const 相手家 = useMemo(() => {
+    if (!h) return [];
+    return 近い順.slice(0, 14)
+      .map((fid) => ({ fid, r: relOf(g, g.player, fid), 可: 婚姻できるか(g, h, fid) }));
+  }, [g, h, 近い順]);
+
+  const 婿候補 = useMemo(() => {
+    if (!h) return [];
+    return g.generals.filter((x) => x.faction === g.player && 嫁がせられるか(g, h, x).ok)
+      .sort((a, b) => (b.lead + b.valor + b.wit) - (a.lead + a.valor + a.wit)).slice(0, 20);
+  }, [g, h]);
+
+  return (
+    <div className="modal" {...外を押して閉じる(onClose)}>
+      <div className="card">
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>姫</div>
+        <div style={{ fontSize: 12, color: U.dim, lineHeight: 1.85, marginBottom: 10 }}>
+          姫は武将ではありません。戦場には出ませんが、城にいるあいだはその城の
+          守備隊の統率に映ります。家と家を結ぶのは多く姫の縁です。<br />
+          家に置ける姫の数は石高によります（いまの限り {枠}人）。十五で世に出ます。
+        </div>
+
+        {!mine.length && <div style={{ fontSize: 13, color: U.dim, padding: "12px 0" }}>いま家に姫はいません。</div>}
+
+        {mine.map((x) => {
+          const 役 = 姫の役(g, x);
+          const 齢 = 姫の齢(g, x);
+          const 婿 = x.嫁 && x.嫁.種 === "家臣" ? g.generals.find((q) => q.id === x.嫁.先) : null;
+          const 先 = x.嫁 && x.嫁.種 === "婚姻" ? g.factions[x.嫁.先] : null;
+          const 使 = x.務め ? g.factions[x.務め.先] : null;
+          return (
+            <div key={x.id} style={{ padding: "8px 0", borderBottom: `1px solid ${U.line2}`,
+              background: sel === x.id ? "rgba(0,0,0,.04)" : "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
+                <span className="mn" style={{ fontSize: 16, minWidth: 92 }}>{x.name}
+                  {x.架空 && <span style={{ color: "#9B9384", fontSize: 10, marginLeft: 2 }}
+                    title="遊びの中で生まれた者。史実の人物ではありません">〔架空〕</span>}
+                </span>
+                <span className="num" style={{ color: U.dim, fontSize: 12.5 }}>
+                  {齢}歳　外交{x.dip}　統率{x.lead}
+                </span>
+                <span style={{ fontSize: 12, color: U.dim, flex: 1, textAlign: "right" }}>
+                  {役 === "在城" ? `${城名(x.at)}にあり`
+                    : 役 === "縁組" ? `${婿 ? 婿.name : ""}の室（${城名(x.at)}）`
+                    : 役 === "輿入れ" ? `${先 ? 先.name : ""}へ輿入れ`
+                    : 役 === "使者" ? `${使 ? 使.name : ""}へ使者（${x.務め.迄.m}月まで）`
+                    : "幼年"}
+                </span>
+              </div>
+              {x.伝 && <div style={{ fontSize: 11, color: U.dim, marginTop: 2 }}>{x.伝}</div>}
+              {使える姫(g, x) && (
+                <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                  {!x.嫁 && (
+                    <button className="btn sm" onClick={() => { setSel(x.id); setMode("輿入れ"); }}>
+                      輿入れ（婚姻同盟）
+                    </button>
+                  )}
+                  <button className="btn sm" onClick={() => { setSel(x.id); setMode("使者"); }}>使者に立てる</button>
+                  {!x.嫁 && (
+                    <button className="btn sm" onClick={() => { setSel(x.id); setMode("縁組"); }}>家臣に嫁がせる</button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {嫁いだ.length > 0 && (
+          <div style={{ fontSize: 11.5, color: U.dim, marginTop: 10, lineHeight: 1.8 }}>
+            輿入れした姫の縁は、その姫が世を去るまで続きます。期限はありません。
+          </div>
+        )}
+
+        {/* ------------------------------------------------ 相手を選ぶ */}
+        {h && mode === "輿入れ" && (
+          <div style={{ marginTop: 12 }}>
+            <div className="sec">{h.name}を、どの家へ輿入れさせますか（支度 {fmt(婚儀の礼)}貫）</div>
+            <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.8 }}>
+              姫の外交が高いほど、冷たい家とも結べます（{h.name}の要る信用は
+              並の家で {婚姻の要る信用(h, { state: "中立" })}、敵対する家で {婚姻の要る信用(h, { state: "敵対" })}）。
+            </div>
+            {相手家.map(({ fid, r, 可 }) => (
+              <div key={fid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0",
+                borderBottom: `1px solid ${U.line2}`, fontSize: 12.5 }}>
+                <span className="mn" style={{ fontSize: 14, flex: 1 }}>{g.factions[fid].name}</span>
+                <span className="num" style={{ color: U.dim }}>{r.state}・信用{Math.round(r.trust)}</span>
+                <button className="btn sm" disabled={!可.ok || 金 < 婚儀の礼}
+                  title={可.why} onClick={() => { onWed(h.id, fid); setMode(null); setSel(null); }}>
+                  {可.ok ? "結ぶ" : 可.why || "―"}
+                </button>
+              </div>
+            ))}
+            <button className="btn sm" style={{ width: "100%", marginTop: 8 }}
+              onClick={() => { setMode(null); setSel(null); }}>やめる</button>
+          </div>
+        )}
+
+        {h && mode === "使者" && (
+          <div style={{ marginTop: 12 }}>
+            <div className="sec">{h.name}を、どの家への使いに立てますか（支度 {fmt(使者の礼)}貫・三月）</div>
+            {近い順.slice(0, 14).map((fid) => ({ fid, r: relOf(g, g.player, fid) }))
+              .map(({ fid, r }) => (
+                <div key={fid} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0",
+                  borderBottom: `1px solid ${U.line2}`, fontSize: 12.5 }}>
+                  <span className="mn" style={{ fontSize: 14, flex: 1 }}>{g.factions[fid].name}</span>
+                  <span className="num" style={{ color: U.dim }}>{r.state}・信用{Math.round(r.trust)}</span>
+                  <button className="btn sm" disabled={金 < 使者の礼}
+                    onClick={() => { onEnvoy(h.id, fid); setMode(null); setSel(null); }}>立てる</button>
+                </div>
+              ))}
+            <button className="btn sm" style={{ width: "100%", marginTop: 8 }}
+              onClick={() => { setMode(null); setSel(null); }}>やめる</button>
+          </div>
+        )}
+
+        {h && mode === "縁組" && (
+          <div style={{ marginTop: 12 }}>
+            <div className="sec">{h.name}を、どの家臣に嫁がせますか</div>
+            <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.8 }}>
+              婿は一門に列します。忠誠は九十二まで上がり、以後も七十を下りません。
+              他家の誘いにも靡かず、家督の候補にも連なります。姫は婿の城に入ります。
+            </div>
+            {婿候補.map((x) => (
+              <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0",
+                borderBottom: `1px solid ${U.line2}`, fontSize: 12.5 }}>
+                <span className="mn" style={{ fontSize: 14, minWidth: 84 }}>{x.name}</span>
+                <span className="num" style={{ color: U.dim, flex: 1 }}>
+                  {x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 忠{忠誠(x)}
+                </span>
+                <button className="btn sm"
+                  onClick={() => { onMarry(h.id, x.id); setMode(null); setSel(null); }}>嫁がせる</button>
+              </div>
+            ))}
+            {!婿候補.length && <div style={{ fontSize: 12, color: U.dim }}>嫁がせられる家臣がいません。</div>}
+            <button className="btn sm" style={{ width: "100%", marginTop: 8 }}
+              onClick={() => { setMode(null); setSel(null); }}>やめる</button>
+          </div>
+        )}
+
         <button className="btn" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>閉じる</button>
       </div>
     </div>

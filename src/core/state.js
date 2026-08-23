@@ -1,5 +1,6 @@
 import { extraIncome, fiefWanted } from "./rank.js";
 import { newRoster } from "./roster.js";
+import { 姫を整える } from "./hime.js";
 import { clamp, fmt, monthsBetween } from "./util.js";
 import { CASTLES, TOWNS } from "../data/castles.js";
 import { SPECIAL_OPTIONS } from "../data/diplo.js";
@@ -72,7 +73,7 @@ export function initState(player) {
   }
   const specials = {};
   for (const t of TOWNS) specials[t.id] = { state: "中立", faction: null, anger: 0, months: 0 };
-  return {
+  const 盤 = {
     /* 卓（GDD 15.3）。ひとつの遊びを見分ける印。
 
        これが無いと、記録の置き場は「別の遊びで上書きしようとしている」ことに
@@ -97,8 +98,11 @@ export function initState(player) {
       rost: newRoster(g.retinue, `ret-${g.id}`, 直属の兵科) }))),
     armies: [], orders: {}, ledger: [], sieges: [], promo: null, campaigns: [],
     relations, specials, plots: [], intel: {}, prev: {},
+    hime: [],                                    // 姫（GDD 6.8）。下で家々に配る
     chronicle: [{ y: 1546, m: 4, text: "尾張は織田三家に分かれ、美濃は斎藤道三が握る。天下はまだ遠い。" }],
   };
+  姫を整える(盤);                                 // 家の石高に応じて姫を立てる
+  return 盤;
 }
 
 // 旧いセーブには名簿がない。読み込み時に作る。
@@ -518,5 +522,7 @@ export function migrateSave(s) {
   migrateRosters(s);
   旗の下を狙う戦役を落とす(s);
   立たぬ申し送りを落とす(s);
+  // 姫のいない古い記録には、いま立てる（GDD 6.8）
+  if (!Array.isArray(s.hime)) { s.hime = []; 姫を整える(s); }
   return s;
 }

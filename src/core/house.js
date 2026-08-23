@@ -61,6 +61,8 @@ export const isKin = (a, b) => !!a && !!b && a.name.slice(0, 2) === b.name.slice
 // 登用できるか。旧主と血を分けた者、旧主への忠誠が篤い者は靡かない。
 export function canRecruit(gen, lord) {
   if (!gen) return { ok: false, why: "" };
+  // 姫を娶って一門に列した者も同じである。縁は血に劣らない（GDD 6.8）。
+  if (gen.一門) return { ok: false, why: "主家の姫を娶った一門。他家に靡くことはない" };
   if (lord && isKin(gen, lord)) return { ok: false, why: `${lord.name}と血を分けた一門。旧主を捨てて仕えることはない` };
   const loy = gen.loyal == null ? 60 : gen.loyal;
   if (loy >= 95) return { ok: false, why: `旧主への忠誠${Math.floor(loy)}。二君に仕える気はないという` };
@@ -76,6 +78,7 @@ export function loyaltyAfterRecruit(gen) {
 // 大名家の一門は、独立した家を持たない。家督は大名家のものとして継がれる。
 export function isMainClan(s, gen) {
   if (!gen || gen.lord) return false;
+  if (gen.一門) return true;                        // 姫を娶って一門に列した者（GDD 6.8）
   const lord = s.generals.find((x) => x.faction === gen.faction && x.lord && !x.captive);
   if (!lord) return false;
   return isClan(s, gen, lord);
@@ -215,7 +218,8 @@ export function heirCandidates(s, dead) {
   const scored = kin.map((x) => ({
     gen: x,
     child: kids.includes(x.id),                     // 実の子
-    blood: kids.includes(x.id) || isClan(s, x, dead),
+    // 姫を娶った婿も一門である。当主の跡目にも連なる（GDD 6.8）
+    blood: kids.includes(x.id) || isClan(s, x, dead) || (!!x.一門 && !!dead.lord),
     able: x.lead + x.gov + x.wit,
   }));
   // 血筋の成人、血筋の幼年、そのほかの器量者、の順に並べる

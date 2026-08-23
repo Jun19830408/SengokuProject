@@ -35,10 +35,11 @@ import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, Goal
 import { SallyDialog } from "./panels.jsx";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
-import { ReinforceDialog, GateDeployDialog } from "./panels.jsx";
+import { ReinforceDialog, GateDeployDialog, HimeList } from "./panels.jsx";
 import { underMyBanner } from "../core/state.js";
 import { 忠誠, 守備隊の統率, castellanOf } from "../core/rank.js";
 import { 守りの割り付け } from "../core/garrison.js";
+import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる } from "../core/hime.js";
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 難を逃れる } from "../core/capture.js";
@@ -634,6 +635,17 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
 
   // 画面外の合戦。兵数・練度・統率・城防から勝敗と損害を出し、結果だけを記録する。
   const autoResolve = (armyId, castleId) => setG((prev) => 合戦裁定.resolveOffscreen(prev, armyId, castleId));
+
+  /* 姫の下知（GDD 6.8）。輿入れ・使者・縁組のいずれも、盤を直に書き換えて
+     結果の一行を報せに出す。断られる筋（信用が足りぬなど）は帳の側で塞いである。 */
+  const 姫の下知 = (行う) => setG((prev) => {
+    const s = structuredClone(prev);
+    const r = 行う(s);
+    if (!r || !r.ok) { s.msg = (r && r.why) || "できなかった"; return s; }
+    s.monthEvents = [...(s.monthEvents || []), r.文];
+    s.msg = r.文;
+    return s;
+  });
 
   /* 城方が遊ぶ側のときは、城攻めの前に門の備えを問う（GDD 9.3）。
      どの門に誰を置くか、兵をどう割るかを決めてから戦が始まる。
@@ -1779,6 +1791,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           <div className="mapctl r" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("factions")}><b>⚑</b>勢力情報</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("generals")}><b>☗</b>武将一覧</div>
+            <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("hime")}><b>◇</b>姫</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("goal")}><b>◈</b>攻略目標</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("manual")}><b>？</b>遊び方</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("chronicle")}><b>▤</b>履歴</div>
@@ -1971,6 +1984,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {modal === "chronicle" && <Chronicle g={g} onClose={() => setModal(null)} />}
         {modal === "factions" && <FactionInfo g={g} onClose={() => setModal(null)} />}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)} />}
+        {modal === "hime" && (
+          <HimeList g={g} onClose={() => setModal(null)}
+            onEnvoy={(hid, fid) => 姫の下知((s) => 使者に立てる(s, hid, fid))}
+            onWed={(hid, fid) => 姫の下知((s) => 婚姻を結ぶ(s, hid, fid))}
+            onMarry={(hid, gid) => 姫の下知((s) => 家臣に嫁がせる(s, hid, gid))} />
+        )}
         {modal === "goal" && <GoalPanel g={g} onClose={() => setModal(null)} />}
         {openCamp && !battle && <CampaignPanel g={g} camp={openCamp} onAct={campaignAct} />}
         {openSiege && !battle && !openCamp && <SiegePanel g={g} sg={openSiege} onChoose={onSiegeChoice} />}

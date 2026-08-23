@@ -5,6 +5,7 @@ import { marchMonths } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
 import { RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap } from "../core/rank.js";
 import { canSee, relOf } from "../core/state.js";
+import { 城の姫 } from "../core/hime.js";
 import { U, clamp, fmt, monthsBetween } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
@@ -125,6 +126,22 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                 </span>
               )}
             </span>
+            {open && (() => {
+              /* 城にある姫（GDD 6.8）。戦場には出ないが、守備隊の統率に映る。 */
+              const 姫 = 城の姫(g, c.id).filter((h) => h.faction === c.faction);
+              if (!姫.length) return null;
+              return (
+                <>
+                  <span className="k">姫</span>
+                  <span className="v mn">
+                    {姫.map((h) => h.name).join("・")}
+                    <span style={{ fontSize: 11, color: U.dim, marginLeft: 6 }}>
+                      （統率{Math.max(...姫.map((h) => h.lead))}・門の守備隊に映る）
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
             <span className="k">城主の格</span>
             <span className="v">
               {open ? <>禄高 {fmt(castleRankNeed(c))}石 以上</> : "？"}
