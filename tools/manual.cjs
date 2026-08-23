@@ -42,6 +42,20 @@ const 絵を組む = (s) => {
     + (s.絵の説 ? `<figcaption>${esc(s.絵の説)}</figcaption>` : '') + '</figure>';
 };
 
+/* 図鑑の並び。左に拡大した絵、右に名と説き。 */
+const 図の道 = (key) => path.join(DIST, 'tebiki', 'zu', `${key}.jpg`);
+const 図を組む = (s) => {
+  if (!(s.図 || []).length) return '';
+  const 行 = s.図.map(([key, 名, 説]) => {
+    const f = 図の道(key);
+    const 絵 = fs.existsSync(f)
+      ? `<img src="data:image/jpeg;base64,${fs.readFileSync(f).toString('base64')}">` : '';
+    return `<div class="zu"><div class="zu-e">${絵}</div>`
+      + `<div class="zu-t"><b>${esc(名)}</b><span>${esc(説)}</span></div></div>`;
+  }).join('');
+  return `<div class="zukan">${行}</div>`;
+};
+
 const 節を組む = (s) => {
   const out = [];
   if (s.見出し) out.push(`<h3>${esc(s.見出し)}</h3>`);
@@ -51,6 +65,7 @@ const 節を組む = (s) => {
     out.push('<table>' + s.表.map(([a, b]) =>
       `<tr><th>${esc(a)}</th><td>${esc(b)}</td></tr>`).join('') + '</table>');
   }
+  out.push(図を組む(s));
   if ((s.箇条 || []).length) {
     out.push('<ul>' + s.箇条.map((t) => `<li>${esc(t)}</li>`).join('') + '</ul>');
   }
@@ -97,6 +112,14 @@ const html = `<!doctype html>
   figure { margin: 2mm 0 4mm; page-break-inside: avoid; }
   figure img { width: 100%; border: .5pt solid #C8C2B4; display: block; }
   figcaption { font-size: 8.5pt; color: #6E6A62; margin-top: 1.2mm; line-height: 1.7; }
+  .zukan { margin: 2mm 0 4mm; }
+  .zu { display: flex; gap: 5mm; align-items: flex-start; padding: 2.5mm 0;
+        border-bottom: .4pt solid #E2DCCE; page-break-inside: avoid; }
+  .zu-e { flex: 0 0 44mm; }
+  .zu-e img { width: 44mm; display: block; border: .5pt solid #C8C2B4; }
+  .zu-t { flex: 1; }
+  .zu-t b { display: block; font-size: 11.5pt; margin-bottom: 1mm; }
+  .zu-t span { font-size: 9.5pt; color: #4A4640; line-height: 1.85; }
 </style></head>
 <body>
   <div class="cover">

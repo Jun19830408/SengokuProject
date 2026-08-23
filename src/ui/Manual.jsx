@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { 説明書, 題名, 副題 } from "../data/manual.js";
 import { 写し } from "../data/shots.js";
+import { 図 } from "../data/zukan.js";
 import { U } from "../core/util.js";
 import { 外を押して閉じる } from "./panels.jsx";
 
@@ -54,6 +55,20 @@ export function Manual({ onClose, 章 = 0 }) {
               )}
               {(s.文 || []).map((t, k) => (
                 <div key={k} style={{ fontSize: 13, lineHeight: 1.95, marginBottom: 6 }}>{t}</div>
+              ))}
+              {/* 図鑑の並び。左に拡大した絵、右に名と説き。 */}
+              {(s.図 || []).map(([key, 名, 説], k) => (
+                <div key={k} style={{ display: "flex", gap: 10, alignItems: "flex-start",
+                  padding: "7px 0", borderBottom: `1px solid ${U.line2}` }}>
+                  <div style={{ flex: "0 0 40%", maxWidth: 190 }}>
+                    {図[key] && <img src={図[key]} alt={名}
+                      style={{ width: "100%", display: "block", border: `1px solid ${U.line}`, borderRadius: 2 }} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="mn" style={{ fontSize: 15, marginBottom: 2 }}>{名}</div>
+                    <div style={{ fontSize: 12, color: U.dim, lineHeight: 1.85 }}>{説}</div>
+                  </div>
+                </div>
               ))}
               {(s.表 || []).length > 0 && (
                 <div style={{ marginTop: 4 }}>
