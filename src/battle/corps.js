@@ -660,6 +660,12 @@ export function 内の門へ退く(b, c) {
 
 export function 退き先(b, c) {
   if (b && b.map) {
+    /* 城の中で崩れたとき。
+
+       城方は外へ逃げる先がない。城の中心から外へ向かって走らせていたので、
+       崩れた隊が曲輪の隅に固まっていた。城方は奥へ――本丸へ逃げるものである。
+       寄せ手だけが、来た道を戻って盤の外へ落ちる。 */
+    if (c.side !== b.attacker) return { x: b.map.cx, y: b.map.cy };
     const ox = c.x - b.map.cx, oy = c.y - b.map.cy, od = Math.hypot(ox, oy) || 1;
     return { x: c.x + (ox / od) * (FIELD.w + FIELD.h), y: c.y + (oy / od) * (FIELD.w + FIELD.h) };
   }

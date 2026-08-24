@@ -1008,6 +1008,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
                   <span style={{ margin: "0 8px" }}>対</span>
                   <span className="dot" style={{ background: ctx.eColor, marginRight: 5 }} />{fmt(eMen)}
                 </div>
+                {/* 委ねたあとでも、途中から手綱を取り戻せる（GDD 8.5）。
+                    委ね直すこともできる。任せきりにするかどうかは、その都度の判断である。 */}
+                <button className="btn" style={{ marginTop: 6 }}
+                  onClick={() => { 委ねRef.current = false; set委ね中(false); setSpeed(1); }}>
+                  手綱を取り戻す
+                </button>
               </div>
             )}
             {(b.notices || []).filter((n) => b.t - n.t < 6).slice(-3).map((n, i) => (

@@ -238,7 +238,31 @@ export function battleAI(b) {
     }
     const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
     const foes = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
-    if (!foes.length) continue;
+
+    /* 追い討ち（GDD 8.7）。
+
+       崩れた敵をそのままにしておくと、盤の上で息を吹き返すまで戦が終わらない。
+       「全隊が崩れているのに、どちらも決着しない」という長い膠着はこれである。
+       槍を合わせていた相手が崩れたら追う。追われた隊は立ち直れず、やがて盤を去る。
+       戦を終わらせるのは、崩れた敵を追い落とすことである。
+
+       ただし、まだ戦える敵が残っているなら、そちらが先である。
+       追い討ちに出るのは、手近に立っている敵がいないときに限る。 */
+    if (!foes.length) {
+      const 崩 = alive.filter((o) => o.side === foeSide && o.routed && !o.潰 && !o.withdraw
+        && (o.seen || !o.ambush));
+      if (崩.length && !c.routed && corpsMen(c) > corpsMax(c) * 0.2) {
+        const 獲 = 崩.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
+        const d = Math.hypot(獲.x - c.x, 獲.y - c.y);
+        c.追い討ち = true;
+        issueOrder(b, c, d < 220 ? { order: "接戦", tx: 獲.x, ty: 獲.y, target: 獲.id }
+          : { order: "前進", tx: 獲.x, ty: 獲.y, target: 獲.id });
+        continue;
+      }
+      c.追い討ち = false;
+      continue;
+    }
+    c.追い討ち = false;
     /* かつては「士気十八・兵五割五分を切り、助けもなければ盤の外へ退く」という
        決まりを置いていた。いまは崩れ（engine の 敗走）が同じ役目を果たす。
        崩れた隊は盤の外へは出ず、敵の来ない所まで退いて息をつき、立ち直れば
@@ -321,7 +345,9 @@ export function battleAI(b) {
            外の門を素通りさせ、寄せ手が本丸に届くまで一矢も射ないことになる。
            守るべきは、まだ破れていない輪のうち、いちばん外の輪である。 */
         let g2 = c.holdGate;
-        const need = !g2 || g2.broken || g2.hp / g2.max < 0.10;
+        /* 一割まで待つと、門が破れる前に下がりきれない。四半分で見切りをつける。
+           「城門が一割を切っても内の門へ行かない」という声はここである。 */
+        const need = !g2 || g2.broken || g2.hp / g2.max < 0.25;
         if (need) {
           // 持ち場があるなら、それより内の門だけを見る（下がるのであって、進み出るのではない）
           const 残り = MAP.gates.filter((x) => !x.broken && (!g2 || x.layer > g2.layer));

@@ -12256,6 +12256,7 @@ function \u5185\u306E\u9580\u3078\u9000\u304F(b, c) {
 }
 function \u9000\u304D\u5148(b, c) {
   if (b && b.map) {
+    if (c.side !== b.attacker) return { x: b.map.cx, y: b.map.cy };
     const ox = c.x - b.map.cx, oy = c.y - b.map.cy, od = Math.hypot(ox, oy) || 1;
     return { x: c.x + ox / od * (FIELD.w + FIELD.h), y: c.y + oy / od * (FIELD.w + FIELD.h) };
   }
@@ -14968,7 +14969,19 @@ function battleAI(b) {
     }
     const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
     const foes = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
-    if (!foes.length) continue;
+    if (!foes.length) {
+      const \u5D29 = alive.filter((o) => o.side === foeSide && o.routed && !o.\u6F70 && !o.withdraw && (o.seen || !o.ambush));
+      if (\u5D29.length && !c.routed && corpsMen(c) > corpsMax(c) * 0.2) {
+        const \u7372 = \u5D29.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
+        const d = Math.hypot(\u7372.x - c.x, \u7372.y - c.y);
+        c.\u8FFD\u3044\u8A0E\u3061 = true;
+        issueOrder(b, c, d < 220 ? { order: "\u63A5\u6226", tx: \u7372.x, ty: \u7372.y, target: \u7372.id } : { order: "\u524D\u9032", tx: \u7372.x, ty: \u7372.y, target: \u7372.id });
+        continue;
+      }
+      c.\u8FFD\u3044\u8A0E\u3061 = false;
+      continue;
+    }
+    c.\u8FFD\u3044\u8A0E\u3061 = false;
     if (!c.formPicked) {
       c.formPicked = true;
       const mine = alive.filter((o) => o.side === mySide).reduce((a, o) => a + corpsMen(o), 0);
@@ -15038,7 +15051,7 @@ function battleAI(b) {
           continue;
         }
         let g2 = c.holdGate;
-        const need = !g2 || g2.broken || g2.hp / g2.max < 0.1;
+        const need = !g2 || g2.broken || g2.hp / g2.max < 0.25;
         if (need) {
           const \u6B8B\u308A = MAP.gates.filter((x) => !x.broken && (!g2 || x.layer > g2.layer));
           if (\u6B8B\u308A.length) {
@@ -17913,7 +17926,19 @@ function BattleScreen({ ctx, land, onEnd }) {
       alignItems: "center",
       justifyContent: "center",
       gap: 14
-    } }, /* @__PURE__ */ React3.createElement("div", { className: "mn", style: { fontSize: 22 } }, "\u8AF8\u5C06\u306B\u59D4\u306D\u3066\u3044\u308B"), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u6226\u5834\u306E\u523B\u3000", Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), "\uFF0F\u3000\u65E5\u6CA1\u307E\u3067 ", Math.max(0, Math.round((b.dusk - b.t) / 60)), " \u5206"), /* @__PURE__ */ React3.createElement("div", { style: { width: 240, height: 6, background: "#EEEBE2", borderRadius: 3, overflow: "hidden" } }, /* @__PURE__ */ React3.createElement("div", { style: { width: `${Math.min(100, b.t / b.dusk * 100)}%`, height: "100%", background: U.ink } })), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor, marginRight: 5 } }), fmt(pMen), /* @__PURE__ */ React3.createElement("span", { style: { margin: "0 8px" } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor, marginRight: 5 } }), fmt(eMen))),
+    } }, /* @__PURE__ */ React3.createElement("div", { className: "mn", style: { fontSize: 22 } }, "\u8AF8\u5C06\u306B\u59D4\u306D\u3066\u3044\u308B"), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u6226\u5834\u306E\u523B\u3000", Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), "\uFF0F\u3000\u65E5\u6CA1\u307E\u3067 ", Math.max(0, Math.round((b.dusk - b.t) / 60)), " \u5206"), /* @__PURE__ */ React3.createElement("div", { style: { width: 240, height: 6, background: "#EEEBE2", borderRadius: 3, overflow: "hidden" } }, /* @__PURE__ */ React3.createElement("div", { style: { width: `${Math.min(100, b.t / b.dusk * 100)}%`, height: "100%", background: U.ink } })), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor, marginRight: 5 } }), fmt(pMen), /* @__PURE__ */ React3.createElement("span", { style: { margin: "0 8px" } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor, marginRight: 5 } }), fmt(eMen)), /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: "btn",
+        style: { marginTop: 6 },
+        onClick: () => {
+          \u59D4\u306DRef.current = false;
+          set\u59D4\u306D\u4E2D(false);
+          setSpeed(1);
+        }
+      },
+      "\u624B\u7DB1\u3092\u53D6\u308A\u623B\u3059"
+    )),
     (b.notices || []).filter((n) => b.t - n.t < 6).slice(-3).map((n, i) => /* @__PURE__ */ React3.createElement(
       "div",
       {
