@@ -12756,6 +12756,7 @@ function routeToCastleGate(m, g, cx, cy) {
     { ...fromUV(m, a, g.off, a.half + t + g.masu / 2), r: 24 },
     { ...fromUV(m, a, g.off, a.half + t + 14), r: 20 }
   ];
+  if (g.broken) tail.push({ ...fromUV(m, a, g.off, a.half - 20), r: 22 });
   if (Math.hypot(cx - open.x, cy - open.y) < 46) return tail;
   const path = navPath(m, cx, cy, open.x, open.y);
   if (!path) return tail;
@@ -15761,6 +15762,7 @@ function stepBattle(b, dt) {
         g.broken = true;
         g.slot = null;
         g.hold = null;
+        MAP.nav = null;
         b.mapDirty = true;
         MAP.nav = null;
         notify(b, `${g.key}\u304C\u7834\u3089\u308C\u305F\u3002`, b.attacker === "P" ? "good" : "bad");

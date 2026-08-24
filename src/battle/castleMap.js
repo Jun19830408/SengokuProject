@@ -543,6 +543,9 @@ export function routeToCastleGate(m, g, cx, cy) {
     { ...fromUV(m, a, g.off, a.half + t + g.masu / 2), r: 24 },
     { ...fromUV(m, a, g.off, a.half + t + 14), r: 20 },
   ];
+  /* 破れた門は通り抜ける先まで導く。門の前で止めていたので、
+     破った門の内へ入れず、その場で押し合っていた。 */
+  if (g.broken) tail.push({ ...fromUV(m, a, g.off, a.half - 20), r: 22 });
   if (Math.hypot(cx - open.x, cy - open.y) < 46) return tail;
   const path = navPath(m, cx, cy, open.x, open.y);
   if (!path) return tail;

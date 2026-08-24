@@ -580,6 +580,10 @@ export function stepBattle(b, dt) {
       }
       if (g.hp <= 0) {
         g.hp = 0; g.broken = true; g.slot = null; g.hold = null;
+        /* 門が破れたら、道の格子を組み直す（GDD 9.3）。
+           格子は戦の初めに一度だけ作っていたので、門が開いてもそこは壁のままで、
+           寄せ手は破った門を通り抜けられず、壁際で押し合っていた。 */
+        MAP.nav = null;
         b.mapDirty = true; MAP.nav = null;        // 通れる場所が変わった
         notify(b, `${g.key}が破られた。`, b.attacker === "P" ? "good" : "bad");
         for (const o of alive) {
