@@ -1069,10 +1069,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         /* 潰走（士気も兵も尽きて戦場を落ちた隊）の将は、逃れる術が乏しい。
            捕らわれる目は大きく上げ、討たれる目はわずかに上げるにとどめる。
            討死ばかりでは、遊んでいて面白くない。 */
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.潰 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0)
-          - gen.valor / 420 + Math.random() * 0.3 - 0.15;
-        if (risk <= 0.66) continue;
-        if (risk > 0.78) {
+        /* 討死と捕縛の境（GDD 12.3）。
+
+           落城のとき、城方の隊はたいてい壊滅している。壊滅の重み（＋〇.三）が
+           そのまま乗るので、城が落ちるたびに四人も五人も討死していた。
+           一度の攻城で名のある将が次々に消えるのでは、家が続かない。
+
+           武将は雑兵ではない。旗本に囲まれ、落ちるか、捕らわれる。
+           討たれるのは、そのうちのごく一部である。
+           壊滅の重みを半ばに落とし、討死の境を上げ、あいだを捕縛にした。 */
+        let risk = lossRate * 0.5 + (c.routed ? 0.14 : 0) + (c.潰 ? 0.08 : 0) + (c.destroyed ? 0.15 : 0)
+          - gen.valor / 380 + Math.random() * 0.3 - 0.15;
+        if (risk <= 0.60) continue;
+        if (risk > 0.86) {
           // 討死。跡目は家督の定めに従う。
           notify(b, `${gen.name}、討死。`, c.side === "P" ? "bad" : "good");
           const heir = s.generals.find((x) => x.faction === gen.faction && x.id !== gen.id && !x.captive);
@@ -1207,13 +1216,13 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         /* 潰走（士気も兵も尽きて戦場を落ちた隊）の将は、逃れる術が乏しい。
            捕らわれる目は大きく上げ、討たれる目はわずかに上げるにとどめる。
            討死ばかりでは、遊んでいて面白くない。 */
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.潰 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0)
+        let risk = lossRate * 0.5 + (c.routed ? 0.14 : 0) + (c.潰 ? 0.08 : 0) + (c.destroyed ? 0.18 : 0)
           + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
         risk += Math.random() * 0.3 - 0.15;
         /* 討死。当主と器量者は、配下に守られ、あるいは自らの手で斬り抜けて
            戦場を離れる（難を逃れる）。大名が野戦で討たれるのは稀な事である。 */
         let fate = null;
-        if (risk > 0.78 && Math.random() < 難を逃れる(gen)) fate = "討死";
+        if (risk > 0.86 && Math.random() < 難を逃れる(gen)) fate = "討死";
         else if (勝家 && risk > 0.58
           && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0) + (c.潰 ? 1.2 : 0))) fate = "捕縛";
         if (fate) notify(b, `${gen.name}、${fate}。`, c.side === "P" ? "bad" : "good");
@@ -1313,13 +1322,13 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         /* 潰走（士気も兵も尽きて戦場を落ちた隊）の将は、逃れる術が乏しい。
            捕らわれる目は大きく上げ、討たれる目はわずかに上げるにとどめる。
            討死ばかりでは、遊んでいて面白くない。 */
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.潰 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0)
+        let risk = lossRate * 0.5 + (c.routed ? 0.14 : 0) + (c.潰 ? 0.08 : 0) + (c.destroyed ? 0.18 : 0)
           + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
         risk += Math.random() * 0.3 - 0.15;
         /* 討死。当主と器量者は、配下に守られ、あるいは自らの手で斬り抜けて
            戦場を離れる（難を逃れる）。大名が野戦で討たれるのは稀な事である。 */
         let fate = null;
-        if (risk > 0.78 && Math.random() < 難を逃れる(gen)) fate = "討死";
+        if (risk > 0.86 && Math.random() < 難を逃れる(gen)) fate = "討死";
         else if (risk > 0.58
           && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0) + (c.潰 ? 1.2 : 0))) fate = "捕縛";
         if (fate) notify(b, `${gen.name}、${fate}。`, c.side === "P" ? "bad" : "good");

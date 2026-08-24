@@ -21168,9 +21168,9 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const gen = s2.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.\u6F70 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0) - gen.valor / 420 + Math.random() * 0.3 - 0.15;
-        if (risk <= 0.66) continue;
-        if (risk > 0.78) {
+        let risk = lossRate * 0.5 + (c.routed ? 0.14 : 0) + (c.\u6F70 ? 0.08 : 0) + (c.destroyed ? 0.15 : 0) - gen.valor / 380 + Math.random() * 0.3 - 0.15;
+        if (risk <= 0.6) continue;
+        if (risk > 0.86) {
           notify(b, `${gen.name}\u3001\u8A0E\u6B7B\u3002`, c.side === "P" ? "bad" : "good");
           const heir = s2.generals.find((x) => x.faction === gen.faction && x.id !== gen.id && !x.captive);
           if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
@@ -21298,10 +21298,10 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const gen = s2.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.\u6F70 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0) + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
+        let risk = lossRate * 0.5 + (c.routed ? 0.14 : 0) + (c.\u6F70 ? 0.08 : 0) + (c.destroyed ? 0.18 : 0) + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
         risk += Math.random() * 0.3 - 0.15;
         let fate = null;
-        if (risk > 0.78 && Math.random() < \u96E3\u3092\u9003\u308C\u308B(gen)) fate = "\u8A0E\u6B7B";
+        if (risk > 0.86 && Math.random() < \u96E3\u3092\u9003\u308C\u308B(gen)) fate = "\u8A0E\u6B7B";
         else if (\u52DD\u5BB6 && risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0) + (c.\u6F70 ? 1.2 : 0))) fate = "\u6355\u7E1B";
         if (fate) notify(b, `${gen.name}\u3001${fate}\u3002`, c.side === "P" ? "bad" : "good");
         else if (risk > 0.52) fate = "\u91CD\u50B7";
@@ -21409,10 +21409,10 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const gen = s2.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
-        let risk = lossRate * 0.55 + (c.routed ? 0.2 : 0) + (c.\u6F70 ? 0.1 : 0) + (c.destroyed ? 0.3 : 0) + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
+        let risk = lossRate * 0.5 + (c.routed ? 0.14 : 0) + (c.\u6F70 ? 0.08 : 0) + (c.destroyed ? 0.18 : 0) + ((c.frontTime || 0) > 40 ? 0.12 : 0) - gen.valor / 420 - (b.orderly ? 0.12 : 0);
         risk += Math.random() * 0.3 - 0.15;
         let fate = null;
-        if (risk > 0.78 && Math.random() < \u96E3\u3092\u9003\u308C\u308B(gen)) fate = "\u8A0E\u6B7B";
+        if (risk > 0.86 && Math.random() < \u96E3\u3092\u9003\u308C\u308B(gen)) fate = "\u8A0E\u6B7B";
         else if (risk > 0.58 && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0) + (c.\u6F70 ? 1.2 : 0))) fate = "\u6355\u7E1B";
         if (fate) notify(b, `${gen.name}\u3001${fate}\u3002`, c.side === "P" ? "bad" : "good");
         else if (risk > 0.52) fate = "\u91CD\u50B7";
