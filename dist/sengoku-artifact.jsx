@@ -11891,6 +11891,36 @@ function \u4F0F\u305B\u5834\u3092\u63A2\u3059(b, c, \u9650\u308A = 900) {
   }
   return best;
 }
+function \u5175\u3067\u512A\u308B(b, side) {
+  const \u91CF = (s2) => b.corps.filter((o) => o.side === s2 && !o.dead && !o.destroyed && !o.routed).reduce((a, o) => a + corpsMen(o) * (0.7 + o.morale / 330), 0);
+  return \u91CF(side) > \u91CF(side === "P" ? "E" : "P") * 1.2;
+}
+var \u5B88\u52E2\u306E\u968A = (b, c) => c.side !== b.attacker && !\u5175\u3067\u512A\u308B(b, c.side);
+function \u4E18\u304C\u7A7A\u304F(b, i, c) {
+  const \u4E3B = (b.\u4E18\u306E\u4E3B || {})[i];
+  if (\u4E3B == null || \u4E3B === c.id) return true;
+  const o = b.corps.find((x) => x.id === \u4E3B);
+  if (!o || o.dead || o.destroyed || o.routed || o.withdraw) return true;
+  return !!(o.detach && o.task !== "\u5F13\u9244\u7832\u9AD8\u5730\u5360\u62E0");
+}
+function \u7A7A\u304D\u4E18\u3092\u63A2\u3059(b, c) {
+  const \u7ACB\u3064\u756A = HILLS.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
+  if (\u7ACB\u3064\u756A >= 0 && \u4E18\u304C\u7A7A\u304F(b, \u7ACB\u3064\u756A, c)) return \u7ACB\u3064\u756A;
+  let \u756A = -1, \u8FD1\u3055 = Infinity;
+  for (let i = 0; i < HILLS.length; i++) {
+    if (!\u4E18\u304C\u7A7A\u304F(b, i, c)) continue;
+    const d = (c.x - HILLS[i].x) ** 2 + (c.y - HILLS[i].y) ** 2;
+    if (d < \u8FD1\u3055) {
+      \u8FD1\u3055 = d;
+      \u756A = i;
+    }
+  }
+  return \u756A;
+}
+function \u4E18\u3092\u62BC\u3055\u3048\u308B(b, i, c) {
+  if (!b.\u4E18\u306E\u4E3B) b.\u4E18\u306E\u4E3B = {};
+  b.\u4E18\u306E\u4E3B[i] = c.id;
+}
 function \u5206\u9063\u306E\u9803\u5408\u3044(b, c, key) {
   if (b.map || !b.\u9663) return false;
   const \u5473\u65B9\u9663 = b.\u9663[c.side], \u6575\u9663 = b.\u9663[c.side === "P" ? "E" : "P"];
@@ -11909,11 +11939,12 @@ function \u5206\u9063\u306E\u9803\u5408\u3044(b, c, key) {
   }
   if (key === "\u5F13\u9244\u7832\u9AD8\u5730\u5360\u62E0") {
     if (!HILLS.length) return false;
-    const \u4E18 = nearestOf(HILLS, c.x, c.y);
-    if (!\u4E18) return false;
+    if (\u5B88\u52E2\u306E\u968A(b, c)) return false;
+    if (!\u5175\u3067\u512A\u308B(b, c.side)) return false;
+    const \u756A = \u7A7A\u304D\u4E18\u3092\u63A2\u3059(b, c);
+    if (\u756A < 0) return false;
+    const \u4E18 = HILLS[\u756A];
     const \u4E18\u307E\u3067 = Math.hypot(\u4E18.x - c.x, \u4E18.y - c.y);
-    const \u53D6\u3089\u308C\u305F = b.corps.some((o) => !o.dead && !o.destroyed && o !== c && Math.hypot(o.x - \u4E18.x, o.y - \u4E18.y) < \u4E18.r * 0.6);
-    if (\u53D6\u3089\u308C\u305F) return false;
     if (!\u653B\u3081\u624B) {
       return \u4E18\u307E\u3067 < \u9593 * 0.5 && \u4E18\u307E\u3067 < 700 && Math.hypot(\u4E18.x - \u5473\u65B9\u9663.x, \u4E18.y - \u5473\u65B9\u9663.y) <= Math.hypot(\u4E18.x - \u6575\u9663.x, \u4E18.y - \u6575\u9663.y);
     }
@@ -12095,11 +12126,16 @@ function detachAI(b, c, alive) {
     return true;
   }
   if (c.task === "\u5F13\u9244\u7832\u9AD8\u5730\u5360\u62E0") {
-    const h = nearestOf(HILLS, c.x, c.y);
-    if (!h) {
+    let \u756A = c.\u4E18\u756A;
+    if (\u756A == null || \u756A < 0 || !\u4E18\u304C\u7A7A\u304F(b, \u756A, c)) \u756A = \u7A7A\u304D\u4E18\u3092\u63A2\u3059(b, c);
+    if (\u756A < 0) {
+      c.\u4E18\u756A = null;
       c.task = "\u5E30\u9663";
       return true;
     }
+    c.\u4E18\u756A = \u756A;
+    \u4E18\u3092\u62BC\u3055\u3048\u308B(b, \u756A, c);
+    const h = HILLS[\u756A];
     if (Math.hypot(h.x - c.x, h.y - c.y) > 40) {
       c.tx = h.x;
       c.ty = h.y;
@@ -14830,6 +14866,68 @@ function \u6E21\u308A\u5834(x) {
   const \u5019\u88DC = [{ x: \u6A4B, \u91CD\u307F: 0.55, \u540D: "\u6A4B" }, { x: \u702C, \u91CD\u307F: 1, \u540D: "\u6D45\u702C" }].map((p) => ({ ...p, \u9060\u3055: Math.abs(p.x - x) * p.\u91CD\u307F }));
   return \u5019\u88DC.sort((a, z) => a.\u9060\u3055 - z.\u9060\u3055)[0];
 }
+function \u968A\u306E\u5F35\u308A(c) {
+  let r = 0;
+  for (const q of c.squads || []) {
+    if (q.men <= 0) continue;
+    const d = Math.abs(q.y - c.y);
+    if (d > r) r = d;
+  }
+  return clamp(r, 24, 70);
+}
+function \u6211\u304C\u5CB8(b, c) {
+  const \u81EA\u5CB8 = \u5CB8(c.x, c.y);
+  if (\u81EA\u5CB8 !== 0) return \u81EA\u5CB8;
+  const \u9663 = b.\u9663 && b.\u9663[c.side];
+  const \u9663\u5CB8 = \u9663 ? \u5CB8(\u9663.x, \u9663.y) : 0;
+  if (\u9663\u5CB8 !== 0) return \u9663\u5CB8;
+  const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(c.x);
+  return c.y < \u4E2D ? -1 : 1;
+}
+function \u6C34\u306B\u304B\u304B\u308B(x, y, \u4F59) {
+  const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(x);
+  const \u534A = (RIVER.bot - RIVER.top) / 2;
+  return Math.abs(y - \u4E2D) < \u534A + \u4F59;
+}
+function \u5CB8\u306E\u9AD8\u3055(x, \u5CB8\u5074, \u4F59) {
+  const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(x);
+  const \u534A = (RIVER.bot - RIVER.top) / 2;
+  return \u4E2D + \u5CB8\u5074 * (\u534A + \u4F59);
+}
+function \u5CB8\u6CBF\u3044\u306B\u76F4\u3059(c, sx, sy, \u5CB8\u5074, \u4F59) {
+  let y = sy;
+  for (let k = 0; k <= 8; k++) {
+    const x = c.x + (sx - c.x) * k / 8;
+    const lim = \u5CB8\u306E\u9AD8\u3055(x, \u5CB8\u5074, \u4F59);
+    y = \u5CB8\u5074 < 0 ? Math.min(y, lim) : Math.max(y, lim);
+  }
+  return y;
+}
+function \u5DDD\u306E\u639F(b, c, sx, sy, tgt) {
+  if (MAP || !hasRiver() || c.routed || c.withdraw) return { sx, sy, \u5C04\u308B: false };
+  const \u4F59 = \u968A\u306E\u5F35\u308A(c) + 24;
+  const \u6211\u5CB8 = \u6211\u304C\u5CB8(b, c);
+  const \u7684\u5CB8 = tgt ? \u5CB8(tgt.x, tgt.y) : \u5CB8(sx, sy);
+  if (c.side !== b.attacker) {
+    if (tgt && \u7684\u5CB8 === 0) {
+      return { sx: tgt.x, sy: \u5CB8\u6CBF\u3044\u306B\u76F4\u3059(c, tgt.x, \u5CB8\u306E\u9AD8\u3055(tgt.x, \u6211\u5CB8, \u4F59), \u6211\u5CB8, \u4F59), \u5C04\u308B: true };
+    }
+    if (\u7684\u5CB8 !== 0 && \u7684\u5CB8 !== \u6211\u5CB8) {
+      const \u5834 = \u6E21\u308A\u5834(c.x);
+      return { sx: \u5834.x, sy: \u5CB8\u6CBF\u3044\u306B\u76F4\u3059(c, \u5834.x, \u5CB8\u306E\u9AD8\u3055(\u5834.x, \u6211\u5CB8, \u4F59 + 120), \u6211\u5CB8, \u4F59), \u5C04\u308B: false };
+    }
+    return { sx, sy: \u5CB8\u6CBF\u3044\u306B\u76F4\u3059(c, sx, \u6C34\u306B\u304B\u304B\u308B(sx, sy, \u4F59) ? \u5CB8\u306E\u9AD8\u3055(sx, \u6211\u5CB8, \u4F59) : sy, \u6211\u5CB8, \u4F59), \u5C04\u308B: false };
+  }
+  if (\u6C34\u306B\u304B\u304B\u308B(sx, sy, \u4F59)) {
+    const \u5CB8\u5074 = \u7684\u5CB8 !== 0 ? \u7684\u5CB8 : \u6211\u5CB8;
+    return { sx, sy: \u5CB8\u306E\u9AD8\u3055(sx, \u5CB8\u5074, \u4F59), \u5C04\u308B: false };
+  }
+  return { sx, sy, \u5C04\u308B: false };
+}
+function \u5CB8\u304B\u3089\u5C04\u308B(c, tgt, sx, sy) {
+  const \u5C04\u624B = c.squads.some((q) => q.men > 0 && ARM_STATS[q.type].range > 0);
+  return \u5C04\u624B ? { order: "\u5C04\u6483", tx: sx, ty: sy, target: tgt.id } : { order: "\u5B88\u5099", tx: sx, ty: sy };
+}
 function \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, sx, sy) {
   const \u76F4 = Math.hypot(sx - c.x, sy - c.y);
   if (\u76F4 < 150 && !\u6DF5\u3092\u8DE8\u3050(c.x, c.y, sx, sy)) return null;
@@ -14878,7 +14976,15 @@ function \u6A4B\u5F85\u3061\u3092\u898B\u308B(b, c, sx, sy) {
 function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
-  for (const c of alive) if (c.detach && !c.routed) detachAI(b, c, alive);
+  for (const c of alive) {
+    if (!c.detach || c.routed) continue;
+    detachAI(b, c, alive);
+    if (MAP || !hasRiver() || c.withdraw || c.ambush) continue;
+    if (c.task === "\u6A4B\u6E21\u6CB3\u70B9\u9632\u885B" || c.order === "\u5F85\u6A5F" || c.order === "\u5B88\u5099") continue;
+    const \u639F = \u5DDD\u306E\u639F(b, c, c.tx, c.ty, null);
+    c.tx = \u639F.sx;
+    c.ty = \u639F.sy;
+  }
   if (!MAP && b.t > 2 && b.t < 45) {
     if (!b.\u4F0F\u5175\u56F3) b.\u4F0F\u5175\u56F3 = {};
     for (const side of ["P", "E"]) {
@@ -14976,7 +15082,12 @@ function battleAI(b) {
         const \u7372 = \u5D29.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
         const d = Math.hypot(\u7372.x - c.x, \u7372.y - c.y);
         c.\u8FFD\u3044\u8A0E\u3061 = true;
-        issueOrder(b, c, d < 220 ? { order: "\u63A5\u6226", tx: \u7372.x, ty: \u7372.y, target: \u7372.id } : { order: "\u524D\u9032", tx: \u7372.x, ty: \u7372.y, target: \u7372.id });
+        const \u639F2 = \u5DDD\u306E\u639F(b, c, \u7372.x, \u7372.y, \u7372);
+        if (\u639F2.\u5C04\u308B) {
+          issueOrder(b, c, \u5CB8\u304B\u3089\u5C04\u308B(c, \u7372, \u639F2.sx, \u639F2.sy));
+          continue;
+        }
+        issueOrder(b, c, d < 220 ? { order: "\u63A5\u6226", tx: \u639F2.sx, ty: \u639F2.sy, target: \u7372.id } : { order: "\u524D\u9032", tx: \u639F2.sx, ty: \u639F2.sy, target: \u7372.id });
         continue;
       }
       c.\u8FFD\u3044\u8A0E\u3061 = false;
@@ -15178,43 +15289,16 @@ function battleAI(b) {
       }
     }
     if (!MAP && HILLS.length && !c.squads.some((q) => q.engaged)) {
-      const \u5C04 = c.squads.filter((q) => ARM_STATS[q.type].range > 0).reduce((a, q) => a + q.men, 0);
-      const \u5473\u65B9 = alive.filter((o) => o.side === mySide && !o.routed).reduce((a, o) => a + corpsMen(o) * (0.7 + o.morale / 330), 0);
-      const \u6575\u52E2 = alive.filter((o) => o.side === foeSide && !o.routed).reduce((a, o) => a + corpsMen(o) * (0.7 + o.morale / 330), 0);
-      const \u62BC\u305B\u308B = \u5473\u65B9 > \u6575\u52E2 * 1.2;
-      const \u5B88\u52E2 = c.side !== b.attacker && !\u62BC\u305B\u308B;
-      const \u6B32\u3057\u3044 = \u5B88\u52E2 || \u5C04 / Math.max(1, corpsMen(c)) > 0.55;
+      const \u5B88\u52E2 = \u5B88\u52E2\u306E\u968A(b, c);
       const \u6575\u307E\u3067 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
-      if (!b.\u4E18\u306E\u4E3B) b.\u4E18\u306E\u4E3B = {};
-      const \u7A7A\u304D\u4E18 = (i) => {
-        const \u4E3B = b.\u4E18\u306E\u4E3B[i];
-        if (\u4E3B == null || \u4E3B === c.id) return true;
-        const o = b.corps.find((x) => x.id === \u4E3B);
-        return !o || o.dead || o.destroyed || o.routed || o.withdraw;
-      };
-      const \u7ACB\u3064\u756A = HILLS.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
-      let \u756A = -1;
-      if (\u6B32\u3057\u3044) {
-        if (\u7ACB\u3064\u756A >= 0 && \u7A7A\u304D\u4E18(\u7ACB\u3064\u756A)) \u756A = \u7ACB\u3064\u756A;
-        else {
-          let \u8FD1\u3055 = Infinity;
-          for (let i = 0; i < HILLS.length; i++) {
-            if (!\u7A7A\u304D\u4E18(i)) continue;
-            const d = (c.x - HILLS[i].x) ** 2 + (c.y - HILLS[i].y) ** 2;
-            if (d < \u8FD1\u3055) {
-              \u8FD1\u3055 = d;
-              \u756A = i;
-            }
-          }
-        }
-      }
+      const \u756A = \u5B88\u52E2 ? \u7A7A\u304D\u4E18\u3092\u63A2\u3059(b, c) : -1;
       const \u4E18 = \u756A >= 0 ? HILLS[\u756A] : null;
       if (\u4E18 && \u6575\u307E\u3067 > 260) {
         const \u9060\u3055 = Math.hypot(\u4E18.x - c.x, \u4E18.y - c.y);
         const \u9802 = clamp(\u4E18.r * 0.45, 60, 120);
-        const \u9593 = (\u5B88\u52E2 ? 540 : 320) + \u4E18.r * 0.8;
+        const \u9593 = 540 + \u4E18.r * 0.8;
         if (\u9060\u3055 > \u9802 && \u9060\u3055 < \u9593 && \u5CB8(c.x, c.y) === \u5CB8(\u4E18.x, \u4E18.y)) {
-          b.\u4E18\u306E\u4E3B[\u756A] = c.id;
+          \u4E18\u3092\u62BC\u3055\u3048\u308B(b, \u756A, c);
           const \u9053 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, \u4E18.x, \u4E18.y);
           if (\u9053 === "\u7D9A\u884C") continue;
           if (\u9053) {
@@ -15225,8 +15309,8 @@ function battleAI(b) {
           issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u4E18.x, ty: \u4E18.y });
           continue;
         }
-        if (\u5B88\u52E2 && \u9060\u3055 <= \u9802) {
-          b.\u4E18\u306E\u4E3B[\u756A] = c.id;
+        if (\u9060\u3055 <= \u9802) {
+          \u4E18\u3092\u62BC\u3055\u3048\u308B(b, \u756A, c);
           issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
           continue;
         }
@@ -15235,19 +15319,13 @@ function battleAI(b) {
     const dd = Math.hypot(c.x - tgt.x, c.y - tgt.y) || 1;
     let sx = dd <= 42 ? c.x : tgt.x + (c.x - tgt.x) / dd * 38;
     let sy = dd <= 42 ? c.y : tgt.y + (c.y - tgt.y) / dd * 38;
-    const \u81EA\u5CB8 = \u5CB8(c.x, c.y), \u7684\u5CB8 = \u5CB8(tgt.x, tgt.y);
-    const \u6E21\u308B\u8981 = !MAP && hasRiver() && \u7684\u5CB8 !== 0 && \u81EA\u5CB8 !== \u7684\u5CB8;
-    if (!MAP && hasRiver() && !c.routed && !c.withdraw && \u6E21\u308B\u8981 && c.side !== b.attacker && \u81EA\u5CB8 !== 0) {
-      const \u5834 = \u6E21\u308A\u5834(c.x);
-      const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(\u5834.x);
-      const \u534A = (RIVER.bot - RIVER.top) / 2;
-      sx = \u5834.x;
-      sy = \u4E2D + \u81EA\u5CB8 * (\u534A + 168);
-    } else if (\u5DDD\u306E\u4E2D(sx, sy) && !\u6E21\u308B\u8981) {
-      const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(sx);
-      const \u534A = (RIVER.bot - RIVER.top) / 2;
-      const \u5CB8\u3078 = \u81EA\u5CB8 !== 0 ? \u81EA\u5CB8 : c.y < \u4E2D ? -1 : 1;
-      sy = \u4E2D + \u5CB8\u3078 * (\u534A + 26);
+    const \u6E21\u308B\u8981 = !MAP && hasRiver() && \u5CB8(tgt.x, tgt.y) !== 0 && \u5CB8(c.x, c.y) !== \u5CB8(tgt.x, tgt.y);
+    const \u639F = \u5DDD\u306E\u639F(b, c, sx, sy, tgt);
+    sx = \u639F.sx;
+    sy = \u639F.sy;
+    if (\u639F.\u5C04\u308B) {
+      issueOrder(b, c, \u5CB8\u304B\u3089\u5C04\u308B(c, tgt, sx, sy));
+      continue;
     }
     if (\u6E21\u308B\u8981 && c.side === b.attacker) \u6A4B\u5F85\u3061\u3092\u898B\u308B(b, c, sx, sy);
     if (!MAP && !c.routed && !c.withdraw) {

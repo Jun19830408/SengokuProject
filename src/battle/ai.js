@@ -1,5 +1,5 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
-import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い } from "./corps.js";
+import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す } from "./corps.js";
 import { ARM_STATS, HILLS, RIVER, hasRiver, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { clamp } from "../core/util.js";
@@ -38,6 +38,125 @@ export function 渡り場(x) {
   const 候補 = [{ x: 橋, 重み: 0.55, 名: "橋" }, { x: 瀬, 重み: 1.0, 名: "浅瀬" }]
     .map((p) => ({ ...p, 遠さ: Math.abs(p.x - x) * p.重み }));
   return 候補.sort((a, z) => a.遠さ - z.遠さ)[0];
+}
+
+/* ------------------------------------------------ 川の掟（GDD 8.1）
+
+   川で槍を合わせるのは、双方にとって愚である。足は0.1、戦う力は半分、
+   隊列は二十四も削れる。それでも盤の上では、二十四戦の交戦のうち一割以上が
+   水の上で起きていた。内訳を採ると、こうであった。
+
+     寄せ手が渡り切らぬうちに当たった          三割七分
+     受け手が陸で当たったあと、水へ歩き込んだ  二割二分
+     回り込む騎馬が淵を突っ切った              一割七分
+
+   もとは、川を避ける道理を采配のあちこちに置いていた。だから必ず漏れる。
+   実際、追い討ち（崩れた敵を追う段）だけがこの道理を素通りしていて、
+   崩れた敵を追って川へ入っていた。
+
+   そこで、行き先を決めたら最後にここを一度だけ通すことにした。掟は四つ。
+
+     一、受け手は川を渡らない。渡り場のこちら岸で待ち、敵が水から上がって
+         くるところを叩く。半渡を撃つ、という。
+     二、寄せ手は渡り場を通って渡り切る。瀬の上では止まらない。
+     三、どちらであれ、行き先が水にかかるなら岸へ置き直す。岸沿いに動くときは、
+         蛇行のいちばん寄っている所に合わせる。真っすぐ歩けば川を横切るからである。
+     四、狙う敵が水の中にいるなら、追って水へは入らない。岸に構えて射る。
+         相手が足を取られているのに、こちらから同じ地へ降りる理由がない。
+
+   縛るのは采配だけである。プレイヤーが手ずから「川を渡れ」と命じたなら渡らせる。
+   指図とは、指図した通りに動くことをもって指図である。 */
+
+/* 隊の張り出し。中心だけを見ていると、翼が水に浸かったまま「岸にいる」と判ずる。
+   千五百の横陣は岸から二十六歩では収まらない。
+
+   ただし測るのは川に垂直な向き（南北）の厚みだけである。川は東西に流れるので、
+   水に浸かるか否かを決めるのは厚みであって、幅ではない。幅で余裕を取ると、
+   横陣は幅こそ広く薄いので、岸から百七十歩も後ろに下がることになる。それでは
+   渡り場を射程に収められない。弓の届くのは百九十歩、鉄砲は百五十歩である。
+   下がって撃てぬのでは、半渡を撃つという構えが成り立たない。 */
+function 隊の張り(c) {
+  let r = 0;
+  for (const q of c.squads || []) {
+    if (q.men <= 0) continue;
+    const d = Math.abs(q.y - c.y);
+    if (d > r) r = d;
+  }
+  return clamp(r, 24, 70);
+}
+
+/* 我が岸。すでに水に入っていて岸を見失っているなら、自陣の側を我が岸とする。
+   敵の位置から決めては、敵が渡り切った途端に我が岸が入れ替わり、
+   受け手のほうが川向こうへ追い出される。 */
+function 我が岸(b, c) {
+  const 自岸 = 岸(c.x, c.y);
+  if (自岸 !== 0) return 自岸;
+  const 陣 = b.陣 && b.陣[c.side];
+  const 陣岸 = 陣 ? 岸(陣.x, 陣.y) : 0;
+  if (陣岸 !== 0) return 陣岸;
+  const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(c.x);
+  return c.y < 中 ? -1 : 1;
+}
+
+// その点は川に寄りすぎているか（隊の張り出しぶんを見込む）
+function 水にかかる(x, y, 余) {
+  const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(x);
+  const 半 = (RIVER.bot - RIVER.top) / 2;
+  return Math.abs(y - 中) < 半 + 余;
+}
+
+// その岸の、水にかからぬ高さ
+function 岸の高さ(x, 岸側, 余) {
+  const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(x);
+  const 半 = (RIVER.bot - RIVER.top) / 2;
+  return 中 + 岸側 * (半 + 余);
+}
+
+/* 岸沿いに動くとき、道中いちばん川が寄っている所に高さを合わせる。
+   噛み合った隊には道を引かないので（寄せ道を引く）、行き先までは真っすぐ歩く。
+   岸沿いのつもりでも、川が蛇行していればそこで水を横切ることになる。 */
+function 岸沿いに直す(c, sx, sy, 岸側, 余) {
+  let y = sy;
+  for (let k = 0; k <= 8; k++) {
+    const x = c.x + (sx - c.x) * k / 8;
+    const lim = 岸の高さ(x, 岸側, 余);
+    y = 岸側 < 0 ? Math.min(y, lim) : Math.max(y, lim);
+  }
+  return y;
+}
+
+/* 行き先に川の掟をかける。{ sx, sy, 射る } を返す。 */
+function 川の掟(b, c, sx, sy, tgt) {
+  if (MAP || !hasRiver() || c.routed || c.withdraw) return { sx, sy, 射る: false };
+  const 余 = 隊の張り(c) + 24;
+  const 我岸 = 我が岸(b, c);
+  const 的岸 = tgt ? 岸(tgt.x, tgt.y) : 岸(sx, sy);
+  if (c.side !== b.attacker) {
+    // 四、狙う敵が水の中にいるなら、岸に構えて射る
+    if (tgt && 的岸 === 0) {
+      return { sx: tgt.x, sy: 岸沿いに直す(c, tgt.x, 岸の高さ(tgt.x, 我岸, 余), 我岸, 余), 射る: true };
+    }
+    // 一、敵が向こう岸なら、渡り場のこちら岸で待ち構える
+    if (的岸 !== 0 && 的岸 !== 我岸) {
+      const 場 = 渡り場(c.x);
+      return { sx: 場.x, sy: 岸沿いに直す(c, 場.x, 岸の高さ(場.x, 我岸, 余 + 120), 我岸, 余), 射る: false };
+    }
+    // 三、同じ岸。行き先が水にかかるなら岸へ引き上げ、道中の蛇行にも合わせる
+    return { sx, sy: 岸沿いに直す(c, sx, 水にかかる(sx, sy, 余) ? 岸の高さ(sx, 我岸, 余) : sy, 我岸, 余), 射る: false };
+  }
+  // 二、寄せ手は渡り切る。瀬の上では止まらない。
+  if (水にかかる(sx, sy, 余)) {
+    const 岸側 = 的岸 !== 0 ? 的岸 : 我岸;
+    return { sx, sy: 岸の高さ(sx, 岸側, 余), 射る: false };
+  }
+  return { sx, sy, 射る: false };
+}
+
+// 岸から射る（遠隔の組がなければ、その場で構える）
+function 岸から射る(c, tgt, sx, sy) {
+  const 射手 = c.squads.some((q) => q.men > 0 && ARM_STATS[q.type].range > 0);
+  return 射手 ? { order: "射撃", tx: sx, ty: sy, target: tgt.id }
+    : { order: "守備", tx: sx, ty: sy };
 }
 
 /* 隘路（橋・浅瀬・木立の縁）で隊を縦陣に組み替える仕掛けは取り止めた。
@@ -133,8 +252,18 @@ function 橋待ちを見る(b, c, sx, sy) {
 export function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
-  // 分遣隊は所属を問わず割り当てられた任務を自律遂行する（GDD 8.5）
-  for (const c of alive) if (c.detach && !c.routed) detachAI(b, c, alive);
+  /* 分遣隊は所属を問わず割り当てられた任務を自律遂行する（GDD 8.5）。
+     割いた隊にも川の掟をかける。本隊にだけ掛けて分遣に掛けぬ道理はない。
+     回り込む騎馬は道を引かずに真っすぐ歩くので、川があれば淵を突っ切っていた。
+     ただし渡河点の守りだけは除く。渡り場の袂に立つのがその役目である。 */
+  for (const c of alive) {
+    if (!c.detach || c.routed) continue;
+    detachAI(b, c, alive);
+    if (MAP || !hasRiver() || c.withdraw || c.ambush) continue;
+    if (c.task === "橋渡河点防衛" || c.order === "待機" || c.order === "守備") continue;
+    const 掟 = 川の掟(b, c, c.tx, c.ty, null);
+    c.tx = 掟.sx; c.ty = 掟.sy;
+  }
   /* 伏兵（GDD 8.7）。
 
      森に兵を伏せ、寄せて来る敵の脇腹へ現れる。知略七十八以上の将が軍にいて
@@ -255,8 +384,12 @@ export function battleAI(b) {
         const 獲 = 崩.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
         const d = Math.hypot(獲.x - c.x, 獲.y - c.y);
         c.追い討ち = true;
-        issueOrder(b, c, d < 220 ? { order: "接戦", tx: 獲.x, ty: 獲.y, target: 獲.id }
-          : { order: "前進", tx: 獲.x, ty: 獲.y, target: 獲.id });
+        /* 追い討ちにも川の掟をかける。ここだけが掟を素通りしていて、
+           崩れた敵が水へ逃げ込むと、追う側まで淵へ踏み込んでいた。 */
+        const 掟 = 川の掟(b, c, 獲.x, 獲.y, 獲);
+        if (掟.射る) { issueOrder(b, c, 岸から射る(c, 獲, 掟.sx, 掟.sy)); continue; }
+        issueOrder(b, c, d < 220 ? { order: "接戦", tx: 掟.sx, ty: 掟.sy, target: 獲.id }
+          : { order: "前進", tx: 掟.sx, ty: 掟.sy, target: 獲.id });
         continue;
       }
       c.追い討ち = false;
@@ -496,76 +629,40 @@ export function battleAI(b) {
     /* 高みを取る（GDD 8.6）。
 
        丘は足を鈍らせるが、登りきれば見晴らしが利き（見通し三百六十）、
-       戦う力も一割五分増す。受け手は、近くに丘があるなら先に登って備える。
-       寄せ手も、射手を多く抱える隊は高みを取りたがる。
+       戦う力も一割五分増す。
+
+       丘へは、本隊で登るか、遠隔兵を割いて登らせるか、いずれかである
+       （corps.js の「丘ひとつに一隊」）。ここは本隊で登るほうであって、
+       登るのは守勢の隊――受け手であって、しかも兵で優らぬ側――だけである。
+
+       高みは弱者の頼りである。数で押せる側が坂の上で待てば、相手に整える暇を
+       与え、こちらは足の鈍る地に留まるだけで、せっかくの数が生きない。押して
+       出る側は本隊を野に置いて敵と当たり、遠隔兵だけを丘へ割く。優劣は隊ごと
+       ではなく軍全体の兵力で測る。丘取りは軍としての構えである。
 
        川向こうの丘は取りに行かない。丘ひとつのために渡河しては元も子もない。
        すでに敵と間近であれば登らない。背を見せて登る隙はない。
 
-       兵で優る受け手は丘を取らない。高みは弱者の頼りである。数で押せる側が
-       坂の上で待てば、相手に整える暇を与え、こちらは足の鈍る地に留まるだけで、
-       せっかくの数が生きない。押して出て、野で決するほうがよい。
-       優劣は隊ごとではなく、軍全体の兵力で測る。丘取りは軍としての構えである。 */
+       丘ひとつに一隊である。いま足を掛けている丘が空いていればそこ、埋まって
+       いれば次に近い空き丘、空き丘が無ければ丘は諦めて野で構える。麓に足を
+       掛けただけで「自分は丘にいる」と判じさせないために、目指すのは頂である。
+       斜面の裾は高みではない。見晴らしも利かず、寄せ手と同じ高さで槍を合わせる
+       ことになる。盤の上でも、丘の手前でぴたりと止まって動かぬ隊として見えていた。
+
+       縛るのは采配――委任した隊と敵方――だけである。プレイヤーが手ずから
+       登らせるぶんには、何隊重ねようと指図は指図として通す（この段は
+       委任した隊しか通らない）。 */
     if (!MAP && HILLS.length && !c.squads.some((q) => q.engaged)) {
-      const 射 = c.squads.filter((q) => ARM_STATS[q.type].range > 0).reduce((a, q) => a + q.men, 0);
-      const 味方 = alive.filter((o) => o.side === mySide && !o.routed)
-        .reduce((a, o) => a + corpsMen(o) * (0.7 + o.morale / 330), 0);
-      const 敵勢 = alive.filter((o) => o.side === foeSide && !o.routed)
-        .reduce((a, o) => a + corpsMen(o) * (0.7 + o.morale / 330), 0);
-      const 押せる = 味方 > 敵勢 * 1.2;
-      const 守勢 = c.side !== b.attacker && !押せる;
-      const 欲しい = 守勢 || 射 / Math.max(1, corpsMen(c)) > 0.55;
+      const 守勢 = 守勢の隊(b, c);
       const 敵まで = Math.hypot(tgt.x - c.x, tgt.y - c.y);
-      /* どの丘を目指すか。
-
-         いま足を掛けている丘があるなら、その丘の頂を目指す。無ければ手近な丘。
-         これを分けないと、麓に立った隊が「自分は丘にいる」と判じて、そこで
-         守りに就いてしまう。斜面の裾は高みではない。見晴らしも利かず、
-         寄せ手と同じ高さで槍を合わせることになる。盤の上でも、丘の手前で
-         ぴたりと止まって動かぬ隊として見えていた。
-
-         丘ひとつに一隊（GDD 8.6）。
-
-         手近な丘をめいめいに選ばせると、受け手の全隊が同じ一つの頂へ折り重なる。
-         頂は狭い。三隊も登れば翼は裾へはみ出して高みの利は得られず、そのあいだ
-         野に構えるべき戦列は空になる。高みを取るのは戦列の一端を高くするためで
-         あって、軍ごと丘の上へ引っ越すためではない。
-
-         そこで、押さえた丘を b.丘の主 に控えておく（丘の番号：押さえた隊の id）。
-         押さえた隊が討たれるか、崩れるか、退くかしたなら、その丘は空く。
-         いま足を掛けている丘が空いていればそこ、埋まっていれば次に近い空き丘、
-         空き丘が無ければ丘は諦めて野で構える。
-
-         縛るのは采配――委任した隊と敵方――だけである。プレイヤーが手ずから
-         登らせるぶんには、何隊重ねようと指図は指図として通す（この段は
-         委任した隊しか通らない）。 */
-      if (!b.丘の主) b.丘の主 = {};
-      const 空き丘 = (i) => {
-        const 主 = b.丘の主[i];
-        if (主 == null || 主 === c.id) return true;
-        const o = b.corps.find((x) => x.id === 主);
-        return !o || o.dead || o.destroyed || o.routed || o.withdraw;
-      };
-      const 立つ番 = HILLS.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
-      let 番 = -1;
-      if (欲しい) {
-        if (立つ番 >= 0 && 空き丘(立つ番)) 番 = 立つ番;
-        else {
-          let 近さ = Infinity;                              // 次に近い空き丘を探す
-          for (let i = 0; i < HILLS.length; i++) {
-            if (!空き丘(i)) continue;
-            const d = (c.x - HILLS[i].x) ** 2 + (c.y - HILLS[i].y) ** 2;
-            if (d < 近さ) { 近さ = d; 番 = i; }
-          }
-        }
-      }
+      const 番 = 守勢 ? 空き丘を探す(b, c) : -1;
       const 丘 = 番 >= 0 ? HILLS[番] : null;
       if (丘 && 敵まで > 260) {
         const 遠さ = Math.hypot(丘.x - c.x, 丘.y - c.y);
         const 頂 = clamp(丘.r * 0.45, 60, 120);            // ここまで登れば頂とみなす
-        const 間 = (守勢 ? 540 : 320) + 丘.r * 0.8;         // 大きな丘ほど遠くからでも目指す
+        const 間 = 540 + 丘.r * 0.8;                        // 大きな丘ほど遠くからでも目指す
         if (遠さ > 頂 && 遠さ < 間 && 岸(c.x, c.y) === 岸(丘.x, 丘.y)) {
-          b.丘の主[番] = c.id;                              // この丘は我が隊が押さえる
+          丘を押さえる(b, 番, c);                           // この丘は我が隊が押さえる
           const 道 = 寄せ道を引く(b, c, 丘.x, 丘.y);
           if (道 === "続行") continue;
           if (道) { c.wp = 道; issueOrder(b, c, { order: "移動", tx: 道[0].x, ty: 道[0].y, keepPath: true }); continue; }
@@ -573,8 +670,8 @@ export function battleAI(b) {
           continue;
         }
         // 頂に就いた受け手は、そこで待ち受ける。降りて出迎える理由がない。
-        if (守勢 && 遠さ <= 頂) {
-          b.丘の主[番] = c.id;
+        if (遠さ <= 頂) {
+          丘を押さえる(b, 番, c);
           issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
           continue;
         }
@@ -585,31 +682,13 @@ export function battleAI(b) {
     const dd = Math.hypot(c.x - tgt.x, c.y - tgt.y) || 1;
     let sx = dd <= 42 ? c.x : tgt.x + ((c.x - tgt.x) / dd) * 38;
     let sy = dd <= 42 ? c.y : tgt.y + ((c.y - tgt.y) / dd) * 38;
-    /* 川ごしの向き合い方（GDD 8.1）。
-
-       受け手は川を渡らない。渡り場のこちら岸で待ち、敵が水から上がってくる
-       ところを叩く。半渡を撃つ、という。両軍とも渡り場を目指せば、双方が同じ
-       瀬へ集まって水の中で噛み合う。それでは川を避けた甲斐がない。
-
-       攻め手は渡る。ここで気をつけるのは、止まる先が水だからといって手前の岸へ
-       引き戻さないことである。引き戻すと、行き先が足元になって道が引けず、
-       両軍が岸を挟んで睨み合ったまま日が暮れた。二十四戦のうち三戦がこれで
-       あった。向こう岸を目指させておけば、道さがしが橋なり瀬なりへ導く。
-
-       岸が同じなのに止まる先だけが水にかかるとき（蛇行の際）は、岸へ引く。 */
-    const 自岸 = 岸(c.x, c.y), 的岸 = 岸(tgt.x, tgt.y);
-    const 渡る要 = !MAP && hasRiver() && 的岸 !== 0 && 自岸 !== 的岸;
-    if (!MAP && hasRiver() && !c.routed && !c.withdraw && 渡る要 && c.side !== b.attacker && 自岸 !== 0) {
-      const 場 = 渡り場(c.x);
-      const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(場.x);
-      const 半 = (RIVER.bot - RIVER.top) / 2;
-      sx = 場.x; sy = 中 + 自岸 * (半 + 168);
-    } else if (川の中(sx, sy) && !渡る要) {
-      const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(sx);
-      const 半 = (RIVER.bot - RIVER.top) / 2;
-      const 岸へ = 自岸 !== 0 ? 自岸 : (c.y < 中 ? -1 : 1);
-      sy = 中 + 岸へ * (半 + 26);
-    }
+    /* 川ごしの向き合い方は、川の掟にまとめた（このファイルの上のほう）。
+       受け手は渡り場のこちら岸で待ち、寄せ手は渡り切る。どちらも水の上では
+       止まらない。狙う敵が水の中にいるなら、受け手は追って入らず岸から射る。 */
+    const 渡る要 = !MAP && hasRiver() && 岸(tgt.x, tgt.y) !== 0 && 岸(c.x, c.y) !== 岸(tgt.x, tgt.y);
+    const 掟 = 川の掟(b, c, sx, sy, tgt);
+    sx = 掟.sx; sy = 掟.sy;
+    if (掟.射る) { issueOrder(b, c, 岸から射る(c, tgt, sx, sy)); continue; }
     if (渡る要 && c.side === b.attacker) 橋待ちを見る(b, c, sx, sy);
     /* 地物を避けて寄せる。道が引ければそれを辿り、引けなければ真っすぐ行く。 */
     if (!MAP && !c.routed && !c.withdraw) {
