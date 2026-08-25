@@ -7,7 +7,7 @@ import { corpsMax, corpsMen, makeCorps, notify, placeSquads } from "../battle/co
 import { 城方の隊を立てる } from "../battle/defense.js";
 import { drawMon, sideHue } from "../battle/draw.js";
 import { createBattle } from "../battle/engine.js";
-import { BASE, FIELD, MAX_CORPS, layoutField, setFieldSeed } from "../battle/field.js";
+import { BASE, FIELD, MAX_CORPS, layoutField, setFieldSeed, terrainAt } from "../battle/field.js";
 import { ambushChance, ambushPlan, tryAmbush } from "../core/ambush.js";
 import { captureChance, makePrisoner, payRansom, ransomAccept, ransomCost, takeAsPrisoner } from "../core/capture.js";
 import { 取り立てる, COMING_OF_AGE, actingHead, bearChild, canRecruit, emergeGenerals, hasHouse, heirCandidates, houseName, inheritHouse, lifeSpan, loyaltyAfterRecruit, makePromotion, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
@@ -879,7 +879,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const 段数 = Math.ceil(n / 列);
       /* 並びの先頭は総大将である。後ろの段の真ん中に置き、
          残りを前の段から順に、中央から外へ埋める。 */
-      const 位 = i === 0 ? { 段: 段数 - 1, 席: 0, 幅: 1 } : (() => {
+      /* 総大将には段を一つ与える。最後の段が半端に埋まると、そこへ大将が重なり、
+         同じ所に旗が二つ立って見えた（浅井久政と熊谷直之）。本陣は独立させる。 */
+      const 位 = i === 0 ? { 段: 段数, 席: 0, 幅: 1 } : (() => {
         const j = i - 1;                             // 総大将を除いた通し番号
         const 段 = Math.min(段数 - 1, Math.floor(j / 列));
         const 中 = j - 段 * 列;
@@ -896,7 +898,30 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const N = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * near - 奥 : FIELD.h * far + 奥), isAtk ? Math.PI / 2 : -Math.PI / 2);
       const E = () => put(X(isAtk ? FIELD.w * far + 奥 : FIELD.w * near - 奥), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? Math.PI : 0);
       const W = () => put(X(isAtk ? FIELD.w * near - 奥 : FIELD.w * far + 奥), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? 0 : Math.PI);
-      return face === "N" ? N() : face === "E" ? E() : face === "W" ? W() : S();
+      const p0 = face === "N" ? N() : face === "E" ? E() : face === "W" ? W() : S();
+      return 置ける所へ(p0);
+    };
+
+    /* 布陣の地を選ぶ（GDD 8.1）。
+
+       森・林・川・集落に陣は敷かない。木立の中で隊を組めば出るのに手間取り、
+       村を踏めば民が逃げ、川は言うまでもない。
+       丘と山は、頂ではなく麓に構える。頂から降りるには時が要る。
+       置けぬ地に当たったら、そのまわりを少しずつ探して、初めに見つかった
+       置ける所へ寄せる。どこも駄目なら、元の所にそのまま置く。 */
+    const 避ける地 = new Set(["forest", "wood", "village", "river", "deep", "ford", "marsh", "hill", "sakamichi"]);
+    const 置ける所へ = (p0) => {
+      const 良 = (x, y) => x > 30 && y > 30 && x < FIELD.w - 30 && y < FIELD.h - 30
+        && !避ける地.has(terrainAt(x, y));
+      if (良(p0.x, p0.y)) return p0;
+      const 刻 = Math.round(46 * (FIELD.w / BASE.w));
+      for (let r = 1; r <= 5; r++) {
+        for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+          const x = p0.x + dx * 刻 * r, y = p0.y + dy * 刻 * r;
+          if (良(x, y)) return { ...p0, x, y };
+        }
+      }
+      return p0;
     };
     const build = (gens0, local, train, side, yBase, facing, color, srcRost, isAtk) => {
       const gens = (gens0.length ? gens0 : [{ id: `gar-${dest.id}-${side}`, name: `${dest.name}守備隊`, lead: 52, valor: 50, wit: 45, gov: 45, retinue: 0, retTrain: train }])

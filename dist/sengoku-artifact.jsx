@@ -20938,7 +20938,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const \u9593 = Math.round(175 * (FIELD.w / BASE.w));
       const \u5217 = Math.max(1, Math.min(n, Math.floor(FIELD.w * 0.78 / Math.max(1, \u9593))));
       const \u6BB5\u6570 = Math.ceil(n / \u5217);
-      const \u4F4D = i === 0 ? { \u6BB5: \u6BB5\u6570 - 1, \u5E2D: 0, \u5E45: 1 } : (() => {
+      const \u4F4D = i === 0 ? { \u6BB5: \u6BB5\u6570, \u5E2D: 0, \u5E45: 1 } : (() => {
         const j = i - 1;
         const \u6BB5 = Math.min(\u6BB5\u6570 - 1, Math.floor(j / \u5217));
         const \u4E2D = j - \u6BB5 * \u5217;
@@ -20954,7 +20954,21 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const N = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * near - \u5965 : FIELD.h * far + \u5965), isAtk ? Math.PI / 2 : -Math.PI / 2);
       const E2 = () => put(X(isAtk ? FIELD.w * far + \u5965 : FIELD.w * near - \u5965), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? Math.PI : 0);
       const W = () => put(X(isAtk ? FIELD.w * near - \u5965 : FIELD.w * far + \u5965), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? 0 : Math.PI);
-      return face === "N" ? N() : face === "E" ? E2() : face === "W" ? W() : S();
+      const p0 = face === "N" ? N() : face === "E" ? E2() : face === "W" ? W() : S();
+      return \u7F6E\u3051\u308B\u6240\u3078(p0);
+    };
+    const \u907F\u3051\u308B\u5730 = /* @__PURE__ */ new Set(["forest", "wood", "village", "river", "deep", "ford", "marsh", "hill", "sakamichi"]);
+    const \u7F6E\u3051\u308B\u6240\u3078 = (p0) => {
+      const \u826F = (x, y) => x > 30 && y > 30 && x < FIELD.w - 30 && y < FIELD.h - 30 && !\u907F\u3051\u308B\u5730.has(terrainAt(x, y));
+      if (\u826F(p0.x, p0.y)) return p0;
+      const \u523B = Math.round(46 * (FIELD.w / BASE.w));
+      for (let r = 1; r <= 5; r++) {
+        for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+          const x = p0.x + dx * \u523B * r, y = p0.y + dy * \u523B * r;
+          if (\u826F(x, y)) return { ...p0, x, y };
+        }
+      }
+      return p0;
     };
     const build = (gens0, local, train, side, yBase, facing, color, srcRost, isAtk) => {
       const gens = (gens0.length ? gens0 : [{ id: `gar-${dest.id}-${side}`, name: `${dest.name}\u5B88\u5099\u968A`, lead: 52, valor: 50, wit: 45, gov: 45, retinue: 0, retTrain: train }]).slice(0, MAX_CORPS);
