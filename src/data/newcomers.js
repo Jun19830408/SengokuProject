@@ -368,6 +368,25 @@ export const NEWCOMERS = [
     lead: 64, valor: 66, wit: 60, gov: 58, retinue: 240, retTrain: 60, born: 1540 },
   { id: "tm_miharu2", name: "田村清顕", faction: "tamura", y: 1555, at: "miharu",
     lead: 66, valor: 68, wit: 62, gov: 58, retinue: 240, retTrain: 60, born: 1540 },
+  // ── 上野・武蔵北（増補の第一回。父はいずれも初期配置に居る）
+  { id: "uy_narishige", name: "和田業繁", faction: "uesugi_y", y: 1555, at: "maebashi",
+    lead: 70, valor: 76, wit: 62, gov: 56, retinue: 240, retTrain: 66, born: 1540 },
+  { id: "uy_nobusada", name: "小幡信貞", faction: "uesugi_y", y: 1555, at: "hirai",
+    lead: 74, valor: 78, wit: 64, gov: 58, retinue: 260, retTrain: 68, born: 1540 },
+  { id: "uy_naoyuki", name: "倉賀野尚行", faction: "uesugi_y", y: 1555, at: "hirai",
+    lead: 64, valor: 66, wit: 60, gov: 58, retinue: 230, retTrain: 60, born: 1540 },
+  { id: "uy_kageshige", name: "安中景繁", faction: "uesugi_y", y: 1555, at: "hirai",
+    lead: 66, valor: 70, wit: 58, gov: 56, retinue: 240, retTrain: 62, born: 1540 },
+  { id: "uy_nagatomo", name: "秋元長朝", faction: "uesugi_y", y: 1561, at: "fukaya",
+    lead: 66, valor: 62, wit: 72, gov: 78, retinue: 200, retTrain: 58, born: 1546 },
+  { id: "uy_kageyoshi", name: "沼田景義", faction: "uesugi_y", y: 1563, at: "numata",
+    lead: 66, valor: 70, wit: 60, gov: 56, retinue: 230, retTrain: 60, born: 1548 },
+  { id: "uy_ujinori", name: "上杉氏憲", faction: "uesugi_y", y: 1567, at: "fukaya",
+    lead: 58, valor: 58, wit: 58, gov: 60, retinue: 240, retTrain: 56, born: 1552 },
+  { id: "uy_terukage", name: "長尾輝景", faction: "uesugi_y", y: 1575, at: "hirai",
+    lead: 64, valor: 64, wit: 62, gov: 62, retinue: 240, retTrain: 60, born: 1560 },
+  { id: "yr_akinaga", name: "長尾顕長", faction: "yura", y: 1569, at: "kanayama",
+    lead: 64, valor: 66, wit: 62, gov: 58, retinue: 260, retTrain: 60, born: 1554 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -423,12 +442,27 @@ export const PARENT = {
   n_toshimasa: "toshiie",
   n_mitsuharu: "mitsuhide",       // 明智光秀 → 秀満（女婿）
   e_kagekatsu2: "kagekatsu",      // 上杉景勝 → 定勝
+  // ── 上野・武蔵北（増補の第一回）
+  uy_narishige: "uy_nobunari",    // 和田信業 → 業繁
+  uy_nobusada: "uy_norishige",    // 小幡憲重 → 信貞
+  uy_naoyuki: "uy_yukimasa",      // 倉賀野行政 → 尚行
+  uy_kageshige: "uy_shigeshige",  // 安中重繁 → 景繁
+  uy_kagenaga: "uy_masanaga",     // 長尾当長 → 景長（足利長尾。養子）
+  uy_nagatomo: "u_fukaya3",       // 秋元景朝 → 長朝
+  uy_kageyoshi: "numata",         // 沼田顕泰 → 景義
+  uy_ujinori: "uy_norimori",      // 上杉憲盛 → 氏憲（深谷上杉）
+  uy_terukage: "uesugi2",         // 長尾憲景 → 輝景（白井長尾）
+  ng_yoshinari: "narimasa_n",     // 長野業正 → 吉業
+  nagano2: "narimasa_n",          // 長野業正 → 業盛
+  yura2: "naritashige",           // 由良成繁 → 国繁
+  yr_akinaga: "naritashige",      // 由良成繁 → 顕長
 };
 
 // 史実で八十を超えた者。没年齢を記す。
 export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっている者
 
 export const LONG_LIVED = {
+  uy_nagatomo: 82,   // 秋元長朝（総社藩主。利根川の治水に功があった）
   harukata_m: 87,    // 志道広良（毛利の宿老）
   norikage: 79,      // 朝倉宗滴
   harusumi: 82,      // 有馬晴純

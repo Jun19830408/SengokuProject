@@ -3184,6 +3184,133 @@ var NEWCOMERS = [
     retinue: 240,
     retTrain: 60,
     born: 1540
+  },
+  // ── 上野・武蔵北（増補の第一回。父はいずれも初期配置に居る）
+  {
+    id: "uy_narishige",
+    name: "\u548C\u7530\u696D\u7E41",
+    faction: "uesugi_y",
+    y: 1555,
+    at: "maebashi",
+    lead: 70,
+    valor: 76,
+    wit: 62,
+    gov: 56,
+    retinue: 240,
+    retTrain: 66,
+    born: 1540
+  },
+  {
+    id: "uy_nobusada",
+    name: "\u5C0F\u5E61\u4FE1\u8C9E",
+    faction: "uesugi_y",
+    y: 1555,
+    at: "hirai",
+    lead: 74,
+    valor: 78,
+    wit: 64,
+    gov: 58,
+    retinue: 260,
+    retTrain: 68,
+    born: 1540
+  },
+  {
+    id: "uy_naoyuki",
+    name: "\u5009\u8CC0\u91CE\u5C1A\u884C",
+    faction: "uesugi_y",
+    y: 1555,
+    at: "hirai",
+    lead: 64,
+    valor: 66,
+    wit: 60,
+    gov: 58,
+    retinue: 230,
+    retTrain: 60,
+    born: 1540
+  },
+  {
+    id: "uy_kageshige",
+    name: "\u5B89\u4E2D\u666F\u7E41",
+    faction: "uesugi_y",
+    y: 1555,
+    at: "hirai",
+    lead: 66,
+    valor: 70,
+    wit: 58,
+    gov: 56,
+    retinue: 240,
+    retTrain: 62,
+    born: 1540
+  },
+  {
+    id: "uy_nagatomo",
+    name: "\u79CB\u5143\u9577\u671D",
+    faction: "uesugi_y",
+    y: 1561,
+    at: "fukaya",
+    lead: 66,
+    valor: 62,
+    wit: 72,
+    gov: 78,
+    retinue: 200,
+    retTrain: 58,
+    born: 1546
+  },
+  {
+    id: "uy_kageyoshi",
+    name: "\u6CBC\u7530\u666F\u7FA9",
+    faction: "uesugi_y",
+    y: 1563,
+    at: "numata",
+    lead: 66,
+    valor: 70,
+    wit: 60,
+    gov: 56,
+    retinue: 230,
+    retTrain: 60,
+    born: 1548
+  },
+  {
+    id: "uy_ujinori",
+    name: "\u4E0A\u6749\u6C0F\u61B2",
+    faction: "uesugi_y",
+    y: 1567,
+    at: "fukaya",
+    lead: 58,
+    valor: 58,
+    wit: 58,
+    gov: 60,
+    retinue: 240,
+    retTrain: 56,
+    born: 1552
+  },
+  {
+    id: "uy_terukage",
+    name: "\u9577\u5C3E\u8F1D\u666F",
+    faction: "uesugi_y",
+    y: 1575,
+    at: "hirai",
+    lead: 64,
+    valor: 64,
+    wit: 62,
+    gov: 62,
+    retinue: 240,
+    retTrain: 60,
+    born: 1560
+  },
+  {
+    id: "yr_akinaga",
+    name: "\u9577\u5C3E\u9855\u9577",
+    faction: "yura",
+    y: 1569,
+    at: "kanayama",
+    lead: 64,
+    valor: 66,
+    wit: 62,
+    gov: 58,
+    retinue: 260,
+    retTrain: 60,
+    born: 1554
   }
 ];
 var KANJI_TSUJI = [
@@ -3289,11 +3416,40 @@ var PARENT = {
   n_toshimasa: "toshiie",
   n_mitsuharu: "mitsuhide",
   // 明智光秀 → 秀満（女婿）
-  e_kagekatsu2: "kagekatsu"
+  e_kagekatsu2: "kagekatsu",
   // 上杉景勝 → 定勝
+  // ── 上野・武蔵北（増補の第一回）
+  uy_narishige: "uy_nobunari",
+  // 和田信業 → 業繁
+  uy_nobusada: "uy_norishige",
+  // 小幡憲重 → 信貞
+  uy_naoyuki: "uy_yukimasa",
+  // 倉賀野行政 → 尚行
+  uy_kageshige: "uy_shigeshige",
+  // 安中重繁 → 景繁
+  uy_kagenaga: "uy_masanaga",
+  // 長尾当長 → 景長（足利長尾。養子）
+  uy_nagatomo: "u_fukaya3",
+  // 秋元景朝 → 長朝
+  uy_kageyoshi: "numata",
+  // 沼田顕泰 → 景義
+  uy_ujinori: "uy_norimori",
+  // 上杉憲盛 → 氏憲（深谷上杉）
+  uy_terukage: "uesugi2",
+  // 長尾憲景 → 輝景（白井長尾）
+  ng_yoshinari: "narimasa_n",
+  // 長野業正 → 吉業
+  nagano2: "narimasa_n",
+  // 長野業正 → 業盛
+  yura2: "naritashige",
+  // 由良成繁 → 国繁
+  yr_akinaga: "naritashige"
+  // 由良成繁 → 顕長
 };
 var FATED = { hirotada: 1549 };
 var LONG_LIVED = {
+  uy_nagatomo: 82,
+  // 秋元長朝（総社藩主。利根川の治水に功があった）
   harukata_m: 87,
   // 志道広良（毛利の宿老）
   norikage: 79,
@@ -6873,6 +7029,17 @@ var GENERALS = [
   { id: "u_numata2", name: "\u6CBC\u7530\u671D\u61B2", faction: "uesugi_y", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 72, age: 24, at: "numata", retinue: 240, retTrain: 60 },
   { id: "u_numata3", name: "\u91D1\u5B50\u6CF0\u6E05", faction: "uesugi_y", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 74, age: 32, at: "numata", retinue: 230, retTrain: 58 },
   { id: "u_maebashi3", name: "\u90A3\u6CE2\u5B97\u4FCA", faction: "uesugi_y", lead: 66, valor: 66, wit: 64, gov: 62, loyal: 76, age: 36, at: "hirai", retinue: 250, retTrain: 60 },
+  { id: "uy_katanari", name: "\u9577\u91CE\u65B9\u696D", faction: "uesugi_y", lead: 70, valor: 66, wit: 70, gov: 64, loyal: 62, age: 45, at: "maebashi", retinue: 340, retTrain: 62 },
+  { id: "uy_nobunari", name: "\u548C\u7530\u4FE1\u696D", faction: "uesugi_y", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 66, age: 40, at: "maebashi", retinue: 260, retTrain: 60 },
+  { id: "uy_akikata", name: "\u9577\u5C3E\u9855\u65B9", faction: "uesugi_y", lead: 62, valor: 62, wit: 60, gov: 60, loyal: 74, age: 40, at: "maebashi", retinue: 250, retTrain: 58 },
+  { id: "uy_masanaga", name: "\u9577\u5C3E\u5F53\u9577", faction: "uesugi_y", lead: 70, valor: 68, wit: 68, gov: 66, loyal: 70, age: 29, at: "hirai", retinue: 320, retTrain: 62 },
+  { id: "uy_kagenaga", name: "\u9577\u5C3E\u666F\u9577", faction: "uesugi_y", lead: 68, valor: 66, wit: 74, gov: 70, loyal: 74, age: 19, at: "hirai", retinue: 280, retTrain: 60 },
+  { id: "uy_yukimasa", name: "\u5009\u8CC0\u91CE\u884C\u653F", faction: "uesugi_y", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 68, age: 45, at: "hirai", retinue: 280, retTrain: 60 },
+  { id: "uy_shigeshige", name: "\u5B89\u4E2D\u91CD\u7E41", faction: "uesugi_y", lead: 66, valor: 70, wit: 58, gov: 56, loyal: 64, age: 42, at: "hirai", retinue: 280, retTrain: 62 },
+  { id: "uy_norishige", name: "\u5C0F\u5E61\u61B2\u91CD", faction: "uesugi_y", lead: 70, valor: 72, wit: 66, gov: 58, loyal: 48, age: 38, at: "hirai", retinue: 300, retTrain: 64 },
+  { id: "uy_norimori", name: "\u4E0A\u6749\u61B2\u76DB", faction: "uesugi_y", lead: 60, valor: 58, wit: 60, gov: 62, loyal: 60, age: 21, at: "fukaya", retinue: 300, retTrain: 56 },
+  { id: "uy_sanetada", name: "\u672C\u5E84\u5B9F\u5FE0", faction: "uesugi_y", lead: 62, valor: 64, wit: 58, gov: 58, loyal: 70, age: 36, at: "fukaya", retinue: 240, retTrain: 58 },
+  { id: "uy_kiyohide", name: "\u5CA1\u8C37\u6E05\u82F1", faction: "uesugi_y", lead: 62, valor: 62, wit: 64, gov: 66, loyal: 84, age: 32, at: "fukaya", retinue: 230, retTrain: 58 },
   { id: "mk_katsurao3", name: "\u96E8\u5BAE\u660C\u79C0", faction: "murakami", lead: 66, valor: 70, wit: 60, gov: 56, loyal: 84, age: 28, at: "katsurao", retinue: 250, retTrain: 62 },
   { id: "mk_toishi3", name: "\u5BA4\u8CC0\u6E80\u6B63", faction: "murakami", lead: 64, valor: 68, wit: 60, gov: 56, loyal: 80, age: 30, at: "toishi", retinue: 240, retTrain: 60 },
   { id: "mk_kaizu3", name: "\u4E95\u4E0A\u660C\u6E80", faction: "murakami", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 80, age: 26, at: "kaizu", retinue: 240, retTrain: 60 },
@@ -7154,7 +7321,8 @@ var GENERALS = [
   { id: "od5_oda3", name: "\u83C5\u8C37\u52DD\u8C9E", faction: "oda_h", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 90, age: 40, at: "oda", retinue: 240, retTrain: 60 },
   { id: "yk5_yuki3", name: "\u591A\u8CC0\u8C37\u653F\u7D4C", faction: "yuki", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 78, age: 28, at: "yuki", retinue: 240, retTrain: 60 },
   { id: "ng5_minowa3", name: "\u4E0A\u6CC9\u4FE1\u7DB1", faction: "nagano_k", lead: 76, valor: 92, wit: 72, gov: 58, loyal: 90, age: 38, at: "minowa", retinue: 240, retTrain: 68 },
-  { id: "yr5_kanayama3", name: "\u6A2A\u702C\u6210\u7E41", faction: "yura", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 26, at: "kanayama", retinue: 240, retTrain: 60 },
+  { id: "ng_yoshinari", name: "\u9577\u91CE\u5409\u696D", faction: "nagano_k", lead: 70, valor: 74, wit: 62, gov: 58, loyal: 92, age: 24, at: "minowa", retinue: 300, retTrain: 64 },
+  { id: "yr_hidekage", name: "\u91D1\u4E95\u79C0\u666F", faction: "yura", lead: 68, valor: 68, wit: 66, gov: 60, loyal: 78, age: 26, at: "kanayama", retinue: 250, retTrain: 60 },
   { id: "sk5_shiba2", name: "\u9AD8\u6C34\u5BFA\u8A6E\u8C9E", faction: "shiba", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 82, age: 28, at: "kosuiji", retinue: 220, retTrain: 56 },
   { id: "mr5_mogami2", name: "\u6C0F\u5BB6\u5149\u68DF", faction: "mogami", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 26, at: "yamagata", retinue: 240, retTrain: 60 },
   { id: "hj5_odawara3", name: "\u77F3\u5DFB\u5BB6\u8C9E", faction: "hojo", lead: 64, valor: 64, wit: 66, gov: 66, loyal: 88, age: 36, at: "odawara", retinue: 240, retTrain: 60 },
