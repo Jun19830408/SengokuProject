@@ -387,6 +387,17 @@ export const NEWCOMERS = [
     lead: 64, valor: 64, wit: 62, gov: 62, retinue: 240, retTrain: 60, born: 1560 },
   { id: "yr_akinaga", name: "長尾顕長", faction: "yura", y: 1569, at: "kanayama",
     lead: 64, valor: 66, wit: 62, gov: 58, retinue: 260, retTrain: 60, born: 1554 },
+  // ── 越前・近江（増補の第二回）
+  { id: "as_kagemitsu", name: "朝倉景垙", faction: "asakura", y: 1560, at: "kanegasaki",
+    lead: 64, valor: 66, wit: 60, gov: 58, retinue: 240, retTrain: 62, born: 1545 },
+  { id: "as_takamoto", name: "真柄隆基", faction: "asakura", y: 1562, at: "kanegasaki",
+    lead: 62, valor: 84, wit: 46, gov: 44, retinue: 220, retTrain: 64, born: 1547 },
+  { id: "as_nagashige", name: "富田長繁", faction: "asakura", y: 1566, at: "kitanosho",
+    lead: 70, valor: 82, wit: 58, gov: 50, retinue: 230, retTrain: 64, born: 1551 },
+  { id: "rk_yoshiharu", name: "六角義治", faction: "rokkaku", y: 1560, at: "kannonji",
+    lead: 58, valor: 60, wit: 54, gov: 56, retinue: 300, retTrain: 60, born: 1545 },
+  { id: "rk_takaharu", name: "後藤高治", faction: "rokkaku", y: 1560, at: "sawayama",
+    lead: 66, valor: 66, wit: 64, gov: 62, retinue: 260, retTrain: 60, born: 1545 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -456,12 +467,26 @@ export const PARENT = {
   nagano2: "narimasa_n",          // 長野業正 → 業盛
   yura2: "naritashige",           // 由良成繁 → 国繁
   yr_akinaga: "naritashige",      // 由良成繁 → 顕長
+  // ── 越前・近江（増補の第二回）
+  yoshikata: "rk_sadayori",       // 六角定頼 → 義賢
+  rk_yoshiharu: "yoshikata",      // 六角義賢 → 義治
+  rk_takaharu: "kagechika",       // 後藤賢豊 → 高治
+  rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
+  mikumo: "rk_katamochi",         // 三雲賢持 → 成持
+  as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
+  as_kagemitsu: "as_kagetoshi",   // 朝倉景紀 → 景垙
+  as_naozumi: "magara",           // 真柄直隆 → 直澄（弟。家の兄弟も結ぶ）
+  as_takamoto: "magara",          // 真柄直隆 → 隆基
+  as_yoshinobu2: "yamazaki",      // 山崎吉家 → 吉延（弟）
+  as_kitanosho3: "as_kagemasa",   // 前波景当 → 吉継
 };
 
 // 史実で八十を超えた者。没年齢を記す。
 export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっている者
 
 export const LONG_LIVED = {
+  rk_shigemasa: 84,  // 吉田重政（弓の日置流。八十四歳）
+  rk_mitsutoshi: 76, // 多羅尾光俊（甲賀。七十六歳）
   uy_nagatomo: 82,   // 秋元長朝（総社藩主。利根川の治水に功があった）
   harukata_m: 87,    // 志道広良（毛利の宿老）
   norikage: 79,      // 朝倉宗滴
