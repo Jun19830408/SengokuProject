@@ -1,6 +1,6 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
 import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い } from "./corps.js";
-import { ARM_STATS, HILLS, RIVER, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
+import { ARM_STATS, HILLS, RIVER, hasRiver, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { clamp } from "../core/util.js";
 
@@ -522,14 +522,50 @@ export function battleAI(b) {
          これを分けないと、麓に立った隊が「自分は丘にいる」と判じて、そこで
          守りに就いてしまう。斜面の裾は高みではない。見晴らしも利かず、
          寄せ手と同じ高さで槍を合わせることになる。盤の上でも、丘の手前で
-         ぴたりと止まって動かぬ隊として見えていた。 */
-      const 立つ丘 = HILLS.find((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
-      const 丘 = 欲しい ? (立つ丘 || nearestOf(HILLS, c.x, c.y)) : null;
+         ぴたりと止まって動かぬ隊として見えていた。
+
+         丘ひとつに一隊（GDD 8.6）。
+
+         手近な丘をめいめいに選ばせると、受け手の全隊が同じ一つの頂へ折り重なる。
+         頂は狭い。三隊も登れば翼は裾へはみ出して高みの利は得られず、そのあいだ
+         野に構えるべき戦列は空になる。高みを取るのは戦列の一端を高くするためで
+         あって、軍ごと丘の上へ引っ越すためではない。
+
+         そこで、押さえた丘を b.丘の主 に控えておく（丘の番号：押さえた隊の id）。
+         押さえた隊が討たれるか、崩れるか、退くかしたなら、その丘は空く。
+         いま足を掛けている丘が空いていればそこ、埋まっていれば次に近い空き丘、
+         空き丘が無ければ丘は諦めて野で構える。
+
+         縛るのは采配――委任した隊と敵方――だけである。プレイヤーが手ずから
+         登らせるぶんには、何隊重ねようと指図は指図として通す（この段は
+         委任した隊しか通らない）。 */
+      if (!b.丘の主) b.丘の主 = {};
+      const 空き丘 = (i) => {
+        const 主 = b.丘の主[i];
+        if (主 == null || 主 === c.id) return true;
+        const o = b.corps.find((x) => x.id === 主);
+        return !o || o.dead || o.destroyed || o.routed || o.withdraw;
+      };
+      const 立つ番 = HILLS.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
+      let 番 = -1;
+      if (欲しい) {
+        if (立つ番 >= 0 && 空き丘(立つ番)) 番 = 立つ番;
+        else {
+          let 近さ = Infinity;                              // 次に近い空き丘を探す
+          for (let i = 0; i < HILLS.length; i++) {
+            if (!空き丘(i)) continue;
+            const d = (c.x - HILLS[i].x) ** 2 + (c.y - HILLS[i].y) ** 2;
+            if (d < 近さ) { 近さ = d; 番 = i; }
+          }
+        }
+      }
+      const 丘 = 番 >= 0 ? HILLS[番] : null;
       if (丘 && 敵まで > 260) {
         const 遠さ = Math.hypot(丘.x - c.x, 丘.y - c.y);
         const 頂 = clamp(丘.r * 0.45, 60, 120);            // ここまで登れば頂とみなす
         const 間 = (守勢 ? 540 : 320) + 丘.r * 0.8;         // 大きな丘ほど遠くからでも目指す
         if (遠さ > 頂 && 遠さ < 間 && 岸(c.x, c.y) === 岸(丘.x, 丘.y)) {
+          b.丘の主[番] = c.id;                              // この丘は我が隊が押さえる
           const 道 = 寄せ道を引く(b, c, 丘.x, 丘.y);
           if (道 === "続行") continue;
           if (道) { c.wp = 道; issueOrder(b, c, { order: "移動", tx: 道[0].x, ty: 道[0].y, keepPath: true }); continue; }
@@ -538,6 +574,7 @@ export function battleAI(b) {
         }
         // 頂に就いた受け手は、そこで待ち受ける。降りて出迎える理由がない。
         if (守勢 && 遠さ <= 頂) {
+          b.丘の主[番] = c.id;
           issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
           continue;
         }

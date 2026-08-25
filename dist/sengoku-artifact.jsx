@@ -15185,13 +15185,36 @@ function battleAI(b) {
       const \u5B88\u52E2 = c.side !== b.attacker && !\u62BC\u305B\u308B;
       const \u6B32\u3057\u3044 = \u5B88\u52E2 || \u5C04 / Math.max(1, corpsMen(c)) > 0.55;
       const \u6575\u307E\u3067 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
-      const \u7ACB\u3064\u4E18 = HILLS.find((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
-      const \u4E18 = \u6B32\u3057\u3044 ? \u7ACB\u3064\u4E18 || nearestOf(HILLS, c.x, c.y) : null;
+      if (!b.\u4E18\u306E\u4E3B) b.\u4E18\u306E\u4E3B = {};
+      const \u7A7A\u304D\u4E18 = (i) => {
+        const \u4E3B = b.\u4E18\u306E\u4E3B[i];
+        if (\u4E3B == null || \u4E3B === c.id) return true;
+        const o = b.corps.find((x) => x.id === \u4E3B);
+        return !o || o.dead || o.destroyed || o.routed || o.withdraw;
+      };
+      const \u7ACB\u3064\u756A = HILLS.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
+      let \u756A = -1;
+      if (\u6B32\u3057\u3044) {
+        if (\u7ACB\u3064\u756A >= 0 && \u7A7A\u304D\u4E18(\u7ACB\u3064\u756A)) \u756A = \u7ACB\u3064\u756A;
+        else {
+          let \u8FD1\u3055 = Infinity;
+          for (let i = 0; i < HILLS.length; i++) {
+            if (!\u7A7A\u304D\u4E18(i)) continue;
+            const d = (c.x - HILLS[i].x) ** 2 + (c.y - HILLS[i].y) ** 2;
+            if (d < \u8FD1\u3055) {
+              \u8FD1\u3055 = d;
+              \u756A = i;
+            }
+          }
+        }
+      }
+      const \u4E18 = \u756A >= 0 ? HILLS[\u756A] : null;
       if (\u4E18 && \u6575\u307E\u3067 > 260) {
         const \u9060\u3055 = Math.hypot(\u4E18.x - c.x, \u4E18.y - c.y);
         const \u9802 = clamp(\u4E18.r * 0.45, 60, 120);
         const \u9593 = (\u5B88\u52E2 ? 540 : 320) + \u4E18.r * 0.8;
         if (\u9060\u3055 > \u9802 && \u9060\u3055 < \u9593 && \u5CB8(c.x, c.y) === \u5CB8(\u4E18.x, \u4E18.y)) {
+          b.\u4E18\u306E\u4E3B[\u756A] = c.id;
           const \u9053 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, \u4E18.x, \u4E18.y);
           if (\u9053 === "\u7D9A\u884C") continue;
           if (\u9053) {
@@ -15203,6 +15226,7 @@ function battleAI(b) {
           continue;
         }
         if (\u5B88\u52E2 && \u9060\u3055 <= \u9802) {
+          b.\u4E18\u306E\u4E3B[\u756A] = c.id;
           issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
           continue;
         }
