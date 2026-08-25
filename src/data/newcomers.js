@@ -461,6 +461,28 @@ export const NEWCOMERS = [
     lead: 66, valor: 68, wit: 62, gov: 62, retinue: 320, retTrain: 62, born: 1558 },
   { id: "ak_yoshisuke", name: "赤松義祐", faction: "akamatsu", y: 1552, at: "ojio",
     lead: 60, valor: 58, wit: 58, gov: 60, retinue: 300, retTrain: 56, born: 1537 },
+  // ── 陸奥南（増補の第六回）
+  // はじめの四人は、初期配置に立っていたが一五四六年より後の生まれであった者。
+  { id: "sm_soma2", name: "相馬義胤", faction: "soma", y: 1563, at: "soma",
+    lead: 72, valor: 76, wit: 64, gov: 60, retinue: 300, retTrain: 64, born: 1548 },
+  { id: "nh_nihonmatsu2", name: "畠山義継", faction: "nihonmatsu", y: 1567, at: "nihonmatsu",
+    lead: 64, valor: 66, wit: 64, gov: 58, retinue: 280, retTrain: 60, born: 1552 },
+  { id: "sw_shirakawa2", name: "結城義親", faction: "shirakawa", y: 1569, at: "shirakawa",
+    lead: 64, valor: 64, wit: 62, gov: 60, retinue: 280, retTrain: 60, born: 1554 },
+  { id: "nk_sukagawa2", name: "二階堂盛義", faction: "nikaido", y: 1559, at: "sukagawa",
+    lead: 66, valor: 66, wit: 62, gov: 58, retinue: 280, retTrain: 60, born: 1544 },
+  { id: "dt_masakage", name: "留守政景", faction: "date", y: 1564, at: "watari",
+    lead: 70, valor: 70, wit: 66, gov: 64, retinue: 280, retTrain: 62, born: 1549 },
+  { id: "dt_akimitsu", name: "石川昭光", faction: "date", y: 1565, at: "yonezawa",
+    lead: 66, valor: 64, wit: 66, gov: 64, retinue: 270, retTrain: 60, born: 1550 },
+  { id: "dt_morishige", name: "国分盛重", faction: "date", y: 1568, at: "watari",
+    lead: 66, valor: 68, wit: 62, gov: 60, retinue: 260, retTrain: 60, born: 1553 },
+  { id: "dt_kageyori", name: "屋代景頼", faction: "date", y: 1578, at: "yonezawa",
+    lead: 68, valor: 72, wit: 64, gov: 58, retinue: 250, retTrain: 62, born: 1563 },
+  { id: "as_morioki", name: "蘆名盛興", faction: "ashina", y: 1562, at: "kurokawa",
+    lead: 62, valor: 62, wit: 58, gov: 58, retinue: 320, retTrain: 58, born: 1547 },
+  { id: "as_ujizane", name: "富田氏実", faction: "ashina", y: 1572, at: "kurokawa",
+    lead: 64, valor: 64, wit: 62, gov: 60, retinue: 260, retTrain: 58, born: 1557 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -565,6 +587,17 @@ export const PARENT = {
   bs_yoshichika: "shigemune",     // 別所就治 → 吉親
   ht_harumichi: "hideharu",       // 波多野秀忠 → 晴通
   ts_junsei: "junsho",            // 筒井順昭 → 順政（弟）
+  // ── 陸奥南（増補の第六回）
+  harumune: "dt_tanemune",        // 伊達稙宗 → 晴宗（天文の乱で争う父子）
+  dt_hisanaka: "dt_munetoki",     // 中野宗時 → 牧野久仲
+  kagetsuna: "dt_kageshige",      // 片倉景重 → 景綱
+  moriuji: "as_morikiyo",         // 蘆名盛舜 → 盛氏
+  as_morioki: "moriuji",          // 蘆名盛氏 → 盛興
+  moritane: "sm_akitane",         // 相馬顕胤 → 盛胤
+  sm_soma2: "moritane",           // 相馬盛胤 → 義胤
+  nh_nihonmatsu2: "nihonmatsu_g", // 畠山義国 → 義継
+  sw_shirakawa2: "shirakawa_g",   // 結城晴綱 → 義親
+  nk_sukagawa2: "nikaido_g",      // 二階堂照行 → 盛義
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
