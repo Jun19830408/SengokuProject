@@ -74,13 +74,9 @@ export const NEWCOMERS = [
     lead: 70, valor: 66, wit: 70, gov: 74, retinue: 240, retTrain: 68, born: 1562 },
   { id: "mitsuhide2", name: "荒木村重", faction: "miyoshi", y: 1565, at: "itami",
     lead: 76, valor: 74, wit: 74, gov: 66, retinue: 220, retTrain: 66, born: 1535 },
-  { id: "hideyoshi2", name: "黒田職隆", faction: "akamatsu", y: 1552, at: "himeji",
-    lead: 70, valor: 64, wit: 76, gov: 78, retinue: 180, retTrain: 60, born: 1524 },
-  { id: "nagachika2", name: "明智秀満", faction: "ashikaga", y: 1570, at: "nijo",
-    lead: 74, valor: 80, wit: 70, gov: 64, retinue: 160, retTrain: 66, born: 1536 },
   { id: "terumoto", name: "毛利輝元", faction: "mori", y: 1563, at: "koriyama_a",
     lead: 70, valor: 64, wit: 72, gov: 76, retinue: 300, retTrain: 66, born: 1553 },
-  { id: "motoyasu_k", name: "小早川秀包", faction: "kobayakawa", y: 1567, at: "mihara",
+  { id: "motoyasu_k", name: "小早川秀包", faction: "kobayakawa", y: 1582, at: "mihara",
     lead: 72, valor: 74, wit: 68, gov: 64, retinue: 200, retTrain: 66, born: 1567 },
   { id: "muneshige", name: "立花宗茂", faction: "otomo", y: 1580, at: "funai",
     lead: 88, valor: 90, wit: 82, gov: 74, retinue: 220, retTrain: 74, born: 1567 },
@@ -140,8 +136,6 @@ export const NEWCOMERS = [
     lead: 66, valor: 60, wit: 70, gov: 84, retinue: 200, retTrain: 64, born: 1579 },
   { id: "m_tadateru", name: "松平信康", faction: "matsudaira", y: 1573, at: "okazaki",
     lead: 74, valor: 80, wit: 66, gov: 62, retinue: 200, retTrain: 68, born: 1559 },
-  { id: "t_masatoyo2", name: "武田信豊", faction: "takeda", y: 1566, at: "tsutsujigasaki",
-    lead: 66, valor: 66, wit: 64, gov: 62, retinue: 180, retTrain: 62, born: 1550 },
   { id: "t_nobushige2", name: "一条信龍", faction: "takeda", y: 1556, at: "tsutsujigasaki",
     lead: 70, valor: 74, wit: 64, gov: 60, retinue: 190, retTrain: 64, born: 1539 },
   { id: "t_masakage2", name: "土屋昌続", faction: "takeda", y: 1561, at: "fukashi",
@@ -194,8 +188,6 @@ export const NEWCOMERS = [
     lead: 66, valor: 66, wit: 68, gov: 70, retinue: 180, retTrain: 62, born: 1586 },
   { id: "as_moritaka", name: "蘆名盛隆", faction: "ashina", y: 1577, at: "kurokawa",
     lead: 64, valor: 64, wit: 66, gov: 66, retinue: 180, retTrain: 62, born: 1561 },
-  { id: "hm_kanetsugu2", name: "本庄繁長", faction: "agakita", y: 1556, at: "murakami",
-    lead: 78, valor: 84, wit: 68, gov: 60, retinue: 200, retTrain: 68, born: 1540 },
   { id: "e_tadaoki", name: "細川忠興", faction: "ashikaga", y: 1578, at: "nijo",
     lead: 78, valor: 80, wit: 76, gov: 74, retinue: 190, retTrain: 68, born: 1563 },
   { id: "e_yukinaga", name: "小西行長", faction: "oda", y: 1580, at: "nagoya",
@@ -416,8 +408,8 @@ export const PARENT = {
   tomonori: "harutomo",
   saneteru: "motozane", shingai3: "saneteru",
   // ── 家臣の家。父子が揃って登場する者を結ぶ。
-  e_nagamasa2: "kuroda",          // 黒田孝高 → 長政
-  kuroda: "ak_himeji2",           // 黒田職隆 → 孝高
+  e_nagamasa2: "kanbei_k",        // 黒田孝高 → 長政
+  kanbei_k: "ak_himeji2",         // 黒田職隆 → 孝高
   e_tadayuki: "e_nagamasa2",      // 長政 → 忠之
   muneshige: "shigetane",         // 高橋紹運 → 立花宗茂
   e_muneshige2: "shigetane",      // 紹運 → 高橋直次
@@ -428,11 +420,9 @@ export const PARENT = {
   e_tadatoshi: "e_tadaoki",       // 細川忠興 → 忠利
   e_katsushige: "rz_saga2",       // 鍋島直茂 → 勝茂
   e_hidemoto: "mo_motoharu2",     // 吉川元長 → （毛利秀元は別家だが縁者）
-  toshiie2: "toshiie",            // 前田利家 → 利長
   n_toshimasa: "toshiie",
-  mitsuharu: "mitsuhide",         // 明智光秀 → 秀満（女婿）
+  n_mitsuharu: "mitsuhide",       // 明智光秀 → 秀満（女婿）
   e_kagekatsu2: "kagekatsu",      // 上杉景勝 → 定勝
-  hidetada2: "hideyoshi",
 };
 
 // 史実で八十を超えた者。没年齢を記す。
@@ -440,7 +430,6 @@ export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっ�
 
 export const LONG_LIVED = {
   harukata_m: 87,    // 志道広良（毛利の宿老）
-  hironaka: 82,      // 相良武任
   norikage: 79,      // 朝倉宗滴
   harusumi: 82,      // 有馬晴純
   e_bokuden: 82,     // 塚原卜伝

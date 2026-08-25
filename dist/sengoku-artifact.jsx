@@ -1128,34 +1128,6 @@ var NEWCOMERS = [
     born: 1535
   },
   {
-    id: "hideyoshi2",
-    name: "\u9ED2\u7530\u8077\u9686",
-    faction: "akamatsu",
-    y: 1552,
-    at: "himeji",
-    lead: 70,
-    valor: 64,
-    wit: 76,
-    gov: 78,
-    retinue: 180,
-    retTrain: 60,
-    born: 1524
-  },
-  {
-    id: "nagachika2",
-    name: "\u660E\u667A\u79C0\u6E80",
-    faction: "ashikaga",
-    y: 1570,
-    at: "nijo",
-    lead: 74,
-    valor: 80,
-    wit: 70,
-    gov: 64,
-    retinue: 160,
-    retTrain: 66,
-    born: 1536
-  },
-  {
     id: "terumoto",
     name: "\u6BDB\u5229\u8F1D\u5143",
     faction: "mori",
@@ -1173,7 +1145,7 @@ var NEWCOMERS = [
     id: "motoyasu_k",
     name: "\u5C0F\u65E9\u5DDD\u79C0\u5305",
     faction: "kobayakawa",
-    y: 1567,
+    y: 1582,
     at: "mihara",
     lead: 72,
     valor: 74,
@@ -1590,20 +1562,6 @@ var NEWCOMERS = [
     born: 1559
   },
   {
-    id: "t_masatoyo2",
-    name: "\u6B66\u7530\u4FE1\u8C4A",
-    faction: "takeda",
-    y: 1566,
-    at: "tsutsujigasaki",
-    lead: 66,
-    valor: 66,
-    wit: 64,
-    gov: 62,
-    retinue: 180,
-    retTrain: 62,
-    born: 1550
-  },
-  {
     id: "t_nobushige2",
     name: "\u4E00\u6761\u4FE1\u9F8D",
     faction: "takeda",
@@ -1966,20 +1924,6 @@ var NEWCOMERS = [
     retinue: 180,
     retTrain: 62,
     born: 1561
-  },
-  {
-    id: "hm_kanetsugu2",
-    name: "\u672C\u5E84\u7E41\u9577",
-    faction: "agakita",
-    y: 1556,
-    at: "murakami",
-    lead: 78,
-    valor: 84,
-    wit: 68,
-    gov: 60,
-    retinue: 200,
-    retTrain: 68,
-    born: 1540
   },
   {
     id: "e_tadaoki",
@@ -3318,9 +3262,9 @@ var PARENT = {
   saneteru: "motozane",
   shingai3: "saneteru",
   // ── 家臣の家。父子が揃って登場する者を結ぶ。
-  e_nagamasa2: "kuroda",
+  e_nagamasa2: "kanbei_k",
   // 黒田孝高 → 長政
-  kuroda: "ak_himeji2",
+  kanbei_k: "ak_himeji2",
   // 黒田職隆 → 孝高
   e_tadayuki: "e_nagamasa2",
   // 長政 → 忠之
@@ -3342,21 +3286,16 @@ var PARENT = {
   // 鍋島直茂 → 勝茂
   e_hidemoto: "mo_motoharu2",
   // 吉川元長 → （毛利秀元は別家だが縁者）
-  toshiie2: "toshiie",
-  // 前田利家 → 利長
   n_toshimasa: "toshiie",
-  mitsuharu: "mitsuhide",
+  n_mitsuharu: "mitsuhide",
   // 明智光秀 → 秀満（女婿）
-  e_kagekatsu2: "kagekatsu",
+  e_kagekatsu2: "kagekatsu"
   // 上杉景勝 → 定勝
-  hidetada2: "hideyoshi"
 };
 var FATED = { hirotada: 1549 };
 var LONG_LIVED = {
   harukata_m: 87,
   // 志道広良（毛利の宿老）
-  hironaka: 82,
-  // 相良武任
   norikage: 79,
   // 朝倉宗滴
   harusumi: 82,
@@ -7059,10 +6998,8 @@ var GENERALS = [
   { id: "om_omura3", name: "\u91DD\u5C3E\u4F0A\u8CC0\u5B88", faction: "omura", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 30, at: "omura", retinue: 220, retTrain: 58 },
   { id: "kk_kumamoto2", name: "\u57CE\u89AA\u51AC", faction: "kikuchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 80, age: 30, at: "kumamoto", retinue: 250, retTrain: 60 },
   { id: "kk_kumamoto3", name: "\u9688\u90E8\u89AA\u6C38", faction: "kikuchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 72, age: 22, at: "kumamoto", retinue: 250, retTrain: 60 },
-  { id: "sr_hitoyoshi2", name: "\u76F8\u826F\u983C\u623F", faction: "sagara", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 88, age: 26, at: "hitoyoshi", retinue: 250, retTrain: 60 },
   { id: "sr_hitoyoshi3", name: "\u72AC\u7AE5\u983C\u5B89", faction: "sagara", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 88, age: 20, at: "hitoyoshi", retinue: 240, retTrain: 60 },
   { id: "sr_yatsushiro3", name: "\u6DF1\u6C34\u9577\u667A", faction: "sagara", lead: 64, valor: 62, wit: 70, gov: 72, loyal: 88, age: 14, at: "yatsushiro", retinue: 240, retTrain: 58 },
-  { id: "it_sadowara2", name: "\u4F0A\u6771\u7950\u5175", faction: "ito", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 88, age: 22, at: "sadowara", retinue: 250, retTrain: 60 },
   { id: "it_sadowara3", name: "\u7C73\u826F\u91CD\u65B9", faction: "ito", lead: 64, valor: 68, wit: 60, gov: 54, loyal: 84, age: 28, at: "sadowara", retinue: 240, retTrain: 60 },
   { id: "it_tonokori2", name: "\u843D\u5408\u517C\u671D", faction: "ito", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 26, at: "tonokori", retinue: 240, retTrain: 60 },
   { id: "it_tonokori3", name: "\u9577\u5009\u7950\u653F", faction: "ito", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 30, at: "tonokori", retinue: 230, retTrain: 58 },
@@ -7112,6 +7049,7 @@ var GENERALS = [
   { id: "sb_kosuiji3", name: "\u5CA9\u6E05\u6C34\u7FA9\u6559", faction: "shiba", lead: 60, valor: 62, wit: 58, gov: 54, loyal: 82, age: 30, at: "kosuiji", retinue: 220, retTrain: 56 },
   { id: "nm_namioka2", name: "\u6D6A\u5CA1\u9855\u7BC4", faction: "namioka", lead: 62, valor: 62, wit: 62, gov: 60, loyal: 86, age: 24, at: "namioka", retinue: 230, retTrain: 58 },
   { id: "nm_namioka3", name: "\u5DDD\u539F\u5177\u4FE1", faction: "namioka", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 84, age: 28, at: "namioka", retinue: 220, retTrain: 56 },
+  { id: "or_masanobu", name: "\u5927\u6D66\u653F\u4FE1", faction: "oura", lead: 64, valor: 68, wit: 58, gov: 58, loyal: 100, age: 46, at: "oura", lord: true, retinue: 340, retTrain: 60 },
   { id: "or_oura2", name: "\u68EE\u5CA1\u4FE1\u5143", faction: "oura", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 84, age: 26, at: "oura", retinue: 230, retTrain: 60 },
   { id: "or_oura3", name: "\u5C0F\u7B20\u539F\u4FE1\u6D44", faction: "oura", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 30, at: "oura", retinue: 220, retTrain: 58 },
   { id: "sm_soma2", name: "\u76F8\u99AC\u7FA9\u80E4", faction: "soma", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 88, age: 20, at: "soma", retinue: 250, retTrain: 62 },
