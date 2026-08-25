@@ -475,7 +475,7 @@ export const NEWCOMERS = [
     lead: 70, valor: 70, wit: 66, gov: 64, retinue: 280, retTrain: 62, born: 1549 },
   { id: "dt_akimitsu", name: "石川昭光", faction: "date", y: 1565, at: "yonezawa",
     lead: 66, valor: 64, wit: 66, gov: 64, retinue: 270, retTrain: 60, born: 1550 },
-  { id: "dt_morishige", name: "国分盛重", faction: "date", y: 1568, at: "watari",
+  { id: "dt_morishige", name: "国分盛重", faction: "kokubun", y: 1568, at: "sendai",
     lead: 66, valor: 68, wit: 62, gov: 60, retinue: 260, retTrain: 60, born: 1553 },
   { id: "dt_kageyori", name: "屋代景頼", faction: "date", y: 1578, at: "yonezawa",
     lead: 68, valor: 72, wit: 64, gov: 58, retinue: 250, retTrain: 62, born: 1563 },
@@ -483,6 +483,19 @@ export const NEWCOMERS = [
     lead: 62, valor: 62, wit: 58, gov: 58, retinue: 320, retTrain: 58, born: 1547 },
   { id: "as_ujizane", name: "富田氏実", faction: "ashina", y: 1572, at: "kurokawa",
     lead: 64, valor: 64, wit: 62, gov: 60, retinue: 260, retTrain: 58, born: 1557 },
+  // ── 陸奥北・出羽（増補の第七回）
+  { id: "ab_yokota2", name: "阿曽沼広長", faction: "abe", y: 1586, at: "yokota",
+    lead: 62, valor: 64, wit: 58, gov: 56, retinue: 230, retTrain: 58, born: 1571 },
+  { id: "nb_masayoshi", name: "八戸政栄", faction: "nanbu", y: 1555, at: "sannohe",
+    lead: 70, valor: 70, wit: 66, gov: 64, retinue: 300, retTrain: 62, born: 1540 },
+  { id: "os_yoshitaka", name: "大崎義隆", faction: "osaki", y: 1563, at: "iwadeyama",
+    lead: 58, valor: 58, wit: 56, gov: 58, retinue: 320, retTrain: 56, born: 1548 },
+  { id: "mg_yoshitoki", name: "中野義時", faction: "mogami", y: 1565, at: "yamagata",
+    lead: 62, valor: 64, wit: 58, gov: 56, retinue: 260, retTrain: 58, born: 1550 },
+  { id: "nm_akimura", name: "浪岡顕村", faction: "namioka", y: 1568, at: "namioka",
+    lead: 56, valor: 56, wit: 58, gov: 58, retinue: 240, retTrain: 54, born: 1553 },
+  { id: "dh_yoshiuji", name: "大宝寺義氏", faction: "daihoji", y: 1566, at: "ourayama",
+    lead: 66, valor: 68, wit: 62, gov: 56, retinue: 300, retTrain: 60, born: 1551 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -598,6 +611,20 @@ export const PARENT = {
   nh_nihonmatsu2: "nihonmatsu_g", // 畠山義国 → 義継
   sw_shirakawa2: "shirakawa_g",   // 結城晴綱 → 義親
   nk_sukagawa2: "nikaido_g",      // 二階堂照行 → 盛義
+  // ── 陸奥北・出羽（増補の第七回）
+  ab_yokota2: "abe_g",            // 阿曽沼広郷 → 広長
+  nobunao: "nb_takanobu",         // 石川高信 → 南部信直
+  kunohe_g: "kn_nobunaka",        // 九戸信仲 → 政実
+  kh_kunohe2: "kn_nobunaka",      // 九戸信仲 → 実親
+  kasai_g: "ks_harutane",         // 葛西晴胤 → 晴信
+  ks_teraike2: "ks_harutane",     // 葛西晴胤 → 親信
+  os_yoshitaka: "osaki_g",        // 大崎義直 → 義隆
+  mg_yoshitoki: "yoshimori",      // 最上義守 → 中野義時
+  chikasue: "ando_g",             // 安東舜季 → 愛季
+  nm_akimura: "namioka_g",        // 浪岡具運 → 顕村
+  dh_yoshiuji: "daihoji_g",       // 大宝寺義増 → 義氏
+  td_tendo2: "tendo_g",           // 天童頼長 → 頼澄
+  or_tamenori: "or_masanobu",     // 大浦政信 → 為則
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
