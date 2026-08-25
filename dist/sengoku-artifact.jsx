@@ -20929,18 +20929,31 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const playerIsAtk = army.faction === g.player;
     const defLocal = foe ? Math.max(0, foe.local) : Math.max(0, dest.local - Math.round(minGarrison(dest) * 0.4));
     const aidMen = foe ? 0 : g.armies.filter((a) => a.id !== army.id && a.at === dest.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))).reduce((t, a) => t + a.men, 0);
-    const \u51FA\u308B\u5C06 = (army.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+    const \u51FA\u308B\u5C06 = (army.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean).sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead + b.gov + b.wit - (a.lead + a.gov + a.wit));
     const \u968A\u6570 = Math.max(2, \u51FA\u308B\u5C06.length + Math.max(1, defGens.length));
     layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0), \u968A\u6570);
     const face = attackFace(army.from, dest.id);
     const lineup = (isAtk, i, n) => {
       const near = 0.14, far = 0.86;
-      const t2 = (i - (n - 1) / 2) * Math.round(175 * (FIELD.w / BASE.w));
+      const \u9593 = Math.round(175 * (FIELD.w / BASE.w));
+      const \u5217 = Math.max(1, Math.min(n, Math.floor(FIELD.w * 0.78 / Math.max(1, \u9593))));
+      const \u6BB5\u6570 = Math.ceil(n / \u5217);
+      const \u4F4D = i === 0 ? { \u6BB5: \u6BB5\u6570 - 1, \u5E2D: 0, \u5E45: 1 } : (() => {
+        const j = i - 1;
+        const \u6BB5 = Math.min(\u6BB5\u6570 - 1, Math.floor(j / \u5217));
+        const \u4E2D = j - \u6BB5 * \u5217;
+        const \u6B8B = Math.min(\u5217, n - 1 - \u6BB5 * \u5217);
+        return { \u6BB5, \u5E2D: \u4E2D - (\u6B8B - 1) / 2, \u5E45: \u6B8B };
+      })();
+      const t2 = \u4F4D.\u5E2D * \u9593;
+      const \u5965 = \u4F4D.\u6BB5 * Math.round(78 * (FIELD.h / BASE.h));
       const put = (ax, ay, f2) => ({ x: ax, y: ay, f: f2 });
-      const S = () => put(FIELD.w / 2 + t2, isAtk ? FIELD.h * far : FIELD.h * near, isAtk ? -Math.PI / 2 : Math.PI / 2);
-      const N = () => put(FIELD.w / 2 + t2, isAtk ? FIELD.h * near : FIELD.h * far, isAtk ? Math.PI / 2 : -Math.PI / 2);
-      const E2 = () => put(isAtk ? FIELD.w * far : FIELD.w * near, FIELD.h / 2 + t2 * 0.66, isAtk ? Math.PI : 0);
-      const W = () => put(isAtk ? FIELD.w * near : FIELD.w * far, FIELD.h / 2 + t2 * 0.66, isAtk ? 0 : Math.PI);
+      const \u7DE0 = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+      const X = (v) => \u7DE0(v, 40, FIELD.w - 40), Y = (v) => \u7DE0(v, 40, FIELD.h - 40);
+      const S = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * far + \u5965 : FIELD.h * near - \u5965), isAtk ? -Math.PI / 2 : Math.PI / 2);
+      const N = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * near - \u5965 : FIELD.h * far + \u5965), isAtk ? Math.PI / 2 : -Math.PI / 2);
+      const E2 = () => put(X(isAtk ? FIELD.w * far + \u5965 : FIELD.w * near - \u5965), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? Math.PI : 0);
+      const W = () => put(X(isAtk ? FIELD.w * near - \u5965 : FIELD.w * far + \u5965), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? 0 : Math.PI);
       return face === "N" ? N() : face === "E" ? E2() : face === "W" ? W() : S();
     };
     const build = (gens0, local, train, side, yBase, facing, color, srcRost, isAtk) => {

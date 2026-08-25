@@ -854,19 +854,48 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     /* 野の広さは、兵の数と隊の数で決める。隊が多いほど、翼を伸ばし、伏せ、
        迂回する余地が要る。兵数だけで決めていたころは、五隊も出せば戦場が
        一杯になり、横に並べて前へ出るのが精一杯であった。 */
-    const 出る将 = (army.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+    /* 総大将を並びの先頭に置く。布陣（lineup）は先頭を後ろの真ん中に据えるので、
+       これで大将が本陣に座り、諸将がその前を固める形になる。
+       当主が出ていなければ、器量の勝る者が大将である。 */
+    const 出る将 = (army.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean)
+      .sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0)
+        || (b.lead + b.gov + b.wit) - (a.lead + a.gov + a.wit));
     const 隊数 = Math.max(2, 出る将.length + Math.max(1, defGens.length));
     layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0), 隊数);
     // 攻め口の方角に応じ、盤の四辺のどこから寄せるかを決める（GDD 8.1）
     const face = attackFace(army.from, dest.id);
+    /* 初めの布陣（GDD 8.1）。
+
+       横一列に並べていたので、隊が多いと盤からはみ出して端まで延びていた。
+       十隊も出せば左右に千七百歩、野の幅を越える。
+
+       段に分けて構える。総大将（並びの先頭）を後ろの真ん中に据え、
+       ほかの将はその前を、中央から外へ振り分けて固める。
+       一段に並べる数は野の幅から決めるので、どれだけ隊が増えても盤に収まる。 */
     const lineup = (isAtk, i, n) => {
       const near = 0.14, far = 0.86;                 // 盤の縁からの割合
-      const t2 = (i - (n - 1) / 2) * Math.round(175 * (FIELD.w / BASE.w));
+      const 間 = Math.round(175 * (FIELD.w / BASE.w));
+      const 列 = Math.max(1, Math.min(n, Math.floor((FIELD.w * 0.78) / Math.max(1, 間))));
+      const 段数 = Math.ceil(n / 列);
+      /* 並びの先頭は総大将である。後ろの段の真ん中に置き、
+         残りを前の段から順に、中央から外へ埋める。 */
+      const 位 = i === 0 ? { 段: 段数 - 1, 席: 0, 幅: 1 } : (() => {
+        const j = i - 1;                             // 総大将を除いた通し番号
+        const 段 = Math.min(段数 - 1, Math.floor(j / 列));
+        const 中 = j - 段 * 列;
+        const 残 = Math.min(列, (n - 1) - 段 * 列);
+        return { 段, 席: 中 - (残 - 1) / 2, 幅: 残 };
+      })();
+      const t2 = 位.席 * 間;
+      const 奥 = 位.段 * Math.round(78 * (FIELD.h / BASE.h));   // 段の厚み（後ろへ下がる）
       const put = (ax, ay, f2) => ({ x: ax, y: ay, f: f2 });
-      const S = () => put(FIELD.w / 2 + t2, isAtk ? FIELD.h * far : FIELD.h * near, isAtk ? -Math.PI / 2 : Math.PI / 2);
-      const N = () => put(FIELD.w / 2 + t2, isAtk ? FIELD.h * near : FIELD.h * far, isAtk ? Math.PI / 2 : -Math.PI / 2);
-      const E = () => put(isAtk ? FIELD.w * far : FIELD.w * near, FIELD.h / 2 + t2 * 0.66, isAtk ? Math.PI : 0);
-      const W = () => put(isAtk ? FIELD.w * near : FIELD.w * far, FIELD.h / 2 + t2 * 0.66, isAtk ? 0 : Math.PI);
+      const 締 = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+      const X = (v) => 締(v, 40, FIELD.w - 40), Y = (v) => 締(v, 40, FIELD.h - 40);
+      // 後ろへ下がる向きは、盤のどちら側に立つかで決まる
+      const S = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * far + 奥 : FIELD.h * near - 奥), isAtk ? -Math.PI / 2 : Math.PI / 2);
+      const N = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * near - 奥 : FIELD.h * far + 奥), isAtk ? Math.PI / 2 : -Math.PI / 2);
+      const E = () => put(X(isAtk ? FIELD.w * far + 奥 : FIELD.w * near - 奥), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? Math.PI : 0);
+      const W = () => put(X(isAtk ? FIELD.w * near - 奥 : FIELD.w * far + 奥), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? 0 : Math.PI);
       return face === "N" ? N() : face === "E" ? E() : face === "W" ? W() : S();
     };
     const build = (gens0, local, train, side, yBase, facing, color, srcRost, isAtk) => {
