@@ -398,6 +398,25 @@ export const NEWCOMERS = [
     lead: 58, valor: 60, wit: 54, gov: 56, retinue: 300, retTrain: 60, born: 1545 },
   { id: "rk_takaharu", name: "後藤高治", faction: "rokkaku", y: 1560, at: "sawayama",
     lead: 66, valor: 66, wit: 64, gov: 62, retinue: 260, retTrain: 60, born: 1545 },
+  // ── 甲斐・信濃・駿河・美濃・北近江（増補の第三回）
+  { id: "td_nobunori", name: "板垣信憲", faction: "takeda", y: 1552, at: "fukashi",
+    lead: 62, valor: 66, wit: 56, gov: 54, retinue: 280, retTrain: 62, born: 1537 },
+  { id: "td_masatada", name: "甘利昌忠", faction: "takeda", y: 1555, at: "fukashi",
+    lead: 68, valor: 70, wit: 62, gov: 60, retinue: 270, retTrain: 64, born: 1540 },
+  { id: "td_masanao", name: "保科正直", faction: "takeda", y: 1557, at: "takato",
+    lead: 70, valor: 74, wit: 64, gov: 62, retinue: 260, retTrain: 66, born: 1542 },
+  { id: "td_yasukage", name: "横田康景", faction: "takeda", y: 1569, at: "tsutsujigasaki",
+    lead: 70, valor: 78, wit: 62, gov: 56, retinue: 250, retTrain: 68, born: 1554 },
+  { id: "im_michiyoshi", name: "小野道好", faction: "imagawa", y: 1552, at: "hikuma",
+    lead: 58, valor: 56, wit: 70, gov: 62, retinue: 200, retTrain: 56, born: 1537 },
+  { id: "im_yasukatsu", name: "朝比奈泰勝", faction: "imagawa", y: 1562, at: "kakegawa",
+    lead: 68, valor: 76, wit: 64, gov: 60, retinue: 230, retTrain: 64, born: 1547 },
+  { id: "sa_sadamichi", name: "稲葉貞通", faction: "saito", y: 1561, at: "ogaki",
+    lead: 70, valor: 72, wit: 64, gov: 62, retinue: 280, retTrain: 64, born: 1546 },
+  { id: "sa_mitsuyasu2", name: "加藤光泰", faction: "saito", y: 1552, at: "ogaki",
+    lead: 70, valor: 68, wit: 70, gov: 74, retinue: 220, retTrain: 62, born: 1537 },
+  { id: "az_hidemura", name: "堀秀村", faction: "azai", y: 1572, at: "yamamotoyama",
+    lead: 60, valor: 60, wit: 58, gov: 60, retinue: 240, retTrain: 58, born: 1557 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -471,6 +490,13 @@ export const PARENT = {
   yoshikata: "rk_sadayori",       // 六角定頼 → 義賢
   rk_yoshiharu: "yoshikata",      // 六角義賢 → 義治
   rk_takaharu: "kagechika",       // 後藤賢豊 → 高治
+  // ── 甲斐・信濃・駿河（増補の第三回）
+  td_nobunori: "nobukata",        // 板垣信方 → 信憲
+  td_masatada: "toramasa",        // 甘利虎泰 → 昌忠
+  td_masanao: "td_masatoshi",     // 保科正俊 → 正直
+  td_yasukage: "td_takatoshi",    // 横田高松 → 康景（養子）
+  im_yasukatsu: "ujitane",        // 朝比奈泰能 → 泰勝
+  sa_sadamichi: "yoshimichi",     // 稲葉良通 → 貞通
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
@@ -485,6 +511,8 @@ export const PARENT = {
 export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっている者
 
 export const LONG_LIVED = {
+  im_yasukatsu: 87,  // 朝比奈泰勝（のち徳川に仕え八十七歳）
+  td_masatoshi: 85,  // 保科正俊（槍弾正。八十五歳）
   rk_shigemasa: 84,  // 吉田重政（弓の日置流。八十四歳）
   rk_mitsutoshi: 76, // 多羅尾光俊（甲賀。七十六歳）
   uy_nagatomo: 82,   // 秋元長朝（総社藩主。利根川の治水に功があった）
