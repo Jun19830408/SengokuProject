@@ -417,6 +417,35 @@ export const NEWCOMERS = [
     lead: 70, valor: 68, wit: 70, gov: 74, retinue: 220, retTrain: 62, born: 1537 },
   { id: "az_hidemura", name: "堀秀村", faction: "azai", y: 1572, at: "yamamotoyama",
     lead: 60, valor: 60, wit: 58, gov: 60, retinue: 240, retTrain: 58, born: 1557 },
+  // ── 相模・武蔵・下総・常陸（増補の第四回）
+  { id: "hj_ujishige", name: "北条氏繁", faction: "hojo", y: 1551, at: "tamanawa",
+    lead: 80, valor: 82, wit: 68, gov: 66, retinue: 320, retTrain: 72, born: 1536 },
+  { id: "hj_kosetsusai", name: "板部岡江雪斎", faction: "hojo", y: 1552, at: "odawara",
+    lead: 52, valor: 46, wit: 84, gov: 80, retinue: 180, retTrain: 54, born: 1537 },
+  { id: "hj_hidenobu", name: "大藤秀信", faction: "hojo", y: 1555, at: "tamanawa",
+    lead: 70, valor: 74, wit: 62, gov: 56, retinue: 260, retTrain: 68, born: 1540 },
+  { id: "ot5_iwatsuki3", name: "太田資武", faction: "ota", y: 1582, at: "iwatsuki",
+    lead: 64, valor: 66, wit: 60, gov: 58, retinue: 240, retTrain: 60, born: 1567 },
+  { id: "ot_ujisuke", name: "太田氏資", faction: "ota", y: 1557, at: "iwatsuki",
+    lead: 68, valor: 70, wit: 62, gov: 60, retinue: 280, retTrain: 62, born: 1542 },
+  { id: "ed_michimasa", name: "江戸通政", faction: "edo_h", y: 1557, at: "mito",
+    lead: 64, valor: 62, wit: 62, gov: 62, retinue: 280, retTrain: 58, born: 1542 },
+  { id: "ed_masamoto", name: "大掾政幹", faction: "edo_h", y: 1560, at: "fuchu_hitachi",
+    lead: 62, valor: 62, wit: 60, gov: 60, retinue: 240, retTrain: 58, born: 1545 },
+  { id: "cb_chikatane", name: "千葉親胤", faction: "chiba", y: 1556, at: "motosakura",
+    lead: 58, valor: 58, wit: 56, gov: 58, retinue: 300, retTrain: 56, born: 1541 },
+  { id: "cb_tanetoki", name: "高城胤辰", faction: "chiba", y: 1564, at: "usui",
+    lead: 64, valor: 66, wit: 62, gov: 60, retinue: 250, retTrain: 60, born: 1549 },
+  { id: "kg_yoshiuji", name: "足利義氏", faction: "koga", y: 1556, at: "koga",
+    lead: 54, valor: 52, wit: 58, gov: 62, retinue: 320, retTrain: 54, born: 1541 },
+  { id: "kg_fujiuji", name: "足利藤氏", faction: "koga", y: 1554, at: "sekiyado",
+    lead: 56, valor: 56, wit: 56, gov: 58, retinue: 280, retTrain: 54, born: 1539 },
+  { id: "nr_ujinaga", name: "成田氏長", faction: "narita", y: 1557, at: "oshi",
+    lead: 66, valor: 64, wit: 68, gov: 66, retinue: 300, retTrain: 60, born: 1542 },
+  { id: "yk_shigetsune", name: "多賀谷重経", faction: "yuki", y: 1573, at: "yuki",
+    lead: 68, valor: 70, wit: 64, gov: 60, retinue: 260, retTrain: 62, born: 1558 },
+  { id: "yk_katsutoshi", name: "水谷勝俊", faction: "yuki", y: 1560, at: "yuki",
+    lead: 66, valor: 68, wit: 62, gov: 62, retinue: 250, retTrain: 60, born: 1545 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -497,6 +526,19 @@ export const PARENT = {
   td_yasukage: "td_takatoshi",    // 横田高松 → 康景（養子）
   im_yasukatsu: "ujitane",        // 朝比奈泰能 → 泰勝
   sa_sadamichi: "yoshimichi",     // 稲葉良通 → 貞通
+  // ── 相模・武蔵・下総・常陸（増補の第四回）
+  hj_ujishige: "tsunashige",      // 北条綱成 → 氏繁（玉縄）
+  hj_hidenobu: "hj_shigenaga",    // 大藤栄永 → 秀信
+  ujinori2: "hj_morihide",        // 松田盛秀 → 憲秀
+  ot5_iwatsuki3: "sukemasa",      // 太田資正 → 資武
+  ot_ujisuke: "sukemasa",         // 太田資正 → 氏資
+  ed_michimasa: "michifusa",      // 江戸忠通 → 通政
+  ed_masamoto: "fuchu",           // 大掾慶幹 → 政幹
+  cb_chikatane: "tanenobu",       // 千葉利胤 → 親胤
+  kg_yoshiuji: "haruuji",         // 足利晴氏 → 義氏
+  kg_fujiuji: "haruuji",          // 足利晴氏 → 藤氏
+  nr_ujinaga: "nagayasu_n",       // 成田長泰 → 氏長
+  yk_harutomo: "masakatsu",       // 結城政勝 → 晴朝（養子）
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
@@ -511,6 +553,7 @@ export const PARENT = {
 export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっている者
 
 export const LONG_LIVED = {
+  yk_harutomo: 81,   // 結城晴朝（八十一歳）
   im_yasukatsu: 87,  // 朝比奈泰勝（のち徳川に仕え八十七歳）
   td_masatoshi: 85,  // 保科正俊（槍弾正。八十五歳）
   rk_shigemasa: 84,  // 吉田重政（弓の日置流。八十四歳）
