@@ -3706,6 +3706,105 @@ var NEWCOMERS = [
     retinue: 250,
     retTrain: 60,
     born: 1545
+  },
+  // ── 畿内（増補の第五回）
+  {
+    id: "my_nagaharu",
+    name: "\u4E09\u597D\u9577\u6CBB",
+    faction: "miyoshi",
+    y: 1568,
+    at: "shozui",
+    lead: 58,
+    valor: 60,
+    wit: 54,
+    gov: 54,
+    retinue: 320,
+    retTrain: 58,
+    born: 1553
+  },
+  {
+    id: "my_yasutoshi",
+    name: "\u4E09\u597D\u5EB7\u4FCA",
+    faction: "miyoshi",
+    y: 1560,
+    at: "ichinomiya",
+    lead: 64,
+    valor: 66,
+    wit: 60,
+    gov: 58,
+    retinue: 260,
+    retTrain: 60,
+    born: 1545
+  },
+  {
+    id: "my_nagamasa",
+    name: "\u6C60\u7530\u9577\u6B63",
+    faction: "miyoshi",
+    y: 1555,
+    at: "itami",
+    lead: 64,
+    valor: 64,
+    wit: 62,
+    gov: 62,
+    retinue: 270,
+    retTrain: 60,
+    born: 1540
+  },
+  {
+    id: "ts_hidesuke",
+    name: "\u4E2D\u574A\u79C0\u7950",
+    faction: "tsutsui",
+    y: 1553,
+    at: "koriyama",
+    lead: 62,
+    valor: 62,
+    wit: 70,
+    gov: 72,
+    retinue: 220,
+    retTrain: 56,
+    born: 1538
+  },
+  {
+    id: "hg_kennyo",
+    name: "\u9855\u5982",
+    faction: "honganji",
+    y: 1558,
+    at: "ishiyama",
+    lead: 74,
+    valor: 52,
+    wit: 88,
+    gov: 86,
+    retinue: 700,
+    retTrain: 62,
+    born: 1543
+  },
+  {
+    id: "bs_nagaharu",
+    name: "\u5225\u6240\u9577\u6CBB",
+    faction: "bessho",
+    y: 1573,
+    at: "miki",
+    lead: 66,
+    valor: 68,
+    wit: 62,
+    gov: 62,
+    retinue: 320,
+    retTrain: 62,
+    born: 1558
+  },
+  {
+    id: "ak_yoshisuke",
+    name: "\u8D64\u677E\u7FA9\u7950",
+    faction: "akamatsu",
+    y: 1552,
+    at: "ojio",
+    lead: 60,
+    valor: 58,
+    wit: 58,
+    gov: 60,
+    retinue: 300,
+    retTrain: 56,
+    born: 1537
   }
 ];
 var KANJI_TSUJI = [
@@ -3885,6 +3984,27 @@ var PARENT = {
   // 成田長泰 → 氏長
   yk_harutomo: "masakatsu",
   // 結城政勝 → 晴朝（養子）
+  // ── 畿内（増補の第五回）
+  yoshiteru: "ak_yoshiharu",
+  // 足利義晴 → 義輝
+  my_nagaharu: "jikkyu",
+  // 三好実休 → 長治
+  my_yasutoshi: "m_yasunaga",
+  // 三好康長 → 康俊
+  my_nagamasa: "my_nobumasa",
+  // 池田信正 → 長正
+  hg_kennyo: "kennyo",
+  // 証如 → 顕如
+  bs_nagaharu: "shigemune",
+  // 別所就治 → 長治
+  ak_yoshisuke: "harumasa",
+  // 赤松晴政 → 義祐
+  bs_yoshichika: "shigemune",
+  // 別所就治 → 吉親
+  ht_harumichi: "hideharu",
+  // 波多野秀忠 → 晴通
+  ts_junsei: "junsho",
+  // 筒井順昭 → 順政（弟）
   rk_shigetsuna: "sadayori",
   // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",
@@ -3904,6 +4024,12 @@ var PARENT = {
 };
 var FATED = { hirotada: 1549 };
 var LONG_LIVED = {
+  ts_ieyoshi: 92,
+  // 柳生家厳（宗厳の父。九十二歳）
+  ts_yoshihiro: 78,
+  // 井戸良弘
+  ts_hidesuke: 77,
+  // 中坊秀祐
   yk_harutomo: 81,
   // 結城晴朝（八十一歳）
   im_yasukatsu: 87,
@@ -7172,28 +7298,43 @@ var GENERALS = [
   { id: "yamazaki", name: "\u5C71\u5D0E\u5409\u5BB6", faction: "asakura", lead: 74, valor: 72, wit: 70, gov: 66, loyal: 88, age: 30, at: "ichijodani", retinue: 340, retTrain: 66 },
   { id: "magara", name: "\u771F\u67C4\u76F4\u9686", faction: "asakura", lead: 66, valor: 90, wit: 48, gov: 44, loyal: 86, age: 22, at: "kanegasaki", retinue: 260, retTrain: 68 },
   { id: "ema", name: "\u6C5F\u99AC\u6642\u76DB", faction: "anegakoji", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 68, age: 38, at: "matsukura_h", retinue: 240, retTrain: 58 },
-  { id: "yoshiteru", name: "\u8DB3\u5229\u7FA9\u8F1D", faction: "ashikaga", lead: 76, valor: 84, wit: 70, gov: 66, loyal: 100, age: 10, at: "nijo", lord: true, retinue: 320, retTrain: 62 },
+  { id: "ak_yoshiharu", name: "\u8DB3\u5229\u7FA9\u6674", faction: "ashikaga", lead: 56, valor: 52, wit: 66, gov: 68, loyal: 100, age: 35, at: "nijo", lord: true, retinue: 340, retTrain: 56 },
+  { id: "yoshiteru", name: "\u8DB3\u5229\u7FA9\u8F1D", faction: "ashikaga", lead: 76, valor: 84, wit: 70, gov: 66, loyal: 100, age: 10, at: "nijo", retinue: 320, retTrain: 62 },
+  { id: "ak_sadataka", name: "\u4F0A\u52E2\u8C9E\u5B5D", faction: "ashikaga", lead: 54, valor: 52, wit: 74, gov: 80, loyal: 66, age: 38, at: "nijo", retinue: 220, retTrain: 54 },
+  { id: "ak_harumitsu", name: "\u5927\u9928\u6674\u5149", faction: "ashikaga", lead: 54, valor: 50, wit: 72, gov: 76, loyal: 84, age: 40, at: "nijo", retinue: 200, retTrain: 52 },
   { id: "fujitaka", name: "\u7D30\u5DDD\u85E4\u5B5D", faction: "ashikaga", lead: 76, valor: 68, wit: 84, gov: 86, loyal: 88, age: 12, at: "nijo", retinue: 220, retTrain: 62 },
   { id: "nagayoshi", name: "\u4E09\u597D\u9577\u6176", faction: "miyoshi", lead: 90, valor: 74, wit: 90, gov: 92, loyal: 100, age: 24, at: "akutagawa", lord: true, retinue: 900, retTrain: 72 },
   { id: "hisahide", name: "\u677E\u6C38\u4E45\u79C0", faction: "miyoshi", lead: 80, valor: 64, wit: 94, gov: 86, loyal: 52, age: 38, at: "shigisan", retinue: 480, retTrain: 66 },
   { id: "jikkyu", name: "\u4E09\u597D\u5B9F\u4F11", faction: "miyoshi", lead: 82, valor: 80, wit: 74, gov: 70, loyal: 94, age: 19, at: "kishiwada", retinue: 520, retTrain: 70 },
-  { id: "fuyuyasu", name: "\u5B89\u5B85\u51AC\u5EB7", faction: "miyoshi", lead: 76, valor: 74, wit: 72, gov: 70, loyal: 92, age: 18, at: "hanakuma", retinue: 380, retTrain: 66 },
+  { id: "fuyuyasu", name: "\u5B89\u5B85\u51AC\u5EB7", faction: "miyoshi", lead: 76, valor: 74, wit: 72, gov: 70, loyal: 92, age: 18, at: "sumoto", retinue: 380, retTrain: 66 },
   { id: "sogo", name: "\u5341\u6CB3\u4E00\u5B58", faction: "miyoshi", lead: 78, valor: 88, wit: 60, gov: 56, loyal: 92, age: 14, at: "takaya", retinue: 420, retTrain: 70 },
   { id: "masanaga", name: "\u4E09\u597D\u653F\u5EB7", faction: "miyoshi", lead: 70, valor: 74, wit: 64, gov: 58, loyal: 84, age: 28, at: "shoryuji", retinue: 340, retTrain: 64 },
   { id: "nagayasu", name: "\u4E09\u597D\u9577\u9038", faction: "miyoshi", lead: 72, valor: 70, wit: 68, gov: 62, loyal: 86, age: 34, at: "itami", retinue: 360, retTrain: 64 },
   { id: "kennyo", name: "\u8A3C\u5982\uFF08\u672C\u9858\u5BFA\uFF09", faction: "honganji", lead: 74, valor: 50, wit: 86, gov: 88, loyal: 100, age: 30, at: "ishiyama", lord: true, retinue: 900, retTrain: 62 },
   { id: "raijun", name: "\u4E0B\u9593\u983C\u7DCF", faction: "honganji", lead: 72, valor: 66, wit: 74, gov: 68, loyal: 94, age: 32, at: "ishiyama", retinue: 420, retTrain: 62 },
+  { id: "hg_raisei", name: "\u4E0B\u9593\u983C\u76DB", faction: "honganji", lead: 70, valor: 68, wit: 70, gov: 66, loyal: 92, age: 28, at: "ishiyama", retinue: 380, retTrain: 62 },
+  { id: "hg_yorichika", name: "\u4E03\u91CC\u983C\u5468", faction: "honganji", lead: 68, valor: 66, wit: 72, gov: 68, loyal: 90, age: 32, at: "ishiyama", retinue: 360, retTrain: 60 },
   { id: "kaga1", name: "\u6749\u6D66\u7384\u4EFB", faction: "kaga_ikko", lead: 70, valor: 68, wit: 72, gov: 64, loyal: 96, age: 34, at: "kanazawa", lord: true, retinue: 620, retTrain: 60 },
   { id: "kaga2", name: "\u4E03\u91CC\u983C\u5468", faction: "kaga_ikko", lead: 66, valor: 62, wit: 74, gov: 66, loyal: 94, age: 31, at: "komatsu", retinue: 380, retTrain: 58 },
   { id: "junsho", name: "\u7B52\u4E95\u9806\u662D", faction: "tsutsui", lead: 72, valor: 68, wit: 70, gov: 70, loyal: 100, age: 24, at: "koriyama", lord: true, retinue: 460, retTrain: 60 },
+  { id: "ts_junsei", name: "\u7B52\u4E95\u9806\u653F", faction: "tsutsui", lead: 70, valor: 68, wit: 72, gov: 68, loyal: 96, age: 22, at: "koriyama", retinue: 320, retTrain: 60 },
+  { id: "ts_ieyoshi", name: "\u67F3\u751F\u5BB6\u53B3", faction: "tsutsui", lead: 62, valor: 80, wit: 62, gov: 56, loyal: 74, age: 53, at: "koriyama", retinue: 220, retTrain: 64 },
+  { id: "ts_yoshihiro", name: "\u4E95\u6238\u826F\u5F18", faction: "tsutsui", lead: 66, valor: 68, wit: 66, gov: 64, loyal: 82, age: 12, at: "koriyama", retinue: 230, retTrain: 58 },
+  { id: "ts_tokatsu", name: "\u5341\u5E02\u9060\u52DD", faction: "tsutsui", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 56, age: 26, at: "takatori", retinue: 270, retTrain: 58 },
   { id: "hanzo_iga", name: "\u767E\u5730\u4E39\u6CE2", faction: "iga", lead: 66, valor: 72, wit: 90, gov: 52, loyal: 100, age: 40, at: "ueno_iga", lord: true, retinue: 340, retTrain: 66 },
   { id: "magoichi", name: "\u9234\u6728\u4F50\u5927\u592B", faction: "saika", lead: 76, valor: 80, wit: 74, gov: 60, loyal: 100, age: 38, at: "saika", lord: true, retinue: 520, retTrain: 70 },
   { id: "saika2", name: "\u571F\u6A4B\u5B88\u91CD", faction: "saika", lead: 70, valor: 74, wit: 68, gov: 58, loyal: 88, age: 32, at: "shingu", retinue: 300, retTrain: 64 },
   { id: "hideharu", name: "\u6CE2\u591A\u91CE\u79C0\u5FE0", faction: "hatano", lead: 72, valor: 70, wit: 66, gov: 66, loyal: 100, age: 42, at: "yagami", lord: true, retinue: 480, retTrain: 60 },
+  { id: "ht_harumichi", name: "\u6CE2\u591A\u91CE\u6674\u901A", faction: "hatano", lead: 66, valor: 66, wit: 62, gov: 62, loyal: 94, age: 24, at: "yagami", retinue: 300, retTrain: 58 },
+  { id: "ht_norinari", name: "\u7C7E\u4E95\u6559\u696D", faction: "hatano", lead: 66, valor: 74, wit: 58, gov: 54, loyal: 78, age: 34, at: "yokoyama", retinue: 260, retTrain: 62 },
   { id: "yoshiyuki", name: "\u4E00\u8272\u7FA9\u5E78", faction: "isshiki", lead: 64, valor: 62, wit: 60, gov: 62, loyal: 100, age: 36, at: "miyazu", lord: true, retinue: 360, retTrain: 56 },
   { id: "suketoyo", name: "\u5C71\u540D\u7950\u8C4A", faction: "yamana", lead: 66, valor: 62, wit: 64, gov: 68, loyal: 100, age: 35, at: "konosumi", lord: true, retinue: 420, retTrain: 56 },
   { id: "harumasa", name: "\u8D64\u677E\u6674\u653F", faction: "akamatsu", lead: 62, valor: 60, wit: 58, gov: 62, loyal: 100, age: 33, at: "ojio", lord: true, retinue: 440, retTrain: 56 },
+  { id: "ak_masahide", name: "\u8D64\u677E\u653F\u79C0", faction: "akamatsu", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 52, age: 30, at: "ojio", retinue: 300, retTrain: 62 },
+  { id: "ak_koresada", name: "\u6ADB\u6A4B\u4F0A\u5B9A", faction: "akamatsu", lead: 62, valor: 64, wit: 62, gov: 62, loyal: 78, age: 36, at: "goshaku", retinue: 250, retTrain: 58 },
   { id: "shigemune", name: "\u5225\u6240\u5C31\u6CBB", faction: "bessho", lead: 70, valor: 68, wit: 66, gov: 64, loyal: 100, age: 44, at: "miki", lord: true, retinue: 400, retTrain: 60 },
+  { id: "bs_yoshichika", name: "\u5225\u6240\u5409\u89AA", faction: "bessho", lead: 64, valor: 66, wit: 62, gov: 60, loyal: 88, age: 26, at: "miki", retinue: 280, retTrain: 60 },
+  { id: "bs_harutada", name: "\u4E09\u5B85\u6CBB\u5FE0", faction: "bessho", lead: 64, valor: 68, wit: 60, gov: 58, loyal: 90, age: 30, at: "miki", retinue: 260, retTrain: 60 },
   { id: "yoshitsugu", name: "\u7560\u5C71\u7FA9\u7D9A", faction: "hatakeyama", lead: 62, valor: 58, wit: 60, gov: 64, loyal: 100, age: 28, at: "nanao", lord: true, retinue: 520, retTrain: 58 },
   { id: "nagatsuna", name: "\u9577\u7D9A\u9023", faction: "hatakeyama", lead: 70, valor: 68, wit: 66, gov: 66, loyal: 84, age: 31, at: "nanao", retinue: 320, retTrain: 60 },
   { id: "nagamoto", name: "\u795E\u4FDD\u9577\u8077", faction: "jinbo", lead: 70, valor: 68, wit: 70, gov: 64, loyal: 100, age: 32, at: "toyama", lord: true, retinue: 420, retTrain: 60 },
@@ -7378,7 +7519,6 @@ var GENERALS = [
   { id: "tadamoto", name: "\u65B0\u7D0D\u5FE0\u5143", faction: "shimazu", lead: 78, valor: 84, wit: 68, gov: 62, loyal: 94, age: 20, at: "obi", retinue: 320, retTrain: 70 },
   { id: "shigehisa", name: "\u4F0A\u96C6\u9662\u5FE0\u6717", faction: "shimazu", lead: 74, valor: 72, wit: 70, gov: 68, loyal: 92, age: 46, at: "uchijo", retinue: 300, retTrain: 64 },
   { id: "yoshishige_s", name: "\u5B97\u6674\u5EB7", faction: "so", lead: 64, valor: 62, wit: 68, gov: 66, loyal: 100, age: 54, at: "kanaishi", lord: true, retinue: 260, retTrain: 58 },
-  { id: "w_atagi", name: "\u5B89\u5B85\u51AC\u5EB7\uFF08\u6D32\u672C\uFF09", faction: "miyoshi", lead: 76, valor: 74, wit: 72, gov: 70, loyal: 92, age: 18, at: "sumoto", retinue: 340, retTrain: 64 },
   { id: "w_ichinomiya", name: "\u4E00\u5BAE\u6210\u7950", faction: "miyoshi", lead: 68, valor: 70, wit: 62, gov: 58, loyal: 72, age: 28, at: "ichinomiya", retinue: 280, retTrain: 60 },
   { id: "w_hakuchi", name: "\u5927\u897F\u899A\u990A", faction: "miyoshi", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 70, age: 26, at: "hakuchi", retinue: 240, retTrain: 58 },
   { id: "motozane", name: "\u65B0\u958B\u5143\u5B9F", faction: "shingai", lead: 68, valor: 70, wit: 66, gov: 66, loyal: 100, age: 52, at: "ushiki", lord: true, retinue: 320, retTrain: 62 },
@@ -7443,13 +7583,20 @@ var GENERALS = [
   { id: "ainu_n3", name: "\u30EB\u30E2\u30A4\u4E59\u540D", faction: "ainu_n", lead: 62, valor: 68, wit: 58, gov: 54, loyal: 90, age: 35, at: "rumoi", retinue: 190, retTrain: 58 },
   { id: "kakizaki3", name: "\u8823\u5D0E\u57FA\u5E83", faction: "kakizaki", lead: 64, valor: 68, wit: 60, gov: 58, loyal: 74, age: 32, at: "esashi", retinue: 220, retTrain: 58 },
   { id: "m_yasunaga", name: "\u4E09\u597D\u5EB7\u9577", faction: "miyoshi", lead: 76, valor: 74, wit: 72, gov: 68, loyal: 88, age: 26, at: "akutagawa", retinue: 320, retTrain: 64 },
+  { id: "my_soso", name: "\u4E09\u597D\u5B97\u4E09", faction: "miyoshi", lead: 72, valor: 70, wit: 74, gov: 70, loyal: 54, age: 38, at: "akutagawa", retinue: 340, retTrain: 64 },
+  { id: "my_naganori", name: "\u904A\u4F50\u9577\u6559", faction: "miyoshi", lead: 70, valor: 66, wit: 78, gov: 74, loyal: 58, age: 40, at: "takaya", retinue: 320, retTrain: 62 },
+  { id: "my_munefusa", name: "\u5B89\u898B\u5B97\u623F", faction: "miyoshi", lead: 68, valor: 70, wit: 68, gov: 62, loyal: 52, age: 34, at: "takaya", retinue: 290, retTrain: 62 },
+  { id: "my_ujitsuna", name: "\u7D30\u5DDD\u6C0F\u7DB1", faction: "miyoshi", lead: 58, valor: 56, wit: 62, gov: 66, loyal: 70, age: 32, at: "shoryuji", retinue: 300, retTrain: 56 },
+  { id: "my_nobumasa", name: "\u6C60\u7530\u4FE1\u6B63", faction: "miyoshi", lead: 66, valor: 66, wit: 62, gov: 62, loyal: 62, age: 32, at: "itami", retinue: 280, retTrain: 60 },
+  { id: "my_chikaoki", name: "\u4F0A\u4E39\u89AA\u8208", faction: "miyoshi", lead: 68, valor: 68, wit: 64, gov: 62, loyal: 58, age: 30, at: "itami", retinue: 280, retTrain: 62 },
+  { id: "my_nagayori", name: "\u677E\u6C38\u9577\u983C", faction: "miyoshi", lead: 76, valor: 74, wit: 72, gov: 64, loyal: 88, age: 26, at: "hanakuma", retinue: 320, retTrain: 66 },
+  { id: "my_motoshige", name: "\u9999\u897F\u5143\u6210", faction: "miyoshi", lead: 68, valor: 72, wit: 64, gov: 58, loyal: 56, age: 36, at: "hiketa", retinue: 280, retTrain: 62 },
   { id: "m_masayasu", name: "\u4E09\u597D\u653F\u52DD", faction: "miyoshi", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 72, age: 30, at: "akutagawa", retinue: 280, retTrain: 62 },
   { id: "m_yukiyasu", name: "\u4E09\u597D\u4E4B\u5EB7", faction: "miyoshi", lead: 70, valor: 72, wit: 66, gov: 62, loyal: 86, age: 24, at: "iimoriyama", retinue: 300, retTrain: 62 },
   { id: "m_matsuyama", name: "\u677E\u5C71\u91CD\u6CBB", faction: "miyoshi", lead: 70, valor: 66, wit: 74, gov: 68, loyal: 84, age: 28, at: "iimoriyama", retinue: 260, retTrain: 62 },
   { id: "m_kono", name: "\u9999\u897F\u9577\u4FE1", faction: "miyoshi", lead: 66, valor: 70, wit: 62, gov: 58, loyal: 80, age: 32, at: "takaya", retinue: 260, retTrain: 60 },
   { id: "m_yui", name: "\u7D50\u57CE\u5FE0\u6B63", faction: "miyoshi", lead: 64, valor: 60, wit: 70, gov: 70, loyal: 80, age: 36, at: "takaya", retinue: 240, retTrain: 58 },
   { id: "m_ibaraki", name: "\u8328\u6728\u9577\u9686", faction: "miyoshi", lead: 66, valor: 62, wit: 72, gov: 74, loyal: 82, age: 41, at: "itami", retinue: 260, retTrain: 60 },
-  { id: "m_iwanari2", name: "\u77F3\u6210\u53CB\u901A", faction: "miyoshi", lead: 68, valor: 70, wit: 66, gov: 60, loyal: 82, age: 25, at: "itami", retinue: 250, retTrain: 62 },
   { id: "m_hatano", name: "\u6CE2\u591A\u91CE\u79C0\u89AA", faction: "miyoshi", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 74, age: 29, at: "hanakuma", retinue: 240, retTrain: 60 },
   { id: "m_araki", name: "\u8352\u6728\u7FA9\u6751", faction: "miyoshi", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 80, age: 31, at: "hanakuma", retinue: 250, retTrain: 60 },
   { id: "m_sogo3", name: "\u5341\u6CB3\u666F\u6ECB", faction: "miyoshi", lead: 70, valor: 76, wit: 60, gov: 56, loyal: 88, age: 34, at: "sogo", retinue: 280, retTrain: 64 },

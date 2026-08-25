@@ -138,6 +138,11 @@ Math.random = function () {
 
 /* ------------------------------------- 二、守備隊は門を離れず、討って出ない */
 {
+  /* ここで賽を振り直す。この段より前に initState を二度呼んでおり、そこで
+     使う乱数の数は武将の数に比例する。武将を増やすたびに、この段の縄張りが
+     別のものに変わってしまう。段ごとに賽を据え直せば、盤の中身が増えても
+     ここで測るものは変わらない。 */
+  種 = 7;
   const 城 = { id: 'test', name: '試の城', def: 55, local: 2400, localTrain: 65, najimi: 70, rost: null, kind: '平山城' };
   const 仕立て = (守備隊) => {
     const map = A.layoutCastleField(A.buildCastleMap(城));
@@ -171,6 +176,16 @@ Math.random = function () {
     for (const c of b.corps) A.placeSquads(c, true);
     return b;
   };
+  /* 「門を離れた」の数え方。
+
+     持ち場の門は、戦の途中で付け替わることがある。守っていた門が破られれば、
+     その隊は次の門へ回される。そのとき隊は動いていないのに、「いまの持ち場から
+     の隔たり」だけが一瞬で跳ぶ。もとの数え方はこれを「門を離れた」と数えて
+     いたので、付け替えの起きる縄張りに当たると倒れた。二十通りの縄張りで
+     測ると、一つでこれが起きる。
+
+     数えたいのは「守っている門を捨てて離れていく」ことであって、「新しい持ち場へ
+     向かって歩いている」ことではない。付け替えの直後は、その門に着くまで数えない。 */
   const 走らす = (b) => {
     let 出た = 0, 離れ = 0, 分遣 = 0;
     for (let i = 0; i < 900; i++) {
@@ -181,7 +196,10 @@ Math.random = function () {
         if (c.sortie || c.sallied) 出た++;
         if (c.holdGate && !c.holdGate.broken && !c.routed && !c.withdraw) {
           const gp = A.gatePos(b.map, b.map.layers[c.holdGate.layer], c.holdGate);
-          if (Math.hypot(c.x - gp.x, c.y - gp.y) > 150) 離れ++;
+          const d = Math.hypot(c.x - gp.x, c.y - gp.y);
+          if (c.前の持ち場 !== c.holdGate) { c.前の持ち場 = c.holdGate; c.着任待ち = d > 150; }
+          if (c.着任待ち && d <= 150) c.着任待ち = false;
+          if (!c.着任待ち && d > 150) 離れ++;
         }
       }
       分遣 = Math.max(分遣, b.corps.filter((c) => c.detach && c.side === 'E').length);

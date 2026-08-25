@@ -446,6 +446,21 @@ export const NEWCOMERS = [
     lead: 68, valor: 70, wit: 64, gov: 60, retinue: 260, retTrain: 62, born: 1558 },
   { id: "yk_katsutoshi", name: "水谷勝俊", faction: "yuki", y: 1560, at: "yuki",
     lead: 66, valor: 68, wit: 62, gov: 62, retinue: 250, retTrain: 60, born: 1545 },
+  // ── 畿内（増補の第五回）
+  { id: "my_nagaharu", name: "三好長治", faction: "miyoshi", y: 1568, at: "shozui",
+    lead: 58, valor: 60, wit: 54, gov: 54, retinue: 320, retTrain: 58, born: 1553 },
+  { id: "my_yasutoshi", name: "三好康俊", faction: "miyoshi", y: 1560, at: "ichinomiya",
+    lead: 64, valor: 66, wit: 60, gov: 58, retinue: 260, retTrain: 60, born: 1545 },
+  { id: "my_nagamasa", name: "池田長正", faction: "miyoshi", y: 1555, at: "itami",
+    lead: 64, valor: 64, wit: 62, gov: 62, retinue: 270, retTrain: 60, born: 1540 },
+  { id: "ts_hidesuke", name: "中坊秀祐", faction: "tsutsui", y: 1553, at: "koriyama",
+    lead: 62, valor: 62, wit: 70, gov: 72, retinue: 220, retTrain: 56, born: 1538 },
+  { id: "hg_kennyo", name: "顕如", faction: "honganji", y: 1558, at: "ishiyama",
+    lead: 74, valor: 52, wit: 88, gov: 86, retinue: 700, retTrain: 62, born: 1543 },
+  { id: "bs_nagaharu", name: "別所長治", faction: "bessho", y: 1573, at: "miki",
+    lead: 66, valor: 68, wit: 62, gov: 62, retinue: 320, retTrain: 62, born: 1558 },
+  { id: "ak_yoshisuke", name: "赤松義祐", faction: "akamatsu", y: 1552, at: "ojio",
+    lead: 60, valor: 58, wit: 58, gov: 60, retinue: 300, retTrain: 56, born: 1537 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -539,6 +554,17 @@ export const PARENT = {
   kg_fujiuji: "haruuji",          // 足利晴氏 → 藤氏
   nr_ujinaga: "nagayasu_n",       // 成田長泰 → 氏長
   yk_harutomo: "masakatsu",       // 結城政勝 → 晴朝（養子）
+  // ── 畿内（増補の第五回）
+  yoshiteru: "ak_yoshiharu",      // 足利義晴 → 義輝
+  my_nagaharu: "jikkyu",          // 三好実休 → 長治
+  my_yasutoshi: "m_yasunaga",     // 三好康長 → 康俊
+  my_nagamasa: "my_nobumasa",     // 池田信正 → 長正
+  hg_kennyo: "kennyo",            // 証如 → 顕如
+  bs_nagaharu: "shigemune",       // 別所就治 → 長治
+  ak_yoshisuke: "harumasa",       // 赤松晴政 → 義祐
+  bs_yoshichika: "shigemune",     // 別所就治 → 吉親
+  ht_harumichi: "hideharu",       // 波多野秀忠 → 晴通
+  ts_junsei: "junsho",            // 筒井順昭 → 順政（弟）
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
@@ -553,6 +579,9 @@ export const PARENT = {
 export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっている者
 
 export const LONG_LIVED = {
+  ts_ieyoshi: 92,    // 柳生家厳（宗厳の父。九十二歳）
+  ts_yoshihiro: 78,  // 井戸良弘
+  ts_hidesuke: 77,   // 中坊秀祐
   yk_harutomo: 81,   // 結城晴朝（八十一歳）
   im_yasukatsu: 87,  // 朝比奈泰勝（のち徳川に仕え八十七歳）
   td_masatoshi: 85,  // 保科正俊（槍弾正。八十五歳）
