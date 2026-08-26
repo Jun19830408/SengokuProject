@@ -6450,6 +6450,366 @@ var NEWCOMERS = [
     retinue: 220,
     retTrain: 64,
     born: 1555
+  },
+  /* ── 層三の二（増補の第十八回）。島原の乱と、江戸初期の諸藩・幕政の人。
+  
+       「一六〇〇年に日本統一、一七〇〇年に世界制覇」という構想であるから、
+       この層は「もし戦国が続いていたら」の想定で置く。海の外へ出た者
+       （支倉常長・山田長政・三浦按針）を厚めに入れたのはそのためである。 */
+  // ── 島原の乱（一六三七〜三八）
+  {
+    id: "e_shigemasa2",
+    name: "\u677F\u5009\u91CD\u660C",
+    faction: "matsudaira",
+    y: 1603,
+    at: "okazaki",
+    lead: 68,
+    valor: 72,
+    wit: 66,
+    gov: 70,
+    retinue: 240,
+    retTrain: 62,
+    born: 1588
+  },
+  {
+    id: "e_ujikane",
+    name: "\u6238\u7530\u6C0F\u9244",
+    faction: "saito",
+    y: 1591,
+    at: "ogaki",
+    lead: 70,
+    valor: 68,
+    wit: 70,
+    gov: 74,
+    retinue: 260,
+    retTrain: 62,
+    born: 1576
+  },
+  {
+    id: "e_katataka",
+    name: "\u5BFA\u6CA2\u5805\u9AD8",
+    faction: "matsura",
+    y: 1624,
+    at: "hirado",
+    lead: 56,
+    valor: 56,
+    wit: 56,
+    gov: 54,
+    retinue: 240,
+    retTrain: 56,
+    born: 1609
+  },
+  {
+    id: "e_shigenari2",
+    name: "\u9234\u6728\u91CD\u6210",
+    faction: "matsudaira",
+    y: 1603,
+    at: "okazaki",
+    lead: 62,
+    valor: 62,
+    wit: 72,
+    gov: 80,
+    retinue: 200,
+    retTrain: 58,
+    born: 1588
+  },
+  {
+    id: "e_emosaku",
+    name: "\u5C71\u7530\u53F3\u885B\u9580\u4F5C",
+    faction: "arima",
+    y: 1600,
+    at: "hinoe",
+    lead: 54,
+    valor: 54,
+    wit: 70,
+    gov: 58,
+    retinue: 150,
+    retTrain: 54,
+    born: 1585
+  },
+  {
+    id: "e_yoshitsugu",
+    name: "\u76CA\u7530\u597D\u6B21",
+    faction: "arima",
+    y: 1600,
+    at: "hinoe",
+    lead: 60,
+    valor: 62,
+    wit: 66,
+    gov: 60,
+    retinue: 180,
+    retTrain: 58,
+    born: 1585
+  },
+  // ── 各藩の重臣
+  {
+    id: "e_mitsumasa",
+    name: "\u6C60\u7530\u5149\u653F",
+    faction: "oda",
+    y: 1624,
+    at: "nagoya",
+    lead: 66,
+    valor: 62,
+    wit: 76,
+    gov: 86,
+    retinue: 300,
+    retTrain: 60,
+    born: 1609
+  },
+  {
+    id: "e_tadayoshi2",
+    name: "\u5C71\u5185\u5FE0\u7FA9",
+    faction: "chosokabe",
+    y: 1607,
+    at: "okou",
+    lead: 64,
+    valor: 64,
+    wit: 66,
+    gov: 70,
+    retinue: 280,
+    retTrain: 60,
+    born: 1592
+  },
+  {
+    id: "e_takatsugu",
+    name: "\u85E4\u5802\u9AD8\u6B21",
+    faction: "oda",
+    y: 1617,
+    at: "nagoya",
+    lead: 64,
+    valor: 64,
+    wit: 66,
+    gov: 70,
+    retinue: 280,
+    retTrain: 60,
+    born: 1602
+  },
+  {
+    id: "e_mitsunao",
+    name: "\u7D30\u5DDD\u5149\u5C1A",
+    faction: "ashikaga",
+    y: 1634,
+    at: "nijo",
+    lead: 64,
+    valor: 64,
+    wit: 66,
+    gov: 70,
+    retinue: 280,
+    retTrain: 60,
+    born: 1619
+  },
+  {
+    id: "e_yoshitaka2",
+    name: "\u4F50\u7AF9\u7FA9\u9686",
+    faction: "satake",
+    y: 1624,
+    at: "ota_hitachi",
+    lead: 64,
+    valor: 62,
+    wit: 66,
+    gov: 70,
+    retinue: 280,
+    retTrain: 58,
+    born: 1609
+  },
+  // ── 幕政と学び
+  {
+    id: "e_tenkai",
+    name: "\u5929\u6D77",
+    faction: "matsudaira",
+    y: 1551,
+    at: "okazaki",
+    lead: 54,
+    valor: 46,
+    wit: 90,
+    gov: 84,
+    retinue: 150,
+    retTrain: 52,
+    born: 1536
+  },
+  {
+    id: "e_suden",
+    name: "\u91D1\u5730\u9662\u5D07\u4F1D",
+    faction: "matsudaira",
+    y: 1584,
+    at: "okazaki",
+    lead: 52,
+    valor: 44,
+    wit: 86,
+    gov: 82,
+    retinue: 140,
+    retTrain: 50,
+    born: 1569
+  },
+  {
+    id: "e_razan",
+    name: "\u6797\u7F85\u5C71",
+    faction: "matsudaira",
+    y: 1598,
+    at: "okazaki",
+    lead: 48,
+    valor: 42,
+    wit: 84,
+    gov: 80,
+    retinue: 130,
+    retTrain: 48,
+    born: 1583
+  },
+  {
+    id: "e_takuan",
+    name: "\u6CA2\u5EB5\u5B97\u5F6D",
+    faction: "tsutsui",
+    y: 1588,
+    at: "koriyama",
+    lead: 50,
+    valor: 46,
+    wit: 84,
+    gov: 70,
+    retinue: 130,
+    retTrain: 48,
+    born: 1573
+  },
+  {
+    id: "e_nagayasu2",
+    name: "\u5927\u4E45\u4FDD\u9577\u5B89",
+    faction: "takeda",
+    y: 1560,
+    at: "tsutsujigasaki",
+    lead: 54,
+    valor: 50,
+    wit: 82,
+    gov: 90,
+    retinue: 160,
+    retTrain: 52,
+    born: 1545
+  },
+  {
+    id: "e_shozaburo",
+    name: "\u5F8C\u85E4\u5E84\u4E09\u90CE",
+    faction: "matsudaira",
+    y: 1586,
+    at: "okazaki",
+    lead: 48,
+    valor: 44,
+    wit: 78,
+    gov: 86,
+    retinue: 130,
+    retTrain: 48,
+    born: 1571
+  },
+  {
+    id: "e_chaya",
+    name: "\u8336\u5C4B\u56DB\u90CE\u6B21\u90CE",
+    faction: "matsudaira",
+    y: 1560,
+    at: "okazaki",
+    lead: 50,
+    valor: 46,
+    wit: 80,
+    gov: 84,
+    retinue: 130,
+    retTrain: 48,
+    born: 1545
+  },
+  {
+    id: "e_soukyu",
+    name: "\u4ECA\u4E95\u5B97\u4E45",
+    faction: "miyoshi",
+    y: 1547,
+    at: "ishiyama",
+    lead: 52,
+    valor: 44,
+    wit: 84,
+    gov: 82,
+    retinue: 140,
+    retTrain: 48,
+    born: 1520
+  },
+  // ── 数寄と技
+  {
+    id: "e_enshu",
+    name: "\u5C0F\u5800\u9060\u5DDE",
+    faction: "azai",
+    y: 1594,
+    at: "odani",
+    lead: 54,
+    valor: 50,
+    wit: 80,
+    gov: 78,
+    retinue: 150,
+    retTrain: 52,
+    born: 1579
+  },
+  {
+    id: "e_oribe",
+    name: "\u53E4\u7530\u7E54\u90E8",
+    faction: "oda",
+    y: 1559,
+    at: "nagoya",
+    lead: 58,
+    valor: 60,
+    wit: 78,
+    gov: 68,
+    retinue: 160,
+    retTrain: 56,
+    born: 1544
+  },
+  {
+    id: "e_koetsu",
+    name: "\u672C\u963F\u5F25\u5149\u60A6",
+    faction: "ashikaga",
+    y: 1573,
+    at: "nijo",
+    lead: 46,
+    valor: 44,
+    wit: 82,
+    gov: 70,
+    retinue: 120,
+    retTrain: 46,
+    born: 1558
+  },
+  // ── 海の外へ出た者
+  {
+    id: "e_tsunenaga",
+    name: "\u652F\u5009\u5E38\u9577",
+    faction: "date",
+    y: 1586,
+    at: "yonezawa",
+    lead: 64,
+    valor: 66,
+    wit: 78,
+    gov: 72,
+    retinue: 180,
+    retTrain: 60,
+    born: 1571
+  },
+  {
+    id: "e_yamada",
+    name: "\u5C71\u7530\u9577\u653F",
+    faction: "imagawa",
+    y: 1605,
+    at: "sunpu",
+    lead: 76,
+    valor: 78,
+    wit: 78,
+    gov: 66,
+    retinue: 200,
+    retTrain: 66,
+    born: 1590
+  },
+  {
+    id: "e_anjin",
+    name: "\u4E09\u6D66\u6309\u91DD",
+    faction: "matsudaira",
+    y: 1600,
+    at: "okazaki",
+    lead: 56,
+    valor: 54,
+    wit: 86,
+    gov: 74,
+    retinue: 140,
+    retTrain: 52,
+    born: 1564
   }
 ];
 var KANJI_TSUJI = [
@@ -6888,6 +7248,21 @@ var PARENT = {
   // 結城秀康 → 松平忠直
   ts_sadataka: "n_katsumoto",
   // 片桐且元 → 貞隆（兄弟）
+  // ── 層三の二（増補の第十八回）
+  e_shigemasa2: "ts_katsushige",
+  // 板倉勝重 → 重昌
+  e_mitsumasa: "n_terumasa",
+  // 池田輝政 → 光政（孫だが家督の筋で結ぶ）
+  e_tadayoshi2: "n_kazutoyo",
+  // 山内一豊 → 忠義（養子）
+  e_takatsugu: "n_takatora",
+  // 藤堂高虎 → 高次
+  e_mitsunao: "e_tadatoshi",
+  // 細川忠利 → 光尚
+  e_yoshitaka2: "st_yoshinobu",
+  // 佐竹義宣 → 義隆
+  e_shiro: "e_yoshitsugu",
+  // 益田好次 → 天草四郎
   rk_shigetsuna: "sadayori",
   // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",
@@ -6907,6 +7282,8 @@ var PARENT = {
 };
 var FATED = { hirotada: 1549 };
 var LONG_LIVED = {
+  e_tenkai: 107,
+  // 天海（諸説あるが百歳を超えたと伝わる）
   ts_katsushige: 79,
   // 板倉勝重（京都所司代）
   ts_nobuyuki: 92,
