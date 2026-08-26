@@ -58,6 +58,7 @@ export const GENERALS = [
   { id: "sadayoshi2", name: "石川清兼", faction: "matsudaira", lead: 64, valor: 58, wit: 66, gov: 70, loyal: 84, age: 41, at: "okazaki", retinue: 240, retTrain: 58 },
   { id: "nobumoto", name: "水野信元", faction: "mizuno", lead: 68, valor: 66, wit: 70, gov: 62, loyal: 100, age: 31, at: "kariya", lord: true, retinue: 420, retTrain: 62 },
   { id: "shingen", name: "武田晴信", faction: "takeda", lead: 96, valor: 76, wit: 94, gov: 92, loyal: 100, age: 25, at: "tsutsujigasaki", lord: true, retinue: 980, retTrain: 78 },
+  { id: "td_nobutora", name: "武田信虎", faction: "imagawa", lead: 78, valor: 80, wit: 66, gov: 58, loyal: 40, age: 52, at: "sunpu", retinue: 260, retTrain: 64 },
   { id: "nobushige", name: "武田信繁", faction: "takeda", lead: 86, valor: 78, wit: 80, gov: 84, loyal: 98, age: 20, at: "tsutsujigasaki", retinue: 520, retTrain: 74 },
   { id: "kansuke", name: "山本勘助", faction: "takeda", lead: 72, valor: 62, wit: 92, gov: 66, loyal: 92, age: 45, at: "tsutsujigasaki", retinue: 220, retTrain: 66 },
   { id: "nobukata", name: "板垣信方", faction: "takeda", lead: 82, valor: 80, wit: 70, gov: 72, loyal: 90, age: 47, at: "fukashi", retinue: 480, retTrain: 72 },
