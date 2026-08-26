@@ -3,7 +3,7 @@ import { ransomCost, takeAsPrisoner } from "../core/capture.js";
 import { 姫を整える, 姫の年送り, 姫の居場所, 使者の帰り, 姫の采配 } from "../core/hime.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
-import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, lifeSpan, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
+import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, lifeSpan, needsGuardian, ruinedHouse, succeed, 親の } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
@@ -28,6 +28,22 @@ import { isVassal, underMyBanner, 援けに着く } from "../core/state.js";
    この一手で、諸家の内政・調略・出陣・包囲・寿命・一揆・官位までが動く。
    画面から切り離してあるので、絵を描かずに何百年でも回せる。
    ========================================================================== */
+
+/* 軍に名（id）を付ける。
+
+   もとは `r${Date.now()}${Math.random()}` と、時計から取っていた。時計は
+   走らせるたびに違う値を返すので、盤の中身が走らせるたびに変わる。
+   賽を固定した試験でも、結果が揃わない。実際 gaiko の「二十五年のうちに
+   間柄が動く」は、同じ種で三度走らせて 11→11／11→15／11→11 と揺れていた。
+   もっとも、これを直しても揺れは止まらなかった（11→15／11→13／11→14）。
+   より重い因は卓の印にあった。state.js の「印は賽から起こす」を見よ。
+
+   盤の中身は時計から切り離す。年と月と、盤ごとの通し番号で名を付ける。
+   同じ種・同じ盤なら、何度走らせても同じ名が付く。 */
+export function 軍の名(s, 頭) {
+  s.軍番 = (s.軍番 || 0) + 1;
+  return `${頭}${s.year}-${s.month}-${s.軍番}`;
+}
 
 // 月を送る。天下じゅうの家が、この一手で動く
 export function advanceMonth(prev, g) {
@@ -694,7 +710,7 @@ export function advanceMonth(prev, g) {
           const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
           c2.rost = tk.rest;
           s.armies.push({
-            id: `r${Date.now()}${Math.round(Math.random() * 1e6)}`, faction: a.faction, from: c2.id,
+            id: 軍の名(s, "r"), faction: a.faction, from: c2.id,
             gens: take.map((x) => x.id), local: send, localTrain: c2.localTrain, rost: tk.taken,
             men: send + take.reduce((t2, x) => t2 + x.retinue, 0), at: c2.id,
             path: findPath(c2.id, a.target), prog: 0, food: Math.round(send * 0.6),
@@ -771,7 +787,7 @@ export function advanceMonth(prev, g) {
         if (send < 200) continue;
         from.c2.local -= send;
         for (const t of take) t.at = null;
-        const rid = `f${Date.now()}${Math.round(Math.random() * 1e6)}`;
+        const rid = 軍の名(s, "f");
         s.armies.push({
           id: rid, faction: cs.faction, from: from.c2.id, gens: take.map((x) => x.id),
           local: send, localTrain: from.c2.localTrain,
@@ -978,7 +994,7 @@ export function advanceMonth(prev, g) {
           const localSend = Math.max(0, Math.min(c.local, send - take.reduce((a, x) => a + x.retinue, 0)));
           c.local -= localSend;
           s.armies.push({
-            id: `a${Date.now()}${Math.random()}`, faction: fid, from: c.id, gens: take.map((x) => x.id),
+            id: 軍の名(s, "a"), faction: fid, from: c.id, gens: take.map((x) => x.id),
             local: localSend, localTrain: c.localTrain, men: localSend + take.reduce((a, x) => a + x.retinue, 0),
             at: c.id, path: findPath(c.id, cand.id), prog: 0, food: Math.round(send * 0.6), target: cand.id,
           });
@@ -1032,18 +1048,25 @@ export function advanceMonth(prev, g) {
           s.chronicle.push({ y: s.year, m: s.month, text: txt });
           if (q.faction === s.player) events.push(txt);
         }
-        // 家を持つ者に子が生まれる（GDD 6.7）。
-        // すでに子がある者、史実の子が後年に現れる者には、重ねて生まれない。
+        /* 家を持つ者に子が生まれる（GDD 6.7）。
+           すでに子がある者、史実の子が後年に現れる者には、重ねて生まれない。
+
+           「子があるか」は、一人ずつ名簿を舐めていた。武将が千人、史実の
+           親子帳が千五百件あるので、年ごとに二百五十万回も引くことになる。
+           千五百人まで増やしたいま、これが年送りで目立つ（測って二十五ミリ秒）。
+           親の名を一度だけ集めておけば、あとは一件ずつ見るだけで済む。 */
+        const 子ある = new Set();
+        for (const x of s.generals) { if (x.captive) continue; const p = 親の(s, x.id); if (p) 子ある.add(p); }
+        for (const n of NEWCOMERS) { const p = PARENT[n.id]; if (p) 子ある.add(p); }
         for (const q of [...s.generals]) {
           if (q.captive || q.lord) continue;
           const a2 = q.age || 30;
           if (a2 < 18 || a2 > 52) continue;
           if (!hasHouse(s, q)) continue;
-          const hasKid = s.generals.some((x) => PARENT[x.id] === q.id && !x.captive)
-            || NEWCOMERS.some((n) => PARENT[n.id] === q.id);
-          if (hasKid) continue;
+          if (子ある.has(q.id)) continue;
           if (Math.random() > 0.07) continue;
           const kid = bearChild(s, q);
+          if (kid) 子ある.add(q.id);
           if (kid && q.faction === s.player) events.push(`${q.name}に子が生まれた（${kid.name}）。`);
         }
         // 年が改まれば、若い者が世に出る（GDD 6.1）

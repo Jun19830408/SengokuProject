@@ -1594,7 +1594,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
       c2.rost = tk.rest;
       s.armies.push({
-        id: `aid${Date.now()}${Math.round(Math.random() * 1e6)}`, faction: c2.faction, from: c2.id,
+        id: 月送り.軍の名(s, "aid"), faction: c2.faction, from: c2.id,
         gens: gens.map((x) => x.id), local: send, localTrain: c2.localTrain, rost: tk.taken,
         men, at: c2.id, path: findPath(c2.id, target), prog: 0, food: Math.round(send * 0.6),
         target, aid: s.player, 助勢: true, ...(囲まれている ? { relief: target } : {}),
@@ -1628,7 +1628,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
       c2.rost = tk.rest;
       s.armies.push({
-        id: `aid${Date.now()}${Math.round(Math.random() * 1e6)}`, faction: c2.faction, from: c2.id,
+        id: 月送り.軍の名(s, "aid"), faction: c2.faction, from: c2.id,
         gens: take.map((x) => x.id), local: send, localTrain: c2.localTrain, rost: tk.taken,
         men: send + take.reduce((a, x) => a + x.retinue, 0), at: c2.id,
         path: findPath(c2.id, target), prog: 0, food: Math.round(send * 0.6),
@@ -1735,7 +1735,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         for (const t of take) t.at = null;
         const path = findPath(rc2.id, p.to);
         s.armies.push({
-          id: `r${Date.now()}${Math.round(Math.random() * 1e6)}`, faction: rc2.faction, from: rc2.id,
+          id: 月送り.軍の名(s, "r"), faction: rc2.faction, from: rc2.id,
           gens: take.map((x) => x.id), local: send, localTrain: rc2.localTrain,
           rost: (() => { const tk = rosterTake(rc2.rost || newRoster(rc2.local + send, `loc-${rc2.id}`), send); rc2.rost = tk.rest; return tk.taken; })(),
           men: send + take.reduce((a, x) => a + x.retinue, 0), at: rc2.id,
@@ -1756,7 +1756,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         s.chronicle.push({ y: s.year, m: s.month, text: `${s.factions[dest.faction].name}との約束を破って兵を出した。裏切りとして周辺勢力の警戒を招いた。` });
       }
       c.local -= p.local; c.food -= p.food;
-      const mainId = `a${Date.now()}`;
+      const mainId = 月送り.軍の名(s, "a");   // 時計から取らない（month.js の「軍に名を付ける」を見よ）
       /* 兵科の割りに従って隊を仕立てる（GDD 8.1）。
 
          槍と弓は村々の百姓が自前で携えて出るが、騎馬には馬が、鉄砲には鉄砲が要る。
@@ -1803,7 +1803,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       // 戦役を起こす。総大将は出陣を発した城の城主。
       const lead = s.generals.find((x) => x.id === (c.lordId || p.gens[0]));
       const camp = {
-        id: `c${Date.now()}`, target: p.to, from: p.from,
+        id: 月送り.軍の名(s, "c"), target: p.to, from: p.from,
         leader: lead ? lead.id : p.gens[0], leaderName: lead ? lead.name : "総大将",
         armies: [mainId], arrived: [], y: s.year, m: s.month, decided: null, waited: 0,
       };

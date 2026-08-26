@@ -90,9 +90,18 @@ export const hasHouse = (s, gen) => !!gen && !gen.lord && !isMainClan(s, gen)
 // 家名。姓の二字をもって家とする。
 export const houseName = (gen) => (gen ? gen.name.slice(0, 2) : "");
 
+/* 親を尋ねる。史実の親子は PARENT、その盤で生まれた子は s.親 に控える。
+
+   もとは bearChild が PARENT へ直に書き込んでいた。PARENT は newcomers.js の
+   持ちもので、盤ごとのものではない。書き込めば卓を閉じても帳面に残り、
+   同じ画面で二局目を始めると一局目に生まれた子の親子が混ざる。
+   賽を固定した試験でも結果が揃わなかったのはこれが因である（同じ種で
+   二度回して 従60/56・臣11/15・将1036/1045 と食い違った）。 */
+export const 親の = (s, id) => (s && s.親 && s.親[id]) || PARENT[id];
+
 // 家を継ぐ者。実の子が先、なければ同姓の年少者。
 export function heirOfHouse(s, gen) {
-  const kids = s.generals.filter((x) => PARENT[x.id] === gen.id && !x.captive
+  const kids = s.generals.filter((x) => 親の(s, x.id) === gen.id && !x.captive
     && x.faction === gen.faction);
   if (kids.length) return [...kids].sort((a, b) => (b.age || 0) - (a.age || 0))[0];
   const sur = houseName(gen);
@@ -124,7 +133,8 @@ export function bearChild(s, gen) {
     架空: true,
   };
   s.generals.push(kid);
-  PARENT[id] = gen.id;
+  if (!s.親) s.親 = {};                            // 生まれた子の親は盤に控える
+  s.親[id] = gen.id;
   return kid;
 }
 
@@ -182,20 +192,33 @@ export const isGuardian = (s, gen) => {
 };
 
 
-// 一門か。親子・兄弟・祖孫のいずれかであれば一門とする。
+/* 一門か。親子・兄弟・祖孫のいずれかであれば一門とする。
+
+   もとは、二人それぞれについて「一代さかのぼる」「二代さかのぼる」を
+   都度たどり直していた。親の無い者でも名簿を端から端まで舐めるので、
+   千五百人の盤では年送りのたびに数百万回の走査になる。
+   さかのぼるのは一度きりにし、親がいなければそこで打ち切る。
+   （見るところは同じ。祖孫までの三代を突き合わせる） */
 export function isClan(s, a, b) {
   if (!a || !b) return false;
   if (a.id === b.id) return true;
-  const up = (g, n) => { let x = g; for (let i = 0; i < n && x; i++) x = s.generals.find((y) => y.id === PARENT[x.id]); return x; };
-  for (let i = 0; i <= 2; i++) for (let j = 0; j <= 2; j++) {
-    const p = up(a, i), q = up(b, j);
-    if (p && q && p.id === q.id) return true;
-  }
+  const 系 = (g) => {
+    const 代 = [g];
+    let x = g;
+    for (let i = 0; i < 2 && x; i++) {
+      const p = 親の(s, x.id);
+      x = p ? s.generals.find((y) => y.id === p) : null;
+      if (x) 代.push(x);
+    }
+    return 代;
+  };
+  const 甲 = 系(a), 乙 = 系(b);
+  for (const p of 甲) for (const q of 乙) if (p.id === q.id) return true;
   return a.name.slice(0, 2) === b.name.slice(0, 2);
 }
 
 // 子を返す（存命の者のみ）
-export const childrenOf = (s, gen) => s.generals.filter((x) => PARENT[x.id] === gen.id && !x.captive);
+export const childrenOf = (s, gen) => s.generals.filter((x) => 親の(s, x.id) === gen.id && !x.captive);
 
 
 /* ------------------------------------------------ 寿命（GDD 6.1）

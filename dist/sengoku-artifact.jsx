@@ -368,6 +368,24 @@ var ROADS = [
   ["kawanoe", "kokubunyama", 53, "\u5C71\u9053"],
   ["okou", "nakamura", 91, "\u96E3\u6240"],
   ["okou", "aki", 28, "\u8857\u9053"],
+  // ── 城と大名家の増補（第二期）
+  ["kouyama", "shibushi", 22, "\u8857\u9053"],
+  ["kouyama", "kajiki", 34, "\u5C71\u9053"],
+  ["kouyama", "obi", 41, "\u5C71\u9053"],
+  ["hamanoyakata", "kumamoto", 31, "\u5C71\u9053"],
+  ["hamanoyakata", "hitoyoshi", 44, "\u96E3\u6240"],
+  ["hamanoyakata", "funai", 62, "\u96E3\u6240"],
+  ["tsutagatake", "tachibanayama", 24, "\u8857\u9053"],
+  ["tsutagatake", "iwaya", 28, "\u8857\u9053"],
+  ["tsutagatake", "akizuki", 33, "\u5C71\u9053"],
+  ["wakae", "takaya", 14, "\u8857\u9053"],
+  ["wakae", "iimoriyama", 9, "\u8857\u9053"],
+  ["wakae", "ishiyama", 12, "\u8857\u9053"],
+  ["takebeyama", "miyazu", 11, "\u8857\u9053"],
+  ["takebeyama", "yagami", 46, "\u5C71\u9053"],
+  ["kisofukushima", "fukashi", 38, "\u5C71\u9053"],
+  ["kisofukushima", "iida", 44, "\u5C71\u9053"],
+  ["kisofukushima", "inabayama", 63, "\u96E3\u6240"],
   // ── 土佐七雄（本山・大平・津野・香宗我部を立てたことによる道）
   ["okou", "motoyama", 26, "\u5C71\u9053"],
   ["okou", "hasuike", 21, "\u8857\u9053"],
@@ -7043,7 +7061,7 @@ var NEWCOMERS = [
     name: "\u7A32\u5BCC\u4E00\u5922",
     faction: "isshiki",
     y: 1567,
-    at: "miyazu",
+    at: "takebeyama",
     lead: 52,
     valor: 62,
     wit: 84,
@@ -7127,9 +7145,9 @@ var NEWCOMERS = [
   {
     id: "r_yoshimasa",
     name: "\u6728\u66FD\u7FA9\u660C",
-    faction: "takeda",
+    faction: "kiso",
     y: 1555,
-    at: "fukashi",
+    at: "kisofukushima",
     lead: 66,
     valor: 66,
     wit: 64,
@@ -7349,20 +7367,6 @@ var NEWCOMERS = [
     born: 1560
   },
   {
-    id: "r_nobunori",
-    name: "\u904A\u4F50\u4FE1\u6559",
-    faction: "miyoshi",
-    y: 1563,
-    at: "takaya",
-    lead: 64,
-    valor: 68,
-    wit: 62,
-    gov: 58,
-    retinue: 260,
-    retTrain: 60,
-    born: 1548
-  },
-  {
     id: "r_takaharu2",
     name: "\u4E00\u6817\u9AD8\u6625",
     faction: "osaki",
@@ -7501,20 +7505,6 @@ var NEWCOMERS = [
     retinue: 220,
     retTrain: 58,
     born: 1550
-  },
-  {
-    id: "r_nagatoki",
-    name: "\u5C0F\u7B20\u539F\u9577\u6642",
-    faction: "takeda",
-    y: 1529,
-    at: "fukashi",
-    lead: 62,
-    valor: 66,
-    wit: 58,
-    gov: 58,
-    retinue: 240,
-    retTrain: 60,
-    born: 1514
   },
   {
     id: "r_kunikiyo",
@@ -7927,7 +7917,7 @@ var NEWCOMERS = [
   {
     id: "f_takamasa",
     name: "\u7560\u5C71\u9AD8\u653F",
-    faction: "miyoshi",
+    faction: "hatakeyama_k",
     y: 1542,
     at: "takaya",
     lead: 60,
@@ -8347,9 +8337,9 @@ var NEWCOMERS = [
   {
     id: "f_soun",
     name: "\u7532\u6590\u5B97\u904B",
-    faction: "kikuchi",
+    faction: "aso",
     y: 1530,
-    at: "kumamoto",
+    at: "hamanoyakata",
     lead: 78,
     valor: 78,
     wit: 80,
@@ -8361,9 +8351,9 @@ var NEWCOMERS = [
   {
     id: "f_koremasa",
     name: "\u963F\u8607\u60DF\u5C06",
-    faction: "kikuchi",
+    faction: "aso",
     y: 1555,
-    at: "kumamoto",
+    at: "hamanoyakata",
     lead: 62,
     valor: 62,
     wit: 62,
@@ -9144,20 +9134,6 @@ var NEWCOMERS = [
     born: 1545
   },
   {
-    id: "h_kanetsugu2",
-    name: "\u809D\u4ED8\u517C\u7D9A",
-    faction: "shimazu",
-    y: 1526,
-    at: "kajiki",
-    lead: 72,
-    valor: 74,
-    wit: 68,
-    gov: 64,
-    retinue: 300,
-    retTrain: 64,
-    born: 1511
-  },
-  {
     id: "h_shigeharu",
     name: "\u79B0\u5BDD\u91CD\u5F35",
     faction: "shimazu",
@@ -9255,6 +9231,91 @@ var NEWCOMERS = [
     retinue: 250,
     retTrain: 60,
     born: 1572
+  },
+  // ── 城と大名家の増補（第二期）。新たに立てた六家の子の代。
+  {
+    id: "km_kanetada",
+    name: "\u809D\u4ED8\u826F\u517C",
+    faction: "kimotsuki",
+    y: 1550,
+    at: "kouyama",
+    lead: 70,
+    valor: 72,
+    wit: 64,
+    gov: 60,
+    retinue: 320,
+    retTrain: 62,
+    born: 1535
+  },
+  {
+    id: "km_kaneaki",
+    name: "\u809D\u4ED8\u517C\u4EAE",
+    faction: "kimotsuki",
+    y: 1567,
+    at: "kouyama",
+    lead: 60,
+    valor: 60,
+    wit: 58,
+    gov: 58,
+    retinue: 280,
+    retTrain: 58,
+    born: 1552
+  },
+  {
+    id: "mn_ujisada",
+    name: "\u5B97\u50CF\u6C0F\u8C9E",
+    faction: "munakata",
+    y: 1560,
+    at: "tsutagatake",
+    lead: 64,
+    valor: 64,
+    wit: 64,
+    gov: 62,
+    retinue: 300,
+    retTrain: 58,
+    born: 1545
+  },
+  {
+    id: "og_sadayoshi",
+    name: "\u5C0F\u7B20\u539F\u8C9E\u6176",
+    faction: "ogasawara",
+    y: 1561,
+    at: "fukashi",
+    lead: 66,
+    valor: 66,
+    wit: 70,
+    gov: 64,
+    retinue: 280,
+    retTrain: 60,
+    born: 1546
+  },
+  {
+    id: "as_koremitsu",
+    name: "\u7532\u6590\u89AA\u82F1",
+    faction: "aso",
+    y: 1565,
+    at: "hamanoyakata",
+    lead: 66,
+    valor: 68,
+    wit: 64,
+    gov: 60,
+    retinue: 270,
+    retTrain: 62,
+    born: 1550
+  },
+  {
+    id: "hk_akitaka",
+    name: "\u904A\u4F50\u4FE1\u6559",
+    faction: "hatakeyama_k",
+    y: 1563,
+    at: "takaya",
+    lead: 64,
+    valor: 68,
+    wit: 62,
+    gov: 58,
+    retinue: 260,
+    retTrain: 60,
+    born: 1548
   }
 ];
 var KANJI_TSUJI = [
@@ -9702,6 +9763,23 @@ var PARENT = {
   // 香宗我部親秀 → 秀通
   ck_chikayasu: "ks_chikahide",
   // 香宗我部親秀 → 親泰（長宗我部から入る養子）
+  // ── 城と大名家の増補（第二期）
+  km_kanetada: "km_kanetsugu",
+  // 肝付兼続 → 良兼
+  km_kaneaki: "km_kanetada",
+  // 肝付良兼 → 兼亮
+  mn_ujisada: "mn_ujio",
+  // 宗像氏男 → 氏貞
+  og_sadayoshi: "og_nagatoki",
+  // 小笠原長時 → 貞慶
+  as_koremitsu: "f_soun",
+  // 甲斐宗運 → 親英
+  hk_akitaka: "my_naganori",
+  // 遊佐長教 → 信教
+  f_koremasa: "as_koretoyo",
+  // 阿蘇惟豊 → 惟将
+  r_yoshimasa: "ks_yoshiyasu",
+  // 木曽義康 → 義昌
   tn_chikatada: "motochika",
   // 長宗我部元親 → 津野親忠（津野へ入る養子）
   // ── 層三の二（増補の第十八回）
@@ -9997,8 +10075,9 @@ function isMainClan(s2, gen) {
 }
 var hasHouse = (s2, gen) => !!gen && !gen.lord && !isMainClan(s2, gen) && (!!gen.house || stipendOf(s2, gen) >= HOUSE_RANK);
 var houseName = (gen) => gen ? gen.name.slice(0, 2) : "";
+var \u89AA\u306E = (s2, id) => s2 && s2.\u89AA && s2.\u89AA[id] || PARENT[id];
 function heirOfHouse(s2, gen) {
-  const kids = s2.generals.filter((x) => PARENT[x.id] === gen.id && !x.captive && x.faction === gen.faction);
+  const kids = s2.generals.filter((x) => \u89AA\u306E(s2, x.id) === gen.id && !x.captive && x.faction === gen.faction);
   if (kids.length) return [...kids].sort((a, b) => (b.age || 0) - (a.age || 0))[0];
   const sur = houseName(gen);
   const kin = s2.generals.filter((x) => x.id !== gen.id && !x.captive && x.faction === gen.faction && houseName(x) === sur && (x.age || 0) >= 12);
@@ -10037,7 +10116,8 @@ function bearChild(s2, gen) {
     \u67B6\u7A7A: true
   };
   s2.generals.push(kid);
-  PARENT[id] = gen.id;
+  if (!s2.\u89AA) s2.\u89AA = {};
+  s2.\u89AA[id] = gen.id;
   return kid;
 }
 function inheritHouse(s2, dead) {
@@ -10068,18 +10148,21 @@ var isGuardian = (s2, gen) => {
 function isClan(s2, a, b) {
   if (!a || !b) return false;
   if (a.id === b.id) return true;
-  const up = (g, n) => {
+  const \u7CFB = (g) => {
+    const \u4EE32 = [g];
     let x = g;
-    for (let i = 0; i < n && x; i++) x = s2.generals.find((y) => y.id === PARENT[x.id]);
-    return x;
+    for (let i = 0; i < 2 && x; i++) {
+      const p = \u89AA\u306E(s2, x.id);
+      x = p ? s2.generals.find((y) => y.id === p) : null;
+      if (x) \u4EE32.push(x);
+    }
+    return \u4EE32;
   };
-  for (let i = 0; i <= 2; i++) for (let j = 0; j <= 2; j++) {
-    const p = up(a, i), q = up(b, j);
-    if (p && q && p.id === q.id) return true;
-  }
+  const \u7532 = \u7CFB(a), \u4E59 = \u7CFB(b);
+  for (const p of \u7532) for (const q of \u4E59) if (p.id === q.id) return true;
   return a.name.slice(0, 2) === b.name.slice(0, 2);
 }
-var childrenOf = (s2, gen) => s2.generals.filter((x) => PARENT[x.id] === gen.id && !x.captive);
+var childrenOf = (s2, gen) => s2.generals.filter((x) => \u89AA\u306E(s2, x.id) === gen.id && !x.captive);
 var LIFE_CAP = 80;
 var lifeSpan = (g) => g && LONG_LIVED[g.id] || LIFE_CAP;
 function heirCandidates(s2, dead) {
@@ -10244,7 +10327,8 @@ var CASTLES = [
   { id: "nagashima", name: "\u9577\u5CF6\u57CE", kuni: "\u4F0A\u52E2", faction: "ikko", lon: 136.69, lat: 35.1, koku: 58979, kokuMax: 66352, kokuCap: 73724, pop: 48363, food: 12386, def: 58, comm: 30, min: 88, hp: 6480, local: 1380, localTrain: 58 },
   { id: "nirayama", name: "\u97EE\u5C71\u57CE", kuni: "\u4F0A\u8C46", faction: "hojo", lon: 138.96, lat: 35.04, koku: 25698, kokuMax: 28911, kokuCap: 32123, pop: 21072, food: 5397, def: 58, comm: 30, min: 76, hp: 6480, local: 601, localTrain: 64 },
   { id: "shimoda", name: "\u4E0B\u7530\u57CE", kuni: "\u4F0A\u8C46", faction: "hojo", lon: 138.945, lat: 34.673, koku: 12290, kokuMax: 13827, kokuCap: 15363, pop: 10078, food: 2581, def: 44, comm: 22, min: 72, hp: 5640, local: 288, localTrain: 58 },
-  { id: "fukashi", name: "\u6DF1\u5FD7\u57CE", kuni: "\u4FE1\u6FC3", faction: "takeda", lon: 137.969, lat: 36.238, koku: 58803, kokuMax: 66154, kokuCap: 73504, pop: 48218, food: 12349, def: 56, comm: 30, min: 64, hp: 6360, local: 1376, localTrain: 62 },
+  { id: "fukashi", name: "\u6DF1\u5FD7\u57CE", kuni: "\u4FE1\u6FC3", faction: "ogasawara", lon: 137.969, lat: 36.238, koku: 42003, kokuMax: 47253, kokuCap: 52504, pop: 34442, food: 8821, def: 56, comm: 30, min: 64, hp: 6360, local: 982, localTrain: 62 },
+  { id: "kisofukushima", name: "\u6728\u66FD\u798F\u5CF6\u57CE", kuni: "\u4FE1\u6FC3", faction: "kiso", lon: 137.691, lat: 35.845, koku: 16800, kokuMax: 18900, kokuCap: 21e3, pop: 13776, food: 3528, def: 54, comm: 20, min: 68, hp: 6120, local: 393, localTrain: 60 },
   { id: "katsurao", name: "\u845B\u5C3E\u57CE", kuni: "\u4FE1\u6FC3", faction: "murakami", lon: 138.256, lat: 36.5, koku: 45736, kokuMax: 51453, kokuCap: 57170, pop: 37504, food: 9605, def: 58, comm: 20, min: 76, hp: 6480, local: 1070, localTrain: 62 },
   { id: "takato", name: "\u9AD8\u9060\u57CE", kuni: "\u4FE1\u6FC3", faction: "takeda", lon: 138.062, lat: 35.833, koku: 42470, kokuMax: 47778, kokuCap: 53087, pop: 34825, food: 8919, def: 54, comm: 20, min: 66, hp: 6240, local: 994, localTrain: 62 },
   { id: "iida", name: "\u98EF\u7530\u57CE", kuni: "\u4FE1\u6FC3", faction: "takeda", lon: 137.822, lat: 35.514, koku: 39202, kokuMax: 44103, kokuCap: 49003, pop: 32146, food: 8232, def: 48, comm: 22, min: 66, hp: 5880, local: 917, localTrain: 60 },
@@ -10289,7 +10373,8 @@ var CASTLES = [
   { id: "shoryuji", name: "\u52DD\u7ADC\u5BFA\u57CE", kuni: "\u5C71\u57CE", faction: "miyoshi", lon: 135.7, lat: 34.919, koku: 39646, kokuMax: 44602, kokuCap: 49558, pop: 32510, food: 8326, def: 50, comm: 44, min: 66, hp: 6e3, local: 928, localTrain: 60 },
   { id: "akutagawa", name: "\u82A5\u5DDD\u5C71\u57CE", kuni: "\u6442\u6D25", faction: "miyoshi", lon: 135.598, lat: 34.855, koku: 74062, kokuMax: 83320, kokuCap: 92578, pop: 60731, food: 15553, def: 58, comm: 42, min: 68, hp: 6480, local: 1733, localTrain: 62 },
   { id: "iimoriyama", name: "\u98EF\u76DB\u5C71\u57CE", kuni: "\u6CB3\u5185", faction: "miyoshi", lon: 135.646, lat: 34.727, koku: 65853, kokuMax: 74084, kokuCap: 82316, pop: 53999, food: 13829, def: 56, comm: 40, min: 68, hp: 6360, local: 1541, localTrain: 62 },
-  { id: "takaya", name: "\u9AD8\u5C4B\u57CE", kuni: "\u6CB3\u5185", faction: "miyoshi", lon: 135.605, lat: 34.552, koku: 46484, kokuMax: 52294, kokuCap: 58105, pop: 38117, food: 9762, def: 50, comm: 36, min: 66, hp: 6e3, local: 1088, localTrain: 58 },
+  { id: "takaya", name: "\u9AD8\u5C4B\u57CE", kuni: "\u6CB3\u5185", faction: "hatakeyama_k", lon: 135.606, lat: 34.556, koku: 46484, kokuMax: 52294, kokuCap: 58105, pop: 38117, food: 9762, def: 52, comm: 30, min: 70, hp: 6e3, local: 1087, localTrain: 60 },
+  { id: "wakae", name: "\u82E5\u6C5F\u57CE", kuni: "\u6CB3\u5185", faction: "hatakeyama_k", lon: 135.593, lat: 34.673, koku: 44e3, kokuMax: 49500, kokuCap: 55e3, pop: 36080, food: 9240, def: 48, comm: 34, min: 68, hp: 5760, local: 1029, localTrain: 58 },
   { id: "itami", name: "\u6709\u5CA1\u57CE", kuni: "\u6442\u6D25", faction: "miyoshi", lon: 135.415, lat: 34.784, koku: 56971, kokuMax: 64093, kokuCap: 71214, pop: 46716, food: 11964, def: 52, comm: 44, min: 66, hp: 6120, local: 1333, localTrain: 58 },
   { id: "hanakuma", name: "\u82B1\u9688\u57CE", kuni: "\u6442\u6D25", faction: "miyoshi", lon: 135.18, lat: 34.69, koku: 39880, kokuMax: 44865, kokuCap: 49850, pop: 32702, food: 8375, def: 44, comm: 46, min: 64, hp: 5640, local: 933, localTrain: 56 },
   { id: "kishiwada", name: "\u5CB8\u548C\u7530\u57CE", kuni: "\u548C\u6CC9", faction: "miyoshi", lon: 135.371, lat: 34.46, koku: 33963, kokuMax: 38209, kokuCap: 42454, pop: 27850, food: 7132, def: 48, comm: 38, min: 66, hp: 5880, local: 795, localTrain: 58 },
@@ -10306,6 +10391,7 @@ var CASTLES = [
   { id: "kameyama_t", name: "\u4E39\u6CE2\u4E80\u5C71\u57CE", kuni: "\u4E39\u6CE2", faction: "hatano", lon: 135.577, lat: 35.013, koku: 46444, kokuMax: 52250, kokuCap: 58055, pop: 38084, food: 9753, def: 50, comm: 34, min: 70, hp: 6e3, local: 1087, localTrain: 58 },
   { id: "yokoyama", name: "\u6A2A\u5C71\u57CE", kuni: "\u4E39\u6CE2", faction: "hatano", lon: 135.116, lat: 35.296, koku: 33778, kokuMax: 38e3, kokuCap: 42222, pop: 27698, food: 7093, def: 46, comm: 24, min: 68, hp: 5760, local: 790, localTrain: 56 },
   { id: "miyazu", name: "\u5BAE\u6D25\u57CE", kuni: "\u4E39\u5F8C", faction: "isshiki", lon: 135.196, lat: 35.535, koku: 38996, kokuMax: 43870, kokuCap: 48745, pop: 31977, food: 8189, def: 48, comm: 38, min: 70, hp: 5880, local: 913, localTrain: 56 },
+  { id: "takebeyama", name: "\u5EFA\u90E8\u5C71\u57CE", kuni: "\u4E39\u5F8C", faction: "isshiki", lon: 135.152, lat: 35.552, koku: 33e3, kokuMax: 37125, kokuCap: 41250, pop: 27060, food: 6930, def: 52, comm: 24, min: 70, hp: 6e3, local: 772, localTrain: 58 },
   { id: "konosumi", name: "\u6B64\u9685\u5C71\u57CE", kuni: "\u4F46\u99AC", faction: "yamana", lon: 134.813, lat: 35.478, koku: 31072, kokuMax: 34956, kokuCap: 38840, pop: 25479, food: 6525, def: 52, comm: 26, min: 70, hp: 6120, local: 727, localTrain: 56 },
   { id: "takeda", name: "\u7AF9\u7530\u57CE", kuni: "\u4F46\u99AC", faction: "yamana", lon: 134.829, lat: 35.301, koku: 23761, kokuMax: 26731, kokuCap: 29701, pop: 19484, food: 4990, def: 62, comm: 22, min: 70, hp: 6720, local: 556, localTrain: 58 },
   { id: "ojio", name: "\u7F6E\u5869\u57CE", kuni: "\u64AD\u78E8", faction: "akamatsu", lon: 134.657, lat: 34.929, koku: 68838, kokuMax: 77443, kokuCap: 86048, pop: 56447, food: 14456, def: 54, comm: 34, min: 68, hp: 6240, local: 1611, localTrain: 56 },
@@ -10415,6 +10501,7 @@ var CASTLES = [
   { id: "katsuyama_n", name: "\u52DD\u5C71\u57CE", kuni: "\u9577\u9580", faction: "ouchi", lon: 130.977, lat: 34.005, koku: 48083, kokuMax: 54094, kokuCap: 60104, pop: 39428, food: 10097, def: 54, comm: 36, min: 72, hp: 6240, local: 1125, localTrain: 60 },
   { id: "shimofuri", name: "\u971C\u964D\u57CE", kuni: "\u9577\u9580", faction: "ouchi", lon: 131.281, lat: 34.019, koku: 25086, kokuMax: 28222, kokuCap: 31358, pop: 20571, food: 5268, def: 50, comm: 22, min: 70, hp: 6e3, local: 587, localTrain: 58 },
   { id: "tachibanayama", name: "\u7ACB\u82B1\u5C71\u57CE", kuni: "\u7B51\u524D", faction: "ouchi", lon: 130.472, lat: 33.703, koku: 80640, kokuMax: 90720, kokuCap: 100800, pop: 66125, food: 16934, def: 62, comm: 46, min: 70, hp: 6720, local: 1887, localTrain: 62 },
+  { id: "tsutagatake", name: "\u8526\u30F6\u5CB3\u57CE", kuni: "\u7B51\u524D", faction: "munakata", lon: 130.545, lat: 33.808, koku: 38e3, kokuMax: 42750, kokuCap: 47500, pop: 31160, food: 7980, def: 52, comm: 32, min: 72, hp: 6e3, local: 889, localTrain: 58 },
   { id: "iwaya", name: "\u5CA9\u5C4B\u57CE", kuni: "\u7B51\u524D", faction: "ouchi", lon: 130.523, lat: 33.531, koku: 53760, kokuMax: 60480, kokuCap: 67200, pop: 44083, food: 11290, def: 58, comm: 26, min: 68, hp: 6480, local: 1258, localTrain: 60 },
   { id: "akizuki", name: "\u79CB\u6708\u57CE", kuni: "\u7B51\u524D", faction: "akizuki", lon: 130.665, lat: 33.52, koku: 48384, kokuMax: 54432, kokuCap: 60480, pop: 39675, food: 10161, def: 54, comm: 26, min: 72, hp: 6240, local: 1132, localTrain: 58 },
   { id: "kokura", name: "\u5C0F\u5009\u57CE", kuni: "\u8C4A\u524D", faction: "ouchi", lon: 130.874, lat: 33.884, koku: 38080, kokuMax: 42840, kokuCap: 47600, pop: 31226, food: 7997, def: 52, comm: 40, min: 70, hp: 6120, local: 891, localTrain: 58 },
@@ -10430,6 +10517,7 @@ var CASTLES = [
   { id: "hinoe", name: "\u65E5\u91CE\u6C5F\u57CE", kuni: "\u80A5\u524D", faction: "arima", lon: 130.234, lat: 32.734, koku: 39672, kokuMax: 44631, kokuCap: 49590, pop: 32531, food: 8331, def: 52, comm: 34, min: 72, hp: 6120, local: 928, localTrain: 58 },
   { id: "omura", name: "\u5927\u6751\u57CE", kuni: "\u80A5\u524D", faction: "omura", lon: 129.958, lat: 32.9, koku: 29754, kokuMax: 33473, kokuCap: 37192, pop: 24398, food: 6248, def: 48, comm: 32, min: 72, hp: 5880, local: 696, localTrain: 56 },
   { id: "kumamoto", name: "\u9688\u672C\u57CE", kuni: "\u80A5\u5F8C", faction: "kikuchi", lon: 130.706, lat: 32.806, koku: 65514, kokuMax: 73704, kokuCap: 81893, pop: 53721, food: 13758, def: 54, comm: 34, min: 70, hp: 6240, local: 1533, localTrain: 58 },
+  { id: "hamanoyakata", name: "\u6D5C\u306E\u9928", kuni: "\u80A5\u5F8C", faction: "aso", lon: 130.995, lat: 32.686, koku: 4e4, kokuMax: 45e3, kokuCap: 5e4, pop: 32800, food: 8400, def: 48, comm: 24, min: 76, hp: 5880, local: 936, localTrain: 60 },
   { id: "yatsushiro", name: "\u53E4\u9E93\u57CE", kuni: "\u80A5\u5F8C", faction: "sagara", lon: 130.615, lat: 32.5, koku: 54595, kokuMax: 61420, kokuCap: 68244, pop: 44768, food: 11465, def: 52, comm: 30, min: 72, hp: 6120, local: 1278, localTrain: 58 },
   { id: "hitoyoshi", name: "\u4EBA\u5409\u57CE", kuni: "\u80A5\u5F8C", faction: "sagara", lon: 130.76, lat: 32.209, koku: 60054, kokuMax: 67561, kokuCap: 75068, pop: 49244, food: 12611, def: 58, comm: 26, min: 80, hp: 6480, local: 1405, localTrain: 62 },
   { id: "sadowara", name: "\u4F50\u571F\u539F\u57CE", kuni: "\u65E5\u5411", faction: "ito", lon: 131.451, lat: 32.032, koku: 26900, kokuMax: 30262, kokuCap: 33625, pop: 22058, food: 5649, def: 54, comm: 30, min: 74, hp: 6240, local: 629, localTrain: 60 },
@@ -10439,6 +10527,7 @@ var CASTLES = [
   { id: "uchijo", name: "\u5185\u57CE", kuni: "\u85A9\u6469", faction: "shimazu", lon: 130.556, lat: 31.596, koku: 117929, kokuMax: 132670, kokuCap: 147411, pop: 96702, food: 24765, def: 60, comm: 40, min: 82, hp: 6600, local: 2760, localTrain: 68 },
   { id: "izumi", name: "\u51FA\u6C34\u57CE", kuni: "\u85A9\u6469", faction: "shimazu", lon: 130.353, lat: 32.09, koku: 54429, kokuMax: 61232, kokuCap: 68036, pop: 44632, food: 11430, def: 56, comm: 26, min: 76, hp: 6360, local: 1274, localTrain: 64 },
   { id: "kajiki", name: "\u52A0\u6CBB\u6728\u57CE", kuni: "\u5927\u9685", faction: "shimazu", lon: 130.658, lat: 31.735, koku: 42014, kokuMax: 47265, kokuCap: 52517, pop: 34451, food: 8823, def: 52, comm: 28, min: 74, hp: 6120, local: 983, localTrain: 62 },
+  { id: "kouyama", name: "\u9AD8\u5C71\u57CE", kuni: "\u5927\u9685", faction: "kimotsuki", lon: 130.995, lat: 31.398, koku: 4e4, kokuMax: 45e3, kokuCap: 5e4, pop: 32800, food: 8400, def: 54, comm: 26, min: 74, hp: 6120, local: 936, localTrain: 62 },
   { id: "shibushi", name: "\u5FD7\u5E03\u5FD7\u57CE", kuni: "\u5927\u9685", faction: "shimazu", lon: 131.099, lat: 31.485, koku: 33611, kokuMax: 37813, kokuCap: 42014, pop: 27561, food: 7058, def: 56, comm: 26, min: 74, hp: 6360, local: 786, localTrain: 62 },
   { id: "iki", name: "\u58F1\u5C90\u89A9\u57CE", kuni: "\u58F1\u5C90", faction: "matsura", lon: 129.72, lat: 33.77, koku: 7200, kokuMax: 8100, kokuCap: 9e3, pop: 5904, food: 1512, def: 44, comm: 34, min: 72, hp: 5640, local: 168, localTrain: 58 },
   { id: "kanaishi", name: "\u91D1\u77F3\u57CE", kuni: "\u5BFE\u99AC", faction: "so", lon: 129.288, lat: 34.203, koku: 5600, kokuMax: 6300, kokuCap: 7e3, pop: 4592, food: 1176, def: 46, comm: 40, min: 76, hp: 5760, local: 131, localTrain: 58 },
@@ -12873,6 +12962,12 @@ var FACTIONS = {
   ichijo: { id: "ichijo", name: "\u571F\u4F50\u4E00\u6761\u5BB6", color: "#B8A44A", mon: "\u6850", gold: 2600, prestige: 50, mobilization: 1 },
   chosokabe: { id: "chosokabe", name: "\u9577\u5B97\u6211\u90E8\u5BB6", color: "#6B8C3C", desc: "\u571F\u4F50\u5CA1\u8C4A\u306E\u5C0F\u52E2\u529B\u3002\u56FD\u89AA\u3068\u82E5\u304D\u5143\u89AA\u306E\u3082\u3068\u3001\u56DB\u56FD\u306E\u7D71\u4E00\u3092\u5922\u898B\u308B\u3002", mon: "\u9162\u6F3F\u8349", gold: 2600, prestige: 50, mobilization: 1 },
   aki: { id: "aki", name: "\u5B89\u82B8\u5BB6", color: "#8C4A5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
+  kimotsuki: { id: "kimotsuki", name: "\u809D\u4ED8\u5BB6", color: "#9B5A4A", mon: "\u4E38\u306B\u5341\u5B57", playable: true, desc: "\u5927\u9685\u9AD8\u5C71\u306E\u540D\u65CF\u3002\u517C\u7D9A\u306E\u3082\u3068\u65E5\u5411\u30FB\u5927\u9685\u306B\u5A01\u3092\u5F35\u308A\u3001\u5CF6\u6D25\u3068\u6B63\u9762\u304B\u3089\u4E89\u3046\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  aso: { id: "aso", name: "\u963F\u8607\u5BB6", color: "#5A8C6B", mon: "\u9055\u3044\u9DF9\u306E\u7FBD", playable: true, desc: "\u80A5\u5F8C\u963F\u8607\u306E\u5927\u5BAE\u53F8\u5BB6\u3002\u60DF\u8C4A\u306E\u3082\u3068\u56FD\u8846\u3092\u307E\u3068\u3081\u3001\u7532\u6590\u5B97\u904B\u3068\u3044\u3046\u826F\u5C06\u3092\u62B1\u3048\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  munakata: { id: "munakata", name: "\u5B97\u50CF\u5BB6", color: "#4A6B8C", mon: "\u6962\u306E\u8449", gold: 2600, prestige: 50, mobilization: 1 },
+  hatakeyama_k: { id: "hatakeyama_k", name: "\u6CB3\u5185\u7560\u5C71\u5BB6", color: "#8C5A7A", mon: "\u4E8C\u3064\u5F15\u4E21", playable: true, desc: "\u6CB3\u5185\u30FB\u7D00\u4F0A\u306E\u5B88\u8B77\u3002\u5BB6\u5BB0\u306E\u904A\u4F50\u9577\u6559\u304C\u5B9F\u6A29\u3092\u63E1\u308A\u3001\u4E09\u597D\u306B\u62BC\u3055\u308C\u3064\u3064\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  ogasawara: { id: "ogasawara", name: "\u5C0F\u7B20\u539F\u5BB6", color: "#6B7A4A", mon: "\u4E09\u968E\u83F1", playable: true, desc: "\u4FE1\u6FC3\u5B88\u8B77\u3002\u5E9C\u4E2D\u6797\u57CE\u306B\u62E0\u308B\u304C\u3001\u5357\u304B\u3089\u6B66\u7530\u6674\u4FE1\u304C\u8FEB\u3063\u3066\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  kiso: { id: "kiso", name: "\u6728\u66FD\u5BB6", color: "#7A6B5A", mon: "\u4E38\u306B\u7ACB\u3061\u8475", gold: 2600, prestige: 50, mobilization: 1 },
   motoyama: { id: "motoyama", name: "\u672C\u5C71\u5BB6", color: "#A0714A", mon: "\u4E38\u306B\u4E09\u3064\u67CF", playable: true, desc: "\u571F\u4F50\u4E2D\u592E\u306E\u5B9F\u529B\u8005\u3002\u6885\u6176\uFF08\u8302\u5B97\uFF09\u306E\u3082\u3068\u5409\u826F\u3092\u4F75\u305B\u3001\u4E00\u6761\u30FB\u9577\u5B97\u6211\u90E8\u3068\u571F\u4F50\u3092\u4E89\u3046\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   ohira: { id: "ohira", name: "\u5927\u5E73\u5BB6", color: "#7A8C5A", mon: "\u4E38\u306B\u4E09\u3064\u5F15", gold: 2600, prestige: 50, mobilization: 1 },
   tsuno: { id: "tsuno", name: "\u6D25\u91CE\u5BB6", color: "#5A6B8C", mon: "\u68B6\u306E\u8449", gold: 2600, prestige: 50, mobilization: 1 },
@@ -12992,11 +13087,13 @@ var GENERALS = [
   { id: "sadayoshi2", name: "\u77F3\u5DDD\u6E05\u517C", faction: "matsudaira", lead: 64, valor: 58, wit: 66, gov: 70, loyal: 84, age: 41, at: "okazaki", retinue: 240, retTrain: 58 },
   { id: "nobumoto", name: "\u6C34\u91CE\u4FE1\u5143", faction: "mizuno", lead: 68, valor: 66, wit: 70, gov: 62, loyal: 100, age: 31, at: "kariya", lord: true, retinue: 420, retTrain: 62 },
   { id: "shingen", name: "\u6B66\u7530\u6674\u4FE1", faction: "takeda", lead: 96, valor: 76, wit: 94, gov: 92, loyal: 100, age: 25, at: "tsutsujigasaki", lord: true, retinue: 980, retTrain: 78 },
+  { id: "og_nagatoki", name: "\u5C0F\u7B20\u539F\u9577\u6642", faction: "ogasawara", lead: 64, valor: 68, wit: 60, gov: 62, loyal: 100, age: 32, at: "fukashi", lord: true, retinue: 520, retTrain: 60 },
+  { id: "ks_yoshiyasu", name: "\u6728\u66FD\u7FA9\u5EB7", faction: "kiso", lead: 64, valor: 64, wit: 64, gov: 62, loyal: 100, age: 32, at: "kisofukushima", lord: true, retinue: 340, retTrain: 60 },
   { id: "td_nobutora", name: "\u6B66\u7530\u4FE1\u864E", faction: "imagawa", lead: 78, valor: 80, wit: 66, gov: 58, loyal: 40, age: 52, at: "sunpu", retinue: 260, retTrain: 64 },
   { id: "nobushige", name: "\u6B66\u7530\u4FE1\u7E41", faction: "takeda", lead: 86, valor: 78, wit: 80, gov: 84, loyal: 98, age: 20, at: "tsutsujigasaki", retinue: 520, retTrain: 74 },
   { id: "kansuke", name: "\u5C71\u672C\u52D8\u52A9", faction: "takeda", lead: 72, valor: 62, wit: 92, gov: 66, loyal: 92, age: 45, at: "tsutsujigasaki", retinue: 220, retTrain: 66 },
-  { id: "nobukata", name: "\u677F\u57A3\u4FE1\u65B9", faction: "takeda", lead: 82, valor: 80, wit: 70, gov: 72, loyal: 90, age: 47, at: "fukashi", retinue: 480, retTrain: 72 },
-  { id: "toramasa", name: "\u7518\u5229\u864E\u6CF0", faction: "takeda", lead: 78, valor: 78, wit: 66, gov: 68, loyal: 88, age: 46, at: "fukashi", retinue: 440, retTrain: 70 },
+  { id: "nobukata", name: "\u677F\u57A3\u4FE1\u65B9", faction: "takeda", lead: 82, valor: 80, wit: 70, gov: 72, loyal: 90, age: 47, at: "takato", retinue: 480, retTrain: 72 },
+  { id: "toramasa", name: "\u7518\u5229\u864E\u6CF0", faction: "takeda", lead: 78, valor: 78, wit: 66, gov: 68, loyal: 88, age: 46, at: "tsutsujigasaki", retinue: 440, retTrain: 70 },
   { id: "masakage", name: "\u99AC\u5834\u4FE1\u6625", faction: "takeda", lead: 86, valor: 84, wit: 74, gov: 66, loyal: 92, age: 31, at: "takato", retinue: 420, retTrain: 76 },
   { id: "nobufusa", name: "\u98EF\u5BCC\u864E\u660C", faction: "takeda", lead: 82, valor: 88, wit: 62, gov: 58, loyal: 86, age: 42, at: "iwadono", retinue: 400, retTrain: 74 },
   { id: "masatoyo", name: "\u5185\u85E4\u660C\u8C4A", faction: "takeda", lead: 84, valor: 76, wit: 78, gov: 76, loyal: 90, age: 24, at: "komoro", retinue: 360, retTrain: 72 },
@@ -13007,7 +13104,7 @@ var GENERALS = [
   { id: "td_jokan", name: "\u4ECA\u798F\u6D44\u9591", faction: "takeda", lead: 70, valor: 78, wit: 62, gov: 56, loyal: 90, age: 34, at: "tsutsujigasaki", retinue: 290, retTrain: 70 },
   { id: "td_mitsukata", name: "\u9577\u5742\u5149\u5805", faction: "takeda", lead: 62, valor: 58, wit: 72, gov: 78, loyal: 88, age: 33, at: "tsutsujigasaki", retinue: 260, retTrain: 60 },
   { id: "td_masatoshi", name: "\u4FDD\u79D1\u6B63\u4FCA", faction: "takeda", lead: 74, valor: 86, wit: 62, gov: 58, loyal: 74, age: 37, at: "takato", retinue: 310, retTrain: 72 },
-  { id: "td_toramitsu", name: "\u5C0F\u5C71\u7530\u864E\u6E80", faction: "takeda", lead: 70, valor: 78, wit: 62, gov: 56, loyal: 86, age: 40, at: "fukashi", retinue: 290, retTrain: 70 },
+  { id: "td_toramitsu", name: "\u5C0F\u5C71\u7530\u864E\u6E80", faction: "takeda", lead: 70, valor: 78, wit: 62, gov: 56, loyal: 86, age: 40, at: "komoro", retinue: 290, retTrain: 70 },
   { id: "td_motonao", name: "\u79B0\u6D25\u5143\u76F4", faction: "takeda", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 66, age: 48, at: "komoro", retinue: 280, retTrain: 62 },
   { id: "td_nobumori", name: "\u82A6\u7530\u4FE1\u5B88", faction: "takeda", lead: 70, valor: 72, wit: 64, gov: 58, loyal: 72, age: 34, at: "komoro", retinue: 290, retTrain: 66 },
   { id: "yoshikiyo", name: "\u6751\u4E0A\u7FA9\u6E05", faction: "murakami", lead: 86, valor: 88, wit: 66, gov: 62, loyal: 100, age: 45, at: "katsurao", lord: true, retinue: 620, retTrain: 72 },
@@ -13071,7 +13168,7 @@ var GENERALS = [
   { id: "motoyasu3", name: "\u677E\u5E73\u5EB7\u5FE0", faction: "matsudaira", lead: 62, valor: 66, wit: 56, gov: 58, loyal: 84, age: 21, at: "okazaki", retinue: 200, retTrain: 60 },
   { id: "nobuchika", name: "\u6C34\u91CE\u5FE0\u653F", faction: "mizuno", lead: 66, valor: 62, wit: 66, gov: 68, loyal: 90, age: 54, at: "kariya", retinue: 280, retTrain: 60 },
   { id: "nobukado", name: "\u6B66\u7530\u4FE1\u5EC9", faction: "takeda", lead: 68, valor: 62, wit: 72, gov: 74, loyal: 94, age: 14, at: "tsutsujigasaki", retinue: 300, retTrain: 66 },
-  { id: "torasada", name: "\u539F\u864E\u80E4", faction: "takeda", lead: 76, valor: 86, wit: 58, gov: 52, loyal: 88, age: 49, at: "fukashi", retinue: 340, retTrain: 72 },
+  { id: "torasada", name: "\u539F\u864E\u80E4", faction: "takeda", lead: 76, valor: 86, wit: 58, gov: 52, loyal: 88, age: 49, at: "tsutsujigasaki", retinue: 340, retTrain: 72 },
   { id: "masatane", name: "\u539F\u660C\u80E4", faction: "takeda", lead: 72, valor: 66, wit: 80, gov: 70, loyal: 90, age: 15, at: "komoro", retinue: 260, retTrain: 68 },
   { id: "nobutomo2", name: "\u5C0F\u5E61\u864E\u76DB", faction: "takeda", lead: 72, valor: 80, wit: 60, gov: 54, loyal: 86, age: 55, at: "takato", retinue: 300, retTrain: 70 },
   { id: "yamagata", name: "\u5C71\u770C\u660C\u666F", faction: "takeda", lead: 86, valor: 88, wit: 76, gov: 66, loyal: 92, age: 17, at: "iwadono", retinue: 280, retTrain: 74 },
@@ -13110,10 +13207,11 @@ var GENERALS = [
   { id: "ak_harumitsu", name: "\u5927\u9928\u6674\u5149", faction: "ashikaga", lead: 54, valor: 50, wit: 72, gov: 76, loyal: 84, age: 40, at: "nijo", retinue: 200, retTrain: 52 },
   { id: "fujitaka", name: "\u7D30\u5DDD\u85E4\u5B5D", faction: "ashikaga", lead: 76, valor: 68, wit: 84, gov: 86, loyal: 88, age: 12, at: "nijo", retinue: 220, retTrain: 62 },
   { id: "nagayoshi", name: "\u4E09\u597D\u9577\u6176", faction: "miyoshi", lead: 90, valor: 74, wit: 90, gov: 92, loyal: 100, age: 24, at: "akutagawa", lord: true, retinue: 900, retTrain: 72 },
+  { id: "hk_masakuni", name: "\u7560\u5C71\u653F\u56FD", faction: "hatakeyama_k", lead: 60, valor: 58, wit: 60, gov: 64, loyal: 100, age: 38, at: "takaya", lord: true, retinue: 460, retTrain: 58 },
   { id: "hisahide", name: "\u677E\u6C38\u4E45\u79C0", faction: "miyoshi", lead: 80, valor: 64, wit: 94, gov: 86, loyal: 52, age: 38, at: "shigisan", retinue: 480, retTrain: 66 },
   { id: "jikkyu", name: "\u4E09\u597D\u5B9F\u4F11", faction: "miyoshi", lead: 82, valor: 80, wit: 74, gov: 70, loyal: 94, age: 19, at: "kishiwada", retinue: 520, retTrain: 70 },
   { id: "fuyuyasu", name: "\u5B89\u5B85\u51AC\u5EB7", faction: "miyoshi", lead: 76, valor: 74, wit: 72, gov: 70, loyal: 92, age: 18, at: "sumoto", retinue: 380, retTrain: 66 },
-  { id: "sogo", name: "\u5341\u6CB3\u4E00\u5B58", faction: "miyoshi", lead: 78, valor: 88, wit: 60, gov: 56, loyal: 92, age: 14, at: "takaya", retinue: 420, retTrain: 70 },
+  { id: "sogo", name: "\u5341\u6CB3\u4E00\u5B58", faction: "miyoshi", lead: 78, valor: 88, wit: 60, gov: 56, loyal: 92, age: 14, at: "sogo", retinue: 420, retTrain: 70 },
   { id: "masanaga", name: "\u4E09\u597D\u653F\u5EB7", faction: "miyoshi", lead: 70, valor: 74, wit: 64, gov: 58, loyal: 84, age: 28, at: "shoryuji", retinue: 340, retTrain: 64 },
   { id: "nagayasu", name: "\u4E09\u597D\u9577\u9038", faction: "miyoshi", lead: 72, valor: 70, wit: 68, gov: 62, loyal: 86, age: 34, at: "itami", retinue: 360, retTrain: 64 },
   { id: "kennyo", name: "\u8A3C\u5982\uFF08\u672C\u9858\u5BFA\uFF09", faction: "honganji", lead: 74, valor: 50, wit: 86, gov: 88, loyal: 100, age: 30, at: "ishiyama", lord: true, retinue: 900, retTrain: 62 },
@@ -13353,9 +13451,11 @@ var GENERALS = [
   { id: "takanobu_r", name: "\u9F8D\u9020\u5BFA\u9686\u4FE1", faction: "ryuzoji", lead: 84, valor: 84, wit: 78, gov: 68, loyal: 92, age: 17, at: "saga", retinue: 360, retTrain: 64 },
   { id: "iesada", name: "\u6CE2\u591A\u89AA", faction: "hata", lead: 64, valor: 64, wit: 60, gov: 58, loyal: 100, age: 21, at: "kishitake", lord: true, retinue: 300, retTrain: 58 },
   { id: "takanobu_m", name: "\u677E\u6D66\u9686\u4FE1", faction: "matsura", lead: 74, valor: 70, wit: 76, gov: 68, loyal: 100, age: 17, at: "hirado", lord: true, retinue: 380, retTrain: 62 },
+  { id: "mn_ujio", name: "\u5B97\u50CF\u6C0F\u7537", faction: "munakata", lead: 64, valor: 64, wit: 66, gov: 66, loyal: 100, age: 40, at: "tsutagatake", lord: true, retinue: 400, retTrain: 58 },
   { id: "harusumi", name: "\u6709\u99AC\u6674\u7D14", faction: "arima", lead: 70, valor: 66, wit: 70, gov: 68, loyal: 100, age: 63, at: "hinoe", lord: true, retinue: 340, retTrain: 60 },
   { id: "sumitada", name: "\u5927\u6751\u7D14\u5FE0", faction: "omura", lead: 64, valor: 60, wit: 68, gov: 66, loyal: 100, age: 13, at: "omura", lord: true, retinue: 280, retTrain: 58 },
   { id: "yoshitake", name: "\u83CA\u6C60\u7FA9\u6B66", faction: "kikuchi", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 100, age: 41, at: "kumamoto", lord: true, retinue: 380, retTrain: 58 },
+  { id: "as_koretoyo", name: "\u963F\u8607\u60DF\u8C4A", faction: "aso", lead: 66, valor: 62, wit: 72, gov: 74, loyal: 100, age: 53, at: "hamanoyakata", lord: true, retinue: 420, retTrain: 60 },
   { id: "yoriharu", name: "\u76F8\u826F\u6674\u5E83", faction: "sagara", lead: 70, valor: 66, wit: 72, gov: 72, loyal: 100, age: 33, at: "hitoyoshi", lord: true, retinue: 420, retTrain: 62 },
   { id: "sr_yoritaka", name: "\u4E0A\u6751\u983C\u5B5D", faction: "sagara", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 42, age: 30, at: "hitoyoshi", retinue: 270, retTrain: 60 },
   { id: "sr_nagae", name: "\u6771\u9577\u5144", faction: "sagara", lead: 62, valor: 60, wit: 72, gov: 74, loyal: 84, age: 34, at: "hitoyoshi", retinue: 240, retTrain: 56 },
@@ -13364,6 +13464,7 @@ var GENERALS = [
   { id: "it_suketomo", name: "\u798F\u6C38\u7950\u53CB", faction: "ito", lead: 64, valor: 66, wit: 62, gov: 60, loyal: 82, age: 32, at: "sadowara", retinue: 250, retTrain: 60 },
   { id: "chikanari", name: "\u571F\u6301\u89AA\u6210", faction: "tsuchimochi", lead: 64, valor: 64, wit: 60, gov: 58, loyal: 100, age: 26, at: "agata", lord: true, retinue: 280, retTrain: 58 },
   { id: "takahisa", name: "\u5CF6\u6D25\u8CB4\u4E45", faction: "shimazu", lead: 88, valor: 78, wit: 86, gov: 86, loyal: 100, age: 32, at: "uchijo", lord: true, retinue: 760, retTrain: 70 },
+  { id: "km_kanetsugu", name: "\u809D\u4ED8\u517C\u7D9A", faction: "kimotsuki", lead: 76, valor: 78, wit: 70, gov: 66, loyal: 100, age: 35, at: "kouyama", lord: true, retinue: 480, retTrain: 66 },
   { id: "sz_tadayoshi2", name: "\u5CF6\u6D25\u5FE0\u826F", faction: "shimazu", lead: 82, valor: 74, wit: 88, gov: 88, loyal: 100, age: 54, at: "uchijo", retinue: 480, retTrain: 68 },
   { id: "sz_hisaaki", name: "\u5DDD\u4E0A\u4E45\u6717", faction: "shimazu", lead: 72, valor: 78, wit: 66, gov: 60, loyal: 92, age: 13, at: "uchijo", retinue: 260, retTrain: 66 },
   { id: "sz_masatoshi", name: "\u938C\u7530\u653F\u5E74", faction: "shimazu", lead: 70, valor: 72, wit: 66, gov: 64, loyal: 90, age: 38, at: "izumi", retinue: 280, retTrain: 64 },
@@ -13469,8 +13570,8 @@ var GENERALS = [
   { id: "kakizaki3", name: "\u8823\u5D0E\u57FA\u5E83", faction: "kakizaki", lead: 64, valor: 68, wit: 60, gov: 58, loyal: 74, age: 32, at: "esashi", retinue: 220, retTrain: 58 },
   { id: "m_yasunaga", name: "\u4E09\u597D\u5EB7\u9577", faction: "miyoshi", lead: 76, valor: 74, wit: 72, gov: 68, loyal: 88, age: 26, at: "akutagawa", retinue: 320, retTrain: 64 },
   { id: "my_soso", name: "\u4E09\u597D\u5B97\u4E09", faction: "miyoshi", lead: 72, valor: 70, wit: 74, gov: 70, loyal: 54, age: 38, at: "akutagawa", retinue: 340, retTrain: 64 },
-  { id: "my_naganori", name: "\u904A\u4F50\u9577\u6559", faction: "miyoshi", lead: 70, valor: 66, wit: 78, gov: 74, loyal: 58, age: 40, at: "takaya", retinue: 320, retTrain: 62 },
-  { id: "my_munefusa", name: "\u5B89\u898B\u5B97\u623F", faction: "miyoshi", lead: 68, valor: 70, wit: 68, gov: 62, loyal: 52, age: 34, at: "takaya", retinue: 290, retTrain: 62 },
+  { id: "my_naganori", name: "\u904A\u4F50\u9577\u6559", faction: "hatakeyama_k", lead: 70, valor: 66, wit: 78, gov: 74, loyal: 58, age: 40, at: "takaya", retinue: 320, retTrain: 62 },
+  { id: "my_munefusa", name: "\u5B89\u898B\u5B97\u623F", faction: "hatakeyama_k", lead: 68, valor: 70, wit: 68, gov: 62, loyal: 52, age: 34, at: "takaya", retinue: 290, retTrain: 62 },
   { id: "my_ujitsuna", name: "\u7D30\u5DDD\u6C0F\u7DB1", faction: "miyoshi", lead: 58, valor: 56, wit: 62, gov: 66, loyal: 70, age: 32, at: "shoryuji", retinue: 300, retTrain: 56 },
   { id: "my_nobumasa", name: "\u6C60\u7530\u4FE1\u6B63", faction: "miyoshi", lead: 66, valor: 66, wit: 62, gov: 62, loyal: 62, age: 32, at: "itami", retinue: 280, retTrain: 60 },
   { id: "my_chikaoki", name: "\u4F0A\u4E39\u89AA\u8208", faction: "miyoshi", lead: 68, valor: 68, wit: 64, gov: 62, loyal: 58, age: 30, at: "itami", retinue: 280, retTrain: 62 },
@@ -13479,8 +13580,8 @@ var GENERALS = [
   { id: "m_masayasu", name: "\u4E09\u597D\u653F\u52DD", faction: "miyoshi", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 72, age: 30, at: "akutagawa", retinue: 280, retTrain: 62 },
   { id: "m_yukiyasu", name: "\u4E09\u597D\u4E4B\u5EB7", faction: "miyoshi", lead: 70, valor: 72, wit: 66, gov: 62, loyal: 86, age: 24, at: "iimoriyama", retinue: 300, retTrain: 62 },
   { id: "m_matsuyama", name: "\u677E\u5C71\u91CD\u6CBB", faction: "miyoshi", lead: 70, valor: 66, wit: 74, gov: 68, loyal: 84, age: 28, at: "iimoriyama", retinue: 260, retTrain: 62 },
-  { id: "m_kono", name: "\u9999\u897F\u9577\u4FE1", faction: "miyoshi", lead: 66, valor: 70, wit: 62, gov: 58, loyal: 80, age: 32, at: "takaya", retinue: 260, retTrain: 60 },
-  { id: "m_yui", name: "\u7D50\u57CE\u5FE0\u6B63", faction: "miyoshi", lead: 64, valor: 60, wit: 70, gov: 70, loyal: 80, age: 36, at: "takaya", retinue: 240, retTrain: 58 },
+  { id: "m_kono", name: "\u9999\u897F\u9577\u4FE1", faction: "miyoshi", lead: 66, valor: 70, wit: 62, gov: 58, loyal: 80, age: 32, at: "sogo", retinue: 260, retTrain: 60 },
+  { id: "m_yui", name: "\u7D50\u57CE\u5FE0\u6B63", faction: "miyoshi", lead: 64, valor: 60, wit: 70, gov: 70, loyal: 80, age: 36, at: "akutagawa", retinue: 240, retTrain: 58 },
   { id: "m_ibaraki", name: "\u8328\u6728\u9577\u9686", faction: "miyoshi", lead: 66, valor: 62, wit: 72, gov: 74, loyal: 82, age: 41, at: "itami", retinue: 260, retTrain: 60 },
   { id: "m_hatano", name: "\u6CE2\u591A\u91CE\u79C0\u89AA", faction: "miyoshi", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 74, age: 29, at: "hanakuma", retinue: 240, retTrain: 60 },
   { id: "m_araki", name: "\u8352\u6728\u7FA9\u6751", faction: "miyoshi", lead: 66, valor: 68, wit: 64, gov: 60, loyal: 80, age: 31, at: "hanakuma", retinue: 250, retTrain: 60 },
@@ -13564,7 +13665,7 @@ var GENERALS = [
   { id: "t_iida3", name: "\u4E0B\u6761\u4FE1\u6C0F", faction: "takeda", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 78, age: 28, at: "iida", retinue: 240, retTrain: 60 },
   { id: "t_komoro3", name: "\u771F\u7530\u5E78\u9686", faction: "takeda", lead: 82, valor: 72, wit: 92, gov: 80, loyal: 84, age: 33, at: "komoro", retinue: 280, retTrain: 66 },
   { id: "t_iwadono3", name: "\u6817\u539F\u8A6E\u51AC", faction: "takeda", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 80, age: 32, at: "iwadono", retinue: 240, retTrain: 60 },
-  { id: "t_fukashi3", name: "\u99AC\u5834\u6C11\u90E8", faction: "takeda", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 84, age: 26, at: "fukashi", retinue: 250, retTrain: 62 },
+  { id: "t_fukashi3", name: "\u99AC\u5834\u6C11\u90E8", faction: "takeda", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 84, age: 26, at: "tsutsujigasaki", retinue: 250, retTrain: 62 },
   { id: "t_tsutsuji4", name: "\u7A74\u5C71\u4FE1\u53CB", faction: "takeda", lead: 70, valor: 68, wit: 70, gov: 70, loyal: 80, age: 40, at: "tsutsujigasaki", retinue: 270, retTrain: 62 },
   { id: "n_kasugayama3", name: "\u672C\u5E84\u5B9F\u4E43", faction: "nagao", lead: 70, valor: 68, wit: 74, gov: 74, loyal: 90, age: 34, at: "kasugayama", retinue: 270, retTrain: 64 },
   { id: "n_kasugayama4", name: "\u5927\u718A\u671D\u79C0", faction: "nagao", lead: 68, valor: 68, wit: 68, gov: 66, loyal: 62, age: 30, at: "kasugayama", retinue: 260, retTrain: 62 },
@@ -13872,7 +13973,7 @@ var GENERALS = [
   { id: "cb5_usui2", name: "\u539F\u80E4\u6804", faction: "chiba", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 86, age: 16, at: "usui", retinue: 240, retTrain: 58 },
   { id: "cb5_usui3", name: "\u9AD8\u57CE\u80E4\u5409", faction: "chiba", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 36, at: "usui", retinue: 230, retTrain: 58 },
   { id: "kt5_matsugashima3", name: "\u5927\u5BAE\u542B\u5FCD\u658E", faction: "kitabatake", lead: 64, valor: 64, wit: 64, gov: 62, loyal: 84, age: 32, at: "matsugashima", retinue: 240, retTrain: 58 },
-  { id: "is5_miyazu3", name: "\u5EF6\u6C38\u6570\u99AC", faction: "isshiki", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 28, at: "miyazu", retinue: 230, retTrain: 58 },
+  { id: "is5_miyazu3", name: "\u5EF6\u6C38\u6570\u99AC", faction: "isshiki", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 28, at: "takebeyama", retinue: 230, retTrain: 58 },
   { id: "nr5_oshi3", name: "\u6210\u7530\u6CF0\u5B63", faction: "narita", lead: 64, valor: 66, wit: 60, gov: 58, loyal: 84, age: 26, at: "oshi", retinue: 240, retTrain: 58 },
   { id: "ns5_karasuyama3", name: "\u5927\u7530\u539F\u8CC7\u6E05", faction: "nasu", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 78, age: 30, at: "karasuyama", retinue: 240, retTrain: 60 },
   { id: "ns_tsunakiyo", name: "\u5927\u7530\u539F\u7DB1\u6E05", faction: "nasu", lead: 66, valor: 68, wit: 62, gov: 60, loyal: 76, age: 22, at: "karasuyama", retinue: 250, retTrain: 60 },
@@ -13989,6 +14090,28 @@ function initState(player) {
     // 安芸と長宗我部は香美をめぐり争う
     ["kosokabe", "chosokabe", "\u4E0D\u53EF\u4FB5", 52],
     // のちに親泰が養子に入る間柄
+    /* 城と大名家の増補（第二期）。立てた六家の、一五四六年の立ち位置。 */
+    ["kimotsuki", "shimazu", "\u6575\u5BFE", 14],
+    // 肝付は島津と大隅を争う
+    ["kimotsuki", "ito", "\u540C\u76DF", 66],
+    // 肝付と伊東は島津を挟む
+    ["aso", "sagara", "\u4E0D\u53EF\u4FB5", 54],
+    // 阿蘇と相良は肥後を分け合う
+    ["aso", "kikuchi", "\u6575\u5BFE", 24],
+    // 菊池（義武）とは相容れない
+    ["munakata", "ouchi", "\u5F93\u5C5E", 68],
+    // 宗像は大内に属する筑前の国人
+    ["hatakeyama_k", "miyoshi", "\u6575\u5BFE", 16],
+    // 畠山は三好に河内を侵されつつある
+    ["hatakeyama_k", "saika", "\u540C\u76DF", 62],
+    // 紀伊の守護として雑賀と結ぶ
+    ["ogasawara", "takeda", "\u6575\u5BFE", 10],
+    // 武田は信濃府中を狙っている
+    ["ogasawara", "murakami", "\u540C\u76DF", 68],
+    // 信濃の国衆は武田に対して結ぶ
+    ["kiso", "ogasawara", "\u5F93\u5C5E", 54],
+    // 木曽は信濃守護の下にある
+    ["kiso", "takeda", "\u6575\u5BFE", 22],
     ["kono", "ouchi", "\u4E0D\u53EF\u4FB5", 54],
     // ── 奥羽
     ["date", "ashina", "\u540C\u76DF", 66],
@@ -14016,7 +14139,17 @@ function initState(player) {
            これが無いと、記録の置き場は「別の遊びで上書きしようとしている」ことに
            気づけない。実際、新しく始めただけで、進めていた盤が黙って消えた。
            盤ごとに違う印を持たせ、置き場の側で守る。 */
-    \u5353: `t${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`,
+    /* 印は賽から起こす。時計を混ぜてはならない。
+    
+           もとは Date.now() を混ぜていた。ところが卓の印は、置き場を守るためだけの
+           ものではない。外交・調略・縁組の賽は籤(s.卓, …) から起こしているので、
+           印に時計が入っていると、賽を固定しても盤が毎回ずれる。
+           同じ種で二度回して 従56/54・臣13/19・城の持ち主まで食い違った。
+           ★gaiko が時折倒れていたのもこれである。
+    
+           遊ぶ側にとっては Math.random が本物の賽なので、卓ごとに違う印が出る。
+           一兆通りあれば、人ひとりの持つ数枚の記録がぶつかることはない。 */
+    \u5353: `t${Math.floor(Math.random() * 1e12).toString(36)}`,
     player,
     year: 1546,
     month: 4,
@@ -17042,6 +17175,10 @@ function resolveClashOffscreen(prev) {
 }
 
 // src/govern/month.js
+function \u8ECD\u306E\u540D(s2, \u982D) {
+  s2.\u8ECD\u756A = (s2.\u8ECD\u756A || 0) + 1;
+  return `${\u982D}${s2.year}-${s2.month}-${s2.\u8ECD\u756A}`;
+}
 function advanceMonth(prev, g) {
   const s2 = structuredClone(prev);
   const events = [];
@@ -17656,7 +17793,7 @@ function advanceMonth(prev, g) {
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
       c2.rost = tk.rest;
       s2.armies.push({
-        id: `r${Date.now()}${Math.round(Math.random() * 1e6)}`,
+        id: \u8ECD\u306E\u540D(s2, "r"),
         faction: a.faction,
         from: c2.id,
         gens: take.map((x) => x.id),
@@ -17743,7 +17880,7 @@ function advanceMonth(prev, g) {
     if (send < 200) continue;
     from.c2.local -= send;
     for (const t of take) t.at = null;
-    const rid = `f${Date.now()}${Math.round(Math.random() * 1e6)}`;
+    const rid = \u8ECD\u306E\u540D(s2, "f");
     s2.armies.push({
       id: rid,
       faction: cs.faction,
@@ -17954,7 +18091,7 @@ function advanceMonth(prev, g) {
       const localSend = Math.max(0, Math.min(c.local, send - take.reduce((a, x) => a + x.retinue, 0)));
       c.local -= localSend;
       s2.armies.push({
-        id: `a${Date.now()}${Math.random()}`,
+        id: \u8ECD\u306E\u540D(s2, "a"),
         faction: fid,
         from: c.id,
         gens: take.map((x) => x.id),
@@ -18011,15 +18148,25 @@ function advanceMonth(prev, g) {
       s2.chronicle.push({ y: s2.year, m: s2.month, text: txt });
       if (q.faction === s2.player) events.push(txt);
     }
+    const \u5B50\u3042\u308B = /* @__PURE__ */ new Set();
+    for (const x of s2.generals) {
+      if (x.captive) continue;
+      const p = \u89AA\u306E(s2, x.id);
+      if (p) \u5B50\u3042\u308B.add(p);
+    }
+    for (const n of NEWCOMERS) {
+      const p = PARENT[n.id];
+      if (p) \u5B50\u3042\u308B.add(p);
+    }
     for (const q of [...s2.generals]) {
       if (q.captive || q.lord) continue;
       const a2 = q.age || 30;
       if (a2 < 18 || a2 > 52) continue;
       if (!hasHouse(s2, q)) continue;
-      const hasKid = s2.generals.some((x) => PARENT[x.id] === q.id && !x.captive) || NEWCOMERS.some((n) => PARENT[n.id] === q.id);
-      if (hasKid) continue;
+      if (\u5B50\u3042\u308B.has(q.id)) continue;
       if (Math.random() > 0.07) continue;
       const kid = bearChild(s2, q);
+      if (kid) \u5B50\u3042\u308B.add(q.id);
       if (kid && q.faction === s2.player) events.push(`${q.name}\u306B\u5B50\u304C\u751F\u307E\u308C\u305F\uFF08${kid.name}\uFF09\u3002`);
     }
     for (const t of emergeGenerals(s2)) {
@@ -28425,7 +28572,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
       c2.rost = tk.rest;
       s2.armies.push({
-        id: `aid${Date.now()}${Math.round(Math.random() * 1e6)}`,
+        id: \u8ECD\u306E\u540D(s2, "aid"),
         faction: c2.faction,
         from: c2.id,
         gens: gens.map((x) => x.id),
@@ -28472,7 +28619,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
       c2.rost = tk.rest;
       s2.armies.push({
-        id: `aid${Date.now()}${Math.round(Math.random() * 1e6)}`,
+        id: \u8ECD\u306E\u540D(s2, "aid"),
         faction: c2.faction,
         from: c2.id,
         gens: take.map((x) => x.id),
@@ -28568,7 +28715,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         for (const t of take) t.at = null;
         const path = findPath(rc2.id, p.to);
         s2.armies.push({
-          id: `r${Date.now()}${Math.round(Math.random() * 1e6)}`,
+          id: \u8ECD\u306E\u540D(s2, "r"),
           faction: rc2.faction,
           from: rc2.id,
           gens: take.map((x) => x.id),
@@ -28607,7 +28754,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       c.local -= p.local;
       c.food -= p.food;
-      const mainId = `a${Date.now()}`;
+      const mainId = \u8ECD\u306E\u540D(s2, "a");
       const \u5272 = \u84C4\u3048\u306B\u5408\u308F\u305B\u308B(p.mix, p.local, { horse: c.horse || 0, gun: c.gun || 0 });
       c.rost = rosterTake(c.rost || newRoster(c.local + p.local, `loc-${c.id}`), p.local).rest;
       const takeMain = { taken: newRoster(p.local, `arm-${mainId}`, \u5272) };
@@ -28660,7 +28807,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       const lead = s2.generals.find((x) => x.id === (c.lordId || p.gens[0]));
       const camp = {
-        id: `c${Date.now()}`,
+        id: \u8ECD\u306E\u540D(s2, "c"),
         target: p.to,
         from: p.from,
         leader: lead ? lead.id : p.gens[0],

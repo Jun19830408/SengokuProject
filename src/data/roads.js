@@ -122,6 +122,16 @@ export const ROADS = [
   ["kagomori", "jizogatake", 30, "街道"], ["itajima", "usuki", 72, "海路"], ["kawanoe", "okou", 48, "山道"],
   ["kawanoe", "amagiri", 33, "街道"], ["kawanoe", "kokubunyama", 53, "山道"], ["okou", "nakamura", 91, "難所"],
   ["okou", "aki", 28, "街道"],
+  // ── 城と大名家の増補（第二期）
+  ["kouyama", "shibushi", 22, "街道"], ["kouyama", "kajiki", 34, "山道"], ["kouyama", "obi", 41, "山道"],
+  ["hamanoyakata", "kumamoto", 31, "山道"], ["hamanoyakata", "hitoyoshi", 44, "難所"],
+  ["hamanoyakata", "funai", 62, "難所"],
+  ["tsutagatake", "tachibanayama", 24, "街道"], ["tsutagatake", "iwaya", 28, "街道"],
+  ["tsutagatake", "akizuki", 33, "山道"],
+  ["wakae", "takaya", 14, "街道"], ["wakae", "iimoriyama", 9, "街道"], ["wakae", "ishiyama", 12, "街道"],
+  ["takebeyama", "miyazu", 11, "街道"], ["takebeyama", "yagami", 46, "山道"],
+  ["kisofukushima", "fukashi", 38, "山道"], ["kisofukushima", "iida", 44, "山道"],
+  ["kisofukushima", "inabayama", 63, "難所"],
   // ── 土佐七雄（本山・大平・津野・香宗我部を立てたことによる道）
   ["okou", "motoyama", 26, "山道"], ["okou", "hasuike", 21, "街道"], ["okou", "kosokabe", 12, "街道"],
   ["kosokabe", "aki", 19, "街道"], ["motoyama", "hasuike", 33, "山道"], ["motoyama", "hakuchi", 36, "山道"],
