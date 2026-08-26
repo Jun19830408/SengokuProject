@@ -922,6 +922,56 @@ export const NEWCOMERS = [
     lead: 76, valor: 78, wit: 78, gov: 66, retinue: 200, retTrain: 66, born: 1590 },
   { id: "e_anjin", name: "三浦按針", faction: "matsudaira", y: 1600, at: "okazaki",
     lead: 56, valor: 54, wit: 86, gov: 74, retinue: 140, retTrain: 52, born: 1564 },
+  /* ── 層四（増補の第十九回）。剣客と技の者。
+
+     置き方は既に居る五人（塚原卜伝・上泉信綱・伊藤一刀斎・丸目長恵・宮本武蔵）
+     に倣う。武勇は高く、統率は低く、手勢は少ない。一人で立つ人であって、
+     隊を率いる人ではないからである。技の者（砲術・医・連歌・刀工）は、
+     第十八回の学びの人と同じく武勇も落とし、知略を高くする。 */
+  // ── 剣の者
+  { id: "e_seigen", name: "富田勢源", faction: "asakura", y: 1539, at: "ichijodani",
+    lead: 54, valor: 90, wit: 70, gov: 50, retinue: 130, retTrain: 66, born: 1524 },
+  { id: "e_shigemasa3", name: "富田重政", faction: "asakura", y: 1569, at: "ichijodani",
+    lead: 58, valor: 88, wit: 68, gov: 56, retinue: 150, retTrain: 66, born: 1554 },
+  { id: "e_jisai", name: "鐘捲自斎", faction: "asakura", y: 1555, at: "ichijodani",
+    lead: 52, valor: 88, wit: 68, gov: 48, retinue: 120, retTrain: 66, born: 1540 },
+  { id: "e_kojiro", name: "佐々木小次郎", faction: "ouchi", y: 1590, at: "kokura",
+    lead: 48, valor: 94, wit: 62, gov: 44, retinue: 110, retTrain: 68, born: 1575 },
+  { id: "e_shigekata", name: "東郷重位", faction: "shimazu", y: 1576, at: "uchijo",
+    lead: 58, valor: 92, wit: 66, gov: 52, retinue: 140, retTrain: 68, born: 1561 },
+  { id: "e_jinsuke", name: "林崎甚助", faction: "mogami", y: 1557, at: "yamagata",
+    lead: 50, valor: 90, wit: 68, gov: 48, retinue: 120, retTrain: 66, born: 1542 },
+  { id: "e_inei", name: "宝蔵院胤栄", faction: "tsutsui", y: 1536, at: "koriyama",
+    lead: 54, valor: 90, wit: 68, gov: 54, retinue: 130, retTrain: 66, born: 1521 },
+  { id: "e_kenpo", name: "吉岡憲法", faction: "ashikaga", y: 1560, at: "nijo",
+    lead: 52, valor: 84, wit: 64, gov: 52, retinue: 130, retTrain: 64, born: 1545 },
+  { id: "e_ippa", name: "諸岡一羽", faction: "satake", y: 1518, at: "ota_hitachi",
+    lead: 52, valor: 86, wit: 68, gov: 48, retinue: 120, retTrain: 64, born: 1503 },
+  { id: "e_tadaaki", name: "小野忠明", faction: "matsudaira", y: 1580, at: "okazaki",
+    lead: 56, valor: 90, wit: 66, gov: 50, retinue: 140, retTrain: 68, born: 1565 },
+  { id: "e_denkibo", name: "斎藤伝鬼房", faction: "satake", y: 1565, at: "ota_hitachi",
+    lead: 52, valor: 86, wit: 64, gov: 48, retinue: 120, retTrain: 64, born: 1550 },
+  { id: "e_toshiyoshi", name: "柳生利厳", faction: "tsutsui", y: 1594, at: "koriyama",
+    lead: 58, valor: 88, wit: 70, gov: 56, retinue: 140, retTrain: 66, born: 1579 },
+  { id: "e_matauemon", name: "荒木又右衛門", faction: "tsutsui", y: 1614, at: "koriyama",
+    lead: 54, valor: 88, wit: 66, gov: 50, retinue: 130, retTrain: 66, born: 1599 },
+  { id: "e_muni", name: "新免無二", faction: "akamatsu", y: 1545, at: "himeji",
+    lead: 52, valor: 86, wit: 64, gov: 48, retinue: 120, retTrain: 64, born: 1530 },
+  { id: "e_seiun", name: "針谷夕雲", faction: "hojo", y: 1608, at: "odawara",
+    lead: 50, valor: 86, wit: 72, gov: 50, retinue: 120, retTrain: 64, born: 1593 },
+  // ── 技の者
+  { id: "e_ichimu", name: "稲富一夢", faction: "isshiki", y: 1567, at: "miyazu",
+    lead: 52, valor: 62, wit: 84, gov: 60, retinue: 130, retTrain: 58, born: 1552 },
+  { id: "e_kazunaga", name: "津田算長", faction: "saika", y: 1514, at: "saika",
+    lead: 56, valor: 64, wit: 82, gov: 62, retinue: 150, retTrain: 60, born: 1499 },
+  { id: "e_dosan2", name: "曲直瀬道三", faction: "ashikaga", y: 1522, at: "nijo",
+    lead: 44, valor: 40, wit: 86, gov: 72, retinue: 110, retTrain: 46, born: 1507 },
+  { id: "e_joha", name: "里村紹巴", faction: "ashikaga", y: 1540, at: "nijo",
+    lead: 44, valor: 40, wit: 80, gov: 70, retinue: 110, retTrain: 46, born: 1525 },
+  { id: "e_kunihiro", name: "堀川国広", faction: "ito", y: 1546, at: "sadowara",
+    lead: 48, valor: 56, wit: 78, gov: 64, retinue: 110, retTrain: 50, born: 1531 },
+  { id: "e_masakiyo", name: "中井正清", faction: "matsudaira", y: 1580, at: "okazaki",
+    lead: 48, valor: 44, wit: 78, gov: 84, retinue: 120, retTrain: 48, born: 1565 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -1159,6 +1209,13 @@ export const PARENT = {
   e_mitsunao: "e_tadatoshi",     // 細川忠利 → 光尚
   e_yoshitaka2: "st_yoshinobu",  // 佐竹義宣 → 義隆
   e_shiro: "e_yoshitsugu",       // 益田好次 → 天草四郎
+  // ── 層四（増補の第十九回）
+  e_shigemasa3: "e_seigen",      // 富田勢源 → 重政（名人越後）
+  e_jisai: "e_seigen",           // 富田勢源 → 鐘捲自斎（門弟）
+  e_ittosai: "e_jisai",          // 鐘捲自斎 → 伊藤一刀斎（門弟）
+  e_tadaaki: "e_ittosai",        // 伊藤一刀斎 → 小野忠明（門弟）
+  e_musashi: "e_muni",           // 新免無二 → 宮本武蔵
+  e_toshiyoshi: "e_sekishusai",  // 柳生宗厳 → 利厳（兵庫助）
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
@@ -1173,6 +1230,10 @@ export const PARENT = {
 export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっている者
 
 export const LONG_LIVED = {
+  e_inei: 86,        // 宝蔵院胤栄（八十六歳）
+  e_shigekata: 82,   // 東郷重位（示現流。八十二歳）
+  e_jinsuke: 79,     // 林崎甚助（居合の祖）
+  e_dosan2: 87,      // 曲直瀬道三（医）
   e_tenkai: 107,     // 天海（諸説あるが百歳を超えたと伝わる）
   ts_katsushige: 79, // 板倉勝重（京都所司代）
   ts_nobuyuki: 92,   // 真田信之（松代藩。九十二歳）

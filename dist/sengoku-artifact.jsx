@@ -6810,6 +6810,308 @@ var NEWCOMERS = [
     retinue: 140,
     retTrain: 52,
     born: 1564
+  },
+  /* ── 層四（増補の第十九回）。剣客と技の者。
+  
+       置き方は既に居る五人（塚原卜伝・上泉信綱・伊藤一刀斎・丸目長恵・宮本武蔵）
+       に倣う。武勇は高く、統率は低く、手勢は少ない。一人で立つ人であって、
+       隊を率いる人ではないからである。技の者（砲術・医・連歌・刀工）は、
+       第十八回の学びの人と同じく武勇も落とし、知略を高くする。 */
+  // ── 剣の者
+  {
+    id: "e_seigen",
+    name: "\u5BCC\u7530\u52E2\u6E90",
+    faction: "asakura",
+    y: 1539,
+    at: "ichijodani",
+    lead: 54,
+    valor: 90,
+    wit: 70,
+    gov: 50,
+    retinue: 130,
+    retTrain: 66,
+    born: 1524
+  },
+  {
+    id: "e_shigemasa3",
+    name: "\u5BCC\u7530\u91CD\u653F",
+    faction: "asakura",
+    y: 1569,
+    at: "ichijodani",
+    lead: 58,
+    valor: 88,
+    wit: 68,
+    gov: 56,
+    retinue: 150,
+    retTrain: 66,
+    born: 1554
+  },
+  {
+    id: "e_jisai",
+    name: "\u9418\u6372\u81EA\u658E",
+    faction: "asakura",
+    y: 1555,
+    at: "ichijodani",
+    lead: 52,
+    valor: 88,
+    wit: 68,
+    gov: 48,
+    retinue: 120,
+    retTrain: 66,
+    born: 1540
+  },
+  {
+    id: "e_kojiro",
+    name: "\u4F50\u3005\u6728\u5C0F\u6B21\u90CE",
+    faction: "ouchi",
+    y: 1590,
+    at: "kokura",
+    lead: 48,
+    valor: 94,
+    wit: 62,
+    gov: 44,
+    retinue: 110,
+    retTrain: 68,
+    born: 1575
+  },
+  {
+    id: "e_shigekata",
+    name: "\u6771\u90F7\u91CD\u4F4D",
+    faction: "shimazu",
+    y: 1576,
+    at: "uchijo",
+    lead: 58,
+    valor: 92,
+    wit: 66,
+    gov: 52,
+    retinue: 140,
+    retTrain: 68,
+    born: 1561
+  },
+  {
+    id: "e_jinsuke",
+    name: "\u6797\u5D0E\u751A\u52A9",
+    faction: "mogami",
+    y: 1557,
+    at: "yamagata",
+    lead: 50,
+    valor: 90,
+    wit: 68,
+    gov: 48,
+    retinue: 120,
+    retTrain: 66,
+    born: 1542
+  },
+  {
+    id: "e_inei",
+    name: "\u5B9D\u8535\u9662\u80E4\u6804",
+    faction: "tsutsui",
+    y: 1536,
+    at: "koriyama",
+    lead: 54,
+    valor: 90,
+    wit: 68,
+    gov: 54,
+    retinue: 130,
+    retTrain: 66,
+    born: 1521
+  },
+  {
+    id: "e_kenpo",
+    name: "\u5409\u5CA1\u61B2\u6CD5",
+    faction: "ashikaga",
+    y: 1560,
+    at: "nijo",
+    lead: 52,
+    valor: 84,
+    wit: 64,
+    gov: 52,
+    retinue: 130,
+    retTrain: 64,
+    born: 1545
+  },
+  {
+    id: "e_ippa",
+    name: "\u8AF8\u5CA1\u4E00\u7FBD",
+    faction: "satake",
+    y: 1518,
+    at: "ota_hitachi",
+    lead: 52,
+    valor: 86,
+    wit: 68,
+    gov: 48,
+    retinue: 120,
+    retTrain: 64,
+    born: 1503
+  },
+  {
+    id: "e_tadaaki",
+    name: "\u5C0F\u91CE\u5FE0\u660E",
+    faction: "matsudaira",
+    y: 1580,
+    at: "okazaki",
+    lead: 56,
+    valor: 90,
+    wit: 66,
+    gov: 50,
+    retinue: 140,
+    retTrain: 68,
+    born: 1565
+  },
+  {
+    id: "e_denkibo",
+    name: "\u658E\u85E4\u4F1D\u9B3C\u623F",
+    faction: "satake",
+    y: 1565,
+    at: "ota_hitachi",
+    lead: 52,
+    valor: 86,
+    wit: 64,
+    gov: 48,
+    retinue: 120,
+    retTrain: 64,
+    born: 1550
+  },
+  {
+    id: "e_toshiyoshi",
+    name: "\u67F3\u751F\u5229\u53B3",
+    faction: "tsutsui",
+    y: 1594,
+    at: "koriyama",
+    lead: 58,
+    valor: 88,
+    wit: 70,
+    gov: 56,
+    retinue: 140,
+    retTrain: 66,
+    born: 1579
+  },
+  {
+    id: "e_matauemon",
+    name: "\u8352\u6728\u53C8\u53F3\u885B\u9580",
+    faction: "tsutsui",
+    y: 1614,
+    at: "koriyama",
+    lead: 54,
+    valor: 88,
+    wit: 66,
+    gov: 50,
+    retinue: 130,
+    retTrain: 66,
+    born: 1599
+  },
+  {
+    id: "e_muni",
+    name: "\u65B0\u514D\u7121\u4E8C",
+    faction: "akamatsu",
+    y: 1545,
+    at: "himeji",
+    lead: 52,
+    valor: 86,
+    wit: 64,
+    gov: 48,
+    retinue: 120,
+    retTrain: 64,
+    born: 1530
+  },
+  {
+    id: "e_seiun",
+    name: "\u91DD\u8C37\u5915\u96F2",
+    faction: "hojo",
+    y: 1608,
+    at: "odawara",
+    lead: 50,
+    valor: 86,
+    wit: 72,
+    gov: 50,
+    retinue: 120,
+    retTrain: 64,
+    born: 1593
+  },
+  // ── 技の者
+  {
+    id: "e_ichimu",
+    name: "\u7A32\u5BCC\u4E00\u5922",
+    faction: "isshiki",
+    y: 1567,
+    at: "miyazu",
+    lead: 52,
+    valor: 62,
+    wit: 84,
+    gov: 60,
+    retinue: 130,
+    retTrain: 58,
+    born: 1552
+  },
+  {
+    id: "e_kazunaga",
+    name: "\u6D25\u7530\u7B97\u9577",
+    faction: "saika",
+    y: 1514,
+    at: "saika",
+    lead: 56,
+    valor: 64,
+    wit: 82,
+    gov: 62,
+    retinue: 150,
+    retTrain: 60,
+    born: 1499
+  },
+  {
+    id: "e_dosan2",
+    name: "\u66F2\u76F4\u702C\u9053\u4E09",
+    faction: "ashikaga",
+    y: 1522,
+    at: "nijo",
+    lead: 44,
+    valor: 40,
+    wit: 86,
+    gov: 72,
+    retinue: 110,
+    retTrain: 46,
+    born: 1507
+  },
+  {
+    id: "e_joha",
+    name: "\u91CC\u6751\u7D39\u5DF4",
+    faction: "ashikaga",
+    y: 1540,
+    at: "nijo",
+    lead: 44,
+    valor: 40,
+    wit: 80,
+    gov: 70,
+    retinue: 110,
+    retTrain: 46,
+    born: 1525
+  },
+  {
+    id: "e_kunihiro",
+    name: "\u5800\u5DDD\u56FD\u5E83",
+    faction: "ito",
+    y: 1546,
+    at: "sadowara",
+    lead: 48,
+    valor: 56,
+    wit: 78,
+    gov: 64,
+    retinue: 110,
+    retTrain: 50,
+    born: 1531
+  },
+  {
+    id: "e_masakiyo",
+    name: "\u4E2D\u4E95\u6B63\u6E05",
+    faction: "matsudaira",
+    y: 1580,
+    at: "okazaki",
+    lead: 48,
+    valor: 44,
+    wit: 78,
+    gov: 84,
+    retinue: 120,
+    retTrain: 48,
+    born: 1565
   }
 ];
 var KANJI_TSUJI = [
@@ -7263,6 +7565,19 @@ var PARENT = {
   // 佐竹義宣 → 義隆
   e_shiro: "e_yoshitsugu",
   // 益田好次 → 天草四郎
+  // ── 層四（増補の第十九回）
+  e_shigemasa3: "e_seigen",
+  // 富田勢源 → 重政（名人越後）
+  e_jisai: "e_seigen",
+  // 富田勢源 → 鐘捲自斎（門弟）
+  e_ittosai: "e_jisai",
+  // 鐘捲自斎 → 伊藤一刀斎（門弟）
+  e_tadaaki: "e_ittosai",
+  // 伊藤一刀斎 → 小野忠明（門弟）
+  e_musashi: "e_muni",
+  // 新免無二 → 宮本武蔵
+  e_toshiyoshi: "e_sekishusai",
+  // 柳生宗厳 → 利厳（兵庫助）
   rk_shigetsuna: "sadayori",
   // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",
@@ -7282,6 +7597,14 @@ var PARENT = {
 };
 var FATED = { hirotada: 1549 };
 var LONG_LIVED = {
+  e_inei: 86,
+  // 宝蔵院胤栄（八十六歳）
+  e_shigekata: 82,
+  // 東郷重位（示現流。八十二歳）
+  e_jinsuke: 79,
+  // 林崎甚助（居合の祖）
+  e_dosan2: 87,
+  // 曲直瀬道三（医）
   e_tenkai: 107,
   // 天海（諸説あるが百歳を超えたと伝わる）
   ts_katsushige: 79,
