@@ -539,6 +539,32 @@ export const NEWCOMERS = [
     lead: 54, valor: 56, wit: 50, gov: 52, retinue: 280, retTrain: 56, born: 1537 },
   { id: "ic_kanesada", name: "一条兼定", faction: "ichijo", y: 1558, at: "nakamura",
     lead: 52, valor: 52, wit: 54, gov: 56, retinue: 340, retTrain: 54, born: 1543 },
+  // ── 常陸・下野・安房（増補の第十二回。層一はここまで）
+  // はじめの四人は、初期配置に立っていたが一五四六年より後の生まれであった者。
+  { id: "sm5_tateyama3", name: "正木時通", faction: "satomi", y: 1557, at: "tateyama",
+    lead: 68, valor: 72, wit: 62, gov: 56, retinue: 260, retTrain: 62, born: 1542 },
+  { id: "sm5_otaki2", name: "正木憲時", faction: "satomi", y: 1566, at: "otaki",
+    lead: 66, valor: 70, wit: 58, gov: 54, retinue: 260, retTrain: 60, born: 1551 },
+  { id: "sn5_karasawa3", name: "佐野宗綱", faction: "sano", y: 1573, at: "karasawa",
+    lead: 68, valor: 74, wit: 60, gov: 56, retinue: 280, retTrain: 62, born: 1558 },
+  { id: "mk_makabe4", name: "真壁道無", faction: "satake", y: 1565, at: "makabe",
+    lead: 70, valor: 86, wit: 60, gov: 56, retinue: 270, retTrain: 66, born: 1550 },
+  { id: "sm_yoshiyori", name: "里見義頼", faction: "satomi", y: 1558, at: "kururi",
+    lead: 68, valor: 66, wit: 70, gov: 68, retinue: 320, retTrain: 60, born: 1543 },
+  { id: "sm_yoritada", name: "正木頼忠", faction: "satomi", y: 1566, at: "tateyama",
+    lead: 64, valor: 66, wit: 64, gov: 62, retinue: 250, retTrain: 60, born: 1551 },
+  { id: "ut_takatsugu", name: "芳賀高継", faction: "utsunomiya", y: 1569, at: "utsunomiya",
+    lead: 66, valor: 68, wit: 66, gov: 64, retinue: 270, retTrain: 60, born: 1554 },
+  { id: "sn_fusatsuna", name: "佐野房綱", faction: "sano", y: 1573, at: "karasawa",
+    lead: 66, valor: 66, wit: 72, gov: 68, retinue: 260, retTrain: 60, born: 1558 },
+  { id: "st_yoshitsugu", name: "北義斯", faction: "satake", y: 1559, at: "ota_hitachi",
+    lead: 68, valor: 68, wit: 66, gov: 64, retinue: 280, retTrain: 60, born: 1544 },
+  { id: "st_yoshinari", name: "小場義成", faction: "satake", y: 1563, at: "makabe",
+    lead: 68, valor: 70, wit: 64, gov: 62, retinue: 270, retTrain: 62, born: 1548 },
+  { id: "st_masakage", name: "梶原政景", faction: "satake", y: 1563, at: "ota_hitachi",
+    lead: 70, valor: 72, wit: 68, gov: 62, retinue: 270, retTrain: 62, born: 1548 },
+  { id: "st_yoshimasa", name: "小野崎義昌", faction: "satake", y: 1565, at: "ota_hitachi",
+    lead: 64, valor: 64, wit: 62, gov: 62, retinue: 260, retTrain: 58, born: 1550 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -699,6 +725,20 @@ export const PARENT = {
   ise_nobukata: "nobuyasu",       // 織田信安 → 信賢
   ic_kanesada: "kanetsugu_i",     // 一条房基 → 兼定
   ujiyoshi: "kn_tanefuji",        // 長野稙藤 → 藤定
+  // ── 常陸・下野・安房（増補の第十二回）
+  hirotsuna: "ut_hisatsuna",      // 宇都宮尚綱 → 広綱
+  ut_takatsugu: "utsunomiya2",    // 芳賀高定 → 高継
+  ujiharu: "od_masaharu",         // 小田政治 → 氏治
+  masatsuna: "sano2",             // 佐野豊綱 → 昌綱
+  sn5_karasawa3: "masatsuna",     // 佐野昌綱 → 宗綱
+  sn_fusatsuna: "masatsuna",      // 佐野昌綱 → 房綱
+  ns_suketane: "masasuke",        // 那須高資 → 資胤（弟）
+  ns_tsunakiyo: "ns5_karasuyama3",// 大田原資清 → 綱清
+  sm5_tateyama3: "satomi2",       // 正木時忠 → 時通
+  sm_yoritada: "satomi2",         // 正木時忠 → 頼忠
+  sm5_otaki2: "otaki",            // 正木時茂 → 憲時
+  sm_yoshiyori: "yoshihiro",      // 里見義弘 → 義頼
+  mk_makabe4: "makabe",           // 真壁久幹 → 道無（氏幹）
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
