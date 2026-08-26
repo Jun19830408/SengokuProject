@@ -1038,6 +1038,131 @@ export const NEWCOMERS = [
     lead: 62, valor: 62, wit: 60, gov: 60, retinue: 280, retTrain: 58, born: 1557 },
   { id: "r_yoshihisa2", name: "東義久", faction: "satake", y: 1569, at: "makabe",
     lead: 66, valor: 66, wit: 66, gov: 64, retinue: 260, retTrain: 60, born: 1554 },
+
+  /* ── 有名どころの照合（増補の第二十一回）。同種の一覧に載る名を六十余り
+     機械で突き合わせ、抜けていた者を足す。 */
+  { id: "f_gyuichi", name: "太田牛一", faction: "oda", y: 1542, at: "nagoya",
+    lead: 56, valor: 60, wit: 78, gov: 74, retinue: 150, retTrain: 54, born: 1527 },
+  { id: "f_yukan", name: "松井友閑", faction: "oda", y: 1560, at: "nagoya",
+    lead: 50, valor: 46, wit: 78, gov: 82, retinue: 140, retTrain: 50, born: 1530 },
+  { id: "f_nagayori", name: "菅屋長頼", faction: "oda", y: 1560, at: "nagoya",
+    lead: 64, valor: 66, wit: 68, gov: 70, retinue: 170, retTrain: 60, born: 1545 },
+  { id: "f_iesada2", name: "矢部家定", faction: "oda", y: 1562, at: "nagoya",
+    lead: 60, valor: 62, wit: 66, gov: 68, retinue: 160, retTrain: 58, born: 1547 },
+  { id: "f_hidekatsu2", name: "福富秀勝", faction: "oda", y: 1560, at: "nagoya",
+    lead: 64, valor: 68, wit: 62, gov: 60, retinue: 160, retTrain: 60, born: 1545 },
+  { id: "f_masashige", name: "野々村正成", faction: "oda", y: 1560, at: "nagoya",
+    lead: 62, valor: 66, wit: 60, gov: 58, retinue: 160, retTrain: 60, born: 1545 },
+  { id: "f_nagayori2", name: "原長頼", faction: "oda", y: 1568, at: "nagoya",
+    lead: 66, valor: 68, wit: 64, gov: 62, retinue: 170, retTrain: 62, born: 1553 },
+  { id: "f_katsutoyo", name: "柴田勝豊", faction: "oda", y: 1567, at: "shobata",
+    lead: 62, valor: 64, wit: 58, gov: 58, retinue: 180, retTrain: 60, born: 1552 },
+  { id: "f_ieyoshi", name: "拝郷家嘉", faction: "oda", y: 1560, at: "shobata",
+    lead: 66, valor: 72, wit: 60, gov: 56, retinue: 170, retTrain: 62, born: 1545 },
+  { id: "f_norihide", name: "徳山則秀", faction: "oda", y: 1559, at: "nagoya",
+    lead: 64, valor: 68, wit: 64, gov: 62, retinue: 160, retTrain: 60, born: 1544 },
+  { id: "f_katanoie", name: "山崎片家", faction: "oda", y: 1562, at: "nagoya",
+    lead: 58, valor: 58, wit: 70, gov: 72, retinue: 150, retTrain: 56, born: 1547 },
+  { id: "f_katsutoshi2", name: "滝川雄利", faction: "oda", y: 1558, at: "nagoya",
+    lead: 64, valor: 64, wit: 72, gov: 72, retinue: 170, retTrain: 58, born: 1543 },
+  { id: "f_hidenobu", name: "織田秀信", faction: "oda", y: 1595, at: "nagoya",
+    lead: 56, valor: 58, wit: 54, gov: 56, retinue: 260, retTrain: 56, born: 1580 },
+  { id: "f_yuko", name: "大村由己", faction: "oda", y: 1560, at: "nagoya",
+    lead: 44, valor: 40, wit: 78, gov: 70, retinue: 110, retTrain: 46, born: 1545 },
+  { id: "f_nobukimi", name: "穴山信君", faction: "takeda", y: 1556, at: "tsutsujigasaki",
+    lead: 68, valor: 66, wit: 70, gov: 68, retinue: 280, retTrain: 62, born: 1541 },
+  { id: "f_sadanaga", name: "山本寺定長", faction: "nagao", y: 1562, at: "kasugayama",
+    lead: 62, valor: 64, wit: 60, gov: 58, retinue: 240, retTrain: 58, born: 1547 },
+  { id: "f_chikatsuna", name: "神余親綱", faction: "nagao", y: 1560, at: "sanjo",
+    lead: 64, valor: 64, wit: 64, gov: 62, retinue: 240, retTrain: 58, born: 1545 },
+  { id: "f_akimoto2", name: "安田顕元", faction: "nagao", y: 1562, at: "shibata",
+    lead: 66, valor: 68, wit: 64, gov: 60, retinue: 250, retTrain: 60, born: 1547 },
+  { id: "f_kanetoyo", name: "樋口兼豊", faction: "nagao", y: 1554, at: "yoita",
+    lead: 60, valor: 58, wit: 66, gov: 68, retinue: 220, retTrain: 56, born: 1539 },
+  { id: "f_hidetsuna", name: "加地秀綱", faction: "agakita", y: 1565, at: "shibata",
+    lead: 64, valor: 66, wit: 62, gov: 58, retinue: 250, retTrain: 60, born: 1550 },
+  { id: "f_yoshiaki3", name: "足利義昭", faction: "ashikaga", y: 1552, at: "nijo",
+    lead: 56, valor: 52, wit: 70, gov: 64, retinue: 320, retTrain: 56, born: 1537 },
+  { id: "f_yoshioki", name: "三好義興", faction: "miyoshi", y: 1557, at: "akutagawa",
+    lead: 72, valor: 70, wit: 68, gov: 66, retinue: 320, retTrain: 64, born: 1542 },
+  { id: "f_hideharu2", name: "波多野秀治", faction: "hatano", y: 1564, at: "yagami",
+    lead: 68, valor: 68, wit: 66, gov: 62, retinue: 300, retTrain: 62, born: 1549 },
+  { id: "f_yoshimichi2", name: "一色義道", faction: "isshiki", y: 1560, at: "miyazu",
+    lead: 58, valor: 58, wit: 56, gov: 58, retinue: 280, retTrain: 56, born: 1545 },
+  { id: "f_takayoshi", name: "京極高吉", faction: "azai", y: 1519, at: "odani",
+    lead: 58, valor: 56, wit: 62, gov: 64, retinue: 240, retTrain: 56, born: 1504 },
+  { id: "f_takamasa", name: "畠山高政", faction: "miyoshi", y: 1542, at: "takaya",
+    lead: 60, valor: 60, wit: 58, gov: 60, retinue: 300, retTrain: 58, born: 1527 },
+  { id: "f_narihide", name: "児玉就英", faction: "mori", y: 1555, at: "sakurao",
+    lead: 68, valor: 70, wit: 64, gov: 60, retinue: 260, retTrain: 62, born: 1540 },
+  { id: "f_hiroshige", name: "桂広繁", faction: "mori", y: 1560, at: "koriyama_a",
+    lead: 64, valor: 64, wit: 64, gov: 62, retinue: 250, retTrain: 58, born: 1545 },
+  { id: "f_mototsugu", name: "宍戸元続", faction: "mori", y: 1577, at: "koriyama_a",
+    lead: 66, valor: 64, wit: 66, gov: 66, retinue: 270, retTrain: 60, born: 1562 },
+  { id: "f_narisuke", name: "山県就相", faction: "mori", y: 1560, at: "koriyama_a",
+    lead: 64, valor: 66, wit: 62, gov: 58, retinue: 250, retTrain: 60, born: 1545 },
+  { id: "f_hisaie", name: "秋上久家", faction: "amago", y: 1562, at: "gassan",
+    lead: 66, valor: 70, wit: 64, gov: 58, retinue: 250, retTrain: 62, born: 1547 },
+  { id: "f_mototsu", name: "神西元通", faction: "amago", y: 1560, at: "gassan",
+    lead: 66, valor: 68, wit: 62, gov: 58, retinue: 250, retTrain: 60, born: 1545 },
+  { id: "f_tamekiyo", name: "三沢為清", faction: "amago", y: 1541, at: "gassan",
+    lead: 66, valor: 66, wit: 66, gov: 64, retinue: 270, retTrain: 60, born: 1526 },
+  { id: "f_hisasuke", name: "三刀屋久扶", faction: "amago", y: 1555, at: "gassan",
+    lead: 64, valor: 64, wit: 66, gov: 62, retinue: 260, retTrain: 58, born: 1540 },
+  { id: "f_hidetsuna2", name: "横道秀綱", faction: "amago", y: 1562, at: "yonago",
+    lead: 64, valor: 68, wit: 60, gov: 56, retinue: 240, retTrain: 60, born: 1547 },
+  { id: "f_tadaie", name: "宇喜多忠家", faction: "uragami", y: 1549, at: "ishiyama_bz",
+    lead: 66, valor: 66, wit: 66, gov: 64, retinue: 260, retTrain: 60, born: 1534 },
+  { id: "f_tatsuyasu", name: "戸川達安", faction: "uragami", y: 1582, at: "ishiyama_bz",
+    lead: 70, valor: 72, wit: 68, gov: 64, retinue: 260, retTrain: 62, born: 1567 },
+  { id: "f_ietoshi", name: "岡家利", faction: "uragami", y: 1549, at: "ishiyama_bz",
+    lead: 66, valor: 66, wit: 68, gov: 66, retinue: 250, retTrain: 60, born: 1534 },
+  { id: "f_sadachika", name: "長船貞親", faction: "uragami", y: 1560, at: "ishiyama_bz",
+    lead: 62, valor: 62, wit: 70, gov: 70, retinue: 240, retTrain: 58, born: 1545 },
+  { id: "f_kagechika", name: "明石景親", faction: "uragami", y: 1558, at: "ishiyama_bz",
+    lead: 66, valor: 68, wit: 64, gov: 60, retinue: 250, retTrain: 60, born: 1543 },
+  { id: "f_chikatsugu", name: "江原親次", faction: "uragami", y: 1560, at: "tenjinyama",
+    lead: 64, valor: 66, wit: 62, gov: 58, retinue: 240, retTrain: 60, born: 1545 },
+  { id: "f_shigemune", name: "本山茂宗", faction: "ichijo", y: 1523, at: "nakamura",
+    lead: 68, valor: 68, wit: 64, gov: 62, retinue: 280, retTrain: 60, born: 1508 },
+  { id: "f_sadakatsu", name: "津野定勝", faction: "ichijo", y: 1545, at: "nakamura",
+    lead: 62, valor: 64, wit: 60, gov: 58, retinue: 250, retTrain: 58, born: 1530 },
+  { id: "f_kunio", name: "大平国雄", faction: "ichijo", y: 1550, at: "nakamura",
+    lead: 60, valor: 62, wit: 58, gov: 58, retinue: 240, retTrain: 58, born: 1535 },
+  { id: "f_chikazane2", name: "吉良親実", faction: "chosokabe", y: 1578, at: "okou",
+    lead: 66, valor: 70, wit: 62, gov: 58, retinue: 240, retTrain: 62, born: 1563 },
+  { id: "f_chikaie", name: "江村親家", faction: "chosokabe", y: 1560, at: "okou",
+    lead: 64, valor: 66, wit: 64, gov: 60, retinue: 240, retTrain: 60, born: 1545 },
+  { id: "f_shigefusa", name: "中島重房", faction: "chosokabe", y: 1560, at: "okou",
+    lead: 62, valor: 64, wit: 62, gov: 58, retinue: 230, retTrain: 58, born: 1545 },
+  { id: "f_chikaie2", name: "大友親家", faction: "otomo", y: 1576, at: "funai",
+    lead: 58, valor: 58, wit: 58, gov: 60, retinue: 260, retTrain: 56, born: 1561 },
+  { id: "f_koresada", name: "佐伯惟定", faction: "otomo", y: 1584, at: "usuki",
+    lead: 70, valor: 74, wit: 66, gov: 60, retinue: 250, retTrain: 64, born: 1569 },
+  { id: "f_shigenao2", name: "木付鎮直", faction: "otomo", y: 1560, at: "usuki",
+    lead: 66, valor: 70, wit: 62, gov: 58, retinue: 250, retTrain: 62, born: 1545 },
+  { id: "f_muneyuki", name: "吉弘統幸", faction: "otomo", y: 1578, at: "usuki",
+    lead: 70, valor: 74, wit: 66, gov: 62, retinue: 250, retTrain: 64, born: 1563 },
+  { id: "f_tadamasu", name: "新納忠増", faction: "shimazu", y: 1560, at: "obi",
+    lead: 66, valor: 70, wit: 62, gov: 58, retinue: 250, retTrain: 62, born: 1545 },
+  { id: "f_arinaga", name: "山田有栄", faction: "shimazu", y: 1593, at: "obi",
+    lead: 70, valor: 76, wit: 64, gov: 58, retinue: 250, retTrain: 64, born: 1578 },
+  { id: "f_tadae", name: "川上忠兄", faction: "shimazu", y: 1561, at: "uchijo",
+    lead: 68, valor: 70, wit: 64, gov: 60, retinue: 250, retTrain: 62, born: 1546 },
+  { id: "f_masahiro", name: "鎌田政広", faction: "shimazu", y: 1560, at: "izumi",
+    lead: 66, valor: 68, wit: 64, gov: 60, retinue: 250, retTrain: 62, born: 1545 },
+  { id: "f_hisatora", name: "頴娃久虎", faction: "shimazu", y: 1559, at: "kajiki",
+    lead: 68, valor: 74, wit: 62, gov: 58, retinue: 250, retTrain: 64, born: 1544 },
+  { id: "f_yoshihi", name: "相良義陽", faction: "sagara", y: 1559, at: "hitoyoshi",
+    lead: 68, valor: 68, wit: 66, gov: 64, retinue: 300, retTrain: 62, born: 1544 },
+  { id: "f_yorinori", name: "犬童頼兄", faction: "sagara", y: 1584, at: "hitoyoshi",
+    lead: 66, valor: 66, wit: 70, gov: 66, retinue: 250, retTrain: 60, born: 1569 },
+  { id: "f_soun", name: "甲斐宗運", faction: "kikuchi", y: 1530, at: "kumamoto",
+    lead: 78, valor: 78, wit: 80, gov: 68, retinue: 280, retTrain: 66, born: 1515 },
+  { id: "f_koremasa", name: "阿蘇惟将", faction: "kikuchi", y: 1555, at: "kumamoto",
+    lead: 62, valor: 62, wit: 62, gov: 62, retinue: 270, retTrain: 58, born: 1540 },
+  { id: "f_akitaka", name: "名和顕孝", faction: "sagara", y: 1560, at: "yatsushiro",
+    lead: 62, valor: 62, wit: 62, gov: 62, retinue: 240, retTrain: 58, born: 1545 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -1289,6 +1414,20 @@ export const PARENT = {
   r_kunikiyo: "yoshikiyo",       // 村上義清 → 国清
   r_kunitane: "cb_chikatane",    // 千葉親胤 → 邦胤
   r_tsunamoto: "moniwa",         // 茂庭良直 → 鬼庭綱元
+  // ── 有名どころの照合（増補の第二十一回）
+  f_nobukimi: "t_tsutsuji4",     // 穴山信友 → 信君（梅雪）
+  f_hidenobu: "n_nobutada",      // 織田信忠 → 秀信（三法師）
+  f_katsutoyo: "katsuie",        // 柴田勝家 → 勝豊（養子）
+  f_yoshiaki3: "ak_yoshiharu",   // 足利義晴 → 義昭
+  f_yoshioki: "nagayoshi",       // 三好長慶 → 義興
+  f_mototsugu: "mo_takaie",      // 宍戸隆家 → 元続
+  f_narihide: "mo_koriyama5",    // 児玉就忠 → 就英
+  kanetsugu: "f_kanetoyo",       // 樋口兼豊 → 直江兼続
+  f_chikaie2: "yoshishige",      // 大友義鎮 → 親家
+  f_muneyuki: "shigetane",       // 高橋紹運 → 吉弘統幸（従兄弟）
+  f_arinaga: "sz_obi4",          // 山田有信 → 有栄
+  f_yoshihi: "yoriharu",         // 相良晴広 → 義陽
+  f_yorinori: "sr_hitoyoshi3",   // 犬童頼安 → 頼兄
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
@@ -1303,6 +1442,9 @@ export const PARENT = {
 export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっている者
 
 export const LONG_LIVED = {
+  f_gyuichi: 86,     // 太田牛一（信長公記の作者）
+  f_arinaga: 90,     // 山田有栄
+  f_yorinori: 86,    // 犬童頼兄
   r_tsunamoto: 92,   // 鬼庭綱元（九十二歳）
   e_inei: 86,        // 宝蔵院胤栄（八十六歳）
   e_shigekata: 82,   // 東郷重位（示現流。八十二歳）
