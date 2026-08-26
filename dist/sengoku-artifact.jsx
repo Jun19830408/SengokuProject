@@ -6135,6 +6135,321 @@ var NEWCOMERS = [
     retinue: 320,
     retTrain: 56,
     born: 1577
+  },
+  /* ── 層三の一（増補の第十七回）。大坂の陣。
+  
+       照合したところ、大坂五人衆のうち盤に居るのは長宗我部盛親だけであった。
+       真田信繁も後藤又兵衛も木村重成も毛利勝永も明石全登も居ない。豊臣秀頼も
+       居ない。関ヶ原は第十四回で埋めたが、その十五年後の最後の戦がまるごと
+       抜けていたことになる。 */
+  {
+    id: "ts_hideyori",
+    name: "\u8C4A\u81E3\u79C0\u983C",
+    faction: "oda",
+    y: 1608,
+    at: "nagoya",
+    lead: 58,
+    valor: 58,
+    wit: 60,
+    gov: 62,
+    retinue: 420,
+    retTrain: 58,
+    born: 1593
+  },
+  {
+    id: "ts_nobushige",
+    name: "\u771F\u7530\u4FE1\u7E41",
+    faction: "takeda",
+    y: 1582,
+    at: "komoro",
+    lead: 88,
+    valor: 86,
+    wit: 88,
+    gov: 70,
+    retinue: 280,
+    retTrain: 72,
+    born: 1567
+  },
+  {
+    id: "ts_motsugu",
+    name: "\u5F8C\u85E4\u57FA\u6B21",
+    faction: "akamatsu",
+    y: 1575,
+    at: "himeji",
+    lead: 82,
+    valor: 90,
+    wit: 70,
+    gov: 58,
+    retinue: 250,
+    retTrain: 72,
+    born: 1560
+  },
+  {
+    id: "ts_shigenari",
+    name: "\u6728\u6751\u91CD\u6210",
+    faction: "oda",
+    y: 1608,
+    at: "nagoya",
+    lead: 74,
+    valor: 82,
+    wit: 66,
+    gov: 60,
+    retinue: 230,
+    retTrain: 68,
+    born: 1593
+  },
+  {
+    id: "ts_katsunaga",
+    name: "\u6BDB\u5229\u52DD\u6C38",
+    faction: "oda",
+    y: 1592,
+    at: "nagoya",
+    lead: 82,
+    valor: 84,
+    wit: 72,
+    gov: 62,
+    retinue: 260,
+    retTrain: 70,
+    born: 1577
+  },
+  {
+    id: "ts_takenori",
+    name: "\u660E\u77F3\u5168\u767B",
+    faction: "uragami",
+    y: 1578,
+    at: "ishiyama_bz",
+    lead: 78,
+    valor: 78,
+    wit: 74,
+    gov: 66,
+    retinue: 250,
+    retTrain: 68,
+    born: 1563
+  },
+  {
+    id: "ts_naoyuki",
+    name: "\u5859\u76F4\u4E4B",
+    faction: "oda",
+    y: 1582,
+    at: "nagoya",
+    lead: 68,
+    valor: 88,
+    wit: 58,
+    gov: 50,
+    retinue: 200,
+    retTrain: 68,
+    born: 1567
+  },
+  {
+    id: "ts_harunaga",
+    name: "\u5927\u91CE\u6CBB\u9577",
+    faction: "oda",
+    y: 1584,
+    at: "nagoya",
+    lead: 58,
+    valor: 58,
+    wit: 62,
+    gov: 64,
+    retinue: 260,
+    retTrain: 58,
+    born: 1569
+  },
+  {
+    id: "ts_harufusa",
+    name: "\u5927\u91CE\u6CBB\u623F",
+    faction: "oda",
+    y: 1590,
+    at: "nagoya",
+    lead: 66,
+    valor: 74,
+    wit: 56,
+    gov: 52,
+    retinue: 230,
+    retTrain: 62,
+    born: 1575
+  },
+  {
+    id: "ts_tadasu",
+    name: "\u6E21\u8FBA\u7CFA",
+    faction: "oda",
+    y: 1585,
+    at: "nagoya",
+    lead: 66,
+    valor: 76,
+    wit: 60,
+    gov: 56,
+    retinue: 210,
+    retTrain: 64,
+    born: 1570
+  },
+  {
+    id: "ts_kanesuke",
+    name: "\u8584\u7530\u517C\u76F8",
+    faction: "oda",
+    y: 1584,
+    at: "nagoya",
+    lead: 62,
+    valor: 84,
+    wit: 52,
+    gov: 48,
+    retinue: 200,
+    retTrain: 66,
+    born: 1569
+  },
+  {
+    id: "ts_masatomo",
+    name: "\u5FA1\u5BBF\u653F\u53CB",
+    faction: "matsudaira",
+    y: 1582,
+    at: "okazaki",
+    lead: 68,
+    valor: 78,
+    wit: 62,
+    gov: 58,
+    retinue: 210,
+    retTrain: 64,
+    born: 1567
+  },
+  {
+    id: "ts_yukihiro",
+    name: "\u6C0F\u5BB6\u884C\u5E83",
+    faction: "saito",
+    y: 1561,
+    at: "ogaki",
+    lead: 64,
+    valor: 66,
+    wit: 64,
+    gov: 62,
+    retinue: 240,
+    retTrain: 60,
+    born: 1546
+  },
+  {
+    id: "ts_daisuke",
+    name: "\u771F\u7530\u5927\u52A9",
+    faction: "takeda",
+    y: 1612,
+    at: "komoro",
+    lead: 62,
+    valor: 70,
+    wit: 60,
+    gov: 54,
+    retinue: 180,
+    retTrain: 62,
+    born: 1597
+  },
+  {
+    id: "ts_sadataka",
+    name: "\u7247\u6850\u8C9E\u9686",
+    faction: "oda",
+    y: 1575,
+    at: "nagoya",
+    lead: 60,
+    valor: 62,
+    wit: 66,
+    gov: 70,
+    retinue: 190,
+    retTrain: 58,
+    born: 1560
+  },
+  // ── 寄せ手（徳川方）
+  {
+    id: "ts_hideyasu",
+    name: "\u7D50\u57CE\u79C0\u5EB7",
+    faction: "matsudaira",
+    y: 1589,
+    at: "okazaki",
+    lead: 76,
+    valor: 80,
+    wit: 66,
+    gov: 64,
+    retinue: 300,
+    retTrain: 66,
+    born: 1574
+  },
+  {
+    id: "ts_tadanao",
+    name: "\u677E\u5E73\u5FE0\u76F4",
+    faction: "matsudaira",
+    y: 1610,
+    at: "okazaki",
+    lead: 70,
+    valor: 78,
+    wit: 58,
+    gov: 54,
+    retinue: 300,
+    retTrain: 64,
+    born: 1595
+  },
+  {
+    id: "ts_tadatomo",
+    name: "\u672C\u591A\u5FE0\u671D",
+    faction: "matsudaira",
+    y: 1597,
+    at: "okazaki",
+    lead: 72,
+    valor: 80,
+    wit: 62,
+    gov: 58,
+    retinue: 240,
+    retTrain: 66,
+    born: 1582
+  },
+  {
+    id: "ts_hidemasa",
+    name: "\u5C0F\u7B20\u539F\u79C0\u653F",
+    faction: "matsudaira",
+    y: 1584,
+    at: "okazaki",
+    lead: 68,
+    valor: 70,
+    wit: 66,
+    gov: 66,
+    retinue: 250,
+    retTrain: 62,
+    born: 1569
+  },
+  {
+    id: "ts_nobuyuki",
+    name: "\u771F\u7530\u4FE1\u4E4B",
+    faction: "takeda",
+    y: 1581,
+    at: "komoro",
+    lead: 74,
+    valor: 70,
+    wit: 76,
+    gov: 78,
+    retinue: 280,
+    retTrain: 66,
+    born: 1566
+  },
+  {
+    id: "ts_katsushige",
+    name: "\u677F\u5009\u52DD\u91CD",
+    faction: "matsudaira",
+    y: 1560,
+    at: "okazaki",
+    lead: 54,
+    valor: 50,
+    wit: 80,
+    gov: 88,
+    retinue: 180,
+    retTrain: 54,
+    born: 1545
+  },
+  {
+    id: "ts_naotsugu",
+    name: "\u5B89\u85E4\u76F4\u6B21",
+    faction: "matsudaira",
+    y: 1570,
+    at: "okazaki",
+    lead: 68,
+    valor: 74,
+    wit: 70,
+    gov: 72,
+    retinue: 220,
+    retTrain: 64,
+    born: 1555
   }
 ];
 var KANJI_TSUJI = [
@@ -6554,6 +6869,25 @@ var PARENT = {
   // 顕如 → 准如
   ry_shonei: "ry_shoei",
   // 尚永王 → 尚寧王
+  // ── 層三の一（増補の第十七回。大坂の陣）
+  ts_hideyori: "hideyoshi",
+  // 豊臣秀吉 → 秀頼
+  ts_nobushige: "masayuki",
+  // 真田昌幸 → 信繁
+  ts_nobuyuki: "masayuki",
+  // 真田昌幸 → 信之
+  ts_daisuke: "ts_nobushige",
+  // 真田信繁 → 大助
+  ts_harufusa: "ts_harunaga",
+  // 大野治長 → 治房（兄弟）
+  ts_tadatomo: "tadakatsu",
+  // 本多忠勝 → 忠朝
+  ts_hideyasu: "ieyasu",
+  // 松平元康（家康）→ 結城秀康
+  ts_tadanao: "ts_hideyasu",
+  // 結城秀康 → 松平忠直
+  ts_sadataka: "n_katsumoto",
+  // 片桐且元 → 貞隆（兄弟）
   rk_shigetsuna: "sadayori",
   // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",
@@ -6573,6 +6907,12 @@ var PARENT = {
 };
 var FATED = { hirotada: 1549 };
 var LONG_LIVED = {
+  ts_katsushige: 79,
+  // 板倉勝重（京都所司代）
+  ts_nobuyuki: 92,
+  // 真田信之（松代藩。九十二歳）
+  ts_naotsugu: 80,
+  // 安藤直次
   m_moritsuna: 78,
   // 渡辺守綱（槍半蔵）
   mo_motosuke: 101,
