@@ -496,6 +496,17 @@ export const NEWCOMERS = [
     lead: 56, valor: 56, wit: 58, gov: 58, retinue: 240, retTrain: 54, born: 1553 },
   { id: "dh_yoshiuji", name: "大宝寺義氏", faction: "daihoji", y: 1566, at: "ourayama",
     lead: 66, valor: 68, wit: 62, gov: 56, retinue: 300, retTrain: 60, born: 1551 },
+  // ── 北陸（増補の第八回）
+  { id: "hy_yoshitsuna", name: "畠山義綱", faction: "hatakeyama", y: 1550, at: "nanao",
+    lead: 60, valor: 58, wit: 60, gov: 62, retinue: 340, retTrain: 58, born: 1535 },
+  { id: "hy_tsunatsura", name: "長綱連", faction: "hatakeyama", y: 1555, at: "nanao",
+    lead: 68, valor: 68, wit: 64, gov: 62, retinue: 280, retTrain: 62, born: 1540 },
+  { id: "hy_kagetaka", name: "温井景隆", faction: "hatakeyama", y: 1560, at: "suemori_n",
+    lead: 64, valor: 64, wit: 66, gov: 62, retinue: 260, retTrain: 58, born: 1545 },
+  { id: "ng_kagechika", name: "千坂景親", faction: "nagao", y: 1551, at: "kasugayama",
+    lead: 62, valor: 60, wit: 72, gov: 74, retinue: 240, retTrain: 58, born: 1536 },
+  { id: "ng_chikanori", name: "水原親憲", faction: "nagao", y: 1561, at: "sanjo",
+    lead: 70, valor: 76, wit: 64, gov: 58, retinue: 260, retTrain: 64, born: 1546 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -625,6 +636,11 @@ export const PARENT = {
   dh_yoshiuji: "daihoji_g",       // 大宝寺義増 → 義氏
   td_tendo2: "tendo_g",           // 天童頼長 → 頼澄
   or_tamenori: "or_masanobu",     // 大浦政信 → 為則
+  // ── 北陸（増補の第八回）
+  kagetora: "ng_harukage",        // 長尾晴景 → 景虎（兄弟。家督はここを通って移る）
+  hy_yoshitsuna: "yoshitsugu",    // 畠山義続 → 義綱
+  hy_tsunatsura: "nagatsuna",     // 長続連 → 綱連
+  hy_kagetaka: "hy_nanao3",       // 温井総貞 → 景隆
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
