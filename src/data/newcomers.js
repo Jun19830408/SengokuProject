@@ -726,7 +726,7 @@ export const NEWCOMERS = [
     lead: 58, valor: 58, wit: 58, gov: 60, retinue: 300, retTrain: 56, born: 1564 },
   { id: "sg_chikatsugu", name: "志賀親次", faction: "shiga", y: 1581, at: "oka",
     lead: 74, valor: 76, wit: 72, gov: 64, retinue: 280, retTrain: 64, born: 1566 },
-  { id: "ck_chikayasu", name: "香宗我部親泰", faction: "chosokabe", y: 1558, at: "okou",
+  { id: "ck_chikayasu", name: "香宗我部親泰", faction: "kosokabe", y: 1558, at: "kosokabe",
     lead: 74, valor: 72, wit: 76, gov: 70, retinue: 280, retTrain: 64, born: 1543 },
   { id: "ck_tadazumi", name: "谷忠澄", faction: "chosokabe", y: 1570, at: "okou",
     lead: 58, valor: 54, wit: 74, gov: 76, retinue: 200, retTrain: 56, born: 1555 },
@@ -1123,12 +1123,6 @@ export const NEWCOMERS = [
     lead: 66, valor: 68, wit: 64, gov: 60, retinue: 250, retTrain: 60, born: 1543 },
   { id: "f_chikatsugu", name: "江原親次", faction: "uragami", y: 1560, at: "tenjinyama",
     lead: 64, valor: 66, wit: 62, gov: 58, retinue: 240, retTrain: 60, born: 1545 },
-  { id: "f_shigemune", name: "本山茂宗", faction: "ichijo", y: 1523, at: "nakamura",
-    lead: 68, valor: 68, wit: 64, gov: 62, retinue: 280, retTrain: 60, born: 1508 },
-  { id: "f_sadakatsu", name: "津野定勝", faction: "ichijo", y: 1545, at: "nakamura",
-    lead: 62, valor: 64, wit: 60, gov: 58, retinue: 250, retTrain: 58, born: 1530 },
-  { id: "f_kunio", name: "大平国雄", faction: "ichijo", y: 1550, at: "nakamura",
-    lead: 60, valor: 62, wit: 58, gov: 58, retinue: 240, retTrain: 58, born: 1535 },
   { id: "f_chikazane2", name: "吉良親実", faction: "chosokabe", y: 1578, at: "okou",
     lead: 66, valor: 70, wit: 62, gov: 58, retinue: 240, retTrain: 62, born: 1563 },
   { id: "f_chikaie", name: "江村親家", faction: "chosokabe", y: 1560, at: "okou",
@@ -1285,6 +1279,11 @@ export const NEWCOMERS = [
     lead: 64, valor: 64, wit: 68, gov: 64, retinue: 240, retTrain: 60, born: 1568 },
   { id: "h_suehisa", name: "喜入季久", faction: "shimazu", y: 1547, at: "obi",
     lead: 66, valor: 66, wit: 66, gov: 64, retinue: 250, retTrain: 60, born: 1532 },
+  // ── 土佐七雄（第一期）。新たに立てた四家の子の代。
+  { id: "my_chikashige", name: "本山親茂", faction: "motoyama", y: 1567, at: "motoyama",
+    lead: 62, valor: 64, wit: 60, gov: 58, retinue: 260, retTrain: 58, born: 1552 },
+  { id: "tn_chikatada", name: "津野親忠", faction: "tsuno", y: 1587, at: "himenono",
+    lead: 66, valor: 66, wit: 68, gov: 66, retinue: 250, retTrain: 60, born: 1572 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -1514,6 +1513,12 @@ export const PARENT = {
   ts_hideyasu: "ieyasu",          // 松平元康（家康）→ 結城秀康
   ts_tadanao: "ts_hideyasu",      // 結城秀康 → 松平忠直
   ts_sadataka: "n_katsumoto",     // 片桐且元 → 貞隆（兄弟）
+  // ── 土佐七雄（第一期）
+  my_shigetoki: "my_shigemune",   // 本山茂宗 → 茂辰
+  my_chikashige: "my_shigetoki",  // 本山茂辰 → 親茂
+  ks_hidemichi: "ks_chikahide",   // 香宗我部親秀 → 秀通
+  ck_chikayasu: "ks_chikahide",   // 香宗我部親秀 → 親泰（長宗我部から入る養子）
+  tn_chikatada: "motochika",      // 長宗我部元親 → 津野親忠（津野へ入る養子）
   // ── 層三の二（増補の第十八回）
   e_shigemasa2: "ts_katsushige", // 板倉勝重 → 重昌
   e_mitsumasa: "n_terumasa",     // 池田輝政 → 光政（孫だが家督の筋で結ぶ）

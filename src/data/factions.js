@@ -61,6 +61,10 @@ export const FACTIONS = {
   ichijo: { id: "ichijo", name: "土佐一条家", color: "#B8A44A", mon: "桐", gold: 2600, prestige: 50, mobilization: 1 },
   chosokabe: { id: "chosokabe", name: "長宗我部家", color: "#6B8C3C", desc: "土佐岡豊の小勢力。国親と若き元親のもと、四国の統一を夢見る。", mon: "酢漿草", gold: 2600, prestige: 50, mobilization: 1 },
   aki: { id: "aki", name: "安芸家", color: "#8C4A5A", mon: "三つ巴", gold: 2600, prestige: 50, mobilization: 1 },
+  motoyama: { id: "motoyama", name: "本山家", color: "#A0714A", mon: "丸に三つ柏", playable: true, desc: "土佐中央の実力者。梅慶（茂宗）のもと吉良を併せ、一条・長宗我部と土佐を争う。", gold: 2600, prestige: 50, mobilization: 1 },
+  ohira: { id: "ohira", name: "大平家", color: "#7A8C5A", mon: "丸に三つ引", gold: 2600, prestige: 50, mobilization: 1 },
+  tsuno: { id: "tsuno", name: "津野家", color: "#5A6B8C", mon: "梶の葉", gold: 2600, prestige: 50, mobilization: 1 },
+  kosokabe: { id: "kosokabe", name: "香宗我部家", color: "#8C7A5A", mon: "七つ酢漿草", gold: 2600, prestige: 50, mobilization: 1 },
   amago: { id: "amago", name: "尼子家", color: "#5A5A9B", desc: "出雲月山富田の雄。大内と山陰山陽を争うが、新宮党を抱えて家中は一枚岩でない。", mon: "平四つ目結", gold: 2600, prestige: 50, mobilization: 1 },
   nanjo: { id: "nanjo", name: "南条家", color: "#7A8C5A", mon: "三つ巴", gold: 2600, prestige: 50, mobilization: 1 },
   yoshimi: { id: "yoshimi", name: "吉見家", color: "#8C7A6B", mon: "二つ引両", gold: 2600, prestige: 50, mobilization: 1 },
@@ -114,7 +118,7 @@ export const FACTIONS = {
   ainu_e: { id: "ainu_e", name: "東蝦夷アイヌ", color: "#6B8C7A", mon: "", gold: 1200, prestige: 40, mobilization: 1 },
   ainu_n: { id: "ainu_n", name: "北蝦夷アイヌ", color: "#7A8C9B", mon: "", gold: 1000, prestige: 38, mobilization: 1 },
   kakizaki: { id: "kakizaki", name: "蠣崎家", color: "#5A8C4A", desc: "蝦夷地の蠣崎。アイヌとの交易で立つ、日本の北の果て。", mon: "三つ巴", gold: 2600, prestige: 50, mobilization: 1 },
-  ryukyu: { id: "ryukyu", name: "琉球王国", color: "#C8963C", desc: "琉球王国。武はないが、明・南蛮との交易で富む。", mon: "", gold: 2600, prestige: 50, mobilization: 1 },
+  ryukyu: { id: "ryukyu", name: "琉球王国", color: "#C8963C", desc: "琉球王国。武はないが、明・南蛮との交易で富む。", mon: "三つ巴", gold: 2600, prestige: 50, mobilization: 1 },
 };
 
 

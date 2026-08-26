@@ -121,7 +121,11 @@ export const ROADS = [
   ["yuzuki", "jizogatake", 44, "山道"], ["kagomori", "itajima", 5, "街道"], ["kagomori", "nakamura", 41, "街道"],
   ["kagomori", "jizogatake", 30, "街道"], ["itajima", "usuki", 72, "海路"], ["kawanoe", "okou", 48, "山道"],
   ["kawanoe", "amagiri", 33, "街道"], ["kawanoe", "kokubunyama", 53, "山道"], ["okou", "nakamura", 91, "難所"],
-  ["okou", "aki", 28, "街道"], ["tachibanayama", "iwaya", 20, "街道"], ["tachibanayama", "kishitake", 51, "街道"],
+  ["okou", "aki", 28, "街道"],
+  // ── 土佐七雄（本山・大平・津野・香宗我部を立てたことによる道）
+  ["okou", "motoyama", 26, "山道"], ["okou", "hasuike", 21, "街道"], ["okou", "kosokabe", 12, "街道"],
+  ["kosokabe", "aki", 19, "街道"], ["motoyama", "hasuike", 33, "山道"], ["motoyama", "hakuchi", 36, "山道"],
+  ["hasuike", "himenono", 29, "街道"], ["himenono", "nakamura", 47, "山道"], ["tachibanayama", "iwaya", 20, "街道"], ["tachibanayama", "kishitake", 51, "街道"],
   ["tachibanayama", "kokura", 42, "街道"], ["tachibanayama", "iki", 70, "海路"], ["iwaya", "akizuki", 13, "街道"],
   ["iwaya", "kurume", 23, "街道"], ["iwaya", "kishitake", 46, "街道"], ["akizuki", "kurume", 27, "山道"],
   ["akizuki", "umagatake", 27, "街道"], ["kurume", "yanagawa", 20, "街道"],
