@@ -565,6 +565,72 @@ export const NEWCOMERS = [
     lead: 70, valor: 72, wit: 68, gov: 62, retinue: 270, retTrain: 62, born: 1548 },
   { id: "st_yoshimasa", name: "小野崎義昌", faction: "satake", y: 1565, at: "ota_hitachi",
     lead: 64, valor: 64, wit: 62, gov: 62, retinue: 260, retTrain: 58, born: 1550 },
+  /* ── 層二の一（増補の第十三回）。織田・豊臣に仕える二列目と、徳川の三河衆。
+     一五七〇年代から九〇年代が薄かった（三十年で七十三名しか居らず、
+     一五五〇〜六〇年代の百六十四名に対して半分に満たない）。天下を狙う家の
+     二代目・三代目が抜けていたのである。 */
+  { id: "n_yoritaka", name: "蜂屋頼隆", faction: "oda", y: 1560, at: "shobata",
+    lead: 70, valor: 72, wit: 64, gov: 62, retinue: 200, retTrain: 64, born: 1534 },
+  { id: "n_hidetaka", name: "河尻秀隆", faction: "oda", y: 1552, at: "nagoya",
+    lead: 72, valor: 74, wit: 64, gov: 60, retinue: 200, retTrain: 64, born: 1527 },
+  { id: "n_naomasa2", name: "原田直政", faction: "oda", y: 1560, at: "nagoya",
+    lead: 68, valor: 70, wit: 64, gov: 64, retinue: 190, retTrain: 62, born: 1535 },
+  { id: "n_morimasa", name: "佐久間盛政", faction: "oda", y: 1569, at: "shobata",
+    lead: 78, valor: 88, wit: 60, gov: 54, retinue: 200, retTrain: 70, born: 1554 },
+  { id: "n_toshimasu", name: "前田慶次", faction: "oda", y: 1560, at: "nagoya",
+    lead: 66, valor: 90, wit: 74, gov: 50, retinue: 150, retTrain: 66, born: 1533 },
+  { id: "n_saizo", name: "可児才蔵", faction: "oda", y: 1569, at: "nagoya",
+    lead: 58, valor: 92, wit: 56, gov: 44, retinue: 120, retTrain: 68, born: 1554 },
+  { id: "n_kazuuji", name: "中村一氏", faction: "oda", y: 1570, at: "nagoya",
+    lead: 70, valor: 68, wit: 70, gov: 72, retinue: 170, retTrain: 62, born: 1555 },
+  { id: "n_yoshiharu", name: "堀尾吉晴", faction: "oda", y: 1558, at: "nagoya",
+    lead: 74, valor: 72, wit: 74, gov: 78, retinue: 180, retTrain: 64, born: 1543 },
+  { id: "n_yoshimasa", name: "田中吉政", faction: "oda", y: 1563, at: "nagoya",
+    lead: 70, valor: 66, wit: 74, gov: 80, retinue: 170, retTrain: 60, born: 1548 },
+  { id: "n_naosue", name: "一柳直末", faction: "oda", y: 1561, at: "nagoya",
+    lead: 70, valor: 72, wit: 66, gov: 66, retinue: 170, retTrain: 62, born: 1546 },
+  { id: "n_hidehisa", name: "仙石秀久", faction: "oda", y: 1567, at: "nagoya",
+    lead: 66, valor: 78, wit: 56, gov: 58, retinue: 180, retTrain: 64, born: 1552 },
+  { id: "n_yasuharu", name: "脇坂安治", faction: "oda", y: 1569, at: "nagoya",
+    lead: 70, valor: 76, wit: 66, gov: 62, retinue: 170, retTrain: 64, born: 1554 },
+  { id: "n_nagayasu", name: "平野長泰", faction: "oda", y: 1574, at: "nagoya",
+    lead: 64, valor: 76, wit: 58, gov: 56, retinue: 150, retTrain: 64, born: 1559 },
+  { id: "n_katsumoto", name: "片桐且元", faction: "oda", y: 1571, at: "nagoya",
+    lead: 64, valor: 70, wit: 70, gov: 74, retinue: 160, retTrain: 60, born: 1556 },
+  { id: "n_yoshiakira", name: "加藤嘉明", faction: "oda", y: 1578, at: "nagoya",
+    lead: 76, valor: 82, wit: 68, gov: 66, retinue: 170, retTrain: 66, born: 1563 },
+  { id: "n_takenori", name: "糟屋武則", faction: "oda", y: 1577, at: "nagoya",
+    lead: 64, valor: 74, wit: 58, gov: 56, retinue: 150, retTrain: 62, born: 1562 },
+  { id: "n_masaie", name: "長束正家", faction: "oda", y: 1577, at: "nagoya",
+    lead: 56, valor: 52, wit: 76, gov: 86, retinue: 150, retTrain: 54, born: 1562 },
+  { id: "n_nagayasu2", name: "前野長康", faction: "oda", y: 1560, at: "shobata",
+    lead: 68, valor: 68, wit: 68, gov: 68, retinue: 180, retTrain: 62, born: 1528 },
+  { id: "n_iemasa", name: "蜂須賀家政", faction: "oda", y: 1573, at: "nagoya",
+    lead: 72, valor: 70, wit: 70, gov: 72, retinue: 190, retTrain: 62, born: 1558 },
+  { id: "n_nagamasa3", name: "浅野長政", faction: "oda", y: 1562, at: "nagoya",
+    lead: 68, valor: 66, wit: 74, gov: 82, retinue: 180, retTrain: 60, born: 1547 },
+  { id: "n_yoshinaga", name: "浅野幸長", faction: "oda", y: 1591, at: "nagoya",
+    lead: 72, valor: 74, wit: 66, gov: 66, retinue: 170, retTrain: 64, born: 1576 },
+  { id: "m_chikayoshi", name: "平岩親吉", faction: "matsudaira", y: 1557, at: "okazaki",
+    lead: 68, valor: 66, wit: 70, gov: 74, retinue: 170, retTrain: 62, born: 1542 },
+  { id: "m_masanari", name: "内藤正成", faction: "matsudaira", y: 1552, at: "okazaki",
+    lead: 66, valor: 82, wit: 58, gov: 54, retinue: 160, retTrain: 66, born: 1528 },
+  { id: "m_moritsuna", name: "渡辺守綱", faction: "matsudaira", y: 1557, at: "okazaki",
+    lead: 66, valor: 84, wit: 58, gov: 54, retinue: 160, retTrain: 68, born: 1542 },
+  { id: "m_tadasa", name: "大久保忠佐", faction: "matsudaira", y: 1552, at: "okazaki",
+    lead: 68, valor: 78, wit: 62, gov: 58, retinue: 170, retTrain: 66, born: 1537 },
+  { id: "m_ietada", name: "松平家忠", faction: "matsudaira", y: 1570, at: "okazaki",
+    lead: 64, valor: 64, wit: 66, gov: 70, retinue: 170, retTrain: 60, born: 1555 },
+  { id: "m_nobumasa", name: "奥平信昌", faction: "matsudaira", y: 1570, at: "okazaki",
+    lead: 74, valor: 76, wit: 68, gov: 64, retinue: 190, retTrain: 66, born: 1555 },
+  { id: "m_shigetsugu", name: "本多重次", faction: "matsudaira", y: 1547, at: "okazaki",
+    lead: 64, valor: 74, wit: 66, gov: 76, retinue: 160, retTrain: 62, born: 1529 },
+  { id: "m_masakazu", name: "成瀬正一", faction: "matsudaira", y: 1553, at: "okazaki",
+    lead: 66, valor: 68, wit: 68, gov: 70, retinue: 160, retTrain: 62, born: 1538 },
+  { id: "m_shigetada", name: "酒井重忠", faction: "matsudaira", y: 1564, at: "okazaki",
+    lead: 68, valor: 68, wit: 66, gov: 70, retinue: 180, retTrain: 62, born: 1549 },
+  { id: "m_yasutaka", name: "大須賀康高", faction: "matsudaira", y: 1552, at: "okazaki",
+    lead: 72, valor: 78, wit: 64, gov: 60, retinue: 180, retTrain: 66, born: 1527 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -739,6 +805,10 @@ export const PARENT = {
   sm5_otaki2: "otaki",            // 正木時茂 → 憲時
   sm_yoshiyori: "yoshihiro",      // 里見義弘 → 義頼
   mk_makabe4: "makabe",           // 真壁久幹 → 道無（氏幹）
+  // ── 層二の一（増補の第十三回）
+  n_yoshinaga: "n_nagamasa3",     // 浅野長政 → 幸長
+  n_iemasa: "nagamasa3",          // 蜂須賀正勝 → 家政
+  m_tadasa: "m_tadayo",           // 大久保忠世 → 忠佐（兄弟）
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
@@ -753,6 +823,7 @@ export const PARENT = {
 export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっている者
 
 export const LONG_LIVED = {
+  m_moritsuna: 78,   // 渡辺守綱（槍半蔵）
   mo_motosuke: 101,  // 国司元相（毛利の宿老。百一歳）
   sz_tadayoshi2: 77, // 島津忠良（日新斎）
   ts_ieyoshi: 92,    // 柳生家厳（宗厳の父。九十二歳）
