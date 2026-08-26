@@ -116,7 +116,9 @@ for (const q of 囚) {
   const 城 = t.castles.find((c) => c.faction === t.player);
   for (const q of 敵将) { q.captive = { by: t.player, from: 敵家, at: 城.id, since: { y: 1546, m: 1 } }; q.at = 城.id; q.retinue = 0; }
   for (const c of t.castles.filter((c2) => c2.faction === 敵家)) c.faction = t.player;   // 滅亡させる
+  const 記の前 = t.chronicle.length;
   t = H.画面なしの一月(t);
+  const 記 = t.chronicle.slice(記の前).map((e) => e.text).join('');
   const 後 = 敵将.map((q) => t.generals.find((x) => x.id === q.id)).filter(Boolean);
   console.log('');
   console.log(`  旧主（${(s.factions[敵家] || {}).name || 敵家}）が滅んだ捕虜 ${後.length} 名`);
@@ -124,7 +126,20 @@ for (const q of 囚) {
     console.log(`    ${q.name}: ${q.captive ? `捕虜のまま（忠誠${Math.round(q.loyal)}）` : '★' + ((t.factions[q.faction] || {}).name || '') + 'の家臣になった'}`);
     if (!q.captive) 咎.push(`${q.name} が旧主の滅亡だけで勝手に家臣になった`);
   }
-  if (後.length !== 敵将.length) 咎.push('旧主が滅んだ捕虜が消えた');
+  /* 捕虜であっても齢は取る。その一月に病没した者は、消えたうちに入らない。
+
+     もとは「三人とも残っていること」で判じていた。これは仕様ではなく、
+     選んだ三人がたまたま長生きすることに賭けていただけである。初めの間柄を
+     書き足して賽の位置がずれた途端、五十一歳の鳥居忠吉が病没して倒れた。
+     守りたいのは「旧主が滅んだというだけで捕虜が黙って消えないこと」である
+     から、没した記が残っているかで判ずる。 */
+  const 黙って消えた = 敵将.filter((q) => !t.generals.find((x) => x.id === q.id)
+    && !記.includes(`${q.name}が病没`));
+  if (黙って消えた.length) 咎.push(`旧主が滅んだ捕虜が黙って消えた（${黙って消えた.map((q) => q.name).join('・')}）`);
+  for (const q of 敵将) {
+    if (t.generals.find((x) => x.id === q.id)) continue;
+    if (記.includes(`${q.name}が病没`)) console.log(`    ${q.name}: その月に病没した（消えたうちに入らない）`);
+  }
 
   // 登用の関門。一門は忠誠がいくら下がっても降らぬ。
   const u = H.initState('oda');

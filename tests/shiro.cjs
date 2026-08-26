@@ -133,6 +133,29 @@ console.log(`  （城 ${C.length}／国 ${国々.length}／道 ${R.length}本／
     無し('主を書き留めていない上下の間柄がない',
       Object.keys(s.relations).filter((k) => ['従属', '臣従'].includes(s.relations[k].state)
         && !s.relations[k].master));
+
+    /* 初めの間柄が書かれていること。
+
+       間柄を書いていない家は、みな「中立」から始まる。盤の上では、
+       誰も誰に従わず、誰も誰と結んでいない盤面になる。実際、浅井は家の
+       説き書きに「六角に押さえられ、当主久政は屈従を選んでいる」と
+       ありながら、六角と何の縁も無いままであった。
+
+       数そのものを守るのではない（家を足せば増える）。守るのは
+       「盤が読めている」下限である。 */
+    const 数 = {};
+    for (const k of Object.keys(s.relations)) {
+      const st = s.relations[k].state;
+      if (st && st !== '中立') 数[st] = (数[st] || 0) + 1;
+    }
+    const 計 = Object.values(数).reduce((a, b) => a + b, 0);
+    確('初めの間柄が八十を超える（盤が読めている）', 計 > 80,
+      Object.entries(数).map(([k, v]) => `${k}${v}`).join('／'));
+    確('旗の下から始まる家が、全体の二割を超える', Object.keys(主).length > Object.keys(s.factions).length * 0.2,
+      `${Object.keys(主).length}／${Object.keys(s.factions).length}家`);
+    確('敵対だけの盤になっていない（結ぶ間柄も同じだけある）',
+      (数['同盟'] || 0) + (数['不可侵'] || 0) + (数['従属'] || 0) + (数['臣従'] || 0) > (数['敵対'] || 0),
+      `結ぶ ${計 - (数['敵対'] || 0)}／敵対 ${数['敵対'] || 0}`);
   }
 }
 
