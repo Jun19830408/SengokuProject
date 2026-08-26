@@ -972,6 +972,72 @@ export const NEWCOMERS = [
     lead: 48, valor: 56, wit: 78, gov: 64, retinue: 110, retTrain: 50, born: 1531 },
   { id: "e_masakiyo", name: "中井正清", faction: "matsudaira", y: 1580, at: "okazaki",
     lead: 48, valor: 44, wit: 78, gov: 84, retinue: 120, retTrain: 48, born: 1565 },
+  /* ── 残りの見直し（増補の第二十回）。四つの層を一巡したうえで、
+     まだ名の欠けている者と、盤の上で薄い家を埋める。 */
+  { id: "r_yoshimasa", name: "木曽義昌", faction: "takeda", y: 1555, at: "fukashi",
+    lead: 66, valor: 66, wit: 64, gov: 62, retinue: 300, retTrain: 60, born: 1540 },
+  { id: "r_muneharu", name: "清水宗治", faction: "mori", y: 1552, at: "koriyama_a",
+    lead: 72, valor: 72, wit: 68, gov: 66, retinue: 270, retTrain: 64, born: 1537 },
+  { id: "r_tsuneie", name: "吉川経家", faction: "masuda", y: 1562, at: "miyake",
+    lead: 72, valor: 74, wit: 68, gov: 64, retinue: 260, retTrain: 64, born: 1547 },
+  { id: "r_kagetaka", name: "山岡景隆", faction: "rokkaku", y: 1540, at: "sakamoto",
+    lead: 68, valor: 70, wit: 66, gov: 62, retinue: 270, retTrain: 62, born: 1525 },
+  { id: "r_kagetomo", name: "山岡景友", faction: "rokkaku", y: 1555, at: "sakamoto",
+    lead: 64, valor: 66, wit: 68, gov: 64, retinue: 250, retTrain: 60, born: 1540 },
+  { id: "r_yoshisada", name: "六角義定", faction: "rokkaku", y: 1560, at: "kannonji",
+    lead: 58, valor: 60, wit: 56, gov: 58, retinue: 280, retTrain: 58, born: 1545 },
+  { id: "r_hideaki2", name: "建部秀明", faction: "rokkaku", y: 1555, at: "sawayama",
+    lead: 64, valor: 64, wit: 64, gov: 64, retinue: 250, retTrain: 58, born: 1540 },
+  { id: "r_munenobu", name: "吉江宗信", faction: "nagao", y: 1512, at: "kasugayama",
+    lead: 66, valor: 68, wit: 64, gov: 62, retinue: 250, retTrain: 60, born: 1497 },
+  { id: "r_hidekatsu", name: "溝口秀勝", faction: "oda", y: 1563, at: "nagoya",
+    lead: 68, valor: 66, wit: 68, gov: 70, retinue: 180, retTrain: 60, born: 1548 },
+  { id: "r_naomasa3", name: "堀直政", faction: "oda", y: 1562, at: "nagoya",
+    lead: 68, valor: 66, wit: 72, gov: 74, retinue: 180, retTrain: 60, born: 1547 },
+  { id: "r_nagamori", name: "岡部長盛", faction: "matsudaira", y: 1583, at: "okazaki",
+    lead: 66, valor: 68, wit: 64, gov: 64, retinue: 230, retTrain: 62, born: 1568 },
+  { id: "r_tadatsugu2", name: "伊木忠次", faction: "oda", y: 1552, at: "nagoya",
+    lead: 66, valor: 68, wit: 66, gov: 68, retinue: 180, retTrain: 60, born: 1537 },
+  { id: "r_kazutada", name: "中村一忠", faction: "oda", y: 1605, at: "nagoya",
+    lead: 56, valor: 56, wit: 56, gov: 58, retinue: 220, retTrain: 56, born: 1590 },
+  { id: "r_kazumasa2", name: "生駒一正", faction: "oda", y: 1570, at: "nagoya",
+    lead: 66, valor: 68, wit: 64, gov: 66, retinue: 190, retTrain: 60, born: 1555 },
+  { id: "r_yasunaga2", name: "石川康長", faction: "matsudaira", y: 1569, at: "okazaki",
+    lead: 62, valor: 62, wit: 64, gov: 66, retinue: 220, retTrain: 58, born: 1554 },
+  { id: "r_satoyasu", name: "蒲生郷安", faction: "oda", y: 1575, at: "nagoya",
+    lead: 68, valor: 74, wit: 62, gov: 58, retinue: 190, retTrain: 64, born: 1560 },
+  { id: "r_nobunori", name: "遊佐信教", faction: "miyoshi", y: 1563, at: "takaya",
+    lead: 64, valor: 68, wit: 62, gov: 58, retinue: 260, retTrain: 60, born: 1548 },
+  { id: "r_takaharu2", name: "一栗高春", faction: "osaki", y: 1562, at: "iwadeyama",
+    lead: 64, valor: 68, wit: 60, gov: 56, retinue: 260, retTrain: 60, born: 1547 },
+  { id: "r_shigenao", name: "山田重直", faction: "nanjo", y: 1560, at: "uyui",
+    lead: 66, valor: 70, wit: 62, gov: 58, retinue: 250, retTrain: 62, born: 1545 },
+  { id: "r_chikanao", name: "久武親直", faction: "chosokabe", y: 1570, at: "okou",
+    lead: 62, valor: 62, wit: 68, gov: 60, retinue: 230, retTrain: 58, born: 1555 },
+  { id: "r_yoshinari2", name: "桑名吉成", faction: "chosokabe", y: 1565, at: "okou",
+    lead: 68, valor: 74, wit: 62, gov: 58, retinue: 250, retTrain: 64, born: 1550 },
+  { id: "r_chikakata", name: "田原親賢", faction: "otomo", y: 1560, at: "funai",
+    lead: 62, valor: 60, wit: 66, gov: 68, retinue: 260, retTrain: 58, born: 1545 },
+  { id: "r_tadanaga", name: "島津忠長", faction: "shimazu", y: 1566, at: "uchijo",
+    lead: 74, valor: 74, wit: 70, gov: 64, retinue: 280, retTrain: 66, born: 1551 },
+  { id: "r_munezane", name: "白石宗実", faction: "date", y: 1568, at: "shiroishi",
+    lead: 70, valor: 72, wit: 66, gov: 62, retinue: 260, retTrain: 62, born: 1553 },
+  { id: "r_tsunamoto", name: "鬼庭綱元", faction: "date", y: 1564, at: "yonezawa",
+    lead: 64, valor: 64, wit: 74, gov: 78, retinue: 250, retTrain: 60, born: 1549 },
+  { id: "r_tadachika", name: "大久保忠隣", faction: "matsudaira", y: 1568, at: "okazaki",
+    lead: 68, valor: 68, wit: 70, gov: 72, retinue: 240, retTrain: 62, born: 1553 },
+  { id: "r_joan", name: "内藤如安", faction: "miyoshi", y: 1565, at: "hanakuma",
+    lead: 64, valor: 64, wit: 72, gov: 66, retinue: 220, retTrain: 58, born: 1550 },
+  { id: "r_nagatoki", name: "小笠原長時", faction: "takeda", y: 1529, at: "fukashi",
+    lead: 62, valor: 66, wit: 58, gov: 58, retinue: 240, retTrain: 60, born: 1514 },
+  { id: "r_kunikiyo", name: "村上国清", faction: "nagao", y: 1561, at: "kasugayama",
+    lead: 68, valor: 70, wit: 64, gov: 60, retinue: 250, retTrain: 62, born: 1546 },
+  { id: "r_masashige", name: "上条政繁", faction: "nagao", y: 1563, at: "kasugayama",
+    lead: 64, valor: 62, wit: 66, gov: 66, retinue: 250, retTrain: 58, born: 1548 },
+  { id: "r_kunitane", name: "千葉邦胤", faction: "chiba", y: 1572, at: "motosakura",
+    lead: 62, valor: 62, wit: 60, gov: 60, retinue: 280, retTrain: 58, born: 1557 },
+  { id: "r_yoshihisa2", name: "東義久", faction: "satake", y: 1569, at: "makabe",
+    lead: 66, valor: 66, wit: 66, gov: 64, retinue: 260, retTrain: 60, born: 1554 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -1216,6 +1282,13 @@ export const PARENT = {
   e_tadaaki: "e_ittosai",        // 伊藤一刀斎 → 小野忠明（門弟）
   e_musashi: "e_muni",           // 新免無二 → 宮本武蔵
   e_toshiyoshi: "e_sekishusai",  // 柳生宗厳 → 利厳（兵庫助）
+  // ── 残りの見直し（増補の第二十回）
+  r_yoshisada: "yoshikata",      // 六角義賢 → 義定
+  r_kagetomo: "r_kagetaka",      // 山岡景隆 → 景友（兄弟）
+  r_tadachika: "m_tadayo",       // 大久保忠世 → 忠隣
+  r_kunikiyo: "yoshikiyo",       // 村上義清 → 国清
+  r_kunitane: "cb_chikatane",    // 千葉親胤 → 邦胤
+  r_tsunamoto: "moniwa",         // 茂庭良直 → 鬼庭綱元
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
@@ -1230,6 +1303,7 @@ export const PARENT = {
 export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっている者
 
 export const LONG_LIVED = {
+  r_tsunamoto: 92,   // 鬼庭綱元（九十二歳）
   e_inei: 86,        // 宝蔵院胤栄（八十六歳）
   e_shigekata: 82,   // 東郷重位（示現流。八十二歳）
   e_jinsuke: 79,     // 林崎甚助（居合の祖）
