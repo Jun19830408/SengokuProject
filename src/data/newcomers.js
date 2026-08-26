@@ -631,6 +631,67 @@ export const NEWCOMERS = [
     lead: 68, valor: 68, wit: 66, gov: 70, retinue: 180, retTrain: 62, born: 1549 },
   { id: "m_yasutaka", name: "大須賀康高", faction: "matsudaira", y: 1552, at: "okazaki",
     lead: 72, valor: 78, wit: 64, gov: 60, retinue: 180, retTrain: 66, born: 1527 },
+  /* ── 層二の二（増補の第十四回）。関ヶ原に欠けていた者と、東国・西国の二列目。 */
+  { id: "kb_hideaki", name: "小早川秀秋", faction: "kobayakawa", y: 1597, at: "mihara",
+    lead: 58, valor: 60, wit: 50, gov: 52, retinue: 300, retTrain: 56, born: 1582 },
+  { id: "mo_ekei", name: "安国寺恵瓊", faction: "mori", y: 1554, at: "koriyama_a",
+    lead: 52, valor: 44, wit: 84, gov: 78, retinue: 150, retTrain: 52, born: 1539 },
+  { id: "n_terumasa", name: "池田輝政", faction: "oda", y: 1580, at: "nagoya",
+    lead: 76, valor: 74, wit: 72, gov: 74, retinue: 190, retTrain: 66, born: 1565 },
+  { id: "az_takatsugu", name: "京極高次", faction: "azai", y: 1578, at: "odani",
+    lead: 62, valor: 62, wit: 66, gov: 66, retinue: 260, retTrain: 58, born: 1563 },
+  { id: "st_yoshishige", name: "佐竹義重", faction: "satake", y: 1562, at: "ota_hitachi",
+    lead: 86, valor: 88, wit: 74, gov: 70, retinue: 380, retTrain: 68, born: 1547 },
+  { id: "st_yoshinobu", name: "佐竹義宣", faction: "satake", y: 1585, at: "ota_hitachi",
+    lead: 72, valor: 66, wit: 72, gov: 72, retinue: 340, retTrain: 62, born: 1570 },
+  { id: "n_tamehiro", name: "平塚為広", faction: "oda", y: 1570, at: "nagoya",
+    lead: 70, valor: 76, wit: 66, gov: 60, retinue: 170, retTrain: 64, born: 1555 },
+  { id: "n_katsushige", name: "戸田勝成", faction: "oda", y: 1570, at: "nagoya",
+    lead: 68, valor: 74, wit: 64, gov: 62, retinue: 170, retTrain: 62, born: 1555 },
+  { id: "n_yoshiharu2", name: "大谷吉治", faction: "oda", y: 1590, at: "nagoya",
+    lead: 64, valor: 72, wit: 62, gov: 58, retinue: 160, retTrain: 62, born: 1575 },
+  { id: "ng_satoie", name: "蒲生郷舎", faction: "nagao", y: 1580, at: "kasugayama",
+    lead: 68, valor: 74, wit: 64, gov: 58, retinue: 250, retTrain: 62, born: 1565 },
+  { id: "n_maihyogo", name: "舞兵庫", faction: "oda", y: 1580, at: "nagoya",
+    lead: 68, valor: 78, wit: 62, gov: 56, retinue: 160, retTrain: 64, born: 1565 },
+  { id: "td_masanobu2", name: "高坂昌信", faction: "takeda", y: 1552, at: "fukashi",
+    lead: 88, valor: 76, wit: 84, gov: 78, retinue: 280, retTrain: 74, born: 1527 },
+  { id: "td_masasada", name: "三枝昌貞", faction: "takeda", y: 1552, at: "takato",
+    lead: 70, valor: 76, wit: 64, gov: 60, retinue: 250, retTrain: 66, born: 1537 },
+  { id: "td_morinobu", name: "仁科盛信", faction: "takeda", y: 1572, at: "takato",
+    lead: 72, valor: 80, wit: 62, gov: 58, retinue: 280, retTrain: 66, born: 1557 },
+  { id: "td_nobukatsu", name: "武田信勝", faction: "takeda", y: 1582, at: "tsutsujigasaki",
+    lead: 58, valor: 60, wit: 56, gov: 56, retinue: 280, retTrain: 58, born: 1567 },
+  { id: "td_masatsune", name: "土屋昌恒", faction: "takeda", y: 1571, at: "tsutsujigasaki",
+    lead: 70, valor: 84, wit: 62, gov: 58, retinue: 250, retTrain: 68, born: 1556 },
+  { id: "td_masamori", name: "小幡昌盛", faction: "takeda", y: 1549, at: "iwadono",
+    lead: 68, valor: 76, wit: 62, gov: 58, retinue: 250, retTrain: 66, born: 1534 },
+  { id: "ng_mitsuchika", name: "須田満親", faction: "nagao", y: 1552, at: "kasugayama",
+    lead: 70, valor: 68, wit: 72, gov: 70, retinue: 260, retTrain: 62, born: 1526 },
+  { id: "ng_kagetsugu", name: "甘粕景継", faction: "nagao", y: 1565, at: "sanjo",
+    lead: 72, valor: 76, wit: 64, gov: 60, retinue: 260, retTrain: 64, born: 1550 },
+  { id: "ng_yoshimoto", name: "安田能元", faction: "nagao", y: 1572, at: "kasugayama",
+    lead: 70, valor: 70, wit: 68, gov: 66, retinue: 250, retTrain: 62, born: 1557 },
+  { id: "ng_nobuyoshi", name: "岩井信能", faction: "nagao", y: 1568, at: "kasugayama",
+    lead: 66, valor: 64, wit: 72, gov: 72, retinue: 240, retTrain: 60, born: 1553 },
+  { id: "ng_saneyori", name: "大国実頼", faction: "nagao", y: 1577, at: "yoita",
+    lead: 66, valor: 66, wit: 70, gov: 68, retinue: 240, retTrain: 60, born: 1562 },
+  { id: "ng_harule", name: "柿崎晴家", faction: "nagao", y: 1565, at: "tochio",
+    lead: 70, valor: 78, wit: 60, gov: 56, retinue: 260, retTrain: 66, born: 1550 },
+  { id: "hj_ujikatsu", name: "北条氏勝", faction: "hojo", y: 1574, at: "tamanawa",
+    lead: 66, valor: 68, wit: 62, gov: 62, retinue: 280, retTrain: 62, born: 1559 },
+  { id: "hj_yasunaga", name: "松田康長", faction: "hojo", y: 1560, at: "nirayama",
+    lead: 68, valor: 72, wit: 62, gov: 60, retinue: 260, retTrain: 62, born: 1545 },
+  { id: "mo_motokiyo", name: "穂井田元清", faction: "mori", y: 1566, at: "koriyama_a",
+    lead: 70, valor: 68, wit: 70, gov: 68, retinue: 280, retTrain: 62, born: 1551 },
+  { id: "mo_hirotoshi", name: "福原広俊", faction: "mori", y: 1582, at: "koriyama_a",
+    lead: 66, valor: 64, wit: 70, gov: 72, retinue: 260, retTrain: 60, born: 1567 },
+  { id: "sz_tokitaka", name: "種子島時堯", faction: "shimazu", y: 1543, at: "uchijo",
+    lead: 62, valor: 62, wit: 76, gov: 70, retinue: 220, retTrain: 60, born: 1528 },
+  { id: "sz_tadazane", name: "伊集院忠真", faction: "shimazu", y: 1591, at: "uchijo",
+    lead: 64, valor: 68, wit: 60, gov: 56, retinue: 250, retTrain: 60, born: 1576 },
+  { id: "sz_nobumitsu", name: "猿渡信光", faction: "shimazu", y: 1548, at: "izumi",
+    lead: 68, valor: 74, wit: 62, gov: 58, retinue: 250, retTrain: 64, born: 1533 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -809,6 +870,18 @@ export const PARENT = {
   n_yoshinaga: "n_nagamasa3",     // 浅野長政 → 幸長
   n_iemasa: "nagamasa3",          // 蜂須賀正勝 → 家政
   m_tadasa: "m_tadayo",           // 大久保忠世 → 忠佐（兄弟）
+  // ── 層二の二（増補の第十四回）
+  kb_hideaki: "takakage_k",       // 小早川隆景 → 秀秋（養子）
+  n_terumasa: "tsuneoki",         // 池田恒興 → 輝政
+  n_yoshiharu2: "n_yoshitsugu",   // 大谷吉継 → 吉治
+  st_yoshishige: "yoshiaki",      // 佐竹義昭 → 義重
+  st_yoshinobu: "st_yoshishige",  // 佐竹義重 → 義宣
+  td_morinobu: "shingen",         // 武田晴信 → 仁科盛信
+  td_nobukatsu: "katsuyori",      // 武田勝頼 → 信勝
+  hj_ujikatsu: "hj_ujishige",     // 北条氏繁 → 氏勝
+  mo_motokiyo: "motonari",        // 毛利元就 → 穂井田元清
+  sz_tadazane: "sz_tadamune",     // 伊集院忠棟 → 忠真
+  ng_harule: "masakage_n",        // 柿崎景家 → 晴家
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
