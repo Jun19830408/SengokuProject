@@ -512,6 +512,22 @@ export const NEWCOMERS = [
     lead: 66, valor: 66, wit: 64, gov: 62, retinue: 260, retTrain: 60, born: 1538 },
   { id: "it_yoshimasu", name: "伊東義益", faction: "ito", y: 1561, at: "sadowara",
     lead: 64, valor: 62, wit: 66, gov: 66, retinue: 300, retTrain: 58, born: 1546 },
+  // ── 中国・九州南（増補の第十回）
+  // はじめの四人は、初期配置に立っていたが一五四六年より後の生まれであった者。
+  { id: "nj_uyui3", name: "小鴨元清", faction: "nanjo", y: 1567, at: "uyui",
+    lead: 66, valor: 68, wit: 62, gov: 60, retinue: 260, retTrain: 60, born: 1552 },
+  { id: "sz_shibushi3", name: "上井覚兼", faction: "shimazu", y: 1560, at: "shibushi",
+    lead: 66, valor: 62, wit: 76, gov: 78, retinue: 250, retTrain: 58, born: 1545 },
+  { id: "o5_tachibana3", name: "薦野増時", faction: "ouchi", y: 1555, at: "tachibanayama",
+    lead: 68, valor: 66, wit: 68, gov: 66, retinue: 250, retTrain: 60, born: 1540 },
+  { id: "sz_obi4", name: "山田有信", faction: "shimazu", y: 1559, at: "obi",
+    lead: 72, valor: 78, wit: 66, gov: 60, retinue: 260, retTrain: 64, born: 1544 },
+  { id: "o_yoshinaga", name: "大内義長", faction: "ouchi", y: 1547, at: "ouchi",
+    lead: 54, valor: 52, wit: 56, gov: 58, retinue: 340, retTrain: 54, born: 1532 },
+  { id: "o_nagafusa", name: "陶長房", faction: "ouchi", y: 1554, at: "wakayama_s",
+    lead: 66, valor: 70, wit: 62, gov: 58, retinue: 280, retTrain: 62, born: 1539 },
+  { id: "sz_tadamune", name: "伊集院忠棟", faction: "shimazu", y: 1556, at: "uchijo",
+    lead: 66, valor: 64, wit: 74, gov: 74, retinue: 270, retTrain: 60, born: 1541 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -655,6 +671,14 @@ export const PARENT = {
   it_yoshimasu: "yoshisuke",      // 伊東義祐 → 義益
   it_sukekatsu: "yoshisuke",      // 伊東義祐 → 祐兵
   sr_yorifusa: "yoriharu",        // 相良晴広 → 頼房
+  // ── 中国・九州南（増補の第十回）
+  takahisa: "sz_tadayoshi2",      // 島津忠良（日新斎）→ 貴久
+  sz_tadamune: "shigehisa",       // 伊集院忠朗 → 忠棟
+  nj_uyui3: "masayori",           // 南条宗勝 → 小鴨元清
+  nj_uyui2: "masayori",           // 南条宗勝 → 元続
+  mm_matsuyama2: "iemichi",       // 三村家親 → 元親
+  ms_miyake2: "fujikane",         // 益田藤兼 → 元祥
+  o_nagafusa: "harukata",         // 陶晴賢 → 長房
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
@@ -669,6 +693,8 @@ export const PARENT = {
 export const FATED = { hirotada: 1549 };   // 史実で没する年が定まっている者
 
 export const LONG_LIVED = {
+  mo_motosuke: 101,  // 国司元相（毛利の宿老。百一歳）
+  sz_tadayoshi2: 77, // 島津忠良（日新斎）
   ts_ieyoshi: 92,    // 柳生家厳（宗厳の父。九十二歳）
   ts_yoshihiro: 78,  // 井戸良弘
   ts_hidesuke: 77,   // 中坊秀祐
