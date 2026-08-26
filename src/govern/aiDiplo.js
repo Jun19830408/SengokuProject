@@ -81,10 +81,11 @@ export function 隣家(s, fid) {
    二人の主に仕えることはできない。ここを見ずに膝を屈させていたころは、
    一つの家が三家にも四家にも臣従して、盤が上下の網で埋まった。 */
 export function 旗の下にいるか(s, fid) {
-  for (const k of Object.keys(s.relations)) {
-    const 相 = 盟約の相手(k, fid);
-    if (!相) continue;
-    const r = s.relations[k];
+  // 関係の帳面を端から繰らず、家の数だけ回って鍵を引く（state.js の 主を探す を参照）
+  for (const 相 of Object.keys(s.factions || {})) {
+    if (相 === fid) continue;
+    const r = s.relations[relKey(fid, 相)];
+    if (!r) continue;
     if (!["従属", "臣従"].includes(r.state)) continue;
     /* 主がはっきり自分であるときだけ「自分が上」とみなす。
        古い盟約には主が書き留められておらず、石高で見当をつけるほかない。

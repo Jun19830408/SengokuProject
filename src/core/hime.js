@@ -12,13 +12,13 @@ const 盟約の相手 = (k, fid) => { const p = k.split("|"); return p[0] === fi
 /* 旗の下にあるか（従属・臣従の下側か）。state.js の 主を探す と同じ理である。
    あちらを呼ぶと輪になるので、ここにも短く置く。 */
 const 主を探す = (s, fid) => {
-  for (const k of Object.keys(s.relations || {})) {
-    const 相 = 盟約の相手(k, fid);
-    if (!相) continue;
-    const r = s.relations[k];
-    if (!["従属", "臣従"].includes(r.state)) continue;
+  // 関係の帳面を端から繰らず、家の数だけ回って鍵を引く（state.js の同名を参照）
+  for (const other of Object.keys(s.factions || {})) {
+    if (other === fid) continue;
+    const r = (s.relations || {})[relKey(fid, other)];
+    if (!r || !["従属", "臣従"].includes(r.state)) continue;
     if (r.master === fid) continue;
-    return 相;
+    return other;
   }
   return null;
 };

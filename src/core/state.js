@@ -441,23 +441,34 @@ export function 膝を屈している(g, me, other) {
 
    主に付けば、それまで他家と結んでいた誼は解ける。以後、外交は主のものに従う。
    下にある家が自ら結べるのは不可侵まで（主が敵と見ている家とは結べない）。 */
+/* 相手を探すのに、関係の帳面を端から端まで繰ってはいけない。
+
+   関係は家と家の組であるから、家が百十三あれば六千三百二十八本になる。
+   一家の主を知りたいだけで、その六千三百二十八本を繰り、いちいち鍵の字を
+   区切って（split）突き合わせていた。月送り一回に三百九十一ミリ秒かかって
+   いたうち、五割八分がこの走査であった。
+
+   家の数だけ回って、鍵を組み立てて引けばよい。百十三回で済む。
+   五十六分の一である。家を増やすと関係は二乗で増えるので、
+   ここを直しておかないと、家を足すたびに月送りが重くなる。 */
 export function 主を探す(g, fid) {
-  for (const k of Object.keys(g.relations || {})) {
-    const 相 = 盟約の相手(k, fid);
-    if (!相) continue;
-    const r = g.relations[k];
-    if (!SUBJECT.includes(r.state)) continue;
+  for (const other of Object.keys(g.factions || {})) {
+    if (other === fid) continue;
+    const r = (g.relations || {})[relKey(fid, other)];
+    if (!r || !SUBJECT.includes(r.state)) continue;
     if (r.master === fid) continue;                 // 自分が上に立っている
-    return 相;                                      // 疑わしきは下とみなす
+    return other;                                   // 疑わしきは下とみなす
   }
   return null;
 }
 
 // その家が旗の下に置いている家々
-export const 旗の下の家 = (g, fid) => Object.keys(g.relations || {})
-  .map((k) => ({ k, 相: 盟約の相手(k, fid) }))
-  .filter((x) => x.相 && SUBJECT.includes(g.relations[x.k].state) && g.relations[x.k].master === fid)
-  .map((x) => x.相);
+export const 旗の下の家 = (g, fid) => Object.keys(g.factions || {})
+  .filter((other) => {
+    if (other === fid) return false;
+    const r = (g.relations || {})[relKey(fid, other)];
+    return !!r && SUBJECT.includes(r.state) && r.master === fid;
+  });
 
 /* 下に付いた家が、それまで結んでいた誼を解く。
    同盟も不可侵も、主の外交に吸い込まれる。縁組の同盟であれば姫は生家へ戻る。 */

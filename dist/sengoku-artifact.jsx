@@ -12222,18 +12222,13 @@ var \u5DF1\u306E\u76DF\u7D04 = (k, fid) => {
   const p = k.split("|");
   return p[0] === fid || p[1] === fid;
 };
-var \u76DF\u7D04\u306E\u76F8\u624B = (k, fid) => {
-  const p = k.split("|");
-  return p[0] === fid ? p[1] : p[1] === fid ? p[0] : null;
-};
 var \u4E3B\u3092\u63A2\u3059 = (s2, fid) => {
-  for (const k of Object.keys(s2.relations || {})) {
-    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B(k, fid);
-    if (!\u76F8) continue;
-    const r = s2.relations[k];
-    if (!["\u5F93\u5C5E", "\u81E3\u5F93"].includes(r.state)) continue;
+  for (const other of Object.keys(s2.factions || {})) {
+    if (other === fid) continue;
+    const r = (s2.relations || {})[relKey(fid, other)];
+    if (!r || !["\u5F93\u5C5E", "\u81E3\u5F93"].includes(r.state)) continue;
     if (r.master === fid) continue;
-    return \u76F8;
+    return other;
   }
   return null;
 };
@@ -13878,11 +13873,11 @@ var GENERALS = [
 
 // src/core/state.js
 var relKey2 = (a, b) => [a, b].sort().join("|");
-var \u76DF\u7D04\u306E\u76F8\u624B2 = (k, fid) => {
+var \u76DF\u7D04\u306E\u76F8\u624B = (k, fid) => {
   const p = k.split("|");
   return p[0] === fid ? p[1] : p[1] === fid ? p[0] : null;
 };
-var \u5DF1\u306E\u76DF\u7D042 = (k, fid) => \u76DF\u7D04\u306E\u76F8\u624B2(k, fid) != null;
+var \u5DF1\u306E\u76DF\u7D042 = (k, fid) => \u76DF\u7D04\u306E\u76F8\u624B(k, fid) != null;
 function initState(player) {
   const factions = JSON.parse(JSON.stringify(FACTIONS));
   for (const f of Object.values(factions)) f.prestige = 50;
@@ -14285,19 +14280,18 @@ function isVassal(g, me, other) {
   return \u4E3B\u5BB6(g, me, other) === me;
 }
 function \u4E3B\u3092\u63A2\u30592(g, fid) {
-  for (const k of Object.keys(g.relations || {})) {
-    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B2(k, fid);
-    if (!\u76F8) continue;
-    const r = g.relations[k];
-    if (!SUBJECT.includes(r.state)) continue;
+  for (const other of Object.keys(g.factions || {})) {
+    if (other === fid) continue;
+    const r = (g.relations || {})[relKey2(fid, other)];
+    if (!r || !SUBJECT.includes(r.state)) continue;
     if (r.master === fid) continue;
-    return \u76F8;
+    return other;
   }
   return null;
 }
 function \u65D7\u306E\u4E0B\u306B\u5165\u308B(g, \u4E0B, \u4E0A, \u89E3\u3044\u305F) {
   for (const k of Object.keys(g.relations)) {
-    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B2(k, \u4E0B);
+    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B(k, \u4E0B);
     if (!\u76F8 || \u76F8 === \u4E0A) continue;
     const r = g.relations[k];
     if (!["\u540C\u76DF", "\u4E0D\u53EF\u4FB5"].includes(r.state)) continue;
@@ -16267,10 +16261,10 @@ function \u96A3\u5BB6(s2, fid) {
   return Object.keys(\u8868).filter((x) => s2.factions[x]).map((x) => ({ \u5148: x, d: \u8868[x], koku: \u77F3[x] || 0, r: relOf2(s2, fid, x) })).sort((a, b) => a.d - b.d);
 }
 function \u65D7\u306E\u4E0B\u306B\u3044\u308B\u304B(s2, fid) {
-  for (const k of Object.keys(s2.relations)) {
-    const \u76F8 = \u76DF\u7D04\u306E\u76F8\u624B2(k, fid);
-    if (!\u76F8) continue;
-    const r = s2.relations[k];
+  for (const \u76F8 of Object.keys(s2.factions || {})) {
+    if (\u76F8 === fid) continue;
+    const r = s2.relations[relKey2(fid, \u76F8)];
+    if (!r) continue;
     if (!["\u5F93\u5C5E", "\u81E3\u5F93"].includes(r.state)) continue;
     if (r.master === fid) continue;
     return \u76F8;
@@ -17108,7 +17102,7 @@ function advanceMonth(prev, g) {
     if (r.until && monthsBetween(s2.year, s2.month, r.until.y, r.until.m) <= 0) {
       r.until = null;
       r.state = "\u4E2D\u7ACB";
-      const \u76F8\u624B = \u76DF\u7D04\u306E\u76F8\u624B2(k, s2.player);
+      const \u76F8\u624B = \u76DF\u7D04\u306E\u76F8\u624B(k, s2.player);
       if (\u76F8\u624B && s2.factions[\u76F8\u624B]) events.push(`${s2.factions[\u76F8\u624B].name}\u3068\u306E\u7D04\u675F\u306E\u671F\u9650\u304C\u5207\u308C\u305F\u3002`);
     }
     r.trust = clamp(r.trust + 0.4, 0, 100);
