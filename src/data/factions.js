@@ -125,6 +125,22 @@ export const FACTIONS = {
   ainu_n: { id: "ainu_n", name: "北蝦夷アイヌ", color: "#7A8C9B", mon: "", gold: 1000, prestige: 38, mobilization: 1 },
   kakizaki: { id: "kakizaki", name: "蠣崎家", color: "#5A8C4A", desc: "蝦夷地の蠣崎。アイヌとの交易で立つ、日本の北の果て。", mon: "三つ巴", gold: 2600, prestige: 50, mobilization: 1 },
   ryukyu: { id: "ryukyu", name: "琉球王国", color: "#C8963C", desc: "琉球王国。武はないが、明・南蛮との交易で富む。", mon: "三つ巴", gold: 2600, prestige: 50, mobilization: 1 },
+  /* 城と大名家の増補（第四期）。国人として他家に間借りしていた者を、
+     家として立てる。土佐七雄と同じ理である。 */
+  hoshino: { id: "hoshino", name: "星野家", color: "#7A8C4A", mon: "三つ星", gold: 2600, prestige: 50, mobilization: 1 },
+  tajiri: { id: "tajiri", name: "田尻家", color: "#8C7A5A", mon: "州浜", gold: 2600, prestige: 50, mobilization: 1 },
+  negoro: { id: "negoro", name: "根来衆", color: "#A05A3C", mon: "輪宝", playable: true, desc: "紀伊那賀の根来寺。数千の行人を擁し、堺と並んで鉄砲を打つ。寺でありながら一国に匹敵する武を持つ。", gold: 2600, prestige: 50, mobilization: 1 },
+  yukawa: { id: "yukawa", name: "湯川家", color: "#4A7A6B", mon: "丸に三つ引", gold: 2600, prestige: 50, mobilization: 1 },
+  yamana_b: { id: "yamana_b", name: "備後山名家", color: "#8C4A5A", mon: "五七桐", gold: 2600, prestige: 50, mobilization: 1 },
+  yamanouchi: { id: "yamanouchi", name: "山内家", color: "#5A6B8C", mon: "三つ柏", gold: 2600, prestige: 50, mobilization: 1 },
+  miura: { id: "miura", name: "三浦家", color: "#6B5A8C", mon: "三つ引両", gold: 2600, prestige: 50, mobilization: 1 },
+  matsuda: { id: "matsuda", name: "松田家", color: "#8C6B3C", mon: "松皮菱", playable: true, desc: "備前金川の名族。守護代の家柄として浦上と備前を争い、法華に帰依して家中を固める。", gold: 2600, prestige: 50, mobilization: 1 },
+  ochi: { id: "ochi", name: "越智家", color: "#7A5A4A", mon: "丸に横木瓜", gold: 2600, prestige: 50, mobilization: 1 },
+  tochi: { id: "tochi", name: "十市家", color: "#5A7A4A", mon: "丸に違い鷹の羽", gold: 2600, prestige: 50, mobilization: 1 },
+  naito: { id: "naito", name: "内藤家", color: "#4A5A7A", mon: "下がり藤", gold: 2600, prestige: 50, mobilization: 1 },
+  mariyatsu: { id: "mariyatsu", name: "真里谷武田家", color: "#8C5A4A", mon: "四つ割菱", gold: 2600, prestige: 50, mobilization: 1 },
+  kyogoku: { id: "kyogoku", name: "京極家", color: "#6B7A5A", mon: "四つ目結", playable: true, desc: "近江北半の守護。四職に列した名門だが、被官の浅井に実を奪われ、当主高広は小谷の下に据えられている。", gold: 2600, prestige: 50, mobilization: 1 },
+  ii: { id: "ii", name: "井伊家", color: "#B03A4A", mon: "橘", playable: true, desc: "遠江井伊谷の国人。藤原の流れを汲む古い家柄で、今川の下に置かれ、当主直盛は駿府へ人質を出している。", gold: 2600, prestige: 50, mobilization: 1 },
 };
 
 

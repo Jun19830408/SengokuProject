@@ -638,7 +638,7 @@ export const NEWCOMERS = [
     lead: 52, valor: 44, wit: 84, gov: 78, retinue: 150, retTrain: 52, born: 1539 },
   { id: "n_terumasa", name: "池田輝政", faction: "oda", y: 1580, at: "nagoya",
     lead: 76, valor: 74, wit: 72, gov: 74, retinue: 190, retTrain: 66, born: 1565 },
-  { id: "az_takatsugu", name: "京極高次", faction: "azai", y: 1578, at: "odani",
+  { id: "az_takatsugu", name: "京極高次", faction: "kyogoku", y: 1578, at: "kamihirai",
     lead: 62, valor: 62, wit: 66, gov: 66, retinue: 260, retTrain: 58, born: 1563 },
   { id: "st_yoshishige", name: "佐竹義重", faction: "satake", y: 1562, at: "ota_hitachi",
     lead: 86, valor: 88, wit: 74, gov: 70, retinue: 380, retTrain: 68, born: 1547 },
@@ -962,8 +962,6 @@ export const NEWCOMERS = [
   // ── 技の者
   { id: "e_ichimu", name: "稲富一夢", faction: "isshiki", y: 1567, at: "takebeyama",
     lead: 52, valor: 62, wit: 84, gov: 60, retinue: 130, retTrain: 58, born: 1552 },
-  { id: "e_kazunaga", name: "津田算長", faction: "saika", y: 1514, at: "saika",
-    lead: 56, valor: 64, wit: 82, gov: 62, retinue: 150, retTrain: 60, born: 1499 },
   { id: "e_dosan2", name: "曲直瀬道三", faction: "ashikaga", y: 1522, at: "nijo",
     lead: 44, valor: 40, wit: 86, gov: 72, retinue: 110, retTrain: 46, born: 1507 },
   { id: "e_joha", name: "里村紹巴", faction: "ashikaga", y: 1540, at: "nijo",
@@ -1085,7 +1083,7 @@ export const NEWCOMERS = [
     lead: 68, valor: 68, wit: 66, gov: 62, retinue: 300, retTrain: 62, born: 1549 },
   { id: "f_yoshimichi2", name: "一色義道", faction: "isshiki", y: 1560, at: "miyazu",
     lead: 58, valor: 58, wit: 56, gov: 58, retinue: 280, retTrain: 56, born: 1545 },
-  { id: "f_takayoshi", name: "京極高吉", faction: "azai", y: 1519, at: "odani",
+  { id: "f_takayoshi", name: "京極高吉", faction: "kyogoku", y: 1519, at: "kamihirai",
     lead: 58, valor: 56, wit: 62, gov: 64, retinue: 240, retTrain: 56, born: 1504 },
   { id: "f_takamasa", name: "畠山高政", faction: "hatakeyama_k", y: 1542, at: "takaya",
     lead: 60, valor: 60, wit: 58, gov: 60, retinue: 300, retTrain: 58, born: 1527 },
@@ -1211,8 +1209,6 @@ export const NEWCOMERS = [
     lead: 46, valor: 44, wit: 78, gov: 74, retinue: 120, retTrain: 48, born: 1520 },
   { id: "h_naganori", name: "山崎長徳", faction: "asakura", y: 1567, at: "ichijodani",
     lead: 68, valor: 70, wit: 66, gov: 62, retinue: 250, retTrain: 62, born: 1552 },
-  { id: "h_naomitsu2", name: "湯川直光", faction: "saika", y: 1545, at: "shingu",
-    lead: 66, valor: 68, wit: 62, gov: 58, retinue: 260, retTrain: 62, born: 1530 },
   { id: "h_raiyu", name: "下間頼龍", faction: "honganji", y: 1567, at: "ishiyama",
     lead: 64, valor: 62, wit: 70, gov: 70, retinue: 290, retTrain: 58, born: 1552 },
   { id: "h_kagemasa2", name: "富田景政", faction: "asakura", y: 1537, at: "ichijodani",
@@ -1291,6 +1287,19 @@ export const NEWCOMERS = [
     lead: 66, valor: 68, wit: 64, gov: 60, retinue: 270, retTrain: 62, born: 1550 },
   { id: "hk_akitaka", name: "遊佐信教", faction: "hatakeyama_k", y: 1563, at: "takaya",
     lead: 64, valor: 68, wit: 62, gov: 58, retinue: 260, retTrain: 60, born: 1548 },
+  /* 城と大名家の増補（第四期）。立てた家の、のちに世に出る者。 */
+  { id: "sk5_tetori2", name: "湯川直春", faction: "yukawa", y: 1559, at: "tetori",
+    lead: 66, valor: 70, wit: 62, gov: 56, retinue: 260, retTrain: 62, born: 1544 },
+  { id: "negoro_kazumasa", name: "津田算正", faction: "negoro", y: 1550, at: "negoroji",
+    lead: 56, valor: 60, wit: 78, gov: 62, retinue: 200, retTrain: 64, born: 1535 },
+  { id: "hoshino_yoshizane", name: "星野吉実", faction: "hoshino", y: 1570, at: "fukumaru",
+    lead: 64, valor: 74, wit: 56, gov: 52, retinue: 240, retTrain: 60, born: 1555 },
+  { id: "miura_sadakatsu", name: "三浦貞勝", faction: "miura", y: 1559, at: "takata_m",
+    lead: 62, valor: 66, wit: 56, gov: 54, retinue: 240, retTrain: 58, born: 1544 },
+  { id: "matsuda_motokata", name: "松田元賢", faction: "matsuda", y: 1560, at: "kanagawa",
+    lead: 60, valor: 60, wit: 58, gov: 58, retinue: 240, retTrain: 58, born: 1545 },
+  { id: "mariyatsu_nobumasa", name: "武田信政", faction: "mariyatsu", y: 1555, at: "mariyatsujo",
+    lead: 58, valor: 62, wit: 56, gov: 54, retinue: 220, retTrain: 56, born: 1540 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -1302,6 +1311,15 @@ export const KANJI_TSUJI = ["政", "秀", "忠", "康", "隆", "長", "元", "�
    家督は血筋に従って継がれ、一門は結束する。 */
 // 子 → 親。史実の親子関係。
 export const PARENT = {
+  km_yanagawa3: "tajiri_c",        // 田尻親種 → 鑑種
+  yamanouchi_t: "yamanouchi_n",    // 山内直通 → 隆通
+  sk5_tetori2: "yukawa_lord",      // 湯川直光 → 直春
+  negoro_kazumasa: "negoro_lord",  // 津田算長 → 算正
+  miura_sadakatsu: "miura_sadahisa",   // 三浦貞久 → 貞勝
+  matsuda_motokata: "matsuda_moteru",  // 松田元輝 → 元賢
+  mariyatsu_nobumasa: "mariyatsu_nt",  // 武田信隆 → 信政
+  naotora: "naomori",              // 井伊直盛 → 直虎
+  az_takatsugu: "f_takayoshi",     // 京極高吉 → 高次
   nobunaga: "nobuhide", nobuyuki: "nobuhide",
   n_nobutada: "nobunaga", n_nobukatsu: "nobunaga", n_nobutaka: "nobunaga",
   yoshitatsu: "dosan",

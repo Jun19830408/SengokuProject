@@ -170,6 +170,20 @@ export const ROADS = [
   ["shurijo", "miyako", 250, "海路"],
   ["shurijo", "uchijo", 530, "海路"],
   ["shurijo", "izumi", 560, "海路"],
+  /* 城と大名家の増補（第四期）。立てた十二城を盤へ繋ぐ。 */
+  ["fukumaru", "kurume", 22, "山道"], ["fukumaru", "yanagawa", 30, "街道"],
+  ["takao", "yanagawa", 9, "街道"], ["takao", "kurume", 24, "街道"],
+  ["negoroji", "saika", 17, "街道"], ["negoroji", "kishiwada", 16, "山道"],
+  ["kameyama_ki", "tetori", 11, "街道"], ["kameyama_ki", "saika", 34, "街道"],
+  ["kozan", "kannabe", 41, "山道"], ["kozan", "mihara", 38, "山道"],
+  ["kozan", "koriyama_a", 33, "山道"],
+  ["kanagawa", "ishiyama_bz", 13, "街道"], ["kanagawa", "tenjinyama", 26, "山道"],
+  ["kaibukiyama", "takatori", 6, "街道"], ["kaibukiyama", "tochijo", 8, "街道"],
+  ["tochijo", "koriyama", 8, "街道"], ["tochijo", "takatori", 11, "街道"],
+  ["yagi", "kameyama_t", 12, "街道"], ["yagi", "yagami", 26, "山道"],
+  ["mariyatsujo", "kururi", 9, "山道"], ["mariyatsujo", "sanuki", 15, "街道"],
+  ["kamihirai", "odani", 14, "街道"], ["kamihirai", "sawayama", 17, "街道"],
+  ["iinoya", "hikuma", 16, "街道"], ["iinoya", "futamata", 14, "山道"],
 ];
 
 
