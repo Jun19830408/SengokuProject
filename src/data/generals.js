@@ -482,6 +482,7 @@ export const GENERALS = [
   { id: "inawashiro", name: "猪苗代盛国", faction: "ashina", lead: 68, valor: 70, wit: 62, gov: 58, loyal: 64, age: 30, at: "inawashiro", retinue: 300, retTrain: 60 },
   { id: "nihonmatsu_g", name: "畠山義国", faction: "nihonmatsu", lead: 64, valor: 64, wit: 60, gov: 60, loyal: 100, age: 32, at: "nihonmatsu", lord: true, retinue: 340, retTrain: 58 },
   { id: "shirakawa_g", name: "結城晴綱", faction: "shirakawa", lead: 64, valor: 62, wit: 62, gov: 62, loyal: 100, age: 26, at: "shirakawa", lord: true, retinue: 340, retTrain: 58 },
+  { id: "g_shigetaka", name: "岩城重隆", faction: "shirakawa", lead: 70, valor: 70, wit: 68, gov: 64, loyal: 66, age: 42, at: "shirakawa", retinue: 300, retTrain: 62 },
   { id: "nikaido_g", name: "二階堂照行", faction: "nikaido", lead: 64, valor: 62, wit: 64, gov: 62, loyal: 100, age: 34, at: "sukagawa", lord: true, retinue: 320, retTrain: 58 },
   { id: "nk_morihide", name: "須田盛秀", faction: "nikaido", lead: 66, valor: 70, wit: 62, gov: 60, loyal: 88, age: 30, at: "sukagawa", retinue: 260, retTrain: 62 },
   { id: "tamura_g", name: "田村隆顕", faction: "tamura", lead: 70, valor: 68, wit: 66, gov: 64, loyal: 100, age: 36, at: "miharu", lord: true, retinue: 340, retTrain: 60 },
