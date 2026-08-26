@@ -507,6 +507,11 @@ export const NEWCOMERS = [
     lead: 62, valor: 60, wit: 72, gov: 74, retinue: 240, retTrain: 58, born: 1536 },
   { id: "ng_chikanori", name: "水原親憲", faction: "nagao", y: 1561, at: "sanjo",
     lead: 70, valor: 76, wit: 64, gov: 58, retinue: 260, retTrain: 64, born: 1546 },
+  // ── 九州北（増補の第九回）
+  { id: "kk_chikakata", name: "城親賢", faction: "kikuchi", y: 1553, at: "kumamoto",
+    lead: 66, valor: 66, wit: 64, gov: 62, retinue: 260, retTrain: 60, born: 1538 },
+  { id: "it_yoshimasu", name: "伊東義益", faction: "ito", y: 1561, at: "sadowara",
+    lead: 64, valor: 62, wit: 66, gov: 66, retinue: 300, retTrain: 58, born: 1546 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -641,6 +646,15 @@ export const PARENT = {
   hy_yoshitsuna: "yoshitsugu",    // 畠山義続 → 義綱
   hy_tsunatsura: "nagatsuna",     // 長続連 → 綱連
   hy_kagetaka: "hy_nanao3",       // 温井総貞 → 景隆
+  // ── 九州北（増補の第九回）
+  yoshishige: "ot_yoshiaki",      // 大友義鑑 → 義鎮
+  takanobu_r: "rz_tanehide",      // 龍造寺胤栄 → 隆信（家督を継ぐ）
+  az_harutane: "tanezane",        // 秋月文種 → 晴種
+  az_akizuki2: "tanezane",        // 秋月文種 → 種実
+  kk_chikakata: "kk_kumamoto2",   // 城親冬 → 親賢
+  it_yoshimasu: "yoshisuke",      // 伊東義祐 → 義益
+  it_sukekatsu: "yoshisuke",      // 伊東義祐 → 祐兵
+  sr_yorifusa: "yoriharu",        // 相良晴広 → 頼房
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
