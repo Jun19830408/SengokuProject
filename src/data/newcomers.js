@@ -528,6 +528,17 @@ export const NEWCOMERS = [
     lead: 66, valor: 70, wit: 62, gov: 58, retinue: 280, retTrain: 62, born: 1539 },
   { id: "sz_tadamune", name: "伊集院忠棟", faction: "shimazu", y: 1556, at: "uchijo",
     lead: 66, valor: 64, wit: 74, gov: 74, retinue: 270, retTrain: 60, born: 1541 },
+  // ── 伊勢・尾張・四国（増補の第十一回）
+  { id: "sumitaka", name: "九鬼澄隆", faction: "kuki", y: 1562, at: "toba",
+    lead: 70, valor: 74, wit: 68, gov: 58, retinue: 300, retTrain: 66, born: 1547 },
+  { id: "kb_tomofusa", name: "北畠具房", faction: "kitabatake", y: 1562, at: "okochi",
+    lead: 56, valor: 54, wit: 58, gov: 60, retinue: 320, retTrain: 56, born: 1547 },
+  { id: "kb_tomofuji", name: "長野具藤", faction: "kitabatake", y: 1567, at: "matsugashima",
+    lead: 58, valor: 58, wit: 58, gov: 58, retinue: 270, retTrain: 56, born: 1552 },
+  { id: "ise_nobukata", name: "織田信賢", faction: "ise", y: 1552, at: "iwakura",
+    lead: 54, valor: 56, wit: 50, gov: 52, retinue: 280, retTrain: 56, born: 1537 },
+  { id: "ic_kanesada", name: "一条兼定", faction: "ichijo", y: 1558, at: "nakamura",
+    lead: 52, valor: 52, wit: 54, gov: 56, retinue: 340, retTrain: 54, born: 1543 },
 ];
 
 // 家を持つ者に子が生まれる。名は通字を継ぐ。
@@ -679,6 +690,15 @@ export const PARENT = {
   mm_matsuyama2: "iemichi",       // 三村家親 → 元親
   ms_miyake2: "fujikane",         // 益田藤兼 → 元祥
   o_nagafusa: "harukata",         // 陶晴賢 → 長房
+  // ── 伊勢・尾張・四国（増補の第十一回）
+  kk_kiyotaka: "kk_sadataka",     // 九鬼定隆 → 浄隆
+  yoshitaka: "kk_sadataka",       // 九鬼定隆 → 嘉隆
+  sumitaka: "kk_kiyotaka",        // 九鬼浄隆 → 澄隆
+  kb_tomofusa: "tomonori",        // 北畠具教 → 具房
+  kb_tomofuji: "tomonori",        // 北畠具教 → 長野具藤
+  ise_nobukata: "nobuyasu",       // 織田信安 → 信賢
+  ic_kanesada: "kanetsugu_i",     // 一条房基 → 兼定
+  ujiyoshi: "kn_tanefuji",        // 長野稙藤 → 藤定
   rk_shigetsuna: "sadayori",      // 蒲生定秀 → 青地茂綱（青地氏へ養子）
   mikumo: "rk_katamochi",         // 三雲賢持 → 成持
   as_kagetoshi: "norikage",       // 朝倉宗滴 → 景紀（養子）
