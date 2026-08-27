@@ -27443,7 +27443,19 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       ctx.restore();
     }
+    const \u540D\u672D = (t, x, y, \u8272, \u7E01\u592A = 3.2, \u63C3 = "center", \u4E0B = "alphabetic") => {
+      ctx.textAlign = \u63C3;
+      ctx.textBaseline = \u4E0B;
+      ctx.lineJoin = "round";
+      ctx.miterLimit = 2;
+      ctx.strokeStyle = "rgba(255,255,255,0.92)";
+      ctx.lineWidth = \u7E01\u592A;
+      ctx.strokeText(t, x, y);
+      ctx.fillStyle = \u8272;
+      ctx.fillText(t, x, y);
+    };
     ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
     for (const q of KUNI_LABELS) {
       const [a, b2] = S(q.x, q.y);
       if (a < -60 || a > W + 60 || b2 < -40 || b2 > H + 40) continue;
@@ -27491,12 +27503,13 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       ctx.beginPath();
       ctx.arc(ax, ay, 8.5, 0, 7);
       ctx.fill();
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
       ctx.fillStyle = "#fff";
       ctx.font = "600 10px sans-serif";
       ctx.fillText("\u8ECD", ax - 5, ay + 3.5);
-      ctx.fillStyle = "#33332F";
       ctx.font = "11px sans-serif";
-      ctx.fillText(`${fmt(a.men)}`, ax + 14, ay + 4);
+      \u540D\u672D(`${fmt(a.men)}`, ax + 14, ay + 4, "#33332F", 2.6, "left");
     }
     for (const t of TOWNS) {
       const \u5370 = \u753A\u306E\u5370\u306E\u4F4D\u7F6E(t, g.castles, px, py);
@@ -27528,16 +27541,10 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       drawTownMark(ctx, t.kind, x, y, r, \u69D8.\u8272);
       if (s2 > 0.85) {
         ctx.font = "11.5px 'Hiragino Sans',sans-serif";
-        const w = ctx.measureText(t.name).width;
-        ctx.fillStyle = "rgba(255,255,255,.72)";
-        ctx.fillRect(x - w / 2 - 3, y + r + 4, w + 6, 14);
-        ctx.fillStyle = "#4A4840";
-        ctx.fillText(t.name, x - w / 2, y + r + 15);
+        \u540D\u672D(t.name, x, y + r + 15, "#4A4840", 3);
         if (s2 > 1.45) {
-          ctx.fillStyle = U.dim;
           ctx.font = "10px sans-serif";
-          const k = `\uFF08${t.kind}${\u69D8.\u4E3B\u540D ? `\u30FB${\u69D8.\u4E3B\u540D}` : ""}\uFF09`;
-          ctx.fillText(k, x - ctx.measureText(k).width / 2, y + r + 27);
+          \u540D\u672D(`\uFF08${t.kind}${\u69D8.\u4E3B\u540D ? `\u30FB${\u69D8.\u4E3B\u540D}` : ""}\uFF09`, x, y + r + 27, U.dim, 2.8);
         }
       }
     }
@@ -27604,6 +27611,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText(\u5370.t, bx, by + 0.4);
+            ctx.textAlign = "left";
+            ctx.textBaseline = "alphabetic";
           }
         }
       }
@@ -27617,17 +27626,12 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       if (s2 > 0.5) {
         ctx.font = `600 ${Math.round(clamp(11 + s2 * 3, 11, 15))}px 'Hiragino Sans',sans-serif`;
-        const w = ctx.measureText(c.name).width;
-        ctx.fillStyle = "rgba(255,255,255,.88)";
-        ctx.fillRect(x - w / 2 - 4, y - big - 22, w + 8, 17);
-        ctx.fillStyle = "#2A2A28";
-        ctx.fillText(c.name, x - w / 2, y - big - 9);
+        \u540D\u672D(c.name, x, y - big - 9, "#2A2A28", 3.4);
       }
       if (s2 > 1.05) {
         const men = c.local + g.generals.filter((q) => q.at === c.id && q.faction === c.faction && !q.captive).reduce((a, q) => a + q.retinue, 0);
         ctx.font = "11px sans-serif";
-        ctx.fillStyle = col;
-        ctx.fillText(`${fmt(men)}`, x + big + 5, y + 12);
+        \u540D\u672D(`${fmt(men)}`, x + big + 5, y + 12, col, 2.6, "left");
       }
     }
     const mv = miniRef.current;

@@ -143,8 +143,27 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       ctx.restore();
     }
+    /* 名札を書く（GDD 13.1）。
+
+       もとは名の後ろに白い帯を敷いていた。帯は ctx.measureText で幅を測り、
+       fillRect で四角を塗り、そのあと fillText で字を置く――という三手であって、
+       字の置きどころが少しでも変われば帯だけが取り残される。実際に取り残された。
+       間柄の印（下の「属・臣・盟・侵」）で ctx.textAlign を "center" に立てたまま
+       戻していなかったので、それ以降の城名だけが左へ半分ずれ、白帯が右に残った。
+
+       帯をやめ、字そのものを白く縁取る。縁は字と同じ字形から描かれるので、
+       ずれようがない。地図も透けて見えるようになる。
+       揃えと下端は、書くたびに必ず言い直す。前に誰が何を立てたかに拠らない。 */
+    const 名札 = (t, x, y, 色, 縁太 = 3.2, 揃 = "center", 下 = "alphabetic") => {
+      ctx.textAlign = 揃; ctx.textBaseline = 下;
+      ctx.lineJoin = "round"; ctx.miterLimit = 2;
+      ctx.strokeStyle = "rgba(255,255,255,0.92)"; ctx.lineWidth = 縁太;
+      ctx.strokeText(t, x, y);
+      ctx.fillStyle = 色; ctx.fillText(t, x, y);
+    };
+
     // 旧国の名。盤の外の国は薄く添えるにとどめる。
-    ctx.textAlign = "center";
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
     for (const q of KUNI_LABELS) {
       const [a, b2] = S(q.x, q.y);
       if (a < -60 || a > W + 60 || b2 < -40 || b2 > H + 40) continue;
@@ -180,8 +199,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(dx2, dy2); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ax, ay, 11, 0, 7); ctx.fill();
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(ax, ay, 8.5, 0, 7); ctx.fill();
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
       ctx.fillStyle = "#fff"; ctx.font = "600 10px sans-serif"; ctx.fillText("軍", ax - 5, ay + 3.5);
-      ctx.fillStyle = "#33332F"; ctx.font = "11px sans-serif"; ctx.fillText(`${fmt(a.men)}`, ax + 14, ay + 4);
+      ctx.font = "11px sans-serif";
+      名札(`${fmt(a.men)}`, ax + 14, ay + 4, "#33332F", 2.6, "left");
     }
     /* 特殊勢力（GDD 5.4 / 13.1）。
        これまではどの町も同じ灰色の点で、名を読まねば湊か寺社か分からなかった。
@@ -212,13 +233,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
          印そのものは遠目にも出しておく。何かがそこに在る、とだけ分かればよい。 */
       if (s > 0.85) {
         ctx.font = "11.5px 'Hiragino Sans',sans-serif";
-        const w = ctx.measureText(t.name).width;
-        ctx.fillStyle = "rgba(255,255,255,.72)"; ctx.fillRect(x - w / 2 - 3, y + r + 4, w + 6, 14);
-        ctx.fillStyle = "#4A4840"; ctx.fillText(t.name, x - w / 2, y + r + 15);
+        名札(t.name, x, y + r + 15, "#4A4840", 3.0);
         if (s > 1.45) {
-          ctx.fillStyle = U.dim; ctx.font = "10px sans-serif";
-          const k = `（${t.kind}${様.主名 ? `・${様.主名}` : ""}）`;
-          ctx.fillText(k, x - ctx.measureText(k).width / 2, y + r + 27);
+          ctx.font = "10px sans-serif";
+          名札(`（${t.kind}${様.主名 ? `・${様.主名}` : ""}）`, x, y + r + 27, U.dim, 2.8);
         }
       }
     }
@@ -267,6 +285,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             ctx.fillStyle = "#fff"; ctx.font = "700 7.4px system-ui, sans-serif";
             ctx.textAlign = "center"; ctx.textBaseline = "middle";
             ctx.fillText(印.t, bx, by + 0.4);
+            ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";   // 立てたら戻す
           }
         }
       }
@@ -278,15 +297,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       if (s > 0.5) {
         ctx.font = `600 ${Math.round(clamp(11 + s * 3, 11, 15))}px 'Hiragino Sans',sans-serif`;
-        const w = ctx.measureText(c.name).width;
-        ctx.fillStyle = "rgba(255,255,255,.88)";
-        ctx.fillRect(x - w / 2 - 4, y - big - 22, w + 8, 17);
-        ctx.fillStyle = "#2A2A28"; ctx.fillText(c.name, x - w / 2, y - big - 9);
+        名札(c.name, x, y - big - 9, "#2A2A28", 3.4);
       }
       if (s > 1.05) {
         const men = c.local + g.generals.filter((q) => q.at === c.id && q.faction === c.faction && !q.captive).reduce((a, q) => a + q.retinue, 0);
-        ctx.font = "11px sans-serif"; ctx.fillStyle = col;
-        ctx.fillText(`${fmt(men)}`, x + big + 5, y + 12);
+        ctx.font = "11px sans-serif";
+        名札(`${fmt(men)}`, x + big + 5, y + 12, col, 2.6, "left");
       }
     }
     const mv = miniRef.current;
