@@ -111,9 +111,19 @@ export function SortieDialog({ g, from, onClose, onGo }) {
     const x = gens.find((q) => q.id === id);
     return a + (x ? troopLimit(x, g) : 0);
   }, 0);
+  /* 連れ出せる地域家臣団。
+
+     もとは「守備の最低数を必ず残す」形であった。ところが小さな城では
+     在地兵より守備の最低数のほうが多い（岡豊城は在地百九十九人に対して
+     六百四十人）。差し引きが負になるので、一人も連れ出せない。しかも
+     城を普請して防備が上がるほど、連れ出せる兵は減っていく――内政を
+     すればするほど攻められなくなる、という妙なことになっていた。
+
+     守備の最低数は目安として示すにとどめ、縛りとしない。城を空にして
+     野に出るのも一つの決断である。空にすれば城は容易に落ちるが、
+     それを承知で出るかどうかを決めるのは遊ぶ側である。 */
   const availLocal = Math.max(0, Math.min(
     c.local,
-    c.local + gens.reduce((a, x) => a + x.retinue, 0) - garrison - retSum,
     Math.max(0, cmdLimit - retSum),          // 将の器を超えては率いられぬ
   ));
   const [local, setLocal] = useState(0);
@@ -336,8 +346,19 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         <div className="sec">地域家臣団の同行</div>
         <input type="range" min="0" max={availLocal} value={useLocal} onChange={(e) => setLocal(+e.target.value)} style={{ width: "100%" }} />
         <div className="row"><span>同行</span><span className="v">{fmt(useLocal)} / {fmt(availLocal)} 人</span></div>
-        <div className="row"><span>城に残る兵</span>
-          <span className="v">{fmt(c.local - useLocal + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0))} 人（最低 {fmt(garrison)}）</span></div>
+        {(() => {
+          const 残 = c.local - useLocal + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
+          const 手薄 = 残 < garrison;
+          return (<>
+            <div className="row"><span>城に残る兵</span>
+              <span className="v" style={手薄 ? { color: "#B0483C" } : undefined}>
+                {fmt(残)} 人（守るに要る {fmt(garrison)}）</span></div>
+            {手薄 && (<div style={{ fontSize: 11, color: "#B0483C", marginTop: 4, lineHeight: 1.7 }}>
+              {残 <= 0 ? "城は空になる。攻められれば、そのまま落ちる。"
+                : "守るに要る数を割る。攻められれば持ちこたえられない。"}
+            </div>)}
+          </>);
+        })()}
 
         {/* ------------------------------------------- 兵科の割り（GDD 8.1） */}
         <div className="sec">兵科の割り</div>
@@ -504,12 +525,8 @@ export function SallyDialog({ g, castleId, foeId, onClose, onGo, 城下 }) {
   const 守り = minGarrison(c);
   const retSum = picked.reduce((a, id) => { const x = gens.find((q) => q.id === id); return a + (x ? x.retinue : 0); }, 0);
   const 限り = picked.reduce((a, id) => { const x = gens.find((q) => q.id === id); return a + (x ? troopLimit(x, g) : 0); }, 0);
-  // 城を空にはできぬ。守備の最低数は必ず残る。
-  const 出せる = Math.max(0, Math.min(
-    c.local,
-    c.local + gens.reduce((a, x) => a + x.retinue, 0) - 守り - retSum,
-    Math.max(0, 限り - retSum),
-  ));
+  // 守備の最低数は目安である。城を空にして討って出ることもできる。
+  const 出せる = Math.max(0, Math.min(c.local, Math.max(0, 限り - retSum)));
   const [local, setLocal] = useState(0);
   useEffect(() => { setLocal(Math.round(出せる * 0.7)); }, [picked.length]); // eslint-disable-line
   const 出す = Math.min(local, 出せる);
@@ -548,11 +565,19 @@ export function SallyDialog({ g, castleId, foeId, onClose, onGo, 城下 }) {
         <div className="sec">連れて出る地域家臣団</div>
         <input type="range" min="0" max={出せる} value={出す} onChange={(e) => setLocal(+e.target.value)} style={{ width: "100%" }} />
         <div className="row"><span>連れて出る</span><span className="v">{fmt(出す)} / {fmt(出せる)} 人</span></div>
-        <div className="row"><span>城に残る兵</span>
-          <span className="v">{fmt(c.local - 出す + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0))} 人（最低 {fmt(守り)}）</span></div>
-        <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
-          守備の最低数は城に残ります。門を開いて出た兵は、戦の後に城へ戻ります。
-        </div>
+        {(() => {
+          const 残 = c.local - 出す + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
+          const 手薄 = 残 < 守り;
+          return (<>
+            <div className="row"><span>城に残る兵</span>
+              <span className="v" style={手薄 ? { color: "#B0483C" } : undefined}>
+                {fmt(残)} 人（守るに要る {fmt(守り)}）</span></div>
+            <div style={{ fontSize: 11, color: 手薄 ? "#B0483C" : U.dim, marginTop: 6, lineHeight: 1.7 }}>
+              {手薄 ? "守るに要る数を割る。討って出て敗れれば、城はそのまま落ちる。"
+                : "門を開いて出た兵は、戦の後に城へ戻ります。"}
+            </div>
+          </>);
+        })()}
 
         <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>籠もったまま</button>

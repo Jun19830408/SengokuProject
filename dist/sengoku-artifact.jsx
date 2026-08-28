@@ -11916,9 +11916,10 @@ function runKenchi(s2, fid, kuni, gov) {
   let before = 0, after = 0;
   for (const c of cs) {
     before += c.koku;
-    const cap = c.kokuCap || c.kokuMax;
-    c.koku = Math.round(Math.min(cap, c.koku + (cap - c.koku) * clamp(skill, 0.5, 1)));
-    c.kokuCap = Math.round(cap * (1 + 0.14 * clamp(skill, 0.5, 1.2)));
+    const \u5143\u7984 = c.kokuGen || Math.round(c.koku * 2.051);
+    c.kokuCap = Math.max(c.kokuCap || c.kokuMax, \u5143\u7984);
+    const \u96A0\u7530 = Math.round(Math.min(c.kokuMax - c.koku, c.koku * 0.03 * clamp(skill, 0.5, 1.2)));
+    c.koku = Math.max(c.koku, c.koku + Math.max(0, \u96A0\u7530));
     c.kokuMax = Math.max(c.kokuMax, c.koku);
     c.pop = Math.round(c.pop * 1.04);
     c.min = clamp(c.min - 9, 0, 100);
@@ -12023,6 +12024,9 @@ var canHoldCastle = (gen, s2, c) => {
   const need = c ? castleRankNeed(c) : 8e3;
   return (s2 ? stipendOf(s2, gen) : fiefOf(gen)) >= need;
 };
+var \u8ECD\u5F79\u306E\u7387 = 500;
+var \u8ECD\u5F79\u306E\u5668 = (gen) => gen && gen.retCap != null ? gen.retCap : gen ? gen.retinue : 0;
+var \u8ECD\u5F79\u306E\u5897 = (gen, d) => Math.round(d / 1e4 * \u8ECD\u5F79\u306E\u7387 * (0.7 + (gen && gen.lead || 60) / 200));
 function troopLimit(gen, s2) {
   if (!gen) return 500;
   if (gen.lord) return needsGuardian(gen) ? 800 : 99999;
@@ -12082,7 +12086,7 @@ function loyaltyDrift(gen) {
 var FIEF_SHARE = 1;
 function fiefRoom(s2, fid) {
   const koku = s2.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
-  const used = s2.generals.filter((x) => x.faction === fid && !x.captive).reduce((a, x) => a + fiefOf(x), 0);
+  const used = s2.generals.filter((x) => x.faction === fid && !x.captive && !x.lord).reduce((a, x) => a + fiefOf(x), 0);
   const cap = Math.round(koku * FIEF_SHARE);
   return { cap, used, left: cap - used };
 }
@@ -14446,8 +14450,30 @@ function initState(player) {
       // 地域家臣団の組の名簿
       kokuBase: c.kokuMax,
       // 治水の伸びを測るための元の上限
-      kokuCap: c.kokuMax,
-      // 国の検地に基づく限り（下でまとめて割り当てる）
+      /* 田の限りは三段に分かれる（GDD 4.6）。
+      
+               盤の総石高 1,258万石は、慶長三年（一五九八）の検地高 1,860万石の
+               〇.六八倍である。天文十五年の把握が粗いからであって、地の力が
+               それしかないわけではない。竿を入れれば実りは表に出る。
+      
+                 石高       いま実っている高。開墾で増える
+                 田畑可能地  開ける余地。治水で広がる（kokuMax）
+                 慶長の高    治水が届く限り。石高の一.四七八倍（kokuCap）
+                 元禄の高    地の力そのもの。石高の二.〇五一倍（kokuGen）
+      
+               元禄十年（一六九七）の郷帳は 2,580万石。慶長からさらに三割九分
+               伸びている。新田開発と治水が百年かけて開いた分である。
+               この遊びは一六〇〇年の天下統一、一七〇〇年の世界制覇を構想と
+               するので、元禄の高をもって地の天井とする。
+      
+               はじめから元禄の高までは開けない。一国を丸ごと押さえて検地を
+               行ってはじめて、限りが慶長の高から元禄の高へ引き上がる。
+               引き上がるだけであって、石高がその場で増えるわけではない。
+               そこから先は、みずから治水して田畑可能地を広げ、開墾で田を開く。 */
+      kokuCap: Math.round(c.koku * 1.478),
+      // 治水の届く限り＝慶長三年の検地高
+      kokuGen: Math.round(c.koku * 2.051),
+      // 地の天井＝元禄十年の検地高
       well: 100,
       // 井戸。城工作で傷むと籠城が続かない（GDD 9.2）
       lordId: null,
@@ -14458,6 +14484,8 @@ function initState(player) {
       ...g,
       unity: clamp(g.retTrain + 8, 30, 100),
       merit: 0,
+      retCap: g.retinue,
+      // 軍役の器。加増すれば増える（GDD 6.4）
       fief: Math.round(fiefWanted(g) * (0.72 + Math.random() * 0.34)),
       rost: newRoster(g.retinue, `ret-${g.id}`, \u76F4\u5C5E\u306E\u5175\u79D1)
     }))),
@@ -16057,21 +16085,23 @@ function runCommand(prev, castleId, cmd, genId, g) {
   const f = s2.factions[c.faction];
   const lines = [];
   const rec = (label, before, after, unit = "") => lines.push({ label, before, after, unit });
-  const COST_OF = { \u958B\u58BE: 140, \u6CBB\u6C34: 180, \u5546\u696D: 160, \u7BC9\u57CE: 200, \u8A13\u7DF4: 120, \u5FB4\u52DF: 100, \u9020\u8239: \u9244\u7532.\u624B\u9593 };
+  const \u8EAB\u306E\u4E08 = (x) => Math.max(0.35, Math.min(1.4, 0.35 + x.koku / 6e4));
+  const \u5024 = (n) => Math.round(n * \u8EAB\u306E\u4E08(c));
+  const COST_OF = { \u958B\u58BE: \u5024(140), \u6CBB\u6C34: \u5024(180), \u5546\u696D: \u5024(160), \u7BC9\u57CE: \u5024(200), \u8A13\u7DF4: \u5024(120), \u5FB4\u52DF: 100, \u9020\u8239: \u9244\u7532.\u624B\u9593 };
   if (f.gold < (COST_OF[cmd] || 140)) {
     s2.msg = `\u91D1\u304C\u8DB3\u308A\u306C\u3002${cmd}\u306B\u306F${COST_OF[cmd] || 140}\u8CAB\u304C\u8981\u308B\uFF08\u624B\u5143${fmt(Math.max(0, f.gold))}\u8CAB\uFF09\u3002`;
     return s2;
   }
   let cost = 0;
   if (cmd === "\u958B\u58BE") {
-    cost = 140;
+    cost = \u5024(140);
     const room = c.kokuMax - c.koku;
     const labor = Math.min(1, c.pop / (c.kokuMax * 0.9));
     const gain = Math.min(room, Math.round(room * 0.16 * (0.5 + gen.gov / 100) * labor));
     rec("\u73FE\u5728\u77F3\u9AD8", c.koku, c.koku + gain, "\u77F3");
     c.koku += gain;
   } else if (cmd === "\u6CBB\u6C34") {
-    cost = 180;
+    cost = \u5024(180);
     const cap = c.kokuCap || c.kokuMax;
     const room = Math.max(0, cap - c.kokuMax);
     const d = Math.min(room, Math.round(c.kokuMax * 0.035 * (0.5 + gen.gov / 100)));
@@ -16081,19 +16111,19 @@ function runCommand(prev, castleId, cmd, genId, g) {
     rec("\u6C11\u5FE0", Math.round(c.min), Math.min(100, Math.round(c.min) + 2));
     c.min = Math.min(100, c.min + 2);
   } else if (cmd === "\u5546\u696D") {
-    cost = 160;
+    cost = \u5024(160);
     const d = Math.round(3 * (0.5 + gen.gov / 100));
     rec("\u5546\u696D", Math.round(c.comm), Math.min(100, Math.round(c.comm) + d));
     c.comm = Math.min(100, c.comm + d);
   } else if (cmd === "\u7BC9\u57CE") {
-    cost = 240;
+    cost = \u5024(240);
     const d = Math.round(3 * (0.5 + gen.gov / 100));
     rec("\u57CE\u9632", Math.round(c.def), Math.min(100, Math.round(c.def) + d));
     c.def = Math.min(100, c.def + d);
     rec("\u8010\u4E45", c.hp, c.hp + 200);
     c.hp += 200;
   } else if (cmd === "\u8A13\u7DF4") {
-    cost = 110;
+    cost = \u5024(110);
     const d = Math.round(4 * (0.4 + gen.lead / 100));
     rec("\u5730\u57DF\u5BB6\u81E3\u56E3 \u7DF4\u5EA6", Math.round(c.localTrain), Math.min(100, Math.round(c.localTrain) + d));
     c.localTrain = Math.min(100, c.localTrain + d);
@@ -16101,7 +16131,7 @@ function runCommand(prev, castleId, cmd, genId, g) {
     rec("\u76F4\u5C5E\u5BB6\u81E3\u56E3 \u7DF4\u5EA6\uFF08\u5728\u57CE\uFF09", gen.retTrain - Math.round(d * 0.7), gen.retTrain);
   } else if (cmd === "\u5FB4\u52DF") {
     const cap = troopCap(c, f.mobilization, g || s2);
-    const cur = c.local + s2.generals.filter((x) => x.at === c.id && x.faction === c.faction).reduce((a, x) => a + x.retinue, 0);
+    const cur = c.local;
     const n = Math.max(0, Math.min(cap - cur, Math.floor((f.gold - 60) / 0.45), Math.floor(c.pop * 0.012)));
     cost = Math.round(n * 0.45);
     rec("\u5730\u57DF\u5BB6\u81E3\u56E3", c.local, c.local + n, "\u4EBA");
@@ -16521,9 +16551,12 @@ function grantFief(prev, genId, delta) {
   }
   const before = fiefOf(gen);
   gen.fief = before + d;
+  const \u5668\u524D = \u8ECD\u5F79\u306E\u5668(gen);
+  gen.retCap = Math.max(gen.retinue, \u5668\u524D + \u8ECD\u5F79\u306E\u5897(gen, d));
   if (d < 0) gen.loyal = clamp((gen.loyal == null ? 60 : gen.loyal) - 4, 0, 100);
   s2.ledger = [{ cmd: "\u77E5\u884C", cost: 0, castle: "\u2015", general: gen.name, lines: [
     { label: `${gen.name} \u77E5\u884C`, before, after: gen.fief, unit: "\u77F3" },
+    { label: `${gen.name} \u624B\u52E2\u306E\u5668`, before: \u5668\u524D, after: gen.retCap, unit: "\u4EBA" },
     { label: "\u914D\u308C\u308B\u4F59\u5730", before: room.left, after: room.left - d, unit: "\u77F3" }
   ] }, ...s2.ledger].slice(0, 6);
   return s2;
@@ -17564,6 +17597,14 @@ function advanceMonth(prev, g) {
       c.min = clamp(c.min + settle + specialBonus(s2, fid, "min"), 0, 100);
       c.comm = clamp(c.comm + specialBonus(s2, fid, "comm"), 0, 100);
       c.najimi = clamp((c.najimi == null ? 70 : c.najimi) + 1.4, 0, 100);
+    }
+    for (const q of s2.generals) {
+      if (q.faction !== fid || q.captive) continue;
+      const \u5668 = Math.min(\u8ECD\u5F79\u306E\u5668(q), troopLimit(q, s2));
+      if (\u5668 <= q.retinue) continue;
+      const \u5897 = Math.max(4, Math.round(q.retinue * 0.03));
+      q.retinue = Math.min(\u5668, q.retinue + \u5897);
+      rosterSync(q, "rost", q.retinue, `ret-${q.id}`);
     }
     gold += specialBonus(s2, fid, "gold") - specialBonus(s2, fid, "upkeep");
     f.prestige = clamp((f.prestige || 50) + specialBonus(s2, fid, "prestige"), 0, 100);
@@ -23557,7 +23598,6 @@ function SortieDialog({ g, from, onClose, onGo }) {
   }, 0);
   const availLocal = Math.max(0, Math.min(
     c.local,
-    c.local + gens.reduce((a, x) => a + x.retinue, 0) - garrison - retSum,
     Math.max(0, cmdLimit - retSum)
     // 将の器を超えては率いられぬ
   ));
@@ -23691,7 +23731,11 @@ function SortieDialog({ g, from, onClose, onGo }) {
   ), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 5 } }, rankName(x, g))), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, x.age, "\u6B73\uFF0F\u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, "\uFF0F\u76F4\u5C5E", fmt(x.retinue)))), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u7387\u3044\u3089\u308C\u308B\u5175\u306B\u306F\u8EAB\u5206\u306E\u9650\u308A\u304C\u3042\u308A\u307E\u3059\u3002 \u7269\u982D\u306F\u4E94\u767E\u4EBA\u3001\u4F8D\u5927\u5C06\u306F\u5343\u516D\u767E\u4EBA\u3001\u5BB6\u8001\u306F\u4E8C\u5343\u4E94\u767E\u4EBA\u3001\u5BBF\u8001\u306F\u56DB\u5343\u4EBA\u307E\u3067\u3002", (() => {
     const sum = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean).reduce((a, x) => a + troopLimit(x, g), 0);
     return /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("br", null), "\u9078\u3093\u3060\u5C06\u3067\u7387\u3044\u3089\u308C\u308B\u306E\u306F ", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, fmt(sum), "\u4EBA"), "\u307E\u3067\u3002");
-  })()), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5730\u57DF\u5BB6\u81E3\u56E3\u306E\u540C\u884C"), /* @__PURE__ */ React2.createElement("input", { type: "range", min: "0", max: availLocal, value: useLocal, onChange: (e) => setLocal(+e.target.value), style: { width: "100%" } }), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u540C\u884C"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(useLocal), " / ", fmt(availLocal), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306B\u6B8B\u308B\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(c.local - useLocal + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0)), " \u4EBA\uFF08\u6700\u4F4E ", fmt(garrison), "\uFF09")), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5175\u79D1\u306E\u5272\u308A"), (() => {
+  })()), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5730\u57DF\u5BB6\u81E3\u56E3\u306E\u540C\u884C"), /* @__PURE__ */ React2.createElement("input", { type: "range", min: "0", max: availLocal, value: useLocal, onChange: (e) => setLocal(+e.target.value), style: { width: "100%" } }), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u540C\u884C"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(useLocal), " / ", fmt(availLocal), " \u4EBA")), (() => {
+    const \u6B8B = c.local - useLocal + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
+    const \u624B\u8584 = \u6B8B < garrison;
+    return /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306B\u6B8B\u308B\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v", style: \u624B\u8584 ? { color: "#B0483C" } : void 0 }, fmt(\u6B8B), " \u4EBA\uFF08\u5B88\u308B\u306B\u8981\u308B ", fmt(garrison), "\uFF09")), \u624B\u8584 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: "#B0483C", marginTop: 4, lineHeight: 1.7 } }, \u6B8B <= 0 ? "\u57CE\u306F\u7A7A\u306B\u306A\u308B\u3002\u653B\u3081\u3089\u308C\u308C\u3070\u3001\u305D\u306E\u307E\u307E\u843D\u3061\u308B\u3002" : "\u5B88\u308B\u306B\u8981\u308B\u6570\u3092\u5272\u308B\u3002\u653B\u3081\u3089\u308C\u308C\u3070\u6301\u3061\u3053\u305F\u3048\u3089\u308C\u306A\u3044\u3002"));
+  })(), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5175\u79D1\u306E\u5272\u308A"), (() => {
     const \u84C4 = \u84C4\u3048\u306B\u5408\u308F\u305B\u308B(mix, useLocal, { horse: c.horse || 0, gun: c.gun || 0 });
     const \u540D = { yari: "\u69CD", yumi: "\u5F13", teppo: "\u9244\u7832", kiba: "\u9A0E\u99AC" };
     const \u65AD = {
@@ -23817,11 +23861,7 @@ function SallyDialog({ g, castleId, foeId, onClose, onGo, \u57CE\u4E0B }) {
     const x = gens.find((q) => q.id === id);
     return a + (x ? troopLimit(x, g) : 0);
   }, 0);
-  const \u51FA\u305B\u308B = Math.max(0, Math.min(
-    c.local,
-    c.local + gens.reduce((a, x) => a + x.retinue, 0) - \u5B88\u308A - retSum,
-    Math.max(0, \u9650\u308A - retSum)
-  ));
+  const \u51FA\u305B\u308B = Math.max(0, Math.min(c.local, Math.max(0, \u9650\u308A - retSum)));
   const [local, setLocal] = useState2(0);
   useEffect2(() => {
     setLocal(Math.round(\u51FA\u305B\u308B * 0.7));
@@ -23835,7 +23875,11 @@ function SallyDialog({ g, castleId, foeId, onClose, onGo, \u57CE\u4E0B }) {
       checked: picked.includes(x.id),
       onChange: () => setPicked((p) => p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id])
     }
-  ), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 5 } }, rankName(x, g))), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, x.age, "\u6B73\uFF0F\u7D71", x.lead, " \u6B66", x.valor, "\uFF0F\u76F4\u5C5E", fmt(x.retinue)))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u9023\u308C\u3066\u51FA\u308B\u5730\u57DF\u5BB6\u81E3\u56E3"), /* @__PURE__ */ React2.createElement("input", { type: "range", min: "0", max: \u51FA\u305B\u308B, value: \u51FA\u3059, onChange: (e) => setLocal(+e.target.value), style: { width: "100%" } }), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u9023\u308C\u3066\u51FA\u308B"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u51FA\u3059), " / ", fmt(\u51FA\u305B\u308B), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306B\u6B8B\u308B\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(c.local - \u51FA\u3059 + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0)), " \u4EBA\uFF08\u6700\u4F4E ", fmt(\u5B88\u308A), "\uFF09")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u5B88\u5099\u306E\u6700\u4F4E\u6570\u306F\u57CE\u306B\u6B8B\u308A\u307E\u3059\u3002\u9580\u3092\u958B\u3044\u3066\u51FA\u305F\u5175\u306F\u3001\u6226\u306E\u5F8C\u306B\u57CE\u3078\u623B\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 16 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onClose }, "\u7C60\u3082\u3063\u305F\u307E\u307E"), /* @__PURE__ */ React2.createElement(
+  ), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 5 } }, rankName(x, g))), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, x.age, "\u6B73\uFF0F\u7D71", x.lead, " \u6B66", x.valor, "\uFF0F\u76F4\u5C5E", fmt(x.retinue)))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u9023\u308C\u3066\u51FA\u308B\u5730\u57DF\u5BB6\u81E3\u56E3"), /* @__PURE__ */ React2.createElement("input", { type: "range", min: "0", max: \u51FA\u305B\u308B, value: \u51FA\u3059, onChange: (e) => setLocal(+e.target.value), style: { width: "100%" } }), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u9023\u308C\u3066\u51FA\u308B"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u51FA\u3059), " / ", fmt(\u51FA\u305B\u308B), " \u4EBA")), (() => {
+    const \u6B8B = c.local - \u51FA\u3059 + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
+    const \u624B\u8584 = \u6B8B < \u5B88\u308A;
+    return /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306B\u6B8B\u308B\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v", style: \u624B\u8584 ? { color: "#B0483C" } : void 0 }, fmt(\u6B8B), " \u4EBA\uFF08\u5B88\u308B\u306B\u8981\u308B ", fmt(\u5B88\u308A), "\uFF09")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: \u624B\u8584 ? "#B0483C" : U.dim, marginTop: 6, lineHeight: 1.7 } }, \u624B\u8584 ? "\u5B88\u308B\u306B\u8981\u308B\u6570\u3092\u5272\u308B\u3002\u8A0E\u3063\u3066\u51FA\u3066\u6557\u308C\u308C\u3070\u3001\u57CE\u306F\u305D\u306E\u307E\u307E\u843D\u3061\u308B\u3002" : "\u9580\u3092\u958B\u3044\u3066\u51FA\u305F\u5175\u306F\u3001\u6226\u306E\u5F8C\u306B\u57CE\u3078\u623B\u308A\u307E\u3059\u3002"));
+  })(), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 16 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onClose }, "\u7C60\u3082\u3063\u305F\u307E\u307E"), /* @__PURE__ */ React2.createElement(
     "button",
     {
       className: "btn dark",
@@ -28679,7 +28723,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         army.local = atkLeft;
         army.men = atkLeft + atkCorps.reduce((a, c) => a + (s2.generals.find((x) => x.id === c.id)?.retinue || 0), 0);
       }
-      const keep = Math.round(minGarrison(castle) * 0.4);
+      const keep = Math.min(castle.local, Math.round(minGarrison(castle) * 0.4));
       castle.local = Math.max(0, keep + defLeft);
       if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
       s2.chronicle.push({

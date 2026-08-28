@@ -212,7 +212,19 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
   if (!着) { console.log('エラー: 後詰が着かない'); console.log('エラー: なし'); process.exit(1); }
 
   const 文 = document.body.textContent;
-  確('城を空にせぬ断りがある', /守備の最低数は城に残ります/.test(文));
+  /* 城を空にできるようになった（GDD 9.2）。
+
+     もとは「守備の最低数は城に残ります」と断り、そのぶんを差し引いて
+     連れ出せる兵を決めていた。ところが小城では在地兵より最低数のほうが
+     多く（岡豊城は在地百九十九人に対して六百四十人）、一人も連れ出せない。
+     しかも築城で防備が上がるほど連れ出せる兵が減る――内政をするほど
+     攻められなくなる、という妙なことになっていた。
+
+     いま最低数は目安として示すにとどめ、縛りとしない。城を空にして
+     野に出るのも一つの決断である。ゆえに判ずるのは「断りがあること」
+     ではなく、「残る兵と、守るに要る数が示されていること」に改める。 */
+  確('残る兵と、守るに要る数が示される', /城に残る兵/.test(文) && /守るに要る/.test(文),
+    (文.match(/城に残る兵[^人]*人（守るに要る[^）]*）/) || [''])[0]);
   確('討って出る武将を選べる', document.querySelectorAll('.modal input[type=checkbox]').length > 0);
 
   const 出撃 = [...document.querySelectorAll('button')].find((b) => /人で討って出る/.test(b.textContent));

@@ -1,7 +1,7 @@
 import { captiveRecruit, payRansom, ransomAccept, ransomCost } from "../core/capture.js";
 import { succeed } from "../core/house.js";
 import { holdsProvince, kenchiCost, kenchiDone, rankBonus, runKenchi } from "../core/province.js";
-import { fiefOf, fiefRoom, troopCap } from "../core/rank.js";
+import { fiefOf, fiefRoom, troopCap , 軍役の器, 軍役の増 } from "../core/rank.js";
 import { rosterSync } from "../core/roster.js";
 import { relKey, 己の盟約, 主を探す, 旗の下に入る, relOf } from "../core/state.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
@@ -36,20 +36,22 @@ export function runCommand(prev, castleId, cmd, genId, g) {
       const lines = [];
       const rec = (label, before, after, unit = "") => lines.push({ label, before, after, unit });
       // 金がなければ何も命じられぬ。無い袖は振れぬ。
-      const COST_OF = { 開墾: 140, 治水: 180, 商業: 160, 築城: 200, 訓練: 120, 徴募: 100, 造船: 鉄甲.手間 };
+      const 身の丈 = (x) => Math.max(0.35, Math.min(1.4, 0.35 + x.koku / 60000));
+      const 値 = (n) => Math.round(n * 身の丈(c));
+      const COST_OF = { 開墾: 値(140), 治水: 値(180), 商業: 値(160), 築城: 値(200), 訓練: 値(120), 徴募: 100, 造船: 鉄甲.手間 };
       if (f.gold < (COST_OF[cmd] || 140)) {
         s.msg = `金が足りぬ。${cmd}には${COST_OF[cmd] || 140}貫が要る（手元${fmt(Math.max(0, f.gold))}貫）。`;
         return s;
       }
       let cost = 0;
       if (cmd === "開墾") {
-        cost = 140;
+        cost = 値(140);
         const room = c.kokuMax - c.koku;
         const labor = Math.min(1, c.pop / (c.kokuMax * 0.9));
         const gain = Math.min(room, Math.round(room * 0.16 * (0.5 + gen.gov / 100) * labor));
         rec("現在石高", c.koku, c.koku + gain, "石"); c.koku += gain;
       } else if (cmd === "治水") {
-        cost = 180;
+        cost = 値(180);
         // 上限の伸びは城の大きさに応じる。重ねれば伸び続けるが、伸びは次第に鈍る。
         // 国の検地に定まった限りを超えて田は増えない
         const cap = c.kokuCap || c.kokuMax;
@@ -59,16 +61,16 @@ export function runCommand(prev, castleId, cmd, genId, g) {
         if (room <= 0) rec("この地の限り", cap, cap, "石（これ以上は開けぬ）");
         rec("民忠", Math.round(c.min), Math.min(100, Math.round(c.min) + 2)); c.min = Math.min(100, c.min + 2);
       } else if (cmd === "商業") {
-        cost = 160;
+        cost = 値(160);
         const d = Math.round(3 * (0.5 + gen.gov / 100));
         rec("商業", Math.round(c.comm), Math.min(100, Math.round(c.comm) + d)); c.comm = Math.min(100, c.comm + d);
       } else if (cmd === "築城") {
-        cost = 240;
+        cost = 値(240);
         const d = Math.round(3 * (0.5 + gen.gov / 100));
         rec("城防", Math.round(c.def), Math.min(100, Math.round(c.def) + d)); c.def = Math.min(100, c.def + d);
         rec("耐久", c.hp, c.hp + 200); c.hp += 200;
       } else if (cmd === "訓練") {
-        cost = 110;
+        cost = 値(110);
         const d = Math.round(4 * (0.4 + gen.lead / 100));
         rec("地域家臣団 練度", Math.round(c.localTrain), Math.min(100, Math.round(c.localTrain) + d));
         c.localTrain = Math.min(100, c.localTrain + d);
@@ -76,7 +78,7 @@ export function runCommand(prev, castleId, cmd, genId, g) {
         rec("直属家臣団 練度（在城）", gen.retTrain - Math.round(d * 0.7), gen.retTrain);
       } else if (cmd === "徴募") {
         const cap = troopCap(c, f.mobilization, g || s);
-        const cur = c.local + s.generals.filter((x) => x.at === c.id && x.faction === c.faction).reduce((a, x) => a + x.retinue, 0);
+        const cur = c.local;   // 手勢は武将の禄が養う。城の軍役は地域家臣団だけを縛る
         const n = Math.max(0, Math.min(cap - cur, Math.floor((f.gold - 60) / 0.45), Math.floor(c.pop * 0.012)));
         cost = Math.round(n * 0.45);
         rec("地域家臣団", c.local, c.local + n, "人");
@@ -502,9 +504,14 @@ export function grantFief(prev, genId, delta) {
     }
     const before = fiefOf(gen);
     gen.fief = before + d;
+    /* 知行が動けば軍役も動く。加増した分だけ手勢の器が増える。
+       召し上げれば軽くなるが、初めから抱えている手勢は削らない。 */
+    const 器前 = 軍役の器(gen);
+    gen.retCap = Math.max(gen.retinue, 器前 + 軍役の増(gen, d));
     if (d < 0) gen.loyal = clamp((gen.loyal == null ? 60 : gen.loyal) - 4, 0, 100);
     s.ledger = [{ cmd: "知行", cost: 0, castle: "―", general: gen.name, lines: [
       { label: `${gen.name} 知行`, before, after: gen.fief, unit: "石" },
+      { label: `${gen.name} 手勢の器`, before: 器前, after: gen.retCap, unit: "人" },
       { label: "配れる余地", before: room.left, after: room.left - d, unit: "石" }] }, ...s.ledger].slice(0, 6);
     return s;
 }

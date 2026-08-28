@@ -38,11 +38,20 @@ export function runKenchi(s, fid, kuni, gov) {
   let before = 0, after = 0;
   for (const c of cs) {
     before += c.koku;
-    const cap = c.kokuCap || c.kokuMax;
-    // 竿を入れれば、隠れていた実りが表に出る
-    c.koku = Math.round(Math.min(cap, c.koku + (cap - c.koku) * clamp(skill, 0.5, 1)));
-    // 検地は限りそのものも改める。新田の見込みが立つ。
-    c.kokuCap = Math.round(cap * (1 + 0.14 * clamp(skill, 0.5, 1.2)));
+    /* 検地が改めるのは「限り」であって、石高そのものではない。
+
+       竿を入れると、慶長の高で止まっていた限りが、元禄の高まで引き上がる。
+       地の力が明らかになった、ということである。そこから先は、みずから
+       治水して田畑可能地を広げ、開墾で田を開いていく。
+       一国を丸ごと押さえた者への褒美は、この「伸ばせるようになること」に
+       とどめる。竿を入れただけで実りが増えるわけではない。
+
+       奉行の政務が良ければ、隠れていた田がいくらか表に出る（隠田の摘発）。
+       これは限りの引き上げに比べれば小さい。 */
+    const 元禄 = c.kokuGen || Math.round(c.koku * 2.051);
+    c.kokuCap = Math.max(c.kokuCap || c.kokuMax, 元禄);
+    const 隠田 = Math.round(Math.min(c.kokuMax - c.koku, c.koku * 0.03 * clamp(skill, 0.5, 1.2)));
+    c.koku = Math.max(c.koku, c.koku + Math.max(0, 隠田));
     c.kokuMax = Math.max(c.kokuMax, c.koku);
     c.pop = Math.round(c.pop * 1.04);
     c.min = clamp(c.min - 9, 0, 100);                  // 民は苦しむ

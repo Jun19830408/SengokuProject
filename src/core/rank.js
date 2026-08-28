@@ -14,6 +14,11 @@ export function diploStat(g, fid) {
   };
 }
 
+/* 城を守るに要る兵。周囲の長さと民の心で決まる（GDD 9.2）。
+
+   この数は「目安」であって、縛りではない。城を空にして野に出るのも
+   一つの決断である。桶狭間の今川方も、姉川の浅井方も、城に兵を残して
+   野に出た。残さずに出た者もいる。決めるのは遊ぶ側であって、掟ではない。 */
 export const minGarrison = (c) => Math.round(c.def * 10 + (100 - c.min) * 5);
 
 export const troopCap = (c, p, s) => Math.round((c.koku / 10000) * MOB_POLICY[p].per
@@ -128,6 +133,22 @@ export const canBeSupreme = (gen, s) => !!gen && (gen.lord || (s ? stipendOf(s, 
 
 // 出陣そのものは物頭でもできる。ただし率いられる兵に限りがある。
 export const canLeadArmy = () => true;
+
+/* 軍役（GDD 6.4）。知行を与えれば、その高に応じた兵を出す。
+
+   これまで手勢（直属家臣団）は初めの値のまま一切動かなかった。加増しても
+   増えない。つまり「国が富めば兵が増える」という道が、ここで切れていた。
+
+   知行を加増したその分だけ、出すべき軍役――手勢の器――が増える。
+   一万石につき五百人を目安とし、統率の高い将ほど多くを抱えられる。
+   器が増えても兵はその月に湧かない。募って調えるには時が要る。
+
+   減らす向きにも働く。知行を召し上げれば軍役も軽くなる。ただし初めから
+   抱えている手勢を、この理屈で削りはしない。 */
+export const 軍役の率 = 500;                     // 一万石あたりの兵
+export const 軍役の器 = (gen) => (gen && gen.retCap != null ? gen.retCap : (gen ? gen.retinue : 0));
+export const 軍役の増 = (gen, d) =>
+  Math.round((d / 10000) * 軍役の率 * (0.7 + ((gen && gen.lead) || 60) / 200));
 
 // 身分ごとの兵の限り
 export function troopLimit(gen, s) {
@@ -251,9 +272,22 @@ export function loyaltyDrift(gen) {
    という釣り合いで縛るのが筋であって、線引きで縛るものではない。 */
 export const FIEF_SHARE = 1.0;                   // 配れるのは石高の十割まで
 
+/* 配れる知行の余地。
+
+   当主の身代は数に入れない。禄高の説き書きにあるとおり「大名の身代は
+   家臣に配る知行ではないので、直轄領と余禄を合わせて御料と呼ぶ」。
+   ところがここでは当主の知行まで「配り済み」に数えていた。
+
+   小身の家ほど当主の取り分が家の石高に近いので、これが効く。長宗我部は
+   石高八千五百石に対し配り済み二万三千百三十三石――余地が負であって、
+   加増が永久にできなかった。当主の一万五千六十六石を御料として除けば、
+   家臣に配ったのは六千八百石。余地は千七百石になる。
+   （二万一千九百九十七石であった岡豊を八千五百石に改めたとき、
+     家臣の知行を直さなかったのも重なっていた） */
 export function fiefRoom(s, fid) {
   const koku = s.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
-  const used = s.generals.filter((x) => x.faction === fid && !x.captive).reduce((a, x) => a + fiefOf(x), 0);
+  const used = s.generals.filter((x) => x.faction === fid && !x.captive && !x.lord)
+    .reduce((a, x) => a + fiefOf(x), 0);
   const cap = Math.round(koku * FIEF_SHARE);
   return { cap, used, left: cap - used };
 }

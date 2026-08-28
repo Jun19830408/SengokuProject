@@ -223,13 +223,35 @@ export function initState(player) {
       najimi: 70,            // 地域家臣団が現城主を受け入れる度合い（GDD 6.2）
       rost: newRoster(c.local, `loc-${c.id}`),   // 地域家臣団の組の名簿
       kokuBase: c.kokuMax,                        // 治水の伸びを測るための元の上限
-      kokuCap: c.kokuMax,                          // 国の検地に基づく限り（下でまとめて割り当てる）
+      /* 田の限りは三段に分かれる（GDD 4.6）。
+
+         盤の総石高 1,258万石は、慶長三年（一五九八）の検地高 1,860万石の
+         〇.六八倍である。天文十五年の把握が粗いからであって、地の力が
+         それしかないわけではない。竿を入れれば実りは表に出る。
+
+           石高       いま実っている高。開墾で増える
+           田畑可能地  開ける余地。治水で広がる（kokuMax）
+           慶長の高    治水が届く限り。石高の一.四七八倍（kokuCap）
+           元禄の高    地の力そのもの。石高の二.〇五一倍（kokuGen）
+
+         元禄十年（一六九七）の郷帳は 2,580万石。慶長からさらに三割九分
+         伸びている。新田開発と治水が百年かけて開いた分である。
+         この遊びは一六〇〇年の天下統一、一七〇〇年の世界制覇を構想と
+         するので、元禄の高をもって地の天井とする。
+
+         はじめから元禄の高までは開けない。一国を丸ごと押さえて検地を
+         行ってはじめて、限りが慶長の高から元禄の高へ引き上がる。
+         引き上がるだけであって、石高がその場で増えるわけではない。
+         そこから先は、みずから治水して田畑可能地を広げ、開墾で田を開く。 */
+      kokuCap: Math.round(c.koku * 1.478),         // 治水の届く限り＝慶長三年の検地高
+      kokuGen: Math.round(c.koku * 2.051),         // 地の天井＝元禄十年の検地高
       well: 100,             // 井戸。城工作で傷むと籠城が続かない（GDD 9.2）
       lordId: null, intrigue: false,
     })))),
     // 知行を定めてから、城を預かる者に身分を保証する
     generals: assignRanks(CASTLES, fillKeepers(CASTLES, GENERALS).map((g) => ({
       ...g, unity: clamp(g.retTrain + 8, 30, 100), merit: 0,
+      retCap: g.retinue,                        // 軍役の器。加増すれば増える（GDD 6.4）
       fief: Math.round(fiefWanted(g) * (0.72 + Math.random() * 0.34)),
       rost: newRoster(g.retinue, `ret-${g.id}`, 直属の兵科) }))),
     armies: [], orders: {}, ledger: [], sieges: [], promo: null, campaigns: [],

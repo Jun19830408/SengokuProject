@@ -1377,8 +1377,13 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const left = (corps) => Math.round(corps.reduce((a, c) => a + c.squads.filter((q) => q.origin === "地域").reduce((t, q) => t + q.men, 0), 0));
       const atkLeft = left(atkCorps), defLeft = left(defCorps);
       if (army) { army.local = atkLeft; army.men = atkLeft + atkCorps.reduce((a, c) => a + (s.generals.find((x) => x.id === c.id)?.retinue || 0), 0); }
-      // 城に残った守備兵の名簿も欠けたまま持ち越す
-      const keep = Math.round(minGarrison(castle) * 0.4);
+      /* 城に残った守備兵の名簿も欠けたまま持ち越す。
+
+         残した数は、城の在地兵のうち野へ出さなかった分である。守備の最低数を
+         そのまま足していたので、在地兵がその数に満たない小城では、戦のあとに
+         兵が湧いていた（岡豊城は在地百九十九人、最低数の四割は二百五十六人。
+         野戦のたびに五十七人ずつ増えていた）。城が抱えていた数を超えない。 */
+      const keep = Math.min(castle.local, Math.round(minGarrison(castle) * 0.4));
       castle.local = Math.max(0, keep + defLeft);
       if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
       s.chronicle.push({ y: s.year, m: s.month,

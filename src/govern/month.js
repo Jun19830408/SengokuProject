@@ -7,7 +7,7 @@ import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritH
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
-import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap } from "../core/rank.js";
+import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , troopLimit, 軍役の器 } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
@@ -108,6 +108,20 @@ export function advanceMonth(prev, g) {
           c.comm = clamp(c.comm + specialBonus(s, fid, "comm"), 0, 100);
           // 城主が代わると地域家臣団の馴染は低い状態から始まり、徐々に育つ（GDD 6.2 / 9.5）
           c.najimi = clamp((c.najimi == null ? 70 : c.najimi) + 1.4, 0, 100);
+        }
+        /* 軍役に応じて手勢を調える（GDD 6.4）。
+
+           加増すれば軍役の器が増える。だが兵はその月に湧かない。
+           在郷の次三男を募り、槍を持たせ、隊に組み入れるには時が要る。
+           月に三分ずつ、器へ向かって近づけていく。
+           器に満ちている者、身分の限りに達している者は増えない。 */
+        for (const q of s.generals) {
+          if (q.faction !== fid || q.captive) continue;
+          const 器 = Math.min(軍役の器(q), troopLimit(q, s));
+          if (器 <= q.retinue) continue;
+          const 増 = Math.max(4, Math.round(q.retinue * 0.03));
+          q.retinue = Math.min(器, q.retinue + 増);
+          rosterSync(q, "rost", q.retinue, `ret-${q.id}`);
         }
         gold += specialBonus(s, fid, "gold") - specialBonus(s, fid, "upkeep");
         f.prestige = clamp((f.prestige || 50) + specialBonus(s, fid, "prestige"), 0, 100);
