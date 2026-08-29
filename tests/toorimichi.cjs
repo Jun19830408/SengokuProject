@@ -33,7 +33,8 @@ fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState, relOf, 軍の道, 通れる城 } from "../src/core/state.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n'
-+ 'export { findPath } from "../src/core/paths.js";\n');
++ 'export { findPath, marchMonths } from "../src/core/paths.js";\n'
++ 'export { 外交を結ぶ } from "../src/govern/commands.js";\n');
 const out = path.join(ROOT, 'build', 'toorimichi.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
   loader: { '.jsx': 'jsx' }, logLevel: 'error' });
@@ -120,7 +121,65 @@ console.log('\n── 二　十年送って、素通りする軍が一つも出�
   確('軍そのものは出ている（掟で盤が凍っていない）', 総 >= 40, `${総}本`);
 }
 
-console.log('\n── 三　道の敷き方（島を跨ぐのに陸の道がない）');
+console.log('\n── 三　上下は一方通行。同盟は道を許さない');
+{
+  const s = A.initState('oda');
+  const 名 = (id) => { const c = s.castles.find((x) => x.id === id); return c ? c.name : id; };
+  const 道 = (f, a, b) => (A.軍の道(s, f, a, b) || []).map(名).join('→');
+  /* 従えている側は、従えた家の領を兵が通る。断れる道理がない。
+     逆に、従っている側が主家の領を素通りして、その先の家へ攻め入ることは
+     できない。主家がそれを許すはずがない。 */
+  確('主は、旗の下の家の領を通れる', !!A.軍の道(s, 'oda', 'nagoya', 'okazaki'),
+    道('oda', 'nagoya', 'okazaki'));
+  確('旗の下の家は、主家の領を素通りできない', !A.軍の道(s, 'mizuno', 'kariya', 'kiyosu'),
+    道('mizuno', 'kariya', 'kiyosu') || '通れない');
+  /* 誼を通じることと、領内を軍が抜けることは別である。同盟の領を素通り
+     できてしまうと、同盟を結んだ相手の隣家が、いきなり遠くの家に攻められる。 */
+  const t = A.initState('oda');
+  t.relations['imagawa|oda'] = { trust: 80, state: '同盟', until: null };
+  確('同盟を結んでも、その領は通れない', !A.軍の道(t, 'oda', 'nagoya', 'yoshida'),
+    (A.軍の道(t, 'oda', 'nagoya', 'yoshida') || []).map(名).join('→') || '通れない');
+  // 道を借りれば通れる（借道）
+  const r = A.外交を結ぶ(t, 'oda', 'imagawa', '道を借りる');
+  確('道を借りれば通れる', r.ok && !!A.軍の道(t, 'oda', 'nagoya', 'yoshida'),
+    r.ok ? (A.軍の道(t, 'oda', 'nagoya', 'yoshida') || []).map(名).join('→') : '★' + r.why);
+  確('借りたのは片道である（貸したほうは通れない）',
+    !A.軍の道(t, 'imagawa', 'sunpu', 'kiyosu') || !(A.軍の道(t, 'imagawa', 'sunpu', 'kiyosu') || [])
+      .slice(1, -1).some((id) => { const c = t.castles.find((x) => x.id === id); return c && c.faction === 'oda'; }),
+    '今川は織田の領を通れない');
+  // 期限が切れれば閉じる
+  t.year = 1547; t.month = 5;
+  確('期限が切れれば、また閉じる', !A.軍の道(t, 'oda', 'nagoya', 'yoshida'),
+    `借りたのは1546年10月まで`);
+}
+
+console.log('\n── 四　水軍の家は山を越えない');
+{
+  const s = A.initState('oda');
+  const 名 = (id) => { const c = s.castles.find((x) => x.id === id); return c ? c.name : id; };
+  確('水軍の家は、街道なら通れる', !!A.軍の道(s, 'kurushima', 'kokubunyama', 'yuzuki'),
+    (A.軍の道(s, 'kurushima', 'kokubunyama', 'yuzuki') || []).map(名).join('→'));
+  確('水軍の家は、山道を越えて攻めない', !A.軍の道(s, 'kurushima', 'kokubunyama', 'kawanoe'),
+    '国分山城→川之江城は山道');
+  確('陸の家なら、その山道を通れる', !!A.軍の道(s, 'kono', 'yuzuki', 'kawanoe'),
+    (A.軍の道(s, 'kono', 'yuzuki', 'kawanoe') || []).map(名).join('→'));
+}
+
+console.log('\n── 五　蝦夷は地元の者だけが速い');
+{
+  const s = A.initState('oda');
+  const 蝦 = s.castles.filter((c) => c.kuni === '蝦夷');
+  const a = 蝦.find((c) => c.name === '宇須岸館'), b = 蝦.find((c) => c.name === '宗谷の砦');
+  const 地 = A.marchMonths(a.id, b.id, 'kakizaki');
+  const 外 = A.marchMonths(a.id, b.id, 'oda');
+  確('蝦夷の家は速いまま', 地 <= 5, `蠣崎 ${地}か月`);
+  確('本州の家は手間取る', 外 >= 地 * 2, `織田 ${外}か月（蠣崎の${(外 / 地).toFixed(1)}倍）`);
+  確('蝦夷の外では、家によって変わらない',
+    A.marchMonths('nagoya', 'okazaki', 'oda') === A.marchMonths('nagoya', 'okazaki', 'kakizaki'),
+    `那古野→岡崎 ${A.marchMonths('nagoya', 'okazaki', 'oda')}か月`);
+}
+
+console.log('\n── 六　道の敷き方（島を跨ぐのに陸の道がない）');
 {
   const s = A.initState('oda');
   const 島 = { 四国: ['阿波', '讃岐', '伊予', '土佐'],

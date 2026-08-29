@@ -5,7 +5,7 @@ import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
 import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, lifeSpan, needsGuardian, ruinedHouse, succeed, 親の } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
-import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
+import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の重み } from "../core/paths.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , troopLimit, 軍役の器 } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
@@ -351,7 +351,9 @@ export function advanceMonth(prev, g) {
         let budget = MARCH_PER_MONTH * (a.food > 0 ? 1 : 0.5);
         while (budget > 0 && a.path.length > 1) {
           const r = roadBetween(a.path[0], a.path[1]);
-          const need = (r ? r[2] : 10) / ROAD_SPEED[r ? r[3] : "街道"];
+          // 蝦夷を知らぬ軍は、そこを進むのに二.六倍の日数がかかる（GDD 7.1）
+          const need = (r ? r[2] : 10) / ROAD_SPEED[r ? r[3] : "街道"]
+            * 蝦夷の重み(a.faction, a.path[0], a.path[1]);
           const rem = need * (1 - a.prog);
           // 海に乗り出す。渡りきるまで岸に足はつけられぬ（GDD 10章）
           if (r && r[3] === "海路" && a.prog === 0 && !a.seaDone) {
@@ -964,7 +966,7 @@ export function advanceMonth(prev, g) {
                ということが起きていた。 */
             const path = 軍の道(s, fid, c.id, t2.id);
             if (!path) return false;
-            if ((marchMonths(c.id, t2.id) || 99) > 6) return false;
+            if ((marchMonths(c.id, t2.id, fid) || 99) > 6) return false;
             for (let i = 1; i < path.length - 1; i++) {
               const mid = s.castles.find((y) => y.id === path[i]);
               if (!mid) return false;

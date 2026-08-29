@@ -363,6 +363,17 @@ export function 外交を結ぶ(s, actor, fid, key) {
       文 = `${me.name}が${you.name}を上下から解き、中立に戻した。`;
       s.chronicle.push({ y: s.year, m: s.month, text: 文 });
     }
+    else if (def.借道) {
+      /* 道を借りる。間柄そのものは動かさない。期限まで領を通れるだけである。
+         鍵は向きを持つ（借りた側 > 貸した側）。貸したからといって、
+         貸したほうが借り手の領を通れるわけではない。 */
+      const 期限 = { y: s.year + Math.floor((s.month + def.months - 1) / 12),
+        m: ((s.month + def.months - 1) % 12) + 1 };
+      s.借道 = { ...(s.借道 || {}), [`${actor}>${fid}`]: 期限 };
+      r.trust = clamp(r.trust + 2, 0, 100);
+      文 = `${you.name}が${me.name}に道を貸した。${期限.y}年${期限.m}月まで、${you.name}の領を兵が通れる。`;
+      s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+    }
     else {
       r.state = def.state || key;
       /* 上下の間柄に期限はない。膝を屈するのは一生の決めごとであって、

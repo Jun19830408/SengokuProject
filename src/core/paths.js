@@ -116,9 +116,31 @@ export const roadBetween = (a, b) => ROAD_MAP[`${a}|${b}`];
 
    いちばん安い道を探してから通れるかを問うのでは順が逆である。
    はじめから、通れる所だけを通って探す。 */
-export function findPathVia(from, to, 通れる) {
+/* 蝦夷の道は、地元の者だけが速い（GDD 7.1）。
+
+   蝦夷の道は、書かれた距離が実際よりずっと短い。網走と宗谷の間は
+   「七十八」と書いてあるが実は二百五十六キロある。石狩と網走で
+   「九十六」に対し二百五十一キロ。地図の上で北海道が縮んでいるためで、
+   そのぶん蝦夷の行軍は実際の二.五倍ほど速い。
+
+   これを一律に直せば、蝦夷に住む家も一緒に遅くなる。そうではなく、
+   蝦夷を知らぬ者だけが手間取るようにする。道なき地を、雪と川と熊を
+   越えて進むのである。案内も宿もない。地元の者には勝手の知れた道でも、
+   本州から来た軍にとってはそうではない。
+
+   蝦夷に城を持って始まった家（蠣崎とアイヌ三家）は速いまま。それ以外の
+   家は、蝦夷の中を進むあいだ二.六倍の日数がかかる。本州を統一した軍でも、
+   北海道の統一には手間取る。それが蝦夷の地の利である。 */
+const 蝦夷の城 = new Set(CASTLES.filter((c) => c.kuni === "蝦夷").map((c) => c.id));
+export const 蝦夷の家 = new Set(CASTLES.filter((c) => c.kuni === "蝦夷").map((c) => c.faction));
+export const 蝦夷の重み = (fid, a, b) =>
+  // 家を指さずに道のりだけを測るときは、素の長さを返す。
+  // 割増は「誰が進むか」の性質であって、道そのものの長さではない。
+  (fid && 蝦夷の城.has(a) && 蝦夷の城.has(b) && !蝦夷の家.has(fid) ? 2.6 : 1);
+
+export function findPathVia(from, to, 通れる, 道の可否) {
   if (from === to) return [from];
-  if (!通れる) return findPath(from, to);
+  if (!通れる && !道の可否) return findPath(from, to);
   const cost = new Map([[from, 0]]);
   const prev = new Map([[from, null]]);
   const seen = new Set();
@@ -154,9 +176,10 @@ export function findPathVia(from, to, 通れる) {
     seen.add(cur);
     if (cur === to) break;
     // 目当ての城そのものは通れずともよい。そこへ攻め入るのだから。
-    if (cur !== from && cur !== to && !通れる(cur)) continue;
+    if (cur !== from && cur !== to && 通れる && !通れる(cur)) continue;
     for (const nxt of ROAD_ADJ[cur] || []) {
       const r = ROAD_MAP[`${cur}|${nxt}`];
+      if (道の可否 && !道の可否(r)) continue;     // 通れぬ種の道（水軍に山道など）
       const d = best + (r ? r[2] / (ROAD_SPEED[r[3]] || 1) : 20);
       if (!cost.has(nxt) || d < cost.get(nxt)) { cost.set(nxt, d); prev.set(nxt, cur); push(d, nxt); }
     }
@@ -168,12 +191,12 @@ export function findPathVia(from, to, 通れる) {
 }
 
 // その道のりが何か月か。道を渡せば、その道で測る。
-export function marchMonthsOf(path) {
+export function marchMonthsOf(path, fid) {
   if (!path || path.length < 2) return path ? 1 : null;
   let d = 0;
   for (let i = 0; i < path.length - 1; i++) {
     const r = roadBetween(path[i], path[i + 1]);
-    d += r ? r[2] / ROAD_SPEED[r[3]] : 10;
+    d += (r ? r[2] / ROAD_SPEED[r[3]] : 10) * 蝦夷の重み(fid, path[i], path[i + 1]);
   }
   return Math.max(1, Math.ceil(d / MARCH_PER_MONTH));
 }
@@ -186,14 +209,7 @@ export function canAttack(g, targetId) {
 }
 
 // 到着までの月数。街道の種別で足の速さが変わる。
-export function marchMonths(from, to) {
-  const path = findPath(from, to);
-  if (!path) return null;
-  let d = 0;
-  for (let i = 0; i < path.length - 1; i++) {
-    const r = roadBetween(path[i], path[i + 1]);
-    d += r ? r[2] / ROAD_SPEED[r[3]] : 10;
-  }
-  return Math.max(1, Math.ceil(d / MARCH_PER_MONTH));
+export function marchMonths(from, to, fid) {
+  return marchMonthsOf(findPath(from, to), fid);
 }
 

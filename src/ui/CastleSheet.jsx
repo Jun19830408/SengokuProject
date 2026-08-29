@@ -666,7 +666,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     const 下 = 主 == null ? null : 主 !== g.player;
                     const 私 = diploStat(g, g.player), 敵 = diploStat(g, dt);
                     const 群 = [
-                      { 名: "誼を通じる", 列: ["親善", "不可侵", "同盟"] },
+                      { 名: "誼を通じる", 列: ["親善", "不可侵", "同盟", "道を借りる"] },
                       { 名: "相手を従える", 列: ["従属させる", "臣従させる", "解き放つ"] },
                       { 名: "自らが膝を屈する", 列: ["従属する", "臣従する", "独立"] },
                     ];

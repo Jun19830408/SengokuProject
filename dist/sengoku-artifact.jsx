@@ -11550,9 +11550,16 @@ function findPath(from, to) {
   return out;
 }
 var roadBetween = (a, b) => ROAD_MAP[`${a}|${b}`];
-function findPathVia(from, to, \u901A\u308C\u308B) {
+var \u8766\u5937\u306E\u57CE = new Set(CASTLES.filter((c) => c.kuni === "\u8766\u5937").map((c) => c.id));
+var \u8766\u5937\u306E\u5BB6 = new Set(CASTLES.filter((c) => c.kuni === "\u8766\u5937").map((c) => c.faction));
+var \u8766\u5937\u306E\u91CD\u307F = (fid, a, b) => (
+  // 家を指さずに道のりだけを測るときは、素の長さを返す。
+  // 割増は「誰が進むか」の性質であって、道そのものの長さではない。
+  fid && \u8766\u5937\u306E\u57CE.has(a) && \u8766\u5937\u306E\u57CE.has(b) && !\u8766\u5937\u306E\u5BB6.has(fid) ? 2.6 : 1
+);
+function findPathVia(from, to, \u901A\u308C\u308B, \u9053\u306E\u53EF\u5426) {
   if (from === to) return [from];
-  if (!\u901A\u308C\u308B) return findPath(from, to);
+  if (!\u901A\u308C\u308B && !\u9053\u306E\u53EF\u5426) return findPath(from, to);
   const cost = /* @__PURE__ */ new Map([[from, 0]]);
   const prev = /* @__PURE__ */ new Map([[from, null]]);
   const seen = /* @__PURE__ */ new Set();
@@ -11589,9 +11596,10 @@ function findPathVia(from, to, \u901A\u308C\u308B) {
     if (seen.has(cur)) continue;
     seen.add(cur);
     if (cur === to) break;
-    if (cur !== from && cur !== to && !\u901A\u308C\u308B(cur)) continue;
+    if (cur !== from && cur !== to && \u901A\u308C\u308B && !\u901A\u308C\u308B(cur)) continue;
     for (const nxt of ROAD_ADJ[cur] || []) {
       const r = ROAD_MAP[`${cur}|${nxt}`];
+      if (\u9053\u306E\u53EF\u5426 && !\u9053\u306E\u53EF\u5426(r)) continue;
       const d = best + (r ? r[2] / (ROAD_SPEED[r[3]] || 1) : 20);
       if (!cost.has(nxt) || d < cost.get(nxt)) {
         cost.set(nxt, d);
@@ -11605,12 +11613,12 @@ function findPathVia(from, to, \u901A\u308C\u308B) {
   for (let x = to; x != null; x = prev.get(x)) out.unshift(x);
   return out;
 }
-function marchMonthsOf(path) {
+function marchMonthsOf(path, fid) {
   if (!path || path.length < 2) return path ? 1 : null;
   let d = 0;
   for (let i = 0; i < path.length - 1; i++) {
     const r = roadBetween(path[i], path[i + 1]);
-    d += r ? r[2] / ROAD_SPEED[r[3]] : 10;
+    d += (r ? r[2] / ROAD_SPEED[r[3]] : 10) * \u8766\u5937\u306E\u91CD\u307F(fid, path[i], path[i + 1]);
   }
   return Math.max(1, Math.ceil(d / MARCH_PER_MONTH));
 }
@@ -11619,15 +11627,8 @@ function canAttack(g, targetId) {
   if (!t || t.faction === g.player) return false;
   return g.castles.some((c) => c.faction === g.player && roadBetween(c.id, targetId));
 }
-function marchMonths(from, to) {
-  const path = findPath(from, to);
-  if (!path) return null;
-  let d = 0;
-  for (let i = 0; i < path.length - 1; i++) {
-    const r = roadBetween(path[i], path[i + 1]);
-    d += r ? r[2] / ROAD_SPEED[r[3]] : 10;
-  }
-  return Math.max(1, Math.ceil(d / MARCH_PER_MONTH));
+function marchMonths(from, to, fid) {
+  return marchMonthsOf(findPath(from, to), fid);
 }
 
 // src/data/ships.js
@@ -12902,6 +12903,24 @@ var DIPLO = [
     why: "\u4FE1\u752872\u4EE5\u4E0A\u3002\u4E0A\u4E0B\u306E\u3042\u308B\u9593\u67C4\u3067\u306F\u7D50\u3079\u306C\uFF08\u307E\u305A\u72EC\u7ACB\u3059\u308B\u304B\u3001\u76F8\u624B\u3092\u89E3\u304D\u653E\u3064\u3053\u3068\uFF09",
     need: (r, me, you) => r.trust >= 72 && !SUBJECT.includes(r.state)
   },
+  /* 道を借りる（借道／GDD 11.1）。
+  
+       他家の領を軍が抜けるのは、戦国において重大な外交であった。同盟を
+       結んでいるからといって、勝手に通れるものではない。道を借りるには
+       使者を立て、金を積み、見返りを約す。断られることもある。
+       中国の古典に「仮道伐虢」といい、道を貸した国が滅ぼされる話がある。
+       貸すほうにも覚悟が要る。
+  
+       誼のある相手（同盟・不可侵）にだけ願える。成れば半年のあいだ、
+       その家の領を兵が通れる。期限が切れれば、また閉じる。 */
+  {
+    key: "\u9053\u3092\u501F\u308A\u308B",
+    cost: 260,
+    months: 6,
+    \u501F\u9053: true,
+    why: "\u540C\u76DF\u304B\u4E0D\u53EF\u4FB5\u306E\u76F8\u624B\u30FB\u4FE1\u752860\u4EE5\u4E0A\u3002\u534A\u5E74\u306E\u3042\u3044\u3060\u3001\u305D\u306E\u5BB6\u306E\u9818\u3092\u901A\u308C\u308B",
+    need: (r) => ["\u540C\u76DF", "\u4E0D\u53EF\u4FB5"].includes(r.state) && r.trust >= 60
+  },
   /* ------------------------------------------------ 相手を従える */
   {
     key: "\u5F93\u5C5E\u3055\u305B\u308B",
@@ -13034,7 +13053,7 @@ var FACTIONS = {
   kitabatake: { id: "kitabatake", name: "\u5317\u7560\u5BB6", color: "#6B8E5A", mon: "\u5272\u308A\u83F1", playable: true, desc: "\u4F0A\u52E2\u56FD\u53F8\u306E\u5BB6\u67C4\u3002\u5357\u4F0A\u52E2\u306B\u6839\u3092\u5F35\u308B\u304C\u3001\u5317\u4F0A\u52E2\u306F\u8AF8\u5BB6\u306B\u5206\u304B\u308C\u3066\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   kanbe: { id: "kanbe", name: "\u795E\u6238\u5BB6", color: "#8C7A4A", mon: "\u4E80\u7532", gold: 2600, prestige: 50, mobilization: 1 },
   ikko: { id: "ikko", name: "\u9577\u5CF6\u4E00\u5411\u8846", color: "#8B5E3C", mon: "\u8F2A\u5B9D", gold: 2600, prestige: 50, mobilization: 1 },
-  kuki: { id: "kuki", name: "\u4E5D\u9B3C\u5BB6", color: "#4A7A8C", mon: "\u4E03\u66DC", gold: 2600, prestige: 50, mobilization: 1 },
+  kuki: { id: "kuki", name: "\u4E5D\u9B3C\u5BB6", color: "#4A7A8C", mon: "\u4E03\u66DC", \u6C34\u8ECD: true, gold: 2600, prestige: 50, mobilization: 1 },
   rokkaku: { id: "rokkaku", name: "\u516D\u89D2\u5BB6", color: "#A0522D", mon: "\u56DB\u3064\u76EE\u7D50", playable: true, desc: "\u8FD1\u6C5F\u89B3\u97F3\u5BFA\u306B\u62E0\u308B\u540D\u9580\u3002\u77F3\u9AD8\u306F\u8C4A\u304B\u3060\u304C\u3001\u5317\u306E\u6D45\u4E95\u304C\u96E2\u308C\u3064\u3064\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   azai: { id: "azai", name: "\u6D45\u4E95\u5BB6", color: "#5A4A8C", mon: "\u4E09\u3064\u76DB\u6728\u74DC", playable: true, desc: "\u5317\u8FD1\u6C5F\u5C0F\u8C37\u306E\u65B0\u8208\u3002\u516D\u89D2\u306B\u62BC\u3055\u3048\u3089\u308C\u3001\u5F53\u4E3B\u4E45\u653F\u306F\u5C48\u5F93\u3092\u9078\u3093\u3067\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   wakasa: { id: "wakasa", name: "\u82E5\u72ED\u6B66\u7530\u5BB6", color: "#7A8C5A", mon: "\u5272\u308A\u83F1", gold: 2600, prestige: 50, mobilization: 1 },
@@ -13075,7 +13094,7 @@ var FACTIONS = {
   chiba: { id: "chiba", name: "\u5343\u8449\u5BB6", color: "#8C4A7A", desc: "\u4E0B\u7DCF\u306E\u540D\u9580\u5343\u8449\u3002\u5317\u6761\u3068\u91CC\u898B\u306E\u9593\u3067\u63FA\u308C\u308B\u3002", mon: "\u6708\u661F", gold: 2600, prestige: 50, mobilization: 1 },
   kagawa: { id: "kagawa", name: "\u9999\u5DDD\u5BB6", color: "#7A6B8C", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
   kono: { id: "kono", name: "\u6CB3\u91CE\u5BB6", color: "#4A8C8C", desc: "\u4F0A\u4E88\u6E6F\u7BC9\u306E\u6CB3\u91CE\u3002\u702C\u6238\u5185\u306E\u6C34\u8ECD\u3068\u7D50\u3073\u3001\u7D30\u304F\u9577\u304F\u4FDD\u3064\u3002", mon: "\u6298\u6577\u306B\u4E09\u6587\u5B57", gold: 2600, prestige: 50, mobilization: 1 },
-  kurushima: { id: "kurushima", name: "\u6765\u5CF6\u6751\u4E0A\u5BB6", color: "#3C6B8C", mon: "\u6298\u6577\u306B\u4E09\u6587\u5B57", gold: 2600, prestige: 50, mobilization: 1 },
+  kurushima: { id: "kurushima", name: "\u6765\u5CF6\u6751\u4E0A\u5BB6", color: "#3C6B8C", mon: "\u6298\u6577\u306B\u4E09\u6587\u5B57", \u6C34\u8ECD: true, gold: 2600, prestige: 50, mobilization: 1 },
   saionji: { id: "saionji", name: "\u897F\u5712\u5BFA\u5BB6", color: "#8C6B4A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
   ichijo: { id: "ichijo", name: "\u571F\u4F50\u4E00\u6761\u5BB6", color: "#B8A44A", mon: "\u6850", gold: 2600, prestige: 50, mobilization: 1 },
   chosokabe: { id: "chosokabe", name: "\u9577\u5B97\u6211\u90E8\u5BB6", color: "#6B8C3C", desc: "\u571F\u4F50\u5CA1\u8C4A\u306E\u5C0F\u52E2\u529B\u3002\u56FD\u89AA\u3068\u82E5\u304D\u5143\u89AA\u306E\u3082\u3068\u3001\u56DB\u56FD\u306E\u7D71\u4E00\u3092\u5922\u898B\u308B\u3002", mon: "\u9162\u6F3F\u8349", gold: 2600, prestige: 50, mobilization: 1 },
@@ -13108,7 +13127,7 @@ var FACTIONS = {
   shiga: { id: "shiga", name: "\u5FD7\u8CC0\u5BB6", color: "#5A6B4A", mon: "\u674F\u8449", gold: 2600, prestige: 50, mobilization: 1 },
   ryuzoji: { id: "ryuzoji", name: "\u9F8D\u9020\u5BFA\u5BB6", color: "#4A5A8C", desc: "\u80A5\u524D\u4F50\u8CC0\u306E\u9F8D\u9020\u5BFA\u3002\u5C11\u5F10\u3092\u9000\u3051\u3066\u81EA\u7ACB\u3057\u3001\u5317\u4E5D\u5DDE\u306B\u7259\u3092\u5265\u304F\u3002", mon: "\u65E5\u8DB3", gold: 2600, prestige: 50, mobilization: 1 },
   hata: { id: "hata", name: "\u6CE2\u591A\u5BB6", color: "#8C6B7A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
-  matsura: { id: "matsura", name: "\u677E\u6D66\u515A", color: "#3C8C8C", mon: "\u4E09\u3064\u661F", gold: 2600, prestige: 50, mobilization: 1 },
+  matsura: { id: "matsura", name: "\u677E\u6D66\u515A", color: "#3C8C8C", mon: "\u4E09\u3064\u661F", \u6C34\u8ECD: true, gold: 2600, prestige: 50, mobilization: 1 },
   arima: { id: "arima", name: "\u6709\u99AC\u5BB6", color: "#8C4A8C", mon: "\u5510\u82B1", gold: 2600, prestige: 50, mobilization: 1 },
   omura: { id: "omura", name: "\u5927\u6751\u5BB6", color: "#5A8C8C", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
   kikuchi: { id: "kikuchi", name: "\u83CA\u6C60\u5BB6", color: "#8C7A3C", mon: "\u9DF9\u306E\u7FBD", gold: 2600, prestige: 50, mobilization: 1 },
@@ -14186,8 +14205,11 @@ function initState(player) {
     ["oda", "yamato", "\u6575\u5BFE", 18],
     // 織田三家は同族ながら相争う
     ["oda", "ise", "\u6575\u5BFE", 22],
-    ["mizuno", "oda", "\u540C\u76DF", 68],
-    // 水野は織田方に転じていた
+    /* 水野信元は天文十三年に今川と縁を切り（於大の方の離縁がその結果である）、
+       織田方に転じた。独立した国人でありながら織田に属し、のちに信長に
+       誅されるほど臣下に近い。対等の同盟より、従属のほうが近い。 */
+    ["mizuno", "oda", "\u5F93\u5C5E", 68, "oda"],
+    // 水野は織田の旗の下に転じていた
     ["oda", "saito", "\u6575\u5BFE", 20],
     // 美濃をめぐる争い
     // ── 畿内・西国
@@ -14877,18 +14899,28 @@ function migrateSave(s2) {
   }
   return s2;
 }
+var \u65D7\u306E\u4E0B\u304B = (g, \u4E0A, \u4E0B) => {
+  if (!\u4E0A || !\u4E0B) return false;
+  if (\u4E0A === \u4E0B) return true;
+  const r = (g.relations || {})[relKey2(\u4E0A, \u4E0B)];
+  return !!r && SUBJECT.includes(r.state) && r.master === \u4E0A;
+};
+var \u9053\u3092\u501F\u308A\u3066\u3044\u308B = (s2, fid, \u76F8) => {
+  const \u671F = (s2.\u501F\u9053 || {})[`${fid}>${\u76F8}`];
+  if (!\u671F) return false;
+  return s2.year < \u671F.y || s2.year === \u671F.y && s2.month <= \u671F.m;
+};
 var \u901A\u308C\u308B\u57CE = (s2, fid) => (id) => {
   const mid = s2.castles.find((y) => y.id === id);
   if (!mid) return true;
-  if (mid.faction === fid) return true;
-  const st = relOf2(s2, fid, mid.faction).state;
-  return st === "\u540C\u76DF" || st === "\u5F93\u5C5E" || st === "\u81E3\u5F93";
+  return \u65D7\u306E\u4E0B\u304B(s2, fid, mid.faction) || \u9053\u3092\u501F\u308A\u3066\u3044\u308B(s2, fid, mid.faction);
 };
+var \u6C34\u8ECD\u306E\u5BB6 = (s2, fid) => !!(s2.factions[fid] || {}).\u6C34\u8ECD;
+var \u5C71\u8D8A\u3048\u306E\u9053 = /* @__PURE__ */ new Set(["\u5C71\u9053", "\u96E3\u6240"]);
 function \u8ECD\u306E\u9053(s2, fid, from, to) {
   if (from === to) return [from];
-  const \u7684 = s2.castles.find((x) => x.id === to);
-  if (\u7684 && underMyBanner(s2, fid, \u7684.faction)) return findPath(from, to);
-  return findPathVia(from, to, \u901A\u308C\u308B\u57CE(s2, fid));
+  const \u9053\u306E\u53EF\u5426 = \u6C34\u8ECD\u306E\u5BB6(s2, fid) ? (r) => !r || !\u5C71\u8D8A\u3048\u306E\u9053.has(r[3]) : null;
+  return findPathVia(from, to, \u901A\u308C\u308B\u57CE(s2, fid), \u9053\u306E\u53EF\u5426);
 }
 
 // src/core/terrainCanvas.js
@@ -16443,6 +16475,15 @@ function \u5916\u4EA4\u3092\u7D50\u3076(s2, actor, fid, key) {
     me.prestige = clamp((me.prestige == null ? 50 : me.prestige) + 3, 0, 100);
     \u6587 = `${me.name}\u304C${you.name}\u3092\u4E0A\u4E0B\u304B\u3089\u89E3\u304D\u3001\u4E2D\u7ACB\u306B\u623B\u3057\u305F\u3002`;
     s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+  } else if (def.\u501F\u9053) {
+    const \u671F\u9650 = {
+      y: s2.year + Math.floor((s2.month + def.months - 1) / 12),
+      m: (s2.month + def.months - 1) % 12 + 1
+    };
+    s2.\u501F\u9053 = { ...s2.\u501F\u9053 || {}, [`${actor}>${fid}`]: \u671F\u9650 };
+    r.trust = clamp(r.trust + 2, 0, 100);
+    \u6587 = `${you.name}\u304C${me.name}\u306B\u9053\u3092\u8CB8\u3057\u305F\u3002${\u671F\u9650.y}\u5E74${\u671F\u9650.m}\u6708\u307E\u3067\u3001${you.name}\u306E\u9818\u3092\u5175\u304C\u901A\u308C\u308B\u3002`;
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
   } else {
     r.state = def.state || key;
     if (SUBJECT.includes(r.state)) def = { ...def, months: null };
@@ -17862,7 +17903,7 @@ function advanceMonth(prev, g) {
     let budget = MARCH_PER_MONTH * (a.food > 0 ? 1 : 0.5);
     while (budget > 0 && a.path.length > 1) {
       const r = roadBetween(a.path[0], a.path[1]);
-      const need = (r ? r[2] : 10) / ROAD_SPEED[r ? r[3] : "\u8857\u9053"];
+      const need = (r ? r[2] : 10) / ROAD_SPEED[r ? r[3] : "\u8857\u9053"] * \u8766\u5937\u306E\u91CD\u307F(a.faction, a.path[0], a.path[1]);
       const rem = need * (1 - a.prog);
       if (r && r[3] === "\u6D77\u8DEF" && a.prog === 0 && !a.seaDone) {
         a.seaDone = true;
@@ -18449,7 +18490,7 @@ function advanceMonth(prev, g) {
       const passable2 = (t2) => {
         const path = \u8ECD\u306E\u9053(s2, fid, c.id, t2.id);
         if (!path) return false;
-        if ((marchMonths(c.id, t2.id) || 99) > 6) return false;
+        if ((marchMonths(c.id, t2.id, fid) || 99) > 6) return false;
         for (let i = 1; i < path.length - 1; i++) {
           const mid = s2.castles.find((y) => y.id === path[i]);
           if (!mid) return false;
@@ -26734,7 +26775,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
       const \u4E0B = \u4E3B == null ? null : \u4E3B !== g.player;
       const \u79C1 = diploStat(g, g.player), \u6575 = diploStat(g, dt);
       const \u7FA4 = [
-        { \u540D: "\u8ABC\u3092\u901A\u3058\u308B", \u5217: ["\u89AA\u5584", "\u4E0D\u53EF\u4FB5", "\u540C\u76DF"] },
+        { \u540D: "\u8ABC\u3092\u901A\u3058\u308B", \u5217: ["\u89AA\u5584", "\u4E0D\u53EF\u4FB5", "\u540C\u76DF", "\u9053\u3092\u501F\u308A\u308B"] },
         { \u540D: "\u76F8\u624B\u3092\u5F93\u3048\u308B", \u5217: ["\u5F93\u5C5E\u3055\u305B\u308B", "\u81E3\u5F93\u3055\u305B\u308B", "\u89E3\u304D\u653E\u3064"] },
         { \u540D: "\u81EA\u3089\u304C\u819D\u3092\u5C48\u3059\u308B", \u5217: ["\u5F93\u5C5E\u3059\u308B", "\u81E3\u5F93\u3059\u308B", "\u72EC\u7ACB"] }
       ];

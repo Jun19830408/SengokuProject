@@ -59,7 +59,10 @@ export function initState(player) {
     ["oda", "imagawa", "敵対", 12],         // 三河をめぐる争い
     ["oda", "yamato", "敵対", 18],          // 織田三家は同族ながら相争う
     ["oda", "ise", "敵対", 22],
-    ["mizuno", "oda", "同盟", 68],          // 水野は織田方に転じていた
+    /* 水野信元は天文十三年に今川と縁を切り（於大の方の離縁がその結果である）、
+       織田方に転じた。独立した国人でありながら織田に属し、のちに信長に
+       誅されるほど臣下に近い。対等の同盟より、従属のほうが近い。 */
+    ["mizuno", "oda", "従属", 68, "oda"],   // 水野は織田の旗の下に転じていた
     ["oda", "saito", "敵対", 20],           // 美濃をめぐる争い
     // ── 畿内・西国
     ["ashikaga", "miyoshi", "従属", 44],    // 将軍家は細川・三好に擁されていた
@@ -794,18 +797,45 @@ export function migrateSave(s) {
 
    通れる道が無ければ null を返す。素の道へ落として繕ったりはしない。
    落とせば、この掟は無いのと同じである。 */
+/* 通ってよいのは、自家の領と、自分の旗の下にある家の領だけである。
+
+   上下は一方通行である。従えている側は、従えた家の領を兵が通る。断れる
+   道理がない。逆に、従っている側が主家の領を勝手に通り抜けて、その先の
+   家へ攻め入ることはできない。主家がそれを許すはずがない。
+
+   同盟と不可侵は、通行を許さない。誼を通じることと、領内を軍が抜ける
+   ことは別である。同盟の領を素通りできてしまうと、同盟を結んだ相手の
+   隣家が、いきなり遠くの家に攻められることになる。 */
+export const 旗の下か = (g, 上, 下) => {
+  if (!上 || !下) return false;
+  if (上 === 下) return true;
+  const r = (g.relations || {})[relKey(上, 下)];
+  return !!r && SUBJECT.includes(r.state) && r.master === 上;
+};
+
+// 道を借りているか（借道）。向きがある。借りた側だけが通れる。
+export const 道を借りている = (s, fid, 相) => {
+  const 期 = (s.借道 || {})[`${fid}>${相}`];
+  if (!期) return false;
+  return s.year < 期.y || (s.year === 期.y && s.month <= 期.m);
+};
+
 export const 通れる城 = (s, fid) => (id) => {
   const mid = s.castles.find((y) => y.id === id);
   if (!mid) return true;                       // 城でない中継（湊・宿）は通れる
-  if (mid.faction === fid) return true;
-  const st = relOf(s, fid, mid.faction).state;
-  return st === "同盟" || st === "従属" || st === "臣従";
+  return 旗の下か(s, fid, mid.faction) || 道を借りている(s, fid, mid.faction);
 };
+
+/* 水軍の家は、山を越えて攻めない（GDD 10章）。
+
+   来島村上が伊予の島から四国山地を越えて土佐の岡豊城を囲む、ということが
+   起きた。旗の下の掟には適っていたが、絵として成り立たない。船で立つ家は
+   船で戦う。街道と海路は通るが、山道と難所は通らない。 */
+export const 水軍の家 = (s, fid) => !!(s.factions[fid] || {}).水軍;
+const 山越えの道 = new Set(["山道", "難所"]);
 
 export function 軍の道(s, fid, from, to) {
   if (from === to) return [from];
-  const 的 = s.castles.find((x) => x.id === to);
-  // 旗の下の城へ入るのは攻めではない。どこを通っても構わない。
-  if (的 && underMyBanner(s, fid, 的.faction)) return findPath(from, to);
-  return findPathVia(from, to, 通れる城(s, fid));
+  const 道の可否 = 水軍の家(s, fid) ? (r) => !r || !山越えの道.has(r[3]) : null;
+  return findPathVia(from, to, 通れる城(s, fid), 道の可否);
 }
