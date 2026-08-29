@@ -14429,8 +14429,60 @@ function initState(player) {
     // 里見は信応を助けて上総を侵す
     ["kyogoku", "azai", "\u5F93\u5C5E", 46],
     // 名門京極は、被官であった浅井に擁されている
-    ["ii", "imagawa", "\u5F93\u5C5E", 60]
+    ["ii", "imagawa", "\u5F93\u5C5E", 60],
     // 井伊は今川の下に置かれ、人質を出している
+    /* 初めの間柄の増補（第四期）。第三期で抜けていた伊勢・北陸・奥羽ほか。
+       間柄が無いこと自体は差し支えないが、史実に間柄があった所は書く。 */
+    // ── 伊勢・志摩。南の国司北畠と、北の国人（長野・神戸・関）が争う
+    ["nagano_k", "kitabatake", "\u6575\u5BFE", 20],
+    // 長野工藤は北畠と伊勢を分けて争う
+    ["kanbe", "kitabatake", "\u6575\u5BFE", 24],
+    // 神戸ら北伊勢の国人も国司に従わない
+    ["kuki", "kitabatake", "\u5F93\u5C5E", 58],
+    // 志摩の九鬼は北畠の被官である
+    // ── 北陸。加賀一向一揆に対して、能登畠山と朝倉が共に戦った
+    ["hatakeyama", "kaga_ikko", "\u6575\u5BFE", 14],
+    ["hatakeyama", "asakura", "\u540C\u76DF", 60],
+    // 享禄・天文の乱以来の共闘
+    // ── 越後・佐渡。守護代長尾の下に、揚北衆と佐渡本間がある
+    ["agakita", "nagao", "\u5F93\u5C5E", 44],
+    // 揚北衆は長尾に属しつつ、しばしば背く
+    ["honma", "nagao", "\u5F93\u5C5E", 46],
+    // 佐渡本間は越後の下にある
+    // ── 関東。河越夜戦の直後、下野の佐野はなお上杉方
+    ["sano", "uesugi_y", "\u5F93\u5C5E", 46],
+    ["sano", "utsunomiya", "\u4E0D\u53EF\u4FB5", 50],
+    // 下野の国人どうし、境を侵さない
+    // ── 備中。庄と石川は姻戚、三村とは争う
+    ["shimizu", "shoo", "\u540C\u76DF", 58],
+    ["shimizu", "mimura", "\u6575\u5BFE", 22],
+    // ── 奥羽。伊達稙宗の縁が北へ広がっている
+    ["kokubun", "date", "\u5F93\u5C5E", 46],
+    // 陸奥宮城の国分は伊達に属する
+    ["kasai", "date", "\u4E0D\u53EF\u4FB5", 52],
+    // 葛西晴胤は天文の乱で稙宗方
+    ["kasai", "osaki", "\u6575\u5BFE", 24],
+    // 葛西と大崎は境を接して争う
+    ["abe", "nanbu", "\u4E0D\u53EF\u4FB5", 48],
+    // 遠野阿曽沼は南部と境を接する
+    ["shirakawa", "satake", "\u6575\u5BFE", 18],
+    // 白河結城と佐竹は長年の抗争
+    ["shirakawa", "nasu", "\u6575\u5BFE", 22],
+    // 那須とも境目を争う
+    ["nikaido", "ashina", "\u4E0D\u53EF\u4FB5", 50],
+    // 須賀川二階堂は蘆名の圧を受けつつ保つ
+    ["daihoji", "mogami", "\u6575\u5BFE", 22],
+    // 庄内大宝寺と最上は争う
+    ["daihoji", "onodera", "\u6575\u5BFE", 20],
+    ["onodera", "ando", "\u6575\u5BFE", 22],
+    // 小野寺と安東は雄勝・仙北を争う
+    ["onodera", "mogami", "\u6575\u5BFE", 20],
+    // ── 蝦夷・琉球
+    ["ainu_w", "kakizaki", "\u6575\u5BFE", 20],
+    // 蠣崎とアイヌの和議は天文十九年である
+    ["ainu_e", "kakizaki", "\u6575\u5BFE", 18],
+    ["ryukyu", "shimazu", "\u4E0D\u53EF\u4FB5", 54]
+    // 琉球と島津は通交の利を分かつ
   ];
   for (const [a, b, st, tr, \u4E3B] of START_TIES) {
     const k = relKey2(a, b);
