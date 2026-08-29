@@ -22,7 +22,7 @@ import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy } f
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { isVassal, underMyBanner, 援けに着く } from "../core/state.js";
+import { isVassal, underMyBanner, 援けに着く, 軍の道 } from "../core/state.js";
 /* ==========================================================================
    月送り ─ 天下じゅうの一月
    この一手で、諸家の内政・調略・出陣・包囲・寿命・一揆・官位までが動く。
@@ -719,6 +719,9 @@ export function advanceMonth(prev, g) {
           const take = [...gs].sort((x, y2) => y2.lead - x.lead).slice(0, 1);
           const send = Math.min(Math.round(spare * 0.6), c2.local);
           if (send < 200) continue;
+          // 他家の領を素通りしては行けない。道が無ければ出さない（GDD 7.1）
+          const 道 = 軍の道(s, a.faction, c2.id, a.target);
+          if (!道) continue;
           c2.local -= send;
           for (const t2 of take) t2.at = null;
           const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
@@ -727,7 +730,7 @@ export function advanceMonth(prev, g) {
             id: 軍の名(s, "r"), faction: a.faction, from: c2.id,
             gens: take.map((x) => x.id), local: send, localTrain: c2.localTrain, rost: tk.taken,
             men: send + take.reduce((t2, x) => t2 + x.retinue, 0), at: c2.id,
-            path: findPath(c2.id, a.target), prog: 0, food: Math.round(send * 0.6),
+            path: 道, prog: 0, food: Math.round(send * 0.6),
             target: a.target, aid: a.faction,
           });
           sent += send;
@@ -790,7 +793,7 @@ export function advanceMonth(prev, g) {
         if (enc > 0.75) continue;                       // 固く囲まれていれば入れない
         if (Math.random() > 0.55 * (1 - enc)) continue;
         const from = s.castles.filter((c2) => c2.faction === cs.faction && c2.id !== cs.id)
-          .map((c2) => ({ c2, p: findPath(c2.id, cs.id) })).filter((x) => x.p)
+          .map((c2) => ({ c2, p: 軍の道(s, c2.faction, c2.id, cs.id) })).filter((x) => x.p)
           .sort((a, b) => a.p.length - b.p.length)[0];
         if (!from) continue;
         const fg = s.generals.filter((x) => x.at === from.c2.id && x.faction === from.c2.faction && !x.captive);
@@ -807,7 +810,7 @@ export function advanceMonth(prev, g) {
           local: send, localTrain: from.c2.localTrain,
           rost: (() => { const tk = rosterTake(from.c2.rost || newRoster(from.c2.local + send, `loc-${from.c2.id}`), send); from.c2.rost = tk.rest; return tk.taken; })(),
           men: send + take.reduce((a, x) => a + x.retinue, 0), at: from.c2.id,
-          path: findPath(from.c2.id, cs.id), prog: 0, food: Math.round(send * 0.6), target: cs.id, relief: cs.id,
+          path: from.p, prog: 0, food: Math.round(send * 0.6), target: cs.id, relief: cs.id,
         });
         sg2.relief = rid;
         events.push(`${s.factions[cs.faction].name}が${cs.name}へ後詰を差し向けた（${from.c2.name}より${fmt(send)}人）。`);
@@ -955,7 +958,11 @@ export function advanceMonth(prev, g) {
           const avail = c.local + gens.reduce((a, x) => a + x.retinue, 0) - minGarrison(c);
           if (avail < 700) continue;
           const passable2 = (t2) => {
-            const path = findPath(c.id, t2.id);
+            /* 他家の領を素通りしてはならない（GDD 7.1）。遊ぶ側の画面には
+               この掟が入っていたが、他家の采配には入っていなかった。
+               蘆名の軍が二階堂と白河結城の領を素通りして那須を攻める、
+               ということが起きていた。 */
+            const path = 軍の道(s, fid, c.id, t2.id);
             if (!path) return false;
             if ((marchMonths(c.id, t2.id) || 99) > 6) return false;
             for (let i = 1; i < path.length - 1; i++) {
@@ -984,7 +991,7 @@ export function advanceMonth(prev, g) {
             return w;
           };
           const scored2 = reach.map((x) => ({
-            x, s2: worth(x) - findPath(c.id, x.id).length * 1.2
+            x, s2: worth(x) - (軍の道(s, fid, c.id, x.id) || []).length * 1.2
               + (aim && aim.target === x.id ? 14 : 0),
           })).sort((a, b) => b.s2 - a.s2);
           const cand = scored2.length ? scored2[0].x : null;
@@ -1003,6 +1010,8 @@ export function advanceMonth(prev, g) {
             else if (p2 > 0.15) need = 0.68;
           }
           if (avail < foeMen2 * need) continue;
+          const 攻め道 = 軍の道(s, fid, c.id, cand.id);
+          if (!攻め道) continue;                      // 通れる領が無ければ攻められない
           const take = gens.sort((a, b) => b.lead - a.lead).slice(0, 3);
           const send = Math.round(avail * 0.85);
           const localSend = Math.max(0, Math.min(c.local, send - take.reduce((a, x) => a + x.retinue, 0)));
@@ -1010,7 +1019,7 @@ export function advanceMonth(prev, g) {
           s.armies.push({
             id: 軍の名(s, "a"), faction: fid, from: c.id, gens: take.map((x) => x.id),
             local: localSend, localTrain: c.localTrain, men: localSend + take.reduce((a, x) => a + x.retinue, 0),
-            at: c.id, path: findPath(c.id, cand.id), prog: 0, food: Math.round(send * 0.6), target: cand.id,
+            at: c.id, path: 攻め道, prog: 0, food: Math.round(send * 0.6), target: cand.id,
           });
           for (const t of take) t.at = null;
           c.food -= Math.round(send * 0.6);

@@ -14877,6 +14877,19 @@ function migrateSave(s2) {
   }
   return s2;
 }
+var \u901A\u308C\u308B\u57CE = (s2, fid) => (id) => {
+  const mid = s2.castles.find((y) => y.id === id);
+  if (!mid) return true;
+  if (mid.faction === fid) return true;
+  const st = relOf2(s2, fid, mid.faction).state;
+  return st === "\u540C\u76DF" || st === "\u5F93\u5C5E" || st === "\u81E3\u5F93";
+};
+function \u8ECD\u306E\u9053(s2, fid, from, to) {
+  if (from === to) return [from];
+  const \u7684 = s2.castles.find((x) => x.id === to);
+  if (\u7684 && underMyBanner(s2, fid, \u7684.faction)) return findPath(from, to);
+  return findPathVia(from, to, \u901A\u308C\u308B\u57CE(s2, fid));
+}
 
 // src/core/terrainCanvas.js
 function buildTerrainCanvas() {
@@ -16737,7 +16750,7 @@ function factionAim(s2, fid) {
   for (const c of mine) {
     for (const t of s2.castles) {
       if (t.faction === fid) continue;
-      const path = findPath(c.id, t.id);
+      const path = \u8ECD\u306E\u9053(s2, fid, c.id, t.id);
       if (!path) continue;
       const \u76F8\u624B = \u5BB6\u3092\u898B\u308B(t.faction);
       if (\u76F8\u624B.\u548C\u7766) continue;
@@ -18175,6 +18188,8 @@ function advanceMonth(prev, g) {
       const take = [...gs].sort((x, y2) => y2.lead - x.lead).slice(0, 1);
       const send = Math.min(Math.round(spare * 0.6), c2.local);
       if (send < 200) continue;
+      const \u9053 = \u8ECD\u306E\u9053(s2, a.faction, c2.id, a.target);
+      if (!\u9053) continue;
       c2.local -= send;
       for (const t2 of take) t2.at = null;
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
@@ -18189,7 +18204,7 @@ function advanceMonth(prev, g) {
         rost: tk.taken,
         men: send + take.reduce((t2, x) => t2 + x.retinue, 0),
         at: c2.id,
-        path: findPath(c2.id, a.target),
+        path: \u9053,
         prog: 0,
         food: Math.round(send * 0.6),
         target: a.target,
@@ -18257,7 +18272,7 @@ function advanceMonth(prev, g) {
     const enc = (sg2.enc == null ? 60 : sg2.enc) / 100;
     if (enc > 0.75) continue;
     if (Math.random() > 0.55 * (1 - enc)) continue;
-    const from = s2.castles.filter((c2) => c2.faction === cs.faction && c2.id !== cs.id).map((c2) => ({ c2, p: findPath(c2.id, cs.id) })).filter((x) => x.p).sort((a, b) => a.p.length - b.p.length)[0];
+    const from = s2.castles.filter((c2) => c2.faction === cs.faction && c2.id !== cs.id).map((c2) => ({ c2, p: \u8ECD\u306E\u9053(s2, c2.faction, c2.id, cs.id) })).filter((x) => x.p).sort((a, b) => a.p.length - b.p.length)[0];
     if (!from) continue;
     const fg = s2.generals.filter((x) => x.at === from.c2.id && x.faction === from.c2.faction && !x.captive);
     const avail = from.c2.local + fg.reduce((a, x) => a + x.retinue, 0) - minGarrison(from.c2);
@@ -18282,7 +18297,7 @@ function advanceMonth(prev, g) {
       })(),
       men: send + take.reduce((a, x) => a + x.retinue, 0),
       at: from.c2.id,
-      path: findPath(from.c2.id, cs.id),
+      path: from.p,
       prog: 0,
       food: Math.round(send * 0.6),
       target: cs.id,
@@ -18432,7 +18447,7 @@ function advanceMonth(prev, g) {
       const avail = c.local + gens.reduce((a, x) => a + x.retinue, 0) - minGarrison(c);
       if (avail < 700) continue;
       const passable2 = (t2) => {
-        const path = findPath(c.id, t2.id);
+        const path = \u8ECD\u306E\u9053(s2, fid, c.id, t2.id);
         if (!path) return false;
         if ((marchMonths(c.id, t2.id) || 99) > 6) return false;
         for (let i = 1; i < path.length - 1; i++) {
@@ -18458,7 +18473,7 @@ function advanceMonth(prev, g) {
       };
       const scored2 = reach.map((x) => ({
         x,
-        s2: worth(x) - findPath(c.id, x.id).length * 1.2 + (aim && aim.target === x.id ? 14 : 0)
+        s2: worth(x) - (\u8ECD\u306E\u9053(s2, fid, c.id, x.id) || []).length * 1.2 + (aim && aim.target === x.id ? 14 : 0)
       })).sort((a, b) => b.s2 - a.s2);
       const cand = scored2.length ? scored2[0].x : null;
       if (!cand) continue;
@@ -18473,6 +18488,8 @@ function advanceMonth(prev, g) {
         else if (p2 > 0.15) need = 0.68;
       }
       if (avail < foeMen2 * need) continue;
+      const \u653B\u3081\u9053 = \u8ECD\u306E\u9053(s2, fid, c.id, cand.id);
+      if (!\u653B\u3081\u9053) continue;
       const take = gens.sort((a, b) => b.lead - a.lead).slice(0, 3);
       const send = Math.round(avail * 0.85);
       const localSend = Math.max(0, Math.min(c.local, send - take.reduce((a, x) => a + x.retinue, 0)));
@@ -18486,7 +18503,7 @@ function advanceMonth(prev, g) {
         localTrain: c.localTrain,
         men: localSend + take.reduce((a, x) => a + x.retinue, 0),
         at: c.id,
-        path: findPath(c.id, cand.id),
+        path: \u653B\u3081\u9053,
         prog: 0,
         food: Math.round(send * 0.6),
         target: cand.id

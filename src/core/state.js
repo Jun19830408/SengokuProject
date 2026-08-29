@@ -2,6 +2,7 @@ import { extraIncome, fiefWanted } from "./rank.js";
 import { newRoster } from "./roster.js";
 import { 姫を整える } from "./hime.js";
 import { clamp, fmt, monthsBetween } from "./util.js";
+import { findPath, findPathVia } from "./paths.js";
 import { CASTLES, TOWNS } from "../data/castles.js";
 import { SPECIAL_OPTIONS } from "../data/diplo.js";
 import { FACTIONS } from "../data/factions.js";
@@ -774,4 +775,37 @@ export function migrateSave(s) {
   // 姫のいない古い記録には、いま立てる（GDD 6.8）
   if (!Array.isArray(s.hime)) { s.hime = []; 姫を整える(s); }
   return s;
+}
+
+/* ------------------------------------------------ 軍の道（GDD 7.1）
+
+   兵を出すとき、他家の領を素通りしてはならない。通ってよいのは、
+   自家の城と、旗の下・同盟の城だけである。目当ての城そのものは通れずとも
+   よい――そこへ攻め入るのだから。
+
+   この掟は遊ぶ側の画面（MapScreen の 出陣の道、panels の出陣先選び）には
+   入っていたが、他家の采配には入っていなかった。他家は findPath を素で
+   使い、いちばん安い道を辿っていた。
+
+   そのため、来島村上が伊予の国分山城から、河野の川之江城を素通りして
+   土佐の岡豊城へ攻め込む、ということが起きた。地図の上では道が繋がって
+   いるが、途中は他家の領である。遊ぶ側から見れば「見えない街道がある」
+   としか映らない。
+
+   通れる道が無ければ null を返す。素の道へ落として繕ったりはしない。
+   落とせば、この掟は無いのと同じである。 */
+export const 通れる城 = (s, fid) => (id) => {
+  const mid = s.castles.find((y) => y.id === id);
+  if (!mid) return true;                       // 城でない中継（湊・宿）は通れる
+  if (mid.faction === fid) return true;
+  const st = relOf(s, fid, mid.faction).state;
+  return st === "同盟" || st === "従属" || st === "臣従";
+};
+
+export function 軍の道(s, fid, from, to) {
+  if (from === to) return [from];
+  const 的 = s.castles.find((x) => x.id === to);
+  // 旗の下の城へ入るのは攻めではない。どこを通っても構わない。
+  if (的 && underMyBanner(s, fid, 的.faction)) return findPath(from, to);
+  return findPathVia(from, to, 通れる城(s, fid));
 }

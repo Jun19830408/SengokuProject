@@ -1,5 +1,5 @@
 import { findPath } from "../core/paths.js";
-import { atPeace, relKey } from "../core/state.js";
+import { atPeace, relKey, 軍の道 } from "../core/state.js";
 import { clamp } from "../core/util.js";
 
 /* ------------------------------------------------- 家の方針（GDD 13.2）
@@ -60,7 +60,8 @@ export function factionAim(s, fid) {
   for (const c of mine) {
     for (const t of s.castles) {
       if (t.faction === fid) continue;
-      const path = findPath(c.id, t.id);
+      // 他家の領を素通りしては攻められない（GDD 7.1）
+      const path = 軍の道(s, fid, c.id, t.id);
       if (!path) continue;
       const 相手 = 家を見る(t.faction);
       if (相手.和睦) continue;
