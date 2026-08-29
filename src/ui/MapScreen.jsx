@@ -1893,7 +1893,21 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         <span style={{ flex: 1 }} />
         <select className="sel" value={pf.mobilization}
           onChange={(e) => setG((p) => { const s = structuredClone(p); s.factions[s.player].mobilization = +e.target.value; return s; })}>
-          {MOB_POLICY.map((m, i) => <option key={m.name} value={i}>{`動員：${m.name}（一万石 ${m.per}人）`}</option>)}
+          {/* 小身の家には軍役の割増がかかる（GDD 6.4）。段の素の値だけを出していると、
+              田を開いて器が広がっても「動員率が変わっていない」と読めてしまう。
+              当家の城をならした実の率を添える。 */}
+          {(() => {
+            const 我 = g.castles.filter((c) => c.faction === g.player);
+            const 石 = 我.reduce((a, c) => a + c.koku, 0);
+            const 実 = (i) => (石 <= 0 ? null
+              : Math.round(我.reduce((a, c) => a + troopCap(c, i, g), 0) / (石 / 10000)));
+            return MOB_POLICY.map((m, i) => {
+              const v = 実(i);
+              return (<option key={m.name} value={i}>
+                {`動員：${m.name}（一万石 ${m.per}人${v && v > m.per + 4 ? `／当家は ${v}人` : ""}）`}
+              </option>);
+            });
+          })()}
         </select>
         <button className="btn sm" onClick={() => setModal("manual")}>遊び方</button>
         <button className="btn sm" onClick={() => setModal("chronicle")}>戦国記</button>

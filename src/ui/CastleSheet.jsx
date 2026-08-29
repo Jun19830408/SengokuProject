@@ -3,7 +3,7 @@ import { RANSOM_DIV, ransomRank } from "../core/capture.js";
 import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/house.js";
 import { marchMonths } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
-import { RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap } from "../core/rank.js";
+import { 軍役の割増, RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap } from "../core/rank.js";
 import { canSee, relOf, isVassal, 主を探す } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
@@ -181,14 +181,20 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
               <div className="row"><span>直属家臣団</span><span className="v">{fmt(ret)} 人</span></div>
               <div className="row"><span>地域家臣団（練度 {Math.round(c.localTrain)}）</span><span className="v">{fmt(c.local)} 人</span></div>
               <div className="row"><span>地域家臣団の馴染</span><span className="v">{Math.round(c.najimi == null ? 70 : c.najimi)} / 100</span></div>
-              <div className="row"><span>守備最低数</span><span className="v">{fmt(garrison)} 人</span></div>
+              {/* 軍役の器は地域家臣団だけを縛る。手勢は武将の禄が養う（GDD 6.4）。
+                  「あと雇える兵」を出さねば、田を開いて器が広がったことが読めない。 */}
               <div className="row" style={{ color: f.color, fontWeight: 600 }}>
-                <span>出征可能兵</span><span className="v">{fmt(Math.max(0, total - garrison))} 人</span>
+                <span>あと雇える兵</span><span className="v">{fmt(Math.max(0, cap - c.local))} 人</span>
               </div>
-              <div className="meter"><i style={{ width: `${Math.min(100, (total / Math.max(1, cap)) * 100)}%`, background: f.color }} /></div>
+              <div className="meter"><i style={{ width: `${Math.min(100, (c.local / Math.max(1, cap)) * 100)}%`, background: f.color }} /></div>
               <div style={{ fontSize: 11, color: U.dim, marginTop: 4 }}>
-                軍役上限 {fmt(cap)} 人（馴染が低いと動員も落ちる）
+                軍役上限 {fmt(cap)} 人 ＝ 一万石あたり {fmt(Math.round(cap / Math.max(1, c.koku / 10000)))} 人
+                {軍役の割増(c.koku) > 1.01 && `（小身の割増 ×${軍役の割増(c.koku).toFixed(2)}）`}
+                。馴染が低いと動員も落ちる
               </div>
+              {/* 守備最低数は目安である。城を空にして野に出るのも一つの決断（GDD 9.2）。 */}
+              <div className="row"><span>出せる兵</span><span className="v">{fmt(total)} 人</span></div>
+              <div className="row"><span>守るに要る兵</span><span className="v">{fmt(garrison)} 人（目安）</span></div>
               {c.intrigue && <div style={{ fontSize: 12, color: "#8A6A34", marginTop: 6 }}>この城には内応の密約が仕込まれている。</div>}
             </>
           )}
@@ -412,9 +418,10 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
               {tab === "軍事" && (
                 <>
                   <div style={{ fontSize: 12, color: U.dim, marginBottom: 8 }}>
-                    出征可能兵 {fmt(Math.max(0, total - garrison))} 人。守備最低数は城に残ります。
+                    出せる兵 {fmt(total)} 人（守るに要る兵 {fmt(garrison)} 人は目安。
+                    城を空にして出ることもできるが、攻められれば落ちる）
                   </div>
-                  <button className="btn dark" style={{ width: "100%" }} disabled={total - garrison < 200 || !gens.length} onClick={onSortie}>出陣</button>
+                  <button className="btn dark" style={{ width: "100%" }} disabled={total < 200 || !gens.length} onClick={onSortie}>出陣</button>
                   {/* 攻められているときは、他の城から援軍を呼べる（GDD 7.3） */}
                   {(() => {
                     if (c.faction !== g.player) return null;
