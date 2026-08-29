@@ -11971,7 +11971,8 @@ function diploStat(g, fid) {
   };
 }
 var minGarrison = (c) => Math.round(c.def * 10 + (100 - c.min) * 5);
-var troopCap = (c, p, s2) => Math.round(c.koku / 1e4 * MOB_POLICY[p].per * (0.75 + (c.najimi == null ? 70 : c.najimi) / 400) * (s2 ? rankBonus(s2, c.faction).troop : 1));
+var \u8ECD\u5F79\u306E\u5272\u5897 = (koku) => Math.max(1, Math.min(1.9, 1 + (3e4 - koku) / 3e4 * 0.9));
+var troopCap = (c, p, s2) => Math.round(c.koku / 1e4 * MOB_POLICY[p].per * \u8ECD\u5F79\u306E\u5272\u5897(c.koku) * (0.75 + (c.najimi == null ? 70 : c.najimi) / 400) * (s2 ? rankBonus(s2, c.faction).troop : 1));
 var foodDays = (food, troops) => troops > 0 ? Math.round(food / (troops * 0.08) * 30) : 999;
 var HOUSE_RANK = 8e3;
 var RANKS = [
@@ -14448,8 +14449,8 @@ function initState(player) {
       // 地域家臣団が現城主を受け入れる度合い（GDD 6.2）
       rost: newRoster(c.local, `loc-${c.id}`),
       // 地域家臣団の組の名簿
-      kokuBase: c.kokuMax,
-      // 治水の伸びを測るための元の上限
+      kokuBase: Math.round(c.koku * 1.25),
+      // 治水の伸びを測るための元の余地
       /* 田の限りは三段に分かれる（GDD 4.6）。
       
                盤の総石高 1,258万石は、慶長三年（一五九八）の検地高 1,860万石の
@@ -14458,6 +14459,12 @@ function initState(player) {
       
                  石高       いま実っている高。開墾で増える
                  田畑可能地  開ける余地。治水で広がる（kokuMax）
+      
+               初めの田畑可能地は、拠点定義では石高の一.一二五倍であった。岡豊城で
+               余地一千六十二石、開墾一手はその十六分なので百七十一石しか開けない。
+               石高が百七十一石増えても軍役の器は六人しか増えず、田を開くことと
+               兵が増えることの繋がりが読めなかった。一.二五倍に改める。
+               一手で三百石ほど開き、三人が働けば七百三十六石になる。
                  慶長の高    治水が届く限り。石高の一.四七八倍（kokuCap）
                  元禄の高    地の力そのもの。石高の二.〇五一倍（kokuGen）
       
@@ -14470,6 +14477,8 @@ function initState(player) {
                行ってはじめて、限りが慶長の高から元禄の高へ引き上がる。
                引き上がるだけであって、石高がその場で増えるわけではない。
                そこから先は、みずから治水して田畑可能地を広げ、開墾で田を開く。 */
+      kokuMax: Math.round(c.koku * 1.25),
+      // 開ける余地（拠点定義の一.一二五倍を改める）
       kokuCap: Math.round(c.koku * 1.478),
       // 治水の届く限り＝慶長三年の検地高
       kokuGen: Math.round(c.koku * 2.051),
@@ -16098,8 +16107,12 @@ function runCommand(prev, castleId, cmd, genId, g) {
     const room = c.kokuMax - c.koku;
     const labor = Math.min(1, c.pop / (c.kokuMax * 0.9));
     const gain = Math.min(room, Math.round(room * 0.16 * (0.5 + gen.gov / 100) * labor));
+    const \u5668\u524D = troopCap(c, f.mobilization, g || s2);
     rec("\u73FE\u5728\u77F3\u9AD8", c.koku, c.koku + gain, "\u77F3");
     c.koku += gain;
+    const \u5668\u5F8C = troopCap(c, f.mobilization, g || s2);
+    rec("\u8ECD\u5F79\u306E\u5668", \u5668\u524D, \u5668\u5F8C, "\u4EBA");
+    rec("\u3042\u3068\u96C7\u3048\u308B\u5175", Math.max(0, \u5668\u524D - c.local), Math.max(0, \u5668\u5F8C - c.local), "\u4EBA");
   } else if (cmd === "\u6CBB\u6C34") {
     cost = \u5024(180);
     const cap = c.kokuCap || c.kokuMax;

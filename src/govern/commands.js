@@ -49,7 +49,14 @@ export function runCommand(prev, castleId, cmd, genId, g) {
         const room = c.kokuMax - c.koku;
         const labor = Math.min(1, c.pop / (c.kokuMax * 0.9));
         const gain = Math.min(room, Math.round(room * 0.16 * (0.5 + gen.gov / 100) * labor));
+        /* 田が開ければ、その田から兵が出る。軍役の器はそのまま石高に比例する。
+           石高だけを見せていては、田を開くことが兵に繋がることが読めない。
+           開墾のたびに、器と「あと何人雇えるか」を並べて示す。 */
+        const 器前 = troopCap(c, f.mobilization, g || s);
         rec("現在石高", c.koku, c.koku + gain, "石"); c.koku += gain;
+        const 器後 = troopCap(c, f.mobilization, g || s);
+        rec("軍役の器", 器前, 器後, "人");
+        rec("あと雇える兵", Math.max(0, 器前 - c.local), Math.max(0, 器後 - c.local), "人");
       } else if (cmd === "治水") {
         cost = 値(180);
         // 上限の伸びは城の大きさに応じる。重ねれば伸び続けるが、伸びは次第に鈍る。
