@@ -13099,14 +13099,14 @@ var FACTIONS = {
   ichijo: { id: "ichijo", name: "\u571F\u4F50\u4E00\u6761\u5BB6", color: "#B8A44A", mon: "\u6850", gold: 2600, prestige: 50, mobilization: 1 },
   chosokabe: { id: "chosokabe", name: "\u9577\u5B97\u6211\u90E8\u5BB6", color: "#6B8C3C", desc: "\u571F\u4F50\u5CA1\u8C4A\u306E\u5C0F\u52E2\u529B\u3002\u56FD\u89AA\u3068\u82E5\u304D\u5143\u89AA\u306E\u3082\u3068\u3001\u56DB\u56FD\u306E\u7D71\u4E00\u3092\u5922\u898B\u308B\u3002", mon: "\u9162\u6F3F\u8349", gold: 2600, prestige: 50, mobilization: 1 },
   aki: { id: "aki", name: "\u5B89\u82B8\u5BB6", color: "#8C4A5A", mon: "\u4E09\u3064\u5DF4", gold: 2600, prestige: 50, mobilization: 1 },
-  kimotsuki: { id: "kimotsuki", name: "\u809D\u4ED8\u5BB6", color: "#9B5A4A", mon: "\u4E38\u306B\u5341\u5B57", playable: true, desc: "\u5927\u9685\u9AD8\u5C71\u306E\u540D\u65CF\u3002\u517C\u7D9A\u306E\u3082\u3068\u65E5\u5411\u30FB\u5927\u9685\u306B\u5A01\u3092\u5F35\u308A\u3001\u5CF6\u6D25\u3068\u6B63\u9762\u304B\u3089\u4E89\u3046\u3002", gold: 2600, prestige: 50, mobilization: 1 },
+  kimotsuki: { id: "kimotsuki", name: "\u809D\u4ED8\u5BB6", color: "#9B5A4A", mon: "\u4E38\u306B\u5341", playable: true, desc: "\u5927\u9685\u9AD8\u5C71\u306E\u540D\u65CF\u3002\u517C\u7D9A\u306E\u3082\u3068\u65E5\u5411\u30FB\u5927\u9685\u306B\u5A01\u3092\u5F35\u308A\u3001\u5CF6\u6D25\u3068\u6B63\u9762\u304B\u3089\u4E89\u3046\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   aso: { id: "aso", name: "\u963F\u8607\u5BB6", color: "#5A8C6B", mon: "\u9055\u3044\u9DF9\u306E\u7FBD", playable: true, desc: "\u80A5\u5F8C\u963F\u8607\u306E\u5927\u5BAE\u53F8\u5BB6\u3002\u60DF\u8C4A\u306E\u3082\u3068\u56FD\u8846\u3092\u307E\u3068\u3081\u3001\u7532\u6590\u5B97\u904B\u3068\u3044\u3046\u826F\u5C06\u3092\u62B1\u3048\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   munakata: { id: "munakata", name: "\u5B97\u50CF\u5BB6", color: "#4A6B8C", mon: "\u6962\u306E\u8449", gold: 2600, prestige: 50, mobilization: 1 },
   hatakeyama_k: { id: "hatakeyama_k", name: "\u6CB3\u5185\u7560\u5C71\u5BB6", color: "#8C5A7A", mon: "\u4E8C\u3064\u5F15\u4E21", playable: true, desc: "\u6CB3\u5185\u30FB\u7D00\u4F0A\u306E\u5B88\u8B77\u3002\u5BB6\u5BB0\u306E\u904A\u4F50\u9577\u6559\u304C\u5B9F\u6A29\u3092\u63E1\u308A\u3001\u4E09\u597D\u306B\u62BC\u3055\u308C\u3064\u3064\u3042\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   ogasawara: { id: "ogasawara", name: "\u5C0F\u7B20\u539F\u5BB6", color: "#6B7A4A", mon: "\u4E09\u968E\u83F1", playable: true, desc: "\u4FE1\u6FC3\u5B88\u8B77\u3002\u5E9C\u4E2D\u6797\u57CE\u306B\u62E0\u308B\u304C\u3001\u5357\u304B\u3089\u6B66\u7530\u6674\u4FE1\u304C\u8FEB\u3063\u3066\u3044\u308B\u3002", gold: 2600, prestige: 50, mobilization: 1 },
   kiso: { id: "kiso", name: "\u6728\u66FD\u5BB6", color: "#7A6B5A", mon: "\u4E38\u306B\u7ACB\u3061\u8475", gold: 2600, prestige: 50, mobilization: 1 },
   motoyama: { id: "motoyama", name: "\u672C\u5C71\u5BB6", color: "#A0714A", mon: "\u4E38\u306B\u4E09\u3064\u67CF", playable: true, desc: "\u571F\u4F50\u4E2D\u592E\u306E\u5B9F\u529B\u8005\u3002\u6885\u6176\uFF08\u8302\u5B97\uFF09\u306E\u3082\u3068\u5409\u826F\u3092\u4F75\u305B\u3001\u4E00\u6761\u30FB\u9577\u5B97\u6211\u90E8\u3068\u571F\u4F50\u3092\u4E89\u3046\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  ohira: { id: "ohira", name: "\u5927\u5E73\u5BB6", color: "#7A8C5A", mon: "\u4E38\u306B\u4E09\u3064\u5F15", gold: 2600, prestige: 50, mobilization: 1 },
+  ohira: { id: "ohira", name: "\u5927\u5E73\u5BB6", color: "#7A8C5A", mon: "\u4E38\u306B\u4E09\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
   tsuno: { id: "tsuno", name: "\u6D25\u91CE\u5BB6", color: "#5A6B8C", mon: "\u68B6\u306E\u8449", gold: 2600, prestige: 50, mobilization: 1 },
   kosokabe: { id: "kosokabe", name: "\u9999\u5B97\u6211\u90E8\u5BB6", color: "#8C7A5A", mon: "\u4E03\u3064\u9162\u6F3F\u8349", gold: 2600, prestige: 50, mobilization: 1 },
   amago: { id: "amago", name: "\u5C3C\u5B50\u5BB6", color: "#5A5A9B", desc: "\u51FA\u96F2\u6708\u5C71\u5BCC\u7530\u306E\u96C4\u3002\u5927\u5185\u3068\u5C71\u9670\u5C71\u967D\u3092\u4E89\u3046\u304C\u3001\u65B0\u5BAE\u515A\u3092\u62B1\u3048\u3066\u5BB6\u4E2D\u306F\u4E00\u679A\u5CA9\u3067\u306A\u3044\u3002", mon: "\u5E73\u56DB\u3064\u76EE\u7D50", gold: 2600, prestige: 50, mobilization: 1 },
@@ -13168,7 +13168,7 @@ var FACTIONS = {
   hoshino: { id: "hoshino", name: "\u661F\u91CE\u5BB6", color: "#7A8C4A", mon: "\u4E09\u3064\u661F", gold: 2600, prestige: 50, mobilization: 1 },
   tajiri: { id: "tajiri", name: "\u7530\u5C3B\u5BB6", color: "#8C7A5A", mon: "\u5DDE\u6D5C", gold: 2600, prestige: 50, mobilization: 1 },
   negoro: { id: "negoro", name: "\u6839\u6765\u8846", color: "#A05A3C", mon: "\u8F2A\u5B9D", playable: true, desc: "\u7D00\u4F0A\u90A3\u8CC0\u306E\u6839\u6765\u5BFA\u3002\u6570\u5343\u306E\u884C\u4EBA\u3092\u64C1\u3057\u3001\u583A\u3068\u4E26\u3093\u3067\u9244\u7832\u3092\u6253\u3064\u3002\u5BFA\u3067\u3042\u308A\u306A\u304C\u3089\u4E00\u56FD\u306B\u5339\u6575\u3059\u308B\u6B66\u3092\u6301\u3064\u3002", gold: 2600, prestige: 50, mobilization: 1 },
-  yukawa: { id: "yukawa", name: "\u6E6F\u5DDD\u5BB6", color: "#4A7A6B", mon: "\u4E38\u306B\u4E09\u3064\u5F15", gold: 2600, prestige: 50, mobilization: 1 },
+  yukawa: { id: "yukawa", name: "\u6E6F\u5DDD\u5BB6", color: "#4A7A6B", mon: "\u4E38\u306B\u4E09\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
   yamana_b: { id: "yamana_b", name: "\u5099\u5F8C\u5C71\u540D\u5BB6", color: "#8C4A5A", mon: "\u4E94\u4E03\u6850", gold: 2600, prestige: 50, mobilization: 1 },
   yamanouchi: { id: "yamanouchi", name: "\u5C71\u5185\u5BB6", color: "#5A6B8C", mon: "\u4E09\u3064\u67CF", gold: 2600, prestige: 50, mobilization: 1 },
   miura: { id: "miura", name: "\u4E09\u6D66\u5BB6", color: "#6B5A8C", mon: "\u4E09\u3064\u5F15\u4E21", gold: 2600, prestige: 50, mobilization: 1 },
@@ -18661,7 +18661,7 @@ function advanceMonth(prev, g) {
       if (a2 < 18 || a2 > 52) continue;
       if (!hasHouse(s2, q)) continue;
       if (\u5B50\u3042\u308B.has(q.id)) continue;
-      if (Math.random() > 0.07) continue;
+      if (Math.random() > 0.035) continue;
       const kid = bearChild(s2, q);
       if (kid) \u5B50\u3042\u308B.add(q.id);
       if (kid && q.faction === s2.player) events.push(`${q.name}\u306B\u5B50\u304C\u751F\u307E\u308C\u305F\uFF08${kid.name}\uFF09\u3002`);
@@ -20263,6 +20263,26 @@ var sideHue = (color, mine) => {
   return shadeHex(base, (\u660E\u308B\u3055 - 0.45) * 0.36);
 };
 var sideColor = (c) => sideHue(c.color, c.side === "P");
+var \u63CF\u3051\u308B = /* @__PURE__ */ new Set(["\u6728\u74DC", "\u6A2A\u6728\u74DC", "\u4E09\u3064\u76DB\u6728\u74DC", "\u4E00\u3064\u5F15\u4E21", "\u4E8C\u3064\u5F15\u4E21", "\u4E09\u3064\u5F15\u4E21", "\u56DB\u3064\u76EE\u7D50", "\u5E73\u56DB\u3064\u76EE\u7D50", "\u4E09\u3064\u5DF4", "\u4E8C\u3064\u5DF4", "\u4E00\u6587\u5B57\u4E09\u661F", "\u4E09\u3064\u661F", "\u6708\u661F", "\u4E03\u66DC", "\u4E5D\u66DC", "\u56DB\u3064\u5272\u83F1", "\u5272\u308A\u83F1", "\u5927\u5185\u83F1", "\u4E09\u968E\u83F1", "\u8475", "\u9162\u6F3F\u8349", "\u4E0B\u304C\u308A\u85E4", "\u6885\u9262", "\u64AB\u5B50", "\u6850", "\u6CA2\u7009", "\u6854\u6897", "\u67CF", "\u5510\u82B1", "\u8D64\u9CE5", "\u4E09\u3064\u9C57", "\u4E38\u306B\u5341", "\u6247", "\u6A9C\u6247", "\u6298\u6577\u306B\u4E09\u6587\u5B57", "\u65E5\u8DB3", "\u674F\u8449", "\u4E8C\u982D\u7ACB\u6CE2", "\u7AF9\u306B\u96C0", "\u7E4B\u304E\u99AC", "\u5DDE\u6D5C", "\u4E80\u7532", "\u9DF9\u306E\u7FBD", "\u8F2A\u5B9D", "\u516B\u54AB\u70CF"]);
+var \u7D0B\u306E\u5BC4\u305B = {
+  \u6962\u306E\u8449: "\u67CF",
+  \u68B6\u306E\u8449: "\u67CF",
+  \u6A58: "\u5510\u82B1",
+  \u677E\u76AE\u83F1: "\u4E09\u968E\u83F1",
+  \u7ACB\u3061\u8475: "\u8475"
+};
+function \u7D0B\u306E\u6838(kind) {
+  if (!kind) return "";
+  const \u8A66 = [kind];
+  const \u4E38 = kind.replace(/^丸に/, "");
+  if (\u4E38 !== kind) \u8A66.push(\u4E38);
+  const \u6570 = \u4E38.replace(/^(一つ|二つ|三つ|四つ|五つ|六つ|七つ|八つ|九つ|五七|違い)+/, "");
+  if (\u6570 && \u6570 !== \u4E38) \u8A66.push(\u6570);
+  const \u9055 = \u6570.replace(/^違い/, "");
+  if (\u9055 && \u9055 !== \u6570) \u8A66.push(\u9055);
+  for (const k of [...\u8A66]) if (\u7D0B\u306E\u5BC4\u305B[k]) \u8A66.push(\u7D0B\u306E\u5BC4\u305B[k]);
+  return [...new Set(\u8A66)];
+}
 function drawMon(ctx, kind, x, y, r, col, sub) {
   ctx.save();
   ctx.translate(x, y);
@@ -20276,6 +20296,17 @@ function drawMon(ctx, kind, x, y, r, col, sub) {
     if (fill) ctx.fill();
     else ctx.stroke();
   };
+  const \u4E38\u306B = /^丸に/.test(kind || "");
+  for (const k of \u7D0B\u306E\u6838(kind)) if (\u63CF\u3051\u308B.has(k)) {
+    kind = k;
+    break;
+  }
+  if (\u4E38\u306B) {
+    const \u592A = ctx.lineWidth;
+    ctx.lineWidth = Math.max(0.7, r * 0.09);
+    circle(0, 0, r * 0.86, false);
+    ctx.lineWidth = \u592A;
+  }
   const petal = (ang, rr, w) => {
     ctx.save();
     ctx.rotate(ang);
@@ -27567,7 +27598,9 @@ function Ending({ g, onClose, onTitle }) {
 
 // src/ui/MapScreen.jsx
 function \u624B\u67C4\u306E\u968A(s2, corps, castle) {
-  const hero = corps.find((c) => c.feats.length || c.loss["\u76F4\u5C5E"] > 60);
+  const \u5024 = (c) => (c.feats || []).length * 2 + (c.loss["\u76F4\u5C5E"] > 160 ? 2 : 0);
+  const \u5019 = corps.filter((c) => \u5024(c) >= 4).sort((a, b) => \u5024(b) - \u5024(a));
+  const hero = \u5019[0];
   if (!hero) return null;
   const gen = s2.generals.find((x) => x.id === hero.id);
   if (gen) return { lord: gen, at: gen.at, faction: gen.faction, \u5B88\u5099\u968A: false };
@@ -28698,7 +28731,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       if (b.result === "P" && !ctx.playerIsAtk) {
         const \u529F = \u624B\u67C4\u306E\u968A(s2, b.corps.filter((c) => c.side === "P"), castle);
-        if (\u529F && Math.random() < 0.6) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
+        if (\u529F && Math.random() < 0.3) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
       }
       return s2;
     });
@@ -28857,7 +28890,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       if (b.result === "P") {
         const \u529F = \u624B\u67C4\u306E\u968A(s2, b.corps.filter((c) => c.side === "P"), null);
-        if (\u529F && Math.random() < 0.7) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
+        if (\u529F && Math.random() < 0.35) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
       }
       return s2;
     });
@@ -28970,7 +29003,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       if (playerWon) {
         const \u529F = \u624B\u67C4\u306E\u968A(s2, side("P"), castle);
-        if (\u529F && Math.random() < 0.7) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
+        if (\u529F && Math.random() < 0.35) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
       }
       s2.pendingArrivals = (s2.pendingArrivals || []).slice(1);
       if (ctx.campId) s2.campaigns = (s2.campaigns || []).filter((x) => x.id !== ctx.campId);

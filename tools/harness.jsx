@@ -40,4 +40,4 @@ export { layoutField, setFieldSeed, FIELD, terrainAt, TERRAIN, HILLS, FORESTS, W
 export { makeCorps, corpsMen, placeSquads, issueOrder, 退かせる, 退き先 } from "../src/battle/corps.js";
 export { createBattle, stepBattle } from "../src/battle/engine.js";
 export { battleAI } from "../src/battle/ai.js";
-export { sideColor, ownZone, drawMon } from "../src/battle/draw.js";
+export { sideColor, ownZone, drawMon, 紋の核 } from "../src/battle/draw.js";

@@ -1089,7 +1089,12 @@ export function advanceMonth(prev, g) {
           if (a2 < 18 || a2 > 52) continue;
           if (!hasHouse(s, q)) continue;
           if (子ある.has(q.id)) continue;
-          if (Math.random() > 0.07) continue;
+          /* 子が生まれる目（GDD 6.7）。
+
+             もとは年に七分であった。二十五年送ると架空の者が百三十一名、
+             武将ぜんたいの一割を超える。史実の人物と混ざりすぎる。
+             半分の三分五厘に落とす。二十五年で六十名ほどになる。 */
+          if (Math.random() > 0.035) continue;
           const kid = bearChild(s, q);
           if (kid) 子ある.add(q.id);
           if (kid && q.faction === s.player) events.push(`${q.name}に子が生まれた（${kid.name}）。`);

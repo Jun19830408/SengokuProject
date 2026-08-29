@@ -57,8 +57,18 @@ import { findPathVia } from "../core/paths.js";
    隊が「◯◯城守備隊」であっても武功は武功である。名は伝わらぬが、
    門を守り抜いたのはその者たちである。その場合は城を預かる者の名で取り立て、
    取り立てられた者はその城に留まる。 */
+/* 手柄の隊（GDD 6.7）。
+
+   もとは「手柄が一つでもあるか、直属を六十人失った隊」であった。一度の
+   武功で足りたので、勝つたびに名も無き者が武将に取り立てられ、架空の者が
+   増えすぎた。取り立てるに値するのは、一つの戦で幾つも手柄を重ねた隊か、
+   一隊の直属を大きく損なってなお戦い抜いた隊である。
+
+   数ある中から、いちばん働いた隊を選ぶ（先に見つかった隊ではない）。 */
 function 手柄の隊(s, corps, castle) {
-  const hero = corps.find((c) => c.feats.length || c.loss["直属"] > 60);
+  const 値 = (c) => (c.feats || []).length * 2 + (c.loss["直属"] > 160 ? 2 : 0);
+  const 候 = corps.filter((c) => 値(c) >= 4).sort((a, b) => 値(b) - 値(a));
+  const hero = 候[0];
   if (!hero) return null;
   const gen = s.generals.find((x) => x.id === hero.id);
   if (gen) return { lord: gen, at: gen.at, faction: gen.faction, 守備隊: false };
@@ -1195,7 +1205,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       if (won && army) { army.local = aLeft + back; sackCastle(s, castle, army, true); }
       if (b.result === "P" && !ctx.playerIsAtk) {
         const 功 = 手柄の隊(s, b.corps.filter((c) => c.side === "P"), castle);
-        if (功 && Math.random() < 0.6) s.promo = makePromotion(功.lord, s.generals, 功);
+        if (功 && Math.random() < 0.30) s.promo = makePromotion(功.lord, s.generals, 功);
       }
       return s;
     });
@@ -1349,7 +1359,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       if (b.result === "P") {
         const 功 = 手柄の隊(s, b.corps.filter((c) => c.side === "P"), null);
-        if (功 && Math.random() < 0.7) s.promo = makePromotion(功.lord, s.generals, 功);
+        if (功 && Math.random() < 0.35) s.promo = makePromotion(功.lord, s.generals, 功);
       }
       return s;
     });
@@ -1475,7 +1485,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       if (playerWon) {
         const 功 = 手柄の隊(s, side("P"), castle);
-        if (功 && Math.random() < 0.7) s.promo = makePromotion(功.lord, s.generals, 功);
+        if (功 && Math.random() < 0.35) s.promo = makePromotion(功.lord, s.generals, 功);
       }
       s.pendingArrivals = (s.pendingArrivals || []).slice(1);
       if (ctx.campId) s.campaigns = (s.campaigns || []).filter((x) => x.id !== ctx.campId);
