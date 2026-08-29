@@ -736,9 +736,38 @@ export function 立たぬ申し送りを落とす(s) {
   return s;
 }
 
+/* 石高の三段を、古い記録にも与える（GDD 4.6）。
+
+   田畑可能地・慶長の高・元禄の高は盤を立てるときに据えている。ところが
+   記録から読み込んだ盤には、書き込まれた当時の値がそのまま入っている。
+   繕わなければ、続きから遊ぶ限り、田畑可能地は石高の一.一二五倍のまま、
+   慶長の高は田畑可能地と同じままで、治水は永久に空打ちになる。
+   遊ぶ側からは「直したはずのものが直っていない」と映る。
+
+   三段は「天文十五年の把握」を元に決まる。いまの石高ではない。開墾して
+   増えたぶんまで元に取ると、開くほど天井が逃げていく。元の高は kokuBase
+   （据えたときの田畑可能地＝当時は石高の一.一二五倍）から逆に引く。
+
+   いずれも max を取る。すでに開いた田を、繕いで取り上げてはならない。 */
+function 石高の三段を繕う(s) {
+  for (const c of s.castles || []) {
+    const 元 = c.kokuBase ? Math.round(c.kokuBase / 1.125) : c.koku;
+    c.kokuMax = Math.max(c.kokuMax || 0, Math.round(元 * 1.25), c.koku);
+    c.kokuCap = Math.max(c.kokuCap || 0, Math.round(元 * 1.478), c.kokuMax);
+    c.kokuGen = Math.max(c.kokuGen || 0, Math.round(元 * 2.051), c.kokuCap);
+  }
+}
+
+// 軍役の器を、古い記録の武将にも与える（いま抱えている手勢がそのまま器になる）
+function 軍役の器を繕う(s) {
+  for (const g of s.generals || []) if (g.retCap == null) g.retCap = g.retinue;
+}
+
 export function migrateSave(s) {
   // 卓の印の無い古い記録には、いま与える（以後、置き場が守れるようになる）
   if (!s.卓) s.卓 = `t${(s.player || "x")}${s.year || 0}-旧`;
+  石高の三段を繕う(s);
+  軍役の器を繕う(s);
   migrateRosters(s);
   旗の下を狙う戦役を落とす(s);
   立たぬ申し送りを落とす(s);

@@ -14853,8 +14853,21 @@ function \u7ACB\u305F\u306C\u7533\u3057\u9001\u308A\u3092\u843D\u3068\u3059(s2) 
   }
   return s2;
 }
+function \u77F3\u9AD8\u306E\u4E09\u6BB5\u3092\u7E55\u3046(s2) {
+  for (const c of s2.castles || []) {
+    const \u5143 = c.kokuBase ? Math.round(c.kokuBase / 1.125) : c.koku;
+    c.kokuMax = Math.max(c.kokuMax || 0, Math.round(\u5143 * 1.25), c.koku);
+    c.kokuCap = Math.max(c.kokuCap || 0, Math.round(\u5143 * 1.478), c.kokuMax);
+    c.kokuGen = Math.max(c.kokuGen || 0, Math.round(\u5143 * 2.051), c.kokuCap);
+  }
+}
+function \u8ECD\u5F79\u306E\u5668\u3092\u7E55\u3046(s2) {
+  for (const g of s2.generals || []) if (g.retCap == null) g.retCap = g.retinue;
+}
 function migrateSave(s2) {
   if (!s2.\u5353) s2.\u5353 = `t${s2.player || "x"}${s2.year || 0}-\u65E7`;
+  \u77F3\u9AD8\u306E\u4E09\u6BB5\u3092\u7E55\u3046(s2);
+  \u8ECD\u5F79\u306E\u5668\u3092\u7E55\u3046(s2);
   migrateRosters(s2);
   \u65D7\u306E\u4E0B\u3092\u72D9\u3046\u6226\u5F79\u3092\u843D\u3068\u3059(s2);
   \u7ACB\u305F\u306C\u7533\u3057\u9001\u308A\u3092\u843D\u3068\u3059(s2);

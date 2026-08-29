@@ -28,7 +28,7 @@ Object.defineProperty(dom.window.HTMLElement.prototype, 'clientWidth', { get() {
 Object.defineProperty(dom.window.HTMLElement.prototype, 'clientHeight', { get() { return 600; } });
 dom.window.HTMLElement.prototype.getBoundingClientRect = function () { return { left: 0, top: 0, width: 900, height: 600, right: 900, bottom: 600 }; };
 const errs = []; console.error = (...a) => errs.push(String(a[0]).slice(0, 180));
-const { createRoot, act, App, React, initState, findPath } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
+const { createRoot, act, App, React, initState, findPath, migrateSave, troopCap } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
 /* ------------------------------------------- 盤をこしらえる
    直す前の記録を模す。味方の城を狙う「戦役」が残り、その軍が既に着いている形。
@@ -70,6 +70,46 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
 (async () => {
   let 咎 = 0;
   const 確 = (名, 可, 添 = '') => { console.log(`  ${可 ? '○' : '★'} ${名}${添 ? '　' + 添 : ''}`); if (!可) 咎++; };
+
+  /* ---------------------------------------- 石高の三段と軍役の器を繕う（GDD 4.6）
+
+     田畑可能地・慶長の高・元禄の高は、盤を立てるときに据えている。ところが
+     記録から読み込んだ盤には、書き込まれた当時の値がそのまま入っている。
+     繕わなければ、続きから遊ぶ限り、田畑可能地は石高の一.一二五倍のまま、
+     慶長の高は田畑可能地と同じままで、治水は永久に空打ちになる。
+     遊ぶ側からは「直したはずのものが直っていない」と映る。実際そうなった。
+
+     三段は「天文十五年の把握」を元に決まる。いまの石高ではない。開墾で
+     増えたぶんまで元に取ると、開くほど天井が逃げていく。 */
+  {
+    const 旧 = initState('chosokabe');
+    for (const c of 旧.castles) {
+      c.kokuBase = Math.round(c.koku * 1.125);      // 昔の記録の姿に戻す
+      c.kokuMax = Math.round(c.koku * 1.125);
+      c.kokuCap = c.kokuMax;
+      delete c.kokuGen;
+    }
+    for (const g of 旧.generals) delete g.retCap;
+    const c0 = 旧.castles.find((c) => c.faction === 'chosokabe');
+    const 元 = c0.koku;
+    c0.koku = Math.round(元 * 1.06);                // 少し開墾が進んでいるものとする
+    const 開いた田 = c0.koku;
+
+    migrateSave(旧);
+
+    確('古い記録でも、治水の余地が出る（限り＞田畑可能地）', c0.kokuCap > c0.kokuMax,
+      `田畑可能地 ${c0.kokuMax} ／ 慶長の高 ${c0.kokuCap}`);
+    確('古い記録でも、元禄の高が与えられる', c0.kokuGen > c0.kokuCap,
+      `元禄の高 ${c0.kokuGen}`);
+    確('三段は「元の石高」から決まる（開いた田で天井が逃げない）',
+      Math.abs(c0.kokuGen - Math.round(元 * 2.051)) <= 2,
+      `元の石高 ${元} × 2.051 ＝ ${Math.round(元 * 2.051)}`);
+    確('繕いで、開いた田を取り上げない', c0.koku === 開いた田 && c0.kokuMax >= c0.koku,
+      `石高 ${c0.koku}`);
+    確('古い記録の武将に、軍役の器が与えられる',
+      旧.generals.every((g) => g.retCap != null && g.retCap >= g.retinue),
+      `${旧.generals.length}名`);
+  }
 
   await act(async () => { root.render(React.createElement(App)); }); await flush(); await flush();
   await rc('続きから'); await flush(); await flush(); await flush();
