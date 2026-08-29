@@ -23512,6 +23512,12 @@ function stepBattle(b, dt) {
       b.log.push({ t: b.t, text: `${c.name}\u968A\u304C\u5D29\u308C\u3001\u6226\u7DDA\u3092\u96E2\u308C\u305F\u3002` });
       for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 6;
     }
+    if (!c.withdraw && !c.\u6F70 && !c.dead && delegated(b, c) && (ratio <= 0.1 || c.morale <= 0)) {
+      \u9000\u304B\u305B\u308B(b, c, true);
+      b.log.push({ t: b.t, text: `${c.name}\u968A\u306F\u652F\u3048\u304D\u308C\u305A\u3001\u6226\u5834\u3092\u9000\u3044\u305F\u3002` });
+      notify(b, `${c.gen.name}\u968A\u304C\u6226\u5834\u3092\u9000\u3044\u305F\u3002`, c.side === "P" ? "bad" : "good");
+      continue;
+    }
     if (c.routed && !c.\u6F70) {
       if (c.morale <= 0 || corpsMen(c) <= 0) {
         c.\u6F70 = true;
@@ -23615,6 +23621,28 @@ function stepBattle(b, dt) {
     } else b.\u7DCF\u5D29\u308C[side] = 0;
     return null;
   };
+  const \u5F15\u304D\u969B = (side) => {
+    const \u751F = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.\u6F70 && !c.withdraw);
+    if (!\u751F.length) return null;
+    const \u521D = (b.initial || {})[side] || 0;
+    const \u5175 = \u751F.reduce((a, c) => a + corpsMen(c), 0);
+    if (\u521D > 0 && \u5175 <= \u521D * 0.2) return "\u5175\u304C\u4E94\u5206\u306E\u4E00\u3092\u5207\u308A\u3001\u8ECD\u3092\u9000\u3044\u305F";
+    const \u6C17 = \u751F.reduce((a, c) => a + c.morale * corpsMen(c), 0) / Math.max(1, \u5175);
+    if (\u6C17 <= 15) return "\u58EB\u6C17\u304C\u5C3D\u304D\u3001\u8ECD\u3092\u9000\u3044\u305F";
+    return null;
+  };
+  const \u59D4\u306D\u305F\u5074 = (side) => side !== "P" || b.\u59D4\u306D\u305F;
+  const P\u9000 = \u59D4\u306D\u305F\u5074("P") ? \u5F15\u304D\u969B("P") : null;
+  const E\u9000 = \u5F15\u304D\u969B("E");
+  if (P\u9000 || E\u9000) {
+    b.phase = "over";
+    b.orderly = true;
+    b.result = P\u9000 && E\u9000 ? pm > em ? "P" : "E" : P\u9000 ? "E" : "P";
+    const \u8CA0 = P\u9000 ? "P" : "E";
+    const \u540D = \u8CA0 === b.attacker ? "\u5BC4\u305B\u624B" : MAP ? "\u57CE\u65B9" : "\u53D7\u3051\u624B";
+    b.log.push({ t: b.t, text: `${\u540D}\u306F${P\u9000 || E\u9000}\u3002` });
+    return;
+  }
   const P\u5C3D = \u5C3D\u304D\u305F("P"), E\u5C3D = \u5C3D\u304D\u305F("E");
   if (P\u5C3D || E\u5C3D) {
     b.phase = "over";

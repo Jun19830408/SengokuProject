@@ -203,6 +203,65 @@ function 一戦(i) {
   A.setBattleMap(null);
 }
 
+/* -------------------------------------------------- 四、引き際（GDD 8.7 / 8.8）
+
+   これまで野戦は、負けた側が盤の上から消え去るまで終わらなかった。隊ごとに
+   士気十五・兵二割二分で崩れる仕掛けはあるが、崩れた隊は盤の上で息をつくので、
+   勝った側が追い回して削り続ける。測ると、負けた側は初めの兵の一割から
+   一割三分まで減ってから終わっていた。
+
+     四千五百 対 三千（六度）  受け手の残り 一割三分・平均百五十秒
+
+   実際の野戦はそうではない。三方ヶ原の徳川も、姉川の浅井も、負けはしたが
+   軍は残って城へ退いた。二段に分けて引き際を設けた。
+
+     隊ごと … 兵が一割を切るか、士気が尽きたら、その隊は戦場を離れる
+     軍ぜんたい … 兵が二割を切るか、残る隊の士気が尽きたら、軍を退く
+
+   いずれも、他家の隊と、遊ぶ側が委ねた隊にだけ効く。手ずから命じた隊を
+   盤が勝手に退かせては、采配にならない。 */
+{
+  const 将2 = (i) => ({ id: `w${i}`, name: `将${i}`, lead: 65, valor: 65, wit: 58, gov: 55,
+    retinue: 400, retTrain: 70, unity: 62 });
+  const 一戦 = (攻, 守, i, 手ずから) => {
+    種 = 0x4000 + i * 733;
+    A.setBattleMap(null); A.setFieldSeed('w' + i, 'y'); A.layoutField(攻 + 守, 6);
+    const W = A.FIELD.w, Hh = A.FIELD.h;
+    const P = [0, 1, 2].map((k) => A.makeCorps('P', 将2(k), 0, Math.round(攻 / 3), 75, 75,
+      W * (0.3 + k * 0.2), Hh * 0.84, -Math.PI / 2, '#2F5D8C'));
+    const E = [0, 1, 2].map((k) => A.makeCorps('E', 将2(10 + k), 0, Math.round(守 / 3), 75, 75,
+      W * (0.3 + k * 0.2), Hh * 0.16, Math.PI / 2, '#B0483C'));
+    for (const c of [...P, ...E]) { c.formation = '横陣'; A.placeSquads(c, true); }
+    if (手ずから) for (const c of P) c.auto = false;    // 遊ぶ側が命じた隊は委任を離れる
+    const b = A.createBattle(P, E, 'P');
+    b.mode = 'field'; b.phase = 'fight'; b.dusk = 1100; b.face = 'S'; b.myFar = false;
+    if (!手ずから) b.委ねた = true;
+    let k = 0;
+    while (b.phase === 'fight' && k < 12000) { if (k % 3 === 0) A.battleAI(b); A.stepBattle(b, 0.25); k++; }
+    const 残 = (l) => l.reduce((a, c) => a + A.corpsMen(c), 0);
+    return { 勝: b.result, 刻: b.t, 攻残: 残(P), 守残: 残(E), P退: P.filter((c) => c.withdraw).length,
+      末: (b.log.slice(-1)[0] || {}).text || '' };
+  };
+
+  const r = []; for (let i = 1; i <= 6; i++) r.push(一戦(4500, 3000, i, false));
+  const 勝 = r.filter((x) => x.勝 === 'P').length;
+  const 割 = r.reduce((a, x) => a + x.守残 / 3000, 0) / r.length;
+  確('勝つべき側が勝つ（四千五百 対 三千）', 勝 === 6, `${勝}/6`);
+  確('負けた側が軍を残して退く（一割五分は残る）', 割 >= 0.15,
+    `受け手の残り ${(割 * 100).toFixed(0)}％（直す前は一割三分）`);
+  確('全滅するまで戦わない（半分は残らない）', 割 <= 0.35, `${(割 * 100).toFixed(0)}％`);
+  確('引き際で戦が終わる', r.some((x) => /軍を退いた|戦場を退いた/.test(x.末)),
+    r[0].末.slice(0, 40));
+
+  // 手ずから率いる隊は、盤が勝手に退かせない
+  const 手 = []; for (let i = 1; i <= 4; i++) 手.push(一戦(2100, 4800, i, true));
+  const 委 = []; for (let i = 1; i <= 4; i++) 委.push(一戦(2100, 4800, i, false));
+  確('手ずから命じた隊は、勝手に退かない', 手.reduce((a, x) => a + x.P退, 0) === 0,
+    `退いた隊 ${手.reduce((a, x) => a + x.P退, 0)}／12`);
+  確('委ねた隊は、他家と同じ判断で退く', 委.reduce((a, x) => a + x.P退, 0) > 0,
+    `退いた隊 ${委.reduce((a, x) => a + x.P退, 0)}／12`);
+}
+
 console.log('');
 if (咎.length) { console.log('★背いた事:'); for (const x of 咎) console.log('   ' + x); }
 console.log('エラー:', 咎.length ? `${咎.length}件` : 'なし');

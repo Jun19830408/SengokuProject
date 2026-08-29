@@ -4,7 +4,7 @@ import { ROW, SP, corpsMax, corpsMen, notify, placeSquads } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 踏み込んだ地, 隊の地 } from "./field.js";
 import { clamp } from "../core/util.js";
 import { px, py } from "../data/geo.js";
-import { 内の門へ退く, 退き場, 退き先 } from "./corps.js";
+import { delegated, issueOrder, 内の門へ退く, 退き場, 退き先, 退かせる } from "./corps.js";
 
 /* 水馴れ（GDD 8.1）。
 
@@ -978,6 +978,23 @@ export function stepBattle(b, dt) {
       b.log.push({ t: b.t, text: `${c.name}隊が崩れ、戦線を離れた。` });
       for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 6;
     }
+    /* 隊の引き際（GDD 8.7）。
+
+       崩れた隊は盤の上で息をつくので、勝った側に追い回されて削られ続ける。
+       隊を預かる者は、そこまで待たない。三隊のうち一隊も残らぬところまで
+       削られたら、あるいは士気が尽きたら、戦場を離れる。
+
+       これが効くのは、他家の隊と、遊ぶ側が委ねた隊だけである（delegated）。
+       手ずから率いる隊を盤が勝手に退かせては、采配にならない。引くも引かぬも
+       遊ぶ側が決める。委ねたのなら、他家と同じ判断で退く。 */
+    if (!c.withdraw && !c.潰 && !c.dead && delegated(b, c)
+      && (ratio <= 0.10 || c.morale <= 0)) {
+      退かせる(b, c, true);                              // 統制のとれた退却
+      b.log.push({ t: b.t, text: `${c.name}隊は支えきれず、戦場を退いた。` });
+      notify(b, `${c.gen.name}隊が戦場を退いた。`, c.side === "P" ? "bad" : "good");
+      continue;
+    }
+
     /* 崩れた隊の行方。
 
        これまでは盤の外へ走り去って、そのまま退場した。八割の兵を抱えたまま
@@ -1132,6 +1149,47 @@ export function stepBattle(b, dt) {
     } else b.総崩れ[side] = 0;
     return null;
   };
+  /* 軍としての引き際（GDD 8.8）。
+
+     右の四つは「もう一兵も動かせない」ところまで待つ判じである。隊ごとには
+     士気十五・兵二割二分で崩れる仕掛けがあるが、崩れた隊は盤の上で息をつく
+     ので、戦そのものは終わらない。勝った側が追い回し、負けた側は削られ続ける。
+     測ると、負けた側は初めの兵の一割から一割三分まで減ってから終わっていた。
+
+       四千五百 対 三千（六度）  受け手の残り 一割三分・平均百五十秒
+       六千 対 三千             受け手の残り 九分
+
+     実際の野戦はそうではない。三方ヶ原の徳川も、姉川の浅井も、負けはしたが
+     軍は残って城へ退いた。全滅するまで戦うのは、退き場を失ったときだけである。
+
+     軍を預かる者は、支えきれぬと見れば退く。兵が初めの十分の一を切るか、
+     残る隊の士気が尽きたら、その軍は退く。統制のとれた退却として扱うので、
+     将が討たれ捕らわれる目も下がる。退いた兵は城へ戻る（画面の側で数える）。 */
+  const 引き際 = (side) => {
+    const 生 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.潰 && !c.withdraw);
+    if (!生.length) return null;                       // 「隊が尽きた」で既に拾う
+    const 初 = (b.initial || {})[side] || 0;
+    const 兵 = 生.reduce((a, c) => a + corpsMen(c), 0);
+    if (初 > 0 && 兵 <= 初 * 0.20) return "兵が五分の一を切り、軍を退いた";
+    const 気 = 生.reduce((a, c) => a + c.morale * corpsMen(c), 0) / Math.max(1, 兵);
+    if (気 <= 15) return "士気が尽き、軍を退いた";
+    return null;
+  };
+  /* 軍としての引き際も、委ねた側にだけ効かせる。遊ぶ側が手ずから率いて
+     いるあいだは、退くか踏み止まるかを盤が決めてはならない。 */
+  const 委ねた側 = (side) => side !== "P" || b.委ねた;
+  const P退 = 委ねた側("P") ? 引き際("P") : null;
+  const E退 = 引き際("E");
+  if (P退 || E退) {
+    b.phase = "over";
+    b.orderly = true;                                  // 統制撤退。将の目減りが軽い
+    b.result = P退 && E退 ? (pm > em ? "P" : "E") : (P退 ? "E" : "P");
+    const 負 = P退 ? "P" : "E";
+    const 名 = 負 === b.attacker ? "寄せ手" : MAP ? "城方" : "受け手";
+    b.log.push({ t: b.t, text: `${名}は${P退 || E退}。` });
+    return;
+  }
+
   const P尽 = 尽きた("P"), E尽 = 尽きた("E");
   if (P尽 || E尽) {
     b.phase = "over";
