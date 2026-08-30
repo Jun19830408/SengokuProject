@@ -15,7 +15,7 @@ import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
 import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap } from "../core/rank.js";
-import { newRoster, rosterSum, rosterSync, rosterTake } from "../core/roster.js";
+import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus } from "../core/state.js";
 import { SEASON, U, clamp, fmt, man, monthsBetween } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
@@ -65,6 +65,31 @@ import { findPathVia } from "../core/paths.js";
    一隊の直属を大きく損なってなお戦い抜いた隊である。
 
    数ある中から、いちばん働いた隊を選ぶ（先に見つかった隊ではない）。 */
+/* 物頭に届いた組頭を、名指しで取り立てる（GDD 6.2 / 6.7）。
+
+   組頭は敵の駒を討ち取るたびに手柄を重ね、勲功が物頭に届けば武将に取り立てる
+   資格を得る。そのとき提示するのは「名も無き者」ではなく、盤の上で手柄を
+   重ねてきたその人である。誰が何をしてきたかは、家中の帳に載っている。
+
+   取り立てられた者は組を離れる。組はそのまま残るので、代を一つ進めて
+   次の長を立てる（代を進めなければ、同じ名の者がもう一度そこに現れる）。 */
+function 物頭を取り立てる(s, corps) {
+  let best = null;
+  for (const c of corps) {
+    const gen = s.generals.find((x) => x.id === c.id);
+    if (!gen || gen.faction !== s.player) continue;
+    const q = 取り立てるべき組(gen.rost);
+    if (q && (!best || q.功 > best.q.功)) best = { q, gen };
+  }
+  if (!best) return null;
+  const promo = makePromotion(best.gen, s.generals, {
+    faction: best.gen.faction, at: best.gen.at, 旧名: 長の名(best.q.id, best.q.代),
+  });
+  best.q.代 = (best.q.代 || 0) + 1;                  // 組には次の長が立つ
+  best.q.功 = 0;
+  return promo;
+}
+
 function 手柄の隊(s, corps, castle) {
   const 値 = (c) => (c.feats || []).length * 2 + (c.loss["直属"] > 160 ? 2 : 0);
   const 候 = corps.filter((c) => 値(c) >= 4).sort((a, b) => 値(b) - 値(a));
@@ -1204,8 +1229,15 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
          上（後詰を戻す件）で足したものを、そのまま捨ててはならない。 */
       if (won && army) { army.local = aLeft + back; sackCastle(s, castle, army, true); }
       if (b.result === "P" && !ctx.playerIsAtk) {
-        const 功 = 手柄の隊(s, b.corps.filter((c) => c.side === "P"), castle);
-        if (功 && Math.random() < 0.30) s.promo = makePromotion(功.lord, s.generals, 功);
+        /* まず、物頭に届いた組頭を見る。居れば必ず提示する（盤の上で
+           五十戦も働いた者であるから、賽で流してはならない）。
+           居なければ、これまで通り手柄の隊から名も無き者を取り立てる。 */
+        組頭の働きを記す(s, b, "P", castle ? castle.name : null);
+        s.promo = 物頭を取り立てる(s, b.corps.filter((c) => c.side === "P"));
+        if (!s.promo) {
+          const 功 = 手柄の隊(s, b.corps.filter((c) => c.side === "P"), castle);
+          if (功 && Math.random() < 0.30) s.promo = makePromotion(功.lord, s.generals, 功);
+        }
       }
       return s;
     });
@@ -1219,9 +1251,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       if (!q.src) continue;
       survive.set(q.src, (survive.get(q.src) || 0) + Math.max(0, Math.round(q.men)));
     }
+    /* 討ち取った駒の数を、組の長の手柄として書き戻す（GDD 6.2）。
+
+       合戦のあいだは b.武功 に組の鍵で数えてある。鍵は組の id から末尾の
+       「b」を落としたもので、割って連れ出した組も元の長へ帰る。
+       組が名簿から落ちれば（全滅すれば）、その長も死ぬ。手柄も消える。 */
+    const 手柄 = b.武功 || {};
     const apply = (rost) => {
       if (!rost) return [];
-      for (const q of rost) if (survive.has(q.id)) q.m = survive.get(q.id);
+      for (const q of rost) {
+        if (survive.has(q.id)) q.m = survive.get(q.id);
+        const 得 = 手柄[組の鍵(q.id)];
+        if (得) q.功 = (q.功 || 0) + 得;
+      }
       return rost.filter((q) => q.m > 0);
     };
     for (const c of corpsList) {
@@ -1358,8 +1400,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             : `${ctx.place}の野戦に敗れ、軍は退いた。`];
       }
       if (b.result === "P") {
-        const 功 = 手柄の隊(s, b.corps.filter((c) => c.side === "P"), null);
-        if (功 && Math.random() < 0.35) s.promo = makePromotion(功.lord, s.generals, 功);
+        組頭の働きを記す(s, b, "P", null);
+        s.promo = 物頭を取り立てる(s, b.corps.filter((c) => c.side === "P"));
+        if (!s.promo) {
+          const 功 = 手柄の隊(s, b.corps.filter((c) => c.side === "P"), null);
+          if (功 && Math.random() < 0.35) s.promo = makePromotion(功.lord, s.generals, 功);
+        }
       }
       return s;
     });
@@ -1484,8 +1530,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           text: `${s.factions[a.faction].name}の援軍は${Math.round(men)}人を残して${home ? `${home.name}へ` : ""}引き揚げた。` });
       }
       if (playerWon) {
-        const 功 = 手柄の隊(s, side("P"), castle);
-        if (功 && Math.random() < 0.35) s.promo = makePromotion(功.lord, s.generals, 功);
+        組頭の働きを記す(s, b, "P", castle ? castle.name : null);
+        s.promo = 物頭を取り立てる(s, side("P"));
+        if (!s.promo) {
+          const 功 = 手柄の隊(s, side("P"), castle);
+          if (功 && Math.random() < 0.35) s.promo = makePromotion(功.lord, s.generals, 功);
+        }
       }
       s.pendingArrivals = (s.pendingArrivals || []).slice(1);
       if (ctx.campId) s.campaigns = (s.campaigns || []).filter((x) => x.id !== ctx.campId);

@@ -1,6 +1,7 @@
 import { battleAI } from "./ai.js";
 import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads } from "./corps.js";
+import { 組の鍵 } from "../core/roster.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 踏み込んだ地, 隊の地 } from "./field.js";
 import { clamp } from "../core/util.js";
 import { px, py } from "../data/geo.js";
@@ -51,13 +52,26 @@ export function createBattle(playerCorps, enemyCorps, attackerSide) {
   return b;
 }
 
-export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps) {
+export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   // 挟撃を受けている隊は受ける損害がやや増える（二方向1.12倍、三方向以上1.22倍）
   const pinch = fCorps.pinch >= 3 ? 1.22 : fCorps.pinch === 2 ? 1.12 : 1;
   const before = e.men;
   e.men = Math.max(0, e.men - dmg * pinch);
   const lost = before - e.men;
   fCorps.loss[e.origin] += lost;
+  /* 駒の長の武功（GDD 6.2）。
+
+     盤の駒は名簿の一組と一対一であり、組ひとつに長がひとり居る。敵の駒を
+     討ち取ったなら、それは討ち取った駒の長の手柄である。ここで数えておき、
+     戦が終わってから盤の側（state）へ書き戻す。
+
+     数えるのは「駒を潰した数」であって、討った人数ではない。人数で数えると
+     大きな駒を削っただけの隊が上位に来る。討ち取ってこそ手柄である。 */
+  if (before > 0 && e.men <= 0 && byQ && byQ.src) {
+    b.武功 = b.武功 || {};
+    const 鍵 = 組の鍵(byQ.src);
+    b.武功[鍵] = (b.武功[鍵] || 0) + 1;
+  }
   // 武勇は「相手の陣形を崩す圧力」として効く。士気そのものは下げない（GDD 8.3）
   // 零より下へは落とさぬ。負のまま持ち越すと、戦のあと整え直すのに際限がなくなる。
   e.cohesion = Math.max(0, e.cohesion - lost * 0.7 * flank * (0.55 + (valor || 60) / 100));
@@ -860,7 +874,7 @@ export function stepBattle(b, dt) {
         applyDamage(b, melee.f, melee.e,
           st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200)
           * terr.fight * flank * charge * push * guard * (1 - c.fatigue / 260) * dt,
-          flank, c.gen.valor * (c.chargeT > 0 ? 1.2 : 1), c);
+          flank, c.gen.valor * (c.chargeT > 0 ? 1.2 : 1), c, q);
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
         if (melee.f.seen || mdist < TERRAIN[melee.e.地 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
           q.cool = st.rof;
@@ -870,7 +884,7 @@ export function stepBattle(b, dt) {
               x2: melee.e.x, y2: melee.e.y, t: 0, life: q.type === "teppo" ? 0.3 : 0.45 });
           }
           const wet = q.type === "teppo" ? WEATHER[b.weather].teppo : 1;
-          applyDamage(b, melee.f, melee.e, st.vol * wet * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c);
+          applyDamage(b, melee.f, melee.e, st.vol * wet * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c, q);
         }
       }
     }

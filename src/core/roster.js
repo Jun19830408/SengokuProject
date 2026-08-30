@@ -85,7 +85,8 @@ export function rosterAdd(r, n, tag) {
 // 兵を減らす。人数の少ない組から消していく。
 export function rosterCut(r, n) {
   let left = Math.round(n);
-  const order = [...r].sort((a, b) => a.m - b.m);
+  // 手柄の無い組から先に削る。名の知られた長を、帳面の都合で消さない。
+  const order = [...r].sort((a, b) => (a.功 || 0) - (b.功 || 0) || a.m - b.m);
   for (const q of order) {
     if (left <= 0) break;
     const take = Math.min(q.m, left);
@@ -98,12 +99,23 @@ export function rosterCut(r, n) {
 export function rosterTake(src, n) {
   const out = [];
   let left = Math.round(n);
-  // 充実した組から順に連れて行く
-  const order = [...src].sort((a, b) => b.m - a.m);
+  /* 手柄のある組から順に連れて行く（GDD 6.2）。
+
+     名の知られた長は、その武将が兵を出すたびに出陣する。留守居に回されて
+     いては、二度と手柄を重ねられない。手柄の同じ組どうしでは、充実した
+     組を先とする。
+
+     組を割って連れ出すときは、長も出陣する（手柄は連れ出したほうへ移す）。
+     もっとも、手柄のある組は先に丸ごと連れ出されるので、割れるのは
+     たいてい手柄のない組である。 */
+  const order = [...src].sort((a, b) => (b.功 || 0) - (a.功 || 0) || b.m - a.m);
   for (const q of order) {
     if (left <= 0) break;
-    if (q.m <= left) { out.push({ id: q.id, t: q.t, m: q.m, max: q.max }); left -= q.m; q.m = 0; }
-    else { out.push({ id: q.id + "b", t: q.t, m: left, max: q.max }); q.m -= left; left = 0; }
+    if (q.m <= left) { out.push({ id: q.id, t: q.t, m: q.m, max: q.max, 功: q.功 }); left -= q.m; q.m = 0; }
+    else {
+      out.push({ id: q.id + "b", t: q.t, m: left, max: q.max, 功: q.功 });
+      q.m -= left; left = 0; q.功 = 0;
+    }
   }
   const rest = src.filter((q) => q.m > 0);
   return { taken: out, rest };
@@ -118,3 +130,97 @@ export function rosterSync(holder, key, total, tag) {
   return holder[key];
 }
 
+/* ------------------------------------------------ 駒の長（GDD 6.2）
+
+   盤の駒は五十人組であり、名簿の一組と一対一である（corps.js が組の id を
+   駒の src に持たせている）。ならば組ひとつに長がひとり居る、と見てよい。
+
+   長の名は、組の id から起こす。控えに文字を持たなくてよいし、同じ組なら
+   何度数えても同じ名が出る。補充されても組の id は変わらないので、長は
+   生き続けて部下だけが入れ替わる。組が名簿から消えれば、長も死ぬ。
+
+   出陣で組の一部を連れ出すと、連れ出したぶんの id に「b」が付く
+   （rosterTake）。末尾の b を落として、元の長の手柄に帰す。 */
+export const 組の鍵 = (id) => String(id || "").replace(/b+$/, "");
+
+/* 通称の材料。名も無き足軽の呼び名であるから、姓は持たない。
+   十二×十二×六で八百六十四通り。天下の組が一万四千あっても、
+   同じ名が居ることはあるが、一つの家の中ではまず重ならない。 */
+const 頭 = ["与", "藤", "弥", "喜", "孫", "彦", "源", "太", "半", "新", "又", "小",
+  "甚", "伝", "勘", "作", "市", "角", "喜", "宗"];
+const 尾 = ["三郎", "七郎", "九郎", "十郎", "兵衛", "太夫", "助", "作", "市", "蔵",
+  "介", "八", "右衛門", "左衛門", "次郎", "五郎", "六郎", "四郎"];
+const 冠 = ["", "", "", "", "権", "左", "右", "小", "大", "上"];   // 権三郎・左七郎の類
+
+/* 組の id から、その長の通称を起こす。字を控えずに済ませるための決め打ちである。
+
+   代を添えるのは、長が武将に取り立てられて組を離れたときのためである。
+   組はそのまま残り、次の者が長に立つ。代を進めなければ、同じ名の者が
+   もう一度そこに現れることになる。 */
+export function 長の名(id, 代) {
+  const k = 組の鍵(id) + (代 ? `#${代}` : "");
+  let h = 2166136261;
+  for (let i = 0; i < k.length; i++) { h ^= k.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return 冠[(h >>> 20) % 冠.length] + 頭[h % 頭.length] + 尾[(h >>> 8) % 尾.length];
+}
+
+// 物頭に届いた組（武将に取り立てられる者）を探す
+export const 物頭の要 = () => 階の段[階の段.length - 1].要;
+export function 取り立てるべき組(rost) {
+  let 出 = null;
+  for (const q of rost || []) {
+    if ((q.功 || 0) < 階の段[階の段.length - 1].要) continue;
+    if (!出 || q.功 > 出.功) 出 = q;
+  }
+  return 出;
+}
+
+/* 階（GDD 6.4）。勲功で位が上がる。
+
+   十人長・五十人長といっても、盤の駒はつねに五十人組である。人数そのもの
+   ではなく、位の名と受け取るのがよい。物頭に届いた者は、武将に取り立てる
+   資格を得る（house.js の makePromotion がここを見る）。 */
+export const 階の段 = [
+  { 名: "十人長", 要: 0 }, { 名: "五十人長", 要: 5 }, { 名: "百人長", 要: 15 },
+  { 名: "三百人長", 要: 35 }, { 名: "物頭", 要: 60 },
+];
+export const 長の階 = (勲) => {
+  let out = 階の段[0];
+  for (const x of 階の段) if ((勲 || 0) >= x.要) out = x;
+  return out.名;
+};
+
+/* 戦のあと、いちばん働いた組頭を戦国記に残す（GDD 6.2）。
+
+   遊ぶ側には盤の上の一人ひとりの働きは見えない。だが数字は動いている。
+   その日いちばん討ち取った組の長を、名を挙げて記す。
+
+   討ち取った相手は、敵の組頭ではなく、敵の隊を率いた武将の名で書く。
+   他家の組頭まで控えれば記録が膨らむし、そこまでは要らない。
+   「福留親政の手勢の一隊を破った」で、誰と戦ったかは十分に伝わる。 */
+export function 組頭の働きを記す(s, b, 我side, 場) {
+  const 功 = b.武功 || {};
+  if (!Object.keys(功).length) return;
+  /* 組は武将の直属だけでなく、城の地域家臣団や出征中の軍にもある。
+     討って出た兵の多くは城の名簿から出るので、そこを見ねば何も見つからない。 */
+  const 我組 = [];
+  const 拾 = (rost, 主) => { for (const q of rost || []) 我組.push({ q, 主 }); };
+  for (const gen of s.generals) if (gen.faction === s.player) 拾(gen.rost, gen.name);
+  for (const c of s.castles) if (c.faction === s.player) 拾(c.rost, `${c.name}の地の兵`);
+  for (const a of s.armies || []) if (a.faction === s.player) 拾(a.rost, "出征の兵");
+  let 頭 = null;
+  for (const x of 我組) {
+    const n = 功[組の鍵(x.q.id)];
+    if (n && (!頭 || n > 頭.n)) 頭 = { n, ...x };
+  }
+  if (!頭 || 頭.n < 2) return;                        // 一駒では、まだ記すに足りない
+  const 敵 = b.corps.filter((c) => c.side !== 我side && c.gen)
+    .sort((a, c) => Object.values(c.loss || {}).reduce((x, y) => x + y, 0)
+      - Object.values(a.loss || {}).reduce((x, y) => x + y, 0))[0];
+  const 名 = 長の名(頭.q.id, 頭.q.代);
+  const 階 = 長の階((頭.q.功 || 0) + 頭.n);
+  s.chronicle.push({ y: s.year, m: s.month,
+    text: `${場 ? `${場}下の戦で、` : ""}${頭.主}の${名}が`
+      + `${敵 && 敵.gen ? `${敵.gen.name}の手勢の` : "敵の"}一隊を${頭.n}つまで破った。`
+      + `${階 === "物頭" ? `${名}は物頭の勲功に達している。` : `いまは${階}である。`}` });
+}

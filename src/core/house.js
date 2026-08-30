@@ -362,7 +362,9 @@ export function makePromotion(lord, allGens, opts = {}) {
      門を守り抜いた者（守備隊）は、堪える力（統率）がいくらか高い。 */
   const 守 = !!opts.守備隊;
   return {
-    oldName: `${sur}${common}`, lordName: lord.name, henki,
+    /* 旧名。組頭から取り立てるときは、その者の通称をそのまま使う。
+       盤の上で手柄を重ねてきた者であって、いま思いついた名ではない。 */
+    oldName: opts.旧名 || `${sur}${common}`, lordName: lord.name, henki,
     candidates: cands.slice(0, 4), feat: FEATS[Math.floor(Math.random() * FEATS.length)],
     仕官: {
       faction: opts.faction || lord.faction, at: opts.at || lord.at,

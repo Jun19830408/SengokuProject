@@ -595,7 +595,7 @@ function rosterAdd(r, n, tag) {
 }
 function rosterCut(r, n) {
   let left = Math.round(n);
-  const order = [...r].sort((a, b) => a.m - b.m);
+  const order = [...r].sort((a, b) => (a.\u529F || 0) - (b.\u529F || 0) || a.m - b.m);
   for (const q of order) {
     if (left <= 0) break;
     const take = Math.min(q.m, left);
@@ -607,17 +607,18 @@ function rosterCut(r, n) {
 function rosterTake(src, n) {
   const out = [];
   let left = Math.round(n);
-  const order = [...src].sort((a, b) => b.m - a.m);
+  const order = [...src].sort((a, b) => (b.\u529F || 0) - (a.\u529F || 0) || b.m - a.m);
   for (const q of order) {
     if (left <= 0) break;
     if (q.m <= left) {
-      out.push({ id: q.id, t: q.t, m: q.m, max: q.max });
+      out.push({ id: q.id, t: q.t, m: q.m, max: q.max, \u529F: q.\u529F });
       left -= q.m;
       q.m = 0;
     } else {
-      out.push({ id: q.id + "b", t: q.t, m: left, max: q.max });
+      out.push({ id: q.id + "b", t: q.t, m: left, max: q.max, \u529F: q.\u529F });
       q.m -= left;
       left = 0;
+      q.\u529F = 0;
     }
   }
   const rest = src.filter((q) => q.m > 0);
@@ -629,6 +630,104 @@ function rosterSync(holder, key, total, tag) {
   if (d > 0) rosterAdd(holder[key], d, tag);
   else if (d < 0) holder[key] = rosterCut(holder[key], -d);
   return holder[key];
+}
+var \u7D44\u306E\u9375 = (id) => String(id || "").replace(/b+$/, "");
+var \u982D = [
+  "\u4E0E",
+  "\u85E4",
+  "\u5F25",
+  "\u559C",
+  "\u5B6B",
+  "\u5F66",
+  "\u6E90",
+  "\u592A",
+  "\u534A",
+  "\u65B0",
+  "\u53C8",
+  "\u5C0F",
+  "\u751A",
+  "\u4F1D",
+  "\u52D8",
+  "\u4F5C",
+  "\u5E02",
+  "\u89D2",
+  "\u559C",
+  "\u5B97"
+];
+var \u5C3E = [
+  "\u4E09\u90CE",
+  "\u4E03\u90CE",
+  "\u4E5D\u90CE",
+  "\u5341\u90CE",
+  "\u5175\u885B",
+  "\u592A\u592B",
+  "\u52A9",
+  "\u4F5C",
+  "\u5E02",
+  "\u8535",
+  "\u4ECB",
+  "\u516B",
+  "\u53F3\u885B\u9580",
+  "\u5DE6\u885B\u9580",
+  "\u6B21\u90CE",
+  "\u4E94\u90CE",
+  "\u516D\u90CE",
+  "\u56DB\u90CE"
+];
+var \u51A0 = ["", "", "", "", "\u6A29", "\u5DE6", "\u53F3", "\u5C0F", "\u5927", "\u4E0A"];
+function \u9577\u306E\u540D(id, \u4EE32) {
+  const k = \u7D44\u306E\u9375(id) + (\u4EE32 ? `#${\u4EE32}` : "");
+  let h = 2166136261;
+  for (let i = 0; i < k.length; i++) {
+    h ^= k.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return \u51A0[(h >>> 20) % \u51A0.length] + \u982D[h % \u982D.length] + \u5C3E[(h >>> 8) % \u5C3E.length];
+}
+function \u53D6\u308A\u7ACB\u3066\u308B\u3079\u304D\u7D44(rost) {
+  let \u51FA = null;
+  for (const q of rost || []) {
+    if ((q.\u529F || 0) < \u968E\u306E\u6BB5[\u968E\u306E\u6BB5.length - 1].\u8981) continue;
+    if (!\u51FA || q.\u529F > \u51FA.\u529F) \u51FA = q;
+  }
+  return \u51FA;
+}
+var \u968E\u306E\u6BB5 = [
+  { \u540D: "\u5341\u4EBA\u9577", \u8981: 0 },
+  { \u540D: "\u4E94\u5341\u4EBA\u9577", \u8981: 5 },
+  { \u540D: "\u767E\u4EBA\u9577", \u8981: 15 },
+  { \u540D: "\u4E09\u767E\u4EBA\u9577", \u8981: 35 },
+  { \u540D: "\u7269\u982D", \u8981: 60 }
+];
+var \u9577\u306E\u968E = (\u52F2) => {
+  let out = \u968E\u306E\u6BB5[0];
+  for (const x of \u968E\u306E\u6BB5) if ((\u52F2 || 0) >= x.\u8981) out = x;
+  return out.\u540D;
+};
+function \u7D44\u982D\u306E\u50CD\u304D\u3092\u8A18\u3059(s2, b, \u6211side, \u5834) {
+  const \u529F = b.\u6B66\u529F || {};
+  if (!Object.keys(\u529F).length) return;
+  const \u6211\u7D44 = [];
+  const \u62FE = (rost, \u4E3B) => {
+    for (const q of rost || []) \u6211\u7D44.push({ q, \u4E3B });
+  };
+  for (const gen of s2.generals) if (gen.faction === s2.player) \u62FE(gen.rost, gen.name);
+  for (const c of s2.castles) if (c.faction === s2.player) \u62FE(c.rost, `${c.name}\u306E\u5730\u306E\u5175`);
+  for (const a of s2.armies || []) if (a.faction === s2.player) \u62FE(a.rost, "\u51FA\u5F81\u306E\u5175");
+  let \u982D2 = null;
+  for (const x of \u6211\u7D44) {
+    const n = \u529F[\u7D44\u306E\u9375(x.q.id)];
+    if (n && (!\u982D2 || n > \u982D2.n)) \u982D2 = { n, ...x };
+  }
+  if (!\u982D2 || \u982D2.n < 2) return;
+  const \u6575 = b.corps.filter((c) => c.side !== \u6211side && c.gen).sort((a, c) => Object.values(c.loss || {}).reduce((x, y) => x + y, 0) - Object.values(a.loss || {}).reduce((x, y) => x + y, 0))[0];
+  const \u540D = \u9577\u306E\u540D(\u982D2.q.id, \u982D2.q.\u4EE3);
+  const \u968E = \u9577\u306E\u968E((\u982D2.q.\u529F || 0) + \u982D2.n);
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${\u5834 ? `${\u5834}\u4E0B\u306E\u6226\u3067\u3001` : ""}${\u982D2.\u4E3B}\u306E${\u540D}\u304C${\u6575 && \u6575.gen ? `${\u6575.gen.name}\u306E\u624B\u52E2\u306E` : "\u6575\u306E"}\u4E00\u968A\u3092${\u982D2.n}\u3064\u307E\u3067\u7834\u3063\u305F\u3002${\u968E === "\u7269\u982D" ? `${\u540D}\u306F\u7269\u982D\u306E\u52F2\u529F\u306B\u9054\u3057\u3066\u3044\u308B\u3002` : `\u3044\u307E\u306F${\u968E}\u3067\u3042\u308B\u3002`}`
+  });
 }
 
 // src/core/util.js
@@ -10367,7 +10466,9 @@ function makePromotion(lord, allGens, opts = {}) {
   const r = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   const \u5B88 = !!opts.\u5B88\u5099\u968A;
   return {
-    oldName: `${sur}${common}`,
+    /* 旧名。組頭から取り立てるときは、その者の通称をそのまま使う。
+       盤の上で手柄を重ねてきた者であって、いま思いついた名ではない。 */
+    oldName: opts.\u65E7\u540D || `${sur}${common}`,
     lordName: lord.name,
     henki,
     candidates: cands.slice(0, 4),
@@ -15283,10 +15384,10 @@ function \u89E3\u3059(\u6587) {
     return v;
   };
   const \u89AA = new Int32Array(65536).fill(-1);
-  const \u5C3E = new Uint8Array(65536);
+  const \u5C3E2 = new Uint8Array(65536);
   const \u4E08 = new Int32Array(65536);
   for (let i = 0; i < 256; i++) {
-    \u5C3E[i] = i;
+    \u5C3E2[i] = i;
     \u4E08[i] = 1;
   }
   let \u6B21 = 257, \u30D3\u30C3\u30C8 = 9;
@@ -15297,7 +15398,7 @@ function \u89E3\u3059(\u6587) {
     const a = new Uint8Array(n);
     let k = n - 1, c = \u7B26;
     while (c >= 0 && k >= 0) {
-      a[k--] = \u5C3E[c];
+      a[k--] = \u5C3E2[c];
       c = \u89AA[c];
     }
     return a;
@@ -15317,7 +15418,7 @@ function \u89E3\u3059(\u6587) {
     \u7DCF += \u4E26\u3073.length;
     if (\u524D >= 0 && \u6B21 < 65536) {
       \u89AA[\u6B21] = \u524D;
-      \u5C3E[\u6B21] = \u4E26\u3073[0];
+      \u5C3E2[\u6B21] = \u4E26\u3073[0];
       \u4E08[\u6B21] = \u4E08[\u524D] + 1;
       \u6B21++;
       if (\u6B21 + 1 === 1 << \u30D3\u30C3\u30C8 && \u30D3\u30C3\u30C8 < 16) \u30D3\u30C3\u30C8++;
@@ -17660,9 +17761,9 @@ function resolveClashOffscreen(prev) {
 }
 
 // src/govern/month.js
-function \u8ECD\u306E\u540D(s2, \u982D) {
+function \u8ECD\u306E\u540D(s2, \u982D2) {
   s2.\u8ECD\u756A = (s2.\u8ECD\u756A || 0) + 1;
-  return `${\u982D}${s2.year}-${s2.month}-${s2.\u8ECD\u756A}`;
+  return `${\u982D2}${s2.year}-${s2.month}-${s2.\u8ECD\u756A}`;
 }
 function advanceMonth(prev, g) {
   const s2 = structuredClone(prev);
@@ -22743,12 +22844,17 @@ function createBattle(playerCorps, enemyCorps, attackerSide) {
   b.\u9663\u9593 = Math.max(200, Math.hypot(b.\u9663.P.x - b.\u9663.E.x, b.\u9663.P.y - b.\u9663.E.y));
   return b;
 }
-function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps) {
+function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   const pinch = fCorps.pinch >= 3 ? 1.22 : fCorps.pinch === 2 ? 1.12 : 1;
   const before = e.men;
   e.men = Math.max(0, e.men - dmg * pinch);
   const lost = before - e.men;
   fCorps.loss[e.origin] += lost;
+  if (before > 0 && e.men <= 0 && byQ && byQ.src) {
+    b.\u6B66\u529F = b.\u6B66\u529F || {};
+    const \u9375 = \u7D44\u306E\u9375(byQ.src);
+    b.\u6B66\u529F[\u9375] = (b.\u6B66\u529F[\u9375] || 0) + 1;
+  }
   e.cohesion = Math.max(0, e.cohesion - lost * 0.7 * flank * (0.55 + (valor || 60) / 100));
   const share = lost / Math.max(1200, corpsMax(fCorps));
   const \u582A\u3048 = clamp(1.3 - (fCorps.gen && fCorps.gen.lead || 60) / 200, 0.8, 1.2);
@@ -23494,7 +23600,8 @@ function stepBattle(b, dt) {
           st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * (1 - c.fatigue / 260) * dt,
           flank,
           c.gen.valor * (c.chargeT > 0 ? 1.2 : 1),
-          c
+          c,
+          q
         );
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
         if (melee.f.seen || mdist < TERRAIN[melee.e.\u5730 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
@@ -23512,7 +23619,7 @@ function stepBattle(b, dt) {
             });
           }
           const wet = q.type === "teppo" ? WEATHER[b.weather].teppo : 1;
-          applyDamage(b, melee.f, melee.e, st.vol * wet * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c);
+          applyDamage(b, melee.f, melee.e, st.vol * wet * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c, q);
         }
       }
     }
@@ -24289,16 +24396,58 @@ function FactionInfo({ g, onClose }) {
     return `\uFF0F${rl.state}${\u5411}\u30FB\u4FE1\u7528${Math.round(rl.trust)}${rl.until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, rl.until.y, rl.until.m)}\u304B\u6708\uFF09` : ""}`;
   })()))), \u7D76\u3048\u305F.length > 0 && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "sec", style: { marginTop: 14 } }, "\u6EC5\u3093\u3060\u5BB6\uFF08", \u7D76\u3048\u305F.length, "\u5BB6\uFF09"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 6 } }, "\u57CE\u3092\u4E00\u3064\u3082\u6301\u305F\u306C\u5BB6\u3067\u3059\u3002\u5F53\u4E3B\u304C\u6355\u3089\u308F\u308C\u3066\u8EAB\u306E\u632F\u308A\u65B9\u304C\u6C7A\u307E\u3089\u305A\u3068\u3082\u3001 \u62E0\u308B\u3079\u304D\u57CE\u304C\u7121\u3051\u308C\u3070\u5BB6\u306F\u7ACB\u3061\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, lineHeight: 2, color: U.dim } }, \u7D76\u3048\u305F.map((r) => /* @__PURE__ */ React2.createElement("span", { key: r.f.id, style: { marginRight: 12, whiteSpace: "nowrap" } }, /* @__PURE__ */ React2.createElement("span", { className: "dot", style: { background: r.f.color, opacity: 0.5 } }), r.f.name, r.\u56DA ? `\uFF08${r.\u56DA.name}\u306F\u6355\u865C\uFF09` : "")))), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")));
 }
+function \u7D44\u982D\u306E\u5E33(g) {
+  const \u51FA = [];
+  const \u898B = (rost, \u6240, \u4E3B) => {
+    for (const q of rost || []) {
+      if (!q.\u529F) continue;
+      \u51FA.push({ \u9375: \u7D44\u306E\u9375(q.id), \u540D: \u9577\u306E\u540D(q.id), \u529F: q.\u529F, \u968E: \u9577\u306E\u968E(q.\u529F), \u5175: q.m, \u6240, \u4E3B });
+    }
+  };
+  for (const gen of g.generals) {
+    if (gen.faction !== g.player || gen.captive) continue;
+    const c = g.castles.find((x) => x.id === gen.at);
+    \u898B(gen.rost, c ? c.name : "\u51FA\u5F81\u4E2D", gen.name);
+  }
+  for (const c of g.castles) {
+    if (c.faction !== g.player) continue;
+    \u898B(c.rost, c.name, "\u5730\u57DF\u5BB6\u81E3\u56E3");
+  }
+  for (const a of g.armies || []) {
+    if (a.faction !== g.player) continue;
+    \u898B(a.rost, "\u51FA\u5F81\u4E2D", "\u5730\u57DF\u5BB6\u81E3\u56E3");
+  }
+  const \u675F = /* @__PURE__ */ new Map();
+  for (const x of \u51FA) {
+    const y = \u675F.get(x.\u9375);
+    if (y) {
+      y.\u529F += x.\u529F;
+      y.\u5175 += x.\u5175;
+      y.\u968E = \u9577\u306E\u968E(y.\u529F);
+    } else \u675F.set(x.\u9375, { ...x });
+  }
+  return [...\u675F.values()].sort((a, b) => b.\u529F - a.\u529F);
+}
 function GeneralList({ g, onClose }) {
   const gs = g.generals.filter((x) => x.faction === g.player);
-  return /* @__PURE__ */ React2.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(onClose) }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 12 } }, "\u6B66\u5C06\u4E00\u89A7"), gs.map((x) => /* @__PURE__ */ React2.createElement("div", { key: x.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 100 } }, x.name, isNameless(x) && /* @__PURE__ */ React2.createElement("span", { style: { color: "#9B9384", fontSize: 10, marginLeft: 2 } }, "\u3014\u4F1D\u3015"), is\u67B6\u7A7A(x) && /* @__PURE__ */ React2.createElement(
+  const [\u6B04, set\u6B04] = useState2("\u6B66\u5C06");
+  const \u982D2 = \u7D44\u982D\u306E\u5E33(g);
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(onClose) }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21 } }, "\u5BB6\u4E2D\u306E\u5E33"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 6 } }, [["\u6B66\u5C06", "\u6B66\u5C06\u306E\u5E33"], ["\u7D44\u982D", "\u7D44\u982D\u306E\u5E33"]].map(([k, \u672D]) => /* @__PURE__ */ React2.createElement("button", { key: k, className: `btn sm ${\u6B04 === k ? "on" : ""}`, onClick: () => set\u6B04(k) }, \u672D, k === "\u7D44\u982D" && \u982D2.length ? ` ${\u982D2.length}` : "")))), \u6B04 === "\u7D44\u982D" && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.8 } }, "\u4E94\u5341\u4EBA\u7D44\u3072\u3068\u3064\u306B\u9577\u304C\u3072\u3068\u308A\u3002\u6575\u306E\u99D2\u3092\u8A0E\u3061\u53D6\u308B\u305F\u3073\u306B\u624B\u67C4\u304C\u7A4D\u307E\u308C\u307E\u3059\u3002 \u540D\u306E\u77E5\u3089\u308C\u305F\u7D44\u306F\u3001\u5175\u3092\u51FA\u3059\u305F\u3073\u306B\u5148\u306B\u547C\u3070\u308C\u307E\u3059\u3002\u7D44\u304C\u5168\u6EC5\u3059\u308C\u3070\u9577\u3082\u6B7B\u306B\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u52F2\u529F ", \u968E\u306E\u6BB5.map((x) => `${x.\u8981}\uFF1D${x.\u540D}`).join("\u3000")), !\u982D2.length && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, padding: "18px 0", textAlign: "center" } }, "\u307E\u3060\u624B\u67C4\u3092\u7ACB\u3066\u305F\u8005\u306F\u3044\u307E\u305B\u3093\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u5408\u6226\u3067\u6575\u306E\u99D2\u3092\u8A0E\u3061\u53D6\u308C\u3070\u3001\u305D\u306E\u7D44\u306E\u9577\u304C\u3053\u3053\u306B\u8F09\u308A\u307E\u3059\u3002"), \u982D2.map((x) => /* @__PURE__ */ React2.createElement("div", { key: x.\u9375, style: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "7px 0",
+    borderBottom: `1px solid ${U.line2}`,
+    fontSize: 13,
+    flexWrap: "wrap"
+  } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 92 } }, x.\u540D), /* @__PURE__ */ React2.createElement("span", { style: { width: 62, color: x.\u968E === "\u7269\u982D" ? "#C8A44A" : U.dim, fontWeight: x.\u968E === "\u7269\u982D" ? 600 : 400 } }, x.\u968E), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { flex: 1, color: U.dim } }, "\u6B66\u529F ", x.\u529F, "\uFF08\u8A0E\u3061\u53D6\u3063\u305F\u99D2\uFF09\u3000\u52F2\u529F ", x.\u529F), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim } }, fmt(x.\u5175), "\u4EBA"), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, x.\u6240))), \u982D2.some((x) => x.\u968E === "\u7269\u982D") && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: "#8A6A34", marginTop: 8, lineHeight: 1.7 } }, "\u7269\u982D\u306B\u5C4A\u3044\u305F\u8005\u306F\u3001\u6B66\u5C06\u306B\u53D6\u308A\u7ACB\u3066\u308B\u8CC7\u683C\u3092\u5F97\u3066\u3044\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")), \u6B04 === "\u6B66\u5C06" && /* @__PURE__ */ React2.createElement(React2.Fragment, null, gs.map((x) => /* @__PURE__ */ React2.createElement("div", { key: x.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 100 } }, x.name, isNameless(x) && /* @__PURE__ */ React2.createElement("span", { style: { color: "#9B9384", fontSize: 10, marginLeft: 2 } }, "\u3014\u4F1D\u3015"), is\u67B6\u7A7A(x) && /* @__PURE__ */ React2.createElement(
     "span",
     {
       style: { color: "#9B9384", fontSize: 10, marginLeft: 2 },
       title: "\u904A\u3073\u306E\u4E2D\u3067\u751F\u307E\u308C\u305F\u8005\u3002\u53F2\u5B9F\u306E\u4EBA\u7269\u3067\u306F\u3042\u308A\u307E\u305B\u3093"
     },
     "\u3014\u67B6\u7A7A\u3015"
-  )), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, flex: 1 } }, x.age, "\u6B73 \u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, " \u653F", x.gov, " \u5FE0", \u5FE0\u8AA0(x)), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, x.at ? (g.castles.find((c) => c.id === x.at) || {}).name : "\u51FA\u5F81\u4E2D"), /* @__PURE__ */ React2.createElement("span", { className: "num" }, "\u76F4\u5C5E ", fmt(x.retinue)))), gs.some((x) => is\u67B6\u7A7A(x)) && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u3014\u67B6\u7A7A\u3015\u2026 \u904A\u3073\u306E\u4E2D\u3067\u751F\u307E\u308C\u305F\u8005\u3067\u3059\u3002\u53F2\u5B9F\u306E\u4EBA\u7269\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), gs.some((x) => isNameless(x)) && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.7 } }, "\u3014\u4F1D\u3015\u306F\u540D\u306E\u4F1D\u308F\u3089\u306C\u5728\u5730\u306E\u9577\u3067\u3059\u3002\u5730\u540D\u306B\u300C\u4E59\u540D\u300D\u300C\u6309\u53F8\u300D\u3092\u6DFB\u3048\u305F\u547C\u3073\u540D\u3067\u3042\u308A\u3001\u5B9F\u5728\u306E\u4EBA\u540D\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")));
+  )), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, flex: 1 } }, x.age, "\u6B73 \u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, " \u653F", x.gov, " \u5FE0", \u5FE0\u8AA0(x)), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, x.at ? (g.castles.find((c) => c.id === x.at) || {}).name : "\u51FA\u5F81\u4E2D"), /* @__PURE__ */ React2.createElement("span", { className: "num" }, "\u76F4\u5C5E ", fmt(x.retinue)))), gs.some((x) => is\u67B6\u7A7A(x)) && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u3014\u67B6\u7A7A\u3015\u2026 \u904A\u3073\u306E\u4E2D\u3067\u751F\u307E\u308C\u305F\u8005\u3067\u3059\u3002\u53F2\u5B9F\u306E\u4EBA\u7269\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), gs.some((x) => isNameless(x)) && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.7 } }, "\u3014\u4F1D\u3015\u306F\u540D\u306E\u4F1D\u308F\u3089\u306C\u5728\u5730\u306E\u9577\u3067\u3059\u3002\u5730\u540D\u306B\u300C\u4E59\u540D\u300D\u300C\u6309\u53F8\u300D\u3092\u6DFB\u3048\u305F\u547C\u3073\u540D\u3067\u3042\u308A\u3001\u5B9F\u5728\u306E\u4EBA\u540D\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B"))));
 }
 function DiploOffer({ g, \u7533, onTake, onPass }) {
   const f = g.factions[\u7533.fid];
@@ -26580,13 +26729,13 @@ function \u6D77\u6226\u3092\u4ED5\u7ACB\u3066\u308B(s2, army, inter, \u5730\u540
   const \u7DCF\u8258 = (inter.mine.\u8258 || 0) + (inter.foe.\u8258 || 0);
   layoutSea((army.id || "x").split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, army.men, \u7DCF\u8258);
   const \u5C06 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
-  const \u982D = \u5C06.length ? \u5C06 : [{ id: "x", name: "\u8239\u624B\u8846", lead: 55, valor: 55, wit: 55 }];
+  const \u982D2 = \u5C06.length ? \u5C06 : [{ id: "x", name: "\u8239\u624B\u8846", lead: 55, valor: 55, wit: 55 }];
   const P = [], E = [];
-  const \u6211\u5272 = \u5206\u3051\u308B(inter.mine.\u5185\u8A33, Math.min(3, \u982D.length));
+  const \u6211\u5272 = \u5206\u3051\u308B(inter.mine.\u5185\u8A33, Math.min(3, \u982D2.length));
   \u6211\u5272.forEach((n, i) => {
     P.push(makeFleet(
       "P",
-      \u982D[i] || \u982D[0],
+      \u982D2[i] || \u982D2[0],
       0,
       inter.mine.skill,
       SEA.w * (0.5 + (i - (\u6211\u5272.length - 1) / 2) * 0.26),
@@ -27597,6 +27746,24 @@ function Ending({ g, onClose, onTitle }) {
 }
 
 // src/ui/MapScreen.jsx
+function \u7269\u982D\u3092\u53D6\u308A\u7ACB\u3066\u308B(s2, corps) {
+  let best = null;
+  for (const c of corps) {
+    const gen = s2.generals.find((x) => x.id === c.id);
+    if (!gen || gen.faction !== s2.player) continue;
+    const q = \u53D6\u308A\u7ACB\u3066\u308B\u3079\u304D\u7D44(gen.rost);
+    if (q && (!best || q.\u529F > best.q.\u529F)) best = { q, gen };
+  }
+  if (!best) return null;
+  const promo = makePromotion(best.gen, s2.generals, {
+    faction: best.gen.faction,
+    at: best.gen.at,
+    \u65E7\u540D: \u9577\u306E\u540D(best.q.id, best.q.\u4EE3)
+  });
+  best.q.\u4EE3 = (best.q.\u4EE3 || 0) + 1;
+  best.q.\u529F = 0;
+  return promo;
+}
 function \u624B\u67C4\u306E\u968A(s2, corps, castle) {
   const \u5024 = (c) => (c.feats || []).length * 2 + (c.loss["\u76F4\u5C5E"] > 160 ? 2 : 0);
   const \u5019 = corps.filter((c) => \u5024(c) >= 4).sort((a, b) => \u5024(b) - \u5024(a));
@@ -28730,8 +28897,12 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         sackCastle(s2, castle, army, true);
       }
       if (b.result === "P" && !ctx.playerIsAtk) {
-        const \u529F = \u624B\u67C4\u306E\u968A(s2, b.corps.filter((c) => c.side === "P"), castle);
-        if (\u529F && Math.random() < 0.3) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
+        \u7D44\u982D\u306E\u50CD\u304D\u3092\u8A18\u3059(s2, b, "P", castle ? castle.name : null);
+        s2.promo = \u7269\u982D\u3092\u53D6\u308A\u7ACB\u3066\u308B(s2, b.corps.filter((c) => c.side === "P"));
+        if (!s2.promo) {
+          const \u529F = \u624B\u67C4\u306E\u968A(s2, b.corps.filter((c) => c.side === "P"), castle);
+          if (\u529F && Math.random() < 0.3) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
+        }
       }
       return s2;
     });
@@ -28743,9 +28914,14 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       if (!q.src) continue;
       survive.set(q.src, (survive.get(q.src) || 0) + Math.max(0, Math.round(q.men)));
     }
+    const \u624B\u67C4 = b.\u6B66\u529F || {};
     const apply = (rost) => {
       if (!rost) return [];
-      for (const q of rost) if (survive.has(q.id)) q.m = survive.get(q.id);
+      for (const q of rost) {
+        if (survive.has(q.id)) q.m = survive.get(q.id);
+        const \u5F97 = \u624B\u67C4[\u7D44\u306E\u9375(q.id)];
+        if (\u5F97) q.\u529F = (q.\u529F || 0) + \u5F97;
+      }
       return rost.filter((q) => q.m > 0);
     };
     for (const c of corpsList) {
@@ -28889,8 +29065,12 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         ];
       }
       if (b.result === "P") {
-        const \u529F = \u624B\u67C4\u306E\u968A(s2, b.corps.filter((c) => c.side === "P"), null);
-        if (\u529F && Math.random() < 0.35) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
+        \u7D44\u982D\u306E\u50CD\u304D\u3092\u8A18\u3059(s2, b, "P", null);
+        s2.promo = \u7269\u982D\u3092\u53D6\u308A\u7ACB\u3066\u308B(s2, b.corps.filter((c) => c.side === "P"));
+        if (!s2.promo) {
+          const \u529F = \u624B\u67C4\u306E\u968A(s2, b.corps.filter((c) => c.side === "P"), null);
+          if (\u529F && Math.random() < 0.35) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
+        }
       }
       return s2;
     });
@@ -29002,8 +29182,12 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         });
       }
       if (playerWon) {
-        const \u529F = \u624B\u67C4\u306E\u968A(s2, side("P"), castle);
-        if (\u529F && Math.random() < 0.35) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
+        \u7D44\u982D\u306E\u50CD\u304D\u3092\u8A18\u3059(s2, b, "P", castle ? castle.name : null);
+        s2.promo = \u7269\u982D\u3092\u53D6\u308A\u7ACB\u3066\u308B(s2, side("P"));
+        if (!s2.promo) {
+          const \u529F = \u624B\u67C4\u306E\u968A(s2, side("P"), castle);
+          if (\u529F && Math.random() < 0.35) s2.promo = makePromotion(\u529F.lord, s2.generals, \u529F);
+        }
       }
       s2.pendingArrivals = (s2.pendingArrivals || []).slice(1);
       if (ctx.campId) s2.campaigns = (s2.campaigns || []).filter((x) => x.id !== ctx.campId);
