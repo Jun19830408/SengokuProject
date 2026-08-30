@@ -28,7 +28,7 @@ Object.defineProperty(dom.window.HTMLElement.prototype, 'clientWidth', { get() {
 Object.defineProperty(dom.window.HTMLElement.prototype, 'clientHeight', { get() { return 600; } });
 dom.window.HTMLElement.prototype.getBoundingClientRect = function () { return { left: 0, top: 0, width: 900, height: 600, right: 900, bottom: 600 }; };
 const errs = []; console.error = (...a) => errs.push(String(a[0]).slice(0, 180));
-const { createRoot, act, App, React, initState, findPath } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
+const { createRoot, act, App, React, initState, findPath, reinforceOffers } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
 /* ------------------------------------------- 盤をこしらえる
    自家の城が敵に囲まれ、他の自家の城と、臣従した家の城が近くにある形。 */
@@ -164,6 +164,39 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
 
   console.log('確かめ:', 咎 ? `★${咎}件が通らなかった` : 'すべて通った');
   console.log('エラー:', errs.length ? errs.slice(0, 2).join(' | ') : 'なし');
+  /* ------------------------------------ 援軍に呼べる城を、数で切らない
+
+     稲葉山から佐和山へ攻めるとき、那古野の兵が呼べなかった。十五城を
+     持ちながら、援軍の一覧に十城しか並ばなかったのである。近い順に十で
+     打ち切っていたので、遠い城が黙って落ちていた。出せぬ理由は無い。
+
+     数で切るのをやめ、間に合うかどうかで切る。半年かけて着く援軍は、
+     着いたころには戦が終わっている。
+     あわせて、攻める相手の城そのものが候補に混じっていたのも直した。 */
+  {
+    const t = initState('oda');
+    for (const id of ['inabayama', 'sunomata', 'ogaki', 'kiyosu', 'iwakura', 'shobata',
+      'narumi', 'nagashima', 'kuwana', 'kanbe', 'odani', 'yamamotoyama']) {
+      const c = t.castles.find((x) => x.id === id);
+      if (c) c.faction = 'oda';
+    }
+    const 我 = t.castles.filter((c) => c.faction === 'oda').length;
+    const 出 = reinforceOffers(t, 'inabayama', 'sawayama');
+    確('十を超える城を持てば、十を超えて並ぶ', 出.length > 10, `${我}城のうち ${出.length}城`);
+    確('遠い自領の城も落ちない（那古野城）', 出.some((o) => o.name === '那古野城'),
+      出.map((o) => o.name).slice(0, 6).join('・') + '…');
+    確('攻める相手の城は、候補に混じらない', !出.some((o) => o.castleId === 'sawayama'));
+    確('出陣元の城も、候補に混じらない', !出.some((o) => o.castleId === 'inabayama'));
+    確('着くのに半年を超える城は並ばない', 出.every((o) => (o.months || 1) <= 6),
+      `いちばん遠くて ${Math.max(...出.map((o) => o.months || 1))}か月`);
+    // 天下を取りかけても、読めぬほど並ばない
+    const u = initState('oda');
+    for (const c of u.castles) c.faction = 'oda';
+    const 大 = reinforceOffers(u, 'nagoya', 'sawayama');
+    確('城が二百を超えても、並ぶのは四十まで', 大.length <= 40,
+      `${u.castles.length}城 → ${大.length}城`);
+  }
+
   process.exit(咎 ? 1 : 0);
 })().catch((e) => {
   console.log('例外:', e.message, '\n', (e.stack || '').split('\n').slice(0, 5).join('\n'));

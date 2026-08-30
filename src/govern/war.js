@@ -22,6 +22,7 @@ export function reinforceOffers(g, from, target) {
   const out = [];
   for (const c of g.castles) {
     if (c.id === from) continue;
+    if (c.id === target) continue;              // 攻める相手の城から援軍は呼べない
     const path = findPath(c.id, target);
     if (!path) continue;
     const legs = path.length - 1;
@@ -52,9 +53,17 @@ export function reinforceOffers(g, from, target) {
       reason: avail < 400 ? "守備が手薄で出せない" : men < 200 && !指図 ? "出せる兵が少なすぎる" : null,
     });
   }
-  // 指図の通る城は先に並べる。呼べる先が埋もれては困る。
-  return out.filter((o) => o.men > 0 || o.reason || o.指図)
-    .sort((a, z) => (z.指図 ? 1 : 0) - (a.指図 ? 1 : 0) || a.legs - z.legs).slice(0, 10);
+  /* 指図の通る城は先に並べる。呼べる先が埋もれては困る。
+
+     もとは近い順に十城で打ち切っていた。ところが城が十を超えると、遠い城が
+     黙って落ちる。稲葉山から佐和山へ攻めるとき、那古野の兵が呼べなかった。
+     十五城を持ちながら十しか並ばなかったのであって、出せぬ理由は無い。
+
+     数で切るのをやめ、間に合うかどうかで切る。半年かけて着く援軍は、
+     着いたころには戦が終わっている。呼べる先が多すぎて読めぬということも
+     ないよう、四十まではそのまま並べる。 */
+  return out.filter((o) => (o.men > 0 || o.reason || o.指図) && (o.months || 1) <= 6)
+    .sort((a, z) => (z.指図 ? 1 : 0) - (a.指図 ? 1 : 0) || a.legs - z.legs).slice(0, 40);
 }
 
 

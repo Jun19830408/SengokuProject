@@ -17235,6 +17235,7 @@ function reinforceOffers(g, from, target) {
   const out = [];
   for (const c of g.castles) {
     if (c.id === from) continue;
+    if (c.id === target) continue;
     const path = findPath(c.id, target);
     if (!path) continue;
     const legs = path.length - 1;
@@ -17292,7 +17293,7 @@ function reinforceOffers(g, from, target) {
       reason: avail < 400 ? "\u5B88\u5099\u304C\u624B\u8584\u3067\u51FA\u305B\u306A\u3044" : men < 200 && !\u6307\u56F3 ? "\u51FA\u305B\u308B\u5175\u304C\u5C11\u306A\u3059\u304E\u308B" : null
     });
   }
-  return out.filter((o) => o.men > 0 || o.reason || o.\u6307\u56F3).sort((a, z) => (z.\u6307\u56F3 ? 1 : 0) - (a.\u6307\u56F3 ? 1 : 0) || a.legs - z.legs).slice(0, 10);
+  return out.filter((o) => (o.men > 0 || o.reason || o.\u6307\u56F3) && (o.months || 1) <= 6).sort((a, z) => (z.\u6307\u56F3 ? 1 : 0) - (a.\u6307\u56F3 ? 1 : 0) || a.legs - z.legs).slice(0, 40);
 }
 function \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle) {
   const \u5408\u6D41 = () => {
