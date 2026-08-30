@@ -18,6 +18,53 @@ import { 難を逃れる } from "../core/capture.js";
 
 // ------------------------------------------------ 援軍（GDD 7.3 / 7.4）
 // 各城・各勢力は「守備最低数・距離・従属度」から派遣・減員・遅参・拒否を判断する。
+/* 遠征の兵糧（GDD 7.3）。
+
+   関ヶ原も大坂の陣も、全国から兵が集まった。主君の求めがあれば、九州の
+   兵も奥羽の兵も出る。呼べる先を距離で切るのは、その姿に合わない。
+
+   縛るのは兵糧である。軍は月に一人あたり〇.〇九石を食う。行程のぶんに
+   陣中の二月を足して持たせる。遠ければ遠いほど蔵が空く。
+
+     一月の道  一人〇.二七石
+     六月の道  一人〇.七二石
+     十二月の道 一人一.二六石
+
+   加えて、城は自らの蔵を空にして援軍を出さない。留守の兵が半年食える
+   だけは残す。攻められれば籠らねばならぬからである。
+
+   これで、遠国から大軍を呼ぶには豊かな蔵が要ることになる。天下を統べる
+   ほどの身代でなければ、全国からの動員はできない。 */
+export const 遠征の兵糧 = (men, months) => Math.round(men * 0.09 * ((months || 1) + 2));
+
+/* 兵糧の運び賃（GDD 7.3）。
+
+   遠征の重みは、米そのものより運ぶ費えに出る。陸送は距離に比例して跳ね
+   上がり、人足と馬と船を雇わねばならぬ。秀吉の遠征でも、最も金を食ったのは
+   兵站であった。
+
+   蔵の米だけを縛りにしても、大城の蔵は大きいので効かない（天下を持つ盤で
+   薩摩へ攻めるとき、二百六十九城が並んで兵糧不足で出せぬ城は一つも無かった）。
+   遠国から大軍を呼ぶには、運ぶ金が要る。
+
+     一人・一月につき〇.〇二貫。
+     三万を十か月かけて呼べば六千貫。天下を統べるほどの身代でなければ叶わない。
+
+   隣国から呼ぶだけなら僅かである（千人を一月で二十貫）。近くの助けは
+   これまで通り気軽に、遠国の動員は覚悟のいることになる。 */
+export const 運び賃 = (men, months) => Math.round(men * ((months || 1)) * 0.02);
+
+/* 呼んだ側の金蔵から運び賃を引く。払えぬぶんは引かず、蔵を空にするに留める。
+   （画面の側で先に量っているので、ここまで来て足りぬことは普通は起きない） */
+export function 運び賃を払う(s, men, months) {
+  const f = s.factions[s.player];
+  if (!f) return 0;
+  const 賃 = Math.min(f.gold, 運び賃(men, months));
+  f.gold = Math.round((f.gold - 賃) * 100) / 100;
+  return 賃;
+}
+export const 留守の蓄え = (c) => Math.round((c.local || 0) * 0.08 * 6);
+
 export function reinforceOffers(g, from, target) {
   const out = [];
   for (const c of g.castles) {
@@ -41,29 +88,36 @@ export function reinforceOffers(g, from, target) {
       else if (rel.state === "同盟") { kind = "同盟"; ratio = 0.25; chance = clamp(rel.trust / 100, 0.2, 0.9); }
       else continue;
     }
-    const distPenalty = clamp(1 - (legs - 1) * 0.12, 0.4, 1);   // 遠いほど減る
-    const men = Math.floor(avail * ratio * distPenalty);
+    const months = marchMonths(c.id, target, c.faction) || Math.max(1, legs);
+    /* 遠いほど兵糧が要る。距離で人数を削るのではなく、蔵の続くかぎり出す。
+       もとは遠さで人数を割り引いていたが、それでは「遠国の兵は役に立たぬ」
+       ことになってしまう。関ヶ原へ向かった島津も、遠いから兵を減らした
+       わけではない。減らすのではなく、出せるか出せないかである。 */
+    const 蔵 = Math.max(0, (c.food || 0) - 留守の蓄え(c));
+    const 出せる兵糧 = Math.floor(蔵 / Math.max(0.01, 0.09 * (months + 2)));
+    const men = Math.min(Math.floor(avail * ratio), 出せる兵糧);
     out.push({
-      castleId: c.id, name: c.name, faction: c.faction, kind, men, legs, chance, 指図,
-      months: marchMonths(c.id, target) || Math.max(1, legs),
+      castleId: c.id, name: c.name, faction: c.faction, kind, men, legs, chance, 指図, months,
       // 指図の通る城では、こちらが将と兵を選ぶ。そのための素材も添える。
       gens: 指図 ? gens.map((x) => ({ id: x.id, name: x.name, age: x.age, lead: x.lead, valor: x.valor, wit: x.wit,
         retinue: x.retinue, rank: rankName(x, g), limit: troopLimit(x, g) })) : [],
       local: c.local, avail, garrison: minGarrison(c),
-      reason: avail < 400 ? "守備が手薄で出せない" : men < 200 && !指図 ? "出せる兵が少なすぎる" : null,
+      蔵, 一人の兵糧: Math.round(0.09 * (months + 2) * 100) / 100,
+      /* 運び賃は城の蔵ではなく主家の財布から出る。ゆえに城ごとには縛らず、
+         呼んだ先を足し合わせた額を、進発の際にまとめて量る（画面の側で見る）。 */
+      一人の運び賃: Math.round(months * 0.02 * 100) / 100,
+      賃: 運び賃(men, months),
+      reason: avail < 400 ? "守備が手薄で出せない"
+        : 出せる兵糧 < 200 ? `兵糧が足りぬ（${months}か月の道に蔵${Math.round(蔵)}石）`
+        : men < 200 && !指図 ? "出せる兵が少なすぎる" : null,
     });
   }
   /* 指図の通る城は先に並べる。呼べる先が埋もれては困る。
-
-     もとは近い順に十城で打ち切っていた。ところが城が十を超えると、遠い城が
-     黙って落ちる。稲葉山から佐和山へ攻めるとき、那古野の兵が呼べなかった。
-     十五城を持ちながら十しか並ばなかったのであって、出せぬ理由は無い。
-
-     数で切るのをやめ、間に合うかどうかで切る。半年かけて着く援軍は、
-     着いたころには戦が終わっている。呼べる先が多すぎて読めぬということも
-     ないよう、四十まではそのまま並べる。 */
-  return out.filter((o) => (o.men > 0 || o.reason || o.指図) && (o.months || 1) <= 6)
-    .sort((a, z) => (z.指図 ? 1 : 0) - (a.指図 ? 1 : 0) || a.legs - z.legs).slice(0, 40);
+     数でも距離でも切らない。全国から呼べることが、この仕掛けの眼目である。
+     盤に並べられる隊は三十二までなので（関ヶ原の参陣数）、呼びすぎても
+     戦場に立てるのはそこまでである。 */
+  return out.filter((o) => o.men > 0 || o.reason || o.指図)
+    .sort((a, z) => (z.指図 ? 1 : 0) - (a.指図 ? 1 : 0) || a.legs - z.legs);
 }
 
 

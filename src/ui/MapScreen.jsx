@@ -12,11 +12,12 @@ import { ambushChance, ambushPlan, tryAmbush } from "../core/ambush.js";
 import { captureChance, makePrisoner, payRansom, ransomAccept, ransomCost, takeAsPrisoner } from "../core/capture.js";
 import { 取り立てる, COMING_OF_AGE, actingHead, bearChild, canRecruit, emergeGenerals, hasHouse, heirCandidates, houseName, inheritHouse, lifeSpan, loyaltyAfterRecruit, makePromotion, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
-import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
+import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
+import { 遠征の兵糧, 運び賃を払う } from "../govern/war.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
 import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap } from "../core/rank.js";
 import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す } from "../core/roster.js";
-import { atPeace, lv, relKey, relOf, specialBonus } from "../core/state.js";
+import { atPeace, lv, relKey, relOf, specialBonus, 軍の道 } from "../core/state.js";
 import { SEASON, U, clamp, fmt, man, monthsBetween } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
@@ -1669,15 +1670,24 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const send = Math.max(0, Math.min(req.local, c2.local));
       const men = send + gens.reduce((a, x) => a + x.retinue, 0);
       if (men < 100) continue;
+      /* 遠征の兵糧（GDD 7.3）。行程のぶんに陣中の二月を足して持たせる。
+         一律に人数の六割としていたころは、九州から奥羽へ向かう軍も
+         隣国へ行く軍も同じだけしか持たず、途中で飢えて溶けていた。 */
+      const 道 = 軍の道(s, c2.faction, c2.id, target) || findPath(c2.id, target);
+      const 月 = marchMonthsOf(道, c2.faction);
+      const 糧 = 遠征の兵糧(men, 月);
       c2.local -= send;
-      c2.food -= Math.round(send * 0.6);
+      c2.food = Math.max(0, c2.food - 糧);
+      /* 運び賃は主家の金蔵から出る（GDD 7.3）。米は城の蔵から、金は家から。
+         遠国ほど人足と馬と船がかさむので、月数に比例して取る。 */
+      運び賃を払う(s, men, 月);
       for (const t of gens) t.at = null;
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
       c2.rost = tk.rest;
       s.armies.push({
         id: 月送り.軍の名(s, "aid"), faction: c2.faction, from: c2.id,
         gens: gens.map((x) => x.id), local: send, localTrain: c2.localTrain, rost: tk.taken,
-        men, at: c2.id, path: findPath(c2.id, target), prog: 0, food: Math.round(send * 0.6),
+        men, at: c2.id, path: 道, prog: 0, food: 糧,
         target, aid: s.player, 助勢: true, ...(囲まれている ? { relief: target } : {}),
       });
       出た += men;
@@ -1703,8 +1713,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const send = Math.min(req.men, Math.max(0, c2.local));
       if (send < 100 || !rgens.length) continue;
       const take = [...rgens].sort((a, z) => z.lead - a.lead).slice(0, 1);
+      const 勢 = send + take.reduce((a, x) => a + x.retinue, 0);
+      const 頼み月 = marchMonthsOf(findPath(c2.id, target), c2.faction);
       c2.local -= send;
-      c2.food -= Math.round(send * 0.6);
+      c2.food = Math.max(0, c2.food - 遠征の兵糧(勢, 頼み月));
+      // 頼んで来てもらう兵でも、道中の費えはこちらが持つ。
+      運び賃を払う(s, 勢, 頼み月);
       for (const t of take) t.at = null;
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
       c2.rost = tk.rest;
@@ -1712,7 +1726,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         id: 月送り.軍の名(s, "aid"), faction: c2.faction, from: c2.id,
         gens: take.map((x) => x.id), local: send, localTrain: c2.localTrain, rost: tk.taken,
         men: send + take.reduce((a, x) => a + x.retinue, 0), at: c2.id,
-        path: findPath(c2.id, target), prog: 0, food: Math.round(send * 0.6),
+        path: findPath(c2.id, target), prog: 0,
+        food: 遠征の兵糧(send + take.reduce((a, x) => a + x.retinue, 0),
+          marchMonthsOf(findPath(c2.id, target), c2.faction)),
         target, aid: s.player, 助勢: true, ...(囲まれている ? { relief: target } : {}),
       });
       s.chronicle.push({ y: s.year, m: s.month,
@@ -1811,16 +1827,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           s.chronicle.push({ y: s.year, m: s.month, text: `${rc2.name}の寄騎は数が足らず、取りやめとなった。` });
           continue;
         }
+        const path = 軍の道(s, rc2.faction, rc2.id, p.to) || findPath(rc2.id, p.to);
+        const 寄月 = marchMonthsOf(path, rc2.faction);
+        const 寄糧 = 遠征の兵糧(総勢, 寄月);
         rc2.local -= send;
-        rc2.food -= Math.round(send * 0.6);
+        rc2.food = Math.max(0, rc2.food - 寄糧);
+        運び賃を払う(s, 総勢, 寄月);
         for (const t of take) t.at = null;
-        const path = findPath(rc2.id, p.to);
         s.armies.push({
           id: 月送り.軍の名(s, "r"), faction: rc2.faction, from: rc2.id,
           gens: take.map((x) => x.id), local: send, localTrain: rc2.localTrain,
           rost: (() => { const tk = rosterTake(rc2.rost || newRoster(rc2.local + send, `loc-${rc2.id}`), send); rc2.rost = tk.rest; return tk.taken; })(),
           men: send + take.reduce((a, x) => a + x.retinue, 0), at: rc2.id,
-          path, prog: 0, food: Math.round(send * 0.6), target: p.to, aid: s.player,
+          path, prog: 0, food: 寄糧, target: p.to, aid: s.player,
         });
         s.chronicle.push({ y: s.year, m: s.month,
           text: `${rc2.name}より寄騎${fmt(総勢)}人（${take.map((x) => x.name).join("・")}）が${nodeById(p.to).name}へ向かう（約${req.months}か月）。` });

@@ -11,7 +11,7 @@ import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
 import { 元服の齢, 姫の役, 姫の枠, 姫の齢, 婚姻できるか, 婚姻の要る信用, 嫁がせられるか, 婚儀の礼, 使者の礼, 使える姫 } from "../core/hime.js";
 import { ARMS, ROAD_SPEED } from "../data/roads.js";
-import { reinforceOffers } from "../govern/war.js";
+import { reinforceOffers, 運び賃 } from "../govern/war.js";
 import { canRecruit } from "../core/house.js";
 import { underMyBanner } from "../core/state.js";
 import { atPeace } from "../core/state.js";
@@ -176,6 +176,13 @@ export function SortieDialog({ g, from, onClose, onGo }) {
   const useLocal = Math.min(local, availLocal);
   const men = retSum + useLocal;
   const food = Math.round(men * 0.6);
+  /* 遠国から呼べば運び賃がかさむ（GDD 7.3）。
+     人足と馬と船を雇う費えであり、蔵の米ではなく主家の金蔵から出る。
+     一城ごとには些少でも、全国から呼べば束になって効いてくる。 */
+  const 賃 = (o) => 運び賃(o.指図 ? 寄騎の総勢(o) : o.men, o.months);
+  const 運び賃の総額 = offers.filter((o) => aid[o.castleId]).reduce((a, o) => a + 賃(o), 0);
+  const 手元金 = g.factions[g.player].gold;
+  const 賃が足りぬ = 運び賃の総額 > 手元金;
   const path = findPath(from, to);
   const dist = path ? path.slice(1).reduce((a, n, i) => { const r = roadBetween(path[i], n); return a + (r ? r[2] / ROAD_SPEED[r[3]] : 10); }, 0) : 0;
   /* 約束を交わした相手の城を狙っていないか。
@@ -410,6 +417,11 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
           <b style={{ color: U.text }}>自家と臣従の家</b>には下知が通り、必ず出ます。
           <b style={{ color: U.text }}>同盟・従属の家</b>へは頼むだけで、応じるか否かは相手が決めます。
+          <br />呼べる先は<b style={{ color: U.text }}>遠近を問いません</b>。関ヶ原も大坂の陣も全国から兵が集まりました。
+          縛りは<b style={{ color: U.text }}>蔵の兵糧</b>と<b style={{ color: U.text }}>運び賃</b>です。
+          軍は月に一人〇.〇九石を食い、行程のぶんに陣中の二月を足して持って出ます。
+          運び賃は人足と馬を雇う費えで、一人・一月につき〇.〇二貫を金蔵から払います。
+          遠国から大軍を呼ぶには、それだけの身代が要ります。
         </div>
         {offers.length === 0 && <div style={{ fontSize: 12, color: U.dim }}>援軍を求められる相手がいない。</div>}
         {offers.map((o) => {
@@ -441,8 +453,12 @@ export function SortieDialog({ g, from, onClose, onGo }) {
                   <span className="pill" style={{ background: g.factions[o.faction].color, marginLeft: 6 }}>{o.kind}</span>
                   <span style={{ color: U.dim, marginLeft: 6 }}>
                     {o.reason ? o.reason
-                      : (o.指図 ? `将と兵を選べる／到着まで約${o.months}か月／出せる兵 ${fmt(o.avail)}人`
-                        : `約${fmt(o.men)}人／到着まで約${o.months}か月／応じる見込み${Math.round(o.chance * 100)}%`)}
+                      : (o.指図
+                        ? `将と兵を選べる／到着まで約${o.months}か月／出せる兵 ${fmt(o.men)}人`
+                          + `／兵糧 一人${o.一人の兵糧}石（蔵 ${fmt(Math.round(o.蔵))}石）`
+                          + `／運び賃 一人${o.一人の運び賃}貫`
+                        : `約${fmt(o.men)}人／到着まで約${o.months}か月／応じる見込み${Math.round(o.chance * 100)}%`
+                          + `／兵糧 一人${o.一人の兵糧}石／運び賃 ${fmt(o.賃)}貫`)}
                   </span>
                 </span>
               </label>
@@ -495,10 +511,16 @@ export function SortieDialog({ g, from, onClose, onGo }) {
           ))}
         </div>
         <div className="row"><span>携行兵糧</span><span className="v">{fmt(food)} 石（城残 {fmt(c.food - food)}）</span></div>
+        {aidIds.length > 0 && (
+          <div className="row" style={{ color: 賃が足りぬ ? "#B0483C" : undefined }}>
+            <span>寄騎の運び賃</span>
+            <span className="v">{fmt(運び賃の総額)} 貫（手元 {fmt(手元金)} 貫）</span>
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>取りやめ</button>
-          <button className="btn dark" style={{ flex: 2 }} disabled={!to || !path || !picked.length || men < 200 || c.food < food}
+          <button className="btn dark" style={{ flex: 2 }} disabled={!to || !path || !picked.length || men < 200 || c.food < food || 賃が足りぬ}
             onClick={() => onGo({ from, to, gens: picked, local: useLocal, food, mix,
               // 指図の通る城は、選んだ将と兵数を添える。頼むだけの城は相手の言い値のまま。
               reinforce: offers.filter((o) => aid[o.castleId]).map((o) => (o.指図
@@ -507,6 +529,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
                 : o)) })}>{約束 ? `約束を破って${fmt(men)}人で進発` : `${fmt(men)}人で進発`}</button>
         </div>
         {c.food < food && <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7 }}>兵糧が足りない。収穫を待つか、開墾を進める必要がある。</div>}
+        {賃が足りぬ && <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7 }}>運び賃が足りない。遠国の寄騎を減らすか、金を蓄えねばならぬ。</div>}
       </div>
     </div>
   );
@@ -724,6 +747,12 @@ export function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
     return ret + Math.min(v.local, 出せる(o));
   };
   const 総勢 = 指図組.filter((o) => 城の値(o).on).reduce((a, o) => a + 兵数(o), 0);
+  /* 遠国から呼ぶには運び賃が要る。出陣の画面と同じ勘定である。
+     頼む相手（同盟・従属）の分も、道中の費えはこちらが持つ。 */
+  const 運び賃の総額 = 指図組.filter((o) => 城の値(o).on).reduce((a, o) => a + 運び賃(兵数(o), o.months), 0)
+    + 頼む組.filter((o) => 頼み.includes(o.castleId)).reduce((a, o) => a + (o.賃 || 0), 0);
+  const 手元金 = g.factions[g.player].gold;
+  const 賃が足りぬ = 運び賃の総額 > 手元金;
   const 隊数 = 指図組.filter((o) => 城の値(o).on).reduce((a, o) => a + 城の値(o).gens.length, 0) + 頼み.length;
 
   return (
@@ -785,7 +814,7 @@ export function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
               <span className="pill" style={{ background: g.factions[o.faction].color, marginLeft: 6 }}>{o.kind}</span>
               <span style={{ color: U.dim, marginLeft: 6 }}>
                 {o.reason ? o.reason
-                  : `約${fmt(o.men)}人／約${o.months}か月／応じる見込み${Math.round(o.chance * 100)}%`}
+                  : `約${fmt(o.men)}人／約${o.months}か月／応じる見込み${Math.round(o.chance * 100)}%／運び賃 ${fmt(o.賃)}貫`}
               </span>
             </span>
           </label>
@@ -793,13 +822,18 @@ export function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
 
         <div className="row" style={{ marginTop: 10 }}><span>差し向ける総勢（下知の分）</span>
           <span className="v">{fmt(総勢)} 人／{隊数}隊</span></div>
+        <div className="row" style={{ color: 賃が足りぬ ? "#B0483C" : undefined }}><span>運び賃</span>
+          <span className="v">{fmt(運び賃の総額)} 貫（手元 {fmt(手元金)} 貫）</span></div>
+        {賃が足りぬ && (
+          <div style={{ fontSize: 12, color: "#B0483C" }}>運び賃が足りぬ。遠国の城を減らすほかない。</div>
+        )}
         {隊数 > MAX_CORPS && (
           <div style={{ fontSize: 12, color: "#B0483C" }}>一方の陣に並べられるのは{MAX_CORPS}隊まで。</div>
         )}
 
         <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>やめる</button>
-          <button className="btn dark" style={{ flex: 2 }} disabled={総勢 < 100 && !頼み.length}
+          <button className="btn dark" style={{ flex: 2 }} disabled={(総勢 < 100 && !頼み.length) || 賃が足りぬ}
             onClick={() => onGo({
               下知: 指図組.filter((o) => 城の値(o).on && 兵数(o) >= 100).map((o) => ({
                 castleId: o.castleId, gens: 城の値(o).gens, local: Math.min(城の値(o).local, 出せる(o)),

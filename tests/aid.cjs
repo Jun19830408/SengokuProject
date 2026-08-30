@@ -28,7 +28,7 @@ Object.defineProperty(dom.window.HTMLElement.prototype, 'clientWidth', { get() {
 Object.defineProperty(dom.window.HTMLElement.prototype, 'clientHeight', { get() { return 600; } });
 dom.window.HTMLElement.prototype.getBoundingClientRect = function () { return { left: 0, top: 0, width: 900, height: 600, right: 900, bottom: 600 }; };
 const errs = []; console.error = (...a) => errs.push(String(a[0]).slice(0, 180));
-const { createRoot, act, App, React, initState, findPath, reinforceOffers } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
+const { createRoot, act, App, React, initState, findPath, reinforceOffers, 運び賃を払う } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
 /* ------------------------------------------- 盤をこしらえる
    自家の城が敵に囲まれ、他の自家の城と、臣従した家の城が近くにある形。 */
@@ -164,15 +164,20 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
 
   console.log('確かめ:', 咎 ? `★${咎}件が通らなかった` : 'すべて通った');
   console.log('エラー:', errs.length ? errs.slice(0, 2).join(' | ') : 'なし');
-  /* ------------------------------------ 援軍に呼べる城を、数で切らない
+  /* ------------------------------ 援軍は遠近を問わず呼べる。縛るのは兵糧
 
-     稲葉山から佐和山へ攻めるとき、那古野の兵が呼べなかった。十五城を
-     持ちながら、援軍の一覧に十城しか並ばなかったのである。近い順に十で
-     打ち切っていたので、遠い城が黙って落ちていた。出せぬ理由は無い。
+     はじめ、援軍の候補を近い順に十城で打ち切っていた。稲葉山から佐和山へ
+     攻めるとき、十五城を持ちながら那古野の兵が呼べなかった。次に「半年で
+     着く城まで／四十城まで」と改めたが、これもまだ数と距離の縛りである。
 
-     数で切るのをやめ、間に合うかどうかで切る。半年かけて着く援軍は、
-     着いたころには戦が終わっている。
-     あわせて、攻める相手の城そのものが候補に混じっていたのも直した。 */
+     関ヶ原も大坂の陣も島原の乱も、全国から兵が集まった。主君の求めがあれば
+     九州の兵も奥羽の兵も出る。呼べる先を距離で切るのは、その姿に合わない。
+
+     縛るのは兵糧である。軍は月に一人〇.〇九石を食い、行程のぶんに陣中の
+     二月を足して持って出る。遠国から呼ぶほど蔵が空く。加えて、城は自らの
+     蔵を空にしては出さない（留守の兵が半年食えるだけは残す）。
+     盤に並べられる隊は三十二まで（関ヶ原の参陣数）であるから、呼びすぎても
+     戦場に立てるのはそこまでである。 */
   {
     const t = initState('oda');
     for (const id of ['inabayama', 'sunomata', 'ogaki', 'kiyosu', 'iwakura', 'shobata',
@@ -187,14 +192,65 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
       出.map((o) => o.name).slice(0, 6).join('・') + '…');
     確('攻める相手の城は、候補に混じらない', !出.some((o) => o.castleId === 'sawayama'));
     確('出陣元の城も、候補に混じらない', !出.some((o) => o.castleId === 'inabayama'));
-    確('着くのに半年を超える城は並ばない', 出.every((o) => (o.months || 1) <= 6),
-      `いちばん遠くて ${Math.max(...出.map((o) => o.months || 1))}か月`);
-    // 天下を取りかけても、読めぬほど並ばない
+
+    // 全国から呼べる。距離でも数でも切らない。
     const u = initState('oda');
     for (const c of u.castles) c.faction = 'oda';
-    const 大 = reinforceOffers(u, 'nagoya', 'sawayama');
-    確('城が二百を超えても、並ぶのは四十まで', 大.length <= 40,
-      `${u.castles.length}城 → ${大.length}城`);
+    const 全 = reinforceOffers(u, 'nagoya', 'uchijo');      // 尾張から薩摩へ
+    確('天下を持てば、全国の城が並ぶ', 全.length > 200,
+      `${u.castles.length}城のうち ${全.length}城`);
+    確('十か月かかる遠国の城も並ぶ', 全.some((o) => o.months >= 10),
+      `いちばん遠くて ${Math.max(...全.map((o) => o.months))}か月`);
+
+    // 兵糧は行程に応じて重くなる
+    const 近 = 全.filter((o) => o.months <= 2), 遠 = 全.filter((o) => o.months >= 10);
+    確('遠いほど、一人あたりの兵糧が重い',
+      近.length && 遠.length && 遠[0].一人の兵糧 > 近[0].一人の兵糧 * 2,
+      `${近[0].months}か月 ${近[0].一人の兵糧}石 ／ ${遠[0].months}か月 ${遠[0].一人の兵糧}石`);
+    確('城は蔵を空にして出さない（留守のぶんを残す）',
+      全.every((o) => o.蔵 <= (u.castles.find((c) => c.id === o.castleId) || {}).food),
+      `留守の蓄えを差し引いた蔵で数えている`);
+    確('蔵が尽きれば、その城は出せない',
+      (() => {
+        const v = initState('oda');
+        for (const c of v.castles) c.faction = 'oda';
+        for (const c of v.castles) c.food = 0;
+        const w = reinforceOffers(v, 'nagoya', 'uchijo');
+        return w.length > 0 && w.every((o) => o.men === 0 || o.reason);
+      })(), '蔵を空にして測った');
+
+    /* 運び賃（GDD 7.3）。
+       蔵の米だけでは全国動員の縛りにならなかった（薩摩へ呼んで兵糧不足の城は皆無）。
+       遠征の重みは、米そのものより人足と馬と船を雇う費えに出る。 */
+    const 賃 = (a) => a.reduce((x, o) => x + o.賃, 0);
+    const 出全 = 全.filter((o) => !o.reason && o.men > 0);
+    確('遠い城ほど、一人あたりの運び賃が高い',
+      近.length && 遠.length && 遠[0].一人の運び賃 > 近[0].一人の運び賃 * 2,
+      `${近[0].months}か月 ${近[0].一人の運び賃}貫 ／ ${遠[0].months}か月 ${遠[0].一人の運び賃}貫`);
+
+    // 近国だけなら僅か、全国から呼べば身代を超える
+    const 近所 = reinforceOffers(initState('oda'), 'nagoya', 'kiyosu').filter((o) => !o.reason && o.men > 0);
+    const 手元 = initState('oda').factions.oda.gold;
+    確('隣国の助けは、運び賃を気にせず呼べる', 賃(近所) < 手元 * 0.1,
+      `尾張の内で ${近所.length}城・${賃(近所)}貫（手元 ${Math.round(手元)}貫）`);
+    確('全国から呼べば、運び賃が身代を超える', 賃(出全) > 手元 * 2,
+      `${出全.length}城で ${賃(出全)}貫（手元 ${Math.round(手元)}貫）`);
+
+    // 払えば実際に金蔵から減る
+    確('運び賃は主家の金蔵から引かれる',
+      (() => {
+        const v = initState('oda');
+        const 前 = v.factions.oda.gold;
+        運び賃を払う(v, 10000, 10);
+        return Math.round(前 - v.factions.oda.gold) === 2000;
+      })(), '一万を十か月呼べば 2,000貫');
+    確('手元より多くは引かれない（蔵が負にならない）',
+      (() => {
+        const v = initState('oda');
+        v.factions.oda.gold = 100;
+        運び賃を払う(v, 10000, 10);
+        return v.factions.oda.gold === 0;
+      })(), '手元100貫で 2,000貫の遠征を試みた');
   }
 
   process.exit(咎 ? 1 : 0);

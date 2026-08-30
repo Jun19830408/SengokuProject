@@ -23,7 +23,7 @@ export { roadBetween, marchMonths, marchMonthsOf, findPathVia, nodeById } from "
 export { ROADS, MARCH_PER_MONTH, ROAD_SPEED } from "../src/data/roads.js";
 export { findPath } from "../src/core/paths.js";
 export { 援けに着く, migrateSave, atPeace, relOf } from "../src/core/state.js";
-export { resolveOffscreen, reinforceOffers } from "../src/govern/war.js";
+export { resolveOffscreen, reinforceOffers, 運び賃, 運び賃を払う } from "../src/govern/war.js";
 export { 圧す, 解す } from "../src/save/pack.js";
 export { advanceMonth } from "../src/govern/month.js";
 export { 忠誠, diploStat } from "../src/core/rank.js";
