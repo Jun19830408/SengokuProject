@@ -8,6 +8,7 @@
     "start": "node tools/serve.cjs",
     "build": "node tools/build.cjs",
     "manual": "node tools/manual.cjs",
+    "shiryo": "node tools/shiryo-all.cjs",
     "shots": "node tools/shots.cjs",
     "zukan": "node tools/zukan.cjs",
     "test": "node tests/all.cjs",
