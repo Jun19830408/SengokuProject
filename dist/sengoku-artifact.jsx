@@ -567,10 +567,11 @@ var rosterSum = (r) => (r || []).reduce((a, q) => a + q.m, 0);
 function rosterAdd(r, n, tag) {
   if (!r || n <= 0) return r || [];
   let left = Math.round(n);
+  const \u9806 = [...r].sort((a, b) => (b.\u529F || 0) - (a.\u529F || 0) || a.m - b.m);
   for (const a of ARMS) {
     const want = Math.round(n * a.ratio);
     let give = want;
-    for (const q of r) {
+    for (const q of \u9806) {
       if (give <= 0) break;
       if (q.t !== a.key || q.m >= q.max) continue;
       const add = Math.min(q.max - q.m, give);
@@ -585,7 +586,7 @@ function rosterAdd(r, n, tag) {
       left -= m;
     }
   }
-  if (left > 0) for (const q of r) {
+  if (left > 0) for (const q of \u9806) {
     if (left <= 0) break;
     const add = Math.min(q.max - q.m, left);
     q.m += add;
@@ -728,6 +729,44 @@ function \u7D44\u982D\u306E\u50CD\u304D\u3092\u8A18\u3059(s2, b, \u6211side, \u5
     m: s2.month,
     text: `${\u5834 ? `${\u5834}\u4E0B\u306E\u6226\u3067\u3001` : ""}${\u982D2.\u4E3B}\u306E${\u540D}\u304C${\u6575 && \u6575.gen ? `${\u6575.gen.name}\u306E\u624B\u52E2\u306E` : "\u6575\u306E"}\u4E00\u968A\u3092${\u982D2.n}\u3064\u307E\u3067\u7834\u3063\u305F\u3002${\u968E === "\u7269\u982D" ? `${\u540D}\u306F\u7269\u982D\u306E\u52F2\u529F\u306B\u9054\u3057\u3066\u3044\u308B\u3002` : `\u3044\u307E\u306F${\u968E}\u3067\u3042\u308B\u3002`}`
   });
+}
+function \u7D44\u982D\u306E\u5E33(g) {
+  const \u51FA = [];
+  const \u898B = (rost, \u6240, \u5C5E) => {
+    for (const q of rost || []) {
+      if (!q.\u529F) continue;
+      \u51FA.push({ \u9375: \u7D44\u306E\u9375(q.id), \u540D: \u9577\u306E\u540D(q.id), \u529F: q.\u529F, \u968E: \u9577\u306E\u968E(q.\u529F), \u5175: q.m, \u6240, \u5C5E });
+    }
+  };
+  for (const gen of g.generals) {
+    if (gen.faction !== g.player || gen.captive) continue;
+    const c = g.castles.find((x) => x.id === gen.at);
+    \u898B(gen.rost, c ? c.name : "\u51FA\u5F81\u4E2D", gen.name);
+  }
+  for (const c of g.castles) {
+    if (c.faction !== g.player) continue;
+    \u898B(c.rost, c.name, "\u5730\u57DF\u5BB6\u81E3\u56E3");
+  }
+  for (const a of g.armies || []) {
+    if (a.faction !== g.player) continue;
+    const \u5C06\u3089 = (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+    const \u5927\u5C06 = \u5C06\u3089.sort((x, y) => (y.lead || 0) - (x.lead || 0))[0];
+    \u898B(a.rost, "\u51FA\u5F81\u4E2D", \u5927\u5C06 ? `${\u5927\u5C06.name}\u306E\u8ECD` : "\u5730\u57DF\u5BB6\u81E3\u56E3");
+  }
+  const \u675F = /* @__PURE__ */ new Map();
+  for (const x of \u51FA) {
+    const y = \u675F.get(x.\u9375);
+    if (y) {
+      y.\u529F += x.\u529F;
+      if (x.\u5175 > y.\u5175) {
+        y.\u6240 = x.\u6240;
+        y.\u5C5E = x.\u5C5E;
+      }
+      y.\u5175 += x.\u5175;
+      y.\u968E = \u9577\u306E\u968E(y.\u529F);
+    } else \u675F.set(x.\u9375, { ...x });
+  }
+  return [...\u675F.values()].sort((a, b) => b.\u529F - a.\u529F);
 }
 
 // src/core/util.js
@@ -24428,43 +24467,11 @@ function FactionInfo({ g, onClose }) {
     return `\uFF0F${rl.state}${\u5411}\u30FB\u4FE1\u7528${Math.round(rl.trust)}${rl.until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, rl.until.y, rl.until.m)}\u304B\u6708\uFF09` : ""}`;
   })()))), \u7D76\u3048\u305F.length > 0 && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "sec", style: { marginTop: 14 } }, "\u6EC5\u3093\u3060\u5BB6\uFF08", \u7D76\u3048\u305F.length, "\u5BB6\uFF09"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 6 } }, "\u57CE\u3092\u4E00\u3064\u3082\u6301\u305F\u306C\u5BB6\u3067\u3059\u3002\u5F53\u4E3B\u304C\u6355\u3089\u308F\u308C\u3066\u8EAB\u306E\u632F\u308A\u65B9\u304C\u6C7A\u307E\u3089\u305A\u3068\u3082\u3001 \u62E0\u308B\u3079\u304D\u57CE\u304C\u7121\u3051\u308C\u3070\u5BB6\u306F\u7ACB\u3061\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, lineHeight: 2, color: U.dim } }, \u7D76\u3048\u305F.map((r) => /* @__PURE__ */ React2.createElement("span", { key: r.f.id, style: { marginRight: 12, whiteSpace: "nowrap" } }, /* @__PURE__ */ React2.createElement("span", { className: "dot", style: { background: r.f.color, opacity: 0.5 } }), r.f.name, r.\u56DA ? `\uFF08${r.\u56DA.name}\u306F\u6355\u865C\uFF09` : "")))), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")));
 }
-function \u7D44\u982D\u306E\u5E33(g) {
-  const \u51FA = [];
-  const \u898B = (rost, \u6240, \u4E3B) => {
-    for (const q of rost || []) {
-      if (!q.\u529F) continue;
-      \u51FA.push({ \u9375: \u7D44\u306E\u9375(q.id), \u540D: \u9577\u306E\u540D(q.id), \u529F: q.\u529F, \u968E: \u9577\u306E\u968E(q.\u529F), \u5175: q.m, \u6240, \u4E3B });
-    }
-  };
-  for (const gen of g.generals) {
-    if (gen.faction !== g.player || gen.captive) continue;
-    const c = g.castles.find((x) => x.id === gen.at);
-    \u898B(gen.rost, c ? c.name : "\u51FA\u5F81\u4E2D", gen.name);
-  }
-  for (const c of g.castles) {
-    if (c.faction !== g.player) continue;
-    \u898B(c.rost, c.name, "\u5730\u57DF\u5BB6\u81E3\u56E3");
-  }
-  for (const a of g.armies || []) {
-    if (a.faction !== g.player) continue;
-    \u898B(a.rost, "\u51FA\u5F81\u4E2D", "\u5730\u57DF\u5BB6\u81E3\u56E3");
-  }
-  const \u675F = /* @__PURE__ */ new Map();
-  for (const x of \u51FA) {
-    const y = \u675F.get(x.\u9375);
-    if (y) {
-      y.\u529F += x.\u529F;
-      y.\u5175 += x.\u5175;
-      y.\u968E = \u9577\u306E\u968E(y.\u529F);
-    } else \u675F.set(x.\u9375, { ...x });
-  }
-  return [...\u675F.values()].sort((a, b) => b.\u529F - a.\u529F);
-}
 function GeneralList({ g, onClose }) {
   const gs = g.generals.filter((x) => x.faction === g.player);
   const [\u6B04, set\u6B04] = useState2("\u6B66\u5C06");
   const \u982D2 = \u7D44\u982D\u306E\u5E33(g);
-  return /* @__PURE__ */ React2.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(onClose) }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21 } }, "\u5BB6\u4E2D\u306E\u5E33"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 6 } }, [["\u6B66\u5C06", "\u6B66\u5C06\u306E\u5E33"], ["\u7D44\u982D", "\u7D44\u982D\u306E\u5E33"]].map(([k, \u672D]) => /* @__PURE__ */ React2.createElement("button", { key: k, className: `btn sm ${\u6B04 === k ? "on" : ""}`, onClick: () => set\u6B04(k) }, \u672D, k === "\u7D44\u982D" && \u982D2.length ? ` ${\u982D2.length}` : "")))), \u6B04 === "\u7D44\u982D" && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.8 } }, "\u4E94\u5341\u4EBA\u7D44\u3072\u3068\u3064\u306B\u9577\u304C\u3072\u3068\u308A\u3002\u6575\u306E\u99D2\u3092\u8A0E\u3061\u53D6\u308B\u305F\u3073\u306B\u624B\u67C4\u304C\u7A4D\u307E\u308C\u307E\u3059\u3002 \u540D\u306E\u77E5\u3089\u308C\u305F\u7D44\u306F\u3001\u5175\u3092\u51FA\u3059\u305F\u3073\u306B\u5148\u306B\u547C\u3070\u308C\u307E\u3059\u3002\u7D44\u304C\u5168\u6EC5\u3059\u308C\u3070\u9577\u3082\u6B7B\u306B\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u52F2\u529F ", \u968E\u306E\u6BB5.map((x) => `${x.\u8981}\uFF1D${x.\u540D}`).join("\u3000")), !\u982D2.length && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, padding: "18px 0", textAlign: "center" } }, "\u307E\u3060\u624B\u67C4\u3092\u7ACB\u3066\u305F\u8005\u306F\u3044\u307E\u305B\u3093\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u5408\u6226\u3067\u6575\u306E\u99D2\u3092\u8A0E\u3061\u53D6\u308C\u3070\u3001\u305D\u306E\u7D44\u306E\u9577\u304C\u3053\u3053\u306B\u8F09\u308A\u307E\u3059\u3002"), \u982D2.map((x) => /* @__PURE__ */ React2.createElement("div", { key: x.\u9375, style: {
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(onClose) }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21 } }, "\u5BB6\u4E2D\u306E\u5E33"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 6 } }, [["\u6B66\u5C06", "\u6B66\u5C06\u306E\u5E33"], ["\u7D44\u982D", "\u7D44\u982D\u306E\u5E33"]].map(([k, \u672D]) => /* @__PURE__ */ React2.createElement("button", { key: k, className: `btn sm ${\u6B04 === k ? "on" : ""}`, onClick: () => set\u6B04(k) }, \u672D, k === "\u7D44\u982D" && \u982D2.length ? ` ${\u982D2.length}` : "")))), \u6B04 === "\u7D44\u982D" && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.8 } }, "\u4E94\u5341\u4EBA\u7D44\u3072\u3068\u3064\u306B\u9577\u304C\u3072\u3068\u308A\u3002\u6575\u306E\u99D2\u3092\u8A0E\u3061\u53D6\u308B\u305F\u3073\u306B\u624B\u67C4\u304C\u7A4D\u307E\u308C\u307E\u3059\u3002 \u540D\u306E\u77E5\u3089\u308C\u305F\u7D44\u306F\u3001\u5175\u3092\u51FA\u3059\u305F\u3073\u306B\u5148\u306B\u547C\u3070\u308C\u307E\u3059\u3002\u7D44\u304C\u5168\u6EC5\u3059\u308C\u3070\u9577\u3082\u6B7B\u306B\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u5FB4\u52DF\u306A\u3069\u3067\u5175\u3092\u88DC\u3046\u3068\u304D\u306F\u3001", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u624B\u67C4\u306E\u91CD\u3044\u7D44\u304B\u3089\u5148\u306B\u57CB\u307E\u308A\u307E\u3059"), "\u3002 \u64E6\u308A\u6E1B\u3063\u305F\u53E4\u53C2\u3092\u653E\u3063\u3066\u304A\u304B\u306C\u305F\u3081\u3067\u3059\uFF08\u4E8C\u5341\u4EBA\u3092\u5272\u3063\u305F\u7D44\u306F\u8D64\u5B57\u3067\u51FA\u307E\u3059\uFF09\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u52F2\u529F ", \u968E\u306E\u6BB5.map((x) => `${x.\u8981}\uFF1D${x.\u540D}`).join("\u3000")), !\u982D2.length && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, padding: "18px 0", textAlign: "center" } }, "\u307E\u3060\u624B\u67C4\u3092\u7ACB\u3066\u305F\u8005\u306F\u3044\u307E\u305B\u3093\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u5408\u6226\u3067\u6575\u306E\u99D2\u3092\u8A0E\u3061\u53D6\u308C\u3070\u3001\u305D\u306E\u7D44\u306E\u9577\u304C\u3053\u3053\u306B\u8F09\u308A\u307E\u3059\u3002"), \u982D2.map((x) => /* @__PURE__ */ React2.createElement("div", { key: x.\u9375, style: {
     display: "flex",
     alignItems: "center",
     gap: 10,
@@ -24472,7 +24479,7 @@ function GeneralList({ g, onClose }) {
     borderBottom: `1px solid ${U.line2}`,
     fontSize: 13,
     flexWrap: "wrap"
-  } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 92 } }, x.\u540D), /* @__PURE__ */ React2.createElement("span", { style: { width: 62, color: x.\u968E === "\u7269\u982D" ? "#C8A44A" : U.dim, fontWeight: x.\u968E === "\u7269\u982D" ? 600 : 400 } }, x.\u968E), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { flex: 1, color: U.dim } }, "\u6B66\u529F ", x.\u529F, "\uFF08\u8A0E\u3061\u53D6\u3063\u305F\u99D2\uFF09\u3000\u52F2\u529F ", x.\u529F), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim } }, fmt(x.\u5175), "\u4EBA"), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, x.\u6240))), \u982D2.some((x) => x.\u968E === "\u7269\u982D") && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: "#8A6A34", marginTop: 8, lineHeight: 1.7 } }, "\u7269\u982D\u306B\u5C4A\u3044\u305F\u8005\u306F\u3001\u6B66\u5C06\u306B\u53D6\u308A\u7ACB\u3066\u308B\u8CC7\u683C\u3092\u5F97\u3066\u3044\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")), \u6B04 === "\u6B66\u5C06" && /* @__PURE__ */ React2.createElement(React2.Fragment, null, gs.map((x) => /* @__PURE__ */ React2.createElement("div", { key: x.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 100 } }, x.name, isNameless(x) && /* @__PURE__ */ React2.createElement("span", { style: { color: "#9B9384", fontSize: 10, marginLeft: 2 } }, "\u3014\u4F1D\u3015"), is\u67B6\u7A7A(x) && /* @__PURE__ */ React2.createElement(
+  } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 92 } }, x.\u540D), /* @__PURE__ */ React2.createElement("span", { style: { width: 62, color: x.\u968E === "\u7269\u982D" ? "#C8A44A" : U.dim, fontWeight: x.\u968E === "\u7269\u982D" ? 600 : 400 } }, x.\u968E), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { flex: 1, color: U.dim } }, "\u6B66\u529F ", x.\u529F, "\uFF08\u8A0E\u3061\u53D6\u3063\u305F\u99D2\uFF09\u3000\u52F2\u529F ", x.\u529F), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: x.\u5175 < 20 ? "#B0483C" : U.dim } }, fmt(x.\u5175), "\u4EBA"), /* @__PURE__ */ React2.createElement("span", { style: { color: U.text, width: 96, textAlign: "right" } }, x.\u5C5E), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, width: 76, textAlign: "right" } }, x.\u6240))), \u982D2.some((x) => x.\u968E === "\u7269\u982D") && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: "#8A6A34", marginTop: 8, lineHeight: 1.7 } }, "\u7269\u982D\u306B\u5C4A\u3044\u305F\u8005\u306F\u3001\u6B66\u5C06\u306B\u53D6\u308A\u7ACB\u3066\u308B\u8CC7\u683C\u3092\u5F97\u3066\u3044\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { width: "100%", marginTop: 16 }, onClick: onClose }, "\u9589\u3058\u308B")), \u6B04 === "\u6B66\u5C06" && /* @__PURE__ */ React2.createElement(React2.Fragment, null, gs.map((x) => /* @__PURE__ */ React2.createElement("div", { key: x.id, style: { display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 100 } }, x.name, isNameless(x) && /* @__PURE__ */ React2.createElement("span", { style: { color: "#9B9384", fontSize: 10, marginLeft: 2 } }, "\u3014\u4F1D\u3015"), is\u67B6\u7A7A(x) && /* @__PURE__ */ React2.createElement(
     "span",
     {
       style: { color: "#9B9384", fontSize: 10, marginLeft: 2 },

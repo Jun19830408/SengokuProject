@@ -59,14 +59,28 @@ export function newRoster(total, tag, mix) {
 
 export const rosterSum = (r) => (r || []).reduce((a, q) => a + q.m, 0);
 
-// 兵を足す。まず欠けた組を埋め、それでも余れば新しい組を立てる。
+/* 兵を足す。まず欠けた組を埋め、それでも余れば新しい組を立てる。
+
+   埋める順は、手柄の重い組からである。
+
+   もとは名簿の並び順に埋めていた。これでは、幾度も戦って十人まで擦り減った
+   古参の組が、いつまでも十人のままということが起きる。次の戦で消えれば、
+   長も死ぬ。名を挙げた者ほど死にやすい、という逆さまなことになっていた。
+
+   兵を減らすときは手柄の無い組から削っている（rosterCut）。足すときも同じ
+   理屈で、手柄の重い組から埋めるのが筋である。国許で兵を集めれば、まず
+   名の知られた組頭の下へ配される――そういう順になる。
+
+   手柄が同じなら、欠けの大きい組を先に埋める。潰れかけた組から手当てする。 */
 export function rosterAdd(r, n, tag) {
   if (!r || n <= 0) return r || [];
   let left = Math.round(n);
+  // 手柄の重い順、同じなら人数の少ない順（潰れかけた古参が先）
+  const 順 = [...r].sort((a, b) => (b.功 || 0) - (a.功 || 0) || a.m - b.m);
   for (const a of ARMS) {
     const want = Math.round(n * a.ratio);
     let give = want;
-    for (const q of r) {
+    for (const q of 順) {
       if (give <= 0) break;
       if (q.t !== a.key || q.m >= q.max) continue;
       const add = Math.min(q.max - q.m, give);
@@ -78,7 +92,7 @@ export function rosterAdd(r, n, tag) {
       give -= m; left -= m;
     }
   }
-  if (left > 0) for (const q of r) { if (left <= 0) break; const add = Math.min(q.max - q.m, left); q.m += add; left -= add; }
+  if (left > 0) for (const q of 順) { if (left <= 0) break; const add = Math.min(q.max - q.m, left); q.m += add; left -= add; }
   return r;
 }
 
@@ -223,4 +237,64 @@ export function 組頭の働きを記す(s, b, 我side, 場) {
     text: `${場 ? `${場}下の戦で、` : ""}${頭.主}の${名}が`
       + `${敵 && 敵.gen ? `${敵.gen.name}の手勢の` : "敵の"}一隊を${頭.n}つまで破った。`
       + `${階 === "物頭" ? `${名}は物頭の勲功に達している。` : `いまは${階}である。`}` });
+}
+
+/* ここに置く理由。
+
+   もとは画面（ui/panels.jsx）の中にあった。ところが画面の中にあるものは、
+   実際に描いて字を拾わねば確かめられない。以前も同じことをして、戦国記の
+   一行が正しいかを測れずにいた。測れる場所に置いてから書く。 */
+
+/* 組頭の帳（GDD 6.2）。
+
+   盤の駒は五十人組であり、名簿の一組と一対一である。組ひとつに長がひとり
+   居て、敵の駒を討ち取るたびに手柄が積まれる。名は組の id から起こすので、
+   補充されても同じ長のままであり、組が全滅すれば長も消える。
+
+   載せるのは手柄を挙げた者だけである。一度も働いていない長まで並べては、
+   帳面が数百行になって読めない。手柄を挙げた瞬間から、この帳に名が載る。
+
+   勲功が物頭に届いた者は、武将に取り立てる資格を得る。 */
+export function 組頭の帳(g) {
+  const 出 = [];
+  const 見 = (rost, 所, 属) => {
+    for (const q of rost || []) {
+      if (!q.功) continue;
+      出.push({ 鍵: 組の鍵(q.id), 名: 長の名(q.id), 功: q.功, 階: 長の階(q.功), 兵: q.m, 所, 属 });
+    }
+  };
+  /* 誰の下にいるかを添える。組は三つの居場所のいずれかにある。
+       武将の名簿（gen.rost）　… その武将の直属である。武将の名を出す
+       城の名簿（c.rost）　　　… 城付きの地域家臣団。誰の直属でもない
+       軍の名簿（a.rost）　　　… 城から連れ出した地域家臣団。率いている将を出す
+     どの武将の隊かが読めねば、手柄を立てた組頭を探しに行けない。 */
+  for (const gen of g.generals) {
+    if (gen.faction !== g.player || gen.captive) continue;
+    const c = g.castles.find((x) => x.id === gen.at);
+    見(gen.rost, c ? c.name : "出征中", gen.name);
+  }
+  for (const c of g.castles) {
+    if (c.faction !== g.player) continue;
+    見(c.rost, c.name, "地域家臣団");
+  }
+  for (const a of g.armies || []) {
+    if (a.faction !== g.player) continue;
+    // 軍の地域家臣団は、その軍を率いる将のもとにある
+    const 将ら = (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+    const 大将 = 将ら.sort((x, y) => (y.lead || 0) - (x.lead || 0))[0];
+    見(a.rost, "出征中", 大将 ? `${大将.name}の軍` : "地域家臣団");
+  }
+  /* 割って連れ出した組は鍵で束ねる（出陣で組を分けると id に b が付く）。
+     居場所は、人数の多いほうを採る。半端な五人のほうを出しても仕方がない。 */
+  const 束 = new Map();
+  for (const x of 出) {
+    const y = 束.get(x.鍵);
+    if (y) {
+      y.功 += x.功;
+      if (x.兵 > y.兵) { y.所 = x.所; y.属 = x.属; }
+      y.兵 += x.兵;
+      y.階 = 長の階(y.功);
+    } else 束.set(x.鍵, { ...x });
+  }
+  return [...束.values()].sort((a, b) => b.功 - a.功);
 }

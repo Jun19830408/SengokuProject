@@ -41,5 +41,5 @@ export { makeCorps, corpsMen, placeSquads, issueOrder, 退かせる, 退き先 }
 export { createBattle, stepBattle } from "../src/battle/engine.js";
 export { battleAI } from "../src/battle/ai.js";
 export { sideColor, ownZone, drawMon, 紋の核 } from "../src/battle/draw.js";
-export { newRoster, rosterTake, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す } from "../src/core/roster.js";
+export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す, 組頭の帳 } from "../src/core/roster.js";
 export { makePromotion } from "../src/core/house.js";

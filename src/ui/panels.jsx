@@ -16,7 +16,7 @@ import { canRecruit } from "../core/house.js";
 import { underMyBanner } from "../core/state.js";
 import { atPeace } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { 兵科の割り, 蓄えに合わせる , 組の鍵, 長の名, 長の階, 階の段 } from "../core/roster.js";
+import { 兵科の割り, 蓄えに合わせる , 組の鍵, 長の名, 長の階, 階の段, 組頭の帳 } from "../core/roster.js";
 import { clamp } from "../core/util.js";
 import { 既定の兵科 } from "../data/arms.js";
 import { 主家 } from "../core/state.js";
@@ -1075,47 +1075,6 @@ export function FactionInfo({ g, onClose }) {
 }
 
 
-/* 組頭の帳（GDD 6.2）。
-
-   盤の駒は五十人組であり、名簿の一組と一対一である。組ひとつに長がひとり
-   居て、敵の駒を討ち取るたびに手柄が積まれる。名は組の id から起こすので、
-   補充されても同じ長のままであり、組が全滅すれば長も消える。
-
-   載せるのは手柄を挙げた者だけである。一度も働いていない長まで並べては、
-   帳面が数百行になって読めない。手柄を挙げた瞬間から、この帳に名が載る。
-
-   勲功が物頭に届いた者は、武将に取り立てる資格を得る。 */
-function 組頭の帳(g) {
-  const 出 = [];
-  const 見 = (rost, 所, 主) => {
-    for (const q of rost || []) {
-      if (!q.功) continue;
-      出.push({ 鍵: 組の鍵(q.id), 名: 長の名(q.id), 功: q.功, 階: 長の階(q.功), 兵: q.m, 所, 主 });
-    }
-  };
-  for (const gen of g.generals) {
-    if (gen.faction !== g.player || gen.captive) continue;
-    const c = g.castles.find((x) => x.id === gen.at);
-    見(gen.rost, c ? c.name : "出征中", gen.name);
-  }
-  for (const c of g.castles) {
-    if (c.faction !== g.player) continue;
-    見(c.rost, c.name, "地域家臣団");
-  }
-  for (const a of g.armies || []) {
-    if (a.faction !== g.player) continue;
-    見(a.rost, "出征中", "地域家臣団");
-  }
-  // 同じ長が二度出ることはないが、割って連れ出した組は鍵で束ねる
-  const 束 = new Map();
-  for (const x of 出) {
-    const y = 束.get(x.鍵);
-    if (y) { y.功 += x.功; y.兵 += x.兵; y.階 = 長の階(y.功); }
-    else 束.set(x.鍵, { ...x });
-  }
-  return [...束.values()].sort((a, b) => b.功 - a.功);
-}
-
 export function GeneralList({ g, onClose }) {
   const gs = g.generals.filter((x) => x.faction === g.player);
   const [欄, set欄] = useState("武将");
@@ -1138,6 +1097,8 @@ export function GeneralList({ g, onClose }) {
           <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.8 }}>
             五十人組ひとつに長がひとり。敵の駒を討ち取るたびに手柄が積まれます。
             名の知られた組は、兵を出すたびに先に呼ばれます。組が全滅すれば長も死にます。
+            <br />徴募などで兵を補うときは、<b style={{ color: U.text }}>手柄の重い組から先に埋まります</b>。
+            擦り減った古参を放っておかぬためです（二十人を割った組は赤字で出ます）。
             <br />勲功 {階の段.map((x) => `${x.要}＝${x.名}`).join("　")}
           </div>
           {!頭.length && (
@@ -1154,8 +1115,10 @@ export function GeneralList({ g, onClose }) {
               <span className="num" style={{ flex: 1, color: U.dim }}>
                 武功 {x.功}（討ち取った駒）　勲功 {x.功}
               </span>
-              <span className="num" style={{ color: U.dim }}>{fmt(x.兵)}人</span>
-              <span style={{ color: U.dim }}>{x.所}</span>
+              {/* 兵が二十を割った組は赤く出す。次の戦で消えれば長も死ぬ。 */}
+              <span className="num" style={{ color: x.兵 < 20 ? "#B0483C" : U.dim }}>{fmt(x.兵)}人</span>
+              <span style={{ color: U.text, width: 96, textAlign: "right" }}>{x.属}</span>
+              <span style={{ color: U.dim, width: 76, textAlign: "right" }}>{x.所}</span>
             </div>
           ))}
           {頭.some((x) => x.階 === "物頭") && (
