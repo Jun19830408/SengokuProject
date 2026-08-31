@@ -1,5 +1,5 @@
 // ブラウザ版（dist/戦国.html）の試験。
-// 開くだけで題名が出て、大名を選んで月が進み、記録がブラウザに残るかを見る。
+// 開くだけで題字が出て、大名を選んで月が進み、記録がブラウザに残るかを見る。
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
@@ -78,7 +78,9 @@ const 家を開く = async (名) => {
   await 待つ(120);
 
   const 文 = () => w.document.body.textContent;
-  確かめる('題名が出る', /センゴク盤/.test(文()));
+  // 題は絵の題字になったので、字ではなく絵の代替文で判ずる（tests/tebiki.cjs と同じ理）
+  const 題の絵 = [...w.document.querySelectorAll('img')].find((e) => /センゴク盤/.test(e.alt || ''));
+  確かめる('題字の絵が出る（代替文は「センゴク盤」）', !!題の絵 && 題の絵.alt === 'センゴク盤');
   確かめる('「ゲームをはじめる」が出る', /ゲームをはじめる/.test(文()));
 
   await 押す('ゲームをはじめる');

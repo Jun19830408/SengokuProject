@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { 題字, 絵にする } from "../data/logo.js";
 import { Manual } from "./Manual.jsx";
 import { U } from "../core/util.js";
 import { FACTIONS } from "../data/factions.js";
@@ -49,10 +50,12 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
     <div className="sp" style={{ height: "100dvh", alignItems: "center", justifyContent: "center", position: "relative", overflow: "auto" }}>
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)" }} />
       <div style={{ position: "relative", textAlign: "center", padding: "24px 0" }}>
-        {/* 題（GDD 1.1）。絵の題字が入るまでは、字で置く。
-            絵が来たら、この二行を差し替えるだけで済むようにしてある。 */}
-        <div className="mn" style={{ fontSize: 42, letterSpacing: ".06em" }}>センゴク盤</div>
-        <div style={{ fontSize: 11, letterSpacing: ".42em", color: U.dim, marginTop: 6 }}>SENGOKU BAN</div>
+        {/* 題（GDD 1.1）。絵の題字が来たので置き換えた。
+            横に組むときは題字を使う、という決まりに従う。印章と副題は題字の中に
+            入っているので、ここで字を重ねる必要はない。
+            幅は四百六十まで。それより狭い画面では画面なりに縮む。 */}
+        <img src={絵にする(題字)} alt="センゴク盤" width="460"
+          style={{ width: "min(460px, 92vw)", height: "auto", display: "block", margin: "0 auto" }} />
         <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 9, width: 360, maxWidth: "92vw" }}>
           {最新 && (
             <button className="btn dark" style={{ padding: "13px" }} onClick={() => onLoad(最新.key)}>

@@ -48,6 +48,13 @@ const 刻印 = (() => {
   return 印 ? `${時}　${印.slice(0, 7)}` : 時;
 })();
 
+/* ロゴ。栞の絵に使う。src/assets/logo から直に読む（生成した src/data/logo.js は
+   遊びの中で使うためのもので、こちらは組み立ての側で要る）。 */
+const ロゴ = (name) => fs.readFileSync(
+  path.join(ROOT, 'src', 'assets', 'logo', name), 'utf8').replace(/\n\s*/g, ' ').trim();
+const 印 = ロゴ('sengokuban-mark.svg');
+const 印章 = ロゴ('sengokuban-seal.svg');
+
 const html = `<!doctype html>
 <html lang="ja">
 <head>
@@ -60,6 +67,11 @@ const html = `<!doctype html>
 <meta name="apple-mobile-web-app-title" content="センゴク盤">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#F4F1E8">
+<!-- 印（GDD 1.1）。栞や見出しの脇に出る小さな絵である。
+     小さく使うので、字なしの「印」のほうを充てる（字は潰れるため）。
+     ホーム画面に置いたときの大きな絵には、字ありの「印章」を使う。 -->
+<link rel="icon" type="image/svg+xml" href="${'data:image/svg+xml,' + encodeURIComponent(印)}">
+<link rel="apple-touch-icon" href="${'data:image/svg+xml,' + encodeURIComponent(印章)}">
 <!-- 石高や兵数を電話番号と見なして繋いでしまうのを止める -->
 <meta name="format-detection" content="telephone=no">
 <style>

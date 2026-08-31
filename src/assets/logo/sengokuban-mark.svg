@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="センゴク盤 印">
+<path fill="#1C1E22" d="M 0.000 512.000 L 512.000 512.000 L 512.000 0.000 L 0.000 0.000 Z"/>
+<path fill="#000000" d="M 128.000 0.000 L 128.000 512.000"/>
+<path fill="none" stroke="#FFFFFF" stroke-width="5.5" opacity="0.353" d="M 128.000 0.000 L 128.000 512.000"/>
+<path fill="#000000" d="M 256.000 0.000 L 256.000 512.000"/>
+<path fill="none" stroke="#FFFFFF" stroke-width="5.5" opacity="0.353" d="M 256.000 0.000 L 256.000 512.000"/>
+<path fill="#000000" d="M 384.000 0.000 L 384.000 512.000"/>
+<path fill="none" stroke="#FFFFFF" stroke-width="5.5" opacity="0.353" d="M 384.000 0.000 L 384.000 512.000"/>
+<path fill="#000000" d="M 0.000 128.000 L 512.000 128.000"/>
+<path fill="none" stroke="#FFFFFF" stroke-width="5.5" opacity="0.353" d="M 0.000 128.000 L 512.000 128.000"/>
+<path fill="#000000" d="M 0.000 256.000 L 512.000 256.000"/>
+<path fill="none" stroke="#FFFFFF" stroke-width="5.5" opacity="0.353" d="M 0.000 256.000 L 512.000 256.000"/>
+<path fill="#000000" d="M 0.000 384.000 L 512.000 384.000"/>
+<path fill="none" stroke="#FFFFFF" stroke-width="5.5" opacity="0.353" d="M 0.000 384.000 L 512.000 384.000"/>
+<path fill="#F4F1E8" d="M 256.000 0.000 L 438.780 281.600 L 343.040 409.600 L 403.970 512.000 L 256.000 435.200 L 108.030 512.000 L 168.960 409.600 L 73.220 281.600 Z"/>
+</svg>

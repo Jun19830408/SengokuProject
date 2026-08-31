@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { 説明書, 題名, 副題 } from "../data/manual.js";
+import { 印, 絵にする } from "../data/logo.js";
 import { 写し } from "../data/shots.js";
 import { 図 } from "../data/zukan.js";
 import { U } from "../core/util.js";
@@ -20,9 +21,13 @@ export function Manual({ onClose, 章 = 0 }) {
   return (
     <div className="modal" {...外を押して閉じる(onClose)}>
       <div className="card" style={{ maxWidth: 560 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
-          <div className="mn" style={{ fontSize: 21 }}>{題名}　遊び方</div>
-          <div style={{ fontSize: 10, letterSpacing: ".3em", color: U.dim }}>{副題}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          {/* 印。小さく置くので、字なしのほうを使う（決まりごとに従う） */}
+          <img src={絵にする(印)} alt="" width="30" height="30" style={{ display: "block", flex: "0 0 auto" }} />
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <div className="mn" style={{ fontSize: 21 }}>{題名}　遊び方</div>
+            <div style={{ fontSize: 10, letterSpacing: ".3em", color: U.dim }}>{副題}</div>
+          </div>
         </div>
 
         {/* 章の見出し。狭い画面では折り返す */}

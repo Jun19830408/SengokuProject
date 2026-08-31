@@ -49,7 +49,14 @@ const 文 = () => document.body.textContent;
   await act(async () => { root.render(React.createElement(App)); }); await flush(); await flush();
 
   /* -------------------------------------------- 一、タイトル画面から読める */
-  確('題名が「センゴク盤」になっている', /センゴク盤/.test(文()), '');
+  /* 題は絵の題字になった（src/assets/logo/sengokuban-title.svg）。
+     字ではなくなったので、字を数えても見つからない。代わりに絵の代替文で判ずる。
+     ここは「読み上げにも題名が伝わるか」を見ていることになるので、
+     字で置いていたころより強い判じである。 */
+  const 題の絵 = [...document.querySelectorAll('img')].find((e) => /センゴク盤/.test(e.alt || ''));
+  確('題字の絵が置かれている', !!題の絵, 題の絵 ? 題の絵.getAttribute('src').slice(0, 24) + '…' : 'img が無い');
+  確('題名が「センゴク盤」として伝わる（絵の代替文）', !!題の絵 && 題の絵.alt === 'センゴク盤',
+    題の絵 ? 題の絵.alt : '');
   確('タイトルに「遊び方を読む」がある', !!btn('遊び方を読む'), '');
   await rc('遊び方を読む'); await flush();
   確('遊び方が開く', /遊び方/.test(文()) && /はじめに/.test(文()), '');

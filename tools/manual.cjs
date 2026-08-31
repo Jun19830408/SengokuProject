@@ -28,6 +28,11 @@ const 束 = path.join(ROOT, 'build', 'manual.cjs');
 esbuild.buildSync({ entryPoints: [口], bundle: true, format: 'cjs', outfile: 束, logLevel: 'error' });
 const { 説明書, 題名, 副題 } = require(束);
 
+// ロゴ。表紙に置く。
+const 題字 = fs.readFileSync(
+  path.join(ROOT, 'src', 'assets', 'logo', 'sengokuban-title.svg'), 'utf8')
+  .replace(/\n\s*/g, ' ').trim();
+
 const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /* 絵は data URI で埋め込む。紙に落とすとき、外のファイルを見に行かせない。
@@ -120,11 +125,12 @@ const html = `<!doctype html>
   .zu-t { flex: 1; }
   .zu-t b { display: block; font-size: 11.5pt; margin-bottom: 1mm; }
   .zu-t span { font-size: 9.5pt; color: #4A4640; line-height: 1.85; }
+  .cover .logo { width: 118mm; height: auto; display: block; margin: 0 auto 6mm; }
 </style></head>
 <body>
   <div class="cover">
-    <div class="t">${esc(題名)}</div>
-    <div class="s">${esc(副題)}</div>
+    <!-- 表紙は題字を使う（横に組むときの決まり）。題名と副題は絵の中にある。 -->
+    <img class="logo" src="${'data:image/svg+xml,' + encodeURIComponent(題字)}" alt="${esc(題名)}">
     <div class="d">説明書<br>天文十五年（一五四六）</div>
     <div class="toc"><ul>${目次}</ul></div>
   </div>
