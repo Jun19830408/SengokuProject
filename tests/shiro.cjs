@@ -24,7 +24,8 @@ fs.writeFileSync(entry,
   'export { CASTLES } from "../src/data/castles.js";\n'
 + 'export { ROADS } from "../src/data/roads.js";\n'
 + 'export { FACTIONS } from "../src/data/factions.js";\n'
-+ 'export { initState } from "../src/core/state.js";\n');
++ 'export { initState } from "../src/core/state.js";\n'
++ 'export { minGarrison, troopCap } from "../src/core/rank.js";\n');
 const out = path.join(ROOT, 'build', 'shiro.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
   loader: { '.jsx': 'jsx' }, logLevel: 'error' });
@@ -186,6 +187,46 @@ console.log(`  （城 ${C.length}／国 ${国々.length}／道 ${R.length}本／
   console.log(`  （史実より厚い国： ${厚.map((r) => `${r.k}+${r.差.toFixed(1)}(${r.城}城)`).join('・')}）`);
   // 咎めるのは、国そのものが盤から落ちているときだけである
   無し('慶長期に石高のある国が、すべて盤にある', Object.keys(慶長).filter((k) => !盤[k]));
+}
+
+/* ------------------------------ 五、出せる兵と守るに要る兵の釣り合い
+
+   守るに要る兵は、もとは防備と民心だけで決まっていた。
+
+     守るに要る兵　四百十〜八百六十　（二.一倍）
+     城の兵　　　　五十三〜三千九百二十七　（七十四倍）
+
+   城の大きさが七十四倍ちがうのに要る兵は二倍しか動かぬので、両端で
+   破れる。二百七十一城のうち七十九城が、居る兵より多くの守兵を求められ、
+   一兵も出せなくなっていた（香宗城 城兵九十二に守り五百六十）。
+
+   この数は目安のはずだが、援軍を出せるか・采配が出陣するかの判じに
+   使われているので、狂うと盤が凍る。長宗我部が本拠から一兵も動かせな
+   かったのはこれである。 */
+{
+  const s = A.initState('oda');
+  const 詰 = s.castles.filter((c) => A.minGarrison(c) >= c.local);
+  無し('居る兵より多くの守兵を求められる城がない',
+    詰.map((c) => `${c.name}(兵${c.local}/守${A.minGarrison(c)})`));
+
+  // 大城は据え置く。壁の要りが身代に見合う城は、元の式のままである。
+  const 壁 = (c) => Math.round(c.def * 10 + (100 - c.min) * 5);
+  const 割増 = (k) => Math.max(1, Math.min(1.9, 1 + ((30000 - k) / 30000) * 0.9));
+  const 器 = (c) => (c.koku / 10000) * 300 * 割増(c.koku);
+  const 見合う = s.castles.filter((c) => 壁(c) <= 器(c) * 0.55);
+  無し('身代に見合う城の守りは、元の式のまま据え置かれる',
+    見合う.filter((c) => A.minGarrison(c) !== 壁(c)).map((c) => c.name),
+    `${見合う.length}城が据え置き（一乗谷 ${A.minGarrison(s.castles.find((c) => c.name === '一乗谷城'))}人）`);
+
+  // 弱小大名の本拠から、まとまった兵が出せること
+  const 岡豊 = s.castles.find((c) => c.name === '岡豊城');
+  確('弱小大名の本拠からも兵が出せる（長宗我部の岡豊城）',
+    岡豊 && 岡豊.local - A.minGarrison(岡豊) >= 100,
+    岡豊 ? `城兵${岡豊.local}／守り${A.minGarrison(岡豊)}／出せる${岡豊.local - A.minGarrison(岡豊)}人` : '城がない');
+
+  const 割 = s.castles.map((c) => A.minGarrison(c) / Math.max(1, c.local)).sort((a, b) => a - b);
+  console.log(`  （守るに要る兵÷城兵　中央 ${割[Math.floor(割.length / 2)].toFixed(2)}`
+    + `／最大 ${割[割.length - 1].toFixed(2)}）`);
 }
 
 console.log('');

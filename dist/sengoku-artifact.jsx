@@ -12072,7 +12072,13 @@ function diploStat(g, fid) {
     prestige: ((g.factions || {})[fid] || {}).prestige == null ? 50 : g.factions[fid].prestige
   };
 }
-var minGarrison = (c) => Math.round(c.def * 10 + (100 - c.min) * 5);
+var minGarrison = (c) => {
+  const \u58C1\u306E\u8981\u308A = Math.round(c.def * 10 + (100 - c.min) * 5);
+  const \u5668 = c.koku / 1e4 * 300 * \u8ECD\u5F79\u306E\u5272\u5897(c.koku);
+  if (\u58C1\u306E\u8981\u308A <= \u5668 * 0.55) return \u58C1\u306E\u8981\u308A;
+  const \u5272 = Math.max(0.12, Math.min(0.55, 0.2 + (c.def - 45) / 400 + (70 - c.min) / 400));
+  return Math.max(40, Math.round(\u5668 * \u5272));
+};
 var \u8ECD\u5F79\u306E\u5272\u5897 = (koku) => Math.max(1, Math.min(1.9, 1 + (3e4 - koku) / 3e4 * 0.9));
 var troopCap = (c, p, s2) => Math.round(c.koku / 1e4 * MOB_POLICY[p].per * \u8ECD\u5F79\u306E\u5272\u5897(c.koku) * (0.75 + (c.najimi == null ? 70 : c.najimi) / 400) * (s2 ? rankBonus(s2, c.faction).troop : 1));
 var foodDays = (food, troops) => troops > 0 ? Math.round(food / (troops * 0.08) * 30) : 999;

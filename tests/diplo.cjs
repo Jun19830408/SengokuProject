@@ -212,7 +212,24 @@ const 押せる = (s, fid, key) => {
     x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
   let u = JSON.parse(JSON.stringify(t));
   u.generals.find((x) => x.id === 手.id).wit = 100;
-  u.plots[u.plots.length - 1].monthsLeft = 1;
+  /* 他家の手出しを退けておく。
+
+     二十回に一度ほど、名指ししていない酒井忠尚の忠誠まで二つ落ちて、試験が
+     咎めていた。追ってみると、名指しの落ちが十八ではなく二十の回に限って
+     起きている。十八はこちらの流言の値であるから、余分の二はよそから来て
+     いた。
+
+     出どころは他家の企ての帳（s.plots）ではなく、陰謀を気性とする家の
+     月々の采配であった（govern/month.js の「気性ごとの振る舞い」）。狙う城の
+     武将すべての忠誠を二つ落とすもので、企ての帳には載らない。ゆえに
+     企てを抜いただけでは止まらなかった。
+
+     はじめ fa.aim（狙う城）を外して止めようとしたが、狙いは同じ月のうちに
+     立て直されるので効かなかった。気性そのものを移し替える。 */
+  const 我が企て = u.plots[u.plots.length - 1];
+  u.plots = [我が企て];
+  我が企て.monthsLeft = 1;
+  for (const fid of Object.keys(u.factions)) if (fid !== u.player) u.factions[fid].temper = "堅実";
   const 前選 = u.generals.find((x) => x.id === 選.id).loyal;
   const 前低 = u.generals.find((x) => x.id === 低.id).loyal;
   u = H.advanceMonth(u);
@@ -221,8 +238,20 @@ const 押せる = (s, fid, key) => {
   const 落ちた = 前選 - 後選;
   確('流言は、選んだ相手に深く刺さる', 落ちた >= 14,
     `${選.name} 忠${Math.round(前選)} → ${Math.round(後選)}（−${Math.round(落ちた)}）`);
-  確('選ばなかった者の忠誠は、流言では落ちない', 後低 >= 前低 - 1,
-    `${低.name} 忠${Math.round(前低)} → ${Math.round(後低)}`);
+  /* 名指ししなかった者は、企てのぶん忠誠を落とさない。
+
+     はじめ「一つ以上落ちなければよい」と見ていたが、これが二十回に一度ほど
+     倒れた。忠誠には月々の素のうつろいがある。禄高が望みに足るかで
+     −一.二／−〇.五／〇／＋〇.三五／＋〇.七 の段に分かれ（loyaltyDrift）、
+     どの段に落ちるかは盤ごとに違う。盤は初手から run ごとに違うので、
+     この者が不遇な盤に当たると、流言と関わりなく落ちていたのである。
+
+     測るべきは「流言がこの者にも及んだか」であって、忠誠が動いたかでは
+     ない。ゆえに素のうつろいのぶんを差し引いて判ずる。 */
+  const 素 = H.loyaltyDrift(u.generals.find((x) => x.id === 低.id));
+  確('選ばなかった者の忠誠は、流言では落ちない', 後低 >= 前低 + 素 - 0.05,
+    `${低.name} 忠${Math.round(前低 * 10) / 10} → ${Math.round(後低 * 10) / 10}`
+    + `（素のうつろい ${素 >= 0 ? '+' : ''}${素}。名指しの ${選.name} は −${Math.round(落ちた)}）`);
 
   Math.random = 元の乱;
 
