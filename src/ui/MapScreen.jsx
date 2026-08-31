@@ -229,14 +229,20 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     for (const a of g.armies) {
       const n0 = nodeById(a.path[0]), n1 = a.path.length > 1 ? nodeById(a.path[1]) : n0;
       const [ax, ay] = S(n0.x + (n1.x - n0.x) * a.prog, n0.y + (n1.y - n0.y) * a.prog);
-      const dst = nodeById(a.target); const [dx2, dy2] = S(dst.x, dst.y);
       const col = g.factions[a.faction].color;
-      ctx.strokeStyle = col + "77"; ctx.setLineDash([5, 5]); ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(dx2, dy2); ctx.stroke(); ctx.setLineDash([]);
+      /* 在陣の軍は行き先を持たない（落とした城に留まっている）。
+         破線を引く先が無いので、そこだけ飛ばす。印は城の上に重なる。 */
+      const dst = a.target ? nodeById(a.target) : null;
+      if (dst) {
+        const [dx2, dy2] = S(dst.x, dst.y);
+        ctx.strokeStyle = col + "77"; ctx.setLineDash([5, 5]); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(dx2, dy2); ctx.stroke(); ctx.setLineDash([]);
+      }
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ax, ay, 11, 0, 7); ctx.fill();
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(ax, ay, 8.5, 0, 7); ctx.fill();
       ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-      ctx.fillStyle = "#fff"; ctx.font = "600 10px sans-serif"; ctx.fillText("軍", ax - 5, ay + 3.5);
+      ctx.fillStyle = "#fff"; ctx.font = "600 10px sans-serif";
+      ctx.fillText(a.在陣 ? "陣" : "軍", ax - 5, ay + 3.5);
       ctx.font = "11px sans-serif";
       名札(`${fmt(a.men)}`, ax + 14, ay + 4, "#33332F", 2.6, "left");
     }

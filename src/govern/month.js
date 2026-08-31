@@ -403,13 +403,32 @@ export function advanceMonth(prev, g) {
         }
         if (a.dead) continue;
         a.food -= Math.round(a.men * 0.09);
+        /* 在陣の軍は、自前の兵糧が尽きれば足下の城の蔵から食う（現地調達）。
+
+           落とした城に居座るのだから、蔵を開けさせるのは道理である。ただし
+           城の蔵は痩せる。長く居座れば、その城は次の冬を越せなくなる。
+           蔵も尽きれば、あとは兵が減っていくだけである。在陣に自ずと限りが出る。 */
+        if (a.在陣 && a.food <= 0) {
+          const 足下 = s.castles.find((c2) => c2.id === a.在陣 && c2.faction === a.faction);
+          if (足下 && 足下.food > 0) {
+            const 要 = Math.round(a.men * 0.09);
+            const 取 = Math.min(足下.food, 要 - a.food);
+            足下.food -= 取; a.food += 取;
+            if (a.faction === s.player && 足下.food < 要 * 2) {
+              events.push(`${足下.name}に在陣する軍が城の蔵を食っている（残り${fmt(Math.round(足下.food))}石）。`);
+            }
+          }
+        }
         if (a.faction === s.player) {
           const days = Math.round((a.food / Math.max(1, a.men * 0.09)) * 30);
-          if (a.food <= 0) events.push(`進軍中の軍の兵糧が尽きた。士気と兵が落ちている。`);
-          else if (days < 45) events.push(`進軍中の軍の兵糧が残り約${days}日分。補給が切れかけている。`);
+          if (a.food <= 0) events.push(`${a.在陣 ? "在陣中" : "進軍中"}の軍の兵糧が尽きた。士気と兵が落ちている。`);
+          else if (days < 45) events.push(`${a.在陣 ? "在陣中" : "進軍中"}の軍の兵糧が残り約${days}日分。補給が切れかけている。`);
         }
         if (a.food <= 0) { a.food = 0; a.men = Math.round(a.men * 0.96); }
-        if (a.path.length === 1 && !a.sieging) arrivals.push(a);
+        /* 在陣の軍は「着いた軍」ではない。もう着いて、留まっている。
+           ここへ入れると毎月あらためて着陣の始末が回り、同じ城を何度も
+           攻め落とすことになる。 */
+        if (a.path.length === 1 && !a.sieging && !a.在陣) arrivals.push(a);
       }
       s.armies = s.armies.filter((a) => !a.dead);
       // 同じ拠点へ着いた本隊と援軍は合流する（GDD 7.3 集結）

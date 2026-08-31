@@ -17579,8 +17579,7 @@ function sackCastle(s2, castle, army, hard) {
   castle.faction = winner;
   const keepN = stay + yield_;
   castle.rost = rosterCut(castle.rost || newRoster(before, `loc-${castle.id}`), Math.max(0, before - keepN));
-  if (army.rost && army.rost.length) castle.rost = [...castle.rost, ...army.rost];
-  castle.local = stay + yield_ + Math.max(0, army.local);
+  castle.local = stay + yield_;
   rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
   castle.koku = Math.round(castle.koku * (hard ? 0.9 : 0.95));
   castle.comm = Math.round(castle.comm * (hard ? 0.8 : 0.9));
@@ -17593,13 +17592,14 @@ function sackCastle(s2, castle, army, hard) {
   castle.lordId = null;
   castle.intrigue = false;
   castle.well = 100;
-  for (const gid of army.gens) {
-    const x = s2.generals.find((q) => q.id === gid);
-    if (x) x.at = castle.id;
-  }
-  s2.armies = s2.armies.filter((x) => x.id !== army.id);
+  army.at = castle.id;
+  army.path = [castle.id];
+  army.prog = 0;
+  army.target = null;
+  army.\u5728\u9663 = castle.id;
   for (const a2 of s2.armies.filter((x) => x.target === castle.id || x.at === castle.id)) {
     if (a2.faction === oldF) continue;
+    if (a2.id === army.id) continue;
     const home = s2.castles.find((c2) => c2.id === a2.from) || s2.castles.find((c2) => c2.faction === a2.faction);
     if (!home) continue;
     home.local += Math.max(0, a2.local);
@@ -17617,10 +17617,18 @@ function sackCastle(s2, castle, army, hard) {
       });
     }
   }
-  s2.armies = s2.armies.filter((x) => !(x.target === castle.id || x.at === castle.id) || x.faction === oldF);
+  s2.armies = s2.armies.filter((x) => x.id === army.id || !(x.target === castle.id || x.at === castle.id) || x.faction === oldF);
   s2.sieges = s2.sieges.filter((x) => x.castleId !== castle.id);
   s2.campaigns = (s2.campaigns || []).filter((x) => x.target !== castle.id);
   log(`${castle.name}\u304C\u843D\u3061\u3001${s2.factions[winner].name}\u306E\u624B\u306B\u6E21\u3063\u305F\uFF08\u65E7\u9818\u4E3B\uFF1A${s2.factions[oldF].name}\uFF09\u3002`);
+  if (winner !== s2.player) {
+    \u57CE\u3092\u59D4\u306D\u308B(s2, castle.id, army.id, \u59D4\u306D\u308B\u5DEE\u914D(s2, castle, army));
+  } else {
+    s2.\u59D4\u306D\u308B\u5F85\u3061 = [
+      ...(s2.\u59D4\u306D\u308B\u5F85\u3061 || []).filter((x) => x.castleId !== castle.id),
+      { castleId: castle.id, armyId: army.id }
+    ];
+  }
   if (castle.kuni && holdsProvince(s2, winner, castle.kuni)) {
     const \u56FD\u306E\u57CE = s2.castles.filter((x) => x.kuni === castle.kuni);
     log(`${s2.factions[winner].name}\u304C${castle.kuni}\u3092\u4E00\u56FD\u6B8B\u3089\u305A\u624B\u4E2D\u306B\u3057\u305F\uFF08${\u56FD\u306E\u57CE.length}\u57CE\uFF09\u3002`);
@@ -17682,6 +17690,47 @@ function sackCastle(s2, castle, army, hard) {
     }
     s2.ruined = [...s2.ruined || [], oldF];
   }
+}
+function \u57CE\u3092\u59D4\u306D\u308B(s2, castleId, armyId, \u5DEE\u914D) {
+  const c = s2.castles.find((x) => x.id === castleId);
+  const a = (s2.armies || []).find((x) => x.id === armyId);
+  if (!c || !a) return s2;
+  const \u7F6E\u304F = [.../* @__PURE__ */ new Set([...\u5DEE\u914D.\u6240\u5C5E || [], ...\u5DEE\u914D.\u57CE\u4E3B ? [\u5DEE\u914D.\u57CE\u4E3B] : []])];
+  for (const gid of \u7F6E\u304F) {
+    if (!(a.gens || []).includes(gid)) continue;
+    const g = s2.generals.find((x) => x.id === gid);
+    if (!g) continue;
+    g.at = c.id;
+    g.\u672C\u9818 = c.id;
+    a.gens = a.gens.filter((x) => x !== gid);
+  }
+  if (\u5DEE\u914D.\u57CE\u4E3B && \u7F6E\u304F.includes(\u5DEE\u914D.\u57CE\u4E3B)) {
+    if (c.lordId && c.lordId !== \u5DEE\u914D.\u57CE\u4E3B) c.najimi = 25;
+    c.lordId = \u5DEE\u914D.\u57CE\u4E3B;
+  }
+  const \u6B8B = Math.max(0, Math.min(Math.round(\u5DEE\u914D.\u5175 || 0), a.local || 0));
+  if (\u6B8B > 0) {
+    const tk = rosterTake(a.rost || newRoster(a.local, `arm-${a.id}`), \u6B8B);
+    a.rost = tk.rest;
+    a.local = Math.max(0, a.local - \u6B8B);
+    c.rost = [...c.rost || [], ...tk.taken];
+    c.local += \u6B8B;
+    rosterSync(c, "rost", c.local, `loc-${c.id}`);
+  }
+  a.men = (a.local || 0) + (a.gens || []).reduce((t, id) => {
+    const g = s2.generals.find((x) => x.id === id);
+    return t + (g ? g.retinue : 0);
+  }, 0);
+  if (!(a.gens || []).length && (a.local || 0) <= 0) {
+    s2.armies = s2.armies.filter((x) => x.id !== a.id);
+  }
+  return s2;
+}
+function \u59D4\u306D\u308B\u5DEE\u914D(s2, castle, army) {
+  const \u5C06\u3089 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
+  if (\u5C06\u3089.length <= 1) return { \u57CE\u4E3B: null, \u6240\u5C5E: [], \u5175: Math.round((army.local || 0) * 0.3) };
+  const \u4E3B = [...\u5C06\u3089].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
+  return { \u57CE\u4E3B: \u4E3B.id, \u6240\u5C5E: [\u4E3B.id], \u5175: Math.round((army.local || 0) * 0.5) };
 }
 function resolveOffscreen(prev, armyId, castleId) {
   const s2 = structuredClone(prev);
@@ -18252,16 +18301,28 @@ function advanceMonth(prev, g) {
     }
     if (a.dead) continue;
     a.food -= Math.round(a.men * 0.09);
+    if (a.\u5728\u9663 && a.food <= 0) {
+      const \u8DB3\u4E0B = s2.castles.find((c2) => c2.id === a.\u5728\u9663 && c2.faction === a.faction);
+      if (\u8DB3\u4E0B && \u8DB3\u4E0B.food > 0) {
+        const \u8981 = Math.round(a.men * 0.09);
+        const \u53D6 = Math.min(\u8DB3\u4E0B.food, \u8981 - a.food);
+        \u8DB3\u4E0B.food -= \u53D6;
+        a.food += \u53D6;
+        if (a.faction === s2.player && \u8DB3\u4E0B.food < \u8981 * 2) {
+          events.push(`${\u8DB3\u4E0B.name}\u306B\u5728\u9663\u3059\u308B\u8ECD\u304C\u57CE\u306E\u8535\u3092\u98DF\u3063\u3066\u3044\u308B\uFF08\u6B8B\u308A${fmt(Math.round(\u8DB3\u4E0B.food))}\u77F3\uFF09\u3002`);
+        }
+      }
+    }
     if (a.faction === s2.player) {
       const days = Math.round(a.food / Math.max(1, a.men * 0.09) * 30);
-      if (a.food <= 0) events.push(`\u9032\u8ECD\u4E2D\u306E\u8ECD\u306E\u5175\u7CE7\u304C\u5C3D\u304D\u305F\u3002\u58EB\u6C17\u3068\u5175\u304C\u843D\u3061\u3066\u3044\u308B\u3002`);
-      else if (days < 45) events.push(`\u9032\u8ECD\u4E2D\u306E\u8ECD\u306E\u5175\u7CE7\u304C\u6B8B\u308A\u7D04${days}\u65E5\u5206\u3002\u88DC\u7D66\u304C\u5207\u308C\u304B\u3051\u3066\u3044\u308B\u3002`);
+      if (a.food <= 0) events.push(`${a.\u5728\u9663 ? "\u5728\u9663\u4E2D" : "\u9032\u8ECD\u4E2D"}\u306E\u8ECD\u306E\u5175\u7CE7\u304C\u5C3D\u304D\u305F\u3002\u58EB\u6C17\u3068\u5175\u304C\u843D\u3061\u3066\u3044\u308B\u3002`);
+      else if (days < 45) events.push(`${a.\u5728\u9663 ? "\u5728\u9663\u4E2D" : "\u9032\u8ECD\u4E2D"}\u306E\u8ECD\u306E\u5175\u7CE7\u304C\u6B8B\u308A\u7D04${days}\u65E5\u5206\u3002\u88DC\u7D66\u304C\u5207\u308C\u304B\u3051\u3066\u3044\u308B\u3002`);
     }
     if (a.food <= 0) {
       a.food = 0;
       a.men = Math.round(a.men * 0.96);
     }
-    if (a.path.length === 1 && !a.sieging) arrivals.push(a);
+    if (a.path.length === 1 && !a.sieging && !a.\u5728\u9663) arrivals.push(a);
   }
   s2.armies = s2.armies.filter((a) => !a.dead);
   for (const a of [...s2.armies]) {
@@ -28015,17 +28076,19 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     for (const a of g.armies) {
       const n0 = nodeById(a.path[0]), n1 = a.path.length > 1 ? nodeById(a.path[1]) : n0;
       const [ax, ay] = S(n0.x + (n1.x - n0.x) * a.prog, n0.y + (n1.y - n0.y) * a.prog);
-      const dst = nodeById(a.target);
-      const [dx2, dy2] = S(dst.x, dst.y);
       const col = g.factions[a.faction].color;
-      ctx.strokeStyle = col + "77";
-      ctx.setLineDash([5, 5]);
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(dx2, dy2);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      const dst = a.target ? nodeById(a.target) : null;
+      if (dst) {
+        const [dx2, dy2] = S(dst.x, dst.y);
+        ctx.strokeStyle = col + "77";
+        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(dx2, dy2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
       ctx.fillStyle = "#fff";
       ctx.beginPath();
       ctx.arc(ax, ay, 11, 0, 7);
@@ -28038,7 +28101,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       ctx.textBaseline = "alphabetic";
       ctx.fillStyle = "#fff";
       ctx.font = "600 10px sans-serif";
-      ctx.fillText("\u8ECD", ax - 5, ay + 3.5);
+      ctx.fillText(a.\u5728\u9663 ? "\u9663" : "\u8ECD", ax - 5, ay + 3.5);
       ctx.font = "11px sans-serif";
       \u540D\u672D(`${fmt(a.men)}`, ax + 14, ay + 4, "#33332F", 2.6, "left");
     }

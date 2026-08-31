@@ -1,8 +1,8 @@
 import { captureChance, makePrisoner, takeAsPrisoner } from "../core/capture.js";
 import { canRecruit, loyaltyAfterRecruit, ruinedHouse } from "../core/house.js";
 import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { minGarrison } from "../core/rank.js";
-import { newRoster, rosterCut, rosterSync } from "../core/roster.js";
+import { minGarrison, stipendOf } from "../core/rank.js";
+import { newRoster, rosterCut, rosterSync, rosterTake } from "../core/roster.js";
 import { relOf } from "../core/state.js";
 import { clamp, fmt } from "../core/util.js";
 import { tryAmbush } from "../core/ambush.js";
@@ -289,8 +289,17 @@ export function sackCastle(s, castle, army, hard) {
   // 名簿。残った者と降った者は元の組のまま残り、攻め手の組が加わる
   const keepN = stay + yield_;
   castle.rost = rosterCut(castle.rost || newRoster(before, `loc-${castle.id}`), Math.max(0, before - keepN));
-  if (army.rost && army.rost.length) castle.rost = [...castle.rost, ...army.rost];
-  castle.local = stay + yield_ + Math.max(0, army.local);
+  /* 攻め手の兵は城に吸われない。軍は軍のまま、この城に在陣する（GDD 6.4）。
+
+     もとは攻め手の地の兵をそのまま城兵に足していた。城を落とせば、連れて
+     きた兵がその城の兵になってしまう。しかし在陣は城を与えられたことでは
+     ないし、遠征軍の兵は遠征軍のものである。
+
+     城に残るのは、元の守兵のうち留まった者と降った者だけである（三割から
+     五割ほど。清洲城なら二千三十四人のうち約八百人）。空にはならないが、
+     将は一人もいないので守備隊の統率は四十に落ちる。誰かを置くかどうかは、
+     このあと大名が決める。 */
+  castle.local = stay + yield_;
   rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
   castle.koku = Math.round(castle.koku * (hard ? 0.90 : 0.95));
   castle.comm = Math.round(castle.comm * (hard ? 0.80 : 0.90));
@@ -303,13 +312,24 @@ export function sackCastle(s, castle, army, hard) {
   castle.lordId = null;
   castle.intrigue = false;
   castle.well = 100;
-  // 城を取ったのは本軍である。ここに残るのは本軍の将だけ。
-  for (const gid of army.gens) { const x = s.generals.find((q) => q.id === gid); if (x) x.at = castle.id; }
-  s.armies = s.armies.filter((x) => x.id !== army.id);
+  /* 軍は解かれない。落とした城に在陣する（GDD 6.4）。
+
+     もとはここで軍を消し、本軍の将を全員この城へ移していた。攻め取るたびに
+     将がその城に住み着くので、遠征のたびに家中の者が散っていった。
+     武将は本領に根付く。落とした城に居るのは在陣であって、移住ではない。
+
+     在陣した軍は、そのまま次の城へ攻め寄せることも、解いて本領へ帰すことも
+     できる。城主と所属を決めるのは、それとは別の下知である。 */
+  army.at = castle.id;
+  army.path = [castle.id];
+  army.prog = 0;
+  army.target = null;
+  army.在陣 = castle.id;
   // 寄騎・後詰・同盟軍として来た軍は、それぞれの城へ帰る。
   // 助けに来た将まで奪った城に居着いては、元の城が空になってしまう。
   for (const a2 of s.armies.filter((x) => x.target === castle.id || x.at === castle.id)) {
     if (a2.faction === oldF) continue;                  // 旧主の軍はここでは扱わない
+    if (a2.id === army.id) continue;                    // 本軍は在陣する。帰さない
     const home = s.castles.find((c2) => c2.id === a2.from)
       || s.castles.find((c2) => c2.faction === a2.faction);
     if (!home) continue;
@@ -322,10 +342,20 @@ export function sackCastle(s, castle, army, hard) {
         text: `${castle.name}攻めに加わった寄騎は${home.name}へ帰陣した。` });
     }
   }
-  s.armies = s.armies.filter((x) => !(x.target === castle.id || x.at === castle.id) || x.faction === oldF);
+  s.armies = s.armies.filter((x) => x.id === army.id
+    || !(x.target === castle.id || x.at === castle.id) || x.faction === oldF);
   s.sieges = s.sieges.filter((x) => x.castleId !== castle.id);
   s.campaigns = (s.campaigns || []).filter((x) => x.target !== castle.id);
   log(`${castle.name}が落ち、${s.factions[winner].name}の手に渡った（旧領主：${s.factions[oldF].name}）。`);
+
+  /* 采配（他家）はその場で差配を決める。遊ぶ側には、画面から問う。
+     問うまでのあいだ、城は将のいないまま留守を守る（守備隊の統率は四十）。 */
+  if (winner !== s.player) {
+    城を委ねる(s, castle.id, army.id, 委ねる差配(s, castle, army));
+  } else {
+    s.委ねる待ち = [...(s.委ねる待ち || []).filter((x) => x.castleId !== castle.id),
+      { castleId: castle.id, armyId: army.id }];
+  }
 
   /* 一国を丸ごと押さえたら、その場で知らせる（GDD 12.5）。
 
@@ -394,6 +424,68 @@ export function sackCastle(s, castle, army, hard) {
 
 
 // 画面外の合戦。兵数・練度・統率・城防から勝敗と損害を出す
+/* 落とした城を誰に委ねるか（GDD 6.4）。
+
+   在陣は城を与えられたことではない。城主を据え、所属の将を置いてはじめて、
+   その城で内政ができる。空けたままにもできるが、将のいない城は守備隊の
+   統率が四十に落ち、次に攻められれば脆い。
+
+   置いた将は軍を離れ、その城を本領とする。連れていた直属もともに移るので、
+   軍はそのぶん痩せる。取るか進むかの判断がここに出る。
+
+     城主　　その城を預かる者。侍大将以上（身分の縛りは追って入れる）
+     所属　　その城に根を移す者。城主のほかに何人でも
+     兵　　　軍の地の兵から城へ残す数
+
+   誰も置かねば、城は元の守兵だけで留守を守ることになる。 */
+export function 城を委ねる(s, castleId, armyId, 差配) {
+  const c = s.castles.find((x) => x.id === castleId);
+  const a = (s.armies || []).find((x) => x.id === armyId);
+  if (!c || !a) return s;
+  const 置く = [...new Set([...(差配.所属 || []), ...(差配.城主 ? [差配.城主] : [])])];
+  for (const gid of 置く) {
+    if (!(a.gens || []).includes(gid)) continue;        // その軍にいない者は置けない
+    const g = s.generals.find((x) => x.id === gid);
+    if (!g) continue;
+    g.at = c.id;
+    g.本領 = c.id;                                      // 根を移す。以後の禄高もこの城から
+    a.gens = a.gens.filter((x) => x !== gid);
+  }
+  if (差配.城主 && 置く.includes(差配.城主)) {
+    if (c.lordId && c.lordId !== 差配.城主) c.najimi = 25;
+    c.lordId = 差配.城主;
+  }
+  // 地の兵を残す。軍の名簿から割いて城の名簿へ移す
+  const 残 = Math.max(0, Math.min(Math.round(差配.兵 || 0), a.local || 0));
+  if (残 > 0) {
+    const tk = rosterTake(a.rost || newRoster(a.local, `arm-${a.id}`), 残);
+    a.rost = tk.rest;
+    a.local = Math.max(0, a.local - 残);
+    c.rost = [...(c.rost || []), ...tk.taken];
+    c.local += 残;
+    rosterSync(c, "rost", c.local, `loc-${c.id}`);
+  }
+  a.men = (a.local || 0) + (a.gens || []).reduce((t, id) => {
+    const g = s.generals.find((x) => x.id === id); return t + (g ? g.retinue : 0);
+  }, 0);
+  // 軍に誰も残らなければ、軍は解ける
+  if (!(a.gens || []).length && (a.local || 0) <= 0) {
+    s.armies = s.armies.filter((x) => x.id !== a.id);
+  }
+  return s;
+}
+
+/* 采配（他家と、遊ぶ側が委ねたとき）の既定の差配。
+
+   いちばん身分の高い者を城主に据え、地の兵の半ばを残す。将が一人しか
+   居らねば置かない――軍が空になっては次が続かないからである。 */
+export function 委ねる差配(s, castle, army) {
+  const 将ら = (army.gens || []).map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
+  if (将ら.length <= 1) return { 城主: null, 所属: [], 兵: Math.round((army.local || 0) * 0.3) };
+  const 主 = [...将ら].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
+  return { 城主: 主.id, 所属: [主.id], 兵: Math.round((army.local || 0) * 0.5) };
+}
+
 export function resolveOffscreen(prev, armyId, castleId) {
     const s = structuredClone(prev);
     const army = s.armies.find((x) => x.id === armyId);
