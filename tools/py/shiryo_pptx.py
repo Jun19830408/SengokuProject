@@ -78,11 +78,17 @@ def 見出し(s, 題, 副=None):
     線(s, 余, Cm(3.55), 幅)
 
 # ------------------------------------------------------------------ 表紙
+#
+#   墨地の枚に印章をそのまま置くと、印章の地（墨）が背景に溶けて、枡目と駒
+#   だけが浮いてしまう。色を変えるのは仕様で禁じられているので、地のほうを
+#   直す。紙色の版（title-onpaper）を使えば、墨地の上に紙の札が乗る形になる。
 s = 枚(墨)
-題PNG = os.path.join(ROOT, 'build', 'logo-title.png')
+題PNG = os.path.join(ROOT, 'build', 'logo-title-onpaper.png')
+if not os.path.exists(題PNG):
+    題PNG = os.path.join(ROOT, 'build', 'logo-title.png')
 if os.path.exists(題PNG):
-    w = Cm(17)
-    s.shapes.add_picture(題PNG, int((W - w) / 2), Cm(4.6), width=w)
+    w = Cm(19)
+    s.shapes.add_picture(題PNG, int((W - w) / 2), Cm(4.4), width=w)
 字(s, DATA['資料名'], 0, Cm(11.4), W, Cm(1), 大=17, 色=紙, 揃=PP_ALIGN.CENTER, 間=4)
 字(s, DATA['添え書き'], 0, Cm(12.9), W, Cm(0.9), 大=11, 色=RGBColor(0xA8, 0xA2, 0x96),
    揃=PP_ALIGN.CENTER, 間=1.5)
@@ -258,13 +264,14 @@ for i, c in enumerate(DATA['資料']):
         if s2.get('箇条'): 箇条の枚(題, 副, s2['箇条'], 一枚=6)
 
 # ------------------------------------------------------------------ 結び
-s = 枚(墨)
+#   こちらは紙地にする。印章の墨がそのまま立つ。
+s = 枚(紙)
 印PNG = os.path.join(ROOT, 'build', 'logo-seal.png')
 if os.path.exists(印PNG):
     w = Cm(5.4)
-    s.shapes.add_picture(印PNG, int((W - w) / 2), Cm(5.4), width=w)
-字(s, DATA['題名'], 0, Cm(11.4), W, Cm(1.4), 大=30, 色=紙, 揃=PP_ALIGN.CENTER, 間=4)
-字(s, DATA['副題'], 0, Cm(13.3), W, Cm(0.8), 大=11, 色=RGBColor(0xA8, 0xA2, 0x96),
+    s.shapes.add_picture(印PNG, int((W - w) / 2), Cm(5.0), width=w)
+字(s, DATA['題名'], 0, Cm(11.2), W, Cm(1.4), 大=30, 色=墨, 揃=PP_ALIGN.CENTER, 間=4)
+字(s, DATA['副題'], 0, Cm(13.1), W, Cm(0.8), 大=11, 色=灰,
    揃=PP_ALIGN.CENTER, 間=6)
 
 out = os.path.join(DIST, '%s_%s.pptx' % (DATA['題名'], DATA['資料名']))
