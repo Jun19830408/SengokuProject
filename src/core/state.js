@@ -34,6 +34,15 @@ export const 己の盟約 = (k, fid) => 盟約の相手(k, fid) != null;
 export function initState(player) {
   const factions = JSON.parse(JSON.stringify(FACTIONS));
   for (const f of Object.values(factions)) f.prestige = 50;
+  /* 本拠（GDD 6.4）。家の本城である。陣触れはここから出る。
+     当主のいる城を本拠とする。当主が居らねば、いちばん石高の高い城。 */
+  const 本拠を定める = (fid, 城ら, 将ら) => {
+    const 主 = 将ら.find((x) => x.faction === fid && x.lord);
+    if (主 && 主.at && 城ら.some((c) => c.id === 主.at)) return 主.at;
+    const 我 = 城ら.filter((c) => c.faction === fid);
+    if (!我.length) return null;
+    return [...我].sort((a, b) => b.koku - a.koku)[0].id;
+  };
   const relations = {};
   const ids = Object.keys(factions);
   for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
@@ -297,6 +306,15 @@ export function initState(player) {
     generals: assignRanks(CASTLES, fillKeepers(CASTLES, GENERALS).map((g) => ({
       ...g, unity: clamp(g.retTrain + 8, 30, 100), merit: 0,
       retCap: g.retinue,                        // 軍役の器。加増すれば増える（GDD 6.4）
+      /* 本領（GDD 6.4）。その武将が根付く城である。
+
+         これまで持っていたのは「いま居る所」（at）だけであった。ゆえに城を
+         落とすと攻めた将が全員そこに住み着き、禄高までがその城の余禄で
+         数え直された。出陣しただけで身代が変わる、という妙なことが起きていた。
+
+         武将は城とその城が抱える土地に根付く。居場所と根は別である。
+         初めは居る城をそのまま本領とする。 */
+      本領: g.at || null,
       fief: Math.round(fiefWanted(g) * (0.72 + Math.random() * 0.34)),
       rost: newRoster(g.retinue, `ret-${g.id}`, 直属の兵科) }))),
     armies: [], orders: {}, ledger: [], sieges: [], promo: null, campaigns: [],
@@ -305,6 +323,10 @@ export function initState(player) {
     chronicle: [{ y: 1546, m: 4, text: "尾張は織田三家に分かれ、美濃は斎藤道三が握る。天下はまだ遠い。" }],
   };
   姫を整える(盤);                                 // 家の石高に応じて姫を立てる
+  // 家ごとに本拠を据える。陣触れはここから出る。
+  for (const fid of Object.keys(盤.factions)) {
+    盤.factions[fid].本拠 = 本拠を定める(fid, 盤.castles, 盤.generals);
+  }
   return 盤;
 }
 
@@ -811,6 +833,33 @@ export function migrateSave(s) {
   立たぬ申し送りを落とす(s);
   // 姫のいない古い記録には、いま立てる（GDD 6.8）
   if (!Array.isArray(s.hime)) { s.hime = []; 姫を整える(s); }
+  本領と本拠を繕う(s);
+  return s;
+}
+
+/* 本領と本拠の無い古い記録を繕う（GDD 6.4）。
+
+   本領はいま居る城とする。出陣中の者は、行き先ではなく出陣元を本領とする
+   （出た先に根があるわけではない）。それも分からねば、家の本拠に置く。
+   本拠は当主のいる城、居らねば石高のいちばん高い城。
+
+   繕いは「無いものを埋める」だけにする。すでに本領のある者には触れない。 */
+export function 本領と本拠を繕う(s) {
+  for (const fid of Object.keys(s.factions || {})) {
+    const f = s.factions[fid];
+    if (f.本拠 && s.castles.some((c) => c.id === f.本拠 && c.faction === fid)) continue;
+    const 主 = s.generals.find((x) => x.faction === fid && x.lord && x.at);
+    const 我 = s.castles.filter((c) => c.faction === fid);
+    f.本拠 = (主 && 我.some((c) => c.id === 主.at)) ? 主.at
+      : (我.length ? [...我].sort((a, b) => b.koku - a.koku)[0].id : null);
+  }
+  // 出陣中の者の出どころ。軍の from を本領とみなす
+  const 出どころ = {};
+  for (const a of s.armies || []) for (const gid of a.gens || []) 出どころ[gid] = a.from;
+  for (const g of s.generals) {
+    if (g.本領 && s.castles.some((c) => c.id === g.本領)) continue;
+    g.本領 = g.at || 出どころ[g.id] || (s.factions[g.faction] || {}).本拠 || null;
+  }
   return s;
 }
 

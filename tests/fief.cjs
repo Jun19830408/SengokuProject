@@ -18,7 +18,7 @@ const entry = path.join(ROOT, 'build', 'fief-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState, migrateSave } from "../src/core/state.js";\n'
-+ 'export { fiefRoom, fiefOf, stipendOf, castleRankNeed, canHoldCastle, castellanOf } from "../src/core/rank.js";\n'
++ 'export { fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, castellanOf, rankName } from "../src/core/rank.js";\n'
 + 'export { grantFief, appoint } from "../src/govern/commands.js";\n');
 const out = path.join(ROOT, 'build', 'fief.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
@@ -26,6 +26,8 @@ esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: 
 const A = require(out);
 
 const 咎 = [];
+const 挙げる = (配) => `${配.length}件 ─ ${配.slice(0, 5).join(' / ')}${配.length > 5 ? ` …ほか${配.length - 5}` : ''}`;
+const 無し = (名, 配, 但し = '') => 確(名, 配.length === 0, 配.length ? 挙げる(配) : (但し || 'なし'));
 const 確 = (名, 可, 添 = '') => {
   console.log(`  ${可 ? '○' : '★'} ${名}${添 ? '　' + 添 : ''}`);
   if (!可) 咎.push(名);
@@ -148,6 +150,60 @@ const 確 = (名, 可, 添 = '') => {
     確('一門でない者は、なお禄高が要る', u.castles.find((x) => x.id === c.id).lordId !== 他.id,
       `${他.name}（禄高${A.stipendOf(s, 他)}石）`);
   } else console.log('  （この城には禄高の足りぬ一門外の将がいないので、その確かめは省く）');
+}
+
+/* ------------------------------------------- 三、本領（GDD 6.4）
+
+   武将は城とその城が抱える土地に根付く。持っていたのは「いま居る所」（at）
+   だけだったので、出陣しただけで身代が動いた。
+
+     出陣で禄高が動いた将　　八百三十七名（平均九百十八石の目減り）
+     天文十五年の織田信長　　在城 二千四百石 ／ 出陣中 三万二千六百石
+
+   信長が跳ねたのは、出陣中は城が見つからず知行をそのまま返しており、
+   齢の頭打ち（十三歳は二千四百石まで）を素通りしていたからである。
+
+   身代は本領から出る。余禄は本領の湊や市から入るものであって、遠征先の
+   余禄が懐に入る道理はない。城の背負い（fiefBurden）も同じ理で本領で数える。
+   居場所で数えていたころは、一人が出陣するたびに留守の者の禄高が
+   ひとりでに上がっていた。 */
+{
+  const s = A.initState('oda');
+  無し('本領の無い武将がいない', s.generals.filter((g) => !g.本領).map((g) => g.name));
+  無し('本拠の無い家がない',
+    Object.keys(s.factions).filter((f) => !s.factions[f].本拠));
+
+  // 出陣しても禄高は動かない
+  const 動いた = [];
+  for (const x of s.generals.filter((q) => q.at && !q.lord)) {
+    const 前 = A.stipendOf(s, x);
+    const 控 = x.at; x.at = null;
+    const 後 = A.stipendOf(s, x);
+    x.at = 控;
+    if (前 !== 後) 動いた.push(`${x.name} ${前}→${後}`);
+  }
+  無し('出陣しても禄高が動かない', 動いた, '八百三十七名が動いていた');
+
+  // 齢の頭打ちは出陣中も効く
+  const 若 = s.generals.find((g) => (g.age || 30) < 15 && g.本領);
+  if (若) {
+    const 在 = A.stipendOf(s, 若);
+    const 控 = 若.at; 若.at = null;
+    const 出 = A.stipendOf(s, 若);
+    若.at = 控;
+    確('若年の頭打ちは出陣中も効く', 在 === 出,
+      `${若.name}（${若.age}歳）在城 ${在}石／出陣中 ${出}石`);
+  }
+
+  // 古い記録の繕い
+  const 旧 = A.initState('oda');
+  for (const g of 旧.generals) delete g.本領;
+  for (const f of Object.values(旧.factions)) delete f.本拠;
+  A.migrateSave(旧);
+  無し('古い記録にも本領が入る', 旧.generals.filter((g) => !g.本領).map((g) => g.name));
+  確('古い記録の本拠は当主の城になる',
+    旧.factions.oda.本拠 === (旧.generals.find((g) => g.faction === 'oda' && g.lord) || {}).at,
+    旧.castles.find((c) => c.id === 旧.factions.oda.本拠).name);
 }
 
 console.log('');

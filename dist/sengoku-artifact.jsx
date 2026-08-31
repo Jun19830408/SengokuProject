@@ -696,9 +696,9 @@ function \u53D6\u308A\u7ACB\u3066\u308B\u3079\u304D\u7D44(rost) {
 var \u968E\u306E\u6BB5 = [
   { \u540D: "\u5341\u4EBA\u9577", \u8981: 0 },
   { \u540D: "\u4E94\u5341\u4EBA\u9577", \u8981: 5 },
-  { \u540D: "\u767E\u4EBA\u9577", \u8981: 15 },
-  { \u540D: "\u4E09\u767E\u4EBA\u9577", \u8981: 35 },
-  { \u540D: "\u7269\u982D", \u8981: 60 }
+  { \u540D: "\u767E\u4EBA\u9577", \u8981: 12 },
+  { \u540D: "\u4E09\u767E\u4EBA\u9577", \u8981: 20 },
+  { \u540D: "\u7269\u982D", \u8981: 30 }
 ];
 var \u9577\u306E\u968E = (\u52F2) => {
   let out = \u968E\u306E\u6BB5[0];
@@ -12236,13 +12236,17 @@ function extraIncome(c) {
   return Math.min(Math.round(trade + sea + mountain), Math.round(c.koku * 0.55 + 4200));
 }
 function fiefBurden(s2, castleId) {
-  return s2.generals.filter((g) => g.at === castleId && !g.captive && !g.lord).reduce((a, g) => a + fiefOf(g), 0);
+  return s2.generals.filter((g) => (g.\u672C\u9818 || g.at) === castleId && !g.captive && !g.lord).reduce((a, g) => a + fiefOf(g), 0);
 }
 function stipendOf(s2, gen) {
   if (!gen) return 0;
   const age = gen.age == null ? 30 : gen.age;
-  const c = s2.castles.find((x) => x.id === gen.at);
-  if (!c) return fiefOf(gen);
+  const c = s2.castles.find((x) => x.id === (gen.\u672C\u9818 || gen.at));
+  if (!c) {
+    if (gen.lord || age >= 20) return fiefOf(gen);
+    const cap0 = age < 13 ? 2400 : age < 15 ? 4e3 : age < 18 ? 9e3 : 16e3;
+    return Math.min(fiefOf(gen), cap0);
+  }
   const burden = fiefBurden(s2, c.id);
   const share = burden > 0 ? fiefOf(gen) / burden : 0;
   const raw = Math.round(fiefOf(gen) + extraIncome(c) * share);
@@ -14353,6 +14357,13 @@ var \u5DF1\u306E\u76DF\u7D042 = (k, fid) => \u76DF\u7D04\u306E\u76F8\u624B(k, fi
 function initState(player) {
   const factions = JSON.parse(JSON.stringify(FACTIONS));
   for (const f of Object.values(factions)) f.prestige = 50;
+  const \u672C\u62E0\u3092\u5B9A\u3081\u308B = (fid, \u57CE\u3089, \u5C06\u3089) => {
+    const \u4E3B = \u5C06\u3089.find((x) => x.faction === fid && x.lord);
+    if (\u4E3B && \u4E3B.at && \u57CE\u3089.some((c) => c.id === \u4E3B.at)) return \u4E3B.at;
+    const \u6211 = \u57CE\u3089.filter((c) => c.faction === fid);
+    if (!\u6211.length) return null;
+    return [...\u6211].sort((a, b) => b.koku - a.koku)[0].id;
+  };
   const relations = {};
   const ids = Object.keys(factions);
   for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
@@ -14754,6 +14765,15 @@ function initState(player) {
       merit: 0,
       retCap: g.retinue,
       // 軍役の器。加増すれば増える（GDD 6.4）
+      /* 本領（GDD 6.4）。その武将が根付く城である。
+      
+               これまで持っていたのは「いま居る所」（at）だけであった。ゆえに城を
+               落とすと攻めた将が全員そこに住み着き、禄高までがその城の余禄で
+               数え直された。出陣しただけで身代が変わる、という妙なことが起きていた。
+      
+               武将は城とその城が抱える土地に根付く。居場所と根は別である。
+               初めは居る城をそのまま本領とする。 */
+      \u672C\u9818: g.at || null,
       fief: Math.round(fiefWanted(g) * (0.72 + Math.random() * 0.34)),
       rost: newRoster(g.retinue, `ret-${g.id}`, \u76F4\u5C5E\u306E\u5175\u79D1)
     }))),
@@ -14773,6 +14793,9 @@ function initState(player) {
     chronicle: [{ y: 1546, m: 4, text: "\u5C3E\u5F35\u306F\u7E54\u7530\u4E09\u5BB6\u306B\u5206\u304B\u308C\u3001\u7F8E\u6FC3\u306F\u658E\u85E4\u9053\u4E09\u304C\u63E1\u308B\u3002\u5929\u4E0B\u306F\u307E\u3060\u9060\u3044\u3002" }]
   };
   \u59EB\u3092\u6574\u3048\u308B(\u76E4);
+  for (const fid of Object.keys(\u76E4.factions)) {
+    \u76E4.factions[fid].\u672C\u62E0 = \u672C\u62E0\u3092\u5B9A\u3081\u308B(fid, \u76E4.castles, \u76E4.generals);
+  }
   return \u76E4;
 }
 function migrateRosters(s2) {
@@ -15133,6 +15156,23 @@ function migrateSave(s2) {
   if (!Array.isArray(s2.hime)) {
     s2.hime = [];
     \u59EB\u3092\u6574\u3048\u308B(s2);
+  }
+  \u672C\u9818\u3068\u672C\u62E0\u3092\u7E55\u3046(s2);
+  return s2;
+}
+function \u672C\u9818\u3068\u672C\u62E0\u3092\u7E55\u3046(s2) {
+  for (const fid of Object.keys(s2.factions || {})) {
+    const f = s2.factions[fid];
+    if (f.\u672C\u62E0 && s2.castles.some((c) => c.id === f.\u672C\u62E0 && c.faction === fid)) continue;
+    const \u4E3B = s2.generals.find((x) => x.faction === fid && x.lord && x.at);
+    const \u6211 = s2.castles.filter((c) => c.faction === fid);
+    f.\u672C\u62E0 = \u4E3B && \u6211.some((c) => c.id === \u4E3B.at) ? \u4E3B.at : \u6211.length ? [...\u6211].sort((a, b) => b.koku - a.koku)[0].id : null;
+  }
+  const \u51FA\u3069\u3053\u308D = {};
+  for (const a of s2.armies || []) for (const gid of a.gens || []) \u51FA\u3069\u3053\u308D[gid] = a.from;
+  for (const g of s2.generals) {
+    if (g.\u672C\u9818 && s2.castles.some((c) => c.id === g.\u672C\u9818)) continue;
+    g.\u672C\u9818 = g.at || \u51FA\u3069\u3053\u308D[g.id] || (s2.factions[g.faction] || {}).\u672C\u62E0 || null;
   }
   return s2;
 }

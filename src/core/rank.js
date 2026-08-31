@@ -256,9 +256,14 @@ export function extraIncome(c) {
 export function fiefCapacity(c) { return c ? c.koku : 0; }
 
 // 城が配っている知行の総和。当主の身代は御料であって知行ではない。
+/* その城が背負っている知行の高。余禄の分け前を割るのに使う。
+
+   ここも本領で数える。居場所（at）で数えていたころは、一人が出陣するたびに
+   その城の背負いが軽くなり、留守の者の禄高がひとりでに上がっていた。
+   知行は土地に結びつくものであって、出かけたからといって消えはしない。 */
 export function fiefBurden(s, castleId) {
   return s.generals
-    .filter((g) => g.at === castleId && !g.captive && !g.lord)
+    .filter((g) => (g.本領 || g.at) === castleId && !g.captive && !g.lord)
     .reduce((a, g) => a + fiefOf(g), 0);
 }
 
@@ -267,8 +272,22 @@ export function stipendOf(s, gen) {
   if (!gen) return 0;
   // 若年の者に大禄は与えられぬ。齢を重ねてこそ身代も増す。
   const age = gen.age == null ? 30 : gen.age;
-  const c = s.castles.find((x) => x.id === gen.at);
-  if (!c) return fiefOf(gen);
+  /* 身代は本領から出る。いま居る所からではない（GDD 6.4）。
+
+     もとは gen.at（いま居る城）で数えていた。ゆえに出陣しただけで禄高が
+     動いた。八百三十七名を測ると、出陣で平均九百十八石が目減りしていた。
+     余禄は本領の湊や市から入るものであって、遠征先の余禄が懐に入る道理はない。
+
+     もう一つ、出陣中は城が見つからず fief をそのまま返していた。齢の頭打ちを
+     素通りするので、天文十五年の織田信長（十三歳）は在城で二千四百石、
+     出陣すると三万二千六百石になっていた。本領で数えれば、どちらも同じである。 */
+  const c = s.castles.find((x) => x.id === (gen.本領 || gen.at));
+  if (!c) {
+    // 本領も居所も無い（城を失った、取り立て直後など）。知行だけで数える
+    if (gen.lord || age >= 20) return fiefOf(gen);
+    const cap0 = age < 13 ? 2400 : age < 15 ? 4000 : age < 18 ? 9000 : 16000;
+    return Math.min(fiefOf(gen), cap0);
+  }
   const burden = fiefBurden(s, c.id);
   const share = burden > 0 ? fiefOf(gen) / burden : 0;
   const raw = Math.round(fiefOf(gen) + extraIncome(c) * share);
