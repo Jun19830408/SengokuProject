@@ -1,4 +1,5 @@
 import { ARMS } from "../data/roads.js";
+import { castellanOf } from "./rank.js";
 
 /* ------------------------------------------------------- 組の名簿（GDD 6.2）
    武将の直属も地域家臣団も、五十人組の名簿として持つ。
@@ -257,32 +258,44 @@ export function 組頭の働きを記す(s, b, 我side, 場) {
    勲功が物頭に届いた者は、武将に取り立てる資格を得る。 */
 export function 組頭の帳(g) {
   const 出 = [];
-  const 見 = (rost, 所, 属) => {
+  /* 誰の隊の組頭かを添える。
+
+     組は三つの居場所を渡り歩く。城の名簿に控え、出陣で軍の名簿へ移り、
+     盤の上では武将の隊に組み込まれる。ゆえに「いまどこの名簿にあるか」で
+     答えては、城に戻ったとたん「地域家臣団」としか言えなくなる。
+
+     隊は武将に属している。組が盤の上で誰の下に立ったかは、戦のあとに
+     組そのものへ刻んである（q.将／MapScreen の writeBackRosters）。
+     手柄を立てた組は必ず盤に立っているのだから、刻みは必ずある。
+
+     刻みの無い組（この仕掛けより前の記録）は、居場所から当てる。
+     城なら城主、軍なら率いる将、武将の名簿ならその武将である。 */
+  const 将の名 = (id) => {
+    const x = g.generals.find((q) => q.id === id);
+    return x ? x.name : null;
+  };
+  const 見 = (rost, 所, 控, 種) => {
     for (const q of rost || []) {
       if (!q.功) continue;
-      出.push({ 鍵: 組の鍵(q.id), 名: 長の名(q.id), 功: q.功, 階: 長の階(q.功), 兵: q.m, 所, 属 });
+      出.push({ 鍵: 組の鍵(q.id), 名: 長の名(q.id), 功: q.功, 階: 長の階(q.功), 兵: q.m,
+        所, 属: (q.将 && 将の名(q.将)) || 控, 種 });
     }
   };
-  /* 誰の下にいるかを添える。組は三つの居場所のいずれかにある。
-       武将の名簿（gen.rost）　… その武将の直属である。武将の名を出す
-       城の名簿（c.rost）　　　… 城付きの地域家臣団。誰の直属でもない
-       軍の名簿（a.rost）　　　… 城から連れ出した地域家臣団。率いている将を出す
-     どの武将の隊かが読めねば、手柄を立てた組頭を探しに行けない。 */
   for (const gen of g.generals) {
     if (gen.faction !== g.player || gen.captive) continue;
     const c = g.castles.find((x) => x.id === gen.at);
-    見(gen.rost, c ? c.name : "出征中", gen.name);
+    見(gen.rost, c ? c.name : "出征中", gen.name, "直属");
   }
   for (const c of g.castles) {
     if (c.faction !== g.player) continue;
-    見(c.rost, c.name, "地域家臣団");
+    const 主 = castellanOf(g, c);
+    見(c.rost, c.name, 主 ? 主.name : "城主なし", "城の兵");
   }
   for (const a of g.armies || []) {
     if (a.faction !== g.player) continue;
-    // 軍の地域家臣団は、その軍を率いる将のもとにある
     const 将ら = (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
-    const 大将 = 将ら.sort((x, y) => (y.lead || 0) - (x.lead || 0))[0];
-    見(a.rost, "出征中", 大将 ? `${大将.name}の軍` : "地域家臣団");
+    const 大将 = [...将ら].sort((x, y) => (y.lead || 0) - (x.lead || 0))[0];
+    見(a.rost, "出征中", 大将 ? 大将.name : "将なし", "軍の兵");
   }
   /* 割って連れ出した組は鍵で束ねる（出陣で組を分けると id に b が付く）。
      居場所は、人数の多いほうを採る。半端な五人のほうを出しても仕方がない。 */
@@ -291,10 +304,58 @@ export function 組頭の帳(g) {
     const y = 束.get(x.鍵);
     if (y) {
       y.功 += x.功;
-      if (x.兵 > y.兵) { y.所 = x.所; y.属 = x.属; }
+      if (x.兵 > y.兵) { y.所 = x.所; y.属 = x.属; y.種 = x.種; }
       y.兵 += x.兵;
       y.階 = 長の階(y.功);
     } else 束.set(x.鍵, { ...x });
   }
   return [...束.values()].sort((a, b) => b.功 - a.功);
+}
+
+
+/* ------------------------------------------- 戦の跡を名簿へ書き戻す（GDD 6.2）
+
+   合戦が終わったら、盤の上で起きたことを名簿へ帰す。帰すのは三つである。
+
+     生き残り　どの組が何人残ったか
+     手柄　　　どの組が敵の駒を幾つ討ち取ったか
+     将　　　　どの武将の隊で戦ったか
+
+   三つめが要る。組は三つの居場所を渡り歩くからである。城の名簿に控え、
+   出陣で軍の名簿へ移り、盤の上では武将の隊に組み込まれる。「いまどこの
+   名簿にあるか」だけを見ていては、城に戻ったとたん「地域家臣団」としか
+   言えなくなる。隊は武将に属しているのだから、誰の下で戦ったかを組に
+   刻んでおく。
+
+   ここに置く理由。もとは画面（ui/MapScreen.jsx）の中にあり、実際に月を
+   送って合戦を通さねば確かめられなかった。測れる場所に置いてから書く。 */
+/* 分遣した隊の id は「武将の id ＋ # ＋ 役」である（corps.js）。
+   側面へ回った組も、高みへ登った組も、率いているのは元の武将である。
+   刻むのは役ではなく人であるから、# より前を採る。 */
+const 隊の主 = (id) => String(id || "").split("#")[0];
+
+export function 戦の跡(corpsList, b) {
+  const 生 = new Map();          // 組の id → 生き残り
+  const 将 = new Map();          // 組の鍵 → 率いた武将の id
+  for (const c of corpsList || []) {
+    for (const q of c.squads || []) {
+      if (!q.src) continue;
+      生.set(q.src, (生.get(q.src) || 0) + Math.max(0, Math.round(q.men)));
+      将.set(組の鍵(q.src), 隊の主(c.id));
+    }
+  }
+  return { 生, 将, 功: (b && b.武功) || {} };
+}
+
+/* 一つの名簿へ、戦の跡を書き戻す。全滅した組は名簿から落ちる（長も死ぬ）。 */
+export function 戦の跡を記す(rost, 跡) {
+  if (!rost) return [];
+  for (const q of rost) {
+    if (跡.生.has(q.id)) q.m = 跡.生.get(q.id);
+    const 鍵 = 組の鍵(q.id);
+    const 得 = 跡.功[鍵];
+    if (得) q.功 = (q.功 || 0) + 得;
+    if (跡.将.has(鍵)) q.将 = 跡.将.get(鍵);
+  }
+  return rost.filter((q) => q.m > 0);
 }

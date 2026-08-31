@@ -26,7 +26,7 @@ export { 援けに着く, migrateSave, atPeace, relOf } from "../src/core/state.
 export { resolveOffscreen, reinforceOffers, 運び賃, 運び賃を払う } from "../src/govern/war.js";
 export { 圧す, 解す } from "../src/save/pack.js";
 export { advanceMonth } from "../src/govern/month.js";
-export { 忠誠, diploStat, loyaltyDrift } from "../src/core/rank.js";
+export { 忠誠, diploStat, loyaltyDrift, castellanOf } from "../src/core/rank.js";
 export { 難を逃れる, captureChance } from "../src/core/capture.js";
 export { succeed, is架空, bearChild, pickHeir } from "../src/core/house.js";
 export { houseAlive, 主家, isVassal, 膝を屈している, canAskAid, underMyBanner } from "../src/core/state.js";
@@ -41,5 +41,5 @@ export { makeCorps, corpsMen, placeSquads, issueOrder, 退かせる, 退き先 }
 export { createBattle, stepBattle } from "../src/battle/engine.js";
 export { battleAI } from "../src/battle/ai.js";
 export { sideColor, ownZone, drawMon, 紋の核 } from "../src/battle/draw.js";
-export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す, 組頭の帳 } from "../src/core/roster.js";
+export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す, 組頭の帳, 戦の跡, 戦の跡を記す } from "../src/core/roster.js";
 export { makePromotion } from "../src/core/house.js";

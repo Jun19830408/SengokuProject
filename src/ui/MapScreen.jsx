@@ -16,7 +16,7 @@ import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../
 import { 遠征の兵糧, 運び賃を払う } from "../govern/war.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
 import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap } from "../core/rank.js";
-import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す } from "../core/roster.js";
+import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す, 戦の跡, 戦の跡を記す } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 軍の道 } from "../core/state.js";
 import { SEASON, U, clamp, fmt, man, monthsBetween } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
@@ -1247,32 +1247,15 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
 
   // 合戦の損害を組の名簿へ書き戻す。欠けた組は欠けたまま残る。
   const writeBackRosters = (s, b, corpsList, army, castle) => {
-    const survive = new Map();                       // 組の id → 生き残り
-    for (const c of corpsList) for (const q of c.squads) {
-      if (!q.src) continue;
-      survive.set(q.src, (survive.get(q.src) || 0) + Math.max(0, Math.round(q.men)));
-    }
-    /* 討ち取った駒の数を、組の長の手柄として書き戻す（GDD 6.2）。
-
-       合戦のあいだは b.武功 に組の鍵で数えてある。鍵は組の id から末尾の
-       「b」を落としたもので、割って連れ出した組も元の長へ帰る。
-       組が名簿から落ちれば（全滅すれば）、その長も死ぬ。手柄も消える。 */
-    const 手柄 = b.武功 || {};
-    const apply = (rost) => {
-      if (!rost) return [];
-      for (const q of rost) {
-        if (survive.has(q.id)) q.m = survive.get(q.id);
-        const 得 = 手柄[組の鍵(q.id)];
-        if (得) q.功 = (q.功 || 0) + 得;
-      }
-      return rost.filter((q) => q.m > 0);
-    };
+    /* 生き残り・手柄・誰の隊で戦ったかを名簿へ帰す。
+       中身は core/roster.js の 戦の跡／戦の跡を記す にある（測れるように外へ出した）。 */
+    const 跡 = 戦の跡(corpsList, b);
     for (const c of corpsList) {
       const gen = s.generals.find((x) => x.id === c.id);
-      if (gen && gen.rost) { gen.rost = apply(gen.rost); gen.retinue = rosterSum(gen.rost); }
+      if (gen && gen.rost) { gen.rost = 戦の跡を記す(gen.rost, 跡); gen.retinue = rosterSum(gen.rost); }
     }
-    if (army && army.rost) { army.rost = apply(army.rost); army.local = rosterSum(army.rost); }
-    if (castle && castle.rost) { castle.rost = apply(castle.rost); }
+    if (army && army.rost) { army.rost = 戦の跡を記す(army.rost, 跡); army.local = rosterSum(army.rost); }
+    if (castle && castle.rost) { castle.rost = 戦の跡を記す(castle.rost, 跡); }
   };
 
   /* 街道での行き合いの決着。

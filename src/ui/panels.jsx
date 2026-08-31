@@ -1117,7 +1117,10 @@ export function GeneralList({ g, onClose }) {
               </span>
               {/* 兵が二十を割った組は赤く出す。次の戦で消えれば長も死ぬ。 */}
               <span className="num" style={{ color: x.兵 < 20 ? "#B0483C" : U.dim }}>{fmt(x.兵)}人</span>
-              <span style={{ color: U.text, width: 96, textAlign: "right" }}>{x.属}</span>
+              <span style={{ color: U.text, textAlign: "right" }}>
+                {x.属}
+                <span style={{ color: U.dim, fontSize: 11, marginLeft: 4 }}>{x.種}</span>
+              </span>
               <span style={{ color: U.dim, width: 76, textAlign: "right" }}>{x.所}</span>
             </div>
           ))}
