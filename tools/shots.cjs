@@ -66,6 +66,24 @@ const 野戦の盤 = () => {
   return s;
 };
 
+/* 海を渡ろうとして、他家の水軍に阻まれる盤（海戦になる）。
+   別所が三木から洲本（三好）へ渡ると、三好の水軍が迎え撃つ。
+   tests/seascreen.cjs が使っているのと同じ局面である。 */
+const 海戦の盤 = () => {
+  const s = initState('bessho');
+  s.year = 1547; s.month = 6;
+  const 将 = s.generals.filter((g) => g.faction === 'bessho' && !g.captive && g.at === 'miki').slice(0, 2);
+  for (const t of 将) t.at = null;
+  s.armies.push({
+    id: 'shot-sea', faction: 'bessho', from: 'miki', gens: 将.map((x) => x.id),
+    local: 3000, localTrain: 70, rost: null,
+    men: 3000 + 将.reduce((a, x) => a + x.retinue, 0),
+    at: 'miki', path: ['miki', 'sumoto'], prog: 0, food: 9000, target: 'sumoto',
+  });
+  s.pendingArrivals = ['shot-sea'];
+  return s;
+};
+
 // 自軍が敵城を囲んでいる盤（強攻すれば城郭図に入る）
 const 城攻めの盤 = () => {
   const s = 素の盤();
@@ -95,7 +113,7 @@ const 城攻めの盤 = () => {
      図:x,y    … 地図（canvas）のその場所を押す
      待:秒     … 待つ
      鍵:...    … 記録を仕込む（盤の名。下の 盤たち にある） */
-const 盤たち = { 素: 素の盤, 野戦: 野戦の盤, 城攻め: 城攻めの盤 };
+const 盤たち = { 素: 素の盤, 野戦: 野戦の盤, 城攻め: 城攻めの盤, 海戦: 海戦の盤 };
 
 const 場面 = [
   { key: 'title', 盤: null, 手: [], 幅: 1000, 高: 980, 説: 'タイトル画面' },
@@ -113,6 +131,26 @@ const 場面 = [
   { key: 'siege-plan', 盤: '城攻め', 手: ['押:続きから', '待:1.2'], 幅: 1000, 高: 1000, 説: '包囲の段' },
   { key: 'siege-map', 盤: '城攻め', 手: ['押:続きから', '待:1.0', '押:強攻', '待:0.8', '押:合戦開始', '待:0.5',
     '押:通常', '待:16', '押:全体', '待:0.8'], 幅: 1200, 高: 950, 説: '城攻め（城郭図）' },
+
+  /* ここから下は紹介資料のために足したもの。合戦の中身を見せる。
+     盤を押して隊を選ぶと、その隊の様子（兵・士気・陣形・疲労・地形）と、
+     下知と陣形の並びが出る。これが合戦の操作の芯である。 */
+  /* 海戦の写しは、まだ撮れていない。別所を三木から洲本へ渡らせて三好の水軍に
+     阻ませる盤（海戦の盤）は仕込んであるが、着いた月の「迎え撃つ」まで進めず、
+     地図の画面のままになる。撮れていないものに海戦の名を付けるわけにはいかぬので、
+     場面ごと外してある。盤の仕込みは残したので、進め方が分かれば足せる。 */
+  { key: 'field-close', 盤: '野戦', 手: ['押:続きから', '待:1.4', '押:正面から当たる', '待:0.8',
+    '押:合戦開始', '待:0.5', '押:通常', '待:30', '押:停止', '待:0.4', '押:拡大', '待:0.3',
+    '押:拡大', '待:0.9'], 幅: 1200, 高: 950, 説: '野戦（駒の寄り）' },
+  { key: 'field-late', 盤: '野戦', 手: ['押:続きから', '待:1.4', '押:正面から当たる', '待:0.8',
+    '押:合戦開始', '待:0.5', '押:通常', '待:70', '押:全体', '待:0.8'],
+    幅: 1200, 高: 950, 説: '野戦（崩れと追撃）' },
+  { key: 'siege-gate', 盤: '城攻め', 手: ['押:続きから', '待:1.0', '押:強攻', '待:0.8', '押:合戦開始', '待:0.5',
+    '押:通常', '待:52', '押:停止', '待:0.4', '押:拡大', '待:0.3', '押:拡大', '待:0.9'],
+    幅: 1200, 高: 950, 説: '城攻め（門を破る）' },
+  { key: 'siege-late', 盤: '城攻め', 手: ['押:続きから', '待:1.0', '押:強攻', '待:0.8',
+    '押:合戦開始', '待:0.5', '押:通常', '待:80', '押:停止', '待:0.8'],
+    幅: 1200, 高: 950, 説: '城攻め（門を破って中へ）' },
 ];
 
 /* --------------------------------------------------- 画面の中で走らせる手 */
@@ -126,6 +164,33 @@ const 手順の書 = (手) => `
   const 押 = async (t) => {
     for (let i = 0; i < 30; i++) { const el = 釦(t); if (el) { el.click(); await 眠(0.25); return true; } await 眠(0.2); }
     console.warn('釦が見つからぬ:', t); return false;
+  };
+  /* 合戦の盤を押す。隊を選ぶと、その隊の様子と下知の並びが出る。
+     盤の canvas は地図のそれとは別なので、見つけ方を分ける。 */
+  /* 隊を選ぶ。どこに隊が居るかは戦の運びで変わるので、当たるまで盤を探る。
+     選べたかどうかは「疲労」の欄が出たかで見分ける（隊を選んだときだけ出る）。 */
+  const 陣 = async () => {
+    /* 押しを受けているのは canvas ではなく、それを包む .fieldwrap である。
+       押した所に隊が居なければ何も起きないので、当たるまで盤を細かく探る。 */
+    const cv = document.querySelector('.fieldwrap');
+    if (!cv) { console.warn('盤が無い'); return false; }
+    const r = cv.getBoundingClientRect();
+    const 押す = async (x, y) => {
+      const o = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: 1 };
+      cv.dispatchEvent(new MouseEvent('mousedown', o));
+      cv.dispatchEvent(new MouseEvent('mousemove', o));
+      cv.dispatchEvent(new MouseEvent('mouseup', { ...o, buttons: 0 }));
+      await 眠(0.12);
+      return /疲労/.test(document.body.textContent);
+    };
+    for (let gy = -0.34; gy <= 0.36; gy += 0.045) {
+      for (let gx = -0.44; gx <= 0.46; gx += 0.04) {
+        if (await 押す(r.left + r.width * (0.5 + gx), r.top + r.height * (0.5 + gy))) {
+          await 眠(0.6); return true;
+        }
+      }
+    }
+    console.warn('隊を選べなかった'); return false;
   };
   const 図 = async (dx, dy) => {
     const cv = document.querySelector('.mapwrap canvas');
@@ -143,9 +208,38 @@ const 手順の書 = (手) => `
     if (k === '押') return `await 押(${JSON.stringify(v)});`;
     if (k === '待') return `await 眠(${Number(v)});`;
     if (k === '図') { const [a, b] = v.split(','); return `await 図(${Number(a)}, ${Number(b)});`; }
+    if (k === '陣') return `await 陣();`;
     return '';
   }).join('\n  ')}
   document.title = 'READY';
+})();
+</script>`;
+
+/* --------------------------------------------------- 絵の刻みを自前で送る
+
+   合戦の盤は requestAnimationFrame で回っている。ところが Chrome を虚の時
+   （--virtual-time-budget）で走らせると rAF が進まない。setTimeout のほうは
+   早送りされるので、待ちだけが過ぎて盤の時計は〇分〇秒のまま止まる。
+
+   そのため「野戦（交戦）」と称していた写しが、布陣のときと同じ絵になっていた。
+   三十八秒待ってから撮っていたつもりが、一秒も進んでいなかったのである。
+
+   そこで撮影のときだけ、rAF を setTimeout で置き換える。十六ミリ秒ごとに
+   刻みを送るので、待った秒数がそのまま盤の秒数になる。遊びの本体には
+   何も足していない（この仕掛けは撮影用の写しにだけ差し込む）。 */
+const 刻みの仕掛け = `<script>
+(() => {
+  const 待ち = [];
+  let 刻 = 0;
+  window.requestAnimationFrame = (cb) => { 待ち.push(cb); return 待ち.length; };
+  window.cancelAnimationFrame = () => {};
+  const 送る = () => {
+    const 今 = 待ち.splice(0, 待ち.length);
+    刻 += 16;
+    for (const cb of 今) { try { cb(刻); } catch (e) {} }
+    setTimeout(送る, 16);
+  };
+  setTimeout(送る, 16);
 })();
 </script>`;
 
@@ -154,9 +248,9 @@ const 元 = fs.readFileSync(path.join(ROOT, 'dist', 'index.html'), 'utf8');
 let 撮れた = 0;
 for (const s of 場面) {
   const 盤 = s.盤 ? 盤たち[s.盤]() : null;
-  const 仕込み = 盤
+  const 仕込み = (盤
     ? `<script>try{localStorage.setItem('sengoku:save1', ${JSON.stringify(JSON.stringify({ v: 1, at: Date.now(), state: 盤 }))});}catch(e){}</script>`
-    : `<script>try{localStorage.clear();}catch(e){}</script>`;
+    : `<script>try{localStorage.clear();}catch(e){}</script>`) + 刻みの仕掛け;
   // 仕込みは本体より先に、手順は本体より後に置く
   const html = 元.replace('<body>', '<body>' + 仕込み) + 手順の書(s.手);
   const p = path.join(TMP, `${s.key}.html`);
@@ -164,7 +258,7 @@ for (const s of 場面) {
   const png = path.join(OUT, `${s.key}.png`);
   try {
     execFileSync(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars',
-      `--window-size=${s.幅},${s.高}`, '--virtual-time-budget=20000',
+      `--window-size=${s.幅},${s.高}`, '--virtual-time-budget=180000',
       `--screenshot=${png}`, `file://${p}`], { stdio: 'ignore' });
   } catch (e) { /* 撮れなくても次へ */ }
   const 有 = fs.existsSync(png) && fs.statSync(png).size > 3000;
