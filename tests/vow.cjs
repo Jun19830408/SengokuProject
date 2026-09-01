@@ -39,7 +39,7 @@ Math.random = function () {
 };
 dom.window.Math.random = Math.random;
 
-const { createRoot, act, App, React, initState, findPath } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
+const { createRoot, act, App, React, initState, findPath, 解す } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
 /* ---------------------------------------------------- 盤をこしらえる */
 const s = initState('oda');
@@ -256,6 +256,32 @@ const txt = () => {
     }
   } else {
     console.log('  （隣に同盟を結べる敵城がなく、二の試験は省略）');
+  }
+
+  /* 陣触れ（GDD 6.4）。本拠から兵を催す入口が地図の上にあること。
+
+     総大将は陣触れを出す城にいる者であるから、本拠から出せば当主が率い、
+     陣触れは天下に届く。近場の小競り合いは、城ごとの「出陣」で足りる。
+
+     ここは最後に置く。陣触れを開くと選んでいる城が本拠へ移るので、
+     途中に挟むと以後の確かめが元の城へ戻れなくなる。 */
+  {
+    for (let i = 0; i < 6 && document.querySelector('.modal'); i++) {
+      if (!(await rc('取りやめ') || await rc('閉じる') || await rc('やめる'))) break;
+    }
+    const 触 = [...document.querySelectorAll('.mbtn')].find((b) => /陣触れ/.test(b.textContent));
+    確('地図に陣触れの入口がある', !!触);
+    if (触) {
+      await click(触); await flush(); await flush(); await flush();
+      /* 「陣触れ」は地図の釦の字でもあるので、画面ぜんたいの字を数えると
+         開いていなくても当たってしまう。窓の中だけを見る。 */
+      const 窓 = document.querySelector('.modal .card');
+      const 窓文 = 窓 ? 窓.textContent.replace(/\s+/g, ' ') : '';
+      確('陣触れの画面が開く', /^陣触れ/.test(窓文.trim()), 窓文.slice(0, 24));
+      確('本拠から催すと分かる', /の本拠。ここから兵を催す/.test(窓文));
+      確('総大将の決まりが説かれている', /いちばん身分の高い者/.test(窓文));
+      確('城ごとの出陣とは名乗りが違う', !/^出陣/.test(窓文.trim()));
+    }
   }
 
   console.log('');

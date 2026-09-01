@@ -27,12 +27,12 @@ import { GOKINAI } from "../data/provinces.js";
 import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "../govern/ai.js";
 import { checkUnified } from "../govern/unify.js";
-import { sackCastle, 城を委ねる } from "../govern/war.js";
+import { sackCastle, 城を委ねる, 軍を解く } from "../govern/war.js";
 import { BattleScreen } from "./BattleScreen.jsx";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
-import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い } from "./panels.jsx";
+import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い } from "./panels.jsx";
 import { SallyDialog } from "./panels.jsx";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
@@ -112,6 +112,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     return seat ? { x: seat.x, y: seat.y, s: 2.4 } : { x: MAPW / 2, y: MAPH / 2, s: 0.9 };
   });
   const [sel, setSel] = useState(null);
+  const [在陣, set在陣] = useState(null);   // 次の城へ攻め寄せる在陣の軍
   const [tab, setTab] = useState("内政");
   const [modal, setModal] = useState(null);
   const [battle, setBattle] = useState(null);
@@ -2003,6 +2004,15 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         </div>
         {!wide && (
           <div className="mapctl r" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+            {/* 陣触れ（GDD 6.4）。本拠から兵を催す。
+                総大将は陣触れを出す城にいる者であるから、本拠から出せば当主が率い、
+                陣触れは天下に届く。近場の小競り合いは、城ごとの「出陣」で足りる。 */}
+            <div className="mbtn" style={{ width: 66 }} onClick={() => {
+              const 本拠 = g.castles.find((c) => c.id === (g.factions[g.player] || {}).本拠)
+                || mine[0];
+              if (!本拠) return;
+              setSel(本拠.id); focus(本拠.id); setModal("sortie");
+            }}><b>⚐</b>陣触れ</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("factions")}><b>⚑</b>勢力情報</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("generals")}><b>☗</b>武将一覧</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("hime")}><b>◇</b>姫</div>
@@ -2029,10 +2039,43 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           <CastleSheet g={g} castle={selCastle} land={land} tab={tab} setTab={setTab}
             onClose={() => setSel(null)} onCommand={runCommand} onAppoint={appoint}
             onTrade={(id, kind, n) => setG((prev) => 政務.doTrade(prev, id, kind, n))}
-            onSortie={() => setModal("sortie")} onCallAid={(id) => setCallAid(id)} onDiplo={doDiplo} onHime={() => setModal("hime")} onPlot={doPlot}
+            onSortie={() => setModal("sortie")}
+            onMarchOn={(id) => { set在陣(id); setModal("marchon"); }}
+            onDisband={(id) => setG((p) => {
+              const s2 = structuredClone(p);
+              const a = (s2.armies || []).find((x) => x.id === id);
+              if (a) {
+                const 城 = s2.castles.find((x) => x.id === a.在陣);
+                軍を解く(s2, a);
+                s2.chronicle.push({ y: s2.year, m: s2.month,
+                  text: `${城 ? 城.name + "の" : ""}在陣を解き、諸将はそれぞれの本領へ帰った。` });
+              }
+              return s2;
+            })}
+            onCallAid={(id) => setCallAid(id)} onDiplo={doDiplo} onHime={() => setModal("hime")} onPlot={doPlot}
             onSpecial={doSpecial} onReward={reward} onCaptive={doCaptive} onFief={grantFief} onRetire={doRetire} onSettle={settleCaptive} onKenchi={doKenchi} />
         )}
         {modal === "sortie" && selCastle && <SortieDialog g={g} from={selCastle.id} onClose={() => setModal(null)} onGo={launchSortie} />}
+        {/* 在陣の軍を次の城へ差し向ける（GDD 6.4）。兵も将も揃っているので、決めるのは行き先だけ。 */}
+        {modal === "marchon" && 在陣 && (
+          <攻め寄せる問い g={g} armyId={在陣} onClose={() => { setModal(null); set在陣(null); }}
+            onGo={(armyId, to) => {
+              setG((p) => {
+                const s2 = structuredClone(p);
+                const a = (s2.armies || []).find((x) => x.id === armyId);
+                const 先 = s2.castles.find((x) => x.id === to);
+                if (!a || !先) return s2;
+                const 道 = 軍の道(s2, a.faction, a.在陣, to) || findPath(a.在陣, to);
+                if (!道) return s2;
+                const 陣 = s2.castles.find((x) => x.id === a.在陣);
+                a.在陣 = null; a.target = to; a.path = 道; a.prog = 0; a.at = 道[0];
+                s2.chronicle.push({ y: s2.year, m: s2.month,
+                  text: `${陣 ? 陣.name : ""}の在陣を払い、${先.name}へ向かう（${fmt(a.men)}人）。` });
+                return s2;
+              });
+              setModal(null); set在陣(null);
+            }} />
+        )}
         {/* 約束を交わした相手へ兵を出す前の問い（GDD 11.1）。
             取り返しがつかぬ手なので、何が失われるかを数で示してから選ばせる。 */}
         {breakVow && (() => {

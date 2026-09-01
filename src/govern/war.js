@@ -698,6 +698,15 @@ export function homeFor(s, army) {
   return 近い ? 近い.c : 自領[0];
 }
 
+/* 軍を解く（GDD 6.4）。
+
+   兵は出陣元（無ければ近い自領）へ返し、将はそれぞれの本領へ帰す。
+
+   もとは将を「いま踏んでいる地の城」へ置いていた。落とした城に在陣したまま
+   軍を解けば、攻めた将が全員その城に住み着く――在陣を入れる前と同じことに
+   なってしまう。武将は本領に根付くのだから、帰る先は本領である。 */
+export function 軍を解く(s, army) { return withdrawArmy(s, army); }
+
 export function withdrawArmy(s, army) {
   const home = homeFor(s, army);
   if (home) {
@@ -709,12 +718,16 @@ export function withdrawArmy(s, army) {
     if (army.rost && army.rost.length) home.rost = [...(home.rost || []), ...army.rost];
     rosterSync(home, "rost", home.local, `loc-${home.id}`);
   }
-  /* 将は必ずどこかへ置く。行き先がなければ、いま踏んでいる地の城に預ける。
-     at が空のまま残すと、盤にも城の帳面にも現れず、消えたのと同じになる。 */
-  const 置く = home || s.castles.find((x) => x.id === army.at) || s.castles[0];
+  /* 将はそれぞれの本領へ帰す。本領を失っていれば出陣元、それも無ければ
+     いま踏んでいる地の城に預ける。at が空のまま残すと、盤にも城の帳面にも
+     現れず、消えたのと同じになる。 */
+  const 控 = home || s.castles.find((x) => x.id === army.at) || s.castles[0];
   for (const gid of army.gens) {
     const x = s.generals.find((q) => q.id === gid);
-    if (x && !x.captive) x.at = 置く ? 置く.id : x.at;
+    if (!x || x.captive) continue;
+    const 本領 = x.本領 && s.castles.find((c) => c.id === x.本領 && c.faction === x.faction);
+    x.at = 本領 ? 本領.id : (控 ? 控.id : x.at);
+    if (!本領 && 控) x.本領 = 控.id;          // 本領を失った者は、帰った先を新たな本領とする
   }
   s.armies = s.armies.filter((x) => x.id !== army.id);
   s.sieges = s.sieges.filter((x) => x.armyId !== army.id);

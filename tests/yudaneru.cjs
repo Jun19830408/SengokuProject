@@ -40,7 +40,7 @@ Math.random = function () {
 };
 dom.window.Math.random = Math.random;
 
-const { createRoot, act, App, React, initState, findPath, 解す } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
+const { createRoot, act, App, React, initState, findPath, 解す, CastleSheet, 攻め寄せる問い } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
 /* ------------------------------- 城を落とし、その城を誰に委ねるかを問う画面 */
 const s = initState('oda');
@@ -80,6 +80,8 @@ const txt = () => {
   for (const x of b.querySelectorAll('style,script')) x.remove();
   return b.textContent.replace(/\s+/g, ' ');
 };
+
+const fmtN = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 (async () => {
   let 咎 = 0;
@@ -138,6 +140,83 @@ const txt = () => {
     確('戦国記に、誰に委ねたかが残る',
       盤.chronicle.some((x) => /に委ねた/.test(x.text)),
       (盤.chronicle.filter((x) => /に委ねた/.test(x.text)).slice(-1)[0] || {}).text || 'なし');
+  }
+
+  /* ------------------------------- 在陣の軍を動かせること
+
+     盤に「陣」の印が出るのに、押しても何もできず軍が宙に浮いていた。
+     次の城へ攻め寄せるか、軍を解いて本領へ帰すかを、城の軍事から決められる。
+
+     ここは城の帳そのものを描いて見る。地図の当て判定を通すと、戦のあとの
+     視点や被さる窓に振り回されて、確かめたいところに辿り着けない。 */
+  {
+    const 盤 = JSON.parse(解す(蔵.get('sengoku:save1'))).state;
+    const c2 = 盤.castles.find((x) => x.id === 的.id);
+    const 陣 = (盤.armies || []).filter((a) => a.在陣 === 的.id && a.faction === 盤.player);
+    確('落とした城に軍が在陣している', 陣.length === 1,
+      陣.length ? `${fmtN(陣[0].men)}人・将${(陣[0].gens || []).length}名` : 'いない');
+
+    const r2 = createRoot(document.getElementById('r2') || (() => {
+      const d = document.createElement('div'); d.id = 'r2'; document.body.appendChild(d); return d;
+    })());
+    let 攻めた = null, 解いた = null;
+    await act(async () => {
+      r2.render(React.createElement(CastleSheet, {
+        g: 盤, castle: c2, land: true, tab: '軍事', setTab: () => {},
+        onClose: () => {}, onCommand: () => {}, onTrade: () => {}, onAppoint: () => {},
+        onSortie: () => {}, onMarchOn: (id) => { 攻めた = id; }, onDisband: (id) => { 解いた = id; },
+        onCallAid: () => {}, onDiplo: () => {}, onPlot: () => {}, onSpecial: () => {},
+        onReward: () => {}, onCaptive: () => {}, onFief: () => {}, onRetire: () => {},
+        onSettle: () => {}, onKenchi: () => {}, onHime: () => {},
+      }));
+    });
+    await flush();
+    const 帳 = document.getElementById('r2').textContent.replace(/\s+/g, ' ');
+    確('在陣の軍が城の軍事に出る', /この城に在陣する軍/.test(帳),
+      (帳.match(/この城に在陣する軍.{0,36}/) || [''])[0]);
+    確('総勢と将と兵糧が読める', /総勢/.test(帳) && /兵糧/.test(帳));
+    const 釦 = (t) => [...document.getElementById('r2').querySelectorAll('button')]
+      .find((b) => b.textContent.includes(t) && !b.disabled);
+    確('次の城へ攻め寄せる道がある', !!釦('次の城へ攻め寄せる'));
+    確('軍を解く道がある', !!釦('軍を解く'));
+    if (釦('次の城へ攻め寄せる')) {
+      await act(async () => { 釦('次の城へ攻め寄せる').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+      await flush();
+      確('押せば、その軍を指して呼ばれる', 攻めた === 陣[0].id, String(攻めた));
+    }
+    if (釦('軍を解く')) {
+      await act(async () => { 釦('軍を解く').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+      await flush();
+      確('軍を解くも、その軍を指して呼ばれる', 解いた === 陣[0].id, String(解いた));
+    }
+
+    // 攻め寄せる画面が、行き先を並べられること
+    const r3 = createRoot((() => {
+      const d = document.createElement('div'); d.id = 'r3'; document.body.appendChild(d); return d;
+    })());
+    let 行った = null;
+    await act(async () => {
+      r3.render(React.createElement(攻め寄せる問い, {
+        g: 盤, armyId: 陣[0].id, onClose: () => {}, onGo: (a, t) => { 行った = [a, t]; },
+      }));
+    });
+    await flush();
+    const 窓 = document.getElementById('r3');
+    const 窓文 = 窓.textContent.replace(/\s+/g, ' ');
+    確('攻め寄せる画面が組める', /攻め寄せる/.test(窓文), 窓文.slice(0, 30));
+    const 札 = [...窓.querySelectorAll('input[type=radio]')];
+    確('行き先が並ぶ', 札.length > 0, `${札.length}件`);
+    if (札.length) {
+      await act(async () => { 札[0].click(); }); await flush();
+      const 進 = [...窓.querySelectorAll('button')].find((b) => /へ攻め寄せる$/.test(b.textContent.trim()));
+      確('行き先を選べば進める', !!進 && !進.disabled, 進 ? 進.textContent.trim() : 'なし');
+      if (進) {
+        await act(async () => { 進.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+        await flush();
+        確('進めば、軍と行き先が渡される', !!行った && 行った[0] === 陣[0].id && !!行った[1],
+          JSON.stringify(行った));
+      }
+    }
   }
 
   console.log('確かめ:', 咎 ? `★${咎}件が通らなかった` : 'すべて通った');

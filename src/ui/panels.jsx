@@ -14,6 +14,7 @@ import { ARMS, ROAD_SPEED } from "../data/roads.js";
 import { reinforceOffers, 運び賃 } from "../govern/war.js";
 import { canRecruit } from "../core/house.js";
 import { underMyBanner } from "../core/state.js";
+import { 軍の道 } from "../core/state.js";
 import { atPeace } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { 兵科の割り, 蓄えに合わせる , 組の鍵, 長の名, 長の階, 階の段, 組頭の帳 } from "../core/roster.js";
@@ -27,6 +28,7 @@ import { findPathVia, marchMonthsOf } from "../core/paths.js";
 
 export function SortieDialog({ g, from, onClose, onGo }) {
   const c = g.castles.find((x) => x.id === from);
+  const 本拠か = from === (g.factions[g.player] || {}).本拠;
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const tooLow = [];
   const [picked, setPicked] = useState(gens.slice(0, 2).map((x) => x.id));
@@ -199,9 +201,17 @@ export function SortieDialog({ g, from, onClose, onGo }) {
   return (
     <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
       <div className="card">
-        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>出陣　{c.name}</div>
+        {/* 本拠から出すときは陣触れ、支城から出すときは出陣と名乗る。
+            同じ画面だが、意味が違う。陣触れは家じゅうに兵を催すことである。 */}
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>
+          {本拠か ? "陣触れ" : "出陣"}　{c.name}
+        </div>
         <div style={{ fontSize: 12, color: U.dim, marginBottom: 10 }}>
-          総大将は{c.name}の城主。目標は自領のいずれかの城と街道でつながる城に限る。
+          {本拠か
+            ? `${c.name}は${g.factions[g.player].name}の本拠。ここから兵を催す。`
+            : `${c.name}から兵を出す。`}
+          総大将は<b style={{ color: U.text }}>この城にいる将のうち、いちばん身分の高い者</b>である。
+          目標は自領のいずれかの城と街道でつながる城に限る。
         </div>
         <div className="sec">目標拠点</div>
         <select className="sel" style={{ width: "100%" }} value={to} onChange={(e) => setTo(e.target.value)}>
@@ -1697,6 +1707,81 @@ export function PromotionDialog({ promo, onDone }) {
   );
 }
 
+
+/* 在陣の軍を、次の城へ差し向ける（GDD 6.4）。
+
+   落とした城に留まっている軍である。城の兵とは別物で、この城を与えられた
+   わけでもない。連れてきた兵をそのまま次へ向ける。
+
+   出陣とは違い、兵も将も既に揃っている。決めるのは行き先だけである。
+   兵糧は在陣のあいだに細っているので、それを添えて示す。 */
+export function 攻め寄せる問い({ g, armyId, onClose, onGo }) {
+  const a = (g.armies || []).find((x) => x.id === armyId);
+  const 陣 = a && g.castles.find((x) => x.id === a.在陣);
+  const 行き先 = useMemo(() => {
+    if (!陣) return [];
+    return g.castles
+      .filter((x) => x.id !== 陣.id && 軍の道(g, g.player, 陣.id, x.id))
+      .map((x) => ({ c: x, 月: marchMonthsOf(軍の道(g, g.player, 陣.id, x.id) || [], g.player) }))
+      .filter((x) => x.月 <= 8)
+      .sort((p, q) => p.月 - q.月);
+  }, [g, 陣 && 陣.id]);
+  const [to, setTo] = useState(null);
+  if (!a || !陣) return null;
+  const 先 = 行き先.find((x) => x.c.id === to);
+  const 将ら = (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+  const 日 = Math.round((a.food / Math.max(1, a.men * 0.09)) * 30);
+  const 要る = 先 ? Math.round(a.men * 0.09 * (先.月 + 1)) : 0;
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card" style={{ maxWidth: 520 }}>
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>攻め寄せる　{陣.name}の在陣</div>
+        <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 10 }}>
+          {陣.name}に在陣している軍を、そのまま次の城へ向けます。兵も将も既に揃っているので、
+          決めるのは行き先だけです。<br />
+          総勢 <b style={{ color: U.text }}>{fmt(a.men)}人</b>（{将ら.map((x) => x.name).join("・") || "将なし"}）／
+          兵糧 <b style={{ color: 日 < 45 ? "#B0483C" : U.text }}>{fmt(Math.round(a.food))}石</b>（残り約{日}日分）
+        </div>
+        <div className="sec">行き先</div>
+        <div style={{ maxHeight: 280, overflow: "auto" }}>
+          {行き先.length === 0 && (
+            <div style={{ fontSize: 12.5, color: U.dim, padding: "14px 0" }}>
+              ここから街道で行ける城がありません。
+            </div>
+          )}
+          {行き先.map(({ c: x, 月 }) => {
+            const 味方 = underMyBanner(g, g.player, x.faction);
+            return (
+              <label key={x.id} style={{ display: "flex", gap: 8, alignItems: "center",
+                padding: "5px 0", fontSize: 13, borderBottom: `1px solid ${U.line2}` }}>
+                <input type="radio" checked={to === x.id} onChange={() => setTo(x.id)} />
+                <span className="mn" style={{ fontSize: 15, width: 108 }}>{x.name}</span>
+                <span className="pill" style={{ background: g.factions[x.faction].color }}>
+                  {g.factions[x.faction].name}</span>
+                <span className="num" style={{ color: U.dim, flex: 1, textAlign: "right" }}>
+                  約{月}か月／城兵 {fmt(x.local)}{味方 ? "（味方）" : ""}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        {先 && (
+          <div className="row" style={{ marginTop: 8, color: a.food < 要る ? "#B0483C" : undefined }}>
+            <span>道中に要る兵糧</span>
+            <span className="v">{fmt(要る)} 石（手持ち {fmt(Math.round(a.food))} 石）</span>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 9, marginTop: 14 }}>
+          <button className="btn" style={{ flex: 1 }} onClick={onClose}>取りやめ</button>
+          <button className="btn dark" style={{ flex: 2 }} disabled={!先}
+            onClick={() => onGo(armyId, to)}>
+            {先 ? `${先.c.name}へ攻め寄せる` : "行き先を選ぶ"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* 落とした城を誰に委ねるか（GDD 6.4）。
 

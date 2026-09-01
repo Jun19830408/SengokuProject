@@ -23,7 +23,7 @@ import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
-export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
+export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onMarchOn, onDisband, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
@@ -417,6 +417,48 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
 
               {tab === "軍事" && (
                 <>
+                  {/* 在陣の軍（GDD 6.4）。
+
+                      落とした城に留まっている軍である。城の兵とは別のもので、
+                      この城を与えられたわけでもない。次の城へ攻め寄せるか、
+                      軍を解いて本領へ帰すかを、ここで決める。
+
+                      これが無かったころは、盤に「陣」の印が出るのに何もできず、
+                      軍が宙に浮いていた。 */}
+                  {(() => {
+                    const 陣 = (g.armies || []).filter((a) => a.在陣 === c.id && a.faction === g.player);
+                    if (!陣.length) return null;
+                    return 陣.map((a) => {
+                      const 将ら = (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+                      const 日 = Math.round((a.food / Math.max(1, a.men * 0.09)) * 30);
+                      return (
+                        <div key={a.id} style={{ border: `1px solid ${U.line2}`, borderLeft: "3px solid #8A6A34",
+                          padding: "8px 10px", marginBottom: 10, background: "rgba(200,164,74,.06)" }}>
+                          <div className="mn" style={{ fontSize: 15, marginBottom: 2 }}>この城に在陣する軍</div>
+                          <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
+                            城を与えられたわけではありません。ここに留まっているだけです。
+                            次の城へ攻め寄せるか、軍を解いて本領へ帰すかを決めてください。
+                          </div>
+                          <div className="row"><span>総勢</span>
+                            <span className="v">{fmt(a.men)} 人（地の兵 {fmt(a.local || 0)}）</span></div>
+                          <div className="row"><span>将</span>
+                            <span className="v">{将ら.map((x) => x.name).join("・") || "なし"}</span></div>
+                          <div className="row"><span>兵糧</span>
+                            <span className="v" style={{ color: 日 < 45 ? "#B0483C" : undefined }}>
+                              {fmt(Math.round(a.food))} 石（残り約{日}日分）</span></div>
+                          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                            <button className="btn dark" style={{ flex: 2 }}
+                              onClick={() => onMarchOn && onMarchOn(a.id)}>次の城へ攻め寄せる</button>
+                            <button className="btn" style={{ flex: 1 }}
+                              onClick={() => onDisband && onDisband(a.id)}>軍を解く</button>
+                          </div>
+                          <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
+                            軍を解けば、兵は出陣元へ返り、将はそれぞれの本領へ帰ります。
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                   <div style={{ fontSize: 12, color: U.dim, marginBottom: 8 }}>
                     出せる兵 {fmt(total)} 人（守るに要る兵 {fmt(garrison)} 人は目安。
                     城を空にして出ることもできるが、攻められれば落ちる）
