@@ -191,6 +191,24 @@ const txt = () => {
   }
 
   /* --------------------------- 二、約束を交わした相手への出陣を問われる */
+  /* 総大将は身分で決まる（GDD 6.4）。侍大将の下に家老は付かない。
+     もとは「選んだ順の先頭」であったので、物頭を先に選べば物頭が家老を
+     指揮することになっていた。画面に誰が率いるかを出す。 */
+  {
+    const 欄 = [...document.querySelectorAll('.modal .row')]
+      .find((r) => /^総大将/.test(r.textContent.trim()));
+    確('出陣の画面に総大将が出る', !!欄, 欄 ? 欄.textContent.replace(/\s+/g, ' ').trim() : 'なし');
+    if (欄) {
+      const 印 = [...document.querySelectorAll('.modal label')]
+        .filter((l) => l.querySelector('input[type=checkbox]:checked') && /歳／統/.test(l.textContent));
+      const 位 = { 当主: 5, 宿老: 4, 家老: 3, 侍大将: 2, 物頭: 1 };
+      const 身 = (t) => Math.max(0, ...Object.keys(位).map((k) => (t.includes(k) ? 位[k] : 0)));
+      const 最上 = Math.max(0, ...印.map((l) => 身(l.textContent)));
+      確('総大将は軍中でいちばん身分の高い者である', 印.length === 0 || 身(欄.textContent) >= 最上,
+        `総大将の身分 ${身(欄.textContent)}／軍中の最上 ${最上}（${印.length}名）`);
+    }
+  }
+
   if (隣敵) {
     const 進発 = [...document.querySelectorAll('.modal button')].find((b) => /人で進発/.test(b.textContent));
     確('進発の釦がある', !!進発 && !進発.disabled);

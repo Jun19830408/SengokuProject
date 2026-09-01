@@ -5,7 +5,7 @@ import { MAX_CORPS, MAX_CORPS_MEN } from "../battle/field.js";
 import { persuadeResult } from "../core/capture.js";
 import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { foodDays, minGarrison, rankName, troopLimit } from "../core/rank.js";
+import { foodDays, minGarrison, rankName, troopLimit, 総大将を定める, 大将を先頭に } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
@@ -329,7 +329,23 @@ export function SortieDialog({ g, from, onClose, onGo }) {
           </div>;
         })()}
 
-        <div className="sec">参加武将（先頭が総大将）</div>
+        {/* 総大将は選んだ順ではなく身分で決まる（GDD 6.4）。
+            侍大将の下に家老は付かない。軍中の最上位が率いる。 */}
+        <div className="sec">参加武将</div>
+        {(() => {
+          const 選将 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
+          const 主 = 総大将を定める(g, 選将);
+          if (!主) return null;
+          return (
+            <div className="row" style={{ marginBottom: 4 }}>
+              <span>総大将</span>
+              <span className="v">
+                <span className="mn" style={{ fontSize: 15 }}>{主.name}</span>
+                <span style={{ color: U.dim, fontSize: 11, marginLeft: 5 }}>{rankName(主, g)}</span>
+              </span>
+            </div>
+          );
+        })()}
         {gens.map((x) => (
           <label key={x.id} style={{ display: "flex", gap: 9, alignItems: "center", padding: "5px 0", fontSize: 13 }}>
             <input type="checkbox" checked={picked.includes(x.id)}
@@ -341,7 +357,9 @@ export function SortieDialog({ g, from, onClose, onGo }) {
           </label>
         ))}
         <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
-          率いられる兵には身分の限りがあります。
+          総大将は<b style={{ color: U.text }}>軍中でいちばん身分の高い者</b>が務めます。
+          侍大将の下に家老は付きません。
+          <br />率いられる兵には身分の限りがあります。
           物頭は五百人、侍大将は千六百人、家老は二千五百人、宿老は四千人まで。
           {(() => {
             const sum = picked.map((id) => gens.find((x) => x.id === id))
@@ -521,7 +539,10 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>取りやめ</button>
           <button className="btn dark" style={{ flex: 2 }} disabled={!to || !path || !picked.length || men < 200 || c.food < food || 賃が足りぬ}
-            onClick={() => onGo({ from, to, gens: picked, local: useLocal, food, mix,
+            onClick={() => onGo({ from, to,
+              // 総大将を先頭に据えて渡す（軍は先頭を大将とする）
+              gens: 大将を先頭に(g, picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean)).map((x) => x.id),
+              local: useLocal, food, mix,
               // 指図の通る城は、選んだ将と兵数を添える。頼むだけの城は相手の言い値のまま。
               reinforce: offers.filter((o) => aid[o.castleId]).map((o) => (o.指図
                 ? { ...o, genIds: aid[o.castleId].genIds || [],
@@ -605,7 +626,9 @@ export function SallyDialog({ g, castleId, foeId, onClose, onGo, 城下 }) {
         <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>籠もったまま</button>
           <button className="btn dark" style={{ flex: 2 }} disabled={!picked.length || 兵 < 100}
-            onClick={() => onGo({ gens: picked, local: 出す })}>{fmt(兵)}人で討って出る</button>
+            onClick={() => onGo({
+              gens: 大将を先頭に(g, picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean)).map((x) => x.id),
+              local: 出す })}>{fmt(兵)}人で討って出る</button>
         </div>
       </div>
     </div>

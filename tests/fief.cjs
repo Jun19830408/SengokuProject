@@ -18,7 +18,7 @@ const entry = path.join(ROOT, 'build', 'fief-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState, migrateSave } from "../src/core/state.js";\n'
-+ 'export { fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, castellanOf, rankName } from "../src/core/rank.js";\n'
++ 'export { fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, castellanOf, rankName, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
 + 'export { grantFief, appoint } from "../src/govern/commands.js";\n');
 const out = path.join(ROOT, 'build', 'fief.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
@@ -204,6 +204,52 @@ const 確 = (名, 可, 添 = '') => {
   確('古い記録の本拠は当主の城になる',
     旧.factions.oda.本拠 === (旧.generals.find((g) => g.faction === 'oda' && g.lord) || {}).at,
     旧.castles.find((c) => c.id === 旧.factions.oda.本拠).name);
+}
+
+/* --------------------------------------- 四、総大将は身分で決まる（GDD 6.4）
+
+   侍大将の下に家老は付かない。軍中にその家の家老がいるなら家老が、宿老が
+   いるなら宿老が総大将である。当主が出れば当主が率いる。
+
+   もとは出陣の画面で「選んだ順の先頭」を総大将としていた。物頭を先に選べば
+   物頭が家老を指揮することになり、身分が意味を持たなかった。 */
+{
+  const s = A.initState('oda');
+  const 我 = s.generals.filter((g) => g.faction === 'oda' && !g.captive);
+  const 別 = {};
+  for (const g of 我) { const r = A.rankName(g, s); (別[r] = 別[r] || []).push(g); }
+  const 取 = (r, n) => (別[r] || []).slice(0, n);
+  const 当主 = 我.find((g) => g.lord);
+
+  console.log(`  （織田の家中 ${['宿老', '家老', '侍大将', '物頭']
+    .map((r) => `${r} ${(別[r] || []).length}`).join('／')}）`);
+
+  if ((別.家老 || []).length && (別.侍大将 || []).length) {
+    const 組 = [...取('侍大将', 1), ...取('家老', 1)];
+    const 主 = A.総大将を定める(s, 組);
+    確('侍大将を先に選んでも、家老が総大将になる',
+      A.rankName(主, s) === '家老',
+      `${組.map((x) => `${x.name}(${A.rankName(x, s)})`).join(' → ')} ⇒ ${主.name}`);
+    確('並びの先頭が総大将になる（軍は先頭を大将とする）',
+      A.大将を先頭に(s, 組)[0].id === 主.id,
+      A.大将を先頭に(s, 組).map((x) => x.name).join(' → '));
+  }
+  if ((別.物頭 || []).length && (別.家老 || []).length) {
+    const 主 = A.総大将を定める(s, [...取('物頭', 1), ...取('家老', 1)]);
+    確('物頭を先に選んでも、家老が総大将になる', A.rankName(主, s) === '家老', 主.name);
+  }
+  if (当主 && (別.家老 || []).length) {
+    const 主 = A.総大将を定める(s, [...取('家老', 1), 当主]);
+    確('当主が出れば当主が率いる', 主.id === 当主.id, `${主.name}（当主）`);
+  }
+  if ((別.侍大将 || []).length >= 3) {
+    const 組 = 取('侍大将', 3);
+    const 主 = A.総大将を定める(s, 組);
+    確('同じ身分なら禄高の高い者が率いる',
+      組.every((x) => A.stipendOf(s, 主) >= A.stipendOf(s, x)),
+      `${主.name}（禄高${A.stipendOf(s, 主)}石）`);
+  }
+  確('誰も選ばねば総大将は立たない', A.総大将を定める(s, []) === null);
 }
 
 console.log('');

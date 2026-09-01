@@ -191,6 +191,35 @@ export const canHoldCastle = (gen, s, c) => {
 // 総大将を務められるのは当主か宿老。
 export const canBeSupreme = (gen, s) => !!gen && (gen.lord || (s ? stipendOf(s, gen) : fiefOf(gen)) >= 20000);
 
+/* 軍を率いるのは誰か（GDD 6.4）。
+
+   侍大将の下に家老は付かない。軍中にその家の家老がいるなら家老が、宿老が
+   いるなら宿老が総大将である。当主が出れば当主が率いる。身分とはそういう
+   ものであって、遊ぶ側が選ぶ順で決まるものではない。
+
+   もとは出陣の画面で「選んだ順の先頭」を総大将としていた。物頭を先に選べば
+   物頭が宿老を指揮することになり、身分が意味を持たなかった。
+
+   同じ身分が並べば禄高の高い者、それも同じなら統率の高い者が率いる。 */
+const 身分の順 = { 当主: 5, 宿老: 4, 家老: 3, 侍大将: 2, 物頭: 1 };
+export const 身分の位 = (gen, s) => (gen && gen.lord ? 5 : (身分の順[rankName(gen, s)] || 1));
+
+export function 総大将を定める(s, 将ら) {
+  const 並 = (将ら || []).filter(Boolean);
+  if (!並.length) return null;
+  return [...並].sort((a, b) =>
+    身分の位(b, s) - 身分の位(a, s)
+    || stipendOf(s, b) - stipendOf(s, a)
+    || (b.lead || 0) - (a.lead || 0))[0];
+}
+
+/* 総大将を先頭に据えた並び。出陣はこの順で軍に渡す（先頭が大将になる）。 */
+export function 大将を先頭に(s, 将ら) {
+  const 主 = 総大将を定める(s, 将ら);
+  if (!主) return [...(将ら || [])];
+  return [主, ...(将ら || []).filter((x) => x && x.id !== 主.id)];
+}
+
 // 出陣そのものは物頭でもできる。ただし率いられる兵に限りがある。
 export const canLeadArmy = () => true;
 

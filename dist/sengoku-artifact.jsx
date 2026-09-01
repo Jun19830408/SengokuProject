@@ -12211,6 +12211,18 @@ var canHoldCastle = (gen, s2, c) => {
   const need = c ? castleRankNeed(c) : 8e3;
   return (s2 ? stipendOf(s2, gen) : fiefOf(gen)) >= need;
 };
+var \u8EAB\u5206\u306E\u9806 = { \u5F53\u4E3B: 5, \u5BBF\u8001: 4, \u5BB6\u8001: 3, \u4F8D\u5927\u5C06: 2, \u7269\u982D: 1 };
+var \u8EAB\u5206\u306E\u4F4D = (gen, s2) => gen && gen.lord ? 5 : \u8EAB\u5206\u306E\u9806[rankName(gen, s2)] || 1;
+function \u7DCF\u5927\u5C06\u3092\u5B9A\u3081\u308B(s2, \u5C06\u3089) {
+  const \u4E26 = (\u5C06\u3089 || []).filter(Boolean);
+  if (!\u4E26.length) return null;
+  return [...\u4E26].sort((a, b) => \u8EAB\u5206\u306E\u4F4D(b, s2) - \u8EAB\u5206\u306E\u4F4D(a, s2) || stipendOf(s2, b) - stipendOf(s2, a) || (b.lead || 0) - (a.lead || 0))[0];
+}
+function \u5927\u5C06\u3092\u5148\u982D\u306B(s2, \u5C06\u3089) {
+  const \u4E3B = \u7DCF\u5927\u5C06\u3092\u5B9A\u3081\u308B(s2, \u5C06\u3089);
+  if (!\u4E3B) return [...\u5C06\u3089 || []];
+  return [\u4E3B, ...(\u5C06\u3089 || []).filter((x) => x && x.id !== \u4E3B.id)];
+}
 var \u8ECD\u5F79\u306E\u7387 = 500;
 var \u8ECD\u5F79\u306E\u5668 = (gen) => gen && gen.retCap != null ? gen.retCap : gen ? gen.retinue : 0;
 var \u8ECD\u5F79\u306E\u5897 = (gen, d) => Math.round(d / 1e4 * \u8ECD\u5F79\u306E\u7387 * (0.7 + (gen && gen.lead || 60) / 200));
@@ -24231,14 +24243,19 @@ function SortieDialog({ g, from, onClose, onGo }) {
     const t = g.castles.find((x) => x.id === to);
     if (!t || !underMyBanner(g, c.faction, t.faction)) return null;
     return /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 4 } }, t.faction === c.faction ? "\u5473\u65B9\u306E\u57CE\u3067\u3059\u3002\u5230\u7740\u3057\u3066\u3082\u5408\u6226\u306F\u8D77\u304D\u305A\u3001\u5175\u306F\u57CE\u3078\u5408\u6D41\u3057\u307E\u3059\u3002" : "\u81E3\u5F93\u306E\u5BB6\u306E\u57CE\u3067\u3059\u3002\u7740\u3044\u305F\u5175\u306F\u305D\u306E\u57CE\u306E\u5B88\u308A\u306B\u52A0\u308F\u308A\u3001\u5C06\u306F\u672C\u56FD\u3078\u5E30\u308A\u307E\u3059\u3002");
-  })(), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u53C2\u52A0\u6B66\u5C06\uFF08\u5148\u982D\u304C\u7DCF\u5927\u5C06\uFF09"), gens.map((x) => /* @__PURE__ */ React2.createElement("label", { key: x.id, style: { display: "flex", gap: 9, alignItems: "center", padding: "5px 0", fontSize: 13 } }, /* @__PURE__ */ React2.createElement(
+  })(), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u53C2\u52A0\u6B66\u5C06"), (() => {
+    const \u9078\u5C06 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
+    const \u4E3B = \u7DCF\u5927\u5C06\u3092\u5B9A\u3081\u308B(g, \u9078\u5C06);
+    if (!\u4E3B) return null;
+    return /* @__PURE__ */ React2.createElement("div", { className: "row", style: { marginBottom: 4 } }, /* @__PURE__ */ React2.createElement("span", null, "\u7DCF\u5927\u5C06"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, \u4E3B.name), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 11, marginLeft: 5 } }, rankName(\u4E3B, g))));
+  })(), gens.map((x) => /* @__PURE__ */ React2.createElement("label", { key: x.id, style: { display: "flex", gap: 9, alignItems: "center", padding: "5px 0", fontSize: 13 } }, /* @__PURE__ */ React2.createElement(
     "input",
     {
       type: "checkbox",
       checked: picked.includes(x.id),
       onChange: () => setPicked((p) => p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id])
     }
-  ), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 5 } }, rankName(x, g))), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, x.age, "\u6B73\uFF0F\u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, "\uFF0F\u76F4\u5C5E", fmt(x.retinue)))), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u7387\u3044\u3089\u308C\u308B\u5175\u306B\u306F\u8EAB\u5206\u306E\u9650\u308A\u304C\u3042\u308A\u307E\u3059\u3002 \u7269\u982D\u306F\u4E94\u767E\u4EBA\u3001\u4F8D\u5927\u5C06\u306F\u5343\u516D\u767E\u4EBA\u3001\u5BB6\u8001\u306F\u4E8C\u5343\u4E94\u767E\u4EBA\u3001\u5BBF\u8001\u306F\u56DB\u5343\u4EBA\u307E\u3067\u3002", (() => {
+  ), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 5 } }, rankName(x, g))), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, x.age, "\u6B73\uFF0F\u7D71", x.lead, " \u6B66", x.valor, " \u77E5", x.wit, "\uFF0F\u76F4\u5C5E", fmt(x.retinue)))), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u7DCF\u5927\u5C06\u306F", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u8ECD\u4E2D\u3067\u3044\u3061\u3070\u3093\u8EAB\u5206\u306E\u9AD8\u3044\u8005"), "\u304C\u52D9\u3081\u307E\u3059\u3002 \u4F8D\u5927\u5C06\u306E\u4E0B\u306B\u5BB6\u8001\u306F\u4ED8\u304D\u307E\u305B\u3093\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u7387\u3044\u3089\u308C\u308B\u5175\u306B\u306F\u8EAB\u5206\u306E\u9650\u308A\u304C\u3042\u308A\u307E\u3059\u3002 \u7269\u982D\u306F\u4E94\u767E\u4EBA\u3001\u4F8D\u5927\u5C06\u306F\u5343\u516D\u767E\u4EBA\u3001\u5BB6\u8001\u306F\u4E8C\u5343\u4E94\u767E\u4EBA\u3001\u5BBF\u8001\u306F\u56DB\u5343\u4EBA\u307E\u3067\u3002", (() => {
     const sum = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean).reduce((a, x) => a + troopLimit(x, g), 0);
     return /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("br", null), "\u9078\u3093\u3060\u5C06\u3067\u7387\u3044\u3089\u308C\u308B\u306E\u306F ", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, fmt(sum), "\u4EBA"), "\u307E\u3067\u3002");
   })()), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5730\u57DF\u5BB6\u81E3\u56E3\u306E\u540C\u884C"), /* @__PURE__ */ React2.createElement("input", { type: "range", min: "0", max: availLocal, value: useLocal, onChange: (e) => setLocal(+e.target.value), style: { width: "100%" } }), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u540C\u884C"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(useLocal), " / ", fmt(availLocal), " \u4EBA")), (() => {
@@ -24342,7 +24359,8 @@ function SortieDialog({ g, from, onClose, onGo }) {
       onClick: () => onGo({
         from,
         to,
-        gens: picked,
+        // 総大将を先頭に据えて渡す（軍は先頭を大将とする）
+        gens: \u5927\u5C06\u3092\u5148\u982D\u306B(g, picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean)).map((x) => x.id),
         local: useLocal,
         food,
         mix,
@@ -24395,7 +24413,10 @@ function SallyDialog({ g, castleId, foeId, onClose, onGo, \u57CE\u4E0B }) {
       className: "btn dark",
       style: { flex: 2 },
       disabled: !picked.length || \u5175 < 100,
-      onClick: () => onGo({ gens: picked, local: \u51FA\u3059 })
+      onClick: () => onGo({
+        gens: \u5927\u5C06\u3092\u5148\u982D\u306B(g, picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean)).map((x) => x.id),
+        local: \u51FA\u3059
+      })
     },
     fmt(\u5175),
     "\u4EBA\u3067\u8A0E\u3063\u3066\u51FA\u308B"
