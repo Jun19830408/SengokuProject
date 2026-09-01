@@ -1,7 +1,7 @@
 import { captureChance, makePrisoner, takeAsPrisoner } from "../core/capture.js";
 import { canRecruit, loyaltyAfterRecruit, ruinedHouse } from "../core/house.js";
 import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { minGarrison, stipendOf } from "../core/rank.js";
+import { minGarrison, stipendOf, 陣触れに応じる, 陣触れの届き } from "../core/rank.js";
 import { newRoster, rosterCut, rosterSync, rosterTake } from "../core/roster.js";
 import { relOf } from "../core/state.js";
 import { clamp, fmt } from "../core/util.js";
@@ -65,11 +65,24 @@ export function 運び賃を払う(s, men, months) {
 }
 export const 留守の蓄え = (c) => Math.round((c.local || 0) * 0.08 * 6);
 
-export function reinforceOffers(g, from, target) {
+/* 呼べる寄騎（GDD 7.3）。
+
+   縛りは三つある。蔵の兵糧、運び賃、そして総大将の身分である。
+
+   身分の縛りは陣触れの届きによる（core/rank.js）。侍大将が率いる軍には
+   自らの城の兵しか集まらず、家老なら一国、宿老と当主なら天下じゅうから
+   集まる。柴田を北国へ、明智を丹波へ――方面軍の芽はここにある。
+
+   大将を渡さねば、これまで通り身分では縛らない（援軍の要請など、総大将を
+   立てぬ場面がある）。 */
+export function reinforceOffers(g, from, target, 大将) {
   const out = [];
+  const 本陣 = g.castles.find((x) => x.id === from);
   for (const c of g.castles) {
     if (c.id === from) continue;
     if (c.id === target) continue;              // 攻める相手の城から援軍は呼べない
+    // 総大将の身分が、陣触れの届く先を決める
+    if (大将 && c.faction === g.player && !陣触れに応じる(g, 大将, 本陣, c)) continue;
     const path = findPath(c.id, target);
     if (!path) continue;
     const legs = path.length - 1;

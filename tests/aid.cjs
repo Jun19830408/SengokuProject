@@ -28,7 +28,7 @@ Object.defineProperty(dom.window.HTMLElement.prototype, 'clientWidth', { get() {
 Object.defineProperty(dom.window.HTMLElement.prototype, 'clientHeight', { get() { return 600; } });
 dom.window.HTMLElement.prototype.getBoundingClientRect = function () { return { left: 0, top: 0, width: 900, height: 600, right: 900, bottom: 600 }; };
 const errs = []; console.error = (...a) => errs.push(String(a[0]).slice(0, 180));
-const { createRoot, act, App, React, initState, findPath, reinforceOffers, 運び賃を払う } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
+const { createRoot, act, App, React, initState, findPath, reinforceOffers, 運び賃を払う, 陣触れの届き, rankName } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
 /* ------------------------------------------- 盤をこしらえる
    自家の城が敵に囲まれ、他の自家の城と、臣従した家の城が近くにある形。 */
@@ -251,6 +251,60 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
         運び賃を払う(v, 10000, 10);
         return v.factions.oda.gold === 0;
       })(), '手元100貫で 2,000貫の遠征を試みた');
+  }
+
+  /* ------------------------------------ 陣触れの届く先は、総大将の身分で決まる
+
+     援軍を全国から呼べるようにしたことで、こんどは誰が呼んでも天下じゅうの
+     兵が集まるようになった。それでは身分が意味を持たない。
+
+     侍大将が率いる軍には自らの城の兵しか集まらず、家老なら一国、宿老と当主
+     なら天下じゅうから集まる。柴田を北国へ、明智を丹波へ――方面軍の芽は
+     ここにある。宿老を立てねば天下の兵は動かぬ、という形になる。
+
+     大将を渡さぬときは身分では縛らない（援軍の要請など、総大将を立てぬ
+     場面があるためである）。 */
+  {
+    const u = initState('oda');
+    for (const c of u.castles) c.faction = 'oda';      // 天下を持つ盤
+    const 我 = u.generals.filter((g) => g.faction === 'oda' && g.at && !g.captive);
+    const 別 = {};
+    for (const g of 我) { const r = rankName(g, u); (別[r] = 別[r] || []).push(g); }
+    const 呼べる = (大将) => reinforceOffers(u, 'nagoya', 'uchijo', 大将)
+      .filter((o) => !o.reason && o.men > 0);
+
+    const 当主 = 我.find((x) => x.lord);
+    const 家老 = (別.家老 || [])[0];
+    const 侍 = (別.侍大将 || [])[0];
+    const 物 = (別.物頭 || [])[0];
+
+    if (当主) {
+      確('当主が率いれば、天下じゅうから集まる',
+        陣触れの届き(当主, u) === '天下' && 呼べる(当主).length > 100,
+        `${当主.name} → ${呼べる(当主).length}城・${呼べる(当主).reduce((a, o) => a + o.men, 0)}人`);
+    }
+    if (家老) {
+      const 出 = 呼べる(家老);
+      const 本陣 = u.castles.find((c) => c.id === 'nagoya');
+      確('家老が率いれば、一国のうちに限られる',
+        陣触れの届き(家老, u) === '一国'
+        && 出.length > 0 && 出.every((o) => (u.castles.find((c) => c.id === o.castleId) || {}).kuni === 本陣.kuni),
+        `${家老.name} → ${出.length}城（すべて${本陣.kuni}）`);
+      if (当主) 確('家老の届きは、当主の届きより狭い', 出.length < 呼べる(当主).length,
+        `家老 ${出.length}城／当主 ${呼べる(当主).length}城`);
+    }
+    if (侍) {
+      確('侍大将が率いれば、自らの城の兵だけ',
+        陣触れの届き(侍, u) === '自城' && 呼べる(侍).length === 0,
+        `${侍.name} → 呼べる城 ${呼べる(侍).length}`);
+    }
+    if (物) {
+      確('物頭は軍を率いられない（陣触れが届かぬ）',
+        陣触れの届き(物, u) === '無し' && 呼べる(物).length === 0, 物.name);
+    }
+    確('大将を渡さねば、身分では縛らない（援軍の要請など）',
+      reinforceOffers(u, 'nagoya', 'uchijo').filter((o) => !o.reason && o.men > 0).length > 100,
+      `${reinforceOffers(u, 'nagoya', 'uchijo').filter((o) => !o.reason && o.men > 0).length}城`);
   }
 
   process.exit(咎 ? 1 : 0);

@@ -12218,6 +12218,22 @@ function \u7DCF\u5927\u5C06\u3092\u5B9A\u3081\u308B(s2, \u5C06\u3089) {
   if (!\u4E26.length) return null;
   return [...\u4E26].sort((a, b) => \u8EAB\u5206\u306E\u4F4D(b, s2) - \u8EAB\u5206\u306E\u4F4D(a, s2) || stipendOf(s2, b) - stipendOf(s2, a) || (b.lead || 0) - (a.lead || 0))[0];
 }
+var \u9663\u89E6\u308C\u306E\u5C4A\u304D = (gen, s2) => {
+  if (!gen) return "\u7121\u3057";
+  const \u4F4D = \u8EAB\u5206\u306E\u4F4D(gen, s2);
+  if (\u4F4D >= 4) return "\u5929\u4E0B";
+  if (\u4F4D === 3) return "\u4E00\u56FD";
+  if (\u4F4D === 2) return "\u81EA\u57CE";
+  return "\u7121\u3057";
+};
+function \u9663\u89E6\u308C\u306B\u5FDC\u3058\u308B(s2, \u5927\u5C06, \u672C\u9663, \u57CE) {
+  if (!\u5927\u5C06 || !\u57CE) return false;
+  const \u5C4A = \u9663\u89E6\u308C\u306E\u5C4A\u304D(\u5927\u5C06, s2);
+  if (\u5C4A === "\u5929\u4E0B") return true;
+  if (\u5C4A === "\u4E00\u56FD") return !!\u672C\u9663 && \u57CE.kuni === \u672C\u9663.kuni;
+  if (\u5C4A === "\u81EA\u57CE") return !!\u672C\u9663 && \u57CE.id === \u672C\u9663.id;
+  return false;
+}
 function \u5927\u5C06\u3092\u5148\u982D\u306B(s2, \u5C06\u3089) {
   const \u4E3B = \u7DCF\u5927\u5C06\u3092\u5B9A\u3081\u308B(s2, \u5C06\u3089);
   if (!\u4E3B) return [...\u5C06\u3089 || []];
@@ -17377,11 +17393,13 @@ function \u904B\u3073\u8CC3\u3092\u6255\u3046(s2, men, months) {
   return \u8CC3;
 }
 var \u7559\u5B88\u306E\u84C4\u3048 = (c) => Math.round((c.local || 0) * 0.08 * 6);
-function reinforceOffers(g, from, target) {
+function reinforceOffers(g, from, target, \u5927\u5C06) {
   const out = [];
+  const \u672C\u9663 = g.castles.find((x) => x.id === from);
   for (const c of g.castles) {
     if (c.id === from) continue;
     if (c.id === target) continue;
+    if (\u5927\u5C06 && c.faction === g.player && !\u9663\u89E6\u308C\u306B\u5FDC\u3058\u308B(g, \u5927\u5C06, \u672C\u9663, c)) continue;
     const path = findPath(c.id, target);
     if (!path) continue;
     const legs = path.length - 1;
@@ -24139,7 +24157,9 @@ function SortieDialog({ g, from, onClose, onGo }) {
   useEffect2(() => {
     setLocal(Math.round(availLocal * 0.6));
   }, [picked.length]);
-  const offers = to ? reinforceOffers(g, from, to) : [];
+  const \u9078\u5C06 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
+  const \u7DCF\u5927\u5C06 = \u7DCF\u5927\u5C06\u3092\u5B9A\u3081\u308B(g, \u9078\u5C06);
+  const offers = to ? reinforceOffers(g, from, to, \u7DCF\u5927\u5C06) : [];
   useEffect2(() => {
     setAid({});
   }, [to]);
@@ -24244,8 +24264,8 @@ function SortieDialog({ g, from, onClose, onGo }) {
     if (!t || !underMyBanner(g, c.faction, t.faction)) return null;
     return /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginTop: 4 } }, t.faction === c.faction ? "\u5473\u65B9\u306E\u57CE\u3067\u3059\u3002\u5230\u7740\u3057\u3066\u3082\u5408\u6226\u306F\u8D77\u304D\u305A\u3001\u5175\u306F\u57CE\u3078\u5408\u6D41\u3057\u307E\u3059\u3002" : "\u81E3\u5F93\u306E\u5BB6\u306E\u57CE\u3067\u3059\u3002\u7740\u3044\u305F\u5175\u306F\u305D\u306E\u57CE\u306E\u5B88\u308A\u306B\u52A0\u308F\u308A\u3001\u5C06\u306F\u672C\u56FD\u3078\u5E30\u308A\u307E\u3059\u3002");
   })(), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u53C2\u52A0\u6B66\u5C06"), (() => {
-    const \u9078\u5C06 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
-    const \u4E3B = \u7DCF\u5927\u5C06\u3092\u5B9A\u3081\u308B(g, \u9078\u5C06);
+    const \u9078\u5C062 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
+    const \u4E3B = \u7DCF\u5927\u5C06\u3092\u5B9A\u3081\u308B(g, \u9078\u5C062);
     if (!\u4E3B) return null;
     return /* @__PURE__ */ React2.createElement("div", { className: "row", style: { marginBottom: 4 } }, /* @__PURE__ */ React2.createElement("span", null, "\u7DCF\u5927\u5C06"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, \u4E3B.name), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 11, marginLeft: 5 } }, rankName(\u4E3B, g))));
   })(), gens.map((x) => /* @__PURE__ */ React2.createElement("label", { key: x.id, style: { display: "flex", gap: 9, alignItems: "center", padding: "5px 0", fontSize: 13 } }, /* @__PURE__ */ React2.createElement(
@@ -24292,7 +24312,7 @@ function SortieDialog({ g, from, onClose, onGo }) {
       textAlign: "right",
       color: a.key === "kiba" && \u84C4.\u8DB3\u308A\u306C\u99AC || a.key === "teppo" && \u84C4.\u8DB3\u308A\u306C\u9244\u7832 ? "#B0483C" : U.text
     } }, fmt(\u84C4[a.key]), "\u4EBA"), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 11, flex: 1 } }, \u65AD[a.key]))), (\u84C4.\u8DB3\u308A\u306C\u99AC > 0 || \u84C4.\u8DB3\u308A\u306C\u9244\u7832 > 0) && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: "#B0483C", marginTop: 4, lineHeight: 1.7 } }, \u84C4.\u8DB3\u308A\u306C\u99AC > 0 ? `\u99AC\u304C${fmt(\u84C4.\u8DB3\u308A\u306C\u99AC)}\u982D` : "", \u84C4.\u8DB3\u308A\u306C\u99AC > 0 && \u84C4.\u8DB3\u308A\u306C\u9244\u7832 > 0 ? "\u30FB" : "", \u84C4.\u8DB3\u308A\u306C\u9244\u7832 > 0 ? `\u9244\u7832\u304C${fmt(\u84C4.\u8DB3\u308A\u306C\u9244\u7832)}\u633A` : "", "\u8DB3\u308A\u307E\u305B\u3093\u3002\u305D\u306E\u3076\u3093\u306F\u69CD\u3067\u7ACB\u3066\u307E\u3059\uFF08\u5546\u4EBA\u304B\u3089\u8CB7\u3044\u8DB3\u305B\u307E\u3059\uFF09\u3002"));
-  })(), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5BC4\u9A0E\u3092\u6C42\u3081\u308B\uFF08GDD 7.3\uFF09"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.6 } }, "\u4E00\u65B9\u306E\u9663\u306B\u4E26\u3079\u3089\u308C\u308B\u306E\u306F", MAX_CORPS, "\u968A\u307E\u3067\uFF08\u95A2\u30F6\u539F\u306E\u53C2\u9663\u6570\u306B\u5408\u308F\u305B\u305F\u4E0A\u9650\uFF09\u3002 \u672C\u968A\u3067", picked.length, "\u968A\u3092\u4F7F\u3046\u306E\u3067\u3001\u5BC4\u9A0E\u306F\u6B8B\u308A", Math.max(0, MAX_CORPS - picked.length), "\u968A\u307E\u3067\u52A0\u308F\u308C\u308B\u3002 \u4E00\u968A\u304C\u62B1\u3048\u3089\u308C\u308B\u5175\u306F", fmt(MAX_CORPS_MEN), "\u4EBA\u307E\u3067\u3067\u3001\u3042\u3075\u308C\u305F\u5206\u306F\u968A\u3068\u3057\u3066\u7ACB\u3066\u3089\u308C\u306A\u3044\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 } }, /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u81EA\u5BB6\u3068\u81E3\u5F93\u306E\u5BB6"), "\u306B\u306F\u4E0B\u77E5\u304C\u901A\u308A\u3001\u5FC5\u305A\u51FA\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u540C\u76DF\u30FB\u5F93\u5C5E\u306E\u5BB6"), "\u3078\u306F\u983C\u3080\u3060\u3051\u3067\u3001\u5FDC\u3058\u308B\u304B\u5426\u304B\u306F\u76F8\u624B\u304C\u6C7A\u3081\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u547C\u3079\u308B\u5148\u306F", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u9060\u8FD1\u3092\u554F\u3044\u307E\u305B\u3093"), "\u3002\u95A2\u30F6\u539F\u3082\u5927\u5742\u306E\u9663\u3082\u5168\u56FD\u304B\u3089\u5175\u304C\u96C6\u307E\u308A\u307E\u3057\u305F\u3002 \u7E1B\u308A\u306F", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u8535\u306E\u5175\u7CE7"), "\u3068", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u904B\u3073\u8CC3"), "\u3067\u3059\u3002 \u8ECD\u306F\u6708\u306B\u4E00\u4EBA\u3007.\u3007\u4E5D\u77F3\u3092\u98DF\u3044\u3001\u884C\u7A0B\u306E\u3076\u3093\u306B\u9663\u4E2D\u306E\u4E8C\u6708\u3092\u8DB3\u3057\u3066\u6301\u3063\u3066\u51FA\u307E\u3059\u3002 \u904B\u3073\u8CC3\u306F\u4EBA\u8DB3\u3068\u99AC\u3092\u96C7\u3046\u8CBB\u3048\u3067\u3001\u4E00\u4EBA\u30FB\u4E00\u6708\u306B\u3064\u304D\u3007.\u3007\u4E8C\u8CAB\u3092\u91D1\u8535\u304B\u3089\u6255\u3044\u307E\u3059\u3002 \u9060\u56FD\u304B\u3089\u5927\u8ECD\u3092\u547C\u3076\u306B\u306F\u3001\u305D\u308C\u3060\u3051\u306E\u8EAB\u4EE3\u304C\u8981\u308A\u307E\u3059\u3002"), offers.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u63F4\u8ECD\u3092\u6C42\u3081\u3089\u308C\u308B\u76F8\u624B\u304C\u3044\u306A\u3044\u3002"), offers.map((o) => {
+  })(), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5BC4\u9A0E\u3092\u6C42\u3081\u308B\uFF08GDD 7.3\uFF09"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.6 } }, "\u4E00\u65B9\u306E\u9663\u306B\u4E26\u3079\u3089\u308C\u308B\u306E\u306F", MAX_CORPS, "\u968A\u307E\u3067\uFF08\u95A2\u30F6\u539F\u306E\u53C2\u9663\u6570\u306B\u5408\u308F\u305B\u305F\u4E0A\u9650\uFF09\u3002 \u672C\u968A\u3067", picked.length, "\u968A\u3092\u4F7F\u3046\u306E\u3067\u3001\u5BC4\u9A0E\u306F\u6B8B\u308A", Math.max(0, MAX_CORPS - picked.length), "\u968A\u307E\u3067\u52A0\u308F\u308C\u308B\u3002 \u4E00\u968A\u304C\u62B1\u3048\u3089\u308C\u308B\u5175\u306F", fmt(MAX_CORPS_MEN), "\u4EBA\u307E\u3067\u3067\u3001\u3042\u3075\u308C\u305F\u5206\u306F\u968A\u3068\u3057\u3066\u7ACB\u3066\u3089\u308C\u306A\u3044\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 } }, /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u81EA\u5BB6\u3068\u81E3\u5F93\u306E\u5BB6"), "\u306B\u306F\u4E0B\u77E5\u304C\u901A\u308A\u3001\u5FC5\u305A\u51FA\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u540C\u76DF\u30FB\u5F93\u5C5E\u306E\u5BB6"), "\u3078\u306F\u983C\u3080\u3060\u3051\u3067\u3001\u5FDC\u3058\u308B\u304B\u5426\u304B\u306F\u76F8\u624B\u304C\u6C7A\u3081\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u9663\u89E6\u308C\u306E\u5C4A\u304F\u5148\u306F", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u7DCF\u5927\u5C06\u306E\u8EAB\u5206"), "\u3067\u6C7A\u307E\u308A\u307E\u3059\u3002 \u4F8D\u5927\u5C06\u306F\u81EA\u3089\u306E\u57CE\u306E\u307F\u3001\u5BB6\u8001\u306F\u4E00\u56FD\u306E\u3046\u3061\u3001", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u5BBF\u8001\u3068\u5F53\u4E3B\u306F\u5929\u4E0B\u3058\u3085\u3046"), "\u304B\u3089\u96C6\u3081\u3089\u308C\u307E\u3059\u3002", \u7DCF\u5927\u5C06 && /* @__PURE__ */ React2.createElement(React2.Fragment, null, "\uFF08\u3044\u307E\u306E\u7DCF\u5927\u5C06 ", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, \u7DCF\u5927\u5C06.name), "\u30FB", rankName(\u7DCF\u5927\u5C06, g), "\u2500\u2500 \u5C4A\u304F\u5148\u306F", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, \u9663\u89E6\u308C\u306E\u5C4A\u304D(\u7DCF\u5927\u5C06, g)), "\uFF09"), /* @__PURE__ */ React2.createElement("br", null), "\u305D\u306E\u3046\u3048\u3067\u3001\u547C\u3079\u308B\u5148\u306F", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u9060\u8FD1\u3092\u554F\u3044\u307E\u305B\u3093"), "\u3002\u95A2\u30F6\u539F\u3082\u5927\u5742\u306E\u9663\u3082\u5168\u56FD\u304B\u3089\u5175\u304C\u96C6\u307E\u308A\u307E\u3057\u305F\u3002 \u7E1B\u308A\u306F", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u8535\u306E\u5175\u7CE7"), "\u3068", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u904B\u3073\u8CC3"), "\u3067\u3059\u3002 \u8ECD\u306F\u6708\u306B\u4E00\u4EBA\u3007.\u3007\u4E5D\u77F3\u3092\u98DF\u3044\u3001\u884C\u7A0B\u306E\u3076\u3093\u306B\u9663\u4E2D\u306E\u4E8C\u6708\u3092\u8DB3\u3057\u3066\u6301\u3063\u3066\u51FA\u307E\u3059\u3002 \u904B\u3073\u8CC3\u306F\u4EBA\u8DB3\u3068\u99AC\u3092\u96C7\u3046\u8CBB\u3048\u3067\u3001\u4E00\u4EBA\u30FB\u4E00\u6708\u306B\u3064\u304D\u3007.\u3007\u4E8C\u8CAB\u3092\u91D1\u8535\u304B\u3089\u6255\u3044\u307E\u3059\u3002 \u9060\u56FD\u304B\u3089\u5927\u8ECD\u3092\u547C\u3076\u306B\u306F\u3001\u305D\u308C\u3060\u3051\u306E\u8EAB\u4EE3\u304C\u8981\u308A\u307E\u3059\u3002"), offers.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u63F4\u8ECD\u3092\u6C42\u3081\u3089\u308C\u308B\u76F8\u624B\u304C\u3044\u306A\u3044\u3002"), offers.map((o) => {
     const \u9078 = aid[o.castleId];
     const \u5C06\u3089 = \u9078\u3070\u308C\u305F\u5C06(o);
     const \u4E0A\u9650 = \u51FA\u305B\u308B\u4E0A\u9650(o, \u5C06\u3089);

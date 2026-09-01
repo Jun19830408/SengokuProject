@@ -26,7 +26,7 @@ export { 援けに着く, migrateSave, atPeace, relOf } from "../src/core/state.
 export { resolveOffscreen, reinforceOffers, 運び賃, 運び賃を払う, sackCastle, 城を委ねる, 委ねる差配 } from "../src/govern/war.js";
 export { 圧す, 解す } from "../src/save/pack.js";
 export { advanceMonth } from "../src/govern/month.js";
-export { 忠誠, diploStat, loyaltyDrift, castellanOf } from "../src/core/rank.js";
+export { 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届き, 陣触れに応じる, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";
 export { 難を逃れる, captureChance } from "../src/core/capture.js";
 export { succeed, is架空, bearChild, pickHeir } from "../src/core/house.js";
 export { houseAlive, 主家, isVassal, 膝を屈している, canAskAid, underMyBanner } from "../src/core/state.js";

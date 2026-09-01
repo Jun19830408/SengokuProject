@@ -5,7 +5,7 @@ import { MAX_CORPS, MAX_CORPS_MEN } from "../battle/field.js";
 import { persuadeResult } from "../core/capture.js";
 import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { foodDays, minGarrison, rankName, troopLimit, 総大将を定める, 大将を先頭に } from "../core/rank.js";
+import { foodDays, minGarrison, rankName, troopLimit, 総大将を定める, 大将を先頭に, 陣触れの届き } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
@@ -151,7 +151,11 @@ export function SortieDialog({ g, from, onClose, onGo }) {
      同盟・従属へは頼むだけなので、相手の言い値をそのまま受ける。 */
   const [aid, setAid] = useState({});
   useEffect(() => { setLocal(Math.round(availLocal * 0.6)); }, [picked.length]); // eslint-disable-line
-  const offers = to ? reinforceOffers(g, from, to) : [];
+  /* 呼べる寄騎は、総大将の身分で変わる（陣触れの届き）。
+     侍大将なら自城のみ、家老なら一国、宿老・当主なら天下じゅうから。 */
+  const 選将 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
+  const 総大将 = 総大将を定める(g, 選将);
+  const offers = to ? reinforceOffers(g, from, to, 総大将) : [];
   // 目標を変えると呼べる先も変わる。前の目標の選びを引きずらせない。
   useEffect(() => { setAid({}); }, [to]);
   const aidIds = Object.keys(aid);
@@ -435,7 +439,11 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
           <b style={{ color: U.text }}>自家と臣従の家</b>には下知が通り、必ず出ます。
           <b style={{ color: U.text }}>同盟・従属の家</b>へは頼むだけで、応じるか否かは相手が決めます。
-          <br />呼べる先は<b style={{ color: U.text }}>遠近を問いません</b>。関ヶ原も大坂の陣も全国から兵が集まりました。
+          <br />陣触れの届く先は<b style={{ color: U.text }}>総大将の身分</b>で決まります。
+          侍大将は自らの城のみ、家老は一国のうち、<b style={{ color: U.text }}>宿老と当主は天下じゅう</b>から集められます。
+          {総大将 && <>（いまの総大将 <b style={{ color: U.text }}>{総大将.name}</b>・{rankName(総大将, g)}
+            ── 届く先は<b style={{ color: U.text }}>{陣触れの届き(総大将, g)}</b>）</>}
+          <br />そのうえで、呼べる先は<b style={{ color: U.text }}>遠近を問いません</b>。関ヶ原も大坂の陣も全国から兵が集まりました。
           縛りは<b style={{ color: U.text }}>蔵の兵糧</b>と<b style={{ color: U.text }}>運び賃</b>です。
           軍は月に一人〇.〇九石を食い、行程のぶんに陣中の二月を足して持って出ます。
           運び賃は人足と馬を雇う費えで、一人・一月につき〇.〇二貫を金蔵から払います。
