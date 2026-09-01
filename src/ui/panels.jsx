@@ -5,7 +5,7 @@ import { MAX_CORPS, MAX_CORPS_MEN } from "../battle/field.js";
 import { persuadeResult } from "../core/capture.js";
 import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { foodDays, minGarrison, rankName, troopLimit, 総大将を定める, 大将を先頭に, 陣触れの届き } from "../core/rank.js";
+import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
@@ -108,11 +108,20 @@ export function SortieDialog({ g, from, onClose, onGo }) {
   }, [行き先, to]);
   const garrison = minGarrison(c);
   const retSum = picked.reduce((a, id) => { const x = gens.find((q) => q.id === id); return a + (x ? x.retinue : 0); }, 0);
-  // 身分ごとに率いられる兵に限りがある（GDD 6.4）
-  const cmdLimit = picked.reduce((a, id) => {
-    const x = gens.find((q) => q.id === id);
-    return a + (x ? troopLimit(x, g) : 0);
-  }, 0);
+  /* 連れ出せる兵に身分の縛りは置かない（GDD 6.4）。
+
+     もとは身分ごとに率いられる兵を定めていた（物頭五百・侍大将千六百・
+     家老二千五百・宿老四千）。しかし史実で武将が連れてきた兵は知行高で
+     決まる（軍役）。身分が決めたのは何人を束ねられるか――寄騎を何家
+     付けられるか――であって、自らの手勢の数ではない。
+
+     いま身分は二つのところで効いている。軍を率いられるか（侍大将以上）と、
+     陣触れがどこまで届くか（自城／一国／天下）である。兵の数そのものは
+     知行と城の兵で決まる。
+
+     なお、この上限は実のところほとんど効いていなかった。八百三十七名を
+     測って、直属が切られていたのは一名（二十人）だけである。 */
+  const cmdLimit = Infinity;
   /* 連れ出せる地域家臣団。
 
      もとは「守備の最低数を必ず残す」形であった。ところが小さな城では
@@ -157,17 +166,22 @@ export function SortieDialog({ g, from, onClose, onGo }) {
      侍大将なら自城のみ、家老なら一国、宿老・当主なら天下じゅうから。 */
   const 選将 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
   const 総大将 = 総大将を定める(g, 選将);
+  /* 軍を率いられるのは侍大将以上である（GDD 6.4）。
+     物頭は一手の兵を預かる身であって、軍の将ではない。 */
+  const 率いる者 = !!総大将 && 身分の位(総大将, g) >= 2;
   const offers = to ? reinforceOffers(g, from, to, 総大将) : [];
   // 目標を変えると呼べる先も変わる。前の目標の選びを引きずらせない。
   useEffect(() => { setAid({}); }, [to]);
   const aidIds = Object.keys(aid);
   /* その城から出せる兵の上限。
-     選んだ将が自ら率いる直属を差し引き、城に残さねばならぬ守備も残す。
-     将の器（率いられる上限）も超えられぬ。援軍の画面と同じ理屈で数える。 */
+     選んだ将が自ら率いる直属を差し引いた残りである。
+
+     もとは「将の器（身分ごとの率いられる上限）」でも切っていた。身分で兵数を
+     縛るのをやめたので、この切り方も外す。連れ出せるのは、その城にある兵と、
+     援軍として出せると判じた数までである。 */
   const 出せる上限 = (o, 将ら) => {
     const 直属 = 将ら.reduce((a, x) => a + x.retinue, 0);
-    const 器 = 将ら.reduce((a, x) => a + x.limit, 0);
-    return Math.max(0, Math.min(o.local, o.avail - 直属, Math.max(0, 器 - 直属)));
+    return Math.max(0, Math.min(o.local, o.avail - 直属));
   };
   const 選ばれた将 = (o) => {
     const v = aid[o.castleId];
@@ -373,13 +387,11 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
           総大将は<b style={{ color: U.text }}>軍中でいちばん身分の高い者</b>が務めます。
           侍大将の下に家老は付きません。
-          <br />率いられる兵には身分の限りがあります。
-          物頭は五百人、侍大将は千六百人、家老は二千五百人、宿老は四千人まで。
-          {(() => {
-            const sum = picked.map((id) => gens.find((x) => x.id === id))
-              .filter(Boolean).reduce((a, x) => a + troopLimit(x, g), 0);
-            return <><br />選んだ将で率いられるのは <b style={{ color: U.text }}>{fmt(sum)}人</b>まで。</>;
-          })()}
+          <br />軍を率いられるのは<b style={{ color: U.text }}>侍大将以上</b>です。
+          物頭は一手の兵を預かる身であって、軍の将ではありません。
+          <br />連れる兵の数に身分の限りはありません。手勢は知行なり（軍役）、
+          地の兵は城の蓄えなりです。身分が決めるのは
+          <b style={{ color: U.text }}>どこまで陣触れが届くか</b>です。
         </div>
 
         <div className="sec">地域家臣団の同行</div>
@@ -515,7 +527,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
                       <span className="mn" style={{ fontSize: 14 }}>{x.name}</span>
                       <span style={{ fontSize: 10.5, color: U.dim }}>{x.rank}</span>
                       <span className="num" style={{ color: U.dim, fontSize: 11 }}>
-                        {x.age}歳／統{x.lead} 武{x.valor}／直属{fmt(x.retinue)}／率いられる上限{fmt(x.limit)}
+                        {x.age}歳／統{x.lead} 武{x.valor}／直属{fmt(x.retinue)}
                       </span>
                     </label>
                   ))}
@@ -556,7 +568,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
 
         <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>取りやめ</button>
-          <button className="btn dark" style={{ flex: 2 }} disabled={!to || !path || !picked.length || men < 200 || c.food < food || 賃が足りぬ}
+          <button className="btn dark" style={{ flex: 2 }} disabled={!to || !path || !picked.length || men < 200 || c.food < food || 賃が足りぬ || !率いる者}
             onClick={() => onGo({ from, to,
               // 総大将を先頭に据えて渡す（軍は先頭を大将とする）
               gens: 大将を先頭に(g, picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean)).map((x) => x.id),
@@ -569,6 +581,12 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         </div>
         {c.food < food && <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7 }}>兵糧が足りない。収穫を待つか、開墾を進める必要がある。</div>}
         {賃が足りぬ && <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7 }}>運び賃が足りない。遠国の寄騎を減らすか、金を蓄えねばならぬ。</div>}
+        {picked.length > 0 && !率いる者 && (
+          <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7, lineHeight: 1.7 }}>
+            軍を率いる者がいない。物頭は一手の兵を預かる身であって、軍の将ではない。
+            侍大将以上の者を加えねばならぬ。
+          </div>
+        )}
       </div>
     </div>
   );
@@ -586,9 +604,9 @@ export function SallyDialog({ g, castleId, foeId, onClose, onGo, 城下 }) {
   const [picked, setPicked] = useState(gens.slice(0, 2).map((x) => x.id));
   const 守り = minGarrison(c);
   const retSum = picked.reduce((a, id) => { const x = gens.find((q) => q.id === id); return a + (x ? x.retinue : 0); }, 0);
-  const 限り = picked.reduce((a, id) => { const x = gens.find((q) => q.id === id); return a + (x ? troopLimit(x, g) : 0); }, 0);
   // 守備の最低数は目安である。城を空にして討って出ることもできる。
-  const 出せる = Math.max(0, Math.min(c.local, Math.max(0, 限り - retSum)));
+  // 身分で兵数を縛るのはやめた（上の SortieDialog の説き書きを見よ）。
+  const 出せる = Math.max(0, c.local);
   const [local, setLocal] = useState(0);
   useEffect(() => { setLocal(Math.round(出せる * 0.7)); }, [picked.length]); // eslint-disable-line
   const 出す = Math.min(local, 出せる);
@@ -779,8 +797,8 @@ export function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
   const 出せる = (o) => {
     const v = 城の値(o);
     const ret = o.gens.filter((x) => v.gens.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
-    const 器 = o.gens.filter((x) => v.gens.includes(x.id)).reduce((a, x) => a + x.limit, 0);
-    return Math.max(0, Math.min(o.local, o.avail - ret, Math.max(0, 器 - ret)));
+    // 身分で兵数を縛るのはやめた（出せる上限と同じ理）
+    return Math.max(0, Math.min(o.local, o.avail - ret));
   };
   const 兵数 = (o) => {
     const v = 城の値(o);

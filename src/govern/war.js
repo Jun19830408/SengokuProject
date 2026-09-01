@@ -9,7 +9,7 @@ import { tryAmbush } from "../core/ambush.js";
 import { persuadeResult } from "../core/capture.js";
 import { succeed } from "../core/house.js";
 import { ROAD_SPEED } from "../data/roads.js";
-import { rankName, troopLimit } from "../core/rank.js";
+import { rankName, 軍役の器 } from "../core/rank.js";
 import { isVassal } from "../core/state.js";
 import { rosterArms } from "../core/roster.js";
 import { holdsProvince } from "../core/province.js";
@@ -113,7 +113,8 @@ export function reinforceOffers(g, from, target, 大将) {
       castleId: c.id, name: c.name, faction: c.faction, kind, men, legs, chance, 指図, months,
       // 指図の通る城では、こちらが将と兵を選ぶ。そのための素材も添える。
       gens: 指図 ? gens.map((x) => ({ id: x.id, name: x.name, age: x.age, lead: x.lead, valor: x.valor, wit: x.wit,
-        retinue: x.retinue, rank: rankName(x, g), limit: troopLimit(x, g) })) : [],
+        // 率いられる兵の限りは身分では置かない。手勢は知行なりである（GDD 6.4）
+        retinue: x.retinue, rank: rankName(x, g), limit: Math.max(軍役の器(x), x.retinue) })) : [],
       local: c.local, avail, garrison: minGarrison(c),
       蔵, 一人の兵糧: Math.round(0.09 * (months + 2) * 100) / 100,
       /* 運び賃は城の蔵ではなく主家の財布から出る。ゆえに城ごとには縛らず、

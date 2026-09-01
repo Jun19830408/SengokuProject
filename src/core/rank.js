@@ -122,10 +122,14 @@ export function castellanOf(s, c) {
   if (!gs.length) return null;
   const lord = gs.find((x) => x.lord);
   if (lord) return lord;                       // 当主のいる城は当主が城主である
-  // 任じた者が預かれるかは canHoldCastle で判ずる。ここだけ禄高で測っていたため、
-  // 一門を任じても黙って別の者が城主とみなされていた。
+  /* 任じた者が預かれるかは canHoldCastle で判ずる。ここだけ禄高で測っていたため、
+     一門を任じても黙って別の者が城主とみなされていた。
+
+     城代（c.城代）はそのまま預かる者である。城主の資格には届かぬが、留守を
+     任された以上その者が城を預かっている。ここで拾わねば、任じた本人ではなく
+     禄高の高い別の者が城を預かっていることになり、守備隊の統率も食い違う。 */
   const named = c.lordId && gs.find((x) => x.id === c.lordId);
-  if (named && canHoldCastle(named, s, c)) return named;
+  if (named && (c.城代 || canHoldCastle(named, s, c))) return named;
   return [...gs].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
 }
 
@@ -184,9 +188,28 @@ export const canHoldCastle = (gen, s, c) => {
   if (gen.lord) return true;
   if (s && isGuardian(s, gen)) return true;
   if (s && isMainClan(s, gen)) return true;      // 大名の一門は無条件
+  /* 城主になれるのは侍大将以上である（GDD 6.4）。
+
+     もとは禄高だけで測っていた。城の要りは高くても八千石で頭打ちなので、
+     禄高がたまたま届いた物頭でも城主になれてしまう。城を預かるのは
+     一手の兵を任される身分になってからのことで、物頭は城代にとどまる。 */
+  if (身分の位(gen, s) < 2) return false;
   const need = c ? castleRankNeed(c) : 8000;
   return (s ? stipendOf(s, gen) : fiefOf(gen)) >= need;
 };
+
+/* 城代になれるか（GDD 6.4）。
+
+   城主が置けぬ城を預かる者である。物頭でも務まる。門番と足軽を束ねて
+   留守を守るのが役目であって、その城を知行として与えられたわけではない。
+   ゆえに本領は移らない。
+
+   守備隊の統率はこの者の統率が映る。誰も置かねば四十に落ちる。 */
+export const canBeKeeper = (gen) => !!gen && !gen.captive;
+
+// 城主か城代か。身分で決まる（一門と当主は身分を問わず城主）
+export const 預かりの格 = (gen, s, c) =>
+  (canHoldCastle(gen, s, c) ? "城主" : (canBeKeeper(gen) ? "城代" : null));
 
 // 総大将を務められるのは当主か宿老。
 export const canBeSupreme = (gen, s) => !!gen && (gen.lord || (s ? stipendOf(s, gen) : fiefOf(gen)) >= 20000);
@@ -270,7 +293,13 @@ export const 軍役の器 = (gen) => (gen && gen.retCap != null ? gen.retCap : (
 export const 軍役の増 = (gen, d) =>
   Math.round((d / 10000) * 軍役の率 * (0.7 + ((gen && gen.lead) || 60) / 200));
 
-// 身分ごとの兵の限り
+/* 身分ごとの兵の限り。
+
+   いまはどこからも呼ばれていない。史実で武将が連れてきた兵は知行高で決まる
+   （軍役）。身分が決めたのは何人を束ねられるかであって、自らの手勢の数では
+   ない――そう改めたので、この縛りは外した。
+
+   残してあるのは、古い記録や外の道具が呼んでいるかもしれぬためである。 */
 export function troopLimit(gen, s) {
   if (!gen) return 500;
   if (gen.lord) return needsGuardian(gen) ? 800 : 99999;   // 幼き当主は自ら率いられぬ

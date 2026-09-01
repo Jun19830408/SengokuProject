@@ -12,7 +12,7 @@ import { DIPLO, PLOTS, SPECIAL_OPTIONS, SUBJECT } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { canHoldCastle, castleRankNeed, stipendOf } from "../core/rank.js";
+import { canBeKeeper, canHoldCastle, castleRankNeed, stipendOf } from "../core/rank.js";
 import { 基準値, 売値, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
@@ -139,15 +139,30 @@ export function appoint(prev, castleId, genId) {
        ここを通していなかったため、届かぬ者を任じても castellanOf が黙って
        禄高の高い別の者を城主とみなし、「任じた」と戦国記に残るのに
        実際の城主は違う、という食い違いが起きていた。 */
-    if (!gen || !canHoldCastle(gen, s, c)) {
-      s.msg = gen
-        ? `${gen.name}の禄高では${c.name}を預かれない（${fmt(castleRankNeed(c))}石が要る／いま${fmt(stipendOf(s, gen))}石）。`
-        : "その者はいない。";
+    if (!gen) { s.msg = "その者はいない。"; return s; }
+    /* 城主か、城代か（GDD 6.4）。
+
+       城主になれるのは侍大将以上で、かつその城の身代に見合う禄高を持つ者
+       である。届かぬ者は城代として預かる。門番と足軽を束ねて留守を守るのが
+       役目であって、その城を知行として与えられたわけではない。
+
+         城主　その城を本領とする。以後の禄高もこの城の余禄から数える
+         城代　預かるだけ。本領は移らない
+
+       どちらも守備隊の統率はその者の統率が映る。誰も置かねば四十に落ちる。 */
+    const 城主か = canHoldCastle(gen, s, c);
+    if (!城主か && !canBeKeeper(gen)) {
+      s.msg = `${gen.name}は${c.name}を預かれない。`;
       return s;
     }
-    if (c.lordId && c.lordId !== genId) c.najimi = 25;   // 城主が代われば馴染は低い状態から始まる
+    if (c.lordId && c.lordId !== genId) c.najimi = 25;   // 預かる者が代われば馴染は低い状態から始まる
     c.lordId = genId;
-    s.chronicle.push({ y: s.year, m: s.month, text: `${s.generals.find((x) => x.id === genId).name}を${c.name}の城主に任じた。` });
+    c.城代 = !城主か;
+    if (城主か) gen.本領 = c.id;                          // 城主は根をその城へ移す
+    s.chronicle.push({ y: s.year, m: s.month,
+      text: 城主か
+        ? `${gen.name}を${c.name}の城主に任じた。`
+        : `${gen.name}を${c.name}の城代に任じた（禄高${fmt(stipendOf(s, gen))}石。城主には${fmt(castleRankNeed(c))}石と侍大将以上の身分が要る）。` });
     return s;
 }
 

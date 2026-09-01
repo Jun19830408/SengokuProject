@@ -3,7 +3,7 @@ import { RANSOM_DIV, ransomRank } from "../core/capture.js";
 import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/house.js";
 import { marchMonths } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
-import { 軍役の割増, RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap } from "../core/rank.js";
+import { 軍役の割増, RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位 } from "../core/rank.js";
 import { canSee, relOf, isVassal, 主を探す } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
@@ -120,7 +120,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
       <div className="split" style={land ? { flexDirection: "column", gap: 10 } : undefined}>
         <div>
           <div className="tbl">
-            <span className="k">城主</span>
+            <span className="k">{c.城代 ? "城代" : "城主"}</span>
             <span className="v mn">
               {open ? (lord ? lord.name : "―") : "？"}
               {open && lord && (
@@ -576,7 +576,10 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     );
                   })()}
                   <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.7 }}>
-                    この城を預かれる禄高 <b style={{ color: U.text }}>{fmt(castleRankNeed(c))}石</b>以上（城主の資格）<br />
+                    城主になれるのは<b style={{ color: U.text }}>侍大将以上</b>で、禄高
+                    <b style={{ color: U.text }}>{fmt(castleRankNeed(c))}石</b>以上の者です
+                    （一門は身分を問いません）。届かぬ者は<b style={{ color: U.text }}>城代</b>として
+                    留守を預かります。城主はその城を本領としますが、城代は預かるだけです。<br />
                     この城の石高 <b style={{ color: U.text }}>{fmt(c.koku)}石</b>（配れる知行の限り）／
                     家臣に配った知行 {fmt(fiefBurden(g, c.id))}石<br />
                     この城の余禄 <b style={{ color: U.text }}>{fmt(extraIncome(c))}石</b>
@@ -604,18 +607,27 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       <div key={x.id} style={{ borderBottom: `1px solid ${U.line2}`, padding: "6px 0" }}>
                         <div style={{ display: "flex", gap: 6 }}>
                           {(() => {
-                            // 城を預かれる禄高に届いているか。届かねば押せぬようにし、
-                            // どれだけ足りぬかを添える（押せたのに任じられぬ、を無くす）
-                            const 預かれる = canHoldCastle(x, g, c);
+                            /* 城主か、城代か（GDD 6.4）。
+
+                               城主になれるのは侍大将以上で、かつその城の身代に見合う
+                               禄高を持つ者である。届かぬ者は城代として預かる。
+                               門番と足軽を束ねて留守を守るのが役目であって、その城を
+                               知行として与えられたわけではない（本領は移らない）。
+
+                               もとは届かぬ者の釦を押せなくしていた。城主になれぬ者にも
+                               留守を預ける道はあるのだから、押せぬようにする筋はない。 */
+                            const 城主か = canHoldCastle(x, g, c);
                             const 要る = castleRankNeed(c), いま = stipendOf(g, x);
+                            const 身分足らず = 身分の位(x, g) < 2 && !x.lord;
                             return (
                               <button className={`btn sm ${lord && lord.id === x.id ? "on" : ""}`}
-                                style={{ flex: 1, textAlign: "left" }} disabled={!預かれる}
-                                title={預かれる ? "" : `${c.name}を預かるには禄高${fmt(要る)}石が要る（いま${fmt(いま)}石）`}
+                                style={{ flex: 1, textAlign: "left" }}
+                                title={城主か ? "" : `城主には侍大将以上の身分と禄高${fmt(要る)}石が要る（いま${rankName(x, g)}・${fmt(いま)}石）。城代としてなら預けられる`}
                                 onClick={() => onAppoint(c.id, x.id)}>
-                                {x.name} を城主に
-                                {!預かれる && <span style={{ fontSize: 10.5, color: "#B0483C", marginLeft: 6 }}>
-                                  禄高あと{fmt(Math.max(0, 要る - いま))}石
+                                {x.name} を{城主か ? "城主" : "城代"}に
+                                {!城主か && <span style={{ fontSize: 10.5, color: "#8A6A34", marginLeft: 6 }}>
+                                  {身分足らず ? `${rankName(x, g)}ゆえ城主にはなれぬ`
+                                    : `城主には禄高あと${fmt(Math.max(0, 要る - いま))}石`}
                                 </span>}
                               </button>
                             );

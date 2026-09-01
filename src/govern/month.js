@@ -7,7 +7,7 @@ import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritH
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の重み } from "../core/paths.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
-import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , troopLimit, 軍役の器 } from "../core/rank.js";
+import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器 } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
@@ -117,7 +117,8 @@ export function advanceMonth(prev, g) {
            器に満ちている者、身分の限りに達している者は増えない。 */
         for (const q of s.generals) {
           if (q.faction !== fid || q.captive) continue;
-          const 器 = Math.min(軍役の器(q), troopLimit(q, s));
+          // 手勢の器は知行なり（軍役）。身分では縛らない（GDD 6.4）
+          const 器 = 軍役の器(q);
           if (器 <= q.retinue) continue;
           const 増 = Math.max(4, Math.round(q.retinue * 0.03));
           q.retinue = Math.min(器, q.retinue + 増);

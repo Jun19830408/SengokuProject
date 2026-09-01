@@ -18,8 +18,10 @@ const entry = path.join(ROOT, 'build', 'fief-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState, migrateSave } from "../src/core/state.js";\n'
-+ 'export { fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, castellanOf, rankName, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
-+ 'export { grantFief, appoint } from "../src/govern/commands.js";\n');
++ 'export { fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, canBeKeeper, 預かりの格, castellanOf, rankName, 身分の位, 軍役の器, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
++ 'export { grantFief, appoint } from "../src/govern/commands.js";\n'
++ 'export { isMainClan } from "../src/core/house.js";\n'
++ 'export { advanceMonth } from "../src/govern/month.js";\n');
 const out = path.join(ROOT, 'build', 'fief.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
   loader: { '.jsx': 'jsx' }, logLevel: 'error' });
@@ -100,13 +102,20 @@ const 確 = (名, 可, 添 = '') => {
   const 足りぬ = ここ.find((x) => !A.canHoldCastle(x, s, c));
   console.log(`  （${c.name}を預かるには禄高 ${要る}石が要る）`);
 
+  /* もとは、禄高の足りぬ者を任じようとすれば拒んでいた。
+
+     いまは拒まず、城代として預ける。城主になれぬ者にも留守を任せる道は
+     あるのだから、押せぬようにする筋はない。仕様が変わったので、測り直す。 */
   if (足りぬ) {
     const t = A.appoint(s, c.id, 足りぬ.id);
     const c2 = t.castles.find((x) => x.id === c.id);
-    確('禄高の足りぬ者は城主に任じられない', c2.lordId !== 足りぬ.id,
-      `${足りぬ.name}（禄高${A.stipendOf(s, 足りぬ)}石）`);
-    確('なぜ任じられぬかを報せる', /預かれない/.test(t.msg || ''), t.msg || '（報せなし）');
-    確('任じられなかったのに戦国記へ書かない',
+    確('禄高の足りぬ者は城主にはならない', !(c2.lordId === 足りぬ.id && !c2.城代),
+      `${足りぬ.name}（禄高${A.stipendOf(s, 足りぬ)}石／要り${要る}石）`);
+    確('その者は城代として預かる', c2.lordId === 足りぬ.id && c2.城代 === true);
+    確('城代に任じた旨が戦国記に残る',
+      (t.chronicle || []).some((x) => x.text.includes(`${足りぬ.name}を${c.name}の城代に任じた`)),
+      ((t.chronicle || []).filter((x) => x.text.includes(足りぬ.name)).slice(-1)[0] || {}).text || 'なし');
+    確('城主に任じたとは書かない',
       !(t.chronicle || []).some((x) => x.text.includes(`${足りぬ.name}を${c.name}の城主に任じた`)));
   } else console.log('  （この城には禄高の足りぬ者がいないので、その確かめは省く）');
 
@@ -147,8 +156,10 @@ const 確 = (名, 可, 添 = '') => {
     && !A.canHoldCastle(x, s, c));
   if (他) {
     const u = A.appoint(s, c.id, 他.id);
-    確('一門でない者は、なお禄高が要る', u.castles.find((x) => x.id === c.id).lordId !== 他.id,
-      `${他.name}（禄高${A.stipendOf(s, 他)}石）`);
+    const uc = u.castles.find((x) => x.id === c.id);
+    確('一門でない者は、なお城主には禄高が要る（城代にはなれる）',
+      uc.lordId === 他.id && uc.城代 === true,
+      `${他.name}（禄高${A.stipendOf(s, 他)}石）→ 城代`);
   } else console.log('  （この城には禄高の足りぬ一門外の将がいないので、その確かめは省く）');
 }
 
@@ -250,6 +261,117 @@ const 確 = (名, 可, 添 = '') => {
       `${主.name}（禄高${A.stipendOf(s, 主)}石）`);
   }
   確('誰も選ばねば総大将は立たない', A.総大将を定める(s, []) === null);
+}
+
+/* ------------------------------------- 五、城主と城代（GDD 6.4）
+
+   もとは禄高だけで城主の可否を測っていた。城の要りは高くても八千石で
+   頭打ちなので、禄高がたまたま届いた物頭でも城主になれてしまう。
+
+   城を預かるのは一手の兵を任される身分になってからのことである。城主に
+   なれるのは侍大将以上で、かつその城の身代に見合う禄高を持つ者。届かぬ者は
+   城代として留守を預かる。門番と足軽を束ねるのが役目であって、その城を
+   知行として与えられたわけではない（本領は移らない）。
+
+   一門と当主は身分を問わず城主である。織田信長が十三で那古野を預かったのは
+   二千四百石だからではなく、織田の子だからである。 */
+{
+  const s = A.initState('oda');
+  const 我 = s.generals.filter((g) => !g.lord && !g.captive);
+  const 城ら = s.castles.filter((c) => c.faction === 'oda');
+  /* 当主のいる城は、誰を任じても当主が預かる（castellanOf）。
+     城主と城代の別を測るには、当主のいない城を選ぶ。 */
+  const 城 = 城ら.find((c) => !s.generals.some((g) => g.lord && g.faction === 'oda' && g.at === c.id))
+    || 城ら[0];
+
+  無し('物頭は城主になれない（一門を除く）',
+    我.filter((g) => A.rankName(g, s) === '物頭' && !g.架空 && A.canHoldCastle(g, s, 城)
+      && !A.isMainClan(s, g))
+      .map((g) => `${g.name}（禄高${A.stipendOf(s, g)}石）`),
+    '禄高が届いても、身分が足らねば城主にはなれぬ');
+
+  const 一門物頭 = 我.find((g) => A.rankName(g, s) === '物頭' && A.isMainClan(s, g));
+  if (一門物頭) {
+    確('一門は身分を問わず城主になれる', A.canHoldCastle(一門物頭, s, 城),
+      `${一門物頭.name}（${一門物頭.age}歳・${A.rankName(一門物頭, s)}・禄高${A.stipendOf(s, 一門物頭)}石）`);
+  }
+
+  const 侍 = 我.find((g) => g.at === 城.id && A.rankName(g, s) === '侍大将' && !A.canHoldCastle(g, s, 城));
+  if (侍) {
+    確('禄高の届かぬ侍大将は城代どまり', A.預かりの格(侍, s, 城) === '城代',
+      `${侍.name}（禄高${A.stipendOf(s, 侍)}石／この城の要り${A.castleRankNeed(城)}石）`);
+    // 城代として任じられること
+    const u = A.appoint(s, 城.id, 侍.id);
+    const c2 = u.castles.find((x) => x.id === 城.id);
+    確('城代として任じられる', c2.lordId === 侍.id && c2.城代 === true,
+      `${侍.name}を${城.name}の城代に`);
+    確('城代の本領は移らない',
+      (u.generals.find((x) => x.id === 侍.id) || {}).本領 === 侍.本領,
+      `本領 ${(u.castles.find((x) => x.id === (u.generals.find((y) => y.id === 侍.id) || {}).本領) || {}).name}`);
+    確('城代でも守備隊の統率は映る（その者が城を預かる）',
+      A.castellanOf(u, c2) && A.castellanOf(u, c2).id === 侍.id,
+      `${城.name}を預かるのは ${(A.castellanOf(u, c2) || {}).name}`);
+  }
+
+  const 家老 = 我.find((g) => g.at === 城.id && A.rankName(g, s) === '家老' && A.canHoldCastle(g, s, 城));
+  if (家老) {
+    const u = A.appoint(s, 城.id, 家老.id);
+    const c2 = u.castles.find((x) => x.id === 城.id);
+    確('家老は城主になれる', c2.lordId === 家老.id && !c2.城代, 家老.name);
+    確('城主は根をその城へ移す',
+      (u.generals.find((x) => x.id === 家老.id) || {}).本領 === 城.id,
+      `${家老.name}の本領 → ${城.name}`);
+  }
+
+  // 盤ぜんたいの散らばり
+  const 数 = {};
+  for (const g of 我) {
+    const r = A.rankName(g, s);
+    const 自城 = s.castles.filter((c) => c.faction === g.faction);
+    const 主か = 自城.some((c) => A.canHoldCastle(g, s, c));
+    数[r] = 数[r] || [0, 0]; 数[r][主か ? 0 : 1]++;
+  }
+  console.log('  （身分ごと 城主になれる／城代どまり： '
+    + ['宿老', '家老', '侍大将', '物頭'].filter((r) => 数[r])
+      .map((r) => `${r} ${数[r][0]}／${数[r][1]}`).join('・') + '）');
+}
+
+/* ------------------------------------- 六、兵の数は身分で縛らない（GDD 6.4）
+
+   もとは身分ごとに率いられる兵を定めていた（物頭五百・侍大将千六百・
+   家老二千五百・宿老四千）。しかし史実で武将が連れてきた兵は知行高で決まる
+   （軍役）。身分が決めたのは何人を束ねられるか――寄騎を何家付けられるか――
+   であって、自らの手勢の数ではない。
+
+   実のところ、この上限はほとんど効いてもいなかった。八百三十七名を測って、
+   直属が切られていたのは一名（二十人）だけである。
+
+   いま身分が効くのは二つ。軍を率いられるか（侍大将以上）と、陣触れがどこまで
+   届くか（自城／一国／天下）である。 */
+{
+  const s = A.initState('oda');
+  const 我 = s.generals.filter((g) => !g.lord && !g.captive);
+  無し('手勢の器は知行なりで、身分では切られない',
+    我.filter((g) => A.軍役の器(g) > 0 && A.軍役の器(g) < g.retinue)
+      .map((g) => `${g.name}（器${A.軍役の器(g)}／手勢${g.retinue}）`),
+    `${我.length}名を検めた`);
+
+  // 月を送っても、手勢は軍役の器まで伸びる（身分で頭打ちにならない）
+  let u = A.initState('oda');
+  for (let i = 0; i < 24; i++) u = A.advanceMonth(u);
+  const 伸 = u.generals.filter((g) => g.faction === 'oda' && !g.captive);
+  無し('月を送っても、手勢が身分で頭打ちにならない',
+    伸.filter((g) => g.retinue > A.軍役の器(g) + 1)
+      .map((g) => `${g.name}（手勢${g.retinue}／器${A.軍役の器(g)}）`),
+    伸.slice(0, 3).map((g) => `${g.name} ${A.rankName(g, u)} 手勢${g.retinue}＝器${A.軍役の器(g)}`).join('／'));
+
+  // 軍を率いられるのは侍大将以上
+  const 物 = 我.find((g) => A.rankName(g, s) === '物頭');
+  const 侍 = 我.find((g) => A.rankName(g, s) === '侍大将');
+  if (物) 確('物頭は軍を率いられない', A.身分の位(物, s) < 2,
+    `${物.name}（${A.rankName(物, s)}・位${A.身分の位(物, s)}）`);
+  if (侍) 確('侍大将は軍を率いられる', A.身分の位(侍, s) >= 2,
+    `${侍.name}（位${A.身分の位(侍, s)}）`);
 }
 
 console.log('');
