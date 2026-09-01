@@ -1667,6 +1667,91 @@ export function PromotionDialog({ promo, onDone }) {
 }
 
 
+/* 落とした城を誰に委ねるか（GDD 6.4）。
+
+   在陣は城を得たことではない。城主を据え、所属の将を置いてはじめて、その城で
+   内政ができる。置いた将は軍を離れてその城を本領とし、連れていた直属もともに
+   移るので、軍はそのぶん痩せる。取るか進むかの判断がここに出る。
+
+   空けたままにもできる。軍は痩せぬが、将のいない城は守備隊の統率が四十に
+   落ちるので、旧主に奪い返されることがある。 */
+export function 城を委ねる問い({ g, 待ち, onDone, onSkip }) {
+  const c = g.castles.find((x) => x.id === 待ち.castleId);
+  const a = (g.armies || []).find((x) => x.id === 待ち.armyId);
+  const 将ら = a ? (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : [];
+  const [城主, set城主] = useState(null);
+  const [所属, set所属] = useState([]);
+  const [兵, set兵] = useState(a ? Math.round((a.local || 0) * 0.4) : 0);
+  if (!c || !a) return null;
+  const 置く = [...new Set([...所属, ...(城主 ? [城主] : [])])];
+  const 残る将 = 将ら.filter((x) => !置く.includes(x.id));
+  const 移る直属 = 将ら.filter((x) => 置く.includes(x.id)).reduce((t, x) => t + x.retinue, 0);
+  const 守り = minGarrison(c);
+  const 城の兵 = c.local + 兵 + 移る直属;
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card" style={{ maxWidth: 520 }}>
+        <div className="mn" style={{ fontSize: 21, marginBottom: 6 }}>{c.name}を誰に委ねるか</div>
+        <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 10 }}>
+          軍はこの城に<b style={{ color: U.text }}>在陣</b>しています。在陣は城を与えられたことではないので、
+          このままでは内政ができません。城主を据え、所属の将を置けば、その城は家のものとして動きだします。
+          <br />置いた将は軍を離れ、<b style={{ color: U.text }}>この城を本領</b>とします（連れていた直属もともに移ります）。
+          <br />空けたままにもできますが、将のいない城は守りが薄く、旧主に奪い返されることがあります。
+        </div>
+
+        <div className="sec">城主に据える</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
+          <button className={`btn sm ${城主 === null ? "on" : ""}`} onClick={() => set城主(null)}>据えない</button>
+          {将ら.map((x) => (
+            <button key={x.id} className={`btn sm ${城主 === x.id ? "on" : ""}`}
+              onClick={() => set城主(x.id)}>
+              {x.name}<span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>{rankName(x, g)}</span>
+            </button>
+          ))}
+        </div>
+
+        {将ら.length > 1 && (<>
+          <div className="sec">ほかにこの城へ残す将</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
+            {将ら.filter((x) => x.id !== 城主).map((x) => (
+              <button key={x.id} className={`btn sm ${所属.includes(x.id) ? "on" : ""}`}
+                onClick={() => set所属((p) => (p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id]))}>
+                {x.name}<span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>直属{fmt(x.retinue)}</span>
+              </button>
+            ))}
+          </div>
+        </>)}
+
+        <div className="sec">城へ残す地の兵</div>
+        <input type="range" min={0} max={Math.max(0, a.local || 0)} value={兵} style={{ width: "100%" }}
+          onChange={(e) => set兵(Number(e.target.value))} />
+        <div className="row"><span>残す兵</span>
+          <span className="v">{fmt(兵)} 人／軍の地の兵 {fmt(a.local || 0)} 人</span></div>
+
+        <div className="row"><span>この城の兵</span>
+          <span className="v" style={{ color: 城の兵 < 守り ? "#B0483C" : undefined }}>
+            {fmt(城の兵)} 人（守るに要る目安 {fmt(守り)} 人）</span></div>
+        <div className="row"><span>先へ進める軍</span>
+          <span className="v">{残る将.length}名／兵 {fmt(Math.max(0, (a.local || 0) - 兵)
+            + 残る将.reduce((t, x) => t + x.retinue, 0))} 人</span></div>
+        {!城主 && (
+          <div style={{ fontSize: 11.5, color: "#B0483C", marginTop: 6, lineHeight: 1.7 }}>
+            城主を据えねば、この城では内政ができません（守備隊の統率も四十のままです）。
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 9, marginTop: 14 }}>
+          <button className="btn" style={{ flex: 1 }} onClick={onSkip}>空けたまま進む</button>
+          <button className="btn dark" style={{ flex: 2 }}
+            onClick={() => onDone({ 城主, 所属, 兵 })}>
+            {城主 ? `${(将ら.find((x) => x.id === 城主) || {}).name}に委ねる` : "この差配で決める"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* 陣形の見取り図つき選択。50人組の実配置がそのまま図になる（GDD 8.4） */
 export function FormationDiagram({ form, color, size }) {
   const slots = layoutSlots(form, 12);

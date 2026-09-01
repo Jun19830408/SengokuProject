@@ -27,12 +27,12 @@ import { GOKINAI } from "../data/provinces.js";
 import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "../govern/ai.js";
 import { checkUnified } from "../govern/unify.js";
-import { sackCastle } from "../govern/war.js";
+import { sackCastle, 城を委ねる } from "../govern/war.js";
 import { BattleScreen } from "./BattleScreen.jsx";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
-import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog } from "./panels.jsx";
+import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い } from "./panels.jsx";
 import { SallyDialog } from "./panels.jsx";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
@@ -2651,6 +2651,24 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               </div>
             </div>
           );
+        })()}
+        {/* 落とした城を誰に委ねるか（GDD 6.4）。
+            落城のたびに一つずつ問う。空けたまま進むこともできる。 */}
+        {(g.委ねる待ち || []).length > 0 && (() => {
+          const 待ち = g.委ねる待ち[0];
+          const 済 = (差配) => setG((p) => {
+            const s = structuredClone(p);
+            if (差配) 城を委ねる(s, 待ち.castleId, 待ち.armyId, 差配);
+            s.委ねる待ち = (s.委ねる待ち || []).filter((x) => x.castleId !== 待ち.castleId);
+            const c = s.castles.find((x) => x.id === 待ち.castleId);
+            const 主 = 差配 && 差配.城主 && s.generals.find((x) => x.id === 差配.城主);
+            if (c) {
+              s.chronicle.push({ y: s.year, m: s.month,
+                text: 主 ? `${c.name}を${主.name}に委ねた。` : `${c.name}には城主を置かず、軍は在陣のまま進む。` });
+            }
+            return s;
+          });
+          return <城を委ねる問い g={g} 待ち={待ち} onDone={済} onSkip={() => 済(null)} />;
         })()}
         {g.promo && <PromotionDialog promo={g.promo} onDone={(name) => setG((p) => {
           const s = structuredClone(p);

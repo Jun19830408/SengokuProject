@@ -24876,6 +24876,57 @@ function PromotionDialog({ promo, onDone }) {
   const [pick, setPick] = useState2(promo.candidates[0]);
   return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card", style: { maxWidth: 460 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 8 } }, "\u6B63\u5F0F\u6B66\u5C06\u3078\u306E\u6607\u9032"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 13, lineHeight: 1.8, marginBottom: 14 } }, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 17 } }, promo.oldName), " \u304C\u6226\u529F\u3092\u6319\u3052\u305F\u3002", /* @__PURE__ */ React2.createElement("br", null), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, promo.feat), /* @__PURE__ */ React2.createElement("br", null), promo.lordName, "\u3088\u308A\u504F\u8AF1\u300C", /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 19 } }, promo.henki), "\u300D\u306E\u4E00\u5B57\u3092\u4E0E\u3048\u3001\u8AF1\u3092\u5B9A\u3081\u308B\u3002"), /* @__PURE__ */ React2.createElement("div", { className: "g2" }, promo.candidates.map((n) => /* @__PURE__ */ React2.createElement("button", { key: n, className: `btn mn ${pick === n ? "on" : ""}`, style: { fontSize: 17 }, onClick: () => setPick(n) }, n))), /* @__PURE__ */ React2.createElement("button", { className: "btn dark", style: { width: "100%", marginTop: 14 }, onClick: () => onDone(pick) }, pick, " \u3068\u540D\u4E57\u3089\u305B\u308B")));
 }
+function \u57CE\u3092\u59D4\u306D\u308B\u554F\u3044({ g, \u5F85\u3061, onDone, onSkip }) {
+  const c = g.castles.find((x) => x.id === \u5F85\u3061.castleId);
+  const a = (g.armies || []).find((x) => x.id === \u5F85\u3061.armyId);
+  const \u5C06\u3089 = a ? (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : [];
+  const [\u57CE\u4E3B, set\u57CE\u4E3B] = useState2(null);
+  const [\u6240\u5C5E, set\u6240\u5C5E] = useState2([]);
+  const [\u5175, set\u5175] = useState2(a ? Math.round((a.local || 0) * 0.4) : 0);
+  if (!c || !a) return null;
+  const \u7F6E\u304F = [.../* @__PURE__ */ new Set([...\u6240\u5C5E, ...\u57CE\u4E3B ? [\u57CE\u4E3B] : []])];
+  const \u6B8B\u308B\u5C06 = \u5C06\u3089.filter((x) => !\u7F6E\u304F.includes(x.id));
+  const \u79FB\u308B\u76F4\u5C5E = \u5C06\u3089.filter((x) => \u7F6E\u304F.includes(x.id)).reduce((t, x) => t + x.retinue, 0);
+  const \u5B88\u308A = minGarrison(c);
+  const \u57CE\u306E\u5175 = c.local + \u5175 + \u79FB\u308B\u76F4\u5C5E;
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card", style: { maxWidth: 520 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 6 } }, c.name, "\u3092\u8AB0\u306B\u59D4\u306D\u308B\u304B"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 10 } }, "\u8ECD\u306F\u3053\u306E\u57CE\u306B", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u5728\u9663"), "\u3057\u3066\u3044\u307E\u3059\u3002\u5728\u9663\u306F\u57CE\u3092\u4E0E\u3048\u3089\u308C\u305F\u3053\u3068\u3067\u306F\u306A\u3044\u306E\u3067\u3001 \u3053\u306E\u307E\u307E\u3067\u306F\u5185\u653F\u304C\u3067\u304D\u307E\u305B\u3093\u3002\u57CE\u4E3B\u3092\u636E\u3048\u3001\u6240\u5C5E\u306E\u5C06\u3092\u7F6E\u3051\u3070\u3001\u305D\u306E\u57CE\u306F\u5BB6\u306E\u3082\u306E\u3068\u3057\u3066\u52D5\u304D\u3060\u3057\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u7F6E\u3044\u305F\u5C06\u306F\u8ECD\u3092\u96E2\u308C\u3001", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u3053\u306E\u57CE\u3092\u672C\u9818"), "\u3068\u3057\u307E\u3059\uFF08\u9023\u308C\u3066\u3044\u305F\u76F4\u5C5E\u3082\u3068\u3082\u306B\u79FB\u308A\u307E\u3059\uFF09\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u7A7A\u3051\u305F\u307E\u307E\u306B\u3082\u3067\u304D\u307E\u3059\u304C\u3001\u5C06\u306E\u3044\u306A\u3044\u57CE\u306F\u5B88\u308A\u304C\u8584\u304F\u3001\u65E7\u4E3B\u306B\u596A\u3044\u8FD4\u3055\u308C\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u57CE\u4E3B\u306B\u636E\u3048\u308B"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 } }, /* @__PURE__ */ React2.createElement("button", { className: `btn sm ${\u57CE\u4E3B === null ? "on" : ""}`, onClick: () => set\u57CE\u4E3B(null) }, "\u636E\u3048\u306A\u3044"), \u5C06\u3089.map((x) => /* @__PURE__ */ React2.createElement(
+    "button",
+    {
+      key: x.id,
+      className: `btn sm ${\u57CE\u4E3B === x.id ? "on" : ""}`,
+      onClick: () => set\u57CE\u4E3B(x.id)
+    },
+    x.name,
+    /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 10, marginLeft: 4 } }, rankName(x, g))
+  ))), \u5C06\u3089.length > 1 && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u307B\u304B\u306B\u3053\u306E\u57CE\u3078\u6B8B\u3059\u5C06"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 } }, \u5C06\u3089.filter((x) => x.id !== \u57CE\u4E3B).map((x) => /* @__PURE__ */ React2.createElement(
+    "button",
+    {
+      key: x.id,
+      className: `btn sm ${\u6240\u5C5E.includes(x.id) ? "on" : ""}`,
+      onClick: () => set\u6240\u5C5E((p) => p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id])
+    },
+    x.name,
+    /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 10, marginLeft: 4 } }, "\u76F4\u5C5E", fmt(x.retinue))
+  )))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u57CE\u3078\u6B8B\u3059\u5730\u306E\u5175"), /* @__PURE__ */ React2.createElement(
+    "input",
+    {
+      type: "range",
+      min: 0,
+      max: Math.max(0, a.local || 0),
+      value: \u5175,
+      style: { width: "100%" },
+      onChange: (e) => set\u5175(Number(e.target.value))
+    }
+  ), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u6B8B\u3059\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u5175), " \u4EBA\uFF0F\u8ECD\u306E\u5730\u306E\u5175 ", fmt(a.local || 0), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u3053\u306E\u57CE\u306E\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v", style: { color: \u57CE\u306E\u5175 < \u5B88\u308A ? "#B0483C" : void 0 } }, fmt(\u57CE\u306E\u5175), " \u4EBA\uFF08\u5B88\u308B\u306B\u8981\u308B\u76EE\u5B89 ", fmt(\u5B88\u308A), " \u4EBA\uFF09")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5148\u3078\u9032\u3081\u308B\u8ECD"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, \u6B8B\u308B\u5C06.length, "\u540D\uFF0F\u5175 ", fmt(Math.max(0, (a.local || 0) - \u5175) + \u6B8B\u308B\u5C06.reduce((t, x) => t + x.retinue, 0)), " \u4EBA")), !\u57CE\u4E3B && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: "#B0483C", marginTop: 6, lineHeight: 1.7 } }, "\u57CE\u4E3B\u3092\u636E\u3048\u306D\u3070\u3001\u3053\u306E\u57CE\u3067\u306F\u5185\u653F\u304C\u3067\u304D\u307E\u305B\u3093\uFF08\u5B88\u5099\u968A\u306E\u7D71\u7387\u3082\u56DB\u5341\u306E\u307E\u307E\u3067\u3059\uFF09\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 14 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onSkip }, "\u7A7A\u3051\u305F\u307E\u307E\u9032\u3080"), /* @__PURE__ */ React2.createElement(
+    "button",
+    {
+      className: "btn dark",
+      style: { flex: 2 },
+      onClick: () => onDone({ \u57CE\u4E3B, \u6240\u5C5E, \u5175 })
+    },
+    \u57CE\u4E3B ? `${(\u5C06\u3089.find((x) => x.id === \u57CE\u4E3B) || {}).name}\u306B\u59D4\u306D\u308B` : "\u3053\u306E\u5DEE\u914D\u3067\u6C7A\u3081\u308B"
+  ))));
+}
 function FormationDiagram({ form, color, size }) {
   const slots = layoutSlots(form, 12);
   const xs = slots.map((s2) => s2.x), ys = slots.map((s2) => s2.y);
@@ -30382,6 +30433,25 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         },
         /* @__PURE__ */ React8.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline" } }, /* @__PURE__ */ React8.createElement("span", { className: "mn", style: { fontSize: 15 } }, gen.name, /* @__PURE__ */ React8.createElement("span", { style: { fontSize: 11, color: blood ? "#3E7A3A" : "#B0483C", marginLeft: 8 } }, blood ? "\u8840\u7B4B" : "\u4ED6\u5BB6\u306E\u51FA", gen.age < 16 ? "\u30FB\u5E7C\u5E74" : "")), /* @__PURE__ */ React8.createElement("span", { className: "num", style: { fontSize: 11.5, color: U.dim } }, gen.age, "\u6B73\uFF0F\u7D71", gen.lead, "\u30FB\u6B66", gen.valor, "\u30FB\u77E5", gen.wit, "\u30FB\u653F", gen.gov))
       ))));
+    })(),
+    (g.\u59D4\u306D\u308B\u5F85\u3061 || []).length > 0 && (() => {
+      const \u5F85\u3061 = g.\u59D4\u306D\u308B\u5F85\u3061[0];
+      const \u6E08 = (\u5DEE\u914D) => setG((p) => {
+        const s2 = structuredClone(p);
+        if (\u5DEE\u914D) \u57CE\u3092\u59D4\u306D\u308B(s2, \u5F85\u3061.castleId, \u5F85\u3061.armyId, \u5DEE\u914D);
+        s2.\u59D4\u306D\u308B\u5F85\u3061 = (s2.\u59D4\u306D\u308B\u5F85\u3061 || []).filter((x) => x.castleId !== \u5F85\u3061.castleId);
+        const c = s2.castles.find((x) => x.id === \u5F85\u3061.castleId);
+        const \u4E3B = \u5DEE\u914D && \u5DEE\u914D.\u57CE\u4E3B && s2.generals.find((x) => x.id === \u5DEE\u914D.\u57CE\u4E3B);
+        if (c) {
+          s2.chronicle.push({
+            y: s2.year,
+            m: s2.month,
+            text: \u4E3B ? `${c.name}\u3092${\u4E3B.name}\u306B\u59D4\u306D\u305F\u3002` : `${c.name}\u306B\u306F\u57CE\u4E3B\u3092\u7F6E\u304B\u305A\u3001\u8ECD\u306F\u5728\u9663\u306E\u307E\u307E\u9032\u3080\u3002`
+          });
+        }
+        return s2;
+      });
+      return /* @__PURE__ */ React8.createElement(\u57CE\u3092\u59D4\u306D\u308B\u554F\u3044, { g, \u5F85\u3061, onDone: \u6E08, onSkip: () => \u6E08(null) });
     })(),
     g.promo && /* @__PURE__ */ React8.createElement(PromotionDialog, { promo: g.promo, onDone: (name) => setG((p) => {
       const s2 = structuredClone(p);
