@@ -197,7 +197,7 @@ const fmtN = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     let 行った = null;
     await act(async () => {
       r3.render(React.createElement(攻め寄せる問い, {
-        g: 盤, armyId: 陣[0].id, onClose: () => {}, onGo: (a, t) => { 行った = [a, t]; },
+        g: 盤, armyId: 陣[0].id, onClose: () => {}, onGo: (a, t, y) => { 行った = [a, t, y]; },
       }));
     });
     await flush();
@@ -208,13 +208,33 @@ const fmtN = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     確('行き先が並ぶ', 札.length > 0, `${札.length}件`);
     if (札.length) {
       await act(async () => { 札[0].click(); }); await flush();
-      const 進 = [...窓.querySelectorAll('button')].find((b) => /へ攻め寄せる$/.test(b.textContent.trim()));
+      /* 在陣から次を攻めるときも、他の城から兵を催せること（GDD 7.3）。
+         届く先は、この軍の総大将の身分による。 */
+      const 窓文2 = 窓.textContent.replace(/\s+/g, ' ');
+      確('寄騎を催す欄が出る', /寄騎を催す/.test(窓文2),
+        (窓文2.match(/寄騎を催す.{0,44}/) || [''])[0]);
+      確('陣触れの届く先が示される', /陣触れの届く先は/.test(窓文2));
+      const 寄騎札 = [...窓.querySelectorAll('input[type=checkbox]')];
+      確('催せる城が並ぶ（または催せる城が無いと断る）',
+        寄騎札.length > 0 || /催せる城がありません/.test(窓文2),
+        寄騎札.length ? `${寄騎札.length}城` : '催せる城なし');
+      if (寄騎札.length) {
+        await act(async () => { 寄騎札[0].click(); }); await flush();
+        確('選べば釦に寄騎の人数が出る',
+          [...窓.querySelectorAll('button')].some((b) => /寄騎[\d,]+人/.test(b.textContent)),
+          ([...窓.querySelectorAll('button')].map((b) => b.textContent.trim())
+            .find((t) => /寄騎/.test(t))) || 'なし');
+      }
+
+      const 進 = [...窓.querySelectorAll('button')].find((b) => /へ攻め寄せる/.test(b.textContent.trim()));
       確('行き先を選べば進める', !!進 && !進.disabled, 進 ? 進.textContent.trim() : 'なし');
       if (進) {
         await act(async () => { 進.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
         await flush();
         確('進めば、軍と行き先が渡される', !!行った && 行った[0] === 陣[0].id && !!行った[1],
-          JSON.stringify(行った));
+          `軍 ${行った && 行った[0]}／行き先 ${行った && 行った[1]}`);
+        確('選んだ寄騎も一緒に渡される', !行った || Array.isArray(行った[2]),
+          `寄騎 ${行った && 行った[2] ? 行った[2].length : 0}城`);
       }
     }
   }

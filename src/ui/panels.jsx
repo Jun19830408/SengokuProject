@@ -1727,11 +1727,21 @@ export function 攻め寄せる問い({ g, armyId, onClose, onGo }) {
       .sort((p, q) => p.月 - q.月);
   }, [g, 陣 && 陣.id]);
   const [to, setTo] = useState(null);
+  const [aid, setAid] = useState({});
+  const 将ら = a ? (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : [];
+  /* 在陣から次を攻めるときも、他の城から兵を催せる（GDD 7.3）。
+     陣触れの届く先は、この軍の総大将の身分による。 */
+  const 総大将 = 総大将を定める(g, 将ら);
+  const offers = (a && 陣 && to) ? reinforceOffers(g, 陣.id, to, 総大将) : [];
+  useEffect(() => { setAid({}); }, [to]);
   if (!a || !陣) return null;
   const 先 = 行き先.find((x) => x.c.id === to);
-  const 将ら = (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
   const 日 = Math.round((a.food / Math.max(1, a.men * 0.09)) * 30);
   const 要る = 先 ? Math.round(a.men * 0.09 * (先.月 + 1)) : 0;
+  const 選んだ寄騎 = offers.filter((o) => aid[o.castleId] && !o.reason && o.men > 0);
+  const 寄騎の兵 = 選んだ寄騎.reduce((t, o) => t + o.men, 0);
+  const 運び = 選んだ寄騎.reduce((t, o) => t + (o.賃 || 0), 0);
+  const 手元 = g.factions[g.player].gold;
   return (
     <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
       <div className="card" style={{ maxWidth: 520 }}>
@@ -1771,13 +1781,60 @@ export function 攻め寄せる問い({ g, armyId, onClose, onGo }) {
             <span className="v">{fmt(要る)} 石（手持ち {fmt(Math.round(a.food))} 石）</span>
           </div>
         )}
+
+        {/* 寄騎（GDD 7.3）。在陣から次を攻めるときも、他の城から兵を催せる。
+            届く先は総大将の身分による（侍大将は自城、家老は一国、宿老・当主は天下）。 */}
+        {先 && (
+          <>
+            <div className="sec">寄騎を催す</div>
+            <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
+              {総大将
+                ? <>総大将 <b style={{ color: U.text }}>{総大将.name}</b>（{rankName(総大将, g)}）──
+                  陣触れの届く先は<b style={{ color: U.text }}>{陣触れの届き(総大将, g)}</b>。</>
+                : "総大将がいません。"}
+              呼んだ兵は{先.c.name}で合流します。
+            </div>
+            {offers.length === 0 && (
+              <div style={{ fontSize: 12, color: U.dim }}>催せる城がありません。</div>
+            )}
+            <div style={{ maxHeight: 180, overflow: "auto" }}>
+              {offers.map((o) => (
+                <label key={o.castleId} style={{ display: "flex", gap: 8, alignItems: "flex-start",
+                  padding: "4px 0", fontSize: 12.5 }}>
+                  <input type="checkbox" disabled={!!o.reason} checked={!!aid[o.castleId]}
+                    onChange={() => setAid((p) => ({ ...p, [o.castleId]: !p[o.castleId] }))} />
+                  <span>
+                    <span className="mn" style={{ fontSize: 14 }}>{o.name}</span>
+                    <span className="pill" style={{ background: g.factions[o.faction].color, marginLeft: 6 }}>{o.kind}</span>
+                    <span style={{ color: U.dim, marginLeft: 6 }}>
+                      {o.reason ? o.reason
+                        : `約${fmt(o.men)}人／到着まで約${o.months}か月／運び賃 ${fmt(o.賃)}貫`}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            {選んだ寄騎.length > 0 && (
+              <div className="row" style={{ color: 運び > 手元 ? "#B0483C" : undefined }}>
+                <span>寄騎</span>
+                <span className="v">{fmt(寄騎の兵)} 人／運び賃 {fmt(運び)} 貫（手元 {fmt(手元)} 貫）</span>
+              </div>
+            )}
+          </>
+        )}
+
         <div style={{ display: "flex", gap: 9, marginTop: 14 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>取りやめ</button>
-          <button className="btn dark" style={{ flex: 2 }} disabled={!先}
-            onClick={() => onGo(armyId, to)}>
-            {先 ? `${先.c.name}へ攻め寄せる` : "行き先を選ぶ"}
+          <button className="btn dark" style={{ flex: 2 }} disabled={!先 || 運び > 手元}
+            onClick={() => onGo(armyId, to, 選んだ寄騎)}>
+            {先 ? `${先.c.name}へ攻め寄せる${選んだ寄騎.length ? `（寄騎${fmt(寄騎の兵)}人）` : ""}` : "行き先を選ぶ"}
           </button>
         </div>
+        {運び > 手元 && (
+          <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7 }}>
+            運び賃が足りない。遠国の寄騎を減らすか、金を蓄えねばならぬ。
+          </div>
+        )}
       </div>
     </div>
   );

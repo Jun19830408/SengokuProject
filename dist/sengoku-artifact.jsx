@@ -17627,6 +17627,10 @@ function sackCastle(s2, castle, army, hard) {
   army.prog = 0;
   army.target = null;
   army.\u5728\u9663 = castle.id;
+  army.sieging = false;
+  army.reinforced = false;
+  army.seaDone = false;
+  s2.sieges = (s2.sieges || []).filter((x) => x.armyId !== army.id);
   for (const a2 of s2.armies.filter((x) => x.target === castle.id || x.at === castle.id)) {
     if (a2.faction === oldF) continue;
     if (a2.id === army.id) continue;
@@ -24932,11 +24936,21 @@ function \u653B\u3081\u5BC4\u305B\u308B\u554F\u3044({ g, armyId, onClose, onGo }
     return g.castles.filter((x) => x.id !== \u9663.id && \u8ECD\u306E\u9053(g, g.player, \u9663.id, x.id)).map((x) => ({ c: x, \u6708: marchMonthsOf(\u8ECD\u306E\u9053(g, g.player, \u9663.id, x.id) || [], g.player) })).filter((x) => x.\u6708 <= 8).sort((p, q) => p.\u6708 - q.\u6708);
   }, [g, \u9663 && \u9663.id]);
   const [to, setTo] = useState2(null);
+  const [aid, setAid] = useState2({});
+  const \u5C06\u3089 = a ? (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : [];
+  const \u7DCF\u5927\u5C06 = \u7DCF\u5927\u5C06\u3092\u5B9A\u3081\u308B(g, \u5C06\u3089);
+  const offers = a && \u9663 && to ? reinforceOffers(g, \u9663.id, to, \u7DCF\u5927\u5C06) : [];
+  useEffect2(() => {
+    setAid({});
+  }, [to]);
   if (!a || !\u9663) return null;
   const \u5148 = \u884C\u304D\u5148.find((x) => x.c.id === to);
-  const \u5C06\u3089 = (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
   const \u65E5 = Math.round(a.food / Math.max(1, a.men * 0.09) * 30);
   const \u8981\u308B = \u5148 ? Math.round(a.men * 0.09 * (\u5148.\u6708 + 1)) : 0;
+  const \u9078\u3093\u3060\u5BC4\u9A0E = offers.filter((o) => aid[o.castleId] && !o.reason && o.men > 0);
+  const \u5BC4\u9A0E\u306E\u5175 = \u9078\u3093\u3060\u5BC4\u9A0E.reduce((t, o) => t + o.men, 0);
+  const \u904B\u3073 = \u9078\u3093\u3060\u5BC4\u9A0E.reduce((t, o) => t + (o.\u8CC3 || 0), 0);
+  const \u624B\u5143 = g.factions[g.player].gold;
   return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card", style: { maxWidth: 520 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, "\u653B\u3081\u5BC4\u305B\u308B\u3000", \u9663.name, "\u306E\u5728\u9663"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 10 } }, \u9663.name, "\u306B\u5728\u9663\u3057\u3066\u3044\u308B\u8ECD\u3092\u3001\u305D\u306E\u307E\u307E\u6B21\u306E\u57CE\u3078\u5411\u3051\u307E\u3059\u3002\u5175\u3082\u5C06\u3082\u65E2\u306B\u63C3\u3063\u3066\u3044\u308B\u306E\u3067\u3001 \u6C7A\u3081\u308B\u306E\u306F\u884C\u304D\u5148\u3060\u3051\u3067\u3059\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u7DCF\u52E2 ", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, fmt(a.men), "\u4EBA"), "\uFF08", \u5C06\u3089.map((x) => x.name).join("\u30FB") || "\u5C06\u306A\u3057", "\uFF09\uFF0F \u5175\u7CE7 ", /* @__PURE__ */ React2.createElement("b", { style: { color: \u65E5 < 45 ? "#B0483C" : U.text } }, fmt(Math.round(a.food)), "\u77F3"), "\uFF08\u6B8B\u308A\u7D04", \u65E5, "\u65E5\u5206\uFF09"), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u884C\u304D\u5148"), /* @__PURE__ */ React2.createElement("div", { style: { maxHeight: 280, overflow: "auto" } }, \u884C\u304D\u5148.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, padding: "14px 0" } }, "\u3053\u3053\u304B\u3089\u8857\u9053\u3067\u884C\u3051\u308B\u57CE\u304C\u3042\u308A\u307E\u305B\u3093\u3002"), \u884C\u304D\u5148.map(({ c: x, \u6708 }) => {
     const \u5473\u65B9 = underMyBanner(g, g.player, x.faction);
     return /* @__PURE__ */ React2.createElement("label", { key: x.id, style: {
@@ -24947,16 +24961,30 @@ function \u653B\u3081\u5BC4\u305B\u308B\u554F\u3044({ g, armyId, onClose, onGo }
       fontSize: 13,
       borderBottom: `1px solid ${U.line2}`
     } }, /* @__PURE__ */ React2.createElement("input", { type: "radio", checked: to === x.id, onChange: () => setTo(x.id) }), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 108 } }, x.name), /* @__PURE__ */ React2.createElement("span", { className: "pill", style: { background: g.factions[x.faction].color } }, g.factions[x.faction].name), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, flex: 1, textAlign: "right" } }, "\u7D04", \u6708, "\u304B\u6708\uFF0F\u57CE\u5175 ", fmt(x.local), \u5473\u65B9 ? "\uFF08\u5473\u65B9\uFF09" : ""));
-  })), \u5148 && /* @__PURE__ */ React2.createElement("div", { className: "row", style: { marginTop: 8, color: a.food < \u8981\u308B ? "#B0483C" : void 0 } }, /* @__PURE__ */ React2.createElement("span", null, "\u9053\u4E2D\u306B\u8981\u308B\u5175\u7CE7"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u8981\u308B), " \u77F3\uFF08\u624B\u6301\u3061 ", fmt(Math.round(a.food)), " \u77F3\uFF09")), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 14 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onClose }, "\u53D6\u308A\u3084\u3081"), /* @__PURE__ */ React2.createElement(
+  })), \u5148 && /* @__PURE__ */ React2.createElement("div", { className: "row", style: { marginTop: 8, color: a.food < \u8981\u308B ? "#B0483C" : void 0 } }, /* @__PURE__ */ React2.createElement("span", null, "\u9053\u4E2D\u306B\u8981\u308B\u5175\u7CE7"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u8981\u308B), " \u77F3\uFF08\u624B\u6301\u3061 ", fmt(Math.round(a.food)), " \u77F3\uFF09")), \u5148 && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5BC4\u9A0E\u3092\u50AC\u3059"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 } }, \u7DCF\u5927\u5C06 ? /* @__PURE__ */ React2.createElement(React2.Fragment, null, "\u7DCF\u5927\u5C06 ", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, \u7DCF\u5927\u5C06.name), "\uFF08", rankName(\u7DCF\u5927\u5C06, g), "\uFF09\u2500\u2500 \u9663\u89E6\u308C\u306E\u5C4A\u304F\u5148\u306F", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, \u9663\u89E6\u308C\u306E\u5C4A\u304D(\u7DCF\u5927\u5C06, g)), "\u3002") : "\u7DCF\u5927\u5C06\u304C\u3044\u307E\u305B\u3093\u3002", "\u547C\u3093\u3060\u5175\u306F", \u5148.c.name, "\u3067\u5408\u6D41\u3057\u307E\u3059\u3002"), offers.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u50AC\u305B\u308B\u57CE\u304C\u3042\u308A\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { maxHeight: 180, overflow: "auto" } }, offers.map((o) => /* @__PURE__ */ React2.createElement("label", { key: o.castleId, style: {
+    display: "flex",
+    gap: 8,
+    alignItems: "flex-start",
+    padding: "4px 0",
+    fontSize: 12.5
+  } }, /* @__PURE__ */ React2.createElement(
+    "input",
+    {
+      type: "checkbox",
+      disabled: !!o.reason,
+      checked: !!aid[o.castleId],
+      onChange: () => setAid((p) => ({ ...p, [o.castleId]: !p[o.castleId] }))
+    }
+  ), /* @__PURE__ */ React2.createElement("span", null, /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 14 } }, o.name), /* @__PURE__ */ React2.createElement("span", { className: "pill", style: { background: g.factions[o.faction].color, marginLeft: 6 } }, o.kind), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, marginLeft: 6 } }, o.reason ? o.reason : `\u7D04${fmt(o.men)}\u4EBA\uFF0F\u5230\u7740\u307E\u3067\u7D04${o.months}\u304B\u6708\uFF0F\u904B\u3073\u8CC3 ${fmt(o.\u8CC3)}\u8CAB`))))), \u9078\u3093\u3060\u5BC4\u9A0E.length > 0 && /* @__PURE__ */ React2.createElement("div", { className: "row", style: { color: \u904B\u3073 > \u624B\u5143 ? "#B0483C" : void 0 } }, /* @__PURE__ */ React2.createElement("span", null, "\u5BC4\u9A0E"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u5BC4\u9A0E\u306E\u5175), " \u4EBA\uFF0F\u904B\u3073\u8CC3 ", fmt(\u904B\u3073), " \u8CAB\uFF08\u624B\u5143 ", fmt(\u624B\u5143), " \u8CAB\uFF09"))), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 14 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onClose }, "\u53D6\u308A\u3084\u3081"), /* @__PURE__ */ React2.createElement(
     "button",
     {
       className: "btn dark",
       style: { flex: 2 },
-      disabled: !\u5148,
-      onClick: () => onGo(armyId, to)
+      disabled: !\u5148 || \u904B\u3073 > \u624B\u5143,
+      onClick: () => onGo(armyId, to, \u9078\u3093\u3060\u5BC4\u9A0E)
     },
-    \u5148 ? `${\u5148.c.name}\u3078\u653B\u3081\u5BC4\u305B\u308B` : "\u884C\u304D\u5148\u3092\u9078\u3076"
-  ))));
+    \u5148 ? `${\u5148.c.name}\u3078\u653B\u3081\u5BC4\u305B\u308B${\u9078\u3093\u3060\u5BC4\u9A0E.length ? `\uFF08\u5BC4\u9A0E${fmt(\u5BC4\u9A0E\u306E\u5175)}\u4EBA\uFF09` : ""}` : "\u884C\u304D\u5148\u3092\u9078\u3076"
+  )), \u904B\u3073 > \u624B\u5143 && /* @__PURE__ */ React2.createElement("div", { style: { color: "#B0483C", fontSize: 12, marginTop: 7 } }, "\u904B\u3073\u8CC3\u304C\u8DB3\u308A\u306A\u3044\u3002\u9060\u56FD\u306E\u5BC4\u9A0E\u3092\u6E1B\u3089\u3059\u304B\u3001\u91D1\u3092\u84C4\u3048\u306D\u3070\u306A\u3089\u306C\u3002")));
 }
 function \u57CE\u3092\u59D4\u306D\u308B\u554F\u3044({ g, \u5F85\u3061, onDone, onSkip }) {
   const c = g.castles.find((x) => x.id === \u5F85\u3061.castleId);
@@ -29773,6 +29801,64 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     };
     return findPathVia(from, to, \u901A\u308C\u308B) || findPath(from, to);
   };
+  const \u5BC4\u9A0E\u3092\u51FA\u3059 = (s2, \u4E00\u89A7, \u76EE\u6A19) => {
+    for (const req of \u4E00\u89A7) {
+      const rc2 = s2.castles.find((x) => x.id === req.castleId);
+      if (!rc2) continue;
+      if (req.reason) {
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: `${rc2.name}\u306F\u5175\u3092\u51FA\u305B\u306A\u304B\u3063\u305F\uFF08${req.reason}\uFF09\u3002` });
+        continue;
+      }
+      if (Math.random() > req.chance) {
+        const rel = s2.relations[relKey2(s2.player, rc2.faction)];
+        if (rel) rel.trust = clamp(rel.trust - 4, 0, 100);
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[rc2.faction].name}\u306F\u5BC4\u9A0E\u306E\u6C42\u3081\u306B\u5FDC\u3058\u306A\u304B\u3063\u305F\u3002` });
+        continue;
+      }
+      const rgens = s2.generals.filter((x) => x.at === rc2.id && x.faction === rc2.faction && !x.captive);
+      if (!rgens.length) continue;
+      const \u6307\u540D = (req.genIds || []).map((id) => rgens.find((x) => x.id === id)).filter(Boolean);
+      const take = \u6307\u540D.length ? \u6307\u540D : [...rgens].sort((a, z) => z.lead - a.lead).slice(0, 1);
+      const send = Math.min(Math.max(0, req.men), Math.max(0, rc2.local));
+      const \u7DCF\u52E2 = send + take.reduce((a, x) => a + x.retinue, 0);
+      if (\u7DCF\u52E2 < 100) {
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: `${rc2.name}\u306E\u5BC4\u9A0E\u306F\u6570\u304C\u8DB3\u3089\u305A\u3001\u53D6\u308A\u3084\u3081\u3068\u306A\u3063\u305F\u3002` });
+        continue;
+      }
+      const path = \u8ECD\u306E\u9053(s2, rc2.faction, rc2.id, \u76EE\u6A19) || findPath(rc2.id, \u76EE\u6A19);
+      const \u5BC4\u6708 = marchMonthsOf(path, rc2.faction);
+      const \u5BC4\u7CE7 = \u9060\u5F81\u306E\u5175\u7CE7(\u7DCF\u52E2, \u5BC4\u6708);
+      rc2.local -= send;
+      rc2.food = Math.max(0, rc2.food - \u5BC4\u7CE7);
+      \u904B\u3073\u8CC3\u3092\u6255\u3046(s2, \u7DCF\u52E2, \u5BC4\u6708);
+      for (const t of take) t.at = null;
+      s2.armies.push({
+        id: \u8ECD\u306E\u540D(s2, "r"),
+        faction: rc2.faction,
+        from: rc2.id,
+        gens: take.map((x) => x.id),
+        local: send,
+        localTrain: rc2.localTrain,
+        rost: (() => {
+          const tk = rosterTake(rc2.rost || newRoster(rc2.local + send, `loc-${rc2.id}`), send);
+          rc2.rost = tk.rest;
+          return tk.taken;
+        })(),
+        men: send + take.reduce((a, x) => a + x.retinue, 0),
+        at: rc2.id,
+        path,
+        prog: 0,
+        food: \u5BC4\u7CE7,
+        target: \u76EE\u6A19,
+        aid: s2.player
+      });
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${rc2.name}\u3088\u308A\u5BC4\u9A0E${fmt(\u7DCF\u52E2)}\u4EBA\uFF08${take.map((x) => x.name).join("\u30FB")}\uFF09\u304C${nodeById(\u76EE\u6A19).name}\u3078\u5411\u304B\u3046\uFF08\u7D04${req.months}\u304B\u6708\uFF09\u3002`
+      });
+    }
+  };
   const launchSortie = (p) => {
     if (!p.to || !findPath(p.from, p.to)) return;
     const \u76EE\u6A19 = g.castles.find((x) => x.id === p.to);
@@ -29782,62 +29868,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     setG((prev) => {
       const s2 = structuredClone(prev);
-      for (const req of p.reinforce || []) {
-        const rc2 = s2.castles.find((x) => x.id === req.castleId);
-        if (!rc2) continue;
-        if (req.reason) {
-          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${rc2.name}\u306F\u5175\u3092\u51FA\u305B\u306A\u304B\u3063\u305F\uFF08${req.reason}\uFF09\u3002` });
-          continue;
-        }
-        if (Math.random() > req.chance) {
-          const rel = s2.relations[relKey2(s2.player, rc2.faction)];
-          if (rel) rel.trust = clamp(rel.trust - 4, 0, 100);
-          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${s2.factions[rc2.faction].name}\u306F\u5BC4\u9A0E\u306E\u6C42\u3081\u306B\u5FDC\u3058\u306A\u304B\u3063\u305F\u3002` });
-          continue;
-        }
-        const rgens = s2.generals.filter((x) => x.at === rc2.id && x.faction === rc2.faction && !x.captive);
-        if (!rgens.length) continue;
-        const \u6307\u540D = (req.genIds || []).map((id) => rgens.find((x) => x.id === id)).filter(Boolean);
-        const take = \u6307\u540D.length ? \u6307\u540D : [...rgens].sort((a, z) => z.lead - a.lead).slice(0, 1);
-        const send = Math.min(Math.max(0, req.men), Math.max(0, rc2.local));
-        const \u7DCF\u52E2 = send + take.reduce((a, x) => a + x.retinue, 0);
-        if (\u7DCF\u52E2 < 100) {
-          s2.chronicle.push({ y: s2.year, m: s2.month, text: `${rc2.name}\u306E\u5BC4\u9A0E\u306F\u6570\u304C\u8DB3\u3089\u305A\u3001\u53D6\u308A\u3084\u3081\u3068\u306A\u3063\u305F\u3002` });
-          continue;
-        }
-        const path = \u8ECD\u306E\u9053(s2, rc2.faction, rc2.id, p.to) || findPath(rc2.id, p.to);
-        const \u5BC4\u6708 = marchMonthsOf(path, rc2.faction);
-        const \u5BC4\u7CE7 = \u9060\u5F81\u306E\u5175\u7CE7(\u7DCF\u52E2, \u5BC4\u6708);
-        rc2.local -= send;
-        rc2.food = Math.max(0, rc2.food - \u5BC4\u7CE7);
-        \u904B\u3073\u8CC3\u3092\u6255\u3046(s2, \u7DCF\u52E2, \u5BC4\u6708);
-        for (const t of take) t.at = null;
-        s2.armies.push({
-          id: \u8ECD\u306E\u540D(s2, "r"),
-          faction: rc2.faction,
-          from: rc2.id,
-          gens: take.map((x) => x.id),
-          local: send,
-          localTrain: rc2.localTrain,
-          rost: (() => {
-            const tk = rosterTake(rc2.rost || newRoster(rc2.local + send, `loc-${rc2.id}`), send);
-            rc2.rost = tk.rest;
-            return tk.taken;
-          })(),
-          men: send + take.reduce((a, x) => a + x.retinue, 0),
-          at: rc2.id,
-          path,
-          prog: 0,
-          food: \u5BC4\u7CE7,
-          target: p.to,
-          aid: s2.player
-        });
-        s2.chronicle.push({
-          y: s2.year,
-          m: s2.month,
-          text: `${rc2.name}\u3088\u308A\u5BC4\u9A0E${fmt(\u7DCF\u52E2)}\u4EBA\uFF08${take.map((x) => x.name).join("\u30FB")}\uFF09\u304C${nodeById(p.to).name}\u3078\u5411\u304B\u3046\uFF08\u7D04${req.months}\u304B\u6708\uFF09\u3002`
-        });
-      }
+      \u5BC4\u9A0E\u3092\u51FA\u3059(s2, p.reinforce || [], p.to);
       const c = s2.castles.find((x) => x.id === p.from);
       const dest = s2.castles.find((x) => x.id === p.to);
       if (dest && dest.faction !== s2.player && atPeace(s2, s2.player, dest.faction)) {
@@ -30067,7 +30098,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           setModal(null);
           set\u5728\u9663(null);
         },
-        onGo: (armyId, to) => {
+        onGo: (armyId, to, \u5BC4\u9A0E) => {
           setG((p) => {
             const s2 = structuredClone(p);
             const a = (s2.armies || []).find((x) => x.id === armyId);
@@ -30081,11 +30112,14 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             a.path = \u9053;
             a.prog = 0;
             a.at = \u9053[0];
+            a.sieging = false;
+            a.reinforced = false;
             s2.chronicle.push({
               y: s2.year,
               m: s2.month,
               text: `${\u9663 ? \u9663.name : ""}\u306E\u5728\u9663\u3092\u6255\u3044\u3001${\u5148.name}\u3078\u5411\u304B\u3046\uFF08${fmt(a.men)}\u4EBA\uFF09\u3002`
             });
+            if ((\u5BC4\u9A0E || []).length) \u5BC4\u9A0E\u3092\u51FA\u3059(s2, \u5BC4\u9A0E, to);
             return s2;
           });
           setModal(null);

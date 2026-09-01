@@ -1774,25 +1774,13 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     return findPathVia(from, to, 通れる) || findPath(from, to);
   };
 
-  const launchSortie = (p) => {
-    if (!p.to || !findPath(p.from, p.to)) return;      // 行けない目標は受け付けない
-    /* 約束を交わした相手へ兵を出そうとしていないか（GDD 11.1）。
 
-       同盟・従属・臣従・不可侵の相手の城へ兵を出せば、それは援軍ではなく攻撃である。
-       着いた月に合戦が始まり、約束は破れ、周辺の家々の信用も落ちる。
-       これまでは黙って実行し、あとから戦国記に「裏切りとして……」と出るだけだった。
-       取り返しがつかぬので、出す前に一度問う。
-       （旗の下の城＝自家と臣従の家の城へ送るのは後詰であって、攻撃ではない。問わない。） */
-    const 目標 = g.castles.find((x) => x.id === p.to);
-    if (!p.覚悟 && 目標 && !underMyBanner(g, g.player, 目標.faction)
-      && atPeace(g, g.player, 目標.faction)) {
-      setBreakVow({ p, castle: 目標, state: relOf(g, g.player, 目標.faction).state });
-      return;
-    }
-    setG((prev) => {
-      const s = structuredClone(prev);
-      // 寄騎（援軍）を出す。各城は守備最低数と距離、従属度から派遣を決める（GDD 7.3）
-      for (const req of (p.reinforce || [])) {
+  /* 寄騎を出す（GDD 7.3）。
+
+     出陣のときも、在陣から次の城へ攻め寄せるときも、催し方は同じである。
+     一つに束ねておかねば、片方だけが古くなる。 */
+  const 寄騎を出す = (s, 一覧, 目標) => {
+    for (const req of 一覧) {
         const rc2 = s.castles.find((x) => x.id === req.castleId);
         if (!rc2) continue;
         if (req.reason) {
@@ -1817,7 +1805,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           s.chronicle.push({ y: s.year, m: s.month, text: `${rc2.name}の寄騎は数が足らず、取りやめとなった。` });
           continue;
         }
-        const path = 軍の道(s, rc2.faction, rc2.id, p.to) || findPath(rc2.id, p.to);
+        const path = 軍の道(s, rc2.faction, rc2.id, 目標) || findPath(rc2.id, 目標);
         const 寄月 = marchMonthsOf(path, rc2.faction);
         const 寄糧 = 遠征の兵糧(総勢, 寄月);
         rc2.local -= send;
@@ -1829,11 +1817,32 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           gens: take.map((x) => x.id), local: send, localTrain: rc2.localTrain,
           rost: (() => { const tk = rosterTake(rc2.rost || newRoster(rc2.local + send, `loc-${rc2.id}`), send); rc2.rost = tk.rest; return tk.taken; })(),
           men: send + take.reduce((a, x) => a + x.retinue, 0), at: rc2.id,
-          path, prog: 0, food: 寄糧, target: p.to, aid: s.player,
+          path, prog: 0, food: 寄糧, target: 目標, aid: s.player,
         });
         s.chronicle.push({ y: s.year, m: s.month,
-          text: `${rc2.name}より寄騎${fmt(総勢)}人（${take.map((x) => x.name).join("・")}）が${nodeById(p.to).name}へ向かう（約${req.months}か月）。` });
+          text: `${rc2.name}より寄騎${fmt(総勢)}人（${take.map((x) => x.name).join("・")}）が${nodeById(目標).name}へ向かう（約${req.months}か月）。` });
       }
+  };
+
+  const launchSortie = (p) => {
+    if (!p.to || !findPath(p.from, p.to)) return;      // 行けない目標は受け付けない
+    /* 約束を交わした相手へ兵を出そうとしていないか（GDD 11.1）。
+
+       同盟・従属・臣従・不可侵の相手の城へ兵を出せば、それは援軍ではなく攻撃である。
+       着いた月に合戦が始まり、約束は破れ、周辺の家々の信用も落ちる。
+       これまでは黙って実行し、あとから戦国記に「裏切りとして……」と出るだけだった。
+       取り返しがつかぬので、出す前に一度問う。
+       （旗の下の城＝自家と臣従の家の城へ送るのは後詰であって、攻撃ではない。問わない。） */
+    const 目標 = g.castles.find((x) => x.id === p.to);
+    if (!p.覚悟 && 目標 && !underMyBanner(g, g.player, 目標.faction)
+      && atPeace(g, g.player, 目標.faction)) {
+      setBreakVow({ p, castle: 目標, state: relOf(g, g.player, 目標.faction).state });
+      return;
+    }
+    setG((prev) => {
+      const s = structuredClone(prev);
+      // 寄騎（援軍）を出す。各城は守備最低数と距離、従属度から派遣を決める（GDD 7.3）
+      寄騎を出す(s, p.reinforce || [], p.to);
       const c = s.castles.find((x) => x.id === p.from);
       const dest = s.castles.find((x) => x.id === p.to);
       // 不可侵・同盟を破れば「裏切り」として信用と威信を失う
@@ -2059,7 +2068,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {/* 在陣の軍を次の城へ差し向ける（GDD 6.4）。兵も将も揃っているので、決めるのは行き先だけ。 */}
         {modal === "marchon" && 在陣 && (
           <攻め寄せる問い g={g} armyId={在陣} onClose={() => { setModal(null); set在陣(null); }}
-            onGo={(armyId, to) => {
+            onGo={(armyId, to, 寄騎) => {
               setG((p) => {
                 const s2 = structuredClone(p);
                 const a = (s2.armies || []).find((x) => x.id === armyId);
@@ -2069,8 +2078,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 if (!道) return s2;
                 const 陣 = s2.castles.find((x) => x.id === a.在陣);
                 a.在陣 = null; a.target = to; a.path = 道; a.prog = 0; a.at = 道[0];
+                a.sieging = false; a.reinforced = false;
                 s2.chronicle.push({ y: s2.year, m: s2.month,
                   text: `${陣 ? 陣.name : ""}の在陣を払い、${先.name}へ向かう（${fmt(a.men)}人）。` });
+                // 在陣から攻め寄せるときも、他の城から兵を催せる
+                if ((寄騎 || []).length) 寄騎を出す(s2, 寄騎, to);
                 return s2;
               });
               setModal(null); set在陣(null);

@@ -338,6 +338,16 @@ export function sackCastle(s, castle, army, hard) {
   army.prog = 0;
   army.target = null;
   army.在陣 = castle.id;
+  /* 囲みの印を落とす。城はもう落ちたのだから、囲んでいる軍ではない。
+
+     残していると、その軍が次の城へ向かっても着陣の始末が回らない。
+     月送りは「囲んでいない軍」だけを着いた軍として拾うからである
+     （govern/month.js）。落とした城から次へ攻め寄せて、着いたきり
+     何も起きぬ、というのはこれであった。 */
+  army.sieging = false;
+  army.reinforced = false;                 // 次の戦では、また寄騎を催せる
+  army.seaDone = false;
+  s.sieges = (s.sieges || []).filter((x) => x.armyId !== army.id);
   // 寄騎・後詰・同盟軍として来た軍は、それぞれの城へ帰る。
   // 助けに来た将まで奪った城に居着いては、元の城が空になってしまう。
   for (const a2 of s.armies.filter((x) => x.target === castle.id || x.at === castle.id)) {

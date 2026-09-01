@@ -22,7 +22,8 @@ fs.writeFileSync(entry,
 + 'export { sackCastle, 城を委ねる, 委ねる差配 } from "../src/govern/war.js";\n'
 + 'export { stipendOf, castellanOf, 守備隊の統率 } from "../src/core/rank.js";\n'
 + 'export { newRoster, rosterSum } from "../src/core/roster.js";\n'
-+ 'export { advanceMonth } from "../src/govern/month.js";\n');
++ 'export { advanceMonth } from "../src/govern/month.js";\n'
++ 'export { 軍の道 } from "../src/core/state.js";\n');
 const out = path.join(ROOT, 'build', 'zaijin.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
   loader: { '.jsx': 'jsx' }, logLevel: 'error' });
@@ -170,6 +171,35 @@ console.log('\n── 七　在陣の軍は、毎月あらためて着陣しな�
   const b = (u.armies || []).find((x) => x.id === 'A1');
   確('軍はその城に在陣したまま', !b || b.在陣 === 的.id,
     b ? `在陣 ${b.在陣}` : '（消えた）');
+}
+
+console.log('\n── 八　在陣を払って次の城へ向かえば、着陣の始末が回る');
+{
+  /* 落城のときに囲みの印（sieging）を落としていなかった。月送りは
+     「囲んでいない軍」だけを着いた軍として拾うので、次の城へ向かっても
+     着いたきり何も起きなかった。遊んでみて分かったことである。 */
+  const { s, 的, 軍 } = 場を組む();
+  軍.sieging = true;                              // 囲んでから落とす形にする
+  s.sieges = [{ castleId: 的.id, armyId: 'A1', months: 2, decided: null }];
+  A.sackCastle(s, 的, 軍, true);
+  const a = s.armies.find((x) => x.id === 'A1');
+  確('落城のとき、囲みの印が落ちる', a.sieging === false, `sieging = ${a.sieging}`);
+  確('囲みの帳からも外れる', !(s.sieges || []).some((x) => x.armyId === 'A1'));
+
+  // 次の城へ向ける（画面がしているのと同じこと）
+  const 次 = s.castles.find((c) => c.faction !== 'oda' && A.軍の道(s, 'oda', 的.id, c.id));
+  if (次) {
+    const 道 = A.軍の道(s, 'oda', 的.id, 次.id);
+    a.在陣 = null; a.target = 次.id; a.path = 道; a.prog = 0; a.at = 道[0];
+    a.food = 30000;
+    let u = s, 着 = false;
+    for (let i = 0; i < 8 && !着; i++) {
+      u = A.advanceMonth(u);
+      着 = (u.pendingArrivals || []).includes('A1') || (u.sieges || []).some((x) => x.armyId === 'A1');
+    }
+    確('次の城に着けば、着陣の始末が回る', 着,
+      着 ? `${次.name}へ着いた` : `${次.name}へ向かったが、着陣が起きない`);
+  }
 }
 
 console.log('');
