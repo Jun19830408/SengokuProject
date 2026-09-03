@@ -12,7 +12,7 @@ import { DIPLO, PLOTS, SPECIAL_OPTIONS, SUBJECT } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { canBeKeeper, canHoldCastle, castleRankNeed, stipendOf } from "../core/rank.js";
+import { canBeKeeper, canHoldCastle, castleRankNeed, stipendOf, 家老に任じる } from "../core/rank.js";
 import { 基準値, 売値, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
@@ -164,6 +164,26 @@ export function appoint(prev, castleId, genId) {
         ? `${gen.name}を${c.name}の城主に任じた。`
         : `${gen.name}を${c.name}の城代に任じた（禄高${fmt(stipendOf(s, gen))}石。城主には${fmt(castleRankNeed(c))}石と侍大将以上の身分が要る）。` });
     return s;
+}
+
+/* 旗頭に任じる（GDD 6.4）。
+
+   家老は禄高で決まる階級ではなく、大名が任じる役である。家が城を持つ国に
+   つき一人まで。新しい国へ進出すれば、そこにもう一人任じられる。
+
+   選べるのはその国に根を持つ侍大将以上である。国を預かるのだから、その国に
+   本領を持たぬ者では務まらない。 */
+export function 旗頭に任じる(prev, kuni, genId) {
+  const s = structuredClone(prev);
+  const r = 家老に任じる(s, s.player, kuni, genId);
+  if (!r.ok) { s.msg = r.why; return prev; }
+  const g = s.generals.find((x) => x.id === genId);
+  s.chronicle.push({ y: s.year, m: s.month,
+    text: r.先 && r.先.id !== genId
+      ? `${kuni}の旗頭を${r.先.name}から${g.name}に替えた。`
+      : `${g.name}を${kuni}の旗頭に任じた（家老に列する）。` });
+  s.msg = `${g.name}が${kuni}を預かる。`;
+  return s;
 }
 
 // 検地（一国を丸ごと押さえたときのみ）

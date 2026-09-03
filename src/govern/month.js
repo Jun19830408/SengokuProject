@@ -7,7 +7,7 @@ import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritH
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の重み } from "../core/paths.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
-import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器 } from "../core/rank.js";
+import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 家老を繕う, 寄騎を繕う } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
@@ -1160,6 +1160,17 @@ export function advanceMonth(prev, g) {
           s.危急.push({ castleId: c.id, armyId: a.id, 家: a.faction, men: a.men, 月 });
           events.push(`【急報】${c.name}へ${s.factions[a.faction].name}の軍${fmt(a.men)}人が向かっている`
             + `（およそ${月}ヶ月で着く）。援軍を出すなら、いま他の城から${c.name}へ出陣させよ。`);
+        }
+      }
+      /* 旗頭と寄騎の筋を繕う（GDD 6.4）。
+         国を失えばその国の旗頭は役を離れ、旗頭でなくなれば寄騎も解ける。
+         城が動くのは月送りの中なので、繕いもここで回す。 */
+      for (const fid of Object.keys(s.factions)) {
+        for (const g of 家老を繕う(s, fid)) {
+          if (fid === s.player) events.push(`${g.name}は預かる国を失い、旗頭の役を離れた。`);
+        }
+        for (const g of 寄騎を繕う(s, fid)) {
+          if (fid === s.player) events.push(`${g.name}は寄親を離れた。`);
         }
       }
       s.orders = {};

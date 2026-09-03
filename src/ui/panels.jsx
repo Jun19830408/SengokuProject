@@ -5,7 +5,7 @@ import { MAX_CORPS, MAX_CORPS_MEN } from "../battle/field.js";
 import { persuadeResult } from "../core/capture.js";
 import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き } from "../core/rank.js";
+import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
@@ -360,6 +360,26 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         {/* 総大将は選んだ順ではなく身分で決まる（GDD 6.4）。
             侍大将の下に家老は付かない。軍中の最上位が率いる。 */}
         <div className="sec">参加武将</div>
+        {/* 寄騎（GDD 6.4）。旗頭を選べば、その寄騎も従う。
+            寄騎は大名の直臣であって旗頭の家臣ではないが、戦では旗頭の下に入る。
+            国を一つ預けるとは、その国の城主たちを一人の下に束ねるということである。 */}
+        {(() => {
+          const 旗ら = picked.map((id) => gens.find((x) => x.id === id))
+            .filter((x) => x && x.役 === "家老");
+          const 従 = 旗ら.flatMap((x) => 寄騎たち(g, x.id))
+            .filter((x) => x.at === c.id && !picked.includes(x.id));
+          if (!旗ら.length) return null;
+          return (
+            <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.75,
+              borderLeft: "3px solid #4A6E8A", paddingLeft: 8 }}>
+              {旗ら.map((x) => `${x.name}（${x.役国}の旗頭）`).join("・")}を出すので、
+              その<b style={{ color: U.text }}>寄騎</b>も従います。
+              {従.length
+                ? <>　{従.map((x) => x.name).join("・")}（{従.length}名）が加わります。</>
+                : "　この城にいる寄騎はいません。"}
+            </div>
+          );
+        })()}
         {(() => {
           const 選将 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
           const 主 = 総大将を定める(g, 選将);
@@ -570,8 +590,15 @@ export function SortieDialog({ g, from, onClose, onGo }) {
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>取りやめ</button>
           <button className="btn dark" style={{ flex: 2 }} disabled={!to || !path || !picked.length || men < 200 || c.food < food || 賃が足りぬ || !率いる者}
             onClick={() => onGo({ from, to,
-              // 総大将を先頭に据えて渡す（軍は先頭を大将とする）
-              gens: 大将を先頭に(g, picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean)).map((x) => x.id),
+              /* 総大将を先頭に据えて渡す（軍は先頭を大将とする）。
+                 旗頭を出すなら、この城にいるその寄騎も加える。 */
+              gens: 大将を先頭に(g, (() => {
+                const 選 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
+                const 従 = 選.filter((x) => x.役 === "家老")
+                  .flatMap((x) => 寄騎たち(g, x.id))
+                  .filter((x) => x.at === c.id && !picked.includes(x.id));
+                return [...選, ...従];
+              })()).map((x) => x.id),
               local: useLocal, food, mix,
               // 指図の通る城は、選んだ将と兵数を添える。頼むだけの城は相手の言い値のまま。
               reinforce: offers.filter((o) => aid[o.castleId]).map((o) => (o.指図

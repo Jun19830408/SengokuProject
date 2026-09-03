@@ -15,7 +15,7 @@ import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
 import { 遠征の兵糧, 運び賃を払う } from "../govern/war.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
-import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap } from "../core/rank.js";
+import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap, 寄騎に取る, 寄騎を解く } from "../core/rank.js";
 import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す, 戦の跡, 戦の跡を記す } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 軍の道 } from "../core/state.js";
 import { SEASON, U, clamp, fmt, man, monthsBetween } from "../core/util.js";
@@ -2058,6 +2058,24 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 軍を解く(s2, a);
                 s2.chronicle.push({ y: s2.year, m: s2.month,
                   text: `${城 ? 城.name + "の" : ""}在陣を解き、諸将はそれぞれの本領へ帰った。` });
+              }
+              return s2;
+            })}
+            onHatagashira={(kuni, genId) => setG((p) => 政務.旗頭に任じる(p, kuni, genId))}
+            onYoriki={(genId, 取るか, 寄親id) => setG((p) => {
+              const s2 = structuredClone(p);
+              const g2 = s2.generals.find((x) => x.id === genId);
+              if (取るか) {
+                const r = 寄騎に取る(s2, 寄親id, genId);
+                if (!r.ok) { s2.msg = r.why; return p; }
+                const 親 = s2.generals.find((x) => x.id === 寄親id);
+                s2.chronicle.push({ y: s2.year, m: s2.month,
+                  text: `${g2.name}を${親.name}の寄騎に付けた（${親.役国}）。` });
+              } else {
+                const 親 = g2 && g2.寄親 && s2.generals.find((x) => x.id === g2.寄親);
+                寄騎を解く(s2, genId);
+                if (親) s2.chronicle.push({ y: s2.year, m: s2.month,
+                  text: `${g2.name}を${親.name}の寄騎から解いた。` });
               }
               return s2;
             })}

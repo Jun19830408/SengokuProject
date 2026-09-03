@@ -1,4 +1,4 @@
-import { extraIncome, fiefWanted } from "./rank.js";
+import { extraIncome, fiefWanted, stipendOf, 身分の位 } from "./rank.js";
 import { newRoster } from "./roster.js";
 import { 姫を整える } from "./hime.js";
 import { clamp, fmt, monthsBetween } from "./util.js";
@@ -327,6 +327,7 @@ export function initState(player) {
   for (const fid of Object.keys(盤.factions)) {
     盤.factions[fid].本拠 = 本拠を定める(fid, 盤.castles, 盤.generals);
   }
+  旗頭を据える(盤);                               // 国ごとに家老を一人（GDD 6.4）
   return 盤;
 }
 
@@ -834,6 +835,31 @@ export function migrateSave(s) {
   // 姫のいない古い記録には、いま立てる（GDD 6.8）
   if (!Array.isArray(s.hime)) { s.hime = []; 姫を整える(s); }
   本領と本拠を繕う(s);
+  旗頭を据える(s);                                // 役の欄の無い古い記録に家老を据える
+  return s;
+}
+
+/* 国ごとに家老（旗頭）を一人据える（GDD 6.4）。
+
+   家老は禄高で決まる階級ではなく、大名が任じる役である。家が城を持つ国に
+   つき一人まで置ける。盤を立てるときは、その国でいちばん身代の重い者を
+   据えておく。以後は遊ぶ側（と采配）が任じ直す。
+
+   古い記録にも同じ繕いをする。役の欄が無いままでは、家老が一人もいない
+   家ばかりになってしまう。 */
+export function 旗頭を据える(s) {
+  for (const fid of Object.keys(s.factions || {})) {
+    const 国 = [...new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni))];
+    for (const kuni of 国) {
+      if (s.generals.some((g) => g.faction === fid && g.役 === "家老" && g.役国 === kuni)) continue;
+      const 候 = s.generals.filter((g) => g.faction === fid && !g.captive && !g.lord
+        && 身分の位(g, s) >= 2
+        && (s.castles.find((c) => c.id === (g.本領 || g.at)) || {}).kuni === kuni);
+      if (!候.length) continue;
+      const 主 = [...候].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
+      主.役 = "家老"; 主.役国 = kuni;
+    }
+  }
   return s;
 }
 

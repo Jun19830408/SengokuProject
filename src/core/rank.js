@@ -99,20 +99,178 @@ export const HOUSE_RANK = 8000;                 // 家を興せる禄高（家�
    一隊を預かるだけの者と、城を任される者、家中を差配する宿老は違う。
    新たな数値を設けず、既にある知行で身分を定める。 */
 export const RANKS = [
-  { key: "宿老", min: 20000, desc: "大名に代わって総大将を務められる", cap: 4000 },
-  { key: "家老", min: 8000, desc: "城を任され、その城の政を執れる", cap: 2500 },
-  { key: "侍大将", min: 2500, desc: "千人を超える隊を率いられる", cap: 1600 },
-  { key: "物頭", min: 0, desc: "五百人までの隊を預かる", cap: 500 },
+  { key: "宿老", min: 20000, desc: "複数の国を束ね、大名に代わって総大将を務める" },
+  { key: "家老", min: 8000, desc: "旗頭として一国を預かり、その国の城主を寄騎に取る" },
+  { key: "侍大将", min: 2500, desc: "城主となり、一手の兵を率いる" },
+  { key: "物頭", min: 0, desc: "一手の兵を預かる。城代にはなれる" },
 ];
 
-// 身分は禄高で定まる。知行だけでなく、余禄も身代のうちである。
+/* 身分の決まり方（GDD 6.4）。
+
+   物頭と侍大将は禄高で定まる。知行だけでなく、余禄も身代のうちである。
+
+   家老はそうではない。大名が任じる役――旗頭である。家が城を持つ国につき
+   一人まで置ける。新しい国へ進出すれば、そこにもう一人任じられる。
+
+   もとは家老も禄高で決めていた（八千石以上）。しかし織田家は尾張の一角から
+   始まるのに、初手から家老が五人もいた。国を一つしか持たぬ家に家老が五人
+   いては、旗頭という意味を成さない。逆に大身の家では家老が十人を超え、
+   侍大将との段差も消えていた。
+
+     三好家　八国に家老十五名　　北条家　三国に家老十二名
+     織田家　一国に家老五名
+
+   役として任じる形にすれば、家老は国の数だけとなり、国を取るたびに一人ずつ
+   増える。侍大将との間に、はっきりした隔たりが生まれる。
+
+   宿老も同じく役である（複数国を束ねる軍団長）。こちらは第四段で扱う。
+   いまは禄高でも宿老になれる形を残してある。 */
 export function rankOf(gen, s) {
   if (!gen) return RANKS[RANKS.length - 1];
   if (gen.lord) return { key: "当主", min: 0, desc: "一家の主" };
   if (s && isGuardian(s, gen)) return { key: "後見", min: 0, desc: "幼き当主に代わって家を差配する" };
   const f = s ? stipendOf(s, gen) : fiefOf(gen);
-  return RANKS.find((r) => f >= r.min) || RANKS[RANKS.length - 1];
+  /* 宿老は禄高でも役でも就ける。二万石を超える身代の者は、旗頭を務めて
+     いようがいまいが宿老である。役として任じる形は第四段で入れる。 */
+  if (gen.役 === "宿老" || f >= RANKS[0].min) return RANKS[0];
+  // 家老は役である。禄高では就けない（禄高で就けるのは侍大将まで）
+  if (gen.役 === "家老") return RANKS[1];
+  return f >= RANKS[2].min ? RANKS[2] : RANKS[3];
 }
+
+/* 家老を置ける数＝その家が城を持つ国の数（GDD 6.4）。
+   新しい国へ進出すれば、一人ぶん枠が増える。国を失えば減る。 */
+export function 家老の枠(s, fid) {
+  const 国 = new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
+  return 国.size;
+}
+
+// いま任じてある家老（その家の）
+export const 家老たち = (s, fid) => s.generals.filter((g) =>
+  g.faction === fid && !g.captive && g.役 === "家老");
+
+/* 旗頭に任じる（GDD 6.4）。
+
+   旗頭（はたがしら）とは、その旗のもとに人が集まる者である。武田家の
+   先方衆にも、織田家の方面軍にも使われた語で、柴田勝家は「北国の旗頭」と
+   呼ばれた。寄騎（与力）を預かる側を、史実では寄親とも言う。
+
+   はじめ「国主」と呼んでいたが、これは江戸期に国持大名を指す格付けであって、
+   大名が家臣に与える役ではない。「その国の主」という語感なので、主君から
+   預かる立場とは意味が逆になる。守護代は意味としては正しいが、この盤では
+   織田大和守家が尾張守護代を名乗っているので衝突する。
+
+   任じられるのはその国に根を持つ者だけである。国を預かるのだから、根を
+   持たぬ者では務まらない。すでにその国に旗頭がいれば、置き換える。
+
+   一人が二国の旗頭を兼ねることはない。別の国の旗頭であれば、その役を解いて
+   から移る（国替えである）。 */
+export function 家老に任じる(s, fid, kuni, genId) {
+  const g = s.generals.find((x) => x.id === genId);
+  if (!g || g.faction !== fid || g.captive) return { ok: false, why: "その者はいない。" };
+  if (g.lord) return { ok: false, why: "当主は家老に任じられない。" };
+  const 城 = s.castles.find((c) => c.id === (g.本領 || g.at));
+  if (!城 || 城.kuni !== kuni) {
+    return { ok: false, why: `${g.name}は${kuni}に根を持たない。旗頭はその国に本領を持つ者から選ぶ。` };
+  }
+  if (身分の位(g, s) < 2) {
+    return { ok: false, why: `${g.name}は${rankName(g, s)}。旗頭となるには侍大将以上の身分が要る。` };
+  }
+  const 先 = 国の家老(s, fid, kuni);
+  if (先 && 先.id !== g.id) { 先.役 = null; 先.役国 = null; }
+  if (g.役 === "家老" && g.役国 && g.役国 !== kuni) { g.役国 = null; }   // 国替え
+  g.役 = "家老"; g.役国 = kuni;
+  return { ok: true, 先: 先 || null };
+}
+
+/* 枠を超えた旗頭を解く。国を失えば、その国の旗頭は役を離れる。
+   国は持っているが枠が足りぬ、ということは起きない（枠＝国の数だから）。 */
+export function 家老を繕う(s, fid) {
+  const 持つ国 = new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
+  const 解いた = [];
+  for (const g of s.generals) {
+    if (g.faction !== fid || g.役 !== "家老") continue;
+    if (!g.役国 || !持つ国.has(g.役国)) { g.役 = null; g.役国 = null; 解いた.push(g); }
+  }
+  return 解いた;
+}
+
+/* ------------------------------------------- 寄親と寄騎（GDD 6.4）
+
+   寄騎（与力）とは、大名が家臣に預ける武士のことである。預かる側を寄親と
+   いう。ここが肝心なのだが、寄騎はあくまで**大名の直臣**であって、寄親の
+   家臣ではない。柴田勝家に付けられた府中三人衆（前田利家・佐々成政・
+   不破光治）は信長の直臣であり、信長の一存で付け替えられた。
+
+   ゆえに寄騎とは所有ではなく差配である。大名はいつでも解ける。
+
+   この盤では、旗頭（家老）がその国の城主を寄騎に取る。旗頭が出陣すれば
+   寄騎も従い、一手の軍となって動く。国を一つ預けるとは、その国の城主たちを
+   一人の下に束ねるということである。
+
+     取れるのは　その国に本領を持つ城主（侍大将以上）
+     取る側は　　その国の旗頭
+     解けるのは　大名（いつでも）
+
+   一人の寄騎が二人の寄親に付くことはない。 */
+export const 寄騎たち = (s, 寄親id) => s.generals.filter((g) =>
+  !g.captive && g.寄親 === 寄親id);
+
+/* 寄騎に取れるか。同じ国に本領を持ち、城主となれる身分の者だけである。 */
+export function 寄騎に取れるか(s, 寄親, gen) {
+  if (!寄親 || !gen || gen.captive) return { ok: false, why: "その者はいない。" };
+  if (寄親.役 !== "家老" || !寄親.役国) return { ok: false, why: `${寄親.name}は旗頭ではない。` };
+  if (gen.id === 寄親.id) return { ok: false, why: "己を寄騎にはできない。" };
+  if (gen.lord) return { ok: false, why: "当主は寄騎にならない。" };
+  if (gen.faction !== 寄親.faction) return { ok: false, why: "家が違う。" };
+  if (gen.役 === "家老") return { ok: false, why: `${gen.name}は旗頭である。旗頭は寄騎にならない。` };
+  if (身分の位(gen, s) < 2) {
+    return { ok: false, why: `${gen.name}は${rankName(gen, s)}。寄騎となるには侍大将以上の身分が要る。` };
+  }
+  const 城 = s.castles.find((c) => c.id === (gen.本領 || gen.at));
+  if (!城 || 城.kuni !== 寄親.役国) {
+    return { ok: false, why: `${gen.name}は${寄親.役国}に本領を持たない。旗頭が束ねられるのは一国のうちである。` };
+  }
+  if (gen.寄親 && gen.寄親 !== 寄親.id) {
+    const 先 = s.generals.find((x) => x.id === gen.寄親);
+    return { ok: false, why: `${gen.name}はすでに${先 ? 先.name : "他の者"}の寄騎である。` };
+  }
+  return { ok: true };
+}
+
+// 寄騎に取る／解く
+export function 寄騎に取る(s, 寄親id, genId) {
+  const 寄親 = s.generals.find((x) => x.id === 寄親id);
+  const g = s.generals.find((x) => x.id === genId);
+  const r = 寄騎に取れるか(s, 寄親, g);
+  if (!r.ok) return r;
+  g.寄親 = 寄親id;
+  return { ok: true };
+}
+export function 寄騎を解く(s, genId) {
+  const g = s.generals.find((x) => x.id === genId);
+  if (g) g.寄親 = null;
+  return s;
+}
+
+/* 寄親でなくなった者の寄騎を解く。旗頭を離れれば、束ねる者ではなくなる。
+   本領が国を出た寄騎も解ける（旗頭が束ねられるのは一国のうちだからである）。 */
+export function 寄騎を繕う(s, fid) {
+  const 解いた = [];
+  for (const g of s.generals) {
+    if (g.faction !== fid || !g.寄親) continue;
+    const 親 = s.generals.find((x) => x.id === g.寄親);
+    const 城 = s.castles.find((c) => c.id === (g.本領 || g.at));
+    const 良 = 親 && !親.captive && 親.役 === "家老" && 親.役国
+      && 城 && 城.kuni === 親.役国 && 城.faction === fid;
+    if (!良) { g.寄親 = null; 解いた.push(g); }
+  }
+  return 解いた;
+}
+
+// その国の旗頭（いれば）
+export const 国の家老 = (s, fid, kuni) => s.generals.find((g) =>
+  g.faction === fid && !g.captive && g.役 === "家老" && g.役国 === kuni) || null;
 
 export const rankName = (gen, s) => rankOf(gen, s).key;
 
