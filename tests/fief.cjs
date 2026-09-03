@@ -17,9 +17,9 @@ const ROOT = path.join(__dirname, '..');
 const entry = path.join(ROOT, 'build', 'fief-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
-  'export { initState, migrateSave } from "../src/core/state.js";\n'
-+ 'export { fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, canBeKeeper, 預かりの格, castellanOf, rankName, 身分の位, 軍役の器, 家老の枠, 家老たち, 国の家老, 家老に任じる, 家老を繕う, 寄騎たち, 寄騎に取れるか, 寄騎に取る, 寄騎を解く, 寄騎を繕う, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
-+ 'export { grantFief, appoint, 旗頭に任じる } from "../src/govern/commands.js";\n'
+  'export { initState, migrateSave, 旗頭を据える } from "../src/core/state.js";\n'
++ 'export { fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, canBeKeeper, 預かりの格, castellanOf, rankName, 身分の位, 軍役の器, 家老の枠, 家老たち, 国の家老, 家老に任じる, 家老を繕う, 寄騎たち, 寄騎に取れるか, 寄騎に取る, 寄騎を解く, 寄騎を繕う, 宿老の枠, 宿老たち, 方面の国, 国の宿老, 宿老に任じる, 宿老を解く, 宿老を繕う, 陣触れの届き, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
++ 'export { grantFief, appoint, 旗頭に任じる, 宿老に任ずる, 宿老を解く下知 } from "../src/govern/commands.js";\n'
 + 'export { isMainClan } from "../src/core/house.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n');
 const out = path.join(ROOT, 'build', 'fief.cjs');
@@ -538,6 +538,89 @@ const 確 = (名, 可, 添 = '') => {
   確('旗頭を離れれば、その寄騎も解ける',
     解.length > 0 && A.寄騎たち(s, 旗.id).length === 0,
     解.map((g) => g.name).join('・') || 'なし');
+}
+
+/* ------------------------------------------- 九、宿老と方面（GDD 6.4）
+
+   宿老は方面を預かる。柴田勝家の北国、明智光秀の丹波、羽柴秀吉の中国――
+   信長が方面軍を置いたのがこれである。一国を旗頭が預かり、その旗頭たちを
+   宿老が束ねる。
+
+   もとは禄高二万石で自動的に宿老としていた。それでは家中でいちばん富んだ者が
+   勝手に軍団長になる。方面を委ねるのは大名の裁量であって、身代の順ではない。
+
+   置ける数は四国につき一人。二国しか持たぬ家に方面軍は要らないし、三十国を
+   一人で束ねるのも無理である。 */
+{
+  const s = A.initState('oda');
+  確('初めの盤に宿老はいない（誰も任じていないゆえ）',
+    s.generals.filter((g) => !g.lord && A.rankName(g, s) === '宿老').length === 0,
+    '直す前は禄高二万石で八名が自動で宿老であった');
+  確('一国の家に宿老は置けない', A.宿老の枠(s, 'oda') === 0,
+    `尾張一国 → 枠 ${A.宿老の枠(s, 'oda')}名`);
+
+  // 五国に広げる
+  const t = A.initState('oda');
+  const 空 = t.generals.filter((g) => g.faction === 'oda' && !g.lord && !g.captive && A.身分の位(g, t) >= 2);
+  let i = 0;
+  for (const k of ['美濃', '三河', '伊勢', '近江']) {
+    const c = t.castles.find((x) => x.kuni === k); c.faction = 'oda';
+    const g = 空[++i]; if (g) { g.at = c.id; g.本領 = c.id; }
+  }
+  A.旗頭を据える(t);
+  確('五国を領すれば宿老を一人置ける', A.宿老の枠(t, 'oda') === 1, `枠 ${A.宿老の枠(t, 'oda')}名`);
+
+  const 侍 = t.generals.find((g) => g.faction === 'oda' && !g.lord && A.rankName(g, t) === '侍大将');
+  if (侍) {
+    const r = A.宿老に任じる(t, 'oda', 侍.id, ['尾張', '美濃']);
+    確('旗頭を務めぬ者に方面は委ねられない', !r.ok, r.why);
+  }
+  const 旗ら = A.家老たち(t, 'oda').filter((g) => g.役国);
+  const r1 = A.宿老に任じる(t, 'oda', 旗ら[0].id, [旗ら[0].役国]);
+  確('一国だけでは方面にならない', !r1.ok, r1.why);
+
+  const 二国 = [旗ら[0].役国, 旗ら[1].役国];
+  const r2 = A.宿老に任じる(t, 'oda', 旗ら[0].id, 二国);
+  確('旗頭に二国以上を預ければ宿老になる', r2.ok, r2.ok ? `${旗ら[0].name}〔${r2.国.join('・')}〕` : r2.why);
+  確('身分が宿老になる', A.rankName(旗ら[0], t) === '宿老');
+  確('方面を預かる者は、一国の旗頭を兼ねない', !旗ら[0].役国,
+    `役国 ${旗ら[0].役国 || '—'}`);
+
+  const 残 = A.家老たち(t, 'oda').filter((g) => g.役国);
+  if (残.length >= 2) {
+    const r3 = A.宿老に任じる(t, 'oda', 残[0].id, [残[0].役国, 残[1].役国]);
+    確('枠を超えては置けない', !r3.ok, r3.why);
+  }
+
+  // 陣触れの届き
+  確('宿老の陣触れは方面に届く', A.陣触れの届き(旗ら[0], t) === '方面');
+  確('旗頭の陣触れは一国に届く', 残.length ? A.陣触れの届き(残[0], t) === '一国' : true);
+
+  // 国を失えば方面から落ち、二国を割れば役も解ける
+  for (const k of 二国) {
+    for (const c of t.castles.filter((x) => x.kuni === k && x.faction === 'oda')) c.faction = 'saito';
+  }
+  const 解 = A.宿老を繕う(t, 'oda');
+  確('方面の国を失えば、宿老の役も解ける',
+    解.some((g) => g.id === 旗ら[0].id) && A.rankName(旗ら[0], t) !== '宿老',
+    `${旗ら[0].name} → ${A.rankName(旗ら[0], t)}`);
+
+  // 下知（画面から呼ばれる道）
+  const u = A.initState('oda');
+  const 空u = u.generals.filter((g) => g.faction === 'oda' && !g.lord && !g.captive && A.身分の位(g, u) >= 2);
+  let j = 0;
+  for (const k of ['美濃', '三河', '伊勢', '近江']) {
+    const c = u.castles.find((x) => x.kuni === k); c.faction = 'oda';
+    const g = 空u[++j]; if (g) { g.at = c.id; g.本領 = c.id; }
+  }
+  A.旗頭を据える(u);
+  const 旗u = A.家老たち(u, 'oda').filter((g) => g.役国);
+  const v = A.宿老に任ずる(u, 旗u[0].id, [旗u[0].役国, 旗u[1].役国]);
+  確('下知からも方面を委ねられる', A.宿老たち(v, 'oda').length === 1,
+    (v.chronicle.slice(-1)[0] || {}).text || 'なし');
+  const w = A.宿老を解く下知(v, 旗u[0].id);
+  確('下知から方面を解ける', A.宿老たち(w, 'oda').length === 0,
+    (w.chronicle.slice(-1)[0] || {}).text || 'なし');
 }
 
 console.log('');

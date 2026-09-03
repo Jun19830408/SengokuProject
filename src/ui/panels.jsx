@@ -5,7 +5,7 @@ import { MAX_CORPS, MAX_CORPS_MEN } from "../battle/field.js";
 import { persuadeResult } from "../core/capture.js";
 import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち } from "../core/rank.js";
+import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 宿老たち, 宿老の枠, 方面の国, 国の宿老, 家老たち, 家老の枠 } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
@@ -1161,7 +1161,7 @@ export function FactionInfo({ g, onClose }) {
 }
 
 
-export function GeneralList({ g, onClose }) {
+export function GeneralList({ g, onClose, onYakume }) {
   const gs = g.generals.filter((x) => x.faction === g.player);
   const [欄, set欄] = useState("武将");
   const 頭 = 組頭の帳(g);
@@ -1171,7 +1171,7 @@ export function GeneralList({ g, onClose }) {
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12 }}>
           <div className="mn" style={{ fontSize: 21 }}>家中の帳</div>
           <div style={{ display: "flex", gap: 6 }}>
-            {[["武将", "武将の帳"], ["組頭", "組頭の帳"]].map(([k, 札]) => (
+            {[["武将", "武将の帳"], ["組頭", "組頭の帳"], ["役", "役目の帳"]].map(([k, 札]) => (
               <button key={k} className={`btn sm ${欄 === k ? "on" : ""}`} onClick={() => set欄(k)}>
                 {札}{k === "組頭" && 頭.length ? ` ${頭.length}` : ""}
               </button>
@@ -1213,6 +1213,79 @@ export function GeneralList({ g, onClose }) {
           {頭.some((x) => x.階 === "物頭") && (
             <div style={{ fontSize: 11, color: "#8A6A34", marginTop: 8, lineHeight: 1.7 }}>
               物頭に届いた者は、武将に取り立てる資格を得ています。
+            </div>
+          )}
+          <button className="btn" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>閉じる</button>
+        </>)}
+
+        {/* 役目の帳（GDD 6.4）。旗頭と宿老は禄高で決まる階級ではなく、
+            大名が任じる役である。誰に何を預けているかは一覧で見えねばならない。 */}
+        {欄 === "役" && (<>
+          <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 }}>
+            <b style={{ color: U.text }}>旗頭</b>は一国を預かる役（家老）。城を持つ国につき一人まで置けます。
+            その旗のもとに<b style={{ color: U.text }}>寄騎</b>が集まります。任じるのは城の「人事」から。
+            <br /><b style={{ color: U.text }}>宿老</b>は方面を預かる役。旗頭を務める者から選び、二国以上をまとめて委ねます。
+            置けるのは四国につき一人。柴田を北国へ、明智を丹波へ――方面軍とはこれです。
+            <br />寄騎も方面の兵も、大名の直臣のままです。いつでも解けます。
+          </div>
+
+          <div className="sec">宿老（方面）　{宿老たち(g, g.player).length}／{宿老の枠(g, g.player)}名</div>
+          {宿老の枠(g, g.player) === 0 && (
+            <div style={{ fontSize: 12, color: U.dim, marginBottom: 8 }}>
+              まだ宿老は置けません（四国を領してはじめて一人）。いま
+              {new Set(g.castles.filter((c) => c.faction === g.player).map((c) => c.kuni)).size}国。
+            </div>
+          )}
+          {宿老たち(g, g.player).map((x) => (
+            <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0",
+              borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" }}>
+              <span className="mn" style={{ fontSize: 15, width: 100 }}>{x.name}</span>
+              <span style={{ flex: 1, color: U.text }}>{方面の国(x).join("・")}</span>
+              <span className="num" style={{ color: U.dim }}>{方面の国(x).length}国</span>
+              <button className="btn sm" onClick={() => onYakume && onYakume({ 解く: x.id })}>解く</button>
+            </div>
+          ))}
+          {宿老の枠(g, g.player) > 宿老たち(g, g.player).length && (() => {
+            const 候 = g.generals.filter((x) => x.faction === g.player && !x.captive && x.役 === "家老");
+            const 空国 = [...new Set(g.castles.filter((c) => c.faction === g.player).map((c) => c.kuni))]
+              .filter((k) => !国の宿老(g, g.player, k));
+            return (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 4 }}>
+                  旗頭を務める者に、二国以上をまとめて預けます。
+                  {候.length ? "" : "（旗頭がいません。まず城の「人事」から旗頭を任じてください）"}
+                </div>
+                {候.map((x) => (
+                  <button key={x.id} className="btn sm" style={{ marginRight: 5, marginBottom: 5 }}
+                    onClick={() => onYakume && onYakume({ 任じる: x.id, 国: 空国 })}>
+                    {x.name}に{空国.length}国を預ける
+                    <span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>{空国.join("・")}</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+
+          <div className="sec" style={{ marginTop: 14 }}>旗頭（一国）　{家老たち(g, g.player).filter((x) => x.役国).length}／{家老の枠(g, g.player)}名</div>
+          {家老たち(g, g.player).filter((x) => x.役国).map((x) => (
+            <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0",
+              borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" }}>
+              <span className="mn" style={{ fontSize: 15, width: 100 }}>{x.name}</span>
+              <span style={{ width: 70, color: U.text }}>{x.役国}</span>
+              <span className="num" style={{ flex: 1, color: U.dim }}>
+                寄騎 {寄騎たち(g, x.id).length}名
+                {寄騎たち(g, x.id).length ? `（${寄騎たち(g, x.id).map((y) => y.name).join("・")}）` : ""}
+              </span>
+              {国の宿老(g, g.player, x.役国) && (
+                <span style={{ fontSize: 11, color: "#4A6E8A" }}>
+                  {国の宿老(g, g.player, x.役国).name}の方面
+                </span>
+              )}
+            </div>
+          ))}
+          {!家老たち(g, g.player).filter((x) => x.役国).length && (
+            <div style={{ fontSize: 12, color: U.dim }}>
+              まだ旗頭がいません。城の「人事」から任じてください。
             </div>
           )}
           <button className="btn" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>閉じる</button>

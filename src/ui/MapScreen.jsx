@@ -2270,7 +2270,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         )}
         {modal === "chronicle" && <Chronicle g={g} onClose={() => setModal(null)} />}
         {modal === "factions" && <FactionInfo g={g} onClose={() => setModal(null)} />}
-        {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)} />}
+        {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)}
+          onYakume={(x) => setG((p) => (x.解く
+            ? 政務.宿老を解く下知(p, x.解く)
+            : 政務.宿老に任ずる(p, x.任じる, x.国)))} />}
         {g.申し入れ && !battle && (
           <DiploOffer g={g} 申={g.申し入れ}
             onTake={() => setG((prev) => {

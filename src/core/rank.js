@@ -129,12 +129,17 @@ export function rankOf(gen, s) {
   if (!gen) return RANKS[RANKS.length - 1];
   if (gen.lord) return { key: "当主", min: 0, desc: "一家の主" };
   if (s && isGuardian(s, gen)) return { key: "後見", min: 0, desc: "幼き当主に代わって家を差配する" };
-  const f = s ? stipendOf(s, gen) : fiefOf(gen);
-  /* 宿老は禄高でも役でも就ける。二万石を超える身代の者は、旗頭を務めて
-     いようがいまいが宿老である。役として任じる形は第四段で入れる。 */
-  if (gen.役 === "宿老" || f >= RANKS[0].min) return RANKS[0];
-  // 家老は役である。禄高では就けない（禄高で就けるのは侍大将まで）
+  /* 宿老も家老と同じく、大名が任じる役である（GDD 6.4）。
+
+     もとは禄高二万石で自動的に宿老としていた。しかしそれでは、家中でいちばん
+     富んだ者が勝手に軍団長になることになる。柴田を北国へ、明智を丹波へ――
+     方面を委ねるのは大名の裁量であって、身代の順ではない。
+
+     宿老は複数国の旗頭を束ねる。ゆえに置けるのは、二国以上を預ける相手が
+     いるときだけである（下の 宿老の枠 を見よ）。 */
+  if (gen.役 === "宿老") return RANKS[0];
   if (gen.役 === "家老") return RANKS[1];
+  const f = s ? stipendOf(s, gen) : fiefOf(gen);
   return f >= RANKS[2].min ? RANKS[2] : RANKS[3];
 }
 
@@ -264,6 +269,89 @@ export function 寄騎を繕う(s, fid) {
     const 良 = 親 && !親.captive && 親.役 === "家老" && 親.役国
       && 城 && 城.kuni === 親.役国 && 城.faction === fid;
     if (!良) { g.寄親 = null; 解いた.push(g); }
+  }
+  return 解いた;
+}
+
+/* ------------------------------------------- 宿老と方面（GDD 6.4）
+
+   宿老は方面を預かる。柴田勝家の北国、明智光秀の丹波、羽柴秀吉の中国――
+   信長が方面軍を置いたのがこれである。一国を旗頭が預かり、その旗頭たちを
+   宿老が束ねる。
+
+   置ける数は家の大きさによる。四国につき一人を目安とする。二国しか持たぬ家に
+   方面軍は要らないし、三十国を一人で束ねるのも無理である。
+
+     四国から一人　八国から二人　十二国から三人 …… */
+export function 宿老の枠(s, fid) {
+  const 国 = new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
+  return Math.floor(国.size / 4);
+}
+
+export const 宿老たち = (s, fid) => s.generals.filter((g) =>
+  g.faction === fid && !g.captive && g.役 === "宿老");
+
+// その宿老が預かる方面（国の並び）
+export const 方面の国 = (gen) => (gen && Array.isArray(gen.方面) ? gen.方面 : []);
+
+// その国を預かる宿老（いれば）
+export const 国の宿老 = (s, fid, kuni) => s.generals.find((g) =>
+  g.faction === fid && !g.captive && g.役 === "宿老" && 方面の国(g).includes(kuni)) || null;
+
+/* 宿老に任じ、方面を預ける。
+
+   選べるのは旗頭（家老）を務めている者である。一国も預かったことのない者に
+   方面は委ねられない。預ける国は、その家が城を持つ国のうち、他の宿老が
+   預かっていないものに限る。 */
+export function 宿老に任じる(s, fid, genId, 国ら) {
+  const g = s.generals.find((x) => x.id === genId);
+  if (!g || g.faction !== fid || g.captive) return { ok: false, why: "その者はいない。" };
+  if (g.lord) return { ok: false, why: "当主は宿老に任じられない。" };
+  if (g.役 !== "家老" && g.役 !== "宿老") {
+    return { ok: false, why: `${g.name}は${rankName(g, s)}。方面を預かるには、まず一国の旗頭を務めねばならぬ。` };
+  }
+  const 枠 = 宿老の枠(s, fid);
+  const いま = 宿老たち(s, fid).filter((x) => x.id !== g.id).length;
+  if (いま >= 枠) {
+    return { ok: false, why: `宿老を置けるのは${枠}名まで（四国につき一人）。いま${いま}名。` };
+  }
+  const 持つ国 = new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
+  const 選 = [...new Set((国ら || []).filter((k) => 持つ国.has(k)))];
+  if (選.length < 2) return { ok: false, why: "方面は二国以上でなければ意味を成さない。" };
+  for (const k of 選) {
+    const 先 = 国の宿老(s, fid, k);
+    if (先 && 先.id !== g.id) return { ok: false, why: `${k}はすでに${先.name}の方面である。` };
+  }
+  /* 旗頭であった者が宿老になるとき、預かっていた一国の役は解く。
+     方面を預かる者が、同時に一国の旗頭を兼ねることはない。 */
+  if (g.役 === "家老") g.役国 = null;
+  g.役 = "宿老";
+  g.方面 = 選;
+  return { ok: true, 国: 選 };
+}
+
+export function 宿老を解く(s, genId) {
+  const g = s.generals.find((x) => x.id === genId);
+  if (g && g.役 === "宿老") { g.役 = null; g.方面 = null; }
+  return s;
+}
+
+/* 方面の筋を繕う。失った国は方面から落ち、二国を割れば宿老の役も解ける。
+   国を失って枠が縮んだときは、預かる国の少ない者から解く。 */
+export function 宿老を繕う(s, fid) {
+  const 持つ国 = new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
+  const 解いた = [];
+  for (const g of s.generals) {
+    if (g.faction !== fid || g.役 !== "宿老") continue;
+    g.方面 = 方面の国(g).filter((k) => 持つ国.has(k));
+    if (g.方面.length < 2) { g.役 = null; g.方面 = null; 解いた.push(g); }
+  }
+  const 枠 = 宿老の枠(s, fid);
+  const 残 = 宿老たち(s, fid);
+  if (残.length > 枠) {
+    const 順 = [...残].sort((a, b) => 方面の国(a).length - 方面の国(b).length
+      || stipendOf(s, a) - stipendOf(s, b));
+    for (const g of 順.slice(0, 残.length - 枠)) { g.役 = null; g.方面 = null; 解いた.push(g); }
   }
   return 解いた;
 }
@@ -408,10 +496,10 @@ export function 総大将を定める(s, 将ら) {
    物頭は総大将になれない（軍を率いるには侍大将以上が要る）。 */
 export const 陣触れの届き = (gen, s) => {
   if (!gen) return "無し";
-  const 位 = 身分の位(gen, s);
-  if (位 >= 4) return "天下";      // 当主・宿老
-  if (位 === 3) return "一国";      // 家老
-  if (位 === 2) return "自城";      // 侍大将
+  if (gen.lord) return "天下";      // 当主は天下じゅうに触れを出せる
+  if (gen.役 === "宿老") return "方面";   // 預かった国々から
+  if (gen.役 === "家老") return "一国";   // 預かった国のうちから
+  if (身分の位(gen, s) >= 2) return "自城";
   return "無し";                    // 物頭
 };
 
@@ -420,7 +508,11 @@ export function 陣触れに応じる(s, 大将, 本陣, 城) {
   if (!大将 || !城) return false;
   const 届 = 陣触れの届き(大将, s);
   if (届 === "天下") return true;
-  if (届 === "一国") return !!本陣 && 城.kuni === 本陣.kuni;
+  /* 宿老は預かった方面の国々から兵を催せる。柴田を北国へ置けば、北国の
+     国々が一つの軍として動く――方面軍とはそういうものである。 */
+  if (届 === "方面") return 方面の国(大将).includes(城.kuni);
+  // 旗頭は預かった国から。本陣がどこであれ、預かるのはその国である
+  if (届 === "一国") return 城.kuni === (大将.役国 || (本陣 || {}).kuni);
   if (届 === "自城") return !!本陣 && 城.id === 本陣.id;
   return false;
 }
