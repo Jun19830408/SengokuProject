@@ -351,7 +351,10 @@ const 隊の主 = (id) => String(id || "").split("#")[0];
 export function 戦の跡(corpsList, b) {
   const 生 = new Map();          // 組の id → 生き残り
   const 将 = new Map();          // 組の鍵 → 率いた武将の id
-  for (const c of corpsList || []) {
+  /* 盤の上の隊だけでなく、散った組（分遣が畳まれるときに兵の尽きた組）も読む。
+     読まねば損害が書き戻されず、討ち死にした組が古い人数のまま城へ帰る。 */
+  const 皆 = [...(corpsList || []), ...((b && b.散った) || [])];
+  for (const c of 皆) {
     for (const q of c.squads || []) {
       if (!q.src) continue;
       生.set(q.src, (生.get(q.src) || 0) + Math.max(0, Math.round(q.men)));

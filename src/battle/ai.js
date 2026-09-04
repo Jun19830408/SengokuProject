@@ -1,8 +1,81 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
 import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す } from "./corps.js";
-import { ARM_STATS, HILLS, RIVER, hasRiver, riverShift, terrainAt } from "./field.js";
+import { ARM_STATS, HILLS, RIVER, fieldScale, hasRiver, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { clamp } from "../core/util.js";
+
+/* ------------------------------------- 先客のいる敵と、前をふさぐ味方（GDD 8.4）
+
+   采配はこれまで「いちばん近い敵」へ向かわせるだけであった。その敵にすでに
+   味方が槍を合わせていても、あいだに味方が立っていても、おかまいなしである。
+   隊どうしは擦り抜けるので、後ろの隊は交戦中の味方をすり抜けて前の敵へ当たる。
+   同じ敵に三隊も四隊も重なり、どこで誰が戦っているのか読めなくなる。
+
+   前で味方が噛み合っているなら、後ろは
+     一、空いている敵がいればそちらへ回る
+     二、いなければ側面へ回り込んで加勢する（一つの敵に二隊まで）
+     三、それも叶わねば、味方の後ろで控える
+   縛るのは采配――委任した隊と敵方――だけである。手ずから命じるぶんには通す。
+
+     実測（四隊対四隊・四分・一秒ごとに見て）
+       噛み合う味方への重なり          66回 → 8回
+       空いた敵がいるのに先客へ向かう  10回 → 0回 */
+
+// 槍を合わせている隊とみなす間合い。組が触れ合う頃合いである
+export const 噛みの間 = () => 95 * fieldScale();
+
+/* その敵に、すでに槍を合わせている味方（自分は数えない）。
+
+   数える輪を広げる形も試したが、どれも悪かった。
+     ・遠くから「あの敵は自分が狙う」と唱えさせる（寄る間150／220／340）
+       → どの敵も先客持ちに見えるので隊が行き先を探して迷う。
+         すり抜けは二十回から三百十一回・五百二十六回まで増えた。
+     ・間合いに入って当たろうとしている隊まで数える
+       → すり抜け三十回、手余り十三回。狭めても良くならない。
+   槍を合わせている隊だけを数えるのが、いちばん収まりがよい。 */
+export function 先客たち(alive, c, o) {
+  const 間 = 噛みの間();
+  return alive.filter((x) => x !== c && x.side === c.side && !x.routed
+    && x.squads.some((q) => q.engaged) && Math.hypot(x.x - o.x, x.y - o.y) < 間);
+}
+
+/* 当たる相手を選ぶ。近さだけでなく、先客の数で重みを付ける。
+   一隊すでに掛かっているなら遠くても空いた敵を選び、二隊掛かっていれば
+   よほどのことがなければ選ばない。 */
+export function 狙う敵を選ぶ(alive, c, foes) {
+  const 遠回りの費え = 420 * fieldScale();     // 空いた敵ならこれだけ遠くても選ぶ
+  const 費え = (o) => {
+    const n = 先客たち(alive, c, o).length;
+    return Math.hypot(o.x - c.x, o.y - c.y)
+      + (n === 0 ? 0 : n === 1 ? 遠回りの費え : 1e7);
+  };
+  return foes.reduce((a, o) => (費え(o) < 費え(a) ? o : a), foes[0]);
+}
+
+/* 線分（我から寄せ先まで）と、味方の隔たり。前をふさいでいるかを見るのに使う。 */
+function 線までの隔たり(x0, y0, x1, y1, px, py) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const L = dx * dx + dy * dy;
+  const t = L <= 0 ? 0 : clamp(((px - x0) * dx + (py - y0) * dy) / L, 0, 1);
+  return Math.hypot(px - (x0 + dx * t), py - (y0 + dy * t));
+}
+
+/* 寄せ道の前に、噛み合っている味方が立ちふさがっていないか。
+   立ちふさがっているなら、その味方を返す（後ろで控えるため）。 */
+export function 前をふさぐ味方(alive, c, sx, sy) {
+  const 幅 = 62 * fieldScale();                 // これより近く重なるなら擦り抜けである
+  const 我まで = Math.hypot(sx - c.x, sy - c.y);
+  let 近 = null, 近さ = Infinity;
+  for (const x of alive) {
+    if (x === c || x.side !== c.side || x.routed || x.withdraw) continue;
+    if (!x.squads.some((q) => q.engaged)) continue;
+    const d = Math.hypot(x.x - c.x, x.y - c.y);
+    if (d >= 我まで) continue;                  // 寄せ先より遠い味方は関わらない
+    if (線までの隔たり(c.x, c.y, sx, sy, x.x, x.y) > 幅) continue;
+    if (d < 近さ) { 近さ = d; 近 = x; }
+  }
+  return 近;
+}
 
 /* ------------------------------------------------ 川を避ける（GDD 8.1）
 
@@ -441,7 +514,9 @@ export function battleAI(b) {
         }
       }
     }
-    const tgt = foes.reduce((a, o) => (Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a), foes[0]);
+    /* 当たる相手は、近さだけでなく先客の数で選ぶ（GDD 8.4）。
+       空いた敵がいるなら、多少遠くてもそちらへ回る。 */
+    const tgt = 狙う敵を選ぶ(alive, c, foes);
     // 槍を合わせている隊は目標を変えない。向き直って側面を晒すのを避ける。
     if (c.order === "接戦" && c.squads.some((q) => q.engaged)) continue;
     if (MAP) {
@@ -682,6 +757,43 @@ export function battleAI(b) {
     const dd = Math.hypot(c.x - tgt.x, c.y - tgt.y) || 1;
     let sx = dd <= 42 ? c.x : tgt.x + ((c.x - tgt.x) / dd) * 38;
     let sy = dd <= 42 ? c.y : tgt.y + ((c.y - tgt.y) / dd) * 38;
+    /* その敵にすでに味方が掛かっているなら、正面には並ばない（GDD 8.4）。
+
+       先客の当たっている筋に直交する側――つまり側面へ回り込む。同じ所へ
+       二隊が重なれば、盤の上ではどちらが戦っているのか読めなくなるし、
+       横から当たるほうが戦としても理に適う。 */
+    if (!MAP) {
+      const 先 = 先客たち(alive, c, tgt);
+      if (先.length) {
+        const f = 先.reduce((a, x) => (Math.hypot(x.x - c.x, x.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? x : a), 先[0]);
+        const fd = Math.hypot(tgt.x - f.x, tgt.y - f.y) || 1;
+        const ux = (tgt.x - f.x) / fd, uy = (tgt.y - f.y) / fd;   // 先客が当たっている筋
+        let px = -uy, py = ux;                                     // その直交
+        if ((c.x - tgt.x) * px + (c.y - tgt.y) * py < 0) { px = -px; py = -py; }   // 自分のいる側へ
+        const 脇 = 46 * fieldScale();
+        sx = tgt.x + px * 脇; sy = tgt.y + py * 脇;
+      }
+    }
+    /* 噛み合っている味方が前をふさいでいるなら、擦り抜けずに脇を回る。
+
+       隊どうしは擦り抜けるので、放っておくと後ろの隊が交戦中の味方を突き抜けて
+       前の敵に当たる。かといって後ろで止めてしまうと戦が進まない――試しに
+       止めたところ、退くべき十二隊が一つも退かなくなった（戦が決しないので、
+       退く目にも遭わない）。味方の脇を回って寄せる。 */
+    if (!MAP && !c.routed && !c.withdraw && !c.squads.some((q) => q.engaged)) {
+      const 塞 = 前をふさぐ味方(alive, c, sx, sy);
+      if (塞) {
+        const bd = Math.hypot(塞.x - c.x, 塞.y - c.y) || 1;
+        const ux = (塞.x - c.x) / bd, uy = (塞.y - c.y) / bd;
+        let px = -uy, py = ux;                                  // ふさぐ味方への筋の直交
+        if ((sx - 塞.x) * px + (sy - 塞.y) * py < 0) { px = -px; py = -py; }   // 寄せ先に近い側へ
+        const 脇 = 110 * fieldScale();
+        const wx = 塞.x + px * 脇, wy = 塞.y + py * 脇;
+        c.wp = [{ x: wx, y: wy, r: 50 * fieldScale() }, { x: sx, y: sy, r: 40 * fieldScale() }];
+        issueOrder(b, c, { order: "移動", tx: wx, ty: wy, keepPath: true });
+        continue;
+      }
+    }
     /* 川ごしの向き合い方は、川の掟にまとめた（このファイルの上のほう）。
        受け手は渡り場のこちら岸で待ち、寄せ手は渡り切る。どちらも水の上では
        止まらない。狙う敵が水の中にいるなら、受け手は追って入らず岸から射る。 */

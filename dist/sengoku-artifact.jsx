@@ -787,7 +787,8 @@ var \u968A\u306E\u4E3B = (id) => String(id || "").split("#")[0];
 function \u6226\u306E\u8DE1(corpsList, b) {
   const \u751F = /* @__PURE__ */ new Map();
   const \u5C06 = /* @__PURE__ */ new Map();
-  for (const c of corpsList || []) {
+  const \u7686 = [...corpsList || [], ...b && b.\u6563\u3063\u305F || []];
+  for (const c of \u7686) {
     for (const q of c.squads || []) {
       if (!q.src) continue;
       \u751F.set(q.src, (\u751F.get(q.src) || 0) + Math.max(0, Math.round(q.men)));
@@ -20165,6 +20166,7 @@ function detachAI(b, c, alive) {
     if (d0 < 70) {
       for (const q of c.squads) {
         if (q.men > 0) parent.squads.push(q);
+        else (b.\u6563\u3063\u305F = b.\u6563\u3063\u305F || []).push({ id: c.id, squads: [q] });
       }
       c.squads = [];
       c.dead = true;
@@ -22959,6 +22961,42 @@ function \u9053\u306E\u308A2(\u9053, x0, y0) {
 }
 
 // src/battle/ai.js
+var \u565B\u307F\u306E\u9593 = () => 95 * fieldScale();
+function \u5148\u5BA2\u305F\u3061(alive, c, o) {
+  const \u9593 = \u565B\u307F\u306E\u9593();
+  return alive.filter((x) => x !== c && x.side === c.side && !x.routed && x.squads.some((q) => q.engaged) && Math.hypot(x.x - o.x, x.y - o.y) < \u9593);
+}
+function \u72D9\u3046\u6575\u3092\u9078\u3076(alive, c, foes) {
+  const \u9060\u56DE\u308A\u306E\u8CBB\u3048 = 420 * fieldScale();
+  const \u8CBB\u3048 = (o) => {
+    const n = \u5148\u5BA2\u305F\u3061(alive, c, o).length;
+    return Math.hypot(o.x - c.x, o.y - c.y) + (n === 0 ? 0 : n === 1 ? \u9060\u56DE\u308A\u306E\u8CBB\u3048 : 1e7);
+  };
+  return foes.reduce((a, o) => \u8CBB\u3048(o) < \u8CBB\u3048(a) ? o : a, foes[0]);
+}
+function \u7DDA\u307E\u3067\u306E\u9694\u305F\u308A(x0, y0, x1, y1, px2, py2) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const L = dx * dx + dy * dy;
+  const t = L <= 0 ? 0 : clamp(((px2 - x0) * dx + (py2 - y0) * dy) / L, 0, 1);
+  return Math.hypot(px2 - (x0 + dx * t), py2 - (y0 + dy * t));
+}
+function \u524D\u3092\u3075\u3055\u3050\u5473\u65B9(alive, c, sx, sy) {
+  const \u5E452 = 62 * fieldScale();
+  const \u6211\u307E\u3067 = Math.hypot(sx - c.x, sy - c.y);
+  let \u8FD1 = null, \u8FD1\u3055 = Infinity;
+  for (const x of alive) {
+    if (x === c || x.side !== c.side || x.routed || x.withdraw) continue;
+    if (!x.squads.some((q) => q.engaged)) continue;
+    const d = Math.hypot(x.x - c.x, x.y - c.y);
+    if (d >= \u6211\u307E\u3067) continue;
+    if (\u7DDA\u307E\u3067\u306E\u9694\u305F\u308A(c.x, c.y, sx, sy, x.x, x.y) > \u5E452) continue;
+    if (d < \u8FD1\u3055) {
+      \u8FD1\u3055 = d;
+      \u8FD1 = x;
+    }
+  }
+  return \u8FD1;
+}
 function \u5CB8(x, y) {
   if (!hasRiver()) return 0;
   const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(x);
@@ -23240,7 +23278,7 @@ function battleAI(b) {
         }
       }
     }
-    const tgt = foes.reduce((a, o) => Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a, foes[0]);
+    const tgt = \u72D9\u3046\u6575\u3092\u9078\u3076(alive, c, foes);
     if (c.order === "\u63A5\u6226" && c.squads.some((q) => q.engaged)) continue;
     if (MAP) {
       const near = Math.hypot(tgt.x - c.x, tgt.y - c.y);
@@ -23427,6 +23465,39 @@ function battleAI(b) {
     const dd = Math.hypot(c.x - tgt.x, c.y - tgt.y) || 1;
     let sx = dd <= 42 ? c.x : tgt.x + (c.x - tgt.x) / dd * 38;
     let sy = dd <= 42 ? c.y : tgt.y + (c.y - tgt.y) / dd * 38;
+    if (!MAP) {
+      const \u5148 = \u5148\u5BA2\u305F\u3061(alive, c, tgt);
+      if (\u5148.length) {
+        const f = \u5148.reduce((a, x) => Math.hypot(x.x - c.x, x.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? x : a, \u5148[0]);
+        const fd = Math.hypot(tgt.x - f.x, tgt.y - f.y) || 1;
+        const ux = (tgt.x - f.x) / fd, uy = (tgt.y - f.y) / fd;
+        let px2 = -uy, py2 = ux;
+        if ((c.x - tgt.x) * px2 + (c.y - tgt.y) * py2 < 0) {
+          px2 = -px2;
+          py2 = -py2;
+        }
+        const \u8107 = 46 * fieldScale();
+        sx = tgt.x + px2 * \u8107;
+        sy = tgt.y + py2 * \u8107;
+      }
+    }
+    if (!MAP && !c.routed && !c.withdraw && !c.squads.some((q) => q.engaged)) {
+      const \u585E = \u524D\u3092\u3075\u3055\u3050\u5473\u65B9(alive, c, sx, sy);
+      if (\u585E) {
+        const bd = Math.hypot(\u585E.x - c.x, \u585E.y - c.y) || 1;
+        const ux = (\u585E.x - c.x) / bd, uy = (\u585E.y - c.y) / bd;
+        let px2 = -uy, py2 = ux;
+        if ((sx - \u585E.x) * px2 + (sy - \u585E.y) * py2 < 0) {
+          px2 = -px2;
+          py2 = -py2;
+        }
+        const \u8107 = 110 * fieldScale();
+        const wx = \u585E.x + px2 * \u8107, wy = \u585E.y + py2 * \u8107;
+        c.wp = [{ x: wx, y: wy, r: 50 * fieldScale() }, { x: sx, y: sy, r: 40 * fieldScale() }];
+        issueOrder(b, c, { order: "\u79FB\u52D5", tx: wx, ty: wy, keepPath: true });
+        continue;
+      }
+    }
     const \u6E21\u308B\u8981 = !MAP && hasRiver() && \u5CB8(tgt.x, tgt.y) !== 0 && \u5CB8(c.x, c.y) !== \u5CB8(tgt.x, tgt.y);
     const \u639F = \u5DDD\u306E\u639F(b, c, sx, sy, tgt);
     sx = \u639F.sx;

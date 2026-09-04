@@ -561,8 +561,20 @@ export function detachAI(b, c, alive) {
     c.task = "帰陣";
     const d0 = Math.hypot(parent.x - c.x, parent.y - c.y);
     if (d0 < 70) {
-      // 本隊に追いついたので組を返す
-      for (const q of c.squads) { if (q.men > 0) parent.squads.push(q); }
+      /* 本隊に追いついたので組を返す。
+
+         兵の尽きた組は本隊へ戻さない――戻せば陣形の幅が空の組ぶん広がる。
+         かといって黙って捨ててはならない。捨てると、その組はどの隊にも
+         属さぬまま戦を終えるので、名簿への書き戻し（core/roster.js の
+         戦の跡）から漏れる。漏れた組は損害が書かれず、古い人数のまま
+         城へ帰り、誰の隊で戦ったかの刻みも付かない。討ち死にした組が
+         紙の上では生きて戻ることになる。
+
+         散った組として盤に控えておき、戦の跡はこれも読む。 */
+      for (const q of c.squads) {
+        if (q.men > 0) parent.squads.push(q);
+        else (b.散った = b.散った || []).push({ id: c.id, squads: [q] });
+      }
       c.squads = [];
       c.dead = true;
       placeSquads(parent, false);
