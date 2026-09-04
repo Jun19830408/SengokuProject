@@ -943,7 +943,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       {退きの札}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 }}>
         {!wide && (
-        <div className="bar" style={{ padding: "6px 10px", gap: 10, fontSize: 12 }}>
+        <div className="bar bt">
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span className="dot" style={{ background: ctx.pColor }} /><b className="mn" style={{ fontSize: 14 }}>{ctx.pName}</b>
           </span>
@@ -1052,7 +1052,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
 
                 もとは「収納」と「広く」が別々で、二度押さねば広くならず、
                 しかも左の釦の列は残ったままであった。 */}
-            <div className={`mapctl l${wide ? " hid" : ""}`}
+            <div className={`mapctl l bctl${wide ? " hid" : ""}`}
               onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}>
               <div className="mbtn" onClick={() => zoomAt(1.3, null)}><b>＋</b>拡大</div>
               <div className="mbtn" onClick={() => zoomAt(0.77, null)}><b>−</b>縮小</div>

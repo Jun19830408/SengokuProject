@@ -16,7 +16,6 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const esbuild = require('esbuild');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'dist', 'tebiki');
@@ -24,96 +23,7 @@ const TMP = path.join(ROOT, 'build', 'shots');
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(TMP, { recursive: true });
 
-const CHROME = [
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  'google-chrome', 'chromium',
-].find((p) => { try { fs.accessSync(p); return true; } catch (e) { return /^[a-z]/.test(p); } });
-
-// 盤を仕込むために、遊びの中身を Node からも触れるようにする
-const 口 = path.join(ROOT, 'build', 'shots-entry.js');
-fs.writeFileSync(口, 'export { initState } from "../src/core/state.js";\n'
-  + 'export { findPath } from "../src/core/paths.js";\n');
-const 束 = path.join(ROOT, 'build', 'shots-state.cjs');
-esbuild.buildSync({ entryPoints: [口], bundle: true, format: 'cjs', outfile: 束, logLevel: 'error' });
-const { initState, findPath } = require(束);
-
-/* ------------------------------------------------------------ 盤の仕込み */
-const 素の盤 = () => {
-  const s = initState('oda');
-  s.year = 1547; s.month = 6;
-  return s;
-};
-
-// 敵の軍が自家の城の際まで来ている盤（城下の野戦になる）
-const 野戦の盤 = () => {
-  const s = 素の盤();
-  const 自城 = s.castles.filter((c) => c.faction === s.player);
-  let 狙 = null, 敵城 = null;
-  for (const c of 自城) {
-    const e = s.castles.find((d) => d.faction !== s.player && (findPath(c.id, d.id) || []).length === 2);
-    if (e) { 狙 = c; 敵城 = e; break; }
-  }
-  const 敵将 = s.generals.filter((x) => x.at === 敵城.id && x.faction === 敵城.faction && !x.captive).slice(0, 3);
-  for (const t of 敵将) t.at = null;
-  s.armies.push({
-    id: 'shot-foe', faction: 敵城.faction, from: 敵城.id, gens: 敵将.map((x) => x.id),
-    local: 3200, localTrain: 72, rost: null,
-    men: 3200 + 敵将.reduce((a, x) => a + x.retinue, 0),
-    at: 狙.id, path: [狙.id], prog: 0, food: 9000, target: 狙.id,
-  });
-  s.pendingArrivals = ['shot-foe'];
-  return s;
-};
-
-/* 海を渡ろうとして、他家の水軍に阻まれる盤（海戦になる）。
-   別所が三木から洲本（三好）へ渡ると、三好の水軍が迎え撃つ。
-   tests/seascreen.cjs が使っているのと同じ局面である。 */
-const 海戦の盤 = () => {
-  const s = initState('bessho');
-  s.year = 1547; s.month = 6;
-  const 将 = s.generals.filter((g) => g.faction === 'bessho' && !g.captive && g.at === 'miki').slice(0, 2);
-  for (const t of 将) t.at = null;
-  s.armies.push({
-    id: 'shot-sea', faction: 'bessho', from: 'miki', gens: 将.map((x) => x.id),
-    local: 3000, localTrain: 70, rost: null,
-    men: 3000 + 将.reduce((a, x) => a + x.retinue, 0),
-    at: 'miki', path: ['miki', 'sumoto'], prog: 0, food: 9000, target: 'sumoto',
-  });
-  s.pendingArrivals = ['shot-sea'];
-  return s;
-};
-
-// 自軍が敵城を囲んでいる盤（強攻すれば城郭図に入る）
-const 城攻めの盤 = () => {
-  const s = 素の盤();
-  const 自城 = s.castles.filter((c) => c.faction === s.player);
-  let 出 = null, 敵城 = null;
-  for (const c of 自城) {
-    const e = s.castles.find((d) => d.faction !== s.player && (findPath(c.id, d.id) || []).length === 2);
-    if (e) { 出 = c; 敵城 = e; break; }
-  }
-  敵城.local = 2600; 敵城.def = Math.max(58, 敵城.def);
-  const 将 = s.generals.filter((x) => x.at === 出.id && x.faction === s.player && !x.captive).slice(0, 3);
-  for (const t of 将) t.at = null;
-  s.armies.push({
-    id: 'shot-siege', faction: s.player, from: 出.id, gens: 将.map((x) => x.id),
-    local: 5200, localTrain: 74, rost: null,
-    men: 5200 + 将.reduce((a, x) => a + x.retinue, 0),
-    at: 敵城.id, path: [敵城.id], prog: 0, food: 16000, target: 敵城.id, sieging: true,
-  });
-  s.sieges = [{ castleId: 敵城.id, armyId: 'shot-siege', months: 1, decided: null }];
-  return s;
-};
-
-/* ------------------------------------------------------------ 場面の並び
-
-   手順は文字列の配列。画面の中で走らせる。
-     押:文字   … その文字を含む釦を押す
-     図:x,y    … 地図（canvas）のその場所を押す
-     待:秒     … 待つ
-     鍵:...    … 記録を仕込む（盤の名。下の 盤たち にある） */
-const 盤たち = { 素: 素の盤, 野戦: 野戦の盤, 城攻め: 城攻めの盤, 海戦: 海戦の盤 };
+const { CHROME, 盤たち, 刻みの仕掛け } = require('./ban.cjs');
 
 const 場面 = [
   { key: 'title', 盤: null, 手: [], 幅: 1000, 高: 980, 説: 'タイトル画面' },
@@ -145,6 +55,9 @@ const 場面 = [
   { key: 'field-show', 盤: '野戦', 手: ['押:続きから', '待:1.4', '押:正面から当たる', '待:0.8',
     '押:合戦開始', '待:0.5', '押:通常', '待:26', '押:停止', '待:0.8'],
     幅: 430, 高: 932, 説: '合戦（道具立てを出した縦画面）' },
+  { key: 'siege-wide', 盤: '城攻め', 手: ['押:続きから', '待:1.0', '押:強攻', '待:0.8', '押:合戦開始',
+    '待:0.5', '押:通常', '待:30', '押:停止', '待:0.4', '押:広く', '待:0.8'],
+    幅: 430, 高: 932, 説: '城攻め（道具立てをしまった縦画面）' },
   { key: 'field-close', 盤: '野戦', 手: ['押:続きから', '待:1.4', '押:正面から当たる', '待:0.8',
     '押:合戦開始', '待:0.5', '押:通常', '待:30', '押:停止', '待:0.4', '押:拡大', '待:0.3',
     '押:拡大', '待:0.9'], 幅: 1200, 高: 950, 説: '野戦（駒の寄り）' },
@@ -221,34 +134,6 @@ const 手順の書 = (手) => `
 })();
 </script>`;
 
-/* --------------------------------------------------- 絵の刻みを自前で送る
-
-   合戦の盤は requestAnimationFrame で回っている。ところが Chrome を虚の時
-   （--virtual-time-budget）で走らせると rAF が進まない。setTimeout のほうは
-   早送りされるので、待ちだけが過ぎて盤の時計は〇分〇秒のまま止まる。
-
-   そのため「野戦（交戦）」と称していた写しが、布陣のときと同じ絵になっていた。
-   三十八秒待ってから撮っていたつもりが、一秒も進んでいなかったのである。
-
-   そこで撮影のときだけ、rAF を setTimeout で置き換える。十六ミリ秒ごとに
-   刻みを送るので、待った秒数がそのまま盤の秒数になる。遊びの本体には
-   何も足していない（この仕掛けは撮影用の写しにだけ差し込む）。 */
-const 刻みの仕掛け = `<script>
-(() => {
-  const 待ち = [];
-  let 刻 = 0;
-  window.requestAnimationFrame = (cb) => { 待ち.push(cb); return 待ち.length; };
-  window.cancelAnimationFrame = () => {};
-  const 送る = () => {
-    const 今 = 待ち.splice(0, 待ち.length);
-    刻 += 16;
-    for (const cb of 今) { try { cb(刻); } catch (e) {} }
-    setTimeout(送る, 16);
-  };
-  setTimeout(送る, 16);
-})();
-</script>`;
-
 /* ------------------------------------------------------------------ 撮る */
 const 元 = fs.readFileSync(path.join(ROOT, 'dist', 'index.html'), 'utf8');
 let 撮れた = 0;
@@ -262,10 +147,34 @@ for (const s of 場面) {
   const p = path.join(TMP, `${s.key}.html`);
   fs.writeFileSync(p, html);
   const png = path.join(OUT, `${s.key}.png`);
+
+  /* Chrome の --window-size は、幅を五百より狭くできない。四三〇と書いても
+     開くのは五百である。そのため「携帯の縦画面」と称した写しは、長らく
+     五百幅で撮れていた。実機の三九三〜四三〇では道具立ての収まりが変わる
+     ので、これでは説明にならない（tools/semai.cjs にいきさつを記した）。
+
+     そこで狭い場面は、五百の窓の中に iframe を置き、その iframe を目当ての
+     幅にする。差し金（media query）は iframe の幅で決まるので、中は本当の
+     狭さになる。撮ったあと、余った右側を切り落とす。 */
+  const 狭 = s.幅 < 500;
+  let 撮る道 = p, 窓幅 = s.幅;
+  if (狭) {
+    /* iframe は真ん中に置く。sips の切り出しは真ん中を残すので（--cropOffset は
+       効かなかった）、真ん中に置いておけば切り出しがそのまま iframe になる。 */
+    const 親 = `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#fff;overflow:hidden}
+iframe{width:${s.幅}px;height:${s.高}px;border:0;display:block;position:absolute;top:0;left:50%;transform:translateX(-50%)}</style>
+<iframe src="${s.key}.html"></iframe>`;
+    撮る道 = path.join(TMP, `${s.key}-oya.html`);
+    fs.writeFileSync(撮る道, 親);
+    窓幅 = 500;
+  }
   try {
     execFileSync(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars',
-      `--window-size=${s.幅},${s.高}`, '--virtual-time-budget=180000',
-      `--screenshot=${png}`, `file://${p}`], { stdio: 'ignore' });
+      `--window-size=${窓幅},${s.高}`, '--virtual-time-budget=180000',
+      `--screenshot=${png}`, `file://${撮る道}`], { stdio: 'ignore' });
+    if (狭 && fs.existsSync(png)) {
+      execFileSync('sips', ['-c', String(s.高), String(s.幅), png], { stdio: 'ignore' });
+    }
   } catch (e) { /* 撮れなくても次へ */ }
   const 有 = fs.existsSync(png) && fs.statSync(png).size > 3000;
   console.log(`  ${有 ? '○' : '★'} ${s.key.padEnd(13)} ${s.説}${有 ? `　${Math.round(fs.statSync(png).size / 1024)}KB` : '　撮れず'}`);

@@ -8,6 +8,7 @@ export const css = `
  font-family:'Hiragino Sans','Yu Gothic UI','Meiryo',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
 .sp .mn{font-family:'Hiragino Mincho ProN','Yu Mincho','MS Mincho',serif}
 .sp .num{font-variant-numeric:tabular-nums}
+.bar.bt{padding:6px 10px;gap:10px;font-size:12px}
 .bar{display:flex;align-items:center;gap:14px;padding:9px 14px;background:${U.card};
  border-bottom:1px solid ${U.line};flex:0 0 auto;flex-wrap:wrap;font-size:13px}
 .bar .kv{display:flex;align-items:center;gap:5px;color:${U.dim}}
@@ -75,6 +76,29 @@ export const css = `
 .split{display:flex;gap:20px}
 .split>div{flex:1;min-width:0}
 @media(max-width:760px){.split{flex-direction:column;gap:10px}.mini{width:96px;height:103px}}
+
+/* ------------------------------------------- 縦に持った携帯（GDD 8.1）
+
+   合戦の道具立ては縦に五つ並ぶ。横に持てば収まるが、縦に持つと盤そのものが
+   短いので、いちばん下の「広く」が盤の外へはみ出して切れる。切れた釦は
+   押せないので、しまうこともできない――これが起きていた。
+
+   狭いときは横に寝かせる。五つ並べても四十八掛ける五で二百四十であるから、
+   四百三十の画面にも収まる。字も間合いも詰める。
+
+   上の帯も同じ理由で三行に折り返し、盤を圧迫していた。詰めて一行に近づける。 */
+@media(max-width:560px){
+  /* 合戦の道具立てだけを寝かせる。政務の地図も同じ .mapctl を使っているが、
+     あちらは左右に二列あり、横に寝かせると狭い画面でぶつかる。 */
+  .mapctl.bctl{flex-direction:row;gap:4px;max-width:calc(100% - 24px);flex-wrap:wrap}
+  .mapctl.bctl.hid{transform:translateY(-72px)}
+  .bctl .mbtn{width:auto;min-width:44px;padding:5px 7px;font-size:9.5px;line-height:1.35}
+  .bctl .mbtn b{font-size:13px}
+  .bar.bt{gap:6px;padding:5px 8px;font-size:11px}
+  .bar.bt .mn{font-size:12px !important}
+  .bar .btn.sm{padding:4px 7px;font-size:11px}
+  .grip{width:38px;height:38px;border-radius:19px;font-size:15px}
+}
 
 /* ---------------------------------------------------------- 携帯で遊ぶために
 
