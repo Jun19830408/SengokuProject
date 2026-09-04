@@ -492,11 +492,36 @@ export function 城を委ねる(s, castleId, armyId, 差配) {
   a.men = (a.local || 0) + (a.gens || []).reduce((t, id) => {
     const g = s.generals.find((x) => x.id === id); return t + (g ? g.retinue : 0);
   }, 0);
-  // 軍に誰も残らなければ、軍は解ける
-  if (!(a.gens || []).length && (a.local || 0) <= 0) {
-    s.armies = s.armies.filter((x) => x.id !== a.id);
+  /* 軍に将が一人も残らなければ、軍は解ける。
+
+     もとは「将もおらず、地の兵も尽きたとき」に限って解いていた。ところが
+     連れてきた将を残らず城へ置き、地の兵を半分だけ残す差配はごく普通にある。
+     すると将のいない軍が兵だけ抱えて在陣し続け、城の帳には「将なし」の軍が並び、
+     地図には数字だけが浮いた。遊ぶ側からは、解いたはずの軍が消えないように見える。
+
+     率いる者のいない軍は軍ではない。残る兵は出陣元へ返す（軍を解くのと同じ）。 */
+  if (!(a.gens || []).length) {
+    const 帰り先 = withdrawArmy(s, a);
+    if (帰り先 && (a.local || 0) > 0) {
+      s.chronicle.push({ y: s.year, m: s.month,
+        text: `${c.name}に将を残らず置いたので軍は解け、残る兵${fmt(a.local)}人は${帰り先.name}へ返した。` });
+    }
   }
   return s;
+}
+
+/* 将のいない軍を拾って解く（月ごとの見回りと、古い記録の繕い）。
+
+   上の落とし穴は塞いだが、すでにできてしまった軍は残っている。
+   将がいなければ率いる者がいないのだから、月が変わるたびにここで解く。 */
+export function 将の無い軍を解く(s) {
+  const 解いた = [];
+  for (const a of [...(s.armies || [])]) {
+    if ((a.gens || []).length) continue;
+    const 帰り先 = withdrawArmy(s, a);
+    解いた.push({ id: a.id, faction: a.faction, men: a.local || 0, 先: 帰り先 });
+  }
+  return 解いた;
 }
 
 /* 采配（他家と、遊ぶ側が委ねたとき）の既定の差配。

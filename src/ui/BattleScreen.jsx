@@ -954,7 +954,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
             <span className="dot" style={{ background: ctx.eColor }} /><b className="mn" style={{ fontSize: 14 }}>{ctx.eName}</b>
           </span>
           <span className="kv">兵 <b className="num">{fmt(eMen)}</b></span>
-          <span className="kv">{ctx.place}{ctx.mode === "castle" ? "城攻め" : ctx.mode === "clash" ? "の野戦" : "下"}・{b.weather}</span>
+          {/* 盤の名にすでに「城下」「の囲み」が付いていれば、重ねて添えない（城下下と出ていた） */}
+          <span className="kv">{ctx.place}{/城下$|の囲み$/.test(ctx.place || "") ? ""
+            : ctx.mode === "castle" ? "城攻め" : ctx.mode === "clash" ? "の野戦" : "下"}・{b.weather}</span>
           {ctx.mode === "castle" && b.map && b.map.gates.map((gt) => (
             <span key={gt.key} style={{ fontSize: 11, color: U.dim }}>
               {gt.key}

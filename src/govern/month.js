@@ -18,7 +18,7 @@ import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "./ai.js";
 import { 外交の采配, 調略の采配, 特殊勢力の采配 } from "./aiDiplo.js";
 import { checkUnified } from "./unify.js";
-import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy } from "./war.js";
+import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く } from "./war.js";
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
@@ -1141,6 +1141,12 @@ export function advanceMonth(prev, g) {
       for (const q of restoreStrays(s)) {
         if (q.faction !== s.player) continue;
         events.push(`${q.name}の所在が知れずにいたが、${(s.castles.find((c) => c.id === q.at) || {}).name}に戻った。`);
+      }
+      /* 将のいない軍も同じである。率いる者がいなければ軍ではない。
+         地図に数字だけが浮き、城の帳には「将なし」の軍が並ぶことになる。 */
+      for (const q of 将の無い軍を解く(s)) {
+        if (q.faction !== s.player || !q.先) continue;
+        events.push(`将のいない軍を解き、兵${fmt(q.men)}人は${q.先.name}へ返した。`);
       }
       /* 危急の報せ（GDD 7.4 / 9.2）。
 

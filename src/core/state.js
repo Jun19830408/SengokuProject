@@ -837,6 +837,32 @@ export function migrateSave(s) {
   盤の増補を取り込む(s);                          // 後から足した城・武将・家・特殊勢力
   本領と本拠を繕う(s);
   旗頭を据える(s);                                // 役の欄の無い古い記録に家老を据える
+  将の無い軍を繕う(s);                            // 兵だけ残って浮いていた軍を解く
+  return s;
+}
+
+/* 将のいない軍を、読み込みのときにも繕う（GDD 6.4）。
+
+   城を委ねるときに将を残らず置くと、地の兵だけの軍が在陣し続けていた。
+   落とし穴は塞いだが、すでにできてしまった軍は記録の中に残っている。
+   兵は失わせない――出陣元（無ければ足下の城）へ返す。 */
+export function 将の無い軍を繕う(s) {
+  for (const a of [...(s.armies || [])]) {
+    if ((a.gens || []).length) continue;
+    const 元 = s.castles.find((c) => c.id === a.from && c.faction === a.faction)
+      || s.castles.find((c) => c.id === a.at && c.faction === a.faction)
+      || s.castles.find((c) => c.faction === a.faction);
+    if (元) {
+      元.local = (元.local || 0) + Math.max(0, a.local || 0);
+      if (a.rost && a.rost.length) 元.rost = [...(元.rost || []), ...a.rost];
+    }
+    s.armies = s.armies.filter((x) => x.id !== a.id);
+    s.sieges = (s.sieges || []).filter((x) => x.armyId !== a.id);
+    s.pendingArrivals = (s.pendingArrivals || []).filter((id) => id !== a.id);
+    s.campaigns = (s.campaigns || []).map((c) => ({ ...c,
+      armies: (c.armies || []).filter((id) => id !== a.id),
+      arrived: (c.arrived || []).filter((id) => id !== a.id) })).filter((c) => c.armies.length);
+  }
   return s;
 }
 

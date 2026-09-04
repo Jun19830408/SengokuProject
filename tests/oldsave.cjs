@@ -109,6 +109,28 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
     確('古い記録の武将に、軍役の器が与えられる',
       旧.generals.every((g) => g.retCap != null && g.retCap >= g.retinue),
       `${旧.generals.length}名`);
+
+    /* 将のいない軍が浮いたまま残っている記録を繕う（GDD 6.4）。
+
+       落とした城に将を残らず置くと、地の兵だけの軍が在陣し続けていた。
+       すでにできてしまった軍は記録の中に残るので、読み込みのときに解く。
+       兵は失わせない――出陣元へ返す。 */
+    const 旧2 = initState('oda');
+    const 城 = 旧2.castles.find((c) => c.faction === 'oda');
+    const 元の兵 = 城.local;
+    旧2.armies.push({ id: '浮いた軍', faction: 'oda', from: 城.id, gens: [],
+      local: 1200, localTrain: 70, rost: null, men: 1200,
+      at: 城.id, path: [城.id], prog: 0, food: 3000, target: null, 在陣: 城.id });
+    旧2.sieges = [{ castleId: 城.id, armyId: '浮いた軍', months: 1, decided: null }];
+    migrateSave(旧2);
+    確('将のいない軍は、読み込みのときに解かれる',
+      !(旧2.armies || []).some((a) => a.id === '浮いた軍'),
+      (旧2.armies || []).some((a) => a.id === '浮いた軍') ? '残っている' : '解けた');
+    確('その兵は失われず、城へ返る',
+      旧2.castles.find((c) => c.id === 城.id).local >= 元の兵 + 1200,
+      `${城.name} ${元の兵}人 → ${旧2.castles.find((c) => c.id === 城.id).local}人`);
+    確('囲みの控えも一緒に片づく',
+      !(旧2.sieges || []).some((x) => x.armyId === '浮いた軍'));
   }
 
   await act(async () => { root.render(React.createElement(App)); }); await flush(); await flush();

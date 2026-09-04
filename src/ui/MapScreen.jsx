@@ -893,9 +893,15 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       else autoResolve(army.id, dest.id);
       return;
     }
+    /* 奇襲の献策を挟むときは、相手の軍と、討って出た城方も一緒に控える。
+
+       もとは { plan, army, dest, camp } しか控えず、答えたあとの再びの呼び出しで
+       foe と sally が落ちていた。相手の軍が落ちれば、向かい合うのは軍ではなく城に
+       なる。自家の城を救いに行った援軍が、その城を攻める形になり、盤の帯には
+       「織田家 対 織田家」と出た。討って出た城方の兵も、そのまま消えていた。 */
     if (ambush === undefined) {
-      const plan = ambushPlan(g, army, dest);
-      if (plan) { setRaid({ plan, army, dest, camp }); return; }   // 献策を問う
+      const plan = ambushPlan(g, army, dest, foe);
+      if (plan) { setRaid({ plan, army, dest, camp, foe, sally }); return; }   // 献策を問う
     }
     setBattleMap(null);
     setFieldSeed(army.from, dest.id);      // 街道ごとに戦場が決まる
@@ -996,7 +1002,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         Math.round(train * 0.7 + najimi * 0.3),                      // 地域は馴染が効く
         ...(() => { const p2 = lineup(isAtk, i, n); return [p2.x, p2.y, p2.f]; })(), color));
     };
-    const atkColor = g.factions[army.faction].color, defColor = g.factions[dest.faction].color;
+    /* 向かい合う家は、城ではなく相手の軍である（行き合い・城下の野戦）。
+       ここを城の家のままにしていたので、自家の城の下で戦うと
+       「織田家 対 織田家」と出た。 */
+    const defFaction = foe ? foe.faction : dest.faction;
+    const atkColor = g.factions[army.faction].color, defColor = g.factions[defFaction].color;
     const betray = dest.intrigue && army.faction === g.player;   // 内応（GDD 11.2）
     // 同着した他家の援軍と、戦役に加わった寄騎は、自前の旗色のまま同じ側に立つ（GDD 7.4）
     // 街道での行き合いは、居合わせた者だけの戦である。寄騎は間に合わぬ。
@@ -1029,9 +1039,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         }
         return "援軍";
       })();
+      /* 末の isAtk を渡していなかったので、援軍は寄せ手ではなく守り手の端に並んでいた。
+         横の位置だけ後で振り直していたため、味方の援軍が敵陣の中に立っていた。 */
       const list = build(ag.slice(0, slots), a.local, a.localTrain, atkSide,
         playerIsAtk ? FIELD.h * 0.875 : FIELD.h * 0.14,
-        playerIsAtk ? -Math.PI / 2 : Math.PI / 2, col);
+        playerIsAtk ? -Math.PI / 2 : Math.PI / 2, col, null, true);
       slots -= list.length;
       list.forEach((c, i) => {
         c.x = FIELD.w / 2 + (off + i) * Math.round(175 * (FIELD.w / BASE.w)) * (off % 2 ? 1 : -1);
@@ -1086,8 +1098,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       b: bb, armyId: army.id, castleId: dest.id, playerIsAtk, campId: camp ? camp.id : null,
       mode: foe ? "clash" : undefined, foeId: foe ? foe.id : null,
       sally: sally ? { castleId: sally.castleId, gens: sally.gens, local: sally.local } : null,
-      pName: g.factions[playerIsAtk ? army.faction : dest.faction].name,
-      eName: g.factions[playerIsAtk ? dest.faction : army.faction].name,
+      pName: g.factions[playerIsAtk ? army.faction : defFaction].name,
+      eName: g.factions[playerIsAtk ? defFaction : army.faction].name,
       // 上部に出す目印は、盤の駒と同じ色にする（自軍は藍、敵軍は朱）。
       // ここだけ家の色のままだと、数を見比べるときにどちらが自軍か紛れる。
       pColor: sideHue(playerIsAtk ? atkColor : defColor, true),
@@ -2553,7 +2565,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 <div className="g2" style={{ marginTop: 16 }}>
                   <button className="btn dark" onClick={() => {
                     const hit = Math.random() < r.p;
-                    const { army, dest, camp } = raid;
+                    const { army, dest, camp, foe, sally } = raid;
                     setRaid(null);
                     if (hit && r.target) {
                       setG((p2) => {
@@ -2572,12 +2584,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                         return s2;
                       });
                     }
-                    startBattle(army, dest, camp, { done: true, hit, head: r.head, target: r.target, atkIsPlayer });
+                    startBattle(army, dest, camp, { done: true, hit, head: r.head, target: r.target, atkIsPlayer }, foe, sally);
                   }}>本陣を衝く</button>
                   <button className="btn" onClick={() => {
-                    const { army, dest, camp } = raid;
+                    const { army, dest, camp, foe, sally } = raid;
                     setRaid(null);
-                    startBattle(army, dest, camp, null);
+                    startBattle(army, dest, camp, null, foe, sally);
                   }}>正面から当たる</button>
                 </div>
               </div>

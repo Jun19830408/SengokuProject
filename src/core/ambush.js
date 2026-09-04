@@ -1,17 +1,23 @@
 import { clamp } from "./util.js";
 
 // 城下に着いたときの献策。寡兵であり、策を献じうる者がいるときに限る。
-export function ambushPlan(g, army, dest) {
+/* foe を渡せば、向かい合うのは城ではなくその軍である（行き合い・城下の野戦）。
+   渡さねば、これまで通り城の守りを相手と見る。 */
+export function ambushPlan(g, army, dest, foe) {
   const atkIsPlayer = army.faction === g.player;
+  const 城方 = foe
+    ? (foe.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean)
+    : g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
+  const 城方の兵 = foe ? foe.men : dest.local + 城方.reduce((a, x) => a + x.retinue, 0);
   const mine = atkIsPlayer
     ? army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean)
-    : g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
+    : 城方;
   const theirs = atkIsPlayer
-    ? g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive)
+    ? 城方
     : army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
   if (!mine.length || !theirs.length) return null;
-  const myMen = atkIsPlayer ? army.men : dest.local + mine.reduce((a, x) => a + x.retinue, 0);
-  const foeMen = atkIsPlayer ? dest.local + theirs.reduce((a, x) => a + x.retinue, 0) : army.men;
+  const myMen = atkIsPlayer ? army.men : 城方の兵;
+  const foeMen = atkIsPlayer ? 城方の兵 : army.men;
   const ratio = myMen / Math.max(1, foeMen);
   if (ratio > 0.62) return null;                       // 互角に近ければ正面から当たる
   const head = [...mine].sort((a, b) => (b.wit + b.lead) - (a.wit + a.lead))[0];
