@@ -1025,32 +1025,49 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 {n.text}
               </div>
             ))}
+            {/* しまったときの要約。盤の上に浮かせるので、盤は狭まらない。
+                縦に持った携帯では幅が足りぬので、字も間合いも詰める。 */}
             {wide && (
-              <div style={{ position: "absolute", right: 10, top: 10, zIndex: 6, display: "flex", gap: 6, alignItems: "center",
-                background: "rgba(255,255,255,.94)", border: `1px solid ${U.line}`, borderRadius: 18, padding: "5px 10px", fontSize: 11.5 }}
+              <div style={{ position: "absolute", right: 8, top: 8, zIndex: 6, display: "flex",
+                gap: land ? 6 : 4, alignItems: "center", opacity: 0.92,
+                background: "rgba(255,255,255,.90)", border: `1px solid ${U.line}`, borderRadius: 18,
+                padding: land ? "5px 10px" : "3px 7px", fontSize: land ? 11.5 : 10.5 }}
                 onMouseDown={stop} onMouseUp={stop}>
                 <span className="dot" style={{ background: ctx.pColor }} /><b className="num">{fmt(pMen)}</b>
                 <span style={{ color: U.dim }}>対</span>
                 <span className="dot" style={{ background: ctx.eColor }} /><b className="num">{fmt(eMen)}</b>
                 <span className="num" style={{ color: U.dim }}>{Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}</span>
                 {phase === "fight" && [["停", 0], ["微", 0.12], ["低", 0.3], ["通", 0.6]].map(([lb, v]) => (
-                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`} style={{ padding: "3px 6px" }}
+                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`}
+                    style={{ padding: land ? "3px 6px" : "2px 5px", fontSize: land ? 12 : 10.5 }}
                     onClick={() => setSpeed(v)}>{lb}</button>
                 ))}
               </div>
             )}
-            <div className="mapctl l" onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}>
+            {/* 道具立て（GDD 8.1）。
+
+                縦に持った携帯では、上の帯と下の欄に挟まれて盤が狭い。「広く」を
+                押せば、帯も欄も左の釦もまとめて引っ込み、盤だけが残る。
+                残るのは隅の取っ手一つで、押せば同じ道を通って戻ってくる。
+
+                もとは「収納」と「広く」が別々で、二度押さねば広くならず、
+                しかも左の釦の列は残ったままであった。 */}
+            <div className={`mapctl l${wide ? " hid" : ""}`}
+              onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}>
               <div className="mbtn" onClick={() => zoomAt(1.3, null)}><b>＋</b>拡大</div>
               <div className="mbtn" onClick={() => zoomAt(0.77, null)}><b>−</b>縮小</div>
               <div className="mbtn" onClick={fitAll}><b>⛶</b>全体</div>
               <div className="mbtn" onClick={() => setPanel((v) => !v)}><b>▤</b>{panel ? "収納" : "展開"}</div>
-              <div className={`mbtn ${wide ? "on" : ""}`} onClick={() => setWide((v) => !v)}>
-                <b>{wide ? "▤" : "⤢"}</b>{wide ? "戻す" : "広く"}
-              </div>
+              <div className="mbtn" onClick={() => setWide(true)}><b>⤢</b>広く</div>
             </div>
+            {wide && (
+              <div className="grip l" title="道具立てを戻す"
+                onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
+                onClick={() => setWide(false)}>▤</div>
+            )}
           </div>
 
-          {panel && (
+          {panel && !wide && (
             <div className="bpanel" onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
               style={{
                 flex: "0 0 auto", background: U.card, padding: "8px 10px", overflowY: "auto",

@@ -834,8 +834,129 @@ export function migrateSave(s) {
   立たぬ申し送りを落とす(s);
   // 姫のいない古い記録には、いま立てる（GDD 6.8）
   if (!Array.isArray(s.hime)) { s.hime = []; 姫を整える(s); }
+  盤の増補を取り込む(s);                          // 後から足した城・武将・家・特殊勢力
   本領と本拠を繕う(s);
   旗頭を据える(s);                                // 役の欄の無い古い記録に家老を据える
+  return s;
+}
+
+/* 盤の増補を、古い記録へ取り込む（GDD 15.3）。
+
+   盤は育っている。二百四十九城・八百十二将で始めたものが、いまは
+   二百七十一城・九百七十二将になった。ところが記録は盤の写しを丸ごと抱えて
+   いるので、古い記録を読んでも増補は入ってこない。出羽も佐渡も蝦夷も琉球も、
+   その盤には無いままである。
+
+   道はそうではない。街道と地点（paths.js の NODES）は常に最新の城で組まれる
+   ので、記録の側にだけ城が無い、という食い違いが起きる。いまのところ実害は
+   出ていないが（六十城どうしを検めて、盤に無い城を経由する道は零本）、
+   放っておく筋のものではない。
+
+   足し方は「史実の持ち主のまま足す」。増補で立てた家は、古い記録には家ごと
+   存在しないので、滅んだ家を勝手に復活させることにはならない。
+
+     出羽　最上・天童・大宝寺・小野寺・安東
+     佐渡　本間　　蝦夷　蠣崎とアイヌ三家　　琉球　琉球王国
+
+   もし本来の持ち主が既に滅んでいれば、その城は誰の物でもない――が、盤には
+   持ち主の無い城という形が無いので、そのときは足さない。滅んだ家を復活
+   させるよりは、盤に出ないほうが害が少ない。 */
+/* 足す城と武将を、盤を立てるときと同じ形にこしらえる。
+   欄の一つでも欠ければ、そこから静かに壊れていく。 */
+function 新しい城(c) {
+  const 城 = 馬と鉄砲を配る(assignKokuCap([{
+    ...c, x: px(c.lon), y: py(c.lat),
+    najimi: 70,
+    rost: newRoster(c.local, `loc-${c.id}`),
+    kokuBase: Math.round(c.koku * 1.25),
+    kokuMax: Math.round(c.koku * 1.25),
+    kokuCap: Math.round(c.koku * 1.478),
+    kokuGen: Math.round(c.koku * 2.051),
+    well: 100,
+    lordId: null, intrigue: false,
+  }]))[0];
+  return 城;
+}
+
+function 新しい将(g) {
+  return {
+    ...g, unity: clamp(g.retTrain + 8, 30, 100), merit: 0,
+    retCap: g.retinue,
+    本領: g.at || null,
+    fief: Math.round(fiefWanted(g) * 0.9),
+    rost: newRoster(g.retinue, `ret-${g.id}`, 直属の兵科),
+  };
+}
+
+export function 盤の増補を取り込む(s) {
+  if (!Array.isArray(s.castles) || !Array.isArray(s.generals)) return s;
+  const 城id = new Set(s.castles.map((c) => c.id));
+  const 生きている家 = (fid) => !!(s.factions || {})[fid]
+    && (s.castles.some((c) => c.faction === fid)
+      || s.generals.some((g) => g.faction === fid && !g.captive));
+
+  // 一、家。増補で立てた家がなければ加える
+  for (const fid of Object.keys(FACTIONS)) {
+    if (!s.factions[fid]) s.factions[fid] = { ...JSON.parse(JSON.stringify(FACTIONS[fid])), prestige: 50 };
+  }
+
+  // 二、城。史実の持ち主が盤にいる（＝増補で立てた家）ものだけを足す
+  const 足した城 = [];
+  for (const c of CASTLES) {
+    if (城id.has(c.id)) continue;
+    // その家が古い記録で既に滅んでいるなら足さない（復活させない）
+    const 増補の家 = !s.castles.some((x) => x.faction === c.faction)
+      && !s.generals.some((g) => g.faction === c.faction);
+    if (!増補の家 && !生きている家(c.faction)) continue;
+    s.castles.push(新しい城(c));
+    城id.add(c.id);
+    足した城.push(c);
+  }
+
+  /* 三、武将。増補で足した者を加える。
+
+     はじめ「足した城に居る者だけ」としていたが、それでは足りなかった。
+     武将の増補は城の増補とは別に進んでいて、既にある城へ人を足したものが
+     百十九名あった（島津忠将、肝付兼演……）。城が盤にあるなら、その者も
+     盤に居るべきである。
+
+     置く先は、その城がまだその家のものである場合に限る。他家に落ちた城へ
+     昔の家臣を湧かせては、盤の理が崩れる。
+
+     居場所の無い者（後年に世に出る者）は加えない。時が来れば出てくる。 */
+  const 将id = new Set(s.generals.map((g) => g.id));
+  let 足した将 = 0;
+  for (const g of GENERALS) {
+    if (将id.has(g.id)) continue;
+    if (!g.at || !城id.has(g.at)) continue;                 // 居場所の無い者は加えない
+    const 城 = s.castles.find((c) => c.id === g.at);
+    if (!城 || 城.faction !== g.faction) continue;           // 主が変わった城には湧かせない
+    s.generals.push(新しい将(g));
+    将id.add(g.id);
+    足した将++;
+  }
+
+  // 四、特殊勢力。増補で足したものを加える
+  if (Array.isArray(s.specials)) {
+    const 印 = new Set(s.specials.map((x) => x.id));
+    for (const t of TOWNS) if (!印.has(t.id)) s.specials.push({ id: t.id, tie: null, 家: null, 月: 0 });
+  }
+
+  // 五、間柄。足した家との間柄が無ければ中立で結ぶ
+  if (s.relations) {
+    const ids = Object.keys(s.factions);
+    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+      const k = relKey(ids[i], ids[j]);
+      if (!s.relations[k]) s.relations[k] = { trust: 45, state: "中立", until: null };
+    }
+  }
+
+  if (足した城.length) {
+    s.chronicle = s.chronicle || [];
+    s.chronicle.push({ y: s.year, m: s.month,
+      text: `盤が広がった。${[...new Set(足した城.map((c) => c.kuni))].join("・")}の`
+        + `${足した城.length}城と${足した将}人の武将が加わった。` });
+  }
   return s;
 }
 

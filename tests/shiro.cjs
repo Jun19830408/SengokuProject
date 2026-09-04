@@ -25,7 +25,9 @@ fs.writeFileSync(entry,
 + 'export { ROADS } from "../src/data/roads.js";\n'
 + 'export { FACTIONS } from "../src/data/factions.js";\n'
 + 'export { initState } from "../src/core/state.js";\n'
-+ 'export { minGarrison, troopCap } from "../src/core/rank.js";\n');
++ 'export { minGarrison, troopCap } from "../src/core/rank.js";\n'
++ 'export { migrateSave } from "../src/core/state.js";\n'
++ 'export { GENERALS } from "../src/data/generals.js";\n');
 const out = path.join(ROOT, 'build', 'shiro.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
   loader: { '.jsx': 'jsx' }, logLevel: 'error' });
@@ -227,6 +229,76 @@ console.log(`  （城 ${C.length}／国 ${国々.length}／道 ${R.length}本／
   const 割 = s.castles.map((c) => A.minGarrison(c) / Math.max(1, c.local)).sort((a, b) => a - b);
   console.log(`  （守るに要る兵÷城兵　中央 ${割[Math.floor(割.length / 2)].toFixed(2)}`
     + `／最大 ${割[割.length - 1].toFixed(2)}）`);
+}
+
+/* ------------------------------ 六、盤の増補が、古い記録へ取り込まれること
+
+   盤は育っている。二百四十九城・八百十二将で始めたものが、いまは
+   二百七十一城・九百七十二将になった。ところが記録は盤の写しを丸ごと抱えて
+   いるので、古い記録を読んでも増補は入ってこない。出羽も佐渡も蝦夷も琉球も、
+   その盤には無いままである。
+
+   道はそうではない。街道と地点（paths.js の NODES）は常に最新の城で組まれる
+   ので、記録の側にだけ城が無い、という食い違いが起きる。
+
+   足し方は「史実の持ち主のまま足す」。増補で立てた家は、古い記録には家ごと
+   存在しないので、滅んだ家を勝手に復活させることにはならない。 */
+{
+  const s = A.initState('oda');
+  // 古い記録を模す。増補の分（城・将・家）をそっくり落とす
+  s.castles = s.castles.slice(0, 249);
+  s.generals = s.generals.slice(0, 812);
+  const 生 = new Set([...s.castles.map((c) => c.faction), ...s.generals.map((g) => g.faction)]);
+  for (const f of Object.keys(s.factions)) if (!生.has(f)) delete s.factions[f];
+  const 前城 = s.castles.length, 前将 = s.generals.length, 前家 = Object.keys(s.factions).length;
+
+  A.migrateSave(s);
+
+  確('古い記録に、いまの盤の城がすべて入る', s.castles.length === C.length,
+    `${前城} → ${s.castles.length}城（いまの盤は ${C.length}城）`);
+  無し('いまの盤の城で、記録に入っていないものがない',
+    C.filter((c) => !s.castles.some((x) => x.id === c.id)).map((c) => `${c.name}(${c.kuni})`));
+  確('武将も加わる', s.generals.length > 前将,
+    `${前将} → ${s.generals.length}名（いまの盤は ${A.GENERALS.length}名）`);
+  /* 家は落ちなかった。増補で立てた家（最上・蠣崎・琉球など）も、城は無いが
+     武将の帳には載っているので、古い記録を模しても家としては残る。
+     ゆえに「増えること」ではなく「欠けないこと」を見る。 */
+  無し('いまの盤の家が、記録から欠けていない',
+    Object.keys(F).filter((f) => !s.factions[f]),
+    `${Object.keys(s.factions).length}家`);
+
+  無し('足した城が、欄の欠けたまま置かれていない',
+    s.castles.filter((c) => c.kokuCap == null || c.rost == null || c.najimi == null || c.well == null)
+      .map((c) => c.name));
+  無し('足した武将が、欄の欠けたまま置かれていない',
+    s.generals.filter((g) => g.rost == null || g.retCap == null || g.本領 === undefined)
+      .map((g) => g.name));
+
+  /* 主が変わった城へ、昔の家臣を湧かせないこと。
+
+     はじめ「他家の城にいる将がいないこと」と見て倒れた。初期の盤にも
+     他家の城に居る者は八名いる（雑賀衆の玉置直和が湯川家の手取城に、
+     大内の杉原理興が備後山名家の神辺城に――客将であり在番である）。
+     もとから居る者を咎めても仕方がない。
+
+     測るべきは「繕いが新たに湧かせていないか」であるから、繕う前と後で
+     数が増えていないかを見る。 */
+  const 他家住み = (盤) => 盤.generals.filter((g) => {
+    const c = 盤.castles.find((x) => x.id === g.at);
+    return c && c.faction !== g.faction && !g.captive;
+  }).length;
+  確('繕いが、他家に落ちた城へ昔の家臣を湧かせない',
+    他家住み(s) <= 他家住み(A.initState('oda')),
+    `繕った盤 ${他家住み(s)}名／初めの盤 ${他家住み(A.initState('oda'))}名（もとから居る客将・在番）`);
+
+  確('何が加わったかが戦国記に残る',
+    s.chronicle.some((x) => /盤が広がった/.test(x.text)),
+    (s.chronicle.filter((x) => /盤が広がった/.test(x.text)).slice(-1)[0] || {}).text || 'なし');
+
+  // 二度読んでも増えない（繕いは何度通しても同じ形になる）
+  const 二度目 = s.castles.length;
+  A.migrateSave(s);
+  確('二度読んでも城は増えない', s.castles.length === 二度目, `${二度目} → ${s.castles.length}城`);
 }
 
 console.log('');

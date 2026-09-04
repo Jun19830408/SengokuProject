@@ -24,8 +24,21 @@ export const css = `
 .mapwrap{flex:1;position:relative;min-height:0;overflow:hidden;background:#DDE4C8;touch-action:none;overscroll-behavior:none}
 .fieldwrap{touch-action:none;overscroll-behavior:none}
 .bpanel .g2,.bpanel .g4{gap:6px}
+.bpanel{transition:max-height .2s ease,opacity .18s ease}
 .bpanel .btn.sm{padding:6px 6px;font-size:12px}
-.mapctl{position:absolute;display:flex;flex-direction:column;gap:6px;z-index:5}
+.mapctl{position:absolute;display:flex;flex-direction:column;gap:6px;z-index:5;
+ transition:opacity .18s ease,transform .18s ease}
+/* 合戦の盤を広く見るとき、道具立てをすっと引っ込める（GDD 8.1）。
+   消してしまうのではなく、外へ滑らせる。戻すときも同じ道を通って出てくる。 */
+.mapctl.hid{opacity:0;pointer-events:none}
+.mapctl.l.hid{transform:translateX(-84px)}
+.mapctl.r.hid{transform:translateX(84px)}
+/* しまったときに残す取っ手。これだけは盤の隅に置いておく。 */
+.grip{position:absolute;z-index:6;width:44px;height:44px;border-radius:22px;
+ background:rgba(255,255,255,.90);border:1px solid ${U.line};color:${U.text};
+ display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;
+ box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.grip.l{left:max(12px,env(safe-area-inset-left));top:12px}
 .mapctl.l{left:12px;top:12px}
 .mapctl.r{right:12px;top:12px}
 .mbtn{width:60px;background:rgba(255,255,255,.94);border:1px solid ${U.line};border-radius:7px;
