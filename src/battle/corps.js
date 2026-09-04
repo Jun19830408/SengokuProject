@@ -133,7 +133,7 @@ export function makeCorps(side, gen, retinue, local, retTrain, localTrain, x, y,
     tx: x, ty: y, formation: "横陣", morale: 78 + gen.lead * 0.15,
     squads, routed: false, dead: false, destroyed: false, ambush: false, revealed: true,
     lastSeen: null, seen: false, loss: { 直属: 0, 地域: 0 }, feats: [],
-    fatigue: 0, chargeT: 0, reformT: 0, faceTo: null, pending: null, pinch: 0, northStart: hasRiver() && y < RIVER.top,
+    fatigue: 0, chargeT: 0, reformT: 0, faceTo: null, 陣向き: facing, pending: null, pinch: 0, northStart: hasRiver() && y < RIVER.top,
     bank0: hasRiver() ? (y < (RIVER.top + RIVER.bot) / 2 + riverShift(x) ? -1 : 1) : 0, detach: false, parentId: null, task: null, autonomous: false, boxed: false,
   };
 }
@@ -143,10 +143,33 @@ export const corpsMen = (c) => c.squads.reduce((s, q) => s + q.men, 0);
 export const corpsMax = (c) => c.squads.reduce((s, q) => s + q.max, 0);
 
 
+/* 組の持ち場を決める。
+
+   割り当て（どの組がどの座席に就くか）と、座席の向き（隊がどちらを向いて
+   いるか）は別の話である。もとは両方まとめて「陣形と組数が変わらなければ
+   やり直さない」としていたので、隊が向きを変えても座席は元の向きのまま
+   凍りついていた。転回を命じても、駒の向きだけが回り、陣形は横に伸びたまま
+   ――押した方角へ「陣形自体が向く」ことにならなかった。
+
+     測り（上を向いた隊に「東を向け」と命じて十秒）
+       直す前　向き -103度 → 0度、座席 (-14,11) → (-14,11)（回らず）
+       直した後　向き -103度 → 0度、座席 (-14,11) → (11,-14)（直角に回る）
+
+   割り当ては重い（座席を組み、費えを測って就ける）ので、これまで通り
+   陣形と組数が変わったときだけ。回転は軽いので毎度やり直す。 */
 export function placeSquads(c, snap) {
-  // 各組の定位置は陣形が決まった時点のもの。毎瞬間は割り当て直さない。
   const live = c.squads.filter((q) => q.men > 0).length;
-  const key = `${c.formation}|${live}|${c.order === "突撃" ? "c" : "n"}`;
+  const 骨 = `${c.formation}|${live}|${c.order === "突撃" ? "c" : "n"}`;
+  /* 陣の向きは、隊の向き（facing）とは別に持つ。
+
+     隊の向きは歩くたびに揺れる。それに陣形まで付き合わせると、進みながら
+     絶えず組み替えることになり、退くときも城へ寄せるときも隊が回り続けて
+     戦そのものが変わってしまった（退く隊が十二のうち一つも退かなくなった）。
+
+     陣の向きが変わるのは、陣形を組み直すときと、転回を命じたときだけである。 */
+  if (snap || c.formKey !== 骨) { c.formKey = 骨; c.陣向き = c.facing; }
+  if (c.陣向き == null) c.陣向き = c.facing;
+  const key = `${骨}|${Math.round(c.陣向き * 12)}`;
   if (!snap && c.slotKey === key) return;
   c.slotKey = key;
   const slots = layoutSlots(c.formation, c.squads.length);
@@ -185,7 +208,16 @@ export function placeSquads(c, snap) {
     const s = slotOf[i] || { x: 0, y: 0, row: 0 };
     // 最後尾の段は予備隊とし、前線が薄くなるまで前へ出さない（GDD 8.4）
     q.reserve = maxRow >= 2 && (s.row || 0) === maxRow && !c.forceAll;
-    const [rx, ry] = rot(s.x, s.y, c.facing);
+    q.座席 = { x: s.x, y: s.y };            // 向きを掛ける前の持ち場
+  });
+  座席を向ける(c, snap);
+}
+
+/* 座席を陣の向きへ回す。割り当てはそのままに、向きだけを掛け直す。 */
+function 座席を向ける(c, snap) {
+  for (const q of c.squads) {
+    const s = q.座席 || { x: 0, y: 0 };
+    const [rx, ry] = rot(s.x, s.y, c.陣向き != null ? c.陣向き : c.facing);
     // 陣形維持が高いうちは等間隔・同方向。落ちて初めて乱れが出る（GDD 8.3）
     const dis = clamp((78 - q.cohesion) / 78, 0, 1);
     q.dis = dis;
@@ -193,7 +225,7 @@ export function placeSquads(c, snap) {
     q.slotX = rx + q.jx * jit;
     q.slotY = ry + q.jy * jit;
     if (snap) { q.x = c.x + q.slotX; q.y = c.y + q.slotY; q.facing = c.facing; }
-  });
+  }
 }
 
 // ------------------------------------------------ 分遣命令（GDD 8.5）
@@ -648,6 +680,16 @@ export function issueOrder(b, c, patch) {
   c.pending = { patch, t: commandDelay(b, c) };
 }
 
+
+/* 転回を命じる（GDD 8.3）。
+
+   画面から直に隊へ書き込むと issueOrder を通らず、委任が解けない。解けなければ
+   采配が〇.六秒ごとに上書きするので、転回は効かない。命じ方をここに一つ置き、
+   画面も試験も同じ道を通す。 */
+export function 転回させる(b, c, x, y) {
+  if (!b || !c) return;
+  issueOrder(b, c, { order: "転回", tx: c.x, ty: c.y, faceTo: Math.atan2(y - c.y, x - c.x) });
+}
 
 /* 退く先（GDD 8.2）。
 

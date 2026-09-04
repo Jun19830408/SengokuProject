@@ -19,7 +19,7 @@ const entry = path.join(ROOT, 'build', 'zaijin-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState } from "../src/core/state.js";\n'
-+ 'export { sackCastle, 城を委ねる, 委ねる差配 } from "../src/govern/war.js";\n'
++ 'export { sackCastle, 城を委ねる, 委ねる差配, resolveOffscreen, 軍を解く } from "../src/govern/war.js";\n'
 + 'export { stipendOf, castellanOf, 守備隊の統率 } from "../src/core/rank.js";\n'
 + 'export { newRoster, rosterSum } from "../src/core/roster.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n'
@@ -224,6 +224,45 @@ console.log('\n── 八　在陣を払って次の城へ向かえば、着陣�
     }
     確('次の城に着けば、着陣の始末が回る', 着,
       着 ? `${次.name}へ着いた` : `${次.name}へ向かったが、着陣が起きない`);
+  }
+}
+
+console.log('\n── 九　味方の城へ着いた援軍は、城に入らず在陣する');
+{
+  /* これまでは、援軍が味方の城に着くと軍が消え、将も兵もその城に吸われていた。
+     出したほうの城は空になり、敵が次の月にまた寄せてきても、援軍はもう城兵の
+     一部でしかない。落とした城に在陣するのと同じ形にする――軍は軍のまま城の
+     下に留まり、連戦にも耐え、要らなくなれば解いて本領へ帰す。 */
+  const s = A.initState('oda');
+  s.year = 1547; s.month = 6;
+  const 自城 = s.castles.filter((c) => c.faction === s.player);
+  const 助ける城 = 自城[0], 出す城 = 自城.find((c) => c !== 助ける城);
+  const 将ら = s.generals.filter((x) => x.at === 出す城.id && x.faction === s.player && !x.captive).slice(0, 2);
+  for (const t of 将ら) t.at = null;
+  s.armies.push({ id: 'AID', faction: s.player, from: 出す城.id, gens: 将ら.map((x) => x.id),
+    local: 1800, localTrain: 70, rost: null, men: 1800 + 将ら.reduce((a, x) => a + x.retinue, 0),
+    at: 助ける城.id, path: [助ける城.id], prog: 0, food: 6000, target: 助ける城.id });
+  s.pendingArrivals = ['AID'];
+  const 城の兵 = 助ける城.local;
+
+  const u = A.resolveOffscreen(s, 'AID', 助ける城.id);
+  const a = (u.armies || []).find((x) => x.id === 'AID');
+  const c = u.castles.find((x) => x.id === 助ける城.id);
+  確('援軍は軍のまま残る（城に吸われない）', !!a, a ? `${a.men}人` : '消えた');
+  確('その城に在陣している', !!a && a.在陣 === 助ける城.id, a ? String(a.在陣) : '');
+  確('城の兵は増えない（軍の兵は軍のもの）', c.local === 城の兵, `城 ${城の兵}人 → ${c.local}人`);
+  確('将は城に入らず、軍とともにある',
+    !!a && 将ら.every((g) => (a.gens || []).includes(g.id))
+      && 将ら.every((g) => { const x = u.generals.find((q) => q.id === g.id); return x && x.at !== 助ける城.id; }),
+    将ら.map((g) => { const x = u.generals.find((q) => q.id === g.id); return `${g.name}:${x ? (x.at || '軍中') : '不明'}`; }).join(' '));
+  確('行き先は持たない（着いて留まっている）', !!a && !a.target);
+
+  if (a) {
+    const 前 = u.castles.find((x) => x.id === 出す城.id).local;
+    A.軍を解く(u, a);
+    確('解けば軍は消える', !(u.armies || []).some((x) => x.id === 'AID'));
+    確('兵は出陣元へ返る', u.castles.find((x) => x.id === 出す城.id).local >= 前 + 1800 * 0.9,
+      `${出す城.name} ${前}人 → ${u.castles.find((x) => x.id === 出す城.id).local}人`);
   }
 }
 

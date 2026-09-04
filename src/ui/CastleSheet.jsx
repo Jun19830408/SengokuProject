@@ -23,7 +23,7 @@ import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
-export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onMarchOn, onDisband, onHatagashira, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
+export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
@@ -435,9 +435,13 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                         <div key={a.id} style={{ border: `1px solid ${U.line2}`, borderLeft: "3px solid #8A6A34",
                           padding: "8px 10px", marginBottom: 10, background: "rgba(200,164,74,.06)" }}>
                           <div className="mn" style={{ fontSize: 15, marginBottom: 2 }}>この城に在陣する軍</div>
+                          {/* 落とした城に留まる軍と、援軍として来て城の下に陣を張った軍。
+                              どちらも「城に入った」わけではないので、断り書きを分ける。 */}
                           <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
-                            城を与えられたわけではありません。ここに留まっているだけです。
-                            次の城へ攻め寄せるか、軍を解いて本領へ帰すかを決めてください。
+                            {a.from === c.id || (g.castles.find((x) => x.id === a.from) || {}).faction !== c.faction
+                              ? "城を与えられたわけではありません。ここに留まっているだけです。"
+                              : "援軍として着き、城の下に陣を張っています。城には入っていません。"}
+                            次の城へ攻め寄せるか、兵を城に入れるか、軍を解いて本領へ帰すかを決めてください。
                           </div>
                           <div className="row"><span>総勢</span>
                             <span className="v">{fmt(a.men)} 人（地の兵 {fmt(a.local || 0)}）</span></div>
@@ -452,8 +456,13 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                             <button className="btn" style={{ flex: 1 }}
                               onClick={() => onDisband && onDisband(a.id)}>軍を解く</button>
                           </div>
+                          {/* 守りを厚くしたいときは、そのまま城へ入れる。
+                              以前は味方の城に着けば必ずこうなっていた。選べる形にした。 */}
+                          <button className="btn" style={{ width: "100%", marginTop: 8 }}
+                            onClick={() => onJoinCastle && onJoinCastle(a.id)}>兵を城に入れる（軍を畳む）</button>
                           <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
                             軍を解けば、兵は出陣元へ返り、将はそれぞれの本領へ帰ります。
+                            城に入れれば、兵も将もこの城のものになります。
                           </div>
                         </div>
                       );

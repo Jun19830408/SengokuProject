@@ -390,14 +390,20 @@ export function stepBattle(b, dt) {
       c.facing += clamp(diff, -1.4 * dt, 1.4 * dt);
       c.faceTo = null;
     } else if (c.faceTo != null) {
-      // その場で向きだけ変える。統率が高いほど早く据わる。
+      /* その場で向きだけ変える。統率が高いほど早く据わる。
+
+         回頭のあいだは、陣の向きも隊の向きに合わせて回す。こうしないと駒だけが
+         回り、陣形は元の向きに伸びたまま――「押した方角へ陣形が向く」ことに
+         ならない（corps.js の placeSquads を参照）。 */
       const diff = ((c.faceTo - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
       const rate = 0.45 + c.gen.lead / 130;
       if (Math.abs(diff) < 0.05) {
         c.facing = c.faceTo; c.faceTo = null;
+        c.陣向き = c.facing;
         if (c.order === "転回") { c.order = "待機"; c.tx = c.x; c.ty = c.y; }
       } else {
         c.facing += clamp(diff, -rate * dt, rate * dt);
+        c.陣向き = c.facing;
         for (const q of c.squads) q.cohesion = Math.max(0, q.cohesion - 1.3 * dt);
       }
     }

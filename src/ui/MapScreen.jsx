@@ -27,7 +27,7 @@ import { GOKINAI } from "../data/provinces.js";
 import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "../govern/ai.js";
 import { checkUnified } from "../govern/unify.js";
-import { sackCastle, 城を委ねる, 軍を解く } from "../govern/war.js";
+import { sackCastle, 城を委ねる, 軍を解く, 在陣させる, 城に合流する } from "../govern/war.js";
 import { BattleScreen } from "./BattleScreen.jsx";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
@@ -617,9 +617,13 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
        城下の野戦にする。城方に討って出る機会も与える（囲みを解く後詰と同じ形）。 */
     if (dest.faction === g.player && !underMyBanner(g, a.faction, dest.faction) && !援けに着く(g, a, dest)) {
       const 待つ = new Set(g.pendingArrivals || []);
+      /* 同じ月に着いた味方の軍だけでなく、すでにその城に在陣している軍も後詰に立つ。
+         援軍を城に入れず在陣させるようにしたので、二度目以降の寄せにも
+         その軍が城下で迎え撃つ。立たねば、置いておく意味がない。 */
       const 後詰 = g.armies.find((x) => x.id !== a.id && x.at === dest.id
         && (!x.path || x.path.length <= 1) && !x.sieging
-        && underMyBanner(g, x.faction, dest.faction) && 待つ.has(x.id));
+        && underMyBanner(g, x.faction, dest.faction)
+        && (待つ.has(x.id) || x.在陣 === dest.id));
       if (後詰) {
         setSally({ armyId: 後詰.id, castleId: dest.id, foeId: a.id, 城下: true });
         return;
@@ -648,23 +652,37 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const s = structuredClone(p);
         const ar = s.armies.find((x) => x.id === a.id);
         const c = s.castles.find((x) => x.id === ar.at);
+        /* 自家の城なら、入らずに在陣する（GDD 6.4 / 9.2）。
+
+           もとは軍が消え、将も兵もその城に吸われていた。援軍を出したほうの城は
+           空になり、敵が次の月にまた寄せてきても、援軍はもう城兵の一部でしかない。
+           城の下に陣を張ったまま留まれば、連戦にも耐え、要らなくなれば解ける。 */
+        const 他家 = c.faction !== ar.faction;
+        if (!他家) {
+          在陣させる(s, ar, c);
+          s.pendingArrivals = s.pendingArrivals.slice(1);
+          if (ar.faction === s.player) {
+            const msg = `${c.name}に着き、城の下に陣を張った（${fmt(ar.men)}人）。`
+              + `次の城へ攻め寄せるか、城に入れるか、軍を解くかは、城の帳から決められる。`;
+            s.monthEvents = [...(s.monthEvents || []), msg];
+            s.chronicle.push({ y: s.year, m: s.month, text: msg });
+          }
+          return s;
+        }
+        // 臣従・同盟の家の城であれば、将までは預けぬ。兵だけ入れ、本国へ帰す。
         c.local += ar.local; c.food += ar.food;
         if (ar.rost && ar.rost.length) { c.rost = [...(c.rost || []), ...ar.rost]; }
         rosterSync(c, "rost", c.local, `loc-${c.id}`);
-        // 臣従の家の城であれば、将までは預けぬ。本国へ帰す。
-        const 他家 = c.faction !== ar.faction;
-        const 本国 = 他家 ? (s.castles.find((x) => x.id === ar.from && x.faction === ar.faction)
-          || s.castles.find((x) => x.faction === ar.faction)) : null;
+        const 本国 = s.castles.find((x) => x.id === ar.from && x.faction === ar.faction)
+          || s.castles.find((x) => x.faction === ar.faction);
         for (const gid of ar.gens) {
           const x = s.generals.find((q) => q.id === gid);
-          if (x) x.at = 他家 ? (本国 ? 本国.id : c.id) : c.id;
+          if (x) x.at = 本国 ? 本国.id : c.id;
         }
         s.armies = s.armies.filter((x) => x.id !== ar.id);
         s.pendingArrivals = s.pendingArrivals.slice(1);
         if (ar.faction === s.player) {
-          const msg = 他家
-            ? `${c.name}（${s.factions[c.faction].name}）へ援軍${fmt(ar.local)}人を入れた。将は${本国 ? 本国.name : "本国"}へ帰陣した。`
-            : `${c.name}に到着し、軍は城へ合流した（味方の城のため合戦は起きない）。`;
+          const msg = `${c.name}（${s.factions[c.faction].name}）へ援軍${fmt(ar.local)}人を入れた。将は${本国 ? 本国.name : "本国"}へ帰陣した。`;
           s.monthEvents = [...(s.monthEvents || []), msg];
           s.chronicle.push({ y: s.year, m: s.month, text: msg });
         }
@@ -2070,6 +2088,18 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 軍を解く(s2, a);
                 s2.chronicle.push({ y: s2.year, m: s2.month,
                   text: `${城 ? 城.name + "の" : ""}在陣を解き、諸将はそれぞれの本領へ帰った。` });
+              }
+              return s2;
+            })}
+            onJoinCastle={(id) => setG((p) => {
+              const s2 = structuredClone(p);
+              const a = (s2.armies || []).find((x) => x.id === id);
+              const 城 = a && s2.castles.find((x) => x.id === (a.在陣 || a.at));
+              if (a && 城) {
+                const 兵 = a.men;
+                城に合流する(s2, a, 城);
+                s2.chronicle.push({ y: s2.year, m: s2.month,
+                  text: `${城.name}の陣を畳み、${fmt(兵)}人が城へ入った。` });
               }
               return s2;
             })}

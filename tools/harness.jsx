@@ -40,7 +40,7 @@ export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 隊がどの門を受け持ち、何の下知を受けているかは、ここから直に見るほかない。
 export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, gatePos, 城の構え } from "../src/battle/castleMap.js";
 export { layoutField, setFieldSeed, FIELD, terrainAt, TERRAIN, HILLS, FORESTS, WOODS, MARSH, VILLAGES, RIVER, hasRiver } from "../src/battle/field.js";
-export { makeCorps, corpsMen, placeSquads, issueOrder, 退かせる, 退き先 } from "../src/battle/corps.js";
+export { makeCorps, corpsMen, placeSquads, issueOrder, 転回させる, 退かせる, 退き先 } from "../src/battle/corps.js";
 export { createBattle, stepBattle } from "../src/battle/engine.js";
 export { battleAI } from "../src/battle/ai.js";
 export { sideColor, ownZone, drawMon, 紋の核 } from "../src/battle/draw.js";

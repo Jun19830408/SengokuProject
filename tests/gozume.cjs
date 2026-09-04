@@ -51,7 +51,7 @@ const 確 = (名, 可, 添 = '') => {
 
    自家の城（狙われる城）へ敵の軍が着き、同じ月に別の自家の城から援軍も着く。
    どちらも道の残りが一区間なので、この月に両方が着く。 */
-function 仕込む() {
+function 仕込む(在陣) {
   const s = initState('oda');
   const 自城 = s.castles.filter((x) => x.faction === s.player);
   let 狙 = null, 敵城 = null, 出城 = null;
@@ -84,6 +84,12 @@ function 仕込む() {
   };
   s.armies.push(援軍, 敵軍);                      // 味方を先に並べる（直す前はこの順で捌かれた）
   s.pendingArrivals = [援軍.id, 敵軍.id];
+  if (在陣) {
+    /* 二度目の寄せ。援軍は先月のうちに着き、城の下に陣を張ったまま留まっている。
+       同じ月に着いた軍ではないので、着陣の列には並ばない。 */
+    援軍.在陣 = 狙.id; 援軍.target = null;
+    s.pendingArrivals = [敵軍.id];
+  }
   s.monthEvents = [];
   return { s, 狙, 敵城, 出城, 敵軍, 援軍, 味将 };
 }
@@ -173,6 +179,42 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
   確('討って出た城方の兵が、こちらの側に立っている',
     出撃兵 > 0 && 数.length >= 1 && 数[0] >= (仕.援軍.men + 出撃兵) * 0.8,
     `自軍${数[0]}人（援軍${仕.援軍.men}人＋討って出た${出撃兵}人）`);
+
+  /* --------- 三、二度目の寄せ。すでに在陣している援軍が迎え撃つこと
+
+     援軍は味方の城に着いても城には入らず、城の下に陣を張って留まる（GDD 6.4）。
+     入ってしまえば城兵の一部になり、次の月にまた寄せられたときには
+     「援軍を出した」ことの意味が消える。城攻めは幾度も繰り返されるのだから、
+     在陣したまま、二度目にも城下で迎え撃たねばならない。
+
+     着いた月の軍は着陣の列に並ぶが、在陣の軍は並ばない。列だけを見ていたので、
+     在陣の軍は後詰に立てず、城が独りで受けることになっていた。 */
+  console.log('\n── 三　すでに在陣している援軍が、二度目の寄せを迎え撃つ');
+  {
+    const 仕2 = 仕込む(true);
+    蔵.set('sengoku:save1', JSON.stringify({ v: 1, at: Date.now(), state: 仕2.s }));
+    /* 一つ目の画面を畳んでから開き直す。畳まずに二つ目を出すと、釦を探すときに
+       一つ目の盤の釦まで拾ってしまい、押したつもりのないものを押すことになる。 */
+    await act(async () => { root.unmount(); });
+    const el2 = document.createElement('div'); el2.id = 'r2'; document.body.appendChild(el2);
+    const root2 = createRoot(el2);
+    await act(async () => { root2.render(React.createElement(App)); }); await flush(); await flush();
+    await rc('続きから'); await flush(); await flush(); await flush();
+    const 文3 = document.body.textContent;
+    確('在陣の軍がいれば、城下の野戦になる（討って出るかを問われる）',
+      /討って出るか/.test(文3), /討って出るか/.test(文3) ? '' : '城が独りで受けている');
+    確('その問いも「城下」の形で出る', /援軍とともに城下で迎え撃/.test(文3),
+      /援軍とともに城下で迎え撃/.test(文3) ? '' : '囲みの文言になっている');
+    await rc('籠もったまま'); await flush(); await flush();
+    if (btn('正面から当たる')) { await rc('正面から当たる'); await flush(); await flush(); }
+    const 帯3 = [...document.querySelectorAll('div')]
+      .map((d) => d.textContent.replace(/\s+/g, ' '))
+      .find((t) => /兵\s*[\d,]+.*対.*兵\s*[\d,]+/.test(t) && t.length < 400) || '';
+    const 数3 = [...帯3.matchAll(/兵\s*([\d,]+)/g)].map((m) => Number(m[1].replace(/,/g, '')));
+    確('盤に立っているのは在陣の援軍である',
+      数3.length >= 2 && Math.abs(数3[0] - 仕2.援軍.men) < 仕2.援軍.men * 0.25,
+      数3.length ? `味方${数3[0]}人（在陣の援軍${仕2.援軍.men}人・城の守兵${仕2.狙.local}人）` : 帯3.slice(0, 80));
+  }
 
   console.log('');
   if (咎.length) { console.log('★背いた事:'); for (const x of 咎) console.log('   ' + x); }

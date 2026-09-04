@@ -188,12 +188,15 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
       await flush(); await flush();
       const t = document.body.textContent;
       if (/攻めかかる/.test(t)) { 軍議 = true; break; }
-      if (/城へ合流した|援軍.*を入れた/.test(t)) { 着 = true; break; }
+      /* 味方の城へ着いた軍は、城に入らず城の下に陣を張る（GDD 6.4）。
+         もとは黙って合流していたので、文言も「城へ合流した」であった。
+         仕様が変わったので、測る文言も改めた（他家の城なら今も兵だけ入れる）。 */
+      if (/城の下に陣を張った|城へ合流した|援軍.*を入れた/.test(t)) { 着 = true; break; }
       // 月初報告を閉じる釦は「評定を開く」である。挙げ忘れると翌月へ進めなくなる。
       for (const b of ['評定を開く', '閉じる', '了']) if (await rc(b)) break;
     }
     確('味方の城で軍議（攻めかかる）が開かれない', !軍議);
-    確('味方の城へ着いて合流する', 着);
+    確('味方の城へ着けば、城の下に陣を張る（敵地扱いにならない）', 着);
   }
 
   console.log('確かめ:', 咎 ? `★${咎}件が通らなかった` : 'すべて通った');

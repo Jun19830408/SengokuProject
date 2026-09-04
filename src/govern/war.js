@@ -143,6 +143,48 @@ export function reinforceOffers(g, from, target, 大将) {
 
    城が囲まれていれば、囲みを打ち払う戦になる。相手は城ではなく寄せ手の軍である。
    囲みがなければ、ただ城へ入って合流する。 */
+/* 味方の城へ着いた軍は、城に入らず在陣する（GDD 6.4 / 9.2）。
+
+   もとは軍が消え、将も兵もその城に吸われていた。援軍を出したほうの城は空になり、
+   敵が次の月にまた寄せてきても、援軍はもう城兵の一部でしかない。城攻めは幾度も
+   繰り返されるのだから、これでは援軍の意味が薄い。
+
+   落とした城に在陣するのと同じ形にする。軍は軍のまま城の下に留まり、連戦にも
+   耐え、要らなくなれば解いて本領へ帰す。城の帳から「次の城へ攻め寄せる」
+   「兵を城に入れる」「軍を解く」を選べる。
+
+   他家（同盟・臣従）の城はこれまで通りである。兵だけ守りに加え、将は本国へ帰す。
+   援軍のつもりで送った将を、そのまま他家の城へ預けてしまってはいけない。 */
+export function 在陣させる(s, army, castle) {
+  army.at = castle.id;
+  army.path = [castle.id];
+  army.prog = 0;
+  army.target = null;
+  army.在陣 = castle.id;
+  army.sieging = false;
+  army.reinforced = false;
+  army.seaDone = false;
+  s.sieges = (s.sieges || []).filter((x) => x.armyId !== army.id);
+  return army;
+}
+
+/* 在陣の軍を城へ入れる。もとの「味方の城に着けば合流する」と同じ始末である。
+   守りを厚くしたいときは、これを選ぶ。 */
+export function 城に合流する(s, army, castle) {
+  castle.local += Math.max(0, army.local);
+  castle.food += Math.max(0, army.food || 0);
+  if (army.rost && army.rost.length) castle.rost = [...(castle.rost || []), ...army.rost];
+  rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+  for (const gid of army.gens) {
+    const x = s.generals.find((q) => q.id === gid);
+    if (x) { x.at = castle.id; if (!x.本領 || !s.castles.some((c) => c.id === x.本領 && c.faction === x.faction)) x.本領 = castle.id; }
+  }
+  s.armies = s.armies.filter((x) => x.id !== army.id);
+  s.sieges = (s.sieges || []).filter((x) => x.armyId !== army.id);
+  s.pendingArrivals = (s.pendingArrivals || []).filter((id) => id !== army.id);
+  return s;
+}
+
 function 味方の城へ着く(s, army, castle) {
   const 合流 = () => {
     castle.local += Math.max(0, army.local);
@@ -162,10 +204,15 @@ function 味方の城へ着く(s, army, castle) {
     }
     s.armies = s.armies.filter((x) => x.id !== army.id);
   };
+  // 自家の城なら、入らずに在陣する。他家の城なら、これまで通り兵だけ入れる。
+  const 留まる = () => {
+    if (castle.faction === army.faction) 在陣させる(s, army, castle);
+    else 合流();
+  };
 
   const sg = s.sieges.find((x) => x.castleId === castle.id);
   const bes = sg && s.armies.find((x) => x.id === sg.armyId);
-  if (!bes || bes.faction === army.faction) { 合流(); return s; }
+  if (!bes || bes.faction === army.faction) { 留まる(); return s; }
 
   // 囲みを打ち払う戦。城の壁は関わらぬ。野で軍と軍が当たる。
   const 将 = (ids) => ids.map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
@@ -195,7 +242,7 @@ function 味方の城へ着く(s, army, castle) {
     }
     s.armies = s.armies.filter((x) => x.id !== bes.id);
     s.sieges = s.sieges.filter((x) => x.castleId !== castle.id);
-    合流();
+    留まる();                    // 囲みを打ち払った後詰も、城には入らず在陣する
   } else {
     // 後詰は退く。城は囲まれたままである。
     const 本国 = s.castles.find((x) => x.id === army.from);

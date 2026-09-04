@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
-import { corpsMen, detachOptions, issueOrder, makeDetachment, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut } from "../battle/corps.js";
+import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut } from "../battle/corps.js";
 import { drawBattle, drawCastleTerrain, drawFieldTerrain, inOwnZone } from "../battle/draw.js";
 import { stepBattle } from "../battle/engine.js";
 import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
@@ -238,9 +238,19 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const orderTo = (c, f, foe) => {
     c.task = null;                       // 手動命令は分遣任務より優先する
     if (faceRef.current) {
-      // 前進はせず、その場で向きだけ変えて陣形を組み直す
-      c.faceTo = Math.atan2(f.y - c.y, f.x - c.x);
-      c.order = "転回"; c.tx = c.x; c.ty = c.y;
+      /* 前進はせず、その場で向きだけ変えて陣形を組み直す。
+
+         もとはここで c に直に書き込んでいた。issueOrder を通さないので
+         「手ずから命じた隊は委任を離れる」の一行が働かず、隊は委任のまま
+         残る。采配は〇.六秒ごとに諸隊へ下知するので、転回はその場で
+         「移動」などに書き換えられ、向きは変わらなかった。
+
+           測り（十秒後）   直す前：order 移動・向き 257度 → 228度（東を向かず）
+                            直した後：order 待機・向き 0度（東を向く）
+
+         向きが変われば、組の座席は placeSquads が向きごと回すので、
+         陣形そのものが押した方角へ向き直る。 */
+      転回させる(b, c, f.x, f.y);
       setFace(false);
       return;
     }
