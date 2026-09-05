@@ -12,7 +12,7 @@ import { DIPLO, PLOTS, SPECIAL_OPTIONS, SUBJECT } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { canBeKeeper, canHoldCastle, castleRankNeed, stipendOf, 家老に任じる, 宿老に任じる, 宿老を解く } from "../core/rank.js";
+import { canBeKeeper, canHoldCastle, castleRankNeed, stipendOf, 国主に任じる, 旗頭に任じる, 旗頭を解く } from "../core/rank.js";
 import { 基準値, 売値, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
@@ -166,36 +166,36 @@ export function appoint(prev, castleId, genId) {
     return s;
 }
 
-/* 旗頭に任じる（GDD 6.4）。
+/* 国主に任ずる（GDD 6.4）。
 
    家老は禄高で決まる階級ではなく、大名が任じる役である。家が城を持つ国に
    つき一人まで。新しい国へ進出すれば、そこにもう一人任じられる。
 
    選べるのはその国に根を持つ侍大将以上である。国を預かるのだから、その国に
    本領を持たぬ者では務まらない。 */
-export function 旗頭に任じる(prev, kuni, genId) {
+export function 国主に任ずる(prev, kuni, genId) {
   const s = structuredClone(prev);
-  const r = 家老に任じる(s, s.player, kuni, genId);
+  const r = 国主に任じる(s, s.player, kuni, genId);
   if (!r.ok) { s.msg = r.why; return prev; }
   const g = s.generals.find((x) => x.id === genId);
   s.chronicle.push({ y: s.year, m: s.month,
     text: r.先 && r.先.id !== genId
-      ? `${kuni}の旗頭を${r.先.name}から${g.name}に替えた。`
-      : `${g.name}を${kuni}の旗頭に任じた（家老に列する）。` });
+      ? `${kuni}の国主を${r.先.name}から${g.name}に替えた。`
+      : `${g.name}を${kuni}の国主に任じた。` });
   s.msg = `${g.name}が${kuni}を預かる。`;
   return s;
 }
 
-/* 宿老に任じ、方面を預ける（GDD 6.4）。
+/* 旗頭に任じ、方面を預ける（GDD 6.4）。
 
    柴田勝家の北国、明智光秀の丹波、羽柴秀吉の中国――信長が方面軍を置いたのが
    これである。一国を旗頭が預かり、その旗頭たちを宿老が束ねる。
 
    選べるのは旗頭を務めている者だけ。一国も預かったことのない者に方面は
    委ねられない。置ける数は四国につき一人である。 */
-export function 宿老に任ずる(prev, genId, 国ら) {
+export function 旗頭に任ずる(prev, genId, 国ら) {
   const s = structuredClone(prev);
-  const r = 宿老に任じる(s, s.player, genId, 国ら);
+  const r = 旗頭に任じる(s, s.player, genId, 国ら);
   if (!r.ok) { s.msg = r.why; return prev; }
   const g = s.generals.find((x) => x.id === genId);
   s.chronicle.push({ y: s.year, m: s.month,
@@ -204,12 +204,12 @@ export function 宿老に任ずる(prev, genId, 国ら) {
   return s;
 }
 
-export function 宿老を解く下知(prev, genId) {
+export function 旗頭を解く下知(prev, genId) {
   const s = structuredClone(prev);
   const g = s.generals.find((x) => x.id === genId);
-  if (!g || g.役 !== "宿老") return prev;
+  if (!g || g.役 !== "旗頭") return prev;
   const 国 = [...(g.方面 || [])];
-  宿老を解く(s, genId);
+  旗頭を解く(s, genId);
   s.chronicle.push({ y: s.year, m: s.month,
     text: `${g.name}の方面（${国.join("・")}）を解いた。` });
   return s;

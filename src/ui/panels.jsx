@@ -5,7 +5,7 @@ import { MAX_CORPS, MAX_CORPS_MEN } from "../battle/field.js";
 import { persuadeResult } from "../core/capture.js";
 import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 宿老たち, 宿老の枠, 方面の国, 国の宿老, 家老たち, 家老の枠 } from "../core/rank.js";
+import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 方面の国, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
@@ -157,13 +157,17 @@ export function SortieDialog({ g, from, onClose, onGo }) {
     });
     return n;
   });
-  /* 寄騎の求め。城ごとに { 将, 兵 } を控える。
+  /* 加勢の求め。城ごとに { 将, 兵 } を控える。
+
+     「寄騎」は国主・旗頭の下に付ける身分の繋がりを指す言葉である。
+     他の城から兵を寄せ集めるこちらは、それとは別のものなので「加勢」と呼ぶ。
+     後詰（囲まれた城を救う軍）とも、援軍（他家から来る助け）とも区別する。
      指図の通る城（自家・臣従）では、誰を何人で出すかをこちらが決められる。
      同盟・従属へは頼むだけなので、相手の言い値をそのまま受ける。 */
   const [aid, setAid] = useState({});
   useEffect(() => { setLocal(Math.round(availLocal * 0.6)); }, [picked.length]); // eslint-disable-line
-  /* 呼べる寄騎は、総大将の身分で変わる（陣触れの届き）。
-     侍大将なら自城のみ、家老なら一国、宿老・当主なら天下じゅうから。 */
+  /* 呼べる加勢は、総大将の役で変わる（陣触れの届き）。
+     城主なら自城のみ、国主なら一国、旗頭・当主なら天下じゅうから。 */
   const 選将 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
   const 総大将 = 総大将を定める(g, 選将);
   /* 軍を率いられるのは侍大将以上である（GDD 6.4）。
@@ -187,7 +191,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
     const v = aid[o.castleId];
     return v ? o.gens.filter((x) => (v.genIds || []).includes(x.id)) : [];
   };
-  const 寄騎の総勢 = (o) => {
+  const 加勢の総勢 = (o) => {
     const 将ら = 選ばれた将(o);
     if (!将ら.length) return 0;
     const v = aid[o.castleId];
@@ -199,7 +203,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
   /* 遠国から呼べば運び賃がかさむ（GDD 7.3）。
      人足と馬と船を雇う費えであり、蔵の米ではなく主家の金蔵から出る。
      一城ごとには些少でも、全国から呼べば束になって効いてくる。 */
-  const 賃 = (o) => 運び賃(o.指図 ? 寄騎の総勢(o) : o.men, o.months);
+  const 賃 = (o) => 運び賃(o.指図 ? 加勢の総勢(o) : o.men, o.months);
   const 運び賃の総額 = offers.filter((o) => aid[o.castleId]).reduce((a, o) => a + 賃(o), 0);
   const 手元金 = g.factions[g.player].gold;
   const 賃が足りぬ = 運び賃の総額 > 手元金;
@@ -360,19 +364,19 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         {/* 総大将は選んだ順ではなく身分で決まる（GDD 6.4）。
             侍大将の下に家老は付かない。軍中の最上位が率いる。 */}
         <div className="sec">参加武将</div>
-        {/* 寄騎（GDD 6.4）。旗頭を選べば、その寄騎も従う。
-            寄騎は大名の直臣であって旗頭の家臣ではないが、戦では旗頭の下に入る。
+        {/* 寄騎（GDD 6.4）。寄親を選べば、その寄騎も従う。
+            寄騎は大名の直臣であって寄親の家臣ではないが、戦では寄親の下に入る。
             国を一つ預けるとは、その国の城主たちを一人の下に束ねるということである。 */}
         {(() => {
           const 旗ら = picked.map((id) => gens.find((x) => x.id === id))
-            .filter((x) => x && x.役 === "家老");
+            .filter((x) => x && x.役 === "国主");
           const 従 = 旗ら.flatMap((x) => 寄騎たち(g, x.id))
             .filter((x) => x.at === c.id && !picked.includes(x.id));
           if (!旗ら.length) return null;
           return (
             <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.75,
               borderLeft: "3px solid #4A6E8A", paddingLeft: 8 }}>
-              {旗ら.map((x) => `${x.name}（${x.役国}の旗頭）`).join("・")}を出すので、
+              {旗ら.map((x) => `${x.name}（${x.役国}の国主）`).join("・")}を出すので、
               その<b style={{ color: U.text }}>寄騎</b>も従います。
               {従.length
                 ? <>　{従.map((x) => x.name).join("・")}（{従.length}名）が加わります。</>
@@ -472,17 +476,17 @@ export function SortieDialog({ g, from, onClose, onGo }) {
           );
         })()}
 
-        <div className="sec">寄騎を求める（GDD 7.3）</div>
+        <div className="sec">加勢を求める（GDD 7.3）</div>
         <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.6 }}>
           一方の陣に並べられるのは{MAX_CORPS}隊まで（関ヶ原の参陣数に合わせた上限）。
-          本隊で{picked.length}隊を使うので、寄騎は残り{Math.max(0, MAX_CORPS - picked.length)}隊まで加われる。
+          本隊で{picked.length}隊を使うので、加勢は残り{Math.max(0, MAX_CORPS - picked.length)}隊まで加われる。
           一隊が抱えられる兵は{fmt(MAX_CORPS_MEN)}人までで、あふれた分は隊として立てられない。
         </div>
         <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
           <b style={{ color: U.text }}>自家と臣従の家</b>には下知が通り、必ず出ます。
           <b style={{ color: U.text }}>同盟・従属の家</b>へは頼むだけで、応じるか否かは相手が決めます。
           <br />陣触れの届く先は<b style={{ color: U.text }}>総大将の身分</b>で決まります。
-          侍大将は自らの城のみ、家老は一国のうち、<b style={{ color: U.text }}>宿老と当主は天下じゅう</b>から集められます。
+          城主は自らの城のみ、国主は一国のうち、<b style={{ color: U.text }}>旗頭と当主は天下じゅう</b>から集められます。
           {総大将 && <>（いまの総大将 <b style={{ color: U.text }}>{総大将.name}</b>・{rankName(総大将, g)}
             ── 届く先は<b style={{ color: U.text }}>{陣触れの届き(総大将, g)}</b>）</>}
           <br />そのうえで、呼べる先は<b style={{ color: U.text }}>遠近を問いません</b>。関ヶ原も大坂の陣も全国から兵が集まりました。
@@ -497,7 +501,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
           const 将ら = 選ばれた将(o);
           const 上限 = 出せる上限(o, 将ら);
           const 兵 = 選 ? Math.min(選.men, 上限) : 0;
-          const 総勢 = 寄騎の総勢(o);
+          const 総勢 = 加勢の総勢(o);
           const 使えぬ = !!o.reason || (o.指図 && !o.gens.length);
           const 隊数 = aidIds.reduce((a, id) => {
             const v = aid[id];
@@ -559,7 +563,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
                     <span className="v">{fmt(兵)} / {fmt(上限)} 人</span>
                   </div>
                   <div className="row" style={{ fontSize: 11.5 }}>
-                    <span>この寄騎の総勢</span>
+                    <span>この加勢の総勢</span>
                     <span className="v">{fmt(総勢)} 人{総勢 < 100 ? "（少なすぎて出せぬ）" : ""}</span>
                   </div>
                   <div className="row" style={{ fontSize: 11.5, color: U.dim }}>
@@ -581,7 +585,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         <div className="row"><span>携行兵糧</span><span className="v">{fmt(food)} 石（城残 {fmt(c.food - food)}）</span></div>
         {aidIds.length > 0 && (
           <div className="row" style={{ color: 賃が足りぬ ? "#B0483C" : undefined }}>
-            <span>寄騎の運び賃</span>
+            <span>加勢の運び賃</span>
             <span className="v">{fmt(運び賃の総額)} 貫（手元 {fmt(手元金)} 貫）</span>
           </div>
         )}
@@ -591,10 +595,10 @@ export function SortieDialog({ g, from, onClose, onGo }) {
           <button className="btn dark" style={{ flex: 2 }} disabled={!to || !path || !picked.length || men < 200 || c.food < food || 賃が足りぬ || !率いる者}
             onClick={() => onGo({ from, to,
               /* 総大将を先頭に据えて渡す（軍は先頭を大将とする）。
-                 旗頭を出すなら、この城にいるその寄騎も加える。 */
+                 寄親を出すなら、この城にいるその寄騎も加える。 */
               gens: 大将を先頭に(g, (() => {
                 const 選 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
-                const 従 = 選.filter((x) => x.役 === "家老")
+                const 従 = 選.filter((x) => x.役 === "国主")
                   .flatMap((x) => 寄騎たち(g, x.id))
                   .filter((x) => x.at === c.id && !picked.includes(x.id));
                 return [...選, ...従];
@@ -1239,25 +1243,25 @@ export function GeneralList({ g, onClose, onYakume }) {
           <button className="btn" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>閉じる</button>
         </>)}
 
-        {/* 役目の帳（GDD 6.4）。旗頭と宿老は禄高で決まる階級ではなく、
+        {/* 役目の帳（GDD 6.4）。国主と旗頭は禄高で決まる身分ではなく、
             大名が任じる役である。誰に何を預けているかは一覧で見えねばならない。 */}
         {欄 === "役" && (<>
           <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 }}>
-            <b style={{ color: U.text }}>旗頭</b>は一国を預かる役（家老）。城を持つ国につき一人まで置けます。
+            <b style={{ color: U.text }}>国主</b>は一国を預かる役。家老（禄高八千石）以上が就け、城を持つ国につき一人までです。
             その旗のもとに<b style={{ color: U.text }}>寄騎</b>が集まります。任じるのは城の「人事」から。
-            <br /><b style={{ color: U.text }}>宿老</b>は方面を預かる役。旗頭を務める者から選び、二国以上をまとめて委ねます。
-            置けるのは四国につき一人。柴田を北国へ、明智を丹波へ――方面軍とはこれです。
+            <br /><b style={{ color: U.text }}>旗頭</b>は方面を預かる役。宿老（禄高二万石）以上で、かつ国主を務める者から選び、
+            二国以上をまとめて委ねます。置けるのは四国につき一人。柴田を北国へ、明智を丹波へ――これです。
             <br />寄騎も方面の兵も、大名の直臣のままです。いつでも解けます。
           </div>
 
-          <div className="sec">宿老（方面）　{宿老たち(g, g.player).length}／{宿老の枠(g, g.player)}名</div>
-          {宿老の枠(g, g.player) === 0 && (
+          <div className="sec">旗頭（方面）　{旗頭たち(g, g.player).length}／{旗頭の枠(g, g.player)}名</div>
+          {旗頭の枠(g, g.player) === 0 && (
             <div style={{ fontSize: 12, color: U.dim, marginBottom: 8 }}>
-              まだ宿老は置けません（四国を領してはじめて一人）。いま
+              まだ旗頭は置けません（四国を領してはじめて一人）。いま
               {new Set(g.castles.filter((c) => c.faction === g.player).map((c) => c.kuni)).size}国。
             </div>
           )}
-          {宿老たち(g, g.player).map((x) => (
+          {旗頭たち(g, g.player).map((x) => (
             <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0",
               borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" }}>
               <span className="mn" style={{ fontSize: 15, width: 100 }}>{x.name}</span>
@@ -1266,15 +1270,15 @@ export function GeneralList({ g, onClose, onYakume }) {
               <button className="btn sm" onClick={() => onYakume && onYakume({ 解く: x.id })}>解く</button>
             </div>
           ))}
-          {宿老の枠(g, g.player) > 宿老たち(g, g.player).length && (() => {
-            const 候 = g.generals.filter((x) => x.faction === g.player && !x.captive && x.役 === "家老");
+          {旗頭の枠(g, g.player) > 旗頭たち(g, g.player).length && (() => {
+            const 候 = g.generals.filter((x) => x.faction === g.player && !x.captive && x.役 === "国主");
             const 空国 = [...new Set(g.castles.filter((c) => c.faction === g.player).map((c) => c.kuni))]
-              .filter((k) => !国の宿老(g, g.player, k));
+              .filter((k) => !国の旗頭(g, g.player, k));
             return (
               <div style={{ marginTop: 8 }}>
                 <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 4 }}>
-                  旗頭を務める者に、二国以上をまとめて預けます。
-                  {候.length ? "" : "（旗頭がいません。まず城の「人事」から旗頭を任じてください）"}
+                  国主を務める者に、二国以上をまとめて預けます。
+                  {候.length ? "" : "（国主がいません。まず城の「人事」から国主を任じてください）"}
                 </div>
                 {候.map((x) => (
                   <button key={x.id} className="btn sm" style={{ marginRight: 5, marginBottom: 5 }}
@@ -1287,8 +1291,8 @@ export function GeneralList({ g, onClose, onYakume }) {
             );
           })()}
 
-          <div className="sec" style={{ marginTop: 14 }}>旗頭（一国）　{家老たち(g, g.player).filter((x) => x.役国).length}／{家老の枠(g, g.player)}名</div>
-          {家老たち(g, g.player).filter((x) => x.役国).map((x) => (
+          <div className="sec" style={{ marginTop: 14 }}>国主（一国）　{国主たち(g, g.player).filter((x) => x.役国).length}／{国主の枠(g, g.player)}名</div>
+          {国主たち(g, g.player).filter((x) => x.役国).map((x) => (
             <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0",
               borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" }}>
               <span className="mn" style={{ fontSize: 15, width: 100 }}>{x.name}</span>
@@ -1297,16 +1301,16 @@ export function GeneralList({ g, onClose, onYakume }) {
                 寄騎 {寄騎たち(g, x.id).length}名
                 {寄騎たち(g, x.id).length ? `（${寄騎たち(g, x.id).map((y) => y.name).join("・")}）` : ""}
               </span>
-              {国の宿老(g, g.player, x.役国) && (
+              {国の旗頭(g, g.player, x.役国) && (
                 <span style={{ fontSize: 11, color: "#4A6E8A" }}>
-                  {国の宿老(g, g.player, x.役国).name}の方面
+                  {国の旗頭(g, g.player, x.役国).name}の方面
                 </span>
               )}
             </div>
           ))}
-          {!家老たち(g, g.player).filter((x) => x.役国).length && (
+          {!国主たち(g, g.player).filter((x) => x.役国).length && (
             <div style={{ fontSize: 12, color: U.dim }}>
-              まだ旗頭がいません。城の「人事」から任じてください。
+              まだ国主がいません。城の「人事」から任じてください。
             </div>
           )}
           <button className="btn" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>閉じる</button>
@@ -1970,10 +1974,10 @@ export function 攻め寄せる問い({ g, armyId, onClose, onGo }) {
         )}
 
         {/* 寄騎（GDD 7.3）。在陣から次を攻めるときも、他の城から兵を催せる。
-            届く先は総大将の身分による（侍大将は自城、家老は一国、宿老・当主は天下）。 */}
+            届く先は総大将の役による（城主は自城、国主は一国、旗頭・当主は天下）。 */}
         {先 && (
           <>
-            <div className="sec">寄騎を催す</div>
+            <div className="sec">加勢を催す</div>
             <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
               {総大将
                 ? <>総大将 <b style={{ color: U.text }}>{総大将.name}</b>（{rankName(総大将, g)}）──

@@ -1807,11 +1807,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   };
 
 
-  /* 寄騎を出す（GDD 7.3）。
+  /* 加勢を出す（GDD 7.3）。
 
      出陣のときも、在陣から次の城へ攻め寄せるときも、催し方は同じである。
      一つに束ねておかねば、片方だけが古くなる。 */
-  const 寄騎を出す = (s, 一覧, 目標) => {
+  const 加勢を出す = (s, 一覧, 目標) => {
     for (const req of 一覧) {
         const rc2 = s.castles.find((x) => x.id === req.castleId);
         if (!rc2) continue;
@@ -1822,7 +1822,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         if (Math.random() > req.chance) {
           const rel = s.relations[relKey(s.player, rc2.faction)];
           if (rel) rel.trust = clamp(rel.trust - 4, 0, 100);
-          s.chronicle.push({ y: s.year, m: s.month, text: `${s.factions[rc2.faction].name}は寄騎の求めに応じなかった。` });
+          s.chronicle.push({ y: s.year, m: s.month, text: `${s.factions[rc2.faction].name}は加勢の求めに応じなかった。` });
           continue;
         }
         const rgens = s.generals.filter((x) => x.at === rc2.id && x.faction === rc2.faction && !x.captive);
@@ -1884,7 +1884,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     setG((prev) => {
       const s = structuredClone(prev);
       // 寄騎（援軍）を出す。各城は守備最低数と距離、従属度から派遣を決める（GDD 7.3）
-      寄騎を出す(s, p.reinforce || [], p.to);
+      加勢を出す(s, p.reinforce || [], p.to);
       const c = s.castles.find((x) => x.id === p.from);
       const dest = s.castles.find((x) => x.id === p.to);
       // 不可侵・同盟を破れば「裏切り」として信用と威信を失う
@@ -2115,7 +2115,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               }
               return s2;
             })}
-            onHatagashira={(kuni, genId) => setG((p) => 政務.旗頭に任じる(p, kuni, genId))}
+            onHatagashira={(kuni, genId) => setG((p) => 政務.国主に任ずる(p, kuni, genId))}
             onYoriki={(genId, 取るか, 寄親id) => setG((p) => {
               const s2 = structuredClone(p);
               const g2 = s2.generals.find((x) => x.id === genId);
@@ -2326,8 +2326,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {modal === "factions" && <FactionInfo g={g} onClose={() => setModal(null)} />}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)}
           onYakume={(x) => setG((p) => (x.解く
-            ? 政務.宿老を解く下知(p, x.解く)
-            : 政務.宿老に任ずる(p, x.任じる, x.国)))} />}
+            ? 政務.旗頭を解く下知(p, x.解く)
+            : 政務.旗頭に任ずる(p, x.任じる, x.国)))} />}
         {/* こちらが臣従しているとき、主家へ攻めの許しを願う（GDD 12.2）。
             使者はその月のうちに戻る。容認されれば、そのまま出陣できる。 */}
         {攻めの許し願い && !battle && (() => {

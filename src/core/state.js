@@ -1,4 +1,4 @@
-import { extraIncome, fiefWanted, stipendOf, 身分の位 } from "./rank.js";
+import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位 } from "./rank.js";
 import { newRoster } from "./roster.js";
 import { 姫を整える } from "./hime.js";
 import { clamp, fmt, monthsBetween } from "./util.js";
@@ -327,7 +327,7 @@ export function initState(player) {
   for (const fid of Object.keys(盤.factions)) {
     盤.factions[fid].本拠 = 本拠を定める(fid, 盤.castles, 盤.generals);
   }
-  旗頭を据える(盤);                               // 国ごとに家老を一人（GDD 6.4）
+  国主を据える(盤);                               // 国ごとに国主を一人（GDD 6.4）
   return 盤;
 }
 
@@ -837,7 +837,8 @@ export function migrateSave(s) {
   盤の増補を取り込む(s);                          // 後から足した城・武将・家・特殊勢力
   本領と本拠を繕う(s);
   本拠を追う(s);                                  // 当主のいる城へ本拠を合わせ直す
-  旗頭を据える(s);                                // 役の欄の無い古い記録に家老を据える
+  役の名を改める(s);                              // 家老→国主・宿老→旗頭（GDD 6.4）
+  国主を据える(s);                                // 役の欄の無い古い記録に国主を据える
   将の無い軍を繕う(s);                            // 兵だけ残って浮いていた軍を解く
   return s;
 }
@@ -995,18 +996,37 @@ export function 盤の増補を取り込む(s) {
 
    古い記録にも同じ繕いをする。役の欄が無いままでは、家老が一人もいない
    家ばかりになってしまう。 */
-export function 旗頭を据える(s) {
+export function 国主を据える(s) {
   for (const fid of Object.keys(s.factions || {})) {
     const 国 = [...new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni))];
     for (const kuni of 国) {
-      if (s.generals.some((g) => g.faction === fid && g.役 === "家老" && g.役国 === kuni)) continue;
+      if (s.generals.some((g) => g.faction === fid && g.役 === "国主" && g.役国 === kuni)) continue;
+      /* 国主となれるのは家老（禄高八千石）以上である（GDD 6.4）。
+         役は身分あってのものなので、その国に家老以上が居らねば国主は置かない。 */
       const 候 = s.generals.filter((g) => g.faction === fid && !g.captive && !g.lord
-        && 身分の位(g, s) >= 2
+        && 身分の位(g, s) >= 役の要る身分.国主
         && (s.castles.find((c) => c.id === (g.本領 || g.at)) || {}).kuni === kuni);
       if (!候.length) continue;
       const 主 = [...候].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
-      主.役 = "家老"; 主.役国 = kuni;
+      主.役 = "国主"; 主.役国 = kuni;
     }
+  }
+  return s;
+}
+
+/* 役の名を改める（GDD 6.4）。
+
+   身分と役を分けたので、役の名も改めた。
+
+     もとの「家老（＝一国の旗頭）」 → 国主
+     もとの「宿老（＝方面軍）」     → 旗頭
+
+   身分のほう（物頭・侍大将・家老・宿老）は禄高で定まる格として残る。
+   古い記録には古い名で書き留められているので、読み込みのときに直す。 */
+export function 役の名を改める(s) {
+  for (const g of s.generals || []) {
+    if (g.役 === "家老") g.役 = "国主";
+    else if (g.役 === "宿老") g.役 = "旗頭";
   }
   return s;
 }

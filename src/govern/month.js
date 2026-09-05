@@ -7,7 +7,7 @@ import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritH
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の重み } from "../core/paths.js";
 import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
-import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 家老を繕う, 寄騎を繕う, 宿老を繕う } from "../core/rank.js";
+import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 国主を繕う, 寄騎を繕う, 旗頭を繕う } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
@@ -1254,13 +1254,13 @@ export function advanceMonth(prev, g) {
          国を失えばその国の旗頭は役を離れ、旗頭でなくなれば寄騎も解ける。
          城が動くのは月送りの中なので、繕いもここで回す。 */
       for (const fid of Object.keys(s.factions)) {
-        for (const g of 家老を繕う(s, fid)) {
+        for (const g of 国主を繕う(s, fid)) {
           if (fid === s.player) events.push(`${g.name}は預かる国を失い、旗頭の役を離れた。`);
         }
         for (const g of 寄騎を繕う(s, fid)) {
           if (fid === s.player) events.push(`${g.name}は寄親を離れた。`);
         }
-        for (const g of 宿老を繕う(s, fid)) {
+        for (const g of 旗頭を繕う(s, fid)) {
           if (fid === s.player) events.push(`${g.name}は方面を保てなくなり、宿老の役を離れた。`);
         }
       }
