@@ -38,6 +38,38 @@ Math.random = function () {
 };
 const 置 = (s, a, b, st, tr, 主) => { s.relations[A.relKey(a, b)] = { trust: tr, state: st, until: null, master: 主 || null }; };
 
+/* --------------------------------- 本拠は当主のいる城を追う（GDD 6.4） */
+{
+  /* 本拠は家の本城であり、陣触れはここから出る。決まりは「当主のいる城」である。
+     ところが一度決めたきり追いかけておらず、当主が移っても古い城のままであった。
+     稲葉山城に当主がいるのに、陣触れを開くと観音寺城が出る、という形で表れた。 */
+  const s = A.initState('oda');
+  const 主 = s.generals.find((x) => x.faction === 'oda' && x.lord && !x.captive);
+  const 初 = s.factions.oda.本拠;
+  確('はじめは当主のいる城が本拠である', 初 === 主.at,
+    `本拠 ${(s.castles.find((c) => c.id === 初) || {}).name}／当主 ${(s.castles.find((c) => c.id === 主.at) || {}).name}`);
+
+  // 当主を別の自城へ移す
+  const 別 = s.castles.find((c) => c.faction === 'oda' && c.id !== 主.at);
+  主.at = 別.id; 主.本領 = 別.id;
+  const u = A.advanceMonth(s);
+  const 移 = u.factions.oda.本拠;
+  const 主2 = u.generals.find((x) => x.faction === 'oda' && x.lord && !x.captive);
+  確('当主が移れば、本拠も移る', 移 === 主2.at,
+    `本拠 ${(u.castles.find((c) => c.id === 移) || {}).name}／当主 ${(u.castles.find((c) => c.id === 主2.at) || {}).name}`);
+
+  // 当主が出陣していれば、本拠は動かさない（陣中に本拠は無い）
+  {
+    const t = A.initState('oda');
+    const m = t.generals.find((x) => x.faction === 'oda' && x.lord && !x.captive);
+    const 前 = t.factions.oda.本拠;
+    m.at = null;                                  // 軍中にある
+    const v = A.advanceMonth(t);
+    確('当主が陣中にあれば、本拠は動かない', v.factions.oda.本拠 === 前,
+      `${(v.castles.find((c) => c.id === v.factions.oda.本拠) || {}).name}`);
+  }
+}
+
 /* ------------------------------------------- 一、旗の下に入るということ */
 {
   const s = A.initState('oda');

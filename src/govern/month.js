@@ -22,7 +22,7 @@ import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, �
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { isVassal, underMyBanner, 援けに着く, 軍の道 } from "../core/state.js";
+import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 軍の道 } from "../core/state.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 /* ==========================================================================
    月送り ─ 天下じゅうの一月
@@ -1224,6 +1224,8 @@ export function advanceMonth(prev, g) {
          地図に数字だけが浮き、城の帳には「将なし」の軍が並ぶことになる。 */
       // 済んだ攻めの許しを片づける（落とした城・主の変わった家）
       済んだ許しを片づける(s);
+      // 本拠は当主のいる城を追う。陣触れはここから出る（GDD 6.4）
+      本拠を追う(s);
       for (const q of 将の無い軍を解く(s)) {
         if (q.faction !== s.player || !q.先) continue;
         events.push(`将のいない軍を解き、兵${fmt(q.men)}人は${q.先.name}へ返した。`);

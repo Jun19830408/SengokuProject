@@ -836,6 +836,7 @@ export function migrateSave(s) {
   if (!Array.isArray(s.hime)) { s.hime = []; 姫を整える(s); }
   盤の増補を取り込む(s);                          // 後から足した城・武将・家・特殊勢力
   本領と本拠を繕う(s);
+  本拠を追う(s);                                  // 当主のいる城へ本拠を合わせ直す
   旗頭を据える(s);                                // 役の欄の無い古い記録に家老を据える
   将の無い軍を繕う(s);                            // 兵だけ残って浮いていた軍を解く
   return s;
@@ -1006,6 +1007,28 @@ export function 旗頭を据える(s) {
       const 主 = [...候].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
       主.役 = "家老"; 主.役国 = kuni;
     }
+  }
+  return s;
+}
+
+/* 本拠は当主のいる城を追う（GDD 6.4）。
+
+   本拠は家の本城であり、陣触れはここから出る。決まりは初めから「当主のいる城」
+   であったが、盤を組むときに一度定めるきりで、当主が移っても追いかけていなかった。
+   稲葉山城に当主がいるのに、陣触れを開くと観音寺城が出る――という形で表れた。
+
+   当主が陣中にある（軍に加わっていて城にいない）ときは動かさない。陣に本拠は
+   無い。当主が居らぬ家、あるいは本拠を失った家は、石高のいちばん高い城とする。 */
+export function 本拠を追う(s) {
+  for (const fid of Object.keys(s.factions || {})) {
+    const f = s.factions[fid];
+    const 我 = (s.castles || []).filter((c) => c.faction === fid);
+    if (!我.length) { f.本拠 = null; continue; }
+    const 主 = (s.generals || []).find((x) => x.faction === fid && x.lord && !x.captive && x.at);
+    if (主 && 我.some((c) => c.id === 主.at)) { f.本拠 = 主.at; continue; }
+    // 当主が陣中にあるか、他家の城にいる。いまの本拠が自領なら、そのまま据え置く
+    if (f.本拠 && 我.some((c) => c.id === f.本拠)) continue;
+    f.本拠 = [...我].sort((a, b) => b.koku - a.koku)[0].id;
   }
   return s;
 }

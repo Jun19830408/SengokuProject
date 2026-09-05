@@ -15363,6 +15363,7 @@ function migrateSave(s2) {
   }
   \u76E4\u306E\u5897\u88DC\u3092\u53D6\u308A\u8FBC\u3080(s2);
   \u672C\u9818\u3068\u672C\u62E0\u3092\u7E55\u3046(s2);
+  \u672C\u62E0\u3092\u8FFD\u3046(s2);
   \u65D7\u982D\u3092\u636E\u3048\u308B(s2);
   \u5C06\u306E\u7121\u3044\u8ECD\u3092\u7E55\u3046(s2);
   return s2;
@@ -15473,6 +15474,24 @@ function \u65D7\u982D\u3092\u636E\u3048\u308B(s2) {
       \u4E3B.\u5F79 = "\u5BB6\u8001";
       \u4E3B.\u5F79\u56FD = kuni;
     }
+  }
+  return s2;
+}
+function \u672C\u62E0\u3092\u8FFD\u3046(s2) {
+  for (const fid of Object.keys(s2.factions || {})) {
+    const f = s2.factions[fid];
+    const \u6211 = (s2.castles || []).filter((c) => c.faction === fid);
+    if (!\u6211.length) {
+      f.\u672C\u62E0 = null;
+      continue;
+    }
+    const \u4E3B = (s2.generals || []).find((x) => x.faction === fid && x.lord && !x.captive && x.at);
+    if (\u4E3B && \u6211.some((c) => c.id === \u4E3B.at)) {
+      f.\u672C\u62E0 = \u4E3B.at;
+      continue;
+    }
+    if (f.\u672C\u62E0 && \u6211.some((c) => c.id === f.\u672C\u62E0)) continue;
+    f.\u672C\u62E0 = [...\u6211].sort((a, b) => b.koku - a.koku)[0].id;
   }
   return s2;
 }
@@ -19564,6 +19583,7 @@ function advanceMonth(prev, g) {
     events.push(`${q.name}\u306E\u6240\u5728\u304C\u77E5\u308C\u305A\u306B\u3044\u305F\u304C\u3001${(s2.castles.find((c) => c.id === q.at) || {}).name}\u306B\u623B\u3063\u305F\u3002`);
   }
   \u6E08\u3093\u3060\u8A31\u3057\u3092\u7247\u3065\u3051\u308B(s2);
+  \u672C\u62E0\u3092\u8FFD\u3046(s2);
   for (const q of \u5C06\u306E\u7121\u3044\u8ECD\u3092\u89E3\u304F(s2)) {
     if (q.faction !== s2.player || !q.\u5148) continue;
     events.push(`\u5C06\u306E\u3044\u306A\u3044\u8ECD\u3092\u89E3\u304D\u3001\u5175${fmt(q.men)}\u4EBA\u306F${q.\u5148.name}\u3078\u8FD4\u3057\u305F\u3002`);
