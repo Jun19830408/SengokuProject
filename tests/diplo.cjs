@@ -62,7 +62,7 @@ const 押せる = (s, fid, key) => {
   const 敵 = s.castles.find((x) => x.faction !== s.player && !旗下(x.faction)).faction;
   for (const c of s.castles.filter((x) => x.faction === 敵)) c.koku = Math.round(c.koku * 0.1);
   const r = s.relations[[s.player, 敵].sort().join('|')];
-  r.trust = 90; r.state = '中立';
+  r.trust = 100; r.state = '中立';       // 臣従させるには信用満が要る（GDD 12.1）
   s.factions[s.player].gold = 99999;
   const 比 = 石高(s, 敵) / 石高(s, s.player);
   console.log(`  （${s.factions[敵].name}は織田家の${Math.round(比 * 100)}％）`);
@@ -98,8 +98,20 @@ const 押せる = (s, fid, key) => {
   s.factions[s.player].gold = 0;                        // 頭を下げるのに金は要らない
   const 比 = 石高(s, 敵) / 石高(s, s.player);
   console.log(`  （${s.factions[敵].name}は織田家の${比.toFixed(1)}倍）`);
-  確('大きい相手には、金も信用もなく降れる',
-    押せる(s, 敵, '従属する') && 押せる(s, 敵, '臣従する'), `信用${Math.round(r.trust)}・金0貫`);
+  /* 降る側の要り（GDD 12.1）。
+       従属する … 石高の比に加え、信用八十。貢を納めて生き延びる約束であるから、
+                   相手を信じられねば結べない。
+       臣従する … 石高の比だけ。攻め滅ぼされる前に降るのだから、誼の篤さは
+                   関わらない。ここを塞ぐと、弱小の家に生き残る道が無くなる。 */
+  確('大きい相手には、金も信用もなく臣従できる',
+    押せる(s, 敵, '臣従する'), `信用${Math.round(r.trust)}・金0貫`);
+  確('従属するには信用八十が要る', !押せる(s, 敵, '従属する'),
+    `信用${Math.round(r.trust)}では従属できない`);
+  {
+    const s2 = structuredClone(s);
+    s2.relations[[s2.player, 敵].sort().join('|')].trust = 80;
+    確('　信用八十まで積めば従属できる', 押せる(s2, 敵, '従属する'), '信用80');
+  }
   確('大きい相手を従えることはできない',
     !押せる(s, 敵, '従属させる') && !押せる(s, 敵, '臣従させる'));
 
@@ -140,13 +152,17 @@ const 押せる = (s, fid, key) => {
   });
   const 敵 = s.castles.find((x) => x.faction !== s.player && !旗下(x.faction)).faction;
     for (const c of s.castles.filter((x) => x.faction === 敵)) c.koku = Math.round(c.koku * 0.1);
-    s.relations[[s.player, 敵].sort().join('|')] = { trust: 55, state: '中立', until: null };
+    /* 従属させるに要る信用は八十（GDD 12.1）。威信が高いほどそこから緩む
+       （威信五十を並みとし、上下それぞれ最大十ぶん動く）。
+       威信95なら七十一ほど、威信10なら八十八ほど要る。そのあいだの
+       七十五で測れば、威信の効きがそのまま見える。 */
+    s.relations[[s.player, 敵].sort().join('|')] = { trust: 75, state: '中立', until: null };
     s.factions[s.player].gold = 99999;
     s.factions[s.player].prestige = 威信;
     return { s, 敵 };
   };
   const 高 = 作(95), 低 = 作(10);
-  確('威信が高ければ、信用55でも従属させられる', 押せる(高.s, 高.敵, '従属させる'), '威信95');
+  確('威信が高ければ、信用75でも従属させられる', 押せる(高.s, 高.敵, '従属させる'), '威信95（要る信用は八十から七十一ほどに緩む）');
   確('威信が低ければ、同じ信用でも従えられない', !押せる(低.s, 低.敵, '従属させる'), '威信10');
 }
 

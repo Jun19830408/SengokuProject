@@ -37,8 +37,10 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
   const [cmd, setCmd] = useState("開墾");
   const [genId, setGenId] = useState(null);
   const [plot, setPlot] = useState("偵察");
+  const [使者, set使者] = useState(null);       // 外交の使者。親善の効き目はこの将の器量で決まる
   const [plotTarget, setPlotTarget] = useState(null);
   const [plotMato, setPlotMato] = useState(null);   // 調略を仕掛ける相手の武将
+  const [離間先, set離間先] = useState(null);       // 離間で裂く相手の家
   const [diploTarget, setDiploTarget] = useState(null);
   const cur = genId && gens.some((x) => x.id === genId) ? genId : (gens[0] && gens[0].id);
   // 月の働きは武将ごとに数える。手の空いている者がいれば、まだ命じられる。
@@ -304,6 +306,36 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       ただし極めて鈍く、風にも乗らない。海戦のときは必ず出る。
                     </div>
                   )}
+                  {/* 離間は「どの家との誼を裂くか」を定めねば立たない（GDD 11.2）。
+                      裂けるのは、その城の家が中立より篤く結んでいる相手だけである。 */}
+                  {(() => {
+                    const d4 = PLOTS.find((x) => x.key === plot);
+                    if (!d4 || !d4.家を指す || !pt) return null;
+                    const 城 = g.castles.find((x) => x.id === pt);
+                    if (!城) return null;
+                    const 列 = Object.keys(g.factions)
+                      .filter((fid2) => fid2 !== 城.faction && g.castles.some((x) => x.faction === fid2))
+                      .map((fid2) => ({ fid2, r: relOf(g, 城.faction, fid2) }))
+                      .filter((x) => ["不可侵", "同盟", "従属", "臣従"].includes(x.r.state) || x.r.trust >= 40)
+                      .sort((a, b) => b.r.trust - a.r.trust);
+                    if (!列.length) return (
+                      <div style={{ fontSize: 12, color: "#B0483C", marginBottom: 8, lineHeight: 1.7 }}>
+                        {g.factions[城.faction].name}には裂くほどの誼がない。
+                      </div>
+                    );
+                    const 今 = 列.some((x) => x.fid2 === 離間先) ? 離間先 : 列[0].fid2;
+                    if (今 !== 離間先) setTimeout(() => set離間先(今), 0);
+                    return (
+                      <select className="sel" style={{ width: "100%", marginBottom: 8 }} value={今}
+                        onChange={(e) => set離間先(e.target.value)}>
+                        {列.map((x) => (
+                          <option key={x.fid2} value={x.fid2}>
+                            {`${g.factions[城.faction].name} と ${g.factions[x.fid2].name}（${x.r.state}・信用${Math.round(x.r.trust)}）を裂く`}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  })()}
                   <select className="sel" style={{ width: "100%", marginBottom: 8 }}
                     value={freeGens.some((x) => x.id === cur) ? cur : (freeGens[0] || {}).id || ""}
                     onChange={(e) => setGenId(e.target.value)}>
@@ -813,6 +845,36 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       </div>
                     );
                   })()}
+                  {/* 使者に立てる将（GDD 12.1）。
+
+                      親善の効き目は、使者の政務と知略の平均で決まる。
+                        九十以上 六　八十以上 五　七十以上 四
+                        六十以上 三　五十以上 二　それ未満 一
+                      誰を遣るかが効くのだから、誰を遣るかを選べねばならない。 */}
+                  {(() => {
+                    const 使える = gens.filter((x) => !g.orders[x.id]);
+                    if (!使える.length) return (
+                      <div style={{ fontSize: 11.5, color: "#B0483C", marginTop: 8 }}>
+                        この城に手の空いた将がいない。使者を立てられないので、親善の効きは一に留まる。
+                      </div>
+                    );
+                    return (
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ fontSize: 11, color: U.dim, marginBottom: 4 }}>使者に立てる将</div>
+                        <select className="sel" style={{ width: "100%" }} value={使者 || ""}
+                          onChange={(e) => set使者(e.target.value || null)}>
+                          <option value="">（立てない・親善の効きは一）</option>
+                          {使える.map((x) => {
+                            const 器 = Math.round(((x.gov || 0) + (x.wit || 0)) / 2);
+                            const 効 = 器 >= 90 ? 6 : 器 >= 80 ? 5 : 器 >= 70 ? 4 : 器 >= 60 ? 3 : 器 >= 50 ? 2 : 1;
+                            return <option key={x.id} value={x.id}>
+                              {x.name}（政{x.gov}／知{x.wit}　親善＋{効}）
+                            </option>;
+                          })}
+                        </select>
+                      </div>
+                    );
+                  })()}
                   {(() => {
                     const 主 = 主家(g, g.player, dt);
                     const 下 = 主 == null ? null : 主 !== g.player;
@@ -834,7 +896,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                             return (
                               <button key={d.key} className="btn sm" disabled={!成る || !金}
                                 title={`${d.why}${d.cost ? `／${d.cost}貫` : "／金は要らぬ"}${!成る ? "" : !金 ? "　【金が足りぬ】" : ""}`}
-                                onClick={() => onDiplo(dt, d.key)}>{d.key}</button>
+                                onClick={() => onDiplo(dt, d.key, 使者)}>{d.key}</button>
                             );
                           })}
                         </div>
@@ -1077,12 +1139,13 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                   {(() => {
                     const d3 = PLOTS.find((x) => x.key === plot);
                     const 要る = d3 && (d3.mato === "要" || d3.mato === "城主");
-                    const 立つ = !要る || !!plotMato;
+                    const 立つ = (!要る || !!plotMato) && (!d3 || !d3.家を指す || !!離間先);
                     return (
                       <button className="btn dark" style={{ width: "100%" }}
                         disabled={!freeGens.length || !pt || !立つ}
                         onClick={() => onPlot(pt, plot, freeGens.some((x) => x.id === cur) ? cur : freeGens[0].id,
-                          d3 && d3.mato !== "無" ? plotMato : null)}>
+                          d3 && d3.mato !== "無" ? plotMato : null,
+                          d3 && d3.家を指す ? 離間先 : null)}>
                         {立つ ? `${plot}を仕掛ける` : `${plot}は相手を定めねば仕掛けられぬ`}
                       </button>
                     );

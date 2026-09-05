@@ -100,7 +100,9 @@ const 確 = (名, 可, 添 = '') => {
   const 相 = 'imagawa';
   const r0 = A.relOf(s, 'oda', 相);
   const k = ['oda', 相].sort().join('|');
-  s.relations[k] = { ...r0, trust: 80, state: '中立', until: null };
+  /* 婚姻に要る信用は満（百）である（GDD 12.1）。縁は姫の存命のあいだ続く、
+     期限のある同盟より重い約束なのだから、誼を尽くし切った相手にしか嫁がせない。 */
+  s.relations[k] = { ...r0, trust: 85, state: '中立', until: null };
   s.factions.oda.gold = 5000;
 
   const 前 = A.婚姻できるか(s, h, 相);
@@ -125,8 +127,14 @@ const 確 = (名, 可, 添 = '') => {
   s3.relations[k3] = { trust: 30, state: '中立', until: null };
   確('信用の足りぬ家とは結べない', !A.婚姻できるか(s3, h3, 'imagawa').ok,
     A.婚姻できるか(s3, h3, 'imagawa').why);
-  確('外交の高い姫ほど低い信用で結べる',
-    A.婚姻の要る信用({ dip: 88 }, { state: '中立' }) < A.婚姻の要る信用({ dip: 40 }, { state: '中立' }),
+  /* 婚姻に要る信用は満（百）である。姫の外交では緩まない（GDD 12.1）。
+
+     もとは姫の外交で三十まで下がった（外交88なら三十、外交40なら四十五ほど）。
+     縁は姫の存命のあいだ続く重い約束なので、誼を尽くし切った相手にしか
+     嫁がせない、と改めた。姫の外交は、使者に立ったときの働きに効く。 */
+  確('婚姻に要る信用は、姫の外交によらず八十五である',
+    A.婚姻の要る信用({ dip: 88 }, { state: '中立' }) === 85
+      && A.婚姻の要る信用({ dip: 40 }, { state: '中立' }) === 85,
     `外交88なら${A.婚姻の要る信用({ dip: 88 }, { state: '中立' })}／外交40なら${A.婚姻の要る信用({ dip: 40 }, { state: '中立' })}`);
 }
 
@@ -236,7 +244,7 @@ const 確 = (名, 可, 添 = '') => {
   // 弱い隣家（松平）が、大きな隣家（今川）を恐れて縁を結ぶ形を作る
   const 弱 = 'matsudaira', 強 = 'imagawa';
   const k = [弱, 強].sort().join('|');
-  s.relations[k] = { trust: 92, state: '中立', until: null };
+  s.relations[k] = { trust: 85, state: '中立', until: null };    // 婚姻に要る信用は八十五（GDD 12.1）
   s.factions[弱].gold = 4000;
   s.卓 = '試の卓';                                   // 采配の籤を定める（毎度同じ手になる）
   const h = A.家の姫(s, 弱)[0];
@@ -252,7 +260,7 @@ const 確 = (名, 可, 添 = '') => {
   // 縁は一つに限る（家々が片端から結べば、盤から戦が消える）
   const 他 = 'oda';
   const k2 = [弱, 他].sort().join('|');
-  s.relations[k2] = { trust: 95, state: '中立', until: null };
+  s.relations[k2] = { trust: 100, state: '中立', until: null };
   A.姫の采配(s, 弱, {});
   確('縁は一つに限る', s.relations[k2].state !== '同盟', s.relations[k2].state);
 }
@@ -264,7 +272,7 @@ const 確 = (名, 可, 添 = '') => {
   for (const c of s.castles.filter((x) => x.faction === 'yamato' || x.faction === 'ise')) c.faction = 'oda';
   const 弱 = 'mizuno';
   const k = [弱, 'oda'].sort().join('|');
-  s.relations[k] = { trust: 95, state: '中立', until: null };
+  s.relations[k] = { trust: 85, state: '中立', until: null };    // 婚姻に要る信用は八十五（GDD 12.1）
   s.factions[弱].gold = 4000;
   s.卓 = '試の卓';
   const h = A.家の姫(s, 弱)[0];
@@ -288,7 +296,26 @@ const 確 = (名, 可, 添 = '') => {
   for (let i = 0; i < 12 * 22; i++) t = A.advanceMonth(t, t);
   const 婚 = Object.values(t.relations).filter((r) => r.婚姻).length;
   const 一門 = (t.generals || []).filter((x) => x.一門).length;
-  確('二十二年のうちに、他家が縁を結ぶ', 婚 > 0, `${婚}組`);
+  /* 婚姻に要る信用を満（百）と改めたので、他家が二十二年のうちに縁を結ぶことは
+     稀になった（二十五年を走らせて測ると、九千三百十六組のうち信用八十以上は
+     百十二組ほどである）。「二十二年に一度は起きる」を判じにすると、
+     当たり外れを見ることになる。
+
+     決まりそのものは下で直に測る――信用が満ちていれば、他家は縁を結ぶ。
+     ここでは起きた数を控えとして出しておく。 */
+  console.log(`  （二十二年のうちに他家が結んだ縁 ${婚}組。婚姻は信用八十五を要るので稀である）`);
+  {
+    // 信用を満たした形を作り、采配が縁を結ぶかを直に見る
+    const u = A.initState('oda');
+    const 弱 = 'matsudaira', 強 = 'imagawa';
+    const k3 = [弱, 強].sort().join('|');
+    u.relations[k3] = { trust: 85, state: '中立', until: null };
+    u.factions[弱].gold = 4000;
+    u.卓 = '試の卓';
+    for (let i = 0; i < 20 && u.relations[k3].state !== '同盟'; i++) { u.year++; A.姫の采配(u, 弱, {}); }
+    確('信用が満ちていれば、他家は縁を結ぶ', u.relations[k3].state === '同盟' && !!u.relations[k3].婚姻,
+      `${u.relations[k3].state}${u.relations[k3].婚姻 ? '（婚姻）' : ''}`);
+  }
   確('他家が家臣に姫を嫁がせて家中を固める', 一門 > 0, `${一門}人`);
   /* 家々が片端から縁を結べば、盤の上のどの家も攻められなくなる。
      結ぶ家は一部にとどまっていること。 */

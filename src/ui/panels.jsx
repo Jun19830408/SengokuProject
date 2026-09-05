@@ -1135,6 +1135,27 @@ export function FactionInfo({ g, onClose }) {
                 return `／${rl.state}${向}・信用${Math.round(rl.trust)}${rl.until ? `（残${monthsBetween(g.year, g.month, rl.until.y, rl.until.m)}か月）` : ""}`;
               })()}
             </span>
+            {/* 他家との信用（GDD 12.1）。武将の忠誠と同じく、抱えつづけて管理する値である。
+                落ち着き所は四十五。それより篤くするには使者を通わせねばならず、
+                放っておけば薄れていく。尽きれば約束も上下も切れて敵対になる。
+
+                  不可侵 50／同盟 65／従属 80／婚姻 85／臣従 100 */}
+            {r.f.id !== g.player && (() => {
+              const rl = relOf(g, g.player, r.f.id);
+              const 要 = [[50, "不可侵"], [65, "同盟"], [80, "従属"], [85, "婚姻"], [100, "臣従"]];
+              const 次 = 要.find(([n]) => rl.trust < n);
+              return (
+                <span style={{ width: "100%", paddingLeft: 32, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="meter" style={{ flex: 1, maxWidth: 200 }}>
+                    <i style={{ width: `${Math.max(0, Math.min(100, rl.trust))}%`,
+                      background: rl.trust <= 15 ? "#B0483C" : rl.trust >= 80 ? "#4A7E5A" : "#4A6E8A" }} />
+                  </span>
+                  <span className="num" style={{ fontSize: 11, color: U.dim }}>
+                    {次 ? `${次[1]}まで あと${Math.ceil(次[0] - rl.trust)}` : "満"}
+                  </span>
+                </span>
+              );
+            })()}
           </div>
         ))}
         {絶えた.length > 0 && (
@@ -1328,6 +1349,54 @@ export function GeneralList({ g, onClose, onYakume }) {
    他家からの申し出は、こちらの諾否を経ずに成らない。
    これを塞いでいなかったころは、隣国を平らげた途端に神戸と北畠が勝手に臣従してきた。
    旗の下に入れるかどうかは、こちらの決めることである。 */
+/* 臣従した家からの「攻めの願い」（GDD 12.2）。
+
+   臣従は旗の下に完全に入ることであり、外交を主に預ける。その家が勝手に隣国へ
+   攻めかかれば、主家の外交はたちまち破れる。だから許しを乞う。
+
+   容認すれば、その家は自らその城を攻める（援軍を主家に求めることもできる）。
+   却下すれば動かない。許しは城ごとで、その城を落とすまで有効である。
+
+   戦略として、あえて臣従した家に攻めさせ、敵とのあいだに干渉地を作ることも
+   できる。落とした城はその家の領となる。 */
+export function 攻めの願い問い({ g, 願, onTake, onPass }) {
+  const 臣 = g.factions[願.臣];
+  const 城 = g.castles.find((c) => c.id === 願.castleId);
+  if (!臣 || !城) return null;
+  const 的 = g.factions[城.faction];
+  const r = relOf(g, g.player, 城.faction);
+  const 守 = 城.local + g.generals.filter((x) => x.at === 城.id && x.faction === 城.faction && !x.captive)
+    .reduce((a, x) => a + x.retinue, 0);
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card">
+        <div className="mn" style={{ fontSize: 21, marginBottom: 6 }}>{臣.name}よりの願い</div>
+        <div style={{ fontSize: 13.5, lineHeight: 1.9, marginBottom: 10 }}>
+          <b className="mn">{城.name}</b>（{的 ? 的.name : ""}）を攻めたい、と申しております。
+        </div>
+        <div className="row"><span>その城の兵</span><span className="v num">{fmt(守)} 人</span></div>
+        <div className="row"><span>石高</span><span className="v num">{fmt(Math.round(城.koku))} 石</span></div>
+        <div className="row"><span>自家とその家の間柄</span>
+          <span className="v">{r.state}（信用 {Math.round(r.trust)}）</span></div>
+        <div style={{ fontSize: 11.5, color: U.dim, marginTop: 8, lineHeight: 1.8 }}>
+          容認すれば、{臣.name}が自ら兵を出します。落とせばその城は{臣.name}の領となります。
+          敵とのあいだに緩衝を置きたいときは、あえて攻めさせるのも一手です。<br />
+          却下すれば動きません。許しは城ごとで、落とすまで続きます。
+          {["同盟", "不可侵", "従属", "臣従"].includes(r.state) && (
+            <><br /><span style={{ color: "#B0483C" }}>
+              自家は{的 ? 的.name : "その家"}と{r.state}の間柄にあります。攻めさせれば、その約束は破れます。
+            </span></>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
+          <button className="btn" style={{ flex: 1 }} onClick={onPass}>却下する</button>
+          <button className="btn dark" style={{ flex: 1 }} onClick={onTake}>容認する</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DiploOffer({ g, 申, onTake, onPass }) {
   const f = g.factions[申.fid];
   if (!f) return null;

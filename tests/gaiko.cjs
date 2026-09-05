@@ -28,7 +28,7 @@ fs.writeFileSync(entry,
   'export { initState, relOf, relKey, factionKoku, atPeace } from "../src/core/state.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n'
 + 'export { 外交の采配, 調略の采配, 特殊勢力の采配, 隣家, 旗の下にいるか } from "../src/govern/aiDiplo.js";\n'
-+ 'export { doDiplo, 外交を結ぶ } from "../src/govern/commands.js";\n'
++ 'export { doDiplo, 外交を結ぶ, 親善の効き, doPlot } from "../src/govern/commands.js";\n'
 + 'export { PLOTS, DIPLO } from "../src/data/diplo.js";\n');
 const out = path.join(ROOT, 'build', 'gaiko.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
@@ -51,17 +51,149 @@ Math.random = function () {
 
 const 状 = (s, f) => Object.values(s.relations).filter(f).length;
 
+/* -------------------------------- 信用が尽きれば、間柄は切れて敵対になる */
+{
+  /* 誼は積むだけのものではない。尽きれば約束も上下も解ける。
+     不可侵・同盟・従属・臣従のいずれも、信用が零に落ちた月に切れる。 */
+  const 試す = (state, master) => {
+    const s = A.initState('oda');
+    const k = ['oda', 'imagawa'].sort().join('|');
+    s.relations[k] = { trust: 0, state, until: null, master: master || null };
+    const u = A.advanceMonth(s);
+    return u.relations[k];
+  };
+  for (const [state, 名] of [['不可侵', '不可侵'], ['同盟', '同盟'], ['従属', '従属'], ['臣従', '臣従']]) {
+    const r = 試す(state, state === '従属' || state === '臣従' ? 'imagawa' : null);
+    確(`信用が尽きれば${名}は切れて敵対になる`, r.state === '敵対',
+      `${state} → ${r.state}（信用 ${Math.round(r.trust)}）`);
+  }
+  {
+    const s = A.initState('oda');
+    const k = ['oda', 'imagawa'].sort().join('|');
+    s.relations[k] = { trust: 3, state: '同盟', until: null };
+    const u = A.advanceMonth(s);
+    確('信用が残っていれば切れない', u.relations[k].state === '同盟',
+      `信用3 → ${Math.round(u.relations[k].trust)}・${u.relations[k].state}`);
+  }
+  {
+    const s = A.initState('oda');
+    const k = ['oda', 'imagawa'].sort().join('|');
+    s.relations[k] = { trust: 0, state: '中立', until: null };
+    const u = A.advanceMonth(s);
+    確('中立はもともと約束が無いので、敵対にはしない', u.relations[k].state === '中立',
+      u.relations[k].state);
+  }
+}
+
+/* ------------------------------------------ 離間――他家どうしの誼を裂く */
+{
+  /* 誼は積むだけのものではない。裂く手立てが無ければ、盤は結ばれるだけで固まる。
+     仕掛けるのは城であるが、削るのはその城の家と、指した相手の家との信用である。 */
+  const 仕 = (知略) => {
+    const s = A.initState('oda');
+    s.factions.oda.gold = 5000;
+    const 城 = s.castles.find((c) => c.faction === 'imagawa');
+    const k = ['imagawa', 'takeda'].sort().join('|');
+    s.relations[k] = { trust: 30, state: '同盟', until: null };
+    const 者 = s.generals.find((x) => x.faction === 'oda' && !x.captive && !s.orders[x.id]);
+    者.wit = 知略;
+    let u = A.doPlot(s, 城.id, '離間', 者.id, null, 'takeda');
+    for (let i = 0; i < 4; i++) u = A.advanceMonth(u);
+    return { r: u.relations[k], 城, u };
+  };
+  /* 調略は当たり外れがある（知略96・天井0.80なので五度に一度は外す）。
+     一度きりで測ると外れた回に倒れるので、幾度か仕掛けて分けを見る。 */
+  const 幾度 = [];
+  for (let i = 0; i < 8; i++) 幾度.push(仕(96));
+  const 削れら = 幾度.map((x) => 30 - x.r.trust);
+  const 成った = 削れら.filter((d) => d > 6);
+  確('離間が成れば、二家のあいだの信用が削れる', 成った.length > 0,
+    `八度のうち ${成った.length}度成った（削れ ${削れら.map((d) => Math.round(d)).join('・')}）`);
+  確('削れ高は親善の一月ぶん（最大六）より大きい',
+    成った.length > 0 && Math.max(...削れら) > 6,
+    `いちばん削れて ${Math.round(Math.max(...削れら))}`);
+  {
+    // 相手の家を指さねば立たない
+    const s = A.initState('oda');
+    s.factions.oda.gold = 5000;
+    const 城 = s.castles.find((c) => c.faction === 'imagawa');
+    const 者 = s.generals.find((x) => x.faction === 'oda' && !x.captive && !s.orders[x.id]);
+    const u = A.doPlot(s, 城.id, '離間', 者.id, null, null);
+    確('裂く相手を定めねば、離間は立たない', (u.plots || []).length === 0, `企て ${(u.plots || []).length}件`);
+  }
+  {
+    // 信用が尽きれば、その月に同盟が切れる
+    const s = A.initState('oda');
+    s.factions.oda.gold = 5000;
+    const 城 = s.castles.find((c) => c.faction === 'imagawa');
+    const k = ['imagawa', 'takeda'].sort().join('|');
+    s.relations[k] = { trust: 8, state: '同盟', until: null };
+    const 者 = s.generals.find((x) => x.faction === 'oda' && !x.captive && !s.orders[x.id]);
+    者.wit = 96;
+    // 調略は外すことがあるので、幾度か仕掛けて一度でも切れるかを見る
+    let 切れた = null;
+    for (let i = 0; i < 8 && !切れた; i++) {
+      const s3 = structuredClone(s);
+      let u = A.doPlot(s3, 城.id, '離間', 者.id, null, 'takeda');
+      for (let j = 0; j < 5; j++) u = A.advanceMonth(u);
+      if (u.relations[k].state === '敵対') 切れた = u.relations[k];
+    }
+    確('裂いた末に信用が尽きれば、同盟は切れて敵対になる', !!切れた,
+      切れた ? `信用8 → ${Math.round(切れた.trust)}・${切れた.state}` : '八度とも切れなかった');
+  }
+}
+
 /* ---------------------------------------------- 一、遊ぶ側の下知は今まで通り */
 {
   const s = A.initState('oda');
   const k = ['oda', 'imagawa'].sort().join('|');
   s.relations[k] = { trust: 40, state: '中立', until: null };
   s.factions.oda.gold = 5000;
+  /* 親善の効き目は、使者に立てた将の政務と知略の平均で決まる（GDD 12.1）。
+     もとは誰を遣ろうと一律に九つ上がった。半年通えば同盟が結べる勘定で、
+     誼を篤くすることが軽すぎた。 */
   const t = A.doDiplo(s, 'imagawa', '親善');
-  確('遊ぶ側の親善は信用を上げる', t.relations[k].trust === 49, `${40} → ${t.relations[k].trust}`);
+  確('使者を立てねば、親善は一しか上がらない', t.relations[k].trust === 41,
+    `40 → ${t.relations[k].trust}`);
   確('金を払う', t.factions.oda.gold < 5000, `${5000 - t.factions.oda.gold}貫`);
+
+  const 段 = [[95, 95, 6], [85, 80, 5], [72, 70, 4], [62, 60, 3], [52, 50, 2], [40, 30, 1]];
+  for (const [gov, wit, 効] of 段) {
+    確(`政${gov}・知${wit}の使者なら ＋${効}`,
+      A.親善の効き({ gov, wit }) === 効, `＋${A.親善の効き({ gov, wit })}`);
+  }
+  {
+    const s2 = A.initState('oda');
+    s2.relations[k] = { trust: 40, state: '中立', until: null };
+    s2.factions.oda.gold = 5000;
+    const 才 = s2.generals.filter((x) => x.faction === 'oda' && !x.captive)
+      .sort((x, y) => ((y.gov || 0) + (y.wit || 0)) - ((x.gov || 0) + (x.wit || 0)))[0];
+    const t3 = A.doDiplo(s2, 'imagawa', '親善', 才.id);
+    確('使者を立てれば、その器量ぶん上がる',
+      t3.relations[k].trust === 40 + A.親善の効き(才),
+      `${才.name}（政${才.gov}／知${才.wit}）→ 40 → ${t3.relations[k].trust}`);
+    確('使者に立った将は、その月ふさがる', !!t3.orders[才.id], t3.orders[才.id] ? t3.orders[才.id].cmd : 'なし');
+  }
+
   const t2 = A.doDiplo(t, 'imagawa', '同盟');
   確('筋の立たぬ結びは成らない（信用が足りない）', t2.relations[k].state === '中立', t2.relations[k].state);
+
+  /* 間柄に要る信用（GDD 12.1）。
+       不可侵 50／同盟 65／従属させる 80／臣従させる 100（満）／従属する 80 */
+  {
+    const 要る = (key, trust, koku比) => {
+      const r = { trust, state: '中立' };
+      const 私 = { koku: 1000, diplo: 0, prestige: 50 }, 敵 = { koku: 1000 * koku比, diplo: 0, prestige: 50 };
+      const d = A.DIPLO.find((x) => x.key === key);
+      return d.need(r, 私, 敵, null);
+    };
+    確('不可侵は信用五十から', !要る('不可侵', 49, 1) && 要る('不可侵', 50, 1));
+    確('同盟は信用六十五から', !要る('同盟', 64, 1) && 要る('同盟', 65, 1));
+    確('従属させるは信用八十から', !要る('従属させる', 79, 0.4) && 要る('従属させる', 80, 0.4));
+    確('臣従させるは信用満のみ', !要る('臣従させる', 99, 0.2) && 要る('臣従させる', 100, 0.2));
+    確('従属するは信用八十から', !要る('従属する', 79, 2.0) && 要る('従属する', 80, 2.0));
+    確('臣従するに信用は問わない（降る道を塞がない）', 要る('臣従する', 0, 3.0));
+  }
 }
 
 /* ---------------------------------------------- 二、他家も結ぶ */

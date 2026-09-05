@@ -44,7 +44,9 @@ const 置 = (s, a, b, st, tr, 主) => { s.relations[A.relKey(a, b)] = { trust: t
   for (const f of Object.values(s.factions)) f.gold = 20000;
   置(s, 'mizuno', 'saito', '同盟', 80);
   置(s, 'mizuno', 'imagawa', '不可侵', 70);
-  置(s, 'mizuno', 'oda', '中立', 70);
+  /* 従属するには信用八十が要る（GDD 12.1）。貢を納めて生き延びる約束であるから、
+     相手を信じられねば結べない。 */
+  置(s, 'mizuno', 'oda', '中立', 80);
   const r = A.外交を結ぶ(s, 'mizuno', 'oda', '従属する');
   確('小さい家は大きい家に従属できる', r.ok && A.relOf(s, 'mizuno', 'oda').state === '従属',
     A.relOf(s, 'mizuno', 'oda').state);
@@ -86,12 +88,18 @@ const 置 = (s, a, b, st, tr, 主) => { s.relations[A.relKey(a, b)] = { trust: t
   }
 
   // 主を替えるには、まず独立
+  /* 代償は「落ちた幅」で測る。絶対の値で測ると、仕込みの信用を動かすたびに
+     判じが揺れる（間柄に要る信用を改めたときに、まさにそれで倒れた）。 */
+  const 前の信 = A.relOf(s, 'mizuno', 'oda').trust;
+  const 前の威 = s.factions.mizuno.prestige;
   const r8 = A.外交を結ぶ(s, 'mizuno', 'oda', '独立');
   確('旗を翻せば主から離れる', r8.ok && A.主を探す(s, 'mizuno') === null,
     A.relOf(s, 'mizuno', 'oda').state);
-  確('独立の代償は大きい（信用と威信）', A.relOf(s, 'mizuno', 'oda').trust <= 30
-    && s.factions.mizuno.prestige <= 38,
-    `信用 75→${Math.round(A.relOf(s, 'mizuno', 'oda').trust)}・威信 50→${Math.round(s.factions.mizuno.prestige)}`);
+  const 後の信 = A.relOf(s, 'mizuno', 'oda').trust;
+  const 後の威 = s.factions.mizuno.prestige;
+  確('独立の代償は大きい（信用と威信）', 前の信 - 後の信 >= 40 && 前の威 - 後の威 >= 10,
+    `信用 ${Math.round(前の信)}→${Math.round(後の信)}（−${Math.round(前の信 - 後の信)}）・`
+    + `威信 ${Math.round(前の威)}→${Math.round(後の威)}（−${Math.round(前の威 - 後の威)}）`);
 }
 
 /* ------------------------------------------- 二、貢（毎月の実入りから） */

@@ -3,7 +3,7 @@ import { canRecruit, loyaltyAfterRecruit, ruinedHouse } from "../core/house.js";
 import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
 import { minGarrison, stipendOf, 陣触れに応じる, 陣触れの届き } from "../core/rank.js";
 import { newRoster, rosterCut, rosterSync, rosterTake } from "../core/roster.js";
-import { relOf } from "../core/state.js";
+import { relOf, 主を探す } from "../core/state.js";
 import { clamp, fmt } from "../core/util.js";
 import { tryAmbush } from "../core/ambush.js";
 import { persuadeResult } from "../core/capture.js";
@@ -75,6 +75,12 @@ export const 留守の蓄え = (c) => Math.round((c.local || 0) * 0.08 * 6);
 
    大将を渡さねば、これまで通り身分では縛らない（援軍の要請など、総大将を
    立てぬ場面がある）。 */
+/* 同じ主の下にあるか。こちらに主がいて、相手の主が同じであること。 */
+function 同じ主の下(g, me, other) {
+  const 我主 = 主を探す(g, me);
+  return !!我主 && other !== 我主 && 主を探す(g, other) === 我主;
+}
+
 export function reinforceOffers(g, from, target, 大将) {
   const out = [];
   const 本陣 = g.castles.find((x) => x.id === from);
@@ -99,6 +105,12 @@ export function reinforceOffers(g, from, target, 大将) {
       const rel = relOf(g, g.player, c.faction);
       if (rel.state === "従属" || rel.state === "臣従") { kind = rel.state; ratio = 0.35; chance = 0.9; }
       else if (rel.state === "同盟") { kind = "同盟"; ratio = 0.25; chance = clamp(rel.trust / 100, 0.2, 0.9); }
+      /* 同じ主の下にある家（GDD 12.2）。
+
+         こちらが臣従しているとき、主家だけでなく、その主の下にある兄弟分の家にも
+         援軍を頼める。同じ旗の下で戦うのだから、頼む筋はある。ただし対等の間柄
+         ゆえ下知は通らない。出るか出ぬかは相手が決める。 */
+      else if (同じ主の下(g, g.player, c.faction)) { kind = "同じ主の下"; ratio = 0.25; chance = 0.7; }
       else continue;
     }
     const months = marchMonths(c.id, target, c.faction) || Math.max(1, legs);

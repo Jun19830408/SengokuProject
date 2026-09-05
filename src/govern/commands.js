@@ -353,7 +353,14 @@ export function doCaptive(prev, genId, how) {
    最後まで動かなかった。誰が結ぶのかを引数に取り、盤を直に書き換える形に改める。
    遊ぶ側の下知（doDiplo）も、他家の采配（govern/aiDiplo.js）も、ここを通る。
    同じ関門（DIPLO の need と費え）をくぐるので、二つの理屈が食い違うことがない。 */
-export function 外交を結ぶ(s, actor, fid, key) {
+/* 親善の効き目。使者の政務と知略の平均で段を分ける（GDD 12.1）。 */
+export function 親善の効き(使者) {
+  if (!使者) return 1;
+  const 器 = ((使者.gov || 0) + (使者.wit || 0)) / 2;
+  return 器 >= 90 ? 6 : 器 >= 80 ? 5 : 器 >= 70 ? 4 : 器 >= 60 ? 3 : 器 >= 50 ? 2 : 1;
+}
+
+export function 外交を結ぶ(s, actor, fid, key, 使者id) {
     const me = s.factions[actor], you = s.factions[fid];
     if (!me || !you || actor === fid) return { ok: false, why: "" };
     const k = relKey(actor, fid);
@@ -401,9 +408,23 @@ export function 外交を結ぶ(s, actor, fid, key) {
     }
     me.gold -= def.cost;
     const 前の間柄 = r.state;
+    const 使者 = 使者id ? s.generals.find((x) => x.id === 使者id && x.faction === actor && !x.captive) : null;
     let 文 = "";
 
-    if (key === "親善") { r.trust = clamp(r.trust + 9, 0, 100); 文 = `${me.name}が${you.name}へ誼を通じた。`; }
+    if (key === "親善") {
+      /* 親善の効き目は、使者に立てた将の器量で決まる（GDD 12.1）。
+
+         もとは誰を遣ろうと一律に九つ上がった。半年も通えば同盟が結べる勘定で、
+         誼を篤くすることが軽すぎた。使者の政務と知略の平均で段を分ける。
+
+           九十以上 六　八十以上 五　七十以上 四
+           六十以上 三　五十以上 二　それ未満 一
+
+         使者を立てずに使う筋（古い記録や、家の名だけで動かすとき）は一とする。 */
+      const 上がり = 親善の効き(使者);
+      r.trust = clamp(r.trust + 上がり, 0, 100);
+      文 = `${me.name}が${you.name}へ誼を通じた${使者 ? `（使者 ${使者.name}・信用＋${上がり}）` : `（信用＋${上がり}）`}。`;
+    }
     else if (key === "独立") {
       // 膝を屈していた家が旗を翻す。信義を捨てるのだから、代償は大きい。
       r.state = "敵対"; r.until = null; r.master = null;
@@ -466,24 +487,27 @@ export function 外交を結ぶ(s, actor, fid, key) {
     return { ok: true, 文, cost: def.cost, trust: r.trust };
 }
 
-export function doDiplo(prev, fid, key) {
+export function doDiplo(prev, fid, key, 使者id) {
     const s = structuredClone(prev);
     const r0 = s.relations[relKey(s.player, fid)];
     const 前の信 = r0 ? Math.round(r0.trust) : 45;
-    const out = 外交を結ぶ(s, s.player, fid, key);
+    const out = 外交を結ぶ(s, s.player, fid, key, 使者id);
     if (!out.ok) return s;
+    // 使者に立った将は、その月それにかかりきりになる
+    if (使者id && s.generals.some((x) => x.id === 使者id)) s.orders[使者id] = { cmd: `外交・${key}` };
     const you = s.factions[fid];
     const def = DIPLO.find((d) => d.key === key);
     if (key === "独立") s.msg = `${you.name}への従属を破った。以後は敵対である。家中の忠誠も揺れている。`;
     else if (key === "解き放つ") s.msg = `${you.name}を解き放った。以後は中立である。`;
     else s.msg = out.文;
-    s.ledger = [{ cmd: `外交・${key}`, cost: def.cost, castle: you.name, general: "使者",
+    const 使 = 使者id ? s.generals.find((x) => x.id === 使者id) : null;
+    s.ledger = [{ cmd: `外交・${key}`, cost: def.cost, castle: you.name, general: 使 ? 使.name : "使者",
       lines: [{ label: `${you.name} 信用`, before: 前の信, after: Math.round(out.trust), unit: "" }] }, ...s.ledger].slice(0, 6);
     return s;
 }
 
 // 調略を仕掛ける
-export function doPlot(prev, castleId, type, genId, matoId) {
+export function doPlot(prev, castleId, type, genId, matoId, 離間先) {
     const s = structuredClone(prev);
     const def = PLOTS.find((x) => x.key === type);
     const f = s.factions[s.player];
@@ -499,9 +523,14 @@ export function doPlot(prev, castleId, type, genId, matoId) {
         return s;
       }
     }
+    /* 離間は「どの家との誼を裂くか」を定めねば立たない。 */
+    if (def.家を指す && (!離間先 || 離間先 === target.faction || !s.factions[離間先])) {
+      s.msg = "どの家との誼を裂くかを定めねばならぬ。";
+      return s;
+    }
     f.gold -= def.cost;
     s.plots.push({ type, castleId, genId, faction: s.player, monthsLeft: def.months,
-      matoId: 的 ? 的.id : null });
+      matoId: 的 ? 的.id : null, 離間先: def.家を指す ? 離間先 : null });
     s.orders[genId] = { cmd: `調略・${type}`, castleId };   // 調略も月の務めである
     s.ledger = [{ cmd: `調略・${type}`, cost: def.cost, castle: target ? target.name : "", general: s.generals.find((x) => x.id === genId).name,
       lines: [{ label: "成否判明まで", before: 0, after: def.months, unit: "か月" }] }, ...s.ledger].slice(0, 6);

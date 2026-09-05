@@ -26,6 +26,7 @@ export { roadBetween, marchMonths, marchMonthsOf, findPathVia, nodeById } from "
 export { ROADS, MARCH_PER_MONTH, ROAD_SPEED } from "../src/data/roads.js";
 export { findPath } from "../src/core/paths.js";
 export { 援けに着く, migrateSave, atPeace, relOf } from "../src/core/state.js";
+export { 臣従の主, 許しの要る主, 許されているか, 攻められるか, 許しを与える, 許しを解く, 容認するか, 済んだ許しを片づける } from "../src/core/yurushi.js";
 export { resolveOffscreen, reinforceOffers, 運び賃, 運び賃を払う, sackCastle, 城を委ねる, 委ねる差配 } from "../src/govern/war.js";
 export { 圧す, 解す } from "../src/save/pack.js";
 export { advanceMonth } from "../src/govern/month.js";

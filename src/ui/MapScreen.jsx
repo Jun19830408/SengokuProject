@@ -32,7 +32,7 @@ import { BattleScreen } from "./BattleScreen.jsx";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
-import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い } from "./panels.jsx";
+import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い, 攻めの願い問い } from "./panels.jsx";
 import { SallyDialog } from "./panels.jsx";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
@@ -43,6 +43,7 @@ import { 守りの割り付け } from "../core/garrison.js";
 import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を受ける, 縁談を断る } from "../core/hime.js";
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
+import { 攻められるか, 許しの要る主, 許されているか, 許しを与える, 容認するか, 臣従の主 } from "../core/yurushi.js";
 import { 難を逃れる } from "../core/capture.js";
 import { 記録の訳を読む, 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
@@ -121,6 +122,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [raid, setRaid] = useState(null);        // 合戦前の奇襲の献策
   const [breakVow, setBreakVow] = useState(null); // 約束を交わした相手へ兵を出すときの問い
   const [sally, setSally] = useState(null);      // 囲まれた城が討って出るかの問い
+  const [攻めの許し願い, set攻めの許し願い] = useState(null);   // 主家へ攻めの許しを願う問い
   const [callAid, setCallAid] = useState(null);  // 援軍を呼ぶ画面（攻められた城）
   const 終幕を見た = !!g.終幕を見た;
   const [rotate, setRotate] = useState(true);
@@ -470,10 +472,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const doRetire = (heirId) => setG((prev) => 政務.doRetire(prev, heirId));
   // 捕虜の処遇（GDD 12.3）。外交の「捕虜」から選ぶ。
   const doCaptive = (genId, how) => setG((prev) => 政務.doCaptive(prev, genId, how));
-  const doDiplo = (fid, key) => setG((prev) => 政務.doDiplo(prev, fid, key));
+  const doDiplo = (fid, key, 使者) => setG((prev) => 政務.doDiplo(prev, fid, key, 使者));
 
   // 調略（GDD 11.2）。接触から成立・拒否・露見まで数か月かかる。
-  const doPlot = (castleId, type, genId, matoId) => setG((prev) => 政務.doPlot(prev, castleId, type, genId, matoId));
+  const doPlot = (castleId, type, genId, matoId, 離間先) => setG((prev) => 政務.doPlot(prev, castleId, type, genId, matoId, 離間先));
 
   // 特殊勢力（GDD 11.3）
   const doSpecial = (townId, key) => setG((prev) => 政務.doSpecial(prev, townId, key));
@@ -1864,6 +1866,16 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
        取り返しがつかぬので、出す前に一度問う。
        （旗の下の城＝自家と臣従の家の城へ送るのは後詰であって、攻撃ではない。問わない。） */
     const 目標 = g.castles.find((x) => x.id === p.to);
+    /* 臣従しているなら、主家の許しなくして他家は攻められない（GDD 12.2）。
+
+       出す家は「出陣元の城の家」である。自家が臣従しているときも、こちらが
+       主で臣従の家の城から出すときも、ここで見る家はその城の家である。
+       主家が遊ぶ側自身であれば、願う相手がいないので許しは要らない。 */
+    const 出す家 = (g.castles.find((x) => x.id === p.from) || {}).faction || g.player;
+    if (目標 && !攻められるか(g, 出す家, p.to)) {
+      set攻めの許し願い({ p, 臣: 出す家, 主: 許しの要る主(g, 出す家, p.to), castle: 目標 });
+      return;
+    }
     if (!p.覚悟 && 目標 && !underMyBanner(g, g.player, 目標.faction)
       && atPeace(g, g.player, 目標.faction)) {
       setBreakVow({ p, castle: 目標, state: relOf(g, g.player, 目標.faction).state });
@@ -2316,6 +2328,83 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           onYakume={(x) => setG((p) => (x.解く
             ? 政務.宿老を解く下知(p, x.解く)
             : 政務.宿老に任ずる(p, x.任じる, x.国)))} />}
+        {/* こちらが臣従しているとき、主家へ攻めの許しを願う（GDD 12.2）。
+            使者はその月のうちに戻る。容認されれば、そのまま出陣できる。 */}
+        {攻めの許し願い && !battle && (() => {
+          const q = 攻めの許し願い;
+          const 主 = g.factions[q.主], 的 = g.factions[q.castle.faction];
+          if (!主) { set攻めの許し願い(null); return null; }
+          return (
+            <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+              <div className="card">
+                <div className="mn" style={{ fontSize: 21, marginBottom: 6 }}>{主.name}の許しを乞う</div>
+                <div style={{ fontSize: 13.5, lineHeight: 1.9, marginBottom: 10 }}>
+                  {q.castle.name}（{的 ? 的.name : ""}）を攻めるには、旗の下に入っている
+                  {主.name}の許しが要ります。
+                </div>
+                <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginBottom: 12 }}>
+                  臣従とは外交を主に預けることです。勝手に隣国へ攻めかかれば、主家の外交が破れます。<br />
+                  容認されればそのまま出陣でき、落とした城はこちらの領となります。援軍を主家に求めることもできます。<br />
+                  却下されれば、その城へは兵を出せません。
+                </div>
+                <div style={{ display: "flex", gap: 9 }}>
+                  <button className="btn" style={{ flex: 1 }} onClick={() => set攻めの許し願い(null)}>やめる</button>
+                  <button className="btn dark" style={{ flex: 1 }} onClick={() => {
+                    const 判 = 容認するか(g, q.主, q.臣, q.castle.id);
+                    set攻めの許し願い(null);
+                    if (!判.ok) {
+                      setG((prev) => {
+                        const s = structuredClone(prev);
+                        const 文 = `${主.name}は${q.castle.name}攻めを容認しなかった（${判.why}）。`;
+                        s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+                        s.msg = 文;
+                        return s;
+                      });
+                      return;
+                    }
+                    setG((prev) => {
+                      const s = structuredClone(prev);
+                      許しを与える(s, q.臣, q.castle.id);
+                      const 文 = `${主.name}が${q.castle.name}攻めを許した。`;
+                      s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+                      s.msg = 文;
+                      return s;
+                    });
+                    // 許しが下りたので、そのまま出陣へ進む
+                    setTimeout(() => launchSortie(q.p), 0);
+                  }}>願い出る</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+        {/* 臣従した家からの攻めの願い（GDD 12.2）。容認すればその家が自ら攻める。 */}
+        {g.攻めの願い && !battle && (
+          <攻めの願い問い g={g} 願={g.攻めの願い}
+            onTake={() => setG((prev) => {
+              const s = structuredClone(prev);
+              const 願 = s.攻めの願い; s.攻めの願い = null;
+              許しを与える(s, 願.臣, 願.castleId);
+              const 城 = s.castles.find((c) => c.id === 願.castleId);
+              const 文 = `${s.factions[願.臣].name}に${城 ? 城.name : ""}攻めを許した。`;
+              s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+              s.msg = 文;
+              return s;
+            })}
+            onPass={() => setG((prev) => {
+              const s = structuredClone(prev);
+              const 願 = s.攻めの願い; s.攻めの願い = null;
+              const 城 = s.castles.find((c) => c.id === 願.castleId);
+              /* 却下は臣下の不満を招く。旗の下にありながら手柄の道を塞がれるのだから、
+                 誼が少し薄れるのは道理である。 */
+              const rel = s.relations[[s.player, 願.臣].sort().join("|")];
+              if (rel) rel.trust = Math.max(0, rel.trust - 4);
+              const 文 = `${s.factions[願.臣].name}の${城 ? 城.name : ""}攻めを却下した。`;
+              s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+              s.msg = 文;
+              return s;
+            })} />
+        )}
         {g.申し入れ && !battle && (
           <DiploOffer g={g} 申={g.申し入れ}
             onTake={() => setG((prev) => {

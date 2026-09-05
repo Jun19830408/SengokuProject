@@ -23,6 +23,7 @@ import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { isVassal, underMyBanner, 援けに着く, 軍の道 } from "../core/state.js";
+import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 /* ==========================================================================
    月送り ─ 天下じゅうの一月
    この一手で、諸家の内政・調略・出陣・包囲・寿命・一揆・官位までが動く。
@@ -169,7 +170,40 @@ export function advanceMonth(prev, g) {
           const 相手 = 盟約の相手(k, s.player);
           if (相手 && s.factions[相手]) events.push(`${s.factions[相手].name}との約束の期限が切れた。`);
         }
-        r.trust = clamp(r.trust + 0.4, 0, 100);
+        /* 信用が尽きれば、約束も上下も解ける（GDD 12.1）。
+
+           誼は積むだけのものではない。離間を仕掛けられ、あるいは背信を重ねて
+           信用が零に落ちれば、不可侵も同盟も、従属も臣従も、その月に切れて
+           敵対になる。武将の忠誠と同じく、他家との信用も抱えつづける値である。
+
+           中立はもともと約束が無いので、切れるものがない。 */
+        if (r.trust <= 0 && ["不可侵", "同盟", "従属", "臣従"].includes(r.state)) {
+          const 前 = r.state;
+          const 両 = k.split("|");
+          r.state = "敵対"; r.until = null; r.master = null;
+          const 名 = 両.map((x) => (s.factions[x] || {}).name || x).join("と");
+          s.chronicle.push({ y: s.year, m: s.month,
+            text: `${名}のあいだの信用が尽き、${前}は切れた。以後は敵対である。` });
+          const 相手 = 盟約の相手(k, s.player);
+          if (相手 && s.factions[相手]) {
+            events.push(`${s.factions[相手].name}との信用が尽きた。${前}は切れ、以後は敵対である。`);
+          }
+        }
+        /* 誼の落ち着き所（GDD 12.1）。
+
+           もとは毎月かならず〇.四ずつ積まれた。年に四.八、放っておくだけで
+           十二年ほどで満ちる。二十五年を走らせて測ったところ、九千三百十六組の
+           うち九千二百九十組が信用百であった。これでは間柄に要る信用も、
+           使者の器量で分けた親善の段も、意味を成さない。
+
+           誼は放っておいて篤くなるものではない。落ち着き所（四十五）へ向かって
+           戻るものとする。それより薄ければ年月が癒し、篤ければ薄れていく。
+           ただし約束が誼を支える――同盟・婚姻・上下のあいだは薄れない。 */
+        const 落ち着き = 45;
+        const 約束あり = ["同盟", "従属", "臣従"].includes(r.state) || !!r.婚姻;
+        if (r.trust < 落ち着き) r.trust = Math.min(落ち着き, r.trust + 0.4);
+        else if (r.trust > 落ち着き && !約束あり) r.trust = Math.max(落ち着き, r.trust - 0.25);
+        r.trust = clamp(r.trust, 0, 100);
       }
       // 調略の進行と成否（GDD 11.2：即時成功にしない）
       const plotBonus = specialBonus(s, s.player, "plot");
@@ -275,6 +309,27 @@ export function advanceMonth(prev, g) {
             }
             s.ruined = [...(s.ruined || []), oldF];
           }
+          return false;
+        }
+        /* 離間（GDD 11.2 / 12.1）。他家どうしの誼を裂く。
+
+           削るのは「その城の家」と「指した相手の家」との信用である。自家と
+           その家との信用ではない。裂いた二家の信用が尽きれば、その月のうちに
+           不可侵も同盟も上下も切れて敵対になる（月送りの外交の手当て）。
+
+           削れ高は使者の知略で決まる。親善が月に一から六しか積めないのだから、
+           三月かけて裂くならそれを上回らねば、仕掛ける値打ちがない。 */
+        if (pl.type === "離間") {
+          const 相 = pl.離間先;
+          const r2 = 相 && s.relations[relKey(target.faction, 相)];
+          if (!r2 || 相 === target.faction) { say(`離間の相手が定まらず、企ては立ち消えた。`); return false; }
+          const 前 = Math.round(r2.trust);
+          const 削 = Math.round(14 + Math.max(0, (gen.wit || 60) - 86) * 0.6);
+          r2.trust = clamp(r2.trust - 削, 0, 100);
+          const 名 = (x) => (s.factions[x] || {}).name || x;
+          say(`${名(target.faction)}と${名(相)}のあいだを裂いた（信用 ${前} → ${Math.round(r2.trust)}）。`);
+          s.chronicle.push({ y: s.year, m: s.month,
+            text: `${名(pl.faction)}の手の者が${名(target.faction)}と${名(相)}のあいだを裂いた（信用 ${前} → ${Math.round(r2.trust)}）。` });
           return false;
         }
         if (pl.type === "偵察") { s.intel[target.id] = { y: s.year, m: s.month }; say(`${target.name}の内情を掴んだ。`); }
@@ -1034,6 +1089,29 @@ export function advanceMonth(prev, g) {
           if (avail < foeMen2 * need) continue;
           const 攻め道 = 軍の道(s, fid, c.id, cand.id);
           if (!攻め道) continue;                      // 通れる領が無ければ攻められない
+
+          /* 臣従した家は、主家の許しなくして他家を攻められない（GDD 12.2）。
+
+             許しは城ごとに一度。まだ無ければ願い出る。主家が遊ぶ側なら
+             諾否を待つ（返事があるまで出陣しない）。主家も他家なら、その場で
+             采配が決める。 */
+          const 主 = 許しの要る主(s, fid, cand.id);
+          if (主 && !許されているか(s, fid, cand.id)) {
+            if (主 === s.player) {
+              /* 遊ぶ側へは、返事を待つ。願いは一度に一つだけ受け付ける
+                 （返事をするまで次は来ない。他家からの申し入れと同じ形）。 */
+              if (!s.攻めの願い) {
+                s.攻めの願い = { 主, 臣: fid, castleId: cand.id, y: s.year, m: s.month };
+                events.push(`${s.factions[fid].name}より、${cand.name}を攻めたいとの願いがあった。`);
+              }
+              break;
+            }
+            const 判 = 容認するか(s, 主, fid, cand.id);
+            if (!判.ok) break;                        // 退けられた。今月は動かない
+            許しを与える(s, fid, cand.id);
+            s.chronicle.push({ y: s.year, m: s.month,
+              text: `${s.factions[主].name}が${s.factions[fid].name}に${cand.name}攻めを許した。` });
+          }
           const take = gens.sort((a, b) => b.lead - a.lead).slice(0, 3);
           const send = Math.round(avail * 0.85);
           const localSend = Math.max(0, Math.min(c.local, send - take.reduce((a, x) => a + x.retinue, 0)));
@@ -1144,6 +1222,8 @@ export function advanceMonth(prev, g) {
       }
       /* 将のいない軍も同じである。率いる者がいなければ軍ではない。
          地図に数字だけが浮き、城の帳には「将なし」の軍が並ぶことになる。 */
+      // 済んだ攻めの許しを片づける（落とした城・主の変わった家）
+      済んだ許しを片づける(s);
       for (const q of 将の無い軍を解く(s)) {
         if (q.faction !== s.player || !q.先) continue;
         events.push(`将のいない軍を解き、兵${fmt(q.men)}人は${q.先.name}へ返した。`);
