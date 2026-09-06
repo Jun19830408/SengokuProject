@@ -1079,6 +1079,34 @@ export function 本領と本拠を繕う(s) {
   return s;
 }
 
+/* 奪われた城を本領としたままの者を繕う（GDD 6.4）。
+
+   城が落ちれば、そこを根としていた将は逃げるか捕らわれる。逃げた者の本領は
+   奪われた城を指したままになっていた。禄高は本領から出るのだから、他家のものと
+   なった城から己の身代が出ることになる。軍を解いたときの帰り先にも響く。
+
+   落城・内応・寝返り――城主が変わる筋はいくつもあるので、その一つ一つで
+   繕うのではなく、月ごとに一度、盤ぜんたいを見て直す。
+
+   繕い先は、いま立っている城。陣中の者は出陣元。それも自家のものでなければ
+   家の本拠とする。捕虜は繕わない（帰参のときに繕われる）。 */
+export function 奪われた本領を繕う(s) {
+  const 出どころ = {};
+  for (const a of s.armies || []) for (const gid of a.gens || []) 出どころ[gid] = a.from;
+  const 自家か = (id, fid) => id && s.castles.some((c) => c.id === id && c.faction === fid);
+  const 直した = [];
+  for (const g of s.generals) {
+    if (g.captive) continue;
+    if (自家か(g.本領, g.faction)) continue;
+    const 先 = [g.at, 出どころ[g.id], (s.factions[g.faction] || {}).本拠]
+      .find((id) => 自家か(id, g.faction));
+    if (!先 || 先 === g.本領) continue;
+    g.本領 = 先;
+    直した.push(g);
+  }
+  return 直した;
+}
+
 /* ------------------------------------------------ 軍の道（GDD 7.1）
 
    兵を出すとき、他家の領を素通りしてはならない。通ってよいのは、

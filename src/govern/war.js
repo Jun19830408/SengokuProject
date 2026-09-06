@@ -7,7 +7,7 @@ import { relOf, 主を探す } from "../core/state.js";
 import { clamp, fmt } from "../core/util.js";
 import { tryAmbush } from "../core/ambush.js";
 import { persuadeResult } from "../core/capture.js";
-import { succeed } from "../core/house.js";
+import { succeed, pickHeir } from "../core/house.js";
 import { ROAD_SPEED } from "../data/roads.js";
 import { rankName, 軍役の器 } from "../core/rank.js";
 import { isVassal } from "../core/state.js";
@@ -310,8 +310,12 @@ export function sackCastle(s, castle, army, hard) {
        配下が殿を務めて落ち延びさせ、あるいは自らの手で斬り抜ける（難を逃れる）。
        ここを免れた者も、なお捕縛と落ち延びの判じには回る。 */
     if (r > 0.86 && Math.random() < 難を逃れる(gen)) {
+      const 当主か = !!gen.lord;
       s.generals = s.generals.filter((x) => x.id !== gen.id);
       log(`${gen.name}は${castle.name}に踏みとどまり討死した。`);
+      // 当主が城を枕にしたなら、跡目を立てねばならない。
+      // 立てぬまま置けば、家臣はいるのに当主のいない家が残る。
+      if (当主か) succeed(s, gen, `${castle.name}に踏みとどまり討死した`);
     } else if (r > 0.70 && Math.random() < captureChance(gen) * 3.2) {
       捕らえる(gen, `${gen.name}は捕らえられた。`);
     } else if (r > 0.70) {
@@ -493,19 +497,7 @@ export function sackCastle(s, castle, army, hard) {
         lordId: lord ? lord.id : null,
         queue: [...(lord ? [lord.id] : []), ...retainers.map((x) => x.id)] };
     } else {
-      // 他家同士なら自動で始末する。多くは召し抱えられ、一部は斬られる。
-      for (const g2 of [lord, ...retainers].filter(Boolean)) {
-        const rec = canRecruit(g2, lord);
-        if (g2 === lord || !rec.ok || Math.random() < 0.25) {
-          if (Math.random() < 0.4) { s.generals = s.generals.filter((x) => x.id !== g2.id); }
-          else takeAsPrisoner(s, g2, winner, castle.id);
-        } else {
-          g2.faction = winner; g2.loyal = loyaltyAfterRecruit(g2); g2.lord = false;
-          g2.at = castle.id;
-        }
-      }
-      s.chronicle.push({ y: s.year, m: s.month,
-        text: `${s.factions[oldF].name}は最後の城を失い、滅亡した。` });
+      滅んだ家を始末する(s, oldF, winner, castle.id, { lord, retainers });
     }
     s.ruined = [...(s.ruined || []), oldF];
   }
@@ -650,10 +642,9 @@ export function resolveOffscreen(prev, armyId, castleId) {
       let 文 = `${amb.by.name}が${castle.name}の本陣を衝いた。`;
       if (段.大将討死 && 主) {
         s.generals = s.generals.filter((x) => x.id !== 主.id);
-        if (主.lord) {
-          const nx = s.generals.filter((x) => x.faction === 主.faction && !x.captive).sort((a, z) => z.lead - a.lead)[0];
-          if (nx) nx.lord = true;
-        }
+        // 跡目は家督の筋（succeed）で立てる。ここだけ別に立てていたので、
+        // 家名の改め（姓の違う者が継いだとき）も家中の揺れも起きなかった。
+        if (主.lord) succeed(s, 主, "本陣を衝かれて討死した");
         文 += `${主.name}は討たれ、${s.factions[castle.faction].name}の軍は瓦解した。`;
         if (army.faction === s.player) s.msg = `${amb.by.name}が敵の本陣を衝き、${主.name}を討ち取った。`;
       } else if (段.大将退く && 主) {
@@ -891,6 +882,151 @@ export function restoreStrays(s) {
     戻した.push(q);
   }
   return 戻した;
+}
+
+/* 城を失ったまま残っている家を始末する（毎月の見回り）。
+
+   城が落ちる筋は落城だけではない。内応で最後の城が移ることもあれば、寝返りで
+   移ることもある。そのすべてに滅亡の始末を書き添えるより、月ごとに「城を持たぬ
+   のに人だけ残っている家」を見つけて片づけるほうが漏れがない。
+
+   勝った家は、当主のいま立っている城の主とする。城に立っていなければ、
+   最も多くの者が立っている城の主。それも分からねば、始末はつけない。 */
+export function 城なき家を片づける(s) {
+  const 片づけた = [];
+  for (const fid of Object.keys(s.factions || {})) {
+    if (s.castles.some((c) => c.faction === fid)) continue;
+    const 残 = s.generals.filter((g) => g.faction === fid && !g.captive);
+    if (!残.length) continue;
+    if (s.warSettle && s.warSettle.faction === fid) continue;      // 遊ぶ側が問われている最中
+    const 数 = new Map();
+    for (const g of 残) {
+      const c = g.at && s.castles.find((x) => x.id === g.at);
+      if (!c) continue;
+      数.set(c.id, (数.get(c.id) || 0) + (g.lord ? 100 : 1));
+    }
+    /* 野に出ている軍も散る。拠るべき城が無いのだから、行き先も帰る先もない。
+       残しておくと、滅んだはずの家が城を攻めてくる。 */
+    const 野の軍 = s.armies.filter((a) => a.faction === fid);
+    const 陣 = 野の軍.map((a) => s.castles.find((c) => c.id === (a.在陣 || a.at))).filter(Boolean);
+    for (const a of 野の軍) for (const gid of (a.gens || [])) {
+      const g = s.generals.find((q) => q.id === gid);
+      if (g) g.at = (陣[0] || {}).id || g.at;
+    }
+    if (野の軍.length) {
+      const 散 = new Set(野の軍.map((a) => a.id));
+      s.armies = s.armies.filter((a) => !散.has(a.id));
+      s.sieges = (s.sieges || []).filter((x) => !散.has(x.armyId));
+      s.campaigns = (s.campaigns || []).filter((x) => x.faction !== fid);
+      s.pendingArrivals = (s.pendingArrivals || []).filter((id) => !散.has(id));
+    }
+    for (const g of 残) {
+      const c = g.at && s.castles.find((x) => x.id === g.at);
+      if (!c) continue;
+      数.set(c.id, (数.get(c.id) || 0) + (g.lord ? 100 : 1));
+    }
+    const [castleId] = [...数.entries()].sort((a, z) => z[1] - a[1])[0] || [];
+    const 城 = castleId && s.castles.find((x) => x.id === castleId);
+    if (!城) continue;
+    滅んだ家を始末する(s, fid, 城.faction, 城.id);
+    s.ruined = [...new Set([...(s.ruined || []), fid])];
+    片づけた.push({ fid, winner: 城.faction });
+  }
+  return 片づけた;
+}
+
+/* 滅んだ家の残る者を、采配で始末する（GDD 12.4）。
+
+   多くは召し抱えられ、一部は斬られ、一部は捕らわれる。当主は決して降らない。
+   遊ぶ側が勝ったときは一人ずつ問う（warSettle）ので、こちらは通らない。
+
+   ここを一つの名にしておくのは、巡検（tools/junken.cjs）が盤を自動で走らせる
+   ときに、問いに答える者がいないからである。問いを溜めたままにすると、
+   滅んだ家の将が敵城に立ったまま何十年も残り、本当の乱れが見えなくなる。 */
+export function 滅んだ家を始末する(s, oldF, winner, castleId, 面々) {
+  const { lord, retainers } = 面々 || ruinedHouse(s, oldF);
+  for (const g2 of [lord, ...retainers].filter(Boolean)) {
+    const rec = canRecruit(g2, lord);
+    if (g2 === lord || !rec.ok || Math.random() < 0.25) {
+      if (Math.random() < 0.4) { s.generals = s.generals.filter((x) => x.id !== g2.id); }
+      else takeAsPrisoner(s, g2, winner, castleId);
+    } else {
+      g2.faction = winner; g2.loyal = loyaltyAfterRecruit(g2); g2.lord = false;
+      g2.at = castleId;
+    }
+  }
+  s.chronicle.push({ y: s.year, m: s.month,
+    text: `${(s.factions[oldF] || {}).name}は最後の城を失い、滅亡した。` });
+  return s;
+}
+
+/* 盤の乱れを繕う（毎月の見回り）。
+
+   巡検（tools/junken.cjs）で拾った乱れを、月ごとにまとめて直す。
+   落とし穴は見つけ次第ふさぐが、城の持ち主が変わる筋も、将が盤から消える筋も
+   数が多い。そのどこか一つを見落とせば、遊ぶ側には「武将が敵の城にいる」
+   「解いた軍に死んだ者が残っている」という形で現れる。網を一枚張っておく。
+
+   一　軍の名簿から、盤にいない者・捕らわれた者・城に立っている者を落とす。
+   二　他家の城に立っている将を、自家の城へ戻す。捕虜は除く（囚われの身は
+       他家の城にいて当然である）。城を持たぬ家の者も除く（滅亡の始末に回る）。 */
+export function 盤の乱れを繕う(s) {
+  const 直し = { 名簿: [], 居所: [] };
+  const 盤にいる = new Map(s.generals.map((g) => [g.id, g]));
+  const 見た = new Set();
+  for (const a of s.armies) {
+    const 元 = (a.gens || []).length;
+    a.gens = (a.gens || []).filter((id) => {
+      const g = 盤にいる.get(id);
+      if (!g) return false;                     // 討死・滅亡で盤から消えた者
+      if (g.captive) return false;              // 捕らわれた者は軍にいない
+      if (g.at != null) return false;           // 城に立つ者は軍にいない
+      if (見た.has(id)) return false;           // 二つの軍に跨がることはない
+      見た.add(id); return true;
+    });
+    if (a.gens.length !== 元) 直し.名簿.push({ armyId: a.id, 落とした: 元 - a.gens.length });
+  }
+  /* 三　城主が他家の者になっていれば、その札を外す。引き抜かれても寝返っても、
+         城の帳面に名が残ったままだった。城主の居ない城として扱えばよい。 */
+  for (const c of s.castles) {
+    if (!c.lordId) continue;
+    const g = s.generals.find((x) => x.id === c.lordId);
+    if (g && !g.captive && g.faction === c.faction) continue;
+    c.lordId = null;
+    直し.名簿.push({ castleId: c.id, 城主を外した: true });
+  }
+  /* 四　城を持ちながら当主のいない家に、跡目を立てる。
+
+     当主が盤から消える筋はいくつもある（落城の討死、内応、出奔、寿命）。
+     そのどれか一つで家督の筋を通し忘れると、家臣はいるのに当主のいない家が
+     残る。陣触れも外交も当主から出るのだから、その家は動かなくなる。 */
+  for (const fid of Object.keys(s.factions || {})) {
+    if (!s.castles.some((c) => c.faction === fid)) continue;
+    const 家中 = s.generals.filter((g) => g.faction === fid && !g.captive);
+    if (!家中.length || 家中.some((g) => g.lord)) continue;
+    const 継 = pickHeir(s, { id: null, faction: fid, name: (s.factions[fid].name || "").slice(0, 2) });
+    if (!継) continue;
+    継.lord = true;
+    s.chronicle.push({ y: s.year, m: s.month,
+      text: `${s.factions[fid].name}は当主を欠いていたが、${継.name}が家督を継いだ。` });
+    直し.名簿.push({ fid, 当主を立てた: 継.name });
+  }
+  for (const g of s.generals) {
+    if (g.captive || g.at == null) continue;
+    const c = s.castles.find((x) => x.id === g.at);
+    if (c && c.faction === g.faction) continue;
+    const 自領 = s.castles.filter((x) => x.faction === g.faction);
+    if (!自領.length) continue;                 // 城なき家は滅亡の始末に回す
+    const 近い = 自領
+      .map((x) => ({ x, p: g.at ? findPath(g.at, x.id) : null }))
+      .filter((v) => v.p)
+      .sort((a2, z) => a2.p.length - z.p.length)[0];
+    const 先 = 近い ? 近い.x : 自領[0];
+    g.at = 先.id;
+    if (!s.castles.some((x) => x.id === g.本領 && x.faction === g.faction)) g.本領 = 先.id;
+    直し.居所.push({ gen: g, 先 });
+  }
+  return 直し;
 }
 
 /* 行き合いの野戦を画面の外で解く。勝った軍を返す。

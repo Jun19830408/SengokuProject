@@ -18,11 +18,11 @@ import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "./ai.js";
 import { 外交の采配, 調略の采配, 特殊勢力の采配, 旗頭の調略 } from "./aiDiplo.js";
 import { checkUnified } from "./unify.js";
-import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く } from "./war.js";
+import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く, 盤の乱れを繕う, 城なき家を片づける } from "./war.js";
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 軍の道 } from "../core/state.js";
+import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 奪われた本領を繕う, 軍の道 } from "../core/state.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 import { 城の寄親, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高 } from "../core/inin.js";
 import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
@@ -276,7 +276,12 @@ export function advanceMonth(prev, g) {
             if (x === lordOf || Math.random() < 0.55) { x.faction = pl.faction; x.loyal = clamp(48 + Math.random() * 18, 0, 100); }
             else {
               const ref = s.castles.find((c2) => c2.faction === oldF && c2.id !== target.id);
-              if (ref) x.at = ref.id; else s.generals = s.generals.filter((q) => q.id !== x.id);
+              if (ref) x.at = ref.id;
+              else {
+                const 当主か = !!x.lord;
+                s.generals = s.generals.filter((q) => q.id !== x.id);
+                if (当主か) succeed(s, x, "内応の混乱のうちに落命した");
+              }
             }
           }
           const rel3 = s.relations[relKey(pl.faction, oldF)];
@@ -1262,6 +1267,8 @@ export function advanceMonth(prev, g) {
       /* 迷子の見回り。軍にも属さず城にもいない将を、自領へ戻す。
          落とし穴は一つずつ塞いだが、見落としがあっても、ここで月ごとに拾う。
          将が盤のどこにもいない、という状態だけは残してはならない。 */
+      /* 盤の乱れの見回り（巡検が拾ったもの）。
+         軍の名簿に残る幽霊、他家の城に立つ将を、月ごとに繕う。 */
       for (const q of restoreStrays(s)) {
         if (q.faction !== s.player) continue;
         events.push(`${q.name}の所在が知れずにいたが、${(s.castles.find((c) => c.id === q.at) || {}).name}に戻った。`);
@@ -1426,6 +1433,31 @@ export function advanceMonth(prev, g) {
           events.push(k.改名
             ? `${k.改名.前}で代替わりがあり、${k.当主}が継いで${k.改名.後}と称した。`
             : `${fn}で代替わりがあり、${k.当主}が家督を継いだ。`);
+        }
+      }
+      /* 盤の見回りは、月送りの締めに置く（GDD 6.4）。
+
+         合戦も内応も寝返りも、この月のうちに起きる。見回りを途中に置くと、
+         その後で城の主が変わった場合に、乱れたまま一月が終わる。遊ぶ側には
+         「敵城に将が立っている」姿がそのまま見えてしまう。締めで拾えば、
+         月が明けたときの盤は必ず整っている。 */
+      {
+        /* 城を失ったまま人だけ残る家を片づける。落城のほかに内応・寝返りでも
+           最後の城は移る。その一つ一つに書き添えるより、ここで拾うほうが漏れがない。 */
+        for (const q of 城なき家を片づける(s)) {
+          if (q.winner !== s.player) continue;
+          events.push(`${(s.factions[q.fid] || {}).name}の残党を始末した。`);
+        }
+        /* 奪われた城を本領としたままの者を繕う（GDD 6.4）。
+           禄高は本領から出る。他家のものとなった城から己の身代が出てはならない。 */
+        for (const q of 奪われた本領を繕う(s)) {
+          if (q.faction !== s.player) continue;
+          events.push(`${q.name}は本領を失い、${(s.castles.find((c) => c.id === q.本領) || {}).name}に居を移した。`);
+        }
+        const 繕 = 盤の乱れを繕う(s);
+        for (const q of 繕.居所) {
+          if (q.gen.faction !== s.player) continue;
+          events.push(`${q.gen.name}は${q.先.name}へ引き移った。`);
         }
       }
       s.代替わり = [];

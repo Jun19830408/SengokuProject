@@ -13871,7 +13871,7 @@ var GENERALS = [
   { id: "kagetora2", name: "\u5927\u9053\u5BFA\u653F\u7E41", faction: "hojo", lead: 74, valor: 70, wit: 72, gov: 74, loyal: 90, age: 13, at: "kawagoe", retinue: 300, retTrain: 66 },
   { id: "nagayori", name: "\u4E09\u597D\u9577\u864E", faction: "miyoshi", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 84, age: 30, at: "iimoriyama", retinue: 280, retTrain: 62 },
   { id: "junkoku", name: "\u7B52\u4E95\u9806\u56FD", faction: "tsutsui", lead: 64, valor: 62, wit: 60, gov: 62, loyal: 86, age: 28, at: "tamonyama", retinue: 240, retTrain: 58 },
-  { id: "tedori", name: "\u7389\u7F6E\u76F4\u548C", faction: "saika", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 80, age: 31, at: "tetori", retinue: 220, retTrain: 58 },
+  { id: "tedori", name: "\u7389\u7F6E\u76F4\u548C", faction: "yukawa", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 80, age: 31, at: "tetori", retinue: 220, retTrain: 58 },
   { id: "kameyama", name: "\u6CE2\u591A\u91CE\u5143\u79C0", faction: "hatano", lead: 66, valor: 66, wit: 62, gov: 60, loyal: 88, age: 22, at: "kameyama_t", retinue: 260, retTrain: 60 },
   { id: "yokoyama", name: "\u837B\u91CE\u76F4\u6B63", faction: "hatano", lead: 72, valor: 78, wit: 66, gov: 56, loyal: 72, age: 11, at: "yokoyama", retinue: 240, retTrain: 62 },
   { id: "takeda_t", name: "\u592A\u7530\u57A3\u671D\u5EF6", faction: "yamana", lead: 66, valor: 70, wit: 60, gov: 56, loyal: 82, age: 34, at: "takeda", retinue: 240, retTrain: 60 },
@@ -14065,9 +14065,9 @@ var GENERALS = [
   { id: "w_wakasa_o", name: "\u77E2\u90E8\u66B9\u6DBC", faction: "yamana", lead: 64, valor: 64, wit: 60, gov: 58, loyal: 78, age: 34, at: "wakasa", retinue: 260, retTrain: 58 },
   { id: "w_shikano", name: "\u9E7F\u91CE\u5B89\u82B8\u5B88", faction: "yamana", lead: 62, valor: 62, wit: 58, gov: 56, loyal: 76, age: 30, at: "shikano", retinue: 220, retTrain: 56 },
   { id: "w_oki", name: "\u96A0\u5C90\u70BA\u6E05", faction: "amago", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 80, age: 36, at: "oki", retinue: 180, retTrain: 54 },
-  { id: "w_takada", name: "\u4E09\u6D66\u8C9E\u5E83", faction: "amago", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 70, age: 16, at: "takata_m", retinue: 300, retTrain: 60 },
+  { id: "w_takada", name: "\u4E09\u6D66\u8C9E\u5E83", faction: "miura", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 70, age: 16, at: "takata_m", retinue: 300, retTrain: 60 },
   { id: "w_iwaya_m2", name: "\u4E2D\u6751\u5247\u6CBB", faction: "amago", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 74, age: 32, at: "iwaya_m", retinue: 260, retTrain: 58 },
-  { id: "w_kannabe", name: "\u6749\u539F\u7406\u8208", faction: "ouchi", lead: 68, valor: 68, wit: 64, gov: 62, loyal: 72, age: 36, at: "kannabe", retinue: 300, retTrain: 60 },
+  { id: "w_kannabe", name: "\u6749\u539F\u7406\u8208", faction: "yamana_b", lead: 68, valor: 68, wit: 64, gov: 62, loyal: 72, age: 36, at: "kannabe", retinue: 300, retTrain: 60 },
   { id: "w_kuragake", name: "\u6749\u9686\u6CF0", faction: "ouchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 70, age: 28, at: "kuragake", retinue: 260, retTrain: 58 },
   { id: "w_tachibana", name: "\u7ACB\u82B1\u9451\u8F09", faction: "ouchi", lead: 68, valor: 70, wit: 62, gov: 58, loyal: 60, age: 26, at: "tachibanayama", retinue: 320, retTrain: 60 },
   { id: "w_iwaya_c2", name: "\u9AD8\u6A4B\u9451\u7A2E", faction: "ouchi", lead: 72, valor: 72, wit: 70, gov: 64, loyal: 58, age: 22, at: "iwaya", retinue: 300, retTrain: 62 },
@@ -14175,8 +14175,8 @@ var GENERALS = [
   { id: "o_sue2", name: "\u9676\u9686\u5EB7", faction: "ouchi", lead: 70, valor: 74, wit: 64, gov: 58, loyal: 80, age: 28, at: "wakayama_s", retinue: 280, retTrain: 64 },
   { id: "o_niho", name: "\u4EC1\u4FDD\u9686\u6170", faction: "ouchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 82, age: 31, at: "wakayama_s", retinue: 250, retTrain: 60 },
   { id: "o_hironaka", name: "\u5F18\u4E2D\u9686\u517C", faction: "ouchi", lead: 76, valor: 78, wit: 70, gov: 62, loyal: 88, age: 34, at: "kuragake", retinue: 280, retTrain: 64 },
-  { id: "o_sugihara", name: "\u6749\u539F\u76DB\u91CD", faction: "ouchi", lead: 72, valor: 74, wit: 68, gov: 62, loyal: 74, age: 16, at: "kannabe", retinue: 270, retTrain: 62 },
-  { id: "o_hirai", name: "\u5E73\u8CC0\u9686\u4FDD", faction: "ouchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 76, age: 20, at: "kannabe", retinue: 250, retTrain: 60 },
+  { id: "o_sugihara", name: "\u6749\u539F\u76DB\u91CD", faction: "yamana_b", lead: 72, valor: 74, wit: 68, gov: 62, loyal: 74, age: 16, at: "kannabe", retinue: 270, retTrain: 62 },
+  { id: "o_hirai", name: "\u5E73\u8CC0\u9686\u4FDD", faction: "ouchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 76, age: 20, at: "ouchi", retinue: 250, retTrain: 60 },
   { id: "o_shimofuri2", name: "\u5E02\u5DDD\u7D4C\u597D", faction: "ouchi", lead: 68, valor: 70, wit: 64, gov: 60, loyal: 84, age: 26, at: "shimofuri", retinue: 250, retTrain: 62 },
   { id: "o_katsuyama2", name: "\u554F\u7530\u9686\u76DB", faction: "ouchi", lead: 64, valor: 66, wit: 62, gov: 60, loyal: 82, age: 34, at: "katsuyama_n", retinue: 240, retTrain: 60 },
   { id: "o_kokura2", name: "\u6749\u91CD\u4FE1", faction: "ouchi", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 80, age: 30, at: "kokura", retinue: 250, retTrain: 60 },
@@ -14229,8 +14229,8 @@ var GENERALS = [
   { id: "a_yonago3", name: "\u798F\u5C71\u8332\u6B63", faction: "amago", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 82, age: 32, at: "yonago", retinue: 240, retTrain: 60 },
   { id: "a_yamabuki2", name: "\u725B\u5C3E\u5E78\u6E05", faction: "amago", lead: 66, valor: 70, wit: 62, gov: 56, loyal: 80, age: 30, at: "yamabuki", retinue: 250, retTrain: 62 },
   { id: "a_yamabuki3", name: "\u4F50\u4E16\u6E05\u5B97", faction: "amago", lead: 68, valor: 68, wit: 66, gov: 62, loyal: 84, age: 34, at: "yamabuki", retinue: 250, retTrain: 62 },
-  { id: "a_takata2", name: "\u4E09\u6D66\u8C9E\u76DB", faction: "amago", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 74, age: 24, at: "takata_m", retinue: 250, retTrain: 60 },
-  { id: "a_takata3", name: "\u7267\u5C1A\u6625", faction: "amago", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 28, at: "takata_m", retinue: 240, retTrain: 60 },
+  { id: "a_takata2", name: "\u4E09\u6D66\u8C9E\u76DB", faction: "miura", lead: 66, valor: 68, wit: 62, gov: 58, loyal: 74, age: 24, at: "takata_m", retinue: 250, retTrain: 60 },
+  { id: "a_takata3", name: "\u7267\u5C1A\u6625", faction: "miura", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 28, at: "takata_m", retinue: 240, retTrain: 60 },
   { id: "a_iwaya2", name: "\u4E2D\u6751\u983C\u5B97", faction: "amago", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 78, age: 30, at: "iwaya_m", retinue: 240, retTrain: 60 },
   { id: "a_iwaya3", name: "\u6C5F\u898B\u4E45\u76DB", faction: "amago", lead: 62, valor: 66, wit: 58, gov: 54, loyal: 76, age: 26, at: "iwaya_m", retinue: 230, retTrain: 58 },
   { id: "a_oki2", name: "\u96A0\u5C90\u6E05\u5BB6", faction: "amago", lead: 60, valor: 62, wit: 58, gov: 56, loyal: 80, age: 32, at: "oki", retinue: 200, retTrain: 56 },
@@ -14522,7 +14522,7 @@ var GENERALS = [
   { id: "sk5_saika3", name: "\u5CA1\u5409\u6B63", faction: "saika", lead: 66, valor: 72, wit: 62, gov: 54, loyal: 86, age: 24, at: "saika", retinue: 230, retTrain: 64 },
   { id: "sk5_shingu2", name: "\u5800\u5185\u6C0F\u5584", faction: "saika", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 84, age: 26, at: "shingu", retinue: 240, retTrain: 60 },
   { id: "sk5_shingu3", name: "\u5C0F\u5C71\u9686\u7DB1", faction: "saika", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 80, age: 30, at: "shingu", retinue: 230, retTrain: 58 },
-  { id: "sk5_tetori3", name: "\u7389\u7F6E\u6C38\u76F4", faction: "saika", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 28, at: "tetori", retinue: 230, retTrain: 58 },
+  { id: "sk5_tetori3", name: "\u7389\u7F6E\u6C38\u76F4", faction: "yukawa", lead: 62, valor: 64, wit: 58, gov: 56, loyal: 82, age: 28, at: "tetori", retinue: 230, retTrain: 58 },
   { id: "ht5_yakami2", name: "\u6CE2\u591A\u91CE\u5B97\u9AD8", faction: "hatano", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 86, age: 20, at: "yagami", retinue: 240, retTrain: 60 },
   { id: "ht5_yakami3", name: "\u8D64\u4E95\u6642\u5BB6", faction: "hatano", lead: 64, valor: 66, wit: 60, gov: 56, loyal: 74, age: 34, at: "yagami", retinue: 240, retTrain: 60 },
   { id: "ht5_kameyama2", name: "\u5185\u85E4\u56FD\u8C9E", faction: "naito", lead: 64, valor: 66, wit: 62, gov: 58, loyal: 100, age: 32, at: "yagi", lord: true, retinue: 320, retTrain: 62 },
@@ -15548,6 +15548,21 @@ function \u672C\u9818\u3068\u672C\u62E0\u3092\u7E55\u3046(s2) {
     g.\u672C\u9818 = g.at || \u51FA\u3069\u3053\u308D[g.id] || (s2.factions[g.faction] || {}).\u672C\u62E0 || null;
   }
   return s2;
+}
+function \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2) {
+  const \u51FA\u3069\u3053\u308D = {};
+  for (const a of s2.armies || []) for (const gid of a.gens || []) \u51FA\u3069\u3053\u308D[gid] = a.from;
+  const \u81EA\u5BB6\u304B = (id, fid) => id && s2.castles.some((c) => c.id === id && c.faction === fid);
+  const \u76F4\u3057\u305F = [];
+  for (const g of s2.generals) {
+    if (g.captive) continue;
+    if (\u81EA\u5BB6\u304B(g.\u672C\u9818, g.faction)) continue;
+    const \u5148 = [g.at, \u51FA\u3069\u3053\u308D[g.id], (s2.factions[g.faction] || {}).\u672C\u62E0].find((id) => \u81EA\u5BB6\u304B(id, g.faction));
+    if (!\u5148 || \u5148 === g.\u672C\u9818) continue;
+    g.\u672C\u9818 = \u5148;
+    \u76F4\u3057\u305F.push(g);
+  }
+  return \u76F4\u3057\u305F;
 }
 var \u65D7\u306E\u4E0B\u304B = (g, \u4E0A, \u4E0B) => {
   if (!\u4E0A || !\u4E0B) return false;
@@ -18073,8 +18088,10 @@ function sackCastle(s2, castle, army, hard) {
     if (lastOne) continue;
     const r = Math.random() + (hard ? 0.12 : 0) + gen.valor / 400 - gen.loyal / 320;
     if (r > 0.86 && Math.random() < \u96E3\u3092\u9003\u308C\u308B(gen)) {
+      const \u5F53\u4E3B\u304B = !!gen.lord;
       s2.generals = s2.generals.filter((x) => x.id !== gen.id);
       log(`${gen.name}\u306F${castle.name}\u306B\u8E0F\u307F\u3068\u3069\u307E\u308A\u8A0E\u6B7B\u3057\u305F\u3002`);
+      if (\u5F53\u4E3B\u304B) succeed(s2, gen, `${castle.name}\u306B\u8E0F\u307F\u3068\u3069\u307E\u308A\u8A0E\u6B7B\u3057\u305F`);
     } else if (r > 0.7 && Math.random() < captureChance(gen) * 3.2) {
       \u6355\u3089\u3048\u308B(gen, `${gen.name}\u306F\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
     } else if (r > 0.7) {
@@ -18214,24 +18231,7 @@ function sackCastle(s2, castle, army, hard) {
         queue: [...lord ? [lord.id] : [], ...retainers.map((x) => x.id)]
       };
     } else {
-      for (const g2 of [lord, ...retainers].filter(Boolean)) {
-        const rec = canRecruit(g2, lord);
-        if (g2 === lord || !rec.ok || Math.random() < 0.25) {
-          if (Math.random() < 0.4) {
-            s2.generals = s2.generals.filter((x) => x.id !== g2.id);
-          } else takeAsPrisoner(s2, g2, winner, castle.id);
-        } else {
-          g2.faction = winner;
-          g2.loyal = loyaltyAfterRecruit(g2);
-          g2.lord = false;
-          g2.at = castle.id;
-        }
-      }
-      s2.chronicle.push({
-        y: s2.year,
-        m: s2.month,
-        text: `${s2.factions[oldF].name}\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3044\u3001\u6EC5\u4EA1\u3057\u305F\u3002`
-      });
+      \u6EC5\u3093\u3060\u5BB6\u3092\u59CB\u672B\u3059\u308B(s2, oldF, winner, castle.id, { lord, retainers });
     }
     s2.ruined = [...s2.ruined || [], oldF];
   }
@@ -18326,10 +18326,7 @@ function resolveOffscreen(prev, armyId, castleId) {
     let \u6587 = `${amb.by.name}\u304C${castle.name}\u306E\u672C\u9663\u3092\u885D\u3044\u305F\u3002`;
     if (\u6BB5.\u5927\u5C06\u8A0E\u6B7B && \u4E3B) {
       s2.generals = s2.generals.filter((x) => x.id !== \u4E3B.id);
-      if (\u4E3B.lord) {
-        const nx = s2.generals.filter((x) => x.faction === \u4E3B.faction && !x.captive).sort((a, z) => z.lead - a.lead)[0];
-        if (nx) nx.lord = true;
-      }
+      if (\u4E3B.lord) succeed(s2, \u4E3B, "\u672C\u9663\u3092\u885D\u304B\u308C\u3066\u8A0E\u6B7B\u3057\u305F");
       \u6587 += `${\u4E3B.name}\u306F\u8A0E\u305F\u308C\u3001${s2.factions[castle.faction].name}\u306E\u8ECD\u306F\u74E6\u89E3\u3057\u305F\u3002`;
       if (army.faction === s2.player) s2.msg = `${amb.by.name}\u304C\u6575\u306E\u672C\u9663\u3092\u885D\u304D\u3001${\u4E3B.name}\u3092\u8A0E\u3061\u53D6\u3063\u305F\u3002`;
     } else if (\u6BB5.\u5927\u5C06\u9000\u304F && \u4E3B) {
@@ -18497,6 +18494,120 @@ function restoreStrays(s2) {
     \u623B\u3057\u305F.push(q);
   }
   return \u623B\u3057\u305F;
+}
+function \u57CE\u306A\u304D\u5BB6\u3092\u7247\u3065\u3051\u308B(s2) {
+  const \u7247\u3065\u3051\u305F = [];
+  for (const fid of Object.keys(s2.factions || {})) {
+    if (s2.castles.some((c) => c.faction === fid)) continue;
+    const \u6B8B = s2.generals.filter((g) => g.faction === fid && !g.captive);
+    if (!\u6B8B.length) continue;
+    if (s2.warSettle && s2.warSettle.faction === fid) continue;
+    const \u6570 = /* @__PURE__ */ new Map();
+    for (const g of \u6B8B) {
+      const c = g.at && s2.castles.find((x) => x.id === g.at);
+      if (!c) continue;
+      \u6570.set(c.id, (\u6570.get(c.id) || 0) + (g.lord ? 100 : 1));
+    }
+    const \u91CE\u306E\u8ECD = s2.armies.filter((a) => a.faction === fid);
+    const \u9663 = \u91CE\u306E\u8ECD.map((a) => s2.castles.find((c) => c.id === (a.\u5728\u9663 || a.at))).filter(Boolean);
+    for (const a of \u91CE\u306E\u8ECD) for (const gid of a.gens || []) {
+      const g = s2.generals.find((q) => q.id === gid);
+      if (g) g.at = (\u9663[0] || {}).id || g.at;
+    }
+    if (\u91CE\u306E\u8ECD.length) {
+      const \u6563 = new Set(\u91CE\u306E\u8ECD.map((a) => a.id));
+      s2.armies = s2.armies.filter((a) => !\u6563.has(a.id));
+      s2.sieges = (s2.sieges || []).filter((x) => !\u6563.has(x.armyId));
+      s2.campaigns = (s2.campaigns || []).filter((x) => x.faction !== fid);
+      s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => !\u6563.has(id));
+    }
+    for (const g of \u6B8B) {
+      const c = g.at && s2.castles.find((x) => x.id === g.at);
+      if (!c) continue;
+      \u6570.set(c.id, (\u6570.get(c.id) || 0) + (g.lord ? 100 : 1));
+    }
+    const [castleId] = [...\u6570.entries()].sort((a, z) => z[1] - a[1])[0] || [];
+    const \u57CE = castleId && s2.castles.find((x) => x.id === castleId);
+    if (!\u57CE) continue;
+    \u6EC5\u3093\u3060\u5BB6\u3092\u59CB\u672B\u3059\u308B(s2, fid, \u57CE.faction, \u57CE.id);
+    s2.ruined = [.../* @__PURE__ */ new Set([...s2.ruined || [], fid])];
+    \u7247\u3065\u3051\u305F.push({ fid, winner: \u57CE.faction });
+  }
+  return \u7247\u3065\u3051\u305F;
+}
+function \u6EC5\u3093\u3060\u5BB6\u3092\u59CB\u672B\u3059\u308B(s2, oldF, winner, castleId, \u9762\u3005) {
+  const { lord, retainers } = \u9762\u3005 || ruinedHouse(s2, oldF);
+  for (const g2 of [lord, ...retainers].filter(Boolean)) {
+    const rec = canRecruit(g2, lord);
+    if (g2 === lord || !rec.ok || Math.random() < 0.25) {
+      if (Math.random() < 0.4) {
+        s2.generals = s2.generals.filter((x) => x.id !== g2.id);
+      } else takeAsPrisoner(s2, g2, winner, castleId);
+    } else {
+      g2.faction = winner;
+      g2.loyal = loyaltyAfterRecruit(g2);
+      g2.lord = false;
+      g2.at = castleId;
+    }
+  }
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${(s2.factions[oldF] || {}).name}\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3044\u3001\u6EC5\u4EA1\u3057\u305F\u3002`
+  });
+  return s2;
+}
+function \u76E4\u306E\u4E71\u308C\u3092\u7E55\u3046(s2) {
+  const \u76F4\u3057 = { \u540D\u7C3F: [], \u5C45\u6240: [] };
+  const \u76E4\u306B\u3044\u308B = new Map(s2.generals.map((g) => [g.id, g]));
+  const \u898B\u305F = /* @__PURE__ */ new Set();
+  for (const a of s2.armies) {
+    const \u5143 = (a.gens || []).length;
+    a.gens = (a.gens || []).filter((id) => {
+      const g = \u76E4\u306B\u3044\u308B.get(id);
+      if (!g) return false;
+      if (g.captive) return false;
+      if (g.at != null) return false;
+      if (\u898B\u305F.has(id)) return false;
+      \u898B\u305F.add(id);
+      return true;
+    });
+    if (a.gens.length !== \u5143) \u76F4\u3057.\u540D\u7C3F.push({ armyId: a.id, \u843D\u3068\u3057\u305F: \u5143 - a.gens.length });
+  }
+  for (const c of s2.castles) {
+    if (!c.lordId) continue;
+    const g = s2.generals.find((x) => x.id === c.lordId);
+    if (g && !g.captive && g.faction === c.faction) continue;
+    c.lordId = null;
+    \u76F4\u3057.\u540D\u7C3F.push({ castleId: c.id, \u57CE\u4E3B\u3092\u5916\u3057\u305F: true });
+  }
+  for (const fid of Object.keys(s2.factions || {})) {
+    if (!s2.castles.some((c) => c.faction === fid)) continue;
+    const \u5BB6\u4E2D = s2.generals.filter((g) => g.faction === fid && !g.captive);
+    if (!\u5BB6\u4E2D.length || \u5BB6\u4E2D.some((g) => g.lord)) continue;
+    const \u7D99 = pickHeir(s2, { id: null, faction: fid, name: (s2.factions[fid].name || "").slice(0, 2) });
+    if (!\u7D99) continue;
+    \u7D99.lord = true;
+    s2.chronicle.push({
+      y: s2.year,
+      m: s2.month,
+      text: `${s2.factions[fid].name}\u306F\u5F53\u4E3B\u3092\u6B20\u3044\u3066\u3044\u305F\u304C\u3001${\u7D99.name}\u304C\u5BB6\u7763\u3092\u7D99\u3044\u3060\u3002`
+    });
+    \u76F4\u3057.\u540D\u7C3F.push({ fid, \u5F53\u4E3B\u3092\u7ACB\u3066\u305F: \u7D99.name });
+  }
+  for (const g of s2.generals) {
+    if (g.captive || g.at == null) continue;
+    const c = s2.castles.find((x) => x.id === g.at);
+    if (c && c.faction === g.faction) continue;
+    const \u81EA\u9818 = s2.castles.filter((x) => x.faction === g.faction);
+    if (!\u81EA\u9818.length) continue;
+    const \u8FD1\u3044 = \u81EA\u9818.map((x) => ({ x, p: g.at ? findPath(g.at, x.id) : null })).filter((v) => v.p).sort((a2, z) => a2.p.length - z.p.length)[0];
+    const \u5148 = \u8FD1\u3044 ? \u8FD1\u3044.x : \u81EA\u9818[0];
+    g.at = \u5148.id;
+    if (!s2.castles.some((x) => x.id === g.\u672C\u9818 && x.faction === g.faction)) g.\u672C\u9818 = \u5148.id;
+    \u76F4\u3057.\u5C45\u6240.push({ gen: g, \u5148 });
+  }
+  return \u76F4\u3057;
 }
 function resolveClash(s2, aId, bId, place) {
   const a = s2.armies.find((x) => x.id === aId), b = s2.armies.find((x) => x.id === bId);
@@ -18961,7 +19072,11 @@ function advanceMonth(prev, g) {
         } else {
           const ref = s2.castles.find((c2) => c2.faction === oldF && c2.id !== target.id);
           if (ref) x.at = ref.id;
-          else s2.generals = s2.generals.filter((q) => q.id !== x.id);
+          else {
+            const \u5F53\u4E3B\u304B = !!x.lord;
+            s2.generals = s2.generals.filter((q) => q.id !== x.id);
+            if (\u5F53\u4E3B\u304B) succeed(s2, x, "\u5185\u5FDC\u306E\u6DF7\u4E71\u306E\u3046\u3061\u306B\u843D\u547D\u3057\u305F");
+          }
         }
       }
       const rel3 = s2.relations[relKey2(pl.faction, oldF)];
@@ -20007,6 +20122,21 @@ function advanceMonth(prev, g) {
       if (k.\u6539\u540D) events.push(`\u3010\u5BB6\u540D\u3011${k.\u6539\u540D.\u524D}\u3092\u6539\u3081\u3001\u4EE5\u5F8C${k.\u6539\u540D.\u5F8C}\u3068\u79F0\u3059\u308B\u3002`);
     } else {
       events.push(k.\u6539\u540D ? `${k.\u6539\u540D.\u524D}\u3067\u4EE3\u66FF\u308F\u308A\u304C\u3042\u308A\u3001${k.\u5F53\u4E3B}\u304C\u7D99\u3044\u3067${k.\u6539\u540D.\u5F8C}\u3068\u79F0\u3057\u305F\u3002` : `${fn}\u3067\u4EE3\u66FF\u308F\u308A\u304C\u3042\u308A\u3001${k.\u5F53\u4E3B}\u304C\u5BB6\u7763\u3092\u7D99\u3044\u3060\u3002`);
+    }
+  }
+  {
+    for (const q of \u57CE\u306A\u304D\u5BB6\u3092\u7247\u3065\u3051\u308B(s2)) {
+      if (q.winner !== s2.player) continue;
+      events.push(`${(s2.factions[q.fid] || {}).name}\u306E\u6B8B\u515A\u3092\u59CB\u672B\u3057\u305F\u3002`);
+    }
+    for (const q of \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2)) {
+      if (q.faction !== s2.player) continue;
+      events.push(`${q.name}\u306F\u672C\u9818\u3092\u5931\u3044\u3001${(s2.castles.find((c) => c.id === q.\u672C\u9818) || {}).name}\u306B\u5C45\u3092\u79FB\u3057\u305F\u3002`);
+    }
+    const \u7E55 = \u76E4\u306E\u4E71\u308C\u3092\u7E55\u3046(s2);
+    for (const q of \u7E55.\u5C45\u6240) {
+      if (q.gen.faction !== s2.player) continue;
+      events.push(`${q.gen.name}\u306F${q.\u5148.name}\u3078\u5F15\u304D\u79FB\u3063\u305F\u3002`);
     }
   }
   s2.\u4EE3\u66FF\u308F\u308A = [];
