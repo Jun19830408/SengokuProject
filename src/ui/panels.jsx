@@ -176,6 +176,33 @@ export function SortieDialog({ g, from, onClose, onGo }) {
   const offers = to ? reinforceOffers(g, from, to, 総大将) : [];
   // 目標を変えると呼べる先も変わる。前の目標の選びを引きずらせない。
   useEffect(() => { setAid({}); }, [to]);
+  /* 寄騎の城には、はじめから印を付けておく（GDD 6.4）。
+
+     寄騎に取れるのを城主だけに改めたので、寄騎はそれぞれ自分の城にいる。
+     寄親と同じ城に居合わせることはまず無い。「この城にいる寄騎が従う」だけでは
+     何も起きないので、寄騎の城を加勢に初めから加える。寄親が出るなら、その下の
+     城々も兵を出す――それが寄騎というものである。外したければ外せる。 */
+  const 寄騎の城 = picked.map((id) => gens.find((x) => x.id === id))
+    .filter((x) => x && (x.役 === "国主" || x.役 === "旗頭"))
+    .flatMap((x) => 寄騎たち(g, x.id))
+    .map((x) => (x.本領 || x.at))
+    .filter((id) => id && id !== from);
+  const 寄騎の城の印 = 寄騎の城.join(",");
+  useEffect(() => {
+    if (!to || !寄騎の城.length) return;
+    setAid((前) => {
+      const 次 = { ...前 };
+      for (const cid of 寄騎の城) {
+        if (次[cid]) continue;
+        const o = offers.find((x) => x.castleId === cid && !x.reason);
+        if (!o) continue;
+        次[cid] = o.指図
+          ? { genIds: o.gens.slice(0, 1).map((x) => x.id), men: Math.round(o.avail * 0.4) }
+          : { genIds: [], men: o.men };
+      }
+      return 次;
+    });
+  }, [to, 寄騎の城の印]); // eslint-disable-line
   const aidIds = Object.keys(aid);
   /* その城から出せる兵の上限。
      選んだ将が自ら率いる直属を差し引いた残りである。
@@ -365,11 +392,17 @@ export function SortieDialog({ g, from, onClose, onGo }) {
             侍大将の下に家老は付かない。軍中の最上位が率いる。 */}
         <div className="sec">参加武将</div>
         {/* 寄騎（GDD 6.4）。寄親を選べば、その寄騎も従う。
-            寄騎は大名の直臣であって寄親の家臣ではないが、戦では寄親の下に入る。
-            国を一つ預けるとは、その国の城主たちを一人の下に束ねるということである。 */}
+
+            寄騎に取れるのを城主だけに改めたので、寄騎はそれぞれ自分の城にいる。
+            同じ城に居合わせることはまず無いから、「この城にいる寄騎が加わる」
+            だけでは何も起きなくなった。
+
+            寄騎の城は、下の「加勢を求める」にはじめから印を付けておく。
+            寄親が出るなら、その下の城々も兵を出す――それが寄騎というものである。
+            外したければ外せる。 */}
         {(() => {
           const 旗ら = picked.map((id) => gens.find((x) => x.id === id))
-            .filter((x) => x && x.役 === "国主");
+            .filter((x) => x && (x.役 === "国主" || x.役 === "旗頭"));
           const 従 = 旗ら.flatMap((x) => 寄騎たち(g, x.id))
             .filter((x) => x.at === c.id && !picked.includes(x.id));
           if (!旗ら.length) return null;
@@ -378,6 +411,14 @@ export function SortieDialog({ g, from, onClose, onGo }) {
               borderLeft: "3px solid #4A6E8A", paddingLeft: 8 }}>
               {旗ら.map((x) => `${x.name}（${x.役国}の国主）`).join("・")}を出すので、
               その<b style={{ color: U.text }}>寄騎</b>も従います。
+              {(() => {
+                const 寄城 = 旗ら.flatMap((x) => 寄騎たち(g, x.id))
+                  .map((x) => (g.castles.find((y) => y.id === (x.本領 || x.at)) || {}).name)
+                  .filter(Boolean);
+                return 寄城.length
+                  ? <>　寄騎の城（{寄城.join("・")}）は、下の「加勢を求める」に初めから印が付きます。</>
+                  : null;
+              })()}
               {従.length
                 ? <>　{従.map((x) => x.name).join("・")}（{従.length}名）が加わります。</>
                 : "　この城にいる寄騎はいません。"}
@@ -1271,22 +1312,15 @@ export function GeneralList({ g, onClose, onYakume }) {
             </div>
           ))}
           {旗頭の枠(g, g.player) > 旗頭たち(g, g.player).length && (() => {
-            const 候 = g.generals.filter((x) => x.faction === g.player && !x.captive && x.役 === "国主");
-            const 空国 = [...new Set(g.castles.filter((c) => c.faction === g.player).map((c) => c.kuni))]
-              .filter((k) => !国の旗頭(g, g.player, k));
+            /* 旗頭を任じるのは本拠の「人事」からである（GDD 6.4）。
+
+               方面軍を立てるのは家の根本の差配であって、どこの城でも決められる
+               ものではない。ここは帳面であるから、どこで定めるかだけを示す。 */
+            const 本拠 = g.castles.find((c) => c.id === (g.factions[g.player] || {}).本拠);
             return (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 4 }}>
-                  国主を務める者に、二国以上をまとめて預けます。
-                  {候.length ? "" : "（国主がいません。まず城の「人事」から国主を任じてください）"}
-                </div>
-                {候.map((x) => (
-                  <button key={x.id} className="btn sm" style={{ marginRight: 5, marginBottom: 5 }}
-                    onClick={() => onYakume && onYakume({ 任じる: x.id, 国: 空国 })}>
-                    {x.name}に{空国.length}国を預ける
-                    <span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>{空国.join("・")}</span>
-                  </button>
-                ))}
+              <div style={{ marginTop: 8, fontSize: 11.5, color: U.dim, lineHeight: 1.8 }}>
+                旗頭を任じるのは<b style={{ color: U.text }}>本拠（{本拠 ? 本拠.name : "—"}）の「人事」</b>からです。
+                方面を預けるのは家の根本の差配ですから、支城では決められません。
               </div>
             );
           })()}

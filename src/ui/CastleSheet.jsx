@@ -3,7 +3,7 @@ import { RANSOM_DIV, ransomRank } from "../core/capture.js";
 import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/house.js";
 import { marchMonths } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
-import { 軍役の割増, RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか } from "../core/rank.js";
+import { 軍役の割増, RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 方面の国, 城主か } from "../core/rank.js";
 import { canSee, relOf, isVassal, 主を探す } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
@@ -24,7 +24,7 @@ import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
-export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
+export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
@@ -558,9 +558,9 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     const 主 = 国の国主(g, g.player, c.kuni);
                     const 枠 = 国主の枠(g, g.player);
                     const いま = 国主たち(g, g.player).length;
-                    // その国に根を持つ侍大将以上
+  // その国に根を持つ家老以上（国主に就くには家老の身分が要る）
                     const 候 = g.generals.filter((x) => x.faction === g.player && !x.captive && !x.lord
-                      && 身分の位(x, g) >= 2
+                      && 身分の位(x, g) >= 3
                       && (g.castles.find((y) => y.id === (x.本領 || x.at)) || {}).kuni === c.kuni);
                     return (
                       <div style={{ border: `1px solid ${U.line2}`, borderLeft: "3px solid #4A6E8A",
@@ -573,13 +573,13 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                           国主は<b style={{ color: U.text }}>家老</b>以上が就く役です。その下に寄騎が付きます。
                           家が城を持つ国につき一人まで置けます。
                           新しい国へ進出すれば、そこにもう一人任じられます。
-                          <br />選べるのは<b style={{ color: U.text }}>{c.kuni}に本領を持つ侍大将以上</b>。
+                          <br />選べるのは<b style={{ color: U.text }}>{c.kuni}に本領を持つ家老以上</b>。
                           国を預かるのですから、その国に根を持たぬ者では務まりません。
                           <br />いま {いま}名／枠 {枠}名（持つ国の数）
                         </div>
                         {候.length === 0 && (
                           <div style={{ fontSize: 12, color: U.dim }}>
-                            {c.kuni}に本領を持つ侍大将以上がいません。城主を据えれば、その者が候補になります。
+                            {c.kuni}に本領を持つ家老以上がいません。加増して身代を上げれば、候補になります。
                           </div>
                         )}
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
@@ -608,6 +608,9 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                                 <span style={{ color: U.dim, marginLeft: 6 }}>{従.length}名</span>
                               </div>
                               <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
+                                寄騎に取れるのは<b style={{ color: U.text }}>{c.kuni}の城主</b>だけです。
+                                城を預かる者を差配下に置くのが寄騎であって、城を持たぬ者では預けるものがありません
+                                （城にいるだけの者は、その城主の手の者と見なします）。<br />
                                 寄騎は<b style={{ color: U.text }}>大名の直臣</b>であって、寄親の家臣ではありません。
                                 いつでも解けます。寄親を出陣させれば、寄騎も従って一手の軍となります。
                                 <br />そして<b style={{ color: U.text }}>寄騎の城は、その月の政務を寄親が差配します</b>。
@@ -635,7 +638,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                               </div>
                               {!従.length && !取れる.length && (
                                 <div style={{ fontSize: 12, color: U.dim }}>
-                                  寄騎に取れる者がいません（{c.kuni}に本領を持つ侍大将以上が要ります）。
+                                  寄騎に取れる者がいません（{c.kuni}の城主が要ります）。
                                 </div>
                               )}
                             </div>
@@ -644,6 +647,148 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       </div>
                     );
                   })()}
+
+                  {/* 旗頭を選ぶ（GDD 6.4）。方面を預ける役である。
+
+                      置けるのは本拠だけとする。方面軍を立てるのは家の根本の差配で
+                      あって、支城で決めることではない。柴田を北国へ、明智を丹波へ
+                      ――信長がそれを決めたのは安土である。
+
+                      寄騎に取れるのは、旗頭の本領のある国の城主と、方面の国々の
+                      国主である。国主を取れば、その国主の下にある城主たちも
+                      旗頭の下に連なる（下に木の形で並べる）。 */}
+                  {mine && c.id === (g.factions[g.player] || {}).本拠 && (() => {
+                    const 枠 = 旗頭の枠(g, g.player);
+                    const 旗ら = 旗頭たち(g, g.player);
+                    const 国主ら = 国主たち(g, g.player).filter((x) => x.役国);
+                    return (
+                      <div style={{ border: `1px solid ${U.line2}`, borderLeft: "3px solid #8A6A34",
+                        padding: "8px 10px", marginBottom: 10, background: "rgba(200,164,74,.05)" }}>
+                        <div className="mn" style={{ fontSize: 15, marginBottom: 2 }}>旗頭を選ぶ</div>
+                        <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
+                          旗頭は<b style={{ color: U.text }}>方面</b>を預かる役です。宿老（禄高二万石）以上で、
+                          かつ国主を務める者から選び、二国以上をまとめて委ねます。
+                          置けるのは四国につき一人。<b style={{ color: U.text }}>本拠でのみ</b>定められます。
+                          <br />いま {旗ら.length}名／枠 {枠}名（{Math.floor(枠 * 4)}国以上で {枠}名）
+                        </div>
+                        {枠 === 0 && (
+                          <div style={{ fontSize: 12, color: U.dim }}>
+                            まだ旗頭は置けません（四国を領してはじめて一人）。
+                          </div>
+                        )}
+                        {枠 > 0 && !旗ら.length && !国主ら.length && (
+                          <div style={{ fontSize: 12, color: U.dim }}>
+                            国主がいません。まず各国の城で国主を任じてください。
+                          </div>
+                        )}
+                        {枠 > 0 && 旗ら.length < 枠 && 国主ら.length >= 2 && (
+                          <div style={{ marginBottom: 8 }}>
+                            <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 4 }}>
+                              旗頭に任じる（二国以上を預けます。宿老の身代が要ります）
+                            </div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                              {国主ら.filter((x) => 身分の位(x, g) >= 4).map((x) => (
+                                <button key={x.id} className="btn sm"
+                                  onClick={() => onHatagashiraCorps && onHatagashiraCorps(x.id)}>
+                                  {x.name}
+                                  <span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>
+                                    {x.役国}の国主・{fmt(stipendOf(g, x))}石
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                            {!国主ら.some((x) => 身分の位(x, g) >= 4) && (
+                              <div style={{ fontSize: 12, color: U.dim }}>
+                                宿老（禄高二万石）に届く国主がいません。加増して身代を上げてください。
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 旗頭ごとに、その寄騎を木の形で並べる */}
+                        {旗ら.map((旗) => {
+                          const 己城 = g.castles.find((x) => x.id === (旗.本領 || 旗.at));
+                          const 従 = 寄騎たち(g, 旗.id);
+                          const 取れる = g.generals.filter((x) => x.faction === g.player && !x.captive
+                            && x.id !== 旗.id && !x.寄親 && 寄騎に取れるか(g, 旗, x).ok);
+                          return (
+                            <div key={旗.id} style={{ marginTop: 10, borderTop: `1px solid ${U.line2}`, paddingTop: 8 }}>
+                              <div style={{ fontSize: 12.5, marginBottom: 2 }}>
+                                <b>{旗.name}</b>
+                                <span style={{ color: U.dim, marginLeft: 6 }}>
+                                  方面 {方面の国(旗).join("・") || "—"}／寄騎 {従.length}名
+                                </span>
+                                <button className="btn sm" style={{ marginLeft: 8 }}
+                                  onClick={() => onHatagashiraRelease && onHatagashiraRelease(旗.id)}>方面を解く</button>
+                              </div>
+                              <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
+                                取れるのは<b style={{ color: U.text }}>{己城 ? 己城.kuni : "旗頭の国"}の城主</b>と
+                                <b style={{ color: U.text }}>方面の国主</b>です。
+                              </div>
+                              {/* いま従えている者 */}
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 6 }}>
+                                {従.map((x) => (
+                                  <button key={x.id} className="btn sm on" title="押せば寄騎を解く"
+                                    onClick={() => onYoriki && onYoriki(x.id, false)}>
+                                    {x.name}
+                                    <span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>
+                                      {x.役 === "国主" ? `${x.役国}の国主` : "城主"}
+                                    </span>
+                                  </button>
+                                ))}
+                                {取れる.map((x) => (
+                                  <button key={x.id} className="btn sm"
+                                    onClick={() => onYoriki && onYoriki(x.id, true, 旗.id)}>
+                                    {x.name}
+                                    <span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>
+                                      {x.役 === "国主" ? `${x.役国}の国主を寄騎に` : "城主を寄騎に"}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                              {/* 寄騎に取った国主の下に、その国の城主を並べる。
+                                  すでにその国主の寄騎である者と、まだ誰にも付いていない者を分けて示す。 */}
+                              {従.filter((x) => x.役 === "国主" && x.役国).map((国) => {
+                                const 国の城主 = g.generals.filter((x) => x.faction === g.player && !x.captive
+                                  && x.id !== 国.id && (城主か(g, x) || {}).kuni === 国.役国);
+                                if (!国の城主.length) return null;
+                                return (
+                                  <div key={国.id} style={{ marginLeft: 12, borderLeft: `2px solid ${U.line2}`,
+                                    paddingLeft: 8, marginBottom: 6 }}>
+                                    <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 3 }}>
+                                      └ {国.役国}（{国.name}の下）の城主
+                                    </div>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                                      {国の城主.map((x) => {
+                                        const 付 = x.寄親 === 国.id ? "国主の寄騎"
+                                          : x.寄親 === 旗.id ? "旗頭の寄騎"
+                                          : x.寄親 ? "他の寄親" : "誰にも付いていない";
+                                        const 旗へ = 寄騎に取れるか(g, 旗, x).ok;
+                                        return (
+                                          <button key={x.id}
+                                            className={`btn sm ${x.寄親 ? "on" : ""}`}
+                                            disabled={!旗へ && !x.寄親}
+                                            title={旗へ ? "押せば旗頭の寄騎にする" : x.寄親 ? "押せば寄騎を解く" : ""}
+                                            onClick={() => {
+                                              if (x.寄親) onYoriki && onYoriki(x.id, false);
+                                              else if (旗へ) onYoriki && onYoriki(x.id, true, 旗.id);
+                                            }}>
+                                            {x.name}
+                                            <span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>{付}</span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
                   <div style={{ fontSize: 12, color: U.dim, marginBottom: 8 }}>
                     城主を定めます。城主が代わると地域家臣団の馴染は下がり、月ごとに戻ります。
                   </div>

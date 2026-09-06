@@ -18,7 +18,7 @@ const entry = path.join(ROOT, 'build', 'fief-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState, migrateSave, 国主を据える } from "../src/core/state.js";\n'
-+ 'export { fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, canBeKeeper, 預かりの格, castellanOf, rankName, 身分の位, 軍役の器, 国主の枠, 国主たち, 国の国主, 国主に任じる, 国主を繕う, 寄騎たち, 寄騎に取れるか, 寄騎に取る, 寄騎を解く, 寄騎を繕う, 旗頭の枠, 旗頭たち, 方面の国, 国の旗頭, 旗頭に任じる, 旗頭を解く, 旗頭を繕う, 陣触れの届き, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
++ 'export { 城主か, fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, canBeKeeper, 預かりの格, castellanOf, rankName, 身分の位, 軍役の器, 国主の枠, 国主たち, 国の国主, 国主に任じる, 国主を繕う, 寄騎たち, 寄騎に取れるか, 寄騎に取る, 寄騎を解く, 寄騎を繕う, 旗頭の枠, 旗頭たち, 方面の国, 国の旗頭, 旗頭に任じる, 旗頭を解く, 旗頭を繕う, 陣触れの届き, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
 + 'export { grantFief, appoint, 国主に任ずる, 旗頭に任ずる, 旗頭を解く下知 } from "../src/govern/commands.js";\n'
 + 'export { isMainClan } from "../src/core/house.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n');
@@ -471,6 +471,88 @@ const 確 = (名, 可, 添 = '') => {
     (v.chronicle.slice(-1)[0] || {}).text || 'なし');
 }
 
+/* ---------------------------- 寄騎に取れるのは城主だけ（GDD 6.4）
+
+   寄騎とは、城を預かる者を寄親の差配下に置くことである。城を持たぬ者を寄騎に
+   しても、預けるものが無い（差配とは、その城の政務を任せることだからである）。
+   城にいるだけの者は、その城主の手の者と見なす――大名から見れば陪臣である。
+
+   もとは「その国に本領を持つ侍大将以上」であった。城を預かっていない者まで
+   ずらりと並び、誰を選べばよいのか読めなかった。 */
+{
+  const s = A.initState('oda');
+  const 尾張 = s.castles.filter((c) => c.faction === 'oda' && c.kuni === '尾張');
+  const 親 = s.generals.find((g) => g.faction === 'oda' && !g.lord && !g.役 && (g.age || 0) >= 25
+    && 尾張.some((c) => c.id === (g.本領 || g.at)));
+  親.fief = 14000; 親.age = 32;
+  A.国主に任じる(s, 'oda', '尾張', 親.id);
+
+  const 取れる = s.generals.filter((x) => x.faction === 'oda' && !x.captive && x.id !== 親.id
+    && !x.寄親 && A.寄騎に取れるか(s, 親, x).ok);
+  確('国主の寄騎に取れるのは、その国の城主だけ',
+    取れる.length > 0 && 取れる.every((x) => !!A.城主か(s, x)),
+    取れる.map((x) => `${x.name}（${(A.城主か(s, x) || {}).name}）`).join('・') || 'なし');
+  確('その国の城だけである',
+    取れる.every((x) => (A.城主か(s, x) || {}).kuni === '尾張'));
+
+  const 城主でない = s.generals.find((x) => x.faction === 'oda' && !x.lord && !A.城主か(s, x)
+    && (s.castles.find((c) => c.id === (x.本領 || x.at)) || {}).kuni === '尾張');
+  if (城主でない) {
+    const r = A.寄騎に取れるか(s, 親, 城主でない);
+    確('城を預かっていない者は寄騎にならない', !r.ok, `${城主でない.name}：${r.why}`);
+  }
+  // 国主を寄騎に取れるのは旗頭だけ
+  {
+    const 美濃 = s.castles.find((c) => c.kuni === '美濃');
+    美濃.faction = 'oda';
+    const 別 = s.generals.find((g) => g.faction === 'oda' && !g.lord && !g.役 && g.id !== 親.id && (g.age || 0) >= 25);
+    別.fief = 14000; 別.age = 32; 別.at = 美濃.id; 別.本領 = 美濃.id;
+    美濃.lordId = 別.id;
+    A.国主に任じる(s, 'oda', '美濃', 別.id);
+    const r = A.寄騎に取れるか(s, 親, 別);
+    確('国主を寄騎に取れるのは旗頭だけ（国主どうしでは取れない）', !r.ok, r.why);
+  }
+}
+
+/* ------------------- 旗頭の寄騎は、己の国の城主と方面の国主（GDD 6.4）
+
+   旗頭は方面を預かる。取れるのは、己の本領のある国の城主と、方面の国々の国主で
+   ある。国主を取れば、その国主の下にある城主たちも旗頭の下に連なる。 */
+{
+  const s = A.initState('oda');
+  const 国ら = ['尾張', '美濃', '三河', '伊勢', '近江'];
+  for (const k of 国ら) for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
+  // 国ごとに国主を立てる（家老の身代を与える）
+  const 国主 = {};
+  for (const k of 国ら) {
+    const 城 = s.castles.find((c) => c.faction === 'oda' && c.kuni === k);
+    const g = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役 && (x.age || 0) >= 25
+      && !Object.values(国主).some((y) => y.id === x.id));
+    if (!g) continue;
+    g.fief = 40000; g.age = 34; g.at = 城.id; g.本領 = 城.id; 城.lordId = g.id;
+    if (A.国主に任じる(s, 'oda', k, g.id).ok) 国主[k] = g;
+  }
+  const 旗 = 国主['尾張'];
+  const r = A.旗頭に任じる(s, 'oda', 旗.id, ['尾張', '美濃', '三河']);
+  確('国主から旗頭を立てられる', r.ok, r.ok ? `${旗.name}〔${r.国.join('・')}〕` : r.why);
+
+  if (r.ok) {
+    const 取れる = s.generals.filter((x) => x.faction === 'oda' && !x.captive && x.id !== 旗.id
+      && !x.寄親 && A.寄騎に取れるか(s, 旗, x).ok);
+    const 己国 = (s.castles.find((c) => c.id === (旗.本領 || 旗.at)) || {}).kuni;
+    確('旗頭は方面の国主を寄騎に取れる',
+      取れる.some((x) => x.役 === '国主' && ['美濃', '三河'].includes(x.役国)),
+      取れる.filter((x) => x.役 === '国主').map((x) => `${x.name}（${x.役国}）`).join('・') || 'なし');
+    確('旗頭は己の国の城主も取れる',
+      取れる.some((x) => x.役 !== '国主' && (A.城主か(s, x) || {}).kuni === 己国),
+      取れる.filter((x) => x.役 !== '国主').map((x) => x.name).join('・') || 'なし');
+    確('方面の外の国主は取れない',
+      !取れる.some((x) => x.役 === '国主' && !['尾張', '美濃', '三河'].includes(x.役国)),
+      `方面 ${A.方面の国(旗).join('・')}`);
+    確('城を預かっていない者は取れない', 取れる.every((x) => !!A.城主か(s, x)));
+  }
+}
+
 /* ------------------------------------------- 八、寄親と寄騎（GDD 6.4）
 
    寄騎（与力）とは、大名が家臣に預ける武士である。預かる側を寄親という。
@@ -486,16 +568,18 @@ const 確 = (名, 可, 添 = '') => {
   const 旗 = A.国主たち(s, 'oda')[0];
   確('旗頭がいる', !!旗, 旗 ? `${旗.name}（${旗.役国}の旗頭）` : 'なし');
 
+  /* 寄騎に取れるのは、その国の城主だけである（GDD 6.4）。
+     もとは「その国に本領を持つ侍大将以上」であったが、城を預かっていない者まで
+     並んでいた。城を預ける相手が寄騎なのだから、城主でなければ意味を成さない。 */
   const 同国 = s.generals.filter((g) => g.faction === 'oda' && !g.lord && !g.captive
-    && g.id !== 旗.id && A.身分の位(g, s) >= 2
-    && (s.castles.find((c) => c.id === (g.本領 || g.at)) || {}).kuni === 旗.役国);
-  確('同じ国に本領を持つ侍大将以上は寄騎に取れる',
+    && g.id !== 旗.id && (A.城主か(s, g) || {}).kuni === 旗.役国);
+  確('同じ国の城主は寄騎に取れる',
     同国.length > 0 && A.寄騎に取れるか(s, 旗, 同国[0]).ok,
-    同国.length ? `${同国[0].name}（${A.rankName(同国[0], s)}）` : '候補なし');
+    同国.length ? `${同国[0].name}（${A.rankName(同国[0], s)}・${(A.城主か(s, 同国[0]) || {}).name}）` : '候補なし');
 
   // 別の国の者は取れない
-  const 他国 = s.generals.find((g) => g.faction === 'oda' && !g.lord && A.身分の位(g, s) >= 2
-    && (s.castles.find((c) => c.id === (g.本領 || g.at)) || {}).kuni !== 旗.役国);
+  const 他国 = s.generals.find((g) => g.faction === 'oda' && !g.lord && !!A.城主か(s, g)
+    && (A.城主か(s, g) || {}).kuni !== 旗.役国);
   if (他国) {
     const r = A.寄騎に取れるか(s, 旗, 他国);
     確('別の国に本領を持つ者は寄騎に取れない', !r.ok, r.why);
@@ -511,50 +595,61 @@ const 確 = (名, 可, 添 = '') => {
   // 旗頭どうしは寄騎にならない
   const t = A.initState('oda');
   const 美濃 = t.castles.find((c) => c.kuni === '美濃'); 美濃.faction = 'oda';
-  const 移 = t.generals.find((g) => g.faction === 'oda' && !g.lord && A.身分の位(g, t) >= 2 && g.役 !== '家老');
-  移.at = 美濃.id; 移.本領 = 美濃.id;
+  const 移 = t.generals.find((g) => g.faction === 'oda' && !g.lord && !g.役 && (g.age || 0) >= 25);
+  移.at = 美濃.id; 移.本領 = 美濃.id; 移.fief = 14000; 移.age = 34; 美濃.lordId = 移.id;
   A.国主に任じる(t, 'oda', '美濃', 移.id);
   const 旗2 = A.国主たち(t, 'oda').find((g) => g.役国 === '尾張');
   const r3 = A.寄騎に取れるか(t, 旗2, 移);
   確('旗頭は他の旗頭の寄騎にならない', !r3.ok, r3.why);
 
-  // 取って、解く
-  A.寄騎に取る(s, 旗.id, 同国[0].id);
-  A.寄騎に取る(s, 旗.id, 同国[1].id);
-  確('寄騎に取れる', A.寄騎たち(s, 旗.id).length === 2,
-    A.寄騎たち(s, 旗.id).map((g) => g.name).join('・'));
+  /* 取って、解く。城主だけを寄騎に取るようにしたので、その国の城主の数だけ
+     取れる（尾張なら国主を除いて二名ほど）。 */
+  const 取る数 = Math.min(2, 同国.length);
+  for (const g of 同国.slice(0, 取る数)) A.寄騎に取る(s, 旗.id, g.id);
+  確('その国の城主を寄騎に取れる', A.寄騎たち(s, 旗.id).length === 取る数,
+    `${A.寄騎たち(s, 旗.id).map((g) => g.name).join('・')}（${取る数}名）`);
   確('二人の寄親には付かない', !A.寄騎に取れるか(s, 旗, 同国[0]).ok
     || 同国[0].寄親 === 旗.id, `${同国[0].name}の寄親 ${同国[0].寄親}`);
   A.寄騎を解く(s, 同国[0].id);
-  確('寄騎を解ける', A.寄騎たち(s, 旗.id).length === 1);
+  確('寄騎を解ける', A.寄騎たち(s, 旗.id).length === 取る数 - 1,
+    `${取る数}名 → ${A.寄騎たち(s, 旗.id).length}名`);
 
-  /* 出陣で旗頭を選べば、その寄騎も従う。
-     出陣の画面がしているのと同じ勘定をここで確かめる（画面の中に書くと
-     実際に描いて字を拾わねば測れない）。 */
+  /* 出陣で寄親を選べば、その寄騎の城が加勢に加わる。
+
+     寄騎に取れるのを城主だけに改めたので、寄騎はそれぞれ自分の城にいる。
+     寄親と同じ城に居合わせることはまず無いから、「この城にいる寄騎が従う」
+     だけでは何も起きなくなった。寄騎の城を加勢に初めから加える形に改めた。
+     出陣の画面がしているのと同じ勘定をここで確かめる。 */
   {
     const u = A.initState('oda');
-    const 旗u = A.国主たち(u, 'oda')[0];
-    const 城 = u.castles.find((x) => x.id === 旗u.at);
-    const 同城 = u.generals.filter((g) => g.faction === 'oda' && !g.lord && !g.captive
-      && g.id !== 旗u.id && g.at === 城.id && A.身分の位(g, u) >= 2
-      && (u.castles.find((c) => c.id === (g.本領 || g.at)) || {}).kuni === 旗u.役国);
-    for (const g of 同城.slice(0, 2)) A.寄騎に取る(u, 旗u.id, g.id);
-    const picked = [旗u.id];
-    const gens = u.generals.filter((x) => x.at === 城.id && x.faction === 城.faction && !x.captive);
-    const 選 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
-    const 従 = 選.filter((x) => x.役 === '国主')
-      .flatMap((x) => A.寄騎たち(u, x.id))
-      .filter((x) => x.at === 城.id && !picked.includes(x.id));
-    確('寄親を選べば、その寄騎も出陣に加わる', 従.length === 2,
-      `${旗u.name}のみを選び → ${[...選, ...従].map((x) => x.name).join('・')}（寄騎${従.length}名）`);
+    const 旗u = A.国主たち(u, 'oda').find((g) => g.役国);
+    const 城 = u.castles.find((x) => x.id === (旗u.本領 || 旗u.at));
+    const 同国 = u.generals.filter((g) => g.faction === 'oda' && !g.lord && !g.captive
+      && g.id !== 旗u.id && (A.城主か(u, g) || {}).kuni === 旗u.役国);
+    for (const g of 同国.slice(0, 2)) A.寄騎に取る(u, 旗u.id, g.id);
+    const 従 = A.寄騎たち(u, 旗u.id);
+    確('寄騎はそれぞれ自分の城にいる（同じ城には居合わせない）',
+      従.length > 0 && 従.every((x) => (x.本領 || x.at) !== 城.id),
+      従.map((x) => `${x.name}（${(A.城主か(u, x) || {}).name}）`).join('・') || 'なし');
+    // 画面が加勢に印を付ける先＝寄騎の本領の城
+    const 寄騎の城 = 従.map((x) => x.本領 || x.at).filter((id) => id !== 城.id);
+    確('寄親を選べば、その寄騎の城が加勢の先になる',
+      寄騎の城.length === 従.length,
+      寄騎の城.map((id) => (u.castles.find((c) => c.id === id) || {}).name).join('・') || 'なし');
   }
 
-  // 旗頭でなくなれば、寄騎も解ける
+  // 国主でなくなれば、寄騎も解ける
+  const 前の寄騎 = A.寄騎たち(s, 旗.id).map((x) => x.id);
   旗.役 = null; 旗.役国 = null;
   const 解 = A.寄騎を繕う(s, 'oda');
-  確('旗頭を離れれば、その寄騎も解ける',
-    解.length > 0 && A.寄騎たち(s, 旗.id).length === 0,
-    解.map((g) => g.name).join('・') || 'なし');
+  /* 尾張の城主は国主を除いて二名ほどしかおらず、上で一人を解いているので、
+     残る寄騎が零のこともある。零なら「解けるものが無い」だけで、決まりは
+     働いている。残っていた者が解かれることを見る。 */
+  確('国主を離れれば、その寄騎も解ける',
+    A.寄騎たち(s, 旗.id).length === 0
+      && 前の寄騎.every((id) => !s.generals.find((x) => x.id === id).寄親),
+    前の寄騎.length ? `${解.map((g) => g.name).join('・') || '（すでに解かれていた）'}／前の寄騎 ${前の寄騎.length}名`
+      : '（残る寄騎が無かった）');
 }
 
 /* ------------------------------------------- 九、宿老と方面（GDD 6.4）
@@ -637,7 +732,9 @@ const 確 = (名, 可, 添 = '') => {
   let j = 0;
   for (const k of ['美濃', '三河', '伊勢', '近江']) {
     const c = u.castles.find((x) => x.kuni === k); c.faction = 'oda';
-    const g = 空u[++j]; if (g) { g.at = c.id; g.本領 = c.id; }
+    /* 国主となれるのは家老（禄高八千石）以上である。据えられるよう身代を与える
+       （若年は禄に頭打ちがあるので齢も添える）。 */
+    const g = 空u[++j]; if (g) { g.at = c.id; g.本領 = c.id; g.fief = 14000; g.age = Math.max(g.age || 30, 30); c.lordId = g.id; }
   }
   A.国主を据える(u);
   const 旗u = A.国主たち(u, 'oda').filter((g) => g.役国);

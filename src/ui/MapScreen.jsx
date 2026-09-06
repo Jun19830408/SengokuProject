@@ -2136,6 +2136,20 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               return s2;
             })}
             onHatagashira={(kuni, genId) => setG((p) => 政務.国主に任ずる(p, kuni, genId))}
+            onHatagashiraCorps={(genId) => setG((p) => {
+              /* 旗頭に任じるときは、預ける方面（国々）を添える。
+                 「その者が国主を務める国」と「他の旗頭が預かっていない自領の国」を
+                 まとめて預ける。細かく選ばせると画面が膨らむ。 */
+              const g2 = p.generals.find((x) => x.id === genId);
+              if (!g2) return p;
+              const 持つ国 = [...new Set(p.castles.filter((c2) => c2.faction === p.player).map((c2) => c2.kuni))];
+              const 他の旗頭 = p.generals.filter((x) => x.faction === p.player && x.役 === "旗頭" && x.id !== genId);
+              const 取られた = new Set(他の旗頭.flatMap((x) => (Array.isArray(x.方面) ? x.方面 : [])));
+              const 国ら = [g2.役国, ...持つ国.filter((k) => k !== g2.役国 && !取られた.has(k))]
+                .filter(Boolean).slice(0, 4);
+              return 政務.旗頭に任ずる(p, genId, 国ら);
+            })}
+            onHatagashiraRelease={(genId) => setG((p) => 政務.旗頭を解く下知(p, genId))}
             onYoriki={(genId, 取るか, 寄親id) => setG((p) => {
               const s2 = structuredClone(p);
               const g2 = s2.generals.find((x) => x.id === genId);

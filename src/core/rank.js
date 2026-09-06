@@ -179,7 +179,7 @@ export function 国主に任じる(s, fid, kuni, genId) {
   if (g.lord) return { ok: false, why: "当主は家老に任じられない。" };
   const 城 = s.castles.find((c) => c.id === (g.本領 || g.at));
   if (!城 || 城.kuni !== kuni) {
-    return { ok: false, why: `${g.name}は${kuni}に根を持たない。旗頭はその国に本領を持つ者から選ぶ。` };
+    return { ok: false, why: `${g.name}は${kuni}に根を持たない。国主はその国に本領を持つ者から選ぶ。` };
   }
   /* 役に就くには身分が要る（GDD 6.4）。国主は家老以上。
      身分は禄高で定まるので、まず加増して身代を上げねばならない。 */
@@ -193,7 +193,7 @@ export function 国主に任じる(s, fid, kuni, genId) {
   return { ok: true, 先: 先 || null };
 }
 
-/* 枠を超えた旗頭を解く。国を失えば、その国の旗頭は役を離れる。
+/* 国を失えば、その国の国主は役を離れる。
    国は持っているが枠が足りぬ、ということは起きない（枠＝国の数だから）。 */
 export function 国主を繕う(s, fid) {
   const 持つ国 = new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
@@ -230,20 +230,55 @@ export function 国主を繕う(s, fid) {
 export const 寄騎たち = (s, 寄親id) => s.generals.filter((g) =>
   !g.captive && g.寄親 === 寄親id);
 
-/* 寄騎に取れるか。同じ国に本領を持ち、城主となれる身分の者だけである。 */
+/* その者は城主か。城を預かっている者だけが寄騎になれる（GDD 6.4）。
+
+   寄騎とは、城を預かる者を寄親の差配下に置くことである。城を持たぬ者を寄騎に
+   しても、預けるものが無い（差配とは、その城の政務を任せることだからである）。
+   城にいるだけの者は、その城主の手の者と見なす――大名から見れば陪臣である。 */
+export function 城主か(s, gen) {
+  if (!gen || gen.captive || gen.lord) return null;
+  const c = s.castles.find((x) => x.id === (gen.本領 || gen.at) && x.faction === gen.faction);
+  if (!c) return null;
+  const 主 = castellanOf(s, c);
+  return 主 && 主.id === gen.id ? c : null;
+}
+
+/* 寄騎に取れるか（GDD 6.4）。
+
+   寄親の役によって、取れる相手が違う。
+
+     国主 … その国の城主
+     旗頭 … 己の本領のある国の城主と、方面の国々の国主
+
+   いずれも「城を預かる者」であることが要る。国主を寄騎に取れるのは旗頭だけで、
+   国主を取れば、その国主の下にある城主たちも旗頭の下に連なる。 */
 export function 寄騎に取れるか(s, 寄親, gen) {
   if (!寄親 || !gen || gen.captive) return { ok: false, why: "その者はいない。" };
-  if (寄親.役 !== "国主" || !寄親.役国) return { ok: false, why: `${寄親.name}は旗頭ではない。` };
+  if (寄親.役 !== "国主" && 寄親.役 !== "旗頭") {
+    return { ok: false, why: `${寄親.name}は国主でも旗頭でもない。寄騎を預かれるのは役に就いた者である。` };
+  }
+  if (寄親.役 === "国主" && !寄親.役国) return { ok: false, why: `${寄親.name}は国を預かっていない。` };
   if (gen.id === 寄親.id) return { ok: false, why: "己を寄騎にはできない。" };
   if (gen.lord) return { ok: false, why: "当主は寄騎にならない。" };
   if (gen.faction !== 寄親.faction) return { ok: false, why: "家が違う。" };
-  if (gen.役 === "国主") return { ok: false, why: `${gen.name}は旗頭である。旗頭は寄騎にならない。` };
-  if (身分の位(gen, s) < 2) {
-    return { ok: false, why: `${gen.name}は${rankName(gen, s)}。寄騎となるには侍大将以上の身分が要る。` };
-  }
-  const 城 = s.castles.find((c) => c.id === (gen.本領 || gen.at));
-  if (!城 || 城.kuni !== 寄親.役国) {
-    return { ok: false, why: `${gen.name}は${寄親.役国}に本領を持たない。旗頭が束ねられるのは一国のうちである。` };
+  if (gen.役 === "旗頭") return { ok: false, why: `${gen.name}は旗頭である。旗頭は寄騎にならない。` };
+
+  const 城 = 城主か(s, gen);
+  if (!城) return { ok: false, why: `${gen.name}は城を預かっていない。寄騎になれるのは城主だけである。` };
+
+  if (寄親.役 === "国主") {
+    if (gen.役 === "国主") return { ok: false, why: `${gen.name}は国主である。国主を寄騎に取れるのは旗頭だけ。` };
+    if (城.kuni !== 寄親.役国) {
+      return { ok: false, why: `${城.name}は${寄親.役国}にない。国主が束ねられるのは一国のうちである。` };
+    }
+  } else {
+    const 己城 = s.castles.find((x) => x.id === (寄親.本領 || 寄親.at));
+    const 方面 = 方面の国(寄親);
+    const 同国 = !!己城 && 城.kuni === 己城.kuni;
+    const 国主で方面 = gen.役 === "国主" && 方面.includes(gen.役国);
+    if (!同国 && !国主で方面) {
+      return { ok: false, why: `${gen.name}は${己城 ? 己城.kuni : "旗頭の国"}の城主でも、方面の国主でもない。` };
+    }
   }
   if (gen.寄親 && gen.寄親 !== 寄親.id) {
     const 先 = s.generals.find((x) => x.id === gen.寄親);
