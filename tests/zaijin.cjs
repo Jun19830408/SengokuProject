@@ -19,7 +19,7 @@ const entry = path.join(ROOT, 'build', 'zaijin-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState } from "../src/core/state.js";\n'
-+ 'export { sackCastle, 城を委ねる, 委ねる差配, resolveOffscreen, 軍を解く } from "../src/govern/war.js";\n'
++ 'export { sackCastle, 城を委ねる, 委ねる差配, resolveOffscreen, 軍を解く, 城に合流する, 在陣させる } from "../src/govern/war.js";\n'
 + 'export { stipendOf, castellanOf, 守備隊の統率 } from "../src/core/rank.js";\n'
 + 'export { newRoster, rosterSum } from "../src/core/roster.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n'
@@ -264,6 +264,94 @@ console.log('\n── 九　味方の城へ着いた援軍は、城に入らず�
     確('兵は出陣元へ返る', u.castles.find((x) => x.id === 出す城.id).local >= 前 + 1800 * 0.9,
       `${出す城.name} ${前}人 → ${u.castles.find((x) => x.id === 出す城.id).local}人`);
   }
+}
+
+/* ここから、軍を解いたときの帰り先。
+
+   在陣を解けば将は本領へ帰る。ならば「城へ移す」ためには、根そのものを
+   移さねばならない。移さずにいたので、味方の城へ兵を送って解くと、将が
+   そろって元の城へ舞い戻っていた。移したはずが元通りになる筋である。 */
+console.log('');
+console.log('── 十　味方の城へ入れれば、根もそこへ移る');
+{
+  const s = A.initState('oda');
+  const 自城 = s.castles.filter((c) => c.faction === 'oda');
+  const 元 = 自城[0], 先 = 自城[1];
+  const 将ら = s.generals.filter((x) => x.at === 元.id && x.faction === 'oda' && !x.captive).slice(0, 2);
+  const 当主 = 将ら.find((x) => x.lord);
+  for (const g of 将ら) g.at = null;
+  const 軍 = { id: 'M1', faction: 'oda', from: 元.id, gens: 将ら.map((x) => x.id),
+    local: 2000, localTrain: 70, rost: A.newRoster(2000, 'arm-M1'),
+    men: 2000, at: 先.id, path: [先.id], prog: 0, food: 6000, target: 先.id };
+  s.armies.push(軍);
+  s.pendingArrivals = ['M1'];
+  const u = A.resolveOffscreen(s, 'M1', 先.id);
+  const a = (u.armies || []).find((x) => x.id === 'M1');
+  確('味方の城へ着いた軍は在陣する（勝手に城へ入らない）', !!a && a.在陣 === 先.id);
+  if (a) {
+    A.城に合流する(u, a, u.castles.find((c) => c.id === 先.id));
+    const 移った = 将ら.filter((g) => { const x = u.generals.find((q) => q.id === g.id); return x && x.at === 先.id; });
+    確('城に入れれば、将はその城に居る', 移った.length === 将ら.length,
+      `${移った.length}/${将ら.length}名`);
+    const 根 = 将ら.filter((g) => { const x = u.generals.find((q) => q.id === g.id); return x && (x.lord ? true : x.本領 === 先.id); });
+    確('当主を除き、本領もその城へ移る', 根.length === 将ら.length,
+      将ら.map((g) => { const x = u.generals.find((q) => q.id === g.id);
+        return `${g.name}:${(u.castles.find((c) => c.id === x.本領) || {}).name || '無'}`; }).join(' '));
+    if (当主) 確('当主の本領は動かさない（本拠は別の下知で移す）',
+      u.generals.find((q) => q.id === 当主.id).本領 === 元.id,
+      `${当主.name}:${(u.castles.find((c) => c.id === u.generals.find((q) => q.id === 当主.id).本領) || {}).name}`);
+  }
+}
+
+console.log('');
+console.log('── 十一　帰り先は必ず自家の城');
+{
+  /* 家が城を全て失いながら、なお敵城を囲んでいる軍。以前は盤の先頭の城
+     （たいてい他家のもの）へ将を落としていたので、解いた途端に敵城へ湧いた。 */
+  const s = A.initState('oda');
+  const 的 = s.castles.find((c) => c.faction !== 'oda' && c.local > 800);
+  const 我城 = s.castles.find((c) => c.faction === 'oda');
+  const 将ら = s.generals.filter((g) => g.faction === 'oda' && g.at === 我城.id && !g.captive).slice(0, 2);
+  for (const g of 将ら) { g.at = null; g.本領 = 我城.id; }
+  s.armies.push({ id: 'Z1', faction: 'oda', from: 我城.id, gens: 将ら.map((g) => g.id),
+    local: 1500, localTrain: 70, rost: A.newRoster(1500, 'arm-Z1'), men: 1500,
+    at: 的.id, path: [的.id], prog: 0, food: 6000, target: 的.id });
+  for (const c of s.castles) if (c.faction === 'oda') c.faction = 'imagawa';   // 留守を突かれ、家の城は尽きた
+  const a = s.armies.find((x) => x.id === 'Z1');
+  const 前の本領 = new Map(将ら.map((g) => [g.id, s.generals.find((q) => q.id === g.id).本領]));
+  A.軍を解く(s, a);
+  const 湧いた = 将ら.filter((g) => { const x = s.generals.find((q) => q.id === g.id);
+    const c = s.castles.find((y) => y.id === x.at); return c && c.faction !== 'oda'; });
+  確('他家の城へ将が湧かない', 湧いた.length === 0,
+    湧いた.map((g) => { const x = s.generals.find((q) => q.id === g.id);
+      return `${g.name}→${(s.castles.find((y) => y.id === x.at) || {}).name}`; }).join(' ') || 'なし');
+  /* 本領は元から奪われた城を指したままでよい（滅亡の始末は別の筋が受け持つ）。
+     ここで見るのは「解いた拍子に他家の城へ書き換えないこと」である。 */
+  const 根 = 将ら.filter((g) => { const x = s.generals.find((q) => q.id === g.id);
+    if (x.本領 === 前の本領.get(g.id)) return false;
+    const c = s.castles.find((y) => y.id === x.本領); return c && c.faction !== 'oda'; });
+  確('他家の城を本領に書き換えない', 根.length === 0,
+    根.map((g) => { const x = s.generals.find((q) => q.id === g.id);
+      return `${g.name}→${(s.castles.find((y) => y.id === x.本領) || {}).name}`; }).join(' ') || 'なし');
+}
+
+console.log('');
+console.log('── 十二　本領を失った将は、共に退く軍の帰り先へ落ちる');
+{
+  const s = A.initState('oda');
+  const 自城 = s.castles.filter((c) => c.faction === 'oda');
+  const 元 = 自城[0], 失 = 自城[1];
+  const 的 = s.castles.find((c) => c.faction !== 'oda' && c.local > 800);
+  const 将 = s.generals.find((g) => g.faction === 'oda' && !g.captive && !g.lord && g.at === 元.id);
+  将.at = null; 将.本領 = 失.id;
+  s.armies.push({ id: 'Y1', faction: 'oda', from: 元.id, gens: [将.id],
+    local: 1200, localTrain: 70, rost: A.newRoster(1200, 'arm-Y1'), men: 1200,
+    at: 的.id, path: [的.id], prog: 0, food: 6000, target: 的.id });
+  失.faction = 'imagawa';                                    // 本領は留守に奪われた
+  A.軍を解く(s, s.armies.find((x) => x.id === 'Y1'));
+  const x = s.generals.find((q) => q.id === 将.id);
+  確('出陣元へ落ちる', x.at === 元.id, `${将.name} → ${(s.castles.find((c) => c.id === x.at) || {}).name}`);
+  確('落ちた先が新たな本領になる', x.本領 === 元.id);
 }
 
 console.log('');

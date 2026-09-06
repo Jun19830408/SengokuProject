@@ -44,7 +44,7 @@ import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を�
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 攻められるか, 許しの要る主, 許されているか, 許しを与える, 容認するか, 臣従の主 } from "../core/yurushi.js";
-import { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 旗頭に許す } from "../core/inin.js";
+import { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 旗頭に許す, 自ら采配するか } from "../core/inin.js";
 import { 難を逃れる } from "../core/capture.js";
 import { 記録の訳を読む, 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
@@ -574,7 +574,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const a = g.armies.find((x) => x.id === cl.aId);
     const b = g.armies.find((x) => x.id === cl.bId);
     if (!a || !b) { setG((p) => ({ ...p, clashes: (p.clashes || []).slice(1) })); return; }
-    if (g.autoPlay || (a.faction !== g.player && b.faction !== g.player)) {
+    // 旗頭に預けた手勢の行き合いも、旗頭が捌く（GDD 6.4）
+    if (g.autoPlay || (!自ら采配するか(g, a, null) && !自ら采配するか(g, b, null))) {
       setG((prev) => 合戦裁定.resolveClashOffscreen(prev));
       return;
     }
@@ -590,7 +591,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     if (!a || !dest) { setG((p) => ({ ...p, pendingArrivals: p.pendingArrivals.slice(1) })); return; }
     // 自勢力が関わらない合戦は画面に出さず、同じ規則で自動解決する（GDD 13.2）
     // 試走のときは自勢力の合戦も自動で解く
-    if (g.autoPlay || (a.faction !== g.player && dest.faction !== g.player)) { autoResolve(a.id, dest.id); return; }
+    /* 旗頭に預けた手勢が他家へ寄せる戦は、盤面に出さず旗頭に任せる（GDD 6.4）。
+       自家の城が的なら守りの戦だから、大名が采配を執る。 */
+    if (g.autoPlay || (!自ら采配するか(g, a, dest) && dest.faction !== g.player)) { autoResolve(a.id, dest.id); return; }
     // 後詰が包囲中の城へ着いたら、囲みを解くための野戦になる。
     // 相手は城ではなく、城を囲んでいる軍そのものである。
     if (a.relief) {

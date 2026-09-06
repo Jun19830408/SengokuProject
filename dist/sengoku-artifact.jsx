@@ -17972,10 +17972,9 @@ function \u57CE\u306B\u5408\u6D41\u3059\u308B(s2, army, castle) {
   rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
   for (const gid of army.gens) {
     const x = s2.generals.find((q) => q.id === gid);
-    if (x) {
-      x.at = castle.id;
-      if (!x.\u672C\u9818 || !s2.castles.some((c) => c.id === x.\u672C\u9818 && c.faction === x.faction)) x.\u672C\u9818 = castle.id;
-    }
+    if (!x) continue;
+    x.at = castle.id;
+    if (!x.lord && castle.faction === x.faction) x.\u672C\u9818 = castle.id;
   }
   s2.armies = s2.armies.filter((x) => x.id !== army.id);
   s2.sieges = (s2.sieges || []).filter((x) => x.armyId !== army.id);
@@ -18457,13 +18456,22 @@ function withdrawArmy(s2, army) {
     if (army.rost && army.rost.length) home.rost = [...home.rost || [], ...army.rost];
     rosterSync(home, "rost", home.local, `loc-${home.id}`);
   }
-  const \u63A7 = home || s2.castles.find((x) => x.id === army.at) || s2.castles[0];
+  const \u843D\u3061\u308B\u5148 = (x) => {
+    const \u672C\u9818 = x.\u672C\u9818 && s2.castles.find((c) => c.id === x.\u672C\u9818 && c.faction === x.faction);
+    if (\u672C\u9818) return \u672C\u9818;
+    if (home && home.faction === x.faction) return home;
+    const \u81EA\u9818 = s2.castles.filter((c) => c.faction === x.faction);
+    if (!\u81EA\u9818.length) return null;
+    const \u8FD1\u3044 = \u81EA\u9818.map((c) => ({ c, p: findPath(army.at || army.from, c.id) })).filter((v) => v.p).sort((a, z) => a.p.length - z.p.length)[0];
+    return \u8FD1\u3044 ? \u8FD1\u3044.c : \u81EA\u9818[0];
+  };
   for (const gid of army.gens) {
     const x = s2.generals.find((q) => q.id === gid);
     if (!x || x.captive) continue;
-    const \u672C\u9818 = x.\u672C\u9818 && s2.castles.find((c) => c.id === x.\u672C\u9818 && c.faction === x.faction);
-    x.at = \u672C\u9818 ? \u672C\u9818.id : \u63A7 ? \u63A7.id : x.at;
-    if (!\u672C\u9818 && \u63A7) x.\u672C\u9818 = \u63A7.id;
+    const \u5148 = \u843D\u3061\u308B\u5148(x);
+    if (!\u5148) continue;
+    x.at = \u5148.id;
+    if (\u5148.id !== x.\u672C\u9818) x.\u672C\u9818 = \u5148.id;
   }
   s2.armies = s2.armies.filter((x) => x.id !== army.id);
   s2.sieges = s2.sieges.filter((x) => x.armyId !== army.id);
@@ -18667,6 +18675,11 @@ function \u65D7\u982D\u306E\u9810\u3051\u9AD8(s2, \u65D7) {
   const \u5B9F = \u57CE\u3089.reduce((a, c) => a + \u57CE\u306E\u5B9F\u5165\u308A(c), 0);
   return { \u57CE: \u57CE\u3089, \u5B9F\u5165\u308A: \u5B9F, \u9810\u3051: Math.round(\u5B9F * \u9810\u3051\u306E\u7387(f)) };
 }
+var \u81EA\u3089\u91C7\u914D\u3059\u308B\u304B = (s2, army, \u7684) => {
+  if (!army || army.faction !== s2.player) return false;
+  if (!army.\u65D7\u982D) return true;
+  return !!\u7684 && \u7684.faction === s2.player;
+};
 
 // src/core/muhon.js
 var \u8B00\u53CD\u306E\u76EE = (s2, \u89AA) => {
@@ -28472,7 +28485,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
             onClick: () => onJoinCastle && onJoinCastle(a.id)
           },
           "\u5175\u3092\u57CE\u306B\u5165\u308C\u308B\uFF08\u8ECD\u3092\u7573\u3080\uFF09"
-        ), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u8ECD\u3092\u89E3\u3051\u3070\u3001\u5175\u306F\u51FA\u9663\u5143\u3078\u8FD4\u308A\u3001\u5C06\u306F\u305D\u308C\u305E\u308C\u306E\u672C\u9818\u3078\u5E30\u308A\u307E\u3059\u3002 \u57CE\u306B\u5165\u308C\u308C\u3070\u3001\u5175\u3082\u5C06\u3082\u3053\u306E\u57CE\u306E\u3082\u306E\u306B\u306A\u308A\u307E\u3059\u3002"));
+        ), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 } }, "\u8ECD\u3092\u89E3\u3051\u3070\u3001\u5175\u306F\u51FA\u9663\u5143\u3078\u8FD4\u308A\u3001\u5C06\u306F\u305D\u308C\u305E\u308C\u306E\u672C\u9818\u3078\u5E30\u308A\u307E\u3059\u3002 \u57CE\u306B\u5165\u308C\u308C\u3070\u3001\u5175\u3082\u5C06\u3082\u3053\u306E\u57CE\u306E\u3082\u306E\u306B\u306A\u308A\u3001\u5C06\u306E\u672C\u9818\u3082\u3053\u306E\u57CE\u3078\u79FB\u308A\u307E\u3059\u3002"));
       });
     })(), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: U.dim, marginBottom: 8 } }, "\u51FA\u305B\u308B\u5175 ", fmt(total), " \u4EBA\uFF08\u5B88\u308B\u306B\u8981\u308B\u5175 ", fmt(garrison), " \u4EBA\u306F\u76EE\u5B89\u3002 \u57CE\u3092\u7A7A\u306B\u3057\u3066\u51FA\u308B\u3053\u3068\u3082\u3067\u304D\u308B\u304C\u3001\u653B\u3081\u3089\u308C\u308C\u3070\u843D\u3061\u308B\uFF09"), /* @__PURE__ */ React5.createElement("button", { className: "btn dark", style: { width: "100%" }, disabled: total < 200 || !gens.length, onClick: onSortie }, "\u51FA\u9663"), (() => {
       if (c.faction !== g.player) return null;
@@ -29962,7 +29975,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       setG((p) => ({ ...p, clashes: (p.clashes || []).slice(1) }));
       return;
     }
-    if (g.autoPlay || a.faction !== g.player && b.faction !== g.player) {
+    if (g.autoPlay || !\u81EA\u3089\u91C7\u914D\u3059\u308B\u304B(g, a, null) && !\u81EA\u3089\u91C7\u914D\u3059\u308B\u304B(g, b, null)) {
       setG((prev) => resolveClashOffscreen(prev));
       return;
     }
@@ -29978,7 +29991,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       setG((p) => ({ ...p, pendingArrivals: p.pendingArrivals.slice(1) }));
       return;
     }
-    if (g.autoPlay || a.faction !== g.player && dest.faction !== g.player) {
+    if (g.autoPlay || !\u81EA\u3089\u91C7\u914D\u3059\u308B\u304B(g, a, dest) && dest.faction !== g.player) {
       autoResolve(a.id, dest.id);
       return;
     }

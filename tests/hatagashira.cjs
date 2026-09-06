@@ -14,7 +14,7 @@ const path = require('path');
 const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 const { initState, advanceMonth, 国主に任じる, 旗頭に任じる, 旗頭の狙い, 旗頭に許す,
   旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭の調略,
-  castellanOf, underMyBanner, 軍の道, 城の実入り } = H;
+  castellanOf, underMyBanner, 軍の道, 城の実入り, 自ら采配するか } = H;
 
 const 咎 = [];
 const 確 = (名, 可, 添 = '') => {
@@ -130,6 +130,32 @@ console.log('\n── 六　旗頭は調略も差配する');
   let 無 = null;
   for (let i = 0; i < 12 && !無; i++) { t.year++; 無 = 旗頭の調略(t, 旗t, { 残: 0 }); }
   確('預け高が尽きていれば仕掛けない', !無, 無 ? `${無.手}を仕掛けた` : '仕掛けなかった');
+}
+
+console.log('\n── 七　旗頭に預けた戦は、大名の盤面に出さない');
+{
+  /* 方面を預け、攻めを許したのに、いざ城下に着くと合戦の盤が大名の前に開き、
+     大名が駒を動かす形になっていた。これでは任せたことにならない。
+     許しを与えるところまでが大名の役で、その先は旗頭が指図する。 */
+  const { s, 旗 } = 場();
+  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner });
+  旗頭に許す(s, 旗.id, 狙.的.id);
+  let u = s, 出 = null;
+  for (let i = 0; i < 6 && !出; i++) { u = advanceMonth(u); 出 = (u.armies || []).find((a) => a.旗頭 === 旗.id); }
+  確('旗頭の軍が出ている', !!出);
+  if (出) {
+    const 的 = u.castles.find((c) => c.id === 出.target);
+    確('その軍は旗頭の印を負う', 出.旗頭 === 旗.id);
+    確('他家へ寄せる戦は大名の盤面に出ない', 自ら采配するか(u, 出, 的) === false,
+      `${(u.generals.find((x) => x.id === 旗.id) || {}).name}の軍 → ${的 ? 的.name : '?'}`);
+    確('街道での行き合いも旗頭が捌く', 自ら采配するか(u, 出, null) === false);
+    const 自城 = u.castles.find((c) => c.faction === 'oda');
+    確('ただし自家の城を守る戦なら、大名が采配を執る', 自ら采配するか(u, 出, 自城) === true,
+      `${自城.name}`);
+  }
+  const 直 = { id: 'D1', faction: 'oda', gens: [], men: 1000 };
+  確('大名の直の手勢は、これまで通り大名が動かす', 自ら采配するか(u, 直, u.castles.find((c) => c.faction !== 'oda')) === true);
+  確('他家の軍は大名の盤面に出ない', 自ら采配するか(u, { id: 'E1', faction: 'imagawa' }, null) === false);
 }
 
 console.log(`\n════ 旗頭の差配：咎 ${咎.length} 件`);

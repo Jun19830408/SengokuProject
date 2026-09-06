@@ -513,7 +513,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                             onClick={() => onJoinCastle && onJoinCastle(a.id)}>兵を城に入れる（軍を畳む）</button>
                           <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
                             軍を解けば、兵は出陣元へ返り、将はそれぞれの本領へ帰ります。
-                            城に入れれば、兵も将もこの城のものになります。
+                            城に入れれば、兵も将もこの城のものになり、将の本領もこの城へ移ります。
                           </div>
                         </div>
                       );
