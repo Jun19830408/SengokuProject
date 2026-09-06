@@ -189,7 +189,7 @@ export function 国主に任ずる(prev, kuni, genId) {
 /* 旗頭に任じ、方面を預ける（GDD 6.4）。
 
    柴田勝家の北国、明智光秀の丹波、羽柴秀吉の中国――信長が方面軍を置いたのが
-   これである。一国を旗頭が預かり、その旗頭たちを宿老が束ねる。
+   これである。一国を国主が預かり、その国主たちを旗頭が束ねる。
 
    選べるのは旗頭を務めている者だけ。一国も預かったことのない者に方面は
    委ねられない。置ける数は四国につき一人である。 */
@@ -199,7 +199,7 @@ export function 旗頭に任ずる(prev, genId, 国ら) {
   if (!r.ok) { s.msg = r.why; return prev; }
   const g = s.generals.find((x) => x.id === genId);
   s.chronicle.push({ y: s.year, m: s.month,
-    text: `${g.name}を宿老に任じ、${r.国.join("・")}の方面を委ねた。` });
+    text: `${g.name}を旗頭に任じ、${r.国.join("・")}の方面を委ねた。` });
   s.msg = `${g.name}が${r.国.join("・")}を束ねる。`;
   return s;
 }

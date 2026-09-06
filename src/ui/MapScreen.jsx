@@ -44,6 +44,7 @@ import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を�
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 攻められるか, 許しの要る主, 許されているか, 許しを与える, 容認するか, 臣従の主 } from "../core/yurushi.js";
+import { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段 } from "../core/inin.js";
 import { 難を逃れる } from "../core/capture.js";
 import { 記録の訳を読む, 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
@@ -2029,6 +2030,25 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             });
           })()}
         </select>
+        {/* 預けの目盛り（GDD 6.4）。家全体で一つ。
+
+            委ねた城が生んだ実入りを、そのまま寄親に預けるのを「並」とする。
+            少なめにすれば余りが本家の蔵に残り、多めにすれば本家が足してやる。
+            金そのものは動かさない――これは「その月に使ってよい額の上限」である。
+
+            預けた城が一つも無ければ、目盛りを出しても意味がないので隠す。 */}
+        {差配を預けた城(g, g.player).length > 0 && (
+          <select className="sel" value={pf.預け == null ? 1 : pf.預け}
+            onChange={(e) => setG((p) => { const s = structuredClone(p); s.factions[s.player].預け = +e.target.value; return s; })}>
+            {預けの段.map((x, i) => {
+              const 高 = 預け高(g, g.player).reduce((a, v) => a + v.預け, 0);
+              const 並 = Math.round(高 / (預けの段[pf.預け == null ? 1 : pf.預け].率 || 1));
+              return (<option key={x.名} value={i}>
+                {`預け：${x.名}（${差配を預けた城(g, g.player).length}城・月${fmt(Math.round(並 * x.率))}貫）`}
+              </option>);
+            })}
+          </select>
+        )}
         <button className="btn sm" onClick={() => setModal("manual")}>遊び方</button>
         <button className="btn sm" onClick={() => setModal("chronicle")}>戦国記</button>
         <button className="btn sm" onClick={() => setModal("save")}>

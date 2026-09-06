@@ -19,6 +19,7 @@ import { canHoldCastle } from "../core/rank.js";
 import { 基準値, 売値, 相場, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
+import { 城の寄親 } from "../core/inin.js";
 import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 
@@ -33,6 +34,8 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
      内政も軍事も調略もこちらの下知で動く。ただし所領は安堵されているので、
      その家の者を自家の城へ移すことはできない（出陣の行き先で縛ってある）。 */
   const 差配 = mine || isVassal(g, g.player, c.faction);
+  // その城の政務を預けている相手（寄親）。いれば大名は下知しない（GDD 6.4）
+  const 預け先 = mine ? 城の寄親(g, c) : null;
   const lord = castellanOf(g, c);
   const [cmd, setCmd] = useState("開墾");
   const [genId, setGenId] = useState(null);
@@ -277,7 +280,23 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                 ))}
               </div>
 
-              {tab === "内政" && (done ? (
+              {/* 差配を預けた城（GDD 6.4）。政務は寄親が行うので、大名は下知しない。
+                  任せたのだから細かくは見せず、誰に預けているかだけを示す。
+                  成果と収支は月報に一行で出る。 */}
+              {tab === "内政" && 預け先 && (
+                <div style={{ border: `1px solid ${U.line2}`, borderLeft: "3px solid #4A6E8A",
+                  padding: "8px 10px", marginBottom: 10, background: "rgba(74,110,138,.06)" }}>
+                  <div className="mn" style={{ fontSize: 15, marginBottom: 2 }}>
+                    {預け先.name}に差配を預けています
+                  </div>
+                  <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75 }}>
+                    この城の政務は{預け先.name}（{預け先.役}）が行います。大名が下知する要はありません。<br />
+                    使う金は預け高で縛られ、成果と収支は月の報せに出ます。
+                    自ら見たいときは、城の「人事」から寄騎を解いてください。
+                  </div>
+                </div>
+              )}
+              {tab === "内政" && !預け先 && (done ? (
                 <div style={{ fontSize: 12, color: U.dim }}>
                   この城の者はみな本月の務めを果たした。次月へ進めば、また働ける。
                 </div>
@@ -591,6 +610,9 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                               <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
                                 寄騎は<b style={{ color: U.text }}>大名の直臣</b>であって、寄親の家臣ではありません。
                                 いつでも解けます。寄親を出陣させれば、寄騎も従って一手の軍となります。
+                                <br />そして<b style={{ color: U.text }}>寄騎の城は、その月の政務を寄親が差配します</b>。
+                                大名が下知せずとも、開墾・治水・徴募・訓練が進みます。
+                                使う金は「預け高」で縛られます（委ねた城の実入りに、地図の「預け」の目盛りを掛けたもの）。
                               </div>
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                                 {従.map((x) => (

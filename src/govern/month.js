@@ -24,6 +24,8 @@ import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 軍の道 } from "../core/state.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
+import { 城の寄親, 差配を預けた城, 預け高 } from "../core/inin.js";
+import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
 /* ==========================================================================
    月送り ─ 天下じゅうの一月
    この一手で、諸家の内政・調略・出陣・包囲・寿命・一揆・官位までが動く。
@@ -892,30 +894,55 @@ export function advanceMonth(prev, g) {
         sg2.relief = rid;
         events.push(`${s.factions[cs.faction].name}が${cs.name}へ後詰を差し向けた（${from.c2.name}より${fmt(send)}人）。`);
       }
-      // 他家も国を治める。捨て置くと兵も石高も増えず、天下の形がいつまでも動かない。
+      /* 他家も国を治める。捨て置くと兵も石高も増えず、天下の形がいつまでも動かない。
+
+         遊ぶ側の城のうち、差配を寄親に預けたものも同じ手で治める（GDD 6.4）。
+         大名がいちいち下知せずとも、寄親の差配で開墾・治水・徴募・訓練が進む。
+         これが寄騎を与えることの利である。
+
+         使ってよい額は「預け高」で縛る。財布は家に一つのままで、金そのものは
+         動かさない――予算とは承認であって、口座を分けることではない。 */
+      const 預け帳 = new Map();
+      for (const v of 預け高(s, s.player)) 預け帳.set(v.親.id, { 残: v.預け, 使: 0, 親: v.親, 石: 0, 兵: 0 });
       for (const fid of Object.keys(s.factions)) {
-        if (!auto(fid)) continue;
+        const 委任あり = fid === s.player && 預け帳.size > 0;
+        if (!auto(fid) && !委任あり) continue;
         const f2 = s.factions[fid];
         for (const c of s.castles.filter((x) => x.faction === fid)) {
+          /* 遊ぶ側の城は、差配を預けたものだけを采配が治める。
+             自ら見る城には手を出さない。 */
+          let 蔵 = null;
+          if (fid === s.player) {
+            const 親 = 城の寄親(s, c);
+            if (!親) continue;
+            蔵 = 預け帳.get(親.id);
+            if (!蔵 || 蔵.残 <= 0) continue;
+          }
           if (s.sieges.some((sg) => sg.castleId === c.id)) continue;   // 囲まれた城では何もできない
           const gens2 = s.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive);
           const gov2 = gens2.length ? Math.max(...gens2.map((x) => x.gov)) : 50;
+          /* 費えを払う。委任した城では、預け高の残りからも引く。
+             残りが足りねば、その手は打たない。 */
+          const 払える = (額) => (!蔵 ? f2.gold >= 額 : 蔵.残 >= 額 && f2.gold >= 額);
+          const 払う = (額) => { f2.gold -= 額; if (蔵) { 蔵.残 -= 額; 蔵.使 += 額; } };
           // 開墾と治水
-          if (f2.gold > 400 && Math.random() < 0.5 * lv(s).aiGrow) {
+          if (f2.gold > 400 && 払える(180) && Math.random() < 0.5 * lv(s).aiGrow) {
             const room = c.kokuMax - c.koku;
+            const 前石 = c.koku;
             if (room > c.kokuMax * 0.04) {
-              c.koku += Math.round(room * 0.12 * (0.5 + gov2 / 100) * lv(s).aiGrow); f2.gold -= 140;
+              c.koku += Math.round(room * 0.12 * (0.5 + gov2 / 100) * lv(s).aiGrow); 払う(140);
             } else {
               const cap2 = c.kokuCap || c.kokuMax;
               const add = Math.min(Math.max(0, cap2 - c.kokuMax), Math.round(c.kokuMax * 0.03 * (0.5 + gov2 / 100)));
-              if (add > 0) { c.kokuMax += add; f2.gold -= 180; }
+              if (add > 0) { c.kokuMax += add; 払う(180); }
             }
+            if (蔵) 蔵.石 += c.koku - 前石;
           }
           // 徴募
           const cap = troopCap(c, f2.mobilization, s);
           const cur = c.local + gens2.reduce((a, x) => a + x.retinue, 0);
           // 一国を丸ごと押さえたら竿を入れる。国を治める者の当然の務めである。
-          if (!f2.kenchiTried || s.month === 4) {
+          if (!蔵 && (!f2.kenchiTried || s.month === 4)) {
             for (const kuni of provincesHeld(s, fid)) {
               if (kenchiDone(s, kuni)) continue;
               const cost2 = kenchiCost(s, kuni);
@@ -932,15 +959,27 @@ export function advanceMonth(prev, g) {
           // 兵は養うもの。限度いっぱいまで抱えると国が痩せ、城が難攻不落になって天下が凍る。
           const want = Math.round(cap * 0.7);
           if (f2.gold > 700 && cur < want) {
-            const n = Math.max(0, Math.min(want - cur, Math.floor((f2.gold - 500) / 0.45), Math.floor(c.pop * 0.010)));
+            const 出せる = 蔵 ? Math.floor(蔵.残 / 0.45) : Infinity;
+            const n = Math.max(0, Math.min(want - cur, Math.floor((f2.gold - 500) / 0.45),
+              Math.floor(c.pop * 0.010), 出せる));
             if (n > 60) {
-              c.local += n; f2.gold -= Math.round(n * 0.45);
+              c.local += n; 払う(Math.round(n * 0.45));
               rosterSync(c, "rost", c.local, `loc-${c.id}`);
               c.pop -= Math.round(n * 0.2);
+              if (蔵) 蔵.兵 += n;
             }
           }
           if (Math.random() < 0.25) c.localTrain = Math.min(100, c.localTrain + 2);
         }
+      }
+      /* 預けた者の報せ（GDD 6.4）。任せたのだから細かくは出さず、
+         月に一行――何城を預かり、いくら預けていくら使い、何を成したか。 */
+      for (const v of 預け帳.values()) {
+        if (!v.使 && !v.石 && !v.兵) continue;
+        const 城数 = 差配を預けた城(s, s.player).filter((c) => (城の寄親(s, c) || {}).id === v.親.id).length;
+        events.push(`${v.親.name}が${城数}城を差配（預け${fmt(v.残 + v.使)}貫のうち${fmt(v.使)}貫を用い、`
+          + `石高${v.石 > 0 ? `+${fmt(Math.round(v.石))}石` : "は据え置き"}`
+          + `${v.兵 > 0 ? `・兵+${fmt(v.兵)}人` : ""}）。`);
       }
       // 家ごとに方針を見直す（GDD 13.2）
       for (const fid of Object.keys(s.factions)) {
@@ -1222,6 +1261,23 @@ export function advanceMonth(prev, g) {
       }
       /* 将のいない軍も同じである。率いる者がいなければ軍ではない。
          地図に数字だけが浮き、城の帳には「将なし」の軍が並ぶことになる。 */
+      /* 謀反の見回り（GDD 6.4 / 12.3）。
+
+         寄騎を多く預けた寄親ほど危うい。忠誠七十を保てば起きないので、
+         褒賞・加増・寄騎を減らす、という手が効く。段を踏ませ、いきなりは
+         起こさない――手が打てたのに打たなかった不幸だけが物語になる。 */
+      for (const fid2 of Object.keys(s.factions)) {
+        const 起 = 謀反の見回り(s, fid2, {
+          告げる: (t) => {
+            s.chronicle.push({ y: s.year, m: s.month, text: t });
+            if (fid2 === s.player) events.push(t);
+          },
+        });
+        if (起.length && fid2 === s.player) {
+          const f3 = s.factions[fid2];
+          f3.prestige = clamp((f3.prestige == null ? 50 : f3.prestige) - 5, 0, 100);
+        }
+      }
       // 済んだ攻めの許しを片づける（落とした城・主の変わった家）
       済んだ許しを片づける(s);
       // 本拠は当主のいる城を追う。陣触れはここから出る（GDD 6.4）
