@@ -12437,6 +12437,15 @@ function extraIncome(c) {
   const mountain = Math.max(0, 40 - c.comm) * 70;
   return Math.min(Math.round(trade + sea + mountain), Math.round(c.koku * 0.55 + 4200));
 }
+function fiefCapacity(c) {
+  return c ? c.koku : 0;
+}
+function \u57CE\u306E\u77E5\u884C\u306E\u4F59\u5730(s2, castleId) {
+  const c = s2.castles.find((x) => x.id === castleId);
+  if (!c) return { cap: 0, used: 0, left: 0 };
+  const used = fiefBurden(s2, castleId);
+  return { cap: fiefCapacity(c), used, left: fiefCapacity(c) - used };
+}
 function fiefBurden(s2, castleId) {
   return s2.generals.filter((g) => (g.\u672C\u9818 || g.at) === castleId && !g.captive && !g.lord).reduce((a, g) => a + fiefOf(g), 0);
 }
@@ -17334,10 +17343,14 @@ function grantFief(prev, genId, delta) {
   const gen = s2.generals.find((x) => x.id === genId);
   if (!gen || gen.captive) return s2;
   const room = fiefRoom(s2, s2.player);
-  const \u4F59\u5730 = Math.max(0, room.left);
+  const \u57CE\u4F59 = \u57CE\u306E\u77E5\u884C\u306E\u4F59\u5730(s2, gen.\u672C\u9818 || gen.at);
+  const \u4F59\u5730 = Math.max(0, Math.min(room.left, \u57CE\u4F59.left));
   const d = delta > 0 ? Math.min(delta, \u4F59\u5730) : Math.max(delta, -fiefOf(gen));
   if (!d) {
-    if (delta > 0) s2.msg = `\u914D\u308C\u308B\u77E5\u884C\u304C\u6B8B\u3063\u3066\u3044\u306A\u3044\uFF08\u77F3\u9AD8 ${fmt(room.cap)}\u77F3\u306E\u3046\u3061 ${fmt(room.used)}\u77F3\u3092\u914D\u5206\u6E08\uFF09\u3002`;
+    if (delta > 0) {
+      const \u57CE = s2.castles.find((x) => x.id === (gen.\u672C\u9818 || gen.at));
+      s2.msg = room.left <= 0 ? `\u914D\u308C\u308B\u77E5\u884C\u304C\u6B8B\u3063\u3066\u3044\u306A\u3044\uFF08\u5BB6\u306E\u77F3\u9AD8 ${fmt(room.cap)}\u77F3\u306E\u3046\u3061 ${fmt(room.used)}\u77F3\u3092\u914D\u5206\u6E08\uFF09\u3002` : `${\u57CE ? \u57CE.name : "\u672C\u9818"}\u306B\u914D\u308C\u308B\u7530\u304C\u6B8B\u3063\u3066\u3044\u306A\u3044\uFF08\u77F3\u9AD8 ${fmt(\u57CE\u4F59.cap)}\u77F3\u306E\u3046\u3061 ${fmt(\u57CE\u4F59.used)}\u77F3\u3092\u914D\u5206\u6E08\uFF09\u3002\u5927\u8EAB\u306E\u8005\u3092\u62B1\u3048\u308B\u306B\u306F\u3001\u5927\u304D\u306A\u57CE\u3092\u4E0E\u3048\u308B\u3053\u3068\u3002`;
+    }
     return s2;
   }
   const before = fiefOf(gen);
@@ -17714,6 +17727,60 @@ function \u8ABF\u7565\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B } = {}) {
     s2.orders[\u624B.id] = { cmd: `\u8ABF\u7565\u30FB${key}`, castleId: \u624B.at };
     if (\u544A\u3052\u308B) \u544A\u3052\u308B(`${f.name}\u304C${\u7684.name}\u3078${key}\u3092\u4ED5\u639B\u3051\u305F\u3002`);
     return { \u624B: key, \u5148: \u7684.id };
+  }
+  return null;
+}
+function \u65D7\u982D\u306E\u8ABF\u7565(s2, \u65D7, { \u544A\u3052\u308B, \u6B8B } = {}) {
+  const fid = \u65D7.faction;
+  const f = s2.factions[fid];
+  if (!f) return null;
+  const \u65B9\u9762 = Array.isArray(\u65D7.\u65B9\u9762) ? \u65D7.\u65B9\u9762 : [];
+  if (!\u65B9\u9762.length) return null;
+  const \u5F15\u304F = \u7C64(s2.\u5353 || "\u5353", "\u65D7\u8ABF\u7565", \u65D7.id, s2.year, s2.month);
+  if (\u5F15\u304F() > 0.22) return null;
+  if ((s2.plots || []).some((p) => p.\u65D7\u982D === \u65D7.id)) return null;
+  const \u5DF1\u65B9 = s2.castles.filter((c) => c.faction === fid && \u65B9\u9762.includes(c.kuni));
+  if (!\u5DF1\u65B9.length) return null;
+  const \u7684\u3089 = [];
+  for (const \u62E0 of \u5DF1\u65B9) {
+    for (const c of s2.castles) {
+      if (c.faction === fid) continue;
+      const rel = relOf2(s2, fid, c.faction);
+      if (["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E", "\u4E0D\u53EF\u4FB5"].includes(rel.state)) continue;
+      const d = Math.hypot(\u62E0.x - c.x, \u62E0.y - c.y);
+      if (d < 220) \u7684\u3089.push({ c, d });
+    }
+  }
+  if (!\u7684\u3089.length) return null;
+  const \u7684 = \u7684\u3089.sort((a, b) => a.d - b.d)[0].c;
+  const \u624B = s2.generals.filter((x) => x.faction === fid && x.at && !x.captive && !(s2.orders || {})[x.id] && \u5DF1\u65B9.some((c) => c.id === x.at)).sort((a, b) => b.wit - a.wit)[0];
+  if (!\u624B) return null;
+  const \u57CE\u4E2D = s2.generals.filter((x) => x.at === \u7684.id && x.faction === \u7684.faction && !x.lord && !x.captive);
+  const \u5FC3\u306E\u96E2\u308C\u305F = [...\u57CE\u4E2D].sort((a, b) => (a.loyal == null ? 60 : a.loyal) - (b.loyal == null ? 60 : b.loyal))[0];
+  const \u57CE\u4E3B = \u57CE\u4E2D.length ? [...\u57CE\u4E2D].sort((a, b) => b.lead + b.gov - (a.lead + a.gov))[0] : null;
+  const \u5019\u88DC = [];
+  if (\u5FC3\u306E\u96E2\u308C\u305F && (\u5FC3\u306E\u96E2\u308C\u305F.loyal == null ? 60 : \u5FC3\u306E\u96E2\u308C\u305F.loyal) < 62) \u5019\u88DC.push(["\u5185\u5FDC", \u57CE\u4E3B], ["\u5F15\u304D\u629C\u304D", \u5FC3\u306E\u96E2\u308C\u305F]);
+  \u5019\u88DC.push(["\u5BC6\u7D04", \u57CE\u4E3B], ["\u57CE\u5DE5\u4F5C", null], ["\u6D41\u8A00", null], ["\u5075\u5BDF", null]);
+  for (const [key, mato] of \u5019\u88DC) {
+    const def = PLOTS.find((x) => x.key === key);
+    if (!def) continue;
+    if (f.gold < def.cost * 1.2) continue;
+    if (\u6B8B != null && \u6B8B < def.cost) continue;
+    if (\u624B.wit < def.need - 14) continue;
+    if ((def.mato === "\u8981" || def.mato === "\u57CE\u4E3B") && (!mato || mato.at !== \u7684.id)) continue;
+    f.gold -= def.cost;
+    s2.plots.push({
+      type: key,
+      castleId: \u7684.id,
+      genId: \u624B.id,
+      faction: fid,
+      monthsLeft: def.months,
+      matoId: mato ? mato.id : null,
+      \u65D7\u982D: \u65D7.id
+    });
+    s2.orders[\u624B.id] = { cmd: `\u8ABF\u7565\u30FB${key}`, castleId: \u624B.at };
+    if (\u544A\u3052\u308B) \u544A\u3052\u308B(`${\u65D7.name}\u304C${\u7684.name}\u3078${key}\u3092\u4ED5\u639B\u3051\u305F\uFF08\u65B9\u9762\u306E\u5DEE\u914D\uFF09\u3002`);
+    return { \u624B: key, \u5148: \u7684.id, \u8CBB\u3048: def.cost };
   }
   return null;
 }
@@ -18555,6 +18622,51 @@ function \u9810\u3051\u9AD8(s2, fid) {
   for (const v of \u5E33.values()) v.\u9810\u3051 = Math.round(v.\u5B9F\u5165\u308A * \u7387);
   return [...\u5E33.values()];
 }
+var \u65D7\u982D\u306E\u8A31\u3057\u63A7\u3048 = (s2) => s2.\u65D7\u982D\u306E\u8A31\u3057 = s2.\u65D7\u982D\u306E\u8A31\u3057 || [];
+var \u65D7\u982D\u306F\u8A31\u3055\u308C\u3066\u3044\u308B\u304B = (s2, \u65D7\u982Did, castleId) => \u65D7\u982D\u306E\u8A31\u3057\u63A7\u3048(s2).some((x) => x.\u65D7\u982D === \u65D7\u982Did && x.castleId === castleId);
+function \u65D7\u982D\u306B\u8A31\u3059(s2, \u65D7\u982Did, castleId) {
+  if (\u65D7\u982D\u306F\u8A31\u3055\u308C\u3066\u3044\u308B\u304B(s2, \u65D7\u982Did, castleId)) return s2;
+  \u65D7\u982D\u306E\u8A31\u3057\u63A7\u3048(s2).push({ \u65D7\u982D: \u65D7\u982Did, castleId, y: s2.year, m: s2.month });
+  return s2;
+}
+function \u65D7\u982D\u306E\u6E08\u3093\u3060\u8A31\u3057\u3092\u7247\u3065\u3051\u308B(s2) {
+  s2.\u65D7\u982D\u306E\u8A31\u3057 = \u65D7\u982D\u306E\u8A31\u3057\u63A7\u3048(s2).filter((x) => {
+    const c = (s2.castles || []).find((y) => y.id === x.castleId);
+    const g = (s2.generals || []).find((y) => y.id === x.\u65D7\u982D);
+    if (!c || !g || g.captive) return false;
+    if (c.faction === g.faction) return false;
+    if (g.\u5F79 !== "\u65D7\u982D") return false;
+    return true;
+  });
+  return s2;
+}
+function \u65D7\u982D\u306E\u72D9\u3044(s2, \u65D7, { \u9053: \u9053\u3092\u5F15\u304F, \u65D7\u306E\u4E0B } = {}) {
+  const \u65B9\u9762 = Array.isArray(\u65D7.\u65B9\u9762) ? \u65D7.\u65B9\u9762 : [];
+  if (!\u65B9\u9762.length) return null;
+  const \u5DF1\u65B9 = (s2.castles || []).filter((c) => c.faction === \u65D7.faction && \u65B9\u9762.includes(c.kuni));
+  if (!\u5DF1\u65B9.length) return null;
+  const \u898B = [];
+  for (const \u62E0 of \u5DF1\u65B9) {
+    for (const \u7684 of s2.castles) {
+      if (\u7684.faction === \u65D7.faction) continue;
+      if (\u65D7\u306E\u4E0B && \u65D7\u306E\u4E0B(s2, \u65D7.faction, \u7684.faction)) continue;
+      const \u9053 = \u9053\u3092\u5F15\u304F ? \u9053\u3092\u5F15\u304F(s2, \u65D7.faction, \u62E0.id, \u7684.id) : null;
+      if (!\u9053 || \u9053.length !== 2) continue;
+      const \u5B88 = \u7684.local + (s2.generals || []).filter((x) => x.at === \u7684.id && x.faction === \u7684.faction && !x.captive).reduce((a, x) => a + x.retinue, 0);
+      \u898B.push({ \u7684, \u62E0, \u5B88 });
+    }
+  }
+  if (!\u898B.length) return null;
+  \u898B.sort((a, b) => a.\u5B88 - b.\u5B88);
+  return \u898B[0];
+}
+function \u65D7\u982D\u306E\u9810\u3051\u9AD8(s2, \u65D7) {
+  const f = (s2.factions || {})[\u65D7.faction] || {};
+  const \u65B9\u9762 = Array.isArray(\u65D7.\u65B9\u9762) ? \u65D7.\u65B9\u9762 : [];
+  const \u57CE\u3089 = (s2.castles || []).filter((c) => c.faction === \u65D7.faction && \u65B9\u9762.includes(c.kuni));
+  const \u5B9F = \u57CE\u3089.reduce((a, c) => a + \u57CE\u306E\u5B9F\u5165\u308A(c), 0);
+  return { \u57CE: \u57CE\u3089, \u5B9F\u5165\u308A: \u5B9F, \u9810\u3051: Math.round(\u5B9F * \u9810\u3051\u306E\u7387(f)) };
+}
 
 // src/core/muhon.js
 var \u8B00\u53CD\u306E\u76EE = (s2, \u89AA) => {
@@ -18934,8 +19046,9 @@ function advanceMonth(prev, g) {
       if (cand && (cand.loyal == null ? 60 : cand.loyal) < 70) {
         cand.faction = pl.faction;
         cand.loyal = 60;
-        const home = s2.castles.find((x) => x.faction === pl.faction);
+        const home = s2.castles.find((x) => x.id === (s2.factions[pl.faction] || {}).\u672C\u62E0) || s2.castles.find((x) => x.faction === pl.faction);
         cand.at = home ? home.id : cand.at;
+        if (home) cand.\u672C\u9818 = home.id;
         say(`${cand.name}\u304C${s2.factions[pl.faction].name}\u3078\u5BDD\u8FD4\u3063\u305F\u3002`);
       } else {
         say(cand ? `${cand.name}\u306F\u8A98\u3044\u306B\u5FDC\u3058\u306A\u304B\u3063\u305F\uFF08\u5FE0\u8AA0${Math.round(cand.loyal == null ? 60 : cand.loyal)}\u300270\u3092\u4E0B\u56DE\u3089\u306D\u3070\u52D5\u304B\u306C\uFF09\u3002` : `${target.name}\u306B\u8A98\u3048\u308B\u6B66\u5C06\u304C\u3044\u306A\u304B\u3063\u305F\u3002`);
@@ -19772,6 +19885,71 @@ function advanceMonth(prev, g) {
       const f3 = s2.factions[fid2];
       f3.prestige = clamp((f3.prestige == null ? 50 : f3.prestige) - 5, 0, 100);
     }
+  }
+  \u65D7\u982D\u306E\u6E08\u3093\u3060\u8A31\u3057\u3092\u7247\u3065\u3051\u308B(s2);
+  for (const \u65D7 of s2.generals.filter((g2) => g2.faction === s2.player && g2.\u5F79 === "\u65D7\u982D" && !g2.captive)) {
+    const \u65B9\u9762 = Array.isArray(\u65D7.\u65B9\u9762) ? \u65D7.\u65B9\u9762 : [];
+    if (!\u65B9\u9762.length) continue;
+    const \u8A31 = (s2.\u65D7\u982D\u306E\u8A31\u3057 || []).filter((x) => x.\u65D7\u982D === \u65D7.id);
+    let \u51FA\u305F = false;
+    for (const k of \u8A31) {
+      const \u7684 = s2.castles.find((c2) => c2.id === k.castleId);
+      if (!\u7684 || \u7684.faction === s2.player) continue;
+      if (s2.armies.some((a) => a.faction === s2.player && a.target === \u7684.id)) {
+        \u51FA\u305F = true;
+        break;
+      }
+      const \u62E0\u3089 = s2.castles.filter((c2) => c2.faction === s2.player && \u65B9\u9762.includes(c2.kuni)).map((c2) => ({ c2, \u9053: \u8ECD\u306E\u9053(s2, s2.player, c2.id, \u7684.id) })).filter((x) => x.\u9053).sort((a, b) => a.\u9053.length - b.\u9053.length);
+      for (const { c2, \u9053 } of \u62E0\u3089) {
+        const gens3 = s2.generals.filter((x) => x.at === c2.id && x.faction === s2.player && !x.captive && !x.lord);
+        if (!gens3.length) continue;
+        const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
+        const dg4 = s2.generals.filter((x) => x.at === \u7684.id && x.faction === \u7684.faction && !x.captive);
+        const \u5B88 = \u7684.local + dg4.reduce((a, x) => a + x.retinue, 0);
+        if (avail3 < \u5B88 * 1.15) continue;
+        const take3 = [...gens3].sort((a, b) => b.lead - a.lead).slice(0, 3);
+        const send3 = Math.round(avail3 * 0.8);
+        const loc3 = Math.max(0, Math.min(c2.local, send3 - take3.reduce((a, x) => a + x.retinue, 0)));
+        if (loc3 < 200) continue;
+        c2.local -= loc3;
+        const tk3 = rosterTake(c2.rost || newRoster(c2.local + loc3, `loc-${c2.id}`), loc3);
+        c2.rost = tk3.rest;
+        s2.armies.push({
+          id: \u8ECD\u306E\u540D(s2, "h"),
+          faction: s2.player,
+          from: c2.id,
+          gens: take3.map((x) => x.id),
+          local: loc3,
+          localTrain: c2.localTrain,
+          rost: tk3.taken,
+          men: loc3 + take3.reduce((a, x) => a + x.retinue, 0),
+          at: c2.id,
+          path: \u9053,
+          prog: 0,
+          food: Math.round(send3 * 0.6),
+          target: \u7684.id,
+          \u65D7\u982D: \u65D7.id
+        });
+        for (const t3 of take3) t3.at = null;
+        c2.food -= Math.round(send3 * 0.6);
+        events.push(`${\u65D7.name}\u304C${c2.name}\u3088\u308A\u51FA\u9663\u3002${\u7684.name}\u3092\u76EE\u6307\u3059\uFF08\u65B9\u9762\u306E\u5DEE\u914D\uFF09\u3002`);
+        \u51FA\u305F = true;
+        break;
+      }
+      if (\u51FA\u305F) break;
+    }
+    if (\u51FA\u305F || \u8A31.length) continue;
+    if (s2.\u65D7\u982D\u306E\u9858\u3044) continue;
+    const \u72D9 = \u65D7\u982D\u306E\u72D9\u3044(s2, \u65D7, { \u9053: \u8ECD\u306E\u9053, \u65D7\u306E\u4E0B: underMyBanner });
+    if (!\u72D9) continue;
+    s2.\u65D7\u982D\u306E\u9858\u3044 = { \u65D7\u982D: \u65D7.id, castleId: \u72D9.\u7684.id, y: s2.year, m: s2.month };
+    events.push(`${\u65D7.name}\u3088\u308A\u3001${\u72D9.\u7684.name}\uFF08${s2.factions[\u72D9.\u7684.faction].name}\uFF09\u3092\u653B\u3081\u305F\u3044\u3068\u306E\u9858\u3044\u304C\u3042\u3063\u305F\u3002`);
+  }
+  for (const \u65D7 of s2.generals.filter((g2) => g2.faction === s2.player && g2.\u5F79 === "\u65D7\u982D" && !g2.captive)) {
+    const \u9AD8 = \u65D7\u982D\u306E\u9810\u3051\u9AD8(s2, \u65D7);
+    const \u4F7F = (s2.plots || []).filter((p) => p.\u65D7\u982D === \u65D7.id).length;
+    if (\u4F7F) continue;
+    \u65D7\u982D\u306E\u8ABF\u7565(s2, \u65D7, { \u6B8B: \u9AD8.\u9810\u3051, \u544A\u3052\u308B: (t) => events.push(t) });
   }
   \u6E08\u3093\u3060\u8A31\u3057\u3092\u7247\u3065\u3051\u308B(s2);
   \u672C\u62E0\u3092\u8FFD\u3046(s2);
@@ -25907,6 +26085,7 @@ function \u57CE\u3092\u59D4\u306D\u308B\u554F\u3044({ g, \u5F85\u3061, onDone, o
   const [\u57CE\u4E3B, set\u57CE\u4E3B] = useState2(null);
   const [\u6240\u5C5E, set\u6240\u5C5E] = useState2([]);
   const [\u5175, set\u5175] = useState2(a ? Math.round((a.local || 0) * 0.4) : 0);
+  const [\u5BC4\u9A0E\u306B\u3059\u308B, set\u5BC4\u9A0E\u306B\u3059\u308B] = useState2(true);
   if (!c || !a) return null;
   const \u7F6E\u304F = [.../* @__PURE__ */ new Set([...\u6240\u5C5E, ...\u57CE\u4E3B ? [\u57CE\u4E3B] : []])];
   const \u6B8B\u308B\u5C06 = \u5C06\u3089.filter((x) => !\u7F6E\u304F.includes(x.id));
@@ -25941,12 +26120,33 @@ function \u57CE\u3092\u59D4\u306D\u308B\u554F\u3044({ g, \u5F85\u3061, onDone, o
       style: { width: "100%" },
       onChange: (e) => set\u5175(Number(e.target.value))
     }
-  ), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u6B8B\u3059\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u5175), " \u4EBA\uFF0F\u8ECD\u306E\u5730\u306E\u5175 ", fmt(a.local || 0), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u3053\u306E\u57CE\u306E\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v", style: { color: \u57CE\u306E\u5175 < \u5B88\u308A ? "#B0483C" : void 0 } }, fmt(\u57CE\u306E\u5175), " \u4EBA\uFF08\u5B88\u308B\u306B\u8981\u308B\u76EE\u5B89 ", fmt(\u5B88\u308A), " \u4EBA\uFF09")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5148\u3078\u9032\u3081\u308B\u8ECD"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, \u6B8B\u308B\u5C06.length, "\u540D\uFF0F\u5175 ", fmt(Math.max(0, (a.local || 0) - \u5175) + \u6B8B\u308B\u5C06.reduce((t, x) => t + x.retinue, 0)), " \u4EBA")), !\u57CE\u4E3B && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: "#B0483C", marginTop: 6, lineHeight: 1.7 } }, "\u57CE\u4E3B\u3092\u636E\u3048\u306D\u3070\u3001\u3053\u306E\u57CE\u3067\u306F\u5185\u653F\u304C\u3067\u304D\u307E\u305B\u3093\uFF08\u5B88\u5099\u968A\u306E\u7D71\u7387\u3082\u56DB\u5341\u306E\u307E\u307E\u3067\u3059\uFF09\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 14 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onSkip }, "\u7A7A\u3051\u305F\u307E\u307E\u9032\u3080"), /* @__PURE__ */ React2.createElement(
+  ), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u6B8B\u3059\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u5175), " \u4EBA\uFF0F\u8ECD\u306E\u5730\u306E\u5175 ", fmt(a.local || 0), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u3053\u306E\u57CE\u306E\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v", style: { color: \u57CE\u306E\u5175 < \u5B88\u308A ? "#B0483C" : void 0 } }, fmt(\u57CE\u306E\u5175), " \u4EBA\uFF08\u5B88\u308B\u306B\u8981\u308B\u76EE\u5B89 ", fmt(\u5B88\u308A), " \u4EBA\uFF09")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5148\u3078\u9032\u3081\u308B\u8ECD"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, \u6B8B\u308B\u5C06.length, "\u540D\uFF0F\u5175 ", fmt(Math.max(0, (a.local || 0) - \u5175) + \u6B8B\u308B\u5C06.reduce((t, x) => t + x.retinue, 0)), " \u4EBA")), !\u57CE\u4E3B && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: "#B0483C", marginTop: 6, lineHeight: 1.7 } }, "\u57CE\u4E3B\u3092\u636E\u3048\u306D\u3070\u3001\u3053\u306E\u57CE\u3067\u306F\u5185\u653F\u304C\u3067\u304D\u307E\u305B\u3093\uFF08\u5B88\u5099\u968A\u306E\u7D71\u7387\u3082\u56DB\u5341\u306E\u307E\u307E\u3067\u3059\uFF09\u3002"), \u57CE\u4E3B && a.\u65D7\u982D && (() => {
+    const \u65D7 = g.generals.find((x) => x.id === a.\u65D7\u982D && x.\u5F79 === "\u65D7\u982D" && !x.captive);
+    if (!\u65D7) return null;
+    return /* @__PURE__ */ React2.createElement("div", { style: { marginTop: 10, borderTop: `1px solid ${U.line2}`, paddingTop: 8 } }, /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u3053\u306E\u57CE\u306E\u5DEE\u914D"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 } }, \u65D7.name, "\u304C\u65B9\u9762\u306E\u5175\u3067\u843D\u3068\u3057\u305F\u57CE\u3067\u3059\u3002", \u65D7.name, "\u306E\u5BC4\u9A0E\u3068\u3059\u308C\u3070\u3001\u4EE5\u5F8C\u306E\u653F\u52D9\u306F", \u65D7.name, "\u304C\u5DEE\u914D\u3057\u307E\u3059\uFF08\u5927\u540D\u306E\u4E0B\u77E5\u306F\u8981\u308A\u307E\u305B\u3093\uFF09\u3002\u76F4\u8F44\u3068\u3059\u308C\u3070\u5927\u540D\u304C\u81EA\u3089\u898B\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React2.createElement(
+      "button",
+      {
+        className: `btn sm ${\u5BC4\u9A0E\u306B\u3059\u308B ? "on" : ""}`,
+        style: { flex: 1 },
+        onClick: () => set\u5BC4\u9A0E\u306B\u3059\u308B(true)
+      },
+      \u65D7.name,
+      "\u306E\u5BC4\u9A0E\u3068\u3059\u308B"
+    ), /* @__PURE__ */ React2.createElement(
+      "button",
+      {
+        className: `btn sm ${\u5BC4\u9A0E\u306B\u3059\u308B ? "" : "on"}`,
+        style: { flex: 1 },
+        onClick: () => set\u5BC4\u9A0E\u306B\u3059\u308B(false)
+      },
+      "\u5927\u540D\u306E\u76F4\u8F44\u3068\u3059\u308B"
+    )));
+  })(), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 14 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onSkip }, "\u7A7A\u3051\u305F\u307E\u307E\u9032\u3080"), /* @__PURE__ */ React2.createElement(
     "button",
     {
       className: "btn dark",
       style: { flex: 2 },
-      onClick: () => onDone({ \u57CE\u4E3B, \u6240\u5C5E, \u5175 })
+      onClick: () => onDone({ \u57CE\u4E3B, \u6240\u5C5E, \u5175, \u5BC4\u89AA: \u5BC4\u9A0E\u306B\u3059\u308B && a.\u65D7\u982D ? a.\u65D7\u982D : null })
     },
     \u57CE\u4E3B ? `${(\u5C06\u3089.find((x) => x.id === \u57CE\u4E3B) || {}).name}\u306B\u59D4\u306D\u308B` : "\u3053\u306E\u5DEE\u914D\u3067\u6C7A\u3081\u308B"
   ))));
@@ -31475,6 +31675,34 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         setTimeout(() => launchSortie(q.p), 0);
       } }, "\u9858\u3044\u51FA\u308B"))));
     })(),
+    g.\u65D7\u982D\u306E\u9858\u3044 && !battle && (() => {
+      const \u9858 = g.\u65D7\u982D\u306E\u9858\u3044;
+      const \u65D7 = g.generals.find((x) => x.id === \u9858.\u65D7\u982D);
+      const \u57CE = g.castles.find((x) => x.id === \u9858.castleId);
+      if (!\u65D7 || !\u57CE) {
+        setG((p) => ({ ...p, \u65D7\u982D\u306E\u9858\u3044: null }));
+        return null;
+      }
+      const \u7684 = g.factions[\u57CE.faction];
+      const \u5B88 = \u57CE.local + g.generals.filter((x) => x.at === \u57CE.id && x.faction === \u57CE.faction && !x.captive).reduce((a, x) => a + x.retinue, 0);
+      const r = relOf2(g, g.player, \u57CE.faction);
+      return /* @__PURE__ */ React8.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React8.createElement("div", { className: "card" }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 6 } }, \u65D7.name, "\u3088\u308A\u306E\u9858\u3044"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 13.5, lineHeight: 1.9, marginBottom: 10 } }, /* @__PURE__ */ React8.createElement("b", { className: "mn" }, \u57CE.name), "\uFF08", \u7684 ? \u7684.name : "", "\uFF09\u3092\u653B\u3081\u305F\u3044\u3001\u3068\u7533\u3057\u3066\u304A\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("div", { className: "row" }, /* @__PURE__ */ React8.createElement("span", null, "\u65B9\u9762"), /* @__PURE__ */ React8.createElement("span", { className: "v" }, (\u65D7.\u65B9\u9762 || []).join("\u30FB") || "\u2014")), /* @__PURE__ */ React8.createElement("div", { className: "row" }, /* @__PURE__ */ React8.createElement("span", null, "\u305D\u306E\u57CE\u306E\u5175"), /* @__PURE__ */ React8.createElement("span", { className: "v num" }, fmt(\u5B88), " \u4EBA")), /* @__PURE__ */ React8.createElement("div", { className: "row" }, /* @__PURE__ */ React8.createElement("span", null, "\u77F3\u9AD8"), /* @__PURE__ */ React8.createElement("span", { className: "v num" }, fmt(Math.round(\u57CE.koku)), " \u77F3")), /* @__PURE__ */ React8.createElement("div", { className: "row" }, /* @__PURE__ */ React8.createElement("span", null, "\u305D\u306E\u5BB6\u3068\u306E\u9593\u67C4"), /* @__PURE__ */ React8.createElement("span", { className: "v" }, r.state, "\uFF08\u4FE1\u7528 ", Math.round(r.trust), "\uFF09")), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginTop: 8, lineHeight: 1.8 } }, "\u5BB9\u8A8D\u3059\u308C\u3070\u3001", \u65D7.name, "\u304C\u65B9\u9762\u306E\u57CE\u304B\u3089\u81EA\u3089\u5175\u3092\u51FA\u3057\u307E\u3059\u3002\u843D\u3068\u305B\u3070\u3001 \u8AB0\u3092\u57CE\u4E3B\u306B\u636E\u3048\u308B\u304B\u3001\u305D\u3057\u3066", \u65D7.name, "\u306E\u5BC4\u9A0E\u3068\u3059\u308B\u304B\u76F4\u8F44\u3068\u3059\u308B\u304B\u3092\u3001\u305D\u306E\u3068\u304D\u554F\u3044\u307E\u3059\u3002", /* @__PURE__ */ React8.createElement("br", null), "\u5374\u4E0B\u3059\u308C\u3070\u52D5\u304D\u307E\u305B\u3093\u3002\u8A31\u3057\u306F\u57CE\u3054\u3068\u3067\u3001\u843D\u3068\u3059\u307E\u3067\u7D9A\u304D\u307E\u3059\u3002", ["\u540C\u76DF", "\u4E0D\u53EF\u4FB5", "\u5F93\u5C5E", "\u81E3\u5F93"].includes(r.state) && /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement("br", null), /* @__PURE__ */ React8.createElement("span", { style: { color: "#B0483C" } }, "\u81EA\u5BB6\u306F", \u7684 ? \u7684.name : "\u305D\u306E\u5BB6", "\u3068", r.state, "\u306E\u9593\u67C4\u306B\u3042\u308A\u307E\u3059\u3002\u653B\u3081\u308C\u3070\u3001\u305D\u306E\u7D04\u675F\u306F\u7834\u308C\u307E\u3059\u3002"))), /* @__PURE__ */ React8.createElement("div", { style: { display: "flex", gap: 9, marginTop: 16 } }, /* @__PURE__ */ React8.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => setG((prev) => {
+        const s2 = structuredClone(prev);
+        s2.\u65D7\u982D\u306E\u9858\u3044 = null;
+        const \u6587 = `${\u65D7.name}\u306E${\u57CE.name}\u653B\u3081\u3092\u5374\u4E0B\u3057\u305F\u3002`;
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+        s2.msg = \u6587;
+        return s2;
+      }) }, "\u5374\u4E0B\u3059\u308B"), /* @__PURE__ */ React8.createElement("button", { className: "btn dark", style: { flex: 1 }, onClick: () => setG((prev) => {
+        const s2 = structuredClone(prev);
+        s2.\u65D7\u982D\u306E\u9858\u3044 = null;
+        \u65D7\u982D\u306B\u8A31\u3059(s2, \u9858.\u65D7\u982D, \u9858.castleId);
+        const \u6587 = `${\u65D7.name}\u306B${\u57CE.name}\u653B\u3081\u3092\u8A31\u3057\u305F\u3002`;
+        s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+        s2.msg = \u6587;
+        return s2;
+      }) }, "\u5BB9\u8A8D\u3059\u308B"))));
+    })(),
     g.\u653B\u3081\u306E\u9858\u3044 && !battle && /* @__PURE__ */ React8.createElement(
       \u653B\u3081\u306E\u9858\u3044\u554F\u3044,
       {
@@ -31921,11 +32149,16 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         s2.\u59D4\u306D\u308B\u5F85\u3061 = (s2.\u59D4\u306D\u308B\u5F85\u3061 || []).filter((x) => x.castleId !== \u5F85\u3061.castleId);
         const c = s2.castles.find((x) => x.id === \u5F85\u3061.castleId);
         const \u4E3B = \u5DEE\u914D && \u5DEE\u914D.\u57CE\u4E3B && s2.generals.find((x) => x.id === \u5DEE\u914D.\u57CE\u4E3B);
+        let \u5BC4\u305B\u305F = null;
+        if (\u4E3B && \u5DEE\u914D.\u5BC4\u89AA) {
+          const r = \u5BC4\u9A0E\u306B\u53D6\u308B(s2, \u5DEE\u914D.\u5BC4\u89AA, \u4E3B.id);
+          if (r.ok) \u5BC4\u305B\u305F = s2.generals.find((x) => x.id === \u5DEE\u914D.\u5BC4\u89AA);
+        }
         if (c) {
           s2.chronicle.push({
             y: s2.year,
             m: s2.month,
-            text: \u4E3B ? `${c.name}\u3092${\u4E3B.name}\u306B\u59D4\u306D\u305F\u3002` : `${c.name}\u306B\u306F\u57CE\u4E3B\u3092\u7F6E\u304B\u305A\u3001\u8ECD\u306F\u5728\u9663\u306E\u307E\u307E\u9032\u3080\u3002`
+            text: \u4E3B ? `${c.name}\u3092${\u4E3B.name}\u306B\u59D4\u306D\u305F${\u5BC4\u305B\u305F ? `\uFF08${\u5BC4\u305B\u305F.name}\u306E\u5BC4\u9A0E\u3068\u3059\u308B\uFF09` : "\uFF08\u5927\u540D\u306E\u76F4\u8F44\uFF09"}\u3002` : `${c.name}\u306B\u306F\u57CE\u4E3B\u3092\u7F6E\u304B\u305A\u3001\u8ECD\u306F\u5728\u9663\u306E\u307E\u307E\u9032\u3080\u3002`
           });
         }
         return s2;

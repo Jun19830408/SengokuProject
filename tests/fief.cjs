@@ -18,7 +18,7 @@ const entry = path.join(ROOT, 'build', 'fief-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState, migrateSave, 国主を据える } from "../src/core/state.js";\n'
-+ 'export { 城主か, fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, canBeKeeper, 預かりの格, castellanOf, rankName, 身分の位, 軍役の器, 国主の枠, 国主たち, 国の国主, 国主に任じる, 国主を繕う, 寄騎たち, 寄騎に取れるか, 寄騎に取る, 寄騎を解く, 寄騎を繕う, 旗頭の枠, 旗頭たち, 方面の国, 国の旗頭, 旗頭に任じる, 旗頭を解く, 旗頭を繕う, 陣触れの届き, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
++ 'export { 城主か, 城の知行の余地, fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, canBeKeeper, 預かりの格, castellanOf, rankName, 身分の位, 軍役の器, 国主の枠, 国主たち, 国の国主, 国主に任じる, 国主を繕う, 寄騎たち, 寄騎に取れるか, 寄騎に取る, 寄騎を解く, 寄騎を繕う, 旗頭の枠, 旗頭たち, 方面の国, 国の旗頭, 旗頭に任じる, 旗頭を解く, 旗頭を繕う, 陣触れの届き, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
 + 'export { grantFief, appoint, 国主に任ずる, 旗頭に任ずる, 旗頭を解く下知 } from "../src/govern/commands.js";\n'
 + 'export { isMainClan } from "../src/core/house.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n');
@@ -469,6 +469,45 @@ const 確 = (名, 可, 添 = '') => {
   const v = A.国主に任ずる(u, '美濃', 誰.id);
   確('下知からも国主に任じられる', A.国主たち(v, 'oda').length === 2,
     (v.chronicle.slice(-1)[0] || {}).text || 'なし');
+}
+
+/* -------------------- 知行は城の石高が限り（GDD 6.4）
+
+   知行は、その者の本領の石高から分け与えられる田の高である。無い田は配れない。
+
+   長らくこの限りは誰からも呼ばれておらず、四万石の城に五万石と三万石の者が
+   根を張ることもできた。大名の取り分が零になるだけで破綻はしないが、
+   「城の石高がその限り」と定めておきながら効いていないのは緩みである。
+
+   加増のとき、家全体の余地と、本領の城の余地と、狭いほうで縛る。 */
+{
+  const s = A.initState('oda');
+  const 城 = s.castles.find((c) => c.faction === 'oda');
+  const 余 = A.城の知行の余地(s, 城.id);
+  確('城ごとの余地が測れる', 余.cap > 0 && 余.left === 余.cap - 余.used,
+    `${城.name} 石高${String(Math.round(余.cap))}石／配分済${String(Math.round(余.used))}石／余地${String(Math.round(余.left))}石`);
+
+  const g = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.captive
+    && (x.本領 || x.at) === 城.id);
+  const 前 = A.fiefOf ? A.fiefOf(g) : g.fief;
+  // 城の余地を使い切ってから、さらに加増を試みる
+  const t = A.grantFief(s, g.id, Math.round(余.left));
+  const g2 = t.generals.find((x) => x.id === g.id);
+  確('城の余地のぶんは加増できる', g2.fief > 前,
+    `${g.name} ${String(前)}石 → ${String(g2.fief)}石`);
+  const 余2 = A.城の知行の余地(t, 城.id);
+  確('使い切れば城の余地は無くなる', 余2.left <= 1, `余地 ${Math.round(余2.left)}石`);
+
+  const u = A.grantFief(t, g.id, 5000);
+  const g3 = u.generals.find((x) => x.id === g.id);
+  確('城の田が尽きれば、それ以上は配れない', g3.fief === g2.fief,
+    `${String(g2.fief)}石のまま／${u.msg || ''}`);
+  確('断りに、どの城の田が尽きたかを出す', /田が残っていない/.test(u.msg || ''), u.msg || 'なし');
+
+  // 家全体の余地が残っていても、城の余地が無ければ配れない
+  const 家余 = A.fiefRoom(u, 'oda');
+  確('家の余地はまだ残っている（縛っているのは城の限りである）', 家余.left > 0,
+    `家の余地 ${String(Math.round(家余.left))}石`);
 }
 
 /* ---------------------------- 寄騎に取れるのは城主だけ（GDD 6.4）

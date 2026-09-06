@@ -44,7 +44,7 @@ import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を�
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 攻められるか, 許しの要る主, 許されているか, 許しを与える, 容認するか, 臣従の主 } from "../core/yurushi.js";
-import { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段 } from "../core/inin.js";
+import { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 旗頭に許す } from "../core/inin.js";
 import { 難を逃れる } from "../core/capture.js";
 import { 記録の訳を読む, 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
@@ -2412,6 +2412,65 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             </div>
           );
         })()}
+        {/* 旗頭からの攻めの願い（GDD 6.4）。
+
+            方面を預けたのだから、どこを攻めるかは旗頭が見立てる。ただし攻める前に
+            大名の許しを乞う――どこへ攻め入るかは家の運を決めるからである。
+            容認すれば、旗頭が方面の城から自ら兵を出す。 */}
+        {g.旗頭の願い && !battle && (() => {
+          const 願 = g.旗頭の願い;
+          const 旗 = g.generals.find((x) => x.id === 願.旗頭);
+          const 城 = g.castles.find((x) => x.id === 願.castleId);
+          if (!旗 || !城) { setG((p) => ({ ...p, 旗頭の願い: null })); return null; }
+          const 的 = g.factions[城.faction];
+          const 守 = 城.local + g.generals.filter((x) => x.at === 城.id && x.faction === 城.faction && !x.captive)
+            .reduce((a, x) => a + x.retinue, 0);
+          const r = relOf(g, g.player, 城.faction);
+          return (
+            <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+              <div className="card">
+                <div className="mn" style={{ fontSize: 21, marginBottom: 6 }}>{旗.name}よりの願い</div>
+                <div style={{ fontSize: 13.5, lineHeight: 1.9, marginBottom: 10 }}>
+                  <b className="mn">{城.name}</b>（{的 ? 的.name : ""}）を攻めたい、と申しております。
+                </div>
+                <div className="row"><span>方面</span><span className="v">{(旗.方面 || []).join("・") || "—"}</span></div>
+                <div className="row"><span>その城の兵</span><span className="v num">{fmt(守)} 人</span></div>
+                <div className="row"><span>石高</span><span className="v num">{fmt(Math.round(城.koku))} 石</span></div>
+                <div className="row"><span>その家との間柄</span>
+                  <span className="v">{r.state}（信用 {Math.round(r.trust)}）</span></div>
+                <div style={{ fontSize: 11.5, color: U.dim, marginTop: 8, lineHeight: 1.8 }}>
+                  容認すれば、{旗.name}が方面の城から自ら兵を出します。落とせば、
+                  誰を城主に据えるか、そして{旗.name}の寄騎とするか直轄とするかを、そのとき問います。<br />
+                  却下すれば動きません。許しは城ごとで、落とすまで続きます。
+                  {["同盟", "不可侵", "従属", "臣従"].includes(r.state) && (
+                    <><br /><span style={{ color: "#B0483C" }}>
+                      自家は{的 ? 的.name : "その家"}と{r.state}の間柄にあります。攻めれば、その約束は破れます。
+                    </span></>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
+                  <button className="btn" style={{ flex: 1 }} onClick={() => setG((prev) => {
+                    const s2 = structuredClone(prev);
+                    s2.旗頭の願い = null;
+                    const 文 = `${旗.name}の${城.name}攻めを却下した。`;
+                    s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
+                    s2.msg = 文;
+                    return s2;
+                  })}>却下する</button>
+                  <button className="btn dark" style={{ flex: 1 }} onClick={() => setG((prev) => {
+                    const s2 = structuredClone(prev);
+                    s2.旗頭の願い = null;
+                    旗頭に許す(s2, 願.旗頭, 願.castleId);
+                    const 文 = `${旗.name}に${城.name}攻めを許した。`;
+                    s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
+                    s2.msg = 文;
+                    return s2;
+                  })}>容認する</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
         {/* 臣従した家からの攻めの願い（GDD 12.2）。容認すればその家が自ら攻める。 */}
         {g.攻めの願い && !battle && (
           <攻めの願い問い g={g} 願={g.攻めの願い}
@@ -2903,9 +2962,18 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             s.委ねる待ち = (s.委ねる待ち || []).filter((x) => x.castleId !== 待ち.castleId);
             const c = s.castles.find((x) => x.id === 待ち.castleId);
             const 主 = 差配 && 差配.城主 && s.generals.find((x) => x.id === 差配.城主);
+            /* 旗頭が落とした城は、その旗頭の寄騎とすることができる（GDD 6.4）。
+               寄騎とすれば、以後その城の政務は旗頭が差配する。 */
+            let 寄せた = null;
+            if (主 && 差配.寄親) {
+              const r = 寄騎に取る(s, 差配.寄親, 主.id);
+              if (r.ok) 寄せた = s.generals.find((x) => x.id === 差配.寄親);
+            }
             if (c) {
               s.chronicle.push({ y: s.year, m: s.month,
-                text: 主 ? `${c.name}を${主.name}に委ねた。` : `${c.name}には城主を置かず、軍は在陣のまま進む。` });
+                text: 主
+                  ? `${c.name}を${主.name}に委ねた${寄せた ? `（${寄せた.name}の寄騎とする）` : "（大名の直轄）"}。`
+                  : `${c.name}には城主を置かず、軍は在陣のまま進む。` });
             }
             return s;
           });

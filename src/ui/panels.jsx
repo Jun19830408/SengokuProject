@@ -2080,6 +2080,8 @@ export function 城を委ねる問い({ g, 待ち, onDone, onSkip }) {
   const [城主, set城主] = useState(null);
   const [所属, set所属] = useState([]);
   const [兵, set兵] = useState(a ? Math.round((a.local || 0) * 0.4) : 0);
+  // 旗頭が落とした城なら、その寄騎とするか直轄とするかを選ぶ（既定は寄騎）
+  const [寄騎にする, set寄騎にする] = useState(true);
   if (!c || !a) return null;
   const 置く = [...new Set([...所属, ...(城主 ? [城主] : [])])];
   const 残る将 = 将ら.filter((x) => !置く.includes(x.id));
@@ -2138,10 +2140,32 @@ export function 城を委ねる問い({ g, 待ち, onDone, onSkip }) {
           </div>
         )}
 
+        {/* 旗頭が落とした城は、その旗頭の寄騎とするか、大名の直轄とするかを選ぶ
+            （GDD 6.4）。寄騎とすればその城の政務は旗頭が差配し、方面が育つ。
+            直轄とすれば大名が自ら見る。干渉地の置きどころを決める手である。 */}
+        {城主 && a.旗頭 && (() => {
+          const 旗 = g.generals.find((x) => x.id === a.旗頭 && x.役 === "旗頭" && !x.captive);
+          if (!旗) return null;
+          return (
+            <div style={{ marginTop: 10, borderTop: `1px solid ${U.line2}`, paddingTop: 8 }}>
+              <div className="sec">この城の差配</div>
+              <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
+                {旗.name}が方面の兵で落とした城です。{旗.name}の寄騎とすれば、以後の政務は
+                {旗.name}が差配します（大名の下知は要りません）。直轄とすれば大名が自ら見ます。
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button className={`btn sm ${寄騎にする ? "on" : ""}`} style={{ flex: 1 }}
+                  onClick={() => set寄騎にする(true)}>{旗.name}の寄騎とする</button>
+                <button className={`btn sm ${寄騎にする ? "" : "on"}`} style={{ flex: 1 }}
+                  onClick={() => set寄騎にする(false)}>大名の直轄とする</button>
+              </div>
+            </div>
+          );
+        })()}
         <div style={{ display: "flex", gap: 9, marginTop: 14 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onSkip}>空けたまま進む</button>
           <button className="btn dark" style={{ flex: 2 }}
-            onClick={() => onDone({ 城主, 所属, 兵 })}>
+            onClick={() => onDone({ 城主, 所属, 兵, 寄親: 寄騎にする && a.旗頭 ? a.旗頭 : null })}>
             {城主 ? `${(将ら.find((x) => x.id === 城主) || {}).name}に委ねる` : "この差配で決める"}
           </button>
         </div>

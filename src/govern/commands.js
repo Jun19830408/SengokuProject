@@ -1,7 +1,7 @@
 import { captiveRecruit, payRansom, ransomAccept, ransomCost } from "../core/capture.js";
 import { succeed } from "../core/house.js";
 import { holdsProvince, kenchiCost, kenchiDone, rankBonus, runKenchi } from "../core/province.js";
-import { fiefOf, fiefRoom, troopCap , 軍役の器, 軍役の増 } from "../core/rank.js";
+import { fiefOf, fiefRoom, troopCap , 軍役の器, 軍役の増, 城の知行の余地 } from "../core/rank.js";
 import { rosterSync } from "../core/roster.js";
 import { relKey, 己の盟約, 主を探す, 旗の下に入る, relOf } from "../core/state.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
@@ -607,10 +607,25 @@ export function grantFief(prev, genId, delta) {
        そこへ Math.min(加増, 余地) と書いていたため、余地が負のときに
        「四千石を与える」が「八万石を召し上げる」に化けていた。
        与えるほうは、余地が無ければ何も起こさない。 */
-    const 余地 = Math.max(0, room.left);
+    /* 城ごとの限りも見る（GDD 6.4）。
+
+       知行は、その者の本領の石高から分け与えられる田の高である。無い田は
+       配れない。家全体の余地（石高の十割）と、本領の城の余地（その城の石高 −
+       その城に根を張る者の知行）と、狭いほうで縛る。
+
+       大身の家臣を抱えるには、大きな城を与えねばならない――そういう圧になる。 */
+    const 城余 = 城の知行の余地(s, gen.本領 || gen.at);
+    const 余地 = Math.max(0, Math.min(room.left, 城余.left));
     const d = delta > 0 ? Math.min(delta, 余地) : Math.max(delta, -fiefOf(gen));
     if (!d) {
-      if (delta > 0) s.msg = `配れる知行が残っていない（石高 ${fmt(room.cap)}石のうち ${fmt(room.used)}石を配分済）。`;
+      if (delta > 0) {
+        const 城 = s.castles.find((x) => x.id === (gen.本領 || gen.at));
+        s.msg = room.left <= 0
+          ? `配れる知行が残っていない（家の石高 ${fmt(room.cap)}石のうち ${fmt(room.used)}石を配分済）。`
+          : `${城 ? 城.name : "本領"}に配れる田が残っていない`
+            + `（石高 ${fmt(城余.cap)}石のうち ${fmt(城余.used)}石を配分済）。`
+            + `大身の者を抱えるには、大きな城を与えること。`;
+      }
       return s;
     }
     const before = fiefOf(gen);

@@ -641,8 +641,24 @@ export function extraIncome(c) {
   return Math.min(Math.round(trade + sea + mountain), Math.round(c.koku * 0.55 + 4200));
 }
 
-// 城が家臣に配れる知行の限り。城の石高がそのまま限りとなる。
+/* 城が家臣に配れる知行の限り。城の石高がそのまま限りとなる（GDD 6.4）。
+
+   知行は、城の石高から分け与えられる田の高である。無い田は配れない。
+   長らくこの限りは誰からも呼ばれておらず、四万石の城に五万石と三万石の者が
+   根を張ることもできた。大名の取り分が零になるだけで破綻はしないが、
+   「城の石高がその限り」と定めておきながら効いていないのは緩みである。
+
+   加増のとき、家全体の余地（fiefRoom）と、この城ごとの余地の両方を見る。 */
 export function fiefCapacity(c) { return c ? c.koku : 0; }
+
+/* その城で、あといくら配れるか。石高から、その城に根を張る者の知行を引く。
+   当主の身代は御料であって知行ではないので、fiefBurden は当主を数えない。 */
+export function 城の知行の余地(s, castleId) {
+  const c = s.castles.find((x) => x.id === castleId);
+  if (!c) return { cap: 0, used: 0, left: 0 };
+  const used = fiefBurden(s, castleId);
+  return { cap: fiefCapacity(c), used, left: fiefCapacity(c) - used };
+}
 
 // 城が配っている知行の総和。当主の身代は御料であって知行ではない。
 /* その城が背負っている知行の高。余禄の分け前を割るのに使う。

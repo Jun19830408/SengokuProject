@@ -282,6 +282,71 @@ export function 調略の采配(s, fid, { 告げる } = {}) {
   return null;
 }
 
+/* --------------------------------------------------- 旗頭の調略（GDD 6.4 / 11.2）
+
+   方面を預けた以上、調略も任せる。方面の国々に接する敵城へ、旗頭が手の者を
+   入れる。金は旗頭に預けた高から出る（大名の財布は一つのままで、これは
+   その月に使ってよい額の上限である）。
+
+   仕掛けは家の采配と同じ品目である。ただし引き抜き・内応で得た者は、大名の
+   本拠へ出仕させる（月送りの側で扱う）。人を抱えるのは大名の権であって、
+   旗頭が方面で人を囲い込む筋ではない。 */
+export function 旗頭の調略(s, 旗, { 告げる, 残 } = {}) {
+  const fid = 旗.faction;
+  const f = s.factions[fid];
+  if (!f) return null;
+  const 方面 = Array.isArray(旗.方面) ? 旗.方面 : [];
+  if (!方面.length) return null;
+  const 引く = 籤(s.卓 || "卓", "旗調略", 旗.id, s.year, s.month);
+  if (引く() > 0.22) return null;
+  if ((s.plots || []).some((p) => p.旗頭 === 旗.id)) return null;      // 一人一つ
+
+  const 己方 = s.castles.filter((c) => c.faction === fid && 方面.includes(c.kuni));
+  if (!己方.length) return null;
+  /* 狙うのは、方面の城と隣り合う他家の城。旗の下・約束のある家へは仕掛けない。 */
+  const 的ら = [];
+  for (const 拠 of 己方) {
+    for (const c of s.castles) {
+      if (c.faction === fid) continue;
+      const rel = relOf(s, fid, c.faction);
+      if (["同盟", "臣従", "従属", "不可侵"].includes(rel.state)) continue;
+      const d = Math.hypot(拠.x - c.x, 拠.y - c.y);
+      if (d < 220) 的ら.push({ c, d });
+    }
+  }
+  if (!的ら.length) return null;
+  const 的 = 的ら.sort((a, b) => a.d - b.d)[0].c;
+
+  // 手の者は方面の城にいる者から。知略の高い者、まだ月の務めに就いていない者
+  const 手 = s.generals
+    .filter((x) => x.faction === fid && x.at && !x.captive && !(s.orders || {})[x.id]
+      && 己方.some((c) => c.id === x.at))
+    .sort((a, b) => b.wit - a.wit)[0];
+  if (!手) return null;
+
+  const 城中 = s.generals.filter((x) => x.at === 的.id && x.faction === 的.faction && !x.lord && !x.captive);
+  const 心の離れた = [...城中].sort((a, b) => (a.loyal == null ? 60 : a.loyal) - (b.loyal == null ? 60 : b.loyal))[0];
+  const 城主 = 城中.length ? [...城中].sort((a, b) => (b.lead + b.gov) - (a.lead + a.gov))[0] : null;
+  const 候補 = [];
+  if (心の離れた && (心の離れた.loyal == null ? 60 : 心の離れた.loyal) < 62) 候補.push(["内応", 城主], ["引き抜き", 心の離れた]);
+  候補.push(["密約", 城主], ["城工作", null], ["流言", null], ["偵察", null]);
+  for (const [key, mato] of 候補) {
+    const def = PLOTS.find((x) => x.key === key);
+    if (!def) continue;
+    if (f.gold < def.cost * 1.2) continue;
+    if (残 != null && 残 < def.cost) continue;                 // 預け高を超えては使わない
+    if (手.wit < def.need - 14) continue;
+    if ((def.mato === "要" || def.mato === "城主") && (!mato || mato.at !== 的.id)) continue;
+    f.gold -= def.cost;
+    s.plots.push({ type: key, castleId: 的.id, genId: 手.id, faction: fid,
+      monthsLeft: def.months, matoId: mato ? mato.id : null, 旗頭: 旗.id });
+    s.orders[手.id] = { cmd: `調略・${key}`, castleId: 手.at };
+    if (告げる) 告げる(`${旗.name}が${的.name}へ${key}を仕掛けた（方面の差配）。`);
+    return { 手: key, 先: 的.id, 費え: def.cost };
+  }
+  return null;
+}
+
 /* --------------------------------------------------- 特殊勢力の采配（GDD 13.1）
 
    寺社・商人・水軍衆・忍びの里・牧・鉄砲鍛冶。手の届くところにあるなら、

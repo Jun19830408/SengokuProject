@@ -81,3 +81,79 @@ export function 預け高(s, fid) {
   for (const v of 帳.values()) v.預け = Math.round(v.実入り * 率);
   return [...帳.values()];
 }
+
+/* ============================================================ 旗頭に戦を任せる（GDD 6.4）
+
+   旗頭は方面を預かる。柴田の北国、明智の丹波、秀吉の中国――信長が方面軍を
+   置いたのは、そこまで一々下知していられなかったからである。内政だけでなく、
+   戦と調略も任せねば、方面を預ける意味が薄い。
+
+   ただし戦は大名の許しを要る。臣従した大名と同じ形である（core/yurushi.js）。
+   臣従は他家であるからその家の外交が破れるのを恐れて縛るのだが、旗頭は家臣で
+   あるから、縛る理由は違う――どこへ攻め入るかは家の運を決める。方面を預けた
+   からといって、天下の絵図まで預けたわけではない。
+
+   許しは城ごとに一度。落とすまで有効である。 */
+
+export const 旗頭の許し控え = (s) => (s.旗頭の許し = s.旗頭の許し || []);
+
+export const 旗頭は許されているか = (s, 旗頭id, castleId) =>
+  旗頭の許し控え(s).some((x) => x.旗頭 === 旗頭id && x.castleId === castleId);
+
+export function 旗頭に許す(s, 旗頭id, castleId) {
+  if (旗頭は許されているか(s, 旗頭id, castleId)) return s;
+  旗頭の許し控え(s).push({ 旗頭: 旗頭id, castleId, y: s.year, m: s.month });
+  return s;
+}
+
+/* 済んだ許しを片づける。落とした城、旗頭でなくなった者。 */
+export function 旗頭の済んだ許しを片づける(s) {
+  s.旗頭の許し = 旗頭の許し控え(s).filter((x) => {
+    const c = (s.castles || []).find((y) => y.id === x.castleId);
+    const g = (s.generals || []).find((y) => y.id === x.旗頭);
+    if (!c || !g || g.captive) return false;
+    if (c.faction === g.faction) return false;            // 落とした（あるいは味方になった）
+    if (g.役 !== "旗頭") return false;
+    return true;
+  });
+  return s;
+}
+
+/* 旗頭が攻めたい城を見立てる。
+
+   方面の国々にある自領の城と隣り合う、他家の城のうち、いちばん手近で
+   兵の薄いものを選ぶ。旗の下（自家・臣従）の城は攻めない。 */
+export function 旗頭の狙い(s, 旗, { 道: 道を引く, 旗の下 } = {}) {
+  const 方面 = Array.isArray(旗.方面) ? 旗.方面 : [];
+  if (!方面.length) return null;
+  const 己方 = (s.castles || []).filter((c) => c.faction === 旗.faction && 方面.includes(c.kuni));
+  if (!己方.length) return null;
+  const 見 = [];
+  for (const 拠 of 己方) {
+    for (const 的 of s.castles) {
+      if (的.faction === 旗.faction) continue;
+      if (旗の下 && 旗の下(s, 旗.faction, 的.faction)) continue;
+      const 道 = 道を引く ? 道を引く(s, 旗.faction, 拠.id, 的.id) : null;
+      if (!道 || 道.length !== 2) continue;               // 隣り合う城だけ
+      const 守 = 的.local + (s.generals || [])
+        .filter((x) => x.at === 的.id && x.faction === 的.faction && !x.captive)
+        .reduce((a, x) => a + x.retinue, 0);
+      見.push({ 的, 拠, 守 });
+    }
+  }
+  if (!見.length) return null;
+  見.sort((a, b) => a.守 - b.守);
+  return 見[0];
+}
+
+/* 旗頭に預ける高。方面の国々にある自領の城の実入りに、目盛りを掛ける。
+
+   寄騎の有無ではなく方面で数える。方面を預けるとは、その国々の差配を預ける
+   ことだからである（寄騎はそのうち、政務まで委ねた城のことである）。 */
+export function 旗頭の預け高(s, 旗) {
+  const f = (s.factions || {})[旗.faction] || {};
+  const 方面 = Array.isArray(旗.方面) ? 旗.方面 : [];
+  const 城ら = (s.castles || []).filter((c) => c.faction === 旗.faction && 方面.includes(c.kuni));
+  const 実 = 城ら.reduce((a, c) => a + 城の実入り(c), 0);
+  return { 城: 城ら, 実入り: 実, 預け: Math.round(実 * 預けの率(f)) };
+}
