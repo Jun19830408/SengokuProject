@@ -2122,7 +2122,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 const 城 = s2.castles.find((x) => x.id === a.在陣);
                 軍を解く(s2, a);
                 s2.chronicle.push({ y: s2.year, m: s2.month,
-                  text: `${城 ? 城.name + "の" : ""}在陣を解き、諸将はそれぞれの本領へ帰った。` });
+                  text: `${城 ? 城.name + "の" : ""}在陣を解き、兵も将も元の城へ帰った。` });
               }
               return s2;
             })}
@@ -2191,7 +2191,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 s2.chronicle.push({ y: s2.year, m: s2.month,
                   text: `${陣 ? 陣.name : ""}の在陣を払い、${先.name}へ向かう（${fmt(a.men)}人）。` });
                 // 在陣から攻め寄せるときも、他の城から兵を催せる
-                if ((寄騎 || []).length) 寄騎を出す(s2, 寄騎, to);
+                // 加勢を出す関数は一つである（かつて 寄騎を出す という無い名を呼んでいた）
+                if ((寄騎 || []).length) 加勢を出す(s2, 寄騎, to);
                 return s2;
               });
               setModal(null); set在陣(null);

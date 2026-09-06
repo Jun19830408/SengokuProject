@@ -492,7 +492,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                             {a.from === c.id || (g.castles.find((x) => x.id === a.from) || {}).faction !== c.faction
                               ? "城を与えられたわけではありません。ここに留まっているだけです。"
                               : "援軍として着き、城の下に陣を張っています。城には入っていません。"}
-                            次の城へ攻め寄せるか、兵を城に入れるか、軍を解いて本領へ帰すかを決めてください。
+                            次の城へ攻め寄せるか、兵を城に入れるか、軍を解いて元の城へ帰すかを決めてください。
                           </div>
                           <div className="row"><span>総勢</span>
                             <span className="v">{fmt(a.men)} 人（地の兵 {fmt(a.local || 0)}）</span></div>
@@ -512,7 +512,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                           <button className="btn" style={{ width: "100%", marginTop: 8 }}
                             onClick={() => onJoinCastle && onJoinCastle(a.id)}>兵を城に入れる（軍を畳む）</button>
                           <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
-                            軍を解けば、兵は出陣元へ返り、将はそれぞれの本領へ帰ります。
+                            軍を解けば、兵も将も出陣元（元の城）へ帰ります。当主だけは本拠へ入ります。
                             城に入れれば、兵も将もこの城のものになり、将の本領もこの城へ移ります。
                           </div>
                         </div>

@@ -423,13 +423,10 @@ export function sackCastle(s, castle, army, hard) {
   for (const a2 of s.armies.filter((x) => x.target === castle.id || x.at === castle.id)) {
     if (a2.faction === oldF) continue;                  // 旧主の軍はここでは扱わない
     if (a2.id === army.id) continue;                    // 本軍は在陣する。帰さない
-    const home = s.castles.find((c2) => c2.id === a2.from)
-      || s.castles.find((c2) => c2.faction === a2.faction);
+    /* 帰し方は「軍を解く」と同じ理屈に揃える。ここで別に書いていたので、
+       将の根が繕われず、持って出た馬と鉄砲も城へ戻らなかった。 */
+    const home = withdrawArmy(s, a2);
     if (!home) continue;
-    home.local += Math.max(0, a2.local);
-    if (a2.rost && a2.rost.length) home.rost = [...(home.rost || []), ...a2.rost];
-    rosterSync(home, "rost", home.local, `loc-${home.id}`);
-    for (const gid of a2.gens) { const x = s.generals.find((q) => q.id === gid); if (x) x.at = home.id; }
     if (a2.faction === s.player) {
       s.chronicle.push({ y: s.year, m: s.month,
         text: `${castle.name}攻めに加わった寄騎は${home.name}へ帰陣した。` });
@@ -823,17 +820,23 @@ export function withdrawArmy(s, army) {
     if (army.rost && army.rost.length) home.rost = [...(home.rost || []), ...army.rost];
     rosterSync(home, "rost", home.local, `loc-${home.id}`);
   }
-  /* 将はそれぞれの本領へ帰す。本領を失っていれば、共に退く軍の帰り先（出陣元）へ、
-     それも自家のものでなければ、いま踏んでいる地から最も近い自家の城へ落ちる。
+  /* 将も兵と同じ城へ帰る（GDD 6.4）。
+
+     もとは兵を出陣元へ返し、将はそれぞれの本領へ散らしていた。行き先が割れて
+     いたので、稲葉山から陣触れして落城させ、軍を解くと、兵だけ稲葉山に入り
+     将は方々の城へ帰るという形になった。連れて出た者が連れ帰られない。
+     出陣元は「元の城」である。兵と将を分ける理由がない。
+
+     当主だけは本拠へ入る。本拠は家の本城であり、当主のいるべき場所である。
+     陣中にあるあいだ本拠は動かないので、帰るところは必ずある。
+
+     城主は己の城へ帰る。城主が他所に根を移しては、城の帳尻が合わない。
 
      帰り先は必ずその将の家の城でなければならない。かつては最後の当てを
      s.castles[0] としていたが、これは盤の先頭の城というだけで、他家の城で
      あることも多い。解いた途端に将が敵城へ湧く筋があった。 */
-  const 落ちる先 = (x) => {
-    const 本領 = x.本領 && s.castles.find((c) => c.id === x.本領 && c.faction === x.faction);
-    if (本領) return 本領;
-    if (home && home.faction === x.faction) return home;
-    const 自領 = s.castles.filter((c) => c.faction === x.faction);
+  const 自家の最寄り = (fid) => {
+    const 自領 = s.castles.filter((c) => c.faction === fid);
     if (!自領.length) return null;            // 家が滅んだ。行き場は無い
     const 近い = 自領
       .map((c) => ({ c, p: findPath(army.at || army.from, c.id) }))
@@ -841,13 +844,24 @@ export function withdrawArmy(s, army) {
       .sort((a, z) => a.p.length - z.p.length)[0];
     return 近い ? 近い.c : 自領[0];
   };
+  const 落ちる先 = (x) => {
+    if (x.lord) {
+      const 拠 = (s.factions[x.faction] || {}).本拠;
+      const c = 拠 && s.castles.find((y) => y.id === 拠 && y.faction === x.faction);
+      if (c) return c;
+    }
+    const 己の城 = s.castles.find((c) => c.lordId === x.id && c.faction === x.faction);
+    if (己の城) return 己の城;
+    if (home && home.faction === x.faction) return home;
+    return 自家の最寄り(x.faction);
+  };
   for (const gid of army.gens) {
     const x = s.generals.find((q) => q.id === gid);
     if (!x || x.captive) continue;
     const 先 = 落ちる先(x);
     if (!先) continue;
     x.at = 先.id;
-    if (先.id !== x.本領) x.本領 = 先.id;      // 本領を失った者は、落ちた先を新たな本領とする
+    x.本領 = 先.id;                            // 帰った城が、その者の根である
   }
   s.armies = s.armies.filter((x) => x.id !== army.id);
   s.sieges = s.sieges.filter((x) => x.armyId !== army.id);
