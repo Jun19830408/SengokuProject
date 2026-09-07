@@ -1,4 +1,5 @@
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
+import { 調略の腰, 治めの腰 } from "../core/kiryou.js";
 import { TOWNS } from "../data/castles.js";
 import { px, py } from "../data/geo.js";
 import { 特殊勢力の可否, 手の届く間 } from "../core/town.js";
@@ -114,8 +115,10 @@ export function 外交の采配(s, fid, { 告げる, 申し入れる } = {}) {
   const f = s.factions[fid];
   const 自城 = s.castles.filter((c) => c.faction === fid);
   if (!f || !自城.length) return null;
+  /* 外交に手を伸ばす繁さは当主の政治で決まる（GDD 6.2 / 13.2）。
+     政治に長けた大名は使者を絶やさず、疎い大名は隣とすら誼を結ばない。 */
   const 引く = 籤(s.卓 || "卓", "外交", fid, s.year, s.month);
-  if (引く() > 0.16) return null;                // 月ごとに六度に一度ほど動く
+  if (引く() > 治めの腰(s, fid, 0.16)) return null;
 
   const 我石 = factionKoku(s, fid);
   const 隣 = 隣家(s, fid);
@@ -233,8 +236,10 @@ export function 外交の采配(s, fid, { 告げる, 申し入れる } = {}) {
 export function 調略の采配(s, fid, { 告げる } = {}) {
   const f = s.factions[fid];
   if (!f) return null;
+  /* 仕掛ける繁さは当主の知略で決まる（GDD 6.2 / 13.2）。
+     元就や道三のような者は絶えず手を回し、武辺一辺倒の家は滅多に仕掛けない。 */
   const 引く = 籤(s.卓 || "卓", "調略", fid, s.year, s.month);
-  if (引く() > 0.22) return null;
+  if (引く() > 調略の腰(s, fid, 0.22)) return null;
   if ((s.plots || []).some((p) => p.faction === fid)) return null;   // 一度に一つ
 
   // 狙う城。方針の的が第一。無ければ手近な敵城。

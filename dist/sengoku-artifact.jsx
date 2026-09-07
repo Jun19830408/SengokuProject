@@ -18355,6 +18355,50 @@ function reviewAim(s2, fid) {
   f.aim = { target: aim.target, from: aim.from, score: aim.score };
 }
 
+// src/core/kiryou.js
+var clamp2 = (v, a, b) => Math.max(a, Math.min(b, v));
+var \u5BB6\u306E\u5F53\u4E3B = (s2, fid) => (s2.generals || []).find((g) => g.faction === fid && g.lord && !g.captive) || null;
+var \u6D78\u900F = (lead) => clamp2(0.35 + (lead - 50) / 200, 0.25, 0.95);
+function \u6C17\u98A8(s2, fid) {
+  const \u4E3B = \u5BB6\u306E\u5F53\u4E3B(s2, fid);
+  if (!\u4E3B) return { \u653B\u3081: 0, \u8ABF\u7565: 0, \u6CBB\u3081: 0, \u6D78\u900F: 0.35, \u4E3B: null };
+  const t = \u6D78\u900F(\u4E3B.lead || 55);
+  const \u632F\u308C = (v) => clamp2(((v == null ? 55 : v) - 60) / 35, -1, 1) * t;
+  return {
+    \u653B\u3081: \u632F\u308C(\u4E3B.valor),
+    \u8ABF\u7565: \u632F\u308C(\u4E3B.wit),
+    \u6CBB\u3081: \u632F\u308C(\u4E3B.gov),
+    \u6D78\u900F: t,
+    \u4E3B
+  };
+}
+function \u653B\u3081\u306E\u8170(s2, fid) {
+  const k = \u6C17\u98A8(s2, fid);
+  return clamp2(0.45 * (1 + k.\u653B\u3081 * 0.8), 0.12, 0.85);
+}
+function \u8981\u308B\u5175\u529B(s2, fid, \u57FA = 1.35) {
+  const k = \u6C17\u98A8(s2, fid);
+  return clamp2(\u57FA * (1 - k.\u653B\u3081 * 0.22), 1.02, \u57FA * 1.35);
+}
+function \u51FA\u305B\u308B\u8ECD\u306E\u6570(s2, fid) {
+  const \u57CE = (s2.castles || []).filter((c) => c.faction === fid).length;
+  if (!\u57CE) return 0;
+  const k = \u6C17\u98A8(s2, fid);
+  const \u57FA = 1 + Math.floor(\u57CE / 4);
+  return clamp2(\u57FA + (k.\u6D78\u900F >= 0.7 ? 1 : 0), 1, 6);
+}
+function \u8ABF\u7565\u306E\u8170(s2, fid, \u57FA = 0.3) {
+  const k = \u6C17\u98A8(s2, fid);
+  return clamp2(\u57FA * (1 + k.\u8ABF\u7565 * 1.2), 0.05, 0.9);
+}
+function \u6CBB\u3081\u306E\u8170(s2, fid, \u57FA = 0.35) {
+  const k = \u6C17\u98A8(s2, fid);
+  return clamp2(\u57FA * (1 + k.\u6CBB\u3081 * 1), 0.08, 0.9);
+}
+function \u597D\u6A5F\u304B(\u5DF1\u306E\u5175, \u6575\u306E\u5175) {
+  return \u5DF1\u306E\u5175 > Math.max(400, \u6575\u306E\u5175) * 2;
+}
+
 // src/govern/aiDiplo.js
 var \u96A3\u306E\u9593 = 150;
 var \u899A\u3048 = { \u5370: "", \u8868: null };
@@ -18422,7 +18466,7 @@ function \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B, \u7533\u3
   const \u81EA\u57CE = s2.castles.filter((c) => c.faction === fid);
   if (!f || !\u81EA\u57CE.length) return null;
   const \u5F15\u304F = \u7C64(s2.\u5353 || "\u5353", "\u5916\u4EA4", fid, s2.year, s2.month);
-  if (\u5F15\u304F() > 0.16) return null;
+  if (\u5F15\u304F() > \u6CBB\u3081\u306E\u8170(s2, fid, 0.16)) return null;
   const \u6211\u77F3 = factionKoku2(s2, fid);
   const \u96A3 = \u96A3\u5BB6(s2, fid);
   if (!\u96A3.length) return null;
@@ -18494,7 +18538,7 @@ function \u8ABF\u7565\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B } = {}) {
   const f = s2.factions[fid];
   if (!f) return null;
   const \u5F15\u304F = \u7C64(s2.\u5353 || "\u5353", "\u8ABF\u7565", fid, s2.year, s2.month);
-  if (\u5F15\u304F() > 0.22) return null;
+  if (\u5F15\u304F() > \u8ABF\u7565\u306E\u8170(s2, fid, 0.22)) return null;
   if ((s2.plots || []).some((p) => p.faction === fid)) return null;
   const \u81EA\u57CE = s2.castles.filter((c) => c.faction === fid);
   if (!\u81EA\u57CE.length) return null;
@@ -19718,7 +19762,7 @@ function advanceMonth(prev, g) {
           \u8535.\u4F7F += \u984D;
         }
       };
-      if (f2.gold > 400 && \u6255\u3048\u308B(180) && Math.random() < 0.5 * lv(s2).aiGrow) {
+      if (f2.gold > 400 && \u6255\u3048\u308B(180) && Math.random() < \u6CBB\u3081\u306E\u8170(s2, fid, 0.5) * lv(s2).aiGrow) {
         const room = c.kokuMax - c.koku;
         const \u524D\u77F3 = c.koku;
         if (room > c.kokuMax * 0.04) {
@@ -19852,9 +19896,10 @@ function advanceMonth(prev, g) {
     }
   }
   for (const fid of Object.keys(s2.factions)) {
-    if (!auto(fid) || s2.armies.some((a) => a.faction === fid)) continue;
+    if (!auto(fid)) continue;
+    if (s2.armies.filter((a) => a.faction === fid && !a.aid).length >= \u51FA\u305B\u308B\u8ECD\u306E\u6570(s2, fid)) continue;
     const fa = s2.factions[fid];
-    const eager = (fa.temper === "\u9032\u53D6" ? 0.6 : fa.temper === "\u5805\u5B9F" ? 0.32 : 0.45) * lv(s2).aiEager;
+    const eager = \u653B\u3081\u306E\u8170(s2, fid) * lv(s2).aiEager;
     if (Math.random() > eager) continue;
     const aim = fa.aim;
     const order = aim ? [s2.castles.find((x) => x.id === aim.from), ...s2.castles.filter((x) => x.faction === fid && x.id !== aim.from)] : s2.castles.filter((x) => x.faction === fid);
@@ -19898,7 +19943,8 @@ function advanceMonth(prev, g) {
       if (!cand) continue;
       const dg = s2.generals.filter((x) => x.at === cand.id && x.faction === cand.faction);
       const foeMen2 = cand.local + dg.reduce((a, x) => a + x.retinue, 0);
-      let need = lv(s2).aiNeed;
+      let need = \u8981\u308B\u5175\u529B(s2, fid, lv(s2).aiNeed);
+      if (\u597D\u6A5F\u304B(avail, foeMen2)) need = Math.min(need, 1.05);
       const head2 = [...gens].sort((x, y2) => y2.wit + y2.lead - (x.wit + x.lead))[0];
       if (head2 && head2.wit >= 78) {
         const wet = s2.weather === "\u96E8" || s2.weather === "\u96EA" || s2.weather === "\u66C7";

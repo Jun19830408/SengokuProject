@@ -36,6 +36,8 @@ export { advanceMonth } from "../src/govern/month.js";
 export { 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届き, 陣触れに応じる, 身分の位, 総大将を定める, 大将を先頭に, 国主に任じる, 旗頭に任じる, 国主たち, 旗頭たち, stipendOf, 役の要る身分, 寄騎に取る, 寄騎を解く, 寄騎たち, 寄騎に取れるか, 城主か, 方面の国, 城の知行の余地, fiefRoom, fiefBurden } from "../src/core/rank.js";
 export { 難を逃れる, captureChance } from "../src/core/capture.js";
 export { succeed, is架空, bearChild, pickHeir } from "../src/core/house.js";
+export { REGIONS, GOKINAI } from "../src/data/provinces.js";
+export { 気風, 浸透, 家の当主, 攻めの腰, 要る兵力, 出せる軍の数, 調略の腰, 治めの腰, 好機か } from "../src/core/kiryou.js";
 export { houseAlive, 主家, isVassal, 膝を屈している, canAskAid, underMyBanner } from "../src/core/state.js";
 export { doDiplo, doPlot, doSpecial } from "../src/govern/commands.js";
 export { DIPLO, PLOTS } from "../src/data/diplo.js";

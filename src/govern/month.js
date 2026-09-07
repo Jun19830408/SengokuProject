@@ -23,6 +23,7 @@ import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 奪われた本領を繕う, 軍の道 } from "../core/state.js";
+import { 攻めの腰, 要る兵力, 出せる軍の数, 好機か, 気風, 治めの腰 } from "../core/kiryou.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 import { 城の寄親, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高 } from "../core/inin.js";
 import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
@@ -941,7 +942,9 @@ export function advanceMonth(prev, g) {
           const 払える = (額) => (!蔵 ? f2.gold >= 額 : 蔵.残 >= 額 && f2.gold >= 額);
           const 払う = (額) => { f2.gold -= 額; if (蔵) { 蔵.残 -= 額; 蔵.使 += 額; } };
           // 開墾と治水
-          if (f2.gold > 400 && 払える(180) && Math.random() < 0.5 * lv(s).aiGrow) {
+          /* 内政の手を打つ繁さは当主の政治で決まる（GDD 6.2）。
+             政治に長けた大名の領は年ごとに肥え、疎い大名の領は痩せたままになる。 */
+          if (f2.gold > 400 && 払える(180) && Math.random() < 治めの腰(s, fid, 0.5) * lv(s).aiGrow) {
             const room = c.kokuMax - c.koku;
             const 前石 = c.koku;
             if (room > c.kokuMax * 0.04) {
@@ -1070,10 +1073,18 @@ export function advanceMonth(prev, g) {
         }
       }
       for (const fid of Object.keys(s.factions)) {
-        if (!auto(fid) || s.armies.some((a) => a.faction === fid)) continue;
+        if (!auto(fid)) continue;
+        /* 一度に出せる軍の数は、家の大きさで決まる（GDD 7.2）。
+
+           もとは「軍が一つでも出ていれば次は出さない」であった。十六城の大身も
+           一城の小家も、同じ一軍しか動かせない。それでは大きい家が大きくならず、
+           地方に大勢力が育たない。四城につき一手を目安とする。 */
+        if (s.armies.filter((a) => a.faction === fid && !a.aid).length >= 出せる軍の数(s, fid)) continue;
         const fa = s.factions[fid];
-        // 気性で腰の重さが変わる。進取は攻めがち、堅実は備えを固めてから。
-        const eager = (fa.temper === "進取" ? 0.60 : fa.temper === "堅実" ? 0.32 : 0.45) * lv(s).aiEager;
+        /* 腰の重さは当主の武勇で決まる（GDD 6.2）。もとは家の名を数にした
+           「気性」で、代替わりしても変わらなかった。器量で決めれば、当主が
+           替われば家の動きも変わる。 */
+        const eager = 攻めの腰(s, fid) * lv(s).aiEager;
         if (Math.random() > eager) continue;
         const aim = fa.aim;
         const order = aim ? [s.castles.find((x) => x.id === aim.from), ...s.castles.filter((x) => x.faction === fid && x.id !== aim.from)]
@@ -1131,7 +1142,11 @@ export function advanceMonth(prev, g) {
           const foeMen2 = cand.local + dg.reduce((a, x) => a + x.retinue, 0);
           // 常に優勢でなければ動かぬ、という将ばかりでは天下は動かぬ。
           // 知略に優れた者は、雨の月に、劣勢を承知で勝負に出る。桶狭間はそういう戦であった。
-          let need = lv(s).aiNeed;
+          /* 攻めに要る兵力の比。当主の武勇で前後する。ただし下限があり、
+             どれほど猛々しくとも五分を割る戦には出ない（無駄な戦はしない）。
+             手薄な城が隣にあれば、腰の重い当主でも狙う（弱きに付け入る）。 */
+          let need = 要る兵力(s, fid, lv(s).aiNeed);
+          if (好機か(avail, foeMen2)) need = Math.min(need, 1.05);
           const head2 = [...gens].sort((x, y2) => (y2.wit + y2.lead) - (x.wit + x.lead))[0];
           if (head2 && head2.wit >= 78) {
             const wet = s.weather === "雨" || s.weather === "雪" || s.weather === "曇";
