@@ -13,7 +13,10 @@
     "zukan": "node tools/zukan.cjs",
     "test": "node tests/all.cjs",
     "compare": "node tools/compare.cjs",
-    "deploy": "node tools/publish-pages.cjs"
+    "deploy": "node tools/publish-pages.cjs",
+    "mimawari": "node tools/mimawari.cjs",
+    "junken": "node tools/junken.cjs",
+    "tenka": "node tools/tenka.cjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.12",
