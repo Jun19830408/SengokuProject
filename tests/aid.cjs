@@ -28,7 +28,7 @@ Object.defineProperty(dom.window.HTMLElement.prototype, 'clientWidth', { get() {
 Object.defineProperty(dom.window.HTMLElement.prototype, 'clientHeight', { get() { return 600; } });
 dom.window.HTMLElement.prototype.getBoundingClientRect = function () { return { left: 0, top: 0, width: 900, height: 600, right: 900, bottom: 600 }; };
 const errs = []; console.error = (...a) => errs.push(String(a[0]).slice(0, 180));
-const { createRoot, act, App, React, initState, findPath, reinforceOffers, 運び賃を払う, 陣触れの届き, rankName, 国主に任じる } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
+const { createRoot, act, App, React, initState, findPath, reinforceOffers, 運び賃を払う, 陣触れに応じる, 陣触れの届き, rankName, 国主に任じる } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
 /* ------------------------------------------- 盤をこしらえる
    自家の城が敵に囲まれ、他の自家の城と、臣従した家の城が近くにある形。 */
@@ -300,9 +300,20 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
         `国主 ${出.length}城／当主 ${呼べる(当主).length}城`);
     }
     if (侍) {
-      確('役を持たぬ者が率いれば、自らの城の兵だけ',
-        陣触れの届き(侍, u) === '自城' && 呼べる(侍).length === 0,
-        `${侍.name}（${rankName(侍, u)}・役なし） → 呼べる城 ${呼べる(侍).length}`);
+      /* 城主の届きを「自城」から「隣の城」へ改めた（GDD 7.3）。
+
+         自城しか届かぬということは、加勢の一覧に一城も並ばぬということで、
+         城主が寄せ手に立つかぎり加勢は一切催せなかった。他家（同盟・従属）へは
+         頼めるのに身内からは呼べない、という逆さまが起きていた。
+         近隣の城と申し合わせて出るのは、城主の器量のうちである。 */
+      const 出 = 呼べる(侍);
+      const 本陣 = u.castles.find((c) => c.id === 'nagoya');
+      確('城主が率いれば、隣り合う自家の城まで届く',
+        陣触れの届き(侍, u) === '隣の城' && 出.length > 0
+        && 出.every((o) => 陣触れに応じる(u, 侍, 本陣, u.castles.find((c) => c.id === o.castleId))),
+        `${侍.name}（${rankName(侍, u)}・役なし） → ${出.length}城`);
+      if (国主) 確('城主の届きは、国主の届きより狭い', 出.length < 呼べる(国主).length,
+        `城主 ${出.length}城／国主 ${呼べる(国主).length}城`);
     }
     if (物) {
       確('物頭は軍を率いられない（陣触れが届かぬ）',

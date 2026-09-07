@@ -167,7 +167,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
   const [aid, setAid] = useState({});
   useEffect(() => { setLocal(Math.round(availLocal * 0.6)); }, [picked.length]); // eslint-disable-line
   /* 呼べる加勢は、総大将の役で変わる（陣触れの届き）。
-     城主なら自城のみ、国主なら一国、旗頭・当主なら天下じゅうから。 */
+     城主なら隣り合う城まで、国主なら一国、旗頭なら方面、当主なら天下じゅうから。 */
   const 選将 = picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean);
   const 総大将 = 総大将を定める(g, 選将);
   /* 軍を率いられるのは侍大将以上である（GDD 6.4）。

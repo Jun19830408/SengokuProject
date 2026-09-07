@@ -1,4 +1,5 @@
 import { isGuardian, needsGuardian } from "./house.js";
+import { ROAD_ADJ } from "./paths.js";
 import { isCoastal } from "./naval.js";
 import { rankBonus } from "./province.js";
 import { MOB_POLICY } from "../data/roads.js";
@@ -549,7 +550,7 @@ export const 陣触れの届き = (gen, s) => {
   if (gen.lord) return "天下";      // 当主は天下じゅうに触れを出せる
   if (gen.役 === "旗頭") return "方面";   // 預かった国々から
   if (gen.役 === "国主") return "一国";   // 預かった国のうちから
-  if (身分の位(gen, s) >= 2) return "自城";
+  if (身分の位(gen, s) >= 2) return "隣の城";   // 城主は街道で直に結ばれた自家の城まで
   return "無し";                    // 物頭
 };
 
@@ -563,7 +564,21 @@ export function 陣触れに応じる(s, 大将, 本陣, 城) {
   if (届 === "方面") return 方面の国(大将).includes(城.kuni);
   // 旗頭は預かった国から。本陣がどこであれ、預かるのはその国である
   if (届 === "一国") return 城.kuni === (大将.役国 || (本陣 || {}).kuni);
-  if (届 === "自城") return !!本陣 && 城.id === 本陣.id;
+  /* 城主は、街道で直に結ばれた自家の城から加勢を催せる（GDD 7.3）。
+
+     もとは「自城」だけとしていた。自城しか届かぬということは、加勢の一覧に
+     一城も並ばぬということで、城主が寄せ手に立つかぎり加勢は一切催せなかった。
+     他家（同盟・従属）へは頼めるのに、身内からは呼べない――逆さまである。
+
+     とはいえ、届きを取り払っては身分の梯子が消える。城主は隣、国主は一国、
+     旗頭は方面、当主は天下。近隣の城と申し合わせて出るのは、城主の器量の
+     うちである。 */
+  if (届 === "隣の城") {
+    if (!本陣) return false;
+    if (城.id === 本陣.id) return true;
+    return (ROAD_ADJ[本陣.id] || []).includes(城.id);
+  }
+  if (届 === "自城") return !!本陣 && 城.id === 本陣.id;   // 古い記録のための残り
   return false;
 }
 

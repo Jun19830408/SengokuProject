@@ -12402,7 +12402,7 @@ var \u9663\u89E6\u308C\u306E\u5C4A\u304D = (gen, s2) => {
   if (gen.lord) return "\u5929\u4E0B";
   if (gen.\u5F79 === "\u65D7\u982D") return "\u65B9\u9762";
   if (gen.\u5F79 === "\u56FD\u4E3B") return "\u4E00\u56FD";
-  if (\u8EAB\u5206\u306E\u4F4D(gen, s2) >= 2) return "\u81EA\u57CE";
+  if (\u8EAB\u5206\u306E\u4F4D(gen, s2) >= 2) return "\u96A3\u306E\u57CE";
   return "\u7121\u3057";
 };
 function \u9663\u89E6\u308C\u306B\u5FDC\u3058\u308B(s2, \u5927\u5C06, \u672C\u9663, \u57CE) {
@@ -12411,6 +12411,11 @@ function \u9663\u89E6\u308C\u306B\u5FDC\u3058\u308B(s2, \u5927\u5C06, \u672C\u96
   if (\u5C4A === "\u5929\u4E0B") return true;
   if (\u5C4A === "\u65B9\u9762") return \u65B9\u9762\u306E\u56FD(\u5927\u5C06).includes(\u57CE.kuni);
   if (\u5C4A === "\u4E00\u56FD") return \u57CE.kuni === (\u5927\u5C06.\u5F79\u56FD || (\u672C\u9663 || {}).kuni);
+  if (\u5C4A === "\u96A3\u306E\u57CE") {
+    if (!\u672C\u9663) return false;
+    if (\u57CE.id === \u672C\u9663.id) return true;
+    return (ROAD_ADJ[\u672C\u9663.id] || []).includes(\u57CE.id);
+  }
   if (\u5C4A === "\u81EA\u57CE") return !!\u672C\u9663 && \u57CE.id === \u672C\u9663.id;
   return false;
 }
@@ -16555,6 +16560,8 @@ function makePrisoner(s2, gen, holderFaction, castleId) {
   gen.captive = { by: holderFaction, from: gen.faction, at: castleId, since: `${s2.year}-${s2.month}` };
   gen.at = castleId;
   gen.retinue = 0;
+  for (const c of s2.castles || []) if (c.lordId === gen.id) c.lordId = null;
+  for (const a of s2.armies || []) if ((a.gens || []).includes(gen.id)) a.gens = a.gens.filter((g) => g !== gen.id);
   return gen;
 }
 function persuadeResult(gen) {
