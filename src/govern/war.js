@@ -13,7 +13,7 @@ import { rankName, 軍役の器 } from "../core/rank.js";
 import { isVassal } from "../core/state.js";
 import { rosterArms } from "../core/roster.js";
 import { holdsProvince } from "../core/province.js";
-import { underMyBanner, 援けに着く } from "../core/state.js";
+import { underMyBanner, 援けに着く, 本拠を追う, 奪われた本領を繕う } from "../core/state.js";
 import { 難を逃れる } from "../core/capture.js";
 
 // ------------------------------------------------ 援軍（GDD 7.3 / 7.4）
@@ -311,7 +311,7 @@ export function sackCastle(s, castle, army, hard) {
        ここを免れた者も、なお捕縛と落ち延びの判じには回る。 */
     if (r > 0.86 && Math.random() < 難を逃れる(gen)) {
       const 当主か = !!gen.lord;
-      s.generals = s.generals.filter((x) => x.id !== gen.id);
+      将を除く(s, gen.id);
       log(`${gen.name}は${castle.name}に踏みとどまり討死した。`);
       // 当主が城を枕にしたなら、跡目を立てねばならない。
       // 立てぬまま置けば、家臣はいるのに当主のいない家が残る。
@@ -440,6 +440,14 @@ export function sackCastle(s, castle, army, hard) {
     || !(x.target === castle.id || x.at === castle.id) || x.faction === oldF);
   s.sieges = s.sieges.filter((x) => x.castleId !== castle.id);
   s.campaigns = (s.campaigns || []).filter((x) => x.target !== castle.id);
+  /* 城の主が変われば、その場で根を繕う。
+
+     月ごとの見回りに任せていたので、落城から月が明けるまでのあいだ、逃げた将の
+     本領が他家の城を指したままになっていた。落城は合戦の始末の中で起きるから、
+     遊ぶ側はその一月をそのまま見る。禄高も帰り先も本領から出るので、置いては
+     おけない。奪われた側の本拠も同じ理屈で追い直す。 */
+  本拠を追う(s);          // 先に本拠を据え直す。本領の繕いは本拠を当てにする
+  奪われた本領を繕う(s);
   log(`${castle.name}が落ち、${s.factions[winner].name}の手に渡った（旧領主：${s.factions[oldF].name}）。`);
 
   /* 采配（他家）はその場で差配を決める。遊ぶ側には、画面から問う。
@@ -641,7 +649,7 @@ export function resolveOffscreen(prev, armyId, castleId) {
       }
       let 文 = `${amb.by.name}が${castle.name}の本陣を衝いた。`;
       if (段.大将討死 && 主) {
-        s.generals = s.generals.filter((x) => x.id !== 主.id);
+        将を除く(s, 主.id);
         // 跡目は家督の筋（succeed）で立てる。ここだけ別に立てていたので、
         // 家名の改め（姓の違う者が継いだとき）も家中の揺れも起きなかった。
         if (主.lord) succeed(s, 主, "本陣を衝かれて討死した");
@@ -935,6 +943,20 @@ export function 城なき家を片づける(s) {
   return 片づけた;
 }
 
+/* 将を盤から除く（討死・切腹・出奔・寿命）。
+
+   これまでは s.generals から抜くだけであった。抜いただけでは、城の帳面に城主の
+   札が残り、軍の名簿にも名が残る。巡検が「城主が居ない」「軍に幽霊の将がいる」
+   として拾ったのは、これである。月ごとの見回りで拾えはするが、遊ぶ側はその
+   一月をそのまま見るのだから、抜くその場で片づけるのが筋である。 */
+export function 将を除く(s, id) {
+  s.generals = (s.generals || []).filter((x) => x.id !== id);
+  for (const c of s.castles || []) if (c.lordId === id) c.lordId = null;
+  for (const a of s.armies || []) if ((a.gens || []).includes(id)) a.gens = a.gens.filter((g) => g !== id);
+  for (const g of s.generals) if (g.寄親 === id) g.寄親 = null;
+  return s;
+}
+
 /* 滅んだ家の残る者を、采配で始末する（GDD 12.4）。
 
    多くは召し抱えられ、一部は斬られ、一部は捕らわれる。当主は決して降らない。
@@ -948,7 +970,7 @@ export function 滅んだ家を始末する(s, oldF, winner, castleId, 面々) {
   for (const g2 of [lord, ...retainers].filter(Boolean)) {
     const rec = canRecruit(g2, lord);
     if (g2 === lord || !rec.ok || Math.random() < 0.25) {
-      if (Math.random() < 0.4) { s.generals = s.generals.filter((x) => x.id !== g2.id); }
+      if (Math.random() < 0.4) { 将を除く(s, g2.id); }
       else takeAsPrisoner(s, g2, winner, castleId);
     } else {
       g2.faction = winner; g2.loyal = loyaltyAfterRecruit(g2); g2.lord = false;

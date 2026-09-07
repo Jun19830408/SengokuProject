@@ -18,7 +18,7 @@ import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "./ai.js";
 import { 外交の采配, 調略の采配, 特殊勢力の采配, 旗頭の調略 } from "./aiDiplo.js";
 import { checkUnified } from "./unify.js";
-import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く, 盤の乱れを繕う, 城なき家を片づける } from "./war.js";
+import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く, 盤の乱れを繕う, 城なき家を片づける, 城に合流する, 軍を解く, 将を除く } from "./war.js";
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
@@ -279,13 +279,16 @@ export function advanceMonth(prev, g) {
               if (ref) x.at = ref.id;
               else {
                 const 当主か = !!x.lord;
-                s.generals = s.generals.filter((q) => q.id !== x.id);
+                将を除く(s, x.id);
                 if (当主か) succeed(s, x, "内応の混乱のうちに落命した");
               }
             }
           }
           const rel3 = s.relations[relKey(pl.faction, oldF)];
           if (rel3) rel3.trust = clamp(rel3.trust - 20, 0, 100);
+          // 城の主が変われば、その場で根を繕う（落城と同じ理屈。war.js の sackCastle を見よ）
+          本拠を追う(s);
+          奪われた本領を繕う(s);
           say(`${lordOf.name}が内応し、${target.name}は戦わずして${s.factions[pl.faction].name}のものとなった。`);
           s.chronicle.push({ y: s.year, m: s.month,
             text: `${target.name}城主${lordOf.name}が内応。城は${s.factions[pl.faction].name}に渡った（旧主：${s.factions[oldF].name}）。` });
@@ -308,7 +311,7 @@ export function advanceMonth(prev, g) {
                 queue: [...(rl ? [rl.id] : []), ...rr.map((x) => x.id)] };
             } else {
               for (const g2 of [rl, ...rr].filter(Boolean)) {
-                if (Math.random() < 0.4) s.generals = s.generals.filter((x) => x.id !== g2.id);
+                if (Math.random() < 0.4) 将を除く(s, g2.id);
                 else takeAsPrisoner(s, g2, pl.faction, target.id);
               }
               s.chronicle.push({ y: s.year, m: s.month,
@@ -638,7 +641,7 @@ export function advanceMonth(prev, g) {
             : a >= cap - 4 ? 0.34 : a >= 70 ? 0.16 : a >= 60 ? 0.075 : a >= 54 ? 0.035 : 0.015;
           if (Math.random() > p) continue;
           const wasLord = q.lord;
-          s.generals = s.generals.filter((x) => x.id !== q.id);
+          将を除く(s, q.id);
           if (wasLord) {
             if (q.faction === s.player && !s.autoPlay) {
               // 跡目は当主が選ぶ。誰を立てるかで家中の様相が変わる。
@@ -741,7 +744,7 @@ export function advanceMonth(prev, g) {
               s.chronicle.push({ y: s.year, m: s.month, text: msg });
               if (oldF === s.player || to.faction === s.player) events.push(msg);
             } else {
-              s.generals = s.generals.filter((x) => x.id !== q.id);
+              将を除く(s, q.id);
               s.chronicle.push({ y: s.year, m: s.month, text: `${q.name}が出奔した。` });
               if (q.faction === s.player) events.push(`${q.name}が出奔した。`);
             }
@@ -1166,18 +1169,77 @@ export function advanceMonth(prev, g) {
           const take = gens.sort((a, b) => b.lead - a.lead).slice(0, 3);
           const send = Math.round(avail * 0.85);
           const localSend = Math.max(0, Math.min(c.local, send - take.reduce((a, x) => a + x.retinue, 0)));
+          /* 持たせる兵糧は、城の蔵にある分を超えない。
+
+             かつては欲しいだけ引いていたので、城の兵糧が負に落ちた（巡検が
+             鳥羽城で −491 石を拾った）。蔵にない米は持ち出せない。
+             足りなければ、持てるだけ持って出る。 */
+          const 欲 = Math.round(send * 0.6);
+          const 糧 = Math.max(0, Math.min(Math.round(c.food), 欲));
+          if (糧 < 欲 * 0.35) break;                  // 兵糧の当てが無ければ出陣しない
           c.local -= localSend;
           s.armies.push({
             id: 軍の名(s, "a"), faction: fid, from: c.id, gens: take.map((x) => x.id),
             local: localSend, localTrain: c.localTrain, men: localSend + take.reduce((a, x) => a + x.retinue, 0),
-            at: c.id, path: 攻め道, prog: 0, food: Math.round(send * 0.6), target: cand.id,
+            at: c.id, path: 攻め道, prog: 0, food: 糧, target: cand.id,
           });
           for (const t of take) t.at = null;
-          c.food -= Math.round(send * 0.6);
+          c.food = Math.max(0, c.food - 糧);
           events.push(`${s.factions[fid].name}が${c.name}より出陣。${cand.name}を目指す。`);
           break;
         }
       }
+      /* 采配は在陣を畳む（GDD 6.4）。
+
+         城を落とした軍はその城に在陣する。遊ぶ側には三択の画面がある――次の城へ
+         攻め寄せるか、城に入れるか、解くか。ところが采配にはその筋が無かった。
+         そのため他家の軍は、初めて城を落とした地に何十年も座り込んだ。
+
+         実測（種を固定し、着陣の始末を回して二十五年）：
+           野に残る軍　六十一　うち在陣のまま　六十一（全部）
+           囲み　常に零　　出陣　初めの五年 286 → 次の五年 34 と細る
+           家の数　137 → 101 で止まる（大身は十六城から増えない）
+
+         人も兵も在陣に縛られるので、次の戦が起こせない。盤が止まる元はこれである。
+         畳み方は三つ。手近に落とせそうな敵城があれば攻め寄せ、足下の城の守りが
+         薄ければ城に入れ、そのどちらでもなければ解いて本領へ帰す。 */
+      for (const a of [...s.armies]) {
+        if (!auto(a.faction) || !a.在陣 || a.aid) continue;
+        const 陣 = s.castles.find((c2) => c2.id === a.在陣 && c2.faction === a.faction);
+        if (!陣) continue;
+        a.在陣待ち = (a.在陣待ち || 0) + 1;
+        if (a.在陣待ち < 2) continue;                 // 落とした月に発つのは慌ただしい
+        const 将 = (a.gens || []).map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
+        // 一　手近な敵城。落とせる見込みがあれば攻め寄せる
+        let 次 = null;
+        if (将.length && a.men > 600 && a.food > a.men * 0.25) {
+          const 的ら = s.castles
+            .filter((x) => x.faction !== a.faction && !underMyBanner(s, a.faction, x.faction) && !atPeace(s, a.faction, x.faction))
+            .map((x) => ({ x, 道: 軍の道(s, a.faction, 陣.id, x.id) }))
+            .filter((v) => v.道 && v.道.length <= 3)
+            .sort((p, q) => p.道.length - q.道.length);
+          次 = 的ら.find((v) => a.men > v.x.local * 1.4) || null;
+        }
+        if (次) {
+          a.在陣 = null; a.在陣待ち = 0; a.target = 次.x.id; a.path = 次.道; a.prog = 0;
+          a.at = 次.道[0]; a.sieging = false; a.reinforced = false;
+          s.chronicle.push({ y: s.year, m: s.month,
+            text: `${陣.name}の在陣を払い、${s.factions[a.faction].name}の軍が${次.x.name}へ向かう。` });
+          continue;
+        }
+        // 二　足下の守りが薄ければ、そのまま城に入る
+        if (陣.local < minGarrison(陣)) {
+          城に合流する(s, a, 陣);
+          s.chronicle.push({ y: s.year, m: s.month,
+            text: `${陣.name}の陣を畳み、${s.factions[a.faction].name}の兵が城へ入った。` });
+          continue;
+        }
+        // 三　することが無ければ解く。人も兵も、遊ばせておく謂れはない
+        軍を解く(s, a);
+        s.chronicle.push({ y: s.year, m: s.month,
+          text: `${陣.name}の在陣を解き、${s.factions[a.faction].name}の兵と将は元の城へ帰った。` });
+      }
+
       /* 旗の下の城を狙う戦役は落とす。
          寝返りや従属で、狙っていた城が味方になることがある。
          そのまま残せば、味方に向かって軍議が開かれる。 */
@@ -1332,7 +1394,7 @@ export function advanceMonth(prev, g) {
               path: 道, prog: 0, food: Math.round(send3 * 0.6), target: 的.id, 旗頭: 旗.id,
             });
             for (const t3 of take3) t3.at = null;
-            c2.food -= Math.round(send3 * 0.6);
+            c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
             events.push(`${旗.name}が${c2.name}より出陣。${的.name}を目指す（方面の差配）。`);
             出た = true;
             break;
@@ -1450,6 +1512,7 @@ export function advanceMonth(prev, g) {
         }
         /* 奪われた城を本領としたままの者を繕う（GDD 6.4）。
            禄高は本領から出る。他家のものとなった城から己の身代が出てはならない。 */
+        本拠を追う(s);                            // 本領の繕いは本拠を当てにする。先に据える
         for (const q of 奪われた本領を繕う(s)) {
           if (q.faction !== s.player) continue;
           events.push(`${q.name}は本領を失い、${(s.castles.find((c) => c.id === q.本領) || {}).name}に居を移した。`);

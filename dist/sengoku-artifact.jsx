@@ -16582,6 +16582,839 @@ function takeAsPrisoner(s2, gen, winner, castleId) {
   g2.at = castleId;
 }
 
+// src/core/ambush.js
+function ambushPlan(g, army, dest, foe) {
+  const atkIsPlayer = army.faction === g.player;
+  const \u57CE\u65B9 = foe ? (foe.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
+  const \u57CE\u65B9\u306E\u5175 = foe ? foe.men : dest.local + \u57CE\u65B9.reduce((a, x) => a + x.retinue, 0);
+  const mine = atkIsPlayer ? army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : \u57CE\u65B9;
+  const theirs = atkIsPlayer ? \u57CE\u65B9 : army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
+  if (!mine.length || !theirs.length) return null;
+  const myMen = atkIsPlayer ? army.men : \u57CE\u65B9\u306E\u5175;
+  const foeMen = atkIsPlayer ? \u57CE\u65B9\u306E\u5175 : army.men;
+  const ratio = myMen / Math.max(1, foeMen);
+  if (ratio > 0.62) return null;
+  const head = [...mine].sort((a, b) => b.wit + b.lead - (a.wit + a.lead))[0];
+  if (!head || head.wit < 62) return null;
+  const wx = g.weather || "\u6674";
+  const terr = dest.kuni === "\u4FE1\u6FC3" || dest.kuni === "\u7532\u6590" || dest.kuni === "\u98DB\u9A28" ? "hill" : "forest";
+  const p = ambushChance(head, wx, terr, ratio);
+  if (p < 0.06) return null;
+  const lord = [...theirs].sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead - a.lead)[0];
+  return { head, target: lord, p, myMen: Math.round(myMen), foeMen: Math.round(foeMen), weather: wx, terr, ratio };
+}
+function ambushChance(gen, weather, terrain, ratio) {
+  if (!gen) return 0;
+  let p = (gen.wit - 55) / 340 + (gen.lead - 55) / 620;
+  p *= weather === "\u96E8" ? 1.55 : weather === "\u96EA" ? 1.35 : weather === "\u66C7" ? 1.12 : 1;
+  p *= terrain === "forest" || terrain === "hill" ? 1.3 : 1;
+  p *= clamp(0.6 + (1 - ratio) * 1.4, 0.5, 2);
+  return clamp(p, 0, 0.52);
+}
+function \u5947\u8972\u306E\u6BB5(wit) {
+  const w = wit || 0;
+  if (w >= 90) return { \u4F4D: "\u5927\u5C06\u8A0E\u6B7B", \u5927\u5C06\u8A0E\u6B7B: true, \u5927\u5C06\u5099\u3048: 0, \u5168\u4F53\u6B20\u3051: 0, \u4E71\u308C: 0.25, \u52E2\u3044: 1.25 };
+  if (w >= 85) return { \u4F4D: "\u672C\u9663\u58CA\u6EC5", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u9000\u304F: true, \u5927\u5C06\u5099\u3048: 0, \u5168\u4F53\u6B20\u3051: 0.5, \u4E71\u308C: 0.5, \u52E2\u3044: 1.18 };
+  if (w >= 80) return { \u4F4D: "\u672C\u9663\u5D29\u3057", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u5099\u3048: 0.25, \u5168\u4F53\u6B20\u3051: 0.25, \u4E71\u308C: 0.72, \u52E2\u3044: 1.12 };
+  if (w >= 70) return { \u4F4D: "\u672C\u9663\u885D\u304D", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u5099\u3048: 0.5, \u5168\u4F53\u6B20\u3051: 1 / 6, \u4E71\u308C: 0.84, \u52E2\u3044: 1.08 };
+  return { \u4F4D: "\u9663\u6255\u3044", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u5099\u3048: 1, \u5168\u4F53\u6B20\u3051: 1 / 8, \u4E71\u308C: 0.92, \u52E2\u3044: 1.05 };
+}
+function tryAmbush(s2, army, castle, aGens, dGens, weather) {
+  const head = [...aGens].sort((a, b) => b.wit + b.lead - (a.wit + a.lead))[0];
+  if (!head) return null;
+  const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
+  const ratio = army.men / Math.max(1, dMen);
+  if (ratio > 0.62) return null;
+  const terr = castle.kuni === "\u4FE1\u6FC3" || castle.kuni === "\u7532\u6590" || castle.kuni === "\u98DB\u9A28" ? "hill" : "forest";
+  const p = ambushChance(head, weather, terr, ratio);
+  if (Math.random() > p) return { ok: false, by: head, p };
+  const cand = dGens.filter((x) => x.faction === castle.faction && !x.captive);
+  const lord = [...cand].sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead - a.lead)[0];
+  return { ok: true, by: head, target: lord || null, p, \u6BB5: \u5947\u8972\u306E\u6BB5(head.wit) };
+}
+
+// src/govern/war.js
+var \u9060\u5F81\u306E\u5175\u7CE7 = (men, months) => Math.round(men * 0.09 * ((months || 1) + 2));
+var \u904B\u3073\u8CC3 = (men, months) => Math.round(men * (months || 1) * 0.02);
+function \u904B\u3073\u8CC3\u3092\u6255\u3046(s2, men, months) {
+  const f = s2.factions[s2.player];
+  if (!f) return 0;
+  const \u8CC3 = Math.min(f.gold, \u904B\u3073\u8CC3(men, months));
+  f.gold = Math.round((f.gold - \u8CC3) * 100) / 100;
+  return \u8CC3;
+}
+var \u7559\u5B88\u306E\u84C4\u3048 = (c) => Math.round((c.local || 0) * 0.08 * 6);
+function \u540C\u3058\u4E3B\u306E\u4E0B(g, me, other) {
+  const \u6211\u4E3B = \u4E3B\u3092\u63A2\u30592(g, me);
+  return !!\u6211\u4E3B && other !== \u6211\u4E3B && \u4E3B\u3092\u63A2\u30592(g, other) === \u6211\u4E3B;
+}
+function reinforceOffers(g, from, target, \u5927\u5C06) {
+  const out = [];
+  const \u672C\u9663 = g.castles.find((x) => x.id === from);
+  for (const c of g.castles) {
+    if (c.id === from) continue;
+    if (c.id === target) continue;
+    if (\u5927\u5C06 && c.faction === g.player && !\u9663\u89E6\u308C\u306B\u5FDC\u3058\u308B(g, \u5927\u5C06, \u672C\u9663, c)) continue;
+    const path = findPath(c.id, target);
+    if (!path) continue;
+    const legs = path.length - 1;
+    const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+    const avail = Math.max(0, c.local + gens.reduce((a, x) => a + x.retinue, 0) - minGarrison(c));
+    let kind = null, ratio = 0, chance = 1, \u6307\u56F3 = false;
+    if (c.faction === g.player) {
+      kind = "\u81EA\u9818";
+      ratio = 0.4;
+      \u6307\u56F3 = true;
+    } else if (isVassal(g, g.player, c.faction)) {
+      kind = "\u81E3\u5F93";
+      ratio = 0.35;
+      chance = 1;
+      \u6307\u56F3 = true;
+    } else {
+      const rel = relOf2(g, g.player, c.faction);
+      if (rel.state === "\u5F93\u5C5E" || rel.state === "\u81E3\u5F93") {
+        kind = rel.state;
+        ratio = 0.35;
+        chance = 0.9;
+      } else if (rel.state === "\u540C\u76DF") {
+        kind = "\u540C\u76DF";
+        ratio = 0.25;
+        chance = clamp(rel.trust / 100, 0.2, 0.9);
+      } else if (\u540C\u3058\u4E3B\u306E\u4E0B(g, g.player, c.faction)) {
+        kind = "\u540C\u3058\u4E3B\u306E\u4E0B";
+        ratio = 0.25;
+        chance = 0.7;
+      } else continue;
+    }
+    const months = marchMonths(c.id, target, c.faction) || Math.max(1, legs);
+    const \u8535 = Math.max(0, (c.food || 0) - \u7559\u5B88\u306E\u84C4\u3048(c));
+    const \u51FA\u305B\u308B\u5175\u7CE7 = Math.floor(\u8535 / Math.max(0.01, 0.09 * (months + 2)));
+    const men = Math.min(Math.floor(avail * ratio), \u51FA\u305B\u308B\u5175\u7CE7);
+    out.push({
+      castleId: c.id,
+      name: c.name,
+      faction: c.faction,
+      kind,
+      men,
+      legs,
+      chance,
+      \u6307\u56F3,
+      months,
+      // 指図の通る城では、こちらが将と兵を選ぶ。そのための素材も添える。
+      gens: \u6307\u56F3 ? gens.map((x) => ({
+        id: x.id,
+        name: x.name,
+        age: x.age,
+        lead: x.lead,
+        valor: x.valor,
+        wit: x.wit,
+        // 率いられる兵の限りは身分では置かない。手勢は知行なりである（GDD 6.4）
+        retinue: x.retinue,
+        rank: rankName(x, g),
+        limit: Math.max(\u8ECD\u5F79\u306E\u5668(x), x.retinue)
+      })) : [],
+      local: c.local,
+      avail,
+      garrison: minGarrison(c),
+      \u8535,
+      \u4E00\u4EBA\u306E\u5175\u7CE7: Math.round(0.09 * (months + 2) * 100) / 100,
+      /* 運び賃は城の蔵ではなく主家の財布から出る。ゆえに城ごとには縛らず、
+         呼んだ先を足し合わせた額を、進発の際にまとめて量る（画面の側で見る）。 */
+      \u4E00\u4EBA\u306E\u904B\u3073\u8CC3: Math.round(months * 0.02 * 100) / 100,
+      \u8CC3: \u904B\u3073\u8CC3(men, months),
+      reason: avail < 400 ? "\u5B88\u5099\u304C\u624B\u8584\u3067\u51FA\u305B\u306A\u3044" : \u51FA\u305B\u308B\u5175\u7CE7 < 200 ? `\u5175\u7CE7\u304C\u8DB3\u308A\u306C\uFF08${months}\u304B\u6708\u306E\u9053\u306B\u8535${Math.round(\u8535)}\u77F3\uFF09` : men < 200 && !\u6307\u56F3 ? "\u51FA\u305B\u308B\u5175\u304C\u5C11\u306A\u3059\u304E\u308B" : null
+    });
+  }
+  return out.filter((o) => o.men > 0 || o.reason || o.\u6307\u56F3).sort((a, z) => (z.\u6307\u56F3 ? 1 : 0) - (a.\u6307\u56F3 ? 1 : 0) || a.legs - z.legs);
+}
+function \u5728\u9663\u3055\u305B\u308B(s2, army, castle) {
+  army.at = castle.id;
+  army.path = [castle.id];
+  army.prog = 0;
+  army.target = null;
+  army.\u5728\u9663 = castle.id;
+  army.sieging = false;
+  army.reinforced = false;
+  army.seaDone = false;
+  s2.sieges = (s2.sieges || []).filter((x) => x.armyId !== army.id);
+  return army;
+}
+function \u57CE\u306B\u5408\u6D41\u3059\u308B(s2, army, castle) {
+  castle.local += Math.max(0, army.local);
+  castle.food += Math.max(0, army.food || 0);
+  if (army.rost && army.rost.length) castle.rost = [...castle.rost || [], ...army.rost];
+  rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+  for (const gid of army.gens) {
+    const x = s2.generals.find((q) => q.id === gid);
+    if (!x) continue;
+    x.at = castle.id;
+    if (!x.lord && castle.faction === x.faction) x.\u672C\u9818 = castle.id;
+  }
+  s2.armies = s2.armies.filter((x) => x.id !== army.id);
+  s2.sieges = (s2.sieges || []).filter((x) => x.armyId !== army.id);
+  s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => id !== army.id);
+  return s2;
+}
+function \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle) {
+  const \u5408\u6D41 = () => {
+    castle.local += Math.max(0, army.local);
+    castle.food += Math.max(0, army.food || 0);
+    if (army.rost && army.rost.length) castle.rost = [...castle.rost || [], ...army.rost];
+    rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+    const \u4ED6\u5BB6 = castle.faction !== army.faction;
+    const \u672C\u56FD = \u4ED6\u5BB6 ? s2.castles.find((x) => x.id === army.from && x.faction === army.faction) || s2.castles.find((x) => x.faction === army.faction) : null;
+    for (const gid of army.gens) {
+      const x = s2.generals.find((q) => q.id === gid);
+      if (x) x.at = \u4ED6\u5BB6 ? \u672C\u56FD ? \u672C\u56FD.id : castle.id : castle.id;
+    }
+    s2.armies = s2.armies.filter((x) => x.id !== army.id);
+  };
+  const \u7559\u307E\u308B = () => {
+    if (castle.faction === army.faction) \u5728\u9663\u3055\u305B\u308B(s2, army, castle);
+    else \u5408\u6D41();
+  };
+  const sg = s2.sieges.find((x) => x.castleId === castle.id);
+  const bes = sg && s2.armies.find((x) => x.id === sg.armyId);
+  if (!bes || bes.faction === army.faction) {
+    \u7559\u307E\u308B();
+    return s2;
+  }
+  const \u5C06 = (ids) => ids.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
+  const \u7D71 = (gs) => gs.length ? gs.reduce((a, x) => a + x.lead, 0) / gs.length : 55;
+  const rG = \u5C06(army.gens), bG = \u5C06(bes.gens);
+  const \u5F8C\u8A70 = army.men * (0.85 + army.localTrain / 250) * (1 + \u7D71(rG) / 300) * (0.85 + Math.random() * 0.3);
+  const \u5BC4\u624B = bes.men * (0.8 + (bes.localTrain || 60) / 250) * (1 + \u7D71(bG) / 300) * (0.85 + Math.random() * 0.3);
+  const \u52DD = \u5F8C\u8A70 > \u5BC4\u624B;
+  const r = Math.min(\u5F8C\u8A70, \u5BC4\u624B) / Math.max(\u5F8C\u8A70, \u5BC4\u624B);
+  const \u5F8C\u8A70\u640D = Math.round(army.men * (\u52DD ? 0.14 * r + 0.05 : 0.28 + 0.2 * r));
+  const \u5BC4\u624B\u640D = Math.round(bes.men * (\u52DD ? 0.3 + 0.2 * r : 0.13 * r + 0.05));
+  army.men = Math.max(0, army.men - \u5F8C\u8A70\u640D);
+  army.local = Math.max(0, army.local - \u5F8C\u8A70\u640D);
+  bes.men = Math.max(0, bes.men - \u5BC4\u624B\u640D);
+  bes.local = Math.max(0, bes.local - \u5BC4\u624B\u640D);
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${castle.name}\u306E\u56F2\u307F\u3092\u89E3\u3053\u3046\u3068${s2.factions[army.faction].name}\u306E\u5F8C\u8A70\u304C${s2.factions[bes.faction].name}\u306E\u9663\u3092\u885D\u304D\u3001${\u52DD ? "\u56F2\u307F\u3092\u6253\u3061\u6255\u3063\u305F" : "\u9000\u3051\u3089\u308C\u305F"}\uFF08\u5F8C\u8A70${fmt(\u5F8C\u8A70\u640D)}\u4EBA\u30FB\u5BC4\u305B\u624B${fmt(\u5BC4\u624B\u640D)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
+  });
+  if (\u52DD) {
+    const \u672C\u56FD = s2.castles.find((x) => x.id === bes.from) || s2.castles.find((x) => x.faction === bes.faction);
+    if (\u672C\u56FD) {
+      \u672C\u56FD.local += Math.max(0, bes.local);
+      if (bes.rost && bes.rost.length) \u672C\u56FD.rost = [...\u672C\u56FD.rost || [], ...bes.rost];
+      rosterSync(\u672C\u56FD, "rost", \u672C\u56FD.local, `loc-${\u672C\u56FD.id}`);
+      for (const gid of bes.gens) {
+        const x = s2.generals.find((q) => q.id === gid);
+        if (x) x.at = \u672C\u56FD.id;
+      }
+    }
+    s2.armies = s2.armies.filter((x) => x.id !== bes.id);
+    s2.sieges = s2.sieges.filter((x) => x.castleId !== castle.id);
+    \u7559\u307E\u308B();
+  } else {
+    const \u672C\u56FD = s2.castles.find((x) => x.id === army.from);
+    if (\u672C\u56FD && \u672C\u56FD.faction === army.faction) {
+      \u672C\u56FD.local += Math.max(0, army.local);
+      for (const gid of army.gens) {
+        const x = s2.generals.find((q) => q.id === gid);
+        if (x) x.at = \u672C\u56FD.id;
+      }
+    } else \u5408\u6D41();
+    s2.armies = s2.armies.filter((x) => x.id !== army.id);
+    if (sg) sg.relief = null;
+  }
+  return s2;
+}
+function sackCastle(s2, castle, army, hard) {
+  const lastOne = s2.castles.filter((c2) => c2.faction === castle.faction).length === 1;
+  const oldF = castle.faction;
+  const defGens = s2.generals.filter((x) => x.at === castle.id && x.faction === oldF && !x.captive);
+  const \u56DA\u4EBA = s2.generals.filter((x) => x.at === castle.id && x.captive);
+  const winner = army.faction;
+  const log = (t) => s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+  const oldLord = s2.generals.find((x) => x.faction === oldF && x.lord && !x.captive);
+  const \u6355\u3089\u3048\u308B = (gen, \u6587) => {
+    const \u5F53\u4E3B\u304B = !!gen.lord;
+    makePrisoner(s2, gen, winner, castle.id);
+    log(\u6587);
+    if (winner === s2.player) s2.captives = [...s2.captives || [], gen.id];
+    if (\u5F53\u4E3B\u304B) {
+      gen.lord = false;
+      succeed(s2, gen, "\u6575\u624B\u306B\u6355\u3089\u308F\u308C\u305F");
+    }
+  };
+  for (const gen of defGens) {
+    if (lastOne) continue;
+    const r = Math.random() + (hard ? 0.12 : 0) + gen.valor / 400 - gen.loyal / 320;
+    if (r > 0.86 && Math.random() < \u96E3\u3092\u9003\u308C\u308B(gen)) {
+      const \u5F53\u4E3B\u304B = !!gen.lord;
+      \u5C06\u3092\u9664\u304F(s2, gen.id);
+      log(`${gen.name}\u306F${castle.name}\u306B\u8E0F\u307F\u3068\u3069\u307E\u308A\u8A0E\u6B7B\u3057\u305F\u3002`);
+      if (\u5F53\u4E3B\u304B) succeed(s2, gen, `${castle.name}\u306B\u8E0F\u307F\u3068\u3069\u307E\u308A\u8A0E\u6B7B\u3057\u305F`);
+    } else if (r > 0.7 && Math.random() < captureChance(gen) * 3.2) {
+      \u6355\u3089\u3048\u308B(gen, `${gen.name}\u306F\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
+    } else if (r > 0.7) {
+      const refuge = s2.castles.find((c2) => c2.faction === oldF && c2.id !== castle.id);
+      if (refuge) {
+        gen.at = refuge.id;
+        log(`${gen.name}\u306F\u56F2\u307F\u3092\u7834\u3063\u3066${refuge.name}\u3078\u9003\u308C\u305F\u3002`);
+      } else \u6355\u3089\u3048\u308B(gen, `${gen.name}\u306F\u9003\u308C\u308B\u5148\u306A\u304F\u3001\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
+    } else if (r > 0.48) {
+      const \u9761\u304F\u304B = !gen.lord && canRecruit(gen, oldLord).ok && persuadeResult(gen);
+      if (\u9761\u304F\u304B) {
+        gen.faction = winner;
+        gen.loyal = loyaltyAfterRecruit(gen);
+        gen.at = castle.id;
+        gen.retinue = Math.round(gen.retinue * 0.5);
+        log(`${gen.name}\u306F\u964D\u308A\u3001${s2.factions[winner].name}\u306B\u5C5E\u3057\u305F\u3002`);
+      } else {
+        \u6355\u3089\u3048\u308B(gen, gen.lord ? `${gen.name}\u306F\u57CE\u3092\u6795\u306B\u3059\u308B\u3053\u3068\u3082\u53F6\u308F\u305A\u3001\u751F\u3051\u6355\u308A\u306B\u3055\u308C\u305F\u3002` : `${gen.name}\u306F\u964D\u3089\u305A\u3001\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
+      }
+    } else {
+      const refuge = s2.castles.find((c) => c.faction === oldF && c.id !== castle.id);
+      const \u843D\u3061\u5EF6\u3073\u308B = refuge && (!gen.lord || Math.random() < 0.6);
+      if (\u843D\u3061\u5EF6\u3073\u308B) {
+        gen.at = refuge.id;
+        gen.retinue = Math.round(gen.retinue * 0.6);
+        log(`${gen.name}\u306F${refuge.name}\u3078\u843D\u3061\u5EF6\u3073\u305F\u3002`);
+      } else \u6355\u3089\u3048\u308B(gen, `${gen.name}\u306F\u843D\u3061\u5EF6\u3073\u308B\u5148\u306A\u304F\u3001\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
+    }
+  }
+  for (const q of \u56DA\u4EBA) {
+    if (q.faction === winner) {
+      q.captive = null;
+      q.warLoyal = void 0;
+      q.loyal = clamp((q.loyal == null ? 60 : q.loyal) + 8, 0, 100);
+      q.retinue = Math.round(120 + Math.random() * 100);
+      log(`${castle.name}\u306B\u56DA\u308F\u308C\u3066\u3044\u305F${q.name}\u304C\u89E3\u304D\u653E\u305F\u308C\u305F\u3002`);
+    } else if (q.captive.by !== winner) {
+      q.captive = { ...q.captive, by: winner, at: castle.id };
+      log(`${castle.name}\u306B\u56DA\u308F\u308C\u3066\u3044\u305F${q.name}\u306E\u8EAB\u67C4\u306F${s2.factions[winner].name}\u306B\u79FB\u3063\u305F\u3002`);
+      if (winner === s2.player) s2.captives = [...s2.captives || [], q.id];
+    }
+  }
+  const before = castle.local;
+  const min0 = castle.min;
+  const stay = Math.round(before * clamp(min0 / 260 + (hard ? 0 : 0.12), 0.05, 0.45));
+  const yield_ = Math.round(before * clamp(0.3 - min0 / 400, 0.05, 0.3));
+  const resist = Math.round(before * (hard ? 0.18 : 0.08));
+  const scatter = Math.max(0, before - stay - yield_ - resist);
+  log(`${castle.name}\u306E\u5730\u57DF\u5BB6\u81E3\u56E3${fmt(before)}\u4EBA\u306E\u3046\u3061\u3001${fmt(stay)}\u4EBA\u304C\u6B8B\u308A\u3001${fmt(yield_)}\u4EBA\u304C\u964D\u308A\u3001${fmt(resist)}\u4EBA\u304C\u6297\u3044\u3001${fmt(scatter)}\u4EBA\u304C\u6563\u3063\u305F\u3002`);
+  castle.faction = winner;
+  const keepN = stay + yield_;
+  castle.rost = rosterCut(castle.rost || newRoster(before, `loc-${castle.id}`), Math.max(0, before - keepN));
+  castle.local = stay + yield_;
+  rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+  castle.koku = Math.round(castle.koku * (hard ? 0.9 : 0.95));
+  castle.comm = Math.round(castle.comm * (hard ? 0.8 : 0.9));
+  castle.pop = Math.round(castle.pop * (hard ? 0.92 : 0.96));
+  castle.food = Math.round(castle.food * (hard ? 0.35 : 0.6));
+  castle.def = Math.round(castle.def * (hard ? 0.68 : 0.85));
+  castle.hp = Math.round(castle.hp * (hard ? 0.55 : 0.8));
+  castle.min = clamp(Math.round(min0 - (hard ? 28 : 16) - resist / Math.max(1, before) * 40), 8, 100);
+  castle.najimi = 18;
+  castle.lordId = null;
+  castle.intrigue = false;
+  castle.well = 100;
+  army.at = castle.id;
+  army.path = [castle.id];
+  army.prog = 0;
+  army.target = null;
+  army.\u5728\u9663 = castle.id;
+  army.sieging = false;
+  army.reinforced = false;
+  army.seaDone = false;
+  s2.sieges = (s2.sieges || []).filter((x) => x.armyId !== army.id);
+  for (const a2 of s2.armies.filter((x) => x.target === castle.id || x.at === castle.id)) {
+    if (a2.faction === oldF) continue;
+    if (a2.id === army.id) continue;
+    const home = withdrawArmy(s2, a2);
+    if (!home) continue;
+    if (a2.faction === s2.player) {
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${castle.name}\u653B\u3081\u306B\u52A0\u308F\u3063\u305F\u5BC4\u9A0E\u306F${home.name}\u3078\u5E30\u9663\u3057\u305F\u3002`
+      });
+    }
+  }
+  s2.armies = s2.armies.filter((x) => x.id === army.id || !(x.target === castle.id || x.at === castle.id) || x.faction === oldF);
+  s2.sieges = s2.sieges.filter((x) => x.castleId !== castle.id);
+  s2.campaigns = (s2.campaigns || []).filter((x) => x.target !== castle.id);
+  \u672C\u62E0\u3092\u8FFD\u3046(s2);
+  \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2);
+  log(`${castle.name}\u304C\u843D\u3061\u3001${s2.factions[winner].name}\u306E\u624B\u306B\u6E21\u3063\u305F\uFF08\u65E7\u9818\u4E3B\uFF1A${s2.factions[oldF].name}\uFF09\u3002`);
+  if (winner !== s2.player) {
+    \u57CE\u3092\u59D4\u306D\u308B(s2, castle.id, army.id, \u59D4\u306D\u308B\u5DEE\u914D(s2, castle, army));
+  } else {
+    s2.\u59D4\u306D\u308B\u5F85\u3061 = [
+      ...(s2.\u59D4\u306D\u308B\u5F85\u3061 || []).filter((x) => x.castleId !== castle.id),
+      { castleId: castle.id, armyId: army.id }
+    ];
+  }
+  if (castle.kuni && holdsProvince(s2, winner, castle.kuni)) {
+    const \u56FD\u306E\u57CE = s2.castles.filter((x) => x.kuni === castle.kuni);
+    log(`${s2.factions[winner].name}\u304C${castle.kuni}\u3092\u4E00\u56FD\u6B8B\u3089\u305A\u624B\u4E2D\u306B\u3057\u305F\uFF08${\u56FD\u306E\u57CE.length}\u57CE\uFF09\u3002`);
+    if (winner === s2.player) {
+      s2.monthEvents = [
+        ...s2.monthEvents || [],
+        `${castle.kuni}\u3092\u5E73\u5B9A\u3057\u305F\u3002\u56FD\u304C\u307E\u3068\u307E\u308C\u3070\u6C11\u306F\u843D\u3061\u7740\u304D\u3001\u7AFF\u3092\u5165\u308C\u3089\u308C\u308B\u3002`
+      ];
+      s2.\u56FD\u5E73\u5B9A = { kuni: castle.kuni, castleId: castle.id, \u57CE\u6570: \u56FD\u306E\u57CE.length, y: s2.year, m: s2.month };
+    }
+  }
+  if (!s2.castles.some((c2) => c2.faction === oldF)) {
+    for (const a2 of s2.armies.filter((x) => x.faction === oldF)) {
+      for (const gid of a2.gens) {
+        const x = s2.generals.find((q) => q.id === gid);
+        if (x) x.at = castle.id;
+      }
+    }
+    s2.armies = s2.armies.filter((x) => x.faction !== oldF);
+    s2.sieges = s2.sieges.filter((x) => {
+      const bes = s2.armies.find((a3) => a3.id === x.armyId);
+      return !!bes;
+    });
+    s2.campaigns = (s2.campaigns || []).filter((x) => x.faction !== oldF);
+    const \u623B\u3059 = s2.generals.filter((x) => x.faction === oldF && x.captive && x.captive.by === winner);
+    for (const q of \u623B\u3059) q.captive = null;
+    if (\u623B\u3059.length) {
+      const \u6E08 = new Set(\u623B\u3059.map((q) => q.id));
+      s2.captives = (s2.captives || []).filter((id) => !\u6E08.has(id));
+    }
+    const { lord, retainers } = ruinedHouse(s2, oldF);
+    if (winner === s2.player && (lord || retainers.length)) {
+      s2.warSettle = {
+        faction: oldF,
+        winner,
+        castleId: castle.id,
+        lordId: lord ? lord.id : null,
+        queue: [...lord ? [lord.id] : [], ...retainers.map((x) => x.id)]
+      };
+    } else {
+      \u6EC5\u3093\u3060\u5BB6\u3092\u59CB\u672B\u3059\u308B(s2, oldF, winner, castle.id, { lord, retainers });
+    }
+    s2.ruined = [...s2.ruined || [], oldF];
+  }
+}
+function \u57CE\u3092\u59D4\u306D\u308B(s2, castleId, armyId, \u5DEE\u914D) {
+  const c = s2.castles.find((x) => x.id === castleId);
+  const a = (s2.armies || []).find((x) => x.id === armyId);
+  if (!c || !a) return s2;
+  const \u7F6E\u304F = [.../* @__PURE__ */ new Set([...\u5DEE\u914D.\u6240\u5C5E || [], ...\u5DEE\u914D.\u57CE\u4E3B ? [\u5DEE\u914D.\u57CE\u4E3B] : []])];
+  for (const gid of \u7F6E\u304F) {
+    if (!(a.gens || []).includes(gid)) continue;
+    const g = s2.generals.find((x) => x.id === gid);
+    if (!g) continue;
+    g.at = c.id;
+    g.\u672C\u9818 = c.id;
+    a.gens = a.gens.filter((x) => x !== gid);
+  }
+  if (\u5DEE\u914D.\u57CE\u4E3B && \u7F6E\u304F.includes(\u5DEE\u914D.\u57CE\u4E3B)) {
+    if (c.lordId && c.lordId !== \u5DEE\u914D.\u57CE\u4E3B) c.najimi = 25;
+    c.lordId = \u5DEE\u914D.\u57CE\u4E3B;
+  }
+  const \u6B8B = Math.max(0, Math.min(Math.round(\u5DEE\u914D.\u5175 || 0), a.local || 0));
+  if (\u6B8B > 0) {
+    const tk = rosterTake(a.rost || newRoster(a.local, `arm-${a.id}`), \u6B8B);
+    a.rost = tk.rest;
+    a.local = Math.max(0, a.local - \u6B8B);
+    c.rost = [...c.rost || [], ...tk.taken];
+    c.local += \u6B8B;
+    rosterSync(c, "rost", c.local, `loc-${c.id}`);
+  }
+  a.men = (a.local || 0) + (a.gens || []).reduce((t, id) => {
+    const g = s2.generals.find((x) => x.id === id);
+    return t + (g ? g.retinue : 0);
+  }, 0);
+  if (!(a.gens || []).length) {
+    const \u5E30\u308A\u5148 = withdrawArmy(s2, a);
+    if (\u5E30\u308A\u5148 && (a.local || 0) > 0) {
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${c.name}\u306B\u5C06\u3092\u6B8B\u3089\u305A\u7F6E\u3044\u305F\u306E\u3067\u8ECD\u306F\u89E3\u3051\u3001\u6B8B\u308B\u5175${fmt(a.local)}\u4EBA\u306F${\u5E30\u308A\u5148.name}\u3078\u8FD4\u3057\u305F\u3002`
+      });
+    }
+  }
+  return s2;
+}
+function \u5C06\u306E\u7121\u3044\u8ECD\u3092\u89E3\u304F(s2) {
+  const \u89E3\u3044\u305F = [];
+  for (const a of [...s2.armies || []]) {
+    if ((a.gens || []).length) continue;
+    const \u5E30\u308A\u5148 = withdrawArmy(s2, a);
+    \u89E3\u3044\u305F.push({ id: a.id, faction: a.faction, men: a.local || 0, \u5148: \u5E30\u308A\u5148 });
+  }
+  return \u89E3\u3044\u305F;
+}
+function \u59D4\u306D\u308B\u5DEE\u914D(s2, castle, army) {
+  const \u5C06\u3089 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
+  if (\u5C06\u3089.length <= 1) return { \u57CE\u4E3B: null, \u6240\u5C5E: [], \u5175: Math.round((army.local || 0) * 0.3) };
+  const \u4E3B = [...\u5C06\u3089].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
+  return { \u57CE\u4E3B: \u4E3B.id, \u6240\u5C5E: [\u4E3B.id], \u5175: Math.round((army.local || 0) * 0.5) };
+}
+function resolveOffscreen(prev, armyId, castleId) {
+  const s2 = structuredClone(prev);
+  const army = s2.armies.find((x) => x.id === armyId);
+  const castle = s2.castles.find((x) => x.id === castleId);
+  s2.pendingArrivals = (s2.pendingArrivals || []).slice(1);
+  if (!army || !castle) return s2;
+  if (\u63F4\u3051\u306B\u7740\u304F(s2, army, castle) || underMyBanner(s2, army.faction, castle.faction)) {
+    return \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle);
+  }
+  const aGens = army.gens.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
+  const dGens = s2.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
+  const lead = (gs) => gs.length ? gs.reduce((a, x) => a + x.lead, 0) / gs.length : 55;
+  const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
+  const wx = s2.weather || "\u6674";
+  const amb = tryAmbush(s2, army, castle, aGens, dGens, wx);
+  let \u4E71\u308C = 1, \u52E2\u3044 = 1;
+  if (amb && amb.ok) {
+    const \u6BB5 = amb.\u6BB5;
+    \u4E71\u308C = \u6BB5.\u4E71\u308C;
+    \u52E2\u3044 = \u6BB5.\u52E2\u3044;
+    const \u4E3B = amb.target ? s2.generals.find((x) => x.id === amb.target.id) : null;
+    if (\u4E3B && \u6BB5.\u5927\u5C06\u5099\u3048 < 1) \u4E3B.retinue = Math.round(\u4E3B.retinue * \u6BB5.\u5927\u5C06\u5099\u3048);
+    if (\u6BB5.\u5168\u4F53\u6B20\u3051 > 0) {
+      const \u6B8B = 1 - \u6BB5.\u5168\u4F53\u6B20\u3051;
+      castle.local = Math.max(0, Math.round(castle.local * \u6B8B));
+      for (const x of dGens) {
+        if (\u4E3B && x.id === \u4E3B.id && \u6BB5.\u5927\u5C06\u5099\u3048 < 1) continue;
+        x.retinue = Math.round(x.retinue * \u6B8B);
+      }
+    }
+    let \u6587 = `${amb.by.name}\u304C${castle.name}\u306E\u672C\u9663\u3092\u885D\u3044\u305F\u3002`;
+    if (\u6BB5.\u5927\u5C06\u8A0E\u6B7B && \u4E3B) {
+      \u5C06\u3092\u9664\u304F(s2, \u4E3B.id);
+      if (\u4E3B.lord) succeed(s2, \u4E3B, "\u672C\u9663\u3092\u885D\u304B\u308C\u3066\u8A0E\u6B7B\u3057\u305F");
+      \u6587 += `${\u4E3B.name}\u306F\u8A0E\u305F\u308C\u3001${s2.factions[castle.faction].name}\u306E\u8ECD\u306F\u74E6\u89E3\u3057\u305F\u3002`;
+      if (army.faction === s2.player) s2.msg = `${amb.by.name}\u304C\u6575\u306E\u672C\u9663\u3092\u885D\u304D\u3001${\u4E3B.name}\u3092\u8A0E\u3061\u53D6\u3063\u305F\u3002`;
+    } else if (\u6BB5.\u5927\u5C06\u9000\u304F && \u4E3B) {
+      const \u843D\u3061\u5148 = s2.castles.filter((x) => x.faction === \u4E3B.faction && x.id !== castle.id).sort((a, z) => Math.hypot(a.lon - castle.lon, a.lat - castle.lat) - Math.hypot(z.lon - castle.lon, z.lat - castle.lat))[0];
+      if (\u843D\u3061\u5148) \u4E3B.at = \u843D\u3061\u5148.id;
+      \u6587 += `${\u4E3B.name}\u306E\u5099\u3048\u306F\u58CA\u6EC5\u3057\u3001\u672C\u4EBA\u306F\u672C\u9663\u3092\u6368\u3066\u3066\u9000\u3044\u305F\u3002`;
+    } else {
+      \u6587 += `${s2.factions[castle.faction].name}\u306E\u5099\u3048\u306F\u4E71\u308C\u305F\u3002`;
+    }
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+  } else if (amb && !amb.ok && army.faction === s2.player) {
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: `${amb.by.name}\u306F\u6575\u306E\u9699\u3092\u7ABA\u3063\u305F\u304C\u3001\u6A5F\u3092\u5F97\u306A\u304B\u3063\u305F\u3002` });
+  }
+  const dGens2 = s2.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
+  const dMen2 = castle.local + dGens2.reduce((a, x) => a + x.retinue, 0);
+  let atk = army.men * (0.8 + army.localTrain / 250) * (1 + lead(aGens) / 300) * (0.85 + Math.random() * 0.3) * \u52E2\u3044;
+  let def = dMen2 * (0.85 + castle.localTrain / 250) * (1 + castle.def / 200 + lead(dGens2) / 300) * (0.85 + Math.random() * 0.3) * \u4E71\u308C;
+  const atkWon = atk > def;
+  const r = Math.min(atk, def) / Math.max(atk, def);
+  const aLoss = Math.round(army.men * (atkWon ? 0.16 * r + 0.06 : 0.3 + 0.2 * r));
+  const dLoss = Math.round(dMen2 * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
+  army.men = Math.max(0, army.men - aLoss);
+  army.local = Math.max(0, army.local - aLoss);
+  castle.local = Math.max(0, castle.local - dLoss);
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${castle.name}\u4E0B\u3067${s2.factions[army.faction].name}\u3068${s2.factions[castle.faction].name}\u304C\u6226\u3044\u3001${atkWon ? "\u653B\u3081\u624B" : "\u5B88\u308A\u624B"}\u304C\u52DD\u3063\u305F\uFF08\u653B${fmt(aLoss)}\u4EBA\u30FB\u5B88${fmt(dLoss)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
+  });
+  if (atkWon && castle.local < 200) {
+    sackCastle(s2, castle, army, true);
+  } else if (atkWon) {
+    army.sieging = true;
+    s2.sieges = [...s2.sieges.filter((x) => x.castleId !== castle.id), { castleId: castle.id, armyId: army.id, months: 0, decided: null }];
+  } else {
+    withdrawArmy(s2, army);
+  }
+  return s2;
+}
+function \u9053\u306E\u308A(path) {
+  let d = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    const r = roadBetween(path[i], path[i + 1]);
+    d += r ? r[2] / ROAD_SPEED[r[3]] : 10;
+  }
+  return d;
+}
+function \u6B8B\u308A\u306E\u9053\u306E\u308A(a) {
+  if (!a.path || a.path.length < 2) return 0;
+  let d = 0;
+  for (let i = 0; i < a.path.length - 1; i++) {
+    const r = roadBetween(a.path[i], a.path[i + 1]);
+    const seg = r ? r[2] / ROAD_SPEED[r[3]] : 10;
+    d += i === 0 ? seg * (1 - (a.prog || 0)) : seg;
+  }
+  return d;
+}
+function \u884C\u304D\u5408\u3046\u533A\u9593(path, at) {
+  let d = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    const r = roadBetween(path[i], path[i + 1]);
+    const seg = r ? r[2] / ROAD_SPEED[r[3]] : 10;
+    if (d + seg >= at || i === path.length - 2) return { u: path[i], v: path[i + 1] };
+    d += seg;
+  }
+  return { u: path[0], v: path[path.length - 1] };
+}
+var \u5730\u540D = (id) => {
+  const n = nodeById(id);
+  return n ? n.name : "";
+};
+function marchClashes(s2) {
+  const out = [];
+  const \u6E08 = /* @__PURE__ */ new Set();
+  const \u884C\u8ECD = (s2.armies || []).filter((a) => a.from && a.target && !a.sieging && !a.dead && a.path);
+  for (const a of \u884C\u8ECD) {
+    if (\u6E08.has(a.id)) continue;
+    const b = \u884C\u8ECD.find((x) => !\u6E08.has(x.id) && x.id !== a.id && x.faction !== a.faction && x.from === a.target && x.target === a.from);
+    if (!b) continue;
+    const pa = findPath(a.from, a.target), pb = findPath(b.from, b.target);
+    if (!pa || !pb || pa.length !== pb.length) continue;
+    if (!pa.every((id, i) => id === pb[pb.length - 1 - i])) continue;
+    const L = \u9053\u306E\u308A(pa);
+    const ra = \u6B8B\u308A\u306E\u9053\u306E\u308A(a), rb = \u6B8B\u308A\u306E\u9053\u306E\u308A(b);
+    const posA = L - ra, posB = rb;
+    if (posA < posB) continue;
+    const { u, v } = \u884C\u304D\u5408\u3046\u533A\u9593(pa, clamp((posA + posB) / 2, 0, L));
+    \u6E08.add(a.id);
+    \u6E08.add(b.id);
+    out.push({ aId: a.id, bId: b.id, u, v, place: `${\u5730\u540D(u)}\u3068${\u5730\u540D(v)}\u306E\u9593` });
+  }
+  return out;
+}
+function clashPower(s2, army) {
+  const gens = army.gens.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
+  const lead = gens.length ? gens.reduce((a, x) => a + x.lead, 0) / gens.length : 55;
+  return army.men * (0.85 + (army.localTrain || 60) / 250) * (1 + lead / 300) * (0.85 + Math.random() * 0.3);
+}
+function homeFor(s2, army) {
+  const \u5143 = s2.castles.find((x) => x.id === army.from);
+  if (\u5143 && \u5143.faction === army.faction) return \u5143;
+  const \u81EA\u9818 = s2.castles.filter((x) => x.faction === army.faction);
+  if (!\u81EA\u9818.length) return null;
+  const \u8FD1\u3044 = \u81EA\u9818.map((c) => ({ c, p: findPath(army.at || army.from, c.id) })).filter((x) => x.p).sort((a, z) => a.p.length - z.p.length)[0];
+  return \u8FD1\u3044 ? \u8FD1\u3044.c : \u81EA\u9818[0];
+}
+function \u8ECD\u3092\u89E3\u304F(s2, army) {
+  return withdrawArmy(s2, army);
+}
+function withdrawArmy(s2, army) {
+  const home = homeFor(s2, army);
+  if (home) {
+    home.local += Math.max(0, army.local);
+    const \u6B8B = rosterArms(army.rost);
+    home.horse = Math.max(0, (home.horse || 0) + \u6B8B.kiba);
+    home.gun = Math.max(0, (home.gun || 0) + \u6B8B.teppo);
+    if (army.rost && army.rost.length) home.rost = [...home.rost || [], ...army.rost];
+    rosterSync(home, "rost", home.local, `loc-${home.id}`);
+  }
+  const \u81EA\u5BB6\u306E\u6700\u5BC4\u308A = (fid) => {
+    const \u81EA\u9818 = s2.castles.filter((c) => c.faction === fid);
+    if (!\u81EA\u9818.length) return null;
+    const \u8FD1\u3044 = \u81EA\u9818.map((c) => ({ c, p: findPath(army.at || army.from, c.id) })).filter((v) => v.p).sort((a, z) => a.p.length - z.p.length)[0];
+    return \u8FD1\u3044 ? \u8FD1\u3044.c : \u81EA\u9818[0];
+  };
+  const \u843D\u3061\u308B\u5148 = (x) => {
+    if (x.lord) {
+      const \u62E0 = (s2.factions[x.faction] || {}).\u672C\u62E0;
+      const c = \u62E0 && s2.castles.find((y) => y.id === \u62E0 && y.faction === x.faction);
+      if (c) return c;
+    }
+    const \u5DF1\u306E\u57CE = s2.castles.find((c) => c.lordId === x.id && c.faction === x.faction);
+    if (\u5DF1\u306E\u57CE) return \u5DF1\u306E\u57CE;
+    if (home && home.faction === x.faction) return home;
+    return \u81EA\u5BB6\u306E\u6700\u5BC4\u308A(x.faction);
+  };
+  for (const gid of army.gens) {
+    const x = s2.generals.find((q) => q.id === gid);
+    if (!x || x.captive) continue;
+    const \u5148 = \u843D\u3061\u308B\u5148(x);
+    if (!\u5148) continue;
+    x.at = \u5148.id;
+    x.\u672C\u9818 = \u5148.id;
+  }
+  s2.armies = s2.armies.filter((x) => x.id !== army.id);
+  s2.sieges = s2.sieges.filter((x) => x.armyId !== army.id);
+  s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => id !== army.id);
+  s2.campaigns = (s2.campaigns || []).map((c) => ({
+    ...c,
+    armies: (c.armies || []).filter((id) => id !== army.id),
+    arrived: (c.arrived || []).filter((id) => id !== army.id)
+  })).filter((c) => c.armies.length);
+  return home;
+}
+function restoreStrays(s2) {
+  const \u51FA\u9663\u4E2D = /* @__PURE__ */ new Set();
+  for (const a of s2.armies) for (const gid of a.gens) \u51FA\u9663\u4E2D.add(gid);
+  const \u623B\u3057\u305F = [];
+  for (const q of s2.generals) {
+    if (q.captive || \u51FA\u9663\u4E2D.has(q.id)) continue;
+    if (q.at && s2.castles.some((c) => c.id === q.at)) continue;
+    const \u81EA\u9818 = s2.castles.filter((c) => c.faction === q.faction);
+    if (!\u81EA\u9818.length) continue;
+    q.at = \u81EA\u9818[0].id;
+    \u623B\u3057\u305F.push(q);
+  }
+  return \u623B\u3057\u305F;
+}
+function \u57CE\u306A\u304D\u5BB6\u3092\u7247\u3065\u3051\u308B(s2) {
+  const \u7247\u3065\u3051\u305F = [];
+  for (const fid of Object.keys(s2.factions || {})) {
+    if (s2.castles.some((c) => c.faction === fid)) continue;
+    const \u6B8B = s2.generals.filter((g) => g.faction === fid && !g.captive);
+    if (!\u6B8B.length) continue;
+    if (s2.warSettle && s2.warSettle.faction === fid) continue;
+    const \u6570 = /* @__PURE__ */ new Map();
+    for (const g of \u6B8B) {
+      const c = g.at && s2.castles.find((x) => x.id === g.at);
+      if (!c) continue;
+      \u6570.set(c.id, (\u6570.get(c.id) || 0) + (g.lord ? 100 : 1));
+    }
+    const \u91CE\u306E\u8ECD = s2.armies.filter((a) => a.faction === fid);
+    const \u9663 = \u91CE\u306E\u8ECD.map((a) => s2.castles.find((c) => c.id === (a.\u5728\u9663 || a.at))).filter(Boolean);
+    for (const a of \u91CE\u306E\u8ECD) for (const gid of a.gens || []) {
+      const g = s2.generals.find((q) => q.id === gid);
+      if (g) g.at = (\u9663[0] || {}).id || g.at;
+    }
+    if (\u91CE\u306E\u8ECD.length) {
+      const \u6563 = new Set(\u91CE\u306E\u8ECD.map((a) => a.id));
+      s2.armies = s2.armies.filter((a) => !\u6563.has(a.id));
+      s2.sieges = (s2.sieges || []).filter((x) => !\u6563.has(x.armyId));
+      s2.campaigns = (s2.campaigns || []).filter((x) => x.faction !== fid);
+      s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => !\u6563.has(id));
+    }
+    for (const g of \u6B8B) {
+      const c = g.at && s2.castles.find((x) => x.id === g.at);
+      if (!c) continue;
+      \u6570.set(c.id, (\u6570.get(c.id) || 0) + (g.lord ? 100 : 1));
+    }
+    const [castleId] = [...\u6570.entries()].sort((a, z) => z[1] - a[1])[0] || [];
+    const \u57CE = castleId && s2.castles.find((x) => x.id === castleId);
+    if (!\u57CE) continue;
+    \u6EC5\u3093\u3060\u5BB6\u3092\u59CB\u672B\u3059\u308B(s2, fid, \u57CE.faction, \u57CE.id);
+    s2.ruined = [.../* @__PURE__ */ new Set([...s2.ruined || [], fid])];
+    \u7247\u3065\u3051\u305F.push({ fid, winner: \u57CE.faction });
+  }
+  return \u7247\u3065\u3051\u305F;
+}
+function \u5C06\u3092\u9664\u304F(s2, id) {
+  s2.generals = (s2.generals || []).filter((x) => x.id !== id);
+  for (const c of s2.castles || []) if (c.lordId === id) c.lordId = null;
+  for (const a of s2.armies || []) if ((a.gens || []).includes(id)) a.gens = a.gens.filter((g) => g !== id);
+  for (const g of s2.generals) if (g.\u5BC4\u89AA === id) g.\u5BC4\u89AA = null;
+  return s2;
+}
+function \u6EC5\u3093\u3060\u5BB6\u3092\u59CB\u672B\u3059\u308B(s2, oldF, winner, castleId, \u9762\u3005) {
+  const { lord, retainers } = \u9762\u3005 || ruinedHouse(s2, oldF);
+  for (const g2 of [lord, ...retainers].filter(Boolean)) {
+    const rec = canRecruit(g2, lord);
+    if (g2 === lord || !rec.ok || Math.random() < 0.25) {
+      if (Math.random() < 0.4) {
+        \u5C06\u3092\u9664\u304F(s2, g2.id);
+      } else takeAsPrisoner(s2, g2, winner, castleId);
+    } else {
+      g2.faction = winner;
+      g2.loyal = loyaltyAfterRecruit(g2);
+      g2.lord = false;
+      g2.at = castleId;
+    }
+  }
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${(s2.factions[oldF] || {}).name}\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3044\u3001\u6EC5\u4EA1\u3057\u305F\u3002`
+  });
+  return s2;
+}
+function \u76E4\u306E\u4E71\u308C\u3092\u7E55\u3046(s2) {
+  const \u76F4\u3057 = { \u540D\u7C3F: [], \u5C45\u6240: [] };
+  const \u76E4\u306B\u3044\u308B = new Map(s2.generals.map((g) => [g.id, g]));
+  const \u898B\u305F = /* @__PURE__ */ new Set();
+  for (const a of s2.armies) {
+    const \u5143 = (a.gens || []).length;
+    a.gens = (a.gens || []).filter((id) => {
+      const g = \u76E4\u306B\u3044\u308B.get(id);
+      if (!g) return false;
+      if (g.captive) return false;
+      if (g.at != null) return false;
+      if (\u898B\u305F.has(id)) return false;
+      \u898B\u305F.add(id);
+      return true;
+    });
+    if (a.gens.length !== \u5143) \u76F4\u3057.\u540D\u7C3F.push({ armyId: a.id, \u843D\u3068\u3057\u305F: \u5143 - a.gens.length });
+  }
+  for (const c of s2.castles) {
+    if (!c.lordId) continue;
+    const g = s2.generals.find((x) => x.id === c.lordId);
+    if (g && !g.captive && g.faction === c.faction) continue;
+    c.lordId = null;
+    \u76F4\u3057.\u540D\u7C3F.push({ castleId: c.id, \u57CE\u4E3B\u3092\u5916\u3057\u305F: true });
+  }
+  for (const fid of Object.keys(s2.factions || {})) {
+    if (!s2.castles.some((c) => c.faction === fid)) continue;
+    const \u5BB6\u4E2D = s2.generals.filter((g) => g.faction === fid && !g.captive);
+    if (!\u5BB6\u4E2D.length || \u5BB6\u4E2D.some((g) => g.lord)) continue;
+    const \u7D99 = pickHeir(s2, { id: null, faction: fid, name: (s2.factions[fid].name || "").slice(0, 2) });
+    if (!\u7D99) continue;
+    \u7D99.lord = true;
+    s2.chronicle.push({
+      y: s2.year,
+      m: s2.month,
+      text: `${s2.factions[fid].name}\u306F\u5F53\u4E3B\u3092\u6B20\u3044\u3066\u3044\u305F\u304C\u3001${\u7D99.name}\u304C\u5BB6\u7763\u3092\u7D99\u3044\u3060\u3002`
+    });
+    \u76F4\u3057.\u540D\u7C3F.push({ fid, \u5F53\u4E3B\u3092\u7ACB\u3066\u305F: \u7D99.name });
+  }
+  for (const g of s2.generals) {
+    if (g.captive || g.at == null) continue;
+    const c = s2.castles.find((x) => x.id === g.at);
+    if (c && c.faction === g.faction) continue;
+    const \u81EA\u9818 = s2.castles.filter((x) => x.faction === g.faction);
+    if (!\u81EA\u9818.length) continue;
+    const \u8FD1\u3044 = \u81EA\u9818.map((x) => ({ x, p: g.at ? findPath(g.at, x.id) : null })).filter((v) => v.p).sort((a2, z) => a2.p.length - z.p.length)[0];
+    const \u5148 = \u8FD1\u3044 ? \u8FD1\u3044.x : \u81EA\u9818[0];
+    g.at = \u5148.id;
+    if (!s2.castles.some((x) => x.id === g.\u672C\u9818 && x.faction === g.faction)) g.\u672C\u9818 = \u5148.id;
+    \u76F4\u3057.\u5C45\u6240.push({ gen: g, \u5148 });
+  }
+  return \u76F4\u3057;
+}
+function resolveClash(s2, aId, bId, place) {
+  const a = s2.armies.find((x) => x.id === aId), b = s2.armies.find((x) => x.id === bId);
+  if (!a || !b) return null;
+  const pa = clashPower(s2, a), pb = clashPower(s2, b);
+  const \u52DD = pa >= pb ? a : b, \u8CA0 = pa >= pb ? b : a;
+  const r = Math.min(pa, pb) / Math.max(pa, pb);
+  const \u52DD\u640D = Math.round(\u52DD.men * (0.13 * r + 0.05));
+  const \u8CA0\u640D = Math.round(\u8CA0.men * (0.3 + 0.2 * r));
+  for (const [army, loss] of [[\u52DD, \u52DD\u640D], [\u8CA0, \u8CA0\u640D]]) {
+    army.men = Math.max(0, army.men - loss);
+    army.local = Math.max(0, army.local - loss);
+    if (army.rost) rosterSync(army, "rost", army.local, `arm-${army.id}`);
+  }
+  s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${place}\u3067${s2.factions[a.faction].name}\u3068${s2.factions[b.faction].name}\u306E\u8ECD\u304C\u884C\u304D\u5408\u3044\u3001\u91CE\u6226\u3068\u306A\u3063\u305F\u3002${s2.factions[\u52DD.faction].name}\u304C\u52DD\u3061\u3001${s2.factions[\u8CA0.faction].name}\u306F\u5175\u3092\u9000\u3044\u305F\uFF08\u52DD\u3061\u624B${fmt(\u52DD\u640D)}\u4EBA\u30FB\u8CA0\u3051\u624B${fmt(\u8CA0\u640D)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
+  });
+  const home = withdrawArmy(s2, \u8CA0);
+  if (home) s2.chronicle.push({
+    y: s2.year,
+    m: s2.month,
+    text: `${s2.factions[\u8CA0.faction].name}\u306E\u8ECD\u306F${home.name}\u3078\u9000\u304D\u3001${s2.factions[\u52DD.faction].name}\u306F${\u5730\u540D(\u52DD.target)}\u3078\u9053\u3092\u9032\u3081\u305F\u3002`
+  });
+  return \u52DD;
+}
+function resolveClashOffscreen(prev) {
+  const s2 = structuredClone(prev);
+  const cl = (s2.clashes || [])[0];
+  if (!cl) return s2;
+  s2.clashes = s2.clashes.slice(1);
+  const \u52DD = resolveClash(s2, cl.aId, cl.bId, cl.place);
+  if (\u52DD && (!\u52DD.path || \u52DD.path.length <= 1)) {
+    s2.pendingArrivals = [\u52DD.id, ...(s2.pendingArrivals || []).filter((id) => id !== \u52DD.id)];
+  }
+  return s2;
+}
+
 // src/data/market.js
 var \u57FA\u6E96\u5024 = {
   food: { \u540D: "\u5175\u7CE7", \u5358\u4F4D: "\u77F3", \u8CB7: 0.024, \u523B\u307F: [1e3, 5e3, 2e4] },
@@ -17022,7 +17855,7 @@ function settleCaptive(prev, genId, kind) {
   if (!g2 || !g2.captive) return s2;
   const f = s2.factions[s2.player];
   if (kind === "\u5207\u8179") {
-    s2.generals = s2.generals.filter((x) => x.id !== g2.id);
+    \u5C06\u3092\u9664\u304F(s2, g2.id);
     s2.chronicle.push({ y: s2.year, m: s2.month, text: `${g2.name}\u306F\u5207\u8179\u3057\u3066\u679C\u3066\u305F\u3002` });
     s2.msg = `${g2.name}\u306B\u8179\u3092\u5207\u3089\u305B\u305F\u3002`;
   } else if (kind === "\u6276\u6301") {
@@ -17101,7 +17934,7 @@ function doCaptive(prev, genId, how) {
   } else if (how === "\u65AC\u9996") {
     const rel = s2.relations[relKey2(s2.player, q.captive.from)];
     if (rel) rel.trust = clamp(rel.trust - 14, 0, 100);
-    s2.generals = s2.generals.filter((x) => x.id !== q.id);
+    \u5C06\u3092\u9664\u304F(s2, q.id);
     log(`${q.name}\u3092\u65AC\u3063\u305F\u3002`);
   } else if (how === "\u8EAB\u4EE3\u91D1") {
     const cost = ransomCost(s2, q);
@@ -17437,57 +18270,6 @@ function doTrade(prev, castleId, kind, n) {
     ] }, ...s2.ledger].slice(0, 6);
   }
   return s2;
-}
-
-// src/core/ambush.js
-function ambushPlan(g, army, dest, foe) {
-  const atkIsPlayer = army.faction === g.player;
-  const \u57CE\u65B9 = foe ? (foe.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
-  const \u57CE\u65B9\u306E\u5175 = foe ? foe.men : dest.local + \u57CE\u65B9.reduce((a, x) => a + x.retinue, 0);
-  const mine = atkIsPlayer ? army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : \u57CE\u65B9;
-  const theirs = atkIsPlayer ? \u57CE\u65B9 : army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
-  if (!mine.length || !theirs.length) return null;
-  const myMen = atkIsPlayer ? army.men : \u57CE\u65B9\u306E\u5175;
-  const foeMen = atkIsPlayer ? \u57CE\u65B9\u306E\u5175 : army.men;
-  const ratio = myMen / Math.max(1, foeMen);
-  if (ratio > 0.62) return null;
-  const head = [...mine].sort((a, b) => b.wit + b.lead - (a.wit + a.lead))[0];
-  if (!head || head.wit < 62) return null;
-  const wx = g.weather || "\u6674";
-  const terr = dest.kuni === "\u4FE1\u6FC3" || dest.kuni === "\u7532\u6590" || dest.kuni === "\u98DB\u9A28" ? "hill" : "forest";
-  const p = ambushChance(head, wx, terr, ratio);
-  if (p < 0.06) return null;
-  const lord = [...theirs].sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead - a.lead)[0];
-  return { head, target: lord, p, myMen: Math.round(myMen), foeMen: Math.round(foeMen), weather: wx, terr, ratio };
-}
-function ambushChance(gen, weather, terrain, ratio) {
-  if (!gen) return 0;
-  let p = (gen.wit - 55) / 340 + (gen.lead - 55) / 620;
-  p *= weather === "\u96E8" ? 1.55 : weather === "\u96EA" ? 1.35 : weather === "\u66C7" ? 1.12 : 1;
-  p *= terrain === "forest" || terrain === "hill" ? 1.3 : 1;
-  p *= clamp(0.6 + (1 - ratio) * 1.4, 0.5, 2);
-  return clamp(p, 0, 0.52);
-}
-function \u5947\u8972\u306E\u6BB5(wit) {
-  const w = wit || 0;
-  if (w >= 90) return { \u4F4D: "\u5927\u5C06\u8A0E\u6B7B", \u5927\u5C06\u8A0E\u6B7B: true, \u5927\u5C06\u5099\u3048: 0, \u5168\u4F53\u6B20\u3051: 0, \u4E71\u308C: 0.25, \u52E2\u3044: 1.25 };
-  if (w >= 85) return { \u4F4D: "\u672C\u9663\u58CA\u6EC5", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u9000\u304F: true, \u5927\u5C06\u5099\u3048: 0, \u5168\u4F53\u6B20\u3051: 0.5, \u4E71\u308C: 0.5, \u52E2\u3044: 1.18 };
-  if (w >= 80) return { \u4F4D: "\u672C\u9663\u5D29\u3057", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u5099\u3048: 0.25, \u5168\u4F53\u6B20\u3051: 0.25, \u4E71\u308C: 0.72, \u52E2\u3044: 1.12 };
-  if (w >= 70) return { \u4F4D: "\u672C\u9663\u885D\u304D", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u5099\u3048: 0.5, \u5168\u4F53\u6B20\u3051: 1 / 6, \u4E71\u308C: 0.84, \u52E2\u3044: 1.08 };
-  return { \u4F4D: "\u9663\u6255\u3044", \u5927\u5C06\u8A0E\u6B7B: false, \u5927\u5C06\u5099\u3048: 1, \u5168\u4F53\u6B20\u3051: 1 / 8, \u4E71\u308C: 0.92, \u52E2\u3044: 1.05 };
-}
-function tryAmbush(s2, army, castle, aGens, dGens, weather) {
-  const head = [...aGens].sort((a, b) => b.wit + b.lead - (a.wit + a.lead))[0];
-  if (!head) return null;
-  const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
-  const ratio = army.men / Math.max(1, dMen);
-  if (ratio > 0.62) return null;
-  const terr = castle.kuni === "\u4FE1\u6FC3" || castle.kuni === "\u7532\u6590" || castle.kuni === "\u98DB\u9A28" ? "hill" : "forest";
-  const p = ambushChance(head, weather, terr, ratio);
-  if (Math.random() > p) return { ok: false, by: head, p };
-  const cand = dGens.filter((x) => x.faction === castle.faction && !x.captive);
-  const lord = [...cand].sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead - a.lead)[0];
-  return { ok: true, by: head, target: lord || null, p, \u6BB5: \u5947\u8972\u306E\u6BB5(head.wit) };
 }
 
 // src/govern/ai.js
@@ -17874,779 +18656,6 @@ function checkUnified(s2) {
   return null;
 }
 
-// src/govern/war.js
-var \u9060\u5F81\u306E\u5175\u7CE7 = (men, months) => Math.round(men * 0.09 * ((months || 1) + 2));
-var \u904B\u3073\u8CC3 = (men, months) => Math.round(men * (months || 1) * 0.02);
-function \u904B\u3073\u8CC3\u3092\u6255\u3046(s2, men, months) {
-  const f = s2.factions[s2.player];
-  if (!f) return 0;
-  const \u8CC3 = Math.min(f.gold, \u904B\u3073\u8CC3(men, months));
-  f.gold = Math.round((f.gold - \u8CC3) * 100) / 100;
-  return \u8CC3;
-}
-var \u7559\u5B88\u306E\u84C4\u3048 = (c) => Math.round((c.local || 0) * 0.08 * 6);
-function \u540C\u3058\u4E3B\u306E\u4E0B(g, me, other) {
-  const \u6211\u4E3B = \u4E3B\u3092\u63A2\u30592(g, me);
-  return !!\u6211\u4E3B && other !== \u6211\u4E3B && \u4E3B\u3092\u63A2\u30592(g, other) === \u6211\u4E3B;
-}
-function reinforceOffers(g, from, target, \u5927\u5C06) {
-  const out = [];
-  const \u672C\u9663 = g.castles.find((x) => x.id === from);
-  for (const c of g.castles) {
-    if (c.id === from) continue;
-    if (c.id === target) continue;
-    if (\u5927\u5C06 && c.faction === g.player && !\u9663\u89E6\u308C\u306B\u5FDC\u3058\u308B(g, \u5927\u5C06, \u672C\u9663, c)) continue;
-    const path = findPath(c.id, target);
-    if (!path) continue;
-    const legs = path.length - 1;
-    const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
-    const avail = Math.max(0, c.local + gens.reduce((a, x) => a + x.retinue, 0) - minGarrison(c));
-    let kind = null, ratio = 0, chance = 1, \u6307\u56F3 = false;
-    if (c.faction === g.player) {
-      kind = "\u81EA\u9818";
-      ratio = 0.4;
-      \u6307\u56F3 = true;
-    } else if (isVassal(g, g.player, c.faction)) {
-      kind = "\u81E3\u5F93";
-      ratio = 0.35;
-      chance = 1;
-      \u6307\u56F3 = true;
-    } else {
-      const rel = relOf2(g, g.player, c.faction);
-      if (rel.state === "\u5F93\u5C5E" || rel.state === "\u81E3\u5F93") {
-        kind = rel.state;
-        ratio = 0.35;
-        chance = 0.9;
-      } else if (rel.state === "\u540C\u76DF") {
-        kind = "\u540C\u76DF";
-        ratio = 0.25;
-        chance = clamp(rel.trust / 100, 0.2, 0.9);
-      } else if (\u540C\u3058\u4E3B\u306E\u4E0B(g, g.player, c.faction)) {
-        kind = "\u540C\u3058\u4E3B\u306E\u4E0B";
-        ratio = 0.25;
-        chance = 0.7;
-      } else continue;
-    }
-    const months = marchMonths(c.id, target, c.faction) || Math.max(1, legs);
-    const \u8535 = Math.max(0, (c.food || 0) - \u7559\u5B88\u306E\u84C4\u3048(c));
-    const \u51FA\u305B\u308B\u5175\u7CE7 = Math.floor(\u8535 / Math.max(0.01, 0.09 * (months + 2)));
-    const men = Math.min(Math.floor(avail * ratio), \u51FA\u305B\u308B\u5175\u7CE7);
-    out.push({
-      castleId: c.id,
-      name: c.name,
-      faction: c.faction,
-      kind,
-      men,
-      legs,
-      chance,
-      \u6307\u56F3,
-      months,
-      // 指図の通る城では、こちらが将と兵を選ぶ。そのための素材も添える。
-      gens: \u6307\u56F3 ? gens.map((x) => ({
-        id: x.id,
-        name: x.name,
-        age: x.age,
-        lead: x.lead,
-        valor: x.valor,
-        wit: x.wit,
-        // 率いられる兵の限りは身分では置かない。手勢は知行なりである（GDD 6.4）
-        retinue: x.retinue,
-        rank: rankName(x, g),
-        limit: Math.max(\u8ECD\u5F79\u306E\u5668(x), x.retinue)
-      })) : [],
-      local: c.local,
-      avail,
-      garrison: minGarrison(c),
-      \u8535,
-      \u4E00\u4EBA\u306E\u5175\u7CE7: Math.round(0.09 * (months + 2) * 100) / 100,
-      /* 運び賃は城の蔵ではなく主家の財布から出る。ゆえに城ごとには縛らず、
-         呼んだ先を足し合わせた額を、進発の際にまとめて量る（画面の側で見る）。 */
-      \u4E00\u4EBA\u306E\u904B\u3073\u8CC3: Math.round(months * 0.02 * 100) / 100,
-      \u8CC3: \u904B\u3073\u8CC3(men, months),
-      reason: avail < 400 ? "\u5B88\u5099\u304C\u624B\u8584\u3067\u51FA\u305B\u306A\u3044" : \u51FA\u305B\u308B\u5175\u7CE7 < 200 ? `\u5175\u7CE7\u304C\u8DB3\u308A\u306C\uFF08${months}\u304B\u6708\u306E\u9053\u306B\u8535${Math.round(\u8535)}\u77F3\uFF09` : men < 200 && !\u6307\u56F3 ? "\u51FA\u305B\u308B\u5175\u304C\u5C11\u306A\u3059\u304E\u308B" : null
-    });
-  }
-  return out.filter((o) => o.men > 0 || o.reason || o.\u6307\u56F3).sort((a, z) => (z.\u6307\u56F3 ? 1 : 0) - (a.\u6307\u56F3 ? 1 : 0) || a.legs - z.legs);
-}
-function \u5728\u9663\u3055\u305B\u308B(s2, army, castle) {
-  army.at = castle.id;
-  army.path = [castle.id];
-  army.prog = 0;
-  army.target = null;
-  army.\u5728\u9663 = castle.id;
-  army.sieging = false;
-  army.reinforced = false;
-  army.seaDone = false;
-  s2.sieges = (s2.sieges || []).filter((x) => x.armyId !== army.id);
-  return army;
-}
-function \u57CE\u306B\u5408\u6D41\u3059\u308B(s2, army, castle) {
-  castle.local += Math.max(0, army.local);
-  castle.food += Math.max(0, army.food || 0);
-  if (army.rost && army.rost.length) castle.rost = [...castle.rost || [], ...army.rost];
-  rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
-  for (const gid of army.gens) {
-    const x = s2.generals.find((q) => q.id === gid);
-    if (!x) continue;
-    x.at = castle.id;
-    if (!x.lord && castle.faction === x.faction) x.\u672C\u9818 = castle.id;
-  }
-  s2.armies = s2.armies.filter((x) => x.id !== army.id);
-  s2.sieges = (s2.sieges || []).filter((x) => x.armyId !== army.id);
-  s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => id !== army.id);
-  return s2;
-}
-function \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle) {
-  const \u5408\u6D41 = () => {
-    castle.local += Math.max(0, army.local);
-    castle.food += Math.max(0, army.food || 0);
-    if (army.rost && army.rost.length) castle.rost = [...castle.rost || [], ...army.rost];
-    rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
-    const \u4ED6\u5BB6 = castle.faction !== army.faction;
-    const \u672C\u56FD = \u4ED6\u5BB6 ? s2.castles.find((x) => x.id === army.from && x.faction === army.faction) || s2.castles.find((x) => x.faction === army.faction) : null;
-    for (const gid of army.gens) {
-      const x = s2.generals.find((q) => q.id === gid);
-      if (x) x.at = \u4ED6\u5BB6 ? \u672C\u56FD ? \u672C\u56FD.id : castle.id : castle.id;
-    }
-    s2.armies = s2.armies.filter((x) => x.id !== army.id);
-  };
-  const \u7559\u307E\u308B = () => {
-    if (castle.faction === army.faction) \u5728\u9663\u3055\u305B\u308B(s2, army, castle);
-    else \u5408\u6D41();
-  };
-  const sg = s2.sieges.find((x) => x.castleId === castle.id);
-  const bes = sg && s2.armies.find((x) => x.id === sg.armyId);
-  if (!bes || bes.faction === army.faction) {
-    \u7559\u307E\u308B();
-    return s2;
-  }
-  const \u5C06 = (ids) => ids.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
-  const \u7D71 = (gs) => gs.length ? gs.reduce((a, x) => a + x.lead, 0) / gs.length : 55;
-  const rG = \u5C06(army.gens), bG = \u5C06(bes.gens);
-  const \u5F8C\u8A70 = army.men * (0.85 + army.localTrain / 250) * (1 + \u7D71(rG) / 300) * (0.85 + Math.random() * 0.3);
-  const \u5BC4\u624B = bes.men * (0.8 + (bes.localTrain || 60) / 250) * (1 + \u7D71(bG) / 300) * (0.85 + Math.random() * 0.3);
-  const \u52DD = \u5F8C\u8A70 > \u5BC4\u624B;
-  const r = Math.min(\u5F8C\u8A70, \u5BC4\u624B) / Math.max(\u5F8C\u8A70, \u5BC4\u624B);
-  const \u5F8C\u8A70\u640D = Math.round(army.men * (\u52DD ? 0.14 * r + 0.05 : 0.28 + 0.2 * r));
-  const \u5BC4\u624B\u640D = Math.round(bes.men * (\u52DD ? 0.3 + 0.2 * r : 0.13 * r + 0.05));
-  army.men = Math.max(0, army.men - \u5F8C\u8A70\u640D);
-  army.local = Math.max(0, army.local - \u5F8C\u8A70\u640D);
-  bes.men = Math.max(0, bes.men - \u5BC4\u624B\u640D);
-  bes.local = Math.max(0, bes.local - \u5BC4\u624B\u640D);
-  s2.chronicle.push({
-    y: s2.year,
-    m: s2.month,
-    text: `${castle.name}\u306E\u56F2\u307F\u3092\u89E3\u3053\u3046\u3068${s2.factions[army.faction].name}\u306E\u5F8C\u8A70\u304C${s2.factions[bes.faction].name}\u306E\u9663\u3092\u885D\u304D\u3001${\u52DD ? "\u56F2\u307F\u3092\u6253\u3061\u6255\u3063\u305F" : "\u9000\u3051\u3089\u308C\u305F"}\uFF08\u5F8C\u8A70${fmt(\u5F8C\u8A70\u640D)}\u4EBA\u30FB\u5BC4\u305B\u624B${fmt(\u5BC4\u624B\u640D)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
-  });
-  if (\u52DD) {
-    const \u672C\u56FD = s2.castles.find((x) => x.id === bes.from) || s2.castles.find((x) => x.faction === bes.faction);
-    if (\u672C\u56FD) {
-      \u672C\u56FD.local += Math.max(0, bes.local);
-      if (bes.rost && bes.rost.length) \u672C\u56FD.rost = [...\u672C\u56FD.rost || [], ...bes.rost];
-      rosterSync(\u672C\u56FD, "rost", \u672C\u56FD.local, `loc-${\u672C\u56FD.id}`);
-      for (const gid of bes.gens) {
-        const x = s2.generals.find((q) => q.id === gid);
-        if (x) x.at = \u672C\u56FD.id;
-      }
-    }
-    s2.armies = s2.armies.filter((x) => x.id !== bes.id);
-    s2.sieges = s2.sieges.filter((x) => x.castleId !== castle.id);
-    \u7559\u307E\u308B();
-  } else {
-    const \u672C\u56FD = s2.castles.find((x) => x.id === army.from);
-    if (\u672C\u56FD && \u672C\u56FD.faction === army.faction) {
-      \u672C\u56FD.local += Math.max(0, army.local);
-      for (const gid of army.gens) {
-        const x = s2.generals.find((q) => q.id === gid);
-        if (x) x.at = \u672C\u56FD.id;
-      }
-    } else \u5408\u6D41();
-    s2.armies = s2.armies.filter((x) => x.id !== army.id);
-    if (sg) sg.relief = null;
-  }
-  return s2;
-}
-function sackCastle(s2, castle, army, hard) {
-  const lastOne = s2.castles.filter((c2) => c2.faction === castle.faction).length === 1;
-  const oldF = castle.faction;
-  const defGens = s2.generals.filter((x) => x.at === castle.id && x.faction === oldF && !x.captive);
-  const \u56DA\u4EBA = s2.generals.filter((x) => x.at === castle.id && x.captive);
-  const winner = army.faction;
-  const log = (t) => s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
-  const oldLord = s2.generals.find((x) => x.faction === oldF && x.lord && !x.captive);
-  const \u6355\u3089\u3048\u308B = (gen, \u6587) => {
-    const \u5F53\u4E3B\u304B = !!gen.lord;
-    makePrisoner(s2, gen, winner, castle.id);
-    log(\u6587);
-    if (winner === s2.player) s2.captives = [...s2.captives || [], gen.id];
-    if (\u5F53\u4E3B\u304B) {
-      gen.lord = false;
-      succeed(s2, gen, "\u6575\u624B\u306B\u6355\u3089\u308F\u308C\u305F");
-    }
-  };
-  for (const gen of defGens) {
-    if (lastOne) continue;
-    const r = Math.random() + (hard ? 0.12 : 0) + gen.valor / 400 - gen.loyal / 320;
-    if (r > 0.86 && Math.random() < \u96E3\u3092\u9003\u308C\u308B(gen)) {
-      const \u5F53\u4E3B\u304B = !!gen.lord;
-      s2.generals = s2.generals.filter((x) => x.id !== gen.id);
-      log(`${gen.name}\u306F${castle.name}\u306B\u8E0F\u307F\u3068\u3069\u307E\u308A\u8A0E\u6B7B\u3057\u305F\u3002`);
-      if (\u5F53\u4E3B\u304B) succeed(s2, gen, `${castle.name}\u306B\u8E0F\u307F\u3068\u3069\u307E\u308A\u8A0E\u6B7B\u3057\u305F`);
-    } else if (r > 0.7 && Math.random() < captureChance(gen) * 3.2) {
-      \u6355\u3089\u3048\u308B(gen, `${gen.name}\u306F\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
-    } else if (r > 0.7) {
-      const refuge = s2.castles.find((c2) => c2.faction === oldF && c2.id !== castle.id);
-      if (refuge) {
-        gen.at = refuge.id;
-        log(`${gen.name}\u306F\u56F2\u307F\u3092\u7834\u3063\u3066${refuge.name}\u3078\u9003\u308C\u305F\u3002`);
-      } else \u6355\u3089\u3048\u308B(gen, `${gen.name}\u306F\u9003\u308C\u308B\u5148\u306A\u304F\u3001\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
-    } else if (r > 0.48) {
-      const \u9761\u304F\u304B = !gen.lord && canRecruit(gen, oldLord).ok && persuadeResult(gen);
-      if (\u9761\u304F\u304B) {
-        gen.faction = winner;
-        gen.loyal = loyaltyAfterRecruit(gen);
-        gen.at = castle.id;
-        gen.retinue = Math.round(gen.retinue * 0.5);
-        log(`${gen.name}\u306F\u964D\u308A\u3001${s2.factions[winner].name}\u306B\u5C5E\u3057\u305F\u3002`);
-      } else {
-        \u6355\u3089\u3048\u308B(gen, gen.lord ? `${gen.name}\u306F\u57CE\u3092\u6795\u306B\u3059\u308B\u3053\u3068\u3082\u53F6\u308F\u305A\u3001\u751F\u3051\u6355\u308A\u306B\u3055\u308C\u305F\u3002` : `${gen.name}\u306F\u964D\u3089\u305A\u3001\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
-      }
-    } else {
-      const refuge = s2.castles.find((c) => c.faction === oldF && c.id !== castle.id);
-      const \u843D\u3061\u5EF6\u3073\u308B = refuge && (!gen.lord || Math.random() < 0.6);
-      if (\u843D\u3061\u5EF6\u3073\u308B) {
-        gen.at = refuge.id;
-        gen.retinue = Math.round(gen.retinue * 0.6);
-        log(`${gen.name}\u306F${refuge.name}\u3078\u843D\u3061\u5EF6\u3073\u305F\u3002`);
-      } else \u6355\u3089\u3048\u308B(gen, `${gen.name}\u306F\u843D\u3061\u5EF6\u3073\u308B\u5148\u306A\u304F\u3001\u6355\u3089\u3048\u3089\u308C\u305F\u3002`);
-    }
-  }
-  for (const q of \u56DA\u4EBA) {
-    if (q.faction === winner) {
-      q.captive = null;
-      q.warLoyal = void 0;
-      q.loyal = clamp((q.loyal == null ? 60 : q.loyal) + 8, 0, 100);
-      q.retinue = Math.round(120 + Math.random() * 100);
-      log(`${castle.name}\u306B\u56DA\u308F\u308C\u3066\u3044\u305F${q.name}\u304C\u89E3\u304D\u653E\u305F\u308C\u305F\u3002`);
-    } else if (q.captive.by !== winner) {
-      q.captive = { ...q.captive, by: winner, at: castle.id };
-      log(`${castle.name}\u306B\u56DA\u308F\u308C\u3066\u3044\u305F${q.name}\u306E\u8EAB\u67C4\u306F${s2.factions[winner].name}\u306B\u79FB\u3063\u305F\u3002`);
-      if (winner === s2.player) s2.captives = [...s2.captives || [], q.id];
-    }
-  }
-  const before = castle.local;
-  const min0 = castle.min;
-  const stay = Math.round(before * clamp(min0 / 260 + (hard ? 0 : 0.12), 0.05, 0.45));
-  const yield_ = Math.round(before * clamp(0.3 - min0 / 400, 0.05, 0.3));
-  const resist = Math.round(before * (hard ? 0.18 : 0.08));
-  const scatter = Math.max(0, before - stay - yield_ - resist);
-  log(`${castle.name}\u306E\u5730\u57DF\u5BB6\u81E3\u56E3${fmt(before)}\u4EBA\u306E\u3046\u3061\u3001${fmt(stay)}\u4EBA\u304C\u6B8B\u308A\u3001${fmt(yield_)}\u4EBA\u304C\u964D\u308A\u3001${fmt(resist)}\u4EBA\u304C\u6297\u3044\u3001${fmt(scatter)}\u4EBA\u304C\u6563\u3063\u305F\u3002`);
-  castle.faction = winner;
-  const keepN = stay + yield_;
-  castle.rost = rosterCut(castle.rost || newRoster(before, `loc-${castle.id}`), Math.max(0, before - keepN));
-  castle.local = stay + yield_;
-  rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
-  castle.koku = Math.round(castle.koku * (hard ? 0.9 : 0.95));
-  castle.comm = Math.round(castle.comm * (hard ? 0.8 : 0.9));
-  castle.pop = Math.round(castle.pop * (hard ? 0.92 : 0.96));
-  castle.food = Math.round(castle.food * (hard ? 0.35 : 0.6));
-  castle.def = Math.round(castle.def * (hard ? 0.68 : 0.85));
-  castle.hp = Math.round(castle.hp * (hard ? 0.55 : 0.8));
-  castle.min = clamp(Math.round(min0 - (hard ? 28 : 16) - resist / Math.max(1, before) * 40), 8, 100);
-  castle.najimi = 18;
-  castle.lordId = null;
-  castle.intrigue = false;
-  castle.well = 100;
-  army.at = castle.id;
-  army.path = [castle.id];
-  army.prog = 0;
-  army.target = null;
-  army.\u5728\u9663 = castle.id;
-  army.sieging = false;
-  army.reinforced = false;
-  army.seaDone = false;
-  s2.sieges = (s2.sieges || []).filter((x) => x.armyId !== army.id);
-  for (const a2 of s2.armies.filter((x) => x.target === castle.id || x.at === castle.id)) {
-    if (a2.faction === oldF) continue;
-    if (a2.id === army.id) continue;
-    const home = withdrawArmy(s2, a2);
-    if (!home) continue;
-    if (a2.faction === s2.player) {
-      s2.chronicle.push({
-        y: s2.year,
-        m: s2.month,
-        text: `${castle.name}\u653B\u3081\u306B\u52A0\u308F\u3063\u305F\u5BC4\u9A0E\u306F${home.name}\u3078\u5E30\u9663\u3057\u305F\u3002`
-      });
-    }
-  }
-  s2.armies = s2.armies.filter((x) => x.id === army.id || !(x.target === castle.id || x.at === castle.id) || x.faction === oldF);
-  s2.sieges = s2.sieges.filter((x) => x.castleId !== castle.id);
-  s2.campaigns = (s2.campaigns || []).filter((x) => x.target !== castle.id);
-  log(`${castle.name}\u304C\u843D\u3061\u3001${s2.factions[winner].name}\u306E\u624B\u306B\u6E21\u3063\u305F\uFF08\u65E7\u9818\u4E3B\uFF1A${s2.factions[oldF].name}\uFF09\u3002`);
-  if (winner !== s2.player) {
-    \u57CE\u3092\u59D4\u306D\u308B(s2, castle.id, army.id, \u59D4\u306D\u308B\u5DEE\u914D(s2, castle, army));
-  } else {
-    s2.\u59D4\u306D\u308B\u5F85\u3061 = [
-      ...(s2.\u59D4\u306D\u308B\u5F85\u3061 || []).filter((x) => x.castleId !== castle.id),
-      { castleId: castle.id, armyId: army.id }
-    ];
-  }
-  if (castle.kuni && holdsProvince(s2, winner, castle.kuni)) {
-    const \u56FD\u306E\u57CE = s2.castles.filter((x) => x.kuni === castle.kuni);
-    log(`${s2.factions[winner].name}\u304C${castle.kuni}\u3092\u4E00\u56FD\u6B8B\u3089\u305A\u624B\u4E2D\u306B\u3057\u305F\uFF08${\u56FD\u306E\u57CE.length}\u57CE\uFF09\u3002`);
-    if (winner === s2.player) {
-      s2.monthEvents = [
-        ...s2.monthEvents || [],
-        `${castle.kuni}\u3092\u5E73\u5B9A\u3057\u305F\u3002\u56FD\u304C\u307E\u3068\u307E\u308C\u3070\u6C11\u306F\u843D\u3061\u7740\u304D\u3001\u7AFF\u3092\u5165\u308C\u3089\u308C\u308B\u3002`
-      ];
-      s2.\u56FD\u5E73\u5B9A = { kuni: castle.kuni, castleId: castle.id, \u57CE\u6570: \u56FD\u306E\u57CE.length, y: s2.year, m: s2.month };
-    }
-  }
-  if (!s2.castles.some((c2) => c2.faction === oldF)) {
-    for (const a2 of s2.armies.filter((x) => x.faction === oldF)) {
-      for (const gid of a2.gens) {
-        const x = s2.generals.find((q) => q.id === gid);
-        if (x) x.at = castle.id;
-      }
-    }
-    s2.armies = s2.armies.filter((x) => x.faction !== oldF);
-    s2.sieges = s2.sieges.filter((x) => {
-      const bes = s2.armies.find((a3) => a3.id === x.armyId);
-      return !!bes;
-    });
-    s2.campaigns = (s2.campaigns || []).filter((x) => x.faction !== oldF);
-    const \u623B\u3059 = s2.generals.filter((x) => x.faction === oldF && x.captive && x.captive.by === winner);
-    for (const q of \u623B\u3059) q.captive = null;
-    if (\u623B\u3059.length) {
-      const \u6E08 = new Set(\u623B\u3059.map((q) => q.id));
-      s2.captives = (s2.captives || []).filter((id) => !\u6E08.has(id));
-    }
-    const { lord, retainers } = ruinedHouse(s2, oldF);
-    if (winner === s2.player && (lord || retainers.length)) {
-      s2.warSettle = {
-        faction: oldF,
-        winner,
-        castleId: castle.id,
-        lordId: lord ? lord.id : null,
-        queue: [...lord ? [lord.id] : [], ...retainers.map((x) => x.id)]
-      };
-    } else {
-      \u6EC5\u3093\u3060\u5BB6\u3092\u59CB\u672B\u3059\u308B(s2, oldF, winner, castle.id, { lord, retainers });
-    }
-    s2.ruined = [...s2.ruined || [], oldF];
-  }
-}
-function \u57CE\u3092\u59D4\u306D\u308B(s2, castleId, armyId, \u5DEE\u914D) {
-  const c = s2.castles.find((x) => x.id === castleId);
-  const a = (s2.armies || []).find((x) => x.id === armyId);
-  if (!c || !a) return s2;
-  const \u7F6E\u304F = [.../* @__PURE__ */ new Set([...\u5DEE\u914D.\u6240\u5C5E || [], ...\u5DEE\u914D.\u57CE\u4E3B ? [\u5DEE\u914D.\u57CE\u4E3B] : []])];
-  for (const gid of \u7F6E\u304F) {
-    if (!(a.gens || []).includes(gid)) continue;
-    const g = s2.generals.find((x) => x.id === gid);
-    if (!g) continue;
-    g.at = c.id;
-    g.\u672C\u9818 = c.id;
-    a.gens = a.gens.filter((x) => x !== gid);
-  }
-  if (\u5DEE\u914D.\u57CE\u4E3B && \u7F6E\u304F.includes(\u5DEE\u914D.\u57CE\u4E3B)) {
-    if (c.lordId && c.lordId !== \u5DEE\u914D.\u57CE\u4E3B) c.najimi = 25;
-    c.lordId = \u5DEE\u914D.\u57CE\u4E3B;
-  }
-  const \u6B8B = Math.max(0, Math.min(Math.round(\u5DEE\u914D.\u5175 || 0), a.local || 0));
-  if (\u6B8B > 0) {
-    const tk = rosterTake(a.rost || newRoster(a.local, `arm-${a.id}`), \u6B8B);
-    a.rost = tk.rest;
-    a.local = Math.max(0, a.local - \u6B8B);
-    c.rost = [...c.rost || [], ...tk.taken];
-    c.local += \u6B8B;
-    rosterSync(c, "rost", c.local, `loc-${c.id}`);
-  }
-  a.men = (a.local || 0) + (a.gens || []).reduce((t, id) => {
-    const g = s2.generals.find((x) => x.id === id);
-    return t + (g ? g.retinue : 0);
-  }, 0);
-  if (!(a.gens || []).length) {
-    const \u5E30\u308A\u5148 = withdrawArmy(s2, a);
-    if (\u5E30\u308A\u5148 && (a.local || 0) > 0) {
-      s2.chronicle.push({
-        y: s2.year,
-        m: s2.month,
-        text: `${c.name}\u306B\u5C06\u3092\u6B8B\u3089\u305A\u7F6E\u3044\u305F\u306E\u3067\u8ECD\u306F\u89E3\u3051\u3001\u6B8B\u308B\u5175${fmt(a.local)}\u4EBA\u306F${\u5E30\u308A\u5148.name}\u3078\u8FD4\u3057\u305F\u3002`
-      });
-    }
-  }
-  return s2;
-}
-function \u5C06\u306E\u7121\u3044\u8ECD\u3092\u89E3\u304F(s2) {
-  const \u89E3\u3044\u305F = [];
-  for (const a of [...s2.armies || []]) {
-    if ((a.gens || []).length) continue;
-    const \u5E30\u308A\u5148 = withdrawArmy(s2, a);
-    \u89E3\u3044\u305F.push({ id: a.id, faction: a.faction, men: a.local || 0, \u5148: \u5E30\u308A\u5148 });
-  }
-  return \u89E3\u3044\u305F;
-}
-function \u59D4\u306D\u308B\u5DEE\u914D(s2, castle, army) {
-  const \u5C06\u3089 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
-  if (\u5C06\u3089.length <= 1) return { \u57CE\u4E3B: null, \u6240\u5C5E: [], \u5175: Math.round((army.local || 0) * 0.3) };
-  const \u4E3B = [...\u5C06\u3089].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
-  return { \u57CE\u4E3B: \u4E3B.id, \u6240\u5C5E: [\u4E3B.id], \u5175: Math.round((army.local || 0) * 0.5) };
-}
-function resolveOffscreen(prev, armyId, castleId) {
-  const s2 = structuredClone(prev);
-  const army = s2.armies.find((x) => x.id === armyId);
-  const castle = s2.castles.find((x) => x.id === castleId);
-  s2.pendingArrivals = (s2.pendingArrivals || []).slice(1);
-  if (!army || !castle) return s2;
-  if (\u63F4\u3051\u306B\u7740\u304F(s2, army, castle) || underMyBanner(s2, army.faction, castle.faction)) {
-    return \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle);
-  }
-  const aGens = army.gens.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
-  const dGens = s2.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
-  const lead = (gs) => gs.length ? gs.reduce((a, x) => a + x.lead, 0) / gs.length : 55;
-  const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
-  const wx = s2.weather || "\u6674";
-  const amb = tryAmbush(s2, army, castle, aGens, dGens, wx);
-  let \u4E71\u308C = 1, \u52E2\u3044 = 1;
-  if (amb && amb.ok) {
-    const \u6BB5 = amb.\u6BB5;
-    \u4E71\u308C = \u6BB5.\u4E71\u308C;
-    \u52E2\u3044 = \u6BB5.\u52E2\u3044;
-    const \u4E3B = amb.target ? s2.generals.find((x) => x.id === amb.target.id) : null;
-    if (\u4E3B && \u6BB5.\u5927\u5C06\u5099\u3048 < 1) \u4E3B.retinue = Math.round(\u4E3B.retinue * \u6BB5.\u5927\u5C06\u5099\u3048);
-    if (\u6BB5.\u5168\u4F53\u6B20\u3051 > 0) {
-      const \u6B8B = 1 - \u6BB5.\u5168\u4F53\u6B20\u3051;
-      castle.local = Math.max(0, Math.round(castle.local * \u6B8B));
-      for (const x of dGens) {
-        if (\u4E3B && x.id === \u4E3B.id && \u6BB5.\u5927\u5C06\u5099\u3048 < 1) continue;
-        x.retinue = Math.round(x.retinue * \u6B8B);
-      }
-    }
-    let \u6587 = `${amb.by.name}\u304C${castle.name}\u306E\u672C\u9663\u3092\u885D\u3044\u305F\u3002`;
-    if (\u6BB5.\u5927\u5C06\u8A0E\u6B7B && \u4E3B) {
-      s2.generals = s2.generals.filter((x) => x.id !== \u4E3B.id);
-      if (\u4E3B.lord) succeed(s2, \u4E3B, "\u672C\u9663\u3092\u885D\u304B\u308C\u3066\u8A0E\u6B7B\u3057\u305F");
-      \u6587 += `${\u4E3B.name}\u306F\u8A0E\u305F\u308C\u3001${s2.factions[castle.faction].name}\u306E\u8ECD\u306F\u74E6\u89E3\u3057\u305F\u3002`;
-      if (army.faction === s2.player) s2.msg = `${amb.by.name}\u304C\u6575\u306E\u672C\u9663\u3092\u885D\u304D\u3001${\u4E3B.name}\u3092\u8A0E\u3061\u53D6\u3063\u305F\u3002`;
-    } else if (\u6BB5.\u5927\u5C06\u9000\u304F && \u4E3B) {
-      const \u843D\u3061\u5148 = s2.castles.filter((x) => x.faction === \u4E3B.faction && x.id !== castle.id).sort((a, z) => Math.hypot(a.lon - castle.lon, a.lat - castle.lat) - Math.hypot(z.lon - castle.lon, z.lat - castle.lat))[0];
-      if (\u843D\u3061\u5148) \u4E3B.at = \u843D\u3061\u5148.id;
-      \u6587 += `${\u4E3B.name}\u306E\u5099\u3048\u306F\u58CA\u6EC5\u3057\u3001\u672C\u4EBA\u306F\u672C\u9663\u3092\u6368\u3066\u3066\u9000\u3044\u305F\u3002`;
-    } else {
-      \u6587 += `${s2.factions[castle.faction].name}\u306E\u5099\u3048\u306F\u4E71\u308C\u305F\u3002`;
-    }
-    s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
-  } else if (amb && !amb.ok && army.faction === s2.player) {
-    s2.chronicle.push({ y: s2.year, m: s2.month, text: `${amb.by.name}\u306F\u6575\u306E\u9699\u3092\u7ABA\u3063\u305F\u304C\u3001\u6A5F\u3092\u5F97\u306A\u304B\u3063\u305F\u3002` });
-  }
-  const dGens2 = s2.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
-  const dMen2 = castle.local + dGens2.reduce((a, x) => a + x.retinue, 0);
-  let atk = army.men * (0.8 + army.localTrain / 250) * (1 + lead(aGens) / 300) * (0.85 + Math.random() * 0.3) * \u52E2\u3044;
-  let def = dMen2 * (0.85 + castle.localTrain / 250) * (1 + castle.def / 200 + lead(dGens2) / 300) * (0.85 + Math.random() * 0.3) * \u4E71\u308C;
-  const atkWon = atk > def;
-  const r = Math.min(atk, def) / Math.max(atk, def);
-  const aLoss = Math.round(army.men * (atkWon ? 0.16 * r + 0.06 : 0.3 + 0.2 * r));
-  const dLoss = Math.round(dMen2 * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
-  army.men = Math.max(0, army.men - aLoss);
-  army.local = Math.max(0, army.local - aLoss);
-  castle.local = Math.max(0, castle.local - dLoss);
-  s2.chronicle.push({
-    y: s2.year,
-    m: s2.month,
-    text: `${castle.name}\u4E0B\u3067${s2.factions[army.faction].name}\u3068${s2.factions[castle.faction].name}\u304C\u6226\u3044\u3001${atkWon ? "\u653B\u3081\u624B" : "\u5B88\u308A\u624B"}\u304C\u52DD\u3063\u305F\uFF08\u653B${fmt(aLoss)}\u4EBA\u30FB\u5B88${fmt(dLoss)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
-  });
-  if (atkWon && castle.local < 200) {
-    sackCastle(s2, castle, army, true);
-  } else if (atkWon) {
-    army.sieging = true;
-    s2.sieges = [...s2.sieges.filter((x) => x.castleId !== castle.id), { castleId: castle.id, armyId: army.id, months: 0, decided: null }];
-  } else {
-    withdrawArmy(s2, army);
-  }
-  return s2;
-}
-function \u9053\u306E\u308A(path) {
-  let d = 0;
-  for (let i = 0; i < path.length - 1; i++) {
-    const r = roadBetween(path[i], path[i + 1]);
-    d += r ? r[2] / ROAD_SPEED[r[3]] : 10;
-  }
-  return d;
-}
-function \u6B8B\u308A\u306E\u9053\u306E\u308A(a) {
-  if (!a.path || a.path.length < 2) return 0;
-  let d = 0;
-  for (let i = 0; i < a.path.length - 1; i++) {
-    const r = roadBetween(a.path[i], a.path[i + 1]);
-    const seg = r ? r[2] / ROAD_SPEED[r[3]] : 10;
-    d += i === 0 ? seg * (1 - (a.prog || 0)) : seg;
-  }
-  return d;
-}
-function \u884C\u304D\u5408\u3046\u533A\u9593(path, at) {
-  let d = 0;
-  for (let i = 0; i < path.length - 1; i++) {
-    const r = roadBetween(path[i], path[i + 1]);
-    const seg = r ? r[2] / ROAD_SPEED[r[3]] : 10;
-    if (d + seg >= at || i === path.length - 2) return { u: path[i], v: path[i + 1] };
-    d += seg;
-  }
-  return { u: path[0], v: path[path.length - 1] };
-}
-var \u5730\u540D = (id) => {
-  const n = nodeById(id);
-  return n ? n.name : "";
-};
-function marchClashes(s2) {
-  const out = [];
-  const \u6E08 = /* @__PURE__ */ new Set();
-  const \u884C\u8ECD = (s2.armies || []).filter((a) => a.from && a.target && !a.sieging && !a.dead && a.path);
-  for (const a of \u884C\u8ECD) {
-    if (\u6E08.has(a.id)) continue;
-    const b = \u884C\u8ECD.find((x) => !\u6E08.has(x.id) && x.id !== a.id && x.faction !== a.faction && x.from === a.target && x.target === a.from);
-    if (!b) continue;
-    const pa = findPath(a.from, a.target), pb = findPath(b.from, b.target);
-    if (!pa || !pb || pa.length !== pb.length) continue;
-    if (!pa.every((id, i) => id === pb[pb.length - 1 - i])) continue;
-    const L = \u9053\u306E\u308A(pa);
-    const ra = \u6B8B\u308A\u306E\u9053\u306E\u308A(a), rb = \u6B8B\u308A\u306E\u9053\u306E\u308A(b);
-    const posA = L - ra, posB = rb;
-    if (posA < posB) continue;
-    const { u, v } = \u884C\u304D\u5408\u3046\u533A\u9593(pa, clamp((posA + posB) / 2, 0, L));
-    \u6E08.add(a.id);
-    \u6E08.add(b.id);
-    out.push({ aId: a.id, bId: b.id, u, v, place: `${\u5730\u540D(u)}\u3068${\u5730\u540D(v)}\u306E\u9593` });
-  }
-  return out;
-}
-function clashPower(s2, army) {
-  const gens = army.gens.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
-  const lead = gens.length ? gens.reduce((a, x) => a + x.lead, 0) / gens.length : 55;
-  return army.men * (0.85 + (army.localTrain || 60) / 250) * (1 + lead / 300) * (0.85 + Math.random() * 0.3);
-}
-function homeFor(s2, army) {
-  const \u5143 = s2.castles.find((x) => x.id === army.from);
-  if (\u5143 && \u5143.faction === army.faction) return \u5143;
-  const \u81EA\u9818 = s2.castles.filter((x) => x.faction === army.faction);
-  if (!\u81EA\u9818.length) return null;
-  const \u8FD1\u3044 = \u81EA\u9818.map((c) => ({ c, p: findPath(army.at || army.from, c.id) })).filter((x) => x.p).sort((a, z) => a.p.length - z.p.length)[0];
-  return \u8FD1\u3044 ? \u8FD1\u3044.c : \u81EA\u9818[0];
-}
-function \u8ECD\u3092\u89E3\u304F(s2, army) {
-  return withdrawArmy(s2, army);
-}
-function withdrawArmy(s2, army) {
-  const home = homeFor(s2, army);
-  if (home) {
-    home.local += Math.max(0, army.local);
-    const \u6B8B = rosterArms(army.rost);
-    home.horse = Math.max(0, (home.horse || 0) + \u6B8B.kiba);
-    home.gun = Math.max(0, (home.gun || 0) + \u6B8B.teppo);
-    if (army.rost && army.rost.length) home.rost = [...home.rost || [], ...army.rost];
-    rosterSync(home, "rost", home.local, `loc-${home.id}`);
-  }
-  const \u81EA\u5BB6\u306E\u6700\u5BC4\u308A = (fid) => {
-    const \u81EA\u9818 = s2.castles.filter((c) => c.faction === fid);
-    if (!\u81EA\u9818.length) return null;
-    const \u8FD1\u3044 = \u81EA\u9818.map((c) => ({ c, p: findPath(army.at || army.from, c.id) })).filter((v) => v.p).sort((a, z) => a.p.length - z.p.length)[0];
-    return \u8FD1\u3044 ? \u8FD1\u3044.c : \u81EA\u9818[0];
-  };
-  const \u843D\u3061\u308B\u5148 = (x) => {
-    if (x.lord) {
-      const \u62E0 = (s2.factions[x.faction] || {}).\u672C\u62E0;
-      const c = \u62E0 && s2.castles.find((y) => y.id === \u62E0 && y.faction === x.faction);
-      if (c) return c;
-    }
-    const \u5DF1\u306E\u57CE = s2.castles.find((c) => c.lordId === x.id && c.faction === x.faction);
-    if (\u5DF1\u306E\u57CE) return \u5DF1\u306E\u57CE;
-    if (home && home.faction === x.faction) return home;
-    return \u81EA\u5BB6\u306E\u6700\u5BC4\u308A(x.faction);
-  };
-  for (const gid of army.gens) {
-    const x = s2.generals.find((q) => q.id === gid);
-    if (!x || x.captive) continue;
-    const \u5148 = \u843D\u3061\u308B\u5148(x);
-    if (!\u5148) continue;
-    x.at = \u5148.id;
-    x.\u672C\u9818 = \u5148.id;
-  }
-  s2.armies = s2.armies.filter((x) => x.id !== army.id);
-  s2.sieges = s2.sieges.filter((x) => x.armyId !== army.id);
-  s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => id !== army.id);
-  s2.campaigns = (s2.campaigns || []).map((c) => ({
-    ...c,
-    armies: (c.armies || []).filter((id) => id !== army.id),
-    arrived: (c.arrived || []).filter((id) => id !== army.id)
-  })).filter((c) => c.armies.length);
-  return home;
-}
-function restoreStrays(s2) {
-  const \u51FA\u9663\u4E2D = /* @__PURE__ */ new Set();
-  for (const a of s2.armies) for (const gid of a.gens) \u51FA\u9663\u4E2D.add(gid);
-  const \u623B\u3057\u305F = [];
-  for (const q of s2.generals) {
-    if (q.captive || \u51FA\u9663\u4E2D.has(q.id)) continue;
-    if (q.at && s2.castles.some((c) => c.id === q.at)) continue;
-    const \u81EA\u9818 = s2.castles.filter((c) => c.faction === q.faction);
-    if (!\u81EA\u9818.length) continue;
-    q.at = \u81EA\u9818[0].id;
-    \u623B\u3057\u305F.push(q);
-  }
-  return \u623B\u3057\u305F;
-}
-function \u57CE\u306A\u304D\u5BB6\u3092\u7247\u3065\u3051\u308B(s2) {
-  const \u7247\u3065\u3051\u305F = [];
-  for (const fid of Object.keys(s2.factions || {})) {
-    if (s2.castles.some((c) => c.faction === fid)) continue;
-    const \u6B8B = s2.generals.filter((g) => g.faction === fid && !g.captive);
-    if (!\u6B8B.length) continue;
-    if (s2.warSettle && s2.warSettle.faction === fid) continue;
-    const \u6570 = /* @__PURE__ */ new Map();
-    for (const g of \u6B8B) {
-      const c = g.at && s2.castles.find((x) => x.id === g.at);
-      if (!c) continue;
-      \u6570.set(c.id, (\u6570.get(c.id) || 0) + (g.lord ? 100 : 1));
-    }
-    const \u91CE\u306E\u8ECD = s2.armies.filter((a) => a.faction === fid);
-    const \u9663 = \u91CE\u306E\u8ECD.map((a) => s2.castles.find((c) => c.id === (a.\u5728\u9663 || a.at))).filter(Boolean);
-    for (const a of \u91CE\u306E\u8ECD) for (const gid of a.gens || []) {
-      const g = s2.generals.find((q) => q.id === gid);
-      if (g) g.at = (\u9663[0] || {}).id || g.at;
-    }
-    if (\u91CE\u306E\u8ECD.length) {
-      const \u6563 = new Set(\u91CE\u306E\u8ECD.map((a) => a.id));
-      s2.armies = s2.armies.filter((a) => !\u6563.has(a.id));
-      s2.sieges = (s2.sieges || []).filter((x) => !\u6563.has(x.armyId));
-      s2.campaigns = (s2.campaigns || []).filter((x) => x.faction !== fid);
-      s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => !\u6563.has(id));
-    }
-    for (const g of \u6B8B) {
-      const c = g.at && s2.castles.find((x) => x.id === g.at);
-      if (!c) continue;
-      \u6570.set(c.id, (\u6570.get(c.id) || 0) + (g.lord ? 100 : 1));
-    }
-    const [castleId] = [...\u6570.entries()].sort((a, z) => z[1] - a[1])[0] || [];
-    const \u57CE = castleId && s2.castles.find((x) => x.id === castleId);
-    if (!\u57CE) continue;
-    \u6EC5\u3093\u3060\u5BB6\u3092\u59CB\u672B\u3059\u308B(s2, fid, \u57CE.faction, \u57CE.id);
-    s2.ruined = [.../* @__PURE__ */ new Set([...s2.ruined || [], fid])];
-    \u7247\u3065\u3051\u305F.push({ fid, winner: \u57CE.faction });
-  }
-  return \u7247\u3065\u3051\u305F;
-}
-function \u6EC5\u3093\u3060\u5BB6\u3092\u59CB\u672B\u3059\u308B(s2, oldF, winner, castleId, \u9762\u3005) {
-  const { lord, retainers } = \u9762\u3005 || ruinedHouse(s2, oldF);
-  for (const g2 of [lord, ...retainers].filter(Boolean)) {
-    const rec = canRecruit(g2, lord);
-    if (g2 === lord || !rec.ok || Math.random() < 0.25) {
-      if (Math.random() < 0.4) {
-        s2.generals = s2.generals.filter((x) => x.id !== g2.id);
-      } else takeAsPrisoner(s2, g2, winner, castleId);
-    } else {
-      g2.faction = winner;
-      g2.loyal = loyaltyAfterRecruit(g2);
-      g2.lord = false;
-      g2.at = castleId;
-    }
-  }
-  s2.chronicle.push({
-    y: s2.year,
-    m: s2.month,
-    text: `${(s2.factions[oldF] || {}).name}\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3044\u3001\u6EC5\u4EA1\u3057\u305F\u3002`
-  });
-  return s2;
-}
-function \u76E4\u306E\u4E71\u308C\u3092\u7E55\u3046(s2) {
-  const \u76F4\u3057 = { \u540D\u7C3F: [], \u5C45\u6240: [] };
-  const \u76E4\u306B\u3044\u308B = new Map(s2.generals.map((g) => [g.id, g]));
-  const \u898B\u305F = /* @__PURE__ */ new Set();
-  for (const a of s2.armies) {
-    const \u5143 = (a.gens || []).length;
-    a.gens = (a.gens || []).filter((id) => {
-      const g = \u76E4\u306B\u3044\u308B.get(id);
-      if (!g) return false;
-      if (g.captive) return false;
-      if (g.at != null) return false;
-      if (\u898B\u305F.has(id)) return false;
-      \u898B\u305F.add(id);
-      return true;
-    });
-    if (a.gens.length !== \u5143) \u76F4\u3057.\u540D\u7C3F.push({ armyId: a.id, \u843D\u3068\u3057\u305F: \u5143 - a.gens.length });
-  }
-  for (const c of s2.castles) {
-    if (!c.lordId) continue;
-    const g = s2.generals.find((x) => x.id === c.lordId);
-    if (g && !g.captive && g.faction === c.faction) continue;
-    c.lordId = null;
-    \u76F4\u3057.\u540D\u7C3F.push({ castleId: c.id, \u57CE\u4E3B\u3092\u5916\u3057\u305F: true });
-  }
-  for (const fid of Object.keys(s2.factions || {})) {
-    if (!s2.castles.some((c) => c.faction === fid)) continue;
-    const \u5BB6\u4E2D = s2.generals.filter((g) => g.faction === fid && !g.captive);
-    if (!\u5BB6\u4E2D.length || \u5BB6\u4E2D.some((g) => g.lord)) continue;
-    const \u7D99 = pickHeir(s2, { id: null, faction: fid, name: (s2.factions[fid].name || "").slice(0, 2) });
-    if (!\u7D99) continue;
-    \u7D99.lord = true;
-    s2.chronicle.push({
-      y: s2.year,
-      m: s2.month,
-      text: `${s2.factions[fid].name}\u306F\u5F53\u4E3B\u3092\u6B20\u3044\u3066\u3044\u305F\u304C\u3001${\u7D99.name}\u304C\u5BB6\u7763\u3092\u7D99\u3044\u3060\u3002`
-    });
-    \u76F4\u3057.\u540D\u7C3F.push({ fid, \u5F53\u4E3B\u3092\u7ACB\u3066\u305F: \u7D99.name });
-  }
-  for (const g of s2.generals) {
-    if (g.captive || g.at == null) continue;
-    const c = s2.castles.find((x) => x.id === g.at);
-    if (c && c.faction === g.faction) continue;
-    const \u81EA\u9818 = s2.castles.filter((x) => x.faction === g.faction);
-    if (!\u81EA\u9818.length) continue;
-    const \u8FD1\u3044 = \u81EA\u9818.map((x) => ({ x, p: g.at ? findPath(g.at, x.id) : null })).filter((v) => v.p).sort((a2, z) => a2.p.length - z.p.length)[0];
-    const \u5148 = \u8FD1\u3044 ? \u8FD1\u3044.x : \u81EA\u9818[0];
-    g.at = \u5148.id;
-    if (!s2.castles.some((x) => x.id === g.\u672C\u9818 && x.faction === g.faction)) g.\u672C\u9818 = \u5148.id;
-    \u76F4\u3057.\u5C45\u6240.push({ gen: g, \u5148 });
-  }
-  return \u76F4\u3057;
-}
-function resolveClash(s2, aId, bId, place) {
-  const a = s2.armies.find((x) => x.id === aId), b = s2.armies.find((x) => x.id === bId);
-  if (!a || !b) return null;
-  const pa = clashPower(s2, a), pb = clashPower(s2, b);
-  const \u52DD = pa >= pb ? a : b, \u8CA0 = pa >= pb ? b : a;
-  const r = Math.min(pa, pb) / Math.max(pa, pb);
-  const \u52DD\u640D = Math.round(\u52DD.men * (0.13 * r + 0.05));
-  const \u8CA0\u640D = Math.round(\u8CA0.men * (0.3 + 0.2 * r));
-  for (const [army, loss] of [[\u52DD, \u52DD\u640D], [\u8CA0, \u8CA0\u640D]]) {
-    army.men = Math.max(0, army.men - loss);
-    army.local = Math.max(0, army.local - loss);
-    if (army.rost) rosterSync(army, "rost", army.local, `arm-${army.id}`);
-  }
-  s2.chronicle.push({
-    y: s2.year,
-    m: s2.month,
-    text: `${place}\u3067${s2.factions[a.faction].name}\u3068${s2.factions[b.faction].name}\u306E\u8ECD\u304C\u884C\u304D\u5408\u3044\u3001\u91CE\u6226\u3068\u306A\u3063\u305F\u3002${s2.factions[\u52DD.faction].name}\u304C\u52DD\u3061\u3001${s2.factions[\u8CA0.faction].name}\u306F\u5175\u3092\u9000\u3044\u305F\uFF08\u52DD\u3061\u624B${fmt(\u52DD\u640D)}\u4EBA\u30FB\u8CA0\u3051\u624B${fmt(\u8CA0\u640D)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
-  });
-  const home = withdrawArmy(s2, \u8CA0);
-  if (home) s2.chronicle.push({
-    y: s2.year,
-    m: s2.month,
-    text: `${s2.factions[\u8CA0.faction].name}\u306E\u8ECD\u306F${home.name}\u3078\u9000\u304D\u3001${s2.factions[\u52DD.faction].name}\u306F${\u5730\u540D(\u52DD.target)}\u3078\u9053\u3092\u9032\u3081\u305F\u3002`
-  });
-  return \u52DD;
-}
-function resolveClashOffscreen(prev) {
-  const s2 = structuredClone(prev);
-  const cl = (s2.clashes || [])[0];
-  if (!cl) return s2;
-  s2.clashes = s2.clashes.slice(1);
-  const \u52DD = resolveClash(s2, cl.aId, cl.bId, cl.place);
-  if (\u52DD && (!\u52DD.path || \u52DD.path.length <= 1)) {
-    s2.pendingArrivals = [\u52DD.id, ...(s2.pendingArrivals || []).filter((id) => id !== \u52DD.id)];
-  }
-  return s2;
-}
-
 // src/core/yurushi.js
 function \u81E3\u5F93\u306E\u4E3B(g, fid) {
   for (const other of Object.keys(g.factions || {})) {
@@ -18830,6 +18839,10 @@ function \u8B00\u53CD\u3092\u8D77\u3053\u3059(s2, \u89AA, \u5148) {
   }
   for (const g of \u6B8B\u308B) g.\u5BC4\u89AA = null;
   \u89AA.\u8B00\u53CD\u652F\u5EA6 = null;
+  if (\u57CE\u3089.length) {
+    \u672C\u62E0\u3092\u8FFD\u3046(s2);
+    \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2);
+  }
   return { \u79FB\u3063\u305F: \u79FB\u308B, \u6B8B\u3063\u305F: \u6B8B\u308B, \u57CE: \u57CE\u3089 };
 }
 function \u8B00\u53CD\u306E\u898B\u56DE\u308A(s2, fid, { \u544A\u3052\u308B, \u7C64: \u7C642 } = {}) {
@@ -19074,13 +19087,15 @@ function advanceMonth(prev, g) {
           if (ref) x.at = ref.id;
           else {
             const \u5F53\u4E3B\u304B = !!x.lord;
-            s2.generals = s2.generals.filter((q) => q.id !== x.id);
+            \u5C06\u3092\u9664\u304F(s2, x.id);
             if (\u5F53\u4E3B\u304B) succeed(s2, x, "\u5185\u5FDC\u306E\u6DF7\u4E71\u306E\u3046\u3061\u306B\u843D\u547D\u3057\u305F");
           }
         }
       }
       const rel3 = s2.relations[relKey2(pl.faction, oldF)];
       if (rel3) rel3.trust = clamp(rel3.trust - 20, 0, 100);
+      \u672C\u62E0\u3092\u8FFD\u3046(s2);
+      \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2);
       say(`${lordOf.name}\u304C\u5185\u5FDC\u3057\u3001${target.name}\u306F\u6226\u308F\u305A\u3057\u3066${s2.factions[pl.faction].name}\u306E\u3082\u306E\u3068\u306A\u3063\u305F\u3002`);
       s2.chronicle.push({
         y: s2.year,
@@ -19109,7 +19124,7 @@ function advanceMonth(prev, g) {
           };
         } else {
           for (const g2 of [rl, ...rr].filter(Boolean)) {
-            if (Math.random() < 0.4) s2.generals = s2.generals.filter((x) => x.id !== g2.id);
+            if (Math.random() < 0.4) \u5C06\u3092\u9664\u304F(s2, g2.id);
             else takeAsPrisoner(s2, g2, pl.faction, target.id);
           }
           s2.chronicle.push({
@@ -19398,7 +19413,7 @@ function advanceMonth(prev, g) {
       const p = reached ? 1 : a >= cap - 4 ? 0.34 : a >= 70 ? 0.16 : a >= 60 ? 0.075 : a >= 54 ? 0.035 : 0.015;
       if (Math.random() > p) continue;
       const wasLord = q.lord;
-      s2.generals = s2.generals.filter((x) => x.id !== q.id);
+      \u5C06\u3092\u9664\u304F(s2, q.id);
       if (wasLord) {
         if (q.faction === s2.player && !s2.autoPlay) {
           s2.succession = { dead: q, cause: "\u75C5\u6CA1\u3057\u305F" };
@@ -19497,7 +19512,7 @@ function advanceMonth(prev, g) {
           s2.chronicle.push({ y: s2.year, m: s2.month, text: msg });
           if (oldF === s2.player || to.faction === s2.player) events.push(msg);
         } else {
-          s2.generals = s2.generals.filter((x) => x.id !== q.id);
+          \u5C06\u3092\u9664\u304F(s2, q.id);
           s2.chronicle.push({ y: s2.year, m: s2.month, text: `${q.name}\u304C\u51FA\u5954\u3057\u305F\u3002` });
           if (q.faction === s2.player) events.push(`${q.name}\u304C\u51FA\u5954\u3057\u305F\u3002`);
         }
@@ -19908,6 +19923,9 @@ function advanceMonth(prev, g) {
       const take = gens.sort((a, b) => b.lead - a.lead).slice(0, 3);
       const send = Math.round(avail * 0.85);
       const localSend = Math.max(0, Math.min(c.local, send - take.reduce((a, x) => a + x.retinue, 0)));
+      const \u6B32 = Math.round(send * 0.6);
+      const \u7CE7 = Math.max(0, Math.min(Math.round(c.food), \u6B32));
+      if (\u7CE7 < \u6B32 * 0.35) break;
       c.local -= localSend;
       s2.armies.push({
         id: \u8ECD\u306E\u540D(s2, "a"),
@@ -19920,14 +19938,58 @@ function advanceMonth(prev, g) {
         at: c.id,
         path: \u653B\u3081\u9053,
         prog: 0,
-        food: Math.round(send * 0.6),
+        food: \u7CE7,
         target: cand.id
       });
       for (const t of take) t.at = null;
-      c.food -= Math.round(send * 0.6);
+      c.food = Math.max(0, c.food - \u7CE7);
       events.push(`${s2.factions[fid].name}\u304C${c.name}\u3088\u308A\u51FA\u9663\u3002${cand.name}\u3092\u76EE\u6307\u3059\u3002`);
       break;
     }
+  }
+  for (const a of [...s2.armies]) {
+    if (!auto(a.faction) || !a.\u5728\u9663 || a.aid) continue;
+    const \u9663 = s2.castles.find((c2) => c2.id === a.\u5728\u9663 && c2.faction === a.faction);
+    if (!\u9663) continue;
+    a.\u5728\u9663\u5F85\u3061 = (a.\u5728\u9663\u5F85\u3061 || 0) + 1;
+    if (a.\u5728\u9663\u5F85\u3061 < 2) continue;
+    const \u5C06 = (a.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
+    let \u6B21 = null;
+    if (\u5C06.length && a.men > 600 && a.food > a.men * 0.25) {
+      const \u7684\u3089 = s2.castles.filter((x) => x.faction !== a.faction && !underMyBanner(s2, a.faction, x.faction) && !atPeace(s2, a.faction, x.faction)).map((x) => ({ x, \u9053: \u8ECD\u306E\u9053(s2, a.faction, \u9663.id, x.id) })).filter((v) => v.\u9053 && v.\u9053.length <= 3).sort((p, q) => p.\u9053.length - q.\u9053.length);
+      \u6B21 = \u7684\u3089.find((v) => a.men > v.x.local * 1.4) || null;
+    }
+    if (\u6B21) {
+      a.\u5728\u9663 = null;
+      a.\u5728\u9663\u5F85\u3061 = 0;
+      a.target = \u6B21.x.id;
+      a.path = \u6B21.\u9053;
+      a.prog = 0;
+      a.at = \u6B21.\u9053[0];
+      a.sieging = false;
+      a.reinforced = false;
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${\u9663.name}\u306E\u5728\u9663\u3092\u6255\u3044\u3001${s2.factions[a.faction].name}\u306E\u8ECD\u304C${\u6B21.x.name}\u3078\u5411\u304B\u3046\u3002`
+      });
+      continue;
+    }
+    if (\u9663.local < minGarrison(\u9663)) {
+      \u57CE\u306B\u5408\u6D41\u3059\u308B(s2, a, \u9663);
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${\u9663.name}\u306E\u9663\u3092\u7573\u307F\u3001${s2.factions[a.faction].name}\u306E\u5175\u304C\u57CE\u3078\u5165\u3063\u305F\u3002`
+      });
+      continue;
+    }
+    \u8ECD\u3092\u89E3\u304F(s2, a);
+    s2.chronicle.push({
+      y: s2.year,
+      m: s2.month,
+      text: `${\u9663.name}\u306E\u5728\u9663\u3092\u89E3\u304D\u3001${s2.factions[a.faction].name}\u306E\u5175\u3068\u5C06\u306F\u5143\u306E\u57CE\u3078\u5E30\u3063\u305F\u3002`
+    });
   }
   \u65D7\u306E\u4E0B\u3092\u72D9\u3046\u6226\u5F79\u3092\u843D\u3068\u3059(s2);
   if (!s2.\u6EC5\u3073 && !s2.castles.some((c) => c.faction === s2.player)) {
@@ -20060,7 +20122,7 @@ function advanceMonth(prev, g) {
           \u65D7\u982D: \u65D7.id
         });
         for (const t3 of take3) t3.at = null;
-        c2.food -= Math.round(send3 * 0.6);
+        c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
         events.push(`${\u65D7.name}\u304C${c2.name}\u3088\u308A\u51FA\u9663\u3002${\u7684.name}\u3092\u76EE\u6307\u3059\uFF08\u65B9\u9762\u306E\u5DEE\u914D\uFF09\u3002`);
         \u51FA\u305F = true;
         break;
@@ -20129,6 +20191,7 @@ function advanceMonth(prev, g) {
       if (q.winner !== s2.player) continue;
       events.push(`${(s2.factions[q.fid] || {}).name}\u306E\u6B8B\u515A\u3092\u59CB\u672B\u3057\u305F\u3002`);
     }
+    \u672C\u62E0\u3092\u8FFD\u3046(s2);
     for (const q of \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2)) {
       if (q.faction !== s2.player) continue;
       events.push(`${q.name}\u306F\u672C\u9818\u3092\u5931\u3044\u3001${(s2.castles.find((c) => c.id === q.\u672C\u9818) || {}).name}\u306B\u5C45\u3092\u79FB\u3057\u305F\u3002`);
@@ -30719,7 +30782,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           const heir = s2.generals.find((x) => x.faction === gen.faction && x.id !== gen.id && !x.captive);
           if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
           const wasLord = gen.lord;
-          s2.generals = s2.generals.filter((x) => x.id !== gen.id);
+          \u5C06\u3092\u9664\u304F(s2, gen.id);
           if (wasLord) {
             if (gen.faction === s2.player) s2.succession = { dead: gen, cause: "\u8A0E\u6B7B\u3057\u305F" };
             else succeed(s2, gen, "\u8A0E\u6B7B\u3057\u305F");
@@ -30867,7 +30930,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         } else if (fate === "\u8A0E\u6B7B") {
           const heir = s2.generals.find((x) => x.faction === gen.faction && x.id !== gen.id);
           if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
-          s2.generals = s2.generals.filter((x) => x.id !== gen.id);
+          \u5C06\u3092\u9664\u304F(s2, gen.id);
           if (gen.lord) {
             if (gen.faction === s2.player) s2.succession = { dead: gen, cause: "\u8A0E\u6B7B\u3057\u305F" };
             else succeed(s2, gen, "\u8A0E\u6B7B\u3057\u305F");
@@ -30979,7 +31042,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         } else if (fate === "\u8A0E\u6B7B") {
           const heir = s2.generals.find((x) => x.faction === gen.faction && x.id !== gen.id);
           if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
-          s2.generals = s2.generals.filter((x) => x.id !== gen.id);
+          \u5C06\u3092\u9664\u304F(s2, gen.id);
           if (gen.lord) {
             if (gen.faction === s2.player) s2.succession = { dead: gen, cause: "\u8A0E\u6B7B\u3057\u305F" };
             else succeed(s2, gen, "\u8A0E\u6B7B\u3057\u305F");
@@ -31984,7 +32047,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           q.loyal = clamp((q.loyal == null ? 60 : q.loyal) + 6, 0, 100);
           log(`${q.name}\u3092\u653E\u3063\u305F\u3002${home.name}\u3078\u5E30\u3063\u305F\u3002`);
         } else if (how === "\u65AC\u9996") {
-          s2.generals = s2.generals.filter((x) => x.id !== q.id);
+          \u5C06\u3092\u9664\u304F(s2, q.id);
           log(`${q.name}\u3092\u65AC\u3063\u305F\u3002`);
         } else {
           log(`${q.name}\u3092\u6355\u865C\u3068\u3057\u3066\u7559\u3081\u7F6E\u3044\u305F\u3002`);

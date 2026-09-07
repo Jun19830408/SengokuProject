@@ -27,7 +27,7 @@ import { GOKINAI } from "../data/provinces.js";
 import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "../govern/ai.js";
 import { checkUnified } from "../govern/unify.js";
-import { sackCastle, 城を委ねる, 軍を解く, 在陣させる, 城に合流する } from "../govern/war.js";
+import { sackCastle, 城を委ねる, 軍を解く, 在陣させる, 城に合流する, 将を除く } from "../govern/war.js";
 import { BattleScreen } from "./BattleScreen.jsx";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
@@ -1236,7 +1236,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           const heir = s.generals.find((x) => x.faction === gen.faction && x.id !== gen.id && !x.captive);
           if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
           const wasLord = gen.lord;
-          s.generals = s.generals.filter((x) => x.id !== gen.id);
+          将を除く(s, gen.id);
           if (wasLord) {
             if (gen.faction === s.player) s.succession = { dead: gen, cause: "討死した" };
             else succeed(s, gen, "討死した");
@@ -1393,7 +1393,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         } else if (fate === "討死") {
           const heir = s.generals.find((x) => x.faction === gen.faction && x.id !== gen.id);
           if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
-          s.generals = s.generals.filter((x) => x.id !== gen.id);
+          将を除く(s, gen.id);
           if (gen.lord) {
             if (gen.faction === s.player) s.succession = { dead: gen, cause: "討死した" };
             else succeed(s, gen, "討死した");
@@ -1511,7 +1511,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         } else if (fate === "討死") {
           const heir = s.generals.find((x) => x.faction === gen.faction && x.id !== gen.id);
           if (heir) heir.retinue += Math.round(gen.retinue * 0.5);
-          s.generals = s.generals.filter((x) => x.id !== gen.id);
+          将を除く(s, gen.id);
           if (gen.lord) {
             if (gen.faction === s.player) s.succession = { dead: gen, cause: "討死した" };
             else succeed(s, gen, "討死した");
@@ -2564,7 +2564,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               q.loyal = clamp((q.loyal == null ? 60 : q.loyal) + 6, 0, 100);
               log(`${q.name}を放った。${home.name}へ帰った。`);
             } else if (how === "斬首") {
-              s.generals = s.generals.filter((x) => x.id !== q.id);
+              将を除く(s, q.id);
               log(`${q.name}を斬った。`);
             } else {
               log(`${q.name}を捕虜として留め置いた。`);

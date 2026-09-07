@@ -200,6 +200,22 @@ const 走らせる = (種, 年数, 詳しく) => {
       見つけた.push({ 種, いつ, 名: '月送りが倒れた', 事: e.message });
       break;
     }
+    /* 着いた軍と行き合いの始末は、画面（MapScreen）が回している。月送りを
+       呼ぶだけでは誰も捌かないので、着いた軍が的の前に立ったまま何十年も
+       残る（一度これで八十軍が凍り、盤がまったくまとまらなかった）。
+       采配に任せた盤と同じになるよう、ここで画面と同じ始末をつける。 */
+    try {
+      for (let k = 0; k < 60 && (s.clashes || []).length; k++) s = H.resolveClashOffscreen(s);
+      for (let k = 0; k < 120 && (s.pendingArrivals || []).length; k++) {
+        const id = s.pendingArrivals[0];
+        const a = (s.armies || []).find((x) => x.id === id);
+        const 的 = a && s.castles.find((c) => c.id === a.at);
+        if (!a || !的) { s.pendingArrivals = s.pendingArrivals.slice(1); continue; }
+        s = H.resolveOffscreen(s, a.id, 的.id);
+      }
+    } catch (e) {
+      見つけた.push({ 種, いつ, 名: '着陣の始末が倒れた', 事: e.message });
+    }
     /* 遊ぶ側に問われる筋（滅亡の始末）に答える者がいない。溜めたままにすると
        滅んだ家の将が敵城に立ったまま残り、本当の乱れが見えなくなる。
        画面で問われた者が答えるのと同じ場所――月が明けてすぐ――で始末をつける。 */

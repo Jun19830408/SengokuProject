@@ -1,3 +1,4 @@
+import { 将を除く } from "./war.js";
 import { captiveRecruit, payRansom, ransomAccept, ransomCost } from "../core/capture.js";
 import { succeed } from "../core/house.js";
 import { holdsProvince, kenchiCost, kenchiDone, rankBonus, runKenchi } from "../core/province.js";
@@ -243,7 +244,7 @@ export function settleCaptive(prev, genId, kind) {
     if (!g2 || !g2.captive) return s;
     const f = s.factions[s.player];
     if (kind === "切腹") {
-      s.generals = s.generals.filter((x) => x.id !== g2.id);
+      将を除く(s, g2.id);
       s.chronicle.push({ y: s.year, m: s.month, text: `${g2.name}は切腹して果てた。` });
       s.msg = `${g2.name}に腹を切らせた。`;
     } else if (kind === "扶持") {
@@ -313,7 +314,7 @@ export function doCaptive(prev, genId, how) {
     } else if (how === "斬首") {
       const rel = s.relations[relKey(s.player, q.captive.from)];
       if (rel) rel.trust = clamp(rel.trust - 14, 0, 100);  // 恨みを買う
-      s.generals = s.generals.filter((x) => x.id !== q.id);
+      将を除く(s, q.id);
       log(`${q.name}を斬った。`);
     } else if (how === "身代金") {
       const cost = ransomCost(s, q);

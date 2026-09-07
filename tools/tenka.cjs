@@ -363,7 +363,7 @@ const 控える = (名, 事, いつ) => {
       }
       const 我 = 新.castles.filter((c) => c.faction === 新.player).length;
       const 家数 = new Set(新.castles.map((c) => c.faction)).size;
-      if (月 % 60 === 0) 節目.push(`  ${年月}　自家 ${我}城　残る家 ${家数}`);
+      if (月 % 60 === 0) 節目.push(`  ${年月}　自家 ${我}城　残る家 ${家数}　野の軍 ${(新.armies || []).length}　囲み ${(新.sieges || []).length}`);
       if (家数 === 1) { 統一 = 年月; break; }
       if (!新.castles.some((c) => c.faction === 新.player)) {
         控える('滅んだ', `${年月}に遊ぶ側の城が尽きた`, 年月);

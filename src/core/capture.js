@@ -98,6 +98,13 @@ export function makePrisoner(s, gen, holderFaction, castleId) {
   gen.captive = { by: holderFaction, from: gen.faction, at: castleId, since: `${s.year}-${s.month}` };
   gen.at = castleId;
   gen.retinue = 0;
+  /* 囚われた者は城主を務められない。札を外し、軍の名簿からも落とす。
+
+     これまでは捕らえるだけで札が残っていたので、他家に囚われている者が
+     城主のまま帳面に載っていた（巡検が長宗我部国親で拾った）。城主のいない城
+     として扱えばよい。誰を据えるかは、そのあと主が決めることである。 */
+  for (const c of s.castles || []) if (c.lordId === gen.id) c.lordId = null;
+  for (const a of s.armies || []) if ((a.gens || []).includes(gen.id)) a.gens = a.gens.filter((g) => g !== gen.id);
   return gen;
 }
 
