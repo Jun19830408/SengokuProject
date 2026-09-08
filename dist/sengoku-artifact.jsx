@@ -18499,13 +18499,12 @@ function \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B, \u7533\u3
   if (\u5927\u7269) {
     const \u5DEE = \u5927\u7269.koku / Math.max(1, \u6211\u77F3);
     const \u72D9\u308F\u308C = (s2.factions[\u5927\u7269.\u5148].aim || {}).target && (s2.castles.find((c) => c.id === s2.factions[\u5927\u7269.\u5148].aim.target) || {}).faction === fid;
-    const \u7D30\u3044 = \u81EA\u57CE.length <= 2;
-    const \u702C\u6238\u969B = \u81EA\u57CE.length <= 1 || \u81EA\u57CE.length <= 2 && \u72D9\u308F\u308C;
-    if (\u5DEE >= 3.4 && \u702C\u6238\u969B && \u5927\u7269.r.trust >= 60 && \u5F15\u304F() < 0.1) {
+    const \u7D30\u3044 = \u81EA\u57CE.length <= 4;
+    if (\u5DEE >= 3 && (\u81EA\u57CE.length <= 3 || \u72D9\u308F\u308C) && \u5F15\u304F() < 0.22) {
       const r = \u6253\u3064(\u5927\u7269.\u5148, "\u81E3\u5F93\u3059\u308B");
       if (r) return r;
     }
-    if (\u5DEE >= 2.4 && (\u7D30\u3044 ? \u72D9\u308F\u308C || \u5DEE >= 3 : \u72D9\u308F\u308C && \u5DEE >= 3) && \u5927\u7269.r.trust >= 50 && \u5F15\u304F() < 0.15) {
+    if (\u5DEE >= 2.2 && (\u7D30\u3044 || \u72D9\u308F\u308C) && \u5F15\u304F() < 0.28) {
       const r = \u6253\u3064(\u5927\u7269.\u5148, "\u5F93\u5C5E\u3059\u308B");
       if (r) return r;
     }
@@ -18517,6 +18516,14 @@ function \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B, \u7533\u3
       if (r) return r;
     }
   }
+  const \u901A\u3046\u5148 = (() => {
+    if (\u5927\u7269 && !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(\u5927\u7269.r.state)) {
+      const \u5DEE = \u5927\u7269.koku / Math.max(1, \u6211\u77F3);
+      if (\u5DEE >= 1.9) return \u5927\u7269;
+    }
+    if (\u5C0F\u7269 && !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(\u5C0F\u7269.r.state) && \u5F15\u304F() < 0.5) return \u5C0F\u7269;
+    return null;
+  })();
   const \u72D9 = f.aim ? (s2.castles.find((c) => c.id === f.aim.target) || {}).faction : null;
   const \u76F8\u624B\u3089 = \u96A3.filter((x) => x.\u5148 !== \u72D9 && !["\u540C\u76DF", "\u81E3\u5F93", "\u5F93\u5C5E"].includes(x.r.state));
   const \u76F8 = [...\u76F8\u624B\u3089].sort((a, b) => b.r.trust - a.r.trust)[0] || \u96A3.filter((x) => x.\u5148 !== \u72D9)[0];
@@ -18529,7 +18536,8 @@ function \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B, \u7533\u3
       const r2 = \u6253\u3064(\u76F8.\u5148, "\u4E0D\u53EF\u4FB5");
       if (r2) return r2;
     }
-    const r = \u6253\u3064(\u76F8.\u5148, "\u89AA\u5584");
+    const \u5148 = \u901A\u3046\u5148 || \u76F8;
+    const r = \u6253\u3064(\u5148.\u5148, "\u89AA\u5584");
     if (r) return r;
   }
   return null;

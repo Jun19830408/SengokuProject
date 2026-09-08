@@ -38,6 +38,7 @@ export { 難を逃れる, captureChance } from "../src/core/capture.js";
 export { succeed, is架空, bearChild, pickHeir } from "../src/core/house.js";
 export { REGIONS, GOKINAI } from "../src/data/provinces.js";
 export { 気風, 浸透, 家の当主, 攻めの腰, 要る兵力, 出せる軍の数, 調略の腰, 治めの腰, 好機か } from "../src/core/kiryou.js";
+export { 主を探す } from "../src/core/state.js";
 export { houseAlive, 主家, isVassal, 膝を屈している, canAskAid, underMyBanner } from "../src/core/state.js";
 export { doDiplo, doPlot, doSpecial } from "../src/govern/commands.js";
 export { DIPLO, PLOTS } from "../src/data/diplo.js";

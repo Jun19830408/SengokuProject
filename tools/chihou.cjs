@@ -32,13 +32,19 @@ const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 const 巡検 = require(path.join(__dirname, 'junken.cjs'));
 const { REGIONS } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
-/* 勢力のまとまり。臣従・従属は主家に数える。 */
+/* 勢力のまとまり。臣従・従属は主家に数える。
+
+   はじめ 主家(s, f) と呼んでいたが、これは組（a と b）を取る関数で、家を一つ
+   渡しても主は返らない。束ねているつもりで、まったく束ねていなかった。
+   膝を屈した家がそのまま別勢力として数えられていたので、絞りの値は
+   実際より大きく出ていた。主を探す（state.js）で辿り直す。 */
 const 束ねる = (s, fid) => {
   let f = fid;
+  const 見た = new Set([f]);
   for (let i = 0; i < 6; i++) {                 // 主の主まで辿る。輪を踏まぬよう限りを置く
-    const 主 = H.主家 ? H.主家(s, f) : null;
-    if (!主 || 主 === f) break;
-    f = 主;
+    const 主 = H.主を探す(s, f);
+    if (!主 || 見た.has(主)) break;
+    見た.add(主); f = 主;
   }
   return f;
 };
