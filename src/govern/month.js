@@ -1072,6 +1072,13 @@ export function advanceMonth(prev, g) {
           if (risk) { risk.def = Math.min(100, risk.def + 2); risk.hp += 150; fa.gold -= 240; }
         }
       }
+      /* 家ごとの城の数を一度だけ数える。的を選ぶたびに数え直しては重い。 */
+      const 家の城数 = new Map();
+      for (const c2 of s.castles) 家の城数.set(c2.faction, (家の城数.get(c2.faction) || 0) + 1);
+      const 弱み = (t2) => {
+        const n = 家の城数.get(t2.faction) || 1;
+        return n <= 2 ? 22 : n <= 4 ? 14 : n <= 8 ? 6 : 0;
+      };
       for (const fid of Object.keys(s.factions)) {
         if (!auto(fid)) continue;
         /* 一度に出せる軍の数は、家の大きさで決まる（GDD 7.2）。
@@ -1132,9 +1139,15 @@ export function advanceMonth(prev, g) {
             }
             return w;
           };
+          /* 弱きから呑む（GDD 13.2）。同じ手間なら、小さい家の城を先に取る。
+
+             大身どうしが噛み合ったまま睨み合っていては、地方はいつまでも絞られない。
+             実際、四十年走らせても中部だけは八割を覆うのに四家を要していた。
+             二十二城の武田と十三城の伊達が押し合う脇で、一城二城の国人がいつまでも
+             残る。戦国の地方は、まず在地の小家が呑まれて形になった。 */
           const scored2 = reach.map((x) => ({
             x, s2: worth(x) - (軍の道(s, fid, c.id, x.id) || []).length * 1.2
-              + (aim && aim.target === x.id ? 14 : 0),
+              + (aim && aim.target === x.id ? 14 : 0) + 弱み(x),
           })).sort((a, b) => b.s2 - a.s2);
           const cand = scored2.length ? scored2[0].x : null;
           if (!cand) continue;

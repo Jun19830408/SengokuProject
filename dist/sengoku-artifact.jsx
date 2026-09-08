@@ -19895,6 +19895,12 @@ function advanceMonth(prev, g) {
       }
     }
   }
+  const \u5BB6\u306E\u57CE\u6570 = /* @__PURE__ */ new Map();
+  for (const c2 of s2.castles) \u5BB6\u306E\u57CE\u6570.set(c2.faction, (\u5BB6\u306E\u57CE\u6570.get(c2.faction) || 0) + 1);
+  const \u5F31\u307F = (t2) => {
+    const n = \u5BB6\u306E\u57CE\u6570.get(t2.faction) || 1;
+    return n <= 2 ? 22 : n <= 4 ? 14 : n <= 8 ? 6 : 0;
+  };
   for (const fid of Object.keys(s2.factions)) {
     if (!auto(fid)) continue;
     if (s2.armies.filter((a) => a.faction === fid && !a.aid).length >= \u51FA\u305B\u308B\u8ECD\u306E\u6570(s2, fid)) continue;
@@ -19937,7 +19943,7 @@ function advanceMonth(prev, g) {
       };
       const scored2 = reach.map((x) => ({
         x,
-        s2: worth(x) - (\u8ECD\u306E\u9053(s2, fid, c.id, x.id) || []).length * 1.2 + (aim && aim.target === x.id ? 14 : 0)
+        s2: worth(x) - (\u8ECD\u306E\u9053(s2, fid, c.id, x.id) || []).length * 1.2 + (aim && aim.target === x.id ? 14 : 0) + \u5F31\u307F(x)
       })).sort((a, b) => b.s2 - a.s2);
       const cand = scored2.length ? scored2[0].x : null;
       if (!cand) continue;
