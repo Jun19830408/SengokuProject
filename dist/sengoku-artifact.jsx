@@ -15170,15 +15170,19 @@ function assignKokuCap(castles) {
 var LEVELS = {
   \u6613: {
     name: "\u6613",
-    desc: "\u4ED6\u5BB6\u306F\u4F38\u3073\u304C\u9045\u304F\u3001\u653B\u3081\u3082\u614E\u91CD\u3002\u307E\u305A\u4ED5\u7D44\u307F\u3092\u899A\u3048\u305F\u3044\u3068\u304D\u306B\u3002",
-    aiGrow: 0.6,
+    desc: "\u4ED6\u5BB6\u306F\u7684\u3092\u9078\u3073\u640D\u306D\u3001\u3053\u3061\u3089\u3092\u72D9\u3046\u3053\u3068\u3082\u5C11\u306A\u3044\u3002\u307E\u305A\u4ED5\u7D44\u307F\u3092\u899A\u3048\u305F\u3044\u3068\u304D\u306B\u3002",
+    aiGrow: 0.8,
     // 他家の内政の効き
-    aiEager: 0.7,
+    aiEager: 0.85,
     // 他家が攻めに出る頻度
-    aiNeed: 1.35,
+    aiNeed: 1.2,
     // 攻めに要する兵力の比
-    aiPlot: 0.5,
+    aiPlot: 0.6,
     // 他家の調略の頻度
+    aiSharp: 0.45,
+    // 最も値打ちのある的を選ぶ確かさ
+    aiVsPlayer: 0.75,
+    // 遊ぶ側の城をどれだけ重く見るか
     reliefP: 1.25,
     // こちらへの後詰の来やすさ
     tribute: 1.2
@@ -15191,16 +15195,20 @@ var LEVELS = {
     aiEager: 1,
     aiNeed: 1.05,
     aiPlot: 1,
+    aiSharp: 0.8,
+    aiVsPlayer: 1,
     reliefP: 1,
     tribute: 1
   },
   \u96E3: {
     name: "\u96E3",
-    desc: "\u4ED6\u5BB6\u306F\u901F\u3084\u304B\u306B\u56FD\u3092\u5BCC\u307E\u305B\u3001\u9699\u3042\u3089\u3070\u653B\u3081\u5BC4\u305B\u308B\u3002\u8B00\u3082\u7D76\u3048\u306C\u3002",
-    aiGrow: 1.5,
-    aiEager: 1.4,
-    aiNeed: 0.85,
+    desc: "\u4ED6\u5BB6\u306F\u7684\u3092\u904E\u305F\u305A\u3001\u9699\u3042\u3089\u3070\u3053\u3061\u3089\u3078\u5BC4\u3063\u3066\u304F\u308B\u3002\u8B00\u3082\u7D76\u3048\u306C\u3002",
+    aiGrow: 1.2,
+    aiEager: 1.15,
+    aiNeed: 0.95,
     aiPlot: 1.8,
+    aiSharp: 1,
+    aiVsPlayer: 1.6,
     reliefP: 0.8,
     tribute: 0.88
   }
@@ -18374,7 +18382,7 @@ function \u6C17\u98A8(s2, fid) {
 }
 function \u653B\u3081\u306E\u8170(s2, fid) {
   const k = \u6C17\u98A8(s2, fid);
-  return clamp2(0.45 * (1 + k.\u653B\u3081 * 0.8), 0.12, 0.85);
+  return clamp2(0.32 * (1 + k.\u653B\u3081 * 0.8), 0.08, 0.62);
 }
 function \u8981\u308B\u5175\u529B(s2, fid, \u57FA = 1.35) {
   const k = \u6C17\u98A8(s2, fid);
@@ -18384,8 +18392,8 @@ function \u51FA\u305B\u308B\u8ECD\u306E\u6570(s2, fid) {
   const \u57CE = (s2.castles || []).filter((c) => c.faction === fid).length;
   if (!\u57CE) return 0;
   const k = \u6C17\u98A8(s2, fid);
-  const \u57FA = 1 + Math.floor(\u57CE / 4);
-  return clamp2(\u57FA + (k.\u6D78\u900F >= 0.7 ? 1 : 0), 1, 6);
+  const \u57FA = 1 + Math.floor(\u57CE / 7);
+  return clamp2(\u57FA + (k.\u6D78\u900F >= 0.75 ? 1 : 0), 1, 4);
 }
 function \u8ABF\u7565\u306E\u8170(s2, fid, \u57FA = 0.3) {
   const k = \u6C17\u98A8(s2, fid);
@@ -18500,11 +18508,11 @@ function \u5916\u4EA4\u306E\u91C7\u914D(s2, fid, { \u544A\u3052\u308B, \u7533\u3
     const \u5DEE = \u5927\u7269.koku / Math.max(1, \u6211\u77F3);
     const \u72D9\u308F\u308C = (s2.factions[\u5927\u7269.\u5148].aim || {}).target && (s2.castles.find((c) => c.id === s2.factions[\u5927\u7269.\u5148].aim.target) || {}).faction === fid;
     const \u7D30\u3044 = \u81EA\u57CE.length <= 4;
-    if (\u5DEE >= 3 && (\u81EA\u57CE.length <= 3 || \u72D9\u308F\u308C) && \u5F15\u304F() < 0.22) {
+    if (\u5DEE >= 3.4 && (\u81EA\u57CE.length <= 3 || \u72D9\u308F\u308C) && \u5F15\u304F() < 0.14) {
       const r = \u6253\u3064(\u5927\u7269.\u5148, "\u81E3\u5F93\u3059\u308B");
       if (r) return r;
     }
-    if (\u5DEE >= 2.2 && (\u7D30\u3044 || \u72D9\u308F\u308C) && \u5F15\u304F() < 0.28) {
+    if (\u5DEE >= 2.6 && (\u7D30\u3044 || \u72D9\u308F\u308C) && \u5F15\u304F() < 0.18) {
       const r = \u6253\u3064(\u5927\u7269.\u5148, "\u5F93\u5C5E\u3059\u308B");
       if (r) return r;
     }
@@ -19907,7 +19915,7 @@ function advanceMonth(prev, g) {
   for (const c2 of s2.castles) \u5BB6\u306E\u57CE\u6570.set(c2.faction, (\u5BB6\u306E\u57CE\u6570.get(c2.faction) || 0) + 1);
   const \u5F31\u307F = (t2) => {
     const n = \u5BB6\u306E\u57CE\u6570.get(t2.faction) || 1;
-    return n <= 2 ? 22 : n <= 4 ? 14 : n <= 8 ? 6 : 0;
+    return n <= 2 ? 12 : n <= 4 ? 8 : n <= 8 ? 3 : 0;
   };
   for (const fid of Object.keys(s2.factions)) {
     if (!auto(fid)) continue;
@@ -19949,11 +19957,14 @@ function advanceMonth(prev, g) {
         }
         return w;
       };
+      const \u5F53\u305F\u308A = (x) => x.faction === s2.player ? (lv(s2).aiVsPlayer - 1) * 20 : 0;
       const scored2 = reach.map((x) => ({
         x,
-        s2: worth(x) - (\u8ECD\u306E\u9053(s2, fid, c.id, x.id) || []).length * 1.2 + (aim && aim.target === x.id ? 14 : 0) + \u5F31\u307F(x)
+        s2: worth(x) - (\u8ECD\u306E\u9053(s2, fid, c.id, x.id) || []).length * 1.2 + (aim && aim.target === x.id ? 14 : 0) + \u5F31\u307F(x) + \u5F53\u305F\u308A(x)
       })).sort((a, b) => b.s2 - a.s2);
-      const cand = scored2.length ? scored2[0].x : null;
+      const \u92ED = lv(s2).aiSharp == null ? 0.8 : lv(s2).aiSharp;
+      const \u982D2 = scored2.slice(0, 3);
+      const cand = !\u982D2.length ? null : Math.random() < \u92ED ? \u982D2[0].x : \u982D2[Math.floor(Math.random() * \u982D2.length)].x;
       if (!cand) continue;
       const dg = s2.generals.filter((x) => x.at === cand.id && x.faction === cand.faction);
       const foeMen2 = cand.local + dg.reduce((a, x) => a + x.retinue, 0);

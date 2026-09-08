@@ -1077,7 +1077,7 @@ export function advanceMonth(prev, g) {
       for (const c2 of s.castles) 家の城数.set(c2.faction, (家の城数.get(c2.faction) || 0) + 1);
       const 弱み = (t2) => {
         const n = 家の城数.get(t2.faction) || 1;
-        return n <= 2 ? 22 : n <= 4 ? 14 : n <= 8 ? 6 : 0;
+        return n <= 2 ? 12 : n <= 4 ? 8 : n <= 8 ? 3 : 0;
       };
       for (const fid of Object.keys(s.factions)) {
         if (!auto(fid)) continue;
@@ -1145,11 +1145,20 @@ export function advanceMonth(prev, g) {
              実際、四十年走らせても中部だけは八割を覆うのに四家を要していた。
              二十二城の武田と十三城の伊達が押し合う脇で、一城二城の国人がいつまでも
              残る。戦国の地方は、まず在地の小家が呑まれて形になった。 */
+          /* 遊ぶ側への当たり（GDD 13.2）。難易度で、諸家が遊ぶ側の城を
+             どれだけ重く見るかが変わる。難しければ寄ってたかって狙う。 */
+          const 当たり = (x) => (x.faction === s.player ? (lv(s).aiVsPlayer - 1) * 20 : 0);
           const scored2 = reach.map((x) => ({
             x, s2: worth(x) - (軍の道(s, fid, c.id, x.id) || []).length * 1.2
-              + (aim && aim.target === x.id ? 14 : 0) + 弱み(x),
+              + (aim && aim.target === x.id ? 14 : 0) + 弱み(x) + 当たり(x),
           })).sort((a, b) => b.s2 - a.s2);
-          const cand = scored2.length ? scored2[0].x : null;
+          /* 采配の切れ味（GDD 13.2）。易しければ二番手三番手の城へ向かい、
+             好機を逃す。難しければ最も値打ちのある城を選ぶ。
+             世界の速さを落として易しくするのではなく、選び損ねさせる。 */
+          const 鋭 = lv(s).aiSharp == null ? 0.8 : lv(s).aiSharp;
+          const 頭 = scored2.slice(0, 3);
+          const cand = !頭.length ? null
+            : (Math.random() < 鋭 ? 頭[0].x : 頭[Math.floor(Math.random() * 頭.length)].x);
           if (!cand) continue;
           const dg = s.generals.filter((x) => x.at === cand.id && x.faction === cand.faction);
           const foeMen2 = cand.local + dg.reduce((a, x) => a + x.retinue, 0);
