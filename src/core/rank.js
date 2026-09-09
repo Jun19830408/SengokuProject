@@ -32,6 +32,7 @@ export function diploStat(g, fid) {
     diplo: rankBonus(g, fid).diplo,
     prestige: ((g.factions || {})[fid] || {}).prestige == null ? 50 : g.factions[fid].prestige,
     官位: 位 ? 位.key : null,
+    号令: !!(位 && 位.号令),
     旗の下か,
     全国: g.castles.reduce((a, c) => a + c.koku, 0),
   };

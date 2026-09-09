@@ -12114,18 +12114,48 @@ function provinceGrip(s2, fid, kuni) {
   if (!cs.length) return 1;
   return cs.filter((c) => c.faction === fid).length / cs.length;
 }
+var \u65D7\u306E\u4E0B\u304B = (s2, fid, other) => {
+  if (fid === other) return true;
+  const r = (s2.relations || {})[[fid, other].sort().join("|")];
+  return !!r && r.state === "\u81E3\u5F93" && r.master === fid;
+};
+var \u56FD\u3092\u65D7\u306E\u4E0B\u306B = (s2, fid, kuni) => {
+  const cs = s2.castles.filter((c) => c.kuni === kuni);
+  return cs.length > 0 && cs.every((c) => \u65D7\u306E\u4E0B\u304B(s2, fid, c.faction));
+};
+var \u65D7\u306E\u4E0B\u306E\u57CE\u6570 = (s2, fid) => s2.castles.filter((c) => {
+  if (c.faction === fid) return true;
+  const r = (s2.relations || {})[[fid, c.faction].sort().join("|")];
+  return !!r && (r.state === "\u81E3\u5F93" || r.state === "\u5F93\u5C5E") && r.master === fid;
+}).length;
+var \u5929\u4E0B\u4EBA\u306E\u76F4\u8F44 = 0.12;
+var \u5929\u4E0B\u4EBA\u306E\u7248\u56F3 = 0.3;
 function courtRank(s2, fid) {
-  const gokinai = GOKINAI.every((k) => holdsProvince(s2, fid, k));
+  const gokinai = GOKINAI.every((k) => \u56FD\u3092\u65D7\u306E\u4E0B\u306B(s2, fid, k));
   if (!gokinai) return null;
-  const kanto = KANTO_KEY.every((k) => holdsProvince(s2, fid, k));
   const n = s2.castles.filter((c) => c.faction === fid).length;
-  if (kanto) return {
-    key: "\u5F81\u5937\u5927\u5C06\u8ECD",
-    desc: "\u5E55\u5E9C\u3092\u958B\u304D\u3001\u5929\u4E0B\u306B\u53F7\u4EE4\u3059\u308B",
-    troop: 1.45,
-    diplo: 22,
-    prestige: 30
-  };
+  const \u5168\u56FD\u77F3\u9AD8 = s2.castles.reduce((a, c) => a + c.koku, 0);
+  const \u76F4\u8F44 = s2.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
+  const \u5929\u4E0B\u4EBA = \u76F4\u8F44 >= \u5168\u56FD\u77F3\u9AD8 * \u5929\u4E0B\u4EBA\u306E\u76F4\u8F44 && \u65D7\u306E\u4E0B\u306E\u57CE\u6570(s2, fid) >= s2.castles.length * \u5929\u4E0B\u4EBA\u306E\u7248\u56F3;
+  if (\u5929\u4E0B\u4EBA) {
+    const kanto = KANTO_KEY.every((k) => \u56FD\u3092\u65D7\u306E\u4E0B\u306B(s2, fid, k));
+    if (kanto) return {
+      key: "\u5F81\u5937\u5927\u5C06\u8ECD",
+      desc: "\u5E55\u5E9C\u3092\u958B\u304D\u3001\u5929\u4E0B\u306B\u53F7\u4EE4\u3059\u308B",
+      troop: 1.45,
+      diplo: 22,
+      prestige: 30,
+      \u53F7\u4EE4: true
+    };
+    return {
+      key: "\u95A2\u767D",
+      desc: "\u95A2\u767D\u306B\u4EFB\u305C\u3089\u308C\u3001\u5929\u4E0B\u306B\u53F7\u4EE4\u3059\u308B",
+      troop: 1.38,
+      diplo: 20,
+      prestige: 26,
+      \u53F7\u4EE4: true
+    };
+  }
   if (n >= 40) return {
     key: "\u5185\u5927\u81E3",
     desc: "\u4E94\u757F\u3092\u5236\u3057\u3001\u671D\u5EF7\u3088\u308A\u5185\u5927\u81E3\u306B\u53D9\u305B\u3089\u308C\u305F",
@@ -12146,13 +12176,13 @@ var rankBonus = (s2, fid) => courtRank(s2, fid) || { troop: 1, diplo: 0, prestig
 // src/core/rank.js
 function diploStat(g, fid) {
   const \u76F4\u8F44 = g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
-  let \u65D7\u306E\u4E0B\u304B2 = false;
+  let \u65D7\u306E\u4E0B\u304B3 = false;
   for (const other of Object.keys(g.factions || {})) {
     if (other === fid) continue;
     const r = (g.relations || {})[[fid, other].sort().join("|")];
     if (!r || r.state !== "\u5F93\u5C5E" && r.state !== "\u81E3\u5F93") continue;
     if (r.master === fid) continue;
-    \u65D7\u306E\u4E0B\u304B2 = true;
+    \u65D7\u306E\u4E0B\u304B3 = true;
     break;
   }
   const \u4F4D = courtRank(g, fid);
@@ -12161,7 +12191,8 @@ function diploStat(g, fid) {
     diplo: rankBonus(g, fid).diplo,
     prestige: ((g.factions || {})[fid] || {}).prestige == null ? 50 : g.factions[fid].prestige,
     \u5B98\u4F4D: \u4F4D ? \u4F4D.key : null,
-    \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u304B2,
+    \u53F7\u4EE4: !!(\u4F4D && \u4F4D.\u53F7\u4EE4),
+    \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u304B3,
     \u5168\u56FD: g.castles.reduce((a, c) => a + c.koku, 0)
   };
 }
@@ -13300,12 +13331,12 @@ function masterOf(r, aId, bId, aKoku, bKoku) {
 var \u5A01\u4FE1\u306E\u52B9\u304D = (me) => ((me.prestige == null ? 50 : me.prestige) - 50) * 0.2;
 var \u5929\u4E0B\u4EBA\u306E\u76EE\u5B89 = 0.1;
 var \u5F93\u3048\u308B\u6BD4 = (me) => {
-  if (me.\u5B98\u4F4D === "\u5F81\u5937\u5927\u5C06\u8ECD" && me.koku >= (me.\u5168\u56FD || 0) * \u5929\u4E0B\u4EBA\u306E\u76EE\u5B89) return 1.35;
+  if (me.\u53F7\u4EE4 && me.koku >= (me.\u5168\u56FD || 0) * \u5929\u4E0B\u4EBA\u306E\u76EE\u5B89) return 1.35;
   if (me.\u5B98\u4F4D) return 0.75;
   return 0.4;
 };
 var \u81E3\u5F93\u3055\u305B\u308B\u6BD4 = (me) => {
-  if (me.\u5B98\u4F4D === "\u5F81\u5937\u5927\u5C06\u8ECD" && me.koku >= (me.\u5168\u56FD || 0) * \u5929\u4E0B\u4EBA\u306E\u76EE\u5B89) return 0.8;
+  if (me.\u53F7\u4EE4 && me.koku >= (me.\u5168\u56FD || 0) * \u5929\u4E0B\u4EBA\u306E\u76EE\u5B89) return 0.8;
   if (me.\u5B98\u4F4D) return 0.45;
   return 0.25;
 };
@@ -13370,7 +13401,7 @@ var DIPLO = [
        由来する。ゆえに官位を「外交の格」として効かせる。
   
          右大臣・内大臣（五畿を制した者）… 従属は二.五倍から一.三三倍へ緩む
-         征夷大将軍（幕府を開いた者）　　… 直轄より大きい家も従属させられる
+         関白・征夷大将軍（天下に号令する者）… 直轄より大きい家も従属させられる
                                             （一.三五倍まで。家康の一.一四倍を含む）
   
        ただし臣従だけは、決して自分より大きい家には及ばない。臣従は独立の望みを
@@ -15645,7 +15676,7 @@ function \u65D7\u306E\u4E0B\u3092\u691C\u3081\u76F4\u3059(s2) {
     const \u4E0B = \u4E3B === a ? b : a;
     const \u6BD4 = (\u77F3[\u4E3B] || 1) / Math.max(1, \u77F3[\u4E0B] || 1);
     const \u4F4D = courtRank(s2, \u4E3B);
-    const \u7DE9 = \u4F4D && \u4F4D.key === "\u5F81\u5937\u5927\u5C06\u8ECD" ? 0.45 : \u4F4D ? 0.75 : 1;
+    const \u7DE9 = \u4F4D && \u4F4D.key === "\u5F81\u5937\u5927\u5C06\u8ECD" ? 0.45 : \u4F4D && \u4F4D.\u53F7\u4EE4 ? 0.55 : \u4F4D ? 0.75 : 1;
     const \u8981 = (r.state === "\u81E3\u5F93" ? 3 : 2) * \u7DE9;
     if (\u6BD4 >= \u8981) continue;
     if (r.state === "\u81E3\u5F93") {
@@ -15661,7 +15692,7 @@ function \u65D7\u306E\u4E0B\u3092\u691C\u3081\u76F4\u3059(s2) {
   }
   return \u89E3\u3051\u305F;
 }
-var \u65D7\u306E\u4E0B\u304B = (g, \u4E0A, \u4E0B) => {
+var \u65D7\u306E\u4E0B\u304B2 = (g, \u4E0A, \u4E0B) => {
   if (!\u4E0A || !\u4E0B) return false;
   if (\u4E0A === \u4E0B) return true;
   const r = (g.relations || {})[relKey2(\u4E0A, \u4E0B)];
@@ -15675,7 +15706,7 @@ var \u9053\u3092\u501F\u308A\u3066\u3044\u308B = (s2, fid, \u76F8) => {
 var \u901A\u308C\u308B\u57CE = (s2, fid) => (id) => {
   const mid = s2.castles.find((y) => y.id === id);
   if (!mid) return true;
-  return \u65D7\u306E\u4E0B\u304B(s2, fid, mid.faction) || \u9053\u3092\u501F\u308A\u3066\u3044\u308B(s2, fid, mid.faction);
+  return \u65D7\u306E\u4E0B\u304B2(s2, fid, mid.faction) || \u9053\u3092\u501F\u308A\u3066\u3044\u308B(s2, fid, mid.faction);
 };
 var \u6C34\u8ECD\u306E\u5BB6 = (s2, fid) => !!(s2.factions[fid] || {}).\u6C34\u8ECD;
 var \u5C71\u8D8A\u3048\u306E\u9053 = /* @__PURE__ */ new Set(["\u5C71\u9053", "\u96E3\u6240"]);

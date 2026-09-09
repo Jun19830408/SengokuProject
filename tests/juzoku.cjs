@@ -19,7 +19,31 @@
    家康はそこまでは屈しなかった。 */
 const path = require('path');
 const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
-const { initState, diploStat, 従える比, 臣従させる比, 天下人の目安, 旗の下を検め直す, courtRank } = H;
+const { initState, diploStat, 従える比, 臣従させる比, 天下人の目安, 旗の下を検め直す, courtRank,
+  旗の下の城数, 天下人の直轄, 天下人の版図 } = H;
+
+/* 天下人を仕立てる（GDD 12.5）。
+
+   幕府の要件を組み直したので、この仕込みも改めた。五畿と関東を直轄で押さえる
+   だけでは足りない。直轄が全国の一割二分、旗の下が全城の三割を要る。
+   仕込みが古い仕様のままだと、右大臣どまりで試験が背く――実際そうなった。 */
+const 五畿ら = ['山城', '大和', '河内', '和泉', '摂津'];
+const 天下人にする = (関東 = true) => {
+  const s = initState('oda');
+  for (const c of s.castles.filter((x) => 五畿ら.includes(x.kuni))) c.faction = 'oda';
+  if (関東) for (const c of s.castles.filter((x) => ['相模', '武蔵'].includes(x.kuni))) c.faction = 'oda';
+  const 全 = () => s.castles.reduce((a, c) => a + c.koku, 0);
+  const 直 = () => s.castles.filter((c) => c.faction === 'oda').reduce((a, c) => a + c.koku, 0);
+  for (const c of s.castles.filter((c) => c.faction !== 'oda')) {
+    if (直() >= 全() * 天下人の直轄) break;
+    c.faction = 'oda';
+  }
+  for (const f of [...new Set(s.castles.filter((c) => c.faction !== 'oda').map((c) => c.faction))]) {
+    if (旗の下の城数(s, 'oda') >= s.castles.length * 天下人の版図) break;
+    s.relations[['oda', f].sort().join('|')] = { state: '臣従', master: 'oda', trust: 100, until: null };
+  }
+  return s;
+};
 
 const 咎 = [];
 const 確 = (名, 可, 添 = '') => {
@@ -74,12 +98,11 @@ console.log('\n── 二　丙　旗の下の家は、さらに他家を従え�
 
 console.log('\n── 三　天下人の道（官位で外交の格が上がる）');
 {
-  const s = initState('oda');
-  const 五畿 = ['山城', '大和', '河内', '和泉', '摂津'];
-  const 位なし = 従える比(diploStat(s, 'oda'));
-  for (const c of s.castles.filter((x) => 五畿.includes(x.kuni))) c.faction = 'oda';
-  const 大臣 = 従える比(diploStat(s, 'oda'));
-  for (const c of s.castles.filter((x) => ['相模', '武蔵'].includes(x.kuni))) c.faction = 'oda';
+  const 位なし = 従える比(diploStat(initState('oda'), 'oda'));
+  const s0 = initState('oda');
+  for (const c of s0.castles.filter((x) => 五畿ら.includes(x.kuni))) c.faction = 'oda';
+  const 大臣 = 従える比(diploStat(s0, 'oda'));
+  const s = 天下人にする(true);
   const me = diploStat(s, 'oda');
   const 将軍 = 従える比(me);
   確('五畿を制せば関門が緩む', 大臣 > 位なし, `${位なし.toFixed(2)} → ${大臣.toFixed(2)}`);
@@ -97,17 +120,16 @@ console.log('\n── 三　天下人の道（官位で外交の格が上がる�
     臣従させる比(me).toFixed(2));
 }
 
-console.log('\n── 四　直轄が細ければ、将軍でも緩まない');
+console.log('\n── 四　五畿と関東を押さえても、版図が細ければ天下人にならない');
 {
+  /* 幕府の要件に版図を入れたので、地の利だけでは天下人になれない。
+     もとは五畿と関東を直轄で押さえるだけで将軍になれた。 */
   const s = initState('oda');
-  const 五畿 = ['山城', '大和', '河内', '和泉', '摂津', '相模', '武蔵'];
-  for (const c of s.castles.filter((x) => 五畿.includes(x.kuni))) c.faction = 'oda';
-  // 全国の石高だけを十倍に膨らませ、直轄の割合を一割未満に落とす
-  for (const c of s.castles.filter((x) => x.faction !== 'oda')) c.koku *= 10;
+  for (const c of s.castles.filter((x) => [...五畿ら, '相模', '武蔵'].includes(x.kuni))) c.faction = 'oda';
   const me = diploStat(s, 'oda');
-  確('位は征夷大将軍のまま', me.官位 === '征夷大将軍');
-  確('直轄が一割に満たない', me.koku < me.全国 * 天下人の目安,
-    `${(me.koku / me.全国 * 100).toFixed(1)}%`);
+  確('位は右大臣どまり', me.官位 === '右大臣', String(me.官位));
+  確('旗の下が三割に満たない', 旗の下の城数(s, 'oda') < s.castles.length * 天下人の版図,
+    `${旗の下の城数(s, 'oda')}城／要る ${Math.ceil(s.castles.length * 天下人の版図)}城`);
   確('それでは自家より大きい家は従えられない', 従える比(me) <= 1,
     `${従える比(me).toFixed(2)}　（幕府の権威も、身代を背負ってこそ意味を持つ）`);
 }
