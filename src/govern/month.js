@@ -22,7 +22,7 @@ import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, �
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 奪われた本領を繕う, 軍の道 } from "../core/state.js";
+import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 奪われた本領を繕う, 旗の下を検め直す, 軍の道 } from "../core/state.js";
 import { 攻めの腰, 要る兵力, 出せる軍の数, 好機か, 気風, 治めの腰 } from "../core/kiryou.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 import { 城の寄親, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高 } from "../core/inin.js";
@@ -504,7 +504,14 @@ export function advanceMonth(prev, g) {
            攻め落とすことになる。 */
         if (a.path.length === 1 && !a.sieging && !a.在陣) arrivals.push(a);
       }
+      /* 討たれた軍を落とす。囲みも一緒に落とさねば、幽霊の軍を指した囲みが
+         残り、その城はいつまでも囲まれた扱いになる。 */
+      const 討 = new Set(s.armies.filter((a) => a.dead).map((a) => a.id));
       s.armies = s.armies.filter((a) => !a.dead);
+      if (討.size) {
+        s.sieges = (s.sieges || []).filter((x) => !討.has(x.armyId));
+        s.pendingArrivals = (s.pendingArrivals || []).filter((id) => !討.has(id));
+      }
       // 同じ拠点へ着いた本隊と援軍は合流する（GDD 7.3 集結）
       for (const a of [...s.armies]) {
         if (a.aid == null || a.path.length > 1) continue;
@@ -514,6 +521,9 @@ export function advanceMonth(prev, g) {
         host.gens = [...host.gens, ...a.gens];
         if (a.rost) host.rost = [...(host.rost || []), ...a.rost];
         s.armies = s.armies.filter((x) => x.id !== a.id);
+        // 合流して消える軍が囲んでいれば、その囲みは本隊へ引き継ぐ
+        for (const sg of (s.sieges || [])) if (sg.armyId === a.id) sg.armyId = host.id;
+        s.pendingArrivals = (s.pendingArrivals || []).filter((id) => id !== a.id);
         const idx = arrivals.indexOf(a);
         if (idx >= 0) arrivals.splice(idx, 1);
         if (host.faction === s.player || a.aid === s.player) {
@@ -1549,6 +1559,16 @@ export function advanceMonth(prev, g) {
         }
         /* 奪われた城を本領としたままの者を繕う（GDD 6.4）。
            禄高は本領から出る。他家のものとなった城から己の身代が出てはならない。 */
+        /* 旗の下が保てるか、月ごとに検め直す（GDD 12.1）。
+           石高の比は結ぶ瞬間にしか見ていなかった。主が力を失えば旗は保てない。 */
+        for (const q of 旗の下を検め直す(s)) {
+          const 主名 = (s.factions[q.主] || {}).name, 下名 = (s.factions[q.下] || {}).name;
+          const 文 = q.後 === "中立"
+            ? `${下名}が${主名}の旗の下を離れ、自立した（${主名}の石高は${下名}の${q.比.toFixed(1)}倍に落ちていた）。`
+            : `${下名}が${主名}への臣従を解き、従属に改めた（石高の差が縮んだ）。`;
+          s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+          if (q.主 === s.player || q.下 === s.player) events.push(文);
+        }
         本拠を追う(s);                            // 本領の繕いは本拠を当てにする。先に据える
         for (const q of 奪われた本領を繕う(s)) {
           if (q.faction !== s.player) continue;

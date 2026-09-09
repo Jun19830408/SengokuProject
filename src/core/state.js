@@ -1,4 +1,5 @@
 import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位 } from "./rank.js";
+import { courtRank } from "./province.js";
 import { newRoster } from "./roster.js";
 import { 姫を整える } from "./hime.js";
 import { clamp, fmt, monthsBetween } from "./util.js";
@@ -1128,6 +1129,51 @@ export function 奪われた本領を繕う(s) {
     直した.push(g);
   }
   return 直した;
+}
+
+/* 旗の下が保てるかを検め直す（GDD 12.1）。
+
+   石高の比は、結ぶ瞬間にしか見ていなかった。結んだ後は一度も見直さない。
+   そのため「一.七倍のときに従属させ、その後に相手が育った」という組が残る。
+   測ると、今川の下に松平が一.三四倍で、北条の下に百四十万石の三好が二.〇二倍で
+   ぶら下がっていた。これが北条八十三城という化け物勢力の正体である。
+
+   主が力を失えば、旗の下は保てない。実際そういうものであった――義輝の将軍家も、
+   衰えた守護大名も、旗を掲げたまま下の者に見限られた。
+
+   崩れの目安は、結ぶときの関門より緩くする（従属は結び二.五倍・崩れ二倍、
+   臣従は結び四倍・崩れ三倍）。同じ数にすると、境目で結んでは離れを繰り返す。
+
+   幕府を開いた者は、崩れの目安がさらに緩む。権威が実力の差を補うからである。
+   秀吉の死後に豊臣の旗が急に色褪せたのは、その権威が一代のものだったからで、
+   幕府はそれを制度に変えるための仕掛けであった。 */
+export function 旗の下を検め直す(s) {
+  const 石 = {};
+  for (const c of s.castles || []) 石[c.faction] = (石[c.faction] || 0) + c.koku;
+  const 解けた = [];
+  for (const k of Object.keys(s.relations || {})) {
+    const r = s.relations[k];
+    if (r.state !== "従属" && r.state !== "臣従") continue;
+    const [a, b] = k.split("|");
+    if (!石[a] || !石[b]) continue;                  // どちらかが滅んでいる。別の筋で始末する
+    const 主 = r.master || (石[a] >= 石[b] ? a : b);
+    const 下 = 主 === a ? b : a;
+    const 比 = (石[主] || 1) / Math.max(1, 石[下] || 1);
+    /* 幕府を開いていれば、実力の差が薄くとも旗は保たれる。 */
+    const 位 = courtRank(s, 主);
+    const 緩 = 位 && 位.key === "征夷大将軍" ? 0.45 : 位 ? 0.75 : 1;
+    const 要 = (r.state === "臣従" ? 3.0 : 2.0) * 緩;
+    if (比 >= 要) continue;
+    if (r.state === "臣従") {
+      r.state = "従属";                              // 旗の下からは出るが、なお貢は納める
+      解けた.push({ 主, 下, 前: "臣従", 後: "従属", 比 });
+    } else {
+      r.state = "中立"; r.master = null; r.until = null;
+      r.trust = Math.min(r.trust, 55);               // 離れた後も、まったくの他人ではない
+      解けた.push({ 主, 下, 前: "従属", 後: "中立", 比 });
+    }
+  }
+  return 解けた;
 }
 
 /* ------------------------------------------------ 軍の道（GDD 7.1）

@@ -25,7 +25,7 @@ export { px, py } from "../src/data/geo.js";
 export { roadBetween, marchMonths, marchMonthsOf, findPathVia, nodeById } from "../src/core/paths.js";
 export { ROADS, MARCH_PER_MONTH, ROAD_SPEED } from "../src/data/roads.js";
 export { findPath } from "../src/core/paths.js";
-export { 援けに着く, migrateSave, atPeace, relOf, 軍の道, 本拠を追う, 奪われた本領を繕う } from "../src/core/state.js";
+export { 援けに着く, migrateSave, atPeace, relOf, 軍の道, 本拠を追う, 奪われた本領を繕う, 旗の下を検め直す } from "../src/core/state.js";
 export { 臣従の主, 許しの要る主, 許されているか, 攻められるか, 許しを与える, 許しを解く, 容認するか, 済んだ許しを片づける } from "../src/core/yurushi.js";
 export { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 預けの率, 城の実入り, 旗頭の狙い, 旗頭に許す, 自ら采配するか, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高 } from "../src/core/inin.js";
 export { 旗頭の調略 } from "../src/govern/aiDiplo.js";
@@ -37,6 +37,8 @@ export { 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届
 export { 難を逃れる, captureChance } from "../src/core/capture.js";
 export { succeed, is架空, bearChild, pickHeir } from "../src/core/house.js";
 export { REGIONS, GOKINAI } from "../src/data/provinces.js";
+export { 従える比, 臣従させる比, 天下人の目安, 威信の効き } from "../src/data/diplo.js";
+export { courtRank } from "../src/core/province.js";
 export { 気風, 浸透, 家の当主, 攻めの腰, 要る兵力, 出せる軍の数, 調略の腰, 治めの腰, 好機か } from "../src/core/kiryou.js";
 export { 主を探す } from "../src/core/state.js";
 export { houseAlive, 主家, isVassal, 膝を屈している, canAskAid, underMyBanner } from "../src/core/state.js";

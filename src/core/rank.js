@@ -1,17 +1,39 @@
 import { isGuardian, needsGuardian } from "./house.js";
 import { ROAD_ADJ } from "./paths.js";
 import { isCoastal } from "./naval.js";
-import { rankBonus } from "./province.js";
+import { rankBonus, courtRank } from "./province.js";
 import { MOB_POLICY } from "../data/roads.js";
 import { isMainClan } from "./house.js";
 
 /* 外交の掛け合いに効く、家の格ひと揃い（GDD 12.1）。
    画面と処理で別々に組み立てると、押せるのに成らぬ、が起きる。ここ一つに拠る。 */
 export function diploStat(g, fid) {
+  const 直轄 = g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
+  /* 旗の下にいるか（GDD 12.1）。旗の下の家は、さらに他家を従えられない。
+
+     これを見ていなかったので、A が B に従い、B が C に従い……と数珠つなぎになり、
+     地方を跨いだ化け物のような勢力ができていた（四十年で北条が旗の下に三好二十一城・
+     今川十一城を抱えて八十三城）。従属とは主に貢を納める間柄であって、又貸しの
+     ように連ねてよいものではない。
+
+     state.js の 主を探す と同じ理屈だが、こちらから呼ぶと取り込みが輪になる
+     （state.js が rank.js を取り込んでいる）。数行なので、その場で見る。 */
+  let 旗の下か = false;
+  for (const other of Object.keys(g.factions || {})) {
+    if (other === fid) continue;
+    const r = (g.relations || {})[[fid, other].sort().join("|")];
+    if (!r || (r.state !== "従属" && r.state !== "臣従")) continue;
+    if (r.master === fid) continue;                  // 自分が上に立っている
+    旗の下か = true; break;
+  }
+  const 位 = courtRank(g, fid);
   return {
-    koku: g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0),
+    koku: 直轄,
     diplo: rankBonus(g, fid).diplo,
     prestige: ((g.factions || {})[fid] || {}).prestige == null ? 50 : g.factions[fid].prestige,
+    官位: 位 ? 位.key : null,
+    旗の下か,
+    全国: g.castles.reduce((a, c) => a + c.koku, 0),
   };
 }
 

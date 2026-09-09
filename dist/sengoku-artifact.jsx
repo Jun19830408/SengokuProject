@@ -12145,10 +12145,24 @@ var rankBonus = (s2, fid) => courtRank(s2, fid) || { troop: 1, diplo: 0, prestig
 
 // src/core/rank.js
 function diploStat(g, fid) {
+  const \u76F4\u8F44 = g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
+  let \u65D7\u306E\u4E0B\u304B2 = false;
+  for (const other of Object.keys(g.factions || {})) {
+    if (other === fid) continue;
+    const r = (g.relations || {})[[fid, other].sort().join("|")];
+    if (!r || r.state !== "\u5F93\u5C5E" && r.state !== "\u81E3\u5F93") continue;
+    if (r.master === fid) continue;
+    \u65D7\u306E\u4E0B\u304B2 = true;
+    break;
+  }
+  const \u4F4D = courtRank(g, fid);
   return {
-    koku: g.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0),
+    koku: \u76F4\u8F44,
     diplo: rankBonus(g, fid).diplo,
-    prestige: ((g.factions || {})[fid] || {}).prestige == null ? 50 : g.factions[fid].prestige
+    prestige: ((g.factions || {})[fid] || {}).prestige == null ? 50 : g.factions[fid].prestige,
+    \u5B98\u4F4D: \u4F4D ? \u4F4D.key : null,
+    \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u304B2,
+    \u5168\u56FD: g.castles.reduce((a, c) => a + c.koku, 0)
   };
 }
 var minGarrison = (c) => {
@@ -13284,6 +13298,17 @@ function masterOf(r, aId, bId, aKoku, bKoku) {
   return aKoku >= bKoku ? aId : bId;
 }
 var \u5A01\u4FE1\u306E\u52B9\u304D = (me) => ((me.prestige == null ? 50 : me.prestige) - 50) * 0.2;
+var \u5929\u4E0B\u4EBA\u306E\u76EE\u5B89 = 0.1;
+var \u5F93\u3048\u308B\u6BD4 = (me) => {
+  if (me.\u5B98\u4F4D === "\u5F81\u5937\u5927\u5C06\u8ECD" && me.koku >= (me.\u5168\u56FD || 0) * \u5929\u4E0B\u4EBA\u306E\u76EE\u5B89) return 1.35;
+  if (me.\u5B98\u4F4D) return 0.75;
+  return 0.4;
+};
+var \u81E3\u5F93\u3055\u305B\u308B\u6BD4 = (me) => {
+  if (me.\u5B98\u4F4D === "\u5F81\u5937\u5927\u5C06\u8ECD" && me.koku >= (me.\u5168\u56FD || 0) * \u5929\u4E0B\u4EBA\u306E\u76EE\u5B89) return 0.8;
+  if (me.\u5B98\u4F4D) return 0.45;
+  return 0.25;
+};
 var DIPLO = [
   {
     key: "\u89AA\u5584",
@@ -13325,24 +13350,54 @@ var DIPLO = [
     why: "\u540C\u76DF\u304B\u4E0D\u53EF\u4FB5\u306E\u76F8\u624B\u30FB\u4FE1\u752860\u4EE5\u4E0A\u3002\u534A\u5E74\u306E\u3042\u3044\u3060\u3001\u305D\u306E\u5BB6\u306E\u9818\u3092\u901A\u308C\u308B",
     need: (r) => ["\u540C\u76DF", "\u4E0D\u53EF\u4FB5"].includes(r.state) && r.trust >= 60
   },
-  /* ------------------------------------------------ 相手を従える */
+  /* ------------------------------------------------ 相手を従える
+  
+       旗の下に入れるには、大きな石高の差が要る（GDD 12.1）。
+  
+       もとは従属が一.六七倍、臣従が二.八六倍であった。これでは差が小さすぎて、
+       測ると従属十五組のうち四組が二倍を割っていた。松平が今川に、三好が北条に
+       従ったまま――それも百四十万石の三好が、である。従属とは、独りでは立ち行かぬ
+       家が身を守るために選ぶ道であって、対等に近い相手が選ぶ道ではない。
+  
+       従属を二.五倍、臣従を四倍とする。
+  
+       ただし天下人には別の道がある（下の「官位の緩め」を見よ）。 */
+  /* 官位の緩め（GDD 12.5）。
+  
+       秀吉の直轄は二百二十万石、家康は二百五十万石であった。直轄だけを比べれば
+       家康のほうが大きい。それでも家康は豊臣に従った。天下人の力は直轄の石高
+       ではなく、五畿を押さえ、朝廷の官位を帯び、諸大名を旗の下に置いたことに
+       由来する。ゆえに官位を「外交の格」として効かせる。
+  
+         右大臣・内大臣（五畿を制した者）… 従属は二.五倍から一.三三倍へ緩む
+         征夷大将軍（幕府を開いた者）　　… 直轄より大きい家も従属させられる
+                                            （一.三五倍まで。家康の一.一四倍を含む）
+  
+       ただし臣従だけは、決して自分より大きい家には及ばない。臣従は独立の望みを
+       捨てて旗の下に完全に入ることであり、家康はそこまでは屈しなかった。
+       官位で緩むのは四倍から一.二五倍までで、一倍を越えることはない。
+  
+       将軍の緩めには、直轄が全国の一割を要る。開始時の最大は三好の五十八万石
+       （全国千二百五十八万石の四.六％）であるから、その倍以上を持ってはじめて
+       天下人と呼べる。作者は「直轄二百万石・旗の下を合わせて一千万石」と案じたが、
+       一千万石は全国の八割にあたり、それはもう天下統一そのものである。
+       石高の絶対値ではなく、全国に占める割合で言うのが筋である。 */
   {
     key: "\u5F93\u5C5E\u3055\u305B\u308B",
     cost: 400,
     state: "\u5F93\u5C5E",
     dir: "\u4E0A",
-    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E6\u5272\u672A\u6E80\u30FB\u4FE1\u752880\u4EE5\u4E0A\u3002\u5B98\u4F4D\u3068\u5A01\u4FE1\u304C\u3042\u308C\u3070\u7DE9\u3080",
-    need: (r, me, you) => !SUBJECT.includes(r.state) && you.koku < me.koku * (0.6 + (me.diplo || 0) * 0.012) && r.trust >= 80 - (me.diplo || 0) - \u5A01\u4FE1\u306E\u52B9\u304D(me)
+    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E4\u5272\u672A\u6E80\uFF08\uFF1D2.5\u500D\uFF09\u30FB\u4FE1\u752880\u4EE5\u4E0A\u3002\u4E94\u757F\u3092\u5236\u305B\u3070\u7DE9\u307F\u3001\u5E55\u5E9C\u3092\u958B\u3051\u3070\u81EA\u5BB6\u3088\u308A\u5927\u304D\u3044\u5BB6\u3082\u5F93\u3048\u3089\u308C\u308B",
+    need: (r, me, you) => !SUBJECT.includes(r.state) && !me.\u65D7\u306E\u4E0B\u304B && you.koku < me.koku * (\u5F93\u3048\u308B\u6BD4(me) + (me.diplo || 0) * 0.012) && r.trust >= 80 - (me.diplo || 0) - \u5A01\u4FE1\u306E\u52B9\u304D(me)
   },
-  /* 臣従は信用百――誼を尽くした相手でなければ、旗の下には入れられない。
-     官位も威信も、ここばかりは緩めにならない。 */
+  /* 臣従は信用百――誼を尽くした相手でなければ、旗の下には入れられない。 */
   {
     key: "\u81E3\u5F93\u3055\u305B\u308B",
     cost: 900,
     state: "\u81E3\u5F93",
     dir: "\u4E0A",
-    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E35\uFF05\u672A\u6E80\u30FB\u4FE1\u7528100\uFF08\u6E80\uFF09\u3002\u65D7\u306E\u4E0B\u306B\u5B8C\u5168\u306B\u5165\u308C\u308B",
-    need: (r, me, you) => !SUBJECT.includes(r.state) && you.koku < me.koku * (0.35 + (me.diplo || 0) * 0.01) && r.trust >= 100
+    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E25\uFF05\u672A\u6E80\uFF08\uFF1D4\u500D\uFF09\u30FB\u4FE1\u7528100\uFF08\u6E80\uFF09\u3002\u5B98\u4F4D\u304C\u3042\u308C\u3070\u7DE9\u3080\u304C\u3001\u81EA\u5BB6\u3088\u308A\u5927\u304D\u3044\u5BB6\u306F\u6C7A\u3057\u3066\u81E3\u5F93\u3055\u305B\u3089\u308C\u306C",
+    need: (r, me, you) => !SUBJECT.includes(r.state) && !me.\u65D7\u306E\u4E0B\u304B && you.koku < me.koku * Math.min(0.8, \u81E3\u5F93\u3055\u305B\u308B\u6BD4(me) + (me.diplo || 0) * 0.01) && r.trust >= 100
   },
   /* --------------------------------- 自らが膝を屈する（弱小の家の生き残る道）
   
@@ -13353,16 +13408,16 @@ var DIPLO = [
     cost: 0,
     state: "\u5F93\u5C5E",
     dir: "\u4E0B",
-    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E1.7\u500D\u8D85\u30FB\u4FE1\u752880\u4EE5\u4E0A\u3002\u8CA2\u3092\u7D0D\u3081\u308B\u304B\u308F\u308A\u306B\u653B\u3081\u3089\u308C\u306B\u304F\u304F\u306A\u308B",
-    need: (r, me, you) => !SUBJECT.includes(r.state) && you.koku > me.koku * 1.7 && r.trust >= 80
+    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E2.5\u500D\u8D85\u30FB\u4FE1\u752880\u4EE5\u4E0A\u3002\u8CA2\u3092\u7D0D\u3081\u308B\u304B\u308F\u308A\u306B\u653B\u3081\u3089\u308C\u306B\u304F\u304F\u306A\u308B",
+    need: (r, me, you) => !SUBJECT.includes(r.state) && !me.\u65D7\u306E\u4E0B\u304B && you.koku > me.koku * 2.5 && r.trust >= 80
   },
   {
     key: "\u81E3\u5F93\u3059\u308B",
     cost: 0,
     state: "\u81E3\u5F93",
     dir: "\u4E0B",
-    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E2.6\u500D\u8D85\u3002\u65D7\u306E\u4E0B\u306B\u5165\u308A\u3001\u72EC\u7ACB\u306E\u671B\u307F\u3092\u6368\u3066\u308B",
-    need: (r, me, you) => !SUBJECT.includes(r.state) && you.koku > me.koku * 2.6
+    why: "\u76F8\u624B\u304C\u81EA\u5BB6\u306E4\u500D\u8D85\u3002\u65D7\u306E\u4E0B\u306B\u5165\u308A\u3001\u72EC\u7ACB\u306E\u671B\u307F\u3092\u6368\u3066\u308B",
+    need: (r, me, you) => !SUBJECT.includes(r.state) && !me.\u65D7\u306E\u4E0B\u304B && you.koku > me.koku * 4
   },
   /* ------------------------------------------------ 上下を解く */
   {
@@ -15577,6 +15632,35 @@ function \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2) {
   }
   return \u76F4\u3057\u305F;
 }
+function \u65D7\u306E\u4E0B\u3092\u691C\u3081\u76F4\u3059(s2) {
+  const \u77F3 = {};
+  for (const c of s2.castles || []) \u77F3[c.faction] = (\u77F3[c.faction] || 0) + c.koku;
+  const \u89E3\u3051\u305F = [];
+  for (const k of Object.keys(s2.relations || {})) {
+    const r = s2.relations[k];
+    if (r.state !== "\u5F93\u5C5E" && r.state !== "\u81E3\u5F93") continue;
+    const [a, b] = k.split("|");
+    if (!\u77F3[a] || !\u77F3[b]) continue;
+    const \u4E3B = r.master || (\u77F3[a] >= \u77F3[b] ? a : b);
+    const \u4E0B = \u4E3B === a ? b : a;
+    const \u6BD4 = (\u77F3[\u4E3B] || 1) / Math.max(1, \u77F3[\u4E0B] || 1);
+    const \u4F4D = courtRank(s2, \u4E3B);
+    const \u7DE9 = \u4F4D && \u4F4D.key === "\u5F81\u5937\u5927\u5C06\u8ECD" ? 0.45 : \u4F4D ? 0.75 : 1;
+    const \u8981 = (r.state === "\u81E3\u5F93" ? 3 : 2) * \u7DE9;
+    if (\u6BD4 >= \u8981) continue;
+    if (r.state === "\u81E3\u5F93") {
+      r.state = "\u5F93\u5C5E";
+      \u89E3\u3051\u305F.push({ \u4E3B, \u4E0B, \u524D: "\u81E3\u5F93", \u5F8C: "\u5F93\u5C5E", \u6BD4 });
+    } else {
+      r.state = "\u4E2D\u7ACB";
+      r.master = null;
+      r.until = null;
+      r.trust = Math.min(r.trust, 55);
+      \u89E3\u3051\u305F.push({ \u4E3B, \u4E0B, \u524D: "\u5F93\u5C5E", \u5F8C: "\u4E2D\u7ACB", \u6BD4 });
+    }
+  }
+  return \u89E3\u3051\u305F;
+}
 var \u65D7\u306E\u4E0B\u304B = (g, \u4E0A, \u4E0B) => {
   if (!\u4E0A || !\u4E0B) return false;
   if (\u4E0A === \u4E0B) return true;
@@ -17357,6 +17441,16 @@ function \u76E4\u306E\u4E71\u308C\u3092\u7E55\u3046(s2) {
     });
     if (a.gens.length !== \u5143) \u76F4\u3057.\u540D\u7C3F.push({ armyId: a.id, \u843D\u3068\u3057\u305F: \u5143 - a.gens.length });
   }
+  const \u5C45\u308B = new Set((s2.armies || []).map((a) => a.id));
+  const \u56F2\u524D = (s2.sieges || []).length;
+  s2.sieges = (s2.sieges || []).filter((x) => \u5C45\u308B.has(x.armyId) && s2.castles.some((c) => c.id === x.castleId));
+  if (s2.sieges.length !== \u56F2\u524D) \u76F4\u3057.\u540D\u7C3F.push({ \u843D\u3068\u3057\u305F\u56F2\u307F: \u56F2\u524D - s2.sieges.length });
+  s2.campaigns = (s2.campaigns || []).map((c) => ({
+    ...c,
+    armies: (c.armies || []).filter((id) => \u5C45\u308B.has(id)),
+    arrived: (c.arrived || []).filter((id) => \u5C45\u308B.has(id))
+  })).filter((c) => c.armies.length && s2.castles.some((x) => x.id === c.target));
+  s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => \u5C45\u308B.has(id));
   for (const c of s2.castles) {
     if (!c.lordId) continue;
     const g = s2.generals.find((x) => x.id === c.lordId);
@@ -19373,7 +19467,12 @@ function advanceMonth(prev, g) {
     }
     if (a.path.length === 1 && !a.sieging && !a.\u5728\u9663) arrivals.push(a);
   }
+  const \u8A0E = new Set(s2.armies.filter((a) => a.dead).map((a) => a.id));
   s2.armies = s2.armies.filter((a) => !a.dead);
+  if (\u8A0E.size) {
+    s2.sieges = (s2.sieges || []).filter((x) => !\u8A0E.has(x.armyId));
+    s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => !\u8A0E.has(id));
+  }
   for (const a of [...s2.armies]) {
     if (a.aid == null || a.path.length > 1) continue;
     const host = s2.armies.find((h) => h !== a && h.at === a.at && h.target === a.target && h.aid == null && h.faction === a.faction);
@@ -19384,6 +19483,8 @@ function advanceMonth(prev, g) {
     host.gens = [...host.gens, ...a.gens];
     if (a.rost) host.rost = [...host.rost || [], ...a.rost];
     s2.armies = s2.armies.filter((x) => x.id !== a.id);
+    for (const sg of s2.sieges || []) if (sg.armyId === a.id) sg.armyId = host.id;
+    s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => id !== a.id);
     const idx = arrivals.indexOf(a);
     if (idx >= 0) arrivals.splice(idx, 1);
     if (host.faction === s2.player || a.aid === s2.player) {
@@ -20268,6 +20369,12 @@ function advanceMonth(prev, g) {
     for (const q of \u57CE\u306A\u304D\u5BB6\u3092\u7247\u3065\u3051\u308B(s2)) {
       if (q.winner !== s2.player) continue;
       events.push(`${(s2.factions[q.fid] || {}).name}\u306E\u6B8B\u515A\u3092\u59CB\u672B\u3057\u305F\u3002`);
+    }
+    for (const q of \u65D7\u306E\u4E0B\u3092\u691C\u3081\u76F4\u3059(s2)) {
+      const \u4E3B\u540D = (s2.factions[q.\u4E3B] || {}).name, \u4E0B\u540D = (s2.factions[q.\u4E0B] || {}).name;
+      const \u6587 = q.\u5F8C === "\u4E2D\u7ACB" ? `${\u4E0B\u540D}\u304C${\u4E3B\u540D}\u306E\u65D7\u306E\u4E0B\u3092\u96E2\u308C\u3001\u81EA\u7ACB\u3057\u305F\uFF08${\u4E3B\u540D}\u306E\u77F3\u9AD8\u306F${\u4E0B\u540D}\u306E${q.\u6BD4.toFixed(1)}\u500D\u306B\u843D\u3061\u3066\u3044\u305F\uFF09\u3002` : `${\u4E0B\u540D}\u304C${\u4E3B\u540D}\u3078\u306E\u81E3\u5F93\u3092\u89E3\u304D\u3001\u5F93\u5C5E\u306B\u6539\u3081\u305F\uFF08\u77F3\u9AD8\u306E\u5DEE\u304C\u7E2E\u3093\u3060\uFF09\u3002`;
+      s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+      if (q.\u4E3B === s2.player || q.\u4E0B === s2.player) events.push(\u6587);
     }
     \u672C\u62E0\u3092\u8FFD\u3046(s2);
     for (const q of \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2)) {

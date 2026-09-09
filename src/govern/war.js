@@ -1008,6 +1008,23 @@ export function 盤の乱れを繕う(s) {
     });
     if (a.gens.length !== 元) 直し.名簿.push({ armyId: a.id, 落とした: 元 - a.gens.length });
   }
+  /* 二の二　消えた軍を指したままの囲み・戦役・着陣待ちを落とす。
+
+     軍が盤から消える筋は多い（討たれる、合流する、解かれる、家が滅ぶ）。その
+     一つ一つで囲みを片づけていたが、合流と討死の二箇所が漏れていた。囲みが
+     幽霊の軍を指したまま残ると、その城はいつまでも囲まれた扱いになり、兵も
+     出せず、政務もできない。巡検が前橋で拾った。 */
+  const 居る = new Set((s.armies || []).map((a) => a.id));
+  const 囲前 = (s.sieges || []).length;
+  s.sieges = (s.sieges || []).filter((x) => 居る.has(x.armyId) && s.castles.some((c) => c.id === x.castleId));
+  if (s.sieges.length !== 囲前) 直し.名簿.push({ 落とした囲み: 囲前 - s.sieges.length });
+  s.campaigns = (s.campaigns || []).map((c) => ({
+    ...c,
+    armies: (c.armies || []).filter((id) => 居る.has(id)),
+    arrived: (c.arrived || []).filter((id) => 居る.has(id)),
+  })).filter((c) => c.armies.length && s.castles.some((x) => x.id === c.target));
+  s.pendingArrivals = (s.pendingArrivals || []).filter((id) => 居る.has(id));
+
   /* 三　城主が他家の者になっていれば、その札を外す。引き抜かれても寝返っても、
          城の帳面に名が残ったままだった。城主の居ない城として扱えばよい。 */
   for (const c of s.castles) {
