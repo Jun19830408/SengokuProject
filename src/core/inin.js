@@ -128,21 +128,34 @@ export function 旗頭の狙い(s, 旗, { 道: 道を引く, 旗の下 } = {}) {
   if (!方面.length) return null;
   const 己方 = (s.castles || []).filter((c) => c.faction === 旗.faction && 方面.includes(c.kuni));
   if (!己方.length) return null;
+  /* 狙うのは、預かる方面に隣接する敵から順である（GDD 6.4）。
+
+     もとは「隣り合う城だけ」を見て、そのうち最も守りの薄いものを選んでいた。
+     二つの難があった。一つは、隣り合う敵城が一つも無ければ何もしなかったこと。
+     方面の内側が固まると、旗頭は永久に動かない。もう一つは、遠近を問わず
+     守りの薄さだけで選んでいたので、方面の反対側の城へ向かうことがあったこと。
+
+     方面の領土に近い敵から順に当たる。同じ近さなら、守りの薄いほうから。
+     境を接する敵を片づけてから次へ進むのが、方面を預かる者の務めである。 */
   const 見 = [];
-  for (const 拠 of 己方) {
-    for (const 的 of s.castles) {
-      if (的.faction === 旗.faction) continue;
-      if (旗の下 && 旗の下(s, 旗.faction, 的.faction)) continue;
-      const 道 = 道を引く ? 道を引く(s, 旗.faction, 拠.id, 的.id) : null;
-      if (!道 || 道.length !== 2) continue;               // 隣り合う城だけ
-      const 守 = 的.local + (s.generals || [])
-        .filter((x) => x.at === 的.id && x.faction === 的.faction && !x.captive)
-        .reduce((a, x) => a + x.retinue, 0);
-      見.push({ 的, 拠, 守 });
+  for (const 的 of s.castles) {
+    if (的.faction === 旗.faction) continue;
+    if (旗の下 && 旗の下(s, 旗.faction, 的.faction)) continue;
+    let 近 = null, 拠 = null;
+    for (const c of 己方) {
+      const 道 = 道を引く ? 道を引く(s, 旗.faction, c.id, 的.id) : null;
+      if (!道) continue;
+      const 歩 = 道.length - 1;                            // 何歩先か（隣り合えば一）
+      if (近 == null || 歩 < 近) { 近 = 歩; 拠 = c; }
     }
+    if (近 == null || 近 > 4) continue;                    // 方面から遠すぎる城は預かりの外
+    const 守 = 的.local + (s.generals || [])
+      .filter((x) => x.at === 的.id && x.faction === 的.faction && !x.captive)
+      .reduce((a, x) => a + x.retinue, 0);
+    見.push({ 的, 拠, 守, 近 });
   }
   if (!見.length) return null;
-  見.sort((a, b) => a.守 - b.守);
+  見.sort((a, b) => a.近 - b.近 || a.守 - b.守);
   return 見[0];
 }
 

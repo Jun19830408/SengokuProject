@@ -169,6 +169,48 @@ console.log('\n── 七　旗頭に預けた戦は、大名の盤面に出さ�
   確('他家の軍は大名の盤面に出ない', 自ら采配するか(u, { id: 'E1', faction: 'imagawa' }, null) === false);
 }
 
+console.log('\n── 八　狙うのは方面に隣接する敵から順');
+{
+  /* もとは「隣り合う城だけ」を見て、守りの薄いものを選んでいた。二つの難が
+     あった。隣り合う敵城が一つも無ければ何もしないこと（方面の内側が固まると
+     旗頭は永久に動かない）と、遠近を問わず守りの薄さだけで選ぶので方面の
+     反対側へ向かうことがあったこと。近い敵から順に当たるのが筋である。 */
+  const { s, 旗 } = 場();
+  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner });
+  確('狙いが立つ', !!狙, 狙 ? `${狙.的.name}（${(s.factions[狙.的.faction] || {}).name}）` : 'なし');
+  if (狙) {
+    確('その城は方面の城と街道で結ばれている', 狙.近 >= 1, `${狙.近}歩先`);
+    /* 方面に隣接する敵城があるなら、それより遠い城は選ばない。 */
+    const 己方 = s.castles.filter((c) => c.faction === 旗.faction && (旗.方面 || []).includes(c.kuni));
+    let 最も近い = 99;
+    for (const 的 of s.castles) {
+      if (的.faction === 旗.faction || underMyBanner(s, 旗.faction, 的.faction)) continue;
+      for (const c of 己方) {
+        const 道 = 軍の道(s, 旗.faction, c.id, 的.id);
+        if (道) 最も近い = Math.min(最も近い, 道.length - 1);
+      }
+    }
+    確('いちばん近い敵と同じ近さの城を選ぶ', 狙.近 === 最も近い,
+      `選んだ ${狙.近}歩先／盤で最も近い敵は ${最も近い}歩先`);
+    /* 同じ近さの城が複数あるなら、守りの薄いほうを選ぶ。 */
+    const 同距離 = [];
+    for (const 的 of s.castles) {
+      if (的.faction === 旗.faction || underMyBanner(s, 旗.faction, 的.faction)) continue;
+      let 近 = 99;
+      for (const c of 己方) { const 道 = 軍の道(s, 旗.faction, c.id, 的.id); if (道) 近 = Math.min(近, 道.length - 1); }
+      if (近 !== 狙.近) continue;
+      const 守 = 的.local + s.generals.filter((x) => x.at === 的.id && x.faction === 的.faction && !x.captive)
+        .reduce((a, x) => a + x.retinue, 0);
+      同距離.push({ 的, 守 });
+    }
+    const 薄 = 同距離.sort((a, b) => a.守 - b.守)[0];
+    確('同じ近さなら、守りの薄いほうを選ぶ', 薄 && 薄.的.id === 狙.的.id,
+      `${同距離.length}城が同じ近さ／選んだ ${狙.的.name}（守 ${薄 ? 薄.守 : '?'}）`);
+  }
+  /* 旗の下の家へは仕掛けない。 */
+  確('旗の下の城は狙わない', !狙 || !underMyBanner(s, 旗.faction, 狙.的.faction));
+}
+
 console.log(`\n════ 旗頭の差配：咎 ${咎.length} 件`);
 console.log('エラー:', 咎.length ? 咎.join(' | ') : 'なし');
 process.exit(咎.length ? 1 : 0);

@@ -12469,16 +12469,41 @@ var \u9663\u89E6\u308C\u306E\u5C4A\u304D = (gen, s2) => {
   if (!gen) return "\u7121\u3057";
   if (gen.lord) return "\u5929\u4E0B";
   if (gen.\u5F79 === "\u65D7\u982D") return "\u65B9\u9762";
-  if (gen.\u5F79 === "\u56FD\u4E3B") return "\u4E00\u56FD";
+  if (gen.\u5F79 === "\u56FD\u4E3B") return "\u4E00\u56FD\u3068\u96A3\u56FD";
   if (\u8EAB\u5206\u306E\u4F4D(gen, s2) >= 2) return "\u96A3\u306E\u57CE";
   return "\u7121\u3057";
 };
+var \u56FD\u306E\u96A3 = null;
+function \u56FD\u304C\u96A3\u308A\u5408\u3046\u304B(s2, a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (!\u56FD\u306E\u96A3) {
+    \u56FD\u306E\u96A3 = {};
+    const \u56FD = {};
+    for (const c of s2.castles) \u56FD[c.id] = c.kuni;
+    for (const id of Object.keys(ROAD_ADJ)) {
+      const k = \u56FD[id];
+      if (!k) continue;
+      for (const \u96A3 of ROAD_ADJ[id] || []) {
+        const j = \u56FD[\u96A3];
+        if (!j || j === k) continue;
+        (\u56FD\u306E\u96A3[k] = \u56FD\u306E\u96A3[k] || /* @__PURE__ */ new Set()).add(j);
+        (\u56FD\u306E\u96A3[j] = \u56FD\u306E\u96A3[j] || /* @__PURE__ */ new Set()).add(k);
+      }
+    }
+  }
+  return !!(\u56FD\u306E\u96A3[a] && \u56FD\u306E\u96A3[a].has(b));
+}
 function \u9663\u89E6\u308C\u306B\u5FDC\u3058\u308B(s2, \u5927\u5C06, \u672C\u9663, \u57CE) {
   if (!\u5927\u5C06 || !\u57CE) return false;
   const \u5C4A = \u9663\u89E6\u308C\u306E\u5C4A\u304D(\u5927\u5C06, s2);
   if (\u5C4A === "\u5929\u4E0B") return true;
   if (\u5C4A === "\u65B9\u9762") return \u65B9\u9762\u306E\u56FD(\u5927\u5C06).includes(\u57CE.kuni);
-  if (\u5C4A === "\u4E00\u56FD") return \u57CE.kuni === (\u5927\u5C06.\u5F79\u56FD || (\u672C\u9663 || {}).kuni);
+  if (\u5C4A === "\u4E00\u56FD" || \u5C4A === "\u4E00\u56FD\u3068\u96A3\u56FD") {
+    const \u9810 = \u5927\u5C06.\u5F79\u56FD || (\u672C\u9663 || {}).kuni;
+    if (\u57CE.kuni === \u9810) return true;
+    return \u56FD\u304C\u96A3\u308A\u5408\u3046\u304B(s2, \u9810, \u57CE.kuni);
+  }
   if (\u5C4A === "\u96A3\u306E\u57CE") {
     if (!\u672C\u9663) return false;
     if (\u57CE.id === \u672C\u9663.id) return true;
@@ -19095,18 +19120,25 @@ function \u65D7\u982D\u306E\u72D9\u3044(s2, \u65D7, { \u9053: \u9053\u3092\u5F15
   const \u5DF1\u65B9 = (s2.castles || []).filter((c) => c.faction === \u65D7.faction && \u65B9\u9762.includes(c.kuni));
   if (!\u5DF1\u65B9.length) return null;
   const \u898B = [];
-  for (const \u62E0 of \u5DF1\u65B9) {
-    for (const \u7684 of s2.castles) {
-      if (\u7684.faction === \u65D7.faction) continue;
-      if (\u65D7\u306E\u4E0B && \u65D7\u306E\u4E0B(s2, \u65D7.faction, \u7684.faction)) continue;
-      const \u9053 = \u9053\u3092\u5F15\u304F ? \u9053\u3092\u5F15\u304F(s2, \u65D7.faction, \u62E0.id, \u7684.id) : null;
-      if (!\u9053 || \u9053.length !== 2) continue;
-      const \u5B88 = \u7684.local + (s2.generals || []).filter((x) => x.at === \u7684.id && x.faction === \u7684.faction && !x.captive).reduce((a, x) => a + x.retinue, 0);
-      \u898B.push({ \u7684, \u62E0, \u5B88 });
+  for (const \u7684 of s2.castles) {
+    if (\u7684.faction === \u65D7.faction) continue;
+    if (\u65D7\u306E\u4E0B && \u65D7\u306E\u4E0B(s2, \u65D7.faction, \u7684.faction)) continue;
+    let \u8FD1 = null, \u62E0 = null;
+    for (const c of \u5DF1\u65B9) {
+      const \u9053 = \u9053\u3092\u5F15\u304F ? \u9053\u3092\u5F15\u304F(s2, \u65D7.faction, c.id, \u7684.id) : null;
+      if (!\u9053) continue;
+      const \u6B69 = \u9053.length - 1;
+      if (\u8FD1 == null || \u6B69 < \u8FD1) {
+        \u8FD1 = \u6B69;
+        \u62E0 = c;
+      }
     }
+    if (\u8FD1 == null || \u8FD1 > 4) continue;
+    const \u5B88 = \u7684.local + (s2.generals || []).filter((x) => x.at === \u7684.id && x.faction === \u7684.faction && !x.captive).reduce((a, x) => a + x.retinue, 0);
+    \u898B.push({ \u7684, \u62E0, \u5B88, \u8FD1 });
   }
   if (!\u898B.length) return null;
-  \u898B.sort((a, b) => a.\u5B88 - b.\u5B88);
+  \u898B.sort((a, b) => a.\u8FD1 - b.\u8FD1 || a.\u5B88 - b.\u5B88);
   return \u898B[0];
 }
 function \u65D7\u982D\u306E\u9810\u3051\u9AD8(s2, \u65D7) {

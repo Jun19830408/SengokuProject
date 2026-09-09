@@ -28,7 +28,7 @@ Object.defineProperty(dom.window.HTMLElement.prototype, 'clientWidth', { get() {
 Object.defineProperty(dom.window.HTMLElement.prototype, 'clientHeight', { get() { return 600; } });
 dom.window.HTMLElement.prototype.getBoundingClientRect = function () { return { left: 0, top: 0, width: 900, height: 600, right: 900, bottom: 600 }; };
 const errs = []; console.error = (...a) => errs.push(String(a[0]).slice(0, 180));
-const { createRoot, act, App, React, initState, findPath, reinforceOffers, 運び賃を払う, 陣触れに応じる, 陣触れの届き, rankName, 国主に任じる } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
+const { createRoot, act, App, React, initState, findPath, reinforceOffers, 運び賃を払う, 陣触れに応じる, 陣触れの届き, 国が隣り合うか, rankName, 国主に任じる } = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 
 /* ------------------------------------------- 盤をこしらえる
    自家の城が敵に囲まれ、他の自家の城と、臣従した家の城が近くにある形。 */
@@ -300,10 +300,17 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
     if (国主) {
       const 出 = 呼べる(国主);
       const 本陣 = u.castles.find((c) => c.id === 'nagoya');
-      確('国主が率いれば、一国のうちに限られる',
-        陣触れの届き(国主, u) === '一国'
-        && 出.length > 0 && 出.every((o) => (u.castles.find((c) => c.id === o.castleId) || {}).kuni === 本陣.kuni),
-        `${国主.name} → ${出.length}城（すべて${本陣.kuni}）`);
+      /* 国主の届きを一国から「一国と隣国」へ改めた（GDD 7.3）。
+         一国のうちだけでは、隣国へ攻め入るときに自分の国の兵しか動かせない。
+         国境を挟んで並ぶ国主どうしが申し合わせて出るのは、家中の当たり前の
+         こしらえである。信長が美濃を攻めたとき、尾張の兵だけで寄せてはいない。 */
+      確('国主が率いれば、預かる国と隣国のうちに限られる',
+        陣触れの届き(国主, u) === '一国と隣国'
+        && 出.length > 0 && 出.every((o) => {
+          const c = u.castles.find((x) => x.id === o.castleId) || {};
+          return c.kuni === 本陣.kuni || 国が隣り合うか(u, 本陣.kuni, c.kuni);
+        }),
+        `${国主.name} → ${出.length}城（${[...new Set(出.map((o) => (u.castles.find((c) => c.id === o.castleId) || {}).kuni))].join('・')}）`);
       if (当主) 確('国主の届きは、当主の届きより狭い', 出.length < 呼べる(当主).length,
         `国主 ${出.length}城／当主 ${呼べる(当主).length}城`);
     }
