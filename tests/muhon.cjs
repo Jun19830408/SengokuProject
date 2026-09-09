@@ -40,6 +40,14 @@ const 場 = (寄騎数 = 2) => {
     && 自城.some((c) => c.id === (g.本領 || g.at)));
   親.fief = 14000; 親.age = Math.max(親.age || 30, 32); 親.loyal = 80;
   const 親城 = 自城.find((c) => c.id === (親.本領 || 親.at));
+  /* 当主のいる国には国主を置けない（GDD 6.4）。測る国から当主を外す。
+     織田は初め尾張の三城しか持たぬので、美濃に一城を与えてそこへ移す。 */
+  {
+    const 美濃 = s.castles.find((c) => c.kuni === '美濃');
+    if (美濃) 美濃.faction = 'oda';
+    const 当主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
+    if (当主 && 美濃) { 当主.at = 美濃.id; 当主.本領 = 美濃.id; 美濃.lordId = 当主.id; }
+  }
   国主に任じる(s, 'oda', '尾張', 親.id);
   const 子ら = [];
   for (const c of 自城.filter((x) => x.id !== 親城.id).slice(0, 寄騎数)) {

@@ -12234,6 +12234,11 @@ function \u56FD\u4E3B\u306B\u4EFB\u3058\u308B(s2, fid, kuni, genId) {
   if (!\u57CE || \u57CE.kuni !== kuni) {
     return { ok: false, why: `${g.name}\u306F${kuni}\u306B\u6839\u3092\u6301\u305F\u306A\u3044\u3002\u56FD\u4E3B\u306F\u305D\u306E\u56FD\u306B\u672C\u9818\u3092\u6301\u3064\u8005\u304B\u3089\u9078\u3076\u3002` };
   }
+  const \u5F53\u4E3B = s2.generals.find((x) => x.faction === fid && x.lord && !x.captive);
+  const \u5F53\u4E3B\u306E\u57CE = \u5F53\u4E3B && s2.castles.find((c) => c.id === (\u5F53\u4E3B.\u672C\u9818 || \u5F53\u4E3B.at));
+  if (\u5F53\u4E3B\u306E\u57CE && \u5F53\u4E3B\u306E\u57CE.kuni === kuni) {
+    return { ok: false, why: `${kuni}\u306B\u306F${\u5F53\u4E3B.name}\u304C\u3044\u308B\u3002\u5F53\u4E3B\u306E\u3044\u308B\u56FD\u306B\u56FD\u4E3B\u306F\u7F6E\u304B\u306A\u3044\u3002` };
+  }
   if (\u8EAB\u5206\u306E\u4F4D(g, s2) < \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u56FD\u4E3B) {
     return { ok: false, why: `${g.name}\u306F${rankName(g, s2)}\u3002\u56FD\u4E3B\u3068\u306A\u308B\u306B\u306F\u5BB6\u8001\uFF08\u7984\u9AD8\u516B\u5343\u77F3\uFF09\u4EE5\u4E0A\u306E\u8EAB\u5206\u304C\u8981\u308B\u3002` };
   }
@@ -12254,7 +12259,10 @@ function \u56FD\u4E3B\u3092\u7E55\u3046(s2, fid) {
   const \u89E3\u3044\u305F = [];
   for (const g of s2.generals) {
     if (g.faction !== fid || g.\u5F79 !== "\u56FD\u4E3B") continue;
-    if (!g.\u5F79\u56FD || !\u6301\u3064\u56FD.has(g.\u5F79\u56FD) || \u8EAB\u5206\u306E\u4F4D(g, s2) < \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u56FD\u4E3B) {
+    const \u6839 = g.\u672C\u9818 && s2.castles.find((c) => c.id === g.\u672C\u9818 && c.faction === fid);
+    const \u5F53\u4E3B = s2.generals.find((x) => x.faction === fid && x.lord && !x.captive);
+    const \u5F53\u4E3B\u306E\u57CE = \u5F53\u4E3B && s2.castles.find((c) => c.id === (\u5F53\u4E3B.\u672C\u9818 || \u5F53\u4E3B.at));
+    if (!g.\u5F79\u56FD || !\u6301\u3064\u56FD.has(g.\u5F79\u56FD) || \u8EAB\u5206\u306E\u4F4D(g, s2) < \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u56FD\u4E3B || \u6839 && \u6839.kuni !== g.\u5F79\u56FD || \u5F53\u4E3B\u306E\u57CE && \u5F53\u4E3B\u306E\u57CE.kuni === g.\u5F79\u56FD) {
       g.\u5F79 = null;
       g.\u5F79\u56FD = null;
       \u89E3\u3044\u305F.push(g);
@@ -12352,8 +12360,16 @@ function \u65D7\u982D\u306B\u4EFB\u3058\u308B(s2, fid, genId, \u56FD\u3089) {
     return { ok: false, why: `\u5BBF\u8001\u3092\u7F6E\u3051\u308B\u306E\u306F${\u67A0}\u540D\u307E\u3067\uFF08\u56DB\u56FD\u306B\u3064\u304D\u4E00\u4EBA\uFF09\u3002\u3044\u307E${\u3044\u307E}\u540D\u3002` };
   }
   const \u6301\u3064\u56FD = new Set(s2.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
-  const \u9078 = [...new Set((\u56FD\u3089 || []).filter((k) => \u6301\u3064\u56FD.has(k)))];
-  if (\u9078.length < 2) return { ok: false, why: "\u65B9\u9762\u306F\u4E8C\u56FD\u4EE5\u4E0A\u3067\u306A\u3051\u308C\u3070\u610F\u5473\u3092\u6210\u3055\u306A\u3044\u3002" };
+  const \u5F53\u4E3B = s2.generals.find((x) => x.faction === fid && x.lord && !x.captive);
+  const \u5F53\u4E3B\u306E\u57CE = \u5F53\u4E3B && s2.castles.find((c) => c.id === (\u5F53\u4E3B.\u672C\u9818 || \u5F53\u4E3B.at));
+  const \u5F53\u4E3B\u306E\u56FD = \u5F53\u4E3B\u306E\u57CE ? \u5F53\u4E3B\u306E\u57CE.kuni : null;
+  const \u9078 = [...new Set((\u56FD\u3089 || []).filter((k) => \u6301\u3064\u56FD.has(k) && k !== \u5F53\u4E3B\u306E\u56FD))];
+  if (\u9078.length < 2) {
+    return {
+      ok: false,
+      why: \u5F53\u4E3B\u306E\u56FD && (\u56FD\u3089 || []).includes(\u5F53\u4E3B\u306E\u56FD) ? `${\u5F53\u4E3B\u306E\u56FD}\u306B\u306F${\u5F53\u4E3B.name}\u304C\u3044\u308B\u3002\u5F53\u4E3B\u306E\u3044\u308B\u56FD\u306F\u65B9\u9762\u306B\u5165\u308C\u3089\u308C\u306A\u3044\u3002\u65B9\u9762\u306F\u4E8C\u56FD\u4EE5\u4E0A\u3092\u8981\u308B\u3002` : "\u65B9\u9762\u306F\u4E8C\u56FD\u4EE5\u4E0A\u3067\u306A\u3051\u308C\u3070\u610F\u5473\u3092\u6210\u3055\u306A\u3044\u3002"
+    };
+  }
   for (const k of \u9078) {
     const \u5148 = \u56FD\u306E\u65D7\u982D(s2, fid, k);
     if (\u5148 && \u5148.id !== g.id) return { ok: false, why: `${k}\u306F\u3059\u3067\u306B${\u5148.name}\u306E\u65B9\u9762\u3067\u3042\u308B\u3002` };
@@ -12377,6 +12393,13 @@ function \u65D7\u982D\u3092\u7E55\u3046(s2, fid) {
   for (const g of s2.generals) {
     if (g.faction !== fid || g.\u5F79 !== "\u65D7\u982D") continue;
     g.\u65B9\u9762 = \u65B9\u9762\u306E\u56FD(g).filter((k) => \u6301\u3064\u56FD.has(k));
+    const \u5F53\u4E3B2 = s2.generals.find((x) => x.faction === fid && x.lord && !x.captive);
+    const \u5F53\u4E3B\u306E\u57CE2 = \u5F53\u4E3B2 && s2.castles.find((c) => c.id === (\u5F53\u4E3B2.\u672C\u9818 || \u5F53\u4E3B2.at));
+    if (\u5F53\u4E3B\u306E\u57CE2) g.\u65B9\u9762 = g.\u65B9\u9762.filter((k) => k !== \u5F53\u4E3B\u306E\u57CE2.kuni);
+    const \u6839 = g.\u672C\u9818 && s2.castles.find((c) => c.id === g.\u672C\u9818 && c.faction === fid);
+    if (\u6839 && g.\u65B9\u9762.length && !g.\u65B9\u9762.includes(\u6839.kuni) && \u6301\u3064\u56FD.has(\u6839.kuni) && (!\u5F53\u4E3B\u306E\u57CE2 || \u5F53\u4E3B\u306E\u57CE2.kuni !== \u6839.kuni)) {
+      g.\u65B9\u9762 = [\u6839.kuni, ...g.\u65B9\u9762].slice(0, 4);
+    }
     if (g.\u65B9\u9762.length < 2 || \u8EAB\u5206\u306E\u4F4D(g, s2) < \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u65D7\u982D) {
       g.\u5F79 = null;
       g.\u65B9\u9762 = null;
@@ -15596,7 +15619,10 @@ function \u76E4\u306E\u5897\u88DC\u3092\u53D6\u308A\u8FBC\u3080(s2) {
 function \u56FD\u4E3B\u3092\u636E\u3048\u308B(s2) {
   for (const fid of Object.keys(s2.factions || {})) {
     const \u56FD = [...new Set(s2.castles.filter((c) => c.faction === fid).map((c) => c.kuni))];
+    const \u5F53\u4E3B = s2.generals.find((g) => g.faction === fid && g.lord && !g.captive);
+    const \u5F53\u4E3B\u306E\u57CE = \u5F53\u4E3B && s2.castles.find((c) => c.id === (\u5F53\u4E3B.\u672C\u9818 || \u5F53\u4E3B.at));
     for (const kuni of \u56FD) {
+      if (\u5F53\u4E3B\u306E\u57CE && \u5F53\u4E3B\u306E\u57CE.kuni === kuni) continue;
       if (s2.generals.some((g) => g.faction === fid && g.\u5F79 === "\u56FD\u4E3B" && g.\u5F79\u56FD === kuni)) continue;
       const \u5019 = s2.generals.filter((g) => g.faction === fid && !g.captive && !g.lord && \u8EAB\u5206\u306E\u4F4D(g, s2) >= \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u56FD\u4E3B && (s2.castles.find((c) => c.id === (g.\u672C\u9818 || g.at)) || {}).kuni === kuni);
       if (!\u5019.length) continue;
@@ -16877,9 +16903,14 @@ function \u57CE\u306B\u5408\u6D41\u3059\u308B(s2, army, castle) {
   for (const gid of army.gens) {
     const x = s2.generals.find((q) => q.id === gid);
     if (!x) continue;
+    if (castle.faction !== x.faction) continue;
     x.at = castle.id;
-    if (!x.lord && castle.faction === x.faction) x.\u672C\u9818 = castle.id;
+    if (!x.lord) x.\u672C\u9818 = castle.id;
   }
+  army.gens = (army.gens || []).filter((gid) => {
+    const x = s2.generals.find((q) => q.id === gid);
+    return x && x.faction !== castle.faction;
+  });
   s2.armies = s2.armies.filter((x) => x.id !== army.id);
   s2.sieges = (s2.sieges || []).filter((x) => x.armyId !== army.id);
   s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => id !== army.id);
@@ -19030,6 +19061,20 @@ function \u8B00\u53CD\u3092\u8D77\u3053\u3059(s2, \u89AA, \u5148) {
     }
   }
   for (const g of \u6B8B\u308B) g.\u5BC4\u89AA = null;
+  const \u8D70 = new Set(\u79FB\u308B.map((g) => g.id));
+  for (const a of s2.armies || []) {
+    if (!(a.gens || []).some((id) => \u8D70.has(id))) continue;
+    a.gens = a.gens.filter((id) => !\u8D70.has(id));
+    for (const id of \u8D70) {
+      const g = s2.generals.find((q) => q.id === id);
+      if (!g || g.at != null) continue;
+      const \u57CE = \u57CE\u3089[0] || s2.castles.find((c) => c.faction === \u5148);
+      if (\u57CE) {
+        g.at = \u57CE.id;
+        if (!g.\u672C\u9818 || !s2.castles.some((c) => c.id === g.\u672C\u9818 && c.faction === \u5148)) g.\u672C\u9818 = \u57CE.id;
+      }
+    }
+  }
   \u89AA.\u8B00\u53CD\u652F\u5EA6 = null;
   if (\u57CE\u3089.length) {
     \u672C\u62E0\u3092\u8FFD\u3046(s2);
@@ -20043,6 +20088,18 @@ function advanceMonth(prev, g) {
       }
     }
   }
+  const \u5168\u56FD\u77F3\u9AD8 = s2.castles.reduce((a, c) => a + c.koku, 0);
+  const \u5FD7\u306E\u76F4\u8F44 = \u5929\u4E0B\u4EBA\u306E\u76F4\u8F44 * 0.65;
+  const \u5FD7\u306E\u7248\u56F3 = \u5929\u4E0B\u4EBA\u306E\u7248\u56F3 * 0.6;
+  const \u4E0A\u6D1B\u306E\u5FD7 = /* @__PURE__ */ new Set();
+  for (const fid2 of Object.keys(s2.factions)) {
+    if (!s2.castles.some((c) => c.faction === fid2)) continue;
+    if (courtRank(s2, fid2)) continue;
+    const \u76F4 = s2.castles.filter((c) => c.faction === fid2).reduce((a, c) => a + c.koku, 0);
+    if (\u76F4 < \u5168\u56FD\u77F3\u9AD8 * \u5FD7\u306E\u76F4\u8F44) continue;
+    if (\u65D7\u306E\u4E0B\u306E\u57CE\u6570(s2, fid2) < s2.castles.length * \u5FD7\u306E\u7248\u56F3) continue;
+    \u4E0A\u6D1B\u306E\u5FD7.add(fid2);
+  }
   const \u5BB6\u306E\u57CE\u6570 = /* @__PURE__ */ new Map();
   for (const c2 of s2.castles) \u5BB6\u306E\u57CE\u6570.set(c2.faction, (\u5BB6\u306E\u57CE\u6570.get(c2.faction) || 0) + 1);
   const \u5F31\u307F = (t2) => {
@@ -20083,6 +20140,7 @@ function advanceMonth(prev, g) {
         if (!cs2.length) return 0;
         const rest = cs2.filter((x) => x.faction !== fid && x.id !== t2.id).length;
         let w = rest === 0 ? 60 : rest === 1 ? 24 : rest === 2 ? 8 : 0;
+        if (\u4E0A\u6D1B\u306E\u5FD7.has(fid) && GOKINAI.includes(t2.kuni)) w += 90;
         if (GOKINAI.includes(t2.kuni)) {
           const got = GOKINAI.filter((k) => holdsProvince(s2, fid, k)).length;
           w += rest === 0 ? 40 + got * 22 : 10 + got * 6;
@@ -20092,7 +20150,7 @@ function advanceMonth(prev, g) {
       const \u5F53\u305F\u308A = (x) => x.faction === s2.player ? (lv(s2).aiVsPlayer - 1) * 20 : 0;
       const scored2 = reach.map((x) => ({
         x,
-        s2: worth(x) - (\u8ECD\u306E\u9053(s2, fid, c.id, x.id) || []).length * 1.2 + (aim && aim.target === x.id ? 14 : 0) + \u5F31\u307F(x) + \u5F53\u305F\u308A(x)
+        s2: worth(x) - (\u8ECD\u306E\u9053(s2, fid, c.id, x.id) || []).length * (\u4E0A\u6D1B\u306E\u5FD7.has(fid) && GOKINAI.includes(x.kuni) ? 0.4 : 1.2) + (aim && aim.target === x.id ? 14 : 0) + \u5F31\u307F(x) + \u5F53\u305F\u308A(x)
       })).sort((a, b) => b.s2 - a.s2);
       const \u92ED = lv(s2).aiSharp == null ? 0.8 : lv(s2).aiSharp;
       const \u982D2 = scored2.slice(0, 3);

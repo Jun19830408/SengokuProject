@@ -1023,7 +1023,14 @@ export function 盤の増補を取り込む(s) {
 export function 国主を据える(s) {
   for (const fid of Object.keys(s.factions || {})) {
     const 国 = [...new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni))];
+    /* 当主のいる国には国主を置かない（GDD 6.4）。大名が自ら差配する国に国主を
+       立てるのは、屋上に屋を架すようなものである。開始時の九十六名のうち
+       七十一名が当主と同じ国にいたので、ここで据えぬようにする。据えてしまうと
+       初月の繕いで一斉に解け、戦国記が離役の報せで埋まる。 */
+    const 当主 = s.generals.find((g) => g.faction === fid && g.lord && !g.captive);
+    const 当主の城 = 当主 && s.castles.find((c) => c.id === (当主.本領 || 当主.at));
     for (const kuni of 国) {
+      if (当主の城 && 当主の城.kuni === kuni) continue;
       if (s.generals.some((g) => g.faction === fid && g.役 === "国主" && g.役国 === kuni)) continue;
       /* 国主となれるのは家老（禄高八千石）以上である（GDD 6.4）。
          役は身分あってのものなので、その国に家老以上が居らねば国主は置かない。 */

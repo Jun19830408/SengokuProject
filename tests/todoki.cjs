@@ -28,7 +28,13 @@ const 確 = (名, 可, 添 = '') => {
 const 場 = () => {
   const s = initState('oda');
   for (const k of ['尾張', '美濃']) for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
-  const 本陣 = s.castles.find((c) => c.faction === 'oda');
+  /* 当主のいる国には国主を置けない（GDD 6.4）。測る国から当主を外す。 */
+  {
+    const 当主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
+    const 余所 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '美濃');
+    if (当主 && 余所) { 当主.at = 余所.id; 当主.本領 = 余所.id; }
+  }
+  const 本陣 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '尾張');
   const 的 = s.castles.find((c) => c.faction !== 'oda' && c.local > 400);
   const 城主 = s.generals.filter((g) => g.faction === 'oda' && g.at === 本陣.id && !g.lord && (g.age || 0) >= 25)[0];
   城主.fief = 6000;                       // 侍大将（城主になれる身分）

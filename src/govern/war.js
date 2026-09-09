@@ -198,9 +198,19 @@ export function 城に合流する(s, army, castle) {
   for (const gid of army.gens) {
     const x = s.generals.find((q) => q.id === gid);
     if (!x) continue;
+    /* 家の違う者は、その城に入れない（GDD 6.4）。
+
+       軍の中で旗を替えた者（謀反・引き抜き）が混じっていることがある。
+       そのまま入れると、他家の城に立つ将ができる。名簿から外し、
+       月ごとの見回りに拾わせる。 */
+    if (castle.faction !== x.faction) continue;
     x.at = castle.id;
-    if (!x.lord && castle.faction === x.faction) x.本領 = castle.id;   // 他家の城は根にできない
+    if (!x.lord) x.本領 = castle.id;
   }
+  army.gens = (army.gens || []).filter((gid) => {
+    const x = s.generals.find((q) => q.id === gid);
+    return x && x.faction !== castle.faction;
+  });
   s.armies = s.armies.filter((x) => x.id !== army.id);
   s.sieges = (s.sieges || []).filter((x) => x.armyId !== army.id);
   s.pendingArrivals = (s.pendingArrivals || []).filter((id) => id !== army.id);

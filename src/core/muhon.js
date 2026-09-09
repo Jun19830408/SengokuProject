@@ -71,6 +71,23 @@ export function 謀反を起こす(s, 親, 先) {
   }
   // 踏みとどまった寄騎は、寄親を失うだけである
   for (const g of 残る) g.寄親 = null;
+  /* 走った者は、旧主の軍から降りる（GDD 12.3）。
+
+     軍の名簿を直していなかったので、寝返った将が旧主の軍に乗ったまま進み、
+     旧主の城へ着いてそこの城主になった――巡検が、赤松に走った宇喜多直家が
+     浦上の天神山城に立っている姿で拾った。旗を替えた者が、そのまま元の主の
+     軍で行軍を続ける道理はない。 */
+  const 走 = new Set(移る.map((g) => g.id));
+  for (const a of s.armies || []) {
+    if (!(a.gens || []).some((id) => 走.has(id))) continue;
+    a.gens = a.gens.filter((id) => !走.has(id));
+    for (const id of 走) {
+      const g = s.generals.find((q) => q.id === id);
+      if (!g || g.at != null) continue;
+      const 城 = (城ら[0] || s.castles.find((c) => c.faction === 先));
+      if (城) { g.at = 城.id; if (!g.本領 || !s.castles.some((c) => c.id === g.本領 && c.faction === 先)) g.本領 = 城.id; }
+    }
+  }
   親.謀反支度 = null;
   /* 城の主が変われば、その場で根を繕う（落城・内応と同じ理屈）。
      繕わねば、旧主に残った者の本領が、走った先の城を指したままになる。 */

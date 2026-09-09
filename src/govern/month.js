@@ -6,7 +6,7 @@ import { 鉄甲 } from "../data/ships.js";
 import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, lifeSpan, needsGuardian, ruinedHouse, succeed, 親の } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の重み } from "../core/paths.js";
-import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
+import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 国主を繕う, 寄騎を繕う, 旗頭を繕う } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す } from "../core/state.js";
@@ -1082,6 +1082,37 @@ export function advanceMonth(prev, g) {
           if (risk) { risk.def = Math.min(100, risk.def + 2); risk.hp += 150; fa.gold -= 240; }
         }
       }
+      /* 上洛の志（GDD 12.5）。
+
+         版図の二つの関門（直轄が全国の一割二分・旗の下が全城の三割）を満たした
+         家は、五畿へ向かう。塞いでいるのは五畿だからである――四十年走らせても
+         天下人が一人も現れず、courtRank は五畿を先に見て満たさねば位そのものを
+         返さない。畿内は三好と六角に割れたまま四十年が過ぎていた。
+
+         身代が調えば都を目指す、というのは戦国のならいである。信長の上洛も、
+         尾張と美濃を押さえてからのことであった。 */
+      const 全国石高 = s.castles.reduce((a, c) => a + c.koku, 0);
+      /* 志を抱く関門は、天下人の関門より低くする。
+
+         初めは同じ関門にしたが、それでは堂々巡りであった。天下人になるには
+         五畿が要り、五畿を狙うには天下人の身代が要る、では誰も動かない。
+         実際、四十年走らせて北条が直轄一割七分九厘まで伸びても、旗の下が
+         二割九分で三割に一分届かず、志が一度も立たなかった。
+
+         志は、資格より先に立つものである。信長が上洛したのは尾張と美濃を
+         押さえた時分で、天下人の身代にはほど遠かった。 */
+      const 志の直轄 = 天下人の直轄 * 0.65;                   // 全国の約八分
+      const 志の版図 = 天下人の版図 * 0.6;                    // 全城の約一割八分
+      const 上洛の志 = new Set();
+      for (const fid2 of Object.keys(s.factions)) {
+        if (!s.castles.some((c) => c.faction === fid2)) continue;
+        if (courtRank(s, fid2)) continue;                     // すでに五畿を制している
+        const 直 = s.castles.filter((c) => c.faction === fid2).reduce((a, c) => a + c.koku, 0);
+        if (直 < 全国石高 * 志の直轄) continue;
+        if (旗の下の城数(s, fid2) < s.castles.length * 志の版図) continue;
+        上洛の志.add(fid2);
+      }
+
       /* 家ごとの城の数を一度だけ数える。的を選ぶたびに数え直しては重い。 */
       const 家の城数 = new Map();
       for (const c2 of s.castles) 家の城数.set(c2.faction, (家の城数.get(c2.faction) || 0) + 1);
@@ -1142,6 +1173,8 @@ export function advanceMonth(prev, g) {
             if (!cs2.length) return 0;
             const rest = cs2.filter((x) => x.faction !== fid && x.id !== t2.id).length;
             let w = rest === 0 ? 60 : rest === 1 ? 24 : rest === 2 ? 8 : 0;
+            // 上洛の志ある家は、五畿を何を措いても取りにいく
+            if (上洛の志.has(fid) && GOKINAI.includes(t2.kuni)) w += 90;
             if (GOKINAI.includes(t2.kuni)) {
               // 五畿は特別である。四国まで押さえていれば、残る一国は何を措いても取る。
               const got = GOKINAI.filter((k) => holdsProvince(s, fid, k)).length;
@@ -1159,7 +1192,9 @@ export function advanceMonth(prev, g) {
              どれだけ重く見るかが変わる。難しければ寄ってたかって狙う。 */
           const 当たり = (x) => (x.faction === s.player ? (lv(s).aiVsPlayer - 1) * 20 : 0);
           const scored2 = reach.map((x) => ({
-            x, s2: worth(x) - (軍の道(s, fid, c.id, x.id) || []).length * 1.2
+            x, s2: worth(x)
+              - (軍の道(s, fid, c.id, x.id) || []).length
+                * (上洛の志.has(fid) && GOKINAI.includes(x.kuni) ? 0.4 : 1.2)
               + (aim && aim.target === x.id ? 14 : 0) + 弱み(x) + 当たり(x),
           })).sort((a, b) => b.s2 - a.s2);
           /* 采配の切れ味（GDD 13.2）。易しければ二番手三番手の城へ向かい、

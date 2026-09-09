@@ -34,6 +34,13 @@ const 場 = () => {
   const s = initState('oda');
   const 国ら = ['尾張', '美濃', '三河', '伊勢', '近江'];
   for (const k of 国ら) for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
+  /* 当主のいる国には国主も旗頭も置けない（GDD 6.4）。当主を近江へ移し、
+     尾張・美濃・三河を測りに使う。 */
+  {
+    const 当主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
+    const 近江 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '近江');
+    if (当主 && 近江) { 当主.at = 近江.id; 当主.本領 = 近江.id; 近江.lordId = 当主.id; }
+  }
   const 国主 = {};
   for (const k of 国ら) {
     const 城 = s.castles.find((c) => c.faction === 'oda' && c.kuni === k);
@@ -120,9 +127,13 @@ console.log('\n── 六　旗頭は調略も差配する');
 {
   const { s, 旗 } = 場();
   const 高 = 旗頭の預け高(s, 旗);
+  /* 仕掛ける目は二割二分。十二度では五度に一度ほど空振りする（〇.七八の十二乗＝
+     〇.〇五）。「仕掛けることがある」を測るには少なすぎた――実際、仕込みが変わって
+     籤の並びがずれた途端に背いた。四十度なら空振りは一万に一度に満たない。
+     閾値を緩めたのではなく、測りの数を足りるようにしたのである。 */
   let 仕 = null;
-  for (let i = 0; i < 12 && !仕; i++) { s.year++; 仕 = 旗頭の調略(s, 旗, { 残: 高.預け }); }
-  確('旗頭が調略を仕掛ける', !!仕, 仕 ? `${仕.手} → ${(s.castles.find((c) => c.id === 仕.先) || {}).name}` : '十二度のうち一度も仕掛けなかった');
+  for (let i = 0; i < 40 && !仕; i++) { s.year++; 仕 = 旗頭の調略(s, 旗, { 残: 高.預け }); }
+  確('旗頭が調略を仕掛ける', !!仕, 仕 ? `${仕.手} → ${(s.castles.find((c) => c.id === 仕.先) || {}).name}` : '四十度のうち一度も仕掛けなかった');
   確('その企ては旗頭のものと控える',
     !仕 || (s.plots || []).some((p) => p.旗頭 === 旗.id), `${(s.plots || []).length}件`);
   // 預け高が無ければ仕掛けない

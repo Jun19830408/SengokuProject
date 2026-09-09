@@ -278,9 +278,17 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
     const 当主 = 我.find((x) => x.lord);
     /* 届きは役で決まるので、役を任じてから測る。
        国主となれるのは家老（禄高八千石）以上である。 */
+    /* 当主のいる国には国主を置けない（GDD 6.4）。当主を美濃へ移して尾張で測る。 */
+    if (当主) {
+      const 美濃 = u.castles.find((c) => c.kuni === '美濃');
+      if (美濃) { 当主.at = 美濃.id; 当主.本領 = 美濃.id; 美濃.lordId = 当主.id; }
+    }
     const 国主 = (別.家老 || []).concat(別.宿老 || [])
       .find((g) => !g.lord && (u.castles.find((c) => c.id === (g.本領 || g.at)) || {}).kuni === '尾張');
-    if (国主) 国主に任じる(u, 'oda', '尾張', 国主.id);
+    if (国主) {
+      const r = 国主に任じる(u, 'oda', '尾張', 国主.id);
+      確('尾張の国主を立てられる', r.ok, r.ok ? 国主.name : r.why);
+    }
     const 侍 = (別.侍大将 || []).find((g) => !g.役);
     const 物 = (別.物頭 || []).find((g) => !g.役);
 
