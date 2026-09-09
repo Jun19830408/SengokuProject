@@ -103,6 +103,13 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
       <div className="sheet-h">
         <button className="btn sm" onClick={onClose}>← 戻る</button>
         <span className="mn" style={{ fontSize: 22 }}>{c.name}</span>
+        {/* どの国の城かを、常に出す（GDD 13.1）。
+
+            もとは自分の城の「竿を入れる」欄と「国主」欄でしか国が読めなかった。
+            他家の城を開いても国が分からず、どこにも属していないように見える。
+            国は一国平定・竿入れ・国主・陣触れの届きに関わるので、城の名の次に
+            置くべき事柄である。 */}
+        <span className="pill" style={{ background: "#6E6558" }}>{c.kuni}</span>
         <span className="pill" style={{ background: f.color }}>{f.name}</span>
         {!mine && (
           <span className="pill" style={{ background: open ? "#5C8C4A" : "#8A8478" }}>
@@ -636,6 +643,38 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                                   </button>
                                 ))}
                               </div>
+                              {/* 取れぬ城には、その理由を添える（GDD 6.4）。
+
+                                  もとは取れる者だけを並べていた。城が一覧に出て
+                                  こなくても、遊ぶ側にはなぜか分からない――将を置いて
+                                  いないのか、城主が出陣中なのか、既に他の寄親に
+                                  付いているのか。黙って落とすのが一番いけない。 */}
+                              {(() => {
+                                const 国の城 = g.castles.filter((x) => x.kuni === c.kuni && x.faction === g.player);
+                                const 訳 = [];
+                                for (const x of 国の城) {
+                                  const 主2 = castellanOf(g, x);
+                                  if (主2 && 主2.id === 主.id) continue;                    // 国主その人の城
+                                  if (主2 && 従.some((q) => q.id === 主2.id)) continue;      // すでに寄騎
+                                  if (主2 && 取れる.some((q) => q.id === 主2.id)) continue;  // 取れる
+                                  if (!主2) { 訳.push(`${x.name}　将がいない（城主を置けば取れる）`); continue; }
+                                  if (主2.寄親) {
+                                    const 先 = g.generals.find((q) => q.id === 主2.寄親);
+                                    訳.push(`${x.name}　${主2.name}はすでに${先 ? 先.name : "他の者"}の寄騎`);
+                                    continue;
+                                  }
+                                  const 可 = 寄騎に取れるか(g, 主, 主2);
+                                  if (!可.ok) 訳.push(`${x.name}　${可.why}`);
+                                }
+                                if (!訳.length) return null;
+                                return (
+                                  <div style={{ fontSize: 11, color: U.dim, lineHeight: 1.8, marginTop: 6,
+                                    borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
+                                    <b>寄騎に取れぬ城</b><br />
+                                    {訳.map((t, i) => <span key={i}>・{t}<br /></span>)}
+                                  </div>
+                                );
+                              })()}
                               {!従.length && !取れる.length && (
                                 <div style={{ fontSize: 12, color: U.dim }}>
                                   寄騎に取れる者がいません（{c.kuni}の城主が要ります）。

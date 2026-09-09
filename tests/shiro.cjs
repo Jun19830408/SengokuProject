@@ -27,7 +27,8 @@ fs.writeFileSync(entry,
 + 'export { initState } from "../src/core/state.js";\n'
 + 'export { minGarrison, troopCap } from "../src/core/rank.js";\n'
 + 'export { migrateSave } from "../src/core/state.js";\n'
-+ 'export { GENERALS } from "../src/data/generals.js";\n');
++ 'export { GENERALS } from "../src/data/generals.js";\n'
++ 'export { REGIONS } from "../src/data/provinces.js";\n');
 const out = path.join(ROOT, 'build', 'shiro.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
   loader: { '.jsx': 'jsx' }, logLevel: 'error' });
@@ -65,6 +66,13 @@ console.log(`  （城 ${C.length}／国 ${国々.length}／道 ${R.length}本／
   console.log(`  （国を跨いだ同名の城 ${跨城.length}組：${跨城.map(([n, v]) => `${n}(${v.join('・')})`).join(' ')}）`);
   無し('持ち主の家が実在する', C.filter((c) => c.faction && !F[c.faction]).map((c) => `${c.name}/${c.faction}`));
   無し('国の名がある', C.filter((c) => !c.kuni).map((c) => c.name));
+  /* 国は地方（REGIONS）のいずれかに属していなければならない。属さぬ国があると、
+     地方の絞りにも一国平定にも数えられず、盤から抜け落ちる。 */
+  const 地方の国 = new Set(A.REGIONS.flatMap((r) => r.kuni));
+  無し('どの地方にも属さぬ国の城がない',
+    C.filter((c) => !地方の国.has(c.kuni)).map((c) => `${c.name}(${c.kuni})`));
+  無し('地方の一覧にあって盤に城の無い国がない',
+    [...地方の国].filter((k) => !国々.includes(k)));
 
   /* 石高に連なる欄。書き換えたときに直し忘れると、城が実らなくなったり、
      兵糧だけが桁違いになったりする。既存の書き方は次の比である。 */

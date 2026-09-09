@@ -28751,7 +28751,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
         boxShadow: "-6px 0 24px rgba(0,0,0,.10)"
       } : void 0
     },
-    /* @__PURE__ */ React5.createElement("div", { className: "sheet-h" }, /* @__PURE__ */ React5.createElement("button", { className: "btn sm", onClick: onClose }, "\u2190 \u623B\u308B"), /* @__PURE__ */ React5.createElement("span", { className: "mn", style: { fontSize: 22 } }, c.name), /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: f.color } }, f.name), !mine && /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: open ? "#5C8C4A" : "#8A8478" } }, open ? "\u5075\u5BDF\u6E08\u307F" : "\u5185\u60C5\u4E0D\u660E"), !mine && relOf2(g, g.player, c.faction).state !== "\u4E2D\u7ACB" && /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: "#4A6E8A" } }, relOf2(g, g.player, c.faction).state, relOf2(g, g.player, c.faction).until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, relOf2(g, g.player, c.faction).until.y, relOf2(g, g.player, c.faction).until.m)}\u304B\u6708\uFF09` : ""), /* @__PURE__ */ React5.createElement("span", { style: { flex: 1 } }), mine && /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11, color: U.dim } }, done ? "\u672C\u6708\u306E\u52D9\u3081\u306F\u6E08\u3093\u3060" : `\u50CD\u3051\u308B\u8005 ${freeGens.length}\u540D`)),
+    /* @__PURE__ */ React5.createElement("div", { className: "sheet-h" }, /* @__PURE__ */ React5.createElement("button", { className: "btn sm", onClick: onClose }, "\u2190 \u623B\u308B"), /* @__PURE__ */ React5.createElement("span", { className: "mn", style: { fontSize: 22 } }, c.name), /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: "#6E6558" } }, c.kuni), /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: f.color } }, f.name), !mine && /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: open ? "#5C8C4A" : "#8A8478" } }, open ? "\u5075\u5BDF\u6E08\u307F" : "\u5185\u60C5\u4E0D\u660E"), !mine && relOf2(g, g.player, c.faction).state !== "\u4E2D\u7ACB" && /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: "#4A6E8A" } }, relOf2(g, g.player, c.faction).state, relOf2(g, g.player, c.faction).until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, relOf2(g, g.player, c.faction).until.y, relOf2(g, g.player, c.faction).until.m)}\u304B\u6708\uFF09` : ""), /* @__PURE__ */ React5.createElement("span", { style: { flex: 1 } }), mine && /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11, color: U.dim } }, done ? "\u672C\u6708\u306E\u52D9\u3081\u306F\u6E08\u3093\u3060" : `\u50CD\u3051\u308B\u8005 ${freeGens.length}\u540D`)),
     /* @__PURE__ */ React5.createElement("div", { className: "split", style: land ? { flexDirection: "column", gap: 10 } : void 0 }, /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("div", { className: "tbl" }, /* @__PURE__ */ React5.createElement("span", { className: "k" }, c.\u57CE\u4EE3 ? "\u57CE\u4EE3" : "\u57CE\u4E3B"), /* @__PURE__ */ React5.createElement("span", { className: "v mn" }, open ? lord ? lord.name : "\u2015" : "\uFF1F", open && lord && /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, lord.lord ? needsGuardian(lord) ? `\uFF08\u5F53\u4E3B\u30FB${lord.age}\u6B73\uFF09` : "\uFF08\u5F53\u4E3B\uFF09" : isGuardian(g, lord) ? "\uFF08\u5F8C\u898B\uFF09" : `\uFF08${rankName(lord, g)}\u30FB\u7984\u9AD8${fmt(stipendOf(g, lord))}\u77F3\uFF09`)), open && (() => {
       const \u59EB = \u57CE\u306E\u59EB(g, c.id).filter((h) => h.faction === c.faction);
       if (!\u59EB.length) return null;
@@ -28951,7 +28951,36 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
           },
           x.name,
           /* @__PURE__ */ React5.createElement("span", { style: { color: U.dim, fontSize: 10, marginLeft: 4 } }, rankName(x, g), "\u3092\u5BC4\u9A0E\u306B")
-        ))), !\u5F93.length && !\u53D6\u308C\u308B.length && /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u8005\u304C\u3044\u307E\u305B\u3093\uFF08", c.kuni, "\u306E\u57CE\u4E3B\u304C\u8981\u308A\u307E\u3059\uFF09\u3002"));
+        ))), (() => {
+          const \u56FD\u306E\u57CE = g.castles.filter((x) => x.kuni === c.kuni && x.faction === g.player);
+          const \u8A33 = [];
+          for (const x of \u56FD\u306E\u57CE) {
+            const \u4E3B2 = castellanOf(g, x);
+            if (\u4E3B2 && \u4E3B2.id === \u4E3B.id) continue;
+            if (\u4E3B2 && \u5F93.some((q) => q.id === \u4E3B2.id)) continue;
+            if (\u4E3B2 && \u53D6\u308C\u308B.some((q) => q.id === \u4E3B2.id)) continue;
+            if (!\u4E3B2) {
+              \u8A33.push(`${x.name}\u3000\u5C06\u304C\u3044\u306A\u3044\uFF08\u57CE\u4E3B\u3092\u7F6E\u3051\u3070\u53D6\u308C\u308B\uFF09`);
+              continue;
+            }
+            if (\u4E3B2.\u5BC4\u89AA) {
+              const \u5148 = g.generals.find((q) => q.id === \u4E3B2.\u5BC4\u89AA);
+              \u8A33.push(`${x.name}\u3000${\u4E3B2.name}\u306F\u3059\u3067\u306B${\u5148 ? \u5148.name : "\u4ED6\u306E\u8005"}\u306E\u5BC4\u9A0E`);
+              continue;
+            }
+            const \u53EF = \u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u304B(g, \u4E3B, \u4E3B2);
+            if (!\u53EF.ok) \u8A33.push(`${x.name}\u3000${\u53EF.why}`);
+          }
+          if (!\u8A33.length) return null;
+          return /* @__PURE__ */ React5.createElement("div", { style: {
+            fontSize: 11,
+            color: U.dim,
+            lineHeight: 1.8,
+            marginTop: 6,
+            borderTop: `1px solid ${U.line2}`,
+            paddingTop: 6
+          } }, /* @__PURE__ */ React5.createElement("b", null, "\u5BC4\u9A0E\u306B\u53D6\u308C\u306C\u57CE"), /* @__PURE__ */ React5.createElement("br", null), \u8A33.map((t, i) => /* @__PURE__ */ React5.createElement("span", { key: i }, "\u30FB", t, /* @__PURE__ */ React5.createElement("br", null))));
+        })(), !\u5F93.length && !\u53D6\u308C\u308B.length && /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u8005\u304C\u3044\u307E\u305B\u3093\uFF08", c.kuni, "\u306E\u57CE\u4E3B\u304C\u8981\u308A\u307E\u3059\uFF09\u3002"));
       })());
     })(), mine && c.id === (g.factions[g.player] || {}).\u672C\u62E0 && (() => {
       const \u67A0 = \u65D7\u982D\u306E\u67A0(g, g.player);
