@@ -24,6 +24,7 @@ import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
 import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 奪われた本領を繕う, 旗の下を検め直す, 軍の道 } from "../core/state.js";
 import { 攻めの腰, 要る兵力, 出せる軍の数, 好機か, 気風, 治めの腰 } from "../core/kiryou.js";
+import { 惣無事令を発する, 応諾を決める, 問われる家, 朝敵か, 朝敵を検め直す, 問い直しの間 } from "../core/sobuji.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 import { 城の寄親, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高 } from "../core/inin.js";
 import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
@@ -1082,6 +1083,49 @@ export function advanceMonth(prev, g) {
           if (risk) { risk.def = Math.min(100, risk.def + 2); risk.hp += 150; fa.gold -= 240; }
         }
       }
+      /* 惣無事令（GDD 12.5）。
+
+         天下人（関白・征夷大将軍）は諸大名に私戦の停止を命じられる。従えば
+         臣従し、拒めば朝敵となる。秀吉の九州も小田原も、この筋で起きた戦である。
+
+         采配の天下人は、位に叙せられた翌月に発する。一度きりではない――版図が
+         広がればまた発せるが、拒んだ家へ立て続けに問うのは無体なので、年を措く。 */
+      朝敵を検め直す(s);
+      for (const fid2 of Object.keys(s.factions)) {
+        if (!s.castles.some((c) => c.faction === fid2)) continue;
+        const 位 = courtRank(s, fid2);
+        if (!位 || !位.号令) continue;
+        if (fid2 === s.player && !s.autoPlay) continue;   // 遊ぶ側は自ら発する（画面から）
+        const 前 = (s.惣無事令の控え || {})[fid2];
+        if (前 && (s.year - 前.y) * 12 + (s.month - 前.m) < 問い直しの間) continue;
+        const 令 = 惣無事令を発する(s, fid2);
+        s.惣無事令の控え = { ...(s.惣無事令の控え || {}), [fid2]: { y: s.year, m: s.month } };
+        const 文 = `${s.factions[fid2].name}が惣無事令を発した。私戦を停め、旗の下に入るよう諸大名に命じる。`;
+        s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+        if (fid2 !== s.player) events.push(文);
+        /* 応諾を捌く。遊ぶ側は自ら答えるので、ここでは決めずに問いを立てる。 */
+        const 石2 = {};
+        for (const c of s.castles) 石2[c.faction] = (石2[c.faction] || 0) + c.koku;
+        let 従 = 0, 拒 = 0;
+        for (const 相 of 令.列) {
+          if (相 === s.player && !s.autoPlay) { s.惣無事令の問い = { 主: fid2, y: s.year, m: s.month }; continue; }
+          const 隔 = (() => {
+            const a = s.castles.filter((c) => c.faction === fid2), b = s.castles.filter((c) => c.faction === 相);
+            if (!a.length || !b.length) return null;
+            let d = Infinity;
+            for (const x of a) for (const y of b) d = Math.min(d, Math.hypot(x.x - y.x, x.y - y.y));
+            return d;
+          })();
+          const r = 応諾を決める(s, fid2, 相, { 石: 石2, 隔たり: 隔 });
+          if (r.従う) 従++; else 拒++;
+        }
+        const 報 = `${従}家が旗の下に入り、${拒}家が拒んで朝敵となった。`;
+        s.chronicle.push({ y: s.year, m: s.month, text: 報 });
+        if (fid2 !== s.player) events.push(報);
+        break;                                            // 一月に一つ
+      }
+      朝敵を検め直す(s);
+
       /* 上洛の志（GDD 12.5）。
 
          版図の二つの関門（直轄が全国の一割二分・旗の下が全城の三割）を満たした
@@ -1175,6 +1219,8 @@ export function advanceMonth(prev, g) {
             let w = rest === 0 ? 60 : rest === 1 ? 24 : rest === 2 ? 8 : 0;
             // 上洛の志ある家は、五畿を何を措いても取りにいく
             if (上洛の志.has(fid) && GOKINAI.includes(t2.kuni)) w += 90;
+            /* 朝敵は討たれるべき者である。天下人の号によるのだから、討てば名も立つ。 */
+            if (朝敵か(s, t2.faction)) w += 30;
             if (GOKINAI.includes(t2.kuni)) {
               // 五畿は特別である。四国まで押さえていれば、残る一国は何を措いても取る。
               const got = GOKINAI.filter((k) => holdsProvince(s, fid, k)).length;

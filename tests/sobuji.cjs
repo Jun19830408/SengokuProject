@@ -13,7 +13,7 @@ const path = require('path');
 const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 const { initState, courtRank, 号令できるか, 国を旗の下に, 旗の下の城数,
   天下人の直轄, 天下人の版図, 惣無事令を発する, 応諾を決める, 応じる目,
-  問われる家, 朝敵か, 朝敵を検め直す } = H;
+  問われる家, 朝敵か, 朝敵を検め直す, advanceMonth, atPeace } = H;
 
 const 咎 = [];
 const 確 = (名, 可, 添 = '') => {
@@ -207,6 +207,58 @@ console.log('\n── 九　朝敵の帳を繕う');
   for (const c of s2.castles.filter((c) => c.faction === 相2)) c.faction = 'oda';   // 滅ぼした
   朝敵を検め直す(s2);
   確('滅べば朝敵の帳から落ちる', !朝敵か(s2, 相2));
+}
+
+console.log('');
+console.log('── 十　朝敵は約束の外に置かれる');
+{
+  /* 惣無事令を拒んだ家を討つのは天下人の命によるもので、私戦ではない。ゆえに
+     たとえ不可侵や同盟を結んでいても、朝敵へは咎めなく兵を出せる。秀吉の
+     小田原はこの形であった――北条と誼を通じていた諸家もこぞって寄せ手に加わった。 */
+  const s = 天下人にする(false);
+  const 相 = 問われる家(s, 'oda')[0];
+  s.relations[['oda', 相].sort().join('|')] = { state: '同盟', trust: 90, master: null };
+  確('同盟のあいだは約束の内にある', atPeace(s, 'oda', 相) === true);
+  s.朝敵 = { [相]: { 主: 'oda', y: s.year, m: s.month, 理由: '惣無事令を拒んだ' } };
+  確('朝敵になれば、同盟のままでも約束の外に出る', atPeace(s, 'oda', 相) === false,
+    '咎めなく兵を出せる');
+  /* 他家から見ても同じである。天下人の号は天下に及ぶ。 */
+  const 他 = 問われる家(s, 'oda').find((f) => f !== 相);
+  if (他) {
+    s.relations[[他, 相].sort().join('|')] = { state: '不可侵', trust: 90, master: null };
+    確('他家から見ても、朝敵は約束の外', atPeace(s, 他, 相) === false);
+  }
+}
+
+console.log('\n── 十一　月送りのなかで、天下人は惣無事令を発する');
+{
+  const s = 天下人にする(false);
+  s.player = 'imagawa';                                  // 采配の天下人として振る舞わせる
+  s.autoPlay = true;
+  確('織田は号令できる位にある', 号令できるか(s, 'oda'));
+  const 前 = Object.keys(s.朝敵 || {}).length;
+  let u = s, 発 = false;
+  for (let i = 0; i < 3 && !発; i++) {
+    u = advanceMonth(u);
+    発 = !!(u.惣無事令の控え || {}).oda;
+  }
+  確('数月のうちに惣無事令が発せられる', 発,
+    発 ? `${(u.惣無事令の控え || {}).oda.y}年${(u.惣無事令の控え || {}).oda.m}月` : '三月のあいだ発せられなかった');
+  const 旗 = Object.keys(u.factions).filter((f) => {
+    const r = u.relations[['oda', f].sort().join('|')];
+    return f !== 'oda' && r && r.state === '臣従' && r.master === 'oda';
+  }).length;
+  const 敵 = Object.keys(u.朝敵 || {}).length;
+  確('従う家と拒む家が分かれる', 旗 > 0 && 敵 > 前,
+    `旗の下 ${旗}家／朝敵 ${敵}家`);
+  確('戦国記に残る', (u.chronicle || []).some((c) => /惣無事令/.test(c.text)));
+  /* 立て続けには問わない。拒んだ家へ毎月問うのは無体である。 */
+  const 控 = { ...(u.惣無事令の控え || {}).oda };
+  let v = u;
+  for (let i = 0; i < 6; i++) v = advanceMonth(v);
+  const 控2 = (v.惣無事令の控え || {}).oda;
+  確('立て続けには発しない（年を措く）', 控2.y === 控.y && 控2.m === 控.m,
+    `${控.y}年${控.m}月　→　${控2.y}年${控2.m}月`);
 }
 
 console.log('');

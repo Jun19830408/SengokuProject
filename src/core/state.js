@@ -591,7 +591,20 @@ export function forecast(s, fid) {
 
 export const relOf = (g, a, b) => g.relations[relKey(a, b)] || { trust: 45, state: "中立", until: null };
 
-export const atPeace = (g, a, b) => { const r = relOf(g, a, b); return r.state === "不可侵" || r.state === "同盟" || r.state === "臣従" || r.state === "従属"; };
+/* 約束を交わした間柄か（GDD 11.1）。
+
+   朝敵はここから外す。惣無事令を拒んだ家を討つのは天下人の命によるもので、
+   私戦ではない。ゆえに、たとえ不可侵や同盟を結んでいても、朝敵となった家へは
+   咎めなく兵を出せる。秀吉の小田原はこの形であった――北条と誼を通じていた
+   諸家も、こぞって寄せ手に加わった。
+
+   朝敵の帳（s.朝敵）を見るのはここ一箇所である。攻められるか、采配が狙うか、
+   約束を破る咎めがあるか――そのすべてがこの関を通る。 */
+export const atPeace = (g, a, b) => {
+  if ((g.朝敵 || {})[b]) return false;                 // 朝敵へは咎めなく兵を出せる
+  const r = relOf(g, a, b);
+  return r.state === "不可侵" || r.state === "同盟" || r.state === "臣従" || r.state === "従属";
+};
 
 /* その家はまだ在るか（GDD 12.4）。
 

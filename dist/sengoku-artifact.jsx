@@ -15382,6 +15382,7 @@ function forecast(s2, fid) {
 }
 var relOf2 = (g, a, b) => g.relations[relKey2(a, b)] || { trust: 45, state: "\u4E2D\u7ACB", until: null };
 var atPeace = (g, a, b) => {
+  if ((g.\u671D\u6575 || {})[b]) return false;
   const r = relOf2(g, a, b);
   return r.state === "\u4E0D\u53EF\u4FB5" || r.state === "\u540C\u76DF" || r.state === "\u81E3\u5F93" || r.state === "\u5F93\u5C5E";
 };
@@ -18879,6 +18880,102 @@ function checkUnified(s2) {
   return null;
 }
 
+// src/core/sobuji.js
+var clamp3 = (v, a, b) => Math.max(a, Math.min(b, v));
+var \u554F\u3044\u76F4\u3057\u306E\u9593 = 60;
+function \u554F\u308F\u308C\u308B\u5BB6(s2, \u4E3B) {
+  return Object.keys(s2.factions || {}).filter((f) => {
+    if (f === \u4E3B) return false;
+    if (!s2.castles.some((c) => c.faction === f)) return false;
+    const r = (s2.relations || {})[[\u4E3B, f].sort().join("|")];
+    if (r && r.state === "\u81E3\u5F93" && r.master === \u4E3B) return false;
+    return true;
+  });
+}
+function \u5FDC\u3058\u308B\u76EE(s2, \u4E3B, \u76F8, { \u77F3, \u9694\u305F\u308A } = {}) {
+  const \u77F3\u9AD8 = \u77F3 || {};
+  const \u6211 = \u77F3\u9AD8[\u4E3B] || 1, \u5F7C = \u77F3\u9AD8[\u76F8] || 1;
+  const \u6BD4 = \u6211 / Math.max(1, \u5F7C);
+  const r = (s2.relations || {})[[\u4E3B, \u76F8].sort().join("|")] || { state: "\u4E2D\u7ACB", trust: 45 };
+  let \u76EE = clamp3(Math.log(Math.max(1, \u6BD4)) / Math.log(8) * 0.62, 0, 0.62);
+  \u76EE += ((r.trust == null ? 45 : r.trust) - 50) / 100 * 0.28;
+  if (r.state === "\u5F93\u5C5E") \u76EE += 0.22;
+  else if (r.state === "\u540C\u76DF") \u76EE += 0.08;
+  else if (r.state === "\u6575\u5BFE") \u76EE -= 0.18;
+  const \u4E3B\u5C06 = (s2.generals || []).find((g) => g.faction === \u76F8 && g.lord && !g.captive);
+  if (\u4E3B\u5C06) {
+    const \u6D78 = clamp3(0.35 + ((\u4E3B\u5C06.lead || 55) - 50) / 200, 0.25, 0.95);
+    const \u6B66 = clamp3(((\u4E3B\u5C06.valor == null ? 55 : \u4E3B\u5C06.valor) - 60) / 35, -1, 1);
+    const \u77E5 = clamp3(((\u4E3B\u5C06.wit == null ? 55 : \u4E3B\u5C06.wit) - 60) / 35, -1, 1);
+    \u76EE += (-\u6B66 * 0.2 + \u77E5 * 0.12) * \u6D78;
+  }
+  if (\u9694\u305F\u308A != null) \u76EE -= clamp3((\u9694\u305F\u308A - 200) / 1200, 0, 0.22);
+  return clamp3(\u76EE, 0.02, 0.95);
+}
+function \u60E3\u7121\u4E8B\u4EE4\u3092\u767A\u3059\u308B(s2, \u4E3B) {
+  const \u5217 = \u554F\u308F\u308C\u308B\u5BB6(s2, \u4E3B);
+  s2.\u60E3\u7121\u4E8B\u4EE4 = { \u4E3B, y: s2.year, m: s2.month, \u5217, \u6E08: [] };
+  return s2.\u60E3\u7121\u4E8B\u4EE4;
+}
+function \u5FDC\u8AFE\u3092\u6C7A\u3081\u308B(s2, \u4E3B, \u76F8, { \u77F3, \u9694\u305F\u308A, \u7C64: \u7C642 } = {}) {
+  const \u5F15\u304F = typeof \u7C642 === "function" ? \u7C642 : Math.random;
+  const \u76EE = \u5FDC\u3058\u308B\u76EE(s2, \u4E3B, \u76F8, { \u77F3, \u9694\u305F\u308A });
+  const \u5F93\u3046 = \u5F15\u304F() < \u76EE;
+  const key = [\u4E3B, \u76F8].sort().join("|");
+  const r = (s2.relations || {})[key] || { trust: 45 };
+  if (\u5F93\u3046) {
+    s2.relations[key] = {
+      ...r,
+      state: "\u81E3\u5F93",
+      master: \u4E3B,
+      until: null,
+      trust: clamp3((r.trust == null ? 45 : r.trust) + 10, 0, 100)
+    };
+    for (const k of Object.keys(s2.relations)) {
+      const q = s2.relations[k];
+      if (!q || q.state !== "\u81E3\u5F93" && q.state !== "\u5F93\u5C5E") continue;
+      if (q.master !== \u76F8) continue;
+      const [a, b] = k.split("|");
+      if (a !== \u76F8 && b !== \u76F8) continue;
+      q.state = "\u4E2D\u7ACB";
+      q.master = null;
+      q.until = null;
+    }
+  } else {
+    s2.relations[key] = {
+      ...r,
+      state: "\u6575\u5BFE",
+      master: null,
+      until: null,
+      trust: Math.min(r.trust == null ? 45 : r.trust, 20)
+    };
+    s2.\u671D\u6575 = { ...s2.\u671D\u6575 || {}, [\u76F8]: { \u4E3B, y: s2.year, m: s2.month, \u7406\u7531: "\u60E3\u7121\u4E8B\u4EE4\u3092\u62D2\u3093\u3060" } };
+  }
+  return { \u76F8, \u5F93\u3046, \u76EE };
+}
+var \u671D\u6575\u304B = (s2, fid) => !!(s2.\u671D\u6575 || {})[fid];
+function \u671D\u6575\u3092\u89E3\u304F(s2, fid) {
+  if (!(s2.\u671D\u6575 || {})[fid]) return false;
+  const \u6B21 = { ...s2.\u671D\u6575 };
+  delete \u6B21[fid];
+  s2.\u671D\u6575 = \u6B21;
+  return true;
+}
+function \u671D\u6575\u3092\u691C\u3081\u76F4\u3059(s2) {
+  const \u843D = [];
+  for (const fid of Object.keys(s2.\u671D\u6575 || {})) {
+    const \u751F = s2.castles.some((c) => c.faction === fid);
+    const \u4E3B = s2.\u671D\u6575[fid].\u4E3B;
+    const r = (s2.relations || {})[[\u4E3B, fid].sort().join("|")];
+    const \u5C48 = r && (r.state === "\u81E3\u5F93" || r.state === "\u5F93\u5C5E") && r.master === \u4E3B;
+    if (!\u751F || \u5C48) {
+      \u671D\u6575\u3092\u89E3\u304F(s2, fid);
+      \u843D.push({ fid, \u6EC5\u3073: !\u751F, \u5C48 });
+    }
+  }
+  return \u843D;
+}
+
 // src/core/yurushi.js
 function \u81E3\u5F93\u306E\u4E3B(g, fid) {
   for (const other of Object.keys(g.factions || {})) {
@@ -20088,6 +20185,44 @@ function advanceMonth(prev, g) {
       }
     }
   }
+  \u671D\u6575\u3092\u691C\u3081\u76F4\u3059(s2);
+  for (const fid2 of Object.keys(s2.factions)) {
+    if (!s2.castles.some((c) => c.faction === fid2)) continue;
+    const \u4F4D = courtRank(s2, fid2);
+    if (!\u4F4D || !\u4F4D.\u53F7\u4EE4) continue;
+    if (fid2 === s2.player && !s2.autoPlay) continue;
+    const \u524D = (s2.\u60E3\u7121\u4E8B\u4EE4\u306E\u63A7\u3048 || {})[fid2];
+    if (\u524D && (s2.year - \u524D.y) * 12 + (s2.month - \u524D.m) < \u554F\u3044\u76F4\u3057\u306E\u9593) continue;
+    const \u4EE4 = \u60E3\u7121\u4E8B\u4EE4\u3092\u767A\u3059\u308B(s2, fid2);
+    s2.\u60E3\u7121\u4E8B\u4EE4\u306E\u63A7\u3048 = { ...s2.\u60E3\u7121\u4E8B\u4EE4\u306E\u63A7\u3048 || {}, [fid2]: { y: s2.year, m: s2.month } };
+    const \u6587 = `${s2.factions[fid2].name}\u304C\u60E3\u7121\u4E8B\u4EE4\u3092\u767A\u3057\u305F\u3002\u79C1\u6226\u3092\u505C\u3081\u3001\u65D7\u306E\u4E0B\u306B\u5165\u308B\u3088\u3046\u8AF8\u5927\u540D\u306B\u547D\u3058\u308B\u3002`;
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+    if (fid2 !== s2.player) events.push(\u6587);
+    const \u77F32 = {};
+    for (const c of s2.castles) \u77F32[c.faction] = (\u77F32[c.faction] || 0) + c.koku;
+    let \u5F93 = 0, \u62D2 = 0;
+    for (const \u76F8 of \u4EE4.\u5217) {
+      if (\u76F8 === s2.player && !s2.autoPlay) {
+        s2.\u60E3\u7121\u4E8B\u4EE4\u306E\u554F\u3044 = { \u4E3B: fid2, y: s2.year, m: s2.month };
+        continue;
+      }
+      const \u9694 = (() => {
+        const a = s2.castles.filter((c) => c.faction === fid2), b = s2.castles.filter((c) => c.faction === \u76F8);
+        if (!a.length || !b.length) return null;
+        let d = Infinity;
+        for (const x of a) for (const y of b) d = Math.min(d, Math.hypot(x.x - y.x, x.y - y.y));
+        return d;
+      })();
+      const r = \u5FDC\u8AFE\u3092\u6C7A\u3081\u308B(s2, fid2, \u76F8, { \u77F3: \u77F32, \u9694\u305F\u308A: \u9694 });
+      if (r.\u5F93\u3046) \u5F93++;
+      else \u62D2++;
+    }
+    const \u5831 = `${\u5F93}\u5BB6\u304C\u65D7\u306E\u4E0B\u306B\u5165\u308A\u3001${\u62D2}\u5BB6\u304C\u62D2\u3093\u3067\u671D\u6575\u3068\u306A\u3063\u305F\u3002`;
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: \u5831 });
+    if (fid2 !== s2.player) events.push(\u5831);
+    break;
+  }
+  \u671D\u6575\u3092\u691C\u3081\u76F4\u3059(s2);
   const \u5168\u56FD\u77F3\u9AD8 = s2.castles.reduce((a, c) => a + c.koku, 0);
   const \u5FD7\u306E\u76F4\u8F44 = \u5929\u4E0B\u4EBA\u306E\u76F4\u8F44 * 0.65;
   const \u5FD7\u306E\u7248\u56F3 = \u5929\u4E0B\u4EBA\u306E\u7248\u56F3 * 0.6;
@@ -20141,6 +20276,7 @@ function advanceMonth(prev, g) {
         const rest = cs2.filter((x) => x.faction !== fid && x.id !== t2.id).length;
         let w = rest === 0 ? 60 : rest === 1 ? 24 : rest === 2 ? 8 : 0;
         if (\u4E0A\u6D1B\u306E\u5FD7.has(fid) && GOKINAI.includes(t2.kuni)) w += 90;
+        if (\u671D\u6575\u304B(s2, t2.faction)) w += 30;
         if (GOKINAI.includes(t2.kuni)) {
           const got = GOKINAI.filter((k) => holdsProvince(s2, fid, k)).length;
           w += rest === 0 ? 40 + got * 22 : 10 + got * 6;
