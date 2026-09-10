@@ -1214,7 +1214,20 @@ export function advanceMonth(prev, g) {
             && (a2.at === c.id || !a2.path || a2.path.length <= 1))) continue;
           const gens = s.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive);
           const avail = c.local + gens.reduce((a, x) => a + x.retinue, 0) - minGarrison(c);
-          if (avail < 700) continue;
+          /* 出陣に要る余り兵は七百。ただし天下を目指す段にある家が、五畿の内に
+             飛び地を持っているときは四百でよい。
+
+             京を得た黒田が、そこから残る五畿へ一歩も出られずに二十年止まって
+             いた。二条御所は兵千四百・守りに六百三十を要る城で、余りは八百――
+             月々の出入りで七百を割ると、もう出られない。近くに敵城が並んで
+             いるのに、遠い本国からは十四歩あって届かない。
+
+             天下人を目指す者が都に足がかりを得たのなら、そこから小さく出るのは
+             理に適う。信長の上洛も、はじめは寡兵であった。 */
+          const 天下の段にある = 天下の道.has(fid)
+            && [天下の段.上洛, 天下の段.五畿, 天下の段.天下].includes((天下の道.get(fid) || {}).段);
+          const 要る余り = (天下の段にある && GOKINAI.includes(c.kuni)) ? 400 : 700;
+          if (avail < 要る余り) continue;
           const passable2 = (t2) => {
             /* 他家の領を素通りしてはならない（GDD 7.1）。遊ぶ側の画面には
                この掟が入っていたが、他家の采配には入っていなかった。
@@ -1222,7 +1235,19 @@ export function advanceMonth(prev, g) {
                ということが起きていた。 */
             const path = 軍の道(s, fid, c.id, t2.id);
             if (!path) return false;
-            if ((marchMonths(c.id, t2.id, fid) || 99) > 6) return false;
+            /* 遠征の限り（GDD 7.1）。常は六月まで。
+
+               ただし天下を目指す段（京を目指す・五畿を制する・天下へ）にある家は、
+               十月まで厭わない。天下人の戦は長い――秀吉の九州征伐も小田原も、
+               年をまたいで兵を動かしている。
+
+               これを見ずに一律六月としていたので、京を得た黒田が、残る五畿へ
+               十三歩・十四歩の隔たりに阻まれて手が出せず、五畿の段のまま二十年
+               動かなかった。段はそこまで進んでいるのに、足だけが届かない。 */
+            const 遠征の限り = 天下の道.has(fid)
+              && [天下の段.上洛, 天下の段.五畿, 天下の段.天下].includes((天下の道.get(fid) || {}).段)
+              ? 10 : 6;
+            if ((marchMonths(c.id, t2.id, fid) || 99) > 遠征の限り) return false;
             for (let i = 1; i < path.length - 1; i++) {
               const mid = s.castles.find((y) => y.id === path[i]);
               if (!mid) return false;

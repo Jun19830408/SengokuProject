@@ -20599,11 +20599,14 @@ function advanceMonth(prev, g) {
       if (s2.armies.some((a2) => a2.faction !== fid && a2.target === c.id && (a2.at === c.id || !a2.path || a2.path.length <= 1))) continue;
       const gens = s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive);
       const avail = c.local + gens.reduce((a, x) => a + x.retinue, 0) - minGarrison(c);
-      if (avail < 700) continue;
+      const \u5929\u4E0B\u306E\u6BB5\u306B\u3042\u308B = \u5929\u4E0B\u306E\u9053.has(fid) && [\u6BB5.\u4E0A\u6D1B, \u6BB5.\u4E94\u757F, \u6BB5.\u5929\u4E0B].includes((\u5929\u4E0B\u306E\u9053.get(fid) || {}).\u6BB5);
+      const \u8981\u308B\u4F59\u308A = \u5929\u4E0B\u306E\u6BB5\u306B\u3042\u308B && GOKINAI.includes(c.kuni) ? 400 : 700;
+      if (avail < \u8981\u308B\u4F59\u308A) continue;
       const passable2 = (t2) => {
         const path = \u8ECD\u306E\u9053(s2, fid, c.id, t2.id);
         if (!path) return false;
-        if ((marchMonths(c.id, t2.id, fid) || 99) > 6) return false;
+        const \u9060\u5F81\u306E\u9650\u308A = \u5929\u4E0B\u306E\u9053.has(fid) && [\u6BB5.\u4E0A\u6D1B, \u6BB5.\u4E94\u757F, \u6BB5.\u5929\u4E0B].includes((\u5929\u4E0B\u306E\u9053.get(fid) || {}).\u6BB5) ? 10 : 6;
+        if ((marchMonths(c.id, t2.id, fid) || 99) > \u9060\u5F81\u306E\u9650\u308A) return false;
         for (let i = 1; i < path.length - 1; i++) {
           const mid = s2.castles.find((y) => y.id === path[i]);
           if (!mid) return false;
