@@ -7,6 +7,9 @@ import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
 import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 方面の国, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
+import { courtRank, 旗の下か } from "../core/province.js";
+import { 問われる家, 応じる目 } from "../core/sobuji.js";
+import { 参陣の顔ぶれ, 号令の限り } from "../core/gourei.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
 import { 元服の齢, 姫の役, 姫の枠, 姫の齢, 婚姻できるか, 婚姻の要る信用, 嫁がせられるか, 婚儀の礼, 使者の礼, 使える姫 } from "../core/hime.js";
@@ -2207,3 +2210,186 @@ export function FormationPicker({ corps, onPick }) {
   );
 }
 
+
+/* ============================================================ 天下（GDD 12.5）
+
+   惣無事令と号令の画面。engine（core/sobuji.js・core/gourei.js）は既に測れる形で
+   揃っているので、ここは見せて選ばせるだけにする。 */
+
+/* 一　惣無事令を発する。天下人だけが開ける。 */
+export function 惣無事令の帳({ g, onSend, onClose }) {
+  const 位 = courtRank(g, g.player);
+  const 問 = 問われる家(g, g.player).filter((f) => g.castles.some((c) => c.faction === f));
+  const 石 = {};
+  for (const c of g.castles) 石[c.faction] = (石[c.faction] || 0) + c.koku;
+  const 見込 = 問.map((f) => ({ f, 目: 応じる目(g, g.player, f, { 石 }) }))
+    .sort((a, b) => b.目 - a.目);
+  const 応 = 見込.filter((x) => x.目 >= 0.5).length;
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card" style={{ maxWidth: 520 }}>
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>惣無事令</div>
+        <div style={{ fontSize: 12.5, lineHeight: 1.95, marginBottom: 10 }}>
+          天下の諸大名に私戦の停止を命じます。従う者は<b>臣従</b>して旗の下に入り、
+          拒む者は<b style={{ color: "#B0483C" }}>朝敵</b>となります。<br />
+          既に臣従している家は問いません。<b>敵対も中立も同盟も従属も、あらためて
+          問い直します</b>――秀吉は既にあった間柄を一度ご破算にして、
+          「秀吉に従うか否か」に組み替えました。
+        </div>
+        <div className="row"><span>いまの位</span>
+          <span className="v mn">{位 ? 位.key : "なし"}</span></div>
+        <div className="row"><span>問う家</span><span className="v num">{問.length} 家</span></div>
+        <div className="row"><span>応じそうな家</span>
+          <span className="v num">およそ {応} 家</span></div>
+        <div style={{ fontSize: 11.5, color: U.dim, margin: "8px 0", lineHeight: 1.8 }}>
+          応じるか否かは、力の差・誼・いまの間柄・当主の器量・遠さで決まります。
+          誼を積んでおけば応じやすく、遠国の家は応じにくい。
+        </div>
+        <div style={{ maxHeight: 200, overflow: "auto", borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
+          {見込.slice(0, 24).map(({ f, 目 }) => (
+            <div key={f} className="row" style={{ fontSize: 12 }}>
+              <span>{(g.factions[f] || {}).name}</span>
+              <span className="v" style={{ color: 目 >= 0.5 ? "#3E7A3A" : "#B0483C" }}>
+                {目 >= 0.75 ? "従うだろう" : 目 >= 0.5 ? "おそらく従う" : 目 >= 0.3 ? "拒みそう" : "拒むだろう"}
+              </span>
+            </div>
+          ))}
+          {見込.length > 24 && (
+            <div style={{ fontSize: 11, color: U.dim, paddingTop: 4 }}>ほか {見込.length - 24} 家</div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 9, marginTop: 14 }}>
+          <button className="btn" style={{ flex: 1 }} onClick={onClose}>今は発しない</button>
+          <button className="btn dark" style={{ flex: 2 }} disabled={!位 || !位.号令}
+            onClick={onSend}>惣無事令を発する</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* 二　惣無事令に応じるか、拒むか。遊ぶ側が問われたとき。 */
+export function 惣無事令の問い({ g, 問, onObey, onRefuse }) {
+  const 主 = g.factions[問.主];
+  if (!主) return null;
+  const 位 = courtRank(g, 問.主);
+  const 石 = (f) => g.castles.filter((c) => c.faction === f).reduce((a, c) => a + c.koku, 0);
+  const 我 = 石(g.player), 彼 = 石(問.主);
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card" style={{ maxWidth: 500 }}>
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>
+          {主.name}が惣無事令を発した
+        </div>
+        <div style={{ fontSize: 13.5, lineHeight: 1.9, marginBottom: 10 }}>
+          私戦を停め、旗の下に入るよう命じています。
+        </div>
+        <div className="row"><span>{主.name}の位</span>
+          <span className="v mn">{位 ? 位.key : "—"}</span></div>
+        <div className="row"><span>石高の差</span>
+          <span className="v num">{(彼 / Math.max(1, 我)).toFixed(1)} 倍
+            （{Math.round(彼 / 10000)}万石 対 {Math.round(我 / 10000)}万石）</span></div>
+        <div style={{ margin: "12px 0", padding: "10px 12px", background: "rgba(74,110,138,0.08)",
+          borderLeft: "3px solid #4A6E8A", fontSize: 12, lineHeight: 1.95 }}>
+          <b>従えば</b>　{主.name}に<b>臣従</b>します。他家を攻めるには主家の許しが要り、
+          号令があれば兵を出さねばなりません。そのかわり、攻められにくくなります。
+        </div>
+        <div style={{ margin: "12px 0", padding: "10px 12px", background: "rgba(176,72,60,0.08)",
+          borderLeft: "3px solid #B0483C", fontSize: 12, lineHeight: 1.95 }}>
+          <b style={{ color: "#B0483C" }}>拒めば</b>　<b>朝敵</b>となります。以後、諸家は約束を
+          破る咎めなく当家へ兵を出せます。同盟も不可侵も、当家に対しては効きません。<br />
+          ただし家中は乱れません。従わぬと決めたことは家臣とも談じたのですから、
+          むしろ結束は固まります。
+        </div>
+        <div style={{ display: "flex", gap: 9 }}>
+          <button className="btn" style={{ flex: 1, borderColor: "#B0483C", color: "#B0483C" }}
+            onClick={onRefuse}>拒む（朝敵となる）</button>
+          <button className="btn dark" style={{ flex: 1 }} onClick={onObey}>従う（臣従する）</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* 三　号令を発する。的を選び、参陣の顔ぶれを見せてから発する。 */
+export function 号令の帳({ g, onSend, onClose }) {
+  const [to, setTo] = useState(null);
+  const 顔 = useMemo(() => 参陣の顔ぶれ(g, g.player), [g]);
+  const 出る = 顔.filter((x) => x.出られる && x.兵 > 0);
+  const 出ぬ = 顔.filter((x) => !x.出られる || x.兵 <= 0);
+  const 的ら = useMemo(() => g.castles
+    .filter((c) => c.faction !== g.player && !旗の下か(g, g.player, c.faction))
+    .filter((c) => !(g.号令 || []).some((x) => x.的 === c.id))
+    .map((c) => ({ c, 近: (軍の道(g, g.player, (出る[0] || {}).発つ城 || (g.castles.find((x) => x.faction === g.player) || {}).id, c.id) || []).length }))
+    .filter((x) => x.近 > 0)
+    .sort((a, b) => a.近 - b.近)
+    .slice(0, 40), [g, 出る.length]);
+  const 先 = to && g.castles.find((c) => c.id === to);
+  const 総勢 = 出る.reduce((a, x) => a + x.兵, 0);
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card" style={{ maxWidth: 540 }}>
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>号令</div>
+        <div style={{ fontSize: 12.5, lineHeight: 1.95, marginBottom: 8 }}>
+          天下の諸大名に、一つの城へ寄せるよう命じます。方面は旗頭が、国は国主が、
+          臣従した家はその大名が、それぞれ一手を率いて参陣します。<br />
+          <b>国主のいない国は参陣しません。</b>国主を任じてはじめて、その国に差配が届きます。
+        </div>
+        <div className="row"><span>いま発している号令</span>
+          <span className="v num">{(g.号令 || []).length} 筋／{号令の限り} 筋まで</span></div>
+        <div className="row"><span>参陣できる手</span>
+          <span className="v num">{出る.length} 手・{fmt(総勢)} 人</span></div>
+
+        <div className="sec">参陣の顔ぶれ</div>
+        <div style={{ maxHeight: 170, overflow: "auto" }}>
+          {出る.map((x, i) => (
+            <div key={i} className="row" style={{ fontSize: 12 }}>
+              <span>
+                <span className="pill" style={{ background: "#6E6558", marginRight: 5 }}>{x.種別}</span>
+                {x.将名}
+                <span style={{ color: U.dim, marginLeft: 5 }}>{x.国ら.join('・')}</span>
+              </span>
+              <span className="v num">{fmt(x.兵)} 人</span>
+            </div>
+          ))}
+          {出ぬ.map((x, i) => (
+            <div key={`x${i}`} className="row" style={{ fontSize: 11.5, color: U.dim }}>
+              <span>{x.国ら.join('・')}{x.将名 ? `（${x.将名}）` : ""}</span>
+              <span className="v" style={{ color: "#B0483C" }}>{x.訳}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="sec">寄せる城</div>
+        <div style={{ maxHeight: 160, overflow: "auto" }}>
+          {的ら.map(({ c, 近 }) => (
+            <label key={c.id} style={{ display: "flex", gap: 8, alignItems: "center",
+              padding: "5px 0", fontSize: 13, borderBottom: `1px solid ${U.line2}` }}>
+              <input type="radio" checked={to === c.id} onChange={() => setTo(c.id)} />
+              <span className="mn" style={{ fontSize: 15, width: 108 }}>{c.name}</span>
+              <span className="pill" style={{ background: (g.factions[c.faction] || {}).color }}>
+                {(g.factions[c.faction] || {}).name}</span>
+              <span className="num" style={{ color: U.dim, flex: 1, textAlign: "right" }}>
+                城兵 {fmt(c.local)}
+              </span>
+            </label>
+          ))}
+          {!的ら.length && (
+            <div style={{ fontSize: 12, color: U.dim, padding: "12px 0" }}>
+              寄せられる城がありません。
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 9, marginTop: 14 }}>
+          <button className="btn" style={{ flex: 1 }} onClick={onClose}>取りやめる</button>
+          <button className="btn dark" style={{ flex: 2 }}
+            disabled={!先 || !出る.length || (g.号令 || []).length >= 号令の限り}
+            onClick={() => onSend(to, 出る)}>
+            {先 ? `${先.name}へ号令を発する（${出る.length}手・${fmt(総勢)}人）` : "寄せる城を選ぶ"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

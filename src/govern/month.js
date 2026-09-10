@@ -25,6 +25,7 @@ import { 忠誠 } from "../core/rank.js";
 import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 奪われた本領を繕う, 旗の下を検め直す, 軍の道 } from "../core/state.js";
 import { 攻めの腰, 要る兵力, 出せる軍の数, 好機か, 気風, 治めの腰 } from "../core/kiryou.js";
 import { 惣無事令を発する, 応諾を決める, 問われる家, 朝敵か, 朝敵を検め直す, 問い直しの間 } from "../core/sobuji.js";
+import { 済んだ号令を片づける } from "../core/gourei.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 import { 城の寄親, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高 } from "../core/inin.js";
 import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
@@ -1125,6 +1126,13 @@ export function advanceMonth(prev, g) {
         break;                                            // 一月に一つ
       }
       朝敵を検め直す(s);
+      /* 済んだ号令を片づける。的が落ちたか、参陣の軍が尽きれば終わりである。 */
+      for (const q of 済んだ号令を片づける(s)) {
+        if (q.主 !== s.player) continue;
+        const c = s.castles.find((x) => x.id === q.的);
+        events.push(q.落ちた ? `${c ? c.name : '的の城'}が落ち、号令は成った。`
+          : `${c ? c.name : '的の城'}への号令は、参陣の軍が尽きて解けた。`);
+      }
 
       /* 上洛の志（GDD 12.5）。
 

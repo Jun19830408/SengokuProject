@@ -121,8 +121,16 @@ export function courtRank(s, fid) {
   const n = s.castles.filter((c) => c.faction === fid).length;
   const 全国石高 = s.castles.reduce((a, c) => a + c.koku, 0);
   const 直轄 = s.castles.filter((c) => c.faction === fid).reduce((a, c) => a + c.koku, 0);
-  const 天下人 = 直轄 >= 全国石高 * 天下人の直轄
-    && 旗の下の城数(s, fid) >= s.castles.length * 天下人の版図;
+  /* 一度得た位は、少々の目減りでは落ちない（GDD 12.5）。
+
+     全国石高は竿を入れ田を拓くたびに増える。関門を割合で置いてあるので、
+     何も失っていないのに足下から関門が迫り上がってくる――実際、直轄百五十四万石
+     のまま一月を送っただけで関白が右大臣に落ちた。位を保つ関門は、得るときより
+     一割ほど低くする。上がるのは難く、落ちるのは易い、では官位の意味がない。 */
+  const 既 = (s.courtRanks || {})[fid];
+  const 保 = 既 === "関白" || 既 === "征夷大将軍" ? 0.9 : 1;
+  const 天下人 = 直轄 >= 全国石高 * 天下人の直轄 * 保
+    && 旗の下の城数(s, fid) >= s.castles.length * 天下人の版図 * 保;
   if (天下人) {
     const kanto = KANTO_KEY.every((k) => 国を旗の下に(s, fid, k));
     if (kanto) return { key: "征夷大将軍", desc: "幕府を開き、天下に号令する",

@@ -14,7 +14,7 @@ import { 取り立てる, COMING_OF_AGE, actingHead, bearChild, canRecruit, emer
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
 import { 遠征の兵糧, 運び賃を払う } from "../govern/war.js";
-import { courtRank, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
+import { courtRank, 号令できるか, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
 import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap, 寄騎に取る, 寄騎を解く } from "../core/rank.js";
 import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す, 戦の跡, 戦の跡を記す } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 軍の道 } from "../core/state.js";
@@ -34,6 +34,9 @@ import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
 import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い, 攻めの願い問い } from "./panels.jsx";
 import { SallyDialog } from "./panels.jsx";
+import { 惣無事令を発する, 応諾を決める, 朝敵を検め直す } from "../core/sobuji.js";
+import { 号令を発する } from "../core/gourei.js";
+import { 惣無事令の帳, 惣無事令の問い as 惣無事令の問い札, 号令の帳 } from "./panels.jsx";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
 import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer, DiploOffer } from "./panels.jsx";
@@ -2087,6 +2090,16 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               if (!本拠) return;
               setSel(本拠.id); focus(本拠.id); setModal("sortie");
             }}><b>⚐</b>陣触れ</div>
+            {/* 天下（GDD 12.5）。関白か征夷大将軍だけが開ける。
+                位に届かぬあいだは出さない――押せぬ釦を並べても仕方がない。 */}
+            {号令できるか(g, g.player) && (
+              <>
+                <div className="mbtn" style={{ width: 66, color: "#8A6A2A" }}
+                  onClick={() => setModal("sobuji")}><b>璽</b>惣無事令</div>
+                <div className="mbtn" style={{ width: 66, color: "#8A6A2A" }}
+                  onClick={() => setModal("gourei")}><b>⚔</b>号令</div>
+              </>
+            )}
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("factions")}><b>⚑</b>勢力情報</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("generals")}><b>☗</b>武将一覧</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("hime")}><b>◇</b>姫</div>
@@ -2476,6 +2489,95 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           );
         })()}
         {/* 臣従した家からの攻めの願い（GDD 12.2）。容認すればその家が自ら攻める。 */}
+        {/* 惣無事令を発する（GDD 12.5）。天下人の権である。 */}
+        {modal === "sobuji" && !battle && (
+          <惣無事令の帳 g={g} onClose={() => setModal(null)}
+            onSend={() => { setModal(null); setG((p) => {
+              const s2 = structuredClone(p);
+              const 令 = 惣無事令を発する(s2, s2.player);
+              s2.惣無事令の控え = { ...(s2.惣無事令の控え || {}), [s2.player]: { y: s2.year, m: s2.month } };
+              const 石 = {};
+              for (const c of s2.castles) 石[c.faction] = (石[c.faction] || 0) + c.koku;
+              let 従 = 0, 拒 = 0;
+              for (const 相 of 令.列) {
+                /* 遠さも見る。手が届くと思えぬ相手は膝を屈さない。 */
+                const a = s2.castles.filter((c) => c.faction === s2.player);
+                const b = s2.castles.filter((c) => c.faction === 相);
+                let d = null;
+                if (a.length && b.length) {
+                  d = Infinity;
+                  for (const x of a) for (const y of b) d = Math.min(d, Math.hypot(x.x - y.x, x.y - y.y));
+                }
+                const r = 応諾を決める(s2, s2.player, 相, { 石, 隔たり: d });
+                if (r.従う) 従++; else 拒++;
+              }
+              朝敵を検め直す(s2);
+              const 文 = `惣無事令を発した。${従}家が旗の下に入り、${拒}家が拒んで朝敵となった。`;
+              s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
+              s2.monthEvents = [...(s2.monthEvents || []), 文];
+              s2.msg = 文;
+              return s2;
+            }); }} />
+        )}
+
+        {/* 惣無事令に応じるか、拒むか（GDD 12.5）。 */}
+        {g.惣無事令の問い && !battle && (() => {
+          const 答 = (従う) => setG((p) => {
+            const s2 = structuredClone(p);
+            const 主 = s2.惣無事令の問い.主;
+            const k = relKey(s2.player, 主);
+            const r = s2.relations[k] || { trust: 45 };
+            if (従う) {
+              s2.relations[k] = { ...r, state: "臣従", master: 主, until: null,
+                trust: clamp((r.trust == null ? 45 : r.trust) + 10, 0, 100) };
+              /* 旗の下に入れば、自家が従えていた家は解ける（又貸しを認めない）。 */
+              for (const key of Object.keys(s2.relations)) {
+                const q = s2.relations[key];
+                if (!q || (q.state !== "臣従" && q.state !== "従属")) continue;
+                if (q.master !== s2.player) continue;
+                q.state = "中立"; q.master = null; q.until = null;
+              }
+              const 文 = `${s2.factions[主].name}の惣無事令に従い、旗の下に入った。`;
+              s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
+              s2.monthEvents = [...(s2.monthEvents || []), 文];
+            } else {
+              s2.relations[k] = { ...r, state: "敵対", master: null, until: null,
+                trust: Math.min(r.trust == null ? 45 : r.trust, 20) };
+              s2.朝敵 = { ...(s2.朝敵 || {}),
+                [s2.player]: { 主, y: s2.year, m: s2.month, 理由: "惣無事令を拒んだ" } };
+              const 文 = `${s2.factions[主].name}の惣無事令を拒んだ。当家は朝敵となった。`;
+              s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
+              s2.monthEvents = [...(s2.monthEvents || []), 文];
+            }
+            s2.惣無事令の問い = null;
+            return s2;
+          });
+          return <惣無事令の問い札 g={g} 問={g.惣無事令の問い}
+            onObey={() => 答(true)} onRefuse={() => 答(false)} />;
+        })()}
+
+        {/* 号令を発する（GDD 12.5）。 */}
+        {modal === "gourei" && !battle && (
+          <号令の帳 g={g} onClose={() => setModal(null)}
+            onSend={(to, 手ら) => { setModal(null); setG((p) => {
+              const s2 = structuredClone(p);
+              const 号 = 号令を発する(s2, s2.player, to, 手ら, {
+                軍の名: (st, 頭) => 月送り.軍の名(st, 頭),
+                道を引く: (st, fid, a, b) => 軍の道(st, fid, a, b),
+                兵糧: (人, 月) => 遠征の兵糧(人, 月),
+                運び賃を払う: (st, 人, 月) => 運び賃を払う(st, 人, 月),
+              });
+              if (!号) { s2.msg = "参陣できる手がなかった。"; return s2; }
+              const 城 = s2.castles.find((c) => c.id === to);
+              const 文 = `${城.name}へ号令を発した。${号.手.length}手・`
+                + `${fmt(号.手.reduce((a, h) => a + h.兵, 0))}人が寄せる。`;
+              s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
+              s2.monthEvents = [...(s2.monthEvents || []), 文];
+              s2.msg = 文;
+              return s2;
+            }); }} />
+        )}
+
         {g.攻めの願い && !battle && (
           <攻めの願い問い g={g} 願={g.攻めの願い}
             onTake={() => setG((prev) => {
