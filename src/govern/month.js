@@ -26,6 +26,7 @@ import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 奪われた
 import { 攻めの腰, 要る兵力, 出せる軍の数, 好機か, 気風, 治めの腰 } from "../core/kiryou.js";
 import { 惣無事令を発する, 応諾を決める, 問われる家, 朝敵か, 朝敵を検め直す, 問い直しの間 } from "../core/sobuji.js";
 import { 済んだ号令を片づける } from "../core/gourei.js";
+import { いまの段, 段の上乗せ, 段 as 天下の段, 京の城 } from "../core/tenkabito.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 import { 城の寄親, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高 } from "../core/inin.js";
 import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
@@ -1153,16 +1154,31 @@ export function advanceMonth(prev, g) {
 
          志は、資格より先に立つものである。信長が上洛したのは尾張と美濃を
          押さえた時分で、天下人の身代にはほど遠かった。 */
-      const 志の直轄 = 天下人の直轄 * 0.65;                   // 全国の約八分
-      const 志の版図 = 天下人の版図 * 0.6;                    // 全城の約一割八分
-      const 上洛の志 = new Set();
+      /* 天下への道筋（GDD 13.2）。家の大きさによって、目指すものが違う。
+
+         弱い家は存続を目指す。強い家は天下を目指すが、一足飛びには行かない。
+         足場を固め、周りを鎮め、京を目指し、五畿を制し、天下へ――と段を踏む。
+         関東・奥羽の家は、まず関東を固めてから西へ向かう（頼朝も家康も、
+         関東を押さえてから天下を論じた）。
+
+         もとは「上洛の志」の一枚きりで、志が立てば直ちに五畿へ向かった。
+         背に敵を置いたまま京へ走るので、足場が固まらぬうちに遠征して痩せた。 */
+      const 旗の下判じ = (st, a, b) => underMyBanner(st, a, b);
+      /* 京までの歩数。盤の街道は動かないので、月に一度だけ数えて控える。
+         上洛の段では、京へ近い城ほど重く見る（道々を切り従えながら進む）。 */
+      const 京歩の控え = new Map();
+      const 京までの歩 = (id) => {
+        if (京歩の控え.has(id)) return 京歩の控え.get(id);
+        const p2 = findPath(id, 京の城);
+        const v = p2 ? p2.length - 1 : null;
+        京歩の控え.set(id, v);
+        return v;
+      };
+      const 天下の道 = new Map();
       for (const fid2 of Object.keys(s.factions)) {
         if (!s.castles.some((c) => c.faction === fid2)) continue;
-        if (courtRank(s, fid2)) continue;                     // すでに五畿を制している
-        const 直 = s.castles.filter((c) => c.faction === fid2).reduce((a, c) => a + c.koku, 0);
-        if (直 < 全国石高 * 志の直轄) continue;
-        if (旗の下の城数(s, fid2) < s.castles.length * 志の版図) continue;
-        上洛の志.add(fid2);
+        const 状 = いまの段(s, fid2, { 旗の下か: 旗の下判じ });
+        if (状 && !状.志なし) 天下の道.set(fid2, 状);
       }
 
       /* 家ごとの城の数を一度だけ数える。的を選ぶたびに数え直しては重い。 */
@@ -1225,8 +1241,8 @@ export function advanceMonth(prev, g) {
             if (!cs2.length) return 0;
             const rest = cs2.filter((x) => x.faction !== fid && x.id !== t2.id).length;
             let w = rest === 0 ? 60 : rest === 1 ? 24 : rest === 2 ? 8 : 0;
-            // 上洛の志ある家は、五畿を何を措いても取りにいく
-            if (上洛の志.has(fid) && GOKINAI.includes(t2.kuni)) w += 90;
+            // 段に応じた上乗せ（足場・関東・上洛・五畿・天下）
+            w += 段の上乗せ(天下の道.get(fid), t2, { 旗の下か: 旗の下判じ, 京までの歩 });
             /* 朝敵は討たれるべき者である。天下人の号によるのだから、討てば名も立つ。 */
             if (朝敵か(s, t2.faction)) w += 30;
             if (GOKINAI.includes(t2.kuni)) {
@@ -1247,8 +1263,9 @@ export function advanceMonth(prev, g) {
           const 当たり = (x) => (x.faction === s.player ? (lv(s).aiVsPlayer - 1) * 20 : 0);
           const scored2 = reach.map((x) => ({
             x, s2: worth(x)
+              /* 段の狙いに沿う城は、遠くとも厭わない。上洛とはそういうものである。 */
               - (軍の道(s, fid, c.id, x.id) || []).length
-                * (上洛の志.has(fid) && GOKINAI.includes(x.kuni) ? 0.4 : 1.2)
+                * (段の上乗せ(天下の道.get(fid), x, { 旗の下か: 旗の下判じ, 京までの歩 }) > 0 ? 0.4 : 1.2)
               + (aim && aim.target === x.id ? 14 : 0) + 弱み(x) + 当たり(x),
           })).sort((a, b) => b.s2 - a.s2);
           /* 采配の切れ味（GDD 13.2）。易しければ二番手三番手の城へ向かい、

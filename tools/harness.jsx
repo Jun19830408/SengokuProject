@@ -41,6 +41,7 @@ export { succeed, is架空, bearChild, pickHeir } from "../src/core/house.js";
 export { REGIONS, GOKINAI } from "../src/data/provinces.js";
 export { 従える比, 臣従させる比, 天下人の目安, 威信の効き } from "../src/data/diplo.js";
 export { courtRank, 号令できるか, 旗の下か, 国を旗の下に, 旗の下の城数, 天下人の直轄, 天下人の版図 } from "../src/core/province.js";
+export { いまの段, 段の上乗せ, 段, 家の地方, 地方の握り, 地方が隣り合うか, 京の城, 志の直轄, 志の版図, 足場の握り } from "../src/core/tenkabito.js";
 export { 参陣の顔ぶれ, 号令を発せるか, 号令を発する, 済んだ号令を片づける, 出せる兵, 出せる地の兵, 旗の下の家ら, 号令の限り } from "../src/core/gourei.js";
 export { 惣無事令を発する, 応諾を決める, 応じる目, 問われる家, 朝敵か, 朝敵を解く, 朝敵を検め直す, 問い直しの間 } from "../src/core/sobuji.js";
 export { 気風, 浸透, 家の当主, 攻めの腰, 要る兵力, 出せる軍の数, 調略の腰, 治めの腰, 好機か } from "../src/core/kiryou.js";

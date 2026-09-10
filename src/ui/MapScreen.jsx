@@ -603,8 +603,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const sg2 = g.sieges.find((x) => x.castleId === a.relief);
       const bes = sg2 && g.armies.find((x) => x.id === sg2.armyId);
       if (bes) {
-        if (a.faction === g.player && underMyBanner(g, g.player, dest.faction)) {
-          // 城方にも討って出る機会を与える。内と外から挟み撃ちにする。
+        /* 城方に討って出る機会を与えるのは、旗の下に限らない。従属や同盟の城を
+           救いに行ったときも、内と外から挟み撃ちにするのが後詰の形である。 */
+        if (a.faction === g.player
+          && (underMyBanner(g, g.player, dest.faction) || 援けに着く(g, a, dest))) {
           setSally({ armyId: a.id, castleId: dest.id, foeId: bes.id });
         } else if (bes.faction === g.player || a.faction === g.player) {
           startBattle(a, { ...dest, name: `${dest.name}の囲み` }, null, undefined, bes);
@@ -1527,7 +1529,30 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         }
       }
 
-      if (atkWon && army) {
+      /* 救いに来た城は、勝っても落とさない（GDD 9.2）。
+
+         囲みを解く後詰の戦は、城ではなく囲んでいる軍と当たるものである。
+         ところが盤の上では、その戦も「城を的とする合戦」の形で立てていた
+         （startBattle に城を渡し、名だけ「◯◯の囲み」と改めていた）。勝った
+         あとの始末が城を的と見なすので、救ったはずの城をそのまま落としていた。
+
+         実際、織田が従属の水野から援軍を求められて出し、囲みを打ち払って
+         勝ったのに、そのまま水野の城を攻め落とす形になった。援軍が城を奪うなら、
+         誰も援軍を頼めない。
+
+         味方の城（自家・臣従・従属・同盟――約束のある間柄すべて）であれば、
+         勝っても囲みを解くだけにする。 */
+      const 救いの戦 = !!army && !!castle && castle.faction !== army.faction
+        && (援けに着く(s, army, castle) || underMyBanner(s, army.faction, castle.faction));
+      if (atkWon && army && 救いの戦) {
+        /* 囲みは解けた。城はそのまま城主のもとに残り、軍は城下に在陣する。 */
+        s.sieges = (s.sieges || []).filter((x) => x.castleId !== castle.id);
+        army.sieging = false;
+        合戦裁定.在陣させる(s, army, castle);
+        s.chronicle.push({ y: s.year, m: s.month,
+          text: `${castle.name}の囲みを打ち払った。城は${s.factions[castle.faction].name}のもとに残り、`
+            + `${s.factions[army.faction].name}の軍は城下に陣を張った。` });
+      } else if (atkWon && army) {
         if (castle.local < 200) {
           army.local = atkLeft;
           sackCastle(s, castle, army, true);
@@ -1883,7 +1908,16 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       set攻めの許し願い({ p, 臣: 出す家, 主: 許しの要る主(g, 出す家, p.to), castle: 目標 });
       return;
     }
-    if (!p.覚悟 && 目標 && !underMyBanner(g, g.player, 目標.faction)
+    /* 約束のある家の、囲まれた城へ送るのは後詰である（GDD 9.2 / 12.1）。
+
+       もとは「旗の下（自家と臣従）」だけを後詰と見なし、従属や同盟の城へ送ろうと
+       すると「約束を破って兵を出すか」と問うていた。従属の水野に援軍を求められて
+       出したのに、攻撃として扱われる――援けを求められて応じるのに、約束を破れと
+       問われるのでは筋が通らない。 */
+    const 救いに行く = !!目標 && 目標.faction !== g.player
+      && atPeace(g, g.player, 目標.faction)
+      && (g.sieges || []).some((sg) => sg.castleId === 目標.id);
+    if (!p.覚悟 && 目標 && !救いに行く && !underMyBanner(g, g.player, 目標.faction)
       && atPeace(g, g.player, 目標.faction)) {
       setBreakVow({ p, castle: 目標, state: relOf(g, g.player, 目標.faction).state });
       return;
@@ -1894,8 +1928,16 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       加勢を出す(s, p.reinforce || [], p.to);
       const c = s.castles.find((x) => x.id === p.from);
       const dest = s.castles.find((x) => x.id === p.to);
-      // 不可侵・同盟を破れば「裏切り」として信用と威信を失う
-      if (dest && dest.faction !== s.player && atPeace(s, s.player, dest.faction)) {
+      /* 不可侵・同盟を破れば「裏切り」として信用と威信を失う。
+
+         ただし、囲まれた味方の城を救いに行くのは裏切りではない。ここを見ずに
+         罰を先に科していたので、間柄が中立に落ち、そのあとで「後詰か否か」を
+         判ずるときには約束が消えていた――従属の水野を救いに出したはずが、
+         そのまま水野を攻める戦役になっていた元はこれである。 */
+      const 救いに行く2 = !!dest && dest.faction !== s.player
+        && atPeace(s, s.player, dest.faction)
+        && (s.sieges || []).some((sg) => sg.castleId === dest.id);
+      if (dest && dest.faction !== s.player && !救いに行く2 && atPeace(s, s.player, dest.faction)) {
         const r = s.relations[relKey(s.player, dest.faction)];
         r.state = "中立"; r.until = null; r.trust = 0;
         for (const k of Object.keys(s.relations)) if (己の盟約(k, s.player)) s.relations[k].trust = clamp(s.relations[k].trust - 15, 0, 100);
@@ -1920,7 +1962,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           text: `${c.name}では${[割.足りぬ馬 ? `馬が${fmt(割.足りぬ馬)}頭` : "", 割.足りぬ鉄砲 ? `鉄砲が${fmt(割.足りぬ鉄砲)}挺` : ""].filter(Boolean).join("・")}足りず、そのぶんは槍で立てた。` });
       }
       // 味方の城が囲まれているなら、これは後詰である。着けば囲みを解くための野戦になる。
-      const 救う = dest && dest.faction === s.player && s.sieges.some((sg) => sg.castleId === dest.id);
+      /* 後詰の印。自家の城だけでなく、旗の下や約束のある家の囲まれた城にも立てる。
+         これを立てねば、着いた月に「囲みを解く野戦」ではなく城攻めになる。 */
+      const 救う = !!dest && s.sieges.some((sg) => sg.castleId === dest.id)
+        && (dest.faction === s.player || underMyBanner(s, s.player, dest.faction)
+          || atPeace(s, s.player, dest.faction));
       s.armies.push({
         /* 出す家。臣従した家の城から出すなら、その家の軍である（GDD 12.2）。
            旗の下の軍であるから、着いた先の扱い（後詰か攻めか）は自家と同じに読む。 */
@@ -1928,6 +1974,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         localTrain: c.localTrain, men: p.local + p.gens.reduce((a, id) => a + s.generals.find((x) => x.id === id).retinue, 0),
         at: p.from, path: 出陣の道(s, p.from, p.to), prog: 0, food: p.food, target: p.to,
         ...(救う ? { relief: p.to } : {}),
+        /* 助勢の印。援けに着く（core/state.js）はこれを見て、着いた城と戦うか
+           否かを判ずる。立てねば、救いに行った城で合戦が始まる。 */
+        ...(dest && dest.faction !== s.player
+          && (underMyBanner(s, s.player, dest.faction) || atPeace(s, s.player, dest.faction))
+          ? { 助勢: true } : {}),
       });
       for (const gid of p.gens) s.generals.find((x) => x.id === gid).at = null;
       if (救う) {
@@ -1941,11 +1992,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       /* 旗の下の城へ向かうのは、攻めではない。援軍であり、持ち場替えである。
          ここで戦役を起こすと、着いた先で「攻めかかるか」と軍議が開かれ、
          味方の城を攻めることになってしまう。戦役は敵城へ向かうときだけ起こす。 */
-      if (underMyBanner(s, s.player, dest ? dest.faction : null)) {
+      /* 味方の城へ向かうのは攻めではない。戦役を起こせば、着いた先で
+         「攻めかかるか」と軍議が開かれ、味方を攻めることになる。
+
+         旗の下（自家・臣従）だけでなく、従属や同盟の城も同じである。従属の城を
+         救いに行ったのに軍議が開かれ、そこで攻めかかれば味方を討つ形になった。 */
+      if (underMyBanner(s, s.player, dest ? dest.faction : null)
+        || (dest && dest.faction !== s.player && atPeace(s, s.player, dest.faction))) {
         s.chronicle.push({ y: s.year, m: s.month,
           text: dest.faction === s.player
             ? `${c.name}より${dest.name}へ兵を移す（${fmt(p.local + p.gens.reduce((a2, id) => a2 + (s.generals.find((x) => x.id === id) || {}).retinue || 0, 0))}人）。`
-            : `${c.name}より${s.factions[dest.faction].name}の${dest.name}へ援軍を送る。` });
+            : 救う
+              ? `${c.name}より後詰が発した。${s.factions[dest.faction].name}の${dest.name}の囲みを解きに向かう。`
+              : `${c.name}より${s.factions[dest.faction].name}の${dest.name}へ援軍を送る。` });
         return s;
       }
       // 戦役を起こす。総大将は出陣を発した城の城主。
@@ -2564,6 +2623,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               const 号 = 号令を発する(s2, s2.player, to, 手ら, {
                 軍の名: (st, 頭) => 月送り.軍の名(st, 頭),
                 道を引く: (st, fid, a, b) => 軍の道(st, fid, a, b),
+                素の道: (a, b) => findPath(a, b),          // 惣無事令を経ていれば道の掟を措く
                 兵糧: (人, 月) => 遠征の兵糧(人, 月),
                 運び賃を払う: (st, 人, 月) => 運び賃を払う(st, 人, 月),
               });
