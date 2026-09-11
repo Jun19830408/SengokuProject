@@ -2629,8 +2629,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               });
               if (!号) { s2.msg = "参陣できる手がなかった。"; return s2; }
               const 城 = s2.castles.find((c) => c.id === to);
+              const 出ず = (号.出られず || []).length;
               const 文 = `${城.name}へ号令を発した。${号.手.length}手・`
-                + `${fmt(号.手.reduce((a, h) => a + h.兵, 0))}人が寄せる。`;
+                + `${fmt(号.手.reduce((a, h) => a + h.兵, 0))}人が寄せる。`
+                + (出ず ? `（${出ず}手は${号.出られず[0].訳}）` : "");
               s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
               s2.monthEvents = [...(s2.monthEvents || []), 文];
               s2.msg = 文;

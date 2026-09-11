@@ -19172,6 +19172,7 @@ function \u53F7\u4EE4\u3092\u767A\u3059\u308B(s2, \u4E3B, \u7684id, \u624B\u3089
     }];
     \u7ACB\u3063\u305F.push({ ...\u624B, armyId: id, \u7DCF\u52E2 });
   }
+  const \u51FA\u3089\u308C\u305A = \u624B\u3089.filter((h) => h.\u51FA\u3089\u308C\u308B && h.\u5175 > 0 && !\u7ACB\u3063\u305F.some((x) => x.\u5C06 === h.\u5C06 && x.\u5BB6 === h.\u5BB6));
   if (!\u7ACB\u3063\u305F.length) return null;
   const \u53F7 = {
     id: \u8ECD\u306E\u540D2 ? \u8ECD\u306E\u540D2(s2, "go") : `go${s2.\u8ECD\u756A}`,
@@ -19181,6 +19182,12 @@ function \u53F7\u4EE4\u3092\u767A\u3059\u308B(s2, \u4E3B, \u7684id, \u624B\u3089
     m: s2.month,
     \u624B: \u7ACB\u3063\u305F.map((x) => ({ \u5C06: x.\u5C06, \u5BB6: x.\u5BB6, armyId: x.armyId, \u7A2E\u5225: x.\u7A2E\u5225, \u5175: x.\u7DCF\u52E2 }))
   };
+  \u53F7.\u51FA\u3089\u308C\u305A = \u51FA\u3089\u308C\u305A.map((h) => ({
+    \u5C06\u540D: h.\u5C06\u540D,
+    \u5BB6: h.\u5BB6,
+    \u56FD\u3089: h.\u56FD\u3089,
+    \u8A33: \u89E6\u308C\u6E08\u307F ? "\u9053\u304C\u901A\u3058\u306A\u3044" : "\u4ED6\u5BB6\u306E\u9818\u3092\u7D20\u901A\u308A\u3067\u304D\u306A\u3044\uFF08\u60E3\u7121\u4E8B\u4EE4\u3092\u767A\u3059\u308C\u3070\u9053\u306F\u958B\u304F\uFF09"
+  }));
   s2.\u53F7\u4EE4 = [...s2.\u53F7\u4EE4 || [], \u53F7];
   return \u53F7;
 }
@@ -32915,7 +32922,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               return s2;
             }
             const \u57CE = s2.castles.find((c) => c.id === to);
-            const \u6587 = `${\u57CE.name}\u3078\u53F7\u4EE4\u3092\u767A\u3057\u305F\u3002${\u53F7.\u624B.length}\u624B\u30FB${fmt(\u53F7.\u624B.reduce((a, h) => a + h.\u5175, 0))}\u4EBA\u304C\u5BC4\u305B\u308B\u3002`;
+            const \u51FA\u305A = (\u53F7.\u51FA\u3089\u308C\u305A || []).length;
+            const \u6587 = `${\u57CE.name}\u3078\u53F7\u4EE4\u3092\u767A\u3057\u305F\u3002${\u53F7.\u624B.length}\u624B\u30FB${fmt(\u53F7.\u624B.reduce((a, h) => a + h.\u5175, 0))}\u4EBA\u304C\u5BC4\u305B\u308B\u3002` + (\u51FA\u305A ? `\uFF08${\u51FA\u305A}\u624B\u306F${\u53F7.\u51FA\u3089\u308C\u305A[0].\u8A33}\uFF09` : "");
             s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
             s2.monthEvents = [...s2.monthEvents || [], \u6587];
             s2.msg = \u6587;
