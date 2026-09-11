@@ -32,7 +32,7 @@ export { 旗頭の調略 } from "../src/govern/aiDiplo.js";
 export { 謀反の目, 走る先, 謀反を起こす, 謀反の見回り } from "../src/core/muhon.js";
 export { 遠征の兵糧 } from "../src/govern/war.js";
 export { ROAD_ADJ } from "../src/core/paths.js";
-export { resolveOffscreen, resolveClashOffscreen, reinforceOffers, 運び賃, 運び賃を払う, sackCastle, 城を委ねる, 委ねる差配, 軍を解く, withdrawArmy, homeFor, 城に合流する, 在陣させる, 盤の乱れを繕う, restoreStrays, 滅んだ家を始末する, 城なき家を片づける } from "../src/govern/war.js";
+export { resolveOffscreen, resolveClashOffscreen, reinforceOffers, 運び賃, 運び賃を払う, sackCastle, 城を委ねる, 委ねる差配, 軍を解く, withdrawArmy, homeFor, 城に合流する, 在陣させる, 盤の乱れを繕う, restoreStrays, 滅んだ家を始末する, 城なき家を片づける, 将を除く } from "../src/govern/war.js";
 export { 圧す, 解す } from "../src/save/pack.js";
 export { advanceMonth } from "../src/govern/month.js";
 export { 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届き, 陣触れに応じる, 国が隣り合うか, minGarrison, 身分の位, 総大将を定める, 大将を先頭に, 国主に任じる, 旗頭に任じる, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 国主たち, 旗頭たち, stipendOf, 役の要る身分, 寄騎に取る, 寄騎を解く, 寄騎たち, 寄騎に取れるか, 城主か, 方面の国, 城の知行の余地, fiefRoom, fiefBurden } from "../src/core/rank.js";

@@ -256,6 +256,13 @@ console.log(`  （城 ${C.length}／国 ${国々.length}／道 ${R.length}本／
   // 古い記録を模す。増補の分（城・将・家）をそっくり落とす
   s.castles = s.castles.slice(0, 249);
   s.generals = s.generals.slice(0, 812);
+  /* 物故の控えは空にしておく（GDD 6.7）。
+
+     控えのある記録では、盤にいない史実の将は「後から足した者」と見なして据える。
+     控えの無い記録では「すでに死んだ者」と見なして据えない――死者を歩かせない
+     ためである（tests/furuki.cjs 八）。ここで測りたいのは増補そのものの働き
+     であるから、控えを持つ記録として仕込む。 */
+  s.物故 = [];
   const 生 = new Set([...s.castles.map((c) => c.faction), ...s.generals.map((g) => g.faction)]);
   for (const f of Object.keys(s.factions)) if (!生.has(f)) delete s.factions[f];
   const 前城 = s.castles.length, 前将 = s.generals.length, 前家 = Object.keys(s.factions).length;

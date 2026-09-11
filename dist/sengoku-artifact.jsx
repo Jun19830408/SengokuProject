@@ -15542,6 +15542,7 @@ function migrateSave(s2) {
     s2.hime = [];
     \u59EB\u3092\u6574\u3048\u308B(s2);
   }
+  \u7269\u6545\u306E\u63A7\u3048\u3092\u7E55\u3046(s2);
   \u76E4\u306E\u5897\u88DC\u3092\u53D6\u308A\u8FBC\u3080(s2);
   \u672C\u9818\u3068\u672C\u62E0\u3092\u7E55\u3046(s2);
   \u672C\u62E0\u3092\u8FFD\u3046(s2);
@@ -15597,6 +15598,11 @@ function \u65B0\u3057\u3044\u5C06(g) {
     rost: newRoster(g.retinue, `ret-${g.id}`, \u76F4\u5C5E\u306E\u5175\u79D1)
   };
 }
+function \u7269\u6545\u306E\u63A7\u3048\u3092\u7E55\u3046(s2) {
+  if (Array.isArray(s2.\u7269\u6545)) return;
+  const \u5C45\u308B = new Set((s2.generals || []).map((g) => g.id));
+  s2.\u7269\u6545 = GENERALS.filter((g) => !\u5C45\u308B.has(g.id)).map((g) => g.id);
+}
 function \u76E4\u306E\u5897\u88DC\u3092\u53D6\u308A\u8FBC\u3080(s2) {
   if (!Array.isArray(s2.castles) || !Array.isArray(s2.generals)) return s2;
   const \u57CEid = new Set(s2.castles.map((c) => c.id));
@@ -15614,9 +15620,11 @@ function \u76E4\u306E\u5897\u88DC\u3092\u53D6\u308A\u8FBC\u3080(s2) {
     \u8DB3\u3057\u305F\u57CE.push(c);
   }
   const \u5C06id = new Set(s2.generals.map((g) => g.id));
+  const \u7269\u6545 = new Set(s2.\u7269\u6545 || []);
   let \u8DB3\u3057\u305F\u5C06 = 0;
   for (const g of GENERALS) {
     if (\u5C06id.has(g.id)) continue;
+    if (\u7269\u6545.has(g.id)) continue;
     if (!g.at || !\u57CEid.has(g.at)) continue;
     const \u57CE = s2.castles.find((c) => c.id === g.at);
     if (!\u57CE || \u57CE.faction !== g.faction) continue;
@@ -16912,6 +16920,11 @@ function reinforceOffers(g, from, target, \u5927\u5C06) {
   }
   return out.filter((o) => o.men > 0 || o.reason || o.\u6307\u56F3).sort((a, z) => (z.\u6307\u56F3 ? 1 : 0) - (a.\u6307\u56F3 ? 1 : 0) || a.legs - z.legs);
 }
+function \u5F53\u4E3B\u304C\u5165\u308C\u3070\u5F79\u3092\u7E55\u3046(s2, fid) {
+  if (!fid || !(s2.factions || {})[fid]) return;
+  \u56FD\u4E3B\u3092\u7E55\u3046(s2, fid);
+  \u65D7\u982D\u3092\u7E55\u3046(s2, fid);
+}
 function \u5728\u9663\u3055\u305B\u308B(s2, army, castle) {
   army.at = castle.id;
   army.path = [castle.id];
@@ -16943,6 +16956,7 @@ function \u57CE\u306B\u5408\u6D41\u3059\u308B(s2, army, castle) {
   s2.armies = s2.armies.filter((x) => x.id !== army.id);
   s2.sieges = (s2.sieges || []).filter((x) => x.armyId !== army.id);
   s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => id !== army.id);
+  \u5F53\u4E3B\u304C\u5165\u308C\u3070\u5F79\u3092\u7E55\u3046(s2, castle.faction);
   return s2;
 }
 function \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle) {
@@ -16988,7 +17002,7 @@ function \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle) {
     text: `${castle.name}\u306E\u56F2\u307F\u3092\u89E3\u3053\u3046\u3068${s2.factions[army.faction].name}\u306E\u5F8C\u8A70\u304C${s2.factions[bes.faction].name}\u306E\u9663\u3092\u885D\u304D\u3001${\u52DD ? "\u56F2\u307F\u3092\u6253\u3061\u6255\u3063\u305F" : "\u9000\u3051\u3089\u308C\u305F"}\uFF08\u5F8C\u8A70${fmt(\u5F8C\u8A70\u640D)}\u4EBA\u30FB\u5BC4\u305B\u624B${fmt(\u5BC4\u624B\u640D)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
   });
   if (\u52DD) {
-    const \u672C\u56FD = s2.castles.find((x) => x.id === bes.from) || s2.castles.find((x) => x.faction === bes.faction);
+    const \u672C\u56FD = s2.castles.find((x) => x.id === bes.from && x.faction === bes.faction) || s2.castles.find((x) => x.faction === bes.faction);
     if (\u672C\u56FD) {
       \u672C\u56FD.local += Math.max(0, bes.local);
       if (bes.rost && bes.rost.length) \u672C\u56FD.rost = [...\u672C\u56FD.rost || [], ...bes.rost];
@@ -17013,6 +17027,7 @@ function \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle) {
     s2.armies = s2.armies.filter((x) => x.id !== army.id);
     if (sg) sg.relief = null;
   }
+  \u5F53\u4E3B\u304C\u5165\u308C\u3070\u5F79\u3092\u7E55\u3046(s2, army.faction);
   return s2;
 }
 function sackCastle(s2, castle, army, hard) {
@@ -17133,6 +17148,8 @@ function sackCastle(s2, castle, army, hard) {
   s2.campaigns = (s2.campaigns || []).filter((x) => x.target !== castle.id);
   \u672C\u62E0\u3092\u8FFD\u3046(s2);
   \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2);
+  \u5F53\u4E3B\u304C\u5165\u308C\u3070\u5F79\u3092\u7E55\u3046(s2, oldF);
+  \u5F53\u4E3B\u304C\u5165\u308C\u3070\u5F79\u3092\u7E55\u3046(s2, winner);
   log(`${castle.name}\u304C\u843D\u3061\u3001${s2.factions[winner].name}\u306E\u624B\u306B\u6E21\u3063\u305F\uFF08\u65E7\u9818\u4E3B\uFF1A${s2.factions[oldF].name}\uFF09\u3002`);
   if (winner !== s2.player) {
     \u57CE\u3092\u59D4\u306D\u308B(s2, castle.id, army.id, \u59D4\u306D\u308B\u5DEE\u914D(s2, castle, army));
@@ -17251,7 +17268,9 @@ function resolveOffscreen(prev, armyId, castleId) {
   s2.pendingArrivals = (s2.pendingArrivals || []).slice(1);
   if (!army || !castle) return s2;
   if (\u63F4\u3051\u306B\u7740\u304F(s2, army, castle) || underMyBanner(s2, army.faction, castle.faction)) {
-    return \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle);
+    const t = \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle);
+    \u57CE\u4E3B\u306E\u672D\u3092\u7E55\u3046(t);
+    return t;
   }
   const aGens = army.gens.map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
   const dGens = s2.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
@@ -17315,6 +17334,7 @@ function resolveOffscreen(prev, armyId, castleId) {
   } else {
     withdrawArmy(s2, army);
   }
+  \u57CE\u4E3B\u306E\u672D\u3092\u7E55\u3046(s2);
   return s2;
 }
 function \u9053\u306E\u308A(path) {
@@ -17430,6 +17450,7 @@ function withdrawArmy(s2, army) {
     armies: (c.armies || []).filter((id) => id !== army.id),
     arrived: (c.arrived || []).filter((id) => id !== army.id)
   })).filter((c) => c.armies.length);
+  \u5F53\u4E3B\u304C\u5165\u308C\u3070\u5F79\u3092\u7E55\u3046(s2, army.faction);
   return home;
 }
 function restoreStrays(s2) {
@@ -17487,6 +17508,8 @@ function \u57CE\u306A\u304D\u5BB6\u3092\u7247\u3065\u3051\u308B(s2) {
   return \u7247\u3065\u3051\u305F;
 }
 function \u5C06\u3092\u9664\u304F(s2, id) {
+  if (!Array.isArray(s2.\u7269\u6545)) s2.\u7269\u6545 = [];
+  if (!s2.\u7269\u6545.includes(id)) s2.\u7269\u6545.push(id);
   s2.generals = (s2.generals || []).filter((x) => x.id !== id);
   for (const c of s2.castles || []) if (c.lordId === id) c.lordId = null;
   for (const a of s2.armies || []) if ((a.gens || []).includes(id)) a.gens = a.gens.filter((g) => g !== id);
@@ -17513,7 +17536,19 @@ function \u6EC5\u3093\u3060\u5BB6\u3092\u59CB\u672B\u3059\u308B(s2, oldF, winner
     m: s2.month,
     text: `${(s2.factions[oldF] || {}).name}\u306F\u6700\u5F8C\u306E\u57CE\u3092\u5931\u3044\u3001\u6EC5\u4EA1\u3057\u305F\u3002`
   });
+  \u57CE\u4E3B\u306E\u672D\u3092\u7E55\u3046(s2);
   return s2;
+}
+function \u57CE\u4E3B\u306E\u672D\u3092\u7E55\u3046(s2) {
+  const \u5916\u3057\u305F = [];
+  for (const c of s2.castles || []) {
+    if (!c.lordId) continue;
+    const g = (s2.generals || []).find((x) => x.id === c.lordId);
+    if (g && !g.captive && g.faction === c.faction) continue;
+    c.lordId = null;
+    \u5916\u3057\u305F.push(c.id);
+  }
+  return \u5916\u3057\u305F;
 }
 function \u76E4\u306E\u4E71\u308C\u3092\u7E55\u3046(s2) {
   const \u76F4\u3057 = { \u540D\u7C3F: [], \u5C45\u6240: [] };
@@ -17542,13 +17577,7 @@ function \u76E4\u306E\u4E71\u308C\u3092\u7E55\u3046(s2) {
     arrived: (c.arrived || []).filter((id) => \u5C45\u308B.has(id))
   })).filter((c) => c.armies.length && s2.castles.some((x) => x.id === c.target));
   s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => \u5C45\u308B.has(id));
-  for (const c of s2.castles) {
-    if (!c.lordId) continue;
-    const g = s2.generals.find((x) => x.id === c.lordId);
-    if (g && !g.captive && g.faction === c.faction) continue;
-    c.lordId = null;
-    \u76F4\u3057.\u540D\u7C3F.push({ castleId: c.id, \u57CE\u4E3B\u3092\u5916\u3057\u305F: true });
-  }
+  for (const c of \u57CE\u4E3B\u306E\u672D\u3092\u7E55\u3046(s2)) \u76F4\u3057.\u540D\u7C3F.push({ castleId: c, \u57CE\u4E3B\u3092\u5916\u3057\u305F: true });
   for (const fid of Object.keys(s2.factions || {})) {
     if (!s2.castles.some((c) => c.faction === fid)) continue;
     const \u5BB6\u4E2D = s2.generals.filter((g) => g.faction === fid && !g.captive);
@@ -17612,6 +17641,7 @@ function resolveClashOffscreen(prev) {
   if (\u52DD && (!\u52DD.path || \u52DD.path.length <= 1)) {
     s2.pendingArrivals = [\u52DD.id, ...(s2.pendingArrivals || []).filter((id) => id !== \u52DD.id)];
   }
+  \u57CE\u4E3B\u306E\u672D\u3092\u7E55\u3046(s2);
   return s2;
 }
 
@@ -20964,6 +20994,15 @@ function advanceMonth(prev, g) {
     for (const q of \u7E55.\u5C45\u6240) {
       if (q.gen.faction !== s2.player) continue;
       events.push(`${q.gen.name}\u306F${q.\u5148.name}\u3078\u5F15\u304D\u79FB\u3063\u305F\u3002`);
+    }
+    for (const fid of Object.keys(s2.factions)) {
+      for (const g2 of \u56FD\u4E3B\u3092\u7E55\u3046(s2, fid)) {
+        if (fid === s2.player) events.push(`${g2.name}\u306F\u56FD\u4E3B\u306E\u5F79\u3092\u96E2\u308C\u305F\u3002`);
+      }
+      for (const g2 of \u65D7\u982D\u3092\u7E55\u3046(s2, fid)) {
+        if (fid === s2.player) events.push(`${g2.name}\u306F\u65B9\u9762\u3092\u4FDD\u3066\u306A\u304F\u306A\u308A\u3001\u5BBF\u8001\u306E\u5F79\u3092\u96E2\u308C\u305F\u3002`);
+      }
+      \u5BC4\u9A0E\u3092\u7E55\u3046(s2, fid);
     }
   }
   s2.\u4EE3\u66FF\u308F\u308A = [];

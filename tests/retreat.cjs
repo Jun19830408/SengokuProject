@@ -63,6 +63,40 @@ const 軍を立てる = (s, from, at, n) => {
   if (A.local > 敵城の前) 咎.push('敵の手に渡った城へ、自軍の兵を足してしまった');
 }
 
+/* 二の二、囲みを打ち払われた寄せ手も、自家の城へ帰ること
+
+   囲んでいるあいだに出陣元が他家の手に落ちることがある。帰り先を id だけで
+   引いていたので、寄せ手はそのまま他家の城へ帰っていた。退いた側の筋には
+   家の検めがあるのに、打ち払われた側の筋には無かった。巡検が拾ったのは、
+   種三三一七七六の一五五七年一月、蘆名の多功長朝と水谷正村が北条の宇都宮城に
+   立っていた姿である。 */
+{
+  const s = H.initState('oda');
+  const 自城 = s.castles.filter((x) => x.faction === s.player);
+  const 出 = 自城[0], 別 = 自城[1];
+  /* 寄せ手（遊ぶ側）が、他家の城を囲んでいる */
+  const 的 = s.castles.find((c) => c.faction !== s.player && c.faction !== 'kounotori');
+  const { a: 囲, gens: 囲の将 } = 軍を立てる(s, 出, 的, 1200);
+  囲.sieging = true;
+  s.sieges = [{ castleId: 的.id, armyId: 囲.id, months: 2, relief: null }];
+  /* 囲んでいるあいだに、出陣元が他家に奪われた */
+  出.faction = 'kounotori';
+  /* 的の家が後詰を差し向け、囲みを打ち払う。兵の差をつけて必ず勝たせる。 */
+  const 後 = { id: 'relief-t', faction: 的.faction, from: 的.id, gens: [],
+    local: 30000, localTrain: 90, rost: null, men: 30000,
+    at: 的.id, path: [的.id], prog: 0, food: 9999, target: 的.id };
+  s.armies.push(後);
+  s.pendingArrivals = [後.id];
+  /* resolveOffscreen は盤を写して返す。返り値のほうを見る。 */
+  const t = H.resolveOffscreen(s, 後.id, 的.id);
+  const 居所 = 囲の将.map((q) => (t.generals.find((x) => x.id === q.id) || {}).at);
+  const 城ら = 居所.map((id) => t.castles.find((c) => c.id === id));
+  console.log('\n二の二、囲みを打ち払われた寄せ手の帰り先');
+  console.log('  将の居場所: ' + 城ら.map((c) => (c ? `${c.name}(${(t.factions[c.faction] || {}).name})` : '★城にいない')).join(' / '));
+  if (城ら.some((c) => !c)) 咎.push('打ち払われた寄せ手の将が城にいない');
+  if (城ら.some((c) => c && c.faction !== t.player)) 咎.push('打ち払われた寄せ手が他家の城へ帰った');
+}
+
 /* 三、迷子の見回り。軍にも属さず城にもいない将を拾うこと */
 {
   const s = H.initState('oda');

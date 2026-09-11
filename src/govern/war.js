@@ -1,7 +1,7 @@
 import { captureChance, makePrisoner, takeAsPrisoner } from "../core/capture.js";
 import { canRecruit, loyaltyAfterRecruit, ruinedHouse } from "../core/house.js";
 import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { minGarrison, stipendOf, 陣触れに応じる, 陣触れの届き } from "../core/rank.js";
+import { minGarrison, stipendOf, 陣触れに応じる, 陣触れの届き, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
 import { newRoster, rosterCut, rosterSync, rosterTake } from "../core/roster.js";
 import { relOf, 主を探す } from "../core/state.js";
 import { clamp, fmt } from "../core/util.js";
@@ -167,6 +167,18 @@ export function reinforceOffers(g, from, target, 大将) {
 
    他家（同盟・臣従）の城はこれまで通りである。兵だけ守りに加え、将は本国へ帰す。
    援軍のつもりで送った将を、そのまま他家の城へ預けてしまってはいけない。 */
+/* 当主が城に入ったその場で、役を検め直す（GDD 6.4）。
+
+   役の繕いは月送りの中にある。ところが軍の着陣は月送りの外（遊ぶ側が画面で
+   捌く）で起きるので、当主が国主のいる国へ帰った月は、月が明けるまで当主と
+   国主が同じ国に並んで見えた。実測では大友義鑑が久留米城へ帰った一五四七年
+   五月がそれである。当主が動いたその場で検めれば、そういう月は生じない。 */
+function 当主が入れば役を繕う(s, fid) {
+  if (!fid || !(s.factions || {})[fid]) return;
+  国主を繕う(s, fid);
+  旗頭を繕う(s, fid);
+}
+
 export function 在陣させる(s, army, castle) {
   army.at = castle.id;
   army.path = [castle.id];
@@ -214,6 +226,7 @@ export function 城に合流する(s, army, castle) {
   s.armies = s.armies.filter((x) => x.id !== army.id);
   s.sieges = (s.sieges || []).filter((x) => x.armyId !== army.id);
   s.pendingArrivals = (s.pendingArrivals || []).filter((id) => id !== army.id);
+  当主が入れば役を繕う(s, castle.faction);
   return s;
 }
 
@@ -264,8 +277,15 @@ function 味方の城へ着く(s, army, castle) {
       + `${勝 ? "囲みを打ち払った" : "退けられた"}（後詰${fmt(後詰損)}人・寄せ手${fmt(寄手損)}人を失う）。` });
 
   if (勝) {
-    // 寄せ手は囲みを解いて引き上げる
-    const 本国 = s.castles.find((x) => x.id === bes.from) || s.castles.find((x) => x.faction === bes.faction);
+    /* 寄せ手は囲みを解いて引き上げる。
+
+       帰り先は必ずその家の城でなければならない。出陣元をid だけで引いていたので、
+       囲んでいるあいだに出陣元が他家の手に落ちていると、寄せ手はそのまま他家の
+       城へ帰った。巡検が拾ったのは、種三三一七七六の一五五七年一月、蘆名の多功
+       長朝と水谷正村が北条の宇都宮城に立っていた姿である。退いた側の筋には家の
+       検めがあるのに、打ち払われた側の筋には無かった。 */
+    const 本国 = s.castles.find((x) => x.id === bes.from && x.faction === bes.faction)
+      || s.castles.find((x) => x.faction === bes.faction);
     if (本国) {
       本国.local += Math.max(0, bes.local);
       if (bes.rost && bes.rost.length) 本国.rost = [...(本国.rost || []), ...bes.rost];
@@ -285,6 +305,7 @@ function 味方の城へ着く(s, army, castle) {
     s.armies = s.armies.filter((x) => x.id !== army.id);
     if (sg) sg.relief = null;                 // 改めて後詰を差し向けうる
   }
+  当主が入れば役を繕う(s, army.faction);
   return s;
 }
 
@@ -458,6 +479,14 @@ export function sackCastle(s, castle, army, hard) {
      おけない。奪われた側の本拠も同じ理屈で追い直す。 */
   本拠を追う(s);          // 先に本拠を据え直す。本領の繕いは本拠を当てにする
   奪われた本領を繕う(s);
+  /* 根が動けば、役も検め直す（GDD 6.4）。
+
+     城を奪われた当主は、残る城へ根を移す。その先に国主がいれば、当主と国主が
+     同じ国に並ぶ。実測では、大内の軍が馬ヶ岳城へ着いた一五四七年五月に大友義鑑の
+     根が久留米城（筑後）へ移り、筑後の国主朽網鑑康と並んだ。落城は月送りの外で
+     起きるので、月ごとの繕いでは一月遅れる。 */
+  当主が入れば役を繕う(s, oldF);
+  当主が入れば役を繕う(s, winner);
   log(`${castle.name}が落ち、${s.factions[winner].name}の手に渡った（旧領主：${s.factions[oldF].name}）。`);
 
   /* 采配（他家）はその場で差配を決める。遊ぶ側には、画面から問う。
@@ -624,7 +653,9 @@ export function resolveOffscreen(prev, armyId, castleId) {
        同盟の家へ差し向けた援軍もここに入る。faction を比べるだけでは
        他家の城なので、盤の外でも同盟国と戦うことになっていた。 */
     if (援けに着く(s, army, castle) || underMyBanner(s, army.faction, castle.faction)) {
-      return 味方の城へ着く(s, army, castle);
+      const t = 味方の城へ着く(s, army, castle);
+      城主の札を繕う(t);
+      return t;
     }
 
     const aGens = army.gens.map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
@@ -700,6 +731,7 @@ export function resolveOffscreen(prev, armyId, castleId) {
     } else {
       withdrawArmy(s, army);        // 出陣元が奪われていても、必ずどこかの自領へ戻す
     }
+    城主の札を繕う(s);              // 家を移った者の札を、その場で外す
     return s;
 }
 
@@ -880,6 +912,7 @@ export function withdrawArmy(s, army) {
     armies: (c.armies || []).filter((id) => id !== army.id),
     arrived: (c.arrived || []).filter((id) => id !== army.id),
   })).filter((c) => c.armies.length);
+  当主が入れば役を繕う(s, army.faction);
   return home;
 }
 
@@ -960,6 +993,14 @@ export function 城なき家を片づける(s) {
    として拾ったのは、これである。月ごとの見回りで拾えはするが、遊ぶ側はその
    一月をそのまま見るのだから、抜くその場で片づけるのが筋である。 */
 export function 将を除く(s, id) {
+  /* 盤から消えた者は控えに載せる（GDD 6.7）。
+
+     載せずに抜くだけだと、記録を読み直すたびに「まだ盤にいない武将」と見なされ、
+     盤の増補（state.js の 盤の増補を取り込む）が据え直してしまう。実測では、
+     二十年遊んだ記録を読み直すと五十九人が生き返った――斎藤道三も武田信虎も
+     松平広忠も、討たれたはずの者が城に立っていた。死んだ者は死んだままにする。 */
+  if (!Array.isArray(s.物故)) s.物故 = [];
+  if (!s.物故.includes(id)) s.物故.push(id);
   s.generals = (s.generals || []).filter((x) => x.id !== id);
   for (const c of s.castles || []) if (c.lordId === id) c.lordId = null;
   for (const a of s.armies || []) if ((a.gens || []).includes(id)) a.gens = a.gens.filter((g) => g !== id);
@@ -989,6 +1030,7 @@ export function 滅んだ家を始末する(s, oldF, winner, castleId, 面々) {
   }
   s.chronicle.push({ y: s.year, m: s.month,
     text: `${(s.factions[oldF] || {}).name}は最後の城を失い、滅亡した。` });
+  城主の札を繕う(s);
   return s;
 }
 
@@ -1002,6 +1044,27 @@ export function 滅んだ家を始末する(s, oldF, winner, castleId, 面々) {
    一　軍の名簿から、盤にいない者・捕らわれた者・城に立っている者を落とす。
    二　他家の城に立っている将を、自家の城へ戻す。捕虜は除く（囚われの身は
        他家の城にいて当然である）。城を持たぬ家の者も除く（滅亡の始末に回る）。 */
+/* 城主の札を繕う（GDD 6.4）。
+
+   引き抜かれても寝返っても、城の帳面には名が残ったままだった。城主の居ない城
+   として扱えばよい。外した城の id を返す。
+
+   月ごとの見回りのほかに、着陣の締めでも回す。将が家を移るのは合戦の始末の
+   中で起きるが、その始末は月送りの外（遊ぶ側が画面で捌く）にあるので、
+   見回りだけでは一月遅れる。巡検が拾ったのは、種三三九六九五の一五五四年二月、
+   尼子へ移った宇喜多直家が浦上の天神山城と備中松山城の城主のままでいた姿である。 */
+export function 城主の札を繕う(s) {
+  const 外した = [];
+  for (const c of s.castles || []) {
+    if (!c.lordId) continue;
+    const g = (s.generals || []).find((x) => x.id === c.lordId);
+    if (g && !g.captive && g.faction === c.faction) continue;
+    c.lordId = null;
+    外した.push(c.id);
+  }
+  return 外した;
+}
+
 export function 盤の乱れを繕う(s) {
   const 直し = { 名簿: [], 居所: [] };
   const 盤にいる = new Map(s.generals.map((g) => [g.id, g]));
@@ -1035,15 +1098,8 @@ export function 盤の乱れを繕う(s) {
   })).filter((c) => c.armies.length && s.castles.some((x) => x.id === c.target));
   s.pendingArrivals = (s.pendingArrivals || []).filter((id) => 居る.has(id));
 
-  /* 三　城主が他家の者になっていれば、その札を外す。引き抜かれても寝返っても、
-         城の帳面に名が残ったままだった。城主の居ない城として扱えばよい。 */
-  for (const c of s.castles) {
-    if (!c.lordId) continue;
-    const g = s.generals.find((x) => x.id === c.lordId);
-    if (g && !g.captive && g.faction === c.faction) continue;
-    c.lordId = null;
-    直し.名簿.push({ castleId: c.id, 城主を外した: true });
-  }
+  /* 三　城主が他家の者になっていれば、その札を外す。 */
+  for (const c of 城主の札を繕う(s)) 直し.名簿.push({ castleId: c, 城主を外した: true });
   /* 四　城を持ちながら当主のいない家に、跡目を立てる。
 
      当主が盤から消える筋はいくつもある（落城の討死、内応、出奔、寿命）。
@@ -1114,5 +1170,6 @@ export function resolveClashOffscreen(prev) {
   if (勝 && (!勝.path || 勝.path.length <= 1)) {
     s.pendingArrivals = [勝.id, ...(s.pendingArrivals || []).filter((id) => id !== 勝.id)];
   }
+  城主の札を繕う(s);
   return s;
 }

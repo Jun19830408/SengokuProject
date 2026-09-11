@@ -1710,6 +1710,22 @@ export function advanceMonth(prev, g) {
           if (q.gen.faction !== s.player) continue;
           events.push(`${q.gen.name}は${q.先.name}へ引き移った。`);
         }
+        /* 役の繕いも、締めでもう一度回す（GDD 6.4）。
+
+           役の繕いは月送りの半ばにある。ところが当主が居を移すのはそれより後で
+           あるから、当主が国主のいる国へ移った月だけ、当主と国主が同じ国に並ぶ。
+           実測では大友義鑑が久留米城へ居を移した一五四七年五月がそれで、翌月には
+           繕われるものの、その一月は掟に背いた盤が遊ぶ側に見えていた。
+           動きがことごとく済んだここで、もう一度検める。 */
+        for (const fid of Object.keys(s.factions)) {
+          for (const g of 国主を繕う(s, fid)) {
+            if (fid === s.player) events.push(`${g.name}は国主の役を離れた。`);
+          }
+          for (const g of 旗頭を繕う(s, fid)) {
+            if (fid === s.player) events.push(`${g.name}は方面を保てなくなり、宿老の役を離れた。`);
+          }
+          寄騎を繕う(s, fid);
+        }
       }
       s.代替わり = [];
       s.monthEvents = events;

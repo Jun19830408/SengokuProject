@@ -871,6 +871,7 @@ export function migrateSave(s) {
   立たぬ申し送りを落とす(s);
   // 姫のいない古い記録には、いま立てる（GDD 6.8）
   if (!Array.isArray(s.hime)) { s.hime = []; 姫を整える(s); }
+  物故の控えを繕う(s);                            // 盤にいない史実の将を「死んだ者」と見なす
   盤の増補を取り込む(s);                          // 後から足した城・武将・家・特殊勢力
   本領と本拠を繕う(s);
   本拠を追う(s);                                  // 当主のいる城へ本拠を合わせ直す
@@ -953,6 +954,23 @@ function 新しい将(g) {
   };
 }
 
+/* 物故の控えを、控えの無い古い記録にも与える（GDD 6.7）。
+
+   将が盤から消える筋（討死・切腹・出奔・寿命）は控えを残すようにしたが、それ
+   以前に書かれた記録には控えが無い。控えが無いまま増補を通せば、死んだ者が
+   ことごとく生き返る――二十年遊んだ記録で五十九人が立ち上がった。
+
+   そこで、控えの無い記録に限り「いま盤にいない史実の将は、すでに死んだ者」と
+   見なして控えに載せる。遊びの途中で史実の将が盤から消える訳は、ほぼ死のほかに
+   ない。代わりに、その記録が書かれるまでに足した武将は、その記録には出て
+   こなくなる。死者を歩かせるより、そのほうがまだしも軽い。以後に足す者は
+   控えに載らないので、これまでどおり増補で盤に出る。 */
+function 物故の控えを繕う(s) {
+  if (Array.isArray(s.物故)) return;
+  const 居る = new Set((s.generals || []).map((g) => g.id));
+  s.物故 = GENERALS.filter((g) => !居る.has(g.id)).map((g) => g.id);
+}
+
 export function 盤の増補を取り込む(s) {
   if (!Array.isArray(s.castles) || !Array.isArray(s.generals)) return s;
   const 城id = new Set(s.castles.map((c) => c.id));
@@ -990,9 +1008,11 @@ export function 盤の増補を取り込む(s) {
 
      居場所の無い者（後年に世に出る者）は加えない。時が来れば出てくる。 */
   const 将id = new Set(s.generals.map((g) => g.id));
+  const 物故 = new Set(s.物故 || []);
   let 足した将 = 0;
   for (const g of GENERALS) {
     if (将id.has(g.id)) continue;
+    if (物故.has(g.id)) continue;                            // 死んだ者は据え直さない
     if (!g.at || !城id.has(g.at)) continue;                 // 居場所の無い者は加えない
     const 城 = s.castles.find((c) => c.id === g.at);
     if (!城 || 城.faction !== g.faction) continue;           // 主が変わった城には湧かせない
