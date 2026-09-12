@@ -197,6 +197,26 @@ export const 国主たち = (s, fid) => s.generals.filter((g) =>
 
    一人が二国の旗頭を兼ねることはない。別の国の旗頭であれば、その役を解いて
    から移る（国替えである）。 */
+/* 当主のいる国（GDD 6.4）。
+
+   もとは本領の国だけを見ていた。ところが当主が本拠を移さずに他国の城へ
+   入ることがある。遊ぶ側の申し出は「稲葉山城に当主の織田信秀を入れているのに、
+   美濃の国主が選べる」であった。当主がその城にいる以上、その国は当主が自ら
+   差配する国である。本領の国と、いま居る国の両方を塞ぐ。
+
+   陣中にあるあいだは at が空くので、遠征しただけで役が動くことはない。 */
+export function 当主の国ら(s, fid) {
+  const 当主 = (s.generals || []).find((x) => x.faction === fid && x.lord && !x.captive);
+  if (!当主) return [];
+  const 国 = new Set();
+  for (const id of [当主.本領, 当主.at]) {
+    if (!id) continue;
+    const c = (s.castles || []).find((x) => x.id === id);
+    if (c) 国.add(c.kuni);
+  }
+  return [...国];
+}
+
 export function 国主に任じる(s, fid, kuni, genId) {
   const g = s.generals.find((x) => x.id === genId);
   if (!g || g.faction !== fid || g.captive) return { ok: false, why: "その者はいない。" };
@@ -211,8 +231,7 @@ export function 国主に任じる(s, fid, kuni, genId) {
      国主を立てるのは、屋上に屋を架すようなものである。本拠を移せば、
      その国の国主は役を離れる（下の 国主を繕う を見よ）。 */
   const 当主 = s.generals.find((x) => x.faction === fid && x.lord && !x.captive);
-  const 当主の城 = 当主 && s.castles.find((c) => c.id === (当主.本領 || 当主.at));
-  if (当主の城 && 当主の城.kuni === kuni) {
+  if (当主の国ら(s, fid).includes(kuni)) {
     return { ok: false, why: `${kuni}には${当主.name}がいる。当主のいる国に国主は置かない。` };
   }
   /* 役に就くには身分が要る（GDD 6.4）。国主は家老以上。
@@ -248,11 +267,9 @@ export function 国主を繕う(s, fid) {
        旗頭にも上がってこない、という形で現れた。 */
     const 根 = g.本領 && s.castles.find((c) => c.id === g.本領 && c.faction === fid);
     // 当主がその国へ移れば、国主は役を離れる（当主のいる国に国主は置かない）
-    const 当主 = s.generals.find((x) => x.faction === fid && x.lord && !x.captive);
-    const 当主の城 = 当主 && s.castles.find((c) => c.id === (当主.本領 || 当主.at));
     if (!g.役国 || !持つ国.has(g.役国) || 身分の位(g, s) < 役の要る身分.国主
       || (根 && 根.kuni !== g.役国)
-      || (当主の城 && 当主の城.kuni === g.役国)) {
+      || 当主の国ら(s, fid).includes(g.役国)) {
       g.役 = null; g.役国 = null; 解いた.push(g);
     }
   }
@@ -313,8 +330,19 @@ export function 寄騎に取れるか(s, 寄親, gen) {
   if (gen.faction !== 寄親.faction) return { ok: false, why: "家が違う。" };
   if (gen.役 === "旗頭") return { ok: false, why: `${gen.name}は旗頭である。旗頭は寄騎にならない。` };
 
+  /* 方面の国主は、城主の札を持たずとも旗頭の寄騎になれる（GDD 6.4）。
+
+     もとは誰であれ先に「城主か」を問うていた。城主は城に居る者のうち最も身代の
+     高い者を指すので、同じ城にさらに大身の者が入れば、国主でありながら城主では
+     なくなる。遊ぶ側の申し出は「二条御所の柴田勝家（山城の国主）と多聞山城の
+     佐久間信盛（大和の国主）が、旗頭の寄騎の候補に上がってこない」であった。
+     国主は城主の上にある役であるから、城主の札を要るのは筋が通らない。 */
   const 城 = 城主か(s, gen);
-  if (!城) return { ok: false, why: `${gen.name}は城を預かっていない。寄騎になれるのは城主だけである。` };
+  const 方面 = 方面の国(寄親);
+  const 国主で方面 = 寄親.役 === "旗頭" && gen.役 === "国主" && 方面.includes(gen.役国);
+  if (!城 && !国主で方面) {
+    return { ok: false, why: `${gen.name}は城を預かっていない。寄騎になれるのは城主か、方面の国主である。` };
+  }
 
   if (寄親.役 === "国主") {
     if (gen.役 === "国主") return { ok: false, why: `${gen.name}は国主である。国主を寄騎に取れるのは旗頭だけ。` };
@@ -323,11 +351,11 @@ export function 寄騎に取れるか(s, 寄親, gen) {
     }
   } else {
     const 己城 = s.castles.find((x) => x.id === (寄親.本領 || 寄親.at));
-    const 方面 = 方面の国(寄親);
-    const 同国 = !!己城 && 城.kuni === 己城.kuni;
-    const 国主で方面 = gen.役 === "国主" && 方面.includes(gen.役国);
+    const 同国 = !!己城 && !!城 && 城.kuni === 己城.kuni;
     if (!同国 && !国主で方面) {
-      return { ok: false, why: `${gen.name}は${己城 ? 己城.kuni : "旗頭の国"}の城主でも、方面の国主でもない。` };
+      return { ok: false, why: gen.役 === "国主"
+        ? `${gen.役国}は${寄親.name}の方面（${方面.join("・") || "なし"}）に入っていない。`
+        : `${gen.name}は${己城 ? 己城.kuni : "旗頭の国"}の城主でも、方面の国主でもない。` };
     }
   }
   if (gen.寄親 && gen.寄親 !== 寄親.id) {
@@ -354,15 +382,26 @@ export function 寄騎を解く(s, genId) {
 
 /* 寄親でなくなった者の寄騎を解く。旗頭を離れれば、束ねる者ではなくなる。
    本領が国を出た寄騎も解ける（旗頭が束ねられるのは一国のうちだからである）。 */
+/* 寄騎の筋を繕う（GDD 6.4）。
+
+   かつては「寄親が国主であること」しか見ていなかった。旗頭の寄騎はことごとく
+   この目に引っかかり、取った翌月には残らず離れていた。遊ぶ側の画面には
+   「浅井久政は寄親を離れた」「丹羽長秀は寄親を離れた」と六人ぶん並んだ。
+
+   繕いは、取るときと同じ物差しで測らねばならない。取れる形をそのまま残す。 */
 export function 寄騎を繕う(s, fid) {
   const 解いた = [];
   for (const g of s.generals) {
     if (g.faction !== fid || !g.寄親) continue;
     const 親 = s.generals.find((x) => x.id === g.寄親);
-    const 城 = s.castles.find((c) => c.id === (g.本領 || g.at));
-    const 良 = 親 && !親.captive && 親.役 === "国主" && 親.役国
-      && 城 && 城.kuni === 親.役国 && 城.faction === fid;
-    if (!良) { g.寄親 = null; 解いた.push(g); }
+    if (!親 || 親.captive || 親.faction !== fid) { g.寄親 = null; 解いた.push(g); continue; }
+    /* 取れるかの判じをそのまま使う。すでにこの寄親に付いている者は、
+       「すでに他の者の寄騎である」で弾かれぬよう、いったん札を外して問う。 */
+    const 元 = g.寄親;
+    g.寄親 = null;
+    const 可 = 寄騎に取れるか(s, 親, g).ok;
+    g.寄親 = 元;
+    if (!可) { g.寄親 = null; 解いた.push(g); }
   }
   return 解いた;
 }
@@ -416,9 +455,9 @@ export function 旗頭に任じる(s, fid, genId, 国ら) {
   /* 当主のいる国は方面に入れない（GDD 6.4）。
      大名が自ら差配する国を、他人に預ける謂れはない。国主と同じ理屈である。 */
   const 当主 = s.generals.find((x) => x.faction === fid && x.lord && !x.captive);
-  const 当主の城 = 当主 && s.castles.find((c) => c.id === (当主.本領 || 当主.at));
-  const 当主の国 = 当主の城 ? 当主の城.kuni : null;
-  const 選 = [...new Set((国ら || []).filter((k) => 持つ国.has(k) && k !== 当主の国))];
+  const 当主の国々 = 当主の国ら(s, fid);
+  const 当主の国 = 当主の国々.find((k) => (国ら || []).includes(k)) || 当主の国々[0] || null;
+  const 選 = [...new Set((国ら || []).filter((k) => 持つ国.has(k) && !当主の国々.includes(k)))];
   if (選.length < 2) {
     return { ok: false,
       why: 当主の国 && (国ら || []).includes(当主の国)
@@ -455,12 +494,11 @@ export function 旗頭を繕う(s, fid) {
        （上の 国主を繕う を見よ）。旗頭は己の国の城主を寄騎に取れるので、
        根が方面の外にあると、取れる相手が方面の外の城主だけになる。 */
     // 当主のいる国は方面から外す
-    const 当主2 = s.generals.find((x) => x.faction === fid && x.lord && !x.captive);
-    const 当主の城2 = 当主2 && s.castles.find((c) => c.id === (当主2.本領 || 当主2.at));
-    if (当主の城2) g.方面 = g.方面.filter((k) => k !== 当主の城2.kuni);
+    const 当主の国々 = 当主の国ら(s, fid);
+    g.方面 = g.方面.filter((k) => !当主の国々.includes(k));
     const 根 = g.本領 && s.castles.find((c) => c.id === g.本領 && c.faction === fid);
     if (根 && g.方面.length && !g.方面.includes(根.kuni) && 持つ国.has(根.kuni)
-      && (!当主の城2 || 当主の城2.kuni !== 根.kuni)) {
+      && !当主の国々.includes(根.kuni)) {
       g.方面 = [根.kuni, ...g.方面].slice(0, 4);
     }
     // 二国を割れば方面ではない。身代が宿老に届かなくなったときも役を離れる

@@ -750,6 +750,12 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                           const 従 = 寄騎たち(g, 旗.id);
                           const 取れる = g.generals.filter((x) => x.faction === g.player && !x.captive
                             && x.id !== 旗.id && !x.寄親 && 寄騎に取れるか(g, 旗, x).ok);
+                          /* 取れない国主には訳を添える（GDD 6.4）。
+                             候補に出てこない理由が読めないと、遊ぶ側からは不具合にしか見えない。 */
+                          const 取れぬ国主 = g.generals.filter((x) => x.faction === g.player && !x.captive
+                            && x.役 === "国主" && x.id !== 旗.id && x.寄親 !== 旗.id
+                            && !寄騎に取れるか(g, 旗, x).ok)
+                            .map((x) => ({ 者: x, 訳: 寄騎に取れるか(g, 旗, x).why }));
                           return (
                             <div key={旗.id} style={{ marginTop: 10, borderTop: `1px solid ${U.line2}`, paddingTop: 8 }}>
                               <div style={{ fontSize: 12.5, marginBottom: 2 }}>
@@ -763,6 +769,11 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                               <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
                                 取れるのは<b style={{ color: U.text }}>{己城 ? 己城.kuni : "旗頭の国"}の城主</b>と
                                 <b style={{ color: U.text }}>方面の国主</b>です。
+                                {取れぬ国主.map(({ 者, 訳 }) => (
+                                  <div key={者.id} style={{ fontSize: 11, marginTop: 2 }}>
+                                    ・{者.name}（{者.役国}の国主）は取れません — {訳}
+                                  </div>
+                                ))}
                               </div>
                               {/* いま従えている者 */}
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 6 }}>

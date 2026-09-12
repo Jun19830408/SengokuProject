@@ -14,7 +14,8 @@ const path = require('path');
 const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 const { initState, advanceMonth, 国主に任じる, 旗頭に任じる, 旗頭の狙い, 旗頭に許す,
   旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭の調略,
-  castellanOf, underMyBanner, 軍の道, 城の実入り, 自ら采配するか } = H;
+  castellanOf, underMyBanner, 軍の道, 城の実入り, 自ら采配するか,
+  寄騎に取る, 寄騎に取れるか, 寄騎を繕う, 国主を繕う, 城主か, 方面の国, 当主の国ら } = H;
 
 const 咎 = [];
 const 確 = (名, 可, 添 = '') => {
@@ -209,6 +210,101 @@ console.log('\n── 八　狙うのは方面に隣接する敵から順');
   }
   /* 旗の下の家へは仕掛けない。 */
   確('旗の下の城は狙わない', !狙 || !underMyBanner(s, 旗.faction, 狙.的.faction));
+}
+
+console.log('\n── 九　旗頭の寄騎は、月が変わっても離れない');
+{
+  /* 寄騎の繕いは「寄親が国主であること」しか見ていなかった。旗頭の寄騎は
+     ことごとくこの目に引っかかり、取った翌月には残らず離れていた。遊ぶ側の
+     画面には「浅井久政は寄親を離れた」と六人ぶん並んだ。 */
+  const { s, 旗, 国主 } = 場();
+  const 取れた = [];
+  for (const k of Object.keys(国主)) {
+    const g = 国主[k];
+    if (g.id === 旗.id) continue;
+    if (寄騎に取る(s, 旗.id, g.id).ok) 取れた.push(g);
+  }
+  確('方面の国主を寄騎に取れる', 取れた.length >= 2,
+    取れた.map((g) => `${g.name}（${g.役国}）`).join('・') || 'なし');
+  const 解 = 寄騎を繕う(s, 'oda');
+  確('繕いで離れない', !取れた.some((g) => 解.some((x) => x.id === g.id)),
+    解.length ? `離れた ${解.map((x) => x.name).join('・')}` : '離れた者なし');
+  /* 月を送っても同じであること（繕いは月送りの中で回る）。 */
+  const t = advanceMonth(s);
+  const 残 = 取れた.filter((g) => (t.generals.find((x) => x.id === g.id) || {}).寄親 === 旗.id);
+  確('月を送っても寄騎のままである', 残.length === 取れた.length,
+    `${残.length}／${取れた.length}名`);
+}
+
+console.log('\n── 十　方面の国主は、城主の札が無くても寄騎に取れる');
+{
+  /* 城主とは、その城に居る者のうち最も身代の高い者である。同じ城にさらに
+     大身の者が入れば、国主でありながら城主ではなくなる。国主は城主の上にある
+     役であるから、城主の札を要るのは筋が通らない。 */
+  const { s, 旗, 国主 } = 場();
+  const 相 = Object.values(国主).find((g) => g.id !== 旗.id);
+  const 城 = s.castles.find((c) => c.id === (相.本領 || 相.at));
+  const 大身 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役
+    && x.id !== 相.id && x.id !== 旗.id);
+  大身.age = 40; 大身.fief = 90000; 大身.at = 城.id; 大身.本領 = 城.id; 城.lordId = 大身.id;
+  確('国主が城主ではなくなった', !城主か(s, 相),
+    `${城.name}の城主は ${(castellanOf(s, 城) || {}).name}`);
+  const r = 寄騎に取れるか(s, 旗, 相);
+  確('それでも旗頭の寄騎に取れる', r.ok, r.ok ? `${相.name}（${相.役国}の国主）` : r.why);
+}
+
+console.log('\n── 十一　方面の外の国主は取れず、その訳が読める');
+{
+  const { s, 旗, 国主 } = 場();
+  /* 方面の外にも一国を持たせ、そこに国主を立てる。 */
+  const 外の国 = '伊賀';
+  for (const c of s.castles.filter((x) => x.kuni === 外の国)) c.faction = 'oda';
+  const 外城 = s.castles.find((c) => c.faction === 'oda' && c.kuni === 外の国);
+  const 外の者 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役
+    && x.id !== 旗.id && !Object.values(国主).some((y) => y.id === x.id));
+  if (外城 && 外の者) {
+    外の者.age = 34; 外の者.fief = 40000; 外の者.at = 外城.id; 外の者.本領 = 外城.id;
+    外城.lordId = 外の者.id;
+    国主に任じる(s, 'oda', 外の国, 外の者.id);
+  }
+  const 外 = [...Object.values(国主), 外の者].filter(Boolean)
+    .find((g) => g && g.id !== 旗.id && g.役 === '国主' && !方面の国(旗).includes(g.役国));
+  if (!外) {
+    確('（方面の外に国主がいないので、この節は測れない）', true, 方面の国(旗).join('・'));
+  } else {
+    const r = 寄騎に取れるか(s, 旗, 外);
+    確('方面の外の国主は取れない', !r.ok, r.why);
+    確('訳に方面が出る', /方面/.test(r.why || ''), r.why);
+  }
+}
+
+console.log('\n── 十二　当主が城へ入れば、その国の国主は置けない');
+{
+  /* 当主の本領が余所にあっても、その城に入っている以上、その国は当主が自ら
+     差配する国である。遊ぶ側の申し出は「稲葉山城に当主の織田信秀を入れて
+     いるのに、美濃の国主が選べる」であった。 */
+  const { s, 国主 } = 場();
+  const 当主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
+  const 美濃 = 国主['美濃'];
+  const 本領の国 = (s.castles.find((c) => c.id === 当主.本領) || {}).kuni;
+  確('当主の本領は美濃ではない', 本領の国 !== '美濃', `本領 ${本領の国}`);
+  /* 当主を美濃の城へ入れる（本領は動かさない） */
+  const 稲葉山 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '美濃');
+  当主.at = 稲葉山.id;
+  確('当主のいる国が数えられる', 当主の国ら(s, 'oda').includes('美濃'),
+    当主の国ら(s, 'oda').join('・'));
+  const 誰 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役 && x.id !== 当主.id);
+  if (誰) {
+    誰.fief = 40000; 誰.age = 34; 誰.at = 稲葉山.id; 誰.本領 = 稲葉山.id;   // 美濃に根を持たせる
+    const r = 国主に任じる(s, 'oda', '美濃', 誰.id);
+    確('当主のいる国には国主を立てられない', !r.ok, r.why);
+  }
+  /* すでに立っていた国主も、月が変われば役を離れる */
+  if (美濃) {
+    const 解 = 国主を繕う(s, 'oda');
+    確('すでに立っていた国主も役を離れる', 解.some((g) => g.id === 美濃.id),
+      解.map((g) => g.name).join('・') || 'なし');
+  }
 }
 
 console.log(`\n════ 旗頭の差配：咎 ${咎.length} 件`);

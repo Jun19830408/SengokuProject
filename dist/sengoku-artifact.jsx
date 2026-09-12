@@ -12229,6 +12229,17 @@ function \u56FD\u4E3B\u306E\u67A0(s2, fid) {
   return \u56FD.size;
 }
 var \u56FD\u4E3B\u305F\u3061 = (s2, fid) => s2.generals.filter((g) => g.faction === fid && !g.captive && g.\u5F79 === "\u56FD\u4E3B");
+function \u5F53\u4E3B\u306E\u56FD\u3089(s2, fid) {
+  const \u5F53\u4E3B2 = (s2.generals || []).find((x) => x.faction === fid && x.lord && !x.captive);
+  if (!\u5F53\u4E3B2) return [];
+  const \u56FD = /* @__PURE__ */ new Set();
+  for (const id of [\u5F53\u4E3B2.\u672C\u9818, \u5F53\u4E3B2.at]) {
+    if (!id) continue;
+    const c = (s2.castles || []).find((x) => x.id === id);
+    if (c) \u56FD.add(c.kuni);
+  }
+  return [...\u56FD];
+}
 function \u56FD\u4E3B\u306B\u4EFB\u3058\u308B(s2, fid, kuni, genId) {
   const g = s2.generals.find((x) => x.id === genId);
   if (!g || g.faction !== fid || g.captive) return { ok: false, why: "\u305D\u306E\u8005\u306F\u3044\u306A\u3044\u3002" };
@@ -12238,8 +12249,7 @@ function \u56FD\u4E3B\u306B\u4EFB\u3058\u308B(s2, fid, kuni, genId) {
     return { ok: false, why: `${g.name}\u306F${kuni}\u306B\u6839\u3092\u6301\u305F\u306A\u3044\u3002\u56FD\u4E3B\u306F\u305D\u306E\u56FD\u306B\u672C\u9818\u3092\u6301\u3064\u8005\u304B\u3089\u9078\u3076\u3002` };
   }
   const \u5F53\u4E3B2 = s2.generals.find((x) => x.faction === fid && x.lord && !x.captive);
-  const \u5F53\u4E3B\u306E\u57CE = \u5F53\u4E3B2 && s2.castles.find((c) => c.id === (\u5F53\u4E3B2.\u672C\u9818 || \u5F53\u4E3B2.at));
-  if (\u5F53\u4E3B\u306E\u57CE && \u5F53\u4E3B\u306E\u57CE.kuni === kuni) {
+  if (\u5F53\u4E3B\u306E\u56FD\u3089(s2, fid).includes(kuni)) {
     return { ok: false, why: `${kuni}\u306B\u306F${\u5F53\u4E3B2.name}\u304C\u3044\u308B\u3002\u5F53\u4E3B\u306E\u3044\u308B\u56FD\u306B\u56FD\u4E3B\u306F\u7F6E\u304B\u306A\u3044\u3002` };
   }
   if (\u8EAB\u5206\u306E\u4F4D(g, s2) < \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u56FD\u4E3B) {
@@ -12263,9 +12273,7 @@ function \u56FD\u4E3B\u3092\u7E55\u3046(s2, fid) {
   for (const g of s2.generals) {
     if (g.faction !== fid || g.\u5F79 !== "\u56FD\u4E3B") continue;
     const \u6839 = g.\u672C\u9818 && s2.castles.find((c) => c.id === g.\u672C\u9818 && c.faction === fid);
-    const \u5F53\u4E3B2 = s2.generals.find((x) => x.faction === fid && x.lord && !x.captive);
-    const \u5F53\u4E3B\u306E\u57CE = \u5F53\u4E3B2 && s2.castles.find((c) => c.id === (\u5F53\u4E3B2.\u672C\u9818 || \u5F53\u4E3B2.at));
-    if (!g.\u5F79\u56FD || !\u6301\u3064\u56FD.has(g.\u5F79\u56FD) || \u8EAB\u5206\u306E\u4F4D(g, s2) < \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u56FD\u4E3B || \u6839 && \u6839.kuni !== g.\u5F79\u56FD || \u5F53\u4E3B\u306E\u57CE && \u5F53\u4E3B\u306E\u57CE.kuni === g.\u5F79\u56FD) {
+    if (!g.\u5F79\u56FD || !\u6301\u3064\u56FD.has(g.\u5F79\u56FD) || \u8EAB\u5206\u306E\u4F4D(g, s2) < \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u56FD\u4E3B || \u6839 && \u6839.kuni !== g.\u5F79\u56FD || \u5F53\u4E3B\u306E\u56FD\u3089(s2, fid).includes(g.\u5F79\u56FD)) {
       g.\u5F79 = null;
       g.\u5F79\u56FD = null;
       \u89E3\u3044\u305F.push(g);
@@ -12292,7 +12300,11 @@ function \u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u304B(s2, \u5BC4\u89AA, gen) {
   if (gen.faction !== \u5BC4\u89AA.faction) return { ok: false, why: "\u5BB6\u304C\u9055\u3046\u3002" };
   if (gen.\u5F79 === "\u65D7\u982D") return { ok: false, why: `${gen.name}\u306F\u65D7\u982D\u3067\u3042\u308B\u3002\u65D7\u982D\u306F\u5BC4\u9A0E\u306B\u306A\u3089\u306A\u3044\u3002` };
   const \u57CE = \u57CE\u4E3B\u304B(s2, gen);
-  if (!\u57CE) return { ok: false, why: `${gen.name}\u306F\u57CE\u3092\u9810\u304B\u3063\u3066\u3044\u306A\u3044\u3002\u5BC4\u9A0E\u306B\u306A\u308C\u308B\u306E\u306F\u57CE\u4E3B\u3060\u3051\u3067\u3042\u308B\u3002` };
+  const \u65B9\u9762 = \u65B9\u9762\u306E\u56FD(\u5BC4\u89AA);
+  const \u56FD\u4E3B\u3067\u65B9\u9762 = \u5BC4\u89AA.\u5F79 === "\u65D7\u982D" && gen.\u5F79 === "\u56FD\u4E3B" && \u65B9\u9762.includes(gen.\u5F79\u56FD);
+  if (!\u57CE && !\u56FD\u4E3B\u3067\u65B9\u9762) {
+    return { ok: false, why: `${gen.name}\u306F\u57CE\u3092\u9810\u304B\u3063\u3066\u3044\u306A\u3044\u3002\u5BC4\u9A0E\u306B\u306A\u308C\u308B\u306E\u306F\u57CE\u4E3B\u304B\u3001\u65B9\u9762\u306E\u56FD\u4E3B\u3067\u3042\u308B\u3002` };
+  }
   if (\u5BC4\u89AA.\u5F79 === "\u56FD\u4E3B") {
     if (gen.\u5F79 === "\u56FD\u4E3B") return { ok: false, why: `${gen.name}\u306F\u56FD\u4E3B\u3067\u3042\u308B\u3002\u56FD\u4E3B\u3092\u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u306E\u306F\u65D7\u982D\u3060\u3051\u3002` };
     if (\u57CE.kuni !== \u5BC4\u89AA.\u5F79\u56FD) {
@@ -12300,11 +12312,9 @@ function \u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u304B(s2, \u5BC4\u89AA, gen) {
     }
   } else {
     const \u5DF1\u57CE = s2.castles.find((x) => x.id === (\u5BC4\u89AA.\u672C\u9818 || \u5BC4\u89AA.at));
-    const \u65B9\u9762 = \u65B9\u9762\u306E\u56FD(\u5BC4\u89AA);
-    const \u540C\u56FD = !!\u5DF1\u57CE && \u57CE.kuni === \u5DF1\u57CE.kuni;
-    const \u56FD\u4E3B\u3067\u65B9\u9762 = gen.\u5F79 === "\u56FD\u4E3B" && \u65B9\u9762.includes(gen.\u5F79\u56FD);
+    const \u540C\u56FD = !!\u5DF1\u57CE && !!\u57CE && \u57CE.kuni === \u5DF1\u57CE.kuni;
     if (!\u540C\u56FD && !\u56FD\u4E3B\u3067\u65B9\u9762) {
-      return { ok: false, why: `${gen.name}\u306F${\u5DF1\u57CE ? \u5DF1\u57CE.kuni : "\u65D7\u982D\u306E\u56FD"}\u306E\u57CE\u4E3B\u3067\u3082\u3001\u65B9\u9762\u306E\u56FD\u4E3B\u3067\u3082\u306A\u3044\u3002` };
+      return { ok: false, why: gen.\u5F79 === "\u56FD\u4E3B" ? `${gen.\u5F79\u56FD}\u306F${\u5BC4\u89AA.name}\u306E\u65B9\u9762\uFF08${\u65B9\u9762.join("\u30FB") || "\u306A\u3057"}\uFF09\u306B\u5165\u3063\u3066\u3044\u306A\u3044\u3002` : `${gen.name}\u306F${\u5DF1\u57CE ? \u5DF1\u57CE.kuni : "\u65D7\u982D\u306E\u56FD"}\u306E\u57CE\u4E3B\u3067\u3082\u3001\u65B9\u9762\u306E\u56FD\u4E3B\u3067\u3082\u306A\u3044\u3002` };
     }
   }
   if (gen.\u5BC4\u89AA && gen.\u5BC4\u89AA !== \u5BC4\u89AA.id) {
@@ -12331,9 +12341,16 @@ function \u5BC4\u9A0E\u3092\u7E55\u3046(s2, fid) {
   for (const g of s2.generals) {
     if (g.faction !== fid || !g.\u5BC4\u89AA) continue;
     const \u89AA = s2.generals.find((x) => x.id === g.\u5BC4\u89AA);
-    const \u57CE = s2.castles.find((c) => c.id === (g.\u672C\u9818 || g.at));
-    const \u826F = \u89AA && !\u89AA.captive && \u89AA.\u5F79 === "\u56FD\u4E3B" && \u89AA.\u5F79\u56FD && \u57CE && \u57CE.kuni === \u89AA.\u5F79\u56FD && \u57CE.faction === fid;
-    if (!\u826F) {
+    if (!\u89AA || \u89AA.captive || \u89AA.faction !== fid) {
+      g.\u5BC4\u89AA = null;
+      \u89E3\u3044\u305F.push(g);
+      continue;
+    }
+    const \u5143 = g.\u5BC4\u89AA;
+    g.\u5BC4\u89AA = null;
+    const \u53EF = \u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u304B(s2, \u89AA, g).ok;
+    g.\u5BC4\u89AA = \u5143;
+    if (!\u53EF) {
       g.\u5BC4\u89AA = null;
       \u89E3\u3044\u305F.push(g);
     }
@@ -12364,9 +12381,9 @@ function \u65D7\u982D\u306B\u4EFB\u3058\u308B(s2, fid, genId, \u56FD\u3089) {
   }
   const \u6301\u3064\u56FD = new Set(s2.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
   const \u5F53\u4E3B2 = s2.generals.find((x) => x.faction === fid && x.lord && !x.captive);
-  const \u5F53\u4E3B\u306E\u57CE = \u5F53\u4E3B2 && s2.castles.find((c) => c.id === (\u5F53\u4E3B2.\u672C\u9818 || \u5F53\u4E3B2.at));
-  const \u5F53\u4E3B\u306E\u56FD = \u5F53\u4E3B\u306E\u57CE ? \u5F53\u4E3B\u306E\u57CE.kuni : null;
-  const \u9078 = [...new Set((\u56FD\u3089 || []).filter((k) => \u6301\u3064\u56FD.has(k) && k !== \u5F53\u4E3B\u306E\u56FD))];
+  const \u5F53\u4E3B\u306E\u56FD\u3005 = \u5F53\u4E3B\u306E\u56FD\u3089(s2, fid);
+  const \u5F53\u4E3B\u306E\u56FD = \u5F53\u4E3B\u306E\u56FD\u3005.find((k) => (\u56FD\u3089 || []).includes(k)) || \u5F53\u4E3B\u306E\u56FD\u3005[0] || null;
+  const \u9078 = [...new Set((\u56FD\u3089 || []).filter((k) => \u6301\u3064\u56FD.has(k) && !\u5F53\u4E3B\u306E\u56FD\u3005.includes(k)))];
   if (\u9078.length < 2) {
     return {
       ok: false,
@@ -12396,11 +12413,10 @@ function \u65D7\u982D\u3092\u7E55\u3046(s2, fid) {
   for (const g of s2.generals) {
     if (g.faction !== fid || g.\u5F79 !== "\u65D7\u982D") continue;
     g.\u65B9\u9762 = \u65B9\u9762\u306E\u56FD(g).filter((k) => \u6301\u3064\u56FD.has(k));
-    const \u5F53\u4E3B2 = s2.generals.find((x) => x.faction === fid && x.lord && !x.captive);
-    const \u5F53\u4E3B\u306E\u57CE2 = \u5F53\u4E3B2 && s2.castles.find((c) => c.id === (\u5F53\u4E3B2.\u672C\u9818 || \u5F53\u4E3B2.at));
-    if (\u5F53\u4E3B\u306E\u57CE2) g.\u65B9\u9762 = g.\u65B9\u9762.filter((k) => k !== \u5F53\u4E3B\u306E\u57CE2.kuni);
+    const \u5F53\u4E3B\u306E\u56FD\u3005 = \u5F53\u4E3B\u306E\u56FD\u3089(s2, fid);
+    g.\u65B9\u9762 = g.\u65B9\u9762.filter((k) => !\u5F53\u4E3B\u306E\u56FD\u3005.includes(k));
     const \u6839 = g.\u672C\u9818 && s2.castles.find((c) => c.id === g.\u672C\u9818 && c.faction === fid);
-    if (\u6839 && g.\u65B9\u9762.length && !g.\u65B9\u9762.includes(\u6839.kuni) && \u6301\u3064\u56FD.has(\u6839.kuni) && (!\u5F53\u4E3B\u306E\u57CE2 || \u5F53\u4E3B\u306E\u57CE2.kuni !== \u6839.kuni)) {
+    if (\u6839 && g.\u65B9\u9762.length && !g.\u65B9\u9762.includes(\u6839.kuni) && \u6301\u3064\u56FD.has(\u6839.kuni) && !\u5F53\u4E3B\u306E\u56FD\u3005.includes(\u6839.kuni)) {
       g.\u65B9\u9762 = [\u6839.kuni, ...g.\u65B9\u9762].slice(0, 4);
     }
     if (g.\u65B9\u9762.length < 2 || \u8EAB\u5206\u306E\u4F4D(g, s2) < \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u65D7\u982D) {
@@ -29666,6 +29682,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
         const \u5DF1\u57CE = g.castles.find((x) => x.id === (\u65D7.\u672C\u9818 || \u65D7.at));
         const \u5F93 = \u5BC4\u9A0E\u305F\u3061(g, \u65D7.id);
         const \u53D6\u308C\u308B = g.generals.filter((x) => x.faction === g.player && !x.captive && x.id !== \u65D7.id && !x.\u5BC4\u89AA && \u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u304B(g, \u65D7, x).ok);
+        const \u53D6\u308C\u306C\u56FD\u4E3B = g.generals.filter((x) => x.faction === g.player && !x.captive && x.\u5F79 === "\u56FD\u4E3B" && x.id !== \u65D7.id && x.\u5BC4\u89AA !== \u65D7.id && !\u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u304B(g, \u65D7, x).ok).map((x) => ({ \u8005: x, \u8A33: \u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u304B(g, \u65D7, x).why }));
         return /* @__PURE__ */ React5.createElement("div", { key: \u65D7.id, style: { marginTop: 10, borderTop: `1px solid ${U.line2}`, paddingTop: 8 } }, /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12.5, marginBottom: 2 } }, /* @__PURE__ */ React5.createElement("b", null, \u65D7.name), /* @__PURE__ */ React5.createElement("span", { style: { color: U.dim, marginLeft: 6 } }, "\u65B9\u9762 ", \u65B9\u9762\u306E\u56FD(\u65D7).join("\u30FB") || "\u2014", "\uFF0F\u5BC4\u9A0E ", \u5F93.length, "\u540D"), /* @__PURE__ */ React5.createElement(
           "button",
           {
@@ -29674,7 +29691,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
             onClick: () => onHatagashiraRelease && onHatagashiraRelease(\u65D7.id)
           },
           "\u65B9\u9762\u3092\u89E3\u304F"
-        )), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 } }, "\u53D6\u308C\u308B\u306E\u306F", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, \u5DF1\u57CE ? \u5DF1\u57CE.kuni : "\u65D7\u982D\u306E\u56FD", "\u306E\u57CE\u4E3B"), "\u3068", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, "\u65B9\u9762\u306E\u56FD\u4E3B"), "\u3067\u3059\u3002"), /* @__PURE__ */ React5.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 6 } }, \u5F93.map((x) => /* @__PURE__ */ React5.createElement(
+        )), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 } }, "\u53D6\u308C\u308B\u306E\u306F", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, \u5DF1\u57CE ? \u5DF1\u57CE.kuni : "\u65D7\u982D\u306E\u56FD", "\u306E\u57CE\u4E3B"), "\u3068", /* @__PURE__ */ React5.createElement("b", { style: { color: U.text } }, "\u65B9\u9762\u306E\u56FD\u4E3B"), "\u3067\u3059\u3002", \u53D6\u308C\u306C\u56FD\u4E3B.map(({ \u8005, \u8A33 }) => /* @__PURE__ */ React5.createElement("div", { key: \u8005.id, style: { fontSize: 11, marginTop: 2 } }, "\u30FB", \u8005.name, "\uFF08", \u8005.\u5F79\u56FD, "\u306E\u56FD\u4E3B\uFF09\u306F\u53D6\u308C\u307E\u305B\u3093 \u2014 ", \u8A33))), /* @__PURE__ */ React5.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 6 } }, \u5F93.map((x) => /* @__PURE__ */ React5.createElement(
           "button",
           {
             key: x.id,
