@@ -12440,7 +12440,14 @@ function \u65D7\u982D\u3092\u7E55\u3046(s2, fid) {
 var \u56FD\u306E\u56FD\u4E3B = (s2, fid, kuni) => s2.generals.find((g) => g.faction === fid && !g.captive && g.\u5F79 === "\u56FD\u4E3B" && g.\u5F79\u56FD === kuni) || null;
 var rankName = (gen, s2) => rankOf(gen, s2).key;
 function castellanOf(s2, c) {
-  const gs = s2.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+  if (!c) return null;
+  const \u672D = c.lordId && (s2.generals || []).find((x) => x.id === c.lordId && x.faction === c.faction && !x.captive);
+  if (\u672D && (c.\u57CE\u4EE3 || canHoldCastle(\u672D, s2, c))) return \u672D;
+  return \u57CE\u3092\u5B88\u308B\u5C06(s2, c);
+}
+function \u57CE\u3092\u5B88\u308B\u5C06(s2, c) {
+  if (!c) return null;
+  const gs = (s2.generals || []).filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   if (!gs.length) return null;
   const lord = gs.find((x) => x.lord);
   if (lord) return lord;
@@ -12453,7 +12460,7 @@ function \u5B88\u5099\u968A\u306E\u7D71\u7387(s2, c) {
   const \u5965 = \u59EB.length ? Math.max(...\u59EB.map((h) => h.lead || 50)) : 0;
   const gs = s2.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   if (gs.length) {
-    const \u4E3B = castellanOf(s2, c);
+    const \u4E3B = \u57CE\u3092\u5B88\u308B\u5C06(s2, c);
     if (\u4E3B) return Math.max(\u4E3B.lead, \u5965);
     const \u4F4D = (x) => RANKS.findIndex((r) => r.key === rankOf(x, s2).key);
     const \u9806 = [...gs].sort((a, b) => \u4F4D(b) - \u4F4D(a) || (b.\u4ED5\u5B98 != null && a.\u4ED5\u5B98 != null ? a.\u4ED5\u5B98 - b.\u4ED5\u5B98 : (b.age || 0) - (a.age || 0)) || b.lead + b.valor + b.wit - (a.lead + a.valor + a.wit));
@@ -29364,6 +29371,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
   const \u5DEE\u914D = mine || isVassal(g, g.player, c.faction);
   const \u9810\u3051\u5148 = mine ? \u57CE\u306E\u5BC4\u89AA(g, c) : null;
   const lord = castellanOf(g, c);
+  const \u7559\u5B88 = mine && lord && lord.at !== c.id ? \u57CE\u3092\u5B88\u308B\u5C06(g, c) : null;
   const [cmd, setCmd] = useState5("\u958B\u58BE");
   const [genId, setGenId] = useState5(null);
   const [plot, setPlot] = useState5("\u5075\u5BDF");
@@ -29429,7 +29437,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
       } : void 0
     },
     /* @__PURE__ */ React5.createElement("div", { className: "sheet-h" }, /* @__PURE__ */ React5.createElement("button", { className: "btn sm", onClick: onClose }, "\u2190 \u623B\u308B"), /* @__PURE__ */ React5.createElement("span", { className: "mn", style: { fontSize: 22 } }, c.name), /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: "#6E6558" } }, c.kuni), /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: f.color } }, f.name), !mine && /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: open ? "#5C8C4A" : "#8A8478" } }, open ? "\u5075\u5BDF\u6E08\u307F" : "\u5185\u60C5\u4E0D\u660E"), !mine && relOf2(g, g.player, c.faction).state !== "\u4E2D\u7ACB" && /* @__PURE__ */ React5.createElement("span", { className: "pill", style: { background: "#4A6E8A" } }, relOf2(g, g.player, c.faction).state, relOf2(g, g.player, c.faction).until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, relOf2(g, g.player, c.faction).until.y, relOf2(g, g.player, c.faction).until.m)}\u304B\u6708\uFF09` : ""), /* @__PURE__ */ React5.createElement("span", { style: { flex: 1 } }), mine && /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11, color: U.dim } }, done ? "\u672C\u6708\u306E\u52D9\u3081\u306F\u6E08\u3093\u3060" : `\u50CD\u3051\u308B\u8005 ${freeGens.length}\u540D`)),
-    /* @__PURE__ */ React5.createElement("div", { className: "split", style: land ? { flexDirection: "column", gap: 10 } : void 0 }, /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("div", { className: "tbl" }, /* @__PURE__ */ React5.createElement("span", { className: "k" }, c.\u57CE\u4EE3 ? "\u57CE\u4EE3" : "\u57CE\u4E3B"), /* @__PURE__ */ React5.createElement("span", { className: "v mn" }, open ? lord ? lord.name : "\u2015" : "\uFF1F", open && lord && /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, lord.lord ? needsGuardian(lord) ? `\uFF08\u5F53\u4E3B\u30FB${lord.age}\u6B73\uFF09` : "\uFF08\u5F53\u4E3B\uFF09" : isGuardian(g, lord) ? "\uFF08\u5F8C\u898B\uFF09" : `\uFF08${rankName(lord, g)}\u30FB\u7984\u9AD8${fmt(stipendOf(g, lord))}\u77F3\uFF09`)), open && (() => {
+    /* @__PURE__ */ React5.createElement("div", { className: "split", style: land ? { flexDirection: "column", gap: 10 } : void 0 }, /* @__PURE__ */ React5.createElement("div", null, /* @__PURE__ */ React5.createElement("div", { className: "tbl" }, /* @__PURE__ */ React5.createElement("span", { className: "k" }, c.\u57CE\u4EE3 ? "\u57CE\u4EE3" : "\u57CE\u4E3B"), /* @__PURE__ */ React5.createElement("span", { className: "v mn" }, open ? lord ? lord.name : "\u2015" : "\uFF1F", open && \u7559\u5B88 && /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, "\uFF08\u51FA\u9663\u4E2D\u3002\u7559\u5B88\u306F", \u7559\u5B88.name, "\u304C\u9810\u304B\u308B\uFF09"), open && lord && /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, lord.lord ? needsGuardian(lord) ? `\uFF08\u5F53\u4E3B\u30FB${lord.age}\u6B73\uFF09` : "\uFF08\u5F53\u4E3B\uFF09" : isGuardian(g, lord) ? "\uFF08\u5F8C\u898B\uFF09" : `\uFF08${rankName(lord, g)}\u30FB\u7984\u9AD8${fmt(stipendOf(g, lord))}\u77F3\uFF09`)), open && (() => {
       const \u59EB = \u57CE\u306E\u59EB(g, c.id).filter((h) => h.faction === c.faction);
       if (!\u59EB.length) return null;
       return /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("span", { className: "k" }, "\u59EB"), /* @__PURE__ */ React5.createElement("span", { className: "v mn" }, \u59EB.map((h) => h.name).join("\u30FB"), /* @__PURE__ */ React5.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, "\uFF08\u7D71\u7387", Math.max(...\u59EB.map((h) => h.lead)), "\u30FB\u9580\u306E\u5B88\u5099\u968A\u306B\u6620\u308B\uFF09")));
@@ -30595,7 +30603,7 @@ function \u624B\u67C4\u306E\u968A(s2, corps, castle) {
   const gen = s2.generals.find((x) => x.id === hero.id);
   if (gen) return { lord: gen, at: gen.at, faction: gen.faction, \u5B88\u5099\u968A: false };
   if (!hero.\u5B88\u5099\u968A || !castle) return null;
-  const \u4E3B = castellanOf(s2, castle) || s2.generals.find((x) => x.faction === castle.faction && x.id === (s2.factions[castle.faction] || {}).lord);
+  const \u4E3B = \u57CE\u3092\u5B88\u308B\u5C06(s2, castle) || s2.generals.find((x) => x.faction === castle.faction && x.id === (s2.factions[castle.faction] || {}).lord);
   if (!\u4E3B) return null;
   return { lord: \u4E3B, at: castle.id, faction: castle.faction, \u5B88\u5099\u968A: true };
 }

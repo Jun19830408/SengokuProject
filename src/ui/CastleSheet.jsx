@@ -3,7 +3,7 @@ import { RANSOM_DIV, ransomRank } from "../core/capture.js";
 import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/house.js";
 import { marchMonths } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
-import { 軍役の割増, RANKS, castellanOf, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 方面の国, 城主か } from "../core/rank.js";
+import { 軍役の割増, RANKS, castellanOf, 城を守る将, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 方面の国, 城主か } from "../core/rank.js";
 import { canSee, relOf, isVassal, 主を探す } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
@@ -37,6 +37,9 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
   // その城の政務を預けている相手（寄親）。いれば大名は下知しない（GDD 6.4）
   const 預け先 = mine ? 城の寄親(g, c) : null;
   const lord = castellanOf(g, c);
+  /* 城主が出陣していれば、城に残る者が留守を預かる（GDD 6.4）。
+     身分は問わない。城主が帰れば、また城主が座を取る。 */
+  const 留守 = mine && lord && lord.at !== c.id ? 城を守る将(g, c) : null;
   const [cmd, setCmd] = useState("開墾");
   const [genId, setGenId] = useState(null);
   const [plot, setPlot] = useState("偵察");
@@ -135,6 +138,11 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
             <span className="k">{c.城代 ? "城代" : "城主"}</span>
             <span className="v mn">
               {open ? (lord ? lord.name : "―") : "？"}
+              {open && 留守 && (
+                <span style={{ fontSize: 11, color: U.dim, marginLeft: 6 }}>
+                  （出陣中。留守は{留守.name}が預かる）
+                </span>
+              )}
               {open && lord && (
                 <span style={{ fontSize: 11, color: U.dim, marginLeft: 6 }}>
                   {lord.lord

@@ -15,7 +15,8 @@ const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 const { initState, advanceMonth, 国主に任じる, 旗頭に任じる, 旗頭の狙い, 旗頭に許す,
   旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭の調略,
   castellanOf, underMyBanner, 軍の道, 城の実入り, 自ら采配するか,
-  寄騎に取る, 寄騎に取れるか, 寄騎を繕う, 国主を繕う, 城主か, 方面の国, 当主の国ら } = H;
+  寄騎に取る, 寄騎に取れるか, 寄騎を繕う, 国主を繕う, 城主か, 城を守る将, 守備隊の統率,
+  方面の国, 当主の国ら } = H;
 
 const 咎 = [];
 const 確 = (名, 可, 添 = '') => {
@@ -305,6 +306,43 @@ console.log('\n── 十二　当主が城へ入れば、その国の国主は�
     確('すでに立っていた国主も役を離れる', 解.some((g) => g.id === 美濃.id),
       解.map((g) => g.name).join('・') || 'なし');
   }
+}
+
+console.log('\n── 十三　城主は任じた者である。出陣しても変わらない');
+{
+  /* もとは「その城にいる者のうち最も身代の高い者」を城主としていた。役では
+     なくその月の顔ぶれで決まるので、城主が出陣した途端に城主でなくなり、
+     国主の寄騎であればその月のうちに寄親を離れた。旗頭・国主・城主の筋が、
+     兵を出すたびに崩れていたことになる。 */
+  const { s, 旗, 国主 } = 場();
+  const 親 = 国主['美濃'] || Object.values(国主).find((g) => g.id !== 旗.id);
+  const 城ら = s.castles.filter((c) => c.faction === 'oda' && c.kuni === 親.役国
+    && c.id !== (親.本領 || 親.at));
+  const 城 = 城ら[0];
+  const 主 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役
+    && x.id !== 旗.id && !Object.values(国主).some((y) => y.id === x.id));
+  主.age = 34; 主.fief = 12000; 主.at = 城.id; 主.本領 = 城.id; 城.lordId = 主.id;
+  確('国主の寄騎に取れる', 寄騎に取る(s, 親.id, 主.id).ok, `${親.name} ← ${主.name}（${城.name}）`);
+
+  /* 出陣（城を離れる）*/
+  主.at = null;
+  確('出陣しても城主のまま', !!城主か(s, 主), (castellanOf(s, 城) || {}).name || 'なし');
+  確('出陣しても寄親を離れない', !寄騎を繕う(s, 'oda').some((g) => g.id === 主.id));
+
+  /* 帰って、より大身の者が同じ城に入る */
+  主.at = 城.id;
+  const 大身 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役
+    && x.id !== 主.id && x.id !== 旗.id && !Object.values(国主).some((y) => y.id === x.id));
+  大身.age = 40; 大身.fief = 90000; 大身.at = 城.id; 大身.本領 = 城.id;
+  確('大身が入っても城主は変わらない', (castellanOf(s, 城) || {}).id === 主.id,
+    `${(castellanOf(s, 城) || {}).name}（大身 ${大身.name}）`);
+
+  /* 留守は、城に残る者が率いる */
+  主.at = null;
+  確('城主の留守は、残る者が率いる', (城を守る将(s, 城) || {}).id === 大身.id,
+    `城主 ${(castellanOf(s, 城) || {}).name}／留守 ${(城を守る将(s, 城) || {}).name}`);
+  確('留守の統率が守備隊に映る', 守備隊の統率(s, 城) >= 大身.lead,
+    `${守備隊の統率(s, 城)}（${大身.name}の統率 ${大身.lead}）`);
 }
 
 console.log(`\n════ 旗頭の差配：咎 ${咎.length} 件`);

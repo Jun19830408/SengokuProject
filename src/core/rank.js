@@ -523,17 +523,36 @@ export const 国の国主 = (s, fid, kuni) => s.generals.find((g) =>
 export const rankName = (gen, s) => rankOf(gen, s).key;
 
 // その城の城主。当主がいれば当主、なければ禄高の最も高い家老。
+/* 城主は、任じた者である（GDD 6.4）。
+
+   もとは「その城にいる者のうち最も身代の高い者」を城主としていた。役ではなく
+   その月の顔ぶれで決まるので、城主が出陣した途端に城主でなくなった。実測では、
+   国主の寄騎である城主を出陣させると、その月のうちに寄親を離れた――旗頭・国主・
+   城主の筋が、兵を出すたびに崩れていたことになる。
+
+   城主は任じるものであるから、任じた者に固定する。出陣しても城主は変わらない。
+   留守を守る者と、城を預かる者は別のことである。
+
+   まだ誰も任じていない城（落としたばかりの城など）は、いま居る者のうち最も
+   身代の高い者が預かっているものとして扱う。 */
 export function castellanOf(s, c) {
-  const gs = s.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+  if (!c) return null;
+  const 札 = c.lordId
+    && (s.generals || []).find((x) => x.id === c.lordId && x.faction === c.faction && !x.captive);
+  if (札 && (c.城代 || canHoldCastle(札, s, c))) return 札;
+  return 城を守る将(s, c);
+}
+
+/* いま城の守りを率いる者（GDD 6.4）。
+
+   城主が出陣していれば、留守は城に残る者が率いる。守備隊の統率も、上がった
+   手柄も、その者のものである。城主という役とは別に数える。 */
+export function 城を守る将(s, c) {
+  if (!c) return null;
+  const gs = (s.generals || []).filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   if (!gs.length) return null;
   const lord = gs.find((x) => x.lord);
-  if (lord) return lord;                       // 当主のいる城は当主が城主である
-  /* 任じた者が預かれるかは canHoldCastle で判ずる。ここだけ禄高で測っていたため、
-     一門を任じても黙って別の者が城主とみなされていた。
-
-     城代（c.城代）はそのまま預かる者である。城主の資格には届かぬが、留守を
-     任された以上その者が城を預かっている。ここで拾わねば、任じた本人ではなく
-     禄高の高い別の者が城を預かっていることになり、守備隊の統率も食い違う。 */
+  if (lord) return lord;                       // 当主が城にあれば、留守は当主が率いる
   const named = c.lordId && gs.find((x) => x.id === c.lordId);
   if (named && (c.城代 || canHoldCastle(named, s, c))) return named;
   return [...gs].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
@@ -563,7 +582,7 @@ export function 守備隊の統率(s, c) {
   const 奥 = 姫.length ? Math.max(...姫.map((h) => h.lead || 50)) : 0;
   const gs = s.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   if (gs.length) {
-    const 主 = castellanOf(s, c);
+    const 主 = 城を守る将(s, c);           // 城主が出陣していれば、留守を率いる者の統率が映る
     if (主) return Math.max(主.lead, 奥);
     const 位 = (x) => RANKS.findIndex((r) => r.key === rankOf(x, s).key);
     const 順 = [...gs].sort((a, b) => 位(b) - 位(a)

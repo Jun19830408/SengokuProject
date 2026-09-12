@@ -15,7 +15,7 @@ import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
 import { 遠征の兵糧, 運び賃を払う } from "../govern/war.js";
 import { courtRank, 号令できるか, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
-import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap, 寄騎に取る, 寄騎を解く } from "../core/rank.js";
+import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap, 寄騎に取る, 寄騎を解く, 城を守る将 } from "../core/rank.js";
 import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す, 戦の跡, 戦の跡を記す } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 軍の道 } from "../core/state.js";
 import { SEASON, U, clamp, fmt, man, monthsBetween } from "../core/util.js";
@@ -104,7 +104,7 @@ function 手柄の隊(s, corps, castle) {
   const gen = s.generals.find((x) => x.id === hero.id);
   if (gen) return { lord: gen, at: gen.at, faction: gen.faction, 守備隊: false };
   if (!hero.守備隊 || !castle) return null;
-  const 主 = castellanOf(s, castle)
+  const 主 = 城を守る将(s, castle)
     || s.generals.find((x) => x.faction === castle.faction && x.id === (s.factions[castle.faction] || {}).lord);
   if (!主) return null;
   return { lord: 主, at: castle.id, faction: castle.faction, 守備隊: true };
