@@ -315,7 +315,7 @@ export function 城主か(s, gen) {
    寄親の役によって、取れる相手が違う。
 
      国主 … その国の城主
-     旗頭 … 己の本領のある国の城主と、方面の国々の国主
+     旗頭 … 受け持ち（己の国と寄騎の国）と、それに隣り合う国の城主・国主
 
    いずれも「城を預かる者」であることが要る。国主を寄騎に取れるのは旗頭だけで、
    国主を取れば、その国主の下にある城主たちも旗頭の下に連なる。 */
@@ -330,7 +330,7 @@ export function 寄騎に取れるか(s, 寄親, gen) {
   if (gen.faction !== 寄親.faction) return { ok: false, why: "家が違う。" };
   if (gen.役 === "旗頭") return { ok: false, why: `${gen.name}は旗頭である。旗頭は寄騎にならない。` };
 
-  /* 方面の国主は、城主の札を持たずとも旗頭の寄騎になれる（GDD 6.4）。
+  /* 国主は、城主の札を持たずとも旗頭の寄騎になれる（GDD 6.4）。
 
      もとは誰であれ先に「城主か」を問うていた。城主は城に居る者のうち最も身代の
      高い者を指すので、同じ城にさらに大身の者が入れば、国主でありながら城主では
@@ -338,10 +338,9 @@ export function 寄騎に取れるか(s, 寄親, gen) {
      佐久間信盛（大和の国主）が、旗頭の寄騎の候補に上がってこない」であった。
      国主は城主の上にある役であるから、城主の札を要るのは筋が通らない。 */
   const 城 = 城主か(s, gen);
-  const 方面 = 方面の国(寄親);
-  const 国主で方面 = 寄親.役 === "旗頭" && gen.役 === "国主" && 方面.includes(gen.役国);
-  if (!城 && !国主で方面) {
-    return { ok: false, why: `${gen.name}は城を預かっていない。寄騎になれるのは城主か、方面の国主である。` };
+  const 国主として = 寄親.役 === "旗頭" && gen.役 === "国主" && !!gen.役国;
+  if (!城 && !国主として) {
+    return { ok: false, why: `${gen.name}は城を預かっていない。寄騎になれるのは城主か、国主である。` };
   }
 
   if (寄親.役 === "国主") {
@@ -350,12 +349,14 @@ export function 寄騎に取れるか(s, 寄親, gen) {
       return { ok: false, why: `${城.name}は${寄親.役国}にない。国主が束ねられるのは一国のうちである。` };
     }
   } else {
-    const 己城 = s.castles.find((x) => x.id === (寄親.本領 || 寄親.at));
-    const 同国 = !!己城 && !!城 && 城.kuni === 己城.kuni;
-    if (!同国 && !国主で方面) {
-      return { ok: false, why: gen.役 === "国主"
-        ? `${gen.役国}は${寄親.name}の方面（${方面.join("・") || "なし"}）に入っていない。`
-        : `${gen.name}は${己城 ? 己城.kuni : "旗頭の国"}の城主でも、方面の国主でもない。` };
+    /* 旗頭の届く先は「受け持ちと、それに隣り合う国」である（GDD 6.4）。
+       受け持ちは己の国と寄騎の国であるから、国主を一人取るたびに一つ外へ伸びる。 */
+    const 国 = 国主として ? gen.役国 : 城.kuni;
+    const 届 = 旗頭の届く国(s, 寄親);
+    if (!届.includes(国)) {
+      const 受 = 旗頭の受け持ち(s, 寄親);
+      return { ok: false,
+        why: `${国}は${寄親.name}の手の届く先にない（受け持ち ${受.join("・") || "なし"}と、その隣国まで）。` };
     }
   }
   if (gen.寄親 && gen.寄親 !== 寄親.id) {
@@ -406,16 +407,25 @@ export function 寄騎を繕う(s, fid) {
   return 解いた;
 }
 
-/* ------------------------------------------- 旗頭と方面（GDD 6.4）
+/* ------------------------------------------- 旗頭と受け持ち（GDD 6.4）
 
-   宿老は方面を預かる。柴田勝家の北国、明智光秀の丹波、羽柴秀吉の中国――
-   信長が方面軍を置いたのがこれである。一国を旗頭が預かり、その旗頭たちを
-   宿老が束ねる。
+   宿老は方面軍を率いる。柴田勝家の北国、明智光秀の丹波、羽柴秀吉の中国――
+   信長が方面軍を置いたのがこれである。
 
-   置ける数は家の大きさによる。四国につき一人を目安とする。二国しか持たぬ家に
-   方面軍は要らないし、三十国を一人で束ねるのも無理である。
+   もとは任じるときに国々を選ばせ、その並びを「方面」として持たせていた。
+   しかしこれは、大名が先に絵図を引いてしまうということである。史実の方面軍は
+   そうして生まれたのではない。与力を付け、隣を切り取らせ、また与力を付ける
+   ――手勢が伸びるのに従って受け持ちが広がった。
 
-     四国から一人　八国から二人　十二国から三人 …… */
+   そこでこの盤では、受け持ちを決め打ちにしない。
+
+     受け持ち　… 旗頭の根のある国と、寄騎たちの国
+     届く先　　… 受け持ちと、それに街道で隣り合う国
+
+   国主を寄騎に取れば、その国が受け持ちに加わり、届く先がさらに一つ外へ伸びる。
+   大名が引くのは「どの家を攻めるか」までで、どの城をいつ攻めるかは旗頭に任せる。
+
+   置ける数は家の大きさによる。四国につき一人を目安とする。 */
 export function 旗頭の枠(s, fid) {
   const 国 = new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
   return Math.floor(国.size / 4);
@@ -424,19 +434,46 @@ export function 旗頭の枠(s, fid) {
 export const 旗頭たち = (s, fid) => s.generals.filter((g) =>
   g.faction === fid && !g.captive && g.役 === "旗頭");
 
-// その旗頭が預かる方面（国の並び）
-export const 方面の国 = (gen) => (gen && Array.isArray(gen.方面) ? gen.方面 : []);
+/* その者の根のある国（本領、無ければ居所）。 */
+const 根の国 = (s, gen) => {
+  if (!gen) return null;
+  const c = (s.castles || []).find((x) => x.id === (gen.本領 || gen.at));
+  return c && c.faction === gen.faction ? c.kuni : null;
+};
 
-// その国を方面に含む旗頭（いれば）
-export const 国の旗頭 = (s, fid, kuni) => s.generals.find((g) =>
-  g.faction === fid && !g.captive && g.役 === "旗頭" && 方面の国(g).includes(kuni)) || null;
+/* 旗頭の受け持ち（GDD 6.4）。己の国と、寄騎たちの国。 */
+export function 旗頭の受け持ち(s, 旗) {
+  if (!旗) return [];
+  const 国 = new Set();
+  const 己 = 根の国(s, 旗);
+  if (己) 国.add(己);
+  for (const g of s.generals || []) {
+    if (g.寄親 !== 旗.id || g.captive || g.faction !== 旗.faction) continue;
+    const k = g.役 === "国主" && g.役国 ? g.役国 : 根の国(s, g);
+    if (k) 国.add(k);
+  }
+  return [...国];
+}
 
-/* 宿老に任じ、方面を預ける。
+/* 旗頭の届く先。受け持ちと、それに街道で隣り合う国。 */
+export function 旗頭の届く国(s, 旗) {
+  const 受 = 旗頭の受け持ち(s, 旗);
+  const 国 = new Set(受);
+  const 全 = new Set((s.castles || []).map((c) => c.kuni));
+  for (const k of 受) for (const j of 全) if (国が隣り合うか(s, k, j)) 国.add(j);
+  return [...国];
+}
 
-   選べるのは旗頭（家老）を務めている者である。一国も預かったことのない者に
-   方面は委ねられない。預ける国は、その家が城を持つ国のうち、他の宿老が
-   預かっていないものに限る。 */
-export function 旗頭に任じる(s, fid, genId, 国ら) {
+// 受け持ちにその国を含む旗頭（いれば）
+export const 国の旗頭 = (s, fid, kuni) => (s.generals || []).find((g) =>
+  g.faction === fid && !g.captive && g.役 === "旗頭"
+  && 旗頭の受け持ち(s, g).includes(kuni)) || null;
+
+/* 宿老に任じる（GDD 6.4）。
+
+   選べるのは国主を務めている者である。一国も預かったことのない者に方面軍は
+   委ねられない。任じたあとの受け持ちは、寄騎を付けるにつれて広がる。 */
+export function 旗頭に任じる(s, fid, genId) {
   const g = s.generals.find((x) => x.id === genId);
   if (!g || g.faction !== fid || g.captive) return { ok: false, why: "その者はいない。" };
   if (g.lord) return { ok: false, why: "当主は宿老に任じられない。" };
@@ -444,74 +481,89 @@ export function 旗頭に任じる(s, fid, genId, 国ら) {
     return { ok: false, why: `${g.name}は${rankName(g, s)}。旗頭となるには宿老（禄高二万石）以上の身分が要る。` };
   }
   if (g.役 !== "国主" && g.役 !== "旗頭") {
-    return { ok: false, why: `${g.name}は国主ではない。方面を預かるには、まず一国を預かる者でなければならぬ。` };
+    return { ok: false, why: `${g.name}は国主ではない。方面軍を預かるには、まず一国を預かる者でなければならぬ。` };
   }
   const 枠 = 旗頭の枠(s, fid);
   const いま = 旗頭たち(s, fid).filter((x) => x.id !== g.id).length;
   if (いま >= 枠) {
     return { ok: false, why: `宿老を置けるのは${枠}名まで（四国につき一人）。いま${いま}名。` };
   }
-  const 持つ国 = new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
-  /* 当主のいる国は方面に入れない（GDD 6.4）。
-     大名が自ら差配する国を、他人に預ける謂れはない。国主と同じ理屈である。 */
-  const 当主 = s.generals.find((x) => x.faction === fid && x.lord && !x.captive);
-  const 当主の国々 = 当主の国ら(s, fid);
-  const 当主の国 = 当主の国々.find((k) => (国ら || []).includes(k)) || 当主の国々[0] || null;
-  const 選 = [...new Set((国ら || []).filter((k) => 持つ国.has(k) && !当主の国々.includes(k)))];
-  if (選.length < 2) {
-    return { ok: false,
-      why: 当主の国 && (国ら || []).includes(当主の国)
-        ? `${当主の国}には${当主.name}がいる。当主のいる国は方面に入れられない。方面は二国以上を要る。`
-        : "方面は二国以上でなければ意味を成さない。" };
+  const 根 = 根の国(s, g);
+  if (!根) return { ok: false, why: `${g.name}は自家の城に根を持たない。` };
+  if (当主の国ら(s, fid).includes(根)) {
+    const 当主 = s.generals.find((x) => x.faction === fid && x.lord && !x.captive);
+    return { ok: false, why: `${根}には${当主 ? 当主.name : "当主"}がいる。当主のいる国に旗頭は置かない。` };
   }
-  for (const k of 選) {
-    const 先 = 国の旗頭(s, fid, k);
-    if (先 && 先.id !== g.id) return { ok: false, why: `${k}はすでに${先.name}の方面である。` };
-  }
-  /* 旗頭であった者が宿老になるとき、預かっていた一国の役は解く。
-     方面を預かる者が、同時に一国の旗頭を兼ねることはない。 */
-  if (g.役 === "国主") g.役国 = null;
+  /* 旗頭になっても、根のある一国は預かったままである。受け持ちはそこから広がる。 */
   g.役 = "旗頭";
-  g.方面 = 選;
-  return { ok: true, 国: 選 };
+  g.役国 = 根;
+  g.方面 = null;                                   // 古い記録の名残を落とす
+  return { ok: true, 国: [根] };
 }
 
 export function 旗頭を解く(s, genId) {
   const g = s.generals.find((x) => x.id === genId);
-  if (g && g.役 === "旗頭") { g.役 = null; g.方面 = null; }
+  if (g && g.役 === "旗頭") { g.役 = null; g.役国 = null; g.方面 = null; g.的家 = null; }
   return s;
 }
 
-/* 方面の筋を繕う。失った国は方面から落ち、二国を割れば宿老の役も解ける。
-   国を失って枠が縮んだときは、預かる国の少ない者から解く。 */
+/* 旗頭が攻める家を定める（GDD 6.4）。
+
+   どこを攻めるかは家の運を決めるので、大名が指す。ただし指すのは家までで、
+   どの城をいつ攻めるかは旗頭が見立てる。選べるのは受け持ちに国境を接する
+   家に限る。手の届かぬ相手を指しても、方面軍は動きようがない。 */
+export const 的家の限り = 3;
+
+export function 旗頭の的にできる家(s, 旗) {
+  if (!旗) return [];
+  const 届 = new Set(旗頭の届く国(s, 旗));
+  const 家 = new Set();
+  for (const c of s.castles || []) {
+    if (c.faction === 旗.faction) continue;
+    if (届.has(c.kuni)) 家.add(c.faction);
+  }
+  return [...家];
+}
+
+export function 旗頭の的家を定める(s, fid, genId, 家ら) {
+  const g = s.generals.find((x) => x.id === genId);
+  if (!g || g.faction !== fid || g.役 !== "旗頭") return { ok: false, why: "その者は旗頭ではない。" };
+  const 選べる = new Set(旗頭の的にできる家(s, g));
+  const 選 = [...new Set((家ら || []).filter((f) => 選べる.has(f)))].slice(0, 的家の限り);
+  g.的家 = 選.length ? 選 : null;
+  return { ok: true, 家: 選 };
+}
+
+export const 旗頭の的家 = (s, 旗) => {
+  const 選べる = new Set(旗頭の的にできる家(s, 旗));
+  return ((旗 && 旗.的家) || []).filter((f) => 選べる.has(f));
+};
+
+/* 旗頭の筋を繕う（GDD 6.4）。
+
+   受け持ちは寄騎から数えるので、国を失えばひとりでに縮む。繕うのは、根と
+   身分と枠だけである。 */
 export function 旗頭を繕う(s, fid) {
-  const 持つ国 = new Set(s.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
   const 解いた = [];
+  const 当主の国々 = 当主の国ら(s, fid);
   for (const g of s.generals) {
     if (g.faction !== fid || g.役 !== "旗頭") continue;
-    g.方面 = 方面の国(g).filter((k) => 持つ国.has(k));
-    /* 根が方面を離れたら、預かる先も改める。国主と同じ理屈である
-       （上の 国主を繕う を見よ）。旗頭は己の国の城主を寄騎に取れるので、
-       根が方面の外にあると、取れる相手が方面の外の城主だけになる。 */
-    // 当主のいる国は方面から外す
-    const 当主の国々 = 当主の国ら(s, fid);
-    g.方面 = g.方面.filter((k) => !当主の国々.includes(k));
-    const 根 = g.本領 && s.castles.find((c) => c.id === g.本領 && c.faction === fid);
-    if (根 && g.方面.length && !g.方面.includes(根.kuni) && 持つ国.has(根.kuni)
-      && !当主の国々.includes(根.kuni)) {
-      g.方面 = [根.kuni, ...g.方面].slice(0, 4);
-    }
-    // 二国を割れば方面ではない。身代が宿老に届かなくなったときも役を離れる
-    if (g.方面.length < 2 || 身分の位(g, s) < 役の要る身分.旗頭) {
-      g.役 = null; g.方面 = null; 解いた.push(g);
+    const 根 = 根の国(s, g);
+    g.役国 = 根 || null;
+    if (g.的家) g.的家 = 旗頭の的家(s, g);
+    if (!g.的家 || !g.的家.length) g.的家 = null;
+    if (!根 || 当主の国々.includes(根) || 身分の位(g, s) < 役の要る身分.旗頭) {
+      g.役 = null; g.役国 = null; g.方面 = null; g.的家 = null; 解いた.push(g);
     }
   }
   const 枠 = 旗頭の枠(s, fid);
   const 残 = 旗頭たち(s, fid);
   if (残.length > 枠) {
-    const 順 = [...残].sort((a, b) => 方面の国(a).length - 方面の国(b).length
+    const 順 = [...残].sort((a, b) => 旗頭の受け持ち(s, a).length - 旗頭の受け持ち(s, b).length
       || stipendOf(s, a) - stipendOf(s, b));
-    for (const g of 順.slice(0, 残.length - 枠)) { g.役 = null; g.方面 = null; 解いた.push(g); }
+    for (const g of 順.slice(0, 残.length - 枠)) {
+      g.役 = null; g.役国 = null; g.方面 = null; g.的家 = null; 解いた.push(g);
+    }
   }
   return 解いた;
 }
@@ -713,9 +765,9 @@ export function 陣触れに応じる(s, 大将, 本陣, 城) {
   if (!大将 || !城) return false;
   const 届 = 陣触れの届き(大将, s);
   if (届 === "天下") return true;
-  /* 宿老は預かった方面の国々から兵を催せる。柴田を北国へ置けば、北国の
+  /* 宿老は受け持ちの国々から兵を催せる。柴田を北国へ置けば、北国の
      国々が一つの軍として動く――方面軍とはそういうものである。 */
-  if (届 === "方面") return 方面の国(大将).includes(城.kuni);
+  if (届 === "方面") return 旗頭の受け持ち(s, 大将).includes(城.kuni);
   /* 国主は預かった一国と、街道で隣り合う国から催せる（GDD 7.3）。
 
      一国のうちだけでは、隣国へ攻め入るときに自分の国の兵しか動かせない。

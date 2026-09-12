@@ -5,7 +5,7 @@ import { MAX_CORPS, MAX_CORPS_MEN } from "../battle/field.js";
 import { persuadeResult } from "../core/capture.js";
 import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 方面の国, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
+import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 旗頭の受け持ち, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
 import { courtRank, 旗の下か } from "../core/province.js";
 import { 問われる家, 応じる目 } from "../core/sobuji.js";
@@ -1293,12 +1293,13 @@ export function GeneralList({ g, onClose, onYakume }) {
           <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 }}>
             <b style={{ color: U.text }}>国主</b>は一国を預かる役。家老（禄高八千石）以上が就け、城を持つ国につき一人までです。
             その旗のもとに<b style={{ color: U.text }}>寄騎</b>が集まります。任じるのは城の「人事」から。
-            <br /><b style={{ color: U.text }}>旗頭</b>は方面を預かる役。宿老（禄高二万石）以上で、かつ国主を務める者から選び、
-            二国以上をまとめて委ねます。置けるのは四国につき一人。柴田を北国へ、明智を丹波へ――これです。
-            <br />寄騎も方面の兵も、大名の直臣のままです。いつでも解けます。
+            <br /><b style={{ color: U.text }}>旗頭</b>は方面軍を率いる役。宿老（禄高二万石）以上で、かつ国主を務める者から選びます。
+            受け持ちは任じるときに決めず、<b style={{ color: U.text }}>国主を寄騎に取るたびに一国ずつ広がります</b>。
+            置けるのは四国につき一人。柴田を北国へ、明智を丹波へ――これです。
+            <br />寄騎も方面軍の兵も、大名の直臣のままです。いつでも解けます。
           </div>
 
-          <div className="sec">旗頭（方面）　{旗頭たち(g, g.player).length}／{旗頭の枠(g, g.player)}名</div>
+          <div className="sec">旗頭（方面軍）　{旗頭たち(g, g.player).length}／{旗頭の枠(g, g.player)}名</div>
           {旗頭の枠(g, g.player) === 0 && (
             <div style={{ fontSize: 12, color: U.dim, marginBottom: 8 }}>
               まだ旗頭は置けません（四国を領してはじめて一人）。いま
@@ -1309,8 +1310,8 @@ export function GeneralList({ g, onClose, onYakume }) {
             <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0",
               borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" }}>
               <span className="mn" style={{ fontSize: 15, width: 100 }}>{x.name}</span>
-              <span style={{ flex: 1, color: U.text }}>{方面の国(x).join("・")}</span>
-              <span className="num" style={{ color: U.dim }}>{方面の国(x).length}国</span>
+              <span style={{ flex: 1, color: U.text }}>{旗頭の受け持ち(g, x).join("・")}</span>
+              <span className="num" style={{ color: U.dim }}>{旗頭の受け持ち(g, x).length}国</span>
               <button className="btn sm" onClick={() => onYakume && onYakume({ 解く: x.id })}>解く</button>
             </div>
           ))}

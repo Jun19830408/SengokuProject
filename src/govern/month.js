@@ -7,7 +7,7 @@ import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritH
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の重み } from "../core/paths.js";
 import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
-import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 国主を繕う, 寄騎を繕う, 旗頭を繕う } from "../core/rank.js";
+import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家 } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
@@ -1534,13 +1534,13 @@ export function advanceMonth(prev, g) {
       }
       /* 旗頭に戦を任せる（GDD 6.4）。
 
-         方面を預けたのだから、どこを攻めるかは旗頭が見立てる。ただし攻める前に
+         方面軍を預けたのだから、どの城をいつ攻めるかは旗頭が見立てる。ただし攻める前に
          大名の許しを乞う――どこへ攻め入るかは家の運を決めるからである。
          許しは城ごとに一度、落とすまで有効（臣従した大名と同じ形）。 */
       旗頭の済んだ許しを片づける(s);
       for (const 旗 of s.generals.filter((g) => g.faction === s.player && g.役 === "旗頭" && !g.captive)) {
-        const 方面 = Array.isArray(旗.方面) ? 旗.方面 : [];
-        if (!方面.length) continue;
+        const 受 = 旗頭の受け持ち(s, 旗);
+        if (!受.length) continue;
         // 許された城があるなら、そこへ兵を出す
         const 許 = (s.旗頭の許し || []).filter((x) => x.旗頭 === 旗.id);
         let 出た = false;
@@ -1548,7 +1548,7 @@ export function advanceMonth(prev, g) {
           const 的 = s.castles.find((c2) => c2.id === k.castleId);
           if (!的 || 的.faction === s.player) continue;
           if (s.armies.some((a) => a.faction === s.player && a.target === 的.id)) { 出た = true; break; }
-          const 拠ら = s.castles.filter((c2) => c2.faction === s.player && 方面.includes(c2.kuni))
+          const 拠ら = s.castles.filter((c2) => c2.faction === s.player && 受.includes(c2.kuni))
             .map((c2) => ({ c2, 道: 軍の道(s, s.player, c2.id, 的.id) })).filter((x) => x.道)
             .sort((a, b) => a.道.length - b.道.length);
           for (const { c2, 道 } of 拠ら) {
@@ -1573,7 +1573,7 @@ export function advanceMonth(prev, g) {
             });
             for (const t3 of take3) t3.at = null;
             c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
-            events.push(`${旗.name}が${c2.name}より出陣。${的.name}を目指す（方面の差配）。`);
+            events.push(`${旗.name}が${c2.name}より出陣。${的.name}を目指す（方面軍の差配）。`);
             出た = true;
             break;
           }
@@ -1582,7 +1582,8 @@ export function advanceMonth(prev, g) {
         if (出た || 許.length) continue;
         // 許しが無ければ願い出る。願いは一度に一つだけ
         if (s.旗頭の願い) continue;
-        const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner });
+        const 狙 = 旗頭の狙い(s, 旗,
+          { 道: 軍の道, 旗の下: underMyBanner, 受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家 });
         if (!狙) continue;
         s.旗頭の願い = { 旗頭: 旗.id, castleId: 狙.的.id, y: s.year, m: s.month };
         events.push(`${旗.name}より、${狙.的.name}（${s.factions[狙.的.faction].name}）を攻めたいとの願いがあった。`);
@@ -1590,10 +1591,10 @@ export function advanceMonth(prev, g) {
       /* 旗頭は調略も差配する（GDD 6.4 / 11.2）。
          金は旗頭に預けた高から出る。方面の実入りに目盛りを掛けたものである。 */
       for (const 旗 of s.generals.filter((g) => g.faction === s.player && g.役 === "旗頭" && !g.captive)) {
-        const 高 = 旗頭の預け高(s, 旗);
+        const 高 = 旗頭の預け高(s, 旗, { 受け持ち: 旗頭の受け持ち });
         const 使 = (s.plots || []).filter((p) => p.旗頭 === 旗.id).length;
         if (使) continue;                                  // 一人一つ
-        旗頭の調略(s, 旗, { 残: 高.預け, 告げる: (t) => events.push(t) });
+        旗頭の調略(s, 旗, { 残: 高.預け, 告げる: (t) => events.push(t), 受け持ち: 旗頭の受け持ち });
       }
       // 済んだ攻めの許しを片づける（落とした城・主の変わった家）
       済んだ許しを片づける(s);

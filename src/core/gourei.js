@@ -26,7 +26,7 @@
 
      五筋まで。一つの号令に加わっている国主・旗頭は、別の号令には出られない。
      人は一人しかいないのだから当然である。 */
-import { minGarrison, 方面の国 } from "./rank.js";
+import { minGarrison, 旗頭の受け持ち } from "./rank.js";
 
 export const 号令の限り = 5;                        // 同時に発せる号令の数
 
@@ -73,14 +73,14 @@ export function 参陣の顔ぶれ(s, 主) {
   const 手ら = [];
   const 済んだ国 = new Set();
 
-  /* 一　旗頭。預かる方面をまとめて一手。 */
+  /* 一　旗頭。受け持ちをまとめて一手。 */
   for (const g of (s.generals || []).filter((x) => x.faction === 主 && x.役 === "旗頭" && !x.captive)) {
-    const 方面 = 方面の国(g).filter((k) => s.castles.some((c) => c.faction === 主 && c.kuni === k));
-    if (!方面.length) continue;
-    for (const k of 方面) 済んだ国.add(k);
-    const 城ら = s.castles.filter((c) => c.faction === 主 && 方面.includes(c.kuni));
+    const 受 = 旗頭の受け持ち(s, g).filter((k) => s.castles.some((c) => c.faction === 主 && c.kuni === k));
+    if (!受.length) continue;
+    for (const k of 受) 済んだ国.add(k);
+    const 城ら = s.castles.filter((c) => c.faction === 主 && 受.includes(c.kuni));
     手ら.push({
-      種別: "方面", 将: g.id, 将名: g.name, 家: 主, 国ら: 方面,
+      種別: "方面", 将: g.id, 将名: g.name, 家: 主, 国ら: 受,
       発つ城: (s.castles.find((c) => c.id === (g.本領 || g.at)) || 城ら[0] || {}).id,
       城ら: 城ら.map((c) => c.id),
       兵: 城ら.reduce((a, c) => a + 出せる兵(s, c), 0),

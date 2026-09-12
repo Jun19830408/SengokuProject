@@ -15,7 +15,7 @@ import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
 import { 遠征の兵糧, 運び賃を払う } from "../govern/war.js";
 import { courtRank, 号令できるか, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
-import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap, 寄騎に取る, 寄騎を解く, 城を守る将 } from "../core/rank.js";
+import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap, 寄騎に取る, 寄騎を解く, 城を守る将, 旗頭の受け持ち } from "../core/rank.js";
 import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す, 戦の跡, 戦の跡を記す } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 軍の道 } from "../core/state.js";
 import { SEASON, U, clamp, fmt, man, monthsBetween } from "../core/util.js";
@@ -2211,20 +2211,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               return s2;
             })}
             onHatagashira={(kuni, genId) => setG((p) => 政務.国主に任ずる(p, kuni, genId))}
-            onHatagashiraCorps={(genId) => setG((p) => {
-              /* 旗頭に任じるときは、預ける方面（国々）を添える。
-                 「その者が国主を務める国」と「他の旗頭が預かっていない自領の国」を
-                 まとめて預ける。細かく選ばせると画面が膨らむ。 */
-              const g2 = p.generals.find((x) => x.id === genId);
-              if (!g2) return p;
-              const 持つ国 = [...new Set(p.castles.filter((c2) => c2.faction === p.player).map((c2) => c2.kuni))];
-              const 他の旗頭 = p.generals.filter((x) => x.faction === p.player && x.役 === "旗頭" && x.id !== genId);
-              const 取られた = new Set(他の旗頭.flatMap((x) => (Array.isArray(x.方面) ? x.方面 : [])));
-              const 国ら = [g2.役国, ...持つ国.filter((k) => k !== g2.役国 && !取られた.has(k))]
-                .filter(Boolean).slice(0, 4);
-              return 政務.旗頭に任ずる(p, genId, 国ら);
-            })}
+            onHatagashiraCorps={(genId) => setG((p) => 政務.旗頭に任ずる(p, genId))}
             onHatagashiraRelease={(genId) => setG((p) => 政務.旗頭を解く下知(p, genId))}
+            onHatagashiraMato={(genId, 家ら) => setG((p) => 政務.旗頭の的家を指す(p, genId, 家ら))}
             onYoriki={(genId, 取るか, 寄親id) => setG((p) => {
               const s2 = structuredClone(p);
               const g2 = s2.generals.find((x) => x.id === genId);
@@ -2437,7 +2426,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)}
           onYakume={(x) => setG((p) => (x.解く
             ? 政務.旗頭を解く下知(p, x.解く)
-            : 政務.旗頭に任ずる(p, x.任じる, x.国)))} />}
+            : 政務.旗頭に任ずる(p, x.任じる)))} />}
         {/* こちらが臣従しているとき、主家へ攻めの許しを願う（GDD 12.2）。
             使者はその月のうちに戻る。容認されれば、そのまま出陣できる。 */}
         {攻めの許し願い && !battle && (() => {
@@ -2509,13 +2498,13 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 <div style={{ fontSize: 13.5, lineHeight: 1.9, marginBottom: 10 }}>
                   <b className="mn">{城.name}</b>（{的 ? 的.name : ""}）を攻めたい、と申しております。
                 </div>
-                <div className="row"><span>方面</span><span className="v">{(旗.方面 || []).join("・") || "—"}</span></div>
+                <div className="row"><span>受け持ち</span><span className="v">{旗頭の受け持ち(g, 旗).join("・") || "—"}</span></div>
                 <div className="row"><span>その城の兵</span><span className="v num">{fmt(守)} 人</span></div>
                 <div className="row"><span>石高</span><span className="v num">{fmt(Math.round(城.koku))} 石</span></div>
                 <div className="row"><span>その家との間柄</span>
                   <span className="v">{r.state}（信用 {Math.round(r.trust)}）</span></div>
                 <div style={{ fontSize: 11.5, color: U.dim, marginTop: 8, lineHeight: 1.8 }}>
-                  容認すれば、{旗.name}が方面の城から自ら兵を出します。落とせば、
+                  容認すれば、{旗.name}が受け持ちの城から自ら兵を出します。落とせば、
                   誰を城主に据えるか、そして{旗.name}の寄騎とするか直轄とするかを、そのとき問います。<br />
                   却下すれば動きません。許しは城ごとで、落とすまで続きます。
                   {["同盟", "不可侵", "従属", "臣従"].includes(r.state) && (

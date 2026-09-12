@@ -1506,7 +1506,6 @@ export const PARENT = {
   sm_toshitane: "sm_soma2",       // 相馬義胤 → 利胤
   hg_kyonyo: "hg_kennyo",         // 顕如 → 教如
   sm_yoshiyasu: "sm_yoshiyori",   // 里見義頼 → 義康
-  ck_chikayasu: "motochika",      // 長宗我部元親 → 香宗我部親泰（弟）
   ck_chikasada: "motochika",      // 長宗我部元親 → 吉良親貞（弟）
   ku_michifusa: "michiyasu",      // 村上通康 → 来島通総
   ad_sanesue: "chikasue",         // 安東愛季 → 実季

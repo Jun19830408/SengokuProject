@@ -16,7 +16,8 @@ const { initState, advanceMonth, 国主に任じる, 旗頭に任じる, 旗頭�
   旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭の調略,
   castellanOf, underMyBanner, 軍の道, 城の実入り, 自ら采配するか,
   寄騎に取る, 寄騎に取れるか, 寄騎を繕う, 国主を繕う, 城主か, 城を守る将, 守備隊の統率,
-  方面の国, 当主の国ら } = H;
+  旗頭の受け持ち, 旗頭の届く国, 旗頭の的にできる家, 旗頭の的家, 旗頭の的家を定める, 的家の限り,
+  当主の国ら } = H;
 
 const 咎 = [];
 const 確 = (名, 可, 添 = '') => {
@@ -53,8 +54,16 @@ const 場 = () => {
     if (国主に任じる(s, 'oda', k, g.id).ok) 国主[k] = g;
   }
   const 旗 = 国主['尾張'];
-  const r = 旗頭に任じる(s, 'oda', 旗.id, 国ら);
+  const r = 旗頭に任じる(s, 'oda', 旗.id);
   if (!r.ok) throw new Error(`旗頭を立てられなかった：${r.why}`);
+  /* 受け持ちは寄騎から広がる。隣り合う国の国主から順に取る。 */
+  for (let i = 0; i < 国ら.length; i++) {
+    for (const k of 国ら) {
+      const g = 国主[k];
+      if (!g || g.id === 旗.id || g.寄親) continue;
+      寄騎に取る(s, 旗.id, g.id);
+    }
+  }
   for (const c of s.castles.filter((x) => x.faction === 'oda')) { c.local = 9000; c.food = 90000; }
   s.factions.oda.gold = 40000;
   return { s, 旗, 国主 };
@@ -63,7 +72,7 @@ const 場 = () => {
 console.log('── 一　旗頭は方面の外れの敵城を見立てる');
 {
   const { s, 旗 } = 場();
-  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner });
+  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner, 受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家 });
   確('攻める先を見立てる', !!狙, 狙 ? `${狙.的.name}（${s.factions[狙.的.faction].name}）守${狙.守}人` : 'なし');
   if (狙) {
     確('狙うのは他家の城である', 狙.的.faction !== 'oda');
@@ -75,7 +84,7 @@ console.log('── 一　旗頭は方面の外れの敵城を見立てる');
 console.log('\n── 二　許しの控え');
 {
   const { s, 旗 } = 場();
-  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner });
+  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner, 受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家 });
   確('はじめは許されていない', !旗頭は許されているか(s, 旗.id, 狙.的.id));
   旗頭に許す(s, 旗.id, 狙.的.id);
   確('許せば控えに載る', 旗頭は許されているか(s, 旗.id, 狙.的.id));
@@ -99,7 +108,7 @@ console.log('\n── 三　許しが無ければ出陣せず、願いが立つ'
 console.log('\n── 四　許せば、旗頭が自ら兵を出す');
 {
   const { s, 旗 } = 場();
-  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner });
+  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner, 受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家 });
   旗頭に許す(s, 旗.id, 狙.的.id);
   let u = s, 出 = null;
   for (let i = 0; i < 6 && !出; i++) {
@@ -107,20 +116,20 @@ console.log('\n── 四　許せば、旗頭が自ら兵を出す');
     出 = (u.armies || []).find((a) => a.旗頭 === 旗.id);
   }
   確('旗頭の軍が出る', !!出, 出 ? `${出.men}人 → ${(u.castles.find((c) => c.id === 出.target) || {}).name}` : '六か月のあいだ出なかった');
-  確('その軍は方面の城から出ている', !出 || (旗.方面 || []).includes(
+  確('その軍は方面の城から出ている', !出 || 旗頭の受け持ち(s, 旗).includes(
     (u.castles.find((c) => c.id === 出.from) || {}).kuni),
     出 ? `${(u.castles.find((c) => c.id === 出.from) || {}).name}` : '');
-  const 報 = (u.monthEvents || []).filter((t) => /方面の差配/.test(t));
+  const 報 = (u.monthEvents || []).filter((t) => /方面軍の差配/.test(t));
   確('月報に出陣が出る', 報.length > 0 || !出, 報[0] || '');
 }
 
 console.log('\n── 五　旗頭に預ける高は、方面の実入りで決まる');
 {
   const { s, 旗 } = 場();
-  const 高 = 旗頭の預け高(s, 旗);
+  const 高 = 旗頭の預け高(s, 旗, { 受け持ち: 旗頭の受け持ち });
   const 実 = 高.城.reduce((a, c) => a + 城の実入り(c), 0);
-  確('方面の城を数える', 高.城.length > 0 && 高.城.every((c) => (旗.方面 || []).includes(c.kuni)),
-    `${高.城.length}城（${(旗.方面 || []).join('・')}）`);
+  確('方面の城を数える', 高.城.length > 0 && 高.城.every((c) => 旗頭の受け持ち(s, 旗).includes(c.kuni)),
+    `${高.城.length}城（${旗頭の受け持ち(s, 旗).join('・')}）`);
   確('並の目盛りなら実入りのまま', Math.abs(高.預け - 実) < 1.5,
     `実入り ${Math.round(実)}貫 → 預け ${高.預け}貫`);
 }
@@ -128,20 +137,20 @@ console.log('\n── 五　旗頭に預ける高は、方面の実入りで決�
 console.log('\n── 六　旗頭は調略も差配する');
 {
   const { s, 旗 } = 場();
-  const 高 = 旗頭の預け高(s, 旗);
+  const 高 = 旗頭の預け高(s, 旗, { 受け持ち: 旗頭の受け持ち });
   /* 仕掛ける目は二割二分。十二度では五度に一度ほど空振りする（〇.七八の十二乗＝
      〇.〇五）。「仕掛けることがある」を測るには少なすぎた――実際、仕込みが変わって
      籤の並びがずれた途端に背いた。四十度なら空振りは一万に一度に満たない。
      閾値を緩めたのではなく、測りの数を足りるようにしたのである。 */
   let 仕 = null;
-  for (let i = 0; i < 40 && !仕; i++) { s.year++; 仕 = 旗頭の調略(s, 旗, { 残: 高.預け }); }
+  for (let i = 0; i < 40 && !仕; i++) { s.year++; 仕 = 旗頭の調略(s, 旗, { 残: 高.預け, 受け持ち: 旗頭の受け持ち }); }
   確('旗頭が調略を仕掛ける', !!仕, 仕 ? `${仕.手} → ${(s.castles.find((c) => c.id === 仕.先) || {}).name}` : '四十度のうち一度も仕掛けなかった');
   確('その企ては旗頭のものと控える',
     !仕 || (s.plots || []).some((p) => p.旗頭 === 旗.id), `${(s.plots || []).length}件`);
   // 預け高が無ければ仕掛けない
   const { s: t, 旗: 旗t } = 場();
   let 無 = null;
-  for (let i = 0; i < 12 && !無; i++) { t.year++; 無 = 旗頭の調略(t, 旗t, { 残: 0 }); }
+  for (let i = 0; i < 12 && !無; i++) { t.year++; 無 = 旗頭の調略(t, 旗t, { 残: 0, 受け持ち: 旗頭の受け持ち }); }
   確('預け高が尽きていれば仕掛けない', !無, 無 ? `${無.手}を仕掛けた` : '仕掛けなかった');
 }
 
@@ -151,7 +160,7 @@ console.log('\n── 七　旗頭に預けた戦は、大名の盤面に出さ�
      大名が駒を動かす形になっていた。これでは任せたことにならない。
      許しを与えるところまでが大名の役で、その先は旗頭が指図する。 */
   const { s, 旗 } = 場();
-  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner });
+  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner, 受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家 });
   旗頭に許す(s, 旗.id, 狙.的.id);
   let u = s, 出 = null;
   for (let i = 0; i < 6 && !出; i++) { u = advanceMonth(u); 出 = (u.armies || []).find((a) => a.旗頭 === 旗.id); }
@@ -178,12 +187,12 @@ console.log('\n── 八　狙うのは方面に隣接する敵から順');
      旗頭は永久に動かない）と、遠近を問わず守りの薄さだけで選ぶので方面の
      反対側へ向かうことがあったこと。近い敵から順に当たるのが筋である。 */
   const { s, 旗 } = 場();
-  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner });
+  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner, 受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家 });
   確('狙いが立つ', !!狙, 狙 ? `${狙.的.name}（${(s.factions[狙.的.faction] || {}).name}）` : 'なし');
   if (狙) {
     確('その城は方面の城と街道で結ばれている', 狙.近 >= 1, `${狙.近}歩先`);
     /* 方面に隣接する敵城があるなら、それより遠い城は選ばない。 */
-    const 己方 = s.castles.filter((c) => c.faction === 旗.faction && (旗.方面 || []).includes(c.kuni));
+    const 己方 = s.castles.filter((c) => c.faction === 旗.faction && 旗頭の受け持ち(s, 旗).includes(c.kuni));
     let 最も近い = 99;
     for (const 的 of s.castles) {
       if (的.faction === 旗.faction || underMyBanner(s, 旗.faction, 的.faction)) continue;
@@ -254,29 +263,91 @@ console.log('\n── 十　方面の国主は、城主の札が無くても寄�
   確('それでも旗頭の寄騎に取れる', r.ok, r.ok ? `${相.name}（${相.役国}の国主）` : r.why);
 }
 
-console.log('\n── 十一　方面の外の国主は取れず、その訳が読める');
+console.log('\n── 十一　届く先の外の国主は取れず、その訳が読める');
 {
+  /* 旗頭の届く先は「受け持ちと、それに隣り合う国」である。遠く離れた国の
+     国主は取れない。取れない理由は読めねばならない。 */
   const { s, 旗, 国主 } = 場();
-  /* 方面の外にも一国を持たせ、そこに国主を立てる。 */
-  const 外の国 = '伊賀';
-  for (const c of s.castles.filter((x) => x.kuni === 外の国)) c.faction = 'oda';
-  const 外城 = s.castles.find((c) => c.faction === 'oda' && c.kuni === 外の国);
-  const 外の者 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役
-    && x.id !== 旗.id && !Object.values(国主).some((y) => y.id === x.id));
-  if (外城 && 外の者) {
-    外の者.age = 34; 外の者.fief = 40000; 外の者.at = 外城.id; 外の者.本領 = 外城.id;
-    外城.lordId = 外の者.id;
-    国主に任じる(s, 'oda', 外の国, 外の者.id);
+  const 届 = 旗頭の届く国(s, 旗);
+  /* 届かぬ国を一つ選び、そこを自領にして国主を立てる。 */
+  const 遠い国 = [...new Set(s.castles.map((c) => c.kuni))].find((k) => !届.includes(k));
+  確('届かぬ国がある', !!遠い国, `受け持ち ${旗頭の受け持ち(s, 旗).join('・')}／届く先 ${届.length}国`);
+  for (const c of s.castles.filter((x) => x.kuni === 遠い国)) c.faction = 'oda';
+  const 遠城 = s.castles.find((c) => c.faction === 'oda' && c.kuni === 遠い国);
+  const 遠の者 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役 && x.id !== 旗.id
+    && !Object.values(国主).some((y) => y.id === x.id));
+  遠の者.age = 34; 遠の者.fief = 40000; 遠の者.at = 遠城.id; 遠の者.本領 = 遠城.id; 遠城.lordId = 遠の者.id;
+  確('遠国に国主を立てられる', 国主に任じる(s, 'oda', 遠い国, 遠の者.id).ok, `${遠い国}　${遠の者.name}`);
+  const r = 寄騎に取れるか(s, 旗, 遠の者);
+  確('届かぬ国の国主は取れない', !r.ok, r.why);
+  確('訳に受け持ちが出る', /受け持ち/.test(r.why || ''), r.why);
+}
+
+console.log('\n── 十一の二　国主を寄騎に取れば、受け持ちが一国ずつ広がる');
+{
+  /* 受け持ちを先に決めず、寄騎を付けるにつれて広げる（GDD 6.4）。
+     大名が絵図を引いてしまうのではなく、手勢が伸びるのに従って広がる。 */
+  const s = initState('oda');
+  const 国ら = ['尾張', '美濃', '三河', '伊勢', '近江'];
+  for (const k of 国ら) for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
+  const 当主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
+  const 近江 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '近江');
+  当主.at = 近江.id; 当主.本領 = 近江.id; 近江.lordId = 当主.id;
+  const 立 = {};
+  for (const k of 国ら) {
+    const 城 = s.castles.find((c) => c.faction === 'oda' && c.kuni === k);
+    const g = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役 && (x.age || 0) >= 25
+      && !Object.values(立).some((y) => y.id === x.id));
+    if (!g) continue;
+    g.fief = 40000; g.age = 34; g.at = 城.id; g.本領 = 城.id; 城.lordId = g.id;
+    if (国主に任じる(s, 'oda', k, g.id).ok) 立[k] = g;
   }
-  const 外 = [...Object.values(国主), 外の者].filter(Boolean)
-    .find((g) => g && g.id !== 旗.id && g.役 === '国主' && !方面の国(旗).includes(g.役国));
-  if (!外) {
-    確('（方面の外に国主がいないので、この節は測れない）', true, 方面の国(旗).join('・'));
-  } else {
-    const r = 寄騎に取れるか(s, 旗, 外);
-    確('方面の外の国主は取れない', !r.ok, r.why);
-    確('訳に方面が出る', /方面/.test(r.why || ''), r.why);
+  const 旗 = 立['尾張'];
+  旗頭に任じる(s, 'oda', 旗.id);
+  const 受 = () => 旗頭の受け持ち(s, 旗);
+  確('はじめの受け持ちは己の国だけ', 受().length === 1, 受().join('・'));
+  const 次 = Object.values(立).find((g) => g.id !== 旗.id && 寄騎に取れるか(s, 旗, g).ok);
+  確('隣の国の国主は取れる', !!次, 次 ? `${次.役国}の${次.name}` : 'なし');
+  if (次) {
+    寄騎に取る(s, 旗.id, 次.id);
+    確('取れば受け持ちが広がる', 受().length === 2, 受().join('・'));
+    const 三 = Object.values(立).find((g) => g.id !== 旗.id && !g.寄親 && 寄騎に取れるか(s, 旗, g).ok);
+    if (三) {
+      寄騎に取る(s, 旗.id, 三.id);
+      確('さらに取れば、さらに広がる', 受().length === 3, 受().join('・'));
+    }
   }
+}
+
+console.log('\n── 十一の三　攻める家は大名が指す。城と時機は旗頭が見立てる');
+{
+  const { s, 旗 } = 場();
+  const 選べる = 旗頭の的にできる家(s, 旗);
+  確('受け持ちに国境を接する家が挙がる', 選べる.length > 0,
+    選べる.map((f) => s.factions[f].name).slice(0, 6).join('・'));
+  /* 三家まで。接していない家は指せない。 */
+  const 接せぬ = Object.keys(s.factions).find((f) => f !== 'oda' && !選べる.includes(f)
+    && s.castles.some((c) => c.faction === f));
+  const r = 旗頭の的家を定める(s, 'oda', 旗.id, [...選べる.slice(0, 4), 接せぬ].filter(Boolean));
+  確('指せるのは三家まで', r.家.length === 的家の限り, `${r.家.length}家`);
+  確('接していない家は指せない', !r.家.includes(接せぬ),
+    接せぬ ? `${s.factions[接せぬ].name}は退けられた` : '（接せぬ家が無い）');
+  /* 指した家の城だけを狙う。道の通じる家で測る――他家の領で塞がれていれば、
+     指しても軍は出せない（他家の領を素通りできないという掟のほうが先である）。 */
+  const 受 = 旗頭の受け持ち(s, 旗);
+  const 己方 = s.castles.filter((c) => c.faction === 'oda' && 受.includes(c.kuni));
+  const 道が通る = (f) => s.castles.some((的) => 的.faction === f
+    && 己方.some((c) => 軍の道(s, 'oda', c.id, 的.id)));
+  const 一家 = 選べる.find(道が通る) || 選べる[0];
+  確('道の通じる家を指す', 道が通る(一家), s.factions[一家].name);
+  旗頭の的家を定める(s, 'oda', 旗.id, [一家]);
+  const 狙 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner, 受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家 });
+  確('指した家の城を狙う', !!狙 && 狙.的.faction === 一家,
+    狙 ? `${狙.的.name}（${s.factions[狙.的.faction].name}）` : 'なし');
+  /* 指さなければ、手近な敵から順に当たる（これまでどおり）。 */
+  旗頭の的家を定める(s, 'oda', 旗.id, []);
+  const 狙2 = 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner, 受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家 });
+  確('指さなければ手近な敵を狙う', !!狙2, 狙2 ? `${狙2.的.name}（${狙2.近}歩先）` : 'なし');
 }
 
 console.log('\n── 十二　当主が城へ入れば、その国の国主は置けない');

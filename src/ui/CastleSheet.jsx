@@ -3,7 +3,7 @@ import { RANSOM_DIV, ransomRank } from "../core/capture.js";
 import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/house.js";
 import { marchMonths } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
-import { 軍役の割増, RANKS, castellanOf, 城を守る将, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 方面の国, 城主か } from "../core/rank.js";
+import { 軍役の割増, RANKS, castellanOf, 城を守る将, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 旗頭の受け持ち, 旗頭の的にできる家, 旗頭の的家, 的家の限り, 城主か } from "../core/rank.js";
 import { canSee, relOf, isVassal, 主を探す } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
@@ -24,7 +24,7 @@ import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
-export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
+export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onHatagashiraMato, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
@@ -701,7 +701,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       あって、支城で決めることではない。柴田を北国へ、明智を丹波へ
                       ――信長がそれを決めたのは安土である。
 
-                      寄騎に取れるのは、旗頭の本領のある国の城主と、方面の国々の
+                      寄騎に取れるのは、受け持ちとそれに隣り合う国の城主・
                       国主である。国主を取れば、その国主の下にある城主たちも
                       旗頭の下に連なる（下に木の形で並べる）。 */}
                   {mine && c.id === (g.factions[g.player] || {}).本拠 && (() => {
@@ -713,8 +713,9 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                         padding: "8px 10px", marginBottom: 10, background: "rgba(200,164,74,.05)" }}>
                         <div className="mn" style={{ fontSize: 15, marginBottom: 2 }}>旗頭を選ぶ</div>
                         <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
-                          旗頭は<b style={{ color: U.text }}>方面</b>を預かる役です。宿老（禄高二万石）以上で、
-                          かつ国主を務める者から選び、二国以上をまとめて委ねます。
+                          旗頭は<b style={{ color: U.text }}>方面軍</b>を率いる役です。宿老（禄高二万石）以上で、
+                          かつ国主を務める者から選びます。受け持ちは任じるときに決めるのではなく、
+                          <b style={{ color: U.text }}>国主を寄騎に取るたびに一国ずつ広がります</b>。
                           置けるのは四国につき一人。<b style={{ color: U.text }}>本拠でのみ</b>定められます。
                           <br />いま {旗ら.length}名／枠 {枠}名（{Math.floor(枠 * 4)}国以上で {枠}名）
                         </div>
@@ -728,10 +729,10 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                             国主がいません。まず各国の城で国主を任じてください。
                           </div>
                         )}
-                        {枠 > 0 && 旗ら.length < 枠 && 国主ら.length >= 2 && (
+                        {枠 > 0 && 旗ら.length < 枠 && 国主ら.length >= 1 && (
                           <div style={{ marginBottom: 8 }}>
                             <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 4 }}>
-                              旗頭に任じる（二国以上を預けます。宿老の身代が要ります）
+                              旗頭に任じる（宿老の身代が要ります）
                             </div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                               {国主ら.filter((x) => 身分の位(x, g) >= 4).map((x) => (
@@ -769,14 +770,43 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                               <div style={{ fontSize: 12.5, marginBottom: 2 }}>
                                 <b>{旗.name}</b>
                                 <span style={{ color: U.dim, marginLeft: 6 }}>
-                                  方面 {方面の国(旗).join("・") || "—"}／寄騎 {従.length}名
+                                  受け持ち {旗頭の受け持ち(g, 旗).join("・") || "—"}／寄騎 {従.length}名
                                 </span>
                                 <button className="btn sm" style={{ marginLeft: 8 }}
-                                  onClick={() => onHatagashiraRelease && onHatagashiraRelease(旗.id)}>方面を解く</button>
+                                  onClick={() => onHatagashiraRelease && onHatagashiraRelease(旗.id)}>旗頭を解く</button>
                               </div>
+                              {/* 攻める家を指す（GDD 6.4）。指すのは家までで、
+                                  どの城をいつ攻めるかは旗頭が見立てる。 */}
+                              {(() => {
+                                const 選べる = 旗頭の的にできる家(g, 旗);
+                                const いま = 旗頭の的家(g, 旗);
+                                return (
+                                  <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
+                                    攻める家（{的家の限り}家まで。どの城をいつ攻めるかは{旗.name}が見立てます）
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 3 }}>
+                                      {選べる.length ? 選べる.map((f) => {
+                                        const 選 = いま.includes(f);
+                                        return (
+                                          <button key={f} className={`btn sm ${選 ? "on" : ""}`}
+                                            disabled={!選 && いま.length >= 的家の限り}
+                                            onClick={() => onHatagashiraMato && onHatagashiraMato(旗.id,
+                                              選 ? いま.filter((x) => x !== f) : [...いま, f])}>
+                                            {(g.factions[f] || {}).name}
+                                          </button>
+                                        );
+                                      }) : <span>受け持ちに国境を接する家がありません。</span>}
+                                    </div>
+                                    {!いま.length && 選べる.length ? (
+                                      <div style={{ fontSize: 11, marginTop: 2 }}>
+                                        指していないあいだは、手近な敵から順に当たります。
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              })()}
                               <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
-                                取れるのは<b style={{ color: U.text }}>{己城 ? 己城.kuni : "旗頭の国"}の城主</b>と
-                                <b style={{ color: U.text }}>方面の国主</b>です。
+                                取れるのは<b style={{ color: U.text }}>受け持ちと、それに隣り合う国</b>の
+                                城主・国主です。
                                 {取れぬ国主.map(({ 者, 訳 }) => (
                                   <div key={者.id} style={{ fontSize: 11, marginTop: 2 }}>
                                     ・{者.name}（{者.役国}の国主）は取れません — {訳}

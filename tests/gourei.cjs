@@ -17,7 +17,7 @@
 const path = require('path');
 const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 const { initState, 参陣の顔ぶれ, 号令を発せるか, 号令を発する, 済んだ号令を片づける,
-  出せる兵, 出せる地の兵, 旗の下の家ら, 号令の限り, 号令できるか, 国主に任じる, 旗頭に任じる,
+  出せる兵, 出せる地の兵, 旗の下の家ら, 号令の限り, 号令できるか, 国主に任じる, 旗頭に任じる, 寄騎に取る,
   minGarrison, 軍の道, 遠征の兵糧 } = H;
 
 const 咎 = [];
@@ -151,9 +151,15 @@ console.log('\n── 三　旗頭は方面をまとめて一手');
   if (国主ら.length >= 2) {
     const 旗 = 国主ら[0];
     旗.fief = 30000;                                   // 宿老（旗頭に要る身分）
-    const 方面 = 国主ら.slice(0, 3).map((g) => g.役国);
-    const r = 旗頭に任じる(s, 'oda', 旗.id, 方面);
-    確('旗頭に任じられる', r.ok, r.ok ? `${旗.name}〔${r.国.join('・')}〕` : r.why);
+    const r = 旗頭に任じる(s, 'oda', 旗.id);
+    確('旗頭に任じられる', r.ok, r.ok ? `${旗.name}〔${r.国.join('・')}より〕` : r.why);
+    /* 受け持ちは寄騎から広がる。隣り合う国の国主を取って束ねる。 */
+    for (let i = 0; i < 国主ら.length; i++) {
+      for (const g of 国主ら) {
+        if (g.id === 旗.id || g.寄親) continue;
+        寄騎に取る(s, 旗.id, g.id);
+      }
+    }
     if (r.ok) {
       const 顔 = 参陣の顔ぶれ(s, 'oda');
       const 手 = 顔.find((x) => x.種別 === '方面');

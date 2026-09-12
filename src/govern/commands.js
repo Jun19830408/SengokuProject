@@ -13,7 +13,7 @@ import { DIPLO, PLOTS, SPECIAL_OPTIONS, SUBJECT } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { canBeKeeper, canHoldCastle, castleRankNeed, stipendOf, 国主に任じる, 旗頭に任じる, 旗頭を解く } from "../core/rank.js";
+import { canBeKeeper, canHoldCastle, castleRankNeed, stipendOf, 国主に任じる, 旗頭に任じる, 旗頭を解く, 旗頭の受け持ち, 旗頭の的家を定める } from "../core/rank.js";
 import { 基準値, 売値, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
@@ -187,21 +187,35 @@ export function 国主に任ずる(prev, kuni, genId) {
   return s;
 }
 
-/* 旗頭に任じ、方面を預ける（GDD 6.4）。
+/* 旗頭に任じる（GDD 6.4）。
 
    柴田勝家の北国、明智光秀の丹波、羽柴秀吉の中国――信長が方面軍を置いたのが
    これである。一国を国主が預かり、その国主たちを旗頭が束ねる。
 
-   選べるのは旗頭を務めている者だけ。一国も預かったことのない者に方面は
-   委ねられない。置ける数は四国につき一人である。 */
-export function 旗頭に任ずる(prev, genId, 国ら) {
+   選べるのは国主を務めている者だけ。一国も預かったことのない者に方面軍は
+   委ねられない。置ける数は四国につき一人である。受け持ちは任じるときに
+   決めるのではなく、寄騎を付けるにつれて広がる。 */
+export function 旗頭に任ずる(prev, genId) {
   const s = structuredClone(prev);
-  const r = 旗頭に任じる(s, s.player, genId, 国ら);
+  const r = 旗頭に任じる(s, s.player, genId);
   if (!r.ok) { s.msg = r.why; return prev; }
   const g = s.generals.find((x) => x.id === genId);
   s.chronicle.push({ y: s.year, m: s.month,
-    text: `${g.name}を旗頭に任じ、${r.国.join("・")}の方面を委ねた。` });
-  s.msg = `${g.name}が${r.国.join("・")}を束ねる。`;
+    text: `${g.name}を旗頭に任じた（${r.国.join("・")}より）。` });
+  s.msg = `${g.name}が方面軍を率いる。国主を寄騎に取れば、受け持ちはそのぶん広がる。`;
+  return s;
+}
+
+/* 旗頭が攻める家を指す（GDD 6.4）。 */
+export function 旗頭の的家を指す(prev, genId, 家ら) {
+  const s = structuredClone(prev);
+  const r = 旗頭の的家を定める(s, s.player, genId, 家ら);
+  if (!r.ok) { s.msg = r.why; return prev; }
+  const g = s.generals.find((x) => x.id === genId);
+  const 名 = r.家.map((f) => (s.factions[f] || {}).name).filter(Boolean);
+  s.msg = 名.length
+    ? `${g.name}に${名.join("・")}を攻めるよう命じた。どの城をいつ攻めるかは${g.name}が見立てる。`
+    : `${g.name}の的を解いた。手近な敵から順に当たる。`;
   return s;
 }
 
@@ -209,10 +223,10 @@ export function 旗頭を解く下知(prev, genId) {
   const s = structuredClone(prev);
   const g = s.generals.find((x) => x.id === genId);
   if (!g || g.役 !== "旗頭") return prev;
-  const 国 = [...(g.方面 || [])];
+  const 国 = 旗頭の受け持ち(s, genId ? g : null);
   旗頭を解く(s, genId);
   s.chronicle.push({ y: s.year, m: s.month,
-    text: `${g.name}の方面（${国.join("・")}）を解いた。` });
+    text: `${g.name}の方面軍（${国.join("・")}）を解いた。` });
   return s;
 }
 

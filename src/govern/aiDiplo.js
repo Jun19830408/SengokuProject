@@ -326,26 +326,26 @@ export function 調略の采配(s, fid, { 告げる } = {}) {
 
 /* --------------------------------------------------- 旗頭の調略（GDD 6.4 / 11.2）
 
-   方面を預けた以上、調略も任せる。方面の国々に接する敵城へ、旗頭が手の者を
+   方面軍を預けた以上、調略も任せる。受け持ちの国々に接する敵城へ、旗頭が手の者を
    入れる。金は旗頭に預けた高から出る（大名の財布は一つのままで、これは
    その月に使ってよい額の上限である）。
 
    仕掛けは家の采配と同じ品目である。ただし引き抜き・内応で得た者は、大名の
    本拠へ出仕させる（月送りの側で扱う）。人を抱えるのは大名の権であって、
-   旗頭が方面で人を囲い込む筋ではない。 */
-export function 旗頭の調略(s, 旗, { 告げる, 残 } = {}) {
+   旗頭が受け持ちで人を囲い込む筋ではない。 */
+export function 旗頭の調略(s, 旗, { 告げる, 残, 受け持ち } = {}) {
   const fid = 旗.faction;
   const f = s.factions[fid];
   if (!f) return null;
-  const 方面 = Array.isArray(旗.方面) ? 旗.方面 : [];
-  if (!方面.length) return null;
+  const 受 = 受け持ち ? 受け持ち(s, 旗) : [];
+  if (!受.length) return null;
   const 引く = 籤(s.卓 || "卓", "旗調略", 旗.id, s.year, s.month);
   if (引く() > 0.22) return null;
   if ((s.plots || []).some((p) => p.旗頭 === 旗.id)) return null;      // 一人一つ
 
-  const 己方 = s.castles.filter((c) => c.faction === fid && 方面.includes(c.kuni));
+  const 己方 = s.castles.filter((c) => c.faction === fid && 受.includes(c.kuni));
   if (!己方.length) return null;
-  /* 狙うのは、方面の城と隣り合う他家の城。旗の下・約束のある家へは仕掛けない。 */
+  /* 狙うのは、受け持ちの城と隣り合う他家の城。旗の下・約束のある家へは仕掛けない。 */
   const 的ら = [];
   for (const 拠 of 己方) {
     for (const c of s.castles) {
