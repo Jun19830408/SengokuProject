@@ -773,6 +773,31 @@ export function 援けに着く(g, army, castle) {
    その名残が記録に残っていると、直したあとも味方を攻める形が続いてしまう。
 
    読み込むときに、旗の下の城を狙う戦役を落とす。 */
+/* その出陣は、約束を破る「裏切り」か（GDD 12.1 / 12.2）。
+
+   不可侵・同盟を破って兵を出せば、信用と威信を失う。ただし次の二つは裏切りでは
+   ない。
+
+     一　囲まれた味方の城を救いに行く（後詰）
+     二　旗の下の家の城へ兵を移す
+
+   二を見ていなかったので、臣従した家の軍をその家の城のあいだで動かしただけで
+   「約束を破って兵を出した」と咎められ、臣従が中立に落ちていた。遊ぶ側の申し出は
+   「臣従大名をその大名の領地内で移動させたら、攻めた判定になって臣従関係が
+   切れた」であった。臣従した家の軍は大名が動かせるのだから、身内の移し替えを
+   裏切りと読んではならない。
+
+   出す家は、出陣元の城の家である（臣従の城から出せば、その家の軍になる）。 */
+export function 裏切りの出陣か(s, 主, 出す家, 的, { 救いに行く } = {}) {
+  if (!的) return false;
+  if (救いに行く) return false;
+  const 家 = 出す家 || 主;
+  if (的.faction === 主 || 的.faction === 家) return false;
+  if (underMyBanner(s, 主, 的.faction) || underMyBanner(s, 的.faction, 主)) return false;
+  if (underMyBanner(s, 家, 的.faction) || underMyBanner(s, 的.faction, 家)) return false;
+  return atPeace(s, 主, 的.faction);
+}
+
 export function 旗の下を狙う戦役を落とす(s) {
   if (!Array.isArray(s.campaigns)) return s;
   s.campaigns = s.campaigns.filter((c) => {

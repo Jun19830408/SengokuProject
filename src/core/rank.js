@@ -297,6 +297,28 @@ export function 国主を繕う(s, fid) {
 export const 寄騎たち = (s, 寄親id) => s.generals.filter((g) =>
   !g.captive && g.寄親 === 寄親id);
 
+/* その家は、この家の旗の下にあるか（臣従しているか）。
+
+   state.js は rank.js を読むので、こちらから state.js は読めない。間柄の控えを
+   直に見る。主が控えられていない古い記録では、石高の大きいほうを主と見る
+   （state.js の masterOf と同じ見方である）。 */
+export function 旗の下の家か(s, 主, 下) {
+  if (!主 || !下 || 主 === 下) return false;
+  const r = (s.relations || {})[[主, 下].sort().join("|")];
+  if (!r || r.state !== "臣従") return false;
+  if (r.master) return r.master === 主;
+  const 石 = (f) => (s.castles || []).filter((c) => c.faction === f).reduce((a2, c) => a2 + c.koku, 0);
+  return 石(主) >= 石(下);
+}
+
+/* その者は臣従した家の当主か（旗頭の寄騎になりうる相手か）。 */
+export const 旗の下の当主か = (s, 主, gen) =>
+  !!gen && !!gen.lord && !gen.captive && 旗の下の家か(s, 主, gen.faction);
+
+/* その家が城を持つ国々。 */
+export const 家の国ら = (s, fid) =>
+  [...new Set((s.castles || []).filter((c) => c.faction === fid).map((c) => c.kuni))];
+
 /* その者は城主か。城を預かっている者だけが寄騎になれる（GDD 6.4）。
 
    寄騎とは、城を預かる者を寄親の差配下に置くことである。城を持たぬ者を寄騎に
@@ -326,9 +348,32 @@ export function 寄騎に取れるか(s, 寄親, gen) {
   }
   if (寄親.役 === "国主" && !寄親.役国) return { ok: false, why: `${寄親.name}は国を預かっていない。` };
   if (gen.id === 寄親.id) return { ok: false, why: "己を寄騎にはできない。" };
-  if (gen.lord) return { ok: false, why: "当主は寄騎にならない。" };
-  if (gen.faction !== 寄親.faction) return { ok: false, why: "家が違う。" };
+  /* 臣従した家の当主は、旗頭の寄騎になれる（GDD 6.4 / 12.2）。
+
+     臣従とは旗の下に入ることであるから、その家の当主を方面軍に組み入れるのは
+     筋が通る。柴田の北国に前田・佐々が付いたのと同じ形で、家ごと寄騎とする。
+     取れるのは、旗頭の受け持ちに隣り合う国に領を持つ家だけである。
+     国主でない家臣が他家の寄騎になることはない。 */
+  const 臣従の当主 = 寄親.役 === "旗頭" && 旗の下の当主か(s, 寄親.faction, gen);
+  if (gen.lord && !臣従の当主) return { ok: false, why: "当主は寄騎にならない。" };
+  if (gen.faction !== 寄親.faction && !臣従の当主) return { ok: false, why: "家が違う。" };
   if (gen.役 === "旗頭") return { ok: false, why: `${gen.name}は旗頭である。旗頭は寄騎にならない。` };
+  if (臣従の当主) {
+    const 領 = 家の国ら(s, gen.faction);
+    const 届 = 旗頭の届く国(s, 寄親);
+    if (!領.length) return { ok: false, why: `${(s.factions[gen.faction] || {}).name}は城を持たない。` };
+    if (!領.some((k) => 届.includes(k))) {
+      const 受 = 旗頭の受け持ち(s, 寄親);
+      return { ok: false,
+        why: `${(s.factions[gen.faction] || {}).name}の領（${領.join("・")}）は`
+          + `${寄親.name}の手の届く先にない（受け持ち ${受.join("・") || "なし"}と、その隣国まで）。` };
+    }
+    if (gen.寄親 && gen.寄親 !== 寄親.id) {
+      const 先 = s.generals.find((x) => x.id === gen.寄親);
+      return { ok: false, why: `${gen.name}はすでに${先 ? 先.name : "他の者"}の寄騎である。` };
+    }
+    return { ok: true };
+  }
 
   /* 国主は、城主の札を持たずとも旗頭の寄騎になれる（GDD 6.4）。
 
@@ -393,9 +438,18 @@ export function 寄騎を解く(s, genId) {
 export function 寄騎を繕う(s, fid) {
   const 解いた = [];
   for (const g of s.generals) {
-    if (g.faction !== fid || !g.寄親) continue;
+    if (!g.寄親) continue;
+    if (g.faction !== fid) {
+      const 親0 = s.generals.find((x) => x.id === g.寄親);
+      if (!親0 || 親0.faction !== fid) continue;        // 他家の寄親は、その家の繕いで見る
+    }
     const 親 = s.generals.find((x) => x.id === g.寄親);
     if (!親 || 親.captive || 親.faction !== fid) { g.寄親 = null; 解いた.push(g); continue; }
+    /* 臣従した家の当主は、旗の下にあるかぎり寄騎のままである。旗を離れれば解ける。 */
+    if (g.faction !== fid) {
+      if (旗の下の当主か(s, fid, g) && 寄騎に取れるか(s, 親, { ...g, 寄親: null }).ok) continue;
+      g.寄親 = null; 解いた.push(g); continue;
+    }
     /* 取れるかの判じをそのまま使う。すでにこの寄親に付いている者は、
        「すでに他の者の寄騎である」で弾かれぬよう、いったん札を外して問う。 */
     const 元 = g.寄親;
@@ -448,7 +502,13 @@ export function 旗頭の受け持ち(s, 旗) {
   const 己 = 根の国(s, 旗);
   if (己) 国.add(己);
   for (const g of s.generals || []) {
-    if (g.寄親 !== 旗.id || g.captive || g.faction !== 旗.faction) continue;
+    if (g.寄親 !== 旗.id || g.captive) continue;
+    /* 臣従した家の当主を寄騎に取れば、その家の領がまるごと受け持ちに入る。 */
+    if (g.faction !== 旗.faction) {
+      if (!旗の下の家か(s, 旗.faction, g.faction)) continue;
+      for (const k of 家の国ら(s, g.faction)) 国.add(k);
+      continue;
+    }
     const k = g.役 === "国主" && g.役国 ? g.役国 : 根の国(s, g);
     if (k) 国.add(k);
   }

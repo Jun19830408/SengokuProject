@@ -3,7 +3,7 @@ import { RANSOM_DIV, ransomRank } from "../core/capture.js";
 import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/house.js";
 import { marchMonths } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
-import { 軍役の割増, RANKS, castellanOf, 城を守る将, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 旗頭の受け持ち, 旗頭の的にできる家, 旗頭の的家, 的家の限り, 城主か } from "../core/rank.js";
+import { 軍役の割増, RANKS, castellanOf, 城を守る将, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 旗頭の受け持ち, 旗頭の的にできる家, 旗頭の的家, 的家の限り, 旗の下の当主か, 城主か } from "../core/rank.js";
 import { canSee, relOf, isVassal, 主を探す } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
@@ -759,6 +759,13 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                           const 従 = 寄騎たち(g, 旗.id);
                           const 取れる = g.generals.filter((x) => x.faction === g.player && !x.captive
                             && x.id !== 旗.id && !x.寄親 && 寄騎に取れるか(g, 旗, x).ok);
+                          /* 臣従した家の当主も、受け持ちに隣り合う領を持つなら寄騎に取れる
+                             （GDD 6.4 / 12.2）。家ごと方面軍に組み入れる形である。 */
+                          const 臣従ら = g.generals.filter((x) => x.lord && !x.captive
+                            && x.faction !== g.player && 旗の下の当主か(g, g.player, x));
+                          const 臣従取れる = 臣従ら.filter((x) => !x.寄親 && 寄騎に取れるか(g, 旗, x).ok);
+                          const 臣従取れぬ = 臣従ら.filter((x) => x.寄親 !== 旗.id && !寄騎に取れるか(g, 旗, x).ok)
+                            .map((x) => ({ 者: x, 訳: 寄騎に取れるか(g, 旗, x).why }));
                           /* 取れない国主には訳を添える（GDD 6.4）。
                              候補に出てこない理由が読めないと、遊ぶ側からは不具合にしか見えない。 */
                           const 取れぬ国主 = g.generals.filter((x) => x.faction === g.player && !x.captive
@@ -806,10 +813,15 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                               })()}
                               <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
                                 取れるのは<b style={{ color: U.text }}>受け持ちと、それに隣り合う国</b>の
-                                城主・国主です。
+                                城主・国主と、<b style={{ color: U.text }}>そこに領を持つ臣従大名</b>です。
                                 {取れぬ国主.map(({ 者, 訳 }) => (
                                   <div key={者.id} style={{ fontSize: 11, marginTop: 2 }}>
                                     ・{者.name}（{者.役国}の国主）は取れません — {訳}
+                                  </div>
+                                ))}
+                                {臣従取れぬ.map(({ 者, 訳 }) => (
+                                  <div key={者.id} style={{ fontSize: 11, marginTop: 2 }}>
+                                    ・{(g.factions[者.faction] || {}).name}（臣従）は取れません — {訳}
                                   </div>
                                 ))}
                               </div>
@@ -820,7 +832,8 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                                     onClick={() => onYoriki && onYoriki(x.id, false)}>
                                     {x.name}
                                     <span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>
-                                      {x.役 === "国主" ? `${x.役国}の国主` : "城主"}
+                                      {x.faction !== g.player ? `${(g.factions[x.faction] || {}).name}（臣従）`
+                                        : x.役 === "国主" ? `${x.役国}の国主` : "城主"}
                                     </span>
                                   </button>
                                 ))}
@@ -830,6 +843,15 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                                     {x.name}
                                     <span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>
                                       {x.役 === "国主" ? `${x.役国}の国主を寄騎に` : "城主を寄騎に"}
+                                    </span>
+                                  </button>
+                                ))}
+                                {臣従取れる.map((x) => (
+                                  <button key={x.id} className="btn sm"
+                                    onClick={() => onYoriki && onYoriki(x.id, true, 旗.id)}>
+                                    {x.name}
+                                    <span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>
+                                      {(g.factions[x.faction] || {}).name}（臣従）を寄騎に
                                     </span>
                                   </button>
                                 ))}

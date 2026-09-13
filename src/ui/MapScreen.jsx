@@ -40,7 +40,7 @@ import { 惣無事令の帳, 惣無事令の問い as 惣無事令の問い札, 
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
 import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer, DiploOffer } from "./panels.jsx";
-import { underMyBanner, 己の盟約, 主家 } from "../core/state.js";
+import { underMyBanner, 己の盟約, 主家, 裏切りの出陣か } from "../core/state.js";
 import { 忠誠, 守備隊の統率, castellanOf } from "../core/rank.js";
 import { 守りの割り付け } from "../core/garrison.js";
 import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を受ける, 縁談を断る } from "../core/hime.js";
@@ -1937,7 +1937,17 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const 救いに行く2 = !!dest && dest.faction !== s.player
         && atPeace(s, s.player, dest.faction)
         && (s.sieges || []).some((sg) => sg.castleId === dest.id);
-      if (dest && dest.faction !== s.player && !救いに行く2 && atPeace(s, s.player, dest.faction)) {
+      /* 旗の下の家の城へ兵を移すのは、裏切りではない（GDD 12.2）。
+
+         臣従した家の軍は大名が動かせる。その家の城から、同じ家の城へ移しただけで
+         「約束を破って兵を出した」と咎められ、臣従が中立に落ちていた。遊ぶ側の
+         申し出は「臣従大名をその大名の領地内で移動させたら、攻めた判定になって
+         臣従関係が切れた」であった。
+
+         出す家は、出陣元の城の家である（臣従の城から出せば、その家の軍になる）。
+         行き先が同じ旗の下にあるなら、身内の移し替えである。 */
+      const 出す家 = (c && c.faction) || s.player;
+      if (裏切りの出陣か(s, s.player, 出す家, dest, { 救いに行く: 救いに行く2 })) {
         const r = s.relations[relKey(s.player, dest.faction)];
         r.state = "中立"; r.until = null; r.trust = 0;
         for (const k of Object.keys(s.relations)) if (己の盟約(k, s.player)) s.relations[k].trust = clamp(s.relations[k].trust - 15, 0, 100);

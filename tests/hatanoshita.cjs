@@ -14,7 +14,7 @@ const ROOT = path.join(__dirname, '..');
 const entry = path.join(ROOT, 'build', 'hata-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
-  'export { initState, relOf, relKey, 主を探す, factionKoku, 旗の下の家 } from "../src/core/state.js";\n'
+  'export { initState, relOf, relKey, 主を探す, factionKoku, 旗の下の家, 裏切りの出陣か } from "../src/core/state.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n'
 + 'export { 外交を結ぶ } from "../src/govern/commands.js";\n'
 + 'export { 外交の采配 } from "../src/govern/aiDiplo.js";\n'
@@ -164,6 +164,34 @@ const 置 = (s, a, b, st, tr, 主) => { s.relations[A.relKey(a, b)] = { trust: t
   }
   確('他家は遊ぶ側に勝手に膝を屈しない', !結, A.relOf(s, 'mizuno', 'oda').state);
   確('そのかわり申し入れてくる', !!申, 申 ? `${申.key}` : '来ない');
+}
+
+console.log('\n── 臣従した家の領内で兵を動かしても、裏切りにはならない');
+{
+  /* 臣従した家の軍は大名が動かせる。その家の城から同じ家の城へ移しただけで
+     「約束を破って兵を出した」と咎められ、臣従が中立に落ちていた。 */
+  const s = A.initState('oda');
+  const 相 = Object.keys(s.factions).find((f) => f !== 'oda'
+    && s.castles.filter((c) => c.faction === f).length >= 2);
+  s.relations[A.relKey('oda', 相)] = { trust: 90, state: '臣従', master: 'oda', until: null };
+  const 城ら = s.castles.filter((c) => c.faction === 相);
+  const 出 = 城ら[0], 着 = 城ら[1];
+  確('その家の領内での移し替えは裏切りでない',
+    !A.裏切りの出陣か(s, 'oda', 相, 着), `${s.factions[相].name}　${出.name} → ${着.name}`);
+  /* 自家の城から臣従家の城へ入れるのも同じ。 */
+  const 自城 = s.castles.find((c) => c.faction === 'oda');
+  確('自家から臣従家の城へ入れるのも裏切りでない',
+    !A.裏切りの出陣か(s, 'oda', 'oda', 着), `${自城.name} → ${着.name}`);
+  /* 約束のある他家へ寄せれば、これは裏切りである。 */
+  const 他 = Object.keys(s.factions).find((f) => f !== 'oda' && f !== 相
+    && s.castles.some((c) => c.faction === f));
+  s.relations[A.relKey('oda', 他)] = { trust: 70, state: '同盟', master: null, until: null };
+  const 他城 = s.castles.find((c) => c.faction === 他);
+  確('約束のある他家へ寄せれば裏切りである',
+    A.裏切りの出陣か(s, 'oda', 'oda', 他城), `${s.factions[他].name}（同盟）`);
+  /* ただし、その城が囲まれていて救いに行くのなら裏切りではない。 */
+  確('救いに行くのは裏切りでない',
+    !A.裏切りの出陣か(s, 'oda', 'oda', 他城, { 救いに行く: true }));
 }
 
 console.log('');

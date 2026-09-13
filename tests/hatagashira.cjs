@@ -17,6 +17,7 @@ const { initState, advanceMonth, 国主に任じる, 旗頭に任じる, 旗頭�
   castellanOf, underMyBanner, 軍の道, 城の実入り, 自ら采配するか,
   寄騎に取る, 寄騎に取れるか, 寄騎を繕う, 国主を繕う, 城主か, 城を守る将, 守備隊の統率,
   旗頭の受け持ち, 旗頭の届く国, 旗頭の的にできる家, 旗頭の的家, 旗頭の的家を定める, 的家の限り,
+  家の国ら, 旗の下の当主か,
   当主の国ら } = H;
 
 const 咎 = [];
@@ -414,6 +415,61 @@ console.log('\n── 十三　城主は任じた者である。出陣しても�
     `城主 ${(castellanOf(s, 城) || {}).name}／留守 ${(城を守る将(s, 城) || {}).name}`);
   確('留守の統率が守備隊に映る', 守備隊の統率(s, 城) >= 大身.lead,
     `${守備隊の統率(s, 城)}（${大身.name}の統率 ${大身.lead}）`);
+}
+
+console.log('\n── 十四　臣従した家の当主も、旗頭の寄騎になれる');
+{
+  /* 臣従とは旗の下に入ることであるから、その家の当主を方面軍に組み入れるのは
+     筋が通る。取れるのは、受け持ちに隣り合う国に領を持つ家だけである。 */
+  const s = initState('oda');
+  const 国ら = ['尾張', '美濃', '三河', '伊勢', '近江'];
+  for (const k of 国ら) for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
+  const 当主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
+  const 近江 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '近江');
+  当主.at = 近江.id; 当主.本領 = 近江.id;
+  /* 境の国（三河）に旗頭を立てる。隣に他家がいる。 */
+  const 城 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '三河');
+  const 旗 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役);
+  旗.age = 35; 旗.fief = 40000; 旗.at = 城.id; 旗.本領 = 城.id; 城.lordId = 旗.id;
+  国主に任じる(s, 'oda', '三河', 旗.id);
+  確('旗頭を立てられる', 旗頭に任じる(s, 'oda', 旗.id).ok, 旗頭の受け持ち(s, 旗).join('・'));
+
+  const 届 = 旗頭の届く国(s, 旗);
+  const 臣従させる = (f) => {
+    s.relations[[s.player, f].sort().join('|')] = { trust: 90, state: '臣従', master: 'oda', until: null };
+  };
+  const 当主のいる家 = (f) => s.factions[f] && s.generals.some((g) => g.faction === f && g.lord);
+  const 隣 = [...new Set(s.castles.filter((c) => c.faction !== 'oda' && 届.includes(c.kuni))
+    .map((c) => c.faction))].find(当主のいる家);
+  確('受け持ちの隣に家がある', !!隣, 隣 ? s.factions[隣].name : 'なし');
+  const 隣の当主 = s.generals.find((g) => g.faction === 隣 && g.lord);
+
+  /* 臣従していなければ取れない。 */
+  const r0 = 寄騎に取れるか(s, 旗, 隣の当主);
+  確('臣従していない家の当主は取れない', !r0.ok, r0.why);
+
+  臣従させる(隣);
+  const r = 寄騎に取れるか(s, 旗, 隣の当主);
+  確('臣従した家の当主は取れる', r.ok, r.ok ? `${s.factions[隣].name}　${隣の当主.name}` : r.why);
+  if (r.ok) {
+    寄騎に取る(s, 旗.id, 隣の当主.id);
+    const 受 = 旗頭の受け持ち(s, 旗);
+    確('その家の領が受け持ちに入る', 家の国ら(s, 隣).every((k) => 受.includes(k)),
+      `受け持ち ${受.join('・')}`);
+    確('月が変わっても離れない', !寄騎を繕う(s, 'oda').some((g) => g.id === 隣の当主.id));
+    /* 臣従が解ければ、寄騎も離れる。 */
+    s.relations[[s.player, 隣].sort().join('|')].state = '従属';
+    確('旗を離れれば、寄騎も解ける', 寄騎を繕う(s, 'oda').some((g) => g.id === 隣の当主.id));
+  }
+
+  /* 遠い臣従家は取れない。 */
+  const 遠 = [...new Set(s.castles.filter((c) => c.faction !== 'oda' && !届.includes(c.kuni))
+    .map((c) => c.faction))].find(当主のいる家);
+  if (遠) {
+    臣従させる(遠);
+    const r2 = 寄騎に取れるか(s, 旗, s.generals.find((g) => g.faction === 遠 && g.lord));
+    確('受け持ちから遠い臣従家は取れない', !r2.ok, r2.why);
+  }
 }
 
 console.log(`\n════ 旗頭の差配：咎 ${咎.length} 件`);
