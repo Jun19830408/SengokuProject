@@ -9,7 +9,7 @@ import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の�
 import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家 } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
-import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す } from "../core/state.js";
+import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 城主の札を据える } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
 import { PLOTS } from "../data/diplo.js";
 import { FATED, NEWCOMERS, PARENT } from "../data/newcomers.js";
@@ -1718,6 +1718,12 @@ export function advanceMonth(prev, g) {
            実測では大友義鑑が久留米城へ居を移した一五四七年五月がそれで、翌月には
            繕われるものの、その一月は掟に背いた盤が遊ぶ側に見えていた。
            動きがことごとく済んだここで、もう一度検める。 */
+        /* 城主の札の絶えた城に、いまの城主を据え直す（GDD 6.4）。
+
+           城主は任じた者に固定するのだから、討たれても出奔しても、そのままでは
+           札の無い城が残る。札が無い城は「居る者のうち最も身代の高い者」に落ちて
+           しまい、また月ごとに揺れる。留守を預かる者をそのまま札にする。 */
+        城主の札を据える(s);
         for (const fid of Object.keys(s.factions)) {
           for (const g of 国主を繕う(s, fid)) {
             if (fid === s.player) events.push(`${g.name}は国主の役を離れた。`);

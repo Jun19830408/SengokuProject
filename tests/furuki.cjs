@@ -54,6 +54,9 @@ const 古い記録 = () => {
   s.autoPlay = true;
   for (let i = 0; i < 36; i++) s = 送る(s);          // 三年
   for (const k of 後の欄) delete s[k];               // 当時は無かった欄を剥ぐ
+  /* 城主の札も、当時は据えていなかった（前に配っていた版で八年遊んだ記録を
+     測ると、札のある城は二百七十一のうち三十九であった）。剥いでおく。 */
+  for (const c of s.castles) { c.lordId = null; c.城代 = false; }
   return JSON.parse(JSON.stringify(s));              // 記録は文字になって置かれる
 };
 
@@ -259,6 +262,66 @@ console.log('\n── 九　長く遊んだ記録でも、読み直しで人が�
   const 湧 = u.generals.filter((g) => !T.has(g.id));
   確('読み直しても将の数が変わらない', 湧.length === 0,
     `${前}人 → ${u.generals.length}人　物故の控え ${(t.物故 || []).length}人`);
+}
+
+console.log('\n── 十　古い記録にも城主の札を据える');
+{
+  /* 城主は任じた者に固定すると決めたが、盤を立てたときには札が一つも無く、
+     記録にも入っていない。札が無い城は「居る者のうち最も身代の高い者」に
+     落ちるので、固定の仕組みが働かない。読み込みで札を据える。
+     据えた時点での顔ぶれは変わらない――変わるのは以後それが動かなくなることである。 */
+  const 前 = 生.castles.filter((c) => c.lordId).length;
+  const t = H.migrateSave(JSON.parse(JSON.stringify(生)));
+  const 後 = t.castles.filter((c) => c.lordId).length;
+  確('札の無い城に札が据わる', 後 > 前, `${前}城 → ${後}城／全 ${t.castles.length}城`);
+
+  /* 誰が城主かは変わらない。 */
+  const 元 = JSON.parse(JSON.stringify(生));
+  let 違 = 0, 見 = 0;
+  for (const x of t.castles) {
+    const c0 = 元.castles.find((y) => y.id === x.id);
+    if (!c0) continue;
+    const 前主 = H.castellanOf(元, c0), 後主 = H.castellanOf(t, x);
+    if (!前主 && !後主) continue;
+    見++;
+    if ((前主 || {}).id !== (後主 || {}).id) 違++;
+  }
+  確('据えても、誰が城主かは変わらない', 違 === 0, `食い違い ${違}／${見}城`);
+
+  /* 据えたあとは、出陣しても大身が入っても動かない。 */
+  const 城 = t.castles.find((c) => c.lordId && c.faction === t.player);
+  if (城) {
+    const 主 = t.generals.find((g) => g.id === 城.lordId);
+    主.at = null;                                     // 出陣
+    確('出陣しても城主のまま', (H.castellanOf(t, 城) || {}).id === 主.id,
+      `${城.name}　城主 ${(H.castellanOf(t, 城) || {}).name}`);
+    主.at = 城.id;
+    const 大身 = t.generals.find((g) => g.faction === 城.faction && !g.lord && g.id !== 主.id);
+    if (大身) {
+      大身.at = 城.id; 大身.本領 = 城.id; 大身.fief = 90000; 大身.age = 40;
+      確('大身が入っても城主は変わらない', (H.castellanOf(t, 城) || {}).id === 主.id,
+        `${(H.castellanOf(t, 城) || {}).name}（大身 ${大身.name}）`);
+    }
+  }
+}
+
+console.log('\n── 十一　古い形の旗頭は、受け持ちの形に繕われる');
+{
+  /* 方面（国の決め打ち）は廃した。古い記録には g.方面 が残り、旗頭の役国が
+     空のままになっている。受け持ちは根から数えるので、根の国を役国に据え直す。 */
+  const s0 = JSON.parse(JSON.stringify(生));
+  const 城 = s0.castles.find((c) => c.faction === 'oda');
+  const g = s0.generals.find((x) => x.faction === 'oda' && !x.lord && x.at === 城.id);
+  g.役 = '旗頭'; g.役国 = null; g.方面 = ['尾張', '美濃']; g.fief = 40000; g.age = 35;
+  const t = H.migrateSave(s0);
+  const 旗 = t.generals.find((x) => x.id === g.id);
+  確('役国が根から据え直される', !!旗.役国, `${旗.name}　役国 ${旗.役国 || '—'}`);
+  確('方面の名残が落ちる', !旗.方面);
+  確('受け持ちが数えられる', H.旗頭の受け持ち(t, 旗).length > 0,
+    H.旗頭の受け持ち(t, 旗).join('・'));
+  確('届く先は受け持ちより広い',
+    H.旗頭の届く国(t, 旗).length > H.旗頭の受け持ち(t, 旗).length,
+    `${H.旗頭の届く国(t, 旗).length}国`);
 }
 
 console.log('');

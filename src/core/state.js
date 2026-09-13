@@ -1,4 +1,4 @@
-import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位 } from "./rank.js";
+import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位, 城を守る将, canHoldCastle } from "./rank.js";
 import { courtRank } from "./province.js";
 import { newRoster } from "./roster.js";
 import { 姫を整える } from "./hime.js";
@@ -329,6 +329,7 @@ export function initState(player) {
     盤.factions[fid].本拠 = 本拠を定める(fid, 盤.castles, 盤.generals);
   }
   国主を据える(盤);                               // 国ごとに国主を一人（GDD 6.4）
+  城主の札を据える(盤);                           // 城ごとに城主を一人（GDD 6.4）
   return 盤;
 }
 
@@ -861,6 +862,53 @@ function 軍役の器を繕う(s) {
   for (const g of s.generals || []) if (g.retCap == null) g.retCap = g.retinue;
 }
 
+/* 城主の札を据える（GDD 6.4）。
+
+   城主は任じた者に固定する、と決めた。ところが盤を立てたときには札が一つも
+   無く、記録にも入っていない――初めの盤で札のある城は二百七十一のうち零で
+   あった。札が無い城は「いま居る者のうち最も身代の高い者」に落ちるので、
+   固定の仕組みが働かない。城主が出陣すれば城主でなくなり、大身が入れば
+   すげ替わる。
+
+   そこで、札の無い城には、いまその城を預かっている者をそのまま札として据える。
+   据えた時点での顔ぶれは変わらないので、盤の見え方は変わらない。変わるのは
+   「以後それが動かなくなる」ことである。
+
+   城主の格に届かぬ者は城代として据える。留守を任された以上、その者が城を
+   預かっている。落としたばかりで遊ぶ側の差配を待っている城には手を触れない。 */
+export function 城主の札を据える(s) {
+  const 待ち = new Set((s.委ねる待ち || []).map((x) => x.castleId));
+  const 据えた = [];
+  for (const c of s.castles || []) {
+    if (待ち.has(c.id)) continue;
+    const 札 = c.lordId && (s.generals || []).find((x) => x.id === c.lordId
+      && x.faction === c.faction && !x.captive);
+    if (札) continue;
+    const 主 = 城を守る将(s, c);
+    if (!主 || 主.lord) { c.lordId = null; continue; }   // 当主のいる城に札は要らない
+    c.lordId = 主.id;
+    c.城代 = !canHoldCastle(主, s, c);
+    据えた.push(c);
+  }
+  return 据えた;
+}
+
+/* 旗頭の名残を落とす（GDD 6.4）。
+
+   方面（国の決め打ち）は廃した。古い記録には g.方面 が残っており、旗頭の
+   役国が空のままになっている。受け持ちは根から数えるので、根の国を役国として
+   据え直す。 */
+function 旗頭の名残を繕う(s) {
+  for (const g of s.generals || []) {
+    if (g.役 !== "旗頭") { if (g.方面) g.方面 = null; continue; }
+    if (!g.役国) {
+      const c = (s.castles || []).find((x) => x.id === (g.本領 || g.at) && x.faction === g.faction);
+      if (c) g.役国 = c.kuni;
+    }
+    g.方面 = null;
+  }
+}
+
 export function migrateSave(s) {
   // 卓の印の無い古い記録には、いま与える（以後、置き場が守れるようになる）
   if (!s.卓) s.卓 = `t${(s.player || "x")}${s.year || 0}-旧`;
@@ -877,6 +925,8 @@ export function migrateSave(s) {
   本拠を追う(s);                                  // 当主のいる城へ本拠を合わせ直す
   役の名を改める(s);                              // 家老→国主・宿老→旗頭（GDD 6.4）
   国主を据える(s);                                // 役の欄の無い古い記録に国主を据える
+  旗頭の名残を繕う(s);                            // 方面を廃した。役国を根から据え直す
+  城主の札を据える(s);                            // 札の無い城に、いまの城主を札として据える
   将の無い軍を繕う(s);                            // 兵だけ残って浮いていた軍を解く
   return s;
 }

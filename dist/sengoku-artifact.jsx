@@ -15236,6 +15236,7 @@ function initState(player) {
     \u76E4.factions[fid].\u672C\u62E0 = \u672C\u62E0\u3092\u5B9A\u3081\u308B(fid, \u76E4.castles, \u76E4.generals);
   }
   \u56FD\u4E3B\u3092\u636E\u3048\u308B(\u76E4);
+  \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(\u76E4);
   return \u76E4;
 }
 function migrateRosters(s2) {
@@ -15595,6 +15596,37 @@ function \u77F3\u9AD8\u306E\u4E09\u6BB5\u3092\u7E55\u3046(s2) {
 function \u8ECD\u5F79\u306E\u5668\u3092\u7E55\u3046(s2) {
   for (const g of s2.generals || []) if (g.retCap == null) g.retCap = g.retinue;
 }
+function \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(s2) {
+  const \u5F85\u3061 = new Set((s2.\u59D4\u306D\u308B\u5F85\u3061 || []).map((x) => x.castleId));
+  const \u636E\u3048\u305F = [];
+  for (const c of s2.castles || []) {
+    if (\u5F85\u3061.has(c.id)) continue;
+    const \u672D = c.lordId && (s2.generals || []).find((x) => x.id === c.lordId && x.faction === c.faction && !x.captive);
+    if (\u672D) continue;
+    const \u4E3B = \u57CE\u3092\u5B88\u308B\u5C06(s2, c);
+    if (!\u4E3B || \u4E3B.lord) {
+      c.lordId = null;
+      continue;
+    }
+    c.lordId = \u4E3B.id;
+    c.\u57CE\u4EE3 = !canHoldCastle(\u4E3B, s2, c);
+    \u636E\u3048\u305F.push(c);
+  }
+  return \u636E\u3048\u305F;
+}
+function \u65D7\u982D\u306E\u540D\u6B8B\u3092\u7E55\u3046(s2) {
+  for (const g of s2.generals || []) {
+    if (g.\u5F79 !== "\u65D7\u982D") {
+      if (g.\u65B9\u9762) g.\u65B9\u9762 = null;
+      continue;
+    }
+    if (!g.\u5F79\u56FD) {
+      const c = (s2.castles || []).find((x) => x.id === (g.\u672C\u9818 || g.at) && x.faction === g.faction);
+      if (c) g.\u5F79\u56FD = c.kuni;
+    }
+    g.\u65B9\u9762 = null;
+  }
+}
 function migrateSave(s2) {
   if (!s2.\u5353) s2.\u5353 = `t${s2.player || "x"}${s2.year || 0}-\u65E7`;
   \u77F3\u9AD8\u306E\u4E09\u6BB5\u3092\u7E55\u3046(s2);
@@ -15612,6 +15644,8 @@ function migrateSave(s2) {
   \u672C\u62E0\u3092\u8FFD\u3046(s2);
   \u5F79\u306E\u540D\u3092\u6539\u3081\u308B(s2);
   \u56FD\u4E3B\u3092\u636E\u3048\u308B(s2);
+  \u65D7\u982D\u306E\u540D\u6B8B\u3092\u7E55\u3046(s2);
+  \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(s2);
   \u5C06\u306E\u7121\u3044\u8ECD\u3092\u7E55\u3046(s2);
   return s2;
 }
@@ -17285,6 +17319,7 @@ function \u57CE\u3092\u59D4\u306D\u308B(s2, castleId, armyId, \u5DEE\u914D) {
     if (c.lordId && c.lordId !== \u5DEE\u914D.\u57CE\u4E3B) c.najimi = 25;
     c.lordId = \u5DEE\u914D.\u57CE\u4E3B;
   }
+  \u5F53\u4E3B\u304C\u5165\u308C\u3070\u5F79\u3092\u7E55\u3046(s2, c.faction);
   const \u6B8B = Math.max(0, Math.min(Math.round(\u5DEE\u914D.\u5175 || 0), a.local || 0));
   if (\u6B8B > 0) {
     const tk = rosterTake(a.rost || newRoster(a.local, `arm-${a.id}`), \u6B8B);
@@ -21077,6 +21112,7 @@ function advanceMonth(prev, g) {
       if (q.gen.faction !== s2.player) continue;
       events.push(`${q.gen.name}\u306F${q.\u5148.name}\u3078\u5F15\u304D\u79FB\u3063\u305F\u3002`);
     }
+    \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(s2);
     for (const fid of Object.keys(s2.factions)) {
       for (const g2 of \u56FD\u4E3B\u3092\u7E55\u3046(s2, fid)) {
         if (fid === s2.player) events.push(`${g2.name}\u306F\u56FD\u4E3B\u306E\u5F79\u3092\u96E2\u308C\u305F\u3002`);

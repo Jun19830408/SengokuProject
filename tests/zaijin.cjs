@@ -367,10 +367,16 @@ console.log('── 十三　解けば、兵も将も出陣元へ帰る（当主
   s.factions.oda.本拠 = 陣.id;
   const 主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
   主.at = 陣.id; 主.本領 = 別.id;                                  // 根がずれた古い記録
-  const 供 = s.generals.find((g) => g.faction === 'oda' && !g.lord && !g.captive && g.at !== 主.at);
+  /* 供は「どこの城主でもない者」から選ぶ。城ごとに城主の札が据わるように
+     なったので（GDD 6.4）、ただ選ぶと城主に当たり、己の城へ帰ってしまう。
+     測りたいのは「城主でない供の将は出陣元へ帰る」ことである。 */
+  const 供 = s.generals.find((g) => g.faction === 'oda' && !g.lord && !g.captive
+    && g.at !== 主.at && !s.castles.some((c) => c.lordId === g.id));
   供.at = 陣.id; 供.本領 = 別.id;
   const 城主 = s.generals.find((g) => g.faction === 'oda' && !g.lord && g.id !== 供.id && !g.captive);
-  城主.at = 陣.id; 城主.本領 = 別.id; 城主の城.lordId = 城主.id;
+  城主.at = 陣.id; 城主.本領 = 別.id;
+  for (const c of s.castles) if (c.lordId === 城主.id) c.lordId = null;   // 札は一つに絞る
+  城主の城.lordId = 城主.id;
   const 将ら = [主, 供, 城主];
   for (const g of 将ら) g.at = null;
   const 前 = 陣.local;
