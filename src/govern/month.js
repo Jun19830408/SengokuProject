@@ -47,6 +47,55 @@ import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
 
    盤の中身は時計から切り離す。年と月と、盤ごとの通し番号で名を付ける。
    同じ種・同じ盤なら、何度走らせても同じ名が付く。 */
+/* 近隣の城から兵を寄せる（GDD 7.3）。
+
+   他家の采配は、月に一手ずつしか出せない。ゆえに三つの城から同じ城を狙っても、
+   別々の月に別々の軍が向かい、着いた順に磨り潰された――各個撃破である。
+   遊ぶ側の申し出は「敵AIもプレイヤー同様、ある程度集結させて攻めるようにして
+   ほしい」であった。
+
+   遊ぶ側は陣触れで近隣の城から加勢を呼び、一手にまとめて出す。同じことを采配にも
+   させる。出陣を発する城から街道で三歩までの自家の城に声をかけ、守りに要る兵を
+   残したうえで、出せる兵の六割までを寄せる。将も一人ずつ加わる。
+
+   声をかけるのは三城まで。囲まれている城、門前に敵軍が来ている城からは呼ばない
+   ――そこは守るのが先である。 */
+export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限り = 3, 歩 = 3 } = {}) {
+  const 寄せた = [];
+  const 近い = (s.castles || []).filter((x) => {
+    if (x.faction !== fid || x.id === 発つ城.id) return false;
+    if ((s.sieges || []).some((sg) => sg.castleId === x.id)) return false;
+    if ((s.armies || []).some((a2) => a2.faction !== fid && a2.target === x.id
+      && (a2.at === x.id || !a2.path || a2.path.length <= 1))) return false;
+    const p = 道 ? 道(s, fid, x.id, 発つ城.id) : null;
+    return !!p && p.length - 1 <= 歩;
+  }).map((x) => ({ x, 歩: (道(s, fid, x.id, 発つ城.id) || []).length - 1 }))
+    .sort((a, b) => a.歩 - b.歩);
+
+  for (const { x } of 近い) {
+    if (寄せた.length >= 限り) break;
+    const gens = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive && !q.lord);
+    const 余り = x.local + gens.reduce((a2, q) => a2 + q.retinue, 0) - minGarrison(x);
+    if (余り < 400) continue;                            // 出せるほどの余りが無い
+    const 出す = Math.round(余り * 0.6);
+    const 将 = [...gens].sort((a2, b2) => b2.lead - a2.lead)[0];
+    const 地 = Math.max(0, Math.min(x.local, 出す - (将 ? 将.retinue : 0)));
+    if (地 + (将 ? 将.retinue : 0) < 200) continue;
+    const tk = rosterTake(x.rost || newRoster(x.local, `loc-${x.id}`), 地);
+    x.rost = tk.rest;
+    x.local -= 地;
+    const 糧 = Math.max(0, Math.min(Math.round(x.food), Math.round((地 + (将 ? 将.retinue : 0)) * 0.6)));
+    x.food = Math.max(0, x.food - 糧);
+    軍.local += 地;
+    軍.men += 地 + (将 ? 将.retinue : 0);
+    軍.food = (軍.food || 0) + 糧;
+    軍.rost = [...(軍.rost || []), ...tk.taken];
+    if (将) { 軍.gens = [...(軍.gens || []), 将.id]; 将.at = null; }
+    寄せた.push({ 城: x, 兵: 地 + (将 ? 将.retinue : 0), 将 });
+  }
+  return 寄せた;
+}
+
 export function 軍の名(s, 頭) {
   s.軍番 = (s.軍番 || 0) + 1;
   return `${頭}${s.year}-${s.month}-${s.軍番}`;
@@ -1356,14 +1405,21 @@ export function advanceMonth(prev, g) {
           const 糧 = Math.max(0, Math.min(Math.round(c.food), 欲));
           if (糧 < 欲 * 0.35) break;                  // 兵糧の当てが無ければ出陣しない
           c.local -= localSend;
-          s.armies.push({
+          const tkA = rosterTake(c.rost || newRoster(c.local + localSend, `loc-${c.id}`), localSend);
+          c.rost = tkA.rest;
+          const 軍 = {
             id: 軍の名(s, "a"), faction: fid, from: c.id, gens: take.map((x) => x.id),
-            local: localSend, localTrain: c.localTrain, men: localSend + take.reduce((a, x) => a + x.retinue, 0),
+            local: localSend, localTrain: c.localTrain, rost: tkA.taken,
+            men: localSend + take.reduce((a, x) => a + x.retinue, 0),
             at: c.id, path: 攻め道, prog: 0, food: 糧, target: cand.id,
-          });
+          };
           for (const t of take) t.at = null;
           c.food = Math.max(0, c.food - 糧);
-          events.push(`${s.factions[fid].name}が${c.name}より出陣。${cand.name}を目指す。`);
+          /* 近隣の城から兵を寄せ、一手にまとめて出す（各個撃破を避ける）。 */
+          const 寄 = 近隣から兵を寄せる(s, fid, c, 軍, { 道: 軍の道 });
+          s.armies.push(軍);
+          events.push(`${s.factions[fid].name}が${c.name}より出陣。${cand.name}を目指す。`
+            + (寄.length ? `（${寄.map((q) => q.城.name).join("・")}より${fmt(寄.reduce((a2, q) => a2 + q.兵, 0))}人が加わる）` : ""));
           break;
         }
       }

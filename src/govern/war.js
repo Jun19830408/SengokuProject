@@ -245,7 +245,16 @@ function 味方の城へ着く(s, army, castle) {
       : null;
     for (const gid of army.gens) {
       const x = s.generals.find((q) => q.id === gid);
-      if (x) x.at = 他家 ? (本国 ? 本国.id : castle.id) : castle.id;
+      if (!x) continue;
+      /* 軍の中で旗を替えた者（引き抜き・謀反）は、その城に入れない（GDD 6.4）。
+
+         入れてしまうと、他家の城に立つ将ができる。巡検が拾ったのは、伊達の軍に
+         いるうちに里見へ引き抜かれた伊達稙宗が、伊達の三条城へ入った姿である。
+         城に合流する には同じ検めが入っていたが、味方の城へ着く には無かった。
+         その者は月ごとの見回りが自家の城へ移す。 */
+      if (x.faction !== castle.faction && x.faction !== army.faction) continue;
+      if (x.faction !== castle.faction && !他家) continue;
+      x.at = 他家 ? (本国 ? 本国.id : castle.id) : castle.id;
     }
     s.armies = s.armies.filter((x) => x.id !== army.id);
   };
@@ -290,7 +299,10 @@ function 味方の城へ着く(s, army, castle) {
       本国.local += Math.max(0, bes.local);
       if (bes.rost && bes.rost.length) 本国.rost = [...(本国.rost || []), ...bes.rost];
       rosterSync(本国, "rost", 本国.local, `loc-${本国.id}`);
-      for (const gid of bes.gens) { const x = s.generals.find((q) => q.id === gid); if (x) x.at = 本国.id; }
+      for (const gid of bes.gens) {
+        const x = s.generals.find((q) => q.id === gid);
+        if (x && x.faction === 本国.faction) x.at = 本国.id;   // 旗を替えた者は入れない
+      }
     }
     s.armies = s.armies.filter((x) => x.id !== bes.id);
     s.sieges = s.sieges.filter((x) => x.castleId !== castle.id);
@@ -300,7 +312,10 @@ function 味方の城へ着く(s, army, castle) {
     const 本国 = s.castles.find((x) => x.id === army.from);
     if (本国 && 本国.faction === army.faction) {
       本国.local += Math.max(0, army.local);
-      for (const gid of army.gens) { const x = s.generals.find((q) => q.id === gid); if (x) x.at = 本国.id; }
+      for (const gid of army.gens) {
+        const x = s.generals.find((q) => q.id === gid);
+        if (x && x.faction === 本国.faction) x.at = 本国.id;   // 旗を替えた者は入れない
+      }
     } else 合流();
     s.armies = s.armies.filter((x) => x.id !== army.id);
     if (sg) sg.relief = null;                 // 改めて後詰を差し向けうる
@@ -576,6 +591,12 @@ export function 城を委ねる(s, castleId, armyId, 差配) {
     if (!(a.gens || []).includes(gid)) continue;        // その軍にいない者は置けない
     const g = s.generals.find((x) => x.id === gid);
     if (!g) continue;
+    /* 家の違う者は、その城に置けない（GDD 6.4）。
+
+       軍の中で旗を替えた者（引き抜き・謀反）が混じっていることがある。検めずに
+       置いていたので、他家の城に立つ将ができた。巡検が拾ったのは、伊達の軍に
+       いるうちに里見へ引き抜かれた伊達稙宗が、伊達の三条城に置かれた姿である。 */
+    if (g.faction !== c.faction) continue;
     g.at = c.id;
     g.本領 = c.id;                                      // 根を移す。以後の禄高もこの城から
     a.gens = a.gens.filter((x) => x !== gid);
@@ -645,12 +666,58 @@ export function 委ねる差配(s, castle, army) {
   return { 城主: 主.id, 所属: [主.id], 兵: Math.round((army.local || 0) * 0.5) };
 }
 
+/* 同じ月に同じ城へ着いた味方の軍を、一つに束ねる（GDD 7.4）。
+
+   別々に着けば別々に戦う。三つの城から千人ずつ出しても、三千の敵に千ずつ当たって
+   順に磨り潰される――各個撃破である。遊ぶ側の申し出は「援軍も複数の城から出した
+   場合で同じ時期に到着するのであれば、個別に合戦するのではなく、複数の援軍が
+   ともに合戦で戦うようにしてほしい」であった。
+
+   同じ城の前に立ち、同じ城を狙っている味方は、そこで合流して一手となる。兵も
+   将も兵糧も一つの軍にまとめる。総大将は兵の多いほうの軍の将である。 */
+export function 着いた味方を束ねる(s, army, castle) {
+  if (!army || !castle) return [];
+  const 束ねた = [];
+  for (const x of [...(s.armies || [])]) {
+    if (x.id === army.id) continue;
+    if (x.at !== castle.id) continue;                    // 同じ城の前にいない
+    /* 束ねるのは同じ家の軍だけである。旗の下の家の軍まで一つにすると、他家の将が
+       こちらの軍に混ざり、解いたときに他家の城へ立つ者ができた（巡検が拾った）。
+       家が違えば、兵は並んで戦っても軍は別である。 */
+    if (x.faction !== army.faction) continue;
+    if (x.path && x.path.length > 1) continue;           // まだ道中である
+    /* 狙いが同じ軍だけを束ねる。城を落として在陣している軍は別の用である。 */
+    const 同じ狙い = (x.target && x.target === castle.id)
+      || (x.aid && (!x.target || x.target === castle.id));
+    if (!同じ狙い || x.sieging) continue;
+    army.local = (army.local || 0) + (x.local || 0);
+    army.food = (army.food || 0) + (x.food || 0);
+    army.gens = [...(army.gens || []), ...(x.gens || [])];
+    if (x.rost && x.rost.length) army.rost = [...(army.rost || []), ...x.rost];
+    army.men = (army.men || 0) + (x.men || 0);
+    s.armies = s.armies.filter((y) => y.id !== x.id);
+    s.pendingArrivals = (s.pendingArrivals || []).filter((id) => id !== x.id);
+    s.campaigns = (s.campaigns || []).map((c) => ({
+      ...c,
+      armies: (c.armies || []).map((id) => (id === x.id ? army.id : id)),
+      arrived: (c.arrived || []).filter((id) => id !== x.id),
+    }));
+    束ねた.push(x);
+  }
+  if (束ねた.length) {
+    s.chronicle.push({ y: s.year, m: s.month,
+      text: `${castle.name}の前で${(s.factions[army.faction] || {}).name}の軍${束ねた.length + 1}隊が合流した（${fmt(army.men)}人）。` });
+  }
+  return 束ねた;
+}
+
 export function resolveOffscreen(prev, armyId, castleId) {
     const s = structuredClone(prev);
     const army = s.armies.find((x) => x.id === armyId);
     const castle = s.castles.find((x) => x.id === castleId);
     s.pendingArrivals = (s.pendingArrivals || []).slice(1);
     if (!army || !castle) return s;
+    着いた味方を束ねる(s, army, castle);
 
     /* 味方の城に着いた軍は、味方と戦わない。
        後詰であれば囲みを打ち払う戦になり、そうでなければ城へ合流する。
@@ -896,6 +963,19 @@ export function withdrawArmy(s, army) {
       const c = 拠 && s.castles.find((y) => y.id === 拠 && y.faction === x.faction);
       if (c) return c;
     }
+    /* 役を預かる者は、己の根へ帰る（GDD 6.4）。
+
+       国主も旗頭も、預かる国はその根で決まる。陣触れに参じただけで根が動けば、
+       役が解け、寄騎もことごとく離れる。実測では、大名の陣触れに旗頭と国主
+       三人が参じ、軍を解いた途端に四人とも役を失い、寄騎が零になった。
+
+       在陣していようと遠くへ出ていようと、帰る先は己の城である。根が移るのは
+       「他の城に入る」と決めたときだけ（城に合流する）で、そのときは役も寄騎も
+       解ける。それは別の下知であって、兵を返す副作用ではない。 */
+    if (x.役 === "国主" || x.役 === "旗頭") {
+      const 根 = x.本領 && s.castles.find((c) => c.id === x.本領 && c.faction === x.faction);
+      if (根) return 根;
+    }
     const 己の城 = s.castles.find((c) => c.lordId === x.id && c.faction === x.faction);
     if (己の城) return 己の城;
     if (home && home.faction === x.faction) return home;
@@ -907,7 +987,9 @@ export function withdrawArmy(s, army) {
     const 先 = 落ちる先(x);
     if (!先) continue;
     x.at = 先.id;
-    x.本領 = 先.id;                            // 帰った城が、その者の根である
+    /* 帰った城が、その者の根である。ただし役を預かる者の根は動かさない
+       ――役は根に付いて回るので、根が動けば役が解ける。 */
+    if (x.役 !== "国主" && x.役 !== "旗頭") x.本領 = 先.id;
   }
   s.armies = s.armies.filter((x) => x.id !== army.id);
   s.sieges = s.sieges.filter((x) => x.armyId !== army.id);

@@ -19,8 +19,8 @@ const entry = path.join(ROOT, 'build', 'zaijin-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState, 本拠を追う } from "../src/core/state.js";\n'
-+ 'export { sackCastle, 城を委ねる, 委ねる差配, resolveOffscreen, 軍を解く, 城に合流する, 在陣させる } from "../src/govern/war.js";\n'
-+ 'export { stipendOf, castellanOf, 守備隊の統率 } from "../src/core/rank.js";\n'
++ 'export { sackCastle, 城を委ねる, 委ねる差配, resolveOffscreen, 軍を解く, 城に合流する, 在陣させる, 着いた味方を束ねる } from "../src/govern/war.js";\n'
++ 'export { stipendOf, castellanOf, 守備隊の統率, 国主に任じる } from "../src/core/rank.js";\n'
 + 'export { newRoster, rosterSum } from "../src/core/roster.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n'
 + 'export { 軍の道 } from "../src/core/state.js";\n');
@@ -394,6 +394,89 @@ console.log('── 十三　解けば、兵も将も出陣元へ帰る（当主
   確('帰った城が、その者の根になる', s.generals.find((q) => q.id === 供.id).本領 === 陣.id);
   確('城主は己の城へ帰る', s.generals.find((q) => q.id === 城主.id).at === 城主の城.id,
     `${城主.name} → ${居(城主)}（城主を務めるのは ${城主の城.name}）`);
+}
+
+console.log('');
+console.log('── 十三の三　役を預かる者は、軍を解けば己の根へ帰る');
+{
+  /* 国主も旗頭も、預かる国はその根で決まる。陣触れに参じただけで根が動けば、
+     役が解け、寄騎もことごとく離れる。実測では、大名の陣触れに旗頭と国主三人が
+     参じ、軍を解いた途端に四人とも役を失い、寄騎が零になった。 */
+  const s = A.initState('oda');
+  for (const k of ['尾張', '美濃']) for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
+  const 尾張 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '尾張');
+  const 美濃 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '美濃');
+  const 当主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
+  当主.at = 尾張.id; 当主.本領 = 尾張.id; s.factions.oda.本拠 = 尾張.id;
+  const 国主 = s.generals.find((g) => g.faction === 'oda' && !g.lord && !g.captive && g.id !== 当主.id);
+  国主.at = 美濃.id; 国主.本領 = 美濃.id; 国主.fief = 40000; 国主.age = 34;
+  /* 札は別の者に持たせる（国主だが城主ではない形。ここが崩れやすい） */
+  const 他 = s.generals.find((g) => g.faction === 'oda' && !g.lord && g.id !== 国主.id && g.id !== 当主.id);
+  他.at = 美濃.id; 他.本領 = 美濃.id; 美濃.lordId = 他.id;
+  確('美濃の国主に任じられる', A.国主に任じる(s, 'oda', '美濃', 国主.id).ok, `${国主.name}`);
+  /* 尾張（本拠）からの陣触れに参じ、軍を解く */
+  国主.at = null;
+  s.armies.push({ id: 'Y1', faction: 'oda', from: 尾張.id, gens: [国主.id],
+    local: 800, localTrain: 70, rost: A.newRoster(800, 'arm-Y1'), men: 800,
+    at: 尾張.id, path: [尾張.id], prog: 0, food: 2000, target: null, 在陣: 尾張.id });
+  A.軍を解く(s, s.armies.find((x) => x.id === 'Y1'));
+  確('己の根へ帰る', 国主.at === 美濃.id,
+    `${国主.name} → ${(s.castles.find((c) => c.id === 国主.at) || {}).name}`);
+  確('根は動かない', 国主.本領 === 美濃.id);
+  確('役も残る', 国主.役 === '国主' && 国主.役国 === '美濃', `${国主.役 || 'なし'}（${国主.役国 || '—'}）`);
+}
+
+console.log('');
+console.log('── 十三の四　同じ月に同じ城へ着いた味方は、一手に束ねて戦う');
+{
+  /* 別々に着けば別々に戦う。三つの城から千人ずつ出しても、三千の敵に千ずつ
+     当たって順に磨り潰される――各個撃破である。 */
+  const s = A.initState('oda');
+  for (const k of ['尾張', '美濃']) for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
+  const 自城 = s.castles.filter((c) => c.faction === 'oda');
+  const 的 = s.castles.find((c) => c.faction !== 'oda' && c.faction !== 'kounotori');
+  /* 三つの城に、それぞれ将を一人置く（加勢を出せる形にする）。 */
+  const 手駒 = s.generals.filter((g) => g.faction === 'oda' && !g.lord && !g.captive).slice(0, 3);
+  手駒.forEach((g, i) => { g.at = 自城[i].id; g.本領 = 自城[i].id; });
+  const 仕立てる = (id, 城) => {
+    const 将 = s.generals.filter((g) => g.at === 城.id && g.faction === 'oda' && !g.captive).slice(0, 1);
+    for (const g of 将) g.at = null;
+    const a = { id, faction: 'oda', from: 城.id, gens: 将.map((g) => g.id),
+      local: 1000, localTrain: 70, rost: A.newRoster(1000, `arm-${id}`),
+      men: 1000 + 将.reduce((t, g) => t + g.retinue, 0),
+      at: 的.id, path: [的.id], prog: 0, food: 3000, target: 的.id };
+    s.armies.push(a); return a;
+  };
+  const 甲 = 仕立てる('M1', 自城[0]), 乙 = 仕立てる('M2', 自城[1]), 丙 = 仕立てる('M3', 自城[2]);
+  const 前 = 甲.men + 乙.men + 丙.men;
+  const 束 = A.着いた味方を束ねる(s, 甲, 的);
+  確('後から着いた味方が束ねられる', 束.length === 2, `${束.length + 1}隊`);
+  確('兵が一手にまとまる', 甲.men === 前, `${甲.men}人（${前}人）`);
+  確('将も一手にまとまる', 甲.gens.length === 3, `${甲.gens.length}名`);
+  確('束ねた軍は盤から消える', !s.armies.some((x) => x.id === 'M2' || x.id === 'M3'));
+}
+
+console.log('');
+console.log('── 十三の二　旗を替えた者は、その城に置かれない');
+{
+  /* 軍の中で引き抜かれた者（家を移った者）を、そのまま城へ置いていた。巡検が
+     拾ったのは、伊達の軍にいるうちに里見へ引き抜かれた伊達稙宗が、伊達の
+     三条城に置かれた姿である。城を委ねる・味方の城へ着く の双方を検める。 */
+  const s = A.initState('oda');
+  for (const k of ['尾張', '美濃']) for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
+  const 自城 = s.castles.filter((c) => c.faction === 'oda');
+  const 陣 = 自城[0], 着 = 自城[1];
+  const 将ら = s.generals.filter((g) => g.faction === 'oda' && !g.lord && !g.captive).slice(0, 2);
+  const 残る = 将ら[0], 替えた = 将ら[1];
+  for (const g of 将ら) g.at = null;
+  替えた.faction = 'saito';                      // 軍中で旗を替えた
+  s.armies.push({ id: 'T1', faction: 'oda', from: 陣.id, gens: 将ら.map((g) => g.id),
+    local: 1000, localTrain: 70, rost: A.newRoster(1000, 'arm-T1'), men: 1000,
+    at: 着.id, path: [着.id], prog: 0, food: 3000, target: null });
+  A.城を委ねる(s, 着.id, 'T1', { 所属: 将ら.map((g) => g.id), 城主: 残る.id, 兵: 500 });
+  確('自家の将はその城に入る', 残る.at === 着.id, `${残る.name} → ${(s.castles.find((c) => c.id === 残る.at) || {}).name}`);
+  確('旗を替えた者は入れない', 替えた.at !== 着.id,
+    `${替えた.name}（${(s.factions[替えた.faction] || {}).name}）の居所 ${替えた.at == null ? '軍中' : (s.castles.find((c) => c.id === 替えた.at) || {}).name}`);
 }
 
 console.log('');
