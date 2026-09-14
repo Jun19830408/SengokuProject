@@ -269,6 +269,45 @@ export const DETACH_DEFS = [
    伏せても、着く前に見つかる。 */
 export const 伏兵の知略 = 78;
 
+/* 内応（GDD 11.2 / 9.4）。
+
+   密約を交わした将は、戦のさなかに旗を翻す。これまでは密約の効き目が
+   「守り手の士気を削り、大手門を開けておく」だけで、その者自身は最後まで
+   敵として戦っていた。内応とは、その者がこちらに付くことである。
+
+   押した時点で側が変わる。名指しの狙いも、追い討ちも一度解く――昨日までの
+   味方へ槍を向けるのだから、隊はいったん止まる。 */
+export function 内応させる(b, c) {
+  if (!c || c.dead || c.destroyed || c.寝返り) return null;
+  c.side = c.side === "P" ? "E" : "P";
+  c.寝返り = true;
+  c.内応 = false;
+  c.order = "待機";
+  c.狙い = null;
+  c.chasing = false;
+  c.sallied = false;
+  c.chargeT = 0;
+  c.tx = c.x; c.ty = c.y;
+  c.seen = true;
+  c.auto = false;
+  for (const q of c.squads || []) { q.engaged = false; q.target = null; }
+  if (b) b.log.push({ t: b.t, text: `${c.gen ? c.gen.name : "内応者"}が旗を翻した。` });
+  return c;
+}
+
+/* 内応した者が、持ち場の門を開く（GDD 9.4）。
+
+   開けられるのは己の持ち場だけである。城じゅうの門を開かせては、内応が城を
+   丸ごと明け渡す下知になってしまう。 */
+export function 内応の門を開く(b, c) {
+  if (!c || !c.寝返り || !c.holdGate || c.holdGate.broken) return null;
+  const g = c.holdGate;
+  g.hp = 0; g.broken = true;
+  c.門を開いた = true;
+  if (b) b.log.push({ t: b.t, text: `${c.gen ? c.gen.name : "内応者"}が持ち場の門を開いた。` });
+  return g;
+}
+
 export function 伏兵の策士(b, side) {
   const 皆 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && c.gen);
   const 首 = [...皆].sort((a, z) => ((z.gen.wit || 0) - (a.gen.wit || 0)))[0];

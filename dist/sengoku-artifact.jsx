@@ -17273,6 +17273,8 @@ function sackCastle(s2, castle, army, hard) {
   castle.najimi = 18;
   castle.lordId = null;
   castle.intrigue = false;
+  castle.intrigueBy = null;
+  castle.intrigueOwner = null;
   castle.well = 100;
   army.at = castle.id;
   army.path = [castle.id];
@@ -20131,6 +20133,7 @@ function advanceMonth(prev, g) {
       target.intrigue = true;
       const \u8005 = pl.matoId ? s2.generals.find((x) => x.id === pl.matoId) : null;
       target.intrigueBy = \u8005 ? \u8005.id : null;
+      target.intrigueOwner = pl.faction;
       say(\u8005 ? `${target.name}\u306E${\u8005.name}\u3068\u5BC6\u7D04\u304C\u6210\u3063\u305F\u3002\u653B\u3081\u5BC4\u305B\u305F\u6642\u306B\u9580\u3092\u958B\u304F\u3002` : `${target.name}\u306E\u5185\u5FDC\u8005\u3068\u5BC6\u7D04\u304C\u6210\u3063\u305F\u3002\u653B\u3081\u5BC4\u305B\u305F\u6642\u306B\u52B9\u304F\u3002`);
     } else if (pl.type === "\u5F15\u304D\u629C\u304D") {
       const \u57CE\u4E2D = s2.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.lord && !x.captive);
@@ -21748,6 +21751,36 @@ var DETACH_DEFS = [
   }
 ];
 var \u4F0F\u5175\u306E\u77E5\u7565 = 78;
+function \u5185\u5FDC\u3055\u305B\u308B(b, c) {
+  if (!c || c.dead || c.destroyed || c.\u5BDD\u8FD4\u308A) return null;
+  c.side = c.side === "P" ? "E" : "P";
+  c.\u5BDD\u8FD4\u308A = true;
+  c.\u5185\u5FDC = false;
+  c.order = "\u5F85\u6A5F";
+  c.\u72D9\u3044 = null;
+  c.chasing = false;
+  c.sallied = false;
+  c.chargeT = 0;
+  c.tx = c.x;
+  c.ty = c.y;
+  c.seen = true;
+  c.auto = false;
+  for (const q of c.squads || []) {
+    q.engaged = false;
+    q.target = null;
+  }
+  if (b) b.log.push({ t: b.t, text: `${c.gen ? c.gen.name : "\u5185\u5FDC\u8005"}\u304C\u65D7\u3092\u7FFB\u3057\u305F\u3002` });
+  return c;
+}
+function \u5185\u5FDC\u306E\u9580\u3092\u958B\u304F(b, c) {
+  if (!c || !c.\u5BDD\u8FD4\u308A || !c.holdGate || c.holdGate.broken) return null;
+  const g = c.holdGate;
+  g.hp = 0;
+  g.broken = true;
+  c.\u9580\u3092\u958B\u3044\u305F = true;
+  if (b) b.log.push({ t: b.t, text: `${c.gen ? c.gen.name : "\u5185\u5FDC\u8005"}\u304C\u6301\u3061\u5834\u306E\u9580\u3092\u958B\u3044\u305F\u3002` });
+  return g;
+}
 function \u4F0F\u5175\u306E\u7B56\u58EB(b, side) {
   const \u7686 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && c.gen);
   const \u9996 = [...\u7686].sort((a, z) => (z.gen.wit || 0) - (a.gen.wit || 0))[0];
@@ -24937,6 +24970,13 @@ function \u6A4B\u5F85\u3061\u3092\u898B\u308B(b, c, sx, sy) {
 function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
+  for (const c of alive) {
+    if (!c.\u5185\u5FDC || c.\u5BDD\u8FD4\u308A) continue;
+    if (c.\u5185\u5FDC\u306E\u4E3B !== "E") continue;
+    if (b.t < 45) continue;
+    \u5185\u5FDC\u3055\u305B\u308B(b, c);
+    if (MAP && c.holdGate && !c.holdGate.broken) \u5185\u5FDC\u306E\u9580\u3092\u958B\u304F(b, c);
+  }
   for (const c of alive) {
     if (!c.detach || c.routed) continue;
     detachAI(b, c, alive);
@@ -28158,7 +28198,25 @@ function BattleScreen({ ctx, land, onEnd }) {
     const coh = Math.round(foe.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, foe.squads.length));
     const \u5175\u79D1 = { yari: "\u69CD", yumi: "\u5F13", teppo: "\u9244\u7832", kiba: "\u9A0E\u99AC" };
     const \u5185\u8A33 = ["kiba", "teppo", "yumi", "yari"].map((k) => [\u5175\u79D1[k], foe.squads.filter((q) => q.type === k).reduce((a, q) => a + q.men, 0)]).filter(([, v]) => v > 0).map(([k, v]) => `${k}${fmt(Math.round(v))}`).join("\u30FB");
-    return /* @__PURE__ */ React3.createElement("div", { style: { borderTop: `2px solid ${ctx.eColor}`, paddingTop: 6, marginTop: 4 } }, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 10.5, letterSpacing: ".14em", color: ctx.eColor } }, "\u6575\u306E\u968A"), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { fontSize: 15, flex: 1 } }, foe.gen.name, "\u968A"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", style: { padding: "1px 8px" }, onClick: () => setFoeSel(null) }, "\u9589\u3058\u308B")), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(foe)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(foe.morale), "\uFF0F\u9663\u5F62", coh, "\uFF0F\u75B2\u52B4", Math.round(foe.fatigue), "\uFF0F", foe.formation || "\u2015", "\uFF0F", TERRAIN[foe.\u5730 || terrainAt(foe.x, foe.y)].label, foe.routed ? "\uFF0F\u6557\u8D70\u4E2D" : "", foe.withdraw ? "\uFF0F\u9000\u5374\u4E2D" : "", foe.chargeT > 0 ? "\uFF0F\u7A81\u6483\u4E2D" : "", foe.squads.some((q) => q.engaged) ? "\uFF0F\u4EA4\u6226\u4E2D" : ""), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.text, lineHeight: 1.6 } }, foe.gen.age ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9F62 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.age), "\u3000") : null, "\u7D71\u7387 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.lead), "\u3000\u6B66\u52C7 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.valor), "\u3000\u77E5\u7565 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.wit), foe.gen.lord ? /* @__PURE__ */ React3.createElement("span", { style: { color: ctx.eColor } }, "\u3000\u3010\u7DCF\u5927\u5C06\u3011") : null), \u5185\u8A33 && /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim } }, "\u5175\u79D1\u3000", \u5185\u8A33), selC && !selC.routed && !selC.detach ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 5 } }, selC.gen.name, "\u968A\u3092", foe.gen.name, "\u968A\u3078\u5DEE\u3057\u5411\u3051\u308B"), /* @__PURE__ */ React3.createElement("div", { className: "g3" }, ["\u63A5\u6226", "\u7A81\u6483", "\u5C04\u6483"].map((o) => /* @__PURE__ */ React3.createElement(
+    return /* @__PURE__ */ React3.createElement("div", { style: { borderTop: `2px solid ${ctx.eColor}`, paddingTop: 6, marginTop: 4 } }, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 10.5, letterSpacing: ".14em", color: ctx.eColor } }, "\u6575\u306E\u968A"), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { fontSize: 15, flex: 1 } }, foe.gen.name, "\u968A"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", style: { padding: "1px 8px" }, onClick: () => setFoeSel(null) }, "\u9589\u3058\u308B")), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(foe)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(foe.morale), "\uFF0F\u9663\u5F62", coh, "\uFF0F\u75B2\u52B4", Math.round(foe.fatigue), "\uFF0F", foe.formation || "\u2015", "\uFF0F", TERRAIN[foe.\u5730 || terrainAt(foe.x, foe.y)].label, foe.routed ? "\uFF0F\u6557\u8D70\u4E2D" : "", foe.withdraw ? "\uFF0F\u9000\u5374\u4E2D" : "", foe.chargeT > 0 ? "\uFF0F\u7A81\u6483\u4E2D" : "", foe.squads.some((q) => q.engaged) ? "\uFF0F\u4EA4\u6226\u4E2D" : ""), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.text, lineHeight: 1.6 } }, foe.gen.age ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9F62 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.age), "\u3000") : null, "\u7D71\u7387 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.lead), "\u3000\u6B66\u52C7 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.valor), "\u3000\u77E5\u7565 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.wit), foe.gen.lord ? /* @__PURE__ */ React3.createElement("span", { style: { color: ctx.eColor } }, "\u3000\u3010\u7DCF\u5927\u5C06\u3011") : null), \u5185\u8A33 && /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim } }, "\u5175\u79D1\u3000", \u5185\u8A33), foe.\u5185\u5FDC && foe.\u5185\u5FDC\u306E\u4E3B === "P" && !foe.\u5BDD\u8FD4\u308A && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: "btn sm",
+        style: {
+          width: "100%",
+          marginTop: 5,
+          borderColor: "#8A6A34",
+          color: "#6B4E1E"
+        },
+        onClick: () => {
+          \u5185\u5FDC\u3055\u305B\u308B(b, foe);
+          pickCorps(foe.id);
+          setFoeSel(null);
+          force((n) => (n + 1) % 1e3);
+        }
+      },
+      "\u5185\u5FDC\u3055\u305B\u308B\uFF08\u3053\u306E\u968A\u3092\u5473\u65B9\u306B\u4ED8\u3051\u308B\uFF09"
+    ), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, marginTop: 3 } }, "\u5BC6\u7D04\u3092\u4EA4\u308F\u3057\u305F\u8005\u3067\u3059\u3002\u62BC\u305B\u3070\u305D\u306E\u5834\u3067\u65D7\u3092\u7FFB\u3057\u307E\u3059\u3002", foe.holdGate ? "\u57CE\u65B9\u3067\u3042\u308C\u3070\u3001\u5BDD\u8FD4\u3063\u305F\u306E\u3061\u6301\u3061\u5834\u306E\u9580\u3092\u958B\u304B\u305B\u3089\u308C\u307E\u3059\u3002" : "")), selC && !selC.routed && !selC.detach ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 5 } }, selC.gen.name, "\u968A\u3092", foe.gen.name, "\u968A\u3078\u5DEE\u3057\u5411\u3051\u308B"), /* @__PURE__ */ React3.createElement("div", { className: "g3" }, ["\u63A5\u6226", "\u7A81\u6483", "\u5C04\u6483"].map((o) => /* @__PURE__ */ React3.createElement(
       "button",
       {
         key: o,
@@ -28170,7 +28228,23 @@ function BattleScreen({ ctx, land, onEnd }) {
   })(), selC ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, selC.detach ? `${selC.gen.name}\u968A ${selC.task || "\u5206\u9063"}` : selC.name, " \u306E\u547D\u4EE4", selC.ally && selC.ally !== "\u81EA\u9818\u63F4\u8ECD" && /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 6 } }, "\u3014", selC.ally, "\u3015")), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(selC)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(selC.morale), "\uFF0F\u9663\u5F62", Math.round(selC.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, selC.squads.length)), "\uFF0F \u75B2\u52B4", Math.round(selC.fatigue), "\uFF0F", TERRAIN[selC.\u5730 || terrainAt(selC.x, selC.y)].label, selC.chargeT > 0 ? `\uFF0F\u7A81\u6483\u4E2D \u6B8B${Math.ceil(selC.chargeT)}\u79D2` : "", selC.reformT > 0 ? `\uFF0F\u9663\u5F62\u66FF\u3048\u4E2D \u6B8B${Math.ceil(selC.reformT)}\u79D2` : "", selC.faceTo != null ? "\uFF0F\u56DE\u982D\u4E2D" : "", selC.pending ? `\uFF0F\u4F1D\u4EE4\u4E2D \u6B8B${Math.ceil(selC.pending.t)}\u79D2` : "", outOfCommand(b, selC) ? "\uFF0F\u6307\u63EE\u570F\u5916\uFF08\u547D\u4EE4\u304C\u5C4A\u304B\u306A\u3044\uFF09" : "", selC.pinch >= 2 ? `\uFF0F${selC.pinch}\u65B9\u5411\u304B\u3089\u631F\u6483\u3092\u53D7\u3051\u3066\u3044\u308B` : "", (() => {
     const t = selC.\u72D9\u3044 && b.corps.find((x) => x.id === selC.\u72D9\u3044);
     return t && !t.destroyed ? `\uFF0F${t.gen.name}\u968A\u3092\u72D9\u3063\u3066\u3044\u308B` : "";
-  })(), isCastle && selC.kit && selC.kit !== "\u306A\u3057" ? `\uFF0F${selC.kit}` : "", isCastle && selC.gateFat > 3 ? `\uFF0F\u9580\u653B\u3081\u306E\u75B2\u308C${Math.round(selC.gateFat)}` : ""), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.text, lineHeight: 1.6 } }, selC.gen.age ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9F62 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.age), "\u3000") : null, "\u7D71\u7387 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.lead), "\u3000\u6B66\u52C7 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.valor), "\u3000\u77E5\u7565 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.wit), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF08\u7D71\u7387\uFF1D\u6307\u63EE\u570F\u3068\u4F1D\u4EE4\u30FB\u9663\u5F62\u66FF\u3048\u306E\u901F\u3055\u3001\u6B66\u52C7\uFF1D\u767D\u5175\u306E\u5F37\u3055\u3001\u77E5\u7565\uFF1D\u4F0F\u5175\u3068\u5206\u9063\u306E\u5224\u65AD\uFF09")), isCastle && iAmAttacker && /* @__PURE__ */ React3.createElement("div", { className: "g4" }, CASTLE_ORDERS.map((o) => /* @__PURE__ */ React3.createElement("button", { key: o, className: "btn sm", onClick: () => castleGo(selC, o) }, o))), isCastle && !iAmAttacker && /* @__PURE__ */ React3.createElement("div", { className: "g2" }, /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => sortieOut(selC) }, "\u6253\u3063\u3066\u51FA\u308B"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => sortieBack(selC) }, "\u57CE\u5185\u3078\u623B\u308B")), /* @__PURE__ */ React3.createElement(
+  })(), isCastle && selC.kit && selC.kit !== "\u306A\u3057" ? `\uFF0F${selC.kit}` : "", isCastle && selC.gateFat > 3 ? `\uFF0F\u9580\u653B\u3081\u306E\u75B2\u308C${Math.round(selC.gateFat)}` : ""), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.text, lineHeight: 1.6 } }, selC.gen.age ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9F62 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.age), "\u3000") : null, "\u7D71\u7387 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.lead), "\u3000\u6B66\u52C7 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.valor), "\u3000\u77E5\u7565 ", /* @__PURE__ */ React3.createElement("b", null, selC.gen.wit), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF08\u7D71\u7387\uFF1D\u6307\u63EE\u570F\u3068\u4F1D\u4EE4\u30FB\u9663\u5F62\u66FF\u3048\u306E\u901F\u3055\u3001\u6B66\u52C7\uFF1D\u767D\u5175\u306E\u5F37\u3055\u3001\u77E5\u7565\uFF1D\u4F0F\u5175\u3068\u5206\u9063\u306E\u5224\u65AD\uFF09")), isCastle && iAmAttacker && /* @__PURE__ */ React3.createElement("div", { className: "g4" }, CASTLE_ORDERS.map((o) => /* @__PURE__ */ React3.createElement("button", { key: o, className: "btn sm", onClick: () => castleGo(selC, o) }, o))), isCastle && !iAmAttacker && /* @__PURE__ */ React3.createElement("div", { className: "g2" }, /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => sortieOut(selC) }, "\u6253\u3063\u3066\u51FA\u308B"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => sortieBack(selC) }, "\u57CE\u5185\u3078\u623B\u308B")), isCastle && selC.\u5BDD\u8FD4\u308A && selC.holdGate && !selC.holdGate.broken && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement(
+    "button",
+    {
+      className: "btn sm",
+      style: {
+        width: "100%",
+        marginBottom: 5,
+        borderColor: "#8A6A34",
+        color: "#6B4E1E"
+      },
+      onClick: () => {
+        \u5185\u5FDC\u306E\u9580\u3092\u958B\u304F(b, selC);
+        force((n) => (n + 1) % 1e3);
+      }
+    },
+    "\u6301\u3061\u5834\u306E\u9580\u3092\u958B\u304F"
+  ), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, marginBottom: 4 } }, "\u5185\u5FDC\u3057\u305F\u8005\u306F\u3001\u5DF1\u306E\u53D7\u3051\u6301\u3063\u3066\u3044\u305F\u9580\u3060\u3051\u3092\u958B\u3051\u307E\u3059\u3002")), /* @__PURE__ */ React3.createElement(
     "button",
     {
       className: `btn sm ${selC.auto ? "on" : ""}`,
@@ -31593,15 +31667,25 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const aMen = atk.reduce((a, c) => a + corpsMen(c), 0);
     bb.sortie = playerIsAtk ? dMen > aMen * 0.85 : !!sg.sortie;
     bb.log.push({ t: 0, text: bb.sortie ? "\u5B88\u308A\u624B\u306F\u57CE\u9580\u3092\u958B\u3044\u3066\u8A0E\u3063\u3066\u51FA\u305F\u3002" : "\u5B88\u308A\u624B\u306F\u66F2\u8F2A\u306B\u7C60\u3063\u3066\u5BC4\u305B\u624B\u3092\u5F85\u3064\u3002" });
-    if (castle.intrigue && playerIsAtk) {
-      for (const c of bb.corps) if (c.side === defSide) {
+    const \u5BC6\u7D04\u306E\u4E3B = castle.intrigue ? castle.intrigueOwner || (playerIsAtk ? g.player : army.faction) : null;
+    if (\u5BC6\u7D04\u306E\u4E3B) {
+      const \u5185\u5FDC\u306E\u5074 = \u5BC6\u7D04\u306E\u4E3B === (playerIsAtk ? g.player : castle.faction) ? "P" : "E";
+      for (const c of bb.corps) {
+        if (c.side !== defSide) continue;
         c.morale -= 20;
         for (const q of c.squads) q.cohesion -= 12;
+        if (castle.intrigueBy && c.id === castle.intrigueBy) {
+          c.\u5185\u5FDC = true;
+          c.\u5185\u5FDC\u306E\u4E3B = \u5185\u5FDC\u306E\u5074;
+        }
       }
       const l0 = map.layers[0].gates[0];
       l0.hp = 0;
       l0.broken = true;
       bb.log.push({ t: 0, text: "\u5185\u5FDC\u306E\u624B\u5F15\u304D\u3067\u5927\u624B\u9580\u304C\u958B\u304B\u308C\u3066\u3044\u308B\u3002" });
+      if (bb.corps.some((c) => c.\u5185\u5FDC)) {
+        bb.log.push({ t: 0, text: "\u57CE\u4E2D\u306B\u5185\u5FDC\u3092\u7D04\u3057\u305F\u8005\u304C\u3044\u308B\u3002\u9803\u5408\u3044\u3092\u898B\u3066\u65D7\u3092\u7FFB\u3055\u305B\u3089\u308C\u308B\u3002" });
+      }
     }
     setBattle({
       b: bb,
@@ -31764,7 +31848,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     };
     const defFaction = foe ? foe.faction : dest.faction;
     const atkColor = g.factions[army.faction].color, defColor = g.factions[defFaction].color;
-    const betray = dest.intrigue && army.faction === g.player;
+    const betray = !!dest.intrigue && (dest.intrigueOwner || (army.faction === g.player ? g.player : null)) != null;
     const allies = [
       ...foe ? [] : g.armies.filter((a) => a.id !== army.id && a.at === dest.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))),
       // 城方が討って出るなら、寄せ手の背を衝く形で同じ側に立つ（GDD 9.2）
@@ -31836,11 +31920,20 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     bb.face = face;
     bb.myFar = playerIsAtk;
     if (betray) {
-      for (const c of bb.corps) if (c.side === "E") {
+      const \u5185\u5FDC\u306E\u5074 = (dest.intrigueOwner || g.player) === g.player ? "P" : "E";
+      for (const c of bb.corps) {
+        if (c.side !== (playerIsAtk ? "E" : "P")) continue;
         c.morale -= 18;
         for (const q of c.squads) q.cohesion -= 10;
+        if (dest.intrigueBy && c.id === dest.intrigueBy) {
+          c.\u5185\u5FDC = true;
+          c.\u5185\u5FDC\u306E\u4E3B = \u5185\u5FDC\u306E\u5074;
+        }
       }
       bb.log.push({ t: 0, text: "\u57CE\u5185\u306E\u5185\u5FDC\u8005\u304C\u52D5\u304D\u3001\u5B88\u308A\u624B\u306E\u58EB\u6C17\u304C\u4E71\u308C\u3066\u3044\u308B\u3002" });
+      if (bb.corps.some((c) => c.\u5185\u5FDC)) {
+        bb.log.push({ t: 0, text: "\u6575\u4E2D\u306B\u5185\u5FDC\u3092\u7D04\u3057\u305F\u8005\u304C\u3044\u308B\u3002\u9803\u5408\u3044\u3092\u898B\u3066\u65D7\u3092\u7FFB\u3055\u305B\u3089\u308C\u308B\u3002" });
+      }
     }
     if (ambush && ambush.done) {
       const mySide = ambush.atkIsPlayer ? "P" : "E";
@@ -31908,6 +32001,36 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       intrigue: false
     }, null, null, foe);
   };
+  const \u5185\u5FDC\u306E\u59CB\u672B = (s2, b, { \u653B\u3081\u624B, \u5B88\u308A\u624B, atkSide, \u843D\u3061\u305F\u57CE }) => {
+    for (const c of b.corps.filter((x) => x.\u5BDD\u8FD4\u308A)) {
+      const gen = s2.generals.find((x) => x.id === c.id);
+      if (!gen) continue;
+      const \u65B0\u5BB6 = c.side === atkSide ? \u653B\u3081\u624B : \u5B88\u308A\u624B;
+      if (!\u65B0\u5BB6 || gen.faction === \u65B0\u5BB6) continue;
+      const \u65E7\u5BB6 = gen.faction;
+      gen.faction = \u65B0\u5BB6;
+      gen.\u5F79 = null;
+      gen.\u5F79\u56FD = null;
+      gen.\u65B9\u9762 = null;
+      gen.\u5BC4\u89AA = null;
+      gen.\u7684\u5BB6 = null;
+      for (const x of s2.generals) if (x.\u5BC4\u89AA === gen.id) x.\u5BC4\u89AA = null;
+      for (const cc of s2.castles) if (cc.lordId === gen.id) cc.lordId = null;
+      gen.loyal = Math.min(gen.loyal == null ? 60 : gen.loyal, 55);
+      const \u884C\u304D\u5148 = (\u843D\u3061\u305F\u57CE && \u843D\u3061\u305F\u57CE.faction === \u65B0\u5BB6 ? \u843D\u3061\u305F\u57CE : null) || s2.castles.find((cc) => cc.faction === \u65B0\u5BB6 && cc.id === (gen.\u672C\u9818 || gen.at)) || s2.castles.find((cc) => cc.faction === \u65B0\u5BB6);
+      if (\u884C\u304D\u5148) {
+        gen.at = \u884C\u304D\u5148.id;
+        gen.\u672C\u9818 = \u884C\u304D\u5148.id;
+      } else {
+        gen.at = null;
+      }
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: `${gen.name}\u304C\u5185\u5FDC\u3057\u3001${(s2.factions[\u65E7\u5BB6] || {}).name}\u3092\u96E2\u308C\u3066${(s2.factions[\u65B0\u5BB6] || {}).name}\u306B\u4ED8\u3044\u305F\u3002`
+      });
+    }
+  };
   const finishAssault = (b, ctx) => {
     setBattleMap(null);
     setG((prev) => {
@@ -31938,6 +32061,12 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       castle.local = Math.max(0, dLeft);
       if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+      \u5185\u5FDC\u306E\u59CB\u672B(s2, b, {
+        \u653B\u3081\u624B: army ? army.faction : ctx.playerIsAtk ? s2.player : castle.faction,
+        \u5B88\u308A\u624B: castle.faction,
+        atkSide,
+        \u843D\u3061\u305F\u57CE: won ? castle : null
+      });
       const \u9580\u3089 = b.map.gates;
       const \u7DCF = \u9580\u3089.reduce((a, g2) => a + g2.max, 0);
       const \u6B8B = \u9580\u3089.reduce((a, g2) => a + Math.max(0, g2.hp), 0);
@@ -32197,6 +32326,12 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const keep = Math.min(castle.local, Math.round(minGarrison(castle) * 0.4));
       castle.local = Math.max(0, keep + defLeft);
       if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+      \u5185\u5FDC\u306E\u59CB\u672B(s2, b, {
+        \u653B\u3081\u624B: army ? army.faction : s2.player,
+        \u5B88\u308A\u624B: castle.faction,
+        atkSide: ctx.playerIsAtk ? "P" : "E",
+        \u843D\u3061\u305F\u57CE: null
+      });
       s2.chronicle.push({
         y: s2.year,
         m: s2.month,

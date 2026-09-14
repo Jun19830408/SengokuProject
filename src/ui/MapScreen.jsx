@@ -841,10 +841,24 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const aMen = atk.reduce((a, c) => a + corpsMen(c), 0);
     bb.sortie = playerIsAtk ? dMen > aMen * 0.85 : !!sg.sortie;
     bb.log.push({ t: 0, text: bb.sortie ? "守り手は城門を開いて討って出た。" : "守り手は曲輪に籠って寄せ手を待つ。" });
-    if (castle.intrigue && playerIsAtk) {
-      for (const c of bb.corps) if (c.side === defSide) { c.morale -= 20; for (const q of c.squads) q.cohesion -= 12; }
+    /* 内応（GDD 11.2 / 9.4）。
+
+       密約を交わした側は、戦のさなかにその者を寝返らせられる。控えが無い古い
+       記録では、これまでどおり寄せ手のものと読む。 */
+    const 密約の主 = castle.intrigue
+      ? (castle.intrigueOwner || (playerIsAtk ? g.player : army.faction)) : null;
+    if (密約の主) {
+      const 内応の側 = 密約の主 === (playerIsAtk ? g.player : castle.faction) ? "P" : "E";
+      for (const c of bb.corps) {
+        if (c.side !== defSide) continue;
+        c.morale -= 20; for (const q of c.squads) q.cohesion -= 12;
+        if (castle.intrigueBy && c.id === castle.intrigueBy) { c.内応 = true; c.内応の主 = 内応の側; }
+      }
       const l0 = map.layers[0].gates[0]; l0.hp = 0; l0.broken = true;
       bb.log.push({ t: 0, text: "内応の手引きで大手門が開かれている。" });
+      if (bb.corps.some((c) => c.内応)) {
+        bb.log.push({ t: 0, text: "城中に内応を約した者がいる。頃合いを見て旗を翻させられる。" });
+      }
     }
     setBattle({
       b: bb, armyId: army.id, castleId: castle.id, playerIsAtk, mode: "castle",
@@ -1036,7 +1050,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
        「織田家 対 織田家」と出た。 */
     const defFaction = foe ? foe.faction : dest.faction;
     const atkColor = g.factions[army.faction].color, defColor = g.factions[defFaction].color;
-    const betray = dest.intrigue && army.faction === g.player;   // 内応（GDD 11.2）
+    /* 内応（GDD 11.2）。密約を結んだのが遊ぶ側とは限らない。 */
+    const betray = !!dest.intrigue
+      && ((dest.intrigueOwner || (army.faction === g.player ? g.player : null)) != null);
     // 同着した他家の援軍と、戦役に加わった寄騎は、自前の旗色のまま同じ側に立つ（GDD 7.4）
     // 街道での行き合いは、居合わせた者だけの戦である。寄騎は間に合わぬ。
     const allies = [
@@ -1091,8 +1107,16 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     bb.face = face;
     bb.myFar = playerIsAtk;      // 寄せ手は遠い側（far）から入る
     if (betray) {
-      for (const c of bb.corps) if (c.side === "E") { c.morale -= 18; for (const q of c.squads) q.cohesion -= 10; }
+      const 内応の側 = (dest.intrigueOwner || g.player) === g.player ? "P" : "E";
+      for (const c of bb.corps) {
+        if (c.side !== (playerIsAtk ? "E" : "P")) continue;
+        c.morale -= 18; for (const q of c.squads) q.cohesion -= 10;
+        if (dest.intrigueBy && c.id === dest.intrigueBy) { c.内応 = true; c.内応の主 = 内応の側; }
+      }
       bb.log.push({ t: 0, text: "城内の内応者が動き、守り手の士気が乱れている。" });
+      if (bb.corps.some((c) => c.内応)) {
+        bb.log.push({ t: 0, text: "敵中に内応を約した者がいる。頃合いを見て旗を翻させられる。" });
+      }
     }
     // 合戦の前に本陣を衝いた首尾を、盤の上に映す（GDD 8.7）
     if (ambush && ambush.done) {
@@ -1147,6 +1171,36 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }, null, null, foe);
   };
 
+  /* 内応した者の始末（GDD 11.2）。
+
+     戦のさなかに旗を翻した者は、そのまま新しい主のもとへ入る。役も寄騎の筋も
+     いったん解け、城主の札も外れる――昨日までの家の差配を、そのまま引き継ぐ
+     筋はない。忠誠は低いところから始まる（旧主を売った者である）。
+
+     行き先は、新しい主の城のうち戦場にいちばん近いもの。落とした城があれば
+     そこへ入る。 */
+  const 内応の始末 = (s, b, { 攻め手, 守り手, atkSide, 落ちた城 }) => {
+    for (const c of b.corps.filter((x) => x.寝返り)) {
+      const gen = s.generals.find((x) => x.id === c.id);
+      if (!gen) continue;
+      const 新家 = c.side === atkSide ? 攻め手 : 守り手;
+      if (!新家 || gen.faction === 新家) continue;
+      const 旧家 = gen.faction;
+      gen.faction = 新家;
+      gen.役 = null; gen.役国 = null; gen.方面 = null; gen.寄親 = null; gen.的家 = null;
+      for (const x of s.generals) if (x.寄親 === gen.id) x.寄親 = null;
+      for (const cc of s.castles) if (cc.lordId === gen.id) cc.lordId = null;
+      gen.loyal = Math.min(gen.loyal == null ? 60 : gen.loyal, 55);
+      const 行き先 = (落ちた城 && 落ちた城.faction === 新家 ? 落ちた城 : null)
+        || s.castles.find((cc) => cc.faction === 新家 && cc.id === (gen.本領 || gen.at))
+        || s.castles.find((cc) => cc.faction === 新家);
+      if (行き先) { gen.at = 行き先.id; gen.本領 = 行き先.id; } else { gen.at = null; }
+      s.chronicle.push({ y: s.year, m: s.month,
+        text: `${gen.name}が内応し、${(s.factions[旧家] || {}).name}を離れて`
+          + `${(s.factions[新家] || {}).name}に付いた。` });
+    }
+  };
+
   const finishAssault = (b, ctx) => {
     setBattleMap(null);
     setG((prev) => {
@@ -1175,6 +1229,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       castle.local = Math.max(0, dLeft);
       if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+      内応の始末(s, b, {
+        攻め手: army ? army.faction : (ctx.playerIsAtk ? s.player : castle.faction),
+        守り手: castle.faction, atkSide, 落ちた城: won ? castle : null,
+      });
       /* 城の傷み（GDD 9.3）。
 
          門は次の攻めまでに直る。焼けた板を張り替え、閂を打ち直せばよい。
@@ -1474,6 +1532,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const keep = Math.min(castle.local, Math.round(minGarrison(castle) * 0.4));
       castle.local = Math.max(0, keep + defLeft);
       if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+      内応の始末(s, b, {
+        攻め手: army ? army.faction : s.player, 守り手: castle.faction,
+        atkSide: ctx.playerIsAtk ? "P" : "E", 落ちた城: null,
+      });
       s.chronicle.push({ y: s.year, m: s.month,
         text: draw ? `${castle.name}下の野戦は日没により決着せず、両軍が兵を退いた（天候：${b.weather}）。`
           : `${castle.name}下の野戦。${atkWon ? "攻め手" : "守り手"}が勝利した（天候：${b.weather}${b.orderly ? "・統制撤退" : ""}）。` });

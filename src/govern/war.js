@@ -444,6 +444,8 @@ export function sackCastle(s, castle, army, hard) {
   castle.najimi = 18;
   castle.lordId = null;
   castle.intrigue = false;
+  castle.intrigueBy = null;
+  castle.intrigueOwner = null;
   castle.well = 100;
   /* 軍は解かれない。落とした城に在陣する（GDD 6.4）。
 

@@ -1,5 +1,5 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
-import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す } from "./corps.js";
+import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
 import { ARM_STATS, HILLS, RIVER, fieldScale, hasRiver, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { clamp } from "../core/util.js";
@@ -325,6 +325,18 @@ function 橋待ちを見る(b, c, sx, sy) {
 export function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
+  /* 采配の側が結んだ内応は、采配が頃合いを計って動かす（GDD 11.2）。
+
+     遊ぶ側は敵の隊の帳面から「内応させる」を押す。采配にはその画面が無いので、
+     戦が半刻ほど進んだところで旗を翻させる。始まるなり寝返らせては、城を
+     囲んだだけで城が割れることになり、戦にならない。 */
+  for (const c of alive) {
+    if (!c.内応 || c.寝返り) continue;
+    if (c.内応の主 !== "E") continue;                    // 遊ぶ側の密約は、遊ぶ側が押す
+    if (b.t < 45) continue;
+    内応させる(b, c);
+    if (MAP && c.holdGate && !c.holdGate.broken) 内応の門を開く(b, c);
+  }
   /* 分遣隊は所属を問わず割り当てられた任務を自律遂行する（GDD 8.5）。
      割いた隊にも川の掟をかける。本隊にだけ掛けて分遣に掛けぬ道理はない。
      回り込む騎馬は道を引かずに真っすぐ歩くので、川があれば淵を突っ切っていた。

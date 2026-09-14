@@ -6,7 +6,7 @@ import { stepBattle } from "../battle/engine.js";
 import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
-import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる } from "../battle/corps.js";
+import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる, 内応させる, 内応の門を開く } from "../battle/corps.js";
 
 /* --------------------------------------------------------------- 合戦画面 */
 export function BattleScreen({ ctx, land, onEnd }) {
@@ -686,6 +686,25 @@ export function BattleScreen({ ctx, land, onEnd }) {
                   {foe.gen.lord ? <span style={{ color: ctx.eColor }}>　【総大将】</span> : null}
                 </div>
                 {内訳 && <div className="num" style={{ fontSize: 11.5, color: U.dim }}>兵科　{内訳}</div>}
+                {/* 内応（GDD 11.2 / 9.4）。密約を結んだ側だけが、この釦を持つ。
+                    押した時点でその隊はこちらに付く。 */}
+                {foe.内応 && foe.内応の主 === "P" && !foe.寝返り && (
+                  <>
+                    <button className="btn sm" style={{ width: "100%", marginTop: 5,
+                      borderColor: "#8A6A34", color: "#6B4E1E" }}
+                      onClick={() => {
+                        内応させる(b, foe);
+                        pickCorps(foe.id); setFoeSel(null);
+                        force((n) => (n + 1) % 1000);
+                      }}>
+                      内応させる（この隊を味方に付ける）
+                    </button>
+                    <div style={{ fontSize: 11, color: U.dim, lineHeight: 1.7, marginTop: 3 }}>
+                      密約を交わした者です。押せばその場で旗を翻します。
+                      {foe.holdGate ? "城方であれば、寝返ったのち持ち場の門を開かせられます。" : ""}
+                    </div>
+                  </>
+                )}
                 {selC && !selC.routed && !selC.detach ? (
                   <>
                     <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 5 }}>
@@ -754,6 +773,19 @@ export function BattleScreen({ ctx, land, onEnd }) {
                   <button className="btn sm" onClick={() => sortieOut(selC)}>打って出る</button>
                   <button className="btn sm" onClick={() => sortieBack(selC)}>城内へ戻る</button>
                 </div>
+              )}
+              {/* 内応した者の手（GDD 9.4）。開けられるのは己の持ち場だけである。 */}
+              {isCastle && selC.寝返り && selC.holdGate && !selC.holdGate.broken && (
+                <>
+                  <button className="btn sm" style={{ width: "100%", marginBottom: 5,
+                    borderColor: "#8A6A34", color: "#6B4E1E" }}
+                    onClick={() => { 内応の門を開く(b, selC); force((n) => (n + 1) % 1000); }}>
+                    持ち場の門を開く
+                  </button>
+                  <div style={{ fontSize: 11, color: U.dim, lineHeight: 1.7, marginBottom: 4 }}>
+                    内応した者は、己の受け持っていた門だけを開けます。
+                  </div>
+                </>
               )}
               <button className={`btn sm ${selC.auto ? "on" : ""}`} style={{ width: "100%", marginBottom: 5 }}
                 onClick={() => {

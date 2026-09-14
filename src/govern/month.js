@@ -424,6 +424,10 @@ export function advanceMonth(prev, g) {
           target.intrigue = true;
           const 者 = pl.matoId ? s.generals.find((x) => x.id === pl.matoId) : null;
           target.intrigueBy = 者 ? 者.id : null;
+          /* 誰が結んだ密約かを控える。合戦の場でその者に「内応させる」を出すのは
+             結んだ家だけである。控えが無ければ、その場は寄せ手のものと読む
+             （古い記録のため）。 */
+          target.intrigueOwner = pl.faction;
           say(者
             ? `${target.name}の${者.name}と密約が成った。攻め寄せた時に門を開く。`
             : `${target.name}の内応者と密約が成った。攻め寄せた時に効く。`);
