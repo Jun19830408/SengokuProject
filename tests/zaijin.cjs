@@ -441,12 +441,14 @@ console.log('── 十三の四　同じ月に同じ城へ着いた味方は、
   const 仕立てる = (id, 城) => {
     const 将 = s.generals.filter((g) => g.at === 城.id && g.faction === 'oda' && !g.captive).slice(0, 1);
     for (const g of 将) g.at = null;
+    城.local = Math.max(0, 城.local - 1000);          // 出した兵は城から抜ける
     const a = { id, faction: 'oda', from: 城.id, gens: 将.map((g) => g.id),
       local: 1000, localTrain: 70, rost: A.newRoster(1000, `arm-${id}`),
       men: 1000 + 将.reduce((t, g) => t + g.retinue, 0),
       at: 的.id, path: [的.id], prog: 0, food: 3000, target: 的.id };
     s.armies.push(a); return a;
   };
+  const 前兵 = [自城[0].local, 自城[1].local, 自城[2].local];
   const 甲 = 仕立てる('M1', 自城[0]), 乙 = 仕立てる('M2', 自城[1]), 丙 = 仕立てる('M3', 自城[2]);
   const 前 = 甲.men + 乙.men + 丙.men;
   const 束 = A.着いた味方を束ねる(s, 甲, 的);
@@ -454,6 +456,18 @@ console.log('── 十三の四　同じ月に同じ城へ着いた味方は、
   確('兵が一手にまとまる', 甲.men === 前, `${甲.men}人（${前}人）`);
   確('将も一手にまとまる', 甲.gens.length === 3, `${甲.gens.length}名`);
   確('束ねた軍は盤から消える', !s.armies.some((x) => x.id === 'M2' || x.id === 'M3'));
+
+  /* 束ねた軍を解けば、兵は来た城へ返る（GDD 7.3）。
+
+     控えが無いと、加勢に来た城の兵まで本隊の出陣元へ入り、寄騎の城が空になって
+     国主の城だけが膨れる。遊ぶ側の申し出は「国主で寄騎とともに出陣し、城を落として
+     軍を解散すると、ほかの城の兵数が国主の城に移ってしまう」であった。 */
+  確('出どころが控えられる', (甲.出どころ || []).length === 3,
+    (甲.出どころ || []).map((q) => `${(s.castles.find((c) => c.id === q.from) || {}).name}:${q.local}`).join('・'));
+  A.軍を解く(s, 甲);
+  const 戻り = [自城[0], 自城[1], 自城[2]].map((c, i) => ({ c, 前: 前兵[i] }));
+  確('兵は来た城へ返る', 戻り.every(({ c, 前 }) => Math.abs(c.local - 前) <= Math.max(2, 前 * 0.02)),
+    戻り.map(({ c, 前 }) => `${c.name} ${前}→${c.local}`).join('／'));
 }
 
 console.log('');

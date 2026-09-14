@@ -46,7 +46,12 @@ export const css = `
  padding:7px 4px;font-size:10px;text-align:center;cursor:pointer;line-height:1.5;color:${U.text}}
 .mbtn b{display:block;font-size:16px;font-weight:500}
 .mbtn:hover{background:#fff}
-.mini{position:absolute;right:12px;bottom:12px;width:130px;height:139px;border:1px solid ${U.line};
+/* 日本全土の小図は左下に置く（GDD 15.1）。
+
+   もとは右下であった。政務の地図では右の列に釦が九つ並ぶので、丈の足りない
+   画面では列の末が小図に重なった――遊ぶ側の写しでは「攻略目標」が小図の下に
+   隠れていた。左の列は釦が五つで短いので、左下なら重ならない。 */
+.mini{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:12px;width:130px;height:139px;border:1px solid ${U.line};
  border-radius:6px;overflow:hidden;background:#fff;z-index:5;cursor:pointer}
 .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(255,255,255,.94);
  border:1px solid ${U.line};border-radius:20px;padding:7px 18px;font-size:12px;color:${U.dim};z-index:4}
@@ -114,6 +119,34 @@ export const css = `
 .sheet{padding-bottom:max(18px,calc(env(safe-area-inset-bottom) + 10px))}
 
 /* 指で操る端末では、押し所を広げる（マウスの環境は元のまま） */
+/* ------------------------------------------- 丈の短い画面（GDD 15.1）
+
+   横に持った携帯は、幅は広いが丈が四百を切る。差し金を幅だけで書いていたので、
+   横持ちでは道具立てが縦に積まれたままであった。実測では、八四四×三九〇の
+   城攻めで「広く」の下端が三八五――盤の丈三九〇にぎりぎり収まる高さで、
+   ブラウザのタブが一段出れば切れて押せなくなる。遊ぶ側の申せられた
+   「合戦マップで広くするコマンドを押せない」はこれである。
+
+   丈が足りないときは、政務の地図も合戦の盤も、道具立てを横に寝かせる。
+   帯も詰め、小図も小さくする。 */
+@media(max-height:560px){
+  .bar{padding:4px 8px;gap:7px;font-size:11.5px}
+  .bar.bt{padding:3px 8px;gap:6px;font-size:11px}
+  .bar .btn.sm{padding:4px 8px;font-size:11.5px}
+  .bar .sel{padding:4px 6px;font-size:11.5px}
+  .bar .mn{font-size:12.5px !important}
+  .mapctl{flex-direction:row;flex-wrap:wrap;gap:4px}
+  .mapctl.l{left:8px;top:8px;max-width:calc(52% - 12px)}
+  .mapctl.r{right:8px;top:8px;max-width:calc(48% - 12px);justify-content:flex-end}
+  .mapctl.l.hid{transform:translateY(-84px)}
+  .mapctl.r.hid{transform:translateY(-84px)}
+  .mapctl .mbtn{width:auto !important;min-width:42px;padding:4px 6px;font-size:9.5px;line-height:1.35}
+  .mapctl .mbtn b{font-size:13px}
+  .mini{width:84px;height:90px;bottom:8px}
+  .grip{width:36px;height:36px;border-radius:18px;font-size:14px}
+  .hint{bottom:8px;padding:4px 12px;font-size:11px}
+}
+
 @media(pointer:coarse){
   .btn{padding:11px 15px;font-size:14px}
   .btn.sm{padding:9px 11px;font-size:13px}

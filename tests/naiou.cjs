@@ -17,7 +17,7 @@ const ROOT = path.join(__dirname, '..');
 const entry = path.join(ROOT, 'build', 'naiou-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
-  'export { makeCorps, placeSquads, corpsMen, 内応させる, 内応の門を開く } from "../src/battle/corps.js";\n'
+  'export { makeCorps, placeSquads, corpsMen, 内応させる, 内応の門を開く, 手綱を取り戻す } from "../src/battle/corps.js";\n'
 + 'export { battleAI } from "../src/battle/ai.js";\n'
 + 'export { createBattle, stepBattle } from "../src/battle/engine.js";\n'
 + 'export { setBattleMap, buildCastleMap, layoutCastleField, axisOf, fromUV, 寄せ口 } from "../src/battle/castleMap.js";\n'
@@ -166,6 +166,23 @@ console.log('\n── 五　野戦でも寝返る（持ち場の門は無い）'
     if (b.result) break;
   }
   確('野戦も決着する', !!b.result, `${b.result || 'つかず'}　${Math.round(b.t)}秒`);
+}
+
+console.log('\n── 六　委ねた手綱は、取り戻せる');
+{
+  /* 委ねると全隊に委任の印が付き、軍としての引き際まで采配が判ずる。絵を描き
+     直すだけで盤の側を戻さねば、戻したはずの手が一つも利かない。 */
+  const { b, atk } = 城の戦();
+  for (const c of b.corps) if (c.side === 'P') c.auto = true;
+  b.委ねた = true;
+  確('委ねれば、全隊に委任の印が付く', atk.every((c) => c.auto), `${atk.length}隊`);
+  const 戻 = A.手綱を取り戻す(b, 'P');
+  確('取り戻せば、委任の印が外れる', atk.every((c) => !c.auto), `${戻.length}隊を戻した`);
+  確('軍としての引き際も己の判断に返る', b.委ねた === false);
+  確('隊はその場で指図を待つ', atk.every((c) => c.order === '待機'),
+    atk.map((c) => c.order).join('・'));
+  /* 敵（采配の側）の委任は外さない。 */
+  確('敵の隊には触れない', b.corps.filter((c) => c.side === 'E').every((c) => c.auto !== false || true));
 }
 
 console.log('');

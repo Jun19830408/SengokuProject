@@ -17428,6 +17428,8 @@ function \u7740\u3044\u305F\u5473\u65B9\u3092\u675F\u306D\u308B(s2, army, castle
     if (x.path && x.path.length > 1) continue;
     const \u540C\u3058\u72D9\u3044 = x.target && x.target === castle.id || x.aid && (!x.target || x.target === castle.id);
     if (!\u540C\u3058\u72D9\u3044 || x.sieging) continue;
+    if (!army.\u51FA\u3069\u3053\u308D) army.\u51FA\u3069\u3053\u308D = [{ from: army.from, local: army.local || 0 }];
+    army.\u51FA\u3069\u3053\u308D.push({ from: x.from, local: x.local || 0 });
     army.local = (army.local || 0) + (x.local || 0);
     army.food = (army.food || 0) + (x.food || 0);
     army.gens = [...army.gens || [], ...x.gens || []];
@@ -17600,13 +17602,50 @@ function \u8ECD\u3092\u89E3\u304F(s2, army) {
 }
 function withdrawArmy(s2, army) {
   const home = homeFor(s2, army);
-  if (home) {
+  const \u5272\u3063\u3066\u8FD4\u3059 = () => {
+    const \u5143 = (army.\u51FA\u3069\u3053\u308D || []).filter((q) => q && q.local > 0);
+    if (\u5143.length < 2 || !(army.local > 0)) return false;
+    const \u7DCF = \u5143.reduce((a2, q) => a2 + q.local, 0);
+    if (\u7DCF <= 0) return false;
+    let \u6B8B = Math.max(0, army.local);
+    let \u540D\u7C3F = [...army.rost || []];
+    const \u914D\u308B = [];
+    \u5143.forEach((q, i) => {
+      const c = s2.castles.find((x) => x.id === q.from && x.faction === army.faction);
+      const \u5206 = i === \u5143.length - 1 ? \u6B8B : Math.min(\u6B8B, Math.round(army.local * (q.local / \u7DCF)));
+      \u6B8B -= \u5206;
+      \u914D\u308B.push({ c, \u5206 });
+    });
+    const \u4F59\u308A = \u914D\u308B.filter((q) => !q.c).reduce((a2, q) => a2 + q.\u5206, 0);
+    for (const { c, \u5206 } of \u914D\u308B) {
+      if (!c || \u5206 <= 0) continue;
+      const tk = rosterTake(\u540D\u7C3F, \u5206);
+      \u540D\u7C3F = tk.rest;
+      c.local += \u5206;
+      c.rost = [...c.rost || [], ...tk.taken];
+      rosterSync(c, "rost", c.local, `loc-${c.id}`);
+    }
+    if (\u4F59\u308A > 0 && home) {
+      const tk = rosterTake(\u540D\u7C3F, \u4F59\u308A);
+      \u540D\u7C3F = tk.rest;
+      home.local += \u4F59\u308A;
+      home.rost = [...home.rost || [], ...tk.taken];
+      rosterSync(home, "rost", home.local, `loc-${home.id}`);
+    }
+    return true;
+  };
+  const \u5272\u3063\u305F = \u5272\u3063\u3066\u8FD4\u3059();
+  if (home && !\u5272\u3063\u305F) {
     home.local += Math.max(0, army.local);
     const \u6B8B = rosterArms(army.rost);
     home.horse = Math.max(0, (home.horse || 0) + \u6B8B.kiba);
     home.gun = Math.max(0, (home.gun || 0) + \u6B8B.teppo);
     if (army.rost && army.rost.length) home.rost = [...home.rost || [], ...army.rost];
     rosterSync(home, "rost", home.local, `loc-${home.id}`);
+  } else if (home && \u5272\u3063\u305F) {
+    const \u6B8B2 = rosterArms(army.rost);
+    home.horse = Math.max(0, (home.horse || 0) + \u6B8B2.kiba);
+    home.gun = Math.max(0, (home.gun || 0) + \u6B8B2.teppo);
   }
   const \u81EA\u5BB6\u306E\u6700\u5BC4\u308A = (fid) => {
     const \u81EA\u9818 = s2.castles.filter((c) => c.faction === fid);
@@ -19803,10 +19842,11 @@ function \u8B00\u53CD\u306E\u898B\u56DE\u308A(s2, fid, { \u544A\u3052\u308B, \u7
 }
 
 // src/govern/month.js
-function \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, fid, \u767A\u3064\u57CE, \u8ECD, { \u9053, \u9650\u308A = 3, \u6B69 = 3 } = {}) {
+function \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, fid, \u767A\u3064\u57CE, \u8ECD, { \u9053, \u9650\u308A = 3, \u6B69 = 3, \u9078\u3079\u308B, \u8981\u308B } = {}) {
   const \u5BC4\u305B\u305F = [];
   const \u8FD1\u3044 = (s2.castles || []).filter((x) => {
     if (x.faction !== fid || x.id === \u767A\u3064\u57CE.id) return false;
+    if (\u9078\u3079\u308B && !\u9078\u3079\u308B(x)) return false;
     if ((s2.sieges || []).some((sg) => sg.castleId === x.id)) return false;
     if ((s2.armies || []).some((a2) => a2.faction !== fid && a2.target === x.id && (a2.at === x.id || !a2.path || a2.path.length <= 1))) return false;
     const p = \u9053 ? \u9053(s2, fid, x.id, \u767A\u3064\u57CE.id) : null;
@@ -19814,6 +19854,7 @@ function \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, fid, \u767A\
   }).map((x) => ({ x, \u6B69: (\u9053(s2, fid, x.id, \u767A\u3064\u57CE.id) || []).length - 1 })).sort((a, b) => a.\u6B69 - b.\u6B69);
   for (const { x } of \u8FD1\u3044) {
     if (\u5BC4\u305B\u305F.length >= \u9650\u308A) break;
+    if (\u8981\u308B && \u8ECD.men >= \u8981\u308B) break;
     const gens = (s2.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive && !q.lord);
     const \u4F59\u308A = x.local + gens.reduce((a2, q) => a2 + q.retinue, 0) - minGarrison(x);
     if (\u4F59\u308A < 400) continue;
@@ -19826,6 +19867,8 @@ function \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, fid, \u767A\
     x.local -= \u5730;
     const \u7CE7 = Math.max(0, Math.min(Math.round(x.food), Math.round((\u5730 + (\u5C06 ? \u5C06.retinue : 0)) * 0.6)));
     x.food = Math.max(0, x.food - \u7CE7);
+    if (!\u8ECD.\u51FA\u3069\u3053\u308D) \u8ECD.\u51FA\u3069\u3053\u308D = [{ from: \u8ECD.from, local: \u8ECD.local || 0 }];
+    \u8ECD.\u51FA\u3069\u3053\u308D.push({ from: x.id, local: \u5730 });
     \u8ECD.local += \u5730;
     \u8ECD.men += \u5730 + (\u5C06 ? \u5C06.retinue : 0);
     \u8ECD.food = (\u8ECD.food || 0) + \u7CE7;
@@ -20560,7 +20603,8 @@ function advanceMonth(prev, g) {
     const bes = s2.armies.find((x) => x.id === sg2.armyId);
     const cs = s2.castles.find((x) => x.id === sg2.castleId);
     if (!bes || !cs) continue;
-    if (!s2.autoPlay && (bes.faction === s2.player || cs.faction === s2.player)) continue;
+    const \u65D7\u982D\u306B\u4EFB\u305B\u305F\u56F2\u307F = !!bes.\u65D7\u982D && bes.faction === s2.player && cs.faction !== s2.player;
+    if (!s2.autoPlay && !\u65D7\u982D\u306B\u4EFB\u305B\u305F\u56F2\u307F && (bes.faction === s2.player || cs.faction === s2.player)) continue;
     sg2.months = (sg2.months || 0) + 1;
     if (sg2.months >= 3) {
       cs.def = Math.max(10, cs.def - 1.5);
@@ -20582,6 +20626,10 @@ function advanceMonth(prev, g) {
     bes.food -= Math.round(bes.men * 0.09);
     if (cs.food <= 0 || cs.min < 25) {
       sackCastle(s2, cs, bes, false);
+      if (\u65D7\u982D\u306B\u4EFB\u305B\u305F\u56F2\u307F) {
+        const \u65D74 = s2.generals.find((x) => x.id === bes.\u65D7\u982D);
+        events.push(`${cs.name}\u306F\u5175\u7CE7\u304C\u5C3D\u304D\u3066\u958B\u3044\u305F\uFF08${\u65D74 ? \u65D74.name : "\u65B9\u9762\u8ECD"}\u306E\u5DEE\u914D\uFF09\u3002`);
+      }
       continue;
     }
     if (bes.food <= 0) {
@@ -20595,12 +20643,19 @@ function advanceMonth(prev, g) {
       bes.men = Math.max(0, bes.men - aL);
       bes.local = Math.max(0, bes.local - aL);
       cs.local = Math.max(0, cs.local - dL);
-      s2.chronicle.push({
-        y: s2.year,
-        m: s2.month,
-        text: `${s2.factions[bes.faction].name}\u304C${cs.name}\u3078\u653B\u3081\u304B\u304B\u3063\u305F\uFF08\u653B${fmt(aL)}\u4EBA\u30FB\u5B88${fmt(dL)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`
-      });
-      if (cs.local < 150) sackCastle(s2, cs, bes, true);
+      const \u6587 = `${s2.factions[bes.faction].name}\u304C${cs.name}\u3078\u653B\u3081\u304B\u304B\u3063\u305F\uFF08\u653B${fmt(aL)}\u4EBA\u30FB\u5B88${fmt(dL)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`;
+      s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
+      if (\u65D7\u982D\u306B\u4EFB\u305B\u305F\u56F2\u307F) {
+        const \u65D72 = s2.generals.find((x) => x.id === bes.\u65D7\u982D);
+        events.push(`${\u65D72 ? \u65D72.name : "\u65B9\u9762\u8ECD"}\u304C${cs.name}\u3078\u653B\u3081\u304B\u304B\u3063\u305F\uFF08\u653B${fmt(aL)}\u4EBA\u30FB\u5B88${fmt(dL)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`);
+      }
+      if (cs.local < 150) {
+        sackCastle(s2, cs, bes, true);
+        if (\u65D7\u982D\u306B\u4EFB\u305B\u305F\u56F2\u307F) {
+          const \u65D73 = s2.generals.find((x) => x.id === bes.\u65D7\u982D);
+          events.push(`${cs.name}\u304C\u843D\u3061\u305F\uFF08${\u65D73 ? \u65D73.name : "\u65B9\u9762\u8ECD"}\u306E\u5DEE\u914D\uFF09\u3002`);
+        }
+      }
     }
   }
   for (const sg2 of s2.sieges) {
@@ -20661,6 +20716,12 @@ function advanceMonth(prev, g) {
       if (s2.sieges.some((sg) => sg.castleId === c.id)) continue;
       const gens2 = s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive);
       const gov2 = gens2.length ? Math.max(...gens2.map((x) => x.gov)) : 50;
+      const \u5668 = troopCap(c, f2.mobilization, s2);
+      const \u3044\u307E\u306E\u5175 = c.local + gens2.reduce((a, x) => a + x.retinue, 0);
+      const \u5175\u304C\u6E80\u3061\u305F = \u3044\u307E\u306E\u5175 >= \u5668 * 0.98;
+      if (\u8535) {
+        \u8535.\u6B20\u3051 = (\u8535.\u6B20\u3051 || 0) + Math.max(0, \u5668 - \u3044\u307E\u306E\u5175);
+      }
       const \u6255\u3048\u308B = (\u984D) => !\u8535 ? f2.gold >= \u984D : \u8535.\u6B8B >= \u984D && f2.gold >= \u984D;
       const \u6255\u3046 = (\u984D) => {
         f2.gold -= \u984D;
@@ -20669,7 +20730,7 @@ function advanceMonth(prev, g) {
           \u8535.\u4F7F += \u984D;
         }
       };
-      if (f2.gold > 400 && \u6255\u3048\u308B(180) && Math.random() < \u6CBB\u3081\u306E\u8170(s2, fid, 0.5) * lv(s2).aiGrow) {
+      if ((!\u8535 || \u5175\u304C\u6E80\u3061\u305F) && f2.gold > 400 && \u6255\u3048\u308B(180) && Math.random() < \u6CBB\u3081\u306E\u8170(s2, fid, 0.5) * lv(s2).aiGrow) {
         const room = c.kokuMax - c.koku;
         const \u524D\u77F3 = c.koku;
         if (room > c.kokuMax * 0.04) {
@@ -20685,8 +20746,8 @@ function advanceMonth(prev, g) {
         }
         if (\u8535) \u8535.\u77F3 += c.koku - \u524D\u77F3;
       }
-      const cap = troopCap(c, f2.mobilization, s2);
-      const cur = c.local + gens2.reduce((a, x) => a + x.retinue, 0);
+      const cap = \u5668;
+      const cur = \u3044\u307E\u306E\u5175;
       if (!\u8535 && (!f2.kenchiTried || s2.month === 4)) {
         for (const kuni of provincesHeld(s2, fid)) {
           if (kenchiDone(s2, kuni)) continue;
@@ -20704,7 +20765,7 @@ function advanceMonth(prev, g) {
         }
         f2.kenchiTried = true;
       }
-      const want = Math.round(cap * 0.7);
+      const want = \u8535 ? cap : Math.round(cap * 0.7);
       if (f2.gold > 700 && cur < want) {
         const \u51FA\u305B\u308B = \u8535 ? Math.floor(\u8535.\u6B8B / 0.45) : Infinity;
         const n = Math.max(0, Math.min(
@@ -21122,49 +21183,80 @@ function advanceMonth(prev, g) {
     const \u8A31 = (s2.\u65D7\u982D\u306E\u8A31\u3057 || []).filter((x) => x.\u65D7\u982D === \u65D7.id);
     let \u51FA\u305F = false;
     for (const k of \u8A31) {
-      const \u7684 = s2.castles.find((c2) => c2.id === k.castleId);
+      const \u7684 = s2.castles.find((c22) => c22.id === k.castleId);
       if (!\u7684 || \u7684.faction === s2.player) continue;
       if (s2.armies.some((a) => a.faction === s2.player && a.target === \u7684.id)) {
         \u51FA\u305F = true;
         break;
       }
-      const \u62E0\u3089 = s2.castles.filter((c2) => c2.faction === s2.player && \u53D7.includes(c2.kuni)).map((c2) => ({ c2, \u9053: \u8ECD\u306E\u9053(s2, s2.player, c2.id, \u7684.id) })).filter((x) => x.\u9053).sort((a, b) => a.\u9053.length - b.\u9053.length);
-      for (const { c2, \u9053 } of \u62E0\u3089) {
-        const gens3 = s2.generals.filter((x) => x.at === c2.id && x.faction === s2.player && !x.captive && !x.lord);
-        if (!gens3.length) continue;
-        const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
-        const dg4 = s2.generals.filter((x) => x.at === \u7684.id && x.faction === \u7684.faction && !x.captive);
-        const \u5B88 = \u7684.local + dg4.reduce((a, x) => a + x.retinue, 0);
-        if (avail3 < \u5B88 * 1.15) continue;
-        const take3 = [...gens3].sort((a, b) => b.lead - a.lead).slice(0, 3);
-        const send3 = Math.round(avail3 * 0.8);
-        const loc3 = Math.max(0, Math.min(c2.local, send3 - take3.reduce((a, x) => a + x.retinue, 0)));
-        if (loc3 < 200) continue;
-        c2.local -= loc3;
-        const tk3 = rosterTake(c2.rost || newRoster(c2.local + loc3, `loc-${c2.id}`), loc3);
-        c2.rost = tk3.rest;
-        s2.armies.push({
-          id: \u8ECD\u306E\u540D(s2, "h"),
-          faction: s2.player,
-          from: c2.id,
-          gens: take3.map((x) => x.id),
-          local: loc3,
-          localTrain: c2.localTrain,
-          rost: tk3.taken,
-          men: loc3 + take3.reduce((a, x) => a + x.retinue, 0),
-          at: c2.id,
-          path: \u9053,
-          prog: 0,
-          food: Math.round(send3 * 0.6),
-          target: \u7684.id,
-          \u65D7\u982D: \u65D7.id
-        });
-        for (const t3 of take3) t3.at = null;
-        c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
-        events.push(`${\u65D7.name}\u304C${c2.name}\u3088\u308A\u51FA\u9663\u3002${\u7684.name}\u3092\u76EE\u6307\u3059\uFF08\u65B9\u9762\u8ECD\u306E\u5DEE\u914D\uFF09\u3002`);
-        \u51FA\u305F = true;
-        break;
+      const \u62E0\u3089 = s2.castles.filter((c22) => c22.faction === s2.player && \u53D7.includes(c22.kuni)).map((c22) => ({ c2: c22, \u9053: \u8ECD\u306E\u9053(s2, s2.player, c22.id, \u7684.id) })).filter((x) => x.\u9053).sort((a, b) => a.\u9053.length - b.\u9053.length);
+      const \u5B88\u308A\u624B = \u7684.faction;
+      const dg4 = s2.generals.filter((x) => x.at === \u7684.id && x.faction === \u5B88\u308A\u624B && !x.captive);
+      const \u5B88 = \u7684.local + dg4.reduce((a, x) => a + x.retinue, 0);
+      const \u5F8C\u8A70\u306E\u898B\u8FBC\u307F = s2.castles.reduce((a2, x) => {
+        if (x.id === \u7684.id) return a2;
+        if (x.faction !== \u5B88\u308A\u624B && !underMyBanner(s2, \u5B88\u308A\u624B, x.faction)) return a2;
+        const p2 = \u8ECD\u306E\u9053(s2, x.faction, x.id, \u7684.id);
+        if (!p2 || p2.length - 1 > 2) return a2;
+        const gs2 = s2.generals.filter((q) => q.at === x.id && q.faction === x.faction && !q.captive);
+        const \u4F59 = x.local + gs2.reduce((t, q) => t + q.retinue, 0) - minGarrison(x);
+        return a2 + Math.max(0, \u4F59) * 0.5;
+      }, 0);
+      const \u8981\u308B\u5175 = Math.round((\u5B88 + \u5F8C\u8A70\u306E\u898B\u8FBC\u307F) * 1.3);
+      const \u767A = \u62E0\u3089[0];
+      if (!\u767A) break;
+      const { c2, \u9053 } = \u767A;
+      const gens3 = s2.generals.filter((x) => x.at === c2.id && x.faction === s2.player && !x.captive && !x.lord);
+      if (!gens3.length) continue;
+      const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
+      if (avail3 < 400) continue;
+      const take3 = [...gens3].sort((a, b) => b.lead - a.lead).slice(0, 3);
+      const send3 = Math.round(avail3 * 0.85);
+      const loc3 = Math.max(0, Math.min(c2.local, send3 - take3.reduce((a, x) => a + x.retinue, 0)));
+      if (loc3 < 200) continue;
+      c2.local -= loc3;
+      const tk3 = rosterTake(c2.rost || newRoster(c2.local + loc3, `loc-${c2.id}`), loc3);
+      c2.rost = tk3.rest;
+      const \u8ECD2 = {
+        id: \u8ECD\u306E\u540D(s2, "h"),
+        faction: s2.player,
+        from: c2.id,
+        gens: take3.map((x) => x.id),
+        local: loc3,
+        localTrain: c2.localTrain,
+        rost: tk3.taken,
+        men: loc3 + take3.reduce((a, x) => a + x.retinue, 0),
+        at: c2.id,
+        path: \u9053,
+        prog: 0,
+        food: Math.round(send3 * 0.6),
+        target: \u7684.id,
+        \u65D7\u982D: \u65D7.id
+      };
+      for (const t3 of take3) t3.at = null;
+      c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
+      const \u53D7\u3051\u306E\u57CE = new Set(\u62E0\u3089.map((q) => q.c2.id));
+      const \u5BC4 = \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, s2.player, c2, \u8ECD2, {
+        \u9053: \u8ECD\u306E\u9053,
+        \u9650\u308A: 4,
+        \u6B69: 6,
+        \u8981\u308B: \u8981\u308B\u5175,
+        \u9078\u3079\u308B: (x) => \u53D7\u3051\u306E\u57CE.has(x.id)
+      });
+      if (\u8ECD2.men < \u8981\u308B\u5175 * 0.72) {
+        c2.local += loc3;
+        c2.rost = [...c2.rost || [], ...tk3.taken];
+        c2.food += Math.round(send3 * 0.6);
+        for (const t3 of take3) t3.at = c2.id;
+        for (const q of \u5BC4) {
+          q.\u57CE.local += q.\u5175 - (q.\u5C06 ? q.\u5C06.retinue : 0);
+          if (q.\u5C06) q.\u5C06.at = q.\u57CE.id;
+        }
+        continue;
       }
+      s2.armies.push(\u8ECD2);
+      events.push(`${\u65D7.name}\u304C${c2.name}\u3088\u308A\u51FA\u9663\u3002${\u7684.name}\u3092\u76EE\u6307\u3059\uFF08\u65B9\u9762\u8ECD\u306E\u5DEE\u914D${\u5BC4.length ? `\u30FB${\u5BC4.map((q) => q.\u57CE.name).join("\u30FB")}\u3088\u308A\u52A0\u52E2` : ""}\uFF0F${fmt(\u8ECD2.men)}\u4EBA\u30FB\u8981\u308A${fmt(\u8981\u308B\u5175)}\u4EBA\uFF09\u3002`);
+      \u51FA\u305F = true;
       if (\u51FA\u305F) break;
     }
     if (\u51FA\u305F || \u8A31.length) continue;
@@ -21182,6 +21274,12 @@ function advanceMonth(prev, g) {
     const \u9AD8 = \u65D7\u982D\u306E\u9810\u3051\u9AD8(s2, \u65D7, { \u53D7\u3051\u6301\u3061: \u65D7\u982D\u306E\u53D7\u3051\u6301\u3061 });
     const \u4F7F = (s2.plots || []).filter((p) => p.\u65D7\u982D === \u65D7.id).length;
     if (\u4F7F) continue;
+    const \u6B20\u3051 = \u9AD8.\u57CE.reduce((a2, c2) => {
+      const gs2 = s2.generals.filter((x) => x.at === c2.id && x.faction === c2.faction && !x.captive);
+      const \u56682 = troopCap(c2, s2.factions[c2.faction].mobilization, s2);
+      return a2 + Math.max(0, \u56682 - (c2.local + gs2.reduce((t, x) => t + x.retinue, 0)));
+    }, 0);
+    if (\u6B20\u3051 > 0) continue;
     \u65D7\u982D\u306E\u8ABF\u7565(s2, \u65D7, { \u6B8B: \u9AD8.\u9810\u3051, \u544A\u3052\u308B: (t) => events.push(t), \u53D7\u3051\u6301\u3061: \u65D7\u982D\u306E\u53D7\u3051\u6301\u3061 });
   }
   \u6E08\u3093\u3060\u8A31\u3057\u3092\u7247\u3065\u3051\u308B(s2);
@@ -21751,6 +21849,19 @@ var DETACH_DEFS = [
   }
 ];
 var \u4F0F\u5175\u306E\u77E5\u7565 = 78;
+function \u624B\u7DB1\u3092\u53D6\u308A\u623B\u3059(b, side = "P") {
+  if (!b) return [];
+  b.\u59D4\u306D\u305F = false;
+  const \u623B\u3057\u305F = [];
+  for (const c of b.corps || []) {
+    if (c.side !== side || c.dead || c.destroyed || c.detach) continue;
+    if (!c.auto) continue;
+    c.auto = false;
+    issueOrder(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
+    \u623B\u3057\u305F.push(c);
+  }
+  return \u623B\u3057\u305F;
+}
 function \u5185\u5FDC\u3055\u305B\u308B(b, c) {
   if (!c || c.dead || c.destroyed || c.\u5BDD\u8FD4\u308A) return null;
   c.side = c.side === "P" ? "E" : "P";
@@ -28434,9 +28545,11 @@ function BattleScreen({ ctx, land, onEnd }) {
         className: "btn",
         style: { marginTop: 6 },
         onClick: () => {
+          \u624B\u7DB1\u3092\u53D6\u308A\u623B\u3059(bRef.current, "P");
           \u59D4\u306DRef.current = false;
           set\u59D4\u306D\u4E2D(false);
-          setSpeed(1);
+          setSpeed(0.6);
+          force((n) => (n + 1) % 1e3);
         }
       },
       "\u624B\u7DB1\u3092\u53D6\u308A\u623B\u3059"
@@ -32515,6 +32628,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const sortie = mode === "\u9632\u885B" ? extra : null;
     const sg = g.sieges.find((x) => {
       if (x.decided === `${g.year}-${g.month}`) return false;
+      if (\u65D7\u982D\u306B\u4EFB\u305B\u305F\u56F2\u307F\u304B(x)) return false;
       const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);
       return a2 && c2 && (a2.faction === g.player || c2.faction === g.player);
     });
@@ -32851,8 +32965,13 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const t = g.castles.find((x) => x.id === c.target);
     return t && !underMyBanner(g, g.player, t.faction);
   });
+  const \u65D7\u982D\u306B\u4EFB\u305B\u305F\u56F2\u307F\u304B = (x) => {
+    const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);
+    return !!a2 && !!c2 && !!a2.\u65D7\u982D && a2.faction === g.player && c2.faction !== g.player;
+  };
   const openSiege = g.sieges.find((x) => {
     if (x.decided === `${g.year}-${g.month}`) return false;
+    if (\u65D7\u982D\u306B\u4EFB\u305B\u305F\u56F2\u307F\u304B(x)) return false;
     const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);
     return a2 && c2 && (a2.faction === g.player || c2.faction === g.player);
   });
@@ -33985,7 +34104,12 @@ var css = `
  padding:7px 4px;font-size:10px;text-align:center;cursor:pointer;line-height:1.5;color:${U.text}}
 .mbtn b{display:block;font-size:16px;font-weight:500}
 .mbtn:hover{background:#fff}
-.mini{position:absolute;right:12px;bottom:12px;width:130px;height:139px;border:1px solid ${U.line};
+/* \u65E5\u672C\u5168\u571F\u306E\u5C0F\u56F3\u306F\u5DE6\u4E0B\u306B\u7F6E\u304F\uFF08GDD 15.1\uFF09\u3002
+
+   \u3082\u3068\u306F\u53F3\u4E0B\u3067\u3042\u3063\u305F\u3002\u653F\u52D9\u306E\u5730\u56F3\u3067\u306F\u53F3\u306E\u5217\u306B\u91E6\u304C\u4E5D\u3064\u4E26\u3076\u306E\u3067\u3001\u4E08\u306E\u8DB3\u308A\u306A\u3044
+   \u753B\u9762\u3067\u306F\u5217\u306E\u672B\u304C\u5C0F\u56F3\u306B\u91CD\u306A\u3063\u305F\u2015\u2015\u904A\u3076\u5074\u306E\u5199\u3057\u3067\u306F\u300C\u653B\u7565\u76EE\u6A19\u300D\u304C\u5C0F\u56F3\u306E\u4E0B\u306B
+   \u96A0\u308C\u3066\u3044\u305F\u3002\u5DE6\u306E\u5217\u306F\u91E6\u304C\u4E94\u3064\u3067\u77ED\u3044\u306E\u3067\u3001\u5DE6\u4E0B\u306A\u3089\u91CD\u306A\u3089\u306A\u3044\u3002 */
+.mini{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:12px;width:130px;height:139px;border:1px solid ${U.line};
  border-radius:6px;overflow:hidden;background:#fff;z-index:5;cursor:pointer}
 .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(255,255,255,.94);
  border:1px solid ${U.line};border-radius:20px;padding:7px 18px;font-size:12px;color:${U.dim};z-index:4}
@@ -34053,6 +34177,34 @@ var css = `
 .sheet{padding-bottom:max(18px,calc(env(safe-area-inset-bottom) + 10px))}
 
 /* \u6307\u3067\u64CD\u308B\u7AEF\u672B\u3067\u306F\u3001\u62BC\u3057\u6240\u3092\u5E83\u3052\u308B\uFF08\u30DE\u30A6\u30B9\u306E\u74B0\u5883\u306F\u5143\u306E\u307E\u307E\uFF09 */
+/* ------------------------------------------- \u4E08\u306E\u77ED\u3044\u753B\u9762\uFF08GDD 15.1\uFF09
+
+   \u6A2A\u306B\u6301\u3063\u305F\u643A\u5E2F\u306F\u3001\u5E45\u306F\u5E83\u3044\u304C\u4E08\u304C\u56DB\u767E\u3092\u5207\u308B\u3002\u5DEE\u3057\u91D1\u3092\u5E45\u3060\u3051\u3067\u66F8\u3044\u3066\u3044\u305F\u306E\u3067\u3001
+   \u6A2A\u6301\u3061\u3067\u306F\u9053\u5177\u7ACB\u3066\u304C\u7E26\u306B\u7A4D\u307E\u308C\u305F\u307E\u307E\u3067\u3042\u3063\u305F\u3002\u5B9F\u6E2C\u3067\u306F\u3001\u516B\u56DB\u56DB\xD7\u4E09\u4E5D\u3007\u306E
+   \u57CE\u653B\u3081\u3067\u300C\u5E83\u304F\u300D\u306E\u4E0B\u7AEF\u304C\u4E09\u516B\u4E94\u2015\u2015\u76E4\u306E\u4E08\u4E09\u4E5D\u3007\u306B\u304E\u308A\u304E\u308A\u53CE\u307E\u308B\u9AD8\u3055\u3067\u3001
+   \u30D6\u30E9\u30A6\u30B6\u306E\u30BF\u30D6\u304C\u4E00\u6BB5\u51FA\u308C\u3070\u5207\u308C\u3066\u62BC\u305B\u306A\u304F\u306A\u308B\u3002\u904A\u3076\u5074\u306E\u7533\u305B\u3089\u308C\u305F
+   \u300C\u5408\u6226\u30DE\u30C3\u30D7\u3067\u5E83\u304F\u3059\u308B\u30B3\u30DE\u30F3\u30C9\u3092\u62BC\u305B\u306A\u3044\u300D\u306F\u3053\u308C\u3067\u3042\u308B\u3002
+
+   \u4E08\u304C\u8DB3\u308A\u306A\u3044\u3068\u304D\u306F\u3001\u653F\u52D9\u306E\u5730\u56F3\u3082\u5408\u6226\u306E\u76E4\u3082\u3001\u9053\u5177\u7ACB\u3066\u3092\u6A2A\u306B\u5BDD\u304B\u305B\u308B\u3002
+   \u5E2F\u3082\u8A70\u3081\u3001\u5C0F\u56F3\u3082\u5C0F\u3055\u304F\u3059\u308B\u3002 */
+@media(max-height:560px){
+  .bar{padding:4px 8px;gap:7px;font-size:11.5px}
+  .bar.bt{padding:3px 8px;gap:6px;font-size:11px}
+  .bar .btn.sm{padding:4px 8px;font-size:11.5px}
+  .bar .sel{padding:4px 6px;font-size:11.5px}
+  .bar .mn{font-size:12.5px !important}
+  .mapctl{flex-direction:row;flex-wrap:wrap;gap:4px}
+  .mapctl.l{left:8px;top:8px;max-width:calc(52% - 12px)}
+  .mapctl.r{right:8px;top:8px;max-width:calc(48% - 12px);justify-content:flex-end}
+  .mapctl.l.hid{transform:translateY(-84px)}
+  .mapctl.r.hid{transform:translateY(-84px)}
+  .mapctl .mbtn{width:auto !important;min-width:42px;padding:4px 6px;font-size:9.5px;line-height:1.35}
+  .mapctl .mbtn b{font-size:13px}
+  .mini{width:84px;height:90px;bottom:8px}
+  .grip{width:36px;height:36px;border-radius:18px;font-size:14px}
+  .hint{bottom:8px;padding:4px 12px;font-size:11px}
+}
+
 @media(pointer:coarse){
   .btn{padding:11px 15px;font-size:14px}
   .btn.sm{padding:9px 11px;font-size:13px}

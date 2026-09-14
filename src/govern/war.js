@@ -692,6 +692,15 @@ export function 着いた味方を束ねる(s, army, castle) {
     const 同じ狙い = (x.target && x.target === castle.id)
       || (x.aid && (!x.target || x.target === castle.id));
     if (!同じ狙い || x.sieging) continue;
+    /* 出どころを控える（GDD 7.3）。
+
+       束ねた軍を解けば、兵はことごとく本隊の出陣元へ帰る。加勢に来た城の兵まで
+       そこへ入ってしまい、寄騎の城が空になって国主の城だけが膨れた。遊ぶ側の
+       申し出は「国主で寄騎とともに出陣し、城を落として軍を解散すると、ほかの城の
+       兵数が国主の城に移ってしまう」であった。どの城から何人来たかを控え、
+       解くときはその割で返す。 */
+    if (!army.出どころ) army.出どころ = [{ from: army.from, local: army.local || 0 }];
+    army.出どころ.push({ from: x.from, local: x.local || 0 });
     army.local = (army.local || 0) + (x.local || 0);
     army.food = (army.food || 0) + (x.food || 0);
     army.gens = [...(army.gens || []), ...(x.gens || [])];
@@ -926,7 +935,45 @@ export function 軍を解く(s, army) { return withdrawArmy(s, army); }
 
 export function withdrawArmy(s, army) {
   const home = homeFor(s, army);
-  if (home) {
+  /* 寄せ集めた兵は、来た城へ返す（GDD 7.3）。
+
+     出どころの控えがあれば、その割で分けて返す。控えが無ければ、これまでどおり
+     出陣元へまとめて返す。控えた城が他家の手に落ちていれば、そのぶんは本隊の
+     帰り先へ回す――帰る城が無いのだから致し方ない。 */
+  const 割って返す = () => {
+    const 元 = (army.出どころ || []).filter((q) => q && q.local > 0);
+    if (元.length < 2 || !(army.local > 0)) return false;
+    const 総 = 元.reduce((a2, q) => a2 + q.local, 0);
+    if (総 <= 0) return false;
+    let 残 = Math.max(0, army.local);
+    let 名簿 = [...(army.rost || [])];
+    const 配る = [];
+    元.forEach((q, i) => {
+      const c = s.castles.find((x) => x.id === q.from && x.faction === army.faction);
+      const 分 = i === 元.length - 1 ? 残 : Math.min(残, Math.round(army.local * (q.local / 総)));
+      残 -= 分;
+      配る.push({ c, 分 });
+    });
+    const 余り = 配る.filter((q) => !q.c).reduce((a2, q) => a2 + q.分, 0);
+    for (const { c, 分 } of 配る) {
+      if (!c || 分 <= 0) continue;
+      const tk = rosterTake(名簿, 分);
+      名簿 = tk.rest;
+      c.local += 分;
+      c.rost = [...(c.rost || []), ...tk.taken];
+      rosterSync(c, "rost", c.local, `loc-${c.id}`);
+    }
+    if (余り > 0 && home) {
+      const tk = rosterTake(名簿, 余り);
+      名簿 = tk.rest;
+      home.local += 余り;
+      home.rost = [...(home.rost || []), ...tk.taken];
+      rosterSync(home, "rost", home.local, `loc-${home.id}`);
+    }
+    return true;
+  };
+  const 割った = 割って返す();
+  if (home && !割った) {
     home.local += Math.max(0, army.local);
     // 生き残った騎馬と鉄砲の数だけ、馬と鉄砲が城へ戻る（GDD 6.3）
     const 残 = rosterArms(army.rost);
@@ -934,6 +981,11 @@ export function withdrawArmy(s, army) {
     home.gun = Math.max(0, (home.gun || 0) + 残.teppo);
     if (army.rost && army.rost.length) home.rost = [...(home.rost || []), ...army.rost];
     rosterSync(home, "rost", home.local, `loc-${home.id}`);
+  } else if (home && 割った) {
+    /* 馬と鉄砲は、束ねた本隊の帰り先へ返す（どの城の分かまでは控えていない）。 */
+    const 残2 = rosterArms(army.rost);
+    home.horse = Math.max(0, (home.horse || 0) + 残2.kiba);
+    home.gun = Math.max(0, (home.gun || 0) + 残2.teppo);
   }
   /* 将も兵と同じ城へ帰る（GDD 6.4）。
 

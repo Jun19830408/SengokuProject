@@ -269,6 +269,26 @@ export const DETACH_DEFS = [
    伏せても、着く前に見つかる。 */
 export const 伏兵の知略 = 78;
 
+/* 手綱を取り戻す（GDD 8.5）。
+
+   委ねると、全隊に委任の印が付き、軍としての引き際まで采配が判ずる（b.委ねた）。
+   絵を描き直すだけで盤の側を戻さねば、戻したはずの手が一つも利かない。
+   遊ぶ側の申し出は「委ねて結果を見るから、プレイに戻す釦を押してもプレイに
+   戻せない」であった。印を外し、隊はその場で指図を待たせる。 */
+export function 手綱を取り戻す(b, side = "P") {
+  if (!b) return [];
+  b.委ねた = false;
+  const 戻した = [];
+  for (const c of b.corps || []) {
+    if (c.side !== side || c.dead || c.destroyed || c.detach) continue;
+    if (!c.auto) continue;
+    c.auto = false;
+    issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y });
+    戻した.push(c);
+  }
+  return 戻した;
+}
+
 /* 内応（GDD 11.2 / 9.4）。
 
    密約を交わした将は、戦のさなかに旗を翻す。これまでは密約の効き目が

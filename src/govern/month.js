@@ -60,10 +60,11 @@ import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
 
    声をかけるのは三城まで。囲まれている城、門前に敵軍が来ている城からは呼ばない
    ――そこは守るのが先である。 */
-export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限り = 3, 歩 = 3 } = {}) {
+export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限り = 3, 歩 = 3, 選べる, 要る } = {}) {
   const 寄せた = [];
   const 近い = (s.castles || []).filter((x) => {
     if (x.faction !== fid || x.id === 発つ城.id) return false;
+    if (選べる && !選べる(x)) return false;
     if ((s.sieges || []).some((sg) => sg.castleId === x.id)) return false;
     if ((s.armies || []).some((a2) => a2.faction !== fid && a2.target === x.id
       && (a2.at === x.id || !a2.path || a2.path.length <= 1))) return false;
@@ -74,6 +75,7 @@ export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限�
 
   for (const { x } of 近い) {
     if (寄せた.length >= 限り) break;
+    if (要る && 軍.men >= 要る) break;                     // 足りたら、それ以上は呼ばない
     const gens = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive && !q.lord);
     const 余り = x.local + gens.reduce((a2, q) => a2 + q.retinue, 0) - minGarrison(x);
     if (余り < 400) continue;                            // 出せるほどの余りが無い
@@ -86,6 +88,11 @@ export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限�
     x.local -= 地;
     const 糧 = Math.max(0, Math.min(Math.round(x.food), Math.round((地 + (将 ? 将.retinue : 0)) * 0.6)));
     x.food = Math.max(0, x.food - 糧);
+    /* どの城から何人来たかを控える。解くときはその割で返す（GDD 7.3）。
+       控えねば、寄せ集めた兵がことごとく本隊の出陣元に入り、呼ばれた城が
+       空になって出した城だけが膨れる。 */
+    if (!軍.出どころ) 軍.出どころ = [{ from: 軍.from, local: 軍.local || 0 }];
+    軍.出どころ.push({ from: x.id, local: 地 });
     軍.local += 地;
     軍.men += 地 + (将 ? 将.retinue : 0);
     軍.food = (軍.food || 0) + 糧;
@@ -904,7 +911,15 @@ export function advanceMonth(prev, g) {
         const bes = s.armies.find((x) => x.id === sg2.armyId);
         const cs = s.castles.find((x) => x.id === sg2.castleId);
         if (!bes || !cs) continue;
-        if (!s.autoPlay && (bes.faction === s.player || cs.faction === s.player)) continue;
+        /* 旗頭に預けた手勢の囲みは、旗頭が捌く（GDD 6.4）。
+
+           遊ぶ側の申し出は「旗頭による自動合戦でも、城攻めは今のところ遊ぶ側が
+           しなければならない。城攻めも自動化して結果だけ示してほしい」であった。
+           方面軍を預けたのだから、城の攻め口まで大名が決める謂れはない。
+           ただし自家の城が囲まれているときは守りの戦だから、大名が采配を執る。 */
+        const 旗頭に任せた囲み = !!bes.旗頭 && bes.faction === s.player && cs.faction !== s.player;
+        if (!s.autoPlay && !旗頭に任せた囲み
+          && (bes.faction === s.player || cs.faction === s.player)) continue;
         // 試走では自家の包囲も自動で進める
         sg2.months = (sg2.months || 0) + 1;
         // 囲みが長引けば城は痩せる。守り手が回復し続けて落ちない、という膠着を防ぐ。
@@ -928,7 +943,14 @@ export function advanceMonth(prev, g) {
         cs.food = Math.max(0, cs.food - Math.round(cs.local * 0.35 + 600));
         cs.min = Math.max(0, cs.min - 5);
         bes.food -= Math.round(bes.men * 0.09);
-        if (cs.food <= 0 || cs.min < 25) { sackCastle(s, cs, bes, false); continue; }
+        if (cs.food <= 0 || cs.min < 25) {
+          sackCastle(s, cs, bes, false);
+          if (旗頭に任せた囲み) {
+            const 旗4 = s.generals.find((x) => x.id === bes.旗頭);
+            events.push(`${cs.name}は兵糧が尽きて開いた（${旗4 ? 旗4.name : "方面軍"}の差配）。`);
+          }
+          continue;
+        }
         if (bes.food <= 0) {                                  // 兵糧が尽きれば囲みを解く
           withdrawArmy(s, bes);                               // 出陣元が奪われていても自領へ戻す
           s.sieges = s.sieges.filter((x) => x !== sg2);
@@ -940,9 +962,21 @@ export function advanceMonth(prev, g) {
           const aL = Math.round(bes.men * 0.14), dL = Math.round(dMen2 * 0.4);
           bes.men = Math.max(0, bes.men - aL); bes.local = Math.max(0, bes.local - aL);
           cs.local = Math.max(0, cs.local - dL);
-          s.chronicle.push({ y: s.year, m: s.month,
-            text: `${s.factions[bes.faction].name}が${cs.name}へ攻めかかった（攻${fmt(aL)}人・守${fmt(dL)}人を失う）。` });
-          if (cs.local < 150) sackCastle(s, cs, bes, true);
+          const 文 = `${s.factions[bes.faction].name}が${cs.name}へ攻めかかった`
+            + `（攻${fmt(aL)}人・守${fmt(dL)}人を失う）。`;
+          s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+          if (旗頭に任せた囲み) {
+            const 旗2 = s.generals.find((x) => x.id === bes.旗頭);
+            events.push(`${旗2 ? 旗2.name : "方面軍"}が${cs.name}へ攻めかかった`
+              + `（攻${fmt(aL)}人・守${fmt(dL)}人を失う）。`);
+          }
+          if (cs.local < 150) {
+            sackCastle(s, cs, bes, true);
+            if (旗頭に任せた囲み) {
+              const 旗3 = s.generals.find((x) => x.id === bes.旗頭);
+              events.push(`${cs.name}が落ちた（${旗3 ? 旗3.name : "方面軍"}の差配）。`);
+            }
+          }
         }
       }
       // 後詰。囲みが緩ければ、城方の勢力が救援を差し向ける（GDD 9.2）
@@ -1003,6 +1037,20 @@ export function advanceMonth(prev, g) {
           if (s.sieges.some((sg) => sg.castleId === c.id)) continue;   // 囲まれた城では何もできない
           const gens2 = s.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive);
           const gov2 = gens2.length ? Math.max(...gens2.map((x) => x.gov)) : 50;
+          /* 預けた城では、兵を満たすのが先である（GDD 6.4）。
+
+             遊ぶ側の申し出は「旗頭の政務は最優先が兵数。まず兵数をマックスにし、
+             その上で富国の各政策を行い、次に調略」であった。方面を預かる者の
+             第一の務めは、いつでも出られる兵を揃えておくことである。田を拓くのは
+             その次でよい。
+
+             兵が満ちるまでは、預け高を開墾・治水・築城へ回さない。満ちた城から
+             順に富国に移る。調略は、受け持ちの城がみな満ちてから（下の
+             旗頭の調略 を見よ）。 */
+          const 器 = troopCap(c, f2.mobilization, s);
+          const いまの兵 = c.local + gens2.reduce((a, x) => a + x.retinue, 0);
+          const 兵が満ちた = いまの兵 >= 器 * 0.98;
+          if (蔵) { 蔵.欠け = (蔵.欠け || 0) + Math.max(0, 器 - いまの兵); }
           /* 費えを払う。委任した城では、預け高の残りからも引く。
              残りが足りねば、その手は打たない。 */
           const 払える = (額) => (!蔵 ? f2.gold >= 額 : 蔵.残 >= 額 && f2.gold >= 額);
@@ -1010,7 +1058,8 @@ export function advanceMonth(prev, g) {
           // 開墾と治水
           /* 内政の手を打つ繁さは当主の政治で決まる（GDD 6.2）。
              政治に長けた大名の領は年ごとに肥え、疎い大名の領は痩せたままになる。 */
-          if (f2.gold > 400 && 払える(180) && Math.random() < 治めの腰(s, fid, 0.5) * lv(s).aiGrow) {
+          if ((!蔵 || 兵が満ちた)
+            && f2.gold > 400 && 払える(180) && Math.random() < 治めの腰(s, fid, 0.5) * lv(s).aiGrow) {
             const room = c.kokuMax - c.koku;
             const 前石 = c.koku;
             if (room > c.kokuMax * 0.04) {
@@ -1023,10 +1072,10 @@ export function advanceMonth(prev, g) {
             if (蔵) 蔵.石 += c.koku - 前石;
           }
           // 徴募
-          const cap = troopCap(c, f2.mobilization, s);
-          const cur = c.local + gens2.reduce((a, x) => a + x.retinue, 0);
+          const cap = 器;
+          const cur = いまの兵;
           // 一国を丸ごと押さえたら竿を入れる。国を治める者の当然の務めである。
-          if (!蔵 && (!f2.kenchiTried || s.month === 4)) {
+          if (!蔵 && (!f2.kenchiTried || s.month === 4)) {   // 竿入れは家の差配。預けた城では行わない
             for (const kuni of provincesHeld(s, fid)) {
               if (kenchiDone(s, kuni)) continue;
               const cost2 = kenchiCost(s, kuni);
@@ -1040,8 +1089,12 @@ export function advanceMonth(prev, g) {
             }
             f2.kenchiTried = true;
           }
-          // 兵は養うもの。限度いっぱいまで抱えると国が痩せ、城が難攻不落になって天下が凍る。
-          const want = Math.round(cap * 0.7);
+          /* 兵は養うもの。限度いっぱいまで抱えると国が痩せ、城が難攻不落になって
+             天下が凍る――采配の家はそこまで抱えない。
+
+             ただし預けた城は別である。方面を預かる者には「まず兵を満たせ」と
+             命じてあるのだから、器いっぱいまで抱える。 */
+          const want = 蔵 ? cap : Math.round(cap * 0.7);
           if (f2.gold > 700 && cur < want) {
             const 出せる = 蔵 ? Math.floor(蔵.残 / 0.45) : Infinity;
             const n = Math.max(0, Math.min(want - cur, Math.floor((f2.gold - 500) / 0.45),
@@ -1611,32 +1664,73 @@ export function advanceMonth(prev, g) {
           const 拠ら = s.castles.filter((c2) => c2.faction === s.player && 受.includes(c2.kuni))
             .map((c2) => ({ c2, 道: 軍の道(s, s.player, c2.id, 的.id) })).filter((x) => x.道)
             .sort((a, b) => a.道.length - b.道.length);
-          for (const { c2, 道 } of 拠ら) {
-            const gens3 = s.generals.filter((x) => x.at === c2.id && x.faction === s.player && !x.captive && !x.lord);
-            if (!gens3.length) continue;
-            const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
-            const dg4 = s.generals.filter((x) => x.at === 的.id && x.faction === 的.faction && !x.captive);
-            const 守 = 的.local + dg4.reduce((a, x) => a + x.retinue, 0);
-            if (avail3 < 守 * 1.15) continue;              // 勝てる目が無ければ出さない
-            const take3 = [...gens3].sort((a, b) => b.lead - a.lead).slice(0, 3);
-            const send3 = Math.round(avail3 * 0.8);
-            const loc3 = Math.max(0, Math.min(c2.local, send3 - take3.reduce((a, x) => a + x.retinue, 0)));
-            if (loc3 < 200) continue;
-            c2.local -= loc3;
-            const tk3 = rosterTake(c2.rost || newRoster(c2.local + loc3, `loc-${c2.id}`), loc3);
-            c2.rost = tk3.rest;
-            s.armies.push({
-              id: 軍の名(s, "h"), faction: s.player, from: c2.id, gens: take3.map((x) => x.id),
-              local: loc3, localTrain: c2.localTrain, rost: tk3.taken,
-              men: loc3 + take3.reduce((a, x) => a + x.retinue, 0), at: c2.id,
-              path: 道, prog: 0, food: Math.round(send3 * 0.6), target: 的.id, 旗頭: 旗.id,
-            });
-            for (const t3 of take3) t3.at = null;
-            c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
-            events.push(`${旗.name}が${c2.name}より出陣。${的.name}を目指す（方面軍の差配）。`);
-            出た = true;
-            break;
+          /* 攻めに要る兵を見積もる（GDD 6.4 / 9.1）。
+
+             城の守りだけを見て出していたので、着いたところへ隣の城から後詰が
+             来て押し返されていた。城の兵に加えて、来うる援軍まで数える。
+
+             来うるのは、その城から街道で二歩までにある同じ家（と旗の下）の城の
+             出せる兵である。半ばが間に合うものとして見込む。 */
+          const 守り手 = 的.faction;
+          const dg4 = s.generals.filter((x) => x.at === 的.id && x.faction === 守り手 && !x.captive);
+          const 守 = 的.local + dg4.reduce((a, x) => a + x.retinue, 0);
+          const 後詰の見込み = s.castles.reduce((a2, x) => {
+            if (x.id === 的.id) return a2;
+            if (x.faction !== 守り手 && !underMyBanner(s, 守り手, x.faction)) return a2;
+            const p2 = 軍の道(s, x.faction, x.id, 的.id);
+            if (!p2 || p2.length - 1 > 2) return a2;
+            const gs2 = s.generals.filter((q) => q.at === x.id && q.faction === x.faction && !q.captive);
+            const 余 = x.local + gs2.reduce((t, q) => t + q.retinue, 0) - minGarrison(x);
+            return a2 + Math.max(0, 余) * 0.5;
+          }, 0);
+          const 要る兵 = Math.round((守 + 後詰の見込み) * 1.3);
+
+          /* 受け持ちの城から兵を寄せ、一手にまとめて出す（GDD 7.3）。
+
+             采配が近隣から兵を寄せるのと同じ考えである。旗頭は受け持ち（己の国と
+             寄騎の国）から催せるので、そこから順に集めて要る兵を揃える。 */
+          const 発 = 拠ら[0];
+          if (!発) break;
+          const { c2, 道 } = 発;
+          const gens3 = s.generals.filter((x) => x.at === c2.id && x.faction === s.player && !x.captive && !x.lord);
+          if (!gens3.length) continue;
+          const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
+          if (avail3 < 400) continue;
+          const take3 = [...gens3].sort((a, b) => b.lead - a.lead).slice(0, 3);
+          const send3 = Math.round(avail3 * 0.85);
+          const loc3 = Math.max(0, Math.min(c2.local, send3 - take3.reduce((a, x) => a + x.retinue, 0)));
+          if (loc3 < 200) continue;
+          c2.local -= loc3;
+          const tk3 = rosterTake(c2.rost || newRoster(c2.local + loc3, `loc-${c2.id}`), loc3);
+          c2.rost = tk3.rest;
+          const 軍2 = {
+            id: 軍の名(s, "h"), faction: s.player, from: c2.id, gens: take3.map((x) => x.id),
+            local: loc3, localTrain: c2.localTrain, rost: tk3.taken,
+            men: loc3 + take3.reduce((a, x) => a + x.retinue, 0), at: c2.id,
+            path: 道, prog: 0, food: Math.round(send3 * 0.6), target: 的.id, 旗頭: 旗.id,
+          };
+          for (const t3 of take3) t3.at = null;
+          c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
+          /* 足りるまで、受け持ちのほかの城から寄せる。呼べるのは受け持ちの城だけ
+             ――旗頭が催せるのはそこまでである（陣触れの届き）。 */
+          const 受けの城 = new Set(拠ら.map((q) => q.c2.id));
+          const 寄 = 近隣から兵を寄せる(s, s.player, c2, 軍2, {
+            道: 軍の道, 限り: 4, 歩: 6, 要る: 要る兵,
+            選べる: (x) => 受けの城.has(x.id),
+          });
+          if (軍2.men < 要る兵 * 0.72) {
+            /* 揃わなければ出さない。兵は城へ戻す。 */
+            c2.local += loc3; c2.rost = [...(c2.rost || []), ...tk3.taken];
+            c2.food += Math.round(send3 * 0.6);
+            for (const t3 of take3) t3.at = c2.id;
+            for (const q of 寄) { q.城.local += q.兵 - (q.将 ? q.将.retinue : 0); if (q.将) q.将.at = q.城.id; }
+            continue;
           }
+          s.armies.push(軍2);
+          events.push(`${旗.name}が${c2.name}より出陣。${的.name}を目指す（方面軍の差配`
+            + `${寄.length ? `・${寄.map((q) => q.城.name).join("・")}より加勢` : ""}`
+            + `／${fmt(軍2.men)}人・要り${fmt(要る兵)}人）。`);
+          出た = true;
           if (出た) break;
         }
         if (出た || 許.length) continue;
@@ -1654,6 +1748,17 @@ export function advanceMonth(prev, g) {
         const 高 = 旗頭の預け高(s, 旗, { 受け持ち: 旗頭の受け持ち });
         const 使 = (s.plots || []).filter((p) => p.旗頭 === 旗.id).length;
         if (使) continue;                                  // 一人一つ
+        /* 調略は後回しである（GDD 6.4）。
+
+           方面を預かる者の務めは、まず兵を満たすこと、次に国を富ませること、
+           そのうえで敵の内を崩すことである。受け持ちの城に兵の欠けがあるうちは、
+           金を調略へ回さない。 */
+        const 欠け = 高.城.reduce((a2, c2) => {
+          const gs2 = s.generals.filter((x) => x.at === c2.id && x.faction === c2.faction && !x.captive);
+          const 器2 = troopCap(c2, s.factions[c2.faction].mobilization, s);
+          return a2 + Math.max(0, 器2 - (c2.local + gs2.reduce((t, x) => t + x.retinue, 0)));
+        }, 0);
+        if (欠け > 0) continue;
         旗頭の調略(s, 旗, { 残: 高.預け, 告げる: (t) => events.push(t), 受け持ち: 旗頭の受け持ち });
       }
       // 済んだ攻めの許しを片づける（落とした城・主の変わった家）

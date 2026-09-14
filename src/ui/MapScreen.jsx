@@ -1743,6 +1743,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const sortie = mode === "防衛" ? extra : null;
     const sg = g.sieges.find((x) => {
       if (x.decided === `${g.year}-${g.month}`) return false;
+      if (旗頭に任せた囲みか(x)) return false;
       const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);
       return a2 && c2 && (a2.faction === g.player || c2.faction === g.player);
     });
@@ -2103,8 +2104,18 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const t = g.castles.find((x) => x.id === c.target);
     return t && !underMyBanner(g, g.player, t.faction);
   });
+  /* 旗頭に預けた手勢の囲みは問わない（GDD 6.4）。
+
+     方面軍を預けたのだから、城の攻め口まで大名が決める謂れはない。月送りの
+     側（govern/month.js）が旗頭の差配として捌き、顛末だけを月報に出す。
+     ただし自家の城が囲まれているときは守りの戦だから、大名が采配を執る。 */
+  const 旗頭に任せた囲みか = (x) => {
+    const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);
+    return !!a2 && !!c2 && !!a2.旗頭 && a2.faction === g.player && c2.faction !== g.player;
+  };
   const openSiege = g.sieges.find((x) => {
     if (x.decided === `${g.year}-${g.month}`) return false;
+    if (旗頭に任せた囲みか(x)) return false;
     const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);
     return a2 && c2 && (a2.faction === g.player || c2.faction === g.player);
   });

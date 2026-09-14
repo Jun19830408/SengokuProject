@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
-import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut } from "../battle/corps.js";
+import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleTerrain, drawFieldTerrain, inOwnZone } from "../battle/draw.js";
 import { stepBattle } from "../battle/engine.js";
 import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
@@ -1055,7 +1055,18 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 {/* 委ねたあとでも、途中から手綱を取り戻せる（GDD 8.5）。
                     委ね直すこともできる。任せきりにするかどうかは、その都度の判断である。 */}
                 <button className="btn" style={{ marginTop: 6 }}
-                  onClick={() => { 委ねRef.current = false; set委ね中(false); setSpeed(1); }}>
+                  onClick={() => {
+                    /* 手綱を取り戻す（GDD 8.5）。
+
+                       もとは絵を描き直すだけで、盤の側は委ねたままであった。隊は
+                       みな委任の印を負い、軍としての引き際も采配が判ずるので、
+                       戻したはずの手が一つも利かない。遊ぶ側の申し出は「委ねて
+                       結果を見るから、プレイに戻す釦を押してもプレイに戻せない」
+                       であった。委任の印を外し、軍の引き際も己の判断に返す。 */
+                    手綱を取り戻す(bRef.current, "P");
+                    委ねRef.current = false; set委ね中(false); setSpeed(0.6);
+                    force((n) => (n + 1) % 1000);
+                  }}>
                   手綱を取り戻す
                 </button>
               </div>

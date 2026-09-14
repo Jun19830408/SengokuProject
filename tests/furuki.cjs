@@ -61,17 +61,26 @@ const 古い記録 = () => {
 };
 
 /* 当主と同じ国に国主がいる数（いまの掟では、あってはならない姿）。 */
+/* 当主のいる国に、その国の国主がいる数。
+
+   「当主のいる国」は本領の国と、いま入っている城の国の両方である（GDD 6.4）。
+   国主のほうは役国で見る――加勢に出て他国の城に立っているだけの国主は、
+   その国の国主ではない。もとは居所で見ていたので、当主の城へ加勢に入った
+   よその国の国主まで数えていた。 */
 const 当主の国の国主 = (t) => {
   let n = 0;
   for (const f of new Set(t.castles.map((c) => c.faction))) {
     const l = t.generals.find((g) => g.faction === f && g.lord);
-    if (!l || l.at == null) continue;
-    const c = t.castles.find((x) => x.id === l.at);
-    if (!c) continue;
+    if (!l) continue;
+    const 国ら = new Set();
+    for (const id of [l.本領, l.at]) {
+      const c = id && t.castles.find((x) => x.id === id);
+      if (c) 国ら.add(c.kuni);
+    }
+    if (!国ら.size) continue;
     for (const g of t.generals) {
       if (g.faction !== f || g.役 !== '国主' || g.lord) continue;
-      const gc = t.castles.find((x) => x.id === g.at);
-      if (gc && gc.kuni === c.kuni) n++;
+      if (g.役国 && 国ら.has(g.役国)) n++;
     }
   }
   return n;
@@ -143,7 +152,7 @@ console.log('\n── 四　古い掟でしか成り立たない役は、月が�
     const c = t.castles.find((y) => y.id === l.at);
     const 誰 = t.generals.find((g) => g.faction === f && !g.lord
       && (t.castles.find((y) => y.id === g.at) || {}).kuni === c.kuni && g.at !== c.id);
-    誰.役 = '国主';
+    誰.役 = '国主'; 誰.役国 = c.kuni; 誰.本領 = 誰.at;   // 当主のいる国を預かる形に仕込む
     const 前 = 当主の国の国主(t);
     確('仕込めた（当主のいる国に国主がいる）', 前 > 0, `${t.factions[f].name}　${c.kuni}　${前}件`);
     t.autoPlay = true;
