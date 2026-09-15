@@ -333,6 +333,40 @@ console.log('\n── 十一　古い形の旗頭は、受け持ちの形に繕�
     `${H.旗頭の届く国(t, 旗).length}国`);
 }
 
+console.log('\n── 十二　後から入れた仕組みが、古い記録の上でも一通り働く');
+{
+  /* 仕組みを足すたびに、古い記録がその欄を持たぬまま残る。読み込みで倒れないか、
+     欄が無いなりに働くか、月を送って乱れないかを一通り検める。 */
+  const t = H.migrateSave(JSON.parse(JSON.stringify(生)));
+  確('物故の控えが立つ', Array.isArray(t.物故), `${(t.物故 || []).length}人`);
+  確('城主の札が据わる', t.castles.filter((c) => c.lordId).length > 0,
+    `${生.castles.filter((c) => c.lordId).length}城 → ${t.castles.filter((c) => c.lordId).length}城`);
+  確('方面の名残が残らない', !t.generals.some((g) => g.方面));
+  確('裏切りの判じが使える', typeof H.裏切りの出陣か === 'function');
+  確('旗の下の家の判じが使える', typeof H.旗の下の家か === 'function');
+
+  /* 古い形の密約（誰が結んだかの控えが無い）でも倒れない。 */
+  const c = t.castles.find((x) => x.faction !== t.player
+    && t.generals.some((g) => g.at === x.id && g.faction === x.faction && !g.lord));
+  if (c) {
+    c.intrigue = true;
+    c.intrigueBy = t.generals.find((g) => g.at === c.id && g.faction === c.faction && !g.lord).id;
+    確('主の控えの無い密約でも読み込める', !!H.migrateSave(JSON.parse(JSON.stringify(t))), c.name);
+  }
+
+  /* 出どころの控えが無い古い軍は、これまでどおり出陣元へまとめて返る。 */
+  const u = H.migrateSave(JSON.parse(JSON.stringify(生)));
+  const 城 = u.castles.find((x) => x.faction === u.player) || u.castles[0];
+  const 将 = u.generals.filter((g) => g.at === 城.id && g.faction === 城.faction).slice(0, 1);
+  for (const g of 将) g.at = null;
+  const 前 = 城.local;
+  u.armies.push({ id: 'OLD1', faction: 城.faction, from: 城.id, gens: 将.map((g) => g.id),
+    local: 800, localTrain: 70, rost: H.newRoster(800, 'arm-OLD1'), men: 800,
+    at: 城.id, path: [城.id], prog: 0, food: 2000, target: null });
+  H.軍を解く(u, u.armies.find((a) => a.id === 'OLD1'));
+  確('出どころの控えが無い軍は、出陣元へまとめて返る', 城.local === 前 + 800, `${前} → ${城.local}`);
+}
+
 console.log('');
 if (咎.length) { console.log('★背いた事:'); for (const x of 咎) console.log('   ' + x); }
 console.log('エラー:', 咎.length ? `${咎.length}件` : 'なし');
