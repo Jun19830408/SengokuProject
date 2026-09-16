@@ -70,6 +70,24 @@ const 場面 = [
   { key: 'siege-late', 盤: '城攻め', 手: ['押:続きから', '待:1.0', '押:強攻', '待:0.8',
     '押:合戦開始', '待:0.5', '押:通常', '待:80', '押:停止', '待:0.8'],
     幅: 1200, 高: 950, 説: '城攻め（門を破って中へ）' },
+  /* 白兵の寄り（紹介資料のため）。
+
+     遊ぶ側の申し出は「合戦の風景をもっとアップにして、隊が戦いあっている
+     ところを見せてほしい」であった。槍が噛み合っているさなかで刻を止め、
+     三度寄る。駒は十人ひとつであるから、この寄りで一人ひとりの並びが見える。 */
+  /* 刻は実の時の六割で進む（通常の速さ）。四十四秒待っても盤は0:26で、まだ
+     両軍が近づいている途中であった。槍が噛み合うのは一分半から二分のあたりで
+     あるから、そこまで待つ。右の欄は畳んで、盤だけを写す。 */
+  /* 槍が噛み合うまで待つのでは、いつ噛み合うか分からない。全軍に接戦を命じて
+     ぶつけ、そこで刻を止めて寄る。盤の只中がどこかは盤に聞く（__寄る）。 */
+  { key: 'field-melee', 盤: '野戦', 手: ['押:続きから', '待:1.4', '押:正面から当たる', '待:0.8',
+    '押:合戦開始', '待:0.6', '押:全軍接戦', '待:0.5', '押:通常', '待:110',
+    '押:停止', '待:0.5', '押:停止', '待:0.5', '寄:1.5', '待:1.2'],
+    幅: 1200, 高: 950, 説: '野戦（槍の噛み合い・寄り）' },
+  { key: 'siege-melee', 盤: '城攻め', 手: ['押:続きから', '待:1.0', '押:強攻', '待:0.8',
+    '押:合戦開始', '待:0.6', '押:全軍門を破る', '待:0.5', '押:通常', '待:130',
+    '押:停止', '待:0.5', '押:停止', '待:0.5', '寄:1.5', '待:1.2'],
+    幅: 1200, 高: 950, 説: '城攻め（門際の押し合い・寄り）' },
 ];
 
 /* --------------------------------------------------- 画面の中で走らせる手 */
@@ -111,6 +129,53 @@ const 手順の書 = (手) => `
     }
     console.warn('隊を選べなかった'); return false;
   };
+  /* 槍を合わせている隊を探して選び、その場所を覚える（紹介資料の寄りのため）。
+
+     寄せる中心は画面の真ん中である。噛み合いが端に寄っていると、寄っても空地が
+     写る。交戦中の隊を見つけ、そこへ寄るようにする。選べたかどうかは「交戦中」の
+     字が出たかで見分ける。 */
+  let 寄せ所 = null;
+  const 陣戦 = async () => {
+    const cv = document.querySelector('.fieldwrap');
+    if (!cv) { console.warn('盤が無い'); return false; }
+    const r = cv.getBoundingClientRect();
+    const 押す = async (x, y) => {
+      const o = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, buttons: 1 };
+      cv.dispatchEvent(new MouseEvent('mousedown', o));
+      cv.dispatchEvent(new MouseEvent('mousemove', o));
+      cv.dispatchEvent(new MouseEvent('mouseup', { ...o, buttons: 0 }));
+      await 眠(0.1);
+      return document.body.textContent;
+    };
+    let 控 = null;
+    for (let gy = -0.42; gy <= 0.44; gy += 0.035) {
+      for (let gx = -0.46; gx <= 0.47; gx += 0.032) {
+        const x = r.left + r.width * (0.5 + gx), y = r.top + r.height * (0.5 + gy);
+        const t = await 押す(x, y);
+        if (!/疲労/.test(t)) continue;
+        if (/交戦中/.test(t)) { 寄せ所 = { x, y }; await 眠(0.4); return true; }
+        if (!控) 控 = { x, y };                      // 交戦中が見つからねば、隊のいる所へ寄る
+      }
+    }
+    寄せ所 = 控;
+    if (!寄せ所) console.warn('隊を選べなかった');
+    await 眠(0.3);
+    return !!寄せ所;
+  };
+  /* 槍の噛み合いの只中へ寄る。盤が出している取っ手（window.__寄る）を使う。
+     どこで槍が合っているかは盤しか知らないので、外から探るのはやめた。 */
+  const 寄 = async (倍) => {
+    for (let i = 0; i < 40; i++) {
+      if (typeof window.__寄る === 'function') {
+        const r = window.__寄る(倍);
+        await 眠(0.8);
+        return !!r;
+      }
+      await 眠(0.2);
+    }
+    console.warn('寄る取っ手が無い');
+    return false;
+  };
   const 図 = async (dx, dy) => {
     const cv = document.querySelector('.mapwrap canvas');
     if (!cv) return false;
@@ -128,16 +193,31 @@ const 手順の書 = (手) => `
     if (k === '待') return `await 眠(${Number(v)});`;
     if (k === '図') { const [a, b] = v.split(','); return `await 図(${Number(a)}, ${Number(b)});`; }
     if (k === '陣') return `await 陣();`;
+    if (k === '陣戦') return `await 陣戦();`;
+    if (k === '寄') return `await 寄(${Number(v)});`;
     return '';
   }).join('\n  ')}
   document.title = 'READY';
 })();
 </script>`;
 
-/* ------------------------------------------------------------------ 撮る */
+/* ------------------------------------------------------------------ 撮る
+
+   名を添えれば、その場面だけを撮る。一場面ごとに Chrome を立ち上げるので、
+   全部で数分かかる。一つ撮り直したいだけのときに全部を回すのは無駄である。
+
+     node tools/shots.cjs                  … すべて
+     node tools/shots.cjs field-melee      … その場面だけ */
 const 元 = fs.readFileSync(path.join(ROOT, 'dist', 'index.html'), 'utf8');
+const 指し = process.argv.slice(2).filter((x) => !x.startsWith('-'));
+const 撮る場面 = 指し.length ? 場面.filter((x) => 指し.includes(x.key)) : 場面;
+if (指し.length && !撮る場面.length) {
+  console.log('その名の場面が無い：' + 指し.join('・'));
+  console.log('ある名：' + 場面.map((x) => x.key).join('・'));
+  process.exit(1);
+}
 let 撮れた = 0;
-for (const s of 場面) {
+for (const s of 撮る場面) {
   const 盤 = s.盤 ? 盤たち[s.盤]() : null;
   const 仕込み = (盤
     ? `<script>try{localStorage.setItem('sengoku:save1', ${JSON.stringify(JSON.stringify({ v: 1, at: Date.now(), state: 盤 }))});}catch(e){}</script>`
@@ -198,12 +278,23 @@ const 整える = (key, 幅, 質, 先) => {
 
 const 紙 = path.join(OUT, '大'), 画 = path.join(OUT, '小');
 let 紙計 = 0, 画計 = 0;
-const 埋め = {};
+/* 場面を選んで撮ったときは、撮らなかったぶんの写しをそのまま残す。
+   丸ごと作り直すと、選んだ一枚のために全部が消えてしまう。 */
+const 埋め = (() => {
+  if (!指し.length) return {};
+  try {
+    const 前 = fs.readFileSync(path.join(ROOT, 'src', 'data', 'shots.js'), 'utf8');
+    const m = 前.match(/export const 写し = ([\s\S]*);\n?$/);
+    return m ? JSON.parse(m[1]) : {};
+  } catch (e) { return {}; }
+})();
 for (const s of 場面) {
+  const 撮った = 撮る場面.includes(s);
   const a = 整える(s.key, 1000, 82, path.join(紙, `${s.key}.jpg`));
   const b = 整える(s.key, 500, 62, path.join(画, `${s.key}.jpg`));
   if (a) 紙計 += fs.statSync(a).size;
   if (b) { 画計 += fs.statSync(b).size; 埋め[s.key] = 'data:image/jpeg;base64,' + fs.readFileSync(b).toString('base64'); }
+  else if (!撮った && 埋め[s.key]) { /* 前の写しをそのまま残す */ }
 }
 
 /* 画面用は遊びの本体へ埋め込む。生成物であることを断って src へ置く。 */
@@ -214,7 +305,7 @@ const 書 = '/* 説明書に載せる、実際の画面の写し。\n'
 fs.writeFileSync(path.join(ROOT, 'src', 'data', 'shots.js'), 書);
 /* 生の写し（PNG）は捨てる。紙用と画面用ができていれば用は足りる。
    置いておくと四MB余りが積もるだけで、撮り直せばまた作れる。 */
-for (const s of 場面) { try { fs.unlinkSync(path.join(OUT, `${s.key}.png`)); } catch (e) { /* 無ければよい */ } }
+for (const s of 撮る場面) { try { fs.unlinkSync(path.join(OUT, `${s.key}.png`)); } catch (e) { /* 無ければよい */ } }
 
 console.log(`dist/tebiki/大   ${Math.round(紙計 / 1024)} KB  … 紙用（幅千）`);
 console.log(`dist/tebiki/小   ${Math.round(画計 / 1024)} KB  … 画面用（幅五百・本体に埋め込む）`);

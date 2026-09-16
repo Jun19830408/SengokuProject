@@ -172,6 +172,58 @@ export function BattleScreen({ ctx, land, onEnd }) {
     }
     force((n) => (n + 1) % 1000);
   };
+  /* 写しを撮るための取っ手（GDD 15.4）。
+
+     説明書と紹介資料の絵は、描き起こさずに実物から撮る（tools/shots.cjs）。
+     ところが「槍の噛み合いを寄って写す」には、盤のどこで槍が合っているかを
+     外から知る術がない。釦を押して寄っても、真ん中が空地なら空地が写る。
+
+     そこで、盤そのものと「その只中へ寄る」手だけを窓に出しておく。遊びの側から
+     呼ばれることはなく、撮る道具だけが使う。 */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.__合戦 = b;
+    /* 倍率は絶対値で受ける（一.六なら一.六倍）。寄る先は「いちばん激しく噛んで
+       いる隊」とその相手の中ほどである。噛み合い全体の重心を取ると、両軍の
+       あいだの空地が真ん中に来てしまう。 */
+    window.__寄る = (倍 = 1.4) => {
+      /* 寄る先は「槍の合っている点」である。隊の重心ではなく、噛んでいる組
+         （squad）の居所から取る。両軍の組が入り混じっているのがその場所で、
+         隊の重心を取ると両軍のあいだの空地が真ん中に来てしまう。 */
+      const 生 = b.corps.filter((c) => !c.dead && !c.destroyed);
+      const 点 = [];
+      for (const c of 生) {
+        for (const q of c.squads || []) {
+          if (q.engaged && q.men > 0) 点.push({ x: q.x, y: q.y });
+        }
+      }
+      if (!生.length) return false;
+      let cx, cy;
+      if (点.length) {
+        /* 噛み合いが二か所に分かれていれば、その平均は空地に落ちる。いちばん
+           人の密なところを選び、その周りだけで中心を取る。 */
+        const 間 = 340;
+        let 主 = 点[0], 数 = -1;
+        for (const p of 点) {
+          const n = 点.filter((q) => Math.hypot(q.x - p.x, q.y - p.y) < 間).length;
+          if (n > 数) { 数 = n; 主 = p; }
+        }
+        const 群 = 点.filter((q) => Math.hypot(q.x - 主.x, q.y - 主.y) < 間);
+        cx = 群.reduce((a2, p) => a2 + p.x, 0) / 群.length;
+        cy = 群.reduce((a2, p) => a2 + p.y, 0) / 群.length;
+      } else {
+        cx = 生.reduce((a2, c) => a2 + c.x, 0) / 生.length;
+        cy = 生.reduce((a2, c) => a2 + c.y, 0) / 生.length;
+      }
+      const cam = camRef.current;
+      cam.x = cx; cam.y = cy;
+      cam.s = clamp(倍, 縮みの限り(), 3.2);
+      force((n) => (n + 1) % 1000);
+      return { 隊: 生.length, 噛み合い: 点.length, x: Math.round(cx), y: Math.round(cy), s: cam.s };
+    };
+    return () => { try { delete window.__合戦; delete window.__寄る; } catch (e) { /* よい */ } };
+  }, [b]);
+
   const fitAll = () => {
     const w = wrapRef.current;
     const cam = camRef.current;
