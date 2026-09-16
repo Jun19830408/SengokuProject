@@ -186,6 +186,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
     /* 倍率は絶対値で受ける（一.六なら一.六倍）。寄る先は「いちばん激しく噛んで
        いる隊」とその相手の中ほどである。噛み合い全体の重心を取ると、両軍の
        あいだの空地が真ん中に来てしまう。 */
+    /* いま槍を合わせている組の数。撮る道具が「いちばん噛み合った時」を待つのに使う。 */
+    window.__噛み = () => b.corps.reduce((n, c) => n + (c.dead || c.destroyed ? 0
+      : (c.squads || []).filter((q) => q.engaged && q.men > 0).length), 0);
     window.__寄る = (倍 = 1.4) => {
       /* 寄る先は「槍の合っている点」である。隊の重心ではなく、噛んでいる組
          （squad）の居所から取る。両軍の組が入り混じっているのがその場所で、
@@ -217,11 +220,26 @@ export function BattleScreen({ ctx, land, onEnd }) {
       }
       const cam = camRef.current;
       cam.x = cx; cam.y = cy;
-      cam.s = clamp(倍, 縮みの限り(), 3.2);
+      /* 倍率に零以下を渡せば、噛み合っている塊がちょうど収まる寄りを自ら選ぶ。
+         塊の広がりを測り、盤の七割に収める。 */
+      let 倍2 = 倍;
+      if (!(倍 > 0)) {
+        const w = wrapRef.current;
+        const 群 = 点.length ? 点.filter((q) => Math.hypot(q.x - cx, q.y - cy) < 340) : [];
+        const 幅 = 群.length ? Math.max(120, ...群.map((q) => Math.abs(q.x - cx))) * 2 : 600;
+        const 丈 = 群.length ? Math.max(120, ...群.map((q) => Math.abs(q.y - cy))) * 2 : 600;
+        const vw = w ? w.clientWidth : 1000, vh = w ? w.clientHeight : 800;
+        /* 噛み合いだけを画いっぱいにすると、隣の隊も地形も切れて何の戦か分からない。
+           塊が画の四割ほどに収まるようにして、周りの戦列も入れる。 */
+        倍2 = Math.min(vw * 0.42 / 幅, vh * 0.42 / 丈);
+      }
+      cam.s = clamp(倍2, 縮みの限り(), 3.2);
       force((n) => (n + 1) % 1000);
       return { 隊: 生.length, 噛み合い: 点.length, x: Math.round(cx), y: Math.round(cy), s: cam.s };
     };
-    return () => { try { delete window.__合戦; delete window.__寄る; } catch (e) { /* よい */ } };
+    return () => {
+      try { delete window.__合戦; delete window.__寄る; delete window.__噛み; } catch (e) { /* よい */ }
+    };
   }, [b]);
 
   const fitAll = () => {
