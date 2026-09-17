@@ -10,6 +10,7 @@ import { FACTIONS } from "../data/factions.js";
 import { GENERALS } from "../data/generals.js";
 import { px, py } from "../data/geo.js";
 import { PARENT } from "../data/newcomers.js";
+import { 改まった名 } from "../data/kaimei.js";
 import { MOB_POLICY } from "../data/roads.js";
 import { 城の馬, 城の鉄砲 } from "../data/arms.js";
 import { 直属の兵科 } from "../data/arms.js";
@@ -330,6 +331,7 @@ export function initState(player) {
   }
   国主を据える(盤);                               // 国ごとに国主を一人（GDD 6.4）
   城主の札を据える(盤);                           // 城ごとに城主を一人（GDD 6.4）
+  城の名を改める(盤);                             // 始めの年より後の名は当てない（天文十五年の名）
   return 盤;
 }
 
@@ -934,6 +936,33 @@ function 旗頭の名残を繕う(s) {
   }
 }
 
+/* 城の名を、その年のものに改める（GDD 4.7）。
+
+   天文十五年の名で盤を立てているが、世が進めば名は変わる。稲葉山が岐阜になり、
+   石山本願寺の跡に大坂城が建ち、黒川は若松と改まる。年が来たら盤の名も改める。
+
+   拾うのは「同じ地で建て替えられたもの」と「近くへ本城の役目が移ったもの」に
+   限る（src/data/kaimei.js）。遠くへ移ったものは入れない――盤の上の場所は
+   動かぬのに名だけ飛べば、地図と名が食い違う。
+
+   改まった年に立ち会えば戦国記に残す。古い記録を読み込んだときは、既に過ぎた
+   改名を黙って当てる（何十年ぶんもの報せが並んでも仕方がない）。 */
+export function 城の名を改める(s, { 告げる } = {}) {
+  const 改めた = [];
+  for (const c of s.castles || []) {
+    const 新 = 改まった名(c.id, s.year);
+    if (!新 || c.name === 新.名) continue;
+    const 旧 = c.name;
+    c.name = 新.名;
+    c.旧名 = c.旧名 || 旧;
+    改めた.push({ c, 旧, 新 });
+    if (告げる && s.year === 新.y) {
+      告げる(`${旧}が${新.名}と改まった（${新.訳}）。`);
+    }
+  }
+  return 改めた;
+}
+
 export function migrateSave(s) {
   // 卓の印の無い古い記録には、いま与える（以後、置き場が守れるようになる）
   if (!s.卓) s.卓 = `t${(s.player || "x")}${s.year || 0}-旧`;
@@ -952,6 +981,7 @@ export function migrateSave(s) {
   国主を据える(s);                                // 役の欄の無い古い記録に国主を据える
   旗頭の名残を繕う(s);                            // 方面を廃した。役国を根から据え直す
   城主の札を据える(s);                            // 札の無い城に、いまの城主を札として据える
+  城の名を改める(s);                              // その年までに改まった城の名を当てる
   将の無い軍を繕う(s);                            // 兵だけ残って浮いていた軍を解く
   return s;
 }
