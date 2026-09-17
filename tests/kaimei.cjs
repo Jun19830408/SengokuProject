@@ -117,6 +117,34 @@ console.log('\n── 五　古い記録を読めば、過ぎた改名がまと�
     `改名後 ${[...new Set(重)].join('・') || 'なし'}／元から ${[...new Set(元)].join('・') || 'なし'}`);
 }
 
+console.log('\n── 六　遠くへ移った本城は、移った先に近い城を改める');
+{
+  /* 毛利は吉田郡山から広島へ、堀尾は月山富田から松江へ移った。移した城の名を
+     動かすと地図と食い違うので、移った先に近い城のほうを改める。 */
+  const s = initState('oda');
+  const 城 = (id) => s.castles.find((c) => c.id === id);
+  const 隔 = (a, b) => Math.hypot(城(a).x - 城(b).x, 城(a).y - 城(b).y);
+
+  確('吉田郡山城は名を変えない', !改まった名('koriyama_a', 1700), 城('koriyama_a').name);
+  確('かわりに銀山城が広島城になる', (改まった名('kanayama_a', 1589) || {}).名 === '広島城');
+  確('広島になる城は、同じ国の元の本城より西の海寄りにある',
+    城('kanayama_a').y > 城('koriyama_a').y, `隔たり ${Math.round(隔('kanayama_a', 'koriyama_a'))}`);
+
+  確('月山富田城は名を変えない', !改まった名('gassan', 1700), 城('gassan').name);
+  確('かわりに白鹿城が松江城になる', (改まった名('shiraga', 1611) || {}).名 === '松江城');
+
+  /* 近い城が盤に無いもの（毛利の萩など）は入れない。 */
+  const 萩 = 城の改名.filter((x) => x.名 === '萩城');
+  確('近い城の無いものは入れない（萩城）', 萩.length === 0);
+
+  /* 改める先は、その国のうちにあること。国をまたいで名が飛ばない。 */
+  const 国違い = 城の改名.filter((x) => {
+    const c = 城(x.id);
+    return !c;
+  });
+  確('改名の先がみな盤にある', 国違い.length === 0, `${城の改名.length}件`);
+}
+
 console.log('');
 if (咎.length) { console.log('★背いた事:'); for (const x of 咎) console.log('   ' + x); }
 console.log('エラー:', 咎.length ? `${咎.length}件` : 'なし');
