@@ -472,6 +472,81 @@ console.log('\n── 十四　臣従した家の当主も、旗頭の寄騎に�
   }
 }
 
+console.log('\n── 十五　記録を読み直しても、旗頭は旗頭のまま');
+{
+  /* 記録を読むたびに 国主を据える が回る。旗頭の役国は「旗頭」の欄なので、
+     「その国に国主が居るか」だけを見ていた目を素通りし、旗頭が国主へ据え直されて
+     いた。役が変われば寄親でなくなるので、寄騎はその月に残らず離れる。
+     実際の記録（一五六〇年正月・織田五十八城）で、柴田勝家ら七名が一斉に離れた。 */
+  const s = initState('oda');
+  const 国ら = ['尾張', '美濃', '三河', '伊勢', '近江'];
+  for (const k of 国ら) for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
+  const 当主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
+  const 尾張 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '尾張');
+  当主.at = 尾張.id; 当主.本領 = 尾張.id;
+  const 城 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '近江');
+  const 旗 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役);
+  旗.age = 35; 旗.fief = 60000; 旗.at = 城.id; 旗.本領 = 城.id; 城.lordId = 旗.id;
+  国主に任じる(s, 'oda', '近江', 旗.id);
+  確('旗頭を立てられる', 旗頭に任じる(s, 'oda', 旗.id).ok, `${旗.name}　${旗.役国}`);
+
+  /* 同じ国に、旗頭より身代の軽い家老を置いておく（据え替えの餌である）。 */
+  const 別 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役 && x.id !== 旗.id
+    && (s.castles.find((c) => c.id === (x.本領 || x.at)) || {}).kuni === '近江');
+  if (別) 別.fief = 20000;
+
+  /* 受け持ちの国の城に城主を据え、旗頭の寄騎に取る。 */
+  const 届 = 旗頭の届く国(s, 旗);
+  const 寄 = [];
+  const 城ら = s.castles.filter((x) => x.faction === 'oda' && 届.includes(x.kuni) && x.id !== 城.id);
+  for (const g of s.generals) {
+    if (寄.length >= 3) break;
+    if (g.faction !== 'oda' || g.lord || g.役 || g.寄親 || g.id === 旗.id) continue;
+    const c = 城ら[寄.length];
+    if (!c) break;
+    g.age = 35; g.fief = 12000; g.at = c.id; g.本領 = c.id; c.lordId = g.id;   // 受け持ちの城主とする
+    if (寄騎に取る(s, 旗.id, g.id).ok) 寄.push(g);
+  }
+  確('寄騎を取れる', 寄.length > 0, 寄.map((g) => g.name).join('・') || '0名');
+
+  const t = JSON.parse(JSON.stringify(s));
+  H.migrateSave(t);
+  const 旗2 = t.generals.find((g) => g.id === 旗.id);
+  確('読み直しても旗頭のまま', 旗2.役 === '旗頭' && 旗2.役国 === 旗.役国, `${旗2.役}／${旗2.役国}`);
+  確('旗頭の国に国主は据わらない',
+    !t.generals.some((g) => g.faction === 'oda' && g.役 === '国主' && g.役国 === 旗.役国));
+  確('寄騎も残る', 寄.every((g) => (t.generals.find((x) => x.id === g.id) || {}).寄親 === 旗.id));
+
+  const u = advanceMonth(t, t);
+  確('月を送っても寄親を離れない',
+    寄.every((g) => (u.generals.find((x) => x.id === g.id) || {}).寄親 === 旗.id),
+    (u.monthEvents || []).filter((x) => /寄親を離れた/.test(x)).join('／') || '離役の報せなし');
+}
+
+console.log('\n── 十六　世に出た者・生まれた子は「本領を失った」ことにならない');
+{
+  /* 登場の報せの隣に「本多忠勝は本領を失い、長篠城に居を移した」と並んでいた。
+     居を移してなどいない――本領の欄が空なだけであった。 */
+  const s = initState('oda');
+  const 親 = s.generals.find((g) => g.faction === 'oda' && !g.lord);
+  const 子 = H.bearChild(s, 親);
+  確('生まれた子に本領がある', !!子.本領, `${子.name}　${子.本領}`);
+  確('子の本領は父の本領', 子.本領 === (親.本領 || 親.at));
+
+  /* 世に出る者は年を跨がねば来ない。盤を数年進めて、出てきた者を検める。 */
+  let t = s, 出 = [], 報 = [];
+  const 既 = new Set(s.generals.map((g) => g.id));
+  for (let i = 0; i < 14 && !出.length; i++) {
+    t = advanceMonth(t, t);
+    報 = (t.monthEvents || []).filter((x) => /本領を失い/.test(x));
+    出 = t.generals.filter((g) => !既.has(g.id));
+  }
+  確('世に出た者がいる', 出.length > 0, `${出.length}名`);
+  確('みな本領を持つ', 出.every((g) => !!g.本領),
+    出.filter((g) => !g.本領).map((g) => g.name).join('・') || '欠けなし');
+  確('「本領を失い」とは告げない', 報.length === 0, 報.join('／') || '報せなし');
+}
+
 console.log(`\n════ 旗頭の差配：咎 ${咎.length} 件`);
 console.log('エラー:', 咎.length ? 咎.join(' | ') : 'なし');
 process.exit(咎.length ? 1 : 0);

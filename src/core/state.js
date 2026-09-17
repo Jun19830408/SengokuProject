@@ -1169,10 +1169,19 @@ export function 国主を据える(s) {
     const 当主の城 = 当主 && s.castles.find((c) => c.id === (当主.本領 || 当主.at));
     for (const kuni of 国) {
       if (当主の城 && 当主の城.kuni === kuni) continue;
-      if (s.generals.some((g) => g.faction === fid && g.役 === "国主" && g.役国 === kuni)) continue;
+      /* その国に役持ちが居るなら、据えない（GDD 6.4）。
+
+         もとは「国主が居るか」しか見ていなかった。旗頭は役の欄が「旗頭」なので
+         この目を素通りし、記録を読むたびに旗頭が国主へ据え直されていた。役が
+         変われば寄親でなくなるので、寄騎はその月に残らず離れる。遊ぶ側の画面には
+         「柴田勝家は寄親を離れた」と七人ぶん並んだ――織田信長を旗頭に立てた
+         記録を読み直しただけで、である。旗頭の根の国には国主を置かない。 */
+      if (s.generals.some((g) => g.faction === fid && !g.captive
+        && (g.役 === "国主" || g.役 === "旗頭") && g.役国 === kuni)) continue;
       /* 国主となれるのは家老（禄高八千石）以上である（GDD 6.4）。
          役は身分あってのものなので、その国に家老以上が居らねば国主は置かない。 */
       const 候 = s.generals.filter((g) => g.faction === fid && !g.captive && !g.lord
+        && g.役 !== "旗頭"                          // 旗頭を国主へ据え替えない（寄騎が離れる）
         && 身分の位(g, s) >= 役の要る身分.国主
         && (s.castles.find((c) => c.id === (g.本領 || g.at)) || {}).kuni === kuni);
       if (!候.length) continue;
@@ -1270,8 +1279,14 @@ export function 奪われた本領を繕う(s) {
     const 先 = [g.at, 出どころ[g.id], (s.factions[g.faction] || {}).本拠]
       .find((id) => 自家か(id, g.faction));
     if (!先 || 先 === g.本領) continue;
+    /* 欄が空なだけの者は、本領を奪われたのではない（GDD 6.4）。
+
+       世に出たばかりの者・生まれたばかりの子は、まだ本領の欄が無い。それを
+       「奪われた」と数えて報せていたので、登場の報せの隣に「本多忠勝は本領を
+       失い、長篠城に居を移した」と並んでいた。据えはするが、告げはしない。 */
+    const 空 = !g.本領;
     g.本領 = 先;
-    直した.push(g);
+    if (!空) 直した.push(g);
   }
   return 直した;
 }

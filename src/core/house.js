@@ -18,6 +18,12 @@ export function emergeGenerals(s) {
     const gen = {
       id: n.id, name: n.name, faction: fid, lead: n.lead, valor: n.valor, wit: n.wit, gov: n.gov,
       loyal: fid === n.faction ? 78 : 58, age: s.year - n.born, at: home.id,
+      /* 世に出る者にも本領を与える（GDD 6.4）。
+
+         禄は本領から出る。欄が空のままだと「本領を繕う」が奪われた者と見なし、
+         出たその月に「本多忠勝は本領を失い、長篠城に居を移した」と告げられた。
+         居を移してなどいない――生国のその城が、はじめからその者の本領である。 */
+      本領: home.id,
       retinue: n.retinue, retTrain: n.retTrain,
       unity: clamp(n.retTrain + 8, 30, 100), merit: 0,
       fief: Math.round(fiefWanted(n) * 0.7),
@@ -124,7 +130,8 @@ export function bearChild(s, gen) {
     lead: mix(gen.lead, 62), valor: mix(gen.valor, 62),
     wit: mix(gen.wit, 60), gov: mix(gen.gov, 60),
     loyal: clamp((gen.loyal == null ? 70 : gen.loyal) - 4, 0, 100),
-    age: 1, at: gen.at, retinue: 60, retTrain: 55,
+    age: 1, at: gen.at, 本領: gen.本領 || gen.at,      // 生まれた子は父の本領に生まれる
+    retinue: 60, retTrain: 55,
     unity: 60, merit: 0, fief: 200, rost: newRoster(60, `ret-${id}`),
     /* 遊びの中で生まれた子は、史実の人物ではない（GDD 6.7）。
        史実に子のある者には、その子が後年ここへ現れるので、重ねては生まれない。
@@ -382,7 +389,8 @@ export function 取り立てる(s, promo, name) {
   const id = `promo-${o.faction}-${s.year}-${s.month}-${s.generals.length}`;
   const gen = {
     id, name, faction: o.faction, lead: o.lead, valor: o.valor, wit: o.wit, gov: o.gov,
-    loyal: 82, age: o.age, at: o.at, retinue: o.retinue, retTrain: o.retTrain,
+    loyal: 82, age: o.age, at: o.at, 本領: o.at,      // 召し抱えた城が、その者の本領となる
+    retinue: o.retinue, retTrain: o.retTrain,
     unity: clamp(o.retTrain + 6, 30, 100), merit: 6, 架空: true,
     fief: 0, rost: newRoster(o.retinue, `ret-${id}`, 直属の兵科),
   };

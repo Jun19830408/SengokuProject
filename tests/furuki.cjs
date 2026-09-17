@@ -367,6 +367,35 @@ console.log('\n── 十二　後から入れた仕組みが、古い記録の�
   確('出どころの控えが無い軍は、出陣元へまとめて返る', 城.local === 前 + 800, `${前} → ${城.local}`);
 }
 
+console.log('\n── 十三　城の名も、古い記録の年に合わせて改まる');
+{
+  /* 城の改名は後から入れた仕組みである。古い記録には旧い名が書き込まれている
+     ので、読み込むときにその年までの改名を当てる（GDD 4.7）。 */
+  const t = H.migrateSave(JSON.parse(JSON.stringify(生)));
+  const 名 = (u, id) => (u.castles.find((c) => c.id === id) || {}).name;
+  確('記録の年にまだ来ていない改名は当てない', 名(t, 'inabayama') === '稲葉山城',
+    `${t.year}年　${名(t, 'inabayama')}`);
+
+  const u = JSON.parse(JSON.stringify(生));
+  u.year = 1600;
+  const v = H.migrateSave(u);
+  確('年の進んだ記録には、過ぎた改名がまとめて当たる',
+    名(v, 'inabayama') === '岐阜城' && 名(v, 'ishiyama') === '大坂城'
+    && 名(v, 'tsutsujigasaki') === '甲府城' && 名(v, 'sakamoto') === '大津城',
+    [名(v, 'inabayama'), 名(v, 'ishiyama'), 名(v, 'tsutsujigasaki'), 名(v, 'sakamoto')].join('・'));
+  確('遠くへ移った本城は、近い城のほうが改まる',
+    名(v, 'koriyama_a') === '吉田郡山城' && 名(v, 'kanayama_a') === '広島城',
+    `${名(v, 'koriyama_a')}／${名(v, 'kanayama_a')}`);
+  確('旧い名も控えられる', (v.castles.find((c) => c.id === 'inabayama') || {}).旧名 === '稲葉山城');
+
+  /* 改名で城の名が重ならないこと。 */
+  const 皆 = v.castles.map((c) => c.name);
+  const 重 = 皆.filter((x, i) => 皆.indexOf(x) !== i);
+  const 元 = 生.castles.map((c) => c.name).filter((x, i, a) => a.indexOf(x) !== i);
+  確('改名で新たな同名が生じない', 重.length === 元.length,
+    `改名後 ${[...new Set(重)].join('・') || 'なし'}／元から ${[...new Set(元)].join('・') || 'なし'}`);
+}
+
 console.log('');
 if (咎.length) { console.log('★背いた事:'); for (const x of 咎) console.log('   ' + x); }
 console.log('エラー:', 咎.length ? `${咎.length}件` : 'なし');

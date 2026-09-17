@@ -10309,6 +10309,12 @@ function emergeGenerals(s2) {
       loyal: fid === n.faction ? 78 : 58,
       age: s2.year - n.born,
       at: home.id,
+      /* 世に出る者にも本領を与える（GDD 6.4）。
+      
+               禄は本領から出る。欄が空のままだと「本領を繕う」が奪われた者と見なし、
+               出たその月に「本多忠勝は本領を失い、長篠城に居を移した」と告げられた。
+               居を移してなどいない――生国のその城が、はじめからその者の本領である。 */
+      \u672C\u9818: home.id,
       retinue: n.retinue,
       retTrain: n.retTrain,
       unity: clamp(n.retTrain + 8, 30, 100),
@@ -10380,6 +10386,8 @@ function bearChild(s2, gen) {
     loyal: clamp((gen.loyal == null ? 70 : gen.loyal) - 4, 0, 100),
     age: 1,
     at: gen.at,
+    \u672C\u9818: gen.\u672C\u9818 || gen.at,
+    // 生まれた子は父の本領に生まれる
     retinue: 60,
     retTrain: 55,
     unity: 60,
@@ -10578,6 +10586,8 @@ function \u53D6\u308A\u7ACB\u3066\u308B(s2, promo, name) {
     loyal: 82,
     age: o.age,
     at: o.at,
+    \u672C\u9818: o.at,
+    // 召し抱えた城が、その者の本領となる
     retinue: o.retinue,
     retTrain: o.retTrain,
     unity: clamp(o.retTrain + 6, 30, 100),
@@ -15886,8 +15896,8 @@ function \u56FD\u4E3B\u3092\u636E\u3048\u308B(s2) {
     const \u5F53\u4E3B\u306E\u57CE = \u5F53\u4E3B2 && s2.castles.find((c) => c.id === (\u5F53\u4E3B2.\u672C\u9818 || \u5F53\u4E3B2.at));
     for (const kuni of \u56FD) {
       if (\u5F53\u4E3B\u306E\u57CE && \u5F53\u4E3B\u306E\u57CE.kuni === kuni) continue;
-      if (s2.generals.some((g) => g.faction === fid && g.\u5F79 === "\u56FD\u4E3B" && g.\u5F79\u56FD === kuni)) continue;
-      const \u5019 = s2.generals.filter((g) => g.faction === fid && !g.captive && !g.lord && \u8EAB\u5206\u306E\u4F4D(g, s2) >= \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u56FD\u4E3B && (s2.castles.find((c) => c.id === (g.\u672C\u9818 || g.at)) || {}).kuni === kuni);
+      if (s2.generals.some((g) => g.faction === fid && !g.captive && (g.\u5F79 === "\u56FD\u4E3B" || g.\u5F79 === "\u65D7\u982D") && g.\u5F79\u56FD === kuni)) continue;
+      const \u5019 = s2.generals.filter((g) => g.faction === fid && !g.captive && !g.lord && g.\u5F79 !== "\u65D7\u982D" && \u8EAB\u5206\u306E\u4F4D(g, s2) >= \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u56FD\u4E3B && (s2.castles.find((c) => c.id === (g.\u672C\u9818 || g.at)) || {}).kuni === kuni);
       if (!\u5019.length) continue;
       const \u4E3B = [...\u5019].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
       \u4E3B.\u5F79 = "\u56FD\u4E3B";
@@ -15947,8 +15957,9 @@ function \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2) {
     if (\u81EA\u5BB6\u304B(g.\u672C\u9818, g.faction)) continue;
     const \u5148 = [g.at, \u51FA\u3069\u3053\u308D[g.id], (s2.factions[g.faction] || {}).\u672C\u62E0].find((id) => \u81EA\u5BB6\u304B(id, g.faction));
     if (!\u5148 || \u5148 === g.\u672C\u9818) continue;
+    const \u7A7A = !g.\u672C\u9818;
     g.\u672C\u9818 = \u5148;
-    \u76F4\u3057\u305F.push(g);
+    if (!\u7A7A) \u76F4\u3057\u305F.push(g);
   }
   return \u76F4\u3057\u305F;
 }
