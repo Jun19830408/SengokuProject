@@ -57,11 +57,21 @@ export function BattleScreen({ ctx, land, onEnd }) {
     }
   }, []);
 
-  // 戦場のドラッグが端末側のスクロールや戻る操作に伝わらないようにする
+  /* 戦場のドラッグが端末側のスクロールや戻る操作に伝わらないようにする。
+
+     ただし止めてよいのは、盤そのもの（canvas）に触れたときだけである。
+     これまでは戦場の枠に触れた指をすべて止めていた。枠の中には道具立て
+     （拡大・縮小・全体・収納・広く）も入っているので、釦を叩いた指も
+     ここで止まる。指の触れはじめを止めると、端末はそのあとの click を
+     起こさない――つまり onClick が呼ばれない。
+
+     実機（携帯の幅四三〇）で測ると、五つの釦すべてで既定が殺され、画面は
+     何も変わらなかった。鼠で押せば効くので、卓の上では気づけない。
+     政務の地図は初めから「盤に触れたときだけ」としてあり、そちらは効いていた。 */
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const block = (e) => e.preventDefault();
+    const block = (e) => { if (e.target === canvasRef.current) e.preventDefault(); };
     el.addEventListener("touchmove", block, { passive: false });
     el.addEventListener("touchstart", block, { passive: false });
     return () => { el.removeEventListener("touchmove", block); el.removeEventListener("touchstart", block); };

@@ -28458,7 +28458,9 @@ function BattleScreen({ ctx, land, onEnd }) {
   useEffect3(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const block = (e) => e.preventDefault();
+    const block = (e) => {
+      if (e.target === canvasRef.current) e.preventDefault();
+    };
     el.addEventListener("touchmove", block, { passive: false });
     el.addEventListener("touchstart", block, { passive: false });
     return () => {
