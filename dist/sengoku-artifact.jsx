@@ -20015,6 +20015,21 @@ function \u8ECD\u306E\u540D(s2, \u982D2) {
   s2.\u8ECD\u756A = (s2.\u8ECD\u756A || 0) + 1;
   return `${\u982D2}${s2.year}-${s2.month}-${s2.\u8ECD\u756A}`;
 }
+function \u653B\u3081\u306B\u8981\u308B\u5175(s2, \u7684, \u5272 = 1.6) {
+  const \u5B88\u308A\u624B = \u7684.faction;
+  const dg = (s2.generals || []).filter((x) => x.at === \u7684.id && x.faction === \u5B88\u308A\u624B && !x.captive);
+  const \u5B88 = \u7684.local + dg.reduce((a, x) => a + x.retinue, 0);
+  const \u5F8C\u8A70\u306E\u898B\u8FBC\u307F = (s2.castles || []).reduce((a2, x) => {
+    if (x.id === \u7684.id) return a2;
+    if (x.faction !== \u5B88\u308A\u624B && !underMyBanner(s2, \u5B88\u308A\u624B, x.faction)) return a2;
+    const p2 = \u8ECD\u306E\u9053(s2, x.faction, x.id, \u7684.id);
+    if (!p2 || p2.length - 1 > 2) return a2;
+    const gs2 = (s2.generals || []).filter((q) => q.at === x.id && q.faction === x.faction && !q.captive);
+    const \u4F59 = x.local + gs2.reduce((t, q) => t + q.retinue, 0) - minGarrison(x);
+    return a2 + Math.max(0, \u4F59) * 0.5;
+  }, 0);
+  return Math.round((\u5B88 + \u5F8C\u8A70\u306E\u898B\u8FBC\u307F) * \u5272);
+}
 function advanceMonth(prev, g) {
   const s2 = structuredClone(prev);
   const events = [];
@@ -21175,7 +21190,19 @@ function advanceMonth(prev, g) {
       };
       for (const t of take) t.at = null;
       c.food = Math.max(0, c.food - \u7CE7);
-      const \u5BC4 = \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, fid, c, \u8ECD, { \u9053: \u8ECD\u306E\u9053 });
+      const \u8981\u308B = \u653B\u3081\u306B\u8981\u308B\u5175(s2, cand);
+      const \u5BC4 = \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, fid, c, \u8ECD, { \u9053: \u8ECD\u306E\u9053, \u9650\u308A: 5, \u6B69: 5, \u8981\u308B });
+      if (\u8ECD.men < \u8981\u308B * 0.8 && !\u597D\u6A5F\u304B(\u8ECD.men, foeMen2)) {
+        c.local += localSend;
+        c.rost = [...c.rost || [], ...tkA.taken];
+        c.food += \u7CE7;
+        for (const t2 of take) t2.at = c.id;
+        for (const q of \u5BC4) {
+          q.\u57CE.local += q.\u5175 - (q.\u5C06 ? q.\u5C06.retinue : 0);
+          if (q.\u5C06) q.\u5C06.at = q.\u57CE.id;
+        }
+        break;
+      }
       s2.armies.push(\u8ECD);
       events.push(`${s2.factions[fid].name}\u304C${c.name}\u3088\u308A\u51FA\u9663\u3002${cand.name}\u3092\u76EE\u6307\u3059\u3002` + (\u5BC4.length ? `\uFF08${\u5BC4.map((q) => q.\u57CE.name).join("\u30FB")}\u3088\u308A${fmt(\u5BC4.reduce((a2, q) => a2 + q.\u5175, 0))}\u4EBA\u304C\u52A0\u308F\u308B\uFF09` : ""));
       break;
@@ -21313,21 +21340,6 @@ function advanceMonth(prev, g) {
   }
   \u65D7\u982D\u306E\u6E08\u3093\u3060\u8A31\u3057\u3092\u7247\u3065\u3051\u308B(s2);
   \u65D7\u982D\u306E\u53E4\u3044\u65AD\u308A\u3092\u7247\u3065\u3051\u308B(s2);
-  const \u653B\u3081\u306B\u8981\u308B\u5175 = (\u7684) => {
-    const \u5B88\u308A\u624B = \u7684.faction;
-    const dg4 = s2.generals.filter((x) => x.at === \u7684.id && x.faction === \u5B88\u308A\u624B && !x.captive);
-    const \u5B88 = \u7684.local + dg4.reduce((a, x) => a + x.retinue, 0);
-    const \u5F8C\u8A70\u306E\u898B\u8FBC\u307F = s2.castles.reduce((a2, x) => {
-      if (x.id === \u7684.id) return a2;
-      if (x.faction !== \u5B88\u308A\u624B && !underMyBanner(s2, \u5B88\u308A\u624B, x.faction)) return a2;
-      const p2 = \u8ECD\u306E\u9053(s2, x.faction, x.id, \u7684.id);
-      if (!p2 || p2.length - 1 > 2) return a2;
-      const gs2 = s2.generals.filter((q) => q.at === x.id && q.faction === x.faction && !q.captive);
-      const \u4F59 = x.local + gs2.reduce((t, q) => t + q.retinue, 0) - minGarrison(x);
-      return a2 + Math.max(0, \u4F59) * 0.5;
-    }, 0);
-    return Math.round((\u5B88 + \u5F8C\u8A70\u306E\u898B\u8FBC\u307F) * 1.3);
-  };
   for (const \u65D7 of s2.generals.filter((g2) => g2.faction === s2.player && g2.\u5F79 === "\u65D7\u982D" && !g2.captive)) {
     const \u53D7 = \u65D7\u982D\u306E\u53D7\u3051\u6301\u3061(s2, \u65D7);
     if (!\u53D7.length) continue;
@@ -21372,7 +21384,7 @@ function advanceMonth(prev, g) {
       }
       continue;
     }
-    const \u8981\u308B\u5175 = \u653B\u3081\u306B\u8981\u308B\u5175(\u7684);
+    const \u8981\u308B\u5175 = \u653B\u3081\u306B\u8981\u308B\u5175(s2, \u7684);
     const \u53D7\u3051\u306E\u57CE = new Set(s2.castles.filter((c22) => c22.faction === s2.player && \u53D7.includes(c22.kuni)).map((c22) => c22.id));
     if (\u5728) {
       const \u9663\u57CE = s2.castles.find((c22) => c22.id === (\u5728.\u5728\u9663 || \u5728.at));
@@ -23030,7 +23042,10 @@ function routeToCastleGate(m, g, cx, cy) {
   if (Math.hypot(cx - open.x, cy - open.y) < 46) return tail;
   const path = navPath(m, cx, cy, open.x, open.y);
   if (!path) return tail;
-  return [...path, ...tail];
+  const \u6B8B\u308A = Math.hypot(open.x - cx, open.y - cy);
+  let i = 0;
+  while (i < path.length - 1 && Math.hypot(open.x - path[i].x, open.y - path[i].y) >= \u6B8B\u308A - 4) i++;
+  return [...path.slice(i), ...tail];
 }
 var gateReachable = (m, g) => g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);
 function nearestOpenGate(m, x, y) {
@@ -25274,6 +25289,32 @@ function \u6A4B\u5F85\u3061\u3092\u898B\u308B(b, c, sx, sy) {
   c.wp = null;
   b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F\u6A4B\u306E\u6DF7\u307F\u3092\u5ACC\u3044\u3001\u702C\u3092\u62BC\u3057\u6E21\u308B\u3002` });
 }
+function \u5947\u8972\u306E\u6E21\u6CB3\u3092\u8A08\u308B(b, c, sx, sy) {
+  if (MAP || !hasRiver() || c.\u62BC\u3057\u6E21\u308B) return false;
+  if (c.routed || c.withdraw || c.squads.some((q) => q.engaged)) return false;
+  if ((c.gen.wit || 55) < 72) return false;
+  if (c.morale < 55) return false;
+  if (b.t < (c.\u6E21\u6CB3\u3092\u8A08\u3063\u305F || 0)) return false;
+  c.\u6E21\u6CB3\u3092\u8A08\u3063\u305F = b.t + 40;
+  if (\u5CB8(c.x, c.y) === \u5CB8(sx, sy)) return false;
+  const \u5834 = \u6E21\u308A\u5834(c.x);
+  const \u4E2D = (RIVER.top + RIVER.bot) / 2 + riverShift(\u5834.x);
+  const \u6E21\u308A\u5834\u307E\u3067 = Math.hypot(\u5834.x - c.x, \u4E2D - c.y);
+  const \u76F4 = Math.hypot(sx - c.x, sy - c.y);
+  const \u6575 = b.corps.filter((o) => !o.dead && !o.destroyed && o.side !== c.side && Math.hypot(\u5834.x - o.x, \u4E2D - o.y) < 240).reduce((a2, o) => a2 + corpsMen(o), 0);
+  const \u9060\u56DE\u308A = \u6E21\u308A\u5834\u307E\u3067 > \u76F4 * 0.9 + 200;
+  if (!\u9060\u56DE\u308A && \u6575 < 700) return false;
+  const \u96E2\u308C = Math.sign(c.x - \u5834.x) || 1;
+  const \u6E21\u70B9 = clamp(c.x + \u96E2\u308C * (260 + Math.random() * 180), 60, FIELD.w - 60);
+  c.\u62BC\u3057\u6E21\u308B = b.t + 120;
+  c.wp = [
+    { x: \u6E21\u70B9, y: (RIVER.top + RIVER.bot) / 2 + riverShift(\u6E21\u70B9), r: 60 },
+    { x: sx, y: sy, r: 50 }
+  ];
+  issueOrder(b, c, { order: "\u79FB\u52D5", tx: c.wp[0].x, ty: c.wp[0].y, keepPath: true });
+  b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F\u6E21\u308A\u5834\u3092\u907F\u3051\u3001\u702C\u306A\u3089\u306C\u6DF5\u3092\u62BC\u3057\u6E21\u3063\u3066\u56DE\u308A\u8FBC\u3080\u3002` });
+  return true;
+}
 function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
@@ -25573,6 +25614,24 @@ function battleAI(b) {
       }
       if (c.side === b.attacker) {
         const g = nearestOpenGate(MAP, c.x, c.y);
+        if (g && g.slot && g.slot !== c.id && !c.pinned) {
+          const a5 = axisOf(MAP.layers[g.layer], g);
+          const \u5F85\u3064\u968A = b.corps.filter((o) => !o.dead && !o.destroyed && !o.routed && !o.withdraw && o.side === b.attacker && o.id !== g.slot && (o.gate === g || !o.gate));
+          const gp5 = gatePos(MAP, MAP.layers[g.layer], g);
+          \u5F85\u3064\u968A.sort((x, y) => Math.hypot(x.x - gp5.x, x.y - gp5.y) - Math.hypot(y.x - gp5.x, y.y - gp5.y));
+          const \u9806 = Math.max(0, \u5F85\u3064\u968A.findIndex((o) => o.id === c.id));
+          const \u63A7 = fromUV(MAP, a5, g.off, a5.half + MAP.t + g.masu + MAP.t + 96 + \u9806 * 66);
+          const \u9694 = Math.hypot(c.x - \u63A7.x, c.y - \u63A7.y);
+          if (\u9694 > 46) {
+            if (!c.wp || !c.wp.length) {
+              issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u63A7.x, ty: \u63A7.y });
+            }
+          } else {
+            c.wp = null;
+            issueOrder(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
+          }
+          continue;
+        }
         if (g && near > 130) {
           if (!c.wp || !c.wp.length) {
             const wp = routeToCastleGate(MAP, g, c.x, c.y);
@@ -25669,6 +25728,7 @@ function battleAI(b) {
       continue;
     }
     if (\u6E21\u308B\u8981 && c.side === b.attacker) \u6A4B\u5F85\u3061\u3092\u898B\u308B(b, c, sx, sy);
+    if (\u6E21\u308B\u8981 && \u5947\u8972\u306E\u6E21\u6CB3\u3092\u8A08\u308B(b, c, sx, sy)) continue;
     if (!MAP && !c.routed && !c.withdraw) {
       const \u9053 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, sx, sy);
       if (\u9053 === "\u7D9A\u884C") continue;
@@ -25744,6 +25804,14 @@ function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   fCorps.\u58EB\u6C17\u306E\u6E9C = (fCorps.\u58EB\u6C17\u306E\u6E9C || 0) + share * 100 * 0.6 * (1 + (flank - 1) * 0.8) * \u582A\u3048;
   fCorps.\u640D = (fCorps.\u640D || 0) + lost;
   if (byCorps) byCorps.\u529F = (byCorps.\u529F || 0) + lost;
+}
+function \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, x, y, \u8DB3\u5143) {
+  if (!c) return true;
+  if (terrainAt(x, y) !== "deep") return true;
+  if (c.\u62BC\u3057\u6E21\u308B && b && b.t < c.\u62BC\u3057\u6E21\u308B) return true;
+  if (c.routed || c.withdraw) return true;
+  if (\u8DB3\u5143 === "deep") return true;
+  return false;
 }
 function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
@@ -25837,13 +25905,15 @@ function stepBattle(b, dt) {
     if (c.detach || c.routed || c.withdraw || c.ambush && !c.revealed) continue;
     const mates = alive.filter((o) => o !== c && o.side === c.side && !o.detach && !o.routed && !o.withdraw);
     if (!mates.length) continue;
+    const \u5C4A\u304D = MAP ? 96 : 150;
+    const \u505C\u307E\u3063\u3066\u3044\u308B = Math.hypot(c.tx - c.x, c.ty - c.y) <= 6;
     let sx = 0, sy = 0;
     for (const o of mates) {
       const d = Math.hypot(o.x - c.x, o.y - c.y);
-      if (d > 0.1 && d < 150) {
-        sx += (c.x - o.x) / d * (150 - d);
-        sy += (c.y - o.y) / d * (150 - d);
-      }
+      if (d <= 0.1 || d >= \u5C4A\u304D) continue;
+      if (\u505C\u307E\u3063\u3066\u3044\u308B && d > 46) continue;
+      sx += (c.x - o.x) / d * (\u5C4A\u304D - d);
+      sy += (c.y - o.y) / d * (\u5C4A\u304D - d);
     }
     if (c.pinned) continue;
     const cap = MAP ? 12 : 40;
@@ -25904,6 +25974,12 @@ function stepBattle(b, dt) {
       }
     }
     const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy);
+    if (!(dist > 6) || HOLD || c.ambush && !c.revealed) {
+      if (c.\u901F) {
+        c.\u901F.x *= Math.max(0, 1 - dt / 0.4);
+        c.\u901F.y *= Math.max(0, 1 - dt / 0.4);
+      }
+    }
     if (dist > 6 && !HOLD && !(c.ambush && !c.revealed)) {
       const terr = TERRAIN[c.\u5730];
       const avgSpeed = c.squads.length ? c.squads.reduce((s2, q) => s2 + ARM_STATS[q.type].speed * q.men, 0) / Math.max(1, corpsMen(c)) : 30;
@@ -25939,14 +26015,33 @@ function stepBattle(b, dt) {
         if (\u5916) \u5BC4\u305B\u9053 = 0.6;
       }
       const v = \u968A\u306E\u8DB3 * fieldScale() * \u6C34\u99B4\u308C\u306E\u8DB3(c, c.\u5730, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * \u5BC4\u305B\u9053 * \u6DF7\u307F;
-      const mvx = dx / dist * v * dt, mvy = dy / dist * v * dt;
-      let \u9032\u3081\u305F = true;
-      if (passableFor(c, b, c.x + mvx, c.y + mvy)) {
+      const \u671Bx = dx / dist * v, \u671By = dy / dist * v;
+      const \u901F = c.\u901F || { x: \u671Bx, y: \u671By };
+      const \u5BC4\u305B = Math.min(1, dt / 0.9);
+      \u901F.x += (\u671Bx - \u901F.x) * \u5BC4\u305B;
+      \u901F.y += (\u671By - \u901F.y) * \u5BC4\u305B;
+      c.\u901F = \u901F;
+      const \u901F\u3055 = Math.hypot(\u901F.x, \u901F.y) || 1;
+      const \u6B69 = Math.min(\u901F\u3055 * dt, dist);
+      const mvx = \u901F.x / \u901F\u3055 * \u6B69, mvy = \u901F.y / \u901F\u3055 * \u6B69;
+      const \u8DB3\u5143 = c.\u5730;
+      const \u5143x = c.x, \u5143y = c.y;
+      const \u8E0F\u3081\u308B = (nx, ny) => passableFor(c, b, nx, ny) && \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, nx, ny, \u8DB3\u5143);
+      if (\u8E0F\u3081\u308B(c.x + mvx, c.y + mvy)) {
         c.x += mvx;
         c.y += mvy;
-      } else if (passableFor(c, b, c.x + mvx, c.y)) c.x += mvx;
-      else if (passableFor(c, b, c.x, c.y + mvy)) c.y += mvy;
-      else \u9032\u3081\u305F = false;
+      } else if (\u8E0F\u3081\u308B(c.x + mvx, c.y)) c.x += mvx;
+      else if (\u8E0F\u3081\u308B(c.x, c.y + mvy)) c.y += mvy;
+      const \u9032\u3081\u305F = Math.hypot(c.x - \u5143x, c.y - \u5143y) > \u6B69 * 0.25;
+      if (!MAP && !\u9032\u3081\u305F && !c.\u62BC\u3057\u6E21\u308B && terrainAt(\u5143x + mvx, \u5143y + mvy) === "deep") {
+        c.\u6C34\u969B = (c.\u6C34\u969B || 0) + dt;
+        const \u5F85\u3064 = 10 + Math.max(0, (c.gen.wit || 55) - 40) * 0.25;
+        if (c.\u6C34\u969B > \u5F85\u3064) {
+          c.\u62BC\u3057\u6E21\u308B = b.t + 120;
+          c.\u6C34\u969B = 0;
+          b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F\u6E21\u308A\u5834\u3092\u5F85\u305F\u305A\u3001\u6DF5\u3092\u62BC\u3057\u6E21\u308B\u3002` });
+        }
+      } else if (\u9032\u3081\u305F) c.\u6C34\u969B = 0;
       if (MAP && !\u9032\u3081\u305F) {
         const R = 30;
         const blocked = (ux, uy) => {
@@ -26084,17 +26179,20 @@ function stepBattle(b, dt) {
       }
       const qd = Math.hypot(targetX - q.x, targetY - q.y);
       const terr = TERRAIN[q.\u5730];
-      if (qd > 2 && (!q.engaged || c.withdraw || c.routed)) {
+      const \u565B\u307F\u4E2D = q.engaged || b.t - (q.\u565B\u307F\u523B == null ? -99 : q.\u565B\u307F\u523B) < 1.2;
+      const \u6B62\u307E\u308B\u5E45 = MAP ? 5 : 2;
+      if (qd > \u6B62\u307E\u308B\u5E45 && (!\u565B\u307F\u4E2D || c.withdraw || c.routed)) {
         const \u9045\u308C = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
         const \u8FFD\u3044\u3064\u304D = c.routed ? 1 : clamp(1 + \u9045\u308C / 34, 1, 2.4);
         const v = st0.speed * \u8FFD\u3044\u3064\u304D * fieldScale() * \u6C34\u99B4\u308C\u306E\u8DB3(c, q.\u5730, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = (targetX - q.x) / qd * Math.min(v * dt, qd);
         const sy = (targetY - q.y) / qd * Math.min(v * dt, qd);
-        if (passableFor(c, b, q.x + sx, q.y + sy)) {
+        const \u8E0F\u3081\u308Bq = (nx, ny) => passableFor(c, b, nx, ny) && \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, nx, ny, q.\u5730);
+        if (\u8E0F\u3081\u308Bq(q.x + sx, q.y + sy)) {
           q.x += sx;
           q.y += sy;
-        } else if (passableFor(c, b, q.x + sx, q.y)) q.x += sx;
-        else if (passableFor(c, b, q.x, q.y + sy)) q.y += sy;
+        } else if (\u8E0F\u3081\u308Bq(q.x + sx, q.y)) q.x += sx;
+        else if (\u8E0F\u3081\u308Bq(q.x, q.y + sy)) q.y += sy;
         const base = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
         q.facing = base + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
         const \u843D\u3061\u7740\u304F\u5148 = clamp(52 + c.gen.lead * 0.28 + terr.cohesion * 4, 12, 92);
@@ -26385,6 +26483,7 @@ function stepBattle(b, dt) {
   }
   const CS = 90;
   const grids = { P: /* @__PURE__ */ new Map(), E: /* @__PURE__ */ new Map() };
+  const \u7D44\u306E\u5E33 = /* @__PURE__ */ new Map();
   for (const c of alive) {
     if (c.ambush && !c.revealed) continue;
     const gmap = grids[c.side];
@@ -26397,6 +26496,7 @@ function stepBattle(b, dt) {
         gmap.set(k, arr);
       }
       arr.push([c, q]);
+      \u7D44\u306E\u5E33.set(q.id, [c, q]);
     }
   }
   const wallBetween = (x1, y1, x2, y2) => {
@@ -26429,6 +26529,17 @@ function stepBattle(b, dt) {
       if (best && bd <= ring * CS) break;
     }
     if (best && MAP && wallBetween(q.x, q.y, best.e.x, best.e.y)) return [null, 1e9];
+    const \u524D = q.foeId && \u7D44\u306E\u5E33.get(q.foeId);
+    if (\u524D) {
+      const [pf, pe] = \u524D;
+      const pd = Math.hypot(pe.x - q.x, pe.y - q.y);
+      const \u898B\u3048\u308B = pe.men > 0 && !(MAP && wallBetween(q.x, q.y, pe.x, pe.y));
+      const \u9593\u5408 = Math.max(46, (ARM_STATS[q.type].range || 0) * 1.2);
+      if (\u898B\u3048\u308B && pd < \u9593\u5408 && (!best || bd > pd * 0.8)) {
+        return [{ f: pf, e: pe, d: pd }, pd];
+      }
+    }
+    if (best) q.foeId = best.e.id;
     return best ? [best, bd] : [null, 1e9];
   };
   for (const c of alive) {
@@ -26447,14 +26558,18 @@ function stepBattle(b, dt) {
           q.engaged = true;
           if (!\u76F8\u624B\u3082\u5F15\u304F) melee.e.engaged = true;
           q.link = { x: melee.e.x, y: melee.e.y };
-          const pull = 2.2 * dt;
-          const ax = (melee.e.x - q.x) / Math.max(1, mdist) * pull;
-          const ay = (melee.e.y - q.y) / Math.max(1, mdist) * pull;
-          if (passable(q.x + ax, q.y + ay)) {
-            q.x += ax;
-            q.y += ay;
-          } else if (passable(q.x + ax, q.y)) q.x += ax;
-          else if (passable(q.x, q.y + ay)) q.y += ay;
+          q.\u565B\u307F\u523B = b.t;
+          const \u9593\u5408 = 15;
+          if (mdist > \u9593\u5408 + 2) {
+            const pull = 1.6 * dt;
+            const ax = (melee.e.x - q.x) / Math.max(1, mdist) * pull;
+            const ay = (melee.e.y - q.y) / Math.max(1, mdist) * pull;
+            if (passable(q.x + ax, q.y + ay)) {
+              q.x += ax;
+              q.y += ay;
+            } else if (passable(q.x + ax, q.y)) q.x += ax;
+            else if (passable(q.x, q.y + ay)) q.y += ay;
+          }
         }
         if (b.fx.length < 200 && (c.side === "P" || c.seen)) {
           const mx2 = (q.x + melee.e.x) / 2, my2 = (q.y + melee.e.y) / 2;

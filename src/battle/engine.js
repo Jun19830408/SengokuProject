@@ -104,6 +104,23 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   if (byCorps) byCorps.功 = (byCorps.功 || 0) + lost;
 }
 
+/* 淵（深い川）は、決めてからでなければ踏み込まない（GDD 8.1）。
+
+   道さがしは淵を法外な費えとして避けるが、道が引けなかったときや、持ち場が
+   対岸にあるときに、組が水へ歩き入っていた。実測では、川のある野で兵の三.六％が
+   常時どこかの淵に立っていた。槍を水の中で合わせれば、足も隊列も戦う力も落ちる。
+
+   足元の水は、将が決めて入るものである。押し渡ると決めた隊、崩れて逃げる兵、
+   すでに水中にいて岸へ上がろうとする組――この三つだけが水を踏める。 */
+function 淵を踏めるか(c, b, x, y, 足元) {
+  if (!c) return true;
+  if (terrainAt(x, y) !== "deep") return true;
+  if (c.押し渡る && b && b.t < c.押し渡る) return true;     // 押し渡ると決めた隊
+  if (c.routed || c.withdraw) return true;                 // 崩れた兵は何でも渡る
+  if (足元 === "deep") return true;                        // すでに水の中。岸へ上がるために動く
+  return false;
+}
+
 export function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt; b.aiClock -= dt;
@@ -191,10 +208,23 @@ export function stepBattle(b, dt) {
     if (c.detach || c.routed || c.withdraw || (c.ambush && !c.revealed)) continue;
     const mates = alive.filter((o) => o !== c && o.side === c.side && !o.detach && !o.routed && !o.withdraw);
     if (!mates.length) continue;
+    /* 押し合いは、重なったときだけ（GDD 8.3）。
+
+       味方が百五十歩のうちにいれば、常に押し戻す力が掛かっていた。門前のように
+       隊が寄り集まる場では、この押し合いと「行き先へ進め」の下知とが毎瞬打ち消し
+       合い、隊はその場で前後に揺れる。実測では、城攻めで隊の動きの二七％が前と逆。
+
+       行き先に着いて留まっている隊は、よほど重なっていない限り押されない。避けるのは
+       通りかかる側の務めであって、陣を敷いている側ではない。城内は狭いので、
+       押し合いの届きも野より短く取る。 */
+    const 届き = MAP ? 96 : 150;
+    const 停まっている = Math.hypot(c.tx - c.x, c.ty - c.y) <= 6;
     let sx = 0, sy = 0;
     for (const o of mates) {
       const d = Math.hypot(o.x - c.x, o.y - c.y);
-      if (d > 0.1 && d < 150) { sx += ((c.x - o.x) / d) * (150 - d); sy += ((c.y - o.y) / d) * (150 - d); }
+      if (d <= 0.1 || d >= 届き) continue;
+      if (停まっている && d > 46) continue;          // 陣を敷いている隊は、重ならぬ限り動かさない          // 陣を敷いている隊は、重ならぬ限り動かさない
+      sx += ((c.x - o.x) / d) * (届き - d); sy += ((c.y - o.y) / d) * (届き - d);
     }
     // 隊どうしが押し合う力。これも城壁を越えてはならない。
     if (c.pinned) continue;              // 門に取り付いた隊は動かない
@@ -252,6 +282,10 @@ export function stepBattle(b, dt) {
       if (c.wp.length) { c.tx = c.wp[0].x; c.ty = c.wp[0].y; }
     }
     const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy);
+    if (!(dist > 6) || HOLD || (c.ambush && !c.revealed)) {
+      // 止まる隊の足は、すっと止まらず、少しずつ落ちる
+      if (c.速) { c.速.x *= Math.max(0, 1 - dt / 0.4); c.速.y *= Math.max(0, 1 - dt / 0.4); }
+    }
     if (dist > 6 && !HOLD && !(c.ambush && !c.revealed)) {
       const terr = TERRAIN[c.地];
       const avgSpeed = c.squads.length ? c.squads.reduce((s, q) => s + ARM_STATS[q.type].speed * q.men, 0) / Math.max(1, corpsMen(c)) : 30;
@@ -324,13 +358,57 @@ export function stepBattle(b, dt) {
       }
       const v = 隊の足 * fieldScale() * 水馴れの足(c, c.地, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1)
         * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * 寄せ道 * 混み;
-      const mvx = (dx / dist) * v * dt, mvy = (dy / dist) * v * dt;
+      /* 行き過ぎない（GDD 8.3）。
+
+         歩幅を残りの隔たりで頭打ちにしていなかった。足は毎秒三十歩ほど、刻みは
+         〇.二秒であるから一歩が六歩ぶん。止まる幅（六歩）とちょうど同じ寸法なので、
+         隊は的を飛び越しては引き返し、その場で前後に揺れていた。実測では、城攻めで
+         隊の動きの三六％が前と逆であった。組は隊に付いて動くので、揺れは隊のぶんだけ
+         そのまま組へ伝わる。残りの隔たりを超えて踏み出さないようにする。 */
+      /* 足取りの慣性（GDD 8.3）。
+
+         隊には幾つもの力が掛かる――下知の引き、味方との押し合い、壁の押し返し、
+         門の順番待ち。これらが毎瞬入れ替わるので、隊はその場で前後に振れていた。
+         軍勢は独楽ではない。いま進んでいる向きは、次の瞬間も残る。
+
+         望む足を、いまの足へ半秒ほどかけて寄せる。相反する下知は打ち消し合う前に
+         鈍り、隊は滑らかに向きを変える。 */
+      const 望x = (dx / dist) * v, 望y = (dy / dist) * v;
+      const 速 = c.速 || { x: 望x, y: 望y };
+      /* 向きを変えるのに要る間は、おおよそ一秒弱。千の兵が一度に向き直れはしない。 */
+      const 寄せ = Math.min(1, dt / 0.9);
+      速.x += (望x - 速.x) * 寄せ; 速.y += (望y - 速.y) * 寄せ;
+      c.速 = 速;
+      const 速さ = Math.hypot(速.x, 速.y) || 1;
+      const 歩 = Math.min(速さ * dt, dist);
+      const mvx = (速.x / 速さ) * 歩, mvy = (速.y / 速さ) * 歩;
       // 城壁と閉じた門は通れない。ぶつかったら壁沿いに滑る。
-      let 進めた = true;
-      if (passableFor(c, b, c.x + mvx, c.y + mvy)) { c.x += mvx; c.y += mvy; }
-      else if (passableFor(c, b, c.x + mvx, c.y)) c.x += mvx;
-      else if (passableFor(c, b, c.x, c.y + mvy)) c.y += mvy;
-      else 進めた = false;
+      const 足元 = c.地;
+      const 元x = c.x, 元y = c.y;
+      const 踏める = (nx, ny) => passableFor(c, b, nx, ny) && 淵を踏めるか(c, b, nx, ny, 足元);
+      if (踏める(c.x + mvx, c.y + mvy)) { c.x += mvx; c.y += mvy; }
+      else if (踏める(c.x + mvx, c.y)) c.x += mvx;
+      else if (踏める(c.x, c.y + mvy)) c.y += mvy;
+      /* 「進めた」は、実際に足が出たかで判ずる。横へ滑るだけで零歩でも進んだことに
+         していたので、水際に立ち尽くしたまま足止めを数えられなかった。 */
+      const 進めた = Math.hypot(c.x - 元x, c.y - 元y) > 歩 * 0.25;
+      /* 水際で足が止まったなら、渡ると決める（GDD 8.1）。
+
+         淵を厭うのはよいが、行き先が川の向こうにあって渡り場への道も引けなければ、
+         隊は岸に立ち尽くすほかなくなる。それでは戦にならない。二秒のあいだ一歩も
+         進めず、その足止めが水のせいであるなら、そこで腹を決めて押し渡る。
+         決めて渡るのだから、足も隊列も落ちるのは承知の上である。 */
+      if (!MAP && !進めた && !c.押し渡る && terrainAt(元x + mvx, 元y + mvy) === "deep") {
+        c.水際 = (c.水際 || 0) + dt;
+        /* 待つ長さは知略で変わる。ものを知らぬ将ほど早く焦れて水へ入る、のではない。
+           逆である――渡り場を探して回るだけの才があるかどうかで、腹を決めるまでの
+           長さが変わる。知略の高い将は先に別の道を探し、それでも駄目なら渡る。 */
+        const 待つ = 10 + Math.max(0, (c.gen.wit || 55) - 40) * 0.25;
+        if (c.水際 > 待つ) {
+          c.押し渡る = b.t + 120; c.水際 = 0;
+          b.log.push({ t: b.t, text: `${c.gen.name}隊は渡り場を待たず、淵を押し渡る。` });
+        }
+      } else if (進めた) c.水際 = 0;
       /* 壁際に貼りついてしまったときだけ、壁から離す。
 
          かつては「遠くへ向かう途中」ならば毎瞬これを掛けていた。城内は壁だらけなので、
@@ -463,7 +541,19 @@ export function stepBattle(b, dt) {
       /* 退いている隊の組は、噛み合っていても動く。
          そうでないと、組は動かず、隊の代表点は組の重心へ引き戻され、
          撤退を命じても一歩も退けない（corps.js の退かせる を参照）。 */
-      if (qd > 2 && (!q.engaged || c.withdraw || c.routed)) {
+      /* 噛み合った組は、離れるまで持ち場へ戻らない（GDD 8.3）。
+
+         噛み合いは一瞬ごとに立ったり消えたりする（間合いの外へ出れば消える）。
+         消えた隙に持ち場へ引き戻され、次の瞬間また前へ出る――前後に往復して
+         「震えている」ように見えたのはこれである。噛み合ってから一.二秒は、
+         その場で斬り結んでいるものとして扱う。
+
+         止まる幅も広げる。二歩の隔たりで足を出しては、いつまでも足踏みになる。 */
+      const 噛み中 = q.engaged || (b.t - (q.噛み刻 == null ? -99 : q.噛み刻) < 1.2);
+      /* 足踏みしない幅。城内は隊も組も密なので広く取る（門前の震えはここが効く）。
+         野では組がぴたりと寄るほうがよく、狭く取る。 */
+      const 止まる幅 = MAP ? 5 : 2;
+      if (qd > 止まる幅 && (!噛み中 || c.withdraw || c.routed)) {
         /* 持ち場へ追いつくための足（GDD 8.3）。
 
            組は自分の兵科の速さでしか歩けなかった。ところが隊そのものは
@@ -479,9 +569,10 @@ export function stepBattle(b, dt) {
         const v = st0.speed * 追いつき * fieldScale() * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = ((targetX - q.x) / qd) * Math.min(v * dt, qd);
         const sy = ((targetY - q.y) / qd) * Math.min(v * dt, qd);
-        if (passableFor(c, b, q.x + sx, q.y + sy)) { q.x += sx; q.y += sy; }
-        else if (passableFor(c, b, q.x + sx, q.y)) q.x += sx;
-        else if (passableFor(c, b, q.x, q.y + sy)) q.y += sy;
+        const 踏めるq = (nx, ny) => passableFor(c, b, nx, ny) && 淵を踏めるか(c, b, nx, ny, q.地);
+        if (踏めるq(q.x + sx, q.y + sy)) { q.x += sx; q.y += sy; }
+        else if (踏めるq(q.x + sx, q.y)) q.x += sx;
+        else if (踏めるq(q.x, q.y + sy)) q.y += sy;
         const base = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
         q.facing = base + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;   // 乱れて初めて向きがずれる
         /* 行軍のあいだの陣形維持（GDD 8.3）。
@@ -789,6 +880,7 @@ export function stepBattle(b, dt) {
   // side ごとに格子へ振り分け、近傍だけを調べる
   const CS = 90;
   const grids = { P: new Map(), E: new Map() };
+  const 組の帳 = new Map();                         // 組の id → [隊, 組]。相手を覚えておくために要る
   for (const c of alive) {
     if (c.ambush && !c.revealed) continue;
     const gmap = grids[c.side];
@@ -798,6 +890,7 @@ export function stepBattle(b, dt) {
       let arr = gmap.get(k);
       if (!arr) { arr = []; gmap.set(k, arr); }
       arr.push([c, q]);
+      組の帳.set(q.id, [c, q]);
     }
   }
   // 城攻めでは、壁や閉じた門を隔てた相手とは戦えない
@@ -829,6 +922,26 @@ export function stepBattle(b, dt) {
     }
     // 壁や閉じた門を隔てていれば、その相手とは戦えない
     if (best && MAP && wallBetween(q.x, q.y, best.e.x, best.e.y)) return [null, 1e9];
+    /* 組み合った相手は、そう易々と取り替えない（GDD 8.3）。
+
+       毎瞬いちばん近い敵を選び直していた。門前のように敵味方が密集する場では、
+       ほぼ同じ隔たりの敵が幾つも並ぶので、選ぶ相手が瞬きのたびに入れ替わる。
+       相手が替われば目指す先も替わるので、組はその場で小刻みに震えた。
+       実測では、城攻めで動いた標本の三六％が前と逆へ折り返していた。
+
+       いま組み合っている相手が生きていて、間合いのうちにいるなら、そのまま
+       組み合い続ける。乗り換えるのは、よほど近い敵が現れたときだけである。 */
+    const 前 = q.foeId && 組の帳.get(q.foeId);
+    if (前) {
+      const [pf, pe] = 前;
+      const pd = Math.hypot(pe.x - q.x, pe.y - q.y);
+      const 見える = pe.men > 0 && !(MAP && wallBetween(q.x, q.y, pe.x, pe.y));
+      const 間合 = Math.max(46, (ARM_STATS[q.type].range || 0) * 1.2);
+      if (見える && pd < 間合 && (!best || bd > pd * 0.8)) {
+        return [{ f: pf, e: pe, d: pd }, pd];
+      }
+    }
+    if (best) q.foeId = best.e.id;
     return best ? [best, bd] : [null, 1e9];
   };
   for (const c of alive) {
@@ -850,13 +963,24 @@ export function stepBattle(b, dt) {
           q.engaged = true;
           if (!相手も引く) melee.e.engaged = true;
           q.link = { x: melee.e.x, y: melee.e.y };      // 組み合っている相手
-          // 接戦中の組は互いへ少し詰め寄る。隊列は保ったまま噛み合いが見えるようにする。
-          const pull = 2.2 * dt;
-          const ax = ((melee.e.x - q.x) / Math.max(1, mdist)) * pull;
-          const ay = ((melee.e.y - q.y) / Math.max(1, mdist)) * pull;
-          if (passable(q.x + ax, q.y + ay)) { q.x += ax; q.y += ay; }
-          else if (passable(q.x + ax, q.y)) q.x += ax;
-          else if (passable(q.x, q.y + ay)) q.y += ay;
+          q.噛み刻 = b.t;                                // 噛み合った刻。持ち場へ戻すのを控える
+          /* 噛み合いは間合いを保つ（GDD 8.3）。
+
+             もとは毎瞬たがいへ詰め寄っていた。双方が同じことをするので二つの組は
+             重なるまで寄り、重なれば近傍の敵が入れ替わり、また別の方へ詰め寄る。
+             これが門前の「小刻みな震え」の正体である。
+
+             槍を合わせる間合いというものがある。離れていれば詰め、詰まりすぎれば
+             それ以上は寄らない。間合いに収まっていれば、その場で斬り結ぶ。 */
+          const 間合 = 15;
+          if (mdist > 間合 + 2) {
+            const pull = 1.6 * dt;
+            const ax = ((melee.e.x - q.x) / Math.max(1, mdist)) * pull;
+            const ay = ((melee.e.y - q.y) / Math.max(1, mdist)) * pull;
+            if (passable(q.x + ax, q.y + ay)) { q.x += ax; q.y += ay; }
+            else if (passable(q.x + ax, q.y)) q.x += ax;
+            else if (passable(q.x, q.y + ay)) q.y += ay;
+          }
         }
         // 接戦の火花。見づらくならないよう間引いて出す。
         if (b.fx.length < 200 && (c.side === "P" || c.seen)) {

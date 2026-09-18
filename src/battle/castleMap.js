@@ -549,7 +549,16 @@ export function routeToCastleGate(m, g, cx, cy) {
   if (Math.hypot(cx - open.x, cy - open.y) < 46) return tail;
   const path = navPath(m, cx, cy, open.x, open.y);
   if (!path) return tail;
-  return [...path, ...tail];
+  /* いま居るところより後ろの地点は捨てる（GDD 9.3）。
+
+     道は「いちばん近い節」から引かれるので、その節が隊の後ろにあることがある。
+     引き直すたびに隊は一度後戻りし、着いてはまた引き直され――門前で行きつ戻りつ
+     していた。実測では、この隊は百二十秒のあいだに三十八回も前後を繰り返していた。
+     虎口の開き口へ近づかない地点は、通る意味がない。 */
+  const 残り = Math.hypot(open.x - cx, open.y - cy);
+  let i = 0;
+  while (i < path.length - 1 && Math.hypot(open.x - path[i].x, open.y - path[i].y) >= 残り - 4) i++;
+  return [...path.slice(i), ...tail];
 }
 
 export const gateReachable = (m, g) => g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);

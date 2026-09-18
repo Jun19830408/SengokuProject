@@ -589,5 +589,46 @@ function 混ませる(知) {
 
 console.log('');
 if (咎.length) { console.log('★背いた事:'); for (const x of 咎) console.log('   ' + x); }
+
+/* ---- 淵は決めてから踏み込む（GDD 8.1） ---- */
+console.log('\n── 淵は、決めてからでなければ踏み込まない');
+{
+  let 淵人 = 0, 総人 = 0, 川の野 = 0, 押し渡り = 0;
+  for (const 鍵 of [11, 22, 33, 44, 55, 66]) {
+    種 = (鍵 * 2654435761) | 0;
+    A.setBattleMap(null); A.setFieldSeed('k' + 鍵, 'm' + 鍵); A.layoutField(8000, 10);
+    if (!(A.RIVER.bot > A.RIVER.top)) continue;
+    川の野++;
+    const 将 = (side, i) => ({ id: `${side}${i}`, name: `${side}${i}`, lead: 55 + i * 3, valor: 58,
+      wit: 50 + i * 8, gov: 50, retinue: 480, retTrain: 62, unity: 60 });
+    const 隊 = (side, n, col) => Array.from({ length: n }, (_, i) => A.makeCorps(side, 将(side, i), 480, 1120, 62, 58,
+      A.FIELD.w / 2 + (i - (n - 1) / 2) * 200, side === 'P' ? A.FIELD.h * 0.86 : A.FIELD.h * 0.14,
+      side === 'P' ? -Math.PI / 2 : Math.PI / 2, col));
+    const b = A.createBattle(隊('P', 5, '#2F5D8C'), 隊('E', 5, '#9B3A34'), 'P');
+    b.phase = 'fight';
+    for (const c of b.corps) c.auto = true;
+    for (let k = 0; k < 2000; k++) {
+      A.stepBattle(b, 0.2);
+      if (b.phase === 'over') break;
+      if (k % 10) continue;
+      for (const c of b.corps) {
+        if (c.dead || c.destroyed) continue;
+        const 決めて渡る = !!c.押し渡る || c.routed || c.withdraw;
+        if (c.押し渡る) 押し渡り++;
+        for (const q of c.squads) {
+          if (q.men <= 0) continue;
+          総人 += q.men;
+          if (!決めて渡る && A.terrainAt(q.x, q.y) === 'deep') 淵人 += q.men;
+        }
+      }
+    }
+  }
+  const 割 = 淵人 / Math.max(1, 総人) * 100;
+  確('川のある野で試せている', 川の野 >= 2, `${川の野}／6`);
+  確('決めもせず淵に立つ兵は、ごく僅か', 割 < 1.2,
+    `${割.toFixed(2)}％（掟を入れる前は 3.62％）`);
+  確('渡ると決めた隊はある（奇襲の渡河・押し渡り）', 押し渡り > 0, `${押し渡り} 標本`);
+}
+
 console.log('エラー:', 咎.length ? `${咎.length}件` : 'なし');
 process.exit(咎.length ? 1 : 0);

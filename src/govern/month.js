@@ -109,6 +109,33 @@ export function 軍の名(s, 頭) {
 }
 
 // 月を送る。天下じゅうの家が、この一手で動く
+/* 攻めに要る兵を見積もる（GDD 6.4 / 9.1）。
+
+   城の守りだけを見て出していたので、着いたところへ隣の城から後詰が来て押し返され、
+   同じ城を何度も攻めては退く戦になっていた。遊ぶ側の申し出は「敵城を攻め取れるに
+   十分な兵数を出したい。ある程度大きな兵で出して連戦させたい」であった。
+
+   数えるのは二つ。城そのものの兵と、来うる後詰――街道で二歩までにある同じ家
+   （と旗の下）の城が出せる兵の半ば。その和に割増を掛けたものを「要る兵」とする。
+
+   割増は一.六。城攻めは寄せ手が三倍という言い習わしからすれば控えめだが、
+   こちらは後詰まで数えたうえでの一.六であるから、実際にはそれに近い。 */
+export function 攻めに要る兵(s, 的, 割 = 1.6) {
+  const 守り手 = 的.faction;
+  const dg = (s.generals || []).filter((x) => x.at === 的.id && x.faction === 守り手 && !x.captive);
+  const 守 = 的.local + dg.reduce((a, x) => a + x.retinue, 0);
+  const 後詰の見込み = (s.castles || []).reduce((a2, x) => {
+    if (x.id === 的.id) return a2;
+    if (x.faction !== 守り手 && !underMyBanner(s, 守り手, x.faction)) return a2;
+    const p2 = 軍の道(s, x.faction, x.id, 的.id);
+    if (!p2 || p2.length - 1 > 2) return a2;
+    const gs2 = (s.generals || []).filter((q) => q.at === x.id && q.faction === x.faction && !q.captive);
+    const 余 = x.local + gs2.reduce((t, q) => t + q.retinue, 0) - minGarrison(x);
+    return a2 + Math.max(0, 余) * 0.5;
+  }, 0);
+  return Math.round((守 + 後詰の見込み) * 割);
+}
+
 export function advanceMonth(prev, g) {
       const s = structuredClone(prev);
       const events = [];
@@ -1480,8 +1507,22 @@ export function advanceMonth(prev, g) {
           };
           for (const t of take) t.at = null;
           c.food = Math.max(0, c.food - 糧);
-          /* 近隣の城から兵を寄せ、一手にまとめて出す（各個撃破を避ける）。 */
-          const 寄 = 近隣から兵を寄せる(s, fid, c, 軍, { 道: 軍の道 });
+          /* 近隣の城から兵を寄せ、一手にまとめて出す（各個撃破を避ける）。
+
+             これまでは「近くの三城から、道は三歩まで」で、要る数も置かずに寄せていた。
+             出て行くのは常にぎりぎりの兵で、城の守りと後詰に押し返され、同じ城へ
+             何度も寄せては退く戦になっていた。旗頭と同じ物差し（攻めに要る兵）を
+             当て、届くまで寄せる。届かねば、その月は出さずに兵を蓄える。 */
+          const 要る = 攻めに要る兵(s, cand);
+          const 寄 = 近隣から兵を寄せる(s, fid, c, 軍, { 道: 軍の道, 限り: 5, 歩: 5, 要る });
+          if (軍.men < 要る * 0.8 && !好機か(軍.men, foeMen2)) {
+            /* 揃わなければ出さない。兵は城へ返す。 */
+            c.local += localSend; c.rost = [...(c.rost || []), ...tkA.taken];
+            c.food += 糧;
+            for (const t2 of take) t2.at = c.id;
+            for (const q of 寄) { q.城.local += q.兵 - (q.将 ? q.将.retinue : 0); if (q.将) q.将.at = q.城.id; }
+            break;
+          }
           s.armies.push(軍);
           events.push(`${s.factions[fid].name}が${c.name}より出陣。${cand.name}を目指す。`
             + (寄.length ? `（${寄.map((q) => q.城.name).join("・")}より${fmt(寄.reduce((a2, q) => a2 + q.兵, 0))}人が加わる）` : ""));
@@ -1667,25 +1708,6 @@ export function advanceMonth(prev, g) {
          陣を払って帰す（一年のあいだ、その城には向かわない）。 */
       旗頭の済んだ許しを片づける(s);
       旗頭の古い断りを片づける(s);
-      /* 攻めに要る兵を見積もる（GDD 6.4 / 9.1）。
-         城の守りだけを見て出すと、着いたところへ隣の城から後詰が来て押し返される。
-         城の兵に加え、街道で二歩までにある同じ家（と旗の下）の城から来うる兵の
-         半ばまで数える。 */
-      const 攻めに要る兵 = (的) => {
-        const 守り手 = 的.faction;
-        const dg4 = s.generals.filter((x) => x.at === 的.id && x.faction === 守り手 && !x.captive);
-        const 守 = 的.local + dg4.reduce((a, x) => a + x.retinue, 0);
-        const 後詰の見込み = s.castles.reduce((a2, x) => {
-          if (x.id === 的.id) return a2;
-          if (x.faction !== 守り手 && !underMyBanner(s, 守り手, x.faction)) return a2;
-          const p2 = 軍の道(s, x.faction, x.id, 的.id);
-          if (!p2 || p2.length - 1 > 2) return a2;
-          const gs2 = s.generals.filter((q) => q.at === x.id && q.faction === x.faction && !q.captive);
-          const 余 = x.local + gs2.reduce((t, q) => t + q.retinue, 0) - minGarrison(x);
-          return a2 + Math.max(0, 余) * 0.5;
-        }, 0);
-        return Math.round((守 + 後詰の見込み) * 1.3);
-      };
       for (const 旗 of s.generals.filter((g) => g.faction === s.player && g.役 === "旗頭" && !g.captive)) {
         const 受 = 旗頭の受け持ち(s, 旗);
         if (!受.length) continue;
@@ -1726,7 +1748,7 @@ export function advanceMonth(prev, g) {
           }
           continue;
         }
-        const 要る兵 = 攻めに要る兵(的);
+        const 要る兵 = 攻めに要る兵(s, 的);
         const 受けの城 = new Set(s.castles.filter((c2) => c2.faction === s.player && 受.includes(c2.kuni))
           .map((c2) => c2.id));
         /* 在陣している手勢があるなら、それを次の城へ向ける（連戦）。

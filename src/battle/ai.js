@@ -1,6 +1,6 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
 import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
-import { ARM_STATS, HILLS, RIVER, fieldScale, hasRiver, riverShift, terrainAt } from "./field.js";
+import { ARM_STATS, FIELD, HILLS, RIVER, fieldScale, hasRiver, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { clamp } from "../core/util.js";
 
@@ -320,6 +320,49 @@ function 橋待ちを見る(b, c, sx, sy) {
   c.押し渡る = b.t + 70;
   c.橋待ち = 0; c.wp = null;
   b.log.push({ t: b.t, text: `${c.gen.name}隊は橋の混みを嫌い、瀬を押し渡る。` });
+}
+
+/* 奇襲の渡河（GDD 8.1 / 8.6）。
+
+   淵は決めてからでなければ踏み込まない――そう定めた（engine の 淵を踏めるか）。
+   では、川を渡って背後を衝くという戦はもう起こらないのか。そうではない。
+   渡り場が敵に固められているなら、わざと瀬でないところを押し渡るのが一手である。
+   真田も島津も、渡れぬはずの所を渡って勝った。
+
+   これは「道が引けなかったから水に入る」のとは別物である。決めて渡る。
+   決めるのは、知略に長けた将が、次の三つを見たときだけとする。
+
+     一、行き先が川の向こうにあること
+     二、渡り場が遠いか、渡り場の袂に敵が待ち構えていること
+     三、己の隊が噛み合っておらず、崩れてもいないこと
+
+   渡れば足も隊列も落ちる。それを承知で回り込むのだから、戦果は敵の不意である。 */
+function 奇襲の渡河を計る(b, c, sx, sy) {
+  if (MAP || !hasRiver() || c.押し渡る) return false;
+  if (c.routed || c.withdraw || c.squads.some((q) => q.engaged)) return false;
+  if ((c.gen.wit || 55) < 72) return false;                  // 知略の要る手である
+  if (c.morale < 55) return false;                           // 気の萎えた隊は冒さない
+  if (b.t < (c.渡河を計った || 0)) return false;              // 一度計ったら、しばらくは計らない
+  c.渡河を計った = b.t + 40;
+  if (岸(c.x, c.y) === 岸(sx, sy)) return false;             // そもそも川を渡らずに行ける
+  const 場 = 渡り場(c.x);
+  const 中 = (RIVER.top + RIVER.bot) / 2 + riverShift(場.x);
+  const 渡り場まで = Math.hypot(場.x - c.x, 中 - c.y);
+  const 直 = Math.hypot(sx - c.x, sy - c.y);
+  /* 渡り場の袂に敵がいるか。固められているなら、そこを通るのは愚である。 */
+  const 敵 = b.corps.filter((o) => !o.dead && !o.destroyed && o.side !== c.side
+    && Math.hypot(場.x - o.x, 中 - o.y) < 240).reduce((a2, o) => a2 + corpsMen(o), 0);
+  const 遠回り = 渡り場まで > 直 * 0.9 + 200;
+  if (!遠回り && 敵 < 700) return false;
+  /* 渡る先は、敵の目の届かぬところ。渡り場から離れた岸を選ぶ。 */
+  const 離れ = Math.sign(c.x - 場.x) || 1;
+  const 渡点 = clamp(c.x + 離れ * (260 + Math.random() * 180), 60, FIELD.w - 60);
+  c.押し渡る = b.t + 120;
+  c.wp = [{ x: 渡点, y: (RIVER.top + RIVER.bot) / 2 + riverShift(渡点), r: 60 },
+    { x: sx, y: sy, r: 50 }];
+  issueOrder(b, c, { order: "移動", tx: c.wp[0].x, ty: c.wp[0].y, keepPath: true });
+  b.log.push({ t: b.t, text: `${c.gen.name}隊は渡り場を避け、瀬ならぬ淵を押し渡って回り込む。` });
+  return true;
 }
 
 export function battleAI(b) {
@@ -692,6 +735,34 @@ export function battleAI(b) {
       if (c.side === b.attacker) {
         // 寄せ手：抜けられる門のうち、いちばん外の近い門へ取り付く
         const g = nearestOpenGate(MAP, c.x, c.y);
+        /* 門の順番待ち（GDD 9.3）。
+
+           門の間口は狭く、取り付けるのは一隊だけである。ところが残りの隊も毎度
+           門へ寄せていたので、押し合いに弾かれては寄せ直し、門前で行きつ戻りつ
+           していた。実測では、城攻めで隊の動きの三割が前と逆であった――遊ぶ側の
+           目には「組があっちへ行ったりこっちへ行ったり」と映る。
+
+           取り付けぬ隊は、門へ続く道の後ろに列を作って待つ。順は門に近い者から。
+           取り付いた隊が退けば、次の隊がそのまま前へ出る。待つのが常道である。 */
+        if (g && g.slot && g.slot !== c.id && !c.pinned) {
+          const a5 = axisOf(MAP.layers[g.layer], g);
+          const 待つ隊 = b.corps.filter((o) => !o.dead && !o.destroyed && !o.routed && !o.withdraw
+            && o.side === b.attacker && o.id !== g.slot && (o.gate === g || !o.gate));
+          const gp5 = gatePos(MAP, MAP.layers[g.layer], g);
+          待つ隊.sort((x, y) => Math.hypot(x.x - gp5.x, x.y - gp5.y) - Math.hypot(y.x - gp5.x, y.y - gp5.y));
+          const 順 = Math.max(0, 待つ隊.findIndex((o) => o.id === c.id));
+          const 控 = fromUV(MAP, a5, g.off, a5.half + MAP.t + g.masu + MAP.t + 96 + 順 * 66);
+          const 隔 = Math.hypot(c.x - 控.x, c.y - 控.y);
+          if (隔 > 46) {
+            if (!c.wp || !c.wp.length) {
+              issueOrder(b, c, { order: "移動", tx: 控.x, ty: 控.y });
+            }
+          } else {
+            c.wp = null;
+            issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y });
+          }
+          continue;
+        }
         if (g && near > 130) {
           if (!c.wp || !c.wp.length) {
             const wp = routeToCastleGate(MAP, g, c.x, c.y);
@@ -814,6 +885,8 @@ export function battleAI(b) {
     sx = 掟.sx; sy = 掟.sy;
     if (掟.射る) { issueOrder(b, c, 岸から射る(c, tgt, sx, sy)); continue; }
     if (渡る要 && c.side === b.attacker) 橋待ちを見る(b, c, sx, sy);
+    // 渡り場が固められているなら、知略のある将は淵を押し渡って回り込む
+    if (渡る要 && 奇襲の渡河を計る(b, c, sx, sy)) continue;
     /* 地物を避けて寄せる。道が引ければそれを辿り、引けなければ真っすぐ行く。 */
     if (!MAP && !c.routed && !c.withdraw) {
       const 道 = 寄せ道を引く(b, c, sx, sy);
