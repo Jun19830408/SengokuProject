@@ -38,7 +38,13 @@ Math.random = function () { 種 |= 0; 種 = (種 + 0x6D2B79F5) | 0;
   let t = 種; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 
-setFieldSeed('x', 'y'); layoutField(12000, 8);
+/* 川の無い野で測る（GDD 8.6）。
+
+   この試験が見たいのは「噛み合っている味方の筋をすり抜けないか」であって、
+   川の渡り方ではない。もとの野（種 x・y）には川が流れており、淵を決めてからでしか
+   踏み込まぬ掟（engine の 淵を踏めるか）を入れて以降、両軍が岸で睨み合う時間が
+   長くなって、すり抜けとも手余りともつかぬ数を拾っていた。川は chikei で測る。 */
+setFieldSeed('p', 'q'); layoutField(12000, 8);
 const 将 = (id, 名) => ({ id, name: 名, lead: 70, valor: 60, wit: 55, gov: 55,
   retinue: 500, retTrain: 70, unity: 65 });
 

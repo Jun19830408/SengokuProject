@@ -1,6 +1,6 @@
 import { axisOf, fromUV, gateOpenU, gatePos } from "./castleMap.js";
 import { KOMA, rot } from "./corps.js";
-import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, RIVER, WOODS, hasRiver, riverShift } from "./field.js";
+import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, RIVER, ROAD, WOODS, hasRiver, riverShift } from "./field.js";
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
@@ -875,6 +875,48 @@ function 集落を描く(ctx, v) {
 
    深みは濃く、岸へ寄るほど淡く。岸には砂の縁を置く。
    浅瀬には石が覗き、橋は板を渡して水面へ影を落とす。 */
+/* 街道を描く（GDD 8.1）。
+
+   踏み固められた土の帯。轍が二本、縁は草に紛れる。この野は二つの城を結ぶ街道の
+   途中なのだから、道が一本通っているだけで、野は人の住む土地に見える。 */
+function 道を描く(ctx) {
+  const 節 = ROAD.節;
+  if (!節 || 節.length < 2 || !ROAD.幅) return;
+  const 引く = (幅, 色, 破 = null) => {
+    ctx.save();
+    ctx.strokeStyle = 色; ctx.lineWidth = 幅; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    if (破) ctx.setLineDash(破);
+    ctx.beginPath();
+    ctx.moveTo(節[0].x, 節[0].y);
+    for (let i = 1; i < 節.length; i++) {
+      const a = 節[i - 1], b = 節[i];
+      const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+      ctx.quadraticCurveTo(a.x, a.y, cx, cy);
+    }
+    ctx.lineTo(節[節.length - 1].x, 節[節.length - 1].y);
+    ctx.stroke();
+    ctx.restore();
+  };
+  引く(ROAD.幅 + 8, "rgba(150,146,112,0.30)");        // 草に紛れる縁
+  引く(ROAD.幅, "#C8B48C");                            // 踏み固められた土
+  引く(ROAD.幅 * 0.72, "rgba(214,198,164,0.55)");      // 中ほどは明るい
+  // 轍。二本の細い筋を、道の中心から左右へ寄せて引く
+  ctx.save();
+  ctx.globalAlpha = 0.30;
+  for (const 寄 of [-ROAD.幅 * 0.2, ROAD.幅 * 0.2]) {
+    ctx.strokeStyle = "#A08F6A"; ctx.lineWidth = 2.2; ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let i = 0; i < 節.length; i++) {
+      const a = 節[i], 前 = 節[i - 1] || 節[i + 1];
+      const ang = Math.atan2(a.y - 前.y, a.x - 前.x) + Math.PI / 2;
+      const x = a.x + Math.cos(ang) * 寄, y = a.y + Math.sin(ang) * 寄;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function 川を描く(ctx) {
   const band = (x) => [RIVER.top + riverShift(x), RIVER.bot + riverShift(x)];
   const 帯 = (x0, x1, 上ずれ, 下ずれ, 色) => {
@@ -976,6 +1018,7 @@ export function drawFieldTerrain(ctx) {
     ctx.restore();
   }
 
+  道を描く(ctx);                       // 街道は地の上、地物の下
   for (const v of VILLAGES) 集落を描く(ctx, v);
   for (const m of MARSH) 湿地を描く(ctx, m);
   for (const h of HILLS) 丘を描く(ctx, h);

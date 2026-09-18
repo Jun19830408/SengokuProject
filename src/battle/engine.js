@@ -223,7 +223,7 @@ export function stepBattle(b, dt) {
     for (const o of mates) {
       const d = Math.hypot(o.x - c.x, o.y - c.y);
       if (d <= 0.1 || d >= 届き) continue;
-      if (停まっている && d > 46) continue;          // 陣を敷いている隊は、重ならぬ限り動かさない          // 陣を敷いている隊は、重ならぬ限り動かさない
+      if (停まっている && d > 36) continue;          // 陣を敷いている隊は、重ならぬ限り動かさない          // 陣を敷いている隊は、重ならぬ限り動かさない
       sx += ((c.x - o.x) / d) * (届き - d); sy += ((c.y - o.y) / d) * (届き - d);
     }
     // 隊どうしが押し合う力。これも城壁を越えてはならない。
@@ -398,51 +398,48 @@ export function stepBattle(b, dt) {
          隊は岸に立ち尽くすほかなくなる。それでは戦にならない。二秒のあいだ一歩も
          進めず、その足止めが水のせいであるなら、そこで腹を決めて押し渡る。
          決めて渡るのだから、足も隊列も落ちるのは承知の上である。 */
-      if (!MAP && !進めた && !c.押し渡る && terrainAt(元x + mvx, 元y + mvy) === "deep") {
+      /* 渡ると腹を決めるのは、下知を受けた隊である。
+
+         采配に委ねた隊には、渡り場を探す目がある（ai.js の 寄せ道・橋待ち・
+         奇襲の渡河）。だから水際で待てばよい――混んだ橋を厭って淵へ乗り入れるのは
+         愚である、というのが常道であった。
+         一方、大名が手ずから「あの城へ行け」と命じた隊は、道案内を持たない。
+         命じられた先が川の向こうなら、いつまでも岸に立たせておくわけにいかない。 */
+      if (!MAP && !進めた && !c.押し渡る && !c.auto && terrainAt(元x + mvx, 元y + mvy) === "deep") {
         c.水際 = (c.水際 || 0) + dt;
         /* 待つ長さは知略で変わる。ものを知らぬ将ほど早く焦れて水へ入る、のではない。
            逆である――渡り場を探して回るだけの才があるかどうかで、腹を決めるまでの
            長さが変わる。知略の高い将は先に別の道を探し、それでも駄目なら渡る。 */
-        const 待つ = 10 + Math.max(0, (c.gen.wit || 55) - 40) * 0.25;
+        const 待つ = 24 + Math.max(0, 80 - (c.gen.wit || 55)) * 0.7;
         if (c.水際 > 待つ) {
           c.押し渡る = b.t + 120; c.水際 = 0;
           b.log.push({ t: b.t, text: `${c.gen.name}隊は渡り場を待たず、淵を押し渡る。` });
         }
       } else if (進めた) c.水際 = 0;
-      /* 壁際に貼りついてしまったときだけ、壁から離す。
+      /* 壁に突き当たったら、押し返さずに壁沿いへ滑らせる（GDD 8.3 / 9.3）。
 
-         かつては「遠くへ向かう途中」ならば毎瞬これを掛けていた。城内は壁だらけなので、
-         行き先へ引く力と壁から押し返す力が毎瞬押し合い、隊は横へじりじりと流れ、
-         その場に留まっていても左右に震えて見えた。
-         測ったところ、隊の折り返しは百二十六秒で五百四十五回。止めると七十九回になる。
+         もとは壁から遠ざかる向きへ押し返していた。城内は壁だらけであるから、
+         行き先へ引く力と押し返す力が一歩ごとに殴り合い、隊はその場で前後に震えた。
+         実測した震えは、押し返し四.五歩と下知五.七歩がぴたりと交互に出る形で、
+         一折り返しあたり十八歩――遊ぶ側の目には「隊が小刻みに震える」と映る。
 
-         進めたのなら貼りついてはいない。押し返す要はない。 */
+         壁は押し返すものではない。突き当たったなら、壁に沿って行き先へ近いほうへ
+         滑る。壁の中へ埋まってしまったときだけ、外へ押し出す（これは救いである）。 */
       if (MAP && !進めた) {
-        // 塀は薄いので、点ではなく線で調べないと見落とす
-        const R = 30;
-        const blocked = (ux, uy) => {
-          for (let k = 1; k <= 4; k++) if (!passable(c.x + ux * k / 4, c.y + uy * k / 4)) return true;
-          return false;
-        };
-        let rx = 0, ry = 0;
-        if (blocked(R, 0)) rx -= 1;
-        if (blocked(-R, 0)) rx += 1;
-        if (blocked(0, R)) ry -= 1;
-        if (blocked(0, -R)) ry += 1;
-        if (rx || ry) {
-          const rl = Math.hypot(rx, ry) || 1;
-          const ax2 = (rx / rl) * 18 * dt, ay2 = (ry / rl) * 18 * dt;
-          if (passable(c.x + ax2, c.y + ay2)) { c.x += ax2; c.y += ay2; }
+        if (!passable(c.x, c.y)) {
+          // 壁の中に埋まっている。城の中心から遠ざかる向きへ押し出す
+          const ox = c.x - MAP.cx, oy = c.y - MAP.cy, od = Math.hypot(ox, oy) || 1;
+          for (let k = 1; k <= 12; k++) {
+            const nx3 = c.x + (ox / od) * k * 14, ny3 = c.y + (oy / od) * k * 14;
+            if (passable(nx3, ny3)) { c.x = nx3; c.y = ny3; break; }
+          }
         }
-      }
-      if (MAP && !passable(c.x + mvx, c.y + mvy) && !passable(c.x + mvx, c.y) && !passable(c.x, c.y + mvy)) {
-        // 壁に貼りついて三方とも塞がったとき。少し壁から離れてから、壁沿いに進む。
-        const ox = c.x - MAP.cx, oy = c.y - MAP.cy, od = Math.hypot(ox, oy) || 1;
-        const px = c.x + (ox / od) * 12, py = c.y + (oy / od) * 12;
-        if (passable(px + mvx, py + mvy)) { c.x = px + mvx; c.y = py + mvy; }
-        else if (passable(px + mvx, py)) { c.x = px + mvx; c.y = py; }
-        else if (passable(px, py + mvy)) { c.x = px; c.y = py + mvy; }
-        else if (passable(px, py)) { c.x = px; c.y = py; }
+        /* 壁に突き当たっただけなら、押しも滑りもしない。待つ。
+
+           押し返せば下知と殴り合って震え、滑らせれば行き先の僅かな揺れで左右へ
+           振れる（測ると、押し返しで一折り返し十八歩、滑らせて二十三歩）。
+           突き当たったなら、そこで足を止めるのが理に適う。行き先へ届かぬままなら
+           「詰まった」と数えられ、道順が引き直される（上の c.stuck）。 */
       }
       if (c.chargeT > 0 && b.fx.length < 160 && Math.random() < dt * 6 && (c.side === "P" || c.seen)) {
         b.fx.push({ k: "dust", x: c.x - Math.cos(c.facing) * 14, y: c.y - Math.sin(c.facing) * 14, t: 0, life: 0.7 });
@@ -521,7 +518,7 @@ export function stepBattle(b, dt) {
         for (let k = 0; k < 18 && !put; k++) {
           const ang = k * 2.399, rr = k === 0 ? 0 : 12 + k * 8;
           const nx2 = targetX + Math.cos(ang) * rr, ny2 = targetY + Math.sin(ang) * rr;
-          if (passable(nx2, ny2)) put = { x: nx2, y: ny2 };
+          if (passable(nx2, ny2) && 淵を踏めるか(c, b, nx2, ny2, null)) put = { x: nx2, y: ny2 };
         }
         if (put) { q.x = put.x; q.y = put.y; q.lost = false; q.cohesion = Math.max(0, q.cohesion - 8); }
       }
@@ -977,9 +974,11 @@ export function stepBattle(b, dt) {
             const pull = 1.6 * dt;
             const ax = ((melee.e.x - q.x) / Math.max(1, mdist)) * pull;
             const ay = ((melee.e.y - q.y) / Math.max(1, mdist)) * pull;
-            if (passable(q.x + ax, q.y + ay)) { q.x += ax; q.y += ay; }
-            else if (passable(q.x + ax, q.y)) q.x += ax;
-            else if (passable(q.x, q.y + ay)) q.y += ay;
+            // 詰め寄るときも淵は踏まない。水の中で槍を合わせに行く道理はない
+            const 寄れる = (nx, ny) => passable(nx, ny) && 淵を踏めるか(c, b, nx, ny, q.地);
+            if (寄れる(q.x + ax, q.y + ay)) { q.x += ax; q.y += ay; }
+            else if (寄れる(q.x + ax, q.y)) q.x += ax;
+            else if (寄れる(q.x, q.y + ay)) q.y += ay;
           }
         }
         // 接戦の火花。見づらくならないよう間引いて出す。
@@ -1131,8 +1130,20 @@ export function stepBattle(b, dt) {
        これが効くのは、他家の隊と、遊ぶ側が委ねた隊だけである（delegated）。
        手ずから率いる隊を盤が勝手に退かせては、采配にならない。引くも引かぬも
        遊ぶ側が決める。委ねたのなら、他家と同じ判断で退く。 */
+    /* 引き際は、削られ切る前に来る（GDD 8.7）。
+
+       もとは「兵が一割になるか、士気が尽きるか」であった。ところが隊は二割二分で
+       崩れるので、この目に掛かる隊はほとんどいない。つまり委ねた隊は、退くより先に
+       潰れていた。戦を預かる者は、そこまで待たない。
+
+       大勢が決したなら――盤の上の味方が敵の半ばを大きく割ったなら――半ばまで
+       削られた隊、気の萎えた隊から順に戦場を離れる。軍を残して退くのは恥ではない。 */
+    const 我が兵 = alive.filter((o) => o.side === c.side).reduce((a2, o) => a2 + corpsMen(o), 0);
+    const 敵の兵 = alive.filter((o) => o.side !== c.side).reduce((a2, o) => a2 + corpsMen(o), 0);
+    const 大勢 = 我が兵 / Math.max(1, 我が兵 + 敵の兵);
     if (!c.withdraw && !c.潰 && !c.dead && delegated(b, c)
-      && (ratio <= 0.10 || c.morale <= 0)) {
+      && (ratio <= 0.10 || c.morale <= 0
+        || (大勢 < 0.34 && (ratio <= 0.45 || c.morale <= 28)))) {
       退かせる(b, c, true);                              // 統制のとれた退却
       b.log.push({ t: b.t, text: `${c.name}隊は支えきれず、戦場を退いた。` });
       notify(b, `${c.gen.name}隊が戦場を退いた。`, c.side === "P" ? "bad" : "good");

@@ -28,6 +28,35 @@ export function riverShift(x) {
 
 export const FORESTS = [], WOODS = [], HILLS = [], MARSH = [];
 
+/* 街道（GDD 8.1）。
+
+   この野は「二つの城を結ぶ街道の途中」である。種も両端の城名から作っている。
+   ところが盤には道が無く、川と橋だけがあった。人の通う土地に見えないし、
+   軍勢が道を辿って進むという、いちばん当たり前の姿も描けない。
+
+   道は野を縦に貫き、川があれば橋で渡る。踏み固められた土であるから足が僅かに
+   速く、道さがしもここを好んで通る（route.js の 通りにくさ）。 */
+export const ROAD = { 節: [], 幅: 0 };
+
+// 点から道までの隔たり（線分の集まりとして測る）
+export function 道までの隔たり(x, y) {
+  const 節 = ROAD.節;
+  if (節.length < 2) return Infinity;
+  let best = Infinity;
+  for (let i = 0; i < 節.length - 1; i++) {
+    const a = 節[i], b = 節[i + 1];
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const L = vx * vx + vy * vy;
+    let t2 = L ? ((x - a.x) * vx + (y - a.y) * vy) / L : 0;
+    t2 = t2 < 0 ? 0 : t2 > 1 ? 1 : t2;
+    const dx = x - (a.x + vx * t2), dy = y - (a.y + vy * t2);
+    const d = dx * dx + dy * dy;
+    if (d < best) best = d;
+  }
+  return Math.sqrt(best);
+}
+export const 道の上か = (x, y) => ROAD.幅 > 0 && 道までの隔たり(x, y) < ROAD.幅 / 2;
+
 /* 集落。野には人が住んでいる。
 
    長らく見た目だけのものであったが、地形として効かせることにした。
@@ -130,6 +159,48 @@ export function genTerrain(seed) {
   /* 丘の高さ。裾の広い丘ほど高く盛り上がる。
      地形としてはどれも「丘」であって、効きは変わらない。見た目の起伏だけである。 */
   for (const h of HILLS) h.rise = Math.round(h.r * (0.20 + (h.seed % 100) / 100 * 0.14));
+
+  /* 街道を通す（GDD 8.1）。
+
+     野を南北に貫く。川があれば橋で渡る――橋は元よりその街道のためにある。
+     道幅は隊の幅より狭い。軍勢は道に沿って伸び、はみ出して野を行く。
+
+     曲がりは二つ三つで足りる。真っすぐな道は人の手のものに見えず、曲がりすぎる
+     道は野を分断する。丘があれば裾を巻き、森があれば縁を掠める。 */
+  ROAD.節.length = 0;
+  ROAD.幅 = Math.round(clamp(36 * Math.sqrt(sc), 34, 86));
+  if (RIVER.bot > RIVER.top) {
+    // 道は橋より狭くなければならない。道幅のまま橋へ入れば、両端は水である。
+    ROAD.幅 = Math.min(ROAD.幅, Math.max(24, (RIVER.bridge[1] - RIVER.bridge[0]) - 10));
+  }
+  {
+    const 渡り = RIVER.bot > RIVER.top
+      ? (RIVER.bridge[0] + RIVER.bridge[1]) / 2
+      : W * (0.3 + rnd() * 0.4);
+    const 南 = clamp(渡り + (rnd() - 0.5) * W * 0.3, W * 0.12, W * 0.88);
+    const 北 = clamp(渡り + (rnd() - 0.5) * W * 0.3, W * 0.12, W * 0.88);
+    const 川中 = RIVER.bot > RIVER.top ? (RIVER.top + RIVER.bot) / 2 : H * 0.5;
+    /* 曲がりは、川へ近づくほど小さくする。橋の袂で道が揺れていては、道を辿った
+       軍勢が橋から外れて淵へ踏み込む。渡り場へは真っすぐ入るのが道というものである。 */
+    const 曲 = (y0, y1, x0, x1, n) => {
+      const 出 = [];
+      for (let i = 1; i < n; i++) {
+        const u = i / n;
+        const 川寄り = 1 - u;                      // 一に近いほど川から遠い
+        const 揺 = (rnd() - 0.5) * W * 0.06 * 川寄り * 川寄り;
+        出.push({ x: clamp(x0 + (x1 - x0) * u + 揺, 20, W - 20), y: y0 + (y1 - y0) * u });
+      }
+      return 出;
+    };
+    /* 渡り場の手前後は、道を真っすぐ立てる。橋に対して斜めに入る道は無い。 */
+    const 川幅 = RIVER.bot > RIVER.top ? (RIVER.bot - RIVER.top) : 60;
+    ROAD.節.push({ x: 南, y: H + 30 });
+    ROAD.節.push(...曲(H + 30, 川中 + 川幅 * 1.6, 南, 渡り, 3));
+    ROAD.節.push({ x: 渡り, y: 川中 + 川幅 * 1.6 });
+    ROAD.節.push({ x: 渡り, y: 川中 - 川幅 * 1.6 });
+    ROAD.節.push(...曲(川中 - 川幅 * 1.6, -30, 渡り, 北, 3));
+    ROAD.節.push({ x: 北, y: -30 });
+  }
 }
 
 export const hasRiver = () => RIVER.bot > RIVER.top + 4;
@@ -191,6 +262,7 @@ export function terrainAt(x, y) {
       return "deep";
     }
   }
+  if (道の上か(x, y)) return "road";                     // 街道は切り開かれている
   for (const f of FORESTS) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.r ** 2) return "forest";
   for (const f of WOODS) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.r ** 2) return "wood";
   for (const m of MARSH) if ((x - m.x) ** 2 + (y - m.y) ** 2 < m.r ** 2) return "marsh";
@@ -255,6 +327,8 @@ export function 隊の地(c) {
 // 速度・戦闘力・陣形維持・視界・騎馬適性を一つの表で管理する（GDD 8.6）
 export const TERRAIN = {
   plain: { speed: 1.0, fight: 1.0, cohesion: 0, sight: 260, horse: 1.0, charge: true, label: "平地" },
+  /* 街道。踏み固められた土で、隊列を崩さずに速く進める。戦う力は野と変わらない。 */
+  road: { speed: 1.08, fight: 1.0, cohesion: 1, sight: 270, horse: 1.1, charge: true, label: "街道" },
   forest: { speed: 0.65, fight: 0.85, cohesion: -6, sight: 95, horse: 0.6, charge: false, label: "森" },
   wood: { speed: 0.82, fight: 0.92, cohesion: -3, sight: 165, horse: 0.85, charge: true, label: "林" },
   marsh: { speed: 0.5, fight: 0.8, cohesion: -9, sight: 240, horse: 0.45, charge: false, label: "湿地" },

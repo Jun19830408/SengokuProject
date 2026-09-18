@@ -22,6 +22,7 @@ import { FIELD, TERRAIN, 地形の代, terrainAt } from "./field.js";
    ========================================================================== */
 export const 通りにくさ = {
   plain: 1.0,
+  road: 0.82,          // 街道。踏み固められて歩きよい。道さがしもここを好む
   bridge: 1.15,
   village: 1.6,
   wood: 1.7,
