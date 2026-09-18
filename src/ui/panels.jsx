@@ -1080,9 +1080,37 @@ export function MonthReport({ g, onClose, onAid }) {
               </span>)}
           </span>
         </div>
-        <div className="sec">報せ</div>
-        {(g.monthEvents || []).length === 0 && <div style={{ fontSize: 12, color: U.dim }}>特に報せはない。</div>}
-        {(g.monthEvents || []).map((e, i) => <div key={i} style={{ fontSize: 13, padding: "5px 0", borderBottom: `1px solid ${U.line2}` }}>{e}</div>)}
+        {/* 方面軍の顛末は、別の段に立てる（GDD 6.4）。
+
+            任せた戦は大名が盤の前で見ていない。ほかの報せに紛れて一行ずつ並ぶと、
+            どこへ出て、どう戦い、どうなったのかが読み取れない。出陣から落城までを
+            ひとまとまりにして、いちばん上に置く。 */}
+        {(() => {
+          const 印 = "【方面軍】";
+          const 方面 = (g.monthEvents || []).filter((e) => typeof e === "string" && e.startsWith(印));
+          const ほか = (g.monthEvents || []).filter((e) => !(typeof e === "string" && e.startsWith(印)));
+          return (
+            <>
+              {方面.length > 0 && (
+                <>
+                  <div className="sec">方面軍</div>
+                  {方面.map((e, i) => (
+                    <div key={`h${i}`} style={{ fontSize: 13, padding: "5px 0 5px 9px", lineHeight: 1.75,
+                      borderLeft: `3px solid ${U.line}`, borderBottom: `1px solid ${U.line2}` }}>
+                      {e.slice(印.length)}
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, marginTop: 4 }}>
+                    旗頭に預けた手勢の戦です。攻める家を指しているあいだ、城ごとの伺いは立てません。
+                  </div>
+                </>
+              )}
+              <div className="sec">報せ</div>
+              {ほか.length === 0 && <div style={{ fontSize: 12, color: U.dim }}>特に報せはない。</div>}
+              {ほか.map((e, i) => <div key={i} style={{ fontSize: 13, padding: "5px 0", borderBottom: `1px solid ${U.line2}` }}>{e}</div>)}
+            </>
+          );
+        })()}
         {/* 危急の城には、その場で援軍を出せるようにする（GDD 9.2）。
             行軍はどれも一月はかかるので、着いてから出したのでは間に合わない。 */}
         {onAid && (g.危急 || []).length > 0 && (

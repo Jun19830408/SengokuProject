@@ -505,11 +505,28 @@ export function sackCastle(s, castle, army, hard) {
   当主が入れば役を繕う(s, oldF);
   当主が入れば役を繕う(s, winner);
   log(`${castle.name}が落ち、${s.factions[winner].name}の手に渡った（旧領主：${s.factions[oldF].name}）。`);
+  方面の報せ(s, army, `${castle.name}（${s.factions[oldF].name}）を落とした。`
+    + `城に残った兵${fmt(castle.local)}人。手勢${fmt(army.men)}人はそのまま城下に在陣する。`);
 
   /* 采配（他家）はその場で差配を決める。遊ぶ側には、画面から問う。
      問うまでのあいだ、城は将のいないまま留守を守る（守備隊の統率は四十）。 */
-  if (winner !== s.player) {
-    城を委ねる(s, castle.id, army.id, 委ねる差配(s, castle, army));
+  /* 攻める家を指しているなら、落とした城の差配も旗頭が決める（GDD 6.4）。
+
+     城ごとに伺いを立てぬと決めた以上、落とすたびに「誰を城主に」と盤の前で
+     問われるのでは、結局そこで足が止まる。旗頭は身代のいちばん重い将を城主に
+     据え、地の兵の半ばを残して次へ向かう。据え替えは城の帳からいつでもできる。
+
+     家を指していないあいだは、これまでどおり大名が決める。 */
+  const 旗主 = army.旗頭 && s.generals.find((g) => g.id === army.旗頭);
+  const 任せきり = !!(旗主 && (旗主.的家 || []).length);
+  if (winner !== s.player || 任せきり) {
+    const 差 = 委ねる差配(s, castle, army);
+    城を委ねる(s, castle.id, army.id, 差);
+    if (winner === s.player) {
+      const 主 = 差.城主 && s.generals.find((g) => g.id === 差.城主);
+      方面の報せ(s, army, `${castle.name}の城主に${主 ? 主.name : "将を置かず"}`
+        + `${主 ? "を据え" : ""}、地の兵${fmt(差.兵 || 0)}人を残した。`);
+    }
   } else {
     s.委ねる待ち = [...(s.委ねる待ち || []).filter((x) => x.castleId !== castle.id),
       { castleId: castle.id, armyId: army.id }];
@@ -570,6 +587,21 @@ export function sackCastle(s, castle, army, hard) {
 
 
 // 画面外の合戦。兵数・練度・統率・城防から勝敗と損害を出す
+/* 方面軍の顛末は、月報にそのまま立てる（GDD 6.4）。
+
+   旗頭に任せた戦は、これまで戦国記に一行残るだけで、月報には出なかった。遊ぶ側の
+   申し出は「攻めたこと等がよくわかるように、単なる記録ではなく、よりわかりやすい
+   記載にしたい」であった。任せたからこそ、顛末は大名に分かる形で届かねばならない。
+
+   月送りの中から呼ばれたときは、月報は月送りの側で組み直されるので、そちらで
+   立てる（govern/month.js）。ここで立てるのは、着陣の始末（画面の外の合戦）から
+   呼ばれたときである。 */
+export const 方面の報せ = (s, army, 文) => {
+  if (!army || army.faction !== s.player || !army.旗頭) return s;
+  s.monthEvents = [...(s.monthEvents || []), `【方面軍】${文}`];
+  return s;
+};
+
 /* 落とした城を誰に委ねるか（GDD 6.4）。
 
    在陣は城を与えられたことではない。城主を据え、所属の将を置いてはじめて、
@@ -662,7 +694,10 @@ export function 将の無い軍を解く(s) {
    いちばん身分の高い者を城主に据え、地の兵の半ばを残す。将が一人しか
    居らねば置かない――軍が空になっては次が続かないからである。 */
 export function 委ねる差配(s, castle, army) {
-  const 将ら = (army.gens || []).map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
+  /* 旗頭その人は城主に据えない（GDD 6.4）。根が動けば受け持ちが動き、
+     寄騎の筋まで一緒に動いてしまう。方面を預かる者は、方面に根を置いたままとする。 */
+  const 将ら = (army.gens || []).map((id) => s.generals.find((x) => x.id === id))
+    .filter(Boolean).filter((g) => g.id !== army.旗頭);
   if (将ら.length <= 1) return { 城主: null, 所属: [], 兵: Math.round((army.local || 0) * 0.3) };
   const 主 = [...将ら].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
   return { 城主: 主.id, 所属: [主.id], 兵: Math.round((army.local || 0) * 0.5) };
@@ -806,13 +841,18 @@ export function resolveOffscreen(prev, armyId, castleId) {
     castle.local = Math.max(0, castle.local - dLoss);
     s.chronicle.push({ y: s.year, m: s.month,
       text: `${castle.name}下で${s.factions[army.faction].name}と${s.factions[castle.faction].name}が戦い、${atkWon ? "攻め手" : "守り手"}が勝った（攻${fmt(aLoss)}人・守${fmt(dLoss)}人を失う）。` });
+    方面の報せ(s, army, `${castle.name}の城下で${s.factions[castle.faction].name}勢と戦い、`
+      + `${atkWon ? "これを破った" : "敗れた"}（味方${fmt(aLoss)}人・敵${fmt(dLoss)}人を失う）。`);
     if (atkWon && castle.local < 200) {
       sackCastle(s, castle, army, true);
     } else if (atkWon) {
       army.sieging = true;
       s.sieges = [...s.sieges.filter((x) => x.castleId !== castle.id), { castleId: castle.id, armyId: army.id, months: 0, decided: null }];
+      方面の報せ(s, army, `${castle.name}を囲んだ（城兵${fmt(castle.local)}人・寄せ手${fmt(army.men)}人）。`
+        + `兵糧が尽きるか、城兵が崩れるまで囲みを続ける。`);
     } else {
-      withdrawArmy(s, army);        // 出陣元が奪われていても、必ずどこかの自領へ戻す
+      const 帰 = withdrawArmy(s, army);        // 出陣元が奪われていても、必ずどこかの自領へ戻す
+      方面の報せ(s, army, `${castle.name}攻めは成らず、${帰 ? 帰.name : "自領"}へ退いた。`);
     }
     城主の札を繕う(s);              // 家を移った者の札を、その場で外す
     return s;
@@ -932,6 +972,23 @@ export function homeFor(s, army) {
    軍を解けば、攻めた将が全員その城に住み着く――在陣を入れる前と同じことに
    なってしまう。武将は本領に根付くのだから、帰る先は本領である。 */
 export function 軍を解く(s, army) { return withdrawArmy(s, army); }
+
+/* 旗頭の陣を払う（GDD 6.4）。
+
+   落とした城に在陣した軍は、次の下知が無ければそこに居続ける。実測では、方面軍の
+   在陣が三つ積み上がったまま三年動かず、九千の兵が遊んでいた。攻める先が無い
+   （断られた、あるいは受け持ちに敵がいない）なら、陣を払って兵を城へ返す。 */
+export function 旗頭の陣を払う(s, 旗頭id) {
+  const 払った = [];
+  for (const a of [...(s.armies || [])]) {
+    if (a.旗頭 !== 旗頭id || a.sieging || a.target) continue;
+    const 陣 = s.castles.find((c) => c.id === (a.在陣 || a.at));
+    const 兵 = a.men;
+    const 帰 = withdrawArmy(s, a);
+    if (帰) 払った.push({ 陣, 帰, 兵 });
+  }
+  return 払った;
+}
 
 export function withdrawArmy(s, army) {
   const home = homeFor(s, army);

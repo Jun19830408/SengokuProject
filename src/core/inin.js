@@ -119,6 +119,44 @@ export function 旗頭の済んだ許しを片づける(s) {
   return s;
 }
 
+/* 攻める家を指していれば、城ごとの伺いは立てない（GDD 6.4）。
+
+   もとは城ごとに許しを乞うていた。方面を預けたのに、城ひとつごとに盤の前で
+   可否を問われるのでは、任せたことにならない。そのうえ許しは一度に一つしか
+   受けられないので、落とすたびに月をまたいで伺いを立てることになり、実測では
+   在陣した軍が三つ積み上がったまま三年動かなかった。
+
+   大名が引くのは絵図の大枠――どの家と戦うか――までである。家を指したなら、
+   その家の城をどの順にいつ攻めるかは旗頭が決め、落とせばそのまま次へ向かう。
+   家を指していないあいだは、これまでどおり城ごとに願い出る。 */
+export const 旗頭に任せきりか = (s, 旗, 的家) => !!(的家 ? 的家(s, 旗) : (旗 && 旗.的家) || []).length;
+
+/* 断りの控え（GDD 6.4）。
+
+   却下された城を、旗頭は翌月また願い出ていた。断ったものを毎月持ち出されては
+   下知にならない。一年のあいだは覚えておいて、その城には向かわない。 */
+export const 旗頭の断り控え = (s) => (s.旗頭の断り = s.旗頭の断り || []);
+
+export const 旗頭は断られたか = (s, 旗頭id, castleId) =>
+  旗頭の断り控え(s).some((x) => x.旗頭 === 旗頭id && x.castleId === castleId);
+
+export function 旗頭に断る(s, 旗頭id, castleId) {
+  if (旗頭は断られたか(s, 旗頭id, castleId)) return s;
+  旗頭の断り控え(s).push({ 旗頭: 旗頭id, castleId, y: s.year, m: s.month });
+  return s;
+}
+
+/* 断られたばかりの旗頭は、しばらく願い出ない。毎月せがむのは臣下の礼を欠く。 */
+export const 断りの直後か = (s, 旗頭id, 月 = 3) => 旗頭の断り控え(s)
+  .some((x) => x.旗頭 === 旗頭id && (s.year * 12 + s.month) - (x.y * 12 + x.m) < 月);
+
+export function 旗頭の古い断りを片づける(s) {
+  const 月 = (x) => x.y * 12 + x.m;
+  const いま = s.year * 12 + s.month;
+  s.旗頭の断り = 旗頭の断り控え(s).filter((x) => いま - 月(x) < 12);
+  return s;
+}
+
 /* 旗頭が攻めたい城を見立てる（GDD 6.4）。
 
    受け持ち（己の国と寄騎の国）にある自領の城から、いちばん手近で兵の薄い
@@ -128,7 +166,7 @@ export function 旗頭の済んだ許しを片づける(s) {
    手近な敵から順に当たる。どの城をいつ攻めるかは旗頭の見立てである
    ――大名が引くのは絵図の大枠までで、そこから先を取り上げては任せたことに
    ならない。 */
-export function 旗頭の狙い(s, 旗, { 道: 道を引く, 旗の下, 受け持ち, 的家 } = {}) {
+export function 旗頭の狙い(s, 旗, { 道: 道を引く, 旗の下, 受け持ち, 的家, 避ける } = {}) {
   const 受 = 受け持ち ? 受け持ち(s, 旗) : [];
   if (!受.length) return null;
   const 己方 = (s.castles || []).filter((c) => c.faction === 旗.faction && 受.includes(c.kuni));
@@ -148,6 +186,7 @@ export function 旗頭の狙い(s, 旗, { 道: 道を引く, 旗の下, 受け�
     if (的.faction === 旗.faction) continue;
     if (旗の下 && 旗の下(s, 旗.faction, 的.faction)) continue;
     if (指した家.length && !指した家.includes(的.faction)) continue;   // 大名が家を指している
+    if (避ける && 避ける(的)) continue;                                // 断られた城には向かわない
     let 近 = null, 拠 = null;
     for (const c of 己方) {
       const 道 = 道を引く ? 道を引く(s, 旗.faction, c.id, 的.id) : null;

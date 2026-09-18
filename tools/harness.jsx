@@ -8,7 +8,7 @@ export { React, createRoot, act, App };
 export { SeaScreen, 海戦を仕立てる } from "../src/ui/SeaScreen.jsx";
 export { CastleSheet } from "../src/ui/CastleSheet.jsx";
 export { BattleScreen } from "../src/ui/BattleScreen.jsx";
-export { 攻め寄せる問い } from "../src/ui/panels.jsx";
+export { 攻め寄せる問い, MonthReport } from "../src/ui/panels.jsx";
 // 盤をこしらえるための道具も差し出す。
 // 画面を延々と押して所定の局面まで持っていくのは当てにならないので、
 // 試験によっては盤を直に組み立て、記録として仕込んでから「続きから」で開く。
@@ -27,12 +27,12 @@ export { ROADS, MARCH_PER_MONTH, ROAD_SPEED } from "../src/data/roads.js";
 export { findPath } from "../src/core/paths.js";
 export { 援けに着く, migrateSave, atPeace, relOf, 軍の道, 本拠を追う, 奪われた本領を繕う, 旗の下を検め直す, 城主の札を据える, 城の名を改める, 裏切りの出陣か } from "../src/core/state.js";
 export { 臣従の主, 許しの要る主, 許されているか, 攻められるか, 許しを与える, 許しを解く, 容認するか, 済んだ許しを片づける } from "../src/core/yurushi.js";
-export { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 預けの率, 城の実入り, 旗頭の狙い, 旗頭に許す, 自ら采配するか, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高 } from "../src/core/inin.js";
+export { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 預けの率, 城の実入り, 旗頭の狙い, 旗頭に許す, 自ら采配するか, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭に任せきりか, 旗頭に断る, 旗頭は断られたか, 旗頭の古い断りを片づける, 断りの直後か } from "../src/core/inin.js";
 export { 旗頭の調略 } from "../src/govern/aiDiplo.js";
 export { 謀反の目, 走る先, 謀反を起こす, 謀反の見回り } from "../src/core/muhon.js";
 export { 遠征の兵糧 } from "../src/govern/war.js";
 export { ROAD_ADJ } from "../src/core/paths.js";
-export { resolveOffscreen, resolveClashOffscreen, reinforceOffers, 運び賃, 運び賃を払う, sackCastle, 城を委ねる, 委ねる差配, 軍を解く, withdrawArmy, homeFor, 城に合流する, 在陣させる, 盤の乱れを繕う, restoreStrays, 滅んだ家を始末する, 城なき家を片づける, 将を除く, 着いた味方を束ねる } from "../src/govern/war.js";
+export { resolveOffscreen, resolveClashOffscreen, reinforceOffers, 運び賃, 運び賃を払う, sackCastle, 城を委ねる, 委ねる差配, 軍を解く, withdrawArmy, homeFor, 城に合流する, 在陣させる, 盤の乱れを繕う, restoreStrays, 滅んだ家を始末する, 城なき家を片づける, 将を除く, 着いた味方を束ねる, 旗頭の陣を払う, 方面の報せ } from "../src/govern/war.js";
 export { 圧す, 解す } from "../src/save/pack.js";
 export { advanceMonth } from "../src/govern/month.js";
 export { 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届き, 陣触れに応じる, 国が隣り合うか, minGarrison, 身分の位, 総大将を定める, 大将を先頭に, 国主に任じる, 旗頭に任じる, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 国主たち, 旗頭たち, stipendOf, 役の要る身分, 寄騎に取る, 寄騎を解く, 寄騎たち, 寄騎に取れるか, 城主か, 城を守る将, 守備隊の統率, 旗頭の受け持ち, 旗頭の届く国, 旗頭の的にできる家, 旗頭の的家, 旗頭の的家を定める, 的家の限り, 家の国ら, 旗の下の家か, 旗の下の当主か, 当主の国ら, 城の知行の余地, fiefRoom, fiefBurden } from "../src/core/rank.js";

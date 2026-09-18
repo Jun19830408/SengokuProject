@@ -18,7 +18,7 @@ import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "./ai.js";
 import { 外交の采配, 調略の采配, 特殊勢力の采配, 旗頭の調略 } from "./aiDiplo.js";
 import { checkUnified } from "./unify.js";
-import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く, 盤の乱れを繕う, 城なき家を片づける, 城に合流する, 軍を解く, 将を除く } from "./war.js";
+import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く, 盤の乱れを繕う, 城なき家を片づける, 城に合流する, 軍を解く, 将を除く, 旗頭の陣を払う } from "./war.js";
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
@@ -28,7 +28,7 @@ import { 惣無事令を発する, 応諾を決める, 問われる家, 朝敵�
 import { 済んだ号令を片づける } from "../core/gourei.js";
 import { いまの段, 段の上乗せ, 段 as 天下の段, 京の城 } from "../core/tenkabito.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
-import { 城の寄親, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高 } from "../core/inin.js";
+import { 城の寄親, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭に任せきりか, 旗頭は断られたか, 旗頭の古い断りを片づける, 断りの直後か } from "../core/inin.js";
 import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
 /* ==========================================================================
    月送り ─ 天下じゅうの一月
@@ -947,14 +947,21 @@ export function advanceMonth(prev, g) {
           sackCastle(s, cs, bes, false);
           if (旗頭に任せた囲み) {
             const 旗4 = s.generals.find((x) => x.id === bes.旗頭);
-            events.push(`${cs.name}は兵糧が尽きて開いた（${旗4 ? 旗4.name : "方面軍"}の差配）。`);
+            events.push(`【方面軍】${cs.name}は兵糧が尽きて開いた（${旗4 ? 旗4.name : "方面軍"}の差配・`
+              + `囲み${sg2.months}ヶ月）。手勢${fmt(bes.men)}人はそのまま城下に在陣する。`);
           }
           continue;
         }
         if (bes.food <= 0) {                                  // 兵糧が尽きれば囲みを解く
-          withdrawArmy(s, bes);                               // 出陣元が奪われていても自領へ戻す
+          const 旗5 = 旗頭に任せた囲み && s.generals.find((x) => x.id === bes.旗頭);
+          const 兵5 = bes.men;
+          const 帰5 = withdrawArmy(s, bes);                   // 出陣元が奪われていても自領へ戻す
           s.sieges = s.sieges.filter((x) => x !== sg2);
           s.chronicle.push({ y: s.year, m: s.month, text: `${s.factions[bes.faction].name}は${cs.name}の囲みを解いた。` });
+          if (旗頭に任せた囲み) {
+            events.push(`【方面軍】兵糧が尽き、${旗5 ? 旗5.name : "方面軍"}は${cs.name}の囲みを解いた`
+              + `（${fmt(兵5)}人が${帰5 ? 帰5.name : "自領"}へ帰陣）。`);
+          }
           continue;
         }
         // 数で押せるなら強攻する
@@ -967,14 +974,15 @@ export function advanceMonth(prev, g) {
           s.chronicle.push({ y: s.year, m: s.month, text: 文 });
           if (旗頭に任せた囲み) {
             const 旗2 = s.generals.find((x) => x.id === bes.旗頭);
-            events.push(`${旗2 ? 旗2.name : "方面軍"}が${cs.name}へ攻めかかった`
-              + `（攻${fmt(aL)}人・守${fmt(dL)}人を失う）。`);
+            events.push(`【方面軍】${旗2 ? 旗2.name : "方面軍"}が${cs.name}へ攻めかかった`
+              + `（味方${fmt(aL)}人・城方${fmt(dL)}人を失う／囲み${sg2.months}ヶ月）。`);
           }
           if (cs.local < 150) {
             sackCastle(s, cs, bes, true);
             if (旗頭に任せた囲み) {
               const 旗3 = s.generals.find((x) => x.id === bes.旗頭);
-              events.push(`${cs.name}が落ちた（${旗3 ? 旗3.name : "方面軍"}の差配）。`);
+              events.push(`【方面軍】${cs.name}を攻め落とした（${旗3 ? 旗3.name : "方面軍"}の差配）。`
+                + `城に残った兵${fmt(cs.local)}人。手勢${fmt(bes.men)}人はそのまま城下に在陣する。`);
             }
           }
         }
@@ -1647,100 +1655,154 @@ export function advanceMonth(prev, g) {
       }
       /* 旗頭に戦を任せる（GDD 6.4）。
 
-         方面軍を預けたのだから、どの城をいつ攻めるかは旗頭が見立てる。ただし攻める前に
-         大名の許しを乞う――どこへ攻め入るかは家の運を決めるからである。
-         許しは城ごとに一度、落とすまで有効（臣従した大名と同じ形）。 */
+         方面軍を預けたのだから、どの城をいつ攻めるかは旗頭が見立てる。大名が引くのは
+         絵図の大枠――どの家と戦うか――までである。
+
+         攻める家を指したなら、城ごとの伺いは立てない。落とせばそのまま次の城へ向かう。
+         もとは城ごとに許しを乞うていたが、許しは一度に一つしか受けられないので、
+         落とすたびに月をまたいで伺いを立てることになり、実測では在陣した軍が三つ
+         積み上がったまま三年動かなかった。九千の兵が遊んでいたことになる。
+
+         家を指していないあいだは、これまでどおり城ごとに願い出る。却下されたなら
+         陣を払って帰す（一年のあいだ、その城には向かわない）。 */
       旗頭の済んだ許しを片づける(s);
+      旗頭の古い断りを片づける(s);
+      /* 攻めに要る兵を見積もる（GDD 6.4 / 9.1）。
+         城の守りだけを見て出すと、着いたところへ隣の城から後詰が来て押し返される。
+         城の兵に加え、街道で二歩までにある同じ家（と旗の下）の城から来うる兵の
+         半ばまで数える。 */
+      const 攻めに要る兵 = (的) => {
+        const 守り手 = 的.faction;
+        const dg4 = s.generals.filter((x) => x.at === 的.id && x.faction === 守り手 && !x.captive);
+        const 守 = 的.local + dg4.reduce((a, x) => a + x.retinue, 0);
+        const 後詰の見込み = s.castles.reduce((a2, x) => {
+          if (x.id === 的.id) return a2;
+          if (x.faction !== 守り手 && !underMyBanner(s, 守り手, x.faction)) return a2;
+          const p2 = 軍の道(s, x.faction, x.id, 的.id);
+          if (!p2 || p2.length - 1 > 2) return a2;
+          const gs2 = s.generals.filter((q) => q.at === x.id && q.faction === x.faction && !q.captive);
+          const 余 = x.local + gs2.reduce((t, q) => t + q.retinue, 0) - minGarrison(x);
+          return a2 + Math.max(0, 余) * 0.5;
+        }, 0);
+        return Math.round((守 + 後詰の見込み) * 1.3);
+      };
       for (const 旗 of s.generals.filter((g) => g.faction === s.player && g.役 === "旗頭" && !g.captive)) {
         const 受 = 旗頭の受け持ち(s, 旗);
         if (!受.length) continue;
-        // 許された城があるなら、そこへ兵を出す
-        const 許 = (s.旗頭の許し || []).filter((x) => x.旗頭 === 旗.id);
-        let 出た = false;
-        for (const k of 許) {
-          const 的 = s.castles.find((c2) => c2.id === k.castleId);
-          if (!的 || 的.faction === s.player) continue;
-          if (s.armies.some((a) => a.faction === s.player && a.target === 的.id)) { 出た = true; break; }
-          const 拠ら = s.castles.filter((c2) => c2.faction === s.player && 受.includes(c2.kuni))
-            .map((c2) => ({ c2, 道: 軍の道(s, s.player, c2.id, 的.id) })).filter((x) => x.道)
-            .sort((a, b) => a.道.length - b.道.length);
-          /* 攻めに要る兵を見積もる（GDD 6.4 / 9.1）。
+        const 手勢 = s.armies.filter((a) => a.faction === s.player && a.旗頭 === 旗.id);
+        if (手勢.some((a) => a.target || a.sieging)) continue;      // いくさの最中はそのまま進める
+        const 任せ = 旗頭に任せきりか(s, 旗, 旗頭の的家);
+        const 避ける = (c2) => 旗頭は断られたか(s, 旗.id, c2.id);
+        const 見立てる = () => 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner,
+          受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家, 避ける });
+        // 攻める先。許された城が先、無ければ（家を指していれば）己の見立て。
+        let 的 = null;
+        for (const k of (s.旗頭の許し || []).filter((x) => x.旗頭 === 旗.id)) {
+          const c3 = s.castles.find((c2) => c2.id === k.castleId);
+          if (c3 && c3.faction !== s.player && !underMyBanner(s, s.player, c3.faction)) { 的 = c3; break; }
+        }
+        if (!的 && 任せ) { const 狙 = 見立てる(); if (狙) 的 = 狙.的; }
+        // 落とした城に在陣している手勢。あればこれを次へ向ける（連戦）
+        const 在 = 手勢.find((a) => a.在陣 && !a.sieging && !a.target);
+        if (!的) {
+          // 家を指していなければ願い出る。願いは一度に一つだけ
+          if (!任せ && !s.旗頭の願い && !断りの直後か(s, 旗.id)) {
+            const 狙 = 見立てる();
+            if (狙) {
+              s.旗頭の願い = { 旗頭: 旗.id, castleId: 狙.的.id, y: s.year, m: s.month };
+              const 陣 = 在 && s.castles.find((c2) => c2.id === 在.在陣);
+              events.push(`【方面軍】${旗.name}より、${狙.的.name}（${s.factions[狙.的.faction].name}）を`
+                + `攻めたいとの願いがあった`
+                + `${陣 ? `（いまは${陣.name}に在陣・${fmt(在.men)}人）` : ""}。`);
+              continue;
+            }
+          }
+          // 攻める先も願いも無いのに陣を張り続けては、兵が遊ぶ。陣を払って城へ返す
+          if (在 && !(s.旗頭の願い && s.旗頭の願い.旗頭 === 旗.id)) {
+            for (const q of 旗頭の陣を払う(s, 旗.id)) {
+              events.push(`【方面軍】攻める先が無く、${旗.name}は${q.陣 ? q.陣.name : "陣"}の陣を払った`
+                + `（${fmt(q.兵)}人が${q.帰.name}へ帰陣）。`);
+            }
+          }
+          continue;
+        }
+        const 要る兵 = 攻めに要る兵(的);
+        const 受けの城 = new Set(s.castles.filter((c2) => c2.faction === s.player && 受.includes(c2.kuni))
+          .map((c2) => c2.id));
+        /* 在陣している手勢があるなら、それを次の城へ向ける（連戦）。
 
-             城の守りだけを見て出していたので、着いたところへ隣の城から後詰が
-             来て押し返されていた。城の兵に加えて、来うる援軍まで数える。
-
-             来うるのは、その城から街道で二歩までにある同じ家（と旗の下）の城の
-             出せる兵である。半ばが間に合うものとして見込む。 */
-          const 守り手 = 的.faction;
-          const dg4 = s.generals.filter((x) => x.at === 的.id && x.faction === 守り手 && !x.captive);
-          const 守 = 的.local + dg4.reduce((a, x) => a + x.retinue, 0);
-          const 後詰の見込み = s.castles.reduce((a2, x) => {
-            if (x.id === 的.id) return a2;
-            if (x.faction !== 守り手 && !underMyBanner(s, 守り手, x.faction)) return a2;
-            const p2 = 軍の道(s, x.faction, x.id, 的.id);
-            if (!p2 || p2.length - 1 > 2) return a2;
-            const gs2 = s.generals.filter((q) => q.at === x.id && q.faction === x.faction && !q.captive);
-            const 余 = x.local + gs2.reduce((t, q) => t + q.retinue, 0) - minGarrison(x);
-            return a2 + Math.max(0, 余) * 0.5;
-          }, 0);
-          const 要る兵 = Math.round((守 + 後詰の見込み) * 1.3);
-
-          /* 受け持ちの城から兵を寄せ、一手にまとめて出す（GDD 7.3）。
-
-             采配が近隣から兵を寄せるのと同じ考えである。旗頭は受け持ち（己の国と
-             寄騎の国）から催せるので、そこから順に集めて要る兵を揃える。 */
-          const 発 = 拠ら[0];
-          if (!発) break;
-          const { c2, 道 } = 発;
-          const gens3 = s.generals.filter((x) => x.at === c2.id && x.faction === s.player && !x.captive && !x.lord);
-          if (!gens3.length) continue;
-          const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
-          if (avail3 < 400) continue;
-          const take3 = [...gens3].sort((a, b) => b.lead - a.lead).slice(0, 3);
-          const send3 = Math.round(avail3 * 0.85);
-          const loc3 = Math.max(0, Math.min(c2.local, send3 - take3.reduce((a, x) => a + x.retinue, 0)));
-          if (loc3 < 200) continue;
-          c2.local -= loc3;
-          const tk3 = rosterTake(c2.rost || newRoster(c2.local + loc3, `loc-${c2.id}`), loc3);
-          c2.rost = tk3.rest;
-          const 軍2 = {
-            id: 軍の名(s, "h"), faction: s.player, from: c2.id, gens: take3.map((x) => x.id),
-            local: loc3, localTrain: c2.localTrain, rost: tk3.taken,
-            men: loc3 + take3.reduce((a, x) => a + x.retinue, 0), at: c2.id,
-            path: 道, prog: 0, food: Math.round(send3 * 0.6), target: 的.id, 旗頭: 旗.id,
-          };
-          for (const t3 of take3) t3.at = null;
-          c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
-          /* 足りるまで、受け持ちのほかの城から寄せる。呼べるのは受け持ちの城だけ
-             ――旗頭が催せるのはそこまでである（陣触れの届き）。 */
-          const 受けの城 = new Set(拠ら.map((q) => q.c2.id));
-          const 寄 = 近隣から兵を寄せる(s, s.player, c2, 軍2, {
-            道: 軍の道, 限り: 4, 歩: 6, 要る: 要る兵,
-            選べる: (x) => 受けの城.has(x.id),
-          });
-          if (軍2.men < 要る兵 * 0.72) {
-            /* 揃わなければ出さない。兵は城へ戻す。 */
-            c2.local += loc3; c2.rost = [...(c2.rost || []), ...tk3.taken];
-            c2.food += Math.round(send3 * 0.6);
-            for (const t3 of take3) t3.at = c2.id;
-            for (const q of 寄) { q.城.local += q.兵 - (q.将 ? q.将.retinue : 0); if (q.将) q.将.at = q.城.id; }
+           落とすたびに別の城から新しい軍を催していたので、そのつど受け持ちの兵が
+           要り、揃わねば動かなかった。目の前に在陣している軍を使わぬ道理はない。 */
+        if (在) {
+          const 陣城 = s.castles.find((c2) => c2.id === (在.在陣 || 在.at));
+          const 道 = 陣城 && 軍の道(s, s.player, 陣城.id, 的.id);
+          if (陣城 && 道) {
+            const 寄 = 在.men < 要る兵
+              ? 近隣から兵を寄せる(s, s.player, 陣城, 在, { 道: 軍の道, 限り: 4, 歩: 6, 要る: 要る兵,
+                選べる: (x) => 受けの城.has(x.id) })
+              : [];
+            if (在.men >= 要る兵 * 0.72) {
+              const 積 = Math.max(0, Math.min(Math.round(陣城.food), Math.round(在.men * 0.6)));
+              陣城.food = Math.max(0, 陣城.food - 積);
+              在.food = (在.food || 0) + 積;
+              在.在陣 = null; 在.target = 的.id; 在.path = 道; 在.prog = 0;
+              在.sieging = false; 在.reinforced = false; 在.seaDone = false;
+              在.from = 陣城.id;
+              const 月 = Math.max(1, marchMonthsOf(道) || 1);
+              events.push(`【方面軍】${旗.name}が${陣城.name}の陣を進め、${的.name}`
+                + `（${s.factions[的.faction].name}）へ向かう`
+                + `${寄.length ? `。${寄.map((q) => q.城.name).join("・")}より加勢` : ""}`
+                + `／兵${fmt(在.men)}人・要り${fmt(要る兵)}人・およそ${月}ヶ月。`);
+              continue;
+            }
+            events.push(`【方面軍】${旗.name}は${陣城.name}に在陣し、${的.name}を攻めるに足る兵`
+              + `（${fmt(要る兵)}人）が揃うのを待っている（いま${fmt(在.men)}人）。`);
             continue;
           }
-          s.armies.push(軍2);
-          events.push(`${旗.name}が${c2.name}より出陣。${的.name}を目指す（方面軍の差配`
-            + `${寄.length ? `・${寄.map((q) => q.城.name).join("・")}より加勢` : ""}`
-            + `／${fmt(軍2.men)}人・要り${fmt(要る兵)}人）。`);
-          出た = true;
-          if (出た) break;
         }
-        if (出た || 許.length) continue;
-        // 許しが無ければ願い出る。願いは一度に一つだけ
-        if (s.旗頭の願い) continue;
-        const 狙 = 旗頭の狙い(s, 旗,
-          { 道: 軍の道, 旗の下: underMyBanner, 受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家 });
-        if (!狙) continue;
-        s.旗頭の願い = { 旗頭: 旗.id, castleId: 狙.的.id, y: s.year, m: s.month };
-        events.push(`${旗.name}より、${狙.的.name}（${s.factions[狙.的.faction].name}）を攻めたいとの願いがあった。`);
+        /* 在陣が無ければ、受け持ちの城から催す（GDD 7.3）。
+           采配が近隣から兵を寄せるのと同じ考えである。 */
+        const 拠ら = s.castles.filter((c2) => c2.faction === s.player && 受.includes(c2.kuni))
+          .map((c2) => ({ c2, 道: 軍の道(s, s.player, c2.id, 的.id) })).filter((x) => x.道)
+          .sort((a, b) => a.道.length - b.道.length);
+        const 発 = 拠ら[0];
+        if (!発) continue;
+        const { c2, 道 } = 発;
+        const gens3 = s.generals.filter((x) => x.at === c2.id && x.faction === s.player && !x.captive && !x.lord);
+        if (!gens3.length) continue;
+        const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
+        if (avail3 < 400) continue;
+        const take3 = [...gens3].sort((a, b) => b.lead - a.lead).slice(0, 3);
+        const send3 = Math.round(avail3 * 0.85);
+        const loc3 = Math.max(0, Math.min(c2.local, send3 - take3.reduce((a, x) => a + x.retinue, 0)));
+        if (loc3 < 200) continue;
+        c2.local -= loc3;
+        const tk3 = rosterTake(c2.rost || newRoster(c2.local + loc3, `loc-${c2.id}`), loc3);
+        c2.rost = tk3.rest;
+        const 軍2 = {
+          id: 軍の名(s, "h"), faction: s.player, from: c2.id, gens: take3.map((x) => x.id),
+          local: loc3, localTrain: c2.localTrain, rost: tk3.taken,
+          men: loc3 + take3.reduce((a, x) => a + x.retinue, 0), at: c2.id,
+          path: 道, prog: 0, food: Math.round(send3 * 0.6), target: 的.id, 旗頭: 旗.id,
+        };
+        for (const t3 of take3) t3.at = null;
+        c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
+        const 寄 = 近隣から兵を寄せる(s, s.player, c2, 軍2, {
+          道: 軍の道, 限り: 4, 歩: 6, 要る: 要る兵, 選べる: (x) => 受けの城.has(x.id),
+        });
+        if (軍2.men < 要る兵 * 0.72) {
+          /* 揃わなければ出さない。兵は城へ戻す。 */
+          c2.local += loc3; c2.rost = [...(c2.rost || []), ...tk3.taken];
+          c2.food += Math.round(send3 * 0.6);
+          for (const t3 of take3) t3.at = c2.id;
+          for (const q of 寄) { q.城.local += q.兵 - (q.将 ? q.将.retinue : 0); if (q.将) q.将.at = q.城.id; }
+          continue;
+        }
+        s.armies.push(軍2);
+        const 月2 = Math.max(1, marchMonthsOf(道) || 1);
+        events.push(`【方面軍】${旗.name}が${c2.name}より出陣。${的.name}（${s.factions[的.faction].name}）を目指す`
+          + `${寄.length ? `。${寄.map((q) => q.城.name).join("・")}より加勢` : ""}`
+          + `／兵${fmt(軍2.men)}人・要り${fmt(要る兵)}人・およそ${月2}ヶ月。`);
       }
       /* 旗頭は調略も差配する（GDD 6.4 / 11.2）。
          金は旗頭に預けた高から出る。方面の実入りに目盛りを掛けたものである。 */
@@ -1794,13 +1856,13 @@ export function advanceMonth(prev, g) {
          城が動くのは月送りの中なので、繕いもここで回す。 */
       for (const fid of Object.keys(s.factions)) {
         for (const g of 国主を繕う(s, fid)) {
-          if (fid === s.player) events.push(`${g.name}は預かる国を失い、旗頭の役を離れた。`);
+          if (fid === s.player) events.push(`${g.name}は預かる国を失い、国主の役を離れた。`);
         }
         for (const g of 寄騎を繕う(s, fid)) {
           if (fid === s.player) events.push(`${g.name}は寄親を離れた。`);
         }
         for (const g of 旗頭を繕う(s, fid)) {
-          if (fid === s.player) events.push(`${g.name}は方面を保てなくなり、宿老の役を離れた。`);
+          if (fid === s.player) events.push(`${g.name}は受け持ちを保てなくなり、旗頭の役を離れた。`);
         }
       }
       s.orders = {};
@@ -1902,7 +1964,7 @@ export function advanceMonth(prev, g) {
             if (fid === s.player) events.push(`${g.name}は国主の役を離れた。`);
           }
           for (const g of 旗頭を繕う(s, fid)) {
-            if (fid === s.player) events.push(`${g.name}は方面を保てなくなり、宿老の役を離れた。`);
+            if (fid === s.player) events.push(`${g.name}は受け持ちを保てなくなり、旗頭の役を離れた。`);
           }
           寄騎を繕う(s, fid);
         }

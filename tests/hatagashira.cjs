@@ -120,7 +120,7 @@ console.log('\n── 四　許せば、旗頭が自ら兵を出す');
   確('その軍は方面の城から出ている', !出 || 旗頭の受け持ち(s, 旗).includes(
     (u.castles.find((c) => c.id === 出.from) || {}).kuni),
     出 ? `${(u.castles.find((c) => c.id === 出.from) || {}).name}` : '');
-  const 報 = (u.monthEvents || []).filter((t) => /方面軍の差配/.test(t));
+  const 報 = (u.monthEvents || []).filter((t) => /【方面軍】/.test(t));
   確('月報に出陣が出る', 報.length > 0 || !出, 報[0] || '');
 }
 
@@ -545,6 +545,97 @@ console.log('\n── 十六　世に出た者・生まれた子は「本領を�
   確('みな本領を持つ', 出.every((g) => !!g.本領),
     出.filter((g) => !g.本領).map((g) => g.name).join('・') || '欠けなし');
   確('「本領を失い」とは告げない', 報.length === 0, 報.join('／') || '報せなし');
+}
+
+/* ---- 在陣からの連戦（GDD 6.4）。落とした城に在陣した手勢が、そのまま次へ向かうか。 */
+const 方面の盤 = (的家を指す) => {
+  const s = initState('oda');
+  for (const k of ['尾張', '美濃', '三河', '近江']) {
+    for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
+  }
+  const 当主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
+  const 尾張 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '尾張');
+  当主.at = 尾張.id; 当主.本領 = 尾張.id;
+  const 城 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '近江');
+  const 旗 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役);
+  旗.age = 35; 旗.fief = 60000; 旗.at = 城.id; 旗.本領 = 城.id; 城.lordId = 旗.id;
+  国主に任じる(s, 'oda', '近江', 旗.id);
+  旗頭に任じる(s, 'oda', 旗.id);
+  if (的家を指す) {
+    const 選 = H.旗頭の的にできる家(s, 旗);
+    H.旗頭の的家を定める(s, 'oda', 旗.id, 選.slice(0, 1));
+  }
+  /* 落としたばかりの城に在陣している、という姿をこしらえる。 */
+  const 供 = s.generals.filter((x) => x.faction === 'oda' && !x.lord && x.id !== 旗.id).slice(0, 2);
+  for (const g of 供) g.at = null;
+  const 軍 = {
+    id: 'test-army', faction: 'oda', from: 城.id, gens: 供.map((g) => g.id),
+    local: 3000, localTrain: 70, rost: null, men: 3000 + 供.reduce((a, g) => a + g.retinue, 0),
+    at: 城.id, path: [城.id], prog: 0, food: 4000, target: null, 旗頭: 旗.id, 在陣: 城.id,
+  };
+  s.armies = [...(s.armies || []), 軍];
+  return { s, 旗, 城, 軍 };
+};
+
+console.log('\n── 十七　攻める家を指せば、伺いを立てず在陣の陣を進める');
+{
+  const { s, 旗 } = 方面の盤(true);
+  確('攻める家が指してある', H.旗頭の的家(s, 旗).length > 0,
+    H.旗頭の的家(s, 旗).map((f) => (s.factions[f] || {}).name).join('・'));
+  const u = advanceMonth(s, s);
+  const a = u.armies.find((x) => x.id === 'test-army');
+  const 的 = a && a.target && u.castles.find((c) => c.id === a.target);
+  確('在陣の手勢が次の城へ向かう', !!的, 的 ? `${的.name}（${(u.factions[的.faction] || {}).name}）` : '動かず');
+  確('城ごとの伺いは立てない', !u.旗頭の願い,
+    u.旗頭の願い ? '願いが立った' : '願いなし');
+  確('その城は指した家のもの', !的 || H.旗頭の的家(u, u.generals.find((g) => g.id === 旗.id)).includes(的.faction));
+  確('月報に方面軍の報せが立つ',
+    (u.monthEvents || []).some((x) => /【方面軍】/.test(x)),
+    (u.monthEvents || []).filter((x) => /【方面軍】/.test(x))[0] || 'なし');
+}
+
+console.log('\n── 十八　家を指していなければ、在陣したまま次の城を願い出る');
+{
+  const { s, 旗, 城 } = 方面の盤(false);
+  const u = advanceMonth(s, s);
+  確('願いが立つ', !!u.旗頭の願い && u.旗頭の願い.旗頭 === 旗.id,
+    u.旗頭の願い ? (u.castles.find((c) => c.id === u.旗頭の願い.castleId) || {}).name : 'なし');
+  const a = u.armies.find((x) => x.id === 'test-army');
+  確('許しが出るまでは在陣のまま', !!a && a.在陣 === 城.id && !a.target);
+  /* 許せば、その陣がそのまま動く。 */
+  if (u.旗頭の願い) {
+    const v = structuredClone(u);
+    H.旗頭に許す(v, v.旗頭の願い.旗頭, v.旗頭の願い.castleId);
+    const 的id = v.旗頭の願い.castleId;
+    v.旗頭の願い = null;
+    const w = advanceMonth(v, v);
+    const b = w.armies.find((x) => x.id === 'test-army');
+    確('許せば在陣の陣が動く', !!b && b.target === 的id,
+      b && b.target ? (w.castles.find((c) => c.id === b.target) || {}).name : '動かず');
+  }
+}
+
+console.log('\n── 十九　却下すれば陣を払って帰り、その城へは一年向かわない');
+{
+  const { s, 旗, 城 } = 方面の盤(false);
+  let u = advanceMonth(s, s);
+  確('願いが立つ', !!u.旗頭の願い);
+  const 断城 = u.旗頭の願い.castleId;
+  H.旗頭に断る(u, 旗.id, 断城);
+  const 払 = H.旗頭の陣を払う(u, 旗.id);
+  u.旗頭の願い = null;
+  確('陣を払って帰る', 払.length > 0 && !u.armies.some((x) => x.id === 'test-army'),
+    払.length ? `${払[0].兵}人が${払[0].帰.name}へ` : '払えず');
+  確('兵は城へ返る', u.castles.some((c) => c.id === (払[0] || {}).帰?.id));
+  /* 断った城には向かわない。願い出るとしても別の城である。 */
+  let 同じ城 = false;
+  for (let i = 0; i < 6; i++) {
+    u = advanceMonth(u, u);
+    if (u.旗頭の願い && u.旗頭の願い.castleId === 断城) 同じ城 = true;
+    if (u.旗頭の願い) u.旗頭の願い = null;      // 大名は答えずに置く
+  }
+  確('断った城は半年のあいだ願い出ない', !同じ城,
+    同じ城 ? '同じ城をまた願い出た' : `${(u.castles.find((c) => c.id === 断城) || {}).name}は持ち出さず`);
 }
 
 console.log(`\n════ 旗頭の差配：咎 ${咎.length} 件`);

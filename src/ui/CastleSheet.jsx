@@ -803,9 +803,15 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                                         );
                                       }) : <span>受け持ちに国境を接する家がありません。</span>}
                                     </div>
-                                    {!いま.length && 選べる.length ? (
+                                    {いま.length ? (
                                       <div style={{ fontSize: 11, marginTop: 2 }}>
-                                        指していないあいだは、手近な敵から順に当たります。
+                                        指しているあいだ、{旗.name}は城ごとの伺いを立てません。自ら城と時機を選び、
+                                        落とせば城主を据えてそのまま次の城へ向かいます（顛末は月報に【方面軍】として出ます）。
+                                      </div>
+                                    ) : 選べる.length ? (
+                                      <div style={{ fontSize: 11, marginTop: 2 }}>
+                                        指していないあいだは、手近な敵から順に、城ごとに攻めの願いを出してきます。
+                                        家を指せば、以後は伺いを立てず連戦します。
                                       </div>
                                     ) : null}
                                   </div>

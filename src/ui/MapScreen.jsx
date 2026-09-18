@@ -47,7 +47,7 @@ import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を�
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 攻められるか, 許しの要る主, 許されているか, 許しを与える, 容認するか, 臣従の主 } from "../core/yurushi.js";
-import { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 旗頭に許す, 自ら采配するか } from "../core/inin.js";
+import { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 旗頭に許す, 旗頭に断る, 自ら采配するか } from "../core/inin.js";
 import { 難を逃れる } from "../core/capture.js";
 import { 記録の訳を読む, 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
@@ -2587,9 +2587,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 <div className="row"><span>その家との間柄</span>
                   <span className="v">{r.state}（信用 {Math.round(r.trust)}）</span></div>
                 <div style={{ fontSize: 11.5, color: U.dim, marginTop: 8, lineHeight: 1.8 }}>
-                  容認すれば、{旗.name}が受け持ちの城から自ら兵を出します。落とせば、
-                  誰を城主に据えるか、そして{旗.name}の寄騎とするか直轄とするかを、そのとき問います。<br />
-                  却下すれば動きません。許しは城ごとで、落とすまで続きます。
+                  容認すれば、{旗.name}が受け持ちの城から自ら兵を出します（在陣していれば、その陣を進めます）。
+                  落とせば、誰を城主に据えるか、そして{旗.name}の寄騎とするか直轄とするかを、そのとき問います。<br />
+                  却下すれば陣を払って帰り、その城へは一年のあいだ向かいません。許しは城ごとで、落とすまで続きます。<br />
+                  城ごとに伺いを立てさせたくなければ、城の帳で<b style={{ color: U.text }}>攻める家</b>を指してください。
+                  指したあいだ、{旗.name}は伺いを立てず、落とせばそのまま次の城へ向かいます。
                   {["同盟", "不可侵", "従属", "臣従"].includes(r.state) && (
                     <><br /><span style={{ color: "#B0483C" }}>
                       自家は{的 ? 的.name : "その家"}と{r.state}の間柄にあります。攻めれば、その約束は破れます。
@@ -2600,7 +2602,15 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                   <button className="btn" style={{ flex: 1 }} onClick={() => setG((prev) => {
                     const s2 = structuredClone(prev);
                     s2.旗頭の願い = null;
-                    const 文 = `${旗.name}の${城.name}攻めを却下した。`;
+                    /* 却下したなら、陣を払って帰す（GDD 6.4）。
+
+                       断ったのに在陣したままでは、兵が遠国に遊ぶ。そのうえ翌月には
+                       同じ城をまた願い出ていた。断った城には一年のあいだ向かわない。 */
+                    旗頭に断る(s2, 願.旗頭, 願.castleId);
+                    let 文 = `${旗.name}の${城.name}攻めを却下した。`;
+                    for (const q of 合戦裁定.旗頭の陣を払う(s2, 願.旗頭)) {
+                      文 += `${q.陣 ? q.陣.name : "陣"}の陣を払い、${fmt(q.兵)}人が${q.帰.name}へ帰陣した。`;
+                    }
                     s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
                     s2.msg = 文;
                     return s2;
