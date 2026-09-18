@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
-import { drawBattle, drawCastleTerrain, drawFieldTerrain, inOwnZone } from "../battle/draw.js";
+import { drawBattle, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { stepBattle } from "../battle/engine.js";
 import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
@@ -30,6 +30,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const setFace = (v) => { faceRef.current = v; setFaceMode(v); };
 
   const brokeRef = useRef(-1);
+  const 跡Ref = useRef(null);
   const paintTerrain = () => {
     const t = terrainRef.current || document.createElement("canvas");
     t.width = FIELD.w; t.height = FIELD.h;
@@ -37,6 +38,13 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (ctx.mode === "castle" && ctx.b.map) drawCastleTerrain(g2, ctx.b.map);
     else drawFieldTerrain(g2);
     terrainRef.current = t;
+    /* 戦の痕の画布（GDD 8.1）。地の半分の寸法で足りる――跡はどれも滲んだ形である。
+       記憶を惜しむのは、地の画布が既に十九MB（城攻めなら四十六MB）あるからである。 */
+    const a = 跡Ref.current || document.createElement("canvas");
+    a.width = Math.ceil(FIELD.w * 0.5); a.height = Math.ceil(FIELD.h * 0.5);
+    a.getContext("2d").clearRect(0, 0, a.width, a.height);
+    跡Ref.current = a;
+    if (ctx.b) { ctx.b.跡 = []; ctx.b.跡焼済 = 0; }
   };
   useEffect(() => {
     paintTerrain();
@@ -128,7 +136,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
         if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
           cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
         }
-        drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current);
+        // 新しく増えた戦の痕だけを、跡の画布へ焼き足す
+        if (跡Ref.current) 跡を焼き足す(跡Ref.current.getContext("2d"), b, 0.5);
+        drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current);
       }
       if (b.phase === "over" && speedRef.current !== 0) setSpeed(0);
       if (ts - uiRef.current > 100) { uiRef.current = ts; force((n) => (n + 1) % 1000); }

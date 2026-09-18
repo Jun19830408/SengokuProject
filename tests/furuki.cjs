@@ -298,7 +298,12 @@ console.log('\n── 十　古い記録にも城主の札を据える');
   確('据えても、誰が城主かは変わらない', 違 === 0, `食い違い ${違}／${見}城`);
 
   /* 据えたあとは、出陣しても大身が入っても動かない。 */
-  const 城 = t.castles.find((c) => c.lordId && c.faction === t.player);
+  /* 札の据わった城のうち、その札で城主が決まっている城を選ぶ。
+
+     城主の格（禄高）が城に足りなければ、札があっても城を守る将に落ちる（castellanOf）。
+     格の足りぬ札の城を選ぶと、「大身が入っても変わらない」の前提そのものが崩れる。 */
+  const 城 = t.castles.find((c) => c.lordId && c.faction === t.player
+    && (H.castellanOf(t, c) || {}).id === c.lordId);
   if (城) {
     const 主 = t.generals.find((g) => g.id === 城.lordId);
     主.at = null;                                     // 出陣
@@ -307,7 +312,13 @@ console.log('\n── 十　古い記録にも城主の札を据える');
     主.at = 城.id;
     const 大身 = t.generals.find((g) => g.faction === 城.faction && !g.lord && g.id !== 主.id);
     if (大身) {
-      大身.at = 城.id; 大身.本領 = 城.id; 大身.fief = 90000; 大身.age = 40;
+      /* 大身は「入った」だけである。本領は動かさない。
+
+         もとは本領までその城へ移していた。すると城の余禄の分け前が大身に偏り、
+         札の主の身代がその城の要りを割る――格を失えば札は効かず、城を守る将に
+         落ちる（castellanOf）。それは掟どおりの振る舞いであって、ここで見たい
+         「入っただけでは城主は変わらない」とは別の話である。 */
+      大身.at = 城.id; 大身.fief = 90000; 大身.age = 40;
       確('大身が入っても城主は変わらない', (H.castellanOf(t, 城) || {}).id === 主.id,
         `${(H.castellanOf(t, 城) || {}).name}（大身 ${大身.name}）`);
     }

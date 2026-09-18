@@ -250,8 +250,38 @@ export function buildCastleMap(castle) {
     fac.push({ kind: "陣鐘櫓", name: `${l.name}陣鐘`, x: 帯.x, y: 帯.y,
       r: 14, hp: 200 + castle.def * 2, max: 200 + castle.def * 2, layer: i, cool: 0 });
   });
+  /* 城の中の普請（GDD 9.3）。
+
+     曲輪の中が空き地のままであった。城とは石垣と門だけのものではない――御殿があり、
+     蔵が並び、井戸があり、馬屋がある。城攻めの図は何度も見る画面であるから、
+     中身があるかないかで印象が大きく違う。
+
+     これは絵だけのものである（当たりにも、門の押し合いにも関わらない）。
+     施設（矢倉・陣鐘櫓）と混ぜぬよう、別の控えに置く。 */
+  const 普請 = [];
+  {
+    const 奥 = layers[layers.length - 1];                 // 本丸
+    const 二 = layers.length >= 2 ? layers[layers.length - 2] : null;
+    /* 寸法は曲輪から取る。城の大きさはそのまま曲輪の大きさだからである。 */
+    if (奥 && 奥.hw > 40 && 奥.hh > 40) {
+      普請.push({ kind: "御殿", x: 奥.ox, y: 奥.oy + 奥.hh * 0.10,
+        w: 奥.hw * 0.92, h: 奥.hh * 0.58 });
+      普請.push({ kind: "蔵", x: 奥.ox - 奥.hw * 0.58, y: 奥.oy - 奥.hh * 0.58,
+        w: 奥.hw * 0.30, h: 奥.hh * 0.20 });
+      普請.push({ kind: "井戸", x: 奥.ox + 奥.hw * 0.56, y: 奥.oy - 奥.hh * 0.54,
+        w: Math.min(奥.hw, 奥.hh) * 0.12, h: Math.min(奥.hw, 奥.hh) * 0.12 });
+    }
+    if (二 && 二.hw > 60 && 二.hh > 60) {
+      普請.push({ kind: "馬屋", x: 二.ox - 二.hw * 0.72, y: 二.oy + 二.hh * 0.70,
+        w: 二.hw * 0.40, h: 二.hh * 0.12 });
+      普請.push({ kind: "蔵", x: 二.ox + 二.hw * 0.74, y: 二.oy + 二.hh * 0.66,
+        w: 二.hw * 0.22, h: 二.hh * 0.10 });
+      普請.push({ kind: "蔵", x: 二.ox + 二.hw * 0.74, y: 二.oy + 二.hh * 0.48,
+        w: 二.hw * 0.22, h: 二.hh * 0.10 });
+    }
+  }
   // 中心は戦場を決めたあとに据える（施設は相対座標で持っておく）
-  return { cx: 0, cy: 0, t, layers, moat: { band: 38 * k * 癖.堀, 空堀: 癖.空堀 }, n,
+  return { cx: 0, cy: 0, t, layers, moat: { band: 38 * k * 癖.堀, 空堀: 癖.空堀 }, n, 普請,
     構: 構, 縄張, 横長, 坂: 構 === "山城" ? 1 : 構 === "平山城" ? 0.55 : 0,
     gates: layers.flatMap((l) => l.gates), fac, unit: U };
 }
@@ -275,6 +305,7 @@ export function layoutCastleField(m) {
   FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 2.4 + 160, ext.h * 余)) * 2);
   m.cx = FIELD.w / 2; m.cy = FIELD.h / 2;
   for (const f of m.fac) { f.x += m.cx; f.y += m.cy; }   // 相対から絶対へ
+  for (const f of m.普請 || []) { f.x += m.cx; f.y += m.cy; }
   return m;
 }
 

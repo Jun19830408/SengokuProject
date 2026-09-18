@@ -67,6 +67,18 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
 
      数えるのは「駒を潰した数」であって、討った人数ではない。人数で数えると
      大きな駒を削っただけの隊が上位に来る。討ち取ってこそ手柄である。 */
+  /* 戦の痕を野に残す（GDD 8.1）。
+
+     踏み荒らされた土、倒れた者の跡。合戦が進むにつれて野が荒れていくのを、
+     絵のほうでも見せる。ここでは印を控えるだけで、焼くのは画面の側である
+     （跡の画布へ焼き足すので、毎こまの費えは増えない）。 */
+  if (lost > 6) {
+    b.跡 = b.跡 || [];
+    if (b.跡.length < 900) {
+      b.跡.push({ x: e.x + (Math.random() - 0.5) * 16, y: e.y + (Math.random() - 0.5) * 16,
+        k: "血", r: 4 + Math.min(9, lost * 0.5) });
+    }
+  }
   if (before > 0 && e.men <= 0 && byQ && byQ.src) {
     b.武功 = b.武功 || {};
     const 鍵 = 組の鍵(byQ.src);
@@ -244,7 +256,14 @@ export function stepBattle(b, dt) {
       c.trailT = 0.6;
       c.trail = c.trail || [];
       const last = c.trail[c.trail.length - 1];
-      if (!last || Math.hypot(last.x - c.x, last.y - c.y) > 18) c.trail.push({ x: c.x, y: c.y });
+      if (!last || Math.hypot(last.x - c.x, last.y - c.y) > 18) {
+        c.trail.push({ x: c.x, y: c.y });
+        // 踏み跡。大軍の通ったあとは草が倒れ、土が覗く
+        b.跡 = b.跡 || [];
+        if (b.跡.length < 900 && corpsMen(c) > 200) {
+          b.跡.push({ x: c.x, y: c.y, k: "踏", r: 16 + Math.min(26, corpsMen(c) / 90) });
+        }
+      }
       if (c.trail.length > 26) c.trail.shift();
     }
   }
@@ -1143,7 +1162,11 @@ export function stepBattle(b, dt) {
     const 大勢 = 我が兵 / Math.max(1, 我が兵 + 敵の兵);
     if (!c.withdraw && !c.潰 && !c.dead && delegated(b, c)
       && (ratio <= 0.10 || c.morale <= 0
-        || (大勢 < 0.34 && (ratio <= 0.45 || c.morale <= 28)))) {
+        /* 早めの引き際は、野の戦だけの話である。城に籠る側に退く先は無い――
+           城が持ち場なのだから、崩れても内の曲輪へ下がるのが筋である（下の 内の門へ退く）。
+           これを分けずに入れたところ、城方が二隊、城を捨てて盤の外へ歩いて出た。 */
+        || (!(MAP && c.side !== b.attacker) && 大勢 < 0.34
+          && (ratio <= 0.45 || c.morale <= 28)))) {
       退かせる(b, c, true);                              // 統制のとれた退却
       b.log.push({ t: b.t, text: `${c.name}隊は支えきれず、戦場を退いた。` });
       notify(b, `${c.gen.name}隊が戦場を退いた。`, c.side === "P" ? "bad" : "good");

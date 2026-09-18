@@ -1019,6 +1019,42 @@ export function drawFieldTerrain(ctx) {
   }
 
   道を描く(ctx);                       // 街道は地の上、地物の下
+  /* 地の手触りを一段（GDD 8.1）。
+
+     草の房、土の覗き、河原の石。地の絵は戦の初めに一度焼くだけで、測ると五ミリ秒。
+     十倍描き込んでも一度きり五十ミリ秒であるから、毎こまの重さには響かない。
+     （解像度は上げない――地の画布は既に十九MB、城攻めなら四十六MBある。） */
+  {
+    const r2 = 種乱数(19960217);
+    const 房 = Math.round((FIELD.w * FIELD.h) / 5200);
+    for (let i = 0; i < 房; i++) {
+      const x = r2() * FIELD.w, y = r2() * FIELD.h;
+      const h = 2.4 + r2() * 3.4;
+      ctx.strokeStyle = `rgba(${132 + r2() * 26 | 0},${150 + r2() * 24 | 0},${96 + r2() * 24 | 0},0.5)`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y); ctx.lineTo(x + (r2() - 0.5) * 2.4, y - h);
+      ctx.moveTo(x + 1.6, y); ctx.lineTo(x + 1.6 + (r2() - 0.5) * 2.4, y - h * 0.8);
+      ctx.stroke();
+    }
+    // 土の覗き。踏み荒らされる前から、野には土の見えるところがある
+    for (let i = 0; i < Math.round(房 / 22); i++) {
+      const x = r2() * FIELD.w, y = r2() * FIELD.h;
+      ctx.fillStyle = `rgba(178,164,128,${(0.10 + r2() * 0.10).toFixed(2)})`;
+      ctx.beginPath(); ctx.ellipse(x, y, 6 + r2() * 14, 4 + r2() * 8, r2() * 3, 0, 7); ctx.fill();
+    }
+    // 石ころ。川の岸に多い
+    for (let i = 0; i < Math.round(房 / 26); i++) {
+      const x = r2() * FIELD.w;
+      const y = hasRiver() && r2() < 0.6
+        ? (r2() < 0.5 ? RIVER.top + riverShift(x) - 6 - r2() * 26 : RIVER.bot + riverShift(x) + 6 + r2() * 26)
+        : r2() * FIELD.h;
+      ctx.fillStyle = `rgba(${150 + r2() * 26 | 0},${146 + r2() * 20 | 0},${128 + r2() * 20 | 0},0.55)`;
+      ctx.beginPath(); ctx.ellipse(x, y, 1.4 + r2() * 1.8, 1 + r2() * 1.2, r2() * 3, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(96,92,78,0.22)";
+      ctx.beginPath(); ctx.ellipse(x + 1, y + 1, 1.4 + r2() * 1.2, 0.9, 0, 0, 7); ctx.fill();
+    }
+  }
   for (const v of VILLAGES) 集落を描く(ctx, v);
   for (const m of MARSH) 湿地を描く(ctx, m);
   for (const h of HILLS) 丘を描く(ctx, h);
@@ -1040,6 +1076,79 @@ export function drawFieldTerrain(ctx) {
 
    当たり判定に使う形（castleMap の l.hw・l.hh・t・gates）には一切触れない。
    見えるものと当たるものが食い違ってはならない。 */
+
+/* 城の中の普請を描く（GDD 9.3）。
+
+   御殿は入母屋の大屋根、蔵は白壁に置屋根、馬屋は低く長い板葺き、井戸は屋形をかけた
+   小さな丸。いずれも左上からの光で、右下へ影を落とす（野と城で光を揃える）。 */
+function 普請を描く(ctx, f) {
+  const { x, y, w, h, kind } = f;
+  // 寸法の取れぬ普請は描かない（古い記録の図など）
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !(w > 2) || !(h > 2)) return;
+  /* 屋根は、棟を境に二つの面で見せる。左上から光が差し、手前の面が明るい。
+     瓦の筋を入れると、真上から見ても「屋根」と読める。 */
+  const 屋根 = (ox, oy, ow, oh, 色, 影色) => {
+    ctx.fillStyle = "rgba(74,72,62,0.24)";
+    ctx.fillRect(ox - ow / 2 + 影.x * 0.5, oy - oh / 2 + 影.y * 0.5, ow, oh);
+    const 上 = ctx.createLinearGradient(0, oy - oh / 2, 0, oy);
+    上.addColorStop(0, 影色); 上.addColorStop(1, 色);
+    ctx.fillStyle = 上;
+    ctx.fillRect(ox - ow / 2, oy - oh / 2, ow, oh / 2);
+    const 下 = ctx.createLinearGradient(0, oy, 0, oy + oh / 2);
+    下.addColorStop(0, 色); 下.addColorStop(1, 影色);
+    ctx.fillStyle = 下;
+    ctx.fillRect(ox - ow / 2, oy, ow, oh / 2);
+    // 棟
+    ctx.fillStyle = "rgba(238,238,232,0.35)";
+    ctx.fillRect(ox - ow / 2 + 1, oy - 1.4, ow - 2, 2.8);
+    // 瓦の筋
+    ctx.strokeStyle = "rgba(34,36,40,0.22)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = ow * 0.1; i < ow; i += Math.max(6, ow / 14)) {
+      ctx.moveTo(ox - ow / 2 + i, oy - oh / 2 + 1); ctx.lineTo(ox - ow / 2 + i, oy + oh / 2 - 1);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(40,42,48,0.55)"; ctx.lineWidth = 1;
+    ctx.strokeRect(ox - ow / 2 + 0.5, oy - oh / 2 + 0.5, ow - 1, oh - 1);
+  };
+  if (kind === "井戸") {
+    ctx.fillStyle = "rgba(74,72,62,0.26)";
+    ctx.beginPath(); ctx.arc(x + 影.x * 0.4, y + 影.y * 0.4, w * 0.5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#9A9280";
+    ctx.beginPath(); ctx.arc(x, y, w * 0.5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#2C3038";
+    ctx.beginPath(); ctx.arc(x, y, w * 0.28, 0, 7); ctx.fill();
+    ctx.strokeStyle = "#6B5334"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x - w * 0.5, y - w * 0.5); ctx.lineTo(x + w * 0.5, y - w * 0.5); ctx.stroke();
+    return;
+  }
+  if (kind === "御殿") {
+    屋根(x, y, w, h, "#7C838F", "#525A66");
+    // 大棟と、正面の向拝
+    ctx.fillStyle = "rgba(255,255,255,0.22)";
+    ctx.fillRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, 3);
+    ctx.fillStyle = "rgba(38,40,46,0.55)";
+    ctx.fillRect(x - w / 2 + 4, y - 2, w - 8, 3);
+    屋根(x, y + h * 0.52, w * 0.34, h * 0.3, "#868E9A", "#5B6370");
+    return;
+  }
+  if (kind === "蔵") {
+    // 白壁の上に置屋根。蔵は白く見えるのが常である
+    ctx.fillStyle = "rgba(74,72,62,0.24)";
+    ctx.fillRect(x - w / 2 + 影.x * 0.4, y - h / 2 + 影.y * 0.4, w, h);
+    ctx.fillStyle = "#E4DFCF"; ctx.fillRect(x - w / 2, y - h / 2, w, h);
+    ctx.fillStyle = "#CFC8B4"; ctx.fillRect(x - w / 2, y + h * 0.18, w, h * 0.32);
+    屋根(x, y - h * 0.28, w * 1.1, h * 0.5, "#6E7783", "#4B525C");
+    return;
+  }
+  // 馬屋。低く長い板葺き
+  屋根(x, y, w, h, "#9C8560", "#6B5940");
+  ctx.strokeStyle = "rgba(60,48,32,0.45)"; ctx.lineWidth = 1;
+  for (let i = 1; i < 5; i++) {
+    const ix = x - w / 2 + (w / 5) * i;
+    ctx.beginPath(); ctx.moveTo(ix, y - h / 2); ctx.lineTo(ix, y + h / 2); ctx.stroke();
+  }
+}
 
 // 石垣。天端を明るく、根元を暗く。石の目地を刻み、影を落とす。
 function 石垣を描く(ctx, x, y, w, h, t) {
@@ -1353,6 +1462,10 @@ export function drawCastleTerrain(ctx, m) {
     ctx.fillText(l.name, lx - l.hw + 10, ly - l.hh + 22);
   });
 
+  /* 城の中の普請（GDD 9.3）。御殿・蔵・井戸・馬屋。絵だけのもので、当たりには関わらない。
+     石垣や櫓と同じ光（左上）で描き、瓦は青鈍、白壁は漆喰の色で置く。 */
+  for (const f of m.普請 || []) 普請を描く(ctx, f);
+
   // 施設。崩れたものは瓦礫にする
   for (const f of m.fac) {
     if (f.hp <= 0) {
@@ -1414,7 +1527,107 @@ export const inOwnZone = (b, x, y) => {
   return x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h;
 };
 
-export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
+/* 戦の痕を焼き足す（GDD 8.1）。
+
+   踏み荒らされた土と、倒れた者の跡。戦が進むにつれて野が荒れていく。
+
+   毎こま描き直しては重いので、地の絵と同じく画布へ焼き足す。新しく増えた印だけを
+   足せばよいので、費えは印の数にしか掛からない。画布は地の半分の寸法で足りる――
+   跡はどれも滲んだ形であるから、粗くても目に立たない。 */
+export function 跡を焼き足す(跡ctx, b, 尺 = 0.5) {
+  if (!跡ctx || !b || !b.跡 || !b.跡.length) return;
+  let i = b.跡焼済 || 0;
+  if (i >= b.跡.length) return;
+  跡ctx.save();
+  跡ctx.scale(尺, 尺);
+  for (; i < b.跡.length; i++) {
+    const m = b.跡[i];
+    if (m.k === "踏") {
+      const g = 跡ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r);
+      g.addColorStop(0, "rgba(150,138,104,0.17)");
+      g.addColorStop(0.7, "rgba(150,138,104,0.09)");
+      g.addColorStop(1, "rgba(150,138,104,0)");
+      跡ctx.fillStyle = g;
+      跡ctx.beginPath(); 跡ctx.arc(m.x, m.y, m.r, 0, 7); 跡ctx.fill();
+    } else {
+      const g = 跡ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r);
+      g.addColorStop(0, "rgba(104,52,40,0.30)");
+      g.addColorStop(0.6, "rgba(104,52,40,0.15)");
+      g.addColorStop(1, "rgba(104,52,40,0)");
+      跡ctx.fillStyle = g;
+      跡ctx.beginPath(); 跡ctx.arc(m.x, m.y, m.r, 0, 7); 跡ctx.fill();
+      // 倒れた者の影。滲みの中に、いくつか濃い点を落とす
+      跡ctx.fillStyle = "rgba(74,38,30,0.30)";
+      for (let k = 0; k < 3; k++) {
+        const a = (m.x + m.y + k * 37) % 6.28;
+        跡ctx.beginPath();
+        跡ctx.ellipse(m.x + Math.cos(a) * m.r * 0.5, m.y + Math.sin(a) * m.r * 0.5, 2.6, 1.6, a, 0, 7);
+        跡ctx.fill();
+      }
+    }
+  }
+  跡ctx.restore();
+  b.跡焼済 = i;
+}
+
+/* 空模様と日暮れ（GDD 8.1）。
+
+   盤は天候を持っていて、視界・足の速さ・鉄砲の不発に効かせている。ところが画面には
+   文字で「雨」と出るだけで、絵は終始晴れた昼のままであった。理屈が効いているのに
+   目に見えないのでは、遊ぶ側はその重みを測れない。
+
+   地の絵は戦の初めに一度焼くだけなので、空模様は上から一枚被せる。被せ物は
+   画面いっぱいの塗りと、雨脚か雪片だけ――毎こまの費えはほとんど増えない。
+
+   日暮れも同じに扱う。戦が長引くほど日は傾き、影は伸び、やがて藍が差す。
+   日没で戦が終わるという掟が、絵のほうからも読めるようになる。 */
+export function 空模様を被せる(ctx, b, W, H) {
+  if (!b) return;
+  const 刻 = b.dusk ? Math.min(1, Math.max(0, b.t / b.dusk)) : 0;
+  ctx.save();
+  // 一、日の傾き。半ばを過ぎたら茜、終わりに近づけば藍
+  if (刻 > 0.45) {
+    const u = (刻 - 0.45) / 0.55;
+    ctx.fillStyle = `rgba(198,128,64,${(0.16 * Math.min(1, u * 1.6)).toFixed(3)})`;
+    ctx.fillRect(0, 0, W, H);
+    if (u > 0.55) {
+      const v = (u - 0.55) / 0.45;
+      ctx.fillStyle = `rgba(38,48,86,${(0.26 * v).toFixed(3)})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+  // 二、空模様
+  const w = b.weather || "晴";
+  if (w === "曇") {
+    ctx.fillStyle = "rgba(70,72,78,0.10)"; ctx.fillRect(0, 0, W, H);
+  } else if (w === "雨") {
+    ctx.fillStyle = "rgba(42,54,68,0.20)"; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(226,236,246,0.30)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i < 150; i++) {
+      const s = (i * 9301 + 49297) % 233280 / 233280;
+      const s2 = (i * 4093 + 7919) % 199 / 199;
+      const x = ((s * W + b.t * 60) % (W + 60)) - 30;
+      const y = ((s2 * H + b.t * 620) % (H + 40)) - 20;
+      ctx.moveTo(x, y); ctx.lineTo(x - 5, y + 17);
+    }
+    ctx.stroke();
+  } else if (w === "雪") {
+    ctx.fillStyle = "rgba(226,234,244,0.22)"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    for (let i = 0; i < 110; i++) {
+      const s = (i * 9301 + 49297) % 233280 / 233280;
+      const s2 = (i * 4093 + 7919) % 199 / 199;
+      const x = ((s * W + Math.sin(b.t * 0.6 + i) * 22) % W + W) % W;
+      const y = ((s2 * H + b.t * 90) % (H + 20)) - 10;
+      const r = 1 + (i % 3) * 0.7;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, 跡Canvas) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
   const S = (wx, wy) => [(wx - cam.x) * cam.s + W / 2, (wy - cam.y) * cam.s + H / 2];
@@ -1423,6 +1636,8 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
   ctx.translate(W / 2 - cam.x * cam.s, H / 2 - cam.y * cam.s);
   ctx.scale(cam.s, cam.s);
   ctx.drawImage(terrainCanvas, 0, 0);
+  // 戦の痕。地の上に重ねる（画布は地の半分の寸法なので、引き伸ばして貼る）
+  if (跡Canvas) ctx.drawImage(跡Canvas, 0, 0, FIELD.w, FIELD.h);
 
   // 布陣段階は自陣の範囲を示す
   if (b.phase === "deploy") {
@@ -1444,7 +1659,12 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
 
   // LOD：近距離＝10人駒、中距離＝50人組、遠距離＝武将隊（GDD 8.10）
   const lod = cam.s >= 0.55 ? "koma" : cam.s >= 0.3 ? "squad" : "corps";
-  const shown = b.corps.filter((c) => !c.dead);
+  /* 奥から手前へ描く（GDD 8.10）。
+
+     並びの順に描いていたので、北にいる隊が南の隊の上に重なることがあった。
+     光は左上から差し、影は右下へ落ちる――その理屈からすれば、手前（南）の者が
+     奥（北）の者を隠すのが道理である。厚みが出て、隊の前後が読めるようになる。 */
+  const shown = b.corps.filter((c) => !c.dead).slice().sort((a, z) => a.y - z.y);
   for (const c of shown) {
     const isP = c.side === "P";
     if (c.destroyed) continue;
@@ -1533,6 +1753,27 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
         }
       }
     }
+    /* 駒の影（GDD 8.10）。
+
+       地形は左上からの光で描いてあるのに、駒だけが影を持たず、紙の上に浮いて
+       見えていた。淡い影を一つ落とすだけで、駒は野に立つ。影はまとめて一筆で
+       塗る――駒ごとに色を替えては、千を超える駒で費えが嵩む。 */
+    ctx.save();
+    ctx.fillStyle = "rgba(40,36,28,0.16)";
+    ctx.beginPath();
+    for (const q of live) {
+      const n = Math.ceil(q.men / 10);
+      for (let i = 0; i < n; i++) {
+        const h1 = Math.sin(q.seed + i * 12.9898), h2 = Math.cos(q.seed + i * 78.233);
+        const [ox, oy] = rot(((i % 5) - 2) * KOMA + h1 * 0, Math.floor(i / 5) * KOMA + h2 * 0, q.facing);
+        ctx.moveTo(q.x + ox + 2.2, q.y + oy + 2.6);
+        ctx.arc(q.x + ox + 1.6, q.y + oy + 2.2, 2.6, 0, 7);
+      }
+    }
+    ctx.fill();
+    ctx.restore();
+    // 組も奥から手前へ
+    live.sort((a, z) => a.y - z.y);
     for (const q of live) {
       const n = Math.ceil(q.men / 10);
       const dis = q.dis || 0;
@@ -1561,19 +1802,37 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
     for (const f of b.fx) {
       const a = 1 - f.t / f.life;
       if (f.k === "arrow") {
+        /* 矢は一本では飛ばない。組で引き絞って一斉に放つのだから、束になって届く。 */
         ctx.globalAlpha = a * 0.5;
         ctx.strokeStyle = "#5A5238"; ctx.lineWidth = 0.7;
         const u = Math.min(1, f.t / f.life * 1.6);
         const hx = f.x + (f.x2 - f.x) * u, hy = f.y + (f.y2 - f.y) * u;
         const tx = f.x + (f.x2 - f.x) * Math.max(0, u - 0.22), ty = f.y + (f.y2 - f.y) * Math.max(0, u - 0.22);
-        ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+        const ang3 = Math.atan2(f.y2 - f.y, f.x2 - f.x) + Math.PI / 2;
+        ctx.beginPath();
+        for (const 寄 of [-3.2, 0, 3.4]) {
+          const ox2 = Math.cos(ang3) * 寄, oy2 = Math.sin(ang3) * 寄;
+          const 遅 = 寄 === 0 ? 0 : 0.06;
+          ctx.moveTo(tx + ox2, ty + oy2);
+          ctx.lineTo(hx + ox2 - (f.x2 - f.x) * 遅, hy + oy2 - (f.y2 - f.y) * 遅);
+        }
+        ctx.stroke();
       } else if (f.k === "shot") {
+        /* 鉄砲。弾の筋は一瞬で消えるが、白煙は筒先に残って風に流れる。
+           一斉に放てば、隊の前に煙の帯ができる――遠目にも「いま撃った」と分かる。 */
         ctx.globalAlpha = a * 0.75;
         ctx.strokeStyle = "#FFF4D8"; ctx.lineWidth = 1.1;
         ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x2, f.y2); ctx.stroke();
-        ctx.globalAlpha = a * 0.4;
-        ctx.fillStyle = "#EFE9DC";
-        ctx.beginPath(); ctx.arc(f.x, f.y, 3 + (1 - a) * 5, 0, 7); ctx.fill();
+        const ang2 = Math.atan2(f.y2 - f.y, f.x2 - f.x);
+        ctx.globalAlpha = a * a * 0.45;
+        ctx.fillStyle = "#EDEAE2";
+        for (let k = 0; k < 3; k++) {
+          const d2 = 4 + k * 5 + (1 - a) * 14;
+          ctx.beginPath();
+          ctx.arc(f.x + Math.cos(ang2) * d2 + (k - 1) * 2, f.y + Math.sin(ang2) * d2 - (1 - a) * 6,
+            2.4 + k * 1.6 + (1 - a) * 5, 0, 7);
+          ctx.fill();
+        }
       } else if (f.k === "clash") {
         ctx.globalAlpha = a * 0.9;
         ctx.strokeStyle = f.big ? "#E8B24A" : "#FFFFFF";
@@ -1660,6 +1919,9 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll) {
     }
   }
   ctx.restore();
+
+  // 空模様と日暮れ。地と隊の上、標識の下に被せる
+  空模様を被せる(ctx, b, W, H);
 
   // 標識・文字は画面座標で描く
   for (const c of shown) {
