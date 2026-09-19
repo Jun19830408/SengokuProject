@@ -448,17 +448,38 @@ export function battleAI(b) {
      いまは戦のあいだ折を見て検め、用のあるものだけを出す（corps.js の
      分遣の頃合い）。誰が、いつ、どこで――その三つが揃ったときだけである。
      崩れかけた隊は割かない。手薄になれば、そこから崩れる。 */
+  /* 一軍が同時に出せる分遣の数には限りがある（GDD 8.5）。
+
+     「噛み合って六秒たてば騎馬を回してよい」という決めは、二隊三隊の戦を
+     見て作ったものであった。隊が増えると、噛み合った隊はみな条件を満たす。
+     関ヶ原（片軍五十隊）で測ると分遣が三十四隊も湧き、盤は分遣の札で埋まって
+     どの隊がどこにいるのかも読めない。十二対十二の野戦でも十二隊が湧いていた。
+
+     側面へ回り込むのは戦の中の一手であって、全隊が同時にやることではない。
+     生きた隊の五分の一、多くとも四隊までとする。 */
+  /* 数は一巡のあいだ持ち回る。makeDetachment は b.corps へ足すが、この一巡で
+     使っている alive には入らないので、同じ一巡のうちに何隊も抜けてしまう
+     （限りを四としたのに十三隊出ていた）。 */
+  const 分遣の数 = { P: 0, E: 0 };
+  for (const o of alive) if (o.detach) 分遣の数[o.side]++;
+  const 分遣の限り = (side) => clamp(Math.round(alive.filter((o) => !o.detach && o.side === side).length / 5), 1, 4);
   for (const c of alive) {
     if (!delegated(b, c) || c.detach || c.routed || c.withdraw) continue;
-    if (c.守備隊) continue;                            // 名も無き守備隊は兵を割かない
+    if (c.守備隊 || c.不戦 || c.控え || c.縛り) continue;   // 動かぬ隊は兵を割かない
     if (c.morale < 55 || corpsMen(c) < corpsMax(c) * 0.5) continue;
     if (b.t < 3) continue;                       // 布陣直後は様子を見る
     if (b.t < (c.分遣を検めた || 0) + 5) continue;
+    if (分遣の数[c.side] >= 分遣の限り(c.side)) continue;
     c.分遣を検めた = b.t;
-    const opt = detachOptions(b, c).filter((o) => o.ok && 分遣の頃合い(b, c, o.key));
+    /* 筋書きの一戦では、割くのは騎馬の側面攻撃だけとする。
+       高地を取る・渡河点を守る・森を探るといった分遣は、そのつど盤に隊と札を
+       増やす。史実の布陣から始める一戦で、これを並べる意味はない。 */
+    const opt = detachOptions(b, c)
+      .filter((o) => o.ok && (!b.筋書き || o.key === "騎馬側面攻撃") && 分遣の頃合い(b, c, o.key));
     if (!opt.length) continue;
     if (Math.random() > 0.3) continue;           // 頃合いでも、必ず割くわけではない
     makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
+    分遣の数[c.side]++;
   }
   /* 名指しの目標（GDD 8.2）。
 
@@ -483,6 +504,9 @@ export function battleAI(b) {
 
   for (const c of alive) {
     if (!delegated(b, c) || c.routed || c.detach) continue;
+    /* 動かぬと決めている隊には、采配も何も企てない。
+       戦わぬ島津に「木立へ回って伏せよ」と命じては、動かぬと決めた意味がない。 */
+    if (c.不戦 || c.控え || c.縛り) continue;
     /* 伏せに向かう隊と、伏せている隊。
 
        伏せ場へ着いたら身をひそめる。ひそめた隊には、以後なにも命じない。
@@ -501,7 +525,14 @@ export function battleAI(b) {
       c.伏せ場 = null;                       // 着いてみたら伏せられぬ地であった
     }
     const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
-    const foes = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
+    /* 戦わぬと決めている敵（島津）は、進んでは狙わない。
+
+       義弘は備を固めたまま一歩も動かなかった。こちらから仕掛けなければ
+       撃ってもこない相手に、わざわざ兵を割いて当たる道理はない――東軍も
+       島津を積極的には攻めなかった。ほかに戦える敵が一つも居なければ、
+       そのときは相手にする。 */
+    const 戦う敵 = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
+    const foes = 戦う敵.some((o) => !o.不戦) ? 戦う敵.filter((o) => !o.不戦) : 戦う敵;
 
     /* 追い討ち（GDD 8.7）。
 
@@ -932,7 +963,7 @@ export function battleAI(b) {
      ここへ来るので、決めた行き先をここで消す――先に消しては、後の段で
      また前へ出る行き先を書かれてしまう（測ったら四千歩も進んでいた）。 */
   for (const c of alive) {
-    if (!c.控え && !c.縛り) continue;
+    if (!c.控え && !c.縛り && !c.不戦) continue;
     c.order = "待機"; c.tx = c.x; c.ty = c.y; c.wp = null;
     c.faceTo = null; c.chargeT = 0;
   }

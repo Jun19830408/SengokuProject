@@ -223,6 +223,47 @@ export function stepBattle(b, dt) {
         let gx2 = cx2 - Math.cos(c.facing) * back, gy2 = cy2 - Math.sin(c.facing) * back;
         if (!passable(gx2, gy2)) { gx2 = cx2; gy2 = cy2; }
         c.gx = gx2; c.gy = gy2;
+
+        /* 代表点そのものを、兵から離れすぎないようにする（GDD 8.3）。
+
+           これまで縛っていたのは「絵に描く武将の位置（gx,gy）」だけで、
+           隊の代表点（x,y）は自由に歩いていた。組の持ち場は代表点から測るので、
+           代表点が先へ行けば持ち場も先へ行く。ところが噛み合っている組は
+           持ち場へ戻らない決まりである（戻らせると前後に震える）。
+
+           結果、槍を合わせている組を置き去りにして代表点だけが進み、
+           組は百十歩の「はぐれ」に落ちて隊の来た道を辿り始める。関ヶ原で
+           測ると、組の一割八分がこの「はぐれ」であった。盤の上では、
+           隊が左右へ流れて崩れたように見える。
+
+           大将は兵を置いて先へは行かない。代表点は、兵の重心から
+           隊の広がりぶんまでしか離れられないものとする。 */
+        let 広 = 0;
+        for (const q of c.squads) {
+          if (q.men <= 0) continue;
+          const r = Math.hypot(q.x - cx2, q.y - cy2);
+          if (r > 広) 広 = r;
+        }
+        c.広がり = 広;
+        /* 縄の長さは、槍を合わせているかどうかで変える。
+
+           行軍のあいだに短い縄で縛ると、代表点が毎瞬引き戻されるので、隊は
+           組の足でしか進めなくなる。測ると、丘へ登る隊が三つとも頂に届かず、
+           前へ出る隊も一歩も出なくなった。歩いているあいだは組がちゃんと
+           追いつくのだから、縄は長くてよい――代表点が兵を置き去りにして
+           野を突っ切るのを止めれば足りる。
+
+           槍を合わせたら短くする。噛み合った組は持ち場へ戻らない決まりなので、
+           ここで縄が長いと、斬り結んでいる組を置いて代表点だけが進む。 */
+        const 噛んでいる = c.squads.some((q) => q.men > 0 && q.engaged);
+        /* 縄は野の話である。城内では隊の居場所は門で決まっており（持ち場に
+           据えられる）、代表点を兵の重心へ引けば持ち場から外れる。実際、
+           外の門が残っているのに城方が本丸の門へ就き替えた。 */
+        if (!MAP && !c.routed && !c.withdraw) {
+          const 縄 = 噛んでいる ? clamp(広 * 0.38, 34, 120) : clamp(広 * 0.95, 70, 280);
+          const dx2 = c.x - cx2, dy2 = c.y - cy2, dd = Math.hypot(dx2, dy2);
+          if (dd > 縄) { c.x = cx2 + (dx2 / dd) * 縄; c.y = cy2 + (dy2 / dd) * 縄; }
+        }
       }
     }
   }
@@ -231,6 +272,17 @@ export function stepBattle(b, dt) {
   // 「離れすぎたら本隊へ戻す」ような、命じていない移動はさせない。
   for (const c of alive) {
     if (c.detach || c.routed || c.withdraw || (c.ambush && !c.revealed)) continue;
+    /* 槍を合わせている隊は、隣に押されて横へ動かない（GDD 8.3）。
+       噛み合いとは足を止めて斬り結ぶことである。そこへ味方の押し合いを
+       掛けると、戦列が横へ流れ、置き去りにされた組がはぐれる。
+
+       その場を動かぬと決めている隊（控えの旗本・山の押さえ・戦わぬ島津）も
+       同じである。押されて持ち場から流れては、動かぬと決めた意味がない
+       （八百秒で五百八十歩も流されていた）。 */
+    /* まったく押されなくすると、押し合いが片側だけになる。動かぬ隊は壁になり、
+       隣の隊はその壁から一方的に押され続けて、盤の外まで流れ出た（実測、
+       小西行長隊が八十秒で盤の左外へ）。押し返さないのではなく、押されにくい。 */
+    const 踏ん張る = c.squads.some((q) => q.men > 0 && q.engaged) || c.不戦 || c.控え || c.縛り;
     const mates = alive.filter((o) => o !== c && o.side === c.side && !o.detach && !o.routed && !o.withdraw);
     if (!mates.length) continue;
     /* 押し合いは、重なったときだけ（GDD 8.3）。
@@ -255,11 +307,17 @@ export function stepBattle(b, dt) {
     if (c.pinned) continue;              // 門に取り付いた隊は動かない
     // 押し合いの力が行軍の足より強いと、隣の隊に阻まれて一歩も進めなくなる。
     const cap = MAP ? 12 : 40;
-    const px = clamp(sx * (MAP ? 0.3 : 0.55), -cap, cap) * dt;
-    const py = clamp(sy * (MAP ? 0.3 : 0.55), -cap, cap) * dt;
+    const 踏 = 踏ん張る ? 0.16 : 1;
+    const px = clamp(sx * (MAP ? 0.3 : 0.55), -cap, cap) * dt * 踏;
+    const py = clamp(sy * (MAP ? 0.3 : 0.55), -cap, cap) * dt * 踏;
     if (passable(c.x + px, c.y + py)) { c.x += px; c.y += py; }
     else if (passable(c.x + px, c.y)) c.x += px;
     else if (passable(c.x, c.y + py)) c.y += py;
+    /* 押されて盤の外へ出ない。盤を落ちるのは崩れて逃げる隊だけである。 */
+    if (!MAP && !c.routed && !c.withdraw) {
+      c.x = clamp(c.x, 30, FIELD.w - 30);
+      c.y = clamp(c.y, 30, FIELD.h - 30);
+    }
   }
 
   // 隊の来た道を覚える。はぐれた組は武将と同じ道筋を辿って戻る。
@@ -540,9 +598,19 @@ export function stepBattle(b, dt) {
           targetY = homeY + ((targetY - homeY) / off) * leash;
         }
       }
-      // 隊からはぐれた組は、まず隊の来た道を辿って追いつく。追いついたら定位置へ戻る。
+      /* 隊からはぐれた組は、まず隊の来た道を辿って追いつく。追いついたら定位置へ戻る。
+
+         ただし槍を合わせている組は「はぐれ」ではない。足を止めて斬り結んで
+         いるあいだに隊が前へ出れば、隔たりは百十歩を超える。そこで来た道を
+         辿らせると、組は敵に背を向け、隊の通ってきた道筋を大きく迂回して
+         戻る――盤の上では、戦列が左右へ流れて崩れたように見える。
+         関ヶ原で測ると、組の一割八分がこの状態であった。
+
+         噛み合っている組と、離れたばかりの組は、はぐれとしない。 */
       const homeD = Math.hypot(q.x - targetX, q.y - targetY);
-      if (homeD > 110) q.lost = true; else if (homeD < 40) q.lost = false;
+      const 噛み最近 = q.engaged || (b.t - (q.噛み刻 == null ? -99 : q.噛み刻) < 3);
+      if (homeD > 110 && !噛み最近) q.lost = true;
+      else if (homeD < 40 || 噛み最近) q.lost = false;
       // それでも大きく離れたままなら、武将のそばへ引き戻す。
       // 壁や堀を挟んで取り残された一組が、隊全体の足を止めてしまうのを防ぐ。
       if (homeD > 190) {
@@ -582,7 +650,21 @@ export function stepBattle(b, dt) {
       /* 足踏みしない幅。城内は隊も組も密なので広く取る（門前の震えはここが効く）。
          野では組がぴたりと寄るほうがよく、狭く取る。 */
       const 止まる幅 = MAP ? 5 : 2;
-      if (qd > 止まる幅 && (!噛み中 || c.withdraw || c.routed)) {
+      /* 噛み合っている組も、持ち場から大きく離れたら戻る（GDD 8.3）。
+
+         もとは「噛み合ったら持ち場へ戻らない」と決めていた。噛み合いは一瞬ごとに
+         立ったり消えたりするので、消えた隙に引き戻されて前後に震えたからである。
+
+         ところが、そのあいだ隊は前へ出る。斬り結んでいる組は置いていかれ、
+         戦列は伸びて陣形の体を成さなくなる。関ヶ原で測ると、噛み合っている組の
+         五分五厘が持ち場から六十歩以上離れていた。
+
+         震えるのは「わずかな隔たりで足を出す」からであって、戻ること自体では
+         ない。噛み合っている組には広い遊び（二十四歩）を与え、それを超えたら
+         半分の足で寄り直す。二十四歩は組の幅ほどで、斬り結ぶ間合いを損なわない。 */
+      const 噛み遊び = 24;
+      const 噛みでも戻る = 噛み中 && qd > 噛み遊び;
+      if (qd > 止まる幅 && (!噛み中 || 噛みでも戻る || c.withdraw || c.routed)) {
         /* 持ち場へ追いつくための足（GDD 8.3）。
 
            組は自分の兵科の速さでしか歩けなかった。ところが隊そのものは
@@ -595,7 +677,8 @@ export function stepBattle(b, dt) {
            行き過ぎることもない（歩幅は残りの隔たりで頭打ちにしてある）。 */
         const 遅れ = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
         const 追いつき = c.routed ? 1 : clamp(1 + 遅れ / 34, 1, 2.4);
-        const v = st0.speed * 追いつき * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
+        // 斬り結びながら寄り直すのだから、足は半ばである
+        const v = st0.speed * 追いつき * (噛みでも戻る ? 0.45 : 1) * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = ((targetX - q.x) / qd) * Math.min(v * dt, qd);
         const sy = ((targetY - q.y) / qd) * Math.min(v * dt, qd);
         const 踏めるq = (nx, ny) => passableFor(c, b, nx, ny) && 淵を踏めるか(c, b, nx, ny, q.地);
@@ -1165,8 +1248,25 @@ export function stepBattle(b, dt) {
     // 総大将が前線に出れば全軍の士気が上がる（GDD 8.7）
     const near = alive.some((o) => o.side === c.side && o.gen.lord && Math.hypot(o.x - c.x, o.y - c.y) < 260);
     c.morale = clamp(c.morale + (動 + (ratio - 0.45) * 0.35 + (near ? 0.3 : 0)) * dt, 0, 100);
+    /* 密集防御から戻る（GDD 8.3）。
+
+       三方から取り付かれた隊は方陣を組む。ところが一度組んだら二度と解けず、
+       関ヶ原で測ると五十隊のうち二十隊が終始「密集防御」のままであった。
+       囲みが解けたなら、陣は元へ戻さねばならない。方陣は攻めの鈍い陣なので、
+       解かぬままでは押し返せず、盤は密集防御の札で埋まる。 */
+    if (c.boxed) {
+      if ((c.pinch || 0) <= 1) {
+        c.囲み解け = (c.囲み解け || 0) + dt;
+        if (c.囲み解け > 6) {
+          c.boxed = false; c.囲み解け = 0;
+          c.formation = c.元の陣 || "横陣"; placeSquads(c, false);
+          b.log.push({ t: b.t, text: `${c.name}隊は囲みを脱し、${c.formation}に戻った。` });
+        }
+      } else c.囲み解け = 0;
+    }
     if (!c.routed && !c.boxed && fighting) {
       if ((c.pinch || 0) >= 3) {
+        c.元の陣 = c.formation;
         c.boxed = true; c.formation = "方陣"; placeSquads(c, false);
         b.log.push({ t: b.t, text: `${c.name}隊が包囲されかけ、方陣で密集防御に移った。` });
         c.feats.push("密集防御");

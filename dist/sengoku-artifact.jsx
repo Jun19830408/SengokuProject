@@ -25263,9 +25263,10 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, \u8DE1Ca
     if (!isP) {
       ctx.save();
       ctx.clip();
-      ctx.strokeStyle = side + "3A";
-      ctx.lineWidth = 1.4 / cam.s;
-      for (let hx = x0 - (y1 - y0); hx < x1; hx += 9) {
+      ctx.strokeStyle = side + (on ? "3A" : "1E");
+      ctx.lineWidth = (on ? 1.4 : 1) / cam.s;
+      const \u9593 = on ? 9 : 17;
+      for (let hx = x0 - (y1 - y0); hx < x1; hx += \u9593) {
         ctx.beginPath();
         ctx.moveTo(hx, y1);
         ctx.lineTo(hx + (y1 - y0), y0);
@@ -25664,7 +25665,10 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, \u8DE1Ca
       ctx.fillStyle = "rgba(154,123,79,0.9)";
       ctx.fillRect(x - 22, y + 21, 44 * c.fatigue / 100, 2);
     }
-    const tag = c.routed ? ["\u6557\u8D70", "#B0483C"] : c.withdraw ? ["\u64A4\u9000\u4E2D", "#7C7668"] : c.boxed ? ["\u5BC6\u96C6\u9632\u5FA1", "#8A6A34"] : c.pinch >= 2 ? ["\u631F\u6483", "#B0483C"] : c.order === "\u5C04\u6483" ? ["\u5C04\u6483\u512A\u5148", "#4A6E8A"] : null;
+    const \u9078\u4E2D = sel === c.id || selAll;
+    const \u6025 = c.routed ? ["\u6557\u8D70", "#B0483C"] : c.withdraw ? ["\u64A4\u9000\u4E2D", "#7C7668"] : null;
+    const \u5E38 = c.boxed ? ["\u5BC6\u96C6\u9632\u5FA1", "#8A6A34"] : c.pinch >= 2 ? ["\u631F\u6483", "#B0483C"] : c.order === "\u5C04\u6483" ? ["\u5C04\u6483\u512A\u5148", "#4A6E8A"] : null;
+    const tag = \u6025 || (\u9078\u4E2D || shown.length <= 14 ? \u5E38 : null);
     if (tag) {
       ctx.fillStyle = tag[1];
       ctx.font = "11px sans-serif";
@@ -26072,17 +26076,22 @@ function battleAI(b) {
       b.log.push({ t: b.t, text: `${\u9078.gen.name}\u968A\u304C\u6728\u7ACB\u3078\u56DE\u308A\u3001\u8EAB\u3092\u3072\u305D\u3081\u308B\u3002` });
     }
   }
+  const \u5206\u9063\u306E\u6570 = { P: 0, E: 0 };
+  for (const o of alive) if (o.detach) \u5206\u9063\u306E\u6570[o.side]++;
+  const \u5206\u9063\u306E\u9650\u308A = (side) => clamp(Math.round(alive.filter((o) => !o.detach && o.side === side).length / 5), 1, 4);
   for (const c of alive) {
     if (!delegated(b, c) || c.detach || c.routed || c.withdraw) continue;
-    if (c.\u5B88\u5099\u968A) continue;
+    if (c.\u5B88\u5099\u968A || c.\u4E0D\u6226 || c.\u63A7\u3048 || c.\u7E1B\u308A) continue;
     if (c.morale < 55 || corpsMen(c) < corpsMax(c) * 0.5) continue;
     if (b.t < 3) continue;
     if (b.t < (c.\u5206\u9063\u3092\u691C\u3081\u305F || 0) + 5) continue;
+    if (\u5206\u9063\u306E\u6570[c.side] >= \u5206\u9063\u306E\u9650\u308A(c.side)) continue;
     c.\u5206\u9063\u3092\u691C\u3081\u305F = b.t;
-    const opt = detachOptions(b, c).filter((o) => o.ok && \u5206\u9063\u306E\u9803\u5408\u3044(b, c, o.key));
+    const opt = detachOptions(b, c).filter((o) => o.ok && (!b.\u7B4B\u66F8\u304D || o.key === "\u9A0E\u99AC\u5074\u9762\u653B\u6483") && \u5206\u9063\u306E\u9803\u5408\u3044(b, c, o.key));
     if (!opt.length) continue;
     if (Math.random() > 0.3) continue;
     makeDetachment(b, c, opt[Math.floor(Math.random() * opt.length)].key);
+    \u5206\u9063\u306E\u6570[c.side]++;
   }
   for (const c of alive) {
     if (!c.\u72D9\u3044 || c.routed || c.withdraw || c.detach) continue;
@@ -26105,6 +26114,7 @@ function battleAI(b) {
   }
   for (const c of alive) {
     if (!delegated(b, c) || c.routed || c.detach) continue;
+    if (c.\u4E0D\u6226 || c.\u63A7\u3048 || c.\u7E1B\u308A) continue;
     if (c.ambush && !c.revealed) continue;
     if (c.\u4F0F\u5175\u7121\u7528) {
       c.\u4F0F\u305B\u5834 = null;
@@ -26128,7 +26138,8 @@ function battleAI(b) {
       c.\u4F0F\u305B\u5834 = null;
     }
     const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
-    const foes = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
+    const \u6226\u3046\u6575 = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
+    const foes = \u6226\u3046\u6575.some((o) => !o.\u4E0D\u6226) ? \u6226\u3046\u6575.filter((o) => !o.\u4E0D\u6226) : \u6226\u3046\u6575;
     if (!foes.length) {
       const \u5D29 = alive.filter((o) => o.side === foeSide && o.routed && !o.\u6F70 && !o.withdraw && (o.seen || !o.ambush));
       if (\u5D29.length && !c.routed && corpsMen(c) > corpsMax(c) * 0.2) {
@@ -26460,7 +26471,7 @@ function battleAI(b) {
     issueOrder(b, c, { order: "\u63A5\u6226", tx: sx, ty: sy });
   }
   for (const c of alive) {
-    if (!c.\u63A7\u3048 && !c.\u7E1B\u308A) continue;
+    if (!c.\u63A7\u3048 && !c.\u7E1B\u308A && !c.\u4E0D\u6226) continue;
     c.order = "\u5F85\u6A5F";
     c.tx = c.x;
     c.ty = c.y;
@@ -26639,11 +26650,28 @@ function stepBattle(b, dt) {
         }
         c.gx = gx2;
         c.gy = gy2;
+        let \u5E83 = 0;
+        for (const q of c.squads) {
+          if (q.men <= 0) continue;
+          const r = Math.hypot(q.x - cx2, q.y - cy2);
+          if (r > \u5E83) \u5E83 = r;
+        }
+        c.\u5E83\u304C\u308A = \u5E83;
+        const \u565B\u3093\u3067\u3044\u308B = c.squads.some((q) => q.men > 0 && q.engaged);
+        if (!MAP && !c.routed && !c.withdraw) {
+          const \u7E04 = \u565B\u3093\u3067\u3044\u308B ? clamp(\u5E83 * 0.38, 34, 120) : clamp(\u5E83 * 0.95, 70, 280);
+          const dx2 = c.x - cx2, dy2 = c.y - cy2, dd = Math.hypot(dx2, dy2);
+          if (dd > \u7E04) {
+            c.x = cx2 + dx2 / dd * \u7E04;
+            c.y = cy2 + dy2 / dd * \u7E04;
+          }
+        }
       }
     }
   }
   for (const c of alive) {
     if (c.detach || c.routed || c.withdraw || c.ambush && !c.revealed) continue;
+    const \u8E0F\u3093\u5F35\u308B = c.squads.some((q) => q.men > 0 && q.engaged) || c.\u4E0D\u6226 || c.\u63A7\u3048 || c.\u7E1B\u308A;
     const mates = alive.filter((o) => o !== c && o.side === c.side && !o.detach && !o.routed && !o.withdraw);
     if (!mates.length) continue;
     const \u5C4A\u304D = MAP ? 96 : 150;
@@ -26658,13 +26686,18 @@ function stepBattle(b, dt) {
     }
     if (c.pinned) continue;
     const cap = MAP ? 12 : 40;
-    const px2 = clamp(sx * (MAP ? 0.3 : 0.55), -cap, cap) * dt;
-    const py2 = clamp(sy * (MAP ? 0.3 : 0.55), -cap, cap) * dt;
+    const \u8E0F = \u8E0F\u3093\u5F35\u308B ? 0.16 : 1;
+    const px2 = clamp(sx * (MAP ? 0.3 : 0.55), -cap, cap) * dt * \u8E0F;
+    const py2 = clamp(sy * (MAP ? 0.3 : 0.55), -cap, cap) * dt * \u8E0F;
     if (passable(c.x + px2, c.y + py2)) {
       c.x += px2;
       c.y += py2;
     } else if (passable(c.x + px2, c.y)) c.x += px2;
     else if (passable(c.x, c.y + py2)) c.y += py2;
+    if (!MAP && !c.routed && !c.withdraw) {
+      c.x = clamp(c.x, 30, FIELD.w - 30);
+      c.y = clamp(c.y, 30, FIELD.h - 30);
+    }
   }
   for (const c of alive) {
     c.trailT = (c.trailT || 0) - dt;
@@ -26866,8 +26899,9 @@ function stepBattle(b, dt) {
         }
       }
       const homeD = Math.hypot(q.x - targetX, q.y - targetY);
-      if (homeD > 110) q.lost = true;
-      else if (homeD < 40) q.lost = false;
+      const \u565B\u307F\u6700\u8FD1 = q.engaged || b.t - (q.\u565B\u307F\u523B == null ? -99 : q.\u565B\u307F\u523B) < 3;
+      if (homeD > 110 && !\u565B\u307F\u6700\u8FD1) q.lost = true;
+      else if (homeD < 40 || \u565B\u307F\u6700\u8FD1) q.lost = false;
       if (homeD > 190) {
         let put = null;
         for (let k = 0; k < 18 && !put; k++) {
@@ -26904,10 +26938,12 @@ function stepBattle(b, dt) {
       const terr = TERRAIN[q.\u5730];
       const \u565B\u307F\u4E2D = q.engaged || b.t - (q.\u565B\u307F\u523B == null ? -99 : q.\u565B\u307F\u523B) < 1.2;
       const \u6B62\u307E\u308B\u5E45 = MAP ? 5 : 2;
-      if (qd > \u6B62\u307E\u308B\u5E45 && (!\u565B\u307F\u4E2D || c.withdraw || c.routed)) {
+      const \u565B\u307F\u904A\u3073 = 24;
+      const \u565B\u307F\u3067\u3082\u623B\u308B = \u565B\u307F\u4E2D && qd > \u565B\u307F\u904A\u3073;
+      if (qd > \u6B62\u307E\u308B\u5E45 && (!\u565B\u307F\u4E2D || \u565B\u307F\u3067\u3082\u623B\u308B || c.withdraw || c.routed)) {
         const \u9045\u308C = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
         const \u8FFD\u3044\u3064\u304D = c.routed ? 1 : clamp(1 + \u9045\u308C / 34, 1, 2.4);
-        const v = st0.speed * \u8FFD\u3044\u3064\u304D * fieldScale() * (b.\u8DB3\u306E\u624B\u52A0\u6E1B || 1) * \u6C34\u99B4\u308C\u306E\u8DB3(c, q.\u5730, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
+        const v = st0.speed * \u8FFD\u3044\u3064\u304D * (\u565B\u307F\u3067\u3082\u623B\u308B ? 0.45 : 1) * fieldScale() * (b.\u8DB3\u306E\u624B\u52A0\u6E1B || 1) * \u6C34\u99B4\u308C\u306E\u8DB3(c, q.\u5730, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = (targetX - q.x) / qd * Math.min(v * dt, qd);
         const sy = (targetY - q.y) / qd * Math.min(v * dt, qd);
         const \u8E0F\u3081\u308Bq = (nx, ny) => passableFor(c, b, nx, ny) && \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, nx, ny, q.\u5730);
@@ -27430,8 +27466,21 @@ function stepBattle(b, dt) {
     if (c.routed && \u6575\u8FD1) \u52D5 -= 0.4;
     const near = alive.some((o) => o.side === c.side && o.gen.lord && Math.hypot(o.x - c.x, o.y - c.y) < 260);
     c.morale = clamp(c.morale + (\u52D5 + (ratio - 0.45) * 0.35 + (near ? 0.3 : 0)) * dt, 0, 100);
+    if (c.boxed) {
+      if ((c.pinch || 0) <= 1) {
+        c.\u56F2\u307F\u89E3\u3051 = (c.\u56F2\u307F\u89E3\u3051 || 0) + dt;
+        if (c.\u56F2\u307F\u89E3\u3051 > 6) {
+          c.boxed = false;
+          c.\u56F2\u307F\u89E3\u3051 = 0;
+          c.formation = c.\u5143\u306E\u9663 || "\u6A2A\u9663";
+          placeSquads(c, false);
+          b.log.push({ t: b.t, text: `${c.name}\u968A\u306F\u56F2\u307F\u3092\u8131\u3057\u3001${c.formation}\u306B\u623B\u3063\u305F\u3002` });
+        }
+      } else c.\u56F2\u307F\u89E3\u3051 = 0;
+    }
     if (!c.routed && !c.boxed && fighting) {
       if ((c.pinch || 0) >= 3) {
+        c.\u5143\u306E\u9663 = c.formation;
         c.boxed = true;
         c.formation = "\u65B9\u9663";
         placeSquads(c, false);
@@ -29006,13 +29055,21 @@ var \u8868 = [
   ["\u5CF6\u5DE6\u8FD1", 1e3, 753, 419, "\u6771", "\u897F", [84, 88, 78, 62, 80], "\u5E38"],
   ["\u84B2\u751F\u90F7\u820E", 1e3, 729, 451, "\u6771", "\u897F", [70, 74, 62, 58, 66], "\u5E38"],
   ["\u7E54\u7530\u4FE1\u9AD8", 500, 588, 407, "\u6771", "\u897F", [54, 56, 50, 52, 55], "\u5E38"],
-  ["\u5CF6\u6D25\u7FA9\u5F18", 1e3, 689, 584, "\u6771", "\u897F", [90, 92, 82, 74, 90], "\u9244\u7832"],
-  ["\u5CF6\u6D25\u8C4A\u4E45", 500, 686, 637, "\u6771", "\u897F", [76, 86, 64, 60, 84], "\u9244\u7832"],
+  /* 島津は戦わぬ（GDD 8.9）。
+  
+       義弘は三成の再三の出撃要請を断り、備を固めたまま一歩も動かなかった。
+       動いたのは戦の終わり――西軍が崩れてから、正面の敵中を突いて退いた
+       （島津の退き口）。盤でも「不戦」として置き、下知を受け付けない。
+       退き口の頃合いが来たら、遊ぶ側に問う。 */
+  ["\u5CF6\u6D25\u7FA9\u5F18", 1e3, 689, 584, "\u6771", "\u897F", [90, 92, 82, 74, 90], "\u9244\u7832", { \u4E0D\u6226: true, \u5CF6\u6D25: true }],
+  ["\u5CF6\u6D25\u8C4A\u4E45", 500, 686, 637, "\u6771", "\u897F", [76, 86, 64, 60, 84], "\u9244\u7832", { \u4E0D\u6226: true, \u5CF6\u6D25: true }],
   ["\u5C0F\u897F\u884C\u9577", 4e3, 626, 679, "\u6771", "\u897F", [62, 58, 72, 76, 60], "\u5E38"],
-  ["\u5B87\u559C\u591A\u79C0\u5BB6", 6e3, 576, 757, "\u6771", "\u897F", [68, 70, 60, 64, 62], "\u5E38"],
-  ["\u660E\u77F3\u5168\u767B", 3e3, 614, 792, "\u6771", "\u897F", [80, 78, 74, 66, 76], "\u5E38"],
-  ["\u9577\u8239\u5409\u884C", 1e3, 538, 795, "\u6771", "\u897F", [62, 62, 58, 60, 60], "\u5E38"],
-  ["\u672C\u591A\u653F\u91CD", 1e3, 546, 720, "\u6771", "\u897F", [68, 76, 60, 56, 62], "\u5E38"],
+  /* 宇喜多隊は一万七千。西軍でいちばん大きい隊である。
+     布陣図は一つの印にまとめて描いているので、四つに割って近くに置く。 */
+  ["\u5B87\u559C\u591A\u79C0\u5BB6", 8e3, 576, 757, "\u6771", "\u897F", [68, 70, 60, 64, 62], "\u5E38"],
+  ["\u660E\u77F3\u5168\u767B", 5e3, 614, 792, "\u6771", "\u897F", [80, 78, 74, 66, 76], "\u5E38"],
+  ["\u9577\u8239\u5409\u884C", 2e3, 538, 795, "\u6771", "\u897F", [62, 62, 58, 60, 60], "\u5E38"],
+  ["\u672C\u591A\u653F\u91CD", 2e3, 546, 720, "\u6771", "\u897F", [68, 76, 60, 56, 62], "\u5E38"],
   ["\u6238\u7530\u91CD\u653F", 900, 504, 850, "\u5357\u6771", "\u897F", [64, 72, 58, 56, 66], "\u5E38"],
   ["\u6728\u4E0B\u983C\u7D99", 1e3, 486, 872, "\u5357\u6771", "\u897F", [58, 60, 56, 56, 60], "\u5E38"],
   ["\u5927\u8C37\u5409\u52DD", 1500, 500, 890, "\u5357\u6771", "\u897F", [66, 68, 62, 60, 70], "\u9244\u7832"],
@@ -29151,8 +29208,13 @@ function \u5408\u6226\u3092\u4ED5\u7ACB\u3066\u308B(id, \u5473\u65B9\u65D7) {
       \u76EE\u4ED8: !!d.\u76EE\u4ED8,
       \u7D9A\u304F: !!d.\u7D9A\u304F,
       \u5BB6\u5EB7: !!d.\u5BB6\u5EB7,
-      \u8981: !!d.\u8981
+      \u8981: !!d.\u8981,
+      \u5CF6\u6D25: !!d.\u5CF6\u6D25
     };
+    if (d.\u4E0D\u6226) {
+      c.\u4E0D\u6226 = true;
+      c.order = "\u5F85\u6A5F";
+    }
     if (d.\u65D7 === "\u9EC4") {
       c.\u65E5\u548C\u898B = true;
       c.order = "\u5F85\u6A5F";
@@ -29245,6 +29307,7 @@ function \u5408\u6226\u306E\u554F\u3044\u306B\u7B54\u3048\u308B(b, \u8AFE) {
   if (q.id === "\u554F\u9244\u7832") \u554F\u9244\u7832\u3092\u6483\u3064(b);
   if (q.id === "\u677E\u5C3E\u5C71\u3078\u5099\u3048\u308B") \u677E\u5C3E\u5C71\u3078\u5099\u3048\u308B(b);
   if (q.id === "\u5357\u5BAE\u5C71\u3078\u4F7F\u3044") \u5357\u5BAE\u5C71\u3078\u4F7F\u3044(b);
+  if (q.id === "\u5CF6\u6D25\u306E\u9000\u304D\u53E3") \u5CF6\u6D25\u306E\u9000\u304D\u53E3(b);
 }
 function \u5BB6\u5EB7\u3092\u9032\u3081\u308B(b) {
   const s2 = b.\u7B4B\u66F8\u304D;
@@ -29276,6 +29339,19 @@ function \u677E\u5C3E\u5C71\u3078\u5099\u3048\u308B(b) {
 function \u5357\u5BAE\u5C71\u3078\u4F7F\u3044(b) {
   b.\u7B4B\u66F8\u304D.\u4F7F\u3044 = true;
   \u5831\u305B\u308B(b, "\u5357\u5BAE\u5C71\u3078\u4F7F\u8005\u3092\u7ACB\u3066\u305F\u3002\u6BDB\u5229\u52E2\u304C\u52D5\u304F\u304B\u3069\u3046\u304B\u306F\u3001\u5409\u5DDD\u5E83\u5BB6\u306E\u8179\u3072\u3068\u3064\u3067\u3042\u308B\u3002");
+}
+function \u5CF6\u6D25\u306E\u9000\u304D\u53E3(b) {
+  const \u5CF6 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u5CF6\u6D25 && !c.dead && !c.destroyed);
+  for (const c of \u5CF6) {
+    c.\u4E0D\u6226 = false;
+    c.order = "\u7A81\u6483";
+    c.formation = "\u92D2\u77E2";
+    c.auto = c.side !== "P" || !!b.\u59D4\u306D\u305F;
+    issueOrder(b, c, { order: "\u7A81\u6483", tx: Math.min(FIELD.w - 60, c.x + 4200), ty: c.y });
+    c.morale = Math.min(100, c.morale + 14);
+    placeSquads(c, true);
+  }
+  \u5831\u305B\u308B(b, "\u5CF6\u6D25\u7FA9\u5F18\u3001\u6B63\u9762\u306E\u6575\u4E2D\u3078\u7A81\u304D\u5165\u308B\u3002\u9000\u304F\u306B\u9000\u3051\u306C\u306A\u3089\u3001\u6575\u306E\u4E2D\u3092\u629C\u3051\u308B\u307B\u304B\u306A\u3044\u3002", "\u5409");
 }
 function \u5C0F\u65E9\u5DDD\u3092\u6C7A\u3081\u308B(b, \u554F\u308F\u308C\u305F) {
   const s2 = b.\u7B4B\u66F8\u304D;
@@ -29350,6 +29426,7 @@ function \u62BC\u3055\u3048\u3092\u89E3\u304F(b, \u6587) {
 function \u6307\u56F3\u306E\u7E1B\u308A(b, c) {
   if (!b || !b.\u7B4B\u66F8\u304D || !c) return null;
   if (c.\u65E5\u548C\u898B) return `${c.name}\u306F\u307E\u3060\u65D7\u8272\u3092\u6C7A\u3081\u3066\u3044\u306A\u3044\u3002\u4E0B\u77E5\u306F\u5C4A\u304B\u306C\u3002`;
+  if (c.\u4E0D\u6226) return `${c.name}\u306F\u5099\u3092\u56FA\u3081\u305F\u307E\u307E\u52D5\u304B\u306C\u3002\u4E09\u6210\u306E\u518D\u4E09\u306E\u50AC\u4FC3\u306B\u3082\u5FDC\u3058\u306A\u304B\u3063\u305F\u3002`;
   if (!c.\u7E1B\u308A) return null;
   if (b.\u7B4B\u66F8\u304D.\u5357\u5BAE\u5C71 !== "\u672A") return null;
   return "\u5357\u5BAE\u5C71\u306E\u69D8\u5B50\u304C\u308F\u304B\u3089\u306C\u3002\u3053\u3053\u3092\u96E2\u308C\u308B\u308F\u3051\u306B\u306F\u3044\u304B\u306C\u3002";
@@ -29400,6 +29477,20 @@ function \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B(b, dt) {
       "\u4F7F\u8005\u3092\u7ACB\u3066\u308B",
       "\u898B\u9001\u308B"
     );
+  }
+  {
+    const \u5CF6 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u5CF6\u6D25 && !c.dead && !c.destroyed && c.\u4E0D\u6226);
+    if (\u5CF6.length && (\u897F\u306E\u6B8B <= 0.55 || s2.\u5C0F\u65E9\u5DDD === "\u6771")) {
+      if (s2.\u5473\u65B9\u65D7 === "\u897F") {
+        \u554F\u3046(
+          b,
+          "\u5CF6\u6D25\u306E\u9000\u304D\u53E3",
+          "\u5CF6\u6D25\u7FA9\u5F18\u306F\u5099\u3092\u56FA\u3081\u305F\u307E\u307E\u52D5\u304B\u306C\u3002\u897F\u8ECD\u306F\u5D29\u308C\u304B\u3051\u3066\u3044\u308B\u3002\u9000\u304F\u306B\u9000\u3051\u306C\u3044\u307E\u3001\u6B63\u9762\u306E\u6575\u4E2D\u3092\u7A81\u3044\u3066\u629C\u3051\u3055\u305B\u307E\u3059\u304B\u3002",
+          "\u6575\u4E2D\u7A81\u7834\u3092\u547D\u3058\u308B",
+          "\u306A\u304A\u5F85\u3064"
+        );
+      } else if (\u897F\u306E\u6B8B <= 0.4) \u5CF6\u6D25\u306E\u9000\u304D\u53E3(b);
+    }
   }
   \u5C0F\u65E9\u5DDD\u3092\u6C7A\u3081\u308B(b, false);
   \u5357\u5BAE\u5C71\u3092\u6C7A\u3081\u308B(b);
@@ -32691,6 +32782,7 @@ var \u8AAC\u660E\u66F8 = [
           "\u91CE\u306B\u306F\u8857\u9053\u304C\u4E00\u672C\u901A\u3063\u3066\u3044\u308B\u3002\u8DB3\u304C\u50C5\u304B\u306B\u901F\u304F\u3001\u5DDD\u304C\u3042\u308C\u3070\u6A4B\u3067\u6E21\u308B\u3002\u968A\u306F\u3053\u306E\u9053\u3092\u597D\u3093\u3067\u9032\u3080\u3002",
           "\u5C71\u8D8A\u3048\u306E\u8857\u9053\uFF08\u5C71\u9053\u30FB\u96E3\u6240\uFF09\u3067\u6226\u3048\u3070\u3001\u91CE\u306B\u5C71\u304C\u7ACB\u3064\u3002\u5C71\u306F\u4E18\u3088\u308A\u305A\u3063\u3068\u5927\u304D\u304F\u3001\u767B\u308C\u3070\u8DB3\u304C\u534A\u3070\u306B\u843D\u3061\u3001\u968A\u5217\u3082\u5D29\u308C\u3001\u9A0E\u99AC\u306F\u307B\u3068\u3093\u3069\u7528\u3092\u306A\u3055\u306A\u3044\u3002\u305D\u306E\u304B\u308F\u308A\u898B\u901A\u3057\u306F\u91CE\u306E\u4E8C\u500D\u8FD1\u304F\u3001\u4E0A\u304B\u3089\u5F53\u305F\u308B\u5F37\u307F\u306F\u4E18\u3088\u308A\u5927\u304D\u3044\u3002\u9053\u3055\u304C\u3057\u306F\u5C71\u3092\u5F37\u304F\u907F\u3051\u308B\u2015\u2015\u8D8A\u3048\u308B\u306E\u306F\u3001\u8FC2\u56DE\u306E\u307B\u3046\u304C\u306A\u304A\u9060\u3044\u3068\u304D\u3060\u3051\u3067\u3042\u308B\u3002",
           "\u5C71\u306F\u5411\u3053\u3046\u5074\u3092\u96A0\u3059\u3002\u5C71\u306E\u9670\u3078\u56DE\u3063\u305F\u968A\u306F\u3001\u9E93\u306E\u6575\u304B\u3089\u306F\u898B\u3048\u306A\u3044\u3002\u305F\u3060\u3057\u5C71\u306E\u4E0A\u306B\u7ACB\u3063\u3066\u3044\u308C\u3070\u3001\u96A0\u3055\u308C\u308B\u3053\u3068\u306F\u306A\u3044\u2015\u2015\u898B\u4E0B\u308D\u3057\u3066\u3044\u308B\u304B\u3089\u3067\u3042\u308B\u3002",
+          "\u69CD\u3092\u5408\u308F\u305B\u3066\u3044\u308B\u3042\u3044\u3060\u3082\u3001\u968A\u306F\u9663\u5F62\u3092\u4FDD\u3064\u3002\u65AC\u308A\u7D50\u3076\u7D44\u306F\u6301\u3061\u5834\u304B\u3089\u4E8C\u5341\u56DB\u6B69\u307E\u3067\u52D5\u3044\u3066\u3088\u3044\u304C\u3001\u305D\u308C\u3092\u8D85\u3048\u308C\u3070\u534A\u5206\u306E\u8DB3\u3067\u5BC4\u308A\u76F4\u3059\u3002\u5074\u9762\u3078\u56DE\u308A\u8FBC\u3080\u5206\u9063\u306F\u3001\u4E00\u8ECD\u3067\u540C\u6642\u306B\u56DB\u968A\u307E\u3067\u3068\u3057\u305F\u3002",
           "\u6DF5\uFF08\u6DF1\u3044\u5DDD\uFF09\u3078\u306F\u3001\u6C7A\u3081\u3066\u304B\u3089\u3067\u306A\u3051\u308C\u3070\u8E0F\u307F\u8FBC\u307E\u306A\u3044\u3002\u62BC\u3057\u6E21\u308B\u3068\u6C7A\u3081\u305F\u968A\u3001\u5D29\u308C\u3066\u9003\u3052\u308B\u5175\u3001\u3059\u3067\u306B\u6C34\u306E\u4E2D\u3067\u5CB8\u3078\u4E0A\u304C\u308D\u3046\u3068\u3059\u308B\u7D44\u3060\u3051\u304C\u6C34\u3092\u8E0F\u3080\u3002\u6E21\u308A\u5834\u304C\u6575\u306B\u56FA\u3081\u3089\u308C\u3066\u3044\u308C\u3070\u3001\u77E5\u7565\u306E\u5C06\u306F\u6DF5\u3092\u62BC\u3057\u6E21\u3063\u3066\u56DE\u308A\u8FBC\u3080\u2015\u2015\u80CC\u5F8C\u3092\u885D\u304F\u305F\u3081\u306E\u6E21\u6CB3\u3067\u3042\u308B\u3002"
         ]
       },
@@ -33068,6 +33160,13 @@ var \u8AAC\u660E\u66F8 = [
           "\u677E\u5C3E\u5C71\u306E\u5C0F\u65E9\u5DDD\u79C0\u79CB\u3068\u3001\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u79C0\u5143\u2015\u2015\u3053\u306E\u56DB\u4E07\u4E94\u5343\u306F\u3001\u3069\u3061\u3089\u306E\u5473\u65B9\u3067\u3082\u306A\u3044\u3002\u76E4\u306E\u4E0A\u3067\u306F\u9EC4\u3067\u63CF\u304B\u308C\u3001\u6483\u3061\u3082\u6483\u305F\u308C\u3082\u305B\u305A\u3001\u305D\u306E\u5834\u3092\u52D5\u304B\u306A\u3044\u3002",
           "\u6761\u4EF6\u304C\u63C3\u3046\u3068\u65D7\u8272\u304C\u6C7A\u307E\u308A\u3001\u305D\u3053\u3067\u521D\u3081\u3066\u52D5\u304D\u51FA\u3059\u3002\u5C0F\u65E9\u5DDD\u304C\u6771\u3078\u50BE\u304F\u306E\u306F\u6613\u304F\u3001\u897F\u3078\u8D77\u3064\u306E\u306F\u96E3\u3044\u3002\u897F\u3078\u8D77\u3064\u306B\u306F\u3001\u5927\u8C37\u52E2\u304C\u5065\u5728\u3067\u3042\u308B\u3053\u3068\u30FB\u677E\u5C3E\u5C71\u306E\u9E93\u3092\u897F\u8ECD\u304C\u56FA\u3081\u3066\u3044\u308B\u3053\u3068\u30FB\u6771\u8ECD\u306E\u524D\u7DDA\u304C\u56DB\u5206\u306E\u4E00\u3092\u5931\u3063\u3066\u3044\u308B\u3053\u3068\u30FB\u4E09\u6210\u304C\u58EB\u6C17\u3092\u4FDD\u3063\u3066\u3044\u308B\u3053\u3068\u3001\u3053\u306E\u56DB\u3064\u304C\u63C3\u308F\u306D\u3070\u306A\u3089\u306A\u3044\u3002",
           "\u5357\u5BAE\u5C71\u304C\u52D5\u304F\u306E\u306F\u3001\u5C0F\u65E9\u5DDD\u304C\u897F\u3078\u8D77\u3061\u3001\u306A\u304A\u6771\u8ECD\u304C\u62BC\u3055\u308C\u3066\u3044\u308B\u3068\u304D\u3060\u3051\u3067\u3042\u308B\u3002\u305D\u3046\u3067\u306A\u3051\u308C\u3070\u3001\u5409\u5DDD\u5E83\u5BB6\u304C\u9053\u3092\u585E\u3044\u3060\u307E\u307E\u65E5\u304C\u66AE\u308C\u308B\u3002"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u6226\u308F\u306C\u968A\uFF08\u5CF6\u6D25\uFF09",
+        \u6587: [
+          "\u5CF6\u6D25\u7FA9\u5F18\u30FB\u8C4A\u4E45\u306E\u5343\u4E94\u767E\u306F\u3001\u897F\u8ECD\u3067\u3042\u308A\u306A\u304C\u3089\u6226\u308F\u306A\u3044\u3002\u7FA9\u5F18\u306F\u4E09\u6210\u306E\u518D\u4E09\u306E\u51FA\u6483\u8981\u8ACB\u3092\u65AD\u308A\u3001\u5099\u3092\u56FA\u3081\u305F\u307E\u307E\u4E00\u6B69\u3082\u52D5\u304B\u306A\u304B\u3063\u305F\u3002\u76E4\u3067\u3082\u4E0B\u77E5\u3092\u53D7\u3051\u4ED8\u3051\u305A\u3001\u81EA\u5206\u304B\u3089\u306F\u653B\u3081\u304B\u304B\u3089\u306A\u3044\u2015\u2015\u653B\u3081\u3089\u308C\u308C\u3070\u6226\u3046\u3002\u6575\u3082\u307E\u305F\u3001\u9032\u3093\u3067\u306F\u5CF6\u6D25\u3092\u72D9\u308F\u306A\u3044\u3002",
+          "\u52D5\u304F\u306E\u306F\u6226\u306E\u7D42\u308F\u308A\u3067\u3042\u308B\u3002\u897F\u8ECD\u304C\u5D29\u308C\u304B\u3051\u305F\u3068\u304D\u3001\u300C\u6B63\u9762\u306E\u6575\u4E2D\u3092\u7A81\u3044\u3066\u629C\u3051\u3055\u305B\u307E\u3059\u304B\u300D\u3068\u554F\u3046\u3002\u3053\u308C\u304C\u5CF6\u6D25\u306E\u9000\u304D\u53E3\u3067\u3042\u308B\u3002"
         ]
       },
       {

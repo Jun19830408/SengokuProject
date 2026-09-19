@@ -1,4 +1,4 @@
-import { 筋書きの野を組む, 筋書きを解く } from "./field.js";
+import { FIELD, 筋書きの野を組む, 筋書きを解く } from "./field.js";
 import { corpsMen, makeCorps, placeSquads, issueOrder } from "./corps.js";
 import { createBattle } from "./engine.js";
 import { newRoster } from "../core/roster.js";
@@ -46,7 +46,10 @@ export function 合戦を仕立てる(id, 味方旗) {
     const c = makeCorps(side, gen, 直, 在, 76, 70, d.x, d.y, d.向き,
       d.旗 === "黄" ? 黄の色 : 旗の色[d.旗]);
     c.筋 = { 旗: d.旗, 属: d.属 || null, 主: !!d.主, 押さえ: !!d.押さえ,
-      目付: !!d.目付, 続く: !!d.続く, 家康: !!d.家康, 要: !!d.要 };
+      目付: !!d.目付, 続く: !!d.続く, 家康: !!d.家康, 要: !!d.要, 島津: !!d.島津 };
+    /* 戦わぬと決めている隊。盤の上にはいるが、自分からは動かず攻めない。
+       攻められれば戦う――そこが日和見（黄）と違うところである。 */
+    if (d.不戦) { c.不戦 = true; c.order = "待機"; }
     if (d.旗 === "黄") { c.日和見 = true; c.order = "待機"; c.seen = true; }
     if (d.押さえ) c.縛り = "南宮山";
     /* 家康の旗本三万は、本陣が動くまで桃配山に控える（GDD 8.9）。
@@ -150,6 +153,7 @@ export function 合戦の問いに答える(b, 諾) {
   if (q.id === "問鉄砲") 問鉄砲を撃つ(b);
   if (q.id === "松尾山へ備える") 松尾山へ備える(b);
   if (q.id === "南宮山へ使い") 南宮山へ使い(b);
+  if (q.id === "島津の退き口") 島津の退き口(b);
 }
 
 /* ------------------------------------------------------------------ 手立て */
@@ -189,6 +193,19 @@ function 南宮山へ使い(b) {
   報せる(b, "南宮山へ使者を立てた。毛利勢が動くかどうかは、吉川広家の腹ひとつである。");
 }
 
+/* 島津の退き口。正面の敵中を突いて東へ抜ける。 */
+function 島津の退き口(b) {
+  const 島 = b.corps.filter((c) => c.筋 && c.筋.島津 && !c.dead && !c.destroyed);
+  for (const c of 島) {
+    c.不戦 = false;
+    c.order = "突撃"; c.formation = "鋒矢";
+    c.auto = c.side !== "P" || !!b.委ねた;
+    issueOrder(b, c, { order: "突撃", tx: Math.min(FIELD.w - 60, c.x + 4200), ty: c.y });
+    c.morale = Math.min(100, c.morale + 14);
+    placeSquads(c, true);
+  }
+  報せる(b, "島津義弘、正面の敵中へ突き入る。退くに退けぬなら、敵の中を抜けるほかない。", "吉");
+}
 /* -------------------------------------------------------- 小早川の去就を決める
 
    東へ傾くのは易く、西へ起つのは難い。
@@ -290,6 +307,7 @@ function 押さえを解く(b, 文) {
 export function 指図の縛り(b, c) {
   if (!b || !b.筋書き || !c) return null;
   if (c.日和見) return `${c.name}はまだ旗色を決めていない。下知は届かぬ。`;
+  if (c.不戦) return `${c.name}は備を固めたまま動かぬ。三成の再三の催促にも応じなかった。`;
   if (!c.縛り) return null;
   if (b.筋書き.南宮山 !== "未") return null;
   return "南宮山の様子がわからぬ。ここを離れるわけにはいかぬ。";
@@ -332,6 +350,19 @@ export function 筋書きを進める(b, dt) {
     問う(b, "南宮山へ使い",
       "南宮山の毛利勢はまだ山にいる。使者を立て、出陣を促しますか。",
       "使者を立てる", "見送る");
+  }
+
+  // 五、島津の退き口（西軍が崩れかけたとき）
+  {
+    const 島 = b.corps.filter((c) => c.筋 && c.筋.島津 && !c.dead && !c.destroyed && c.不戦);
+    if (島.length && (西の残 <= 0.55 || s.小早川 === "東")) {
+      if (s.味方旗 === "西") {
+        問う(b, "島津の退き口",
+          "島津義弘は備を固めたまま動かぬ。西軍は崩れかけている。"
+          + "退くに退けぬいま、正面の敵中を突いて抜けさせますか。",
+          "敵中突破を命じる", "なお待つ");
+      } else if (西の残 <= 0.40) 島津の退き口(b);
+    }
   }
 
   小早川を決める(b, false);

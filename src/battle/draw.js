@@ -1850,10 +1850,15 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     ctx.closePath();
     ctx.fillStyle = side + (on ? "4A" : isP ? "22" : "14");
     ctx.fill();
-    if (!isP) {                       // 敵の隊は斜線で塗り分ける（色に頼らない識別）
+    /* 敵の隊は斜線で塗り分ける（色に頼らない識別）。
+
+       ただし隊が幾十も重なる盤では、斜線どうしが重なって画面が一面の赤になる。
+       斜線の間を広く、色を薄く取り、選んでいる隊だけは元の濃さで引く。 */
+    if (!isP) {
       ctx.save(); ctx.clip();
-      ctx.strokeStyle = side + "3A"; ctx.lineWidth = 1.4 / cam.s;
-      for (let hx = x0 - (y1 - y0); hx < x1; hx += 9) {
+      ctx.strokeStyle = side + (on ? "3A" : "1E"); ctx.lineWidth = (on ? 1.4 : 1.0) / cam.s;
+      const 間 = on ? 9 : 17;
+      for (let hx = x0 - (y1 - y0); hx < x1; hx += 間) {
         ctx.beginPath(); ctx.moveTo(hx, y1); ctx.lineTo(hx + (y1 - y0), y0); ctx.stroke();
       }
       ctx.restore();
@@ -2196,9 +2201,14 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     if (c.fatigue > 45) {
       ctx.fillStyle = "rgba(154,123,79,0.9)"; ctx.fillRect(x - 22, y + 21, (44 * c.fatigue) / 100, 2);
     }
-    const tag = c.routed ? ["敗走", "#B0483C"] : c.withdraw ? ["撤退中", "#7C7668"]
-      : c.boxed ? ["密集防御", "#8A6A34"] : c.pinch >= 2 ? ["挟撃", "#B0483C"]
+    /* 隊の様子を示す札。隊が多い盤では、これが一斉に出ると名札と重なって
+       どれも読めなくなる。急を要するもの（敗走・撤退）は常に、そうでないものは
+       選んでいる隊だけに出す。 */
+    const 選中 = sel === c.id || selAll;
+    const 急 = c.routed ? ["敗走", "#B0483C"] : c.withdraw ? ["撤退中", "#7C7668"] : null;
+    const 常 = c.boxed ? ["密集防御", "#8A6A34"] : c.pinch >= 2 ? ["挟撃", "#B0483C"]
       : c.order === "射撃" ? ["射撃優先", "#4A6E8A"] : null;
+    const tag = 急 || ((選中 || shown.length <= 14) ? 常 : null);
     if (tag) { ctx.fillStyle = tag[1]; ctx.font = "11px sans-serif"; ctx.fillText(tag[0], x - tag[0].length * 5.5, y + 34); }
     if (c.ambush && !c.revealed && isP) {
       ctx.strokeStyle = side; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
