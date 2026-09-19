@@ -106,6 +106,8 @@ console.log('\n── 二　布陣');
   const 兵 = (l) => Math.round(l.reduce((a, c) => a + corpsMen(c), 0));
   確('六十三隊が並ぶ', b.corps.length === 63, `${b.corps.length}隊`);
   確('西軍は十六隊', 旗('西').length === 16, `${兵(旗('西')).toLocaleString()}人`);
+  確('西軍は三万三千九百（実際に戦った西軍の通説に合う）',
+    Math.abs(兵(旗('西')) - 33900) < 60, `${兵(旗('西')).toLocaleString()}人`);
   確('東軍は三十四隊', 旗('東').length === 34, `${兵(旗('東')).toLocaleString()}人`);
   確('去就の定まらぬ隊は十三隊', 旗('黄').length === 13, `${兵(旗('黄')).toLocaleString()}人`);
   確('盤からはみ出した隊がない',
@@ -116,6 +118,49 @@ console.log('\n── 二　布陣');
     `三成 x=${Math.round(三成.x)} ／ 家康 x=${Math.round(家康.x)}`);
   確('黄の隊は日和見として置かれる', 旗('黄').every((c) => c.日和見));
   確('南宮山の押さえは六隊', b.corps.filter((c) => c.縛り).length === 6);
+  合戦を畳む();
+}
+
+/* ------------------------------------------------ 二の二　川と当たる相手 */
+console.log('\n── 二の二　川の位置と、当たる相手');
+賽(18);
+{
+  const b = 合戦を仕立てる('sekigahara', '西').b;
+  const 水 = (t) => t === 'deep' || t === 'ford' || t === 'bridge';
+  let 濡 = [];
+  for (const c of b.corps) {
+    let n = 0, w = 0;
+    for (const q of c.squads) { if (q.men <= 0) continue; n++; if (水(terrainAt(q.x, q.y))) w++; }
+    if (w > n * 0.03) 濡.push(`${c.name} ${Math.round(w / n * 100)}%`);
+  }
+  確('川の中に布陣している隊がない', 濡.length === 0, 濡.join(' / '));
+  const 生 = (f) => b.corps.filter((c) => c.筋 && c.筋.旗 === f && !c.日和見 && !c.控え && !c.縛り);
+  const 跨 = (a, z) => { let n = 0;
+    for (let k = 1; k < 40; k++) if (terrainAt(a.x + (z.x - a.x) * k / 40, a.y + (z.y - a.y) * k / 40) === 'deep') n++;
+    return n; };
+  let 挟 = [];
+  for (const c of 生('西')) {
+    const e = 生('東').map((o) => ({ o, d: Math.hypot(o.x - c.x, o.y - c.y) })).sort((x, y) => x.d - y.d)[0];
+    if (跨(c, e.o)) 挟.push(`${c.name}→${e.o.name}`);
+  }
+  確('正面の敵とのあいだに淵を挟む隊がない', 挟.length === 0, 挟.join(' / '));
+  // 史実の当たり
+  const 近い敵 = (名) => {
+    const c = b.corps.find((x) => x.name === 名);
+    return 生('東').map((o) => ({ o, d: Math.hypot(o.x - c.x, o.y - c.y) })).sort((x, y) => x.d - y.d)[0].o.name;
+  };
+  確('石田隊の正面は黒田長政', 近い敵('石田三成') === '黒田長政', 近い敵('石田三成'));
+  確('島左近の正面も黒田長政', 近い敵('島左近') === '黒田長政', 近い敵('島左近'));
+  確('宇喜多隊の正面は福島正則', 近い敵('宇喜多秀家') === '福島正則', 近い敵('宇喜多秀家'));
+  確('大谷隊の正面は藤堂高虎', 近い敵('大谷吉継') === '藤堂高虎', 近い敵('大谷吉継'));
+  確('島津隊の正面は稲葉貞通', 近い敵('島津義弘') === '稲葉貞通', 近い敵('島津義弘'));
+  // 西軍は西の高みに拠る
+  const 地 = (c) => { const 別 = {};
+    for (const q of c.squads) { if (q.men <= 0) continue; const t = terrainAt(q.x, q.y); 別[t] = (別[t] || 0) + 1; }
+    return Object.entries(別).sort((x, y) => y[1] - x[1])[0][0]; };
+  const 丘の西軍 = 生('西').filter((c) => 地(c) === 'hill').length;
+  確('西軍は西の高みに拠る（過半が丘の上）', 丘の西軍 >= 生('西').length * 0.6,
+    `${丘の西軍}／${生('西').length}隊`);
   合戦を畳む();
 }
 
@@ -199,9 +244,12 @@ console.log('\n── 六　小早川の去就');
   const b = 合戦を仕立てる('sekigahara', '西').b;
   b.phase = 'fight'; b.委ねた = true;
   for (const c of b.corps) c.auto = true;
-  // 遊ぶ側が上手く戦った体を作る：東軍の前線を三割削り、大谷勢を松尾山の麓へ置く
+  /* 遊ぶ側が上手く戦った体を作る：東軍の先手（黒田・福島）を崩し、
+     大谷勢を松尾山の麓へ置く。これが小早川を西へ起たせる条件である。 */
   for (const c of b.corps) {
-    if (c.筋 && c.筋.旗 === '東' && !c.控え && !c.縛り) for (const q of c.squads) q.men *= 0.70;
+    if (!/黒田長政|福島正則/.test(c.name)) continue;
+    c.routed = true; c.morale = 12;
+    for (const q of c.squads) q.men *= 0.35;
   }
   let k = 0;
   for (const c of b.corps) {

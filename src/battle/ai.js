@@ -502,8 +502,43 @@ export function battleAI(b) {
       tx: t.x + ((c.x - t.x) / d) * 間, ty: t.y + ((c.y - t.y) / d) * 間 });
   }
 
+  /* 本陣を守る（GDD 8.7）。
+
+     敵が総大将の間近まで迫ったら、近い味方が引き返して本陣を守る。
+     旗が倒れれば軍は崩れるのだから、戦列を保つことより先である。
+     筋書きの一戦（関ヶ原）では掛けない――そちらは史実の布陣で始まり、
+     本陣の進退は分岐のほうで決まる。 */
+  if (!MAP && !b.筋書き) {
+    for (const side of ["P", "E"]) {
+      for (const o of alive) if (o.side === side) o.本陣を守る = false;
+      const 大将 = alive.find((c) => c.side === side && c.gen.lord && !c.detach && !c.routed && !c.withdraw);
+      if (!大将) continue;
+      const 間 = 520 * Math.sqrt(fieldScale());
+      const 迫 = alive.filter((o) => o.side !== side && !o.routed && !o.withdraw
+        && Math.hypot(o.x - 大将.x, o.y - 大将.y) < 間);
+      if (!迫.length) continue;
+      const 的 = 迫.sort((x, y2) => Math.hypot(x.x - 大将.x, x.y - 大将.y)
+        - Math.hypot(y2.x - 大将.x, y2.y - 大将.y))[0];
+      const 候 = alive.filter((o) => o.side === side && o !== 大将 && !o.detach && !o.routed
+        && !o.withdraw && delegated(b, o) && !o.不戦 && !o.控え && !o.縛り)
+        .sort((x, y2) => Math.hypot(x.x - 大将.x, x.y - 大将.y)
+          - Math.hypot(y2.x - 大将.x, y2.y - 大将.y)).slice(0, 2);
+      for (const o of 候) {
+        if (!o.守りに就いた) {
+          o.守りに就いた = true;
+          b.log.push({ t: b.t, text: `${o.gen.name}隊が本陣の守りへ引き返す。` });
+        }
+        o.本陣を守る = true;
+        const d = Math.hypot(的.x - o.x, 的.y - o.y) || 1;
+        issueOrder(b, o, { order: "接戦", target: 的.id,
+          tx: 的.x + ((o.x - 的.x) / d) * 40, ty: 的.y + ((o.y - 的.y) / d) * 40 });
+      }
+    }
+  }
+
   for (const c of alive) {
     if (!delegated(b, c) || c.routed || c.detach) continue;
+    if (c.本陣を守る) continue;                       // 本陣の守りに就いた隊は、そのまま
     /* 動かぬと決めている隊には、采配も何も企てない。
        戦わぬ島津に「木立へ回って伏せよ」と命じては、動かぬと決めた意味がない。 */
     if (c.不戦 || c.控え || c.縛り) continue;
@@ -533,6 +568,46 @@ export function battleAI(b) {
        そのときは相手にする。 */
     const 戦う敵 = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
     const foes = 戦う敵.some((o) => !o.不戦) ? 戦う敵.filter((o) => !o.不戦) : 戦う敵;
+
+    /* 総大将の身の置きどころ（GDD 8.7）。
+
+       大将は旗本を率いて戦列の後ろに構える。前線が前へ出れば、同じ間合いを
+       保って進む――戦うためではなく、旗を見せて士気を支えるためである
+       （engine の「総大将が前線に出れば全軍の士気が上がる」はそのままである）。
+
+       敵が崩れて勝ちが見えたら、大将も前へ出る。武勇と統率のある将ほど早く出る。
+       片軍が三隊に満たないときは掛けない――二隊しかいない戦で大将が下がれば、
+       残る一隊で戦うことになる。 */
+    if (c.gen.lord && !MAP && !b.筋書き && !c.withdraw) {
+      const 味方 = alive.filter((o) => o.side === mySide && o !== c && !o.detach && !o.routed);
+      if (味方.length >= 2) {
+        const 敵気 = foes.length ? foes.reduce((a, o) => a + o.morale, 0) / foes.length : 0;
+        const 敵兵 = foes.reduce((a, o) => a + corpsMen(o), 0);
+        const 初 = ((b.initial || {})[foeSide]) || 1;
+        const 腰 = ((c.gen.valor || 60) + (c.gen.lead || 60)) / 2;
+        const 好機 = !foes.length || 敵気 < 26 + 腰 * 0.14 || 敵兵 <= 初 * (0.30 + 腰 * 0.0020);
+        if (!好機) {
+          const cx = 味方.reduce((a, o) => a + o.x, 0) / 味方.length;
+          const cy = 味方.reduce((a, o) => a + o.y, 0) / 味方.length;
+          const 敵中 = foes.length
+            ? { x: foes.reduce((a, o) => a + o.x, 0) / foes.length,
+              y: foes.reduce((a, o) => a + o.y, 0) / foes.length }
+            : { x: cx, y: cy - 1 };
+          const vx = cx - 敵中.x, vy = cy - 敵中.y, d = Math.hypot(vx, vy) || 1;
+          const 後ろ = clamp(FIELD.h * 0.13, 240, 900);
+          const tx = clamp(cx + (vx / d) * 後ろ, 60, FIELD.w - 60);
+          const ty = clamp(cy + (vy / d) * 後ろ, 60, FIELD.h - 60);
+          if (Math.hypot(tx - c.x, ty - c.y) > 90) issueOrder(b, c, { order: "移動", tx, ty });
+          else issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y });
+          c.本陣に構える = true;
+          continue;
+        }
+        if (c.本陣に構える) {
+          c.本陣に構える = false;
+          b.log.push({ t: b.t, text: `${c.gen.name}が旗本を率いて前へ出た。` });
+        }
+      }
+    }
 
     /* 追い討ち（GDD 8.7）。
 
@@ -566,8 +641,10 @@ export function battleAI(b) {
        決まりを置いていた。いまは崩れ（engine の 敗走）が同じ役目を果たす。
        崩れた隊は盤の外へは出ず、敵の来ない所まで退いて息をつき、立ち直れば
        戦列に戻る。二重に退かせると、まだ戦える隊が野を去ってしまう。 */
-    // 兵力差と地形から陣形を選び直す。プレイヤーと同じ陣形・同じ手間で行う。
-    if (!c.formPicked) {
+    /* 兵力差と地形から陣形を選び直す。プレイヤーと同じ陣形・同じ手間で行う。
+       ただし、遊ぶ側が布陣のときに選んだ陣形は書き換えない。
+       初めの陣形は横陣であり（makeCorps）、そこから選ぶのは遊ぶ側の領分である。 */
+    if (!c.formPicked && !c.陣を選んだ) {
       c.formPicked = true;
       const mine = alive.filter((o) => o.side === mySide).reduce((a, o) => a + corpsMen(o), 0);
       const foeMen = alive.filter((o) => o.side === foeSide).reduce((a, o) => a + corpsMen(o), 0);

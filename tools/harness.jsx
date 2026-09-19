@@ -52,7 +52,7 @@ export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 合戦の中身を直に動かすための取り出し口。
 // 画面を通すと、戦況の記録が流れて肝心の一行を取り逃がす。
 // 隊がどの門を受け持ち、何の下知を受けているかは、ここから直に見るほかない。
-export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, gatePos, 城の構え } from "../src/battle/castleMap.js";
+export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, gatePos, inLayer, 城の構え } from "../src/battle/castleMap.js";
 export { layoutField, setFieldSeed, setFieldKind, FIELD, terrainAt, TERRAIN, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVER, ROAD, ROADS as 野の道, RIVERS, 筋書きの野を組む, 筋書きを解く, hasRiver, hasMountain, 山が遮るか, 踏み込んだ地, genTerrain } from "../src/battle/field.js";
 export { makeCorps, corpsMen, placeSquads, issueOrder, 転回させる, 退かせる, 退き先 } from "../src/battle/corps.js";
 export { createBattle, stepBattle } from "../src/battle/engine.js";

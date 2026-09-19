@@ -36,7 +36,7 @@ fs.writeFileSync(entry,
 + 'export { makeCorps, placeSquads, corpsMen, corpsMax } from "../src/battle/corps.js";\n'
 + 'export { battleAI } from "../src/battle/ai.js";\n'
 + 'export { createBattle, stepBattle } from "../src/battle/engine.js";\n'
-+ 'export { setBattleMap, buildCastleMap, layoutCastleField, axisOf, fromUV, 寄せ口 } from "../src/battle/castleMap.js";\n');
++ 'export { setBattleMap, buildCastleMap, layoutCastleField, axisOf, fromUV, inLayer, 寄せ口 } from "../src/battle/castleMap.js";\n');
 const out = path.join(ROOT, 'build', 'shirokatame.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
   loader: { '.jsx': 'jsx' }, logLevel: 'error' });
@@ -146,6 +146,11 @@ function 城を攻める(i, opt = {}) {
    息をつくことになり、門はがら空きになる。城方が崩れたら、内の曲輪へ下がって
    門を背に息をつき、立ち直ったらそのままその門を守る。 */
 {
+  const 何層目 = (map, x, y) => {
+    let n = -1;
+    for (let i = 0; i < map.layers.length; i++) if (A.inLayer(map, map.layers[i], x, y)) n = i;
+    return n;
+  };
   let 崩 = 0, 内へ = 0, 門を受け持つ = 0;
   for (let i = 0; i < 8; i++) {
     種 = 0xB000 + i * 419;
@@ -177,11 +182,17 @@ function 城を攻める(i, opt = {}) {
         if (c.routed && !c.見た) {
           c.見た = true; 崩++;
           c.崩れ位置 = Math.hypot(c.x - map.cx, c.y - map.cy);
+          /* 下がり先は「内の輪」で測る。中心からの隔たりで測っていたが、
+             輪の門は四方にあるので、押し込まれた隅で崩れた隊は、内の輪の門へ
+             下がっても中心からは遠くなることがある。掟が言っているのは
+             「内の曲輪へ下がる」であって「中心へ寄る」ではない。 */
+          /* 崩れた「場所」がどの輪かで測る。受け持ちの門で測ると、崩れたのと
+             同じ刻に下がり先が決まるので、すでに書き換わっている。 */
+          c.崩れ層 = 何層目(map, c.x, c.y);
         }
         if (c.見た && !c.測った && c.立て直し) {
           c.測った = true;
-          const d = Math.hypot(c.立て直し.x - map.cx, c.立て直し.y - map.cy);
-          if (d < c.崩れ位置 - 20) 内へ++;
+          if (c.退き門 && c.退き門.layer >= c.崩れ層) 内へ++;
           if (c.holdGate) 門を受け持つ++;
         }
       }
@@ -189,8 +200,8 @@ function 城を攻める(i, opt = {}) {
     }
   }
   確('城方が崩れる戦がある（測れている）', 崩 > 0, `${崩}隊`);
-  確('崩れた城方は、内へ下がって立て直す', 崩 === 0 || 内へ === 崩,
-    `${内へ}／${崩}隊が城の中心へ寄った`);
+  確('崩れた城方は、内の曲輪へ下がって立て直す', 崩 === 0 || 内へ === 崩,
+    `${内へ}／${崩}隊が内の輪へ下がった`);
   確('下がった先の門を受け持つ', 崩 === 0 || 門を受け持つ === 崩,
     `${門を受け持つ}／${崩}隊`);
   A.setBattleMap(null);

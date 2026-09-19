@@ -579,6 +579,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const changeForm = (c, f) => {
     if (!c || c.formation === f) return;
     c.formation = f;
+    /* 遊ぶ側が選んだ陣形には印をつける。采配は開戦の一手目で兵力差を見て
+       陣形を選び直すので、印がないと、布陣のときに選んだ陣がその場で
+       書き換えられてしまう（選んだそばから鶴翼や魚鱗になっていた）。 */
+    c.陣を選んだ = true;
     c.reformT = reformTime(c.gen);   // 統率が高いほど速く組み直せる
     placeSquads(c, b.phase === "deploy");
     force((n) => (n + 1) % 1000);
@@ -1091,6 +1095,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
     set退き確認(null);
     if (!k) return;
     if (k.全軍) allOrder("撤退");
+    else if (k.corps && k.corps.gen.lord && !b.筋書き) {
+      /* 総大将が退けば、軍は退く（GDD 8.7）。
+
+         大将の旗が戦場を去ったのに、諸将だけが踏み止まるということはない。
+         総大将の撤退は全軍の撤退である。念押しの文でもそう告げる。 */
+      allOrder("撤退");
+      b.log.push({ t: b.t, text: `${k.corps.gen.name}の旗が退いた。全軍がこれに続く。` });
+    }
     else if (k.corps) {
       const c = k.corps;
       const r = 退かせる(b, c, false);            // 一隊だけ抜けるので追い討ちは重い
@@ -1110,7 +1122,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
       <div className="modal" onMouseDown={stop} onMouseUp={stop}>
         <div className="card" style={{ maxWidth: 430 }}>
           <div className="mn" style={{ fontSize: 20, marginBottom: 6 }}>
-            {全 ? "全軍を退かせますか" : `${c.gen.name}隊を退かせますか`}
+            {全 ? "全軍を退かせますか"
+              : c.gen.lord && !b.筋書き ? `${c.gen.name}は総大将です。退けば全軍が退きます`
+                : `${c.gen.name}隊を退かせますか`}
           </div>
           <div style={{ fontSize: 12.5, lineHeight: 1.95 }}>
             {全

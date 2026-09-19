@@ -21988,7 +21988,7 @@ function layoutSlots(form, n) {
       s2.push({ x: (col - (cols - 1) / 2) * SP, y: row * ROW, row });
     }
   } else if (form === "\u9DB4\u7FFC") {
-    const per = \u6A2A\u306B\u4E26\u3079\u308B\u6570(n, 3.4, 4, 22);
+    const per = \u6A2A\u306B\u4E26\u3079\u308B\u6570(n, 6.5, 4, 26);
     for (let i = 0; i < n; i++) {
       const row = Math.floor(i / per), idx = i % per, cols = Math.min(per, n - row * per);
       const k = idx - (cols - 1) / 2;
@@ -26112,8 +26112,35 @@ function battleAI(b) {
       ty: t.y + (c.y - t.y) / d * \u9593
     });
   }
+  if (!MAP && !b.\u7B4B\u66F8\u304D) {
+    for (const side of ["P", "E"]) {
+      for (const o of alive) if (o.side === side) o.\u672C\u9663\u3092\u5B88\u308B = false;
+      const \u5927\u5C06 = alive.find((c) => c.side === side && c.gen.lord && !c.detach && !c.routed && !c.withdraw);
+      if (!\u5927\u5C06) continue;
+      const \u9593 = 520 * Math.sqrt(fieldScale());
+      const \u8FEB = alive.filter((o) => o.side !== side && !o.routed && !o.withdraw && Math.hypot(o.x - \u5927\u5C06.x, o.y - \u5927\u5C06.y) < \u9593);
+      if (!\u8FEB.length) continue;
+      const \u7684 = \u8FEB.sort((x, y2) => Math.hypot(x.x - \u5927\u5C06.x, x.y - \u5927\u5C06.y) - Math.hypot(y2.x - \u5927\u5C06.x, y2.y - \u5927\u5C06.y))[0];
+      const \u5019 = alive.filter((o) => o.side === side && o !== \u5927\u5C06 && !o.detach && !o.routed && !o.withdraw && delegated(b, o) && !o.\u4E0D\u6226 && !o.\u63A7\u3048 && !o.\u7E1B\u308A).sort((x, y2) => Math.hypot(x.x - \u5927\u5C06.x, x.y - \u5927\u5C06.y) - Math.hypot(y2.x - \u5927\u5C06.x, y2.y - \u5927\u5C06.y)).slice(0, 2);
+      for (const o of \u5019) {
+        if (!o.\u5B88\u308A\u306B\u5C31\u3044\u305F) {
+          o.\u5B88\u308A\u306B\u5C31\u3044\u305F = true;
+          b.log.push({ t: b.t, text: `${o.gen.name}\u968A\u304C\u672C\u9663\u306E\u5B88\u308A\u3078\u5F15\u304D\u8FD4\u3059\u3002` });
+        }
+        o.\u672C\u9663\u3092\u5B88\u308B = true;
+        const d = Math.hypot(\u7684.x - o.x, \u7684.y - o.y) || 1;
+        issueOrder(b, o, {
+          order: "\u63A5\u6226",
+          target: \u7684.id,
+          tx: \u7684.x + (o.x - \u7684.x) / d * 40,
+          ty: \u7684.y + (o.y - \u7684.y) / d * 40
+        });
+      }
+    }
+  }
   for (const c of alive) {
     if (!delegated(b, c) || c.routed || c.detach) continue;
+    if (c.\u672C\u9663\u3092\u5B88\u308B) continue;
     if (c.\u4E0D\u6226 || c.\u63A7\u3048 || c.\u7E1B\u308A) continue;
     if (c.ambush && !c.revealed) continue;
     if (c.\u4F0F\u5175\u7121\u7528) {
@@ -26140,6 +26167,36 @@ function battleAI(b) {
     const mySide = c.side, foeSide = mySide === "P" ? "E" : "P";
     const \u6226\u3046\u6575 = alive.filter((o) => o.side === foeSide && !o.routed && (o.seen || !o.ambush));
     const foes = \u6226\u3046\u6575.some((o) => !o.\u4E0D\u6226) ? \u6226\u3046\u6575.filter((o) => !o.\u4E0D\u6226) : \u6226\u3046\u6575;
+    if (c.gen.lord && !MAP && !b.\u7B4B\u66F8\u304D && !c.withdraw) {
+      const \u5473\u65B9 = alive.filter((o) => o.side === mySide && o !== c && !o.detach && !o.routed);
+      if (\u5473\u65B9.length >= 2) {
+        const \u6575\u6C17 = foes.length ? foes.reduce((a, o) => a + o.morale, 0) / foes.length : 0;
+        const \u6575\u5175 = foes.reduce((a, o) => a + corpsMen(o), 0);
+        const \u521D = (b.initial || {})[foeSide] || 1;
+        const \u8170 = ((c.gen.valor || 60) + (c.gen.lead || 60)) / 2;
+        const \u597D\u6A5F = !foes.length || \u6575\u6C17 < 26 + \u8170 * 0.14 || \u6575\u5175 <= \u521D * (0.3 + \u8170 * 2e-3);
+        if (!\u597D\u6A5F) {
+          const cx = \u5473\u65B9.reduce((a, o) => a + o.x, 0) / \u5473\u65B9.length;
+          const cy = \u5473\u65B9.reduce((a, o) => a + o.y, 0) / \u5473\u65B9.length;
+          const \u6575\u4E2D = foes.length ? {
+            x: foes.reduce((a, o) => a + o.x, 0) / foes.length,
+            y: foes.reduce((a, o) => a + o.y, 0) / foes.length
+          } : { x: cx, y: cy - 1 };
+          const vx = cx - \u6575\u4E2D.x, vy = cy - \u6575\u4E2D.y, d = Math.hypot(vx, vy) || 1;
+          const \u5F8C\u308D = clamp(FIELD.h * 0.13, 240, 900);
+          const tx = clamp(cx + vx / d * \u5F8C\u308D, 60, FIELD.w - 60);
+          const ty = clamp(cy + vy / d * \u5F8C\u308D, 60, FIELD.h - 60);
+          if (Math.hypot(tx - c.x, ty - c.y) > 90) issueOrder(b, c, { order: "\u79FB\u52D5", tx, ty });
+          else issueOrder(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
+          c.\u672C\u9663\u306B\u69CB\u3048\u308B = true;
+          continue;
+        }
+        if (c.\u672C\u9663\u306B\u69CB\u3048\u308B) {
+          c.\u672C\u9663\u306B\u69CB\u3048\u308B = false;
+          b.log.push({ t: b.t, text: `${c.gen.name}\u304C\u65D7\u672C\u3092\u7387\u3044\u3066\u524D\u3078\u51FA\u305F\u3002` });
+        }
+      }
+    }
     if (!foes.length) {
       const \u5D29 = alive.filter((o) => o.side === foeSide && o.routed && !o.\u6F70 && !o.withdraw && (o.seen || !o.ambush));
       if (\u5D29.length && !c.routed && corpsMen(c) > corpsMax(c) * 0.2) {
@@ -26158,7 +26215,7 @@ function battleAI(b) {
       continue;
     }
     c.\u8FFD\u3044\u8A0E\u3061 = false;
-    if (!c.formPicked) {
+    if (!c.formPicked && !c.\u9663\u3092\u9078\u3093\u3060) {
       c.formPicked = true;
       const mine = alive.filter((o) => o.side === mySide).reduce((a, o) => a + corpsMen(o), 0);
       const foeMen = alive.filter((o) => o.side === foeSide).reduce((a, o) => a + corpsMen(o), 0);
@@ -28822,8 +28879,19 @@ var \u4E18 = [
   { \u540D: "\u5929\u6E80\u5C71", \u9AD8: 198, ...P(482, 478), r: \u9577(92), \u672D: true },
   { \u540D: "\u4E38\u5C71", \u9AD8: 198, ...P(1252, 200), r: \u9577(96), \u672D: true },
   { \u540D: "\u6843\u914D\u5C71", \u9AD8: 152, ...P(1640, 938), r: \u9577(76), \u672D: true },
+  /* 西の高み（GDD 8.9）。
+  
+       関ヶ原の西軍は、盆地の西の縁――笹尾山から天満山、山中の丘へと続く
+       高みに拠って東を見下ろしていた。これが数で劣る西軍の唯一の強みである。
+       名のある峰だけを円で置いていたので、そのあいだの尾根が抜け落ち、
+       測ると西軍十六隊が一つ残らず平地に立ち、東軍の黒田隊のほうが丘に
+       乗っているという逆さまなことになっていた。尾根を継ぐ。 */
+  { \u540D: "\u7B39\u5C3E\u5C71\u306E\u88FE", ...P(630, 330), r: \u9577(120) },
+  { \u540D: "\u5929\u6E80\u5C71\u306E\u88FE", ...P(560, 690), r: \u9577(150) },
+  { \u540D: "\u5C0F\u6C60\u306E\u9AD8\u307F", ...P(660, 560), r: \u9577(110) },
+  { \u540D: "\u5C71\u4E2D\u306E\u4E18", ...P(500, 900), r: \u9577(130) },
   // 盆地を囲む裾。名は無いが、野の縁が高いことを盤にも映す
-  { ...P(880, 250), r: \u9577(130) },
+  { ...P(880, 224), r: \u9577(108) },
   { ...P(1080, 400), r: \u9577(110) },
   { ...P(1480, 300), r: \u9577(120) },
   { ...P(300, 980), r: \u9577(120) },
@@ -28898,54 +28966,65 @@ var \u6751 = [
   { \u540D: "\u5C0F\u6C60\u6751", ...P(700, 520), r: \u9577(38) }
 ];
 var \u5DDD = [
+  /* 相川。もとの写しは石田隊と黒田・細川のあいだを横切っており、竹中重門隊は
+     淵の中に布陣していた（組の七割四分が水の中）。両軍の布陣の帯から外し、
+     丸山の南を掠めて野上へ落とす形にする。 */
   {
     \u540D: "\u76F8\u5DDD",
     \u5E45: \u9577(17),
     \u7BC0: \u7B4B([
-      [720, 333],
-      [800, 387],
-      [880, 447],
-      [960, 486],
-      [1040, 501],
-      [1120, 495],
-      [1200, 489],
-      [1320, 495],
-      [1480, 504],
-      [1680, 510],
-      [1900, 513],
-      [2120, 516],
+      [700, 180],
+      [800, 215],
+      [900, 250],
+      [1e3, 280],
+      [1100, 302],
+      [1200, 322],
+      [1320, 352],
+      [1450, 396],
+      [1600, 440],
+      [1750, 470],
+      [1900, 492],
+      [2120, 506],
       [2360, 516]
     ]),
     \u6E21\u3057: [
-      { ...P(1040, 501), r: \u9577(26), \u7A2E: "\u6A4B" },
-      { ...P(1680, 510), r: \u9577(34), \u7A2E: "\u6D45\u702C" },
-      { ...P(880, 447), r: \u9577(30), \u7A2E: "\u6D45\u702C" }
+      { ...P(1100, 302), r: \u9577(26), \u7A2E: "\u6A4B" },
+      { ...P(1600, 440), r: \u9577(34), \u7A2E: "\u6D45\u702C" },
+      { ...P(900, 250), r: \u9577(30), \u7A2E: "\u6D45\u702C" }
     ]
   },
+  /* 藤古川。もとの写しは天満山の東を通って宇喜多・大谷の只中を抜けており、
+     宇喜多隊は組の三分の一、本多政重隊は七割が水の中に立っていた。
+     天満山・城山の西を下らせ、東へ折れるのは松尾山の南からとする。 */
   {
     \u540D: "\u85E4\u53E4\u5DDD",
     \u5E45: \u9577(14),
     \u7BC0: \u7B4B([
-      [520, 260],
-      [528, 440],
-      [560, 560],
-      [540, 700],
-      [560, 830],
-      [640, 900],
-      [720, 954],
-      [800, 1029],
-      [880, 1134],
-      [1e3, 1140],
-      [1180, 1137],
-      [1360, 1140],
-      [1560, 1200],
+      [470, 150],
+      [440, 250],
+      [410, 340],
+      [385, 440],
+      [370, 540],
+      [365, 640],
+      [378, 760],
+      [398, 880],
+      [415, 1e3],
+      [435, 1100],
+      [465, 1200],
+      [525, 1300],
+      [650, 1365],
+      [830, 1392],
+      [1010, 1380],
+      [1190, 1330],
+      [1370, 1290],
+      [1570, 1270],
       [1760, 1320]
     ]),
     \u6E21\u3057: [
-      { ...P(560, 830), r: \u9577(26), \u7A2E: "\u6A4B" },
-      { ...P(1e3, 1140), r: \u9577(30), \u7A2E: "\u6D45\u702C" },
-      { ...P(1360, 1140), r: \u9577(30), \u7A2E: "\u6D45\u702C" },
-      { ...P(540, 700), r: \u9577(24), \u7A2E: "\u6D45\u702C" }
+      { ...P(378, 760), r: \u9577(26), \u7A2E: "\u6A4B" },
+      { ...P(415, 1e3), r: \u9577(28), \u7A2E: "\u6D45\u702C" },
+      { ...P(830, 1392), r: \u9577(30), \u7A2E: "\u6D45\u702C" },
+      { ...P(1190, 1330), r: \u9577(30), \u7A2E: "\u6D45\u702C" }
     ]
   },
   {
@@ -29067,7 +29146,7 @@ var \u8868 = [
   /* 宇喜多隊は一万七千。西軍でいちばん大きい隊である。
      布陣図は一つの印にまとめて描いているので、四つに割って近くに置く。 */
   ["\u5B87\u559C\u591A\u79C0\u5BB6", 8e3, 576, 757, "\u6771", "\u897F", [68, 70, 60, 64, 62], "\u5E38"],
-  ["\u660E\u77F3\u5168\u767B", 5e3, 614, 792, "\u6771", "\u897F", [80, 78, 74, 66, 76], "\u5E38"],
+  ["\u660E\u77F3\u5168\u767B", 5e3, 624, 812, "\u6771", "\u897F", [80, 78, 74, 66, 76], "\u5E38"],
   ["\u9577\u8239\u5409\u884C", 2e3, 538, 795, "\u6771", "\u897F", [62, 62, 58, 60, 60], "\u5E38"],
   ["\u672C\u591A\u653F\u91CD", 2e3, 546, 720, "\u6771", "\u897F", [68, 76, 60, 56, 62], "\u5E38"],
   ["\u6238\u7530\u91CD\u653F", 900, 504, 850, "\u5357\u6771", "\u897F", [64, 72, 58, 56, 66], "\u5E38"],
@@ -29076,31 +29155,31 @@ var \u8868 = [
   ["\u5927\u8C37\u5409\u7D99", 600, 473, 909, "\u5357\u6771", "\u897F", [86, 70, 90, 88, 88], "\u9244\u7832", { \u8981: true }],
   ["\u5E73\u585A\u70BA\u5E83", 900, 644, 917, "\u5357\u6771", "\u897F", [72, 82, 66, 58, 74], "\u5E38"],
   // ── 東軍（北国街道から関ヶ原宿にかけての先手）
-  ["\u9ED2\u7530\u9577\u653F", 5400, 963, 441, "\u897F", "\u6771", [82, 76, 84, 78, 80], "\u9244\u7832"],
-  ["\u7AF9\u4E2D\u91CD\u9580", 1e3, 972, 485, "\u897F", "\u6771", [60, 60, 66, 62, 62], "\u5E38"],
-  ["\u52A0\u85E4\u5609\u660E", 3e3, 929, 530, "\u897F", "\u6771", [78, 80, 66, 68, 74], "\u5E38"],
-  ["\u7D30\u5DDD\u5FE0\u8208", 5100, 888, 571, "\u897F", "\u6771", [76, 78, 72, 74, 74], "\u9244\u7832"],
-  ["\u7A32\u8449\u8C9E\u901A", 1400, 836, 632, "\u897F", "\u6771", [64, 68, 58, 58, 62], "\u5E38"],
-  ["\u6238\u5DDD\u9054\u5B89", 800, 811, 688, "\u897F", "\u6771", [66, 74, 60, 56, 64], "\u5E38"],
-  ["\u5B87\u559C\u591A\u8A6E\u5BB6", 1500, 862, 702, "\u897F", "\u6771", [62, 70, 56, 54, 58], "\u5E38"],
-  ["\u4E80\u4E95\u8332\u77E9", 1e3, 950, 662, "\u897F", "\u6771", [60, 62, 64, 62, 60], "\u5E38"],
-  ["\u4E09\u597D\u653F\u52DD", 500, 978, 686, "\u897F", "\u6771", [56, 58, 54, 54, 56], "\u5E38"],
-  ["\u7530\u4E2D\u5409\u653F", 3e3, 776, 740, "\u897F", "\u6771", [70, 66, 70, 74, 68], "\u5E38"],
-  ["\u7B52\u4E95\u5B9A\u6B21", 2850, 750, 794, "\u897F", "\u6771", [56, 54, 52, 56, 52], "\u5E38"],
-  ["\u4E95\u4F0A\u76F4\u653F", 3600, 968, 791, "\u897F", "\u6771", [86, 88, 78, 76, 86], "\u9A0E\u99AC"],
-  ["\u677E\u5E73\u5FE0\u5409", 3e3, 996, 816, "\u897F", "\u6771", [66, 76, 58, 60, 70], "\u9A0E\u99AC"],
-  ["\u798F\u5CF6\u6B63\u5247", 6e3, 785, 948, "\u897F", "\u6771", [80, 92, 58, 60, 78], "\u5E38"],
-  ["\u53EF\u5150\u624D\u8535", 500, 812, 974, "\u897F", "\u6771", [70, 90, 56, 50, 72], "\u5E38"],
-  ["\u85E4\u5802\u9AD8\u864E", 2500, 838, 928, "\u897F", "\u6771", [80, 74, 82, 80, 76], "\u5E38"],
-  ["\u4EAC\u6975\u9AD8\u77E5", 3e3, 866, 950, "\u897F", "\u6771", [64, 66, 62, 64, 62], "\u5E38"],
-  ["\u5BFA\u6CA2\u5E83\u9AD8", 2400, 1004, 934, "\u897F", "\u6771", [62, 60, 66, 68, 62], "\u5E38"],
-  ["\u53E4\u7530\u91CD\u7136", 1200, 1250, 614, "\u897F", "\u6771", [54, 52, 62, 62, 54], "\u5E38"],
-  ["\u7E54\u7530\u9577\u76CA", 450, 1250, 667, "\u897F", "\u6771", [52, 50, 58, 58, 50], "\u5E38"],
-  ["\u91D1\u68EE\u9577\u8FD1", 1140, 1326, 733, "\u897F", "\u6771", [66, 64, 66, 68, 64], "\u5E38"],
-  ["\u751F\u99D2\u4E00\u6B63", 1830, 1326, 774, "\u897F", "\u6771", [62, 62, 58, 60, 60], "\u5E38"],
-  ["\u672C\u591A\u5FE0\u52DD", 500, 1369, 847, "\u897F", "\u6771", [88, 96, 76, 70, 90], "\u9A0E\u99AC"],
-  ["\u5E73\u91CE\u9577\u6CF0", 500, 1365, 891, "\u897F", "\u6771", [62, 74, 54, 52, 60], "\u5E38"],
-  ["\u6851\u5C71\u5143\u6674", 1e3, 1392, 914, "\u897F", "\u6771", [58, 58, 56, 58, 56], "\u5E38"],
+  ["\u9ED2\u7530\u9577\u653F", 5400, 880, 390, "\u897F", "\u6771", [82, 76, 84, 78, 80], "\u9244\u7832"],
+  ["\u7AF9\u4E2D\u91CD\u9580", 1e3, 992, 330, "\u897F", "\u6771", [60, 60, 66, 62, 62], "\u5E38"],
+  ["\u52A0\u85E4\u5609\u660E", 3e3, 952, 548, "\u897F", "\u6771", [78, 80, 66, 68, 74], "\u5E38"],
+  ["\u7D30\u5DDD\u5FE0\u8208", 5100, 900, 480, "\u897F", "\u6771", [76, 78, 72, 74, 74], "\u9244\u7832"],
+  ["\u7A32\u8449\u8C9E\u901A", 1400, 846, 610, "\u897F", "\u6771", [64, 68, 58, 58, 62], "\u5E38"],
+  ["\u6238\u5DDD\u9054\u5B89", 800, 828, 665, "\u897F", "\u6771", [66, 74, 60, 56, 64], "\u5E38"],
+  ["\u5B87\u559C\u591A\u8A6E\u5BB6", 1500, 876, 712, "\u897F", "\u6771", [62, 70, 56, 54, 58], "\u5E38"],
+  ["\u4E80\u4E95\u8332\u77E9", 1e3, 974, 622, "\u897F", "\u6771", [60, 62, 64, 62, 60], "\u5E38"],
+  ["\u4E09\u597D\u653F\u52DD", 500, 1e3, 668, "\u897F", "\u6771", [56, 58, 54, 54, 56], "\u5E38"],
+  ["\u7530\u4E2D\u5409\u653F", 3e3, 796, 745, "\u897F", "\u6771", [70, 66, 70, 74, 68], "\u5E38"],
+  ["\u7B52\u4E95\u5B9A\u6B21", 2850, 812, 690, "\u897F", "\u6771", [56, 54, 52, 56, 52], "\u5E38"],
+  ["\u4E95\u4F0A\u76F4\u653F", 3600, 934, 792, "\u897F", "\u6771", [86, 88, 78, 76, 86], "\u9A0E\u99AC"],
+  ["\u677E\u5E73\u5FE0\u5409", 3e3, 972, 834, "\u897F", "\u6771", [66, 76, 58, 60, 70], "\u9A0E\u99AC"],
+  ["\u798F\u5CF6\u6B63\u5247", 6e3, 770, 800, "\u897F", "\u6771", [80, 92, 58, 60, 78], "\u5E38"],
+  ["\u53EF\u5150\u624D\u8535", 500, 800, 845, "\u897F", "\u6771", [70, 90, 56, 50, 72], "\u5E38"],
+  ["\u85E4\u5802\u9AD8\u864E", 2500, 700, 930, "\u897F", "\u6771", [80, 74, 82, 80, 76], "\u5E38"],
+  ["\u4EAC\u6975\u9AD8\u77E5", 3e3, 734, 962, "\u897F", "\u6771", [64, 66, 62, 64, 62], "\u5E38"],
+  ["\u5BFA\u6CA2\u5E83\u9AD8", 2400, 1004, 860, "\u897F", "\u6771", [62, 60, 66, 68, 62], "\u5E38"],
+  ["\u53E4\u7530\u91CD\u7136", 1200, 1250, 614, "\u897F", "\u6771", [54, 52, 62, 62, 54], "\u5E38", { \u4E8C\u306E\u624B: true }],
+  ["\u7E54\u7530\u9577\u76CA", 450, 1250, 667, "\u897F", "\u6771", [52, 50, 58, 58, 50], "\u5E38", { \u4E8C\u306E\u624B: true }],
+  ["\u91D1\u68EE\u9577\u8FD1", 1140, 1326, 733, "\u897F", "\u6771", [66, 64, 66, 68, 64], "\u5E38", { \u4E8C\u306E\u624B: true }],
+  ["\u751F\u99D2\u4E00\u6B63", 1830, 1326, 774, "\u897F", "\u6771", [62, 62, 58, 60, 60], "\u5E38", { \u4E8C\u306E\u624B: true }],
+  ["\u672C\u591A\u5FE0\u52DD", 500, 1369, 847, "\u897F", "\u6771", [88, 96, 76, 70, 90], "\u9A0E\u99AC", { \u4E8C\u306E\u624B: true }],
+  ["\u5E73\u91CE\u9577\u6CF0", 500, 1365, 891, "\u897F", "\u6771", [62, 74, 54, 52, 60], "\u5E38", { \u4E8C\u306E\u624B: true }],
+  ["\u6851\u5C71\u5143\u6674", 1e3, 1392, 914, "\u897F", "\u6771", [58, 58, 56, 58, 56], "\u5E38", { \u4E8C\u306E\u624B: true }],
   // 家康の旗本三万。一隊三万は盤に載らぬので、先手・本陣・後備の三隊に分ける
   ["\u5FB3\u5DDD\u65D7\u672C \u5148\u624B", 1e4, 1520, 790, "\u897F", "\u6771", [78, 72, 74, 76, 80], "\u65D7\u672C"],
   ["\u5FB3\u5DDD\u5BB6\u5EB7 \u672C\u9663", 1e4, 1568, 828, "\u897F", "\u6771", [92, 74, 96, 94, 92], "\u65D7\u672C", { \u5927\u5C06: true, \u5BB6\u5EB7: true }],
@@ -29221,7 +29300,7 @@ function \u5408\u6226\u3092\u4ED5\u7ACB\u3066\u308B(id, \u5473\u65B9\u65D7) {
       c.seen = true;
     }
     if (d.\u62BC\u3055\u3048) c.\u7E1B\u308A = "\u5357\u5BAE\u5C71";
-    if (/徳川/.test(d.\u540D)) c.\u63A7\u3048 = true;
+    if (/徳川/.test(d.\u540D) || d.\u4E8C\u306E\u624B) c.\u63A7\u3048 = true;
     c.auto = side !== "P";
     placeSquads(c, true);
     (side === "P" ? P2 : E).push(c);
@@ -29261,10 +29340,30 @@ var \u5175\u6570 = (list) => list.reduce((a, c) => a + corpsMen(c), 0);
 var \u65D7\u306E\u968A = (b, \u65D7) => b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u65D7 === \u65D7);
 var \u5C5E\u306E\u968A = (b, \u5C5E) => b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u5C5E === \u5C5E);
 function \u6B8B\u308A(b, \u65D7) {
-  const \u968A = \u65D7\u306E\u968A(b, \u65D7).filter((c) => !c.\u65E5\u548C\u898B && !c.\u63A7\u3048 && !c.\u7E1B\u308A);
+  const \u968A = \u65D7\u306E\u968A(b, \u65D7).filter((c) => !c.\u65E5\u548C\u898B && !c.\u63A7\u3048 && !c.\u7E1B\u308A && !c.\u4E0D\u6226);
   const \u521D = \u968A.reduce((a, c) => a + c.squads.reduce((s2, q) => s2 + q.max, 0), 0);
   return \u521D > 0 ? \u5175\u6570(\u968A.filter((c) => !c.dead && !c.destroyed)) / \u521D : 1;
 }
+var \u4E09\u3064\u306E\u5099 = {
+  \u77F3\u7530: /石田三成|島左近|蒲生郷舎|織田信高/,
+  \u5B87\u559C\u591A: /宇喜多秀家|明石全登|長船吉行|本多政重/,
+  \u5927\u8C37: /大谷吉継|大谷吉勝|木下頼継|戸田重政|平塚為広/
+};
+function \u5099\u306E\u69D8\u5B50(b) {
+  const \u51FA = {};
+  for (const k in \u4E09\u3064\u306E\u5099) {
+    const l = b.corps.filter((c) => \u4E09\u3064\u306E\u5099[k].test(c.name));
+    const \u751F = l.filter((c) => !c.dead && !c.destroyed);
+    const \u5175 = \u751F.reduce((a, c) => a + corpsMen(c), 0);
+    \u51FA[k] = {
+      \u5D29\u308C: l.some((c) => c.routed || c.destroyed || c.dead),
+      \u6C17: \u5175 > 0 ? \u751F.reduce((a, c) => a + c.morale * corpsMen(c), 0) / \u5175 : 0,
+      \u6B8B: l.length ? \u5175 / l.reduce((a, c) => a + c.squads.reduce((t, q) => t + q.max, 0), 0) : 0
+    };
+  }
+  return \u51FA;
+}
+var \u5148\u624B\u306E\u5D29\u308C = (b) => b.corps.filter((c) => /黒田長政|細川忠興|福島正則/.test(c.name) && (c.routed || c.destroyed || c.dead)).length;
 var \u5831\u305B\u308B = (b, text, \u7A2E = "info") => {
   b.\u7B4B\u66F8\u304D.\u5831.push({ t: b.t, text, \u7A2E });
   b.log.push({ t: b.t, text });
@@ -29273,6 +29372,7 @@ var \u5831\u305B\u308B = (b, text, \u7A2E = "info") => {
 };
 function \u65D7\u3092\u6C7A\u3081\u308B(b, \u5C5E, \u6C7A, \u8A33) {
   const s2 = b.\u7B4B\u66F8\u304D;
+  s2.\u6C7A\u3081\u305F\u523B = b.t;
   const \u5473\u65B9\u5074 = "P";
   for (const c of \u5C5E\u306E\u968A(b, \u5C5E)) {
     if (!c.\u65E5\u548C\u898B) continue;
@@ -29312,6 +29412,7 @@ function \u5408\u6226\u306E\u554F\u3044\u306B\u7B54\u3048\u308B(b, \u8AFE) {
 function \u5BB6\u5EB7\u3092\u9032\u3081\u308B(b) {
   const s2 = b.\u7B4B\u66F8\u304D;
   s2.\u5BB6\u5EB7\u524D\u9032 = true;
+  s2.\u524D\u9032\u306E\u523B = b.t;
   for (const c of b.corps) if (/徳川/.test(c.name)) c.\u63A7\u3048 = false;
   for (const c of b.corps) {
     if (!c.\u7B4B || !c.\u7B4B.\u5BB6\u5EB7) continue;
@@ -29362,7 +29463,7 @@ function \u5C0F\u65E9\u5DDD\u3092\u6C7A\u3081\u308B(b, \u554F\u308F\u308C\u305F)
   const \u6771\u306E\u6B8B = \u6B8B\u308A(b, "\u6771"), \u897F\u306E\u6B8B = \u6B8B\u308A(b, "\u897F");
   const \u4E09\u6210 = b.corps.find((c) => /石田三成/.test(c.name));
   const \u65D7\u982D\u5065\u5728 = !!(\u4E09\u6210 && !\u4E09\u6210.dead && !\u4E09\u6210.destroyed && corpsMen(\u4E09\u6210) > 0 && \u4E09\u6210.morale >= 50);
-  const \u897F\u3078 = \u5927\u8C37\u306E\u6B8B >= 0.7 && \u5C71\u306E\u9E93 >= 2 && \u6771\u306E\u6B8B <= 0.75 && \u65D7\u982D\u5065\u5728;
+  const \u897F\u3078 = \u5148\u624B\u306E\u5D29\u308C(b) >= 2 && \u5927\u8C37\u306E\u6B8B >= 0.7 && \u5C71\u306E\u9E93 >= 2 && \u65D7\u982D\u5065\u5728;
   if (\u897F\u3078) {
     s2.\u5C0F\u65E9\u5DDD = "\u897F";
     \u65D7\u3092\u6C7A\u3081\u308B(
@@ -29400,7 +29501,7 @@ function \u5357\u5BAE\u5C71\u3092\u6C7A\u3081\u308B(b) {
     \u62BC\u3055\u3048\u3092\u89E3\u304F(b, "\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u52E2\u304C\u52D5\u3044\u305F\u3002\u62BC\u3055\u3048\u306E\u516D\u968A\u306F\u3001\u3053\u308C\u3092\u8FCE\u3048\u6483\u3064\u3002");
     return;
   }
-  const \u5C3D\u304D\u305F = s2.\u5C0F\u65E9\u5DDD === "\u6771" || b.t >= b.dusk * 0.58 || \u6B8B\u308A(b, "\u897F") <= 0.45;
+  const \u5C3D\u304D\u305F = s2.\u5C0F\u65E9\u5DDD === "\u6771" && b.t > (s2.\u6C7A\u3081\u305F\u523B || 0) + 90 || b.t >= b.dusk * 0.58 || \u6B8B\u308A(b, "\u897F") <= 0.45;
   if (\u5C3D\u304D\u305F) {
     s2.\u5357\u5BAE\u5C71 = "\u52D5\u304B\u305A";
     for (const c of \u5C5E\u306E\u968A(b, "\u5357\u5BAE\u5C71")) {
@@ -29439,7 +29540,10 @@ function \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B(b, dt) {
   const \u6771\u306F\u6575 = s2.\u5473\u65B9\u65D7 === "\u897F";
   const \u4EA4\u6226 = b.corps.some((c) => !c.\u65E5\u548C\u898B && c.squads.some((q) => q.engaged));
   const \u897F\u306E\u6B8B = \u6B8B\u308A(b, "\u897F");
-  if (!s2.\u5BB6\u5EB7\u524D\u9032 && \u4EA4\u6226 && (b.t > 300 || \u897F\u306E\u6B8B <= 0.86)) {
+  const \u5099 = \u5099\u306E\u69D8\u5B50(b);
+  const \u5099\u306E\u6C17 = (\u5099.\u77F3\u7530.\u6C17 + \u5099.\u5B87\u559C\u591A.\u6C17 + \u5099.\u5927\u8C37.\u6C17) / 3;
+  const \u5099\u304C\u63FA\u3089\u3050 = \u5099.\u77F3\u7530.\u5D29\u308C || \u5099.\u5B87\u559C\u591A.\u5D29\u308C || \u5099.\u5927\u8C37.\u5D29\u308C || \u5099\u306E\u6C17 < 70;
+  if (!s2.\u5BB6\u5EB7\u524D\u9032 && \u4EA4\u6226 && b.t > 300 && \u897F\u306E\u6B8B <= 0.8 && \u5099\u304C\u63FA\u3089\u3050) {
     if (\u6771\u306F\u6575) {
       \u5BB6\u5EB7\u3092\u9032\u3081\u308B(b);
     } else \u554F\u3046(
@@ -29450,7 +29554,7 @@ function \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B(b, dt) {
       "\u307E\u3060\u52D5\u304B\u3055\u306C"
     );
   }
-  if (s2.\u5BB6\u5EB7\u524D\u9032 && !s2.\u554F\u9244\u7832 && s2.\u5C0F\u65E9\u5DDD === "\u672A" && (b.t > 540 || \u897F\u306E\u6B8B <= 0.72)) {
+  if (s2.\u5BB6\u5EB7\u524D\u9032 && !s2.\u554F\u9244\u7832 && s2.\u5C0F\u65E9\u5DDD === "\u672A" && b.t > (s2.\u524D\u9032\u306E\u523B || 0) + 150 && (\u5099.\u77F3\u7530.\u5D29\u308C || \u5099.\u5B87\u559C\u591A.\u5D29\u308C || \u897F\u306E\u6B8B <= 0.7)) {
     if (\u6771\u306F\u6575) \u554F\u9244\u7832\u3092\u6483\u3064(b);
     else \u554F\u3046(
       b,
@@ -29480,7 +29584,7 @@ function \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B(b, dt) {
   }
   {
     const \u5CF6 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u5CF6\u6D25 && !c.dead && !c.destroyed && c.\u4E0D\u6226);
-    if (\u5CF6.length && (\u897F\u306E\u6B8B <= 0.55 || s2.\u5C0F\u65E9\u5DDD === "\u6771")) {
+    if (\u5CF6.length && (\u897F\u306E\u6B8B <= 0.5 || s2.\u5C0F\u65E9\u5DDD === "\u6771" && b.t > (s2.\u6C7A\u3081\u305F\u523B || 0) + 120)) {
       if (s2.\u5473\u65B9\u65D7 === "\u897F") {
         \u554F\u3046(
           b,
@@ -30165,6 +30269,7 @@ function BattleScreen({ ctx, land, onEnd }) {
   const changeForm = (c, f) => {
     if (!c || c.formation === f) return;
     c.formation = f;
+    c.\u9663\u3092\u9078\u3093\u3060 = true;
     c.reformT = reformTime(c.gen);
     placeSquads(c, b.phase === "deploy");
     force((n) => (n + 1) % 1e3);
@@ -30535,7 +30640,10 @@ function BattleScreen({ ctx, land, onEnd }) {
     set\u9000\u304D\u78BA\u8A8D(null);
     if (!k) return;
     if (k.\u5168\u8ECD) allOrder("\u64A4\u9000");
-    else if (k.corps) {
+    else if (k.corps && k.corps.gen.lord && !b.\u7B4B\u66F8\u304D) {
+      allOrder("\u64A4\u9000");
+      b.log.push({ t: b.t, text: `${k.corps.gen.name}\u306E\u65D7\u304C\u9000\u3044\u305F\u3002\u5168\u8ECD\u304C\u3053\u308C\u306B\u7D9A\u304F\u3002` });
+    } else if (k.corps) {
       const c = k.corps;
       const r = \u9000\u304B\u305B\u308B(b, c, false);
       b.log.push({ t: b.t, text: r && r.\u640D ? `${c.gen.name}\u968A\u304C\u69CD\u3092\u5F15\u3044\u3066\u6226\u5834\u3092\u96E2\u308C\u308B\u3002\u80CC\u3092\u8FFD\u308F\u308C${fmt(r.\u640D)}\u4EBA\u3092\u5931\u3063\u305F\u3002` : `${c.gen.name}\u968A\u304C\u6226\u5834\u3092\u96E2\u308C\u308B\u3002` });
@@ -30548,7 +30656,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     const c = \u9000\u304D\u78BA\u8A8D.corps;
     const \u5175 = \u5168 ? pMen : c ? corpsMen(c) : 0;
     const \u968A\u6570 = b.corps.filter((x) => x.side === "P" && !x.dead && !x.destroyed && !x.routed).length;
-    return /* @__PURE__ */ React3.createElement("div", { className: "modal", onMouseDown: stop, onMouseUp: stop }, /* @__PURE__ */ React3.createElement("div", { className: "card", style: { maxWidth: 430 } }, /* @__PURE__ */ React3.createElement("div", { className: "mn", style: { fontSize: 20, marginBottom: 6 } }, \u5168 ? "\u5168\u8ECD\u3092\u9000\u304B\u305B\u307E\u3059\u304B" : `${c.gen.name}\u968A\u3092\u9000\u304B\u305B\u307E\u3059\u304B`), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95 } }, \u5168 ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9000\u304D\u9266\u3092\u9CF4\u3089\u3057\u3001", /* @__PURE__ */ React3.createElement("b", null, \u968A\u6570, "\u968A", fmt(\u5175), "\u4EBA"), "\u304C\u6226\u5834\u3092\u96E2\u308C\u307E\u3059\u3002\u3053\u306E\u5408\u6226\u306F", /* @__PURE__ */ React3.createElement("b", null, "\u64A4\u9000"), "\u3068\u3057\u3066\u7D42\u308F\u308A\u307E\u3059\u3002") : /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("b", null, fmt(\u5175), "\u4EBA"), "\u304C\u6226\u5834\u3092\u96E2\u308C\u307E\u3059\u3002\u4E00\u5EA6\u9000\u3044\u305F\u968A\u306F\u3001\u3053\u306E\u5408\u6226\u306B\u306F\u623B\u305B\u307E\u305B\u3093\u3002")), /* @__PURE__ */ React3.createElement("div", { style: {
+    return /* @__PURE__ */ React3.createElement("div", { className: "modal", onMouseDown: stop, onMouseUp: stop }, /* @__PURE__ */ React3.createElement("div", { className: "card", style: { maxWidth: 430 } }, /* @__PURE__ */ React3.createElement("div", { className: "mn", style: { fontSize: 20, marginBottom: 6 } }, \u5168 ? "\u5168\u8ECD\u3092\u9000\u304B\u305B\u307E\u3059\u304B" : c.gen.lord && !b.\u7B4B\u66F8\u304D ? `${c.gen.name}\u306F\u7DCF\u5927\u5C06\u3067\u3059\u3002\u9000\u3051\u3070\u5168\u8ECD\u304C\u9000\u304D\u307E\u3059` : `${c.gen.name}\u968A\u3092\u9000\u304B\u305B\u307E\u3059\u304B`), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95 } }, \u5168 ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9000\u304D\u9266\u3092\u9CF4\u3089\u3057\u3001", /* @__PURE__ */ React3.createElement("b", null, \u968A\u6570, "\u968A", fmt(\u5175), "\u4EBA"), "\u304C\u6226\u5834\u3092\u96E2\u308C\u307E\u3059\u3002\u3053\u306E\u5408\u6226\u306F", /* @__PURE__ */ React3.createElement("b", null, "\u64A4\u9000"), "\u3068\u3057\u3066\u7D42\u308F\u308A\u307E\u3059\u3002") : /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("b", null, fmt(\u5175), "\u4EBA"), "\u304C\u6226\u5834\u3092\u96E2\u308C\u307E\u3059\u3002\u4E00\u5EA6\u9000\u3044\u305F\u968A\u306F\u3001\u3053\u306E\u5408\u6226\u306B\u306F\u623B\u305B\u307E\u305B\u3093\u3002")), /* @__PURE__ */ React3.createElement("div", { style: {
       margin: "10px 0",
       padding: "9px 11px",
       background: "rgba(176,72,60,0.08)",
@@ -32782,6 +32890,7 @@ var \u8AAC\u660E\u66F8 = [
           "\u91CE\u306B\u306F\u8857\u9053\u304C\u4E00\u672C\u901A\u3063\u3066\u3044\u308B\u3002\u8DB3\u304C\u50C5\u304B\u306B\u901F\u304F\u3001\u5DDD\u304C\u3042\u308C\u3070\u6A4B\u3067\u6E21\u308B\u3002\u968A\u306F\u3053\u306E\u9053\u3092\u597D\u3093\u3067\u9032\u3080\u3002",
           "\u5C71\u8D8A\u3048\u306E\u8857\u9053\uFF08\u5C71\u9053\u30FB\u96E3\u6240\uFF09\u3067\u6226\u3048\u3070\u3001\u91CE\u306B\u5C71\u304C\u7ACB\u3064\u3002\u5C71\u306F\u4E18\u3088\u308A\u305A\u3063\u3068\u5927\u304D\u304F\u3001\u767B\u308C\u3070\u8DB3\u304C\u534A\u3070\u306B\u843D\u3061\u3001\u968A\u5217\u3082\u5D29\u308C\u3001\u9A0E\u99AC\u306F\u307B\u3068\u3093\u3069\u7528\u3092\u306A\u3055\u306A\u3044\u3002\u305D\u306E\u304B\u308F\u308A\u898B\u901A\u3057\u306F\u91CE\u306E\u4E8C\u500D\u8FD1\u304F\u3001\u4E0A\u304B\u3089\u5F53\u305F\u308B\u5F37\u307F\u306F\u4E18\u3088\u308A\u5927\u304D\u3044\u3002\u9053\u3055\u304C\u3057\u306F\u5C71\u3092\u5F37\u304F\u907F\u3051\u308B\u2015\u2015\u8D8A\u3048\u308B\u306E\u306F\u3001\u8FC2\u56DE\u306E\u307B\u3046\u304C\u306A\u304A\u9060\u3044\u3068\u304D\u3060\u3051\u3067\u3042\u308B\u3002",
           "\u5C71\u306F\u5411\u3053\u3046\u5074\u3092\u96A0\u3059\u3002\u5C71\u306E\u9670\u3078\u56DE\u3063\u305F\u968A\u306F\u3001\u9E93\u306E\u6575\u304B\u3089\u306F\u898B\u3048\u306A\u3044\u3002\u305F\u3060\u3057\u5C71\u306E\u4E0A\u306B\u7ACB\u3063\u3066\u3044\u308C\u3070\u3001\u96A0\u3055\u308C\u308B\u3053\u3068\u306F\u306A\u3044\u2015\u2015\u898B\u4E0B\u308D\u3057\u3066\u3044\u308B\u304B\u3089\u3067\u3042\u308B\u3002",
+          "\u521D\u3081\u306E\u9663\u5F62\u306F\u6A2A\u9663\u3067\u3042\u308B\u3002\u5E03\u9663\u306E\u3068\u304D\u306B\u3001\u7F6E\u304D\u5834\u6240\u3060\u3051\u3067\u306A\u304F\u9663\u5F62\u3082\u9078\u3079\u308B\u3002\u9078\u3093\u3060\u9663\u5F62\u306F\u3001\u958B\u6226\u5F8C\u306B\u91C7\u914D\u304C\u66F8\u304D\u63DB\u3048\u308B\u3053\u3068\u306F\u306A\u3044\u3002",
           "\u69CD\u3092\u5408\u308F\u305B\u3066\u3044\u308B\u3042\u3044\u3060\u3082\u3001\u968A\u306F\u9663\u5F62\u3092\u4FDD\u3064\u3002\u65AC\u308A\u7D50\u3076\u7D44\u306F\u6301\u3061\u5834\u304B\u3089\u4E8C\u5341\u56DB\u6B69\u307E\u3067\u52D5\u3044\u3066\u3088\u3044\u304C\u3001\u305D\u308C\u3092\u8D85\u3048\u308C\u3070\u534A\u5206\u306E\u8DB3\u3067\u5BC4\u308A\u76F4\u3059\u3002\u5074\u9762\u3078\u56DE\u308A\u8FBC\u3080\u5206\u9063\u306F\u3001\u4E00\u8ECD\u3067\u540C\u6642\u306B\u56DB\u968A\u307E\u3067\u3068\u3057\u305F\u3002",
           "\u6DF5\uFF08\u6DF1\u3044\u5DDD\uFF09\u3078\u306F\u3001\u6C7A\u3081\u3066\u304B\u3089\u3067\u306A\u3051\u308C\u3070\u8E0F\u307F\u8FBC\u307E\u306A\u3044\u3002\u62BC\u3057\u6E21\u308B\u3068\u6C7A\u3081\u305F\u968A\u3001\u5D29\u308C\u3066\u9003\u3052\u308B\u5175\u3001\u3059\u3067\u306B\u6C34\u306E\u4E2D\u3067\u5CB8\u3078\u4E0A\u304C\u308D\u3046\u3068\u3059\u308B\u7D44\u3060\u3051\u304C\u6C34\u3092\u8E0F\u3080\u3002\u6E21\u308A\u5834\u304C\u6575\u306B\u56FA\u3081\u3089\u308C\u3066\u3044\u308C\u3070\u3001\u77E5\u7565\u306E\u5C06\u306F\u6DF5\u3092\u62BC\u3057\u6E21\u3063\u3066\u56DE\u308A\u8FBC\u3080\u2015\u2015\u80CC\u5F8C\u3092\u885D\u304F\u305F\u3081\u306E\u6E21\u6CB3\u3067\u3042\u308B\u3002"
         ]
@@ -32800,6 +32909,14 @@ var \u8AAC\u660E\u66F8 = [
         \u7B87\u6761: [
           "\u9244\u7832\u3068\u99AC\u306F\u8CB7\u308F\u306D\u3070\u5897\u3048\u306A\u3044\uFF08\u9244\u7832\u935B\u51B6\u30FB\u7267\u3068\u8ABC\u3092\u901A\u3058\u308C\u3070\u5B89\u304F\u624B\u306B\u5165\u308B\uFF09",
           "\u7D44\u306F\u524D\u5217\u3068\u63A7\u3048\u306B\u5206\u304B\u308C\u308B\u3002\u524D\u5217\u304C\u8584\u304F\u306A\u308C\u3070\u63A7\u3048\u304C\u7E70\u308A\u4E0A\u304C\u308B"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u7DCF\u5927\u5C06",
+        \u6587: [
+          "\u7DCF\u5927\u5C06\uFF08\u5F53\u4E3B\uFF09\u306F\u65D7\u672C\u3092\u7387\u3044\u3066\u6226\u5217\u306E\u5F8C\u308D\u306B\u69CB\u3048\u308B\u3002\u524D\u7DDA\u304C\u524D\u3078\u51FA\u308C\u3070\u3001\u540C\u3058\u9593\u5408\u3044\u3092\u4FDD\u3063\u3066\u9032\u3080\u2015\u2015\u6226\u3046\u305F\u3081\u3067\u306F\u306A\u304F\u3001\u65D7\u3092\u898B\u305B\u3066\u58EB\u6C17\u3092\u652F\u3048\u308B\u305F\u3081\u3067\u3042\u308B\u3002\u6575\u304C\u5D29\u308C\u3066\u52DD\u3061\u304C\u898B\u3048\u305F\u3089\u3001\u5927\u5C06\u3082\u524D\u3078\u51FA\u308B\u3002\u6B66\u52C7\u3068\u7D71\u7387\u306E\u3042\u308B\u5C06\u307B\u3069\u65E9\u304F\u51FA\u308B\u3002",
+          "\u6575\u304C\u672C\u9663\u306E\u9593\u8FD1\u307E\u3067\u8FEB\u3063\u305F\u3089\u3001\u8FD1\u3044\u5473\u65B9\u4E00\u301C\u4E8C\u968A\u304C\u5F15\u304D\u8FD4\u3057\u3066\u672C\u9663\u3092\u5B88\u308B\u3002",
+          "\u7DCF\u5927\u5C06\u304C\u9000\u3051\u3070\u3001\u5168\u8ECD\u304C\u3053\u308C\u306B\u7D9A\u304F\u3002\u9000\u304D\u9266\u3092\u9CF4\u3089\u3059\u306E\u3068\u540C\u3058\u3053\u3068\u3067\u3042\u308B\u3002\u3053\u308C\u3089\u306F\u59D4\u306D\u305F\u968A\u306B\u3060\u3051\u639B\u304B\u308B\u6C7A\u307E\u308A\u3067\u3001\u904A\u3076\u5074\u306F\u7DCF\u5927\u5C06\u3082\u81EA\u7531\u306B\u52D5\u304B\u305B\u308B\u3002"
         ]
       },
       {
