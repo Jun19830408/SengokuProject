@@ -373,7 +373,8 @@ function 奇襲の渡河を計る(b, c, sx, sy) {
 
 export function battleAI(b) {
   setAiIssuing(true);
-  const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
+  // 去就の定まらぬ隊（日和見）は采配の目にも入らない（GDD 8.9）
+  const alive = b.corps.filter((c) => !c.dead && !c.destroyed && !c.日和見);
   /* 采配の側が結んだ内応は、采配が頃合いを計って動かす（GDD 11.2）。
 
      遊ぶ側は敵の隊の帳面から「内応させる」を押す。采配にはその画面が無いので、
@@ -923,6 +924,17 @@ export function battleAI(b) {
       }
     }
     issueOrder(b, c, { order: "接戦", tx: sx, ty: sy });
+  }
+  /* 控えと縛り（GDD 8.9）。
+
+     本陣の旗本は下知があるまで桃配山に控える。南宮山の押さえは、山の去就が
+     知れるまでその場を離れられない。采配は隊ごとに行き先を決めてから最後に
+     ここへ来るので、決めた行き先をここで消す――先に消しては、後の段で
+     また前へ出る行き先を書かれてしまう（測ったら四千歩も進んでいた）。 */
+  for (const c of alive) {
+    if (!c.控え && !c.縛り) continue;
+    c.order = "待機"; c.tx = c.x; c.ty = c.y; c.wp = null;
+    c.faceTo = null; c.chargeT = 0;
   }
   setAiIssuing(false);
 }

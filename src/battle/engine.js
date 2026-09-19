@@ -2,7 +2,7 @@ import { battleAI } from "./ai.js";
 import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
-import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 踏み込んだ地, 隊の地 } from "./field.js";
+import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地 } from "./field.js";
 import { clamp } from "../core/util.js";
 import { px, py } from "../data/geo.js";
 import { delegated, issueOrder, 内の門へ退く, 退き場, 退き先, 退かせる } from "./corps.js";
@@ -56,7 +56,12 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   // 挟撃を受けている隊は受ける損害がやや増える（二方向1.12倍、三方向以上1.22倍）
   const pinch = fCorps.pinch >= 3 ? 1.22 : fCorps.pinch === 2 ? 1.12 : 1;
   const before = e.men;
-  e.men = Math.max(0, e.men - dmg * pinch);
+  /* 筋書きのある一戦は、損害の出方を緩める（GDD 8.9）。
+
+     街道の合戦は百秒ほどで片が付く。一回で遊びきる関ヶ原を同じ速さで
+     走らせると、布陣を見終わらぬうちに三十四秒で決着した。それでは
+     小早川も南宮山も出番が無い。史実の関ヶ原は六時間戦っている。 */
+  e.men = Math.max(0, e.men - dmg * pinch * (b.損の手加減 || 1));
   const lost = before - e.men;
   fCorps.loss[e.origin] += lost;
   /* 駒の長の武功（GDD 6.2）。
@@ -136,6 +141,7 @@ function 淵を踏めるか(c, b, x, y, 足元) {
 export function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt; b.aiClock -= dt;
+  if (b.進行) b.進行(b, dt);            // 筋書きのある一戦は、分岐をここで進める
   for (const c of b.corps) {
     if (!c.pending) continue;
     c.pending.t -= dt;
@@ -146,7 +152,12 @@ export function stepBattle(b, dt) {
     b.fx = b.fx.filter((f) => f.t < f.life);
   }
   if (b.aiClock <= 0) { battleAI(b); b.aiClock = 0.6; }
-  const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
+  /* 去就の定まらぬ隊（日和見）は、盤の上にいるが戦には加わらない（GDD 8.9）。
+
+     松尾山の小早川も、南宮山の毛利も、開戦から昼まで一歩も動かなかった。
+     旗色が決まるまでは、見えてはいるが撃ちも撃たれもしない。
+     生きている隊の数から外すことで、動きも、狙いも、士気も止まる。 */
+  const alive = b.corps.filter((c) => !c.dead && !c.destroyed && !c.日和見);
 
   /* この刻、どの隊・どの組がどの地にかかっているかを、はじめに一度だけ判ずる。
      一点で測るのではなく、踏み場の大半がその地であるときに限る（field.js を参照）。
@@ -161,6 +172,8 @@ export function stepBattle(b, dt) {
     const foes = alive.filter((o) => o.side !== c.side);
     let seen = false;
     for (const f of foes) {
+      // 山の陰に回った隊は見えない（GDD 8.6）。隊と隊の中どころで判ずる。
+      if (山が遮るか(c.x, c.y, f.x, f.y)) continue;
       for (const q of f.squads) {
         const t = TERRAIN[c.地];
         const sight = (c.ambush && !c.revealed ? 95 : t.sight) * WEATHER[b.weather].sight * fieldScale();
@@ -375,7 +388,7 @@ export function stepBattle(b, dt) {
         const 外 = !inLayer(MAP, o, c.x, c.y, MAP.t + o.masu + MAP.t + 8);
         if (外) 寄せ道 = 0.6;
       }
-      const v = 隊の足 * fieldScale() * 水馴れの足(c, c.地, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1)
+      const v = 隊の足 * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, c.地, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1)
         * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * 寄せ道 * 混み;
       /* 行き過ぎない（GDD 8.3）。
 
@@ -582,7 +595,7 @@ export function stepBattle(b, dt) {
            行き過ぎることもない（歩幅は残りの隔たりで頭打ちにしてある）。 */
         const 遅れ = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
         const 追いつき = c.routed ? 1 : clamp(1 + 遅れ / 34, 1, 2.4);
-        const v = st0.speed * 追いつき * fieldScale() * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
+        const v = st0.speed * 追いつき * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = ((targetX - q.x) / qd) * Math.min(v * dt, qd);
         const sy = ((targetY - q.y) / qd) * Math.min(v * dt, qd);
         const 踏めるq = (nx, ny) => passableFor(c, b, nx, ny) && 淵を踏めるか(c, b, nx, ny, q.地);
@@ -893,8 +906,13 @@ export function stepBattle(b, dt) {
     }
   }
 
-  // side ごとに格子へ振り分け、近傍だけを調べる
+  /* side ごとに格子へ振り分け、近傍だけを調べる。
+
+     升目の鍵は数にする。文字を繋いだ鍵（"12,7"）は、組ひとつにつき四十九回
+     作っては捨てることになる。関ヶ原の盤は組が三千五百あるので、刻ごとに
+     十七万の文字が生まれていた（測ったら、この探索だけで一こまの三割八分）。 */
   const CS = 90;
+  const KEY = (gx, gy) => gx * 8192 + gy;
   const grids = { P: new Map(), E: new Map() };
   const 組の帳 = new Map();                         // 組の id → [隊, 組]。相手を覚えておくために要る
   for (const c of alive) {
@@ -902,7 +920,7 @@ export function stepBattle(b, dt) {
     const gmap = grids[c.side];
     for (const q of c.squads) {
       if (q.men <= 0) continue;
-      const k = ((q.x / CS) | 0) + "," + ((q.y / CS) | 0);
+      const k = KEY((q.x / CS) | 0, (q.y / CS) | 0);
       let arr = gmap.get(k);
       if (!arr) { arr = []; gmap.set(k, arr); }
       arr.push([c, q]);
@@ -927,7 +945,7 @@ export function stepBattle(b, dt) {
     for (let ring = 0; ring <= 3; ring++) {
       for (let dy = -ring; dy <= ring; dy++) for (let dx = -ring; dx <= ring; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
-        const arr = gmap.get((cx + dx) + "," + (cy + dy));
+        const arr = gmap.get(KEY(cx + dx, cy + dy));
         if (!arr) continue;
         for (const [f, e] of arr) {
           const d = Math.hypot(e.x - q.x, e.y - q.y);
@@ -960,7 +978,33 @@ export function stepBattle(b, dt) {
     if (best) q.foeId = best.e.id;
     return best ? [best, bd] : [null, 1e9];
   };
+  /* 敵が遠い隊は、組ごとの探索そのものを省く（GDD 8.3）。
+
+     組は最も遠くて二百七十歩先の敵としか関わらない（弓の届きが百九十歩）。
+     隊と隊の中どころが、互いの広がりを足しても届かぬほど離れているなら、
+     その隊の組は一つとして敵に触れない。関ヶ原のように広い盤では、
+     大半の隊が大半の刻をそうして過ごしている。 */
   for (const c of alive) {
+    let 広 = 0;
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const d = Math.hypot(q.x - c.x, q.y - c.y);
+      if (d > 広) 広 = d;
+    }
+    c.広がり = 広;
+  }
+  for (const c of alive) {
+    c.敵が近い = false;
+    for (const o of alive) {
+      if (o.side === c.side) continue;
+      if (Math.hypot(o.x - c.x, o.y - c.y) < c.広がり + o.広がり + 320) { c.敵が近い = true; break; }
+    }
+  }
+  for (const c of alive) {
+    if (!c.敵が近い) {
+      for (const q of c.squads) { q.foe = null; q.link = null; }
+      continue;
+    }
     for (const q of c.squads) {
       if (q.men <= 0) continue;
       const st = ARM_STATS[q.type];
@@ -1100,7 +1144,10 @@ export function stepBattle(b, dt) {
          損害の割が大きく出るので、同じ削れでも士気の落ち方が急になる。
          測ってみると、城方は毎秒一.二ずつ落ち、五十秒で八十八から十四まで
          下がっていた。門ひとつの攻防で城中の隊が総崩れになる勘定である。 */
-      const 早さ = MAP ? 0.7 : 1.2;
+      /* 筋書きの一戦（関ヶ原など）は、士気の落ちを緩める（GDD 8.9）。
+         一回で遊びきる戦であるから、半刻で総崩れになっては筋書きが進まない。
+         史実の関ヶ原も、六時間のあいだ押し合っていた。 */
+      const 早さ = b.筋書き ? 0.72 : MAP ? 0.7 : 1.2;
       const 引く = Math.min(c.士気の溜, 早さ * dt);
       c.morale -= 引く; c.士気の溜 -= 引く;
       if (c.士気の溜 < 0.01) c.士気の溜 = 0;
@@ -1258,7 +1305,7 @@ export function stepBattle(b, dt) {
      崩れた隊を丸ごと除いていたので、一隊崩れただけで勝敗が決することがあった。
      崩れても盤の上にいて、立ち直れば戦列に戻るのだから、半ばに数える。
      盤を落ちた隊（潰走）と、手ずから退かせた隊だけを除く。 */
-  const 勘 = (side) => b.corps.filter((c) => c.side === side && !c.dead && !c.潰 && !c.withdraw)
+  const 勘 = (side) => b.corps.filter((c) => c.side === side && !c.dead && !c.潰 && !c.withdraw && !c.日和見)
     .reduce((s, c) => s + corpsMen(c) * (c.routed ? 0.5 : 1), 0);
   const pm = 勘("P"), em = 勘("E");
   // 本丸を押さえれば城は落ちる（GDD 9.3）
@@ -1309,7 +1356,7 @@ export function stepBattle(b, dt) {
      城攻めではこれに「本丸を押さえる」が加わる（上で見た）。 */
   if (!b.総崩れ) b.総崩れ = {};
   const 尽きた = (side) => {
-    const 生 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.潰 && !c.withdraw);
+    const 生 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.潰 && !c.withdraw && !c.日和見);
     if (!生.length) return "隊が尽きた";                     // 四
     const 兵 = 生.reduce((a, c) => a + corpsMen(c), 0);
     if (兵 <= 0) return "兵が尽きた";                        // 二
@@ -1344,7 +1391,7 @@ export function stepBattle(b, dt) {
      残る隊の士気が尽きたら、その軍は退く。統制のとれた退却として扱うので、
      将が討たれ捕らわれる目も下がる。退いた兵は城へ戻る（画面の側で数える）。 */
   const 引き際 = (side) => {
-    const 生 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.潰 && !c.withdraw);
+    const 生 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.潰 && !c.withdraw && !c.日和見);
     if (!生.length) return null;                       // 「隊が尽きた」で既に拾う
     const 初 = (b.initial || {})[side] || 0;
     const 兵 = 生.reduce((a, c) => a + corpsMen(c), 0);

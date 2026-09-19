@@ -40,7 +40,7 @@ function 記録の札({ 枠, onLoad, onErase }) {
   );
 }
 
-export function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
+export function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onKassen }) {
   const [遊び方, set遊び方] = useState(false);
   const 控え口 = useRef(null);
   const 在る = (saves || []).filter((w) => w.d);
@@ -65,6 +65,10 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
           )}
           <button className={`btn ${最新 ? "" : "dark"}`} style={{ padding: "13px" }} onClick={onStart}>
             {最新 ? "新しくはじめる" : "ゲームをはじめる"}
+          </button>
+          {/* 合戦（GDD 8.9）。国を治めずに、決まった一戦だけを遊ぶ入口。 */}
+          <button className="btn" style={{ padding: "13px" }} onClick={onKassen}>
+            合戦 ── 関ヶ原
           </button>
           {/* 初めて開いた人が、まず読めるように。遊びの中からも同じものが開ける。 */}
           <button className="btn" style={{ padding: "11px" }} onClick={() => set遊び方(true)}>遊び方を読む</button>

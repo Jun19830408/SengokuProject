@@ -44,10 +44,33 @@ export const SP = 5 * KOMA + 2;          // 50人組の横間隔 ≒ 組の幅
 
 export const ROW = KOMA + 6;             // 列（段）の間隔
 
+/* 陣の縦横（GDD 8.4）。
+
+   組の横間隔 SP は二十七歩、段の間隔 ROW は十一歩である。したがって、組を
+   縦横おなじ数だけ並べても、実際の形は横に二.四五倍長い。そこへ「組数の
+   平方根の二.二倍を横に並べる」という決めを重ねていたので、横陣は
+   正面：奥行が五.四対一になっていた。
+
+   測ると、井伊直政三千六百で正面二百八十一m・奥行五十三m。黒田長政五千四百で
+   三百四十六m・六十二m。家康の旗本一万で四百五十四m・八十八mである。
+   四百五十mの正面に一列で並ぶ隊は、実在しない。
+
+   史実の一備（七百〜千人）は正面五十〜九十m・奥行九十〜百四十mで、正面より
+   奥行のほうが深い。数千の大身はその備を二段三段に重ねたので、隊全体では
+   おおむね正方形に近づく。
+
+   そこで、望む縦横比 R から横に並べる数を出すことにした。
+     per × SP ： rows × ROW ＝ R、かつ per × rows ＝ n
+     → per ＝ √(R × ROW ÷ SP × n) ＝ √(0.407 × R × n)
+   横陣は R＝一.五（七つの陣形のうち最も正面が広い、という位置づけは保つ）。
+   鶴翼は包み込む陣なのでさらに広く R＝二.二。方陣は文字どおり正方形の R＝一。 */
+export const 横に並べる数 = (n, R, 最小 = 4, 最大 = 18) =>
+  clamp(Math.round(Math.sqrt(0.407 * R * Math.max(1, n))), 最小, 最大);
+
 export function layoutSlots(form, n) {
   const s = [];
   if (form === "横陣") {
-    const want = clamp(Math.round(Math.sqrt(n * 2.2)), 3, 22);   // 組数が増えるほど正面を広げる
+    const want = 横に並べる数(n, 1.5, 4, 18);
     const per = Math.max(3, Math.ceil(n / Math.max(1, Math.ceil(n / want))));
     for (let i = 0; i < n; i++) {
       const row = Math.floor(i / per), col = i % per, cols = Math.min(per, n - row * per);
@@ -55,7 +78,10 @@ export function layoutSlots(form, n) {
     }
   } else if (form === "鶴翼") {
     // 中央を引き、両翼を前へ張り出して敵を包む（敵に対してV字に開く）
-    const per = clamp(Math.round(Math.sqrt(n * 3)), 4, 26);
+    /* 鶴翼は包み込む陣なので、七つのうちで最も正面が広くなければならない。
+       V字に折るぶん奥行が出るので、望む比より大きめの数を並べる
+       （二.二では横陣と並んでしまった。実測で二.二対一になるのは三.四のとき）。 */
+    const per = 横に並べる数(n, 3.4, 4, 22);
     for (let i = 0; i < n; i++) {
       const row = Math.floor(i / per), idx = i % per, cols = Math.min(per, n - row * per);
       const k = idx - (cols - 1) / 2;
@@ -76,8 +102,16 @@ export function layoutSlots(form, n) {
       row++;
     }
   } else if (form === "魚鱗") {
+    /* 先端の一点に力を集めて破る陣。段ごとに一組ずつ広げていたが、
+       組の横間隔は段の間隔の二.四五倍あるので、出来上がりは底辺が奥行の
+       二.四倍という平たい三角になっていた。「正面は狭く」という陣ではない。
+       二.四段につき一組ずつ広げることにして、底辺と奥行を揃える。 */
     let i = 0, row = 0;
-    while (i < n) { const cnt = row + 1; for (let j = 0; j < cnt && i < n; j++, i++) s.push({ x: (j - (cnt - 1) / 2) * SP, y: row * ROW, row }); row++; }
+    while (i < n) {
+      const cnt = Math.max(1, Math.round((row + 1) / 2.4));
+      for (let j = 0; j < cnt && i < n; j++, i++) s.push({ x: (j - (cnt - 1) / 2) * SP, y: row * ROW, row });
+      row++;
+    }
   } else if (form === "雁行") {
     const per = Math.min(10, n);
     for (let i = 0; i < n; i++) {
@@ -85,8 +119,15 @@ export function layoutSlots(form, n) {
       s.push({ x: (idx - (cols - 1) / 2) * SP * 0.9, y: idx * ROW * 0.45 + row * ROW * 1.3, row });
     }
   } else if (form === "方陣") {
-    const side = Math.ceil(Math.sqrt(n));
-    for (let i = 0; i < n; i++) { const r = Math.floor(i / side), c = i % side; s.push({ x: (c - (side - 1) / 2) * SP, y: (r - (side - 1) / 2) * ROW, row: r }); }
+    /* 四方へ槍を向けて密集する陣。組を縦横おなじ数だけ並べると、実際の形は
+       横に二.四五倍長い長方形になる。包囲されて組む陣が横長では、四方を
+       向けたことにならない。歩で測って正方形になる数を並べる。 */
+    const side = 横に並べる数(n, 1.0, 2, 24);
+    const rows = Math.max(1, Math.ceil(n / side));
+    for (let i = 0; i < n; i++) {
+      const r = Math.floor(i / side), c = i % side, cols = Math.min(side, n - r * side);
+      s.push({ x: (c - (cols - 1) / 2) * SP, y: (r - (rows - 1) / 2) * ROW, row: r });
+    }
   } else { for (let i = 0; i < n; i++) s.push({ x: 0, y: i * ROW, row: i }); }
   return s;
 }

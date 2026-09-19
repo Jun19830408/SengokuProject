@@ -5,6 +5,7 @@ import { SAVE_KEY, clearGame, loadGame, saveGame, 自動を逃がす, 記録の�
 import { DaimyoSelect } from "./DaimyoSelect.jsx";
 import { MapScreen } from "./MapScreen.jsx";
 import { Title } from "./Title.jsx";
+import { KassenScreen } from "./KassenScreen.jsx";
 import { css } from "./css.js";
 import { FACTIONS } from "../data/factions.js";
 import { exportSave, importSave } from "../save/save.js";
@@ -91,7 +92,11 @@ export default function App() {
         const d = await loadGame(key);
         if (d && d.state) exportSave(d.state, (FACTIONS[d.state.player] || {}).name);
       }}
-      onImport={控えから戻す} /></>);
+      onImport={控えから戻す}
+      onKassen={() => setScreen("kassen")} /></>);
+  /* 合戦。国も月も無い、決まった一戦だけの遊び方（GDD 8.9）。 */
+  if (screen === "kassen") return (<><style>{css}</style>
+    <KassenScreen land={land} onTitle={() => setScreen("title")} /></>);
   if (screen === "select") return (<><style>{css}</style>
     <DaimyoSelect terrain={terrain} land={land} onBack={() => setScreen("title")}
       onPick={(f, watch, lvl) => {

@@ -1,6 +1,6 @@
 import { axisOf, fromUV, gateOpenU, gatePos } from "./castleMap.js";
 import { KOMA, rot } from "./corps.js";
-import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, RIVER, ROAD, WOODS, hasRiver, riverShift } from "./field.js";
+import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS, ROAD, ROADS, WOODS, hasRiver, riverShift } from "./field.js";
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
@@ -54,7 +54,9 @@ export const sideHue = (color, mine) => {
   const 明るさ = (v[0] * 0.30 + v[1] * 0.59 + v[2] * 0.11) / 255;   // 0〜1
   return shadeHex(base, (明るさ - 0.45) * 0.36);                     // ±一割五分ほど
 };
-export const sideColor = (c) => sideHue(c.color, c.side === "P");
+/* 去就の定まらぬ隊は黄で描く（GDD 8.9）。青でも赤でもない、という一色。 */
+export const 日和見の色 = "#D9A62A";
+export const sideColor = (c) => (c.日和見 ? 日和見の色 : sideHue(c.color, c.side === "P"));
 
 /* ------------------------------------------------------------ 家紋
    図案は輪郭で描く。城の丸の中に収まる大きさで、勢力の色で塗る。 */
@@ -547,11 +549,23 @@ export function drawMon(ctx, kind, x, y, r, col, sub) {
    騎馬は後ろが二股に割れた菱形、船は舟形。
    いずれも前が尖り、向きが判るようにしてある。
    濃さの序列は 騎馬＞鉄砲＞槍＞弓。遠目に騎馬の重みが出る。 */
+/* 駒の細み（GDD 8.2）。
+
+   十人ひとつの駒を、横幅だけ細める。長さはそのままである。
+
+   組がずらりと並んだとき、太い駒は互いに触れ合って一枚の塊に見えた。
+   五十人の組が一つの染みになり、隊が何組でできているのかも、どちらを
+   向いているのかも読み取れない。細めれば、駒と駒のあいだに地が見える。
+   並んだ列が列として見え、向きも分かる。
+
+   細めるのは陸の四兵科だけである。船は細めない――船は本当に太い。 */
+export const 駒の細み = 0.66;
+const 細く = (pts) => pts.map(([a, b]) => [a, +(b * 駒の細み).toFixed(2)]);
 export const KOMA_SHAPE = {
-  yari:  [[9, 0], [-2, 2.6], [-5, 0], [-2, -2.6]],
-  yumi:  [[6.4, 0], [-1.6, 2.3], [-4.2, 1.6], [-1, 0], [-4.2, -1.6], [-1.6, -2.3]],
-  teppo: [[6, 3.0], [6, -3.0], [-4, -2.0], [-4, 2.0]],
-  kiba:  [[12, 0], [1, 4.2], [-4, 2.0], [-8, 3.4], [-5, 0], [-8, -3.4], [-4, -2.0], [1, -4.2]],
+  yari:  細く([[9, 0], [-2, 2.6], [-5, 0], [-2, -2.6]]),
+  yumi:  細く([[6.4, 0], [-1.6, 2.3], [-4.2, 1.6], [-1, 0], [-4.2, -1.6], [-1.6, -2.3]]),
+  teppo: 細く([[6, 3.0], [6, -3.0], [-4, -2.0], [-4, 2.0]]),
+  kiba:  細く([[12, 0], [1, 4.2], [-4, 2.0], [-8, 3.4], [-5, 0], [-8, -3.4], [-4, -2.0], [1, -4.2]]),
   fune:  [[11, 0], [5, 4.4], [-7, 4.0], [-8.5, 0], [-7, -4.0], [5, -4.4]],
 };
 
@@ -652,6 +666,85 @@ const 混 = (a, b, t) => {
    丘が丘に見えるのは、光の当たる側と陰になる側があるからである。
    左上から差す光を面に当て、右下へ影を落とす。等高線はその補いとして、
    数を絞って薄く置く。 */
+/* 山を描く（GDD 8.1）。
+
+   丘と同じ筋で組むが、三つ変える。
+     一、稜線を幾重にも重ねる。丘は一つの盛り上がりだが、山は尾根と谷を持つ。
+     二、等高線を細かく入れる。数が多いほど斜面が急に見える。
+     三、頂の近くに岩と針葉樹を置く。草叢の丘とは、生えているものが違う。 */
+function 山を描く(ctx, m) {
+  const 高 = m.rise || Math.round(m.r * 0.34);
+  const rnd = 種乱数((m.seed || 7) * 131 + 11);
+
+  ctx.fillStyle = "rgba(74,88,58,0.30)";                      // 落ちる影。丘より濃い
+  ゆらぎ形(ctx, { ...m, x: m.x + 影.x * 2.4, y: m.y + 影.y * 1.8 }, 1.03);
+  ctx.fill();
+
+  /* 山体。裾から頂へ、四重の稜線を重ねる。重ねるたびに少しずつ光の側へ寄せる。 */
+  const 段 = 5;
+  for (let i = 0; i < 段; i++) {
+    const t = i / (段 - 1);
+    const k = 1 - t * 0.58;
+    const dx = 光.x * m.r * 0.16 * t, dy = 光.y * m.r * 0.14 * t - 高 * t * 0.42;
+    const g = ctx.createRadialGradient(
+      m.x + dx + 光.x * m.r * k * 0.3, m.y + dy + 光.y * m.r * k * 0.28, m.r * k * 0.05,
+      m.x + dx, m.y + dy, m.r * k * 1.04);
+    g.addColorStop(0.00, 混("#BFCE94", "#8FA771", t));
+    g.addColorStop(0.55, 混("#9DB278", "#748C5C", t));
+    g.addColorStop(1.00, 混("#6F8657", "#55704A", t));
+    ctx.fillStyle = g;
+    ゆらぎ形(ctx, { ...m, x: m.x + dx, y: m.y + dy, seed: (m.seed || 7) + i * 97 }, k, 0.20);
+    ctx.fill();
+  }
+
+  ctx.save(); ゆらぎ形(ctx, m, 1.0, 0.20); ctx.clip();
+  // 谷筋。頂から裾へ落ちる筋を何本か引くと、山体が平らに見えない
+  ctx.strokeStyle = "rgba(68,84,52,0.30)"; ctx.lineWidth = Math.max(2, m.r * 0.022);
+  for (let i = 0; i < 9; i++) {
+    const a = rnd() * Math.PI * 2;
+    const tx = m.x + 光.x * m.r * 0.16, ty = m.y + 光.y * m.r * 0.14 - 高 * 0.42;
+    ctx.beginPath(); ctx.moveTo(tx, ty);
+    ctx.quadraticCurveTo(tx + Math.cos(a) * m.r * 0.5, ty + Math.sin(a) * m.r * 0.44,
+      m.x + Math.cos(a) * m.r * 0.96, m.y + Math.sin(a) * m.r * 0.84);
+    ctx.stroke();
+  }
+  // 等高線。丘は三本、山は七本
+  ctx.lineWidth = 1.2;
+  for (let i = 1; i <= 7; i++) {
+    const k = i / 8;
+    ctx.strokeStyle = "rgba(255,255,255,0.22)";
+    ゆらぎ形(ctx, { ...m, y: m.y - 高 * (1 - k) * 0.8 }, 1 - k * 0.72, 0.20); ctx.stroke();
+    ctx.strokeStyle = "rgba(96,112,72,0.20)";
+    ゆらぎ形(ctx, { ...m, y: m.y - 高 * (1 - k) * 0.8 + 2 }, 1 - k * 0.72, 0.20); ctx.stroke();
+  }
+  ctx.restore();
+
+  // 岩と針葉樹。山には山のものが生えている
+  for (let i = 0; i < 34; i++) {
+    const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * m.r * 0.9;
+    const x = m.x + Math.cos(a) * d, y = m.y + Math.sin(a) * d * 0.84 - 高 * 0.3 * (1 - d / m.r);
+    if (rnd() < 0.42) {
+      ctx.fillStyle = `rgba(${146 + rnd() * 22 | 0},${142 + rnd() * 18 | 0},${124 + rnd() * 18 | 0},0.72)`;
+      ctx.beginPath(); ctx.ellipse(x, y, m.r * (0.012 + rnd() * 0.018), m.r * (0.008 + rnd() * 0.012), rnd() * 3, 0, 7); ctx.fill();
+    } else {
+      const h2 = m.r * (0.030 + rnd() * 0.026);
+      ctx.fillStyle = "rgba(56,80,48,0.62)";
+      ctx.beginPath(); ctx.moveTo(x, y - h2); ctx.lineTo(x - h2 * 0.5, y + h2 * 0.5); ctx.lineTo(x + h2 * 0.5, y + h2 * 0.5);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  // 名札。筋書きの山は幾つかの円を重ねて形を作るので、札を持つ円にだけ名を出す
+  if (m.名 && !m.札) return;
+  const 字 = Math.round(17 * 札の倍());
+  ctx.font = `${字}px 'Hiragino Mincho ProN',serif`;
+  const 名 = m.名 || "山";
+  const 幅 = ctx.measureText(名).width;
+  const ty = m.y - 高 * 0.9 + 字 * 0.4;
+  ctx.strokeStyle = "rgba(250,252,236,0.92)"; ctx.lineWidth = 字 * 0.24;
+  ctx.strokeText(名, m.x - 幅 / 2, ty);
+  ctx.fillStyle = "rgba(44,62,34,0.96)"; ctx.fillText(名, m.x - 幅 / 2, ty);
+}
+
 function 丘を描く(ctx, h) {
   const 高 = h.rise || Math.round(h.r * 0.24);
 
@@ -692,12 +785,16 @@ function 丘を描く(ctx, h) {
     const tx = h.x + Math.cos(a) * r, ty = h.y - 高 * 0.7 + Math.sin(a) * r * 0.7;
     ctx.beginPath(); ctx.moveTo(tx, ty + 4); ctx.lineTo(tx + (rnd() - 0.5) * 5, ty - 5); ctx.stroke();
   }
-  /* 名札も野の広さに合わせる。広い野で十五pxでは、遠目にただの緑になる。 */
+  /* 名札も野の広さに合わせる。広い野で十五pxでは、遠目にただの緑になる。
+     名のある丘（笹尾山など）は、その名を出す。 */
+  if (h.名 && !h.札) return;
   const 字 = Math.round(15 * 札の倍());
   ctx.font = `${字}px 'Hiragino Mincho ProN',serif`;
+  const 名 = h.名 || "丘";
+  const 幅 = ctx.measureText(名).width;
   ctx.strokeStyle = "rgba(250,252,236,0.9)"; ctx.lineWidth = 字 * 0.23;
-  ctx.strokeText("丘", h.x - 字 * 0.5, h.y - 高 * 0.7 + 字 * 0.4);
-  ctx.fillStyle = "rgba(60,78,44,0.95)"; ctx.fillText("丘", h.x - 字 * 0.5, h.y - 高 * 0.7 + 字 * 0.4);
+  ctx.strokeText(名, h.x - 幅 / 2, h.y - 高 * 0.7 + 字 * 0.4);
+  ctx.fillStyle = "rgba(60,78,44,0.95)"; ctx.fillText(名, h.x - 幅 / 2, h.y - 高 * 0.7 + 字 * 0.4);
 }
 
 /* ------------------------------------------------------------------ 森・林
@@ -880,8 +977,14 @@ function 集落を描く(ctx, v) {
    踏み固められた土の帯。轍が二本、縁は草に紛れる。この野は二つの城を結ぶ街道の
    途中なのだから、道が一本通っているだけで、野は人の住む土地に見える。 */
 function 道を描く(ctx) {
-  const 節 = ROAD.節;
-  if (!節 || 節.length < 2 || !ROAD.幅) return;
+  /* 街道は一本とは限らない（GDD 8.1）。筋書きの野には中山道・北国街道・
+     伊勢街道・美濃路が交わっている。束のぶんだけ引く。 */
+  for (const r of (ROADS.length ? ROADS : [ROAD])) 一本の道を描く(ctx, r.節, r.幅);
+}
+
+function 一本の道を描く(ctx, 節, 幅0) {
+  if (!節 || 節.length < 2 || !幅0) return;
+  const ROAD = { 節, 幅: 幅0 };
   const 引く = (幅, 色, 破 = null) => {
     ctx.save();
     ctx.strokeStyle = 色; ctx.lineWidth = 幅; ctx.lineCap = "round"; ctx.lineJoin = "round";
@@ -915,6 +1018,61 @@ function 道を描く(ctx) {
     ctx.stroke();
   }
   ctx.restore();
+}
+
+/* 折れ線の川を描く（GDD 8.1）。
+
+   街道ごとの野の川は盤を横切る一本の帯なので、上下の岸を引けば済んだ。
+   筋書きの野の川は曲がりくねっているので、芯線を太い筆で引き、
+   その上に細い明るい筋を重ねて流れを出す。渡し場（橋・浅瀬）はその上に置く。 */
+function 川筋を描く(ctx, r) {
+  const 節 = r.節;
+  if (!節 || 節.length < 2) return;
+  const 筆 = (幅, 色) => {
+    ctx.save();
+    ctx.strokeStyle = 色; ctx.lineWidth = 幅; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(節[0].x, 節[0].y);
+    for (let i = 1; i < 節.length - 1; i++) {
+      const a = 節[i], b = 節[i + 1];
+      ctx.quadraticCurveTo(a.x, a.y, (a.x + b.x) / 2, (a.y + b.y) / 2);
+    }
+    ctx.lineTo(節[節.length - 1].x, 節[節.length - 1].y);
+    ctx.stroke(); ctx.restore();
+  };
+  筆(r.幅 + 16, "rgba(196,186,152,0.55)");        // 河原の砂利
+  筆(r.幅, "#6E9BBE");                            // 水面
+  筆(r.幅 * 0.42, "rgba(186,214,232,0.55)");      // 流れの明るいところ
+  for (const w of r.渡し || []) {
+    const 橋 = w.種 === "橋";
+    ctx.save();
+    ctx.fillStyle = 橋 ? "#A8804E" : "rgba(180,212,228,0.85)";
+    ctx.beginPath(); ctx.arc(w.x, w.y, w.r, 0, 7); ctx.fill();
+    if (橋) {
+      ctx.strokeStyle = "rgba(96,68,38,0.65)"; ctx.lineWidth = 2.2;
+      for (let k = -2; k <= 2; k++) {
+        ctx.beginPath(); ctx.moveTo(w.x - w.r * 0.8, w.y + k * w.r * 0.3);
+        ctx.lineTo(w.x + w.r * 0.8, w.y + k * w.r * 0.3); ctx.stroke();
+      }
+    }
+    const 字 = Math.round(13 * 札の倍());
+    ctx.font = `${字}px 'Hiragino Mincho ProN',serif`;
+    const t = 橋 ? "橋" : "浅瀬";
+    const 幅 = ctx.measureText(t).width;
+    ctx.strokeStyle = "rgba(250,252,236,0.9)"; ctx.lineWidth = 字 * 0.24;
+    ctx.strokeText(t, w.x - 幅 / 2, w.y + 字 * 0.36);
+    ctx.fillStyle = "rgba(38,62,84,0.95)"; ctx.fillText(t, w.x - 幅 / 2, w.y + 字 * 0.36);
+    ctx.restore();
+  }
+  if (r.名) {
+    const 字 = Math.round(15 * 札の倍());
+    const i = Math.floor(節.length / 2), a = 節[i];
+    ctx.save(); ctx.font = `${字}px 'Hiragino Mincho ProN',serif`;
+    const 幅 = ctx.measureText(r.名).width;
+    ctx.strokeStyle = "rgba(250,252,236,0.9)"; ctx.lineWidth = 字 * 0.24;
+    ctx.strokeText(r.名, a.x - 幅 / 2, a.y - r.幅 * 0.7);
+    ctx.fillStyle = "rgba(38,62,84,0.95)"; ctx.fillText(r.名, a.x - 幅 / 2, a.y - r.幅 * 0.7);
+    ctx.restore();
+  }
 }
 
 function 川を描く(ctx) {
@@ -1057,10 +1215,12 @@ export function drawFieldTerrain(ctx) {
   }
   for (const v of VILLAGES) 集落を描く(ctx, v);
   for (const m of MARSH) 湿地を描く(ctx, m);
+  for (const m of MOUNTAINS) 山を描く(ctx, m);
   for (const h of HILLS) 丘を描く(ctx, h);
   for (const f of WOODS) 木立を描く(ctx, f, false, 22, "林");
   for (const f of FORESTS) 木立を描く(ctx, f, true, 48, "森");
   if (hasRiver()) 川を描く(ctx);
+  for (const r of RIVERS) 川筋を描く(ctx, r);
 }
 
 
@@ -1635,12 +1795,14 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   ctx.save();
   ctx.translate(W / 2 - cam.x * cam.s, H / 2 - cam.y * cam.s);
   ctx.scale(cam.s, cam.s);
-  ctx.drawImage(terrainCanvas, 0, 0);
+  /* 地の画布は、広い野では間引いて焼いてある（画面の側の 画布の倍 を参照）。
+     貼るときに野の寸法まで引き伸ばす。 */
+  ctx.drawImage(terrainCanvas, 0, 0, FIELD.w, FIELD.h);
   // 戦の痕。地の上に重ねる（画布は地の半分の寸法なので、引き伸ばして貼る）
   if (跡Canvas) ctx.drawImage(跡Canvas, 0, 0, FIELD.w, FIELD.h);
 
-  // 布陣段階は自陣の範囲を示す
-  if (b.phase === "deploy") {
+  // 布陣段階は自陣の範囲を示す（筋書きの一戦は布陣を動かせないので出さない）
+  if (b.phase === "deploy" && !b.筋書き) {
     const z = ownZone(b);
     ctx.fillStyle = "rgba(47,93,140,0.07)";
     ctx.fillRect(z.x, z.y, z.w, z.h);
@@ -1923,6 +2085,24 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   // 空模様と日暮れ。地と隊の上、標識の下に被せる
   空模様を被せる(ctx, b, W, H);
 
+  /* 名札の重なりを避ける（GDD 8.2）。
+
+     隊が六十を超える盤（関ヶ原）では、名札が中央で折り重なって一枚も読めない。
+     置き場を上へ（足りねば下へ）ずらして、空いている所へ逃がす。
+     置き場が見つからなければ、そのまま重ねて描く――名が消えるよりはましである。 */
+  const 札の跡 = [];
+  const 札の場 = (x, y, w, h) => {
+    for (const dy of [0, -17, 17, -34, 34, -51, 51, -68, 68]) {
+      const r = [x - w / 2 - 4, y + dy - h, w + 8, h + 2];
+      let 当 = false;
+      for (const o of 札の跡) {
+        if (r[0] < o[0] + o[2] && o[0] < r[0] + r[2] && r[1] < o[1] + o[3] && o[1] < r[1] + r[3]) { 当 = true; break; }
+      }
+      if (!当) { 札の跡.push(r); return y + dy; }
+    }
+    return y;
+  };
+
   // 標識・文字は画面座標で描く
   for (const c of shown) {
     const isP = c.side === "P";
@@ -1935,7 +2115,10 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
       ctx.fillStyle = "#8A8478"; ctx.font = "12px sans-serif"; ctx.fillText("壊滅", x - 12, y + 4);
       continue;
     }
-    if (!isP && !c.seen && b.phase === "fight") {
+    /* 去就の定まらぬ隊は、敵でも味方でもないので隠さない（GDD 8.9）。
+       松尾山にも南宮山にも、旗指物を立てた一万五千が白昼堂々と居座っている。
+       それを「敵影」と点線で描くのは、見えているものを見えぬことにする話である。 */
+    if (!isP && !c.seen && !c.日和見 && b.phase === "fight") {
       if (c.lastSeen && b.t - c.lastSeen.t < 45) {
         const [lx, ly] = S(c.lastSeen.x, c.lastSeen.y);
         ctx.strokeStyle = side + "88"; ctx.setLineDash([5, 5]); ctx.lineWidth = 2;
@@ -1991,9 +2174,15 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     const label = c.detach ? `${c.task}${c.autonomous ? "・自律" : ""}` : c.ally ? `${c.name}（${c.ally}）` : c.name;
     ctx.font = c.detach ? "11px 'Hiragino Sans',sans-serif" : "600 13px 'Hiragino Sans',sans-serif";
     const w = ctx.measureText(label).width;
+    const ly0 = (c.gen.lord && !c.detach ? 34 : 26) + 14;
+    const ly = y - 札の場(x, y - ly0, w, 16);
     ctx.fillStyle = "rgba(255,255,255,0.85)";
-    const ly = (c.gen.lord && !c.detach ? 34 : 26) + 14;
     ctx.fillRect(x - w / 2 - 4, y - ly, w + 8, 16);
+    /* 名札が駒から離れたら、細い線で結ぶ。どの隊の名かが分からなくなる。 */
+    if (Math.abs(ly - ly0) > 4) {
+      ctx.strokeStyle = "rgba(60,58,50,0.45)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, y - ly + 8); ctx.lineTo(x, y - 10); ctx.stroke();
+    }
     ctx.fillStyle = c.detach ? "#5B5850" : "#33332F";
     ctx.fillText(label, x - w / 2, y - ly + 12);
 

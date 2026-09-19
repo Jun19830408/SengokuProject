@@ -9,6 +9,9 @@ import { clamp, makeRng } from "../core/util.js";
 // 参加隊数は史料により差があるため、片軍32隊を上限とする。
 export const MAX_CORPS = 32;
 
+/* ただし筋書きのある一戦（関ヶ原など）はこの限りではない。
+   布陣は史実で決まっており、東軍だけで三十四隊ある。kassen.js が直に組む。 */
+
 export const MAX_CORPS_MEN = 30000;
 
 
@@ -28,6 +31,22 @@ export function riverShift(x) {
 
 export const FORESTS = [], WOODS = [], HILLS = [], MARSH = [];
 
+/* 山（GDD 8.1）。
+
+   盤には丘しか無かった。丘は「少し高いところ」であって、山ではない。
+   南宮山のような四百mの山も、笹尾山の六十mの比高も、同じ「丘」として
+   置くほかなかった。山越えの街道で戦っても、野に丘が二つ三つ立つだけである。
+
+   山は丘とは別の地物とする。足は丘よりさらに鈍り（丘〇.七に対し〇.四二）、
+   隊列は崩れ、騎馬はほとんど使えない。そのかわり登り切れば遠くまで見通せ、
+   上から当たる強みは丘より大きい。道さがしは山を強く避ける――避けきれぬときは
+   越えるが、それは軍勢にとって難儀な選択である。 */
+export const MOUNTAINS = [];
+
+/* この野を結ぶ街道の質（街道・山道・難所）。山が立つか否かはこれで決まる。 */
+export let 道の質 = "街道";
+export function setFieldKind(kind) { 道の質 = kind || "街道"; }
+
 /* 街道（GDD 8.1）。
 
    この野は「二つの城を結ぶ街道の途中」である。種も両端の城名から作っている。
@@ -38,10 +57,30 @@ export const FORESTS = [], WOODS = [], HILLS = [], MARSH = [];
    速く、道さがしもここを好んで通る（route.js の 通りにくさ）。 */
 export const ROAD = { 節: [], 幅: 0 };
 
+/* 街道は一本とは限らない（GDD 8.1）。
+
+   街道ごとに作る野は一本で足りる。ところが筋書き（関ヶ原のような決まった戦場）
+   には、中山道・北国街道・伊勢街道が交わっている。道を束で持てるようにする。
+   街道ごとの野では、この束に ROAD ひとつが入る。 */
+export const ROADS = [];
+
+/* 折れ線の川（GDD 8.1）。
+
+   街道ごとの野の川は、盤を横切る一本の帯（RIVER）である。筋書きの野では
+   川が曲がり、幾筋にも分かれ、渡し場が決まった所にある。帯では表せない。 */
+export const RIVERS = [];
+
 // 点から道までの隔たり（線分の集まりとして測る）
-export function 道までの隔たり(x, y) {
-  const 節 = ROAD.節;
-  if (節.length < 2) return Infinity;
+export const 道までの隔たり = (x, y) => 節までの隔たり(ROAD.節, x, y);
+
+export const 道の上か = (x, y) => {
+  for (const r of ROADS) if (r.幅 > 0 && 節までの隔たり(r.節, x, y) < r.幅 / 2) return true;
+  return false;
+};
+
+/* 折れ線までの隔たり（道までの隔たり の中身をそのまま切り出したもの） */
+export function 節までの隔たり(節, x, y) {
+  if (!節 || 節.length < 2) return Infinity;
   let best = Infinity;
   for (let i = 0; i < 節.length - 1; i++) {
     const a = 節[i], b = 節[i + 1];
@@ -55,7 +94,6 @@ export function 道までの隔たり(x, y) {
   }
   return Math.sqrt(best);
 }
-export const 道の上か = (x, y) => ROAD.幅 > 0 && 道までの隔たり(x, y) < ROAD.幅 / 2;
 
 /* 集落。野には人が住んでいる。
 
@@ -87,6 +125,7 @@ export function genTerrain(seed) {
   const W = FIELD.w, H = FIELD.h;
   RIVER.top = 0; RIVER.bot = 0; RIVER.bridge = [0, 0]; RIVER.ford = [0, 0]; RIVER.wave = 0;
   FORESTS.length = 0; WOODS.length = 0; HILLS.length = 0; MARSH.length = 0; VILLAGES.length = 0;
+  MOUNTAINS.length = 0;
   const kind = rnd();
   // 川。六割の野に一本流れる。橋と浅瀬の位置も野ごとに違う。
   if (kind > 0.4) {
@@ -118,17 +157,30 @@ export function genTerrain(seed) {
     RIVER.ph = rnd() * Math.PI * 2;
   }
   // 丘・森・林・湿地。数も場所も野ごとに違う。
-  const put = (list, n, rMin, rMax) => {
+  /* 置き直しの数（試み）は、既にある野を変えぬよう二十四のままとする。
+     ここを増やすと賽の流れがずれ、街道の通る筋まで変わってしまう
+     （それに気づかず、味方をすり抜けぬ試験が 24→107 に崩れた）。
+     山だけは裾が広くて置き場を探しにくいので、山のときだけ多く試す。 */
+  const put = (list, n, rMin, rMax, 丸ごと外へ, 試み = 24) => {
     for (let i = 0; i < n; i++) {
       let x = 0, y = 0, ok = false;
       const r0 = rMin + rnd() * (rMax - rMin);
       const mx = r0 + 24, my = r0 + 24;               // 盤からはみ出さない
       if (mx * 2 > W - 40 || my * 2 > H - 40) continue;
-      for (let k = 0; k < 24 && !ok; k++) {
+      for (let k = 0; k < 試み && !ok; k++) {
         x = mx + rnd() * (W - mx * 2); y = my + rnd() * (H - my * 2);
-        // 川の上と、他の地形の上には置かない
-        if (RIVER.bot > RIVER.top && y > RIVER.top - 40 && y < RIVER.bot + 40) continue;
-        ok = ![...FORESTS, ...WOODS, ...HILLS, ...MARSH].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + r0 + 30);
+        /* 川の上と、他の地形の上には置かない。
+
+           川を避けるのに、中どころだけを見ていた。丘や森ならそれでよい――
+           裾が岸に届くくらいは、むしろ野の姿である。ところが裾の広い山は、
+           中どころが川から離れていても裾が川を跨ぐ。絵の上では川が山を貫いて
+           流れ、地形としても山の中に淵があるという有様になった。
+           山だけは、丸ごと川の外にあることを求める。 */
+        const 際 = 丸ごと外へ ? r0 + 24 : 40;
+        if (RIVER.bot > RIVER.top
+          && y + 際 > RIVER.top - (丸ごと外へ ? RIVER.wave : 0)
+          && y - 際 < RIVER.bot + (丸ごと外へ ? RIVER.wave : 0)) continue;
+        ok = ![...FORESTS, ...WOODS, ...HILLS, ...MOUNTAINS, ...MARSH].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + r0 + 30);
       }
       if (ok) list.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r0), seed: Math.floor(rnd() * 1e9) });
     }
@@ -150,6 +202,24 @@ export function genTerrain(seed) {
      見渡す限り何も無い野では、回り込む目印も、伏せる場所もない。 */
   const 底 = sc >= 2.4 ? 2 : sc >= 1.6 ? 1 : 0;
   const 数 = (基, 要) => Math.max(要 ? 底 : 0, Math.round(基 * (0.6 + sc * 0.62)));
+  /* 山を立てる（GDD 8.1）。
+
+     山越えの街道でのみ立つ。山道なら一つ、難所なら二つ。
+     丘より一回り大きいので、ほかの地物より先に場所を取る――後から入れると
+     置き場が残っていない。野の四分の一を塞ぐほどには大きくしない。
+     塞いでしまえば戦場ではなく廊下になる。 */
+  {
+    const 数山 = 道の質 === "難所" ? 2 : 道の質 === "山道" ? 1 : 0;
+    const 前 = HILLS.length;
+    /* 山の裾は野の高さに縛る。野の半ばを埋める山は、戦場ではなく壁である。 */
+    const 裾小 = clamp(120 * sc, 130, H * 0.145), 裾大 = clamp(175 * sc, 190, H * 0.205);
+    if (数山) put(HILLS, 数山, 裾小, Math.max(裾小 + 10, 裾大), true, 60);
+    for (const m of HILLS.splice(前)) {
+      m.高 = Math.round(180 + (m.seed % 100) * 2.4);   // 比高の目安（m）。絵の起伏に使う
+      m.rise = Math.round(m.r * 0.34);
+      MOUNTAINS.push(m);
+    }
+  }
   put(HILLS, 数(Math.floor(rnd() * 3), true), 80 * sc, 130 * sc);
   put(FORESTS, 数(Math.floor(rnd() * 4), true), 70 * sc, 115 * sc);
   put(WOODS, 数(Math.floor(rnd() * 3) + 1), 50 * sc, 85 * sc);
@@ -168,6 +238,8 @@ export function genTerrain(seed) {
      曲がりは二つ三つで足りる。真っすぐな道は人の手のものに見えず、曲がりすぎる
      道は野を分断する。丘があれば裾を巻き、森があれば縁を掠める。 */
   ROAD.節.length = 0;
+  ROADS.length = 0; ROADS.push(ROAD);
+  RIVERS.length = 0;
   ROAD.幅 = Math.round(clamp(36 * Math.sqrt(sc), 34, 86));
   if (RIVER.bot > RIVER.top) {
     // 道は橋より狭くなければならない。道幅のまま橋へ入れば、両端は水である。
@@ -203,9 +275,122 @@ export function genTerrain(seed) {
   }
 }
 
+/* ========================================================================== 
+   筋書きの野（GDD 8.1）
+
+   関ヶ原のような「決まった戦場」は、街道ごとに賽で組む野とは作りが違う。
+   山も川も道も、実際の土地から写し取った形で置く。
+
+   ところが terrainAt は、呼ばれるたびに地物を一つずつ当たっている。円が
+   四十、川の折れ線が六十節ともなれば、一度の問い合わせに百五十からの
+   勘定が要る。組は三千を超え、刻ごとに七度ずつ問うのだから、これでは
+   一こま七十ミリ秒――戦が動かない。
+
+   そこで、筋書きの野だけは地形を升目に焼いておく。十歩四方の升に地物の名を
+   一つ入れ、問い合わせは升を引くだけにする。焼くのは戦の初めに一度きりで、
+   地物の側から升を塗るので、野の広さなりの手間で済む。
+   ========================================================================== */
+const 格種 = ["plain", "road", "forest", "wood", "marsh", "mountain", "hill", "village", "deep", "ford", "bridge"];
+export let 地形格 = null;
+
+function 野を焼く(ce = 10) {
+  const gw = Math.ceil(FIELD.w / ce), gh = Math.ceil(FIELD.h / ce);
+  const d = new Uint8Array(gw * gh);
+  const 丸 = (o, v) => {
+    const x0 = Math.max(0, Math.floor((o.x - o.r) / ce)), x1 = Math.min(gw - 1, Math.ceil((o.x + o.r) / ce));
+    const y0 = Math.max(0, Math.floor((o.y - o.r) / ce)), y1 = Math.min(gh - 1, Math.ceil((o.y + o.r) / ce));
+    const rr = o.r * o.r;
+    for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) {
+      const cx = i * ce + ce / 2, cy = j * ce + ce / 2;
+      if ((cx - o.x) ** 2 + (cy - o.y) ** 2 <= rr) d[j * gw + i] = v;
+    }
+  };
+  const 帯 = (節, 幅, v) => {
+    const h2 = 幅 / 2;
+    for (let k = 0; k + 1 < 節.length; k++) {
+      const a = 節[k], b = 節[k + 1];
+      const x0 = Math.max(0, Math.floor((Math.min(a.x, b.x) - h2) / ce)), x1 = Math.min(gw - 1, Math.ceil((Math.max(a.x, b.x) + h2) / ce));
+      const y0 = Math.max(0, Math.floor((Math.min(a.y, b.y) - h2) / ce)), y1 = Math.min(gh - 1, Math.ceil((Math.max(a.y, b.y) + h2) / ce));
+      const vx = b.x - a.x, vy = b.y - a.y, L = vx * vx + vy * vy;
+      for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) {
+        const cx = i * ce + ce / 2, cy = j * ce + ce / 2;
+        let t2 = L ? ((cx - a.x) * vx + (cy - a.y) * vy) / L : 0;
+        t2 = t2 < 0 ? 0 : t2 > 1 ? 1 : t2;
+        if ((cx - (a.x + vx * t2)) ** 2 + (cy - (a.y + vy * t2)) ** 2 <= h2 * h2) d[j * gw + i] = v;
+      }
+    }
+  };
+  /* 塗る順は「弱い地物から」。後から塗ったものが上に来る。
+     山は森より上に置く――木の生えた山は、やはり山である。
+     川はすべての上を流れ、渡し場（橋・浅瀬）はその川の上に架かる。 */
+  for (const o of VILLAGES) 丸(o, 7);
+  for (const o of HILLS) 丸(o, 6);
+  for (const o of MARSH) 丸(o, 4);
+  for (const o of WOODS) 丸(o, 3);
+  for (const o of FORESTS) 丸(o, 2);
+  for (const o of MOUNTAINS) 丸(o, 5);
+  for (const r of ROADS) 帯(r.節, r.幅, 1);
+  for (const r of RIVERS) 帯(r.節, r.幅, 8);
+  for (const r of RIVERS) for (const w of r.渡し || []) 丸(w, w.種 === "橋" ? 10 : 9);
+  return { ce, w: gw, h: gh, d };
+}
+
+/* 筋書きから野を組む。地物はすべて写し取った形で渡される。 */
+export function 筋書きの野を組む(地) {
+  代++;
+  FIELD.w = 地.w; FIELD.h = 地.h;
+  setFieldKind("街道");
+  RIVER.top = 0; RIVER.bot = 0; RIVER.bridge = [0, 0]; RIVER.ford = [0, 0]; RIVER.wave = 0;
+  FORESTS.length = 0; WOODS.length = 0; HILLS.length = 0; MARSH.length = 0;
+  VILLAGES.length = 0; MOUNTAINS.length = 0; RIVERS.length = 0; ROADS.length = 0;
+  const 種付 = (o, i) => ({ seed: ((o.x | 0) * 7919 + (o.y | 0) * 31 + i) >>> 0, ...o });
+  (地.村 || []).forEach((o, i) => VILLAGES.push(種付(o, i)));
+  (地.丘 || []).forEach((o, i) => HILLS.push({ ...種付(o, i), rise: o.rise || Math.round(o.r * 0.24) }));
+  (地.沼 || []).forEach((o, i) => MARSH.push(種付(o, i)));
+  (地.林 || []).forEach((o, i) => WOODS.push(種付(o, i)));
+  (地.森 || []).forEach((o, i) => FORESTS.push(種付(o, i)));
+  (地.山 || []).forEach((o, i) => MOUNTAINS.push({ ...種付(o, i), rise: o.rise || Math.round(o.r * 0.34) }));
+  (地.道 || []).forEach((r) => ROADS.push({ 名: r.名, 節: r.節, 幅: r.幅 || 60 }));
+  (地.川 || []).forEach((r) => RIVERS.push({ 名: r.名, 節: r.節, 幅: r.幅 || 40, 渡し: r.渡し || [] }));
+  ROAD.節.length = 0; ROAD.幅 = 0;
+  地形格 = 野を焼く(地.升 || 10);
+}
+
+/* 筋書きを畳む。街道ごとの野に戻す（升目を捨てる）。 */
+export function 筋書きを解く() { 地形格 = null; RIVERS.length = 0; }
+
 export const hasRiver = () => RIVER.bot > RIVER.top + 4;
 
 export const hasHill = () => HILLS.length > 0;
+
+export const hasMountain = () => MOUNTAINS.length > 0;
+
+/* 山が見通しを遮るか（GDD 8.6）。
+
+   丘や林は「そこに立つと遠くが見える／見えない」という地形であった。
+   山は、そこに立たなくとも、向こう側を隠す。山の陰に回った隊は、
+   麓の敵から見えない――これが伏せるということである。
+
+   ただし、どちらかが山の上にいるなら遮られない。上から見下ろしているのに
+   「山があるから見えない」では話が逆である。 */
+export function 山が遮るか(x1, y1, x2, y2) {
+  if (!MOUNTAINS.length) return false;
+  /* どちらかが山に立っているなら、何も遮らない。
+     山は幾つかの円を重ねて一つの尾根を作ることがあるので、「この円の中か」では
+     なく「山の地に立っているか」で見る（南宮山の一峰に立つと、同じ南宮山の
+     別の峰が視界を塞ぐ、という妙なことになっていた）。 */
+  if (terrainAt(x1, y1) === "mountain" || terrainAt(x2, y2) === "mountain") return false;
+  for (const m of MOUNTAINS) {
+    const r = m.r * 0.82;                       // 頂の近くだけが本当に遮る
+    const vx = x2 - x1, vy = y2 - y1, L = vx * vx + vy * vy;
+    if (L <= 0) continue;
+    let t = ((m.x - x1) * vx + (m.y - y1) * vy) / L;
+    if (t <= 0 || t >= 1) continue;             // 線分の外に山がある
+    const dx = m.x - (x1 + vx * t), dy = m.y - (y1 + vy * t);
+    if (dx * dx + dy * dy < r * r) return true;
+  }
+  return false;
+}
 
 export const hasForest = () => FORESTS.length > 0;
 
@@ -254,6 +439,12 @@ export function passableFor(c, b, x, y) {
 
 export function terrainAt(x, y) {
   if (MAP) return castleTerrainAt(x, y);
+  if (地形格) {                                   // 筋書きの野は升目を引くだけ
+    const g = 地形格;
+    const i = x < 0 ? 0 : x >= FIELD.w ? g.w - 1 : (x / g.ce) | 0;
+    const j = y < 0 ? 0 : y >= FIELD.h ? g.h - 1 : (y / g.ce) | 0;
+    return 格種[g.d[j * g.w + i]];
+  }
   if (hasRiver()) {
     const sh = riverShift(x);
     if (y > RIVER.top + sh && y < RIVER.bot + sh) {
@@ -266,6 +457,7 @@ export function terrainAt(x, y) {
   for (const f of FORESTS) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.r ** 2) return "forest";
   for (const f of WOODS) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.r ** 2) return "wood";
   for (const m of MARSH) if ((x - m.x) ** 2 + (y - m.y) ** 2 < m.r ** 2) return "marsh";
+  for (const m of MOUNTAINS) if ((x - m.x) ** 2 + (y - m.y) ** 2 < m.r ** 2) return "mountain";
   for (const h of HILLS) if ((x - h.x) ** 2 + (y - h.y) ** 2 < h.r ** 2) return "hill";
   for (const v of VILLAGES) if ((x - v.x) ** 2 + (y - v.y) ** 2 < v.r ** 2) return "village";
   return "plain";
@@ -333,6 +525,9 @@ export const TERRAIN = {
   wood: { speed: 0.82, fight: 0.92, cohesion: -3, sight: 165, horse: 0.85, charge: true, label: "林" },
   marsh: { speed: 0.5, fight: 0.8, cohesion: -9, sight: 240, horse: 0.45, charge: false, label: "湿地" },
   hill: { speed: 0.7, fight: 1.15, cohesion: -2, sight: 360, horse: 0.8, charge: true, label: "丘" },
+  /* 山。丘の一段上。登るのに難儀し、隊列は崩れ、騎馬は用をなさない。
+     そのかわり見晴らしは野の倍近く、上から当たる強みも丘より大きい。 */
+  mountain: { speed: 0.42, fight: 1.28, cohesion: -7, sight: 470, horse: 0.35, charge: false, label: "山" },
   village: { speed: 0.78, fight: 0.95, cohesion: -3, sight: 130, horse: 0.7, charge: false, label: "集落" },
   bridge: { speed: 0.95, fight: 0.85, cohesion: -5, sight: 260, horse: 0.9, charge: false, label: "橋" },
   ford: { speed: 0.3, fight: 0.7, cohesion: -14, sight: 260, horse: 0.5, charge: false, label: "浅瀬" },

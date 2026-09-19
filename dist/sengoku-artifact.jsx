@@ -2,7 +2,7 @@
 // これは src/ の折を一つに束ね直したものである。直すときは src/ のほうを直し、
 // npm run build で作り直すこと。この書き出しを直に編めば、次の書き出しで消える。
 // src/ui/App.jsx
-import React10, { useState as useState9, useEffect as useEffect6, useMemo as useMemo2 } from "react";
+import React11, { useState as useState10, useEffect as useEffect7, useMemo as useMemo2 } from "react";
 
 // src/data/roads.js
 var ROADS = [
@@ -15241,7 +15241,7 @@ function initState(player) {
   }
   const specials = {};
   for (const t of TOWNS) specials[t.id] = { state: "\u4E2D\u7ACB", faction: null, anger: 0, months: 0 };
-  const \u76E4 = {
+  const \u76E42 = {
     /* 卓（GDD 15.3）。ひとつの遊びを見分ける印。
     
            これが無いと、記録の置き場は「別の遊びで上書きしようとしている」ことに
@@ -15343,14 +15343,14 @@ function initState(player) {
     // 姫（GDD 6.8）。下で家々に配る
     chronicle: [{ y: 1546, m: 4, text: "\u5C3E\u5F35\u306F\u7E54\u7530\u4E09\u5BB6\u306B\u5206\u304B\u308C\u3001\u7F8E\u6FC3\u306F\u658E\u85E4\u9053\u4E09\u304C\u63E1\u308B\u3002\u5929\u4E0B\u306F\u307E\u3060\u9060\u3044\u3002" }]
   };
-  \u59EB\u3092\u6574\u3048\u308B(\u76E4);
-  for (const fid of Object.keys(\u76E4.factions)) {
-    \u76E4.factions[fid].\u672C\u62E0 = \u672C\u62E0\u3092\u5B9A\u3081\u308B(fid, \u76E4.castles, \u76E4.generals);
+  \u59EB\u3092\u6574\u3048\u308B(\u76E42);
+  for (const fid of Object.keys(\u76E42.factions)) {
+    \u76E42.factions[fid].\u672C\u62E0 = \u672C\u62E0\u3092\u5B9A\u3081\u308B(fid, \u76E42.castles, \u76E42.generals);
   }
-  \u56FD\u4E3B\u3092\u636E\u3048\u308B(\u76E4);
-  \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(\u76E4);
-  \u57CE\u306E\u540D\u3092\u6539\u3081\u308B(\u76E4);
-  return \u76E4;
+  \u56FD\u4E3B\u3092\u636E\u3048\u308B(\u76E42);
+  \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(\u76E42);
+  \u57CE\u306E\u540D\u3092\u6539\u3081\u308B(\u76E42);
+  return \u76E42;
 }
 function migrateRosters(s2) {
   for (const c of s2.castles) if (!c.rost) c.rost = newRoster(Math.max(0, c.local), `loc-${c.id}`);
@@ -15689,8 +15689,8 @@ function \u7ACB\u305F\u306C\u7533\u3057\u9001\u308A\u3092\u843D\u3068\u3059(s2) 
     if (typeof q.fief === "number" && q.fief < 0) q.fief = 0;
   }
   if (s2.warSettle && Array.isArray(s2.warSettle.queue)) {
-    const \u6B8B\u308A = s2.warSettle.queue.filter((id) => (s2.generals || []).some((x) => x.id === id));
-    s2.warSettle = \u6B8B\u308A.length ? { ...s2.warSettle, queue: \u6B8B\u308A } : null;
+    const \u6B8B\u308A2 = s2.warSettle.queue.filter((id) => (s2.generals || []).some((x) => x.id === id));
+    s2.warSettle = \u6B8B\u308A2.length ? { ...s2.warSettle, queue: \u6B8B\u308A2 } : null;
   }
   for (const k of Object.keys(s2.relations || {})) {
     const r = s2.relations[k];
@@ -16018,12 +16018,12 @@ function \u8ECD\u306E\u9053(s2, fid, from, to) {
 
 // src/core/terrainCanvas.js
 function buildTerrainCanvas() {
-  const RW = 500, RH = 534;
-  const sx = MAPW / RW, sy = MAPH / RH;
-  const H = new Float32Array(RW * RH);
-  for (let j = 0; j < RH; j++) {
+  const RW2 = 500, RH2 = 534;
+  const sx = MAPW / RW2, sy = MAPH / RH2;
+  const H = new Float32Array(RW2 * RH2);
+  for (let j = 0; j < RH2; j++) {
     const wy = j * sy;
-    for (let i = 0; i < RW; i++) {
+    for (let i = 0; i < RW2; i++) {
       const wx = i * sx;
       let h = 0;
       for (const r of RIDGES) {
@@ -16037,7 +16037,7 @@ function buildTerrainCanvas() {
         if (t < 3) h = Math.max(h, r.amp * Math.exp(-t * t));
       }
       const n = vnoise(wx / 26, wy / 26) * 0.55 + vnoise(wx / 11, wy / 11) * 0.3 + vnoise(wx / 5, wy / 5) * 0.15;
-      H[j * RW + i] = Math.max(0, h * (0.72 + n * 0.56));
+      H[j * RW2 + i] = Math.max(0, h * (0.72 + n * 0.56));
     }
   }
   const RAMP = [
@@ -16060,19 +16060,19 @@ function buildTerrainCanvas() {
     return RAMP[RAMP.length - 1][1];
   };
   const small = document.createElement("canvas");
-  small.width = RW;
-  small.height = RH;
+  small.width = RW2;
+  small.height = RH2;
   const sctx = small.getContext("2d");
-  const img = sctx.createImageData(RW, RH);
-  for (let j = 0; j < RH; j++) {
-    for (let i = 0; i < RW; i++) {
-      const h = H[j * RW + i];
-      const hx = H[j * RW + Math.min(RW - 1, i + 1)] - H[j * RW + Math.max(0, i - 1)];
-      const hy = H[Math.min(RH - 1, j + 1) * RW + i] - H[Math.max(0, j - 1) * RW + i];
+  const img = sctx.createImageData(RW2, RH2);
+  for (let j = 0; j < RH2; j++) {
+    for (let i = 0; i < RW2; i++) {
+      const h = H[j * RW2 + i];
+      const hx = H[j * RW2 + Math.min(RW2 - 1, i + 1)] - H[j * RW2 + Math.max(0, i - 1)];
+      const hy = H[Math.min(RH2 - 1, j + 1) * RW2 + i] - H[Math.max(0, j - 1) * RW2 + i];
       let shade2 = 1 + (-hx - hy) * 3.6;
       shade2 = Math.max(0.62, Math.min(1.34, shade2));
       const c = ramp(Math.min(1, h));
-      const o = (j * RW + i) * 4;
+      const o = (j * RW2 + i) * 4;
       img.data[o] = Math.min(255, c[0] * shade2);
       img.data[o + 1] = Math.min(255, c[1] * shade2);
       img.data[o + 2] = Math.min(255, c[2] * shade2);
@@ -16466,23 +16466,23 @@ async function \u68DA\u3092\u8A70\u3081\u76F4\u3059(\u9664\u304F) {
   }
   if (!\u624B\u5143.length) return 0;
   let \u8A70\u3081\u305F = 0;
-  const \u6B8B\u308A = [];
+  const \u6B8B\u308A2 = [];
   for (const h of \u624B\u5143) {
     try {
       await \u7F6E\u304D\u5834().\u66F8\u304F(h.key, h.\u5727);
       \u8A70\u3081\u305F++;
     } catch (e) {
-      \u6B8B\u308A.push(h);
+      \u6B8B\u308A2.push(h);
     }
   }
   if (\u8A70\u3081\u305F) return \u8A70\u3081\u305F;
-  for (const h of \u6B8B\u308A) {
+  for (const h of \u6B8B\u308A2) {
     try {
       await \u7F6E\u304D\u5834().\u6D88\u3059(h.key);
     } catch (e) {
     }
   }
-  for (const h of \u6B8B\u308A) {
+  for (const h of \u6B8B\u308A2) {
     try {
       await \u7F6E\u304D\u5834().\u66F8\u304F(h.key, h.\u5727);
       \u8A70\u3081\u305F++;
@@ -19022,8 +19022,8 @@ function \u6708\u306E\u4E0B\u8ABF\u3079(s2) {
 }
 function \u96A3\u5BB6(s2, fid) {
   const { \u9694, \u77F3 } = \u6708\u306E\u4E0B\u8ABF\u3079(s2);
-  const \u8868 = \u9694[fid] || {};
-  return Object.keys(\u8868).filter((x) => s2.factions[x]).map((x) => ({ \u5148: x, d: \u8868[x], koku: \u77F3[x] || 0, r: relOf2(s2, fid, x) })).sort((a, b) => a.d - b.d);
+  const \u88682 = \u9694[fid] || {};
+  return Object.keys(\u88682).filter((x) => s2.factions[x]).map((x) => ({ \u5148: x, d: \u88682[x], koku: \u77F3[x] || 0, r: relOf2(s2, fid, x) })).sort((a, b) => a.d - b.d);
 }
 function \u65D7\u306E\u4E0B\u306B\u3044\u308B\u304B(s2, fid) {
   for (const \u76F8 of Object.keys(s2.factions || {})) {
@@ -19514,8 +19514,8 @@ function \u53F7\u4EE4\u3092\u767A\u3059\u308B(s2, \u4E3B, \u7684id, \u624B\u3089
     if (!\u624B.\u51FA\u3089\u308C\u308B || \u624B.\u5175 <= 0) continue;
     const \u767A = s2.castles.find((c) => c.id === \u624B.\u767A\u3064\u57CE);
     if (!\u767A) continue;
-    const \u9053 = \u89E6\u308C\u6E08\u307F ? (\u7D20\u306E\u9053 ? \u7D20\u306E\u9053(\u767A.id, \u7684id) : null) || (\u9053\u3092\u5F15\u304F ? \u9053\u3092\u5F15\u304F(s2, \u624B.\u5BB6, \u767A.id, \u7684id) : null) : \u9053\u3092\u5F15\u304F ? \u9053\u3092\u5F15\u304F(s2, \u624B.\u5BB6, \u767A.id, \u7684id) : null;
-    if (!\u9053) continue;
+    const \u90532 = \u89E6\u308C\u6E08\u307F ? (\u7D20\u306E\u9053 ? \u7D20\u306E\u9053(\u767A.id, \u7684id) : null) || (\u9053\u3092\u5F15\u304F ? \u9053\u3092\u5F15\u304F(s2, \u624B.\u5BB6, \u767A.id, \u7684id) : null) : \u9053\u3092\u5F15\u304F ? \u9053\u3092\u5F15\u304F(s2, \u624B.\u5BB6, \u767A.id, \u7684id) : null;
+    if (!\u90532) continue;
     let \u5175 = 0;
     const \u540D\u7C3F = [];
     for (const cid of \u624B.\u57CE\u3089) {
@@ -19537,7 +19537,7 @@ function \u53F7\u4EE4\u3092\u767A\u3059\u308B(s2, \u4E3B, \u7684id, \u624B\u3089
     }
     const \u7DCF\u52E2 = \u5175 + \u5C06\u3089.reduce((a, g) => a + (g.retinue || 0), 0);
     if (\u7DCF\u52E2 < 100) continue;
-    const \u6708 = Math.max(1, (\u9053.length || 1) - 1);
+    const \u6708 = Math.max(1, (\u90532.length || 1) - 1);
     const \u7CE7 = \u5175\u7CE7 ? \u5175\u7CE7(\u7DCF\u52E2, \u6708) : Math.round(\u7DCF\u52E2 * 0.09 * (\u6708 + 2));
     \u767A.food = Math.max(0, (\u767A.food || 0) - \u7CE7);
     if (\u904B\u3073\u8CC3\u3092\u6255\u30462) \u904B\u3073\u8CC3\u3092\u6255\u30462(s2, \u7DCF\u52E2, \u6708);
@@ -19553,7 +19553,7 @@ function \u53F7\u4EE4\u3092\u767A\u3059\u308B(s2, \u4E3B, \u7684id, \u624B\u3089
       rost: \u540D\u7C3F.length ? \u540D\u7C3F : null,
       men: \u7DCF\u52E2,
       at: \u767A.id,
-      path: \u9053,
+      path: \u90532,
       prog: 0,
       food: \u7CE7,
       target: \u7684id,
@@ -19843,9 +19843,9 @@ function \u65D7\u982D\u306E\u72D9\u3044(s2, \u65D7, { \u9053: \u9053\u3092\u5F15
     if (\u907F\u3051\u308B && \u907F\u3051\u308B(\u7684)) continue;
     let \u8FD1 = null, \u62E0 = null;
     for (const c of \u5DF1\u65B9) {
-      const \u9053 = \u9053\u3092\u5F15\u304F ? \u9053\u3092\u5F15\u304F(s2, \u65D7.faction, c.id, \u7684.id) : null;
-      if (!\u9053) continue;
-      const \u6B69 = \u9053.length - 1;
+      const \u90532 = \u9053\u3092\u5F15\u304F ? \u9053\u3092\u5F15\u304F(s2, \u65D7.faction, c.id, \u7684.id) : null;
+      if (!\u90532) continue;
+      const \u6B69 = \u90532.length - 1;
       if (\u8FD1 == null || \u6B69 < \u8FD1) {
         \u8FD1 = \u6B69;
         \u62E0 = c;
@@ -19972,16 +19972,16 @@ function \u8B00\u53CD\u306E\u898B\u56DE\u308A(s2, fid, { \u544A\u3052\u308B, \u7
 }
 
 // src/govern/month.js
-function \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, fid, \u767A\u3064\u57CE, \u8ECD, { \u9053, \u9650\u308A = 3, \u6B69 = 3, \u9078\u3079\u308B, \u8981\u308B } = {}) {
+function \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, fid, \u767A\u3064\u57CE, \u8ECD, { \u9053: \u90532, \u9650\u308A = 3, \u6B69 = 3, \u9078\u3079\u308B, \u8981\u308B } = {}) {
   const \u5BC4\u305B\u305F = [];
   const \u8FD1\u3044 = (s2.castles || []).filter((x) => {
     if (x.faction !== fid || x.id === \u767A\u3064\u57CE.id) return false;
     if (\u9078\u3079\u308B && !\u9078\u3079\u308B(x)) return false;
     if ((s2.sieges || []).some((sg) => sg.castleId === x.id)) return false;
     if ((s2.armies || []).some((a2) => a2.faction !== fid && a2.target === x.id && (a2.at === x.id || !a2.path || a2.path.length <= 1))) return false;
-    const p = \u9053 ? \u9053(s2, fid, x.id, \u767A\u3064\u57CE.id) : null;
+    const p = \u90532 ? \u90532(s2, fid, x.id, \u767A\u3064\u57CE.id) : null;
     return !!p && p.length - 1 <= \u6B69;
-  }).map((x) => ({ x, \u6B69: (\u9053(s2, fid, x.id, \u767A\u3064\u57CE.id) || []).length - 1 })).sort((a, b) => a.\u6B69 - b.\u6B69);
+  }).map((x) => ({ x, \u6B69: (\u90532(s2, fid, x.id, \u767A\u3064\u57CE.id) || []).length - 1 })).sort((a, b) => a.\u6B69 - b.\u6B69);
   for (const { x } of \u8FD1\u3044) {
     if (\u5BC4\u305B\u305F.length >= \u9650\u308A) break;
     if (\u8981\u308B && \u8ECD.men >= \u8981\u308B) break;
@@ -20714,8 +20714,8 @@ function advanceMonth(prev, g) {
       const take = [...gs].sort((x, y2) => y2.lead - x.lead).slice(0, 1);
       const send = Math.min(Math.round(spare * 0.6), c2.local);
       if (send < 200) continue;
-      const \u9053 = \u8ECD\u306E\u9053(s2, a.faction, c2.id, a.target);
-      if (!\u9053) continue;
+      const \u90532 = \u8ECD\u306E\u9053(s2, a.faction, c2.id, a.target);
+      if (!\u90532) continue;
       c2.local -= send;
       for (const t2 of take) t2.at = null;
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
@@ -20730,7 +20730,7 @@ function advanceMonth(prev, g) {
         rost: tk.taken,
         men: send + take.reduce((t2, x) => t2 + x.retinue, 0),
         at: c2.id,
-        path: \u9053,
+        path: \u90532,
         prog: 0,
         food: Math.round(send * 0.6),
         target: a.target,
@@ -21389,8 +21389,8 @@ function advanceMonth(prev, g) {
     const \u53D7\u3051\u306E\u57CE = new Set(s2.castles.filter((c22) => c22.faction === s2.player && \u53D7.includes(c22.kuni)).map((c22) => c22.id));
     if (\u5728) {
       const \u9663\u57CE = s2.castles.find((c22) => c22.id === (\u5728.\u5728\u9663 || \u5728.at));
-      const \u90532 = \u9663\u57CE && \u8ECD\u306E\u9053(s2, s2.player, \u9663\u57CE.id, \u7684.id);
-      if (\u9663\u57CE && \u90532) {
+      const \u90533 = \u9663\u57CE && \u8ECD\u306E\u9053(s2, s2.player, \u9663\u57CE.id, \u7684.id);
+      if (\u9663\u57CE && \u90533) {
         const \u5BC42 = \u5728.men < \u8981\u308B\u5175 ? \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, s2.player, \u9663\u57CE, \u5728, {
           \u9053: \u8ECD\u306E\u9053,
           \u9650\u308A: 4,
@@ -21404,13 +21404,13 @@ function advanceMonth(prev, g) {
           \u5728.food = (\u5728.food || 0) + \u7A4D;
           \u5728.\u5728\u9663 = null;
           \u5728.target = \u7684.id;
-          \u5728.path = \u90532;
+          \u5728.path = \u90533;
           \u5728.prog = 0;
           \u5728.sieging = false;
           \u5728.reinforced = false;
           \u5728.seaDone = false;
           \u5728.from = \u9663\u57CE.id;
-          const \u6708 = Math.max(1, marchMonthsOf(\u90532) || 1);
+          const \u6708 = Math.max(1, marchMonthsOf(\u90533) || 1);
           events.push(`\u3010\u65B9\u9762\u8ECD\u3011${\u65D7.name}\u304C${\u9663\u57CE.name}\u306E\u9663\u3092\u9032\u3081\u3001${\u7684.name}\uFF08${s2.factions[\u7684.faction].name}\uFF09\u3078\u5411\u304B\u3046${\u5BC42.length ? `\u3002${\u5BC42.map((q) => q.\u57CE.name).join("\u30FB")}\u3088\u308A\u52A0\u52E2` : ""}\uFF0F\u5175${fmt(\u5728.men)}\u4EBA\u30FB\u8981\u308A${fmt(\u8981\u308B\u5175)}\u4EBA\u30FB\u304A\u3088\u305D${\u6708}\u30F6\u6708\u3002`);
           continue;
         }
@@ -21421,7 +21421,7 @@ function advanceMonth(prev, g) {
     const \u62E0\u3089 = s2.castles.filter((c22) => c22.faction === s2.player && \u53D7.includes(c22.kuni)).map((c22) => ({ c2: c22, \u9053: \u8ECD\u306E\u9053(s2, s2.player, c22.id, \u7684.id) })).filter((x) => x.\u9053).sort((a, b) => a.\u9053.length - b.\u9053.length);
     const \u767A = \u62E0\u3089[0];
     if (!\u767A) continue;
-    const { c2, \u9053 } = \u767A;
+    const { c2, \u9053: \u90532 } = \u767A;
     const gens3 = s2.generals.filter((x) => x.at === c2.id && x.faction === s2.player && !x.captive && !x.lord);
     if (!gens3.length) continue;
     const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
@@ -21443,7 +21443,7 @@ function advanceMonth(prev, g) {
       rost: tk3.taken,
       men: loc3 + take3.reduce((a, x) => a + x.retinue, 0),
       at: c2.id,
-      path: \u9053,
+      path: \u90532,
       prog: 0,
       food: Math.round(send3 * 0.6),
       target: \u7684.id,
@@ -21470,7 +21470,7 @@ function advanceMonth(prev, g) {
       continue;
     }
     s2.armies.push(\u8ECD2);
-    const \u67082 = Math.max(1, marchMonthsOf(\u9053) || 1);
+    const \u67082 = Math.max(1, marchMonthsOf(\u90532) || 1);
     events.push(`\u3010\u65B9\u9762\u8ECD\u3011${\u65D7.name}\u304C${c2.name}\u3088\u308A\u51FA\u9663\u3002${\u7684.name}\uFF08${s2.factions[\u7684.faction].name}\uFF09\u3092\u76EE\u6307\u3059${\u5BC4.length ? `\u3002${\u5BC4.map((q) => q.\u57CE.name).join("\u30FB")}\u3088\u308A\u52A0\u52E2` : ""}\uFF0F\u5175${fmt(\u8ECD2.men)}\u4EBA\u30FB\u8981\u308A${fmt(\u8981\u308B\u5175)}\u4EBA\u30FB\u304A\u3088\u305D${\u67082}\u30F6\u6708\u3002`);
   }
   for (const \u65D7 of s2.generals.filter((g2) => g2.faction === s2.player && g2.\u5F79 === "\u65D7\u982D" && !g2.captive)) {
@@ -21591,10 +21591,20 @@ var FORESTS = [];
 var WOODS = [];
 var HILLS = [];
 var MARSH = [];
+var MOUNTAINS = [];
+var \u9053\u306E\u8CEA = "\u8857\u9053";
+function setFieldKind(kind) {
+  \u9053\u306E\u8CEA = kind || "\u8857\u9053";
+}
 var ROAD = { \u7BC0: [], \u5E45: 0 };
-function \u9053\u307E\u3067\u306E\u9694\u305F\u308A(x, y) {
-  const \u7BC0 = ROAD.\u7BC0;
-  if (\u7BC0.length < 2) return Infinity;
+var ROADS2 = [];
+var RIVERS2 = [];
+var \u9053\u306E\u4E0A\u304B = (x, y) => {
+  for (const r of ROADS2) if (r.\u5E45 > 0 && \u7BC0\u307E\u3067\u306E\u9694\u305F\u308A(r.\u7BC0, x, y) < r.\u5E45 / 2) return true;
+  return false;
+};
+function \u7BC0\u307E\u3067\u306E\u9694\u305F\u308A(\u7BC0, x, y) {
+  if (!\u7BC0 || \u7BC0.length < 2) return Infinity;
   let best = Infinity;
   for (let i = 0; i < \u7BC0.length - 1; i++) {
     const a = \u7BC0[i], b = \u7BC0[i + 1];
@@ -21608,7 +21618,6 @@ function \u9053\u307E\u3067\u306E\u9694\u305F\u308A(x, y) {
   }
   return Math.sqrt(best);
 }
-var \u9053\u306E\u4E0A\u304B = (x, y) => ROAD.\u5E45 > 0 && \u9053\u307E\u3067\u306E\u9694\u305F\u308A(x, y) < ROAD.\u5E45 / 2;
 var VILLAGES = [];
 var FIELD_SEED = 0;
 var \u4EE3 = 0;
@@ -21636,6 +21645,7 @@ function genTerrain(seed) {
   HILLS.length = 0;
   MARSH.length = 0;
   VILLAGES.length = 0;
+  MOUNTAINS.length = 0;
   const kind = rnd();
   if (kind > 0.4) {
     const \u5E45\u500D = clamp(Math.pow(W / 1080, 0.3), 1, 1.7);
@@ -21655,17 +21665,18 @@ function genTerrain(seed) {
     RIVER.k = (1.4 + rnd() * 1.6) * Math.PI / W;
     RIVER.ph = rnd() * Math.PI * 2;
   }
-  const put = (list, n, rMin, rMax) => {
+  const put = (list, n, rMin, rMax, \u4E38\u3054\u3068\u5916\u3078, \u8A66\u307F = 24) => {
     for (let i = 0; i < n; i++) {
       let x = 0, y = 0, ok = false;
       const r0 = rMin + rnd() * (rMax - rMin);
       const mx = r0 + 24, my = r0 + 24;
       if (mx * 2 > W - 40 || my * 2 > H - 40) continue;
-      for (let k = 0; k < 24 && !ok; k++) {
+      for (let k = 0; k < \u8A66\u307F && !ok; k++) {
         x = mx + rnd() * (W - mx * 2);
         y = my + rnd() * (H - my * 2);
-        if (RIVER.bot > RIVER.top && y > RIVER.top - 40 && y < RIVER.bot + 40) continue;
-        ok = ![...FORESTS, ...WOODS, ...HILLS, ...MARSH].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + r0 + 30);
+        const \u969B = \u4E38\u3054\u3068\u5916\u3078 ? r0 + 24 : 40;
+        if (RIVER.bot > RIVER.top && y + \u969B > RIVER.top - (\u4E38\u3054\u3068\u5916\u3078 ? RIVER.wave : 0) && y - \u969B < RIVER.bot + (\u4E38\u3054\u3068\u5916\u3078 ? RIVER.wave : 0)) continue;
+        ok = ![...FORESTS, ...WOODS, ...HILLS, ...MOUNTAINS, ...MARSH].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + r0 + 30);
       }
       if (ok) list.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r0), seed: Math.floor(rnd() * 1e9) });
     }
@@ -21673,6 +21684,17 @@ function genTerrain(seed) {
   const sc = clamp(FIELD.w / 1080, 1, 4.6);
   const \u5E952 = sc >= 2.4 ? 2 : sc >= 1.6 ? 1 : 0;
   const \u6570 = (\u57FA, \u8981) => Math.max(\u8981 ? \u5E952 : 0, Math.round(\u57FA * (0.6 + sc * 0.62)));
+  {
+    const \u6570\u5C71 = \u9053\u306E\u8CEA === "\u96E3\u6240" ? 2 : \u9053\u306E\u8CEA === "\u5C71\u9053" ? 1 : 0;
+    const \u524D = HILLS.length;
+    const \u88FE\u5C0F = clamp(120 * sc, 130, H * 0.145), \u88FE\u5927 = clamp(175 * sc, 190, H * 0.205);
+    if (\u6570\u5C71) put(HILLS, \u6570\u5C71, \u88FE\u5C0F, Math.max(\u88FE\u5C0F + 10, \u88FE\u5927), true, 60);
+    for (const m of HILLS.splice(\u524D)) {
+      m.\u9AD8 = Math.round(180 + m.seed % 100 * 2.4);
+      m.rise = Math.round(m.r * 0.34);
+      MOUNTAINS.push(m);
+    }
+  }
   put(HILLS, \u6570(Math.floor(rnd() * 3), true), 80 * sc, 130 * sc);
   put(FORESTS, \u6570(Math.floor(rnd() * 4), true), 70 * sc, 115 * sc);
   put(WOODS, \u6570(Math.floor(rnd() * 3) + 1), 50 * sc, 85 * sc);
@@ -21680,6 +21702,9 @@ function genTerrain(seed) {
   put(VILLAGES, \u6570(Math.floor(rnd() * 3)), 34 * sc, 58 * sc);
   for (const h of HILLS) h.rise = Math.round(h.r * (0.2 + h.seed % 100 / 100 * 0.14));
   ROAD.\u7BC0.length = 0;
+  ROADS2.length = 0;
+  ROADS2.push(ROAD);
+  RIVERS2.length = 0;
   ROAD.\u5E45 = Math.round(clamp(36 * Math.sqrt(sc), 34, 86));
   if (RIVER.bot > RIVER.top) {
     ROAD.\u5E45 = Math.min(ROAD.\u5E45, Math.max(24, RIVER.bridge[1] - RIVER.bridge[0] - 10));
@@ -21708,7 +21733,96 @@ function genTerrain(seed) {
     ROAD.\u7BC0.push({ x: \u5317, y: -30 });
   }
 }
+var \u683C\u7A2E = ["plain", "road", "forest", "wood", "marsh", "mountain", "hill", "village", "deep", "ford", "bridge"];
+var \u5730\u5F62\u683C = null;
+function \u91CE\u3092\u713C\u304F(ce = 10) {
+  const gw = Math.ceil(FIELD.w / ce), gh = Math.ceil(FIELD.h / ce);
+  const d = new Uint8Array(gw * gh);
+  const \u4E38 = (o, v) => {
+    const x0 = Math.max(0, Math.floor((o.x - o.r) / ce)), x1 = Math.min(gw - 1, Math.ceil((o.x + o.r) / ce));
+    const y0 = Math.max(0, Math.floor((o.y - o.r) / ce)), y1 = Math.min(gh - 1, Math.ceil((o.y + o.r) / ce));
+    const rr = o.r * o.r;
+    for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) {
+      const cx = i * ce + ce / 2, cy = j * ce + ce / 2;
+      if ((cx - o.x) ** 2 + (cy - o.y) ** 2 <= rr) d[j * gw + i] = v;
+    }
+  };
+  const \u5E2F = (\u7BC0, \u5E452, v) => {
+    const h2 = \u5E452 / 2;
+    for (let k = 0; k + 1 < \u7BC0.length; k++) {
+      const a = \u7BC0[k], b = \u7BC0[k + 1];
+      const x0 = Math.max(0, Math.floor((Math.min(a.x, b.x) - h2) / ce)), x1 = Math.min(gw - 1, Math.ceil((Math.max(a.x, b.x) + h2) / ce));
+      const y0 = Math.max(0, Math.floor((Math.min(a.y, b.y) - h2) / ce)), y1 = Math.min(gh - 1, Math.ceil((Math.max(a.y, b.y) + h2) / ce));
+      const vx = b.x - a.x, vy = b.y - a.y, L = vx * vx + vy * vy;
+      for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) {
+        const cx = i * ce + ce / 2, cy = j * ce + ce / 2;
+        let t2 = L ? ((cx - a.x) * vx + (cy - a.y) * vy) / L : 0;
+        t2 = t2 < 0 ? 0 : t2 > 1 ? 1 : t2;
+        if ((cx - (a.x + vx * t2)) ** 2 + (cy - (a.y + vy * t2)) ** 2 <= h2 * h2) d[j * gw + i] = v;
+      }
+    }
+  };
+  for (const o of VILLAGES) \u4E38(o, 7);
+  for (const o of HILLS) \u4E38(o, 6);
+  for (const o of MARSH) \u4E38(o, 4);
+  for (const o of WOODS) \u4E38(o, 3);
+  for (const o of FORESTS) \u4E38(o, 2);
+  for (const o of MOUNTAINS) \u4E38(o, 5);
+  for (const r of ROADS2) \u5E2F(r.\u7BC0, r.\u5E45, 1);
+  for (const r of RIVERS2) \u5E2F(r.\u7BC0, r.\u5E45, 8);
+  for (const r of RIVERS2) for (const w of r.\u6E21\u3057 || []) \u4E38(w, w.\u7A2E === "\u6A4B" ? 10 : 9);
+  return { ce, w: gw, h: gh, d };
+}
+function \u7B4B\u66F8\u304D\u306E\u91CE\u3092\u7D44\u3080(\u5730) {
+  \u4EE3++;
+  FIELD.w = \u5730.w;
+  FIELD.h = \u5730.h;
+  setFieldKind("\u8857\u9053");
+  RIVER.top = 0;
+  RIVER.bot = 0;
+  RIVER.bridge = [0, 0];
+  RIVER.ford = [0, 0];
+  RIVER.wave = 0;
+  FORESTS.length = 0;
+  WOODS.length = 0;
+  HILLS.length = 0;
+  MARSH.length = 0;
+  VILLAGES.length = 0;
+  MOUNTAINS.length = 0;
+  RIVERS2.length = 0;
+  ROADS2.length = 0;
+  const \u7A2E\u4ED8 = (o, i) => ({ seed: (o.x | 0) * 7919 + (o.y | 0) * 31 + i >>> 0, ...o });
+  (\u5730.\u6751 || []).forEach((o, i) => VILLAGES.push(\u7A2E\u4ED8(o, i)));
+  (\u5730.\u4E18 || []).forEach((o, i) => HILLS.push({ ...\u7A2E\u4ED8(o, i), rise: o.rise || Math.round(o.r * 0.24) }));
+  (\u5730.\u6CBC || []).forEach((o, i) => MARSH.push(\u7A2E\u4ED8(o, i)));
+  (\u5730.\u6797 || []).forEach((o, i) => WOODS.push(\u7A2E\u4ED8(o, i)));
+  (\u5730.\u68EE || []).forEach((o, i) => FORESTS.push(\u7A2E\u4ED8(o, i)));
+  (\u5730.\u5C71 || []).forEach((o, i) => MOUNTAINS.push({ ...\u7A2E\u4ED8(o, i), rise: o.rise || Math.round(o.r * 0.34) }));
+  (\u5730.\u9053 || []).forEach((r) => ROADS2.push({ \u540D: r.\u540D, \u7BC0: r.\u7BC0, \u5E45: r.\u5E45 || 60 }));
+  (\u5730.\u5DDD || []).forEach((r) => RIVERS2.push({ \u540D: r.\u540D, \u7BC0: r.\u7BC0, \u5E45: r.\u5E45 || 40, \u6E21\u3057: r.\u6E21\u3057 || [] }));
+  ROAD.\u7BC0.length = 0;
+  ROAD.\u5E45 = 0;
+  \u5730\u5F62\u683C = \u91CE\u3092\u713C\u304F(\u5730.\u5347 || 10);
+}
+function \u7B4B\u66F8\u304D\u3092\u89E3\u304F() {
+  \u5730\u5F62\u683C = null;
+  RIVERS2.length = 0;
+}
 var hasRiver = () => RIVER.bot > RIVER.top + 4;
+function \u5C71\u304C\u906E\u308B\u304B(x1, y1, x2, y2) {
+  if (!MOUNTAINS.length) return false;
+  if (terrainAt(x1, y1) === "mountain" || terrainAt(x2, y2) === "mountain") return false;
+  for (const m of MOUNTAINS) {
+    const r = m.r * 0.82;
+    const vx = x2 - x1, vy = y2 - y1, L = vx * vx + vy * vy;
+    if (L <= 0) continue;
+    let t = ((m.x - x1) * vx + (m.y - y1) * vy) / L;
+    if (t <= 0 || t >= 1) continue;
+    const dx = m.x - (x1 + vx * t), dy = m.y - (y1 + vy * t);
+    if (dx * dx + dy * dy < r * r) return true;
+  }
+  return false;
+}
 var nearestOf = (list, x, y) => list.length ? list.reduce((a, o) => Math.hypot(o.x - x, o.y - y) < Math.hypot(a.x - x, a.y - y) ? o : a, list[0]) : null;
 function layoutField(totalMen, \u968A\u6570) {
   const \u968A = clamp(\u968A\u6570 || 2, 2, 24);
@@ -21737,6 +21851,12 @@ function passableFor(c, b, x, y) {
 }
 function terrainAt(x, y) {
   if (MAP) return castleTerrainAt(x, y);
+  if (\u5730\u5F62\u683C) {
+    const g = \u5730\u5F62\u683C;
+    const i = x < 0 ? 0 : x >= FIELD.w ? g.w - 1 : x / g.ce | 0;
+    const j = y < 0 ? 0 : y >= FIELD.h ? g.h - 1 : y / g.ce | 0;
+    return \u683C\u7A2E[g.d[j * g.w + i]];
+  }
   if (hasRiver()) {
     const sh = riverShift(x);
     if (y > RIVER.top + sh && y < RIVER.bot + sh) {
@@ -21749,6 +21869,7 @@ function terrainAt(x, y) {
   for (const f of FORESTS) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.r ** 2) return "forest";
   for (const f of WOODS) if ((x - f.x) ** 2 + (y - f.y) ** 2 < f.r ** 2) return "wood";
   for (const m of MARSH) if ((x - m.x) ** 2 + (y - m.y) ** 2 < m.r ** 2) return "marsh";
+  for (const m of MOUNTAINS) if ((x - m.x) ** 2 + (y - m.y) ** 2 < m.r ** 2) return "mountain";
   for (const h of HILLS) if ((x - h.x) ** 2 + (y - h.y) ** 2 < h.r ** 2) return "hill";
   for (const v of VILLAGES) if ((x - v.x) ** 2 + (y - v.y) ** 2 < v.r ** 2) return "village";
   return "plain";
@@ -21793,6 +21914,9 @@ var TERRAIN = {
   wood: { speed: 0.82, fight: 0.92, cohesion: -3, sight: 165, horse: 0.85, charge: true, label: "\u6797" },
   marsh: { speed: 0.5, fight: 0.8, cohesion: -9, sight: 240, horse: 0.45, charge: false, label: "\u6E7F\u5730" },
   hill: { speed: 0.7, fight: 1.15, cohesion: -2, sight: 360, horse: 0.8, charge: true, label: "\u4E18" },
+  /* 山。丘の一段上。登るのに難儀し、隊列は崩れ、騎馬は用をなさない。
+     そのかわり見晴らしは野の倍近く、上から当たる強みも丘より大きい。 */
+  mountain: { speed: 0.42, fight: 1.28, cohesion: -7, sight: 470, horse: 0.35, charge: false, label: "\u5C71" },
   village: { speed: 0.78, fight: 0.95, cohesion: -3, sight: 130, horse: 0.7, charge: false, label: "\u96C6\u843D" },
   bridge: { speed: 0.95, fight: 0.85, cohesion: -5, sight: 260, horse: 0.9, charge: false, label: "\u6A4B" },
   ford: { speed: 0.3, fight: 0.7, cohesion: -14, sight: 260, horse: 0.5, charge: false, label: "\u6D45\u702C" },
@@ -21853,17 +21977,18 @@ function rot(sx, sy, th) {
 var KOMA = 5;
 var SP = 5 * KOMA + 2;
 var ROW = KOMA + 6;
+var \u6A2A\u306B\u4E26\u3079\u308B\u6570 = (n, R, \u6700\u5C0F = 4, \u6700\u5927 = 18) => clamp(Math.round(Math.sqrt(0.407 * R * Math.max(1, n))), \u6700\u5C0F, \u6700\u5927);
 function layoutSlots(form, n) {
   const s2 = [];
   if (form === "\u6A2A\u9663") {
-    const want = clamp(Math.round(Math.sqrt(n * 2.2)), 3, 22);
+    const want = \u6A2A\u306B\u4E26\u3079\u308B\u6570(n, 1.5, 4, 18);
     const per = Math.max(3, Math.ceil(n / Math.max(1, Math.ceil(n / want))));
     for (let i = 0; i < n; i++) {
       const row = Math.floor(i / per), col = i % per, cols = Math.min(per, n - row * per);
       s2.push({ x: (col - (cols - 1) / 2) * SP, y: row * ROW, row });
     }
   } else if (form === "\u9DB4\u7FFC") {
-    const per = clamp(Math.round(Math.sqrt(n * 3)), 4, 26);
+    const per = \u6A2A\u306B\u4E26\u3079\u308B\u6570(n, 3.4, 4, 22);
     for (let i = 0; i < n; i++) {
       const row = Math.floor(i / per), idx = i % per, cols = Math.min(per, n - row * per);
       const k = idx - (cols - 1) / 2;
@@ -21888,7 +22013,7 @@ function layoutSlots(form, n) {
   } else if (form === "\u9B5A\u9C57") {
     let i = 0, row = 0;
     while (i < n) {
-      const cnt = row + 1;
+      const cnt = Math.max(1, Math.round((row + 1) / 2.4));
       for (let j = 0; j < cnt && i < n; j++, i++) s2.push({ x: (j - (cnt - 1) / 2) * SP, y: row * ROW, row });
       row++;
     }
@@ -21899,10 +22024,11 @@ function layoutSlots(form, n) {
       s2.push({ x: (idx - (cols - 1) / 2) * SP * 0.9, y: idx * ROW * 0.45 + row * ROW * 1.3, row });
     }
   } else if (form === "\u65B9\u9663") {
-    const side = Math.ceil(Math.sqrt(n));
+    const side = \u6A2A\u306B\u4E26\u3079\u308B\u6570(n, 1, 2, 24);
+    const rows = Math.max(1, Math.ceil(n / side));
     for (let i = 0; i < n; i++) {
-      const r = Math.floor(i / side), c = i % side;
-      s2.push({ x: (c - (side - 1) / 2) * SP, y: (r - (side - 1) / 2) * ROW, row: r });
+      const r = Math.floor(i / side), c = i % side, cols = Math.min(side, n - r * side);
+      s2.push({ x: (c - (cols - 1) / 2) * SP, y: (r - (rows - 1) / 2) * ROW, row: r });
     }
   } else {
     for (let i = 0; i < n; i++) s2.push({ x: 0, y: i * ROW, row: i });
@@ -22234,10 +22360,10 @@ function \u5206\u9063\u306E\u9803\u5408\u3044(b, c, key) {
     if (!\u5175\u3067\u512A\u308B(b, c.side)) return false;
     const \u756A = \u7A7A\u304D\u4E18\u3092\u63A2\u3059(b, c);
     if (\u756A < 0) return false;
-    const \u4E18 = HILLS[\u756A];
-    const \u4E18\u307E\u3067 = Math.hypot(\u4E18.x - c.x, \u4E18.y - c.y);
+    const \u4E182 = HILLS[\u756A];
+    const \u4E18\u307E\u3067 = Math.hypot(\u4E182.x - c.x, \u4E182.y - c.y);
     if (!\u653B\u3081\u624B) {
-      return \u4E18\u307E\u3067 < \u9593 * 0.5 && \u4E18\u307E\u3067 < 700 && Math.hypot(\u4E18.x - \u5473\u65B9\u9663.x, \u4E18.y - \u5473\u65B9\u9663.y) <= Math.hypot(\u4E18.x - \u6575\u9663.x, \u4E18.y - \u6575\u9663.y);
+      return \u4E18\u307E\u3067 < \u9593 * 0.5 && \u4E18\u307E\u3067 < 700 && Math.hypot(\u4E182.x - \u5473\u65B9\u9663.x, \u4E182.y - \u5473\u65B9\u9663.y) <= Math.hypot(\u4E182.x - \u6575\u9663.x, \u4E182.y - \u6575\u9663.y);
     }
     return \u6575\u9663\u307E\u3067 < \u9593 * 0.55 && \u4E18\u307E\u3067 < 520;
   }
@@ -22249,11 +22375,11 @@ function \u5206\u9063\u306E\u9803\u5408\u3044(b, c, key) {
   }
   if (key === "\u68EE\u6797\u5075\u5BDF") {
     if (!FORESTS.length) return false;
-    const \u68EE = nearestOf(FORESTS, c.x, c.y);
-    if (!\u68EE) return false;
-    const \u68EE\u307E\u3067 = Math.hypot(\u68EE.x - c.x, \u68EE.y - c.y);
+    const \u68EE2 = nearestOf(FORESTS, c.x, c.y);
+    if (!\u68EE2) return false;
+    const \u68EE\u307E\u3067 = Math.hypot(\u68EE2.x - c.x, \u68EE2.y - c.y);
     if (\u68EE\u307E\u3067 > 460) return false;
-    const \u6575\u5074\u306E\u68EE = Math.hypot(\u68EE.x - \u6575\u9663.x, \u68EE.y - \u6575\u9663.y) < Math.hypot(\u68EE.x - \u5473\u65B9\u9663.x, \u68EE.y - \u5473\u65B9\u9663.y);
+    const \u6575\u5074\u306E\u68EE = Math.hypot(\u68EE2.x - \u6575\u9663.x, \u68EE2.y - \u6575\u9663.y) < Math.hypot(\u68EE2.x - \u5473\u65B9\u9663.x, \u68EE2.y - \u5473\u65B9\u9663.y);
     const \u898B\u5931\u3044 = \u751F\u304D\u305F\u6575.some((o) => !o.seen);
     return \u6575\u5074\u306E\u68EE && \u6575\u9663\u307E\u3067 < \u9593 * 0.75 || \u898B\u5931\u3044 && \u68EE\u307E\u3067 < 320;
   }
@@ -22541,11 +22667,11 @@ function \u9000\u304D\u5834(b, c) {
   const \u6575 = b.corps.filter((o) => !o.dead && !o.destroyed && o.side !== c.side && !o.routed);
   const \u7AEF = \u9000\u304D\u5148(b, c);
   const \u5411 = { x: \u7AEF.x - c.x, y: \u7AEF.y - c.y };
-  const \u9577 = Math.hypot(\u5411.x, \u5411.y) || 1;
+  const \u95772 = Math.hypot(\u5411.x, \u5411.y) || 1;
   let best = null, bs = -1e9;
   for (const \u8DDD of [260, 420, 600, 820]) {
     for (const \u6A2A of [-0.5, -0.22, 0, 0.22, 0.5]) {
-      const ux = \u5411.x / \u9577, uy = \u5411.y / \u9577;
+      const ux = \u5411.x / \u95772, uy = \u5411.y / \u95772;
       const x = c.x + ux * \u8DDD - uy * \u8DDD * \u6A2A;
       const y = c.y + uy * \u8DDD + ux * \u8DDD * \u6A2A;
       if (b.map) {
@@ -22563,8 +22689,8 @@ function \u9000\u304D\u5834(b, c) {
     }
   }
   return best || {
-    x: clamp(c.x + \u5411.x / \u9577 * 420, 60, FIELD.w - 60),
-    y: clamp(c.y + \u5411.y / \u9577 * 420, 60, FIELD.h - 60)
+    x: clamp(c.x + \u5411.x / \u95772 * 420, 60, FIELD.w - 60),
+    y: clamp(c.y + \u5411.y / \u95772 * 420, 60, FIELD.h - 60)
   };
 }
 function \u5185\u306E\u9580\u3078\u9000\u304F(b, c) {
@@ -23148,9 +23274,9 @@ function routeToCastleGate(m, g, cx, cy) {
   if (Math.hypot(cx - open.x, cy - open.y) < 46) return tail;
   const path = navPath(m, cx, cy, open.x, open.y);
   if (!path) return tail;
-  const \u6B8B\u308A = Math.hypot(open.x - cx, open.y - cy);
+  const \u6B8B\u308A2 = Math.hypot(open.x - cx, open.y - cy);
   let i = 0;
-  while (i < path.length - 1 && Math.hypot(open.x - path[i].x, open.y - path[i].y) >= \u6B8B\u308A - 4) i++;
+  while (i < path.length - 1 && Math.hypot(open.x - path[i].x, open.y - path[i].y) >= \u6B8B\u308A2 - 4) i++;
   return [...path.slice(i), ...tail];
 }
 var gateReachable = (m, g) => g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);
@@ -23291,7 +23417,8 @@ var sideHue = (color, mine) => {
   const \u660E\u308B\u3055 = (v[0] * 0.3 + v[1] * 0.59 + v[2] * 0.11) / 255;
   return shadeHex(base, (\u660E\u308B\u3055 - 0.45) * 0.36);
 };
-var sideColor = (c) => sideHue(c.color, c.side === "P");
+var \u65E5\u548C\u898B\u306E\u8272 = "#D9A62A";
+var sideColor = (c) => c.\u65E5\u548C\u898B ? \u65E5\u548C\u898B\u306E\u8272 : sideHue(c.color, c.side === "P");
 var \u63CF\u3051\u308B = /* @__PURE__ */ new Set(["\u6728\u74DC", "\u6A2A\u6728\u74DC", "\u4E09\u3064\u76DB\u6728\u74DC", "\u4E00\u3064\u5F15\u4E21", "\u4E8C\u3064\u5F15\u4E21", "\u4E09\u3064\u5F15\u4E21", "\u56DB\u3064\u76EE\u7D50", "\u5E73\u56DB\u3064\u76EE\u7D50", "\u4E09\u3064\u5DF4", "\u4E8C\u3064\u5DF4", "\u4E00\u6587\u5B57\u4E09\u661F", "\u4E09\u3064\u661F", "\u6708\u661F", "\u4E03\u66DC", "\u4E5D\u66DC", "\u56DB\u3064\u5272\u83F1", "\u5272\u308A\u83F1", "\u5927\u5185\u83F1", "\u4E09\u968E\u83F1", "\u8475", "\u9162\u6F3F\u8349", "\u4E0B\u304C\u308A\u85E4", "\u6885\u9262", "\u64AB\u5B50", "\u6850", "\u6CA2\u7009", "\u6854\u6897", "\u67CF", "\u5510\u82B1", "\u8D64\u9CE5", "\u4E09\u3064\u9C57", "\u4E38\u306B\u5341", "\u6247", "\u6A9C\u6247", "\u6298\u6577\u306B\u4E09\u6587\u5B57", "\u65E5\u8DB3", "\u674F\u8449", "\u4E8C\u982D\u7ACB\u6CE2", "\u7AF9\u306B\u96C0", "\u7E4B\u304E\u99AC", "\u5DDE\u6D5C", "\u4E80\u7532", "\u9DF9\u306E\u7FBD", "\u8F2A\u5B9D", "\u516B\u54AB\u70CF"]);
 var \u7D0B\u306E\u5BC4\u305B = {
   \u6962\u306E\u8449: "\u67CF",
@@ -23853,11 +23980,13 @@ function drawMon(ctx, kind, x, y, r, col, sub) {
   }
   ctx.restore();
 }
+var \u99D2\u306E\u7D30\u307F = 0.66;
+var \u7D30\u304F = (pts) => pts.map(([a, b]) => [a, +(b * \u99D2\u306E\u7D30\u307F).toFixed(2)]);
 var KOMA_SHAPE = {
-  yari: [[9, 0], [-2, 2.6], [-5, 0], [-2, -2.6]],
-  yumi: [[6.4, 0], [-1.6, 2.3], [-4.2, 1.6], [-1, 0], [-4.2, -1.6], [-1.6, -2.3]],
-  teppo: [[6, 3], [6, -3], [-4, -2], [-4, 2]],
-  kiba: [[12, 0], [1, 4.2], [-4, 2], [-8, 3.4], [-5, 0], [-8, -3.4], [-4, -2], [1, -4.2]],
+  yari: \u7D30\u304F([[9, 0], [-2, 2.6], [-5, 0], [-2, -2.6]]),
+  yumi: \u7D30\u304F([[6.4, 0], [-1.6, 2.3], [-4.2, 1.6], [-1, 0], [-4.2, -1.6], [-1.6, -2.3]]),
+  teppo: \u7D30\u304F([[6, 3], [6, -3], [-4, -2], [-4, 2]]),
+  kiba: \u7D30\u304F([[12, 0], [1, 4.2], [-4, 2], [-8, 3.4], [-5, 0], [-8, -3.4], [-4, -2], [1, -4.2]]),
   fune: [[11, 0], [5, 4.4], [-7, 4], [-8.5, 0], [-7, -4], [5, -4.4]]
 };
 function drawKoma(ctx, x, y, f, type, fill, stroke, k) {
@@ -23911,6 +24040,92 @@ var \u6DF7 = (a, b, t) => {
   const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b);
   return `rgb(${Math.round(r1 + (r2 - r1) * t)},${Math.round(g1 + (g2 - g1) * t)},${Math.round(b1 + (b2 - b1) * t)})`;
 };
+function \u5C71\u3092\u63CF\u304F(ctx, m) {
+  const \u9AD8 = m.rise || Math.round(m.r * 0.34);
+  const rnd = \u7A2E\u4E71\u6570((m.seed || 7) * 131 + 11);
+  ctx.fillStyle = "rgba(74,88,58,0.30)";
+  \u3086\u3089\u304E\u5F62(ctx, { ...m, x: m.x + \u5F71.x * 2.4, y: m.y + \u5F71.y * 1.8 }, 1.03);
+  ctx.fill();
+  const \u6BB52 = 5;
+  for (let i = 0; i < \u6BB52; i++) {
+    const t = i / (\u6BB52 - 1);
+    const k = 1 - t * 0.58;
+    const dx = \u5149.x * m.r * 0.16 * t, dy = \u5149.y * m.r * 0.14 * t - \u9AD8 * t * 0.42;
+    const g = ctx.createRadialGradient(
+      m.x + dx + \u5149.x * m.r * k * 0.3,
+      m.y + dy + \u5149.y * m.r * k * 0.28,
+      m.r * k * 0.05,
+      m.x + dx,
+      m.y + dy,
+      m.r * k * 1.04
+    );
+    g.addColorStop(0, \u6DF7("#BFCE94", "#8FA771", t));
+    g.addColorStop(0.55, \u6DF7("#9DB278", "#748C5C", t));
+    g.addColorStop(1, \u6DF7("#6F8657", "#55704A", t));
+    ctx.fillStyle = g;
+    \u3086\u3089\u304E\u5F62(ctx, { ...m, x: m.x + dx, y: m.y + dy, seed: (m.seed || 7) + i * 97 }, k, 0.2);
+    ctx.fill();
+  }
+  ctx.save();
+  \u3086\u3089\u304E\u5F62(ctx, m, 1, 0.2);
+  ctx.clip();
+  ctx.strokeStyle = "rgba(68,84,52,0.30)";
+  ctx.lineWidth = Math.max(2, m.r * 0.022);
+  for (let i = 0; i < 9; i++) {
+    const a = rnd() * Math.PI * 2;
+    const tx = m.x + \u5149.x * m.r * 0.16, ty2 = m.y + \u5149.y * m.r * 0.14 - \u9AD8 * 0.42;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty2);
+    ctx.quadraticCurveTo(
+      tx + Math.cos(a) * m.r * 0.5,
+      ty2 + Math.sin(a) * m.r * 0.44,
+      m.x + Math.cos(a) * m.r * 0.96,
+      m.y + Math.sin(a) * m.r * 0.84
+    );
+    ctx.stroke();
+  }
+  ctx.lineWidth = 1.2;
+  for (let i = 1; i <= 7; i++) {
+    const k = i / 8;
+    ctx.strokeStyle = "rgba(255,255,255,0.22)";
+    \u3086\u3089\u304E\u5F62(ctx, { ...m, y: m.y - \u9AD8 * (1 - k) * 0.8 }, 1 - k * 0.72, 0.2);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(96,112,72,0.20)";
+    \u3086\u3089\u304E\u5F62(ctx, { ...m, y: m.y - \u9AD8 * (1 - k) * 0.8 + 2 }, 1 - k * 0.72, 0.2);
+    ctx.stroke();
+  }
+  ctx.restore();
+  for (let i = 0; i < 34; i++) {
+    const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * m.r * 0.9;
+    const x = m.x + Math.cos(a) * d, y = m.y + Math.sin(a) * d * 0.84 - \u9AD8 * 0.3 * (1 - d / m.r);
+    if (rnd() < 0.42) {
+      ctx.fillStyle = `rgba(${146 + rnd() * 22 | 0},${142 + rnd() * 18 | 0},${124 + rnd() * 18 | 0},0.72)`;
+      ctx.beginPath();
+      ctx.ellipse(x, y, m.r * (0.012 + rnd() * 0.018), m.r * (8e-3 + rnd() * 0.012), rnd() * 3, 0, 7);
+      ctx.fill();
+    } else {
+      const h2 = m.r * (0.03 + rnd() * 0.026);
+      ctx.fillStyle = "rgba(56,80,48,0.62)";
+      ctx.beginPath();
+      ctx.moveTo(x, y - h2);
+      ctx.lineTo(x - h2 * 0.5, y + h2 * 0.5);
+      ctx.lineTo(x + h2 * 0.5, y + h2 * 0.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  if (m.\u540D && !m.\u672D) return;
+  const \u5B57 = Math.round(17 * \u672D\u306E\u500D());
+  ctx.font = `${\u5B57}px 'Hiragino Mincho ProN',serif`;
+  const \u540D = m.\u540D || "\u5C71";
+  const \u5E452 = ctx.measureText(\u540D).width;
+  const ty = m.y - \u9AD8 * 0.9 + \u5B57 * 0.4;
+  ctx.strokeStyle = "rgba(250,252,236,0.92)";
+  ctx.lineWidth = \u5B57 * 0.24;
+  ctx.strokeText(\u540D, m.x - \u5E452 / 2, ty);
+  ctx.fillStyle = "rgba(44,62,34,0.96)";
+  ctx.fillText(\u540D, m.x - \u5E452 / 2, ty);
+}
 function \u4E18\u3092\u63CF\u304F(ctx, h) {
   const \u9AD8 = h.rise || Math.round(h.r * 0.24);
   ctx.fillStyle = "rgba(92,106,70,0.26)";
@@ -23953,13 +24168,16 @@ function \u4E18\u3092\u63CF\u304F(ctx, h) {
     ctx.lineTo(tx + (rnd() - 0.5) * 5, ty - 5);
     ctx.stroke();
   }
+  if (h.\u540D && !h.\u672D) return;
   const \u5B57 = Math.round(15 * \u672D\u306E\u500D());
   ctx.font = `${\u5B57}px 'Hiragino Mincho ProN',serif`;
+  const \u540D = h.\u540D || "\u4E18";
+  const \u5E452 = ctx.measureText(\u540D).width;
   ctx.strokeStyle = "rgba(250,252,236,0.9)";
   ctx.lineWidth = \u5B57 * 0.23;
-  ctx.strokeText("\u4E18", h.x - \u5B57 * 0.5, h.y - \u9AD8 * 0.7 + \u5B57 * 0.4);
+  ctx.strokeText(\u540D, h.x - \u5E452 / 2, h.y - \u9AD8 * 0.7 + \u5B57 * 0.4);
   ctx.fillStyle = "rgba(60,78,44,0.95)";
-  ctx.fillText("\u4E18", h.x - \u5B57 * 0.5, h.y - \u9AD8 * 0.7 + \u5B57 * 0.4);
+  ctx.fillText(\u540D, h.x - \u5E452 / 2, h.y - \u9AD8 * 0.7 + \u5B57 * 0.4);
 }
 function \u6728\u7ACB\u3092\u63CF\u304F(ctx, f, \u6FC3, n, label) {
   const \u4E08 = Math.max(7, f.r * (\u6FC3 ? 0.17 : 0.15));
@@ -23973,18 +24191,18 @@ function \u6728\u7ACB\u3092\u63CF\u304F(ctx, f, \u6FC3, n, label) {
   \u3086\u3089\u304E\u5F62(ctx, f, 0.96, 0.18);
   ctx.fill();
   const rnd = \u7A2E\u4E71\u6570((f.seed || 7) * 104729);
-  const \u6728 = [];
+  const \u67282 = [];
   for (let i = 0; i < n; i++) {
     const a = i * 2.399 + rnd() * 0.6;
     const r = f.r * Math.pow((i + 0.6) / n, 0.42) * (0.92 + rnd() * 0.2);
-    \u6728.push({
+    \u67282.push({
       x: f.x + Math.cos(a) * r,
       y: f.y + Math.sin(a) * r * 0.84,
       s: \u4E08 * (0.8 + rnd() * 0.46)
     });
   }
-  \u6728.sort((a, b) => a.y - b.y);
-  for (const t of \u6728) {
+  \u67282.sort((a, b) => a.y - b.y);
+  for (const t of \u67282) {
     ctx.fillStyle = "rgba(48,64,40,0.30)";
     ctx.beginPath();
     ctx.ellipse(t.x + t.s * 0.5, t.y + t.s * 0.34, t.s * 0.68, t.s * 0.26, 0, 0, Math.PI * 2);
@@ -24025,18 +24243,18 @@ function \u6728\u306E\u68A2\u3060\u3051(ctx, f, \u6FC3, n) {
   const \u68A2 = \u6FC3 ? "#537A44" : "#6E9553";
   const \u660E = \u6FC3 ? "#79A15C" : "#93B76E";
   const rnd = \u7A2E\u4E71\u6570((f.seed || 7) * 104729);
-  const \u6728 = [];
+  const \u67282 = [];
   for (let i = 0; i < n; i++) {
     const a = i * 2.399 + rnd() * 0.6;
     const r = f.r * Math.pow((i + 0.6) / n, 0.42) * (0.92 + rnd() * 0.2);
-    \u6728.push({
+    \u67282.push({
       x: f.x + Math.cos(a) * r,
       y: f.y + Math.sin(a) * r * 0.84,
       s: \u4E08 * (0.8 + rnd() * 0.46)
     });
   }
-  \u6728.sort((a, b) => a.y - b.y);
-  for (const t of \u6728) {
+  \u67282.sort((a, b) => a.y - b.y);
+  for (const t of \u67282) {
     ctx.fillStyle = \u68A2;
     for (const [dx, dy, k] of [[0.3, -0.28, 0.56], [0.06, -0.2, 0.6], [-0.34, -0.3, 0.52]]) {
       ctx.beginPath();
@@ -24156,8 +24374,11 @@ function \u96C6\u843D\u3092\u63CF\u304F(ctx, v) {
   }
 }
 function \u9053\u3092\u63CF\u304F(ctx) {
-  const \u7BC0 = ROAD.\u7BC0;
-  if (!\u7BC0 || \u7BC0.length < 2 || !ROAD.\u5E45) return;
+  for (const r of ROADS2.length ? ROADS2 : [ROAD]) \u4E00\u672C\u306E\u9053\u3092\u63CF\u304F(ctx, r.\u7BC0, r.\u5E45);
+}
+function \u4E00\u672C\u306E\u9053\u3092\u63CF\u304F(ctx, \u7BC0, \u5E450) {
+  if (!\u7BC0 || \u7BC0.length < 2 || !\u5E450) return;
+  const ROAD2 = { \u7BC0, \u5E45: \u5E450 };
   const \u5F15\u304F = (\u5E452, \u8272, \u7834 = null) => {
     ctx.save();
     ctx.strokeStyle = \u8272;
@@ -24176,12 +24397,12 @@ function \u9053\u3092\u63CF\u304F(ctx) {
     ctx.stroke();
     ctx.restore();
   };
-  \u5F15\u304F(ROAD.\u5E45 + 8, "rgba(150,146,112,0.30)");
-  \u5F15\u304F(ROAD.\u5E45, "#C8B48C");
-  \u5F15\u304F(ROAD.\u5E45 * 0.72, "rgba(214,198,164,0.55)");
+  \u5F15\u304F(ROAD2.\u5E45 + 8, "rgba(150,146,112,0.30)");
+  \u5F15\u304F(ROAD2.\u5E45, "#C8B48C");
+  \u5F15\u304F(ROAD2.\u5E45 * 0.72, "rgba(214,198,164,0.55)");
   ctx.save();
   ctx.globalAlpha = 0.3;
-  for (const \u5BC4 of [-ROAD.\u5E45 * 0.2, ROAD.\u5E45 * 0.2]) {
+  for (const \u5BC4 of [-ROAD2.\u5E45 * 0.2, ROAD2.\u5E45 * 0.2]) {
     ctx.strokeStyle = "#A08F6A";
     ctx.lineWidth = 2.2;
     ctx.lineCap = "round";
@@ -24196,6 +24417,70 @@ function \u9053\u3092\u63CF\u304F(ctx) {
     ctx.stroke();
   }
   ctx.restore();
+}
+function \u5DDD\u7B4B\u3092\u63CF\u304F(ctx, r) {
+  const \u7BC0 = r.\u7BC0;
+  if (!\u7BC0 || \u7BC0.length < 2) return;
+  const \u7B46 = (\u5E452, \u8272) => {
+    ctx.save();
+    ctx.strokeStyle = \u8272;
+    ctx.lineWidth = \u5E452;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(\u7BC0[0].x, \u7BC0[0].y);
+    for (let i = 1; i < \u7BC0.length - 1; i++) {
+      const a = \u7BC0[i], b = \u7BC0[i + 1];
+      ctx.quadraticCurveTo(a.x, a.y, (a.x + b.x) / 2, (a.y + b.y) / 2);
+    }
+    ctx.lineTo(\u7BC0[\u7BC0.length - 1].x, \u7BC0[\u7BC0.length - 1].y);
+    ctx.stroke();
+    ctx.restore();
+  };
+  \u7B46(r.\u5E45 + 16, "rgba(196,186,152,0.55)");
+  \u7B46(r.\u5E45, "#6E9BBE");
+  \u7B46(r.\u5E45 * 0.42, "rgba(186,214,232,0.55)");
+  for (const w of r.\u6E21\u3057 || []) {
+    const \u6A4B = w.\u7A2E === "\u6A4B";
+    ctx.save();
+    ctx.fillStyle = \u6A4B ? "#A8804E" : "rgba(180,212,228,0.85)";
+    ctx.beginPath();
+    ctx.arc(w.x, w.y, w.r, 0, 7);
+    ctx.fill();
+    if (\u6A4B) {
+      ctx.strokeStyle = "rgba(96,68,38,0.65)";
+      ctx.lineWidth = 2.2;
+      for (let k = -2; k <= 2; k++) {
+        ctx.beginPath();
+        ctx.moveTo(w.x - w.r * 0.8, w.y + k * w.r * 0.3);
+        ctx.lineTo(w.x + w.r * 0.8, w.y + k * w.r * 0.3);
+        ctx.stroke();
+      }
+    }
+    const \u5B57 = Math.round(13 * \u672D\u306E\u500D());
+    ctx.font = `${\u5B57}px 'Hiragino Mincho ProN',serif`;
+    const t = \u6A4B ? "\u6A4B" : "\u6D45\u702C";
+    const \u5E452 = ctx.measureText(t).width;
+    ctx.strokeStyle = "rgba(250,252,236,0.9)";
+    ctx.lineWidth = \u5B57 * 0.24;
+    ctx.strokeText(t, w.x - \u5E452 / 2, w.y + \u5B57 * 0.36);
+    ctx.fillStyle = "rgba(38,62,84,0.95)";
+    ctx.fillText(t, w.x - \u5E452 / 2, w.y + \u5B57 * 0.36);
+    ctx.restore();
+  }
+  if (r.\u540D) {
+    const \u5B57 = Math.round(15 * \u672D\u306E\u500D());
+    const i = Math.floor(\u7BC0.length / 2), a = \u7BC0[i];
+    ctx.save();
+    ctx.font = `${\u5B57}px 'Hiragino Mincho ProN',serif`;
+    const \u5E452 = ctx.measureText(r.\u540D).width;
+    ctx.strokeStyle = "rgba(250,252,236,0.9)";
+    ctx.lineWidth = \u5B57 * 0.24;
+    ctx.strokeText(r.\u540D, a.x - \u5E452 / 2, a.y - r.\u5E45 * 0.7);
+    ctx.fillStyle = "rgba(38,62,84,0.95)";
+    ctx.fillText(r.\u540D, a.x - \u5E452 / 2, a.y - r.\u5E45 * 0.7);
+    ctx.restore();
+  }
 }
 function \u5DDD\u3092\u63CF\u304F(ctx) {
   const band = (x) => [RIVER.top + riverShift(x), RIVER.bot + riverShift(x)];
@@ -24340,10 +24625,12 @@ function drawFieldTerrain(ctx) {
   }
   for (const v of VILLAGES) \u96C6\u843D\u3092\u63CF\u304F(ctx, v);
   for (const m of MARSH) \u6E7F\u5730\u3092\u63CF\u304F(ctx, m);
+  for (const m of MOUNTAINS) \u5C71\u3092\u63CF\u304F(ctx, m);
   for (const h of HILLS) \u4E18\u3092\u63CF\u304F(ctx, h);
   for (const f of WOODS) \u6728\u7ACB\u3092\u63CF\u304F(ctx, f, false, 22, "\u6797");
   for (const f of FORESTS) \u6728\u7ACB\u3092\u63CF\u304F(ctx, f, true, 48, "\u68EE");
   if (hasRiver()) \u5DDD\u3092\u63CF\u304F(ctx);
+  for (const r of RIVERS2) \u5DDD\u7B4B\u3092\u63CF\u304F(ctx, r);
 }
 function \u666E\u8ACB\u3092\u63CF\u304F(ctx, f) {
   const { x, y, w, h, kind } = f;
@@ -24927,9 +25214,9 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, \u8DE1Ca
   ctx.save();
   ctx.translate(W / 2 - cam.x * cam.s, H / 2 - cam.y * cam.s);
   ctx.scale(cam.s, cam.s);
-  ctx.drawImage(terrainCanvas, 0, 0);
+  ctx.drawImage(terrainCanvas, 0, 0, FIELD.w, FIELD.h);
   if (\u8DE1Canvas) ctx.drawImage(\u8DE1Canvas, 0, 0, FIELD.w, FIELD.h);
-  if (b.phase === "deploy") {
+  if (b.phase === "deploy" && !b.\u7B4B\u66F8\u304D) {
     const z = ownZone(b);
     ctx.fillStyle = "rgba(47,93,140,0.07)";
     ctx.fillRect(z.x, z.y, z.w, z.h);
@@ -25229,6 +25516,24 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, \u8DE1Ca
   }
   ctx.restore();
   \u7A7A\u6A21\u69D8\u3092\u88AB\u305B\u308B(ctx, b, W, H);
+  const \u672D\u306E\u8DE1 = [];
+  const \u672D\u306E\u5834 = (x, y, w, h) => {
+    for (const dy of [0, -17, 17, -34, 34, -51, 51, -68, 68]) {
+      const r = [x - w / 2 - 4, y + dy - h, w + 8, h + 2];
+      let \u5F53 = false;
+      for (const o of \u672D\u306E\u8DE1) {
+        if (r[0] < o[0] + o[2] && o[0] < r[0] + r[2] && r[1] < o[1] + o[3] && o[1] < r[1] + r[3]) {
+          \u5F53 = true;
+          break;
+        }
+      }
+      if (!\u5F53) {
+        \u672D\u306E\u8DE1.push(r);
+        return y + dy;
+      }
+    }
+    return y;
+  };
   for (const c of shown) {
     const isP = c.side === "P";
     const side = sideColor(c);
@@ -25244,7 +25549,7 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, \u8DE1Ca
       ctx.fillText("\u58CA\u6EC5", x - 12, y + 4);
       continue;
     }
-    if (!isP && !c.seen && b.phase === "fight") {
+    if (!isP && !c.seen && !c.\u65E5\u548C\u898B && b.phase === "fight") {
       if (c.lastSeen && b.t - c.lastSeen.t < 45) {
         const [lx, ly2] = S(c.lastSeen.x, c.lastSeen.y);
         ctx.strokeStyle = side + "88";
@@ -25334,9 +25639,18 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, \u8DE1Ca
     const label = c.detach ? `${c.task}${c.autonomous ? "\u30FB\u81EA\u5F8B" : ""}` : c.ally ? `${c.name}\uFF08${c.ally}\uFF09` : c.name;
     ctx.font = c.detach ? "11px 'Hiragino Sans',sans-serif" : "600 13px 'Hiragino Sans',sans-serif";
     const w = ctx.measureText(label).width;
+    const ly0 = (c.gen.lord && !c.detach ? 34 : 26) + 14;
+    const ly = y - \u672D\u306E\u5834(x, y - ly0, w, 16);
     ctx.fillStyle = "rgba(255,255,255,0.85)";
-    const ly = (c.gen.lord && !c.detach ? 34 : 26) + 14;
     ctx.fillRect(x - w / 2 - 4, y - ly, w + 8, 16);
+    if (Math.abs(ly - ly0) > 4) {
+      ctx.strokeStyle = "rgba(60,58,50,0.45)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y - ly + 8);
+      ctx.lineTo(x, y - 10);
+      ctx.stroke();
+    }
     ctx.fillStyle = c.detach ? "#5B5850" : "#33332F";
     ctx.fillText(label, x - w / 2, y - ly + 12);
     const coh = c.squads.length ? c.squads.reduce((a, q) => a + q.cohesion, 0) / c.squads.length : 0;
@@ -25380,6 +25694,8 @@ var \u901A\u308A\u306B\u304F\u3055 = {
   village: 1.6,
   wood: 1.7,
   hill: 2,
+  mountain: 3.4,
+  // 山。森より避けたいが、湿地ほどではない。越えられぬわけではない
   forest: 2.6,
   marsh: 4,
   ford: 3.2,
@@ -25495,22 +25811,22 @@ function \u91CE\u306E\u9053(x0, y0, x1, y1, opt = {}) {
     if (k === S) break;
   }
   \u5217.reverse();
-  const \u9053 = [];
+  const \u90532 = [];
   let \u524D\u306E\u5411\u304D = null;
   for (let n = 1; n < \u5217.length; n++) {
     const a = \u5217[n - 1], z = \u5217[n];
     const v = `${z % w - a % w},${(z / w | 0) - (a / w | 0)}`;
     if (v !== \u524D\u306E\u5411\u304D) {
       \u524D\u306E\u5411\u304D = v;
-      \u9053.push({ x: z % w * \u5347 + \u5347 / 2, y: (z / w | 0) * \u5347 + \u5347 / 2, r: 52 });
+      \u90532.push({ x: z % w * \u5347 + \u5347 / 2, y: (z / w | 0) * \u5347 + \u5347 / 2, r: 52 });
     }
   }
-  \u9053.push({ x: x1, y: y1, r: 40 });
-  return \u9053;
+  \u90532.push({ x: x1, y: y1, r: 40 });
+  return \u90532;
 }
-function \u9053\u306E\u308A2(\u9053, x0, y0) {
+function \u9053\u306E\u308A2(\u90532, x0, y0) {
   let d = 0, px2 = x0, py2 = y0;
-  for (const p of \u9053) {
+  for (const p of \u90532) {
     d += Math.hypot(p.x - px2, p.y - py2);
     px2 = p.x;
     py2 = p.y;
@@ -25638,12 +25954,12 @@ function \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, sx, sy) {
   if (c.squads.some((q) => q.engaged)) return null;
   if (c.wp && c.wp.length && c.\u9053\u306E\u7684 && Math.hypot(c.\u9053\u306E\u7684.x - sx, c.\u9053\u306E\u7684.y - sy) < 150 && b.t - (c.\u9053\u523B || 0) < 6) return "\u7D9A\u884C";
   const \u62BC = !!(c.\u62BC\u3057\u6E21\u308B && b.t < c.\u62BC\u3057\u6E21\u308B);
-  const \u9053 = \u91CE\u306E\u9053(c.x, c.y, sx, sy, { \u62BC\u3057\u6E21\u308B: \u62BC });
-  if (!\u9053 || !\u9053.length) return null;
-  if (!\u6DF5\u3092\u8DE8\u3050(c.x, c.y, sx, sy) && \u9053\u306E\u308A2(\u9053, c.x, c.y) > \u76F4 * 4.5 + 400) return null;
+  const \u90532 = \u91CE\u306E\u9053(c.x, c.y, sx, sy, { \u62BC\u3057\u6E21\u308B: \u62BC });
+  if (!\u90532 || !\u90532.length) return null;
+  if (!\u6DF5\u3092\u8DE8\u3050(c.x, c.y, sx, sy) && \u9053\u306E\u308A2(\u90532, c.x, c.y) > \u76F4 * 4.5 + 400) return null;
   c.\u9053\u306E\u7684 = { x: sx, y: sy };
   c.\u9053\u523B = b.t;
-  return \u9053;
+  return \u90532;
 }
 function \u6DF5\u3092\u8DE8\u3050(x0, y0, x1, y1) {
   if (!hasRiver()) return false;
@@ -25705,7 +26021,7 @@ function \u5947\u8972\u306E\u6E21\u6CB3\u3092\u8A08\u308B(b, c, sx, sy) {
 }
 function battleAI(b) {
   setAiIssuing(true);
-  const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
+  const alive = b.corps.filter((c) => !c.dead && !c.destroyed && !c.\u65E5\u548C\u898B);
   for (const c of alive) {
     if (!c.\u5185\u5FDC || c.\u5BDD\u8FD4\u308A) continue;
     if (c.\u5185\u5FDC\u306E\u4E3B !== "E") continue;
@@ -25902,11 +26218,11 @@ function battleAI(b) {
         let g2 = c.holdGate;
         const need = !g2 || g2.broken || g2.hp / g2.max < 0.25;
         if (need) {
-          const \u6B8B\u308A = MAP.gates.filter((x) => !x.broken && (!g2 || x.layer > g2.layer));
-          if (\u6B8B\u308A.length) {
-            const \u8F2A = Math.min(...\u6B8B\u308A.map((x) => x.layer));
+          const \u6B8B\u308A2 = MAP.gates.filter((x) => !x.broken && (!g2 || x.layer > g2.layer));
+          if (\u6B8B\u308A2.length) {
+            const \u8F2A = Math.min(...\u6B8B\u308A2.map((x) => x.layer));
             const \u5834 = (x) => gatePos(MAP, MAP.layers[x.layer], x);
-            const \u6B21 = \u6B8B\u308A.filter((x) => x.layer === \u8F2A).sort((x, y2) => {
+            const \u6B21 = \u6B8B\u308A2.filter((x) => x.layer === \u8F2A).sort((x, y2) => {
               const ga = \u5834(x), gb = \u5834(y2);
               return Math.hypot(ga.x - c.x, ga.y - c.y) - Math.hypot(gb.x - c.x, gb.y - c.y);
             })[0];
@@ -26047,21 +26363,21 @@ function battleAI(b) {
       const \u5B88\u52E2 = \u5B88\u52E2\u306E\u968A(b, c);
       const \u6575\u307E\u3067 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
       const \u756A = \u5B88\u52E2 ? \u7A7A\u304D\u4E18\u3092\u63A2\u3059(b, c) : -1;
-      const \u4E18 = \u756A >= 0 ? HILLS[\u756A] : null;
-      if (\u4E18 && \u6575\u307E\u3067 > 260) {
-        const \u9060\u3055 = Math.hypot(\u4E18.x - c.x, \u4E18.y - c.y);
-        const \u9802 = clamp(\u4E18.r * 0.45, 60, 120);
-        const \u9593 = 540 + \u4E18.r * 0.8;
-        if (\u9060\u3055 > \u9802 && \u9060\u3055 < \u9593 && \u5CB8(c.x, c.y) === \u5CB8(\u4E18.x, \u4E18.y)) {
+      const \u4E182 = \u756A >= 0 ? HILLS[\u756A] : null;
+      if (\u4E182 && \u6575\u307E\u3067 > 260) {
+        const \u9060\u3055 = Math.hypot(\u4E182.x - c.x, \u4E182.y - c.y);
+        const \u9802 = clamp(\u4E182.r * 0.45, 60, 120);
+        const \u9593 = 540 + \u4E182.r * 0.8;
+        if (\u9060\u3055 > \u9802 && \u9060\u3055 < \u9593 && \u5CB8(c.x, c.y) === \u5CB8(\u4E182.x, \u4E182.y)) {
           \u4E18\u3092\u62BC\u3055\u3048\u308B(b, \u756A, c);
-          const \u9053 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, \u4E18.x, \u4E18.y);
-          if (\u9053 === "\u7D9A\u884C") continue;
-          if (\u9053) {
-            c.wp = \u9053;
-            issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u9053[0].x, ty: \u9053[0].y, keepPath: true });
+          const \u90532 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, \u4E182.x, \u4E182.y);
+          if (\u90532 === "\u7D9A\u884C") continue;
+          if (\u90532) {
+            c.wp = \u90532;
+            issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u90532[0].x, ty: \u90532[0].y, keepPath: true });
             continue;
           }
-          issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u4E18.x, ty: \u4E18.y });
+          issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u4E182.x, ty: \u4E182.y });
           continue;
         }
         if (\u9060\u3055 <= \u9802) {
@@ -26133,15 +26449,24 @@ function battleAI(b) {
       c.\u7768\u307F\u524D = null;
     }
     if (!MAP && !c.routed && !c.withdraw) {
-      const \u9053 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, sx, sy);
-      if (\u9053 === "\u7D9A\u884C") continue;
-      if (\u9053) {
-        c.wp = \u9053;
-        issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u9053[0].x, ty: \u9053[0].y, keepPath: true });
+      const \u90532 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, sx, sy);
+      if (\u90532 === "\u7D9A\u884C") continue;
+      if (\u90532) {
+        c.wp = \u90532;
+        issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u90532[0].x, ty: \u90532[0].y, keepPath: true });
         continue;
       }
     }
     issueOrder(b, c, { order: "\u63A5\u6226", tx: sx, ty: sy });
+  }
+  for (const c of alive) {
+    if (!c.\u63A7\u3048 && !c.\u7E1B\u308A) continue;
+    c.order = "\u5F85\u6A5F";
+    c.tx = c.x;
+    c.ty = c.y;
+    c.wp = null;
+    c.faceTo = null;
+    c.chargeT = 0;
   }
   setAiIssuing(false);
 }
@@ -26193,7 +26518,7 @@ function createBattle(playerCorps, enemyCorps, attackerSide) {
 function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   const pinch = fCorps.pinch >= 3 ? 1.22 : fCorps.pinch === 2 ? 1.12 : 1;
   const before = e.men;
-  e.men = Math.max(0, e.men - dmg * pinch);
+  e.men = Math.max(0, e.men - dmg * pinch * (b.\u640D\u306E\u624B\u52A0\u6E1B || 1));
   const lost = before - e.men;
   fCorps.loss[e.origin] += lost;
   if (lost > 6) {
@@ -26231,6 +26556,7 @@ function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt;
   b.aiClock -= dt;
+  if (b.\u9032\u884C) b.\u9032\u884C(b, dt);
   for (const c of b.corps) {
     if (!c.pending) continue;
     c.pending.t -= dt;
@@ -26247,7 +26573,7 @@ function stepBattle(b, dt) {
     battleAI(b);
     b.aiClock = 0.6;
   }
-  const alive = b.corps.filter((c) => !c.dead && !c.destroyed);
+  const alive = b.corps.filter((c) => !c.dead && !c.destroyed && !c.\u65E5\u548C\u898B);
   for (const c of alive) {
     for (const q of c.squads) q.\u5730 = \u8E0F\u307F\u8FBC\u3093\u3060\u5730(q.x, q.y);
     c.\u5730\u82AF = \u8E0F\u307F\u8FBC\u3093\u3060\u5730(c.x, c.y);
@@ -26257,6 +26583,7 @@ function stepBattle(b, dt) {
     const foes = alive.filter((o) => o.side !== c.side);
     let seen = false;
     for (const f of foes) {
+      if (\u5C71\u304C\u906E\u308B\u304B(c.x, c.y, f.x, f.y)) continue;
       for (const q of f.squads) {
         const t = TERRAIN[c.\u5730];
         const sight = (c.ambush && !c.revealed ? 95 : t.sight) * WEATHER[b.weather].sight * fieldScale();
@@ -26434,7 +26761,7 @@ function stepBattle(b, dt) {
         const \u5916 = !inLayer(MAP, o, c.x, c.y, MAP.t + o.masu + MAP.t + 8);
         if (\u5916) \u5BC4\u305B\u9053 = 0.6;
       }
-      const v = \u968A\u306E\u8DB3 * fieldScale() * \u6C34\u99B4\u308C\u306E\u8DB3(c, c.\u5730, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * \u5BC4\u305B\u9053 * \u6DF7\u307F;
+      const v = \u968A\u306E\u8DB3 * fieldScale() * (b.\u8DB3\u306E\u624B\u52A0\u6E1B || 1) * \u6C34\u99B4\u308C\u306E\u8DB3(c, c.\u5730, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * \u5BC4\u305B\u9053 * \u6DF7\u307F;
       const \u671Bx = dx / dist * v, \u671By = dy / dist * v;
       const \u901F = c.\u901F || { x: \u671Bx, y: \u671By };
       const \u5BC4\u305B = Math.min(1, dt / 0.9);
@@ -26580,7 +26907,7 @@ function stepBattle(b, dt) {
       if (qd > \u6B62\u307E\u308B\u5E45 && (!\u565B\u307F\u4E2D || c.withdraw || c.routed)) {
         const \u9045\u308C = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
         const \u8FFD\u3044\u3064\u304D = c.routed ? 1 : clamp(1 + \u9045\u308C / 34, 1, 2.4);
-        const v = st0.speed * \u8FFD\u3044\u3064\u304D * fieldScale() * \u6C34\u99B4\u308C\u306E\u8DB3(c, q.\u5730, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
+        const v = st0.speed * \u8FFD\u3044\u3064\u304D * fieldScale() * (b.\u8DB3\u306E\u624B\u52A0\u6E1B || 1) * \u6C34\u99B4\u308C\u306E\u8DB3(c, q.\u5730, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = (targetX - q.x) / qd * Math.min(v * dt, qd);
         const sy = (targetY - q.y) / qd * Math.min(v * dt, qd);
         const \u8E0F\u3081\u308Bq = (nx, ny) => passableFor(c, b, nx, ny) && \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, nx, ny, q.\u5730);
@@ -26878,6 +27205,7 @@ function stepBattle(b, dt) {
     }
   }
   const CS = 90;
+  const KEY = (gx, gy) => gx * 8192 + gy;
   const grids = { P: /* @__PURE__ */ new Map(), E: /* @__PURE__ */ new Map() };
   const \u7D44\u306E\u5E33 = /* @__PURE__ */ new Map();
   for (const c of alive) {
@@ -26885,7 +27213,7 @@ function stepBattle(b, dt) {
     const gmap = grids[c.side];
     for (const q of c.squads) {
       if (q.men <= 0) continue;
-      const k = (q.x / CS | 0) + "," + (q.y / CS | 0);
+      const k = KEY(q.x / CS | 0, q.y / CS | 0);
       let arr = gmap.get(k);
       if (!arr) {
         arr = [];
@@ -26912,7 +27240,7 @@ function stepBattle(b, dt) {
     for (let ring = 0; ring <= 3; ring++) {
       for (let dy = -ring; dy <= ring; dy++) for (let dx = -ring; dx <= ring; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
-        const arr = gmap.get(cx + dx + "," + (cy + dy));
+        const arr = gmap.get(KEY(cx + dx, cy + dy));
         if (!arr) continue;
         for (const [f, e] of arr) {
           const d = Math.hypot(e.x - q.x, e.y - q.y);
@@ -26939,6 +27267,32 @@ function stepBattle(b, dt) {
     return best ? [best, bd] : [null, 1e9];
   };
   for (const c of alive) {
+    let \u5E83 = 0;
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const d = Math.hypot(q.x - c.x, q.y - c.y);
+      if (d > \u5E83) \u5E83 = d;
+    }
+    c.\u5E83\u304C\u308A = \u5E83;
+  }
+  for (const c of alive) {
+    c.\u6575\u304C\u8FD1\u3044 = false;
+    for (const o of alive) {
+      if (o.side === c.side) continue;
+      if (Math.hypot(o.x - c.x, o.y - c.y) < c.\u5E83\u304C\u308A + o.\u5E83\u304C\u308A + 320) {
+        c.\u6575\u304C\u8FD1\u3044 = true;
+        break;
+      }
+    }
+  }
+  for (const c of alive) {
+    if (!c.\u6575\u304C\u8FD1\u3044) {
+      for (const q of c.squads) {
+        q.foe = null;
+        q.link = null;
+      }
+      continue;
+    }
     for (const q of c.squads) {
       if (q.men <= 0) continue;
       const st = ARM_STATS[q.type];
@@ -27058,7 +27412,7 @@ function stepBattle(b, dt) {
     const \u7ACB\u3061\u76F4\u308A = 0.3 + clamp((\u5668\u91CF - 45) / 55, 0, 1.1) * 0.45;
     const \u6575\u8FD1 = alive.some((o) => o.side !== c.side && !o.routed && Math.hypot(o.x - c.x, o.y - c.y) < 240);
     if (c.\u58EB\u6C17\u306E\u6E9C > 0) {
-      const \u65E9\u3055 = MAP ? 0.7 : 1.2;
+      const \u65E9\u3055 = b.\u7B4B\u66F8\u304D ? 0.72 : MAP ? 0.7 : 1.2;
       const \u5F15\u304F = Math.min(c.\u58EB\u6C17\u306E\u6E9C, \u65E9\u3055 * dt);
       c.morale -= \u5F15\u304F;
       c.\u58EB\u6C17\u306E\u6E9C -= \u5F15\u304F;
@@ -27160,7 +27514,7 @@ function stepBattle(b, dt) {
       b.log.push({ t: b.t, text: `${c.name}\u968A\u306F\u58CA\u6EC5\u3057\u305F\u3002` });
     }
   }
-  const \u52D8 = (side) => b.corps.filter((c) => c.side === side && !c.dead && !c.\u6F70 && !c.withdraw).reduce((s2, c) => s2 + corpsMen(c) * (c.routed ? 0.5 : 1), 0);
+  const \u52D8 = (side) => b.corps.filter((c) => c.side === side && !c.dead && !c.\u6F70 && !c.withdraw && !c.\u65E5\u548C\u898B).reduce((s2, c) => s2 + corpsMen(c) * (c.routed ? 0.5 : 1), 0);
   const pm = \u52D8("P"), em = \u52D8("E");
   if (MAP) {
     const h = MAP.layers[MAP.layers.length - 1];
@@ -27199,7 +27553,7 @@ function stepBattle(b, dt) {
   }
   if (!b.\u7DCF\u5D29\u308C) b.\u7DCF\u5D29\u308C = {};
   const \u5C3D\u304D\u305F = (side) => {
-    const \u751F = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.\u6F70 && !c.withdraw);
+    const \u751F = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.\u6F70 && !c.withdraw && !c.\u65E5\u548C\u898B);
     if (!\u751F.length) return "\u968A\u304C\u5C3D\u304D\u305F";
     const \u5175 = \u751F.reduce((a, c) => a + corpsMen(c), 0);
     if (\u5175 <= 0) return "\u5175\u304C\u5C3D\u304D\u305F";
@@ -27212,7 +27566,7 @@ function stepBattle(b, dt) {
     return null;
   };
   const \u5F15\u304D\u969B = (side) => {
-    const \u751F = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.\u6F70 && !c.withdraw);
+    const \u751F = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.\u6F70 && !c.withdraw && !c.\u65E5\u548C\u898B);
     if (!\u751F.length) return null;
     const \u521D = (b.initial || {})[side] || 0;
     const \u5175 = \u751F.reduce((a, c) => a + corpsMen(c), 0);
@@ -27265,10 +27619,10 @@ function SortieDialog({ g, from, onClose, onGo }) {
         const st = relOf2(g, c.faction, mid.faction).state;
         return st === "\u540C\u76DF" || st === "\u5F93\u5C5E" || st === "\u81E3\u5F93";
       };
-      const \u9053 = underMyBanner(g, c.faction, x.faction) ? findPath(from, x.id) : findPathVia(from, x.id, \u901A\u308C\u308B);
-      return { x, m: \u9053 ? marchMonthsOf(\u9053) || 99 : 99, \u9053 };
-    }).filter(({ x, m, \u9053 }) => {
-      if (!\u9053) return false;
+      const \u90532 = underMyBanner(g, c.faction, x.faction) ? findPath(from, x.id) : findPathVia(from, x.id, \u901A\u308C\u308B);
+      return { x, m: \u90532 ? marchMonthsOf(\u90532) || 99 : 99, \u9053: \u90532 };
+    }).filter(({ x, m, \u9053: \u90532 }) => {
+      if (!\u90532) return false;
       if (roadBetween(from, x.id)) return true;
       if (m > 6) return false;
       return true;
@@ -27711,13 +28065,13 @@ function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
     const ret = o.gens.filter((x) => v.gens.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
     return Math.max(0, Math.min(o.local, o.avail - ret));
   };
-  const \u5175\u6570 = (o) => {
+  const \u5175\u65702 = (o) => {
     const v = \u57CE\u306E\u5024(o);
     const ret = o.gens.filter((x) => v.gens.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
     return ret + Math.min(v.local, \u51FA\u305B\u308B(o));
   };
-  const \u7DCF\u52E2 = \u6307\u56F3\u7D44.filter((o) => \u57CE\u306E\u5024(o).on).reduce((a, o) => a + \u5175\u6570(o), 0);
-  const \u904B\u3073\u8CC3\u306E\u7DCF\u984D = \u6307\u56F3\u7D44.filter((o) => \u57CE\u306E\u5024(o).on).reduce((a, o) => a + \u904B\u3073\u8CC3(\u5175\u6570(o), o.months), 0) + \u983C\u3080\u7D44.filter((o) => \u983C\u307F.includes(o.castleId)).reduce((a, o) => a + (o.\u8CC3 || 0), 0);
+  const \u7DCF\u52E2 = \u6307\u56F3\u7D44.filter((o) => \u57CE\u306E\u5024(o).on).reduce((a, o) => a + \u5175\u65702(o), 0);
+  const \u904B\u3073\u8CC3\u306E\u7DCF\u984D = \u6307\u56F3\u7D44.filter((o) => \u57CE\u306E\u5024(o).on).reduce((a, o) => a + \u904B\u3073\u8CC3(\u5175\u65702(o), o.months), 0) + \u983C\u3080\u7D44.filter((o) => \u983C\u307F.includes(o.castleId)).reduce((a, o) => a + (o.\u8CC3 || 0), 0);
   const \u624B\u5143\u91D1 = g.factions[g.player].gold;
   const \u8CC3\u304C\u8DB3\u308A\u306C = \u904B\u3073\u8CC3\u306E\u7DCF\u984D > \u624B\u5143\u91D1;
   const \u968A\u6570 = \u6307\u56F3\u7D44.filter((o) => \u57CE\u306E\u5024(o).on).reduce((a, o) => a + \u57CE\u306E\u5024(o).gens.length, 0) + \u983C\u307F.length;
@@ -27741,7 +28095,7 @@ function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
         onChange: (e) => \u76F4\u3059(o.castleId, { local: +e.target.value }),
         style: { width: "100%" }
       }
-    ), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u9023\u308C\u3066\u884C\u304F\u5730\u57DF\u5BB6\u81E3\u56E3"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(Math.min(v.local, \u4E0A\u9650)), " / ", fmt(\u4E0A\u9650), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u3053\u306E\u57CE\u304B\u3089"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u5175\u6570(o)), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim } }, "\u5B88\u5099\u306E\u6700\u4F4E\u6570 ", fmt(o.garrison), "\u4EBA\u306F\u57CE\u306B\u6B8B\u308A\u307E\u3059\u3002")));
+    ), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u9023\u308C\u3066\u884C\u304F\u5730\u57DF\u5BB6\u81E3\u56E3"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(Math.min(v.local, \u4E0A\u9650)), " / ", fmt(\u4E0A\u9650), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u3053\u306E\u57CE\u304B\u3089"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u5175\u65702(o)), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: U.dim } }, "\u5B88\u5099\u306E\u6700\u4F4E\u6570 ", fmt(o.garrison), "\u4EBA\u306F\u57CE\u306B\u6B8B\u308A\u307E\u3059\u3002")));
   }), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u983C\u3080\u3060\u3051\u306E\u5BB6\uFF08\u540C\u76DF\u30FB\u5F93\u5C5E\uFF09"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 } }, "\u65D7\u306E\u4E0B\u306B\u306A\u3044\u5BB6\u306B\u306F\u3001\u3069\u306E\u5C06\u3092\u4F55\u4EBA\u3067\u3068\u307E\u3067\u306F\u6307\u56F3\u3067\u304D\u307E\u305B\u306C\u3002 \u5FDC\u3058\u308B\u304B\u5426\u304B\u3001\u3069\u308C\u3060\u3051\u51FA\u3059\u304B\u306F\u76F8\u624B\u304C\u6C7A\u3081\u307E\u3059\u3002"), \u983C\u3080\u7D44.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u983C\u3081\u308B\u76F8\u624B\u304C\u3044\u306A\u3044\u3002"), \u983C\u3080\u7D44.map((o) => /* @__PURE__ */ React2.createElement("label", { key: o.castleId, style: { display: "flex", gap: 8, alignItems: "flex-start", padding: "4px 0", fontSize: 12.5 } }, /* @__PURE__ */ React2.createElement(
     "input",
     {
@@ -27757,7 +28111,7 @@ function ReinforceDialog({ g, target, title, note, onClose, onGo }) {
       style: { flex: 2 },
       disabled: \u7DCF\u52E2 < 100 && !\u983C\u307F.length || \u8CC3\u304C\u8DB3\u308A\u306C,
       onClick: () => onGo({
-        \u4E0B\u77E5: \u6307\u56F3\u7D44.filter((o) => \u57CE\u306E\u5024(o).on && \u5175\u6570(o) >= 100).map((o) => ({
+        \u4E0B\u77E5: \u6307\u56F3\u7D44.filter((o) => \u57CE\u306E\u5024(o).on && \u5175\u65702(o) >= 100).map((o) => ({
           castleId: o.castleId,
           gens: \u57CE\u306E\u5024(o).gens,
           local: Math.min(\u57CE\u306E\u5024(o).local, \u51FA\u305B\u308B(o))
@@ -27943,13 +28297,13 @@ function HimeList({ g, onClose, onEnvoy, onWed, onMarry }) {
   const \u91D1 = g.factions[g.player].gold;
   const \u9694\u305F\u308A = useMemo(() => {
     const \u81EA = g.castles.filter((c) => c.faction === g.player);
-    const \u8868 = {};
+    const \u88682 = {};
     for (const c of g.castles) {
       if (c.faction === g.player) continue;
       const d = Math.min(...\u81EA.map((m) => Math.hypot(m.x - c.x, m.y - c.y)));
-      if (\u8868[c.faction] == null || d < \u8868[c.faction]) \u8868[c.faction] = d;
+      if (\u88682[c.faction] == null || d < \u88682[c.faction]) \u88682[c.faction] = d;
     }
-    return \u8868;
+    return \u88682;
   }, [g]);
   const \u8FD1\u3044\u9806 = useMemo(() => Object.keys(g.factions).filter((fid) => fid !== g.player && g.castles.some((c) => c.faction === fid)).sort((a, b) => (\u9694\u305F\u308A[a] ?? 9e9) - (\u9694\u305F\u308A[b] ?? 9e9)), [g, \u9694\u305F\u308A]);
   const \u76F8\u624B\u5BB6 = useMemo(() => {
@@ -28393,6 +28747,764 @@ function \u53F7\u4EE4\u306E\u5E33({ g, onSend, onClose }) {
   ))));
 }
 
+// src/data/sekigahara.js
+var \u753B\u7D20m = 2.9;
+var \u6B69m = 0.8;
+var K = \u753B\u7D20m / \u6B69m;
+var OX = 150;
+var OY = 70;
+var RW = 2400;
+var RH = 1696;
+var P = (x, y) => ({ x: Math.round((x - OX) * K), y: Math.round((y - OY) * K) });
+var \u9577 = (v) => Math.round(v * K);
+var \u7B4B = (pts) => pts.map(([x, y]) => P(x, y));
+var \u76E4 = { w: Math.round((RW - OX) * K), h: Math.round((RH - OY) * K) };
+var \u5C71 = [
+  { \u540D: "\u5357\u5BAE\u5C71", \u9AD8: 419, ...P(1976, 1150), r: \u9577(205), \u672D: true },
+  { \u540D: "\u5357\u5BAE\u5C71", \u9AD8: 400, ...P(1856, 1258), r: \u9577(148) },
+  { \u540D: "\u5357\u5BAE\u5C71", \u9AD8: 390, ...P(2104, 1236), r: \u9577(150) },
+  { \u540D: "\u677E\u5C3E\u5C71", \u9AD8: 293, ...P(650, 1186), r: \u9577(140), \u672D: true },
+  { \u540D: "\u677E\u5C3E\u5C71", \u9AD8: 270, ...P(748, 1258), r: \u9577(104) },
+  { \u540D: "\u57CE\u5C71", \u9AD8: 265, ...P(124, 764), r: \u9577(128), \u672D: true },
+  { \u540D: "\u671D\u5009\u5C71", \u9AD8: 198, ...P(1880, 866), r: \u9577(98), \u672D: true }
+];
+var \u4E18 = [
+  { \u540D: "\u7B39\u5C3E\u5C71", \u9AD8: 198, ...P(592, 186), r: \u9577(98), \u672D: true },
+  { \u540D: "\u5929\u6E80\u5C71", \u9AD8: 198, ...P(482, 478), r: \u9577(92), \u672D: true },
+  { \u540D: "\u4E38\u5C71", \u9AD8: 198, ...P(1252, 200), r: \u9577(96), \u672D: true },
+  { \u540D: "\u6843\u914D\u5C71", \u9AD8: 152, ...P(1640, 938), r: \u9577(76), \u672D: true },
+  // 盆地を囲む裾。名は無いが、野の縁が高いことを盤にも映す
+  { ...P(880, 250), r: \u9577(130) },
+  { ...P(1080, 400), r: \u9577(110) },
+  { ...P(1480, 300), r: \u9577(120) },
+  { ...P(300, 980), r: \u9577(120) },
+  { ...P(900, 1340), r: \u9577(140) },
+  { ...P(1320, 1320), r: \u9577(120) },
+  { ...P(2210, 640), r: \u9577(130) },
+  { ...P(2280, 1420), r: \u9577(120) }
+];
+var \u6728 = [
+  [763, 103],
+  [920, 131],
+  [1081, 149],
+  [823, 214],
+  [1048, 282],
+  [887, 337],
+  [1323, 391],
+  [1170, 396],
+  [1228, 479],
+  [1685, 577],
+  [1476, 628],
+  [2012, 633],
+  [1146, 684],
+  [2297, 742],
+  [241, 767],
+  [691, 787],
+  [1772, 849],
+  [2161, 867],
+  [1196, 894],
+  [229, 907],
+  [2246, 910],
+  [2062, 926],
+  [1733, 945],
+  [2216, 996],
+  [331, 1024],
+  [1008, 1053],
+  [1188, 1062],
+  [2320, 1086],
+  [605, 1106],
+  [1645, 1122],
+  [1762, 1130],
+  [175, 1147],
+  [1794, 1225],
+  [853, 1227],
+  [1069, 1245],
+  [1230, 1266],
+  [2003, 1325],
+  [1139, 1326],
+  [619, 1330],
+  [970, 1334],
+  [1721, 1347],
+  [732, 1393],
+  [2311, 1395],
+  [858, 1400],
+  [446, 1420],
+  [253, 1465],
+  [947, 1498],
+  [1421, 1526],
+  [1709, 1531],
+  [1986, 1554],
+  [1553, 1571],
+  [1180, 1589],
+  [736, 1596],
+  [1015, 1610]
+];
+var \u68EE = \u6728.filter((_, i) => i % 3 === 0).map(([x, y]) => ({ ...P(x, y), r: \u9577(38) }));
+var \u6797 = \u6728.filter((_, i) => i % 3 !== 0).map(([x, y]) => ({ ...P(x, y), r: \u9577(27) }));
+var \u6751 = [
+  { \u540D: "\u95A2\u30B1\u539F\u5BBF", ...P(1100, 862), r: \u9577(60) },
+  { \u540D: "\u91CE\u4E0A", ...P(1190, 700), r: \u9577(40) },
+  { \u540D: "\u5C71\u4E2D\u6751", ...P(430, 960), r: \u9577(40) },
+  { \u540D: "\u85E4\u4E0B\u6751", ...P(330, 1030), r: \u9577(36) },
+  { \u540D: "\u5C0F\u6C60\u6751", ...P(700, 520), r: \u9577(38) }
+];
+var \u5DDD = [
+  {
+    \u540D: "\u76F8\u5DDD",
+    \u5E45: \u9577(17),
+    \u7BC0: \u7B4B([
+      [720, 333],
+      [800, 387],
+      [880, 447],
+      [960, 486],
+      [1040, 501],
+      [1120, 495],
+      [1200, 489],
+      [1320, 495],
+      [1480, 504],
+      [1680, 510],
+      [1900, 513],
+      [2120, 516],
+      [2360, 516]
+    ]),
+    \u6E21\u3057: [
+      { ...P(1040, 501), r: \u9577(26), \u7A2E: "\u6A4B" },
+      { ...P(1680, 510), r: \u9577(34), \u7A2E: "\u6D45\u702C" },
+      { ...P(880, 447), r: \u9577(30), \u7A2E: "\u6D45\u702C" }
+    ]
+  },
+  {
+    \u540D: "\u85E4\u53E4\u5DDD",
+    \u5E45: \u9577(14),
+    \u7BC0: \u7B4B([
+      [520, 260],
+      [528, 440],
+      [560, 560],
+      [540, 700],
+      [560, 830],
+      [640, 900],
+      [720, 954],
+      [800, 1029],
+      [880, 1134],
+      [1e3, 1140],
+      [1180, 1137],
+      [1360, 1140],
+      [1560, 1200],
+      [1760, 1320]
+    ]),
+    \u6E21\u3057: [
+      { ...P(560, 830), r: \u9577(26), \u7A2E: "\u6A4B" },
+      { ...P(1e3, 1140), r: \u9577(30), \u7A2E: "\u6D45\u702C" },
+      { ...P(1360, 1140), r: \u9577(30), \u7A2E: "\u6D45\u702C" },
+      { ...P(540, 700), r: \u9577(24), \u7A2E: "\u6D45\u702C" }
+    ]
+  },
+  {
+    \u540D: "\u7267\u7530\u5DDD",
+    \u5E45: \u9577(19),
+    \u7BC0: \u7B4B([
+      [240, 1638],
+      [400, 1632],
+      [600, 1629],
+      [800, 1626],
+      [1e3, 1620],
+      [1200, 1608],
+      [1400, 1602],
+      [1600, 1596],
+      [1800, 1608],
+      [2e3, 1620],
+      [2200, 1614]
+    ]),
+    \u6E21\u3057: [{ ...P(1e3, 1620), r: \u9577(30), \u7A2E: "\u6A4B" }, { ...P(1600, 1596), r: \u9577(34), \u7A2E: "\u6D45\u702C" }]
+  }
+];
+var \u9053 = [
+  { \u540D: "\u4E2D\u5C71\u9053", \u5E45: \u9577(9), \u7BC0: \u7B4B([
+    [300, 1148],
+    [356, 1114],
+    [406, 1080],
+    [466, 1044],
+    [523, 1013],
+    [584, 982],
+    [645, 952],
+    [701, 930],
+    [760, 904],
+    [822, 892],
+    [890, 900],
+    [950, 912],
+    [1e3, 890],
+    [1049, 872],
+    [1085, 868],
+    [1160, 855],
+    [1234, 842],
+    [1363, 806],
+    [1473, 781],
+    [1590, 760],
+    [1705, 738],
+    [1825, 715],
+    [1932, 704],
+    [2051, 690],
+    [2150, 662],
+    [2248, 637],
+    [2312, 609],
+    [2343, 594]
+  ]) },
+  { \u540D: "\u5317\u56FD\u8857\u9053", \u5E45: \u9577(8), \u7BC0: \u7B4B([
+    [330, 428],
+    [430, 414],
+    [521, 420],
+    [581, 418],
+    [631, 415],
+    [702, 433],
+    [760, 492],
+    [806, 560],
+    [848, 642],
+    [888, 724],
+    [928, 806],
+    [968, 874],
+    [1010, 896]
+  ]) },
+  { \u540D: "\u7F8E\u6FC3\u8DEF", \u5E45: \u9577(8), \u7BC0: \u7B4B([
+    [2062, 696],
+    [2090, 800],
+    [2111, 893],
+    [2160, 980],
+    [2201, 1060],
+    [2255, 1104],
+    [2303, 1133]
+  ]) },
+  { \u540D: "\u4F0A\u52E2\u8857\u9053", \u5E45: \u9577(8), \u7BC0: \u7B4B([
+    [1480, 1075],
+    [1560, 1135],
+    [1618, 1185],
+    [1709, 1269],
+    [1788, 1342],
+    [1854, 1423],
+    [1920, 1448],
+    [1989, 1462],
+    [2060, 1520],
+    [2128, 1572],
+    [2157, 1599],
+    [2183, 1630],
+    [2212, 1653]
+  ]) }
+];
+var \u5730\u5F62 = { w: \u76E4.w, h: \u76E4.h, \u5347: 10, \u5C71, \u4E18, \u68EE, \u6797, \u6751, \u5DDD, \u9053, \u6CBC: [] };
+var \u5411\u304D = { \u6771: 0, \u897F: Math.PI, \u5317: -Math.PI / 2, \u5357: Math.PI / 2, \u5357\u6771: Math.PI / 4, \u5317\u6771: -Math.PI / 4 };
+var \u5175\u79D1 = {
+  \u5E38: { yari: 0.5, yumi: 0.12, teppo: 0.2, kiba: 0.18 },
+  \u9244\u7832: { yari: 0.44, yumi: 0.1, teppo: 0.3, kiba: 0.16 },
+  // 島津・大谷のように鉄砲を厚く
+  \u9A0E\u99AC: { yari: 0.44, yumi: 0.1, teppo: 0.16, kiba: 0.3 },
+  // 井伊の赤備え
+  \u5F13: { yari: 0.5, yumi: 0.22, teppo: 0.14, kiba: 0.14 },
+  \u65D7\u672C: { yari: 0.46, yumi: 0.12, teppo: 0.2, kiba: 0.22 }
+};
+var \u8868 = [
+  // ── 西軍（笹尾山から天満山、藤川台へ）
+  ["\u77F3\u7530\u4E09\u6210", 4e3, 642, 371, "\u6771", "\u897F", [72, 58, 88, 92, 74], "\u5E38", { \u5927\u5C06: true }],
+  ["\u5CF6\u5DE6\u8FD1", 1e3, 753, 419, "\u6771", "\u897F", [84, 88, 78, 62, 80], "\u5E38"],
+  ["\u84B2\u751F\u90F7\u820E", 1e3, 729, 451, "\u6771", "\u897F", [70, 74, 62, 58, 66], "\u5E38"],
+  ["\u7E54\u7530\u4FE1\u9AD8", 500, 588, 407, "\u6771", "\u897F", [54, 56, 50, 52, 55], "\u5E38"],
+  ["\u5CF6\u6D25\u7FA9\u5F18", 1e3, 689, 584, "\u6771", "\u897F", [90, 92, 82, 74, 90], "\u9244\u7832"],
+  ["\u5CF6\u6D25\u8C4A\u4E45", 500, 686, 637, "\u6771", "\u897F", [76, 86, 64, 60, 84], "\u9244\u7832"],
+  ["\u5C0F\u897F\u884C\u9577", 4e3, 626, 679, "\u6771", "\u897F", [62, 58, 72, 76, 60], "\u5E38"],
+  ["\u5B87\u559C\u591A\u79C0\u5BB6", 6e3, 576, 757, "\u6771", "\u897F", [68, 70, 60, 64, 62], "\u5E38"],
+  ["\u660E\u77F3\u5168\u767B", 3e3, 614, 792, "\u6771", "\u897F", [80, 78, 74, 66, 76], "\u5E38"],
+  ["\u9577\u8239\u5409\u884C", 1e3, 538, 795, "\u6771", "\u897F", [62, 62, 58, 60, 60], "\u5E38"],
+  ["\u672C\u591A\u653F\u91CD", 1e3, 546, 720, "\u6771", "\u897F", [68, 76, 60, 56, 62], "\u5E38"],
+  ["\u6238\u7530\u91CD\u653F", 900, 504, 850, "\u5357\u6771", "\u897F", [64, 72, 58, 56, 66], "\u5E38"],
+  ["\u6728\u4E0B\u983C\u7D99", 1e3, 486, 872, "\u5357\u6771", "\u897F", [58, 60, 56, 56, 60], "\u5E38"],
+  ["\u5927\u8C37\u5409\u52DD", 1500, 500, 890, "\u5357\u6771", "\u897F", [66, 68, 62, 60, 70], "\u9244\u7832"],
+  ["\u5927\u8C37\u5409\u7D99", 600, 473, 909, "\u5357\u6771", "\u897F", [86, 70, 90, 88, 88], "\u9244\u7832", { \u8981: true }],
+  ["\u5E73\u585A\u70BA\u5E83", 900, 644, 917, "\u5357\u6771", "\u897F", [72, 82, 66, 58, 74], "\u5E38"],
+  // ── 東軍（北国街道から関ヶ原宿にかけての先手）
+  ["\u9ED2\u7530\u9577\u653F", 5400, 963, 441, "\u897F", "\u6771", [82, 76, 84, 78, 80], "\u9244\u7832"],
+  ["\u7AF9\u4E2D\u91CD\u9580", 1e3, 972, 485, "\u897F", "\u6771", [60, 60, 66, 62, 62], "\u5E38"],
+  ["\u52A0\u85E4\u5609\u660E", 3e3, 929, 530, "\u897F", "\u6771", [78, 80, 66, 68, 74], "\u5E38"],
+  ["\u7D30\u5DDD\u5FE0\u8208", 5100, 888, 571, "\u897F", "\u6771", [76, 78, 72, 74, 74], "\u9244\u7832"],
+  ["\u7A32\u8449\u8C9E\u901A", 1400, 836, 632, "\u897F", "\u6771", [64, 68, 58, 58, 62], "\u5E38"],
+  ["\u6238\u5DDD\u9054\u5B89", 800, 811, 688, "\u897F", "\u6771", [66, 74, 60, 56, 64], "\u5E38"],
+  ["\u5B87\u559C\u591A\u8A6E\u5BB6", 1500, 862, 702, "\u897F", "\u6771", [62, 70, 56, 54, 58], "\u5E38"],
+  ["\u4E80\u4E95\u8332\u77E9", 1e3, 950, 662, "\u897F", "\u6771", [60, 62, 64, 62, 60], "\u5E38"],
+  ["\u4E09\u597D\u653F\u52DD", 500, 978, 686, "\u897F", "\u6771", [56, 58, 54, 54, 56], "\u5E38"],
+  ["\u7530\u4E2D\u5409\u653F", 3e3, 776, 740, "\u897F", "\u6771", [70, 66, 70, 74, 68], "\u5E38"],
+  ["\u7B52\u4E95\u5B9A\u6B21", 2850, 750, 794, "\u897F", "\u6771", [56, 54, 52, 56, 52], "\u5E38"],
+  ["\u4E95\u4F0A\u76F4\u653F", 3600, 968, 791, "\u897F", "\u6771", [86, 88, 78, 76, 86], "\u9A0E\u99AC"],
+  ["\u677E\u5E73\u5FE0\u5409", 3e3, 996, 816, "\u897F", "\u6771", [66, 76, 58, 60, 70], "\u9A0E\u99AC"],
+  ["\u798F\u5CF6\u6B63\u5247", 6e3, 785, 948, "\u897F", "\u6771", [80, 92, 58, 60, 78], "\u5E38"],
+  ["\u53EF\u5150\u624D\u8535", 500, 812, 974, "\u897F", "\u6771", [70, 90, 56, 50, 72], "\u5E38"],
+  ["\u85E4\u5802\u9AD8\u864E", 2500, 838, 928, "\u897F", "\u6771", [80, 74, 82, 80, 76], "\u5E38"],
+  ["\u4EAC\u6975\u9AD8\u77E5", 3e3, 866, 950, "\u897F", "\u6771", [64, 66, 62, 64, 62], "\u5E38"],
+  ["\u5BFA\u6CA2\u5E83\u9AD8", 2400, 1004, 934, "\u897F", "\u6771", [62, 60, 66, 68, 62], "\u5E38"],
+  ["\u53E4\u7530\u91CD\u7136", 1200, 1250, 614, "\u897F", "\u6771", [54, 52, 62, 62, 54], "\u5E38"],
+  ["\u7E54\u7530\u9577\u76CA", 450, 1250, 667, "\u897F", "\u6771", [52, 50, 58, 58, 50], "\u5E38"],
+  ["\u91D1\u68EE\u9577\u8FD1", 1140, 1326, 733, "\u897F", "\u6771", [66, 64, 66, 68, 64], "\u5E38"],
+  ["\u751F\u99D2\u4E00\u6B63", 1830, 1326, 774, "\u897F", "\u6771", [62, 62, 58, 60, 60], "\u5E38"],
+  ["\u672C\u591A\u5FE0\u52DD", 500, 1369, 847, "\u897F", "\u6771", [88, 96, 76, 70, 90], "\u9A0E\u99AC"],
+  ["\u5E73\u91CE\u9577\u6CF0", 500, 1365, 891, "\u897F", "\u6771", [62, 74, 54, 52, 60], "\u5E38"],
+  ["\u6851\u5C71\u5143\u6674", 1e3, 1392, 914, "\u897F", "\u6771", [58, 58, 56, 58, 56], "\u5E38"],
+  // 家康の旗本三万。一隊三万は盤に載らぬので、先手・本陣・後備の三隊に分ける
+  ["\u5FB3\u5DDD\u65D7\u672C \u5148\u624B", 1e4, 1520, 790, "\u897F", "\u6771", [78, 72, 74, 76, 80], "\u65D7\u672C"],
+  ["\u5FB3\u5DDD\u5BB6\u5EB7 \u672C\u9663", 1e4, 1568, 828, "\u897F", "\u6771", [92, 74, 96, 94, 92], "\u65D7\u672C", { \u5927\u5C06: true, \u5BB6\u5EB7: true }],
+  ["\u5FB3\u5DDD\u65D7\u672C \u5F8C\u5099", 1e4, 1606, 868, "\u897F", "\u6771", [74, 68, 72, 74, 78], "\u65D7\u672C"],
+  // ── 南宮山の押さえ（東軍。南宮山の去就が決まるまで動けない）
+  ["\u4E2D\u6751\u4E00\u5FE0", 4e3, 1590, 755, "\u6771", "\u6771", [58, 60, 56, 58, 58], "\u5E38", { \u62BC\u3055\u3048: true }],
+  ["\u6709\u99AC\u8C4A\u6C0F", 900, 1668, 745, "\u6771", "\u6771", [64, 66, 62, 62, 62], "\u5E38", { \u62BC\u3055\u3048: true }],
+  ["\u5C71\u5185\u4E00\u8C4A", 2058, 1752, 720, "\u6771", "\u6771", [72, 68, 72, 74, 70], "\u5E38", { \u62BC\u3055\u3048: true }],
+  ["\u8702\u9808\u8CC0\u81F3\u93AE", 1e3, 1828, 712, "\u6771", "\u6771", [64, 70, 62, 62, 64], "\u5E38", { \u62BC\u3055\u3048: true }],
+  ["\u6D45\u91CE\u5E78\u9577", 6510, 1878, 748, "\u6771", "\u6771", [74, 78, 68, 70, 72], "\u5F13", { \u62BC\u3055\u3048: true }],
+  ["\u6C60\u7530\u8F1D\u653F", 4560, 2022, 822, "\u6771", "\u6771", [76, 74, 72, 76, 74], "\u5E38", { \u62BC\u3055\u3048: true }],
+  // ── 松尾山の小早川勢（去就の定まらぬ隊）
+  ["\u5C0F\u65E9\u5DDD\u79C0\u79CB", 8e3, 525, 1117, "\u5317", "\u9EC4", [54, 50, 48, 52, 46], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD", \u4E3B: true }],
+  ["\u5E73\u5CA1\u30FB\u7A32\u8449", 4e3, 572, 1150, "\u5317", "\u9EC4", [62, 60, 70, 64, 56], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD" }],
+  ["\u677E\u91CE\u91CD\u5143", 600, 476, 1148, "\u5317", "\u9EC4", [64, 66, 62, 58, 60], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD" }],
+  ["\u5965\u5E73\u8C9E\u6CBB", 300, 562, 1086, "\u5317", "\u9EC4", [66, 70, 62, 58, 64], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD", \u76EE\u4ED8: true }],
+  // ── 藤川台の四隊（小早川に続いて旗を翻した）
+  ["\u8D64\u5EA7\u76F4\u4FDD", 600, 697, 976, "\u5317", "\u9EC4", [56, 58, 54, 54, 50], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD", \u7D9A\u304F: true }],
+  ["\u5C0F\u5DDD\u7950\u5FE0", 2100, 729, 1009, "\u5317", "\u9EC4", [58, 58, 56, 56, 50], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD", \u7D9A\u304F: true }],
+  ["\u673D\u6728\u5143\u7DB1", 600, 748, 1042, "\u5317", "\u9EC4", [56, 56, 58, 56, 50], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD", \u7D9A\u304F: true }],
+  ["\u8107\u5742\u5B89\u6CBB", 990, 780, 1075, "\u5317", "\u9EC4", [68, 72, 64, 62, 56], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD", \u7D9A\u304F: true }],
+  // ── 南宮山の毛利勢（去就の定まらぬ隊）
+  ["\u5409\u5DDD\u5E83\u5BB6", 3e3, 1941, 988, "\u897F", "\u9EC4", [74, 70, 82, 76, 70], "\u5E38", { \u5C5E: "\u5357\u5BAE\u5C71", \u4E3B: true }],
+  ["\u5B89\u56FD\u5BFA\u6075\u74CA", 1800, 2033, 1024, "\u897F", "\u9EC4", [56, 52, 74, 68, 54], "\u5E38", { \u5C5E: "\u5357\u5BAE\u5C71" }],
+  ["\u6BDB\u5229\u79C0\u5143", 15e3, 2012, 1122, "\u897F", "\u9EC4", [70, 72, 64, 66, 68], "\u5E38", { \u5C5E: "\u5357\u5BAE\u5C71" }],
+  ["\u9577\u675F\u6B63\u5BB6", 1500, 2306, 1197, "\u897F", "\u9EC4", [58, 54, 70, 76, 56], "\u5E38", { \u5C5E: "\u5357\u5BAE\u5C71" }],
+  ["\u9577\u5B97\u6211\u90E8\u76DB\u89AA", 6600, 2321, 1578, "\u897F", "\u9EC4", [64, 66, 60, 62, 62], "\u5E38", { \u5C5E: "\u5357\u5BAE\u5C71" }]
+];
+var \u5E03\u9663 = \u8868.map(([\u540D, \u5175, rx, ry, \u3080, \u65D7, \u80FD, \u79D1, \u53702], i) => ({
+  id: `sk${i}`,
+  \u540D,
+  \u5175,
+  ...P(rx, ry),
+  \u56F3: { x: rx, y: ry },
+  \u5411\u304D: \u5411\u304D[\u3080],
+  \u65D7,
+  \u5C06: { lead: \u80FD[0], valor: \u80FD[1], wit: \u80FD[2], gov: \u80FD[3], unity: \u80FD[4] },
+  \u5175\u79D1: \u5175\u79D1[\u79D1] || \u5175\u79D1.\u5E38,
+  ...\u53702 || {}
+}));
+var \u7B4B\u66F8\u304D = {
+  id: "sekigahara",
+  \u540D: "\u95A2\u30F6\u539F\u306E\u6226\u3044",
+  \u5E74: 1600,
+  \u6708: 9,
+  \u65E5: 15,
+  \u6240: "\u7F8E\u6FC3\u56FD\u4E0D\u7834\u90E1\u95A2\u30F6\u539F",
+  \u5730\u5F62,
+  \u5E03\u9663,
+  \u6B69m,
+  \u753B\u7D20m,
+  \u5929\u6C17: "\u66C7",
+  /* 日暮れまで。実際の合戦は辰の刻から未の刻まで六時間ほど続いた。
+     盤の上では四十分とする（広い野を渡る刻を含めて、勝負が決まる長さ）。 */
+  \u523B: 2400,
+  \u8A5E: "\u5929\u4E0B\u5206\u3051\u76EE\u3002\u91CE\u306B\u51FA\u305F\u306E\u306F\u5341\u4E03\u4E07\u4E94\u5343\u3002\u3046\u3061\u56DB\u4E07\u4E94\u5343\u306F\u677E\u5C3E\u5C71\u3068\u5357\u5BAE\u5C71\u306B\u3042\u3063\u3066\u3001\u307E\u3060\u65D7\u8272\u3092\u6C7A\u3081\u304B\u306D\u3066\u3044\u308B\u3002\u3053\u306E\u56DB\u4E07\u4E94\u5343\u304C\u3069\u3061\u3089\u3078\u8EE2\u3076\u304B\u3067\u3001\u5929\u4E0B\u304C\u6C7A\u307E\u308B\u3002"
+};
+
+// src/battle/kassen.js
+var \u5408\u6226\u4E00\u89A7 = [\u7B4B\u66F8\u304D];
+var \u5408\u6226\u3092\u63A2\u3059 = (id) => \u5408\u6226\u4E00\u89A7.find((k) => k.id === id) || null;
+var \u9EC4\u306E\u8272 = "#D9A62A";
+var \u65D7\u306E\u8272 = { \u897F: "#2F5D8C", \u6771: "#B0483C" };
+function \u5408\u6226\u3092\u4ED5\u7ACB\u3066\u308B(id, \u5473\u65B9\u65D7) {
+  const k = \u5408\u6226\u3092\u63A2\u3059(id);
+  if (!k) return null;
+  \u7B4B\u66F8\u304D\u306E\u91CE\u3092\u7D44\u3080(k.\u5730\u5F62);
+  const \u6575\u65D7 = \u5473\u65B9\u65D7 === "\u897F" ? "\u6771" : "\u897F";
+  const P2 = [], E = [];
+  for (const d of k.\u5E03\u9663) {
+    const \u5B9F\u65D7 = d.\u65D7 === "\u9EC4" ? "\u897F" : d.\u65D7;
+    const side = \u5B9F\u65D7 === \u5473\u65B9\u65D7 ? "P" : "E";
+    const \u76F4 = Math.round(d.\u5175 * 0.3), \u5728 = d.\u5175 - \u76F4;
+    const gen = {
+      id: d.id,
+      name: d.\u540D,
+      lead: d.\u5C06.lead,
+      valor: d.\u5C06.valor,
+      wit: d.\u5C06.wit,
+      gov: d.\u5C06.gov,
+      unity: d.\u5C06.unity,
+      retinue: \u76F4,
+      retTrain: 76,
+      rost: newRoster(\u76F4, `${d.id}-\u76F4`, d.\u5175\u79D1),
+      locRost: newRoster(\u5728, `${d.id}-\u5728`, d.\u5175\u79D1),
+      lord: !!d.\u5927\u5C06
+    };
+    const c = makeCorps(
+      side,
+      gen,
+      \u76F4,
+      \u5728,
+      76,
+      70,
+      d.x,
+      d.y,
+      d.\u5411\u304D,
+      d.\u65D7 === "\u9EC4" ? \u9EC4\u306E\u8272 : \u65D7\u306E\u8272[d.\u65D7]
+    );
+    c.\u7B4B = {
+      \u65D7: d.\u65D7,
+      \u5C5E: d.\u5C5E || null,
+      \u4E3B: !!d.\u4E3B,
+      \u62BC\u3055\u3048: !!d.\u62BC\u3055\u3048,
+      \u76EE\u4ED8: !!d.\u76EE\u4ED8,
+      \u7D9A\u304F: !!d.\u7D9A\u304F,
+      \u5BB6\u5EB7: !!d.\u5BB6\u5EB7,
+      \u8981: !!d.\u8981
+    };
+    if (d.\u65D7 === "\u9EC4") {
+      c.\u65E5\u548C\u898B = true;
+      c.order = "\u5F85\u6A5F";
+      c.seen = true;
+    }
+    if (d.\u62BC\u3055\u3048) c.\u7E1B\u308A = "\u5357\u5BAE\u5C71";
+    if (/徳川/.test(d.\u540D)) c.\u63A7\u3048 = true;
+    c.auto = side !== "P";
+    placeSquads(c, true);
+    (side === "P" ? P2 : E).push(c);
+  }
+  const \u653B = \u6575\u65D7 === "\u6771" ? "E" : "P";
+  const b = createBattle(P2, E, \u5473\u65B9\u65D7 === "\u6771" ? "P" : "E");
+  b.weather = k.\u5929\u6C17 || "\u66C7";
+  b.\u640D\u306E\u624B\u52A0\u6E1B = k.\u640D || 0.11;
+  b.\u8DB3\u306E\u624B\u52A0\u6E1B = k.\u8DB3 || 0.5;
+  b.dusk = k.\u523B || 2400;
+  b.attacker = \u653B;
+  b.phase = "deploy";
+  b.\u7B4B\u66F8\u304D = {
+    id: k.id,
+    \u540D: k.\u540D,
+    \u5473\u65B9\u65D7,
+    \u6575\u65D7,
+    \u5C0F\u65E9\u5DDD: "\u672A",
+    \u5357\u5BAE\u5C71: "\u672A",
+    \u5BB6\u5EB7\u524D\u9032: false,
+    \u554F\u9244\u7832: false,
+    \u554F\u3044: null,
+    \u6E08\u3093\u3060\u554F\u3044: {},
+    \u5831: []
+  };
+  const \u6570 = (side) => b.corps.filter((c) => c.side === side && !c.\u65E5\u548C\u898B).reduce((a, c) => a + corpsMen(c), 0);
+  b.initial = { P: \u6570("P"), E: \u6570("E") };
+  b.\u9032\u884C = \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B;
+  b.log.push({ t: 0, text: k.\u8A5E });
+  b.log.push({ t: 0, text: `\u904A\u3076\u5074\u306F${\u5473\u65B9\u65D7}\u8ECD\u3002\u9EC4\u306E\u968A\u306F\u53BB\u5C31\u304C\u5B9A\u307E\u3063\u3066\u3044\u306A\u3044\u3002` });
+  return { b, \u7B4B\u66F8\u304D: k };
+}
+function \u5408\u6226\u3092\u7573\u3080() {
+  \u7B4B\u66F8\u304D\u3092\u89E3\u304F();
+}
+var \u5175\u6570 = (list) => list.reduce((a, c) => a + corpsMen(c), 0);
+var \u65D7\u306E\u968A = (b, \u65D7) => b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u65D7 === \u65D7);
+var \u5C5E\u306E\u968A = (b, \u5C5E) => b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u5C5E === \u5C5E);
+function \u6B8B\u308A(b, \u65D7) {
+  const \u968A = \u65D7\u306E\u968A(b, \u65D7).filter((c) => !c.\u65E5\u548C\u898B && !c.\u63A7\u3048 && !c.\u7E1B\u308A);
+  const \u521D = \u968A.reduce((a, c) => a + c.squads.reduce((s2, q) => s2 + q.max, 0), 0);
+  return \u521D > 0 ? \u5175\u6570(\u968A.filter((c) => !c.dead && !c.destroyed)) / \u521D : 1;
+}
+var \u5831\u305B\u308B = (b, text, \u7A2E = "info") => {
+  b.\u7B4B\u66F8\u304D.\u5831.push({ t: b.t, text, \u7A2E });
+  b.log.push({ t: b.t, text });
+  b.notices = b.notices || [];
+  b.notices.push({ t: b.t, kind: \u7A2E === "\u51F6" ? "bad" : \u7A2E === "\u5409" ? "good" : "info", text });
+};
+function \u65D7\u3092\u6C7A\u3081\u308B(b, \u5C5E, \u6C7A, \u8A33) {
+  const s2 = b.\u7B4B\u66F8\u304D;
+  const \u5473\u65B9\u5074 = "P";
+  for (const c of \u5C5E\u306E\u968A(b, \u5C5E)) {
+    if (!c.\u65E5\u548C\u898B) continue;
+    c.\u65E5\u548C\u898B = false;
+    c.\u7B4B.\u65D7 = \u6C7A;
+    c.side = \u6C7A === s2.\u5473\u65B9\u65D7 ? "P" : "E";
+    c.color = \u65D7\u306E\u8272[\u6C7A];
+    c.morale = clamp(c.morale - 6, 20, 100);
+    c.auto = c.side !== \u5473\u65B9\u5074 || !!b.\u59D4\u306D\u305F;
+    c.order = "\u5F85\u6A5F";
+    placeSquads(c, true);
+  }
+  \u5831\u305B\u308B(b, \u8A33, \u6C7A === s2.\u5473\u65B9\u65D7 ? "\u5409" : "\u51F6");
+}
+function \u554F\u3046(b, id, \u6587, \u8AFE\u6587, \u5426\u6587) {
+  const s2 = b.\u7B4B\u66F8\u304D;
+  if (s2.\u6E08\u3093\u3060\u554F\u3044[id] || s2.\u554F\u3044) return false;
+  s2.\u554F\u3044 = { id, \u6587, \u8AFE\u6587: \u8AFE\u6587 || "\u305D\u3046\u3059\u308B", \u5426\u6587: \u5426\u6587 || "\u3084\u3081\u3066\u304A\u304F" };
+  return true;
+}
+function \u5408\u6226\u306E\u554F\u3044\u306B\u7B54\u3048\u308B(b, \u8AFE) {
+  const s2 = b.\u7B4B\u66F8\u304D;
+  if (!s2 || !s2.\u554F\u3044) return;
+  const q = s2.\u554F\u3044;
+  s2.\u554F\u3044 = null;
+  s2.\u6E08\u3093\u3060\u554F\u3044[q.id] = \u8AFE ? "\u8AFE" : "\u5426";
+  if (!\u8AFE) {
+    \u5831\u305B\u308B(b, `${q.\u898B\u51FA\u3057 || "\u732E\u7B56"}\u306F\u7528\u3044\u306A\u304B\u3063\u305F\u3002`);
+    return;
+  }
+  if (q.id === "\u5BB6\u5EB7\u524D\u9032") \u5BB6\u5EB7\u3092\u9032\u3081\u308B(b);
+  if (q.id === "\u554F\u9244\u7832") \u554F\u9244\u7832\u3092\u6483\u3064(b);
+  if (q.id === "\u677E\u5C3E\u5C71\u3078\u5099\u3048\u308B") \u677E\u5C3E\u5C71\u3078\u5099\u3048\u308B(b);
+  if (q.id === "\u5357\u5BAE\u5C71\u3078\u4F7F\u3044") \u5357\u5BAE\u5C71\u3078\u4F7F\u3044(b);
+}
+function \u5BB6\u5EB7\u3092\u9032\u3081\u308B(b) {
+  const s2 = b.\u7B4B\u66F8\u304D;
+  s2.\u5BB6\u5EB7\u524D\u9032 = true;
+  for (const c of b.corps) if (/徳川/.test(c.name)) c.\u63A7\u3048 = false;
+  for (const c of b.corps) {
+    if (!c.\u7B4B || !c.\u7B4B.\u5BB6\u5EB7) continue;
+    issueOrder(b, c, "\u524D\u9032", { x: c.x - 2600, y: c.y + 300 });
+    c.morale = Math.min(100, c.morale + 4);
+  }
+  for (const c of b.corps) if (c.\u7B4B && c.\u7B4B.\u65D7 === "\u6771" && !c.\u65E5\u548C\u898B) c.morale = Math.min(100, c.morale + 3);
+  \u5831\u305B\u308B(b, "\u5BB6\u5EB7\u304C\u6843\u914D\u5C71\u3092\u4E0B\u308A\u3001\u9663\u5834\u91CE\u3078\u672C\u9663\u3092\u9032\u3081\u305F\u3002\u5168\u8ECD\u306E\u76EE\u304C\u672C\u9663\u3092\u898B\u3066\u3044\u308B\u3002", "\u5409");
+}
+function \u554F\u9244\u7832\u3092\u6483\u3064(b) {
+  const s2 = b.\u7B4B\u66F8\u304D;
+  s2.\u554F\u9244\u7832 = true;
+  \u5831\u305B\u308B(b, "\u677E\u5C3E\u5C71\u306E\u9E93\u3078\u9244\u7832\u304C\u6483\u3061\u304B\u3051\u3089\u308C\u305F\u3002\u5C0F\u65E9\u5DDD\u306E\u53BB\u5C31\u3092\u554F\u3046\u305F\u306E\u3067\u3042\u308B\u3002");
+  \u5C0F\u65E9\u5DDD\u3092\u6C7A\u3081\u308B(b, true);
+}
+function \u677E\u5C3E\u5C71\u3078\u5099\u3048\u308B(b) {
+  for (const c of b.corps) {
+    if (c.side !== "P" || c.\u65E5\u548C\u898B) continue;
+    if (!c.\u7B4B || c.\u7B4B.\u65D7 !== "\u897F") continue;
+    if (!c.\u7B4B.\u8981 && !/大谷|戸田|木下|平塚/.test(c.name)) continue;
+    issueOrder(b, c, "\u524D\u9032", { x: c.x - 200, y: c.y + 1400 });
+  }
+  \u5831\u305B\u308B(b, "\u5927\u8C37\u52E2\u304C\u677E\u5C3E\u5C71\u3078\u6B63\u9762\u3092\u5411\u3051\u305F\u3002\u5C71\u304C\u52D5\u3044\u3066\u3082\u3001\u53D7\u3051\u6B62\u3081\u308B\u69CB\u3048\u3067\u3042\u308B\u3002", "\u5409");
+}
+function \u5357\u5BAE\u5C71\u3078\u4F7F\u3044(b) {
+  b.\u7B4B\u66F8\u304D.\u4F7F\u3044 = true;
+  \u5831\u305B\u308B(b, "\u5357\u5BAE\u5C71\u3078\u4F7F\u8005\u3092\u7ACB\u3066\u305F\u3002\u6BDB\u5229\u52E2\u304C\u52D5\u304F\u304B\u3069\u3046\u304B\u306F\u3001\u5409\u5DDD\u5E83\u5BB6\u306E\u8179\u3072\u3068\u3064\u3067\u3042\u308B\u3002");
+}
+function \u5C0F\u65E9\u5DDD\u3092\u6C7A\u3081\u308B(b, \u554F\u308F\u308C\u305F) {
+  const s2 = b.\u7B4B\u66F8\u304D;
+  if (s2.\u5C0F\u65E9\u5DDD !== "\u672A") return;
+  const \u5927\u8C37 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u65D7 === "\u897F" && /大谷|戸田|木下|平塚/.test(c.name));
+  const \u5927\u8C37\u306E\u6B8B = \u5927\u8C37.length ? \u5175\u6570(\u5927\u8C37.filter((c) => !c.dead && !c.destroyed)) / \u5927\u8C37.reduce((a, c) => a + c.squads.reduce((t, q) => t + q.max, 0), 0) : 0;
+  const \u5C71\u306E\u9E93 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u65D7 === "\u897F" && !c.dead && !c.destroyed && Math.hypot(c.x - 1812, c.y - 4045) < 2400).length;
+  const \u6771\u306E\u6B8B = \u6B8B\u308A(b, "\u6771"), \u897F\u306E\u6B8B = \u6B8B\u308A(b, "\u897F");
+  const \u4E09\u6210 = b.corps.find((c) => /石田三成/.test(c.name));
+  const \u65D7\u982D\u5065\u5728 = !!(\u4E09\u6210 && !\u4E09\u6210.dead && !\u4E09\u6210.destroyed && corpsMen(\u4E09\u6210) > 0 && \u4E09\u6210.morale >= 50);
+  const \u897F\u3078 = \u5927\u8C37\u306E\u6B8B >= 0.7 && \u5C71\u306E\u9E93 >= 2 && \u6771\u306E\u6B8B <= 0.75 && \u65D7\u982D\u5065\u5728;
+  if (\u897F\u3078) {
+    s2.\u5C0F\u65E9\u5DDD = "\u897F";
+    \u65D7\u3092\u6C7A\u3081\u308B(
+      b,
+      "\u5C0F\u65E9\u5DDD",
+      "\u897F",
+      "\u677E\u5C3E\u5C71\u304C\u52D5\u3044\u305F\u3002\u5C0F\u65E9\u5DDD\u79C0\u79CB\u3001\u897F\u8ECD\u3068\u3057\u3066\u5C71\u3092\u4E0B\u308B\u3002"
+    );
+    return;
+  }
+  if (!\u554F\u308F\u308C\u305F) return;
+  s2.\u5C0F\u65E9\u5DDD = "\u6771";
+  \u65D7\u3092\u6C7A\u3081\u308B(
+    b,
+    "\u5C0F\u65E9\u5DDD",
+    "\u6771",
+    "\u677E\u5C3E\u5C71\u304C\u52D5\u3044\u305F\u3002\u5C0F\u65E9\u5DDD\u79C0\u79CB\u3001\u65D7\u3092\u7FFB\u3057\u3066\u5927\u8C37\u52E2\u306E\u5074\u9762\u3078\u96EA\u5D29\u308C\u843D\u3061\u308B\u3002"
+  );
+}
+function \u5357\u5BAE\u5C71\u3092\u6C7A\u3081\u308B(b) {
+  const s2 = b.\u7B4B\u66F8\u304D;
+  if (s2.\u5357\u5BAE\u5C71 !== "\u672A") return;
+  const \u6771\u306E\u6B8B = \u6B8B\u308A(b, "\u6771");
+  const \u62BC\u3055\u3048 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u62BC\u3055\u3048);
+  const \u62BC\u3055\u3048\u306E\u6B8B = \u62BC\u3055\u3048.length ? \u5175\u6570(\u62BC\u3055\u3048.filter((c) => !c.dead && !c.destroyed)) / \u62BC\u3055\u3048.reduce((a, c) => a + c.squads.reduce((t, q) => t + q.max, 0), 0) : 1;
+  const \u897F\u3078 = s2.\u5C0F\u65E9\u5DDD === "\u897F" && \u6771\u306E\u6B8B <= 0.7 && (\u62BC\u3055\u3048\u306E\u6B8B <= 0.55 || s2.\u4F7F\u3044 && \u6771\u306E\u6B8B <= 0.55);
+  if (\u897F\u3078) {
+    s2.\u5357\u5BAE\u5C71 = "\u897F";
+    \u65D7\u3092\u6C7A\u3081\u308B(
+      b,
+      "\u5357\u5BAE\u5C71",
+      "\u897F",
+      "\u5357\u5BAE\u5C71\u304C\u52D5\u3044\u305F\u3002\u5409\u5DDD\u5E83\u5BB6\u304C\u9053\u3092\u7A7A\u3051\u3001\u6BDB\u5229\u79C0\u5143\u30FB\u9577\u5B97\u6211\u90E8\u76DB\u89AA\u304C\u91CE\u3078\u4E0B\u308B\u3002"
+    );
+    \u62BC\u3055\u3048\u3092\u89E3\u304F(b, "\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u52E2\u304C\u52D5\u3044\u305F\u3002\u62BC\u3055\u3048\u306E\u516D\u968A\u306F\u3001\u3053\u308C\u3092\u8FCE\u3048\u6483\u3064\u3002");
+    return;
+  }
+  const \u5C3D\u304D\u305F = s2.\u5C0F\u65E9\u5DDD === "\u6771" || b.t >= b.dusk * 0.58 || \u6B8B\u308A(b, "\u897F") <= 0.45;
+  if (\u5C3D\u304D\u305F) {
+    s2.\u5357\u5BAE\u5C71 = "\u52D5\u304B\u305A";
+    for (const c of \u5C5E\u306E\u968A(b, "\u5357\u5BAE\u5C71")) {
+      c.\u65E5\u548C\u898B = true;
+      c.\u7B4B.\u52D5\u304B\u305A = true;
+    }
+    \u5831\u305B\u308B(
+      b,
+      "\u5357\u5BAE\u5C71\u306F\u52D5\u304B\u306C\u3002\u5409\u5DDD\u5E83\u5BB6\u304C\u9053\u3092\u585E\u304E\u3001\u6BDB\u5229\u52E2\u306F\u3064\u3044\u306B\u5C71\u3092\u4E0B\u308A\u306A\u304B\u3063\u305F\u3002",
+      s2.\u5473\u65B9\u65D7 === "\u6771" ? "\u5409" : "\u51F6"
+    );
+    \u62BC\u3055\u3048\u3092\u89E3\u304F(b, "\u5357\u5BAE\u5C71\u306F\u52D5\u304B\u306C\u3068\u898B\u3048\u305F\u3002\u62BC\u3055\u3048\u306E\u516D\u968A\u306F\u3001\u77F3\u7530\u4E09\u6210\u306E\u9663\u3078\u5411\u304B\u3048\u308B\u3002");
+  }
+}
+function \u62BC\u3055\u3048\u3092\u89E3\u304F(b, \u6587) {
+  for (const c of b.corps) {
+    if (!c.\u7E1B\u308A) continue;
+    c.\u7E1B\u308A = null;
+    c.\u624B\u304C\u96E2\u308C\u305F = true;
+  }
+  \u5831\u305B\u308B(b, \u6587, "\u5409");
+}
+function \u6307\u56F3\u306E\u7E1B\u308A(b, c) {
+  if (!b || !b.\u7B4B\u66F8\u304D || !c) return null;
+  if (c.\u65E5\u548C\u898B) return `${c.name}\u306F\u307E\u3060\u65D7\u8272\u3092\u6C7A\u3081\u3066\u3044\u306A\u3044\u3002\u4E0B\u77E5\u306F\u5C4A\u304B\u306C\u3002`;
+  if (!c.\u7E1B\u308A) return null;
+  if (b.\u7B4B\u66F8\u304D.\u5357\u5BAE\u5C71 !== "\u672A") return null;
+  return "\u5357\u5BAE\u5C71\u306E\u69D8\u5B50\u304C\u308F\u304B\u3089\u306C\u3002\u3053\u3053\u3092\u96E2\u308C\u308B\u308F\u3051\u306B\u306F\u3044\u304B\u306C\u3002";
+}
+function \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B(b, dt) {
+  const s2 = b.\u7B4B\u66F8\u304D;
+  if (!s2) return;
+  if (b.phase !== "fight") return;
+  s2.\u523B = (s2.\u523B || 0) + dt;
+  const \u6771\u306F\u6575 = s2.\u5473\u65B9\u65D7 === "\u897F";
+  const \u4EA4\u6226 = b.corps.some((c) => !c.\u65E5\u548C\u898B && c.squads.some((q) => q.engaged));
+  const \u897F\u306E\u6B8B = \u6B8B\u308A(b, "\u897F");
+  if (!s2.\u5BB6\u5EB7\u524D\u9032 && \u4EA4\u6226 && (b.t > 300 || \u897F\u306E\u6B8B <= 0.86)) {
+    if (\u6771\u306F\u6575) {
+      \u5BB6\u5EB7\u3092\u9032\u3081\u308B(b);
+    } else \u554F\u3046(
+      b,
+      "\u5BB6\u5EB7\u524D\u9032",
+      "\u677E\u5C3E\u5C71\u306E\u5C0F\u65E9\u5DDD\u306F\u3044\u307E\u3060\u52D5\u304B\u306C\u3002\u5BB6\u5EB7\u3092\u6843\u914D\u5C71\u304B\u3089\u9663\u5834\u91CE\u3078\u9032\u3081\u3001\u5C0F\u65E9\u5DDD\u306B\u50AC\u4FC3\u3057\u307E\u3059\u304B\u3002",
+      "\u672C\u9663\u3092\u9032\u3081\u308B",
+      "\u307E\u3060\u52D5\u304B\u3055\u306C"
+    );
+  }
+  if (s2.\u5BB6\u5EB7\u524D\u9032 && !s2.\u554F\u9244\u7832 && s2.\u5C0F\u65E9\u5DDD === "\u672A" && (b.t > 540 || \u897F\u306E\u6B8B <= 0.72)) {
+    if (\u6771\u306F\u6575) \u554F\u9244\u7832\u3092\u6483\u3064(b);
+    else \u554F\u3046(
+      b,
+      "\u554F\u9244\u7832",
+      "\u672C\u9663\u306F\u524D\u3078\u51FA\u305F\u3002\u677E\u5C3E\u5C71\u3078\u9244\u7832\u3092\u6483\u3061\u304B\u3051\u3001\u5C0F\u65E9\u5DDD\u306E\u53BB\u5C31\u3092\u3044\u307E\u554F\u3044\u8CEA\u3057\u307E\u3059\u304B\u3002",
+      "\u554F\u9244\u7832\u3092\u6483\u3064",
+      "\u306A\u304A\u5F85\u3064"
+    );
+  }
+  if (s2.\u5473\u65B9\u65D7 === "\u897F" && s2.\u5C0F\u65E9\u5DDD === "\u672A" && (b.t > 240 || \u897F\u306E\u6B8B <= 0.9)) {
+    \u554F\u3046(
+      b,
+      "\u677E\u5C3E\u5C71\u3078\u5099\u3048\u308B",
+      "\u677E\u5C3E\u5C71\u306E\u5C0F\u65E9\u5DDD\u306F\u3001\u3044\u3064\u5C71\u3092\u4E0B\u308A\u3066\u304F\u308B\u304B\u5206\u304B\u3089\u306C\u3002\u5927\u8C37\u52E2\u306B\u677E\u5C3E\u5C71\u3078\u306E\u5099\u3048\u3092\u56FA\u3081\u3055\u305B\u307E\u3059\u304B\u3002",
+      "\u5099\u3048\u3092\u56FA\u3081\u308B",
+      "\u305D\u306E\u307E\u307E\u3067\u3088\u3044"
+    );
+  }
+  if (s2.\u5473\u65B9\u65D7 === "\u897F" && s2.\u5357\u5BAE\u5C71 === "\u672A" && (b.t > 480 || s2.\u5C0F\u65E9\u5DDD !== "\u672A")) {
+    \u554F\u3046(
+      b,
+      "\u5357\u5BAE\u5C71\u3078\u4F7F\u3044",
+      "\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u52E2\u306F\u307E\u3060\u5C71\u306B\u3044\u308B\u3002\u4F7F\u8005\u3092\u7ACB\u3066\u3001\u51FA\u9663\u3092\u4FC3\u3057\u307E\u3059\u304B\u3002",
+      "\u4F7F\u8005\u3092\u7ACB\u3066\u308B",
+      "\u898B\u9001\u308B"
+    );
+  }
+  \u5C0F\u65E9\u5DDD\u3092\u6C7A\u3081\u308B(b, false);
+  \u5357\u5BAE\u5C71\u3092\u6C7A\u3081\u308B(b);
+}
+var \u63A7\u3048\u306E\u9375 = "sengoku:kassen";
+function \u5408\u6226\u3092\u63A7\u3048\u308B(b) {
+  if (!b || !b.\u7B4B\u66F8\u304D) return null;
+  const s2 = b.\u7B4B\u66F8\u304D;
+  return {
+    \u7248: 1,
+    id: s2.id,
+    \u5473\u65B9\u65D7: s2.\u5473\u65B9\u65D7,
+    t: Math.round(b.t),
+    \u5929\u6C17: b.weather,
+    \u76F8: b.phase,
+    \u679C: b.result || null,
+    \u7B4B: {
+      \u5C0F\u65E9\u5DDD: s2.\u5C0F\u65E9\u5DDD,
+      \u5357\u5BAE\u5C71: s2.\u5357\u5BAE\u5C71,
+      \u5BB6\u5EB7\u524D\u9032: s2.\u5BB6\u5EB7\u524D\u9032,
+      \u554F\u9244\u7832: s2.\u554F\u9244\u7832,
+      \u4F7F\u3044: !!s2.\u4F7F\u3044,
+      \u6E08\u3093\u3060\u554F\u3044: s2.\u6E08\u3093\u3060\u554F\u3044,
+      \u5831: s2.\u5831
+    },
+    \u968A: b.corps.map((c) => ({
+      i: c.id,
+      s: c.side,
+      x: Math.round(c.x),
+      y: Math.round(c.y),
+      f: +c.facing.toFixed(3),
+      j: +(c.\u9663\u5411\u304D == null ? c.facing : c.\u9663\u5411\u304D).toFixed(3),
+      m: Math.round(c.morale),
+      h: Math.round(c.fatigue),
+      o: c.order,
+      \u5F62: c.formation,
+      tx: Math.round(c.tx),
+      ty: Math.round(c.ty),
+      \u72B6: (c.dead ? 1 : 0) | (c.destroyed ? 2 : 0) | (c.routed ? 4 : 0) | (c.withdraw ? 8 : 0) | (c.\u65E5\u548C\u898B ? 16 : 0) | (c.\u7E1B\u308A ? 32 : 0) | (c.\u63A7\u3048 ? 64 : 0) | (c.auto ? 128 : 0),
+      \u65D7: c.\u7B4B ? c.\u7B4B.\u65D7 : null,
+      detach: !!c.detach
+    })).filter((d) => !d.detach),
+    /* 組は、隊ではなく組の名で控える。
+    
+           戦の途中で分遣（騎馬の側面攻撃など）が出ると、親の隊から組が抜けて
+           別の隊になる。隊ごとに並び順で控えると、戻したとき親の組数が合わず、
+           抜けたはずの組が満杯のまま残る（測ったら一万三千人も湧いていた）。
+           組の名は初めから終わりまで変わらないので、名で引き当てる。
+           分遣そのものは控えない。戻したときは親へ呼び戻されたものとする。 */
+    \u7D44: b.corps.flatMap((c) => c.squads.map((q) => [q.id, Math.round(q.men), Math.round(q.cohesion)])),
+    log: b.log.slice(-40)
+  };
+}
+function \u5408\u6226\u3092\u623B\u3059(\u63A7) {
+  if (!\u63A7 || !\u63A7.id) return null;
+  const r = \u5408\u6226\u3092\u4ED5\u7ACB\u3066\u308B(\u63A7.id, \u63A7.\u5473\u65B9\u65D7);
+  if (!r) return null;
+  const b = r.b;
+  b.t = \u63A7.t || 0;
+  b.weather = \u63A7.\u5929\u6C17 || b.weather;
+  b.phase = \u63A7.\u76F8 === "over" ? "over" : "fight";
+  b.result = \u63A7.\u679C || null;
+  Object.assign(b.\u7B4B\u66F8\u304D, \u63A7.\u7B4B || {});
+  const \u5E33 = new Map(b.corps.map((c) => [c.id, c]));
+  for (const d of \u63A7.\u968A || []) {
+    const c = \u5E33.get(d.i);
+    if (!c) continue;
+    c.side = d.s;
+    c.x = d.x;
+    c.y = d.y;
+    c.facing = d.f;
+    c.\u9663\u5411\u304D = d.j;
+    c.morale = d.m;
+    c.fatigue = d.h;
+    c.order = d.o;
+    c.formation = d.\u5F62;
+    c.tx = d.tx;
+    c.ty = d.ty;
+    c.dead = !!(d.\u72B6 & 1);
+    c.destroyed = !!(d.\u72B6 & 2);
+    c.routed = !!(d.\u72B6 & 4);
+    c.withdraw = !!(d.\u72B6 & 8);
+    c.\u65E5\u548C\u898B = !!(d.\u72B6 & 16);
+    c.\u7E1B\u308A = d.\u72B6 & 32 ? "\u5357\u5BAE\u5C71" : null;
+    c.\u63A7\u3048 = !!(d.\u72B6 & 64);
+    c.auto = !!(d.\u72B6 & 128);
+    if (d.\u65D7 && c.\u7B4B) {
+      c.\u7B4B.\u65D7 = d.\u65D7;
+      c.color = d.\u65D7 === "\u9EC4" ? \u9EC4\u306E\u8272 : \u65D7\u306E\u8272[d.\u65D7];
+    }
+  }
+  const \u7D44\u5E33 = new Map((\u63A7.\u7D44 || []).map((r2) => [r2[0], r2]));
+  for (const c of b.corps) {
+    for (const q of c.squads) {
+      const r2 = \u7D44\u5E33.get(q.id);
+      q.men = r2 ? r2[1] : 0;
+      q.cohesion = r2 ? r2[2] : q.cohesion;
+    }
+    placeSquads(c, true);
+  }
+  b.log = (\u63A7.log || []).slice();
+  b.log.push({ t: b.t, text: "\u9589\u3058\u305F\u3068\u3053\u308D\u304B\u3089\u6226\u3092\u7D9A\u3051\u308B\u3002" });
+  return { b, \u7B4B\u66F8\u304D: r.\u7B4B\u66F8\u304D };
+}
+
 // src/ui/BattleScreen.jsx
 function BattleScreen({ ctx, land, onEnd }) {
   const canvasRef = useRef2(null), terrainRef = useRef2(null), bRef = useRef2(ctx.b), wrapRef = useRef2(null);
@@ -28406,6 +29518,8 @@ function BattleScreen({ ctx, land, onEnd }) {
   const [faceMode, setFaceMode] = useState3(false);
   const [foeSel, setFoeSel] = useState3(null);
   const [\u9000\u304D\u78BA\u8A8D, set\u9000\u304D\u78BA\u8A8D] = useState3(null);
+  const [\u548E\u3081, set\u548E\u3081] = useState3(null);
+  const [, \u554F\u3044\u76F4\u3057] = useState3(0);
   const faceRef = useRef2(false);
   const speedRef = useRef2(0), selRef = useRef2(null), uiRef = useRef2(0), allRef = useRef2(false);
   const camRef = useRef2({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
@@ -28426,19 +29540,33 @@ function BattleScreen({ ctx, land, onEnd }) {
     faceRef.current = v;
     setFaceMode(v);
   };
+  const \u4E0B\u77E5 = (bb, c, patch) => {
+    const \u8A33 = \u6307\u56F3\u306E\u7E1B\u308A(bb, c);
+    if (\u8A33) {
+      set\u548E\u3081(\u8A33);
+      return false;
+    }
+    issueOrder(bb, c, patch);
+    return true;
+  };
   const brokeRef = useRef2(-1);
   const \u8DE1Ref = useRef2(null);
+  const \u753B\u5E03\u306E\u500D = () => Math.min(1, Math.sqrt(2e7 / Math.max(1, FIELD.w * FIELD.h)));
   const paintTerrain = () => {
     const t = terrainRef.current || document.createElement("canvas");
-    t.width = FIELD.w;
-    t.height = FIELD.h;
+    const k = \u753B\u5E03\u306E\u500D();
+    t.width = Math.max(1, Math.round(FIELD.w * k));
+    t.height = Math.max(1, Math.round(FIELD.h * k));
     const g2 = t.getContext("2d");
+    g2.setTransform(k, 0, 0, k, 0, 0);
     if (ctx.mode === "castle" && ctx.b.map) drawCastleTerrain(g2, ctx.b.map);
     else drawFieldTerrain(g2);
+    g2.setTransform(1, 0, 0, 1, 0, 0);
     terrainRef.current = t;
     const a = \u8DE1Ref.current || document.createElement("canvas");
-    a.width = Math.ceil(FIELD.w * 0.5);
-    a.height = Math.ceil(FIELD.h * 0.5);
+    const ak = Math.min(0.5, \u753B\u5E03\u306E\u500D());
+    a.width = Math.ceil(FIELD.w * ak);
+    a.height = Math.ceil(FIELD.h * ak);
     a.getContext("2d").clearRect(0, 0, a.width, a.height);
     \u8DE1Ref.current = a;
     if (ctx.b) {
@@ -28451,8 +29579,27 @@ function BattleScreen({ ctx, land, onEnd }) {
     const t = terrainRef.current;
     const w = wrapRef.current;
     if (w && w.clientWidth) {
-      const \u53CE = Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h);
-      camRef.current.s = clamp(\u53CE * 0.98, Math.min(0.2, \u53CE * 0.9), 3);
+      const \u4E3B = ctx.b.\u7B4B\u66F8\u304D ? ctx.b.corps.filter((c) => !c.\u65E5\u548C\u898B && !c.\u63A7\u3048 && !c.\u7E1B\u308A) : [];
+      if (\u4E3B.length) {
+        let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+        for (const c of \u4E3B) {
+          if (c.x < x0) x0 = c.x;
+          if (c.x > x1) x1 = c.x;
+          if (c.y < y0) y0 = c.y;
+          if (c.y > y1) y1 = c.y;
+        }
+        const \u4F59 = 700;
+        x0 -= \u4F59;
+        x1 += \u4F59;
+        y0 -= \u4F59;
+        y1 += \u4F59;
+        camRef.current.x = (x0 + x1) / 2;
+        camRef.current.y = (y0 + y1) / 2;
+        camRef.current.s = clamp(Math.min(w.clientWidth / (x1 - x0), w.clientHeight / (y1 - y0)) * 0.96, 0.08, 3);
+      } else {
+        const \u53CE = Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h);
+        camRef.current.s = clamp(\u53CE * 0.98, Math.min(0.2, \u53CE * 0.9), 3);
+      }
     }
   }, []);
   useEffect3(() => {
@@ -28468,6 +29615,11 @@ function BattleScreen({ ctx, land, onEnd }) {
       el.removeEventListener("touchstart", block);
     };
   }, [land, panel]);
+  useEffect3(() => {
+    if (!\u548E\u3081) return;
+    const h = setTimeout(() => set\u548E\u3081(null), 3200);
+    return () => clearTimeout(h);
+  }, [\u548E\u3081]);
   useEffect3(() => {
     const onKey = (e) => {
       if (e.key === "Escape") pickCorps(null);
@@ -28539,7 +29691,7 @@ function BattleScreen({ ctx, land, onEnd }) {
           cv.width = Math.round(W * dpr);
           cv.height = Math.round(H * dpr);
         }
-        if (\u8DE1Ref.current) \u8DE1\u3092\u713C\u304D\u8DB3\u3059(\u8DE1Ref.current.getContext("2d"), b2, 0.5);
+        if (\u8DE1Ref.current) \u8DE1\u3092\u713C\u304D\u8DB3\u3059(\u8DE1Ref.current.getContext("2d"), b2, Math.min(0.5, \u753B\u5E03\u306E\u500D()));
         drawBattle(cv.getContext("2d"), b2, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, \u8DE1Ref.current);
       }
       if (b2.phase === "over" && speedRef.current !== 0) setSpeed(0);
@@ -28708,11 +29860,20 @@ function BattleScreen({ ctx, land, onEnd }) {
   const orderTo = (c, f, foe) => {
     c.task = null;
     if (faceRef.current) {
+      if (\u6307\u56F3\u306E\u7E1B\u308A(b, c)) {
+        set\u548E\u3081(\u6307\u56F3\u306E\u7E1B\u308A(b, c));
+        setFace(false);
+        return;
+      }
       \u8EE2\u56DE\u3055\u305B\u308B(b, c, f.x, f.y);
       setFace(false);
       return;
     }
     if (b.phase === "deploy") {
+      if (b.\u7B4B\u66F8\u304D) {
+        set\u548E\u3081("\u3053\u306E\u6226\u306E\u5E03\u9663\u306F\u53F2\u5B9F\u306E\u307E\u307E\u3067\u3042\u308B\u3002\u9663\u5F62\u3068\u5411\u304D\u3060\u3051\u6C7A\u3081\u3089\u308C\u308B\u3002");
+        return;
+      }
       if (inOwnZone(b, f.x, f.y)) {
         c.x = f.x;
         c.y = f.y;
@@ -28725,11 +29886,11 @@ function BattleScreen({ ctx, land, onEnd }) {
     if (foe) {
       const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
       const gx = foe.x + (c.x - foe.x) / d * 38, gy = foe.y + (c.y - foe.y) / d * 38;
-      issueOrder(b, c, { order: "\u63A5\u6226", tx: gx, ty: gy });
+      \u4E0B\u77E5(b, c, { order: "\u63A5\u6226", tx: gx, ty: gy });
     } else {
       c.siegeAuto = false;
       c.gate = null;
-      issueOrder(b, c, { order: "\u79FB\u52D5", tx: f.x, ty: f.y });
+      \u4E0B\u77E5(b, c, { order: "\u79FB\u52D5", tx: f.x, ty: f.y });
     }
   };
   const onCancel = () => {
@@ -28769,6 +29930,7 @@ function BattleScreen({ ctx, land, onEnd }) {
   const allOrder = (o) => {
     for (const c of b.corps) {
       if (c.side !== "P" || c.dead || c.destroyed || c.routed) continue;
+      if (c.\u65E5\u548C\u898B || \u6307\u56F3\u306E\u7E1B\u308A(b, c)) continue;
       c.task = null;
       if (o === "\u524D\u9032") {
         c.order = "\u524D\u9032";
@@ -28804,9 +29966,10 @@ function BattleScreen({ ctx, land, onEnd }) {
       b.log.push({ t: b.t, text: "\u5168\u8ECD\u306B\u9000\u304D\u9266\u3002\u7D71\u5236\u3092\u4FDD\u3063\u3066\u6226\u5834\u3092\u96E2\u308C\u308B\u3002" });
     }
   };
-  const livingP = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed);
+  const livingP = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed && !c.\u65E5\u548C\u898B);
   const pMen = livingP.reduce((s2, c) => s2 + corpsMen(c), 0);
-  const eMen = b.corps.filter((c) => c.side === "E" && !c.dead && !c.destroyed && (c.seen || !c.ambush)).reduce((s2, c) => s2 + corpsMen(c), 0);
+  const eMen = b.corps.filter((c) => c.side === "E" && !c.dead && !c.destroyed && !c.\u65E5\u548C\u898B && (c.seen || !c.ambush)).reduce((s2, c) => s2 + corpsMen(c), 0);
+  const \u65E5\u548C\u898B\u306E\u5175 = b.corps.filter((c) => c.\u65E5\u548C\u898B && !c.dead && !c.destroyed).reduce((s2, c) => s2 + corpsMen(c), 0);
   const pMor = Math.round(livingP.reduce((s2, c) => s2 + c.morale, 0) / Math.max(1, livingP.length));
   const opts = selC && !selC.detach ? detachOptions(b, selC) : [];
   const stop = (e) => e.stopPropagation();
@@ -28836,18 +29999,18 @@ function BattleScreen({ ctx, land, onEnd }) {
             c.revealed = true;
             c.\u4F0F\u305B\u5834 = null;
             c.\u4F0F\u5175\u7121\u7528 = true;
-            issueOrder(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
+            \u4E0B\u77E5(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
           } else if (\u3053\u3053\u3067\u7F6E\u3051\u308B) {
             c.ambush = true;
             c.revealed = false;
             c.\u4F0F\u305B\u5834 = null;
             c.\u4F0F\u5175\u7121\u7528 = false;
-            issueOrder(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
+            \u4E0B\u77E5(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
             b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C\u6728\u7ACB\u306B\u4F0F\u305B\u305F\u3002` });
           } else if (\u5834) {
             c.\u4F0F\u305B\u5834 = \u5834;
             c.\u4F0F\u5175\u7121\u7528 = false;
-            issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u5834.x, ty: \u5834.y });
+            \u4E0B\u77E5(b, c, { order: "\u79FB\u52D5", tx: \u5834.x, ty: \u5834.y });
             b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C\u6728\u7ACB\u3078\u56DE\u308A\u3001\u8EAB\u3092\u3072\u305D\u3081\u308B\u3002` });
           }
           force((n) => (n + 1) % 1e3);
@@ -28883,7 +30046,7 @@ function BattleScreen({ ctx, land, onEnd }) {
         patch = { order: "\u79FB\u52D5", tx: c.x + (c.x - t.x) / d * 170, ty: c.y + (c.y - t.y) / d * 170 };
       } else patch = { order: "\u79FB\u52D5", tx: c.x, ty: Math.min(FIELD.h - 40, c.y + 170) };
     } else patch = { order: "\u5F85\u6A5F", tx: c.x, ty: c.y };
-    issueOrder(b, c, patch);
+    \u4E0B\u77E5(b, c, patch);
     force((n) => (n + 1) % 1e3);
   };
   const \u72D9\u3063\u3066\u547D\u3058\u308B = (c, foe, o) => {
@@ -28904,7 +30067,7 @@ function BattleScreen({ ctx, land, onEnd }) {
       ty: foe.y + (c.y - foe.y) / d * \u9593
     };
     if (o === "\u7A81\u6483") patch.chargeT = c.formation === "\u92D2\u77E2" ? 26 : 16;
-    issueOrder(b, c, patch);
+    \u4E0B\u77E5(b, c, patch);
     notify(b, `${c.gen.name}\u968A\u304C${foe.gen.name}\u968A\u3078${o}\u3002`, "info");
     force((n) => (n + 1) % 1e3);
   };
@@ -28929,16 +30092,16 @@ function BattleScreen({ ctx, land, onEnd }) {
       const l = m.layers[gt.layer], a = axisOf(l, gt);
       const gp = gatePos(m, l, gt);
       if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * (FIELD.w / BASE.w)) {
-        issueOrder(b, c, { order: "\u5F85\u6A5F" });
+        \u4E0B\u77E5(b, c, { order: "\u5F85\u6A5F" });
         return;
       }
       const wp = routeToCastleGate(m, gt, c.x, c.y);
       if (wp.length) {
-        issueOrder(b, c, { order: "\u524D\u9032", tx: wp[0].x, ty: wp[0].y, keepPath: true });
+        \u4E0B\u77E5(b, c, { order: "\u524D\u9032", tx: wp[0].x, ty: wp[0].y, keepPath: true });
         c.wp = wp;
       } else {
         const p = fromUV(m, a, gateOpenU(gt), a.half + m.t + gt.masu + m.t + 30);
-        issueOrder(b, c, { order: "\u524D\u9032", tx: p.x, ty: p.y });
+        \u4E0B\u77E5(b, c, { order: "\u524D\u9032", tx: p.x, ty: p.y });
       }
     } else if (kind === "\u672C\u4E38\u3078") {
       c.siegeAuto = false;
@@ -28951,14 +30114,14 @@ function BattleScreen({ ctx, land, onEnd }) {
           fromUV(m, a2, hg.off, a2.half - 40),
           { x: m.cx, y: m.cy }
         ];
-        issueOrder(b, c, { order: "\u524D\u9032", tx: wp[0].x, ty: wp[0].y, keepPath: true });
+        \u4E0B\u77E5(b, c, { order: "\u524D\u9032", tx: wp[0].x, ty: wp[0].y, keepPath: true });
         c.wp = wp;
       } else castleGo(c, "\u9580\u3092\u7834\u308B");
     } else if (kind === "\u65BD\u8A2D\u3092\u5D29\u3059") {
       c.siegeAuto = false;
       const cand = m.fac.filter((f2) => f2.hp > 0 && (f2.layer === 0 ? m.layers[0].gates.some((x) => x.broken) : m.layers[f2.layer].gates.some((x) => x.broken) || m.layers[f2.layer - 1].gates.some((x) => x.broken)));
       const f = cand.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
-      if (f) issueOrder(b, c, { order: "\u524D\u9032", tx: f.x, ty: f.y });
+      if (f) \u4E0B\u77E5(b, c, { order: "\u524D\u9032", tx: f.x, ty: f.y });
       else castleGo(c, "\u9580\u3092\u7834\u308B");
     }
     force((n) => (n + 1) % 1e3);
@@ -28985,14 +30148,14 @@ function BattleScreen({ ctx, land, onEnd }) {
     const p2 = fromUV(m, a2, gt.off, a2.half + m.t + 90);
     c.sortie = true;
     c.holdGate = null;
-    issueOrder(b, c, { order: "\u79FB\u52D5", tx: p2.x, ty: p2.y });
+    \u4E0B\u77E5(b, c, { order: "\u79FB\u52D5", tx: p2.x, ty: p2.y });
     notify(b, `${c.gen.name}\u968A\u304C\u57CE\u9580\u3092\u958B\u3044\u3066\u8A0E\u3063\u3066\u51FA\u305F\u3002`, "info");
     force((n) => (n + 1) % 1e3);
   };
   const sortieBack = (c) => {
     if (!c || !b.map) return;
     c.sortie = false;
-    issueOrder(b, c, { order: "\u79FB\u52D5", tx: b.map.cx, ty: b.map.cy });
+    \u4E0B\u77E5(b, c, { order: "\u79FB\u52D5", tx: b.map.cx, ty: b.map.cy });
     force((n) => (n + 1) % 1e3);
   };
   const orderHint = {
@@ -29005,7 +30168,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     \u5F8C\u9000: "\u6575\u304B\u3089\u8DDD\u96E2\u3092\u53D6\u308A\u76F4\u3059\u3002",
     \u5F85\u6A5F: "\u305D\u306E\u5834\u3067\u968A\u5217\u3092\u6574\u3048\u308B\u3002"
   };
-  const panelBody = /* @__PURE__ */ React3.createElement(React3.Fragment, null, b.phase === "deploy" && /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", flexWrap: "wrap", width: "100%" } }, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.65, flex: 1 } }, ctx.mode === "castle" ? "\u5BC4\u305B\u624B\u306F\u5927\u624B\u53E3\u306E\u524D\u306B\u5E03\u9663\u3057\u3066\u3044\u307E\u3059\u3002\u9580\u306B\u53D6\u308A\u4ED8\u3051\u3070\u9580\u6249\u304C\u50B7\u307F\u3001\u7834\u308C\u3070\u6B21\u306E\u66F2\u8F2A\u3078\u9032\u3081\u307E\u3059\u3002\u672C\u4E38\u3092\u62BC\u3055\u3048\u308C\u3070\u57CE\u306F\u843D\u3061\u307E\u3059\u3002" : "\u968A\u3092\u9078\u3073\u3001\u81EA\u9663\uFF08\u9752\u3044\u5E2F\u306E\u4E2D\uFF09\u3092\u30BF\u30C3\u30D7\u304B\u30C9\u30E9\u30C3\u30B0\u3057\u3066\u5E03\u9663\u3002\u68EE\u306B\u7F6E\u3044\u305F\u968A\u306F\u4F0F\u5175\u306B\u3067\u304D\u307E\u3059\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u99D2\uFF1D10\u4EBA\u3002", /* @__PURE__ */ React3.createElement("b", { style: { color: ctx.pColor } }, "\u85CD\uFF1D\u81EA\u8ECD"), "\uFF0F", /* @__PURE__ */ React3.createElement("b", { style: { color: ctx.eColor } }, "\u6731\uFF1D\u6575\u8ECD"), "\u3001", /* @__PURE__ */ React3.createElement("b", null, "\u660E\u308B\u304F\u767D\u7E01\uFF1D\u76F4\u5C5E"), "\uFF0F", /* @__PURE__ */ React3.createElement("b", null, "\u6697\u304F\u9ED2\u7E01\uFF1D\u5730\u57DF"), "\u3001", /* @__PURE__ */ React3.createElement("b", null, "\u5F62\uFF1D\u5175\u79D1"), "\uFF08\u69CD\u306F\u4E09\u89D2\u3001\u9A0E\u99AC\u306F\u7D30\u9577\u3001\u5F13\u306F\u80CC\u304C\u51F9\u3080\u3001\u9244\u7832\u306F\u4E2D\u592E\u306B\u70B9\uFF09\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u6700\u5F8C\u5C3E\u306E\u6BB5\u306F\u4E88\u5099\u968A\u3067\u3001\u524D\u7DDA\u304C\u8584\u304F\u306A\u308B\u307E\u3067\u524D\u3078\u51FA\u307E\u305B\u3093\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u5929\u5019\u306F", /* @__PURE__ */ React3.createElement("b", null, b.weather), "\uFF1A", WEATHER[b.weather].note), selC && /* @__PURE__ */ React3.createElement(React3.Fragment, null, isCastle && selC.side !== b.attacker && (() => {
+  const panelBody = /* @__PURE__ */ React3.createElement(React3.Fragment, null, b.phase === "deploy" && /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", flexWrap: "wrap", width: "100%" } }, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.65, flex: 1 } }, b.\u7B4B\u66F8\u304D ? "\u5E03\u9663\u306F\u5F53\u6642\u306E\u307E\u307E\u3067\u3059\u3002\u968A\u3092\u9078\u3073\u3001\u9663\u5F62\u3068\u5411\u304D\u3060\u3051\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002\u9EC4\u306E\u968A\u306F\u53BB\u5C31\u304C\u5B9A\u307E\u3063\u3066\u3044\u307E\u305B\u3093\u2015\u2015\u6483\u3061\u3082\u6483\u305F\u308C\u3082\u305B\u305A\u3001\u6761\u4EF6\u304C\u63C3\u3046\u307E\u3067\u52D5\u304D\u307E\u305B\u3093\u3002" : ctx.mode === "castle" ? "\u5BC4\u305B\u624B\u306F\u5927\u624B\u53E3\u306E\u524D\u306B\u5E03\u9663\u3057\u3066\u3044\u307E\u3059\u3002\u9580\u306B\u53D6\u308A\u4ED8\u3051\u3070\u9580\u6249\u304C\u50B7\u307F\u3001\u7834\u308C\u3070\u6B21\u306E\u66F2\u8F2A\u3078\u9032\u3081\u307E\u3059\u3002\u672C\u4E38\u3092\u62BC\u3055\u3048\u308C\u3070\u57CE\u306F\u843D\u3061\u307E\u3059\u3002" : "\u968A\u3092\u9078\u3073\u3001\u81EA\u9663\uFF08\u9752\u3044\u5E2F\u306E\u4E2D\uFF09\u3092\u30BF\u30C3\u30D7\u304B\u30C9\u30E9\u30C3\u30B0\u3057\u3066\u5E03\u9663\u3002\u68EE\u306B\u7F6E\u3044\u305F\u968A\u306F\u4F0F\u5175\u306B\u3067\u304D\u307E\u3059\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u99D2\uFF1D10\u4EBA\u3002", /* @__PURE__ */ React3.createElement("b", { style: { color: ctx.pColor } }, "\u85CD\uFF1D\u81EA\u8ECD"), "\uFF0F", /* @__PURE__ */ React3.createElement("b", { style: { color: ctx.eColor } }, "\u6731\uFF1D\u6575\u8ECD"), b.\u7B4B\u66F8\u304D ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\uFF0F", /* @__PURE__ */ React3.createElement("b", { style: { color: "#B08A10" } }, "\u9EC4\uFF1D\u53BB\u5C31\u672A\u5B9A")) : null, "\u3001", /* @__PURE__ */ React3.createElement("b", null, "\u660E\u308B\u304F\u767D\u7E01\uFF1D\u76F4\u5C5E"), "\uFF0F", /* @__PURE__ */ React3.createElement("b", null, "\u6697\u304F\u9ED2\u7E01\uFF1D\u5730\u57DF"), "\u3001", /* @__PURE__ */ React3.createElement("b", null, "\u5F62\uFF1D\u5175\u79D1"), "\uFF08\u69CD\u306F\u4E09\u89D2\u3001\u9A0E\u99AC\u306F\u7D30\u9577\u3001\u5F13\u306F\u80CC\u304C\u51F9\u3080\u3001\u9244\u7832\u306F\u4E2D\u592E\u306B\u70B9\uFF09\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u6700\u5F8C\u5C3E\u306E\u6BB5\u306F\u4E88\u5099\u968A\u3067\u3001\u524D\u7DDA\u304C\u8584\u304F\u306A\u308B\u307E\u3067\u524D\u3078\u51FA\u307E\u305B\u3093\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u5929\u5019\u306F", /* @__PURE__ */ React3.createElement("b", null, b.weather), "\uFF1A", WEATHER[b.weather].note), selC && /* @__PURE__ */ React3.createElement(React3.Fragment, null, isCastle && selC.side !== b.attacker && (() => {
     const MAPX = MAP;
     if (!MAPX) return null;
     const held = selC.holdGate;
@@ -29061,9 +30224,9 @@ function BattleScreen({ ctx, land, onEnd }) {
     b.\u59D4\u306D\u305F = true;
     force((n) => (n + 1) % 1e3);
   } }, "\u5168\u8ECD\u59D4\u4EFB"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => {
-    for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) {
+    for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed && !c.\u65E5\u548C\u898B && !\u6307\u56F3\u306E\u7E1B\u308A(b, c)) {
       c.auto = false;
-      issueOrder(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
+      \u4E0B\u77E5(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
     }
     force((n) => (n + 1) % 1e3);
   } }, "\u5168\u8ECD\u59D4\u4EFB\u89E3\u9664"), /* @__PURE__ */ React3.createElement(
@@ -29098,8 +30261,8 @@ function BattleScreen({ ctx, land, onEnd }) {
     const foe = foeSel && b.corps.find((c) => c.id === foeSel);
     if (!foe || foe.dead || foe.destroyed || !foe.seen) return null;
     const coh = Math.round(foe.squads.reduce((a, q) => a + q.cohesion, 0) / Math.max(1, foe.squads.length));
-    const \u5175\u79D1 = { yari: "\u69CD", yumi: "\u5F13", teppo: "\u9244\u7832", kiba: "\u9A0E\u99AC" };
-    const \u5185\u8A33 = ["kiba", "teppo", "yumi", "yari"].map((k) => [\u5175\u79D1[k], foe.squads.filter((q) => q.type === k).reduce((a, q) => a + q.men, 0)]).filter(([, v]) => v > 0).map(([k, v]) => `${k}${fmt(Math.round(v))}`).join("\u30FB");
+    const \u5175\u79D12 = { yari: "\u69CD", yumi: "\u5F13", teppo: "\u9244\u7832", kiba: "\u9A0E\u99AC" };
+    const \u5185\u8A33 = ["kiba", "teppo", "yumi", "yari"].map((k) => [\u5175\u79D12[k], foe.squads.filter((q) => q.type === k).reduce((a, q) => a + q.men, 0)]).filter(([, v]) => v > 0).map(([k, v]) => `${k}${fmt(Math.round(v))}`).join("\u30FB");
     return /* @__PURE__ */ React3.createElement("div", { style: { borderTop: `2px solid ${ctx.eColor}`, paddingTop: 6, marginTop: 4 } }, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 10.5, letterSpacing: ".14em", color: ctx.eColor } }, "\u6575\u306E\u968A"), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { fontSize: 15, flex: 1 } }, foe.gen.name, "\u968A"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", style: { padding: "1px 8px" }, onClick: () => setFoeSel(null) }, "\u9589\u3058\u308B")), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6 } }, fmt(corpsMen(foe)), "\u4EBA\uFF0F\u58EB\u6C17", Math.round(foe.morale), "\uFF0F\u9663\u5F62", coh, "\uFF0F\u75B2\u52B4", Math.round(foe.fatigue), "\uFF0F", foe.formation || "\u2015", "\uFF0F", TERRAIN[foe.\u5730 || terrainAt(foe.x, foe.y)].label, foe.routed ? "\uFF0F\u6557\u8D70\u4E2D" : "", foe.withdraw ? "\uFF0F\u9000\u5374\u4E2D" : "", foe.chargeT > 0 ? "\uFF0F\u7A81\u6483\u4E2D" : "", foe.squads.some((q) => q.engaged) ? "\uFF0F\u4EA4\u6226\u4E2D" : ""), /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.text, lineHeight: 1.6 } }, foe.gen.age ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\u9F62 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.age), "\u3000") : null, "\u7D71\u7387 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.lead), "\u3000\u6B66\u52C7 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.valor), "\u3000\u77E5\u7565 ", /* @__PURE__ */ React3.createElement("b", null, foe.gen.wit), foe.gen.lord ? /* @__PURE__ */ React3.createElement("span", { style: { color: ctx.eColor } }, "\u3000\u3010\u7DCF\u5927\u5C06\u3011") : null), \u5185\u8A33 && /* @__PURE__ */ React3.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim } }, "\u5175\u79D1\u3000", \u5185\u8A33), foe.\u5185\u5FDC && foe.\u5185\u5FDC\u306E\u4E3B === "P" && !foe.\u5BDD\u8FD4\u308A && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement(
       "button",
       {
@@ -29153,7 +30316,7 @@ function BattleScreen({ ctx, land, onEnd }) {
       style: { width: "100%", marginBottom: 5 },
       onClick: () => {
         selC.auto = !selC.auto;
-        if (!selC.auto) issueOrder(b, selC, { order: "\u5F85\u6A5F", tx: selC.x, ty: selC.y });
+        if (!selC.auto) \u4E0B\u77E5(b, selC, { order: "\u5F85\u6A5F", tx: selC.x, ty: selC.y });
         force((n) => (n + 1) % 1e3);
       }
     },
@@ -29303,7 +30466,47 @@ function BattleScreen({ ctx, land, onEnd }) {
       lineHeight: 1.9
     } }, \u5168 ? "\u4E00\u6589\u306B\u9000\u304D\u9266\u3092\u9CF4\u3089\u3059\u306E\u3067\u7D71\u5236\u306F\u4FDD\u305F\u308C\u3001\u8FFD\u3044\u8A0E\u3061\u306E\u640D\u306F\u5C0F\u3055\u304F\u6E08\u307F\u307E\u3059\uFF08\u69CD\u3092\u5408\u308F\u305B\u3066\u3044\u308B\u968A\u306F\u5175\u306E\u56DB\u5206\u307B\u3069\u3092\u5931\u3044\u307E\u3059\uFF09\u3002\u305F\u3060\u3057\u57CE\u306F\u843D\u3061\u305A\u3001\u5175\u3068\u5175\u7CE7\u306F\u8CBB\u3048\u307E\u3059\u3002" : "\u4E00\u968A\u3060\u3051\u69CD\u3092\u5F15\u304F\u306E\u3067\u3001\u80CC\u3092\u8FFD\u308F\u308C\u307E\u3059\uFF08\u69CD\u3092\u5408\u308F\u305B\u3066\u3044\u308C\u3070\u5175\u306E\u4E03\u5206\u307B\u3069\u3092\u5931\u3044\u3001\u58EB\u6C17\u3068\u968A\u5217\u3082\u5D29\u308C\u307E\u3059\uFF09\u3002\u6B8B\u308B\u968A\u3060\u3051\u3067\u6226\u3046\u3053\u3068\u306B\u306A\u308A\u307E\u3059\u3002"), /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", gap: 9 } }, /* @__PURE__ */ React3.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => set\u9000\u304D\u78BA\u8A8D(null) }, "\u53D6\u308A\u3084\u3081\u308B"), /* @__PURE__ */ React3.createElement("button", { className: "btn dark", style: { flex: 1 }, onClick: \u9000\u304D\u5B9F\u884C }, \u5168 ? "\u627F\u77E5\u3002\u5168\u8ECD\u9000\u304F" : "\u627F\u77E5\u3002\u3053\u306E\u968A\u3092\u9000\u304B\u305B\u308B"))));
   })();
-  return /* @__PURE__ */ React3.createElement("div", { className: "sp", style: { height: "100dvh", background: U.paper, overscrollBehavior: "none" }, onMouseDown: stop, onMouseUp: stop }, \u9000\u304D\u306E\u672D, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 } }, !wide && /* @__PURE__ */ React3.createElement("div", { className: "bar bt" }, /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.pName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(pMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u58EB\u6C17 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, pMor)), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { color: U.dim } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.eName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(eMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, ctx.place, /城下$|の囲み$/.test(ctx.place || "") ? "" : ctx.mode === "castle" ? "\u57CE\u653B\u3081" : ctx.mode === "clash" ? "\u306E\u91CE\u6226" : "\u4E0B", "\u30FB", b.weather), ctx.mode === "castle" && b.map && b.map.gates.map((gt) => /* @__PURE__ */ React3.createElement("span", { key: gt.key, style: { fontSize: 11, color: U.dim } }, gt.key, /* @__PURE__ */ React3.createElement("b", { style: { color: gt.broken ? "#B0483C" : gt.hp / gt.max > 0.4 ? U.text : "#C89A3A" } }, gt.broken ? "\u7834" : `${Math.round(gt.hp / gt.max * 100)}%`))), ctx.mode === "castle" && b.map && b.press != null && /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 11, color: U.dim } }, "\u57CE\u306E\u50BE\u304D", /* @__PURE__ */ React3.createElement("b", { style: { color: b.press > 0.6 ? "#B0483C" : U.text } }, Math.round(b.press * 100), "%")), /* @__PURE__ */ React3.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React3.createElement("span", { className: "kv num" }, Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF0F\u65E5\u6CA1\u307E\u3067", Math.max(0, Math.ceil((b.dusk - b.t) / 60)), "\u5206")), phase === "fight" && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0 ? "on" : ""}`, onClick: () => setSpeed(0) }, "\u505C\u6B62"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.12 ? "on" : ""}`, onClick: () => setSpeed(0.12) }, "\u5FAE\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.3 ? "on" : ""}`, onClick: () => setSpeed(0.3) }, "\u4F4E\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.6 ? "on" : ""}`, onClick: () => setSpeed(0.6) }, "\u901A\u5E38"))), /* @__PURE__ */ React3.createElement("div", { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" } }, /* @__PURE__ */ React3.createElement(
+  const \u7B4B2 = b.\u7B4B\u66F8\u304D;
+  const \u554F\u3044\u306E\u672D = \u7B4B2 && \u7B4B2.\u554F\u3044 && /* @__PURE__ */ React3.createElement("div", { className: "modal", onMouseDown: stop, onMouseUp: stop }, /* @__PURE__ */ React3.createElement("div", { className: "card", style: { maxWidth: 460 } }, /* @__PURE__ */ React3.createElement("div", { className: "mn", style: { fontSize: 19, marginBottom: 8 } }, "\u597D\u6A5F"), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 13, lineHeight: 2 } }, \u7B4B2.\u554F\u3044.\u6587), /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", gap: 8, marginTop: 14 } }, /* @__PURE__ */ React3.createElement(
+    "button",
+    {
+      className: "btn dark",
+      style: { flex: 1, padding: 11 },
+      onClick: () => {
+        \u5408\u6226\u306E\u554F\u3044\u306B\u7B54\u3048\u308B(b, true);
+        setSpeed(speedRef.current || 1);
+        \u554F\u3044\u76F4\u3057((n) => n + 1);
+      }
+    },
+    \u7B4B2.\u554F\u3044.\u8AFE\u6587
+  ), /* @__PURE__ */ React3.createElement(
+    "button",
+    {
+      className: "btn",
+      style: { flex: 1, padding: 11 },
+      onClick: () => {
+        \u5408\u6226\u306E\u554F\u3044\u306B\u7B54\u3048\u308B(b, false);
+        \u554F\u3044\u76F4\u3057((n) => n + 1);
+      }
+    },
+    \u7B4B2.\u554F\u3044.\u5426\u6587
+  ))));
+  const \u548E\u3081\u306E\u5E2F = \u548E\u3081 && /* @__PURE__ */ React3.createElement("div", { style: {
+    position: "absolute",
+    left: "50%",
+    bottom: 92,
+    transform: "translateX(-50%)",
+    background: "rgba(44,40,32,0.92)",
+    color: "#F6F2E6",
+    padding: "9px 16px",
+    borderRadius: 7,
+    fontSize: 13,
+    zIndex: 60,
+    pointerEvents: "none",
+    maxWidth: "86vw",
+    textAlign: "center"
+  } }, \u548E\u3081);
+  return /* @__PURE__ */ React3.createElement("div", { className: "sp", style: { height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }, onMouseDown: stop, onMouseUp: stop }, \u9000\u304D\u306E\u672D, \u554F\u3044\u306E\u672D, \u548E\u3081\u306E\u5E2F, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 } }, !wide && /* @__PURE__ */ React3.createElement("div", { className: "bar bt" }, /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.pName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(pMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u58EB\u6C17 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, pMor)), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { color: U.dim } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.eName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(eMen))), \u65E5\u548C\u898B\u306E\u5175 > 0 && /* @__PURE__ */ React3.createElement("span", { className: "kv", style: { color: "#8A6A10" } }, "\u53BB\u5C31\u672A\u5B9A ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(\u65E5\u548C\u898B\u306E\u5175))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, ctx.place, /城下$|の囲み$/.test(ctx.place || "") ? "" : ctx.mode === "castle" ? "\u57CE\u653B\u3081" : ctx.mode === "clash" ? "\u306E\u91CE\u6226" : "\u4E0B", "\u30FB", b.weather), ctx.mode === "castle" && b.map && b.map.gates.map((gt) => /* @__PURE__ */ React3.createElement("span", { key: gt.key, style: { fontSize: 11, color: U.dim } }, gt.key, /* @__PURE__ */ React3.createElement("b", { style: { color: gt.broken ? "#B0483C" : gt.hp / gt.max > 0.4 ? U.text : "#C89A3A" } }, gt.broken ? "\u7834" : `${Math.round(gt.hp / gt.max * 100)}%`))), ctx.mode === "castle" && b.map && b.press != null && /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 11, color: U.dim } }, "\u57CE\u306E\u50BE\u304D", /* @__PURE__ */ React3.createElement("b", { style: { color: b.press > 0.6 ? "#B0483C" : U.text } }, Math.round(b.press * 100), "%")), /* @__PURE__ */ React3.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React3.createElement("span", { className: "kv num" }, Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF0F\u65E5\u6CA1\u307E\u3067", Math.max(0, Math.ceil((b.dusk - b.t) / 60)), "\u5206")), phase === "fight" && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0 ? "on" : ""}`, onClick: () => setSpeed(0) }, "\u505C\u6B62"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.12 ? "on" : ""}`, onClick: () => setSpeed(0.12) }, "\u5FAE\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.3 ? "on" : ""}`, onClick: () => setSpeed(0.3) }, "\u4F4E\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.6 ? "on" : ""}`, onClick: () => setSpeed(0.6) }, "\u901A\u5E38"))), /* @__PURE__ */ React3.createElement("div", { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" } }, /* @__PURE__ */ React3.createElement(
     "div",
     {
       ref: wrapRef,
@@ -29576,13 +30779,13 @@ function \u4E26\u3079\u76F4\u3059(f, \u7F6E\u304F) {
 }
 var fleetShips = (f) => f.ships.filter((s2) => !s2.sunk).length;
 var fleetCrew = (f) => f.ships.reduce((a, s2) => s2.sunk ? a : a + s2.crew, 0);
-function createSeaBattle(P, E, attacker, ctx) {
+function createSeaBattle(P2, E, attacker, ctx) {
   const b = {
     t: 0,
     phase: "deploy",
-    fleets: [...P, ...E],
+    fleets: [...P2, ...E],
     attacker,
-    initial: { P: P.reduce((a, f) => a + fleetShips(f), 0), E: E.reduce((a, f) => a + fleetShips(f), 0) },
+    initial: { P: P2.reduce((a, f) => a + fleetShips(f), 0), E: E.reduce((a, f) => a + fleetShips(f), 0) },
     log: [],
     result: null,
     fx: [],
@@ -30523,10 +31726,10 @@ function \u6D77\u6226\u3092\u4ED5\u7ACB\u3066\u308B(s2, army, inter, \u5730\u540
   layoutSea((army.id || "x").split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0, army.men, \u7DCF\u8258);
   const \u5C06 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean);
   const \u982D2 = \u5C06.length ? \u5C06 : [{ id: "x", name: "\u8239\u624B\u8846", lead: 55, valor: 55, wit: 55 }];
-  const P = [], E = [];
+  const P2 = [], E = [];
   const \u6211\u5272 = \u5206\u3051\u308B(inter.mine.\u5185\u8A33, Math.min(3, \u982D2.length));
   \u6211\u5272.forEach((n, i) => {
-    P.push(makeFleet(
+    P2.push(makeFleet(
       "P",
       \u982D2[i] || \u982D2[0],
       0,
@@ -30554,7 +31757,7 @@ function \u6D77\u6226\u3092\u4ED5\u7ACB\u3066\u308B(s2, army, inter, \u5730\u540
       n
     ));
   });
-  const b = createSeaBattle(P, E, "P", {});
+  const b = createSeaBattle(P2, E, "P", {});
   return {
     b,
     place: \u5730\u540D2,
@@ -30563,7 +31766,7 @@ function \u6D77\u6226\u3092\u4ED5\u7ACB\u3066\u308B(s2, army, inter, \u5730\u540
     pName,
     eName,
     \u7ACB\u3066: { mine: inter.mine, foe: inter.foe },
-    \u521D\u3081: { P: P.reduce((a, f) => a + fleetShips(f), 0), E: E.reduce((a, f) => a + fleetShips(f), 0) }
+    \u521D\u3081: { P: P2.reduce((a, f) => a + fleetShips(f), 0), E: E.reduce((a, f) => a + fleetShips(f), 0) }
   };
 }
 
@@ -31069,8 +32272,8 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
       padding: "4px 0"
     } }, /* @__PURE__ */ React5.createElement("span", null, "\u3010\u6355\u865C\u3011", x.name), /* @__PURE__ */ React5.createElement("span", { className: "num" }, x.age, "\u6B73\uFF0F\u7D71", x.lead, "\uFF0F\u6B66", x.valor, "\uFF0F\u77E5", x.wit, "\uFF0F\u653F", x.gov, "\u65E7\u4E3B\u3078\u306E\u5FE0\u8AA0 ", \u5FE0\u8AA0(x)))), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 11, color: U.dim, marginTop: 4 } }, "\u6355\u865C\u306F\u57CE\u4E3B\u306B\u3082\u8912\u8CDE\u306B\u3082\u4E0E\u308C\u306A\u3044\u3002\u51E6\u9047\u306F\u5916\u4EA4\u306E\u300C\u6355\u865C\u300D\u3067\u6C7A\u3081\u308B\u3002"))), tab === "\u5916\u4EA4" && /* @__PURE__ */ React5.createElement(React5.Fragment, null, /* @__PURE__ */ React5.createElement("select", { className: "sel", style: { width: "100%", marginBottom: 8 }, value: dt, onChange: (e) => setDiploTarget(e.target.value) }, foeFactions.map((x) => /* @__PURE__ */ React5.createElement("option", { key: x.id, value: x.id }, x.full))), (() => {
       const \u4E3B = \u4E3B\u5BB6(g, g.player, dt);
-      const \u5411\u304D = \u4E3B == null ? "" : \u4E3B === g.player ? "\uFF08\u3053\u3061\u3089\u304C\u4E0A\uFF09" : "\uFF08\u3053\u3061\u3089\u304C\u4E0B\uFF09";
-      return /* @__PURE__ */ React5.createElement("div", { className: "row" }, /* @__PURE__ */ React5.createElement("span", null, "\u73FE\u5728\u306E\u95A2\u4FC2"), /* @__PURE__ */ React5.createElement("span", { className: "v" }, rel.state, \u5411\u304D, rel.until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, rel.until.y, rel.until.m)}\u304B\u6708\uFF09` : ""));
+      const \u5411\u304D2 = \u4E3B == null ? "" : \u4E3B === g.player ? "\uFF08\u3053\u3061\u3089\u304C\u4E0A\uFF09" : "\uFF08\u3053\u3061\u3089\u304C\u4E0B\uFF09";
+      return /* @__PURE__ */ React5.createElement("div", { className: "row" }, /* @__PURE__ */ React5.createElement("span", null, "\u73FE\u5728\u306E\u95A2\u4FC2"), /* @__PURE__ */ React5.createElement("span", { className: "v" }, rel.state, \u5411\u304D2, rel.until ? `\uFF08\u6B8B${monthsBetween(g.year, g.month, rel.until.y, rel.until.m)}\u304B\u6708\uFF09` : ""));
     })(), /* @__PURE__ */ React5.createElement("div", { className: "row" }, /* @__PURE__ */ React5.createElement("span", null, "\u4FE1\u7528"), /* @__PURE__ */ React5.createElement("span", { className: "v" }, Math.round(rel.trust), " / 100")), /* @__PURE__ */ React5.createElement("div", { className: "meter" }, /* @__PURE__ */ React5.createElement("i", { style: { width: `${rel.trust}%`, background: "#4A6E8A" } })), (() => {
       const \u79C1 = diploStat(g, g.player), \u6575 = diploStat(g, dt);
       const \u6BD4 = \u79C1.koku > 0 ? \u6575.koku / \u79C1.koku : 9;
@@ -31476,6 +32679,7 @@ var \u8AAC\u660E\u66F8 = [
           ["chi-hayashi", "\u6797", "\u8DB3\u3007.\u516B\u4E8C\uFF0F\u898B\u901A\u3057\u767E\u516D\u5341\u4E94\u3002\u8EFD\u304F\u8EAB\u3092\u96A0\u305B\u308B"],
           ["chi-mori", "\u68EE", "\u8DB3\u3007.\u516D\u4E94\uFF0F\u898B\u901A\u3057\u4E5D\u5341\u4E94\uFF0F\u6226\u3046\u529B\u3007.\u516B\u4E94\u3002\u4F0F\u5175\u3092\u7F6E\u3051\u308B\u306E\u306F\u3053\u3053\uFF08\u3068\u6797\u30FB\u96C6\u843D\uFF09"],
           ["chi-oka", "\u4E18", "\u8DB3\u3007.\u4E03\uFF0F\u6226\u3046\u529B\u4E00.\u4E00\u4E94\uFF0F\u898B\u901A\u3057\u4E09\u516D\u3007\u3002\u767B\u308C\u3070\u5F37\u3044\u3002\u907F\u3051\u308B\u3082\u306E\u3067\u306F\u306A\u304F\u3001\u53D6\u308B\u3082\u306E"],
+          ["chi-oka", "\u5C71", "\u8DB3\u3007.\u56DB\u4E8C\uFF0F\u6226\u3046\u529B\u4E00.\u4E8C\u516B\uFF0F\u898B\u901A\u3057\u56DB\u4E03\u3007\uFF0F\u9A0E\u99AC\u3007.\u4E09\u4E94\u3002\u4E18\u306E\u4E00\u6BB5\u4E0A\u3002\u767B\u308B\u306E\u306F\u96E3\u5100\u3060\u304C\u3001\u4E0A\u3092\u53D6\u308C\u3070\u5F37\u3044"],
           ["chi-shitsuchi", "\u6E7F\u5730", "\u8DB3\u3007.\u4E94\uFF0F\u6226\u3046\u529B\u3007.\u516B\u3002\u8E0F\u307F\u8FBC\u3081\u3070\u8EAB\u52D5\u304D\u304C\u53D6\u308C\u306A\u3044"],
           ["chi-shuraku", "\u96C6\u843D", "\u8DB3\u3007.\u4E03\u516B\uFF0F\u898B\u901A\u3057\u767E\u4E09\u5341\u3002\u57A3\u3068\u5C4B\u6839\u306B\u7D1B\u308C\u308B"],
           ["chi-hashi", "\u6A4B", "\u8DB3\u3007.\u4E5D\u4E94\u3002\u6DF5\u306F\u8DB3\u3007.\u4E00\u30FB\u6226\u3046\u529B\u3007.\u4E94\u3067\u3001\u6E21\u308C\u3070\u307E\u305A\u8CA0\u3051\u308B\u3002\u6A4B\u306F\u72ED\u3044\u304C\u78BA\u304B\u306A\u9053"],
@@ -31485,6 +32689,8 @@ var \u8AAC\u660E\u66F8 = [
           "\u59D4\u4EFB\u3057\u305F\u968A\u306F\u3001\u6A4B\u304B\u6D45\u702C\u3092\u9078\u3093\u3067\u6E21\u308A\u3001\u68EE\u30FB\u6797\u30FB\u6E7F\u5730\u30FB\u96C6\u843D\u3092\u907F\u3051\u3066\u9032\u3080\u3002\u4E18\u306F\u907F\u3051\u308B\u3082\u306E\u3067\u306F\u306A\u304F\u3001\u53D6\u308B\u3082\u306E\u3067\u3042\u308B\u3002\u53D7\u3051\u624B\u306F\u8FD1\u304F\u306E\u4E18\u3078\u767B\u3063\u3066\u5099\u3048\u308B\u3002\u305F\u3060\u3057\u5175\u3067\u512A\u308B\u53D7\u3051\u624B\u306F\u3001\u4E18\u306B\u62E0\u3089\u305A\u62BC\u3057\u51FA\u308B\u3002",
           "\u77E5\u7565\u516B\u5341\u3092\u8D85\u3048\u308B\u5C06\u306F\u6C34\u99B4\u308C\u3066\u304A\u308A\u3001\u6DF5\u3067\u3082\u8DB3\u304C\u3055\u307B\u3069\u920D\u3089\u306A\u3044\uFF08\u6226\u3046\u529B\u306F\u843D\u3061\u305F\u307E\u307E\u3067\u3042\u308B\uFF09\u3002",
           "\u91CE\u306B\u306F\u8857\u9053\u304C\u4E00\u672C\u901A\u3063\u3066\u3044\u308B\u3002\u8DB3\u304C\u50C5\u304B\u306B\u901F\u304F\u3001\u5DDD\u304C\u3042\u308C\u3070\u6A4B\u3067\u6E21\u308B\u3002\u968A\u306F\u3053\u306E\u9053\u3092\u597D\u3093\u3067\u9032\u3080\u3002",
+          "\u5C71\u8D8A\u3048\u306E\u8857\u9053\uFF08\u5C71\u9053\u30FB\u96E3\u6240\uFF09\u3067\u6226\u3048\u3070\u3001\u91CE\u306B\u5C71\u304C\u7ACB\u3064\u3002\u5C71\u306F\u4E18\u3088\u308A\u305A\u3063\u3068\u5927\u304D\u304F\u3001\u767B\u308C\u3070\u8DB3\u304C\u534A\u3070\u306B\u843D\u3061\u3001\u968A\u5217\u3082\u5D29\u308C\u3001\u9A0E\u99AC\u306F\u307B\u3068\u3093\u3069\u7528\u3092\u306A\u3055\u306A\u3044\u3002\u305D\u306E\u304B\u308F\u308A\u898B\u901A\u3057\u306F\u91CE\u306E\u4E8C\u500D\u8FD1\u304F\u3001\u4E0A\u304B\u3089\u5F53\u305F\u308B\u5F37\u307F\u306F\u4E18\u3088\u308A\u5927\u304D\u3044\u3002\u9053\u3055\u304C\u3057\u306F\u5C71\u3092\u5F37\u304F\u907F\u3051\u308B\u2015\u2015\u8D8A\u3048\u308B\u306E\u306F\u3001\u8FC2\u56DE\u306E\u307B\u3046\u304C\u306A\u304A\u9060\u3044\u3068\u304D\u3060\u3051\u3067\u3042\u308B\u3002",
+          "\u5C71\u306F\u5411\u3053\u3046\u5074\u3092\u96A0\u3059\u3002\u5C71\u306E\u9670\u3078\u56DE\u3063\u305F\u968A\u306F\u3001\u9E93\u306E\u6575\u304B\u3089\u306F\u898B\u3048\u306A\u3044\u3002\u305F\u3060\u3057\u5C71\u306E\u4E0A\u306B\u7ACB\u3063\u3066\u3044\u308C\u3070\u3001\u96A0\u3055\u308C\u308B\u3053\u3068\u306F\u306A\u3044\u2015\u2015\u898B\u4E0B\u308D\u3057\u3066\u3044\u308B\u304B\u3089\u3067\u3042\u308B\u3002",
           "\u6DF5\uFF08\u6DF1\u3044\u5DDD\uFF09\u3078\u306F\u3001\u6C7A\u3081\u3066\u304B\u3089\u3067\u306A\u3051\u308C\u3070\u8E0F\u307F\u8FBC\u307E\u306A\u3044\u3002\u62BC\u3057\u6E21\u308B\u3068\u6C7A\u3081\u305F\u968A\u3001\u5D29\u308C\u3066\u9003\u3052\u308B\u5175\u3001\u3059\u3067\u306B\u6C34\u306E\u4E2D\u3067\u5CB8\u3078\u4E0A\u304C\u308D\u3046\u3068\u3059\u308B\u7D44\u3060\u3051\u304C\u6C34\u3092\u8E0F\u3080\u3002\u6E21\u308A\u5834\u304C\u6575\u306B\u56FA\u3081\u3089\u308C\u3066\u3044\u308C\u3070\u3001\u77E5\u7565\u306E\u5C06\u306F\u6DF5\u3092\u62BC\u3057\u6E21\u3063\u3066\u56DE\u308A\u8FBC\u3080\u2015\u2015\u80CC\u5F8C\u3092\u885D\u304F\u305F\u3081\u306E\u6E21\u6CB3\u3067\u3042\u308B\u3002"
         ]
       },
@@ -31842,6 +33048,46 @@ var \u8AAC\u660E\u66F8 = [
           "\u5408\u6226\u4E2D\u3082\u968A\u3092\u30BF\u30C3\u30D7\u3059\u308C\u3070\u3001\u305D\u306E\u968A\u306E\u69D8\u5B50\uFF08\u5175\u30FB\u58EB\u6C17\u30FB\u968A\u5217\u30FB\u75B2\u52B4\u30FB\u5730\u5F62\uFF09\u304C\u8AAD\u3081\u308B",
           "\u6575\u306E\u968A\u3092\u30BF\u30C3\u30D7\u3059\u308C\u3070\u3001\u898B\u3048\u3066\u3044\u308B\u7BC4\u56F2\u3067\u76F8\u624B\u306E\u69D8\u5B50\u3082\u8AAD\u3081\u308B",
           "\u300C\u6226\u56FD\u8A18\u300D\u306B\u306F\u3001\u3053\u308C\u307E\u3067\u306B\u8D77\u304D\u305F\u51FA\u6765\u4E8B\u304C\u6B8B\u308B"
+        ]
+      }
+    ]
+  },
+  {
+    \u984C: "\u5408\u6226\uFF08\u95A2\u30F6\u539F\uFF09",
+    \u7BC0: [
+      {
+        \u898B\u51FA\u3057: "\u6C7A\u307E\u3063\u305F\u4E00\u6226\u3060\u3051\u3092\u6226\u3046",
+        \u6587: [
+          "\u984C\u306E\u753B\u9762\u304B\u3089\u300C\u5408\u6226\u300D\u306B\u5165\u308B\u3068\u3001\u56FD\u3092\u6CBB\u3081\u305A\u306B\u3001\u6C7A\u307E\u3063\u305F\u4E00\u6226\u3060\u3051\u3092\u6226\u3048\u308B\u3002\u3044\u307E\u3042\u308B\u306E\u306F\u95A2\u30F6\u539F\u306E\u6226\u3044\uFF08\u6176\u9577\u4E94\u5E74\u4E5D\u6708\u5341\u4E94\u65E5\uFF09\u3067\u3042\u308B\u3002\u5730\u5F62\u3082\u5E03\u9663\u3082\u5F53\u6642\u306E\u5E03\u9663\u56F3\u304B\u3089\u5199\u3057\u53D6\u3063\u3066\u3042\u308A\u3001\u516D\u5341\u4E09\u968A\u30FB\u5341\u4E03\u4E07\u4E94\u5343\u4F59\u304C\u76E4\u306B\u4E26\u3076\u3002",
+          "\u897F\u8ECD\u3067\u3082\u6771\u8ECD\u3067\u3082\u59CB\u3081\u3089\u308C\u308B\u3002\u9078\u3093\u3060\u5074\u304C\u9752\u3001\u6575\u304C\u8D64\u3067\u3042\u308B\u3002\u8A18\u9332\u306F\u6B8B\u3089\u306A\u3044\u2015\u2015\u4E00\u56DE\u3067\u904A\u3073\u304D\u308B\u3002\u305F\u3060\u3057\u3001\u3046\u3063\u304B\u308A\u9801\u3092\u9589\u3058\u305F\u3068\u304D\u306E\u305F\u3081\u306B\u63A7\u3048\u3092\u3072\u3068\u3064\u3060\u3051\u53D6\u3063\u3066\u3042\u308A\u3001\u6B21\u306B\u958B\u3051\u3070\u305D\u3053\u304B\u3089\u7D9A\u3051\u3089\u308C\u308B\u3002\u65B0\u3057\u3044\u5408\u6226\u3092\u59CB\u3081\u308C\u3070\u3001\u305D\u306E\u63A7\u3048\u306F\u6D88\u3048\u308B\u3002"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u53BB\u5C31\u306E\u5B9A\u307E\u3089\u306C\u968A\uFF08\u9EC4\uFF09",
+        \u6587: [
+          "\u677E\u5C3E\u5C71\u306E\u5C0F\u65E9\u5DDD\u79C0\u79CB\u3068\u3001\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u79C0\u5143\u2015\u2015\u3053\u306E\u56DB\u4E07\u4E94\u5343\u306F\u3001\u3069\u3061\u3089\u306E\u5473\u65B9\u3067\u3082\u306A\u3044\u3002\u76E4\u306E\u4E0A\u3067\u306F\u9EC4\u3067\u63CF\u304B\u308C\u3001\u6483\u3061\u3082\u6483\u305F\u308C\u3082\u305B\u305A\u3001\u305D\u306E\u5834\u3092\u52D5\u304B\u306A\u3044\u3002",
+          "\u6761\u4EF6\u304C\u63C3\u3046\u3068\u65D7\u8272\u304C\u6C7A\u307E\u308A\u3001\u305D\u3053\u3067\u521D\u3081\u3066\u52D5\u304D\u51FA\u3059\u3002\u5C0F\u65E9\u5DDD\u304C\u6771\u3078\u50BE\u304F\u306E\u306F\u6613\u304F\u3001\u897F\u3078\u8D77\u3064\u306E\u306F\u96E3\u3044\u3002\u897F\u3078\u8D77\u3064\u306B\u306F\u3001\u5927\u8C37\u52E2\u304C\u5065\u5728\u3067\u3042\u308B\u3053\u3068\u30FB\u677E\u5C3E\u5C71\u306E\u9E93\u3092\u897F\u8ECD\u304C\u56FA\u3081\u3066\u3044\u308B\u3053\u3068\u30FB\u6771\u8ECD\u306E\u524D\u7DDA\u304C\u56DB\u5206\u306E\u4E00\u3092\u5931\u3063\u3066\u3044\u308B\u3053\u3068\u30FB\u4E09\u6210\u304C\u58EB\u6C17\u3092\u4FDD\u3063\u3066\u3044\u308B\u3053\u3068\u3001\u3053\u306E\u56DB\u3064\u304C\u63C3\u308F\u306D\u3070\u306A\u3089\u306A\u3044\u3002",
+          "\u5357\u5BAE\u5C71\u304C\u52D5\u304F\u306E\u306F\u3001\u5C0F\u65E9\u5DDD\u304C\u897F\u3078\u8D77\u3061\u3001\u306A\u304A\u6771\u8ECD\u304C\u62BC\u3055\u308C\u3066\u3044\u308B\u3068\u304D\u3060\u3051\u3067\u3042\u308B\u3002\u305D\u3046\u3067\u306A\u3051\u308C\u3070\u3001\u5409\u5DDD\u5E83\u5BB6\u304C\u9053\u3092\u585E\u3044\u3060\u307E\u307E\u65E5\u304C\u66AE\u308C\u308B\u3002"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u5357\u5BAE\u5C71\u306E\u62BC\u3055\u3048",
+        \u6587: [
+          "\u6771\u8ECD\u306E\u3046\u3061\u6C60\u7530\u8F1D\u653F\u30FB\u6D45\u91CE\u5E78\u9577\u30FB\u5C71\u5185\u4E00\u8C4A\u30FB\u8702\u9808\u8CC0\u81F3\u93AE\u30FB\u6709\u99AC\u8C4A\u6C0F\u30FB\u4E2D\u6751\u4E00\u5FE0\u306E\u516D\u968A\u306F\u3001\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u52E2\u3092\u62BC\u3055\u3048\u308B\u305F\u3081\u306B\u7F6E\u304B\u308C\u3066\u3044\u308B\u3002\u5C71\u306E\u53BB\u5C31\u304C\u5206\u304B\u3089\u306C\u3042\u3044\u3060\u3001\u3053\u306E\u516D\u968A\u306B\u4E0B\u77E5\u306F\u3067\u304D\u306A\u3044\u2015\u2015\u80CC\u306B\u4E00\u4E07\u4E94\u5343\u3092\u8CA0\u3063\u305F\u307E\u307E\u91CE\u3078\u51FA\u308B\u306E\u306F\u91C7\u914D\u3067\u306F\u306A\u3044\u3002",
+          "\u5C71\u304C\u52D5\u3044\u305F\u304B\u3001\u52D5\u304B\u306C\u3068\u5B9A\u307E\u3063\u305F\u3068\u304D\u306B\u624B\u304C\u96E2\u308C\u308B\u3002\u52D5\u3051\u3070\u8FCE\u3048\u6483\u3061\u3001\u52D5\u304B\u306C\u3068\u6C7A\u307E\u308C\u3070\u4E09\u6210\u306E\u9663\u3078\u5411\u304B\u3048\u308B\u3002"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u597D\u6A5F\u306E\u554F\u3044",
+        \u6587: [
+          "\u6761\u4EF6\u304C\u63C3\u3046\u3068\u3001\u76E4\u306E\u307B\u3046\u304B\u3089\u554F\u3044\u304C\u51FA\u308B\u3002\u5BB6\u5EB7\u3092\u6843\u914D\u5C71\u304B\u3089\u9663\u5834\u91CE\u3078\u9032\u3081\u308B\u304B\u3001\u677E\u5C3E\u5C71\u3078\u554F\u9244\u7832\u3092\u6483\u3064\u304B\u3001\u5927\u8C37\u52E2\u306B\u677E\u5C3E\u5C71\u3078\u306E\u5099\u3048\u3092\u56FA\u3081\u3055\u305B\u308B\u304B\u3001\u5357\u5BAE\u5C71\u3078\u4F7F\u8005\u3092\u7ACB\u3066\u308B\u304B\u2015\u2015\u3044\u305A\u308C\u3082\u53D6\u308A\u8FD4\u3057\u306E\u3064\u304B\u306C\u4E00\u624B\u3067\u3042\u308B\u304B\u3089\u3001\u8AFE\u5426\u306F\u904A\u3076\u5074\u304C\u6C7A\u3081\u308B\u3002",
+          "\u554F\u9244\u7832\u306F\u3001\u5BB6\u5EB7\u304C\u524D\u3078\u51FA\u3066\u3044\u306A\u3051\u308C\u3070\u6483\u3066\u306A\u3044\u3002\u672C\u9663\u304C\u6843\u914D\u5C71\u306B\u3042\u308B\u3046\u3061\u306F\u3001\u677E\u5C3E\u5C71\u306B\u50AC\u4FC3\u3059\u308B\u624B\u7ACB\u3066\u304C\u306A\u3044\u3002"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u52DD\u3061\u8CA0\u3051",
+        \u6587: [
+          "\u6575\u306E\u968A\u3092\u3072\u3068\u3064\u6B8B\u3089\u305A\u5D29\u305B\u3070\u52DD\u3061\u3067\u3042\u308B\u3002\u3075\u3064\u3046\u306E\u5408\u6226\u3068\u540C\u3058\u6C7A\u307E\u308A\u3060\u304C\u3001\u5408\u6226\u306E\u4E00\u6226\u306F\u58EB\u6C17\u304C\u843D\u3061\u306B\u304F\u304F\u3001\u640D\u5BB3\u306E\u51FA\u65B9\u3082\u7DE9\u3084\u304B\u306B\u3057\u3066\u3042\u308B\u3002\u534A\u523B\u3067\u7247\u304C\u4ED8\u3044\u3066\u306F\u3001\u5C0F\u65E9\u5DDD\u3082\u5357\u5BAE\u5C71\u3082\u51FA\u756A\u304C\u306A\u3044\u304B\u3089\u3067\u3042\u308B\u3002"
         ]
       }
     ]
@@ -32670,8 +33916,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const k = kits[c.id];
       if (k && SIEGE_KIT[k]) c.kit = k;
     }
-    const P = playerIsAtk ? atk : def, E = playerIsAtk ? def : atk;
-    const bb = createBattle(P, E, atkSide);
+    const P2 = playerIsAtk ? atk : def, E = playerIsAtk ? def : atk;
+    const bb = createBattle(P2, E, atkSide);
     bb.mode = "castle";
     bb.map = map;
     bb.dusk = Math.round(1080 * clamp(Math.pow(FIELD.w / 1600, 0.62), 1, 3.2));
@@ -32793,6 +34039,10 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     setBattleMap(null);
     setFieldSeed(army.from, dest.id);
+    {
+      const r = roadBetween(army.from, dest.id);
+      setFieldKind(r ? r[3] : "\u8857\u9053");
+    }
     const atkGens = army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
     const defGens = foe ? foe.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
     const playerIsAtk = army.faction === g.player;
@@ -32931,9 +34181,9 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       dest.rost,
       false
     );
-    const P = playerIsAtk ? atkCorpsList : defList;
+    const P2 = playerIsAtk ? atkCorpsList : defList;
     const E = playerIsAtk ? defList : atkCorpsList;
-    const bb = createBattle(P, E, playerIsAtk ? "P" : "E");
+    const bb = createBattle(P2, E, playerIsAtk ? "P" : "E");
     bb.face = face;
     bb.myFar = playerIsAtk;
     if (betray) {
@@ -33572,8 +34822,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const send = Math.max(0, Math.min(req.local, c2.local));
       const men = send + gens.reduce((a, x) => a + x.retinue, 0);
       if (men < 100) continue;
-      const \u9053 = \u8ECD\u306E\u9053(s2, c2.faction, c2.id, target) || findPath(c2.id, target);
-      const \u6708 = marchMonthsOf(\u9053, c2.faction);
+      const \u90532 = \u8ECD\u306E\u9053(s2, c2.faction, c2.id, target) || findPath(c2.id, target);
+      const \u6708 = marchMonthsOf(\u90532, c2.faction);
       const \u7CE7 = \u9060\u5F81\u306E\u5175\u7CE7(men, \u6708);
       c2.local -= send;
       c2.food = Math.max(0, c2.food - \u7CE7);
@@ -33591,7 +34841,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         rost: tk.taken,
         men,
         at: c2.id,
-        path: \u9053,
+        path: \u90532,
         prog: 0,
         food: \u7CE7,
         target,
@@ -34092,14 +35342,14 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             const a = (s2.armies || []).find((x) => x.id === armyId);
             const \u5148 = s2.castles.find((x) => x.id === to);
             if (!a || !\u5148) return s2;
-            const \u9053 = \u8ECD\u306E\u9053(s2, a.faction, a.\u5728\u9663, to) || findPath(a.\u5728\u9663, to);
-            if (!\u9053) return s2;
+            const \u90532 = \u8ECD\u306E\u9053(s2, a.faction, a.\u5728\u9663, to) || findPath(a.\u5728\u9663, to);
+            if (!\u90532) return s2;
             const \u9663 = s2.castles.find((x) => x.id === a.\u5728\u9663);
             a.\u5728\u9663 = null;
             a.target = to;
-            a.path = \u9053;
+            a.path = \u90532;
             a.prog = 0;
-            a.at = \u9053[0];
+            a.at = \u90532[0];
             a.sieging = false;
             a.reinforced = false;
             s2.chronicle.push({
@@ -34764,12 +36014,12 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     })(),
     g.warSettle && (() => {
       const ws = g.warSettle;
-      const \u6B8B\u308A = ws.queue.filter((id) => g.generals.some((x) => x.id === id));
-      const gen = g.generals.find((x) => x.id === \u6B8B\u308A[0]);
+      const \u6B8B\u308A2 = ws.queue.filter((id) => g.generals.some((x) => x.id === id));
+      const gen = g.generals.find((x) => x.id === \u6B8B\u308A2[0]);
       const lord = ws.lordId ? g.generals.find((x) => x.id === ws.lordId) : null;
       const fname = (g.factions[ws.faction] || {}).name || "";
-      if (gen && \u6B8B\u308A.length !== ws.queue.length) {
-        setG((p2) => ({ ...p2, warSettle: { ...p2.warSettle, queue: \u6B8B\u308A } }));
+      if (gen && \u6B8B\u308A2.length !== ws.queue.length) {
+        setG((p2) => ({ ...p2, warSettle: { ...p2.warSettle, queue: \u6B8B\u308A2 } }));
         return null;
       }
       if (!gen) {
@@ -34921,7 +36171,7 @@ function \u8A18\u9332\u306E\u672D({ \u67A0, onLoad, onErase }) {
     "\u6D88"
   )) : /* @__PURE__ */ React9.createElement("span", { style: { flex: 1, fontSize: 12, color: U.dim, padding: "7px 0" } }, "\u7A7A\u304D"));
 }
-function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
+function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onKassen }) {
   const [\u904A\u3073\u65B9, set\u904A\u3073\u65B9] = useState8(false);
   const \u63A7\u3048\u53E3 = useRef5(null);
   const \u5728\u308B = (saves || []).filter((w) => w.d);
@@ -34934,7 +36184,7 @@ function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
       width: "460",
       style: { width: "min(460px, 92vw)", height: "auto", display: "block", margin: "0 auto" }
     }
-  ), /* @__PURE__ */ React9.createElement("div", { style: { marginTop: 24, display: "flex", flexDirection: "column", gap: 9, width: 360, maxWidth: "92vw" } }, \u6700\u65B0 && /* @__PURE__ */ React9.createElement("button", { className: "btn dark", style: { padding: "13px" }, onClick: () => onLoad(\u6700\u65B0.key) }, "\u7D9A\u304D\u304B\u3089\uFF08", \u6700\u65B0.\u540D, "\u30FB", \u6700\u65B0.d.state.year, "\u5E74", \u6700\u65B0.d.state.month, "\u6708\u30FB", (FACTIONS[\u6700\u65B0.d.state.player] || {}).name, "\uFF09"), /* @__PURE__ */ React9.createElement("button", { className: `btn ${\u6700\u65B0 ? "" : "dark"}`, style: { padding: "13px" }, onClick: onStart }, \u6700\u65B0 ? "\u65B0\u3057\u304F\u306F\u3058\u3081\u308B" : "\u30B2\u30FC\u30E0\u3092\u306F\u3058\u3081\u308B"), /* @__PURE__ */ React9.createElement("button", { className: "btn", style: { padding: "11px" }, onClick: () => set\u904A\u3073\u65B9(true) }, "\u904A\u3073\u65B9\u3092\u8AAD\u3080"), \u5728\u308B.some((w) => w.\u81EA\u52D5) && /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, textAlign: "left", marginTop: -3 } }, "\u65B0\u3057\u304F\u59CB\u3081\u308B\u3068\u3001\u3044\u307E\u300C\u81EA\u52D5\u300D\u306B\u3042\u308B\u76E4\u306F\u7A7A\u3044\u3066\u3044\u308B\u67A0\u3078\u79FB\u3057\u3066\u53D6\u3063\u3066\u304A\u304D\u307E\u3059\u3002"), /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 6, textAlign: "left" } }, "\u8A18\u9332\u6240\u3000\uFF08\u62BC\u305B\u3070\u305D\u306E\u76E4\u304B\u3089\u59CB\u307E\u308A\u307E\u3059\uFF09"), /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5 } }, (saves || []).map((w) => /* @__PURE__ */ React9.createElement(\u8A18\u9332\u306E\u672D, { key: w.key, \u67A0: w, onLoad, onErase }))), /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 10.5, color: U.dim, lineHeight: 1.7, textAlign: "left" } }, "\u300C\u81EA\u52D5\u300D\u306F\u6708\u304C\u66FF\u308F\u308B\u305F\u3073\u306B\u52DD\u624B\u306B\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\u3002\u53D6\u3063\u3066\u304A\u304D\u305F\u3044\u76E4\u306F\u3001 \u904A\u3073\u306E\u4E2D\u306E\u300C\u8A18\u9332\u300D\u304B\u3089\u4E00\u301C\u4E94\u306E\u3069\u308C\u304B\u3078\u53CE\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } }, \u6700\u65B0 && /* @__PURE__ */ React9.createElement(
+  ), /* @__PURE__ */ React9.createElement("div", { style: { marginTop: 24, display: "flex", flexDirection: "column", gap: 9, width: 360, maxWidth: "92vw" } }, \u6700\u65B0 && /* @__PURE__ */ React9.createElement("button", { className: "btn dark", style: { padding: "13px" }, onClick: () => onLoad(\u6700\u65B0.key) }, "\u7D9A\u304D\u304B\u3089\uFF08", \u6700\u65B0.\u540D, "\u30FB", \u6700\u65B0.d.state.year, "\u5E74", \u6700\u65B0.d.state.month, "\u6708\u30FB", (FACTIONS[\u6700\u65B0.d.state.player] || {}).name, "\uFF09"), /* @__PURE__ */ React9.createElement("button", { className: `btn ${\u6700\u65B0 ? "" : "dark"}`, style: { padding: "13px" }, onClick: onStart }, \u6700\u65B0 ? "\u65B0\u3057\u304F\u306F\u3058\u3081\u308B" : "\u30B2\u30FC\u30E0\u3092\u306F\u3058\u3081\u308B"), /* @__PURE__ */ React9.createElement("button", { className: "btn", style: { padding: "13px" }, onClick: onKassen }, "\u5408\u6226 \u2500\u2500 \u95A2\u30F6\u539F"), /* @__PURE__ */ React9.createElement("button", { className: "btn", style: { padding: "11px" }, onClick: () => set\u904A\u3073\u65B9(true) }, "\u904A\u3073\u65B9\u3092\u8AAD\u3080"), \u5728\u308B.some((w) => w.\u81EA\u52D5) && /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, textAlign: "left", marginTop: -3 } }, "\u65B0\u3057\u304F\u59CB\u3081\u308B\u3068\u3001\u3044\u307E\u300C\u81EA\u52D5\u300D\u306B\u3042\u308B\u76E4\u306F\u7A7A\u3044\u3066\u3044\u308B\u67A0\u3078\u79FB\u3057\u3066\u53D6\u3063\u3066\u304A\u304D\u307E\u3059\u3002"), /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 6, textAlign: "left" } }, "\u8A18\u9332\u6240\u3000\uFF08\u62BC\u305B\u3070\u305D\u306E\u76E4\u304B\u3089\u59CB\u307E\u308A\u307E\u3059\uFF09"), /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 5 } }, (saves || []).map((w) => /* @__PURE__ */ React9.createElement(\u8A18\u9332\u306E\u672D, { key: w.key, \u67A0: w, onLoad, onErase }))), /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 10.5, color: U.dim, lineHeight: 1.7, textAlign: "left" } }, "\u300C\u81EA\u52D5\u300D\u306F\u6708\u304C\u66FF\u308F\u308B\u305F\u3073\u306B\u52DD\u624B\u306B\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\u3002\u53D6\u3063\u3066\u304A\u304D\u305F\u3044\u76E4\u306F\u3001 \u904A\u3073\u306E\u4E2D\u306E\u300C\u8A18\u9332\u300D\u304B\u3089\u4E00\u301C\u4E94\u306E\u3069\u308C\u304B\u3078\u53CE\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", gap: 8, marginTop: 4 } }, \u6700\u65B0 && /* @__PURE__ */ React9.createElement(
     "button",
     {
       className: "btn",
@@ -34964,6 +36214,145 @@ function Title({ saves, onStart, onLoad, onErase, onExport, onImport }) {
       }
     }
   ))), /* @__PURE__ */ React9.createElement("div", { style: { position: "absolute", left: 20, bottom: 16, fontSize: 11, color: U.dim } }, "ver.0.2.0", typeof window !== "undefined" && window.__BUILD__ ? `\u3000\u66F8\u304D\u51FA\u3057 ${window.__BUILD__}` : ""), \u904A\u3073\u65B9 && /* @__PURE__ */ React9.createElement(Manual, { onClose: () => set\u904A\u3073\u65B9(false) }));
+}
+
+// src/ui/KassenScreen.jsx
+import React10, { useEffect as useEffect6, useRef as useRef6, useState as useState9 } from "react";
+var \u65D7\u306E\u8AAC = {
+  \u897F: {
+    \u540D: "\u897F\u8ECD",
+    \u5C06: "\u77F3\u7530\u4E09\u6210\u30FB\u5B87\u559C\u591A\u79C0\u5BB6\u30FB\u5927\u8C37\u5409\u7D99",
+    \u5175: "\u4E8C\u4E07\u4E03\u5343\u4E5D\u767E\uFF08\u5341\u516D\u968A\uFF09",
+    \u8A5E: "\u6BDB\u5229\u8F1D\u5143\u3092\u7DCF\u5927\u5C06\u306B\u6234\u304F\u304C\u3001\u8F1D\u5143\u306F\u5927\u5742\u57CE\u306B\u3042\u3063\u3066\u95A2\u30F6\u539F\u306B\u3044\u306A\u3044\u3002\u91CE\u306B\u7ACB\u3064\u306E\u306F\u4E09\u6210\u3067\u3042\u308B\u3002\u677E\u5C3E\u5C71\u3068\u5357\u5BAE\u5C71\u306B\u3001\u65D7\u8272\u3092\u6C7A\u3081\u304B\u306D\u308B\u56DB\u4E07\u4E94\u5343\u304C\u3044\u308B\u3002\u3053\u306E\u56DB\u4E07\u4E94\u5343\u3092\u3069\u3061\u3089\u3078\u8EE2\u3070\u305B\u308B\u304B\u304C\u3001\u3053\u306E\u6226\u306E\u3059\u3079\u3066\u3067\u3042\u308B\u3002"
+  },
+  \u6771: {
+    \u540D: "\u6771\u8ECD",
+    \u5C06: "\u5FB3\u5DDD\u5BB6\u5EB7\u30FB\u798F\u5CF6\u6B63\u5247\u30FB\u4E95\u4F0A\u76F4\u653F",
+    \u5175: "\u5341\u4E07\u4E8C\u5343\u767E\u4E5D\u5341\u516B\uFF08\u4E09\u5341\u56DB\u968A\uFF09",
+    \u8A5E: "\u6570\u3067\u306F\u52DD\u308B\u304C\u3001\u65D7\u672C\u4E09\u4E07\u306F\u6843\u914D\u5C71\u306B\u63A7\u3048\u3001\u516D\u968A\u4E00\u4E07\u4E5D\u5343\u306F\u5357\u5BAE\u5C71\u3092\u62BC\u3055\u3048\u3066\u52D5\u3051\u306A\u3044\u3002\u5B9F\u969B\u306B\u69CD\u3092\u5408\u308F\u305B\u3089\u308C\u308B\u306E\u306F\u4E94\u4E07\u4E09\u5343\u307B\u3069\u3067\u3042\u308B\u3002\u677E\u5C3E\u5C71\u3092\u5473\u65B9\u306B\u3064\u3051\u3089\u308C\u308B\u304B\u3069\u3046\u304B\u3067\u6C7A\u307E\u308B\u3002"
+  }
+};
+function KassenScreen({ land, onTitle }) {
+  const [ctx, setCtx] = useState9(null);
+  const [\u63A7\u3048, set\u63A7\u3048] = useState9(void 0);
+  const [\u9078\u3073, set\u9078\u3073] = useState9(\u5408\u6226\u4E00\u89A7[0].id);
+  const [\u7D422, set\u7D42] = useState9(null);
+  const ctxRef = useRef6(null);
+  useEffect6(() => () => {
+    \u5408\u6226\u3092\u7573\u3080();
+  }, []);
+  useEffect6(() => {
+    let \u751F\u304D\u3066\u3044\u308B = true;
+    (async () => {
+      try {
+        const \u6587 = await \u7F6E\u304D\u5834().\u8AAD\u3080(\u63A7\u3048\u306E\u9375);
+        if (\u751F\u304D\u3066\u3044\u308B) set\u63A7\u3048(\u6587 ? JSON.parse(\u6587) : null);
+      } catch (e) {
+        if (\u751F\u304D\u3066\u3044\u308B) set\u63A7\u3048(null);
+      }
+    })();
+    return () => {
+      \u751F\u304D\u3066\u3044\u308B = false;
+    };
+  }, []);
+  const \u63A7\u3048\u308B = async () => {
+    const c = ctxRef.current;
+    if (!c || !c.b || c.b.phase === "over") return;
+    try {
+      await \u7F6E\u304D\u5834().\u66F8\u304F(\u63A7\u3048\u306E\u9375, JSON.stringify(\u5408\u6226\u3092\u63A7\u3048\u308B(c.b)));
+    } catch (e) {
+    }
+  };
+  const \u63A7\u3048\u3092\u6D88\u3059 = async () => {
+    try {
+      await \u7F6E\u304D\u5834().\u6D88\u3059(\u63A7\u3048\u306E\u9375);
+    } catch (e) {
+    }
+  };
+  useEffect6(() => {
+    const \u9589\u3058\u969B = () => {
+      const c = ctxRef.current;
+      if (!c || !c.b || c.b.phase === "over") return;
+      try {
+        window.localStorage.setItem(\u63A7\u3048\u306E\u9375, JSON.stringify(\u5408\u6226\u3092\u63A7\u3048\u308B(c.b)));
+      } catch (e) {
+      }
+    };
+    window.addEventListener("pagehide", \u9589\u3058\u969B);
+    window.addEventListener("beforeunload", \u9589\u3058\u969B);
+    const \u6642 = setInterval(\u63A7\u3048\u308B, 2e4);
+    return () => {
+      window.removeEventListener("pagehide", \u9589\u3058\u969B);
+      window.removeEventListener("beforeunload", \u9589\u3058\u969B);
+      clearInterval(\u6642);
+    };
+  }, []);
+  const \u4ED5\u7ACB\u3066\u308B = (r, \u65D7) => {
+    if (!r) return;
+    const \u6575\u65D7 = \u65D7 === "\u897F" ? "\u6771" : "\u897F";
+    const c = {
+      b: r.b,
+      \u7B4B\u66F8\u304D: r.\u7B4B\u66F8\u304D,
+      mode: "kassen",
+      armyId: `kassen-${r.\u7B4B\u66F8\u304D.id}-${\u65D7}`,
+      playerIsAtk: \u65D7 === "\u6771",
+      pName: `${\u65D7}\u8ECD`,
+      eName: `${\u6575\u65D7}\u8ECD`,
+      pColor: "#2F5D8C",
+      eColor: "#B0483C",
+      place: r.\u7B4B\u66F8\u304D.\u6240
+    };
+    ctxRef.current = c;
+    setCtx(c);
+    set\u7D42(null);
+  };
+  const \u59CB\u3081\u308B = async (\u65D7) => {
+    await \u63A7\u3048\u3092\u6D88\u3059();
+    set\u63A7\u3048(null);
+    \u4ED5\u7ACB\u3066\u308B(\u5408\u6226\u3092\u4ED5\u7ACB\u3066\u308B(\u9078\u3073, \u65D7), \u65D7);
+  };
+  const \u7D9A\u304D\u304B\u3089 = () => {
+    if (\u63A7\u3048) \u4ED5\u7ACB\u3066\u308B(\u5408\u6226\u3092\u623B\u3059(\u63A7\u3048), \u63A7\u3048.\u5473\u65B9\u65D7);
+  };
+  const \u7D42\u308F\u308B = async (b) => {
+    await \u63A7\u3048\u3092\u6D88\u3059();
+    set\u63A7\u3048(null);
+    set\u7D42({
+      \u679C: b.result,
+      \u65D7: ctxRef.current ? ctxRef.current.pName : "",
+      \u5473\u65B9: b.corps.filter((c) => c.side === "P").reduce((a, c) => a + corpsMen(c), 0),
+      \u6575: b.corps.filter((c) => c.side === "E").reduce((a, c) => a + corpsMen(c), 0),
+      \u640D: b.corps.filter((c) => c.side === "P").reduce((a, c) => a + c.loss["\u76F4\u5C5E"] + c.loss["\u5730\u57DF"], 0),
+      \u7B4B: b.\u7B4B\u66F8\u304D
+    });
+    ctxRef.current = null;
+    setCtx(null);
+    \u5408\u6226\u3092\u7573\u3080();
+  };
+  if (ctx) return /* @__PURE__ */ React10.createElement(BattleScreen, { key: ctx.armyId, ctx, land, onEnd: \u7D42\u308F\u308B });
+  const k = \u5408\u6226\u4E00\u89A7.find((x) => x.id === \u9078\u3073) || \u5408\u6226\u4E00\u89A7[0];
+  return /* @__PURE__ */ React10.createElement("div", { className: "sp", style: { height: "100dvh", overflow: "auto", background: U.paper } }, /* @__PURE__ */ React10.createElement("div", { style: { maxWidth: 760, margin: "0 auto", padding: "20px 16px 40px" } }, /* @__PURE__ */ React10.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 10 } }, /* @__PURE__ */ React10.createElement("h1", { className: "mn", style: { fontSize: 26, margin: 0 } }, "\u5408\u6226"), /* @__PURE__ */ React10.createElement("span", { style: { fontSize: 12, color: U.dim } }, "\u6C7A\u307E\u3063\u305F\u4E00\u6226\u3060\u3051\u3092\u6226\u3046\u3002\u4E00\u56DE\u3067\u904A\u3073\u304D\u308A\u3001\u8A18\u9332\u306F\u6B8B\u3089\u306A\u3044\u3002")), \u7D422 && /* @__PURE__ */ React10.createElement("div", { style: {
+    marginTop: 14,
+    padding: "12px 14px",
+    border: `1px solid ${U.line}`,
+    borderRadius: 8,
+    background: \u7D422.\u679C === "P" ? "rgba(62,122,58,0.10)" : "rgba(176,72,60,0.10)"
+  } }, /* @__PURE__ */ React10.createElement("b", { className: "mn", style: { fontSize: 20, color: \u7D422.\u679C === "P" ? "#3E7A3A" : "#B0483C" } }, \u7D422.\u679C === "P" ? "\u52DD\u5229" : \u7D422.\u679C === "\u65E5\u6CA1" ? "\u65E5\u6CA1\u30FB\u4E21\u8ECD\u64A4\u53CE" : "\u6557\u5317"), /* @__PURE__ */ React10.createElement("div", { style: { fontSize: 12.5, color: U.dim, marginTop: 6, lineHeight: 1.9 } }, "\u6B8B\u5175 ", fmt(\u7D422.\u5473\u65B9), "\uFF0F\u6575 ", fmt(\u7D422.\u6575), "\u3000\u640D\u5BB3 ", fmt(\u7D422.\u640D), "\u4EBA", /* @__PURE__ */ React10.createElement("br", null), "\u5C0F\u65E9\u5DDD\u306F", \u7D422.\u7B4B ? \u7D422.\u7B4B.\u5C0F\u65E9\u5DDD === "\u672A" ? "\u3064\u3044\u306B\u52D5\u304B\u306A\u304B\u3063\u305F" : `${\u7D422.\u7B4B.\u5C0F\u65E9\u5DDD}\u8ECD\u3068\u3057\u3066\u5C71\u3092\u4E0B\u308A\u305F` : "\u2014", "\u3002 \u5357\u5BAE\u5C71\u306F", \u7D422.\u7B4B ? \u7D422.\u7B4B.\u5357\u5BAE\u5C71 === "\u897F" ? "\u91CE\u3078\u4E0B\u308A\u305F" : \u7D422.\u7B4B.\u5357\u5BAE\u5C71 === "\u52D5\u304B\u305A" ? "\u3064\u3044\u306B\u52D5\u304B\u306A\u304B\u3063\u305F" : "\u53BB\u5C31\u306E\u5B9A\u307E\u3089\u306C\u307E\u307E\u65E5\u304C\u66AE\u308C\u305F" : "\u2014", "\u3002")), \u63A7\u3048 && !\u7D422 && /* @__PURE__ */ React10.createElement("div", { style: { marginTop: 14, padding: "12px 14px", border: `1px solid ${U.line}`, borderRadius: 8, background: "rgba(255,255,255,0.55)" } }, /* @__PURE__ */ React10.createElement("div", { style: { fontSize: 13, marginBottom: 8 } }, "\u524D\u306B\u9014\u4E2D\u3067\u9589\u3058\u305F\u4E00\u6226\u304C\u3042\u308A\u307E\u3059\uFF08", \u63A7\u3048.\u5473\u65B9\u65D7, "\u8ECD\u30FB", Math.round(\u63A7\u3048.t / 60), "\u5206\u307B\u3069\u6226\u3063\u305F\u3068\u3053\u308D\uFF09\u3002"), /* @__PURE__ */ React10.createElement("button", { className: "btn dark", style: { padding: "10px 16px" }, onClick: \u7D9A\u304D\u304B\u3089 }, "\u7D9A\u304D\u304B\u3089")), /* @__PURE__ */ React10.createElement("div", { style: { marginTop: 18, padding: "14px 16px", border: `1px solid ${U.line}`, borderRadius: 8, background: "rgba(255,255,255,0.55)" } }, /* @__PURE__ */ React10.createElement("div", { className: "mn", style: { fontSize: 21 } }, k.\u540D), /* @__PURE__ */ React10.createElement("div", { style: { fontSize: 12, color: U.dim, marginTop: 2 } }, "\u6176\u9577\u4E94\u5E74\u4E5D\u6708\u5341\u4E94\u65E5\u3000", k.\u6240, "\u3000\u5168\u516D\u5341\u4E09\u968A\u30FB\u5341\u4E03\u4E07\u4E94\u5343\u4F59"), /* @__PURE__ */ React10.createElement("div", { style: { fontSize: 13, lineHeight: 2, marginTop: 10 } }, k.\u8A5E), /* @__PURE__ */ React10.createElement("div", { style: { display: "flex", flexDirection: land ? "row" : "column", gap: 12, marginTop: 16 } }, ["\u897F", "\u6771"].map((\u65D7) => /* @__PURE__ */ React10.createElement("div", { key: \u65D7, style: {
+    flex: 1,
+    border: `1px solid ${U.line2}`,
+    borderRadius: 8,
+    padding: "12px 13px",
+    background: \u65D7 === "\u897F" ? "rgba(47,93,140,0.07)" : "rgba(176,72,60,0.07)"
+  } }, /* @__PURE__ */ React10.createElement("b", { className: "mn", style: { fontSize: 17 } }, \u65D7\u306E\u8AAC[\u65D7].\u540D), /* @__PURE__ */ React10.createElement("div", { style: { fontSize: 11.5, color: U.dim, marginTop: 3 } }, \u65D7\u306E\u8AAC[\u65D7].\u5C06), /* @__PURE__ */ React10.createElement("div", { style: { fontSize: 11.5, color: U.dim } }, "\u5175 ", \u65D7\u306E\u8AAC[\u65D7].\u5175), /* @__PURE__ */ React10.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginTop: 8, minHeight: 96 } }, \u65D7\u306E\u8AAC[\u65D7].\u8A5E), /* @__PURE__ */ React10.createElement(
+    "button",
+    {
+      className: "btn dark",
+      style: { width: "100%", padding: 11, marginTop: 8 },
+      onClick: () => \u59CB\u3081\u308B(\u65D7)
+    },
+    \u65D7\u306E\u8AAC[\u65D7].\u540D,
+    "\u3067\u6226\u3046"
+  )))), /* @__PURE__ */ React10.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.9, marginTop: 12 } }, "\u9078\u3093\u3060\u5074\u304C", /* @__PURE__ */ React10.createElement("b", { style: { color: "#2F5D8C" } }, "\u9752"), "\u3001\u6575\u304C", /* @__PURE__ */ React10.createElement("b", { style: { color: "#B0483C" } }, "\u8D64"), "\u3001 \u53BB\u5C31\u306E\u5B9A\u307E\u3089\u306C\u968A\u304C", /* @__PURE__ */ React10.createElement("b", { style: { color: "#B08A10" } }, "\u9EC4"), "\u3067\u3042\u308B\u3002\u9EC4\u306E\u968A\u306F\u6483\u3061\u3082\u6483\u305F\u308C\u3082\u3057\u306A\u3044\u3002 \u6761\u4EF6\u304C\u63C3\u3048\u3070\u65D7\u8272\u304C\u6C7A\u307E\u308A\u3001\u305D\u3053\u3067\u521D\u3081\u3066\u52D5\u304D\u51FA\u3059\u3002")), /* @__PURE__ */ React10.createElement("button", { className: "btn", style: { marginTop: 18, padding: "10px 16px" }, onClick: onTitle }, "\u984C\u3078\u623B\u308B")));
 }
 
 // src/ui/css.js
@@ -35124,8 +36513,8 @@ var css = `
 
 // src/ui/App.jsx
 function useLandscape() {
-  const [land, setLand] = useState9(true);
-  useEffect6(() => {
+  const [land, setLand] = useState10(true);
+  useEffect7(() => {
     const on = () => setLand(window.innerWidth >= window.innerHeight * 1.05);
     on();
     window.addEventListener("resize", on);
@@ -35138,13 +36527,13 @@ function useLandscape() {
   return land;
 }
 function App() {
-  const [screen, setScreen] = useState9("title");
-  const [g, setG] = useState9(null);
-  const [saves, setSaves] = useState9([]);
+  const [screen, setScreen] = useState10("title");
+  const [g, setG] = useState10(null);
+  const [saves, setSaves] = useState10([]);
   const land = useLandscape();
   const terrain = useMemo2(() => typeof document === "undefined" ? null : buildTerrainCanvas(), []);
   const \u4E26\u3079\u76F4\u30592 = async () => setSaves(await \u8A18\u9332\u3092\u4E26\u3079\u308B());
-  useEffect6(() => {
+  useEffect7(() => {
     \u4E26\u3079\u76F4\u30592();
   }, []);
   const doSave = async (st, key) => {
@@ -35197,7 +36586,7 @@ function App() {
     setG(d.state);
     setScreen("map");
   };
-  if (screen === "title") return /* @__PURE__ */ React10.createElement(React10.Fragment, null, /* @__PURE__ */ React10.createElement("style", null, css), /* @__PURE__ */ React10.createElement(
+  if (screen === "title") return /* @__PURE__ */ React11.createElement(React11.Fragment, null, /* @__PURE__ */ React11.createElement("style", null, css), /* @__PURE__ */ React11.createElement(
     Title,
     {
       saves,
@@ -35211,10 +36600,12 @@ function App() {
         const d = await loadGame(key);
         if (d && d.state) exportSave(d.state, (FACTIONS[d.state.player] || {}).name);
       },
-      onImport: \u63A7\u3048\u304B\u3089\u623B\u3059
+      onImport: \u63A7\u3048\u304B\u3089\u623B\u3059,
+      onKassen: () => setScreen("kassen")
     }
   ));
-  if (screen === "select") return /* @__PURE__ */ React10.createElement(React10.Fragment, null, /* @__PURE__ */ React10.createElement("style", null, css), /* @__PURE__ */ React10.createElement(
+  if (screen === "kassen") return /* @__PURE__ */ React11.createElement(React11.Fragment, null, /* @__PURE__ */ React11.createElement("style", null, css), /* @__PURE__ */ React11.createElement(KassenScreen, { land, onTitle: () => setScreen("title") }));
+  if (screen === "select") return /* @__PURE__ */ React11.createElement(React11.Fragment, null, /* @__PURE__ */ React11.createElement("style", null, css), /* @__PURE__ */ React11.createElement(
     DaimyoSelect,
     {
       terrain,
@@ -35229,7 +36620,7 @@ function App() {
       }
     }
   ));
-  return /* @__PURE__ */ React10.createElement(React10.Fragment, null, /* @__PURE__ */ React10.createElement("style", null, css), /* @__PURE__ */ React10.createElement(
+  return /* @__PURE__ */ React11.createElement(React11.Fragment, null, /* @__PURE__ */ React11.createElement("style", null, css), /* @__PURE__ */ React11.createElement(
     MapScreen,
     {
       g,

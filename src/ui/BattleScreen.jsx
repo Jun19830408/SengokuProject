@@ -7,6 +7,7 @@ import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
 import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる, 内応させる, 内応の門を開く } from "../battle/corps.js";
+import { 合戦の問いに答える, 指図の縛り } from "../battle/kassen.js";
 
 /* --------------------------------------------------------------- 合戦画面 */
 export function BattleScreen({ ctx, land, onEnd }) {
@@ -21,6 +22,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const [faceMode, setFaceMode] = useState(false);
   const [foeSel, setFoeSel] = useState(null);        // 押した敵の隊（帳面を見る／名指しで狙う）
   const [退き確認, set退き確認] = useState(null);     // 撤退の念押し
+  const [咎め, set咎め] = useState(null);            // 「いま下知できぬ」訳を束の間出す
+  const [, 問い直し] = useState(0);                  // 筋書きの問いに答えたら描き直す
   const faceRef = useRef(false);
   const speedRef = useRef(0), selRef = useRef(null), uiRef = useRef(0), allRef = useRef(false);
   const camRef = useRef({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
@@ -29,19 +32,45 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const pickCorps = (v) => { selRef.current = v; setSel(v); if (v) { allRef.current = false; setSelAll(false); } };
   const setFace = (v) => { faceRef.current = v; setFaceMode(v); };
 
+  /* 下知の関所（GDD 8.9）。
+
+     筋書きの一戦では、いま動かしてはならぬ隊がある。南宮山の押さえに当たる
+     六隊は、山の去就が知れるまでその場を離れられない。押したときに黙って
+     何も起きないのでは、壊れているのか決まりなのか分からないので、訳を出す。 */
+  const 下知 = (bb, c, patch) => {
+    const 訳 = 指図の縛り(bb, c);
+    if (訳) { set咎め(訳); return false; }
+    issueOrder(bb, c, patch);
+    return true;
+  };
+
   const brokeRef = useRef(-1);
   const 跡Ref = useRef(null);
+  /* 地の画布の寸法（GDD 8.1）。
+
+     これまでは野と同じ寸法で焼いていた。街道の野はいちばん広くて七千二百歩なので
+     それで足りていたが、関ヶ原の盤は八千百五十六×五千八百九十四――四千八百万画素、
+     一枚で百九十二MBになる。焼くだけで頁が固まった（実際、画面が出なくなった）。
+
+     二千万画素を上限とし、それを超える野は間引いて焼く。貼るときに引き伸ばすので、
+     遠目には変わらない。寄って見れば地の描き込みが少し甘くなるが、
+     地の絵が甘いのと戦が始まらないのとでは、比べるまでもない。 */
+  const 画布の倍 = () => Math.min(1, Math.sqrt(2.0e7 / Math.max(1, FIELD.w * FIELD.h)));
   const paintTerrain = () => {
     const t = terrainRef.current || document.createElement("canvas");
-    t.width = FIELD.w; t.height = FIELD.h;
+    const k = 画布の倍();
+    t.width = Math.max(1, Math.round(FIELD.w * k)); t.height = Math.max(1, Math.round(FIELD.h * k));
     const g2 = t.getContext("2d");
+    g2.setTransform(k, 0, 0, k, 0, 0);
     if (ctx.mode === "castle" && ctx.b.map) drawCastleTerrain(g2, ctx.b.map);
     else drawFieldTerrain(g2);
+    g2.setTransform(1, 0, 0, 1, 0, 0);
     terrainRef.current = t;
     /* 戦の痕の画布（GDD 8.1）。地の半分の寸法で足りる――跡はどれも滲んだ形である。
        記憶を惜しむのは、地の画布が既に十九MB（城攻めなら四十六MB）あるからである。 */
     const a = 跡Ref.current || document.createElement("canvas");
-    a.width = Math.ceil(FIELD.w * 0.5); a.height = Math.ceil(FIELD.h * 0.5);
+    const ak = Math.min(0.5, 画布の倍());
+    a.width = Math.ceil(FIELD.w * ak); a.height = Math.ceil(FIELD.h * ak);
     a.getContext("2d").clearRect(0, 0, a.width, a.height);
     跡Ref.current = a;
     if (ctx.b) { ctx.b.跡 = []; ctx.b.跡焼済 = 0; }
@@ -51,9 +80,24 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const t = terrainRef.current;
     const w = wrapRef.current;
     if (w && w.clientWidth) {
-      // 初めから全体が映るようにする（盤が広いときは 0.2 では収まらない）
-      const 収 = Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h);
-      camRef.current.s = clamp(収 * 0.98, Math.min(0.2, 収 * 0.9), 3);
+      /* 初めから全体が映るようにする（盤が広いときは 0.2 では収まらない）。
+
+         ただし筋書きの一戦は、盤が野の広がりそのものなので、全体を映すと
+         隊が芥子粒になる。関ヶ原の盤は八千百五十六歩あるが、初めに槍を
+         合わせるのは西の三千歩ほどである。まず戦う隊だけを枠に収める。 */
+      const 主 = ctx.b.筋書き
+        ? ctx.b.corps.filter((c) => !c.日和見 && !c.控え && !c.縛り) : [];
+      if (主.length) {
+        let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+        for (const c of 主) { if (c.x < x0) x0 = c.x; if (c.x > x1) x1 = c.x; if (c.y < y0) y0 = c.y; if (c.y > y1) y1 = c.y; }
+        const 余 = 700;
+        x0 -= 余; x1 += 余; y0 -= 余; y1 += 余;
+        camRef.current.x = (x0 + x1) / 2; camRef.current.y = (y0 + y1) / 2;
+        camRef.current.s = clamp(Math.min(w.clientWidth / (x1 - x0), w.clientHeight / (y1 - y0)) * 0.96, 0.08, 3);
+      } else {
+        const 収 = Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h);
+        camRef.current.s = clamp(収 * 0.98, Math.min(0.2, 収 * 0.9), 3);
+      }
     }
   }, []);
 
@@ -76,6 +120,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
     el.addEventListener("touchstart", block, { passive: false });
     return () => { el.removeEventListener("touchmove", block); el.removeEventListener("touchstart", block); };
   }, [land, panel]);
+
+  useEffect(() => {
+    if (!咎め) return;
+    const h = setTimeout(() => set咎め(null), 3200);
+    return () => clearTimeout(h);
+  }, [咎め]);
 
   // Esc で選択解除（GDD 8.2）
   useEffect(() => {
@@ -147,7 +197,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
           cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
         }
         // 新しく増えた戦の痕だけを、跡の画布へ焼き足す
-        if (跡Ref.current) 跡を焼き足す(跡Ref.current.getContext("2d"), b, 0.5);
+        if (跡Ref.current) 跡を焼き足す(跡Ref.current.getContext("2d"), b, Math.min(0.5, 画布の倍()));
         drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current);
       }
       if (b.phase === "over" && speedRef.current !== 0) setSpeed(0);
@@ -340,11 +390,16 @@ export function BattleScreen({ ctx, land, onEnd }) {
 
          向きが変われば、組の座席は placeSquads が向きごと回すので、
          陣形そのものが押した方角へ向き直る。 */
+      if (指図の縛り(b, c)) { set咎め(指図の縛り(b, c)); setFace(false); return; }
       転回させる(b, c, f.x, f.y);
       setFace(false);
       return;
     }
     if (b.phase === "deploy") {
+      /* 筋書きの一戦は、布陣を動かせない（GDD 8.9）。
+         関ヶ原の隊は当時の布陣図どおりに置いてある。並べ替えられては、
+         史実の布陣から始めるという肝が消える。陣形と向きだけは決められる。 */
+      if (b.筋書き) { set咎め("この戦の布陣は史実のままである。陣形と向きだけ決められる。"); return; }
       if (inOwnZone(b, f.x, f.y)) { c.x = f.x; c.y = f.y; c.tx = f.x; c.ty = f.y; placeSquads(c, true); }
       return;
     }
@@ -352,10 +407,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
       const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
       // 指示したときはまっすぐ向かう。森へ入れ、山を登れ、川を渡れという命令もありうる。
       const gx = foe.x + ((c.x - foe.x) / d) * 38, gy = foe.y + ((c.y - foe.y) / d) * 38;
-      issueOrder(b, c, { order: "接戦", tx: gx, ty: gy });
+      下知(b, c, { order: "接戦", tx: gx, ty: gy });
     } else {
       c.siegeAuto = false; c.gate = null;
-      issueOrder(b, c, { order: "移動", tx: f.x, ty: f.y });
+      下知(b, c, { order: "移動", tx: f.x, ty: f.y });
     }
   };
   // 指の追跡が断たれたとき。掴んだままにしない。
@@ -392,6 +447,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const allOrder = (o) => {
     for (const c of b.corps) {
       if (c.side !== "P" || c.dead || c.destroyed || c.routed) continue;
+      // 旗色の定まらぬ隊と、山を押さえて動けぬ隊には、一括命令も届かない
+      if (c.日和見 || 指図の縛り(b, c)) continue;
       c.task = null;
       if (o === "前進") { c.order = "前進"; c.wp = null; c.tx = c.x; c.ty = Math.max(120, c.y - 260); }
       if (o === "接戦") {
@@ -410,9 +467,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (o === "撤退") { b.retreat = "P"; b.orderly = true; b.log.push({ t: b.t, text: "全軍に退き鉦。統制を保って戦場を離れる。" }); }
   };
 
-  const livingP = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed);
+  /* 兵の数には、去就の定まらぬ隊を数えない（GDD 8.9）。
+     松尾山と南宮山の四万五千まで味方に数えては、いま槍を合わせられる兵が
+     いくらなのか分からない。旗色が決まれば、そこで数に入る。 */
+  const livingP = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed && !c.日和見);
   const pMen = livingP.reduce((s, c) => s + corpsMen(c), 0);
-  const eMen = b.corps.filter((c) => c.side === "E" && !c.dead && !c.destroyed && (c.seen || !c.ambush))
+  const eMen = b.corps.filter((c) => c.side === "E" && !c.dead && !c.destroyed && !c.日和見 && (c.seen || !c.ambush))
+    .reduce((s, c) => s + corpsMen(c), 0);
+  const 日和見の兵 = b.corps.filter((c) => c.日和見 && !c.dead && !c.destroyed)
     .reduce((s, c) => s + corpsMen(c), 0);
   const pMor = Math.round(livingP.reduce((s, c) => s + c.morale, 0) / Math.max(1, livingP.length));
   const opts = selC && !selC.detach ? detachOptions(b, selC) : [];
@@ -457,14 +519,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
           if (伏せ中 || 向かい中) {
             c.ambush = false; c.revealed = true; c.伏せ場 = null;
             c.伏兵無用 = true;                     // 采配が伏せ直さぬように
-            issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y });
+            下知(b, c, { order: "待機", tx: c.x, ty: c.y });
           } else if (ここで置ける) {
             c.ambush = true; c.revealed = false; c.伏せ場 = null; c.伏兵無用 = false;
-            issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y });
+            下知(b, c, { order: "待機", tx: c.x, ty: c.y });
             b.log.push({ t: b.t, text: `${c.gen.name}隊が木立に伏せた。` });
           } else if (場) {
             c.伏せ場 = 場; c.伏兵無用 = false;
-            issueOrder(b, c, { order: "移動", tx: 場.x, ty: 場.y });
+            下知(b, c, { order: "移動", tx: 場.x, ty: 場.y });
             b.log.push({ t: b.t, text: `${c.gen.name}隊が木立へ回り、身をひそめる。` });
           }
           force((n) => (n + 1) % 1000);
@@ -495,7 +557,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
         patch = { order: "移動", tx: c.x + ((c.x - t.x) / d) * 170, ty: c.y + ((c.y - t.y) / d) * 170 }; }
       else patch = { order: "移動", tx: c.x, ty: Math.min(FIELD.h - 40, c.y + 170) };
     } else patch = { order: "待機", tx: c.x, ty: c.y };
-    issueOrder(b, c, patch);
+    下知(b, c, patch);
     force((n) => (n + 1) % 1000);
   };
   /* 名指しで攻めかかる（GDD 8.2）。
@@ -509,7 +571,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const patch = { order: o, target: foe.id, 狙い: foe.id,
       tx: foe.x + ((c.x - foe.x) / d) * 間, ty: foe.y + ((c.y - foe.y) / d) * 間 };
     if (o === "突撃") patch.chargeT = c.formation === "鋒矢" ? 26 : 16;
-    issueOrder(b, c, patch);
+    下知(b, c, patch);
     notify(b, `${c.gen.name}隊が${foe.gen.name}隊へ${o}。`, "info");
     force((n) => (n + 1) % 1000);
   };
@@ -536,14 +598,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
       const l = m.layers[gt.layer], a = axisOf(l, gt);
       const gp = gatePos(m, l, gt);
       // すでに取り付いていれば呼び戻さない
-      if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * (FIELD.w / BASE.w)) { issueOrder(b, c, { order: "待機" }); return; }
+      if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * (FIELD.w / BASE.w)) { 下知(b, c, { order: "待機" }); return; }
       const wp = routeToCastleGate(m, gt, c.x, c.y);
       if (wp.length) {
-        issueOrder(b, c, { order: "前進", tx: wp[0].x, ty: wp[0].y, keepPath: true });
+        下知(b, c, { order: "前進", tx: wp[0].x, ty: wp[0].y, keepPath: true });
         c.wp = wp;
       } else {
         const p = fromUV(m, a, gateOpenU(gt), a.half + m.t + gt.masu + m.t + 30);
-        issueOrder(b, c, { order: "前進", tx: p.x, ty: p.y });
+        下知(b, c, { order: "前進", tx: p.x, ty: p.y });
       }
     } else if (kind === "本丸へ") {
       c.siegeAuto = false;                   // 別命令。門攻めの自動追随はやめる
@@ -553,7 +615,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
         const a2 = axisOf(hon, hg);
         const wp = [...routeToCastleGate(m, hg, c.x, c.y),
           fromUV(m, a2, hg.off, a2.half - 40), { x: m.cx, y: m.cy }];
-        issueOrder(b, c, { order: "前進", tx: wp[0].x, ty: wp[0].y, keepPath: true });
+        下知(b, c, { order: "前進", tx: wp[0].x, ty: wp[0].y, keepPath: true });
         c.wp = wp;
       } else castleGo(c, "門を破る");
     } else if (kind === "施設を崩す") {
@@ -561,7 +623,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       const cand = m.fac.filter((f) => f.hp > 0 && (f.layer === 0 ? m.layers[0].gates.some((x) => x.broken)
         : m.layers[f.layer].gates.some((x) => x.broken) || m.layers[f.layer - 1].gates.some((x) => x.broken)));
       const f = cand.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
-      if (f) issueOrder(b, c, { order: "前進", tx: f.x, ty: f.y });
+      if (f) 下知(b, c, { order: "前進", tx: f.x, ty: f.y });
       else castleGo(c, "門を破る");
     }
     force((n) => (n + 1) % 1000);
@@ -585,14 +647,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const a2 = axisOf(m.layers[li], gt);
     const p2 = fromUV(m, a2, gt.off, a2.half + m.t + 90);
     c.sortie = true; c.holdGate = null;
-    issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y });
+    下知(b, c, { order: "移動", tx: p2.x, ty: p2.y });
     notify(b, `${c.gen.name}隊が城門を開いて討って出た。`, "info");
     force((n) => (n + 1) % 1000);
   };
   const sortieBack = (c) => {
     if (!c || !b.map) return;
     c.sortie = false;
-    issueOrder(b, c, { order: "移動", tx: b.map.cx, ty: b.map.cy });
+    下知(b, c, { order: "移動", tx: b.map.cx, ty: b.map.cy });
     force((n) => (n + 1) % 1000);
   };
   const orderHint = {
@@ -608,10 +670,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
       {b.phase === "deploy" && (
         <div style={{ display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", flexWrap: "wrap", width: "100%" }}>
           <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.65, flex: 1 }}>
-            {ctx.mode === "castle"
-              ? "寄せ手は大手口の前に布陣しています。門に取り付けば門扉が傷み、破れば次の曲輪へ進めます。本丸を押さえれば城は落ちます。"
-              : "隊を選び、自陣（青い帯の中）をタップかドラッグして布陣。森に置いた隊は伏兵にできます。"}<br />
-            駒＝10人。<b style={{ color: ctx.pColor }}>藍＝自軍</b>／<b style={{ color: ctx.eColor }}>朱＝敵軍</b>、<b>明るく白縁＝直属</b>／<b>暗く黒縁＝地域</b>、
+            {b.筋書き
+              ? "布陣は当時のままです。隊を選び、陣形と向きだけ決めてください。黄の隊は去就が定まっていません――撃ちも撃たれもせず、条件が揃うまで動きません。"
+              : ctx.mode === "castle"
+                ? "寄せ手は大手口の前に布陣しています。門に取り付けば門扉が傷み、破れば次の曲輪へ進めます。本丸を押さえれば城は落ちます。"
+                : "隊を選び、自陣（青い帯の中）をタップかドラッグして布陣。森に置いた隊は伏兵にできます。"}<br />
+            駒＝10人。<b style={{ color: ctx.pColor }}>藍＝自軍</b>／<b style={{ color: ctx.eColor }}>朱＝敵軍</b>{b.筋書き ? <>／<b style={{ color: "#B08A10" }}>黄＝去就未定</b></> : null}、<b>明るく白縁＝直属</b>／<b>暗く黒縁＝地域</b>、
             <b>形＝兵科</b>（槍は三角、騎馬は細長、弓は背が凹む、鉄砲は中央に点）。<br />
             最後尾の段は予備隊で、前線が薄くなるまで前へ出ません。<br />
             天候は<b>{b.weather}</b>：{WEATHER[b.weather].note}
@@ -684,7 +748,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
               force((n) => (n + 1) % 1000);
             }}>全軍委任</button>
             <button className="btn sm" onClick={() => {
-              for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) { c.auto = false; issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y }); }
+              for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed && !c.日和見 && !指図の縛り(b, c)) { c.auto = false; 下知(b, c, { order: "待機", tx: c.x, ty: c.y }); }
               force((n) => (n + 1) % 1000);
             }}>全軍委任解除</button>
             <button className={`btn sm ${selAll ? "on" : ""}`}
@@ -880,7 +944,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
               <button className={`btn sm ${selC.auto ? "on" : ""}`} style={{ width: "100%", marginBottom: 5 }}
                 onClick={() => {
                   selC.auto = !selC.auto;
-                  if (!selC.auto) issueOrder(b, selC, { order: "待機", tx: selC.x, ty: selC.y });
+                  if (!selC.auto) 下知(b, selC, { order: "待機", tx: selC.x, ty: selC.y });
                   force((n) => (n + 1) % 1000);
                 }}>
                 {selC.auto ? "委任中（押すと解除）" : "この隊に委任する"}
@@ -1070,9 +1134,44 @@ export function BattleScreen({ ctx, land, onEnd }) {
     );
   })();
 
+  /* 筋書きの問い（GDD 8.9）。
+
+     好機はいつも同じ形で訪れるとは限らない。条件が揃ったところで盤が問い、
+     遊ぶ側が諾否を決める。家康を前へ出すか、問鉄砲を撃つか――どれも
+     取り返しのつかぬ一手であるから、黙って進めるわけにはいかない。 */
+  const 筋 = b.筋書き;
+  const 問いの札 = 筋 && 筋.問い && (
+    <div className="modal" onMouseDown={stop} onMouseUp={stop}>
+      <div className="card" style={{ maxWidth: 460 }}>
+        <div className="mn" style={{ fontSize: 19, marginBottom: 8 }}>好機</div>
+        <div style={{ fontSize: 13, lineHeight: 2.0 }}>{筋.問い.文}</div>
+        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          <button className="btn dark" style={{ flex: 1, padding: 11 }}
+            onClick={() => { 合戦の問いに答える(b, true); setSpeed(speedRef.current || 1); 問い直し((n) => n + 1); }}>
+            {筋.問い.諾文}
+          </button>
+          <button className="btn" style={{ flex: 1, padding: 11 }}
+            onClick={() => { 合戦の問いに答える(b, false); 問い直し((n) => n + 1); }}>
+            {筋.問い.否文}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+  /* 下知を断られた訳。束の間だけ盤の下に出す。 */
+  const 咎めの帯 = 咎め && (
+    <div style={{ position: "absolute", left: "50%", bottom: 92, transform: "translateX(-50%)",
+      background: "rgba(44,40,32,0.92)", color: "#F6F2E6", padding: "9px 16px", borderRadius: 7,
+      fontSize: 13, zIndex: 60, pointerEvents: "none", maxWidth: "86vw", textAlign: "center" }}>
+      {咎め}
+    </div>
+  );
+
   return (
-    <div className="sp" style={{ height: "100dvh", background: U.paper, overscrollBehavior: "none" }} onMouseDown={stop} onMouseUp={stop}>
+    <div className="sp" style={{ height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }} onMouseDown={stop} onMouseUp={stop}>
       {退きの札}
+      {問いの札}
+      {咎めの帯}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 }}>
         {!wide && (
         <div className="bar bt">
@@ -1086,6 +1185,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
             <span className="dot" style={{ background: ctx.eColor }} /><b className="mn" style={{ fontSize: 14 }}>{ctx.eName}</b>
           </span>
           <span className="kv">兵 <b className="num">{fmt(eMen)}</b></span>
+          {日和見の兵 > 0 && (
+            <span className="kv" style={{ color: "#8A6A10" }}>
+              去就未定 <b className="num">{fmt(日和見の兵)}</b>
+            </span>
+          )}
           {/* 盤の名にすでに「城下」「の囲み」が付いていれば、重ねて添えない（城下下と出ていた） */}
           <span className="kv">{ctx.place}{/城下$|の囲み$/.test(ctx.place || "") ? ""
             : ctx.mode === "castle" ? "城攻め" : ctx.mode === "clash" ? "の野戦" : "下"}・{b.weather}</span>

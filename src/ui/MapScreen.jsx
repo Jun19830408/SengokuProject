@@ -7,7 +7,7 @@ import { corpsMax, corpsMen, makeCorps, notify, placeSquads } from "../battle/co
 import { 城方の隊を立てる } from "../battle/defense.js";
 import { drawMon, sideHue } from "../battle/draw.js";
 import { createBattle } from "../battle/engine.js";
-import { BASE, FIELD, MAX_CORPS, layoutField, setFieldSeed, terrainAt } from "../battle/field.js";
+import { BASE, FIELD, MAX_CORPS, layoutField, setFieldKind, setFieldSeed, terrainAt } from "../battle/field.js";
 import { ambushChance, ambushPlan, tryAmbush } from "../core/ambush.js";
 import { captureChance, makePrisoner, payRansom, ransomAccept, ransomCost, takeAsPrisoner } from "../core/capture.js";
 import { 取り立てる, COMING_OF_AGE, actingHead, bearChild, canRecruit, emergeGenerals, hasHouse, heirCandidates, houseName, inheritHouse, lifeSpan, loyaltyAfterRecruit, makePromotion, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
@@ -948,6 +948,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     setBattleMap(null);
     setFieldSeed(army.from, dest.id);      // 街道ごとに戦場が決まる
+    /* 山越えの街道で戦うなら、野には山が立つ（GDD 8.1）。
+       地図の上で山道・難所と引いてある道が、盤の上では平野になっていた。
+       南宮山のような山を戦場に置けるようにしたので、街道の質をそのまま渡す。 */
+    { const r = roadBetween(army.from, dest.id); setFieldKind(r ? r[3] : "街道"); }
     const atkGens = army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
     // 行き合いなら、向かい合うのは城の守備ではなく相手の軍である
     const defGens = foe
