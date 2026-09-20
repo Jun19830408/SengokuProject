@@ -14897,6 +14897,33 @@ function \u6539\u307E\u3063\u305F\u540D(id, \u5E74) {
   }
   return \u540D ? { \u540D, y: \u5E74\u5370, \u8A33 } : null;
 }
+var \u6B66\u5C06\u306E\u6539\u540D = [
+  // ── 天下人の道
+  { id: "hideyoshi", y: 1561, \u540D: "\u6728\u4E0B\u79C0\u5409", \u8A33: "\u304A\u306D\u3068\u795D\u8A00\u3092\u6319\u3052\u3001\u79C0\u5409\u3068\u540D\u4E57\u3063\u305F" },
+  { id: "hideyoshi", y: 1573, \u540D: "\u7FBD\u67F4\u79C0\u5409", \u8A33: "\u4E39\u7FBD\u3068\u67F4\u7530\u304B\u3089\u4E00\u5B57\u305A\u3064\u53D6\u3063\u3066\u7FBD\u67F4\u3092\u79F0\u3057\u305F" },
+  { id: "hideyoshi", y: 1586, \u540D: "\u8C4A\u81E3\u79C0\u5409", \u8A33: "\u6B63\u89AA\u753A\u5929\u7687\u3088\u308A\u8C4A\u81E3\u306E\u59D3\u3092\u8CDC\u3063\u305F" },
+  { id: "hidenaga", y: 1586, \u540D: "\u8C4A\u81E3\u79C0\u9577", \u8A33: "\u5144\u304C\u8C4A\u81E3\u306E\u59D3\u3092\u8CDC\u308A\u3001\u5F1F\u3082\u3053\u308C\u306B\u5023\u3063\u305F" },
+  { id: "ieyasu", y: 1563, \u540D: "\u677E\u5E73\u5BB6\u5EB7", \u8A33: "\u4ECA\u5DDD\u3068\u624B\u3092\u5207\u308A\u3001\u7FA9\u5143\u304B\u3089\u53D7\u3051\u305F\u300C\u5143\u300D\u306E\u5B57\u3092\u6368\u3066\u305F" },
+  { id: "ieyasu", y: 1566, \u540D: "\u5FB3\u5DDD\u5BB6\u5EB7", \u8A33: "\u52C5\u8A31\u3092\u5F97\u3066\u5FB3\u5DDD\u3092\u79F0\u3057\u305F" },
+  // ── 家督と偏諱、そして剃髪
+  { id: "kagetora", y: 1561, \u540D: "\u4E0A\u6749\u653F\u864E", \u8A33: "\u4E0A\u6749\u61B2\u653F\u304B\u3089\u5BB6\u7763\u3068\u95A2\u6771\u7BA1\u9818\u3092\u8B72\u3089\u308C\u305F" },
+  { id: "kagetora", y: 1562, \u540D: "\u4E0A\u6749\u8F1D\u864E", \u8A33: "\u5C06\u8ECD\u8DB3\u5229\u7FA9\u8F1D\u3088\u308A\u4E00\u5B57\u3092\u8CDC\u3063\u305F" },
+  { id: "kagetora", y: 1570, \u540D: "\u4E0A\u6749\u8B19\u4FE1", \u8A33: "\u5243\u9AEA\u3057\u3066\u8B19\u4FE1\u3068\u53F7\u3057\u305F" },
+  { id: "shingen", y: 1559, \u540D: "\u6B66\u7530\u4FE1\u7384", \u8A33: "\u5243\u9AEA\u3057\u3066\u4FE1\u7384\u3068\u53F7\u3057\u305F" },
+  { id: "yoshishige", y: 1562, \u540D: "\u5927\u53CB\u5B97\u9E9F", \u8A33: "\u5243\u9AEA\u3057\u3066\u5B97\u9E9F\u3068\u53F7\u3057\u305F" },
+  { id: "fujitaka", y: 1582, \u540D: "\u7D30\u5DDD\u5E7D\u658E", \u8A33: "\u672C\u80FD\u5BFA\u306E\u5909\u306E\u5F8C\u3001\u5243\u9AEA\u3057\u3066\u5E7D\u658E\u3068\u53F7\u3057\u305F" },
+  { id: "yoshihisa", y: 1587, \u540D: "\u5CF6\u6D25\u9F8D\u4F2F", \u8A33: "\u79C0\u5409\u306B\u964D\u308A\u3001\u5243\u9AEA\u3057\u3066\u9F8D\u4F2F\u3068\u53F7\u3057\u305F" }
+];
+function \u6539\u307E\u3063\u305F\u540D\u4E57\u308A(id, \u5E74) {
+  let \u540D = null, \u5E74\u5370 = -1, \u8A33 = null;
+  for (const x of \u6B66\u5C06\u306E\u6539\u540D) {
+    if (x.id !== id || x.y > \u5E74 || x.y < \u5E74\u5370) continue;
+    \u540D = x.\u540D;
+    \u5E74\u5370 = x.y;
+    \u8A33 = x.\u8A33;
+  }
+  return \u540D ? { \u540D, y: \u5E74\u5370, \u8A33 } : null;
+}
 
 // src/core/state.js
 var relKey2 = (a, b) => [a, b].sort().join("|");
@@ -15350,6 +15377,7 @@ function initState(player) {
   \u56FD\u4E3B\u3092\u636E\u3048\u308B(\u76E42);
   \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(\u76E42);
   \u57CE\u306E\u540D\u3092\u6539\u3081\u308B(\u76E42);
+  \u6B66\u5C06\u306E\u540D\u3092\u6539\u3081\u308B(\u76E42);
   return \u76E42;
 }
 function migrateRosters(s2) {
@@ -15764,6 +15792,19 @@ function \u57CE\u306E\u540D\u3092\u6539\u3081\u308B(s2, { \u544A\u3052\u308B } =
   }
   return \u6539\u3081\u305F;
 }
+function \u6B66\u5C06\u306E\u540D\u3092\u6539\u3081\u308B(s2, { \u544A\u3052\u308B } = {}) {
+  const \u6539\u3081\u305F = [];
+  for (const g of s2.generals || []) {
+    const \u65B0 = \u6539\u307E\u3063\u305F\u540D\u4E57\u308A(g.id, s2.year);
+    if (!\u65B0 || g.name === \u65B0.\u540D) continue;
+    const \u65E7 = g.name;
+    g.name = \u65B0.\u540D;
+    g.\u65E7\u540D = g.\u65E7\u540D || \u65E7;
+    \u6539\u3081\u305F.push({ g, \u65E7, \u65B0 });
+    if (\u544A\u3052\u308B && s2.year === \u65B0.y) \u544A\u3052\u308B(`${\u65E7}\u304C${\u65B0.\u540D}\u3068\u540D\u3092\u6539\u3081\u305F\uFF08${\u65B0.\u8A33}\uFF09\u3002`);
+  }
+  return \u6539\u3081\u305F;
+}
 function migrateSave(s2) {
   if (!s2.\u5353) s2.\u5353 = `t${s2.player || "x"}${s2.year || 0}-\u65E7`;
   \u77F3\u9AD8\u306E\u4E09\u6BB5\u3092\u7E55\u3046(s2);
@@ -15784,6 +15825,7 @@ function migrateSave(s2) {
   \u65D7\u982D\u306E\u540D\u6B8B\u3092\u7E55\u3046(s2);
   \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(s2);
   \u57CE\u306E\u540D\u3092\u6539\u3081\u308B(s2);
+  \u6B66\u5C06\u306E\u540D\u3092\u6539\u3081\u308B(s2);
   \u5C06\u306E\u7121\u3044\u8ECD\u3092\u7E55\u3046(s2);
   return s2;
 }
@@ -21550,12 +21592,10 @@ function advanceMonth(prev, g) {
       if (q.gen.faction !== s2.player) continue;
       events.push(`${q.gen.name}\u306F${q.\u5148.name}\u3078\u5F15\u304D\u79FB\u3063\u305F\u3002`);
     }
-    for (const q of \u57CE\u306E\u540D\u3092\u6539\u3081\u308B(s2, { \u544A\u3052\u308B: (t) => {
-      s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
-      events.push(t);
-    } })) {
+    for (const q of \u57CE\u306E\u540D\u3092\u6539\u3081\u308B(s2, { \u544A\u3052\u308B: (t) => events.push(t) })) {
       void q;
     }
+    \u6B66\u5C06\u306E\u540D\u3092\u6539\u3081\u308B(s2, { \u544A\u3052\u308B: (t) => events.push(t) });
     \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(s2);
     for (const fid of Object.keys(s2.factions)) {
       for (const g2 of \u56FD\u4E3B\u3092\u7E55\u3046(s2, fid)) {
@@ -21569,7 +21609,17 @@ function advanceMonth(prev, g) {
   }
   s2.\u4EE3\u66FF\u308F\u308A = [];
   s2.monthEvents = events;
-  if (events.length) s2.chronicle.push(...events.map((t) => ({ y: s2.year, m: s2.month, text: t })));
+  if (events.length) {
+    const \u65E2 = {};
+    for (const x of s2.chronicle) if (x.y === s2.year && x.m === s2.month) \u65E2[x.text] = (\u65E2[x.text] || 0) + 1;
+    for (const t of events) {
+      if (\u65E2[t]) {
+        \u65E2[t]--;
+        continue;
+      }
+      s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+    }
+  }
   if (s2.chronicle.length > 400) s2.chronicle = s2.chronicle.slice(-400);
   return s2;
 }

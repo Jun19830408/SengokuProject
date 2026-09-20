@@ -9,7 +9,7 @@ import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の�
 import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家 } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
-import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 城主の札を据える, 城の名を改める } from "../core/state.js";
+import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 城主の札を据える, 城の名を改める, 武将の名を改める } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
 import { PLOTS } from "../data/diplo.js";
 import { FATED, NEWCOMERS, PARENT } from "../data/newcomers.js";
@@ -1977,13 +1977,14 @@ export function advanceMonth(prev, g) {
            札の無い城が残る。札が無い城は「居る者のうち最も身代の高い者」に落ちて
            しまい、また月ごとに揺れる。留守を預かる者をそのまま札にする。 */
         /* 年が改まれば、城の名も改まる（GDD 4.7）。稲葉山が岐阜に、黒川が若松に。 */
-        for (const q of 城の名を改める(s, { 告げる: (t) => {
-          s.chronicle.push({ y: s.year, m: s.month, text: t });
-          events.push(t);
-        } })) {
+        /* 報せは events に積むだけでよい。月送りの締めで年代記へ流し込まれるので、
+           ここで s.chronicle にも積むと同じ一行が二度並ぶ（実測：一五六七年の岐阜）。 */
+        for (const q of 城の名を改める(s, { 告げる: (t) => events.push(t) })) {
           /* 本拠や名指しの控えは id で持つので、名が変わっても壊れない。 */
           void q;
         }
+        /* 人の名も年につれて改まる（GDD 4.7）。藤吉郎が秀吉に、元康が家康に。 */
+        武将の名を改める(s, { 告げる: (t) => events.push(t) });
         城主の札を据える(s);
         for (const fid of Object.keys(s.factions)) {
           for (const g of 国主を繕う(s, fid)) {
@@ -1997,7 +1998,22 @@ export function advanceMonth(prev, g) {
       }
       s.代替わり = [];
       s.monthEvents = events;
-      if (events.length) s.chronicle.push(...events.map((t) => ({ y: s.year, m: s.month, text: t })));
+      /* 締めで年代記へ流す。ただし、すでにこの月の年代記に載っている一行は重ねない。
+
+         報せの積み方は場所によって二通りある。年代記へ直に積んでから、遊ぶ側の
+         家の分だけ events にも積む所（同盟・寝返り・出奔など）と、events だけに
+         積む所（改名・役の繕いなど）である。前者は遊ぶ側の出来事にかぎって
+         年代記に二度並んでいた（実測：二十年で四百行のうち四十七行）。
+         同じ文が本当に二度起きることもある（兵糧の尽きた軍が二つ）ので、
+         数で引く――events にある数から、すでに載っている数を差し引いた分だけ足す。 */
+      if (events.length) {
+        const 既 = {};
+        for (const x of s.chronicle) if (x.y === s.year && x.m === s.month) 既[x.text] = (既[x.text] || 0) + 1;
+        for (const t of events) {
+          if (既[t]) { 既[t]--; continue; }
+          s.chronicle.push({ y: s.year, m: s.month, text: t });
+        }
+      }
       if (s.chronicle.length > 400) s.chronicle = s.chronicle.slice(-400);   // 古い記録は流す
       return s;
 }

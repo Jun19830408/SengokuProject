@@ -9,7 +9,7 @@
    入れない――盤の上の場所は動かぬのに名だけ飛べば、地図と名が食い違う。 */
 const path = require('path');
 const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
-const { initState, advanceMonth, migrateSave, 城の名を改める } = H;
+const { initState, advanceMonth, migrateSave, 城の名を改める, 武将の名を改める } = H;
 /* 改名の表そのものも束ねて読む（engine の包みには入っていない）。 */
 const fs = require('fs');
 const esbuild = require('esbuild');
@@ -17,7 +17,7 @@ const 表の道 = path.join(__dirname, '..', 'build', 'kaimei.cjs');
 fs.mkdirSync(path.dirname(表の道), { recursive: true });
 esbuild.buildSync({ entryPoints: [path.join(__dirname, '..', 'src', 'data', 'kaimei.js')],
   bundle: true, format: 'cjs', outfile: 表の道, logLevel: 'error' });
-const { 城の改名, 改まった名 } = require(表の道);
+const { 城の改名, 改まった名, 武将の改名, 改まった名乗り } = require(表の道);
 
 const 咎 = [];
 const 確 = (名, 可, 添 = '') => {
@@ -25,6 +25,7 @@ const 確 = (名, 可, 添 = '') => {
   if (!可) 咎.push(名);
 };
 const 名 = (s, id) => (s.castles.find((c) => c.id === id) || {}).name;
+/* 武将の節では、同じ「名」を別の意味で使うので、そちらは 名乗り とする。 */
 
 console.log('── 一　表そのものの検め');
 {
@@ -147,6 +148,92 @@ console.log('\n── 六　遠くへ移った本城は、移った先に近い�
     return !c;
   });
   確('改名の先がみな盤にある', 国違い.length === 0, `${城の改名.length}件`);
+}
+
+/* ==========================================================================
+   武将の改名（GDD 4.7）
+
+   城と同じく、人の名も年につれて改まる。木下藤吉郎が秀吉に、羽柴に、豊臣に。
+   松平元康が家康に、徳川に。長尾景虎が上杉を継ぎ、謙信と号する。
+   ========================================================================== */
+{
+  console.log('\n── 武将の改名');
+  確('改名の表がある', 武将の改名.length >= 10, `${武将の改名.length}件`);
+
+  const 名乗り = (id, y) => (改まった名乗り(id, y) || {}).名 || null;
+  確('木下藤吉郎は年とともに名を改める',
+    名乗り('hideyoshi', 1555) === null && 名乗り('hideyoshi', 1561) === '木下秀吉'
+    && 名乗り('hideyoshi', 1573) === '羽柴秀吉' && 名乗り('hideyoshi', 1590) === '豊臣秀吉',
+    `1555 ${名乗り('hideyoshi', 1555) || '木下藤吉郎'}／1561 ${名乗り('hideyoshi', 1561)}／1573 ${名乗り('hideyoshi', 1573)}／1590 ${名乗り('hideyoshi', 1590)}`);
+  確('松平元康は徳川家康になる',
+    名乗り('ieyasu', 1562) === null && 名乗り('ieyasu', 1563) === '松平家康' && 名乗り('ieyasu', 1570) === '徳川家康',
+    `1563 ${名乗り('ieyasu', 1563)}／1570 ${名乗り('ieyasu', 1570)}`);
+  確('長尾景虎は上杉謙信になる',
+    名乗り('kagetora', 1561) === '上杉政虎' && 名乗り('kagetora', 1562) === '上杉輝虎'
+    && 名乗り('kagetora', 1575) === '上杉謙信',
+    `1561 ${名乗り('kagetora', 1561)}／1562 ${名乗り('kagetora', 1562)}／1575 ${名乗り('kagetora', 1575)}`);
+  確('剃髪した者は号で呼ばれる',
+    名乗り('shingen', 1560) === '武田信玄' && 名乗り('yoshishige', 1565) === '大友宗麟'
+    && 名乗り('fujitaka', 1583) === '細川幽斎' && 名乗り('yoshihisa', 1590) === '島津龍伯');
+  確('その年が来るまでは改まらない', 名乗り('shingen', 1558) === null && 名乗り('fujitaka', 1581) === null);
+
+  /* 盤の上でも改まるか。開いた年の前後で見る。 */
+  const t = initState('oda');
+  const 引 = (id) => (t.generals.find((g) => g.id === id) || {}).name;
+  t.year = 1546; 武将の名を改める(t);
+  確('開いた年は旧い名のまま', 引('kagetora') === '長尾景虎' && 引('shingen') === '武田晴信',
+    `${引('kagetora')}・${引('shingen')}`);
+  t.year = 1570; 武将の名を改める(t);
+  確('年を進めれば盤の名も改まる', 引('kagetora') === '上杉謙信' && 引('shingen') === '武田信玄',
+    `${引('kagetora')}・${引('shingen')}`);
+  確('旧い名を控えている', (t.generals.find((g) => g.id === 'kagetora') || {}).旧名 === '長尾景虎');
+
+  /* 後から世に出る者にも効く（木下藤吉郎は一五五四年に登場する）。 */
+  const u = initState('oda');
+  u.year = 1590;
+  u.generals.push({ id: 'hideyoshi', name: '木下藤吉郎', faction: 'oda', lead: 88, valor: 66,
+    wit: 96, gov: 97, loyal: 80, age: 53, at: 'nagoya', retinue: 120, retTrain: 58 });
+  武将の名を改める(u);
+  確('後から世に出た者も改まる',
+    (u.generals.find((g) => g.id === 'hideyoshi') || {}).name === '豊臣秀吉',
+    (u.generals.find((g) => g.id === 'hideyoshi') || {}).name);
+
+  /* 旧い記録――改名の仕組みを入れる前に保った盤――を読み込んだとき。
+     天正三年の記録に長尾景虎のまま残っていても、読み込みで名乗りが当たる。 */
+  {
+    const w = initState('oda');
+    w.year = 1575; w.month = 6;
+    for (const g of w.generals) if (g.id === 'kagetora') { g.name = '長尾景虎'; delete g.旧名; }
+    for (const g of w.generals) if (g.id === 'shingen') { g.name = '武田晴信'; delete g.旧名; }
+    migrateSave(w);
+    const k = w.generals.find((g) => g.id === 'kagetora') || {};
+    const sh = w.generals.find((g) => g.id === 'shingen') || {};
+    確('旧い記録を読み込めば名乗りが当たる', k.name === '上杉謙信' && sh.name === '武田信玄',
+      `${k.name}・${sh.name}`);
+    確('旧い記録でも旧名を控える', k.旧名 === '長尾景虎', k.旧名);
+  }
+
+  /* 月送りに乗せて、改名の報せが年代記に一度だけ載るか（GDD 4.7）。
+     報せは events に積めば締めで年代記へ流れる。両方へ積むと同じ行が二度並ぶ。 */
+  {
+    let v = initState('oda'); v.autoPlay = true;
+    const 改 = [];
+    for (let m = 0; m < 12 * 22; m++) {
+      v = advanceMonth(v);
+      for (const x of v.monthEvents || []) if (/名を改めた|と改まった/.test(x)) 改.push(`${v.year}/${v.month} ${x}`);
+    }
+    const 二度 = 改.filter((x, i) => 改.indexOf(x) !== i);
+    確('改名の報せは月に一度きり', 二度.length === 0, `${改.length}件／重なり${二度.length}件`);
+    const 年代記 = (v.chronicle || []).filter((x) => /名を改めた|と改まった/.test(x.text))
+      .map((x) => `${x.y}/${x.m} ${x.text}`);
+    確('年代記にも二度書かない', 年代記.filter((x, i) => 年代記.indexOf(x) !== i).length === 0,
+      年代記.join('／') || 'なし');
+  }
+
+  /* 名で武将を引いている所がないこと（改名で壊れないか）。 */
+  const 重 = {};
+  for (const x of 武将の改名) 重[`${x.id}:${x.y}`] = (重[`${x.id}:${x.y}`] || 0) + 1;
+  確('同じ年に二つの名を当てていない', Object.values(重).every((n) => n === 1));
 }
 
 console.log('');

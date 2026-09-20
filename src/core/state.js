@@ -10,7 +10,7 @@ import { FACTIONS } from "../data/factions.js";
 import { GENERALS } from "../data/generals.js";
 import { px, py } from "../data/geo.js";
 import { PARENT } from "../data/newcomers.js";
-import { 改まった名 } from "../data/kaimei.js";
+import { 改まった名, 改まった名乗り } from "../data/kaimei.js";
 import { MOB_POLICY } from "../data/roads.js";
 import { 城の馬, 城の鉄砲 } from "../data/arms.js";
 import { 直属の兵科 } from "../data/arms.js";
@@ -332,6 +332,7 @@ export function initState(player) {
   国主を据える(盤);                               // 国ごとに国主を一人（GDD 6.4）
   城主の札を据える(盤);                           // 城ごとに城主を一人（GDD 6.4）
   城の名を改める(盤);                             // 始めの年より後の名は当てない（天文十五年の名）
+  武将の名を改める(盤);                           // 人の名も同じ。開いた年に合わせた名乗りにする
   return 盤;
 }
 
@@ -963,6 +964,23 @@ export function 城の名を改める(s, { 告げる } = {}) {
   return 改めた;
 }
 
+/* 武将の名を改める（GDD 4.7）。城の名と同じ筋で、年が来たら名乗りを改める。 */
+export function 武将の名を改める(s, { 告げる } = {}) {
+  const 改めた = [];
+  for (const g of s.generals || []) {
+    const 新 = 改まった名乗り(g.id, s.year);
+    if (!新 || g.name === 新.名) continue;
+    const 旧 = g.name;
+    g.name = 新.名;
+    g.旧名 = g.旧名 || 旧;
+    改めた.push({ g, 旧, 新 });
+    /* 告げるのは、まさにその年に改まったときだけ。古い記録を読み込んだときは、
+       黙って直す（十年ぶんの改名が一度に流れても読めない）。 */
+    if (告げる && s.year === 新.y) 告げる(`${旧}が${新.名}と名を改めた（${新.訳}）。`);
+  }
+  return 改めた;
+}
+
 export function migrateSave(s) {
   // 卓の印の無い古い記録には、いま与える（以後、置き場が守れるようになる）
   if (!s.卓) s.卓 = `t${(s.player || "x")}${s.year || 0}-旧`;
@@ -982,6 +1000,7 @@ export function migrateSave(s) {
   旗頭の名残を繕う(s);                            // 方面を廃した。役国を根から据え直す
   城主の札を据える(s);                            // 札の無い城に、いまの城主を札として据える
   城の名を改める(s);                              // その年までに改まった城の名を当てる
+  武将の名を改める(s);                            // 旧い記録の武将にも、その年までの名乗りを当てる
   将の無い軍を繕う(s);                            // 兵だけ残って浮いていた軍を解く
   return s;
 }
