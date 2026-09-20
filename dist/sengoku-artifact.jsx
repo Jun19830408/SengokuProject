@@ -25845,7 +25845,7 @@ function \u5148\u5BA2\u305F\u3061(alive, c, o) {
   return alive.filter((x) => x !== c && x.side === c.side && !x.routed && x.squads.some((q) => q.engaged) && Math.hypot(x.x - o.x, x.y - o.y) < \u9593);
 }
 function \u72D9\u3046\u6575\u3092\u9078\u3076(alive, c, foes) {
-  const \u9060\u56DE\u308A\u306E\u8CBB\u3048 = 420 * fieldScale();
+  const \u9060\u56DE\u308A\u306E\u8CBB\u3048 = clamp(420 * Math.sqrt(fieldScale()), 420, 900);
   const \u8CBB\u3048 = (o) => {
     const n = \u5148\u5BA2\u305F\u3061(alive, c, o).length;
     return Math.hypot(o.x - c.x, o.y - c.y) + (n === 0 ? 0 : n === 1 ? \u9060\u56DE\u308A\u306E\u8CBB\u3048 : 1e7);
@@ -25859,7 +25859,7 @@ function \u7DDA\u307E\u3067\u306E\u9694\u305F\u308A(x0, y0, x1, y1, px2, py2) {
   return Math.hypot(px2 - (x0 + dx * t), py2 - (y0 + dy * t));
 }
 function \u524D\u3092\u3075\u3055\u3050\u5473\u65B9(alive, c, sx, sy) {
-  const \u5E452 = 62 * fieldScale();
+  const \u5E452 = clamp(62 * Math.sqrt(fieldScale()), 62, 180);
   const \u6211\u307E\u3067 = Math.hypot(sx - c.x, sy - c.y);
   let \u8FD1 = null, \u8FD1\u3055 = Infinity;
   for (const x of alive) {
@@ -25960,13 +25960,14 @@ function \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, sx, sy) {
   const \u62BC = !!(c.\u62BC\u3057\u6E21\u308B && b.t < c.\u62BC\u3057\u6E21\u308B);
   const \u90532 = \u91CE\u306E\u9053(c.x, c.y, sx, sy, { \u62BC\u3057\u6E21\u308B: \u62BC });
   if (!\u90532 || !\u90532.length) return null;
-  if (!\u6DF5\u3092\u8DE8\u3050(c.x, c.y, sx, sy) && \u9053\u306E\u308A2(\u90532, c.x, c.y) > \u76F4 * 4.5 + 400) return null;
+  const \u6C34\u3092\u631F\u3080 = \u6DF5\u3092\u8DE8\u3050(c.x, c.y, sx, sy);
+  if (!\u6C34\u3092\u631F\u3080 && \u9053\u306E\u308A2(\u90532, c.x, c.y) > \u76F4 * 1.6 + 300) return null;
   c.\u9053\u306E\u7684 = { x: sx, y: sy };
   c.\u9053\u523B = b.t;
   return \u90532;
 }
 function \u6DF5\u3092\u8DE8\u3050(x0, y0, x1, y1) {
-  if (!hasRiver()) return false;
+  if (!hasRiver() && !RIVERS2.length) return false;
   const n = 6;
   for (let k = 0; k <= n; k++) {
     if (terrainAt(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n) === "deep") return true;
@@ -26053,6 +26054,7 @@ function battleAI(b) {
       }
       const \u5019\u88DC = alive.filter((c) => c.side === side && delegated(b, c) && !c.detach && !c.routed && !c.withdraw && !c.ambush && !c.\u4F0F\u305B\u5834 && !c.\u4F0F\u5175\u7121\u7528 && !c.squads.some((q) => q.engaged));
       const \u624B\u52E2 = alive.filter((c) => c.side === side && !c.detach);
+      if (b.\u7B4B\u66F8\u304D) continue;
       if (\u624B\u52E2.length < 2 || !\u5019\u88DC.length) continue;
       let \u9078 = null, \u5834 = null, bd = 1e9;
       for (const c of \u5019\u88DC) {
@@ -26427,12 +26429,13 @@ function battleAI(b) {
         }
       }
     }
-    if (!MAP && HILLS.length && !c.squads.some((q) => q.engaged)) {
+    if (!MAP && !b.\u7B4B\u66F8\u304D && HILLS.length && !c.squads.some((q) => q.engaged)) {
       const \u5B88\u52E2 = \u5B88\u52E2\u306E\u968A(b, c);
       const \u6575\u307E\u3067 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
       const \u756A = \u5B88\u52E2 ? \u7A7A\u304D\u4E18\u3092\u63A2\u3059(b, c) : -1;
       const \u4E182 = \u756A >= 0 ? HILLS[\u756A] : null;
-      if (\u4E182 && \u6575\u307E\u3067 > 260) {
+      const \u4E0B\u304C\u308A = \u4E182 ? Math.hypot(tgt.x - \u4E182.x, tgt.y - \u4E182.y) - \u6575\u307E\u3067 : 0;
+      if (\u4E182 && \u6575\u307E\u3067 > 260 && \u4E0B\u304C\u308A <= 200) {
         const \u9060\u3055 = Math.hypot(\u4E182.x - c.x, \u4E182.y - c.y);
         const \u9802 = clamp(\u4E182.r * 0.45, 60, 120);
         const \u9593 = 540 + \u4E182.r * 0.8;
@@ -26528,10 +26531,14 @@ function battleAI(b) {
     issueOrder(b, c, { order: "\u63A5\u6226", tx: sx, ty: sy });
   }
   for (const c of alive) {
-    if (!c.\u63A7\u3048 && !c.\u7E1B\u308A && !c.\u4E0D\u6226) continue;
+    if (!c.\u63A7\u3048 && !c.\u7E1B\u308A && !c.\u4E0D\u6226) {
+      c.\u636E\u3048\u7F6E\u304D = null;
+      continue;
+    }
+    if (!c.\u636E\u3048\u7F6E\u304D) c.\u636E\u3048\u7F6E\u304D = { x: c.x, y: c.y };
     c.order = "\u5F85\u6A5F";
-    c.tx = c.x;
-    c.ty = c.y;
+    c.tx = c.\u636E\u3048\u7F6E\u304D.x;
+    c.ty = c.\u636E\u3048\u7F6E\u304D.y;
     c.wp = null;
     c.faceTo = null;
     c.chargeT = 0;
@@ -26719,8 +26726,19 @@ function stepBattle(b, dt) {
           const \u7E04 = \u565B\u3093\u3067\u3044\u308B ? clamp(\u5E83 * 0.38, 34, 120) : clamp(\u5E83 * 0.95, 70, 280);
           const dx2 = c.x - cx2, dy2 = c.y - cy2, dd = Math.hypot(dx2, dy2);
           if (dd > \u7E04) {
-            c.x = cx2 + dx2 / dd * \u7E04;
-            c.y = cy2 + dy2 / dd * \u7E04;
+            const nx2 = cx2 + dx2 / dd * \u7E04, ny2 = cy2 + dy2 / dd * \u7E04;
+            let mx3 = nx2 - c.x, my3 = ny2 - c.y;
+            const \u884C2 = Math.hypot(c.tx - c.x, c.ty - c.y);
+            if (\u884C2 > 12) {
+              const ux = (c.tx - c.x) / \u884C2, uy = (c.ty - c.y) / \u884C2;
+              const \u6CBF = mx3 * ux + my3 * uy;
+              if (\u6CBF < 0) {
+                mx3 -= \u6CBF * ux;
+                my3 -= \u6CBF * uy;
+              }
+            }
+            c.x += mx3;
+            c.y += my3;
           }
         }
       }
@@ -26744,13 +26762,32 @@ function stepBattle(b, dt) {
     if (c.pinned) continue;
     const cap = MAP ? 12 : 40;
     const \u8E0F = \u8E0F\u3093\u5F35\u308B ? 0.16 : 1;
-    const px2 = clamp(sx * (MAP ? 0.3 : 0.55), -cap, cap) * dt * \u8E0F;
-    const py2 = clamp(sy * (MAP ? 0.3 : 0.55), -cap, cap) * dt * \u8E0F;
+    let px2 = clamp(sx * (MAP ? 0.3 : 0.55), -cap, cap) * dt * \u8E0F;
+    let py2 = clamp(sy * (MAP ? 0.3 : 0.55), -cap, cap) * dt * \u8E0F;
+    const \u884C = Math.hypot(c.tx - c.x, c.ty - c.y);
+    if (\u884C > 12) {
+      const ux = (c.tx - c.x) / \u884C, uy = (c.ty - c.y) / \u884C;
+      const \u6CBF = px2 * ux + py2 * uy;
+      if (\u6CBF < 0) {
+        px2 -= \u6CBF * ux;
+        py2 -= \u6CBF * uy;
+      }
+    }
+    const \u524D\u306E\u9694 = Math.hypot(c.tx - c.x, c.ty - c.y);
     if (passable(c.x + px2, c.y + py2)) {
       c.x += px2;
       c.y += py2;
     } else if (passable(c.x + px2, c.y)) c.x += px2;
     else if (passable(c.x, c.y + py2)) c.y += py2;
+    {
+      const \u5F8C\u306E\u9694 = Math.hypot(c.tx - c.x, c.ty - c.y);
+      const \u8A31 = Math.max(\u524D\u306E\u9694, 40);
+      if (\u5F8C\u306E\u9694 > \u8A31 + 1e-3) {
+        const k = \u8A31 / \u5F8C\u306E\u9694;
+        c.x = c.tx + (c.x - c.tx) * k;
+        c.y = c.ty + (c.y - c.ty) * k;
+      }
+    }
     if (!MAP && !c.routed && !c.withdraw) {
       c.x = clamp(c.x, 30, FIELD.w - 30);
       c.y = clamp(c.y, 30, FIELD.h - 30);

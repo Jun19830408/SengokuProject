@@ -1,6 +1,6 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
 import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
-import { ARM_STATS, FIELD, HILLS, RIVER, fieldScale, hasRiver, riverShift, terrainAt } from "./field.js";
+import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { clamp } from "../core/util.js";
 
@@ -43,7 +43,17 @@ export function 先客たち(alive, c, o) {
    一隊すでに掛かっているなら遠くても空いた敵を選び、二隊掛かっていれば
    よほどのことがなければ選ばない。 */
 export function 狙う敵を選ぶ(alive, c, foes) {
-  const 遠回りの費え = 420 * fieldScale();     // 空いた敵ならこれだけ遠くても選ぶ
+  /* 空いた敵ならこれだけ遠くても選ぶ、という遠回りの許し。
+
+     もとは盤の広さにそのまま比例させていた（420×野の倍）。標準の野では
+     四百二十歩で収まるが、関ヶ原の盤は八千百五十六歩あるので、野の倍が
+     七.五五、遠回りの許しが三千百七十一歩になっていた。目の前二十一歩に
+     敵がいても、そこに味方が一隊取り付いていれば、八百歩よそへ歩き出す。
+     遊ぶ側から見れば「ぶつかる前に隊が後退している」としか見えない。
+
+     広い盤でも、隊が横へ流れてよい幅は隊の正面ほどである。平方根で効かせ、
+     九百歩で頭打ちにする。 */
+  const 遠回りの費え = clamp(420 * Math.sqrt(fieldScale()), 420, 900);
   const 費え = (o) => {
     const n = 先客たち(alive, c, o).length;
     return Math.hypot(o.x - c.x, o.y - c.y)
@@ -63,7 +73,8 @@ function 線までの隔たり(x0, y0, x1, y1, px, py) {
 /* 寄せ道の前に、噛み合っている味方が立ちふさがっていないか。
    立ちふさがっているなら、その味方を返す（後ろで控えるため）。 */
 export function 前をふさぐ味方(alive, c, sx, sy) {
-  const 幅 = 62 * fieldScale();                 // これより近く重なるなら擦り抜けである
+  // これより近く重なるなら擦り抜けである。遠回りの許しと同じ理由で、平方根で効かせる。
+  const 幅 = clamp(62 * Math.sqrt(fieldScale()), 62, 180);
   const 我まで = Math.hypot(sx - c.x, sy - c.y);
   let 近 = null, 近さ = Infinity;
   for (const x of alive) {
@@ -279,14 +290,27 @@ function 寄せ道を引く(b, c, sx, sy) {
      踏み込まない掟にしたので、道を捨てれば隊は水際で立ち尽くす。実測では、委ねた隊が
      行き先を目の前にして動かぬまま――「手が余って立ち尽くす」が五回から百十四回に
      増えていた。水を挟むなら、どれほど遠回りでも渡り場を回る。 */
-  if (!淵を跨ぐ(c.x, c.y, sx, sy) && 道のり(道, c.x, c.y) > 直 * 4.5 + 400) return null;
+  /* 回り道の許しは、何を避けているかで変える。
+
+     水を挟むなら、どれほど遠回りでも渡り場を回る（真っすぐ行けば水際で
+     立ち尽くす）。ところが丘や森は、避けねばならぬものではなく、ただ歩き
+     にくいだけである。そこに四.五倍の回り道を許していたので、盤に大きな丘を
+     足したとたん、隊は丘を大きく巻いて歩き出した。行き先は一手ごとに敵から
+     遠のき（測ると、敵から遠ざかる「移動」の下知が九百六十一件。目の前
+     二十一歩の敵を捨てて八百三十歩よそへ向かう隊もあった）、遊ぶ側からは
+     「ぶつかる前に押されて後退している」としか見えない。
+
+     水でなければ、回り道は直の一.六倍までとする。それを超えるなら、
+     鈍かろうと真っすぐ行くほうが理に適う。 */
+  const 水を挟む = 淵を跨ぐ(c.x, c.y, sx, sy);
+  if (!水を挟む && 道のり(道, c.x, c.y) > 直 * 1.6 + 300) return null;
   c.道の的 = { x: sx, y: sy }; c.道刻 = b.t;
   return 道;
 }
 
 // 二点を結ぶ線が淵を跨ぐか。近間でも、水を挟むなら道を引く。
 function 淵を跨ぐ(x0, y0, x1, y1) {
-  if (!hasRiver()) return false;
+  if (!hasRiver() && !RIVERS.length) return false;     // 筋書きの野は折れ線の川を持つ
   const n = 6;
   for (let k = 0; k <= n; k++) {
     if (terrainAt(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n) === "deep") return true;
@@ -421,6 +445,7 @@ export function battleAI(b) {
         && !c.detach && !c.routed && !c.withdraw && !c.ambush && !c.伏せ場 && !c.伏兵無用
         && !c.squads.some((q) => q.engaged));
       const 手勢 = alive.filter((c) => c.side === side && !c.detach);
+      if (b.筋書き) continue;                            // 筋書きの一戦は史実の布陣で始める
       if (手勢.length < 2 || !候補.length) continue;      // 全隊を伏せはしない
       let 選 = null, 場 = null, bd = 1e9;
       for (const c of 候補) {
@@ -925,12 +950,24 @@ export function battleAI(b) {
        縛るのは采配――委任した隊と敵方――だけである。プレイヤーが手ずから
        登らせるぶんには、何隊重ねようと指図は指図として通す（この段は
        委任した隊しか通らない）。 */
-    if (!MAP && HILLS.length && !c.squads.some((q) => q.engaged)) {
+    /* 丘取りは、筋書きの一戦では行わない。布陣が史実で決まっているのに、
+       開戦の合図とともに諸隊が後ろの丘へ登り直しては、その布陣の意味がない。 */
+    if (!MAP && !b.筋書き && HILLS.length && !c.squads.some((q) => q.engaged)) {
       const 守勢 = 守勢の隊(b, c);
       const 敵まで = Math.hypot(tgt.x - c.x, tgt.y - c.y);
       const 番 = 守勢 ? 空き丘を探す(b, c) : -1;
       const 丘 = 番 >= 0 ? HILLS[番] : null;
-      if (丘 && 敵まで > 260) {
+      /* 下がってまで丘は取らない（GDD 8.1）。
+
+         「近くの空いた丘へ登る」とだけ決めていたので、背後に丘があると
+         受け手はそこへ下がった。遊ぶ側から見れば、槍も合わせぬうちに隊が
+         勝手に退いていく。測ると、敵から遠ざかる「移動」の下知が千二百件
+         出ており、行き先は一手ごとに敵から遠のいていた。
+
+         丘は、いま立っている所より敵から遠くならない範囲で取る。
+         二百歩ぶんの後退までは、備えを固めるうちと見る。 */
+      const 下がり = 丘 ? Math.hypot(tgt.x - 丘.x, tgt.y - 丘.y) - 敵まで : 0;
+      if (丘 && 敵まで > 260 && 下がり <= 200) {
         const 遠さ = Math.hypot(丘.x - c.x, 丘.y - c.y);
         const 頂 = clamp(丘.r * 0.45, 60, 120);            // ここまで登れば頂とみなす
         const 間 = 540 + 丘.r * 0.8;                        // 大きな丘ほど遠くからでも目指す
@@ -1040,8 +1077,13 @@ export function battleAI(b) {
      ここへ来るので、決めた行き先をここで消す――先に消しては、後の段で
      また前へ出る行き先を書かれてしまう（測ったら四千歩も進んでいた）。 */
   for (const c of alive) {
-    if (!c.控え && !c.縛り && !c.不戦) continue;
-    c.order = "待機"; c.tx = c.x; c.ty = c.y; c.wp = null;
+    if (!c.控え && !c.縛り && !c.不戦) { c.据え置き = null; continue; }
+    /* 据え置きの所を覚える。行き先を「いまの居どころ」に置き直していると、
+       押し合いの遊び（四十歩）が毎回いまの位置から数え直されるので、
+       押されるたびに的ごと前へずれる。実測で、動かぬはずの押さえが
+       五百五十三歩も流れていた。動かぬ隊は、初めの持ち場に縛る。 */
+    if (!c.据え置き) c.据え置き = { x: c.x, y: c.y };
+    c.order = "待機"; c.tx = c.据え置き.x; c.ty = c.据え置き.y; c.wp = null;
     c.faceTo = null; c.chargeT = 0;
   }
   setAiIssuing(false);

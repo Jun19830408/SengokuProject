@@ -262,7 +262,20 @@ export function stepBattle(b, dt) {
         if (!MAP && !c.routed && !c.withdraw) {
           const 縄 = 噛んでいる ? clamp(広 * 0.38, 34, 120) : clamp(広 * 0.95, 70, 280);
           const dx2 = c.x - cx2, dy2 = c.y - cy2, dd = Math.hypot(dx2, dy2);
-          if (dd > 縄) { c.x = cx2 + (dx2 / dd) * 縄; c.y = cy2 + (dy2 / dd) * 縄; }
+          if (dd > 縄) {
+            /* 縄で引き戻すときも、行き先から遠ざける向きには効かせない。
+               行き先に着いて組の追いつくのを待っている隊が、組の重心へ
+               引かれて後ずさりして見えた（実測、着いた隊が三十〜五十歩戻った）。 */
+            const nx2 = cx2 + (dx2 / dd) * 縄, ny2 = cy2 + (dy2 / dd) * 縄;
+            let mx3 = nx2 - c.x, my3 = ny2 - c.y;
+            const 行2 = Math.hypot(c.tx - c.x, c.ty - c.y);
+            if (行2 > 12) {
+              const ux = (c.tx - c.x) / 行2, uy = (c.ty - c.y) / 行2;
+              const 沿 = mx3 * ux + my3 * uy;
+              if (沿 < 0) { mx3 -= 沿 * ux; my3 -= 沿 * uy; }
+            }
+            c.x += mx3; c.y += my3;
+          }
         }
       }
     }
@@ -308,11 +321,42 @@ export function stepBattle(b, dt) {
     // 押し合いの力が行軍の足より強いと、隣の隊に阻まれて一歩も進めなくなる。
     const cap = MAP ? 12 : 40;
     const 踏 = 踏ん張る ? 0.16 : 1;
-    const px = clamp(sx * (MAP ? 0.3 : 0.55), -cap, cap) * dt * 踏;
-    const py = clamp(sy * (MAP ? 0.3 : 0.55), -cap, cap) * dt * 踏;
+    let px = clamp(sx * (MAP ? 0.3 : 0.55), -cap, cap) * dt * 踏;
+    let py = clamp(sy * (MAP ? 0.3 : 0.55), -cap, cap) * dt * 踏;
+    /* 押し合いで、行き先から遠ざかることはない（GDD 8.3）。
+
+       味方に押されて後ろへ下がる隊があった。測ると、槍も合わせていない
+       隊の動きの二割八分が「行き先から遠ざかる向き」で、ひどいものは
+       三百歩、八百歩と押し流されていた。遊ぶ側から見れば、下知したはずの
+       隊が勝手に退いているとしか見えない。
+
+       避けるのは構わないが、避けるなら横へ避ける。行き先へ向かう成分を
+       打ち消す向きの押しは落とす。 */
+    const 行 = Math.hypot(c.tx - c.x, c.ty - c.y);
+    if (行 > 12) {
+      const ux = (c.tx - c.x) / 行, uy = (c.ty - c.y) / 行;
+      const 沿 = px * ux + py * uy;
+      if (沿 < 0) { px -= 沿 * ux; py -= 沿 * uy; }
+    }
+    const 前の隔 = Math.hypot(c.tx - c.x, c.ty - c.y);
     if (passable(c.x + px, c.y + py)) { c.x += px; c.y += py; }
     else if (passable(c.x + px, c.y)) c.x += px;
     else if (passable(c.x, c.y + py)) c.y += py;
+    /* 押し合いで行き先から引き離されない（GDD 8.3）。
+
+       横へ避けるのは構わないが、押されて行き先から遠ざかるのは後退である。
+       いま居る所より遠くへは流されない――ただし、行き先にぴたりと着いて
+       いる隊が身じろぎもできぬのでは、重なった隊が離れられないので、
+       四十歩の遊びだけは残す。 */
+    {
+      const 後の隔 = Math.hypot(c.tx - c.x, c.ty - c.y);
+      const 許 = Math.max(前の隔, 40);
+      if (後の隔 > 許 + 0.001) {
+        const k = 許 / 後の隔;
+        c.x = c.tx + (c.x - c.tx) * k;
+        c.y = c.ty + (c.y - c.ty) * k;
+      }
+    }
     /* 押されて盤の外へ出ない。盤を落ちるのは崩れて逃げる隊だけである。 */
     if (!MAP && !c.routed && !c.withdraw) {
       c.x = clamp(c.x, 30, FIELD.w - 30);
