@@ -7,7 +7,7 @@ import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
 import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる, 内応させる, 内応の門を開く } from "../battle/corps.js";
-import { 合戦の問いに答える, 指図の縛り } from "../battle/kassen.js";
+import { 合戦の問いに答える, 指図の縛り, 筋書きの覚え } from "../battle/kassen.js";
 
 /* --------------------------------------------------------------- 合戦画面 */
 export function BattleScreen({ ctx, land, onEnd }) {
@@ -24,6 +24,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const [退き確認, set退き確認] = useState(null);     // 撤退の念押し
   const [咎め, set咎め] = useState(null);            // 「いま下知できぬ」訳を束の間出す
   const [, 問い直し] = useState(0);                  // 筋書きの問いに答えたら描き直す
+  const [覚え開く, set覚え開く] = useState(false);    // 筋書きの覚え（分岐の条件）
   const faceRef = useRef(false);
   const speedRef = useRef(0), selRef = useRef(null), uiRef = useRef(0), allRef = useRef(false);
   const camRef = useRef({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
@@ -1172,9 +1173,43 @@ export function BattleScreen({ ctx, land, onEnd }) {
       </div>
     </div>
   );
+  /* 筋書きの覚え（GDD 8.9）。分岐の条件を並べ、揃ったものに印をつける。 */
+  const 覚え = 筋 ? 筋書きの覚え(b) : [];
+  const 覚えの札 = 筋 && (
+    <div style={{ position: "absolute", right: 8, bottom: 8, zIndex: 40, maxWidth: "min(430px, 92vw)" }}
+      onMouseDown={stop} onMouseUp={stop}>
+      <button className="btn" style={{ padding: "7px 12px", fontSize: 12, background: "rgba(255,255,255,0.92)" }}
+        onClick={() => set覚え開く((v) => !v)}>
+        筋書きの覚え {覚え開く ? "▼" : "▲"}
+        <span style={{ color: U.dim, marginLeft: 7 }}>
+          {覚え.filter((x) => x.済).length}／{覚え.length}
+        </span>
+      </button>
+      {覚え開く && (
+        <div style={{ marginTop: 6, background: "rgba(255,255,255,0.95)", border: `1px solid ${U.line}`,
+          borderRadius: 8, padding: "10px 12px", maxHeight: "58vh", overflow: "auto" }}>
+          {覚え.map((x) => (
+            <div key={x.題} style={{ marginBottom: 9 }}>
+              <div className="mn" style={{ fontSize: 13.5, color: x.済 ? "#3E7A3A" : "#33332F" }}>
+                {x.済 ? "✔" : "□"} {x.題}
+              </div>
+              {x.但 && <div style={{ fontSize: 10.5, color: U.dim, lineHeight: 1.7 }}>{x.但}</div>}
+              {x.条.map((j, k) => (
+                <div key={k} style={{ fontSize: 11.5, lineHeight: 1.85, marginLeft: 10,
+                  color: j.可 ? "#3E7A3A" : U.dim }}>
+                  {j.可 ? "○" : "×"} {j.文}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   /* 下知を断られた訳。束の間だけ盤の下に出す。 */
   const 咎めの帯 = 咎め && (
-    <div style={{ position: "absolute", left: "50%", bottom: 92, transform: "translateX(-50%)",
+    <div style={{ position: "absolute", left: "50%", bottom: 132, transform: "translateX(-50%)",
       background: "rgba(44,40,32,0.92)", color: "#F6F2E6", padding: "9px 16px", borderRadius: 7,
       fontSize: 13, zIndex: 60, pointerEvents: "none", maxWidth: "86vw", textAlign: "center" }}>
       {咎め}
@@ -1186,6 +1221,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       {退きの札}
       {問いの札}
       {咎めの帯}
+      {覚えの札}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 }}>
         {!wide && (
         <div className="bar bt">
@@ -1281,8 +1317,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
             )}
             {(b.notices || []).filter((n) => b.t - n.t < 6).slice(-3).map((n, i) => (
               <div key={`${n.t}-${i}`} className="mn"
+                /* 報せは盤の下に出す。上に出していたころは、縦に持った携帯で
+                   左上の道具立て（拡大・縮小・全体・収納・広く）と重なって、
+                   釦が読めなくなっていた。下は空いている。 */
                 style={{ position: "absolute", left: "50%", transform: "translateX(-50%)",
-                  top: 12 + i * 34, padding: "7px 16px", borderRadius: 8, fontSize: 15, whiteSpace: "nowrap",
+                  bottom: 16 + i * 34, padding: "7px 16px", borderRadius: 8, fontSize: 15,
+                  maxWidth: "92%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   background: n.kind === "bad" ? "rgba(176,72,60,0.93)" : n.kind === "good" ? "rgba(62,122,58,0.93)" : "rgba(40,40,36,0.9)",
                   color: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.25)", pointerEvents: "none", zIndex: 5 }}>
                 {n.text}

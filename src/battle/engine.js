@@ -141,7 +141,6 @@ function 淵を踏めるか(c, b, x, y, 足元) {
 export function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt; b.aiClock -= dt;
-  if (b.進行) b.進行(b, dt);            // 筋書きのある一戦は、分岐をここで進める
   for (const c of b.corps) {
     if (!c.pending) continue;
     c.pending.t -= dt;
@@ -152,6 +151,11 @@ export function stepBattle(b, dt) {
     b.fx = b.fx.filter((f) => f.t < f.life);
   }
   if (b.aiClock <= 0) { battleAI(b); b.aiClock = 0.6; }
+  /* 筋書きのある一戦は、分岐と備の差配をここで進める。
+
+     采配（battleAI）のあとに置く。前に置いていたころは、備ごとにまとめて
+     当たらせた下知を、その直後に采配が隊ごとの下知で塗り潰していた。 */
+  if (b.進行) b.進行(b, dt);
   /* 去就の定まらぬ隊（日和見）は、盤の上にいるが戦には加わらない（GDD 8.9）。
 
      松尾山の小早川も、南宮山の毛利も、開戦から昼まで一歩も動かなかった。
@@ -181,8 +185,14 @@ export function stepBattle(b, dt) {
       }
       if (seen) break;
     }
-    c.seen = seen;
-    if (seen) c.lastSeen = { x: c.x, y: c.y, t: b.t };
+    /* 筋書きの一戦は、互いに見えている（GDD 8.9）。
+
+       関ヶ原は開けた盆地で、両軍は夜明けから互いの旗指物を見ていた。
+       霧が晴れたあとは隠れようがない。見えぬ敵を点線の「敵影」で描くと、
+       南宮山の押さえのように遠くに構える隊が盤から消えてしまう
+       （遊ぶ側からは「徳川軍が突然消えた」と見える）。 */
+    c.seen = seen || !!b.筋書き;
+    if (c.seen) c.lastSeen = { x: c.x, y: c.y, t: b.t };
     // 挟撃：いくつの方角から敵に取り付かれているか。四方位で数える。
     const dirs = new Set();
     for (const o of foes) {

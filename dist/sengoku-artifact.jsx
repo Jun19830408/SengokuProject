@@ -26217,7 +26217,7 @@ function battleAI(b) {
       continue;
     }
     c.\u8FFD\u3044\u8A0E\u3061 = false;
-    if (!c.formPicked && !c.\u9663\u3092\u9078\u3093\u3060) {
+    if (!c.formPicked && !c.\u9663\u3092\u9078\u3093\u3060 && !b.\u7B4B\u66F8\u304D) {
       c.formPicked = true;
       const mine = alive.filter((o) => o.side === mySide).reduce((a, o) => a + corpsMen(o), 0);
       const foeMen = alive.filter((o) => o.side === foeSide).reduce((a, o) => a + corpsMen(o), 0);
@@ -26631,7 +26631,6 @@ function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt;
   b.aiClock -= dt;
-  if (b.\u9032\u884C) b.\u9032\u884C(b, dt);
   for (const c of b.corps) {
     if (!c.pending) continue;
     c.pending.t -= dt;
@@ -26648,6 +26647,7 @@ function stepBattle(b, dt) {
     battleAI(b);
     b.aiClock = 0.6;
   }
+  if (b.\u9032\u884C) b.\u9032\u884C(b, dt);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed && !c.\u65E5\u548C\u898B);
   for (const c of alive) {
     for (const q of c.squads) q.\u5730 = \u8E0F\u307F\u8FBC\u3093\u3060\u5730(q.x, q.y);
@@ -26669,8 +26669,8 @@ function stepBattle(b, dt) {
       }
       if (seen) break;
     }
-    c.seen = seen;
-    if (seen) c.lastSeen = { x: c.x, y: c.y, t: b.t };
+    c.seen = seen || !!b.\u7B4B\u66F8\u304D;
+    if (c.seen) c.lastSeen = { x: c.x, y: c.y, t: b.t };
     const dirs = /* @__PURE__ */ new Set();
     for (const o of foes) {
       if (o.destroyed || Math.hypot(o.x - c.x, o.y - c.y) > 190) continue;
@@ -29167,56 +29167,56 @@ var \u5175\u79D1 = {
 };
 var \u8868 = [
   // ── 西軍（笹尾山から天満山、藤川台へ）
-  ["\u77F3\u7530\u4E09\u6210", 4e3, 642, 371, "\u6771", "\u897F", [72, 58, 88, 92, 74], "\u5E38", { \u5927\u5C06: true }],
-  ["\u5CF6\u5DE6\u8FD1", 1e3, 753, 419, "\u6771", "\u897F", [84, 88, 78, 62, 80], "\u5E38"],
-  ["\u84B2\u751F\u90F7\u820E", 1e3, 729, 451, "\u6771", "\u897F", [70, 74, 62, 58, 66], "\u5E38"],
-  ["\u7E54\u7530\u4FE1\u9AD8", 500, 588, 407, "\u6771", "\u897F", [54, 56, 50, 52, 55], "\u5E38"],
+  ["\u77F3\u7530\u4E09\u6210", 4e3, 642, 371, "\u6771", "\u897F", [72, 58, 88, 92, 74], "\u5E38", { \u5099: "\u77F3\u7530", \u5927\u5C06: true }],
+  ["\u5CF6\u5DE6\u8FD1", 1e3, 753, 419, "\u6771", "\u897F", [84, 88, 78, 62, 80], "\u5E38", { \u5099: "\u77F3\u7530" }],
+  ["\u84B2\u751F\u90F7\u820E", 1e3, 729, 451, "\u6771", "\u897F", [70, 74, 62, 58, 66], "\u5E38", { \u5099: "\u77F3\u7530" }],
+  ["\u7E54\u7530\u4FE1\u9AD8", 500, 588, 407, "\u6771", "\u897F", [54, 56, 50, 52, 55], "\u5E38", { \u5099: "\u77F3\u7530" }],
   /* 島津は戦わぬ（GDD 8.9）。
   
        義弘は三成の再三の出撃要請を断り、備を固めたまま一歩も動かなかった。
        動いたのは戦の終わり――西軍が崩れてから、正面の敵中を突いて退いた
        （島津の退き口）。盤でも「不戦」として置き、下知を受け付けない。
        退き口の頃合いが来たら、遊ぶ側に問う。 */
-  ["\u5CF6\u6D25\u7FA9\u5F18", 1e3, 689, 584, "\u6771", "\u897F", [90, 92, 82, 74, 90], "\u9244\u7832", { \u4E0D\u6226: true, \u5CF6\u6D25: true }],
-  ["\u5CF6\u6D25\u8C4A\u4E45", 500, 686, 637, "\u6771", "\u897F", [76, 86, 64, 60, 84], "\u9244\u7832", { \u4E0D\u6226: true, \u5CF6\u6D25: true }],
-  ["\u5C0F\u897F\u884C\u9577", 4e3, 626, 679, "\u6771", "\u897F", [62, 58, 72, 76, 60], "\u5E38"],
+  ["\u5CF6\u6D25\u7FA9\u5F18", 1e3, 689, 584, "\u6771", "\u897F", [90, 92, 82, 74, 90], "\u9244\u7832", { \u5099: "\u5CF6\u6D25", \u4E0D\u6226: true, \u5CF6\u6D25: true }],
+  ["\u5CF6\u6D25\u8C4A\u4E45", 500, 686, 637, "\u6771", "\u897F", [76, 86, 64, 60, 84], "\u9244\u7832", { \u5099: "\u5CF6\u6D25", \u4E0D\u6226: true, \u5CF6\u6D25: true }],
+  ["\u5C0F\u897F\u884C\u9577", 4e3, 626, 679, "\u6771", "\u897F", [62, 58, 72, 76, 60], "\u5E38", { \u5099: "\u5C0F\u897F" }],
   /* 宇喜多隊は一万七千。西軍でいちばん大きい隊である。
      布陣図は一つの印にまとめて描いているので、四つに割って近くに置く。 */
-  ["\u5B87\u559C\u591A\u79C0\u5BB6", 8e3, 576, 757, "\u6771", "\u897F", [68, 70, 60, 64, 62], "\u5E38"],
-  ["\u660E\u77F3\u5168\u767B", 5e3, 624, 812, "\u6771", "\u897F", [80, 78, 74, 66, 76], "\u5E38"],
-  ["\u9577\u8239\u5409\u884C", 2e3, 538, 795, "\u6771", "\u897F", [62, 62, 58, 60, 60], "\u5E38"],
-  ["\u672C\u591A\u653F\u91CD", 2e3, 546, 720, "\u6771", "\u897F", [68, 76, 60, 56, 62], "\u5E38"],
-  ["\u6238\u7530\u91CD\u653F", 900, 504, 850, "\u5357\u6771", "\u897F", [64, 72, 58, 56, 66], "\u5E38"],
-  ["\u6728\u4E0B\u983C\u7D99", 1e3, 486, 872, "\u5357\u6771", "\u897F", [58, 60, 56, 56, 60], "\u5E38"],
-  ["\u5927\u8C37\u5409\u52DD", 1500, 500, 890, "\u5357\u6771", "\u897F", [66, 68, 62, 60, 70], "\u9244\u7832"],
-  ["\u5927\u8C37\u5409\u7D99", 600, 473, 909, "\u5357\u6771", "\u897F", [86, 70, 90, 88, 88], "\u9244\u7832", { \u8981: true }],
-  ["\u5E73\u585A\u70BA\u5E83", 900, 644, 917, "\u5357\u6771", "\u897F", [72, 82, 66, 58, 74], "\u5E38"],
+  ["\u5B87\u559C\u591A\u79C0\u5BB6", 8e3, 576, 757, "\u6771", "\u897F", [68, 70, 60, 64, 62], "\u5E38", { \u5099: "\u5B87\u559C\u591A" }],
+  ["\u660E\u77F3\u5168\u767B", 5e3, 624, 812, "\u6771", "\u897F", [80, 78, 74, 66, 76], "\u5E38", { \u5099: "\u5B87\u559C\u591A" }],
+  ["\u9577\u8239\u5409\u884C", 2e3, 538, 795, "\u6771", "\u897F", [62, 62, 58, 60, 60], "\u5E38", { \u5099: "\u5B87\u559C\u591A" }],
+  ["\u672C\u591A\u653F\u91CD", 2e3, 546, 720, "\u6771", "\u897F", [68, 76, 60, 56, 62], "\u5E38", { \u5099: "\u5B87\u559C\u591A" }],
+  ["\u6238\u7530\u91CD\u653F", 900, 504, 850, "\u5357\u6771", "\u897F", [64, 72, 58, 56, 66], "\u5E38", { \u5099: "\u5927\u8C37" }],
+  ["\u6728\u4E0B\u983C\u7D99", 1e3, 486, 872, "\u5357\u6771", "\u897F", [58, 60, 56, 56, 60], "\u5E38", { \u5099: "\u5927\u8C37" }],
+  ["\u5927\u8C37\u5409\u52DD", 1500, 500, 890, "\u5357\u6771", "\u897F", [66, 68, 62, 60, 70], "\u9244\u7832", { \u5099: "\u5927\u8C37" }],
+  ["\u5927\u8C37\u5409\u7D99", 600, 473, 909, "\u5357\u6771", "\u897F", [86, 70, 90, 88, 88], "\u9244\u7832", { \u5099: "\u5927\u8C37", \u8981: true }],
+  ["\u5E73\u585A\u70BA\u5E83", 900, 644, 917, "\u5357\u6771", "\u897F", [72, 82, 66, 58, 74], "\u5E38", { \u5099: "\u5927\u8C37" }],
   // ── 東軍（北国街道から関ヶ原宿にかけての先手）
-  ["\u9ED2\u7530\u9577\u653F", 5400, 880, 390, "\u897F", "\u6771", [82, 76, 84, 78, 80], "\u9244\u7832"],
-  ["\u7AF9\u4E2D\u91CD\u9580", 1e3, 992, 330, "\u897F", "\u6771", [60, 60, 66, 62, 62], "\u5E38"],
-  ["\u52A0\u85E4\u5609\u660E", 3e3, 952, 548, "\u897F", "\u6771", [78, 80, 66, 68, 74], "\u5E38"],
-  ["\u7D30\u5DDD\u5FE0\u8208", 5100, 900, 480, "\u897F", "\u6771", [76, 78, 72, 74, 74], "\u9244\u7832"],
-  ["\u7A32\u8449\u8C9E\u901A", 1400, 846, 610, "\u897F", "\u6771", [64, 68, 58, 58, 62], "\u5E38"],
-  ["\u6238\u5DDD\u9054\u5B89", 800, 828, 665, "\u897F", "\u6771", [66, 74, 60, 56, 64], "\u5E38"],
-  ["\u5B87\u559C\u591A\u8A6E\u5BB6", 1500, 876, 712, "\u897F", "\u6771", [62, 70, 56, 54, 58], "\u5E38"],
-  ["\u4E80\u4E95\u8332\u77E9", 1e3, 974, 622, "\u897F", "\u6771", [60, 62, 64, 62, 60], "\u5E38"],
-  ["\u4E09\u597D\u653F\u52DD", 500, 1e3, 668, "\u897F", "\u6771", [56, 58, 54, 54, 56], "\u5E38"],
-  ["\u7530\u4E2D\u5409\u653F", 3e3, 796, 745, "\u897F", "\u6771", [70, 66, 70, 74, 68], "\u5E38"],
-  ["\u7B52\u4E95\u5B9A\u6B21", 2850, 812, 690, "\u897F", "\u6771", [56, 54, 52, 56, 52], "\u5E38"],
-  ["\u4E95\u4F0A\u76F4\u653F", 3600, 934, 792, "\u897F", "\u6771", [86, 88, 78, 76, 86], "\u9A0E\u99AC"],
-  ["\u677E\u5E73\u5FE0\u5409", 3e3, 972, 834, "\u897F", "\u6771", [66, 76, 58, 60, 70], "\u9A0E\u99AC"],
-  ["\u798F\u5CF6\u6B63\u5247", 6e3, 770, 800, "\u897F", "\u6771", [80, 92, 58, 60, 78], "\u5E38"],
-  ["\u53EF\u5150\u624D\u8535", 500, 800, 845, "\u897F", "\u6771", [70, 90, 56, 50, 72], "\u5E38"],
-  ["\u85E4\u5802\u9AD8\u864E", 2500, 700, 930, "\u897F", "\u6771", [80, 74, 82, 80, 76], "\u5E38"],
-  ["\u4EAC\u6975\u9AD8\u77E5", 3e3, 734, 962, "\u897F", "\u6771", [64, 66, 62, 64, 62], "\u5E38"],
-  ["\u5BFA\u6CA2\u5E83\u9AD8", 2400, 1004, 860, "\u897F", "\u6771", [62, 60, 66, 68, 62], "\u5E38"],
-  ["\u53E4\u7530\u91CD\u7136", 1200, 1250, 614, "\u897F", "\u6771", [54, 52, 62, 62, 54], "\u5E38", { \u4E8C\u306E\u624B: true }],
-  ["\u7E54\u7530\u9577\u76CA", 450, 1250, 667, "\u897F", "\u6771", [52, 50, 58, 58, 50], "\u5E38", { \u4E8C\u306E\u624B: true }],
-  ["\u91D1\u68EE\u9577\u8FD1", 1140, 1326, 733, "\u897F", "\u6771", [66, 64, 66, 68, 64], "\u5E38", { \u4E8C\u306E\u624B: true }],
-  ["\u751F\u99D2\u4E00\u6B63", 1830, 1326, 774, "\u897F", "\u6771", [62, 62, 58, 60, 60], "\u5E38", { \u4E8C\u306E\u624B: true }],
-  ["\u672C\u591A\u5FE0\u52DD", 500, 1369, 847, "\u897F", "\u6771", [88, 96, 76, 70, 90], "\u9A0E\u99AC", { \u4E8C\u306E\u624B: true }],
-  ["\u5E73\u91CE\u9577\u6CF0", 500, 1365, 891, "\u897F", "\u6771", [62, 74, 54, 52, 60], "\u5E38", { \u4E8C\u306E\u624B: true }],
-  ["\u6851\u5C71\u5143\u6674", 1e3, 1392, 914, "\u897F", "\u6771", [58, 58, 56, 58, 56], "\u5E38", { \u4E8C\u306E\u624B: true }],
+  ["\u9ED2\u7530\u9577\u653F", 5400, 880, 390, "\u897F", "\u6771", [82, 76, 84, 78, 80], "\u9244\u7832", { \u5F53: "\u77F3\u7530", \u5148\u92D2: true }],
+  ["\u7AF9\u4E2D\u91CD\u9580", 1e3, 992, 330, "\u897F", "\u6771", [60, 60, 66, 62, 62], "\u5E38", { \u5F53: "\u77F3\u7530" }],
+  ["\u52A0\u85E4\u5609\u660E", 3e3, 952, 548, "\u897F", "\u6771", [78, 80, 66, 68, 74], "\u5E38", { \u5F53: "\u77F3\u7530" }],
+  ["\u7D30\u5DDD\u5FE0\u8208", 5100, 900, 480, "\u897F", "\u6771", [76, 78, 72, 74, 74], "\u9244\u7832", { \u5F53: "\u5B87\u559C\u591A" }],
+  ["\u7A32\u8449\u8C9E\u901A", 1400, 846, 610, "\u897F", "\u6771", [64, 68, 58, 58, 62], "\u5E38", { \u5F53: "\u5C0F\u897F" }],
+  ["\u6238\u5DDD\u9054\u5B89", 800, 828, 665, "\u897F", "\u6771", [66, 74, 60, 56, 64], "\u5E38", { \u5F53: "\u5C0F\u897F" }],
+  ["\u5B87\u559C\u591A\u8A6E\u5BB6", 1500, 876, 712, "\u897F", "\u6771", [62, 70, 56, 54, 58], "\u5E38", { \u5F53: "\u5B87\u559C\u591A" }],
+  ["\u4E80\u4E95\u8332\u77E9", 1e3, 974, 622, "\u897F", "\u6771", [60, 62, 64, 62, 60], "\u5E38", { \u5F53: "\u5B87\u559C\u591A" }],
+  ["\u4E09\u597D\u653F\u52DD", 500, 1e3, 668, "\u897F", "\u6771", [56, 58, 54, 54, 56], "\u5E38", { \u5F53: "\u5B87\u559C\u591A" }],
+  ["\u7530\u4E2D\u5409\u653F", 3e3, 796, 745, "\u897F", "\u6771", [70, 66, 70, 74, 68], "\u5E38", { \u5F53: "\u5C0F\u897F" }],
+  ["\u7B52\u4E95\u5B9A\u6B21", 2850, 812, 690, "\u897F", "\u6771", [56, 54, 52, 56, 52], "\u5E38", { \u5F53: "\u5C0F\u897F" }],
+  ["\u4E95\u4F0A\u76F4\u653F", 3600, 934, 792, "\u897F", "\u6771", [86, 88, 78, 76, 86], "\u9A0E\u99AC", { \u5F53: "\u5B87\u559C\u591A" }],
+  ["\u677E\u5E73\u5FE0\u5409", 3e3, 972, 834, "\u897F", "\u6771", [66, 76, 58, 60, 70], "\u9A0E\u99AC", { \u5F53: "\u5B87\u559C\u591A" }],
+  ["\u798F\u5CF6\u6B63\u5247", 6e3, 770, 800, "\u897F", "\u6771", [80, 92, 58, 60, 78], "\u5E38", { \u5F53: "\u5B87\u559C\u591A", \u5148\u92D2: true }],
+  ["\u53EF\u5150\u624D\u8535", 500, 800, 845, "\u897F", "\u6771", [70, 90, 56, 50, 72], "\u5E38", { \u5F53: "\u5B87\u559C\u591A" }],
+  ["\u85E4\u5802\u9AD8\u864E", 2500, 700, 930, "\u897F", "\u6771", [80, 74, 82, 80, 76], "\u5E38", { \u5F53: "\u5927\u8C37", \u5148\u92D2: true }],
+  ["\u4EAC\u6975\u9AD8\u77E5", 3e3, 734, 962, "\u897F", "\u6771", [64, 66, 62, 64, 62], "\u5E38", { \u5F53: "\u5927\u8C37" }],
+  ["\u5BFA\u6CA2\u5E83\u9AD8", 2400, 1004, 860, "\u897F", "\u6771", [62, 60, 66, 68, 62], "\u5E38", { \u5F53: "\u5B87\u559C\u591A" }],
+  ["\u53E4\u7530\u91CD\u7136", 1200, 1250, 614, "\u897F", "\u6771", [54, 52, 62, 62, 54], "\u5E38", { \u5F53: "\u77F3\u7530", \u4E8C\u306E\u624B: true }],
+  ["\u7E54\u7530\u9577\u76CA", 450, 1250, 667, "\u897F", "\u6771", [52, 50, 58, 58, 50], "\u5E38", { \u5F53: "\u77F3\u7530", \u4E8C\u306E\u624B: true }],
+  ["\u91D1\u68EE\u9577\u8FD1", 1140, 1326, 733, "\u897F", "\u6771", [66, 64, 66, 68, 64], "\u5E38", { \u5F53: "\u5C0F\u897F", \u4E8C\u306E\u624B: true }],
+  ["\u751F\u99D2\u4E00\u6B63", 1830, 1326, 774, "\u897F", "\u6771", [62, 62, 58, 60, 60], "\u5E38", { \u5F53: "\u5C0F\u897F", \u4E8C\u306E\u624B: true }],
+  ["\u672C\u591A\u5FE0\u52DD", 500, 1369, 847, "\u897F", "\u6771", [88, 96, 76, 70, 90], "\u9A0E\u99AC", { \u5F53: "\u5B87\u559C\u591A", \u4E8C\u306E\u624B: true }],
+  ["\u5E73\u91CE\u9577\u6CF0", 500, 1365, 891, "\u897F", "\u6771", [62, 74, 54, 52, 60], "\u5E38", { \u5F53: "\u5B87\u559C\u591A", \u4E8C\u306E\u624B: true }],
+  ["\u6851\u5C71\u5143\u6674", 1e3, 1392, 914, "\u897F", "\u6771", [58, 58, 56, 58, 56], "\u5E38", { \u5F53: "\u5927\u8C37", \u4E8C\u306E\u624B: true }],
   // 家康の旗本三万。一隊三万は盤に載らぬので、先手・本陣・後備の三隊に分ける
   ["\u5FB3\u5DDD\u65D7\u672C \u5148\u624B", 1e4, 1520, 790, "\u897F", "\u6771", [78, 72, 74, 76, 80], "\u65D7\u672C"],
   ["\u5FB3\u5DDD\u5BB6\u5EB7 \u672C\u9663", 1e4, 1568, 828, "\u897F", "\u6771", [92, 74, 96, 94, 92], "\u65D7\u672C", { \u5927\u5C06: true, \u5BB6\u5EB7: true }],
@@ -29238,12 +29238,17 @@ var \u8868 = [
   ["\u5C0F\u5DDD\u7950\u5FE0", 2100, 729, 1009, "\u5317", "\u9EC4", [58, 58, 56, 56, 50], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD", \u7D9A\u304F: true }],
   ["\u673D\u6728\u5143\u7DB1", 600, 748, 1042, "\u5317", "\u9EC4", [56, 56, 58, 56, 50], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD", \u7D9A\u304F: true }],
   ["\u8107\u5742\u5B89\u6CBB", 990, 780, 1075, "\u5317", "\u9EC4", [68, 72, 64, 62, 56], "\u5E38", { \u5C5E: "\u5C0F\u65E9\u5DDD", \u7D9A\u304F: true }],
-  // ── 南宮山の毛利勢（去就の定まらぬ隊）
-  ["\u5409\u5DDD\u5E83\u5BB6", 3e3, 1941, 988, "\u897F", "\u9EC4", [74, 70, 82, 76, 70], "\u5E38", { \u5C5E: "\u5357\u5BAE\u5C71", \u4E3B: true }],
-  ["\u5B89\u56FD\u5BFA\u6075\u74CA", 1800, 2033, 1024, "\u897F", "\u9EC4", [56, 52, 74, 68, 54], "\u5E38", { \u5C5E: "\u5357\u5BAE\u5C71" }],
-  ["\u6BDB\u5229\u79C0\u5143", 15e3, 2012, 1122, "\u897F", "\u9EC4", [70, 72, 64, 66, 68], "\u5E38", { \u5C5E: "\u5357\u5BAE\u5C71" }],
-  ["\u9577\u675F\u6B63\u5BB6", 1500, 2306, 1197, "\u897F", "\u9EC4", [58, 54, 70, 76, 56], "\u5E38", { \u5C5E: "\u5357\u5BAE\u5C71" }],
-  ["\u9577\u5B97\u6211\u90E8\u76DB\u89AA", 6600, 2321, 1578, "\u897F", "\u9EC4", [64, 66, 60, 62, 62], "\u5E38", { \u5C5E: "\u5357\u5BAE\u5C71" }]
+  /* ── 南宮山の毛利勢。
+  
+       西軍である。ただし吉川広家が道を塞いでいるあいだは動かない――島津と同じ
+       「不戦」であって、去就の定まらぬ隊（黄）ではない。兵の勘定には西軍として
+       入る。松尾山が動いたとき、この二万七千九百と、これを押さえる東軍六隊の
+       手が、同時に離れる。 */
+  ["\u5409\u5DDD\u5E83\u5BB6", 3e3, 1941, 988, "\u897F", "\u897F", [74, 70, 82, 76, 70], "\u5E38", { \u5099: "\u5357\u5BAE\u5C71", \u4E0D\u6226: true, \u5C5E: "\u5357\u5BAE\u5C71", \u4E3B: true }],
+  ["\u5B89\u56FD\u5BFA\u6075\u74CA", 1800, 2033, 1024, "\u897F", "\u897F", [56, 52, 74, 68, 54], "\u5E38", { \u5099: "\u5357\u5BAE\u5C71", \u4E0D\u6226: true, \u5C5E: "\u5357\u5BAE\u5C71" }],
+  ["\u6BDB\u5229\u79C0\u5143", 15e3, 2012, 1122, "\u897F", "\u897F", [70, 72, 64, 66, 68], "\u5E38", { \u5099: "\u5357\u5BAE\u5C71", \u4E0D\u6226: true, \u5C5E: "\u5357\u5BAE\u5C71" }],
+  ["\u9577\u675F\u6B63\u5BB6", 1500, 2306, 1197, "\u897F", "\u897F", [58, 54, 70, 76, 56], "\u5E38", { \u5099: "\u5357\u5BAE\u5C71", \u4E0D\u6226: true, \u5C5E: "\u5357\u5BAE\u5C71" }],
+  ["\u9577\u5B97\u6211\u90E8\u76DB\u89AA", 6600, 2321, 1578, "\u897F", "\u897F", [64, 66, 60, 62, 62], "\u5E38", { \u5099: "\u5357\u5BAE\u5C71", \u4E0D\u6226: true, \u5C5E: "\u5357\u5BAE\u5C71" }]
 ];
 var \u5E03\u9663 = \u8868.map(([\u540D, \u5175, rx, ry, \u3080, \u65D7, \u80FD, \u79D1, \u53702], i) => ({
   id: `sk${i}`,
@@ -29325,7 +29330,10 @@ function \u5408\u6226\u3092\u4ED5\u7ACB\u3066\u308B(id, \u5473\u65B9\u65D7) {
       \u7D9A\u304F: !!d.\u7D9A\u304F,
       \u5BB6\u5EB7: !!d.\u5BB6\u5EB7,
       \u8981: !!d.\u8981,
-      \u5CF6\u6D25: !!d.\u5CF6\u6D25
+      \u5CF6\u6D25: !!d.\u5CF6\u6D25,
+      \u5099: d.\u5099 || null,
+      \u5F53: d.\u5F53 || null,
+      \u5148\u92D2: !!d.\u5148\u92D2
     };
     if (d.\u4E0D\u6226) {
       c.\u4E0D\u6226 = true;
@@ -29363,7 +29371,7 @@ function \u5408\u6226\u3092\u4ED5\u7ACB\u3066\u308B(id, \u5473\u65B9\u65D7) {
     \u6E08\u3093\u3060\u554F\u3044: {},
     \u5831: []
   };
-  const \u6570 = (side) => b.corps.filter((c) => c.side === side && !c.\u65E5\u548C\u898B).reduce((a, c) => a + corpsMen(c), 0);
+  const \u6570 = (side) => b.corps.filter((c) => c.side === side && !c.\u65E5\u548C\u898B && !c.\u4E0D\u6226).reduce((a, c) => a + corpsMen(c), 0);
   b.initial = { P: \u6570("P"), E: \u6570("E") };
   b.\u9032\u884C = \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B;
   b.log.push({ t: 0, text: k.\u8A5E });
@@ -29443,7 +29451,6 @@ function \u5408\u6226\u306E\u554F\u3044\u306B\u7B54\u3048\u308B(b, \u8AFE) {
   if (q.id === "\u5BB6\u5EB7\u524D\u9032") \u5BB6\u5EB7\u3092\u9032\u3081\u308B(b);
   if (q.id === "\u554F\u9244\u7832") \u554F\u9244\u7832\u3092\u6483\u3064(b);
   if (q.id === "\u677E\u5C3E\u5C71\u3078\u5099\u3048\u308B") \u677E\u5C3E\u5C71\u3078\u5099\u3048\u308B(b);
-  if (q.id === "\u5357\u5BAE\u5C71\u3078\u4F7F\u3044") \u5357\u5BAE\u5C71\u3078\u4F7F\u3044(b);
   if (q.id === "\u5CF6\u6D25\u306E\u9000\u304D\u53E3") \u5CF6\u6D25\u306E\u9000\u304D\u53E3(b);
 }
 function \u5BB6\u5EB7\u3092\u9032\u3081\u308B(b) {
@@ -29473,10 +29480,6 @@ function \u677E\u5C3E\u5C71\u3078\u5099\u3048\u308B(b) {
     issueOrder(b, c, "\u524D\u9032", { x: c.x - 200, y: c.y + 1400 });
   }
   \u5831\u305B\u308B(b, "\u5927\u8C37\u52E2\u304C\u677E\u5C3E\u5C71\u3078\u6B63\u9762\u3092\u5411\u3051\u305F\u3002\u5C71\u304C\u52D5\u3044\u3066\u3082\u3001\u53D7\u3051\u6B62\u3081\u308B\u69CB\u3048\u3067\u3042\u308B\u3002", "\u5409");
-}
-function \u5357\u5BAE\u5C71\u3078\u4F7F\u3044(b) {
-  b.\u7B4B\u66F8\u304D.\u4F7F\u3044 = true;
-  \u5831\u305B\u308B(b, "\u5357\u5BAE\u5C71\u3078\u4F7F\u8005\u3092\u7ACB\u3066\u305F\u3002\u6BDB\u5229\u52E2\u304C\u52D5\u304F\u304B\u3069\u3046\u304B\u306F\u3001\u5409\u5DDD\u5E83\u5BB6\u306E\u8179\u3072\u3068\u3064\u3067\u3042\u308B\u3002");
 }
 function \u5CF6\u6D25\u306E\u9000\u304D\u53E3(b) {
   const \u5CF6 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u5CF6\u6D25 && !c.dead && !c.destroyed);
@@ -29520,38 +29523,24 @@ function \u5C0F\u65E9\u5DDD\u3092\u6C7A\u3081\u308B(b, \u554F\u308F\u308C\u305F)
     "\u677E\u5C3E\u5C71\u304C\u52D5\u3044\u305F\u3002\u5C0F\u65E9\u5DDD\u79C0\u79CB\u3001\u65D7\u3092\u7FFB\u3057\u3066\u5927\u8C37\u52E2\u306E\u5074\u9762\u3078\u96EA\u5D29\u308C\u843D\u3061\u308B\u3002"
   );
 }
-function \u5357\u5BAE\u5C71\u3092\u6C7A\u3081\u308B(b) {
+function \u5357\u5BAE\u5C71\u306E\u624B\u3092\u96E2\u3059(b) {
   const s2 = b.\u7B4B\u66F8\u304D;
-  if (s2.\u5357\u5BAE\u5C71 !== "\u672A") return;
-  const \u6771\u306E\u6B8B = \u6B8B\u308A(b, "\u6771");
-  const \u62BC\u3055\u3048 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u62BC\u3055\u3048);
-  const \u62BC\u3055\u3048\u306E\u6B8B = \u62BC\u3055\u3048.length ? \u5175\u6570(\u62BC\u3055\u3048.filter((c) => !c.dead && !c.destroyed)) / \u62BC\u3055\u3048.reduce((a, c) => a + c.squads.reduce((t, q) => t + q.max, 0), 0) : 1;
-  const \u897F\u3078 = s2.\u5C0F\u65E9\u5DDD === "\u897F" && \u6771\u306E\u6B8B <= 0.7 && (\u62BC\u3055\u3048\u306E\u6B8B <= 0.55 || s2.\u4F7F\u3044 && \u6771\u306E\u6B8B <= 0.55);
-  if (\u897F\u3078) {
-    s2.\u5357\u5BAE\u5C71 = "\u897F";
-    \u65D7\u3092\u6C7A\u3081\u308B(
-      b,
-      "\u5357\u5BAE\u5C71",
-      "\u897F",
-      "\u5357\u5BAE\u5C71\u304C\u52D5\u3044\u305F\u3002\u5409\u5DDD\u5E83\u5BB6\u304C\u9053\u3092\u7A7A\u3051\u3001\u6BDB\u5229\u79C0\u5143\u30FB\u9577\u5B97\u6211\u90E8\u76DB\u89AA\u304C\u91CE\u3078\u4E0B\u308B\u3002"
-    );
-    \u62BC\u3055\u3048\u3092\u89E3\u304F(b, "\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u52E2\u304C\u52D5\u3044\u305F\u3002\u62BC\u3055\u3048\u306E\u516D\u968A\u306F\u3001\u3053\u308C\u3092\u8FCE\u3048\u6483\u3064\u3002");
-    return;
+  if (s2.\u5357\u5BAE\u5C71 !== "\u672A" || s2.\u5C0F\u65E9\u5DDD === "\u672A") return;
+  if (b.t < (s2.\u6C7A\u3081\u305F\u523B || 0) + 30) return;
+  s2.\u5357\u5BAE\u5C71 = "\u89E3\u3051\u305F";
+  for (const c of \u5C5E\u306E\u968A(b, "\u5357\u5BAE\u5C71")) {
+    if (!c.\u4E0D\u6226) continue;
+    c.\u4E0D\u6226 = false;
+    c.\u636E\u3048\u7F6E\u304D = null;
+    c.auto = c.side !== "P" || !!b.\u59D4\u306D\u305F;
+    c.order = "\u5F85\u6A5F";
   }
-  const \u5C3D\u304D\u305F = s2.\u5C0F\u65E9\u5DDD === "\u6771" && b.t > (s2.\u6C7A\u3081\u305F\u523B || 0) + 90 || b.t >= b.dusk * 0.58 || \u6B8B\u308A(b, "\u897F") <= 0.45;
-  if (\u5C3D\u304D\u305F) {
-    s2.\u5357\u5BAE\u5C71 = "\u52D5\u304B\u305A";
-    for (const c of \u5C5E\u306E\u968A(b, "\u5357\u5BAE\u5C71")) {
-      c.\u65E5\u548C\u898B = true;
-      c.\u7B4B.\u52D5\u304B\u305A = true;
-    }
-    \u5831\u305B\u308B(
-      b,
-      "\u5357\u5BAE\u5C71\u306F\u52D5\u304B\u306C\u3002\u5409\u5DDD\u5E83\u5BB6\u304C\u9053\u3092\u585E\u304E\u3001\u6BDB\u5229\u52E2\u306F\u3064\u3044\u306B\u5C71\u3092\u4E0B\u308A\u306A\u304B\u3063\u305F\u3002",
-      s2.\u5473\u65B9\u65D7 === "\u6771" ? "\u5409" : "\u51F6"
-    );
-    \u62BC\u3055\u3048\u3092\u89E3\u304F(b, "\u5357\u5BAE\u5C71\u306F\u52D5\u304B\u306C\u3068\u898B\u3048\u305F\u3002\u62BC\u3055\u3048\u306E\u516D\u968A\u306F\u3001\u77F3\u7530\u4E09\u6210\u306E\u9663\u3078\u5411\u304B\u3048\u308B\u3002");
-  }
+  \u5831\u305B\u308B(
+    b,
+    "\u677E\u5C3E\u5C71\u304C\u52D5\u3044\u305F\u3002\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u52E2\u306F\u3001\u3088\u3046\u3084\u304F\u5C71\u3092\u4E0B\u308A\u3089\u308C\u308B\u3002",
+    s2.\u5473\u65B9\u65D7 === "\u897F" ? "\u5409" : "\u51F6"
+  );
+  \u62BC\u3055\u3048\u3092\u89E3\u304F(b, "\u677E\u5C3E\u5C71\u304C\u52D5\u3044\u305F\u3002\u5357\u5BAE\u5C71\u306E\u62BC\u3055\u3048\u306B\u5C31\u3044\u3066\u3044\u305F\u516D\u968A\u3082\u3001\u624B\u304C\u96E2\u308C\u308B\u3002");
 }
 function \u62BC\u3055\u3048\u3092\u89E3\u304F(b, \u6587) {
   for (const c of b.corps) {
@@ -29568,6 +29557,63 @@ function \u6307\u56F3\u306E\u7E1B\u308A(b, c) {
   if (!c.\u7E1B\u308A) return null;
   if (b.\u7B4B\u66F8\u304D.\u5357\u5BAE\u5C71 !== "\u672A") return null;
   return "\u5357\u5BAE\u5C71\u306E\u69D8\u5B50\u304C\u308F\u304B\u3089\u306C\u3002\u3053\u3053\u3092\u96E2\u308C\u308B\u308F\u3051\u306B\u306F\u3044\u304B\u306C\u3002";
+}
+function \u5099\u306E\u5DEE\u914D(b) {
+  const s2 = b.\u7B4B\u66F8\u304D;
+  if (b.t < 3) return;
+  if (b.t < (s2.\u5DEE\u914D\u523B || 0) + 1.2) return;
+  s2.\u5DEE\u914D\u523B = b.t;
+  const \u751F = (c) => !c.dead && !c.destroyed && !c.routed && !c.withdraw && !c.\u4E0D\u6226 && !c.\u65E5\u548C\u898B && !c.\u63A7\u3048 && !c.\u7E1B\u308A;
+  const \u59D4 = (c) => (c.side !== "P" || c.auto) && !c.detach && \u751F(c);
+  const \u897F = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u65D7 === "\u897F" && \u751F(c));
+  const \u6771 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u65D7 === "\u6771" && \u751F(c));
+  const \u8FD1\u3044 = (c, l) => l.length ? l.reduce((a, o) => Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a) : null;
+  const \u5F53\u3066\u308B = (c, \u7684, \u756A = 0, \u6570 = 1) => {
+    const d = Math.hypot(\u7684.x - c.x, \u7684.y - c.y) || 1;
+    const ux = (c.x - \u7684.x) / d, uy = (c.y - \u7684.y) / d;
+    const \u5BC4 = (\u756A - (\u6570 - 1) / 2) * 260;
+    c.\u72D9\u3044 = \u7684.id;
+    issueOrder(b, c, {
+      order: "\u63A5\u6226",
+      target: \u7684.id,
+      \u72D9\u3044: \u7684.id,
+      tx: \u7684.x + ux * 38 - uy * \u5BC4,
+      ty: \u7684.y + uy * 38 + ux * \u5BC4
+    });
+  };
+  setAiIssuing(true);
+  {
+    const \u7D44 = /* @__PURE__ */ new Map();
+    for (const c of \u6771) {
+      if (!\u59D4(c) || !c.\u7B4B.\u5F53) continue;
+      if (c.squads.some((q) => q.engaged)) continue;
+      const \u624B = \u897F.filter((o) => o.\u7B4B.\u5099 === c.\u7B4B.\u5F53);
+      const \u7684 = \u8FD1\u3044(c, \u624B.length ? \u624B : \u897F);
+      if (!\u7684) continue;
+      if (!\u7D44.has(\u7684)) \u7D44.set(\u7684, []);
+      \u7D44.get(\u7684).push(c);
+    }
+    for (const [\u7684, \u3089] of \u7D44) {
+      \u3089.sort((x, y2) => (y2.\u7B4B.\u5148\u92D2 ? 1 : 0) - (x.\u7B4B.\u5148\u92D2 ? 1 : 0) || Math.hypot(x.x - \u7684.x, x.y - \u7684.y) - Math.hypot(y2.x - \u7684.x, y2.y - \u7684.y));
+      const \u4E26 = [];
+      \u3089.forEach((c, i) => {
+        if (i === 0) \u4E26.splice(0, 0, c);
+        else if (i % 2) \u4E26.push(c);
+        else \u4E26.unshift(c);
+      });
+      \u4E26.forEach((c, i) => \u5F53\u3066\u308B(c, \u7684, i, \u4E26.length));
+    }
+  }
+  for (const \u540D of new Set(\u897F.map((c) => c.\u7B4B.\u5099).filter(Boolean))) {
+    const \u624B = \u897F.filter((c) => c.\u7B4B.\u5099 === \u540D);
+    const \u565B = \u624B.find((c) => c.squads.some((q) => q.engaged));
+    if (!\u565B) continue;
+    const \u6575 = \u8FD1\u3044(\u565B, \u6771);
+    if (!\u6575) continue;
+    const \u5BC4\u305B\u624B = \u624B.filter((c) => c !== \u565B && \u59D4(c) && !c.squads.some((q) => q.engaged) && Math.hypot(\u6575.x - c.x, \u6575.y - c.y) <= 1600);
+    \u5BC4\u305B\u624B.forEach((c, i) => \u5F53\u3066\u308B(c, \u6575, i + 1, \u5BC4\u305B\u624B.length + 1));
+  }
+  setAiIssuing(false);
 }
 function \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B(b, dt) {
   const s2 = b.\u7B4B\u66F8\u304D;
@@ -29610,15 +29656,6 @@ function \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B(b, dt) {
       "\u305D\u306E\u307E\u307E\u3067\u3088\u3044"
     );
   }
-  if (s2.\u5473\u65B9\u65D7 === "\u897F" && s2.\u5357\u5BAE\u5C71 === "\u672A" && (b.t > 480 || s2.\u5C0F\u65E9\u5DDD !== "\u672A")) {
-    \u554F\u3046(
-      b,
-      "\u5357\u5BAE\u5C71\u3078\u4F7F\u3044",
-      "\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u52E2\u306F\u307E\u3060\u5C71\u306B\u3044\u308B\u3002\u4F7F\u8005\u3092\u7ACB\u3066\u3001\u51FA\u9663\u3092\u4FC3\u3057\u307E\u3059\u304B\u3002",
-      "\u4F7F\u8005\u3092\u7ACB\u3066\u308B",
-      "\u898B\u9001\u308B"
-    );
-  }
   {
     const \u5CF6 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u5CF6\u6D25 && !c.dead && !c.destroyed && c.\u4E0D\u6226);
     if (\u5CF6.length && (\u897F\u306E\u6B8B <= 0.5 || s2.\u5C0F\u65E9\u5DDD === "\u6771" && b.t > (s2.\u6C7A\u3081\u305F\u523B || 0) + 120)) {
@@ -29634,7 +29671,8 @@ function \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B(b, dt) {
     }
   }
   \u5C0F\u65E9\u5DDD\u3092\u6C7A\u3081\u308B(b, false);
-  \u5357\u5BAE\u5C71\u3092\u6C7A\u3081\u308B(b);
+  \u5357\u5BAE\u5C71\u306E\u624B\u3092\u96E2\u3059(b);
+  \u5099\u306E\u5DEE\u914D(b);
 }
 var \u63A7\u3048\u306E\u9375 = "sengoku:kassen";
 function \u5408\u6226\u3092\u63A7\u3048\u308B(b) {
@@ -29736,6 +29774,86 @@ function \u5408\u6226\u3092\u623B\u3059(\u63A7) {
   b.log.push({ t: b.t, text: "\u9589\u3058\u305F\u3068\u3053\u308D\u304B\u3089\u6226\u3092\u7D9A\u3051\u308B\u3002" });
   return { b, \u7B4B\u66F8\u304D: r.\u7B4B\u66F8\u304D };
 }
+function \u7B4B\u66F8\u304D\u306E\u899A\u3048(b) {
+  if (!b || !b.\u7B4B\u66F8\u304D) return [];
+  const s2 = b.\u7B4B\u66F8\u304D;
+  const \u5099 = \u5099\u306E\u69D8\u5B50(b);
+  const \u897F\u306E\u6B8B = \u6B8B\u308A(b, "\u897F"), \u6771\u306E\u6B8B = \u6B8B\u308A(b, "\u6771");
+  const \u5099\u306E\u6C17 = Math.round((\u5099.\u77F3\u7530.\u6C17 + \u5099.\u5B87\u559C\u591A.\u6C17 + \u5099.\u5927\u8C37.\u6C17) / 3);
+  const \u5D29 = \u5148\u624B\u306E\u5D29\u308C(b);
+  const \u5927\u8C37 = b.corps.filter((c) => /大谷|戸田|木下|平塚/.test(c.name));
+  const \u5927\u8C37\u306E\u6B8B = \u5927\u8C37.length ? \u5175\u6570(\u5927\u8C37.filter((c) => !c.dead && !c.destroyed)) / \u5927\u8C37.reduce((a, c) => a + c.squads.reduce((t, q) => t + q.max, 0), 0) : 0;
+  const \u5C71\u306E\u9E93 = b.corps.filter((c) => c.\u7B4B && c.\u7B4B.\u65D7 === "\u897F" && !c.dead && !c.destroyed && Math.hypot(c.x - 1812, c.y - 4045) < 2400).length;
+  const \u4E09\u6210 = b.corps.find((c) => /石田三成/.test(c.name));
+  const \u65D7\u982D\u5065\u5728 = !!(\u4E09\u6210 && !\u4E09\u6210.dead && !\u4E09\u6210.destroyed && corpsMen(\u4E09\u6210) > 0 && \u4E09\u6210.morale >= 50);
+  const \u5272 = (v) => `${Math.round(v * 100)}\uFF05`;
+  const \u5206 = (t) => `${Math.floor(t / 60)}\u5206${String(Math.round(t % 60)).padStart(2, "0")}\u79D2`;
+  return [
+    {
+      \u984C: "\u5BB6\u5EB7\u306E\u524D\u9032",
+      \u6E08: s2.\u5BB6\u5EB7\u524D\u9032,
+      \u4F46: "\u65D7\u672C\u4E09\u4E07\u306E\u63A7\u3048\u304C\u89E3\u3051\u308B\u3002\u554F\u9244\u7832\u306E\u524D\u63D0",
+      \u6761: [
+        { \u6587: `\u958B\u6226\u304B\u3089\u4E94\u5206\u304C\u7D4C\u3064\uFF08\u3044\u307E ${\u5206(b.t)}\uFF09`, \u53EF: b.t > 300 },
+        { \u6587: `\u897F\u8ECD\u306E\u524D\u7DDA\u304C\u516B\u5272\u3092\u5207\u308B\uFF08\u3044\u307E ${\u5272(\u897F\u306E\u6B8B)}\uFF09`, \u53EF: \u897F\u306E\u6B8B <= 0.8 },
+        {
+          \u6587: `\u77F3\u7530\u30FB\u5B87\u559C\u591A\u30FB\u5927\u8C37\u306E\u3069\u308C\u304B\u304C\u5D29\u308C\u308B\u3001\u307E\u305F\u306F\u4E09\u5099\u306E\u58EB\u6C17\u304C\u4E03\u5341\u3092\u5207\u308B\uFF08\u3044\u307E ${\u5099\u306E\u6C17}\uFF09`,
+          \u53EF: \u5099.\u77F3\u7530.\u5D29\u308C || \u5099.\u5B87\u559C\u591A.\u5D29\u308C || \u5099.\u5927\u8C37.\u5D29\u308C || \u5099\u306E\u6C17 < 70
+        }
+      ]
+    },
+    {
+      \u984C: "\u554F\u9244\u7832",
+      \u6E08: s2.\u554F\u9244\u7832,
+      \u4F46: "\u677E\u5C3E\u5C71\u306E\u53BB\u5C31\u3092\u305D\u306E\u5834\u3067\u6C7A\u3081\u3055\u305B\u308B",
+      \u6761: [
+        { \u6587: "\u5BB6\u5EB7\u304C\u524D\u3078\u51FA\u3066\u3044\u308B", \u53EF: !!s2.\u5BB6\u5EB7\u524D\u9032 },
+        { \u6587: `\u524D\u9032\u304B\u3089\u767E\u4E94\u5341\u79D2\u304C\u7D4C\u3064`, \u53EF: !!s2.\u5BB6\u5EB7\u524D\u9032 && b.t > (s2.\u524D\u9032\u306E\u523B || 0) + 150 },
+        {
+          \u6587: `\u77F3\u7530\u304B\u5B87\u559C\u591A\u304C\u5D29\u308C\u308B\u3001\u307E\u305F\u306F\u897F\u8ECD\u306E\u524D\u7DDA\u304C\u4E03\u5272\u3092\u5207\u308B\uFF08\u3044\u307E ${\u5272(\u897F\u306E\u6B8B)}\uFF09`,
+          \u53EF: \u5099.\u77F3\u7530.\u5D29\u308C || \u5099.\u5B87\u559C\u591A.\u5D29\u308C || \u897F\u306E\u6B8B <= 0.7
+        }
+      ]
+    },
+    {
+      \u984C: "\u5C0F\u65E9\u5DDD\u304C\u897F\u8ECD\u3068\u3057\u3066\u8D77\u3064",
+      \u6E08: s2.\u5C0F\u65E9\u5DDD === "\u897F",
+      \u4F46: "\u56DB\u3064\u3068\u3082\u63C3\u3048\u3070\u3001\u554F\u9244\u7832\u3092\u53D7\u3051\u3066\u3082\u6771\u3078\u306F\u8EE2\u3070\u306A\u3044",
+      \u6761: [
+        { \u6587: `\u9ED2\u7530\u30FB\u7D30\u5DDD\u30FB\u798F\u5CF6\u306E\u3046\u3061\u4E8C\u968A\u4EE5\u4E0A\u304C\u5D29\u308C\u308B\uFF08\u3044\u307E ${\u5D29}\u968A\uFF09`, \u53EF: \u5D29 >= 2 },
+        { \u6587: `\u5927\u8C37\u52E2\u304C\u4E03\u5272\u4EE5\u4E0A\u6B8B\u308B\uFF08\u3044\u307E ${\u5272(\u5927\u8C37\u306E\u6B8B)}\uFF09`, \u53EF: \u5927\u8C37\u306E\u6B8B >= 0.7 },
+        { \u6587: `\u677E\u5C3E\u5C71\u306E\u9E93\u306B\u897F\u8ECD\u304C\u4E8C\u968A\u4EE5\u4E0A\uFF08\u3044\u307E ${\u5C71\u306E\u9E93}\u968A\uFF09`, \u53EF: \u5C71\u306E\u9E93 >= 2 },
+        { \u6587: `\u77F3\u7530\u4E09\u6210\u304C\u5065\u5728\u3067\u58EB\u6C17\u4E94\u5341\u4EE5\u4E0A\uFF08\u3044\u307E ${\u4E09\u6210 ? Math.round(\u4E09\u6210.morale) : 0}\uFF09`, \u53EF: \u65D7\u982D\u5065\u5728 }
+      ]
+    },
+    {
+      \u984C: "\u5357\u5BAE\u5C71\u3068\u62BC\u3055\u3048\u306E\u624B\u304C\u96E2\u308C\u308B",
+      \u6E08: s2.\u5357\u5BAE\u5C71 === "\u89E3\u3051\u305F",
+      \u4F46: "\u6BDB\u5229\u52E2\u4E8C\u4E07\u4E03\u5343\u4E5D\u767E\u3068\u3001\u6771\u8ECD\u306E\u62BC\u3055\u3048\u516D\u968A\u304C\u52D5\u3051\u308B\u3088\u3046\u306B\u306A\u308B",
+      \u6761: [
+        { \u6587: `\u677E\u5C3E\u5C71\u306E\u53BB\u5C31\u304C\u6C7A\u307E\u308B\uFF08\u3044\u307E ${s2.\u5C0F\u65E9\u5DDD === "\u672A" ? "\u672A\u3060" : s2.\u5C0F\u65E9\u5DDD + "\u3078"}\uFF09`, \u53EF: s2.\u5C0F\u65E9\u5DDD !== "\u672A" },
+        { \u6587: "\u6C7A\u307E\u3063\u3066\u304B\u3089\u4E09\u5341\u79D2", \u53EF: s2.\u5C0F\u65E9\u5DDD !== "\u672A" && b.t > (s2.\u6C7A\u3081\u305F\u523B || 0) + 30 }
+      ]
+    },
+    {
+      \u984C: "\u5CF6\u6D25\u306E\u9000\u304D\u53E3",
+      \u6E08: !b.corps.some((c) => c.\u7B4B && c.\u7B4B.\u5CF6\u6D25 && c.\u4E0D\u6226),
+      \u4F46: "\u6B63\u9762\u306E\u6575\u4E2D\u3092\u7A81\u3044\u3066\u629C\u3051\u308B\u3002\u305D\u308C\u307E\u3067\u5CF6\u6D25\u306F\u52D5\u304B\u306A\u3044",
+      \u6761: [
+        {
+          \u6587: `\u897F\u8ECD\u306E\u524D\u7DDA\u304C\u4E94\u5272\u3092\u5207\u308B\uFF08\u3044\u307E ${\u5272(\u897F\u306E\u6B8B)}\uFF09\u3001\u307E\u305F\u306F\u677E\u5C3E\u5C71\u304C\u6771\u3078\u8EE2\u3076`,
+          \u53EF: \u897F\u306E\u6B8B <= 0.5 || s2.\u5C0F\u65E9\u5DDD === "\u6771"
+        }
+      ]
+    },
+    {
+      \u984C: "\u52DD\u3061",
+      \u6E08: b.phase === "over" && b.result === "P",
+      \u4F46: `\u6575\u306E\u968A\u3092\u3072\u3068\u3064\u6B8B\u3089\u305A\u5D29\u3059\uFF08\u6575\u306E\u524D\u7DDA\u306F\u3044\u307E ${\u5272(s2.\u5473\u65B9\u65D7 === "\u897F" ? \u6771\u306E\u6B8B : \u897F\u306E\u6B8B)}\uFF09`,
+      \u6761: []
+    }
+  ];
+}
 
 // src/ui/BattleScreen.jsx
 function BattleScreen({ ctx, land, onEnd }) {
@@ -29752,6 +29870,7 @@ function BattleScreen({ ctx, land, onEnd }) {
   const [\u9000\u304D\u78BA\u8A8D, set\u9000\u304D\u78BA\u8A8D] = useState3(null);
   const [\u548E\u3081, set\u548E\u3081] = useState3(null);
   const [, \u554F\u3044\u76F4\u3057] = useState3(0);
+  const [\u899A\u3048\u958B\u304F, set\u899A\u3048\u958B\u304F] = useState3(false);
   const faceRef = useRef2(false);
   const speedRef = useRef2(0), selRef = useRef2(null), uiRef = useRef2(0), allRef = useRef2(false);
   const camRef = useRef2({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
@@ -30727,10 +30846,44 @@ function BattleScreen({ ctx, land, onEnd }) {
     },
     \u7B4B2.\u554F\u3044.\u5426\u6587
   ))));
+  const \u899A\u30482 = \u7B4B2 ? \u7B4B\u66F8\u304D\u306E\u899A\u3048(b) : [];
+  const \u899A\u3048\u306E\u672D = \u7B4B2 && /* @__PURE__ */ React3.createElement(
+    "div",
+    {
+      style: { position: "absolute", right: 8, bottom: 8, zIndex: 40, maxWidth: "min(430px, 92vw)" },
+      onMouseDown: stop,
+      onMouseUp: stop
+    },
+    /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: "btn",
+        style: { padding: "7px 12px", fontSize: 12, background: "rgba(255,255,255,0.92)" },
+        onClick: () => set\u899A\u3048\u958B\u304F((v) => !v)
+      },
+      "\u7B4B\u66F8\u304D\u306E\u899A\u3048 ",
+      \u899A\u3048\u958B\u304F ? "\u25BC" : "\u25B2",
+      /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim, marginLeft: 7 } }, \u899A\u30482.filter((x) => x.\u6E08).length, "\uFF0F", \u899A\u30482.length)
+    ),
+    \u899A\u3048\u958B\u304F && /* @__PURE__ */ React3.createElement("div", { style: {
+      marginTop: 6,
+      background: "rgba(255,255,255,0.95)",
+      border: `1px solid ${U.line}`,
+      borderRadius: 8,
+      padding: "10px 12px",
+      maxHeight: "58vh",
+      overflow: "auto"
+    } }, \u899A\u30482.map((x) => /* @__PURE__ */ React3.createElement("div", { key: x.\u984C, style: { marginBottom: 9 } }, /* @__PURE__ */ React3.createElement("div", { className: "mn", style: { fontSize: 13.5, color: x.\u6E08 ? "#3E7A3A" : "#33332F" } }, x.\u6E08 ? "\u2714" : "\u25A1", " ", x.\u984C), x.\u4F46 && /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, color: U.dim, lineHeight: 1.7 } }, x.\u4F46), x.\u6761.map((j, k) => /* @__PURE__ */ React3.createElement("div", { key: k, style: {
+      fontSize: 11.5,
+      lineHeight: 1.85,
+      marginLeft: 10,
+      color: j.\u53EF ? "#3E7A3A" : U.dim
+    } }, j.\u53EF ? "\u25CB" : "\xD7", " ", j.\u6587)))))
+  );
   const \u548E\u3081\u306E\u5E2F = \u548E\u3081 && /* @__PURE__ */ React3.createElement("div", { style: {
     position: "absolute",
     left: "50%",
-    bottom: 92,
+    bottom: 132,
     transform: "translateX(-50%)",
     background: "rgba(44,40,32,0.92)",
     color: "#F6F2E6",
@@ -30742,7 +30895,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     maxWidth: "86vw",
     textAlign: "center"
   } }, \u548E\u3081);
-  return /* @__PURE__ */ React3.createElement("div", { className: "sp", style: { height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }, onMouseDown: stop, onMouseUp: stop }, \u9000\u304D\u306E\u672D, \u554F\u3044\u306E\u672D, \u548E\u3081\u306E\u5E2F, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 } }, !wide && /* @__PURE__ */ React3.createElement("div", { className: "bar bt" }, /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.pName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(pMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u58EB\u6C17 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, pMor)), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { color: U.dim } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.eName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(eMen))), \u65E5\u548C\u898B\u306E\u5175 > 0 && /* @__PURE__ */ React3.createElement("span", { className: "kv", style: { color: "#8A6A10" } }, "\u53BB\u5C31\u672A\u5B9A ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(\u65E5\u548C\u898B\u306E\u5175))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, ctx.place, /城下$|の囲み$/.test(ctx.place || "") ? "" : ctx.mode === "castle" ? "\u57CE\u653B\u3081" : ctx.mode === "clash" ? "\u306E\u91CE\u6226" : "\u4E0B", "\u30FB", b.weather), ctx.mode === "castle" && b.map && b.map.gates.map((gt) => /* @__PURE__ */ React3.createElement("span", { key: gt.key, style: { fontSize: 11, color: U.dim } }, gt.key, /* @__PURE__ */ React3.createElement("b", { style: { color: gt.broken ? "#B0483C" : gt.hp / gt.max > 0.4 ? U.text : "#C89A3A" } }, gt.broken ? "\u7834" : `${Math.round(gt.hp / gt.max * 100)}%`))), ctx.mode === "castle" && b.map && b.press != null && /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 11, color: U.dim } }, "\u57CE\u306E\u50BE\u304D", /* @__PURE__ */ React3.createElement("b", { style: { color: b.press > 0.6 ? "#B0483C" : U.text } }, Math.round(b.press * 100), "%")), /* @__PURE__ */ React3.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React3.createElement("span", { className: "kv num" }, Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF0F\u65E5\u6CA1\u307E\u3067", Math.max(0, Math.ceil((b.dusk - b.t) / 60)), "\u5206")), phase === "fight" && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0 ? "on" : ""}`, onClick: () => setSpeed(0) }, "\u505C\u6B62"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.12 ? "on" : ""}`, onClick: () => setSpeed(0.12) }, "\u5FAE\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.3 ? "on" : ""}`, onClick: () => setSpeed(0.3) }, "\u4F4E\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.6 ? "on" : ""}`, onClick: () => setSpeed(0.6) }, "\u901A\u5E38"))), /* @__PURE__ */ React3.createElement("div", { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" } }, /* @__PURE__ */ React3.createElement(
+  return /* @__PURE__ */ React3.createElement("div", { className: "sp", style: { height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }, onMouseDown: stop, onMouseUp: stop }, \u9000\u304D\u306E\u672D, \u554F\u3044\u306E\u672D, \u548E\u3081\u306E\u5E2F, \u899A\u3048\u306E\u672D, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 } }, !wide && /* @__PURE__ */ React3.createElement("div", { className: "bar bt" }, /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.pName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(pMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u58EB\u6C17 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, pMor)), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { color: U.dim } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.eName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(eMen))), \u65E5\u548C\u898B\u306E\u5175 > 0 && /* @__PURE__ */ React3.createElement("span", { className: "kv", style: { color: "#8A6A10" } }, "\u53BB\u5C31\u672A\u5B9A ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(\u65E5\u548C\u898B\u306E\u5175))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, ctx.place, /城下$|の囲み$/.test(ctx.place || "") ? "" : ctx.mode === "castle" ? "\u57CE\u653B\u3081" : ctx.mode === "clash" ? "\u306E\u91CE\u6226" : "\u4E0B", "\u30FB", b.weather), ctx.mode === "castle" && b.map && b.map.gates.map((gt) => /* @__PURE__ */ React3.createElement("span", { key: gt.key, style: { fontSize: 11, color: U.dim } }, gt.key, /* @__PURE__ */ React3.createElement("b", { style: { color: gt.broken ? "#B0483C" : gt.hp / gt.max > 0.4 ? U.text : "#C89A3A" } }, gt.broken ? "\u7834" : `${Math.round(gt.hp / gt.max * 100)}%`))), ctx.mode === "castle" && b.map && b.press != null && /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 11, color: U.dim } }, "\u57CE\u306E\u50BE\u304D", /* @__PURE__ */ React3.createElement("b", { style: { color: b.press > 0.6 ? "#B0483C" : U.text } }, Math.round(b.press * 100), "%")), /* @__PURE__ */ React3.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React3.createElement("span", { className: "kv num" }, Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF0F\u65E5\u6CA1\u307E\u3067", Math.max(0, Math.ceil((b.dusk - b.t) / 60)), "\u5206")), phase === "fight" && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0 ? "on" : ""}`, onClick: () => setSpeed(0) }, "\u505C\u6B62"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.12 ? "on" : ""}`, onClick: () => setSpeed(0.12) }, "\u5FAE\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.3 ? "on" : ""}`, onClick: () => setSpeed(0.3) }, "\u4F4E\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.6 ? "on" : ""}`, onClick: () => setSpeed(0.6) }, "\u901A\u5E38"))), /* @__PURE__ */ React3.createElement("div", { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" } }, /* @__PURE__ */ React3.createElement(
     "div",
     {
       ref: wrapRef,
@@ -30793,10 +30946,13 @@ function BattleScreen({ ctx, land, onEnd }) {
           position: "absolute",
           left: "50%",
           transform: "translateX(-50%)",
-          top: 12 + i * 34,
+          bottom: 16 + i * 34,
           padding: "7px 16px",
           borderRadius: 8,
           fontSize: 15,
+          maxWidth: "92%",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
           whiteSpace: "nowrap",
           background: n.kind === "bad" ? "rgba(176,72,60,0.93)" : n.kind === "good" ? "rgba(62,122,58,0.93)" : "rgba(40,40,36,0.9)",
           color: "#fff",
@@ -33309,6 +33465,13 @@ var \u8AAC\u660E\u66F8 = [
         ]
       },
       {
+        \u898B\u51FA\u3057: "\u5099\uFF08\u305D\u306A\u3048\uFF09\u3067\u307E\u3068\u307E\u3063\u3066\u5F53\u305F\u308B",
+        \u6587: [
+          "\u95A2\u30F6\u539F\u306F\u968A\u3054\u3068\u306E\u5C0F\u7AF6\u308A\u5408\u3044\u3067\u306F\u306A\u304F\u3001\u5099\u3069\u3046\u3057\u306E\u3076\u3064\u304B\u308A\u5408\u3044\u3067\u3042\u3063\u305F\u3002\u77F3\u7530\u968A\u306F\u4E09\u6210\u306E\u672C\u968A\u30FB\u5CF6\u5DE6\u8FD1\u30FB\u84B2\u751F\u90F7\u820E\u30FB\u7E54\u7530\u4FE1\u9AD8\u3067\u3072\u3068\u3064\u306E\u5099\u3092\u6210\u3057\u3001\u9ED2\u7530\u9577\u653F\uFF08\u5148\u92D2\uFF09\u30FB\u7AF9\u4E2D\u30FB\u52A0\u85E4\u304C\u3053\u308C\u306B\u5F53\u305F\u308B\u3002\u5099\u306E\u4E00\u968A\u304C\u69CD\u3092\u5408\u308F\u305B\u308C\u3070\u3001\u540C\u3058\u5099\u306E\u968A\u3082\u305D\u3053\u3078\u5BC4\u308B\u3002",
+          "\u6771\u8ECD\u306E\u53D7\u3051\u6301\u3061\u306F\u56DB\u3064\u3002\u77F3\u7530\u3078\u9ED2\u7530\u9577\u653F\u3001\u5B87\u559C\u591A\u3078\u798F\u5CF6\u6B63\u5247\u3001\u5927\u8C37\u3078\u85E4\u5802\u9AD8\u864E\u304C\u5148\u92D2\u3068\u3057\u3066\u6700\u524D\u7DDA\u306B\u7ACB\u3061\u3001\u6B8B\u308A\u304C\u305D\u306E\u5DE6\u53F3\u3078\u4E26\u3076\u3002\u5C0F\u897F\u3078\u306F\u7530\u4E2D\u5409\u653F\u30FB\u7B52\u4E95\u5B9A\u6B21\u3002"
+        ]
+      },
+      {
         \u898B\u51FA\u3057: "\u53BB\u5C31\u306E\u5B9A\u307E\u3089\u306C\u968A\uFF08\u9EC4\uFF09",
         \u6587: [
           "\u677E\u5C3E\u5C71\u306E\u5C0F\u65E9\u5DDD\u79C0\u79CB\u3068\u3001\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u79C0\u5143\u2015\u2015\u3053\u306E\u56DB\u4E07\u4E94\u5343\u306F\u3001\u3069\u3061\u3089\u306E\u5473\u65B9\u3067\u3082\u306A\u3044\u3002\u76E4\u306E\u4E0A\u3067\u306F\u9EC4\u3067\u63CF\u304B\u308C\u3001\u6483\u3061\u3082\u6483\u305F\u308C\u3082\u305B\u305A\u3001\u305D\u306E\u5834\u3092\u52D5\u304B\u306A\u3044\u3002",
@@ -33324,10 +33487,17 @@ var \u8AAC\u660E\u66F8 = [
         ]
       },
       {
-        \u898B\u51FA\u3057: "\u5357\u5BAE\u5C71\u306E\u62BC\u3055\u3048",
+        \u898B\u51FA\u3057: "\u5357\u5BAE\u5C71\u3068\u3001\u305D\u306E\u62BC\u3055\u3048",
         \u6587: [
-          "\u6771\u8ECD\u306E\u3046\u3061\u6C60\u7530\u8F1D\u653F\u30FB\u6D45\u91CE\u5E78\u9577\u30FB\u5C71\u5185\u4E00\u8C4A\u30FB\u8702\u9808\u8CC0\u81F3\u93AE\u30FB\u6709\u99AC\u8C4A\u6C0F\u30FB\u4E2D\u6751\u4E00\u5FE0\u306E\u516D\u968A\u306F\u3001\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u52E2\u3092\u62BC\u3055\u3048\u308B\u305F\u3081\u306B\u7F6E\u304B\u308C\u3066\u3044\u308B\u3002\u5C71\u306E\u53BB\u5C31\u304C\u5206\u304B\u3089\u306C\u3042\u3044\u3060\u3001\u3053\u306E\u516D\u968A\u306B\u4E0B\u77E5\u306F\u3067\u304D\u306A\u3044\u2015\u2015\u80CC\u306B\u4E00\u4E07\u4E94\u5343\u3092\u8CA0\u3063\u305F\u307E\u307E\u91CE\u3078\u51FA\u308B\u306E\u306F\u91C7\u914D\u3067\u306F\u306A\u3044\u3002",
-          "\u5C71\u304C\u52D5\u3044\u305F\u304B\u3001\u52D5\u304B\u306C\u3068\u5B9A\u307E\u3063\u305F\u3068\u304D\u306B\u624B\u304C\u96E2\u308C\u308B\u3002\u52D5\u3051\u3070\u8FCE\u3048\u6483\u3061\u3001\u52D5\u304B\u306C\u3068\u6C7A\u307E\u308C\u3070\u4E09\u6210\u306E\u9663\u3078\u5411\u304B\u3048\u308B\u3002"
+          "\u5357\u5BAE\u5C71\u306E\u6BDB\u5229\u52E2\u4E8C\u4E07\u4E03\u5343\u4E5D\u767E\uFF08\u6BDB\u5229\u79C0\u5143\u30FB\u5409\u5DDD\u5E83\u5BB6\u30FB\u5B89\u56FD\u5BFA\u6075\u74CA\u30FB\u9577\u675F\u6B63\u5BB6\u30FB\u9577\u5B97\u6211\u90E8\u76DB\u89AA\uFF09\u306F\u897F\u8ECD\u3067\u3042\u308B\u3002\u305F\u3060\u3057\u5409\u5DDD\u5E83\u5BB6\u304C\u9053\u3092\u585E\u3044\u3067\u3044\u308B\u3042\u3044\u3060\u306F\u52D5\u304B\u306A\u3044\u2015\u2015\u5CF6\u6D25\u3068\u540C\u3058\u300C\u4E0D\u6226\u300D\u3067\u3001\u5175\u306E\u52D8\u5B9A\u306B\u306F\u897F\u8ECD\u3068\u3057\u3066\u5165\u308B\u3002",
+          "\u6771\u8ECD\u306E\u3046\u3061\u6C60\u7530\u8F1D\u653F\u30FB\u6D45\u91CE\u5E78\u9577\u30FB\u5C71\u5185\u4E00\u8C4A\u30FB\u8702\u9808\u8CC0\u81F3\u93AE\u30FB\u6709\u99AC\u8C4A\u6C0F\u30FB\u4E2D\u6751\u4E00\u5FE0\u306E\u516D\u968A\u306F\u3001\u305D\u306E\u5357\u5BAE\u5C71\u3092\u62BC\u3055\u3048\u308B\u305F\u3081\u306B\u7F6E\u304B\u308C\u3066\u3044\u308B\u3002\u5C71\u306E\u53BB\u5C31\u304C\u5206\u304B\u3089\u306C\u3042\u3044\u3060\u3001\u3053\u306E\u516D\u968A\u306B\u3082\u4E0B\u77E5\u306F\u3067\u304D\u306A\u3044\u3002",
+          "\u677E\u5C3E\u5C71\u304C\u52D5\u3051\u3070\u3001\u6226\u306E\u5F62\u304C\u5B9A\u307E\u308B\u3002\u305D\u306E\u3068\u304D\u6BDB\u5229\u52E2\u3068\u62BC\u3055\u3048\u306E\u516D\u968A\u306E\u624B\u304C\u3001\u540C\u6642\u306B\u96E2\u308C\u308B\u3002"
+        ]
+      },
+      {
+        \u898B\u51FA\u3057: "\u7B4B\u66F8\u304D\u306E\u899A\u3048",
+        \u6587: [
+          "\u76E4\u306E\u53F3\u4E0B\u306B\u300C\u7B4B\u66F8\u304D\u306E\u899A\u3048\u300D\u304C\u3042\u308B\u3002\u958B\u304F\u3068\u3001\u5BB6\u5EB7\u306E\u524D\u9032\u30FB\u554F\u9244\u7832\u30FB\u5C0F\u65E9\u5DDD\u30FB\u5357\u5BAE\u5C71\u30FB\u5CF6\u6D25\u306E\u9000\u304D\u53E3\u306B\u3064\u3044\u3066\u3001\u305D\u308C\u305E\u308C\u4F55\u304C\u8981\u308B\u306E\u304B\u3001\u3044\u307E\u3069\u3053\u307E\u3067\u63C3\u3063\u3066\u3044\u308B\u306E\u304B\u304C\u25CB\xD7\u3067\u4E26\u3076\u3002\u63C3\u3063\u305F\u5206\u5C90\u306B\u306F\u2714\u304C\u3064\u304F\u3002"
         ]
       },
       {

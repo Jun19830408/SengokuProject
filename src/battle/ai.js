@@ -669,7 +669,10 @@ export function battleAI(b) {
     /* 兵力差と地形から陣形を選び直す。プレイヤーと同じ陣形・同じ手間で行う。
        ただし、遊ぶ側が布陣のときに選んだ陣形は書き換えない。
        初めの陣形は横陣であり（makeCorps）、そこから選ぶのは遊ぶ側の領分である。 */
-    if (!c.formPicked && !c.陣を選んだ) {
+    /* 筋書きの一戦では、采配は陣形を選び直さない。関ヶ原の各隊がどの陣を
+       敷いていたかは記録が乏しく、確かなことは言えない。横陣のまま始め、
+       組み替えるのは遊ぶ側の領分とする。 */
+    if (!c.formPicked && !c.陣を選んだ && !b.筋書き) {
       c.formPicked = true;
       const mine = alive.filter((o) => o.side === mySide).reduce((a, o) => a + corpsMen(o), 0);
       const foeMen = alive.filter((o) => o.side === foeSide).reduce((a, o) => a + corpsMen(o), 0);

@@ -105,11 +105,13 @@ console.log('\n── 二　布陣');
   const 旗 = (f) => b.corps.filter((c) => c.筋 && c.筋.旗 === f);
   const 兵 = (l) => Math.round(l.reduce((a, c) => a + corpsMen(c), 0));
   確('六十三隊が並ぶ', b.corps.length === 63, `${b.corps.length}隊`);
-  確('西軍は十六隊', 旗('西').length === 16, `${兵(旗('西')).toLocaleString()}人`);
-  確('西軍は三万三千九百（実際に戦った西軍の通説に合う）',
-    Math.abs(兵(旗('西')) - 33900) < 60, `${兵(旗('西')).toLocaleString()}人`);
+  確('西軍は二十一隊（南宮山の毛利勢を含む）', 旗('西').length === 21, `${兵(旗('西')).toLocaleString()}人`);
+  確('西軍の総勢は六万一千八百', Math.abs(兵(旗('西')) - 61800) < 60, `${兵(旗('西')).toLocaleString()}人`);
+  const 戦う西 = 旗('西').filter((c) => !c.不戦);
+  確('うち実際に戦うのは三万二千四百（不戦の島津と南宮山を除く）',
+    Math.abs(兵(戦う西) - 32400) < 60, `${兵(戦う西).toLocaleString()}人`);
   確('東軍は三十四隊', 旗('東').length === 34, `${兵(旗('東')).toLocaleString()}人`);
-  確('去就の定まらぬ隊は十三隊', 旗('黄').length === 13, `${兵(旗('黄')).toLocaleString()}人`);
+  確('去就の定まらぬ隊は小早川勢の八隊', 旗('黄').length === 8, `${兵(旗('黄')).toLocaleString()}人`);
   確('盤からはみ出した隊がない',
     b.corps.every((c) => c.x >= 0 && c.y >= 0 && c.x <= FIELD.w && c.y <= FIELD.h));
   const 三成 = b.corps.find((c) => c.name === '石田三成');
@@ -117,6 +119,8 @@ console.log('\n── 二　布陣');
   確('三成は西、家康は東に立つ', 三成.x < FIELD.w * 0.3 && 家康.x > FIELD.w * 0.5,
     `三成 x=${Math.round(三成.x)} ／ 家康 x=${Math.round(家康.x)}`);
   確('黄の隊は日和見として置かれる', 旗('黄').every((c) => c.日和見));
+  確('南宮山の毛利勢は西軍の不戦（黄ではない）',
+    b.corps.filter((c) => c.筋 && c.筋.属 === '南宮山').every((c) => c.不戦 && c.筋.旗 === '西'));
   確('南宮山の押さえは六隊', b.corps.filter((c) => c.縛り).length === 6);
   合戦を畳む();
 }
