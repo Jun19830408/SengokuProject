@@ -52,8 +52,6 @@ export const NEWCOMERS = [
     lead: 62, valor: 60, wit: 76, gov: 78, retinue: 120, retTrain: 62, born: 1565 },
   { id: "hidenaga", name: "木下小一郎", faction: "oda", y: 1564, at: "nagoya",
     lead: 82, valor: 68, wit: 84, gov: 90, retinue: 180, retTrain: 66, born: 1540 },
-  { id: "kanbei", name: "黒田官兵衛", faction: "oda", y: 1575, at: "nagoya",
-    lead: 82, valor: 62, wit: 96, gov: 88, retinue: 160, retTrain: 64, born: 1546 },
   { id: "masamune", name: "真田信綱", faction: "takeda", y: 1558, at: "komoro",
     lead: 76, valor: 84, wit: 66, gov: 60, retinue: 220, retTrain: 70, born: 1537 },
   { id: "katsuyori2", name: "武田信豊", faction: "takeda", y: 1566, at: "fukashi",

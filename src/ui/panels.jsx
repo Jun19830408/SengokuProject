@@ -10,6 +10,9 @@ import { canSee, forecast, relOf } from "../core/state.js";
 import { courtRank, 旗の下か } from "../core/province.js";
 import { 問われる家, 応じる目 } from "../core/sobuji.js";
 import { 参陣の顔ぶれ, 号令の限り } from "../core/gourei.js";
+import { 分け目の野 } from "../data/wakemeba.js";
+import { 器量くらべ, 挑める家ら, 分け目の備えを組む, 分け目の兵, 版図の石高, 直轄の石高,
+  接する国ら, 割譲の城ら, 割譲の限り, 集結の月数, 野を選ぶ側, 天下分け目を挑めるか } from "../core/wakeme.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
 import { 元服の齢, 姫の役, 姫の枠, 姫の齢, 婚姻できるか, 婚姻の要る信用, 嫁がせられるか, 婚儀の礼, 使者の礼, 使える姫 } from "../core/hime.js";
@@ -2417,6 +2420,158 @@ export function 号令の帳({ g, onSend, onClose }) {
             onClick={() => onSend(to, 出る)}>
             {先 ? `${先.name}へ号令を発する（${出る.length}手・${fmt(総勢)}人）` : "寄せる城を選ぶ"}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ==========================================================================
+   天下分け目の帳（GDD 12.6）
+
+   挑む相手を選び、野を選ぶ。出す兵は選べない――留守居を除いた全軍が出る。
+   ここで決められるのは「誰へ挑むか」と、器量くらべに勝ったときの「どの野か」
+   だけである。
+   ========================================================================== */
+export function 天下分け目の帳({ g, onSend, onClose }) {
+  const 的ら = useMemo(() => 挑める家ら(g, g.player), [g]);
+  const [的, set的] = useState(的ら[0] || null);
+  const [野, set野] = useState(分け目の野[0].id);
+  const 我が兵 = useMemo(() => 分け目の兵(g, g.player), [g]);
+  const 我が隊 = useMemo(() => 分け目の備えを組む(g, g.player).length, [g]);
+  const 彼が兵 = useMemo(() => (的 ? 分け目の兵(g, 的) : 0), [g, 的]);
+  const 選ぶ側 = 的 ? 野を選ぶ側(g, g.player, 的) : null;
+  const 待 = 的 ? Math.max(集結の月数(g, g.player), 集結の月数(g, 的)) : 0;
+  const 器 = (f) => 器量くらべ(g, f);
+  const 選べる = 選ぶ側 === g.player;
+  const 見 = 分け目の野.find((f) => f.id === 野) || 分け目の野[0];
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card" style={{ maxWidth: 580 }}>
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>天下分け目</div>
+        <div style={{ fontSize: 12.5, lineHeight: 1.95, marginBottom: 8 }}>
+          肩を並べる家へ、全軍を挙げて一戦を挑みます。<b>出す兵は選べません。</b>
+          直轄・従属・臣従のすべての城から、留守居を除いた兵が残らず出ます。
+          留守は薄くなりますから、その隙に他家が攻めてくることもあります。<br />
+          勝てば、こちらの領と接した一国（最大{割譲の限り}城）が手に入り、
+          相手の兵は大きく損じます。負ければ同じことが起こります。
+        </div>
+        <div className="row"><span>出せる兵</span>
+          <span className="v num">{fmt(我が兵)} 人／{我が隊} 隊</span></div>
+        <div className="row"><span>直轄</span>
+          <span className="v num">{man(直轄の石高(g, g.player))} 万石</span></div>
+
+        <div className="sec">挑む相手</div>
+        {!的ら.length && (
+          <div style={{ fontSize: 12.5, color: U.dim, padding: "6px 0" }}>
+            いま挑める家はありません。石高で一つ上か一つ下の家で、版図百二十万石を超える相手が要ります。
+          </div>
+        )}
+        {的ら.map((f) => (
+          <label key={f} style={{ display: "flex", gap: 8, alignItems: "center",
+            padding: "5px 0", fontSize: 13, borderBottom: `1px solid ${U.line2}` }}>
+            <input type="radio" checked={的 === f} onChange={() => set的(f)} />
+            <span className="pill" style={{ background: (g.factions[f] || {}).color }}>
+              {(g.factions[f] || {}).name}</span>
+            <span className="v num" style={{ marginLeft: "auto" }}>
+              版図 {man(版図の石高(g, f))} 万石／兵 {fmt(分け目の兵(g, f))} 人</span>
+          </label>
+        ))}
+
+        {的 && (
+          <>
+            <div className="sec">器量くらべ（知略を倍に見る）</div>
+            <div className="row"><span>{(g.factions[g.player] || {}).name}</span>
+              <span className="v num">{器(g.player)}</span></div>
+            <div className="row"><span>{(g.factions[的] || {}).name}</span>
+              <span className="v num">{器(的)}</span></div>
+            <div style={{ fontSize: 12, color: 選べる ? "#3E7A3A" : U.dim, margin: "4px 0 2px" }}>
+              {選ぶ側 == null ? "器量は伯仲している。野は賽で決まる。"
+                : 選べる ? "器量で上回っている。戦う野をこちらが選べる。"
+                  : `${(g.factions[的] || {}).name}が野を選ぶ。`}
+            </div>
+
+            <div className="sec">戦う野</div>
+            {選べる ? (
+              <div style={{ maxHeight: 150, overflow: "auto" }}>
+                {分け目の野.map((f) => (
+                  <label key={f.id} style={{ display: "flex", gap: 8, alignItems: "center",
+                    padding: "4px 0", fontSize: 12.5, borderBottom: `1px solid ${U.line2}` }}>
+                    <input type="radio" checked={野 === f.id} onChange={() => set野(f.id)} />
+                    <span className="mn" style={{ fontSize: 14, width: 150 }}>{f.名}</span>
+                    <span style={{ color: U.dim }}>{f.詞}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12.5, color: U.dim }}>相手が選ぶ。どの野になるかは、野に出るまで分からない。</div>
+            )}
+            {選べる && (
+              <div style={{ fontSize: 12, color: U.dim, marginTop: 4 }}>
+                {見.特.map((t, i) => <div key={i}>・{t}</div>)}
+              </div>
+            )}
+
+            <div className="sec">兵の集まり</div>
+            <div className="row"><span>本拠に兵が揃うまで</span><span className="v num">{待} ヶ月</span></div>
+            <div className="row"><span>相手の兵</span><span className="v num">{fmt(彼が兵)} 人</span></div>
+          </>
+        )}
+
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button className="btn" onClick={onClose}>やめる</button>
+          <button className="btn pri" disabled={!的 || !天下分け目を挑めるか(g, g.player, 的).ok}
+            onClick={() => onSend(的, 選べる ? 野 : null)}>天下分け目を挑む</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* 戦の跡の帳。勝った側が、接した国のうち一つを取る。 */
+export function 分け目の沙汰の帳({ g, 勝, 負, 果, onTake }) {
+  const 国ら = useMemo(() => 接する国ら(g, 勝, 負), [g, 勝, 負]);
+  const [国, set国] = useState(国ら[0] || null);
+  const 勝った = 勝 === g.player;
+  return (
+    <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+      <div className="card" style={{ maxWidth: 520 }}>
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>
+          天下分け目の跡{勝った ? "　――　勝ち" : "　――　負け"}</div>
+        <div style={{ fontSize: 12.5, lineHeight: 1.95, marginBottom: 8 }}>
+          {勝った
+            ? `${(g.factions[負] || {}).name}を野に破りました。接した国を一つ、最大${割譲の限り}城まで取れます。`
+            : `${(g.factions[勝] || {}).name}に敗れました。接した国が一つ、相手の手に渡ります。`}
+          <br />敗れた側は兵が逃げ散り、旗の下にあった家はみな離れて独り立ちします。
+        </div>
+        {果 && (
+          <>
+            <div className="row"><span>崩れた隊</span>
+              <span className="v num">{果.崩れた隊} ／ {果.隊} 隊</span></div>
+            <div className="row"><span>逃げ散る兵の割</span>
+              <span className="v num">{Math.round(果.割 * 1000) / 10} ％</span></div>
+          </>
+        )}
+        <div className="sec">{勝った ? "取る国" : "渡る国"}</div>
+        {!国ら.length && <div style={{ fontSize: 12.5, color: U.dim }}>接した国がありません。国は動きません。</div>}
+        <div style={{ maxHeight: 200, overflow: "auto" }}>
+          {国ら.map((k) => {
+            const 城ら = 割譲の城ら(g, 勝, 負, k);
+            return (
+              <label key={k} style={{ display: "flex", gap: 8, alignItems: "center",
+                padding: "5px 0", fontSize: 13, borderBottom: `1px solid ${U.line2}` }}>
+                <input type="radio" disabled={!勝った} checked={国 === k} onChange={() => set国(k)} />
+                <span className="mn" style={{ fontSize: 15, width: 84 }}>{k}</span>
+                <span style={{ color: U.dim, fontSize: 12 }}>
+                  {城ら.map((c) => c.name).join("・")}（{城ら.length}城）</span>
+              </label>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button className="btn pri" onClick={() => onTake(勝った ? 国 : null)}>
+            {勝った ? "この国を取る" : "受け入れる"}</button>
         </div>
       </div>
     </div>

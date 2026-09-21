@@ -26,6 +26,8 @@ import { isVassal, underMyBanner, 援けに着く, 本拠を追う, 奪われた
 import { 攻めの腰, 要る兵力, 出せる軍の数, 好機か, 気風, 治めの腰 } from "../core/kiryou.js";
 import { 惣無事令を発する, 応諾を決める, 問われる家, 朝敵か, 朝敵を検め直す, 問い直しの間 } from "../core/sobuji.js";
 import { 済んだ号令を片づける } from "../core/gourei.js";
+import { 分け目を進める, 挑める見込み } from "../core/wakeme.js";
+import { 天下分け目の采配, 盤を開かずに裁く } from "./aiWakeme.js";
 import { いまの段, 段の上乗せ, 段 as 天下の段, 京の城 } from "../core/tenkabito.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 import { 城の寄親, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭に任せきりか, 旗頭は断られたか, 旗頭の古い断りを片づける, 断りの直後か } from "../core/inin.js";
@@ -1268,6 +1270,31 @@ export function advanceMonth(prev, g) {
         break;                                            // 一月に一つ
       }
       朝敵を検め直す(s);
+      /* 天下分け目の集結（GDD 12.6）。兵が本拠へ寄るのを月ごとに待つ。
+         どちらかの家が滅びたり旗の下に入ったりすれば、話は立ち消える。 */
+      if (s.分け目) {
+        const 我が事 = s.分け目.挑 === s.player || s.分け目.受 === s.player;
+        const 跡 = 分け目を進める(s, { 告げる: (t) => { if (我が事) events.push(t); } });
+        if (跡 && 跡.立ち消え) { if (我が事) events.push("天下分け目の触れは立ち消えた。"); }
+        /* 遊ぶ側の関わらぬ一戦は、兵が集まった月に盤を開かずに裁く。
+           六十四隊を日暮れまで回せば月送りが止まるからである。 */
+        else if (s.分け目 && s.分け目.残り <= 0 && !我が事) {
+          const 果 = 盤を開かずに裁く(s, s.分け目, { 告げる: (t) => {
+            s.chronicle.push({ y: s.year, m: s.month, text: t });
+          } });
+          if (果) {
+            events.push(`${(s.factions[果.勝] || {}).name}が${(s.factions[果.負] || {}).name}を野に破った（天下分け目）。`);
+          }
+        }
+      } else if (挑める見込み(s) && Math.random() < 0.5) {
+        /* AI の大身が一戦を挑む（月に一件まで）。
+           賽を引くのは、挑めるほどの家が盤にいるときだけにする――
+           引くだけで賽の流れがずれ、関わりのない盤まで別の歴史になる。 */
+        天下分け目の采配(s, { 告げる: (t) => {
+          s.chronicle.push({ y: s.year, m: s.month, text: t });
+          if (s.分け目 && (s.分け目.挑 === s.player || s.分け目.受 === s.player)) events.push(t);
+        } });
+      }
       /* 済んだ号令を片づける。的が落ちたか、参陣の軍が尽きれば終わりである。 */
       for (const q of 済んだ号令を片づける(s)) {
         if (q.主 !== s.player) continue;

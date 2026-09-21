@@ -330,8 +330,16 @@ console.log('\n── 十一　古い形の旗頭は、受け持ちの形に繕�
   /* 方面（国の決め打ち）は廃した。古い記録には g.方面 が残り、旗頭の役国が
      空のままになっている。受け持ちは根から数えるので、根の国を役国に据え直す。 */
   const s0 = JSON.parse(JSON.stringify(生));
-  const 城 = s0.castles.find((c) => c.faction === 'oda');
-  const g = s0.generals.find((x) => x.faction === 'oda' && !x.lord && x.at === 城.id);
+  /* 家は選ばない。長く走らせた盤では織田が滅んでいることもある
+     （天下分け目を入れてから、実際に城を一つも持たない盤が出た）。
+     いま城を持ち、そこに当主でない将がいる家を拾う。 */
+  let 城 = null, g = null;
+  for (const c of s0.castles) {
+    const x = s0.generals.find((y) => y.faction === c.faction && !y.lord && y.at === c.id);
+    if (x) { 城 = c; g = x; break; }
+  }
+  if (!g) { console.log('  … 城と将の組が見つからず、この節は飛ばす'); }
+  if (g) {
   g.役 = '旗頭'; g.役国 = null; g.方面 = ['尾張', '美濃']; g.fief = 40000; g.age = 35;
   const t = H.migrateSave(s0);
   const 旗 = t.generals.find((x) => x.id === g.id);
@@ -342,6 +350,7 @@ console.log('\n── 十一　古い形の旗頭は、受け持ちの形に繕�
   確('届く先は受け持ちより広い',
     H.旗頭の届く国(t, 旗).length > H.旗頭の受け持ち(t, 旗).length,
     `${H.旗頭の届く国(t, 旗).length}国`);
+  }
 }
 
 console.log('\n── 十二　後から入れた仕組みが、古い記録の上でも一通り働く');

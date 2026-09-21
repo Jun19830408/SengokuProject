@@ -143,7 +143,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
 
      一歩は 0.05 秒。これは画面を見ながら戦うときの歩幅の上限と同じで、
      この仕組みが元より想定している刻みである。 */
-  const 委ねる歩幅 = 0.05;
+  /* 一歩は 0.05 秒。ただし天下分け目のような大軍どうしの一戦では、隊が六十を
+     超え、日暮れまで四千四百秒ある。0.05 秒刻みで回すと一戦に十分以上かかり、
+     委ねたのに頁が固まったように見える（実測：六十四隊で十三分）。
+     隊数に応じて歩幅を伸ばす。委ねた戦の結果は、もとより細かく見せない。 */
+  const 委ねる歩幅 = bRef.current.corps.length > 40 ? 0.25
+    : bRef.current.corps.length > 24 ? 0.12 : 0.05;
   const [委ね中, set委ね中] = useState(false);
   const 委ねRef = useRef(false);
   const 委ねる = () => {
@@ -1154,7 +1159,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
      好機はいつも同じ形で訪れるとは限らない。条件が揃ったところで盤が問い、
      遊ぶ側が諾否を決める。家康を前へ出すか、問鉄砲を撃つか――どれも
      取り返しのつかぬ一手であるから、黙って進めるわけにはいかない。 */
-  const 筋 = b.筋書き;
+  /* 筋書きの札（問いと覚え）は関ヶ原の一戦のものである。天下分け目は同じ
+     「筋書きの野」の仕組みに乗っているが、分岐の覚えも問いも持たない。 */
+  const 筋 = b.分け目 ? null : b.筋書き;
   const 問いの札 = 筋 && 筋.問い && (
     <div className="modal" onMouseDown={stop} onMouseUp={stop}>
       <div className="card" style={{ maxWidth: 460 }}>

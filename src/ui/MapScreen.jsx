@@ -36,7 +36,10 @@ import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, Goal
 import { SallyDialog } from "./panels.jsx";
 import { 惣無事令を発する, 応諾を決める, 朝敵を検め直す } from "../core/sobuji.js";
 import { 号令を発する } from "../core/gourei.js";
-import { 惣無事令の帳, 惣無事令の問い as 惣無事令の問い札, 号令の帳 } from "./panels.jsx";
+import { 惣無事令の帳, 惣無事令の問い as 惣無事令の問い札, 号令の帳, 天下分け目の帳, 分け目の沙汰の帳 } from "./panels.jsx";
+import { 挑める家ら, 天下分け目を起こす, 分け目の沙汰, 接する国ら, 割譲の城ら } from "../core/wakeme.js";
+import { 分け目の盤を組む, 分け目の戦果 } from "../battle/wakemeikusa.js";
+import { 筋書きを解く } from "../battle/field.js";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
 import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer, DiploOffer } from "./panels.jsx";
@@ -121,6 +124,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [tab, setTab] = useState("内政");
   const [modal, setModal] = useState(null);
   const [battle, setBattle] = useState(null);
+  const [分け目の跡, set分け目の跡] = useState(null);
   const [sea, setSea] = useState(null);        // 盤の上の海戦
   const [townSel, setTownSel] = useState(null); // 押した特殊勢力
   const [raid, setRaid] = useState(null);        // 合戦前の奇襲の献策
@@ -1506,7 +1510,104 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     setBattle(null);
   };
 
+  /* ------------------------------------------------------ 天下分け目（GDD 12.6）
+
+     兵が本拠に揃ったら野へ出る。盤は「分け目の盤を組む」が組む――どの城の誰が
+     来たかで、その都度ちがう陣ができる。戦い終えたら、盤の上の兵を国の帳へ帰し、
+     取る国を決めて沙汰を下す。 */
+  const 野へ出る = () => {
+    const w0 = g.分け目;
+    if (!w0 || w0.残り > 0) return;
+    /* 盤を組むと、出した兵が城の帳から引かれる。引いた盤をそのまま持ち回る。 */
+    const s = structuredClone(g);
+    const 組 = 分け目の盤を組む(s, s.分け目, { 味方: s.player });
+    if (!組) {
+      /* 野に立てる隊がない（城も将も尽きた）。触れを畳む。 */
+      setG((p) => {
+        const s2 = structuredClone(p);
+        s2.分け目 = null;
+        s2.msg = "野に出せる手が残っていない。天下分け目の触れは立ち消えた。";
+        return s2;
+      });
+      return;
+    }
+    setG(s);
+    const w = s.分け目;
+    const 敵 = w.挑 === g.player ? w.受 : w.挑;
+    setBattle({
+      b: 組.b, mode: "wakeme", armyId: `wakeme-${w.挑}-${w.受}-${w.野}`,
+      playerIsAtk: w.挑 === g.player,
+      覚え: 組.覚え, 野: 組.野.id,
+      pName: (g.factions[g.player] || {}).name, eName: (g.factions[敵] || {}).name,
+      pColor: sideHue((g.factions[g.player] || {}).color, true),
+      eColor: sideHue((g.factions[敵] || {}).color, false),
+      place: 組.野.名,
+    });
+  };
+
+  /* 負けたとき、相手（AI）が取る国。いちばん石高の高い国を取る。 */
+  const 相手の取る国 = (s, 勝, 負) => {
+    const 国ら = 接する国ら(s, 勝, 負);
+    if (!国ら.length) return null;
+    return 国ら.map((k) => ({ k, 石: 割譲の城ら(s, 勝, 負, k).reduce((a, c) => a + (c.koku || 0), 0) }))
+      .sort((a, b) => b.石 - a.石)[0].k;
+  };
+
+  /* 天下分け目の決着。盤の兵を国の帳へ帰し、跡の帳を開く。 */
+  const finishWakeme = (b, ctx) => {
+    /* 筋書きの野（升目に焼いた地形）を畳む。畳まずに地図へ戻ると、次の野戦まで
+       天下分け目の野が残る。 */
+    筋書きを解く();
+    setG((prev) => {
+      const s = structuredClone(prev);
+      const w = s.分け目;
+      setBattle(null);
+      if (!w) return s;
+      const 私 = s.player;
+      const 敵 = w.挑 === 私 ? w.受 : w.挑;
+      /* 盤の上の兵を国の帳へ帰す。隊ごとに、出てきた城へ戻す。 */
+      const 城の分 = {};
+      for (const c of b.corps) {
+        const 印 = c.分け目;
+        const gen = s.generals.find((x) => x.id === c.id);
+        const 直 = Math.round(c.squads.filter((q) => q.origin === "直属").reduce((a, q) => a + q.men, 0));
+        const 地 = Math.round(c.squads.filter((q) => q.origin === "地域").reduce((a, q) => a + q.men, 0));
+        if (gen) gen.retinue = Math.max(0, 直);
+        if (!印) continue;
+        const 先 = (印.城ら || [])[0];
+        if (先) 城の分[先] = (城の分[先] || 0) + 地;
+      }
+      /* 生き残った在地の兵を、出てきた城へ帰す（出すときに引いてあるので足す）。 */
+      for (const [cid, 兵] of Object.entries(城の分)) {
+        const 城 = s.castles.find((c) => c.id === cid);
+        if (!城) continue;
+        城.local = Math.max(0, Math.round((城.local || 0) + 兵));
+        城.rost = newRoster(城.local, `loc-${城.id}`);
+      }
+      const 引き分け = b.result === "日没";
+      const 勝側 = b.result === "P" ? 私 : 敵;
+      const 果私 = 分け目の戦果(b, 私), 果敵 = 分け目の戦果(b, 敵);
+      if (引き分け) {
+        /* 日暮れまで決着がつかなければ、双方とも兵を退く。国は動かない。 */
+        s.分け目 = null;
+        const 文 = "日が暮れた。天下分け目は決せぬまま、双方とも兵を退いた。";
+        s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+        s.monthEvents = [...(s.monthEvents || []), 文];
+        s.msg = 文;
+        return s;
+      }
+      const 負側 = 勝側 === 私 ? 敵 : 私;
+      const 果 = 負側 === 私 ? 果私 : 果敵;
+      const 出た将ら = (ctx.覚え || []).filter((x) => x.家 === 負側
+        || ((s.generals.find((gg) => gg.id === x.id) || {}).faction === 負側)).map((x) => x.id);
+      set分け目の跡({ 勝: 勝側, 負: 負側, 出た将ら,
+        果: { ...果, 割: 0.05 + 0.15 * (果.出した兵 ? 果.敗走兵 / 果.出した兵 : 0) } });
+      return s;
+    });
+  };
+
   const finishBattle = (b, ctx) => {
+    if (ctx.mode === "wakeme") return finishWakeme(b, ctx);
     if (ctx.mode === "castle") return finishAssault(b, ctx);
     if (ctx.mode === "clash") return finishClash(b, ctx);
     setG((prev) => {
@@ -2216,6 +2317,27 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp} onTouchCancel={onCancel}
         onWheel={(e) => { if (e.target === cvRef.current) zoom(e.deltaY < 0 ? 1.12 : 0.89); }}>
         <canvas ref={cvRef} style={{ width: "100%", height: "100%", display: "block", touchAction: "none" }} />
+        {/* 天下分け目の触れ（GDD 12.6）。集結の月数を出し、揃えば野へ出る釦を出す。 */}
+        {g.分け目 && !battle && !分け目の跡
+          && (g.分け目.挑 === g.player || g.分け目.受 === g.player) && (() => {
+            const w = g.分け目;
+            const 敵 = w.挑 === g.player ? w.受 : w.挑;
+            const 揃 = w.残り <= 0;
+            return (
+              <div style={{ position: "absolute", left: "50%", top: 12, transform: "translateX(-50%)", zIndex: 7,
+                background: "rgba(44,40,32,0.94)", color: "#F6F2E6", padding: "8px 16px", borderRadius: 8,
+                display: "flex", gap: 12, alignItems: "center", fontSize: 13 }}
+                onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+                <span className="mn" style={{ fontSize: 15 }}>天下分け目</span>
+                <span>{(g.factions[敵] || {}).name}と{w.挑 === g.player ? "の一戦（挑んだ側）" : "の一戦（受けた側）"}</span>
+                <span style={{ color: "#D9A62A" }}>
+                  {揃 ? "兵が本拠に揃った" : `兵が寄っている（あと${w.残り}ヶ月）`}</span>
+                {揃 && (
+                  <button className="btn pri" style={{ padding: "4px 12px" }} onClick={野へ出る}>野へ出る</button>
+                )}
+              </div>
+            );
+          })()}
         <div className="mapctl l" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
           <div className="mbtn" onClick={() => zoom(1.25)}><b>＋</b>拡大</div>
           <div className="mbtn" onClick={() => zoom(0.8)}><b>−</b>縮小</div>
@@ -2245,6 +2367,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 <div className="mbtn" style={{ width: 66, color: "#8A6A2A" }}
                   onClick={() => setModal("gourei")}><b>⚔</b>号令</div>
               </>
+            )}
+            {!g.分け目 && 挑める家ら(g, g.player).length > 0 && (
+              <div className="mbtn" style={{ width: 66, color: "#8A3A2A" }}
+                onClick={() => setModal("wakeme")}><b>⚔</b>天下分け目</div>
             )}
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("factions")}><b>⚑</b>勢力情報</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("generals")}><b>☗</b>武将一覧</div>
@@ -2724,6 +2850,42 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               s2.msg = 文;
               return s2;
             }); }} />
+        )}
+
+        {/* 天下分け目を挑む（GDD 12.6）。 */}
+        {modal === "wakeme" && !battle && (
+          <天下分け目の帳 g={g} onClose={() => setModal(null)}
+            onSend={(的, 野) => { setModal(null); setG((p) => {
+              const s2 = structuredClone(p);
+              const w = 天下分け目を起こす(s2, s2.player, 的, { 野 });
+              if (!w) { s2.msg = "いまは挑めない。"; return s2; }
+              const 文 = `${(s2.factions[的] || {}).name}へ天下分け目を挑んだ。`
+                + `兵は${w.待ち}ヶ月のうちに本拠へ集まる。`;
+              s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
+              s2.monthEvents = [...(s2.monthEvents || []), 文];
+              s2.msg = 文;
+              return s2;
+            }); }} />
+        )}
+
+        {/* 戦の跡。取る国を決める（負けたときは相手が取る国を見るだけ）。 */}
+        {分け目の跡 && !battle && (
+          <分け目の沙汰の帳 g={g} 勝={分け目の跡.勝} 負={分け目の跡.負} 果={分け目の跡.果}
+            onTake={(国) => {
+              const 跡 = 分け目の跡; set分け目の跡(null);
+              setG((p) => {
+                const s2 = structuredClone(p);
+                const 選 = 跡.勝 === s2.player ? 国 : 相手の取る国(s2, 跡.勝, 跡.負);
+                const 報 = [];
+                分け目の沙汰(s2, { 勝: 跡.勝, 負: 跡.負, 国: 選,
+                  敗走兵: 跡.果 ? 跡.果.敗走兵 : 0, 出した兵: 跡.果 ? 跡.果.出した兵 : 0,
+                  出た将ら: 跡.出た将ら || [], 告げる: (t) => 報.push(t) });
+                for (const t of 報) s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+                s2.monthEvents = [...(s2.monthEvents || []), ...報];
+                s2.msg = 報[0] || "天下分け目は決した。";
+                return s2;
+              });
+            }} />
         )}
 
         {g.攻めの願い && !battle && (
