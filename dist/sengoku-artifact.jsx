@@ -19771,7 +19771,91 @@ var \u7B4B\u307E\u3067\u306E\u8DDD = (\u7B4B\u3089, x, y) => {
   }
   return \u6700;
 };
-var \u9663\u306E\u5186 = (\u9663) => ({ x: \u9663.x, y: \u9663.y, r: Math.max(\u9663.\u5E45, \u9663.\u5965) / 2, \u9593: 260 });
+var \u9663\u306E\u5186 = (\u9663) => {
+  const \u5099\u3089 = \u9663.\u5099 || [];
+  if (!\u5099\u3089.length) return { x: 0, y: 0, r: 0, \u9593: 0 };
+  const x = \u5099\u3089.reduce((a, b) => a + b.x, 0) / \u5099\u3089.length;
+  const y = \u5099\u3089.reduce((a, b) => a + b.y, 0) / \u5099\u3089.length;
+  let r = 0;
+  for (const b of \u5099\u3089) r = Math.max(r, Math.hypot(b.x - x, b.y - y) + b.\u5E45 / 2);
+  return { x, y, r: r + 120, \u9593: 200 };
+};
+var \u5099 = (\u540D, x, y, \u5411, \u5E452, \u6570, \u5F79 = "\u672C\u968A") => ({ \u540D, x, y, \u5411, \u5E45: \u5E452, \u6570, \u5F79 });
+var \u968A\u306E\u9593\u5408\u3044 = 230;
+function \u5099\u3092\u6577\u304F(b, \u6570) {
+  const co = Math.cos(b.\u5411), si = Math.sin(b.\u5411);
+  const \u4E00\u6BB5 = Math.max(1, Math.min(\u6570, Math.floor(b.\u5E45 / \u968A\u306E\u9593\u5408\u3044) + 1));
+  const \u6BB5\u6570 = Math.ceil(\u6570 / \u4E00\u6BB5);
+  const \u51FA = [];
+  for (let r = 0; r < \u6BB5\u6570; r++) {
+    const n = Math.min(\u4E00\u6BB5, \u6570 - r * \u4E00\u6BB5);
+    for (let i = 0; i < n; i++) {
+      const u = n > 1 ? (i - (n - 1) / 2) * (b.\u5E45 / (n - 1)) : 0;
+      const e = r * 200;
+      \u51FA.push({
+        x: Math.round(b.x + u * si - e * co),
+        y: Math.round(b.y - u * co - e * si),
+        \u5411: b.\u5411,
+        \u540D: b.\u540D,
+        \u5F79: b.\u5F79 || "\u672C\u968A"
+      });
+    }
+  }
+  return \u51FA;
+}
+function \u62BC\u3057\u5206\u3051\u308B(\u5834, \u9593 = \u968A\u306E\u9593\u5408\u3044) {
+  for (let \u5EA6 = 0; \u5EA6 < 6; \u5EA6++) {
+    let \u52D5 = 0;
+    for (let i = 0; i < \u5834.length; i++) {
+      for (let j = i + 1; j < \u5834.length; j++) {
+        const dx = \u5834[j].x - \u5834[i].x, dy = \u5834[j].y - \u5834[i].y;
+        const d = Math.hypot(dx, dy);
+        if (d >= \u9593 || d === 0) continue;
+        const \u62BC = (\u9593 - d) / 2;
+        const ux = dx / d, uy = dy / d;
+        \u5834[i].x -= ux * \u62BC;
+        \u5834[i].y -= uy * \u62BC;
+        \u5834[j].x += ux * \u62BC;
+        \u5834[j].y += uy * \u62BC;
+        \u52D5++;
+      }
+    }
+    if (!\u52D5) break;
+  }
+  for (const p of \u5834) {
+    p.x = Math.round(p.x);
+    p.y = Math.round(p.y);
+  }
+  return \u5834;
+}
+function \u9663\u7ACB\u3066\u3092\u6577\u304F(\u9663\u7ACB\u3066, n) {
+  const \u672C\u9663\u3089 = \u9663\u7ACB\u3066.filter((b) => b.\u5F79 === "\u672C\u9663");
+  const \u524D\u3089 = \u9663\u7ACB\u3066.filter((b) => b.\u5F79 !== "\u672C\u9663");
+  const \u672C\u9663\u306E\u6570 = \u672C\u9663\u3089.length ? Math.max(1, Math.min(n <= 8 ? 1 : 2, n)) : 0;
+  const \u524D\u306E\u6570 = Math.max(0, n - \u672C\u9663\u306E\u6570);
+  const \u51FA = [];
+  for (const b of \u524D\u3089) {
+    if (\u51FA.length >= \u524D\u306E\u6570) break;
+    \u51FA.push(...\u5099\u3092\u6577\u304F(b, Math.min(b.\u6570, \u524D\u306E\u6570 - \u51FA.length)));
+  }
+  for (const b of \u672C\u9663\u3089) {
+    if (\u51FA.length >= n) break;
+    \u51FA.push(...\u5099\u3092\u6577\u304F(b, Math.min(b.\u6570, n - \u51FA.length)));
+  }
+  let \u6BB52 = 1;
+  while (\u51FA.length < n && \u524D\u3089.length) {
+    const b = \u524D\u3089[\u524D\u3089.length - 1];
+    const co = Math.cos(b.\u5411), si = Math.sin(b.\u5411);
+    const \u5F8C = \u5099\u3092\u6577\u304F(
+      { ...b, \u540D: "\u5F8C\u5099", x: b.x - co * 240 * \u6BB52, y: b.y - si * 240 * \u6BB52 },
+      Math.min(6, n - \u51FA.length)
+    );
+    \u51FA.push(...\u5F8C);
+    \u6BB52++;
+    if (\u6BB52 > 8) break;
+  }
+  return \u62BC\u3057\u5206\u3051\u308B(\u51FA.slice(0, n));
+}
 var W = 8e3;
 var H = 5600;
 var \u4E8C\u5DDD\u306E\u5E73\u91CE = (() => {
@@ -19799,8 +19883,24 @@ var \u4E8C\u5DDD\u306E\u5E73\u91CE = (() => {
     { \u540D: "\u539F\u306E\u91CC", x: 5300, y: 1700, r: 160 }
   ];
   const \u9663 = {
-    \u5B88: { x: 5150, y: 2300, \u5E45: 1700, \u5965: 850, \u5411: Math.PI },
-    \u653B: { x: 2900, y: 2350, \u5E45: 2300, \u5965: 850, \u5411: 0 }
+    \u5B88: { \u540D: "\u5FAE\u9AD8\u5730\u306E\u9DB4\u7FFC", \u5099: [
+      \u5099("\u5FAE\u9AD8\u306E\u672C\u968A", 4950, 2450, Math.PI, 1500, 8),
+      \u5099("\u91CE\u306E\u5FAE\u9AD8\uFF08\u9AD8\u307F\uFF09", 5550, 2350, Math.PI, 900, 4, "\u9AD8\u307F"),
+      \u5099("\u6771\u306E\u8170\uFF08\u9AD8\u307F\uFF09", 6250, 2675, Math.PI, 800, 3, "\u9AD8\u307F"),
+      \u5099("\u5317\u306E\u6E21\u3057\u306E\u62BC\u3055\u3048", 5250, 1500, Math.PI * 0.75, 900, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u5357\u306E\u6E21\u3057\u306E\u62BC\u3055\u3048", 5700, 3200, -Math.PI * 0.75, 900, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u5317\u56DE\u308A\u306E\u5225\u50CD", 4500, 1350, Math.PI, 800, 4, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 6400, 2800, Math.PI, 600, 3, "\u672C\u9663")
+    ] },
+    \u653B: { \u540D: "\u8ECA\u61F8\u308A\u3068\u5357\u56DE\u308A", \u5099: [
+      \u5099("\u4E00\u306E\u624B", 3050, 2200, 0, 700, 4),
+      \u5099("\u4E8C\u306E\u624B", 2700, 2450, 0, 700, 4),
+      \u5099("\u4E09\u306E\u624B", 2350, 2700, 0, 700, 4),
+      \u5099("\u56DB\u306E\u624B", 2e3, 2950, 0, 700, 4),
+      \u5099("\u5317\u306E\u6E21\u3057\u306E\u62BC\u3055\u3048", 2900, 1300, Math.PI * 0.25, 800, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u5357\u56DE\u308A\u306E\u5225\u50CD", 3400, 3900, -Math.PI * 0.2, 900, 6, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 1500, 2500, 0, 600, 4, "\u672C\u9663")
+    ] }
   };
   const \u907F = [...\u67512.map((v) => ({ ...v, \u9593: 260 })), \u9663\u306E\u5186(\u9663.\u5B88), \u9663\u306E\u5186(\u9663.\u653B)];
   const \u5BC4 = (x, y) => Math.min(\u7B4B\u307E\u3067\u306E\u8DDD(\u7280\u7B4B, x, y), \u7B4B\u307E\u3067\u306E\u8DDD(\u5343\u66F2\u7B4B, x, y)) < 520 || [...\u8336\u81FC.\u88FE, ...\u59BB\u5973.\u88FE, ...\u7686\u795E.\u88FE].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + 260);
@@ -19861,8 +19961,24 @@ var \u5DDD\u3092\u631F\u3080\u91CE = (() => {
     { \u540D: "\u8857\u9053\u306E\u5BBF", x: 3300, y: 900, r: 170 }
   ];
   const \u9663 = {
-    \u5B88: { x: 4100, y: 1750, \u5E45: 3200, \u5965: 850, \u5411: Math.PI / 2 },
-    \u653B: { x: 4100, y: 3900, \u5E45: 3200, \u5965: 850, \u5411: -Math.PI / 2 }
+    \u5B88: { \u540D: "\u4E09\u3064\u306E\u6E21\u3057\u306E\u5099\u3048", \u5099: [
+      \u5099("\u6A4B\u306E\u62BC\u3055\u3048", 3800, 2300, Math.PI / 2, 1200, 6, "\u62BC\u3055\u3048"),
+      \u5099("\u897F\u306E\u6D45\u702C\u306E\u62BC\u3055\u3048", 2400, 2350, Math.PI / 2, 900, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u6771\u306E\u6D45\u702C\u306E\u62BC\u3055\u3048", 6500, 2150, Math.PI / 2, 1e3, 5, "\u62BC\u3055\u3048"),
+      \u5099("\u5317\u306E\u6BB5\uFF08\u9AD8\u307F\uFF09", 3500, 1700, Math.PI / 2, 1100, 4, "\u9AD8\u307F"),
+      \u5099("\u5317\u897F\u306E\u5C71\u306E\u88FE\uFF08\u9AD8\u307F\uFF09", 1500, 1500, Math.PI / 2, 800, 3, "\u9AD8\u307F"),
+      \u5099("\u6771\u56DE\u308A\u306E\u5225\u50CD", 7300, 2500, Math.PI * 0.8, 800, 4, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 4e3, 1250, Math.PI / 2, 700, 4, "\u672C\u9663")
+    ] },
+    \u653B: { \u540D: "\u4E09\u3064\u306E\u6E21\u3057\u306E\u5BC4\u305B", \u5099: [
+      \u5099("\u6A4B\u306E\u5BC4\u305B", 3800, 3350, -Math.PI / 2, 1200, 6),
+      \u5099("\u897F\u306E\u6D45\u702C\u306E\u5BC4\u305B", 2400, 3400, -Math.PI / 2, 900, 4),
+      \u5099("\u6771\u306E\u6D45\u702C\u306E\u5BC4\u305B", 6500, 3200, -Math.PI / 2, 1e3, 5),
+      \u5099("\u5357\u306E\u6BB5\uFF08\u9AD8\u307F\uFF09", 4500, 4200, -Math.PI / 2, 1100, 4, "\u9AD8\u307F"),
+      \u5099("\u5357\u6771\u306E\u4E18\uFF08\u9AD8\u307F\uFF09", 6900, 4300, -Math.PI / 2, 800, 3, "\u9AD8\u307F"),
+      \u5099("\u897F\u56DE\u308A\u306E\u5225\u50CD", 1400, 3700, -Math.PI * 0.8, 800, 4, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 4200, 4900, -Math.PI / 2, 700, 4, "\u672C\u9663")
+    ] }
   };
   const \u907F = [...\u67512.map((v) => ({ ...v, \u9593: 240 })), \u9663\u306E\u5186(\u9663.\u5B88), \u9663\u306E\u5186(\u9663.\u653B)];
   const \u5BC4 = (x, y) => \u7B4B\u307E\u3067\u306E\u8DDD(\u5DDD\u7B4B, x, y) < 480 || [...\u5C0F\u8C37.\u88FE, ...\u6A2A\u5C71.\u88FE].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + 320);
@@ -19926,8 +20042,23 @@ var \u8C37\u6238 = (() => {
     { \u540D: "\u5357\u306E\u5728\u6240", x: 3300, y: 5e3, r: 170 }
   ];
   const \u9663 = {
-    \u5B88: { x: 2250, y: 2800, \u5E45: 2800, \u5965: 850, \u5411: 0 },
-    \u653B: { x: 4150, y: 2800, \u5E45: 2800, \u5965: 850, \u5411: Math.PI }
+    \u5B88: { \u540D: "\u6BB5\u306E\u7E01\u306B\u6CBF\u3046\u4E09\u6BB5", \u5099: [
+      \u5099("\u4E2D\u306E\u6BB5\uFF08\u9AD8\u307F\uFF09", 2400, 2700, 0, 1200, 8, "\u9AD8\u307F"),
+      \u5099("\u5317\u306E\u6BB5\uFF08\u9AD8\u307F\uFF09", 2430, 1500, 0, 900, 5, "\u9AD8\u307F"),
+      \u5099("\u5357\u306E\u6BB5\uFF08\u9AD8\u307F\uFF09", 2440, 3700, 0, 900, 5, "\u9AD8\u307F"),
+      \u5099("\u5317\u306E\u6D45\u702C\u306E\u62BC\u3055\u3048", 2750, 1050, 0, 700, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u5357\u306E\u6D45\u702C\u306E\u62BC\u3055\u3048", 2780, 4700, 0, 700, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u672C\u9663", 1550, 2750, 0, 600, 4, "\u672C\u9663")
+    ] },
+    \u653B: { \u540D: "\u4E94\u6BB5\u306E\u5BC4\u305B\u3068\u4E21\u56DE\u308A", \u5099: [
+      \u5099("\u4E00\u306E\u624B", 3900, 2550, Math.PI, 800, 4),
+      \u5099("\u4E8C\u306E\u624B", 4250, 2800, Math.PI, 800, 4),
+      \u5099("\u4E09\u306E\u624B", 4600, 3050, Math.PI, 800, 4),
+      \u5099("\u5317\u56DE\u308A\u306E\u5225\u50CD", 3800, 1250, Math.PI * 0.85, 900, 5, "\u5225\u50CD"),
+      \u5099("\u5357\u56DE\u308A\u306E\u5225\u50CD", 3850, 4650, -Math.PI * 0.85, 900, 5, "\u5225\u50CD"),
+      \u5099("\u6771\u306E\u9AD8\u307E\u308A\uFF08\u9AD8\u307F\uFF09", 5400, 1100, Math.PI, 700, 3, "\u9AD8\u307F"),
+      \u5099("\u672C\u9663", 5800, 2900, Math.PI, 700, 5, "\u672C\u9663")
+    ] }
   };
   const \u907F = [...\u67512.map((v) => ({ ...v, \u9593: 230 })), \u9663\u306E\u5186(\u9663.\u5B88), \u9663\u306E\u5186(\u9663.\u653B)];
   const \u5BC4 = (x, y) => Math.min(\u7B4B\u307E\u3067\u306E\u8DDD(\u5C0F\u5DDD, x, y), \u7B4B\u307E\u3067\u306E\u8DDD(\u843D\u3061\u5408\u3044, x, y), \u7B4B\u307E\u3067\u306E\u8DDD(\u5317\u306E\u5DDD, x, y)) < 380 || \u6771\u306E\u5C71.\u88FE.some((o) => Math.hypot(o.x - x, o.y - y) < o.r + 320);
@@ -19990,8 +20121,22 @@ var \u9698\u8DEF = (() => {
     { \u540D: "\u8857\u9053\u306E\u91CC", x: 5100, y: 2600, r: 190 }
   ];
   const \u9663 = {
-    \u5B88: { x: 5300, y: 2600, \u5E45: 2400, \u5965: 900, \u5411: Math.PI * 0.86 },
-    \u653B: { x: 2600, y: 3e3, \u5E45: 2e3, \u5965: 800, \u5411: -Math.PI * 0.14 }
+    \u5B88: { \u540D: "\u5C0F\u5DDD\u3068\u9AD8\u307F\u306E\u62BC\u3055\u3048", \u5099: [
+      \u5099("\u5C0F\u5DDD\u306E\u672C\u968A", 4600, 2950, Math.PI * 0.86, 1200, 8),
+      \u5099("\u5317\u306E\u4E18\uFF08\u9AD8\u307F\uFF09", 4700, 1e3, Math.PI * 0.86, 1e3, 5, "\u9AD8\u307F"),
+      \u5099("\u6CB3\u7554\u306E\u62BC\u3055\u3048", 4900, 4150, Math.PI * 0.86, 900, 5, "\u62BC\u3055\u3048"),
+      \u5099("\u5C71\u88FE\u306E\u62BC\u3055\u3048", 3500, 1750, Math.PI * 0.86, 800, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u5C71\u8D8A\u3048\u306E\u5225\u50CD", 3100, 1e3, Math.PI * 0.9, 700, 3, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 6100, 2050, Math.PI * 0.86, 700, 5, "\u672C\u9663")
+    ] },
+    \u653B: { \u540D: "\u5C71\u88FE\u3068\u6CB3\u7554\u306E\u4E8C\u624B", \u5099: [
+      \u5099("\u8857\u9053\u306E\u672C\u968A", 2650, 3100, -Math.PI * 0.14, 1200, 8),
+      \u5099("\u5C71\u88FE\u306E\u624B\uFF08\u9AD8\u307F\u53D6\u308A\uFF09", 1800, 2050, -Math.PI * 0.14, 900, 5, "\u9AD8\u307F"),
+      \u5099("\u6CB3\u7554\u306E\u624B", 2650, 4250, -Math.PI * 0.14, 900, 6),
+      \u5099("\u5C0F\u5DDD\u306E\u6D45\u702C\u306E\u62BC\u3055\u3048", 2550, 2500, -Math.PI * 0.14, 700, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u5C71\u8D8A\u3048\u306E\u5225\u50CD", 1350, 1150, -Math.PI * 0.1, 700, 3, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 1350, 3500, -Math.PI * 0.14, 700, 4, "\u672C\u9663")
+    ] }
   };
   const \u907F = [...\u67512.map((v) => ({ ...v, \u9593: 240 })), \u9663\u306E\u5186(\u9663.\u5B88), \u9663\u306E\u5186(\u9663.\u653B)];
   const \u5BC4 = (x, y) => Math.min(\u7B4B\u307E\u3067\u306E\u8DDD(\u5927\u6CB3, x, y), \u7B4B\u307E\u3067\u306E\u8DDD(\u5C0F\u5DDD, x, y)) < 420 || [...\u5929\u738B\u5C71.\u88FE, ...\u5317\u306E\u4E18.\u88FE].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + 280);
@@ -20055,8 +20200,22 @@ var \u5DDD\u5408\u3044\u306E\u91CE = (() => {
     { \u540D: "\u5DDD\u6771\u306E\u91CC", x: 6200, y: 3e3, r: 190 }
   ];
   const \u9663 = {
-    \u5B88: { x: 2700, y: 3400, \u5E45: 2800, \u5965: 900, \u5411: 0 },
-    \u653B: { x: 6300, y: 3750, \u5E45: 2e3, \u5965: 800, \u5411: Math.PI }
+    \u5B88: { \u540D: "\u5C0F\u5C71\u3068\u6E21\u3057\u306E\u62BC\u3055\u3048", \u5099: [
+      \u5099("\u5C0F\u5C71\u306E\u897F\uFF08\u9AD8\u307F\uFF09", 4550, 3300, 0, 1e3, 5, "\u9AD8\u307F"),
+      \u5099("\u672C\u968A", 3300, 2650, 0, 1200, 8),
+      \u5099("\u5357\u306E\u6E21\u3057\u306E\u62BC\u3055\u3048", 3850, 4250, 0, 900, 5, "\u62BC\u3055\u3048"),
+      \u5099("\u9675\u306E\u4F0F\u305B", 1950, 4100, 0, 900, 4, "\u9AD8\u307F"),
+      \u5099("\u5317\u306E\u6A4B\u306E\u62BC\u3055\u3048", 3e3, 1550, Math.PI * 0.2, 800, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u672C\u9663", 1900, 2700, 0, 700, 4, "\u672C\u9663")
+    ] },
+    \u653B: { \u540D: "\u5C0F\u5C71\u3078\u306E\u4E8C\u624B\u3068\u5357\u56DE\u308A", \u5099: [
+      \u5099("\u5C0F\u5C71\u306E\u6771\uFF08\u9AD8\u307F\uFF09", 5750, 3300, Math.PI, 1e3, 5, "\u9AD8\u307F"),
+      \u5099("\u8857\u9053\u306E\u672C\u968A", 6250, 2950, Math.PI, 1100, 7),
+      \u5099("\u5317\u306E\u6D45\u702C\u306E\u624B", 6150, 2150, Math.PI * 0.9, 900, 5),
+      \u5099("\u5357\u306E\u5C0F\u5DDD\u306E\u624B", 6e3, 4250, -Math.PI * 0.9, 900, 5),
+      \u5099("\u5357\u56DE\u308A\u306E\u5225\u50CD", 5200, 5050, -Math.PI * 0.75, 800, 4, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 7100, 3400, Math.PI, 700, 4, "\u672C\u9663")
+    ] }
   };
   const \u907F = [...\u67512.map((v) => ({ ...v, \u9593: 250 })), \u9663\u306E\u5186(\u9663.\u5B88), \u9663\u306E\u5186(\u9663.\u653B)];
   const \u5BC4 = (x, y) => Math.min(
@@ -20125,8 +20284,22 @@ var \u5927\u5E73\u91CE = (() => {
     { \u540D: "\u5DDD\u8FBA\u306E\u6751", x: 3400, y: 4300, r: 170 }
   ];
   const \u9663 = {
-    \u5B88: { x: 2700, y: 2500, \u5E45: 3e3, \u5965: 950, \u5411: Math.PI / 4 },
-    \u653B: { x: 5700, y: 3300, \u5E45: 3e3, \u5965: 950, \u5411: -Math.PI * 3 / 4 }
+    \u5B88: { \u540D: "\u72EC\u7ACB\u4E18\u306B\u62E0\u308B", \u5099: [
+      \u5099("\u4E18\u306E\u4E0A\uFF08\u9AD8\u307F\uFF09", 2050, 2100, Math.PI / 4, 900, 5, "\u9AD8\u307F"),
+      \u5099("\u4E18\u306E\u88FE\u306E\u672C\u968A", 2950, 2800, Math.PI / 4, 1200, 8),
+      \u5099("\u5317\u306E\u62BC\u3055\u3048", 3600, 1350, Math.PI * 0.1, 900, 5, "\u62BC\u3055\u3048"),
+      \u5099("\u5357\u306E\u6A4B\u306E\u62BC\u3055\u3048", 3e3, 4200, Math.PI * 0.5, 900, 5, "\u62BC\u3055\u3048"),
+      \u5099("\u904A\u8ECD", 2e3, 3400, Math.PI / 4, 800, 3),
+      \u5099("\u672C\u9663", 1400, 2300, Math.PI / 4, 700, 4, "\u672C\u9663")
+    ] },
+    \u653B: { \u540D: "\u4E09\u624B\u306B\u5272\u3063\u3066\u5305\u3080", \u5099: [
+      \u5099("\u672C\u968A", 5500, 3400, -Math.PI * 3 / 4, 1300, 8),
+      \u5099("\u6771\u306E\u4E18\uFF08\u9AD8\u307F\uFF09", 6300, 1500, -Math.PI * 0.6, 900, 5, "\u9AD8\u307F"),
+      \u5099("\u5317\u56DE\u308A\u306E\u5225\u50CD", 5100, 1500, -Math.PI * 0.55, 900, 5, "\u5225\u50CD"),
+      \u5099("\u5357\u306E\u624B", 4700, 4400, -Math.PI * 0.9, 900, 5),
+      \u5099("\u904A\u8ECD", 6100, 2650, -Math.PI * 3 / 4, 800, 3),
+      \u5099("\u672C\u9663", 6900, 3950, -Math.PI * 3 / 4, 700, 4, "\u672C\u9663")
+    ] }
   };
   const \u907F = [...\u67512.map((v) => ({ ...v, \u9593: 260 })), \u9663\u306E\u5186(\u9663.\u5B88), \u9663\u306E\u5186(\u9663.\u653B)];
   const \u5BC4 = (x, y) => \u7B4B\u307E\u3067\u306E\u8DDD(\u5DDD\u7B4B, x, y) < 520 || [...\u72EC\u7ACB\u4E18.\u88FE, ...\u6771\u306E\u4E18.\u88FE].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + 340);
@@ -20192,8 +20365,22 @@ var \u6E56\u3068\u7826 = (() => {
     { \u540D: "\u6771\u306E\u91CC", x: 6600, y: 2600, r: 190 }
   ];
   const \u9663 = {
-    \u5B88: { x: 4e3, y: 1500, \u5E45: 2600, \u5965: 800, \u5411: Math.PI / 2 },
-    \u653B: { x: 6200, y: 4400, \u5E45: 2200, \u5965: 800, \u5411: -Math.PI * 0.75 }
+    \u5B88: { \u540D: "\u7826\u306E\u9023\u306A\u308A", \u5099: [
+      \u5099("\u5317\u306E\u7826\uFF08\u9AD8\u307F\uFF09", 3500, 1500, Math.PI / 2, 1100, 6, "\u9AD8\u307F"),
+      \u5099("\u6771\u306E\u7826\uFF08\u9AD8\u307F\uFF09", 5600, 1750, Math.PI / 2, 1e3, 6, "\u9AD8\u307F"),
+      \u5099("\u9F3B\u306E\u62BC\u3055\u3048\uFF08\u9AD8\u307F\uFF09", 4450, 2200, Math.PI / 2, 900, 5, "\u9AD8\u307F"),
+      \u5099("\u8857\u9053\u306E\u53E3\u306E\u62BC\u3055\u3048", 6450, 2600, Math.PI / 2, 800, 5, "\u62BC\u3055\u3048"),
+      \u5099("\u6E56\u897F\u306E\u62BC\u3055\u3048", 1750, 2200, Math.PI * 0.3, 800, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u672C\u9663", 4400, 1150, Math.PI / 2, 700, 4, "\u672C\u9663")
+    ] },
+    \u653B: { \u540D: "\u8857\u9053\u3068\u80A9\u8D8A\u3048", \u5099: [
+      \u5099("\u8857\u9053\u306E\u672C\u968A", 6300, 4250, -Math.PI * 0.6, 1100, 8),
+      \u5099("\u6E56\u5357\u306E\u80A9\uFF08\u9AD8\u307F\uFF09", 3950, 4150, -Math.PI * 0.4, 1e3, 6, "\u9AD8\u307F"),
+      \u5099("\u9F3B\u3078\u306E\u624B", 5300, 3450, -Math.PI / 2, 900, 5),
+      \u5099("\u897F\u56DE\u308A\u306E\u5225\u50CD", 2600, 4300, -Math.PI * 0.2, 800, 5, "\u5225\u50CD"),
+      \u5099("\u904A\u8ECD", 4900, 4650, -Math.PI / 2, 800, 3),
+      \u5099("\u672C\u9663", 6350, 5150, -Math.PI * 0.6, 700, 3, "\u672C\u9663")
+    ] }
   };
   const \u907F = [...\u67512.map((v) => ({ ...v, \u9593: 230 })), { x: 3100, y: 2900, r: 1300 }, \u9663\u306E\u5186(\u9663.\u5B88), \u9663\u306E\u5186(\u9663.\u653B)];
   const \u5BC4 = (x, y) => [...\u5317\u897F\u306E\u5C3E\u6839.\u88FE, ...\u5317\u6771\u306E\u5C71.\u88FE, ...\u6771\u306E\u9F3B.\u88FE, ...\u5357\u306E\u5CF0.\u88FE, ...\u897F\u306E\u5C71.\u88FE].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + 300);
@@ -20254,8 +20441,23 @@ var \u843D\u3061\u5408\u3046\u4F4E\u5730 = (() => {
     { \u540D: "\u5317\u306E\u5728\u6240", x: 4700, y: 1200, r: 180 }
   ];
   const \u9663 = {
-    \u5B88: { x: 4e3, y: 4e3, \u5E45: 3e3, \u5965: 850, \u5411: -Math.PI / 2 },
-    \u653B: { x: 4e3, y: 2e3, \u5E45: 3e3, \u5965: 850, \u5411: Math.PI / 2 }
+    \u5B88: { \u540D: "\u91E3\u308A\u91CE\u4F0F", \u5099: [
+      \u5099("\u56EE\u306E\u624B", 4200, 3550, -Math.PI / 2, 900, 4),
+      \u5099("\u5DE6\u306E\u4F0F\u305B\uFF08\u9AD8\u307F\uFF09", 2e3, 4400, -Math.PI * 0.35, 1200, 6, "\u9AD8\u307F"),
+      \u5099("\u53F3\u306E\u4F0F\u305B\uFF08\u9AD8\u307F\uFF09", 6300, 4600, -Math.PI * 0.65, 1200, 6, "\u9AD8\u307F"),
+      \u5099("\u897F\u306E\u6D45\u702C\u306E\u62BC\u3055\u3048", 1700, 3400, -Math.PI / 2, 800, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u6771\u306E\u6D45\u702C\u306E\u62BC\u3055\u3048", 5600, 3500, -Math.PI / 2, 800, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u6771\u5357\u304B\u3089\u306E\u5225\u50CD", 7e3, 4300, -Math.PI * 0.8, 700, 3, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 4e3, 5100, -Math.PI / 2, 700, 3, "\u672C\u9663")
+    ] },
+    \u653B: { \u540D: "\u9AD8\u5730\u3092\u62BC\u3055\u3048\u3066\u6E21\u308B", \u5099: [
+      \u5099("\u5DDD\u539F\u306E\u672C\u968A", 4200, 2400, Math.PI / 2, 1200, 8),
+      \u5099("\u5317\u306E\u9AD8\u5730\uFF08\u9AD8\u307F\uFF09", 3e3, 1450, Math.PI / 2, 1e3, 5, "\u9AD8\u307F"),
+      \u5099("\u5317\u6771\u306E\u9AD8\u5730\uFF08\u9AD8\u307F\uFF09", 6500, 1550, Math.PI / 2, 1e3, 5, "\u9AD8\u307F"),
+      \u5099("\u897F\u306E\u6D45\u702C\u306E\u624B", 1600, 2500, Math.PI / 2, 800, 4),
+      \u5099("\u6771\u306E\u6D45\u702C\u306E\u624B", 5700, 2550, Math.PI / 2, 800, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u672C\u9663", 4650, 1250, Math.PI / 2, 700, 4, "\u672C\u9663")
+    ] }
   };
   const \u907F = [...\u67512.map((v) => ({ ...v, \u9593: 240 })), \u9663\u306E\u5186(\u9663.\u5B88), \u9663\u306E\u5186(\u9663.\u653B)];
   const \u5BC4 = (x, y) => Math.min(\u7B4B\u307E\u3067\u306E\u8DDD(\u5927\u5DDD, x, y), \u7B4B\u307E\u3067\u306E\u8DDD(\u5C0F\u5DDD, x, y)) < 460 || [...\u5317\u306E\u9AD8\u5730.\u88FE, ...\u5357\u306E\u5742.\u88FE, ...\u5357\u6771\u306E\u9AD8\u5730.\u88FE, ...\u5317\u6771\u306E\u9AD8\u5730.\u88FE].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + 300);
@@ -20326,8 +20528,22 @@ var \u523B\u307E\u308C\u305F\u53F0\u5730 = (() => {
     { \u540D: "\u8C37\u53E3\u306E\u6751", x: 2300, y: 3600, r: 180 }
   ];
   const \u9663 = {
-    \u5B88: { x: 5e3, y: 3500, \u5E45: 2800, \u5965: 900, \u5411: -Math.PI * 0.75 },
-    \u653B: { x: 3300, y: 1600, \u5E45: 2800, \u5965: 900, \u5411: Math.PI * 0.25 }
+    \u5B88: { \u540D: "\u9DB4\u7FFC\u3068\u8C37\u53E3\u306E\u62BC\u3055\u3048", \u5099: [
+      \u5099("\u4E2D\u8ECD", 5e3, 3450, -Math.PI * 0.75, 1300, 8),
+      \u5099("\u53F0\u306E\u6BB5\uFF08\u9AD8\u307F\uFF09", 4750, 1900, -Math.PI * 0.6, 900, 5, "\u9AD8\u307F"),
+      \u5099("\u5357\u306E\u7FFC", 4150, 4450, -Math.PI * 0.9, 900, 5),
+      \u5099("\u6771\u306E\u91CC\u306E\u62BC\u3055\u3048", 6600, 2750, -Math.PI * 0.75, 800, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u5317\u56DE\u308A\u306E\u5225\u50CD", 5700, 2350, -Math.PI * 0.6, 800, 4, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 6e3, 4250, -Math.PI * 0.75, 700, 4, "\u672C\u9663")
+    ] },
+    \u653B: { \u540D: "\u9B5A\u9C57\u3068\u5357\u56DE\u308A", \u5099: [
+      \u5099("\u5148\u92D2", 3350, 1850, Math.PI * 0.25, 800, 5),
+      \u5099("\u4E8C\u9663", 2800, 1400, Math.PI * 0.25, 1100, 7),
+      \u5099("\u53F0\u306E\u5728\u6240\u306E\u624B", 3350, 2400, Math.PI * 0.3, 900, 5),
+      \u5099("\u5357\u56DE\u308A\u306E\u5225\u50CD", 2500, 3350, Math.PI * 0.45, 900, 5, "\u5225\u50CD"),
+      \u5099("\u897F\u306E\u9AD8\u307F", 1150, 1150, Math.PI * 0.25, 700, 3, "\u9AD8\u307F"),
+      \u5099("\u672C\u9663", 1950, 850, Math.PI * 0.25, 700, 5, "\u672C\u9663")
+    ] }
   };
   const \u907F = [...\u67512.map((v) => ({ ...v, \u9593: 250 })), \u9663\u306E\u5186(\u9663.\u5B88), \u9663\u306E\u5186(\u9663.\u653B)];
   const \u5BC4 = (x, y) => \u8C37.some((g) => \u7B4B\u307E\u3067\u306E\u8DDD(g, x, y) < 420) || Math.hypot(900 - x, 900 - y) < 800;
@@ -20377,8 +20593,22 @@ var \u5C71\u3068\u6E56\u306E\u539F = (() => {
     { \u540D: "\u6771\u306E\u91CC", x: 6800, y: 2400, r: 180 }
   ];
   const \u9663 = {
-    \u5B88: { x: 2900, y: 3400, \u5E45: 2400, \u5965: 850, \u5411: 0 },
-    \u653B: { x: 6100, y: 3400, \u5E45: 2400, \u5965: 850, \u5411: Math.PI }
+    \u5B88: { \u540D: "\u539F\u3092\u585E\u3050\u4E09\u6BB5", \u5099: [
+      \u5099("\u672C\u968A", 2900, 3150, 0, 1300, 8),
+      \u5099("\u539F\u306E\u4E18\u306E\u897F\uFF08\u9AD8\u307F\uFF09", 4150, 2650, 0, 900, 5, "\u9AD8\u307F"),
+      \u5099("\u5317\u306E\u5C71\u88FE\u306E\u62BC\u3055\u3048", 3050, 1600, Math.PI * 0.15, 900, 5, "\u62BC\u3055\u3048"),
+      \u5099("\u5357\u306E\u6E56\u7554\u306E\u62BC\u3055\u3048", 3250, 4350, -Math.PI * 0.15, 900, 4, "\u62BC\u3055\u3048"),
+      \u5099("\u5C71\u88FE\u306E\u5225\u50CD", 4300, 1250, 0, 800, 4, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 1500, 3300, 0, 700, 4, "\u672C\u9663")
+    ] },
+    \u653B: { \u540D: "\u4E18\u3068\u5C71\u88FE\u306E\u4E8C\u624B", \u5099: [
+      \u5099("\u672C\u968A", 6150, 3200, Math.PI, 1300, 8),
+      \u5099("\u539F\u306E\u4E18\u306E\u6771\uFF08\u9AD8\u307F\uFF09", 5400, 2600, Math.PI, 900, 5, "\u9AD8\u307F"),
+      \u5099("\u5317\u306E\u5C71\u88FE\u306E\u624B", 5700, 1450, Math.PI * 0.85, 900, 5),
+      \u5099("\u5357\u306E\u6E56\u7554\u306E\u624B", 5800, 4300, -Math.PI * 0.85, 900, 4),
+      \u5099("\u897F\u3078\u56DE\u308B\u5225\u50CD", 5e3, 4700, Math.PI * 0.9, 800, 4, "\u5225\u50CD"),
+      \u5099("\u672C\u9663", 7150, 3050, Math.PI, 700, 4, "\u672C\u9663")
+    ] }
   };
   const \u907F = [...\u67512.map((v) => ({ ...v, \u9593: 240 })), \u9663\u306E\u5186(\u9663.\u5B88), \u9663\u306E\u5186(\u9663.\u653B)];
   const \u5BC4 = (x, y) => \u7B4B\u307E\u3067\u306E\u8DDD(\u5DDD2, x, y) < 420 || [...\u5927\u5C71.\u88FE, ...\u539F\u306E\u4E18.\u88FE].some((o) => Math.hypot(o.x - x, o.y - y) < o.r + 220);
@@ -20435,7 +20665,7 @@ var \u5206\u3051\u76EE\u306E\u9650\u308A = 32;
 var \u5206\u3051\u76EE\u306E\u66AE\u308C = 4400;
 var \u6311\u3080\u76F4\u8F44 = 2e6;
 var \u6311\u307E\u308C\u308B\u7248\u56F3 = 12e5;
-var \u518D\u3073\u6311\u3081\u308B\u4FE1\u7528 = 45;
+var \u518D\u3073\u6311\u3081\u308B\u6708 = 60;
 var \u96C6\u7D50\u306E\u9650\u308A = 6;
 var \u76F4\u8F44\u306E\u77F3\u9AD8 = (s2, fid) => (s2.castles || []).filter((c) => c.faction === fid).reduce((a, c) => a + (c.koku || 0), 0);
 function \u7248\u56F3\u306E\u77F3\u9AD8(s2, fid) {
@@ -20490,8 +20720,11 @@ function \u5929\u4E0B\u5206\u3051\u76EE\u3092\u6311\u3081\u308B\u304B(s2, \u4E3B
     return { ok: false, why: "\u65D7\u306E\u4E0B\u306B\u3042\u308B\u5BB6\u3068\u306F\u6226\u3048\u306A\u3044\u3002" };
   }
   const \u63A7 = (s2.\u5206\u3051\u76EE\u306E\u63A7\u3048 || {})[relKey2(\u4E3B, \u7684)] || null;
-  if (\u63A7 && (r.trust || 45) >= \u518D\u3073\u6311\u3081\u308B\u4FE1\u7528) {
-    return { ok: false, why: `\u4E00\u5EA6\u96CC\u96C4\u3092\u6C7A\u3057\u305F\u76F8\u624B\u3067\u3042\u308B\u3002\u8ABC\u304C\u8584\u308C\u308B\u307E\u3067\u3001\u3075\u305F\u305F\u3073\u306F\u6311\u3081\u306A\u3044\uFF08\u4FE1\u7528${Math.round(r.trust)}\uFF09\u3002` };
+  if (\u63A7) {
+    const \u7D4C = (s2.year - \u63A7.y) * 12 + (s2.month - \u63A7.m);
+    if (\u7D4C < \u518D\u3073\u6311\u3081\u308B\u6708) {
+      return { ok: false, why: `\u4E00\u5EA6\u96CC\u96C4\u3092\u6C7A\u3057\u305F\u76F8\u624B\u3067\u3042\u308B\u3002\u3075\u305F\u305F\u3073\u6311\u3080\u306B\u306F\u3001\u3042\u3068${\u518D\u3073\u6311\u3081\u308B\u6708 - \u7D4C}\u30F6\u6708\u304B\u304B\u308B\u3002` };
+    }
   }
   if (!\u5BB6\u306E\u5F53\u4E3B(s2, \u4E3B) || !\u5BB6\u306E\u5F53\u4E3B(s2, \u7684)) return { ok: false, why: "\u5F53\u4E3B\u306E\u306A\u3044\u5BB6\u306F\u91CE\u306B\u51FA\u3089\u308C\u306A\u3044\u3002" };
   return { ok: true };
@@ -20548,7 +20781,7 @@ function \u5206\u3051\u76EE\u306E\u9854\u3076\u308C(s2, fid) {
     for (const c of (s2.castles || []).filter((x) => x.faction === \u5BB6)) {
       const \u5175 = \u51FA\u305B\u308B\u5175(s2, c);
       if (\u5175 <= 0) continue;
-      const \u5C06\u3089 = (\u57CE\u306E\u5C06.get(c.id) || []).filter((g) => g.faction === \u5BB6).sort((a, b) => b.lead + b.valor - (a.lead + a.valor));
+      const \u5C06\u3089 = (\u57CE\u306E\u5C06.get(c.id) || []).filter((g) => g.faction === \u5BB6).sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead + b.valor - (a.lead + a.valor));
       if (!\u5C06\u3089.length) continue;
       \u624B\u3089.push({
         \u57CE: c.id,
@@ -20629,14 +20862,10 @@ function \u5206\u3051\u76EE\u3092\u9032\u3081\u308B(s2, { \u544A\u3052\u308B } =
   }
   return w;
 }
-function \u63A5\u3059\u308B\u56FD\u3089(s2, \u52DD, \u8CA0) {
-  const \u52DD\u306E\u56FD = [...new Set((s2.castles || []).filter((c) => c.faction === \u52DD).map((c) => c.kuni))];
-  const \u8CA0\u306E\u56FD = [...new Set((s2.castles || []).filter((c) => c.faction === \u8CA0).map((c) => c.kuni))];
-  return \u8CA0\u306E\u56FD.filter((k) => \u52DD\u306E\u56FD.some((j) => \u56FD\u304C\u96A3\u308A\u5408\u3046\u304B(s2, j, k)));
-}
-var \u5272\u8B72\u306E\u9650\u308A = 5;
-function \u5272\u8B72\u306E\u57CE\u3089(s2, \u52DD, \u8CA0, \u56FD) {
-  const \u7684 = (s2.castles || []).filter((c) => c.faction === \u8CA0 && c.kuni === \u56FD);
+var \u5272\u8B72\u306E\u9650\u308A = 10;
+function \u5272\u8B72\u3067\u304D\u308B\u57CE\u3089(s2, \u52DD, \u8CA0) {
+  const \u672C = (s2.factions[\u8CA0] || {}).\u672C\u62E0;
+  const \u7684 = (s2.castles || []).filter((c) => c.faction === \u8CA0 && c.id !== \u672C);
   const \u52DD\u306E\u57CE = (s2.castles || []).filter((c) => c.faction === \u52DD);
   const \u9694 = (c) => {
     let \u6700 = Infinity;
@@ -20646,7 +20875,12 @@ function \u5272\u8B72\u306E\u57CE\u3089(s2, \u52DD, \u8CA0, \u56FD) {
     }
     return \u6700;
   };
-  return \u7684.sort((a, b) => \u9694(a) - \u9694(b)).slice(0, \u5272\u8B72\u306E\u9650\u308A);
+  return \u7684.map((c) => ({ c, \u9694: \u9694(c) })).sort((a, b) => a.\u9694 - b.\u9694).map((x) => x.c);
+}
+function \u53D6\u308B\u57CE\u3092\u898B\u7ACB\u3066\u308B(s2, \u52DD, \u8CA0) {
+  const \u4E26 = \u5272\u8B72\u3067\u304D\u308B\u57CE\u3089(s2, \u52DD, \u8CA0);
+  const \u5024 = (c, i) => (c.koku || 0) / 1e4 - i * 0.6;
+  return \u4E26.map((c, i) => ({ c, \u70B9: \u5024(c, i) })).sort((a, b) => b.\u70B9 - a.\u70B9).slice(0, \u5272\u8B72\u306E\u9650\u308A).map((x) => x.c.id);
 }
 var \u9003\u6563\u306E\u5272 = (\u6557\u8D70\u5175, \u51FA\u3057\u305F\u5175) => clamp(0.05 + 0.15 * (\u51FA\u3057\u305F\u5175 > 0 ? \u6557\u8D70\u5175 / \u51FA\u3057\u305F\u5175 : 0), 0.05, 0.2);
 var \u5206\u3051\u76EE\u306E\u6355\u7E1B = 2.5;
@@ -20715,12 +20949,12 @@ function \u6557\u308C\u305F\u5C06\u306E\u59CB\u672B(s2, fid, \u51FA\u305F\u5C06\
   }
   return \u8DE1;
 }
-function \u56FD\u3092\u5272\u8B72\u3059\u308B(s2, \u52DD, \u8CA0, \u56FD, { \u544A\u3052\u308B } = {}) {
-  const \u57CE\u3089 = \u5272\u8B72\u306E\u57CE\u3089(s2, \u52DD, \u8CA0, \u56FD);
-  if (!\u57CE\u3089.length) return [];
-  const \u672C = (s2.factions[\u8CA0] || {}).\u672C\u62E0 || ((s2.castles || []).find((c) => c.faction === \u8CA0 && !\u57CE\u3089.includes(c)) || {}).id || null;
+function \u57CE\u3092\u5272\u8B72\u3059\u308B(s2, \u52DD, \u8CA0, \u57CE\u3089, { \u544A\u3052\u308B } = {}) {
+  const \u6E21 = (\u57CE\u3089 || []).map((id) => (s2.castles || []).find((c) => c.id === id && c.faction === \u8CA0)).filter(Boolean).slice(0, \u5272\u8B72\u306E\u9650\u308A);
+  if (!\u6E21.length) return [];
+  const \u672C = (s2.factions[\u8CA0] || {}).\u672C\u62E0 || ((s2.castles || []).find((c) => c.faction === \u8CA0 && !\u6E21.includes(c)) || {}).id || null;
   const \u79FB = [];
-  for (const c of \u57CE\u3089) {
+  for (const c of \u6E21) {
     for (const g of s2.generals || []) {
       if (g.at !== c.id || g.faction !== \u8CA0) continue;
       if (\u672C) {
@@ -20742,13 +20976,14 @@ function \u56FD\u3092\u5272\u8B72\u3059\u308B(s2, \u52DD, \u8CA0, \u56FD, { \u54
     c.intrigueOwner = null;
   }
   if (\u544A\u3052\u308B) {
-    \u544A\u3052\u308B(`${\u56FD}\u306E\u3046\u3061${\u57CE\u3089.length}\u57CE\u304C${(s2.factions[\u52DD] || {}).name}\u306E\u624B\u306B\u6E21\u3063\u305F\uFF08${\u57CE\u3089.map((c) => c.name).join("\u30FB")}\uFF09\u3002` + (\u79FB.length ? `${\u79FB.join("\u30FB")}\u306F${(s2.castles.find((c) => c.id === \u672C) || {}).name || "\u672C\u62E0"}\u3078\u5F15\u304D\u79FB\u3063\u305F\u3002` : ""));
+    \u544A\u3052\u308B(`${\u6E21.length}\u57CE\u304C${(s2.factions[\u52DD] || {}).name}\u306E\u624B\u306B\u6E21\u3063\u305F\uFF08${\u6E21.map((c) => c.name).join("\u30FB")}\uFF09\u3002` + (\u79FB.length ? `${\u79FB.join("\u30FB")}\u306F${(s2.castles.find((c) => c.id === \u672C) || {}).name || "\u672C\u62E0"}\u3078\u5F15\u304D\u79FB\u3063\u305F\u3002` : ""));
   }
-  return \u57CE\u3089;
+  return \u6E21;
 }
-function \u5206\u3051\u76EE\u306E\u6C99\u6C70(s2, { \u52DD, \u8CA0, \u56FD, \u6557\u8D70\u5175 = 0, \u51FA\u3057\u305F\u5175 = 0, \u51FA\u305F\u5C06\u3089 = [], \u544A\u3052\u308B } = {}) {
+function \u5206\u3051\u76EE\u306E\u6C99\u6C70(s2, { \u52DD, \u8CA0, \u57CE\u3089, \u6557\u8D70\u5175 = 0, \u51FA\u3057\u305F\u5175 = 0, \u51FA\u305F\u5C06\u3089 = [], \u544A\u3052\u308B } = {}) {
   const \u8DE1 = { \u6E21\u3063\u305F\u57CE: [], \u9003\u6563: 0, \u5272: 0, \u89E3\u3051\u305F: [], \u6355: [], \u8A0E: [] };
-  if (\u56FD) \u8DE1.\u6E21\u3063\u305F\u57CE = \u56FD\u3092\u5272\u8B72\u3059\u308B(s2, \u52DD, \u8CA0, \u56FD, { \u544A\u3052\u308B }).map((c) => c.id);
+  const \u53D6\u308B = \u57CE\u3089 && \u57CE\u3089.length ? \u57CE\u3089 : \u53D6\u308B\u57CE\u3092\u898B\u7ACB\u3066\u308B(s2, \u52DD, \u8CA0);
+  \u8DE1.\u6E21\u3063\u305F\u57CE = \u57CE\u3092\u5272\u8B72\u3059\u308B(s2, \u52DD, \u8CA0, \u53D6\u308B, { \u544A\u3052\u308B }).map((c) => c.id);
   \u8DE1.\u5272 = \u9003\u6563\u306E\u5272(\u6557\u8D70\u5175, \u51FA\u3057\u305F\u5175);
   \u8DE1.\u9003\u6563 = \u5175\u3092\u9003\u6563\u3055\u305B\u308B(s2, \u8CA0, \u8DE1.\u5272);
   if (\u544A\u3052\u308B && \u8DE1.\u9003\u6563 > 0) {
@@ -20821,13 +21056,12 @@ function \u76E4\u3092\u958B\u304B\u305A\u306B\u88C1\u304F(s2, w, { \u544A\u3052\
   const \u958B = Math.max(A, B) / Math.max(1, Math.min(A, B));
   const \u6557\u8D70\u6BD4 = clamp(0.25 + (\u958B - 1) * 1.2, 0.2, 1);
   const \u51FA\u3057\u305F\u5175 = \u5206\u3051\u76EE\u306E\u5175(s2, \u8CA0);
-  const \u56FD\u3089 = \u63A5\u3059\u308B\u56FD\u3089(s2, \u52DD, \u8CA0);
-  const \u56FD = \u56FD\u3089.length ? \u56FD\u3089.map((k) => ({ k, \u77F3: (s2.castles || []).filter((c) => c.faction === \u8CA0 && c.kuni === k).reduce((t, c) => t + (c.koku || 0), 0) })).sort((x, y) => y.\u77F3 - x.\u77F3)[0].k : null;
+  const \u57CE\u3089 = \u53D6\u308B\u57CE\u3092\u898B\u7ACB\u3066\u308B(s2, \u52DD, \u8CA0);
   const \u51FA\u305F\u5C06\u3089 = (s2.generals || []).filter((g) => g.faction === \u8CA0 && !g.captive).map((g) => g.id);
   const \u8DE1 = \u5206\u3051\u76EE\u306E\u6C99\u6C70(s2, {
     \u52DD,
     \u8CA0,
-    \u56FD,
+    \u57CE\u3089,
     \u6557\u8D70\u5175: Math.round(\u51FA\u3057\u305F\u5175 * \u6557\u8D70\u6BD4),
     \u51FA\u3057\u305F\u5175,
     \u51FA\u305F\u5C06\u3089,
@@ -27386,7 +27620,7 @@ function battleAI(b) {
       ty: t.y + (c.y - t.y) / d * \u9593
     });
   }
-  if (!MAP && !b.\u7B4B\u66F8\u304D) {
+  if (!MAP && (!b.\u7B4B\u66F8\u304D || b.\u5206\u3051\u76EE)) {
     for (const side of ["P", "E"]) {
       for (const o of alive) if (o.side === side) o.\u672C\u9663\u3092\u5B88\u308B = false;
       const \u5927\u5C06 = alive.find((c) => c.side === side && c.gen.lord && !c.detach && !c.routed && !c.withdraw);
@@ -27529,6 +27763,36 @@ function battleAI(b) {
     }
     const tgt = \u72D9\u3046\u6575\u3092\u9078\u3076(alive, c, foes);
     if (c.order === "\u63A5\u6226" && c.squads.some((q) => q.engaged)) continue;
+    if (c.\u6301\u3061\u5834 && !c.routed && !c.withdraw && !c.detach) {
+      const \u5834 = c.\u6301\u3061\u5834;
+      const \u6575\u307E\u3067 = Math.hypot(tgt.x - \u5834.x, tgt.y - \u5834.y);
+      const \u6211\u307E\u3067 = Math.hypot(c.x - \u5834.x, c.y - \u5834.y);
+      if (\u6575\u307E\u3067 > \u5834.\u7E04 || \u6211\u307E\u3067 > \u5834.\u7E04 * 1.15) {
+        if (\u6211\u307E\u3067 > 160) {
+          issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u5834.x, ty: \u5834.y });
+          continue;
+        }
+        c.order = "\u5B88\u5099";
+        c.tx = c.x;
+        c.ty = c.y;
+        continue;
+      }
+    }
+    const \u5927\u8ECD\u306E\u6383\u8A0E = !MAP && b.corps.length >= 28;
+    if (\u5927\u8ECD\u306E\u6383\u8A0E && !c.squads.some((q) => q.engaged) && !c.routed && !c.withdraw && !c.detach) {
+      const \u5473\u65B9\u6570 = alive.filter((x) => x.side === c.side && !x.routed && !x.withdraw).length;
+      const \u5BC4\u305B\u308B\u9650\u308A = foes.length <= 2 ? 3 : 2;
+      if (foes.length * \u5BC4\u305B\u308B\u9650\u308A < \u5473\u65B9\u6570) {
+        const \u6211\u307E\u3067 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
+        const \u8FD1\u3044\u5473\u65B9 = alive.filter((x) => x !== c && x.side === c.side && !x.routed && !x.withdraw && Math.hypot(x.x - tgt.x, x.y - tgt.y) < \u6211\u307E\u3067).length;
+        if (\u8FD1\u3044\u5473\u65B9 >= \u5BC4\u305B\u308B\u9650\u308A) {
+          c.order = "\u5F85\u6A5F";
+          c.tx = c.x;
+          c.ty = c.y;
+          continue;
+        }
+      }
+    }
     if (MAP) {
       const near = Math.hypot(tgt.x - c.x, tgt.y - c.y);
       if (c.side !== b.attacker) {
@@ -30198,20 +30462,29 @@ function \u5929\u4E0B\u5206\u3051\u76EE\u306E\u5E33({ g, onSend, onClose }) {
   ))));
 }
 function \u5206\u3051\u76EE\u306E\u6C99\u6C70\u306E\u5E33({ g, \u52DD, \u8CA0, \u679C, onTake }) {
-  const \u56FD\u3089 = useMemo(() => \u63A5\u3059\u308B\u56FD\u3089(g, \u52DD, \u8CA0), [g, \u52DD, \u8CA0]);
-  const [\u56FD, set\u56FD] = useState2(\u56FD\u3089[0] || null);
+  const \u4E26 = useMemo(() => \u5272\u8B72\u3067\u304D\u308B\u57CE\u3089(g, \u52DD, \u8CA0), [g, \u52DD, \u8CA0]);
+  const \u898B\u7ACB\u3066 = useMemo(() => \u53D6\u308B\u57CE\u3092\u898B\u7ACB\u3066\u308B(g, \u52DD, \u8CA0), [g, \u52DD, \u8CA0]);
   const \u52DD\u3063\u305F = \u52DD === g.player;
-  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card", style: { maxWidth: 520 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, "\u5929\u4E0B\u5206\u3051\u76EE\u306E\u8DE1", \u52DD\u3063\u305F ? "\u3000\u2015\u2015\u3000\u52DD\u3061" : "\u3000\u2015\u2015\u3000\u8CA0\u3051"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginBottom: 8 } }, \u52DD\u3063\u305F ? `${(g.factions[\u8CA0] || {}).name}\u3092\u91CE\u306B\u7834\u308A\u307E\u3057\u305F\u3002\u63A5\u3057\u305F\u56FD\u3092\u4E00\u3064\u3001\u6700\u5927${\u5272\u8B72\u306E\u9650\u308A}\u57CE\u307E\u3067\u53D6\u308C\u307E\u3059\u3002` : `${(g.factions[\u52DD] || {}).name}\u306B\u6557\u308C\u307E\u3057\u305F\u3002\u63A5\u3057\u305F\u56FD\u304C\u4E00\u3064\u3001\u76F8\u624B\u306E\u624B\u306B\u6E21\u308A\u307E\u3059\u3002`, /* @__PURE__ */ React2.createElement("br", null), "\u6557\u308C\u305F\u5074\u306F\u5175\u304C\u9003\u3052\u6563\u308A\u3001\u65D7\u306E\u4E0B\u306B\u3042\u3063\u305F\u5BB6\u306F\u307F\u306A\u96E2\u308C\u3066\u72EC\u308A\u7ACB\u3061\u3057\u307E\u3059\u3002"), \u679C && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5D29\u308C\u305F\u968A"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, \u679C.\u5D29\u308C\u305F\u968A, " \uFF0F ", \u679C.\u968A, " \u968A")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u9003\u3052\u6563\u308B\u5175\u306E\u5272"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, Math.round(\u679C.\u5272 * 1e3) / 10, " \uFF05"))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, \u52DD\u3063\u305F ? "\u53D6\u308B\u56FD" : "\u6E21\u308B\u56FD"), !\u56FD\u3089.length && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim } }, "\u63A5\u3057\u305F\u56FD\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u56FD\u306F\u52D5\u304D\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { maxHeight: 200, overflow: "auto" } }, \u56FD\u3089.map((k) => {
-    const \u57CE\u3089 = \u5272\u8B72\u306E\u57CE\u3089(g, \u52DD, \u8CA0, k);
-    return /* @__PURE__ */ React2.createElement("label", { key: k, style: {
+  const [\u9078, set\u9078] = useState2(() => \u52DD\u3063\u305F ? \u898B\u7ACB\u3066.slice(0, \u5272\u8B72\u306E\u9650\u308A) : \u898B\u7ACB\u3066);
+  const \u62BC\u3059 = (id) => set\u9078((\u524D) => {
+    if (\u524D.includes(id)) return \u524D.filter((x) => x !== id);
+    if (\u524D.length >= \u5272\u8B72\u306E\u9650\u308A) return \u524D;
+    return [...\u524D, id];
+  });
+  const \u77F3 = \u9078.reduce((a, id) => a + ((\u4E26.find((c) => c.id === id) || {}).koku || 0), 0);
+  return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card", style: { maxWidth: 560 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, "\u5929\u4E0B\u5206\u3051\u76EE\u306E\u8DE1", \u52DD\u3063\u305F ? "\u3000\u2015\u2015\u3000\u52DD\u3061" : "\u3000\u2015\u2015\u3000\u8CA0\u3051"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginBottom: 8 } }, \u52DD\u3063\u305F ? `${(g.factions[\u8CA0] || {}).name}\u3092\u91CE\u306B\u7834\u308A\u307E\u3057\u305F\u3002\u76F8\u624B\u306E\u57CE\u304B\u3089${\u5272\u8B72\u306E\u9650\u308A}\u307E\u3067\u9078\u3093\u3067\u53D6\u308C\u307E\u3059\uFF08\u672C\u62E0\u306F\u53D6\u308C\u307E\u305B\u3093\uFF09\u3002` : `${(g.factions[\u52DD] || {}).name}\u306B\u6557\u308C\u307E\u3057\u305F\u3002\u57CE\u304C${\u5272\u8B72\u306E\u9650\u308A}\u307E\u3067\u76F8\u624B\u306E\u624B\u306B\u6E21\u308A\u307E\u3059\u3002`, /* @__PURE__ */ React2.createElement("br", null), "\u6557\u308C\u305F\u5074\u306F\u5175\u304C\u9003\u3052\u6563\u308A\u3001\u65D7\u306E\u4E0B\u306B\u3042\u3063\u305F\u5BB6\u306F\u307F\u306A\u96E2\u308C\u3066\u72EC\u308A\u7ACB\u3061\u3057\u307E\u3059\u3002 \u3053\u306E\u76F8\u624B\u3068\u306F\u3001\u4EE5\u5F8C\u4E94\u5E74\u306F\u6226\u3048\u307E\u305B\u3093\u3002"), \u679C && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5D29\u308C\u305F\u968A"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, \u679C.\u5D29\u308C\u305F\u968A, " \uFF0F ", \u679C.\u968A, " \u968A")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u9003\u3052\u6563\u308B\u5175\u306E\u5272"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, Math.round(\u679C.\u5272 * 1e3) / 10, " \uFF05"))), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, \u52DD\u3063\u305F ? "\u53D6\u308B\u57CE" : "\u6E21\u308B\u57CE"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, \u9078.length, " \uFF0F ", \u5272\u8B72\u306E\u9650\u308A, " \u57CE\u30FB", man(\u77F3), " \u4E07\u77F3")), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, \u52DD\u3063\u305F ? "\u57CE\u3092\u9078\u3076\uFF08\u8FD1\u3044\u9806\uFF09" : "\u6E21\u308B\u57CE"), !\u4E26.length && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim } }, "\u6E21\u305B\u308B\u57CE\u304C\u3042\u308A\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { maxHeight: 230, overflow: "auto" } }, \u4E26.slice(0, 40).map((c) => {
+    const \u5165 = \u9078.includes(c.id);
+    if (!\u52DD\u3063\u305F && !\u5165) return null;
+    return /* @__PURE__ */ React2.createElement("label", { key: c.id, style: {
       display: "flex",
       gap: 8,
       alignItems: "center",
       padding: "5px 0",
       fontSize: 13,
-      borderBottom: `1px solid ${U.line2}`
-    } }, /* @__PURE__ */ React2.createElement("input", { type: "radio", disabled: !\u52DD\u3063\u305F, checked: \u56FD === k, onChange: () => set\u56FD(k) }), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 84 } }, k), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 12 } }, \u57CE\u3089.map((c) => c.name).join("\u30FB"), "\uFF08", \u57CE\u3089.length, "\u57CE\uFF09"));
-  })), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn pri", onClick: () => onTake(\u52DD\u3063\u305F ? \u56FD : null) }, \u52DD\u3063\u305F ? "\u3053\u306E\u56FD\u3092\u53D6\u308B" : "\u53D7\u3051\u5165\u308C\u308B"))));
+      borderBottom: `1px solid ${U.line2}`,
+      opacity: \u52DD\u3063\u305F || \u5165 ? 1 : 0.5
+    } }, /* @__PURE__ */ React2.createElement("input", { type: "checkbox", disabled: !\u52DD\u3063\u305F, checked: \u5165, onChange: () => \u62BC\u3059(c.id) }), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15, width: 118 } }, c.name), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim, fontSize: 12 } }, c.kuni), /* @__PURE__ */ React2.createElement("span", { className: "v num", style: { marginLeft: "auto" } }, man(c.koku), " \u4E07\u77F3"));
+  })), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn pri", disabled: \u52DD\u3063\u305F && !\u9078.length, onClick: () => onTake(\u9078) }, \u52DD\u3063\u305F ? `\u3053\u306E${\u9078.length}\u57CE\u3092\u53D6\u308B` : "\u53D7\u3051\u5165\u308C\u308B"))));
 }
 
 // src/data/sekigahara.js
@@ -30947,9 +31220,9 @@ function \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B(b, dt) {
   const \u6771\u306F\u6575 = s2.\u5473\u65B9\u65D7 === "\u897F";
   const \u4EA4\u6226 = b.corps.some((c) => !c.\u65E5\u548C\u898B && c.squads.some((q) => q.engaged));
   const \u897F\u306E\u6B8B = \u6B8B\u308A(b, "\u897F");
-  const \u5099 = \u5099\u306E\u69D8\u5B50(b);
-  const \u5099\u306E\u6C17 = (\u5099.\u77F3\u7530.\u6C17 + \u5099.\u5B87\u559C\u591A.\u6C17 + \u5099.\u5927\u8C37.\u6C17) / 3;
-  const \u5099\u304C\u63FA\u3089\u3050 = \u5099.\u77F3\u7530.\u5D29\u308C || \u5099.\u5B87\u559C\u591A.\u5D29\u308C || \u5099.\u5927\u8C37.\u5D29\u308C || \u5099\u306E\u6C17 < 70;
+  const \u50992 = \u5099\u306E\u69D8\u5B50(b);
+  const \u5099\u306E\u6C17 = (\u50992.\u77F3\u7530.\u6C17 + \u50992.\u5B87\u559C\u591A.\u6C17 + \u50992.\u5927\u8C37.\u6C17) / 3;
+  const \u5099\u304C\u63FA\u3089\u3050 = \u50992.\u77F3\u7530.\u5D29\u308C || \u50992.\u5B87\u559C\u591A.\u5D29\u308C || \u50992.\u5927\u8C37.\u5D29\u308C || \u5099\u306E\u6C17 < 70;
   if (!s2.\u5BB6\u5EB7\u524D\u9032 && \u4EA4\u6226 && b.t > 300 && \u897F\u306E\u6B8B <= 0.8 && \u5099\u304C\u63FA\u3089\u3050) {
     if (\u6771\u306F\u6575) {
       \u5BB6\u5EB7\u3092\u9032\u3081\u308B(b);
@@ -30961,7 +31234,7 @@ function \u7B4B\u66F8\u304D\u3092\u9032\u3081\u308B(b, dt) {
       "\u307E\u3060\u52D5\u304B\u3055\u306C"
     );
   }
-  if (s2.\u5BB6\u5EB7\u524D\u9032 && !s2.\u554F\u9244\u7832 && s2.\u5C0F\u65E9\u5DDD === "\u672A" && b.t > (s2.\u524D\u9032\u306E\u523B || 0) + 150 && (\u5099.\u77F3\u7530.\u5D29\u308C || \u5099.\u5B87\u559C\u591A.\u5D29\u308C || \u897F\u306E\u6B8B <= 0.7)) {
+  if (s2.\u5BB6\u5EB7\u524D\u9032 && !s2.\u554F\u9244\u7832 && s2.\u5C0F\u65E9\u5DDD === "\u672A" && b.t > (s2.\u524D\u9032\u306E\u523B || 0) + 150 && (\u50992.\u77F3\u7530.\u5D29\u308C || \u50992.\u5B87\u559C\u591A.\u5D29\u308C || \u897F\u306E\u6B8B <= 0.7)) {
     if (\u6771\u306F\u6575) \u554F\u9244\u7832\u3092\u6483\u3064(b);
     else \u554F\u3046(
       b,
@@ -31101,9 +31374,9 @@ function \u5408\u6226\u3092\u623B\u3059(\u63A7) {
 function \u7B4B\u66F8\u304D\u306E\u899A\u3048(b) {
   if (!b || !b.\u7B4B\u66F8\u304D) return [];
   const s2 = b.\u7B4B\u66F8\u304D;
-  const \u5099 = \u5099\u306E\u69D8\u5B50(b);
+  const \u50992 = \u5099\u306E\u69D8\u5B50(b);
   const \u897F\u306E\u6B8B = \u6B8B\u308A(b, "\u897F"), \u6771\u306E\u6B8B = \u6B8B\u308A(b, "\u6771");
-  const \u5099\u306E\u6C17 = Math.round((\u5099.\u77F3\u7530.\u6C17 + \u5099.\u5B87\u559C\u591A.\u6C17 + \u5099.\u5927\u8C37.\u6C17) / 3);
+  const \u5099\u306E\u6C17 = Math.round((\u50992.\u77F3\u7530.\u6C17 + \u50992.\u5B87\u559C\u591A.\u6C17 + \u50992.\u5927\u8C37.\u6C17) / 3);
   const \u5D29 = \u5148\u624B\u306E\u5D29\u308C(b);
   const \u5927\u8C37 = b.corps.filter((c) => /大谷|戸田|木下|平塚/.test(c.name));
   const \u5927\u8C37\u306E\u6B8B = \u5927\u8C37.length ? \u5175\u6570(\u5927\u8C37.filter((c) => !c.dead && !c.destroyed)) / \u5927\u8C37.reduce((a, c) => a + c.squads.reduce((t, q) => t + q.max, 0), 0) : 0;
@@ -31122,7 +31395,7 @@ function \u7B4B\u66F8\u304D\u306E\u899A\u3048(b) {
         { \u6587: `\u897F\u8ECD\u306E\u524D\u7DDA\u304C\u516B\u5272\u3092\u5207\u308B\uFF08\u3044\u307E ${\u5272(\u897F\u306E\u6B8B)}\uFF09`, \u53EF: \u897F\u306E\u6B8B <= 0.8 },
         {
           \u6587: `\u77F3\u7530\u30FB\u5B87\u559C\u591A\u30FB\u5927\u8C37\u306E\u3069\u308C\u304B\u304C\u5D29\u308C\u308B\u3001\u307E\u305F\u306F\u4E09\u5099\u306E\u58EB\u6C17\u304C\u4E03\u5341\u3092\u5207\u308B\uFF08\u3044\u307E ${\u5099\u306E\u6C17}\uFF09`,
-          \u53EF: \u5099.\u77F3\u7530.\u5D29\u308C || \u5099.\u5B87\u559C\u591A.\u5D29\u308C || \u5099.\u5927\u8C37.\u5D29\u308C || \u5099\u306E\u6C17 < 70
+          \u53EF: \u50992.\u77F3\u7530.\u5D29\u308C || \u50992.\u5B87\u559C\u591A.\u5D29\u308C || \u50992.\u5927\u8C37.\u5D29\u308C || \u5099\u306E\u6C17 < 70
         }
       ]
     },
@@ -31135,7 +31408,7 @@ function \u7B4B\u66F8\u304D\u306E\u899A\u3048(b) {
         { \u6587: `\u524D\u9032\u304B\u3089\u767E\u4E94\u5341\u79D2\u304C\u7D4C\u3064`, \u53EF: !!s2.\u5BB6\u5EB7\u524D\u9032 && b.t > (s2.\u524D\u9032\u306E\u523B || 0) + 150 },
         {
           \u6587: `\u77F3\u7530\u304B\u5B87\u559C\u591A\u304C\u5D29\u308C\u308B\u3001\u307E\u305F\u306F\u897F\u8ECD\u306E\u524D\u7DDA\u304C\u4E03\u5272\u3092\u5207\u308B\uFF08\u3044\u307E ${\u5272(\u897F\u306E\u6B8B)}\uFF09`,
-          \u53EF: \u5099.\u77F3\u7530.\u5D29\u308C || \u5099.\u5B87\u559C\u591A.\u5D29\u308C || \u897F\u306E\u6B8B <= 0.7
+          \u53EF: \u50992.\u77F3\u7530.\u5D29\u308C || \u50992.\u5B87\u559C\u591A.\u5D29\u308C || \u897F\u306E\u6B8B <= 0.7
         }
       ]
     },
@@ -31308,7 +31581,10 @@ function BattleScreen({ ctx, land, onEnd }) {
   const \u59D4\u306D\u308B = () => {
     const b2 = bRef.current;
     if (b2.phase === "over" || \u59D4\u306DRef.current) return;
-    for (const c of b2.corps) if (c.side === "P") c.auto = true;
+    for (const c of b2.corps) if (c.side === "P") {
+      c.auto = true;
+      \u6301\u3061\u5834\u3092\u89E3\u304F(c);
+    }
     b2.\u59D4\u306D\u305F = true;
     if (b2.phase === "deploy") {
       b2.phase = "fight";
@@ -31896,12 +32172,16 @@ function BattleScreen({ ctx, land, onEnd }) {
     setPhase("fight");
     setSpeed(0.3);
   } }, "\u5408\u6226\u958B\u59CB"), /* @__PURE__ */ React3.createElement("button", { className: "btn", onClick: \u59D4\u306D\u308B }, "\u59D4\u306D\u3066\u7D50\u679C\u3092\u898B\u308B")), b.phase === "fight" && /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 7, width: "100%" } }, /* @__PURE__ */ React3.createElement("button", { className: "btn", onClick: \u59D4\u306D\u308B, disabled: \u59D4\u306D\u4E2D }, \u59D4\u306D\u4E2D ? "\u59D4\u306D\u3066\u3044\u308B\u2026" : "\u59D4\u306D\u3066\u7D50\u679C\u3092\u898B\u308B"), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim } }, "\u4E00\u62EC\u547D\u4EE4"), /* @__PURE__ */ React3.createElement("div", { className: "g4" }, /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => {
-    for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) c.auto = true;
+    for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) {
+      c.auto = true;
+      \u6301\u3061\u5834\u3092\u89E3\u304F(c);
+    }
     b.\u59D4\u306D\u305F = true;
     force((n) => (n + 1) % 1e3);
   } }, "\u5168\u8ECD\u59D4\u4EFB"), /* @__PURE__ */ React3.createElement("button", { className: "btn sm", onClick: () => {
     for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed && !c.\u65E5\u548C\u898B && !\u6307\u56F3\u306E\u7E1B\u308A(b, c)) {
       c.auto = false;
+      c.\u624B\u96E2\u308C = true;
       \u4E0B\u77E5(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y });
     }
     force((n) => (n + 1) % 1e3);
@@ -31992,7 +32272,10 @@ function BattleScreen({ ctx, land, onEnd }) {
       style: { width: "100%", marginBottom: 5 },
       onClick: () => {
         selC.auto = !selC.auto;
-        if (!selC.auto) \u4E0B\u77E5(b, selC, { order: "\u5F85\u6A5F", tx: selC.x, ty: selC.y });
+        if (!selC.auto) {
+          selC.\u624B\u96E2\u308C = true;
+          \u4E0B\u77E5(b, selC, { order: "\u5F85\u6A5F", tx: selC.x, ty: selC.y });
+        } else \u6301\u3061\u5834\u3092\u89E3\u304F(selC);
         force((n) => (n + 1) % 1e3);
       }
     },
@@ -32115,6 +32398,11 @@ function BattleScreen({ ctx, land, onEnd }) {
     },
     "\u672C\u968A\u3078\u623B\u3059"
   ), selC.detach && selC.task === "\u5E30\u9663" && /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim } }, "\u672C\u968A\u3078\u5E30\u9663\u4E2D\u3002")) : /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.6, borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, "\u968A\u3092\u30BF\u30C3\u30D7\u3057\u3066\u9078\u3076\u3068\u3001\u305D\u306E\u968A\u3060\u3051\u306B\u524D\u9032\u30FB\u63A5\u6226\u30FB\u7A81\u6483\u30FB\u5C04\u6483\u30FB\u5B88\u5099\u30FB\u5F8C\u9000\u3092\u51FA\u305B\u307E\u3059\u3002 \u5730\u9762\u3084\u6575\u3092\u30BF\u30C3\u30D7\u304B\u30C9\u30E9\u30C3\u30B0\u3067\u3082\u547D\u4EE4\u3067\u304D\u307E\u3059\u3002Esc\u3067\u9078\u629E\u89E3\u9664\u3002"), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11, color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 } }, b.log.length ? b.log[b.log.length - 1].text : "\u3000")), b.phase === "over" && /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", width: "100%" } }, /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { fontSize: 19, color: b.result === "P" ? "#3E7A3A" : b.result === "\u65E5\u6CA1" ? "#7C7668" : "#B0483C" } }, b.result === "P" ? "\u52DD\u5229" : b.result === "\u65E5\u6CA1" ? "\u65E5\u6CA1\u30FB\u4E21\u8ECD\u64A4\u53CE" : b.orderly ? "\u64A4\u9000" : "\u6557\u5317"), /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 12, color: U.dim, flex: 1 } }, "\u640D\u5BB3\u3000\u76F4\u5C5E ", fmt(b.corps.filter((c) => c.side === "P").reduce((a, c) => a + c.loss["\u76F4\u5C5E"], 0)), "\u4EBA\uFF0F \u5730\u57DF ", fmt(b.corps.filter((c) => c.side === "P").reduce((a, c) => a + c.loss["\u5730\u57DF"], 0)), "\u4EBA"), /* @__PURE__ */ React3.createElement("button", { className: "btn dark", onClick: () => onEnd(b) }, "\u6226\u5834\u3092\u96E2\u308C\u308B")));
+  const \u6301\u3061\u5834\u3092\u89E3\u304F = (c) => {
+    if (!c || !c.\u624B\u96E2\u308C) return;
+    c.\u6301\u3061\u5834 = null;
+    c.\u624B\u96E2\u308C = false;
+  };
   const \u9000\u304D\u5B9F\u884C = () => {
     const k = \u9000\u304D\u78BA\u8A8D;
     set\u9000\u304D\u78BA\u8A8D(null);
@@ -34187,22 +34475,16 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
 var \u901A\u308C\u306C = /* @__PURE__ */ new Set(["deep", "mountain", "wall", "gate", "moat"]);
 var \u9EC4\u306E\u82722 = "#D9A62A";
 function \u9663\u306B\u4E26\u3079\u308B(\u9663, n) {
-  const \u5217 = Math.min(10, Math.max(1, n));
-  const \u884C = Math.ceil(n / \u5217);
-  const co = Math.cos(\u9663.\u5411), si = Math.sin(\u9663.\u5411);
-  const \u51FA = [];
-  for (let i = 0; i < n; i++) {
-    const c = i % \u5217, r = Math.floor(i / \u5217);
-    const u = \u5217 > 1 ? (c - (\u5217 - 1) / 2) * (\u9663.\u5E45 / (\u5217 - 1)) : 0;
-    const v = \u884C > 1 ? (r - (\u884C - 1) / 2) * (\u9663.\u5965 / (\u884C - 1)) : 0;
-    let x = \u9663.x + u * si - v * co, y = \u9663.y - u * co - v * si;
+  const \u5834 = \u9663\u7ACB\u3066\u3092\u6577\u304F(\u9663.\u5099 || [], n);
+  return \u5834.map((p) => {
+    const co = Math.cos(p.\u5411), si = Math.sin(p.\u5411);
+    let x = p.x, y = p.y;
     for (let t = 0; t < 40 && \u901A\u308C\u306C.has(terrainAt(x, y)); t++) {
-      x += co * 90;
-      y += si * 90;
+      x -= co * 90;
+      y -= si * 90;
     }
-    \u51FA.push({ x: Math.round(clampIn(x, FIELD.w)), y: Math.round(clampIn(y, FIELD.h)), \u5411: \u9663.\u5411 });
-  }
-  return \u51FA;
+    return { x: Math.round(clampIn(x, FIELD.w)), y: Math.round(clampIn(y, FIELD.h)), \u5411: p.\u5411, \u540D: p.\u540D, \u5F79: p.\u5F79 };
+  });
 }
 var clampIn = (v, \u7AEF) => Math.max(160, Math.min(\u7AEF - 160, v));
 function \u65E5\u548C\u898B\u304B(s2, \u624B, \u5C06) {
@@ -34210,11 +34492,37 @@ function \u65E5\u548C\u898B\u304B(s2, \u624B, \u5C06) {
   if (\u624B.\u65D7\u306E\u4E0B) return \u5FE0 < 70;
   return \u5FE0 < 45;
 }
+function \u5099\u3092\u5F53\u3066\u308B(s2, \u624B\u3089, \u5834) {
+  const \u5F53 = new Array(\u5834.length).fill(null);
+  const \u672C\u9663\u67A0 = \u5834.map((p, i) => p.\u5F79 === "\u672C\u9663" ? i : -1).filter((i) => i >= 0);
+  const \u6B8B\u308A2 = \u624B\u3089.slice();
+  const \u5F53\u4E3B\u306E\u624B = \u6B8B\u308A2.findIndex((\u624B) => {
+    const g = (s2.generals || []).find((x) => x.id === \u624B.\u5C06);
+    return g && g.lord;
+  });
+  if (\u5F53\u4E3B\u306E\u624B >= 0 && \u672C\u9663\u67A0.length) {
+    \u5F53[\u672C\u9663\u67A0[0]] = \u6B8B\u308A2.splice(\u5F53\u4E3B\u306E\u624B, 1)[0];
+  }
+  const \u524D\u304B\u3089 = \u5834.map((p, i) => i).filter((i) => !\u5F53[i] && \u5834[i].\u5F79 !== "\u672C\u9663");
+  for (const i of \u524D\u304B\u3089) {
+    if (!\u6B8B\u308A2.length) break;
+    \u5F53[i] = \u6B8B\u308A2.shift();
+  }
+  const \u5F8C\u308D = \u672C\u9663\u67A0.filter((i) => !\u5F53[i]);
+  for (const i of \u5F8C\u308D) {
+    if (!\u6B8B\u308A2.length) break;
+    \u5F53[i] = \u6B8B\u308A2.pop();
+  }
+  for (let i = 0; i < \u5F53.length && \u6B8B\u308A2.length; i++) if (!\u5F53[i]) \u5F53[i] = \u6B8B\u308A2.shift();
+  return \u5F53;
+}
 function \u5099\u3048\u3092\u968A\u306B\u3059\u308B(s2, fid, \u9663, side, \u8272, \u899A\u30482) {
-  const \u5099 = \u5206\u3051\u76EE\u306E\u5099\u3048\u3092\u7D44\u3080(s2, fid).slice(0, Math.min(\u5206\u3051\u76EE\u306E\u9650\u308A, MAX_CORPS));
-  const \u5834 = \u9663\u306B\u4E26\u3079\u308B(\u9663, \u5099.length);
+  const \u624B\u3089 = \u5206\u3051\u76EE\u306E\u5099\u3048\u3092\u7D44\u3080(s2, fid).slice(0, Math.min(\u5206\u3051\u76EE\u306E\u9650\u308A, MAX_CORPS));
+  const \u5834 = \u9663\u306B\u4E26\u3079\u308B(\u9663, \u624B\u3089.length);
+  const \u5F53 = \u5099\u3092\u5F53\u3066\u308B(s2, \u624B\u3089, \u5834);
   const \u968A = [];
-  \u5099.forEach((\u624B, i) => {
+  \u5F53.forEach((\u624B, i) => {
+    if (!\u624B) return;
     const \u5C06 = (s2.generals || []).find((g) => g.id === \u624B.\u5C06);
     if (!\u5C06) return;
     const \u76F4 = Math.min(\u5C06.retinue || 0, \u624B.\u5175);
@@ -34255,7 +34563,7 @@ function \u5099\u3048\u3092\u968A\u306B\u3059\u308B(s2, fid, \u9663, side, \u827
     if (\u6B8B > 0) \u5728\u540D\u7C3F = [...\u5728\u540D\u7C3F || [], ...newRoster(\u6B8B, `wk-${\u624B.\u57CE}`)];
     const \u5175\u79D12 = null;
     const g2 = { ...\u5C06, retinue: \u76F4, rost: \u5C06.rost || newRoster(\u76F4, `${\u5C06.id}-\u76F4`, \u5175\u79D12), locRost: \u5728\u540D\u7C3F };
-    const p = \u5834[i] || { x: \u9663.x, y: \u9663.y, \u5411: \u9663.\u5411 };
+    const p = \u5834[i] || \u5834[\u5834.length - 1] || { x: 0, y: 0, \u5411: 0 };
     const \u9EC4 = \u65E5\u548C\u898B\u304B(s2, \u624B, \u5C06);
     const c = makeCorps(
       side,
@@ -34276,7 +34584,11 @@ function \u5099\u3048\u3092\u968A\u306B\u3059\u308B(s2, fid, \u9663, side, \u827
       c.order = "\u5F85\u6A5F";
       c.seen = true;
     }
-    c.\u5206\u3051\u76EE = { \u5BB6: \u624B.\u5BB6, \u57CE\u3089: \u624B.\u57CE\u3089, \u65D7\u306E\u4E0B: !!\u624B.\u65D7\u306E\u4E0B, \u51FA\u3057\u524D };
+    c.\u5F79 = p.\u5F79 || "\u672C\u968A";
+    if (c.\u5F79 === "\u9AD8\u307F" || c.\u5F79 === "\u62BC\u3055\u3048" || c.\u5F79 === "\u672C\u9663") {
+      c.\u6301\u3061\u5834 = { x: c.x, y: c.y, \u7E04: c.\u5F79 === "\u9AD8\u307F" ? 900 : c.\u5F79 === "\u62BC\u3055\u3048" ? 1100 : 1400 };
+    }
+    c.\u5206\u3051\u76EE = { \u5BB6: \u624B.\u5BB6, \u57CE\u3089: \u624B.\u57CE\u3089, \u65D7\u306E\u4E0B: !!\u624B.\u65D7\u306E\u4E0B, \u51FA\u3057\u524D, \u5099: p.\u540D || null, \u5F79: c.\u5F79 };
     \u968A.push(c);
     \u899A\u30482.push({ id: \u5C06.id, \u5BB6: \u624B.\u5BB6, \u57CE\u3089: \u624B.\u57CE\u3089, side });
   });
@@ -34865,12 +35177,14 @@ var \u8AAC\u660E\u66F8 = [
           "\u6226\u3046\u91CE\u306F\u5341\u679A\u3002\u3069\u3061\u3089\u304C\u9078\u3076\u304B\u306F\u5F53\u4E3B\u306E\u5668\u91CF\u3067\u6C7A\u307E\u308B\uFF08\u77E5\u7565\u3092\u500D\u306B\u898B\u3066\u3001\u7D71\u7387\u3068\u6B66\u52C7\u3092\u8DB3\u3059\uFF09\u3002\u6570\u3067\u52A3\u3063\u3066\u3044\u3066\u3082\u3001\u77E5\u6075\u8005\u306E\u5F53\u4E3B\u306A\u3089\u72ED\u3044\u91CE\u3092\u9078\u3093\u3067\u652F\u3048\u3089\u308C\u308B\u3002"
         ],
         \u8868: [
-          ["\u52DD\u3066\u3070", "\u63A5\u3057\u305F\u4E00\u56FD\uFF08\u6700\u5927\u4E94\u57CE\uFF09\u304C\u624B\u306B\u5165\u308B\u3002\u57CE\u3068\u5175\u3060\u3051\u304C\u6E21\u308A\u3001\u6B66\u5C06\u306F\u76F8\u624B\u306E\u307E\u307E"],
-          ["\u8CA0\u3051\u308C\u3070", "\u540C\u3058\u56FD\u3092\u5931\u3044\u3001\u6B8B\u5175\u304C\u9003\u3052\u6563\u308B\uFF08\u6557\u8D70\u306E\u5EA6\u5408\u3044\u306B\u9023\u308C\u3066\u4E94\u5206\u304B\u3089\u4E8C\u5272\uFF09"],
+          ["\u52DD\u3066\u3070", "\u76F8\u624B\u306E\u57CE\u304B\u3089\u5341\u307E\u3067\u9078\u3093\u3067\u53D6\u308C\u308B\uFF08\u672C\u62E0\u306F\u9664\u304F\uFF09\u3002\u57CE\u3068\u5175\u3060\u3051\u304C\u6E21\u308A\u3001\u6B66\u5C06\u306F\u76F8\u624B\u306E\u307E\u307E"],
+          ["\u8CA0\u3051\u308C\u3070", "\u540C\u3058\u3060\u3051\u57CE\u3092\u5931\u3044\u3001\u6B8B\u5175\u304C\u9003\u3052\u6563\u308B\uFF08\u6557\u8D70\u306E\u5EA6\u5408\u3044\u306B\u9023\u308C\u3066\u4E94\u5206\u304B\u3089\u4E8C\u5272\uFF09"],
           ["\u3069\u3061\u3089\u3082", "\u6557\u8005\u306E\u5F93\u5C5E\u30FB\u81E3\u5F93\u306F\u3059\u3079\u3066\u89E3\u3051\u3001\u52DD\u8005\u3068\u306E\u4FE1\u7528\u306F\u516D\u5341\u306B\u306A\u308B"]
         ],
         \u7B87\u6761: [
-          "\u4E00\u5EA6\u6C7A\u3057\u305F\u76F8\u624B\u3078\u306F\u3001\u4FE1\u7528\u304C\u56DB\u5341\u4E94\u3092\u5272\u308B\u307E\u3067\uFF08\u304A\u3088\u305D\u4E94\u5E74\uFF09\u3075\u305F\u305F\u3073\u6311\u3081\u306A\u3044",
+          "\u4E00\u5EA6\u6C7A\u3057\u305F\u76F8\u624B\u3078\u306F\u3001\u4E94\u5E74\u306E\u3042\u3044\u3060\u3075\u305F\u305F\u3073\u6311\u3081\u306A\u3044",
+          "\u5E03\u9663\u306F\u91CE\u3054\u3068\u306B\u6C7A\u307E\u3063\u3066\u3044\u308B\u3002\u9AD8\u307F\u3068\u6E21\u3057\u3092\u62BC\u3055\u3048\u308B\u968A\u306F\u6301\u3061\u5834\u3092\u96E2\u308C\u305A\u3001\u5225\u50CD\u306F\u5927\u304D\u304F\u56DE\u308B",
+          "\u5F53\u4E3B\u306F\u672C\u9663\u306B\u5EA7\u308B\u3002\u624B\u305A\u304B\u3089\u52D5\u304B\u3057\u305F\u968A\u306F\u6301\u3061\u5834\u306B\u7E1B\u3089\u308C\u306A\u3044\uFF08\u59D4\u4EFB\u306B\u623B\u305B\u3070\u8FD1\u3044\u6575\u306B\u5F53\u305F\u308B\uFF09",
           "\u6574\u7136\u3068\u9000\u3051\u3070\u9003\u6563\u306F\u8EFD\u3044\u3002\u7DCF\u5D29\u308C\u306B\u306A\u308B\u3068\u91CD\u3044\u2015\u2015\u9000\u304D\u969B\u304C\u8DE1\u3092\u6C7A\u3081\u308B",
           "\u6557\u308C\u305F\u5074\u306E\u5C06\u306F\u5668\u91CF\u306B\u5FDC\u3058\u3066\u843D\u3061\u5EF6\u3073\u308B\u3002\u5F53\u4E3B\u306F\u6355\u3089\u3048\u3066\u3082\u9003\u304C\u3059"
         ]
@@ -36499,11 +36813,6 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       place: \u7D44.\u91CE.\u540D
     });
   };
-  const \u76F8\u624B\u306E\u53D6\u308B\u56FD = (s2, \u52DD, \u8CA0) => {
-    const \u56FD\u3089 = \u63A5\u3059\u308B\u56FD\u3089(s2, \u52DD, \u8CA0);
-    if (!\u56FD\u3089.length) return null;
-    return \u56FD\u3089.map((k) => ({ k, \u77F3: \u5272\u8B72\u306E\u57CE\u3089(s2, \u52DD, \u8CA0, k).reduce((a, c) => a + (c.koku || 0), 0) })).sort((a, b) => b.\u77F3 - a.\u77F3)[0].k;
-  };
   const finishWakeme = (b, ctx) => {
     \u7B4B\u66F8\u304D\u3092\u89E3\u304F();
     setG((prev) => {
@@ -37720,17 +38029,17 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         \u52DD: \u5206\u3051\u76EE\u306E\u8DE1.\u52DD,
         \u8CA0: \u5206\u3051\u76EE\u306E\u8DE1.\u8CA0,
         \u679C: \u5206\u3051\u76EE\u306E\u8DE1.\u679C,
-        onTake: (\u56FD) => {
+        onTake: (\u57CE\u3089) => {
           const \u8DE1 = \u5206\u3051\u76EE\u306E\u8DE1;
           set\u5206\u3051\u76EE\u306E\u8DE1(null);
           setG((p) => {
             const s2 = structuredClone(p);
-            const \u9078 = \u8DE1.\u52DD === s2.player ? \u56FD : \u76F8\u624B\u306E\u53D6\u308B\u56FD(s2, \u8DE1.\u52DD, \u8DE1.\u8CA0);
+            const \u9078 = \u8DE1.\u52DD === s2.player ? \u57CE\u3089 : \u53D6\u308B\u57CE\u3092\u898B\u7ACB\u3066\u308B(s2, \u8DE1.\u52DD, \u8DE1.\u8CA0);
             const \u5831 = [];
             \u5206\u3051\u76EE\u306E\u6C99\u6C70(s2, {
               \u52DD: \u8DE1.\u52DD,
               \u8CA0: \u8DE1.\u8CA0,
-              \u56FD: \u9078,
+              \u57CE\u3089: \u9078,
               \u6557\u8D70\u5175: \u8DE1.\u679C ? \u8DE1.\u679C.\u6557\u8D70\u5175 : 0,
               \u51FA\u3057\u305F\u5175: \u8DE1.\u679C ? \u8DE1.\u679C.\u51FA\u3057\u305F\u5175 : 0,
               \u51FA\u305F\u5C06\u3089: \u8DE1.\u51FA\u305F\u5C06\u3089 || [],

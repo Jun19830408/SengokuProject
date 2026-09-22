@@ -63,8 +63,8 @@ export { 合戦一覧, 合戦を探す, 合戦を仕立てる, 合戦を畳む, 
 export { 筋書き as 関ヶ原 } from "../src/data/sekigahara.js";
 export { battleAI } from "../src/battle/ai.js";
 export { sideColor, ownZone, drawMon, 紋の核 } from "../src/battle/draw.js";
-export { 分け目の野, 野を探す } from "../src/data/wakemeba.js";
-export { 分け目の限り, 分け目の暮れ, 挑む直轄, 挑まれる版図, 再び挑める信用, 直轄の石高, 版図の石高, 石高の順, 並びの隣か, 天下分け目を挑めるか, 挑める家ら, 挑める見込み, 器量くらべ, 野を選ぶ側, 分け目の顔ぶれ, 分け目の兵, 分け目の備えを組む, 集結の月数, 天下分け目を起こす, 分け目を進める, 接する国ら, 割譲の城ら, 割譲の限り, 逃散の割, 野の見立て, 兵を逃散させる, 上下の縁を解く, 敗れた将の始末, 国を割譲する, 分け目の沙汰 } from "../src/core/wakeme.js";
+export { 分け目の野, 野を探す, 陣立てを敷く, 隊の間合い } from "../src/data/wakemeba.js";
+export { 分け目の限り, 分け目の暮れ, 挑む直轄, 挑まれる版図, 再び挑める信用, 直轄の石高, 版図の石高, 石高の順, 並びの隣か, 天下分け目を挑めるか, 挑める家ら, 挑める見込み, 器量くらべ, 野を選ぶ側, 分け目の顔ぶれ, 分け目の兵, 分け目の備えを組む, 集結の月数, 天下分け目を起こす, 分け目を進める, 割譲できる城ら, 取る城を見立てる, 割譲の限り, 再び挑める月, 逃散の割, 野の見立て, 兵を逃散させる, 上下の縁を解く, 敗れた将の始末, 城を割譲する, 分け目の沙汰 } from "../src/core/wakeme.js";
 export { 分け目の盤を組む, 分け目の戦果 } from "../src/battle/wakemeikusa.js";
 export { 天下分け目の采配, 挑むか, AIの選ぶ野, 盤を開かずに裁く } from "../src/govern/aiWakeme.js";
 export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す, 組頭の帳, 戦の跡, 戦の跡を記す } from "../src/core/roster.js";

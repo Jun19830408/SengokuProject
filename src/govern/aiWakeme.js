@@ -13,7 +13,7 @@ import { 家の当主 } from "../core/kiryou.js";
 import { 分け目の野, 野を探す } from "../data/wakemeba.js";
 import {
   器量くらべ, 天下分け目を挑めるか, 天下分け目を起こす, 分け目の兵, 分け目の沙汰,
-  接する国ら, 野を選ぶ側, 野の見立て, 石高の順,
+  取る城を見立てる, 野を選ぶ側, 野の見立て, 石高の順,
 } from "../core/wakeme.js";
 
 export const 挑む腰 = 0.10;                  // 条件が揃った月に挑む目
@@ -85,13 +85,9 @@ export function 盤を開かずに裁く(s, w, { 告げる } = {}) {
   const 開 = Math.max(A, B) / Math.max(1, Math.min(A, B));
   const 敗走比 = clamp(0.25 + (開 - 1) * 1.2, 0.2, 1);
   const 出した兵 = 分け目の兵(s, 負);
-  const 国ら = 接する国ら(s, 勝, 負);
-  const 国 = 国ら.length
-    ? 国ら.map((k) => ({ k, 石: (s.castles || []).filter((c) => c.faction === 負 && c.kuni === k)
-      .reduce((t, c) => t + (c.koku || 0), 0) })).sort((x, y) => y.石 - x.石)[0].k
-    : null;
+  const 城ら = 取る城を見立てる(s, 勝, 負);
   const 出た将ら = (s.generals || []).filter((g) => g.faction === 負 && !g.captive).map((g) => g.id);
-  const 跡 = 分け目の沙汰(s, { 勝, 負, 国, 敗走兵: Math.round(出した兵 * 敗走比), 出した兵,
+  const 跡 = 分け目の沙汰(s, { 勝, 負, 城ら, 敗走兵: Math.round(出した兵 * 敗走比), 出した兵,
     出た将ら, 告げる });
   if (告げる) {
     告げる(`${野 ? 野.詞 : "野"}に兵十万余。${(s.factions[勝] || {}).name}が${(s.factions[負] || {}).name}を破り、天下分け目は決した。`);

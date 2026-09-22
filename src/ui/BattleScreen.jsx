@@ -154,7 +154,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const 委ねる = () => {
     const b2 = bRef.current;
     if (b2.phase === "over" || 委ねRef.current) return;
-    for (const c of b2.corps) if (c.side === "P") c.auto = true;   // 全軍を委任する
+    for (const c of b2.corps) if (c.side === "P") { c.auto = true; 持ち場を解く(c); }   // 全軍を委任する
     b2.委ねた = true;                                              // 伏兵の判断まで任せる
     if (b2.phase === "deploy") { b2.phase = "fight"; setPhase("fight"); }
     setSpeed(0);
@@ -753,12 +753,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
           <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim }}>一括命令</div>
           <div className="g4">
             <button className="btn sm" onClick={() => {
-              for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) c.auto = true;
+              for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed) { c.auto = true; 持ち場を解く(c); }
               b.委ねた = true;              // 采配に伏兵まで任せるのは、こう命じたときだけ
               force((n) => (n + 1) % 1000);
             }}>全軍委任</button>
             <button className="btn sm" onClick={() => {
-              for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed && !c.日和見 && !指図の縛り(b, c)) { c.auto = false; 下知(b, c, { order: "待機", tx: c.x, ty: c.y }); }
+              for (const c of b.corps) if (c.side === "P" && !c.dead && !c.destroyed && !c.日和見 && !指図の縛り(b, c)) { c.auto = false; c.手離れ = true; 下知(b, c, { order: "待機", tx: c.x, ty: c.y }); }
               force((n) => (n + 1) % 1000);
             }}>全軍委任解除</button>
             <button className={`btn sm ${selAll ? "on" : ""}`}
@@ -954,7 +954,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
               <button className={`btn sm ${selC.auto ? "on" : ""}`} style={{ width: "100%", marginBottom: 5 }}
                 onClick={() => {
                   selC.auto = !selC.auto;
-                  if (!selC.auto) 下知(b, selC, { order: "待機", tx: selC.x, ty: selC.y });
+                  if (!selC.auto) { selC.手離れ = true; 下知(b, selC, { order: "待機", tx: selC.x, ty: selC.y }); }
+                  else 持ち場を解く(selC);
                   force((n) => (n + 1) % 1000);
                 }}>
                 {selC.auto ? "委任中（押すと解除）" : "この隊に委任する"}
@@ -1096,6 +1097,17 @@ export function BattleScreen({ ctx, land, onEnd }) {
      撤退は取り返しがつかない。一括命令の並びに「全軍撤退」があり、その隣は
      「全軍待機」である。指の下で一つずれれば、押した瞬間に全軍が戦場を離れる。
      押したら必ず問い、了解を得てから退く。 */
+  /* 持ち場を解く（GDD 12.6）。
+
+     天下分け目の高み・押さえは、采配のもとでは持ち場を離れない。しかし遊ぶ側が
+     一度手ずから動かした隊を、また委ねたときに元の持ち場へ戻らせるのは筋が違う
+     ――もうそこにはいないし、遊ぶ側の考えで動かした結果である。手を離した隊が
+     委任に戻ったら、縄を解いて、常のとおり近い敵に当たらせる。 */
+  const 持ち場を解く = (c) => {
+    if (!c || !c.手離れ) return;
+    c.持ち場 = null; c.手離れ = false;
+  };
+
   const 退き実行 = () => {
     const k = 退き確認;
     set退き確認(null);

@@ -37,7 +37,7 @@ import { SallyDialog } from "./panels.jsx";
 import { 惣無事令を発する, 応諾を決める, 朝敵を検め直す } from "../core/sobuji.js";
 import { 号令を発する } from "../core/gourei.js";
 import { 惣無事令の帳, 惣無事令の問い as 惣無事令の問い札, 号令の帳, 天下分け目の帳, 分け目の沙汰の帳 } from "./panels.jsx";
-import { 挑める家ら, 天下分け目を起こす, 分け目の沙汰, 接する国ら, 割譲の城ら } from "../core/wakeme.js";
+import { 挑める家ら, 天下分け目を起こす, 分け目の沙汰, 取る城を見立てる } from "../core/wakeme.js";
 import { 分け目の盤を組む, 分け目の戦果 } from "../battle/wakemeikusa.js";
 import { 筋書きを解く } from "../battle/field.js";
 import { Manual } from "./Manual.jsx";
@@ -1545,14 +1545,6 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     });
   };
 
-  /* 負けたとき、相手（AI）が取る国。いちばん石高の高い国を取る。 */
-  const 相手の取る国 = (s, 勝, 負) => {
-    const 国ら = 接する国ら(s, 勝, 負);
-    if (!国ら.length) return null;
-    return 国ら.map((k) => ({ k, 石: 割譲の城ら(s, 勝, 負, k).reduce((a, c) => a + (c.koku || 0), 0) }))
-      .sort((a, b) => b.石 - a.石)[0].k;
-  };
-
   /* 天下分け目の決着。盤の兵を国の帳へ帰し、跡の帳を開く。 */
   const finishWakeme = (b, ctx) => {
     /* 筋書きの野（升目に焼いた地形）を畳む。畳まずに地図へ戻ると、次の野戦まで
@@ -2871,13 +2863,14 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {/* 戦の跡。取る国を決める（負けたときは相手が取る国を見るだけ）。 */}
         {分け目の跡 && !battle && (
           <分け目の沙汰の帳 g={g} 勝={分け目の跡.勝} 負={分け目の跡.負} 果={分け目の跡.果}
-            onTake={(国) => {
+            onTake={(城ら) => {
               const 跡 = 分け目の跡; set分け目の跡(null);
               setG((p) => {
                 const s2 = structuredClone(p);
-                const 選 = 跡.勝 === s2.player ? 国 : 相手の取る国(s2, 跡.勝, 跡.負);
+                /* 勝ったなら選んだ城、負けたなら相手（AI）の見立てで決まる。 */
+                const 選 = 跡.勝 === s2.player ? 城ら : 取る城を見立てる(s2, 跡.勝, 跡.負);
                 const 報 = [];
-                分け目の沙汰(s2, { 勝: 跡.勝, 負: 跡.負, 国: 選,
+                分け目の沙汰(s2, { 勝: 跡.勝, 負: 跡.負, 城ら: 選,
                   敗走兵: 跡.果 ? 跡.果.敗走兵 : 0, 出した兵: 跡.果 ? 跡.果.出した兵 : 0,
                   出た将ら: 跡.出た将ら || [], 告げる: (t) => 報.push(t) });
                 for (const t of 報) s2.chronicle.push({ y: s2.year, m: s2.month, text: t });

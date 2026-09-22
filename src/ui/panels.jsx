@@ -12,7 +12,7 @@ import { 問われる家, 応じる目 } from "../core/sobuji.js";
 import { 参陣の顔ぶれ, 号令の限り } from "../core/gourei.js";
 import { 分け目の野 } from "../data/wakemeba.js";
 import { 器量くらべ, 挑める家ら, 分け目の備えを組む, 分け目の兵, 版図の石高, 直轄の石高,
-  接する国ら, 割譲の城ら, 割譲の限り, 集結の月数, 野を選ぶ側, 天下分け目を挑めるか } from "../core/wakeme.js";
+  割譲できる城ら, 取る城を見立てる, 割譲の限り, 集結の月数, 野を選ぶ側, 天下分け目を挑めるか } from "../core/wakeme.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
 import { 元服の齢, 姫の役, 姫の枠, 姫の齢, 婚姻できるか, 婚姻の要る信用, 嫁がせられるか, 婚儀の礼, 使者の礼, 使える姫 } from "../core/hime.js";
@@ -2529,21 +2529,29 @@ export function 天下分け目の帳({ g, onSend, onClose }) {
   );
 }
 
-/* 戦の跡の帳。勝った側が、接した国のうち一つを取る。 */
+/* 戦の跡の帳。勝った側が、敗者の城から十を選んで取る。 */
 export function 分け目の沙汰の帳({ g, 勝, 負, 果, onTake }) {
-  const 国ら = useMemo(() => 接する国ら(g, 勝, 負), [g, 勝, 負]);
-  const [国, set国] = useState(国ら[0] || null);
+  const 並 = useMemo(() => 割譲できる城ら(g, 勝, 負), [g, 勝, 負]);
+  const 見立て = useMemo(() => 取る城を見立てる(g, 勝, 負), [g, 勝, 負]);
   const 勝った = 勝 === g.player;
+  const [選, set選] = useState(() => (勝った ? 見立て.slice(0, 割譲の限り) : 見立て));
+  const 押す = (id) => set選((前) => {
+    if (前.includes(id)) return 前.filter((x) => x !== id);
+    if (前.length >= 割譲の限り) return 前;
+    return [...前, id];
+  });
+  const 石 = 選.reduce((a, id) => a + ((並.find((c) => c.id === id) || {}).koku || 0), 0);
   return (
     <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
-      <div className="card" style={{ maxWidth: 520 }}>
+      <div className="card" style={{ maxWidth: 560 }}>
         <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>
           天下分け目の跡{勝った ? "　――　勝ち" : "　――　負け"}</div>
         <div style={{ fontSize: 12.5, lineHeight: 1.95, marginBottom: 8 }}>
           {勝った
-            ? `${(g.factions[負] || {}).name}を野に破りました。接した国を一つ、最大${割譲の限り}城まで取れます。`
-            : `${(g.factions[勝] || {}).name}に敗れました。接した国が一つ、相手の手に渡ります。`}
+            ? `${(g.factions[負] || {}).name}を野に破りました。相手の城から${割譲の限り}まで選んで取れます（本拠は取れません）。`
+            : `${(g.factions[勝] || {}).name}に敗れました。城が${割譲の限り}まで相手の手に渡ります。`}
           <br />敗れた側は兵が逃げ散り、旗の下にあった家はみな離れて独り立ちします。
+          この相手とは、以後五年は戦えません。
         </div>
         {果 && (
           <>
@@ -2553,25 +2561,29 @@ export function 分け目の沙汰の帳({ g, 勝, 負, 果, onTake }) {
               <span className="v num">{Math.round(果.割 * 1000) / 10} ％</span></div>
           </>
         )}
-        <div className="sec">{勝った ? "取る国" : "渡る国"}</div>
-        {!国ら.length && <div style={{ fontSize: 12.5, color: U.dim }}>接した国がありません。国は動きません。</div>}
-        <div style={{ maxHeight: 200, overflow: "auto" }}>
-          {国ら.map((k) => {
-            const 城ら = 割譲の城ら(g, 勝, 負, k);
+        <div className="row"><span>{勝った ? "取る城" : "渡る城"}</span>
+          <span className="v num">{選.length} ／ {割譲の限り} 城・{man(石)} 万石</span></div>
+        <div className="sec">{勝った ? "城を選ぶ（近い順）" : "渡る城"}</div>
+        {!並.length && <div style={{ fontSize: 12.5, color: U.dim }}>渡せる城がありません。</div>}
+        <div style={{ maxHeight: 230, overflow: "auto" }}>
+          {並.slice(0, 40).map((c) => {
+            const 入 = 選.includes(c.id);
+            if (!勝った && !入) return null;
             return (
-              <label key={k} style={{ display: "flex", gap: 8, alignItems: "center",
-                padding: "5px 0", fontSize: 13, borderBottom: `1px solid ${U.line2}` }}>
-                <input type="radio" disabled={!勝った} checked={国 === k} onChange={() => set国(k)} />
-                <span className="mn" style={{ fontSize: 15, width: 84 }}>{k}</span>
-                <span style={{ color: U.dim, fontSize: 12 }}>
-                  {城ら.map((c) => c.name).join("・")}（{城ら.length}城）</span>
+              <label key={c.id} style={{ display: "flex", gap: 8, alignItems: "center",
+                padding: "5px 0", fontSize: 13, borderBottom: `1px solid ${U.line2}`,
+                opacity: 勝った || 入 ? 1 : 0.5 }}>
+                <input type="checkbox" disabled={!勝った} checked={入} onChange={() => 押す(c.id)} />
+                <span className="mn" style={{ fontSize: 15, width: 118 }}>{c.name}</span>
+                <span style={{ color: U.dim, fontSize: 12 }}>{c.kuni}</span>
+                <span className="v num" style={{ marginLeft: "auto" }}>{man(c.koku)} 万石</span>
               </label>
             );
           })}
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <button className="btn pri" onClick={() => onTake(勝った ? 国 : null)}>
-            {勝った ? "この国を取る" : "受け入れる"}</button>
+          <button className="btn pri" disabled={勝った && !選.length} onClick={() => onTake(選)}>
+            {勝った ? `この${選.length}城を取る` : "受け入れる"}</button>
         </div>
       </div>
     </div>

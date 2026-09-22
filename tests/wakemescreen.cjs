@@ -163,8 +163,9 @@ function 大身の盤() {
   if (跡出) {
     確('勝ち負けが出ている', /勝ち|負け/.test(文()));
     const 勝った = /勝ち/.test(文());
-    const 取釦 = 釦('この国を取る') || 釦('受け入れる');
-    確('国のやり取りが決められる', !!取釦);
+    const 取釦 = [...document.querySelectorAll('button')].find((b) => !b.disabled
+      && /城を取る|受け入れる/.test(b.textContent || ''));
+    確('城のやり取りが決められる', !!取釦, 取釦 ? 取釦.textContent : '');
     if (取釦) await click(取釦);
     await 描く();
     確('触れが畳まれる', 盤.分け目 == null);

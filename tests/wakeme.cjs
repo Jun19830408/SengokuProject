@@ -11,9 +11,10 @@ const {
   分け目の野, 野を探す, 直轄の石高, 版図の石高, 石高の順, 並びの隣か,
   天下分け目を挑めるか, 挑める家ら, 器量くらべ, 野を選ぶ側, 分け目の顔ぶれ, 分け目の兵,
   分け目の備えを組む, 集結の月数, 天下分け目を起こす, 分け目を進める,
-  接する国ら, 割譲の城ら, 割譲の限り, 逃散の割, 兵を逃散させる, 上下の縁を解く,
-  敗れた将の始末, 国を割譲する, 分け目の沙汰, 分け目の限り, 分け目の暮れ,
+  割譲できる城ら, 取る城を見立てる, 割譲の限り, 再び挑める月, 逃散の割, 兵を逃散させる, 上下の縁を解く,
+  敗れた将の始末, 城を割譲する, 分け目の沙汰, 分け目の限り, 分け目の暮れ,
   分け目の盤を組む, 分け目の戦果, stepBattle, corpsMen, 圧す, 解す, 野の見立て, 挑める見込み,
+  陣立てを敷く,
 } = H;
 
 const 咎 = [];
@@ -83,9 +84,17 @@ console.log('── 一　挑める条件');
   const v = JSON.parse(JSON.stringify(s));
   v.分け目の控え = { [[甲, 乙].sort().join('|')]: { y: v.year, m: v.month, 勝: 甲, 負: 乙 } };
   v.relations[[甲, 乙].sort().join('|')] = { trust: 60, state: '中立', until: null };
-  確('一度決した相手へは続けて挑めない', !天下分け目を挑めるか(v, 甲, 乙).ok);
-  v.relations[[甲, 乙].sort().join('|')].trust = 40;
-  確('誼が薄れればまた挑める', 天下分け目を挑めるか(v, 甲, 乙).ok);
+  確('一度決した相手へは続けて挑めない', !天下分け目を挑めるか(v, 甲, 乙).ok,
+    (天下分け目を挑めるか(v, 甲, 乙).why || '').slice(0, 30));
+  v.year += 4;
+  確('四年では、まだ挑めない', !天下分け目を挑めるか(v, 甲, 乙).ok);
+  v.year += 1;
+  確('五年経てばまた挑める', 天下分け目を挑めるか(v, 甲, 乙).ok, `${再び挑める月}ヶ月`);
+  /* 信用を上げ下げしても、月が経たねば挑めない（誼まかせにしない）。 */
+  const v2 = JSON.parse(JSON.stringify(s));
+  v2.分け目の控え = { [[甲, 乙].sort().join('|')]: { y: v2.year, m: v2.month, 勝: 甲, 負: 乙 } };
+  v2.relations[[甲, 乙].sort().join('|')] = { trust: 10, state: '中立', until: null };
+  確('誼が薄れても、五年経たねば挑めない', !天下分け目を挑めるか(v2, 甲, 乙).ok);
 }
 
 console.log('\n── 一の二　挑める家がいないあいだは、盤に触れない');
@@ -134,8 +143,25 @@ console.log('\n── 三　野の選びと集結');
 {
   const { s, 甲, 乙 } = 大身の盤();
   確('野は十枚ある', 分け目の野.length === 10, `${分け目の野.length}枚`);
-  確('どの野にも守勢と攻勢の陣がある',
-    分け目の野.every((f) => f.陣 && f.陣.守 && f.陣.攻 && f.陣.守.幅 > 0 && f.陣.攻.幅 > 0));
+  確('どの野にも守勢と攻勢の陣立てがある',
+    分け目の野.every((f) => f.陣 && (f.陣.守.備 || []).length > 0 && (f.陣.攻.備 || []).length > 0),
+    分け目の野.map((f) => `${f.陣.守.名}／${f.陣.攻.名}`).slice(0, 3).join('、') + ' …');
+  確('陣立ては三十隊ぶんの立ち位置を出す',
+    分け目の野.every((f) => 陣立てを敷く(f.陣.守.備, 30).length === 30
+      && 陣立てを敷く(f.陣.攻.備, 30).length === 30));
+  確('隊どうしが重ならない（二百歩以上あく）', (() => {
+    for (const f of 分け目の野) {
+      for (const 陣 of [f.陣.守, f.陣.攻]) {
+        const ps = 陣立てを敷く(陣.備, 30);
+        for (let i = 0; i < ps.length; i++) {
+          for (let j = i + 1; j < ps.length; j++) {
+            if (Math.hypot(ps[i].x - ps[j].x, ps[i].y - ps[j].y) < 190) return false;
+          }
+        }
+      }
+    }
+    return true;
+  })());
   const 器 = (f) => 器量くらべ(s, f);
   const 選 = 野を選ぶ側(s, 甲, 乙);
   確('器量くらべで野を選ぶ側が決まる', 選 === null || 選 === 甲 || 選 === 乙,
@@ -193,6 +219,58 @@ console.log('\n── 四　六十四隊の盤');
     `出した兵${果.出した兵}／崩れた隊${果.崩れた隊}`);
 }
 
+console.log('\n── 四の三　持ち場（高みと押さえ）');
+{
+  const { s, 甲, 乙 } = 大身の盤();
+  s.player = 甲;
+  天下分け目を起こす(s, 甲, 乙, { 野: 'toride' });
+  s.分け目.野 = 'toride';
+  const 組 = 分け目の盤を組む(s, s.分け目, { 味方: 甲 });
+  const b = 組.b; b.phase = 'fight';
+  const 役数 = {};
+  for (const c of b.corps) 役数[c.役 || '—'] = (役数[c.役 || '—'] || 0) + 1;
+  確('隊に役がついている', (役数['高み'] || 0) > 0 && (役数['押さえ'] || 0) > 0 && (役数['本隊'] || 0) > 0,
+    Object.entries(役数).map(([k, v]) => `${k}${v}`).join('・'));
+  確('高みと押さえには持ち場がある',
+    b.corps.filter((c) => c.役 === '高み' || c.役 === '押さえ').every((c) => c.持ち場 && c.持ち場.縄 > 0));
+  確('本隊には持ち場がない', b.corps.filter((c) => c.役 === '本隊').every((c) => !c.持ち場));
+  /* 総大将は本陣に座り、前線より後ろにいる。 */
+  for (const side of ['P', 'E']) {
+    const 大将 = b.corps.find((c) => c.side === side && c.gen && c.gen.lord);
+    const 前 = b.corps.filter((c) => c.side === side && c.役 !== '本陣');
+    const 敵 = b.corps.filter((c) => c.side !== side);
+    const 中 = { x: 敵.reduce((a, c) => a + c.x, 0) / 敵.length, y: 敵.reduce((a, c) => a + c.y, 0) / 敵.length };
+    const 将まで = 大将 ? Math.hypot(大将.x - 中.x, 大将.y - 中.y) : 0;
+    const 前まで = 前.reduce((a, c) => a + Math.hypot(c.x - 中.x, c.y - 中.y), 0) / Math.max(1, 前.length);
+    確(`${side}の総大将は本陣に座る`, !!大将 && 大将.役 === '本陣' && 将まで > 前まで,
+      大将 ? `${大将.gen.name}　敵まで${Math.round(将まで)}歩（前線は${Math.round(前まで)}歩）` : 'なし');
+  }
+
+  const 初 = new Map(b.corps.map((c) => [c.id, { x: c.x, y: c.y }]));
+  for (let i = 0; i < 2400; i++) stepBattle(b, 0.25);
+  const 離 = (役) => {
+    const ls = b.corps.filter((c) => c.役 === 役 && !c.dead && !c.destroyed && !c.routed);
+    if (!ls.length) return 0;
+    return Math.round(ls.reduce((a, c) => {
+      const p = 初.get(c.id); return a + Math.hypot(c.x - p.x, c.y - p.y);
+    }, 0) / ls.length);
+  };
+  const 高離 = 離('高み'), 別離 = 離('別働');
+  確('高みの隊は持ち場を離れない（八百歩の内）', 高離 < 800, `${高離}歩`);
+  確('別働の隊は大きく回る（千五百歩より遠く）', 別離 === 0 || 別離 > 1500, `${別離}歩`);
+
+  /* 遊ぶ側が手を離して委任に戻した隊は、縄が解けて近い敵に当たる。 */
+  const 高 = b.corps.find((c) => c.役 === '高み' && !c.dead);
+  if (高) {
+    高.持ち場 = null;                       // 画面の「委任に戻す」がこれを行う
+    const 前 = { x: 高.x, y: 高.y };
+    for (let i = 0; i < 1200; i++) stepBattle(b, 0.25);
+    確('縄を解けば持ち場を離れて戦う',
+      高.dead || 高.destroyed || Math.hypot(高.x - 前.x, 高.y - 前.y) > 100,
+      `${Math.round(Math.hypot(高.x - 前.x, 高.y - 前.y))}歩`);
+  }
+}
+
 console.log('\n── 四の二　兵の出納');
 {
   const { s, 甲, 乙 } = 大身の盤();
@@ -228,21 +306,28 @@ console.log('\n── 五　戦の跡');
   for (const c of 城) c.faction = 丙;
   for (const g of s.generals) if (城.some((c) => c.id === g.at)) g.faction = 丙;
   s.relations[[乙, 丙].sort().join('|')] = { trust: 70, state: '臣従', master: 乙, until: null };
+  /* 丙へ回した城が本拠だったなら、本拠を据え直す（渡らぬ城として残る）。 */
+  if (!s.castles.some((c) => c.id === s.factions[乙].本拠 && c.faction === 乙)) {
+    s.factions[乙].本拠 = (s.castles.find((c) => c.faction === 乙) || {}).id;
+  }
 
-  const 国ら = 接する国ら(s, 甲, 乙);
-  確('勝者の領と接する国が挙がる', 国ら.length > 0, `${国ら.length}国`);
-  const 国 = 国ら[0];
-  const 渡 = 割譲の城ら(s, 甲, 乙, 国);
-  確('渡る城は五つまで', 渡.length <= 割譲の限り, `${渡.length}城`);
+  const 並 = 割譲できる城ら(s, 甲, 乙);
+  確('渡せる城が並ぶ', 並.length > 0, `${並.length}城`);
+  確('本拠は渡せない', !並.some((c) => c.id === (s.factions[乙] || {}).本拠));
+  const 見立 = 取る城を見立てる(s, 甲, 乙);
+  確('AI の見立ては十城まで', 見立.length <= 割譲の限り && 見立.length > 0, `${見立.length}城`);
 
   const 前の兵 = s.castles.filter((c) => c.faction === 乙).reduce((a, c) => a + c.local, 0);
   const 出た将ら = s.generals.filter((g) => g.faction === 乙).map((g) => g.id);
   const 報 = [];
-  const 跡 = 分け目の沙汰(s, { 勝: 甲, 負: 乙, 国, 敗走兵: 6000, 出した兵: 20000,
+  const 跡 = 分け目の沙汰(s, { 勝: 甲, 負: 乙, 城ら: 見立, 敗走兵: 6000, 出した兵: 20000,
     出た将ら, 告げる: (t) => 報.push(t) });
 
   確('城が渡った', 跡.渡った城.length > 0 && 跡.渡った城.every((id) =>
     s.castles.find((c) => c.id === id).faction === 甲), `${跡.渡った城.length}城`);
+  確('渡る城は十まで', 跡.渡った城.length <= 割譲の限り, `${跡.渡った城.length}／${割譲の限り}城`);
+  確('敗者の本拠は残る',
+    s.castles.some((c) => c.id === (s.factions[乙] || {}).本拠 && c.faction === 乙));
   確('渡った城の武将は敗者のまま', s.generals.every((g) => !跡.渡った城.includes(g.at) || g.faction !== 乙)
     && s.generals.some((g) => g.faction === 乙), '本拠へ引き移る');
   const 割 = 逃散の割(6000, 20000);

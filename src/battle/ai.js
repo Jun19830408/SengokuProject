@@ -532,8 +532,10 @@ export function battleAI(b) {
      敵が総大将の間近まで迫ったら、近い味方が引き返して本陣を守る。
      旗が倒れれば軍は崩れるのだから、戦列を保つことより先である。
      筋書きの一戦（関ヶ原）では掛けない――そちらは史実の布陣で始まり、
-     本陣の進退は分岐のほうで決まる。 */
-  if (!MAP && !b.筋書き) {
+     本陣の進退は分岐のほうで決まる。天下分け目は同じ「筋書きの野」に乗って
+     いるが、布陣は史実ではなく盤の成り行きで決まるので、こちらは掛ける
+     ――当主が本陣に座っている以上、旗を守る手当てが要る。 */
+  if (!MAP && (!b.筋書き || b.分け目)) {
     for (const side of ["P", "E"]) {
       for (const o of alive) if (o.side === side) o.本陣を守る = false;
       const 大将 = alive.find((c) => c.side === side && c.gen.lord && !c.detach && !c.routed && !c.withdraw);
@@ -717,6 +719,52 @@ export function battleAI(b) {
     const tgt = 狙う敵を選ぶ(alive, c, foes);
     // 槍を合わせている隊は目標を変えない。向き直って側面を晒すのを避ける。
     if (c.order === "接戦" && c.squads.some((q) => q.engaged)) continue;
+    /* 持ち場のある隊（高み・押さえ）は、縄の内で戦う（GDD 12.6）。
+
+       高みを押さえた隊が敵を見て山を降りてしまっては、山を取った甲斐がない。
+       縄の外の敵は追わず、持ち場へ戻る。縄の内に敵が入れば、常のとおり当たる。 */
+    if (c.持ち場 && !c.routed && !c.withdraw && !c.detach) {
+      const 場 = c.持ち場;
+      const 敵まで = Math.hypot(tgt.x - 場.x, tgt.y - 場.y);
+      const 我まで = Math.hypot(c.x - 場.x, c.y - 場.y);
+      /* 敵が縄の外なら追わない。自分が縄の外へ出ていたら、まず戻る
+         （追ううちに引きずられて持ち場を空けることがある）。 */
+      if (敵まで > 場.縄 || 我まで > 場.縄 * 1.15) {
+        if (我まで > 160) { issueOrder(b, c, { order: "移動", tx: 場.x, ty: 場.y }); continue; }
+        c.order = "守備"; c.tx = c.x; c.ty = c.y; continue;
+      }
+    }
+    /* 掃討のときに、全軍が一塊にならないようにする（GDD 8.4）。
+
+       戦の終わりに敵が数隊まで減ると、残った味方がみなその数隊へ向かう。
+       先客の数で重みは付けてあるが、それは「槍を合わせている味方」しか数えない
+       ので、向かっている途中の隊は数に入らない。実測では、七隊が二百五十歩の
+       塊になって盤の隅に固まっていた（遊ぶ側の見立てどおりである）。
+
+       敵一隊につき味方二隊で足りる。手が余っているなら、余った隊は持ち場に
+       留まる――追わずに、その場を押さえる。戦が長引くことはない。二隊が掛かって
+       いるのだから、掃討そのものは進む。 */
+    /* 掛ける数は二隊まで。三隊にすると塊が戻り、止めすぎると掃討が進まない。
+       効かせるのは大軍の一戦だけにする――隊が二十八を超える盤である。
+       十隊ほどの野戦では、そもそも塊に見えないうえ、掃討が長引くと日没まで
+       延びて引き分けが増える（実測で戦の長さが五割延びた）。 */
+    const 大軍の掃討 = !MAP && b.corps.length >= 28;
+    if (大軍の掃討 && !c.squads.some((q) => q.engaged) && !c.routed && !c.withdraw && !c.detach) {
+      const 味方数 = alive.filter((x) => x.side === c.side && !x.routed && !x.withdraw).length;
+      /* 掛かるのは「その敵にいちばん近い二隊」だけ、と順で決める。
+
+         はじめは「まわりに何隊寄っているか」で数えていたが、終わり際には
+         みな近くにいるので数が頭打ちになり、十五隊が二百八十歩の塊になった。
+         自分より近い味方を数えれば、誰が掛かるべきかが一意に決まる。 */
+      const 寄せる限り = foes.length <= 2 ? 3 : 2;      // 残り二隊を切ったら三隊で片づける
+      if (foes.length * 寄せる限り < 味方数) {
+        const 我まで = Math.hypot(tgt.x - c.x, tgt.y - c.y);
+        const 近い味方 = alive.filter((x) => x !== c && x.side === c.side && !x.routed && !x.withdraw
+          && Math.hypot(x.x - tgt.x, x.y - tgt.y) < 我まで).length;
+        /* 手が余っているなら、余った隊は持ち場に留まる。追わずに、その場を押さえる。 */
+        if (近い味方 >= 寄せる限り) { c.order = "待機"; c.tx = c.x; c.ty = c.y; continue; }
+      }
+    }
     if (MAP) {
       const near = Math.hypot(tgt.x - c.x, tgt.y - c.y);
       if (c.side !== b.attacker) {

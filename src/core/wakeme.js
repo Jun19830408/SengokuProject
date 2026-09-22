@@ -35,7 +35,8 @@ export const 分け目の限り = 32;              // 片軍に立てられる�
 export const 分け目の暮れ = 4400;            // 日没まで（常の合戦は二千四百）
 export const 挑む直轄 = 2000000;             // 直轄二百万石で挑める
 export const 挑まれる版図 = 1200000;         // 相手は版図百二十万石以上
-export const 再び挑める信用 = 45;            // 勝者との信用がここまで薄れれば、また挑める
+export const 再び挑める月 = 60;              // 一度決したら、五年は挑めない
+export const 再び挑める信用 = 45;            // 勝者との信用が薄れる目安（五年でここへ戻る）
 export const 集結の限り = 6;                 // 兵が寄るのを待つのは長くて半年
 
 /* ------------------------------------------------------------------ 石高 */
@@ -104,9 +105,17 @@ export function 天下分け目を挑めるか(s, 主, 的) {
   if (主家(s, 主, 的) === 的 || 主家(s, 的, 主) === 主) {
     return { ok: false, why: "旗の下にある家とは戦えない。" };
   }
+  /* 一度決した相手へは五年空ける（GDD 12.6）。
+
+     もとは「勝者との信用が四十五を割るまで」としていた。信用は月〇.二五ずつ
+     四十五へ戻るので、そのままなら五年で解ける――はずが、間に婚姻や使者が
+     入れば信用は動く。続けざまに挑めては一戦の重みがない。月で数える。 */
   const 控 = ((s.分け目の控え || {})[relKey(主, 的)]) || null;
-  if (控 && (r.trust || 45) >= 再び挑める信用) {
-    return { ok: false, why: `一度雌雄を決した相手である。誼が薄れるまで、ふたたびは挑めない（信用${Math.round(r.trust)}）。` };
+  if (控) {
+    const 経 = (s.year - 控.y) * 12 + (s.month - 控.m);
+    if (経 < 再び挑める月) {
+      return { ok: false, why: `一度雌雄を決した相手である。ふたたび挑むには、あと${再び挑める月 - 経}ヶ月かかる。` };
+    }
   }
   if (!家の当主(s, 主) || !家の当主(s, 的)) return { ok: false, why: "当主のない家は野に出られない。" };
   return { ok: true };
@@ -191,9 +200,12 @@ export function 分け目の顔ぶれ(s, fid) {
     for (const c of (s.castles || []).filter((x) => x.faction === 家)) {
       const 兵 = 出せる兵(s, c);
       if (兵 <= 0) continue;
+      /* 手の頭は、その城にいる将のうち器量の高い者。ただし当主がいれば当主が率いる
+         ――大名が家臣の下に付くことはない。本陣はこの手で立つ。 */
       const 将ら = (城の将.get(c.id) || [])
         .filter((g) => g.faction === 家)
-        .sort((a, b) => (b.lead + b.valor) - (a.lead + a.valor));
+        .sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0)
+          || (b.lead + b.valor) - (a.lead + a.valor));
       if (!将ら.length) continue;
       手ら.push({ 城: c.id, 城名: c.name, 家, 兵, 将: 将ら[0].id, 将名: 将ら[0].name,
         供: 将ら.slice(1).map((g) => g.id), 旗の下: 家 !== fid });
@@ -270,18 +282,22 @@ export function 分け目を進める(s, { 告げる } = {}) {
 }
 
 /* ------------------------------------------------------------ 戦の跡 */
-/* 勝者の領と接している国。そこから一国を選んで取る。 */
-export function 接する国ら(s, 勝, 負) {
-  const 勝の国 = [...new Set((s.castles || []).filter((c) => c.faction === 勝).map((c) => c.kuni))];
-  const 負の国 = [...new Set((s.castles || []).filter((c) => c.faction === 負).map((c) => c.kuni))];
-  return 負の国.filter((k) => 勝の国.some((j) => 国が隣り合うか(s, j, k)));
-}
+/* 割譲（GDD 12.6）。
 
-export const 割譲の限り = 5;                  // 一国でも、渡るのは五城まで
+   もとは「接した一国、ただし五城まで」としていた。国は大きさがまちまちで
+   （中央値四城に対し奥州は十九城）、一国では取り分が土地によって振れすぎる。
+   国を離れ、城の数で数える――勝者は敗者の城から十まで選んで取る。
 
-/* その国のうち、実際に渡る城（勝者の領に近いものから五つ）。 */
-export function 割譲の城ら(s, 勝, 負, 国) {
-  const 的 = (s.castles || []).filter((c) => c.faction === 負 && c.kuni === 国);
+   十城は、敗者にとっては痛いが立ち直れる数である（百二十万石の家なら
+   おおむね二割五分ほど）。国境の縛りも外した。飛び地になっても構わない――
+   関ヶ原の後の加増も、飛び地だらけであった。 */
+export const 割譲の限り = 10;                 // 一戦で渡る城の数
+
+/* 渡せる城。勝者の領に近い順に並べる（近い城ほど選ばれやすかろう、という順である）。
+   本拠は渡さない――家を丸ごと潰す一戦にはしない。 */
+export function 割譲できる城ら(s, 勝, 負) {
+  const 本 = (s.factions[負] || {}).本拠;
+  const 的 = (s.castles || []).filter((c) => c.faction === 負 && c.id !== 本);
   const 勝の城 = (s.castles || []).filter((c) => c.faction === 勝);
   const 隔 = (c) => {
     let 最 = Infinity;
@@ -291,7 +307,15 @@ export function 割譲の城ら(s, 勝, 負, 国) {
     }
     return 最;
   };
-  return 的.sort((a, b) => 隔(a) - 隔(b)).slice(0, 割譲の限り);
+  return 的.map((c) => ({ c, 隔: 隔(c) })).sort((a, b) => a.隔 - b.隔).map((x) => x.c);
+}
+
+/* AI が取る城。近くて実入りの大きいものから十。 */
+export function 取る城を見立てる(s, 勝, 負) {
+  const 並 = 割譲できる城ら(s, 勝, 負);
+  const 値 = (c, i) => (c.koku || 0) / 10000 - i * 0.6;      // 近いほど上、石高が高いほど上
+  return 並.map((c, i) => ({ c, 点: 値(c, i) })).sort((a, b) => b.点 - a.点)
+    .slice(0, 割譲の限り).map((x) => x.c.id);
 }
 
 /* 逃散の割（GDD 12.6）。敗走した兵の割に連れて重くなる。
@@ -381,14 +405,15 @@ export function 敗れた将の始末(s, fid, 出た将ら, { 勝, 告げる } =
   return 跡;
 }
 
-/* 一国（最大五城）を勝者へ渡す。武将は敗者のまま本拠へ引き移る。 */
-export function 国を割譲する(s, 勝, 負, 国, { 告げる } = {}) {
-  const 城ら = 割譲の城ら(s, 勝, 負, 国);
-  if (!城ら.length) return [];
+/* 選ばれた城を勝者へ渡す。武将は敗者のまま本拠へ引き移る。 */
+export function 城を割譲する(s, 勝, 負, 城ら, { 告げる } = {}) {
+  const 渡 = (城ら || []).map((id) => (s.castles || []).find((c) => c.id === id && c.faction === 負))
+    .filter(Boolean).slice(0, 割譲の限り);
+  if (!渡.length) return [];
   const 本 = (s.factions[負] || {}).本拠
-    || ((s.castles || []).find((c) => c.faction === 負 && !城ら.includes(c)) || {}).id || null;
+    || ((s.castles || []).find((c) => c.faction === 負 && !渡.includes(c)) || {}).id || null;
   const 移 = [];
-  for (const c of 城ら) {
+  for (const c of 渡) {
     for (const g of s.generals || []) {
       if (g.at !== c.id || g.faction !== 負) continue;
       if (本) { g.at = 本; if (g.本領 === c.id) g.本領 = 本; } else { g.at = null; }
@@ -400,17 +425,18 @@ export function 国を割譲する(s, 勝, 負, 国, { 告げる } = {}) {
     c.intrigue = false; c.intrigueBy = null; c.intrigueOwner = null;
   }
   if (告げる) {
-    告げる(`${国}のうち${城ら.length}城が${(s.factions[勝] || {}).name}の手に渡った`
-      + `（${城ら.map((c) => c.name).join("・")}）。`
+    告げる(`${渡.length}城が${(s.factions[勝] || {}).name}の手に渡った`
+      + `（${渡.map((c) => c.name).join("・")}）。`
       + (移.length ? `${移.join("・")}は${(s.castles.find((c) => c.id === 本) || {}).name || "本拠"}へ引き移った。` : ""));
   }
-  return 城ら;
+  return 渡;
 }
 
 /* 戦の跡をまとめて裁く。 */
-export function 分け目の沙汰(s, { 勝, 負, 国, 敗走兵 = 0, 出した兵 = 0, 出た将ら = [], 告げる } = {}) {
+export function 分け目の沙汰(s, { 勝, 負, 城ら, 敗走兵 = 0, 出した兵 = 0, 出た将ら = [], 告げる } = {}) {
   const 跡 = { 渡った城: [], 逃散: 0, 割: 0, 解けた: [], 捕: [], 討: [] };
-  if (国) 跡.渡った城 = 国を割譲する(s, 勝, 負, 国, { 告げる }).map((c) => c.id);
+  const 取る = (城ら && 城ら.length) ? 城ら : 取る城を見立てる(s, 勝, 負);
+  跡.渡った城 = 城を割譲する(s, 勝, 負, 取る, { 告げる }).map((c) => c.id);
   跡.割 = 逃散の割(敗走兵, 出した兵);
   跡.逃散 = 兵を逃散させる(s, 負, 跡.割);
   if (告げる && 跡.逃散 > 0) {
