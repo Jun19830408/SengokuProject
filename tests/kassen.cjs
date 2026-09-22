@@ -311,6 +311,43 @@ console.log('\n── 八　途中から続ける');
   合戦を畳む();
 }
 
+/* ── 九　家康の本陣が崩れれば、そこで戦は決する（GDD 8.9）
+
+   遊ぶ側の申し出：「西軍で全ての条件をクリアし、家康の本陣を敗走させたのに、
+   兵数の減りで負けになった」。関ヶ原は西軍が総崩れになって終わった戦だが、
+   本陣を破ったのならそこが勝ちである。 */
+{
+  console.log('\n── 九　家康の本陣が崩れれば決する');
+  const r = 合戦を仕立てる('sekigahara', '西');
+  const b = r.b;
+  b.phase = 'fight'; b.委ねた = true;
+  for (const c of b.corps) if (c.side === 'P') c.auto = true;
+  const 本陣 = b.corps.find((c) => c.筋 && c.筋.家康);
+  確('家康の本陣が盤にある', !!本陣, 本陣 ? `${本陣.name} ${Math.round(corpsMen(本陣))}人` : 'なし');
+  for (let i = 0; i < 400 && b.phase === 'fight'; i++) stepBattle(b, 0.25);
+  確('本陣が健在なら戦は続く', b.phase === 'fight');
+  if (本陣) 本陣.routed = true;                       // 本陣が敗走した
+  stepBattle(b, 0.25);
+  確('本陣が退けば戦が決する', b.phase === 'over', b.phase);
+  確('西軍（遊ぶ側）の勝ち', b.result === 'P', String(b.result));
+  確('戦国記に本陣の崩れが残る',
+    b.log.slice(-4).some((x) => /本陣が崩れ/.test(x.text)),
+    (b.log.slice(-1)[0] || {}).text || '');
+  合戦を畳む();
+}
+
+/* ── 十　兵の減り方に偏りがないか（同じ隊どうしなら損害も揃う） */
+{
+  console.log('\n── 十　損害の物差し');
+  const r = 合戦を仕立てる('sekigahara', '西');
+  const b = r.b;
+  確('損の手加減は両軍に等しく掛かる', b.損の手加減 === 0.11, String(b.損の手加減));
+  確('初めの兵から黄と不戦を除いてある',
+    b.initial.P < b.corps.filter((c) => c.side === 'P').reduce((a, c) => a + corpsMen(c), 0),
+    `初め ${b.initial.P} ／ 盤の西 ${Math.round(b.corps.filter((c) => c.side === 'P').reduce((a, c) => a + corpsMen(c), 0))}`);
+  合戦を畳む();
+}
+
 console.log(`\n════ 合戦：咎 ${咎.length} 件`);
 console.log(咎.length ? 'エラー: ' + 咎.join('、') : 'エラー: なし');
 if (咎.length) process.exitCode = 1;

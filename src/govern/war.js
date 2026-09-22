@@ -13,7 +13,7 @@ import { rankName, 軍役の器 } from "../core/rank.js";
 import { isVassal } from "../core/state.js";
 import { rosterArms } from "../core/roster.js";
 import { holdsProvince } from "../core/province.js";
-import { underMyBanner, 援けに着く, 本拠を追う, 奪われた本領を繕う } from "../core/state.js";
+import { underMyBanner, 同じ旗の下, 援けに着く, 本拠を追う, 奪われた本領を繕う } from "../core/state.js";
 import { 難を逃れる } from "../core/capture.js";
 
 // ------------------------------------------------ 援軍（GDD 7.3 / 7.4）
@@ -770,7 +770,7 @@ export function resolveOffscreen(prev, armyId, castleId) {
 
        同盟の家へ差し向けた援軍もここに入る。faction を比べるだけでは
        他家の城なので、盤の外でも同盟国と戦うことになっていた。 */
-    if (援けに着く(s, army, castle) || underMyBanner(s, army.faction, castle.faction)) {
+    if (援けに着く(s, army, castle) || 同じ旗の下(s, army.faction, castle.faction)) {
       const t = 味方の城へ着く(s, army, castle);
       城主の札を繕う(t);
       return t;

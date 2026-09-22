@@ -263,5 +263,45 @@ console.log('\n── 十一　月送りのなかで、天下人は惣無事令�
 
 console.log('');
 if (咎.length) { console.log('★背いた事:'); for (const x of 咎) console.log('   ' + x); }
+console.log('\n── 触れの及ばぬ家（GDD 12.5）');
+{
+  const s2 = H.initState('oda');
+  /* 蝦夷と琉球には触れが届かない。松前（蠣崎）も蝦夷だけなら届かない。 */
+  const 蝦夷の家 = [...new Set(s2.castles.filter((c) => c.kuni === '蝦夷').map((c) => c.faction))];
+  const 琉球の家 = [...new Set(s2.castles.filter((c) => c.kuni === '琉球').map((c) => c.faction))];
+  確('蝦夷に城しか持たぬ家には触れが届かない',
+    蝦夷の家.every((f) => s2.castles.filter((c) => c.faction === f).some((c) => c.kuni !== '蝦夷')
+      || !H.触れの届く家(s2, f)),
+    蝦夷の家.map((f) => (s2.factions[f] || {}).name).join('・'));
+  確('琉球の家にも届かない',
+    琉球の家.every((f) => !H.触れの届く家(s2, f)),
+    琉球の家.map((f) => (s2.factions[f] || {}).name).join('・'));
+  確('問いの列に蝦夷・琉球の家が入らない', (() => {
+    const 列 = H.問われる家(s2, 'oda');
+    return ![...蝦夷の家, ...琉球の家].some((f) => 列.includes(f)
+      && !s2.castles.filter((c) => c.faction === f).some((c) => !H.外の国.includes(c.kuni)));
+  })());
+
+  /* 有力な家は、誼が無ければ従わない。 */
+  const 有力 = Object.keys(s2.factions).filter((f) => f !== 'oda'
+    && s2.castles.filter((c) => c.faction === f).reduce((a, c) => a + c.koku, 0)
+      >= s2.castles.filter((c) => c.faction === 'oda').reduce((a, c) => a + c.koku, 0) * 0.25)[0]
+    || Object.keys(s2.factions).find((f) => f !== 'oda');
+  const k = ['oda', 有力].sort().join('|');
+  s2.relations[k] = { trust: 40, state: '中立', until: null };
+  const 力 = (f) => s2.castles.filter((c) => c.faction === f).reduce((a, c) => a + c.koku, 0);
+  if (力(有力) >= 力('oda') * 0.25) {
+    確('誼の無い有力な家は従わない（問いに載らない）', !H.触れに従う気があるか(s2, 'oda', 有力),
+      `${(s2.factions[有力] || {}).name} 信用40`);
+    s2.relations[k] = { trust: 40, state: '不可侵', until: null };
+    確('不可侵を結んでいれば従う気がある', H.触れに従う気があるか(s2, 'oda', 有力));
+    s2.relations[k] = { trust: 70, state: '中立', until: null };
+    確('信用が五十を超えていれば従う気がある', H.触れに従う気があるか(s2, 'oda', 有力));
+  }
+  const 外 = H.問わぬ家ら(s2, 'oda');
+  確('問わぬ家とその訳が出せる', Array.isArray(外) && 外.length > 0,
+    外.slice(0, 2).map((x) => `${(s2.factions[x.f] || {}).name}：${x.訳}`).join('／'));
+}
+
 console.log('エラー:', 咎.length ? `${咎.length}件` : 'なし');
 process.exit(咎.length ? 1 : 0);

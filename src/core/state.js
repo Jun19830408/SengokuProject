@@ -737,6 +737,17 @@ export function 旗の下に入る(g, 下, 上, 解いた) {
 // 指図の通る間柄か（自家、または臣従の家）
 export const underMyBanner = (g, me, other) => me === other || isVassal(g, me, other);
 
+/* 同じ旗の下か（GDD 7.4）。
+
+   underMyBanner は「相手が自分の旗の下にいるか」であって、向きがある。
+   援軍の受け渡しのように、どちらが上かを問わず「身内か」を見たい場面では、
+   向きを取り違えると味方が敵になる――実測では、臣従した大名に下知して当家の城へ
+   援軍を出させたところ、着いた軍が寄せ手と見なされ、自分の城が囲まれた形になった
+   （underMyBanner(軍の家, 城の家) は「城の家が軍の家の旗の下か」を問うので、
+   主従が逆のときに偽になる）。両の向きを見る。 */
+export const 同じ旗の下 = (g, a, b) => !!a && !!b
+  && (a === b || underMyBanner(g, a, b) || underMyBanner(g, b, a));
+
 // 頼むことはできるが、指図はできない間柄か（同盟・従属）
 export function canAskAid(g, me, other) {
   if (!me || !other || me === other) return false;
@@ -765,6 +776,9 @@ export function canAskAid(g, me, other) {
 export function 援けに着く(g, army, castle) {
   if (!army || !castle) return false;
   if (army.faction === castle.faction) return true;      // 自家の城
+  /* 旗の下の家どうしは、助勢の印があろうとなかろうと身内である。
+     印は他家（同盟・不可侵）へ差し向けた軍を見分けるためのものだった。 */
+  if (同じ旗の下(g, army.faction, castle.faction)) return true;
   if (!army.助勢) return false;                          // 攻めるために出た軍
   return atPeace(g, army.faction, castle.faction);
 }

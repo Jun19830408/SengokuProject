@@ -36,15 +36,17 @@ import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, Goal
 import { SallyDialog } from "./panels.jsx";
 import { 惣無事令を発する, 応諾を決める, 朝敵を検め直す } from "../core/sobuji.js";
 import { 号令を発する } from "../core/gourei.js";
-import { 惣無事令の帳, 惣無事令の問い as 惣無事令の問い札, 号令の帳, 天下分け目の帳, 分け目の沙汰の帳 } from "./panels.jsx";
+import { 惣無事令の帳, 惣無事令の問い as 惣無事令の問い札, 号令の帳, 天下分け目の帳, 分け目の沙汰の帳, 移封の帳, 直参の帳 } from "./panels.jsx";
+import { 移封する, 直参に招く } from "../core/ihou.js";
 import { 挑める家ら, 天下分け目を起こす, 分け目の沙汰, 取る城を見立てる } from "../core/wakeme.js";
 import { 分け目の盤を組む, 分け目の戦果 } from "../battle/wakemeikusa.js";
 import { 筋書きを解く } from "../battle/field.js";
 import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
 import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer, DiploOffer } from "./panels.jsx";
-import { underMyBanner, 己の盟約, 主家, 裏切りの出陣か } from "../core/state.js";
-import { 忠誠, 守備隊の統率, castellanOf } from "../core/rank.js";
+import { underMyBanner, 同じ旗の下, 己の盟約, 主家, 裏切りの出陣か } from "../core/state.js";
+import { 忠誠, 守備隊の統率, castellanOf, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
+import { 城主の札を据える } from "../core/state.js";
 import { 守りの割り付け } from "../core/garrison.js";
 import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を受ける, 縁談を断る } from "../core/hime.js";
 import { 蓄えに合わせる } from "../core/roster.js";
@@ -125,6 +127,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [modal, setModal] = useState(null);
   const [battle, setBattle] = useState(null);
   const [分け目の跡, set分け目の跡] = useState(null);
+  const [移封の相手, set移封の相手] = useState(null);   // 外交の帳から開いた相手
   const [sea, setSea] = useState(null);        // 盤の上の海戦
   const [townSel, setTownSel] = useState(null); // 押した特殊勢力
   const [raid, setRaid] = useState(null);        // 合戦前の奇襲の献策
@@ -630,14 +633,14 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
 
        敵が着いたとき、同じ城へ向かっている味方の軍があれば、そちらを主として
        城下の野戦にする。城方に討って出る機会も与える（囲みを解く後詰と同じ形）。 */
-    if (dest.faction === g.player && !underMyBanner(g, a.faction, dest.faction) && !援けに着く(g, a, dest)) {
+    if (dest.faction === g.player && !同じ旗の下(g, a.faction, dest.faction) && !援けに着く(g, a, dest)) {
       const 待つ = new Set(g.pendingArrivals || []);
       /* 同じ月に着いた味方の軍だけでなく、すでにその城に在陣している軍も後詰に立つ。
          援軍を城に入れず在陣させるようにしたので、二度目以降の寄せにも
          その軍が城下で迎え撃つ。立たねば、置いておく意味がない。 */
       const 後詰 = g.armies.find((x) => x.id !== a.id && x.at === dest.id
         && (!x.path || x.path.length <= 1) && !x.sieging
-        && underMyBanner(g, x.faction, dest.faction)
+        && 同じ旗の下(g, x.faction, dest.faction)
         && (待つ.has(x.id) || x.在陣 === dest.id));
       if (後詰) {
         setSally({ armyId: 後詰.id, castleId: dest.id, foeId: a.id, 城下: true });
@@ -648,7 +651,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     // 旗の下の城なら、軍議にはかけない。味方に向かって軍議を開く筋はない。
     // 旗の下の城へ着いた軍は、味方と戦わない。
     // 自家の城なら将もそこへ入る。臣従の家の城なら、兵だけ守りに加え、将は本国へ帰る。
-    if (underMyBanner(g, a.faction, dest.faction) || 援けに着く(g, a, dest)) {
+    if (同じ旗の下(g, a.faction, dest.faction) || 援けに着く(g, a, dest)) {
       /* 入城する前に、同じ城へ敵の軍も着いていないかを見る。
 
          着いているなら、そちらを先に捌く。ここで黙って入城してしまうと、
@@ -657,7 +660,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const 待ち = new Set(g.pendingArrivals || []);
       const 寄せ手 = g.armies.find((x) => x.id !== a.id && x.at === dest.id
         && (!x.path || x.path.length <= 1) && !x.sieging && 待ち.has(x.id)
-        && !underMyBanner(g, x.faction, dest.faction) && !援けに着く(g, x, dest));
+        && !同じ旗の下(g, x.faction, dest.faction) && !援けに着く(g, x, dest));
       if (寄せ手 && dest.faction === g.player) {
         setG((p) => ({ ...p,
           pendingArrivals: [寄せ手.id, ...(p.pendingArrivals || []).filter((id) => id !== 寄せ手.id)] }));
@@ -672,7 +675,14 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
            もとは軍が消え、将も兵もその城に吸われていた。援軍を出したほうの城は
            空になり、敵が次の月にまた寄せてきても、援軍はもう城兵の一部でしかない。
            城の下に陣を張ったまま留まれば、連戦にも耐え、要らなくなれば解ける。 */
-        const 他家 = c.faction !== ar.faction;
+        /* 旗の下の軍は、城の主の手勢として陣を張る（GDD 7.4）。
+
+           もとは「家が違えば兵だけ城に入れ、将は本国へ帰す」としていた。
+           臣従した大名に下知して当家の城へ援軍を出させると、その軍は消えて
+           城の兵になり、こちらの軍として使えなかった（遊ぶ側の申し出はこれである）。
+           下知の通る家の軍なら、城の下に陣を張らせる――主が動かせる手勢である。
+           逆に、こちらが旗の下の家の城へ出した援軍は、これまでどおり兵だけ渡す。 */
+        const 他家 = c.faction !== ar.faction && !underMyBanner(s, c.faction, ar.faction);
         if (!他家) {
           在陣させる(s, ar, c);
           s.pendingArrivals = s.pendingArrivals.slice(1);
@@ -2437,6 +2447,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               return s2;
             })}
             onCallAid={(id) => setCallAid(id)} onDiplo={doDiplo} onHime={() => setModal("hime")} onPlot={doPlot}
+            onIhou={(fid) => { set移封の相手(fid); setModal("ihou"); }}
+            onChokusan={(fid) => { set移封の相手(fid); setModal("chokusan"); }}
             onSpecial={doSpecial} onReward={reward} onCaptive={doCaptive} onFief={grantFief} onRetire={doRetire} onSettle={settleCaptive} onKenchi={doKenchi} />
         )}
         {modal === "sortie" && selCastle && <SortieDialog g={g} from={selCastle.id} onClose={() => setModal(null)} onGo={launchSortie} />}
@@ -2822,24 +2834,63 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {/* 号令を発する（GDD 12.5）。 */}
         {modal === "gourei" && !battle && (
           <号令の帳 g={g} onClose={() => setModal(null)}
-            onSend={(to, 手ら) => { setModal(null); setG((p) => {
+            onSend={(組ら) => { setModal(null); setG((p) => {
               const s2 = structuredClone(p);
-              const 号 = 号令を発する(s2, s2.player, to, 手ら, {
-                軍の名: (st, 頭) => 月送り.軍の名(st, 頭),
-                道を引く: (st, fid, a, b) => 軍の道(st, fid, a, b),
-                素の道: (a, b) => findPath(a, b),          // 惣無事令を経ていれば道の掟を措く
-                兵糧: (人, 月) => 遠征の兵糧(人, 月),
-                運び賃を払う: (st, 人, 月) => 運び賃を払う(st, 人, 月),
-              });
-              if (!号) { s2.msg = "参陣できる手がなかった。"; return s2; }
-              const 城 = s2.castles.find((c) => c.id === to);
-              const 出ず = (号.出られず || []).length;
-              const 文 = `${城.name}へ号令を発した。${号.手.length}手・`
-                + `${fmt(号.手.reduce((a, h) => a + h.兵, 0))}人が寄せる。`
-                + (出ず ? `（${出ず}手は${号.出られず[0].訳}）` : "");
-              s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
-              s2.monthEvents = [...(s2.monthEvents || []), 文];
-              s2.msg = 文;
+              const 文ら = [];
+              for (const { 的, 手ら } of 組ら) {
+                const 号 = 号令を発する(s2, s2.player, 的, 手ら, {
+                  軍の名: (st, 頭) => 月送り.軍の名(st, 頭),
+                  道を引く: (st, fid, a, b) => 軍の道(st, fid, a, b),
+                  素の道: (a, b) => findPath(a, b),          // 惣無事令を経ていれば道の掟を措く
+                  兵糧: (人, 月) => 遠征の兵糧(人, 月),
+                  運び賃を払う: (st, 人, 月) => 運び賃を払う(st, 人, 月),
+                });
+                if (!号) continue;
+                const 城 = s2.castles.find((c) => c.id === 的);
+                const 出ず = (号.出られず || []).length;
+                文ら.push(`${城 ? 城.name : "城"}へ号令を発した。${号.手.length}手・`
+                  + `${fmt(号.手.reduce((a, h) => a + h.兵, 0))}人が寄せる。`
+                  + (出ず ? `（${出ず}手は${号.出られず[0].訳}）` : ""));
+              }
+              if (!文ら.length) { s2.msg = "参陣できる手がなかった。"; return s2; }
+              for (const t of 文ら) s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+              s2.monthEvents = [...(s2.monthEvents || []), ...文ら];
+              s2.msg = 文ら.join("　");
+              return s2;
+            }); }} />
+        )}
+
+        {/* 移封（GDD 6.9）。旗の下の大名を別の土地へ移す。 */}
+        {modal === "ihou" && !battle && (
+          <移封の帳 g={g} 相手={移封の相手} onClose={() => setModal(null)}
+            onSend={(臣, 城ら) => { setModal(null); setG((p) => {
+              const s2 = structuredClone(p);
+              const 報 = [];
+              const 果 = 移封する(s2, s2.player, 臣, 城ら, { 告げる: (t) => 報.push(t) });
+              if (!果.ok) { s2.msg = 果.why || "移封できなかった。"; return s2; }
+              for (const t of 報) s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+              s2.monthEvents = [...(s2.monthEvents || []), ...報];
+              s2.msg = 報[0] || "移封を申し渡した。";
+              /* 城と将が大きく動く。役と札を繕い直す。 */
+              城主の札を据える(s2);
+              for (const fid of Object.keys(s2.factions)) { 国主を繕う(s2, fid); 旗頭を繕う(s2, fid); }
+              return s2;
+            }); }} />
+        )}
+
+        {/* 直参に招く（GDD 6.9）。旗の下の家の家臣を召し出す。 */}
+        {modal === "chokusan" && !battle && (
+          <直参の帳 g={g} 相手={移封の相手} onClose={() => setModal(null)}
+            onSend={(id) => { setModal(null); setG((p) => {
+              const s2 = structuredClone(p);
+              const 報 = [];
+              const 果 = 直参に招く(s2, s2.player, id, { 告げる: (t) => 報.push(t) });
+              if (!果.ok) { s2.msg = 果.why || "招けなかった。"; return s2; }
+              for (const t of 報) s2.chronicle.push({ y: s2.year, m: s2.month, text: t });
+              s2.monthEvents = [...(s2.monthEvents || []), ...報];
+              s2.msg = 報[0] || "直参に召し出した。";
+              城主の札を据える(s2);
+              for (const fid of Object.keys(s2.factions)) { 国主を繕う(s2, fid); 旗頭を繕う(s2, fid); }
               return s2;
             }); }} />
         )}

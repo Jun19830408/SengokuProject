@@ -23,14 +23,64 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const 問い直しの間 = 60;                    // 拒んだ家へ再び問うまでの月数
 
 /* 惣無事令に問われる家。既に臣従している家と、滅んだ家を除く。 */
+/* 惣無事令が届かぬ土地（GDD 12.5）。
+
+   蝦夷と琉球には、京の触れは届かない。蝦夷の家は松前（蠣崎）が幕府と結んで
+   後に大名と認められるまで在地の領主であり、琉球は明の冊封を受けた別の王国で
+   ある。どちらも「天下」の外にある。 */
+export const 外の国 = ["蝦夷", "琉球"];
+export const 触れの届く家 = (s, f) => {
+  const 城ら = (s.castles || []).filter((c) => c.faction === f);
+  if (!城ら.length) return false;
+  /* 領がすべて外の国にあるなら、届かない。蝦夷の松前（蠣崎）だけは例外で、
+     本土に足場を持つようになれば触れが届く。 */
+  return 城ら.some((c) => !外の国.includes(c.kuni));
+};
+
+/* 有力な家は、誼が無ければ従わない（GDD 12.5）。
+
+   遊ぶ側の申し出：「令を出す時点で同盟か不可侵を結んでいない、または信用が
+   五十以下の有力な大名は従わない」。力のある家が、縁もゆかりもない触れ一つで
+   膝を屈するのは軽い。まず誼を作れ、という筋である。 */
+export const 有力の目安 = 0.25;                // 天下人の直轄に対する版図の比
+
+export function 触れに従う気があるか(s, 主, f) {
+  const 石 = (fid) => (s.castles || []).filter((c) => c.faction === fid).reduce((a, c) => a + (c.koku || 0), 0);
+  const 我 = 石(主) || 1;
+  const 有力 = 石(f) >= 我 * 有力の目安;
+  if (!有力) return true;
+  const r = (s.relations || {})[[主, f].sort().join("|")] || { state: "中立", trust: 45 };
+  if (r.state === "同盟" || r.state === "不可侵") return true;
+  if (r.state === "従属" || r.state === "臣従") return true;
+  return (r.trust == null ? 45 : r.trust) > 50;
+}
+
 export function 問われる家(s, 主) {
   return Object.keys(s.factions || {}).filter((f) => {
     if (f === 主) return false;
     if (!s.castles.some((c) => c.faction === f)) return false;   // 滅んでいる
     const r = (s.relations || {})[[主, f].sort().join("|")];
     if (r && r.state === "臣従" && r.master === 主) return false;  // 既に旗の下
+    if (!触れの届く家(s, f)) return false;                        // 蝦夷・琉球には届かない
+    if (!触れに従う気があるか(s, 主, f)) return false;             // 誼の無い有力な家
     return true;
   });
+}
+
+/* 問いから外れた家と、その訳（画面に出すため）。 */
+export function 問わぬ家ら(s, 主) {
+  const 出 = [];
+  for (const f of Object.keys(s.factions || {})) {
+    if (f === 主) continue;
+    if (!s.castles.some((c) => c.faction === f)) continue;
+    const r = (s.relations || {})[[主, f].sort().join("|")];
+    if (r && r.state === "臣従" && r.master === 主) continue;
+    if (!触れの届く家(s, f)) { 出.push({ f, 訳: "蝦夷・琉球には触れが届かない" }); continue; }
+    if (!触れに従う気があるか(s, 主, f)) {
+      出.push({ f, 訳: `有力な家である。誼が無ければ従わない（信用${Math.round(((s.relations || {})[[主, f].sort().join("|")] || {}).trust || 45)}）` });
+    }
+  }
+  return 出;
 }
 
 /* 応じる見込み（GDD 12.5）。

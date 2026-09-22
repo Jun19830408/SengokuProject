@@ -32,6 +32,8 @@ export { 援けに着く, migrateSave, atPeace, relOf, 軍の道, 本拠を追�
 export { 臣従の主, 許しの要る主, 許されているか, 攻められるか, 許しを与える, 許しを解く, 容認するか, 済んだ許しを片づける } from "../src/core/yurushi.js";
 export { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 預けの率, 城の実入り, 旗頭の狙い, 旗頭に許す, 自ら采配するか, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭に任せきりか, 旗頭に断る, 旗頭は断られたか, 旗頭の古い断りを片づける, 断りの直後か } from "../src/core/inin.js";
 export { 旗頭の調略 } from "../src/govern/aiDiplo.js";
+export { 移封の間合い, 拒む信用, 拒む減り, 家の城ら, 石高 as 城らの石高, 渡せる城ら, 移封できるか, 移封できる家ら, 移封の見立て, 移封する,
+  招ける忠誠, 招きの咎め, 招けるか, 招ける者ら, 直参に招く } from "../src/core/ihou.js";
 export { 謀反の目, 走る先, 謀反を起こす, 謀反の見回り } from "../src/core/muhon.js";
 export { 遠征の兵糧 } from "../src/govern/war.js";
 export { ROAD_ADJ } from "../src/core/paths.js";
@@ -46,10 +48,10 @@ export { 従える比, 臣従させる比, 天下人の目安, 威信の効き }
 export { courtRank, 号令できるか, 旗の下か, 国を旗の下に, 旗の下の城数, 天下人の直轄, 天下人の版図 } from "../src/core/province.js";
 export { いまの段, 段の上乗せ, 段, 家の地方, 地方の握り, 地方が隣り合うか, 京の城, 志の直轄, 志の版図, 足場の握り } from "../src/core/tenkabito.js";
 export { 参陣の顔ぶれ, 号令を発せるか, 号令を発する, 済んだ号令を片づける, 出せる兵, 出せる地の兵, 旗の下の家ら, 号令の限り } from "../src/core/gourei.js";
-export { 惣無事令を発する, 応諾を決める, 応じる目, 問われる家, 朝敵か, 朝敵を解く, 朝敵を検め直す, 問い直しの間 } from "../src/core/sobuji.js";
+export { 惣無事令を発する, 応諾を決める, 応じる目, 問われる家, 問わぬ家ら, 触れの届く家, 触れに従う気があるか, 外の国, 有力の目安, 朝敵か, 朝敵を解く, 朝敵を検め直す, 問い直しの間 } from "../src/core/sobuji.js";
 export { 気風, 浸透, 家の当主, 攻めの腰, 要る兵力, 出せる軍の数, 調略の腰, 治めの腰, 好機か } from "../src/core/kiryou.js";
 export { 主を探す } from "../src/core/state.js";
-export { houseAlive, 主家, isVassal, 膝を屈している, canAskAid, underMyBanner } from "../src/core/state.js";
+export { houseAlive, 主家, isVassal, 膝を屈している, canAskAid, underMyBanner, 同じ旗の下 } from "../src/core/state.js";
 export { doDiplo, doPlot, doSpecial } from "../src/govern/commands.js";
 export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 合戦の中身を直に動かすための取り出し口。

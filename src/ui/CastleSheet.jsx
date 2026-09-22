@@ -11,6 +11,7 @@ import { 鉄甲 } from "../data/ships.js";
 import { U, clamp, fmt, monthsBetween } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
+import { 移封できるか, 招ける者ら } from "../core/ihou.js";
 import { px, py } from "../data/geo.js";
 import { captiveRecruit } from "../core/capture.js";
 import { houseAlive } from "../core/state.js";
@@ -24,7 +25,7 @@ import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
-export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onHatagashiraMato, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime }) {
+export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onHatagashiraMato, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime, onIhou, onChokusan }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
@@ -1185,6 +1186,33 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                         </div>
                       </div>
                     ));
+                  })()}
+                  {/* 旗の下の家への差配（GDD 6.9）。移封と、家臣の召し出し。
+                      外交の欄に置くのは、どちらも相手のある話だからである。 */}
+                  {(() => {
+                    const 可 = 移封できるか(g, g.player, dt);
+                    const 招 = 招ける者ら(g, g.player).filter((x) => x.faction === dt);
+                    const 旗の下 = 主家(g, g.player, dt) === g.player && rel.state === "臣従";
+                    if (!旗の下) return null;
+                    return (
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ fontSize: 11, color: U.dim, marginBottom: 4 }}>旗の下の家へ</div>
+                        <div className="g2">
+                          <button className="btn sm" disabled={!可.ok || !onIhou}
+                            title={可.ok ? "城をそっくり取り替えて、別の土地へ移す" : 可.why}
+                            onClick={() => onIhou && onIhou(dt)}>移封</button>
+                          <button className="btn sm" disabled={!招.length || !onChokusan}
+                            title={招.length ? `${招.length}名が耳を貸す` : "忠誠の薄い家臣がいない"}
+                            onClick={() => onChokusan && onChokusan(dt)}>直参に招く</button>
+                        </div>
+                        <div style={{ fontSize: 11, color: U.dim, marginTop: 5, lineHeight: 1.8 }}>
+                          <b style={{ color: U.text }}>移封</b>＝城の数はそのままに土地を取り替えます。
+                          加増すれば信用が増し、減封すれば減ります（信用が薄いうえに大きく減らせば拒まれ、旗を離れます）。<br />
+                          <b style={{ color: U.text }}>直参に招く</b>＝忠誠の薄い家臣を召し出します。
+                          人だけが移り、城は動きません。その家との信用は落ちます。
+                        </div>
+                      </div>
+                    );
                   })()}
                   {/* 姫の縁（GDD 6.8）。輿入れと使者は姫の帳から出す。
                       外交の欄を開いた者が、姫のことに気づけるようにしておく。 */}

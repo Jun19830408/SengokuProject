@@ -135,6 +135,56 @@ function 仕込む() {
     H.援けに着く(t, a2, t.castles.find((x) => x.id === 盟城.id)));
 }
 
+/* ------------------- 三の二、臣従した家から当家の城へ来た援軍が、自軍として立つこと
+
+   遊ぶ側の申し出：「臣従大名から当方の大名に援軍を出させたのに、自城が包囲されて
+   いるような扱いになり、自軍扱いされなかった」。
+
+   旗の下の判じ（underMyBanner）には向きがある。「相手が自分の旗の下にいるか」で
+   あって、主従が逆だと偽になる。着いた城の側から見ると、臣従した家の軍は
+   「旗の下の軍」であるのに、軍の側から見た判じを当てていたので寄せ手と見なされた。 */
+{
+  const s = initState('oda');
+  const 自城 = s.castles.filter((x) => x.faction === s.player);
+  const 受ける城 = 自城[0];
+  /* 近くの家を臣従させる */
+  let 臣 = null, 臣城 = null;
+  for (const d of s.castles) {
+    if (d.faction === s.player) continue;
+    const p = findPath(d.id, 受ける城.id);
+    if (p && p.length >= 2 && p.length <= 4) { 臣 = d.faction; 臣城 = d; break; }
+  }
+  確('近くに臣従させられる家がある', !!臣, 臣 ? s.factions[臣].name : 'なし');
+  if (臣) {
+    s.relations[[s.player, 臣].sort().join('|')] = { trust: 84, state: '臣従', master: s.player, until: null };
+    確('その家は旗の下にある', H.underMyBanner(s, s.player, 臣) && !H.underMyBanner(s, 臣, s.player));
+    確('向きを問わぬ判じでは、どちらから見ても身内', H.同じ旗の下(s, 臣, s.player)
+      && H.同じ旗の下(s, s.player, 臣));
+
+    const 将 = s.generals.filter((x) => x.at === 臣城.id && x.faction === 臣 && !x.captive).slice(0, 1);
+    for (const t of 将) t.at = null;
+    const 軍 = {
+      id: 'vassal-aid', faction: 臣, from: 臣城.id, gens: 将.map((x) => x.id),
+      local: 2500, localTrain: 70, rost: null,
+      men: 2500 + 将.reduce((a, x) => a + x.retinue, 0), at: 受ける城.id,
+      path: [受ける城.id], prog: 0, food: 4000,
+      target: 受ける城.id, aid: s.player, 助勢: true,
+    };
+    s.armies.push(軍);
+    確('臣従の家の軍は、当家の城へ援けに着く', H.援けに着く(s, 軍, 受ける城));
+    /* 印が無くても身内である（古い記録や、別の道で出た軍） */
+    const 印なし = { ...軍, id: 'v2' }; delete 印なし.助勢;
+    確('助勢の印が無くても、旗の下なら援けに着く', H.援けに着く(s, 印なし, 受ける城));
+
+    /* 盤の外で解く道でも、合戦にならず在陣・入城になる */
+    const t2 = JSON.parse(JSON.stringify(s));
+    t2.pendingArrivals = ['vassal-aid'];
+    const 後 = H.resolveOffscreen(t2, 'vassal-aid', 受ける城.id);
+    確('囲みが立たない', !(後.sieges || []).some((x) => x.castleId === 受ける城.id));
+    確('城は当家のまま', (後.castles.find((x) => x.id === 受ける城.id) || {}).faction === s.player);
+  }
+}
+
 /* --------------------------------- 四、画面で着いたときに合戦が始まらないこと */
 const 仕 = 仕込む();
 const 蔵 = new Map([['sengoku:save1', JSON.stringify({ v: 1, at: Date.now(), state: 仕.s })]]);

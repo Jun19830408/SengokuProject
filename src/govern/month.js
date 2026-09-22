@@ -1541,12 +1541,39 @@ export function advanceMonth(prev, g) {
              何度も寄せては退く戦になっていた。旗頭と同じ物差し（攻めに要る兵）を
              当て、届くまで寄せる。届かねば、その月は出さずに兵を蓄える。 */
           const 要る = 攻めに要る兵(s, cand);
-          const 寄 = 近隣から兵を寄せる(s, fid, c, 軍, { 道: 軍の道, 限り: 5, 歩: 5, 要る });
-          /* 揃わねば出さない。ただし、城そのものを呑めるだけの兵があるなら出る。
-             後詰の見込みまで数えた「要る兵」に届くのを待っていては、後詰の来ようが
-             無い小城にも寄せられなくなり、盤が凍る（十年で軍が四十本を割った）。 */
-          const 呑める = 軍.men >= foeMen2 * 1.6;
-          if (軍.men < 要る * 0.75 && !呑める && !好機か(軍.men, foeMen2)) {
+          /* 兵を寄せる城は選ぶ（GDD 7.3）。
+
+             別の敵と境を接している城から根こそぎ引くと、そこが手薄になって
+             次の月に喰われる。攻める相手以外の敵と隣り合う城からは呼ばない。
+             呼べる城が無ければ、その月は出さずに蓄える。 */
+          const 敵と境を接する = (x) => (s.castles || []).some((y) => {
+            if (y.faction === x.faction || y.faction === cand.faction) return false;
+            if (underMyBanner(s, x.faction, y.faction) || atPeace(s, x.faction, y.faction)) return false;
+            const p3 = findPath(x.id, y.id);
+            return p3 && p3.length - 1 <= 1;                  // 隣の城
+          });
+          const 寄 = 近隣から兵を寄せる(s, fid, c, 軍, { 道: 軍の道, 限り: 6, 歩: 5, 要る,
+            選べる: (x) => !敵と境を接する(x) });
+          /* まとまって攻める（GDD 7.3）。
+
+             実測（十五年・種五）では、他家の出陣八十八件のうち四十八分が二千に
+             満たなかった。中央値二千十六人――千で出て、次の月に三千で出て、と
+             小刻みに送っては各個に磨り潰される。遊ぶ側の申し出はこれである。
+
+             連戦を見越し、攻めに要る兵（守兵＋後詰の見込みの一.六倍）に届くまで
+             出さない。加えて、どれほど小さな城が相手でも「守兵の二.二倍」と
+             「千五百人」を下回る出陣はしない。届かねばその月は蓄える。 */
+          /* 出陣の底（GDD 7.3）。小勢で出ては各個に潰される。ただし家そのものが
+             小さければ、千五百を待っていては永久に動けない――その家が出せる兵の
+             六割を上限として底を置く。 */
+          const 家の出せる = (s.castles || []).filter((x) => x.faction === fid)
+            .reduce((a2, x) => {
+              const gs3 = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive);
+              return a2 + Math.max(0, x.local + gs3.reduce((t, q) => t + (q.retinue || 0), 0) - minGarrison(x));
+            }, 0);
+          const 底 = Math.min(1500, Math.round(家の出せる * 0.6));
+          const 呑める = 軍.men >= Math.max(foeMen2 * 2.2, 底);
+          if (軍.men < 底 || ((軍.men < 要る) && !呑める && !好機か(軍.men, foeMen2))) {
             /* 揃わなければ出さない。兵は城へ返す。 */
             c.local += localSend; c.rost = [...(c.rost || []), ...tkA.taken];
             c.food += 糧;
@@ -1840,10 +1867,21 @@ export function advanceMonth(prev, g) {
         };
         for (const t3 of take3) t3.at = null;
         c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
-        const 寄 = 近隣から兵を寄せる(s, s.player, c2, 軍2, {
-          道: 軍の道, 限り: 4, 歩: 6, 要る: 要る兵, 選べる: (x) => 受けの城.has(x.id),
+        /* 方面軍も、別の敵と境を接する城からは根こそぎ引かない（GDD 6.4）。
+           受け持ちの守りを空けて出れば、留守を突かれる。 */
+        const 旗の境 = (x) => (s.castles || []).some((y) => {
+          if (y.faction === x.faction || y.faction === 的.faction) return false;
+          if (underMyBanner(s, x.faction, y.faction) || atPeace(s, x.faction, y.faction)) return false;
+          const p4 = findPath(x.id, y.id);
+          return p4 && p4.length - 1 <= 1;
         });
-        if (軍2.men < 要る兵 * 0.72) {
+        const 寄 = 近隣から兵を寄せる(s, s.player, c2, 軍2, {
+          道: 軍の道, 限り: 5, 歩: 6, 要る: 要る兵,
+          選べる: (x) => 受けの城.has(x.id) && !旗の境(x),
+        });
+        /* 方面軍も、まとまるまで出さない。小刻みに出しては各個に潰される。 */
+        const 旗の底 = Math.min(1500, Math.round(要る兵 * 0.9));
+        if (軍2.men < 要る兵 * 0.9 || 軍2.men < 旗の底) {
           /* 揃わなければ出さない。兵は城へ戻す。 */
           c2.local += loc3; c2.rost = [...(c2.rost || []), ...tk3.taken];
           c2.food += Math.round(send3 * 0.6);

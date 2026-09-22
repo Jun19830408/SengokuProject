@@ -184,34 +184,63 @@ const 月を送って盤を読む = async () => { await rc('次月へ'); await f
     }
     await flush();
     const t = txt();
-    確('帳が開く', /一つの城へ寄せるよう命じます/.test(t));
-    確('参陣の顔ぶれが並ぶ', /参陣の顔ぶれ/.test(t));
+    /* 号令の帳は「攻める家 → 城 → その城へ向かう手」を繰り返す形になった（GDD 12.5）。
+       一度に三城まで攻められる。 */
+    確('帳が開く', /最大.*つの城/.test(t) || /号令/.test(t));
+    確('三つまで攻められると書いてある', /つの城/.test(t));
     確('国主のいない国は参陣しないと書いてある', /国主のいない国は参陣しません/.test(t));
     確('筋の限りが読める', /筋まで/.test(t));
-    /* 寄せる城を選ぶ。丸印を押してから発する。 */
-    const 丸 = [...document.querySelectorAll('label')].filter((l) => l.querySelector('input[type=radio]'));
-    確('寄せる城が並ぶ', 丸.length > 0, `${丸.length}城`);
-    if (丸.length) {
-      await act(async () => { 丸[0].querySelector('input[type=radio]').click(); });
-      await flush();
-      const 押 = [...document.querySelectorAll('button')].find((b) => /号令を発する/.test(b.textContent) && !b.disabled);
-      確('城を選べば発せるようになる', !!押, 押 ? 押.textContent.trim() : '押せない');
-      if (押) {
-        const 前軍 = (盤().armies || []).length;
-        await click(押); await flush(); await flush();
-        確('発すれば帳が閉じる', !/一つの城へ寄せるよう命じます/.test(txt()));
-        const 後 = await 月を送って盤を読む();
-        const 号 = (後.号令 || [])[0];
-        確('号令が控えられる', !!号, 号 ? `${号.手.length}手` : 'なし');
-        確('手の数だけ軍が立つ', (後.armies || []).length > 前軍,
-          `軍 ${前軍} → ${(後.armies || []).length}`);
-        確('どの軍も同じ城を目指す',
-          !号 || 号.手.every((h) => ((後.armies || []).find((a) => a.id === h.armyId) || {}).target === 号.的));
-        確('戦国記に残る', (後.chronicle || []).some((c) => /号令を発した/.test(c.text)));
-        /* 守備の兵は残っていなければならない。 */
-        const 欠 = (後.castles || []).filter((c) => c.faction === 'oda' && c.local < minGarrison(c) * 0.9);
+
+    /* 一　攻める家を選ぶ（家の釦が並ぶ） */
+    const 家釦 = [...document.querySelectorAll('button')]
+      .filter((b) => /（\d+城）/.test(b.textContent) && !b.disabled);
+    確('攻める家が並ぶ', 家釦.length > 0, `${家釦.length}家`);
+    if (家釦.length) {
+      await click(家釦[0]); await flush();
+      /* 二　城を選ぶ（押せる行が並ぶ） */
+      let 城行 = [...document.querySelectorAll('div')]
+        .filter((d) => d.style && d.style.cursor === 'pointer' && /城/.test(d.textContent));
+      if (!城行.length) {
+        /* 道の引けぬ家を選んでしまったなら、次の家を試す。 */
+        for (const 釦 of 家釦.slice(1, 8)) {
+          await click(釦); await flush();
+          城行 = [...document.querySelectorAll('div')]
+            .filter((d) => d.style && d.style.cursor === 'pointer' && /城/.test(d.textContent));
+          if (城行.length) break;
+        }
+      }
+      確('攻める城が並ぶ', 城行.length > 0, `${城行.length}城`);
+      if (城行.length) {
+        await click(城行[0]); await flush();
+        /* 三　その城へ向かう手を選ぶ（四角印） */
+        const 四角 = [...document.querySelectorAll('input[type=checkbox]')].filter((x) => !x.disabled);
+        確('その城へ向かう手が並ぶ', 四角.length > 0, `${四角.length}手`);
+        if (四角.length) {
+          await act(async () => { 四角[0].click(); }); await flush(); await flush();
+          const 決 = [...document.querySelectorAll('button')].find((b) => /この手立てで決める/.test(b.textContent));
+          確('手を選べば決められる', !!決 && !決.disabled,
+            決 ? (決.disabled ? '押せない' : 決.textContent.trim()) : '釦が無い');
+          if (決) { await click(決); await flush(); }
+        }
+        const 押 = [...document.querySelectorAll('button')].find((b) => /筋の号令を発する/.test(b.textContent) && !b.disabled);
+        確('城と手が揃えば発せる', !!押, 押 ? 押.textContent.trim() : '押せない');
+        if (押) {
+          const 前軍 = (盤().armies || []).length;
+          await click(押); await flush(); await flush();
+          確('発すれば帳が閉じる', !/この手立てで決める/.test(txt()));
+          const 後 = await 月を送って盤を読む();
+          const 号 = (後.号令 || [])[0];
+          確('号令が控えられる', !!号, 号 ? `${号.手.length}手` : 'なし');
+          確('手の数だけ軍が立つ', (後.armies || []).length > 前軍,
+            `軍 ${前軍} → ${(後.armies || []).length}`);
+          確('どの軍も同じ城を目指す',
+            !号 || 号.手.every((h) => ((後.armies || []).find((a) => a.id === h.armyId) || {}).target === 号.的));
+          確('戦国記に残る', (後.chronicle || []).some((c) => /号令を発した/.test(c.text)));
+          /* 守備の兵は残っていなければならない。 */
+          const 欠 = (後.castles || []).filter((c) => c.faction === 'oda' && c.local < minGarrison(c) * 0.9);
         確('どの城にも守備の兵が残る', 欠.length === 0,
           欠.length ? 欠.slice(0, 3).map((c) => c.name).join('・') : `${後.castles.filter((c) => c.faction === 'oda').length}城を検めた`);
+        }
       }
     }
   }
