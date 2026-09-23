@@ -61,7 +61,9 @@ for (const c of s.castles.filter((x) => x.faction === s.player)) {
 }
 const 将 = s.generals.filter((x) => x.at === 自.id && x.faction === 自.faction && !x.captive).slice(0, 3);
 for (const t of 将) t.at = null;
-const 地兵 = 20000;                                  // 三隊では盤に出きらない大軍
+/* 寄せ手の隊は将の数だけではなく兵の数でも割る（三千で一隊・三十二隊まで）。
+   九万六千までは攻め口に就けるので、控えを見るにはそれを超える大軍が要る。 */
+const 地兵 = 150000;                                 // 三十二隊でも出きらない大軍
 const 直属 = 将.reduce((a, x) => a + x.retinue, 0);
 s.armies.push({
   id: 'siegeArmy', faction: 自.faction, from: 自.id, gens: 将.map((x) => x.id),
@@ -98,8 +100,12 @@ const 家の兵 = () => { const m = txt().match(/万石\s+([\d,]+)/); return m ?
 
   await rc('強攻'); await flush(); await flush();
   const 盤の兵 = Number(((txt().match(/([\d,]+)\s+\d+\s+対/) || [])[1] || '0').replace(/,/g, ''));
-  確('三千を超える兵は盤に出ない（残りは控え）', 盤の兵 > 0 && 盤の兵 < 地兵 * 0.75,
+  /* 一隊三千・三十二隊で九万六千。それを超えた分は盤の外に控える。
+     （将の数だけで隊を割っていたころは、将三人なら九千しか立てなかった。） */
+  確('九万六千までは攻め口に立つ', 盤の兵 > 90000,
     `盤に ${盤の兵}人／寄せ手 ${地兵 + 直属}人`);
+  確('それを超える兵は盤に出ない（残りは控え）', 盤の兵 < 地兵 * 0.75,
+    `控え ${地兵 + 直属 - 盤の兵}人`);
 
   await rc('合戦開始'); await flush();
   await rc('委ねて結果を見る');

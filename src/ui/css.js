@@ -9,8 +9,22 @@ export const css = `
 .sp .mn{font-family:'Hiragino Mincho ProN','Yu Mincho','MS Mincho',serif}
 .sp .num{font-variant-numeric:tabular-nums}
 .bar.bt{padding:6px 10px;gap:10px;font-size:12px}
-.bar{display:flex;align-items:center;gap:14px;padding:9px 14px;background:${U.card};
- border-bottom:1px solid ${U.line};flex:0 0 auto;flex-wrap:wrap;font-size:13px}
+/* 上の帯は薄くする（GDD 15.1）。帯が二段に折れると、地図の見える丈がそのぶん
+   削られる。詰めて一段に収まりやすくし、折れても丈を食わないようにした。 */
+.bar{display:flex;align-items:center;gap:10px;padding:6px 12px;background:${U.card};
+ border-bottom:1px solid ${U.line};flex:0 0 auto;font-size:12.5px;
+ flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
+/* 帯の中身は横に繰れるようにし、次月へだけは右端に据える（GDD 15.1）。
+   帯が二段三段に折れると、そのぶん地図の丈が削られる。 */
+.barin{display:flex;align-items:center;gap:10px;flex:1 1 0;min-width:0;
+ overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.barin::-webkit-scrollbar{display:none}
+.barin>*{flex:0 0 auto}
+/* 次月へは帯の右端に貼り付ける。帯を横に繰れるようにしたので、
+   狭い画面では最も要る釦が画面の外へ出てしまう。 */
+.bar .tsugi{flex:0 0 auto;margin-left:10px}
+.bar .btn{padding:5px 10px;font-size:12.5px}
+.bar .sel{padding:4px 8px;font-size:12px}
 .bar .kv{display:flex;align-items:center;gap:5px;color:${U.dim}}
 .bar .kv b{color:${U.text};font-weight:600}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
@@ -42,7 +56,7 @@ export const css = `
 .grip.l{left:max(12px,env(safe-area-inset-left));top:12px}
 .mapctl.l{left:12px;top:12px}
 .mapctl.r{right:12px;top:12px}
-.mbtn{width:60px;background:rgba(255,255,255,.94);border:1px solid ${U.line};border-radius:7px;
+.mbtn{width:54px;background:rgba(255,255,255,.94);border:1px solid ${U.line};border-radius:7px;
  padding:7px 4px;font-size:10px;text-align:center;cursor:pointer;line-height:1.5;color:${U.text}}
 .mbtn b{display:block;font-size:16px;font-weight:500}
 .mbtn:hover{background:#fff}
@@ -51,8 +65,18 @@ export const css = `
    もとは右下であった。政務の地図では右の列に釦が九つ並ぶので、丈の足りない
    画面では列の末が小図に重なった――遊ぶ側の写しでは「攻略目標」が小図の下に
    隠れていた。左の列は釦が五つで短いので、左下なら重ならない。 */
-.mini{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:12px;width:130px;height:139px;border:1px solid ${U.line};
- border-radius:6px;overflow:hidden;background:#fff;z-index:5;cursor:pointer}
+.mini{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:12px;width:112px;height:120px;border:1px solid ${U.line};
+ border-radius:6px;overflow:hidden;background:#fff;z-index:5;cursor:pointer;opacity:.95}
+/* 小図の畳み（GDD 15.1）。丈の足りない画面では、左の釦の列と小図がぶつかる。
+   畳めば札だけが残り、地図がそのぶん広く見える。 */
+.minitab{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:12px;z-index:6;
+ background:rgba(255,255,255,.94);border:1px solid ${U.line};border-radius:7px;
+ padding:5px 9px;font-size:11px;color:${U.text};cursor:pointer;line-height:1.4}
+.minifold{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:136px;z-index:6;
+ background:rgba(255,255,255,.94);border:1px solid ${U.line};border-radius:6px;
+ padding:2px 7px;font-size:10px;color:${U.dim};cursor:pointer}
+/* 釦の列が小図に届かぬようにする（届けば重なって押せない）。 */
+.mapctl.l{max-height:calc(100% - 210px);overflow:hidden}
 .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(255,255,255,.94);
  border:1px solid ${U.line};border-radius:20px;padding:7px 18px;font-size:12px;color:${U.dim};z-index:4}
 .sheet{position:absolute;left:0;right:0;bottom:0;background:${U.card};border-top:1px solid ${U.line};
@@ -80,7 +104,7 @@ export const css = `
 .sel{border:1px solid ${U.line};border-radius:6px;padding:7px;font-family:inherit;font-size:13px;background:#fff;color:${U.text}}
 .split{display:flex;gap:20px}
 .split>div{flex:1;min-width:0}
-@media(max-width:760px){.split{flex-direction:column;gap:10px}.mini{width:96px;height:103px}}
+@media(max-width:760px){.split{flex-direction:column;gap:10px}.mini{width:92px;height:99px}.minifold{bottom:116px}}
 
 /* ------------------------------------------- 縦に持った携帯（GDD 8.1）
 
@@ -142,7 +166,8 @@ export const css = `
   .mapctl.r.hid{transform:translateY(-84px)}
   .mapctl .mbtn{width:auto !important;min-width:42px;padding:4px 6px;font-size:9.5px;line-height:1.35}
   .mapctl .mbtn b{font-size:13px}
-  .mini{width:84px;height:90px;bottom:8px}
+  .mini{width:80px;height:86px;bottom:8px}
+  .minifold{bottom:98px}
   .grip{width:36px;height:36px;border-radius:18px;font-size:14px}
   .hint{bottom:8px;padding:4px 12px;font-size:11px}
 }

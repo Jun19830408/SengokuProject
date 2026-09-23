@@ -23393,9 +23393,9 @@ function \u5C71\u304C\u906E\u308B\u304B(x1, y1, x2, y2) {
 }
 var nearestOf = (list, x, y) => list.length ? list.reduce((a, o) => Math.hypot(o.x - x, o.y - y) < Math.hypot(a.x - x, a.y - y) ? o : a, list[0]) : null;
 function layoutField(totalMen, \u968A\u6570) {
-  const \u968A = clamp(\u968A\u6570 || 2, 2, 24);
+  const \u968A = clamp(\u968A\u6570 || 2, 2, 32);
   const \u968A\u5E83 = Math.sqrt(\u968A / 2);
-  const w = clamp(Math.round(1180 * Math.sqrt(Math.max(600, totalMen) / 3e3) * \u968A\u5E83), 1100, 7200);
+  const w = clamp(Math.round(1180 * Math.sqrt(Math.max(600, totalMen) / 3e3) * \u968A\u5E83), 1100, 8600);
   const h = Math.round(w * 0.667);
   FIELD.w = w;
   FIELD.h = h;
@@ -24327,6 +24327,41 @@ function setAiIssuing(v) {
   AI_ISSUING = v;
 }
 var delegated = (b, c) => c.side !== "P" || c.auto;
+function \u76E4\u306B\u53CE\u3081\u308B(ls, \u7AEF = 60) {
+  let \u76F4\u3057\u305F = 0;
+  for (const c of ls || []) {
+    if (!c || !c.squads || !c.squads.length) continue;
+    const x0 = c.x, y0 = c.y;
+    for (let n = 0; n < 2; n++) {
+      const nx = clamp(c.x, \u7AEF, Math.max(\u7AEF, FIELD.w - \u7AEF));
+      const ny = clamp(c.y, \u7AEF, Math.max(\u7AEF, FIELD.h - \u7AEF));
+      if (nx !== c.x || ny !== c.y) {
+        c.x = nx;
+        c.y = ny;
+        c.tx = c.x;
+        c.ty = c.y;
+        placeSquads(c, true);
+      }
+      const xs = c.squads.map((q) => q.x), ys = c.squads.map((q) => q.y);
+      const \u5DE6 = Math.min(...xs), \u53F3 = Math.max(...xs);
+      const \u4E0A = Math.min(...ys), \u4E0B = Math.max(...ys);
+      let dx = 0, dy = 0;
+      if (\u5DE6 < \u7AEF) dx = \u7AEF - \u5DE6;
+      else if (\u53F3 > FIELD.w - \u7AEF) dx = FIELD.w - \u7AEF - \u53F3;
+      if (\u4E0A < \u7AEF) dy = \u7AEF - \u4E0A;
+      else if (\u4E0B > FIELD.h - \u7AEF) dy = FIELD.h - \u7AEF - \u4E0B;
+      if (!dx && !dy) break;
+      c.x += dx;
+      c.y += dy;
+      c.tx = c.x;
+      c.ty = c.y;
+      placeSquads(c, true);
+    }
+    if (c.x !== x0 || c.y !== y0) \u76F4\u3057\u305F++;
+  }
+  return \u76F4\u3057\u305F;
+}
+var \u5BC4\u305B\u624B\u306E\u968A\u6570 = (\u5C06\u6570, \u7DCF\u5175, \u4E0A\u9650 = 3e3, \u9650\u308A = MAX_CORPS) => Math.max(1, Math.min(\u9650\u308A, Math.max(\u5C06\u6570 | 0, Math.ceil(Math.max(0, \u7DCF\u5175) / \u4E0A\u9650))));
 
 // src/battle/castleMap.js
 var MAP = null;
@@ -35850,6 +35885,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [battle, setBattle] = useState7(null);
   const [\u5206\u3051\u76EE\u306E\u8DE1, set\u5206\u3051\u76EE\u306E\u8DE1] = useState7(null);
   const [\u79FB\u5C01\u306E\u76F8\u624B, set\u79FB\u5C01\u306E\u76F8\u624B] = useState7(null);
+  const [\u5C0F\u56F3, set\u5C0F\u56F3] = useState7(true);
   const [sea, setSea] = useState7(null);
   const [townSel, setTownSel] = useState7(null);
   const [raid, setRaid] = useState7(null);
@@ -36111,14 +36147,16 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     const mv = miniRef.current;
     if (mv) {
+      const \u5E452 = Math.max(40, Math.round(mv.clientWidth || 112));
+      const \u9AD8 = Math.max(40, Math.round(mv.clientHeight || 120));
       const mc = mv.getContext("2d");
-      if (mv.width !== 130) {
-        mv.width = 130;
-        mv.height = 139;
+      if (mv.width !== \u5E452 || mv.height !== \u9AD8) {
+        mv.width = \u5E452;
+        mv.height = \u9AD8;
       }
-      mc.clearRect(0, 0, 130, 139);
-      mc.drawImage(terrain, 0, 0, MAPW, MAPH, 0, 0, 130, 139);
-      const k = 130 / MAPW;
+      mc.clearRect(0, 0, \u5E452, \u9AD8);
+      mc.drawImage(terrain, 0, 0, MAPW, MAPH, 0, 0, \u5E452, \u9AD8);
+      const k = \u5E452 / MAPW;
       mc.strokeStyle = "#fff";
       mc.lineWidth = 2;
       mc.strokeRect((vx - W2 / 2 / s2) * k, (vy - H2 / 2 / s2) * k, W2 / s2 * k, H2 / s2 * k);
@@ -36495,8 +36533,22 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     setBattleMap(map);
     const atkGens = army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
     const defGens = g.generals.filter((x) => x.at === castle.id && x.faction === castle.faction);
-    const nAtk = Math.max(1, Math.min(atkGens.length, MAX_CORPS));
-    const retSum = atkGens.slice(0, nAtk).reduce((a2, x) => a2 + x.retinue, 0);
+    const \u7DCF\u5175 = Math.max(0, army.local) + atkGens.reduce((a2, x) => a2 + (x.retinue || 0), 0);
+    const nAtk = \u5BC4\u305B\u624B\u306E\u968A\u6570(atkGens.length, \u7DCF\u5175, SIEGE_CORPS_CAP, MAX_CORPS);
+    const \u5BC4\u305B\u624B\u3089 = atkGens.slice(0, nAtk);
+    for (let i = \u5BC4\u305B\u624B\u3089.length; i < nAtk; i++) {
+      \u5BC4\u305B\u624B\u3089.push({
+        id: `${army.id}-yose${i}`,
+        name: `\u5BC4\u624B${i - atkGens.length + 1}\u306E\u5099`,
+        lead: 54,
+        valor: 54,
+        wit: 48,
+        gov: 44,
+        retinue: 0,
+        retTrain: army.localTrain || 62
+      });
+    }
+    const retSum = \u5BC4\u305B\u624B\u3089.reduce((a2, x) => a2 + (x.retinue || 0), 0);
     const room = Math.max(0, SIEGE_CORPS_CAP * nAtk - retSum);
     const useLocal = Math.min(Math.max(0, army.local), room);
     const reserveMen = Math.max(0, army.local - useLocal);
@@ -36537,7 +36589,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       });
     };
     const outer = map.layers[0], og = outer.gates;
-    const atk = mk(atkGens, useLocal, army.localTrain, atkSide, atkColor, (i, n) => {
+    const atk = mk(\u5BC4\u305B\u624B\u3089, useLocal, army.localTrain, atkSide, atkColor, (i, n) => {
       const gt = og[i % og.length];
       return \u5BC4\u305B\u53E3(map, gt, Math.floor(i / og.length));
     }, commitRost);
@@ -36682,9 +36734,11 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const defGens = foe ? foe.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
     const playerIsAtk = army.faction === g.player;
     const defLocal = foe ? Math.max(0, foe.local) : Math.max(0, dest.local - Math.round(minGarrison(dest) * 0.4));
-    const aidMen = foe ? 0 : g.armies.filter((a) => a.id !== army.id && a.at === dest.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))).reduce((t, a) => t + a.men, 0);
+    const \u63F4\u8ECD\u3089 = foe ? [] : g.armies.filter((a) => a.id !== army.id && a.at === dest.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id)));
+    const aidMen = \u63F4\u8ECD\u3089.reduce((t, a) => t + a.men, 0);
     const \u51FA\u308B\u5C06 = (army.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean).sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead + b.gov + b.wit - (a.lead + a.gov + a.wit));
-    const \u968A\u6570 = Math.max(2, \u51FA\u308B\u5C06.length + Math.max(1, defGens.length));
+    const \u63F4\u5C06\u6570 = \u63F4\u8ECD\u3089.reduce((t, a) => t + (a.gens || []).length, 0) + (sally2 ? (sally2.gens || []).length : 0);
+    const \u968A\u6570 = Math.max(2, \u51FA\u308B\u5C06.length + \u63F4\u5C06\u6570 + Math.max(1, defGens.length));
     layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0), \u968A\u6570);
     const face = attackFace(army.from, dest.id);
     const lineup = (isAtk, i, n) => {
@@ -36751,11 +36805,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const defFaction = foe ? foe.faction : dest.faction;
     const atkColor = g.factions[army.faction].color, defColor = g.factions[defFaction].color;
     const betray = !!dest.intrigue && (dest.intrigueOwner || (army.faction === g.player ? g.player : null)) != null;
-    const allies = [
-      ...foe ? [] : g.armies.filter((a) => a.id !== army.id && a.at === dest.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))),
-      // 城方が討って出るなら、寄せ手の背を衝く形で同じ側に立つ（GDD 9.2）
-      ...sally2 ? [sally2] : []
-    ];
+    const allies = [...\u63F4\u8ECD\u3089, ...sally2 ? [sally2] : []];
     const atkSide = playerIsAtk ? "P" : "E";
     const atkCorpsList = build(
       atkGens,
@@ -36796,7 +36846,14 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       );
       slots -= list.length;
       list.forEach((c, i) => {
-        c.x = FIELD.w / 2 + (off + i) * Math.round(175 * (FIELD.w / BASE.w)) * (off % 2 ? 1 : -1);
+        const \u5E2D = atkCorpsList.length + i;
+        const p2 = lineup(true, \u5E2D + 1, \u5E2D + 2);
+        c.x = p2.x;
+        c.y = p2.y;
+        c.facing = p2.f;
+        c.\u9663\u5411\u304D = p2.f;
+        c.tx = c.x;
+        c.ty = c.y;
         c.ally = kind;
         c.allyFaction = a.faction;
         c.armyId = a.id;
@@ -36816,6 +36873,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       dest.rost,
       false
     );
+    \u76E4\u306B\u53CE\u3081\u308B(atkCorpsList);
+    \u76E4\u306B\u53CE\u3081\u308B(defList);
     const P2 = playerIsAtk ? atkCorpsList : defList;
     const E = playerIsAtk ? defList : atkCorpsList;
     const bb = createBattle(P2, E, playerIsAtk ? "P" : "E");
@@ -37848,7 +37907,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const selCastle = g.castles.find((c) => c.id === sel);
   if (sea) return /* @__PURE__ */ React8.createElement(SeaScreen, { key: sea.key, ctx: sea, land, onEnd: (bb) => \u6D77\u6226\u3092\u7D42\u3048\u308B(bb) });
   if (battle) return /* @__PURE__ */ React8.createElement(BattleScreen, { key: battle.armyId, ctx: battle, land, onEnd: (bb) => finishBattle(bb, battle) });
-  return /* @__PURE__ */ React8.createElement("div", { className: "sp", style: { height: "100dvh" } }, !wide && /* @__PURE__ */ React8.createElement("div", { className: "bar" }, /* @__PURE__ */ React8.createElement("span", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React8.createElement("span", { className: "dot", style: { background: pf.color } }), /* @__PURE__ */ React8.createElement("b", { className: "mn", style: { fontSize: 16 } }, pf.name)), /* @__PURE__ */ React8.createElement("span", { className: "kv num" }, /* @__PURE__ */ React8.createElement("b", null, g.year, "\u5E74 ", g.month, "\u6708"), /* @__PURE__ */ React8.createElement("span", { style: { background: "#EFEDE4", borderRadius: 3, padding: "1px 6px", fontSize: 11 } }, SEASON(g.month))), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u77F3\u9AD8 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, man(mine.reduce((a, c) => a + c.koku, 0)), " \u4E07\u77F3")), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u5175\u6570 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, fmt(totalMen))), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u91D1\u92AD ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, fmt(pf.gold), " \u8CAB")), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u62E0\u70B9 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, mine.length, " \u57CE")), (() => {
+  return /* @__PURE__ */ React8.createElement("div", { className: "sp", style: { height: "100dvh" } }, !wide && /* @__PURE__ */ React8.createElement("div", { className: "bar" }, /* @__PURE__ */ React8.createElement("div", { className: "barin" }, /* @__PURE__ */ React8.createElement("span", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React8.createElement("span", { className: "dot", style: { background: pf.color } }), /* @__PURE__ */ React8.createElement("b", { className: "mn", style: { fontSize: 16 } }, pf.name)), /* @__PURE__ */ React8.createElement("span", { className: "kv num" }, /* @__PURE__ */ React8.createElement("b", null, g.year, "\u5E74 ", g.month, "\u6708"), /* @__PURE__ */ React8.createElement("span", { style: { background: "#EFEDE4", borderRadius: 3, padding: "1px 6px", fontSize: 11 } }, SEASON(g.month))), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u77F3\u9AD8 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, man(mine.reduce((a, c) => a + c.koku, 0)), " \u4E07\u77F3")), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u5175\u6570 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, fmt(totalMen))), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u91D1\u92AD ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, fmt(pf.gold), " \u8CAB")), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u62E0\u70B9 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, mine.length, " \u57CE")), (() => {
     const cr = courtRank(g, g.player);
     if (!cr) return null;
     return /* @__PURE__ */ React8.createElement("span", { className: "kv", style: { color: "#8A6A2A" } }, /* @__PURE__ */ React8.createElement("b", null, cr.key), "\uFF08\u5175\xD7", cr.troop, "\uFF09");
@@ -37893,7 +37952,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const \u4E26 = Math.round(\u9AD8 / (\u9810\u3051\u306E\u6BB5[pf.\u9810\u3051 == null ? 1 : pf.\u9810\u3051].\u7387 || 1));
       return /* @__PURE__ */ React8.createElement("option", { key: x.\u540D, value: i }, `\u9810\u3051\uFF1A${x.\u540D}\uFF08${\u5DEE\u914D\u3092\u9810\u3051\u305F\u57CE(g, g.player).length}\u57CE\u30FB\u6708${fmt(Math.round(\u4E26 * x.\u7387))}\u8CAB\uFF09`);
     })
-  ), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("manual") }, "\u904A\u3073\u65B9"), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("chronicle") }, "\u6226\u56FD\u8A18"), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("save") }, "\u8A18\u9332", savedMsg ? `\uFF1A${savedMsg}` : ""), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: onTitle }, "\u30BF\u30A4\u30C8\u30EB"), /* @__PURE__ */ React8.createElement("button", { className: "btn dark sm", disabled: !!battle || !!openSiege, onClick: nextMonth }, "\u6B21\u6708\u3078")), /* @__PURE__ */ React8.createElement(
+  ), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("manual") }, "\u904A\u3073\u65B9"), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("chronicle") }, "\u6226\u56FD\u8A18"), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("save") }, "\u8A18\u9332", savedMsg ? `\uFF1A${savedMsg}` : ""), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: onTitle }, "\u30BF\u30A4\u30C8\u30EB")), /* @__PURE__ */ React8.createElement("button", { className: "btn dark sm tsugi", disabled: !!battle || !!openSiege, onClick: nextMonth }, "\u6B21\u6708\u3078")), /* @__PURE__ */ React8.createElement(
     "div",
     {
       className: "mapwrap",
@@ -37977,7 +38036,30 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       /* @__PURE__ */ React8.createElement("b", null, "\u2694"),
       "\u5929\u4E0B\u5206\u3051\u76EE"
     ), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("factions") }, /* @__PURE__ */ React8.createElement("b", null, "\u2691"), "\u52E2\u529B\u60C5\u5831"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("generals") }, /* @__PURE__ */ React8.createElement("b", null, "\u2617"), "\u6B66\u5C06\u4E00\u89A7"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("hime") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C7"), "\u59EB"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("goal") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C8"), "\u653B\u7565\u76EE\u6A19"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("manual") }, /* @__PURE__ */ React8.createElement("b", null, "\uFF1F"), "\u904A\u3073\u65B9"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("chronicle") }, /* @__PURE__ */ React8.createElement("b", null, "\u25A4"), "\u5C65\u6B74")),
-    !wide && /* @__PURE__ */ React8.createElement("canvas", { className: "mini", ref: miniRef, onClick: whole }),
+    !wide && \u5C0F\u56F3 && /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement(
+      "div",
+      {
+        className: "minifold",
+        onMouseDown: (e) => e.stopPropagation(),
+        onClick: (e) => {
+          e.stopPropagation();
+          set\u5C0F\u56F3(false);
+        }
+      },
+      "\u5168\u571F\u56F3\u3092\u7573\u3080 \u25BE"
+    ), /* @__PURE__ */ React8.createElement("canvas", { className: "mini", ref: miniRef, onClick: whole })),
+    !wide && !\u5C0F\u56F3 && /* @__PURE__ */ React8.createElement(
+      "div",
+      {
+        className: "minitab",
+        onMouseDown: (e) => e.stopPropagation(),
+        onClick: (e) => {
+          e.stopPropagation();
+          set\u5C0F\u56F3(true);
+        }
+      },
+      "\u25B4 \u5168\u571F\u56F3"
+    ),
     wide && /* @__PURE__ */ React8.createElement("div", { style: {
       position: "absolute",
       left: 12,
@@ -39244,8 +39326,22 @@ var css = `
 .sp .mn{font-family:'Hiragino Mincho ProN','Yu Mincho','MS Mincho',serif}
 .sp .num{font-variant-numeric:tabular-nums}
 .bar.bt{padding:6px 10px;gap:10px;font-size:12px}
-.bar{display:flex;align-items:center;gap:14px;padding:9px 14px;background:${U.card};
- border-bottom:1px solid ${U.line};flex:0 0 auto;flex-wrap:wrap;font-size:13px}
+/* \u4E0A\u306E\u5E2F\u306F\u8584\u304F\u3059\u308B\uFF08GDD 15.1\uFF09\u3002\u5E2F\u304C\u4E8C\u6BB5\u306B\u6298\u308C\u308B\u3068\u3001\u5730\u56F3\u306E\u898B\u3048\u308B\u4E08\u304C\u305D\u306E\u3076\u3093
+   \u524A\u3089\u308C\u308B\u3002\u8A70\u3081\u3066\u4E00\u6BB5\u306B\u53CE\u307E\u308A\u3084\u3059\u304F\u3057\u3001\u6298\u308C\u3066\u3082\u4E08\u3092\u98DF\u308F\u306A\u3044\u3088\u3046\u306B\u3057\u305F\u3002 */
+.bar{display:flex;align-items:center;gap:10px;padding:6px 12px;background:${U.card};
+ border-bottom:1px solid ${U.line};flex:0 0 auto;font-size:12.5px;
+ flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
+/* \u5E2F\u306E\u4E2D\u8EAB\u306F\u6A2A\u306B\u7E70\u308C\u308B\u3088\u3046\u306B\u3057\u3001\u6B21\u6708\u3078\u3060\u3051\u306F\u53F3\u7AEF\u306B\u636E\u3048\u308B\uFF08GDD 15.1\uFF09\u3002
+   \u5E2F\u304C\u4E8C\u6BB5\u4E09\u6BB5\u306B\u6298\u308C\u308B\u3068\u3001\u305D\u306E\u3076\u3093\u5730\u56F3\u306E\u4E08\u304C\u524A\u3089\u308C\u308B\u3002 */
+.barin{display:flex;align-items:center;gap:10px;flex:1 1 0;min-width:0;
+ overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.barin::-webkit-scrollbar{display:none}
+.barin>*{flex:0 0 auto}
+/* \u6B21\u6708\u3078\u306F\u5E2F\u306E\u53F3\u7AEF\u306B\u8CBC\u308A\u4ED8\u3051\u308B\u3002\u5E2F\u3092\u6A2A\u306B\u7E70\u308C\u308B\u3088\u3046\u306B\u3057\u305F\u306E\u3067\u3001
+   \u72ED\u3044\u753B\u9762\u3067\u306F\u6700\u3082\u8981\u308B\u91E6\u304C\u753B\u9762\u306E\u5916\u3078\u51FA\u3066\u3057\u307E\u3046\u3002 */
+.bar .tsugi{flex:0 0 auto;margin-left:10px}
+.bar .btn{padding:5px 10px;font-size:12.5px}
+.bar .sel{padding:4px 8px;font-size:12px}
 .bar .kv{display:flex;align-items:center;gap:5px;color:${U.dim}}
 .bar .kv b{color:${U.text};font-weight:600}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
@@ -39277,7 +39373,7 @@ var css = `
 .grip.l{left:max(12px,env(safe-area-inset-left));top:12px}
 .mapctl.l{left:12px;top:12px}
 .mapctl.r{right:12px;top:12px}
-.mbtn{width:60px;background:rgba(255,255,255,.94);border:1px solid ${U.line};border-radius:7px;
+.mbtn{width:54px;background:rgba(255,255,255,.94);border:1px solid ${U.line};border-radius:7px;
  padding:7px 4px;font-size:10px;text-align:center;cursor:pointer;line-height:1.5;color:${U.text}}
 .mbtn b{display:block;font-size:16px;font-weight:500}
 .mbtn:hover{background:#fff}
@@ -39286,8 +39382,18 @@ var css = `
    \u3082\u3068\u306F\u53F3\u4E0B\u3067\u3042\u3063\u305F\u3002\u653F\u52D9\u306E\u5730\u56F3\u3067\u306F\u53F3\u306E\u5217\u306B\u91E6\u304C\u4E5D\u3064\u4E26\u3076\u306E\u3067\u3001\u4E08\u306E\u8DB3\u308A\u306A\u3044
    \u753B\u9762\u3067\u306F\u5217\u306E\u672B\u304C\u5C0F\u56F3\u306B\u91CD\u306A\u3063\u305F\u2015\u2015\u904A\u3076\u5074\u306E\u5199\u3057\u3067\u306F\u300C\u653B\u7565\u76EE\u6A19\u300D\u304C\u5C0F\u56F3\u306E\u4E0B\u306B
    \u96A0\u308C\u3066\u3044\u305F\u3002\u5DE6\u306E\u5217\u306F\u91E6\u304C\u4E94\u3064\u3067\u77ED\u3044\u306E\u3067\u3001\u5DE6\u4E0B\u306A\u3089\u91CD\u306A\u3089\u306A\u3044\u3002 */
-.mini{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:12px;width:130px;height:139px;border:1px solid ${U.line};
- border-radius:6px;overflow:hidden;background:#fff;z-index:5;cursor:pointer}
+.mini{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:12px;width:112px;height:120px;border:1px solid ${U.line};
+ border-radius:6px;overflow:hidden;background:#fff;z-index:5;cursor:pointer;opacity:.95}
+/* \u5C0F\u56F3\u306E\u7573\u307F\uFF08GDD 15.1\uFF09\u3002\u4E08\u306E\u8DB3\u308A\u306A\u3044\u753B\u9762\u3067\u306F\u3001\u5DE6\u306E\u91E6\u306E\u5217\u3068\u5C0F\u56F3\u304C\u3076\u3064\u304B\u308B\u3002
+   \u7573\u3081\u3070\u672D\u3060\u3051\u304C\u6B8B\u308A\u3001\u5730\u56F3\u304C\u305D\u306E\u3076\u3093\u5E83\u304F\u898B\u3048\u308B\u3002 */
+.minitab{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:12px;z-index:6;
+ background:rgba(255,255,255,.94);border:1px solid ${U.line};border-radius:7px;
+ padding:5px 9px;font-size:11px;color:${U.text};cursor:pointer;line-height:1.4}
+.minifold{position:absolute;left:max(12px,env(safe-area-inset-left));bottom:136px;z-index:6;
+ background:rgba(255,255,255,.94);border:1px solid ${U.line};border-radius:6px;
+ padding:2px 7px;font-size:10px;color:${U.dim};cursor:pointer}
+/* \u91E6\u306E\u5217\u304C\u5C0F\u56F3\u306B\u5C4A\u304B\u306C\u3088\u3046\u306B\u3059\u308B\uFF08\u5C4A\u3051\u3070\u91CD\u306A\u3063\u3066\u62BC\u305B\u306A\u3044\uFF09\u3002 */
+.mapctl.l{max-height:calc(100% - 210px);overflow:hidden}
 .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(255,255,255,.94);
  border:1px solid ${U.line};border-radius:20px;padding:7px 18px;font-size:12px;color:${U.dim};z-index:4}
 .sheet{position:absolute;left:0;right:0;bottom:0;background:${U.card};border-top:1px solid ${U.line};
@@ -39315,7 +39421,7 @@ var css = `
 .sel{border:1px solid ${U.line};border-radius:6px;padding:7px;font-family:inherit;font-size:13px;background:#fff;color:${U.text}}
 .split{display:flex;gap:20px}
 .split>div{flex:1;min-width:0}
-@media(max-width:760px){.split{flex-direction:column;gap:10px}.mini{width:96px;height:103px}}
+@media(max-width:760px){.split{flex-direction:column;gap:10px}.mini{width:92px;height:99px}.minifold{bottom:116px}}
 
 /* ------------------------------------------- \u7E26\u306B\u6301\u3063\u305F\u643A\u5E2F\uFF08GDD 8.1\uFF09
 
@@ -39377,7 +39483,8 @@ var css = `
   .mapctl.r.hid{transform:translateY(-84px)}
   .mapctl .mbtn{width:auto !important;min-width:42px;padding:4px 6px;font-size:9.5px;line-height:1.35}
   .mapctl .mbtn b{font-size:13px}
-  .mini{width:84px;height:90px;bottom:8px}
+  .mini{width:80px;height:86px;bottom:8px}
+  .minifold{bottom:98px}
   .grip{width:36px;height:36px;border-radius:18px;font-size:14px}
   .hint{bottom:8px;padding:4px 12px;font-size:11px}
 }

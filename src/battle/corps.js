@@ -2,7 +2,7 @@ import { MAP, axisOf, fromUV, gatePos } from "./castleMap.js";
 import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, VILLAGES, WOODS, fieldScale, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
 import { clamp } from "../core/util.js";
 import { ARMS } from "../data/roads.js";
-import { FIELD, passable } from "./field.js";
+import { FIELD, MAX_CORPS, passable } from "./field.js";
 
 export const FORMATIONS = ["横陣", "鶴翼", "魚鱗", "鋒矢", "雁行", "方陣", "長蛇"];
 
@@ -954,3 +954,42 @@ export function setAiIssuing(v) { AI_ISSUING = v; }
 // 委任された隊はAIが差配する。委任は隊ごとに入り切りでき、
 // プレイヤーが命令を出した瞬間に解ける。
 export const delegated = (b, c) => c.side !== "P" || c.auto;
+
+/* 盤の内へ引き戻す（GDD 8.1）。
+
+   布陣の席は盤の内に取ってあるが、隊には広がりがある――中心が縁の内でも、
+   組は外へこぼれる。援軍や寄騎で隊が増えると、席が端へ寄ってなおさら
+   はみ出す。どの隊も、組ごと盤の内に収まるまで引き戻す留め。 */
+export function 盤に収める(ls, 端 = 60) {
+  let 直した = 0;
+  for (const c of ls || []) {
+    if (!c || !c.squads || !c.squads.length) continue;
+    const x0 = c.x, y0 = c.y;
+    /* 二度まわす。組を内へ引き戻すと中心が外へ出ることがあり（地物を避けて
+       組が片側へ寄った隊で起きる）、その逆もまた起こるためである。 */
+    for (let n = 0; n < 2; n++) {
+      const nx = clamp(c.x, 端, Math.max(端, FIELD.w - 端));
+      const ny = clamp(c.y, 端, Math.max(端, FIELD.h - 端));
+      if (nx !== c.x || ny !== c.y) { c.x = nx; c.y = ny; c.tx = c.x; c.ty = c.y; placeSquads(c, true); }
+      const xs = c.squads.map((q) => q.x), ys = c.squads.map((q) => q.y);
+      const 左 = Math.min(...xs), 右 = Math.max(...xs);
+      const 上 = Math.min(...ys), 下 = Math.max(...ys);
+      let dx = 0, dy = 0;
+      if (左 < 端) dx = 端 - 左; else if (右 > FIELD.w - 端) dx = (FIELD.w - 端) - 右;
+      if (上 < 端) dy = 端 - 上; else if (下 > FIELD.h - 端) dy = (FIELD.h - 端) - 下;
+      if (!dx && !dy) break;
+      c.x += dx; c.y += dy; c.tx = c.x; c.ty = c.y;
+      placeSquads(c, true);
+    }
+    if (c.x !== x0 || c.y !== y0) 直した++;
+  }
+  return 直した;
+}
+
+/* 城攻めの寄せ手の隊数（GDD 9.3）。
+
+   一隊の兵には上限がある（城の中は狭い）。隊の数を将の数だけに縛ると、
+   九万の軍でも将が四人なら一万二千しか攻め口に立てない。兵の数でも
+   隊を割り、足りない分は将のいない備で埋める。 */
+export const 寄せ手の隊数 = (将数, 総兵, 上限 = 3000, 限り = MAX_CORPS) =>
+  Math.max(1, Math.min(限り, Math.max(将数 | 0, Math.ceil(Math.max(0, 総兵) / 上限))));

@@ -3,7 +3,7 @@ import * as 月送り from "../govern/month.js";
 import * as 合戦裁定 from "../govern/war.js";
 import React, { useState, useRef, useEffect } from "react";
 import { SIEGE_CORPS_CAP, SIEGE_KIT, axisOf, buildCastleMap, fromUV, gateOpenU, layoutCastleField, setBattleMap, 寄せ口 } from "../battle/castleMap.js";
-import { corpsMax, corpsMen, makeCorps, notify, placeSquads } from "../battle/corps.js";
+import { corpsMax, corpsMen, makeCorps, notify, placeSquads, 寄せ手の隊数, 盤に収める } from "../battle/corps.js";
 import { 城方の隊を立てる } from "../battle/defense.js";
 import { drawMon, sideHue } from "../battle/draw.js";
 import { createBattle } from "../battle/engine.js";
@@ -128,6 +128,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [battle, setBattle] = useState(null);
   const [分け目の跡, set分け目の跡] = useState(null);
   const [移封の相手, set移封の相手] = useState(null);   // 外交の帳から開いた相手
+  const [小図, set小図] = useState(true);               // 左下の日本全土図を出すか
   const [sea, setSea] = useState(null);        // 盤の上の海戦
   const [townSel, setTownSel] = useState(null); // 押した特殊勢力
   const [raid, setRaid] = useState(null);        // 合戦前の奇襲の献策
@@ -363,11 +364,15 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     const mv = miniRef.current;
     if (mv) {
+      /* 小図の寸法は札に合わせる（畳んだり、狭い画面で縮んだりする）。
+         決め打ちで百三十にしていたので、縮めた札の中で絵がはみ出していた。 */
+      const 幅 = Math.max(40, Math.round(mv.clientWidth || 112));
+      const 高 = Math.max(40, Math.round(mv.clientHeight || 120));
       const mc = mv.getContext("2d");
-      if (mv.width !== 130) { mv.width = 130; mv.height = 139; }
-      mc.clearRect(0, 0, 130, 139);
-      mc.drawImage(terrain, 0, 0, MAPW, MAPH, 0, 0, 130, 139);
-      const k = 130 / MAPW;
+      if (mv.width !== 幅 || mv.height !== 高) { mv.width = 幅; mv.height = 高; }
+      mc.clearRect(0, 0, 幅, 高);
+      mc.drawImage(terrain, 0, 0, MAPW, MAPH, 0, 0, 幅, 高);
+      const k = 幅 / MAPW;
       mc.strokeStyle = "#fff"; mc.lineWidth = 2;
       mc.strokeRect((vx - W / 2 / s) * k, (vy - H / 2 / s) * k, (W / s) * k, (H / s) * k);
     }
@@ -799,9 +804,26 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     setBattleMap(map);
     const atkGens = army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
     const defGens = g.generals.filter((x) => x.at === castle.id && x.faction === castle.faction);
-    // 一隊の兵に上限を設ける。あふれた分は後詰として戦場の外に控える。
-    const nAtk = Math.max(1, Math.min(atkGens.length, MAX_CORPS));
-    const retSum = atkGens.slice(0, nAtk).reduce((a2, x) => a2 + x.retinue, 0);
+    /* 寄せ手の隊立て（GDD 9.3）。
+
+       一隊の兵には上限がある（城の中は狭い。三千で一隊）。ところが隊の数を
+       将の数だけに縛っていたので、九万の軍でも将が四人なら一万二千しか
+       攻め口に立てず、残りはみな後詰に回っていた――遊ぶ側からは「野戦では
+       九万いたのに城攻めでは一万二千になった」と見える。
+
+       将のいない寄せ手の備（足軽の組）も立てられるようにする。隊の数は
+       「兵÷三千」で決め、三十二隊まで。これで九万の軍なら九万六千まで
+       攻め口に就ける。それでも余る兵は、これまでどおり後詰として控える
+       （城の外で待ち、戦が終われば軍へ戻る）。 */
+    const 総兵 = Math.max(0, army.local) + atkGens.reduce((a2, x) => a2 + (x.retinue || 0), 0);
+    const nAtk = 寄せ手の隊数(atkGens.length, 総兵, SIEGE_CORPS_CAP, MAX_CORPS);
+    /* 将が足りなければ、足軽の備で埋める。 */
+    const 寄せ手ら = atkGens.slice(0, nAtk);
+    for (let i = 寄せ手ら.length; i < nAtk; i++) {
+      寄せ手ら.push({ id: `${army.id}-yose${i}`, name: `寄手${i - atkGens.length + 1}の備`,
+        lead: 54, valor: 54, wit: 48, gov: 44, retinue: 0, retTrain: army.localTrain || 62 });
+    }
+    const retSum = 寄せ手ら.reduce((a2, x) => a2 + (x.retinue || 0), 0);
     const room = Math.max(0, SIEGE_CORPS_CAP * nAtk - retSum);
     const useLocal = Math.min(Math.max(0, army.local), room);
     const reserveMen = Math.max(0, army.local - useLocal);
@@ -833,7 +855,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     };
     /* 寄せ手は野から寄せる。構える所は castleMap の 寄せ口 が決める（GDD 9.3）。 */
     const outer = map.layers[0], og = outer.gates;
-    const atk = mk(atkGens, useLocal, army.localTrain, atkSide, atkColor, (i, n) => {
+    const atk = mk(寄せ手ら, useLocal, army.localTrain, atkSide, atkColor, (i, n) => {
       const gt = og[i % og.length];
       return 寄せ口(map, gt, Math.floor(i / og.length));
     }, commitRost);
@@ -975,8 +997,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const defLocal = foe ? Math.max(0, foe.local)
       : Math.max(0, dest.local - Math.round(minGarrison(dest) * 0.4));
     // 出てくる兵の総数から戦場の広さを決める
-    const aidMen = foe ? 0 : g.armies.filter((a) => a.id !== army.id && a.at === dest.id
-      && (a.aid === army.faction || (camp && camp.arrived.includes(a.id)))).reduce((t, a) => t + a.men, 0);
+    const 援軍ら = foe ? [] : g.armies.filter((a) => a.id !== army.id && a.at === dest.id
+      && (a.aid === army.faction || (camp && camp.arrived.includes(a.id))));
+    const aidMen = 援軍ら.reduce((t, a) => t + a.men, 0);
     /* 野の広さは、兵の数と隊の数で決める。隊が多いほど、翼を伸ばし、伏せ、
        迂回する余地が要る。兵数だけで決めていたころは、五隊も出せば戦場が
        一杯になり、横に並べて前へ出るのが精一杯であった。 */
@@ -986,7 +1009,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const 出る将 = (army.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean)
       .sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0)
         || (b.lead + b.gov + b.wit) - (a.lead + a.gov + a.wit));
-    const 隊数 = Math.max(2, 出る将.length + Math.max(1, defGens.length));
+    /* 野の広さは、盤に立つ隊の数で決める。援軍の将を数え落としていたので、
+       加勢が多い戦ほど野が狭く組まれ、隊が端へ押しつけられていた。 */
+    const 援将数 = 援軍ら.reduce((t, a) => t + ((a.gens || []).length), 0)
+      + (sally ? (sally.gens || []).length : 0);
+    const 隊数 = Math.max(2, 出る将.length + 援将数 + Math.max(1, defGens.length));
     layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0), 隊数);
     // 攻め口の方角に応じ、盤の四辺のどこから寄せるかを決める（GDD 8.1）
     const face = attackFace(army.from, dest.id);
@@ -1073,12 +1100,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       && ((dest.intrigueOwner || (army.faction === g.player ? g.player : null)) != null);
     // 同着した他家の援軍と、戦役に加わった寄騎は、自前の旗色のまま同じ側に立つ（GDD 7.4）
     // 街道での行き合いは、居合わせた者だけの戦である。寄騎は間に合わぬ。
-    const allies = [
-      ...(foe ? [] : g.armies.filter((a) => a.id !== army.id && a.at === dest.id
-        && (a.aid === army.faction || (camp && camp.arrived.includes(a.id))))),
-      // 城方が討って出るなら、寄せ手の背を衝く形で同じ側に立つ（GDD 9.2）
-      ...(sally ? [sally] : []),
-    ];
+    // 城方が討って出るなら、寄せ手の背を衝く形で同じ側に立つ（GDD 9.2）
+    const allies = [...援軍ら, ...(sally ? [sally] : [])];
     const atkSide = playerIsAtk ? "P" : "E";
     const atkCorpsList = build(atkGens, army.local, army.localTrain, atkSide, playerIsAtk ? FIELD.h * 0.875 : FIELD.h * 0.14,
       playerIsAtk ? -Math.PI / 2 : Math.PI / 2, atkColor, army.rost, true);
@@ -1109,7 +1132,16 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         playerIsAtk ? -Math.PI / 2 : Math.PI / 2, col, null, true);
       slots -= list.length;
       list.forEach((c, i) => {
-        c.x = FIELD.w / 2 + (off + i) * Math.round(175 * (FIELD.w / BASE.w)) * (off % 2 ? 1 : -1);
+        /* 援軍も本隊と同じ陣立てに連ねる（GDD 8.1）。
+
+           もとは「盤の真ん中から左右へ、隊の幅ずつずらす」だけで、盤の縁を
+           まるで見ていなかった。援軍が増えるほど端からはみ出し、野の外に隊が
+           立っていた（遊ぶ側の申し出はこれである）。本隊の並びの続きとして
+           席を採り、盤の内に収める。 */
+        const 席 = atkCorpsList.length + i;
+        const p2 = lineup(true, 席 + 1, 席 + 2);      // 総大将の席（0）は本隊が使う
+        c.x = p2.x; c.y = p2.y; c.facing = p2.f; c.陣向き = p2.f;
+        c.tx = c.x; c.ty = c.y;
         c.ally = kind; c.allyFaction = a.faction; c.armyId = a.id;
         placeSquads(c, true);
       });
@@ -1118,6 +1150,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     const defList = build(defGens, defLocal, dest.localTrain, playerIsAtk ? "E" : "P",
       playerIsAtk ? FIELD.h * 0.14 : FIELD.h * 0.875, playerIsAtk ? Math.PI / 2 : -Math.PI / 2, defColor, dest.rost, false);
+    /* 念のための留め（GDD 8.1）。
+
+       布陣の席は盤の内に取ってあるが、隊には広がりがある――中心が縁の内でも、
+       組は外へこぼれる。どの隊も、組ごと盤の内に収まるまで引き戻す。
+       援軍や寄騎で隊が増えたときの取りこぼしを、ここで一括して塞ぐ。 */
+    盤に収める(atkCorpsList); 盤に収める(defList);
     const P = playerIsAtk ? atkCorpsList : defList;
     const E = playerIsAtk ? defList : atkCorpsList;
     const bb = createBattle(P, E, playerIsAtk ? "P" : "E");
@@ -2236,6 +2274,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     <div className="sp" style={{ height: "100dvh" }}>
       {!wide && (
       <div className="bar">
+        <div className="barin">
         <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <span className="dot" style={{ background: pf.color }} />
           <b className="mn" style={{ fontSize: 16 }}>{pf.name}</b>
@@ -2310,7 +2349,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           記録{savedMsg ? `：${savedMsg}` : ""}
         </button>
         <button className="btn sm" onClick={onTitle}>タイトル</button>
-        <button className="btn dark sm" disabled={!!battle || !!openSiege} onClick={nextMonth}>次月へ</button>
+        </div>
+        <button className="btn dark sm tsugi" disabled={!!battle || !!openSiege} onClick={nextMonth}>次月へ</button>
       </div>
       )}
 
@@ -2382,7 +2422,18 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("chronicle")}><b>▤</b>履歴</div>
           </div>
         )}
-        {!wide && <canvas className="mini" ref={miniRef} onClick={whole} />}
+        {/* 日本全土の小図（GDD 15.1）。畳めば地図がそのぶん広く見える。 */}
+        {!wide && 小図 && (
+          <>
+            <div className="minifold" onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); set小図(false); }}>全土図を畳む ▾</div>
+            <canvas className="mini" ref={miniRef} onClick={whole} />
+          </>
+        )}
+        {!wide && !小図 && (
+          <div className="minitab" onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); set小図(true); }}>▴ 全土図</div>
+        )}
         {wide && (
           <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 6, display: "flex", gap: 8, alignItems: "center",
             background: "rgba(255,255,255,.94)", border: `1px solid ${U.line}`, borderRadius: 20, padding: "6px 12px", fontSize: 12 }}>

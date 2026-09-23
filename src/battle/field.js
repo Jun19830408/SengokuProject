@@ -410,9 +410,15 @@ export function layoutField(totalMen, 隊数) {
      三千人・二隊を標準とし、
        兵数の平方根に比例して広げ（大軍ほど広い野が要る）、
        隊数の平方根にも比例して広げる（五隊なら一.六倍、八隊なら二倍）。 */
-  const 隊 = clamp(隊数 || 2, 2, 24);
+  /* 大軍の野は、もっと広く要る（GDD 8.1）。
+
+     隊の数を二十四で頭打ちにし、幅も七千二百歩で止めていた。号令や援軍で
+     三十隊を超える戦になると、盤が足りずに隊が端へ押しつけられ、はみ出して
+     見えた。頭打ちを三十二隊・八千六百歩まで伸ばす（関ヶ原の八千百五十六歩と
+     同じ桁である）。 */
+  const 隊 = clamp(隊数 || 2, 2, 32);
   const 隊広 = Math.sqrt(隊 / 2);
-  const w = clamp(Math.round(1180 * Math.sqrt(Math.max(600, totalMen) / 3000) * 隊広), 1100, 7200);
+  const w = clamp(Math.round(1180 * Math.sqrt(Math.max(600, totalMen) / 3000) * 隊広), 1100, 8600);
   const h = Math.round(w * 0.667);
   FIELD.w = w; FIELD.h = h;
   genTerrain(FIELD_SEED);

@@ -59,7 +59,7 @@ export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 隊がどの門を受け持ち、何の下知を受けているかは、ここから直に見るほかない。
 export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, gatePos, inLayer, 城の構え } from "../src/battle/castleMap.js";
 export { layoutField, setFieldSeed, setFieldKind, FIELD, terrainAt, TERRAIN, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVER, ROAD, ROADS as 野の道, RIVERS, 筋書きの野を組む, 筋書きを解く, hasRiver, hasMountain, 山が遮るか, 踏み込んだ地, genTerrain } from "../src/battle/field.js";
-export { makeCorps, corpsMen, placeSquads, issueOrder, 転回させる, 退かせる, 退き先 } from "../src/battle/corps.js";
+export { makeCorps, corpsMen, placeSquads, issueOrder, 転回させる, 退かせる, 退き先, 盤に収める, 寄せ手の隊数 } from "../src/battle/corps.js";
 export { createBattle, stepBattle } from "../src/battle/engine.js";
 export { 合戦一覧, 合戦を探す, 合戦を仕立てる, 合戦を畳む, 合戦の問いに答える, 指図の縛り, 筋書きの覚え, 合戦を控える, 合戦を戻す, 控えの鍵 } from "../src/battle/kassen.js";
 export { 筋書き as 関ヶ原 } from "../src/data/sekigahara.js";
