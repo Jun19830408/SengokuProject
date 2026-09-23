@@ -428,9 +428,22 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const f = toField(p.clientX, p.clientY);
     if (g.mode === "unit" && g.moved > 8) { orderTo(g.corps, f, null); return; }   // 部隊ドラッグ＝移動／布陣
     if (g.moved > 8) return;                                                       // カメラ移動だった
-    const own = hitCorps(f, true);
+    /* 狙い札を先に見る（GDD 8.2）。
+
+       敵をタップして差し向ける仕掛けは、隊が重なると押せなかった。槍を合わせて
+       いる敵はなおさらで、味方の駒と重なって指が届かない。味方の隊を選んでいる
+       あいだ、敵の名札を「狙い札」として押せるようにしてある（draw.js）。
+       札は重ならぬよう逃がして並べてあるので、団子になっていても押し分けられる。 */
+    const 札 = (() => {
+      const wrap = wrapRef.current; if (!wrap || !b.狙い札) return null;
+      const r = wrap.getBoundingClientRect();
+      const px = p.clientX - r.left, py = p.clientY - r.top;
+      const hit = b.狙い札.find((t) => px >= t.x && px <= t.x + t.w && py >= t.y && py <= t.y + t.h);
+      return hit ? b.corps.find((c) => c.id === hit.id) : null;
+    })();
+    const own = 札 ? null : hitCorps(f, true);
     if (own && !allRef.current) { pickCorps(sel === own.id ? null : own.id); setFoeSel(null); return; }  // 再タップで解除
-    const foe = b.corps.find((c) => !c.dead && !c.destroyed && c.side === "E" && c.seen
+    const foe = 札 || b.corps.find((c) => !c.dead && !c.destroyed && c.side === "E" && c.seen
       && Math.hypot(c.x - f.x, c.y - f.y) < 42 / Math.max(0.4, camRef.current.s));
     /* 敵の隊を押したら、その隊の帳面を開く（GDD 8.2）。
        これまでは、自隊を選んでいるときだけ「そこへ攻めかかれ」の意味しか持たず、
@@ -443,11 +456,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
       const live = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed && !c.routed);
       const cx = live.reduce((a, c) => a + c.x, 0) / Math.max(1, live.length);
       const cy = live.reduce((a, c) => a + c.y, 0) / Math.max(1, live.length);
-      for (const c of live) orderTo(c, { x: f.x + (c.x - cx), y: f.y + (c.y - cy) }, foe);
+      const 的 = 札 ? { x: 札.x, y: 札.y } : f;
+      for (const c of live) orderTo(c, { x: 的.x + (c.x - cx), y: 的.y + (c.y - cy) }, foe);
       return;
     }
     if (!selC) return;
-    orderTo(selC, f, foe);
+    orderTo(selC, 札 ? { x: 札.x, y: 札.y } : f, foe);
   };
 
   const allOrder = (o) => {

@@ -24362,6 +24362,37 @@ function \u76E4\u306B\u53CE\u3081\u308B(ls, \u7AEF = 60) {
   return \u76F4\u3057\u305F;
 }
 var \u5BC4\u305B\u624B\u306E\u968A\u6570 = (\u5C06\u6570, \u7DCF\u5175, \u4E0A\u9650 = 3e3, \u9650\u308A = MAX_CORPS) => Math.max(1, Math.min(\u9650\u308A, Math.max(\u5C06\u6570 | 0, Math.ceil(Math.max(0, \u7DCF\u5175) / \u4E0A\u9650))));
+function \u524D\u5217\u3092\u5165\u308C\u66FF\u3048\u308B(c) {
+  if (!c || !c.squads || c.squads.length < 4) return 0;
+  const \u751F = c.squads.filter((q) => q.men > 0 && q.\u5EA7\u5E2D);
+  if (\u751F.length < 4) return 0;
+  const \u524D\u5F8C = \u751F.map((q) => q.\u5EA7\u5E2D.y);
+  const \u6700\u524D = Math.min(...\u524D\u5F8C);
+  const \u524D\u5217 = \u751F.filter((q) => q.\u5EA7\u5E2D.y <= \u6700\u524D + ROW * 1.2 && ARM_STATS[q.type].range === 0);
+  const \u5F8C\u5217 = \u751F.filter((q) => q.\u5EA7\u5E2D.y > \u6700\u524D + ROW * 1.2 && q.\u5EA7\u5E2D.y <= \u6700\u524D + ROW * 3.2 && ARM_STATS[q.type].range === 0);
+  if (!\u524D\u5217.length || !\u5F8C\u5217.length) return 0;
+  let \u66FF\u3048\u305F = 0;
+  for (const \u75B2 of \u524D\u5217) {
+    const \u5F31 = \u75B2.men < \u75B2.max * 0.5 || \u75B2.cohesion < 34;
+    if (!\u5F31) continue;
+    const \u5019\u88DC = \u5F8C\u5217.filter((q) => q.men > q.max * 0.72 && q.cohesion > 58 && !q.\u5165\u66FF);
+    if (!\u5019\u88DC.length) break;
+    \u5019\u88DC.sort((a, b2) => Math.abs(a.\u5EA7\u5E2D.x - \u75B2.\u5EA7\u5E2D.x) - Math.abs(b2.\u5EA7\u5E2D.x - \u75B2.\u5EA7\u5E2D.x));
+    const \u65B0 = \u5019\u88DC[0];
+    const t = \u75B2.\u5EA7\u5E2D;
+    \u75B2.\u5EA7\u5E2D = \u65B0.\u5EA7\u5E2D;
+    \u65B0.\u5EA7\u5E2D = t;
+    \u75B2.\u5165\u66FF = true;
+    \u65B0.\u5165\u66FF = true;
+    \u66FF\u3048\u305F++;
+    break;
+  }
+  if (\u66FF\u3048\u305F) {
+    for (const q of c.squads) q.\u5165\u66FF = false;
+    \u5EA7\u5E2D\u3092\u5411\u3051\u308B(c, false);
+  }
+  return \u66FF\u3048\u305F;
+}
 
 // src/battle/castleMap.js
 var MAP = null;
@@ -26819,6 +26850,7 @@ function \u7A7A\u6A21\u69D8\u3092\u88AB\u305B\u308B(ctx, b, W2, H2) {
 function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1Canvas) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W2, H2);
+  b.\u72D9\u3044\u672D = [];
   const S = (wx, wy) => [(wx - cam.x) * cam.s + W2 / 2, (wy - cam.y) * cam.s + H2 / 2];
   ctx.save();
   ctx.translate(W2 / 2 - cam.x * cam.s, H2 / 2 - cam.y * cam.s);
@@ -27246,13 +27278,30 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+    const \u72D9\u3048\u308B = (sel || selAll) && !isP && !c.\u65E5\u548C\u898B && !c.detach && b.phase === "fight";
     const label = c.detach ? `${c.task}${c.autonomous ? "\u30FB\u81EA\u5F8B" : ""}` : c.ally ? `${c.name}\uFF08${c.ally}\uFF09` : c.name;
     ctx.font = c.detach ? "11px 'Hiragino Sans',sans-serif" : "600 13px 'Hiragino Sans',sans-serif";
-    const w = ctx.measureText(label).width;
+    const w = ctx.measureText(label).width + (\u72D9\u3048\u308B ? 15 : 0);
     const ly0 = (c.gen.lord && !c.detach ? 34 : 26) + 14;
     const ly = y - \u672D\u306E\u5834(x, y - ly0, w, 16);
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillStyle = \u72D9\u3048\u308B ? "rgba(255,246,240,0.96)" : "rgba(255,255,255,0.85)";
     ctx.fillRect(x - w / 2 - 4, y - ly, w + 8, 16);
+    if (\u72D9\u3048\u308B) {
+      b.\u72D9\u3044\u672D.push({ id: c.id, x: x - w / 2 - 8, y: y - ly - 4, w: w + 16, h: 24 });
+      ctx.strokeStyle = side;
+      ctx.lineWidth = 1.4;
+      ctx.strokeRect(x - w / 2 - 4, y - ly, w + 8, 16);
+      const tx2 = x - w / 2 + 3, ty2 = y - ly + 8;
+      ctx.strokeStyle = side;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(tx2, ty2, 4.6, 0, 7);
+      ctx.stroke();
+      ctx.fillStyle = side;
+      ctx.beginPath();
+      ctx.arc(tx2, ty2, 1.7, 0, 7);
+      ctx.fill();
+    }
     if (Math.abs(ly - ly0) > 4) {
       ctx.strokeStyle = "rgba(60,58,50,0.45)";
       ctx.lineWidth = 1;
@@ -27262,7 +27311,7 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
       ctx.stroke();
     }
     ctx.fillStyle = c.detach ? "#5B5850" : "#33332F";
-    ctx.fillText(label, x - w / 2, y - ly + 12);
+    ctx.fillText(label, x - w / 2 + (\u72D9\u3048\u308B ? 15 : 0), y - ly + 12);
     const coh = c.squads.length ? c.squads.reduce((a, q) => a + q.cohesion, 0) / c.squads.length : 0;
     ctx.fillStyle = "rgba(255,255,255,0.8)";
     ctx.fillRect(x - 22, y + 12, 44, 8);
@@ -28265,6 +28314,20 @@ function \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, x, y, \u8DB3\u5143) {
   if (\u8DB3\u5143 === "deep") return true;
   return false;
 }
+function \u524D\u9762\u307E\u3067(c, ux, uy) {
+  const fx = Math.cos(c.facing), fy = Math.sin(c.facing);
+  const \u524D\u5F8C = ux * fx + uy * fy;
+  const \u5DE6\u53F3 = -ux * fy + uy * fx;
+  return Math.max(0, \u524D\u5F8C) * (c.\u5F35\u308A\u524D || 0) + Math.max(0, -\u524D\u5F8C) * (c.\u5F35\u308A\u5F8C || 0) + Math.max(0, \u5DE6\u53F3) * (c.\u5F35\u308A\u53F3 || 0) + Math.max(0, -\u5DE6\u53F3) * (c.\u5F35\u308A\u5DE6 || 0);
+}
+var \u89E6\u308C\u9699 = 10;
+var \u89E6\u308C\u4E0A\u9650 = 34;
+var \u89E6\u308C\u308B\u9694\u305F\u308A = (c, o, ux, uy) => Math.min(
+  \u89E6\u308C\u4E0A\u9650,
+  \u524D\u9762\u307E\u3067(c, ux, uy) + \u524D\u9762\u307E\u3067(o, -ux, -uy) + \u89E6\u308C\u9699
+);
+var \u62BC\u3057\u529B = (c) => Math.max(1, corpsMen(c)) * (0.5 + c.morale / 200) * (c.chargeT > 0 ? 1.25 : 1) * (c.order === "\u5B88\u5099" ? 1.12 : 1) * (1 - c.fatigue / 300);
+var \u584A\u3068\u3057\u3066\u7ACB\u3064 = (c) => !c.routed && !c.withdraw && !c.detach && !c.destroyed && !(c.ambush && !c.revealed) && c.squads.some((q) => q.men > 0);
 function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt;
@@ -28291,6 +28354,36 @@ function stepBattle(b, dt) {
     for (const q of c.squads) q.\u5730 = \u8E0F\u307F\u8FBC\u3093\u3060\u5730(q.x, q.y);
     c.\u5730\u82AF = \u8E0F\u307F\u8FBC\u3093\u3060\u5730(c.x, c.y);
     c.\u5730 = \u968A\u306E\u5730(c);
+  }
+  for (const c of alive) {
+    let \u524D = 0, \u5F8C = 0, \u53F3 = 0, \u5DE6 = 0;
+    const fx = Math.cos(c.facing), fy = Math.sin(c.facing);
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const rx = q.slotX || 0, ry = q.slotY || 0;
+      const a2 = rx * fx + ry * fy, b2 = -rx * fy + ry * fx;
+      if (a2 > \u524D) \u524D = a2;
+      if (-a2 > \u5F8C) \u5F8C = -a2;
+      if (b2 > \u53F3) \u53F3 = b2;
+      if (-b2 > \u5DE6) \u5DE6 = -b2;
+    }
+    c.\u5F35\u308A\u524D = \u524D;
+    c.\u5F35\u308A\u5F8C = \u5F8C;
+    c.\u5F35\u308A\u53F3 = \u53F3;
+    c.\u5F35\u308A\u5DE6 = \u5DE6;
+  }
+  for (const c of alive) {
+    c.\u63A5\u6575 = null;
+    if (MAP || !\u584A\u3068\u3057\u3066\u7ACB\u3064(c)) continue;
+    let \u8FD1 = 1e9;
+    for (const o of alive) {
+      if (o.side === c.side || !\u584A\u3068\u3057\u3066\u7ACB\u3064(o)) continue;
+      const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
+      if (ed < 0.5 || ed > 460 || ed >= \u8FD1) continue;
+      if (ed > \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, ex / ed, ey / ed) + 6) continue;
+      \u8FD1 = ed;
+      c.\u63A5\u6575 = o;
+    }
   }
   for (const c of alive) {
     const foes = alive.filter((o) => o.side !== c.side);
@@ -28431,6 +28524,40 @@ function stepBattle(b, dt) {
       c.y = clamp(c.y, 30, FIELD.h - 30);
     }
   }
+  if (!MAP) {
+    const \u5BC4\u305B\u623B\u3057 = 0.6;
+    for (let i = 0; i < alive.length; i++) {
+      const c = alive[i];
+      if (!\u584A\u3068\u3057\u3066\u7ACB\u3064(c)) continue;
+      for (let j = i + 1; j < alive.length; j++) {
+        const o = alive[j];
+        if (o.side === c.side || !\u584A\u3068\u3057\u3066\u7ACB\u3064(o)) continue;
+        const dx = o.x - c.x, dy = o.y - c.y, d = Math.hypot(dx, dy);
+        if (d < 0.5 || d > 460) continue;
+        const ux = dx / d, uy = dy / d;
+        const \u91CD = \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, ux, uy) - d;
+        if (\u91CD <= 0) continue;
+        const wc = \u62BC\u3057\u529B(c), wo = \u62BC\u3057\u529B(o);
+        const kc = wo / (wc + wo), ko = wc / (wc + wo);
+        const \u62BC = \u91CD * \u5BC4\u305B\u623B\u3057;
+        const \u52D5\u304B\u3059 = (x, k, sx, sy) => {
+          const nx = x.x + sx * k, ny = x.y + sy * k;
+          if (passable(nx, ny)) {
+            x.x = nx;
+            x.y = ny;
+          } else if (passable(nx, x.y)) x.x = nx;
+          else if (passable(x.x, ny)) x.y = ny;
+        };
+        \u52D5\u304B\u3059(c, kc, -ux * \u62BC, -uy * \u62BC);
+        \u52D5\u304B\u3059(o, ko, ux * \u62BC, uy * \u62BC);
+      }
+    }
+    for (const c of alive) {
+      if (c.routed || c.withdraw) continue;
+      c.x = clamp(c.x, 30, FIELD.w - 30);
+      c.y = clamp(c.y, 30, FIELD.h - 30);
+    }
+  }
   for (const c of alive) {
     c.trailT = (c.trailT || 0) - dt;
     if (c.trailT <= 0) {
@@ -28527,7 +28654,26 @@ function stepBattle(b, dt) {
         if (\u5916) \u5BC4\u305B\u9053 = 0.6;
       }
       const v = \u968A\u306E\u8DB3 * fieldScale() * (b.\u8DB3\u306E\u624B\u52A0\u6E1B || 1) * \u6C34\u99B4\u308C\u306E\u8DB3(c, c.\u5730, terr.speed) * W2.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * \u5BC4\u305B\u9053 * \u6DF7\u307F;
-      const \u671Bx = dx / dist * v, \u671By = dy / dist * v;
+      let \u671Bx = dx / dist * v, \u671By = dy / dist * v;
+      const \u89E6\u308C\u305F\u6575 = c.\u63A5\u6575;
+      if (!MAP && \u89E6\u308C\u305F\u6575) {
+        for (const o of alive) {
+          if (o.side === c.side || !\u584A\u3068\u3057\u3066\u7ACB\u3064(o)) continue;
+          const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
+          if (ed < 0.5 || ed > 460) continue;
+          const ux = ex / ed, uy = ey / ed;
+          if (ed > \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, ux, uy) + 6) continue;
+          const \u6CBF = \u671Bx * ux + \u671By * uy;
+          if (\u6CBF > 0) {
+            \u671Bx -= \u6CBF * ux;
+            \u671By -= \u6CBF * uy;
+          }
+        }
+        if (\u89E6\u308C\u305F\u6575 && Math.hypot(\u671Bx, \u671By) < v * 0.34) {
+          \u671Bx = 0;
+          \u671By = 0;
+        }
+      }
       const \u901F = c.\u901F || { x: \u671Bx, y: \u671By };
       const \u5BC4\u305B = Math.min(1, dt / 0.9);
       \u901F.x += (\u671Bx - \u901F.x) * \u5BC4\u305B;
@@ -28614,7 +28760,17 @@ function stepBattle(b, dt) {
     for (const q of c.squads) {
       let targetX = c.x + q.slotX, targetY = c.y + q.slotY;
       const st0 = ARM_STATS[q.type];
-      if (aggressive && !c.routed && q.foe && !q.reserve) {
+      const \u524D\u5217\u304B = c.\u63A5\u6575 && !q.reserve && st0.range === 0 && (q.\u5EA7\u5E2D ? -(q.\u5EA7\u5E2D.y || 0) >= -(ROW * 1.2) : false);
+      if (c.\u63A5\u6575 && \u524D\u5217\u304B) {
+        const o = c.\u63A5\u6575;
+        const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey) || 1;
+        const ux = ex / ed, uy = ey / ed;
+        const vx = -uy, vy = ux;
+        const \u6A2A = (q.slotX || 0) * vx + (q.slotY || 0) * vy;
+        const \u524D\u3078 = Math.max(0, ed / 2 - 9);
+        targetX = c.x + ux * \u524D\u3078 + vx * \u6A2A;
+        targetY = c.y + uy * \u524D\u3078 + vy * \u6A2A;
+      } else if (aggressive && !c.routed && q.foe && !q.reserve) {
         const want = st0.range > 0 ? st0.range * 0.75 : 15;
         if (c.order === "\u5C04\u6483" && st0.range === 0) {
         } else if (q.foe.d > want) {
@@ -29138,11 +29294,12 @@ function stepBattle(b, dt) {
         const charge = q.type === "kiba" && terr.charge ? 1 + c.gen.valor / 260 : 1;
         const push = c.chargeT > 0 && terr.charge ? 1.3 : 1;
         const guard = melee.f.order === "\u5B88\u5099" ? 0.85 : 1;
+        const \u652F\u3048 = 1 + clamp(((c.\u7ACB\u3064\u7D44\u6570 || 1) / Math.max(1, c.\u565B\u307F\u7D44\u6570 || 1) - 1) * 0.05, 0, 0.35);
         applyDamage(
           b,
           melee.f,
           melee.e,
-          st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * (1 - c.fatigue / 260) * dt,
+          st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * \u652F\u3048 * (1 - c.fatigue / 260) * dt,
           flank,
           c.gen.valor * (c.chargeT > 0 ? 1.2 : 1),
           c,
@@ -29197,6 +29354,16 @@ function stepBattle(b, dt) {
       if (near2 || fighting) c.frontTime = (c.frontTime || 0) + dt;
     }
     c.\u565B\u307F\u523B = fighting ? (c.\u565B\u307F\u523B || 0) + dt : 0;
+    if (fighting && !MAP) {
+      c.\u5165\u66FF\u523B = (c.\u5165\u66FF\u523B || 0) - dt;
+      if (c.\u5165\u66FF\u523B <= 0) {
+        c.\u5165\u66FF\u523B = 10;
+        const n = \u524D\u5217\u3092\u5165\u308C\u66FF\u3048\u308B(c);
+        if (n && c.side === "P") b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C\u524D\u5217\u3092\u5165\u308C\u66FF\u3048\u305F\u3002` });
+      }
+    }
+    c.\u565B\u307F\u7D44\u6570 = c.squads.filter((q) => q.men > 0 && q.engaged).length;
+    c.\u7ACB\u3064\u7D44\u6570 = c.squads.filter((q) => q.men > 0).length;
     c.fatigue = clamp(c.fatigue + (fighting ? 1.1 : c.order === "\u5F85\u6A5F" ? -1.4 : 0) * dt, 0, 100);
     if (c.pinch >= 2) c.morale -= (c.pinch - 1) * 0.22 * dt;
     const \u892A = Math.pow(0.905, dt);
@@ -32318,13 +32485,21 @@ function BattleScreen({ ctx, land, onEnd }) {
       return;
     }
     if (g.moved > 8) return;
-    const own = hitCorps(f, true);
+    const \u672D = (() => {
+      const wrap = wrapRef.current;
+      if (!wrap || !b.\u72D9\u3044\u672D) return null;
+      const r = wrap.getBoundingClientRect();
+      const px2 = p.clientX - r.left, py2 = p.clientY - r.top;
+      const hit = b.\u72D9\u3044\u672D.find((t) => px2 >= t.x && px2 <= t.x + t.w && py2 >= t.y && py2 <= t.y + t.h);
+      return hit ? b.corps.find((c) => c.id === hit.id) : null;
+    })();
+    const own = \u672D ? null : hitCorps(f, true);
     if (own && !allRef.current) {
       pickCorps(sel === own.id ? null : own.id);
       setFoeSel(null);
       return;
     }
-    const foe = b.corps.find((c) => !c.dead && !c.destroyed && c.side === "E" && c.seen && Math.hypot(c.x - f.x, c.y - f.y) < 42 / Math.max(0.4, camRef.current.s));
+    const foe = \u672D || b.corps.find((c) => !c.dead && !c.destroyed && c.side === "E" && c.seen && Math.hypot(c.x - f.x, c.y - f.y) < 42 / Math.max(0.4, camRef.current.s));
     if (foe) setFoeSel(foe.id);
     else setFoeSel(null);
     if (foe && !selC && !allRef.current) return;
@@ -32332,11 +32507,12 @@ function BattleScreen({ ctx, land, onEnd }) {
       const live = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed && !c.routed);
       const cx = live.reduce((a, c) => a + c.x, 0) / Math.max(1, live.length);
       const cy = live.reduce((a, c) => a + c.y, 0) / Math.max(1, live.length);
-      for (const c of live) orderTo(c, { x: f.x + (c.x - cx), y: f.y + (c.y - cy) }, foe);
+      const \u7684 = \u672D ? { x: \u672D.x, y: \u672D.y } : f;
+      for (const c of live) orderTo(c, { x: \u7684.x + (c.x - cx), y: \u7684.y + (c.y - cy) }, foe);
       return;
     }
     if (!selC) return;
-    orderTo(selC, f, foe);
+    orderTo(selC, \u672D ? { x: \u672D.x, y: \u672D.y } : f, foe);
   };
   const allOrder = (o) => {
     for (const c of b.corps) {

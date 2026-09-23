@@ -1,6 +1,6 @@
 import { battleAI } from "./ai.js";
 import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, nearestOpenGate, routeToCastleGate, 門の控え口 } from "./castleMap.js";
-import { ROW, SP, corpsMax, corpsMen, notify, placeSquads } from "./corps.js";
+import { ROW, SP, corpsMax, corpsMen, notify, placeSquads, 前列を入れ替える } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地 } from "./field.js";
 import { clamp } from "../core/util.js";
@@ -138,6 +138,48 @@ function 淵を踏めるか(c, b, x, y, 足元) {
   return false;
 }
 
+/* 隊の前面までの隔たり（GDD 8.3）。
+
+   軍勢は点ではなく、幅と丈を持つ人の塊である。向き u の先に、その塊の縁が
+   どれだけ張り出しているかを返す。
+
+   初めは「向きに沿った半丈」と「横の半幅」の二つで菱形に見積もったが、陣形は
+   前後で対称ではない。横陣なら前へ四十歩、後ろへ七十六歩。前後の大きいほうで
+   測ると、正面から当たっても前列どうしが四十四歩離れたところで止まり、
+   槍がまるで合わなかった（噛み合う組が一つも立たない）。
+
+   そこで前・後・右・左の四方それぞれの張り出しを持ち、向き u に応じて足す。
+   組を一つ一つ当たれば厳密だが、隊の数だけ掛け算が増える。これで桁は合う。 */
+export function 前面まで(c, ux, uy) {
+  const fx = Math.cos(c.facing), fy = Math.sin(c.facing);
+  const 前後 = ux * fx + uy * fy;                 // ＋なら相手は前方
+  const 左右 = -ux * fy + uy * fx;
+  return Math.max(0, 前後) * (c.張り前 || 0) + Math.max(0, -前後) * (c.張り後 || 0)
+    + Math.max(0, 左右) * (c.張り右 || 0) + Math.max(0, -左右) * (c.張り左 || 0);
+}
+
+/* 触れ合う隔たり（GDD 8.3）。
+
+   隊の代表点は陣の前列にある（横陣なら前へ〇歩・後ろへ七十七歩）。だから
+   正面から当たれば、二つの代表点のあいだに残るのは前列と前列の隙だけである。
+   隙は十八歩――槍の間合い（二十二歩で槍を合わせる）よりわずかに狭く取る。
+   これより広いと槍が届かず、狭いと前列が重なって兵が混じる。 */
+export const 触れ隙 = 10;
+/* 触れ合う隔たりには上限を置く。塊は前が狭く後ろが深いので、斜に向き合うと
+   後ろの厚みと横幅が效いて、触れる隔たりばかりが大きくなる。それでは前列が
+   槍の間合いに入れない。塊が触れるのは縁と縁であって、腹ではない。 */
+export const 触れ上限 = 34;
+export const 触れる隔たり = (c, o, ux, uy) => Math.min(触れ上限,
+  前面まで(c, ux, uy) + 前面まで(o, -ux, -uy) + 触れ隙);
+
+// 押し合う力。兵の数が第一、士気と勢いがそれに乗る。
+export const 押し力 = (c) => Math.max(1, corpsMen(c)) * (0.5 + c.morale / 200)
+  * (c.chargeT > 0 ? 1.25 : 1) * (c.order === "守備" ? 1.12 : 1) * (1 - c.fatigue / 300);
+
+// 塊として押し合う相手か（崩れた隊・退く隊・伏兵は数に入れない）
+export const 塊として立つ = (c) => !c.routed && !c.withdraw && !c.detach && !c.destroyed
+  && !(c.ambush && !c.revealed) && c.squads.some((q) => q.men > 0);
+
 export function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt; b.aiClock -= dt;
@@ -170,6 +212,46 @@ export function stepBattle(b, dt) {
     for (const q of c.squads) q.地 = 踏み込んだ地(q.x, q.y);
     c.地芯 = 踏み込んだ地(c.x, c.y);
     c.地 = 隊の地(c);
+  }
+
+  /* 隊の張り出しを前・後・右・左の四方で測る（前面までの隔たりに使う）。
+
+     測るのは、いま組が立っている所ではなく、陣形の席（持ち場）である。
+     組の居場所で測ると、槍を合わせに前へ出た組がそのまま塊を膨らませ、
+     膨らんだぶん押し合いが強まって互いを弾き、弾かれた組がまた追う――
+     塊が自分で自分を押し広げる。実測では、ぶつかった直後に隊が九十一歩から
+     二百四十八歩まで離れ、以後は槍を合わせぬまま撃ち合うだけになった。
+
+     席は陣形と隊の数で決まり、戦いのあいだも揺れない。塊の大きさとしては
+     こちらが正しい。 */
+  for (const c of alive) {
+    let 前 = 0, 後 = 0, 右 = 0, 左 = 0;
+    const fx = Math.cos(c.facing), fy = Math.sin(c.facing);
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const rx = q.slotX || 0, ry = q.slotY || 0;       // 席は盤の軸で持っている
+      const a2 = rx * fx + ry * fy, b2 = -rx * fy + ry * fx;
+      if (a2 > 前) 前 = a2; if (-a2 > 後) 後 = -a2;
+      if (b2 > 右) 右 = b2; if (-b2 > 左) 左 = -b2;
+    }
+    c.張り前 = 前; c.張り後 = 後; c.張り右 = 右; c.張り左 = 左;
+  }
+
+  /* いま塊として触れ合っている敵を控える（GDD 8.3）。
+
+     足を止めた隊でも「触れているかどうか」は要る。組の配り（前列が戦の線を
+     作る）も、足の止め方も、ここを見て決まる。 */
+  for (const c of alive) {
+    c.接敵 = null;
+    if (MAP || !塊として立つ(c)) continue;
+    let 近 = 1e9;
+    for (const o of alive) {
+      if (o.side === c.side || !塊として立つ(o)) continue;
+      const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
+      if (ed < 0.5 || ed > 460 || ed >= 近) continue;
+      if (ed > 触れる隔たり(c, o, ex / ed, ey / ed) + 6) continue;
+      近 = ed; c.接敵 = o;
+    }
   }
 
   for (const c of alive) {
@@ -374,6 +456,53 @@ export function stepBattle(b, dt) {
     }
   }
 
+  /* 敵の隊とはすれ違わない（GDD 8.3）。
+
+     味方どうしの押し合いは入れてあったが、敵味方には何も無かった。だから
+     正面から当たらせると、二つの隊は互いをすり抜け、代表点が入れ替わる。
+     測ると、千六百刻のうち千百十二刻――七割の刻で、味方の隊は敵の後ろへ
+     抜けていた。持ち場（陣形の席）は代表点から測るので、席は敵を越えて
+     向こう側へ行く。斬り結んでいる組はそこへ引き戻され、敵に背を向けて歩く。
+     間近の敵から遠ざかる組の動きの八割が、この「席へ戻る」であった。
+     遊ぶ側の目には「ぶつかる前に弾き合っている」と映る。
+
+     軍勢は人の塊である。塊と塊は重ならない。前面が触れたらそこで止まり、
+     あとは押し合いになる――押し勝つ側がじりじりと地を得て、負ける側が
+     譲る。ここではその「重なりを解く」ことだけを行う。勝敗はいつもどおり
+     兵と士気が決める。 */
+  if (!MAP) {
+    const 寄せ戻し = 0.6;                    // 重なりは一刻で六割ほど解く（残りは次の刻へ）
+    for (let i = 0; i < alive.length; i++) {
+      const c = alive[i];
+      if (!塊として立つ(c)) continue;
+      for (let j = i + 1; j < alive.length; j++) {
+        const o = alive[j];
+        if (o.side === c.side || !塊として立つ(o)) continue;
+        const dx = o.x - c.x, dy = o.y - c.y, d = Math.hypot(dx, dy);
+        if (d < 0.5 || d > 460) continue;
+        const ux = dx / d, uy = dy / d;
+        const 重 = 触れる隔たり(c, o, ux, uy) - d;
+        if (重 <= 0) continue;
+        const wc = 押し力(c), wo = 押し力(o);
+        const kc = wo / (wc + wo), ko = wc / (wc + wo);      // 弱いほうが多く譲る
+        const 押 = 重 * 寄せ戻し;
+        const 動かす = (x, k, sx, sy) => {
+          const nx = x.x + sx * k, ny = x.y + sy * k;
+          if (passable(nx, ny)) { x.x = nx; x.y = ny; }
+          else if (passable(nx, x.y)) x.x = nx;
+          else if (passable(x.x, ny)) x.y = ny;
+        };
+        動かす(c, kc, -ux * 押, -uy * 押);
+        動かす(o, ko, ux * 押, uy * 押);
+      }
+    }
+    for (const c of alive) {
+      if (c.routed || c.withdraw) continue;
+      c.x = clamp(c.x, 30, FIELD.w - 30);
+      c.y = clamp(c.y, 30, FIELD.h - 30);
+    }
+  }
+
   // 隊の来た道を覚える。はぐれた組は武将と同じ道筋を辿って戻る。
   for (const c of alive) {
     c.trailT = (c.trailT || 0) - dt;
@@ -517,7 +646,37 @@ export function stepBattle(b, dt) {
 
          望む足を、いまの足へ半秒ほどかけて寄せる。相反する下知は打ち消し合う前に
          鈍り、隊は滑らかに向きを変える。 */
-      const 望x = (dx / dist) * v, 望y = (dy / dist) * v;
+      let 望x = (dx / dist) * v, 望y = (dy / dist) * v;
+      /* 触れ合った敵の中へは踏み込まない（GDD 8.3）。
+
+         塊と塊が触れたあとも「敵の中どころへ進め」と足を出し続けると、
+         重なりを解く押しと下知の引きとが一歩ごとに殴り合い、隊はその場で
+         前後に震える（測ると、隊の動きの三八％が前と逆になった）。
+
+         触れたらそこが戦の線である。敵へ踏み込む成分は落とし、横へ回る
+         成分だけを残す。押して地を得るのは足ではなく、押し合いの勝ち負けで
+         決まる（下の「敵の隊とはすれ違わない」）。 */
+      const 触れた敵 = c.接敵;
+      if (!MAP && 触れた敵) {
+        for (const o of alive) {
+          if (o.side === c.side || !塊として立つ(o)) continue;
+          const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
+          if (ed < 0.5 || ed > 460) continue;
+          const ux = ex / ed, uy = ey / ed;
+          if (ed > 触れる隔たり(c, o, ux, uy) + 6) continue;      // まだ触れていない
+          const 沿 = 望x * ux + 望y * uy;
+          if (沿 > 0) { 望x -= 沿 * ux; 望y -= 沿 * uy; }
+        }
+        /* 触れたら、そこで足を止める（GDD 8.3）。
+
+           前へ出る成分を落としただけでは、残った横の成分で敵の前を滑って歩く。
+           滑るたび「行き先」の向きが変わるので隊は斜を向き、押し合いに流されては
+           また向き直る――当たったはずの二隊が、互いの前で踊るように見える。
+
+           塊と塊が触れたら、そこが戦の線である。横へ回るのは、そう下知された
+           ときだけでよい（行き先が明らかに横にあるなら、この段は通らない）。 */
+        if (触れた敵 && Math.hypot(望x, 望y) < v * 0.34) { 望x = 0; 望y = 0; }
+      }
       const 速 = c.速 || { x: 望x, y: 望y };
       /* 向きを変えるのに要る間は、おおよそ一秒弱。千の兵が一度に向き直れはしない。 */
       const 寄せ = Math.min(1, dt / 0.9);
@@ -634,7 +793,30 @@ export function stepBattle(b, dt) {
     for (const q of c.squads) {
       let targetX = c.x + q.slotX, targetY = c.y + q.slotY;
       const st0 = ARM_STATS[q.type];
-      if (aggressive && !c.routed && q.foe && !q.reserve) {
+      /* 前列は戦の線を作る（GDD 8.3）。
+
+         これまで組は、めいめい「いちばん近い敵」へ寄っていた。斜めに向かい合う
+         二つの隊では、組が思い思いの方角へ食いつくので、前列は線ではなく
+         幾つもの塊になり、間に隙が空く。空いた隙へ後ろの組が吸い込まれ、
+         また引き戻される――遊ぶ側の目には、当たる前から弾き合っているように映る。
+
+         塊として敵に触れているあいだ、前列の組は「戦の線」に並ぶ。線とは、
+         こちらの前面と敵の前面の中ほどに引いた、敵へ向かう軸と直交する線である。
+         横の並び順は陣形の席のまま――つまり隊列を崩さずに線を作る。
+         後列は席を保ち、押し支えながら前が空くのを待つ。 */
+      const 前列か = c.接敵 && !q.reserve && st0.range === 0
+        && (q.座席 ? -(q.座席.y || 0) >= -(ROW * 1.2) : false);
+      if (c.接敵 && 前列か) {
+        const o = c.接敵;
+        const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey) || 1;
+        const ux = ex / ed, uy = ey / ed;
+        const vx = -uy, vy = ux;                       // 線に沿う向き
+        // 席の横のずれを、そのまま線の上の並びに移す
+        const 横 = (q.slotX || 0) * vx + (q.slotY || 0) * vy;
+        const 前へ = Math.max(0, ed / 2 - 9);          // 前面と前面の中ほどの、少し手前
+        targetX = c.x + ux * 前へ + vx * 横;
+        targetY = c.y + uy * 前へ + vy * 横;
+      } else if (aggressive && !c.routed && q.foe && !q.reserve) {
         const want = st0.range > 0 ? st0.range * 0.75 : 15;
         // 射撃優先では遠隔は射程を保ち、白兵は隊列を守って前へ出ない
         if (c.order === "射撃" && st0.range === 0) { /* 陣形位置を維持 */ }
@@ -1238,9 +1420,20 @@ export function stepBattle(b, dt) {
         const charge = q.type === "kiba" && terr.charge ? 1 + c.gen.valor / 260 : 1;
         const push = c.chargeT > 0 && terr.charge ? 1.3 : 1;              // 突撃中の圧力
         const guard = melee.f.order === "守備" ? 0.85 : 1;                 // 密集して守る側は硬い
+        /* 後ろが押し支える（GDD 8.3）。
+
+           塊と塊がすれ違えなくなったので、槍を合わせるのは前列だけになった。
+           人の戦としてはそれが正しい。ただし戦う組が三分の一に減ったぶん、
+           決着までの時が倍近くに延びた（百三十二秒→二百三十五秒）。日没までの
+           長さは変えていないのだから、これでは引き分けばかりになる。
+
+           実の戦でも、前列だけが働くのではない。後ろは槍を押し込み、傷ついた者と
+           入れ替わり、崩れた所を埋める。だから「後ろにどれだけ控えているか」で
+           前列の働きが変わるものとする。厚みのある隊ほど押しが強い。 */
+        const 支え = 1 + clamp(((c.立つ組数 || 1) / Math.max(1, c.噛み組数 || 1) - 1) * 0.05, 0, 0.35);
         applyDamage(b, melee.f, melee.e,
           st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200)
-          * terr.fight * flank * charge * push * guard * (1 - c.fatigue / 260) * dt,
+          * terr.fight * flank * charge * push * guard * 支え * (1 - c.fatigue / 260) * dt,
           flank, c.gen.valor * (c.chargeT > 0 ? 1.2 : 1), c, q);
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
         if (melee.f.seen || mdist < TERRAIN[melee.e.地 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
@@ -1287,6 +1480,19 @@ export function stepBattle(b, dt) {
     }
     // 槍を合わせている刻。分遣（騎馬の回り込み）を出す頃合いを測るのに使う。
     c.噛み刻 = fighting ? (c.噛み刻 || 0) + dt : 0;
+    /* 傷ついた前列を、後ろの新手と入れ替える（GDD 8.3）。
+       槍を合わせているあいだ、七秒ごとに見る。 */
+    if (fighting && !MAP) {
+      c.入替刻 = (c.入替刻 || 0) - dt;
+      if (c.入替刻 <= 0) {
+        c.入替刻 = 10;
+        const n = 前列を入れ替える(c);
+        if (n && c.side === "P") b.log.push({ t: b.t, text: `${c.gen.name}隊が前列を入れ替えた。` });
+      }
+    }
+    // 前列で槍を合わせている組の数。後ろが支える度合いを測るのに使う。
+    c.噛み組数 = c.squads.filter((q) => q.men > 0 && q.engaged).length;
+    c.立つ組数 = c.squads.filter((q) => q.men > 0).length;
     c.fatigue = clamp(c.fatigue + (fighting ? 1.1 : c.order === "待機" ? -1.4 : 0) * dt, 0, 100);
     if (c.pinch >= 2) c.morale -= (c.pinch - 1) * 0.22 * dt;   // 挟まれると士気がじわりと落ちる
     // 押し引きの覚え。刻とともに褪せる（半減およそ七秒）

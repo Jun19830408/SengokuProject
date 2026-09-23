@@ -1790,6 +1790,8 @@ export function 空模様を被せる(ctx, b, W, H) {
 export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, 跡Canvas) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
+  // 狙い札の置き場（画面の座標）。押せる所を、描いた側が控えて渡す。
+  b.狙い札 = [];
   const S = (wx, wy) => [(wx - cam.x) * cam.s + W / 2, (wy - cam.y) * cam.s + H / 2];
 
   ctx.save();
@@ -2176,20 +2178,40 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     }
     ctx.globalAlpha = 1;
 
+    /* 狙い札（GDD 8.2）。
+
+       敵をタップして接戦に向かわせる仕掛けは、隊が重なると押せなくなる。
+       槍を合わせている最中の敵はなおさらで、味方の駒と重なって指が届かない。
+
+       名札は、もともと重ならぬよう逃がして並べてある（上の 札の場）。
+       味方の隊を選んでいるあいだ、敵の名札をそのまま「狙い札」とする。
+       札には的の輪を添え、押せば、その隊へ差し向けられる。 */
+    const 狙える = (sel || selAll) && !isP && !c.日和見 && !c.detach && b.phase === "fight";
     const label = c.detach ? `${c.task}${c.autonomous ? "・自律" : ""}` : c.ally ? `${c.name}（${c.ally}）` : c.name;
     ctx.font = c.detach ? "11px 'Hiragino Sans',sans-serif" : "600 13px 'Hiragino Sans',sans-serif";
-    const w = ctx.measureText(label).width;
+    const w = ctx.measureText(label).width + (狙える ? 15 : 0);
     const ly0 = (c.gen.lord && !c.detach ? 34 : 26) + 14;
     const ly = y - 札の場(x, y - ly0, w, 16);
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillStyle = 狙える ? "rgba(255,246,240,0.96)" : "rgba(255,255,255,0.85)";
     ctx.fillRect(x - w / 2 - 4, y - ly, w + 8, 16);
+    if (狙える) {
+      b.狙い札.push({ id: c.id, x: x - w / 2 - 8, y: y - ly - 4, w: w + 16, h: 24 });
+      ctx.strokeStyle = side; ctx.lineWidth = 1.4;
+      ctx.strokeRect(x - w / 2 - 4, y - ly, w + 8, 16);
+      // 的の輪
+      const tx2 = x - w / 2 + 3, ty2 = y - ly + 8;
+      ctx.strokeStyle = side; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(tx2, ty2, 4.6, 0, 7); ctx.stroke();
+      ctx.fillStyle = side;
+      ctx.beginPath(); ctx.arc(tx2, ty2, 1.7, 0, 7); ctx.fill();
+    }
     /* 名札が駒から離れたら、細い線で結ぶ。どの隊の名かが分からなくなる。 */
     if (Math.abs(ly - ly0) > 4) {
       ctx.strokeStyle = "rgba(60,58,50,0.45)"; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x, y - ly + 8); ctx.lineTo(x, y - 10); ctx.stroke();
     }
     ctx.fillStyle = c.detach ? "#5B5850" : "#33332F";
-    ctx.fillText(label, x - w / 2, y - ly + 12);
+    ctx.fillText(label, x - w / 2 + (狙える ? 15 : 0), y - ly + 12);
 
     // 士気（上段）と陣形維持（下段）を分けて示す
     const coh = c.squads.length ? c.squads.reduce((a, q) => a + q.cohesion, 0) / c.squads.length : 0;

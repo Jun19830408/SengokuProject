@@ -993,3 +993,41 @@ export function 盤に収める(ls, 端 = 60) {
    隊を割り、足りない分は将のいない備で埋める。 */
 export const 寄せ手の隊数 = (将数, 総兵, 上限 = 3000, 限り = MAX_CORPS) =>
   Math.max(1, Math.min(限り, Math.max(将数 | 0, Math.ceil(Math.max(0, 総兵) / 上限))));
+
+/* 前列の入れ替わり（GDD 8.3）。
+
+   戦の線は、同じ顔ぶれで保つものではない。前で槍を合わせた組は傷つき疲れる。
+   そのまま立たせておけば、そこから線が破れる。後ろに控えた新手と入れ替え、
+   傷ついた組を下げるのが備えというものである。
+
+   席（陣形の持ち場）を入れ替えるだけでよい。組は席へ寄るので、下がる者と
+   出る者がおのずと入れ替わる。並びの横位置は変えない――線は乱れない。 */
+export function 前列を入れ替える(c) {
+  if (!c || !c.squads || c.squads.length < 4) return 0;
+  const 生 = c.squads.filter((q) => q.men > 0 && q.座席);
+  if (生.length < 4) return 0;
+  const 前後 = 生.map((q) => q.座席.y);
+  const 最前 = Math.min(...前後);
+  const 前列 = 生.filter((q) => q.座席.y <= 最前 + ROW * 1.2 && ARM_STATS[q.type].range === 0);
+  // 新手は二列目から採る。遠くから呼べば、線に着くまでのあいだ穴が空く。
+  const 後列 = 生.filter((q) => q.座席.y > 最前 + ROW * 1.2 && q.座席.y <= 最前 + ROW * 3.2
+    && ARM_STATS[q.type].range === 0);
+  if (!前列.length || !後列.length) return 0;
+  let 替えた = 0;
+  for (const 疲 of 前列) {
+    // 半ば以上を失ったか、隊列の乱れた組は下げる
+    const 弱 = 疲.men < 疲.max * 0.5 || 疲.cohesion < 34;
+    if (!弱) continue;
+    // 新手は、横の並びがいちばん近い者から選ぶ（線の並び順を崩さない）
+    const 候補 = 後列.filter((q) => q.men > q.max * 0.72 && q.cohesion > 58 && !q.入替);
+    if (!候補.length) break;
+    候補.sort((a, b2) => Math.abs(a.座席.x - 疲.座席.x) - Math.abs(b2.座席.x - 疲.座席.x));
+    const 新 = 候補[0];
+    const t = 疲.座席; 疲.座席 = 新.座席; 新.座席 = t;
+    疲.入替 = true; 新.入替 = true;
+    替えた++;
+    break;                                   // 一度に替えるのは一組。線を一度に崩さない
+  }
+  if (替えた) { for (const q of c.squads) q.入替 = false; 座席を向ける(c, false); }
+  return 替えた;
+}
