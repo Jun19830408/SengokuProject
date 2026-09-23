@@ -56,6 +56,21 @@ const 検分 = `
     const 帯 = document.querySelector('.bar');
     報.帯の丈 = 帯 ? Math.round(帯.getBoundingClientRect().height) : 0;
 
+    /* 速さの指図（GDD 15.1）。帯を一段に詰めたとき、狭い画面では停止・微速・
+       低速・通常が画面の外へ出ていた。盤を止められないのは手綱を失うに等しい。 */
+    報.速さ = [];
+    for (const 名 of ['停止', '微速', '低速', '通常']) {
+      const el = 釦(名);
+      if (!el) { 報.速さ.push({ 名, 有: false }); 報.咎.push('速さの釦 ' + 名 + ' が無い'); continue; }
+      const r = el.getBoundingClientRect();
+      const 中 = document.elementFromPoint((r.left + r.right) / 2, (r.top + r.bottom) / 2);
+      const 届 = !!中 && (el.contains(中) || 中 === el);
+      const 収 = r.left >= -1 && r.right <= 報.幅 + 1 && r.top >= -1 && r.bottom <= 報.高 + 1;
+      報.速さ.push({ 名, 有: true, 左: Math.round(r.left), 右: Math.round(r.right), 届, 収 });
+      if (!収) 報.咎.push('速さの釦 ' + 名 + ' が画面の外（右' + Math.round(r.right) + ' 対 画面' + 報.幅 + '）');
+      if (!届) 報.咎.push('速さの釦 ' + 名 + ' は押しても届かぬ');
+    }
+
     for (const 名 of ['拡大', '縮小', '全体', '収納', '広く']) {
       const el = 釦(名);
       if (!el) { 報.釦.push({ 名, 有: false }); 報.咎.push('釦 ' + 名 + ' が無い'); continue; }

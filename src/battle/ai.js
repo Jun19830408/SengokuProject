@@ -1,4 +1,4 @@
-import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
+import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 門の控え口 } from "./castleMap.js";
 import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
@@ -936,13 +936,14 @@ export function battleAI(b) {
            取り付けぬ隊は、門へ続く道の後ろに列を作って待つ。順は門に近い者から。
            取り付いた隊が退けば、次の隊がそのまま前へ出る。待つのが常道である。 */
         if (g && g.slot && g.slot !== c.id && !c.pinned) {
-          const a5 = axisOf(MAP.layers[g.layer], g);
           const 待つ隊 = b.corps.filter((o) => !o.dead && !o.destroyed && !o.routed && !o.withdraw
             && o.side === b.attacker && o.id !== g.slot && (o.gate === g || !o.gate));
           const gp5 = gatePos(MAP, MAP.layers[g.layer], g);
           待つ隊.sort((x, y) => Math.hypot(x.x - gp5.x, x.y - gp5.y) - Math.hypot(y.x - gp5.x, y.y - gp5.y));
           const 順 = Math.max(0, 待つ隊.findIndex((o) => o.id === c.id));
-          const 控 = fromUV(MAP, a5, g.off, a5.half + MAP.t + g.masu + MAP.t + 96 + 順 * 66);
+          /* 立ち所は engine と同じ口から採る。采配と engine が別々の所を指して
+             いると、隊は二つの的のあいだで揺れる。 */
+          const 控 = 門の控え口(MAP, MAP.layers[g.layer], g, 順);
           const 隔 = Math.hypot(c.x - 控.x, c.y - 控.y);
           if (隔 > 46) {
             if (!c.wp || !c.wp.length) {

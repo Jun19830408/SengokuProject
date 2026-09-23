@@ -24694,6 +24694,12 @@ function gateOpenU(g) {
   const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
   return from + g.w / 2;
 }
+function \u9580\u306E\u63A7\u3048\u53E3(m, l, g, \u9806 = 0) {
+  const a = axisOf(l, g);
+  const \u5800 = g.layer === 0 ? (m.moat ? m.moat.band : 0) + 8 : 0;
+  const v = a.half + m.t + g.masu + m.t + \u5800 + 54 + Math.max(0, \u9806) * 70;
+  return fromUV(m, a, gateOpenU(g), v);
+}
 function masuWall(m, l, g, dx, dy) {
   if (g.broken) return false;
   const a = axisOf(l, g), { u, v } = toUV(a, dx, dy), t = m.t;
@@ -28022,12 +28028,11 @@ function battleAI(b) {
       if (c.side === b.attacker) {
         const g = nearestOpenGate(MAP, c.x, c.y);
         if (g && g.slot && g.slot !== c.id && !c.pinned) {
-          const a5 = axisOf(MAP.layers[g.layer], g);
           const \u5F85\u3064\u968A = b.corps.filter((o) => !o.dead && !o.destroyed && !o.routed && !o.withdraw && o.side === b.attacker && o.id !== g.slot && (o.gate === g || !o.gate));
           const gp5 = gatePos(MAP, MAP.layers[g.layer], g);
           \u5F85\u3064\u968A.sort((x, y) => Math.hypot(x.x - gp5.x, x.y - gp5.y) - Math.hypot(y.x - gp5.x, y.y - gp5.y));
           const \u9806 = Math.max(0, \u5F85\u3064\u968A.findIndex((o) => o.id === c.id));
-          const \u63A7 = fromUV(MAP, a5, g.off, a5.half + MAP.t + g.masu + MAP.t + 96 + \u9806 * 66);
+          const \u63A7 = \u9580\u306E\u63A7\u3048\u53E3(MAP, MAP.layers[g.layer], g, \u9806);
           const \u9694 = Math.hypot(c.x - \u63A7.x, c.y - \u63A7.y);
           if (\u9694 > 46) {
             if (!c.wp || !c.wp.length) {
@@ -28741,6 +28746,31 @@ function stepBattle(b, dt) {
         holder.ty = stand.y;
         holder.pinned = true;
       }
+      const \u5F85\u3061 = atkC.filter((c) => c.id !== holder.id && c.gate === g && !c.detach && !c.squads.some((q) => q.engaged));
+      \u5F85\u3061.sort((x, y2) => Math.hypot((x.mx == null ? x.x : x.mx) - gp.x, (x.my == null ? x.y : x.my) - gp.y) - Math.hypot((y2.mx == null ? y2.x : y2.mx) - gp.x, (y2.my == null ? y2.y : y2.my) - gp.y));
+      \u5F85\u3061.forEach((c, i) => {
+        const \u63A7 = \u9580\u306E\u63A7\u3048\u53E3(MAP, l, g, i);
+        const \u9580\u307E\u3067 = Math.hypot((c.mx == null ? c.x : c.mx) - gp.x, (c.my == null ? c.y : c.my) - gp.y);
+        const \u63A7\u307E\u3067 = Math.hypot(c.x - \u63A7.x, c.y - \u63A7.y);
+        if (\u9580\u307E\u3067 > R * 3.2 && \u63A7\u307E\u3067 > R * 3.2) {
+          c.gate\u5F85\u3061 = 0;
+          return;
+        }
+        c.gate\u5F85\u3061 = i + 1;
+        c.pinned = false;
+        if (\u63A7\u307E\u3067 > 46) {
+          if (\u9580\u307E\u3067 < R * 1.6 || !c.wp || !c.wp.length) {
+            c.wp = null;
+            c.tx = \u63A7.x;
+            c.ty = \u63A7.y;
+          }
+        } else {
+          c.wp = null;
+          c.tx = c.x;
+          c.ty = c.y;
+        }
+      });
+      holder.gate\u5F85\u3061 = 0;
       holder.gateFat = Math.min(100, (holder.gateFat || 0) + 5 * dt);
       holder.morale = Math.min(100, holder.morale + 0.16 * dt);
       const men = corpsMen(holder);
@@ -28833,6 +28863,7 @@ function stepBattle(b, dt) {
     }
     for (const c of atkC) {
       if (c.wp && c.wp.length) continue;
+      if (c.gate\u5F85\u3061) continue;
       const gt = c.gate;
       if (!gt || gt.broken || !gateReachable(MAP, gt)) continue;
       const gp = gatePos(MAP, MAP.layers[gt.layer], gt);
@@ -32936,7 +32967,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     maxWidth: "86vw",
     textAlign: "center"
   } }, \u548E\u3081);
-  return /* @__PURE__ */ React3.createElement("div", { className: "sp", style: { height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }, onMouseDown: stop, onMouseUp: stop }, \u9000\u304D\u306E\u672D, \u554F\u3044\u306E\u672D, \u548E\u3081\u306E\u5E2F, \u899A\u3048\u306E\u672D, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 } }, !wide && /* @__PURE__ */ React3.createElement("div", { className: "bar bt" }, /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.pName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(pMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u58EB\u6C17 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, pMor)), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { color: U.dim } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.eName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(eMen))), \u65E5\u548C\u898B\u306E\u5175 > 0 && /* @__PURE__ */ React3.createElement("span", { className: "kv", style: { color: "#8A6A10" } }, "\u53BB\u5C31\u672A\u5B9A ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(\u65E5\u548C\u898B\u306E\u5175))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, ctx.place, /城下$|の囲み$/.test(ctx.place || "") ? "" : ctx.mode === "castle" ? "\u57CE\u653B\u3081" : ctx.mode === "clash" ? "\u306E\u91CE\u6226" : "\u4E0B", "\u30FB", b.weather), ctx.mode === "castle" && b.map && b.map.gates.map((gt) => /* @__PURE__ */ React3.createElement("span", { key: gt.key, style: { fontSize: 11, color: U.dim } }, gt.key, /* @__PURE__ */ React3.createElement("b", { style: { color: gt.broken ? "#B0483C" : gt.hp / gt.max > 0.4 ? U.text : "#C89A3A" } }, gt.broken ? "\u7834" : `${Math.round(gt.hp / gt.max * 100)}%`))), ctx.mode === "castle" && b.map && b.press != null && /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 11, color: U.dim } }, "\u57CE\u306E\u50BE\u304D", /* @__PURE__ */ React3.createElement("b", { style: { color: b.press > 0.6 ? "#B0483C" : U.text } }, Math.round(b.press * 100), "%")), /* @__PURE__ */ React3.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React3.createElement("span", { className: "kv num" }, Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF0F\u65E5\u6CA1\u307E\u3067", Math.max(0, Math.ceil((b.dusk - b.t) / 60)), "\u5206")), phase === "fight" && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0 ? "on" : ""}`, onClick: () => setSpeed(0) }, "\u505C\u6B62"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.12 ? "on" : ""}`, onClick: () => setSpeed(0.12) }, "\u5FAE\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.3 ? "on" : ""}`, onClick: () => setSpeed(0.3) }, "\u4F4E\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.6 ? "on" : ""}`, onClick: () => setSpeed(0.6) }, "\u901A\u5E38"))), /* @__PURE__ */ React3.createElement("div", { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" } }, /* @__PURE__ */ React3.createElement(
+  return /* @__PURE__ */ React3.createElement("div", { className: "sp", style: { height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }, onMouseDown: stop, onMouseUp: stop }, \u9000\u304D\u306E\u672D, \u554F\u3044\u306E\u672D, \u548E\u3081\u306E\u5E2F, \u899A\u3048\u306E\u672D, /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 } }, !wide && /* @__PURE__ */ React3.createElement("div", { className: "bar bt" }, /* @__PURE__ */ React3.createElement("div", { className: "barin" }, /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.pColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.pName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(pMen))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u58EB\u6C17 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, pMor)), /* @__PURE__ */ React3.createElement("span", { className: "mn", style: { color: U.dim } }, "\u5BFE"), /* @__PURE__ */ React3.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React3.createElement("span", { className: "dot", style: { background: ctx.eColor } }), /* @__PURE__ */ React3.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.eName)), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, "\u5175 ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(eMen))), \u65E5\u548C\u898B\u306E\u5175 > 0 && /* @__PURE__ */ React3.createElement("span", { className: "kv", style: { color: "#8A6A10" } }, "\u53BB\u5C31\u672A\u5B9A ", /* @__PURE__ */ React3.createElement("b", { className: "num" }, fmt(\u65E5\u548C\u898B\u306E\u5175))), /* @__PURE__ */ React3.createElement("span", { className: "kv" }, ctx.place, /城下$|の囲み$/.test(ctx.place || "") ? "" : ctx.mode === "castle" ? "\u57CE\u653B\u3081" : ctx.mode === "clash" ? "\u306E\u91CE\u6226" : "\u4E0B", "\u30FB", b.weather), ctx.mode === "castle" && b.map && b.map.gates.map((gt) => /* @__PURE__ */ React3.createElement("span", { key: gt.key, style: { fontSize: 11, color: U.dim } }, gt.key, /* @__PURE__ */ React3.createElement("b", { style: { color: gt.broken ? "#B0483C" : gt.hp / gt.max > 0.4 ? U.text : "#C89A3A" } }, gt.broken ? "\u7834" : `${Math.round(gt.hp / gt.max * 100)}%`))), ctx.mode === "castle" && b.map && b.press != null && /* @__PURE__ */ React3.createElement("span", { style: { fontSize: 11, color: U.dim } }, "\u57CE\u306E\u50BE\u304D", /* @__PURE__ */ React3.createElement("b", { style: { color: b.press > 0.6 ? "#B0483C" : U.text } }, Math.round(b.press * 100), "%")), /* @__PURE__ */ React3.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React3.createElement("span", { className: "kv num" }, Math.floor(b.t / 60), ":", String(Math.floor(b.t % 60)).padStart(2, "0"), /* @__PURE__ */ React3.createElement("span", { style: { color: U.dim } }, "\uFF0F\u65E5\u6CA1\u307E\u3067", Math.max(0, Math.ceil((b.dusk - b.t) / 60)), "\u5206"))), phase === "fight" && /* @__PURE__ */ React3.createElement("span", { className: "tsugi hayasa" }, /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0 ? "on" : ""}`, onClick: () => setSpeed(0) }, "\u505C\u6B62"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.12 ? "on" : ""}`, onClick: () => setSpeed(0.12) }, "\u5FAE\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.3 ? "on" : ""}`, onClick: () => setSpeed(0.3) }, "\u4F4E\u901F"), /* @__PURE__ */ React3.createElement("button", { className: `btn sm ${speed === 0.6 ? "on" : ""}`, onClick: () => setSpeed(0.6) }, "\u901A\u5E38"))), /* @__PURE__ */ React3.createElement("div", { style: { flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" } }, /* @__PURE__ */ React3.createElement(
     "div",
     {
       ref: wrapRef,
@@ -39345,6 +39376,9 @@ var css = `
    \u7559\u3081\u3066\u304A\u304B\u306A\u3044\u3068\u3001\u72ED\u3044\u753B\u9762\u3067\u306F\u6700\u3082\u8981\u308B\u91E6\u304C\u753B\u9762\u306E\u5916\u3078\u51FA\u3066\u3057\u307E\u3046\u3002
    \u3068\u308A\u308F\u3051\u8A18\u9332\u306F\u3001\u5931\u3048\u3070\u53D6\u308A\u8FD4\u3057\u304C\u3064\u304B\u306A\u3044\u3002 */
 .bar .tsugi{flex:0 0 auto;margin-left:8px}
+/* \u901F\u3055\u306E\u6307\u56F3\u306F\u3001\u5E2F\u306E\u53F3\u7AEF\u306B\u4E00\u7D44\u3067\u7559\u3081\u308B\uFF08GDD 15.1\uFF09\u3002 */
+.bar .hayasa{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+@media(max-width:560px){.bar .hayasa .btn.sm{padding:4px 6px;font-size:10.5px}}
 .bar .btn{padding:5px 10px;font-size:12.5px}
 .bar .sel{padding:4px 8px;font-size:12px}
 .bar .kv{display:flex;align-items:center;gap:5px;color:${U.dim}}

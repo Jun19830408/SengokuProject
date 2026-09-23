@@ -1244,6 +1244,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 }}>
         {!wide && (
         <div className="bar bt">
+          {/* 戦況は横に繰り、速さの指図だけは右端に留める（GDD 15.1）。
+              帯を一段に詰めたとき、狭い画面では速さの釦が画面の外へ出ていた。
+              盤を止められないのは、遊ぶ側にとって手綱を失うに等しい。 */}
+          <div className="barin">
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span className="dot" style={{ background: ctx.pColor }} /><b className="mn" style={{ fontSize: 14 }}>{ctx.pName}</b>
           </span>
@@ -1280,13 +1284,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
             {Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}
             <span style={{ color: U.dim }}>／日没まで{Math.max(0, Math.ceil((b.dusk - b.t) / 60))}分</span>
           </span>
+          </div>
           {phase === "fight" && (
-            <>
+            <span className="tsugi hayasa">
               <button className={`btn sm ${speed === 0 ? "on" : ""}`} onClick={() => setSpeed(0)}>停止</button>
               <button className={`btn sm ${speed === 0.12 ? "on" : ""}`} onClick={() => setSpeed(0.12)}>微速</button>
               <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} onClick={() => setSpeed(0.3)}>低速</button>
               <button className={`btn sm ${speed === 0.6 ? "on" : ""}`} onClick={() => setSpeed(0.6)}>通常</button>
-            </>
+            </span>
           )}
         </div>
         )}

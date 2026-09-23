@@ -27,6 +27,9 @@ export const css = `
    留めておかないと、狭い画面では最も要る釦が画面の外へ出てしまう。
    とりわけ記録は、失えば取り返しがつかない。 */
 .bar .tsugi{flex:0 0 auto;margin-left:8px}
+/* 速さの指図は、帯の右端に一組で留める（GDD 15.1）。 */
+.bar .hayasa{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+@media(max-width:560px){.bar .hayasa .btn.sm{padding:4px 6px;font-size:10.5px}}
 .bar .btn{padding:5px 10px;font-size:12.5px}
 .bar .sel{padding:4px 8px;font-size:12px}
 .bar .kv{display:flex;align-items:center;gap:5px;color:${U.dim}}

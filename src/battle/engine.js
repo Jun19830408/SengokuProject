@@ -1,5 +1,5 @@
 import { battleAI } from "./ai.js";
-import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, nearestOpenGate, routeToCastleGate } from "./castleMap.js";
+import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, nearestOpenGate, routeToCastleGate, 門の控え口 } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地 } from "./field.js";
@@ -806,6 +806,40 @@ export function stepBattle(b, dt) {
         holder.tx = stand.x; holder.ty = stand.y;
         holder.pinned = true;
       }
+      /* 後続は橋の手前で待つ（GDD 9.3）。
+
+         門に取り付けるのは一隊だけである。ところが「全軍門を破る」と下知すれば、
+         後続の隊も堀も橋もお構いなしに門へ寄せ、前の隊と重なって押し合った。
+         弾かれては寄せ直すので、盤の上では隊が瞬いて動き、小刻みに震えて見える。
+         采配（委任した隊）には門の順番待ちを入れてあったが、遊ぶ側の下知には
+         効いていなかった。門は一つ、列は engine が持つ――ここで一本にする。
+
+         列に着くのは、この門を目指していて（c.gate === g）、まだ槍を合わせて
+         いない隊である。門に近い者から順に、堀の外へ並ぶ。取り付いた隊が退けば
+         次の隊がそのまま前へ出る。 */
+      const 待ち = atkC.filter((c) => c.id !== holder.id && c.gate === g && !c.detach
+        && !c.squads.some((q) => q.engaged));
+      待ち.sort((x, y2) => Math.hypot((x.mx == null ? x.x : x.mx) - gp.x, (x.my == null ? x.y : x.my) - gp.y)
+        - Math.hypot((y2.mx == null ? y2.x : y2.mx) - gp.x, (y2.my == null ? y2.y : y2.my) - gp.y));
+      待ち.forEach((c, i) => {
+        const 控 = 門の控え口(MAP, l, g, i);
+        const 門まで = Math.hypot((c.mx == null ? c.x : c.mx) - gp.x, (c.my == null ? c.y : c.my) - gp.y);
+        const 控まで = Math.hypot(c.x - 控.x, c.y - 控.y);
+        /* 遠くを進んでいる隊は、道順に任せる。列に着くのは門の間近まで来た隊だけ。
+           ここで横から手を出すと、壁を突っ切る向きへ引かれて道に迷う。 */
+        if (門まで > R * 3.2 && 控まで > R * 3.2) { c.gate待ち = 0; return; }
+        c.gate待ち = i + 1;                       // 何番目に控えているか（帳に出す）
+        c.pinned = false;
+        if (控まで > 46) {
+          if (門まで < R * 1.6 || !c.wp || !c.wp.length) {
+            // 門前に重なっているか、道順を持たぬ隊は、控え口へ引く
+            c.wp = null; c.tx = 控.x; c.ty = 控.y;
+          }
+        } else {
+          c.wp = null; c.tx = c.x; c.ty = c.y;    // 着いたらその場で待つ
+        }
+      });
+      holder.gate待ち = 0;
       holder.gateFat = Math.min(100, (holder.gateFat || 0) + 5.0 * dt);
       // 破れる手応えが士気を支える。ただし〇.四では、門を押すだけで士気が
       // 満ちきってしまい、寄せ手が終始百のまま崩れなくなる。
@@ -887,6 +921,10 @@ export function stepBattle(b, dt) {
     // 道順が尽きたのに門から遠いままの隊は、道順を組み直す
     for (const c of atkC) {
       if (c.wp && c.wp.length) continue;
+      /* 列に控えている隊は、組み直さない（GDD 9.3）。
+         控え口は門から百三十歩より遠いので、この段が五秒ごとに門へ引き戻し、
+         列の留めと引っ張り合っていた。待っているのだから、道は要らない。 */
+      if (c.gate待ち) continue;
       const gt = c.gate;
       if (!gt || gt.broken || !gateReachable(MAP, gt)) continue;
       const gp = gatePos(MAP, MAP.layers[gt.layer], gt);

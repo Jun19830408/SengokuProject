@@ -364,6 +364,22 @@ export function gateOpenU(g) {
   return from + g.w / 2;
 }
 
+/* 門の控え口（GDD 9.3）。
+
+   門の間口は狭く、取り付けるのは一隊だけである。ところが後続の隊も門へ寄せて
+   いたので、堀も橋もお構いなしに前の隊へ重なり、押し合いに弾かれては寄せ直し、
+   門前で行きつ戻りつしていた。盤の上では隊が瞬いて動くように見える。
+
+   後続は橋の手前――堀の外に、門に近い者から順に列を作って待つ。
+   立ち所は虎口の開き口の正面。取り付いた隊が退けば、次の隊がそのまま前へ出る。 */
+export function 門の控え口(m, l, g, 順 = 0) {
+  const a = axisOf(l, g);
+  // 外周の門には堀が回る。内の門に堀は無い。
+  const 堀 = g.layer === 0 ? (m.moat ? m.moat.band : 0) + 8 : 0;
+  const v = a.half + m.t + g.masu + m.t + 堀 + 54 + Math.max(0, 順) * 70;
+  return fromUV(m, a, gateOpenU(g), v);
+}
+
 export function masuWall(m, l, g, dx, dy) {
   if (g.broken) return false;                        // 門が破れれば虎口も崩れる
   const a = axisOf(l, g), { u, v } = toUV(a, dx, dy), t = m.t;
