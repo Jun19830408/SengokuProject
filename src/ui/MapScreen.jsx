@@ -2306,50 +2306,16 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           );
         })()}
         <span style={{ flex: 1 }} />
-        <select className="sel" value={pf.mobilization}
-          onChange={(e) => setG((p) => { const s = structuredClone(p); s.factions[s.player].mobilization = +e.target.value; return s; })}>
-          {/* 小身の家には軍役の割増がかかる（GDD 6.4）。段の素の値だけを出していると、
-              田を開いて器が広がっても「動員率が変わっていない」と読めてしまう。
-              当家の城をならした実の率を添える。 */}
-          {(() => {
-            const 我 = g.castles.filter((c) => c.faction === g.player);
-            const 石 = 我.reduce((a, c) => a + c.koku, 0);
-            const 実 = (i) => (石 <= 0 ? null
-              : Math.round(我.reduce((a, c) => a + troopCap(c, i, g), 0) / (石 / 10000)));
-            return MOB_POLICY.map((m, i) => {
-              const v = 実(i);
-              return (<option key={m.name} value={i}>
-                {`動員：${m.name}（一万石 ${m.per}人${v && v > m.per + 4 ? `／当家は ${v}人` : ""}）`}
-              </option>);
-            });
-          })()}
-        </select>
-        {/* 預けの目盛り（GDD 6.4）。家全体で一つ。
+        </div>
+        {/* 記録と次月へは、帯の右端に留めて繰らせない（GDD 15.1）。
 
-            委ねた城が生んだ実入りを、そのまま寄親に預けるのを「並」とする。
-            少なめにすれば余りが本家の蔵に残り、多めにすれば本家が足してやる。
-            金そのものは動かさない――これは「その月に使ってよい額の上限」である。
-
-            預けた城が一つも無ければ、目盛りを出しても意味がないので隠す。 */}
-        {差配を預けた城(g, g.player).length > 0 && (
-          <select className="sel" value={pf.預け == null ? 1 : pf.預け}
-            onChange={(e) => setG((p) => { const s = structuredClone(p); s.factions[s.player].預け = +e.target.value; return s; })}>
-            {預けの段.map((x, i) => {
-              const 高 = 預け高(g, g.player).reduce((a, v) => a + v.預け, 0);
-              const 並 = Math.round(高 / (預けの段[pf.預け == null ? 1 : pf.預け].率 || 1));
-              return (<option key={x.名} value={i}>
-                {`預け：${x.名}（${差配を預けた城(g, g.player).length}城・月${fmt(Math.round(並 * x.率))}貫）`}
-              </option>);
-            })}
-          </select>
-        )}
-        <button className="btn sm" onClick={() => setModal("manual")}>遊び方</button>
-        <button className="btn sm" onClick={() => setModal("chronicle")}>戦国記</button>
-        <button className="btn sm" onClick={() => setModal("save")}>
+            帯を横に繰れるようにしたところ、狭い画面では「記録」が画面の外へ
+            出たままになった。繰る余地があることは絵からは分からない。記録は
+            この盤で最も失ってはならない口である。遊び方・戦国記・タイトルは
+            右の指図列へ移し、帯には記録だけを留める。 */}
+        <button className="btn sm tsugi" onClick={() => setModal("save")}>
           記録{savedMsg ? `：${savedMsg}` : ""}
         </button>
-        <button className="btn sm" onClick={onTitle}>タイトル</button>
-        </div>
         <button className="btn dark sm tsugi" disabled={!!battle || !!openSiege} onClick={nextMonth}>次月へ</button>
       </div>
       )}
@@ -2418,8 +2384,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("generals")}><b>☗</b>武将一覧</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("hime")}><b>◇</b>姫</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("goal")}><b>◈</b>攻略目標</div>
+            <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("seisaku")}><b>政</b>方針</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("manual")}><b>？</b>遊び方</div>
-            <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("chronicle")}><b>▤</b>履歴</div>
+            {/* 帯から移した口（GDD 15.1）。同じ帳を「履歴」と「戦国記」の二つの名で
+                呼んでいたので、戦国記に揃えた。 */}
+            <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("chronicle")}><b>▤</b>戦国記</div>
+            <div className="mbtn" style={{ width: 66 }} onClick={onTitle}><b>⌂</b>タイトル</div>
           </div>
         )}
         {/* 日本全土の小図（GDD 15.1）。畳めば地図がそのぶん広く見える。 */}
@@ -3041,6 +3011,63 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             onEnvoy={(hid, fid) => 姫の下知((s) => 使者に立てる(s, hid, fid))}
             onWed={(hid, fid) => 姫の下知((s) => 婚姻を結ぶ(s, hid, fid))}
             onMarry={(hid, gid) => 姫の下知((s) => 家臣に嫁がせる(s, hid, gid))} />
+        )}
+        {/* 家の方針（GDD 6.4／15.1）。
+
+            動員と預けの目盛りは、長らく上の帯に置いていた。帯を一段に詰めた
+            ので、狭い画面では繰らねば届かない。右の指図列から開く帳に移す。 */}
+        {modal === "seisaku" && (
+          <div className="modal" onClick={() => setModal(null)}>
+            <div className="card" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ margin: "0 0 4px" }}>家の方針</h3>
+              <div className="sub" style={{ marginBottom: 14 }}>
+                動員の段は、一万石あたり何人を兵に取るかを決める。重くすれば兵は増えるが、
+                田畑が荒れて実入りが落ち、民の心も離れる。
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <select className="sel" value={pf.mobilization}
+                onChange={(e) => setG((p) => { const s = structuredClone(p); s.factions[s.player].mobilization = +e.target.value; return s; })}>
+                {/* 小身の家には軍役の割増がかかる（GDD 6.4）。段の素の値だけを出していると、
+                    田を開いて器が広がっても「動員率が変わっていない」と読めてしまう。
+                    当家の城をならした実の率を添える。 */}
+                {(() => {
+                  const 我 = g.castles.filter((c) => c.faction === g.player);
+                  const 石 = 我.reduce((a, c) => a + c.koku, 0);
+                  const 実 = (i) => (石 <= 0 ? null
+                    : Math.round(我.reduce((a, c) => a + troopCap(c, i, g), 0) / (石 / 10000)));
+                  return MOB_POLICY.map((m, i) => {
+                    const v = 実(i);
+                    return (<option key={m.name} value={i}>
+                      {`動員：${m.name}（一万石 ${m.per}人${v && v > m.per + 4 ? `／当家は ${v}人` : ""}）`}
+                    </option>);
+                  });
+                })()}
+              </select>
+              {/* 預けの目盛り（GDD 6.4）。家全体で一つ。
+
+                  委ねた城が生んだ実入りを、そのまま寄親に預けるのを「並」とする。
+                  少なめにすれば余りが本家の蔵に残り、多めにすれば本家が足してやる。
+                  金そのものは動かさない――これは「その月に使ってよい額の上限」である。
+
+                  預けた城が一つも無ければ、目盛りを出しても意味がないので隠す。 */}
+              {差配を預けた城(g, g.player).length > 0 && (
+                <select className="sel" value={pf.預け == null ? 1 : pf.預け}
+                  onChange={(e) => setG((p) => { const s = structuredClone(p); s.factions[s.player].預け = +e.target.value; return s; })}>
+                  {預けの段.map((x, i) => {
+                    const 高 = 預け高(g, g.player).reduce((a, v) => a + v.預け, 0);
+                    const 並 = Math.round(高 / (預けの段[pf.預け == null ? 1 : pf.預け].率 || 1));
+                    return (<option key={x.名} value={i}>
+                      {`預け：${x.名}（${差配を預けた城(g, g.player).length}城・月${fmt(Math.round(並 * x.率))}貫）`}
+                    </option>);
+                  })}
+                </select>
+              )}
+              </div>
+              <div style={{ textAlign: "right", marginTop: 16 }}>
+                <button className="btn" onClick={() => setModal(null)}>閉じる</button>
+              </div>
+            </div>
+          </div>
         )}
         {modal === "goal" && <GoalPanel g={g} onClose={() => setModal(null)} />}
         {openCamp && !battle && <CampaignPanel g={g} camp={openCamp} onAct={campaignAct} />}

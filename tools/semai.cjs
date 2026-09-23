@@ -45,6 +45,7 @@ const 検分 = `
   try {
     await 眠(0.9);
     await 押('続きから'); await 眠(1.4);
+
     await 押('正面から当たる'); await 眠(0.8);
     await 押('合戦開始'); await 眠(0.6);
     await 押('停止'); await 眠(0.5);
@@ -97,15 +98,65 @@ const 検分 = `
 })();
 `;
 
-function 測る(幅, 高) {
-  const 中 = 頁を組む('野戦') + '<script>' + 検分 + '</script>';
-  const 中の道 = path.join(TMP, `naka-${幅}.html`);
+/* 政務の地図で、帯の要の釦が画面の内にあるか（GDD 15.1）。
+
+   帯を一段に詰めて横に繰れるようにしたとき、狭い画面では「記録」が画面の外へ
+   出たままになっていた。繰る余地があることは絵からは分からないし、記録は
+   この盤で最も失ってはならない口である。ここでは政務の頁を狭い枠に入れ、
+   記録と次月へが画面の内にあって押せることを測る。 */
+const 政務の検分 = `
+(async () => {
+  const 眠 = (s) => new Promise((r) => setTimeout(r, s * 1000));
+  const 釦 = (t) => [...document.querySelectorAll('button,.mbtn,.btn')]
+    .filter((b) => !b.disabled && b.offsetParent !== null)
+    .find((b) => (b.textContent || '').includes(t));
+  const 押 = async (t) => { for (let i = 0; i < 40; i++) { const el = 釦(t); if (el) { el.click(); await 眠(0.25); return true; } await 眠(0.2); } return false; };
+  const 報 = { 幅: document.documentElement.clientWidth, 高: document.documentElement.clientHeight, 釦: [], 咎: [] };
+  try {
+    await 眠(0.9);
+    await 押('続きから'); await 眠(1.6);
+    const 帯 = document.querySelector('.bar');
+    報.帯の丈 = 帯 ? Math.round(帯.getBoundingClientRect().height) : 0;
+    if (!帯) 報.咎.push('政務の帯が無い');
+    for (const 名 of ['記録', '次月へ']) {
+      const el = 釦(名);
+      if (!el) { 報.釦.push({ 名, 有: false }); 報.咎.push('帯の釦 ' + 名 + ' が無い'); continue; }
+      const r = el.getBoundingClientRect();
+      const 中 = document.elementFromPoint((r.left + r.right) / 2, (r.top + r.bottom) / 2);
+      const 届 = !!中 && (el.contains(中) || 中 === el);
+      const 収 = r.left >= -1 && r.right <= 報.幅 + 1 && r.top >= -1 && r.bottom <= 報.高 + 1;
+      報.釦.push({ 名, 有: true, 上: Math.round(r.top), 下: Math.round(r.bottom), 左: Math.round(r.left), 右: Math.round(r.right), 届, 収 });
+      if (!収) 報.咎.push('帯の釦 ' + 名 + ' が画面の外（右' + Math.round(r.right) + ' 対 画面' + 報.幅 + '）');
+      if (!届) 報.咎.push('帯の釦 ' + 名 + ' は押しても届かぬ');
+    }
+    /* 帯から右の指図列へ移した口も、繰れば手が届くこと。 */
+    報.指図 = [];
+    for (const 名 of ['遊び方', '戦国記', 'タイトル', '方針']) {
+      const el = 釦(名);
+      報.指図.push({ 名, 有: !!el });
+      if (!el) 報.咎.push('指図列に ' + 名 + ' が無い');
+    }
+    const 列 = document.querySelector('.mapctl.r');
+    if (列) {
+      報.列の丈 = Math.round(列.getBoundingClientRect().height);
+      報.列が繰れる = 列.scrollHeight > 列.clientHeight + 1 ? true : false;
+      報.列は画面の内 = Math.round(列.getBoundingClientRect().bottom) <= 報.高 + 1;
+      if (!報.列は画面の内) 報.咎.push('指図列が画面の下からはみ出す');
+    } else 報.咎.push('指図列が無い');
+  } catch (e) { 報.咎.push('検分そのものが転んだ：' + (e && e.message)); }
+  parent.postMessage({ 検分: 報 }, '*');
+})();
+`;
+
+function 測る(幅, 高, 盤名 = '野戦', 手順 = 検分, 印 = '') {
+  const 中 = 頁を組む(盤名) + '<script>' + 手順 + '</script>';
+  const 中の道 = path.join(TMP, `naka${印}-${幅}.html`);
   fs.writeFileSync(中の道, 中);
   /* 親は五百幅で開くほかないが、iframe を四三〇にすれば、中の差し金は
      四三〇として効く。測るのは中の座標なので、親の幅は関わらない。 */
   const 親 = `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#888}
 iframe{width:${幅}px;height:${高}px;border:0;display:block}</style>
-<iframe src="naka-${幅}.html"></iframe>
+<iframe src="naka${印}-${幅}.html"></iframe>
 <script>
 addEventListener('message', (e) => {
   if (!e.data || !e.data.検分) return;
@@ -120,7 +171,7 @@ setTimeout(() => { if (document.title !== 'DONE') {
   document.body.appendChild(pre);
 } }, 60000);
 </script>`;
-  const 親の道 = path.join(TMP, `oya-${幅}.html`);
+  const 親の道 = path.join(TMP, `oya${印}-${幅}.html`);
   fs.writeFileSync(親の道, 親);
   let dom = '';
   try {
@@ -141,6 +192,11 @@ function 検分する(組ら) {
   return (組ら || 既定).map((o) => 測る(o.幅, o.高));
 }
 
+// 政務の地図で、帯と指図列を測る
+function 政務を検分する(組ら) {
+  return (組ら || 既定).map((o) => 測る(o.幅, o.高, '素', 政務の検分, '-sei'));
+}
+
 if (require.main === module) {
   const 結 = 検分する();
   if (process.argv.includes('--json')) { console.log(JSON.stringify(結)); process.exit(0); }
@@ -159,4 +215,4 @@ if (require.main === module) {
   process.exit(咎 ? 1 : 0);
 }
 
-module.exports = { 検分する };
+module.exports = { 検分する, 政務を検分する };

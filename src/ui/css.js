@@ -17,12 +17,16 @@ export const css = `
 /* 帯の中身は横に繰れるようにし、次月へだけは右端に据える（GDD 15.1）。
    帯が二段三段に折れると、そのぶん地図の丈が削られる。 */
 .barin{display:flex;align-items:center;gap:10px;flex:1 1 0;min-width:0;
- overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+ overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+ /* 端を薄くして、まだ先があることを示す（収まっていれば余白が薄まるだけ）。 */
+ -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 16px),rgba(0,0,0,.15));
+ mask-image:linear-gradient(to right,#000 calc(100% - 16px),rgba(0,0,0,.15))}
 .barin::-webkit-scrollbar{display:none}
 .barin>*{flex:0 0 auto}
-/* 次月へは帯の右端に貼り付ける。帯を横に繰れるようにしたので、
-   狭い画面では最も要る釦が画面の外へ出てしまう。 */
-.bar .tsugi{flex:0 0 auto;margin-left:10px}
+/* 記録と次月へは帯の右端に貼り付ける。帯を横に繰れるようにしたので、
+   留めておかないと、狭い画面では最も要る釦が画面の外へ出てしまう。
+   とりわけ記録は、失えば取り返しがつかない。 */
+.bar .tsugi{flex:0 0 auto;margin-left:8px}
 .bar .btn{padding:5px 10px;font-size:12.5px}
 .bar .sel{padding:4px 8px;font-size:12px}
 .bar .kv{display:flex;align-items:center;gap:5px;color:${U.dim}}
@@ -77,6 +81,11 @@ export const css = `
  padding:2px 7px;font-size:10px;color:${U.dim};cursor:pointer}
 /* 釦の列が小図に届かぬようにする（届けば重なって押せない）。 */
 .mapctl.l{max-height:calc(100% - 210px);overflow:hidden}
+/* 右の指図列は、口が増えると画面の丈を越える（GDD 15.1）。帯から移した
+   遊び方・戦国記・タイトル・方針を並べると、携帯では下の口が画面の外へ出た。
+   縦に繰れるようにして、どの口にも手が届くようにする。 */
+.mapctl.r{max-height:calc(100% - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+.mapctl.r::-webkit-scrollbar{display:none}
 .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(255,255,255,.94);
  border:1px solid ${U.line};border-radius:20px;padding:7px 18px;font-size:12px;color:${U.dim};z-index:4}
 .sheet{position:absolute;left:0;right:0;bottom:0;background:${U.card};border-top:1px solid ${U.line};

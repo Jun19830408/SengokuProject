@@ -61,7 +61,7 @@ const bar=()=>document.querySelector('.bar').textContent.replace(/\s+/g,' ').sli
   console.log("\n--- 地図まわり ---");
   await rc('拡大'); await rc('縮小'); await rc('全体図'); await rc('本拠');
   console.log(" 拡大/縮小/全体図/本拠: 例外なし");
-  for(const b of ['勢力情報','武将一覧','攻略目標','履歴']){
+  for(const b of ['勢力情報','武将一覧','攻略目標','方針','戦国記']){
     await rc(b); const ok=!!document.querySelector('.card');
     console.log(` ${b}: ${ok?"開いた":"★開かない"}`); await rc('閉じる');
   }

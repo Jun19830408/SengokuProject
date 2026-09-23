@@ -37916,43 +37916,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     if (!lord || !needsGuardian(lord)) return null;
     const gd = actingHead(g, g.player);
     return /* @__PURE__ */ React8.createElement("span", { className: "kv", style: { color: "#8A5A3A" } }, "\u5F53\u4E3B ", /* @__PURE__ */ React8.createElement("b", null, lord.name), "\uFF08", lord.age, "\u6B73\uFF09\u306F\u5E7C\u5E74\u3002", gd && gd.id !== lord.id ? /* @__PURE__ */ React8.createElement(React8.Fragment, null, " ", /* @__PURE__ */ React8.createElement("b", null, gd.name), "\u304C\u5F8C\u898B") : " \u5F8C\u898B\u306A\u3057");
-  })(), /* @__PURE__ */ React8.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React8.createElement(
-    "select",
-    {
-      className: "sel",
-      value: pf.mobilization,
-      onChange: (e) => setG((p) => {
-        const s2 = structuredClone(p);
-        s2.factions[s2.player].mobilization = +e.target.value;
-        return s2;
-      })
-    },
-    (() => {
-      const \u6211 = g.castles.filter((c) => c.faction === g.player);
-      const \u77F3 = \u6211.reduce((a, c) => a + c.koku, 0);
-      const \u5B9F = (i) => \u77F3 <= 0 ? null : Math.round(\u6211.reduce((a, c) => a + troopCap(c, i, g), 0) / (\u77F3 / 1e4));
-      return MOB_POLICY.map((m, i) => {
-        const v = \u5B9F(i);
-        return /* @__PURE__ */ React8.createElement("option", { key: m.name, value: i }, `\u52D5\u54E1\uFF1A${m.name}\uFF08\u4E00\u4E07\u77F3 ${m.per}\u4EBA${v && v > m.per + 4 ? `\uFF0F\u5F53\u5BB6\u306F ${v}\u4EBA` : ""}\uFF09`);
-      });
-    })()
-  ), \u5DEE\u914D\u3092\u9810\u3051\u305F\u57CE(g, g.player).length > 0 && /* @__PURE__ */ React8.createElement(
-    "select",
-    {
-      className: "sel",
-      value: pf.\u9810\u3051 == null ? 1 : pf.\u9810\u3051,
-      onChange: (e) => setG((p) => {
-        const s2 = structuredClone(p);
-        s2.factions[s2.player].\u9810\u3051 = +e.target.value;
-        return s2;
-      })
-    },
-    \u9810\u3051\u306E\u6BB5.map((x, i) => {
-      const \u9AD8 = \u9810\u3051\u9AD8(g, g.player).reduce((a, v) => a + v.\u9810\u3051, 0);
-      const \u4E26 = Math.round(\u9AD8 / (\u9810\u3051\u306E\u6BB5[pf.\u9810\u3051 == null ? 1 : pf.\u9810\u3051].\u7387 || 1));
-      return /* @__PURE__ */ React8.createElement("option", { key: x.\u540D, value: i }, `\u9810\u3051\uFF1A${x.\u540D}\uFF08${\u5DEE\u914D\u3092\u9810\u3051\u305F\u57CE(g, g.player).length}\u57CE\u30FB\u6708${fmt(Math.round(\u4E26 * x.\u7387))}\u8CAB\uFF09`);
-    })
-  ), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("manual") }, "\u904A\u3073\u65B9"), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("chronicle") }, "\u6226\u56FD\u8A18"), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: () => setModal("save") }, "\u8A18\u9332", savedMsg ? `\uFF1A${savedMsg}` : ""), /* @__PURE__ */ React8.createElement("button", { className: "btn sm", onClick: onTitle }, "\u30BF\u30A4\u30C8\u30EB")), /* @__PURE__ */ React8.createElement("button", { className: "btn dark sm tsugi", disabled: !!battle || !!openSiege, onClick: nextMonth }, "\u6B21\u6708\u3078")), /* @__PURE__ */ React8.createElement(
+  })(), /* @__PURE__ */ React8.createElement("span", { style: { flex: 1 } })), /* @__PURE__ */ React8.createElement("button", { className: "btn sm tsugi", onClick: () => setModal("save") }, "\u8A18\u9332", savedMsg ? `\uFF1A${savedMsg}` : ""), /* @__PURE__ */ React8.createElement("button", { className: "btn dark sm tsugi", disabled: !!battle || !!openSiege, onClick: nextMonth }, "\u6B21\u6708\u3078")), /* @__PURE__ */ React8.createElement(
     "div",
     {
       className: "mapwrap",
@@ -38035,7 +37999,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       },
       /* @__PURE__ */ React8.createElement("b", null, "\u2694"),
       "\u5929\u4E0B\u5206\u3051\u76EE"
-    ), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("factions") }, /* @__PURE__ */ React8.createElement("b", null, "\u2691"), "\u52E2\u529B\u60C5\u5831"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("generals") }, /* @__PURE__ */ React8.createElement("b", null, "\u2617"), "\u6B66\u5C06\u4E00\u89A7"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("hime") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C7"), "\u59EB"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("goal") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C8"), "\u653B\u7565\u76EE\u6A19"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("manual") }, /* @__PURE__ */ React8.createElement("b", null, "\uFF1F"), "\u904A\u3073\u65B9"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("chronicle") }, /* @__PURE__ */ React8.createElement("b", null, "\u25A4"), "\u5C65\u6B74")),
+    ), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("factions") }, /* @__PURE__ */ React8.createElement("b", null, "\u2691"), "\u52E2\u529B\u60C5\u5831"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("generals") }, /* @__PURE__ */ React8.createElement("b", null, "\u2617"), "\u6B66\u5C06\u4E00\u89A7"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("hime") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C7"), "\u59EB"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("goal") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C8"), "\u653B\u7565\u76EE\u6A19"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("seisaku") }, /* @__PURE__ */ React8.createElement("b", null, "\u653F"), "\u65B9\u91DD"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("manual") }, /* @__PURE__ */ React8.createElement("b", null, "\uFF1F"), "\u904A\u3073\u65B9"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("chronicle") }, /* @__PURE__ */ React8.createElement("b", null, "\u25A4"), "\u6226\u56FD\u8A18"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: onTitle }, /* @__PURE__ */ React8.createElement("b", null, "\u2302"), "\u30BF\u30A4\u30C8\u30EB")),
     !wide && \u5C0F\u56F3 && /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement(
       "div",
       {
@@ -38709,6 +38673,43 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         onMarry: (hid, gid) => \u59EB\u306E\u4E0B\u77E5((s2) => \u5BB6\u81E3\u306B\u5AC1\u304C\u305B\u308B(s2, hid, gid))
       }
     ),
+    modal === "seisaku" && /* @__PURE__ */ React8.createElement("div", { className: "modal", onClick: () => setModal(null) }, /* @__PURE__ */ React8.createElement("div", { className: "card", style: { maxWidth: 480 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React8.createElement("h3", { style: { margin: "0 0 4px" } }, "\u5BB6\u306E\u65B9\u91DD"), /* @__PURE__ */ React8.createElement("div", { className: "sub", style: { marginBottom: 14 } }, "\u52D5\u54E1\u306E\u6BB5\u306F\u3001\u4E00\u4E07\u77F3\u3042\u305F\u308A\u4F55\u4EBA\u3092\u5175\u306B\u53D6\u308B\u304B\u3092\u6C7A\u3081\u308B\u3002\u91CD\u304F\u3059\u308C\u3070\u5175\u306F\u5897\u3048\u308B\u304C\u3001 \u7530\u7551\u304C\u8352\u308C\u3066\u5B9F\u5165\u308A\u304C\u843D\u3061\u3001\u6C11\u306E\u5FC3\u3082\u96E2\u308C\u308B\u3002"), /* @__PURE__ */ React8.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12 } }, /* @__PURE__ */ React8.createElement(
+      "select",
+      {
+        className: "sel",
+        value: pf.mobilization,
+        onChange: (e) => setG((p) => {
+          const s2 = structuredClone(p);
+          s2.factions[s2.player].mobilization = +e.target.value;
+          return s2;
+        })
+      },
+      (() => {
+        const \u6211 = g.castles.filter((c) => c.faction === g.player);
+        const \u77F3 = \u6211.reduce((a, c) => a + c.koku, 0);
+        const \u5B9F = (i) => \u77F3 <= 0 ? null : Math.round(\u6211.reduce((a, c) => a + troopCap(c, i, g), 0) / (\u77F3 / 1e4));
+        return MOB_POLICY.map((m, i) => {
+          const v = \u5B9F(i);
+          return /* @__PURE__ */ React8.createElement("option", { key: m.name, value: i }, `\u52D5\u54E1\uFF1A${m.name}\uFF08\u4E00\u4E07\u77F3 ${m.per}\u4EBA${v && v > m.per + 4 ? `\uFF0F\u5F53\u5BB6\u306F ${v}\u4EBA` : ""}\uFF09`);
+        });
+      })()
+    ), \u5DEE\u914D\u3092\u9810\u3051\u305F\u57CE(g, g.player).length > 0 && /* @__PURE__ */ React8.createElement(
+      "select",
+      {
+        className: "sel",
+        value: pf.\u9810\u3051 == null ? 1 : pf.\u9810\u3051,
+        onChange: (e) => setG((p) => {
+          const s2 = structuredClone(p);
+          s2.factions[s2.player].\u9810\u3051 = +e.target.value;
+          return s2;
+        })
+      },
+      \u9810\u3051\u306E\u6BB5.map((x, i) => {
+        const \u9AD8 = \u9810\u3051\u9AD8(g, g.player).reduce((a, v) => a + v.\u9810\u3051, 0);
+        const \u4E26 = Math.round(\u9AD8 / (\u9810\u3051\u306E\u6BB5[pf.\u9810\u3051 == null ? 1 : pf.\u9810\u3051].\u7387 || 1));
+        return /* @__PURE__ */ React8.createElement("option", { key: x.\u540D, value: i }, `\u9810\u3051\uFF1A${x.\u540D}\uFF08${\u5DEE\u914D\u3092\u9810\u3051\u305F\u57CE(g, g.player).length}\u57CE\u30FB\u6708${fmt(Math.round(\u4E26 * x.\u7387))}\u8CAB\uFF09`);
+      })
+    )), /* @__PURE__ */ React8.createElement("div", { style: { textAlign: "right", marginTop: 16 } }, /* @__PURE__ */ React8.createElement("button", { className: "btn", onClick: () => setModal(null) }, "\u9589\u3058\u308B")))),
     modal === "goal" && /* @__PURE__ */ React8.createElement(GoalPanel, { g, onClose: () => setModal(null) }),
     openCamp && !battle && /* @__PURE__ */ React8.createElement(CampaignPanel, { g, camp: openCamp, onAct: campaignAct }),
     openSiege && !battle && !openCamp && /* @__PURE__ */ React8.createElement(SiegePanel, { g, sg: openSiege, onChoose: onSiegeChoice }),
@@ -39334,12 +39335,16 @@ var css = `
 /* \u5E2F\u306E\u4E2D\u8EAB\u306F\u6A2A\u306B\u7E70\u308C\u308B\u3088\u3046\u306B\u3057\u3001\u6B21\u6708\u3078\u3060\u3051\u306F\u53F3\u7AEF\u306B\u636E\u3048\u308B\uFF08GDD 15.1\uFF09\u3002
    \u5E2F\u304C\u4E8C\u6BB5\u4E09\u6BB5\u306B\u6298\u308C\u308B\u3068\u3001\u305D\u306E\u3076\u3093\u5730\u56F3\u306E\u4E08\u304C\u524A\u3089\u308C\u308B\u3002 */
 .barin{display:flex;align-items:center;gap:10px;flex:1 1 0;min-width:0;
- overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+ overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
+ /* \u7AEF\u3092\u8584\u304F\u3057\u3066\u3001\u307E\u3060\u5148\u304C\u3042\u308B\u3053\u3068\u3092\u793A\u3059\uFF08\u53CE\u307E\u3063\u3066\u3044\u308C\u3070\u4F59\u767D\u304C\u8584\u307E\u308B\u3060\u3051\uFF09\u3002 */
+ -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 16px),rgba(0,0,0,.15));
+ mask-image:linear-gradient(to right,#000 calc(100% - 16px),rgba(0,0,0,.15))}
 .barin::-webkit-scrollbar{display:none}
 .barin>*{flex:0 0 auto}
-/* \u6B21\u6708\u3078\u306F\u5E2F\u306E\u53F3\u7AEF\u306B\u8CBC\u308A\u4ED8\u3051\u308B\u3002\u5E2F\u3092\u6A2A\u306B\u7E70\u308C\u308B\u3088\u3046\u306B\u3057\u305F\u306E\u3067\u3001
-   \u72ED\u3044\u753B\u9762\u3067\u306F\u6700\u3082\u8981\u308B\u91E6\u304C\u753B\u9762\u306E\u5916\u3078\u51FA\u3066\u3057\u307E\u3046\u3002 */
-.bar .tsugi{flex:0 0 auto;margin-left:10px}
+/* \u8A18\u9332\u3068\u6B21\u6708\u3078\u306F\u5E2F\u306E\u53F3\u7AEF\u306B\u8CBC\u308A\u4ED8\u3051\u308B\u3002\u5E2F\u3092\u6A2A\u306B\u7E70\u308C\u308B\u3088\u3046\u306B\u3057\u305F\u306E\u3067\u3001
+   \u7559\u3081\u3066\u304A\u304B\u306A\u3044\u3068\u3001\u72ED\u3044\u753B\u9762\u3067\u306F\u6700\u3082\u8981\u308B\u91E6\u304C\u753B\u9762\u306E\u5916\u3078\u51FA\u3066\u3057\u307E\u3046\u3002
+   \u3068\u308A\u308F\u3051\u8A18\u9332\u306F\u3001\u5931\u3048\u3070\u53D6\u308A\u8FD4\u3057\u304C\u3064\u304B\u306A\u3044\u3002 */
+.bar .tsugi{flex:0 0 auto;margin-left:8px}
 .bar .btn{padding:5px 10px;font-size:12.5px}
 .bar .sel{padding:4px 8px;font-size:12px}
 .bar .kv{display:flex;align-items:center;gap:5px;color:${U.dim}}
@@ -39394,6 +39399,11 @@ var css = `
  padding:2px 7px;font-size:10px;color:${U.dim};cursor:pointer}
 /* \u91E6\u306E\u5217\u304C\u5C0F\u56F3\u306B\u5C4A\u304B\u306C\u3088\u3046\u306B\u3059\u308B\uFF08\u5C4A\u3051\u3070\u91CD\u306A\u3063\u3066\u62BC\u305B\u306A\u3044\uFF09\u3002 */
 .mapctl.l{max-height:calc(100% - 210px);overflow:hidden}
+/* \u53F3\u306E\u6307\u56F3\u5217\u306F\u3001\u53E3\u304C\u5897\u3048\u308B\u3068\u753B\u9762\u306E\u4E08\u3092\u8D8A\u3048\u308B\uFF08GDD 15.1\uFF09\u3002\u5E2F\u304B\u3089\u79FB\u3057\u305F
+   \u904A\u3073\u65B9\u30FB\u6226\u56FD\u8A18\u30FB\u30BF\u30A4\u30C8\u30EB\u30FB\u65B9\u91DD\u3092\u4E26\u3079\u308B\u3068\u3001\u643A\u5E2F\u3067\u306F\u4E0B\u306E\u53E3\u304C\u753B\u9762\u306E\u5916\u3078\u51FA\u305F\u3002
+   \u7E26\u306B\u7E70\u308C\u308B\u3088\u3046\u306B\u3057\u3066\u3001\u3069\u306E\u53E3\u306B\u3082\u624B\u304C\u5C4A\u304F\u3088\u3046\u306B\u3059\u308B\u3002 */
+.mapctl.r{max-height:calc(100% - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+.mapctl.r::-webkit-scrollbar{display:none}
 .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(255,255,255,.94);
  border:1px solid ${U.line};border-radius:20px;padding:7px 18px;font-size:12px;color:${U.dim};z-index:4}
 .sheet{position:absolute;left:0;right:0;bottom:0;background:${U.card};border-top:1px solid ${U.line};
