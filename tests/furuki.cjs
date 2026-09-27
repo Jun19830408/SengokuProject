@@ -284,18 +284,36 @@ console.log('\n── 十　古い記録にも城主の札を据える');
   const 後 = t.castles.filter((c) => c.lordId).length;
   確('札の無い城に札が据わる', 後 > 前, `${前}城 → ${後}城／全 ${t.castles.length}城`);
 
-  /* 誰が城主かは変わらない。 */
+  /* 誰が城主かは変わらない――ただし「一人で二つの城」を生む札は据えない。
+
+     もとは、その城にいる最も身代の重い者を無条件に据えていた。他の城を預かる者や、
+     根の城でない国主・旗頭まで据わるので、一人が二つの城の城主になっていた。
+     いまは据えない（GDD 6.4）。その差だけは変わってよい。 */
   const 元 = JSON.parse(JSON.stringify(生));
-  let 違 = 0, 見 = 0;
+  let 違 = 0, 見 = 0, 二重を避けた = 0;
   for (const x of t.castles) {
     const c0 = 元.castles.find((y) => y.id === x.id);
     if (!c0) continue;
     const 前主 = H.castellanOf(元, c0), 後主 = H.castellanOf(t, x);
     if (!前主 && !後主) continue;
     見++;
-    if ((前主 || {}).id !== (後主 || {}).id) 違++;
+    if ((前主 || {}).id === (後主 || {}).id) continue;
+    /* 変わってよいのは、前の者が他の城を預かっているか、根の城でない役持ちのとき。 */
+    const 前 = 前主 && t.generals.find((g) => g.id === 前主.id);
+    const 他城 = 前 && t.castles.some((y) => y.id !== x.id && y.lordId === 前.id);
+    const 役持ち = 前 && (前.役 === "国主" || 前.役 === "旗頭") && 前.本領 !== x.id;
+    if (他城 || 役持ち) 二重を避けた++; else 違++;
   }
-  確('据えても、誰が城主かは変わらない', 違 === 0, `食い違い ${違}／${見}城`);
+  確('据えても、誰が城主かは変わらない（二重を避けた分を除く）', 違 === 0,
+    `食い違い ${違}／${見}城　二重を避けた ${二重を避けた}件`);
+  /* 据えたあと、一人で二つの城を預かる者がいないこと。 */
+  {
+    const 数 = new Map();
+    for (const c of t.castles) { if (!c.lordId) continue; 数.set(c.lordId, (数.get(c.lordId) || 0) + 1); }
+    const 重 = [...数].filter(([, n]) => n > 1);
+    確('一人で二つの城の城主にならない', 重.length === 0,
+      重.map(([id, n]) => `${(t.generals.find((g) => g.id === id) || {}).name}×${n}`).join('・') || '重なりなし');
+  }
 
   /* 据えたあとは、出陣しても大身が入っても動かない。 */
   /* 札の据わった城のうち、その札で城主が決まっている城を選ぶ。

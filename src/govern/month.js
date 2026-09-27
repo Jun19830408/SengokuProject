@@ -9,7 +9,7 @@ import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の�
 import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家 } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
-import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 城主の札を据える, 城の名を改める, 武将の名を改める } from "../core/state.js";
+import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 二重の城主を解く, 城主の札を据える, 城の名を改める, 武将の名を改める } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
 import { PLOTS } from "../data/diplo.js";
 import { FATED, NEWCOMERS, PARENT } from "../data/newcomers.js";
@@ -2050,6 +2050,7 @@ export function advanceMonth(prev, g) {
         }
         /* 人の名も年につれて改まる（GDD 4.7）。藤吉郎が秀吉に、元康が家康に。 */
         武将の名を改める(s, { 告げる: (t) => events.push(t) });
+        二重の城主を解く(s);
         城主の札を据える(s);
         for (const fid of Object.keys(s.factions)) {
           for (const g of 国主を繕う(s, fid)) {

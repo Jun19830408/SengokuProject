@@ -12266,7 +12266,14 @@ function \u56FD\u4E3B\u3092\u7E55\u3046(s2, fid) {
   const \u89E3\u3044\u305F = [];
   for (const g of s2.generals) {
     if (g.faction !== fid || g.\u5F79 !== "\u56FD\u4E3B") continue;
-    const \u6839 = g.\u672C\u9818 && s2.castles.find((c) => c.id === g.\u672C\u9818 && c.faction === fid);
+    let \u6839 = g.\u672C\u9818 && s2.castles.find((c) => c.id === g.\u672C\u9818 && c.faction === fid);
+    if (\u6839 && g.\u5F79\u56FD && \u6839.kuni !== g.\u5F79\u56FD && \u6301\u3064\u56FD.has(g.\u5F79\u56FD) && \u6839.lordId !== g.id) {
+      const \u623B\u308A = s2.castles.find((c) => c.faction === fid && c.kuni === g.\u5F79\u56FD && c.lordId === g.id);
+      if (\u623B\u308A) {
+        g.\u672C\u9818 = \u623B\u308A.id;
+        \u6839 = \u623B\u308A;
+      }
+    }
     if (!g.\u5F79\u56FD || !\u6301\u3064\u56FD.has(g.\u5F79\u56FD) || \u8EAB\u5206\u306E\u4F4D(g, s2) < \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u56FD\u4E3B || \u6839 && \u6839.kuni !== g.\u5F79\u56FD || \u5F53\u4E3B\u306E\u56FD\u3089(s2, fid).includes(g.\u5F79\u56FD)) {
       g.\u5F79 = null;
       g.\u5F79\u56FD = null;
@@ -12288,6 +12295,12 @@ var \u65D7\u306E\u4E0B\u306E\u5F53\u4E3B\u304B = (s2, \u4E3B, gen) => !!gen && !
 var \u5BB6\u306E\u56FD\u3089 = (s2, fid) => [...new Set((s2.castles || []).filter((c) => c.faction === fid).map((c) => c.kuni))];
 function \u57CE\u4E3B\u304B(s2, gen) {
   if (!gen || gen.captive || gen.lord) return null;
+  const \u672D\u3089 = (s2.castles || []).filter((x) => x.lordId === gen.id && x.faction === gen.faction);
+  const \u672D = \u672D\u3089.find((x) => x.id === gen.\u672C\u9818) || \u672D\u3089[0];
+  if (\u672D) {
+    const \u4E3B2 = castellanOf(s2, \u672D);
+    if (\u4E3B2 && \u4E3B2.id === gen.id) return \u672D;
+  }
   const c = s2.castles.find((x) => x.id === (gen.\u672C\u9818 || gen.at) && x.faction === gen.faction);
   if (!c) return null;
   const \u4E3B = castellanOf(s2, c);
@@ -12391,6 +12404,39 @@ function \u5BC4\u9A0E\u3092\u7E55\u3046(s2, fid) {
     }
   }
   return \u89E3\u3044\u305F;
+}
+function \u57CE\u4E3B\u3092\u636E\u3048\u66FF\u3048\u308B(s2, castle, genId, { \u57CE\u4EE3 } = {}) {
+  if (!castle || !genId) return null;
+  const g = (s2.generals || []).find((x) => x.id === genId);
+  if (!g) return null;
+  const \u660E\u3051\u305F = [];
+  for (const c of s2.castles || []) {
+    if (c.id === castle.id || c.lordId !== genId) continue;
+    \u660E\u3051\u305F.push(\u57CE\u3092\u660E\u3051\u6E21\u3059(s2, c, g));
+  }
+  if (castle.lordId && castle.lordId !== genId) castle.najimi = 25;
+  castle.lordId = genId;
+  castle.\u57CE\u4EE3 = \u57CE\u4EE3 != null ? !!\u57CE\u4EE3 : !canHoldCastle(g, s2, castle);
+  return { \u660E\u3051\u305F: \u660E\u3051\u305F.filter(Boolean) };
+}
+function \u57CE\u3092\u660E\u3051\u6E21\u3059(s2, \u57CE, \u53BB\u308B) {
+  const \u7D99\u3052\u308B = (x) => !x.captive && !x.lord && x.faction === \u57CE.faction && x.id !== (\u53BB\u308B || {}).id && !(s2.castles || []).some((o) => o.id !== \u57CE.id && o.lordId === x.id) && !((x.\u5F79 === "\u56FD\u4E3B" || x.\u5F79 === "\u65D7\u982D") && x.\u672C\u9818 !== \u57CE.id);
+  const \u6B8B\u308A2 = (s2.generals || []).filter((x) => x.at === \u57CE.id && \u7D99\u3052\u308B(x));
+  const \u6839\u306E\u8005 = (s2.generals || []).filter((x) => x.\u672C\u9818 === \u57CE.id && x.at !== \u57CE.id && \u7D99\u3052\u308B(x));
+  const \u7D99\u3050 = \u6B8B\u308A2.sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0] || \u6839\u306E\u8005.sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0] || null;
+  const \u5143\u306E\u5BC4\u89AA = \u53BB\u308B ? \u53BB\u308B.\u5BC4\u89AA : null;
+  if (!\u7D99\u3050) {
+    \u57CE.lordId = null;
+    \u57CE.\u57CE\u4EE3 = false;
+    return { \u57CE, \u7D99\u3050: null };
+  }
+  \u57CE.lordId = \u7D99\u3050.id;
+  \u57CE.\u57CE\u4EE3 = !canHoldCastle(\u7D99\u3050, s2, \u57CE);
+  if (\u5143\u306E\u5BC4\u89AA && !\u7D99\u3050.\u5BC4\u89AA && \u7D99\u3050.\u5F79 !== "\u56FD\u4E3B" && \u7D99\u3050.\u5F79 !== "\u65D7\u982D") {
+    const \u89AA = (s2.generals || []).find((x) => x.id === \u5143\u306E\u5BC4\u89AA);
+    if (\u89AA && !\u89AA.captive && \u89AA.faction === \u7D99\u3050.faction) \u7D99\u3050.\u5BC4\u89AA = \u89AA.id;
+  }
+  return { \u57CE, \u7D99\u3050 };
 }
 function \u65D7\u982D\u306E\u67A0(s2, fid) {
   const \u56FD = new Set(s2.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
@@ -15799,6 +15845,26 @@ function \u77F3\u9AD8\u306E\u4E09\u6BB5\u3092\u7E55\u3046(s2) {
 function \u8ECD\u5F79\u306E\u5668\u3092\u7E55\u3046(s2) {
   for (const g of s2.generals || []) if (g.retCap == null) g.retCap = g.retinue;
 }
+function \u4E8C\u91CD\u306E\u57CE\u4E3B\u3092\u89E3\u304F(s2) {
+  const \u76F4\u3057\u305F = [];
+  const \u6570 = /* @__PURE__ */ new Map();
+  for (const c of s2.castles || []) {
+    if (!c.lordId) continue;
+    if (!\u6570.has(c.lordId)) \u6570.set(c.lordId, []);
+    \u6570.get(c.lordId).push(c);
+  }
+  for (const [gid, \u3089] of \u6570) {
+    if (\u3089.length < 2) continue;
+    const g = (s2.generals || []).find((x) => x.id === gid);
+    if (!g) continue;
+    const \u6B8B\u3059 = \u3089.find((c) => c.id === g.\u672C\u9818) || \u3089[0];
+    for (const c of \u3089) {
+      if (c.id === \u6B8B\u3059.id) continue;
+      \u76F4\u3057\u305F.push({ \u57CE: c, ...\u57CE\u3092\u660E\u3051\u6E21\u3059(s2, c, g) });
+    }
+  }
+  return \u76F4\u3057\u305F;
+}
 function \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(s2) {
   const \u5F85\u3061 = new Set((s2.\u59D4\u306D\u308B\u5F85\u3061 || []).map((x) => x.castleId));
   const \u636E\u3048\u305F = [];
@@ -15806,8 +15872,18 @@ function \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(s2) {
     if (\u5F85\u3061.has(c.id)) continue;
     const \u672D = c.lordId && (s2.generals || []).find((x) => x.id === c.lordId && x.faction === c.faction && !x.captive);
     if (\u672D) continue;
-    const \u4E3B = \u57CE\u3092\u5B88\u308B\u5C06(s2, c);
-    if (!\u4E3B || \u4E3B.lord) {
+    const \u5C45\u308B = (s2.generals || []).filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+    if (\u5C45\u308B.some((x) => x.lord)) {
+      c.lordId = null;
+      continue;
+    }
+    const \u636E\u3048\u3089\u308C\u308B = \u5C45\u308B.filter((x) => {
+      if ((s2.castles || []).some((o) => o.id !== c.id && o.lordId === x.id)) return false;
+      if ((x.\u5F79 === "\u56FD\u4E3B" || x.\u5F79 === "\u65D7\u982D") && x.\u672C\u9818 !== c.id) return false;
+      return true;
+    });
+    const \u4E3B = [...\u636E\u3048\u3089\u308C\u308B].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
+    if (!\u4E3B) {
       c.lordId = null;
       continue;
     }
@@ -15876,6 +15952,7 @@ function migrateSave(s2) {
   \u5F79\u306E\u540D\u3092\u6539\u3081\u308B(s2);
   \u56FD\u4E3B\u3092\u636E\u3048\u308B(s2);
   \u65D7\u982D\u306E\u540D\u6B8B\u3092\u7E55\u3046(s2);
+  \u4E8C\u91CD\u306E\u57CE\u4E3B\u3092\u89E3\u304F(s2);
   \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(s2);
   \u57CE\u306E\u540D\u3092\u6539\u3081\u308B(s2);
   \u6B66\u5C06\u306E\u540D\u3092\u6539\u3081\u308B(s2);
@@ -17254,8 +17331,18 @@ function reinforceOffers(g, from, target, \u5927\u5C06) {
 }
 function \u5F53\u4E3B\u304C\u5165\u308C\u3070\u5F79\u3092\u7E55\u3046(s2, fid) {
   if (!fid || !(s2.factions || {})[fid]) return;
-  \u56FD\u4E3B\u3092\u7E55\u3046(s2, fid);
-  \u65D7\u982D\u3092\u7E55\u3046(s2, fid);
+  for (const g of \u56FD\u4E3B\u3092\u7E55\u3046(s2, fid)) {
+    s2.chronicle = s2.chronicle || [];
+    s2.chronicle.push({
+      y: s2.year,
+      m: s2.month,
+      text: `${g.name}\u306F${g.\u5F79\u56FD || "\u9810\u304B\u308B\u56FD"}\u306E\u56FD\u4E3B\u306E\u5F79\u3092\u96E2\u308C\u305F\uFF08\u6839\u304C\u305D\u306E\u56FD\u3092\u96E2\u308C\u305F\u305F\u3081\uFF09\u3002`
+    });
+  }
+  for (const g of \u65D7\u982D\u3092\u7E55\u3046(s2, fid)) {
+    s2.chronicle = s2.chronicle || [];
+    s2.chronicle.push({ y: s2.year, m: s2.month, text: `${g.name}\u306F\u65D7\u982D\u306E\u5F79\u3092\u96E2\u308C\u305F\u3002` });
+  }
 }
 function \u5728\u9663\u3055\u305B\u308B(s2, army, castle) {
   army.at = castle.id;
@@ -17279,7 +17366,7 @@ function \u57CE\u306B\u5408\u6D41\u3059\u308B(s2, army, castle) {
     if (!x) continue;
     if (castle.faction !== x.faction) continue;
     x.at = castle.id;
-    if (!x.lord) x.\u672C\u9818 = castle.id;
+    if (!x.lord && x.\u5F79 !== "\u56FD\u4E3B" && x.\u5F79 !== "\u65D7\u982D") x.\u672C\u9818 = castle.id;
   }
   army.gens = (army.gens || []).filter((gid) => {
     const x = s2.generals.find((q) => q.id === gid);
@@ -17554,6 +17641,27 @@ var \u65B9\u9762\u306E\u5831\u305B = (s2, army, \u6587) => {
   s2.monthEvents = [...s2.monthEvents || [], `\u3010\u65B9\u9762\u8ECD\u3011${\u6587}`];
   return s2;
 };
+function \u65B0\u3057\u3044\u57CE\u4E3B\u306E\u5BC4\u89AA\u3092\u5B9A\u3081\u308B(s2, c, genId, army) {
+  const g = s2.generals.find((x) => x.id === genId);
+  if (!g || g.lord || g.\u5F79 === "\u56FD\u4E3B" || g.\u5F79 === "\u65D7\u982D") return null;
+  if (g.\u5BC4\u89AA) {
+    const \u89AA0 = s2.generals.find((x) => x.id === g.\u5BC4\u89AA);
+    const \u5408\u3046 = \u89AA0 && \u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u304B(s2, \u89AA0, { ...g, \u5BC4\u89AA: null }).ok;
+    if (\u5408\u3046) return \u89AA0;
+    g.\u5BC4\u89AA = null;
+  }
+  const \u56FD\u4E3B = (s2.generals || []).find((x) => x.faction === c.faction && !x.captive && x.\u5F79 === "\u56FD\u4E3B" && x.\u5F79\u56FD === c.kuni && x.id !== g.id);
+  if (\u56FD\u4E3B) {
+    g.\u5BC4\u89AA = \u56FD\u4E3B.id;
+    return \u56FD\u4E3B;
+  }
+  const \u65D7 = army && army.\u65D7\u982D && s2.generals.find((x) => x.id === army.\u65D7\u982D) || army && (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).find((x) => x && x.\u5F79 === "\u65D7\u982D" && x.faction === c.faction);
+  if (\u65D7 && !\u65D7.captive && \u65D7.faction === c.faction && \u65D7.id !== g.id) {
+    g.\u5BC4\u89AA = \u65D7.id;
+    return \u65D7;
+  }
+  return null;
+}
 function \u57CE\u3092\u59D4\u306D\u308B(s2, castleId, armyId, \u5DEE\u914D) {
   const c = s2.castles.find((x) => x.id === castleId);
   const a = (s2.armies || []).find((x) => x.id === armyId);
@@ -17565,12 +17673,20 @@ function \u57CE\u3092\u59D4\u306D\u308B(s2, castleId, armyId, \u5DEE\u914D) {
     if (!g) continue;
     if (g.faction !== c.faction) continue;
     g.at = c.id;
-    g.\u672C\u9818 = c.id;
+    if (g.\u5F79 !== "\u56FD\u4E3B" && g.\u5F79 !== "\u65D7\u982D") g.\u672C\u9818 = c.id;
     a.gens = a.gens.filter((x) => x !== gid);
   }
   if (\u5DEE\u914D.\u57CE\u4E3B && \u7F6E\u304F.includes(\u5DEE\u914D.\u57CE\u4E3B)) {
-    if (c.lordId && c.lordId !== \u5DEE\u914D.\u57CE\u4E3B) c.najimi = 25;
-    c.lordId = \u5DEE\u914D.\u57CE\u4E3B;
+    const \u636E = \u57CE\u4E3B\u3092\u636E\u3048\u66FF\u3048\u308B(s2, c, \u5DEE\u914D.\u57CE\u4E3B);
+    for (const m of \u636E && \u636E.\u660E\u3051\u305F || []) {
+      const \u79FB = s2.generals.find((x) => x.id === \u5DEE\u914D.\u57CE\u4E3B);
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: m.\u7D99\u3050 ? `${\u79FB ? \u79FB.name : "\u57CE\u4E3B"}\u304C${c.name}\u3078\u79FB\u308A\u3001${m.\u57CE.name}\u306F${m.\u7D99\u3050.name}\u304C${m.\u57CE.\u57CE\u4EE3 ? "\u57CE\u4EE3\u3068\u3057\u3066\u9810\u304B\u3063\u305F" : "\u57CE\u4E3B\u3068\u306A\u3063\u305F"}\u3002` : `${\u79FB ? \u79FB.name : "\u57CE\u4E3B"}\u304C${c.name}\u3078\u79FB\u308A\u3001${m.\u57CE.name}\u306F\u57CE\u4E3B\u4E0D\u5728\u3068\u306A\u3063\u305F\u3002`
+      });
+    }
+    \u65B0\u3057\u3044\u57CE\u4E3B\u306E\u5BC4\u89AA\u3092\u5B9A\u3081\u308B(s2, c, \u5DEE\u914D.\u57CE\u4E3B, a);
   }
   \u5F53\u4E3B\u304C\u5165\u308C\u3070\u5F79\u3092\u7E55\u3046(s2, c.faction);
   const \u6B8B = Math.max(0, Math.min(Math.round(\u5DEE\u914D.\u5175 || 0), a.local || 0));
@@ -17608,7 +17724,7 @@ function \u5C06\u306E\u7121\u3044\u8ECD\u3092\u89E3\u304F(s2) {
   return \u89E3\u3044\u305F;
 }
 function \u59D4\u306D\u308B\u5DEE\u914D(s2, castle, army) {
-  const \u5C06\u3089 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean).filter((g) => g.id !== army.\u65D7\u982D);
+  const \u5C06\u3089 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean).filter((g) => g.id !== army.\u65D7\u982D && g.\u5F79 !== "\u56FD\u4E3B" && g.\u5F79 !== "\u65D7\u982D");
   if (\u5C06\u3089.length <= 1) return { \u57CE\u4E3B: null, \u6240\u5C5E: [], \u5175: Math.round((army.local || 0) * 0.3) };
   const \u4E3B = [...\u5C06\u3089].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
   return { \u57CE\u4E3B: \u4E3B.id, \u6240\u5C5E: [\u4E3B.id], \u5175: Math.round((army.local || 0) * 0.5) };
@@ -18430,14 +18546,21 @@ function appoint(prev, castleId, genId) {
     s2.msg = `${gen.name}\u306F${c.name}\u3092\u9810\u304B\u308C\u306A\u3044\u3002`;
     return s2;
   }
-  if (c.lordId && c.lordId !== genId) c.najimi = 25;
-  c.lordId = genId;
-  c.\u57CE\u4EE3 = !\u57CE\u4E3B\u304B2;
-  if (\u57CE\u4E3B\u304B2) gen.\u672C\u9818 = c.id;
+  const \u636E = \u57CE\u4E3B\u3092\u636E\u3048\u66FF\u3048\u308B(s2, c, genId, { \u57CE\u4EE3: !\u57CE\u4E3B\u304B2 });
+  const \u5F79\u6301\u3061 = gen.\u5F79 === "\u56FD\u4E3B" || gen.\u5F79 === "\u65D7\u982D";
+  if (\u57CE\u4E3B\u304B2 && !\u5F79\u6301\u3061) gen.\u672C\u9818 = c.id;
+  \u65B0\u3057\u3044\u57CE\u4E3B\u306E\u5BC4\u89AA\u3092\u5B9A\u3081\u308B(s2, c, genId, null);
+  for (const m of \u636E && \u636E.\u660E\u3051\u305F || []) {
+    s2.chronicle.push({
+      y: s2.year,
+      m: s2.month,
+      text: m.\u7D99\u3050 ? `${gen.name}\u304C${c.name}\u3078\u79FB\u308A\u3001${m.\u57CE.name}\u306F${m.\u7D99\u3050.name}\u304C${m.\u57CE.\u57CE\u4EE3 ? "\u57CE\u4EE3\u3068\u3057\u3066\u9810\u304B\u3063\u305F" : "\u57CE\u4E3B\u3068\u306A\u3063\u305F"}\u3002` : `${gen.name}\u304C${c.name}\u3078\u79FB\u308A\u3001${m.\u57CE.name}\u306F\u57CE\u4E3B\u4E0D\u5728\u3068\u306A\u3063\u305F\u3002`
+    });
+  }
   s2.chronicle.push({
     y: s2.year,
     m: s2.month,
-    text: \u57CE\u4E3B\u304B2 ? `${gen.name}\u3092${c.name}\u306E\u57CE\u4E3B\u306B\u4EFB\u3058\u305F\u3002` : `${gen.name}\u3092${c.name}\u306E\u57CE\u4EE3\u306B\u4EFB\u3058\u305F\uFF08\u7984\u9AD8${fmt(stipendOf(s2, gen))}\u77F3\u3002\u57CE\u4E3B\u306B\u306F${fmt(castleRankNeed(c))}\u77F3\u3068\u4F8D\u5927\u5C06\u4EE5\u4E0A\u306E\u8EAB\u5206\u304C\u8981\u308B\uFF09\u3002`
+    text: \u57CE\u4E3B\u304B2 ? `${gen.name}\u3092${c.name}\u306E\u57CE\u4E3B\u306B\u4EFB\u3058\u305F\u3002${\u5F79\u6301\u3061 && (s2.castles.find((x) => x.id === gen.\u672C\u9818) || {}).kuni !== c.kuni ? `\uFF08${gen.\u5F79}\u306E\u5F79\u306F\u305D\u306E\u307E\u307E\u3002\u6839\u306F${(s2.castles.find((x) => x.id === gen.\u672C\u9818) || {}).name || "\u5143\u306E\u57CE"}\u306B\u7F6E\u304F\uFF09` : ""}` : `${gen.name}\u3092${c.name}\u306E\u57CE\u4EE3\u306B\u4EFB\u3058\u305F\uFF08\u7984\u9AD8${fmt(stipendOf(s2, gen))}\u77F3\u3002\u57CE\u4E3B\u306B\u306F${fmt(castleRankNeed(c))}\u77F3\u3068\u4F8D\u5927\u5C06\u4EE5\u4E0A\u306E\u8EAB\u5206\u304C\u8981\u308B\uFF09\u3002`
   });
   return s2;
 }
@@ -23114,6 +23237,7 @@ function advanceMonth(prev, g) {
       void q;
     }
     \u6B66\u5C06\u306E\u540D\u3092\u6539\u3081\u308B(s2, { \u544A\u3052\u308B: (t) => events.push(t) });
+    \u4E8C\u91CD\u306E\u57CE\u4E3B\u3092\u89E3\u304F(s2);
     \u57CE\u4E3B\u306E\u672D\u3092\u636E\u3048\u308B(s2);
     for (const fid of Object.keys(s2.factions)) {
       for (const g2 of \u56FD\u4E3B\u3092\u7E55\u3046(s2, fid)) {

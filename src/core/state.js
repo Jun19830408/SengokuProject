@@ -1,4 +1,4 @@
-import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位, 城を守る将, canHoldCastle } from "./rank.js";
+import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位, 城を明け渡す, 城を守る将, canHoldCastle } from "./rank.js";
 import { courtRank } from "./province.js";
 import { newRoster } from "./roster.js";
 import { 姫を整える } from "./hime.js";
@@ -918,6 +918,31 @@ function 軍役の器を繕う(s) {
 
    城主の格に届かぬ者は城代として据える。留守を任された以上、その者が城を
    預かっている。落としたばかりで遊ぶ側の差配を待っている城には手を触れない。 */
+/* 二つの城の城主を解く（GDD 6.4）。
+
+   一人が二つの城の札を持つ姿は、古い記録に残っている（実測では三十年で二人）。
+   根の城の札を残し、ほかは明け渡す。明けた城は、そこに残る将が継ぐ。 */
+export function 二重の城主を解く(s) {
+  const 直した = [];
+  const 数 = new Map();
+  for (const c of s.castles || []) {
+    if (!c.lordId) continue;
+    if (!数.has(c.lordId)) 数.set(c.lordId, []);
+    数.get(c.lordId).push(c);
+  }
+  for (const [gid, ら] of 数) {
+    if (ら.length < 2) continue;
+    const g = (s.generals || []).find((x) => x.id === gid);
+    if (!g) continue;
+    const 残す = ら.find((c) => c.id === g.本領) || ら[0];
+    for (const c of ら) {
+      if (c.id === 残す.id) continue;
+      直した.push({ 城: c, ...城を明け渡す(s, c, g) });
+    }
+  }
+  return 直した;
+}
+
 export function 城主の札を据える(s) {
   const 待ち = new Set((s.委ねる待ち || []).map((x) => x.castleId));
   const 据えた = [];
@@ -926,8 +951,26 @@ export function 城主の札を据える(s) {
     const 札 = c.lordId && (s.generals || []).find((x) => x.id === c.lordId
       && x.faction === c.faction && !x.captive);
     if (札) continue;
-    const 主 = 城を守る将(s, c);
-    if (!主 || 主.lord) { c.lordId = null; continue; }   // 当主のいる城に札は要らない
+    /* 立ち寄っただけの将を城主にしない（GDD 6.4）。
+
+       もとは「その城にいる最も身代の重い者」を無条件に据えていた。ところが
+       他の城の城主が通りかかっただけでも札が立ち、立ち去っても札は残る
+       （札は「その家の生きている将」なら有効とみなすため）。こうして一人が
+       二つの城の城主になっていた――実測では三十年で二人、札の七／一七二が
+       本領でない城に立っていた。
+
+       ほかに城を預かっている者と、役を預かる者（国主・旗頭。根の城でなければ）は
+       据えない。誰も残らなければ札は空のままとする。守りはこれまでどおり
+       「城を守る将」が率いる。 */
+    const 居る = (s.generals || []).filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+    if (居る.some((x) => x.lord)) { c.lordId = null; continue; }  // 当主のいる城に札は要らない
+    const 据えられる = 居る.filter((x) => {
+      if ((s.castles || []).some((o) => o.id !== c.id && o.lordId === x.id)) return false;
+      if ((x.役 === "国主" || x.役 === "旗頭") && x.本領 !== c.id) return false;
+      return true;
+    });
+    const 主 = [...据えられる].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
+    if (!主) { c.lordId = null; continue; }
     c.lordId = 主.id;
     c.城代 = !canHoldCastle(主, s, c);
     据えた.push(c);
@@ -1012,6 +1055,7 @@ export function migrateSave(s) {
   役の名を改める(s);                              // 家老→国主・宿老→旗頭（GDD 6.4）
   国主を据える(s);                                // 役の欄の無い古い記録に国主を据える
   旗頭の名残を繕う(s);                            // 方面を廃した。役国を根から据え直す
+  二重の城主を解く(s);                            // 一人で二つの城を持つ姿を解く（古い記録の繕い）
   城主の札を据える(s);                            // 札の無い城に、いまの城主を札として据える
   城の名を改める(s);                              // その年までに改まった城の名を当てる
   武将の名を改める(s);                            // 旧い記録の武将にも、その年までの名乗りを当てる

@@ -1,7 +1,7 @@
 import { captureChance, makePrisoner, takeAsPrisoner } from "../core/capture.js";
 import { canRecruit, loyaltyAfterRecruit, ruinedHouse } from "../core/house.js";
 import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { minGarrison, stipendOf, 陣触れに応じる, 陣触れの届き, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
+import { minGarrison, stipendOf, 城主を据え替える, 寄騎に取れるか, 陣触れに応じる, 陣触れの届き, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
 import { newRoster, rosterCut, rosterSync, rosterTake } from "../core/roster.js";
 import { relOf, 主を探す } from "../core/state.js";
 import { clamp, fmt } from "../core/util.js";
@@ -175,8 +175,20 @@ export function reinforceOffers(g, from, target, 大将) {
    五月がそれである。当主が動いたその場で検めれば、そういう月は生じない。 */
 function 当主が入れば役を繕う(s, fid) {
   if (!fid || !(s.factions || {})[fid]) return;
-  国主を繕う(s, fid);
-  旗頭を繕う(s, fid);
+  /* 役が剥がれたなら、黙って剥がない（GDD 6.4）。
+
+     月送りの中で剥がれたぶんは月報に出るが、着陣の始末はその外で起きるので、
+     ここで剥がれた役は誰にも告げられずに消えていた。寄騎が離れた理由が
+     遊ぶ側に分からない。剥いだら戦国記に残す。 */
+  for (const g of 国主を繕う(s, fid)) {
+    s.chronicle = s.chronicle || [];
+    s.chronicle.push({ y: s.year, m: s.month,
+      text: `${g.name}は${g.役国 || "預かる国"}の国主の役を離れた（根がその国を離れたため）。` });
+  }
+  for (const g of 旗頭を繕う(s, fid)) {
+    s.chronicle = s.chronicle || [];
+    s.chronicle.push({ y: s.year, m: s.month, text: `${g.name}は旗頭の役を離れた。` });
+  }
 }
 
 export function 在陣させる(s, army, castle) {
@@ -217,7 +229,16 @@ export function 城に合流する(s, army, castle) {
        月ごとの見回りに拾わせる。 */
     if (castle.faction !== x.faction) continue;
     x.at = castle.id;
-    if (!x.lord) x.本領 = castle.id;
+    /* 役を預かる者の根は動かさない（GDD 6.4）。
+
+       役（国主・旗頭）は根の国に結びついている。別の城へ入っただけで根が動けば、
+       根の国と役国が食い違い、月ごとの繕いが役を剥ぐ。剥がれれば、その国主に
+       付いていた寄騎（その国の城主たち）は残らず解け、旗頭の受け持ちまで
+       元の国から新しい国へ化ける。遊ぶ側の目には「勝手に寄親から離れた」と映る。
+
+       在陣も入城も自由であってよい。ただし根＝知行の地を移すのは国替えであり、
+       大名の下知（国主に任じる・移封）によってのみ起こる。 */
+    if (!x.lord && x.役 !== "国主" && x.役 !== "旗頭") x.本領 = castle.id;
   }
   army.gens = (army.gens || []).filter((gid) => {
     const x = s.generals.find((q) => q.id === gid);
@@ -616,6 +637,36 @@ export const 方面の報せ = (s, army, 文) => {
      兵　　　軍の地の兵から城へ残す数
 
    誰も置かねば、城は元の守兵だけで留守を守ることになる。 */
+/* 取った城の城主を、誰の寄騎とするか（GDD 6.4）。
+
+   国を束ねるのは国主の役であるから、その国に国主がいればその寄騎とする。
+   いなければ、攻め取った旗頭の寄騎とする。旗頭の手の届かぬ国でも、取った以上は
+   方面のうちである――寄騎に取れば受け持ちがそこまで伸びるので、以後の繕いでも
+   解けない。役を預かる者（国主・旗頭）と当主は、もとより寄騎にならない。 */
+export function 新しい城主の寄親を定める(s, c, genId, army) {
+  const g = s.generals.find((x) => x.id === genId);
+  if (!g || g.lord || g.役 === "国主" || g.役 === "旗頭") return null;
+  /* すでに寄親がいても、城を移れば筋は変わる（GDD 6.4）。
+
+     国主が束ねられるのは一国のうちである。他国の城へ移った者は、もとの国主の
+     寄騎ではいられない（月ごとの繕いが解く）。解けるに任せて無主にするのではなく、
+     移った先の筋へ繋ぎ替える。 */
+  if (g.寄親) {
+    const 親0 = s.generals.find((x) => x.id === g.寄親);
+    const 合う = 親0 && 寄騎に取れるか(s, 親0, { ...g, 寄親: null }).ok;
+    if (合う) return 親0;
+    g.寄親 = null;
+  }
+  const 国主 = (s.generals || []).find((x) => x.faction === c.faction && !x.captive
+    && x.役 === "国主" && x.役国 === c.kuni && x.id !== g.id);
+  if (国主) { g.寄親 = 国主.id; return 国主; }
+  const 旗 = (army && army.旗頭 && s.generals.find((x) => x.id === army.旗頭))
+    || (army && (army.gens || []).map((id) => s.generals.find((x) => x.id === id))
+      .find((x) => x && x.役 === "旗頭" && x.faction === c.faction));
+  if (旗 && !旗.captive && 旗.faction === c.faction && 旗.id !== g.id) { g.寄親 = 旗.id; return 旗; }
+  return null;
+}
+
 export function 城を委ねる(s, castleId, armyId, 差配) {
   const c = s.castles.find((x) => x.id === castleId);
   const a = (s.armies || []).find((x) => x.id === armyId);
@@ -632,12 +683,28 @@ export function 城を委ねる(s, castleId, armyId, 差配) {
        いるうちに里見へ引き抜かれた伊達稙宗が、伊達の三条城に置かれた姿である。 */
     if (g.faction !== c.faction) continue;
     g.at = c.id;
-    g.本領 = c.id;                                      // 根を移す。以後の禄高もこの城から
+    // 役を預かる者の根は動かさない（城は預かれるが、国替えは大名の下知による）
+    if (g.役 !== "国主" && g.役 !== "旗頭") g.本領 = c.id;   // 根を移す。以後の禄高もこの城から
     a.gens = a.gens.filter((x) => x !== gid);
   }
   if (差配.城主 && 置く.includes(差配.城主)) {
-    if (c.lordId && c.lordId !== 差配.城主) c.najimi = 25;
-    c.lordId = 差配.城主;
+    /* 城を移るとは、元の城を明け渡すことである（GDD 6.4）。
+       明けた城は、そこに残る将が継ぐ（格に届かねば城代）。寄親の筋も継ぐ。 */
+    const 据 = 城主を据え替える(s, c, 差配.城主);
+    for (const m of (据 && 据.明けた) || []) {
+      const 移 = s.generals.find((x) => x.id === 差配.城主);
+      s.chronicle.push({ y: s.year, m: s.month,
+        text: m.継ぐ
+          ? `${移 ? 移.name : "城主"}が${c.name}へ移り、${m.城.name}は${m.継ぐ.name}が`
+            + `${m.城.城代 ? "城代として預かった" : "城主となった"}。`
+          : `${移 ? 移.name : "城主"}が${c.name}へ移り、${m.城.name}は城主不在となった。` });
+    }
+    /* 取った城の城主を、誰の下に置くか（GDD 6.4）。
+
+       国を束ねるのは国主の役である。その国に国主がいればその寄騎とし、
+       いなければ、攻め取った旗頭の寄騎とする。旗頭の手が届かぬ国であっても、
+       取った以上は方面のうちである――寄騎に取れば受け持ちがそこまで伸びる。 */
+      新しい城主の寄親を定める(s, c, 差配.城主, a);
   }
   /* 落とした城へ当主自らが入ることがある。その国に国主がいれば、当主と国主が
      同じ国に並ぶ。委ねるのは月送りの外（着陣の始末）で起きるので、月ごとの
@@ -694,10 +761,16 @@ export function 将の無い軍を解く(s) {
    いちばん身分の高い者を城主に据え、地の兵の半ばを残す。将が一人しか
    居らねば置かない――軍が空になっては次が続かないからである。 */
 export function 委ねる差配(s, castle, army) {
-  /* 旗頭その人は城主に据えない（GDD 6.4）。根が動けば受け持ちが動き、
-     寄騎の筋まで一緒に動いてしまう。方面を預かる者は、方面に根を置いたままとする。 */
+  /* 役を預かる者は城主に据えない（GDD 6.4）。
+
+     旗頭はもとより、国主も同じである。根が動けば受け持ちが動き、寄騎の筋まで
+     一緒に動いてしまう。方面を預かる者は方面に、国を預かる者はその国に、
+     根を置いたままとする。
+
+     そもそも役持ちが城を移るのは国替えであって、大名の下知によるものである。
+     采配（旗頭の差配・月送りの自動）で勝手に動かしてよいものではない。 */
   const 将ら = (army.gens || []).map((id) => s.generals.find((x) => x.id === id))
-    .filter(Boolean).filter((g) => g.id !== army.旗頭);
+    .filter(Boolean).filter((g) => g.id !== army.旗頭 && g.役 !== "国主" && g.役 !== "旗頭");
   if (将ら.length <= 1) return { 城主: null, 所属: [], 兵: Math.round((army.local || 0) * 0.3) };
   const 主 = [...将ら].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
   return { 城主: 主.id, 所属: [主.id], 兵: Math.round((army.local || 0) * 0.5) };

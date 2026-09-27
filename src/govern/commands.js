@@ -1,4 +1,4 @@
-import { 将を除く } from "./war.js";
+import { 将を除く, 新しい城主の寄親を定める } from "./war.js";
 import { captiveRecruit, payRansom, ransomAccept, ransomCost } from "../core/capture.js";
 import { succeed } from "../core/house.js";
 import { holdsProvince, kenchiCost, kenchiDone, rankBonus, runKenchi } from "../core/province.js";
@@ -13,7 +13,7 @@ import { DIPLO, PLOTS, SPECIAL_OPTIONS, SUBJECT } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { canBeKeeper, canHoldCastle, castleRankNeed, stipendOf, 国主に任じる, 旗頭に任じる, 旗頭を解く, 旗頭の受け持ち, 旗頭の的家を定める } from "../core/rank.js";
+import { canBeKeeper, canHoldCastle, castleRankNeed, stipendOf, 国主に任じる, 城主を据え替える, 旗頭に任じる, 旗頭を解く, 旗頭の受け持ち, 旗頭の的家を定める } from "../core/rank.js";
 import { 基準値, 売値, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
@@ -156,13 +156,32 @@ export function appoint(prev, castleId, genId) {
       s.msg = `${gen.name}は${c.name}を預かれない。`;
       return s;
     }
-    if (c.lordId && c.lordId !== genId) c.najimi = 25;   // 預かる者が代われば馴染は低い状態から始まる
-    c.lordId = genId;
-    c.城代 = !城主か;
-    if (城主か) gen.本領 = c.id;                          // 城主は根をその城へ移す
+    /* 城を移るとは、元の城を明け渡すことである（GDD 6.4）。
+       札を立てるだけで元の札を降ろさなかったので、一人が二つの城の城主になっていた。 */
+    const 据 = 城主を据え替える(s, c, genId, { 城代: !城主か });
+    /* 城は預かれるが、役持ちの根は動かさない（GDD 6.4）。
+
+       国主・旗頭の役は根の国に結びついている。他国の城を預けたとたんに根が動けば、
+       根の国と役国が食い違い、月ごとの繕いが役を剥ぐ。剥がれれば寄騎も解ける。
+       国替えは「国主に任じる」で改めて行うものとする。 */
+    const 役持ち = gen.役 === "国主" || gen.役 === "旗頭";
+    if (城主か && !役持ち) gen.本領 = c.id;                // 城主は根をその城へ移す
+    /* 城を移れば、寄親の筋も移る（GDD 6.4）。
+
+       国主が束ねられるのは一国のうちであるから、他国の城へ移った者は、もとの
+       国主の寄騎ではいられない。黙って無主にせず、移った先の筋へ繋ぎ替える
+       （その国の国主、いなければその国に手の届く旗頭）。 */
+    新しい城主の寄親を定める(s, c, genId, null);
+    for (const m of (据 && 据.明けた) || []) {
+      s.chronicle.push({ y: s.year, m: s.month,
+        text: m.継ぐ
+          ? `${gen.name}が${c.name}へ移り、${m.城.name}は${m.継ぐ.name}が${m.城.城代 ? "城代として預かった" : "城主となった"}。`
+          : `${gen.name}が${c.name}へ移り、${m.城.name}は城主不在となった。` });
+    }
     s.chronicle.push({ y: s.year, m: s.month,
       text: 城主か
-        ? `${gen.name}を${c.name}の城主に任じた。`
+        ? `${gen.name}を${c.name}の城主に任じた。${役持ち && (s.castles.find((x) => x.id === gen.本領) || {}).kuni !== c.kuni
+          ? `（${gen.役}の役はそのまま。根は${(s.castles.find((x) => x.id === gen.本領) || {}).name || "元の城"}に置く）` : ""}`
         : `${gen.name}を${c.name}の城代に任じた（禄高${fmt(stipendOf(s, gen))}石。城主には${fmt(castleRankNeed(c))}石と侍大将以上の身分が要る）。` });
     return s;
 }
