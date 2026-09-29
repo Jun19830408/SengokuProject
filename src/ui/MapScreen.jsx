@@ -2487,6 +2487,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 const 陣 = s2.castles.find((x) => x.id === a.在陣);
                 a.在陣 = null; a.target = to; a.path = 道; a.prog = 0; a.at = 道[0];
                 a.sieging = false; a.reinforced = false;
+                // 陣を払って自ら攻める軍は、もう誰かの援けではない（GDD 7.3）
+                a.aid = null; a.助勢 = null;
                 s2.chronicle.push({ y: s2.year, m: s2.month,
                   text: `${陣 ? 陣.name : ""}の在陣を払い、${先.name}へ向かう（${fmt(a.men)}人）。` });
                 // 在陣から攻め寄せるときも、他の城から兵を催せる
@@ -2561,6 +2563,16 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                   いまの盤は{g.year}年{g.month}月（{g.factions[g.player].name}／
                   {g.castles.filter((c) => c.faction === g.player).length}城）。収める枠を選んでください。<br />
                   「自動」は月が替わるたびに上書きされます。取っておきたい盤は一〜五へ。
+                  {/* いま動いている版を、いつでも見られる所に出す（GDD 15.3）。
+
+                      配り直しても、開いたままの画面は古い仕掛けのまま動き続ける。
+                      直したはずの不具合が直らない、という食い違いはここから起きる。
+                      版を出しておけば、繋ぎ直せばよいのか、直りが足りないのかが判る。 */}
+                  {typeof window !== "undefined" && window.__BUILD__ && (
+                    <><br />いまの版：{window.__BUILD__}
+                      <span style={{ color: U.dim }}>（配り直しても、この画面を開いたままでは古い版のままです。
+                        版が古ければ、いったん閉じて開き直してください）</span></>
+                  )}
                 </div>
                 {(saves || []).map((w) => {
                   const h = 記録の見出し(w.d, g.factions);

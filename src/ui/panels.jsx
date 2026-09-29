@@ -1013,11 +1013,32 @@ export const 外を押して閉じる = (onClose) => ({
 
 export function MonthReport({ g, onClose, onAid }) {
   const mine = g.castles.filter((c) => c.faction === g.player);
+  /* 月初報告は三つの頁に分ける（GDD 15.1）。
+
+     一枚の紙に見通し・領内・報せを順に並べていたが、城が増えると領内だけで
+     何十段にもなり、下に置いた方面軍と報せまで指で繰らねば届かない。
+     遊ぶ側の申し出は「領内が長すぎて読みづらい」であった。
+     見通し・領内・報せの三枚に分け、頁を選べるようにする。 */
+  const 危急 = (g.危急 || []).length;
+  /* 初めに開くのは報せの頁とする。方面軍の顛末と急ぎの援軍は、その月のうちに
+     手を打たねば間に合わない。見通しと領内は、いつ読んでも遅れはない。 */
+  const [頁, set頁] = useState("報せ");
+  const 頁ら = [
+    { 鍵: "報せ", 名: 危急 ? `報せ（急ぎ${危急}）` : "報せ" },
+    { 鍵: "見通し", 名: "見通し" },
+    { 鍵: "領内", 名: `領内（${mine.length}城）` },
+  ];
   return (
     <div className="modal" {...外を押して閉じる(onClose)}>
       <div className="card">
         <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>{g.year}年{g.month}月　月初報告</div>
-        {(() => {
+        <div style={{ display: "flex", gap: 6, margin: "8px 0 10px" }}>
+          {頁ら.map((x) => (
+            <button key={x.鍵} className={`btn sm ${頁 === x.鍵 ? "on" : ""}`}
+              style={{ flex: 1 }} onClick={() => set頁(x.鍵)}>{x.名}</button>
+          ))}
+        </div>
+        {頁 === "見通し" && (() => {
           const fc = forecast(g, g.player);
           const warn = fc.months != null && fc.months <= 6;
           return (
@@ -1049,8 +1070,7 @@ export function MonthReport({ g, onClose, onAid }) {
             </>
           );
         })()}
-        <div className="sec">領内</div>
-        {mine.map((c) => {
+        {頁 === "領内" && mine.map((c) => {
           const men = c.local + g.generals.filter((x) => x.at === c.id && x.faction === g.player).reduce((a, x) => a + x.retinue, 0);
           const days = foodDays(c.food, men);
           const pv = (g.prev || {})[c.id];
@@ -1075,6 +1095,7 @@ export function MonthReport({ g, onClose, onAid }) {
             </div>
           );
         })}
+        {頁 === "領内" && (
         <div className="row" style={{ borderTop: `1px solid ${U.line2}`, marginTop: 6, paddingTop: 6 }}>
           <span>金銭</span>
           <span className="v num">{fmt(g.factions[g.player].gold)} 貫
@@ -1084,12 +1105,13 @@ export function MonthReport({ g, onClose, onAid }) {
               </span>)}
           </span>
         </div>
+        )}
         {/* 方面軍の顛末は、別の段に立てる（GDD 6.4）。
 
             任せた戦は大名が盤の前で見ていない。ほかの報せに紛れて一行ずつ並ぶと、
             どこへ出て、どう戦い、どうなったのかが読み取れない。出陣から落城までを
             ひとまとまりにして、いちばん上に置く。 */}
-        {(() => {
+        {頁 === "報せ" && (() => {
           const 印 = "【方面軍】";
           const 方面 = (g.monthEvents || []).filter((e) => typeof e === "string" && e.startsWith(印));
           const ほか = (g.monthEvents || []).filter((e) => !(typeof e === "string" && e.startsWith(印)));
@@ -1117,7 +1139,7 @@ export function MonthReport({ g, onClose, onAid }) {
         })()}
         {/* 危急の城には、その場で援軍を出せるようにする（GDD 9.2）。
             行軍はどれも一月はかかるので、着いてから出したのでは間に合わない。 */}
-        {onAid && (g.危急 || []).length > 0 && (
+        {頁 === "報せ" && onAid && (g.危急 || []).length > 0 && (
           <>
             <div className="sec">援軍</div>
             {(g.危急 || []).map((k) => {

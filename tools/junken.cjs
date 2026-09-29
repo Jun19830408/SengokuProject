@@ -106,6 +106,27 @@ const 不変式 = [
     }
     return 咎;
   }],
+  /* 一人が二つの城の城主にならない（GDD 6.4）。
+
+     城を移るとは元の城を明け渡すことである。据えるときに他の札を降ろすように
+     したが、書き口が増えればまた湧きうる。月ごとに検める。 */
+  ['一人で二つの城の城主にならない', (s) => {
+    const 咎 = [];
+    const 数 = new Map();
+    for (const c of s.castles) {
+      if (!c.lordId) continue;
+      const g = s.generals.find((x) => x.id === c.lordId);
+      if (!g || g.faction !== c.faction) continue;      // 他家の札は上の事柄で見る
+      if (!数.has(c.lordId)) 数.set(c.lordId, []);
+      数.get(c.lordId).push(c.name);
+    }
+    for (const [id, ら] of 数) {
+      if (ら.length < 2) continue;
+      const g = s.generals.find((x) => x.id === id);
+      咎.push(`${g ? g.name : id}が${ら.length}城の城主（${ら.join('・')}）`);
+    }
+    return 咎;
+  }],
   ['数が負にならない', (s) => {
     const 咎 = [];
     for (const c of s.castles) {
