@@ -17,7 +17,7 @@ import { 遠征の兵糧, 運び賃を払う } from "../govern/war.js";
 import { courtRank, 号令できるか, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
 import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap, 寄騎に取る, 寄騎を解く, 城を守る将, 旗頭の受け持ち } from "../core/rank.js";
 import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す, 戦の跡, 戦の跡を記す } from "../core/roster.js";
-import { atPeace, lv, relKey, relOf, specialBonus, 軍の道 } from "../core/state.js";
+import { atPeace, forecast, lv, relKey, relOf, specialBonus, 軍の道 } from "../core/state.js";
 import { SEASON, U, clamp, fmt, man, monthsBetween } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
@@ -2283,7 +2283,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           <span style={{ background: "#EFEDE4", borderRadius: 3, padding: "1px 6px", fontSize: 11 }}>{SEASON(g.month)}</span></span>
         <span className="kv">石高 <b className="num">{man(mine.reduce((a, c) => a + c.koku, 0))} 万石</b></span>
         <span className="kv">兵数 <b className="num">{fmt(totalMen)}</b></span>
-        <span className="kv">金銭 <b className="num">{fmt(pf.gold)} 貫</b></span>
+        {/* 金銭は、蔵の高だけでなく月の出入りも並べる（GDD 6.2）。
+            兵を雇えば扶持が増え、田を開き商いを興せば入りが増える。
+            いま懐がどちらへ向いているかは、常に見えていなければならない。 */}
+        <span className="kv">金銭 <b className="num">{fmt(pf.gold)} 貫</b>
+          {(() => {
+            const 月 = Math.round(forecast(g, g.player).netGold);
+            return (
+              <span className="num" style={{ color: 月 >= 0 ? "#3E7A3A" : "#B0483C", fontSize: 11.5 }}>
+                （月{月 >= 0 ? "＋" : "−"}{fmt(Math.abs(月))}）
+              </span>
+            );
+          })()}
+        </span>
         <span className="kv">拠点 <b className="num">{mine.length} 城</b></span>
         {(() => {
           const cr = courtRank(g, g.player);

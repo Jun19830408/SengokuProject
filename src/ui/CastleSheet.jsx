@@ -4,7 +4,7 @@ import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/h
 import { marchMonths } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
 import { 軍役の割増, RANKS, castellanOf, 城を守る将, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 旗頭の受け持ち, 旗頭の的にできる家, 旗頭の的家, 的家の限り, 旗の下の当主か, 城主か } from "../core/rank.js";
-import { canSee, relOf, isVassal, 主を探す } from "../core/state.js";
+import { canSee, forecast, relOf, isVassal, 主を探す } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
@@ -331,6 +331,41 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       <button className={`btn sm ${cmd === "造船" ? "on" : ""}`} onClick={() => setCmd("造船")}>造船</button>
                     )}
                   </div>
+                  {/* 打つ前に、月の懐がどう動くかを示す（GDD 6.2）。
+
+                      田を開けば入りが増え、商いを興せばさらに増え、兵を雇えば扶持が増える。
+                      打ってからでは遅い手もあるので、選んだ段で見通しを出す。 */}
+                  {["開墾", "商業", "徴募"].includes(cmd) && (() => {
+                    const 前 = Math.round(forecast(g, c.faction).netGold);
+                    const 仮 = structuredClone(g);
+                    const c2 = 仮.castles.find((x) => x.id === c.id);
+                    let 添 = "";
+                    if (cmd === "徴募") {
+                      const cap = troopCap(c, g.factions[c.faction].mobilization, g);
+                      const n = Math.max(0, Math.min(cap - c.local,
+                        Math.floor((g.factions[c.faction].gold - 60) / 0.45), Math.floor(c.pop * 0.012)));
+                      c2.local += n;
+                      添 = `${fmt(n)}人を雇えば`;
+                    } else if (cmd === "商業") {
+                      c2.comm = Math.min(100, c2.comm + 3);
+                      添 = "商いが三つ上がれば";
+                    } else {
+                      const room = c2.kokuMax - c2.koku;
+                      c2.koku += Math.max(0, Math.round(room * 0.16 * 0.9));
+                      添 = "田を開けば";
+                    }
+                    const 後 = Math.round(forecast(仮, c.faction).netGold);
+                    if (前 === 後) return null;
+                    return (
+                      <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginBottom: 8 }}>
+                        {添}、家の月の金銭は
+                        <b className="num" style={{ color: U.text }}>　{前 >= 0 ? "＋" : "−"}{fmt(Math.abs(前))}</b>
+                        <span> → </span>
+                        <b className="num" style={{ color: 後 >= 0 ? "#3E7A3A" : "#B0483C" }}>{後 >= 0 ? "＋" : "−"}{fmt(Math.abs(後))}</b> 貫。
+                        <span>（扶持は地の兵に掛かる。手勢は武将の知行が養う）</span>
+                      </div>
+                    );
+                  })()}
                   {(cmd === "造船" || (g.factions[c.faction].鉄甲船 || 0) > 0
                     || (g.factions[c.faction].鉄甲普請 || 0) > 0) && 鉄甲船を造れるか(g, c).ok && (
                     <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginBottom: 8 }}>

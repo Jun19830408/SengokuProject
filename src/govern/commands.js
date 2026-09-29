@@ -4,7 +4,7 @@ import { succeed } from "../core/house.js";
 import { holdsProvince, kenchiCost, kenchiDone, rankBonus, runKenchi } from "../core/province.js";
 import { fiefOf, fiefRoom, troopCap , 軍役の器, 軍役の増, 城の知行の余地 } from "../core/rank.js";
 import { rosterSync } from "../core/roster.js";
-import { relKey, 己の盟約, 主を探す, 旗の下に入る, relOf } from "../core/state.js";
+import { forecast, relKey, 己の盟約, 主を探す, 旗の下に入る, relOf } from "../core/state.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
 import { clamp, fmt } from "../core/util.js";
@@ -123,6 +123,17 @@ export function runCommand(prev, castleId, cmd, genId, g) {
       if (f.gold < cost) {
         s.msg = `金が足りぬ。${cmd}には${fmt(cost)}貫が要る（手元${fmt(Math.max(0, f.gold))}貫）。`;
         return prev;                             // 何も起こさずに戻す
+      }
+      /* 手を打てば、家の月々の出入りが動く（GDD 6.2）。
+
+         田を開けば入りが増え、商いを興せばさらに増え、兵を雇えば扶持が増える。
+         ところが盤に出るのは「石高が幾ら増えた」までで、それが月の懐にどう響くかは
+         遊ぶ側が頭の中で勘定するほかなかった。手のたびに、家全体の月の金銭が
+         いくらからいくらへ動いたかを添える。 */
+      {
+        const 前 = Math.round(forecast(prev, c.faction).netGold);
+        const 後 = Math.round(forecast(s, c.faction).netGold);
+        if (前 !== 後) rec("家の月の金銭", 前, 後, "貫");
       }
       f.gold -= cost;
       s.ledger = [{ cmd, cost, lines, castle: c.name, general: gen.name }, ...s.ledger].slice(0, 6);

@@ -556,7 +556,8 @@ export function forecast(s, fid) {
     const t = c.local + ret;
     troops += t; food += c.food;
     inGold += c.comm * 4 + c.koku * 0.003;
-    outGold += t * 0.075 * up;
+    // 扶持は地の兵にだけ掛かる（手勢は武将の知行が養う。month.js と同じ勘定）
+    outGold += c.local * 0.075 * up;
     inFood += Math.round((c.koku / 12) * 0.5 * harvest * (c.min / 80));
     outFood += Math.round(t * 0.08 * up);
   }

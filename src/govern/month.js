@@ -181,8 +181,19 @@ export function advanceMonth(prev, g) {
           const troops = c.local + ret;
           const up = MOB_POLICY[f.mobilization].upkeep;
           c.food += Math.round((c.koku / 12) * 0.5 * harvest * (c.min / 80)) - Math.round(troops * 0.08 * up);
-          // 兵は養うものである。扶持が軽すぎると、金が余り、兵を抱える判断が生まれない。
-          gold += (c.comm * 4 + c.koku * 0.003) * (fid === s.player ? lv(s).tribute : 1) - troops * 0.075 * up;
+          /* 扶持は地の兵にだけ掛かる（GDD 6.2）。
+
+             兵は養うものである。扶持が軽すぎると金が余り、兵を抱える判断が生まれない。
+             ――ただし養う者は誰かという話である。手勢（直属）は、その武将の知行から
+             出る兵である。知行はすでに城の石高から配ってあるのだから、大名の蔵から
+             さらに扶持を引くのは二重取りになる。
+
+             実測では、武田家の兵一万七千のうち手勢が一万六百九十（六割）を占め、
+             二重に引いたぶんで月の実入りが百四十四貫まで痩せていた。城を一つ取って
+             兵を二万まで増やすと十貫になる。それでは普請も調略もできない。
+
+             大名の蔵が負うのは地の兵――城が直に抱える兵である。 */
+          gold += (c.comm * 4 + c.koku * 0.003) * (fid === s.player ? lv(s).tribute : 1) - c.local * 0.075 * up;
           if (c.food < 0) {
             c.food = 0; c.min = Math.max(0, c.min - 4); c.localTrain = Math.max(20, c.localTrain - 3);
             const lost = Math.round(c.local * 0.04); c.local -= lost;
