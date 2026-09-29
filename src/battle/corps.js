@@ -779,13 +779,31 @@ export function notify(b, text, kind) {
   b.log.push({ t: b.t, text });
 }
 
-export function issueOrder(b, c, patch) {
+export function issueOrder(b, c, patch, { 即 } = {}) {
   if (!c || c.dead || c.destroyed) return;
   c.pinned = false;                      // 命令を受けたら門の前の据え置きを解く
+  /* 退きの印は、別の下知で解ける（GDD 8.3）。
+
+     退かせる は withdraw の印を立てるが、これを降ろす道がどこにも無かった。
+     采配が「退け」と命じた隊に、次の刻で「接戦」と命じ直すと、印だけが残る。
+     印のある隊は槍を合わせない決まりであり、行き先も自分の居場所に書き換わって
+     いるので、退きも戦いもせずその場に立ち尽くす。相手も噛みつけないから、
+     どれだけ押しても戦にならず、日没まで睨み合う――遊ぶ側の「攻めないまま
+     時間切れになる」はこれである（一万六千九百の織田勢と、退きの印が残った
+     上杉勢が、二十八歩を隔てて百五十秒動かなかった）。
+
+     退けと命じたものを、別の下知で取り消すのは当たり前のことである。 */
+  if (patch && patch.order && patch.order !== "撤退") c.withdraw = false;
   if (!AI_ISSUING && c.side === "P") c.auto = false;   // 手ずから命じた隊は委任を離れる
   if (!patch.keepPath) c.wp = null;      // 新たな命令は道順を打ち消す
   const apply = () => Object.assign(c, patch);
-  if (b.phase === "deploy" || patch.order === c.order) { apply(); c.pending = null; return; }
+  /* 即のしるしが立っていれば、伝令を待たずにその場で効かせる（GDD 8.3）。
+
+     退却は本人の判断である。崩れかけた隊が退くのに、本陣からの許しは要らない。
+     ところがこれを常の下知と同じ道に通していたので、指揮圏の外にいる隊では
+     「命令が届かない」として黙って捨てられ、退きの印だけが残った。
+     退きも戦いもせぬ隊が盤に立ち尽くし、日没まで動かない。 */
+  if (b.phase === "deploy" || 即 || patch.order === c.order) { apply(); c.pending = null; return; }
   // 味方への指示はすぐに効かせる（伝令の間があると操作が鈍く感じられるため）
   if (c.side === "P") { apply(); c.pending = null; return; }
   if (outOfCommand(b, c)) { c.pending = null; c.autonomous = true; return; }   // 命令が届かない
@@ -943,7 +961,7 @@ export function 退かせる(b, c, 統制) {
     c.morale = Math.max(0, c.morale - (統制 ? 6 : 12));
   }
   const 先 = 退き先(b, c);
-  issueOrder(b, c, { order: "撤退", tx: 先.x, ty: 先.y });
+  issueOrder(b, c, { order: "撤退", tx: 先.x, ty: 先.y }, { 即: true });
   return { 噛んでいた, 損 };
 }
 

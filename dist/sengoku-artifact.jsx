@@ -24331,13 +24331,14 @@ function notify(b, text, kind) {
   if (b.notices.length > 6) b.notices.shift();
   b.log.push({ t: b.t, text });
 }
-function issueOrder(b, c, patch) {
+function issueOrder(b, c, patch, { \u5373 } = {}) {
   if (!c || c.dead || c.destroyed) return;
   c.pinned = false;
+  if (patch && patch.order && patch.order !== "\u64A4\u9000") c.withdraw = false;
   if (!AI_ISSUING && c.side === "P") c.auto = false;
   if (!patch.keepPath) c.wp = null;
   const apply = () => Object.assign(c, patch);
-  if (b.phase === "deploy" || patch.order === c.order) {
+  if (b.phase === "deploy" || \u5373 || patch.order === c.order) {
     apply();
     c.pending = null;
     return;
@@ -24450,7 +24451,7 @@ function \u9000\u304B\u305B\u308B(b, c, \u7D71\u5236) {
     c.morale = Math.max(0, c.morale - (\u7D71\u5236 ? 6 : 12));
   }
   const \u5148 = \u9000\u304D\u5148(b, c);
-  issueOrder(b, c, { order: "\u64A4\u9000", tx: \u5148.x, ty: \u5148.y });
+  issueOrder(b, c, { order: "\u64A4\u9000", tx: \u5148.x, ty: \u5148.y }, { \u5373: true });
   return { \u565B\u3093\u3067\u3044\u305F, \u640D };
 }
 var AI_ISSUING = false;
@@ -28452,7 +28453,7 @@ function \u524D\u9762\u307E\u3067(c, ux, uy) {
   return Math.max(0, \u524D\u5F8C) * (c.\u5F35\u308A\u524D || 0) + Math.max(0, -\u524D\u5F8C) * (c.\u5F35\u308A\u5F8C || 0) + Math.max(0, \u5DE6\u53F3) * (c.\u5F35\u308A\u53F3 || 0) + Math.max(0, -\u5DE6\u53F3) * (c.\u5F35\u308A\u5DE6 || 0);
 }
 var \u89E6\u308C\u9699 = 10;
-var \u89E6\u308C\u4E0A\u9650 = 34;
+var \u89E6\u308C\u4E0A\u9650 = 18;
 var \u89E6\u308C\u308B\u9694\u305F\u308A = (c, o, ux, uy) => Math.min(
   \u89E6\u308C\u4E0A\u9650,
   \u524D\u9762\u307E\u3067(c, ux, uy) + \u524D\u9762\u307E\u3067(o, -ux, -uy) + \u89E6\u308C\u9699
@@ -28502,6 +28503,12 @@ function stepBattle(b, dt) {
     c.\u5F35\u308A\u5F8C = \u5F8C;
     c.\u5F35\u308A\u53F3 = \u53F3;
     c.\u5F35\u308A\u5DE6 = \u5DE6;
+  }
+  for (const c of alive) {
+    if (!c.withdraw) continue;
+    if (c.order === "\u64A4\u9000") continue;
+    if (c.pending && c.pending.patch && c.pending.patch.order === "\u64A4\u9000") continue;
+    c.withdraw = false;
   }
   for (const c of alive) {
     c.\u63A5\u6575 = null;
@@ -28786,7 +28793,11 @@ function stepBattle(b, dt) {
       }
       const v = \u968A\u306E\u8DB3 * fieldScale() * (b.\u8DB3\u306E\u624B\u52A0\u6E1B || 1) * \u6C34\u99B4\u308C\u306E\u8DB3(c, c.\u5730, terr.speed) * W2.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * \u5BC4\u305B\u9053 * \u6DF7\u307F;
       let \u671Bx = dx / dist * v, \u671By = dy / dist * v;
-      const \u89E6\u308C\u305F\u6575 = c.\u63A5\u6575;
+      const \u653B\u3081\u306E\u4E0B\u77E5 = c.order === "\u63A5\u6226" || c.order === "\u7A81\u6483" || c.order === "\u524D\u9032";
+      if (\u653B\u3081\u306E\u4E0B\u77E5 && c.\u63A5\u6575 && !c.squads.some((q) => q.engaged)) {
+        c.\u7768\u307F = (c.\u7768\u307F || 0) + dt;
+      } else c.\u7768\u307F = 0;
+      const \u89E6\u308C\u305F\u6575 = (c.\u7768\u307F || 0) > 6 ? null : c.\u63A5\u6575;
       if (!MAP && \u89E6\u308C\u305F\u6575) {
         for (const o of alive) {
           if (o.side === c.side || !\u584A\u3068\u3057\u3066\u7ACB\u3064(o)) continue;
