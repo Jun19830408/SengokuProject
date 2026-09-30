@@ -33,7 +33,7 @@ import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
 import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い, 攻めの願い問い } from "./panels.jsx";
-import { SallyDialog } from "./panels.jsx";
+import { SallyDialog, 音の欄 } from "./panels.jsx";
 import { 惣無事令を発する, 応諾を決める, 朝敵を検め直す } from "../core/sobuji.js";
 import { 号令を発する } from "../core/gourei.js";
 import { 惣無事令の帳, 惣無事令の問い as 惣無事令の問い札, 号令の帳, 天下分け目の帳, 分け目の沙汰の帳, 移封の帳, 直参の帳 } from "./panels.jsx";
@@ -47,6 +47,7 @@ import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer, DiploOffer 
 import { underMyBanner, 同じ旗の下, 己の盟約, 主家, 裏切りの出陣か } from "../core/state.js";
 import { 忠誠, 守備隊の統率, castellanOf, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
 import { 城主の札を据える } from "../core/state.js";
+import { 場面を選ぶ } from "../audio/oto.js";
 import { 守りの割り付け } from "../core/garrison.js";
 import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を受ける, 縁談を断る } from "../core/hime.js";
 import { 蓄えに合わせる } from "../core/roster.js";
@@ -2267,6 +2268,21 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const selCastle = g.castles.find((c) => c.id === sel);
 
   // 合戦中は戦略画面の帯を出さず、画面全体を戦場にする（GDD 15.1）
+  /* 場面の調べ（GDD 15.4）。
+
+     政務は位で替わる――守護代の頃、関白に昇った頃、征夷大将軍に任じられた頃。
+     戦は野と城で分け、天下分け目だけは別に立てる。 */
+  const 位 = (() => { const r = courtRank(g, g.player); return r ? r.key : null; })();
+  useEffect(() => {
+    if (battle) {
+      場面を選ぶ(battle.mode === "wakeme" ? "分け目" : battle.mode === "castle" ? "城攻め" : "野戦");
+    } else if (sea) {
+      場面を選ぶ("野戦");
+    } else {
+      場面を選ぶ("政務", { 位 });
+    }
+  }, [battle ? battle.mode : null, !!sea, 位]);
+
   if (sea) return <SeaScreen key={sea.key} ctx={sea} land={land} onEnd={(bb) => 海戦を終える(bb)} />;
   if (battle) return <BattleScreen key={battle.armyId} ctx={battle} land={land} onEnd={(bb) => finishBattle(bb, battle)} />;
 
@@ -3087,6 +3103,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 </select>
               )}
               </div>
+              {/* 音（GDD 15.4）。政務・合戦・城攻め・天下分け目で調べが替わる。 */}
+              <div className="sec" style={{ marginTop: 14 }}>音</div>
+              <音の欄 />
               <div style={{ textAlign: "right", marginTop: 16 }}>
                 <button className="btn" onClick={() => setModal(null)}>閉じる</button>
               </div>

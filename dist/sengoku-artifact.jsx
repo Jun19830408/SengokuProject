@@ -13339,8 +13339,8 @@ function \u59EB\u306E\u5C45\u5834\u6240(s2, { \u544A\u3052\u308B } = {}) {
           h.at = gen.at;
           continue;
         }
-        const \u4ECA = s2.castles.find((c) => c.id === h.at);
-        if (\u4ECA && \u4ECA.faction === h.faction) continue;
+        const \u4ECA2 = s2.castles.find((c) => c.id === h.at);
+        if (\u4ECA2 && \u4ECA2.faction === h.faction) continue;
       }
     }
     const \u57CE = s2.castles.find((c) => c.id === h.at);
@@ -19915,14 +19915,14 @@ function \u6728\u3092\u6563\u3089\u3059(\u7A2E, n, \u5E452, \u9AD8, { \u5BC4 = n
   }
   return \u51FA;
 }
-var \u7B4B = (pts, \u5272 = 4, \u63FA = 0, \u7A2E = 7) => {
+var \u7B4B = (pts, \u5272 = 4, \u63FA2 = 0, \u7A2E = 7) => {
   const \u8CFD = \u8CFD\u3092\u5DFB\u304F(\u7A2E), \u51FA = [];
   for (let i = 0; i < pts.length - 1; i++) {
     const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
     const dx = x2 - x1, dy = y2 - y1, \u95772 = Math.hypot(dx, dy) || 1;
     const nx = -dy / \u95772, ny = dx / \u95772;
     for (let k = 0; k < \u5272; k++) {
-      const t = k / \u5272, w = \u63FA ? (\u8CFD() - 0.5) * 2 * \u63FA * Math.sin(Math.PI * t) : 0;
+      const t = k / \u5272, w = \u63FA2 ? (\u8CFD() - 0.5) * 2 * \u63FA2 * Math.sin(Math.PI * t) : 0;
       \u51FA.push({ x: Math.round(x1 + dx * t + nx * w), y: Math.round(y1 + dy * t + ny * w) });
     }
   }
@@ -19972,7 +19972,7 @@ function \u5099\u3092\u6577\u304F(b, \u6570) {
   return \u51FA;
 }
 function \u62BC\u3057\u5206\u3051\u308B(\u5834, \u9593 = \u968A\u306E\u9593\u5408\u3044) {
-  for (let \u5EA6 = 0; \u5EA6 < 6; \u5EA6++) {
+  for (let \u5EA62 = 0; \u5EA62 < 6; \u5EA62++) {
     let \u52D5 = 0;
     for (let i = 0; i < \u5834.length; i++) {
       for (let j = i + 1; j < \u5834.length; j++) {
@@ -21329,20 +21329,20 @@ var \u5730\u65B9\u306E\u4E26\u3073 = {
   \u4E5D\u5DDE: ["\u4E2D\u56FD", "\u56DB\u56FD"]
 };
 var \u5730\u65B9\u304C\u96A3\u308A\u5408\u3046\u304B = (a, b) => !!(\u5730\u65B9\u306E\u4E26\u3073[a] || []).includes(b);
-function \u6BB5\u306E\u4E0A\u4E57\u305B(\u72B6, \u7684, { \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u304B3, \u4EAC\u307E\u3067\u306E\u6B69 } = {}) {
-  if (!\u72B6 || !\u7684) return 0;
+function \u6BB5\u306E\u4E0A\u4E57\u305B(\u72B62, \u7684, { \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u304B3, \u4EAC\u307E\u3067\u306E\u6B69 } = {}) {
+  if (!\u72B62 || !\u7684) return 0;
   let w = 0;
-  const \u56FD = \u72B6.\u72D9\u3046\u56FD;
-  if (\u72B6.\u6BB5 === \u6BB5.\u5B58\u7D9A) return 0;
-  if (\u72B6.\u72D9\u3046\u57CE && \u7684.id === \u72B6.\u72D9\u3046\u57CE) w += 140;
+  const \u56FD = \u72B62.\u72D9\u3046\u56FD;
+  if (\u72B62.\u6BB5 === \u6BB5.\u5B58\u7D9A) return 0;
+  if (\u72B62.\u72D9\u3046\u57CE && \u7684.id === \u72B62.\u72D9\u3046\u57CE) w += 140;
   if (\u56FD && \u56FD.includes(\u7684.kuni)) {
-    w += \u72B6.\u6BB5 === \u6BB5.\u8DB3\u5834 ? 70 : \u72B6.\u6BB5 === \u6BB5.\u95A2\u6771 ? 80 : \u72B6.\u6BB5 === \u6BB5.\u4E0A\u6D1B ? 90 : \u72B6.\u6BB5 === \u6BB5.\u4E94\u757F ? 90 : \u72B6.\u6BB5 === \u6BB5.\u5468\u308A ? 50 : 30;
+    w += \u72B62.\u6BB5 === \u6BB5.\u8DB3\u5834 ? 70 : \u72B62.\u6BB5 === \u6BB5.\u95A2\u6771 ? 80 : \u72B62.\u6BB5 === \u6BB5.\u4E0A\u6D1B ? 90 : \u72B62.\u6BB5 === \u6BB5.\u4E94\u757F ? 90 : \u72B62.\u6BB5 === \u6BB5.\u5468\u308A ? 50 : 30;
   }
-  if (\u72B6.\u6BB5 === \u6BB5.\u4E0A\u6D1B && typeof \u4EAC\u307E\u3067\u306E\u6B69 === "function") {
+  if (\u72B62.\u6BB5 === \u6BB5.\u4E0A\u6D1B && typeof \u4EAC\u307E\u3067\u306E\u6B69 === "function") {
     const \u6B69 = \u4EAC\u307E\u3067\u306E\u6B69(\u7684.id);
     if (\u6B69 != null && \u6B69 <= 8) w += Math.round(75 * Math.pow(0.75, \u6B69 - 1));
   }
-  if (\u72B6.\u6BB5 === \u6BB5.\u4E0A\u6D1B && GOKINAI.includes(\u7684.kuni)) w += 40;
+  if (\u72B62.\u6BB5 === \u6BB5.\u4E0A\u6D1B && GOKINAI.includes(\u7684.kuni)) w += 40;
   return w;
 }
 
@@ -21633,9 +21633,9 @@ function \u8FD1\u96A3\u304B\u3089\u5175\u3092\u5BC4\u305B\u308B(s2, fid, \u767A\
     const gens = (s2.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive && !q.lord);
     const \u4F59\u308A = x.local + gens.reduce((a2, q) => a2 + q.retinue, 0) - minGarrison(x);
     if (\u4F59\u308A < 400) continue;
-    const \u51FA\u3059 = Math.round(\u4F59\u308A * 0.6);
+    const \u51FA\u30592 = Math.round(\u4F59\u308A * 0.6);
     const \u5C06 = [...gens].sort((a2, b2) => b2.lead - a2.lead)[0];
-    const \u5730 = Math.max(0, Math.min(x.local, \u51FA\u3059 - (\u5C06 ? \u5C06.retinue : 0)));
+    const \u5730 = Math.max(0, Math.min(x.local, \u51FA\u30592 - (\u5C06 ? \u5C06.retinue : 0)));
     if (\u5730 + (\u5C06 ? \u5C06.retinue : 0) < 200) continue;
     const tk = rosterTake(x.rost || newRoster(x.local, `loc-${x.id}`), \u5730);
     x.rost = tk.rest;
@@ -22735,8 +22735,8 @@ function advanceMonth(prev, g) {
   const \u5929\u4E0B\u306E\u9053 = /* @__PURE__ */ new Map();
   for (const fid2 of Object.keys(s2.factions)) {
     if (!s2.castles.some((c) => c.faction === fid2)) continue;
-    const \u72B6 = \u3044\u307E\u306E\u6BB5(s2, fid2, { \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u5224\u3058 });
-    if (\u72B6 && !\u72B6.\u5FD7\u306A\u3057) \u5929\u4E0B\u306E\u9053.set(fid2, \u72B6);
+    const \u72B62 = \u3044\u307E\u306E\u6BB5(s2, fid2, { \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u5224\u3058 });
+    if (\u72B62 && !\u72B62.\u5FD7\u306A\u3057) \u5929\u4E0B\u306E\u9053.set(fid2, \u72B62);
   }
   const \u5BB6\u306E\u57CE\u6570 = /* @__PURE__ */ new Map();
   for (const c2 of s2.castles) \u5BB6\u306E\u57CE\u6570.set(c2.faction, (\u5BB6\u306E\u57CE\u6570.get(c2.faction) || 0) + 1);
@@ -23413,22 +23413,22 @@ function genTerrain(seed) {
     const \u5357 = clamp(\u6E21\u308A + (rnd() - 0.5) * W2 * 0.3, W2 * 0.12, W2 * 0.88);
     const \u5317 = clamp(\u6E21\u308A + (rnd() - 0.5) * W2 * 0.3, W2 * 0.12, W2 * 0.88);
     const \u5DDD\u4E2D = RIVER.bot > RIVER.top ? (RIVER.top + RIVER.bot) / 2 : H2 * 0.5;
-    const \u66F2 = (y0, y1, x0, x1, n) => {
+    const \u66F22 = (y0, y1, x0, x1, n) => {
       const \u51FA = [];
       for (let i = 1; i < n; i++) {
         const u = i / n;
         const \u5DDD\u5BC4\u308A = 1 - u;
-        const \u63FA = (rnd() - 0.5) * W2 * 0.06 * \u5DDD\u5BC4\u308A * \u5DDD\u5BC4\u308A;
-        \u51FA.push({ x: clamp(x0 + (x1 - x0) * u + \u63FA, 20, W2 - 20), y: y0 + (y1 - y0) * u });
+        const \u63FA2 = (rnd() - 0.5) * W2 * 0.06 * \u5DDD\u5BC4\u308A * \u5DDD\u5BC4\u308A;
+        \u51FA.push({ x: clamp(x0 + (x1 - x0) * u + \u63FA2, 20, W2 - 20), y: y0 + (y1 - y0) * u });
       }
       return \u51FA;
     };
     const \u5DDD\u5E45 = RIVER.bot > RIVER.top ? RIVER.bot - RIVER.top : 60;
     ROAD.\u7BC0.push({ x: \u5357, y: H2 + 30 });
-    ROAD.\u7BC0.push(...\u66F2(H2 + 30, \u5DDD\u4E2D + \u5DDD\u5E45 * 1.6, \u5357, \u6E21\u308A, 3));
+    ROAD.\u7BC0.push(...\u66F22(H2 + 30, \u5DDD\u4E2D + \u5DDD\u5E45 * 1.6, \u5357, \u6E21\u308A, 3));
     ROAD.\u7BC0.push({ x: \u6E21\u308A, y: \u5DDD\u4E2D + \u5DDD\u5E45 * 1.6 });
     ROAD.\u7BC0.push({ x: \u6E21\u308A, y: \u5DDD\u4E2D - \u5DDD\u5E45 * 1.6 });
-    ROAD.\u7BC0.push(...\u66F2(\u5DDD\u4E2D - \u5DDD\u5E45 * 1.6, -30, \u6E21\u308A, \u5317, 3));
+    ROAD.\u7BC0.push(...\u66F22(\u5DDD\u4E2D - \u5DDD\u5E45 * 1.6, -30, \u6E21\u308A, \u5317, 3));
     ROAD.\u7BC0.push({ x: \u5317, y: -30 });
   }
 }
@@ -24396,8 +24396,8 @@ function \u9000\u304D\u5834(b, c) {
 function \u5185\u306E\u9580\u3078\u9000\u304F(b, c) {
   const m = b && b.map;
   if (!m) return null;
-  const \u4ECA = c.holdGate;
-  const \u5185 = m.gates.filter((g) => !g.broken && (!\u4ECA || g.layer > \u4ECA.layer));
+  const \u4ECA2 = c.holdGate;
+  const \u5185 = m.gates.filter((g) => !g.broken && (!\u4ECA2 || g.layer > \u4ECA2.layer));
   const \u5019\u88DC = \u5185.length ? \u5185 : m.gates.filter((g) => !g.broken);
   if (!\u5019\u88DC.length) {
     const h = m.layers[m.layers.length - 1];
@@ -29721,6 +29721,499 @@ import React3, { useState as useState3, useRef as useRef2, useEffect as useEffec
 // src/ui/panels.jsx
 import React2, { useState as useState2, useEffect as useEffect2, useMemo } from "react";
 
+// src/audio/kyoku.js
+var \u97F3\u968E = {
+  \u90FD\u7BC0: [62, 63, 67, 69, 70],
+  // レ ミ♭ ソ ラ シ♭
+  \u5F8B: [62, 64, 67, 69, 71],
+  // レ ミ ソ ラ シ
+  \u6C11\u8B21: [62, 65, 67, 69, 72]
+  // レ ファ ソ ラ ド
+};
+var \u5EA6 = (\u968E, n) => {
+  const \u95772 = \u968E.length;
+  const \u516B = Math.floor(n / \u95772);
+  return \u968E[(n % \u95772 + \u95772) % \u95772] + \u516B * 12;
+};
+var \u63FA = (i, n) => i * 2654435761 % n;
+var \u653F\u52D9 = {
+  \u540D: "\u56FD\u3065\u304F\u308A",
+  \u62CD: 66,
+  \u62CD\u5B50: 4,
+  \u5C0F\u7BC0: 8,
+  \u97F3\u968E: \u97F3\u968E.\u90FD\u7BC0,
+  \u6839: 0,
+  \u97F3\u7B26(\u5C0F) {
+    const S = this.\u97F3\u968E, o = [];
+    const \u578B = [[0, 2, 4, 2], [0, 3, 4, 3], [-1, 2, 4, 2], [0, 2, 5, 2]][\u5C0F % 4];
+    \u578B.forEach((d, i) => o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S, d) - 12, \u4F4D: i, \u9577: 1.1, \u5F37: i === 0 ? 0.5 : 0.34 }));
+    if (\u5C0F % 2 === 0) {
+      const \u7BC0 = [[4, 0, 2.2], [5, 1.5, 1.4], [3, 2.5, 1.2]];
+      const \u79FB = \u63FA(\u5C0F, 3) - 1;
+      for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S, d + \u79FB), \u4F4D, \u9577: \u95772, \u5F37: 0.3 });
+    }
+    if (\u5C0F === this.\u5C0F\u7BC0 - 1) o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S, 0) - 24, \u4F4D: 3, \u9577: 2, \u5F37: 0.4 });
+    return o;
+  }
+};
+var \u95A2\u767D = {
+  \u540D: "\u53C2\u5185",
+  \u62CD: 52,
+  \u62CD\u5B50: 4,
+  \u5C0F\u7BC0: 8,
+  \u97F3\u968E: \u97F3\u968E.\u5F8B,
+  \u6839: 0,
+  \u97F3\u7B26(\u5C0F) {
+    const S = this.\u97F3\u968E, o = [];
+    const \u6839 = \u5EA6(S, [0, 1, 0, 3][\u5C0F % 4]);
+    for (const d of [0, 7, 12]) o.push({ \u697D\u5668: "\u7B19", \u97F3: \u6839 + d, \u4F4D: 0, \u9577: 4, \u5F37: 0.16 });
+    if (\u5C0F % 2 === 1) {
+      const \u7BC0 = [[2, 0.5, 1.6], [3, 2, 1.2], [1, 3.2, 0.8]];
+      for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u7BF3\u7BE5", \u97F3: \u5EA6(S, d + \u63FA(\u5C0F, 2)), \u4F4D, \u9577: \u95772, \u5F37: 0.26 });
+    }
+    if (\u5C0F % 4 === 0) o.push({ \u697D\u5668: "\u9266", \u97F3: \u5EA6(S, 4) + 12, \u4F4D: 0, \u9577: 2.6, \u5F37: 0.24 });
+    return o;
+  }
+};
+var \u5C06\u8ECD = {
+  \u540D: "\u5E55\u5E9C",
+  \u62CD: 60,
+  \u62CD\u5B50: 4,
+  \u5C0F\u7BC0: 8,
+  \u97F3\u968E: \u97F3\u968E.\u90FD\u7BC0,
+  \u6839: 0,
+  \u97F3\u7B26(\u5C0F) {
+    const S = this.\u97F3\u968E, o = [];
+    const \u578B = [[0, 4, 2, 4], [0, 3, 2, 3]][\u5C0F % 2];
+    \u578B.forEach((d, i) => o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S, d) - 12, \u4F4D: i, \u9577: 1.05, \u5F37: i === 0 ? 0.48 : 0.3 }));
+    o.push({ \u697D\u5668: "\u7B19", \u97F3: \u5EA6(S, 0) - 12, \u4F4D: 0, \u9577: 4, \u5F37: 0.13 });
+    o.push({ \u697D\u5668: "\u7B19", \u97F3: \u5EA6(S, 3) - 12, \u4F4D: 0, \u9577: 4, \u5F37: 0.1 });
+    o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 48, \u4F4D: 0, \u9577: 0.5, \u5F37: 0.42 });
+    if (\u5C0F % 2 === 1) o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 50, \u4F4D: 2, \u9577: 0.4, \u5F37: 0.26 });
+    if (\u5C0F % 4 === 2) {
+      for (const [d, \u4F4D, \u95772] of [[4, 1, 1.4], [2, 2.6, 1.2]]) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S, d), \u4F4D, \u9577: \u95772, \u5F37: 0.26 });
+    }
+    return o;
+  }
+};
+var \u91CE\u6226 = {
+  \u540D: "\u62BC\u3057\u592A\u9F13",
+  \u62CD: 132,
+  \u62CD\u5B50: 4,
+  \u5C0F\u7BC0: 4,
+  \u97F3\u968E: \u97F3\u968E.\u6C11\u8B21,
+  \u6839: 0,
+  \u97F3\u7B26(\u5C0F) {
+    const S = this.\u97F3\u968E, o = [];
+    for (let i = 0; i < 4; i++) o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: i % 2 === 0 ? 46 : 52, \u4F4D: i, \u9577: 0.4, \u5F37: i % 2 === 0 ? 0.5 : 0.3 });
+    o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 54, \u4F4D: 2.5, \u9577: 0.3, \u5F37: 0.22 });
+    if (\u5C0F % 2 === 1) o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 54, \u4F4D: 3.5, \u9577: 0.3, \u5F37: 0.24 });
+    const \u7BC0 = [[[4, 0, 0.8], [3, 1, 0.6], [4, 2, 1.4]], [[5, 0, 0.7], [4, 1.5, 0.7], [2, 2.5, 1.2]]][\u5C0F % 2];
+    for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u7B1B", \u97F3: \u5EA6(S, d), \u4F4D, \u9577: \u95772, \u5F37: 0.28 });
+    if (\u5C0F % 4 === 0) o.push({ \u697D\u5668: "\u6CD5\u87BA", \u97F3: \u5EA6(S, 0) - 12, \u4F4D: 0, \u9577: 2.4, \u5F37: 0.3 });
+    return o;
+  }
+};
+var \u57CE\u653B\u3081 = {
+  \u540D: "\u5BC4\u305B\u592A\u9F13",
+  \u62CD: 92,
+  \u62CD\u5B50: 4,
+  \u5C0F\u7BC0: 8,
+  \u97F3\u968E: \u97F3\u968E.\u90FD\u7BC0,
+  \u6839: 0,
+  \u97F3\u7B26(\u5C0F) {
+    const S = this.\u97F3\u968E, o = [];
+    o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 43, \u4F4D: 0, \u9577: 0.9, \u5F37: 0.55 });
+    o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 45, \u4F4D: 2, \u9577: 0.6, \u5F37: 0.3 });
+    if (\u5C0F % 2 === 1) o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 48, \u4F4D: 3.25, \u9577: 0.4, \u5F37: 0.24 });
+    if (\u5C0F % 3 === 0) {
+      for (const [d, \u4F4D, \u95772] of [[0, 0.5, 2.2], [1, 3, 1.2]]) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S, d) - 12, \u4F4D, \u9577: \u95772, \u5F37: 0.3 });
+    }
+    if (\u5C0F % 2 === 0) o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S, 0) - 24, \u4F4D: 1, \u9577: 1.6, \u5F37: 0.3 });
+    return o;
+  }
+};
+var \u5206\u3051\u76EE = {
+  \u540D: "\u5929\u4E0B\u5206\u3051\u76EE",
+  \u62CD: 116,
+  \u62CD\u5B50: 4,
+  \u5C0F\u7BC0: 8,
+  \u97F3\u968E: \u97F3\u968E.\u90FD\u7BC0,
+  \u6839: 0,
+  \u97F3\u7B26(\u5C0F) {
+    const S = this.\u97F3\u968E, o = [];
+    const \u5F8C\u534A = \u5C0F >= 4;
+    for (let i = 0; i < 4; i++) {
+      o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: i === 0 ? 43 : 50, \u4F4D: i, \u9577: 0.45, \u5F37: i === 0 ? 0.55 : 0.3 });
+      if (\u5F8C\u534A) o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 55, \u4F4D: i + 0.5, \u9577: 0.25, \u5F37: 0.2 });
+    }
+    const \u578B = [[0, 3, 4, 3], [0, 4, 5, 4]][\u5C0F % 2];
+    \u578B.forEach((d, i) => o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S, d) - 12, \u4F4D: i, \u9577: 0.9, \u5F37: 0.36 }));
+    o.push({ \u697D\u5668: "\u7B19", \u97F3: \u5EA6(S, 0) - 24, \u4F4D: 0, \u9577: 4, \u5F37: \u5F8C\u534A ? 0.16 : 0.1 });
+    if (\u5C0F % 4 === 0) o.push({ \u697D\u5668: "\u6CD5\u87BA", \u97F3: \u5EA6(S, 0) - 12, \u4F4D: 0, \u9577: 2.6, \u5F37: 0.34 });
+    if (\u5F8C\u534A) {
+      const \u7BC0 = [[5, 0.5, 1.2], [4, 2, 1], [6, 3, 1]];
+      for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S, d), \u4F4D, \u9577: \u95772, \u5F37: 0.3 });
+    }
+    return o;
+  }
+};
+var \u66F2 = { \u653F\u52D9, \u95A2\u767D, \u5C06\u8ECD, \u91CE\u6226, \u57CE\u653B\u3081, \u5206\u3051\u76EE };
+function \u5834\u9762\u306E\u66F2(\u5834\u9762, { \u4F4D } = {}) {
+  if (\u5834\u9762 === "\u5206\u3051\u76EE") return "\u5206\u3051\u76EE";
+  if (\u5834\u9762 === "\u57CE\u653B\u3081") return "\u57CE\u653B\u3081";
+  if (\u5834\u9762 === "\u91CE\u6226") return "\u91CE\u6226";
+  if (\u5834\u9762 === "\u653F\u52D9") {
+    if (\u4F4D === "\u5F81\u5937\u5927\u5C06\u8ECD") return "\u5C06\u8ECD";
+    if (\u4F4D === "\u95A2\u767D" || \u4F4D === "\u592A\u653F\u5927\u81E3") return "\u95A2\u767D";
+    return "\u653F\u52D9";
+  }
+  return null;
+}
+
+// src/audio/gakki.js
+var \u97F3\u7A0B = (n) => 440 * Math.pow(2, (n - 69) / 12);
+var \u96D1\u97F3\u306E\u68DA = /* @__PURE__ */ new WeakMap();
+function \u96D1\u97F3(\u5EA7) {
+  if (\u96D1\u97F3\u306E\u68DA.has(\u5EA7)) return \u96D1\u97F3\u306E\u68DA.get(\u5EA7);
+  const \u79D2 = 2;
+  const b = \u5EA7.createBuffer(1, Math.floor(\u5EA7.sampleRate * \u79D2), \u5EA7.sampleRate);
+  const d = b.getChannelData(0);
+  let x = 5446;
+  for (let i = 0; i < d.length; i++) {
+    x = x * 1103515245 + 12345 & 2147483647;
+    d[i] = x / 1073741823 - 1;
+  }
+  \u96D1\u97F3\u306E\u68DA.set(\u5EA7, b);
+  return b;
+}
+var \u5305\u7D61 = (g, t, \u5F37, \u7ACB, \u4FDD, \u843D) => {
+  g.gain.setValueAtTime(1e-4, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(2e-4, \u5F37), t + \u7ACB);
+  g.gain.setValueAtTime(Math.max(2e-4, \u5F37), t + \u7ACB + \u4FDD);
+  g.gain.exponentialRampToValueAtTime(1e-4, t + \u7ACB + \u4FDD + \u843D);
+};
+function \u7434(\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37) {
+  const f = \u97F3\u7A0B(\u97F3);
+  for (const [\u500D, \u91CF, \u6E1B] of [[1, 1, 1], [2, 0.42, 0.7], [3, 0.2, 0.5], [4.2, 0.1, 0.35]]) {
+    const o = \u5EA7.createOscillator(), g = \u5EA7.createGain();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(f * \u500D, t);
+    \u5305\u7D61(g, t, \u5F37 * \u91CF * 0.5, 4e-3, 0.01, \u95772 * \u6E1B + 0.2);
+    o.connect(g).connect(\u51FA);
+    o.start(t);
+    o.stop(t + \u95772 * \u6E1B + 0.4);
+  }
+  const n = \u5EA7.createBufferSource(), ng = \u5EA7.createGain(), nf = \u5EA7.createBiquadFilter();
+  n.buffer = \u96D1\u97F3(\u5EA7);
+  n.loop = true;
+  nf.type = "bandpass";
+  nf.frequency.setValueAtTime(f * 3, t);
+  nf.Q.value = 2;
+  \u5305\u7D61(ng, t, \u5F37 * 0.22, 2e-3, 5e-3, 0.05);
+  n.connect(nf).connect(ng).connect(\u51FA);
+  n.start(t);
+  n.stop(t + 0.1);
+}
+function \u7B1B\u7CFB(\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37, { \u606F = 0.3, \u63FA: \u63FA2 = 5.2, \u6DF1 = 3.5, \u786C = false } = {}) {
+  const f = \u97F3\u7A0B(\u97F3);
+  const o = \u5EA7.createOscillator(), g = \u5EA7.createGain();
+  o.type = \u786C ? "square" : "sine";
+  o.frequency.setValueAtTime(f, t);
+  const lfo = \u5EA7.createOscillator(), lg = \u5EA7.createGain();
+  lfo.frequency.setValueAtTime(\u63FA2, t);
+  lg.gain.setValueAtTime(0, t);
+  lg.gain.linearRampToValueAtTime(\u6DF1, t + Math.min(0.4, \u95772 * 0.5));
+  lfo.connect(lg).connect(o.frequency);
+  \u5305\u7D61(g, t, \u5F37 * (\u786C ? 0.34 : 0.5), 0.08, Math.max(0.02, \u95772 - 0.25), 0.22);
+  o.connect(g).connect(\u51FA);
+  o.start(t);
+  o.stop(t + \u95772 + 0.3);
+  lfo.start(t);
+  lfo.stop(t + \u95772 + 0.3);
+  if (\u606F > 0) {
+    const n = \u5EA7.createBufferSource(), nf = \u5EA7.createBiquadFilter(), ng = \u5EA7.createGain();
+    n.buffer = \u96D1\u97F3(\u5EA7);
+    n.loop = true;
+    nf.type = "bandpass";
+    nf.frequency.setValueAtTime(f * 2, t);
+    nf.Q.value = 1.2;
+    \u5305\u7D61(ng, t, \u5F37 * \u606F * 0.3, 0.06, Math.max(0.02, \u95772 - 0.2), 0.2);
+    n.connect(nf).connect(ng).connect(\u51FA);
+    n.start(t);
+    n.stop(t + \u95772 + 0.2);
+  }
+}
+function \u592A\u9F13(\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37) {
+  const f = \u97F3\u7A0B(\u97F3);
+  const o = \u5EA7.createOscillator(), g = \u5EA7.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(f * 2.2, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(30, f * 0.8), t + 0.09);
+  \u5305\u7D61(g, t, \u5F37, 3e-3, 0.02, Math.max(0.14, \u95772 * 0.6));
+  o.connect(g).connect(\u51FA);
+  o.start(t);
+  o.stop(t + \u95772 + 0.3);
+  const n = \u5EA7.createBufferSource(), nf = \u5EA7.createBiquadFilter(), ng = \u5EA7.createGain();
+  n.buffer = \u96D1\u97F3(\u5EA7);
+  n.loop = true;
+  nf.type = "lowpass";
+  nf.frequency.setValueAtTime(1200, t);
+  \u5305\u7D61(ng, t, \u5F37 * 0.5, 2e-3, 4e-3, 0.09);
+  n.connect(nf).connect(ng).connect(\u51FA);
+  n.start(t);
+  n.stop(t + 0.2);
+}
+function \u7B19(\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37) {
+  const f = \u97F3\u7A0B(\u97F3);
+  for (const [\u500D, \u91CF] of [[1, 1], [2, 0.5], [3, 0.3], [5, 0.12]]) {
+    const o = \u5EA7.createOscillator(), g = \u5EA7.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(f * \u500D * (1 + \u500D % 2 * 1e-3), t);
+    \u5305\u7D61(g, t, \u5F37 * \u91CF * 0.4, 0.6, Math.max(0.1, \u95772 - 1.1), 0.7);
+    o.connect(g).connect(\u51FA);
+    o.start(t);
+    o.stop(t + \u95772 + 0.9);
+  }
+}
+function \u7BF3\u7BE5(\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37) {
+  const f = \u97F3\u7A0B(\u97F3);
+  const o = \u5EA7.createOscillator(), g = \u5EA7.createGain(), lp = \u5EA7.createBiquadFilter();
+  o.type = "sawtooth";
+  o.frequency.setValueAtTime(f, t);
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(f * 4.5, t);
+  lp.Q.value = 3;
+  const lfo = \u5EA7.createOscillator(), lg = \u5EA7.createGain();
+  lfo.frequency.setValueAtTime(4.6, t);
+  lg.gain.setValueAtTime(0, t);
+  lg.gain.linearRampToValueAtTime(4, t + 0.5);
+  lfo.connect(lg).connect(o.frequency);
+  \u5305\u7D61(g, t, \u5F37 * 0.34, 0.12, Math.max(0.05, \u95772 - 0.3), 0.3);
+  o.connect(lp).connect(g).connect(\u51FA);
+  o.start(t);
+  o.stop(t + \u95772 + 0.4);
+  lfo.start(t);
+  lfo.stop(t + \u95772 + 0.4);
+}
+function \u9266(\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37) {
+  const f = \u97F3\u7A0B(\u97F3);
+  const o = \u5EA7.createOscillator(), m = \u5EA7.createOscillator(), mg = \u5EA7.createGain(), g = \u5EA7.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(f, t);
+  m.type = "sine";
+  m.frequency.setValueAtTime(f * 3.47, t);
+  mg.gain.setValueAtTime(f * 2.4, t);
+  mg.gain.exponentialRampToValueAtTime(1, t + 0.5);
+  m.connect(mg).connect(o.frequency);
+  \u5305\u7D61(g, t, \u5F37 * 0.4, 4e-3, 0.02, \u95772 + 0.6);
+  o.connect(g).connect(\u51FA);
+  o.start(t);
+  o.stop(t + \u95772 + 0.9);
+  m.start(t);
+  m.stop(t + \u95772 + 0.9);
+}
+function \u6CD5\u87BA(\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37) {
+  const f = \u97F3\u7A0B(\u97F3);
+  const o = \u5EA7.createOscillator(), g = \u5EA7.createGain(), lp = \u5EA7.createBiquadFilter();
+  o.type = "sawtooth";
+  o.frequency.setValueAtTime(f * 0.98, t);
+  o.frequency.linearRampToValueAtTime(f, t + 0.35);
+  lp.type = "lowpass";
+  lp.frequency.setValueAtTime(f * 3, t);
+  const lfo = \u5EA7.createOscillator(), lg = \u5EA7.createGain();
+  lfo.frequency.setValueAtTime(5.5, t);
+  lg.gain.setValueAtTime(2.5, t);
+  lfo.connect(lg).connect(o.frequency);
+  \u5305\u7D61(g, t, \u5F37 * 0.42, 0.3, Math.max(0.1, \u95772 - 0.7), 0.5);
+  o.connect(lp).connect(g).connect(\u51FA);
+  o.start(t);
+  o.stop(t + \u95772 + 0.6);
+  lfo.start(t);
+  lfo.stop(t + \u95772 + 0.6);
+}
+var \u697D\u5668 = {
+  \u7434,
+  \u592A\u9F13,
+  \u7B19,
+  \u7BF3\u7BE5,
+  \u9266,
+  \u6CD5\u87BA,
+  \u5C3A\u516B: (\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37) => \u7B1B\u7CFB(\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37, { \u606F: 0.45, \u63FA: 4.8, \u6DF1: 4 }),
+  \u7B1B: (\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37) => \u7B1B\u7CFB(\u5EA7, \u51FA, t, \u97F3, \u95772, \u5F37, { \u606F: 0.22, \u63FA: 6.2, \u6DF1: 2.6, \u786C: true })
+};
+function \u9CF4\u3089\u3059(\u5EA7, \u51FA, \u540D, \u97F3, \u6642, \u95772, \u5F37) {
+  const f = \u697D\u5668[\u540D];
+  if (!f) return false;
+  try {
+    f(\u5EA7, \u51FA, \u6642, \u97F3, \u95772, \u5F37);
+  } catch (e) {
+    return false;
+  }
+  return true;
+}
+
+// src/audio/oto.js
+var \u68DA\u306E\u9375 = "sengoku:oto";
+var \u5148\u8AAD\u307F = 0.4;
+var \u523B\u307F\u306E\u9593 = 0.2;
+var \u72B6 = {
+  \u5EA7: null,
+  \u4E3B: null,
+  \u53E3: null,
+  \u6642\u8A08: null,
+  \u89E3\u3051\u305F: false,
+  \u5165: true,
+  \u97F3\u91CF: 0.55,
+  \u66F2\u540D: null,
+  \u6B21\u306E\u66F2: null,
+  \u5C0F\u7BC0: 0,
+  \u6B21\u306E\u6642: 0,
+  \u59CB\u3081: 0,
+  \u63A7\u3048: []
+  // 試験のための覚え書き
+};
+function \u8A2D\u5B9A\u3092\u8AAD\u3080(\u68DA) {
+  const st = \u68DA || (typeof localStorage !== "undefined" ? localStorage : null);
+  if (!st) return { \u5165: \u72B6.\u5165, \u97F3\u91CF: \u72B6.\u97F3\u91CF };
+  try {
+    const v = JSON.parse(st.getItem(\u68DA\u306E\u9375) || "null");
+    if (v && typeof v === "object") {
+      \u72B6.\u5165 = v.\u5165 !== false;
+      \u72B6.\u97F3\u91CF = typeof v.\u97F3\u91CF === "number" ? Math.max(0, Math.min(1, v.\u97F3\u91CF)) : \u72B6.\u97F3\u91CF;
+    }
+  } catch (e) {
+  }
+  return { \u5165: \u72B6.\u5165, \u97F3\u91CF: \u72B6.\u97F3\u91CF };
+}
+function \u8A2D\u5B9A\u3092\u66F8\u304F() {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(\u68DA\u306E\u9375, JSON.stringify({ \u5165: \u72B6.\u5165, \u97F3\u91CF: \u72B6.\u97F3\u91CF }));
+  } catch (e) {
+  }
+}
+var \u97F3\u306E\u8A2D\u5B9A = () => ({ \u5165: \u72B6.\u5165, \u97F3\u91CF: \u72B6.\u97F3\u91CF, \u89E3\u3051\u305F: \u72B6.\u89E3\u3051\u305F, \u66F2: \u72B6.\u66F2\u540D });
+function \u5165\u5207(v) {
+  \u72B6.\u5165 = !!v;
+  \u8A2D\u5B9A\u3092\u66F8\u304F();
+  if (!\u72B6.\u5165) \u6B62\u3081\u308B();
+  else if (\u72B6.\u89E3\u3051\u305F && \u72B6.\u66F2\u540D) \u639B\u3051\u308B(\u72B6.\u66F2\u540D, true);
+  return \u72B6.\u5165;
+}
+function \u97F3\u91CF(v) {
+  \u72B6.\u97F3\u91CF = Math.max(0, Math.min(1, Number(v) || 0));
+  \u8A2D\u5B9A\u3092\u66F8\u304F();
+  if (\u72B6.\u4E3B && \u72B6.\u5EA7) \u72B6.\u4E3B.gain.setValueAtTime(\u72B6.\u97F3\u91CF * 0.5, \u72B6.\u5EA7.currentTime);
+  return \u72B6.\u97F3\u91CF;
+}
+function \u8D77\u3053\u3057\u76F4\u3059() {
+  if (!\u72B6.\u5EA7) return false;
+  try {
+    if (\u72B6.\u5EA7.state !== "running" && \u72B6.\u5EA7.resume) \u72B6.\u5EA7.resume();
+    return \u72B6.\u5EA7.state === "running";
+  } catch (e) {
+    return false;
+  }
+}
+function \u7121\u97F3\u3092\u4E00\u3064(\u5EA7) {
+  try {
+    const b = \u5EA7.createBuffer(1, 1, \u5EA7.sampleRate || 44100);
+    const src = \u5EA7.createBufferSource();
+    src.buffer = b;
+    src.connect(\u5EA7.destination);
+    if (src.start) src.start(0);
+  } catch (e) {
+  }
+}
+function \u89E3\u9320\u3059\u308B(\u4F5C\u308B) {
+  if (\u72B6.\u89E3\u3051\u305F) {
+    \u8D77\u3053\u3057\u76F4\u3059();
+    return true;
+  }
+  \u8A2D\u5B9A\u3092\u8AAD\u3080();
+  const \u4F5C\u308A = \u4F5C\u308B || typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext);
+  if (!\u72B6.\u53E3) {
+    if (!\u4F5C\u308A) return false;
+    try {
+      \u72B6.\u5EA7 = typeof \u4F5C\u308A === "function" && \u4F5C\u308A.prototype ? new \u4F5C\u308A() : \u4F5C\u308A();
+      \u72B6.\u4E3B = \u72B6.\u5EA7.createGain();
+      \u72B6.\u4E3B.gain.setValueAtTime(\u72B6.\u97F3\u91CF * 0.5, \u72B6.\u5EA7.currentTime);
+      \u72B6.\u4E3B.connect(\u72B6.\u5EA7.destination);
+      if (\u72B6.\u5EA7.state !== "running" && \u72B6.\u5EA7.resume) \u72B6.\u5EA7.resume();
+      \u7121\u97F3\u3092\u4E00\u3064(\u72B6.\u5EA7);
+    } catch (e) {
+      return false;
+    }
+  }
+  \u72B6.\u89E3\u3051\u305F = true;
+  if (\u72B6.\u66F2\u540D) \u639B\u3051\u308B(\u72B6.\u66F2\u540D, true);
+  return true;
+}
+var \u4ECA = () => \u72B6.\u53E3 && \u72B6.\u53E3.\u3044\u307E ? \u72B6.\u53E3.\u3044\u307E() : \u72B6.\u5EA7 ? \u72B6.\u5EA7.currentTime : 0;
+function \u5834\u9762\u3092\u9078\u3076(\u5834\u9762, \u69D8 = {}) {
+  const \u540D = \u5834\u9762\u306E\u66F2(\u5834\u9762, \u69D8);
+  if (!\u540D) {
+    \u6B62\u3081\u308B();
+    return null;
+  }
+  if (\u540D === \u72B6.\u66F2\u540D) return \u540D;
+  \u639B\u3051\u308B(\u540D);
+  return \u540D;
+}
+function \u639B\u3051\u308B(\u540D, \u7D9A\u304D) {
+  if (!\u66F2[\u540D]) return null;
+  \u72B6.\u66F2\u540D = \u540D;
+  if (!\u7D9A\u304D) \u72B6.\u5C0F\u7BC0 = 0;
+  if (!\u72B6.\u5165 || !\u72B6.\u89E3\u3051\u305F) return \u540D;
+  \u72B6.\u6B21\u306E\u6642 = \u4ECA() + 0.08;
+  \u4ED5\u639B\u3051\u308B();
+  return \u540D;
+}
+function \u6B62\u3081\u308B() {
+  if (\u72B6.\u6642\u8A08 && typeof clearInterval !== "undefined") clearInterval(\u72B6.\u6642\u8A08);
+  \u72B6.\u6642\u8A08 = null;
+}
+function \u4ED5\u639B\u3051\u308B() {
+  if (\u72B6.\u6642\u8A08) return;
+  if (typeof setInterval === "undefined") return;
+  \u72B6.\u6642\u8A08 = setInterval(() => {
+    try {
+      \u523B\u3080();
+    } catch (e) {
+    }
+  }, \u523B\u307F\u306E\u9593 * 1e3);
+  \u523B\u3080();
+}
+function \u523B\u3080() {
+  if (!\u72B6.\u5165 || !\u72B6.\u89E3\u3051\u305F || !\u72B6.\u66F2\u540D) return 0;
+  const k = \u66F2[\u72B6.\u66F2\u540D];
+  const \u4E00\u62CD = 60 / k.\u62CD;
+  let \u7A4D\u3093\u3060 = 0;
+  while (\u72B6.\u6B21\u306E\u6642 < \u4ECA() + \u5148\u8AAD\u307F) {
+    const \u982D2 = \u72B6.\u6B21\u306E\u6642;
+    const \u97F3\u7B26 = k.\u97F3\u7B26(\u72B6.\u5C0F\u7BC0 % k.\u5C0F\u7BC0);
+    for (const n of \u97F3\u7B26) {
+      const t = \u982D2 + n.\u4F4D * \u4E00\u62CD;
+      const \u95772 = n.\u9577 * \u4E00\u62CD;
+      \u51FA\u3059(n.\u697D\u5668, n.\u97F3, t, \u95772, n.\u5F37);
+      \u7A4D\u3093\u3060++;
+    }
+    \u72B6.\u5C0F\u7BC0++;
+    \u72B6.\u6B21\u306E\u6642 += k.\u62CD\u5B50 * \u4E00\u62CD;
+  }
+  return \u7A4D\u3093\u3060;
+}
+function \u51FA\u3059(\u697D\u56682, \u97F3, \u6642, \u95772, \u5F37) {
+  if (\u72B6.\u53E3) {
+    \u72B6.\u53E3.\u9CF4\u3089\u3059(\u697D\u56682, \u97F3, \u6642, \u95772, \u5F37);
+    \u72B6.\u63A7\u3048.push({ \u697D\u5668: \u697D\u56682, \u97F3, \u6642, \u9577: \u95772, \u5F37 });
+    return;
+  }
+  if (!\u72B6.\u5EA7 || !\u72B6.\u4E3B) return;
+  \u9CF4\u3089\u3059(\u72B6.\u5EA7, \u72B6.\u4E3B, \u697D\u56682, \u97F3, \u6642, \u95772, \u5F37);
+}
+
 // src/core/ihou.js
 var \u79FB\u5C01\u306E\u9593\u5408\u3044 = 60;
 var \u62D2\u3080\u4FE1\u7528 = 35;
@@ -30233,8 +30726,8 @@ function SallyDialog({ g, castleId, foeId, onClose, onGo, \u57CE\u4E0B }) {
   useEffect2(() => {
     setLocal(Math.round(\u51FA\u305B\u308B * 0.7));
   }, [picked.length]);
-  const \u51FA\u3059 = Math.min(local, \u51FA\u305B\u308B);
-  const \u5175 = retSum + \u51FA\u3059;
+  const \u51FA\u30592 = Math.min(local, \u51FA\u305B\u308B);
+  const \u5175 = retSum + \u51FA\u30592;
   return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card" }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, c.name, "\u3000\u8A0E\u3063\u3066\u51FA\u308B\u304B"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 } }, \u57CE\u4E0B ? /* @__PURE__ */ React2.createElement(React2.Fragment, null, "\u6575\u306E\u8ECD\u304C\u57CE\u4E0B\u306B\u7740\u304D\u3001\u540C\u3058\u6708\u306B\u5473\u65B9\u306E\u63F4\u8ECD\u3082\u7740\u304D\u307E\u3057\u305F\u3002", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u3044\u307E\u9580\u3092\u958B\u3051\u3070\u3001\u63F4\u8ECD\u3068\u3068\u3082\u306B\u57CE\u4E0B\u3067\u8FCE\u3048\u6483\u3066\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("br", null), "\u57CE\u306B\u7C60\u3082\u3063\u305F\u307E\u307E\u3067\u3082\u69CB\u3044\u307E\u305B\u306C\u3002\u305D\u306E\u5834\u5408\u3001\u63F4\u8ECD\u3060\u3051\u3067\u6575\u306B\u5F53\u305F\u308A\u307E\u3059\u3002") : /* @__PURE__ */ React2.createElement(React2.Fragment, null, "\u5F8C\u8A70\u304C\u56F2\u307F\u306E\u5916\u306B\u7740\u304D\u307E\u3057\u305F\u3002", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, "\u3044\u307E\u9580\u3092\u958B\u3051\u3070\u3001\u5BC4\u305B\u624B\u3092\u5185\u3068\u5916\u304B\u3089\u631F\u3081\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("br", null), "\u57CE\u306B\u7C60\u3082\u3063\u305F\u307E\u307E\u3067\u3082\u69CB\u3044\u307E\u305B\u306C\u3002\u305D\u306E\u5834\u5408\u3001\u5F8C\u8A70\u3060\u3051\u3067\u56F2\u307F\u3092\u885D\u304D\u307E\u3059\u3002")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5BC4\u305B\u624B\uFF08", g.factions[foe ? foe.faction : c.faction].name, "\uFF09"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(foe ? foe.men : 0), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306E\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(c.local + gens.reduce((a, x) => a + x.retinue, 0)), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u8A0E\u3063\u3066\u51FA\u308B\u6B66\u5C06"), gens.length === 0 && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: U.dim } }, "\u57CE\u306B\u5C06\u304C\u3044\u306A\u3044\u3002"), gens.map((x) => /* @__PURE__ */ React2.createElement("label", { key: x.id, style: { display: "flex", gap: 9, alignItems: "center", padding: "5px 0", fontSize: 13 } }, /* @__PURE__ */ React2.createElement(
     "input",
     {
@@ -30242,8 +30735,8 @@ function SallyDialog({ g, castleId, foeId, onClose, onGo, \u57CE\u4E0B }) {
       checked: picked.includes(x.id),
       onChange: () => setPicked((p) => p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id])
     }
-  ), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 5 } }, rankName(x, g))), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, x.age, "\u6B73\uFF0F\u7D71", x.lead, " \u6B66", x.valor, "\uFF0F\u76F4\u5C5E", fmt(x.retinue)))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u9023\u308C\u3066\u51FA\u308B\u5730\u57DF\u5BB6\u81E3\u56E3"), /* @__PURE__ */ React2.createElement("input", { type: "range", min: "0", max: \u51FA\u305B\u308B, value: \u51FA\u3059, onChange: (e) => setLocal(+e.target.value), style: { width: "100%" } }), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u9023\u308C\u3066\u51FA\u308B"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u51FA\u3059), " / ", fmt(\u51FA\u305B\u308B), " \u4EBA")), (() => {
-    const \u6B8B = c.local - \u51FA\u3059 + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
+  ), /* @__PURE__ */ React2.createElement("span", { className: "mn", style: { fontSize: 15 } }, x.name, /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 10.5, color: U.dim, marginLeft: 5 } }, rankName(x, g))), /* @__PURE__ */ React2.createElement("span", { className: "num", style: { color: U.dim, fontSize: 11 } }, x.age, "\u6B73\uFF0F\u7D71", x.lead, " \u6B66", x.valor, "\uFF0F\u76F4\u5C5E", fmt(x.retinue)))), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u9023\u308C\u3066\u51FA\u308B\u5730\u57DF\u5BB6\u81E3\u56E3"), /* @__PURE__ */ React2.createElement("input", { type: "range", min: "0", max: \u51FA\u305B\u308B, value: \u51FA\u30592, onChange: (e) => setLocal(+e.target.value), style: { width: "100%" } }), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u9023\u308C\u3066\u51FA\u308B"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u51FA\u30592), " / ", fmt(\u51FA\u305B\u308B), " \u4EBA")), (() => {
+    const \u6B8B = c.local - \u51FA\u30592 + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
     const \u624B\u8584 = \u6B8B < \u5B88\u308A;
     return /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u57CE\u306B\u6B8B\u308B\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v", style: \u624B\u8584 ? { color: "#B0483C" } : void 0 }, fmt(\u6B8B), " \u4EBA\uFF08\u5B88\u308B\u306B\u8981\u308B ", fmt(\u5B88\u308A), "\uFF09")), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11, color: \u624B\u8584 ? "#B0483C" : U.dim, marginTop: 6, lineHeight: 1.7 } }, \u624B\u8584 ? "\u5B88\u308B\u306B\u8981\u308B\u6570\u3092\u5272\u308B\u3002\u8A0E\u3063\u3066\u51FA\u3066\u6557\u308C\u308C\u3070\u3001\u57CE\u306F\u305D\u306E\u307E\u307E\u843D\u3061\u308B\u3002" : "\u9580\u3092\u958B\u3044\u3066\u51FA\u305F\u5175\u306F\u3001\u6226\u306E\u5F8C\u306B\u57CE\u3078\u623B\u308A\u307E\u3059\u3002"));
   })(), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 9, marginTop: 16 } }, /* @__PURE__ */ React2.createElement("button", { className: "btn", style: { flex: 1 }, onClick: onClose }, "\u7C60\u3082\u3063\u305F\u307E\u307E"), /* @__PURE__ */ React2.createElement(
@@ -30254,7 +30747,7 @@ function SallyDialog({ g, castleId, foeId, onClose, onGo, \u57CE\u4E0B }) {
       disabled: !picked.length || \u5175 < 100,
       onClick: () => onGo({
         gens: \u5927\u5C06\u3092\u5148\u982D\u306B(g, picked.map((id) => gens.find((x) => x.id === id)).filter(Boolean)).map((x) => x.id),
-        local: \u51FA\u3059
+        local: \u51FA\u30592
       })
     },
     fmt(\u5175),
@@ -30408,6 +30901,42 @@ var \u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B = (onClose) => ({
     if (\u5916\u3067\u59CB\u3081\u305F && e.target === e.currentTarget && onClose) onClose();
   }
 });
+function \u97F3\u306E\u6B04({ \u5C0F\u3055\u304F } = {}) {
+  const [\u8A2D\u5B9A, set\u8A2D\u5B9A] = useState2(() => \u97F3\u306E\u8A2D\u5B9A());
+  const \u76F4\u3059 = (f) => {
+    f();
+    set\u8A2D\u5B9A(\u97F3\u306E\u8A2D\u5B9A());
+  };
+  return /* @__PURE__ */ React2.createElement("div", { style: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+    fontSize: \u5C0F\u3055\u304F ? 11.5 : 12.5,
+    color: U.dim
+  } }, /* @__PURE__ */ React2.createElement(
+    "button",
+    {
+      className: `btn sm ${\u8A2D\u5B9A.\u5165 ? "on" : ""}`,
+      onClick: () => \u76F4\u3059(() => {
+        const v = \u5165\u5207(!\u97F3\u306E\u8A2D\u5B9A().\u5165);
+        if (v) \u89E3\u9320\u3059\u308B();
+      })
+    },
+    "\u97F3 ",
+    \u8A2D\u5B9A.\u5165 ? "\u5165" : "\u5207"
+  ), /* @__PURE__ */ React2.createElement(
+    "input",
+    {
+      type: "range",
+      min: "0",
+      max: "100",
+      value: Math.round(\u8A2D\u5B9A.\u97F3\u91CF * 100),
+      style: { flex: "1 1 120px", maxWidth: 200 },
+      onChange: (e) => \u76F4\u3059(() => \u97F3\u91CF(Number(e.target.value) / 100))
+    }
+  ), /* @__PURE__ */ React2.createElement("span", { className: "num" }, Math.round(\u8A2D\u5B9A.\u97F3\u91CF * 100)), !\u5C0F\u3055\u304F && /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 11, lineHeight: 1.7 } }, "\u653F\u52D9\u30FB\u5408\u6226\u30FB\u57CE\u653B\u3081\u30FB\u5929\u4E0B\u5206\u3051\u76EE\u3067\u8ABF\u3079\u304C\u5909\u308F\u308A\u307E\u3059\u3002 \u7AEF\u672B\u306E\u30DE\u30CA\u30FC\u30B9\u30A4\u30C3\u30C1\u304C\u5165\u3063\u3066\u3044\u308B\u3068\u9CF4\u308A\u307E\u305B\u3093\u3002"));
+}
 function MonthReport({ g, onClose, onAid }) {
   const mine = g.castles.filter((c) => c.faction === g.player);
   const \u5371\u6025 = (g.\u5371\u6025 || []).length;
@@ -34699,14 +35228,14 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
       if (!\u57CE) return null;
       const \u5217 = Object.keys(g.factions).filter((fid2) => fid2 !== \u57CE.faction && g.castles.some((x) => x.faction === fid2)).map((fid2) => ({ fid2, r: relOf2(g, \u57CE.faction, fid2) })).filter((x) => ["\u4E0D\u53EF\u4FB5", "\u540C\u76DF", "\u5F93\u5C5E", "\u81E3\u5F93"].includes(x.r.state) || x.r.trust >= 40).sort((a, b) => b.r.trust - a.r.trust);
       if (!\u5217.length) return /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12, color: "#B0483C", marginBottom: 8, lineHeight: 1.7 } }, g.factions[\u57CE.faction].name, "\u306B\u306F\u88C2\u304F\u307B\u3069\u306E\u8ABC\u304C\u306A\u3044\u3002");
-      const \u4ECA = \u5217.some((x) => x.fid2 === \u96E2\u9593\u5148) ? \u96E2\u9593\u5148 : \u5217[0].fid2;
-      if (\u4ECA !== \u96E2\u9593\u5148) setTimeout(() => set\u96E2\u9593\u5148(\u4ECA), 0);
+      const \u4ECA2 = \u5217.some((x) => x.fid2 === \u96E2\u9593\u5148) ? \u96E2\u9593\u5148 : \u5217[0].fid2;
+      if (\u4ECA2 !== \u96E2\u9593\u5148) setTimeout(() => set\u96E2\u9593\u5148(\u4ECA2), 0);
       return /* @__PURE__ */ React5.createElement(
         "select",
         {
           className: "sel",
           style: { width: "100%", marginBottom: 8 },
-          value: \u4ECA,
+          value: \u4ECA2,
           onChange: (e) => set\u96E2\u9593\u5148(e.target.value)
         },
         \u5217.map((x) => /* @__PURE__ */ React5.createElement("option", { key: x.fid2, value: x.fid2 }, `${g.factions[\u57CE.faction].name} \u3068 ${g.factions[x.fid2].name}\uFF08${x.r.state}\u30FB\u4FE1\u7528${Math.round(x.r.trust)}\uFF09\u3092\u88C2\u304F`))
@@ -35376,20 +35905,20 @@ function \u5099\u3048\u3092\u968A\u306B\u3059\u308B(s2, fid, \u9663, side, \u827
     for (const cid of \u624B.\u57CE\u3089) {
       const \u57CE = (s2.castles || []).find((c2) => c2.id === cid);
       if (!\u57CE || \u6B8B <= 0) continue;
-      const \u51FA\u3059 = Math.min(\u6B8B, Math.max(0, \u51FA\u305B\u308B\u5730\u306E\u5175(s2, \u57CE)));
-      if (\u51FA\u3059 > 0) {
+      const \u51FA\u30592 = Math.min(\u6B8B, Math.max(0, \u51FA\u305B\u308B\u5730\u306E\u5175(s2, \u57CE)));
+      if (\u51FA\u30592 > 0) {
         if (\u57CE.rost) {
-          const tk = rosterTake(\u57CE.rost, Math.min(\u51FA\u3059, rosterSum(\u57CE.rost)));
+          const tk = rosterTake(\u57CE.rost, Math.min(\u51FA\u30592, rosterSum(\u57CE.rost)));
           \u57CE.rost = tk.rest;
           \u5728\u540D\u7C3F = [...\u5728\u540D\u7C3F || [], ...tk.taken];
           const \u53D6\u308C\u305F = rosterSum(tk.taken);
-          if (\u53D6\u308C\u305F < \u51FA\u3059) \u5728\u540D\u7C3F = [...\u5728\u540D\u7C3F, ...newRoster(\u51FA\u3059 - \u53D6\u308C\u305F, `wk-${cid}`)];
+          if (\u53D6\u308C\u305F < \u51FA\u30592) \u5728\u540D\u7C3F = [...\u5728\u540D\u7C3F, ...newRoster(\u51FA\u30592 - \u53D6\u308C\u305F, `wk-${cid}`)];
         } else {
-          \u5728\u540D\u7C3F = [...\u5728\u540D\u7C3F || [], ...newRoster(\u51FA\u3059, `wk-${cid}`)];
+          \u5728\u540D\u7C3F = [...\u5728\u540D\u7C3F || [], ...newRoster(\u51FA\u30592, `wk-${cid}`)];
         }
-        \u57CE.local = Math.max(0, (\u57CE.local || 0) - \u51FA\u3059);
-        \u51FA\u3057\u524D[cid] = \u51FA\u3059;
-        \u6B8B -= \u51FA\u3059;
+        \u57CE.local = Math.max(0, (\u57CE.local || 0) - \u51FA\u30592);
+        \u51FA\u3057\u524D[cid] = \u51FA\u30592;
+        \u6B8B -= \u51FA\u30592;
       }
       for (const o of s2.generals || []) {
         if (\u6B8B <= 0) break;
@@ -36166,7 +36695,7 @@ var \u56F3 = { "koma-yari": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/
 // src/ui/Manual.jsx
 function Manual({ onClose, \u7AE0 = 0 }) {
   const [tab, setTab] = useState6(\u7AE0);
-  const \u4ECA = \u8AAC\u660E\u66F8[Math.min(tab, \u8AAC\u660E\u66F8.length - 1)];
+  const \u4ECA2 = \u8AAC\u660E\u66F8[Math.min(tab, \u8AAC\u660E\u66F8.length - 1)];
   return /* @__PURE__ */ React6.createElement("div", { className: "modal", ...\u5916\u3092\u62BC\u3057\u3066\u9589\u3058\u308B(onClose) }, /* @__PURE__ */ React6.createElement("div", { className: "card", style: { maxWidth: 560 } }, /* @__PURE__ */ React6.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 8 } }, /* @__PURE__ */ React6.createElement("img", { src: \u7D75\u306B\u3059\u308B(\u5370), alt: "", width: "30", height: "30", style: { display: "block", flex: "0 0 auto" } }), /* @__PURE__ */ React6.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 10 } }, /* @__PURE__ */ React6.createElement("div", { className: "mn", style: { fontSize: 21 } }, \u984C\u540D, "\u3000\u904A\u3073\u65B9"), /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 10, letterSpacing: ".3em", color: U.dim } }, \u526F\u984C))), /* @__PURE__ */ React6.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 10 } }, \u8AAC\u660E\u66F8.map((c, i) => /* @__PURE__ */ React6.createElement(
     "button",
     {
@@ -36176,7 +36705,7 @@ function Manual({ onClose, \u7AE0 = 0 }) {
       onClick: () => setTab(i)
     },
     c.\u984C
-  ))), /* @__PURE__ */ React6.createElement("div", { style: { maxHeight: "62vh", overflow: "auto", paddingRight: 2 } }, \u4ECA.\u7BC0.map((s2, i) => /* @__PURE__ */ React6.createElement("div", { key: i, style: { marginBottom: 14 } }, s2.\u898B\u51FA\u3057 && /* @__PURE__ */ React6.createElement("div", { className: "sec", style: { marginTop: i ? 12 : 0 } }, s2.\u898B\u51FA\u3057), s2.\u7D75 && \u5199\u3057[s2.\u7D75] && /* @__PURE__ */ React6.createElement("figure", { style: { margin: "4px 0 10px" } }, /* @__PURE__ */ React6.createElement(
+  ))), /* @__PURE__ */ React6.createElement("div", { style: { maxHeight: "62vh", overflow: "auto", paddingRight: 2 } }, \u4ECA2.\u7BC0.map((s2, i) => /* @__PURE__ */ React6.createElement("div", { key: i, style: { marginBottom: 14 } }, s2.\u898B\u51FA\u3057 && /* @__PURE__ */ React6.createElement("div", { className: "sec", style: { marginTop: i ? 12 : 0 } }, s2.\u898B\u51FA\u3057), s2.\u7D75 && \u5199\u3057[s2.\u7D75] && /* @__PURE__ */ React6.createElement("figure", { style: { margin: "4px 0 10px" } }, /* @__PURE__ */ React6.createElement(
     "img",
     {
       src: \u5199\u3057[s2.\u7D75],
@@ -37136,15 +37665,15 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const \u9593 = Math.round(175 * (FIELD.w / BASE.w));
       const \u5217 = Math.max(1, Math.min(n, Math.floor(FIELD.w * 0.78 / Math.max(1, \u9593))));
       const \u6BB5\u6570 = Math.ceil(n / \u5217);
-      const \u4F4D = i === 0 ? { \u6BB5: \u6BB5\u6570, \u5E2D: 0, \u5E45: 1 } : (() => {
+      const \u4F4D2 = i === 0 ? { \u6BB5: \u6BB5\u6570, \u5E2D: 0, \u5E45: 1 } : (() => {
         const j = i - 1;
         const \u6BB52 = Math.min(\u6BB5\u6570 - 1, Math.floor(j / \u5217));
         const \u4E2D = j - \u6BB52 * \u5217;
         const \u6B8B = Math.min(\u5217, n - 1 - \u6BB52 * \u5217);
         return { \u6BB5: \u6BB52, \u5E2D: \u4E2D - (\u6B8B - 1) / 2, \u5E45: \u6B8B };
       })();
-      const t2 = \u4F4D.\u5E2D * \u9593;
-      const \u5965 = \u4F4D.\u6BB5 * Math.round(78 * (FIELD.h / BASE.h));
+      const t2 = \u4F4D2.\u5E2D * \u9593;
+      const \u5965 = \u4F4D2.\u6BB5 * Math.round(78 * (FIELD.h / BASE.h));
       const put = (ax, ay, f2) => ({ x: ax, y: ay, f: f2 });
       const \u7DE0 = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
       const X = (v) => \u7DE0(v, 40, FIELD.w - 40), Y = (v) => \u7DE0(v, 40, FIELD.h - 40);
@@ -38295,6 +38824,19 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     return a2 && c2 && (a2.faction === g.player || c2.faction === g.player);
   });
   const selCastle = g.castles.find((c) => c.id === sel);
+  const \u4F4D = (() => {
+    const r = courtRank(g, g.player);
+    return r ? r.key : null;
+  })();
+  useEffect5(() => {
+    if (battle) {
+      \u5834\u9762\u3092\u9078\u3076(battle.mode === "wakeme" ? "\u5206\u3051\u76EE" : battle.mode === "castle" ? "\u57CE\u653B\u3081" : "\u91CE\u6226");
+    } else if (sea) {
+      \u5834\u9762\u3092\u9078\u3076("\u91CE\u6226");
+    } else {
+      \u5834\u9762\u3092\u9078\u3076("\u653F\u52D9", { \u4F4D });
+    }
+  }, [battle ? battle.mode : null, !!sea, \u4F4D]);
   if (sea) return /* @__PURE__ */ React8.createElement(SeaScreen, { key: sea.key, ctx: sea, land, onEnd: (bb) => \u6D77\u6226\u3092\u7D42\u3048\u308B(bb) });
   if (battle) return /* @__PURE__ */ React8.createElement(BattleScreen, { key: battle.armyId, ctx: battle, land, onEnd: (bb) => finishBattle(bb, battle) });
   return /* @__PURE__ */ React8.createElement("div", { className: "sp", style: { height: "100dvh" } }, !wide && /* @__PURE__ */ React8.createElement("div", { className: "bar" }, /* @__PURE__ */ React8.createElement("div", { className: "barin" }, /* @__PURE__ */ React8.createElement("span", { style: { display: "flex", alignItems: "center", gap: 7 } }, /* @__PURE__ */ React8.createElement("span", { className: "dot", style: { background: pf.color } }), /* @__PURE__ */ React8.createElement("b", { className: "mn", style: { fontSize: 16 } }, pf.name)), /* @__PURE__ */ React8.createElement("span", { className: "kv num" }, /* @__PURE__ */ React8.createElement("b", null, g.year, "\u5E74 ", g.month, "\u6708"), /* @__PURE__ */ React8.createElement("span", { style: { background: "#EFEDE4", borderRadius: 3, padding: "1px 6px", fontSize: 11 } }, SEASON(g.month))), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u77F3\u9AD8 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, man(mine.reduce((a, c) => a + c.koku, 0)), " \u4E07\u77F3")), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u5175\u6570 ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, fmt(totalMen))), /* @__PURE__ */ React8.createElement("span", { className: "kv" }, "\u91D1\u92AD ", /* @__PURE__ */ React8.createElement("b", { className: "num" }, fmt(pf.gold), " \u8CAB"), (() => {
@@ -39104,7 +39646,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         const \u4E26 = Math.round(\u9AD8 / (\u9810\u3051\u306E\u6BB5[pf.\u9810\u3051 == null ? 1 : pf.\u9810\u3051].\u7387 || 1));
         return /* @__PURE__ */ React8.createElement("option", { key: x.\u540D, value: i }, `\u9810\u3051\uFF1A${x.\u540D}\uFF08${\u5DEE\u914D\u3092\u9810\u3051\u305F\u57CE(g, g.player).length}\u57CE\u30FB\u6708${fmt(Math.round(\u4E26 * x.\u7387))}\u8CAB\uFF09`);
       })
-    )), /* @__PURE__ */ React8.createElement("div", { style: { textAlign: "right", marginTop: 16 } }, /* @__PURE__ */ React8.createElement("button", { className: "btn", onClick: () => setModal(null) }, "\u9589\u3058\u308B")))),
+    )), /* @__PURE__ */ React8.createElement("div", { className: "sec", style: { marginTop: 14 } }, "\u97F3"), /* @__PURE__ */ React8.createElement(\u97F3\u306E\u6B04, null), /* @__PURE__ */ React8.createElement("div", { style: { textAlign: "right", marginTop: 16 } }, /* @__PURE__ */ React8.createElement("button", { className: "btn", onClick: () => setModal(null) }, "\u9589\u3058\u308B")))),
     modal === "goal" && /* @__PURE__ */ React8.createElement(GoalPanel, { g, onClose: () => setModal(null) }),
     openCamp && !battle && /* @__PURE__ */ React8.createElement(CampaignPanel, { g, camp: openCamp, onAct: campaignAct }),
     openSiege && !battle && !openCamp && /* @__PURE__ */ React8.createElement(SiegePanel, { g, sg: openSiege, onChoose: onSiegeChoice }),
@@ -39242,7 +39784,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         return s2;
       };
       if (ac.\u4E0B\u77E5) {
-        const \u51FA\u3059 = () => setG((prev) => {
+        const \u51FA\u30592 = () => setG((prev) => {
           const s2 = structuredClone(prev);
           const plan = \u81E3\u5F93\u306E\u4F9B\u51FA(s2, ac.castleId);
           const t = plan.\u4E0B\u77E5.length ? sendAidState(s2, ac.castleId, plan) : s2;
@@ -39256,7 +39798,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           borderLeft: "3px solid #4A6E8A",
           fontSize: 12,
           lineHeight: 1.9
-        } }, "\u6700\u5BC4\u308A\u306E\u57CE\u304B\u3089\u3001\u5B88\u5099\u3092\u6B8B\u305B\u308B\u3060\u3051\u306E\u5175\u3092\u51FA\u3057\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("button", { className: "btn dark", style: { width: "100%" }, onClick: \u51FA\u3059 }, "\u4E0B\u77E5\u3092\u627F\u308B")));
+        } }, "\u6700\u5BC4\u308A\u306E\u57CE\u304B\u3089\u3001\u5B88\u5099\u3092\u6B8B\u305B\u308B\u3060\u3051\u306E\u5175\u3092\u51FA\u3057\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("button", { className: "btn dark", style: { width: "100%" }, onClick: \u51FA\u30592 }, "\u4E0B\u77E5\u3092\u627F\u308B")));
       }
       return /* @__PURE__ */ React8.createElement("div", { className: "modal" }, /* @__PURE__ */ React8.createElement("div", { className: "card", style: { maxWidth: 470 } }, /* @__PURE__ */ React8.createElement("div", { className: "mn", style: { fontSize: 20 } }, f.name, "\u3088\u308A\u306E\u63F4\u8ECD\u306E\u6C42\u3081"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginTop: 8 } }, /* @__PURE__ */ React8.createElement("b", null, \u7684.name), "\u304C", ac.\u56F2\u307E\u308C ? "\u56F2\u307E\u308C\u3066\u3044\u307E\u3059" : "\u653B\u3081\u3089\u308C\u3088\u3046\u3068\u3057\u3066\u3044\u307E\u3059", ac.\u5BC4\u305B\u624B.length ? `\uFF08${ac.\u5BC4\u305B\u624B.map((x) => (g.factions[x] || {}).name).join("\u30FB")}\uFF09` : "", "\u3002", ac.state, "\u306E\u8ABC\u3092\u3082\u3063\u3066\u3001\u63F4\u8ECD\u3092\u6C42\u3081\u3066\u304D\u307E\u3057\u305F\u3002"), /* @__PURE__ */ React8.createElement("div", { style: { fontSize: 11.5, color: U.dim, margin: "10px 0", lineHeight: 1.8 } }, "\u5FDC\u3058\u308C\u3070\u4FE1\u7528\u304C\u5897\u3057\u307E\u3059\u3002\u65AD\u308C\u3070\u6E1B\u308A\u307E\u3059\u3002", /* @__PURE__ */ React8.createElement("br", null), "\u653E\u3063\u3066\u304A\u3051\u3070\u3053\u306E\u5BB6\u306F\u524A\u3089\u308C\u3001\u3084\u304C\u3066\u96A3\u306B\u5F37\u3044\u6575\u304C\u7ACB\u3061\u307E\u3059\u3002"), /* @__PURE__ */ React8.createElement("div", { style: { display: "flex", gap: 9 } }, /* @__PURE__ */ React8.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => setG((prev) => {
         const s2 = structuredClone(prev);
@@ -39571,7 +40113,7 @@ function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onKassen }
         if (f) onImport(f);
       }
     }
-  ))), /* @__PURE__ */ React9.createElement("div", { style: { position: "absolute", left: 20, bottom: 16, fontSize: 11, color: U.dim } }, "ver.0.2.0", typeof window !== "undefined" && window.__BUILD__ ? `\u3000\u66F8\u304D\u51FA\u3057 ${window.__BUILD__}` : ""), \u904A\u3073\u65B9 && /* @__PURE__ */ React9.createElement(Manual, { onClose: () => set\u904A\u3073\u65B9(false) }));
+  ))), /* @__PURE__ */ React9.createElement("div", { style: { position: "absolute", right: 20, bottom: 14, maxWidth: 260 } }, /* @__PURE__ */ React9.createElement(\u97F3\u306E\u6B04, { \u5C0F\u3055\u304F: true })), /* @__PURE__ */ React9.createElement("div", { style: { position: "absolute", left: 20, bottom: 16, fontSize: 11, color: U.dim } }, "ver.0.2.0", typeof window !== "undefined" && window.__BUILD__ ? `\u3000\u66F8\u304D\u51FA\u3057 ${window.__BUILD__}` : ""), \u904A\u3073\u65B9 && /* @__PURE__ */ React9.createElement(Manual, { onClose: () => set\u904A\u3073\u65B9(false) }));
 }
 
 // src/ui/KassenScreen.jsx
@@ -39663,6 +40205,7 @@ function KassenScreen({ land, onTitle }) {
     ctxRef.current = c;
     setCtx(c);
     set\u7D42(null);
+    \u5834\u9762\u3092\u9078\u3076(r.\u7B4B\u66F8\u304D && r.\u7B4B\u66F8\u304D.\u57CE ? "\u57CE\u653B\u3081" : "\u91CE\u6226");
   };
   const \u59CB\u3081\u308B = async (\u65D7) => {
     await \u63A7\u3048\u3092\u6D88\u3059();
@@ -39686,6 +40229,7 @@ function KassenScreen({ land, onTitle }) {
     ctxRef.current = null;
     setCtx(null);
     \u5408\u6226\u3092\u7573\u3080();
+    \u5834\u9762\u3092\u9078\u3076(null);
   };
   if (ctx) return /* @__PURE__ */ React10.createElement(BattleScreen, { key: ctx.armyId, ctx, land, onEnd: \u7D42\u308F\u308B });
   const k = \u5408\u6226\u4E00\u89A7.find((x) => x.id === \u9078\u3073) || \u5408\u6226\u4E00\u89A7[0];
@@ -39923,6 +40467,30 @@ function useLandscape() {
 }
 function App() {
   const [screen, setScreen] = useState10("title");
+  useEffect7(() => {
+    \u8A2D\u5B9A\u3092\u8AAD\u3080();
+    if (typeof window === "undefined") return void 0;
+    const \u89E3\u304F2 = () => {
+      \u89E3\u9320\u3059\u308B();
+      \u8D77\u3053\u3057\u76F4\u3059();
+    };
+    const \u623B\u308A = () => {
+      if (!document.hidden) \u8D77\u3053\u3057\u76F4\u3059();
+    };
+    window.addEventListener("pointerdown", \u89E3\u304F2);
+    window.addEventListener("touchend", \u89E3\u304F2);
+    window.addEventListener("keydown", \u89E3\u304F2);
+    document.addEventListener("visibilitychange", \u623B\u308A);
+    return () => {
+      window.removeEventListener("pointerdown", \u89E3\u304F2);
+      window.removeEventListener("touchend", \u89E3\u304F2);
+      window.removeEventListener("keydown", \u89E3\u304F2);
+      document.removeEventListener("visibilitychange", \u623B\u308A);
+    };
+  }, []);
+  useEffect7(() => {
+    if (screen !== "map" && screen !== "kassen") \u6B62\u3081\u308B();
+  }, [screen]);
   const [g, setG] = useState10(null);
   const [saves, setSaves] = useState10([]);
   const land = useLandscape();

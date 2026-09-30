@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { 題字, 絵にする } from "../data/logo.js";
 import { Manual } from "./Manual.jsx";
+import { 音の欄 } from "./panels.jsx";
 import { U } from "../core/util.js";
 import { FACTIONS } from "../data/factions.js";
 import { 記録の見出し } from "../save/save.js";
@@ -108,6 +109,10 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onK
       </div>
       {/* 書き出した日時を出す。ネットに置いたものが古いままか、
           新しく上げ直したものかを、この一行で見分けられる。 */}
+      {/* 音の入切（GDD 15.4）。ここで決めたものは、次に開いたときも保たれる。 */}
+      <div style={{ position: "absolute", right: 20, bottom: 14, maxWidth: 260 }}>
+        <音の欄 小さく />
+      </div>
       <div style={{ position: "absolute", left: 20, bottom: 16, fontSize: 11, color: U.dim }}>
         ver.0.2.0
         {typeof window !== "undefined" && window.__BUILD__ ? `　書き出し ${window.__BUILD__}` : ""}

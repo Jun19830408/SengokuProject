@@ -1,3 +1,4 @@
+import { 場面を選ぶ } from "../audio/oto.js";
 import React, { useEffect, useRef, useState } from "react";
 import { BattleScreen } from "./BattleScreen.jsx";
 import { 合戦一覧, 合戦を仕立てる, 合戦を控える, 合戦を戻す, 合戦を畳む, 控えの鍵 } from "../battle/kassen.js";
@@ -78,6 +79,8 @@ export function KassenScreen({ land, onTitle }) {
       place: r.筋書き.所,
     };
     ctxRef.current = c; setCtx(c); set終(null);
+    // 合戦モードの調べ。城攻めの筋書きなら城の調べ、野なら野の調べ（GDD 15.4）
+    場面を選ぶ(r.筋書き && r.筋書き.城 ? "城攻め" : "野戦");
   };
 
   const 始める = async (旗) => {
@@ -94,6 +97,7 @@ export function KassenScreen({ land, onTitle }) {
       損: b.corps.filter((c) => c.side === "P").reduce((a, c) => a + c.loss["直属"] + c.loss["地域"], 0),
       筋: b.筋書き });
     ctxRef.current = null; setCtx(null); 合戦を畳む();
+    場面を選ぶ(null);
   };
 
   if (ctx) return <BattleScreen key={ctx.armyId} ctx={ctx} land={land} onEnd={終わる} />;

@@ -9,6 +9,7 @@ import { KassenScreen } from "./KassenScreen.jsx";
 import { css } from "./css.js";
 import { FACTIONS } from "../data/factions.js";
 import { exportSave, importSave } from "../save/save.js";
+import { 場面を選ぶ, 起こし直す, 解錠する, 設定を読む, 止める as 音を止める } from "../audio/oto.js";
 
 // 横画面を基本とする（GDD 15.2）。政務も合戦も横で扱う。
 export function useLandscape() {
@@ -25,6 +26,30 @@ export function useLandscape() {
 
 export default function App() {
   const [screen, setScreen] = useState("title");
+  /* 音の解錠（GDD 15.4）。
+
+     携帯は、遊ぶ側が画面に触れるまで音を出せない決まりである。どこを触っても
+     よいので、最初の一度で解く。以後は場面に応じて調べが替わる。 */
+  useEffect(() => {
+    設定を読む();
+    if (typeof window === "undefined") return undefined;
+    /* 一度で解けるとは限らない。Safari では座が眠ったまま起きることがあるので、
+       触れるたびに起こし直す（走り出せば何もしない）。 */
+    const 解く = () => { 解錠する(); 起こし直す(); };
+    const 戻り = () => { if (!document.hidden) 起こし直す(); };
+    window.addEventListener("pointerdown", 解く);
+    window.addEventListener("touchend", 解く);
+    window.addEventListener("keydown", 解く);
+    document.addEventListener("visibilitychange", 戻り);
+    return () => {
+      window.removeEventListener("pointerdown", 解く);
+      window.removeEventListener("touchend", 解く);
+      window.removeEventListener("keydown", 解く);
+      document.removeEventListener("visibilitychange", 戻り);
+    };
+  }, []);
+  // 題名と大名選びは静か。政務と合戦の調べは、それぞれの画面が受け持つ。
+  useEffect(() => { if (screen !== "map" && screen !== "kassen") 音を止める(); }, [screen]);
   const [g, setG] = useState(null);
   const [saves, setSaves] = useState([]);
   const land = useLandscape();

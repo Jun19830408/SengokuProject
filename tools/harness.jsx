@@ -71,3 +71,7 @@ export { 分け目の盤を組む, 分け目の戦果 } from "../src/battle/wake
 export { 天下分け目の采配, 挑むか, AIの選ぶ野, 盤を開かずに裁く } from "../src/govern/aiWakeme.js";
 export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す, 組頭の帳, 戦の跡, 戦の跡を記す } from "../src/core/roster.js";
 export { makePromotion } from "../src/core/house.js";
+export { 曲, 音階, 度, 場面の曲 } from "../src/audio/kyoku.js";
+export { 楽器, 鳴らす as 音を鳴らす } from "../src/audio/gakki.js";
+export { 掛ける, 刻む, 口を据える, 場面を選ぶ, 止める as 音を止める, 入切, 音量, 音の設定,
+  解錠する, 設定を読む, 覚える口, 盤の場面, 棚の鍵 as 音の棚の鍵, 先読み } from "../src/audio/oto.js";
