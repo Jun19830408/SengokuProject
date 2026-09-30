@@ -2215,6 +2215,13 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
 
     // 士気（上段）と陣形維持（下段）を分けて示す
     const coh = c.squads.length ? c.squads.reduce((a, q) => a + q.cohesion, 0) / c.squads.length : 0;
+    /* 槍衾の印（GDD 8.4）。構えが立っているあいだ、帯の左に小さく出す。 */
+    if (c.衾) {
+      ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(x - 36, y + 11, 13, 13);
+      ctx.strokeStyle = "#5A6E46"; ctx.lineWidth = 1; ctx.strokeRect(x - 36, y + 11, 13, 13);
+      ctx.fillStyle = "#3A4A2E"; ctx.font = "10px 'Hiragino Sans',sans-serif";
+      ctx.fillText("衾", x - 34, y + 21);
+    }
     ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(x - 22, y + 12, 44, 8);
     ctx.fillStyle = c.morale > 55 ? "#5C8C4A" : c.morale > 30 ? "#C89A3A" : "#B0483C";
     ctx.fillRect(x - 22, y + 12, (44 * c.morale) / 100, 4);

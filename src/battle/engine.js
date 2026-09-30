@@ -91,7 +91,10 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   }
   // 武勇は「相手の陣形を崩す圧力」として効く。士気そのものは下げない（GDD 8.3）
   // 零より下へは落とさぬ。負のまま持ち越すと、戦のあと整え直すのに際限がなくなる。
-  e.cohesion = Math.max(0, e.cohesion - lost * 0.7 * flank * (0.55 + (valor || 60) / 100));
+  /* 槍衾は衝を吸う（GDD 8.4）。構えているあいだは隊列の削れが半ば以下。
+     これが無いと、最初の一当てで隊列が乱れて衾が崩れ、構えた意味が消える。 */
+  e.cohesion = Math.max(0, e.cohesion - lost * 0.7 * flank * (0.55 + (valor || 60) / 100)
+    * (fCorps.衾 ? 0.3 : 1));
   /* 損害による士気の削れ（GDD 8.7）。
 
      もとは「失った兵の割 × 二.二」であった。一割を失えば士気が二十二も落ちる
@@ -261,14 +264,38 @@ export function stepBattle(b, dt) {
      作る）も、足の止め方も、ここを見て決まる。 */
   for (const c of alive) {
     c.接敵 = null;
+    c.敵向 = null;
     if (MAP || !塊として立つ(c)) continue;
-    let 近 = 1e9;
+    let 近 = 1e9, 敵近 = 1e9;
     for (const o of alive) {
       if (o.side === c.side || !塊として立つ(o)) continue;
       const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
-      if (ed < 0.5 || ed > 460 || ed >= 近) continue;
+      if (ed < 0.5) continue;
+      if (ed < 敵近 && ed < 320) { 敵近 = ed; c.敵向 = Math.atan2(ey, ex); }
+      if (ed > 460 || ed >= 近) continue;
       if (ed > 触れる隔たり(c, o, ex / ed, ey / ed) + 6) continue;
       近 = ed; c.接敵 = o;
+    }
+    /* 槍衾（GDD 8.4）。
+
+       長柄の槍は、密集して穂先を揃えてこそのものである。足を止めて（二秒）、
+       敵に正対し（±六十度）、隊列が保たれている（槍組の平均五十五以上）なら、
+       槍隊はおのずと衾を作る。正面から乗り入れた騎馬は勢いを削がれ、穂先の
+       返しを受ける。横と後ろには効かない――回り込みこそが騎馬の答えである。 */
+    c.前衾 = c.衾;
+    c.衾 = false;
+    if ((c.静止t || 0) >= 2 && c.敵向 != null && !c.routed && !c.withdraw) {
+      const 差 = Math.abs(((c.敵向 - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+      if (差 < Math.PI / 3) {
+        let 槍n = 0, 槍coh = 0, 総 = 0;
+        for (const q of c.squads) {
+          if (q.men <= 0) continue;
+          総 += q.men;
+          if (q.type === "yari") { 槍n += q.men; 槍coh += q.cohesion * q.men; }
+        }
+        const 要る = c.前衾 ? 35 : 55;              // 一度立てば、崩れるまで粘る
+        if (槍n > 0 && 槍n >= 総 * 0.4 && 槍coh / 槍n >= 要る) c.衾 = true;
+      }
     }
   }
 
@@ -572,12 +599,36 @@ export function stepBattle(b, dt) {
       }
       if (c.wp.length) { c.tx = c.wp[0].x; c.ty = c.wp[0].y; }
     }
+    /* 射撃の間合い（GDD 8.4）。
+
+       弓と鉄砲の隊は、敵と間を置いて撃つのが本分である。射撃の下知を受けた隊は、
+       敵が百三十五歩の内へ詰めてきたら（鉄砲の届き百五十の内側である）、撃ちながら後ずさって間合いを保つ。
+       ただで下がれはしない――後ろ歩きの足は六割で、疲れも常のとおり積もる。
+       追う側は必ず追いつける。槍を合わせてしまえば、もう下がれない。 */
+    c.後退中 = false;
+    if (!MAP && c.order === "射撃" && !c.routed && !c.withdraw
+      && !c.squads.some((q) => q.engaged)) {
+      let 近 = null, nd = 1e9;
+      for (const o of alive) {
+        if (o.side === c.side || !塊として立つ(o)) continue;
+        const d2 = Math.hypot(o.x - c.x, o.y - c.y);
+        if (d2 < nd) { nd = d2; 近 = o; }
+      }
+      if (近 && nd < 135) {
+        const ux = (c.x - 近.x) / nd, uy = (c.y - 近.y) / nd;
+        c.tx = clamp(c.x + ux * 70, 40, FIELD.w - 40);
+        c.ty = clamp(c.y + uy * 70, 40, FIELD.h - 40);
+        c.後退中 = true;
+      }
+    }
     const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy);
     if (!(dist > 6) || HOLD || (c.ambush && !c.revealed)) {
       // 止まる隊の足は、すっと止まらず、少しずつ落ちる
       if (c.速) { c.速.x *= Math.max(0, 1 - dt / 0.4); c.速.y *= Math.max(0, 1 - dt / 0.4); }
+      c.静止t = (c.静止t || 0) + dt;             // 足を止めている刻（槍衾の条件）
     }
     if (dist > 6 && !HOLD && !(c.ambush && !c.revealed)) {
+      c.静止t = 0;
       const terr = TERRAIN[c.地];
       const avgSpeed = c.squads.length ? c.squads.reduce((s, q) => s + ARM_STATS[q.type].speed * q.men, 0) / Math.max(1, corpsMen(c)) : 30;
       const engaged = c.squads.some((q) => q.engaged);
@@ -648,7 +699,8 @@ export function stepBattle(b, dt) {
         if (外) 寄せ道 = 0.6;
       }
       const v = 隊の足 * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, c.地, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1)
-        * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * 寄せ道 * 混み;
+        * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * 寄せ道 * 混み
+        * (c.後退中 ? 0.62 : 1);
       /* 行き過ぎない（GDD 8.3）。
 
          歩幅を残りの隔たりで頭打ちにしていなかった。足は毎秒三十歩ほど、刻みは
@@ -844,7 +896,17 @@ export function stepBattle(b, dt) {
         const 前へ = Math.max(0, ed / 2 - 9);          // 前面と前面の中ほどの、少し手前
         targetX = c.x + ux * 前へ + vx * 横;
         targetY = c.y + uy * 前へ + vy * 横;
-      } else if (aggressive && !c.routed && q.foe && !q.reserve) {
+      } else if (aggressive && !c.routed && q.foe && !q.reserve
+        /* 接戦では騎馬は翼で控える（GDD 8.4）。
+
+           槍が前で合わせ、弓鉄砲が後ろから撃ち、騎馬は翼で待つ。使いどころは
+           「騎馬側面攻撃」（分遣）か、突撃の下知である。敵が翼まで来れば、
+           持ち場で迎え撃つ（噛み合いは間合いで起きる）。
+
+           控えるのは、槍の前列を持つ隊の騎馬だけである。騎馬ばかりの隊まで
+           控えさせては、守るべき前列も無いのに全軍が棒立ちになる。 */
+        && !(c.order === "接戦" && q.type === "kiba" && !c.detach
+          && (c.槍組数 || 0) >= 3 && (c.槍組数 || 0) >= (c.立つ組数 || 1) * 0.3)) {
         const want = st0.range > 0 ? st0.range * 0.75 : 15;
         // 射撃優先では遠隔は射程を保ち、白兵は隊列を守って前へ出ない
         if (c.order === "射撃" && st0.range === 0) { /* 陣形位置を維持 */ }
@@ -1398,7 +1460,11 @@ export function stepBattle(b, dt) {
       q.link = null;
       if (!melee) continue;
       const terr = TERRAIN[q.地];
-      if (mdist < 22) {
+      /* 噛み合う間合い。ふだんは二十二歩だが、槍衾は穂先が長い。
+         構えた側・構えを衝く側は、離れても穂先が届いて斬り結び続ける。
+         これが無いと、当たった直後に押し合いで離れ、衾が空を切る。 */
+      const 噛み間 = 34;
+      if (mdist < 噛み間) {
         /* 退いている隊は組み合わない。背を向けて離れていく。
            相手を掴み直すこともしないし、相手からも掴まれない。
            ただし離れきるまでは追い討ちの刃を受ける（下の applyDamage は通る）。 */
@@ -1448,6 +1514,26 @@ export function stepBattle(b, dt) {
         const charge = q.type === "kiba" && terr.charge ? 1 + c.gen.valor / 260 : 1;
         const push = c.chargeT > 0 && terr.charge ? 1.3 : 1;              // 突撃中の圧力
         const guard = melee.f.order === "守備" ? 0.85 : 1;                 // 密集して守る側は硬い
+        /* 騎馬の本領と天敵（GDD 8.4）。
+
+           騎馬は、崩れた敵にこそ強い。隊列の乱れた組への白兵は五割五分増し、
+           崩走中の隊へは七割増し――討死の大半は崩走で出る、という史実の写しである。
+           崩れた隊は騎馬に追われているあいだ、息をつけない（立ち直りが遅れる）。
+
+           逆に、構えた槍衾へ正面から乗り入れれば勢いは三分五厘削がれ、
+           穂先の返しを受ける。それでも騎馬は強い（白兵一.九）――ただし
+           「崩れた槍・横から回った槍」との差が、はっきり出るようになる。 */
+        let 騎 = 1;
+        if (q.type === "kiba") {
+          if (melee.f.routed) { 騎 *= 1.7; melee.f.追われ = b.t; }
+          else if (melee.e.cohesion < 40) 騎 *= 1.55;
+          if (flank === 1.0 && melee.f.衾) {
+            騎 *= 0.5;
+            // 穂先の返し。受け止めた槍組の厚みに応じて、馬側が削られる
+            applyDamage(b, c, q, 1.0 * (melee.e.men / 50) * terr.fight * dt,
+              1, melee.f.gen.valor, melee.f, melee.e);
+          }
+        }
         /* 後ろが押し支える（GDD 8.3）。
 
            塊と塊がすれ違えなくなったので、槍を合わせるのは前列だけになった。
@@ -1461,18 +1547,31 @@ export function stepBattle(b, dt) {
         const 支え = 1 + clamp(((c.立つ組数 || 1) / Math.max(1, c.噛み組数 || 1) - 1) * 0.05, 0, 0.35);
         applyDamage(b, melee.f, melee.e,
           st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200)
-          * terr.fight * flank * charge * push * guard * 支え * (1 - c.fatigue / 260) * dt,
+          * terr.fight * flank * charge * push * guard * 支え * 騎 * (1 - c.fatigue / 260) * dt,
           flank, c.gen.valor * (c.chargeT > 0 ? 1.2 : 1), c, q);
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
         if (melee.f.seen || mdist < TERRAIN[melee.e.地 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
-          q.cool = st.rof;
+          /* 三段の構え（GDD 8.4）。
+
+             鉄砲を三組以上並べた隊は、放つ者・込める者を分けて撃ち継げる。
+             実効の間が四.二秒から二.八秒へ縮む。数を揃えることに意味が出る。 */
+          q.cool = (q.type === "teppo" && (c.鉄砲組数 || 0) >= 3) ? 2.8 : st.rof;
+          /* 初弾の利（GDD 8.4）。
+
+             六秒以上放たずに引きつけ、間合いの内（八割）で放つ最初の斉射は
+             一.五倍。狙いを定め、火蓋を切って待った一発である。 */
+          const 初弾 = (b.t - (q.放った刻 == null ? -99 : q.放った刻) >= 6
+            && mdist < st.range * 0.8) ? 1.5 : 1;
+          q.放った刻 = b.t;
+          b.発射数 = b.発射数 || {};
+          b.発射数[c.id] = (b.発射数[c.id] || 0) + 1;
           q.aim = { x: melee.e.x, y: melee.e.y, t: b.t };   // 狙っている相手
           if (b.fx.length < 160 && (c.side === "P" || c.seen)) {
             b.fx.push({ k: q.type === "teppo" ? "shot" : "arrow", x: q.x, y: q.y,
               x2: melee.e.x, y2: melee.e.y, t: 0, life: q.type === "teppo" ? 0.3 : 0.45 });
           }
           const wet = q.type === "teppo" ? WEATHER[b.weather].teppo : 1;
-          applyDamage(b, melee.f, melee.e, st.vol * wet * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c, q);
+          applyDamage(b, melee.f, melee.e, st.vol * wet * 初弾 * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c, q);
         }
       }
     }
@@ -1521,6 +1620,8 @@ export function stepBattle(b, dt) {
     // 前列で槍を合わせている組の数。後ろが支える度合いを測るのに使う。
     c.噛み組数 = c.squads.filter((q) => q.men > 0 && q.engaged).length;
     c.立つ組数 = c.squads.filter((q) => q.men > 0).length;
+    c.鉄砲組数 = c.squads.filter((q) => q.men > 0 && q.type === "teppo").length;
+    c.槍組数 = c.squads.filter((q) => q.men > 0 && q.type === "yari").length;
     c.fatigue = clamp(c.fatigue + (fighting ? 1.1 : c.order === "待機" ? -1.4 : 0) * dt, 0, 100);
     if (c.pinch >= 2) c.morale -= (c.pinch - 1) * 0.22 * dt;   // 挟まれると士気がじわりと落ちる
     // 押し引きの覚え。刻とともに褪せる（半減およそ七秒）
@@ -1659,7 +1760,8 @@ export function stepBattle(b, dt) {
         c.潰 = true;
         b.log.push({ t: b.t, text: `${c.name}隊は支えを失い、戦場を落ちていった。` });
       } else if (c.morale >= 40 && ratio >= 0.26
-        && b.t - (c.崩れた刻 || 0) > 30 && !(c.立ち直り数 >= 1)) {
+        && b.t - (c.崩れた刻 || 0) > 30 && !(c.立ち直り数 >= 1)
+        && b.t - (c.追われ || -99) > 8) {                 // 騎馬に追われているうちは息をつけない
         /* 兵が戻らぬ隊は立ち直らない。
 
            崩れる目は二つある――士気が十五を切ること、兵が十五分の一を割ること。
