@@ -44,7 +44,24 @@ function 設定を書く() {
   try { localStorage.setItem(棚の鍵, JSON.stringify({ 入: 状.入, 音量: 状.音量 })); } catch (e) { /* 書けずとも進む */ }
 }
 
-export const 音の設定 = () => ({ 入: 状.入, 音量: 状.音量, 解けた: 状.解けた, 曲: 状.曲名 });
+export const 音の設定 = () => ({
+  入: 状.入, 音量: 状.音量, 解けた: 状.解けた, 曲: 状.曲名,
+  /* 座の様子。鳴らないと言われたとき、どこで止まっているかを判じるための一言。 */
+  座: !状.座 ? (状.口 ? "偽の口" : "作れていない") : (状.座.state || "不明"),
+});
+
+/* 試し鳴らし（GDD 15.4）。
+
+   音を入れた折に、その場で一音鳴らす。鳴れば「聞こえる」ことが遊ぶ側に分かるし、
+   鳴らなければ端末の側（マナースイッチ・音量）に因があると分かる。 */
+export function 試しに鳴らす() {
+  if (!状.解けた) 解錠する();
+  起こし直す();
+  const t = 今() + 0.05;
+  出す("鉦", 74, t, 1.2, 0.5);
+  出す("琴", 62, t + 0.12, 1.0, 0.5);
+  return true;
+}
 
 /* 入切と音量。切れば、いま鳴っている音も止める。 */
 export function 入切(v) {
@@ -57,7 +74,7 @@ export function 入切(v) {
 export function 音量(v) {
   状.音量 = Math.max(0, Math.min(1, Number(v) || 0));
   設定を書く();
-  if (状.主 && 状.座) 状.主.gain.setValueAtTime(状.音量 * 0.5, 状.座.currentTime);
+  if (状.主 && 状.座) 状.主.gain.setValueAtTime(状.音量 * 1.1, 状.座.currentTime);
   return 状.音量;
 }
 
@@ -102,7 +119,7 @@ export function 解錠する(作る) {
     try {
       状.座 = typeof 作り === "function" && 作り.prototype ? new 作り() : 作り();
       状.主 = 状.座.createGain();
-      状.主.gain.setValueAtTime(状.音量 * 0.5, 状.座.currentTime);
+      状.主.gain.setValueAtTime(状.音量 * 1.1, 状.座.currentTime);
       状.主.connect(状.座.destination);
       if (状.座.state !== "running" && 状.座.resume) 状.座.resume();
       無音を一つ(状.座);                     // Safari はこれで座が目を覚ます

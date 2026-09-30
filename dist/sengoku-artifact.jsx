@@ -30093,7 +30093,22 @@ function \u8A2D\u5B9A\u3092\u66F8\u304F() {
   } catch (e) {
   }
 }
-var \u97F3\u306E\u8A2D\u5B9A = () => ({ \u5165: \u72B6.\u5165, \u97F3\u91CF: \u72B6.\u97F3\u91CF, \u89E3\u3051\u305F: \u72B6.\u89E3\u3051\u305F, \u66F2: \u72B6.\u66F2\u540D });
+var \u97F3\u306E\u8A2D\u5B9A = () => ({
+  \u5165: \u72B6.\u5165,
+  \u97F3\u91CF: \u72B6.\u97F3\u91CF,
+  \u89E3\u3051\u305F: \u72B6.\u89E3\u3051\u305F,
+  \u66F2: \u72B6.\u66F2\u540D,
+  /* 座の様子。鳴らないと言われたとき、どこで止まっているかを判じるための一言。 */
+  \u5EA7: !\u72B6.\u5EA7 ? \u72B6.\u53E3 ? "\u507D\u306E\u53E3" : "\u4F5C\u308C\u3066\u3044\u306A\u3044" : \u72B6.\u5EA7.state || "\u4E0D\u660E"
+});
+function \u8A66\u3057\u306B\u9CF4\u3089\u3059() {
+  if (!\u72B6.\u89E3\u3051\u305F) \u89E3\u9320\u3059\u308B();
+  \u8D77\u3053\u3057\u76F4\u3059();
+  const t = \u4ECA() + 0.05;
+  \u51FA\u3059("\u9266", 74, t, 1.2, 0.5);
+  \u51FA\u3059("\u7434", 62, t + 0.12, 1, 0.5);
+  return true;
+}
 function \u5165\u5207(v) {
   \u72B6.\u5165 = !!v;
   \u8A2D\u5B9A\u3092\u66F8\u304F();
@@ -30104,7 +30119,7 @@ function \u5165\u5207(v) {
 function \u97F3\u91CF(v) {
   \u72B6.\u97F3\u91CF = Math.max(0, Math.min(1, Number(v) || 0));
   \u8A2D\u5B9A\u3092\u66F8\u304F();
-  if (\u72B6.\u4E3B && \u72B6.\u5EA7) \u72B6.\u4E3B.gain.setValueAtTime(\u72B6.\u97F3\u91CF * 0.5, \u72B6.\u5EA7.currentTime);
+  if (\u72B6.\u4E3B && \u72B6.\u5EA7) \u72B6.\u4E3B.gain.setValueAtTime(\u72B6.\u97F3\u91CF * 1.1, \u72B6.\u5EA7.currentTime);
   return \u72B6.\u97F3\u91CF;
 }
 function \u8D77\u3053\u3057\u76F4\u3059() {
@@ -30138,7 +30153,7 @@ function \u89E3\u9320\u3059\u308B(\u4F5C\u308B) {
     try {
       \u72B6.\u5EA7 = typeof \u4F5C\u308A === "function" && \u4F5C\u308A.prototype ? new \u4F5C\u308A() : \u4F5C\u308A();
       \u72B6.\u4E3B = \u72B6.\u5EA7.createGain();
-      \u72B6.\u4E3B.gain.setValueAtTime(\u72B6.\u97F3\u91CF * 0.5, \u72B6.\u5EA7.currentTime);
+      \u72B6.\u4E3B.gain.setValueAtTime(\u72B6.\u97F3\u91CF * 1.1, \u72B6.\u5EA7.currentTime);
       \u72B6.\u4E3B.connect(\u72B6.\u5EA7.destination);
       if (\u72B6.\u5EA7.state !== "running" && \u72B6.\u5EA7.resume) \u72B6.\u5EA7.resume();
       \u7121\u97F3\u3092\u4E00\u3064(\u72B6.\u5EA7);
@@ -30920,10 +30935,13 @@ function \u97F3\u306E\u6B04({ \u5C0F\u3055\u304F } = {}) {
       className: `btn sm ${\u8A2D\u5B9A.\u5165 ? "on" : ""}`,
       onClick: () => \u76F4\u3059(() => {
         const v = \u5165\u5207(!\u97F3\u306E\u8A2D\u5B9A().\u5165);
-        if (v) \u89E3\u9320\u3059\u308B();
+        if (v) {
+          \u89E3\u9320\u3059\u308B();
+          \u8A66\u3057\u306B\u9CF4\u3089\u3059();
+        }
       })
     },
-    "\u97F3 ",
+    "\u266A \u97F3 ",
     \u8A2D\u5B9A.\u5165 ? "\u5165" : "\u5207"
   ), /* @__PURE__ */ React2.createElement(
     "input",
@@ -30935,7 +30953,11 @@ function \u97F3\u306E\u6B04({ \u5C0F\u3055\u304F } = {}) {
       style: { flex: "1 1 120px", maxWidth: 200 },
       onChange: (e) => \u76F4\u3059(() => \u97F3\u91CF(Number(e.target.value) / 100))
     }
-  ), /* @__PURE__ */ React2.createElement("span", { className: "num" }, Math.round(\u8A2D\u5B9A.\u97F3\u91CF * 100)), !\u5C0F\u3055\u304F && /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 11, lineHeight: 1.7 } }, "\u653F\u52D9\u30FB\u5408\u6226\u30FB\u57CE\u653B\u3081\u30FB\u5929\u4E0B\u5206\u3051\u76EE\u3067\u8ABF\u3079\u304C\u5909\u308F\u308A\u307E\u3059\u3002 \u7AEF\u672B\u306E\u30DE\u30CA\u30FC\u30B9\u30A4\u30C3\u30C1\u304C\u5165\u3063\u3066\u3044\u308B\u3068\u9CF4\u308A\u307E\u305B\u3093\u3002"));
+  ), /* @__PURE__ */ React2.createElement("span", { className: "num" }, Math.round(\u8A2D\u5B9A.\u97F3\u91CF * 100)), /* @__PURE__ */ React2.createElement("button", { className: "btn sm", onClick: () => {
+    \u89E3\u9320\u3059\u308B();
+    \u8A66\u3057\u306B\u9CF4\u3089\u3059();
+    set\u8A2D\u5B9A(\u97F3\u306E\u8A2D\u5B9A());
+  } }, "\u8A66\u3057\u9CF4\u3089\u3057"), !\u5C0F\u3055\u304F && /* @__PURE__ */ React2.createElement("span", { style: { fontSize: 11, lineHeight: 1.7 } }, "\u653F\u52D9\u30FB\u5408\u6226\u30FB\u57CE\u653B\u3081\u30FB\u5929\u4E0B\u5206\u3051\u76EE\u3067\u8ABF\u3079\u304C\u5909\u308F\u308A\u307E\u3059\u3002 \u9CF4\u3089\u306A\u3044\u3068\u304D\u306F\u3001\u7AEF\u672B\u306E\u30DE\u30CA\u30FC\u30B9\u30A4\u30C3\u30C1\uFF08\u6D88\u97F3\uFF09\u3068\u97F3\u91CF\u3092\u304A\u78BA\u304B\u3081\u304F\u3060\u3055\u3044\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u97F3\u306E\u5EA7\uFF1A", /* @__PURE__ */ React2.createElement("b", { style: { color: U.text } }, \u8A2D\u5B9A.\u5EA7), \u8A2D\u5B9A.\u66F2 ? `\uFF0F\u3044\u307E\u306E\u8ABF\u3079\u300C${\u8A2D\u5B9A.\u66F2}\u300D` : "\uFF0F\u8ABF\u3079\u306F\u6B62\u307E\u3063\u3066\u3044\u307E\u3059"));
 }
 function MonthReport({ g, onClose, onAid }) {
   const mine = g.castles.filter((c) => c.faction === g.player);
@@ -36803,6 +36825,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [modal, setModal] = useState7(null);
   const [battle, setBattle] = useState7(null);
   const [\u5206\u3051\u76EE\u306E\u8DE1, set\u5206\u3051\u76EE\u306E\u8DE1] = useState7(null);
+  const [\u97F3\u306E\u672D, set\u97F3\u306E\u672D] = useState7(0);
   const [\u79FB\u5C01\u306E\u76F8\u624B, set\u79FB\u5C01\u306E\u76F8\u624B] = useState7(null);
   const [\u5C0F\u56F3, set\u5C0F\u56F3] = useState7(true);
   const [sea, setSea] = useState7(null);
@@ -38934,7 +38957,14 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       },
       /* @__PURE__ */ React8.createElement("b", null, "\u2694"),
       "\u5929\u4E0B\u5206\u3051\u76EE"
-    ), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("factions") }, /* @__PURE__ */ React8.createElement("b", null, "\u2691"), "\u52E2\u529B\u60C5\u5831"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("generals") }, /* @__PURE__ */ React8.createElement("b", null, "\u2617"), "\u6B66\u5C06\u4E00\u89A7"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("hime") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C7"), "\u59EB"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("goal") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C8"), "\u653B\u7565\u76EE\u6A19"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("seisaku") }, /* @__PURE__ */ React8.createElement("b", null, "\u653F"), "\u65B9\u91DD"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("manual") }, /* @__PURE__ */ React8.createElement("b", null, "\uFF1F"), "\u904A\u3073\u65B9"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("chronicle") }, /* @__PURE__ */ React8.createElement("b", null, "\u25A4"), "\u6226\u56FD\u8A18"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: onTitle }, /* @__PURE__ */ React8.createElement("b", null, "\u2302"), "\u30BF\u30A4\u30C8\u30EB")),
+    ), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("factions") }, /* @__PURE__ */ React8.createElement("b", null, "\u2691"), "\u52E2\u529B\u60C5\u5831"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("generals") }, /* @__PURE__ */ React8.createElement("b", null, "\u2617"), "\u6B66\u5C06\u4E00\u89A7"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("hime") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C7"), "\u59EB"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("goal") }, /* @__PURE__ */ React8.createElement("b", null, "\u25C8"), "\u653B\u7565\u76EE\u6A19"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("seisaku") }, /* @__PURE__ */ React8.createElement("b", null, "\u653F"), "\u65B9\u91DD"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => {
+      const v = \u5165\u5207(!\u97F3\u306E\u8A2D\u5B9A().\u5165);
+      if (v) {
+        \u89E3\u9320\u3059\u308B();
+        \u8A66\u3057\u306B\u9CF4\u3089\u3059();
+      }
+      set\u97F3\u306E\u672D((n) => n + 1);
+    } }, /* @__PURE__ */ React8.createElement("b", null, "\u266A"), "\u97F3", \u97F3\u306E\u8A2D\u5B9A().\u5165 ? "\u5165" : "\u5207"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("manual") }, /* @__PURE__ */ React8.createElement("b", null, "\uFF1F"), "\u904A\u3073\u65B9"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: () => setModal("chronicle") }, /* @__PURE__ */ React8.createElement("b", null, "\u25A4"), "\u6226\u56FD\u8A18"), /* @__PURE__ */ React8.createElement("div", { className: "mbtn", style: { width: 66 }, onClick: onTitle }, /* @__PURE__ */ React8.createElement("b", null, "\u2302"), "\u30BF\u30A4\u30C8\u30EB")),
     !wide && \u5C0F\u56F3 && /* @__PURE__ */ React8.createElement(React8.Fragment, null, /* @__PURE__ */ React8.createElement(
       "div",
       {

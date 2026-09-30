@@ -47,7 +47,7 @@ import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer, DiploOffer 
 import { underMyBanner, 同じ旗の下, 己の盟約, 主家, 裏切りの出陣か } from "../core/state.js";
 import { 忠誠, 守備隊の統率, castellanOf, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
 import { 城主の札を据える } from "../core/state.js";
-import { 場面を選ぶ } from "../audio/oto.js";
+import { 入切, 場面を選ぶ, 試しに鳴らす, 音の設定, 解錠する } from "../audio/oto.js";
 import { 守りの割り付け } from "../core/garrison.js";
 import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を受ける, 縁談を断る } from "../core/hime.js";
 import { 蓄えに合わせる } from "../core/roster.js";
@@ -128,6 +128,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [modal, setModal] = useState(null);
   const [battle, setBattle] = useState(null);
   const [分け目の跡, set分け目の跡] = useState(null);
+  const [音の札, set音の札] = useState(0);        // 音の入切を押したときの描き直し
   const [移封の相手, set移封の相手] = useState(null);   // 外交の帳から開いた相手
   const [小図, set小図] = useState(true);               // 左下の日本全土図を出すか
   const [sea, setSea] = useState(null);        // 盤の上の海戦
@@ -2413,6 +2414,13 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("hime")}><b>◇</b>姫</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("goal")}><b>◈</b>攻略目標</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("seisaku")}><b>政</b>方針</div>
+            {/* 音（GDD 15.4）。押せばその場で解錠し、一音鳴らして聞こえることを示す。
+                携帯は釦を押した折がいちばん確かに解ける。 */}
+            <div className="mbtn" style={{ width: 66 }} onClick={() => {
+              const v = 入切(!音の設定().入);
+              if (v) { 解錠する(); 試しに鳴らす(); }
+              set音の札((n) => n + 1);
+            }}><b>♪</b>音{音の設定().入 ? "入" : "切"}</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("manual")}><b>？</b>遊び方</div>
             {/* 帯から移した口（GDD 15.1）。同じ帳を「履歴」と「戦国記」の二つの名で
                 呼んでいたので、戦国記に揃えた。 */}

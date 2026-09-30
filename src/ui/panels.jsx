@@ -10,7 +10,7 @@ import { canSee, forecast, relOf } from "../core/state.js";
 import { courtRank, 旗の下か } from "../core/province.js";
 import { 問われる家, 問わぬ家ら, 応じる目 } from "../core/sobuji.js";
 import { 参陣の顔ぶれ, 号令の限り } from "../core/gourei.js";
-import { 入切, 音の設定, 音量, 解錠する } from "../audio/oto.js";
+import { 入切, 試しに鳴らす, 音の設定, 音量, 解錠する } from "../audio/oto.js";
 import { 分け目の野 } from "../data/wakemeba.js";
 import { 移封できる家ら, 移封できるか, 移封の見立て, 渡せる城ら, 家の城ら, 招ける者ら, 招けるか, 招きの咎め } from "../core/ihou.js";
 import { 器量くらべ, 挑める家ら, 分け目の備えを組む, 分け目の兵, 版図の石高, 直轄の石高,
@@ -1023,17 +1023,23 @@ export function 音の欄({ 小さく } = {}) {
     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
       fontSize: 小さく ? 11.5 : 12.5, color: U.dim }}>
       <button className={`btn sm ${設定.入 ? "on" : ""}`}
-        onClick={() => 直す(() => { const v = 入切(!音の設定().入); if (v) 解錠する(); })}>
-        音 {設定.入 ? "入" : "切"}
+        onClick={() => 直す(() => {
+          const v = 入切(!音の設定().入);
+          if (v) { 解錠する(); 試しに鳴らす(); }        // 入れた折に一音鳴らして、聞こえることを示す
+        })}>
+        ♪ 音 {設定.入 ? "入" : "切"}
       </button>
       <input type="range" min="0" max="100" value={Math.round(設定.音量 * 100)}
         style={{ flex: "1 1 120px", maxWidth: 200 }}
         onChange={(e) => 直す(() => 音量(Number(e.target.value) / 100))} />
       <span className="num">{Math.round(設定.音量 * 100)}</span>
+      <button className="btn sm" onClick={() => { 解錠する(); 試しに鳴らす(); set設定(音の設定()); }}>試し鳴らし</button>
       {!小さく && (
         <span style={{ fontSize: 11, lineHeight: 1.7 }}>
           政務・合戦・城攻め・天下分け目で調べが変わります。
-          端末のマナースイッチが入っていると鳴りません。
+          鳴らないときは、端末のマナースイッチ（消音）と音量をお確かめください。<br />
+          音の座：<b style={{ color: U.text }}>{設定.座}</b>
+          {設定.曲 ? `／いまの調べ「${設定.曲}」` : "／調べは止まっています"}
         </span>
       )}
     </div>
