@@ -26138,6 +26138,10 @@ var \u7D44\u306E\u614B = (q) => {
       sx: new Float32Array(50),
       sy: new Float32Array(50),
       \u751F: new Uint8Array(50),
+      \u6B69\u8DDD: new Float32Array(50),
+      \u901F: new Float32Array(50),
+      \u9032x: new Float32Array(50),
+      \u9032y: new Float32Array(50),
       \u521D: false,
       prevMen: q.men,
       prevCool: q.cool || 0,
@@ -26151,21 +26155,22 @@ var \u7D44\u306E\u614B = (q) => {
 var \u76E4\u306E\u614B = (b) => {
   let s2 = \u76E4\u614B.get(b);
   if (!s2) {
-    s2 = { \u5012\u308C: [], \u524Dnow: 0 };
+    s2 = { \u5012\u308C: [], \u524Dt: b.t };
     \u76E4\u614B.set(b, s2);
   }
   return s2;
 };
 function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
   const \u614B = \u76E4\u306E\u614B(b);
-  const dt = \u614B.\u524Dnow ? Math.min(0.1, nowSec - \u614B.\u524Dnow) : 0.016;
-  \u614B.\u524Dnow = nowSec;
+  const dt = Math.max(0, Math.min(0.25, b.t - \u614B.\u524Dt));
+  \u614B.\u524Dt = b.t;
+  if (dt <= 0) return 0;
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
     if (viewRect && (c.x < viewRect.x0 - 160 || c.x > viewRect.x1 + 160 || c.y < viewRect.y0 - 160 || c.y > viewRect.y1 + 160)) continue;
     for (const q of c.squads) {
       const s2 = \u7D44\u306E\u614B(q);
-      if ((q.cool || 0) > s2.prevCool + 0.4) s2.\u6483\u523B = nowSec;
+      if ((q.cool || 0) > s2.prevCool + 0.4) s2.\u6483\u523B = b.t;
       s2.prevCool = q.cool || 0;
       {
         const ddx = q.x - s2.dx, ddy = q.y - s2.dy, d = Math.hypot(ddx, ddy);
@@ -26173,7 +26178,7 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
           s2.dx = q.x;
           s2.dy = q.y;
         } else if (d > 0.02) {
-          const mv = Math.min(d, (q.type === "kiba" ? 46 : 30) * dt);
+          const mv = Math.min(d, (q.type === "kiba" ? 80 : 52) * dt);
           s2.dx += ddx / d * mv;
           s2.dy += ddy / d * mv;
         }
@@ -26200,7 +26205,7 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
       const bx = -Math.cos(th), by = -Math.sin(th);
       const \u524D = q.engaged && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
       const \u523B\u307F = (\u524D + 2.8) / 4;
-      const \u62BC = q.engaged ? 0.6 - Math.sin(nowSec * 0.9 + (q.seed || 0)) * 1.2 : 0;
+      const \u62BC = q.engaged ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
       for (let n = 0; n < alive; n++) {
         const o = \u5834[n];
         const \u6DF1 = q.engaged ? -\u524D + o[2] * \u523B\u307F + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))) : o[1];
@@ -26209,17 +26214,23 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
           s2.sx[n] = tx;
           s2.sy[n] = ty;
           s2.\u751F[n] = 1;
+          s2.\u901F[n] = 0;
           continue;
         }
         const vx = tx - s2.sx[n], vy = ty - s2.sy[n], d = Math.hypot(vx, vy);
+        let mv = 0;
         if (d > 90) {
           s2.sx[n] = tx;
           s2.sy[n] = ty;
         } else if (d > 0.02) {
-          const mv = Math.min(d, (q.type === "kiba" ? 36 : 17) * dt);
+          mv = Math.min(d, (q.type === "kiba" ? 74 : 48) * dt);
           s2.sx[n] += vx / d * mv;
           s2.sy[n] += vy / d * mv;
+          s2.\u9032x[n] += (vx / d - s2.\u9032x[n]) * Math.min(1, dt * 3);
+          s2.\u9032y[n] += (vy / d - s2.\u9032y[n]) * Math.min(1, dt * 3);
         }
+        s2.\u6B69\u8DDD[n] += mv;
+        s2.\u901F[n] += ((dt > 0 ? mv / dt : 0) - s2.\u901F[n]) * Math.min(1, dt * 6);
       }
       for (let n = alive; n < 50; n++) s2.\u751F[n] = 0;
       s2.\u521D = true;
@@ -26266,7 +26277,7 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
       const alive = Math.max(0, Math.min(50, Math.round(q.men)));
       const th = s2.\u5411;
       const dir\u57FA = \u5411\u304D\u516B(Math.cos(th), Math.sin(th));
-      const \u6483 = (nowSec - s2.\u6483\u523B) / 1.5;
+      const \u6483 = (b.t - s2.\u6483\u523B) / 1.5;
       for (let n = 0; n < alive; n++) {
         if (!s2.\u751F[n]) continue;
         if (\u4E26.length > 12e3) break;
@@ -26274,17 +26285,17 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
         if (!\u898B\u3048\u308B(wx, wy)) continue;
         let fr = 0, dir = dir\u57FA;
         const \u5834 = q.type === "kiba" ? \u99AC\u6301\u5834 : \u6301\u5834;
-        if (q.engaged && \u5834[n][2] < 2) {
-          const ph = (nowSec * 0.55 + (q.seed || 0) + n * 0.17) % 1;
+        const \u6B69\u901F = s2.\u901F[n];
+        if (\u6B69\u901F > 2.5) {
+          const \u6B69\u5E45 = q.type === "kiba" ? 14 : 9;
+          const w = s2.\u6B69\u8DDD[n] / \u6B69\u5E45 % 1;
+          if (Math.hypot(s2.\u9032x[n], s2.\u9032y[n]) > 0.3) dir = \u5411\u304D\u516B(s2.\u9032x[n], s2.\u9032y[n]);
+          fr = \u9AA8\u5EA6 > 0 ? 1 + w * 2 : 1 + (w < 0.5 ? 0 : 1);
+        } else if (q.engaged && \u5834[n][2] < 2) {
+          const ph = (b.t * 0.55 + (q.seed || 0) + n * 0.17) % 1;
           fr = \u9AA8\u5EA6 > 0 ? 3 + ph * 3.999 : 3 + Math.min(3, ph * 4 | 0);
         } else if (\u6483 >= 0 && \u6483 < 1 && (q.type === "yumi" || q.type === "teppo")) {
           fr = \u9AA8\u5EA6 > 0 ? 3 + Math.min(3.999, \u6483 * 4) : 3 + Math.min(3, \u6483 * 4 | 0);
-        } else {
-          const \u901F = Math.hypot(q.x - s2.dx, q.y - s2.dy);
-          if (\u901F > 2) {
-            const w = (nowSec * 1.7 + n * 0.07 + (q.seed || 0)) % 1;
-            fr = \u9AA8\u5EA6 > 0 ? 1 + w * 2 : 1 + (nowSec * 3.4 + n * 0.7 | 0) % 2;
-          }
         }
         \u4E26.push({
           wx,

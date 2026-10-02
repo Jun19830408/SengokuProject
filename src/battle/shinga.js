@@ -542,19 +542,28 @@ const 組態 = new WeakMap();
 const 盤態 = new WeakMap();
 const 組の態 = (q) => { let s = 組態.get(q);
   if (!s) { s = { dx: q.x, dy: q.y, sx: new Float32Array(50), sy: new Float32Array(50),
-    生: new Uint8Array(50), 初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0 };
+    生: new Uint8Array(50), 歩距: new Float32Array(50), 速: new Float32Array(50),
+    進x: new Float32Array(50), 進y: new Float32Array(50),
+    初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0 };
     組態.set(q, s); }
   return s; };
 const 盤の態 = (b) => { let s = 盤態.get(b);
-  if (!s) { s = { 倒れ: [], 前now: 0 }; 盤態.set(b, s); }
+  if (!s) { s = { 倒れ: [], 前t: b.t }; 盤態.set(b, s); }
   return s; };
 
 /* ---- 見た目の状態を進める。読みは盤から、書きは WeakMap だけ ----
    nowSec は実時間（秒）。viewRect {x0,y0,x1,y1} の外の組は飛ばす（null なら全部）。 */
 export function 新絵状態を進める(b, nowSec, viewRect) {
   const 態 = 盤の態(b);
-  const dt = 態.前now ? Math.min(0.1, nowSec - 態.前now) : 0.016;
-  態.前now = nowSec;
+  /* 刻は盤のもの（b.t）を使う（GDD 8.11）。
+
+     実時間で足を動かしていたころは、盤を通常で進めると隊のほうが速く、
+     兵がついて行けずに瞬間移動していた――これが「ヌメっと動く」の正体である。
+     盤の刻で動かせば、どの速さでも兵は隊と同じ歩調で歩く。
+     盤を止めれば兵も止まる。それが道理である。 */
+  const dt = Math.max(0, Math.min(0.25, b.t - 態.前t));
+  態.前t = b.t;
+  if (dt <= 0) return 0;
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
     if (viewRect && (c.x < viewRect.x0 - 160 || c.x > viewRect.x1 + 160
@@ -562,12 +571,12 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
     for (const q of c.squads) {
       const s = 組の態(q);
       /* 発砲の刻。cool が跳ね上がったら、いま放った */
-      if ((q.cool || 0) > s.prevCool + 0.4) s.撃刻 = nowSec;
+      if ((q.cool || 0) > s.prevCool + 0.4) s.撃刻 = b.t;
       s.prevCool = q.cool || 0;
       /* 組の足：目標（盤の位置）へ、歩幅の上限で寄る */
       { const ddx = q.x - s.dx, ddy = q.y - s.dy, d = Math.hypot(ddx, ddy);
         if (!s.初 || d > 120) { s.dx = q.x; s.dy = q.y; }
-        else if (d > 0.02) { const mv = Math.min(d, (q.type === "kiba" ? 46 : 30) * dt);
+        else if (d > 0.02) { const mv = Math.min(d, (q.type === "kiba" ? 80 : 52) * dt);
           s.dx += ddx / d * mv; s.dy += ddy / d * mv; } }
       /* 向きの均し */
       { let df = (q.facing || 0) - s.向;
@@ -589,18 +598,30 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       /* 噛み合っていれば、前列は敵との中間まで伸びる（槍合わせの線） */
       const 前 = q.engaged && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
       const 刻み = (前 + 2.8) / 4;
-      const 押 = q.engaged ? 0.6 - Math.sin(nowSec * 0.9 + (q.seed || 0)) * 1.2 : 0;
+      const 押 = q.engaged ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
       for (let n = 0; n < alive; n++) {
         const o = 場[n];
         const 深 = q.engaged
           ? (-前 + o[2] * 刻み + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))))
           : o[1];
         const tx = s.dx + lx * o[0] + bx * (深 + 押), ty = s.dy + ly * o[0] + by * (深 + 押);
-        if (!s.生[n] || !s.初) { s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; continue; }
+        if (!s.生[n] || !s.初) { s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; s.速[n] = 0; continue; }
         const vx = tx - s.sx[n], vy = ty - s.sy[n], d = Math.hypot(vx, vy);
+        let mv = 0;
         if (d > 90) { s.sx[n] = tx; s.sy[n] = ty; }
-        else if (d > 0.02) { const mv = Math.min(d, (q.type === "kiba" ? 36 : 17) * dt);
-          s.sx[n] += vx / d * mv; s.sy[n] += vy / d * mv; }
+        else if (d > 0.02) { mv = Math.min(d, (q.type === "kiba" ? 74 : 48) * dt);
+          s.sx[n] += vx / d * mv; s.sy[n] += vy / d * mv;
+          /* 進む向き。均しておかないと、持ち場の細かな直しで体がくるくる回る */
+          s.進x[n] += (vx / d - s.進x[n]) * Math.min(1, dt * 3);
+          s.進y[n] += (vy / d - s.進y[n]) * Math.min(1, dt * 3); }
+        /* 歩いた距離で拍を回す（GDD 8.11）。
+
+           時計で回していたころは、盤を微速にすると体だけ止まり、位置だけが
+           滑っていった――遊ぶ側の目には「ヌメっと動く」と映る。
+           足は踏んだ地べたのぶんだけ出るのが道理である。歩幅で回せば、
+           どんな速さでも足が地に着き、滑りは消える。 */
+        s.歩距[n] += mv;
+        s.速[n] += ((dt > 0 ? mv / dt : 0) - s.速[n]) * Math.min(1, dt * 6);
       }
       for (let n = alive; n < 50; n++) s.生[n] = 0;
       s.初 = true;
@@ -608,6 +629,9 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
   }
   return dt;
 }
+
+/* 試験のための覗き窓。見た目の状態（歩いた距離・足の速さ）を読むだけ。 */
+export function 組の見た目(q) { return 組態.get(q) || null; }
 
 const 向き八 = (vx, vy) => { const a = Math.atan2(vy, vx);
   return ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8; };
@@ -643,7 +667,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       const alive = Math.max(0, Math.min(50, Math.round(q.men)));
       const th = s.向;
       const dir基 = 向き八(Math.cos(th), Math.sin(th));
-      const 撃 = (nowSec - s.撃刻) / 1.5;
+      const 撃 = (b.t - s.撃刻) / 1.5;
       for (let n = 0; n < alive; n++) {
         if (!s.生[n]) continue;
         if (並.length > 12000) break;
@@ -652,16 +676,19 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
         /* 拍：歩き・突き・斉射。寄りが深ければ割り切れない拍で滑らかに */
         let fr = 0, dir = dir基;
         const 場 = q.type === "kiba" ? 馬持場 : 持場;
-        if (q.engaged && 場[n][2] < 2) {
-          const ph = (nowSec * 0.55 + (q.seed || 0) + n * 0.17) % 1;
+        const 歩速 = s.速[n];
+        if (歩速 > 2.5) {
+          /* 歩み：歩幅（騎馬は三歩半、徒は二歩二分）ごとに一周 */
+          const 歩幅 = q.type === "kiba" ? 14 : 9;
+          const w = (s.歩距[n] / 歩幅) % 1;
+          if (Math.hypot(s.進x[n], s.進y[n]) > 0.3) dir = 向き八(s.進x[n], s.進y[n]);
+          fr = 骨度 > 0 ? 1 + w * 2 : 1 + (w < 0.5 ? 0 : 1);
+        } else if (q.engaged && 場[n][2] < 2) {
+          /* 突き：合戦の刻で回す。盤を遅くすれば、槍もゆっくり繰り出される */
+          const ph = (b.t * 0.55 + (q.seed || 0) + n * 0.17) % 1;
           fr = 骨度 > 0 ? 3 + ph * 3.999 : 3 + Math.min(3, (ph * 4) | 0);
         } else if (撃 >= 0 && 撃 < 1 && (q.type === "yumi" || q.type === "teppo")) {
           fr = 骨度 > 0 ? 3 + Math.min(3.999, 撃 * 4) : 3 + Math.min(3, (撃 * 4) | 0);
-        } else {
-          /* 歩いているか：組の足の速さで決める */
-          const 速 = Math.hypot(q.x - s.dx, q.y - s.dy);
-          if (速 > 2) { const w = (nowSec * 1.7 + n * 0.07 + (q.seed || 0)) % 1;
-            fr = 骨度 > 0 ? 1 + w * 2 : 1 + (((nowSec * 3.4 + n * 0.7) | 0) % 2); }
         }
         並.push({ wx, wy, 地y: wy, key: 側 + q.type + dir + "_" + fr,
           直: 骨度 > 0 ? { dir, fr, 型: q.type, 側, 乱: ((q.seed || 0) * 31 + n * 7) % 97 / 97 } : null });
