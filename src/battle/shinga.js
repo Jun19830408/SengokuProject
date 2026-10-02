@@ -32,6 +32,32 @@ export const 個人閾 = 1.6;        // これより寄れば一人ずつ
 export const 滑閾 = 5.4;          // これより寄れば連続の位相で直接描く
 export const 新絵の寄り限り = 7.2;
 
+/* 一人ずつ描くか（GDD 8.11）。
+
+   予算は「画面に映っている組」で数える。隊の中ほどで数えていたころは、
+   旗本三万（六百組）が一つ映るだけで溢れ、槍を合わせた只中へ寄るほど
+   駒へ戻るという逆さまなことになった。組ひとつずつ見れば、寄るほど
+   数は減る――寄るほど絵が細かくなる。 */
+export const 組の予算 = 400;                 // 画面に四百組＝二万人まで
+export function 個人で描くか(b, cam, W, H) {
+  if (!新絵か(b) || cam.s < 個人閾) return false;
+  return 見える組数(b, cam, W, H) <= 組の予算;
+}
+export function 見える組数(b, cam, W, H) {
+  const vx0 = cam.x - W / 2 / cam.s - 60, vx1 = cam.x + W / 2 / cam.s + 60;
+  const vy0 = cam.y - H / 2 / cam.s - 80, vy1 = cam.y + H / 2 / cam.s + 60;
+  let n = 0;
+  for (const c of b.corps) {
+    if (c.dead || c.destroyed) continue;
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      if (q.x < vx0 || q.x > vx1 || q.y < vy0 || q.y > vy1) continue;
+      if (++n > 組の予算) return n;
+    }
+  }
+  return n;
+}
+
 /* ---- 筆の下ごしらえ ---- */
 const shade = (hex, k) => { const n = parseInt(hex.slice(1), 16),
   r = (n >> 16) & 255, g = (n >> 8) & 255, b2 = n & 255;

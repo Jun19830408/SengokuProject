@@ -4,7 +4,7 @@ import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
-import { 新絵か, 新絵の兵描き, 個人閾 } from "./shinga.js";
+import { 新絵か, 新絵の兵描き, 個人で描くか } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
 
@@ -1795,24 +1795,8 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
      ただし予算がある。関ヶ原の西口は組が六百も密集しており、倍率一.六で
      ほどくと画面に三万人が立って筆が止まる。見えている組×五十が予算を
      超えるあいだは従来の駒のままにし、寄って数が絞れたら一人ずつへ移る。 */
-  let 個人絵 = false;
+  const 個人絵 = 個人で描くか(b, cam, W, H);
   const 新絵隊 = [];
-  if (新絵か(b) && cam.s >= 個人閾) {
-    const vx0 = cam.x - W / 2 / cam.s - 100, vx1 = cam.x + W / 2 / cam.s + 100;
-    const vy0 = cam.y - H / 2 / cam.s - 100, vy1 = cam.y + H / 2 / cam.s + 100;
-    let 組数 = 0;
-    for (const c of b.corps) {
-      if (c.dead || c.destroyed) continue;
-      if (c.x < vx0 || c.x > vx1 || c.y < vy0 || c.y > vy1) continue;
-      組数 += c.squads.length;
-    }
-    個人絵 = 組数 * 50 <= 12000;
-  }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, W, H);
-  // 狙い札の置き場（画面の座標）。押せる所を、描いた側が控えて渡す。
-  b.狙い札 = [];
-  const S = (wx, wy) => [(wx - cam.x) * cam.s + W / 2, (wy - cam.y) * cam.s + H / 2];
 
   ctx.save();
   ctx.translate(W / 2 - cam.x * cam.s, H / 2 - cam.y * cam.s);
@@ -2028,16 +2012,44 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
           ctx.fill();
         }
       } else if (f.k === "clash") {
-        ctx.globalAlpha = a * 0.9;
-        ctx.strokeStyle = f.big ? "#E8B24A" : "#FFFFFF";
-        ctx.lineWidth = f.big ? 1.4 : 1;
-        const r = (f.big ? 5 : 3.5) + (1 - a) * 4;
-        for (let k = 0; k < 3; k++) {
-          const ang = f.x * 0.7 + f.y * 1.3 + k * 2.1;
+        if (個人絵) {
+          /* 槍を合わせたしるし（新しい絵・GDD 8.11）。
+
+             白い線が花火のように散るのは、駒の頃の印であった。一人ずつが
+             描かれる絵では、刃がぶつかって土が舞うのが自然である。
+             足元の土埃と、刃の光をひとつ二つ――それだけでよい。 */
+          const 立 = (1 - a);
+          ctx.globalAlpha = a * a * 0.34;
+          ctx.fillStyle = "#B5A684";
           ctx.beginPath();
-          ctx.moveTo(f.x + Math.cos(ang) * r * 0.4, f.y + Math.sin(ang) * r * 0.4);
-          ctx.lineTo(f.x + Math.cos(ang) * r, f.y + Math.sin(ang) * r);
-          ctx.stroke();
+          ctx.ellipse(f.x, f.y - 立 * 2.4, (f.big ? 3.2 : 2.2) + 立 * 5.5,
+            ((f.big ? 3.2 : 2.2) + 立 * 5.5) * 0.55, 0, 0, 7);
+          ctx.fill();
+          if (a > 0.45) {                       // 刃の光は、当たった刹那だけ
+            ctx.globalAlpha = (a - 0.45) * 1.5;
+            ctx.strokeStyle = f.big ? "#FFE9B0" : "#F2F4F0";
+            ctx.lineWidth = f.big ? 0.9 : 0.6;
+            const ang = f.x * 0.7 + f.y * 1.3;
+            for (let k = 0; k < (f.big ? 2 : 1); k++) {
+              const a2 = ang + k * 1.9, r2 = (f.big ? 3.4 : 2.4);
+              ctx.beginPath();
+              ctx.moveTo(f.x + Math.cos(a2) * r2 * 0.3, f.y + Math.sin(a2) * r2 * 0.3 - 2);
+              ctx.lineTo(f.x + Math.cos(a2) * r2, f.y + Math.sin(a2) * r2 - 2.6);
+              ctx.stroke();
+            }
+          }
+        } else {
+          ctx.globalAlpha = a * 0.9;
+          ctx.strokeStyle = f.big ? "#E8B24A" : "#FFFFFF";
+          ctx.lineWidth = f.big ? 1.4 : 1;
+          const r = (f.big ? 5 : 3.5) + (1 - a) * 4;
+          for (let k = 0; k < 3; k++) {
+            const ang = f.x * 0.7 + f.y * 1.3 + k * 2.1;
+            ctx.beginPath();
+            ctx.moveTo(f.x + Math.cos(ang) * r * 0.4, f.y + Math.sin(ang) * r * 0.4);
+            ctx.lineTo(f.x + Math.cos(ang) * r, f.y + Math.sin(ang) * r);
+            ctx.stroke();
+          }
         }
       } else if (f.k === "dust") {
         // 立ち上がって薄れる土煙。上へ流れる

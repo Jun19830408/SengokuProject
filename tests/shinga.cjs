@@ -106,5 +106,37 @@ console.log('\n── 四　兵の動きは歩幅で回る');
     `通常${通常.隔.toFixed(0)}歩・微速${微速.隔.toFixed(0)}歩`);
 }
 
+console.log('\n── 五　寄るほど絵は細かくなる');
+{
+  /* 隊の中ほどで予算を数えていたころは、旗本三万（六百組）が一つ映るだけで
+     溢れ、槍を合わせた只中へ寄るほど駒へ戻るという逆さまなことになった。
+     組ひとつずつ数えれば、寄るほど数は減り、寄るほど絵は細かくなる。 */
+  種で固める();
+  const r = H.合戦を仕立てる('sekigahara', '西');
+  const b = r.b; b.dusk = 2400; b.phase = 'fight';
+  const 的 = b.corps.find((c) => c.side === 'E' && !c.dead);
+  for (const c of b.corps) if (c.side === 'P') H.issueOrder(b, c, { order: '接戦', tx: 的.x, ty: 的.y });
+  /* 槍が合うまで進める */
+  let 噛 = null;
+  for (let k = 0; k < 4000 && !噛; k++) {
+    H.stepBattle(b, 0.05);
+    for (const c of b.corps) { for (const q of c.squads) if (q.engaged && q.men > 0) { 噛 = q; break; } if (噛) break; }
+  }
+  確('槍が合う所まで進む', !!噛, 噛 ? `${Math.round(b.t)}秒` : '合わず');
+  const W = 900, Hp = 700;
+  const 旗本 = b.corps.filter((c) => c.squads.length > 120).length;
+  const 試 = (s2) => {
+    const cam = { x: 噛 ? 噛.x : b.corps[0].x, y: 噛 ? 噛.y : b.corps[0].y, s: s2 };
+    return { 組: H.見える組数(b, cam, W, Hp), 個: H.個人で描くか(b, cam, W, Hp) };
+  };
+  const 浅 = 試(1.8), 中 = 試(3.2), 深 = 試(6.0);
+  確('乱戦の只中でも、寄れば一人ずつになる', 深.個, `倍率六で${深.組}組`);
+  確('中ほどでも一人ずつ', 中.個, `倍率三.二で${中.組}組`);
+  確('寄るほど映る組は減る', 深.組 <= 中.組 && 中.組 <= 浅.組,
+    `浅${浅.組}／中${中.組}／深${深.組}`);
+  確('大隊（百二十組超）が盤にある', 旗本 > 0, `${旗本}隊`);
+  確('引きでは一人ずつにしない', !H.個人で描くか(b, { x: 2000, y: 2000, s: 0.5 }, W, Hp));
+}
+
 console.log(誤 ? `\nエラー: ${誤}件` : '\nエラー: なし');
 process.exit(誤 ? 1 : 0);
