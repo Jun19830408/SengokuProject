@@ -1797,6 +1797,11 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
      超えるあいだは従来の駒のままにし、寄って数が絞れたら一人ずつへ移る。 */
   const 個人絵 = 個人で描くか(b, cam, W, H);
   const 新絵隊 = [];
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  // 狙い札の置き場（画面の座標）。押せる所を、描いた側が控えて渡す。
+  b.狙い札 = [];
+  const S = (wx, wy) => [(wx - cam.x) * cam.s + W / 2, (wy - cam.y) * cam.s + H / 2];
 
   ctx.save();
   ctx.translate(W / 2 - cam.x * cam.s, H / 2 - cam.y * cam.s);

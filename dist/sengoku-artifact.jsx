@@ -16828,7 +16828,7 @@ function DaimyoSelect({
     ctx.clearRect(0, 0, W2, H2);
     const base = W2 / MAPW;
     const k = base * mv.s;
-    const S2 = (wx, wy) => [(wx - mv.x) * k + W2 / 2, (wy - mv.y) * k + H2 / 2];
+    const S = (wx, wy) => [(wx - mv.x) * k + W2 / 2, (wy - mv.y) * k + H2 / 2];
     ctx.drawImage(
       terrain,
       0,
@@ -16841,7 +16841,7 @@ function DaimyoSelect({
       MAPH * k
     );
     const cs = CASTLES.map((c) => {
-      const [x, y] = S2(px(c.lon), py(c.lat));
+      const [x, y] = S(px(c.lon), py(c.lat));
       return {
         x,
         y,
@@ -16871,7 +16871,7 @@ function DaimyoSelect({
     ctx.globalAlpha = 1;
     const big = mv.s > 1.8;
     for (const c of CASTLES) {
-      const [x, y] = S2(px(c.lon), py(c.lat));
+      const [x, y] = S(px(c.lon), py(c.lat));
       if (x < -30 || x > W2 + 30 || y < -30 || y > H2 + 30) continue;
       const on = open === c.faction;
       const col = (FACTIONS[c.faction] || {}).color || "#888";
@@ -16897,7 +16897,7 @@ function DaimyoSelect({
     if (open) {
       const seat = seatOf(CASTLES, GENERALS, open);
       if (seat) {
-        const [x, y] = S2(px(seat.lon), py(seat.lat));
+        const [x, y] = S(px(seat.lon), py(seat.lat));
         ctx.strokeStyle = (FACTIONS[open] || {}).color || "#888";
         ctx.lineWidth = 2.4;
         ctx.beginPath();
@@ -16915,7 +16915,7 @@ function DaimyoSelect({
     ctx.fillStyle = "rgba(40,60,80,.5)";
     ctx.font = `${Math.round(clamp(12 * mv.s, 11, 20))}px serif`;
     for (const q of SEA_LABELS) {
-      const [x, y] = S2(q.x, q.y);
+      const [x, y] = S(q.x, q.y);
       if (x < -40 || x > W2 + 40 || y < -20 || y > H2 + 20) continue;
       ctx.fillText(q.name, x - 20, y);
     }
@@ -24968,9 +24968,9 @@ function navPath(m, x0, y0, x1, y1) {
     }
     return -1;
   };
-  const S2 = near(ix(x0), iy(y0)), T = near(ix(x1), iy(y1));
-  if (S2 < 0 || T < 0) return null;
-  if (S2 === T) return [{ x: x1, y: y1, r: 24 }];
+  const S = near(ix(x0), iy(y0)), T = near(ix(x1), iy(y1));
+  if (S < 0 || T < 0) return null;
+  if (S === T) return [{ x: x1, y: y1, r: 24 }];
   const N = w * h;
   const g = new Float32Array(N).fill(Infinity);
   const prev = new Int32Array(N).fill(-1);
@@ -24981,8 +24981,8 @@ function navPath(m, x0, y0, x1, y1) {
     const dx = Math.abs(i - tx), dy = Math.abs(j - ty);
     return dx + dy + (Math.SQRT2 - 2) * Math.min(dx, dy);
   };
-  const open = [{ k: S2, f: hOf(S2) }];
-  g[S2] = 0;
+  const open = [{ k: S, f: hOf(S) }];
+  g[S] = 0;
   let found = false, guard = 0;
   while (open.length && guard++ < 6e4) {
     let bi = 0;
@@ -25019,7 +25019,7 @@ function navPath(m, x0, y0, x1, y1) {
   const cells = [];
   for (let k = T; k !== -1; k = prev[k]) {
     cells.push(k);
-    if (k === S2) break;
+    if (k === S) break;
   }
   cells.reverse();
   const pts = [];
@@ -28183,6 +28183,10 @@ function \u7A7A\u6A21\u69D8\u3092\u88AB\u305B\u308B(ctx, b, W2, H2) {
 function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1Canvas) {
   const \u500B\u4EBA\u7D75 = \u500B\u4EBA\u3067\u63CF\u304F\u304B(b, cam, W2, H2);
   const \u65B0\u7D75\u968A = [];
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W2, H2);
+  b.\u72D9\u3044\u672D = [];
+  const S = (wx, wy) => [(wx - cam.x) * cam.s + W2 / 2, (wy - cam.y) * cam.s + H2 / 2];
   ctx.save();
   ctx.translate(W2 / 2 - cam.x * cam.s, H2 / 2 - cam.y * cam.s);
   ctx.scale(cam.s, cam.s);
@@ -28810,8 +28814,8 @@ function \u91CE\u306E\u9053(x0, y0, x1, y1, opt = {}) {
   const \u76EE = opt.\u62BC\u3057\u6E21\u308B ? \u62BC\u3057\u6E21\u308B\u76EE : \u901A\u308A\u306B\u304F\u3055;
   const ix = (x) => Math.max(0, Math.min(w - 1, Math.floor(x / \u5347)));
   const iy = (y) => Math.max(0, Math.min(h - 1, Math.floor(y / \u5347)));
-  const S2 = iy(y0) * w + ix(x0), T = iy(y1) * w + ix(x1);
-  if (S2 === T) return null;
+  const S = iy(y0) * w + ix(x0), T = iy(y1) * w + ix(x1);
+  if (S === T) return null;
   const N = w * h;
   const gc = new Float32Array(N).fill(Infinity);
   const prev = new Int32Array(N).fill(-1);
@@ -28823,8 +28827,8 @@ function \u91CE\u306E\u9053(x0, y0, x1, y1, opt = {}) {
     return dx + dy + (Math.SQRT2 - 2) * Math.min(dx, dy);
   };
   const \u958B = \u30D2\u30FC\u30D7();
-  gc[S2] = 0;
-  \u958B.push(S2, \u898B(S2));
+  gc[S] = 0;
+  \u958B.push(S, \u898B(S));
   let \u7740 = false, \u756A = 0;
   while (\u958B.len() && \u756A++ < 4e4) {
     const cur = \u958B.pop();
@@ -28856,7 +28860,7 @@ function \u91CE\u306E\u9053(x0, y0, x1, y1, opt = {}) {
   const \u5217 = [];
   for (let k = T; k !== -1; k = prev[k]) {
     \u5217.push(k);
-    if (k === S2) break;
+    if (k === S) break;
   }
   \u5217.reverse();
   const \u90532 = [];
@@ -31069,15 +31073,15 @@ var \u653F\u52D9 = {
   \u97F3\u968E: \u97F3\u968E.\u90FD\u7BC0,
   \u6839: 0,
   \u97F3\u7B26(\u5C0F) {
-    const S2 = this.\u97F3\u968E, o = [];
+    const S = this.\u97F3\u968E, o = [];
     const \u578B = [[0, 2, 4, 2], [0, 3, 4, 3], [-1, 2, 4, 2], [0, 2, 5, 2]][\u5C0F % 4];
-    \u578B.forEach((d, i) => o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S2, d) - 12, \u4F4D: i, \u9577: 1.1, \u5F37: i === 0 ? 0.5 : 0.34 }));
+    \u578B.forEach((d, i) => o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S, d) - 12, \u4F4D: i, \u9577: 1.1, \u5F37: i === 0 ? 0.5 : 0.34 }));
     if (\u5C0F % 2 === 0) {
       const \u7BC0 = [[4, 0, 2.2], [5, 1.5, 1.4], [3, 2.5, 1.2]];
       const \u79FB = \u63FA(\u5C0F, 3) - 1;
-      for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S2, d + \u79FB), \u4F4D, \u9577: \u95772, \u5F37: 0.3 });
+      for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S, d + \u79FB), \u4F4D, \u9577: \u95772, \u5F37: 0.3 });
     }
-    if (\u5C0F === this.\u5C0F\u7BC0 - 1) o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S2, 0) - 24, \u4F4D: 3, \u9577: 2, \u5F37: 0.4 });
+    if (\u5C0F === this.\u5C0F\u7BC0 - 1) o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S, 0) - 24, \u4F4D: 3, \u9577: 2, \u5F37: 0.4 });
     return o;
   }
 };
@@ -31089,14 +31093,14 @@ var \u95A2\u767D = {
   \u97F3\u968E: \u97F3\u968E.\u5F8B,
   \u6839: 0,
   \u97F3\u7B26(\u5C0F) {
-    const S2 = this.\u97F3\u968E, o = [];
-    const \u6839 = \u5EA6(S2, [0, 1, 0, 3][\u5C0F % 4]);
+    const S = this.\u97F3\u968E, o = [];
+    const \u6839 = \u5EA6(S, [0, 1, 0, 3][\u5C0F % 4]);
     for (const d of [0, 7, 12]) o.push({ \u697D\u5668: "\u7B19", \u97F3: \u6839 + d, \u4F4D: 0, \u9577: 4, \u5F37: 0.16 });
     if (\u5C0F % 2 === 1) {
       const \u7BC0 = [[2, 0.5, 1.6], [3, 2, 1.2], [1, 3.2, 0.8]];
-      for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u7BF3\u7BE5", \u97F3: \u5EA6(S2, d + \u63FA(\u5C0F, 2)), \u4F4D, \u9577: \u95772, \u5F37: 0.26 });
+      for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u7BF3\u7BE5", \u97F3: \u5EA6(S, d + \u63FA(\u5C0F, 2)), \u4F4D, \u9577: \u95772, \u5F37: 0.26 });
     }
-    if (\u5C0F % 4 === 0) o.push({ \u697D\u5668: "\u9266", \u97F3: \u5EA6(S2, 4) + 12, \u4F4D: 0, \u9577: 2.6, \u5F37: 0.24 });
+    if (\u5C0F % 4 === 0) o.push({ \u697D\u5668: "\u9266", \u97F3: \u5EA6(S, 4) + 12, \u4F4D: 0, \u9577: 2.6, \u5F37: 0.24 });
     return o;
   }
 };
@@ -31108,15 +31112,15 @@ var \u5C06\u8ECD = {
   \u97F3\u968E: \u97F3\u968E.\u90FD\u7BC0,
   \u6839: 0,
   \u97F3\u7B26(\u5C0F) {
-    const S2 = this.\u97F3\u968E, o = [];
+    const S = this.\u97F3\u968E, o = [];
     const \u578B = [[0, 4, 2, 4], [0, 3, 2, 3]][\u5C0F % 2];
-    \u578B.forEach((d, i) => o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S2, d) - 12, \u4F4D: i, \u9577: 1.05, \u5F37: i === 0 ? 0.48 : 0.3 }));
-    o.push({ \u697D\u5668: "\u7B19", \u97F3: \u5EA6(S2, 0) - 12, \u4F4D: 0, \u9577: 4, \u5F37: 0.13 });
-    o.push({ \u697D\u5668: "\u7B19", \u97F3: \u5EA6(S2, 3) - 12, \u4F4D: 0, \u9577: 4, \u5F37: 0.1 });
+    \u578B.forEach((d, i) => o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S, d) - 12, \u4F4D: i, \u9577: 1.05, \u5F37: i === 0 ? 0.48 : 0.3 }));
+    o.push({ \u697D\u5668: "\u7B19", \u97F3: \u5EA6(S, 0) - 12, \u4F4D: 0, \u9577: 4, \u5F37: 0.13 });
+    o.push({ \u697D\u5668: "\u7B19", \u97F3: \u5EA6(S, 3) - 12, \u4F4D: 0, \u9577: 4, \u5F37: 0.1 });
     o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 48, \u4F4D: 0, \u9577: 0.5, \u5F37: 0.42 });
     if (\u5C0F % 2 === 1) o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 50, \u4F4D: 2, \u9577: 0.4, \u5F37: 0.26 });
     if (\u5C0F % 4 === 2) {
-      for (const [d, \u4F4D, \u95772] of [[4, 1, 1.4], [2, 2.6, 1.2]]) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S2, d), \u4F4D, \u9577: \u95772, \u5F37: 0.26 });
+      for (const [d, \u4F4D, \u95772] of [[4, 1, 1.4], [2, 2.6, 1.2]]) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S, d), \u4F4D, \u9577: \u95772, \u5F37: 0.26 });
     }
     return o;
   }
@@ -31129,13 +31133,13 @@ var \u91CE\u6226 = {
   \u97F3\u968E: \u97F3\u968E.\u6C11\u8B21,
   \u6839: 0,
   \u97F3\u7B26(\u5C0F) {
-    const S2 = this.\u97F3\u968E, o = [];
+    const S = this.\u97F3\u968E, o = [];
     for (let i = 0; i < 4; i++) o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: i % 2 === 0 ? 46 : 52, \u4F4D: i, \u9577: 0.4, \u5F37: i % 2 === 0 ? 0.5 : 0.3 });
     o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 54, \u4F4D: 2.5, \u9577: 0.3, \u5F37: 0.22 });
     if (\u5C0F % 2 === 1) o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 54, \u4F4D: 3.5, \u9577: 0.3, \u5F37: 0.24 });
     const \u7BC0 = [[[4, 0, 0.8], [3, 1, 0.6], [4, 2, 1.4]], [[5, 0, 0.7], [4, 1.5, 0.7], [2, 2.5, 1.2]]][\u5C0F % 2];
-    for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u7B1B", \u97F3: \u5EA6(S2, d), \u4F4D, \u9577: \u95772, \u5F37: 0.28 });
-    if (\u5C0F % 4 === 0) o.push({ \u697D\u5668: "\u6CD5\u87BA", \u97F3: \u5EA6(S2, 0) - 12, \u4F4D: 0, \u9577: 2.4, \u5F37: 0.3 });
+    for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u7B1B", \u97F3: \u5EA6(S, d), \u4F4D, \u9577: \u95772, \u5F37: 0.28 });
+    if (\u5C0F % 4 === 0) o.push({ \u697D\u5668: "\u6CD5\u87BA", \u97F3: \u5EA6(S, 0) - 12, \u4F4D: 0, \u9577: 2.4, \u5F37: 0.3 });
     return o;
   }
 };
@@ -31147,14 +31151,14 @@ var \u57CE\u653B\u3081 = {
   \u97F3\u968E: \u97F3\u968E.\u90FD\u7BC0,
   \u6839: 0,
   \u97F3\u7B26(\u5C0F) {
-    const S2 = this.\u97F3\u968E, o = [];
+    const S = this.\u97F3\u968E, o = [];
     o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 43, \u4F4D: 0, \u9577: 0.9, \u5F37: 0.55 });
     o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 45, \u4F4D: 2, \u9577: 0.6, \u5F37: 0.3 });
     if (\u5C0F % 2 === 1) o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 48, \u4F4D: 3.25, \u9577: 0.4, \u5F37: 0.24 });
     if (\u5C0F % 3 === 0) {
-      for (const [d, \u4F4D, \u95772] of [[0, 0.5, 2.2], [1, 3, 1.2]]) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S2, d) - 12, \u4F4D, \u9577: \u95772, \u5F37: 0.3 });
+      for (const [d, \u4F4D, \u95772] of [[0, 0.5, 2.2], [1, 3, 1.2]]) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S, d) - 12, \u4F4D, \u9577: \u95772, \u5F37: 0.3 });
     }
-    if (\u5C0F % 2 === 0) o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S2, 0) - 24, \u4F4D: 1, \u9577: 1.6, \u5F37: 0.3 });
+    if (\u5C0F % 2 === 0) o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S, 0) - 24, \u4F4D: 1, \u9577: 1.6, \u5F37: 0.3 });
     return o;
   }
 };
@@ -31166,19 +31170,19 @@ var \u5206\u3051\u76EE = {
   \u97F3\u968E: \u97F3\u968E.\u90FD\u7BC0,
   \u6839: 0,
   \u97F3\u7B26(\u5C0F) {
-    const S2 = this.\u97F3\u968E, o = [];
+    const S = this.\u97F3\u968E, o = [];
     const \u5F8C\u534A = \u5C0F >= 4;
     for (let i = 0; i < 4; i++) {
       o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: i === 0 ? 43 : 50, \u4F4D: i, \u9577: 0.45, \u5F37: i === 0 ? 0.55 : 0.3 });
       if (\u5F8C\u534A) o.push({ \u697D\u5668: "\u592A\u9F13", \u97F3: 55, \u4F4D: i + 0.5, \u9577: 0.25, \u5F37: 0.2 });
     }
     const \u578B = [[0, 3, 4, 3], [0, 4, 5, 4]][\u5C0F % 2];
-    \u578B.forEach((d, i) => o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S2, d) - 12, \u4F4D: i, \u9577: 0.9, \u5F37: 0.36 }));
-    o.push({ \u697D\u5668: "\u7B19", \u97F3: \u5EA6(S2, 0) - 24, \u4F4D: 0, \u9577: 4, \u5F37: \u5F8C\u534A ? 0.16 : 0.1 });
-    if (\u5C0F % 4 === 0) o.push({ \u697D\u5668: "\u6CD5\u87BA", \u97F3: \u5EA6(S2, 0) - 12, \u4F4D: 0, \u9577: 2.6, \u5F37: 0.34 });
+    \u578B.forEach((d, i) => o.push({ \u697D\u5668: "\u7434", \u97F3: \u5EA6(S, d) - 12, \u4F4D: i, \u9577: 0.9, \u5F37: 0.36 }));
+    o.push({ \u697D\u5668: "\u7B19", \u97F3: \u5EA6(S, 0) - 24, \u4F4D: 0, \u9577: 4, \u5F37: \u5F8C\u534A ? 0.16 : 0.1 });
+    if (\u5C0F % 4 === 0) o.push({ \u697D\u5668: "\u6CD5\u87BA", \u97F3: \u5EA6(S, 0) - 12, \u4F4D: 0, \u9577: 2.6, \u5F37: 0.34 });
     if (\u5F8C\u534A) {
       const \u7BC0 = [[5, 0.5, 1.2], [4, 2, 1], [6, 3, 1]];
-      for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S2, d), \u4F4D, \u9577: \u95772, \u5F37: 0.3 });
+      for (const [d, \u4F4D, \u95772] of \u7BC0) o.push({ \u697D\u5668: "\u5C3A\u516B", \u97F3: \u5EA6(S, d), \u4F4D, \u9577: \u95772, \u5F37: 0.3 });
     }
     return o;
   }
@@ -35923,7 +35927,7 @@ function drawShip(ctx, s2, col, mine) {
 function drawSea(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, side\u8272) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W2, H2);
-  const S2 = (wx, wy) => [(wx - cam.x) * cam.s + W2 / 2, (wy - cam.y) * cam.s + H2 / 2];
+  const S = (wx, wy) => [(wx - cam.x) * cam.s + W2 / 2, (wy - cam.y) * cam.s + H2 / 2];
   ctx.save();
   ctx.translate(W2 / 2 - cam.x * cam.s, H2 / 2 - cam.y * cam.s);
   ctx.scale(cam.s, cam.s);
@@ -36010,7 +36014,7 @@ function drawSea(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, side\u8272) {
   for (const f of alive) {
     if (f.destroyed) continue;
     const col = side\u8272(f);
-    const [x, y] = S2(f.x, f.y);
+    const [x, y] = S(f.x, f.y);
     const H22 = f.gen.lord ? 28 : 21;
     ctx.strokeStyle = "rgba(255,255,255,0.9)";
     ctx.lineWidth = 3;
@@ -38192,7 +38196,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const { x: vx, y: vy, s: s2 } = view;
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(terrain, -vx * s2 + W2 / 2, -vy * s2 + H2 / 2, MAPW * s2, MAPH * s2);
-    const S2 = (wx, wy) => [(wx - vx) * s2 + W2 / 2, (wy - vy) * s2 + H2 / 2];
+    const S = (wx, wy) => [(wx - vx) * s2 + W2 / 2, (wy - vy) * s2 + H2 / 2];
     {
       const cell = 20;
       ctx.save();
@@ -38235,7 +38239,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
     for (const q of KUNI_LABELS) {
-      const [a, b2] = S2(q.x, q.y);
+      const [a, b2] = S(q.x, q.y);
       if (a < -60 || a > W2 + 60 || b2 < -40 || b2 > H2 + 40) continue;
       const sz = Math.round(clamp(15 + s2 * 9, 14, 30));
       ctx.font = `${sz}px 'Hiragino Mincho ProN',serif`;
@@ -38244,7 +38248,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     ctx.fillStyle = `rgba(70,104,128,${clamp(0.3 + s2 * 0.2, 0.3, 0.6)})`;
     for (const q of SEA_LABELS) {
-      const [a, b2] = S2(q.x, q.y);
+      const [a, b2] = S(q.x, q.y);
       if (a < -60 || a > W2 + 60 || b2 < -40 || b2 > H2 + 40) continue;
       ctx.font = `${Math.round(clamp(13 + s2 * 6, 12, 22))}px 'Hiragino Mincho ProN',serif`;
       ctx.fillText(q.name, a, b2);
@@ -38255,17 +38259,17 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       ctx.fillStyle = "rgba(56,96,124,.9)";
       for (const r of RIVERS) {
         const p = r.pts[Math.floor(r.pts.length / 2)];
-        const [a, b2] = S2(p[0] + 8, p[1]);
+        const [a, b2] = S(p[0] + 8, p[1]);
         ctx.fillText(r.name, a, b2);
       }
     }
     for (const a of g.armies) {
       const n0 = nodeById(a.path[0]), n1 = a.path.length > 1 ? nodeById(a.path[1]) : n0;
-      const [ax, ay] = S2(n0.x + (n1.x - n0.x) * a.prog, n0.y + (n1.y - n0.y) * a.prog);
+      const [ax, ay] = S(n0.x + (n1.x - n0.x) * a.prog, n0.y + (n1.y - n0.y) * a.prog);
       const col = g.factions[a.faction].color;
       const dst = a.target ? nodeById(a.target) : null;
       if (dst) {
-        const [dx2, dy2] = S2(dst.x, dst.y);
+        const [dx2, dy2] = S(dst.x, dst.y);
         ctx.strokeStyle = col + "77";
         ctx.setLineDash([5, 5]);
         ctx.lineWidth = 2;
@@ -38293,7 +38297,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     for (const t of TOWNS) {
       const \u53702 = \u753A\u306E\u5370\u306E\u4F4D\u7F6E(t, g.castles, px, py);
-      const [x, y] = S2(\u53702.x, \u53702.y);
+      const [x, y] = S(\u53702.x, \u53702.y);
       const \u69D8 = \u753A\u306E\u69D8\u5B50(g, t);
       const r = \u69D8.\u8ABC ? 5.6 : 4.6;
       ctx.fillStyle = "rgba(0,0,0,0.14)";
@@ -38329,7 +38333,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
     }
     for (const c of g.castles) {
-      const [x, y] = S2(c.x, c.y);
+      const [x, y] = S(c.x, c.y);
       const col = g.factions[c.faction].color;
       const big = clamp(4.4 + Math.sqrt(c.koku / 1e4) * 1.5, 4.4, 11);
       const besieged = g.sieges.some((sg) => sg.castleId === c.id);
@@ -39027,11 +39031,11 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const put = (ax, ay, f2) => ({ x: ax, y: ay, f: f2 });
       const \u7DE0 = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
       const X = (v) => \u7DE0(v, 40, FIELD.w - 40), Y = (v) => \u7DE0(v, 40, FIELD.h - 40);
-      const S2 = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * far + \u5965 : FIELD.h * near - \u5965), isAtk ? -Math.PI / 2 : Math.PI / 2);
+      const S = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * far + \u5965 : FIELD.h * near - \u5965), isAtk ? -Math.PI / 2 : Math.PI / 2);
       const N = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * near - \u5965 : FIELD.h * far + \u5965), isAtk ? Math.PI / 2 : -Math.PI / 2);
       const E2 = () => put(X(isAtk ? FIELD.w * far + \u5965 : FIELD.w * near - \u5965), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? Math.PI : 0);
       const W2 = () => put(X(isAtk ? FIELD.w * near - \u5965 : FIELD.w * far + \u5965), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? 0 : Math.PI);
-      const p0 = face === "N" ? N() : face === "E" ? E2() : face === "W" ? W2() : S2();
+      const p0 = face === "N" ? N() : face === "E" ? E2() : face === "W" ? W2() : S();
       return \u7F6E\u3051\u308B\u6240\u3078(p0);
     };
     const \u907F\u3051\u308B\u5730 = /* @__PURE__ */ new Set(["forest", "wood", "village", "river", "deep", "ford", "marsh", "hill", "sakamichi"]);
