@@ -361,9 +361,15 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const p = pointerOf(e);
     const f = toField(p.clientX, p.clientY);
     const own = hitCorps(f, true);
-    // 部隊の上から始めたドラッグは移動・布陣、空白から始めたドラッグはカメラ移動
+    /* 部隊の上から始めたドラッグは移動・布陣、そのほかはカメラ移動（GDD 8.2）。
+
+       ただし「選んでいる隊」の上から始めたときだけである。何も選んでいない
+       のに盤を指でなぞると、たまたま指の下にいた隊が勝手に歩き出していた。
+       寄った画では画面の大半が隊なので、盤を少し動かすたびに命令が飛ぶ。
+       選んでいない隊は、掴んでも動かない――選ぶのが先である。 */
+    const 掴める = own && (allRef.current || selRef.current === own.id);
     gesture.current = {
-      mode: own ? "unit" : "camera", corps: own || null, moved: 0,
+      mode: 掴める ? "unit" : "camera", corps: 掴める ? own : null, moved: 0,
       sx: p.clientX, sy: p.clientY, camX: camRef.current.x, camY: camRef.current.y,
     };
   };

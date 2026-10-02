@@ -2003,11 +2003,23 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
       } else if (f.k === "shot") {
         /* 鉄砲。弾の筋は一瞬で消えるが、白煙は筒先に残って風に流れる。
            一斉に放てば、隊の前に煙の帯ができる――遠目にも「いま撃った」と分かる。 */
-        ctx.globalAlpha = a * 0.75;
-        ctx.strokeStyle = "#FFF4D8"; ctx.lineWidth = 1.1;
-        ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x2, f.y2); ctx.stroke();
         const ang2 = Math.atan2(f.y2 - f.y, f.x2 - f.x);
-        ctx.globalAlpha = a * a * 0.45;
+        if (個人絵) {
+          /* 一人ずつ描かれる絵では、弾の筋は長い白線になって盤を横切る。
+             鉛玉は目に見えぬものである。筒先の火と煙だけでよい。 */
+          if (a > 0.6) {
+            ctx.globalAlpha = (a - 0.6) * 2.4;
+            ctx.fillStyle = "#FFE7A8";
+            ctx.beginPath();
+            ctx.arc(f.x + Math.cos(ang2) * 2.6, f.y + Math.sin(ang2) * 2.6, 1.5, 0, 7);
+            ctx.fill();
+          }
+        } else {
+          ctx.globalAlpha = a * 0.75;
+          ctx.strokeStyle = "#FFF4D8"; ctx.lineWidth = 1.1;
+          ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x2, f.y2); ctx.stroke();
+        }
+        ctx.globalAlpha = a * a * (個人絵 ? 0.3 : 0.45);
         ctx.fillStyle = "#EDEAE2";
         for (let k = 0; k < 3; k++) {
           const d2 = 4 + k * 5 + (1 - a) * 14;

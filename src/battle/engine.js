@@ -523,22 +523,66 @@ export function stepBattle(b, dt) {
       for (let j = i + 1; j < alive.length; j++) {
         const o = alive[j];
         if (o.side === c.side || !塊として立つ(o)) continue;
-        const dx = o.x - c.x, dy = o.y - c.y, d = Math.hypot(dx, dy);
-        if (d < 0.5 || d > 460) continue;
-        const ux = dx / d, uy = dy / d;
-        const 重 = 触れる隔たり(c, o, ux, uy) - d;
-        if (重 <= 0) continue;
+        const dx = o.x - c.x, dy = o.y - c.y;
+        let d = Math.hypot(dx, dy);
+        if (d > 460) continue;
+        /* 重なりきったときの軸（GDD 8.3）。
+
+           代表点どうしが半歩より近いと押し合いを飛ばしていた。隊は互いの
+           只中で軸を失い、そのまま突き抜ける――遊ぶ側の目には「接戦なのに
+           相手の腹へ滑り込む」と映る。近すぎるときは相手の向きを軸に取る。 */
+        let ux, uy;
+        if (d < 0.5) { ux = -Math.cos(o.facing); uy = -Math.sin(o.facing); d = 0.5; }
+        else { ux = dx / d; uy = dy / d; }
         const wc = 押し力(c), wo = 押し力(o);
         const kc = wo / (wc + wo), ko = wc / (wc + wo);      // 弱いほうが多く譲る
-        const 押 = 重 * 寄せ戻し;
         const 動かす = (x, k, sx, sy) => {
           const nx = x.x + sx * k, ny = x.y + sy * k;
           if (passable(nx, ny)) { x.x = nx; x.y = ny; }
           else if (passable(nx, x.y)) x.x = nx;
           else if (passable(x.x, ny)) x.y = ny;
         };
-        動かす(c, kc, -ux * 押, -uy * 押);
-        動かす(o, ko, ux * 押, uy * 押);
+        /* 接戦では、相手の前線を越えない（GDD 8.3）。
+
+           槍を合わせるとは、前列と前列が噛み合うことである。隊の只中へ
+           滑り込むのは突撃の仕事で、接戦の仕事ではない。囲まれるのが道理で
+           あるから、押し勝っても相手の前線までしか進まない。
+           突撃（chargeT が残っているあいだ）と、崩れた相手にはこの縛りを
+           掛けない――崩れた敵の中へは、追い討ちで入ってよい。 */
+        const 越えぬ = (x, y2) => {
+          if (x.chargeT > 0 || x.order === "突撃") return;
+          if (y2.routed || y2.withdraw) return;
+          const fx = Math.cos(y2.facing), fy = Math.sin(y2.facing);
+          const ex = x.x - y2.x, ey = x.y - y2.y;
+          const 奥 = ex * fx + ey * fy;                       // ＋なら相手の前
+          if (奥 >= 触れ隙 * 0.5) return;                      // まだ前にいる
+          /* 縛るのは「相手の体の中へ入った隊」だけである。
+
+             盤じゅうの隊を縛ったときは、四百六十歩の先にいる隊まで前線へ
+             引き寄せられ、関ヶ原の西軍が三百秒で消し飛んだ（噛み合う組が
+             千三百を超えた）。相手の体――奥行と幅の内側に踏み込んだ隊だけ、
+             前線まで押し戻す。 */
+          const 横 = -ex * fy + ey * fx;
+          const 奥行 = (y2.張り後 || 0) + 40;
+          const 幅 = Math.max(y2.張り右 || 0, y2.張り左 || 0) + 40;
+          if (奥 < -奥行 || Math.abs(横) > 幅) return;
+          const 戻 = (触れ隙 * 0.5 - 奥) * 寄せ戻し;
+          動かす(x, 1, fx * 戻, fy * 戻);
+        };
+        越えぬ(c, o); 越えぬ(o, c);
+        /* 前線の縛りで寄ったぶんを、最後に押し戻す。
+           縛りを先に、押し合いを後に置かねば、縛りが隊を相手の腹へ寄せてしまう。 */
+        const dx2 = o.x - c.x, dy2 = o.y - c.y;
+        let d2 = Math.hypot(dx2, dy2);
+        let vx2, vy2;
+        if (d2 < 0.5) { vx2 = -Math.cos(o.facing); vy2 = -Math.sin(o.facing); d2 = 0.5; }
+        else { vx2 = dx2 / d2; vy2 = dy2 / d2; }
+        const 重 = 触れる隔たり(c, o, vx2, vy2) - d2;
+        if (重 > 0) {
+          const 押 = 重 * 寄せ戻し;
+          動かす(c, kc, -vx2 * 押, -vy2 * 押);
+          動かす(o, ko, vx2 * 押, vy2 * 押);
+        }
       }
     }
     for (const c of alive) {

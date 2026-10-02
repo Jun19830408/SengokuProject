@@ -83,9 +83,15 @@ const 穂8=(g,x,y,a,s)=>{ const cs=Math.cos(a),sn=Math.sin(a);
   g.closePath(); g.fill(); };
 const 腕8=(g,sx,sy,gx,gy,s,K)=>{ 線8(g,sx,sy,gx,gy,0.8*s,shade(K.濃,1.1));
   g.fillStyle=肌; g.beginPath(); g.arc(gx,gy,0.42*s,0,7); g.fill(); };
+/* 向きは十六に割る（GDD 8.11）。八方向では、斜めへ進む隊がかくかくと向きを
+   変えて見えた。右半分（東向き）の五つの型を鏡で返して十六を作る。 */
 function 姿八(g,x,y,s,dir,fr,型,K,乱){
-  const 反=(dir===3||dir===4||dir===5);
-  const archetype=反?{3:1,4:0,5:7}[dir]:dir;
+  const N = 16;
+  const d16 = ((dir % N) + N) % N;
+  const 反 = d16 > 4 && d16 < 12;                    // 西向きは鏡で返す
+  const 右 = 反 ? (8 - d16 + 16) % 16 : d16;          // 0=東 … 4=南 12=北
+  const archetype = 右 <= 1 ? 0 : 右 <= 3 ? 1 : 右 <= 5 ? 2 : 右 <= 7 ? 1 : 右 <= 9 ? 2
+    : 右 <= 11 ? 7 : 右 <= 13 ? 7 : 右 <= 15 ? 6 : 0;
   g.save(); g.translate(x,y); if(反) g.scale(-1,1);
   const j=乱||0;
   const 構=fr>=3;
@@ -110,8 +116,13 @@ function 姿八(g,x,y,s,dir,fr,型,K,乱){
     引き=曲([0.25,0.65,1,0,0.25],pf);
     退=曲([0,0,0.35,0.9,0],pf); 上=曲([0,0,0,0.5,0],pf);
   }
-  const 面=archetype===2?'前':archetype===6?'後':archetype===0?'横':archetype===1?'斜前':'斜後';
-  g.scale((面==='斜前'||面==='斜後')?0.86:1,1);
+  /* 東0・南4・西8・北12。南寄りは前、北寄りは後、東西寄りは横 */
+  const a16 = 右 * Math.PI / 8;
+  const 面 = 右 === 0 || 右 === 15 || 右 === 1 ? '横'
+    : 右 <= 3 ? '斜前' : 右 <= 5 ? '前' : 右 <= 7 ? '斜前' : 右 <= 9 ? '前'
+    : 右 <= 11 ? '斜後' : 右 <= 13 ? '後' : '斜後';
+  /* 横への縮み。真横なら一、正面・背面なら〇.七二まで細る（連なりで滑らかに） */
+  g.scale(0.72 + 0.28 * Math.abs(Math.cos(a16)), 1);
   g.fillStyle='rgba(24,26,18,0.3)';
   g.beginPath(); g.ellipse(0.2*s,0.15*s,2.5*s,0.8*s,0,0,7); g.fill();
   const 笠=(hy)=>{
@@ -312,19 +323,26 @@ function 騎八(g,s,面,fr,K,j){
     g.restore();
   }
 }
-/* 型紙 */
+/* 型紙。使う分だけその場で焼く（十六方向×七拍×四兵科×三側を先に焼くと重い） */
 const 札帳={};
-let 札焼済=false;
-function 札を焼く(){
-  if(札焼済||typeof document==='undefined') return; 札焼済=true;
-  for(const side of ['P','E','Y']) for(const 型 of ['yari','yumi','teppo','kiba'])
-    for(let dir=0;dir<8;dir++) for(let fr=0;fr<7;fr++){
-      const 幅=型==='kiba'?96:64, 高=型==='kiba'?116:104;
-      const n=document.createElement('canvas'); n.width=幅; n.height=高;
-      姿八(n.getContext('2d'),幅/2,高-8,型==='kiba'?6.2:6.4,dir,fr,型,具側[side],(dir*3+fr)*0.37%1);
-      札帳[side+型+dir+'_'+fr]=n; }
-  for(const side of ['P','E','Y']){
-    const n=document.createElement('canvas'); n.width=64; n.height=64;
+function 札取り(side,型,dir,fr){
+  const key=side+型+dir+'_'+fr;
+  let n=札帳[key];
+  if(n===undefined){
+    if(typeof document==='undefined'){ 札帳[key]=null; return null; }
+    const 幅=型==='kiba'?96:64, 高=型==='kiba'?116:104;
+    n=document.createElement('canvas'); n.width=幅; n.height=高;
+    姿八(n.getContext('2d'),幅/2,高-8,型==='kiba'?6.2:6.4,dir,fr,型,具側[side],(dir*3+fr)*0.37%1);
+    札帳[key]=n;
+  }
+  return n;
+}
+function 倒れ札(side){
+  const key=side+'fallen';
+  let n=札帳[key];
+  if(n===undefined){
+    if(typeof document==='undefined'){ 札帳[key]=null; return null; }
+    n=document.createElement('canvas'); n.width=64; n.height=64;
     const g=n.getContext('2d'); const K=具側[side];
     g.translate(32,36);
     g.fillStyle='rgba(24,26,18,0.3)'; g.beginPath(); g.ellipse(0,2,16,6,0,0,7); g.fill();
@@ -336,8 +354,11 @@ function 札を焼く(){
     g.rotate(-0.5);
     g.strokeStyle='#7A5A34'; g.lineWidth=2;
     g.beginPath(); g.moveTo(-14,10); g.lineTo(16,-6); g.stroke();
-    札帳[side+'fallen']=n; }
+    札帳[key]=n;
+  }
+  return n;
 }
+function 札を焼く(){ /* 先焼きはしない。使う分だけ 札取り が焼く */ }
 const 札貼=(g,key,x,y,倍,alpha)=>{ const n=札帳[key]; if(!n) return;
   if(alpha!=null) g.globalAlpha=alpha;
   g.drawImage(n, x-n.width/2*倍, y-(n.height-8)*倍, n.width*倍, n.height*倍);
@@ -568,6 +589,7 @@ const 組態 = new WeakMap();
 const 盤態 = new WeakMap();
 const 組の態 = (q) => { let s = 組態.get(q);
   if (!s) { s = { dx: q.x, dy: q.y, sx: new Float32Array(50), sy: new Float32Array(50),
+    弧: null,
     生: new Uint8Array(50), 歩距: new Float32Array(50), 速: new Float32Array(50),
     進x: new Float32Array(50), 進y: new Float32Array(50),
     初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0 };
@@ -594,6 +616,34 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
     if (c.dead || c.destroyed) continue;
     if (viewRect && (c.x < viewRect.x0 - 160 || c.x > viewRect.x1 + 160
       || c.y < viewRect.y0 - 160 || c.y > viewRect.y1 + 160)) continue;
+    /* 馬廻（うままわり・GDD 8.11）。
+
+       武将がどこにいるかは、盤の上で最も知りたいことの一つである。
+       隊の中どころにいちばん近い騎馬の組――五十騎を、武将を囲む輪に
+       並べ替えて描く。絵のために騎馬を足しはしない。実在の五十騎であり、
+       数も居場所も元のままである（並びだけを輪にする）。 */
+    const 騎ら = c.squads
+      .filter((q) => q.men > 0 && q.type === "kiba"
+        && Math.hypot(q.x - c.x, q.y - c.y) < 70)
+      .sort((a, z) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(z.x - c.x, z.y - c.y));
+    const 馬廻ら = [];
+    let 騎数 = 0;
+    for (const q of 騎ら) {                        // 五十騎ほど集まるまで
+      if (騎数 >= 50) break;
+      馬廻ら.push(q); 騎数 += Math.min(50, Math.round(q.men));
+    }
+    c.馬廻 = 馬廻ら.length ? 馬廻ら[0] : null;      // 絵のための控え（理には使わない）
+    for (const q of c.squads) {
+      const st = 組の態(q);
+      if (馬廻ら.indexOf(q) < 0) { st.弧 = null; continue; }
+      /* 馬廻は、組がいまいる隔たりのまま、武将を中心に弧を描いて並ぶ。
+
+         武将のそばへ引き寄せて輪にしたときは、盤の上の居場所と絵が
+         六十六歩も食い違った。弧なら、騎馬は自分の組の周りに留まったまま
+         武将を囲む――絵も偽らず、武将の居場所も読める。 */
+      st.弧 = { 角: Math.atan2(q.y - c.y, q.x - c.x),
+        半: Math.max(8, Math.hypot(q.x - c.x, q.y - c.y)), x: c.x, y: c.y };
+    }
     for (const q of c.squads) {
       const s = 組の態(q);
       /* 発砲の刻。cool が跳ね上がったら、いま放った */
@@ -601,8 +651,11 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       s.prevCool = q.cool || 0;
       /* 組の足：目標（盤の位置）へ、歩幅の上限で寄る */
       { const ddx = q.x - s.dx, ddy = q.y - s.dy, d = Math.hypot(ddx, ddy);
-        if (!s.初 || d > 120) { s.dx = q.x; s.dy = q.y; }
-        else if (d > 0.02) { const mv = Math.min(d, (q.type === "kiba" ? 80 : 52) * dt);
+        /* 組を追う点は、組より速くなければ置いて行かれる。
+           遅く取っていたころは、絵の兵が組から六十六歩も遅れた。
+           組の足（騎馬五十六・徒三十四）の三倍を取り、瞬間移動だけを均す。 */
+        if (!s.初 || d > 70) { s.dx = q.x; s.dy = q.y; }
+        else if (d > 0.02) { const mv = Math.min(d, (q.type === "kiba" ? 170 : 110) * dt);
           s.dx += ddx / d * mv; s.dy += ddy / d * mv; } }
       /* 向きの均し */
       { let df = (q.facing || 0) - s.向;
@@ -625,16 +678,35 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       const 前 = q.engaged && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
       const 刻み = (前 + 2.8) / 4;
       const 押 = q.engaged ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
+      const 弧 = s.弧;
       for (let n = 0; n < alive; n++) {
+        let tx, ty;
+        if (弧) {
+          /* 武将を中心に、組の隔たりのまま弧を描く。二列（内と外） */
+          const 列 = n % 2, i2 = (n / 2) | 0, 数 = Math.max(1, Math.ceil(alive / 2));
+          /* 弧の広がりは、組から離れすぎぬように隔たりで決める。
+             どの隔たりでも、横へ二十二歩ほどに収まる。 */
+          const 開 = Math.min(1.1, 44 / Math.max(10, 弧.半));
+          const a = 弧.角 + ((i2 + 0.5) / 数 - 0.5) * 開;
+          const r2 = 弧.半 + (列 ? 4.2 : 0);
+          tx = 弧.x + Math.cos(a) * r2;
+          ty = 弧.y + Math.sin(a) * r2 * 0.86;
+          /* それでも組から三十歩を超えたら引き戻す。絵は盤を偽らない */
+          const ex = tx - q.x, ey = ty - q.y, ed = Math.hypot(ex, ey);
+          if (ed > 30) { tx = q.x + ex / ed * 30; ty = q.y + ey / ed * 30; }
+        } else {
         const o = 場[n];
         const 深 = q.engaged
           ? (-前 + o[2] * 刻み + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))))
           : o[1];
-        const tx = s.dx + lx * o[0] + bx * (深 + 押), ty = s.dy + ly * o[0] + by * (深 + 押);
+        tx = s.dx + lx * o[0] + bx * (深 + 押); ty = s.dy + ly * o[0] + by * (深 + 押);
+        }
         if (!s.生[n] || !s.初) { s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; s.速[n] = 0; continue; }
         const vx = tx - s.sx[n], vy = ty - s.sy[n], d = Math.hypot(vx, vy);
         let mv = 0;
-        if (d > 90) { s.sx[n] = tx; s.sy[n] = ty; }
+        /* 組が盤の繕いで飛んだときは、兵も一緒に飛ぶ。歩いて追わせると、
+           兵が組から七十歩も遅れて絵と盤が食い違った（測った）。 */
+        if (d > 45) { s.sx[n] = tx; s.sy[n] = ty; }
         else if (d > 0.02) { mv = Math.min(d, (q.type === "kiba" ? 74 : 48) * dt);
           s.sx[n] += vx / d * mv; s.sy[n] += vy / d * mv;
           /* 進む向き。均しておかないと、持ち場の細かな直しで体がくるくる回る */
@@ -660,7 +732,65 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
 export function 組の見た目(q) { return 組態.get(q) || null; }
 
 const 向き八 = (vx, vy) => { const a = Math.atan2(vy, vx);
-  return ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8; };
+  return ((Math.round(a / (Math.PI / 8)) % 16) + 16) % 16; };
+
+/* ---- 武将と母衣衆（GDD 8.11）----
+
+   隊の只中に、兜と甲冑の武将が馬上にある。そのまわりを母衣衆（旗指物を
+   背負った騎馬の近習）が囲む。遊ぶ側が「誰がどこにいるか」を一目で読める
+   ようにするためで、理には一切関わらない（当たりも命令も持たない）。 */
+function 武将を描く(g, c, x, y, 側, t) {
+  const K = 具側[側];
+  const 向 = c.facing || 0;
+  const 向dir = ((Math.round(向 / (Math.PI / 8)) % 16) + 16) % 16;
+  /* 四方の旗。武将の立つ所を四隅の幟で囲い、遠目にも居場所が読める */
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * 6.283 + 向 + 0.78;
+    const bx = x + Math.cos(a) * 4.4, by = y + Math.sin(a) * 4.4 * 0.8;
+    g.strokeStyle = "#3A2C1A"; g.lineWidth = 0.26;
+    g.beginPath(); g.moveTo(bx, by); g.lineTo(bx, by - 9.5); g.stroke();
+    const ゆ = Math.sin(t * 1.7 + i) * 0.14;
+    g.fillStyle = shade(K.帯, 1.24);
+    g.beginPath();
+    g.moveTo(bx + 0.16, by - 9.5);
+    g.lineTo(bx + 2.1 + ゆ, by - 9.2);
+    g.lineTo(bx + 2.1 + ゆ, by - 5.6);
+    g.lineTo(bx + 0.16, by - 5.9);
+    g.closePath(); g.fill();
+    g.fillStyle = shade(K.濃, 1.08);                 // 旗の陰（下半分）
+    g.beginPath();
+    g.moveTo(bx + 0.16, by - 7.6); g.lineTo(bx + 2.1 + ゆ, by - 7.4);
+    g.lineTo(bx + 2.1 + ゆ, by - 5.6); g.lineTo(bx + 0.16, by - 5.9);
+    g.closePath(); g.fill();
+    g.strokeStyle = "rgba(242,238,226,0.6)"; g.lineWidth = 0.14;
+    g.strokeRect(bx + 0.16, by - 9.5, 1.95, 3.7);
+  }
+  /* 武将。騎馬の描き手をひと回り大きく使い、前立てと采配を重ねる */
+  const 将倍 = 0.062 * 1.32;
+  const 将札 = 札取り(側, "kiba", 向dir, 0);
+  if (将札) g.drawImage(将札, x - 将札.width / 2 * 将倍, y - (将札.height - 8) * 将倍,
+    将札.width * 将倍, 将札.height * 将倍);
+  /* 兜の前立て（金の三日月） */
+  const 兜y = y - 9.4;
+  g.fillStyle = "#E8C24A"; g.strokeStyle = "#8A6E1E"; g.lineWidth = 0.16;
+  g.beginPath();
+  g.arc(x, 兜y, 1.5, Math.PI * 1.08, Math.PI * 1.92, false);
+  g.arc(x, 兜y - 0.7, 1.2, Math.PI * 1.88, Math.PI * 1.12, true);
+  g.closePath(); g.fill(); g.stroke();
+  /* 采配。振るたびに紙房が揺れる */
+  const 振 = Math.sin(t * 1.9) * 0.3;
+  const hx = x + 1.9, hy = y - 7.0;
+  g.strokeStyle = "#7A5A34"; g.lineWidth = 0.22;
+  const 棒 = -1.25 + 振 * 0.8;
+  const 先x = hx + Math.cos(棒) * 2.2, 先y = hy + Math.sin(棒) * 2.2;
+  g.beginPath(); g.moveTo(hx, hy); g.lineTo(先x, 先y); g.stroke();
+  g.strokeStyle = "rgba(242,236,221,0.95)"; g.lineWidth = 0.13;
+  for (let i = 0; i < 6; i++) {
+    const a2 = 棒 - 0.6 + i * 0.24 + Math.sin(t * 4 + i) * 0.08;
+    g.beginPath(); g.moveTo(先x, 先y);
+    g.lineTo(先x + Math.cos(a2) * 1.6, 先y + Math.sin(a2) * 1.8); g.stroke();
+  }
+}
 
 /* ---- 一人ずつを描く。drawBattle の世界座標の中で呼ばれる ---- */
 export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
@@ -682,7 +812,11 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
   /* 倒れた者 */
   for (const e of 態.倒れ) {
     if (!見える(e.x, e.y)) continue;
-    札貼(ctx, e.s + "fallen", e.x, e.y - 持上高(e.x, e.y), 0.056, 0.85);
+    { const n = 倒れ札(e.s);
+      if (n) { ctx.globalAlpha = 0.85;
+        ctx.drawImage(n, e.x - n.width / 2 * 0.056, e.y - 持上高(e.x, e.y) - (n.height - 8) * 0.056,
+          n.width * 0.056, n.height * 0.056);
+        ctx.globalAlpha = 1; } }
   }
   const 並 = [];
   for (const c of 隊ら) {
@@ -703,20 +837,26 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
         let fr = 0, dir = dir基;
         const 場 = q.type === "kiba" ? 馬持場 : 持場;
         const 歩速 = s.速[n];
-        if (歩速 > 2.5) {
-          /* 歩み：歩幅（騎馬は三歩半、徒は二歩二分）ごとに一周 */
-          const 歩幅 = q.type === "kiba" ? 14 : 9;
-          const w = (s.歩距[n] / 歩幅) % 1;
-          if (Math.hypot(s.進x[n], s.進y[n]) > 0.3) dir = 向き八(s.進x[n], s.進y[n]);
-          fr = 骨度 > 0 ? 1 + w * 2 : 1 + (w < 0.5 ? 0 : 1);
-        } else if (q.engaged && 場[n][2] < 2) {
+        /* 働きの順（GDD 8.11）。
+
+           歩みを先に見ていたころは、槍を合わせた前列が持ち場を直すたびに
+           「歩き」と見なされ、突きが一度も出なかった。
+           槍を合わせているなら突く。放ったなら構えを解く。それ以外で
+           足が出ているときだけ歩く――働きのほうが先である。 */
+        if (q.engaged && 場[n][2] < 2 && 歩速 < 14) {
           /* 突き：合戦の刻で回す。盤を遅くすれば、槍もゆっくり繰り出される */
           const ph = (b.t * 0.55 + (q.seed || 0) + n * 0.17) % 1;
           fr = 骨度 > 0 ? 3 + ph * 3.999 : 3 + Math.min(3, (ph * 4) | 0);
         } else if (撃 >= 0 && 撃 < 1 && (q.type === "yumi" || q.type === "teppo")) {
           fr = 骨度 > 0 ? 3 + Math.min(3.999, 撃 * 4) : 3 + Math.min(3, (撃 * 4) | 0);
+        } else if (歩速 > 2.5) {
+          /* 歩み：歩幅（騎馬は十四歩、徒は九歩）ごとに一周 */
+          const 歩幅 = q.type === "kiba" ? 14 : 9;
+          const w = (s.歩距[n] / 歩幅) % 1;
+          if (Math.hypot(s.進x[n], s.進y[n]) > 0.3) dir = 向き八(s.進x[n], s.進y[n]);
+          fr = 骨度 > 0 ? 1 + w * 2 : 1 + (w < 0.5 ? 0 : 1);
         }
-        並.push({ wx, wy, 地y: wy, key: 側 + q.type + dir + "_" + fr,
+        並.push({ wx, wy, 地y: wy, 側, 型: q.type, dir: Math.round(dir), fr: Math.round(fr),
           直: 骨度 > 0 ? { dir, fr, 型: q.type, 側, 乱: ((q.seed || 0) * 31 + n * 7) % 97 / 97 } : null });
       }
       /* 組の小旗（後列に二本）。側の色でまとまりを示す */
@@ -731,6 +871,12 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       }
     }
   }
+  /* 武将と母衣衆は隊の只中に。並びの中へ入れて前後を正しく重ねる */
+  for (const c of 隊ら) {
+    const 側 = c.日和見 ? "Y" : (c.side === "P" ? "P" : "E");
+    if (!見える(c.x, c.y)) continue;
+    並.push({ wx: c.x, wy: c.y, 地y: c.y + 0.1, 将: { c, 側 } });
+  }
   並.sort((a, z) => a.地y - z.地y);
   for (const p of 並) {
     const y = p.wy - 持上高(p.wx, p.wy);
@@ -741,9 +887,12 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       ctx.fillRect(p.wx + 0.06, y - 2.0, 0.55, 1.05);
       continue;
     }
+    if (p.将) { 武将を描く(ctx, p.将.c, p.wx, y, p.将.側, nowSec); continue; }
     if (p.直) 姿八(ctx, p.wx, y, (p.直.型 === "kiba" ? 6.2 : 6.4) * 0.062,
       p.直.dir, p.直.fr, p.直.型, 具側[p.直.側], p.直.乱);
-    else 札貼(ctx, p.key, p.wx, y, 0.062);
+    else { const n = 札取り(p.側, p.型, p.dir, p.fr);
+      if (n) ctx.drawImage(n, p.wx - n.width / 2 * 0.062, y - (n.height - 8) * 0.062,
+        n.width * 0.062, n.height * 0.062); }
   }
   return dt;
 }
