@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
+import { 新絵か, 新絵の野, 新絵の寄り限り } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
 import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
@@ -64,6 +65,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const g2 = t.getContext("2d");
     g2.setTransform(k, 0, 0, k, 0, 0);
     if (ctx.mode === "castle" && ctx.b.map) drawCastleTerrain(g2, ctx.b.map);
+    else if (新絵か(ctx.b)) 新絵の野(g2);    // 関ヶ原だけ淡彩の野（GDD 8.11）
     else drawFieldTerrain(g2);
     g2.setTransform(1, 0, 0, 1, 0, 0);
     terrainRef.current = t;
@@ -232,6 +234,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
      いちばん縮めても盤の一部しか見えなくなった。全体を見渡せぬのでは、
      どこへ回り込むかも決められない。
      盤が枠に収まる倍率の、さらに九割まで縮められるようにする。 */
+  // 新しい絵では、一人ずつが見える深さまで寄れる（関ヶ原だけ・GDD 8.11）
+  const 寄りの限り = () => (新絵か(ctx.b) ? 新絵の寄り限り : 3.2);
   const 縮みの限り = () => {
     const w = wrapRef.current;
     if (!w || !w.clientWidth) return 0.25;
@@ -241,7 +245,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const zoomAt = (k, clientX, clientY) => {
     const cam = camRef.current;
     const before = clientX == null ? null : toField(clientX, clientY);
-    cam.s = clamp(cam.s * k, 縮みの限り(), 3.2);
+    cam.s = clamp(cam.s * k, 縮みの限り(), 寄りの限り());
     if (before) {
       const after = toField(clientX, clientY);
       cam.x += before.x - after.x; cam.y += before.y - after.y;
@@ -309,7 +313,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
            塊が画の四割ほどに収まるようにして、周りの戦列も入れる。 */
         倍2 = Math.min(vw * 0.42 / 幅, vh * 0.42 / 丈);
       }
-      cam.s = clamp(倍2, 縮みの限り(), 3.2);
+      cam.s = clamp(倍2, 縮みの限り(), 寄りの限り());
       force((n) => (n + 1) % 1000);
       return { 隊: 生.length, 噛み合い: 点.length, x: Math.round(cx), y: Math.round(cy), s: cam.s };
     };
@@ -322,7 +326,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const w = wrapRef.current;
     const cam = camRef.current;
     cam.x = FIELD.w / 2; cam.y = FIELD.h / 2;
-    if (w) cam.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h) * 0.98, 縮みの限り(), 3.2);
+    if (w) cam.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / FIELD.h) * 0.98, 縮みの限り(), 寄りの限り());
     force((n) => (n + 1) % 1000);
   };
   // 隊のどこを押しても選べるようにする。50人組の広がりと、頭上の武将名の札を当たり判定にする。

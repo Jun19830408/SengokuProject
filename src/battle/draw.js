@@ -4,6 +4,7 @@ import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
+import { 新絵か, 新絵の兵描き, 個人閾 } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
 
@@ -1788,6 +1789,25 @@ export function 空模様を被せる(ctx, b, W, H) {
 }
 
 export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, 跡Canvas) {
+  /* 新しい絵（関ヶ原だけ・GDD 8.11）。深く寄ったときは組を五十人にほどいて
+     一人ずつ描く。引きはこれまでの絵のまま。理には触れない。
+
+     ただし予算がある。関ヶ原の西口は組が六百も密集しており、倍率一.六で
+     ほどくと画面に三万人が立って筆が止まる。見えている組×五十が予算を
+     超えるあいだは従来の駒のままにし、寄って数が絞れたら一人ずつへ移る。 */
+  let 個人絵 = false;
+  const 新絵隊 = [];
+  if (新絵か(b) && cam.s >= 個人閾) {
+    const vx0 = cam.x - W / 2 / cam.s - 100, vx1 = cam.x + W / 2 / cam.s + 100;
+    const vy0 = cam.y - H / 2 / cam.s - 100, vy1 = cam.y + H / 2 / cam.s + 100;
+    let 組数 = 0;
+    for (const c of b.corps) {
+      if (c.dead || c.destroyed) continue;
+      if (c.x < vx0 || c.x > vx1 || c.y < vy0 || c.y > vy1) continue;
+      組数 += c.squads.length;
+    }
+    個人絵 = 組数 * 50 <= 12000;
+  }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
   // 狙い札の置き場（画面の座標）。押せる所を、描いた側が控えて渡す。
@@ -1872,6 +1892,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     ctx.setLineDash([]);
 
     if (lod === "corps") continue;
+    if (個人絵) { 新絵隊.push(c); continue; }   // 組の体は新絵がまとめて描く（輪郭と選びは残す）
 
     const bright = shadeHex(side, isP ? 0.18 : 0.16), dark = shadeHex(side, isP ? -0.30 : -0.22);
     const edge = isP ? "rgba(255,255,255,0.95)" : "rgba(28,26,22,0.85)";
@@ -1965,6 +1986,10 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
         ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.stroke();
       }
     }
+  }
+  if (新絵隊.length) {
+    新絵の兵描き(ctx, b, 新絵隊, cam, W, H,
+      (typeof performance !== "undefined" ? performance.now() : 0) / 1000);
   }
   // 戦いの気配。短く消える細い線と火花だけで、駒を隠さない。
   if (b.fx && b.fx.length) {
