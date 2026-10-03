@@ -269,6 +269,17 @@ export function BattleScreen({ ctx, land, onEnd }) {
     /* いま槍を合わせている組の数。撮る道具が「いちばん噛み合った時」を待つのに使う。 */
     window.__噛み = () => b.corps.reduce((n, c) => n + (c.dead || c.destroyed ? 0
       : (c.squads || []).filter((q) => q.engaged && q.men > 0).length), 0);
+    /* 名のある隊の将の只中へ寄る。新しい絵（将と馬廻）を撮って検めるために使う。 */
+    window.__将へ = (名, 倍 = 4) => {
+      const c = b.corps.find((x) => !x.dead && !x.destroyed
+        && (名 ? x.name.includes(名) : x.side === "P"));
+      if (!c) return null;
+      const 所 = c.本陣 || { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
+      const cam = camRef.current;
+      cam.x = 所.x; cam.y = 所.y; cam.s = clamp(倍, 縮みの限り(), 寄りの限り());
+      force((n) => (n + 1) % 1000);
+      return { 名: c.name, x: Math.round(所.x), y: Math.round(所.y), s: cam.s };
+    };
     window.__寄る = (倍 = 1.4) => {
       /* 寄る先は「槍の合っている点」である。隊の重心ではなく、噛んでいる組
          （squad）の居所から取る。両軍の組が入り混じっているのがその場所で、
@@ -318,7 +329,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       return { 隊: 生.length, 噛み合い: 点.length, x: Math.round(cx), y: Math.round(cy), s: cam.s };
     };
     return () => {
-      try { delete window.__合戦; delete window.__寄る; delete window.__噛み; } catch (e) { /* よい */ }
+      try { delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; } catch (e) { /* よい */ }
     };
   }, [b]);
 

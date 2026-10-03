@@ -2168,8 +2168,22 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   for (const c of shown) {
     const isP = c.side === "P";
     const side = sideColor(c);          // 馬印も足元の印も、敵味方の色で描く
-    // 武将は隊の後ろ寄りに描く（c.gx/c.gy が算出済みならそこへ）
-    const [x, y] = S(c.gx == null ? c.x : c.gx, c.gy == null ? c.y : c.gy);
+    /* 武将は隊の後ろ寄りに描く（c.gx/c.gy が算出済みならそこへ）。
+
+       新しい絵では、同じ場所に兜と甲冑の将と馬廻の方陣が立つ（shinga.js）。
+       標識（馬印・足元の駒・名札）を同じ点に重ねると、せっかくの将が
+       白い丸と旗に隠れて見えない――遊ぶ側から「将が見えない」との申し出は
+       これである。新しい絵のときは、標識だけを将の上へ逃がし、
+       細い線で足元へ結ぶ。押せる所（狙い札）も札に付いて動く。 */
+    const 将所 = (個人絵 && c.本陣) ? c.本陣
+      : { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
+    const [x, y0] = S(将所.x, 将所.y);
+    const 逃 = 個人絵 && !c.destroyed ? Math.min(64, Math.max(30, 26 * cam.s * 0.3)) : 0;
+    const y = y0 - 逃;
+    if (逃 > 0) {                                  // 標識と将を結ぶ細い線
+      ctx.strokeStyle = "rgba(60,58,50,0.45)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.lineTo(x, y0 - 4); ctx.stroke();
+    }
     if (c.destroyed) {
       ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(x - 26, y - 10, 52, 19);
       ctx.strokeStyle = side; ctx.lineWidth = 1; ctx.strokeRect(x - 26, y - 10, 52, 19);

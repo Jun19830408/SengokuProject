@@ -359,6 +359,32 @@ function 倒れ札(side){
   return n;
 }
 function 札を焼く(){ /* 先焼きはしない。使う分だけ 札取り が焼く */ }
+
+/* 将と旗持の型紙。毎コマ筆で描くと、小さく潰れたうえに費えも嵩む。
+   兵と同じように一度だけ焼いて、あとは貼る。 */
+function 将札(side, 格) {
+  const key = side + "将" + 格;
+  let n = 札帳[key];
+  if (n === undefined) {
+    if (typeof document === "undefined") { 札帳[key] = null; return null; }
+    n = document.createElement("canvas"); n.width = 150; n.height = 190;
+    武将図(n.getContext("2d"), 75, 178, 11, 具側[side], 2, 0);
+    札帳[key] = n;
+  }
+  return n;
+}
+function 旗持札(side, 形) {
+  const key = side + "旗" + 形;
+  let n = 札帳[key];
+  if (n === undefined) {
+    if (typeof document === "undefined") { 札帳[key] = null; return null; }
+    /* 馬印は遠くから見えてこそのもの。竿も標も大きく取る */
+    n = document.createElement("canvas"); n.width = 260; n.height = 420;
+    旗持図(n.getContext("2d"), 130, 404, 19, 具側[side], 形, 0);
+    札帳[key] = n;
+  }
+  return n;
+}
 const 札貼=(g,key,x,y,倍,alpha)=>{ const n=札帳[key]; if(!n) return;
   if(alpha!=null) g.globalAlpha=alpha;
   g.drawImage(n, x-n.width/2*倍, y-(n.height-8)*倍, n.width*倍, n.height*倍);
@@ -589,7 +615,7 @@ const 組態 = new WeakMap();
 const 盤態 = new WeakMap();
 const 組の態 = (q) => { let s = 組態.get(q);
   if (!s) { s = { dx: q.x, dy: q.y, sx: new Float32Array(50), sy: new Float32Array(50),
-    弧: null,
+    陣: null,
     生: new Uint8Array(50), 歩距: new Float32Array(50), 速: new Float32Array(50),
     進x: new Float32Array(50), 進y: new Float32Array(50),
     初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0 };
@@ -622,28 +648,51 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
        隊の中どころにいちばん近い騎馬の組――五十騎を、武将を囲む輪に
        並べ替えて描く。絵のために騎馬を足しはしない。実在の五十騎であり、
        数も居場所も元のままである（並びだけを輪にする）。 */
+    /* 馬廻（うままわり・GDD 8.11）。
+
+       将の居場所は、隊の代表点ではなく本陣（gx, gy＝兵の重心から後ろ二列目）
+       である。名札もそこに出る。馬廻は、本陣の近くにいる騎馬の組を集め、
+       七×七の方陣に組み直して将を囲む。中心が将、その右隣が旗持。
+       絵のために騎馬を足しはしない――実在の騎馬の並びを変えるだけである。
+
+       槍を合わせている騎馬は呼ばない。噛み合っている組を本陣へ呼べば、
+       刃の火花だけが元の場所に残って絵と盤が食い違う。 */
+    const 本x = c.gx == null ? c.x : c.gx, 本y = c.gy == null ? c.y : c.gy;
     const 騎ら = c.squads
-      .filter((q) => q.men > 0 && q.type === "kiba"
-        && Math.hypot(q.x - c.x, q.y - c.y) < 70)
-      .sort((a, z) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(z.x - c.x, z.y - c.y));
+      .filter((q) => q.men > 0 && q.type === "kiba" && !q.engaged
+        && Math.hypot(q.x - 本x, q.y - 本y) < 70)
+      .sort((a, z) => Math.hypot(a.x - 本x, a.y - 本y) - Math.hypot(z.x - 本x, z.y - 本y));
     const 馬廻ら = [];
     let 騎数 = 0;
-    for (const q of 騎ら) {                        // 五十騎ほど集まるまで
-      if (騎数 >= 50) break;
+    for (const q of 騎ら) {
+      if (騎数 >= 48) break;                      // 方陣は七×七。中心と旗持を除いて四十七
       馬廻ら.push(q); 騎数 += Math.min(50, Math.round(q.men));
     }
     c.馬廻 = 馬廻ら.length ? 馬廻ら[0] : null;      // 絵のための控え（理には使わない）
-    for (const q of c.squads) {
-      const st = 組の態(q);
-      if (馬廻ら.indexOf(q) < 0) { st.弧 = null; continue; }
-      /* 馬廻は、組がいまいる隔たりのまま、武将を中心に弧を描いて並ぶ。
+    /* 陣の中心は、馬廻の組の重心に取る（本陣そのものではない）。
 
-         武将のそばへ引き寄せて輪にしたときは、盤の上の居場所と絵が
-         六十六歩も食い違った。弧なら、騎馬は自分の組の周りに留まったまま
-         武将を囲む――絵も偽らず、武将の居場所も読める。 */
-      st.弧 = { 角: Math.atan2(q.y - c.y, q.x - c.x),
-        半: Math.max(8, Math.hypot(q.x - c.x, q.y - c.y)), x: c.x, y: c.y };
+       本陣に寄せて方陣を組ませたときは、組が遠いと引き戻しが効いて
+       方陣が崩れ、騎馬がばらばらに散った。馬廻のいる所に陣を据えれば、
+       騎馬は自分の組の周りに立ったまま方陣を組める。将はその真ん中に立つ。
+       名札もここへ出す（draw.js が c.本陣 を見る）ので、名と将は揃う。 */
+    let 陣x = 本x, 陣y = 本y;
+    if (馬廻ら.length) {
+      let sx2 = 0, sy2 = 0, n2 = 0;
+      for (const q of 馬廻ら) { const m = Math.min(50, Math.round(q.men));
+        sx2 += q.x * m; sy2 += q.y * m; n2 += m; }
+      陣x = sx2 / n2; 陣y = sy2 / n2;
+      /* とはいえ本陣から離れすぎては「隊の将」に見えない。四十歩で留める */
+      const dx3 = 陣x - 本x, dy3 = 陣y - 本y, d3 = Math.hypot(dx3, dy3);
+      if (d3 > 40) { 陣x = 本x + dx3 / d3 * 40; 陣y = 本y + dy3 / d3 * 40; }
     }
+    c.本陣 = { x: 陣x, y: 陣y };
+    { let 基 = 0;
+      for (const q of c.squads) {
+        const st = 組の態(q);
+        if (馬廻ら.indexOf(q) < 0) { st.陣 = null; continue; }
+        st.陣 = { x: 陣x, y: 陣y, 基, 向: c.facing || 0 };
+        基 += Math.min(50, Math.round(q.men));
+      } }
     for (const q of c.squads) {
       const s = 組の態(q);
       /* 発砲の刻。cool が跳ね上がったら、いま放った */
@@ -678,22 +727,24 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       const 前 = q.engaged && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
       const 刻み = (前 + 2.8) / 4;
       const 押 = q.engaged ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
-      const 弧 = s.弧;
+      const 陣 = s.陣;
       for (let n = 0; n < alive; n++) {
         let tx, ty;
-        if (弧) {
-          /* 武将を中心に、組の隔たりのまま弧を描く。二列（内と外） */
-          const 列 = n % 2, i2 = (n / 2) | 0, 数 = Math.max(1, Math.ceil(alive / 2));
-          /* 弧の広がりは、組から離れすぎぬように隔たりで決める。
-             どの隔たりでも、横へ二十二歩ほどに収まる。 */
-          const 開 = Math.min(1.1, 44 / Math.max(10, 弧.半));
-          const a = 弧.角 + ((i2 + 0.5) / 数 - 0.5) * 開;
-          const r2 = 弧.半 + (列 ? 4.2 : 0);
-          tx = 弧.x + Math.cos(a) * r2;
-          ty = 弧.y + Math.sin(a) * r2 * 0.86;
-          /* それでも組から三十歩を超えたら引き戻す。絵は盤を偽らない */
-          const ex = tx - q.x, ey = ty - q.y, ed = Math.hypot(ex, ey);
-          if (ed > 30) { tx = q.x + ex / ed * 30; ty = q.y + ey / ed * 30; }
+        if (陣) {
+          /* 七×七の方陣。中心（二十四番）は将、その右隣（二十五番）は旗持 */
+          let 席 = 陣.基 + n;
+          if (席 >= 24) 席 += 2;                    // 将と旗持のぶん空ける
+          if (席 > 48) 席 = 48;
+          const 列 = 席 % 7, 行 = (席 / 7) | 0;
+          const 間x = 6.4, 間y = 5.6;
+          const lx2 = Math.cos(陣.向 + Math.PI / 2), ly2 = Math.sin(陣.向 + Math.PI / 2);
+          const bx2 = -Math.cos(陣.向), by2 = -Math.sin(陣.向);
+          const dx2 = (列 - 3) * 間x, dy2 = (行 - 3) * 間y;
+          tx = 陣.x + lx2 * dx2 + bx2 * dy2;
+          ty = 陣.y + ly2 * dx2 + by2 * dy2;
+          /* 組から離れすぎぬように引き戻す。絵は盤を偽らない */
+          const ex2 = tx - q.x, ey2 = ty - q.y, ed2 = Math.hypot(ex2, ey2);
+          if (ed2 > 45) { tx = q.x + ex2 / ed2 * 45; ty = q.y + ey2 / ed2 * 45; }
         } else {
         const o = 場[n];
         const 深 = q.engaged
@@ -734,63 +785,367 @@ export function 組の見た目(q) { return 組態.get(q) || null; }
 const 向き八 = (vx, vy) => { const a = Math.atan2(vy, vx);
   return ((Math.round(a / (Math.PI / 8)) % 16) + 16) % 16; };
 
-/* ---- 武将と母衣衆（GDD 8.11）----
+/* ---- 将と旗持（GDD 8.11）----
 
-   隊の只中に、兜と甲冑の武将が馬上にある。そのまわりを母衣衆（旗指物を
-   背負った騎馬の近習）が囲む。遊ぶ側が「誰がどこにいるか」を一目で読める
-   ようにするためで、理には一切関わらない（当たりも命令も持たない）。 */
-function 武将を描く(g, c, x, y, 側, t) {
-  const K = 具側[側];
-  const 向 = c.facing || 0;
-  const 向dir = ((Math.round(向 / (Math.PI / 8)) % 16) + 16) % 16;
-  /* 四方の旗。武将の立つ所を四隅の幟で囲い、遠目にも居場所が読める */
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * 6.283 + 向 + 0.78;
-    const bx = x + Math.cos(a) * 4.4, by = y + Math.sin(a) * 4.4 * 0.8;
-    g.strokeStyle = "#3A2C1A"; g.lineWidth = 0.26;
-    g.beginPath(); g.moveTo(bx, by); g.lineTo(bx, by - 9.5); g.stroke();
-    const ゆ = Math.sin(t * 1.7 + i) * 0.14;
-    g.fillStyle = shade(K.帯, 1.24);
+   隊の本陣（gx, gy＝兵の重心から後ろ二列目。名札もここに出る）に、
+   兜と甲冑の将が馬上にある。大きさは馬廻と同じで、鍬形の前立て・面頬・
+   大袖・馬鎧だけで足軽と見分ける。
+
+   将は指物（背旗）を負わない――背の指物は足軽・母衣衆・使番の印であって、
+   隊を率いる将のものではない。将の居場所は、かたわらの旗持が掲げる馬印で
+   示す。馬印は格で分ける。
+     一般の将 … 長旗（家の色の幟）
+     総大将   … 金の扇
+     大名     … 金の唐傘（一段。縁に白熊の毛を回す）
+   ここにあるのは描きだけで、理には一切関わらない。 */
+function 武将図(g, x, y, s, K, 案, t) {
+  const 毛 = "#3E2E20";
+  const 影 = (fn) => { g.save(); g.shadowColor = "rgba(24,22,16,0.4)"; g.shadowBlur = 0.5 * s;
+    g.shadowOffsetX = -0.3 * s; g.shadowOffsetY = 0.4 * s; fn(); g.restore(); };
+  /* ── 馬（横向き・右を向く）。足軽の馬を下敷きに、ひと回り大きく ── */
+  g.fillStyle = "rgba(24,26,18,0.32)";
+  g.beginPath(); g.ellipse(x + 0.3 * s, y + 0.25 * s, 4.0 * s, 1.1 * s, 0, 0, 7); g.fill();
+  /* 奥の脚 */
+  g.strokeStyle = shade(毛, 0.45); g.lineCap = "round";
+  for (const [dx, 曲] of [[2.5, 0.25], [-2.3, -0.2]]) {
+    g.lineWidth = 0.52 * s;
+    g.beginPath(); g.moveTo(x + dx * s, y - 2.6 * s);
+    g.lineTo(x + (dx + 曲) * s, y - 1.2 * s); g.stroke();
+    g.lineWidth = 0.34 * s;
+    g.beginPath(); g.moveTo(x + (dx + 曲) * s, y - 1.2 * s);
+    g.lineTo(x + (dx + 曲 * 1.6) * s, y - 0.1 * s); g.stroke(); }
+  /* 尾 */
+  g.strokeStyle = shade(毛, 0.4);
+  for (const k of [-0.2, 0, 0.2]) { g.lineWidth = 0.22 * s;
+    g.beginPath(); g.moveTo(x - 3.5 * s, y - 4.4 * s);
+    g.quadraticCurveTo(x - 4.5 * s, y - 3.0 * s + k * s, x - 4.2 * s, y - 0.9 * s + k * 0.6 * s);
+    g.stroke(); }
+  /* 胴（尻と肩の二つの山） */
+  const g馬 = g.createLinearGradient(x, y - 5.6 * s, x, y - 2.0 * s);
+  g馬.addColorStop(0, shade(毛, 1.34)); g馬.addColorStop(0.55, 毛); g馬.addColorStop(1, shade(毛, 0.55));
+  影(() => {
     g.beginPath();
-    g.moveTo(bx + 0.16, by - 9.5);
-    g.lineTo(bx + 2.1 + ゆ, by - 9.2);
-    g.lineTo(bx + 2.1 + ゆ, by - 5.6);
-    g.lineTo(bx + 0.16, by - 5.9);
-    g.closePath(); g.fill();
-    g.fillStyle = shade(K.濃, 1.08);                 // 旗の陰（下半分）
-    g.beginPath();
-    g.moveTo(bx + 0.16, by - 7.6); g.lineTo(bx + 2.1 + ゆ, by - 7.4);
-    g.lineTo(bx + 2.1 + ゆ, by - 5.6); g.lineTo(bx + 0.16, by - 5.9);
-    g.closePath(); g.fill();
-    g.strokeStyle = "rgba(242,238,226,0.6)"; g.lineWidth = 0.14;
-    g.strokeRect(bx + 0.16, by - 9.5, 1.95, 3.7);
-  }
-  /* 武将。騎馬の描き手をひと回り大きく使い、前立てと采配を重ねる */
-  const 将倍 = 0.062 * 1.32;
-  const 将札 = 札取り(側, "kiba", 向dir, 0);
-  if (将札) g.drawImage(将札, x - 将札.width / 2 * 将倍, y - (将札.height - 8) * 将倍,
-    将札.width * 将倍, 将札.height * 将倍);
-  /* 兜の前立て（金の三日月） */
-  const 兜y = y - 9.4;
-  g.fillStyle = "#E8C24A"; g.strokeStyle = "#8A6E1E"; g.lineWidth = 0.16;
+    g.moveTo(x - 3.6 * s, y - 3.6 * s);
+    g.quadraticCurveTo(x - 3.4 * s, y - 5.4 * s, x - 1.6 * s, y - 5.3 * s);
+    g.quadraticCurveTo(x + 0.2 * s, y - 5.0 * s, x + 1.6 * s, y - 5.4 * s);
+    g.quadraticCurveTo(x + 2.9 * s, y - 5.7 * s, x + 3.3 * s, y - 4.6 * s);
+    g.quadraticCurveTo(x + 3.6 * s, y - 3.6 * s, x + 3.2 * s, y - 2.6 * s);
+    g.quadraticCurveTo(x + 1.2 * s, y - 1.7 * s, x - 1.4 * s, y - 1.8 * s);
+    g.quadraticCurveTo(x - 3.2 * s, y - 1.9 * s, x - 3.6 * s, y - 3.6 * s);
+    g.closePath(); g.fillStyle = g馬; g.fill(); });
+  g.strokeStyle = "rgba(18,14,8,0.65)"; g.lineWidth = 0.08 * s; g.stroke();
+  /* 馬鎧（胴に掛ける家の色の布。胴の形に沿わせる） */
+  g.save();
   g.beginPath();
-  g.arc(x, 兜y, 1.5, Math.PI * 1.08, Math.PI * 1.92, false);
-  g.arc(x, 兜y - 0.7, 1.2, Math.PI * 1.88, Math.PI * 1.12, true);
-  g.closePath(); g.fill(); g.stroke();
-  /* 采配。振るたびに紙房が揺れる */
-  const 振 = Math.sin(t * 1.9) * 0.3;
-  const hx = x + 1.9, hy = y - 7.0;
-  g.strokeStyle = "#7A5A34"; g.lineWidth = 0.22;
-  const 棒 = -1.25 + 振 * 0.8;
-  const 先x = hx + Math.cos(棒) * 2.2, 先y = hy + Math.sin(棒) * 2.2;
-  g.beginPath(); g.moveTo(hx, hy); g.lineTo(先x, 先y); g.stroke();
-  g.strokeStyle = "rgba(242,236,221,0.95)"; g.lineWidth = 0.13;
-  for (let i = 0; i < 6; i++) {
-    const a2 = 棒 - 0.6 + i * 0.24 + Math.sin(t * 4 + i) * 0.08;
+  g.moveTo(x - 3.4 * s, y - 3.5 * s);
+  g.quadraticCurveTo(x - 1.4 * s, y - 2.0 * s, x + 1.4 * s, y - 2.0 * s);
+  g.quadraticCurveTo(x + 2.9 * s, y - 2.2 * s, x + 3.2 * s, y - 2.8 * s);
+  g.lineTo(x + 3.0 * s, y - 2.2 * s);
+  g.quadraticCurveTo(x + 1.2 * s, y - 1.2 * s, x - 1.5 * s, y - 1.3 * s);
+  g.quadraticCurveTo(x - 3.0 * s, y - 1.4 * s, x - 3.5 * s, y - 2.8 * s);
+  g.closePath(); g.clip();
+  g.fillStyle = shade(K.中, 0.95);
+  g.fillRect(x - 4 * s, y - 4 * s, 8 * s, 4 * s);
+  g.strokeStyle = "rgba(240,232,210,0.5)"; g.lineWidth = 0.12 * s;
+  for (const dy of [-2.6, -2.0]) {
+    g.beginPath(); g.moveTo(x - 4 * s, y + dy * s); g.lineTo(x + 4 * s, y + dy * s); g.stroke(); }
+  g.restore();
+  g.strokeStyle = "#B8442F"; g.lineWidth = 0.18 * s;          // 房
+  for (let i = -3; i <= 3; i++) {
+    g.beginPath(); g.moveTo(x + (i * 0.8 - 0.2) * s, y - 1.5 * s);
+    g.lineTo(x + (i * 0.8 - 0.2) * s, y - 0.9 * s); g.stroke(); }
+  /* 手前の脚 */
+  g.strokeStyle = shade(毛, 0.72);
+  for (const [dx, 曲] of [[2.9, 0.3], [-2.7, -0.25]]) {
+    g.lineWidth = 0.6 * s;
+    g.beginPath(); g.moveTo(x + dx * s, y - 2.4 * s);
+    g.lineTo(x + (dx + 曲) * s, y - 1.1 * s); g.stroke();
+    g.lineWidth = 0.38 * s;
+    g.beginPath(); g.moveTo(x + (dx + 曲) * s, y - 1.1 * s);
+    g.lineTo(x + (dx + 曲 * 1.7) * s, y); g.stroke();
+    g.fillStyle = "#241C14";
+    g.beginPath(); g.ellipse(x + (dx + 曲 * 1.7) * s, y + 0.05 * s, 0.3 * s, 0.18 * s, 0, 0, 7); g.fill(); }
+  /* 首と頭（前へ伸ばす） */
+  影(() => {
+    g.beginPath();
+    g.moveTo(x + 2.5 * s, y - 5.0 * s);
+    g.quadraticCurveTo(x + 4.0 * s, y - 6.2 * s, x + 4.7 * s, y - 7.1 * s);
+    g.lineTo(x + 5.5 * s, y - 6.6 * s);
+    g.quadraticCurveTo(x + 4.6 * s, y - 5.2 * s, x + 3.5 * s, y - 3.6 * s);
+    g.closePath(); g.fillStyle = shade(毛, 1.08); g.fill(); });
+  g.strokeStyle = "rgba(18,14,8,0.6)"; g.lineWidth = 0.08 * s; g.stroke();
+  g.save(); g.translate(x + 5.3 * s, y - 7.0 * s); g.rotate(0.55);
+  g.fillStyle = shade(毛, 0.9);
+  g.beginPath(); g.ellipse(0, 0, 1.15 * s, 0.52 * s, 0, 0, 7); g.fill();
+  g.strokeStyle = "rgba(18,14,8,0.6)"; g.lineWidth = 0.08 * s; g.stroke();
+  g.fillStyle = "#8F8A7A";                                     // 馬面（鉄の面当て）
+  g.beginPath(); g.ellipse(0.25 * s, 0, 0.72 * s, 0.34 * s, 0, 0, 7); g.fill();
+  g.fillStyle = "#1E1812";
+  g.beginPath(); g.ellipse(-0.42 * s, -0.16 * s, 0.13 * s, 0.16 * s, 0, 0, 7); g.fill();
+  for (const e of [-1, 1]) {                                   // 耳
+    g.beginPath(); g.moveTo(-0.75 * s + e * 0.1 * s, -0.3 * s);
+    g.lineTo(-0.85 * s + e * 0.3 * s, -0.95 * s); g.lineTo(-0.5 * s + e * 0.15 * s, -0.3 * s);
+    g.closePath(); g.fillStyle = shade(毛, 0.85); g.fill(); }
+  g.restore();
+  g.strokeStyle = shade(毛, 0.4); g.lineWidth = 0.26 * s;       // たてがみ
+  g.beginPath(); g.moveTo(x + 2.7 * s, y - 5.2 * s);
+  g.quadraticCurveTo(x + 3.8 * s, y - 6.2 * s, x + 4.6 * s, y - 7.0 * s); g.stroke();
+  /* 鞍と乗り手の脚 */
+  g.fillStyle = "#3A2C1C";
+  g.beginPath(); g.ellipse(x - 0.2 * s, y - 5.3 * s, 1.3 * s, 0.42 * s, 0, 0, 7); g.fill();
+  g.strokeStyle = 布; g.lineWidth = 0.5 * s; g.lineCap = "round";
+  g.beginPath(); g.moveTo(x - 0.1 * s, y - 5.1 * s); g.lineTo(x + 0.7 * s, y - 3.3 * s); g.stroke();
+  g.strokeStyle = "#5A5448"; g.lineWidth = 0.34 * s;            // 脛当
+  g.beginPath(); g.moveTo(x + 0.7 * s, y - 3.3 * s); g.lineTo(x + 0.95 * s, y - 2.4 * s); g.stroke();
+  /* ── 甲冑の胴（黒漆に家の色の威し）と草摺 ── */
+  for (let i = -1; i <= 1; i++) {                              // 草摺
+    g.fillStyle = i ? shade(K.中, 0.6) : shade(K.中, 0.78);
+    g.beginPath();
+    g.moveTo(x + (i * 0.9 - 0.65) * s, y - 5.5 * s);
+    g.lineTo(x + (i * 0.9 + 0.25) * s, y - 5.5 * s);
+    g.lineTo(x + (i * 1.0 + 0.3) * s, y - 4.3 * s);
+    g.lineTo(x + (i * 1.0 - 0.7) * s, y - 4.3 * s);
+    g.closePath(); g.fill();
+    g.strokeStyle = "rgba(16,14,10,0.5)"; g.lineWidth = 0.06 * s; g.stroke(); }
+  const g胴 = g.createLinearGradient(x - 1.4 * s, y - 8.6 * s, x + 1.4 * s, y - 5.4 * s);
+  g胴.addColorStop(0, "#241F1A"); g胴.addColorStop(0.5, "#322C24"); g胴.addColorStop(1, "#1C1814");
+  影(() => {
+    g.beginPath();
+    g.moveTo(x - 1.25 * s, y - 8.3 * s);
+    g.quadraticCurveTo(x - 0.1 * s, y - 8.7 * s, x + 1.15 * s, y - 8.3 * s);
+    g.lineTo(x + 1.35 * s, y - 5.5 * s);
+    g.quadraticCurveTo(x - 0.1 * s, y - 5.1 * s, x - 1.45 * s, y - 5.5 * s);
+    g.closePath(); g.fillStyle = g胴; g.fill(); });
+  g.strokeStyle = "rgba(10,8,6,0.75)"; g.lineWidth = 0.08 * s; g.stroke();
+  g.strokeStyle = shade(K.帯, 1.3); g.lineWidth = 0.14 * s;      // 威し（色の紐）
+  for (const yy of [-7.8, -7.2, -6.6, -6.0]) {
+    g.beginPath(); g.moveTo(x - 1.2 * s, y + yy * s); g.lineTo(x + 1.2 * s, y + yy * s); g.stroke(); }
+  /* 大袖（肩の板）。足軽には無い */
+  for (const 側 of [-1, 1]) {
+    const g袖 = g.createLinearGradient(x + 側 * 1.1 * s, y - 8.2 * s, x + 側 * 2.2 * s, y - 6.2 * s);
+    g袖.addColorStop(0, shade(K.中, 側 < 0 ? 0.8 : 1.3)); g袖.addColorStop(1, shade(K.中, 側 < 0 ? 0.5 : 0.85));
+    g.beginPath();
+    g.moveTo(x + 側 * 1.05 * s, y - 8.2 * s); g.lineTo(x + 側 * 2.1 * s, y - 7.9 * s);
+    g.lineTo(x + 側 * 2.0 * s, y - 6.2 * s); g.lineTo(x + 側 * 1.1 * s, y - 6.5 * s);
+    g.closePath(); g.fillStyle = g袖; g.fill();
+    g.strokeStyle = "rgba(14,12,8,0.6)"; g.lineWidth = 0.07 * s; g.stroke();
+    g.strokeStyle = "rgba(16,14,10,0.35)"; g.lineWidth = 0.05 * s;
+    for (const k of [0.4, 0.75]) {
+      g.beginPath();
+      g.moveTo(x + 側 * 1.05 * s, y - 8.2 * s + 1.8 * k * s);
+      g.lineTo(x + 側 * 2.1 * s, y - 7.9 * s + 1.75 * k * s); g.stroke(); } }
+  /* ── 首・顔・面頬 ── */
+  g.strokeStyle = 肌; g.lineWidth = 0.42 * s;
+  g.beginPath(); g.moveTo(x - 0.05 * s, y - 8.3 * s); g.lineTo(x + 0.1 * s, y - 8.9 * s); g.stroke();
+  g.fillStyle = 肌;
+  g.beginPath(); g.ellipse(x + 0.12 * s, y - 9.25 * s, 0.6 * s, 0.66 * s, 0, 0, 7); g.fill();
+  g.fillStyle = "#2A2218";
+  g.beginPath(); g.ellipse(x + 0.42 * s, y - 9.35 * s, 0.1 * s, 0.13 * s, 0, 0, 7); g.fill();
+  if (案 === 2) {                                              // 面頬（鉄の覆面）
+    g.fillStyle = "rgba(84,50,34,0.92)";
+    g.beginPath();
+    g.moveTo(x - 0.46 * s, y - 9.2 * s);
+    g.quadraticCurveTo(x + 0.14 * s, y - 8.5 * s, x + 0.72 * s, y - 9.2 * s);
+    g.lineTo(x + 0.6 * s, y - 8.95 * s);
+    g.quadraticCurveTo(x + 0.12 * s, y - 8.35 * s, x - 0.34 * s, y - 8.95 * s);
+    g.closePath(); g.fill(); }
+  /* ── 兜 ── */
+  const 兜y = y - 10.0 * s, 兜r = 1.0 * s;
+  for (let i = 2; i >= 0; i--) {                               // 錣
+    g.beginPath();
+    g.ellipse(x + 0.1 * s, 兜y + (0.5 + i * 0.26) * s,
+      (0.85 + i * 0.2) * s, (0.34 + i * 0.1) * s, 0, 0.1, Math.PI - 0.1);
+    g.fillStyle = i % 2 ? "#332E26" : "#453E33"; g.fill();
+    g.strokeStyle = "rgba(14,12,8,0.6)"; g.lineWidth = 0.05 * s; g.stroke();
+    g.strokeStyle = shade(K.帯, 1.25); g.lineWidth = 0.08 * s;
+    g.beginPath();
+    g.ellipse(x + 0.1 * s, 兜y + (0.5 + i * 0.26) * s,
+      (0.76 + i * 0.2) * s, (0.27 + i * 0.1) * s, 0, 0.35, Math.PI - 0.35); g.stroke(); }
+  const g鉢 = g.createRadialGradient(x - 0.25 * s, 兜y - 0.6 * s, 0.1 * s, x + 0.1 * s, 兜y, 兜r * 1.3);
+  g鉢.addColorStop(0, "#7A7162"); g鉢.addColorStop(0.5, "#453E33"); g鉢.addColorStop(1, "#272219");
+  影(() => {
+    g.beginPath();
+    g.moveTo(x + 0.1 * s - 兜r, 兜y + 0.26 * s);
+    g.quadraticCurveTo(x + 0.1 * s - 兜r * 1.05, 兜y - 兜r * 1.15, x + 0.1 * s, 兜y - 兜r * 1.28);
+    g.quadraticCurveTo(x + 0.1 * s + 兜r * 1.05, 兜y - 兜r * 1.15, x + 0.1 * s + 兜r, 兜y + 0.26 * s);
+    g.closePath(); g.fillStyle = g鉢; g.fill(); });
+  g.strokeStyle = "rgba(12,10,8,0.8)"; g.lineWidth = 0.07 * s; g.stroke();
+  g.strokeStyle = "rgba(210,200,170,0.35)"; g.lineWidth = 0.05 * s;    // 筋
+  for (const k of [-0.5, 0, 0.5]) {
+    g.beginPath();
+    g.moveTo(x + 0.1 * s + k * 兜r, 兜y + 0.2 * s);
+    g.quadraticCurveTo(x + 0.1 * s + k * 兜r * 0.68, 兜y - 兜r * 0.8,
+      x + 0.1 * s + k * 兜r * 0.28, 兜y - 兜r * 1.18); g.stroke(); }
+  for (const 側 of [-1, 1]) {                                   // 吹返し
+    g.beginPath();
+    g.moveTo(x + 0.1 * s + 側 * 兜r * 0.9, 兜y + 0.2 * s);
+    g.quadraticCurveTo(x + 0.1 * s + 側 * 兜r * 1.6, 兜y - 0.15 * s,
+      x + 0.1 * s + 側 * 兜r * 1.5, 兜y - 0.78 * s);
+    g.lineTo(x + 0.1 * s + 側 * 兜r * 0.95, 兜y - 0.42 * s);
+    g.closePath(); g.fillStyle = "#453E33"; g.fill();
+    g.strokeStyle = "rgba(14,12,8,0.7)"; g.lineWidth = 0.05 * s; g.stroke();
+    g.strokeStyle = shade(K.帯, 1.3); g.lineWidth = 0.06 * s;
+    g.beginPath();
+    g.moveTo(x + 0.1 * s + 側 * 兜r * 1.0, 兜y - 0.02 * s);
+    g.lineTo(x + 0.1 * s + 側 * 兜r * 1.4, 兜y - 0.55 * s); g.stroke(); }
+  g.strokeStyle = "#1E1A14"; g.lineWidth = 0.16 * s;             // 眉庇
+  g.beginPath(); g.ellipse(x + 0.1 * s, 兜y - 兜r * 0.14, 兜r * 0.98, 兜r * 0.4, 0,
+    Math.PI * 1.06, Math.PI * 1.94); g.stroke();
+  /* ── 前立て（案ごとに形を変える） ── */
+  const 眉y = 兜y - 兜r * 0.55, 立x = x + 0.1 * s;
+  g.fillStyle = "#E8C24A"; g.strokeStyle = "#8A6E1E"; g.lineWidth = 0.05 * s;
+  if (案 === 1) {                                               // 三日月
+    g.beginPath();
+    g.arc(立x, 眉y - 0.85 * s, 1.25 * s, Math.PI * 1.12, Math.PI * 1.88, false);
+    g.arc(立x, 眉y - 1.32 * s, 0.95 * s, Math.PI * 1.84, Math.PI * 1.16, true);
+    g.closePath(); g.fill(); g.stroke();
+  } else if (案 === 2) {                                        // 鍬形
+    for (const 側 of [-1, 1]) {
+      g.beginPath();
+      g.moveTo(立x + 側 * 0.22 * s, 眉y - 0.05 * s);
+      g.quadraticCurveTo(立x + 側 * 1.15 * s, 眉y - 0.8 * s, 立x + 側 * 0.95 * s, 眉y - 2.1 * s);
+      g.lineTo(立x + 側 * 0.55 * s, 眉y - 1.72 * s);
+      g.quadraticCurveTo(立x + 側 * 0.62 * s, 眉y - 0.7 * s, 立x + 側 * 0.04 * s, 眉y + 0.04 * s);
+      g.closePath(); g.fill(); g.stroke(); }
+    g.beginPath(); g.arc(立x, 眉y - 0.12 * s, 0.3 * s, 0, 7); g.fill(); g.stroke();
+  } else {                                                      // 輪貫
+    g.lineWidth = 0.3 * s; g.strokeStyle = "#E8C24A";
+    g.beginPath(); g.arc(立x, 眉y - 1.25 * s, 1.0 * s, 0, 7); g.stroke();
+    g.lineWidth = 0.06 * s; g.strokeStyle = "#8A6E1E";
+    g.beginPath(); g.arc(立x, 眉y - 1.25 * s, 1.15 * s, 0, 7); g.stroke();
+    g.beginPath(); g.arc(立x, 眉y - 1.25 * s, 0.85 * s, 0, 7); g.stroke(); }
+  /* ── 采配。肩から肘・手・柄・紙房へ順に繋ぐ ── */
+  const 肩x = x + 1.1 * s, 肩y = y - 7.9 * s;
+  const 振 = Math.sin(t * 1.8) * 0.2;
+  const 肘x = 肩x + Math.cos(-0.6 + 振) * 1.15 * s, 肘y = 肩y + Math.sin(-0.6 + 振) * 1.15 * s;
+  const 手x = 肘x + Math.cos(-1.45 + 振) * 1.05 * s, 手y = 肘y + Math.sin(-1.45 + 振) * 1.05 * s;
+  g.strokeStyle = shade(K.中, 0.9); g.lineWidth = 0.4 * s; g.lineCap = "round";
+  g.beginPath(); g.moveTo(肩x, 肩y); g.lineTo(肘x, 肘y); g.stroke();
+  g.strokeStyle = "#2E2922"; g.lineWidth = 0.32 * s;
+  g.beginPath(); g.moveTo(肘x, 肘y); g.lineTo(手x, 手y); g.stroke();
+  g.fillStyle = 肌; g.beginPath(); g.arc(手x, 手y, 0.24 * s, 0, 7); g.fill();
+  const 棒 = -1.05 + 振 * 1.2;
+  const 先x = 手x + Math.cos(棒) * 1.5 * s, 先y = 手y + Math.sin(棒) * 1.5 * s;
+  g.strokeStyle = "#6E4F2C"; g.lineWidth = 0.16 * s;
+  g.beginPath(); g.moveTo(手x, 手y); g.lineTo(先x, 先y); g.stroke();
+  g.strokeStyle = "rgba(246,242,230,0.95)"; g.lineWidth = 0.09 * s;
+  for (let i = 0; i < 7; i++) {
+    const a2 = 棒 - 0.5 + i * 0.17 + Math.sin(t * 4 + i) * 0.06;
     g.beginPath(); g.moveTo(先x, 先y);
-    g.lineTo(先x + Math.cos(a2) * 1.6, 先y + Math.sin(a2) * 1.8); g.stroke();
-  }
+    g.quadraticCurveTo(先x + Math.cos(a2) * 0.7 * s, 先y + Math.sin(a2) * 0.7 * s,
+      先x + Math.cos(a2) * 1.3 * s, 先y + Math.sin(a2) * 1.5 * s); g.stroke(); }
+  /* 将は指物（背旗）を負わない。
+     背の指物は足軽・母衣衆・使番の印であって、隊を率いる将のものではない。
+     将の居場所は、かたわらの旗持が掲げる馬印で示す（下の 旗持 を見よ）。 */
 }
+
+/* 旗持（はたもち）。将のかたわらで馬印を掲げる騎馬。
+   馬印は家ごとに形が違う――ここでは三つの形を見せる。 */
+function 旗持図(g, x, y, s, K, 形, t) {
+  const n = 札取り("P", "kiba", 0, 0);
+  if (n) g.drawImage(n, x - n.width / 2 * (s / 6.2), y - (n.height - 8) * (s / 6.2),
+    n.width * (s / 6.2), n.height * (s / 6.2));
+  /* 馬印の竿。乗り手の肩から高く掲げる */
+  const 竿x = x - 0.5 * s, 根 = y - 7.0 * s;
+  const 先 = y - (形 === "金の唐傘" ? 17.0 : 15.5) * s;
+  g.strokeStyle = "#3A2C1A"; g.lineWidth = 0.2 * s; g.lineCap = "round";
+  g.beginPath(); g.moveTo(竿x, 根); g.lineTo(竿x, 先); g.stroke();
+  const ゆ = Math.sin(t * 1.5) * 0.12 * s;
+  g.fillStyle = "#E8C24A"; g.strokeStyle = "#8A6E1E"; g.lineWidth = 0.07 * s;
+  if (形 === "金の扇") {
+    g.beginPath();
+    g.moveTo(竿x, 先 + 0.3 * s);
+    g.arc(竿x, 先 + 0.3 * s, 2.0 * s, Math.PI * 1.15, Math.PI * 1.85);
+    g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = "rgba(120,92,20,0.6)"; g.lineWidth = 0.05 * s;
+    for (let i = 1; i < 5; i++) { const a = Math.PI * (1.15 + 0.7 * i / 5);
+      g.beginPath(); g.moveTo(竿x, 先 + 0.3 * s);
+      g.lineTo(竿x + Math.cos(a) * 2.0 * s, 先 + 0.3 * s + Math.sin(a) * 2.0 * s); g.stroke(); }
+  } else if (形 === "朱の円") {
+    g.beginPath(); g.arc(竿x + ゆ, 先 + 1.1 * s, 1.5 * s, 0, 7);
+    g.fillStyle = "#C0392B"; g.fill();
+    g.strokeStyle = "rgba(246,242,230,0.8)"; g.lineWidth = 0.12 * s; g.stroke();
+  } else if (形 === "金の唐傘") {
+    /* 大名の馬印。唐傘の形は一段――二段に重ねるのは仏具の天蓋であって
+       馬印には見ない。派手さは大きさと、縁に回した白熊（はぐま）の毛で出す。
+       白熊は唐牛の毛を染めた飾りで、兜にも馬印にも実際に使われた。 */
+    const 揺 = Math.sin(t * 1.3) * 0.1 * s;
+    const 傘y = 先 + 2.4 * s, r = 4.2 * s;
+    g.save(); g.translate(揺, 0);
+    /* 傘の面。中央が高く、縁へ向かって垂れる */
+    const g傘 = g.createRadialGradient(竿x - r * 0.3, 傘y - r * 0.6, r * 0.1, 竿x, 傘y - r * 0.1, r * 1.1);
+    g傘.addColorStop(0, "#FBE79A"); g傘.addColorStop(0.55, "#EFCB4E"); g傘.addColorStop(1, "#C9A227");
+    g.beginPath();
+    g.moveTo(竿x - r, 傘y);
+    g.quadraticCurveTo(竿x - r * 0.72, 傘y - r * 0.92, 竿x, 傘y - r * 1.02);
+    g.quadraticCurveTo(竿x + r * 0.72, 傘y - r * 0.92, 竿x + r, 傘y);
+    g.quadraticCurveTo(竿x + r * 0.5, 傘y + 0.5 * s, 竿x, 傘y + 0.38 * s);
+    g.quadraticCurveTo(竿x - r * 0.5, 傘y + 0.5 * s, 竿x - r, 傘y);
+    g.closePath(); g.fillStyle = g傘; g.fill();
+    g.strokeStyle = "#8A6E1E"; g.lineWidth = 0.08 * s; g.stroke();
+    /* 骨 */
+    g.strokeStyle = "rgba(140,108,24,0.5)"; g.lineWidth = 0.05 * s;
+    for (const k of [-0.82, -0.5, -0.17, 0.17, 0.5, 0.82]) {
+      g.beginPath(); g.moveTo(竿x, 傘y - r * 0.98);
+      g.quadraticCurveTo(竿x + k * r * 0.72, 傘y - r * 0.45, 竿x + k * r, 傘y + 0.08 * s); g.stroke(); }
+    /* 白熊（はぐま）の毛。縁をぐるりと回す */
+    for (let i = -8; i <= 8; i++) {
+      const t2 = i / 8;
+      const px = 竿x + t2 * r * 0.98;
+      const py = 傘y + 0.3 * s - Math.abs(t2) * Math.abs(t2) * 0.45 * s;
+      const 長 = (0.9 + Math.cos(t2 * 1.4) * 0.45) * s;
+      const ゆ2 = Math.sin(t * 2.1 + i * 0.7) * 0.1 * s;
+      g.strokeStyle = "rgba(248,246,240,0.95)"; g.lineWidth = 0.17 * s; g.lineCap = "round";
+      g.beginPath(); g.moveTo(px, py);
+      g.quadraticCurveTo(px + ゆ2, py + 長 * 0.6, px + ゆ2 * 1.6, py + 長); g.stroke();
+      g.strokeStyle = "rgba(214,208,196,0.8)"; g.lineWidth = 0.07 * s;
+      g.beginPath(); g.moveTo(px, py);
+      g.quadraticCurveTo(px + ゆ2, py + 長 * 0.6, px + ゆ2 * 1.6, py + 長 * 0.92); g.stroke(); }
+    /* てっぺんの露（小さな玉）。宝珠のような火炎は付けない */
+    g.fillStyle = "#F6DC7A"; g.strokeStyle = "#8A6E1E"; g.lineWidth = 0.07 * s;
+    g.beginPath(); g.arc(竿x, 傘y - r * 1.12, 0.3 * s, 0, 7); g.fill(); g.stroke();
+    g.restore();
+  } else if (形 === "千成瓢箪") {                   // 大名の馬印・その二
+    g.fillStyle = "#E8C24A"; g.strokeStyle = "#8A6E1E"; g.lineWidth = 0.06 * s;
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * 6.283 + t * 0.4;
+      const px = 竿x + Math.cos(a) * (0.9 + (i % 2) * 0.5) * s;
+      const py = 先 + 1.4 * s + Math.sin(a) * (0.7 + (i % 2) * 0.4) * s;
+      g.beginPath();
+      g.ellipse(px, py - 0.45 * s, 0.34 * s, 0.4 * s, 0, 0, 7); g.fill(); g.stroke();
+      g.beginPath();
+      g.ellipse(px, py + 0.3 * s, 0.52 * s, 0.6 * s, 0, 0, 7); g.fill(); g.stroke(); }
+  } else {                                        // 長旗（幟）
+    g.fillStyle = shade(K.帯, 1.25);
+    g.beginPath();
+    g.moveTo(竿x + 0.12 * s, 先);
+    g.lineTo(竿x + 2.0 * s + ゆ, 先 + 0.25 * s);
+    g.lineTo(竿x + 1.9 * s + ゆ, 先 + 5.2 * s);
+    g.lineTo(竿x + 0.12 * s, 先 + 4.9 * s);
+    g.closePath(); g.fill();
+    g.fillStyle = shade(K.濃, 1.06);
+    g.beginPath();
+    g.moveTo(竿x + 0.12 * s, 先 + 2.8 * s);
+    g.lineTo(竿x + 1.95 * s + ゆ, 先 + 3.0 * s);
+    g.lineTo(竿x + 1.9 * s + ゆ, 先 + 5.2 * s);
+    g.lineTo(竿x + 0.12 * s, 先 + 4.9 * s);
+    g.closePath(); g.fill();
+    g.strokeStyle = "rgba(246,242,230,0.6)"; g.lineWidth = 0.07 * s;
+    g.beginPath();
+    g.moveTo(竿x + 0.12 * s, 先); g.lineTo(竿x + 2.0 * s + ゆ, 先 + 0.25 * s);
+    g.lineTo(竿x + 1.9 * s + ゆ, 先 + 5.2 * s); g.lineTo(竿x + 0.12 * s, 先 + 4.9 * s);
+    g.closePath(); g.stroke(); }
+}
+
+
+/* 将の格を見分ける。大名＞総大将＞一般の将 */
+function 将の格(b, c) {
+  if (c.gen && c.gen.lord) return "大名";
+  if (c.筋 && (c.筋.家康 || c.筋.大将)) return "総大将";
+  if (c.大将) return "総大将";
+  return "将";
+}
+const 馬印の形 = { 大名: "金の唐傘", 総大将: "金の扇", 将: "長旗" };
 
 /* ---- 一人ずつを描く。drawBattle の世界座標の中で呼ばれる ---- */
 export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
@@ -859,6 +1214,19 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
         並.push({ wx, wy, 地y: wy, 側, 型: q.type, dir: Math.round(dir), fr: Math.round(fr),
           直: 骨度 > 0 ? { dir, fr, 型: q.type, 側, 乱: ((q.seed || 0) * 31 + n * 7) % 97 / 97 } : null });
       }
+      /* 馬廻は指物を背負う（GDD 8.11）。
+
+         将の居場所を読ませるのが馬廻の役目である。騎馬が五十騎集まっても、
+         ただの騎馬の塊では他の騎馬組と見分けが付かない。一騎ずつ家の色の
+         指物を立てれば、方陣は「旗の群れ」として遠目にも読める。 */
+      if (s.陣) {
+        for (let n = 0; n < alive; n++) {
+          if (!s.生[n]) continue;
+          const wx = s.sx[n], wy = s.sy[n];
+          if (!見える(wx, wy)) continue;
+          並.push({ wx, wy, 地y: wy + 0.05, 指: 側 });
+        }
+      }
       /* 組の小旗（後列に二本）。側の色でまとまりを示す */
       if (cam.s > 2.2) {
         const lx = Math.cos(th + Math.PI / 2), ly = Math.sin(th + Math.PI / 2);
@@ -874,12 +1242,22 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
   /* 武将と母衣衆は隊の只中に。並びの中へ入れて前後を正しく重ねる */
   for (const c of 隊ら) {
     const 側 = c.日和見 ? "Y" : (c.side === "P" ? "P" : "E");
-    if (!見える(c.x, c.y)) continue;
-    並.push({ wx: c.x, wy: c.y, 地y: c.y + 0.1, 将: { c, 側 } });
+    /* 将は馬廻の只中に立つ。名札もそこに出るので、名と将が揃う */
+    const 本 = c.本陣 || { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
+    if (!見える(本.x, 本.y)) continue;
+    並.push({ wx: 本.x, wy: 本.y, 地y: 本.y + 0.1, 将: { c, 側 } });
   }
   並.sort((a, z) => a.地y - z.地y);
   for (const p of 並) {
     const y = p.wy - 持上高(p.wx, p.wy);
+    if (p.指) {                                    // 馬廻の指物
+      const K2 = 具側[p.指];
+      ctx.strokeStyle = "#3A2C1A"; ctx.lineWidth = 0.1;
+      ctx.beginPath(); ctx.moveTo(p.wx - 1.4, y - 3.2); ctx.lineTo(p.wx - 1.6, y - 7.4); ctx.stroke();
+      ctx.fillStyle = shade(K2.帯, 1.25);
+      ctx.fillRect(p.wx - 1.58, y - 7.4, 0.85, 1.6);
+      continue;
+    }
     if (p.旗) {
       ctx.strokeStyle = "#3A2C1A"; ctx.lineWidth = 0.12;
       ctx.beginPath(); ctx.moveTo(p.wx, y); ctx.lineTo(p.wx, y - 2.0); ctx.stroke();
@@ -887,7 +1265,23 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       ctx.fillRect(p.wx + 0.06, y - 2.0, 0.55, 1.05);
       continue;
     }
-    if (p.将) { 武将を描く(ctx, p.将.c, p.wx, y, p.将.側, nowSec); continue; }
+    if (p.将) {
+      const c2 = p.将.c, 側2 = p.将.側;
+      const 格 = 将の格(b, c2);
+      /* 将は馬廻と同じ丈。型紙の丈（百九十）を兵の丈（百四）に合わせる */
+      const 倍2 = 0.062 * (104 / 190) * 1.18;
+      const n2 = 将札(側2, 格);
+      if (n2) ctx.drawImage(n2, p.wx - n2.width / 2 * 倍2, y - (n2.height - 12) * 倍2,
+        n2.width * 倍2, n2.height * 倍2);
+      /* 旗持は将の右隣（方陣の二十五番の席）に立つ */
+      const 向 = c2.facing || 0;
+      const lx2 = Math.cos(向 + Math.PI / 2), ly2 = Math.sin(向 + Math.PI / 2);
+      const n3 = 旗持札(側2, 馬印の形[格]);
+      const 倍3 = 0.062 * (104 / 190) * 1.18 * (11 / 19);   // 乗り手の丈は将と同じに保つ
+      if (n3) ctx.drawImage(n3, p.wx + lx2 * 6.4 - n3.width / 2 * 倍3,
+        y + ly2 * 6.4 - (n3.height - 12) * 倍3, n3.width * 倍3, n3.height * 倍3);
+      continue;
+    }
     if (p.直) 姿八(ctx, p.wx, y, (p.直.型 === "kiba" ? 6.2 : 6.4) * 0.062,
       p.直.dir, p.直.fr, p.直.型, 具側[p.直.側], p.直.乱);
     else { const n = 札取り(p.側, p.型, p.dir, p.fr);
