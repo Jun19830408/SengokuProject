@@ -1,6 +1,6 @@
 import { battleAI } from "./ai.js";
 import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, nearestOpenGate, routeToCastleGate, 門の控え口 } from "./castleMap.js";
-import { ROW, SP, corpsMax, corpsMen, notify, placeSquads, 前列を入れ替える } from "./corps.js";
+import { ROW, SP, corpsMax, corpsMen, notify, placeSquads, 前列を入れ替える, 支えの向き数, 支えの幅, 空 } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地 } from "./field.js";
 import { clamp } from "../core/util.js";
@@ -167,8 +167,9 @@ export function 前面まで(c, ux, uy) {
    正面から当たれば、二つの代表点のあいだに残るのは前列と前列の隙だけである。
    隙は十八歩――槍の間合い（二十二歩で槍を合わせる）よりわずかに狭く取る。
    これより広いと槍が届かず、狭いと前列が重なって兵が混じる。 */
-export const 触れ隙 = 10;
-/* 触れ合う隔たりには上限を置く（GDD 8.3）。
+export const 触れ隙 = 18;
+/* 触れ合う隔たりの上限。いまは席の差し渡しを持たない相手（軍船など）に
+   四方の箱で測るときの、ただの歯止めである（GDD 8.3）。
 
    塊は前が狭く後ろが深いので、斜に向き合うと後ろの厚みと横幅が效いて、触れる
    隔たりばかりが大きくなる。それでは前列が槍の間合いに入れない。
@@ -177,9 +178,59 @@ export const 触れ隙 = 10;
    していたとき、一万六千九百の大軍と千の小勢が四十二歩を隔てて睨み合い、槍が一度も
    合わぬまま日没を迎えた（遊ぶ側の申し出はこれである）。塊が触れるのは縁と縁で
    あって、腹ではない。触れたところで槍が届かねば、戦にならない。 */
-export const 触れ上限 = 18;
-export const 触れる隔たり = (c, o, ux, uy) => Math.min(触れ上限,
-  前面まで(c, ux, uy) + 前面まで(o, -ux, -uy) + 触れ隙);
+export const 触れ上限 = 26;
+/* 組と組が槍を合わせられる間合い。 */
+export const 噛み間 = 34;
+
+/* 塊が触れ合う隔たり（GDD 8.3）。
+
+   隊の体は、組の席が作る形である。向き u の上で二つの形が触れ合うまでの、
+   中どころと中どころの隔たりを返す。
+
+   形ごとの差し渡しは、席が変わるときに三十二の向きで焼いてある
+   （corps.js の 席の差し渡しを焼く）。二つの形は、互いのどれか一つの向きで
+   離せていればよいから、「いちばん早く離せる向き」で決まる。
+
+   正面から当たれば、代表点はどちらも前列にあるので隔たりはほぼ触れ隙だけ――
+   前列と前列が槍の間合いに入る。横から当たれば横幅のぶん、後ろから当たれば
+   奥行きのぶん、ちゃんと離れて止まる。四方の箱ではないので、鶴翼の翼が
+   正面の隔たりを膨らませることもない。 */
+const 支え向き = (() => {
+  const t = [];
+  for (let i = 0; i < 支えの向き数; i++) {
+    const a = (Math.PI * 2 * i) / 支えの向き数;
+    t.push([Math.cos(a), Math.sin(a)]);
+  }
+  return t;
+})();
+/* 相手が通る幅に合う帯を選ぶ。相手の横の張り出しで決める。 */
+const 帯を選ぶ = (o, i) => {
+  const 半 = 支えの向き数 / 4;
+  const 幅 = Math.max(o.支え[支えの幅.length - 1][(i + 半) % 支えの向き数],
+                      o.支え[支えの幅.length - 1][(i + 支えの向き数 - 半) % 支えの向き数]);
+  for (let w = 0; w < 支えの幅.length; w++) if (幅 <= 支えの幅[w]) return w;
+  return 支えの幅.length - 1;
+};
+export function 触れる隔たり(c, o, ux, uy) {
+  // 席の差し渡しを持たない相手（軍船など）は、四方の箱で測る
+  if (!c.支え || !o.支え) {
+    return Math.min(触れ上限, 前面まで(c, ux, uy) + 前面まで(o, -ux, -uy) + 触れ隙);
+  }
+  const 半 = 支えの向き数 / 2;
+  let 最 = Infinity;
+  for (let i = 0; i < 支えの向き数; i++) {
+    const n = 支え向き[i];
+    const un = n[0] * ux + n[1] * uy;
+    if (un < 0.08) continue;                   // この向きでは離せない
+    const j = (i + 半) % 支えの向き数;
+    const 己 = c.支え[帯を選ぶ(o, i)][i], 彼 = o.支え[帯を選ぶ(c, j)][j];
+    if (己 <= 空 || 彼 <= 空) continue;          // どちらかの帯が空――塞ぐものが無い
+    const d = (己 * (c.締まり == null ? 1 : c.締まり)
+             + 彼 * (o.締まり == null ? 1 : o.締まり)) / un;
+    if (d < 最) 最 = d;
+  }
+  return (Number.isFinite(最) ? 最 : 0) + 触れ隙;
+}
 
 // 押し合う力。兵の数が第一、士気と勢いがそれに乗る。
 export const 押し力 = (c) => Math.max(1, corpsMen(c)) * (0.5 + c.morale / 200)
@@ -244,6 +295,19 @@ export function stepBattle(b, dt) {
       if (b2 > 右) 右 = b2; if (-b2 > 左) 左 = -b2;
     }
     c.張り前 = 前; c.張り後 = 後; c.張り右 = 右; c.張り左 = 左;
+    /* 陣形の締まり（GDD 8.3）。
+
+       塊の体がどれだけ形を保っているか。列が整っていれば、寄せ手は体の縁で
+       止められる。崩れた塊、横腹を噛まれて内に敵を入れた塊は、懐まで入られる。
+       「乱れた槍には騎馬が乗り入る」のはこれである――衾が立たぬだけでなく、
+       そもそも列の隙から馬が入る。 */
+    let 和 = 0, 兵 = 0;
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      和 += q.cohesion * q.men; 兵 += q.men;
+    }
+    const 締 = 兵 > 0 ? 和 / 兵 : 60;
+    c.締まり = (0.55 + 0.45 * clamp(締 / 80, 0, 1)) * (1 - 0.35 * (c.乱れ || 0));
   }
 
   /* 退きの印が宙に浮いた隊を繕う（GDD 8.3）。
@@ -542,42 +606,33 @@ export function stepBattle(b, dt) {
           else if (passable(nx, x.y)) x.x = nx;
           else if (passable(x.x, ny)) x.y = ny;
         };
-        /* 接戦では、相手の前線を越えない（GDD 8.3）。
+        /* 隊の只中へ滑り込ませない縛りは、方角で場合分けしない。
 
-           槍を合わせるとは、前列と前列が噛み合うことである。隊の只中へ
-           滑り込むのは突撃の仕事で、接戦の仕事ではない。囲まれるのが道理で
-           あるから、押し勝っても相手の前線までしか進まない。
-           突撃（chargeT が残っているあいだ）と、崩れた相手にはこの縛りを
-           掛けない――崩れた敵の中へは、追い討ちで入ってよい。 */
-        const 越えぬ = (x, y2) => {
-          if (x.chargeT > 0 || x.order === "突撃") return;
-          if (y2.routed || y2.withdraw) return;
-          const fx = Math.cos(y2.facing), fy = Math.sin(y2.facing);
-          const ex = x.x - y2.x, ey = x.y - y2.y;
-          const 奥 = ex * fx + ey * fy;                       // ＋なら相手の前
-          if (奥 >= 触れ隙 * 0.5) return;                      // まだ前にいる
-          /* 縛るのは「相手の体の中へ入った隊」だけである。
+           いちど「相手の前線を越えない」「相手の体を箱と見て押し出す」と
+           置いてみたが、どちらも方角によって矛盾した。前線の面で縛れば
+           背面から回った隊が永久に近づけず、箱で縛れば鶴翼の大軍が前の
+           小勢を押し出して槍が合わない。
 
-             盤じゅうの隊を縛ったときは、四百六十歩の先にいる隊まで前線へ
-             引き寄せられ、関ヶ原の西軍が三百秒で消し飛んだ（噛み合う組が
-             千三百を超えた）。相手の体――奥行と幅の内側に踏み込んだ隊だけ、
-             前線まで押し戻す。 */
-          const 横 = -ex * fy + ey * fx;
-          const 奥行 = (y2.張り後 || 0) + 40;
-          const 幅 = Math.max(y2.張り右 || 0, y2.張り左 || 0) + 40;
-          if (奥 < -奥行 || Math.abs(横) > 幅) return;
-          const 戻 = (触れ隙 * 0.5 - 奥) * 寄せ戻し;
-          動かす(x, 1, fx * 戻, fy * 戻);
-        };
-        越えぬ(c, o); 越えぬ(o, c);
-        /* 前線の縛りで寄ったぶんを、最後に押し戻す。
-           縛りを先に、押し合いを後に置かねば、縛りが隊を相手の腹へ寄せてしまう。 */
+           隊と隊が重ならないのは、触れ合いの隔たり（触れる隔たり）の仕事である。
+           そこを席の差し渡しで測るようにしたので、前からも横からも後ろからも、
+           同じ一つの理で止まる。ここでは、食い込んだぶんを押し戻すだけでよい。 */
         const dx2 = o.x - c.x, dy2 = o.y - c.y;
         let d2 = Math.hypot(dx2, dy2);
         let vx2, vy2;
         if (d2 < 0.5) { vx2 = -Math.cos(o.facing); vy2 = -Math.sin(o.facing); d2 = 0.5; }
         else { vx2 = dx2 / d2; vy2 = dy2 / d2; }
-        const 重 = 触れる隔たり(c, o, vx2, vy2) - d2;
+        /* 懐の窪みへは入れる（GDD 8.3）。
+
+           鶴翼のように前が窪んだ陣では、翼の差し渡しで押し出すと、懐に入った
+           小勢が翼の線まで吐き出され、どちらの槍も届かぬまま撃ち合うだけに
+           なった（一万六千九百の大軍と二千五百の小勢で、組どうしの最短が
+           七十一歩――穂先は三十四歩である）。
+
+           どちらの組も敵の組を噛み間に捉えていないなら、まだ押し合う間柄では
+           ない。塊はもう一歩、懐へ入れる。ただし中どころが重なるまでは許さない。 */
+        const 槍が届く = (x) => (x.組の最近 == null ? Infinity : x.組の最近) <= 噛み間 * 1.4;
+        const 懐に入る = !槍が届く(c) && !槍が届く(o) && d2 > 触れ隙 * 1.5;
+        const 重 = 懐に入る ? -1 : 触れる隔たり(c, o, vx2, vy2) - d2;
         if (重 > 0) {
           const 押 = 重 * 寄せ戻し;
           動かす(c, kc, -vx2 * 押, -vy2 * 押);
@@ -788,6 +843,11 @@ export function stepBattle(b, dt) {
           if (ed < 0.5 || ed > 460) continue;
           const ux = ex / ed, uy = ey / ed;
           if (ed > 触れる隔たり(c, o, ux, uy) + 6) continue;      // まだ触れていない
+          /* 槍がまだ届かぬなら、足は止めない（懐の窪みへ入る。上の押し合いと同じ理）。
+             中どころが重なるほど近ければ、そこで止まる。 */
+          if (ed > 触れ隙 * 1.5
+              && (c.組の最近 == null ? Infinity : c.組の最近) > 噛み間 * 1.4
+              && (o.組の最近 == null ? Infinity : o.組の最近) > 噛み間 * 1.4) continue;
           const 沿 = 望x * ux + 望y * uy;
           if (沿 > 0) { 望x -= 沿 * ux; 望y -= 沿 * uy; }
         }
@@ -887,9 +947,17 @@ export function stepBattle(b, dt) {
       }
       // 疲労：移動・登坂・渡渉・悪天候で増える（GDD 8.8）
       c.fatigue = Math.min(100, c.fatigue + (0.55 + (1 / Math.max(0.1, terr.speed) - 1) * 0.5) * W.fatigue * (c.chargeT > 0 ? 1.8 : 1) * dt);
-      const want = Math.atan2(dy, dx);
-      const diff = ((want - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      c.facing += clamp(diff, -1.4 * dt, 1.4 * dt);
+      /* 歩けば、歩く方へ向き直る。ただし槍を合わせている隊は向きを変えない。
+
+         噛み合った隊は押し合いで持ち場から押し出され、持ち場へ戻ろうと歩く。
+         その歩みに向きを付き合わせると、横腹を噛まれた隊が押し戻されるついでに
+         敵のほうへ向き直ってしまう。兵がそちらへ顔を向けるのはよいが、陣ごと
+         向き直るには「転回」の下知が要る（tests/sokumen.cjs）。 */
+      if (!c.squads.some((q) => q.engaged)) {
+        const want = Math.atan2(dy, dx);
+        const diff = ((want - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+        c.facing += clamp(diff, -1.4 * dt, 1.4 * dt);
+      }
       c.faceTo = null;
     } else if (c.faceTo != null) {
       /* その場で向きだけ変える。統率が高いほど早く据わる。
@@ -1034,6 +1102,19 @@ export function stepBattle(b, dt) {
          半分の足で寄り直す。二十四歩は組の幅ほどで、斬り結ぶ間合いを損なわない。 */
       const 噛み遊び = 24;
       const 噛みでも戻る = 噛み中 && qd > 噛み遊び;
+      /* 足を止めていても、間近の敵へ顔を向ける（GDD 8.3）。
+
+         かつて顔の向きは、歩く段の中でだけ決めていた。足を止めて斬り結ぶ組は
+         最後に歩いたときの向きのままで、横から噛まれても振り向かなかった。
+         横腹を衝かれた隊の「その辺の兵がそちらを向く」はこれである――兵は
+         振り向くが、陣形は元の向きに伸びたままで、そこが横撃の利になる
+         （tests/sokumen.cjs）。一息には向き直らず、二秒ほどで据わる。 */
+      {
+        const 的 = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
+        const 望向 = 的 + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
+        const 差 = ((望向 - q.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+        q.facing += clamp(差, -2.6 * dt, 2.6 * dt);
+      }
       if (qd > 止まる幅 && (!噛み中 || 噛みでも戻る || c.withdraw || c.routed)) {
         /* 持ち場へ追いつくための足（GDD 8.3）。
 
@@ -1492,6 +1573,13 @@ export function stepBattle(b, dt) {
     }
   }
   for (const c of alive) {
+    /* いちばん近い敵の組までの隔たりを覚えておく（GDD 8.3）。
+
+       触れ合う隔たりで足を止めるのは、槍が届いてからでよい。鶴翼のように
+       前が窪んだ陣では、翼の差し渡しで止まると懐の組に穂先が届かない。
+       組と組が噛み間に入っていないなら、塊はもう一歩寄れるものとする。 */
+    c.組の最近 = c.組の最近次 == null ? Infinity : c.組の最近次;
+    c.組の最近次 = null;
     if (!c.敵が近い) {
       for (const q of c.squads) { q.foe = null; q.link = null; }
       continue;
@@ -1501,13 +1589,13 @@ export function stepBattle(b, dt) {
       const st = ARM_STATS[q.type];
       const [melee, mdist] = nearestFoeSquad(c, q);
       q.foe = melee ? { x: melee.e.x, y: melee.e.y, d: mdist } : null;
+      if (melee && mdist < (c.組の最近次 == null ? Infinity : c.組の最近次)) c.組の最近次 = mdist;
       q.link = null;
       if (!melee) continue;
       const terr = TERRAIN[q.地];
       /* 噛み合う間合い。ふだんは二十二歩だが、槍衾は穂先が長い。
          構えた側・構えを衝く側は、離れても穂先が届いて斬り結び続ける。
          これが無いと、当たった直後に押し合いで離れ、衾が空を切る。 */
-      const 噛み間 = 34;
       if (mdist < 噛み間) {
         /* 退いている隊は組み合わない。背を向けて離れていく。
            相手を掴み直すこともしないし、相手からも掴まれない。
@@ -1552,8 +1640,19 @@ export function stepBattle(b, dt) {
               t: 0, life: 1.1 + Math.random() * 0.6, r0: 5 + Math.random() * 4 });
           }
         }
+        /* 横撃・背面撃の判じ（GDD 8.3）。
+
+           これまでは「噛まれている組の顔がどこを向いているか」で測っていた。
+           ところが組は、間近の敵のほうへ顔を向ける（この下の q.facing を参照）。
+           横から噛まれた組もすぐ振り向くので、横撃の利はほとんど立たなかった。
+
+           兵が振り向くのと、陣形が向き直るのは別の事である。横から来た敵へ
+           その辺の兵が槍を向けても、隊の列はまだ元の向きに伸びている。
+           だから軸は陣の向き（placeSquads の 陣向き）に取る。
+           陣ごと向き直るには「転回」の下知が要り、その間は陣形が削れる。 */
+        const 敵の陣向 = melee.f.陣向き == null ? melee.f.facing : melee.f.陣向き;
         const ang = Math.atan2(q.y - melee.e.y, q.x - melee.e.x);
-        const rel = Math.abs(((ang - melee.e.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+        const rel = Math.abs(((ang - 敵の陣向 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
         const flank = rel > 2.2 ? 2.0 : rel > 1.1 ? 1.45 : 1.0;
         const charge = q.type === "kiba" && terr.charge ? 1 + c.gen.valor / 260 : 1;
         const push = c.chargeT > 0 && terr.charge ? 1.3 : 1;              // 突撃中の圧力
@@ -1589,9 +1688,18 @@ export function stepBattle(b, dt) {
            入れ替わり、崩れた所を埋める。だから「後ろにどれだけ控えているか」で
            前列の働きが変わるものとする。厚みのある隊ほど押しが強い。 */
         const 支え = 1 + clamp(((c.立つ組数 || 1) / Math.max(1, c.噛み組数 || 1) - 1) * 0.05, 0, 0.35);
+        /* 陣形の乱れ（GDD 8.3）。
+
+           横腹や背から噛まれた隊は、内に敵を入れて列が割れる。味方同士が
+           槍を合わせる向きを失い、押し支えも効かない。攻めは三割落ち、
+           受けも三割五分ぶん脆くなる。乱れの度合いは、噛まれている組のうち
+           何割が前の九十度より外から噛まれているかで測る（下の c.乱れ）。 */
+        const 乱れ攻 = 1 - 0.30 * (c.乱れ || 0);
+        const 乱れ受 = 1 + 0.35 * (melee.f.乱れ || 0);
         applyDamage(b, melee.f, melee.e,
           st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200)
-          * terr.fight * flank * charge * push * guard * 支え * 騎 * (1 - c.fatigue / 260) * dt,
+          * terr.fight * flank * charge * push * guard * 支え * 騎 * (1 - c.fatigue / 260)
+          * 乱れ攻 * 乱れ受 * dt,
           flank, c.gen.valor * (c.chargeT > 0 ? 1.2 : 1), c, q);
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
         if (melee.f.seen || mdist < TERRAIN[melee.e.地 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
@@ -1659,6 +1767,26 @@ export function stepBattle(b, dt) {
         c.入替刻 = 10;
         const n = 前列を入れ替える(c);
         if (n && c.side === "P") b.log.push({ t: b.t, text: `${c.gen.name}隊が前列を入れ替えた。` });
+      }
+    }
+    /* 横腹・背を噛まれた度合い。陣の向きを軸に、噛まれている組の相手が
+       前の九十度より外に居るかを数える。中へ侵されるほど一に近づく。 */
+    {
+      const 陣向 = c.陣向き == null ? c.facing : c.陣向き;
+      let 噛 = 0, 横 = 0;
+      for (const q of c.squads) {
+        if (q.men <= 0 || !q.engaged || !q.foe) continue;
+        噛++;
+        const a = Math.atan2(q.foe.y - q.y, q.foe.x - q.x);
+        const r = Math.abs(((a - 陣向 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+        if (r > 1.1) 横++;
+      }
+      c.乱れ = 噛 > 0 ? 横 / 噛 : 0;
+      // 列が割れていく。乱れた組は向きもずれ、見た目にも隊形が崩れる。
+      if (c.乱れ > 0.2) {
+        for (const q of c.squads) {
+          if (q.men > 0) q.cohesion = Math.max(0, q.cohesion - c.乱れ * 1.8 * dt);
+        }
       }
     }
     // 前列で槍を合わせている組の数。後ろが支える度合いを測るのに使う。

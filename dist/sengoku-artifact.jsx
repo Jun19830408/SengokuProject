@@ -16129,9 +16129,9 @@ function \u596A\u308F\u308C\u305F\u672C\u9818\u3092\u7E55\u3046(s2) {
     if (\u81EA\u5BB6\u304B(g.\u672C\u9818, g.faction)) continue;
     const \u5148 = [g.at, \u51FA\u3069\u3053\u308D[g.id], (s2.factions[g.faction] || {}).\u672C\u62E0].find((id) => \u81EA\u5BB6\u304B(id, g.faction));
     if (!\u5148 || \u5148 === g.\u672C\u9818) continue;
-    const \u7A7A = !g.\u672C\u9818;
+    const \u7A7A2 = !g.\u672C\u9818;
     g.\u672C\u9818 = \u5148;
-    if (!\u7A7A) \u76F4\u3057\u305F.push(g);
+    if (!\u7A7A2) \u76F4\u3057\u305F.push(g);
   }
   return \u76F4\u3057\u305F;
 }
@@ -23832,11 +23832,13 @@ var corpsMen = (c) => c.squads.reduce((s2, q) => s2 + q.men, 0);
 var corpsMax = (c) => c.squads.reduce((s2, q) => s2 + q.max, 0);
 function placeSquads(c, snap) {
   const live = c.squads.filter((q) => q.men > 0).length;
-  const \u9AA8 = `${c.formation}|${live}|${c.order === "\u7A81\u6483" ? "c" : "n"}`;
-  if (snap || c.formKey !== \u9AA8) {
-    c.formKey = \u9AA8;
+  const \u5F62\u9AA8 = `${c.formation}|${c.order === "\u7A81\u6483" ? "c" : "n"}`;
+  const \u9AA8 = `${\u5F62\u9AA8}|${live}`;
+  if (snap || c.\u5F62\u9AA8 !== \u5F62\u9AA8) {
+    c.\u5F62\u9AA8 = \u5F62\u9AA8;
     c.\u9663\u5411\u304D = c.facing;
   }
+  if (c.formKey !== \u9AA8) c.formKey = \u9AA8;
   if (c.\u9663\u5411\u304D == null) c.\u9663\u5411\u304D = c.facing;
   const key = `${\u9AA8}|${Math.round(c.\u9663\u5411\u304D * 12)}`;
   if (!snap && c.slotKey === key) return;
@@ -23899,6 +23901,30 @@ function \u5EA7\u5E2D\u3092\u5411\u3051\u308B(c, snap) {
       q.y = c.y + q.slotY;
       q.facing = c.facing;
     }
+  }
+  \u5E2D\u306E\u5DEE\u3057\u6E21\u3057\u3092\u713C\u304F(c);
+}
+var \u652F\u3048\u306E\u5411\u304D\u6570 = 32;
+var \u652F\u3048\u306E\u5E45 = [60, 120, 240, Infinity];
+var \u7A7A = -1e9;
+function \u5E2D\u306E\u5DEE\u3057\u6E21\u3057\u3092\u713C\u304F(c) {
+  if (!c.\u652F\u3048 || c.\u652F\u3048.length !== \u652F\u3048\u306E\u5E45.length) {
+    c.\u652F\u3048 = \u652F\u3048\u306E\u5E45.map(() => new Float64Array(\u652F\u3048\u306E\u5411\u304D\u6570));
+  }
+  for (let i = 0; i < \u652F\u3048\u306E\u5411\u304D\u6570; i++) {
+    const a = Math.PI * 2 * i / \u652F\u3048\u306E\u5411\u304D\u6570;
+    const nx = Math.cos(a), ny = Math.sin(a);
+    const m = \u652F\u3048\u306E\u5E45.map(() => \u7A7A);
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const sx = q.slotX || 0, sy = q.slotY || 0;
+      const \u5C04 = sx * nx + sy * ny;
+      const \u6A2A = Math.abs(-sx * ny + sy * nx);
+      for (let w = 0; w < \u652F\u3048\u306E\u5E45.length; w++) {
+        if (\u6A2A <= \u652F\u3048\u306E\u5E45[w] && \u5C04 > m[w]) m[w] = \u5C04;
+      }
+    }
+    for (let w = 0; w < \u652F\u3048\u306E\u5E45.length; w++) c.\u652F\u3048[w][i] = m[w];
   }
 }
 function commandCapacity(gen) {
@@ -26200,6 +26226,8 @@ var \u7D44\u306E\u614B = (q) => {
       sx: new Float32Array(50),
       sy: new Float32Array(50),
       \u9663: null,
+      \u524Dqx: q.x,
+      \u524Dqy: q.y,
       \u751F: new Uint8Array(50),
       \u6B69\u8DDD: new Float32Array(50),
       \u901F: new Float32Array(50),
@@ -26218,7 +26246,7 @@ var \u7D44\u306E\u614B = (q) => {
 var \u76E4\u306E\u614B = (b) => {
   let s2 = \u76E4\u614B.get(b);
   if (!s2) {
-    s2 = { \u5012\u308C: [], \u524Dt: b.t };
+    s2 = { \u5012\u308C: [], \u524Dt: b.t, \u98DB\u3073\u6570: 0 };
     \u76E4\u614B.set(b, s2);
   }
   return s2;
@@ -26241,23 +26269,7 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
       \u9A0E\u6570 += Math.min(50, Math.round(q.men));
     }
     c.\u99AC\u5EFB = \u99AC\u5EFB\u3089.length ? \u99AC\u5EFB\u3089[0] : null;
-    let \u9663x = \u672Cx, \u9663y = \u672Cy;
-    if (\u99AC\u5EFB\u3089.length) {
-      let sx2 = 0, sy2 = 0, n2 = 0;
-      for (const q of \u99AC\u5EFB\u3089) {
-        const m = Math.min(50, Math.round(q.men));
-        sx2 += q.x * m;
-        sy2 += q.y * m;
-        n2 += m;
-      }
-      \u9663x = sx2 / n2;
-      \u9663y = sy2 / n2;
-      const dx3 = \u9663x - \u672Cx, dy3 = \u9663y - \u672Cy, d3 = Math.hypot(dx3, dy3);
-      if (d3 > 40) {
-        \u9663x = \u672Cx + dx3 / d3 * 40;
-        \u9663y = \u672Cy + dy3 / d3 * 40;
-      }
-    }
+    const \u9663x = \u672Cx, \u9663y = \u672Cy;
     c.\u672C\u9663 = { x: \u9663x, y: \u9663y };
     {
       let \u57FA = 0;
@@ -26276,8 +26288,24 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
       if ((q.cool || 0) > s2.prevCool + 0.4) s2.\u6483\u523B = b.t;
       s2.prevCool = q.cool || 0;
       {
+        const jx2 = q.x - s2.\u524Dqx, jy2 = q.y - s2.\u524Dqy;
+        const j = Math.hypot(jx2, jy2);
+        const \u6B69\u3051\u308B = (q.type === "kiba" ? 56 : 34) * dt * 1.6 + 1.5;
+        if (s2.\u521D && j > \u6B69\u3051\u308B) {
+          \u614B.\u98DB\u3073\u6570++;
+          s2.dx += jx2;
+          s2.dy += jy2;
+          for (let n = 0; n < 50; n++) {
+            s2.sx[n] += jx2;
+            s2.sy[n] += jy2;
+          }
+        }
+        s2.\u524Dqx = q.x;
+        s2.\u524Dqy = q.y;
+      }
+      {
         const ddx = q.x - s2.dx, ddy = q.y - s2.dy, d = Math.hypot(ddx, ddy);
-        if (!s2.\u521D || d > 70) {
+        if (!s2.\u521D || d > 200) {
           s2.dx = q.x;
           s2.dy = q.y;
         } else if (d > 0.02) {
@@ -26324,9 +26352,9 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
           tx = \u9663.x + lx2 * dx2 + bx2 * dy2;
           ty = \u9663.y + ly2 * dx2 + by2 * dy2;
           const ex2 = tx - q.x, ey2 = ty - q.y, ed2 = Math.hypot(ex2, ey2);
-          if (ed2 > 45) {
-            tx = q.x + ex2 / ed2 * 45;
-            ty = q.y + ey2 / ed2 * 45;
+          if (ed2 > 60) {
+            tx = q.x + ex2 / ed2 * 60;
+            ty = q.y + ey2 / ed2 * 60;
           }
         } else {
           const o = \u5834[n];
@@ -26343,11 +26371,11 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
         }
         const vx = tx - s2.sx[n], vy = ty - s2.sy[n], d = Math.hypot(vx, vy);
         let mv = 0;
-        if (d > 45) {
+        if (d > 100) {
           s2.sx[n] = tx;
           s2.sy[n] = ty;
         } else if (d > 0.02) {
-          mv = Math.min(d, (q.type === "kiba" ? 74 : 48) * dt);
+          mv = Math.min(d, (q.type === "kiba" ? 130 : 90) * dt);
           s2.sx[n] += vx / d * mv;
           s2.sy[n] += vy / d * mv;
           s2.\u9032x[n] += (vx / d - s2.\u9032x[n]) * Math.min(1, dt * 3);
@@ -29341,7 +29369,7 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
     const side = sideColor(c);
     const \u5C06\u6240 = \u500B\u4EBA\u7D75 && c.\u672C\u9663 ? c.\u672C\u9663 : { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
     const [x, y0] = S(\u5C06\u6240.x, \u5C06\u6240.y);
-    const \u9003 = \u500B\u4EBA\u7D75 && !c.destroyed ? Math.min(64, Math.max(30, 26 * cam.s * 0.3)) : 0;
+    const \u9003 = \u500B\u4EBA\u7D75 && !c.destroyed ? Math.min(92, Math.max(34, 30 * cam.s * 0.38)) : 0;
     const y = y0 - \u9003;
     if (\u9003 > 0) {
       ctx.strokeStyle = "rgba(60,58,50,0.45)";
@@ -30501,12 +30529,44 @@ function \u524D\u9762\u307E\u3067(c, ux, uy) {
   const \u5DE6\u53F3 = -ux * fy + uy * fx;
   return Math.max(0, \u524D\u5F8C) * (c.\u5F35\u308A\u524D || 0) + Math.max(0, -\u524D\u5F8C) * (c.\u5F35\u308A\u5F8C || 0) + Math.max(0, \u5DE6\u53F3) * (c.\u5F35\u308A\u53F3 || 0) + Math.max(0, -\u5DE6\u53F3) * (c.\u5F35\u308A\u5DE6 || 0);
 }
-var \u89E6\u308C\u9699 = 10;
-var \u89E6\u308C\u4E0A\u9650 = 18;
-var \u89E6\u308C\u308B\u9694\u305F\u308A = (c, o, ux, uy) => Math.min(
-  \u89E6\u308C\u4E0A\u9650,
-  \u524D\u9762\u307E\u3067(c, ux, uy) + \u524D\u9762\u307E\u3067(o, -ux, -uy) + \u89E6\u308C\u9699
-);
+var \u89E6\u308C\u9699 = 18;
+var \u89E6\u308C\u4E0A\u9650 = 26;
+var \u565B\u307F\u9593 = 34;
+var \u652F\u3048\u5411\u304D = (() => {
+  const t = [];
+  for (let i = 0; i < \u652F\u3048\u306E\u5411\u304D\u6570; i++) {
+    const a = Math.PI * 2 * i / \u652F\u3048\u306E\u5411\u304D\u6570;
+    t.push([Math.cos(a), Math.sin(a)]);
+  }
+  return t;
+})();
+var \u5E2F\u3092\u9078\u3076 = (o, i) => {
+  const \u534A = \u652F\u3048\u306E\u5411\u304D\u6570 / 4;
+  const \u5E452 = Math.max(
+    o.\u652F\u3048[\u652F\u3048\u306E\u5E45.length - 1][(i + \u534A) % \u652F\u3048\u306E\u5411\u304D\u6570],
+    o.\u652F\u3048[\u652F\u3048\u306E\u5E45.length - 1][(i + \u652F\u3048\u306E\u5411\u304D\u6570 - \u534A) % \u652F\u3048\u306E\u5411\u304D\u6570]
+  );
+  for (let w = 0; w < \u652F\u3048\u306E\u5E45.length; w++) if (\u5E452 <= \u652F\u3048\u306E\u5E45[w]) return w;
+  return \u652F\u3048\u306E\u5E45.length - 1;
+};
+function \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, ux, uy) {
+  if (!c.\u652F\u3048 || !o.\u652F\u3048) {
+    return Math.min(\u89E6\u308C\u4E0A\u9650, \u524D\u9762\u307E\u3067(c, ux, uy) + \u524D\u9762\u307E\u3067(o, -ux, -uy) + \u89E6\u308C\u9699);
+  }
+  const \u534A = \u652F\u3048\u306E\u5411\u304D\u6570 / 2;
+  let \u6700 = Infinity;
+  for (let i = 0; i < \u652F\u3048\u306E\u5411\u304D\u6570; i++) {
+    const n = \u652F\u3048\u5411\u304D[i];
+    const un = n[0] * ux + n[1] * uy;
+    if (un < 0.08) continue;
+    const j = (i + \u534A) % \u652F\u3048\u306E\u5411\u304D\u6570;
+    const \u5DF1 = c.\u652F\u3048[\u5E2F\u3092\u9078\u3076(o, i)][i], \u5F7C = o.\u652F\u3048[\u5E2F\u3092\u9078\u3076(c, j)][j];
+    if (\u5DF1 <= \u7A7A || \u5F7C <= \u7A7A) continue;
+    const d = (\u5DF1 * (c.\u7DE0\u307E\u308A == null ? 1 : c.\u7DE0\u307E\u308A) + \u5F7C * (o.\u7DE0\u307E\u308A == null ? 1 : o.\u7DE0\u307E\u308A)) / un;
+    if (d < \u6700) \u6700 = d;
+  }
+  return (Number.isFinite(\u6700) ? \u6700 : 0) + \u89E6\u308C\u9699;
+}
 var \u62BC\u3057\u529B = (c) => Math.max(1, corpsMen(c)) * (0.5 + c.morale / 200) * (c.chargeT > 0 ? 1.25 : 1) * (c.order === "\u5B88\u5099" ? 1.12 : 1) * (1 - c.fatigue / 300);
 var \u584A\u3068\u3057\u3066\u7ACB\u3064 = (c) => !c.routed && !c.withdraw && !c.detach && !c.destroyed && !(c.ambush && !c.revealed) && c.squads.some((q) => q.men > 0);
 function stepBattle(b, dt) {
@@ -30552,6 +30612,14 @@ function stepBattle(b, dt) {
     c.\u5F35\u308A\u5F8C = \u5F8C;
     c.\u5F35\u308A\u53F3 = \u53F3;
     c.\u5F35\u308A\u5DE6 = \u5DE6;
+    let \u548C = 0, \u5175 = 0;
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      \u548C += q.cohesion * q.men;
+      \u5175 += q.men;
+    }
+    const \u7DE0 = \u5175 > 0 ? \u548C / \u5175 : 60;
+    c.\u7DE0\u307E\u308A = (0.55 + 0.45 * clamp(\u7DE0 / 80, 0, 1)) * (1 - 0.35 * (c.\u4E71\u308C || 0));
   }
   for (const c of alive) {
     if (!c.withdraw) continue;
@@ -30765,22 +30833,6 @@ function stepBattle(b, dt) {
           } else if (passable(nx, x.y)) x.x = nx;
           else if (passable(x.x, ny)) x.y = ny;
         };
-        const \u8D8A\u3048\u306C = (x, y2) => {
-          if (x.chargeT > 0 || x.order === "\u7A81\u6483") return;
-          if (y2.routed || y2.withdraw) return;
-          const fx = Math.cos(y2.facing), fy = Math.sin(y2.facing);
-          const ex = x.x - y2.x, ey = x.y - y2.y;
-          const \u5965 = ex * fx + ey * fy;
-          if (\u5965 >= \u89E6\u308C\u9699 * 0.5) return;
-          const \u6A2A = -ex * fy + ey * fx;
-          const \u5965\u884C = (y2.\u5F35\u308A\u5F8C || 0) + 40;
-          const \u5E452 = Math.max(y2.\u5F35\u308A\u53F3 || 0, y2.\u5F35\u308A\u5DE6 || 0) + 40;
-          if (\u5965 < -\u5965\u884C || Math.abs(\u6A2A) > \u5E452) return;
-          const \u623B = (\u89E6\u308C\u9699 * 0.5 - \u5965) * \u5BC4\u305B\u623B\u3057;
-          \u52D5\u304B\u3059(x, 1, fx * \u623B, fy * \u623B);
-        };
-        \u8D8A\u3048\u306C(c, o);
-        \u8D8A\u3048\u306C(o, c);
         const dx2 = o.x - c.x, dy2 = o.y - c.y;
         let d2 = Math.hypot(dx2, dy2);
         let vx2, vy2;
@@ -30792,7 +30844,9 @@ function stepBattle(b, dt) {
           vx2 = dx2 / d2;
           vy2 = dy2 / d2;
         }
-        const \u91CD = \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, vx2, vy2) - d2;
+        const \u69CD\u304C\u5C4A\u304F = (x) => (x.\u7D44\u306E\u6700\u8FD1 == null ? Infinity : x.\u7D44\u306E\u6700\u8FD1) <= \u565B\u307F\u9593 * 1.4;
+        const \u61D0\u306B\u5165\u308B = !\u69CD\u304C\u5C4A\u304F(c) && !\u69CD\u304C\u5C4A\u304F(o) && d2 > \u89E6\u308C\u9699 * 1.5;
+        const \u91CD = \u61D0\u306B\u5165\u308B ? -1 : \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, vx2, vy2) - d2;
         if (\u91CD > 0) {
           const \u62BC = \u91CD * \u5BC4\u305B\u623B\u3057;
           \u52D5\u304B\u3059(c, kc, -vx2 * \u62BC, -vy2 * \u62BC);
@@ -30935,6 +30989,7 @@ function stepBattle(b, dt) {
           if (ed < 0.5 || ed > 460) continue;
           const ux = ex / ed, uy = ey / ed;
           if (ed > \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, ux, uy) + 6) continue;
+          if (ed > \u89E6\u308C\u9699 * 1.5 && (c.\u7D44\u306E\u6700\u8FD1 == null ? Infinity : c.\u7D44\u306E\u6700\u8FD1) > \u565B\u307F\u9593 * 1.4 && (o.\u7D44\u306E\u6700\u8FD1 == null ? Infinity : o.\u7D44\u306E\u6700\u8FD1) > \u565B\u307F\u9593 * 1.4) continue;
           const \u6CBF = \u671Bx * ux + \u671By * uy;
           if (\u6CBF > 0) {
             \u671Bx -= \u6CBF * ux;
@@ -31005,9 +31060,11 @@ function stepBattle(b, dt) {
         }
       }
       c.fatigue = Math.min(100, c.fatigue + (0.55 + (1 / Math.max(0.1, terr.speed) - 1) * 0.5) * W2.fatigue * (c.chargeT > 0 ? 1.8 : 1) * dt);
-      const want = Math.atan2(dy, dx);
-      const diff = (want - c.facing + Math.PI * 3) % (Math.PI * 2) - Math.PI;
-      c.facing += clamp(diff, -1.4 * dt, 1.4 * dt);
+      if (!c.squads.some((q) => q.engaged)) {
+        const want = Math.atan2(dy, dx);
+        const diff = (want - c.facing + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+        c.facing += clamp(diff, -1.4 * dt, 1.4 * dt);
+      }
       c.faceTo = null;
     } else if (c.faceTo != null) {
       const diff = (c.faceTo - c.facing + Math.PI * 3) % (Math.PI * 2) - Math.PI;
@@ -31100,6 +31157,12 @@ function stepBattle(b, dt) {
       const \u6B62\u307E\u308B\u5E45 = MAP ? 5 : 2;
       const \u565B\u307F\u904A\u3073 = 24;
       const \u565B\u307F\u3067\u3082\u623B\u308B = \u565B\u307F\u4E2D && qd > \u565B\u307F\u904A\u3073;
+      {
+        const \u7684 = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
+        const \u671B\u5411 = \u7684 + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
+        const \u5DEE = (\u671B\u5411 - q.facing + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+        q.facing += clamp(\u5DEE, -2.6 * dt, 2.6 * dt);
+      }
       if (qd > \u6B62\u307E\u308B\u5E45 && (!\u565B\u307F\u4E2D || \u565B\u307F\u3067\u3082\u623B\u308B || c.withdraw || c.routed)) {
         const \u9045\u308C = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
         const \u8FFD\u3044\u3064\u304D = c.routed ? 1 : clamp(1 + \u9045\u308C / 34, 1, 2.4);
@@ -31508,6 +31571,8 @@ function stepBattle(b, dt) {
     }
   }
   for (const c of alive) {
+    c.\u7D44\u306E\u6700\u8FD1 = c.\u7D44\u306E\u6700\u8FD1\u6B21 == null ? Infinity : c.\u7D44\u306E\u6700\u8FD1\u6B21;
+    c.\u7D44\u306E\u6700\u8FD1\u6B21 = null;
     if (!c.\u6575\u304C\u8FD1\u3044) {
       for (const q of c.squads) {
         q.foe = null;
@@ -31520,10 +31585,10 @@ function stepBattle(b, dt) {
       const st = ARM_STATS[q.type];
       const [melee, mdist] = nearestFoeSquad(c, q);
       q.foe = melee ? { x: melee.e.x, y: melee.e.y, d: mdist } : null;
+      if (melee && mdist < (c.\u7D44\u306E\u6700\u8FD1\u6B21 == null ? Infinity : c.\u7D44\u306E\u6700\u8FD1\u6B21)) c.\u7D44\u306E\u6700\u8FD1\u6B21 = mdist;
       q.link = null;
       if (!melee) continue;
       const terr = TERRAIN[q.\u5730];
-      const \u565B\u307F\u9593 = 34;
       if (mdist < \u565B\u307F\u9593) {
         const \u5F15\u304F = c.withdraw || c.routed;
         const \u76F8\u624B\u3082\u5F15\u304F = melee.f.withdraw || melee.f.routed;
@@ -31561,8 +31626,9 @@ function stepBattle(b, dt) {
             });
           }
         }
+        const \u6575\u306E\u9663\u5411 = melee.f.\u9663\u5411\u304D == null ? melee.f.facing : melee.f.\u9663\u5411\u304D;
         const ang = Math.atan2(q.y - melee.e.y, q.x - melee.e.x);
-        const rel = Math.abs((ang - melee.e.facing + Math.PI * 3) % (Math.PI * 2) - Math.PI);
+        const rel = Math.abs((ang - \u6575\u306E\u9663\u5411 + Math.PI * 3) % (Math.PI * 2) - Math.PI);
         const flank = rel > 2.2 ? 2 : rel > 1.1 ? 1.45 : 1;
         const charge = q.type === "kiba" && terr.charge ? 1 + c.gen.valor / 260 : 1;
         const push = c.chargeT > 0 && terr.charge ? 1.3 : 1;
@@ -31588,11 +31654,13 @@ function stepBattle(b, dt) {
           }
         }
         const \u652F\u3048 = 1 + clamp(((c.\u7ACB\u3064\u7D44\u6570 || 1) / Math.max(1, c.\u565B\u307F\u7D44\u6570 || 1) - 1) * 0.05, 0, 0.35);
+        const \u4E71\u308C\u653B = 1 - 0.3 * (c.\u4E71\u308C || 0);
+        const \u4E71\u308C\u53D7 = 1 + 0.35 * (melee.f.\u4E71\u308C || 0);
         applyDamage(
           b,
           melee.f,
           melee.e,
-          st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * \u652F\u3048 * \u9A0E * (1 - c.fatigue / 260) * dt,
+          st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * \u652F\u3048 * \u9A0E * (1 - c.fatigue / 260) * \u4E71\u308C\u653B * \u4E71\u308C\u53D7 * dt,
           flank,
           c.gen.valor * (c.chargeT > 0 ? 1.2 : 1),
           c,
@@ -31657,6 +31725,23 @@ function stepBattle(b, dt) {
         c.\u5165\u66FF\u523B = 10;
         const n = \u524D\u5217\u3092\u5165\u308C\u66FF\u3048\u308B(c);
         if (n && c.side === "P") b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u304C\u524D\u5217\u3092\u5165\u308C\u66FF\u3048\u305F\u3002` });
+      }
+    }
+    {
+      const \u9663\u5411 = c.\u9663\u5411\u304D == null ? c.facing : c.\u9663\u5411\u304D;
+      let \u565B = 0, \u6A2A = 0;
+      for (const q of c.squads) {
+        if (q.men <= 0 || !q.engaged || !q.foe) continue;
+        \u565B++;
+        const a = Math.atan2(q.foe.y - q.y, q.foe.x - q.x);
+        const r = Math.abs((a - \u9663\u5411 + Math.PI * 3) % (Math.PI * 2) - Math.PI);
+        if (r > 1.1) \u6A2A++;
+      }
+      c.\u4E71\u308C = \u565B > 0 ? \u6A2A / \u565B : 0;
+      if (c.\u4E71\u308C > 0.2) {
+        for (const q of c.squads) {
+          if (q.men > 0) q.cohesion = Math.max(0, q.cohesion - c.\u4E71\u308C * 1.8 * dt);
+        }
       }
     }
     c.\u565B\u307F\u7D44\u6570 = c.squads.filter((q) => q.men > 0 && q.engaged).length;

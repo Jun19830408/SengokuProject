@@ -2178,7 +2178,9 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     const 将所 = (個人絵 && c.本陣) ? c.本陣
       : { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
     const [x, y0] = S(将所.x, 将所.y);
-    const 逃 = 個人絵 && !c.destroyed ? Math.min(64, Math.max(30, 26 * cam.s * 0.3)) : 0;
+    /* 逃がす高さは、将の背丈より高く取る。実測で、将の丈は寄り七.二倍のとき
+       五十二点ほど――二十六×倍×〇.三では札の底が将の兜に掛かっていた。 */
+    const 逃 = 個人絵 && !c.destroyed ? Math.min(92, Math.max(34, 30 * cam.s * 0.38)) : 0;
     const y = y0 - 逃;
     if (逃 > 0) {                                  // 標識と将を結ぶ細い線
       ctx.strokeStyle = "rgba(60,58,50,0.45)"; ctx.lineWidth = 1;

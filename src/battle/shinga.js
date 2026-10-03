@@ -615,14 +615,14 @@ const 組態 = new WeakMap();
 const 盤態 = new WeakMap();
 const 組の態 = (q) => { let s = 組態.get(q);
   if (!s) { s = { dx: q.x, dy: q.y, sx: new Float32Array(50), sy: new Float32Array(50),
-    陣: null,
+    陣: null, 前qx: q.x, 前qy: q.y,
     生: new Uint8Array(50), 歩距: new Float32Array(50), 速: new Float32Array(50),
     進x: new Float32Array(50), 進y: new Float32Array(50),
     初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0 };
     組態.set(q, s); }
   return s; };
 const 盤の態 = (b) => { let s = 盤態.get(b);
-  if (!s) { s = { 倒れ: [], 前t: b.t }; 盤態.set(b, s); }
+  if (!s) { s = { 倒れ: [], 前t: b.t, 飛び数: 0 }; 盤態.set(b, s); }
   return s; };
 
 /* ---- 見た目の状態を進める。読みは盤から、書きは WeakMap だけ ----
@@ -669,22 +669,13 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       馬廻ら.push(q); 騎数 += Math.min(50, Math.round(q.men));
     }
     c.馬廻 = 馬廻ら.length ? 馬廻ら[0] : null;      // 絵のための控え（理には使わない）
-    /* 陣の中心は、馬廻の組の重心に取る（本陣そのものではない）。
+    /* 陣の中心は本陣（gx, gy）に据える。
 
-       本陣に寄せて方陣を組ませたときは、組が遠いと引き戻しが効いて
-       方陣が崩れ、騎馬がばらばらに散った。馬廻のいる所に陣を据えれば、
-       騎馬は自分の組の周りに立ったまま方陣を組める。将はその真ん中に立つ。
-       名札もここへ出す（draw.js が c.本陣 を見る）ので、名と将は揃う。 */
-    let 陣x = 本x, 陣y = 本y;
-    if (馬廻ら.length) {
-      let sx2 = 0, sy2 = 0, n2 = 0;
-      for (const q of 馬廻ら) { const m = Math.min(50, Math.round(q.men));
-        sx2 += q.x * m; sy2 += q.y * m; n2 += m; }
-      陣x = sx2 / n2; 陣y = sy2 / n2;
-      /* とはいえ本陣から離れすぎては「隊の将」に見えない。四十歩で留める */
-      const dx3 = 陣x - 本x, dy3 = 陣y - 本y, d3 = Math.hypot(dx3, dy3);
-      if (d3 > 40) { 陣x = 本x + dx3 / d3 * 40; 陣y = 本y + dy3 / d3 * 40; }
-    }
+       いちど馬廻の重心に取ったところ、この盤では騎馬が本陣より二十一歩ほど
+       前におり、将と馬廻が兵の前へ出てしまった。本陣は「兵の重心から後ろ
+       二列目」であって、旗本が構える所である。将が前へ出る道理はない。
+       馬廻は、そこへ下がって方陣を組む。 */
+    const 陣x = 本x, 陣y = 本y;
     c.本陣 = { x: 陣x, y: 陣y };
     { let 基 = 0;
       for (const q of c.squads) {
@@ -698,12 +689,30 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       /* 発砲の刻。cool が跳ね上がったら、いま放った */
       if ((q.cool || 0) > s.prevCool + 0.4) s.撃刻 = b.t;
       s.prevCool = q.cool || 0;
+      /* 盤が組を飛ばしたときは、兵も組ごと同じだけ平行移動する（GDD 8.11）。
+
+         盤は組をときどき飛ばす（陣形の組み直し、はぐれの繕い、盤に収める）。
+         絵の兵が一人ずつ歩いて追うと、近い者から順に着くので、隊が
+         「打ち寄せる波」のように現れる――遊ぶ側の申し出はこれである。
+         塊ごと同じだけ動かせば、並びを保ったまま移る。歩幅は積まない
+         （歩いていないのだから、足も出ない）。 */
+      {
+        const jx2 = q.x - s.前qx, jy2 = q.y - s.前qy;
+        const j = Math.hypot(jx2, jy2);
+        const 歩ける = (q.type === "kiba" ? 56 : 34) * dt * 1.6 + 1.5;
+        if (s.初 && j > 歩ける) {
+          態.飛び数++;
+          s.dx += jx2; s.dy += jy2;
+          for (let n = 0; n < 50; n++) { s.sx[n] += jx2; s.sy[n] += jy2; }
+        }
+        s.前qx = q.x; s.前qy = q.y;
+      }
       /* 組の足：目標（盤の位置）へ、歩幅の上限で寄る */
       { const ddx = q.x - s.dx, ddy = q.y - s.dy, d = Math.hypot(ddx, ddy);
         /* 組を追う点は、組より速くなければ置いて行かれる。
            遅く取っていたころは、絵の兵が組から六十六歩も遅れた。
            組の足（騎馬五十六・徒三十四）の三倍を取り、瞬間移動だけを均す。 */
-        if (!s.初 || d > 70) { s.dx = q.x; s.dy = q.y; }
+        if (!s.初 || d > 200) { s.dx = q.x; s.dy = q.y; }
         else if (d > 0.02) { const mv = Math.min(d, (q.type === "kiba" ? 170 : 110) * dt);
           s.dx += ddx / d * mv; s.dy += ddy / d * mv; } }
       /* 向きの均し */
@@ -742,9 +751,10 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
           const dx2 = (列 - 3) * 間x, dy2 = (行 - 3) * 間y;
           tx = 陣.x + lx2 * dx2 + bx2 * dy2;
           ty = 陣.y + ly2 * dx2 + by2 * dy2;
-          /* 組から離れすぎぬように引き戻す。絵は盤を偽らない */
+          /* 組から離れすぎぬように引き戻す。絵は盤を偽らない。
+             馬廻は本陣へ下がるぶん、ほかの組より少し広く取る（六十歩）。 */
           const ex2 = tx - q.x, ey2 = ty - q.y, ed2 = Math.hypot(ex2, ey2);
-          if (ed2 > 45) { tx = q.x + ex2 / ed2 * 45; ty = q.y + ey2 / ed2 * 45; }
+          if (ed2 > 60) { tx = q.x + ex2 / ed2 * 60; ty = q.y + ey2 / ed2 * 60; }
         } else {
         const o = 場[n];
         const 深 = q.engaged
@@ -755,10 +765,12 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
         if (!s.生[n] || !s.初) { s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; s.速[n] = 0; continue; }
         const vx = tx - s.sx[n], vy = ty - s.sy[n], d = Math.hypot(vx, vy);
         let mv = 0;
-        /* 組が盤の繕いで飛んだときは、兵も一緒に飛ぶ。歩いて追わせると、
-           兵が組から七十歩も遅れて絵と盤が食い違った（測った）。 */
-        if (d > 45) { s.sx[n] = tx; s.sy[n] = ty; }
-        else if (d > 0.02) { mv = Math.min(d, (q.type === "kiba" ? 74 : 48) * dt);
+        /* 飛びは上で組ごと平行移動して捌いた。ここで瞬間移動させるのは、
+           よほど離れたとき（盤の繕いの取りこぼし）だけである。 */
+        if (d > 100) { s.sx[n] = tx; s.sy[n] = ty; }
+        /* 兵の足は、組の足（騎馬五十六・徒三十四）より速く取る。
+           遅いと、組が走り続けるあいだ兵が置いて行かれ、百八十歩も遅れた。 */
+        else if (d > 0.02) { mv = Math.min(d, (q.type === "kiba" ? 130 : 90) * dt);
           s.sx[n] += vx / d * mv; s.sy[n] += vy / d * mv;
           /* 進む向き。均しておかないと、持ち場の細かな直しで体がくるくる回る */
           s.進x[n] += (vx / d - s.進x[n]) * Math.min(1, dt * 3);
@@ -769,6 +781,13 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
            滑っていった――遊ぶ側の目には「ヌメっと動く」と映る。
            足は踏んだ地べたのぶんだけ出るのが道理である。歩幅で回せば、
            どんな速さでも足が地に着き、滑りは消える。 */
+        /* 歩幅に積むのは、踏んだ地べたのぶん――そのまま mv である。
+
+           いちど「組の足（騎馬五十六・徒三十四）より速いぶんは積まない」と
+           蓋をしてみたが、これは逆であった。置いて行かれた兵が駆けて追いつく
+           とき、足はその速さで回らねばならない。蓋をすると足が地面より遅く
+           回り、かえって滑って見える（盤の刻を細かく取ったとき、歩幅と
+           道のりの見合いが一.〇〇から〇.四五まで落ちた）。 */
         s.歩距[n] += mv;
         s.速[n] += ((dt > 0 ? mv / dt : 0) - s.速[n]) * Math.min(1, dt * 6);
       }
@@ -781,6 +800,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
 
 /* 試験のための覗き窓。見た目の状態（歩いた距離・足の速さ）を読むだけ。 */
 export function 組の見た目(q) { return 組態.get(q) || null; }
+export function 盤の見た目(b) { return 盤態.get(b) || null; }
 
 const 向き八 = (vx, vy) => { const a = Math.atan2(vy, vx);
   return ((Math.round(a / (Math.PI / 8)) % 16) + 16) % 16; };

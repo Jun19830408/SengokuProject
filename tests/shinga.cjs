@@ -80,15 +80,20 @@ console.log('\n── 四　兵の動きは歩幅で回る');
     const 組 = b.corps.find((c) => c.side === 'P').squads[0];
     for (let i = 0; i < 2; i++) { H.stepBattle(b, 刻み); H.新絵状態を進める(b, 0, null); }
     const v0 = H.組の見た目(組);
-    const 起 = { x: 組.x, y: 組.y }, 初距 = v0.歩距[0];
+    const 初距 = v0.歩距[0];
     let 速最 = 0;
+    /* 道のりは「踏んだ地べた」――刻ごとに積む。起点と終点の隔たりで測ると、
+       曲がった道を直線で数えることになり、歩幅のほうが多く出て当然である
+       （実測で二.三七倍。足が滑っているのではない）。 */
+    let 道のり = 0, 前 = { x: 組.x, y: 組.y };
     for (let k = 0; k < 回; k++) {
       H.stepBattle(b, 刻み); H.新絵状態を進める(b, 0, null);
+      道のり += Math.hypot(組.x - 前.x, 組.y - 前.y);
+      前 = { x: 組.x, y: 組.y };
       const v = H.組の見た目(組);
       if (v.速[0] > 速最) 速最 = v.速[0];
     }
     const v = H.組の見た目(組);
-    const 道のり = Math.hypot(組.x - 起.x, 組.y - 起.y);
     return { 歩幅: v.歩距[0] - 初距, 道のり, 速: 速最,
       見合: (v.歩距[0] - 初距) / Math.max(1, 道のり),
       隔: Math.hypot(組.x - v.sx[0], 組.y - v.sy[0]) };

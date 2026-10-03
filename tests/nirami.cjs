@@ -35,8 +35,43 @@ Math.random = function () { 種 |= 0; 種 = (種 + 0x6D2B79F5) | 0;
 const 将 = (i, nm) => ({ id: 'g' + i, name: nm, lead: 80, valor: 76, wit: 70, gov: 60,
   retinue: 0, retTrain: 70, unity: 60, arms: { yari: 55, yumi: 20, teppo: 15, kiba: 10 } });
 
-console.log('■ 一、触れ合う隔たりは、槍の間合いより狭い');
-確('上限は十八歩（槍は二十二歩で合う）', H.触れ上限 <= 20, `${H.触れ上限}歩`);
+console.log('■ 一、正面から当たれば、前列が槍の間合いに入る');
+/* 隊と隊が止まる隔たりは、席の差し渡しで決まる（engine の 触れる隔たり）。
+   定数を見ても意味がないので、実際に正面から当てて、止まったところで
+   組と組が噛み間（三十四歩）の内に入っているかを測る。
+   広すぎれば睨み合いのまま日が暮れ、狭すぎれば塊が互いの只中へ滑り込む。 */
+{
+  H.setFieldSeed('n', 'i'); H.setBattleMap(null); H.layoutField(4000, 2);
+  const W = H.FIELD.w, Hh = H.FIELD.h;
+  const 甲 = H.makeCorps('P', 将(8, '甲'), 0, 2000, 78, 78, W / 2, Hh * 0.5 + 220, -Math.PI / 2, '#2F5D8C');
+  const 乙 = H.makeCorps('E', 将(9, '乙'), 0, 2000, 78, 78, W / 2, Hh * 0.5 - 220, Math.PI / 2, '#B0483C');
+  for (const c of [甲, 乙]) H.placeSquads(c, true);
+  const b = H.createBattle([甲], [乙], 'P');
+  b.mode = 'field'; b.phase = 'fight'; b.dusk = 1200; b.face = 'S'; b.myFar = false;
+  b.aiClock = 1e9;
+  for (const c of b.corps) c.auto = false;
+  H.issueOrder(b, 甲, { order: '接戦', tx: 乙.x, ty: 乙.y }, { 即: true });
+  H.issueOrder(b, 乙, { order: '守備', tx: 乙.x, ty: 乙.y }, { 即: true });
+  let 最短 = 1e9, 噛み延べ = 0;
+  for (let k = 0; k < 200; k++) {
+    H.stepBattle(b, 0.2);
+    噛み延べ += 甲.squads.filter((q) => q.engaged).length;
+    if (k < 60) continue;                       // 寄せているあいだは測らない
+    for (const p of 甲.squads) {
+      if (p.men <= 0) continue;
+      for (const q of 乙.squads) {
+        if (q.men <= 0) continue;
+        const d = Math.hypot(p.x - q.x, p.y - q.y);
+        if (d < 最短) 最短 = d;
+      }
+    }
+  }
+  確('止まったところで、組と組が噛み間の内に入る', 最短 < H.噛み間,
+    `組どうしの最短 ${Math.round(最短)}歩（噛み間 ${H.噛み間}歩）`);
+  確('正面から当たれば槍が合う', 噛み延べ > 400, `噛み合いの延べ ${噛み延べ}`);
+  確('塊は互いの只中へ入り込まない', Math.hypot(甲.x - 乙.x, 甲.y - 乙.y) > 8,
+    `隊の中どころの隔たり ${Math.round(Math.hypot(甲.x - 乙.x, 甲.y - 乙.y))}歩`);
+}
 
 console.log('■ 二、退きの印だけが残った隊は、その場で繕われる');
 {

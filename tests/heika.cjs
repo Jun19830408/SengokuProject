@@ -166,7 +166,14 @@ console.log('■ 五、接戦では騎馬が翼で控える');
   凍る(b);
   下知(b, 味, { order: '接戦', tx: 敵.x, ty: 敵.y });
   下知(b, 敵, { order: '接戦', tx: 味.x, ty: 味.y });
-  for (let k = 0; k < 250; k++) H.stepBattle(b, 0.2);
+  /* 測るのは、槍の前列が立っているあいだ（二十秒）である。
+
+     もとは五十秒まで回して測っていた。塊の触れ合いを席の差し渡しで測るように
+     してから戦の運びが速くなり、五十秒では味方の槍組が十四から四まで減って
+     いた。前列を使い切ったあとで「騎馬が控えているか」を問うても仕方がない
+     ――控える先の前列が無いのだから、残った騎馬が穂先を合わせるのは当然
+     である（tests/sokumen.cjs の作り替えを参照）。 */
+  for (let k = 0; k < 100; k++) H.stepBattle(b, 0.2);
   const 槍噛 = 味.squads.filter((q) => q.men > 0 && q.type === 'yari' && q.engaged).length;
   const 馬ら = 味.squads.filter((q) => q.men > 0 && q.type === 'kiba');
   const 馬噛 = 馬ら.filter((q) => q.engaged).length;
