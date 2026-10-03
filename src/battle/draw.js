@@ -4,7 +4,7 @@ import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
-import { 新絵か, 新絵の兵描き, 個人で描くか } from "./shinga.js";
+import { 新絵か, 新絵の兵描き, 個人で描くか, 近景の肌理 } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
 
@@ -1811,6 +1811,9 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   ctx.drawImage(terrainCanvas, 0, 0, FIELD.w, FIELD.h);
   // 戦の痕。地の上に重ねる（画布は地の半分の寸法なので、引き伸ばして貼る）
   if (跡Canvas) ctx.drawImage(跡Canvas, 0, 0, FIELD.w, FIELD.h);
+  /* 近景の肌理（GDD 8.11）。寄ったときだけ、地の肌理を画面の縮尺で刻む。
+     焼いた地を引き伸ばすと滲むので、兵と同じ寸法の草と石を上から置く。 */
+  if (個人絵) 近景の肌理(ctx, cam, W, H, dpr);
 
   // 布陣段階は自陣の範囲を示す（筋書きの一戦は布陣を動かせないので出さない）
   if (b.phase === "deploy" && !b.筋書き) {

@@ -19999,8 +19999,8 @@ function \u62BC\u3057\u5206\u3051\u308B(\u5834, \u9593 = \u968A\u306E\u9593\u540
 function \u9663\u7ACB\u3066\u3092\u6577\u304F(\u9663\u7ACB\u3066, n) {
   const \u672C\u9663\u3089 = \u9663\u7ACB\u3066.filter((b) => b.\u5F79 === "\u672C\u9663");
   const \u524D\u3089 = \u9663\u7ACB\u3066.filter((b) => b.\u5F79 !== "\u672C\u9663");
-  const \u672C\u9663\u306E\u6570 = \u672C\u9663\u3089.length ? Math.max(1, Math.min(n <= 8 ? 1 : 2, n)) : 0;
-  const \u524D\u306E\u6570 = Math.max(0, n - \u672C\u9663\u306E\u6570);
+  const \u672C\u9663\u306E\u65702 = \u672C\u9663\u3089.length ? Math.max(1, Math.min(n <= 8 ? 1 : 2, n)) : 0;
+  const \u524D\u306E\u6570 = Math.max(0, n - \u672C\u9663\u306E\u65702);
   const \u51FA = [];
   for (const b of \u524D\u3089) {
     if (\u51FA.length >= \u524D\u306E\u6570) break;
@@ -25273,6 +25273,13 @@ function \u59FF\u516B(g, x, y, s2, dir, fr, \u578B, K2, \u4E71) {
   const \u53CD = d16 > 4 && d16 < 12;
   const \u53F3 = \u53CD ? (8 - d16 + 16) % 16 : d16;
   const archetype = \u53F3 <= 1 ? 0 : \u53F3 <= 3 ? 1 : \u53F3 <= 5 ? 2 : \u53F3 <= 7 ? 1 : \u53F3 <= 9 ? 2 : \u53F3 <= 11 ? 7 : \u53F3 <= 13 ? 7 : \u53F3 <= 15 ? 6 : 0;
+  g.fillStyle = "#1C1E14";
+  const \u5F71a = g.globalAlpha;
+  g.globalAlpha = \u5F71a * 0.26;
+  g.beginPath();
+  g.ellipse(x, y + 0.18 * s2, (\u578B === "kiba" ? 1.9 : 1.15) * s2, (\u578B === "kiba" ? 0.62 : 0.42) * s2, 0, 0, 7);
+  g.fill();
+  g.globalAlpha = \u5F71a;
   g.save();
   g.translate(x, y);
   if (\u53CD) g.scale(-1, 1);
@@ -26184,9 +26191,10 @@ var \u6301\u5834 = [];
   \u7A2E = 13;
   for (let i = 0; i < 50; i++) {
     const col = i % 10, row = i / 10 | 0;
+    const \u5F13 = Math.cos((col - 4.5) / 4.5 * (Math.PI / 2)) * 0.95;
     \u6301\u5834.push([
-      (col - 4.5) * 1.9 + row % 2 * 0.8 + (R() - 0.5) * 0.8,
-      -8 + row * 2.6 + (R() - 0.5) * 0.8,
+      (col - 4.5) * 1.9 + row % 2 * 0.8 + (R() - 0.5) * 1.6,
+      -8 + row * 2.6 - \u5F13 + (R() - 0.5) * 1.5,
       row
     ]);
   }
@@ -26196,9 +26204,10 @@ var \u99AC\u6301\u5834 = [];
   \u7A2E = 29;
   for (let i = 0; i < 50; i++) {
     const col = i % 10, row = i / 10 | 0;
+    const \u5F13 = Math.cos((col - 4.5) / 4.5 * (Math.PI / 2)) * 1.3;
     \u99AC\u6301\u5834.push([
-      (col - 4.5) * 3.1 + row % 2 * 1.2 + (R() - 0.5) * 1.2,
-      -8 + row * 3.6 + (R() - 0.5) * 1.2,
+      (col - 4.5) * 3.1 + row % 2 * 1.2 + (R() - 0.5) * 2.2,
+      -8 + row * 3.6 - \u5F13 + (R() - 0.5) * 2,
       row
     ]);
   }
@@ -26225,7 +26234,7 @@ var \u7D44\u306E\u614B = (q) => {
       dy: q.y,
       sx: new Float32Array(50),
       sy: new Float32Array(50),
-      \u9663: null,
+      \u501F\u308A: 0,
       \u524Dqx: q.x,
       \u524Dqy: q.y,
       \u751F: new Uint8Array(50),
@@ -26251,6 +26260,154 @@ var \u76E4\u306E\u614B = (b) => {
   }
   return s2;
 };
+var \u808C\u7406\u306E\u5BF8 = 512;
+var \u808C\u7406\u672D = void 0;
+function \u808C\u7406\u306E\u578B\u7D19() {
+  if (\u808C\u7406\u672D !== void 0) return \u808C\u7406\u672D;
+  if (typeof document === "undefined") {
+    \u808C\u7406\u672D = null;
+    return null;
+  }
+  const n = document.createElement("canvas");
+  n.width = \u808C\u7406\u306E\u5BF8;
+  n.height = \u808C\u7406\u306E\u5BF8;
+  const g = n.getContext("2d");
+  \u7A2E = 4649;
+  g.lineWidth = 1;
+  g.lineCap = "butt";
+  const \u8272 = ["rgba(86,96,54,0.46)", "rgba(126,134,80,0.40)", "rgba(198,200,142,0.34)"];
+  for (let k = 0; k < 3; k++) {
+    g.strokeStyle = \u8272[k];
+    g.beginPath();
+    for (let i = 0; i < 2600; i++) {
+      const x = R() * \u808C\u7406\u306E\u5BF8, y = R() * \u808C\u7406\u306E\u5BF8;
+      const a = -1.45 + (R() - 0.5) * 0.7, L = 2 + R() * 3.4;
+      g.moveTo(x, y);
+      g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L);
+    }
+    g.stroke();
+  }
+  g.fillStyle = "rgba(118,110,88,0.34)";
+  g.beginPath();
+  for (let i = 0; i < 900; i++) {
+    const x = R() * \u808C\u7406\u306E\u5BF8, y = R() * \u808C\u7406\u306E\u5BF8;
+    g.rect(x, y, 1 + (R() < 0.3 ? 1 : 0), 1);
+  }
+  g.fill();
+  \u808C\u7406\u672D = n;
+  return n;
+}
+function \u8FD1\u666F\u306E\u808C\u7406(ctx, cam, W2, H2, dpr) {
+  const s2 = cam.s;
+  if (s2 < \u500B\u4EBA\u95BE) return;
+  const \u6FC3 = Math.min(1, (s2 - \u500B\u4EBA\u95BE) / 1.4);
+  const n = \u808C\u7406\u306E\u578B\u7D19();
+  if (!n) return;
+  const sx = W2 / 2 - cam.x * s2, sy = H2 / 2 - cam.y * s2;
+  const \u5DE6 = Math.max(0, sx), \u4E0A = Math.max(0, sy);
+  const \u53F3 = Math.min(W2, sx + FIELD.w * s2), \u4E0B = Math.min(H2, sy + FIELD.h * s2);
+  if (\u53F3 <= \u5DE6 || \u4E0B <= \u4E0A) return;
+  ctx.save();
+  ctx.setTransform(dpr || 1, 0, 0, dpr || 1, 0, 0);
+  ctx.beginPath();
+  ctx.rect(\u5DE6, \u4E0A, \u53F3 - \u5DE6, \u4E0B - \u4E0A);
+  ctx.clip();
+  ctx.globalAlpha = \u6FC3;
+  const T = \u808C\u7406\u306E\u5BF8;
+  const \u59CBx = \u5DE6 - ((\u5DE6 - sx) % T + T) % T;
+  const \u59CBy = \u4E0A - ((\u4E0A - sy) % T + T) % T;
+  for (let x = \u59CBx; x < \u53F3; x += T) for (let y = \u59CBy; y < \u4E0B; y += T) ctx.drawImage(n, x, y);
+  ctx.restore();
+}
+var \u672C\u9663\u614B = /* @__PURE__ */ new WeakMap();
+var \u672C\u9663\u306E\u6570 = 25;
+var \u99AC\u5EFB\u306E\u5E2D\u9806 = (() => {
+  const a = [];
+  for (let k = 0; k < \u672C\u9663\u306E\u6570; k++) {
+    if (k === 12 || k === 13) continue;
+    a.push(k);
+  }
+  const d = (k) => Math.hypot(k % 5 - 2, (k / 5 | 0) - 2);
+  a.sort((x, z) => d(x) - d(z) || x - z);
+  return a;
+})();
+var \u672C\u9663\u306E\u614B = (c) => {
+  let t = \u672C\u9663\u614B.get(c);
+  if (!t) {
+    t = {
+      x: new Float32Array(\u672C\u9663\u306E\u6570),
+      y: new Float32Array(\u672C\u9663\u306E\u6570),
+      \u6B69\u8DDD: new Float32Array(\u672C\u9663\u306E\u6570),
+      \u901F: new Float32Array(\u672C\u9663\u306E\u6570),
+      \u9032x: new Float32Array(\u672C\u9663\u306E\u6570),
+      \u9032y: new Float32Array(\u672C\u9663\u306E\u6570),
+      \u6570: 0,
+      \u521D: false,
+      \u524Dx: 0,
+      \u524Dy: 0
+    };
+    \u672C\u9663\u614B.set(c, t);
+  }
+  return t;
+};
+function \u672C\u9663\u8846\u3092\u9032\u3081\u308B(c, b, dt, \u672Cx, \u672Cy) {
+  const t = \u672C\u9663\u306E\u614B(c);
+  const \u5175 = c.squads.reduce((a, q) => a + (q.men > 0 ? q.men : 0), 0);
+  const \u5EFB = Math.max(10, Math.min(23, Math.round(\u5175 / 260)));
+  t.\u6570 = 2 + \u5EFB;
+  for (const q of c.squads) \u7D44\u306E\u614B(q).\u501F\u308A = 0;
+  {
+    let \u6B8B = \u5EFB;
+    const \u8FD1\u3044 = c.squads.filter((q) => q.men > 0).sort((a, z) => Math.hypot(a.x - \u672Cx, a.y - \u672Cy) - Math.hypot(z.x - \u672Cx, z.y - \u672Cy));
+    for (const q of \u8FD1\u3044) {
+      if (\u6B8B <= 0) break;
+      const n = Math.min(6, \u6B8B, Math.max(0, Math.min(50, Math.round(q.men)) - 4));
+      \u7D44\u306E\u614B(q).\u501F\u308A = n;
+      \u6B8B -= n;
+    }
+  }
+  if (t.\u521D) {
+    const jx = \u672Cx - t.\u524Dx, jy = \u672Cy - t.\u524Dy;
+    if (Math.hypot(jx, jy) > 56 * dt * 1.6 + 1.5) {
+      for (let n = 0; n < \u672C\u9663\u306E\u6570; n++) {
+        t.x[n] += jx;
+        t.y[n] += jy;
+      }
+    }
+  }
+  t.\u524Dx = \u672Cx;
+  t.\u524Dy = \u672Cy;
+  const \u5411 = c.facing || 0;
+  const lx = Math.cos(\u5411 + Math.PI / 2), ly = Math.sin(\u5411 + Math.PI / 2);
+  const bx = -Math.cos(\u5411), by = -Math.sin(\u5411);
+  for (let n = 0; n < t.\u6570; n++) {
+    const \u5E2D = n === 0 ? 12 : n === 1 ? 13 : \u99AC\u5EFB\u306E\u5E2D\u9806[Math.min(\u99AC\u5EFB\u306E\u5E2D\u9806.length - 1, n - 2)];
+    const \u5217 = \u5E2D % 5, \u884C = \u5E2D / 5 | 0;
+    const tx = \u672Cx + lx * (\u5217 - 2) * 4.6 + bx * (\u884C - 2) * 4.2;
+    const ty = \u672Cy + ly * (\u5217 - 2) * 4.6 + by * (\u884C - 2) * 4.2;
+    if (!t.\u521D) {
+      t.x[n] = tx;
+      t.y[n] = ty;
+      t.\u901F[n] = 0;
+      continue;
+    }
+    const vx = tx - t.x[n], vy = ty - t.y[n], d = Math.hypot(vx, vy);
+    let mv = 0;
+    if (d > 100) {
+      t.x[n] = tx;
+      t.y[n] = ty;
+    } else if (d > 0.02) {
+      mv = Math.min(d, 130 * dt);
+      t.x[n] += vx / d * mv;
+      t.y[n] += vy / d * mv;
+      t.\u9032x[n] += (vx / d - t.\u9032x[n]) * Math.min(1, dt * 3);
+      t.\u9032y[n] += (vy / d - t.\u9032y[n]) * Math.min(1, dt * 3);
+    }
+    t.\u6B69\u8DDD[n] += mv;
+    t.\u901F[n] += ((dt > 0 ? mv / dt : 0) - t.\u901F[n]) * Math.min(1, dt * 6);
+  }
+  t.\u521D = true;
+}
 function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
   const \u614B = \u76E4\u306E\u614B(b);
   const dt = Math.max(0, Math.min(0.25, b.t - \u614B.\u524Dt));
@@ -26260,29 +26417,8 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
     if (c.dead || c.destroyed) continue;
     if (viewRect && (c.x < viewRect.x0 - 160 || c.x > viewRect.x1 + 160 || c.y < viewRect.y0 - 160 || c.y > viewRect.y1 + 160)) continue;
     const \u672Cx = c.gx == null ? c.x : c.gx, \u672Cy = c.gy == null ? c.y : c.gy;
-    const \u9A0E\u3089 = c.squads.filter((q) => q.men > 0 && q.type === "kiba" && !q.engaged && Math.hypot(q.x - \u672Cx, q.y - \u672Cy) < 70).sort((a, z) => Math.hypot(a.x - \u672Cx, a.y - \u672Cy) - Math.hypot(z.x - \u672Cx, z.y - \u672Cy));
-    const \u99AC\u5EFB\u3089 = [];
-    let \u9A0E\u6570 = 0;
-    for (const q of \u9A0E\u3089) {
-      if (\u9A0E\u6570 >= 48) break;
-      \u99AC\u5EFB\u3089.push(q);
-      \u9A0E\u6570 += Math.min(50, Math.round(q.men));
-    }
-    c.\u99AC\u5EFB = \u99AC\u5EFB\u3089.length ? \u99AC\u5EFB\u3089[0] : null;
-    const \u9663x = \u672Cx, \u9663y = \u672Cy;
-    c.\u672C\u9663 = { x: \u9663x, y: \u9663y };
-    {
-      let \u57FA = 0;
-      for (const q of c.squads) {
-        const st = \u7D44\u306E\u614B(q);
-        if (\u99AC\u5EFB\u3089.indexOf(q) < 0) {
-          st.\u9663 = null;
-          continue;
-        }
-        st.\u9663 = { x: \u9663x, y: \u9663y, \u57FA, \u5411: c.facing || 0 };
-        \u57FA += Math.min(50, Math.round(q.men));
-      }
-    }
+    c.\u672C\u9663 = { x: \u672Cx, y: \u672Cy };
+    \u672C\u9663\u8846\u3092\u9032\u3081\u308B(c, b, dt, \u672Cx, \u672Cy);
     for (const q of c.squads) {
       const s2 = \u7D44\u306E\u614B(q);
       if ((q.cool || 0) > s2.prevCool + 0.4) s2.\u6483\u523B = b.t;
@@ -26337,31 +26473,10 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
       const \u524D = q.engaged && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
       const \u523B\u307F = (\u524D + 2.8) / 4;
       const \u62BC = q.engaged ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
-      const \u9663 = s2.\u9663;
       for (let n = 0; n < alive; n++) {
-        let tx, ty;
-        if (\u9663) {
-          let \u5E2D = \u9663.\u57FA + n;
-          if (\u5E2D >= 24) \u5E2D += 2;
-          if (\u5E2D > 48) \u5E2D = 48;
-          const \u5217 = \u5E2D % 7, \u884C = \u5E2D / 7 | 0;
-          const \u9593x = 6.4, \u9593y = 5.6;
-          const lx2 = Math.cos(\u9663.\u5411 + Math.PI / 2), ly2 = Math.sin(\u9663.\u5411 + Math.PI / 2);
-          const bx2 = -Math.cos(\u9663.\u5411), by2 = -Math.sin(\u9663.\u5411);
-          const dx2 = (\u5217 - 3) * \u9593x, dy2 = (\u884C - 3) * \u9593y;
-          tx = \u9663.x + lx2 * dx2 + bx2 * dy2;
-          ty = \u9663.y + ly2 * dx2 + by2 * dy2;
-          const ex2 = tx - q.x, ey2 = ty - q.y, ed2 = Math.hypot(ex2, ey2);
-          if (ed2 > 60) {
-            tx = q.x + ex2 / ed2 * 60;
-            ty = q.y + ey2 / ed2 * 60;
-          }
-        } else {
-          const o = \u5834[n];
-          const \u6DF1 = q.engaged ? -\u524D + o[2] * \u523B\u307F + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))) : o[1];
-          tx = s2.dx + lx * o[0] + bx * (\u6DF1 + \u62BC);
-          ty = s2.dy + ly * o[0] + by * (\u6DF1 + \u62BC);
-        }
+        const o = \u5834[n];
+        const \u6DF1 = q.engaged ? -\u524D + o[2] * \u523B\u307F + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))) : o[1];
+        const tx = s2.dx + lx * o[0] + bx * (\u6DF1 + \u62BC), ty = s2.dy + ly * o[0] + by * (\u6DF1 + \u62BC);
         if (!s2.\u751F[n] || !s2.\u521D) {
           s2.sx[n] = tx;
           s2.sy[n] = ty;
@@ -27028,7 +27143,7 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
       if (q.men <= 0) continue;
       const s2 = \u7D44\u614B.get(q);
       if (!s2 || !s2.\u521D) continue;
-      const alive = Math.max(0, Math.min(50, Math.round(q.men)));
+      const alive = Math.max(0, Math.min(50, Math.round(q.men)) - (s2.\u501F\u308A || 0));
       const th = s2.\u5411;
       const dir\u57FA = \u5411\u304D\u516B(Math.cos(th), Math.sin(th));
       const \u6483 = (b.t - s2.\u6483\u523B) / 1.5;
@@ -27051,6 +27166,7 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
           if (Math.hypot(s2.\u9032x[n], s2.\u9032y[n]) > 0.3) dir = \u5411\u304D\u516B(s2.\u9032x[n], s2.\u9032y[n]);
           fr = \u9AA8\u5EA6 > 0 ? 1 + w * 2 : 1 + (w < 0.5 ? 0 : 1);
         }
+        const \u4E08 = 0.95 + ((q.seed || 0) * 31 + n * 7) % 12 / 100;
         \u4E26.push({
           wx,
           wy,
@@ -27059,16 +27175,9 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
           \u578B: q.type,
           dir: Math.round(dir),
           fr: Math.round(fr),
+          \u4E08,
           \u76F4: \u9AA8\u5EA6 > 0 ? { dir, fr, \u578B: q.type, \u5074, \u4E71: ((q.seed || 0) * 31 + n * 7) % 97 / 97 } : null
         });
-      }
-      if (s2.\u9663) {
-        for (let n = 0; n < alive; n++) {
-          if (!s2.\u751F[n]) continue;
-          const wx = s2.sx[n], wy = s2.sy[n];
-          if (!\u898B\u3048\u308B(wx, wy)) continue;
-          \u4E26.push({ wx, wy, \u5730y: wy + 0.05, \u6307: \u5074 });
-        }
       }
       if (cam.s > 2.2) {
         const lx = Math.cos(th + Math.PI / 2), ly = Math.sin(th + Math.PI / 2);
@@ -27083,9 +27192,38 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
   }
   for (const c of \u968A\u3089) {
     const \u5074 = c.\u65E5\u548C\u898B ? "Y" : c.side === "P" ? "P" : "E";
-    const \u672C = c.\u672C\u9663 || { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
-    if (!\u898B\u3048\u308B(\u672C.x, \u672C.y)) continue;
-    \u4E26.push({ wx: \u672C.x, wy: \u672C.y, \u5730y: \u672C.y + 0.1, \u5C06: { c, \u5074 } });
+    const t = \u672C\u9663\u614B.get(c);
+    if (!t || !t.\u521D) continue;
+    for (let n = 0; n < t.\u6570; n++) {
+      const wx = t.x[n], wy = t.y[n];
+      if (!\u898B\u3048\u308B(wx, wy)) continue;
+      if (n === 0) {
+        \u4E26.push({ wx, wy, \u5730y: wy + 0.1, \u5C06: { c, \u5074 } });
+        continue;
+      }
+      if (n === 1) {
+        \u4E26.push({ wx, wy, \u5730y: wy + 0.08, \u65D7\u6301: { c, \u5074 } });
+        continue;
+      }
+      const \u9032 = Math.hypot(t.\u9032x[n], t.\u9032y[n]) > 0.3 ? \u5411\u304D\u516B(t.\u9032x[n], t.\u9032y[n]) : \u5411\u304D\u516B(Math.cos(c.facing || 0), Math.sin(c.facing || 0));
+      let fr = 0;
+      if (t.\u901F[n] > 2.5) {
+        const w = t.\u6B69\u8DDD[n] / 14 % 1;
+        fr = 1 + (w < 0.5 ? 0 : 1);
+      }
+      \u4E26.push({
+        wx,
+        wy,
+        \u5730y: wy,
+        \u5074,
+        \u578B: "kiba",
+        dir: \u9032,
+        fr,
+        \u76F4: null,
+        \u4E08: 0.96 + n * 13 % 10 / 100
+      });
+      \u4E26.push({ wx, wy, \u5730y: wy + 0.05, \u6307: \u5074 });
+    }
   }
   \u4E26.sort((a, z) => a.\u5730y - z.\u5730y);
   for (const p of \u4E26) {
@@ -27125,24 +27263,27 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
         n2.width * \u500D2,
         n2.height * \u500D2
       );
-      const \u5411 = c2.facing || 0;
-      const lx2 = Math.cos(\u5411 + Math.PI / 2), ly2 = Math.sin(\u5411 + Math.PI / 2);
-      const n3 = \u65D7\u6301\u672D(\u50742, \u99AC\u5370\u306E\u5F62[\u683C]);
+      continue;
+    }
+    if (p.\u65D7\u6301) {
+      const \u683C = \u5C06\u306E\u683C(b, p.\u65D7\u6301.c);
+      const n3 = \u65D7\u6301\u672D(p.\u65D7\u6301.\u5074, \u99AC\u5370\u306E\u5F62[\u683C]);
       const \u500D3 = 0.062 * (104 / 190) * 1.18 * (11 / 19);
       if (n3) ctx.drawImage(
         n3,
-        p.wx + lx2 * 6.4 - n3.width / 2 * \u500D3,
-        y + ly2 * 6.4 - (n3.height - 12) * \u500D3,
+        p.wx - n3.width / 2 * \u500D3,
+        y - (n3.height - 12) * \u500D3,
         n3.width * \u500D3,
         n3.height * \u500D3
       );
       continue;
     }
+    const \u4E08 = p.\u4E08 || 1;
     if (p.\u76F4) \u59FF\u516B(
       ctx,
       p.wx,
       y,
-      (p.\u76F4.\u578B === "kiba" ? 6.2 : 6.4) * 0.062,
+      (p.\u76F4.\u578B === "kiba" ? 6.2 : 6.4) * 0.062 * \u4E08,
       p.\u76F4.dir,
       p.\u76F4.fr,
       p.\u76F4.\u578B,
@@ -27151,12 +27292,13 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
     );
     else {
       const n = \u672D\u53D6\u308A(p.\u5074, p.\u578B, p.dir, p.fr);
+      const k2 = 0.062 * \u4E08;
       if (n) ctx.drawImage(
         n,
-        p.wx - n.width / 2 * 0.062,
-        y - (n.height - 8) * 0.062,
-        n.width * 0.062,
-        n.height * 0.062
+        p.wx - n.width / 2 * k2,
+        y - (n.height - 8) * k2,
+        n.width * k2,
+        n.height * k2
       );
     }
   }
@@ -28990,6 +29132,7 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
   ctx.scale(cam.s, cam.s);
   ctx.drawImage(terrainCanvas, 0, 0, FIELD.w, FIELD.h);
   if (\u8DE1Canvas) ctx.drawImage(\u8DE1Canvas, 0, 0, FIELD.w, FIELD.h);
+  if (\u500B\u4EBA\u7D75) \u8FD1\u666F\u306E\u808C\u7406(ctx, cam, W2, H2, dpr);
   if (b.phase === "deploy" && !b.\u7B4B\u66F8\u304D) {
     const z = ownZone(b);
     ctx.fillStyle = "rgba(47,93,140,0.07)";

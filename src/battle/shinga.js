@@ -92,6 +92,15 @@ function 姿八(g,x,y,s,dir,fr,型,K,乱){
   const 右 = 反 ? (8 - d16 + 16) % 16 : d16;          // 0=東 … 4=南 12=北
   const archetype = 右 <= 1 ? 0 : 右 <= 3 ? 1 : 右 <= 5 ? 2 : 右 <= 7 ? 1 : 右 <= 9 ? 2
     : 右 <= 11 ? 7 : 右 <= 13 ? 7 : 右 <= 15 ? 6 : 0;
+  /* 接地影（GDD 8.11）。足元に小さな暗い楕円を落とす。
+
+     これが無いと、兵は地面の上に浮いて見える――紙を貼ったように見えた元の
+     一つである。型紙に焼き込むので、一コマあたりの費えは増えない。 */
+  g.fillStyle = '#1C1E14';
+  const 影a = g.globalAlpha; g.globalAlpha = 影a * 0.26;
+  g.beginPath();
+  g.ellipse(x, y + 0.18 * s, (型 === 'kiba' ? 1.9 : 1.15) * s, (型 === 'kiba' ? 0.62 : 0.42) * s, 0, 0, 7);
+  g.fill(); g.globalAlpha = 影a;
   g.save(); g.translate(x,y); if(反) g.scale(-1,1);
   const j=乱||0;
   const 構=fr>=3;
@@ -588,16 +597,23 @@ export function 新絵の野(g) {
 
 
 /* ---- 組の中の持ち場（戦列の形：前列が組の前縁、後ろへ五列） ---- */
+/* 散らばりは、定規で引いた格子に見えぬ程度に広く取る（GDD 8.11）。
+
+   人の列は真っ直ぐには並ばない。端は遅れ、中ほどは押し出される。
+   散らばりを ±〇.四歩から ±〇.八歩へ広げ、列そのものも弓なりに撓ませる。
+   それでも前列は前列のまま（row は変えない）なので、戦列の読みは崩れない。 */
 const 持場 = [];
 { 種 = 13;
   for (let i = 0; i < 50; i++) { const col = i % 10, row = (i / 10) | 0;
-    持場.push([(col - 4.5) * 1.9 + (row % 2) * 0.8 + (R() - 0.5) * 0.8,
-      -8 + row * 2.6 + (R() - 0.5) * 0.8, row]); } }
+    const 弓 = Math.cos(((col - 4.5) / 4.5) * (Math.PI / 2)) * 0.95;   // 中ほどが前へ出る
+    持場.push([(col - 4.5) * 1.9 + (row % 2) * 0.8 + (R() - 0.5) * 1.6,
+      -8 + row * 2.6 - 弓 + (R() - 0.5) * 1.5, row]); } }
 const 馬持場 = [];
 { 種 = 29;
   for (let i = 0; i < 50; i++) { const col = i % 10, row = (i / 10) | 0;
-    馬持場.push([(col - 4.5) * 3.1 + (row % 2) * 1.2 + (R() - 0.5) * 1.2,
-      -8 + row * 3.6 + (R() - 0.5) * 1.2, row]); } }
+    const 弓 = Math.cos(((col - 4.5) / 4.5) * (Math.PI / 2)) * 1.3;
+    馬持場.push([(col - 4.5) * 3.1 + (row % 2) * 1.2 + (R() - 0.5) * 2.2,
+      -8 + row * 3.6 - 弓 + (R() - 0.5) * 2.0, row]); } }
 
 /* ---- 高さ。丘山の持ち上がり（歩）。寄りの見た目だけに使う ---- */
 const 山高m = (o) => o.高 || Math.min(200, (o.r || 60) * 0.4);
@@ -615,7 +631,7 @@ const 組態 = new WeakMap();
 const 盤態 = new WeakMap();
 const 組の態 = (q) => { let s = 組態.get(q);
   if (!s) { s = { dx: q.x, dy: q.y, sx: new Float32Array(50), sy: new Float32Array(50),
-    陣: null, 前qx: q.x, 前qy: q.y,
+    借り: 0, 前qx: q.x, 前qy: q.y,
     生: new Uint8Array(50), 歩距: new Float32Array(50), 速: new Float32Array(50),
     進x: new Float32Array(50), 進y: new Float32Array(50),
     初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0 };
@@ -624,6 +640,163 @@ const 組の態 = (q) => { let s = 組態.get(q);
 const 盤の態 = (b) => { let s = 盤態.get(b);
   if (!s) { s = { 倒れ: [], 前t: b.t, 飛び数: 0 }; 盤態.set(b, s); }
   return s; };
+
+/* ---- 近景の肌理（GDD 8.11）----
+
+   野の地は、盤いっぱいの一枚に焼いて拡大して映している。寄り七倍で見ると、
+   草の一筋は七倍に伸びて滲み、地面はのっぺりした色面になる。兵だけが輪郭の
+   はっきりした絵なので、平らな下敷きに紙を貼ったように見えた――遊ぶ側から
+   「兵がマップの上に貼り付けられているだけに見える」との申し出はこれである。
+
+   そこで、寄ったときだけ、地の肌理を「画面の縮尺で」刻む。草の丈も石の粒も
+   画面の上で同じ大きさに保つので、寄るほど細かくなる。兵と同じ寸法の肌理が
+   足元にあれば、兵は地面の中に立って見える。
+
+   貼り方は型紙である。はじめは一本ずつ筆で引いたが、一コマに七千本では絵が
+   重くなった（撮りの実測で三倍遅くなった）。細かい粒だけの型紙を一枚焼いて
+   敷き詰めれば、貼るのは六枚で済む。型紙は野の原点に合わせて並べるので、
+   画面を動かしても地から浮かない。 */
+const 肌理の寸 = 512;
+let 肌理札 = undefined;
+/* 肌理の型紙を一枚だけ焼く。細かい粒だけで作るので、敷き詰めても継ぎ目が出ない。
+   一本ずつ筆で引いていたころは、一コマに七千本を引いて絵が重くなった
+   （撮りの実測で三倍遅くなった）。型紙なら貼るのは六枚で済む。 */
+function 肌理の型紙() {
+  if (肌理札 !== undefined) return 肌理札;
+  if (typeof document === "undefined") { 肌理札 = null; return null; }
+  const n = document.createElement("canvas");
+  n.width = 肌理の寸; n.height = 肌理の寸;
+  const g = n.getContext("2d");
+  種 = 4649;
+  g.lineWidth = 1; g.lineCap = "butt";
+  const 色 = ["rgba(86,96,54,0.46)", "rgba(126,134,80,0.40)", "rgba(198,200,142,0.34)"];
+  for (let k = 0; k < 3; k++) {
+    g.strokeStyle = 色[k];
+    g.beginPath();
+    for (let i = 0; i < 2600; i++) {
+      const x = R() * 肌理の寸, y = R() * 肌理の寸;
+      const a = -1.45 + (R() - 0.5) * 0.7, L = 2 + R() * 3.4;
+      g.moveTo(x, y); g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L);
+    }
+    g.stroke();
+  }
+  /* 小石と土くれ */
+  g.fillStyle = "rgba(118,110,88,0.34)";
+  g.beginPath();
+  for (let i = 0; i < 900; i++) {
+    const x = R() * 肌理の寸, y = R() * 肌理の寸;
+    g.rect(x, y, 1 + (R() < 0.3 ? 1 : 0), 1);
+  }
+  g.fill();
+  肌理札 = n;
+  return n;
+}
+export function 近景の肌理(ctx, cam, W, H, dpr) {
+  const s = cam.s;
+  /* 一人ずつ描き始める寄り（個人閾）に合わせて出す。別の閾にすると、
+     兵が人型になる寄りと肌理の出る寄りがずれて、地面だけが後から変わる。 */
+  if (s < 個人閾) return;
+  const 濃 = Math.min(1, (s - 個人閾) / 1.4);            // 寄るほど濃く出す
+  const n = 肌理の型紙(); if (!n) return;
+  /* 画面の座標で貼る。こうすれば草の丈は寄りによらず同じ太さに保たれ、
+     盤の原点に合わせて位置を決めるので、画面を動かしても地から浮かない。 */
+  const sx = W / 2 - cam.x * s, sy = H / 2 - cam.y * s;   // 野の原点の画面座標
+  const 左 = Math.max(0, sx), 上 = Math.max(0, sy);
+  const 右 = Math.min(W, sx + FIELD.w * s), 下 = Math.min(H, sy + FIELD.h * s);
+  if (右 <= 左 || 下 <= 上) return;
+  ctx.save();
+  /* 画面の座標へ戻す。画素の倍（dpr）を掛け忘れると、画素の細かい画面では
+     三分の一しか貼られない――携帯はたいてい三倍である。 */
+  ctx.setTransform(dpr || 1, 0, 0, dpr || 1, 0, 0);
+  ctx.beginPath(); ctx.rect(左, 上, 右 - 左, 下 - 上); ctx.clip();
+  ctx.globalAlpha = 濃;
+  const T = 肌理の寸;
+  const 始x = 左 - (((左 - sx) % T) + T) % T;
+  const 始y = 上 - (((上 - sy) % T) + T) % T;
+  for (let x = 始x; x < 右; x += T) for (let y = 始y; y < 下; y += T) ctx.drawImage(n, x, y);
+  ctx.restore();
+}
+
+/* ---- 本陣衆（将・旗持・馬廻）の見た目 ---- */
+const 本陣態 = new WeakMap();
+const 本陣の数 = 25;                       /* 五×五。中が将、その隣が旗持 */
+/* 馬廻の席順。将（十二番）に近いほうから埋める。
+
+   番の若い順に埋めていたころは、馬廻が六騎の小勢だと上の一列だけが埋まり、
+   「将の前に一列が並ぶ」形になって本陣に見えなかった。近い席から埋めれば、
+   何騎であっても将を囲む輪になる。 */
+const 馬廻の席順 = (() => {
+  const a = [];
+  for (let k = 0; k < 本陣の数; k++) {
+    if (k === 12 || k === 13) continue;            // 将と旗持の席
+    a.push(k);
+  }
+  const d = (k) => Math.hypot((k % 5) - 2, ((k / 5) | 0) - 2);
+  a.sort((x, z) => d(x) - d(z) || x - z);
+  return a;
+})();
+const 本陣の態 = (c) => { let t = 本陣態.get(c);
+  if (!t) { t = { x: new Float32Array(本陣の数), y: new Float32Array(本陣の数),
+    歩距: new Float32Array(本陣の数), 速: new Float32Array(本陣の数),
+    進x: new Float32Array(本陣の数), 進y: new Float32Array(本陣の数),
+    数: 0, 初: false, 前x: 0, 前y: 0 };
+    本陣態.set(c, t); }
+  return t; };
+
+/* 本陣衆を進める。塊として本陣に据え、隊と一緒に動く。
+   描くぶんの兵は、本陣に近い組から少しずつ借りて差し引く（絵は盤を偽らない）。 */
+function 本陣衆を進める(c, b, dt, 本x, 本y) {
+  const t = 本陣の態(c);
+  const 兵 = c.squads.reduce((a, q) => a + (q.men > 0 ? q.men : 0), 0);
+  /* 馬廻の数は隊の大きさに見合わせる。小勢に四十騎の馬廻は立たない。 */
+  const 廻 = Math.max(10, Math.min(23, Math.round(兵 / 260)));
+  t.数 = 2 + 廻;
+  /* 借りを割り当て直す。本陣に近い組から、一組につき六人まで。 */
+  for (const q of c.squads) 組の態(q).借り = 0;
+  {
+    let 残 = 廻;
+    const 近い = c.squads.filter((q) => q.men > 0)
+      .sort((a, z) => (Math.hypot(a.x - 本x, a.y - 本y) - Math.hypot(z.x - 本x, z.y - 本y)));
+    for (const q of 近い) {
+      if (残 <= 0) break;
+      const n = Math.min(6, 残, Math.max(0, Math.min(50, Math.round(q.men)) - 4));
+      組の態(q).借り = n; 残 -= n;
+    }
+  }
+  /* 盤が隊を飛ばしたら、塊も同じだけ平行移動する */
+  if (t.初) {
+    const jx = 本x - t.前x, jy = 本y - t.前y;
+    if (Math.hypot(jx, jy) > 56 * dt * 1.6 + 1.5) {
+      for (let n = 0; n < 本陣の数; n++) { t.x[n] += jx; t.y[n] += jy; }
+    }
+  }
+  t.前x = 本x; t.前y = 本y;
+  const 向 = c.facing || 0;
+  const lx = Math.cos(向 + Math.PI / 2), ly = Math.sin(向 + Math.PI / 2);
+  const bx = -Math.cos(向), by = -Math.sin(向);
+  for (let n = 0; n < t.数; n++) {
+    /* 席。五×五の二十五席のうち、十二番が将、十三番が旗持。
+       残りが馬廻で、将に近い席から埋める（馬廻の席順）。 */
+    const 席 = n === 0 ? 12 : n === 1 ? 13 : 馬廻の席順[Math.min(馬廻の席順.length - 1, n - 2)];
+    const 列 = 席 % 5, 行 = (席 / 5) | 0;
+    /* 間合いは詰める。広いと歩兵の列に紛れて、本陣の塊として読めない */
+    const tx = 本x + lx * (列 - 2) * 4.6 + bx * (行 - 2) * 4.2;
+    const ty = 本y + ly * (列 - 2) * 4.6 + by * (行 - 2) * 4.2;
+    if (!t.初) { t.x[n] = tx; t.y[n] = ty; t.速[n] = 0; continue; }
+    const vx = tx - t.x[n], vy = ty - t.y[n], d = Math.hypot(vx, vy);
+    let mv = 0;
+    if (d > 100) { t.x[n] = tx; t.y[n] = ty; }
+    else if (d > 0.02) {
+      mv = Math.min(d, 130 * dt);
+      t.x[n] += vx / d * mv; t.y[n] += vy / d * mv;
+      t.進x[n] += (vx / d - t.進x[n]) * Math.min(1, dt * 3);
+      t.進y[n] += (vy / d - t.進y[n]) * Math.min(1, dt * 3);
+    }
+    t.歩距[n] += mv;
+    t.速[n] += ((dt > 0 ? mv / dt : 0) - t.速[n]) * Math.min(1, dt * 6);
+  }
+  t.初 = true;
+}
 
 /* ---- 見た目の状態を進める。読みは盤から、書きは WeakMap だけ ----
    nowSec は実時間（秒）。viewRect {x0,y0,x1,y1} の外の組は飛ばす（null なら全部）。 */
@@ -642,48 +815,23 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
     if (c.dead || c.destroyed) continue;
     if (viewRect && (c.x < viewRect.x0 - 160 || c.x > viewRect.x1 + 160
       || c.y < viewRect.y0 - 160 || c.y > viewRect.y1 + 160)) continue;
-    /* 馬廻（うままわり・GDD 8.11）。
+    /* 本陣衆――将・旗持・馬廻を一つの塊にする（GDD 8.11）。
 
-       武将がどこにいるかは、盤の上で最も知りたいことの一つである。
-       隊の中どころにいちばん近い騎馬の組――五十騎を、武将を囲む輪に
-       並べ替えて描く。絵のために騎馬を足しはしない。実在の五十騎であり、
-       数も居場所も元のままである（並びだけを輪にする）。 */
-    /* 馬廻（うままわり・GDD 8.11）。
+       かつては「馬廻のための方陣」を別に組み、本陣の近くにいる騎馬の組から
+       兵を連れてきて並べ直していた。これが三つの不具合を生んだ。
 
-       将の居場所は、隊の代表点ではなく本陣（gx, gy＝兵の重心から後ろ二列目）
-       である。名札もそこに出る。馬廻は、本陣の近くにいる騎馬の組を集め、
-       七×七の方陣に組み直して将を囲む。中心が将、その右隣が旗持。
-       絵のために騎馬を足しはしない――実在の騎馬の並びを変えるだけである。
+         一、連れてくる組が本陣から七十歩より遠いと、一騎も来ない（将が独り）
+         二、来ても、組の持ち場と方陣とで引っぱり合うので、隊列から浮く
+         三、馬印は将とは別に置いていたので、離れて漂う
 
-       槍を合わせている騎馬は呼ばない。噛み合っている組を本陣へ呼べば、
-       刃の火花だけが元の場所に残って絵と盤が食い違う。 */
+       いまは、将・旗持・馬廻を一つの塊として本陣に据え、塊ごと動かす。
+       組から兵を連れてくるのではなく、この塊のぶんだけ兵を描き、そのぶんを
+       近くの組から差し引く（下の 借り）。数は増えも減りもしないし、
+       塊は何があっても離れようがない。 */
     const 本x = c.gx == null ? c.x : c.gx, 本y = c.gy == null ? c.y : c.gy;
-    const 騎ら = c.squads
-      .filter((q) => q.men > 0 && q.type === "kiba" && !q.engaged
-        && Math.hypot(q.x - 本x, q.y - 本y) < 70)
-      .sort((a, z) => Math.hypot(a.x - 本x, a.y - 本y) - Math.hypot(z.x - 本x, z.y - 本y));
-    const 馬廻ら = [];
-    let 騎数 = 0;
-    for (const q of 騎ら) {
-      if (騎数 >= 48) break;                      // 方陣は七×七。中心と旗持を除いて四十七
-      馬廻ら.push(q); 騎数 += Math.min(50, Math.round(q.men));
-    }
-    c.馬廻 = 馬廻ら.length ? 馬廻ら[0] : null;      // 絵のための控え（理には使わない）
-    /* 陣の中心は本陣（gx, gy）に据える。
+    c.本陣 = { x: 本x, y: 本y };
+    本陣衆を進める(c, b, dt, 本x, 本y);
 
-       いちど馬廻の重心に取ったところ、この盤では騎馬が本陣より二十一歩ほど
-       前におり、将と馬廻が兵の前へ出てしまった。本陣は「兵の重心から後ろ
-       二列目」であって、旗本が構える所である。将が前へ出る道理はない。
-       馬廻は、そこへ下がって方陣を組む。 */
-    const 陣x = 本x, 陣y = 本y;
-    c.本陣 = { x: 陣x, y: 陣y };
-    { let 基 = 0;
-      for (const q of c.squads) {
-        const st = 組の態(q);
-        if (馬廻ら.indexOf(q) < 0) { st.陣 = null; continue; }
-        st.陣 = { x: 陣x, y: 陣y, 基, 向: c.facing || 0 };
-        基 += Math.min(50, Math.round(q.men));
-      } }
     for (const q of c.squads) {
       const s = 組の態(q);
       /* 発砲の刻。cool が跳ね上がったら、いま放った */
@@ -736,32 +884,12 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       const 前 = q.engaged && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
       const 刻み = (前 + 2.8) / 4;
       const 押 = q.engaged ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
-      const 陣 = s.陣;
       for (let n = 0; n < alive; n++) {
-        let tx, ty;
-        if (陣) {
-          /* 七×七の方陣。中心（二十四番）は将、その右隣（二十五番）は旗持 */
-          let 席 = 陣.基 + n;
-          if (席 >= 24) 席 += 2;                    // 将と旗持のぶん空ける
-          if (席 > 48) 席 = 48;
-          const 列 = 席 % 7, 行 = (席 / 7) | 0;
-          const 間x = 6.4, 間y = 5.6;
-          const lx2 = Math.cos(陣.向 + Math.PI / 2), ly2 = Math.sin(陣.向 + Math.PI / 2);
-          const bx2 = -Math.cos(陣.向), by2 = -Math.sin(陣.向);
-          const dx2 = (列 - 3) * 間x, dy2 = (行 - 3) * 間y;
-          tx = 陣.x + lx2 * dx2 + bx2 * dy2;
-          ty = 陣.y + ly2 * dx2 + by2 * dy2;
-          /* 組から離れすぎぬように引き戻す。絵は盤を偽らない。
-             馬廻は本陣へ下がるぶん、ほかの組より少し広く取る（六十歩）。 */
-          const ex2 = tx - q.x, ey2 = ty - q.y, ed2 = Math.hypot(ex2, ey2);
-          if (ed2 > 60) { tx = q.x + ex2 / ed2 * 60; ty = q.y + ey2 / ed2 * 60; }
-        } else {
         const o = 場[n];
         const 深 = q.engaged
           ? (-前 + o[2] * 刻み + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))))
           : o[1];
-        tx = s.dx + lx * o[0] + bx * (深 + 押); ty = s.dy + ly * o[0] + by * (深 + 押);
-        }
+        const tx = s.dx + lx * o[0] + bx * (深 + 押), ty = s.dy + ly * o[0] + by * (深 + 押);
         if (!s.生[n] || !s.初) { s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; s.速[n] = 0; continue; }
         const vx = tx - s.sx[n], vy = ty - s.sy[n], d = Math.hypot(vx, vy);
         let mv = 0;
@@ -1199,7 +1327,8 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
     for (const q of c.squads) {
       if (q.men <= 0) continue;
       const s = 組態.get(q); if (!s || !s.初) continue;
-      const alive = Math.max(0, Math.min(50, Math.round(q.men)));
+      /* 本陣衆へ貸したぶんは、この組では描かない（数を増やさないため） */
+      const alive = Math.max(0, Math.min(50, Math.round(q.men)) - (s.借り || 0));
       const th = s.向;
       const dir基 = 向き八(Math.cos(th), Math.sin(th));
       const 撃 = (b.t - s.撃刻) / 1.5;
@@ -1231,21 +1360,15 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
           if (Math.hypot(s.進x[n], s.進y[n]) > 0.3) dir = 向き八(s.進x[n], s.進y[n]);
           fr = 骨度 > 0 ? 1 + w * 2 : 1 + (w < 0.5 ? 0 : 1);
         }
-        並.push({ wx, wy, 地y: wy, 側, 型: q.type, dir: Math.round(dir), fr: Math.round(fr),
-          直: 骨度 > 0 ? { dir, fr, 型: q.type, 側, 乱: ((q.seed || 0) * 31 + n * 7) % 97 / 97 } : null });
-      }
-      /* 馬廻は指物を背負う（GDD 8.11）。
+        /* 丈を少しずつ変える（GDD 8.11）。
 
-         将の居場所を読ませるのが馬廻の役目である。騎馬が五十騎集まっても、
-         ただの騎馬の塊では他の騎馬組と見分けが付かない。一騎ずつ家の色の
-         指物を立てれば、方陣は「旗の群れ」として遠目にも読める。 */
-      if (s.陣) {
-        for (let n = 0; n < alive; n++) {
-          if (!s.生[n]) continue;
-          const wx = s.sx[n], wy = s.sy[n];
-          if (!見える(wx, wy)) continue;
-          並.push({ wx, wy, 地y: wy + 0.05, 指: 側 });
-        }
+           型紙を色ちがいで焼けば具足の幅は出せるが、十六方向×七拍ぶん増える
+           ので三十MBが六十MBになる。携帯では危うい。丈を〇.九五〜一.〇六の
+           あいだで散らすだけなら費えは零で、「同じ判を押した」感じはほどけ
+           る。馬の毛色は型紙の側で既に三色に散っている。 */
+        const 丈 = 0.95 + (((q.seed || 0) * 31 + n * 7) % 12) / 100;
+        並.push({ wx, wy, 地y: wy, 側, 型: q.type, dir: Math.round(dir), fr: Math.round(fr), 丈,
+          直: 骨度 > 0 ? { dir, fr, 型: q.type, 側, 乱: ((q.seed || 0) * 31 + n * 7) % 97 / 97 } : null });
       }
       /* 組の小旗（後列に二本）。側の色でまとまりを示す */
       if (cam.s > 2.2) {
@@ -1259,13 +1382,25 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       }
     }
   }
-  /* 武将と母衣衆は隊の只中に。並びの中へ入れて前後を正しく重ねる */
+  /* 本陣衆――将・旗持・馬廻。一つの塊として本陣に立つ（GDD 8.11）。
+     並びの中へ入れて、前後を正しく重ねる。 */
   for (const c of 隊ら) {
     const 側 = c.日和見 ? "Y" : (c.side === "P" ? "P" : "E");
-    /* 将は馬廻の只中に立つ。名札もそこに出るので、名と将が揃う */
-    const 本 = c.本陣 || { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
-    if (!見える(本.x, 本.y)) continue;
-    並.push({ wx: 本.x, wy: 本.y, 地y: 本.y + 0.1, 将: { c, 側 } });
+    const t = 本陣態.get(c); if (!t || !t.初) continue;
+    for (let n = 0; n < t.数; n++) {
+      const wx = t.x[n], wy = t.y[n];
+      if (!見える(wx, wy)) continue;
+      if (n === 0) { 並.push({ wx, wy, 地y: wy + 0.1, 将: { c, 側 } }); continue; }
+      if (n === 1) { 並.push({ wx, wy, 地y: wy + 0.08, 旗持: { c, 側 } }); continue; }
+      /* 馬廻。一騎ずつ家の色の指物を立てるので、遠目にも「旗の群れ」として読める */
+      const 進 = Math.hypot(t.進x[n], t.進y[n]) > 0.3
+        ? 向き八(t.進x[n], t.進y[n]) : 向き八(Math.cos(c.facing || 0), Math.sin(c.facing || 0));
+      let fr = 0;
+      if (t.速[n] > 2.5) { const w = (t.歩距[n] / 14) % 1; fr = 1 + (w < 0.5 ? 0 : 1); }
+      並.push({ wx, wy, 地y: wy, 側, 型: "kiba", dir: 進, fr, 直: null,
+        丈: 0.96 + ((n * 13) % 10) / 100 });
+      並.push({ wx, wy, 地y: wy + 0.05, 指: 側 });
+    }
   }
   並.sort((a, z) => a.地y - z.地y);
   for (const p of 並) {
@@ -1293,20 +1428,23 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       const n2 = 将札(側2, 格);
       if (n2) ctx.drawImage(n2, p.wx - n2.width / 2 * 倍2, y - (n2.height - 12) * 倍2,
         n2.width * 倍2, n2.height * 倍2);
-      /* 旗持は将の右隣（方陣の二十五番の席）に立つ */
-      const 向 = c2.facing || 0;
-      const lx2 = Math.cos(向 + Math.PI / 2), ly2 = Math.sin(向 + Math.PI / 2);
-      const n3 = 旗持札(側2, 馬印の形[格]);
-      const 倍3 = 0.062 * (104 / 190) * 1.18 * (11 / 19);   // 乗り手の丈は将と同じに保つ
-      if (n3) ctx.drawImage(n3, p.wx + lx2 * 6.4 - n3.width / 2 * 倍3,
-        y + ly2 * 6.4 - (n3.height - 12) * 倍3, n3.width * 倍3, n3.height * 倍3);
       continue;
     }
-    if (p.直) 姿八(ctx, p.wx, y, (p.直.型 === "kiba" ? 6.2 : 6.4) * 0.062,
+    if (p.旗持) {                                   // 馬印を掲げる旗持。将の隣に立つ
+      const 格 = 将の格(b, p.旗持.c);
+      const n3 = 旗持札(p.旗持.側, 馬印の形[格]);
+      const 倍3 = 0.062 * (104 / 190) * 1.18 * (11 / 19);   // 乗り手の丈は将と同じに保つ
+      if (n3) ctx.drawImage(n3, p.wx - n3.width / 2 * 倍3, y - (n3.height - 12) * 倍3,
+        n3.width * 倍3, n3.height * 倍3);
+      continue;
+    }
+    const 丈 = p.丈 || 1;
+    if (p.直) 姿八(ctx, p.wx, y, (p.直.型 === "kiba" ? 6.2 : 6.4) * 0.062 * 丈,
       p.直.dir, p.直.fr, p.直.型, 具側[p.直.側], p.直.乱);
     else { const n = 札取り(p.側, p.型, p.dir, p.fr);
-      if (n) ctx.drawImage(n, p.wx - n.width / 2 * 0.062, y - (n.height - 8) * 0.062,
-        n.width * 0.062, n.height * 0.062); }
+      const k2 = 0.062 * 丈;
+      if (n) ctx.drawImage(n, p.wx - n.width / 2 * k2, y - (n.height - 8) * k2,
+        n.width * k2, n.height * k2); }
   }
   return dt;
 }
