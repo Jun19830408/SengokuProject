@@ -432,179 +432,499 @@ const 名札 = (g, x, y, s) => {
   g.lineWidth = 3.5; g.strokeStyle = "rgba(238,232,214,0.85)"; g.strokeText(s, x, y);
   g.fillStyle = "rgba(56,50,36,0.95)"; g.fillText(s, x, y); g.restore(); };
 
-export function 新絵の野(g) {
-  const W = FIELD.w, H = FIELD.h, 面 = W * H;
-  種 = 31;
-  g.fillStyle = "#A9AE7C"; g.fillRect(0, 0, W, H);
-  const 染 = (色, n, r0, r1, a) => { for (let i = 0; i < n; i++) {
-    const x = R() * W, y = R() * H, r = r0 + R() * (r1 - r0);
-    const gr = g.createRadialGradient(x, y, r * 0.1, x, y, r);
-    gr.addColorStop(0, 色.replace(")", `,${a})`).replace("rgb", "rgba"));
-    gr.addColorStop(1, 色.replace(")", ",0)").replace("rgb", "rgba"));
-    g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, r, r * 0.7, R() * 3, 0, 7); g.fill(); } };
-  const 規 = Math.sqrt(面 / 8e5);                       // 野の広さで数を合わせる
-  染("rgb(140,146,96)", (22 * 規) | 0, 60, 190, 0.5); 染("rgb(186,188,128)", (16 * 規) | 0, 50, 160, 0.5);
-  染("rgb(122,132,86)", (12 * 規) | 0, 80, 220, 0.4); 染("rgb(168,150,100)", (8 * 規) | 0, 50, 130, 0.35);
-  const 草数 = Math.min(42000, (面 / 180) | 0);
-  for (let i = 0; i < 草数; i++) { const x = R() * W, y = R() * H;
-    g.strokeStyle = R() < 0.55 ? "rgba(96,106,62,0.26)" : "rgba(206,206,150,0.24)"; g.lineWidth = 1;
-    const a = -1.35 + (R() - 0.5) * 0.5, L = 2.5 + R() * 3.6;
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke(); }
-  /* 沼 */
-  for (const m of MARSH) {
-    const gr = g.createRadialGradient(m.x, m.y, m.r * 0.2, m.x, m.y, m.r);
-    gr.addColorStop(0, "rgba(96,122,104,0.5)"); gr.addColorStop(1, "rgba(96,122,104,0)");
-    g.fillStyle = gr; g.beginPath(); g.ellipse(m.x, m.y, m.r, m.r * 0.8, 0, 0, 7); g.fill();
-    for (let i = 0; i < m.r; i++) { const a = R() * 6.283, d = Math.sqrt(R()) * m.r * 0.9;
-      g.strokeStyle = "rgba(70,96,82,0.4)"; g.lineWidth = 1;
-      const px = m.x + Math.cos(a) * d, py = m.y + Math.sin(a) * d * 0.8;
-      g.beginPath(); g.moveTo(px - 2, py); g.lineTo(px + 2, py); g.stroke(); } }
-  /* 丘と山：段彩。南東へ影、北西に光、山は頂に岩 */
-  for (const h of [...HILLS, ...MOUNTAINS.map((m) => ({ ...m, 山: true }))]) {
-    const 段数 = h.山 ? 6 : 3;
-    g.save(); g.globalCompositeOperation = "multiply";
-    const g影 = g.createRadialGradient(h.x + h.r * 0.22, h.y + h.r * 0.26, h.r * 0.3,
-      h.x + h.r * 0.14, h.y + h.r * 0.16, h.r * 1.25);
-    g影.addColorStop(0, "rgba(70,74,50,0.42)"); g影.addColorStop(1, "rgba(70,74,50,0)");
-    g.fillStyle = g影;
-    g.beginPath(); g.ellipse(h.x + h.r * 0.12, h.y + h.r * 0.12, h.r * 1.18, h.r * 1.02, 0, 0, 7); g.fill();
-    g.restore();
-    for (let k = 0; k < 段数; k++) {
-      const t2 = k / 段数, rr = h.r * (1 - t2 * 0.82), 明 = 0.86 + t2 * 0.5;
-      const cx2 = h.x - h.r * 0.05 * (k / 段数) * 3, cy2 = h.y - h.r * 0.05 * (k / 段数) * 3;
-      const g段 = g.createRadialGradient(cx2 - rr * 0.4, cy2 - rr * 0.45, rr * 0.15, cx2, cy2, rr * 1.05);
-      g段.addColorStop(0, `rgba(${168 * 明 | 0},${176 * 明 | 0},${116 * 明 | 0},0.9)`);
-      g段.addColorStop(0.7, `rgba(${128 * 明 | 0},${142 * 明 | 0},${92 * 明 | 0},0.85)`);
-      g段.addColorStop(1, `rgba(${104 * 明 | 0},${118 * 明 | 0},${76 * 明 | 0},${k === 0 ? 0 : 0.55})`);
-      g.fillStyle = g段;
-      g.beginPath();
-      for (let i2 = 0; i2 <= 16; i2++) { const a = i2 / 16 * 6.283, rad = rr * (0.92 + R() * 0.1);
-        i2 ? g.lineTo(cx2 + Math.cos(a) * rad, cy2 + Math.sin(a) * rad * 0.92)
-           : g.moveTo(cx2 + rad * 0.92, cy2); }
-      g.closePath(); g.fill();
-      g.strokeStyle = `rgba(60,66,44,${0.2 + t2 * 0.12})`; g.lineWidth = 1.3;
-      g.beginPath(); g.ellipse(cx2, cy2, rr * 0.97, rr * 0.9, 0, Math.PI * 0.05, Math.PI * 0.6); g.stroke();
-      g.strokeStyle = "rgba(224,228,180,0.3)"; g.lineWidth = 1;
-      g.beginPath(); g.ellipse(cx2, cy2, rr * 0.97, rr * 0.9, 0, Math.PI * 1.1, Math.PI * 1.7); g.stroke();
-    }
-    for (let i2 = 0; i2 < h.r * (h.山 ? 1.2 : 0.6); i2++) {
-      const a = R() * 6.283, d2 = 0.45 + Math.sqrt(R()) * 0.5;
-      g.fillStyle = R() < 0.55 ? "rgba(58,76,40,0.42)" : "rgba(120,142,80,0.33)";
-      g.beginPath(); g.arc(h.x + Math.cos(a) * h.r * d2 * 0.95, h.y + Math.sin(a) * h.r * d2 * 0.85,
-        0.8 + R() * 1.8, 0, 7); g.fill(); }
-    if (h.山) {
-      for (let i2 = 0; i2 < 26; i2++) { const a = R() * 6.283, d2 = R() * 0.22;
-        g.fillStyle = R() < 0.5 ? "rgba(134,132,116,0.65)" : "rgba(96,96,82,0.55)";
-        g.beginPath(); g.ellipse(h.x + Math.cos(a) * h.r * d2 - h.r * 0.12,
-          h.y + Math.sin(a) * h.r * d2 * 0.9 - h.r * 0.12,
-          1.6 + R() * 3, 1.1 + R() * 1.8, R() * 3, 0, 7); g.fill(); }
-      for (let i2 = 0; i2 < 7; i2++) { const a = (i2 / 7) * 6.283 + R() * 0.4;
-        g.strokeStyle = "rgba(74,84,52,0.32)"; g.lineWidth = 1.4;
-        g.beginPath();
-        g.moveTo(h.x + Math.cos(a) * h.r * 0.3, h.y + Math.sin(a) * h.r * 0.27);
-        g.quadraticCurveTo(h.x + Math.cos(a + 0.12) * h.r * 0.62, h.y + Math.sin(a + 0.12) * h.r * 0.56,
-          h.x + Math.cos(a + 0.05) * h.r * 0.95, h.y + Math.sin(a + 0.05) * h.r * 0.86); g.stroke(); }
-    }
+/* ===== 野を、画素ごとに塗る（GDD 8.11）=====
+
+   面（楕円や矩形）を重ねる描き方では、どこまで行っても図形の匂いが抜けない。
+   地面は「高さの場」から色を決める。高い所と低い所、急な所と緩い所、乾いた
+   所と湿った所で色が変わる――それが本物の地面の見え方である。
+
+   立体に見えるのは、次の四つが揃うからである。
+     一、日影    …… 高い所が低い所に影を落とす（光線を地形に当てて調べる）
+     二、環境遮蔽…… 窪みは空が狭いので暗い
+     三、水の底  …… 浅い所は底が透け、深い所は空を映す
+     四、林の梢  …… 林は塊として高さを持ち、自ら影を落とす
+
+   費えは焼く時の一度きりで、遊ぶ間は一切変わらない。
+   ただし二千万画素を画素ごとに回すのは重すぎるので、新しい野は三百万画素で
+   焼く。細かさは近景の肌理（寄ったときに画面の縮尺で重ねる）が持つ。
+   影と遮蔽は、さらに半分の寸法で焼いて引き伸ばす――どちらも滑らかな量なので
+   見た目は変わらず、速さは四倍になる。 */
+export const 新絵の画布上限 = 3.2e6;
+
+/* 値の雑音。盤の賽（Math.random）は使わない――同じ種から同じ盤が出なくなる */
+const 雑格寸 = 256;
+const 雑格 = new Float32Array(雑格寸 * 雑格寸);
+(() => { let v = 1013904223;
+  for (let i = 0; i < 雑格.length; i++) {
+    v = (Math.imul(v, 1664525) + 1013904223) | 0;
+    雑格[i] = ((v >>> 8) & 0xffff) / 65535; } })();
+const 滑曲 = (t) => t * t * (3 - 2 * t);
+function 粒音(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const xf = 滑曲(x - xi), yf = 滑曲(y - yi);
+  const i0 = (xi & 255), i1 = ((xi + 1) & 255);
+  const j0 = (yi & 255) * 雑格寸, j1 = (((yi + 1) & 255)) * 雑格寸;
+  const a = 雑格[j0 + i0], b = 雑格[j0 + i1], c = 雑格[j1 + i0], d = 雑格[j1 + i1];
+  const t = a + (b - a) * xf;
+  return t + ((c + (d - c) * xf) - t) * yf;
+}
+function 襞(x, y, 段 = 3) {
+  let s = 0, a = 1, f = 1, w = 0;
+  for (let i = 0; i < 段; i++) { s += 粒音(x * f, y * f) * a; w += a; a *= 0.5; f *= 2.03; }
+  return s / w;
+}
+let 野種 = 20250915;
+const 野乱 = () => { 野種 = (野種 * 1103515245 + 12345) & 0x7fffffff; return 野種 / 0x7fffffff; };
+const 野種を置く = (n) => { 野種 = n; };
+const 挟 = (v, a, b) => (v < a ? a : v > b ? b : v);
+const 混色 = (c1, c2, t) => [c1[0] + (c2[0] - c1[0]) * t, c1[1] + (c2[1] - c1[1]) * t,
+  c1[2] + (c2[2] - c1[2]) * t];
+
+/* 折れ線までの隔たり */
+function 筋まで(x, y, 節) {
+  let 最 = 1e9;
+  for (let i = 0; i < 節.length - 1; i++) {
+    const x0 = 節[i][0], y0 = 節[i][1], x1 = 節[i + 1][0], y1 = 節[i + 1][1];
+    const dx = x1 - x0, dy = y1 - y0, L2 = dx * dx + dy * dy || 1;
+    let t = ((x - x0) * dx + (y - y0) * dy) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const d = Math.hypot(x - (x0 + dx * t), y - (y0 + dy * t));
+    if (d < 最) 最 = d;
   }
-  /* 川（筋書きの折れ線と、昔ながらの横帯の両方に対応） */
-  const 川ら = RIVERS.length ? RIVERS
-    : (hasRiver() ? [{ 節: [{ x: -40, y: (RIVER.top + RIVER.bot) / 2 },
-      { x: W + 40, y: (RIVER.top + RIVER.bot) / 2 }], 幅: RIVER.bot - RIVER.top, 渡し: [] }] : []);
-  for (const r of 川ら) {
-    const pts = r.節, w2 = Math.max(8, r.幅);
-    g.save(); g.globalCompositeOperation = "multiply";
-    線引(g, 揺点(pts, 16, 4), w2 + 12, "rgba(112,112,84,0.42)");
-    g.restore();
-    線引(g, 揺点(pts, 16, 3), w2 + 5, "#4A5E74");
-    線引(g, 揺点(pts, 16, 3), w2, "#57748E");
-    線引(g, 揺点(pts, 18, 3), Math.max(3, w2 * 0.5), "#6E8AA6");
-    for (let i = 0; i < pts.length - 1; i++) { if (R() < 0.4) continue;
-      const a = Math.atan2(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x);
-      for (let k = 0; k < 4; k++) { const t = k / 4;
-        const px = pts[i].x + (pts[i + 1].x - pts[i].x) * t + (R() - 0.5) * w2 * 0.6;
-        const py = pts[i].y + (pts[i + 1].y - pts[i].y) * t + (R() - 0.5) * w2 * 0.6;
-        g.strokeStyle = R() < 0.5 ? "rgba(196,210,222,0.3)" : "rgba(50,64,86,0.3)"; g.lineWidth = 1;
-        g.beginPath(); g.moveTo(px, py); g.lineTo(px + Math.cos(a) * (6 + R() * 12), py + Math.sin(a) * (6 + R() * 12)); g.stroke(); } }
-    for (const 渡 of (r.渡し || [])) {
-      let a = 0, best = 1e18;
-      for (let i = 0; i < pts.length - 1; i++) {
-        const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2;
-        const d = (mx - 渡.x) ** 2 + (my - 渡.y) ** 2;
-        if (d < best) { best = d; a = Math.atan2(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x); } }
-      g.save(); g.translate(渡.x, 渡.y); g.rotate(a + Math.PI / 2);
-      if (渡.種 === "橋") {
-        g.fillStyle = "#8E7450"; g.fillRect(-w2 * 0.8, -11, w2 * 1.6, 22);
-        g.strokeStyle = "rgba(52,38,20,0.75)"; g.lineWidth = 1.6;
-        g.strokeRect(-w2 * 0.8, -11, w2 * 1.6, 22);
-        g.strokeStyle = "rgba(60,44,24,0.5)";
-        for (let k = -w2 * 0.8 + 3; k < w2 * 0.8; k += 5) {
-          g.beginPath(); g.moveTo(k, -11); g.lineTo(k, 11); g.stroke(); }
-      } else {
-        for (let i = 0; i < 14; i++) { g.fillStyle = "rgba(200,206,196,0.5)";
-          g.beginPath(); g.arc((R() - 0.5) * w2 * 1.5, (R() - 0.5) * 20, 1.2 + R() * 1.6, 0, 7); g.fill(); } }
-      g.restore();
-    }
-  }
-  /* 街道 */
-  for (const rd of (ROADS.length ? ROADS : (ROAD ? [ROAD] : []))) {
-    const pts = rd.節, w2 = Math.max(6, rd.幅 * 1.4);
-    g.save(); g.globalCompositeOperation = "multiply";
-    線引(g, 揺点(pts, 18, 4), w2 + 8, "rgba(120,108,80,0.32)");
-    g.restore();
-    線引(g, 揺点(pts, 16, 3), w2, "#B99C7A");
-    線引(g, 揺点(pts, 16, 2.5), w2 * 0.62, "#C8AC86");
-    線引(g, 揺点(pts, 18, 2.5), w2 * 0.3, "#D2B892");
-  }
-  /* 林 */
-  for (const f of [...FORESTS, ...WOODS]) {
-    const n = Math.min(30, Math.max(4, (f.r / 7) | 0));
-    const 木ら = [];
-    for (let i = 0; i < n; i++) 木ら.push([f.x + (R() - 0.5) * f.r * 1.6, f.y + (R() - 0.5) * f.r * 1.1, 7 + R() * 8]);
-    for (const [x, y, r] of 木ら.sort((a, z) => a[1] - z[1])) {
-      g.save(); g.shadowColor = "rgba(40,44,26,0.5)"; g.shadowBlur = r * 0.5;
-      g.shadowOffsetX = -r * 0.5; g.shadowOffsetY = r * 0.35;
-      g.beginPath();
-      for (let i2 = 0; i2 <= 10; i2++) { const a = i2 / 10 * 6.283, rad = r * (0.78 + R() * 0.3);
-        i2 ? g.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad * 0.86)
-           : g.moveTo(x + rad, y); }
-      g.closePath();
-      const gr = g.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r * 1.05);
-      gr.addColorStop(0, "#6E8A44"); gr.addColorStop(0.6, "#485F30"); gr.addColorStop(1, "#2E401E");
-      g.fillStyle = gr; g.fill();
-      g.restore(); } }
-  /* 村 */
-  for (const v of VILLAGES) {
-    for (let i = 0; i < 3; i++) { const a = i * 2.2 + 0.4, d2 = (v.r || 40) * 0.5;
-      const x = v.x + Math.cos(a) * d2, y = v.y + Math.sin(a) * d2 * 0.7, w2 = 13, h3 = 11;
-      g.save(); g.shadowColor = "rgba(46,40,26,0.5)"; g.shadowBlur = 4;
-      g.shadowOffsetX = -2; g.shadowOffsetY = 3;
-      g.fillStyle = "#9C8462"; g.fillRect(x - w2 / 2, y - h3 * 0.1, w2, h3 * 0.45);
-      g.restore();
-      const gr = g.createLinearGradient(x, y - h3 * 0.66, x, y - h3 * 0.02);
-      gr.addColorStop(0, "#6E5A42"); gr.addColorStop(1, "#463424");
-      g.fillStyle = gr;
-      g.beginPath(); g.moveTo(x - w2 * 0.64, y - h3 * 0.06); g.lineTo(x, y - h3 * 0.64);
-      g.lineTo(x + w2 * 0.64, y - h3 * 0.06); g.closePath(); g.fill();
-      g.strokeStyle = "rgba(34,26,16,0.7)"; g.lineWidth = 0.8; g.stroke(); } }
-  /* 名のある峰と村の札 */
-  for (const o of [...HILLS, ...MOUNTAINS]) if (o.札 && o.名) 名札(g, o.x, o.y - o.r * 0.36, o.名);
-  for (const v of VILLAGES) if (v.札 && v.名) 名札(g, v.x, v.y + (v.r || 40) + 12, v.名);
-  /* 紙の粒と隅の落ち */
-  if (typeof document !== "undefined") {
-    const ノ = document.createElement("canvas"); ノ.width = ノ.height = 160;
-    const ng = ノ.getContext("2d"); const im = ng.createImageData(160, 160);
-    for (let i = 0; i < im.data.length; i += 4) { const v = 105 + Math.random() * 100;
-      im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255; }
-    ng.putImageData(im, 0, 0);
-    g.save(); g.globalCompositeOperation = "soft-light"; g.globalAlpha = 0.5;
-    g.fillStyle = g.createPattern(ノ, "repeat"); g.fillRect(0, 0, W, H); g.restore();
-  }
-  g.save(); g.globalCompositeOperation = "multiply";
-  const v2 = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.5, W / 2, H / 2, Math.max(W, H) * 0.72);
-  v2.addColorStop(0, "rgba(255,255,255,1)"); v2.addColorStop(1, "rgba(150,146,120,0.85)");
-  g.fillStyle = v2; g.fillRect(0, 0, W, H); g.restore();
+  return 最;
 }
 
+/* 日影。光の来る向きへ地形を辿り、遮られていれば影。縁は半影でぼかす */
+function 日影を焼く(高, W, H, 光x, 光y, 光高, 歩, 回) {
+  const 影 = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x, h0 = 高[i];
+      let 遮 = 0;
+      for (let k = 1; k <= 回; k++) {
+        const sx = Math.round(x - 光x * 歩 * k), sy = Math.round(y - 光y * 歩 * k);
+        if (sx < 0 || sy < 0 || sx >= W || sy >= H) break;
+        const hs = 高[sy * W + sx];
+        const 要 = h0 + 光高 * 歩 * k;
+        if (hs > 要) { 遮 = Math.max(遮, Math.min(1, (hs - 要) * 0.3)); if (遮 > 0.95) break; }
+      }
+      影[i] = 遮;
+    }
+  }
+  const 出 = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let s = 0, n = 0;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+      s += 影[yy * W + xx]; n++;
+    }
+    出[y * W + x] = s / n;
+  }
+  return 出;
+}
+/* 環境遮蔽。周り八方が高いほど暗い */
+function 遮蔽を焼く(高, W, H, 距) {
+  const 遮 = new Float32Array(W * H);
+  const 向 = [[1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7], [0, -1], [0.7, -0.7]];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, h0 = 高[i];
+    let s = 0;
+    for (let v = 0; v < 向.length; v++) {
+      const dx = 向[v][0], dy = 向[v][1];
+      let 最 = 0;
+      for (let k = 2; k <= 距; k += 2) {
+        const sx = Math.round(x + dx * k), sy = Math.round(y + dy * k);
+        if (sx < 0 || sy < 0 || sx >= W || sy >= H) continue;
+        const t = (高[sy * W + sx] - h0) / k;
+        if (t > 最) 最 = t;
+      }
+      s += Math.min(1, Math.max(0, 最));
+    }
+    遮[i] = s / 向.length;
+  }
+  return 遮;
+}
+/* 半分の寸法で焼いた場を、双一次で引き伸ばして読む */
+const 引伸 = (場, hw, hh, x, y, 半) => {
+  const u = x / 半, v = y / 半;
+  const x0 = Math.min(hw - 1, Math.max(0, Math.floor(u))), y0 = Math.min(hh - 1, Math.max(0, Math.floor(v)));
+  const x1 = Math.min(hw - 1, x0 + 1), y1 = Math.min(hh - 1, y0 + 1);
+  const fx = u - x0, fy = v - y0;
+  const a = 場[y0 * hw + x0], b = 場[y0 * hw + x1], c = 場[y1 * hw + x0], d = 場[y1 * hw + x1];
+  const t = a + (b - a) * fx;
+  return t + ((c + (d - c) * fx) - t) * fy;
+};
+
+/* ---- 寄棟の瓦屋根。棟を一本通し、四方へ流れが落ちる ---- */
+function 瓦屋根(q, cx, cy, w, d, 向, 明, 倍) {
+  q.save(); q.translate(cx, cy); q.rotate(向);
+  const hw = w / 2, hd = d / 2, 棟 = hw * 0.42, 出 = d * 0.26;
+  const 基 = [128, 142, 146];
+  const c = (k) => `rgb(${(基[0] * k * 明) | 0},${(基[1] * k * 明) | 0},${(基[2] * k * 明) | 0})`;
+  const 面 = (p, k1, k2) => {
+    const gr = q.createLinearGradient(p[0][0], p[0][1], p[2] ? p[2][0] : p[1][0], p[2] ? p[2][1] : p[1][1]);
+    gr.addColorStop(0, c(k1)); gr.addColorStop(1, c(k2));
+    q.fillStyle = gr; q.beginPath(); q.moveTo(p[0][0], p[0][1]);
+    for (let i = 1; i < p.length; i++) q.lineTo(p[i][0], p[i][1]);
+    q.closePath(); q.fill();
+  };
+  面([[-hw, -hd], [hw, -hd], [棟, -出], [-棟, -出]], 1.5, 1.1);
+  面([[-hw, hd], [hw, hd], [棟, -出], [-棟, -出]], 0.82, 0.64);
+  面([[-hw, -hd], [-hw, hd], [-棟, -出]], 1.22, 0.92);
+  面([[hw, -hd], [hw, hd], [棟, -出]], 0.92, 0.74);
+  q.strokeStyle = `rgba(214,222,226,${0.85 * 明})`; q.lineWidth = Math.max(1, 1.8 * 倍); q.lineCap = "round";
+  q.beginPath(); q.moveTo(-棟, -出); q.lineTo(棟, -出); q.stroke();
+  q.strokeStyle = `rgba(34,40,42,${0.6 * 明})`; q.lineWidth = Math.max(0.8, 1.2 * 倍);
+  q.strokeRect(-hw, -hd, w, d);
+  q.restore();
+}
+/* ---- 茅葺きの寄棟屋根 ---- */
+function 茅屋根(q, cx, cy, w, d, 向, 明, 倍) {
+  q.save(); q.translate(cx, cy); q.rotate(向);
+  const hw = w / 2, hd = d / 2, 棟 = hw * 0.34, 出 = d * 0.3;
+  const 茅 = [168, 142, 92];
+  const c = (k) => `rgb(${(茅[0] * k * 明) | 0},${(茅[1] * k * 明) | 0},${(茅[2] * k * 明) | 0})`;
+  const 面 = (p, k1, k2) => {
+    const gr = q.createLinearGradient(p[0][0], p[0][1], p[2] ? p[2][0] : p[1][0], p[2] ? p[2][1] : p[1][1]);
+    gr.addColorStop(0, c(k1)); gr.addColorStop(1, c(k2));
+    q.fillStyle = gr; q.beginPath(); q.moveTo(p[0][0], p[0][1]);
+    for (let i = 1; i < p.length; i++) q.lineTo(p[i][0], p[i][1]);
+    q.closePath(); q.fill();
+  };
+  面([[-hw, -hd], [hw, -hd], [棟, -出], [-棟, -出]], 1.42, 1.12);
+  面([[-hw, hd], [hw, hd], [棟, -出], [-棟, -出]], 0.74, 0.54);
+  面([[-hw, -hd], [-hw, hd], [-棟, -出]], 1.2, 0.94);
+  面([[hw, -hd], [hw, hd], [棟, -出]], 0.88, 0.66);
+  q.strokeStyle = `rgb(${(126 * 明) | 0},${(104 * 明) | 0},${(66 * 明) | 0})`;
+  q.lineWidth = Math.max(1.4, 2.6 * 倍); q.lineCap = "round";
+  q.beginPath(); q.moveTo(-棟, -出); q.lineTo(棟, -出); q.stroke();
+  q.strokeStyle = `rgba(66,52,30,${0.5 * 明})`; q.lineWidth = Math.max(0.8, 1.2 * 倍);
+  q.strokeRect(-hw, -hd, w, d);
+  q.restore();
+}
+/* ---- 繁った木。型紙に焼いて貼る。
+
+   房を六つ重ねるので、木ごとに勾配を六つ作ると一枚の野で数万回になる。
+   丈と色味と日の当たりを刻んで型紙に焼き、あとは貼るだけにする。 ---- */
+const 木帳 = {};
+function 木札(r, 振, 日) {
+  const 丈 = Math.max(3, Math.round(r));
+  const i振 = 振 < 0.45 ? 0 : 1;
+  const i日 = Math.max(0, Math.min(3, Math.round(日 * 3)));
+  const key = 丈 + "_" + i振 + "_" + i日;
+  let n = 木帳[key];
+  if (n === undefined) {
+    if (typeof document === "undefined") { 木帳[key] = null; return null; }
+    const 幅 = Math.ceil(丈 * 4.2), 高2 = Math.ceil(丈 * 4.4);
+    n = document.createElement("canvas"); n.width = 幅; n.height = 高2;
+    繁木を描く(n.getContext("2d"), 幅 / 2, 高2 - 丈 * 0.9, 丈, i振 ? 0.6 : 0.2, i日 / 3);
+    n.根x = 幅 / 2; n.根y = 高2 - 丈 * 0.9;
+    木帳[key] = n;
+  }
+  return n;
+}
+function 繁木(q, x, y, r, 振, 日) {
+  const n = 木札(r, 振, 日);
+  if (!n) { 繁木を描く(q, x, y, r, 振, 日); return; }
+  q.drawImage(n, x - n.根x, y - n.根y);
+}
+function 繁木を描く(q, x, y, r, 振, 日) {
+  q.fillStyle = `rgba(46,62,30,${(0.34 * (0.5 + 日 * 0.5)).toFixed(2)})`;
+  q.beginPath(); q.ellipse(x + r * 0.78, y + r * 0.2, r * 1.05, r * 0.34, 0.2, 0, 7); q.fill();
+  q.strokeStyle = "#5E4B2E"; q.lineWidth = Math.max(0.6, r * 0.2); q.lineCap = "round";
+  q.beginPath(); q.moveTo(x, y); q.lineTo(x - r * 0.06, y - r * 0.55); q.stroke();
+  const 寒 = 振 < 0.45;
+  const 明 = 寒 ? [120, 152, 70] : [150, 174, 72], 暗 = 寒 ? [40, 66, 32] : [52, 76, 30];
+  const 房 = [[-0.5, -0.56, 0.52], [0.52, -0.52, 0.5], [-0.26, -0.9, 0.52],
+    [0.3, -0.88, 0.5], [0, -1.16, 0.48], [0, -0.72, 0.56]];
+  for (let k = 0; k < 房.length; k++) {
+    const ax = x + 房[k][0] * r, ay = y + 房[k][1] * r, rr = r * 房[k][2];
+    const gr = q.createRadialGradient(ax - rr * 0.45, ay - rr * 0.5, rr * 0.08, ax, ay, rr * 1.12);
+    const m = 0.72 + 0.28 * 日 + (k >= 4 ? 0.12 : 0);
+    gr.addColorStop(0, `rgb(${(明[0] * m) | 0},${(明[1] * m) | 0},${(明[2] * m) | 0})`);
+    gr.addColorStop(0.55, `rgb(${((明[0] + 暗[0]) / 2 * m) | 0},${((明[1] + 暗[1]) / 2 * m) | 0},${((明[2] + 暗[2]) / 2 * m) | 0})`);
+    gr.addColorStop(1, `rgb(${(暗[0] * m) | 0},${(暗[1] * m) | 0},${(暗[2] * m) | 0})`);
+    q.fillStyle = gr; q.beginPath(); q.ellipse(ax, ay, rr, rr * 0.92, 0, 0, 7); q.fill();
+  }
+}
+/* ---- 集落。道を一本通し、その両側に茅葺きの家と白壁の蔵を並べ、生垣で囲う ---- */
+function 集落(q, cx, cy, r, 種, 明関, 倍) {
+  野種を置く(種);
+  const 向 = 野乱() * 6.283, ux = Math.cos(向), uy = Math.sin(向);
+  const 長 = r * 1.5;
+  q.lineCap = "round"; q.lineJoin = "round";
+  q.strokeStyle = "rgba(176,152,124,0.5)"; q.lineWidth = Math.max(2, 5 * 倍);
+  q.beginPath(); q.moveTo(cx - ux * 長, cy - uy * 長 * 0.72); q.lineTo(cx + ux * 長, cy + uy * 長 * 0.72); q.stroke();
+  q.strokeStyle = "rgba(206,186,164,0.7)"; q.lineWidth = Math.max(1.4, 3 * 倍);
+  q.beginPath(); q.moveTo(cx - ux * 長, cy - uy * 長 * 0.72); q.lineTo(cx + ux * 長, cy + uy * 長 * 0.72); q.stroke();
+  const 垣 = [];
+  for (let i = 0; i <= 26; i++) {
+    const a = (i / 26) * 6.283, rr = r * (0.95 + Math.sin(a * 3 + 種) * 0.1);
+    垣.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.76]);
+  }
+  const 垣引 = (ox, oy, 幅, 色) => {
+    q.strokeStyle = 色; q.lineWidth = 幅;
+    q.beginPath(); q.moveTo(垣[0][0] + ox, 垣[0][1] + oy);
+    for (let i = 1; i < 垣.length; i++) q.lineTo(垣[i][0] + ox, 垣[i][1] + oy);
+    q.stroke();
+  };
+  垣引(2 * 倍, 3 * 倍, Math.max(2.4, 5 * 倍), "rgba(46,70,32,0.34)");
+  垣引(0, 0, Math.max(2, 4 * 倍), "#5A7A36");
+  垣引(-0.8 * 倍, -1.4 * 倍, Math.max(0.8, 1.4 * 倍), "rgba(150,180,96,0.6)");
+  const 家ら = [];
+  const n = Math.max(9, Math.round(r / (3.6 * 倍)));
+  for (let i = 0; i < n; i++) {
+    const t = (i / (n - 1) - 0.5) * 1.7, 側 = (i % 2) ? 1 : -1;
+    const 寄 = (0.18 + 野乱() * 0.5) * r * 側;
+    const x = cx + ux * 長 * t - uy * 寄 * 0.8 + (野乱() - 0.5) * 6 * 倍;
+    const y = cy + uy * 長 * t * 0.72 + ux * 寄 * 0.6 + (野乱() - 0.5) * 5 * 倍;
+    if (Math.hypot((x - cx) / r, (y - cy) / (r * 0.76)) > 0.94) continue;
+    家ら.push([x, y, 野乱() < 0.22 ? "蔵" : "家", 野乱()]);
+  }
+  家ら.sort((a, b) => a[1] - b[1]);
+  for (const [x, y, 種類, rr] of 家ら) {
+    const m = 明関(x, y);
+    const w2 = (種類 === "蔵" ? 10 + rr * 4 : 14 + rr * 8) * 倍;
+    const d2 = (種類 === "蔵" ? 8 + rr * 3 : 11 + rr * 4) * 倍;
+    q.fillStyle = `rgba(40,56,26,${0.42 * (0.5 + m * 0.5)})`;
+    q.beginPath(); q.ellipse(x + w2 * 0.34, y + d2 * 0.3, w2 * 0.72, d2 * 0.46, 0.2, 0, 7); q.fill();
+    q.save(); q.translate(x, y); q.rotate(向);
+    if (種類 === "蔵") {
+      q.fillStyle = `rgb(${(236 * m) | 0},${(230 * m) | 0},${(216 * m) | 0})`;
+      q.fillRect(-w2 * 0.46, -d2 * 0.34, w2 * 0.92, d2 * 0.8);
+    } else {
+      q.fillStyle = `rgb(${(176 * m) | 0},${(160 * m) | 0},${(132 * m) | 0})`;
+      q.fillRect(-w2 * 0.44, -d2 * 0.3, w2 * 0.88, d2 * 0.74);
+    }
+    q.restore();
+    if (種類 === "蔵") 瓦屋根(q, x, y, w2 * 1.06, d2, 向, m, 倍);
+    else 茅屋根(q, x, y, w2, d2, 向, m, 倍);
+  }
+  for (let i = 0; i < Math.max(6, (r / (6 * 倍)) | 0); i++) {
+    const a = 野乱() * 6.283, dd = r * (0.5 + 野乱() * 0.42);
+    const x = cx + Math.cos(a) * dd, y = cy + Math.sin(a) * dd * 0.76;
+    繁木(q, x, y, (4 + 野乱() * 3) * 倍, 野乱(), 明関(x, y));
+  }
+}
+
+/* ============ 野を焼く ============
+   g は画布の筆。画k ＝ 野の寸法から画布の画素への倍。 */
+export function 新絵の野(g, 画k) {
+  const k = 画k || 1;
+  const W = Math.max(1, Math.round(FIELD.w * k)), H = Math.max(1, Math.round(FIELD.h * k));
+  const 倍 = Math.max(0.5, Math.min(2, k * 3.2));      /* 筆の太さの目安 */
+  const PX = (x) => x * k, PY = (y) => y * k;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+
+  /* 峰。盤の持つ高さ（m）を、画素の尺度へ直す（丘の丈＝半径の三割四分） */
+  const 峰 = [];
+  for (const o of HILLS) 峰.push({ x: PX(o.x), y: PY(o.y), r: PX(o.r), h: 山高m(o) / 200, 山: false });
+  for (const o of MOUNTAINS) 峰.push({ x: PX(o.x), y: PY(o.y), r: PX(o.r), h: 山高m(o) / 200, 山: true });
+  const 川ら = (RIVERS && RIVERS.length ? RIVERS : (hasRiver() ? [{
+    幅: Math.max(20, RIVER.bot - RIVER.top),
+    節: [[0, (RIVER.top + RIVER.bot) / 2], [FIELD.w, (RIVER.top + RIVER.bot) / 2]],
+  }] : [])).map((r) => ({ 幅: PX(r.幅 || 50), 節: (r.節 || []).map((p) => [PX(p.x != null ? p.x : p[0]), PY(p.y != null ? p.y : p[1])]) }))
+    .filter((r) => r.節.length > 1);
+  const 道ら = (ROADS && ROADS.length ? ROADS : (ROAD ? [ROAD] : []))
+    .map((r) => ({ 幅: PX(r.幅 || 30), 節: (r.節 || []).map((p) => [PX(p.x != null ? p.x : p[0]), PY(p.y != null ? p.y : p[1])]) }))
+    .filter((r) => r.節.length > 1);
+
+  /* ---- 高さの場。半分の寸法で持つ（影と遮蔽はここで焼く） ---- */
+  const 半 = 2;
+  const hw = Math.max(2, Math.ceil(W / 半)), hh = Math.max(2, Math.ceil(H / 半));
+  const 高 = new Float32Array(hw * hh);
+  const 川深 = new Float32Array(hw * hh), 川岸 = new Float32Array(hw * hh);
+  const 道度 = new Float32Array(hw * hh), 川谷 = new Float32Array(hw * hh);
+  /* 地のうねり */
+  for (let y = 0; y < hh; y++) {
+    for (let x = 0; x < hw; x++) {
+      高[y * hw + x] = ((襞(x * 半 / (150 * 倍), y * 半 / (150 * 倍), 3) - 0.5) * 7 * 倍) / 半;
+    }
+  }
+  /* 峰。毎画素で全部の峰を測ると二十三倍の手間になる。峰のほうを辿って盛る */
+  for (const o of 峰) {
+    const cx2 = o.x / 半, cy2 = o.y / 半, rr = o.r / 半;
+    const ax0 = Math.max(0, Math.floor(cx2 - rr)), ax1 = Math.min(hw - 1, Math.ceil(cx2 + rr));
+    const ay0 = Math.max(0, Math.floor(cy2 - rr)), ay1 = Math.min(hh - 1, Math.ceil(cy2 + rr));
+    const 丈 = o.r * 0.34 * o.h / 半, 指 = o.山 ? 1.25 : 1.5;
+    for (let y = ay0; y <= ay1; y++) for (let x = ax0; x <= ax1; x++) {
+      const d = Math.hypot(x - cx2, y - cy2);
+      if (d >= rr) continue;
+      高[y * hw + x] += 丈 * Math.cos((d / rr) * Math.PI / 2) ** 指;
+    }
+  }
+  /* 川と道の場。線を辿って刻む（焼き付ける）。
+
+     毎画素で全区間までの隔たりを測ると、一画素あたり百七十回の判じになり、
+     それだけで三秒かかった（実測）。線のほうを辿って、その周りに円を
+     重ねて行くほうが桁違いに速い。歩幅を細かく取れば隔たりも正しく出る。 */
+  const 刻む = (節, 幅, 場, 伸, 深さ) => {
+    const r = 幅 / 2 + 伸;
+    for (let i = 0; i < 節.length - 1; i++) {
+      const x0 = 節[i][0] / 半, y0 = 節[i][1] / 半, x1 = 節[i + 1][0] / 半, y1 = 節[i + 1][1] / 半;
+      const L = Math.hypot(x1 - x0, y1 - y0);
+      const 歩 = Math.max(1, Math.ceil(L));
+      for (let k = 0; k <= 歩; k++) {
+        const t = k / 歩, cx2 = x0 + (x1 - x0) * t, cy2 = y0 + (y1 - y0) * t;
+        const rr = r / 半;
+        const ax0 = Math.max(0, Math.floor(cx2 - rr)), ax1 = Math.min(hw - 1, Math.ceil(cx2 + rr));
+        const ay0 = Math.max(0, Math.floor(cy2 - rr)), ay1 = Math.min(hh - 1, Math.ceil(cy2 + rr));
+        for (let y = ay0; y <= ay1; y++) for (let x = ax0; x <= ax1; x++) {
+          const d = Math.hypot(x - cx2, y - cy2) * 半;
+          if (d > 幅 / 2 + 伸) continue;
+          const j = y * hw + x;
+          const t2 = 深さ(d);
+          if (t2 > 場[j]) 場[j] = t2;
+        }
+      }
+    }
+  };
+  for (const r of 川ら) {
+    const 半幅 = r.幅 / 2;
+    刻む(r.節, r.幅, 川深, 0, (d) => (d < 半幅 ? 1 - d / 半幅 : 0));
+    刻む(r.節, r.幅, 川岸, 3 * 倍, (d) => (d > 半幅 ? (半幅 + 3 * 倍 - d) / (3 * 倍) : 0));
+    /* 谷を刻む。高さを下げるので、別の場へ取ってから引く */
+    const 谷 = r.幅 * 2.4;
+    刻む(r.節, 谷 * 2, 川谷, 0, (d) => (d < 谷 ? (1 - d / 谷) ** 2 * r.幅 * 0.5 : 0));
+  }
+  for (const r of 道ら) {
+    const 半幅 = r.幅 / 2 + 2 * 倍;
+    刻む(r.節, r.幅, 道度, 2 * 倍, (d) => Math.min(1, (半幅 - d) / (2.5 * 倍)));
+  }
+  for (let i = 0; i < 高.length; i++) if (川谷[i] > 0) 高[i] -= 川谷[i] / 半;
+  /* 林。梢の塊として高さを持たせ、自ら影を落とさせる */
+  const 林 = new Float32Array(hw * hh);
+  for (const f of [...FORESTS, ...WOODS]) {
+    const fx = PX(f.x) / 半, fy = PY(f.y) / 半, r = PX(f.r) / 半 * 1.08;
+    const x0 = Math.max(0, (fx - r) | 0), x1 = Math.min(hw - 1, Math.ceil(fx + r));
+    const y0 = Math.max(0, (fy - r) | 0), y1 = Math.min(hh - 1, Math.ceil(fy + r));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const d = Math.hypot(x - fx, y - fy) / r;
+      const ほつれ = (襞(x / (4.5 * 倍), y / (4.5 * 倍), 3) - 0.5) * 0.52;
+      const t = 1 - (d + ほつれ);
+      if (t > 0) 林[y * hw + x] = Math.max(林[y * hw + x], Math.min(1, t * 2.2));
+    }
+  }
+  for (let i = 0; i < 林.length; i++) {
+    if (林[i] < 0.01) continue;
+    const x = i % hw, y = (i / hw) | 0;
+    const 梢 = 襞(x / (1.7 * 倍), y / (1.7 * 倍), 2);
+    高[i] += 林[i] * (3.5 * 倍 + 梢 * 2.5 * 倍);
+  }
+  const 光x = -0.62, 光y = -0.72, 光高 = 0.52;
+  const 影 = 日影を焼く(高, hw, hh, 光x, 光y, 光高, Math.max(1.4, 1.3 * 倍), 30);
+  const 遮 = 遮蔽を焼く(高, hw, hh, Math.max(5, (7 * 倍) | 0));
+
+  /* ---- 色を塗る ---- */
+  const im = g.createImageData(W, H), d = im.data;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const p = (y * W + x) * 4;
+      const hx = x / 半, hy = y / 半;
+      const hh2 = 引伸(高, hw, hh, x, y, 半);
+      const gx = 引伸(高, hw, hh, x + 半, y, 半) - 引伸(高, hw, hh, x - 半, y, 半);
+      const gy = 引伸(高, hw, hh, x, y + 半, 半) - 引伸(高, hw, hh, x, y - 半, 半);
+      const 傾 = Math.hypot(gx, gy) * 0.5 / 半;
+      const 乾 = 挟(0.38 + hh2 / (24 * 倍) + (襞(x / (40 * 倍), y / (40 * 倍), 3) - 0.5) * 0.85, 0, 1);
+      let c = 混色([104, 154, 60], [208, 206, 116], 乾);
+      const n1 = 襞(x / (1.8 * 倍), y / (1.8 * 倍), 2) - 0.5, n2 = 襞(x / (6 * 倍), y / (6 * 倍), 2) - 0.5;
+      c = [c[0] * (1 + n1 * 0.1 + n2 * 0.13), c[1] * (1 + n1 * 0.07 + n2 * 0.11), c[2] * (1 + n1 * 0.2 + n2 * 0.2)];
+      /* 林の梢 */
+      const fr = 引伸(林, hw, hh, x, y, 半);
+      if (fr > 0.01) {
+        const 葉 = 襞(x / (2.6 * 倍), y / (2.6 * 倍), 2);
+        c = 混色(c, 混色([58, 92, 40], [104, 134, 54], 葉), Math.min(0.96, fr * 1.3));
+      }
+      /* 急な所は土 */
+      const 露 = 挟((傾 - 0.72) * 1.1, 0, 1);
+      if (露 > 0.01) c = 混色(c, 混色([186, 170, 130], [156, 140, 106], 襞(x / (3.6 * 倍), y / (3.6 * 倍), 2)), 露 * 0.62);
+      /* 道 */
+      const 道t = 引伸(道度, hw, hh, x, y, 半);
+      if (道t > 0.01) {
+        const t = 挟(道t + (襞(x / (2.6 * 倍), y / (2.6 * 倍), 2) - 0.5) * 0.5, 0, 1);
+        c = 混色(c, [214, 182, 162], t * 0.92);
+      }
+      /* 川。岸の砂、浅い所は底が透け、深い所は空を映す */
+      const 岸t = 引伸(川岸, hw, hh, x, y, 半);
+      if (岸t > 0.01) c = 混色(c, [202, 194, 166], 岸t * 0.85);
+      const 深 = 引伸(川深, hw, hh, x, y, 半);
+      if (深 > 0.004) {
+        const 底 = 混色([152, 142, 112], [100, 104, 86], 襞(x / (3 * 倍), y / (3 * 倍), 2));
+        const 透 = Math.exp(-深 * 3.2);
+        let 面 = 混色(混色([120, 154, 190], [62, 96, 148], 挟(深 * 1.1, 0, 1)), 底, 透 * 0.72);
+        面 = 混色(面, [178, 200, 230], 0.26);
+        const 波 = 襞(x / (2.6 * 倍), y / (1.2 * 倍), 2);
+        if (波 > 0.68) 面 = 混色(面, [240, 248, 255], (波 - 0.68) * 2.2);
+        c = 混色(c, 面, 挟(深 * 7, 0, 1));
+      }
+      /* 光。日影・環境遮蔽・面の向き */
+      const nx = -gx * 0.5 / 半, ny = -gy * 0.5 / 半, nl = Math.hypot(nx, ny, 1);
+      const 直 = 挟((nx * 光x + ny * 光y + 光高) / nl, 0, 1);
+      const 日 = 1 - 引伸(影, hw, hh, x, y, 半) * 0.6;
+      const 空 = 1 - 引伸(遮, hw, hh, x, y, 半) * 0.26;
+      const 明 = 0.58 * 空 + 0.6 * 直 * 日;
+      c = [c[0] * 明, c[1] * 明 * 1.01, c[2] * 明 * (1 + (1 - 日) * 0.22 + (1 - 空) * 0.1)];
+      d[p] = 挟(c[0], 0, 255); d[p + 1] = 挟(c[1], 0, 255); d[p + 2] = 挟(c[2], 0, 255); d[p + 3] = 255;
+    }
+  }
+  g.putImageData(im, 0, 0);
+
+  const 明関 = (x, y) => 1 - 引伸(影, hw, hh, Math.max(0, Math.min(W - 1, x)), Math.max(0, Math.min(H - 1, y)), 半) * 0.5;
+
+  /* 草の穂。短く、多く、薄く */
+  野種を置く(31337);
+  g.lineCap = "butt";
+  const 穂数 = Math.min(220000, Math.round(W * H * 0.05));
+  for (let i = 0; i < 穂数; i++) {
+    const x = 野乱() * W, y = 野乱() * H;
+    const 日 = 明関(x, y);
+    const t = 野乱(), a = (0.09 + 野乱() * 0.06) * 日;
+    g.strokeStyle = t < 0.45 ? `rgba(82,114,46,${a.toFixed(3)})`
+      : t < 0.82 ? `rgba(144,172,78,${a.toFixed(3)})` : `rgba(196,204,128,${a.toFixed(3)})`;
+    g.lineWidth = Math.max(0.6, 0.8 * 倍);
+    const ang = -1.5 + (野乱() - 0.5) * 0.9, L = (0.7 + 野乱() * 1.4) * 倍;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(ang) * L, y + Math.sin(ang) * L); g.stroke();
+  }
+
+  /* 沼 */
+  for (const m of MARSH) {
+    const mx = PX(m.x), my = PY(m.y), r = PX(m.r);
+    const gr = g.createRadialGradient(mx, my, r * 0.2, mx, my, r);
+    gr.addColorStop(0, "rgba(86,112,92,0.55)"); gr.addColorStop(1, "rgba(86,112,92,0)");
+    g.fillStyle = gr; g.beginPath(); g.ellipse(mx, my, r, r * 0.8, 0, 0, 7); g.fill();
+  }
+
+  /* 集落 */
+  for (const v of VILLAGES) 集落(g, PX(v.x), PY(v.y), PX(v.r || 40) * 0.95, Math.round(v.x + v.y), 明関, 倍);
+
+  /* 木。林の只中は塊で描いたので、木は縁と野にだけ立てる */
+  野種を置く(606);
+  const 木 = [];
+  const 試 = Math.min(260000, Math.round(W * H * 0.06));
+  for (let i = 0; i < 試; i++) {
+    const x = 野乱() * W, y = 野乱() * H;
+    const fr = 引伸(林, hw, hh, x, y, 半);
+    const 群 = 襞(x / (20 * 倍), y / (20 * 倍), 3);
+    let 生 = false;
+    if (fr > 0.5) 生 = false;
+    else if (fr > 0.08) 生 = 野乱() < 0.1;
+    else if (群 > 0.58) 生 = 野乱() < 0.05;
+    else 生 = 野乱() < 0.008;
+    if (!生) continue;
+    if (引伸(川深, hw, hh, x, y, 半) > 0.004) continue;
+    if (引伸(川岸, hw, hh, x, y, 半) > 0.1) continue;
+    if (引伸(道度, hw, hh, x, y, 半) > 0.05) continue;
+    木.push([x, y, (2.6 + 野乱() * 3.2) * 倍, 野乱(), 明関(x, y)]);
+  }
+  木.sort((a, b) => a[1] - b[1]);
+  for (const [x, y, r, 振, 日] of 木) 繁木(g, x, y, r, 振, 日);
+
+  /* 名のある峰と村の札。野の座標で描く */
+  g.setTransform(k, 0, 0, k, 0, 0);
+  for (const o of [...HILLS, ...MOUNTAINS]) if (o.札 && o.名) 名札(g, o.x, o.y - o.r * 0.36, o.名);
+  for (const v of VILLAGES) if (v.札 && v.名) 名札(g, v.x, v.y + (v.r || 40) + 12, v.名);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+}
 
 /* ---- 組の中の持ち場（戦列の形：前列が組の前縁、後ろへ五列） ---- */
 /* 散らばりは、定規で引いた格子に見えぬ程度に広く取る（GDD 8.11）。

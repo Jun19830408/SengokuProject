@@ -202,7 +202,7 @@ export const corpsMax = (c) => c.squads.reduce((s, q) => s + q.max, 0);
    陣形と組数が変わったときだけ。回転は軽いので毎度やり直す。 */
 export function placeSquads(c, snap) {
   const live = c.squads.filter((q) => q.men > 0).length;
-  const 形骨 = `${c.formation}|${c.order === "突撃" ? "c" : "n"}`;
+  const 形骨 = `${c.formation}|${c.order === "突撃" ? "c" : c.order === "射撃" ? "s" : "n"}`;
   const 骨 = `${形骨}|${live}`;
   /* 陣の向きは、隊の向き（facing）とは別に持つ。
 
@@ -237,7 +237,15 @@ export function placeSquads(c, snap) {
   }));
   // 突撃のときは騎馬を前に立てる。組が飛び出すのではなく、陣形の中の持ち場が入れ替わる。
   const CHARGE_ROLE = { yari: [0.40, 0.42], kiba: [0.44, 0.08], yumi: [0.34, 0.88], teppo: [0.30, 0.82] };
-  const role = c.order === "突撃" ? CHARGE_ROLE : (FORM_ROLE[c.formation] || FORM_ROLE["横陣"]);
+  /* 射撃のときは弓と鉄砲を前に出す（GDD 8.4）。
+
+     撃てと命じても、弓鉄砲が後列にいては槍の背中しか撃てない。射撃の下知を
+     受けたら、射手が前、槍は後ろに控えて射手を守り、騎馬はさらに後ろへ退く。
+     突撃と同じく、組が飛び出すのではなく陣形の中の持ち場が入れ替わる。 */
+  const SHOOT_ROLE = { yari: [0.42, 0.72], kiba: [0.50, 0.92], yumi: [0.32, 0.10], teppo: [0.24, 0.06] };
+  const role = c.order === "突撃" ? CHARGE_ROLE
+    : c.order === "射撃" ? SHOOT_ROLE
+    : (FORM_ROLE[c.formation] || FORM_ROLE["横陣"]);
   const cost = (q, i) => {
     const w = role[q.type] || [0.4, 0.4];
     const f = feat[i];

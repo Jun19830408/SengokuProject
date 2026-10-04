@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
-import { 新絵か, 新絵の野, 新絵の寄り限り } from "../battle/shinga.js";
+import { 新絵か, 新絵の野, 新絵の寄り限り, 新絵の画布上限 } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
-import { BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
+import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
 import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる, 内応させる, 内応の門を開く } from "../battle/corps.js";
@@ -57,17 +57,31 @@ export function BattleScreen({ ctx, land, onEnd }) {
      二千万画素を上限とし、それを超える野は間引いて焼く。貼るときに引き伸ばすので、
      遠目には変わらない。寄って見れば地の描き込みが少し甘くなるが、
      地の絵が甘いのと戦が始まらないのとでは、比べるまでもない。 */
-  const 画布の倍 = () => Math.min(1, Math.sqrt(2.0e7 / Math.max(1, FIELD.w * FIELD.h)));
+  /* 新しい野は画素ごとに塗るので、二千万画素では焼くのに三十秒かかる。
+     三百万画素で焼き、細かさは近景の肌理（寄ったときに画面の縮尺で重ねる）に
+     持たせる。引きで見れば差は分からず、寄れば肌理のほうが効く。 */
+  const 画布の倍 = () => {
+    const 上限 = (ctx.b && ctx.mode !== "castle" && 新絵か(ctx.b)) ? 新絵の画布上限 : 2.0e7;
+    return Math.min(1, Math.sqrt(上限 / Math.max(1, FIELD.w * FIELD.h)));
+  };
   const paintTerrain = () => {
     const t = terrainRef.current || document.createElement("canvas");
     const k = 画布の倍();
     t.width = Math.max(1, Math.round(FIELD.w * k)); t.height = Math.max(1, Math.round(FIELD.h * k));
     const g2 = t.getContext("2d");
-    g2.setTransform(k, 0, 0, k, 0, 0);
-    if (ctx.mode === "castle" && ctx.b.map) drawCastleTerrain(g2, ctx.b.map);
-    else if (新絵か(ctx.b)) 新絵の野(g2);    // 関ヶ原だけ淡彩の野（GDD 8.11）
-    else drawFieldTerrain(g2);
+    const 焼始 = (typeof performance !== "undefined" ? performance.now() : 0);
+    if (ctx.mode === "castle" && ctx.b.map) {
+      g2.setTransform(k, 0, 0, k, 0, 0); drawCastleTerrain(g2, ctx.b.map);
+    } else if (新絵か(ctx.b)) {
+      新絵の野(g2, k);                        // 関ヶ原だけ画素で塗る野（GDD 8.11）
+    } else {
+      g2.setTransform(k, 0, 0, k, 0, 0); drawFieldTerrain(g2);
+    }
     g2.setTransform(1, 0, 0, 1, 0, 0);
+    if (typeof window !== "undefined") {
+      window.__野焼き = Math.round(performance.now() - 焼始) + "ms / "
+        + Math.round(t.width) + "x" + Math.round(t.height);
+    }
     terrainRef.current = t;
     /* 戦の痕の画布（GDD 8.1）。地の半分の寸法で足りる――跡はどれも滲んだ形である。
        記憶を惜しむのは、地の画布が既に十九MB（城攻めなら四十六MB）あるからである。 */
@@ -583,6 +597,16 @@ export function BattleScreen({ ctx, land, onEnd }) {
     c.task = null;
     c.狙い = null;                       // 別の命令を出せば、名指しの狙いは解ける
     const t = nearestFoe(c);
+    const 近い敵 = (self) => {
+      let 近 = null, nd = 1e9;
+      for (const o of b.corps) {
+        if (o.side === self.side || o.dead || o.destroyed || o.routed) continue;
+        if (o.ambush && !o.revealed) continue;
+        const d = Math.hypot(o.x - self.x, o.y - self.y);
+        if (d < nd) { nd = d; 近 = o; }
+      }
+      return 近;
+    };
     const standoff = (foe, gap) => {
       const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
       return { tx: foe.x + ((c.x - foe.x) / d) * gap, ty: foe.y + ((c.y - foe.y) / d) * gap };
@@ -591,7 +615,17 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (o === "前進") { c.wp = null; patch = { order: "前進", tx: c.x, ty: Math.max(60, c.y - 190) }; }
     else if (o === "接戦") patch = { order: "接戦", ...(t ? standoff(t, 38) : { tx: c.tx, ty: c.ty }) };
     else if (o === "突撃") patch = { order: "突撃", chargeT: c.formation === "鋒矢" ? 26 : 16, ...(t ? standoff(t, 20) : {}) };
-    else if (o === "射撃") patch = { order: "射撃", tx: c.x, ty: c.y };
+    else if (o === "射撃") {
+      /* 射撃は「間合いを取って撃つ」下知である。名指しの敵があればその敵へ、
+         なければいちばん近い敵へ、得物の届く所まで寄る（engine が毎刻
+         取り直すので、ここで決めるのは出だしの行き先だけでよい）。 */
+      let 届 = 0;
+      for (const q of c.squads) { if (q.men > 0) 届 = Math.max(届, ARM_STATS[q.type].range); }
+      const 的 = t || 近い敵(c);
+      patch = (届 > 0 && 的)
+        ? { order: "射撃", ...standoff(的, Math.min(Math.hypot(c.x - 的.x, c.y - 的.y), 届 * 0.88)) }
+        : { order: "射撃", tx: c.x, ty: c.y };
+    }
     else if (o === "守備") patch = { order: "守備", formation: "方陣", tx: c.x, ty: c.y, reformT: reformTime(c.gen) };
     else if (o === "後退") {
       if (t) { const d = Math.hypot(c.x - t.x, c.y - t.y) || 1;
@@ -706,7 +740,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     前進: "隊列を保って前へ出る。", 接戦: "最寄りの敵と槍を合わせる。",
     突撃: "16秒だけ勢いをつけて当たる。速く強いが隊列と疲労を大きく損なう。",
     転回: "前進せず、その場で向きだけ変える。",
-    射撃: "前へ出ず、弓と鉄砲で射程を保つ。", 守備: "方陣で密集し、受ける損害を抑える。",
+    射撃: "弓鉄砲を前に立て、射程まで寄って撃つ。近づかれたら退きつつ撃つ。", 守備: "方陣で密集し、受ける損害を抑える。",
     後退: "敵から距離を取り直す。", 待機: "その場で隊列を整える。",
   };
 

@@ -23832,7 +23832,7 @@ var corpsMen = (c) => c.squads.reduce((s2, q) => s2 + q.men, 0);
 var corpsMax = (c) => c.squads.reduce((s2, q) => s2 + q.max, 0);
 function placeSquads(c, snap) {
   const live = c.squads.filter((q) => q.men > 0).length;
-  const \u5F62\u9AA8 = `${c.formation}|${c.order === "\u7A81\u6483" ? "c" : "n"}`;
+  const \u5F62\u9AA8 = `${c.formation}|${c.order === "\u7A81\u6483" ? "c" : c.order === "\u5C04\u6483" ? "s" : "n"}`;
   const \u9AA8 = `${\u5F62\u9AA8}|${live}`;
   if (snap || c.\u5F62\u9AA8 !== \u5F62\u9AA8) {
     c.\u5F62\u9AA8 = \u5F62\u9AA8;
@@ -23854,7 +23854,8 @@ function placeSquads(c, snap) {
     fd: Math.hypot(sl.x, sl.y - cy0) / Math.max(1, Math.hypot(maxX, spanY / 2))
   }));
   const CHARGE_ROLE = { yari: [0.4, 0.42], kiba: [0.44, 0.08], yumi: [0.34, 0.88], teppo: [0.3, 0.82] };
-  const role = c.order === "\u7A81\u6483" ? CHARGE_ROLE : FORM_ROLE[c.formation] || FORM_ROLE["\u6A2A\u9663"];
+  const SHOOT_ROLE = { yari: [0.42, 0.72], kiba: [0.5, 0.92], yumi: [0.32, 0.1], teppo: [0.24, 0.06] };
+  const role = c.order === "\u7A81\u6483" ? CHARGE_ROLE : c.order === "\u5C04\u6483" ? SHOOT_ROLE : FORM_ROLE[c.formation] || FORM_ROLE["\u6A2A\u9663"];
   const cost = (q, i) => {
     const w = role[q.type] || [0.4, 0.4];
     const f = feat[i];
@@ -25852,31 +25853,6 @@ function \u65D7\u6301\u672D(side, \u5F62) {
   }
   return n;
 }
-function \u63FA\u70B9(pts, step, \u5E452) {
-  const out = [];
-  for (let i = 0; i < pts.length - 1; i++) {
-    const x0 = pts[i].x, y0 = pts[i].y, x1 = pts[i + 1].x, y1 = pts[i + 1].y;
-    const L = Math.hypot(x1 - x0, y1 - y0) || 1, n = Math.max(2, L / step | 0);
-    const nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
-    for (let k = 0; k < n; k++) {
-      const t = k / n, off = (R() - 0.5) * \u5E452;
-      out.push([x0 + (x1 - x0) * t + nx * off, y0 + (y1 - y0) * t + ny * off]);
-    }
-  }
-  const L2 = pts[pts.length - 1];
-  out.push([L2.x, L2.y]);
-  return out;
-}
-function \u7DDA\u5F15(g, pts, lw, st) {
-  g.strokeStyle = st;
-  g.lineWidth = lw;
-  g.lineJoin = "round";
-  g.lineCap = "round";
-  g.beginPath();
-  g.moveTo(pts[0][0], pts[0][1]);
-  for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
-  g.stroke();
-}
 var \u540D\u672D = (g, x, y, s2) => {
   g.save();
   g.font = '600 13px "Hiragino Mincho ProN","Yu Mincho",serif';
@@ -25888,303 +25864,509 @@ var \u540D\u672D = (g, x, y, s2) => {
   g.fillText(s2, x, y);
   g.restore();
 };
-function \u65B0\u7D75\u306E\u91CE(g) {
-  const W2 = FIELD.w, H2 = FIELD.h, \u9762 = W2 * H2;
-  \u7A2E = 31;
-  g.fillStyle = "#A9AE7C";
-  g.fillRect(0, 0, W2, H2);
-  const \u67D3 = (\u8272, n, r0, r1, a) => {
-    for (let i = 0; i < n; i++) {
-      const x = R() * W2, y = R() * H2, r = r0 + R() * (r1 - r0);
-      const gr = g.createRadialGradient(x, y, r * 0.1, x, y, r);
-      gr.addColorStop(0, \u8272.replace(")", `,${a})`).replace("rgb", "rgba"));
-      gr.addColorStop(1, \u8272.replace(")", ",0)").replace("rgb", "rgba"));
-      g.fillStyle = gr;
-      g.beginPath();
-      g.ellipse(x, y, r, r * 0.7, R() * 3, 0, 7);
-      g.fill();
+var \u65B0\u7D75\u306E\u753B\u5E03\u4E0A\u9650 = 32e5;
+var \u96D1\u683C\u5BF8 = 256;
+var \u96D1\u683C = new Float32Array(\u96D1\u683C\u5BF8 * \u96D1\u683C\u5BF8);
+(() => {
+  let v = 1013904223;
+  for (let i = 0; i < \u96D1\u683C.length; i++) {
+    v = Math.imul(v, 1664525) + 1013904223 | 0;
+    \u96D1\u683C[i] = (v >>> 8 & 65535) / 65535;
+  }
+})();
+var \u6ED1\u66F2 = (t) => t * t * (3 - 2 * t);
+function \u7C92\u97F3(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const xf = \u6ED1\u66F2(x - xi), yf = \u6ED1\u66F2(y - yi);
+  const i0 = xi & 255, i1 = xi + 1 & 255;
+  const j0 = (yi & 255) * \u96D1\u683C\u5BF8, j1 = (yi + 1 & 255) * \u96D1\u683C\u5BF8;
+  const a = \u96D1\u683C[j0 + i0], b = \u96D1\u683C[j0 + i1], c = \u96D1\u683C[j1 + i0], d = \u96D1\u683C[j1 + i1];
+  const t = a + (b - a) * xf;
+  return t + (c + (d - c) * xf - t) * yf;
+}
+function \u895E(x, y, \u6BB52 = 3) {
+  let s2 = 0, a = 1, f = 1, w = 0;
+  for (let i = 0; i < \u6BB52; i++) {
+    s2 += \u7C92\u97F3(x * f, y * f) * a;
+    w += a;
+    a *= 0.5;
+    f *= 2.03;
+  }
+  return s2 / w;
+}
+var \u91CE\u7A2E = 20250915;
+var \u91CE\u4E71 = () => {
+  \u91CE\u7A2E = \u91CE\u7A2E * 1103515245 + 12345 & 2147483647;
+  return \u91CE\u7A2E / 2147483647;
+};
+var \u91CE\u7A2E\u3092\u7F6E\u304F = (n) => {
+  \u91CE\u7A2E = n;
+};
+var \u631F = (v, a, b) => v < a ? a : v > b ? b : v;
+var \u6DF7\u8272 = (c1, c2, t) => [
+  c1[0] + (c2[0] - c1[0]) * t,
+  c1[1] + (c2[1] - c1[1]) * t,
+  c1[2] + (c2[2] - c1[2]) * t
+];
+function \u65E5\u5F71\u3092\u713C\u304F(\u9AD8, W2, H2, \u5149x, \u5149y, \u5149\u9AD8, \u6B69, \u56DE) {
+  const \u5F712 = new Float32Array(W2 * H2);
+  for (let y = 0; y < H2; y++) {
+    for (let x = 0; x < W2; x++) {
+      const i = y * W2 + x, h0 = \u9AD8[i];
+      let \u906E = 0;
+      for (let k = 1; k <= \u56DE; k++) {
+        const sx = Math.round(x - \u5149x * \u6B69 * k), sy = Math.round(y - \u5149y * \u6B69 * k);
+        if (sx < 0 || sy < 0 || sx >= W2 || sy >= H2) break;
+        const hs = \u9AD8[sy * W2 + sx];
+        const \u8981 = h0 + \u5149\u9AD8 * \u6B69 * k;
+        if (hs > \u8981) {
+          \u906E = Math.max(\u906E, Math.min(1, (hs - \u8981) * 0.3));
+          if (\u906E > 0.95) break;
+        }
+      }
+      \u5F712[i] = \u906E;
+    }
+  }
+  const \u51FA = new Float32Array(W2 * H2);
+  for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) {
+    let s2 = 0, n = 0;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= W2 || yy >= H2) continue;
+      s2 += \u5F712[yy * W2 + xx];
+      n++;
+    }
+    \u51FA[y * W2 + x] = s2 / n;
+  }
+  return \u51FA;
+}
+function \u906E\u853D\u3092\u713C\u304F(\u9AD8, W2, H2, \u8DDD) {
+  const \u906E = new Float32Array(W2 * H2);
+  const \u5411 = [[1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7], [0, -1], [0.7, -0.7]];
+  for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) {
+    const i = y * W2 + x, h0 = \u9AD8[i];
+    let s2 = 0;
+    for (let v = 0; v < \u5411.length; v++) {
+      const dx = \u5411[v][0], dy = \u5411[v][1];
+      let \u6700 = 0;
+      for (let k = 2; k <= \u8DDD; k += 2) {
+        const sx = Math.round(x + dx * k), sy = Math.round(y + dy * k);
+        if (sx < 0 || sy < 0 || sx >= W2 || sy >= H2) continue;
+        const t = (\u9AD8[sy * W2 + sx] - h0) / k;
+        if (t > \u6700) \u6700 = t;
+      }
+      s2 += Math.min(1, Math.max(0, \u6700));
+    }
+    \u906E[i] = s2 / \u5411.length;
+  }
+  return \u906E;
+}
+var \u5F15\u4F38 = (\u5834, hw, hh, x, y, \u534A) => {
+  const u = x / \u534A, v = y / \u534A;
+  const x0 = Math.min(hw - 1, Math.max(0, Math.floor(u))), y0 = Math.min(hh - 1, Math.max(0, Math.floor(v)));
+  const x1 = Math.min(hw - 1, x0 + 1), y1 = Math.min(hh - 1, y0 + 1);
+  const fx = u - x0, fy = v - y0;
+  const a = \u5834[y0 * hw + x0], b = \u5834[y0 * hw + x1], c = \u5834[y1 * hw + x0], d = \u5834[y1 * hw + x1];
+  const t = a + (b - a) * fx;
+  return t + (c + (d - c) * fx - t) * fy;
+};
+function \u74E6\u5C4B\u6839(q, cx, cy, w, d, \u5411, \u660E, \u500D) {
+  q.save();
+  q.translate(cx, cy);
+  q.rotate(\u5411);
+  const hw = w / 2, hd = d / 2, \u68DF = hw * 0.42, \u51FA = d * 0.26;
+  const \u57FA = [128, 142, 146];
+  const c = (k) => `rgb(${\u57FA[0] * k * \u660E | 0},${\u57FA[1] * k * \u660E | 0},${\u57FA[2] * k * \u660E | 0})`;
+  const \u9762 = (p, k1, k2) => {
+    const gr = q.createLinearGradient(p[0][0], p[0][1], p[2] ? p[2][0] : p[1][0], p[2] ? p[2][1] : p[1][1]);
+    gr.addColorStop(0, c(k1));
+    gr.addColorStop(1, c(k2));
+    q.fillStyle = gr;
+    q.beginPath();
+    q.moveTo(p[0][0], p[0][1]);
+    for (let i = 1; i < p.length; i++) q.lineTo(p[i][0], p[i][1]);
+    q.closePath();
+    q.fill();
+  };
+  \u9762([[-hw, -hd], [hw, -hd], [\u68DF, -\u51FA], [-\u68DF, -\u51FA]], 1.5, 1.1);
+  \u9762([[-hw, hd], [hw, hd], [\u68DF, -\u51FA], [-\u68DF, -\u51FA]], 0.82, 0.64);
+  \u9762([[-hw, -hd], [-hw, hd], [-\u68DF, -\u51FA]], 1.22, 0.92);
+  \u9762([[hw, -hd], [hw, hd], [\u68DF, -\u51FA]], 0.92, 0.74);
+  q.strokeStyle = `rgba(214,222,226,${0.85 * \u660E})`;
+  q.lineWidth = Math.max(1, 1.8 * \u500D);
+  q.lineCap = "round";
+  q.beginPath();
+  q.moveTo(-\u68DF, -\u51FA);
+  q.lineTo(\u68DF, -\u51FA);
+  q.stroke();
+  q.strokeStyle = `rgba(34,40,42,${0.6 * \u660E})`;
+  q.lineWidth = Math.max(0.8, 1.2 * \u500D);
+  q.strokeRect(-hw, -hd, w, d);
+  q.restore();
+}
+function \u8305\u5C4B\u6839(q, cx, cy, w, d, \u5411, \u660E, \u500D) {
+  q.save();
+  q.translate(cx, cy);
+  q.rotate(\u5411);
+  const hw = w / 2, hd = d / 2, \u68DF = hw * 0.34, \u51FA = d * 0.3;
+  const \u8305 = [168, 142, 92];
+  const c = (k) => `rgb(${\u8305[0] * k * \u660E | 0},${\u8305[1] * k * \u660E | 0},${\u8305[2] * k * \u660E | 0})`;
+  const \u9762 = (p, k1, k2) => {
+    const gr = q.createLinearGradient(p[0][0], p[0][1], p[2] ? p[2][0] : p[1][0], p[2] ? p[2][1] : p[1][1]);
+    gr.addColorStop(0, c(k1));
+    gr.addColorStop(1, c(k2));
+    q.fillStyle = gr;
+    q.beginPath();
+    q.moveTo(p[0][0], p[0][1]);
+    for (let i = 1; i < p.length; i++) q.lineTo(p[i][0], p[i][1]);
+    q.closePath();
+    q.fill();
+  };
+  \u9762([[-hw, -hd], [hw, -hd], [\u68DF, -\u51FA], [-\u68DF, -\u51FA]], 1.42, 1.12);
+  \u9762([[-hw, hd], [hw, hd], [\u68DF, -\u51FA], [-\u68DF, -\u51FA]], 0.74, 0.54);
+  \u9762([[-hw, -hd], [-hw, hd], [-\u68DF, -\u51FA]], 1.2, 0.94);
+  \u9762([[hw, -hd], [hw, hd], [\u68DF, -\u51FA]], 0.88, 0.66);
+  q.strokeStyle = `rgb(${126 * \u660E | 0},${104 * \u660E | 0},${66 * \u660E | 0})`;
+  q.lineWidth = Math.max(1.4, 2.6 * \u500D);
+  q.lineCap = "round";
+  q.beginPath();
+  q.moveTo(-\u68DF, -\u51FA);
+  q.lineTo(\u68DF, -\u51FA);
+  q.stroke();
+  q.strokeStyle = `rgba(66,52,30,${0.5 * \u660E})`;
+  q.lineWidth = Math.max(0.8, 1.2 * \u500D);
+  q.strokeRect(-hw, -hd, w, d);
+  q.restore();
+}
+var \u6728\u5E33 = {};
+function \u6728\u672D(r, \u632F, \u65E5) {
+  const \u4E08 = Math.max(3, Math.round(r));
+  const i\u632F = \u632F < 0.45 ? 0 : 1;
+  const i\u65E5 = Math.max(0, Math.min(3, Math.round(\u65E5 * 3)));
+  const key = \u4E08 + "_" + i\u632F + "_" + i\u65E5;
+  let n = \u6728\u5E33[key];
+  if (n === void 0) {
+    if (typeof document === "undefined") {
+      \u6728\u5E33[key] = null;
+      return null;
+    }
+    const \u5E452 = Math.ceil(\u4E08 * 4.2), \u9AD82 = Math.ceil(\u4E08 * 4.4);
+    n = document.createElement("canvas");
+    n.width = \u5E452;
+    n.height = \u9AD82;
+    \u7E41\u6728\u3092\u63CF\u304F(n.getContext("2d"), \u5E452 / 2, \u9AD82 - \u4E08 * 0.9, \u4E08, i\u632F ? 0.6 : 0.2, i\u65E5 / 3);
+    n.\u6839x = \u5E452 / 2;
+    n.\u6839y = \u9AD82 - \u4E08 * 0.9;
+    \u6728\u5E33[key] = n;
+  }
+  return n;
+}
+function \u7E41\u6728(q, x, y, r, \u632F, \u65E5) {
+  const n = \u6728\u672D(r, \u632F, \u65E5);
+  if (!n) {
+    \u7E41\u6728\u3092\u63CF\u304F(q, x, y, r, \u632F, \u65E5);
+    return;
+  }
+  q.drawImage(n, x - n.\u6839x, y - n.\u6839y);
+}
+function \u7E41\u6728\u3092\u63CF\u304F(q, x, y, r, \u632F, \u65E5) {
+  q.fillStyle = `rgba(46,62,30,${(0.34 * (0.5 + \u65E5 * 0.5)).toFixed(2)})`;
+  q.beginPath();
+  q.ellipse(x + r * 0.78, y + r * 0.2, r * 1.05, r * 0.34, 0.2, 0, 7);
+  q.fill();
+  q.strokeStyle = "#5E4B2E";
+  q.lineWidth = Math.max(0.6, r * 0.2);
+  q.lineCap = "round";
+  q.beginPath();
+  q.moveTo(x, y);
+  q.lineTo(x - r * 0.06, y - r * 0.55);
+  q.stroke();
+  const \u5BD2 = \u632F < 0.45;
+  const \u660E = \u5BD2 ? [120, 152, 70] : [150, 174, 72], \u6697 = \u5BD2 ? [40, 66, 32] : [52, 76, 30];
+  const \u623F = [
+    [-0.5, -0.56, 0.52],
+    [0.52, -0.52, 0.5],
+    [-0.26, -0.9, 0.52],
+    [0.3, -0.88, 0.5],
+    [0, -1.16, 0.48],
+    [0, -0.72, 0.56]
+  ];
+  for (let k = 0; k < \u623F.length; k++) {
+    const ax = x + \u623F[k][0] * r, ay = y + \u623F[k][1] * r, rr = r * \u623F[k][2];
+    const gr = q.createRadialGradient(ax - rr * 0.45, ay - rr * 0.5, rr * 0.08, ax, ay, rr * 1.12);
+    const m = 0.72 + 0.28 * \u65E5 + (k >= 4 ? 0.12 : 0);
+    gr.addColorStop(0, `rgb(${\u660E[0] * m | 0},${\u660E[1] * m | 0},${\u660E[2] * m | 0})`);
+    gr.addColorStop(0.55, `rgb(${(\u660E[0] + \u6697[0]) / 2 * m | 0},${(\u660E[1] + \u6697[1]) / 2 * m | 0},${(\u660E[2] + \u6697[2]) / 2 * m | 0})`);
+    gr.addColorStop(1, `rgb(${\u6697[0] * m | 0},${\u6697[1] * m | 0},${\u6697[2] * m | 0})`);
+    q.fillStyle = gr;
+    q.beginPath();
+    q.ellipse(ax, ay, rr, rr * 0.92, 0, 0, 7);
+    q.fill();
+  }
+}
+function \u96C6\u843D(q, cx, cy, r, \u7A2E2, \u660E\u95A2, \u500D) {
+  \u91CE\u7A2E\u3092\u7F6E\u304F(\u7A2E2);
+  const \u5411 = \u91CE\u4E71() * 6.283, ux = Math.cos(\u5411), uy = Math.sin(\u5411);
+  const \u95772 = r * 1.5;
+  q.lineCap = "round";
+  q.lineJoin = "round";
+  q.strokeStyle = "rgba(176,152,124,0.5)";
+  q.lineWidth = Math.max(2, 5 * \u500D);
+  q.beginPath();
+  q.moveTo(cx - ux * \u95772, cy - uy * \u95772 * 0.72);
+  q.lineTo(cx + ux * \u95772, cy + uy * \u95772 * 0.72);
+  q.stroke();
+  q.strokeStyle = "rgba(206,186,164,0.7)";
+  q.lineWidth = Math.max(1.4, 3 * \u500D);
+  q.beginPath();
+  q.moveTo(cx - ux * \u95772, cy - uy * \u95772 * 0.72);
+  q.lineTo(cx + ux * \u95772, cy + uy * \u95772 * 0.72);
+  q.stroke();
+  const \u57A3 = [];
+  for (let i = 0; i <= 26; i++) {
+    const a = i / 26 * 6.283, rr = r * (0.95 + Math.sin(a * 3 + \u7A2E2) * 0.1);
+    \u57A3.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.76]);
+  }
+  const \u57A3\u5F15 = (ox, oy, \u5E452, \u8272) => {
+    q.strokeStyle = \u8272;
+    q.lineWidth = \u5E452;
+    q.beginPath();
+    q.moveTo(\u57A3[0][0] + ox, \u57A3[0][1] + oy);
+    for (let i = 1; i < \u57A3.length; i++) q.lineTo(\u57A3[i][0] + ox, \u57A3[i][1] + oy);
+    q.stroke();
+  };
+  \u57A3\u5F15(2 * \u500D, 3 * \u500D, Math.max(2.4, 5 * \u500D), "rgba(46,70,32,0.34)");
+  \u57A3\u5F15(0, 0, Math.max(2, 4 * \u500D), "#5A7A36");
+  \u57A3\u5F15(-0.8 * \u500D, -1.4 * \u500D, Math.max(0.8, 1.4 * \u500D), "rgba(150,180,96,0.6)");
+  const \u5BB6\u3089 = [];
+  const n = Math.max(9, Math.round(r / (3.6 * \u500D)));
+  for (let i = 0; i < n; i++) {
+    const t = (i / (n - 1) - 0.5) * 1.7, \u5074 = i % 2 ? 1 : -1;
+    const \u5BC4 = (0.18 + \u91CE\u4E71() * 0.5) * r * \u5074;
+    const x = cx + ux * \u95772 * t - uy * \u5BC4 * 0.8 + (\u91CE\u4E71() - 0.5) * 6 * \u500D;
+    const y = cy + uy * \u95772 * t * 0.72 + ux * \u5BC4 * 0.6 + (\u91CE\u4E71() - 0.5) * 5 * \u500D;
+    if (Math.hypot((x - cx) / r, (y - cy) / (r * 0.76)) > 0.94) continue;
+    \u5BB6\u3089.push([x, y, \u91CE\u4E71() < 0.22 ? "\u8535" : "\u5BB6", \u91CE\u4E71()]);
+  }
+  \u5BB6\u3089.sort((a, b) => a[1] - b[1]);
+  for (const [x, y, \u7A2E\u985E, rr] of \u5BB6\u3089) {
+    const m = \u660E\u95A2(x, y);
+    const w2 = (\u7A2E\u985E === "\u8535" ? 10 + rr * 4 : 14 + rr * 8) * \u500D;
+    const d2 = (\u7A2E\u985E === "\u8535" ? 8 + rr * 3 : 11 + rr * 4) * \u500D;
+    q.fillStyle = `rgba(40,56,26,${0.42 * (0.5 + m * 0.5)})`;
+    q.beginPath();
+    q.ellipse(x + w2 * 0.34, y + d2 * 0.3, w2 * 0.72, d2 * 0.46, 0.2, 0, 7);
+    q.fill();
+    q.save();
+    q.translate(x, y);
+    q.rotate(\u5411);
+    if (\u7A2E\u985E === "\u8535") {
+      q.fillStyle = `rgb(${236 * m | 0},${230 * m | 0},${216 * m | 0})`;
+      q.fillRect(-w2 * 0.46, -d2 * 0.34, w2 * 0.92, d2 * 0.8);
+    } else {
+      q.fillStyle = `rgb(${176 * m | 0},${160 * m | 0},${132 * m | 0})`;
+      q.fillRect(-w2 * 0.44, -d2 * 0.3, w2 * 0.88, d2 * 0.74);
+    }
+    q.restore();
+    if (\u7A2E\u985E === "\u8535") \u74E6\u5C4B\u6839(q, x, y, w2 * 1.06, d2, \u5411, m, \u500D);
+    else \u8305\u5C4B\u6839(q, x, y, w2, d2, \u5411, m, \u500D);
+  }
+  for (let i = 0; i < Math.max(6, r / (6 * \u500D) | 0); i++) {
+    const a = \u91CE\u4E71() * 6.283, dd = r * (0.5 + \u91CE\u4E71() * 0.42);
+    const x = cx + Math.cos(a) * dd, y = cy + Math.sin(a) * dd * 0.76;
+    \u7E41\u6728(q, x, y, (4 + \u91CE\u4E71() * 3) * \u500D, \u91CE\u4E71(), \u660E\u95A2(x, y));
+  }
+}
+function \u65B0\u7D75\u306E\u91CE(g, \u753Bk) {
+  const k = \u753Bk || 1;
+  const W2 = Math.max(1, Math.round(FIELD.w * k)), H2 = Math.max(1, Math.round(FIELD.h * k));
+  const \u500D = Math.max(0.5, Math.min(2, k * 3.2));
+  const PX = (x) => x * k, PY = (y) => y * k;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const \u5CF0 = [];
+  for (const o of HILLS) \u5CF0.push({ x: PX(o.x), y: PY(o.y), r: PX(o.r), h: \u5C71\u9AD8m(o) / 200, \u5C71: false });
+  for (const o of MOUNTAINS) \u5CF0.push({ x: PX(o.x), y: PY(o.y), r: PX(o.r), h: \u5C71\u9AD8m(o) / 200, \u5C71: true });
+  const \u5DDD\u3089 = (RIVERS2 && RIVERS2.length ? RIVERS2 : hasRiver() ? [{
+    \u5E45: Math.max(20, RIVER.bot - RIVER.top),
+    \u7BC0: [[0, (RIVER.top + RIVER.bot) / 2], [FIELD.w, (RIVER.top + RIVER.bot) / 2]]
+  }] : []).map((r) => ({ \u5E45: PX(r.\u5E45 || 50), \u7BC0: (r.\u7BC0 || []).map((p) => [PX(p.x != null ? p.x : p[0]), PY(p.y != null ? p.y : p[1])]) })).filter((r) => r.\u7BC0.length > 1);
+  const \u9053\u3089 = (ROADS2 && ROADS2.length ? ROADS2 : ROAD ? [ROAD] : []).map((r) => ({ \u5E45: PX(r.\u5E45 || 30), \u7BC0: (r.\u7BC0 || []).map((p) => [PX(p.x != null ? p.x : p[0]), PY(p.y != null ? p.y : p[1])]) })).filter((r) => r.\u7BC0.length > 1);
+  const \u534A = 2;
+  const hw = Math.max(2, Math.ceil(W2 / \u534A)), hh = Math.max(2, Math.ceil(H2 / \u534A));
+  const \u9AD8 = new Float32Array(hw * hh);
+  const \u5DDD\u6DF1 = new Float32Array(hw * hh), \u5DDD\u5CB8 = new Float32Array(hw * hh);
+  const \u9053\u5EA6 = new Float32Array(hw * hh), \u5DDD\u8C37 = new Float32Array(hw * hh);
+  for (let y = 0; y < hh; y++) {
+    for (let x = 0; x < hw; x++) {
+      \u9AD8[y * hw + x] = (\u895E(x * \u534A / (150 * \u500D), y * \u534A / (150 * \u500D), 3) - 0.5) * 7 * \u500D / \u534A;
+    }
+  }
+  for (const o of \u5CF0) {
+    const cx2 = o.x / \u534A, cy2 = o.y / \u534A, rr = o.r / \u534A;
+    const ax0 = Math.max(0, Math.floor(cx2 - rr)), ax1 = Math.min(hw - 1, Math.ceil(cx2 + rr));
+    const ay0 = Math.max(0, Math.floor(cy2 - rr)), ay1 = Math.min(hh - 1, Math.ceil(cy2 + rr));
+    const \u4E08 = o.r * 0.34 * o.h / \u534A, \u6307 = o.\u5C71 ? 1.25 : 1.5;
+    for (let y = ay0; y <= ay1; y++) for (let x = ax0; x <= ax1; x++) {
+      const d2 = Math.hypot(x - cx2, y - cy2);
+      if (d2 >= rr) continue;
+      \u9AD8[y * hw + x] += \u4E08 * Math.cos(d2 / rr * Math.PI / 2) ** \u6307;
+    }
+  }
+  const \u523B\u30802 = (\u7BC0, \u5E452, \u5834, \u4F38, \u6DF1\u3055) => {
+    const r = \u5E452 / 2 + \u4F38;
+    for (let i = 0; i < \u7BC0.length - 1; i++) {
+      const x0 = \u7BC0[i][0] / \u534A, y0 = \u7BC0[i][1] / \u534A, x1 = \u7BC0[i + 1][0] / \u534A, y1 = \u7BC0[i + 1][1] / \u534A;
+      const L = Math.hypot(x1 - x0, y1 - y0);
+      const \u6B69 = Math.max(1, Math.ceil(L));
+      for (let k2 = 0; k2 <= \u6B69; k2++) {
+        const t = k2 / \u6B69, cx2 = x0 + (x1 - x0) * t, cy2 = y0 + (y1 - y0) * t;
+        const rr = r / \u534A;
+        const ax0 = Math.max(0, Math.floor(cx2 - rr)), ax1 = Math.min(hw - 1, Math.ceil(cx2 + rr));
+        const ay0 = Math.max(0, Math.floor(cy2 - rr)), ay1 = Math.min(hh - 1, Math.ceil(cy2 + rr));
+        for (let y = ay0; y <= ay1; y++) for (let x = ax0; x <= ax1; x++) {
+          const d2 = Math.hypot(x - cx2, y - cy2) * \u534A;
+          if (d2 > \u5E452 / 2 + \u4F38) continue;
+          const j = y * hw + x;
+          const t2 = \u6DF1\u3055(d2);
+          if (t2 > \u5834[j]) \u5834[j] = t2;
+        }
+      }
     }
   };
-  const \u898F = Math.sqrt(\u9762 / 8e5);
-  \u67D3("rgb(140,146,96)", 22 * \u898F | 0, 60, 190, 0.5);
-  \u67D3("rgb(186,188,128)", 16 * \u898F | 0, 50, 160, 0.5);
-  \u67D3("rgb(122,132,86)", 12 * \u898F | 0, 80, 220, 0.4);
-  \u67D3("rgb(168,150,100)", 8 * \u898F | 0, 50, 130, 0.35);
-  const \u8349\u6570 = Math.min(42e3, \u9762 / 180 | 0);
-  for (let i = 0; i < \u8349\u6570; i++) {
-    const x = R() * W2, y = R() * H2;
-    g.strokeStyle = R() < 0.55 ? "rgba(96,106,62,0.26)" : "rgba(206,206,150,0.24)";
-    g.lineWidth = 1;
-    const a = -1.35 + (R() - 0.5) * 0.5, L = 2.5 + R() * 3.6;
+  for (const r of \u5DDD\u3089) {
+    const \u534A\u5E45 = r.\u5E45 / 2;
+    \u523B\u30802(r.\u7BC0, r.\u5E45, \u5DDD\u6DF1, 0, (d2) => d2 < \u534A\u5E45 ? 1 - d2 / \u534A\u5E45 : 0);
+    \u523B\u30802(r.\u7BC0, r.\u5E45, \u5DDD\u5CB8, 3 * \u500D, (d2) => d2 > \u534A\u5E45 ? (\u534A\u5E45 + 3 * \u500D - d2) / (3 * \u500D) : 0);
+    const \u8C37 = r.\u5E45 * 2.4;
+    \u523B\u30802(r.\u7BC0, \u8C37 * 2, \u5DDD\u8C37, 0, (d2) => d2 < \u8C37 ? (1 - d2 / \u8C37) ** 2 * r.\u5E45 * 0.5 : 0);
+  }
+  for (const r of \u9053\u3089) {
+    const \u534A\u5E45 = r.\u5E45 / 2 + 2 * \u500D;
+    \u523B\u30802(r.\u7BC0, r.\u5E45, \u9053\u5EA6, 2 * \u500D, (d2) => Math.min(1, (\u534A\u5E45 - d2) / (2.5 * \u500D)));
+  }
+  for (let i = 0; i < \u9AD8.length; i++) if (\u5DDD\u8C37[i] > 0) \u9AD8[i] -= \u5DDD\u8C37[i] / \u534A;
+  const \u67972 = new Float32Array(hw * hh);
+  for (const f of [...FORESTS, ...WOODS]) {
+    const fx = PX(f.x) / \u534A, fy = PY(f.y) / \u534A, r = PX(f.r) / \u534A * 1.08;
+    const x0 = Math.max(0, fx - r | 0), x1 = Math.min(hw - 1, Math.ceil(fx + r));
+    const y0 = Math.max(0, fy - r | 0), y1 = Math.min(hh - 1, Math.ceil(fy + r));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const d2 = Math.hypot(x - fx, y - fy) / r;
+      const \u307B\u3064\u308C = (\u895E(x / (4.5 * \u500D), y / (4.5 * \u500D), 3) - 0.5) * 0.52;
+      const t = 1 - (d2 + \u307B\u3064\u308C);
+      if (t > 0) \u67972[y * hw + x] = Math.max(\u67972[y * hw + x], Math.min(1, t * 2.2));
+    }
+  }
+  for (let i = 0; i < \u67972.length; i++) {
+    if (\u67972[i] < 0.01) continue;
+    const x = i % hw, y = i / hw | 0;
+    const \u68A2 = \u895E(x / (1.7 * \u500D), y / (1.7 * \u500D), 2);
+    \u9AD8[i] += \u67972[i] * (3.5 * \u500D + \u68A2 * 2.5 * \u500D);
+  }
+  const \u5149x = -0.62, \u5149y = -0.72, \u5149\u9AD8 = 0.52;
+  const \u5F712 = \u65E5\u5F71\u3092\u713C\u304F(\u9AD8, hw, hh, \u5149x, \u5149y, \u5149\u9AD8, Math.max(1.4, 1.3 * \u500D), 30);
+  const \u906E = \u906E\u853D\u3092\u713C\u304F(\u9AD8, hw, hh, Math.max(5, 7 * \u500D | 0));
+  const im = g.createImageData(W2, H2), d = im.data;
+  for (let y = 0; y < H2; y++) {
+    for (let x = 0; x < W2; x++) {
+      const p = (y * W2 + x) * 4;
+      const hx = x / \u534A, hy = y / \u534A;
+      const hh2 = \u5F15\u4F38(\u9AD8, hw, hh, x, y, \u534A);
+      const gx = \u5F15\u4F38(\u9AD8, hw, hh, x + \u534A, y, \u534A) - \u5F15\u4F38(\u9AD8, hw, hh, x - \u534A, y, \u534A);
+      const gy = \u5F15\u4F38(\u9AD8, hw, hh, x, y + \u534A, \u534A) - \u5F15\u4F38(\u9AD8, hw, hh, x, y - \u534A, \u534A);
+      const \u50BE = Math.hypot(gx, gy) * 0.5 / \u534A;
+      const \u4E7E = \u631F(0.38 + hh2 / (24 * \u500D) + (\u895E(x / (40 * \u500D), y / (40 * \u500D), 3) - 0.5) * 0.85, 0, 1);
+      let c = \u6DF7\u8272([104, 154, 60], [208, 206, 116], \u4E7E);
+      const n1 = \u895E(x / (1.8 * \u500D), y / (1.8 * \u500D), 2) - 0.5, n2 = \u895E(x / (6 * \u500D), y / (6 * \u500D), 2) - 0.5;
+      c = [c[0] * (1 + n1 * 0.1 + n2 * 0.13), c[1] * (1 + n1 * 0.07 + n2 * 0.11), c[2] * (1 + n1 * 0.2 + n2 * 0.2)];
+      const fr = \u5F15\u4F38(\u67972, hw, hh, x, y, \u534A);
+      if (fr > 0.01) {
+        const \u8449 = \u895E(x / (2.6 * \u500D), y / (2.6 * \u500D), 2);
+        c = \u6DF7\u8272(c, \u6DF7\u8272([58, 92, 40], [104, 134, 54], \u8449), Math.min(0.96, fr * 1.3));
+      }
+      const \u9732 = \u631F((\u50BE - 0.72) * 1.1, 0, 1);
+      if (\u9732 > 0.01) c = \u6DF7\u8272(c, \u6DF7\u8272([186, 170, 130], [156, 140, 106], \u895E(x / (3.6 * \u500D), y / (3.6 * \u500D), 2)), \u9732 * 0.62);
+      const \u9053t = \u5F15\u4F38(\u9053\u5EA6, hw, hh, x, y, \u534A);
+      if (\u9053t > 0.01) {
+        const t = \u631F(\u9053t + (\u895E(x / (2.6 * \u500D), y / (2.6 * \u500D), 2) - 0.5) * 0.5, 0, 1);
+        c = \u6DF7\u8272(c, [214, 182, 162], t * 0.92);
+      }
+      const \u5CB8t = \u5F15\u4F38(\u5DDD\u5CB8, hw, hh, x, y, \u534A);
+      if (\u5CB8t > 0.01) c = \u6DF7\u8272(c, [202, 194, 166], \u5CB8t * 0.85);
+      const \u6DF1 = \u5F15\u4F38(\u5DDD\u6DF1, hw, hh, x, y, \u534A);
+      if (\u6DF1 > 4e-3) {
+        const \u5E952 = \u6DF7\u8272([152, 142, 112], [100, 104, 86], \u895E(x / (3 * \u500D), y / (3 * \u500D), 2));
+        const \u900F = Math.exp(-\u6DF1 * 3.2);
+        let \u9762 = \u6DF7\u8272(\u6DF7\u8272([120, 154, 190], [62, 96, 148], \u631F(\u6DF1 * 1.1, 0, 1)), \u5E952, \u900F * 0.72);
+        \u9762 = \u6DF7\u8272(\u9762, [178, 200, 230], 0.26);
+        const \u6CE2 = \u895E(x / (2.6 * \u500D), y / (1.2 * \u500D), 2);
+        if (\u6CE2 > 0.68) \u9762 = \u6DF7\u8272(\u9762, [240, 248, 255], (\u6CE2 - 0.68) * 2.2);
+        c = \u6DF7\u8272(c, \u9762, \u631F(\u6DF1 * 7, 0, 1));
+      }
+      const nx = -gx * 0.5 / \u534A, ny = -gy * 0.5 / \u534A, nl = Math.hypot(nx, ny, 1);
+      const \u76F4 = \u631F((nx * \u5149x + ny * \u5149y + \u5149\u9AD8) / nl, 0, 1);
+      const \u65E5 = 1 - \u5F15\u4F38(\u5F712, hw, hh, x, y, \u534A) * 0.6;
+      const \u7A7A2 = 1 - \u5F15\u4F38(\u906E, hw, hh, x, y, \u534A) * 0.26;
+      const \u660E = 0.58 * \u7A7A2 + 0.6 * \u76F4 * \u65E5;
+      c = [c[0] * \u660E, c[1] * \u660E * 1.01, c[2] * \u660E * (1 + (1 - \u65E5) * 0.22 + (1 - \u7A7A2) * 0.1)];
+      d[p] = \u631F(c[0], 0, 255);
+      d[p + 1] = \u631F(c[1], 0, 255);
+      d[p + 2] = \u631F(c[2], 0, 255);
+      d[p + 3] = 255;
+    }
+  }
+  g.putImageData(im, 0, 0);
+  const \u660E\u95A2 = (x, y) => 1 - \u5F15\u4F38(\u5F712, hw, hh, Math.max(0, Math.min(W2 - 1, x)), Math.max(0, Math.min(H2 - 1, y)), \u534A) * 0.5;
+  \u91CE\u7A2E\u3092\u7F6E\u304F(31337);
+  g.lineCap = "butt";
+  const \u7A42\u6570 = Math.min(22e4, Math.round(W2 * H2 * 0.05));
+  for (let i = 0; i < \u7A42\u6570; i++) {
+    const x = \u91CE\u4E71() * W2, y = \u91CE\u4E71() * H2;
+    const \u65E5 = \u660E\u95A2(x, y);
+    const t = \u91CE\u4E71(), a = (0.09 + \u91CE\u4E71() * 0.06) * \u65E5;
+    g.strokeStyle = t < 0.45 ? `rgba(82,114,46,${a.toFixed(3)})` : t < 0.82 ? `rgba(144,172,78,${a.toFixed(3)})` : `rgba(196,204,128,${a.toFixed(3)})`;
+    g.lineWidth = Math.max(0.6, 0.8 * \u500D);
+    const ang = -1.5 + (\u91CE\u4E71() - 0.5) * 0.9, L = (0.7 + \u91CE\u4E71() * 1.4) * \u500D;
     g.beginPath();
     g.moveTo(x, y);
-    g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L);
+    g.lineTo(x + Math.cos(ang) * L, y + Math.sin(ang) * L);
     g.stroke();
   }
   for (const m of MARSH) {
-    const gr = g.createRadialGradient(m.x, m.y, m.r * 0.2, m.x, m.y, m.r);
-    gr.addColorStop(0, "rgba(96,122,104,0.5)");
-    gr.addColorStop(1, "rgba(96,122,104,0)");
+    const mx = PX(m.x), my = PY(m.y), r = PX(m.r);
+    const gr = g.createRadialGradient(mx, my, r * 0.2, mx, my, r);
+    gr.addColorStop(0, "rgba(86,112,92,0.55)");
+    gr.addColorStop(1, "rgba(86,112,92,0)");
     g.fillStyle = gr;
     g.beginPath();
-    g.ellipse(m.x, m.y, m.r, m.r * 0.8, 0, 0, 7);
+    g.ellipse(mx, my, r, r * 0.8, 0, 0, 7);
     g.fill();
-    for (let i = 0; i < m.r; i++) {
-      const a = R() * 6.283, d = Math.sqrt(R()) * m.r * 0.9;
-      g.strokeStyle = "rgba(70,96,82,0.4)";
-      g.lineWidth = 1;
-      const px2 = m.x + Math.cos(a) * d, py2 = m.y + Math.sin(a) * d * 0.8;
-      g.beginPath();
-      g.moveTo(px2 - 2, py2);
-      g.lineTo(px2 + 2, py2);
-      g.stroke();
-    }
   }
-  for (const h of [...HILLS, ...MOUNTAINS.map((m) => ({ ...m, \u5C71: true }))]) {
-    const \u6BB5\u6570 = h.\u5C71 ? 6 : 3;
-    g.save();
-    g.globalCompositeOperation = "multiply";
-    const g\u5F71 = g.createRadialGradient(
-      h.x + h.r * 0.22,
-      h.y + h.r * 0.26,
-      h.r * 0.3,
-      h.x + h.r * 0.14,
-      h.y + h.r * 0.16,
-      h.r * 1.25
-    );
-    g\u5F71.addColorStop(0, "rgba(70,74,50,0.42)");
-    g\u5F71.addColorStop(1, "rgba(70,74,50,0)");
-    g.fillStyle = g\u5F71;
-    g.beginPath();
-    g.ellipse(h.x + h.r * 0.12, h.y + h.r * 0.12, h.r * 1.18, h.r * 1.02, 0, 0, 7);
-    g.fill();
-    g.restore();
-    for (let k = 0; k < \u6BB5\u6570; k++) {
-      const t2 = k / \u6BB5\u6570, rr = h.r * (1 - t2 * 0.82), \u660E = 0.86 + t2 * 0.5;
-      const cx2 = h.x - h.r * 0.05 * (k / \u6BB5\u6570) * 3, cy2 = h.y - h.r * 0.05 * (k / \u6BB5\u6570) * 3;
-      const g\u6BB5 = g.createRadialGradient(cx2 - rr * 0.4, cy2 - rr * 0.45, rr * 0.15, cx2, cy2, rr * 1.05);
-      g\u6BB5.addColorStop(0, `rgba(${168 * \u660E | 0},${176 * \u660E | 0},${116 * \u660E | 0},0.9)`);
-      g\u6BB5.addColorStop(0.7, `rgba(${128 * \u660E | 0},${142 * \u660E | 0},${92 * \u660E | 0},0.85)`);
-      g\u6BB5.addColorStop(1, `rgba(${104 * \u660E | 0},${118 * \u660E | 0},${76 * \u660E | 0},${k === 0 ? 0 : 0.55})`);
-      g.fillStyle = g\u6BB5;
-      g.beginPath();
-      for (let i2 = 0; i2 <= 16; i2++) {
-        const a = i2 / 16 * 6.283, rad = rr * (0.92 + R() * 0.1);
-        i2 ? g.lineTo(cx2 + Math.cos(a) * rad, cy2 + Math.sin(a) * rad * 0.92) : g.moveTo(cx2 + rad * 0.92, cy2);
-      }
-      g.closePath();
-      g.fill();
-      g.strokeStyle = `rgba(60,66,44,${0.2 + t2 * 0.12})`;
-      g.lineWidth = 1.3;
-      g.beginPath();
-      g.ellipse(cx2, cy2, rr * 0.97, rr * 0.9, 0, Math.PI * 0.05, Math.PI * 0.6);
-      g.stroke();
-      g.strokeStyle = "rgba(224,228,180,0.3)";
-      g.lineWidth = 1;
-      g.beginPath();
-      g.ellipse(cx2, cy2, rr * 0.97, rr * 0.9, 0, Math.PI * 1.1, Math.PI * 1.7);
-      g.stroke();
-    }
-    for (let i2 = 0; i2 < h.r * (h.\u5C71 ? 1.2 : 0.6); i2++) {
-      const a = R() * 6.283, d2 = 0.45 + Math.sqrt(R()) * 0.5;
-      g.fillStyle = R() < 0.55 ? "rgba(58,76,40,0.42)" : "rgba(120,142,80,0.33)";
-      g.beginPath();
-      g.arc(
-        h.x + Math.cos(a) * h.r * d2 * 0.95,
-        h.y + Math.sin(a) * h.r * d2 * 0.85,
-        0.8 + R() * 1.8,
-        0,
-        7
-      );
-      g.fill();
-    }
-    if (h.\u5C71) {
-      for (let i2 = 0; i2 < 26; i2++) {
-        const a = R() * 6.283, d2 = R() * 0.22;
-        g.fillStyle = R() < 0.5 ? "rgba(134,132,116,0.65)" : "rgba(96,96,82,0.55)";
-        g.beginPath();
-        g.ellipse(
-          h.x + Math.cos(a) * h.r * d2 - h.r * 0.12,
-          h.y + Math.sin(a) * h.r * d2 * 0.9 - h.r * 0.12,
-          1.6 + R() * 3,
-          1.1 + R() * 1.8,
-          R() * 3,
-          0,
-          7
-        );
-        g.fill();
-      }
-      for (let i2 = 0; i2 < 7; i2++) {
-        const a = i2 / 7 * 6.283 + R() * 0.4;
-        g.strokeStyle = "rgba(74,84,52,0.32)";
-        g.lineWidth = 1.4;
-        g.beginPath();
-        g.moveTo(h.x + Math.cos(a) * h.r * 0.3, h.y + Math.sin(a) * h.r * 0.27);
-        g.quadraticCurveTo(
-          h.x + Math.cos(a + 0.12) * h.r * 0.62,
-          h.y + Math.sin(a + 0.12) * h.r * 0.56,
-          h.x + Math.cos(a + 0.05) * h.r * 0.95,
-          h.y + Math.sin(a + 0.05) * h.r * 0.86
-        );
-        g.stroke();
-      }
-    }
+  for (const v of VILLAGES) \u96C6\u843D(g, PX(v.x), PY(v.y), PX(v.r || 40) * 0.95, Math.round(v.x + v.y), \u660E\u95A2, \u500D);
+  \u91CE\u7A2E\u3092\u7F6E\u304F(606);
+  const \u67282 = [];
+  const \u8A66 = Math.min(26e4, Math.round(W2 * H2 * 0.06));
+  for (let i = 0; i < \u8A66; i++) {
+    const x = \u91CE\u4E71() * W2, y = \u91CE\u4E71() * H2;
+    const fr = \u5F15\u4F38(\u67972, hw, hh, x, y, \u534A);
+    const \u7FA4 = \u895E(x / (20 * \u500D), y / (20 * \u500D), 3);
+    let \u751F = false;
+    if (fr > 0.5) \u751F = false;
+    else if (fr > 0.08) \u751F = \u91CE\u4E71() < 0.1;
+    else if (\u7FA4 > 0.58) \u751F = \u91CE\u4E71() < 0.05;
+    else \u751F = \u91CE\u4E71() < 8e-3;
+    if (!\u751F) continue;
+    if (\u5F15\u4F38(\u5DDD\u6DF1, hw, hh, x, y, \u534A) > 4e-3) continue;
+    if (\u5F15\u4F38(\u5DDD\u5CB8, hw, hh, x, y, \u534A) > 0.1) continue;
+    if (\u5F15\u4F38(\u9053\u5EA6, hw, hh, x, y, \u534A) > 0.05) continue;
+    \u67282.push([x, y, (2.6 + \u91CE\u4E71() * 3.2) * \u500D, \u91CE\u4E71(), \u660E\u95A2(x, y)]);
   }
-  const \u5DDD\u3089 = RIVERS2.length ? RIVERS2 : hasRiver() ? [{ \u7BC0: [
-    { x: -40, y: (RIVER.top + RIVER.bot) / 2 },
-    { x: W2 + 40, y: (RIVER.top + RIVER.bot) / 2 }
-  ], \u5E45: RIVER.bot - RIVER.top, \u6E21\u3057: [] }] : [];
-  for (const r of \u5DDD\u3089) {
-    const pts = r.\u7BC0, w2 = Math.max(8, r.\u5E45);
-    g.save();
-    g.globalCompositeOperation = "multiply";
-    \u7DDA\u5F15(g, \u63FA\u70B9(pts, 16, 4), w2 + 12, "rgba(112,112,84,0.42)");
-    g.restore();
-    \u7DDA\u5F15(g, \u63FA\u70B9(pts, 16, 3), w2 + 5, "#4A5E74");
-    \u7DDA\u5F15(g, \u63FA\u70B9(pts, 16, 3), w2, "#57748E");
-    \u7DDA\u5F15(g, \u63FA\u70B9(pts, 18, 3), Math.max(3, w2 * 0.5), "#6E8AA6");
-    for (let i = 0; i < pts.length - 1; i++) {
-      if (R() < 0.4) continue;
-      const a = Math.atan2(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x);
-      for (let k = 0; k < 4; k++) {
-        const t = k / 4;
-        const px2 = pts[i].x + (pts[i + 1].x - pts[i].x) * t + (R() - 0.5) * w2 * 0.6;
-        const py2 = pts[i].y + (pts[i + 1].y - pts[i].y) * t + (R() - 0.5) * w2 * 0.6;
-        g.strokeStyle = R() < 0.5 ? "rgba(196,210,222,0.3)" : "rgba(50,64,86,0.3)";
-        g.lineWidth = 1;
-        g.beginPath();
-        g.moveTo(px2, py2);
-        g.lineTo(px2 + Math.cos(a) * (6 + R() * 12), py2 + Math.sin(a) * (6 + R() * 12));
-        g.stroke();
-      }
-    }
-    for (const \u6E21 of r.\u6E21\u3057 || []) {
-      let a = 0, best = 1e18;
-      for (let i = 0; i < pts.length - 1; i++) {
-        const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2;
-        const d = (mx - \u6E21.x) ** 2 + (my - \u6E21.y) ** 2;
-        if (d < best) {
-          best = d;
-          a = Math.atan2(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x);
-        }
-      }
-      g.save();
-      g.translate(\u6E21.x, \u6E21.y);
-      g.rotate(a + Math.PI / 2);
-      if (\u6E21.\u7A2E === "\u6A4B") {
-        g.fillStyle = "#8E7450";
-        g.fillRect(-w2 * 0.8, -11, w2 * 1.6, 22);
-        g.strokeStyle = "rgba(52,38,20,0.75)";
-        g.lineWidth = 1.6;
-        g.strokeRect(-w2 * 0.8, -11, w2 * 1.6, 22);
-        g.strokeStyle = "rgba(60,44,24,0.5)";
-        for (let k = -w2 * 0.8 + 3; k < w2 * 0.8; k += 5) {
-          g.beginPath();
-          g.moveTo(k, -11);
-          g.lineTo(k, 11);
-          g.stroke();
-        }
-      } else {
-        for (let i = 0; i < 14; i++) {
-          g.fillStyle = "rgba(200,206,196,0.5)";
-          g.beginPath();
-          g.arc((R() - 0.5) * w2 * 1.5, (R() - 0.5) * 20, 1.2 + R() * 1.6, 0, 7);
-          g.fill();
-        }
-      }
-      g.restore();
-    }
-  }
-  for (const rd of ROADS2.length ? ROADS2 : ROAD ? [ROAD] : []) {
-    const pts = rd.\u7BC0, w2 = Math.max(6, rd.\u5E45 * 1.4);
-    g.save();
-    g.globalCompositeOperation = "multiply";
-    \u7DDA\u5F15(g, \u63FA\u70B9(pts, 18, 4), w2 + 8, "rgba(120,108,80,0.32)");
-    g.restore();
-    \u7DDA\u5F15(g, \u63FA\u70B9(pts, 16, 3), w2, "#B99C7A");
-    \u7DDA\u5F15(g, \u63FA\u70B9(pts, 16, 2.5), w2 * 0.62, "#C8AC86");
-    \u7DDA\u5F15(g, \u63FA\u70B9(pts, 18, 2.5), w2 * 0.3, "#D2B892");
-  }
-  for (const f of [...FORESTS, ...WOODS]) {
-    const n = Math.min(30, Math.max(4, f.r / 7 | 0));
-    const \u6728\u3089 = [];
-    for (let i = 0; i < n; i++) \u6728\u3089.push([f.x + (R() - 0.5) * f.r * 1.6, f.y + (R() - 0.5) * f.r * 1.1, 7 + R() * 8]);
-    for (const [x, y, r] of \u6728\u3089.sort((a, z) => a[1] - z[1])) {
-      g.save();
-      g.shadowColor = "rgba(40,44,26,0.5)";
-      g.shadowBlur = r * 0.5;
-      g.shadowOffsetX = -r * 0.5;
-      g.shadowOffsetY = r * 0.35;
-      g.beginPath();
-      for (let i2 = 0; i2 <= 10; i2++) {
-        const a = i2 / 10 * 6.283, rad = r * (0.78 + R() * 0.3);
-        i2 ? g.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad * 0.86) : g.moveTo(x + rad, y);
-      }
-      g.closePath();
-      const gr = g.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r * 1.05);
-      gr.addColorStop(0, "#6E8A44");
-      gr.addColorStop(0.6, "#485F30");
-      gr.addColorStop(1, "#2E401E");
-      g.fillStyle = gr;
-      g.fill();
-      g.restore();
-    }
-  }
-  for (const v of VILLAGES) {
-    for (let i = 0; i < 3; i++) {
-      const a = i * 2.2 + 0.4, d2 = (v.r || 40) * 0.5;
-      const x = v.x + Math.cos(a) * d2, y = v.y + Math.sin(a) * d2 * 0.7, w2 = 13, h3 = 11;
-      g.save();
-      g.shadowColor = "rgba(46,40,26,0.5)";
-      g.shadowBlur = 4;
-      g.shadowOffsetX = -2;
-      g.shadowOffsetY = 3;
-      g.fillStyle = "#9C8462";
-      g.fillRect(x - w2 / 2, y - h3 * 0.1, w2, h3 * 0.45);
-      g.restore();
-      const gr = g.createLinearGradient(x, y - h3 * 0.66, x, y - h3 * 0.02);
-      gr.addColorStop(0, "#6E5A42");
-      gr.addColorStop(1, "#463424");
-      g.fillStyle = gr;
-      g.beginPath();
-      g.moveTo(x - w2 * 0.64, y - h3 * 0.06);
-      g.lineTo(x, y - h3 * 0.64);
-      g.lineTo(x + w2 * 0.64, y - h3 * 0.06);
-      g.closePath();
-      g.fill();
-      g.strokeStyle = "rgba(34,26,16,0.7)";
-      g.lineWidth = 0.8;
-      g.stroke();
-    }
-  }
+  \u67282.sort((a, b) => a[1] - b[1]);
+  for (const [x, y, r, \u632F, \u65E5] of \u67282) \u7E41\u6728(g, x, y, r, \u632F, \u65E5);
+  g.setTransform(k, 0, 0, k, 0, 0);
   for (const o of [...HILLS, ...MOUNTAINS]) if (o.\u672D && o.\u540D) \u540D\u672D(g, o.x, o.y - o.r * 0.36, o.\u540D);
   for (const v of VILLAGES) if (v.\u672D && v.\u540D) \u540D\u672D(g, v.x, v.y + (v.r || 40) + 12, v.\u540D);
-  if (typeof document !== "undefined") {
-    const \u30CE = document.createElement("canvas");
-    \u30CE.width = \u30CE.height = 160;
-    const ng = \u30CE.getContext("2d");
-    const im = ng.createImageData(160, 160);
-    for (let i = 0; i < im.data.length; i += 4) {
-      const v = 105 + Math.random() * 100;
-      im.data[i] = im.data[i + 1] = im.data[i + 2] = v;
-      im.data[i + 3] = 255;
-    }
-    ng.putImageData(im, 0, 0);
-    g.save();
-    g.globalCompositeOperation = "soft-light";
-    g.globalAlpha = 0.5;
-    g.fillStyle = g.createPattern(\u30CE, "repeat");
-    g.fillRect(0, 0, W2, H2);
-    g.restore();
-  }
-  g.save();
-  g.globalCompositeOperation = "multiply";
-  const v2 = g.createRadialGradient(W2 / 2, H2 / 2, Math.min(W2, H2) * 0.5, W2 / 2, H2 / 2, Math.max(W2, H2) * 0.72);
-  v2.addColorStop(0, "rgba(255,255,255,1)");
-  v2.addColorStop(1, "rgba(150,146,120,0.85)");
-  g.fillStyle = v2;
-  g.fillRect(0, 0, W2, H2);
-  g.restore();
+  g.setTransform(1, 0, 0, 1, 0, 0);
 }
 var \u6301\u5834 = [];
 {
@@ -31083,20 +31265,44 @@ function stepBattle(b, dt) {
     }
     c.\u5F8C\u9000\u4E2D = false;
     if (!MAP && c.order === "\u5C04\u6483" && !c.routed && !c.withdraw && !c.squads.some((q) => q.engaged)) {
-      let \u8FD1 = null, nd = 1e9;
-      for (const o of alive) {
-        if (o.side === c.side || !\u584A\u3068\u3057\u3066\u7ACB\u3064(o)) continue;
-        const d2 = Math.hypot(o.x - c.x, o.y - c.y);
-        if (d2 < nd) {
-          nd = d2;
-          \u8FD1 = o;
-        }
+      let \u5C4A = 0;
+      for (const q of c.squads) {
+        if (q.men <= 0) continue;
+        const r = ARM_STATS[q.type].range;
+        if (r > \u5C4A) \u5C4A = r;
       }
-      if (\u8FD1 && nd < 135) {
-        const ux = (c.x - \u8FD1.x) / nd, uy = (c.y - \u8FD1.y) / nd;
-        c.tx = clamp(c.x + ux * 70, 40, FIELD.w - 40);
-        c.ty = clamp(c.y + uy * 70, 40, FIELD.h - 40);
-        c.\u5F8C\u9000\u4E2D = true;
+      if (\u5C4A > 0) {
+        let \u7684 = null, nd = 1e9;
+        if (c.\u72D9\u3044) {
+          const t2 = alive.find((o) => o.id === c.\u72D9\u3044 && o.side !== c.side && \u584A\u3068\u3057\u3066\u7ACB\u3064(o));
+          if (t2) {
+            \u7684 = t2;
+            nd = Math.hypot(t2.x - c.x, t2.y - c.y);
+          }
+        }
+        if (!\u7684) {
+          for (const o of alive) {
+            if (o.side === c.side || !\u584A\u3068\u3057\u3066\u7ACB\u3064(o)) continue;
+            if (c.side === "P" && o.ambush && !o.revealed) continue;
+            const d2 = Math.hypot(o.x - c.x, o.y - c.y);
+            if (d2 < nd) {
+              nd = d2;
+              \u7684 = o;
+            }
+          }
+        }
+        if (\u7684) {
+          const \u4FDD\u3061 = \u5C4A * 0.88;
+          const ux = (c.x - \u7684.x) / (nd || 1), uy = (c.y - \u7684.y) / (nd || 1);
+          if (nd > \u4FDD\u3061 + 10) {
+            c.tx = clamp(\u7684.x + ux * \u4FDD\u3061, 40, FIELD.w - 40);
+            c.ty = clamp(\u7684.y + uy * \u4FDD\u3061, 40, FIELD.h - 40);
+          } else if (nd < \u4FDD\u3061 * 0.8) {
+            c.tx = clamp(c.x + ux * 70, 40, FIELD.w - 40);
+            c.ty = clamp(c.y + uy * 70, 40, FIELD.h - 40);
+            c.\u5F8C\u9000\u4E2D = true;
+          }
+        }
       }
     }
     const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy);
@@ -35244,18 +35450,30 @@ function BattleScreen({ ctx, land, onEnd }) {
   };
   const brokeRef = useRef2(-1);
   const \u8DE1Ref = useRef2(null);
-  const \u753B\u5E03\u306E\u500D = () => Math.min(1, Math.sqrt(2e7 / Math.max(1, FIELD.w * FIELD.h)));
+  const \u753B\u5E03\u306E\u500D = () => {
+    const \u4E0A\u9650 = ctx.b && ctx.mode !== "castle" && \u65B0\u7D75\u304B(ctx.b) ? \u65B0\u7D75\u306E\u753B\u5E03\u4E0A\u9650 : 2e7;
+    return Math.min(1, Math.sqrt(\u4E0A\u9650 / Math.max(1, FIELD.w * FIELD.h)));
+  };
   const paintTerrain = () => {
     const t = terrainRef.current || document.createElement("canvas");
     const k = \u753B\u5E03\u306E\u500D();
     t.width = Math.max(1, Math.round(FIELD.w * k));
     t.height = Math.max(1, Math.round(FIELD.h * k));
     const g2 = t.getContext("2d");
-    g2.setTransform(k, 0, 0, k, 0, 0);
-    if (ctx.mode === "castle" && ctx.b.map) drawCastleTerrain(g2, ctx.b.map);
-    else if (\u65B0\u7D75\u304B(ctx.b)) \u65B0\u7D75\u306E\u91CE(g2);
-    else drawFieldTerrain(g2);
+    const \u713C\u59CB = typeof performance !== "undefined" ? performance.now() : 0;
+    if (ctx.mode === "castle" && ctx.b.map) {
+      g2.setTransform(k, 0, 0, k, 0, 0);
+      drawCastleTerrain(g2, ctx.b.map);
+    } else if (\u65B0\u7D75\u304B(ctx.b)) {
+      \u65B0\u7D75\u306E\u91CE(g2, k);
+    } else {
+      g2.setTransform(k, 0, 0, k, 0, 0);
+      drawFieldTerrain(g2);
+    }
     g2.setTransform(1, 0, 0, 1, 0, 0);
+    if (typeof window !== "undefined") {
+      window.__\u91CE\u713C\u304D = Math.round(performance.now() - \u713C\u59CB) + "ms / " + Math.round(t.width) + "x" + Math.round(t.height);
+    }
     terrainRef.current = t;
     const a = \u8DE1Ref.current || document.createElement("canvas");
     const ak = Math.min(0.5, \u753B\u5E03\u306E\u500D());
@@ -35748,6 +35966,19 @@ function BattleScreen({ ctx, land, onEnd }) {
     c.task = null;
     c.\u72D9\u3044 = null;
     const t = nearestFoe(c);
+    const \u8FD1\u3044\u6575 = (self) => {
+      let \u8FD1 = null, nd = 1e9;
+      for (const o2 of b.corps) {
+        if (o2.side === self.side || o2.dead || o2.destroyed || o2.routed) continue;
+        if (o2.ambush && !o2.revealed) continue;
+        const d = Math.hypot(o2.x - self.x, o2.y - self.y);
+        if (d < nd) {
+          nd = d;
+          \u8FD1 = o2;
+        }
+      }
+      return \u8FD1;
+    };
     const standoff = (foe, gap) => {
       const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
       return { tx: foe.x + (c.x - foe.x) / d * gap, ty: foe.y + (c.y - foe.y) / d * gap };
@@ -35758,8 +35989,14 @@ function BattleScreen({ ctx, land, onEnd }) {
       patch = { order: "\u524D\u9032", tx: c.x, ty: Math.max(60, c.y - 190) };
     } else if (o === "\u63A5\u6226") patch = { order: "\u63A5\u6226", ...t ? standoff(t, 38) : { tx: c.tx, ty: c.ty } };
     else if (o === "\u7A81\u6483") patch = { order: "\u7A81\u6483", chargeT: c.formation === "\u92D2\u77E2" ? 26 : 16, ...t ? standoff(t, 20) : {} };
-    else if (o === "\u5C04\u6483") patch = { order: "\u5C04\u6483", tx: c.x, ty: c.y };
-    else if (o === "\u5B88\u5099") patch = { order: "\u5B88\u5099", formation: "\u65B9\u9663", tx: c.x, ty: c.y, reformT: reformTime(c.gen) };
+    else if (o === "\u5C04\u6483") {
+      let \u5C4A = 0;
+      for (const q of c.squads) {
+        if (q.men > 0) \u5C4A = Math.max(\u5C4A, ARM_STATS[q.type].range);
+      }
+      const \u7684 = t || \u8FD1\u3044\u6575(c);
+      patch = \u5C4A > 0 && \u7684 ? { order: "\u5C04\u6483", ...standoff(\u7684, Math.min(Math.hypot(c.x - \u7684.x, c.y - \u7684.y), \u5C4A * 0.88)) } : { order: "\u5C04\u6483", tx: c.x, ty: c.y };
+    } else if (o === "\u5B88\u5099") patch = { order: "\u5B88\u5099", formation: "\u65B9\u9663", tx: c.x, ty: c.y, reformT: reformTime(c.gen) };
     else if (o === "\u5F8C\u9000") {
       if (t) {
         const d = Math.hypot(c.x - t.x, c.y - t.y) || 1;
@@ -35884,7 +36121,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     \u63A5\u6226: "\u6700\u5BC4\u308A\u306E\u6575\u3068\u69CD\u3092\u5408\u308F\u305B\u308B\u3002",
     \u7A81\u6483: "16\u79D2\u3060\u3051\u52E2\u3044\u3092\u3064\u3051\u3066\u5F53\u305F\u308B\u3002\u901F\u304F\u5F37\u3044\u304C\u968A\u5217\u3068\u75B2\u52B4\u3092\u5927\u304D\u304F\u640D\u306A\u3046\u3002",
     \u8EE2\u56DE: "\u524D\u9032\u305B\u305A\u3001\u305D\u306E\u5834\u3067\u5411\u304D\u3060\u3051\u5909\u3048\u308B\u3002",
-    \u5C04\u6483: "\u524D\u3078\u51FA\u305A\u3001\u5F13\u3068\u9244\u7832\u3067\u5C04\u7A0B\u3092\u4FDD\u3064\u3002",
+    \u5C04\u6483: "\u5F13\u9244\u7832\u3092\u524D\u306B\u7ACB\u3066\u3001\u5C04\u7A0B\u307E\u3067\u5BC4\u3063\u3066\u6483\u3064\u3002\u8FD1\u3065\u304B\u308C\u305F\u3089\u9000\u304D\u3064\u3064\u6483\u3064\u3002",
     \u5B88\u5099: "\u65B9\u9663\u3067\u5BC6\u96C6\u3057\u3001\u53D7\u3051\u308B\u640D\u5BB3\u3092\u6291\u3048\u308B\u3002",
     \u5F8C\u9000: "\u6575\u304B\u3089\u8DDD\u96E2\u3092\u53D6\u308A\u76F4\u3059\u3002",
     \u5F85\u6A5F: "\u305D\u306E\u5834\u3067\u968A\u5217\u3092\u6574\u3048\u308B\u3002"

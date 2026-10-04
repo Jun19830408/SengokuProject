@@ -700,24 +700,58 @@ export function stepBattle(b, dt) {
     }
     /* 射撃の間合い（GDD 8.4）。
 
-       弓と鉄砲の隊は、敵と間を置いて撃つのが本分である。射撃の下知を受けた隊は、
-       敵が百三十五歩の内へ詰めてきたら（鉄砲の届き百五十の内側である）、撃ちながら後ずさって間合いを保つ。
+       弓と鉄砲の隊は、敵と間を置いて撃つのが本分である。射撃を命じたら、
+       隊はその間合いを取りに行く――遠ければ寄り、近すぎれば撃ちながら退く。
+
+       かつては「近すぎたら退く」しか置いていなかった。撃てと命じても、敵が
+       射程の外にいれば隊はその場に立ち尽くしたままで、一発も放たなかった
+       （遊ぶ側から「射撃コマンドが効いていない」との申し出はこれである）。
+
+       狙いを名指ししてあればその敵へ、していなければいちばん近い敵へ寄る。
+       間合いは隊の持つ得物で決まる――弓は百九十歩、鉄砲は百五十歩。
+       射手のいない隊に射撃を命じても間合いは取らない（取る意味がない）。
+
        ただで下がれはしない――後ろ歩きの足は六割で、疲れも常のとおり積もる。
        追う側は必ず追いつける。槍を合わせてしまえば、もう下がれない。 */
     c.後退中 = false;
     if (!MAP && c.order === "射撃" && !c.routed && !c.withdraw
       && !c.squads.some((q) => q.engaged)) {
-      let 近 = null, nd = 1e9;
-      for (const o of alive) {
-        if (o.side === c.side || !塊として立つ(o)) continue;
-        const d2 = Math.hypot(o.x - c.x, o.y - c.y);
-        if (d2 < nd) { nd = d2; 近 = o; }
+      /* 隊の届き。いちばん遠くまで届く得物に合わせる */
+      let 届 = 0;
+      for (const q of c.squads) {
+        if (q.men <= 0) continue;
+        const r = ARM_STATS[q.type].range;
+        if (r > 届) 届 = r;
       }
-      if (近 && nd < 135) {
-        const ux = (c.x - 近.x) / nd, uy = (c.y - 近.y) / nd;
-        c.tx = clamp(c.x + ux * 70, 40, FIELD.w - 40);
-        c.ty = clamp(c.y + uy * 70, 40, FIELD.h - 40);
-        c.後退中 = true;
+      if (届 > 0) {
+        /* 狙いが決まっていればその敵、でなければいちばん近い敵 */
+        let 的 = null, nd = 1e9;
+        if (c.狙い) {
+          const t2 = alive.find((o) => o.id === c.狙い && o.side !== c.side && 塊として立つ(o));
+          if (t2) { 的 = t2; nd = Math.hypot(t2.x - c.x, t2.y - c.y); }
+        }
+        if (!的) {
+          for (const o of alive) {
+            if (o.side === c.side || !塊として立つ(o)) continue;
+            if (c.side === "P" && o.ambush && !o.revealed) continue;   // 見えぬ伏兵は狙えない
+            const d2 = Math.hypot(o.x - c.x, o.y - c.y);
+            if (d2 < nd) { nd = d2; 的 = o; }
+          }
+        }
+        if (的) {
+          const 保ち = 届 * 0.88;                     /* ここに立って撃つ */
+          const ux = (c.x - 的.x) / (nd || 1), uy = (c.y - 的.y) / (nd || 1);
+          if (nd > 保ち + 10) {
+            /* 遠い。撃てる所まで寄る */
+            c.tx = clamp(的.x + ux * 保ち, 40, FIELD.w - 40);
+            c.ty = clamp(的.y + uy * 保ち, 40, FIELD.h - 40);
+          } else if (nd < 保ち * 0.8) {
+            /* 近すぎる。撃ちながら後ずさる */
+            c.tx = clamp(c.x + ux * 70, 40, FIELD.w - 40);
+            c.ty = clamp(c.y + uy * 70, 40, FIELD.h - 40);
+            c.後退中 = true;
+          }
+        }
       }
     }
     const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy);
