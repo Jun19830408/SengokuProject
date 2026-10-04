@@ -17,10 +17,50 @@ const 種で固める = () => { let 種 = 0x5EC1; Math.random = function () { �
 
 console.log('\n── 一　旗の立ち方');
 {
+  /* はじめは関ヶ原だけに掛けて確かめ、作りが固まったので野戦へ広げた。
+     城攻めは地の筆が別（縄張りを読む版はこれから）なので、まだ掛けない。 */
   確('関ヶ原の盤では新絵', H.新絵か({ 筋書き: { id: 'sekigahara' } }) === true);
-  確('筋書きの無い盤では立たない', H.新絵か({}) === false);
-  確('別の筋書きでも立たない', H.新絵か({ 筋書き: { id: 'okehazama' } }) === false);
+  確('筋書きの無い野戦でも新絵', H.新絵か({}) === true);
+  確('別の筋書きでも新絵', H.新絵か({ 筋書き: { id: 'okehazama' } }) === true);
+  確('城攻めでは立たない（地の筆が別）', H.新絵か({ map: { cx: 0 } }) === false);
   確('盤が無ければ立たない', H.新絵か(null) === false);
+}
+
+console.log('\n── 一の二　どの野でも焼ける');
+{
+  /* 野を焼く筆は画布を持たないと動かない。試験の場には画布が無いので、
+     筆の真似をする道具を立てて、算の筋がどの野でも通ることだけを見る
+     （絵そのものは実画面を撮って目で見る。tests では見られない）。 */
+  const 作り筆 = () => {
+    const 鈍 = () => ({ addColorStop() {} });
+    return {
+      canvas: { width: 0, height: 0 },
+      setTransform() {}, save() {}, restore() {}, translate() {}, rotate() {}, scale() {},
+      beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {}, closePath() {},
+      arc() {}, ellipse() {}, rect() {}, fill() {}, stroke() {}, clip() {},
+      fillRect() {}, strokeRect() {}, drawImage() {}, setLineDash() {},
+      createLinearGradient: 鈍, createRadialGradient: 鈍, createPattern: () => null,
+      measureText: () => ({ width: 10 }), fillText() {}, strokeText() {},
+      createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }),
+      putImageData() {},
+      getImageData: (x, y, w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }),
+    };
+  };
+  const 試す = (種, 兵) => {
+    種で固める();
+    H.setFieldSeed(種, 'x'); H.setFieldKind('街道'); H.setBattleMap(null);
+    H.layoutField(兵, 2);
+    const k = Math.min(1, Math.sqrt(2.2e6 / Math.max(1, H.FIELD.w * H.FIELD.h)));
+    const t0 = Date.now();
+    try { H.新絵の野(作り筆(), k); } catch (e) { return { 咎: e.message }; }
+    return { ms: Date.now() - t0, 野: `${Math.round(H.FIELD.w)}×${Math.round(H.FIELD.h)}` };
+  };
+  let 可 = true; const 添 = [];
+  for (const [種, 兵] of [['a', 1200], ['b', 6000], ['c', 30000]]) {
+    const r = 試す(種, 兵);
+    if (r.咎) { 可 = false; 添.push(`${種}：${r.咎}`); } else 添.push(`${兵}人 ${r.野} ${r.ms}ms`);
+  }
+  確('生まれの違う野でも、焼く筋が通る', 可, 添.join('・'));
 }
 
 console.log('\n── 二　高さの持ち上がり');

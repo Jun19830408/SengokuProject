@@ -23,7 +23,10 @@ import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS
 
 /* 関ヶ原だけで使う。棚の sengoku:旧絵 が「入」なら使わない（逃げ道）。 */
 export function 新絵か(b) {
-  if (!b || !b.筋書き || b.筋書き.id !== "sekigahara") return false;
+  if (!b) return false;
+  /* 城攻めは別の筆（縄張りを読む版はこれから）。野戦はすべて新しい絵で描く。
+     はじめは関ヶ原だけに掛けて確かめ、作りが固まったので野戦へ広げた。 */
+  if (b.map) return false;
   try { if (typeof localStorage !== "undefined" && localStorage.getItem("sengoku:旧絵") === "入") return false; }
   catch { /* 棚が無い場でも絵は出す */ }
   return true;
@@ -449,7 +452,10 @@ const 名札 = (g, x, y, s) => {
    焼く。細かさは近景の肌理（寄ったときに画面の縮尺で重ねる）が持つ。
    影と遮蔽は、さらに半分の寸法で焼いて引き伸ばす――どちらも滑らかな量なので
    見た目は変わらず、速さは四倍になる。 */
-export const 新絵の画布上限 = 3.2e6;
+/* 画布の上限。三百二十万画素では、いちばん広い野（三万の兵）で焼きに
+   二.四秒かかった（算だけで。携帯ではその二〜四倍）。二百二十万へ抑える。
+   寄ったときの細かさは近景の肌理が持つので、引きでも寄りでも差は出ない。 */
+export const 新絵の画布上限 = 2.2e6;
 
 /* 値の雑音。盤の賽（Math.random）は使わない――同じ種から同じ盤が出なくなる */
 const 雑格寸 = 256;
@@ -874,7 +880,7 @@ export function 新絵の野(g, 画k) {
   /* 草の穂。短く、多く、薄く */
   野種を置く(31337);
   g.lineCap = "butt";
-  const 穂数 = Math.min(220000, Math.round(W * H * 0.05));
+  const 穂数 = Math.min(160000, Math.round(W * H * 0.035));
   for (let i = 0; i < 穂数; i++) {
     const x = 野乱() * W, y = 野乱() * H;
     const 日 = 明関(x, y);
@@ -900,7 +906,7 @@ export function 新絵の野(g, 画k) {
   /* 木。林の只中は塊で描いたので、木は縁と野にだけ立てる */
   野種を置く(606);
   const 木 = [];
-  const 試 = Math.min(260000, Math.round(W * H * 0.06));
+  const 試 = Math.min(200000, Math.round(W * H * 0.05));
   for (let i = 0; i < 試; i++) {
     const x = 野乱() * W, y = 野乱() * H;
     const fr = 引伸(林, hw, hh, x, y, 半);

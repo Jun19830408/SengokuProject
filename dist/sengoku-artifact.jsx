@@ -25193,7 +25193,8 @@ function \u57CE\u65B9\u306E\u968A\u3092\u7ACB\u3066\u308B(s2, castle, map, { def
 
 // src/battle/shinga.js
 function \u65B0\u7D75\u304B(b) {
-  if (!b || !b.\u7B4B\u66F8\u304D || b.\u7B4B\u66F8\u304D.id !== "sekigahara") return false;
+  if (!b) return false;
+  if (b.map) return false;
   try {
     if (typeof localStorage !== "undefined" && localStorage.getItem("sengoku:\u65E7\u7D75") === "\u5165") return false;
   } catch {
@@ -25864,7 +25865,7 @@ var \u540D\u672D = (g, x, y, s2) => {
   g.fillText(s2, x, y);
   g.restore();
 };
-var \u65B0\u7D75\u306E\u753B\u5E03\u4E0A\u9650 = 32e5;
+var \u65B0\u7D75\u306E\u753B\u5E03\u4E0A\u9650 = 22e5;
 var \u96D1\u683C\u5BF8 = 256;
 var \u96D1\u683C = new Float32Array(\u96D1\u683C\u5BF8 * \u96D1\u683C\u5BF8);
 (() => {
@@ -26319,7 +26320,7 @@ function \u65B0\u7D75\u306E\u91CE(g, \u753Bk) {
   const \u660E\u95A2 = (x, y) => 1 - \u5F15\u4F38(\u5F712, hw, hh, Math.max(0, Math.min(W2 - 1, x)), Math.max(0, Math.min(H2 - 1, y)), \u534A) * 0.5;
   \u91CE\u7A2E\u3092\u7F6E\u304F(31337);
   g.lineCap = "butt";
-  const \u7A42\u6570 = Math.min(22e4, Math.round(W2 * H2 * 0.05));
+  const \u7A42\u6570 = Math.min(16e4, Math.round(W2 * H2 * 0.035));
   for (let i = 0; i < \u7A42\u6570; i++) {
     const x = \u91CE\u4E71() * W2, y = \u91CE\u4E71() * H2;
     const \u65E5 = \u660E\u95A2(x, y);
@@ -26345,7 +26346,7 @@ function \u65B0\u7D75\u306E\u91CE(g, \u753Bk) {
   for (const v of VILLAGES) \u96C6\u843D(g, PX(v.x), PY(v.y), PX(v.r || 40) * 0.95, Math.round(v.x + v.y), \u660E\u95A2, \u500D);
   \u91CE\u7A2E\u3092\u7F6E\u304F(606);
   const \u67282 = [];
-  const \u8A66 = Math.min(26e4, Math.round(W2 * H2 * 0.06));
+  const \u8A66 = Math.min(2e5, Math.round(W2 * H2 * 0.05));
   for (let i = 0; i < \u8A66; i++) {
     const x = \u91CE\u4E71() * W2, y = \u91CE\u4E71() * H2;
     const fr = \u5F15\u4F38(\u67972, hw, hh, x, y, \u534A);
