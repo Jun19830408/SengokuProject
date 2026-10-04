@@ -4,7 +4,7 @@ import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
-import { 新絵か, 新絵の兵描き, 個人で描くか, 近景の肌理 } from "./shinga.js";
+import { 新絵か, 新絵の兵描き, 個人で描くか, 近景の肌理, 本陣の所 } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
 
@@ -2178,8 +2178,8 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
        白い丸と旗に隠れて見えない――遊ぶ側から「将が見えない」との申し出は
        これである。新しい絵のときは、標識だけを将の上へ逃がし、
        細い線で足元へ結ぶ。押せる所（狙い札）も札に付いて動く。 */
-    const 将所 = (個人絵 && c.本陣) ? c.本陣
-      : { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
+    const 本 = 個人絵 ? 本陣の所(c) : null;
+    const 将所 = 本 || { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
     const [x, y0] = S(将所.x, 将所.y);
     /* 逃がす高さは、将の背丈より高く取る。実測で、将の丈は寄り七.二倍のとき
        五十二点ほど――二十六×倍×〇.三では札の底が将の兜に掛かっていた。 */

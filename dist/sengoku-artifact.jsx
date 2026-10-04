@@ -25231,9 +25231,9 @@ var \u67C4 = "#7A5A34";
 var \u5E03 = "#4A4034";
 var \u99AC\u6BDB\u3089 = ["#5A4030", "#6B4A33", "#3E2E20"];
 var \u5177\u5074 = {
-  P: { \u6FC3: "#24407E", \u4E2D: "#3560B4", \u5E2F: "#5A86D8" },
-  E: { \u6FC3: "#8A2014", \u4E2D: "#B43A24", \u5E2F: "#D45A40" },
-  Y: { \u6FC3: "#6E5612", \u4E2D: "#977A1E", \u5E2F: "#C0A12E" }
+  P: { \u6FC3: "#14203C", \u4E2D: "#1E3056", \u5E2F: "#5FA0FF" },
+  E: { \u6FC3: "#3C120B", \u4E2D: "#5A1C12", \u5E2F: "#FF6B4A" },
+  Y: { \u6FC3: "#3A2C08", \u4E2D: "#53410F", \u5E2F: "#F2CE48" }
 };
 var \u7A2E = 11;
 var R = () => {
@@ -26350,6 +26350,10 @@ var \u672C\u9663\u306E\u614B = (c) => {
   }
   return t;
 };
+function \u672C\u9663\u306E\u6240(c) {
+  const t = \u672C\u9663\u614B.get(c);
+  return t && t.\u521D ? { x: t.\u524Dx, y: t.\u524Dy } : null;
+}
 function \u672C\u9663\u8846\u3092\u9032\u3081\u308B(c, b, dt, \u672Cx, \u672Cy) {
   const t = \u672C\u9663\u306E\u614B(c);
   const \u5175 = c.squads.reduce((a, q) => a + (q.men > 0 ? q.men : 0), 0);
@@ -26412,12 +26416,10 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
   const \u614B = \u76E4\u306E\u614B(b);
   const dt = Math.max(0, Math.min(0.25, b.t - \u614B.\u524Dt));
   \u614B.\u524Dt = b.t;
-  if (dt <= 0) return 0;
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
     if (viewRect && (c.x < viewRect.x0 - 160 || c.x > viewRect.x1 + 160 || c.y < viewRect.y0 - 160 || c.y > viewRect.y1 + 160)) continue;
     const \u672Cx = c.gx == null ? c.x : c.gx, \u672Cy = c.gy == null ? c.y : c.gy;
-    c.\u672C\u9663 = { x: \u672Cx, y: \u672Cy };
     \u672C\u9663\u8846\u3092\u9032\u3081\u308B(c, b, dt, \u672Cx, \u672Cy);
     const \u672Cx2 = \u672Cx, \u672Cy2 = \u672Cy;
     const \u9663\u54112 = c.facing || 0;
@@ -27268,7 +27270,7 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
       ctx.moveTo(p.wx, y);
       ctx.lineTo(p.wx, y - 2);
       ctx.stroke();
-      ctx.fillStyle = shade2(\u5177\u5074[p.\u65D7].\u4E2D, 1.25);
+      ctx.fillStyle = shade2(\u5177\u5074[p.\u65D7].\u5E2F, 1.02);
       ctx.fillRect(p.wx + 0.06, y - 2, 0.55, 1.05);
       continue;
     }
@@ -29531,7 +29533,8 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
   for (const c of shown) {
     const isP = c.side === "P";
     const side = sideColor(c);
-    const \u5C06\u6240 = \u500B\u4EBA\u7D75 && c.\u672C\u9663 ? c.\u672C\u9663 : { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
+    const \u672C = \u500B\u4EBA\u7D75 ? \u672C\u9663\u306E\u6240(c) : null;
+    const \u5C06\u6240 = \u672C || { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
     const [x, y0] = S(\u5C06\u6240.x, \u5C06\u6240.y);
     const \u9003 = \u500B\u4EBA\u7D75 && !c.destroyed ? Math.min(92, Math.max(34, 30 * cam.s * 0.38)) : 0;
     const y = y0 - \u9003;
@@ -35436,7 +35439,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     window.__\u5C06\u3078 = (\u540D, \u500D = 4) => {
       const c = b.corps.find((x) => !x.dead && !x.destroyed && (\u540D ? x.name.includes(\u540D) : x.side === "P"));
       if (!c) return null;
-      const \u6240 = c.\u672C\u9663 || { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
+      const \u6240 = { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
       const cam = camRef.current;
       cam.x = \u6240.x;
       cam.y = \u6240.y;

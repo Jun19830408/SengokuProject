@@ -274,7 +274,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       const c = b.corps.find((x) => !x.dead && !x.destroyed
         && (名 ? x.name.includes(名) : x.side === "P"));
       if (!c) return null;
-      const 所 = c.本陣 || { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
+      const 所 = { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
       const cam = camRef.current;
       cam.x = 所.x; cam.y = 所.y; cam.s = clamp(倍, 縮みの限り(), 寄りの限り());
       force((n) => (n + 1) % 1000);
