@@ -26419,6 +26419,11 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
     const \u672Cx = c.gx == null ? c.x : c.gx, \u672Cy = c.gy == null ? c.y : c.gy;
     c.\u672C\u9663 = { x: \u672Cx, y: \u672Cy };
     \u672C\u9663\u8846\u3092\u9032\u3081\u308B(c, b, dt, \u672Cx, \u672Cy);
+    const \u672Cx2 = \u672Cx, \u672Cy2 = \u672Cy;
+    const \u9663\u54112 = c.facing || 0;
+    const \u9663fx = Math.cos(\u9663\u54112), \u9663fy = Math.sin(\u9663\u54112);
+    const \u9663\u6A2A\u534A = 2 * 4.6 + 3.4, \u9663\u5965\u534A = 2 * 4.2 + 3.4;
+    const \u672C\u9663\u3088\u3051 = !(c.routed || c.withdraw);
     for (const q of c.squads) {
       const s2 = \u7D44\u306E\u614B(q);
       if ((q.cool || 0) > s2.prevCool + 0.4) s2.\u6483\u523B = b.t;
@@ -26476,7 +26481,23 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
       for (let n = 0; n < alive; n++) {
         const o = \u5834[n];
         const \u6DF1 = q.engaged ? -\u524D + o[2] * \u523B\u307F + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))) : o[1];
-        const tx = s2.dx + lx * o[0] + bx * (\u6DF1 + \u62BC), ty = s2.dy + ly * o[0] + by * (\u6DF1 + \u62BC);
+        let tx = s2.dx + lx * o[0] + bx * (\u6DF1 + \u62BC), ty = s2.dy + ly * o[0] + by * (\u6DF1 + \u62BC);
+        if (\u672C\u9663\u3088\u3051) {
+          const dx3 = tx - \u672Cx2, dy3 = ty - \u672Cy2;
+          const \u59653 = dx3 * \u9663fx + dy3 * \u9663fy;
+          const \u6A2A3 = -dx3 * \u9663fy + dy3 * \u9663fx;
+          if (Math.abs(\u59653) < \u9663\u5965\u534A && Math.abs(\u6A2A3) < \u9663\u6A2A\u534A) {
+            if (\u9663\u6A2A\u534A - Math.abs(\u6A2A3) <= \u9663\u5965\u534A - Math.abs(\u59653)) {
+              const \u5148 = \u6A2A3 >= 0 ? \u9663\u6A2A\u534A : -\u9663\u6A2A\u534A, \u5DEE = \u5148 - \u6A2A3;
+              tx += -\u9663fy * \u5DEE;
+              ty += \u9663fx * \u5DEE;
+            } else {
+              const \u5148 = \u59653 >= 0 ? \u9663\u5965\u534A : -\u9663\u5965\u534A, \u5DEE = \u5148 - \u59653;
+              tx += \u9663fx * \u5DEE;
+              ty += \u9663fy * \u5DEE;
+            }
+          }
+        }
         if (!s2.\u751F[n] || !s2.\u521D) {
           s2.sx[n] = tx;
           s2.sy[n] = ty;

@@ -832,6 +832,13 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
     c.本陣 = { x: 本x, y: 本y };
     本陣衆を進める(c, b, dt, 本x, 本y);
 
+    /* 馬廻の陣（五×五）が占める四角。ほかの兵はこの四角を避ける。
+       崩れた隊・退く隊では避けない（陣形どころではない）。 */
+    const 本x2 = 本x, 本y2 = 本y;
+    const 陣向2 = c.facing || 0;
+    const 陣fx = Math.cos(陣向2), 陣fy = Math.sin(陣向2);
+    const 陣横半 = 2 * 4.6 + 3.4, 陣奥半 = 2 * 4.2 + 3.4;
+    const 本陣よけ = !(c.routed || c.withdraw);
     for (const q of c.squads) {
       const s = 組の態(q);
       /* 発砲の刻。cool が跳ね上がったら、いま放った */
@@ -889,7 +896,30 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
         const 深 = q.engaged
           ? (-前 + o[2] * 刻み + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))))
           : o[1];
-        const tx = s.dx + lx * o[0] + bx * (深 + 押), ty = s.dy + ly * o[0] + by * (深 + 押);
+        let tx = s.dx + lx * o[0] + bx * (深 + 押), ty = s.dy + ly * o[0] + by * (深 + 押);
+        /* 本陣の陣に、ほかの兵を被せない（GDD 8.11）。
+
+           将と馬廻を本陣に据えたところ、そこは隊の只中なので歩兵の列に埋もれた
+           ――遊ぶ側から「武将と馬廻役が埋もれている」との申し出はこれである。
+
+           馬廻は五×五の四角い陣を組む。その四角のぶんだけ、ほかの兵を外へ
+           よける（いちど円に避けさせたが、地面に定規の円が浮かび上がって
+           かえって作り物に見えた）。よけ方は「いちばん近い辺へ」。
+           絵の上だけの話で、盤の組の居場所は動かさない。 */
+        if (本陣よけ) {
+          const dx3 = tx - 本x2, dy3 = ty - 本y2;
+          const 奥3 = dx3 * 陣fx + dy3 * 陣fy;              // 前後（陣の向き）
+          const 横3 = -dx3 * 陣fy + dy3 * 陣fx;             // 左右
+          if (Math.abs(奥3) < 陣奥半 && Math.abs(横3) < 陣横半) {
+            if (陣横半 - Math.abs(横3) <= 陣奥半 - Math.abs(奥3)) {
+              const 先 = 横3 >= 0 ? 陣横半 : -陣横半, 差 = 先 - 横3;
+              tx += -陣fy * 差; ty += 陣fx * 差;
+            } else {
+              const 先 = 奥3 >= 0 ? 陣奥半 : -陣奥半, 差 = 先 - 奥3;
+              tx += 陣fx * 差; ty += 陣fy * 差;
+            }
+          }
+        }
         if (!s.生[n] || !s.初) { s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; s.速[n] = 0; continue; }
         const vx = tx - s.sx[n], vy = ty - s.sy[n], d = Math.hypot(vx, vy);
         let mv = 0;
