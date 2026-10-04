@@ -25194,7 +25194,6 @@ function \u57CE\u65B9\u306E\u968A\u3092\u7ACB\u3066\u308B(s2, castle, map, { def
 // src/battle/shinga.js
 function \u65B0\u7D75\u304B(b) {
   if (!b) return false;
-  if (b.map) return false;
   try {
     if (typeof localStorage !== "undefined" && localStorage.getItem("sengoku:\u65E7\u7D75") === "\u5165") return false;
   } catch {
@@ -25866,6 +25865,7 @@ var \u540D\u672D = (g, x, y, s2) => {
   g.restore();
 };
 var \u65B0\u7D75\u306E\u753B\u5E03\u4E0A\u9650 = 22e5;
+var \u57CE\u306E\u753B\u5E03\u4E0A\u9650 = 9e6;
 var \u96D1\u683C\u5BF8 = 256;
 var \u96D1\u683C = new Float32Array(\u96D1\u683C\u5BF8 * \u96D1\u683C\u5BF8);
 (() => {
@@ -26369,6 +26369,324 @@ function \u65B0\u7D75\u306E\u91CE(g, \u753Bk) {
   for (const v of VILLAGES) if (v.\u672D && v.\u540D) \u540D\u672D(g, v.x, v.y + (v.r || 40) + 12, v.\u540D);
   g.setTransform(1, 0, 0, 1, 0, 0);
 }
+function \u65B0\u7D75\u306E\u57CE\u306E\u5730(g, m, \u753Bk) {
+  const k = \u753Bk || 1;
+  const W2 = Math.max(1, Math.round(FIELD.w * k)), H2 = Math.max(1, Math.round(FIELD.h * k));
+  const \u500D = Math.max(0.5, Math.min(2, k * 3.2));
+  const PX = (v) => v * k;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const t = m.t, band = m.moat.band, \u7A7A\u5800 = !!m.moat.\u7A7A\u5800;
+  const o0 = m.layers[0], ob = o0.masu + t + 8;
+  const \u90ED\u3089 = m.layers.map((l, i) => ({
+    i,
+    x: PX(m.cx + (l.ox || 0)),
+    y: PX(m.cy + (l.oy || 0)),
+    hw: PX(l.hw + t),
+    hh: PX(l.hh + t)
+  }));
+  const \u5800\u5916 = {
+    x: PX(m.cx),
+    y: PX(m.cy),
+    hw: PX(o0.hw + t + ob + band),
+    hh: PX(o0.hh + t + ob + band)
+  };
+  const \u5800\u5E45 = Math.max(2, PX(band));
+  const \u5800\u5185 = { x: \u5800\u5916.x, y: \u5800\u5916.y, hw: \u5800\u5916.hw - \u5800\u5E45, hh: \u5800\u5916.hh - \u5800\u5E45 };
+  const \u534A = 2;
+  const gw = Math.max(2, Math.ceil(W2 / \u534A)), gh = Math.max(2, Math.ceil(H2 / \u534A));
+  const \u9AD8 = new Float32Array(gw * gh);
+  const \u90ED = new Float32Array(gw * gh);
+  const \u5800\u57DF = new Float32Array(gw * gh);
+  const \u5800\u6DF1 = new Float32Array(gw * gh);
+  const \u5CB82 = new Float32Array(gw * gh);
+  const \u9053\u5EA6 = new Float32Array(gw * gh);
+  const \u67972 = new Float32Array(gw * gh);
+  const \u77E9\u8DDD = (px2, py2, r) => {
+    const dx = Math.abs(px2 - r.x / \u534A) - r.hw / \u534A, dy = Math.abs(py2 - r.y / \u534A) - r.hh / \u534A;
+    return Math.min(Math.max(dx, dy), 0) + Math.hypot(Math.max(dx, 0), Math.max(dy, 0));
+  };
+  const \u67A0 = (r, \u4F38) => ({
+    x0: Math.max(0, Math.floor((r.x - r.hw) / \u534A - \u4F38)),
+    x1: Math.min(gw - 1, Math.ceil((r.x + r.hw) / \u534A + \u4F38)),
+    y0: Math.max(0, Math.floor((r.y - r.hh) / \u534A - \u4F38)),
+    y1: Math.min(gh - 1, Math.ceil((r.y + r.hh) / \u534A + \u4F38))
+  });
+  const \u5742R = (Math.max(\u5800\u5916.hw, \u5800\u5916.hh) + \u5800\u5E45) * (m.\u5742 >= 1 ? 1.55 : 1.85);
+  const \u5742\u4E08 = (m.\u5742 >= 1 ? 0.26 : m.\u5742 > 0 ? 0.1 : 0) * \u5742R;
+  const ccx = \u5800\u5916.x / \u534A, ccy = \u5800\u5916.y / \u534A, \u5742r2 = \u5742R / \u534A;
+  for (let y = 0; y < gh; y++) {
+    for (let x = 0; x < gw; x++) {
+      let h = (\u895E(x * \u534A / (150 * \u500D), y * \u534A / (150 * \u500D), 3) - 0.5) * 9 * \u500D + (\u895E(x * \u534A / (430 * \u500D) + 11, y * \u534A / (430 * \u500D) + 7, 2) - 0.5) * 22 * \u500D;
+      if (\u5742\u4E08 > 0) {
+        const \u5D29 = 0.82 + \u895E(x / (46 * \u500D), y / (46 * \u500D), 3) * 0.42;
+        const d = Math.hypot(x - ccx, y - ccy) / (\u5742r2 * \u5D29);
+        if (d < 1) h += \u5742\u4E08 * Math.cos(d * Math.PI / 2) ** 1.35;
+      }
+      \u9AD8[y * gw + x] = h / \u534A;
+    }
+  }
+  const \u6BB52 = 5.5 * \u500D;
+  for (const r of \u90ED\u3089) {
+    const b = \u67A0(r, 2);
+    for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++) {
+      const d = \u77E9\u8DDD(x, y, r);
+      if (d >= 0) continue;
+      const w = Math.min(1, -d / 1.4);
+      const j = y * gw + x;
+      \u90ED[j] += w;
+      \u9AD8[j] += \u6BB52 / \u534A * w;
+    }
+  }
+  const \u6DF1 = (\u7A7A\u5800 ? 12 : 10) * \u500D;
+  const \u5207 = Math.max(1.5, Math.min(\u5800\u5E45 * 0.34, 7 * \u500D));
+  {
+    const b = \u67A0(\u5800\u5916, 4 * \u500D / \u534A + 2);
+    for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++) {
+      const d1 = -\u77E9\u8DDD(x, y, \u5800\u5916), d2 = \u77E9\u8DDD(x, y, \u5800\u5185);
+      const j = y * gw + x;
+      if (d1 > 0 && d2 > 0) {
+        const e = Math.min(d1, d2) * \u534A;
+        \u5800\u57DF[j] = Math.min(1, e / Math.max(0.8, \u500D));
+        \u5800\u6DF1[j] = Math.min(1, e / \u5207);
+        \u9AD8[j] -= \u6DF1 / \u534A * \u5800\u6DF1[j];
+      } else {
+        const e2 = Math.min(d1 > 0 ? 1e9 : -d1, d2 > 0 ? 1e9 : -d2) * \u534A;
+        if (e2 < 4 * \u500D) \u5CB82[j] = Math.max(\u5CB82[j], 1 - e2 / (4 * \u500D));
+      }
+    }
+  }
+  const \u523B\u30802 = (x0, y0, x1, y1, \u5E452, \u5834, \u6DF1\u3055) => {
+    const L = Math.hypot(x1 - x0, y1 - y0) / \u534A, \u6B69 = Math.max(1, Math.ceil(L));
+    const r = \u5E452 / 2 + 3 * \u500D;
+    for (let s2 = 0; s2 <= \u6B69; s2++) {
+      const u = s2 / \u6B69, px2 = (x0 + (x1 - x0) * u) / \u534A, py2 = (y0 + (y1 - y0) * u) / \u534A;
+      const rr = r / \u534A;
+      const ax0 = Math.max(0, Math.floor(px2 - rr)), ax1 = Math.min(gw - 1, Math.ceil(px2 + rr));
+      const ay0 = Math.max(0, Math.floor(py2 - rr)), ay1 = Math.min(gh - 1, Math.ceil(py2 + rr));
+      for (let y = ay0; y <= ay1; y++) for (let x = ax0; x <= ax1; x++) {
+        const dd2 = Math.hypot(x - px2, y - py2) * \u534A;
+        if (dd2 > r) continue;
+        const j = y * gw + x, v = \u6DF1\u3055(dd2);
+        if (v > \u5834[j]) \u5834[j] = v;
+      }
+    }
+  };
+  const \u9580\u306E\u53E3 = (l, q) => {
+    const \u6A2A = q.face === "S" || q.face === "N";
+    const lx = PX(m.cx + (l.ox || 0)), ly = PX(m.cy + (l.oy || 0));
+    const hwp = PX(l.hw + t), hhp = PX(l.hh + t);
+    return \u6A2A ? { x: lx + PX(q.off), y: ly + (q.face === "S" ? hhp - PX(t) * 2 : -hhp + PX(t) * 2) } : { x: lx + (q.face === "E" ? hwp - PX(t) * 2 : -hwp + PX(t) * 2), y: ly + PX(q.off) };
+  };
+  const \u5927\u624B = o0.gates.find((q) => q.face === "S") || o0.gates[0] || null;
+  const \u9053\u53E3 = [];
+  for (const q of o0.gates) {
+    const \u6A2A = q.face === "S" || q.face === "N";
+    const u = PX(q.off), \u5E452 = PX(q.w) * 0.95;
+    const x0 = \u5800\u5916.x + (\u6A2A ? u : q.face === "E" ? \u5800\u5916.hw : -\u5800\u5916.hw);
+    const y0 = \u5800\u5916.y + (\u6A2A ? q.face === "S" ? \u5800\u5916.hh : -\u5800\u5916.hh : u);
+    const x1 = \u6A2A ? x0 : q.face === "E" ? W2 + 20 : -20;
+    const y1 = \u6A2A ? q.face === "S" ? H2 + 20 : -20 : y0;
+    const \u534A\u5E45 = \u5E452 / 2 + 2 * \u500D;
+    \u523B\u30802(x0, y0, x1, y1, \u5E452, \u9053\u5EA6, (d) => Math.min(1, (\u534A\u5E45 - d) / (3 * \u500D)));
+    \u9053\u53E3.push({ q, x0, y0, x1, y1, \u6A2A });
+  }
+  for (let i = 0; i < m.layers.length; i++) {
+    const l = m.layers[i], \u6B21 = m.layers[i + 1] || null;
+    for (const q of l.gates) {
+      const a = \u9580\u306E\u53E3(l, q);
+      let b2;
+      if (\u6B21) {
+        let \u6700 = null, nd = Infinity;
+        for (const q2 of \u6B21.gates) {
+          const p2 = \u9580\u306E\u53E3(\u6B21, q2), dd2 = Math.hypot(p2.x - a.x, p2.y - a.y);
+          if (dd2 < nd) {
+            nd = dd2;
+            \u6700 = p2;
+          }
+        }
+        b2 = \u6700;
+      } else {
+        b2 = { x: PX(m.cx + (l.ox || 0)), y: PX(m.cy + (l.oy || 0)) };
+      }
+      if (!b2) continue;
+      const \u5E452 = Math.max(4 * \u500D, PX(q.w) * 0.55);
+      const \u534A\u5E45 = \u5E452 / 2 + 2 * \u500D;
+      const \u6298 = { x: b2.x, y: a.y };
+      \u523B\u30802(a.x, a.y, \u6298.x, \u6298.y, \u5E452, \u9053\u5EA6, (d) => Math.min(0.72, (\u534A\u5E45 - d) / (3 * \u500D)));
+      \u523B\u30802(\u6298.x, \u6298.y, b2.x, b2.y, \u5E452, \u9053\u5EA6, (d) => Math.min(0.72, (\u534A\u5E45 - d) / (3 * \u500D)));
+    }
+  }
+  \u91CE\u7A2E\u3092\u7F6E\u304F(Math.round(Math.abs(m.cx * 7 + m.cy * 13 + m.layers.length * 101)) % 1e6 + 11);
+  const \u7FA4\u6570 = Math.max(4, Math.round(W2 * H2 / (300 * 300 * \u500D * \u500D)) + (m.\u5742 >= 1 ? 6 : 0));
+  for (let i = 0; i < \u7FA4\u6570; i++) {
+    const cx2 = \u91CE\u4E71() * W2, cy2 = \u91CE\u4E71() * H2;
+    if (\u77E9\u8DDD(cx2 / \u534A, cy2 / \u534A, \u5800\u5916) < 24 * \u500D / \u534A) continue;
+    const r = (46 + \u91CE\u4E71() * 90) * \u500D;
+    const fx = cx2 / \u534A, fy = cy2 / \u534A, rr = r / \u534A;
+    const x0 = Math.max(0, fx - rr | 0), x1 = Math.min(gw - 1, Math.ceil(fx + rr));
+    const y0 = Math.max(0, fy - rr | 0), y1 = Math.min(gh - 1, Math.ceil(fy + rr));
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      if (\u77E9\u8DDD(x, y, \u5800\u5916) < 0) continue;
+      const d = Math.hypot(x - fx, y - fy) / rr;
+      const \u307B\u3064\u308C = (\u895E(x / (4.5 * \u500D), y / (4.5 * \u500D), 3) - 0.5) * 0.52;
+      const v = 1 - (d + \u307B\u3064\u308C);
+      if (v > 0) \u67972[y * gw + x] = Math.max(\u67972[y * gw + x], Math.min(1, v * 2.2));
+    }
+  }
+  for (let i = 0; i < \u67972.length; i++) {
+    if (\u67972[i] < 0.01) continue;
+    if (\u9053\u5EA6[i] > 0.2) {
+      \u67972[i] = 0;
+      continue;
+    }
+    const x = i % gw, y = i / gw | 0;
+    \u9AD8[i] += \u67972[i] * (3.5 * \u500D + \u895E(x / (1.7 * \u500D), y / (1.7 * \u500D), 2) * 2.5 * \u500D);
+  }
+  const \u5149x = -0.62, \u5149y = -0.72, \u5149\u9AD8 = 0.52;
+  const \u5F712 = \u65E5\u5F71\u3092\u713C\u304F(\u9AD8, gw, gh, \u5149x, \u5149y, \u5149\u9AD8, Math.max(1.4, 1.3 * \u500D), 34);
+  const \u906E = \u906E\u853D\u3092\u713C\u304F(\u9AD8, gw, gh, Math.max(5, 7 * \u500D | 0));
+  const im = g.createImageData(W2, H2), dd = im.data;
+  for (let y = 0; y < H2; y++) {
+    for (let x = 0; x < W2; x++) {
+      const p = (y * W2 + x) * 4;
+      const h2 = \u5F15\u4F38(\u9AD8, gw, gh, x, y, \u534A);
+      const gx = \u5F15\u4F38(\u9AD8, gw, gh, x + \u534A, y, \u534A) - \u5F15\u4F38(\u9AD8, gw, gh, x - \u534A, y, \u534A);
+      const gy = \u5F15\u4F38(\u9AD8, gw, gh, x, y + \u534A, \u534A) - \u5F15\u4F38(\u9AD8, gw, gh, x, y - \u534A, \u534A);
+      const \u50BE = Math.hypot(gx, gy) * 0.5 / \u534A;
+      const \u90EDt = \u5F15\u4F38(\u90ED, gw, gh, x, y, \u534A);
+      const \u5800m = \u5F15\u4F38(\u5800\u57DF, gw, gh, x, y, \u534A);
+      const \u5800t = \u5F15\u4F38(\u5800\u6DF1, gw, gh, x, y, \u534A);
+      const \u5CB8t = \u5F15\u4F38(\u5CB82, gw, gh, x, y, \u534A);
+      const n1 = \u895E(x / (1.8 * \u500D), y / (1.8 * \u500D), 2) - 0.5, n2 = \u895E(x / (6 * \u500D), y / (6 * \u500D), 2) - 0.5;
+      const \u4E7E = \u631F(0.36 + h2 / (24 * \u500D) + (\u895E(x / (40 * \u500D), y / (40 * \u500D), 3) - 0.5) * 0.8, 0, 1);
+      let c = \u6DF7\u8272([104, 154, 60], [206, 204, 116], \u4E7E);
+      c = [c[0] * (1 + n1 * 0.1 + n2 * 0.13), c[1] * (1 + n1 * 0.07 + n2 * 0.11), c[2] * (1 + n1 * 0.2 + n2 * 0.2)];
+      const \u5916d = \u77E9\u8DDD(x / \u534A, y / \u534A, \u5800\u5916);
+      if (\u5916d > 2 && \u90EDt < 0.02 && \u5800m < 0.02 && \u50BE < 0.55) {
+        const \u7530 = \u895E(x / (46 * \u500D), y / (46 * \u500D), 2);
+        if (\u7530 > 0.46) {
+          const \u56DEx = x * 0.985 + y * 0.174, \u56DEy = y * 0.985 - x * 0.174;
+          const \u5272x = \u56DEx / (24 * \u500D), \u5272y = \u56DEy / (18 * \u500D);
+          const \u533A = \u7C92\u97F3(Math.floor(\u5272x) * 7.31 + 0.5, Math.floor(\u5272y) * 5.17 + 0.5);
+          const \u7551 = \u6DF7\u8272([150, 162, 84], [186, 182, 118], \u533A);
+          c = \u6DF7\u8272(c, \u7551, Math.min(0.5, (\u7530 - 0.46) * 1.9));
+          const \u7566 = Math.max(Math.abs(\u5272x % 1 - 0.5), Math.abs(\u5272y % 1 - 0.5));
+          if (\u7566 > 0.44) c = \u6DF7\u8272(c, [172, 160, 118], 0.28);
+        }
+      }
+      const fr = \u5F15\u4F38(\u67972, gw, gh, x, y, \u534A);
+      if (fr > 0.01) {
+        c = \u6DF7\u8272(c, \u6DF7\u8272([58, 92, 40], [104, 134, 54], \u895E(x / (2.6 * \u500D), y / (2.6 * \u500D), 2)), Math.min(0.96, fr * 1.3));
+      }
+      const \u9732 = \u631F((\u50BE - 0.7) * 1.1, 0, 1);
+      if (\u9732 > 0.01) c = \u6DF7\u8272(c, \u6DF7\u8272([186, 170, 130], [152, 136, 102], \u895E(x / (3.6 * \u500D), y / (3.6 * \u500D), 2)), \u9732 * 0.66);
+      if (\u90EDt > 0.01) {
+        const \u7802 = \u6DF7\u8272([200, 188, 156], [176, 162, 128], \u895E(x / (3.4 * \u500D), y / (3.4 * \u500D), 2));
+        const \u5C64\u660E = 1 + Math.min(3, \u90EDt) * 0.014;
+        let s2 = [\u7802[0] * \u5C64\u660E, \u7802[1] * \u5C64\u660E, \u7802[2] * \u5C64\u660E];
+        const \u6591 = \u895E(x / (16 * \u500D), y / (16 * \u500D), 2);
+        if (\u6591 > 0.68) s2 = \u6DF7\u8272(s2, [140, 160, 92], (\u6591 - 0.68) * 1.1);
+        s2 = [s2[0] * (1 + n1 * 0.07), s2[1] * (1 + n1 * 0.07), s2[2] * (1 + n1 * 0.09)];
+        c = \u6DF7\u8272(c, s2, Math.min(1, \u90EDt * 1.8));
+      }
+      if (\u5CB8t > 0.01) c = \u6DF7\u8272(c, [204, 194, 164], \u5CB8t * 0.5);
+      const \u9053t = \u5F15\u4F38(\u9053\u5EA6, gw, gh, x, y, \u534A);
+      if (\u9053t > 0.01 && \u5800m < 0.3) {
+        const v = \u631F(\u9053t + (\u895E(x / (2.6 * \u500D), y / (2.6 * \u500D), 2) - 0.5) * 0.5, 0, 1);
+        c = \u6DF7\u8272(c, [214, 182, 162], v * 0.9);
+      }
+      if (\u5800m > 0.01) {
+        if (\u7A7A\u5800) {
+          let \u571F = \u6DF7\u8272([178, 162, 128], [128, 114, 88], \u631F(\u5800t * 1.15, 0, 1));
+          \u571F = [\u571F[0] * (1 + n1 * 0.08), \u571F[1] * (1 + n1 * 0.08), \u571F[2] * (1 + n1 * 0.1)];
+          const \u7B4B3 = \u895E(x / (2.2 * \u500D), y / (5 * \u500D), 2);
+          if (\u7B4B3 > 0.66) \u571F = \u6DF7\u8272(\u571F, [150, 136, 104], (\u7B4B3 - 0.66) * 1.2);
+          c = \u6DF7\u8272(c, \u571F, \u5800m);
+        } else {
+          const \u5E952 = \u6DF7\u8272([140, 134, 104], [84, 92, 74], \u895E(x / (3 * \u500D), y / (3 * \u500D), 2));
+          const \u900F = Math.exp(-\u5800t * 3.8);
+          let \u9762 = \u6DF7\u8272(\u6DF7\u8272([96, 124, 118], [44, 72, 84], \u631F(\u5800t * 1.2, 0, 1)), \u5E952, \u900F * 0.72);
+          \u9762 = \u6DF7\u8272(\u9762, [150, 176, 198], 0.14 + (1 - \u5800t) * 0.1);
+          const \u6CE2 = \u895E(x / (2.6 * \u500D), y / (1.2 * \u500D), 2);
+          if (\u6CE2 > 0.74) \u9762 = \u6DF7\u8272(\u9762, [226, 236, 244], (\u6CE2 - 0.74) * 1.5);
+          c = \u6DF7\u8272(c, \u9762, \u5800m);
+        }
+      }
+      const nx = -gx * 0.5 / \u534A, ny = -gy * 0.5 / \u534A, nl = Math.hypot(nx, ny, 1);
+      const \u76F4 = \u631F((nx * \u5149x + ny * \u5149y + \u5149\u9AD8) / nl, 0, 1);
+      const \u65E5 = 1 - \u5F15\u4F38(\u5F712, gw, gh, x, y, \u534A) * 0.6;
+      const \u7A7A2 = 1 - \u5F15\u4F38(\u906E, gw, gh, x, y, \u534A) * 0.28;
+      const \u660E = 0.58 * \u7A7A2 + 0.6 * \u76F4 * \u65E5;
+      c = [c[0] * \u660E, c[1] * \u660E * 1.01, c[2] * \u660E * (1 + (1 - \u65E5) * 0.22 + (1 - \u7A7A2) * 0.1)];
+      dd[p] = \u631F(c[0], 0, 255);
+      dd[p + 1] = \u631F(c[1], 0, 255);
+      dd[p + 2] = \u631F(c[2], 0, 255);
+      dd[p + 3] = 255;
+    }
+  }
+  g.putImageData(im, 0, 0);
+  const \u660E\u95A2 = (x, y) => 1 - \u5F15\u4F38(\u5F712, gw, gh, Math.max(0, Math.min(W2 - 1, x)), Math.max(0, Math.min(H2 - 1, y)), \u534A) * 0.5;
+  const \u5916\u304B = (x, y) => \u77E9\u8DDD(x / \u534A, y / \u534A, \u5800\u5916) > 0;
+  \u91CE\u7A2E\u3092\u7F6E\u304F(24601);
+  g.lineCap = "butt";
+  const \u7A42\u6570 = Math.min(14e4, Math.round(W2 * H2 * 0.03));
+  for (let i = 0; i < \u7A42\u6570; i++) {
+    const x = \u91CE\u4E71() * W2, y = \u91CE\u4E71() * H2;
+    const \u90EDt = \u5F15\u4F38(\u90ED, gw, gh, x, y, \u534A), \u5800t = \u5F15\u4F38(\u5800\u57DF, gw, gh, x, y, \u534A);
+    if (\u5800t > 0.06) continue;
+    if (\u90EDt > 0.02 && \u91CE\u4E71() > 0.14) continue;
+    if (\u5F15\u4F38(\u9053\u5EA6, gw, gh, x, y, \u534A) > 0.4) continue;
+    const \u65E5 = \u660E\u95A2(x, y);
+    const u = \u91CE\u4E71(), a = (0.09 + \u91CE\u4E71() * 0.06) * \u65E5;
+    g.strokeStyle = u < 0.45 ? `rgba(82,114,46,${a.toFixed(3)})` : u < 0.82 ? `rgba(144,172,78,${a.toFixed(3)})` : `rgba(196,204,128,${a.toFixed(3)})`;
+    g.lineWidth = Math.max(0.6, 0.8 * \u500D);
+    const ang = -1.5 + (\u91CE\u4E71() - 0.5) * 0.9, L = (0.7 + \u91CE\u4E71() * 1.4) * \u500D;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + Math.cos(ang) * L, y + Math.sin(ang) * L);
+    g.stroke();
+  }
+  if (\u5927\u624B) {
+    const \u53E3 = \u9053\u53E3.find((o) => o.q === \u5927\u624B);
+    if (\u53E3) {
+      const ux = \u53E3.x1 - \u53E3.x0, uy = \u53E3.y1 - \u53E3.y0, uL = Math.hypot(ux, uy) || 1;
+      const r = Math.min(W2, H2) * 0.075;
+      const \u5BC4 = Math.min(uL * 0.62, \u5800\u5E45 * 3 + 170 * \u500D);
+      const mx = \u631F(\u53E3.x0 + ux / uL * \u5BC4, r + 6, W2 - r - 6);
+      const my = \u631F(\u53E3.y0 + uy / uL * \u5BC4, r + 6, H2 - r - 6);
+      if (\u77E9\u8DDD(mx / \u534A, my / \u534A, \u5800\u5916) > r * 0.5 / \u534A) {
+        \u96C6\u843D(g, mx, my, r, Math.round(m.cx + m.cy), \u660E\u95A2, \u500D);
+      }
+    }
+  }
+  \u91CE\u7A2E\u3092\u7F6E\u304F(8086);
+  const \u67282 = [];
+  const \u8A66 = Math.min(16e4, Math.round(W2 * H2 * 0.04));
+  for (let i = 0; i < \u8A66; i++) {
+    const x = \u91CE\u4E71() * W2, y = \u91CE\u4E71() * H2;
+    let \u751F = false;
+    if (!\u5916\u304B(x, y)) {
+      if (\u90ED\u3089.length < 3) continue;
+      if (\u5F15\u4F38(\u90ED, gw, gh, x, y, \u534A) < 0.5) continue;
+      if (\u77E9\u8DDD(x / \u534A, y / \u534A, \u90ED\u3089[1]) < 0) continue;
+      \u751F = \u91CE\u4E71() < 0.02;
+    } else {
+      const fr = \u5F15\u4F38(\u67972, gw, gh, x, y, \u534A);
+      const \u7FA4 = \u895E(x / (20 * \u500D), y / (20 * \u500D), 3);
+      if (fr > 0.5) \u751F = false;
+      else if (fr > 0.08) \u751F = \u91CE\u4E71() < 0.1;
+      else if (\u7FA4 > 0.6) \u751F = \u91CE\u4E71() < 0.035;
+      else \u751F = \u91CE\u4E71() < 6e-3;
+    }
+    if (!\u751F) continue;
+    if (\u5F15\u4F38(\u9053\u5EA6, gw, gh, x, y, \u534A) > 0.05) continue;
+    if (\u5F15\u4F38(\u5800\u57DF, gw, gh, x, y, \u534A) > 0.02) continue;
+    \u67282.push([x, y, (2.6 + \u91CE\u4E71() * 3.2) * \u500D, \u91CE\u4E71(), \u660E\u95A2(x, y)]);
+  }
+  \u67282.sort((a, b) => a[1] - b[1]);
+  for (const [x, y, r, \u632F, \u65E5] of \u67282) \u7E41\u6728(g, x, y, r, \u632F, \u65E5);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+}
 var \u6301\u5834 = [];
 {
   \u7A2E = 13;
@@ -26396,7 +26714,9 @@ var \u99AC\u6301\u5834 = [];
   }
 }
 var \u5C71\u9AD8m = (o) => o.\u9AD8 || Math.min(200, (o.r || 60) * 0.4);
+var \u57CE\u76E4 = false;
 function \u6301\u4E0A\u9AD8(x, y) {
+  if (\u57CE\u76E4) return 0;
   let v = 0;
   for (const o of [...HILLS, ...MOUNTAINS]) {
     const d = Math.hypot(x - o.x, y - o.y);
@@ -26480,26 +26800,95 @@ function \u808C\u7406\u306E\u578B\u7D19() {
   \u808C\u7406\u672D = n;
   return n;
 }
-function \u8FD1\u666F\u306E\u808C\u7406(ctx, cam, W2, H2, dpr) {
+var \u7802\u672D;
+function \u7802\u306E\u578B\u7D19() {
+  if (\u7802\u672D !== void 0) return \u7802\u672D;
+  if (typeof document === "undefined") {
+    \u7802\u672D = null;
+    return null;
+  }
+  const n = document.createElement("canvas");
+  n.width = \u808C\u7406\u306E\u5BF8;
+  n.height = \u808C\u7406\u306E\u5BF8;
+  const g = n.getContext("2d");
+  \u7A2E = 2255;
+  g.lineWidth = 1;
+  g.lineCap = "butt";
+  for (const \u8272 of ["rgba(146,132,104,0.30)", "rgba(222,212,186,0.28)"]) {
+    g.strokeStyle = \u8272;
+    g.beginPath();
+    for (let i = 0; i < 1800; i++) {
+      const x = R() * \u808C\u7406\u306E\u5BF8, y = R() * \u808C\u7406\u306E\u5BF8;
+      const a = (R() - 0.5) * 0.5, L = 3 + R() * 7;
+      g.moveTo(x, y);
+      g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L);
+    }
+    g.stroke();
+  }
+  g.fillStyle = "rgba(106,98,80,0.34)";
+  g.beginPath();
+  for (let i = 0; i < 1500; i++) {
+    const x = R() * \u808C\u7406\u306E\u5BF8, y = R() * \u808C\u7406\u306E\u5BF8;
+    g.rect(x, y, 1 + (R() < 0.26 ? 1 : 0), 1);
+  }
+  g.fill();
+  g.fillStyle = "rgba(240,234,214,0.26)";
+  g.beginPath();
+  for (let i = 0; i < 900; i++) g.rect(R() * \u808C\u7406\u306E\u5BF8, R() * \u808C\u7406\u306E\u5BF8, 1, 1);
+  g.fill();
+  \u7802\u672D = n;
+  return n;
+}
+function \u8FD1\u666F\u306E\u808C\u7406(ctx, cam, W2, H2, dpr, m) {
   const s2 = cam.s;
   if (s2 < \u500B\u4EBA\u95BE) return;
   const \u6FC3 = Math.min(1, (s2 - \u500B\u4EBA\u95BE) / 1.4);
-  const n = \u808C\u7406\u306E\u578B\u7D19();
-  if (!n) return;
+  const \u8349 = \u808C\u7406\u306E\u578B\u7D19();
+  if (!\u8349) return;
   const sx = W2 / 2 - cam.x * s2, sy = H2 / 2 - cam.y * s2;
   const \u5DE6 = Math.max(0, sx), \u4E0A = Math.max(0, sy);
   const \u53F3 = Math.min(W2, sx + FIELD.w * s2), \u4E0B = Math.min(H2, sy + FIELD.h * s2);
   if (\u53F3 <= \u5DE6 || \u4E0B <= \u4E0A) return;
   ctx.save();
   ctx.setTransform(dpr || 1, 0, 0, dpr || 1, 0, 0);
-  ctx.beginPath();
-  ctx.rect(\u5DE6, \u4E0A, \u53F3 - \u5DE6, \u4E0B - \u4E0A);
-  ctx.clip();
   ctx.globalAlpha = \u6FC3;
   const T = \u808C\u7406\u306E\u5BF8;
-  const \u59CBx = \u5DE6 - ((\u5DE6 - sx) % T + T) % T;
-  const \u59CBy = \u4E0A - ((\u4E0A - sy) % T + T) % T;
-  for (let x = \u59CBx; x < \u53F3; x += T) for (let y = \u59CBy; y < \u4E0B; y += T) ctx.drawImage(n, x, y);
+  const \u6577 = (n) => {
+    const \u59CBx = \u5DE6 - ((\u5DE6 - sx) % T + T) % T;
+    const \u59CBy = \u4E0A - ((\u4E0A - sy) % T + T) % T;
+    for (let x = \u59CBx; x < \u53F3; x += T) for (let y = \u59CBy; y < \u4E0B; y += T) ctx.drawImage(n, x, y);
+  };
+  if (!m || !m.layers || !m.layers.length) {
+    ctx.beginPath();
+    ctx.rect(\u5DE6, \u4E0A, \u53F3 - \u5DE6, \u4E0B - \u4E0A);
+    ctx.clip();
+    \u6577(\u8349);
+  } else {
+    const l0 = m.layers[0], t = m.t, ob = l0.masu + t + 8;
+    const \u90EDx = sx + (m.cx + (l0.ox || 0) - l0.hw - t) * s2, \u90EDy = sy + (m.cy + (l0.oy || 0) - l0.hh - t) * s2;
+    const \u90EDw = (l0.hw + t) * 2 * s2, \u90EDh = (l0.hh + t) * 2 * s2;
+    const \u5916\u5E45 = l0.hw + t + ob + m.moat.band, \u5916\u5965 = l0.hh + t + ob + m.moat.band;
+    const \u5800x = sx + (m.cx - \u5916\u5E45) * s2, \u5800y = sy + (m.cy - \u5916\u5965) * s2;
+    const \u5185\u5E45 = l0.hw + t + ob, \u5185\u5965 = l0.hh + t + ob;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(\u5DE6, \u4E0A, \u53F3 - \u5DE6, \u4E0B - \u4E0A);
+    ctx.rect(\u5800x, \u5800y, \u5916\u5E45 * 2 * s2, \u5916\u5965 * 2 * s2);
+    ctx.rect(sx + (m.cx - \u5185\u5E45) * s2, sy + (m.cy - \u5185\u5965) * s2, \u5185\u5E45 * 2 * s2, \u5185\u5965 * 2 * s2);
+    ctx.rect(\u90EDx, \u90EDy, \u90EDw, \u90EDh);
+    ctx.clip("evenodd");
+    \u6577(\u8349);
+    ctx.restore();
+    const \u7802 = \u7802\u306E\u578B\u7D19();
+    if (\u7802) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(\u90EDx, \u90EDy, \u90EDw, \u90EDh);
+      ctx.clip();
+      \u6577(\u7802);
+      ctx.restore();
+    }
+  }
   ctx.restore();
 }
 var \u672C\u9663\u614B = /* @__PURE__ */ new WeakMap();
@@ -27306,6 +27695,7 @@ function \u5C06\u306E\u683C(b, c) {
 var \u99AC\u5370\u306E\u5F62 = { \u5927\u540D: "\u91D1\u306E\u5510\u5098", \u7DCF\u5927\u5C06: "\u91D1\u306E\u6247", \u5C06: "\u9577\u65D7" };
 function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2, nowSec) {
   \u672D\u3092\u713C\u304F();
+  \u57CE\u76E4 = !!(b && b.map);
   const dt = \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, {
     x0: cam.x - W2 / 2 / cam.s,
     x1: cam.x + W2 / 2 / cam.s,
@@ -28994,8 +29384,31 @@ function \u6AD3\u3092\u63CF\u304F(ctx, f) {
   ctx.lineTo(f.x + rw * 0.22, f.y - \u9AD8 - w2 / 2 - rw * 0.3);
   ctx.stroke();
 }
-function drawCastleTerrain(ctx, m) {
+function drawCastleTerrain(ctx, m, \u753Bk) {
   const t = m.t, cx = m.cx, cy = m.cy;
+  const k = \u753Bk || 1;
+  const \u65B0 = \u65B0\u7D75\u304B({ map: m });
+  if (\u65B0) {
+    const \u5730k = Math.min(k, Math.sqrt(\u65B0\u7D75\u306E\u753B\u5E03\u4E0A\u9650 / Math.max(1, FIELD.w * FIELD.h)));
+    const W2 = Math.max(1, Math.round(FIELD.w * k)), H2 = Math.max(1, Math.round(FIELD.h * k));
+    if (\u5730k < k * 0.98 && typeof document !== "undefined") {
+      const n = document.createElement("canvas");
+      n.width = Math.max(1, Math.round(FIELD.w * \u5730k));
+      n.height = Math.max(1, Math.round(FIELD.h * \u5730k));
+      \u65B0\u7D75\u306E\u57CE\u306E\u5730(n.getContext("2d"), m, \u5730k);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(n, 0, 0, W2, H2);
+    } else \u65B0\u7D75\u306E\u57CE\u306E\u5730(ctx, m, k);
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+  } else {
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    \u65E7\u306E\u57CE\u306E\u5730(ctx, m, t, cx, cy);
+  }
+  \u57CE\u306E\u7ACB\u3064\u3082\u306E\u3092\u63CF\u304F(ctx, m, t, cx, cy, \u65B0);
+}
+function \u65E7\u306E\u57CE\u306E\u5730(ctx, m, t, cx, cy) {
   ctx.fillStyle = "#CBD8AC";
   ctx.fillRect(0, 0, FIELD.w, FIELD.h);
   const rnd0 = \u7A2E\u4E71\u6570(777 + Math.round(FIELD.w));
@@ -29026,10 +29439,6 @@ function drawCastleTerrain(ctx, m) {
     y: cy - o.hh - t - ob,
     w: (o.hw + t + ob) * 2,
     h: (o.hh + t + ob) * 2
-  };
-  const \u74B0 = (r0, \u8272) => {
-    ctx.fillStyle = \u8272;
-    ctx.fillRect(\u5800\u5916.x - r0, \u5800\u5916.y - r0, \u5800\u5916.w + r0 * 2, \u5800\u5916.h + r0 * 2);
   };
   if (m.\u5742 > 0) {
     const \u6BB52 = m.\u5742 >= 1 ? 6 : 3;
@@ -29084,28 +29493,46 @@ function drawCastleTerrain(ctx, m) {
   }
   ctx.fillStyle = "#CBD8AC";
   ctx.fillRect(\u5800\u5185.x, \u5800\u5185.y, \u5800\u5185.w, \u5800\u5185.h);
+}
+function \u57CE\u306E\u7ACB\u3064\u3082\u306E\u3092\u63CF\u304F(ctx, m, t, cx, cy, \u65B0) {
+  const o = m.layers[0], band = m.moat.band;
+  const ob = o.masu + t + 8;
+  const tone4 = ["#C6D2A8", "#C0CDA0", "#BACA98", "#B4C592"];
   for (const g of o.gates) {
     const a = axisOf(o, g);
     const u0 = gateOpenU(g) - g.w * 0.8, v0 = (a.along === "x" ? o.hh : o.hw) + t + ob;
     const rect = a.along === "x" ? { x: cx + u0, y: a.sgn > 0 ? cy + v0 : cy - v0 - band, w: g.w * 1.6, h: band } : { x: a.sgn > 0 ? cx + v0 : cx - v0 - band, y: cy + u0, w: band, h: g.w * 1.6 };
-    ctx.fillStyle = "rgba(40,60,70,0.32)";
-    ctx.fillRect(rect.x + \u5F71.x * 0.5, rect.y + \u5F71.y * 0.5, rect.w, rect.h);
-    ctx.fillStyle = "#C2A177";
+    ctx.fillStyle = "rgba(26,42,52,0.40)";
+    ctx.fillRect(rect.x + \u5F71.x * 0.45, rect.y + \u5F71.y * 0.45, rect.w, rect.h);
+    ctx.fillStyle = "#BCA782";
     ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-    ctx.fillStyle = "rgba(120,90,60,0.42)";
-    if (a.along === "x") {
-      for (let x = rect.x; x < rect.x + rect.w; x += 11) ctx.fillRect(x, rect.y, 2, rect.h);
-    } else {
-      for (let y = rect.y; y < rect.y + rect.h; y += 11) ctx.fillRect(rect.x, y, rect.w, 2);
+    ctx.fillStyle = "rgba(150,132,100,0.5)";
+    if (a.along === "x") ctx.fillRect(rect.x + rect.w * 0.3, rect.y, rect.w * 0.4, rect.h);
+    else ctx.fillRect(rect.x, rect.y + rect.h * 0.3, rect.w, rect.h * 0.4);
+    {
+      const r2 = \u7A2E\u4E71\u6570(97 + Math.round(rect.x + rect.y));
+      const \u7C92 = Math.max(40, Math.min(600, Math.round(rect.w * rect.h / 70)));
+      for (let i = 0; i < \u7C92; i++) {
+        const px2 = rect.x + r2() * rect.w, py2 = rect.y + r2() * rect.h;
+        ctx.fillStyle = r2() < 0.5 ? "rgba(132,116,88,0.34)" : "rgba(224,212,186,0.30)";
+        ctx.fillRect(px2, py2, 1 + (r2() < 0.3 ? 1 : 0), 1);
+      }
     }
-    ctx.strokeStyle = "rgba(110,86,58,0.7)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
+    ctx.fillStyle = "#A39B8C";
+    if (a.along === "x") {
+      ctx.fillRect(rect.x - 1.5, rect.y, 3, rect.h);
+      ctx.fillRect(rect.x + rect.w - 1.5, rect.y, 3, rect.h);
+    } else {
+      ctx.fillRect(rect.x, rect.y - 1.5, rect.w, 3);
+      ctx.fillRect(rect.x, rect.y + rect.h - 1.5, rect.w, 3);
+    }
   }
   m.layers.forEach((l, i) => {
     const lx = cx + (l.ox || 0), ly = cy + (l.oy || 0);
-    ctx.fillStyle = tone4[Math.min(3, Math.round(i / Math.max(1, m.layers.length - 1) * 3))];
-    ctx.fillRect(lx - l.hw, ly - l.hh, l.hw * 2, l.hh * 2);
+    if (!\u65B0) {
+      ctx.fillStyle = tone4[Math.min(3, Math.round(i / Math.max(1, m.layers.length - 1) * 3))];
+      ctx.fillRect(lx - l.hw, ly - l.hh, l.hw * 2, l.hh * 2);
+    }
     const x0 = lx - l.hw - t, x1 = lx + l.hw + t, y0 = ly - l.hh - t, y1 = ly + l.hh + t;
     for (const face of ["S", "N", "E", "W"]) {
       const gs = l.gates.filter((g) => g.face === face).sort((p1, p2) => p1.off - p2.off);
@@ -29338,7 +29765,7 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
   ctx.scale(cam.s, cam.s);
   ctx.drawImage(terrainCanvas, 0, 0, FIELD.w, FIELD.h);
   if (\u8DE1Canvas) ctx.drawImage(\u8DE1Canvas, 0, 0, FIELD.w, FIELD.h);
-  if (\u500B\u4EBA\u7D75) \u8FD1\u666F\u306E\u808C\u7406(ctx, cam, W2, H2, dpr);
+  if (\u500B\u4EBA\u7D75) \u8FD1\u666F\u306E\u808C\u7406(ctx, cam, W2, H2, dpr, b.map || null);
   if (b.phase === "deploy" && !b.\u7B4B\u66F8\u304D) {
     const z = ownZone(b);
     ctx.fillStyle = "rgba(47,93,140,0.07)";
@@ -35452,7 +35879,7 @@ function BattleScreen({ ctx, land, onEnd }) {
   const brokeRef = useRef2(-1);
   const \u8DE1Ref = useRef2(null);
   const \u753B\u5E03\u306E\u500D = () => {
-    const \u4E0A\u9650 = ctx.b && ctx.mode !== "castle" && \u65B0\u7D75\u304B(ctx.b) ? \u65B0\u7D75\u306E\u753B\u5E03\u4E0A\u9650 : 2e7;
+    const \u4E0A\u9650 = !ctx.b || !\u65B0\u7D75\u304B(ctx.b) ? 2e7 : ctx.mode === "castle" && ctx.b.map ? \u57CE\u306E\u753B\u5E03\u4E0A\u9650 : \u65B0\u7D75\u306E\u753B\u5E03\u4E0A\u9650;
     return Math.min(1, Math.sqrt(\u4E0A\u9650 / Math.max(1, FIELD.w * FIELD.h)));
   };
   const paintTerrain = () => {
@@ -35463,8 +35890,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     const g2 = t.getContext("2d");
     const \u713C\u59CB = typeof performance !== "undefined" ? performance.now() : 0;
     if (ctx.mode === "castle" && ctx.b.map) {
-      g2.setTransform(k, 0, 0, k, 0, 0);
-      drawCastleTerrain(g2, ctx.b.map);
+      drawCastleTerrain(g2, ctx.b.map, k);
     } else if (\u65B0\u7D75\u304B(ctx.b)) {
       \u65B0\u7D75\u306E\u91CE(g2, k);
     } else {

@@ -4,7 +4,7 @@ import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
-import { 新絵か, 新絵の兵描き, 個人で描くか, 近景の肌理, 本陣の所 } from "./shinga.js";
+import { 新絵か, 新絵の兵描き, 新絵の城の地, 新絵の画布上限, 個人で描くか, 近景の肌理, 本陣の所 } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
 
@@ -1456,8 +1456,38 @@ function 櫓を描く(ctx, f) {
   ctx.stroke();
 }
 
-export function drawCastleTerrain(ctx, m) {
+export function drawCastleTerrain(ctx, m, 画k) {
   const t = m.t, cx = m.cx, cy = m.cy;
+  const k = 画k || 1;
+  /* 地を新しい筆で焼く（GDD 8.11）。
+
+     焼くのは地だけである。石垣・門・櫓・天守は戦の間に破れたり燃えたりする
+     ので、これまでどおり下に続く描きに任せる。新しい地は曲輪の段と堀を
+     高さの場として持つから、石垣の根に落ちる影がそのまま段差の影になる。 */
+  const 新 = 新絵か({ map: m });
+  if (新) {
+    /* 地は二百二十万画素で焼いて引き伸ばす。画素ごとに塗る筆は、
+       画布を大きくしたぶんだけ時を食う（九百万画素なら五秒）。
+       地の細かさは引き伸ばしても分からぬが、石垣や天守の線は分かる。
+       だから地だけ小さく焼き、立つものはこの画布の寸法で描く。 */
+    const 地k = Math.min(k, Math.sqrt(新絵の画布上限 / Math.max(1, FIELD.w * FIELD.h)));
+    const W = Math.max(1, Math.round(FIELD.w * k)), H2 = Math.max(1, Math.round(FIELD.h * k));
+    if (地k < k * 0.98 && typeof document !== "undefined") {
+      const n = document.createElement("canvas");
+      n.width = Math.max(1, Math.round(FIELD.w * 地k)); n.height = Math.max(1, Math.round(FIELD.h * 地k));
+      新絵の城の地(n.getContext("2d"), m, 地k);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(n, 0, 0, W, H2);
+    } else 新絵の城の地(ctx, m, k);
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+  } else { ctx.setTransform(k, 0, 0, k, 0, 0); 旧の城の地(ctx, m, t, cx, cy); }
+  城の立つものを描く(ctx, m, t, cx, cy, 新);
+}
+
+/* 今までの城の地。棚に sengoku:旧絵 を置いたときのための控えである。 */
+function 旧の城の地(ctx, m, t, cx, cy) {
   ctx.fillStyle = "#CBD8AC"; ctx.fillRect(0, 0, FIELD.w, FIELD.h);
   // 城の外は田畑。野の図と同じ地にする
   const rnd0 = 種乱数(777 + Math.round(FIELD.w));
@@ -1481,10 +1511,6 @@ export function drawCastleTerrain(ctx, m) {
     w: (o.hw + t + ob + band) * 2, h: (o.hh + t + ob + band) * 2 };
   const 堀内 = { x: cx - o.hw - t - ob, y: cy - o.hh - t - ob,
     w: (o.hw + t + ob) * 2, h: (o.hh + t + ob) * 2 };
-  const 環 = (r0, 色) => {
-    ctx.fillStyle = 色;
-    ctx.fillRect(堀外.x - r0, 堀外.y - r0, 堀外.w + r0 * 2, 堀外.h + r0 * 2);
-  };
   /* 峰の坂（GDD 9.3）。山城の外は斜面である。等高線を回して、登ることを示す。
      平城には坂がない。城下がそのまま門の前まで続く。 */
   if (m.坂 > 0) {
@@ -1531,30 +1557,59 @@ export function drawCastleTerrain(ctx, m) {
     }
   }
   ctx.fillStyle = "#CBD8AC"; ctx.fillRect(堀内.x, 堀内.y, 堀内.w, 堀内.h);
+}
 
-  // 各門の土橋。板を渡し、水面へ影を落とす
+/* 城に立つもの ── 石垣・門・櫓・天守と、堀を渡る土橋。
+   戦の間に破れたり燃えたりして形が変わるので、地とは分けて描く。 */
+function 城の立つものを描く(ctx, m, t, cx, cy, 新) {
+  const o = m.layers[0], band = m.moat.band;
+  const ob = o.masu + t + 8;
+  const tone4 = ["#C6D2A8", "#C0CDA0", "#BACA98", "#B4C592"];
+
+  // 各門の土橋。堀を埋め残した土の道で、水面へ影を落とす
   for (const g of o.gates) {
     const a = axisOf(o, g);
     const u0 = gateOpenU(g) - g.w * 0.8, v0 = (a.along === "x" ? o.hh : o.hw) + t + ob;
     const rect = a.along === "x"
       ? { x: cx + u0, y: a.sgn > 0 ? cy + v0 : cy - v0 - band, w: g.w * 1.6, h: band }
       : { x: a.sgn > 0 ? cx + v0 : cx - v0 - band, y: cy + u0, w: band, h: g.w * 1.6 };
-    ctx.fillStyle = "rgba(40,60,70,0.32)";
-    ctx.fillRect(rect.x + 影.x * 0.5, rect.y + 影.y * 0.5, rect.w, rect.h);
-    ctx.fillStyle = "#C2A177"; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-    ctx.fillStyle = "rgba(120,90,60,0.42)";                    // 板の目
-    if (a.along === "x") { for (let x = rect.x; x < rect.x + rect.w; x += 11) ctx.fillRect(x, rect.y, 2, rect.h); }
-    else { for (let y = rect.y; y < rect.y + rect.h; y += 11) ctx.fillRect(rect.x, y, rect.w, 2); }
-    ctx.strokeStyle = "rgba(110,86,58,0.7)"; ctx.lineWidth = 1;
-    ctx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.w - 1, rect.h - 1);
+    /* 土橋。板を渡した橋ではなく、堀を埋め残した土の道である（GDD 9.3）。
+       両の縁を石で固め、水際へ影を落とす。板の目を刻んでいたころは、
+       水に浮いた筏に見えた。 */
+    ctx.fillStyle = "rgba(26,42,52,0.40)";
+    ctx.fillRect(rect.x + 影.x * 0.45, rect.y + 影.y * 0.45, rect.w, rect.h);
+    ctx.fillStyle = "#BCA782"; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.fillStyle = "rgba(150,132,100,0.5)";                   // 踏み締められた筋
+    if (a.along === "x") ctx.fillRect(rect.x + rect.w * 0.30, rect.y, rect.w * 0.40, rect.h);
+    else ctx.fillRect(rect.x, rect.y + rect.h * 0.30, rect.w, rect.h * 0.40);
+    {                                                          // 土と砂利の粒。のっぺりした板に見えぬように
+      const r2 = 種乱数(97 + Math.round(rect.x + rect.y));
+      const 粒 = Math.max(40, Math.min(600, Math.round(rect.w * rect.h / 70)));
+      for (let i = 0; i < 粒; i++) {
+        const px2 = rect.x + r2() * rect.w, py2 = rect.y + r2() * rect.h;
+        ctx.fillStyle = r2() < 0.5 ? "rgba(132,116,88,0.34)" : "rgba(224,212,186,0.30)";
+        ctx.fillRect(px2, py2, 1 + (r2() < 0.3 ? 1 : 0), 1);
+      }
+    }
+    ctx.fillStyle = "#A39B8C";                                 // 縁の石積み
+    if (a.along === "x") {
+      ctx.fillRect(rect.x - 1.5, rect.y, 3, rect.h);
+      ctx.fillRect(rect.x + rect.w - 1.5, rect.y, 3, rect.h);
+    } else {
+      ctx.fillRect(rect.x, rect.y - 1.5, rect.w, 3);
+      ctx.fillRect(rect.x, rect.y + rect.h - 1.5, rect.w, 3);
+    }
   }
 
   m.layers.forEach((l, i) => {
     /* 曲輪ごとに寄せ（縄張り）がある。連郭式なら一列に、梯郭式なら一隅に寄る。
        描くほうも、その層の中心を見て描かねばならない。 */
     const lx = cx + (l.ox || 0), ly = cy + (l.oy || 0);
-    ctx.fillStyle = tone4[Math.min(3, Math.round((i / Math.max(1, m.layers.length - 1)) * 3))];
-    ctx.fillRect(lx - l.hw, ly - l.hh, l.hw * 2, l.hh * 2);
+    if (!新) {
+      /* 新しい地は曲輪の砂まで画素で塗ってあるので、一色で潰してはならない */
+      ctx.fillStyle = tone4[Math.min(3, Math.round((i / Math.max(1, m.layers.length - 1)) * 3))];
+      ctx.fillRect(lx - l.hw, ly - l.hh, l.hw * 2, l.hh * 2);
+    }
     // 城壁（門の分を抜く）。一色の四角ではなく、石垣として積む
     const x0 = lx - l.hw - t, x1 = lx + l.hw + t, y0 = ly - l.hh - t, y1 = ly + l.hh + t;
     for (const face of ["S", "N", "E", "W"]) {
@@ -1813,7 +1868,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   if (跡Canvas) ctx.drawImage(跡Canvas, 0, 0, FIELD.w, FIELD.h);
   /* 近景の肌理（GDD 8.11）。寄ったときだけ、地の肌理を画面の縮尺で刻む。
      焼いた地を引き伸ばすと滲むので、兵と同じ寸法の草と石を上から置く。 */
-  if (個人絵) 近景の肌理(ctx, cam, W, H, dpr);
+  if (個人絵) 近景の肌理(ctx, cam, W, H, dpr, b.map || null);
 
   // 布陣段階は自陣の範囲を示す（筋書きの一戦は布陣を動かせないので出さない）
   if (b.phase === "deploy" && !b.筋書き) {

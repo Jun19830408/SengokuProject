@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
-import { 新絵か, 新絵の野, 新絵の寄り限り, 新絵の画布上限 } from "../battle/shinga.js";
+import { 新絵か, 新絵の野, 新絵の寄り限り, 新絵の画布上限, 城の画布上限 } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
@@ -61,7 +61,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
      三百万画素で焼き、細かさは近景の肌理（寄ったときに画面の縮尺で重ねる）に
      持たせる。引きで見れば差は分からず、寄れば肌理のほうが効く。 */
   const 画布の倍 = () => {
-    const 上限 = (ctx.b && ctx.mode !== "castle" && 新絵か(ctx.b)) ? 新絵の画布上限 : 2.0e7;
+    /* 城攻めは、地を小さく焼いて引き伸ばし、石垣や天守はこの寸法で描く。
+       だから画布そのものは野より大きく取る（GDD 8.11）。 */
+    const 上限 = !ctx.b || !新絵か(ctx.b) ? 2.0e7
+      : ctx.mode === "castle" && ctx.b.map ? 城の画布上限 : 新絵の画布上限;
     return Math.min(1, Math.sqrt(上限 / Math.max(1, FIELD.w * FIELD.h)));
   };
   const paintTerrain = () => {
@@ -71,7 +74,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const g2 = t.getContext("2d");
     const 焼始 = (typeof performance !== "undefined" ? performance.now() : 0);
     if (ctx.mode === "castle" && ctx.b.map) {
-      g2.setTransform(k, 0, 0, k, 0, 0); drawCastleTerrain(g2, ctx.b.map);
+      drawCastleTerrain(g2, ctx.b.map, k);     // 地は画素で塗る（筆の尺度は中で取る）
     } else if (新絵か(ctx.b)) {
       新絵の野(g2, k);                        // 関ヶ原だけ画素で塗る野（GDD 8.11）
     } else {

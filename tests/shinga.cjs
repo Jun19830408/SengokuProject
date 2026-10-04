@@ -17,12 +17,12 @@ const 種で固める = () => { let 種 = 0x5EC1; Math.random = function () { �
 
 console.log('\n── 一　旗の立ち方');
 {
-  /* はじめは関ヶ原だけに掛けて確かめ、作りが固まったので野戦へ広げた。
-     城攻めは地の筆が別（縄張りを読む版はこれから）なので、まだ掛けない。 */
+  /* はじめは関ヶ原だけに掛けて確かめ、作りが固まったので野戦へ、
+     それから城攻めへ広げた。城攻めの地は縄張りを読んで焼く。 */
   確('関ヶ原の盤では新絵', H.新絵か({ 筋書き: { id: 'sekigahara' } }) === true);
   確('筋書きの無い野戦でも新絵', H.新絵か({}) === true);
   確('別の筋書きでも新絵', H.新絵か({ 筋書き: { id: 'okehazama' } }) === true);
-  確('城攻めでは立たない（地の筆が別）', H.新絵か({ map: { cx: 0 } }) === false);
+  確('城攻めでも新絵（縄張りを読んで焼く）', H.新絵か({ map: { cx: 0 } }) === true);
   確('盤が無ければ立たない', H.新絵か(null) === false);
 }
 
@@ -61,6 +61,26 @@ console.log('\n── 一の二　どの野でも焼ける');
     if (r.咎) { 可 = false; 添.push(`${種}：${r.咎}`); } else 添.push(`${兵}人 ${r.野} ${r.ms}ms`);
   }
   確('生まれの違う野でも、焼く筋が通る', 可, 添.join('・'));
+
+  /* 城攻めの地。縄張りを読んで焼くので、構えの違う城で筋を通す。
+     山城は空堀・平城は水堀、曲輪は二層から四層まで変わる。 */
+  const 城を試す = (名, 防) => {
+    種で固める();
+    const m = H.layoutCastleField(H.buildCastleMap({ id: 'T' + 名, name: 名, def: 防 }));
+    const k = Math.min(1, Math.sqrt(2.2e6 / Math.max(1, H.FIELD.w * H.FIELD.h)));
+    const t0 = Date.now();
+    try { H.新絵の城の地(作り筆(), m, k); } catch (e) { return { 咎: e.message }; }
+    return { ms: Date.now() - t0,
+      札: `${m.構}/${m.layers.length}層/${m.moat.空堀 ? '空堀' : '水堀'} ${Math.round(H.FIELD.w)}×${Math.round(H.FIELD.h)} ${Date.now() - t0}ms` };
+  };
+  { let 可2 = true; const 添2 = [];
+    for (const [名, 防] of [['岐阜', 30], ['観音寺', 50], ['小田原', 80], ['岩村', 92]]) {
+      const r = 城を試す(名, 防);
+      if (r.咎) { 可2 = false; 添2.push(`${名}：${r.咎}`); } else 添2.push(r.札);
+    }
+    確('どの構えの城でも、地を焼く筋が通る', 可2, 添2.join('・'));
+    H.setBattleMap && H.setBattleMap(null);
+  }
 }
 
 console.log('\n── 二　高さの持ち上がり');
