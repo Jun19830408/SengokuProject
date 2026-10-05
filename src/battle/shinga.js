@@ -41,10 +41,31 @@ export const 新絵の寄り限り = 7.2;
    旗本三万（六百組）が一つ映るだけで溢れ、槍を合わせた只中へ寄るほど
    駒へ戻るという逆さまなことになった。組ひとつずつ見れば、寄るほど
    数は減る――寄るほど絵が細かくなる。 */
-export const 組の予算 = 400;                 // 画面に四百組＝二万人まで
+export const 組の予算 = 400;                 // 画面に四百組（古い記録と道具のため残す）
+/* 予算は組の数ではなく、人の数で見る（GDD 8.11）。
+
+   費えは「描く人の数」に比例する。組の数で見ていたので、欠けて十人になった
+   組も五十人の組も同じ一組と数えた。そのうえ天下分け目（六十四隊）では
+   映る組が四百一――ちょうど一組だけ超えて、画面ぜんたいが駒の絵へ落ちていた。
+   人で数えれば、戦が進んで組が欠けるほど、一人ずつ描ける範囲も広がる。 */
+export const 人の予算 = 22000;              // 一度に一人ずつ描くのはここまで
+export function 見える人数(b, cam, W, H) {
+  const x0 = cam.x - W / 2 / cam.s - 40, x1 = cam.x + W / 2 / cam.s + 40;
+  const y0 = cam.y - H / 2 / cam.s - 60, y1 = cam.y + H / 2 / cam.s + 40;
+  let n = 0;
+  for (const c of b.corps) {
+    if (c.dead || c.destroyed) continue;
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      if (q.x < x0 || q.x > x1 || q.y < y0 || q.y > y1) continue;
+      n += Math.min(50, Math.round(q.men));
+    }
+  }
+  return n;
+}
 export function 個人で描くか(b, cam, W, H) {
   if (!新絵か(b) || cam.s < 個人閾) return false;
-  return 見える組数(b, cam, W, H) <= 組の予算;
+  return 見える人数(b, cam, W, H) <= 人の予算;
 }
 export function 見える組数(b, cam, W, H) {
   const vx0 = cam.x - W / 2 / cam.s - 60, vx1 = cam.x + W / 2 / cam.s + 60;

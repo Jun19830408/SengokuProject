@@ -25316,24 +25316,24 @@ function \u65B0\u7D75\u304B(b) {
 var \u500B\u4EBA\u95BE = 1.6;
 var \u6ED1\u95BE = 5.4;
 var \u65B0\u7D75\u306E\u5BC4\u308A\u9650\u308A = 7.2;
-var \u7D44\u306E\u4E88\u7B97 = 400;
-function \u500B\u4EBA\u3067\u63CF\u304F\u304B(b, cam, W2, H2) {
-  if (!\u65B0\u7D75\u304B(b) || cam.s < \u500B\u4EBA\u95BE) return false;
-  return \u898B\u3048\u308B\u7D44\u6570(b, cam, W2, H2) <= \u7D44\u306E\u4E88\u7B97;
-}
-function \u898B\u3048\u308B\u7D44\u6570(b, cam, W2, H2) {
-  const vx0 = cam.x - W2 / 2 / cam.s - 60, vx1 = cam.x + W2 / 2 / cam.s + 60;
-  const vy0 = cam.y - H2 / 2 / cam.s - 80, vy1 = cam.y + H2 / 2 / cam.s + 60;
+var \u4EBA\u306E\u4E88\u7B97 = 22e3;
+function \u898B\u3048\u308B\u4EBA\u6570(b, cam, W2, H2) {
+  const x0 = cam.x - W2 / 2 / cam.s - 40, x1 = cam.x + W2 / 2 / cam.s + 40;
+  const y0 = cam.y - H2 / 2 / cam.s - 60, y1 = cam.y + H2 / 2 / cam.s + 40;
   let n = 0;
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
     for (const q of c.squads) {
       if (q.men <= 0) continue;
-      if (q.x < vx0 || q.x > vx1 || q.y < vy0 || q.y > vy1) continue;
-      if (++n > \u7D44\u306E\u4E88\u7B97) return n;
+      if (q.x < x0 || q.x > x1 || q.y < y0 || q.y > y1) continue;
+      n += Math.min(50, Math.round(q.men));
     }
   }
   return n;
+}
+function \u500B\u4EBA\u3067\u63CF\u304F\u304B(b, cam, W2, H2) {
+  if (!\u65B0\u7D75\u304B(b) || cam.s < \u500B\u4EBA\u95BE) return false;
+  return \u898B\u3048\u308B\u4EBA\u6570(b, cam, W2, H2) <= \u4EBA\u306E\u4E88\u7B97;
 }
 var shade2 = (hex, k) => {
   const n = parseInt(hex.slice(1), 16), r = n >> 16 & 255, g = n >> 8 & 255, b2 = n & 255;
