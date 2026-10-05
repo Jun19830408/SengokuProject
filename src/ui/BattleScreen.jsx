@@ -577,25 +577,23 @@ export function BattleScreen({ ctx, land, onEnd }) {
     orderTo(selC, 札 ? { x: 札.x, y: 札.y } : f, foe);
   };
 
+  /* 一括命令（GDD 8.2）。
+
+     もとは c.order へ直に書き込んでいた。命令は入るが、委任（c.auto）が
+     解けないので、采配の次の刻に残らず上書きされる――遊ぶ側には「全軍弓優先を
+     押したのに射撃をしない」としか見えない。遊ぶ側の申し出は「射撃の修正が
+     ちゃんと入っているか。やはり射撃をしていないように思う」であった。
+
+     一括命令も手ずからの下知である。一隊ずつと同じ道（corpsOrder → 下知 →
+     issueOrder）を通す。委任が解け、持ち場も組み直され、射撃なら弓と鉄砲が
+     前に出る。 */
   const allOrder = (o) => {
     for (const c of b.corps) {
       if (c.side !== "P" || c.dead || c.destroyed || c.routed) continue;
       // 旗色の定まらぬ隊と、山を押さえて動けぬ隊には、一括命令も届かない
       if (c.日和見 || 指図の縛り(b, c)) continue;
-      c.task = null;
-      if (o === "前進") { c.order = "前進"; c.wp = null; c.tx = c.x; c.ty = Math.max(120, c.y - 260); }
-      if (o === "接戦") {
-        c.order = "接戦";
-        const foes = b.corps.filter((x) => x.side === "E" && !x.dead && !x.destroyed && x.seen);
-        if (foes.length) {
-          const t = foes.reduce((a, x) => (Math.hypot(x.x - c.x, x.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? x : a), foes[0]);
-          const d = Math.hypot(c.x - t.x, c.y - t.y) || 1;
-          c.tx = t.x + ((c.x - t.x) / d) * 38; c.ty = t.y + ((c.y - t.y) / d) * 38;   // 重ならない距離で止める
-        }
-      }
-      if (o === "射撃") { c.order = "射撃"; c.tx = c.x; c.ty = c.y; }
-      if (o === "待機") { c.order = "待機"; c.tx = c.x; c.ty = c.y; }
-      if (o === "撤退") 退かせる(b, c, true);      // 一斉に退けば統制は保たれる
+      if (o === "撤退") { c.task = null; 退かせる(b, c, true); continue; }   // 一斉に退けば統制は保たれる
+      corpsOrder(c, o);
     }
     if (o === "撤退") { b.retreat = "P"; b.orderly = true; b.log.push({ t: b.t, text: "全軍に退き鉦。統制を保って戦場を離れる。" }); }
   };
