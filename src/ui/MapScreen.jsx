@@ -53,7 +53,7 @@ import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を�
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 攻められるか, 許しの要る主, 許されているか, 許しを与える, 容認するか, 臣従の主 } from "../core/yurushi.js";
-import { 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 旗頭に許す, 旗頭に断る, 自ら采配するか } from "../core/inin.js";
+import { 城の寄親, 守りを旗頭に任せるか, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 旗頭に許す, 旗頭に断る, 自ら采配するか } from "../core/inin.js";
 import { 難を逃れる } from "../core/capture.js";
 import { 記録の訳を読む, 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
@@ -610,7 +610,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     // 試走のときは自勢力の合戦も自動で解く
     /* 旗頭に預けた手勢が他家へ寄せる戦は、盤面に出さず旗頭に任せる（GDD 6.4）。
        自家の城が的なら守りの戦だから、大名が采配を執る。 */
-    if (g.autoPlay || (!自ら采配するか(g, a, dest) && dest.faction !== g.player)) { autoResolve(a.id, dest.id); return; }
+    /* 守りを旗頭に預けた城なら、寄せ手が来ても旗頭が受ける（GDD 6.4）。
+       方面を預けたのだから、その国々の守りまで大名が出る謂れはない。 */
+    const 守り任せ = 守りを旗頭に任せるか(g, dest, a);
+    if (g.autoPlay || (!自ら采配するか(g, a, dest) && dest.faction !== g.player) || 守り任せ) {
+      autoResolve(a.id, dest.id); return;
+    }
     // 後詰が包囲中の城へ着いたら、囲みを解くための野戦になる。
     // 相手は城ではなく、城を囲んでいる軍そのものである。
     if (a.relief) {
@@ -2132,8 +2137,29 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       setBreakVow({ p, castle: 目標, state: relOf(g, g.player, 目標.faction).state });
       return;
     }
+    /* 旗の下の家の城へ兵を出すときは、心づもりを問う（GDD 12.2）。
+
+       これまでは何も問わずに後詰として扱い、着いた月に兵だけ城へ吸われていた。
+       遊ぶ側の申し出は「臣従大名を攻めようとしたところ、なぜか兵だけがその
+       臣従大名の城に吸収されるバグがあった」であった。攻める気で出したのに
+       援軍になるのでは、旗の下の家を攻める道が無い。
+       兵を入れるのか、手切れして攻めるのか、ここで決める。 */
+    if (!p.覚悟 && 目標 && !救いに行く && 目標.faction !== g.player
+      && underMyBanner(g, g.player, 目標.faction)) {
+      setBreakVow({ p, castle: 目標, state: relOf(g, g.player, 目標.faction).state, 旗下: true });
+      return;
+    }
     setG((prev) => {
       const s = structuredClone(prev);
+      /* 手切れしてから出す。旗の下の家を攻めると決めたときである。
+         切ってからでなければ、着いた先で「味方の城」と読まれて兵が吸われる。 */
+      if (p.手切れ) {
+        const 的家 = (s.castles.find((x) => x.id === p.to) || {}).faction;
+        if (的家 && 的家 !== s.player) {
+          const r = 政務.外交を結ぶ(s, s.player, 的家, "手切れ", null);
+          if (r && r.ok) s.monthEvents = [...(s.monthEvents || []), r.文];
+        }
+      }
       // 寄騎（援軍）を出す。各城は守備最低数と距離、従属度から派遣を決める（GDD 7.3）
       加勢を出す(s, p.reinforce || [], p.to);
       const c = s.castles.find((x) => x.id === p.from);
@@ -2258,7 +2284,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
      ただし自家の城が囲まれているときは守りの戦だから、大名が采配を執る。 */
   const 旗頭に任せた囲みか = (x) => {
     const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);
-    return !!a2 && !!c2 && !!a2.旗頭 && a2.faction === g.player && c2.faction !== g.player;
+    if (!a2 || !c2) return false;
+    if (!!a2.旗頭 && a2.faction === g.player && c2.faction !== g.player) return true;
+    /* 守りを預けた城が囲まれているときも、城攻めの受けは旗頭が執る。 */
+    return !!守りを旗頭に任せるか(g, c2, a2);
   };
   const openSiege = g.sieges.find((x) => {
     if (x.decided === `${g.year}-${g.month}`) return false;
@@ -2537,7 +2566,48 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         )}
         {/* 約束を交わした相手へ兵を出す前の問い（GDD 11.1）。
             取り返しがつかぬ手なので、何が失われるかを数で示してから選ばせる。 */}
-        {breakVow && (() => {
+        {breakVow && breakVow.旗下 && (() => {
+          /* 旗の下の家の城へ兵を出す（GDD 12.2）。後詰か、手切れか。 */
+          const bv = breakVow;
+          const f = g.factions[bv.castle.faction];
+          const rel = relOf(g, g.player, bv.castle.faction);
+          const 味方 = Object.keys(g.relations)
+            .filter((k) => 己の盟約(k, g.player) && g.relations[k].trust >= 40).length;
+          return (
+            <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+              <div className="card" style={{ maxWidth: 470 }}>
+                <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>
+                  {f.name}は旗の下にある（{bv.state}）
+                </div>
+                <div style={{ fontSize: 12.5, lineHeight: 1.95, marginTop: 8 }}>
+                  <b>{bv.castle.name}</b>は身内の城です。このまま出せば<b>後詰</b>となり、
+                  兵は城へ入り、将は本国へ帰ります。<br />
+                  攻め取るつもりなら、まず<b>手切れ</b>して敵に戻さねばなりません。
+                </div>
+                <div style={{ margin: "12px 0", padding: "10px 12px", background: "rgba(176,72,60,0.08)",
+                  borderLeft: "3px solid #B0483C", fontSize: 12, lineHeight: 1.95 }}>
+                  <b style={{ color: "#B0483C" }}>手切れで失うもの</b><br />
+                  ・{f.name}との<b>{bv.state}</b>は切れ、敵対となる（いまの信用 {Math.round(rel.trust)}　→　0）<br />
+                  ・{f.name}は旗の下を離れ、貢も加勢も絶える<br />
+                  ・<b>威信</b>が下がる（{Math.round(g.factions[g.player].prestige)} → {Math.round(Math.max(0, g.factions[g.player].prestige - 10))}）<br />
+                  ・<b>他家すべての信用</b>が8下がる（いま信用40以上の相手 {味方} 家）
+                </div>
+                <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
+                  <button className="btn" style={{ flex: "1 1 46%" }} onClick={() => setBreakVow(null)}>取りやめる</button>
+                  <button className="btn" style={{ flex: "1 1 46%" }}
+                    onClick={() => { const q = bv.p; setBreakVow(null); launchSortie({ ...q, 覚悟: true }); }}>
+                    後詰として入れる
+                  </button>
+                  <button className="btn dark" style={{ flex: "1 1 100%" }}
+                    onClick={() => { const q = bv.p; setBreakVow(null); launchSortie({ ...q, 覚悟: true, 手切れ: true }); }}>
+                    手切れして攻める
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+        {breakVow && !breakVow.旗下 && (() => {
           const bv = breakVow;
           const f = g.factions[bv.castle.faction];
           const rel = relOf(g, g.player, bv.castle.faction);

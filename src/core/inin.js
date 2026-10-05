@@ -36,6 +36,46 @@ export function 城の寄親(s, c) {
   return 親;
 }
 
+/* 守りを旗頭に預けた城か（GDD 6.4）。預けていれば、その旗頭を返す。
+
+   旗頭の寄騎には「守り」まで委ねてある（この書の頭を見よ）。それなのに、
+   他家が寄せてくるたびに大名が盤面へ呼ばれ、城下の野戦も城攻めも自ら
+   采配していた。遊ぶ側の申し出は「旗頭の城が他国から攻められた場合でも、
+   プレイヤーが防戦と防御側で城攻めをしなければならない。これも旗頭が
+   対応するようにしてほしい」であった。
+
+   鎖は 城主 → 国主 → 旗頭 の一本道であるから、上へ辿って旗頭に行き着けば
+   その城の守りはその者のものである。ただし二つは大名が自ら執る。
+     一、本拠。家の本城であって、誰にも預けない
+     二、当主のいる城。その場に大名がいるのに、人に任せる筋はない */
+export function 守りの寄親(s, c) {
+  if (!c) return null;
+  const f = (s.factions || {})[c.faction] || {};
+  if (f.本拠 === c.id) return null;
+  let x = castellanOf(s, c);
+  if (!x || x.lord) return null;
+  for (let i = 0; i < 4 && x; i++) {
+    if (x.役 === "旗頭" && !x.lord && !x.captive && x.faction === c.faction) return x;
+    x = x.寄親 ? (s.generals || []).find((q) => q.id === x.寄親 && !q.captive) : null;
+  }
+  return null;
+}
+
+/* その城の守りを旗頭に任せるか（GDD 6.4）。
+
+   任せぬのは、こちらから軍を出して迎え撃つときである。大名が自ら動かした
+   手勢の戦まで取り上げては、援軍を出した意味がない。 */
+export function 守りを旗頭に任せるか(s, c, 寄せ手) {
+  if (!c || c.faction !== s.player) return null;
+  if (寄せ手 && 寄せ手.faction === s.player) return null;      // こちらの軍が着いた戦
+  const 旗 = 守りの寄親(s, c);
+  if (!旗) return null;
+  /* 城下に大名直々の手勢（旗頭に預けていない軍）が居るなら、采配は大名が執る。 */
+  const 直 = (s.armies || []).some((a) => a.faction === s.player && a.at === c.id
+    && !a.旗頭 && (!a.path || a.path.length <= 1) && !a.sieging);
+  return 直 ? null : 旗;
+}
+
 export const 差配を預けた城 = (s, fid) =>
   (s.castles || []).filter((c) => c.faction === fid && 城の寄親(s, c));
 

@@ -486,6 +486,26 @@ export function 外交を結ぶ(s, actor, fid, key, 使者id) {
       文 = `${me.name}が${you.name}への${前の間柄}を破り、独立を宣した。諸家の信を損ねた。`;
       s.chronicle.push({ y: s.year, m: s.month, text: 文 });
     }
+    else if (key === "手切れ") {
+      /* 約束を破って敵に戻す（GDD 12.1）。
+
+         旗の下に入れていた家なら、その家は旗を離れる。離れた家は自らの外交を
+         取り戻すが、こちらとは敵対である。同盟・不可侵なら、ただ破れる。
+         いずれにせよ義に悖るので、諸家の信も、己の威信も損なう。 */
+      const 旗を解いた = SUBJECT.includes(前の間柄);
+      r.state = "敵対"; r.until = null; r.master = null;
+      r.trust = 0;
+      me.prestige = clamp((me.prestige == null ? 50 : me.prestige) - 10, 0, 100);
+      for (const k2 of Object.keys(s.relations)) {              // 他家からも信を失う
+        if (!己の盟約(k2, actor)) continue;
+        const r2 = s.relations[k2];
+        if (r2 !== r) r2.trust = clamp(r2.trust - 8, 0, 100);
+      }
+      文 = 旗を解いた
+        ? `${me.name}が${you.name}との${前の間柄}を切り、敵とした。${you.name}は旗の下を離れた。`
+        : `${me.name}が${you.name}との${前の間柄}を切り、敵とした。諸家の信を損ねた。`;
+      s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+    }
     else if (key === "解き放つ") {
       r.state = "中立"; r.until = null; r.master = null;
       r.trust = clamp(r.trust + 10, 0, 100);

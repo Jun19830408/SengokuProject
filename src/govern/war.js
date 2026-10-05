@@ -821,8 +821,8 @@ export function 着いた味方を束ねる(s, army, castle) {
        申し出は「国主で寄騎とともに出陣し、城を落として軍を解散すると、ほかの城の
        兵数が国主の城に移ってしまう」であった。どの城から何人来たかを控え、
        解くときはその割で返す。 */
-    if (!army.出どころ) army.出どころ = [{ from: army.from, local: army.local || 0 }];
-    army.出どころ.push({ from: x.from, local: x.local || 0 });
+    if (!army.出どころ) army.出どころ = [{ from: army.from, local: army.local || 0, gens: [...(army.gens || [])] }];
+    army.出どころ.push({ from: x.from, local: x.local || 0, gens: [...(x.gens || [])] });
     army.local = (army.local || 0) + (x.local || 0);
     army.food = (army.food || 0) + (x.food || 0);
     army.gens = [...(army.gens || []), ...(x.gens || [])];
@@ -1155,6 +1155,25 @@ export function withdrawArmy(s, army) {
       .sort((a, z) => a.p.length - z.p.length)[0];
     return 近い ? 近い.c : 自領[0];
   };
+  /* どの将がどの城から出たか（GDD 7.3）。
+
+     陣触れで諸城から兵を催せば、軍は一つでも出どころは幾つもある。兵は
+     出どころの割で返すのに、将だけ本隊の出陣元へ入れていたので、解くたび
+     家中の者が大名の城に積み上がった。遊ぶ側の申し出は「陣触れをして大名の城と
+     他の城も合わせて出陣したあと、軍を解くと参加した武将と兵が全て大名の城に
+     所属してしまう」であった。将も、己の出た城へ帰す。 */
+  const 出た城 = (() => {
+    const 表 = new Map();
+    for (const q of (army.出どころ || [])) {
+      for (const gid of (q && q.gens) || []) 表.set(gid, q.from);
+    }
+    return (gid) => {
+      const id = 表.get(gid);
+      if (!id) return null;
+      const c = s.castles.find((y) => y.id === id);
+      return c && c.faction === army.faction ? c : null;
+    };
+  })();
   const 落ちる先 = (x) => {
     if (x.lord) {
       const 拠 = (s.factions[x.faction] || {}).本拠;
@@ -1176,6 +1195,8 @@ export function withdrawArmy(s, army) {
     }
     const 己の城 = s.castles.find((c) => c.lordId === x.id && c.faction === x.faction);
     if (己の城) return 己の城;
+    const 出 = 出た城(x.id);                      // 加勢として出てきた者は、その城へ帰る
+    if (出 && 出.faction === x.faction) return 出;
     if (home && home.faction === x.faction) return home;
     return 自家の最寄り(x.faction);
   };
