@@ -464,6 +464,16 @@ export const 新絵の画布上限 = 2.2e6;
    九百万画素で三十六MB――元の城の画布（二千万画素・七十六MB）の半分である。 */
 export const 城の画布上限 = 9.0e6;
 
+/* 焼きの内訳（GDD 8.11）。どこで時を食っているかは、推し量らずに測る。
+   頁からは window.__焼き内訳 で読める。費えは performance.now() の十数回だけ。 */
+const 内訳 = [];
+let 内訳刻 = 0;
+const 刻む計 = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+const 計始 = () => { 内訳.length = 0; 内訳刻 = 刻む計(); };
+const 計 = (名) => { const t = 刻む計(); 内訳.push(名 + " " + Math.round(t - 内訳刻) + "ms"); 内訳刻 = t;
+  if (typeof window !== "undefined") window.__焼き内訳 = 内訳.join(" / "); };
+export const 焼きの内訳 = () => 内訳.join(" / ");
+
 /* 値の雑音。盤の賽（Math.random）は使わない――同じ種から同じ盤が出なくなる */
 const 雑格寸 = 256;
 const 雑格 = new Float32Array(雑格寸 * 雑格寸);
@@ -506,10 +516,20 @@ function 筋まで(x, y, 節) {
   return 最;
 }
 
+/* 焼きを帯に割る（GDD 8.11）。
+
+   地を焼くのに一秒以上かかる。一息で焼けば、そのあいだ頁は固まる――
+   城攻めでは門の様子が変わるたびに焼き直していたので、攻めている間じゅう
+   止まっていた。焼き手を生成子（止められる関数）にして、描き直しの輪から
+   一コマ十ミリ秒ずつ汲む。帯の数は、一帯がおよそ二〜四ミリ秒になるよう選ぶ。 */
+const 帯幅 = (n, 割) => Math.max(1, Math.ceil(n / 割));
+
 /* 日影。光の来る向きへ地形を辿り、遮られていれば影。縁は半影でぼかす */
-function 日影を焼く(高, W, H, 光x, 光y, 光高, 歩, 回) {
+function* 日影を焼く(高, W, H, 光x, 光y, 光高, 歩, 回) {
   const 影 = new Float32Array(W * H);
+  const 帯 = 帯幅(H, 90);
   for (let y = 0; y < H; y++) {
+    if (y % 帯 === 0) yield;
     for (let x = 0; x < W; x++) {
       const i = y * W + x, h0 = 高[i];
       let 遮 = 0;
@@ -524,7 +544,9 @@ function 日影を焼く(高, W, H, 光x, 光y, 光高, 歩, 回) {
     }
   }
   const 出 = new Float32Array(W * H);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  for (let y = 0; y < H; y++) {
+   if (y % 帯 === 0) yield;
+   for (let x = 0; x < W; x++) {
     let s = 0, n = 0;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const xx = x + dx, yy = y + dy;
@@ -532,14 +554,16 @@ function 日影を焼く(高, W, H, 光x, 光y, 光高, 歩, 回) {
       s += 影[yy * W + xx]; n++;
     }
     出[y * W + x] = s / n;
+   }
   }
   return 出;
 }
 /* 環境遮蔽。周り八方が高いほど暗い */
-function 遮蔽を焼く(高, W, H, 距) {
+function* 遮蔽を焼く(高, W, H, 距) {
   const 遮 = new Float32Array(W * H);
   const 向 = [[1, 0], [0.7, 0.7], [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7], [0, -1], [0.7, -0.7]];
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  const 帯 = 帯幅(H, 90);
+  for (let y = 0; y < H; y++) { if (y % 帯 === 0) yield; for (let x = 0; x < W; x++) {
     const i = y * W + x, h0 = 高[i];
     let s = 0;
     for (let v = 0; v < 向.length; v++) {
@@ -554,7 +578,7 @@ function 遮蔽を焼く(高, W, H, 距) {
       s += Math.min(1, Math.max(0, 最));
     }
     遮[i] = s / 向.length;
-  }
+  } }
   return 遮;
 }
 /* 半分の寸法で焼いた場を、双一次で引き伸ばして読む */
@@ -722,7 +746,10 @@ function 集落(q, cx, cy, r, 種, 明関, 倍) {
 
 /* ============ 野を焼く ============
    g は画布の筆。画k ＝ 野の寸法から画布の画素への倍。 */
-export function 新絵の野(g, 画k) {
+export function 新絵の野(g, 画k) { const it = 野を焼く(g, 画k); while (!it.next().done) { /* 一息で焼く */ } }
+/* 帯で止められる焼き手。頁はこちらを汲み、試験や道具は上の一息版を使う。 */
+export function* 野を焼く(g, 画k) {
+  計始();
   const k = 画k || 1;
   const W = Math.max(1, Math.round(FIELD.w * k)), H = Math.max(1, Math.round(FIELD.h * k));
   const 倍 = Math.max(0.5, Math.min(2, k * 3.2));      /* 筆の太さの目安 */
@@ -749,21 +776,28 @@ export function 新絵の野(g, 画k) {
   const 川深 = new Float32Array(hw * hh), 川岸 = new Float32Array(hw * hh);
   const 道度 = new Float32Array(hw * hh), 川谷 = new Float32Array(hw * hh);
   /* 地のうねり */
-  for (let y = 0; y < hh; y++) {
-    for (let x = 0; x < hw; x++) {
-      高[y * hw + x] = ((襞(x * 半 / (150 * 倍), y * 半 / (150 * 倍), 3) - 0.5) * 7 * 倍) / 半;
+  { const 帯 = 帯幅(hh, 48);
+    for (let y = 0; y < hh; y++) {
+      if (y % 帯 === 0) yield;
+      for (let x = 0; x < hw; x++) {
+        高[y * hw + x] = ((襞(x * 半 / (150 * 倍), y * 半 / (150 * 倍), 3) - 0.5) * 7 * 倍) / 半;
+      }
     }
   }
   /* 峰。毎画素で全部の峰を測ると二十三倍の手間になる。峰のほうを辿って盛る */
   for (const o of 峰) {
+    yield;
     const cx2 = o.x / 半, cy2 = o.y / 半, rr = o.r / 半;
     const ax0 = Math.max(0, Math.floor(cx2 - rr)), ax1 = Math.min(hw - 1, Math.ceil(cx2 + rr));
     const ay0 = Math.max(0, Math.floor(cy2 - rr)), ay1 = Math.min(hh - 1, Math.ceil(cy2 + rr));
     const 丈 = o.r * 0.34 * o.h / 半, 指 = o.山 ? 1.25 : 1.5;
-    for (let y = ay0; y <= ay1; y++) for (let x = ax0; x <= ax1; x++) {
+    const 峰帯 = 帯幅(ay1 - ay0 + 1, 28);
+    for (let y = ay0; y <= ay1; y++) { if ((y - ay0) % 峰帯 === 0) yield;
+     for (let x = ax0; x <= ax1; x++) {
       const d = Math.hypot(x - cx2, y - cy2);
       if (d >= rr) continue;
       高[y * hw + x] += 丈 * Math.cos((d / rr) * Math.PI / 2) ** 指;
+     }
     }
   }
   /* 川と道の場。線を辿って刻む（焼き付ける）。
@@ -771,13 +805,18 @@ export function 新絵の野(g, 画k) {
      毎画素で全区間までの隔たりを測ると、一画素あたり百七十回の判じになり、
      それだけで三秒かかった（実測）。線のほうを辿って、その周りに円を
      重ねて行くほうが桁違いに速い。歩幅を細かく取れば隔たりも正しく出る。 */
-  const 刻む = (節, 幅, 場, 伸, 深さ) => {
+  const 刻む = function* (節, 幅, 場, 伸, 深さ) {
     const r = 幅 / 2 + 伸;
     for (let i = 0; i < 節.length - 1; i++) {
+      yield;
       const x0 = 節[i][0] / 半, y0 = 節[i][1] / 半, x1 = 節[i + 1][0] / 半, y1 = 節[i + 1][1] / 半;
       const L = Math.hypot(x1 - x0, y1 - y0);
       const 歩 = Math.max(1, Math.ceil(L));
+      /* 区間の初めだけで止めていたころは、野を横切る一本の川が
+         四百ミリ秒の一帯になっていた。歩みの途中でも止める。 */
+      const 歩帯 = Math.max(1, Math.ceil(歩 / Math.max(1, Math.ceil((歩 * r * r) / 16000))));
       for (let k = 0; k <= 歩; k++) {
+        if (k % 歩帯 === 0) yield;
         const t = k / 歩, cx2 = x0 + (x1 - x0) * t, cy2 = y0 + (y1 - y0) * t;
         const rr = r / 半;
         const ax0 = Math.max(0, Math.floor(cx2 - rr)), ax1 = Math.min(hw - 1, Math.ceil(cx2 + rr));
@@ -794,20 +833,21 @@ export function 新絵の野(g, 画k) {
   };
   for (const r of 川ら) {
     const 半幅 = r.幅 / 2;
-    刻む(r.節, r.幅, 川深, 0, (d) => (d < 半幅 ? 1 - d / 半幅 : 0));
-    刻む(r.節, r.幅, 川岸, 3 * 倍, (d) => (d > 半幅 ? (半幅 + 3 * 倍 - d) / (3 * 倍) : 0));
+    yield* 刻む(r.節, r.幅, 川深, 0, (d) => (d < 半幅 ? 1 - d / 半幅 : 0));
+    yield* 刻む(r.節, r.幅, 川岸, 3 * 倍, (d) => (d > 半幅 ? (半幅 + 3 * 倍 - d) / (3 * 倍) : 0));
     /* 谷を刻む。高さを下げるので、別の場へ取ってから引く */
     const 谷 = r.幅 * 2.4;
-    刻む(r.節, 谷 * 2, 川谷, 0, (d) => (d < 谷 ? (1 - d / 谷) ** 2 * r.幅 * 0.5 : 0));
+    yield* 刻む(r.節, 谷 * 2, 川谷, 0, (d) => (d < 谷 ? (1 - d / 谷) ** 2 * r.幅 * 0.5 : 0));
   }
   for (const r of 道ら) {
     const 半幅 = r.幅 / 2 + 2 * 倍;
-    刻む(r.節, r.幅, 道度, 2 * 倍, (d) => Math.min(1, (半幅 - d) / (2.5 * 倍)));
+    yield* 刻む(r.節, r.幅, 道度, 2 * 倍, (d) => Math.min(1, (半幅 - d) / (2.5 * 倍)));
   }
   for (let i = 0; i < 高.length; i++) if (川谷[i] > 0) 高[i] -= 川谷[i] / 半;
   /* 林。梢の塊として高さを持たせ、自ら影を落とさせる */
   const 林 = new Float32Array(hw * hh);
   for (const f of [...FORESTS, ...WOODS]) {
+    yield;
     const fx = PX(f.x) / 半, fy = PY(f.y) / 半, r = PX(f.r) / 半 * 1.08;
     const x0 = Math.max(0, (fx - r) | 0), x1 = Math.min(hw - 1, Math.ceil(fx + r));
     const y0 = Math.max(0, (fy - r) | 0), y1 = Math.min(hh - 1, Math.ceil(fy + r));
@@ -818,22 +858,30 @@ export function 新絵の野(g, 画k) {
       if (t > 0) 林[y * hw + x] = Math.max(林[y * hw + x], Math.min(1, t * 2.2));
     }
   }
-  for (let i = 0; i < 林.length; i++) {
-    if (林[i] < 0.01) continue;
-    const x = i % hw, y = (i / hw) | 0;
-    const 梢 = 襞(x / (1.7 * 倍), y / (1.7 * 倍), 2);
-    高[i] += 林[i] * (3.5 * 倍 + 梢 * 2.5 * 倍);
+  { const 林帯 = 帯幅(hh, 20) * hw;
+    for (let i = 0; i < 林.length; i++) {
+      if (i % 林帯 === 0) yield;
+      if (林[i] < 0.01) continue;
+      const x = i % hw, y = (i / hw) | 0;
+      const 梢 = 襞(x / (1.7 * 倍), y / (1.7 * 倍), 2);
+      高[i] += 林[i] * (3.5 * 倍 + 梢 * 2.5 * 倍);
+    }
   }
   const 光x = -0.62, 光y = -0.72, 光高 = 0.52;
-  const 影 = 日影を焼く(高, hw, hh, 光x, 光y, 光高, Math.max(1.4, 1.3 * 倍), 30);
-  const 遮 = 遮蔽を焼く(高, hw, hh, Math.max(5, (7 * 倍) | 0));
+  計("高さ");
+  yield;
+  const 影 = yield* 日影を焼く(高, hw, hh, 光x, 光y, 光高, Math.max(1.4, 1.3 * 倍), 30);
+  計("日影");
+  const 遮 = yield* 遮蔽を焼く(高, hw, hh, Math.max(5, (7 * 倍) | 0));
+  計("遮蔽");
 
   /* ---- 色を塗る ---- */
   const im = g.createImageData(W, H), d = im.data;
+  const 色帯 = 帯幅(H, 360);
   for (let y = 0; y < H; y++) {
+    if (y % 色帯 === 0) yield;
     for (let x = 0; x < W; x++) {
       const p = (y * W + x) * 4;
-      const hx = x / 半, hy = y / 半;
       const hh2 = 引伸(高, hw, hh, x, y, 半);
       const gx = 引伸(高, hw, hh, x + 半, y, 半) - 引伸(高, hw, hh, x - 半, y, 半);
       const gy = 引伸(高, hw, hh, x, y + 半, 半) - 引伸(高, hw, hh, x, y - 半, 半);
@@ -881,6 +929,7 @@ export function 新絵の野(g, 画k) {
     }
   }
   g.putImageData(im, 0, 0);
+  計("色");
 
   const 明関 = (x, y) => 1 - 引伸(影, hw, hh, Math.max(0, Math.min(W - 1, x)), Math.max(0, Math.min(H - 1, y)), 半) * 0.5;
 
@@ -888,7 +937,9 @@ export function 新絵の野(g, 画k) {
   野種を置く(31337);
   g.lineCap = "butt";
   const 穂数 = Math.min(160000, Math.round(W * H * 0.035));
+  const 穂帯 = 帯幅(穂数, 48);
   for (let i = 0; i < 穂数; i++) {
+    if (i % 穂帯 === 0) yield;
     const x = 野乱() * W, y = 野乱() * H;
     const 日 = 明関(x, y);
     const t = 野乱(), a = (0.09 + 野乱() * 0.06) * 日;
@@ -899,6 +950,7 @@ export function 新絵の野(g, 画k) {
     g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(ang) * L, y + Math.sin(ang) * L); g.stroke();
   }
 
+  計("草");
   /* 沼 */
   for (const m of MARSH) {
     const mx = PX(m.x), my = PY(m.y), r = PX(m.r);
@@ -910,11 +962,14 @@ export function 新絵の野(g, 画k) {
   /* 集落 */
   for (const v of VILLAGES) 集落(g, PX(v.x), PY(v.y), PX(v.r || 40) * 0.95, Math.round(v.x + v.y), 明関, 倍);
 
+  計("沼と集落");
   /* 木。林の只中は塊で描いたので、木は縁と野にだけ立てる */
   野種を置く(606);
   const 木 = [];
   const 試 = Math.min(200000, Math.round(W * H * 0.05));
+  const 試帯 = 帯幅(試, 40);
   for (let i = 0; i < 試; i++) {
+    if (i % 試帯 === 0) yield;
     const x = 野乱() * W, y = 野乱() * H;
     const fr = 引伸(林, hw, hh, x, y, 半);
     const 群 = 襞(x / (20 * 倍), y / (20 * 倍), 3);
@@ -931,6 +986,7 @@ export function 新絵の野(g, 画k) {
   }
   木.sort((a, b) => a[1] - b[1]);
   for (const [x, y, r, 振, 日] of 木) 繁木(g, x, y, r, 振, 日);
+  計("木");
 
   /* 名のある峰と村の札。野の座標で描く */
   g.setTransform(k, 0, 0, k, 0, 0);
@@ -950,13 +1006,16 @@ export function 新絵の野(g, 画k) {
    立てるもの（石垣・門・櫓・天守）は、戦の間に破れたり燃えたりする。
    それは今までどおり drawCastleTerrain と drawBattle に描かせ、ここでは
    地だけを焼く。地は一度焼けば動かぬものである。                        */
-export function 新絵の城の地(g, m, 画k) {
+export function 新絵の城の地(g, m, 画k) { const it = 城の地を焼く(g, m, 画k); while (!it.next().done) { /* 一息で焼く */ } }
+/* 帯で止められる焼き手。頁はこちらを汲む（上の一息版は試験と道具のため）。 */
+export function* 城の地を焼く(g, m, 画k) {
   const k = 画k || 1;
   const W = Math.max(1, Math.round(FIELD.w * k)), H = Math.max(1, Math.round(FIELD.h * k));
   const 倍 = Math.max(0.5, Math.min(2, k * 3.2));
   const PX = (v) => v * k;
   g.setTransform(1, 0, 0, 1, 0, 0);
 
+  計始();
   const t = m.t, band = m.moat.band, 空堀 = !!m.moat.空堀;
   const o0 = m.layers[0], ob = o0.masu + t + 8;
   /* 曲輪。石垣の厚みぶん外へ出した矩形が、その曲輪の天端である */
@@ -998,7 +1057,9 @@ export function 新絵の城の地(g, m, 画k) {
   const 坂R = (Math.max(堀外.hw, 堀外.hh) + 堀幅) * (m.坂 >= 1 ? 1.55 : 1.85);
   const 坂丈 = (m.坂 >= 1 ? 0.26 : m.坂 > 0 ? 0.10 : 0) * 坂R;
   const ccx = 堀外.x / 半, ccy = 堀外.y / 半, 坂r2 = 坂R / 半;
+  const 高帯 = 帯幅(gh, 48);
   for (let y = 0; y < gh; y++) {
+    if (y % 高帯 === 0) yield;
     for (let x = 0; x < gw; x++) {
       let h = (襞(x * 半 / (150 * 倍), y * 半 / (150 * 倍), 3) - 0.5) * 9 * 倍
         + (襞(x * 半 / (430 * 倍) + 11, y * 半 / (430 * 倍) + 7, 2) - 0.5) * 22 * 倍;   // 大きなうねり
@@ -1015,12 +1076,15 @@ export function 新絵の城の地(g, m, 画k) {
   const 段 = 5.5 * 倍;
   for (const r of 郭ら) {
     const b = 枠(r, 2);
-    for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++) {
+    const 段帯 = 帯幅(b.y1 - b.y0 + 1, 28);
+    for (let y = b.y0; y <= b.y1; y++) { if ((y - b.y0) % 段帯 === 0) yield;
+     for (let x = b.x0; x <= b.x1; x++) {
       const d = 矩距(x, y, r);
       if (d >= 0) continue;
       const w = Math.min(1, -d / 1.4);
       const j = y * gw + x;
       郭[j] += w; 高[j] += (段 / 半) * w;
+     }
     }
   }
   /* 堀。水堀でも空堀でも、掘り下げるのは同じ。切岸の傾きだけ違う */
@@ -1028,7 +1092,9 @@ export function 新絵の城の地(g, m, 画k) {
   const 切 = Math.max(1.5, Math.min(堀幅 * 0.34, 7 * 倍));
   {
     const b = 枠(堀外, 4 * 倍 / 半 + 2);
-    for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++) {
+    const 堀帯 = 帯幅(b.y1 - b.y0 + 1, 28);
+    for (let y = b.y0; y <= b.y1; y++) { if ((y - b.y0) % 堀帯 === 0) yield;
+     for (let x = b.x0; x <= b.x1; x++) {
       const d1 = -矩距(x, y, 堀外), d2 = 矩距(x, y, 堀内);
       const j = y * gw + x;
       if (d1 > 0 && d2 > 0) {
@@ -1041,13 +1107,17 @@ export function 新絵の城の地(g, m, 画k) {
         const e2 = Math.min(d1 > 0 ? 1e9 : -d1, d2 > 0 ? 1e9 : -d2) * 半;
         if (e2 < 4 * 倍) 岸[j] = Math.max(岸[j], 1 - e2 / (4 * 倍));
       }
+     }
     }
   }
   /* 大手道。門の前から盤の外へ伸びる。寄せ手が上ってくる道である */
-  const 刻む = (x0, y0, x1, y1, 幅, 場, 深さ) => {
+  const 刻む = function* (x0, y0, x1, y1, 幅, 場, 深さ) {
+    yield;
     const L = Math.hypot(x1 - x0, y1 - y0) / 半, 歩 = Math.max(1, Math.ceil(L));
     const r = 幅 / 2 + 3 * 倍;
+    const 歩帯 = Math.max(1, Math.ceil(歩 / Math.max(1, Math.ceil((歩 * r * r) / 16000))));
     for (let s = 0; s <= 歩; s++) {
+      if (s % 歩帯 === 0) yield;
       const u = s / 歩, px = (x0 + (x1 - x0) * u) / 半, py = (y0 + (y1 - y0) * u) / 半;
       const rr = r / 半;
       const ax0 = Math.max(0, Math.floor(px - rr)), ax1 = Math.min(gw - 1, Math.ceil(px + rr));
@@ -1078,7 +1148,7 @@ export function 新絵の城の地(g, m, 画k) {
     const x1 = 横 ? x0 : (q.face === "E" ? W + 20 : -20);
     const y1 = 横 ? (q.face === "S" ? H + 20 : -20) : y0;
     const 半幅 = 幅 / 2 + 2 * 倍;
-    刻む(x0, y0, x1, y1, 幅, 道度, (d) => Math.min(1, (半幅 - d) / (3 * 倍)));
+    yield* 刻む(x0, y0, x1, y1, 幅, 道度, (d) => Math.min(1, (半幅 - d) / (3 * 倍)));
     道口.push({ q, x0, y0, x1, y1, 横 });
   }
   /* 曲輪の中の踏み道。門から次の曲輪の門へ、人の通う筋が付く。
@@ -1103,8 +1173,8 @@ export function 新絵の城の地(g, m, 画k) {
       const 半幅 = 幅 / 2 + 2 * 倍;
       /* 曲がり角を一つ入れる。真っ直ぐ斜めに横切る道は城に無い */
       const 折 = { x: b2.x, y: a.y };
-      刻む(a.x, a.y, 折.x, 折.y, 幅, 道度, (d) => Math.min(0.72, (半幅 - d) / (3 * 倍)));
-      刻む(折.x, 折.y, b2.x, b2.y, 幅, 道度, (d) => Math.min(0.72, (半幅 - d) / (3 * 倍)));
+      yield* 刻む(a.x, a.y, 折.x, 折.y, 幅, 道度, (d) => Math.min(0.72, (半幅 - d) / (3 * 倍)));
+      yield* 刻む(折.x, 折.y, b2.x, b2.y, 幅, 道度, (d) => Math.min(0.72, (半幅 - d) / (3 * 倍)));
     }
   }
 
@@ -1112,6 +1182,7 @@ export function 新絵の城の地(g, m, 画k) {
   野種を置く(Math.round(Math.abs(m.cx * 7 + m.cy * 13 + m.layers.length * 101)) % 1e6 + 11);
   const 群数 = Math.max(4, Math.round((W * H) / (300 * 300 * 倍 * 倍)) + (m.坂 >= 1 ? 6 : 0));
   for (let i = 0; i < 群数; i++) {
+    yield;
     const cx2 = 野乱() * W, cy2 = 野乱() * H;
     if (矩距(cx2 / 半, cy2 / 半, 堀外) < 24 * 倍 / 半) continue;   // 城と堀の際には生やさぬ
     const r = (46 + 野乱() * 90) * 倍;
@@ -1126,20 +1197,28 @@ export function 新絵の城の地(g, m, 画k) {
       if (v > 0) 林[y * gw + x] = Math.max(林[y * gw + x], Math.min(1, v * 2.2));
     }
   }
+  const 林帯 = 帯幅(gh, 20) * gw;
   for (let i = 0; i < 林.length; i++) {
+    if (i % 林帯 === 0) yield;
     if (林[i] < 0.01) continue;
     if (道度[i] > 0.2) { 林[i] = 0; continue; }                 // 道は木で塞がない
     const x = i % gw, y = (i / gw) | 0;
     高[i] += 林[i] * (3.5 * 倍 + 襞(x / (1.7 * 倍), y / (1.7 * 倍), 2) * 2.5 * 倍);
   }
 
+  計("高さ");
+  yield;
   const 光x = -0.62, 光y = -0.72, 光高 = 0.52;
-  const 影 = 日影を焼く(高, gw, gh, 光x, 光y, 光高, Math.max(1.4, 1.3 * 倍), 34);
-  const 遮 = 遮蔽を焼く(高, gw, gh, Math.max(5, (7 * 倍) | 0));
+  const 影 = yield* 日影を焼く(高, gw, gh, 光x, 光y, 光高, Math.max(1.4, 1.3 * 倍), 34);
+  計("日影");
+  const 遮 = yield* 遮蔽を焼く(高, gw, gh, Math.max(5, (7 * 倍) | 0));
+  計("遮蔽");
 
   /* ---- 色を塗る ---- */
   const im = g.createImageData(W, H), dd = im.data;
+  const 色帯 = 帯幅(H, 360);
   for (let y = 0; y < H; y++) {
+    if (y % 色帯 === 0) yield;
     for (let x = 0; x < W; x++) {
       const p = (y * W + x) * 4;
       const h2 = 引伸(高, gw, gh, x, y, 半);
@@ -1228,6 +1307,7 @@ export function 新絵の城の地(g, m, 画k) {
     }
   }
   g.putImageData(im, 0, 0);
+  計("色");
 
   const 明関 = (x, y) => 1 - 引伸(影, gw, gh, Math.max(0, Math.min(W - 1, x)), Math.max(0, Math.min(H - 1, y)), 半) * 0.5;
   const 外か = (x, y) => 矩距(x / 半, y / 半, 堀外) > 0;
@@ -1236,7 +1316,9 @@ export function 新絵の城の地(g, m, 画k) {
   野種を置く(24601);
   g.lineCap = "butt";
   const 穂数 = Math.min(140000, Math.round(W * H * 0.03));
+  const 穂帯 = 帯幅(穂数, 48);
   for (let i = 0; i < 穂数; i++) {
+    if (i % 穂帯 === 0) yield;
     const x = 野乱() * W, y = 野乱() * H;
     const 郭t = 引伸(郭, gw, gh, x, y, 半), 堀t = 引伸(堀域, gw, gh, x, y, 半);
     if (堀t > 0.06) continue;
@@ -1251,6 +1333,7 @@ export function 新絵の城の地(g, m, 画k) {
     g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(ang) * L, y + Math.sin(ang) * L); g.stroke();
   }
 
+  計("草");
   /* 城下の町。大手の道沿いに、堀から少し離して置く */
   if (大手) {
     const 口 = 道口.find((o) => o.q === 大手);
@@ -1268,11 +1351,14 @@ export function 新絵の城の地(g, m, 画k) {
     }
   }
 
+  計("城下");
   /* 木。林の只中は塊で描いたので、縁と野にだけ立てる */
   野種を置く(8086);
   const 木 = [];
   const 試 = Math.min(160000, Math.round(W * H * 0.04));
+  const 試帯 = 帯幅(試, 40);
   for (let i = 0; i < 試; i++) {
+    if (i % 試帯 === 0) yield;
     const x = 野乱() * W, y = 野乱() * H;
     let 生 = false;
     if (!外か(x, y)) {
@@ -1297,6 +1383,7 @@ export function 新絵の城の地(g, m, 画k) {
   }
   木.sort((a, b) => a[1] - b[1]);
   for (const [x, y, r, 振, 日] of 木) 繁木(g, x, y, r, 振, 日);
+  計("木");
 
   g.setTransform(1, 0, 0, 1, 0, 0);
 }

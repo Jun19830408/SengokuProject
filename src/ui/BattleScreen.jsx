@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
-import { drawBattle, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
-import { 新絵か, 新絵の野, 新絵の寄り限り, 新絵の画布上限, 城の画布上限 } from "../battle/shinga.js";
+import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
+import { 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限 } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
@@ -13,6 +13,7 @@ import { 合戦の問いに答える, 指図の縛り, 筋書きの覚え } from
 /* --------------------------------------------------------------- 合戦画面 */
 export function BattleScreen({ ctx, land, onEnd }) {
   const canvasRef = useRef(null), terrainRef = useRef(null), bRef = useRef(ctx.b), wrapRef = useRef(null);
+  const 城Ref = useRef(null), 焼きRef = useRef(null);
   const [, force] = useState(0);
   const [sel, setSel] = useState(null);
   const [speed, setSpeedState] = useState(0);
@@ -67,16 +68,66 @@ export function BattleScreen({ ctx, land, onEnd }) {
       : ctx.mode === "castle" && ctx.b.map ? 城の画布上限 : 新絵の画布上限;
     return Math.min(1, Math.sqrt(上限 / Math.max(1, FIELD.w * FIELD.h)));
   };
+  /* 城に立つもの（石垣・門・櫓・天守）だけを描き直す。
+     門が破れても地は変わらないので、ここだけ焼けばよい。 */
+  const paintCastle = () => {
+    if (!(ctx.b && ctx.b.map && 新絵か(ctx.b))) { 城Ref.current = null; return false; }
+    const k = 画布の倍();
+    const c = 城Ref.current || document.createElement("canvas");
+    c.width = Math.max(1, Math.round(FIELD.w * k)); c.height = Math.max(1, Math.round(FIELD.h * k));
+    drawCastleBuildings(c.getContext("2d"), ctx.b.map, k);
+    城Ref.current = c;
+    return true;
+  };
+  /* 地を二段で焼く（GDD 8.11）。
+
+     一段目は十六分の一ほどの寸法で一息に焼いて引き伸ばす（百ミリ秒ほど）。
+     二段目は同じ絵を本来の寸法で、帯に割って描き直しの輪から汲む。
+     色も形も同じ絵なので、差し替わってもぼけが締まるだけで見た目は飛ばない。
+
+     一息で焼いていたころは、城攻めに入るたび、門が破れるたびに一.五秒止まった。 */
+  const 粗の画素 = 1.6e5;
+  const 焼きを仕込む = (t, 地k, 作る) => {
+    const 粗k = Math.min(地k, Math.sqrt(粗の画素 / Math.max(1, FIELD.w * FIELD.h)));
+    const 寸 = (kk) => [Math.max(1, Math.round(FIELD.w * kk)), Math.max(1, Math.round(FIELD.h * kk))];
+    const 貼る = (元, 濃 = 1) => {
+      const g = t.getContext("2d");
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.imageSmoothingEnabled = true;
+      if ("imageSmoothingQuality" in g) g.imageSmoothingQuality = "high";
+      g.globalAlpha = 濃;
+      g.drawImage(元, 0, 0, t.width, t.height);
+      g.globalAlpha = 1;
+    };
+    const [w0, h0] = 寸(粗k);
+    const c0 = document.createElement("canvas"); c0.width = w0; c0.height = h0;
+    const it0 = 作る(c0.getContext("2d"), 粗k);
+    while (!it0.next().done) { /* 粗焼きは一息で */ }
+    貼る(c0);
+    const [w1, h1] = 寸(地k);
+    const c1 = document.createElement("canvas"); c1.width = w1; c1.height = h1;
+    焼きRef.current = { it: 作る(c1.getContext("2d"), 地k), 細: c1, 貼る, 済: false, 溶: 0 };
+  };
   const paintTerrain = () => {
     const t = terrainRef.current || document.createElement("canvas");
     const k = 画布の倍();
     t.width = Math.max(1, Math.round(FIELD.w * k)); t.height = Math.max(1, Math.round(FIELD.h * k));
     const g2 = t.getContext("2d");
     const 焼始 = (typeof performance !== "undefined" ? performance.now() : 0);
+    焼きRef.current = null; 城Ref.current = null;
+    const 新 = 新絵か(ctx.b);
     if (ctx.mode === "castle" && ctx.b.map) {
-      drawCastleTerrain(g2, ctx.b.map, k);     // 地は画素で塗る（筆の尺度は中で取る）
-    } else if (新絵か(ctx.b)) {
-      新絵の野(g2, k);                        // 関ヶ原だけ画素で塗る野（GDD 8.11）
+      if (新) {
+        /* 地は野より粗く焼いて引き伸ばす。石垣や天守の線は画布の寸法で描く（別画布） */
+        const 地k = Math.min(k, Math.sqrt(新絵の画布上限 / Math.max(1, FIELD.w * FIELD.h)));
+        const m = ctx.b.map;
+        焼きを仕込む(t, 地k, (g, kk) => 城の地を焼く(g, m, kk));
+        paintCastle();
+      } else {
+        g2.setTransform(k, 0, 0, k, 0, 0); drawCastleTerrain(g2, ctx.b.map, k);
+      }
+    } else if (新) {
+      焼きを仕込む(t, k, (g, kk) => 野を焼く(g, kk));
     } else {
       g2.setTransform(k, 0, 0, k, 0, 0); drawFieldTerrain(g2);
     }
@@ -207,12 +258,36 @@ export function BattleScreen({ ctx, land, onEnd }) {
       // 委ねている間は絵を描かない。描かぬぶんだけ時が速く進む。
       if (委ねRef.current) { handle = requestAnimationFrame(loop); return; }
       if (b.phase === "fight" && sp > 0) stepBattle(b, dt * sp);
-      // 門が破れたら城郭図を描き直す
+      /* 地の焼きを少しずつ進める（GDD 8.11）。一コマ十ミリ秒を上限に汲み、
+         焼き上がったら数コマかけて溶暗で差し替える。 */
+      const 焼 = 焼きRef.current;
+      if (焼) {
+        if (!焼.済) {
+          const t0 = performance.now();
+          while (performance.now() - t0 < 10) { if (焼.it.next().done) { 焼.済 = true; break; } }
+        } else {
+          /* 溶暗。四コマ（六十ミリ秒ほど）かけて細かい地へ移る。
+             最後は濃さ一で置くので、粗い下地はきれいに消える。 */
+          const 濃 = [0.35, 0.5, 0.7, 1][焼.溶] ?? 1;
+          焼.貼る(焼.細, 濃);
+          if (++焼.溶 >= 4) 焼きRef.current = null;
+        }
+      }
+      // 門が破れたら城の立つものを描き直す（地は変わらないので焼き直さない）
       if (b.map) {
+        /* 描き直しの頃合い。
+
+           門の傷み帯は毎コマ上から描くので、画布を焼き直すのは
+           「門が破れた」「櫓が落ちた」「門の板の色が一段黒ずんだ」ときだけでよい。
+           かつては傷みの数を三十で割って見ていたので、攻めているあいだ
+           絶え間なく焼き直していた――そのうえ地まで一緒に焼いていた。 */
         const bk = b.map.gates.filter((g) => g.broken).length * 100000
           + b.map.fac.filter((f) => f.hp <= 0).length * 3000
-          + Math.round(b.map.gates.reduce((a, g) => a + g.hp, 0) / 30);
-        if (bk !== brokeRef.current) { brokeRef.current = bk; paintTerrain(); }
+          + Math.round(b.map.gates.reduce((a, g) => a + g.hp / Math.max(1, g.max), 0) * 8);
+        if (bk !== brokeRef.current) {
+          brokeRef.current = bk;
+          if (!paintCastle()) paintTerrain();   // 旧い絵のときは今までどおり丸ごと
+        }
       }
       const cv = canvasRef.current, wrap = wrapRef.current;
       if (cv && wrap && terrainRef.current) {
@@ -223,7 +298,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
         }
         // 新しく増えた戦の痕だけを、跡の画布へ焼き足す
         if (跡Ref.current) 跡を焼き足す(跡Ref.current.getContext("2d"), b, Math.min(0.5, 画布の倍()));
-        drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current);
+        drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current);
       }
       if (b.phase === "over" && speedRef.current !== 0) setSpeed(0);
       if (ts - uiRef.current > 100) { uiRef.current = ts; force((n) => (n + 1) % 1000); }

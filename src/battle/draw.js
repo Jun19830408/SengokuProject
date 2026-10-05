@@ -1559,6 +1559,46 @@ function 旧の城の地(ctx, m, t, cx, cy) {
   ctx.fillStyle = "#CBD8AC"; ctx.fillRect(堀内.x, 堀内.y, 堀内.w, 堀内.h);
 }
 
+/* 門と施設の傷み帯。毎刻変わるので、焼いた画布には入れず、その場で描く。 */
+function 門の傷みを一つ描く(ctx, m, g) {
+  const l = m.layers[g.layer];
+  if (!l) return;
+  const a = axisOf(l, g);
+  const along = a.along === "x";
+  const bp = fromUV(m, a, g.off, a.half + m.t + 11);
+  const r = g.hp / g.max;
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  if (along) ctx.fillRect(bp.x - g.w / 2, bp.y - 2, g.w, 4); else ctx.fillRect(bp.x - 2, bp.y - g.w / 2, 4, g.w);
+  ctx.fillStyle = r > 0.5 ? "#5C8C4A" : r > 0.22 ? "#C89A3A" : "#B0483C";
+  if (along) ctx.fillRect(bp.x - g.w / 2, bp.y - 2, g.w * r, 4); else ctx.fillRect(bp.x - 2, bp.y - g.w / 2, 4, g.w * r);
+}
+function 施設の傷みを一つ描く(ctx, f) {
+  ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2, 3);
+  ctx.fillStyle = f.hp / f.max > 0.5 ? "#5C8C4A" : f.hp / f.max > 0.25 ? "#C89A3A" : "#B0483C";
+  ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2 * (f.hp / f.max), 3);
+}
+/* 城の傷みを、焼いた画布の上に重ねる。これだけは毎コマ描く（十数回の塗りで済む）。 */
+export function 城の傷みを描く(ctx, m) {
+  for (const l of m.layers) for (const g of l.gates) { if (!g.broken) 門の傷みを一つ描く(ctx, m, g); }
+  for (const f of m.fac) { if (f.hp > 0 && f.max) 施設の傷みを一つ描く(ctx, f); }
+}
+
+/* 城に立つものだけを、透けた画布へ描く（GDD 8.11）。
+
+   これを分けたのは重さのためである。門の傷みが変わるたびに城の絵を
+   描き直していたが、そこには画素ごとに塗る地まで含まれていたので、
+   攻めている間じゅう一.五秒の焼きが繰り返されていた――遊ぶ側には
+   「城攻めになると固まる」としか見えない。
+   地は一度焼けば動かぬもの、立つものは戦のあいだ変わるもの。別の画布に住まわせる。 */
+export function drawCastleBuildings(ctx, m, 画k) {
+  const k = 画k || 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, Math.ceil(FIELD.w * k) + 2, Math.ceil(FIELD.h * k) + 2);
+  ctx.setTransform(k, 0, 0, k, 0, 0);
+  城の立つものを描く(ctx, m, m.t, m.cx, m.cy, true);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
 /* 城に立つもの ── 石垣・門・櫓・天守と、堀を渡る土橋。
    戦の間に破れたり燃えたりして形が変わるので、地とは分けて描く。 */
 function 城の立つものを描く(ctx, m, t, cx, cy, 新) {
@@ -1645,13 +1685,9 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新) {
         continue;
       }
       門を描く(ctx, gp, along, g.w, t, g.hp / g.max);
-      // 傷み具合の帯
-      const bp = fromUV(m, a, g.off, a.half + t + 11);
-      const r = g.hp / g.max;
-      ctx.fillStyle = "rgba(255,255,255,0.8)";
-      if (along) ctx.fillRect(bp.x - g.w / 2, bp.y - 2, g.w, 4); else ctx.fillRect(bp.x - 2, bp.y - g.w / 2, 4, g.w);
-      ctx.fillStyle = r > 0.5 ? "#5C8C4A" : r > 0.22 ? "#C89A3A" : "#B0483C";
-      if (along) ctx.fillRect(bp.x - g.w / 2, bp.y - 2, g.w * r, 4); else ctx.fillRect(bp.x - 2, bp.y - g.w / 2, 4, g.w * r);
+      /* 傷み具合の帯は、新しい絵では焼かない（毎刻変わるものだからである）。
+         石垣や門を焼いた画布は、門が破れるまで動かない。帯だけ上から描く。 */
+      if (!新) 門の傷みを一つ描く(ctx, m, g);
       // 虎口の袖壁と正面壁も石垣で積む
       const put = (u, v, wu, wv) => {
         const q = fromUV(m, a, u, v);
@@ -1708,10 +1744,8 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新) {
       ctx.strokeStyle = "rgba(66,62,54,0.6)"; ctx.lineWidth = 1;
       ctx.strokeRect(f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
     }
-    // 傷み具合の帯
-    ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2, 3);
-    ctx.fillStyle = f.hp / f.max > 0.5 ? "#5C8C4A" : f.hp / f.max > 0.25 ? "#C89A3A" : "#B0483C";
-    ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2 * (f.hp / f.max), 3);
+    // 傷み具合の帯（新しい絵では生の層で描く）
+    if (!新) 施設の傷みを一つ描く(ctx, f);
   }
   ctx.font = "14px 'Hiragino Mincho ProN',serif";
   ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 3;
@@ -1843,7 +1877,7 @@ export function 空模様を被せる(ctx, b, W, H) {
   ctx.restore();
 }
 
-export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, 跡Canvas) {
+export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, 跡Canvas, 城Canvas) {
   /* 新しい絵（関ヶ原だけ・GDD 8.11）。深く寄ったときは組を五十人にほどいて
      一人ずつ描く。引きはこれまでの絵のまま。理には触れない。
 
@@ -1869,6 +1903,12 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   /* 近景の肌理（GDD 8.11）。寄ったときだけ、地の肌理を画面の縮尺で刻む。
      焼いた地を引き伸ばすと滲むので、兵と同じ寸法の草と石を上から置く。 */
   if (個人絵) 近景の肌理(ctx, cam, W, H, dpr, b.map || null);
+  /* 城に立つもの（石垣・門・櫓・天守）。地とは別の画布に焼いてある。
+     肌理のあとに貼るので、草や砂の粒が石垣の上に乗ることもない。 */
+  if (城Canvas) {
+    ctx.drawImage(城Canvas, 0, 0, FIELD.w, FIELD.h);
+    城の傷みを描く(ctx, b.map);          // 帯だけは毎コマ。画布は門が破れるまで焼き直さない
+  }
 
   // 布陣段階は自陣の範囲を示す（筋書きの一戦は布陣を動かせないので出さない）
   if (b.phase === "deploy" && !b.筋書き) {
