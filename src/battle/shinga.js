@@ -19,7 +19,7 @@
    広げる。切りたいときは棚に sengoku:旧絵 を「入」で置けば元の絵に戻る。
    ========================================================================== */
 import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS, ROAD,
-  RIVER, hasRiver } from "./field.js";
+  RIVER, hasRiver, riverShift } from "./field.js";
 
 /* どの盤でも新しい絵で描く。棚の sengoku:旧絵 が「入」なら使わない（逃げ道）。
 
@@ -777,9 +777,12 @@ function 線引(g, pts, lw, st) { g.strokeStyle = st; g.lineWidth = lw;
   g.lineJoin = "round"; g.lineCap = "round";
   g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
   for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.stroke(); }
-const 名札 = (g, x, y, s) => {
-  g.save(); g.font = '600 13px "Hiragino Mincho ProN","Yu Mincho",serif'; g.textAlign = "center";
-  g.lineWidth = 3.5; g.strokeStyle = "rgba(238,232,214,0.85)"; g.strokeText(s, x, y);
+/* 地物の札。野の座標で描くので、字の大きさは野の広さに連れて大きくする。
+   十三で固めると、広い野では十三歩――豆粒になって読めない。 */
+const 名札 = (g, x, y, s, 倍 = 1) => {
+  const 字 = Math.round(13 * Math.max(1, 倍));
+  g.save(); g.font = `600 ${字}px "Hiragino Mincho ProN","Yu Mincho",serif`; g.textAlign = "center";
+  g.lineWidth = 字 * 0.27; g.strokeStyle = "rgba(238,232,214,0.85)"; g.strokeText(s, x, y);
   g.fillStyle = "rgba(56,50,36,0.95)"; g.fillText(s, x, y); g.restore(); };
 
 /* ===== 野を、画素ごとに塗る（GDD 8.11）=====
@@ -1091,8 +1094,106 @@ function 集落(q, cx, cy, r, 種, 明関, 倍) {
   }
 }
 
+/* 渡し場（GDD 8.1）。橋は板を渡し、浅瀬は瀬が浅く石が覗く。
+
+   新しい筆には、これが一行も無かった。盤（理）には橋も浅瀬もあるのに、
+   絵には無い――どこを渡れるのか目で分からない。遊ぶ側の申し出は
+   「橋や浅瀬がなくなっている」であった。 */
+function 渡し場を描く(g, r, w, 倍) {
+  const 橋 = w.種 === "橋";
+  const 川幅 = w.川幅 || r.幅 || 50;
+  /* 渡し場は川の向きに合わせて敷く。横に流れる川しか無いと決めてかかると、
+     斜めに流れる筋書きの川（千曲・犀）で橋が水の外へ落ちる。
+     いちばん近い節の向きを取り、その向きに板を渡す。 */
+  let cx = w.x, cy = w.y, 角 = 0, 近 = Infinity;
+  for (let i = 0; i + 1 < r.節.length; i++) {
+    const [x0, y0] = r.節[i], [x1, y1] = r.節[i + 1];
+    const vx = x1 - x0, vy = y1 - y0, L2 = vx * vx + vy * vy;
+    let t = L2 ? ((w.x - x0) * vx + (w.y - y0) * vy) / L2 : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const px = x0 + vx * t, py = y0 + vy * t;
+    const d = (px - w.x) ** 2 + (py - w.y) ** 2;
+    if (d < 近) { 近 = d; cx = px; cy = py; 角 = Math.atan2(vy, vx); }
+  }
+  const 長 = Math.max(8, w.r || (w.帯 ? (w.帯[1] - w.帯[0]) / 2 : 川幅 * 0.6));
+  const 半 = 川幅 / 2 + (橋 ? 1.5 : 3) * 倍;
+  g.save();
+  g.translate(cx, cy); g.rotate(角);
+  const x0 = -長, x1 = 長;
+  if (橋) {
+    g.fillStyle = "rgba(24,40,52,0.38)";                          // 水面へ落ちる影
+    g.fillRect(x0 + 1.5 * 倍, -半 + 2.5 * 倍, 長 * 2, 半 * 2);
+    g.fillStyle = "#9A7748";                                      // 板
+    g.fillRect(x0, -半, 長 * 2, 半 * 2);
+    /* 板は渡る向きに対して横に敷く。縦に引いては、筏を並べたように見える。 */
+    g.strokeStyle = "rgba(70,48,26,0.45)"; g.lineWidth = Math.max(0.6, 0.5 * 倍);
+    const 板間 = Math.max(2 * 倍, (半 * 2) / 14);
+    for (let d = -半 + 板間; d < 半; d += 板間) {
+      g.beginPath(); g.moveTo(x0, d); g.lineTo(x1, d); g.stroke();
+    }
+    g.fillStyle = "#6B4F2E";                                      // 橋脚（水の中の柱）
+    for (const t of [0.34, 0.66]) {
+      const d = -半 + 半 * 2 * t;
+      g.fillRect(x0, d - 0.5 * 倍, 長 * 2, 倍);
+    }
+    g.strokeStyle = "#5E4426"; g.lineWidth = Math.max(1.2, 1.4 * 倍);
+    for (const x of [x0, x1]) {                                   // 欄干。渡る両の脇
+      g.beginPath(); g.moveTo(x, -半); g.lineTo(x, 半); g.stroke();
+    }
+    g.fillStyle = "#4A3722";                                      // 擬宝珠（柱の頭）
+    for (const x of [x0, x1]) {
+      for (const d of [-半, -半 / 3, 半 / 3, 半]) {
+        g.beginPath(); g.arc(x, d, 1.1 * 倍, 0, 7); g.fill();
+      }
+    }
+  } else {
+    g.fillStyle = "rgba(196,218,226,0.72)";                       // 浅い瀬
+    g.fillRect(x0, -半, 長 * 2, 半 * 2);
+    g.fillStyle = "rgba(206,200,176,0.8)";                        // 瀬に覗く石
+    野種を置く(Math.round(w.x + w.y));
+    for (let i = 0; i < 26; i++) {
+      const x = x0 + 野乱() * 長 * 2, d = (野乱() - 0.5) * 川幅 * 0.8;
+      g.beginPath(); g.ellipse(x, d, (0.8 + 野乱() * 1.2) * 倍, (0.5 + 野乱() * 0.7) * 倍, 0, 0, 7); g.fill();
+    }
+  }
+  g.restore();
+  /* 札は回さない。字は常に真っ直ぐ読めるようにして、川の上の側へ置く。 */
+  const nx = -Math.sin(角), ny = Math.cos(角);
+  const 向 = ny > 0 ? -1 : 1;
+  名札(g, cx + nx * 向 * (半 + 3 * 倍), cy + ny * 向 * (半 + 3 * 倍), 橋 ? "橋" : "浅瀬", 倍 * 0.7);
+}
+
 /* ============ 野を焼く ============
    g は画布の筆。画k ＝ 野の寸法から画布の画素への倍。 */
+/* 盤の川を、絵に写せる形へ起こす（GDD 8.1）。
+   筋書きの野は RIVERS に節と渡しを持つ。生まれた野は RIVER の帯と
+   riverShift の蛇行で持つ――どちらも同じ形に揃えて返す。理（terrainAt）と
+   同じ式から起こすので、絵の水と足を止める水とは必ず重なる。 */
+export function 野の川筋() {
+  const 野の川 = [];
+  if (RIVERS && RIVERS.length) {
+    for (const r of RIVERS) {
+      野の川.push({ 幅: r.幅 || 50,
+        節: (r.節 || []).map((p) => [p.x != null ? p.x : p[0], p.y != null ? p.y : p[1]]),
+        渡し: (r.渡し || []).map((w) => ({ x: w.x, y: w.y, r: w.r, 種: w.種 })) });
+    }
+  } else if (hasRiver()) {
+    const 芯 = (RIVER.top + RIVER.bot) / 2;
+    const 節 = [];
+    for (let x = 0; x <= FIELD.w; x += Math.max(20, FIELD.w / 160)) 節.push([x, 芯 + riverShift(x)]);
+    節.push([FIELD.w, 芯 + riverShift(FIELD.w)]);
+    const 渡し = [];
+    const 幅川 = Math.max(20, RIVER.bot - RIVER.top);
+    for (const [帯, 種] of [[RIVER.bridge, "橋"], [RIVER.ford, "浅瀬"]]) {
+      if (!帯 || !(帯[1] > 帯[0])) continue;
+      const cx = (帯[0] + 帯[1]) / 2;
+      渡し.push({ x: cx, y: 芯 + riverShift(cx), r: (帯[1] - 帯[0]) / 2, 種, 帯, 川幅: 幅川 });
+    }
+    野の川.push({ 幅: 幅川, 節, 渡し });
+  }
+  return 野の川;
+}
+
 export function 新絵の野(g, 画k) { const it = 野を焼く(g, 画k); while (!it.next().done) { /* 一息で焼く */ } }
 /* 帯で止められる焼き手。頁はこちらを汲み、試験や道具は上の一息版を使う。 */
 export function* 野を焼く(g, 画k) {
@@ -1107,10 +1208,17 @@ export function* 野を焼く(g, 画k) {
   const 峰 = [];
   for (const o of HILLS) 峰.push({ x: PX(o.x), y: PY(o.y), r: PX(o.r), h: 山高m(o) / 200, 山: false });
   for (const o of MOUNTAINS) 峰.push({ x: PX(o.x), y: PY(o.y), r: PX(o.r), h: 山高m(o) / 200, 山: true });
-  const 川ら = (RIVERS && RIVERS.length ? RIVERS : (hasRiver() ? [{
-    幅: Math.max(20, RIVER.bot - RIVER.top),
-    節: [[0, (RIVER.top + RIVER.bot) / 2], [FIELD.w, (RIVER.top + RIVER.bot) / 2]],
-  }] : [])).map((r) => ({ 幅: PX(r.幅 || 50), 節: (r.節 || []).map((p) => [PX(p.x != null ? p.x : p[0]), PY(p.y != null ? p.y : p[1])]) }))
+  /* 川（GDD 8.1）。
+
+     盤の持つ川をそのまま写す。生まれた野の川は蛇行する（riverShift）のに、
+     ここでは真っ直ぐな一本として描いていた。絵の水と、理の水とが食い違う――
+     水の無いところで足が止まり、水の上を素通りする。遊ぶ側の申し出は
+     「川の判定位置がおかしい」であった。蛇行を節に起こして写す。
+
+     渡し場（橋・浅瀬）も盤から読む。筋書きの野は川ごとに渡しを持ち、
+     生まれた野は RIVER.bridge／RIVER.ford が x の幅で持つ。 */
+  const 野の川 = 野の川筋();
+  const 川ら = 野の川.map((r) => ({ 幅: PX(r.幅), 節: r.節.map((p) => [PX(p[0]), PY(p[1])]) }))
     .filter((r) => r.節.length > 1);
   const 道ら = (ROADS && ROADS.length ? ROADS : (ROAD ? [ROAD] : []))
     .map((r) => ({ 幅: PX(r.幅 || 30), 節: (r.節 || []).map((p) => [PX(p.x != null ? p.x : p[0]), PY(p.y != null ? p.y : p[1])]) }))
@@ -1335,10 +1443,12 @@ export function* 野を焼く(g, 画k) {
   for (const [x, y, r, 振, 日] of 木) 繁木(g, x, y, r, 振, 日);
   計("木");
 
-  /* 名のある峰と村の札。野の座標で描く */
+  /* 渡し場と、名のある峰・村の札。野の座標で描く */
   g.setTransform(k, 0, 0, k, 0, 0);
-  for (const o of [...HILLS, ...MOUNTAINS]) if (o.札 && o.名) 名札(g, o.x, o.y - o.r * 0.36, o.名);
-  for (const v of VILLAGES) if (v.札 && v.名) 名札(g, v.x, v.y + (v.r || 40) + 12, v.名);
+  for (const r of 野の川) for (const w of (r.渡し || [])) 渡し場を描く(g, r, w, Math.max(1, 倍 / k));
+  { const 札倍 = Math.max(1, 0.7 * 倍 / k);
+    for (const o of [...HILLS, ...MOUNTAINS]) if (o.札 && o.名) 名札(g, o.x, o.y - o.r * 0.36, o.名, 札倍);
+    for (const v of VILLAGES) if (v.札 && v.名) 名札(g, v.x, v.y + (v.r || 40) + 12, v.名, 札倍); }
   g.setTransform(1, 0, 0, 1, 0, 0);
 }
 

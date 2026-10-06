@@ -26204,11 +26204,12 @@ function \u65D7\u6301\u672D(side, \u5F62) {
   }
   return n;
 }
-var \u540D\u672D = (g, x, y, s2) => {
+var \u540D\u672D = (g, x, y, s2, \u500D = 1) => {
+  const \u5B57 = Math.round(13 * Math.max(1, \u500D));
   g.save();
-  g.font = '600 13px "Hiragino Mincho ProN","Yu Mincho",serif';
+  g.font = `600 ${\u5B57}px "Hiragino Mincho ProN","Yu Mincho",serif`;
   g.textAlign = "center";
-  g.lineWidth = 3.5;
+  g.lineWidth = \u5B57 * 0.27;
   g.strokeStyle = "rgba(238,232,214,0.85)";
   g.strokeText(s2, x, y);
   g.fillStyle = "rgba(56,50,36,0.95)";
@@ -26552,6 +26553,108 @@ function \u96C6\u843D(q, cx, cy, r, \u7A2E2, \u660E\u95A2, \u500D) {
     \u7E41\u6728(q, x, y, (4 + \u91CE\u4E71() * 3) * \u500D, \u91CE\u4E71(), \u660E\u95A2(x, y));
   }
 }
+function \u6E21\u3057\u5834\u3092\u63CF\u304F(g, r, w, \u500D) {
+  const \u6A4B = w.\u7A2E === "\u6A4B";
+  const \u5DDD\u5E45 = w.\u5DDD\u5E45 || r.\u5E45 || 50;
+  let cx = w.x, cy = w.y, \u89D2 = 0, \u8FD1 = Infinity;
+  for (let i = 0; i + 1 < r.\u7BC0.length; i++) {
+    const [x02, y0] = r.\u7BC0[i], [x12, y1] = r.\u7BC0[i + 1];
+    const vx = x12 - x02, vy = y1 - y0, L2 = vx * vx + vy * vy;
+    let t = L2 ? ((w.x - x02) * vx + (w.y - y0) * vy) / L2 : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const px2 = x02 + vx * t, py2 = y0 + vy * t;
+    const d = (px2 - w.x) ** 2 + (py2 - w.y) ** 2;
+    if (d < \u8FD1) {
+      \u8FD1 = d;
+      cx = px2;
+      cy = py2;
+      \u89D2 = Math.atan2(vy, vx);
+    }
+  }
+  const \u95772 = Math.max(8, w.r || (w.\u5E2F ? (w.\u5E2F[1] - w.\u5E2F[0]) / 2 : \u5DDD\u5E45 * 0.6));
+  const \u534A = \u5DDD\u5E45 / 2 + (\u6A4B ? 1.5 : 3) * \u500D;
+  g.save();
+  g.translate(cx, cy);
+  g.rotate(\u89D2);
+  const x0 = -\u95772, x1 = \u95772;
+  if (\u6A4B) {
+    g.fillStyle = "rgba(24,40,52,0.38)";
+    g.fillRect(x0 + 1.5 * \u500D, -\u534A + 2.5 * \u500D, \u95772 * 2, \u534A * 2);
+    g.fillStyle = "#9A7748";
+    g.fillRect(x0, -\u534A, \u95772 * 2, \u534A * 2);
+    g.strokeStyle = "rgba(70,48,26,0.45)";
+    g.lineWidth = Math.max(0.6, 0.5 * \u500D);
+    const \u677F\u9593 = Math.max(2 * \u500D, \u534A * 2 / 14);
+    for (let d = -\u534A + \u677F\u9593; d < \u534A; d += \u677F\u9593) {
+      g.beginPath();
+      g.moveTo(x0, d);
+      g.lineTo(x1, d);
+      g.stroke();
+    }
+    g.fillStyle = "#6B4F2E";
+    for (const t of [0.34, 0.66]) {
+      const d = -\u534A + \u534A * 2 * t;
+      g.fillRect(x0, d - 0.5 * \u500D, \u95772 * 2, \u500D);
+    }
+    g.strokeStyle = "#5E4426";
+    g.lineWidth = Math.max(1.2, 1.4 * \u500D);
+    for (const x of [x0, x1]) {
+      g.beginPath();
+      g.moveTo(x, -\u534A);
+      g.lineTo(x, \u534A);
+      g.stroke();
+    }
+    g.fillStyle = "#4A3722";
+    for (const x of [x0, x1]) {
+      for (const d of [-\u534A, -\u534A / 3, \u534A / 3, \u534A]) {
+        g.beginPath();
+        g.arc(x, d, 1.1 * \u500D, 0, 7);
+        g.fill();
+      }
+    }
+  } else {
+    g.fillStyle = "rgba(196,218,226,0.72)";
+    g.fillRect(x0, -\u534A, \u95772 * 2, \u534A * 2);
+    g.fillStyle = "rgba(206,200,176,0.8)";
+    \u91CE\u7A2E\u3092\u7F6E\u304F(Math.round(w.x + w.y));
+    for (let i = 0; i < 26; i++) {
+      const x = x0 + \u91CE\u4E71() * \u95772 * 2, d = (\u91CE\u4E71() - 0.5) * \u5DDD\u5E45 * 0.8;
+      g.beginPath();
+      g.ellipse(x, d, (0.8 + \u91CE\u4E71() * 1.2) * \u500D, (0.5 + \u91CE\u4E71() * 0.7) * \u500D, 0, 0, 7);
+      g.fill();
+    }
+  }
+  g.restore();
+  const nx = -Math.sin(\u89D2), ny = Math.cos(\u89D2);
+  const \u5411 = ny > 0 ? -1 : 1;
+  \u540D\u672D(g, cx + nx * \u5411 * (\u534A + 3 * \u500D), cy + ny * \u5411 * (\u534A + 3 * \u500D), \u6A4B ? "\u6A4B" : "\u6D45\u702C", \u500D * 0.7);
+}
+function \u91CE\u306E\u5DDD\u7B4B() {
+  const \u91CE\u306E\u5DDD = [];
+  if (RIVERS2 && RIVERS2.length) {
+    for (const r of RIVERS2) {
+      \u91CE\u306E\u5DDD.push({
+        \u5E45: r.\u5E45 || 50,
+        \u7BC0: (r.\u7BC0 || []).map((p) => [p.x != null ? p.x : p[0], p.y != null ? p.y : p[1]]),
+        \u6E21\u3057: (r.\u6E21\u3057 || []).map((w) => ({ x: w.x, y: w.y, r: w.r, \u7A2E: w.\u7A2E }))
+      });
+    }
+  } else if (hasRiver()) {
+    const \u82AF = (RIVER.top + RIVER.bot) / 2;
+    const \u7BC0 = [];
+    for (let x = 0; x <= FIELD.w; x += Math.max(20, FIELD.w / 160)) \u7BC0.push([x, \u82AF + riverShift(x)]);
+    \u7BC0.push([FIELD.w, \u82AF + riverShift(FIELD.w)]);
+    const \u6E21\u3057 = [];
+    const \u5E45\u5DDD = Math.max(20, RIVER.bot - RIVER.top);
+    for (const [\u5E2F, \u7A2E2] of [[RIVER.bridge, "\u6A4B"], [RIVER.ford, "\u6D45\u702C"]]) {
+      if (!\u5E2F || !(\u5E2F[1] > \u5E2F[0])) continue;
+      const cx = (\u5E2F[0] + \u5E2F[1]) / 2;
+      \u6E21\u3057.push({ x: cx, y: \u82AF + riverShift(cx), r: (\u5E2F[1] - \u5E2F[0]) / 2, \u7A2E: \u7A2E2, \u5E2F, \u5DDD\u5E45: \u5E45\u5DDD });
+    }
+    \u91CE\u306E\u5DDD.push({ \u5E45: \u5E45\u5DDD, \u7BC0, \u6E21\u3057 });
+  }
+  return \u91CE\u306E\u5DDD;
+}
 function* \u91CE\u3092\u713C\u304F2(g, \u753Bk) {
   \u8A08\u59CB();
   const k = \u753Bk || 1;
@@ -26562,10 +26665,8 @@ function* \u91CE\u3092\u713C\u304F2(g, \u753Bk) {
   const \u5CF0 = [];
   for (const o of HILLS) \u5CF0.push({ x: PX(o.x), y: PY(o.y), r: PX(o.r), h: \u5C71\u9AD8m(o) / 200, \u5C71: false });
   for (const o of MOUNTAINS) \u5CF0.push({ x: PX(o.x), y: PY(o.y), r: PX(o.r), h: \u5C71\u9AD8m(o) / 200, \u5C71: true });
-  const \u5DDD\u3089 = (RIVERS2 && RIVERS2.length ? RIVERS2 : hasRiver() ? [{
-    \u5E45: Math.max(20, RIVER.bot - RIVER.top),
-    \u7BC0: [[0, (RIVER.top + RIVER.bot) / 2], [FIELD.w, (RIVER.top + RIVER.bot) / 2]]
-  }] : []).map((r) => ({ \u5E45: PX(r.\u5E45 || 50), \u7BC0: (r.\u7BC0 || []).map((p) => [PX(p.x != null ? p.x : p[0]), PY(p.y != null ? p.y : p[1])]) })).filter((r) => r.\u7BC0.length > 1);
+  const \u91CE\u306E\u5DDD = \u91CE\u306E\u5DDD\u7B4B();
+  const \u5DDD\u3089 = \u91CE\u306E\u5DDD.map((r) => ({ \u5E45: PX(r.\u5E45), \u7BC0: r.\u7BC0.map((p) => [PX(p[0]), PY(p[1])]) })).filter((r) => r.\u7BC0.length > 1);
   const \u9053\u3089 = (ROADS2 && ROADS2.length ? ROADS2 : ROAD ? [ROAD] : []).map((r) => ({ \u5E45: PX(r.\u5E45 || 30), \u7BC0: (r.\u7BC0 || []).map((p) => [PX(p.x != null ? p.x : p[0]), PY(p.y != null ? p.y : p[1])]) })).filter((r) => r.\u7BC0.length > 1);
   const \u534A = 2;
   const hw = Math.max(2, Math.ceil(W2 / \u534A)), hh = Math.max(2, Math.ceil(H2 / \u534A));
@@ -26770,8 +26871,12 @@ function* \u91CE\u3092\u713C\u304F2(g, \u753Bk) {
   for (const [x, y, r, \u632F, \u65E5] of \u67282) \u7E41\u6728(g, x, y, r, \u632F, \u65E5);
   \u8A08("\u6728");
   g.setTransform(k, 0, 0, k, 0, 0);
-  for (const o of [...HILLS, ...MOUNTAINS]) if (o.\u672D && o.\u540D) \u540D\u672D(g, o.x, o.y - o.r * 0.36, o.\u540D);
-  for (const v of VILLAGES) if (v.\u672D && v.\u540D) \u540D\u672D(g, v.x, v.y + (v.r || 40) + 12, v.\u540D);
+  for (const r of \u91CE\u306E\u5DDD) for (const w of r.\u6E21\u3057 || []) \u6E21\u3057\u5834\u3092\u63CF\u304F(g, r, w, Math.max(1, \u500D / k));
+  {
+    const \u672D\u500D = Math.max(1, 0.7 * \u500D / k);
+    for (const o of [...HILLS, ...MOUNTAINS]) if (o.\u672D && o.\u540D) \u540D\u672D(g, o.x, o.y - o.r * 0.36, o.\u540D, \u672D\u500D);
+    for (const v of VILLAGES) if (v.\u672D && v.\u540D) \u540D\u672D(g, v.x, v.y + (v.r || 40) + 12, v.\u540D, \u672D\u500D);
+  }
   g.setTransform(1, 0, 0, 1, 0, 0);
 }
 function \u65B0\u7D75\u306E\u57CE\u306E\u5730(g, m, \u753Bk) {
