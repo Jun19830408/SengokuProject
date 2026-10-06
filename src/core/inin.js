@@ -20,7 +20,7 @@
 
    縦の鎖は 城主 → 国主 → 旗頭 の一本道である。寄親は一人までなので、
    枝分かれはしない。 */
-import { castellanOf } from "./rank.js";
+import { canHoldCastle, castellanOf, stipendOf, 旗頭たち, 旗頭の受け持ち } from "./rank.js";
 
 /* その城の差配は預けられているか。預けられていれば寄親を返す。
 
@@ -274,3 +274,69 @@ export const 自ら采配するか = (s, army, 的) => {
   if (!army.旗頭) return true;                       // 大名の直の手勢
   return !!的 && 的.faction === s.player;            // 預けた手勢でも、自家の守りなら出る
 };
+
+
+/* ============================================ 旗頭が城主を宛てがう（GDD 6.4）
+
+   方面軍の受け持ちから、城主が欠けることがある。討たれ、捕らわれ、病に倒れ、
+   あるいは城を落として空のまま置いた。城主のいない城は、鎖（城主→寄親）が
+   切れているので寄騎にできない。差配も守りも預けられず、受け持ちの真ん中に
+   大名が直に見るほかない城が穴のように空く。
+
+   遊ぶ側の申し出は「方面軍である旗頭のおさめている城について城主がいなくなった
+   場合、旗頭が自分の管理する城から武将を自動であてがうようにしたい。武将のいない
+   城は寄騎になれないので、何か工夫してほしい」であった。
+
+   工夫はこうである。鎖のほうを緩めるのではなく、欠けた環を旗頭に埋めさせる。
+   方面を預かるとは、人の配りまで預かるということである。受け持ちの城が空けば、
+   手許の城から身代の重い者を選んで送り、根を移させ、己の寄騎に加える。
+   送り出した城が空にならぬよう、城主のほかに人のいる城からしか引かない。
+
+   当主・国主・旗頭は動かさない。役を持つ者の根を勝手に移しては、国と方面の
+   絵図が崩れる。城を二つ持たせもしない。 */
+export function 旗頭が城主を宛てがう(s, fid) {
+  const 据えた = [];
+  const 旗ら = 旗頭たち(s, fid);
+  if (!旗ら.length) return 据えた;
+  const 家の城 = (s.castles || []).filter((c) => c.faction === fid);
+  const 本拠 = ((s.factions || {})[fid] || {}).本拠;
+  /* 動かせぬ者。当主、役を持つ者、すでに城を預かる者、陣中の者、囚われた者。 */
+  const 動かせる = (g, 元) => !g.captive && g.faction === fid && !g.lord
+    && g.役 !== "国主" && g.役 !== "旗頭"
+    && g.at === 元.id
+    && !(s.castles || []).some((o) => o.lordId === g.id);
+  for (const 旗 of 旗ら) {
+    const 受 = 旗頭の受け持ち(s, 旗);
+    if (!受.length) continue;
+    const 手許 = 家の城.filter((c) => 受.includes(c.kuni));
+    /* 空いた城。本拠は大名の城であるから触れない。 */
+    const 空 = 手許.filter((c) => c.id !== 本拠 && !castellanOf(s, c));
+    for (const c of 空) {
+      /* 送り出せる者を、手許の城から集める。城主のほかに人のいる城からだけ。 */
+      let 択 = null, 元 = null;
+      for (const o of 手許) {
+        if (o.id === c.id) continue;
+        const 居 = (s.generals || []).filter((g) => 動かせる(g, o));
+        const 主 = castellanOf(s, o);
+        const 余 = 居.filter((g) => !主 || g.id !== 主.id);
+        /* 城主を引き抜いて空にはしない。城主のほかに誰も居らぬなら送らない。 */
+        if (!余.length) continue;
+        for (const g of 余) {
+          const 位 = canHoldCastle(g, s, c) ? 1 : 0;
+          const 禄 = stipendOf(s, g);
+          if (!択 || 位 > 択.位 || (位 === 択.位 && 禄 > 択.禄)) {
+            択 = { g, 位, 禄 }; 元 = o;
+          }
+        }
+      }
+      if (!択) continue;
+      const g = 択.g;
+      g.at = c.id; g.本領 = c.id;
+      c.lordId = g.id;
+      c.城代 = !canHoldCastle(g, s, c);
+      g.寄親 = 旗.id;                                 // 埋めた環を、そのまま方面に繋ぐ
+      据えた.push({ 旗, 城: c, 将: g, 元, 城代: !!c.城代 });
+    }
+  }
+  return 据えた;
+}

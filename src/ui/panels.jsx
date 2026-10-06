@@ -1322,6 +1322,22 @@ export function FactionInfo({ g, onClose }) {
 export function GeneralList({ g, onClose, onYakume }) {
   const gs = g.generals.filter((x) => x.faction === g.player);
   const [欄, set欄] = useState("武将");
+  /* 名でさがす（GDD 6.4）。
+
+     家中が百人を越えると、帳を繰るだけで目当ての者に辿り着けない。遊ぶ側の
+     申し出は「武将一覧がわかりにくいので、検索できるようにしてほしい。完全一致
+     でなくても、候補が出るようにしてほしい」であった。名の一部、城の名、国の名、
+     役の名――どれに掠っても候補に残す。 */
+  const [探, set探] = useState("");
+  const 城名 = (x) => (g.castles.find((c) => c.id === (x.at || x.本領)) || {}).name || "";
+  const 国名 = (x) => (g.castles.find((c) => c.id === (x.at || x.本領)) || {}).kuni || "";
+  const 掠る = (x) => {
+    const q = 探.trim();
+    if (!q) return true;
+    return [x.name, 城名(x), 国名(x), x.役 || "", rankName(x, g)]
+      .some((t) => String(t).includes(q));
+  };
+  const 当たり = gs.filter(掠る);
   const 頭 = 組頭の帳(g);
   return (
     <div className="modal" {...外を押して閉じる(onClose)}>
@@ -1444,7 +1460,24 @@ export function GeneralList({ g, onClose, onYakume }) {
         </>)}
 
         {欄 === "武将" && (<>
-        {gs.map((x) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <input value={探} onChange={(e) => set探(e.target.value)}
+            placeholder="名でさがす（城・国・役でも当たります）"
+            style={{ flex: 1, padding: "5px 8px", background: "transparent", color: U.text,
+              border: `1px solid ${U.line2}`, fontSize: 13 }} />
+          {探 && (
+            <button className="btn sm" onClick={() => set探("")}>消す</button>
+          )}
+          <span className="num" style={{ color: U.dim, fontSize: 12 }}>
+            {探 ? `${当たり.length}／${gs.length}名` : `${gs.length}名`}
+          </span>
+        </div>
+        {探 && !当たり.length && (
+          <div style={{ fontSize: 12.5, color: U.dim, padding: "18px 0", textAlign: "center" }}>
+            「{探}」に当たる者はいません。
+          </div>
+        )}
+        {当たり.map((x) => (
           <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" }}>
             <span className="mn" style={{ fontSize: 15, width: 100 }}>
               {x.name}
@@ -1457,12 +1490,12 @@ export function GeneralList({ g, onClose, onYakume }) {
             <span className="num">直属 {fmt(x.retinue)}</span>
           </div>
         ))}
-        {gs.some((x) => is架空(x)) && (
+        {当たり.some((x) => is架空(x)) && (
           <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
             〔架空〕… 遊びの中で生まれた者です。史実の人物ではありません。
           </div>
         )}
-        {gs.some((x) => isNameless(x)) && (
+        {当たり.some((x) => isNameless(x)) && (
           <div style={{ fontSize: 11, color: U.dim, marginTop: 10, lineHeight: 1.7 }}>
             〔伝〕は名の伝わらぬ在地の長です。地名に「乙名」「按司」を添えた呼び名であり、実在の人名ではありません。
           </div>
@@ -1481,6 +1514,11 @@ export function GeneralList({ g, onClose, onYakume }) {
    これを塞いでいなかったころは、隣国を平らげた途端に神戸と北畠が勝手に臣従してきた。
    旗の下に入れるかどうかは、こちらの決めることである。 */
 /* 臣従した家からの「攻めの願い」（GDD 12.2）。
+
+   いまは新しく立たない。主家が遊ぶ側であるときの願いは取り下げた（遊ぶ側の
+   申し出による。core/yurushi.js の書を見よ）。前の版の記録に願いが残っている
+   ことがあるので、答える道だけは残してある。 */
+/* もとの書き（願いが立っていたころの筋）。
 
    臣従は旗の下に完全に入ることであり、外交を主に預ける。その家が勝手に隣国へ
    攻めかかれば、主家の外交はたちまち破れる。だから許しを乞う。

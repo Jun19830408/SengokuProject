@@ -2485,6 +2485,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {selCastle && (
           <CastleSheet g={g} castle={selCastle} land={land} tab={tab} setTab={setTab}
             onClose={() => setSel(null)} onCommand={runCommand} onAppoint={appoint}
+            onShirogae={(genId, toId) => setG((p) => 政務.城替え(p, genId, toId))}
             onTrade={(id, kind, n) => setG((prev) => 政務.doTrade(prev, id, kind, n))}
             onSortie={() => setModal("sortie")}
             onMarchOn={(id) => { set在陣(id); setModal("marchon"); }}

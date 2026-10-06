@@ -633,7 +633,15 @@ export function sackCastle(s, castle, army, hard) {
    呼ばれたときである。 */
 export const 方面の報せ = (s, army, 文) => {
   if (!army || army.faction !== s.player || !army.旗頭) return s;
-  s.monthEvents = [...(s.monthEvents || []), `【方面軍】${文}`];
+  /* どの旗頭が、どこを攻めたのか（GDD 6.4）。
+
+     月報には「【方面軍】岐阜城を囲んだ」とだけ並んでいた。方面を幾人にも
+     預ければ、同じ月に三つも四つも並ぶ。どれが誰の手柄で、どの方面の話なのかが
+     分からない――遊ぶ側の申し出は「どの旗頭がどこを攻めたのかも明記してほしい」
+     であった。報せの頭に、旗頭の名と預けた方面を置く。 */
+  const 旗 = (s.generals || []).find((g) => g.id === army.旗頭);
+  const 主語 = 旗 ? `${旗.name}${旗.役国 ? `（${旗.役国}方面）` : ""}が` : "";
+  s.monthEvents = [...(s.monthEvents || []), `【方面軍】${主語}${文}`];
   return s;
 };
 
@@ -939,7 +947,7 @@ export function resolveOffscreen(prev, armyId, castleId) {
         + `兵糧が尽きるか、城兵が崩れるまで囲みを続ける。`);
     } else {
       const 帰 = withdrawArmy(s, army);        // 出陣元が奪われていても、必ずどこかの自領へ戻す
-      方面の報せ(s, army, `${castle.name}攻めは成らず、${帰 ? 帰.name : "自領"}へ退いた。`);
+      方面の報せ(s, army, `${castle.name}攻めに敗れ、${帰 ? 帰.name : "自領"}へ退いた。`);
     }
     城主の札を繕う(s);              // 家を移った者の札を、その場で外す
     return s;

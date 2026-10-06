@@ -13,7 +13,7 @@ import { DIPLO, PLOTS, SPECIAL_OPTIONS, SUBJECT } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { canBeKeeper, canHoldCastle, castleRankNeed, stipendOf, 国主に任じる, 城主を据え替える, 旗頭に任じる, 旗頭を解く, 旗頭の受け持ち, 旗頭の的家を定める } from "../core/rank.js";
+import { canBeKeeper, canHoldCastle, castellanOf, castleRankNeed, stipendOf, 国主に任じる, 城主を据え替える, 城を明け渡す, 旗頭に任じる, 旗頭を解く, 旗頭の受け持ち, 旗頭の的家を定める } from "../core/rank.js";
 import { 基準値, 売値, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
@@ -194,6 +194,85 @@ export function appoint(prev, castleId, genId) {
         ? `${gen.name}を${c.name}の城主に任じた。${役持ち && (s.castles.find((x) => x.id === gen.本領) || {}).kuni !== c.kuni
           ? `（${gen.役}の役はそのまま。根は${(s.castles.find((x) => x.id === gen.本領) || {}).name || "元の城"}に置く）` : ""}`
         : `${gen.name}を${c.name}の城代に任じた（禄高${fmt(stipendOf(s, gen))}石。城主には${fmt(castleRankNeed(c))}石と侍大将以上の身分が要る）。` });
+    return s;
+}
+
+/* ====================================================== 城替え（GDD 6.4）
+
+   同じ家の城と城のあいだで、人を入れ替える。
+
+   これまで人を動かす道は二つしかなかった。城主に任じる（その城にいる者から
+   選ぶ）と、出陣して着いた先に置く、である。遠くの城に大身の者が埋もれ、
+   近くの城は城代ばかり、という配りの歪みを直す手が無かった。
+
+   遊ぶ側の申し出は「自国の城について、その城の城主と所属武将の城替えが
+   できるようにしてほしい。移動先に別の城主や武将がいたら、そのまま交換、
+   移動先にだれもいなければ移動先には城主と武将がそのまま入り、元の城は
+   空になるように」であった。そのとおりに組む。
+
+     行き先に人がいる　… 入れ替える（互いの城へ根を移す）
+     行き先が空　　　　… 移って城主となる。元の城は、残る者が継ぐか、空く
+
+   動かせぬ者が三つある。
+     一、当主。当主の居る城が本拠であるから、本拠が動いてしまう
+     二、囚われの者
+     三、国主と旗頭を、国の外へは出さない。役は根の国に結びついている
+         （同じ国の中での城替えは、根の国が変わらないので差し支えない） */
+export function 城替え(prev, genId, toCastleId) {
+    const s = structuredClone(prev);
+    const g1 = s.generals.find((x) => x.id === genId);
+    const to = s.castles.find((x) => x.id === toCastleId);
+    if (!g1 || !to) { s.msg = "その者か、その城がない。"; return s; }
+    const from = s.castles.find((x) => x.id === g1.at);
+    if (!from) { s.msg = `${g1.name}は陣中にある。城に戻ってからでなければ城替えはできぬ。`; return s; }
+    if (from.id === to.id) { s.msg = "同じ城である。"; return s; }
+    if (g1.faction !== s.player || from.faction !== s.player || to.faction !== s.player) {
+      s.msg = "城替えができるのは自家の城のあいだだけである。"; return s;
+    }
+    if (g1.captive) { s.msg = `${g1.name}は囚われの身である。`; return s; }
+    if (g1.lord) { s.msg = "当主は城替えできぬ。当主の居る城が本拠となる。"; return s; }
+    const 役持ち = (x) => x.役 === "国主" || x.役 === "旗頭";
+    if (役持ち(g1) && from.kuni !== to.kuni) {
+      s.msg = `${g1.name}は${g1.役}である。役の根は国を出られぬ（${from.kuni}の城どうしなら移せる）。`;
+      return s;
+    }
+    /* 入れ替える相手。行き先の城主、いなければ城にいるうち最も身代の重い者。 */
+    const 居 = s.generals.filter((x) => x.at === to.id && x.faction === s.player && !x.captive && !x.lord);
+    const 札 = to.lordId && 居.find((x) => x.id === to.lordId);
+    const 相手 = 札 || [...居].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0] || null;
+    if (相手 && 役持ち(相手) && from.kuni !== to.kuni) {
+      s.msg = `${相手.name}は${相手.役}である。役の根は国を出られぬ。`;
+      return s;
+    }
+    const 元の主 = castellanOf(s, from);
+    const 先の主 = castellanOf(s, to);
+    const 根を移す = (g, c) => { g.at = c.id; if (!役持ち(g)) g.本領 = c.id; };
+    const 札を据える = (c, g) => {
+      if (!g) { c.lordId = null; c.城代 = false; return; }
+      城主を据え替える(s, c, g.id, { 城代: !canHoldCastle(g, s, c) });
+    };
+    if (相手) {
+      根を移す(g1, to); 根を移す(相手, from);
+      /* 城主の札は、それぞれの城に残る。移った先で城主であった者の札を、
+         入れ替わりに入った者が引き継ぐ。 */
+      if (先の主 && 先の主.id === 相手.id) 札を据える(to, g1);
+      if (元の主 && 元の主.id === g1.id) 札を据える(from, 相手);
+      新しい城主の寄親を定める(s, to, g1.id, null);
+      新しい城主の寄親を定める(s, from, 相手.id, null);
+      s.chronicle.push({ y: s.year, m: s.month,
+        text: `${g1.name}と${相手.name}が城を替えた（${from.name} ⇄ ${to.name}）。` });
+      s.msg = `${g1.name}を${to.name}へ、${相手.name}を${from.name}へ移した。`;
+    } else {
+      const 明け = 元の主 && 元の主.id === g1.id ? 城を明け渡す(s, from, g1) : null;
+      根を移す(g1, to);
+      札を据える(to, g1);
+      新しい城主の寄親を定める(s, to, g1.id, null);
+      s.chronicle.push({ y: s.year, m: s.month,
+        text: `${g1.name}が${from.name}から${to.name}へ移り、${to.城代 ? "城代として預かった" : "城主となった"}。`
+          + (明け ? (明け.継ぐ ? `${from.name}は${明け.継ぐ.name}が継いだ。` : `${from.name}は城主不在となった。`) : "") });
+      s.msg = `${g1.name}を${to.name}へ移した。`
+        + (明け && !明け.継ぐ ? `${from.name}は将のいない城となった。` : "");
+    }
     return s;
 }
 

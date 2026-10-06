@@ -25,7 +25,7 @@ import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
-export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onHatagashiraMato, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime, onIhou, onChokusan }) {
+export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onShirogae, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onHatagashiraMato, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime, onIhou, onChokusan }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
@@ -48,6 +48,26 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
   const [plotTarget, setPlotTarget] = useState(null);
   const [plotMato, setPlotMato] = useState(null);   // 調略を仕掛ける相手の武将
   const [離間先, set離間先] = useState(null);       // 離間で裂く相手の家
+  /* 人事の小口（GDD 6.4）。
+
+     大名の城の人事には、城主・知行・国主・旗頭・家督・捕虜の下知が一続きに
+     並んでいた。本拠では画面が巻物のように伸び、目当ての下知に辿り着くまで
+     延々と繰ることになる。遊ぶ側の申し出は「大名の城の人事コマンドがやたらと
+     長くなるので、旗頭のことなのか、褒章関係なのかなど、トピックがわかり
+     やすく工夫してほしい」であった。話の筋ごとに分ける。 */
+  const [人事口, set人事口] = useState("城と知行");
+  const [替え者, set替え者] = useState(null);       // 城替えで動かす者
+  const [城替え探, set城替え探] = useState("");     // 城替えの行き先さがし
+  const 人事の小口 = (() => {
+    const 当主 = g.generals.find((x) => x.faction === g.player && x.lord && !x.captive);
+    const 継げる = !!当主 && 当主.at === c.id
+      && heirCandidates(g, 当主).filter(({ gen }) => gen.age >= 12).length > 0;
+    const 虜 = g.generals.some((x) => x.captive && x.captive.ruin
+      && x.captive.by === g.player && x.at === c.id);
+    return [["城と知行", true], ["国と方面", mine], ["家督", 継げる], ["捕虜", 虜]]
+      .filter((x) => x[1]).map((x) => x[0]);
+  })();
+  const 口 = 人事の小口.includes(人事口) ? 人事口 : (人事の小口[0] || "城と知行");
   const [diploTarget, setDiploTarget] = useState(null);
   const cur = genId && gens.some((x) => x.id === genId) ? genId : (gens[0] && gens[0].id);
   // 月の働きは武将ごとに数える。手の空いている者がいれば、まだ命じられる。
@@ -603,6 +623,211 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
 
               {tab === "人事" && (
                 <>
+                  {人事の小口.length > 1 && (
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10,
+                      borderBottom: `1px solid ${U.line2}`, paddingBottom: 8 }}>
+                      {人事の小口.map((k) => (
+                        <button key={k} className={`btn sm ${口 === k ? "on" : ""}`}
+                          onClick={() => set人事口(k)}>{k}</button>
+                      ))}
+                    </div>
+                  )}
+                  {口 === "城と知行" && (
+                    <>
+                  <div style={{ fontSize: 12, color: U.dim, marginBottom: 8 }}>
+                    城主を定めます。城主が代わると地域家臣団の馴染は下がり、月ごとに戻ります。
+                  </div>
+                  <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.7 }}>
+                    城主になれるのは<b style={{ color: U.text }}>侍大将以上</b>で、禄高
+                    <b style={{ color: U.text }}>{fmt(castleRankNeed(c))}石</b>以上の者です
+                    （一門は身分を問いません）。届かぬ者は<b style={{ color: U.text }}>城代</b>として
+                    留守を預かります。城主はその城を本領としますが、城代は預かるだけです。<br />
+                    この城の石高 <b style={{ color: U.text }}>{fmt(c.koku)}石</b>（配れる知行の限り）／
+                    家臣に配った知行 {fmt(fiefBurden(g, c.id))}石<br />
+                    この城の余禄 <b style={{ color: U.text }}>{fmt(extraIncome(c))}石</b>
+                    （湊の運上・市の役銭・山の産）<br />
+                    <span style={{ fontSize: 11 }}>
+                      知行に余禄の分け前を加えたものが<b>禄高</b>で、身分はこれで定まります。
+                      石高が増えれば、配れる知行も増えます。
+                    </span>
+                  </div>
+                  {(() => { const rm = fiefRoom(g, g.player); return (
+                    <div className="row" style={{ borderBottom: `1px solid ${U.line2}`, paddingBottom: 4 }}>
+                      <span>配れる知行</span>
+                      <span className="v num" style={{ color: rm.left <= 0 ? "#B0483C" : U.text }}>
+                        {rm.left > 0 ? `${fmt(rm.left)}石` : "なし"} <span style={{ color: U.dim, fontSize: 11 }}>
+                        （石高 {fmt(rm.cap)}石のうち {fmt(rm.used)}石を配分済
+                        {rm.left < 0 ? `／${fmt(-rm.left)}石の配りすぎ` : ""}）</span></span>
+                    </div>
+                  ); })()}
+                  {gens.filter((x) => !x.captive).map((x) => {
+                    const want = fiefWanted(x), have = fiefOf(x);
+                    const r = have / Math.max(1, want);
+                    const mood = r >= 1.0 ? "満ちている" : r >= 0.75 ? "不足はない" : r >= 0.5 ? "不満がある" : "強い不満";
+                    const col = r >= 0.75 ? U.dim : r >= 0.5 ? "#C89A3A" : "#B0483C";
+                    return (
+                      <div key={x.id} style={{ borderBottom: `1px solid ${U.line2}`, padding: "6px 0" }}>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {(() => {
+                            /* 城主か、城代か（GDD 6.4）。
+
+                               城主になれるのは侍大将以上で、かつその城の身代に見合う
+                               禄高を持つ者である。届かぬ者は城代として預かる。
+                               門番と足軽を束ねて留守を守るのが役目であって、その城を
+                               知行として与えられたわけではない（本領は移らない）。
+
+                               もとは届かぬ者の釦を押せなくしていた。城主になれぬ者にも
+                               留守を預ける道はあるのだから、押せぬようにする筋はない。 */
+                            const 城主か = canHoldCastle(x, g, c);
+                            const 要る = castleRankNeed(c), いま = stipendOf(g, x);
+                            const 身分足らず = 身分の位(x, g) < 2 && !x.lord;
+                            return (
+                              <button className={`btn sm ${lord && lord.id === x.id ? "on" : ""}`}
+                                style={{ flex: 1, textAlign: "left" }}
+                                title={城主か ? "" : `城主には侍大将以上の身分と禄高${fmt(要る)}石が要る（いま${rankName(x, g)}・${fmt(いま)}石）。城代としてなら預けられる`}
+                                onClick={() => onAppoint(c.id, x.id)}>
+                                {x.name} を{城主か ? "城主" : "城代"}に
+                                {!城主か && <span style={{ fontSize: 10.5, color: "#8A6A34", marginLeft: 6 }}>
+                                  {身分足らず ? `${rankName(x, g)}ゆえ城主にはなれぬ`
+                                    : `城主には禄高あと${fmt(Math.max(0, 要る - いま))}石`}
+                                </span>}
+                              </button>
+                            );
+                          })()}
+                          <button className="btn sm" onClick={() => onReward(x.id)}>褒賞300貫</button>
+                        </div>
+                        <div style={{ fontSize: 11, marginTop: 2 }}>
+                          <span style={{ color: "#8A7A5A" }}>{rankName(x, g)}</span>
+                          {!x.lord && (() => {
+                            if (x.lord) return <span style={{ color: U.dim, marginLeft: 6 }}>　御料{fmt(goryoOf(g, x.faction).total)}石</span>;
+                            const st = stipendOf(g, x);
+                            const nx = RANKS.filter((r) => r.min > st).sort((a, b) => a.min - b.min)[0];
+                            return nx ? <span style={{ color: U.dim, marginLeft: 6 }}>
+                              　禄高{fmt(st)}石（あと{fmt(nx.min - st)}石で{nx.key}）
+                            </span> : <span style={{ color: U.dim, marginLeft: 6 }}>　禄高{fmt(st)}石</span>;
+                          })()}
+                        </div>
+                        <div className="num" style={{ fontSize: 11.5, color: col, marginTop: 3 }}>
+                          {isNameless(x) ? <span style={{ color: "#9B9384" }} title="名の伝わらぬ在地の長。実在の人名ではありません">〔伝〕</span> : null}
+                          {is架空(x) ? <span style={{ color: "#9B9384" }} title="遊びの中で生まれた者。史実の人物ではありません">〔架空〕</span> : null}
+                          {x.retired ? <span style={{ color: "#8A7A5A" }}>【隠居】</span> : null}
+                          {x.lord ? <span style={{ color: "#C8A44A" }}>【当主】</span> : null}
+                          忠誠{忠誠(x)}／知行 {fmt(have)}石
+                          （望むところ {fmt(want)}石・{mood}）
+                        </div>
+                        <div className="g4" style={{ marginTop: 3 }}>
+                          {[500, 1500, 4000].map((n) => (
+                            <button key={n} className="btn sm" onClick={() => onFief(x.id, n)}>＋{fmt(n)}石</button>
+                          ))}
+                          <button className="btn sm" onClick={() => onFief(x.id, -1500)}>−1,500石</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {g.generals.filter((x) => x.captive && x.captive.at === c.id && x.captive.by === c.faction).length > 0 && (
+                    <>
+                      <div className="sec">この城に留め置く捕虜</div>
+                      {g.generals.filter((x) => x.captive && x.captive.at === c.id && x.captive.by === c.faction).map((x) => (
+                        <div key={x.id} style={{ display: "flex", justifyContent: "space-between",
+                          color: "#A9A499", fontSize: 12.5, padding: "4px 0" }}>
+                          <span>【捕虜】{x.name}</span>
+                          <span className="num">
+                            {x.age}歳／統{x.lead}／武{x.valor}／知{x.wit}／政{x.gov}　
+                            旧主への忠誠 {忠誠(x)}
+                          </span>
+                        </div>
+                      ))}
+                      <div style={{ fontSize: 11, color: U.dim, marginTop: 4 }}>
+                        捕虜は城主にも褒賞にも与れない。処遇は外交の「捕虜」で決める。
+                      </div>
+                    </>
+                  )}
+                  {/* 城替え（GDD 6.4）。自家の城のあいだで人を入れ替える。 */}
+                  {mine && (() => {
+                    const 動かせる = gens.filter((x) => !x.lord && !x.captive);
+                    const 者 = 替え者 && 動かせる.find((x) => x.id === 替え者) ? 替え者 : null;
+                    const g1 = 者 && 動かせる.find((x) => x.id === 者);
+                    const 役持ち = (x) => x && (x.役 === "国主" || x.役 === "旗頭");
+                    const 先ら = g.castles.filter((x) => x.faction === g.player && x.id !== c.id)
+                      .filter((x) => !g1 || !役持ち(g1) || x.kuni === c.kuni)
+                      .filter((x) => !城替え探 || x.name.includes(城替え探) || (x.kuni || "").includes(城替え探));
+                    return (
+                      <>
+                        <div className="sec">城替え</div>
+                        <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
+                          自家の城のあいだで人を入れ替えます。
+                          <b style={{ color: U.text }}>行き先に人がいれば交換</b>（互いの城へ根を移します）、
+                          <b style={{ color: U.text }}>行き先が空なら移って城主</b>となり、元の城は残る者が継ぐか空きます。<br />
+                          当主は動かせません（当主の居る城が本拠となるからです）。
+                          国主と旗頭は、役の根が国に結びついているので<b style={{ color: U.text }}>同じ国のうち</b>でだけ移せます。
+                        </div>
+                        {!動かせる.length ? (
+                          <div style={{ fontSize: 12, color: U.dim }}>この城に動かせる者がいません。</div>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: 12, marginBottom: 4 }}>一、動かす者</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
+                              {動かせる.map((x) => (
+                                <button key={x.id} className={`btn sm ${者 === x.id ? "on" : ""}`}
+                                  onClick={() => set替え者(者 === x.id ? null : x.id)}>
+                                  {x.name}
+                                  <span style={{ color: U.dim, fontSize: 10, marginLeft: 4 }}>
+                                    {lord && lord.id === x.id ? (c.城代 ? "城代" : "城主") : rankName(x, g)}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {g1 && (
+                          <>
+                            <div style={{ fontSize: 12, marginBottom: 4 }}>
+                              二、{g1.name}を移す先
+                              {役持ち(g1) && <span style={{ color: U.dim }}>（{g1.役}につき{c.kuni}のうちだけ）</span>}
+                            </div>
+                            <input value={城替え探} onChange={(e) => set城替え探(e.target.value)}
+                              placeholder="城か国の名でしぼる"
+                              style={{ width: "100%", boxSizing: "border-box", marginBottom: 6, padding: "4px 6px",
+                                background: "transparent", color: U.text, border: `1px solid ${U.line2}`, fontSize: 12 }} />
+                            <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                              {先ら.length === 0 && (
+                                <div style={{ fontSize: 12, color: U.dim }}>移せる城がありません。</div>
+                              )}
+                              {先ら.map((x) => {
+                                /* 入れ替わる相手は、下知と同じ見方で選ぶ（当主は動かない）。
+                                   画面に城主の名を出して、下知が別の者を動かすのでは話が合わない。 */
+                                const 居 = g.generals.filter((q) => q.at === x.id && q.faction === g.player
+                                  && !q.captive && !q.lord);
+                                const 札2 = x.lordId && 居.find((q) => q.id === x.lordId);
+                                const 相手 = 札2 || [...居].sort((a, b) => stipendOf(g, b) - stipendOf(g, a))[0] || null;
+                                const 障り = 相手 && 役持ち(相手) && x.kuni !== c.kuni
+                                  ? `${相手.name}は${相手.役}（国を出られません）` : null;
+                                return (
+                                  <div key={x.id} style={{ display: "flex", justifyContent: "space-between",
+                                    alignItems: "center", borderBottom: `1px solid ${U.line2}`, padding: "4px 0" }}>
+                                    <span style={{ fontSize: 12.5 }}>
+                                      {x.name}<span style={{ color: U.dim, fontSize: 11 }}>（{x.kuni}）</span>
+                                      <span style={{ color: U.dim, fontSize: 11, marginLeft: 6 }}>
+                                        {障り || (相手 ? `${相手.name}と入れ替え` : "将がいない（移って城主に）")}
+                                      </span>
+                                    </span>
+                                    <button className="btn sm" disabled={!!障り}
+                                      onClick={() => { onShirogae && onShirogae(g1.id, x.id); set替え者(null); }}>
+                                      {相手 ? "入れ替える" : "移す"}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
+                    </>
+                  )}
+                  {口 === "国と方面" && (
+                    <>
                   {/* 国主。家が城を持つ国につき一人（GDD 6.4）。
                       新しい国へ進出すれば、そこにもう一人任じられる。 */}
                   {mine && (() => {
@@ -941,9 +1166,42 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     );
                   })()}
 
-                  <div style={{ fontSize: 12, color: U.dim, marginBottom: 8 }}>
-                    城主を定めます。城主が代わると地域家臣団の馴染は下がり、月ごとに戻ります。
-                  </div>
+                    </>
+                  )}
+                  {口 === "家督" && (
+                    <>
+                  {(() => {
+                    const lord = g.generals.find((x) => x.faction === g.player && x.lord && !x.captive);
+                    if (!lord || lord.at !== c.id) return null;
+                    const cands = heirCandidates(g, lord).filter(({ gen }) => gen.age >= 12);
+                    if (!cands.length) return null;
+                    return (
+                      <>
+                        <div className="sec">家督を譲る（隠居）</div>
+                        <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
+                          存命のうちに譲れば、先代が後見に立つため<b>家中はほとんど揺れません</b>。
+                          没してから継がせると、血筋でない者なら忠誠が九つ、幼年ならさらに五つ下がります。<br />
+                          先代（{lord.name}・{lord.age}歳）は家臣として残り、直属の半ばを新当主に渡します。
+                        </div>
+                        {cands.slice(0, 4).map(({ gen, blood }) => (
+                          <button key={gen.id} className="btn sm" style={{ width: "100%", textAlign: "left", marginBottom: 4 }}
+                            onClick={() => onRetire(gen.id)}>
+                            {gen.name}に譲る　
+                            <span style={{ color: blood ? "#3E7A3A" : "#B0483C", fontSize: 11 }}>
+                              {blood ? "血筋" : "他家の出"}{gen.age < 16 ? "・幼年" : ""}
+                            </span>
+                            <span className="num" style={{ color: U.dim, fontSize: 11 }}>
+                              　{gen.age}歳／統{gen.lead}・武{gen.valor}・知{gen.wit}・政{gen.gov}
+                            </span>
+                          </button>
+                        ))}
+                      </>
+                    );
+                  })()}
+                    </>
+                  )}
+                  {口 === "捕虜" && (
+                    <>
                   {(() => {
                     // 戦後の始末。滅んだ家から捕らえた将を、どう遇するか。
                     const pris = g.generals.filter((x) => x.captive && x.captive.ruin
@@ -996,137 +1254,6 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                       </>
                     );
                   })()}
-                  {(() => {
-                    const lord = g.generals.find((x) => x.faction === g.player && x.lord && !x.captive);
-                    if (!lord || lord.at !== c.id) return null;
-                    const cands = heirCandidates(g, lord).filter(({ gen }) => gen.age >= 12);
-                    if (!cands.length) return null;
-                    return (
-                      <>
-                        <div className="sec">家督を譲る（隠居）</div>
-                        <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
-                          存命のうちに譲れば、先代が後見に立つため<b>家中はほとんど揺れません</b>。
-                          没してから継がせると、血筋でない者なら忠誠が九つ、幼年ならさらに五つ下がります。<br />
-                          先代（{lord.name}・{lord.age}歳）は家臣として残り、直属の半ばを新当主に渡します。
-                        </div>
-                        {cands.slice(0, 4).map(({ gen, blood }) => (
-                          <button key={gen.id} className="btn sm" style={{ width: "100%", textAlign: "left", marginBottom: 4 }}
-                            onClick={() => onRetire(gen.id)}>
-                            {gen.name}に譲る　
-                            <span style={{ color: blood ? "#3E7A3A" : "#B0483C", fontSize: 11 }}>
-                              {blood ? "血筋" : "他家の出"}{gen.age < 16 ? "・幼年" : ""}
-                            </span>
-                            <span className="num" style={{ color: U.dim, fontSize: 11 }}>
-                              　{gen.age}歳／統{gen.lead}・武{gen.valor}・知{gen.wit}・政{gen.gov}
-                            </span>
-                          </button>
-                        ))}
-                      </>
-                    );
-                  })()}
-                  <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.7 }}>
-                    城主になれるのは<b style={{ color: U.text }}>侍大将以上</b>で、禄高
-                    <b style={{ color: U.text }}>{fmt(castleRankNeed(c))}石</b>以上の者です
-                    （一門は身分を問いません）。届かぬ者は<b style={{ color: U.text }}>城代</b>として
-                    留守を預かります。城主はその城を本領としますが、城代は預かるだけです。<br />
-                    この城の石高 <b style={{ color: U.text }}>{fmt(c.koku)}石</b>（配れる知行の限り）／
-                    家臣に配った知行 {fmt(fiefBurden(g, c.id))}石<br />
-                    この城の余禄 <b style={{ color: U.text }}>{fmt(extraIncome(c))}石</b>
-                    （湊の運上・市の役銭・山の産）<br />
-                    <span style={{ fontSize: 11 }}>
-                      知行に余禄の分け前を加えたものが<b>禄高</b>で、身分はこれで定まります。
-                      石高が増えれば、配れる知行も増えます。
-                    </span>
-                  </div>
-                  {(() => { const rm = fiefRoom(g, g.player); return (
-                    <div className="row" style={{ borderBottom: `1px solid ${U.line2}`, paddingBottom: 4 }}>
-                      <span>配れる知行</span>
-                      <span className="v num" style={{ color: rm.left <= 0 ? "#B0483C" : U.text }}>
-                        {rm.left > 0 ? `${fmt(rm.left)}石` : "なし"} <span style={{ color: U.dim, fontSize: 11 }}>
-                        （石高 {fmt(rm.cap)}石のうち {fmt(rm.used)}石を配分済
-                        {rm.left < 0 ? `／${fmt(-rm.left)}石の配りすぎ` : ""}）</span></span>
-                    </div>
-                  ); })()}
-                  {gens.filter((x) => !x.captive).map((x) => {
-                    const want = fiefWanted(x), have = fiefOf(x);
-                    const r = have / Math.max(1, want);
-                    const mood = r >= 1.0 ? "満ちている" : r >= 0.75 ? "不足はない" : r >= 0.5 ? "不満がある" : "強い不満";
-                    const col = r >= 0.75 ? U.dim : r >= 0.5 ? "#C89A3A" : "#B0483C";
-                    return (
-                      <div key={x.id} style={{ borderBottom: `1px solid ${U.line2}`, padding: "6px 0" }}>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          {(() => {
-                            /* 城主か、城代か（GDD 6.4）。
-
-                               城主になれるのは侍大将以上で、かつその城の身代に見合う
-                               禄高を持つ者である。届かぬ者は城代として預かる。
-                               門番と足軽を束ねて留守を守るのが役目であって、その城を
-                               知行として与えられたわけではない（本領は移らない）。
-
-                               もとは届かぬ者の釦を押せなくしていた。城主になれぬ者にも
-                               留守を預ける道はあるのだから、押せぬようにする筋はない。 */
-                            const 城主か = canHoldCastle(x, g, c);
-                            const 要る = castleRankNeed(c), いま = stipendOf(g, x);
-                            const 身分足らず = 身分の位(x, g) < 2 && !x.lord;
-                            return (
-                              <button className={`btn sm ${lord && lord.id === x.id ? "on" : ""}`}
-                                style={{ flex: 1, textAlign: "left" }}
-                                title={城主か ? "" : `城主には侍大将以上の身分と禄高${fmt(要る)}石が要る（いま${rankName(x, g)}・${fmt(いま)}石）。城代としてなら預けられる`}
-                                onClick={() => onAppoint(c.id, x.id)}>
-                                {x.name} を{城主か ? "城主" : "城代"}に
-                                {!城主か && <span style={{ fontSize: 10.5, color: "#8A6A34", marginLeft: 6 }}>
-                                  {身分足らず ? `${rankName(x, g)}ゆえ城主にはなれぬ`
-                                    : `城主には禄高あと${fmt(Math.max(0, 要る - いま))}石`}
-                                </span>}
-                              </button>
-                            );
-                          })()}
-                          <button className="btn sm" onClick={() => onReward(x.id)}>褒賞300貫</button>
-                        </div>
-                        <div style={{ fontSize: 11, marginTop: 2 }}>
-                          <span style={{ color: "#8A7A5A" }}>{rankName(x, g)}</span>
-                          {!x.lord && (() => {
-                            if (x.lord) return <span style={{ color: U.dim, marginLeft: 6 }}>　御料{fmt(goryoOf(g, x.faction).total)}石</span>;
-                            const st = stipendOf(g, x);
-                            const nx = RANKS.filter((r) => r.min > st).sort((a, b) => a.min - b.min)[0];
-                            return nx ? <span style={{ color: U.dim, marginLeft: 6 }}>
-                              　禄高{fmt(st)}石（あと{fmt(nx.min - st)}石で{nx.key}）
-                            </span> : <span style={{ color: U.dim, marginLeft: 6 }}>　禄高{fmt(st)}石</span>;
-                          })()}
-                        </div>
-                        <div className="num" style={{ fontSize: 11.5, color: col, marginTop: 3 }}>
-                          {isNameless(x) ? <span style={{ color: "#9B9384" }} title="名の伝わらぬ在地の長。実在の人名ではありません">〔伝〕</span> : null}
-                          {is架空(x) ? <span style={{ color: "#9B9384" }} title="遊びの中で生まれた者。史実の人物ではありません">〔架空〕</span> : null}
-                          {x.retired ? <span style={{ color: "#8A7A5A" }}>【隠居】</span> : null}
-                          {x.lord ? <span style={{ color: "#C8A44A" }}>【当主】</span> : null}
-                          忠誠{忠誠(x)}／知行 {fmt(have)}石
-                          （望むところ {fmt(want)}石・{mood}）
-                        </div>
-                        <div className="g4" style={{ marginTop: 3 }}>
-                          {[500, 1500, 4000].map((n) => (
-                            <button key={n} className="btn sm" onClick={() => onFief(x.id, n)}>＋{fmt(n)}石</button>
-                          ))}
-                          <button className="btn sm" onClick={() => onFief(x.id, -1500)}>−1,500石</button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {g.generals.filter((x) => x.captive && x.captive.at === c.id && x.captive.by === c.faction).length > 0 && (
-                    <>
-                      <div className="sec">この城に留め置く捕虜</div>
-                      {g.generals.filter((x) => x.captive && x.captive.at === c.id && x.captive.by === c.faction).map((x) => (
-                        <div key={x.id} style={{ display: "flex", justifyContent: "space-between",
-                          color: "#A9A499", fontSize: 12.5, padding: "4px 0" }}>
-                          <span>【捕虜】{x.name}</span>
-                          <span className="num">
-                            {x.age}歳／統{x.lead}／武{x.valor}／知{x.wit}／政{x.gov}　
-                            旧主への忠誠 {忠誠(x)}
-                          </span>
-                        </div>
-                      ))}
-                      <div style={{ fontSize: 11, color: U.dim, marginTop: 4 }}>
-                        捕虜は城主にも褒賞にも与れない。処遇は外交の「捕虜」で決める。
-                      </div>
                     </>
                   )}
                 </>

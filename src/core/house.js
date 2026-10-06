@@ -3,6 +3,7 @@ import { newRoster } from "./roster.js";
 import { clamp } from "./util.js";
 import { KANJI_TSUJI, LONG_LIVED, NEWCOMERS, PARENT } from "../data/newcomers.js";
 import { 直属の兵科 } from "../data/arms.js";
+import { 本拠を追う } from "./state.js";
 
 // その年に世に出る者を招く。仕えるべき家が滅んでいれば、代わりにその城の主へ仕える。
 export function emergeGenerals(s) {
@@ -334,6 +335,15 @@ export function succeed(s, dead, cause, heirId, retire) {
     faction: dead.faction, 先代: dead.name, 当主: heir.name, cause, retire: !!retire,
     blood, age: heir.age, 改名, y: s.year, m: s.month,
   }];
+  /* 本拠は新しい当主の城へ移る（GDD 6.4）。
+
+     本拠は「当主のいる城」である。ところがその付け替え（本拠を追う）は月送りの
+     終いでしか回っていなかった。隠居で家督を譲ると、新しい当主が別の城にいても
+     本拠は先代の城に据え置かれたままになる。大名だけの差配――旗頭の任免、方面の
+     割り、城の下げ渡し――はみな本拠でしか開かないので、遊ぶ側からは
+     「代が替わったのに、先代の城でしか大名の仕事ができない」と見えた。
+     家督が動いた、その場で本拠も動かす。 */
+  本拠を追う(s);
   return heir;
 }
 

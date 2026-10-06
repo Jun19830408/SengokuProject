@@ -7,6 +7,8 @@ import App from "../src/index.jsx";
 export { React, createRoot, act, App };
 export { SeaScreen, 海戦を仕立てる } from "../src/ui/SeaScreen.jsx";
 export { CastleSheet } from "../src/ui/CastleSheet.jsx";
+export { GeneralList } from "../src/ui/panels.jsx";
+export { css } from "../src/ui/css.js";
 export { BattleScreen } from "../src/ui/BattleScreen.jsx";
 export { MapScreen } from "../src/ui/MapScreen.jsx";
 export { 天下分け目の帳, 分け目の沙汰の帳 } from "../src/ui/panels.jsx";
