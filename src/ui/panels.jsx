@@ -2625,7 +2625,11 @@ export function 天下分け目の帳({ g, onSend, onClose }) {
           直轄・従属・臣従のすべての城から、留守居を除いた兵が残らず出ます。
           留守は薄くなりますから、その隙に他家が攻めてくることもあります。<br />
           勝てば、こちらの領と接した一国（最大{割譲の限り}城）が手に入り、
-          相手の兵は大きく損じます。負ければ同じことが起こります。
+          相手の兵は大きく損じます。負ければ同じことが起こります。<br />
+          <span style={{ color: U.dim }}>
+            渡るのは<b>接した国の城だけ</b>です。領が接していない相手に勝っても、
+            城は渡りません（飛び地を作らぬための決まりです）。
+          </span>
         </div>
         <div className="row"><span>出せる兵</span>
           <span className="v num">{fmt(我が兵)} 人／{我が隊} 隊</span></div>
@@ -2734,7 +2738,13 @@ export function 分け目の沙汰の帳({ g, 勝, 負, 果, onTake }) {
         <div className="row"><span>{勝った ? "取る城" : "渡る城"}</span>
           <span className="v num">{選.length} ／ {割譲の限り} 城・{man(石)} 万石</span></div>
         <div className="sec">{勝った ? "城を選ぶ（近い順）" : "渡る城"}</div>
-        {!並.length && <div style={{ fontSize: 12.5, color: U.dim }}>渡せる城がありません。</div>}
+        {!並.length && (
+          <div style={{ fontSize: 12.5, color: U.dim, lineHeight: 1.9 }}>
+            渡る城はありません。<b>領が接していない</b>からです
+            （飛び地は兵も兵糧も届かぬので、離れた国の城は渡りません）。
+            兵の逃散と、旗の下にあった家の離散だけが跡に残ります。
+          </div>
+        )}
         <div style={{ maxHeight: 230, overflow: "auto" }}>
           {並.slice(0, 40).map((c) => {
             const 入 = 選.includes(c.id);
@@ -2752,8 +2762,9 @@ export function 分け目の沙汰の帳({ g, 勝, 負, 果, onTake }) {
           })}
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          <button className="btn pri" disabled={勝った && !選.length} onClick={() => onTake(選)}>
-            {勝った ? `この${選.length}城を取る` : "受け入れる"}</button>
+          <button className="btn pri" disabled={勝った && !選.length && 並.length > 0}
+            onClick={() => onTake(選)}>
+            {勝った ? (並.length ? `この${選.length}城を取る` : "承知した") : "受け入れる"}</button>
         </div>
       </div>
     </div>

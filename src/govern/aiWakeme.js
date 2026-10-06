@@ -13,7 +13,7 @@ import { 家の当主 } from "../core/kiryou.js";
 import { 分け目の野, 野を探す } from "../data/wakemeba.js";
 import {
   器量くらべ, 天下分け目を挑めるか, 天下分け目を起こす, 分け目の兵, 分け目の沙汰,
-  取る城を見立てる, 野を選ぶ側, 野の見立て, 石高の順,
+  取る城を見立てる, 割譲できる城ら, 野を選ぶ側, 野の見立て, 石高の順,
 } from "../core/wakeme.js";
 
 export const 挑む腰 = 0.10;                  // 条件が揃った月に挑む目
@@ -47,6 +47,12 @@ export function 天下分け目の采配(s, { 告げる } = {}) {
   for (const [主, 的] of 組ら) {
     if (主 === s.player) continue;                 // 遊ぶ側は自分で挑む
     if (!天下分け目を挑めるか(s, 主, 的).ok) continue;
+    /* 領が接していなければ挑まない（GDD 12.6）。
+
+       勝っても城は渡らない――飛び地を作らぬための決まりである。取るものが
+       無いのに全軍を挙げて野へ出る家はない。陸奥の家が九州の家へ一戦を
+       挑むような組み合わせは、ここで落ちる。 */
+    if (!割譲できる城ら(s, 主, 的).length) continue;
     if (!挑むか(s, 主, 的)) continue;
     if (Math.random() > 挑む腰) continue;
     const 選 = 野を選ぶ側(s, 主, 的);

@@ -27,7 +27,7 @@ import { relKey, relOf, 主家 } from "./state.js";
 import { courtRank } from "./province.js";
 import { 出せる兵, 旗の下の家ら } from "./gourei.js";
 import { 国が隣り合うか } from "./rank.js";
-import { marchMonths } from "./paths.js";
+import { ROAD_ADJ, marchMonths } from "./paths.js";
 import { 家の当主 } from "./kiryou.js";
 import { 分け目の野 } from "../data/wakemeba.js";
 
@@ -293,12 +293,40 @@ export function 分け目を進める(s, { 告げる } = {}) {
    関ヶ原の後の加増も、飛び地だらけであった。 */
 export const 割譲の限り = 10;                 // 一戦で渡る城の数
 
-/* 渡せる城。勝者の領に近い順に並べる（近い城ほど選ばれやすかろう、という順である）。
-   本拠は渡さない――家を丸ごと潰す一戦にはしない。 */
+/* 渡せる城（GDD 12.6）。
+
+   渡るのは「勝者の領に接した国」の城である。画面にも、この書の頭にもそう
+   書いてあるのに、縛りが実装に無かった。近い順に並べはするものの、見立ての
+   点が「石高（万石）− 順位×〇.六」であったから、石高が距離を押し潰す。
+
+   実測（遊ぶ側の記録・一五七〇年二月）では、陸奥の南部家が豊後の大友家を
+   破って九州の十城を得（一五六七年三月）、さらに薩摩の島津家を破って
+   十城を得ていた（一五六九年七月）。遊ぶ側の申し出は「突然、九州のほうに
+   東北の南部家が現れた。流石にありえない」であった。
+
+   飛び地は盤としても壊れている。兵も兵糧も援軍も届かず、守ることも
+   攻め継ぐこともできない。接した国の城だけを渡す。接する国が無ければ、
+   城は渡らない――一戦の跡は、兵の逃散と旗の下の離散で贖われる。
+
+   接するとは、
+     一、勝者の城がその国にある
+     二、勝者の城と道で隣り合う
+     三、勝者の持つ国と、その国が隣り合う
+   のいずれかである。道は細かく、国は大まかに見る。 */
 export function 割譲できる城ら(s, 勝, 負) {
   const 本 = (s.factions[負] || {}).本拠;
   const 的 = (s.castles || []).filter((c) => c.faction === 負 && c.id !== 本);
   const 勝の城 = (s.castles || []).filter((c) => c.faction === 勝);
+  if (!勝の城.length || !的.length) return [];
+  const 勝のid = new Set(勝の城.map((c) => c.id));
+  const 勝の国 = [...new Set(勝の城.map((c) => c.kuni))];
+  const 接する = (c) => {
+    if (勝の国.includes(c.kuni)) return true;
+    if ((ROAD_ADJ[c.id] || []).some((n) => 勝のid.has(n))) return true;
+    for (const k of 勝の国) if (国が隣り合うか(s, k, c.kuni)) return true;
+    return false;
+  };
+  const 候 = 的.filter(接する);
   const 隔 = (c) => {
     let 最 = Infinity;
     for (const w of 勝の城) {
@@ -307,13 +335,16 @@ export function 割譲できる城ら(s, 勝, 負) {
     }
     return 最;
   };
-  return 的.map((c) => ({ c, 隔: 隔(c) })).sort((a, b) => a.隔 - b.隔).map((x) => x.c);
+  return 候.map((c) => ({ c, 隔: 隔(c) })).sort((a, b) => a.隔 - b.隔).map((x) => x.c);
 }
 
-/* AI が取る城。近くて実入りの大きいものから十。 */
+/* AI が取る城。接した国のうち、近くて実入りの大きいものから十。
+
+   近さの重みを順位あたり〇.六から一.五へ上げる。渡せる城はすでに接した国に
+   絞ってあるが、そのうちでも境から取るのが筋である。 */
 export function 取る城を見立てる(s, 勝, 負) {
   const 並 = 割譲できる城ら(s, 勝, 負);
-  const 値 = (c, i) => (c.koku || 0) / 10000 - i * 0.6;      // 近いほど上、石高が高いほど上
+  const 値 = (c, i) => (c.koku || 0) / 10000 - i * 1.5;      // 近いほど上、石高が高いほど上
   return 並.map((c, i) => ({ c, 点: 値(c, i) })).sort((a, b) => b.点 - a.点)
     .slice(0, 割譲の限り).map((x) => x.c.id);
 }
