@@ -29,7 +29,8 @@
      付いていった者は、新しい主のもとで忠誠が低い。引き抜き・内応で取り返せる。 */
 import { relOf } from "./state.js";
 import { 本拠を追う, 奪われた本領を繕う } from "./state.js";
-import { 寄騎たち, 忠誠 } from "./rank.js";
+import { 寄騎たち, 忠誠, 国が隣り合うか } from "./rank.js";
+import { ROAD_ADJ } from "./paths.js";
 
 export const 謀反の目 = (s, 親) => {
   if (!親 || 親.captive || 親.lord) return 0;
@@ -40,14 +41,39 @@ export const 謀反の目 = (s, 親) => {
   return ((70 - 忠) * (1 + 寄 * 0.15)) / 70;
 };
 
-// 走る先。敵対する隣家のうち、いちばん大きい家
-export function 走る先(s, fid) {
+/* 走る先。敵対する隣家のうち、いちばん大きい家（GDD 12.3）。
+
+   「隣家」と書きながら、隣かどうかを見ていなかった。敵対する家のうち
+   いちばん大きい家、それだけである。
+
+   遊ぶ側の記録（一五七二年十二月）では、織田家と敵対する家が雑賀衆ただ一つ
+   であった。ゆえに、遠江の徳川家康も、出雲の吉川元春も、武蔵の葛山氏元も、
+   備後の長宗我部親泰も、因幡の長船貞親も、伊豆の伊丹康直も、みな紀伊の
+   雑賀衆へ走った――六城が日本中から雑賀衆のものになった。遊ぶ側の申し出は
+   「突然、雑賀衆が色んな城に顔を出している。掛川の徳川家康が突然雑賀衆に
+   なっており、変だ」であった。
+
+   背く者は、隣の敵へ走る。荒木村重は毛利と本願寺へ、松永久秀は三好へ――
+   いずれも境を接する相手である。背いたその日に兵を入れてもらえぬ相手の
+   旗を掲げる謀反人はいない。
+
+   隣とは、その者の城と道で繋がるか、国が隣り合うことをいう。 */
+export function 走る先(s, fid, 親) {
   const 石 = (x) => s.castles.filter((c) => c.faction === x).reduce((a, c) => a + c.koku, 0);
   const 敵 = Object.keys(s.factions || {}).filter((x) => x !== fid
     && s.castles.some((c) => c.faction === x)
     && relOf(s, fid, x).state === "敵対");
   if (!敵.length) return null;
-  return [...敵].sort((a, b) => 石(b) - 石(a))[0];
+  /* 背く者の城。本領（無ければ居所）で測る */
+  const 己 = 親 ? (s.castles || []).find((c) => c.id === (親.本領 || 親.at)) : null;
+  if (!己) return [...敵].sort((a, b) => 石(b) - 石(a))[0];
+  const 隣か = (x) => (s.castles || []).some((c) => c.faction === x
+    && (c.kuni === 己.kuni
+      || (ROAD_ADJ[己.id] || []).includes(c.id)
+      || 国が隣り合うか(s, 己.kuni, c.kuni)));
+  const 隣 = 敵.filter(隣か);
+  if (!隣.length) return null;                 // 隣に敵がいなければ、走る先がない
+  return [...隣].sort((a, b) => 石(b) - 石(a))[0];
 }
 
 /* 謀反を起こす。寄親とその寄騎（忠誠七十未満）の城が、走る先へ移る。 */
@@ -106,20 +132,26 @@ export function 謀反の見回り(s, fid, { 告げる, 籤 } = {}) {
     // 三、支度が整えば起こす
     if (親.謀反支度) {
       if (親.謀反支度.残 > 1) { 親.謀反支度.残--; continue; }
-      const 先 = s.factions[親.謀反支度.先] && s.castles.some((c) => c.faction === 親.謀反支度.先)
-        ? 親.謀反支度.先 : 走る先(s, fid);
+      /* 支度を交わした相手でも、いまも隣の敵でなければ走れない。
+         城が移って境が変われば、話は流れる。 */
+      const 約 = 親.謀反支度.先;
+      const 隣の敵 = 走る先(s, fid, 親);
+      const 先 = (約 && s.factions[約] && s.castles.some((c) => c.faction === 約)
+        && relOf(s, fid, 約).state === "敵対"
+        && (隣の敵 === 約 || 走る先(s, fid, 親) === 約)) ? 約 : 隣の敵;
       if (!先) { 親.謀反支度 = null; continue; }
       const r = 謀反を起こす(s, 親, 先);
       起きた.push({ 親, 先, ...r });
       if (告げる) {
         告げる(`${親.name}が${s.factions[先].name}へ走った。`
-          + `${r.城.length}城が離れ、${r.残った.length ? `${r.残った.map((x) => x.name).join("・")}は踏みとどまった` : "従う者はことごとく付いていった"}。`);
+          + `${r.城.length ? `${r.城.map((c) => c.name).join("・")}の${r.城.length}城が離れた` : "城は離れなかった"}。`
+          + `${r.残った.length ? `${r.残った.map((x) => x.name).join("・")}は踏みとどまった。` : ""}`);
       }
       continue;
     }
     // 二、他家と使者を交わす（忠誠五十を割る）
     if (忠 < 50 && 引く() < 目 * 0.15) {
-      const 先 = 走る先(s, fid);
+      const 先 = 走る先(s, fid, 親);
       if (先) {
         親.謀反支度 = { 先, 残: 2 };
         if (告げる) 告げる(`${親.name}が${s.factions[先].name}と使者を交わしている由。捨て置けば事が起きよう。`);

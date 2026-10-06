@@ -21620,11 +21620,16 @@ var \u8B00\u53CD\u306E\u76EE = (s2, \u89AA) => {
   const \u5BC4 = \u5BC4\u9A0E\u305F\u3061(s2, \u89AA.id).length;
   return (70 - \u5FE0) * (1 + \u5BC4 * 0.15) / 70;
 };
-function \u8D70\u308B\u5148(s2, fid) {
+function \u8D70\u308B\u5148(s2, fid, \u89AA) {
   const \u77F3 = (x) => s2.castles.filter((c) => c.faction === x).reduce((a, c) => a + c.koku, 0);
   const \u6575 = Object.keys(s2.factions || {}).filter((x) => x !== fid && s2.castles.some((c) => c.faction === x) && relOf2(s2, fid, x).state === "\u6575\u5BFE");
   if (!\u6575.length) return null;
-  return [...\u6575].sort((a, b) => \u77F3(b) - \u77F3(a))[0];
+  const \u5DF1 = \u89AA ? (s2.castles || []).find((c) => c.id === (\u89AA.\u672C\u9818 || \u89AA.at)) : null;
+  if (!\u5DF1) return [...\u6575].sort((a, b) => \u77F3(b) - \u77F3(a))[0];
+  const \u96A3\u304B = (x) => (s2.castles || []).some((c) => c.faction === x && (c.kuni === \u5DF1.kuni || (ROAD_ADJ[\u5DF1.id] || []).includes(c.id) || \u56FD\u304C\u96A3\u308A\u5408\u3046\u304B(s2, \u5DF1.kuni, c.kuni)));
+  const \u96A3 = \u6575.filter(\u96A3\u304B);
+  if (!\u96A3.length) return null;
+  return [...\u96A3].sort((a, b) => \u77F3(b) - \u77F3(a))[0];
 }
 function \u8B00\u53CD\u3092\u8D77\u3053\u3059(s2, \u89AA, \u5148) {
   const \u79FB\u308B = [\u89AA, ...\u5BC4\u9A0E\u305F\u3061(s2, \u89AA.id).filter((x) => \u5FE0\u8AA0(x) < 70)];
@@ -21683,7 +21688,9 @@ function \u8B00\u53CD\u306E\u898B\u56DE\u308A(s2, fid, { \u544A\u3052\u308B, \u7
         \u89AA.\u8B00\u53CD\u652F\u5EA6.\u6B8B--;
         continue;
       }
-      const \u5148 = s2.factions[\u89AA.\u8B00\u53CD\u652F\u5EA6.\u5148] && s2.castles.some((c) => c.faction === \u89AA.\u8B00\u53CD\u652F\u5EA6.\u5148) ? \u89AA.\u8B00\u53CD\u652F\u5EA6.\u5148 : \u8D70\u308B\u5148(s2, fid);
+      const \u7D04 = \u89AA.\u8B00\u53CD\u652F\u5EA6.\u5148;
+      const \u96A3\u306E\u6575 = \u8D70\u308B\u5148(s2, fid, \u89AA);
+      const \u5148 = \u7D04 && s2.factions[\u7D04] && s2.castles.some((c) => c.faction === \u7D04) && relOf2(s2, fid, \u7D04).state === "\u6575\u5BFE" && (\u96A3\u306E\u6575 === \u7D04 || \u8D70\u308B\u5148(s2, fid, \u89AA) === \u7D04) ? \u7D04 : \u96A3\u306E\u6575;
       if (!\u5148) {
         \u89AA.\u8B00\u53CD\u652F\u5EA6 = null;
         continue;
@@ -21691,12 +21698,12 @@ function \u8B00\u53CD\u306E\u898B\u56DE\u308A(s2, fid, { \u544A\u3052\u308B, \u7
       const r = \u8B00\u53CD\u3092\u8D77\u3053\u3059(s2, \u89AA, \u5148);
       \u8D77\u304D\u305F.push({ \u89AA, \u5148, ...r });
       if (\u544A\u3052\u308B) {
-        \u544A\u3052\u308B(`${\u89AA.name}\u304C${s2.factions[\u5148].name}\u3078\u8D70\u3063\u305F\u3002${r.\u57CE.length}\u57CE\u304C\u96E2\u308C\u3001${r.\u6B8B\u3063\u305F.length ? `${r.\u6B8B\u3063\u305F.map((x) => x.name).join("\u30FB")}\u306F\u8E0F\u307F\u3068\u3069\u307E\u3063\u305F` : "\u5F93\u3046\u8005\u306F\u3053\u3068\u3054\u3068\u304F\u4ED8\u3044\u3066\u3044\u3063\u305F"}\u3002`);
+        \u544A\u3052\u308B(`${\u89AA.name}\u304C${s2.factions[\u5148].name}\u3078\u8D70\u3063\u305F\u3002${r.\u57CE.length ? `${r.\u57CE.map((c) => c.name).join("\u30FB")}\u306E${r.\u57CE.length}\u57CE\u304C\u96E2\u308C\u305F` : "\u57CE\u306F\u96E2\u308C\u306A\u304B\u3063\u305F"}\u3002${r.\u6B8B\u3063\u305F.length ? `${r.\u6B8B\u3063\u305F.map((x) => x.name).join("\u30FB")}\u306F\u8E0F\u307F\u3068\u3069\u307E\u3063\u305F\u3002` : ""}`);
       }
       continue;
     }
     if (\u5FE0 < 50 && \u5F15\u304F() < \u76EE * 0.15) {
-      const \u5148 = \u8D70\u308B\u5148(s2, fid);
+      const \u5148 = \u8D70\u308B\u5148(s2, fid, \u89AA);
       if (\u5148) {
         \u89AA.\u8B00\u53CD\u652F\u5EA6 = { \u5148, \u6B8B: 2 };
         if (\u544A\u3052\u308B) \u544A\u3052\u308B(`${\u89AA.name}\u304C${s2.factions[\u5148].name}\u3068\u4F7F\u8005\u3092\u4EA4\u308F\u3057\u3066\u3044\u308B\u7531\u3002\u6368\u3066\u7F6E\u3051\u3070\u4E8B\u304C\u8D77\u304D\u3088\u3046\u3002`);

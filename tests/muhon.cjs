@@ -80,15 +80,37 @@ console.log('── 一　謀反の目は、忠誠と寄騎の数で決まる');
 
 console.log('\n── 二　走る先は、敵対する隣家');
 {
-  const { s } = 場();
+  const { s, 親 } = 場();
   for (const k of Object.keys(s.relations)) {
     const [a, b] = k.split('|');
     if (a === 'oda' || b === 'oda') s.relations[k].state = '中立';
   }
-  確('敵対する家が無ければ、走る先も無い', 走る先(s, 'oda') === null);
+  確('敵対する家が無ければ、走る先も無い', 走る先(s, 'oda', 親) === null);
   s.relations[relKey('oda', 'imagawa')] = { trust: 10, state: '敵対', until: null };
-  確('敵対する家があれば、そこへ走る', 走る先(s, 'oda') === 'imagawa',
-    走る先(s, 'oda') || 'なし');
+  確('敵対する家があれば、そこへ走る', 走る先(s, 'oda', 親) === 'imagawa',
+    走る先(s, 'oda', 親) || 'なし');
+
+  /* 遠国の敵へは走らない（GDD 12.3）。
+
+     遊ぶ側の記録（一五七二年十二月）では、織田家と敵対する家が雑賀衆ただ一つ
+     であった。隣かどうかを見ていなかったので、遠江・出雲・武蔵・備後・因幡・
+     伊豆の国主が、みな紀伊の雑賀衆へ走った――六城が日本中から雑賀衆のものに
+     なった。背いた日に兵を入れてもらえぬ相手の旗を掲げる謀反人はいない。 */
+  for (const k of Object.keys(s.relations)) {
+    const [a, b] = k.split('|');
+    if (a === 'oda' || b === 'oda') s.relations[k].state = '中立';
+  }
+  const 遠 = Object.keys(s.factions).find((f) => f !== 'oda'
+    && s.castles.some((c) => c.faction === f)
+    && !s.castles.some((c) => c.faction === f && ['尾張', '美濃', '三河', '伊勢', '伊賀', '近江'].includes(c.kuni)));
+  s.relations[relKey('oda', 遠)] = { trust: 0, state: '敵対', until: null };
+  const 遠の国 = [...new Set(s.castles.filter((c) => c.faction === 遠).map((c) => c.kuni))];
+  確('遠国の敵へは走らない', 走る先(s, 'oda', 親) === null,
+    `${(s.factions[遠] || {}).name}（${遠の国.join('・')}）は尾張の隣ではない`);
+  /* 隣に敵が立てば、そちらへ走る */
+  s.relations[relKey('oda', 'imagawa')] = { trust: 0, state: '敵対', until: null };
+  確('隣に敵が立てば、そちらへ走る', 走る先(s, 'oda', 親) === 'imagawa',
+    走る先(s, 'oda', 親) || 'なし');
 }
 
 console.log('\n── 三　謀反が起きれば、城ごと走る');
