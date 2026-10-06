@@ -79,15 +79,26 @@ const openFaction=async(nm)=>{const el=[...document.querySelectorAll('.mn')].fin
   console.log('外交:', await rc('外交')?'開いた':'★開かない');
   const btns=[...document.querySelectorAll('.sheet button')].filter(b=>/^(親善|不可侵|同盟|従属|臣従|独立)$/.test(b.textContent.trim()));
   console.log('  '+btns.map(b=>b.textContent.trim()+(b.disabled?'[不可]':'[可]')).join(' / '));
+  /* 人事は話の筋で小口に分かれた（城と知行／国と方面／家督／捕虜）。
+     家督を譲る欄は「家督」の口にある。 */
+  console.log('人事:', await rc('人事')?'開いた':'★開かない');
+  console.log('  小口: '+[...document.querySelectorAll('.sheet button')]
+    .filter(b=>/^(城と知行|国と方面|家督|捕虜)$/.test(b.textContent.trim()))
+    .map(b=>b.textContent.trim()).join(' / '));
+  console.log('  家督の口:', await rc('家督')?'開いた':'★開かない');
   const t=document.body.textContent;
   console.log('隠居の欄:', /家督を譲る（隠居）/.test(t)?'出た':'★出ない');
   const btn=[...document.querySelectorAll('button')].filter(b=>/に譲る/.test(b.textContent)).map(b=>b.textContent.replace(/\s+/g,' ').trim());
   console.log('  候補: '+btn.join(' ／ '));
   if(btn.length){
+    const 先代=(btn[0].match(/^(.+?)に譲る/)||[])[1]||'';
     await rc('に譲る');
+    /* 譲ったあとの札（【隠居】【当主】）は「城と知行」の口に並ぶ。 */
+    await rc('城と知行');
     const t2=document.body.textContent;
-    console.log('譲った後:', (t2.match(/[^。]{0,40}(隠居し|家督を継いだ)[^。]{0,30}。/)||['★記録なし'])[0]);
-    console.log('  武将欄:', /【隠居】/.test(t2)?'【隠居】が出た':'★出ない', /【当主】/.test(t2)?'／【当主】も出た':'');
+    console.log('譲った後の札:', /【隠居】/.test(t2)?'【隠居】が出た':'★出ない',
+      /【当主】/.test(t2)?'／【当主】も出た':'／★【当主】が出ない');
+    console.log('  新しい当主:', 先代?('先代の跡を '+先代+' が継いだ'):'（候補の名が読めぬ）');
   }
   console.log('エラー:', errs.length?errs.slice(0,2).join(' | '):'なし');
   process.exit(0);
