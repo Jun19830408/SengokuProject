@@ -857,7 +857,10 @@ export function issueOrder(b, c, patch, { 即 } = {}) {
 
      退けと命じたものを、別の下知で取り消すのは当たり前のことである。 */
   if (patch && patch.order && patch.order !== "撤退") c.withdraw = false;
-  if (!AI_ISSUING && c.side === "P") c.auto = false;   // 手ずから命じた隊は委任を離れる
+  if (!AI_ISSUING && c.side === "P") {
+    c.auto = false;                                   // 手ずから命じた隊は委任を離れる
+    if (b) b.手出し = b.t;                            // 遊ぶ側が手を出した刻（膠着の見極めに使う）
+  }
   if (!patch.keepPath) c.wp = null;      // 新たな命令は道順を打ち消す
   const apply = () => Object.assign(c, patch);
   /* 即のしるしが立っていれば、伝令を待たずにその場で効かせる（GDD 8.3）。

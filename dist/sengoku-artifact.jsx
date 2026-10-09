@@ -24665,7 +24665,10 @@ function issueOrder(b, c, patch, { \u5373 } = {}) {
   if (!c || c.dead || c.destroyed) return;
   c.pinned = false;
   if (patch && patch.order && patch.order !== "\u64A4\u9000") c.withdraw = false;
-  if (!AI_ISSUING && c.side === "P") c.auto = false;
+  if (!AI_ISSUING && c.side === "P") {
+    c.auto = false;
+    if (b) b.\u624B\u51FA\u3057 = b.t;
+  }
   if (!patch.keepPath) c.wp = null;
   const apply = () => Object.assign(c, patch);
   if (b.phase === "deploy" || \u5373 || patch.order === c.order) {
@@ -31981,18 +31984,18 @@ function battleAI(b) {
     if (\u6E21\u308B\u8981 && \u5947\u8972\u306E\u6E21\u6CB3\u3092\u8A08\u308B(b, c, sx, sy)) continue;
     if (\u6E21\u308B\u8981 && c.side === b.attacker && !c.\u62BC\u3057\u6E21\u308B && !c.routed && !c.withdraw && !c.squads.some((q) => q.engaged)) {
       const \u9694 = Math.hypot(sx - c.x, sy - c.y);
-      if (c.\u7768\u307F\u524D != null && \u9694 > c.\u7768\u307F\u524D - 30) c.\u7768\u307F = (c.\u7768\u307F || 0) + 0.6;
-      else c.\u7768\u307F = 0;
-      c.\u7768\u307F\u524D = \u9694;
-      if (c.\u7768\u307F > 45) {
+      if (c.\u5DDD\u7768\u307F\u524D != null && \u9694 > c.\u5DDD\u7768\u307F\u524D - 30) c.\u5DDD\u7768\u307F = (c.\u5DDD\u7768\u307F || 0) + 0.6;
+      else c.\u5DDD\u7768\u307F = 0;
+      c.\u5DDD\u7768\u307F\u524D = \u9694;
+      if (c.\u5DDD\u7768\u307F > 45) {
         c.\u62BC\u3057\u6E21\u308B = b.t + 150;
-        c.\u7768\u307F = 0;
+        c.\u5DDD\u7768\u307F = 0;
         c.wp = null;
         b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F\u6E21\u308A\u5834\u3092\u63A2\u3057\u3042\u3050\u306D\u3001\u6DF5\u3092\u62BC\u3057\u6E21\u308B\u3002` });
       }
     } else if (!\u6E21\u308B\u8981) {
-      c.\u7768\u307F = 0;
-      c.\u7768\u307F\u524D = null;
+      c.\u5DDD\u7768\u307F = 0;
+      c.\u5DDD\u7768\u307F\u524D = null;
     }
     if (!MAP && !c.routed && !c.withdraw) {
       const \u90532 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, sx, sy);
@@ -32580,8 +32583,8 @@ function stepBattle(b, dt) {
       }
       const v = \u968A\u306E\u8DB3 * fieldScale() * (b.\u8DB3\u306E\u624B\u52A0\u6E1B || 1) * \u6C34\u99B4\u308C\u306E\u8DB3(c, c.\u5730, terr.speed) * W2.speed * chg * (engaged ? 0.35 : 1) * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * \u5BC4\u305B\u9053 * \u6DF7\u307F * (c.\u5F8C\u9000\u4E2D ? 0.62 : 1);
       let \u671Bx = dx / dist * v, \u671By = dy / dist * v;
-      const \u653B\u3081\u306E\u4E0B\u77E5 = c.order === "\u63A5\u6226" || c.order === "\u7A81\u6483" || c.order === "\u524D\u9032";
-      if (\u653B\u3081\u306E\u4E0B\u77E5 && c.\u63A5\u6575 && !c.squads.some((q) => q.engaged)) {
+      const \u6B62\u307E\u308B\u4E0B\u77E5 = c.order === "\u5F85\u6A5F" || c.order === "\u5B88\u5099" || c.order === "\u8EE2\u56DE" || c.order === "\u5C04\u6483";
+      if (!\u6B62\u307E\u308B\u4E0B\u77E5 && c.\u63A5\u6575 && !c.squads.some((q) => q.engaged)) {
         c.\u7768\u307F = (c.\u7768\u307F || 0) + dt;
       } else c.\u7768\u307F = 0;
       const \u89E6\u308C\u305F\u6575 = (c.\u7768\u307F || 0) > 6 ? null : c.\u63A5\u6575;
@@ -32621,7 +32624,7 @@ function stepBattle(b, dt) {
       } else if (\u8E0F\u3081\u308B(c.x + mvx, c.y)) c.x += mvx;
       else if (\u8E0F\u3081\u308B(c.x, c.y + mvy)) c.y += mvy;
       const \u9032\u3081\u305F = Math.hypot(c.x - \u5143x, c.y - \u5143y) > \u6B69 * 0.25;
-      if (!MAP && !\u9032\u3081\u305F && !c.\u62BC\u3057\u6E21\u308B && !c.auto && terrainAt(\u5143x + mvx, \u5143y + mvy) === "deep") {
+      if (!MAP && !\u9032\u3081\u305F && !c.\u62BC\u3057\u6E21\u308B && terrainAt(\u5143x + mvx, \u5143y + mvy) === "deep") {
         c.\u6C34\u969B = (c.\u6C34\u969B || 0) + dt;
         const \u5F85\u3064 = 24 + Math.max(0, 80 - (c.gen.wit || 55)) * 0.7;
         if (c.\u6C34\u969B > \u5F85\u3064) {
@@ -33493,6 +33496,33 @@ function stepBattle(b, dt) {
         return;
       }
     } else b.hold = 0;
+  }
+  if (!b.\u81A0\u7740) b.\u81A0\u7740 = { \u523B: b.t, \u8FD1: Infinity, \u5175: Infinity, \u898B\u305F: -9 };
+  if (b.t - b.\u81A0\u7740.\u898B\u305F >= 1) {
+    b.\u81A0\u7740.\u898B\u305F = b.t;
+    const \u7ACB\u3064 = (sd) => b.corps.filter((c) => c.side === sd && !c.dead && !c.destroyed && !c.\u6F70 && !c.withdraw && !c.\u65E5\u548C\u898B);
+    const P\u7ACB = \u7ACB\u3064("P"), E\u7ACB = \u7ACB\u3064("E");
+    let \u8FD1 = Infinity;
+    for (const a of P\u7ACB) for (const z of E\u7ACB) {
+      const d = Math.hypot(a.x - z.x, a.y - z.y);
+      if (d < \u8FD1) \u8FD1 = d;
+    }
+    const \u5175 = [...P\u7ACB, ...E\u7ACB].reduce((t, c) => t + corpsMen(c), 0);
+    const \u565B = b.corps.some((c) => !c.dead && !c.destroyed && c.squads.some((q) => q.engaged));
+    if (\u565B || \u8FD1 < b.\u81A0\u7740.\u8FD1 - 40 || \u5175 < b.\u81A0\u7740.\u5175 - 20 || (b.\u624B\u51FA\u3057 || -9) > b.\u81A0\u7740.\u523B) {
+      b.\u81A0\u7740.\u523B = b.t;
+    }
+    if (\u8FD1 < b.\u81A0\u7740.\u8FD1) b.\u81A0\u7740.\u8FD1 = \u8FD1;
+    if (\u5175 < b.\u81A0\u7740.\u5175) b.\u81A0\u7740.\u5175 = \u5175;
+  }
+  if (b.t - b.\u81A0\u7740.\u523B > 180) {
+    b.phase = "over";
+    b.orderly = true;
+    b.result = b.attacker === "P" ? "E" : "P";
+    const \u6587 = MAP ? "\u5BC4\u305B\u624B\u306F\u653B\u3081\u53E3\u3092\u958B\u3051\u306C\u307E\u307E\u523B\u3092\u8CBB\u3084\u3057\u3001\u56F2\u307F\u3078\u623B\u3063\u305F\u3002" : "\u5BC4\u305B\u624B\u306F\u653B\u3081\u3042\u3050\u306D\u3001\u5175\u3092\u9000\u3044\u305F\u3002";
+    b.log.push({ t: b.t, text: \u6587 });
+    notify(b, \u6587, b.result === "P" ? "good" : "bad");
+    return;
   }
   if (b.t >= b.dusk) {
     b.phase = "over";

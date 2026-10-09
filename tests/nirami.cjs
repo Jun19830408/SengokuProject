@@ -138,6 +138,63 @@ console.log('■ 四、大軍が小勢に攻めかかれる');
     `${Math.round(H.corpsMen(小))}人（初め2,500）`);
 }
 
+/* ■ 五　止まった戦は、日が暮れる前に終わる（GDD 8.8）
+
+   遊ぶ側の申し出は「たまに合戦で撤退した相手（敵でも自軍でも）がマップ外に
+   出たのに合戦が終わらない（場合によっては引き分けになる）」であった。
+
+   根は三つあった。
+
+   一、engine の「触れたまま槍を合わせぬ間」と、ai の「渡り場を探しあぐねた間」が
+       同じ札（c.睨み）を奪い合っていた。engine が毎刻書き換えるので、ai の数は
+       溜まる間もなく消え、「探しあぐねたら押し渡る」という腹の決めが委ねた隊では
+       一度も働いていなかった。
+
+   二、触れ合いの留めを解く目が「接戦・突撃・前進」の三つの下知に限られていた。
+       采配が道を引いて「移動」と命じた隊は、川向こうの敵と触れ合ったまま足が
+       止まり、そのまま日が暮れた。
+
+   三、水際で腹を決める筋が、委ねた隊を除いていた。采配の渡り場さがしは寄せ手に
+       しか付いていないので、受け手の隊が水際へ出ると、渡るとも退くとも決められず
+       そこで固まった。
+
+   そのうえで、どう直しても届かぬ盤はありうるので、止まった戦を終いにする筋を
+   置いた。槍も合わず、間合いも縮まず、兵も減らず、遊ぶ側の下知も無いまま三分が
+   過ぎたら、寄せ手は攻めあぐねたのである。引き分けではなく、寄せ手の退却とする。 */
+console.log('■ 五、止まった戦は、日が暮れる前に終わる');
+{
+  const 組む = () => {
+    H.setBattleMap(null); H.setFieldSeed('x', 'y'); H.setFieldKind('街道'); H.layoutField(8000, 2);
+    const W = H.FIELD.w, Hh = H.FIELD.h;
+    const p = H.makeCorps('P', 将(11, '寄せ手'), 0, 2000, 70, 70, W * 0.2, Hh * 0.8, 0, '#2F5D8C');
+    const e = H.makeCorps('E', 将(12, '受け手'), 0, 2000, 70, 70, W * 0.8, Hh * 0.2, 0, '#B0483C');
+    for (const c of [p, e]) H.placeSquads(c, true);
+    const b = H.createBattle([p], [e], 'P');
+    b.mode = 'field'; b.phase = 'fight'; b.dusk = 1200; b.face = 'S'; b.myFar = false;
+    /* どちらも動かぬ形に置く。手ずから率いて、ただ睨み合っている盤である。 */
+    for (const c of b.corps) { c.auto = false; c.order = '待機'; c.tx = c.x; c.ty = c.y; }
+    return b;
+  };
+  {
+    const b = 組む();
+    for (let k = 0; k < 12000 && b.phase === 'fight'; k++) H.stepBattle(b, 0.2);
+    確('止まった戦は、日没を待たずに終わる', b.phase === 'over' && b.t < b.dusk,
+      `${Math.round(b.t)}秒で${b.phase}（日没は${b.dusk}秒）`);
+    確('引き分けにせず、寄せ手の退却として裁く', b.result === 'E',
+      `結末 ${b.result}／${((b.log || []).slice(-1)[0] || {}).text || ''}`);
+  }
+  {
+    /* 遊ぶ側が下知を出し続けているあいだは、盤が勝手に終わらせない。 */
+    const b = 組む();
+    for (let k = 0; k < 12000 && b.phase === 'fight'; k++) {
+      H.stepBattle(b, 0.2);
+      if (k % 500 === 0) b.手出し = b.t;
+    }
+    確('遊ぶ側が采を執っているうちは、勝手に終わらせない', b.result === '日没',
+      `${Math.round(b.t)}秒・結末 ${b.result}`);
+  }
+}
+
 console.log('');
 if (咎.length) { console.log('★背いた事:'); for (const x of 咎) console.log('   ' + x); }
 console.log('エラー:', 咎.length ? `${咎.length}件` : 'なし');

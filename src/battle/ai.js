@@ -1200,14 +1200,20 @@ export function battleAI(b) {
     if (渡る要 && c.side === b.attacker && !c.押し渡る
       && !c.routed && !c.withdraw && !c.squads.some((q) => q.engaged)) {
       const 隔 = Math.hypot(sx - c.x, sy - c.y);
-      if (c.睨み前 != null && 隔 > c.睨み前 - 30) c.睨み = (c.睨み || 0) + 0.6;
-      else c.睨み = 0;
-      c.睨み前 = 隔;
-      if (c.睨み > 45) {
-        c.押し渡る = b.t + 150; c.睨み = 0; c.wp = null;
+      /* この数は engine の「触れたまま槍を合わせぬ間」（c.睨み）とは別物である。
+
+         同じ名で持っていたので、engine が毎刻 c.睨み を書き換え（攻めの下知で
+         敵に触れていなければ零に戻す）、こちらの数は溜まる間もなく消えていた。
+         つまり「渡り場を探しあぐねたら押し渡る」という腹の決めが、委ねた隊では
+         一度も働いていなかった。川を挟んで日が暮れる戦の元である。別の名で持つ。 */
+      if (c.川睨み前 != null && 隔 > c.川睨み前 - 30) c.川睨み = (c.川睨み || 0) + 0.6;
+      else c.川睨み = 0;
+      c.川睨み前 = 隔;
+      if (c.川睨み > 45) {
+        c.押し渡る = b.t + 150; c.川睨み = 0; c.wp = null;
         b.log.push({ t: b.t, text: `${c.gen.name}隊は渡り場を探しあぐね、淵を押し渡る。` });
       }
-    } else if (!渡る要) { c.睨み = 0; c.睨み前 = null; }
+    } else if (!渡る要) { c.川睨み = 0; c.川睨み前 = null; }
     /* 地物を避けて寄せる。道が引ければそれを辿り、引けなければ真っすぐ行く。 */
     if (!MAP && !c.routed && !c.withdraw) {
       const 道 = 寄せ道を引く(b, c, sx, sy);
