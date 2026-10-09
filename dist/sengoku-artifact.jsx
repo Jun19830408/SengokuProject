@@ -808,6 +808,59 @@ function \u6226\u306E\u8DE1\u3092\u8A18\u3059(rost, \u8DE1) {
   }
   return rost.filter((q) => q.m > 0);
 }
+function \u8ECD\u306E\u640D\u3092\u5206\u3051\u308B(s2, army, \u640D) {
+  if (!army || !(\u640D > 0)) return 0;
+  const \u5C06\u3089 = (army.gens || []).map((id) => ((s2 || {}).generals || []).find((g) => g.id === id)).filter((g) => g && !g.captive);
+  const \u76F4 = \u5C06\u3089.reduce((t, g) => t + Math.max(0, g.retinue || 0), 0);
+  const \u5730 = Math.max(0, army.local || 0);
+  const \u7DCF = \u5730 + \u76F4;
+  const \u6570\u3048\u76F4\u3059 = () => {
+    army.local = Math.max(0, army.local || 0);
+    army.men = Math.max(0, army.local + \u5C06\u3089.reduce((t, g) => t + Math.max(0, g.retinue || 0), 0));
+  };
+  if (\u7DCF <= 0) {
+    army.local = 0;
+    army.men = 0;
+    return 0;
+  }
+  const \u5F15 = Math.min(Math.round(\u640D), \u7DCF);
+  let \u5730\u5206 = Math.min(\u5730, Math.round(\u5F15 * (\u5730 / \u7DCF)));
+  let \u76F4\u5206 = \u5F15 - \u5730\u5206;
+  if (\u76F4\u5206 > \u76F4) {
+    \u5730\u5206 = Math.min(\u5730, \u5730\u5206 + (\u76F4\u5206 - \u76F4));
+    \u76F4\u5206 = \u76F4;
+  }
+  if (\u5730\u5206 > 0) {
+    army.local = \u5730 - \u5730\u5206;
+    if (army.rost && army.rost.length) rosterSync(army, "rost", army.local, `arm-${army.id}`);
+  }
+  if (\u76F4\u5206 > 0) {
+    let \u6B8B = \u76F4\u5206;
+    const \u4E26 = [...\u5C06\u3089].sort((a, b) => (b.retinue || 0) - (a.retinue || 0));
+    for (const g of \u4E26) {
+      if (\u6B8B <= 0) break;
+      const \u5272 = Math.floor(\u76F4\u5206 * (Math.max(0, g.retinue || 0) / \u76F4));
+      const \u6E1B = Math.min(Math.max(0, g.retinue || 0), \u5272, \u6B8B);
+      if (\u6E1B > 0) {
+        g.retinue = Math.max(0, (g.retinue || 0) - \u6E1B);
+        \u6B8B -= \u6E1B;
+      }
+    }
+    for (const g of \u4E26) {
+      if (\u6B8B <= 0) break;
+      const \u6E1B = Math.min(Math.max(0, g.retinue || 0), \u6B8B);
+      if (\u6E1B > 0) {
+        g.retinue = Math.max(0, (g.retinue || 0) - \u6E1B);
+        \u6B8B -= \u6E1B;
+      }
+    }
+    for (const g of \u5C06\u3089) {
+      if (g.rost && g.rost.length) rosterSync(g, "rost", Math.max(0, g.retinue || 0), `ret-${g.id}`);
+    }
+  }
+  \u6570\u3048\u76F4\u3059();
+  return \u5F15;
+}
 
 // src/core/util.js
 var U = {
@@ -12019,9 +12072,7 @@ function resolveSeaBattle(s2, army, inter) {
   const win = av > dv;
   const r = Math.min(av, dv) / Math.max(av, dv);
   const lost = Math.round(army.men * (win ? 0.04 + r * 0.05 : 0.16 + r * 0.16));
-  army.men = Math.max(0, army.men - lost);
-  army.local = Math.max(0, army.local - lost);
-  if (army.rost) rosterCut(army.rost, lost);
+  \u8ECD\u306E\u640D\u3092\u5206\u3051\u308B(s2, army, lost);
   return { win, lost, foeName: s2.factions[inter.by].name };
 }
 function \u9244\u7532\u8239\u3092\u9020\u308C\u308B\u304B(s2, c) {
@@ -17439,10 +17490,8 @@ function \u5473\u65B9\u306E\u57CE\u3078\u7740\u304F(s2, army, castle) {
   const r = Math.min(\u5F8C\u8A70, \u5BC4\u624B) / Math.max(\u5F8C\u8A70, \u5BC4\u624B);
   const \u5F8C\u8A70\u640D = Math.round(army.men * (\u52DD ? 0.14 * r + 0.05 : 0.28 + 0.2 * r));
   const \u5BC4\u624B\u640D = Math.round(bes.men * (\u52DD ? 0.3 + 0.2 * r : 0.13 * r + 0.05));
-  army.men = Math.max(0, army.men - \u5F8C\u8A70\u640D);
-  army.local = Math.max(0, army.local - \u5F8C\u8A70\u640D);
-  bes.men = Math.max(0, bes.men - \u5BC4\u624B\u640D);
-  bes.local = Math.max(0, bes.local - \u5BC4\u624B\u640D);
+  \u8ECD\u306E\u640D\u3092\u5206\u3051\u308B(s2, army, \u5F8C\u8A70\u640D);
+  \u8ECD\u306E\u640D\u3092\u5206\u3051\u308B(s2, bes, \u5BC4\u624B\u640D);
   s2.chronicle.push({
     y: s2.year,
     m: s2.month,
@@ -17751,7 +17800,7 @@ function \u5C06\u306E\u7121\u3044\u8ECD\u3092\u89E3\u304F(s2) {
   return \u89E3\u3044\u305F;
 }
 function \u59D4\u306D\u308B\u5DEE\u914D(s2, castle, army) {
-  const \u5C06\u3089 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean).filter((g) => g.id !== army.\u65D7\u982D && g.\u5F79 !== "\u56FD\u4E3B" && g.\u5F79 !== "\u65D7\u982D");
+  const \u5C06\u3089 = (army.gens || []).map((id) => s2.generals.find((x) => x.id === id)).filter(Boolean).filter((g) => g.id !== army.\u65D7\u982D && !g.lord && g.\u5F79 !== "\u56FD\u4E3B" && g.\u5F79 !== "\u65D7\u982D");
   if (\u5C06\u3089.length <= 1) return { \u57CE\u4E3B: null, \u6240\u5C5E: [], \u5175: Math.round((army.local || 0) * 0.3) };
   const \u4E3B = [...\u5C06\u3089].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
   return { \u57CE\u4E3B: \u4E3B.id, \u6240\u5C5E: [\u4E3B.id], \u5175: Math.round((army.local || 0) * 0.5) };
@@ -17849,8 +17898,7 @@ function resolveOffscreen(prev, armyId, castleId) {
   const r = Math.min(atk, def) / Math.max(atk, def);
   const aLoss = Math.round(army.men * (atkWon ? 0.16 * r + 0.06 : 0.3 + 0.2 * r));
   const dLoss = Math.round(dMen2 * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
-  army.men = Math.max(0, army.men - aLoss);
-  army.local = Math.max(0, army.local - aLoss);
+  \u8ECD\u306E\u640D\u3092\u5206\u3051\u308B(s2, army, aLoss);
   castle.local = Math.max(0, castle.local - dLoss);
   s2.chronicle.push({
     y: s2.year,
@@ -18214,11 +18262,7 @@ function resolveClash(s2, aId, bId, place) {
   const r = Math.min(pa, pb) / Math.max(pa, pb);
   const \u52DD\u640D = Math.round(\u52DD.men * (0.13 * r + 0.05));
   const \u8CA0\u640D = Math.round(\u8CA0.men * (0.3 + 0.2 * r));
-  for (const [army, loss] of [[\u52DD, \u52DD\u640D], [\u8CA0, \u8CA0\u640D]]) {
-    army.men = Math.max(0, army.men - loss);
-    army.local = Math.max(0, army.local - loss);
-    if (army.rost) rosterSync(army, "rost", army.local, `arm-${army.id}`);
-  }
+  for (const [army, loss] of [[\u52DD, \u52DD\u640D], [\u8CA0, \u8CA0\u640D]]) \u8ECD\u306E\u640D\u3092\u5206\u3051\u308B(s2, army, loss);
   s2.chronicle.push({
     y: s2.year,
     m: s2.month,
@@ -22684,8 +22728,7 @@ function advanceMonth(prev, g) {
     }
     if (bes.men > dMen2 * 1.6 && Math.random() < 0.45) {
       const aL = Math.round(bes.men * 0.14), dL = Math.round(dMen2 * 0.4);
-      bes.men = Math.max(0, bes.men - aL);
-      bes.local = Math.max(0, bes.local - aL);
+      \u8ECD\u306E\u640D\u3092\u5206\u3051\u308B(s2, bes, aL);
       cs.local = Math.max(0, cs.local - dL);
       const \u6587 = `${s2.factions[bes.faction].name}\u304C${cs.name}\u3078\u653B\u3081\u304B\u304B\u3063\u305F\uFF08\u653B${fmt(aL)}\u4EBA\u30FB\u5B88${fmt(dL)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`;
       s2.chronicle.push({ y: s2.year, m: s2.month, text: \u6587 });
@@ -31194,12 +31237,17 @@ function \u5148\u5BA2\u305F\u3061(alive, c, o) {
   return alive.filter((x) => x !== c && x.side === c.side && !x.routed && x.squads.some((q) => q.engaged) && Math.hypot(x.x - o.x, x.y - o.y) < \u9593);
 }
 function \u72D9\u3046\u6575\u3092\u9078\u3076(alive, c, foes) {
+  if (!foes || !foes.length) return null;
   const \u9060\u56DE\u308A\u306E\u8CBB\u3048 = clamp(420 * Math.sqrt(fieldScale()), 420, 900);
+  const \u9694 = (o) => Math.hypot(o.x - c.x, o.y - c.y);
+  const \u8FD1\u3055 = foes.reduce((m, o) => Math.min(m, \u9694(o)), Infinity);
+  const \u5019 = foes.filter((o) => \u9694(o) <= \u8FD1\u3055 + \u9060\u56DE\u308A\u306E\u8CBB\u3048);
+  const \u7FA4 = \u5019.length ? \u5019 : foes;
   const \u8CBB\u3048 = (o) => {
     const n = \u5148\u5BA2\u305F\u3061(alive, c, o).length;
-    return Math.hypot(o.x - c.x, o.y - c.y) + (n === 0 ? 0 : n === 1 ? \u9060\u56DE\u308A\u306E\u8CBB\u3048 : 1e7);
+    return \u9694(o) + (n === 0 ? 0 : n === 1 ? \u9060\u56DE\u308A\u306E\u8CBB\u3048 : \u9060\u56DE\u308A\u306E\u8CBB\u3048 * 4);
   };
-  return foes.reduce((a, o) => \u8CBB\u3048(o) < \u8CBB\u3048(a) ? o : a, foes[0]);
+  return \u7FA4.reduce((a, o) => \u8CBB\u3048(o) < \u8CBB\u3048(a) ? o : a, \u7FA4[0]);
 }
 function \u7DDA\u307E\u3067\u306E\u9694\u305F\u308A(x0, y0, x1, y1, px2, py2) {
   const dx = x1 - x0, dy = y1 - y0;
@@ -31373,6 +31421,50 @@ function \u5947\u8972\u306E\u6E21\u6CB3\u3092\u8A08\u308B(b, c, sx, sy) {
   b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F\u6E21\u308A\u5834\u3092\u907F\u3051\u3001\u702C\u306A\u3089\u306C\u6DF5\u3092\u62BC\u3057\u6E21\u3063\u3066\u56DE\u308A\u8FBC\u3080\u3002` });
   return true;
 }
+function \u81EA\u3089\u5F53\u305F\u308B(b, c, alive) {
+  const foeSide = c.side === "P" ? "E" : "P";
+  let \u7684 = null, \u8FD1 = Infinity;
+  for (const o of alive) {
+    if (o.side !== foeSide || o.routed || o.withdraw || o.\u4E0D\u6226) continue;
+    if (o.ambush && !o.seen) continue;
+    const d2 = Math.hypot(o.x - c.x, o.y - c.y);
+    if (d2 < \u8FD1) {
+      \u8FD1 = d2;
+      \u7684 = o;
+    }
+  }
+  if (!\u7684) {
+    issueOrder(b, c, { order: "\u5F85\u6A5F", tx: c.x, ty: c.y }, { \u5373: true });
+    return;
+  }
+  if (c.squads.some((q) => q.engaged)) return;
+  if (c.side !== b.attacker && \u8FD1 > \u565B\u307F\u306E\u9593() * 2.5) {
+    issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y, faceTo: Math.atan2(\u7684.y - c.y, \u7684.x - c.x) }, { \u5373: true });
+    return;
+  }
+  const d = Math.max(1, \u8FD1);
+  let sx = \u7684.x + (c.x - \u7684.x) / d * 40;
+  let sy = \u7684.y + (c.y - \u7684.y) / d * 40;
+  if (!MAP && hasRiver()) {
+    const \u639F = \u5DDD\u306E\u639F(b, c, sx, sy, \u7684);
+    if (\u639F.\u5C04\u308B) {
+      issueOrder(b, c, \u5CB8\u304B\u3089\u5C04\u308B(c, \u7684, \u639F.sx, \u639F.sy), { \u5373: true });
+      return;
+    }
+    sx = \u639F.sx;
+    sy = \u639F.sy;
+  }
+  if (!MAP && !c.routed && !c.withdraw) {
+    const \u90532 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, sx, sy);
+    if (\u90532 === "\u7D9A\u884C") return;
+    if (\u90532) {
+      c.wp = \u90532;
+      issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u90532[0].x, ty: \u90532[0].y, keepPath: true }, { \u5373: true });
+      return;
+    }
+  }
+  issueOrder(b, c, { order: "\u63A5\u6226", target: \u7684.id, tx: sx, ty: sy }, { \u5373: true });
+}
 function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed && !c.\u65E5\u548C\u898B);
@@ -31494,6 +31586,10 @@ function battleAI(b) {
     if (c.\u672C\u9663\u3092\u5B88\u308B) continue;
     if (c.\u4E0D\u6226 || c.\u63A7\u3048 || c.\u7E1B\u308A) continue;
     if (c.ambush && !c.revealed) continue;
+    if (!MAP && !c.\u4F0F\u305B\u5834 && outOfCommand(b, c)) {
+      \u81EA\u3089\u5F53\u305F\u308B(b, c, alive);
+      continue;
+    }
     if (c.\u4F0F\u5175\u7121\u7528) {
       c.\u4F0F\u305B\u5834 = null;
     }
@@ -31624,8 +31720,9 @@ function battleAI(b) {
     const \u5927\u8ECD\u306E\u6383\u8A0E = !MAP && b.corps.length >= 28;
     if (\u5927\u8ECD\u306E\u6383\u8A0E && !c.squads.some((q) => q.engaged) && !c.routed && !c.withdraw && !c.detach) {
       const \u5473\u65B9\u6570 = alive.filter((x) => x.side === c.side && !x.routed && !x.withdraw).length;
-      const \u5BC4\u305B\u308B\u9650\u308A = foes.length <= 2 ? 3 : 2;
-      if (foes.length * \u5BC4\u305B\u308B\u9650\u308A < \u5473\u65B9\u6570) {
+      const \u6B8B\u308B\u6575 = alive.filter((x) => x.side === foeSide && !x.routed && !x.withdraw && !x.\u4E0D\u6226 && !x.dead && !x.destroyed).length;
+      const \u5BC4\u305B\u308B\u9650\u308A = \u6B8B\u308B\u6575 <= 2 ? 3 : 2;
+      if (\u6B8B\u308B\u6575 * \u5BC4\u305B\u308B\u9650\u308A < \u5473\u65B9\u6570) {
         const \u6211\u307E\u3067 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
         const \u8FD1\u3044\u5473\u65B9 = alive.filter((x) => x !== c && x.side === c.side && !x.routed && !x.withdraw && Math.hypot(x.x - tgt.x, x.y - tgt.y) < \u6211\u307E\u3067).length;
         if (\u8FD1\u3044\u5473\u65B9 >= \u5BC4\u305B\u308B\u9650\u308A) {
@@ -35221,7 +35318,15 @@ function \u57CE\u3092\u59D4\u306D\u308B\u554F\u3044({ g, \u5F85\u3061, onDone, o
       style: { width: "100%" },
       onChange: (e) => set\u5175(Number(e.target.value))
     }
-  ), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u6B8B\u3059\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u5175), " \u4EBA\uFF0F\u8ECD\u306E\u5730\u306E\u5175 ", fmt(a.local || 0), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u3053\u306E\u57CE\u306E\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v", style: { color: \u57CE\u306E\u5175 < \u5B88\u308A ? "#B0483C" : void 0 } }, fmt(\u57CE\u306E\u5175), " \u4EBA\uFF08\u5B88\u308B\u306B\u8981\u308B\u76EE\u5B89 ", fmt(\u5B88\u308A), " \u4EBA\uFF09")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5148\u3078\u9032\u3081\u308B\u8ECD"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, \u6B8B\u308B\u5C06.length, "\u540D\uFF0F\u5175 ", fmt(Math.max(0, (a.local || 0) - \u5175) + \u6B8B\u308B\u5C06.reduce((t, x) => t + x.retinue, 0)), " \u4EBA")), !\u57CE\u4E3B && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: "#B0483C", marginTop: 6, lineHeight: 1.7 } }, "\u57CE\u4E3B\u3092\u636E\u3048\u306D\u3070\u3001\u3053\u306E\u57CE\u3067\u306F\u5185\u653F\u304C\u3067\u304D\u307E\u305B\u3093\uFF08\u5B88\u5099\u968A\u306E\u7D71\u7387\u3082\u56DB\u5341\u306E\u307E\u307E\u3067\u3059\uFF09\u3002"), \u57CE\u4E3B && a.\u65D7\u982D && (() => {
+  ), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u6B8B\u3059\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, fmt(\u5175), " \u4EBA\uFF0F\u8ECD\u306E\u5730\u306E\u5175 ", fmt(a.local || 0), " \u4EBA")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u3053\u306E\u57CE\u306E\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v", style: { color: \u57CE\u306E\u5175 < \u5B88\u308A ? "#B0483C" : void 0 } }, fmt(\u57CE\u306E\u5175), " \u4EBA\uFF08\u5B88\u308B\u306B\u8981\u308B\u76EE\u5B89 ", fmt(\u5B88\u308A), " \u4EBA\uFF09")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u5148\u3078\u9032\u3081\u308B\u8ECD"), /* @__PURE__ */ React2.createElement("span", { className: "v" }, \u6B8B\u308B\u5C06.length, "\u540D\uFF0F\u5175 ", fmt(Math.max(0, (a.local || 0) - \u5175) + \u6B8B\u308B\u5C06.reduce((t, x) => t + x.retinue, 0)), " \u4EBA")), !\u57CE\u4E3B && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: "#B0483C", marginTop: 6, lineHeight: 1.7 } }, "\u57CE\u4E3B\u3092\u636E\u3048\u306D\u3070\u3001\u3053\u306E\u57CE\u3067\u306F\u5185\u653F\u304C\u3067\u304D\u307E\u305B\u3093\uFF08\u5B88\u5099\u968A\u306E\u7D71\u7387\u3082\u56DB\u5341\u306E\u307E\u307E\u3067\u3059\uFF09\u3002"), \u57CE\u4E3B && (() => {
+    const \u4E3B = \u5C06\u3089.find((x) => x.id === \u57CE\u4E3B);
+    if (!\u4E3B || !\u4E3B.lord) return null;
+    return /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: "#B0483C", marginTop: 6, lineHeight: 1.7 } }, \u4E3B.name, "\u306F", /* @__PURE__ */ React2.createElement("b", null, "\u5F53\u4E3B"), "\u3067\u3059\u3002\u636E\u3048\u308C\u3070", /* @__PURE__ */ React2.createElement("b", null, "\u3053\u3053\u304C\u672C\u62E0"), "\u3068\u306A\u308A\u3001\u9663\u89E6\u308C\u3082\u3053\u306E\u57CE\u304B\u3089\u51FA\u307E\u3059\u3002 \u6575\u5730\u306E\u969B\u306B\u5F53\u4E3B\u3092\u7F6E\u3051\u3070\u3001\u596A\u3044\u8FD4\u3055\u308C\u305F\u3068\u304D\u306B\u5F53\u4E3B\u3082\u308D\u3068\u3082\u5931\u3044\u307E\u3059\u3002");
+  })(), \u57CE\u4E3B && (() => {
+    const \u4E3B = \u5C06\u3089.find((x) => x.id === \u57CE\u4E3B);
+    if (!\u4E3B || \u4E3B.lord || \u4E3B.\u5F79 !== "\u56FD\u4E3B" && \u4E3B.\u5F79 !== "\u65D7\u982D") return null;
+    return /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: "#C89A3A", marginTop: 6, lineHeight: 1.7 } }, \u4E3B.name, "\u306F", /* @__PURE__ */ React2.createElement("b", null, \u4E3B.\u5F79), "\u3067\u3059\u3002\u57CE\u306F\u9810\u304B\u308C\u307E\u3059\u304C\u3001\u6839\u306F", \u4E3B.\u5F79 === "\u56FD\u4E3B" ? "\u9810\u304B\u308B\u56FD" : "\u65B9\u9762", "\u306B\u7F6E\u3044\u305F\u307E\u307E\u306B\u3057\u307E\u3059 \uFF08\u6839\u304C\u52D5\u3051\u3070\u5F79\u304C\u89E3\u3051\u3001\u5BC4\u9A0E\u3082\u96E2\u308C\u308B\u305F\u3081\u3067\u3059\uFF09\u3002");
+  })(), \u57CE\u4E3B && a.\u65D7\u982D && (() => {
     const \u65D7 = g.generals.find((x) => x.id === a.\u65D7\u982D && x.\u5F79 === "\u65D7\u982D" && !x.captive);
     if (!\u65D7) return null;
     return /* @__PURE__ */ React2.createElement("div", { style: { marginTop: 10, borderTop: `1px solid ${U.line2}`, paddingTop: 8 } }, /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u3053\u306E\u57CE\u306E\u5DEE\u914D"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 } }, \u65D7.name, "\u304C\u65B9\u9762\u306E\u5175\u3067\u843D\u3068\u3057\u305F\u57CE\u3067\u3059\u3002", \u65D7.name, "\u306E\u5BC4\u9A0E\u3068\u3059\u308C\u3070\u3001\u4EE5\u5F8C\u306E\u653F\u52D9\u306F", \u65D7.name, "\u304C\u5DEE\u914D\u3057\u307E\u3059\uFF08\u5927\u540D\u306E\u4E0B\u77E5\u306F\u8981\u308A\u307E\u305B\u3093\uFF09\u3002\u76F4\u8F44\u3068\u3059\u308C\u3070\u5927\u540D\u304C\u81EA\u3089\u898B\u307E\u3059\u3002"), /* @__PURE__ */ React2.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React2.createElement(

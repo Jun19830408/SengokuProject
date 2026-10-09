@@ -1,5 +1,5 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 門の控え口 } from "./castleMap.js";
-import { setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
+import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { clamp } from "../core/util.js";
@@ -43,6 +43,7 @@ export function 先客たち(alive, c, o) {
    一隊すでに掛かっているなら遠くても空いた敵を選び、二隊掛かっていれば
    よほどのことがなければ選ばない。 */
 export function 狙う敵を選ぶ(alive, c, foes) {
+  if (!foes || !foes.length) return null;
   /* 空いた敵ならこれだけ遠くても選ぶ、という遠回りの許し。
 
      もとは盤の広さにそのまま比例させていた（420×野の倍）。標準の野では
@@ -54,12 +55,30 @@ export function 狙う敵を選ぶ(alive, c, foes) {
      広い盤でも、隊が横へ流れてよい幅は隊の正面ほどである。平方根で効かせ、
      九百歩で頭打ちにする。 */
   const 遠回りの費え = clamp(420 * Math.sqrt(fieldScale()), 420, 900);
+  const 隔 = (o) => Math.hypot(o.x - c.x, o.y - c.y);
+  /* 回ってよいのは、手近な敵からひと流れのうちである（GDD 8.4）。
+
+     先客が二隊いる敵には法外な費え（一千万）を置いて、事実上除いていた。
+     除くだけで、どこまで歩いて探してよいかを決めていなかったので、近くの敵が
+     みな塞がっていると、隊は野を横切って空いた敵を探しに出た。実測では、
+     三十二対三十二の野で、百五十九歩先に敵がいるのに三千五十六歩先の敵を
+     狙う隊があった。遊ぶ側には「委任した軍があらぬ方へ向かう」と映る。
+     隊が二十・三十と並ぶ大軍ほど、近くの敵が塞がるので頻に出る。
+
+     横へ流れてよい幅は隊の正面ほど、という元の決めをそのまま距離にも効かせる。
+     手近な敵から遠回りの費えのうちにいる敵だけを候補とし、そのうちで空いた
+     敵を選ぶ。候補がみな塞がっていれば、手近な敵に加わる――野を横切って
+     独りで遠くの敵に当たるよりは、そのほうがよほど戦になる。 */
+  const 近さ = foes.reduce((m, o) => Math.min(m, 隔(o)), Infinity);
+  const 候 = foes.filter((o) => 隔(o) <= 近さ + 遠回りの費え);
+  const 群 = 候.length ? 候 : foes;
   const 費え = (o) => {
     const n = 先客たち(alive, c, o).length;
-    return Math.hypot(o.x - c.x, o.y - c.y)
-      + (n === 0 ? 0 : n === 1 ? 遠回りの費え : 1e7);
+    /* 法外な値を置くと、候補がみな塞がったときに順が決まらない。
+       三隊目を思いとどまらせるだけの重みを、有限で置く。 */
+    return 隔(o) + (n === 0 ? 0 : n === 1 ? 遠回りの費え : 遠回りの費え * 4);
   };
-  return foes.reduce((a, o) => (費え(o) < 費え(a) ? o : a), foes[0]);
+  return 群.reduce((a, o) => (費え(o) < 費え(a) ? o : a), 群[0]);
 }
 
 /* 線分（我から寄せ先まで）と、味方の隔たり。前をふさいでいるかを見るのに使う。 */
@@ -395,6 +414,63 @@ function 奇襲の渡河を計る(b, c, sx, sy) {
   return true;
 }
 
+/* 指揮圏の外で戦う（GDD 8.5）。
+
+   本陣から伝令の届かぬ隊には、これまで何の下知も渡らなかった。issueOrder が
+   「命令が届かない」として黙って捨てていたからである。渡らねば隊は布陣したときの
+   「待機」のまま、敵が四十歩先に来ても動かない。
+
+   指揮圏は 三百＋統率×三（野の倍を掛ける）であり、隊が二十・三十と並ぶ大軍では
+   戦列が指揮圏より長くなる。翼の隊はそのまま盤の隅で立ち尽くす。遊ぶ側の
+   申し出は「合戦で多数の軍が出ると、委任しても動かなかったり変な方向に向かう軍が
+   ある」であった。実測では、三十二対三十二の野で片翼の四隊が、百三十歩先に敵を
+   見ながら一歩も動かなかった。
+
+   伝令が届かぬとは、本陣の絵図どおりに動けぬということであって、戦わぬという
+   ことではない。己の目に映るいちばん近い敵へ当たる。回り込みも、丘取りも、
+   伏せもしない――それらは本陣の差配だからである。川の掟と道さがしだけは通す。
+   目の前の淵に歩み入るのは、伝令の有無とは関わりがない。 */
+function 自ら当たる(b, c, alive) {
+  const foeSide = c.side === "P" ? "E" : "P";
+  let 的 = null, 近 = Infinity;
+  for (const o of alive) {
+    if (o.side !== foeSide || o.routed || o.withdraw || o.不戦) continue;
+    if (o.ambush && !o.seen) continue;
+    const d = Math.hypot(o.x - c.x, o.y - c.y);
+    if (d < 近) { 近 = d; 的 = o; }
+  }
+  if (!的) { issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y }, { 即: true }); return; }
+  if (c.squads.some((q) => q.engaged)) return;        // すでに槍を合わせている。そのまま戦う
+  /* 寄せ手は進み、受け手は持ち場を守る。
+
+     伝令が届かぬからといって、受け手まで丘を下りて駆け出すのでは筋が通らない。
+     高みに拠るのは受け手の利であり、寄せて来るのを待てばよい。進まねば何も
+     始まらぬのは寄せ手のほうである。ただし敵が間近に迫れば、どちらも当たる
+     ――目の前の敵を見ながら動かぬ備など無い。 */
+  if (c.side !== b.attacker && 近 > 噛みの間() * 2.5) {
+    issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y, faceTo: Math.atan2(的.y - c.y, 的.x - c.x) }, { 即: true });
+    return;
+  }
+  const d = Math.max(1, 近);
+  let sx = 的.x + ((c.x - 的.x) / d) * 40;
+  let sy = 的.y + ((c.y - 的.y) / d) * 40;
+  if (!MAP && hasRiver()) {
+    const 掟 = 川の掟(b, c, sx, sy, 的);
+    if (掟.射る) { issueOrder(b, c, 岸から射る(c, 的, 掟.sx, 掟.sy), { 即: true }); return; }
+    sx = 掟.sx; sy = 掟.sy;
+  }
+  if (!MAP && !c.routed && !c.withdraw) {
+    const 道 = 寄せ道を引く(b, c, sx, sy);
+    if (道 === "続行") return;
+    if (道) {
+      c.wp = 道;
+      issueOrder(b, c, { order: "移動", tx: 道[0].x, ty: 道[0].y, keepPath: true }, { 即: true });
+      return;
+    }
+  }
+  issueOrder(b, c, { order: "接戦", target: 的.id, tx: sx, ty: sy }, { 即: true });
+}
+
 export function battleAI(b) {
   setAiIssuing(true);
   // 去就の定まらぬ隊（日和見）は采配の目にも入らない（GDD 8.9）
@@ -574,6 +650,9 @@ export function battleAI(b) {
        伏せ場へ着いたら身をひそめる。ひそめた隊には、以後なにも命じない。
        命じれば動き、動けば見つかる。 */
     if (c.ambush && !c.revealed) continue;
+    /* 伝令の届かぬ隊は、己の判じで戦う（上の「指揮圏の外で戦う」を見よ）。
+       本陣の絵図（回り込み・丘取り・伏せ）には加われないが、立ち尽くしもしない。 */
+    if (!MAP && !c.伏せ場 && outOfCommand(b, c)) { 自ら当たる(b, c, alive); continue; }
     if (c.伏兵無用) { c.伏せ場 = null; }
     if (c.伏せ場 && !c.ambush) {
       const d = Math.hypot(c.伏せ場.x - c.x, c.伏せ場.y - c.y);
@@ -756,8 +835,22 @@ export function battleAI(b) {
          はじめは「まわりに何隊寄っているか」で数えていたが、終わり際には
          みな近くにいるので数が頭打ちになり、十五隊が二百八十歩の塊になった。
          自分より近い味方を数えれば、誰が掛かるべきかが一意に決まる。 */
-      const 寄せる限り = foes.length <= 2 ? 3 : 2;      // 残り二隊を切ったら三隊で片づける
-      if (foes.length * 寄せる限り < 味方数) {
+      /* 手が余っているかは、盤に残る敵の数で測る（GDD 8.4）。
+
+         もとは foes――「いま見えている敵」――の数で測っていた。味方の数は
+         盤じゅうを数えるのに、敵だけ目に映るぶんしか数えない。野が広く隊が
+         多いほど、翼の隊には敵が二つ三つしか見えないので、まだ戦の初めだと
+         いうのに「敵二隊に味方三十二隊では手が余る」と判じて立ち尽くした。
+         遊ぶ側の申し出は「合戦で多数の軍が出ると、委任しても動かなかったり
+         変な方向に向かう軍がある」であった。実測では、三十二対三十二の野で
+         四隊が百三十歩先の敵を見ながら待機のまま動かなかった。
+
+         数えるのは、まだ戦える敵――敗走も退きもせず、戦う気のある隊である。
+         見えていようといまいと、いずれ当たらねばならぬ相手には違いない。 */
+      const 残る敵 = alive.filter((x) => x.side === foeSide
+        && !x.routed && !x.withdraw && !x.不戦 && !x.dead && !x.destroyed).length;
+      const 寄せる限り = 残る敵 <= 2 ? 3 : 2;           // 残り二隊を切ったら三隊で片づける
+      if (残る敵 * 寄せる限り < 味方数) {
         const 我まで = Math.hypot(tgt.x - c.x, tgt.y - c.y);
         const 近い味方 = alive.filter((x) => x !== c && x.side === c.side && !x.routed && !x.withdraw
           && Math.hypot(x.x - tgt.x, x.y - tgt.y) < 我まで).length;

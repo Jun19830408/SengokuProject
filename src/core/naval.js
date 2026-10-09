@@ -1,5 +1,5 @@
 import { nodeById } from "./paths.js";
-import { rosterCut } from "./roster.js";
+import { 軍の損を分ける } from "./roster.js";
 import { atPeace } from "./state.js";
 import { clamp } from "./util.js";
 import { TOWNS } from "../data/castles.js";
@@ -209,9 +209,7 @@ export function resolveSeaBattle(s, army, inter) {
   const r = Math.min(av, dv) / Math.max(av, dv);
   // 負ければ大きく沈む。海の上に退き場はない。
   const lost = Math.round(army.men * (win ? 0.04 + r * 0.05 : 0.16 + r * 0.16));
-  army.men = Math.max(0, army.men - lost);
-  army.local = Math.max(0, army.local - lost);
-  if (army.rost) rosterCut(army.rost, lost);
+  軍の損を分ける(s, army, lost);
   return { win, lost, foeName: s.factions[inter.by].name };
 }
 

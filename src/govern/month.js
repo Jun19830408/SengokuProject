@@ -8,7 +8,7 @@ import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の重み } from "../core/paths.js";
 import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家 } from "../core/rank.js";
-import { newRoster, rosterSync, rosterTake } from "../core/roster.js";
+import { newRoster, rosterSync, rosterTake, 軍の損を分ける } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 二重の城主を解く, 城主の札を据える, 城の名を改める, 武将の名を改める } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
 import { PLOTS } from "../data/diplo.js";
@@ -1055,7 +1055,7 @@ export function advanceMonth(prev, g) {
         // 数で押せるなら強攻する
         if (bes.men > dMen2 * 1.6 && Math.random() < 0.45) {
           const aL = Math.round(bes.men * 0.14), dL = Math.round(dMen2 * 0.4);
-          bes.men = Math.max(0, bes.men - aL); bes.local = Math.max(0, bes.local - aL);
+          軍の損を分ける(s, bes, aL);
           cs.local = Math.max(0, cs.local - dL);
           const 文 = `${s.factions[bes.faction].name}が${cs.name}へ攻めかかった`
             + `（攻${fmt(aL)}人・守${fmt(dL)}人を失う）。`;

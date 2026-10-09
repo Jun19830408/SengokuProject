@@ -376,3 +376,62 @@ export function 戦の跡を記す(rost, 跡) {
   }
   return rost.filter((q) => q.m > 0);
 }
+
+/* ============================================ 軍の損を分ける（GDD 7.4 / 8.6）
+
+   盤の外で起きる戦――着陣の始末、囲みの強攻、後詰、海の上、行き合いの野戦――は、
+   損害を「軍の総勢（men）」と「地の兵（local）」からだけ引いていた。将の直属には
+   一指も触れない。
+
+   地の兵が尽きた軍は、そこから先いくら討たれても総勢だけが減る。ところが総勢を
+   組み直す筋が盤にはいくつもある（城を委ねる、月送りの合流、束ねる）。どれも
+   「総勢＝地の兵＋直属の和」で数え直すので、回った途端に総勢が元へ戻る――
+   討たれたはずの兵が生き返る。遊ぶ側の申し出は「陣触れで大軍で攻めて連戦し
+   続けていると、なぜか兵が増える」であった。実測では、地の兵を使い果たした
+   二千六百の軍が、深志城で四百四十七人を失ったのち、城を委ねた途端に
+   二千六百へ戻っていた。
+
+   損は地の兵と直属へ、頭数の割で配る。地の兵は名簿（五十人組）から、直属も
+   将ごとの名簿から削る。配りきれぬ端数は、手勢の残っている者から順に引く。 */
+export function 軍の損を分ける(s, army, 損) {
+  if (!army || !(損 > 0)) return 0;
+  const 将ら = (army.gens || [])
+    .map((id) => ((s || {}).generals || []).find((g) => g.id === id))
+    .filter((g) => g && !g.captive);
+  const 直 = 将ら.reduce((t, g) => t + Math.max(0, g.retinue || 0), 0);
+  const 地 = Math.max(0, army.local || 0);
+  const 総 = 地 + 直;
+  const 数え直す = () => {
+    army.local = Math.max(0, army.local || 0);
+    army.men = Math.max(0, army.local + 将ら.reduce((t, g) => t + Math.max(0, g.retinue || 0), 0));
+  };
+  if (総 <= 0) { army.local = 0; army.men = 0; return 0; }
+  const 引 = Math.min(Math.round(損), 総);
+  let 地分 = Math.min(地, Math.round(引 * (地 / 総)));
+  let 直分 = 引 - 地分;
+  if (直分 > 直) { 地分 = Math.min(地, 地分 + (直分 - 直)); 直分 = 直; }
+  if (地分 > 0) {
+    army.local = 地 - 地分;
+    if (army.rost && army.rost.length) rosterSync(army, "rost", army.local, `arm-${army.id}`);
+  }
+  if (直分 > 0) {
+    let 残 = 直分;
+    const 並 = [...将ら].sort((a, b) => (b.retinue || 0) - (a.retinue || 0));
+    for (const g of 並) {                                  // まず割に応じて
+      if (残 <= 0) break;
+      const 割 = Math.floor(直分 * (Math.max(0, g.retinue || 0) / 直));
+      const 減 = Math.min(Math.max(0, g.retinue || 0), 割, 残);
+      if (減 > 0) { g.retinue = Math.max(0, (g.retinue || 0) - 減); 残 -= 減; }
+    }
+    for (const g of 並) {                                  // 端数は手勢の残る者から
+      if (残 <= 0) break;
+      const 減 = Math.min(Math.max(0, g.retinue || 0), 残);
+      if (減 > 0) { g.retinue = Math.max(0, (g.retinue || 0) - 減); 残 -= 減; }
+    }
+    for (const g of 将ら) {
+      if (g.rost && g.rost.length) rosterSync(g, "rost", Math.max(0, g.retinue || 0), `ret-${g.id}`);
+    }
+  }
+  数え直す();
+  return 引;
+}

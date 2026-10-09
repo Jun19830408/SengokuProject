@@ -2,7 +2,7 @@ import { captureChance, makePrisoner, takeAsPrisoner } from "../core/capture.js"
 import { canRecruit, loyaltyAfterRecruit, ruinedHouse } from "../core/house.js";
 import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
 import { minGarrison, stipendOf, 城主を据え替える, 寄騎に取れるか, 陣触れに応じる, 陣触れの届き, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
-import { newRoster, rosterCut, rosterSync, rosterTake } from "../core/roster.js";
+import { newRoster, rosterCut, rosterSync, rosterTake, 軍の損を分ける } from "../core/roster.js";
 import { relOf, 主を探す } from "../core/state.js";
 import { clamp, fmt } from "../core/util.js";
 import { tryAmbush } from "../core/ambush.js";
@@ -314,8 +314,8 @@ function 味方の城へ着く(s, army, castle) {
   const r = Math.min(後詰, 寄手) / Math.max(後詰, 寄手);
   const 後詰損 = Math.round(army.men * (勝 ? 0.14 * r + 0.05 : 0.28 + 0.2 * r));
   const 寄手損 = Math.round(bes.men * (勝 ? 0.30 + 0.2 * r : 0.13 * r + 0.05));
-  army.men = Math.max(0, army.men - 後詰損); army.local = Math.max(0, army.local - 後詰損);
-  bes.men = Math.max(0, bes.men - 寄手損); bes.local = Math.max(0, bes.local - 寄手損);
+  軍の損を分ける(s, army, 後詰損);
+  軍の損を分ける(s, bes, 寄手損);
   s.chronicle.push({ y: s.year, m: s.month,
     text: `${castle.name}の囲みを解こうと${s.factions[army.faction].name}の後詰が${s.factions[bes.faction].name}の陣を衝き、`
       + `${勝 ? "囲みを打ち払った" : "退けられた"}（後詰${fmt(後詰損)}人・寄せ手${fmt(寄手損)}人を失う）。` });
@@ -790,9 +790,24 @@ export function 委ねる差配(s, castle, army) {
      根を置いたままとする。
 
      そもそも役持ちが城を移るのは国替えであって、大名の下知によるものである。
-     采配（旗頭の差配・月送りの自動）で勝手に動かしてよいものではない。 */
+     采配（旗頭の差配・月送りの自動）で勝手に動かしてよいものではない。
+
+     当主はなおさらである（GDD 6.4）。
+
+     当主の禄高は御料――家じゅうの実入り――であるから、身代の重い者を選べば
+     必ず当主が選ばれる。当主を城主に据えると、その者の根が最前線の城へ移る。
+     本拠は当主のいる城を追うので、陣触れを出す城まで敵地の際へ動く。そのうえ
+     次に攻められれば当主ごと討たれ、あるいは捕らわれる。
+
+     遊ぶ側の申し出は「大名で出陣して軍を解いたのに、本拠地に戻らず、最後に
+     攻めていた城に入城することがあった。しかも、大名でなくなり、かつ、大名と
+     なる者がいなくなる」であった。実測では、清洲・岩倉を落とすたびに織田信秀が
+     城主に据えられ、岩倉城を奪い返された月に当主が替わっていた。
+
+     大名が自ら城を移るのは国替えであり、下知によるものである。采配は選ばない。 */
   const 将ら = (army.gens || []).map((id) => s.generals.find((x) => x.id === id))
-    .filter(Boolean).filter((g) => g.id !== army.旗頭 && g.役 !== "国主" && g.役 !== "旗頭");
+    .filter(Boolean)
+    .filter((g) => g.id !== army.旗頭 && !g.lord && g.役 !== "国主" && g.役 !== "旗頭");
   if (将ら.length <= 1) return { 城主: null, 所属: [], 兵: Math.round((army.local || 0) * 0.3) };
   const 主 = [...将ら].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
   return { 城主: 主.id, 所属: [主.id], 兵: Math.round((army.local || 0) * 0.5) };
@@ -932,7 +947,7 @@ export function resolveOffscreen(prev, armyId, castleId) {
     const r = Math.min(atk, def) / Math.max(atk, def);
     const aLoss = Math.round(army.men * (atkWon ? 0.16 * r + 0.06 : 0.3 + 0.2 * r));
     const dLoss = Math.round(dMen2 * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
-    army.men = Math.max(0, army.men - aLoss); army.local = Math.max(0, army.local - aLoss);
+    軍の損を分ける(s, army, aLoss);
     castle.local = Math.max(0, castle.local - dLoss);
     s.chronicle.push({ y: s.year, m: s.month,
       text: `${castle.name}下で${s.factions[army.faction].name}と${s.factions[castle.faction].name}が戦い、${atkWon ? "攻め手" : "守り手"}が勝った（攻${fmt(aLoss)}人・守${fmt(dLoss)}人を失う）。` });
@@ -1458,11 +1473,7 @@ export function resolveClash(s, aId, bId, place) {
   const r = Math.min(pa, pb) / Math.max(pa, pb);
   const 勝損 = Math.round(勝.men * (0.13 * r + 0.05));
   const 負損 = Math.round(負.men * (0.30 + 0.2 * r));
-  for (const [army, loss] of [[勝, 勝損], [負, 負損]]) {
-    army.men = Math.max(0, army.men - loss);
-    army.local = Math.max(0, army.local - loss);
-    if (army.rost) rosterSync(army, "rost", army.local, `arm-${army.id}`);
-  }
+  for (const [army, loss] of [[勝, 勝損], [負, 負損]]) 軍の損を分ける(s, army, loss);
   s.chronicle.push({ y: s.year, m: s.month,
     text: `${place}で${s.factions[a.faction].name}と${s.factions[b.faction].name}の軍が行き合い、野戦となった。`
       + `${s.factions[勝.faction].name}が勝ち、${s.factions[負.faction].name}は兵を退いた`
