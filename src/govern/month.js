@@ -1840,24 +1840,228 @@ export function advanceMonth(prev, g) {
       for (const 旗 of s.generals.filter((g) => g.faction === s.player && g.役 === "旗頭" && !g.captive)) {
         const 受 = 旗頭の受け持ち(s, 旗);
         if (!受.length) continue;
-        const 手勢 = s.armies.filter((a) => a.faction === s.player && a.旗頭 === 旗.id);
-        if (手勢.some((a) => a.target || a.sieging)) continue;      // いくさの最中はそのまま進める
+        const 受けの城 = new Set(s.castles.filter((c2) => c2.faction === s.player && 受.includes(c2.kuni))
+          .map((c2) => c2.id));
+        const 手勢 = () => s.armies.filter((a) => a.faction === s.player && a.旗頭 === 旗.id);
+
+        /* ────────────── 一、守り（GDD 6.4 / 9.2）
+
+           方面を預かる者の第一の務めは、預かった国を保つことである。攻める先を
+           探すのはそのあとでよい。遊ぶ側の申し出は「方面軍としての旗頭は第一に
+           攻められている自分のおさめる寄騎等の城を守りに行くことを第一とする」で
+           あった。
+
+           もとは守りの筋がまるで無かった。旗頭は攻める先しか見ておらず、受け持ちの
+           城が囲まれていようと、よその城へ兵を出していた。囲まれた城は大名が
+           自ら救うほかなく、方面を預けた意味が薄い。
+
+           囲まれた城と、敵が二月のうちに着く城を危うい順に並べ、近い城から
+           後詰を差し向ける。出すのは受け持ちの城からで、危うい城そのものからは
+           引かない（守りを薄くしては本末が転倒する）。 */
+        const 危うい城 = [];
+        for (const c2 of s.castles) {
+          if (!受けの城.has(c2.id)) continue;
+          const 囲 = (s.sieges || []).find((x) => x.castleId === c2.id);
+          const 迫 = (s.armies || []).filter((a) => a.target === c2.id && a.faction !== s.player
+            && !underMyBanner(s, a.faction, s.player) && !atPeace(s, s.player, a.faction));
+          if (!囲 && !迫.length) continue;
+          const 寄せ手 = 囲 ? (s.armies.find((a) => a.id === 囲.armyId) || null) : null;
+          const 月 = 囲 ? 0
+            : Math.min(...迫.map((a) => Math.max(1, marchMonthsOf(a.path || []) || 1)));
+          危うい城.push({ c: c2, 囲, 寄せ手, 迫, 月,
+            敵兵: (寄せ手 ? 寄せ手.men : 0) + 迫.reduce((t, a) => t + a.men, 0) });
+        }
+        危うい城.sort((a, b) => a.月 - b.月 || b.敵兵 - a.敵兵);
+        /* 後詰を一手立てる。立てられたら真を返す。 */
+        const 後詰を立てる = (危) => {
+          const 要 = Math.max(700, Math.round(危.敵兵 * 0.8));
+          const 拠ら = s.castles.filter((c2) => 受けの城.has(c2.id) && c2.id !== 危.c.id)
+            .map((c2) => ({ c2, 道: 軍の道(s, s.player, c2.id, 危.c.id) })).filter((x) => x.道)
+            .sort((a, b) => a.道.length - b.道.length);
+          for (const { c2, 道 } of 拠ら) {
+            const gs = s.generals.filter((x) => x.at === c2.id && x.faction === s.player
+              && !x.captive && !x.lord);
+            if (!gs.length) continue;
+            const 余 = c2.local + gs.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
+            if (余 < 400) continue;
+            const take = [...gs].sort((a, b) => b.lead - a.lead).slice(0, 2);
+            const 出 = Math.round(余 * 0.8);
+            const loc = Math.max(0, Math.min(c2.local, 出 - take.reduce((a, x) => a + x.retinue, 0)));
+            if (loc < 150) continue;
+            c2.local -= loc;
+            const tk = rosterTake(c2.rost || newRoster(c2.local + loc, `loc-${c2.id}`), loc);
+            c2.rost = tk.rest;
+            const 糧 = Math.max(0, Math.min(Math.round(c2.food), Math.round(出 * 0.5)));
+            c2.food = Math.max(0, c2.food - 糧);
+            const a2 = { id: 軍の名(s, "g"), faction: s.player, from: c2.id,
+              gens: take.map((x) => x.id), local: loc, localTrain: c2.localTrain, rost: tk.taken,
+              men: loc + take.reduce((t, x) => t + x.retinue, 0), at: c2.id,
+              path: 道, prog: 0, food: 糧, target: 危.c.id, relief: 危.c.id, 旗頭: 旗.id };
+            for (const t of take) t.at = null;
+            /* 一城だけでは後詰にならない。近隣の受け持ちからも寄せる。 */
+            const 寄 = 近隣から兵を寄せる(s, s.player, c2, a2, { 道: 軍の道, 限り: 3, 歩: 4, 要る: 要,
+              選べる: (x) => 受けの城.has(x.id) && x.id !== 危.c.id });
+            s.armies.push(a2);
+            if (危.囲) 危.囲.relief = a2.id;
+            const 月 = Math.max(1, marchMonthsOf(道) || 1);
+            const 敵名 = 危.寄せ手 ? (s.factions[危.寄せ手.faction] || {}).name
+              : (s.factions[(危.迫[0] || {}).faction] || {}).name || "寄せ手";
+            events.push(`【方面軍】${旗.name}が${危.c.name}へ後詰を差し向けた`
+              + `（${c2.name}より${fmt(a2.men)}人`
+              + `${寄.length ? `・${寄.map((q) => q.城.name).join("・")}より加勢` : ""}`
+              + `／およそ${月}ヶ月）。${危.c.name}は${敵名}の`
+              + `${fmt(危.敵兵)}人に${危.囲 ? "囲まれている" : "迫られている"}。`);
+            return true;
+          }
+          return false;
+        };
+        for (const 危 of 危うい城) {
+          if (危.月 > 2) continue;                        // まだ遠い。手を割かない
+          /* すでに救いの手が向かっているなら、重ねて出さない。 */
+          if ((s.armies || []).some((a) => a.faction === s.player && a.relief === 危.c.id)) continue;
+          if (危.囲 && 危.囲.relief) continue;
+          後詰を立てる(危);
+        }
+
+        /* ────────────── 二、攻め（GDD 6.4）
+
+           もとは「手勢がひとつでも動いていれば何もしない」としていたので、旗頭は
+           一度にひとつの城しか攻められなかった。四国五国を預けても戦は一筋である。
+           遊ぶ側の申し出は「多方面に軍を展開するようにする。城を防衛しに行きつつ、
+           他城を攻めたり、複数の城を攻めたりして合理的に動くようにしてほしい」で
+           あった。
+
+           預かる国の数で手数を決める。一国二国なら一手、三国四国で二手、五国から
+           三手までとする。後詰は手数のうちに数えない――守りは攻めの都合で止める
+           ものではないからである。 */
+        const 手数 = Math.min(3, 1 + Math.floor(Math.max(0, 受.length - 1) / 2));
         const 任せ = 旗頭に任せきりか(s, 旗, 旗頭の的家);
-        const 避ける = (c2) => 旗頭は断られたか(s, 旗.id, c2.id);
+        /* いま攻めに出ている手。後詰（relief）と、在陣して次を待つ手は数えない。 */
+        const 攻めの手 = () => 手勢().filter((a) => !a.relief && (a.target || a.sieging)).length;
+        const 狙い済み = () => new Set(手勢().filter((a) => a.target).map((a) => a.target));
+        const 避ける = (c2) => 旗頭は断られたか(s, 旗.id, c2.id) || 狙い済み().has(c2.id);
         const 見立てる = () => 旗頭の狙い(s, 旗, { 道: 軍の道, 旗の下: underMyBanner,
           受け持ち: 旗頭の受け持ち, 的家: 旗頭の的家, 避ける });
-        // 攻める先。許された城が先、無ければ（家を指していれば）己の見立て。
-        let 的 = null;
-        for (const k of (s.旗頭の許し || []).filter((x) => x.旗頭 === 旗.id)) {
-          const c3 = s.castles.find((c2) => c2.id === k.castleId);
-          if (c3 && c3.faction !== s.player && !underMyBanner(s, s.player, c3.faction)) { 的 = c3; break; }
+        /* 許された城（大名が城ごとに許したもの）。手数のぶんだけ順に当たる。 */
+        const 許された = () => (s.旗頭の許し || []).filter((x) => x.旗頭 === 旗.id)
+          .map((x) => s.castles.find((c2) => c2.id === x.castleId))
+          .filter((c3) => c3 && c3.faction !== s.player && !underMyBanner(s, s.player, c3.faction)
+            && !狙い済み().has(c3.id));
+
+        /* 一手を立てる。在陣している手勢があればそれを進め、無ければ受け持ちから催す。
+
+           残る手が多いうちは、近隣から寄せる城の数を絞る。手数のぶん別々の城へ
+           向けると決めたのに、一手目が受け持ちじゅうの兵を吸い上げては、二手目を
+           立てる兵が残らない。実測では、五国を預けた旗頭が一手目に一万二千を集め、
+           二手目が一度も立たなかった。 */
+        const 攻めを立てる = (的, 残る手) => {
+          const 寄せ限り = 残る手 > 1 ? 2 : 5;
+          const 寄せ歩 = 残る手 > 1 ? 3 : 6;
+          const 要る兵 = 攻めに要る兵(s, 的);
+          const 在 = 手勢().find((a) => a.在陣 && !a.sieging && !a.target && !a.relief);
+          if (在) {
+            const 陣城 = s.castles.find((c2) => c2.id === (在.在陣 || 在.at));
+            const 道 = 陣城 && 軍の道(s, s.player, 陣城.id, 的.id);
+            if (陣城 && 道) {
+              const 寄 = 在.men < 要る兵
+                ? 近隣から兵を寄せる(s, s.player, 陣城, 在, { 道: 軍の道, 限り: 寄せ限り, 歩: 寄せ歩,
+                  要る: 要る兵, 選べる: (x) => 受けの城.has(x.id) })
+                : [];
+              if (在.men >= 要る兵 * 0.72) {
+                const 積 = Math.max(0, Math.min(Math.round(陣城.food), Math.round(在.men * 0.6)));
+                陣城.food = Math.max(0, 陣城.food - 積);
+                在.food = (在.food || 0) + 積;
+                在.在陣 = null; 在.target = 的.id; 在.path = 道; 在.prog = 0;
+                在.sieging = false; 在.reinforced = false; 在.seaDone = false;
+                在.from = 陣城.id;
+                const 月 = Math.max(1, marchMonthsOf(道) || 1);
+                events.push(`【方面軍】${旗.name}が${陣城.name}の陣を進め、${的.name}`
+                  + `（${s.factions[的.faction].name}）へ向かう`
+                  + `${寄.length ? `。${寄.map((q) => q.城.name).join("・")}より加勢` : ""}`
+                  + `／兵${fmt(在.men)}人・要り${fmt(要る兵)}人・およそ${月}ヶ月。`);
+                return true;
+              }
+              events.push(`【方面軍】${旗.name}は${陣城.name}に在陣し、${的.name}を攻めるに足る兵`
+                + `（${fmt(要る兵)}人）が揃うのを待っている（いま${fmt(在.men)}人）。`);
+              return false;
+            }
+          }
+          /* 催す城は一つに決め打ちしない（GDD 6.4）。
+
+             もとは「いちばん近い城」だけを見て、そこに出せる将や兵が無ければ
+             その月は何もしなかった。受け持ちが十国あっても、手前の一城が痩せて
+             いるというだけで方面軍が止まる。近い順に当たり、出せる城が見つかる
+             まで下っていく。 */
+          const 拠ら = s.castles.filter((c2) => 受けの城.has(c2.id))
+            .map((c2) => ({ c2, 道: 軍の道(s, s.player, c2.id, 的.id) })).filter((x) => x.道)
+            .sort((a, b) => a.道.length - b.道.length);
+          for (const 発 of 拠ら) {
+          const { c2, 道 } = 発;
+          const gens3 = s.generals.filter((x) => x.at === c2.id && x.faction === s.player
+            && !x.captive && !x.lord);
+          if (!gens3.length) continue;
+          const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
+          if (avail3 < 400) continue;
+          const take3 = [...gens3].sort((a, b) => b.lead - a.lead).slice(0, 3);
+          const send3 = Math.round(avail3 * 0.85);
+          const loc3 = Math.max(0, Math.min(c2.local, send3 - take3.reduce((a, x) => a + x.retinue, 0)));
+          if (loc3 < 200) continue;
+          c2.local -= loc3;
+          const tk3 = rosterTake(c2.rost || newRoster(c2.local + loc3, `loc-${c2.id}`), loc3);
+          c2.rost = tk3.rest;
+          const 軍2 = {
+            id: 軍の名(s, "h"), faction: s.player, from: c2.id, gens: take3.map((x) => x.id),
+            local: loc3, localTrain: c2.localTrain, rost: tk3.taken,
+            men: loc3 + take3.reduce((a, x) => a + x.retinue, 0), at: c2.id,
+            path: 道, prog: 0, food: Math.round(send3 * 0.6), target: 的.id, 旗頭: 旗.id,
+          };
+          for (const t3 of take3) t3.at = null;
+          c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
+          /* 方面軍も、別の敵と境を接する城からは根こそぎ引かない（GDD 6.4）。
+             受け持ちの守りを空けて出れば、留守を突かれる。 */
+          const 旗の境 = (x) => (s.castles || []).some((y) => {
+            if (y.faction === x.faction || y.faction === 的.faction) return false;
+            if (underMyBanner(s, x.faction, y.faction) || atPeace(s, x.faction, y.faction)) return false;
+            const p4 = findPath(x.id, y.id);
+            return p4 && p4.length - 1 <= 1;
+          });
+          const 寄 = 近隣から兵を寄せる(s, s.player, c2, 軍2, {
+            道: 軍の道, 限り: 寄せ限り, 歩: 寄せ歩, 要る: 要る兵,
+            選べる: (x) => 受けの城.has(x.id) && !旗の境(x),
+          });
+          /* 方面軍も、まとまるまで出さない。小刻みに出しては各個に潰される。 */
+          const 旗の底 = Math.min(1500, Math.round(要る兵 * 0.9));
+          if (軍2.men < 要る兵 * 0.9 || 軍2.men < 旗の底) {
+            c2.local += loc3; c2.rost = [...(c2.rost || []), ...tk3.taken];
+            c2.food += Math.round(send3 * 0.6);
+            for (const t3 of take3) t3.at = c2.id;
+            for (const q of 寄) { q.城.local += q.兵 - (q.将 ? q.将.retinue : 0); if (q.将) q.将.at = q.城.id; }
+            continue;
+          }
+          s.armies.push(軍2);
+          const 月2 = Math.max(1, marchMonthsOf(道) || 1);
+          events.push(`【方面軍】${旗.name}が${c2.name}より出陣。${的.name}`
+            + `（${s.factions[的.faction].name}）を目指す`
+            + `${寄.length ? `。${寄.map((q) => q.城.name).join("・")}より加勢` : ""}`
+            + `／兵${fmt(軍2.men)}人・要り${fmt(要る兵)}人・およそ${月2}ヶ月。`);
+          return true;
+          }
+          return false;
+        };
+
+        /* 手数のぶんだけ、別々の城へ向ける。立たなければそこで止める。 */
+        let 残る手 = 手数 - 攻めの手();
+        while (残る手 > 0) {
+          let 的 = 許された()[0] || null;
+          if (!的 && 任せ) { const 狙 = 見立てる(); if (狙) 的 = 狙.的; }
+          if (!的) break;
+          if (!攻めを立てる(的, 残る手)) break;
+          残る手--;
         }
-        if (!的 && 任せ) { const 狙 = 見立てる(); if (狙) 的 = 狙.的; }
-        // 落とした城に在陣している手勢。あればこれを次へ向ける（連戦）
-        const 在 = 手勢.find((a) => a.在陣 && !a.sieging && !a.target);
-        if (!的) {
-          // 家を指していなければ願い出る。願いは一度に一つだけ
-          if (!任せ && !s.旗頭の願い && !断りの直後か(s, 旗.id)) {
+        /* 攻める先が無いなら、願い出るか、陣を払う。 */
+        if (!攻めの手()) {
+          const 在 = 手勢().find((a) => a.在陣 && !a.sieging && !a.target && !a.relief);
+          if (!任せ && !許された().length && !s.旗頭の願い && !断りの直後か(s, 旗.id)) {
             const 狙 = 見立てる();
             if (狙) {
               s.旗頭の願い = { 旗頭: 旗.id, castleId: 狙.的.id, y: s.year, m: s.month };
@@ -1868,103 +2072,15 @@ export function advanceMonth(prev, g) {
               continue;
             }
           }
-          // 攻める先も願いも無いのに陣を張り続けては、兵が遊ぶ。陣を払って城へ返す
-          if (在 && !(s.旗頭の願い && s.旗頭の願い.旗頭 === 旗.id)) {
+          /* 攻める先も願いも無いのに陣を張り続けては、兵が遊ぶ。陣を払って城へ返す。
+             ただし受け持ちが危ういうちは払わない――そこが次の戦場になる。 */
+          if (在 && !危うい城.length && !(s.旗頭の願い && s.旗頭の願い.旗頭 === 旗.id)) {
             for (const q of 旗頭の陣を払う(s, 旗.id)) {
               events.push(`【方面軍】攻める先が無く、${旗.name}は${q.陣 ? q.陣.name : "陣"}の陣を払った`
                 + `（${fmt(q.兵)}人が${q.帰.name}へ帰陣）。`);
             }
           }
-          continue;
         }
-        const 要る兵 = 攻めに要る兵(s, 的);
-        const 受けの城 = new Set(s.castles.filter((c2) => c2.faction === s.player && 受.includes(c2.kuni))
-          .map((c2) => c2.id));
-        /* 在陣している手勢があるなら、それを次の城へ向ける（連戦）。
-
-           落とすたびに別の城から新しい軍を催していたので、そのつど受け持ちの兵が
-           要り、揃わねば動かなかった。目の前に在陣している軍を使わぬ道理はない。 */
-        if (在) {
-          const 陣城 = s.castles.find((c2) => c2.id === (在.在陣 || 在.at));
-          const 道 = 陣城 && 軍の道(s, s.player, 陣城.id, 的.id);
-          if (陣城 && 道) {
-            const 寄 = 在.men < 要る兵
-              ? 近隣から兵を寄せる(s, s.player, 陣城, 在, { 道: 軍の道, 限り: 4, 歩: 6, 要る: 要る兵,
-                選べる: (x) => 受けの城.has(x.id) })
-              : [];
-            if (在.men >= 要る兵 * 0.72) {
-              const 積 = Math.max(0, Math.min(Math.round(陣城.food), Math.round(在.men * 0.6)));
-              陣城.food = Math.max(0, 陣城.food - 積);
-              在.food = (在.food || 0) + 積;
-              在.在陣 = null; 在.target = 的.id; 在.path = 道; 在.prog = 0;
-              在.sieging = false; 在.reinforced = false; 在.seaDone = false;
-              在.from = 陣城.id;
-              const 月 = Math.max(1, marchMonthsOf(道) || 1);
-              events.push(`【方面軍】${旗.name}が${陣城.name}の陣を進め、${的.name}`
-                + `（${s.factions[的.faction].name}）へ向かう`
-                + `${寄.length ? `。${寄.map((q) => q.城.name).join("・")}より加勢` : ""}`
-                + `／兵${fmt(在.men)}人・要り${fmt(要る兵)}人・およそ${月}ヶ月。`);
-              continue;
-            }
-            events.push(`【方面軍】${旗.name}は${陣城.name}に在陣し、${的.name}を攻めるに足る兵`
-              + `（${fmt(要る兵)}人）が揃うのを待っている（いま${fmt(在.men)}人）。`);
-            continue;
-          }
-        }
-        /* 在陣が無ければ、受け持ちの城から催す（GDD 7.3）。
-           采配が近隣から兵を寄せるのと同じ考えである。 */
-        const 拠ら = s.castles.filter((c2) => c2.faction === s.player && 受.includes(c2.kuni))
-          .map((c2) => ({ c2, 道: 軍の道(s, s.player, c2.id, 的.id) })).filter((x) => x.道)
-          .sort((a, b) => a.道.length - b.道.length);
-        const 発 = 拠ら[0];
-        if (!発) continue;
-        const { c2, 道 } = 発;
-        const gens3 = s.generals.filter((x) => x.at === c2.id && x.faction === s.player && !x.captive && !x.lord);
-        if (!gens3.length) continue;
-        const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
-        if (avail3 < 400) continue;
-        const take3 = [...gens3].sort((a, b) => b.lead - a.lead).slice(0, 3);
-        const send3 = Math.round(avail3 * 0.85);
-        const loc3 = Math.max(0, Math.min(c2.local, send3 - take3.reduce((a, x) => a + x.retinue, 0)));
-        if (loc3 < 200) continue;
-        c2.local -= loc3;
-        const tk3 = rosterTake(c2.rost || newRoster(c2.local + loc3, `loc-${c2.id}`), loc3);
-        c2.rost = tk3.rest;
-        const 軍2 = {
-          id: 軍の名(s, "h"), faction: s.player, from: c2.id, gens: take3.map((x) => x.id),
-          local: loc3, localTrain: c2.localTrain, rost: tk3.taken,
-          men: loc3 + take3.reduce((a, x) => a + x.retinue, 0), at: c2.id,
-          path: 道, prog: 0, food: Math.round(send3 * 0.6), target: 的.id, 旗頭: 旗.id,
-        };
-        for (const t3 of take3) t3.at = null;
-        c2.food = Math.max(0, c2.food - Math.round(send3 * 0.6));
-        /* 方面軍も、別の敵と境を接する城からは根こそぎ引かない（GDD 6.4）。
-           受け持ちの守りを空けて出れば、留守を突かれる。 */
-        const 旗の境 = (x) => (s.castles || []).some((y) => {
-          if (y.faction === x.faction || y.faction === 的.faction) return false;
-          if (underMyBanner(s, x.faction, y.faction) || atPeace(s, x.faction, y.faction)) return false;
-          const p4 = findPath(x.id, y.id);
-          return p4 && p4.length - 1 <= 1;
-        });
-        const 寄 = 近隣から兵を寄せる(s, s.player, c2, 軍2, {
-          道: 軍の道, 限り: 5, 歩: 6, 要る: 要る兵,
-          選べる: (x) => 受けの城.has(x.id) && !旗の境(x),
-        });
-        /* 方面軍も、まとまるまで出さない。小刻みに出しては各個に潰される。 */
-        const 旗の底 = Math.min(1500, Math.round(要る兵 * 0.9));
-        if (軍2.men < 要る兵 * 0.9 || 軍2.men < 旗の底) {
-          /* 揃わなければ出さない。兵は城へ戻す。 */
-          c2.local += loc3; c2.rost = [...(c2.rost || []), ...tk3.taken];
-          c2.food += Math.round(send3 * 0.6);
-          for (const t3 of take3) t3.at = c2.id;
-          for (const q of 寄) { q.城.local += q.兵 - (q.将 ? q.将.retinue : 0); if (q.将) q.将.at = q.城.id; }
-          continue;
-        }
-        s.armies.push(軍2);
-        const 月2 = Math.max(1, marchMonthsOf(道) || 1);
-        events.push(`【方面軍】${旗.name}が${c2.name}より出陣。${的.name}（${s.factions[的.faction].name}）を目指す`
-          + `${寄.length ? `。${寄.map((q) => q.城.name).join("・")}より加勢` : ""}`
-          + `／兵${fmt(軍2.men)}人・要り${fmt(要る兵)}人・およそ${月2}ヶ月。`);
       }
       /* 旗頭は調略も差配する（GDD 6.4 / 11.2）。
          金は旗頭に預けた高から出る。方面の実入りに目盛りを掛けたものである。 */

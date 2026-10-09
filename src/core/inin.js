@@ -272,7 +272,16 @@ export function 旗頭の預け高(s, 旗, { 受け持ち } = {}) {
 export const 自ら采配するか = (s, army, 的) => {
   if (!army || army.faction !== s.player) return false;
   if (!army.旗頭) return true;                       // 大名の直の手勢
-  return !!的 && 的.faction === s.player;            // 預けた手勢でも、自家の守りなら出る
+  if (!的 || 的.faction !== s.player) return false;  // 他家へ寄せる戦は旗頭が指図する
+  /* 的が自家の城であっても、その城の守りをその旗頭に預けているなら、後詰も
+     旗頭が執る（GDD 6.4）。
+
+     旗頭は受け持ちの城が囲まれれば自ら後詰を差し向ける（govern/month.js の
+     「一、守り」）。差し向けたその戦で大名が盤面へ呼ばれるのでは、方面を
+     預けた意味がない。預けていない城の守りは、これまでどおり大名が執る。 */
+  const 守 = 守りの寄親(s, 的);
+  if (守 && 守.id === army.旗頭) return false;
+  return true;
 };
 
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { RANSOM_DIV, ransomRank } from "../core/capture.js";
 import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/house.js";
-import { marchMonths } from "../core/paths.js";
+import { marchMonths, marchMonthsOf } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
 import { 軍役の割増, RANKS, castellanOf, 城を守る将, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 旗頭の受け持ち, 旗頭の的にできる家, 旗頭の的家, 的家の限り, 旗の下の当主か, 城主か } from "../core/rank.js";
 import { canSee, forecast, relOf, isVassal, 主を探す } from "../core/state.js";
@@ -20,7 +20,8 @@ import { canHoldCastle } from "../core/rank.js";
 import { 基準値, 売値, 相場, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
-import { 城の寄親 } from "../core/inin.js";
+import { 城の寄親, 守りの寄親 } from "../core/inin.js";
+import { 囲みの様子, 囲んでいる様子 } from "../core/kakomi.js";
 import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 
@@ -152,6 +153,128 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
           {done ? "本月の務めは済んだ" : `働ける者 ${freeGens.length}名`}
         </span>}
       </div>
+
+      {/* 囲みの札（GDD 9.2）。
+
+          城が囲まれている、あるいはこちらが囲んでいる――そのとき何が起きている
+          のかは、これまで軍事の欄の末に一行あるきりであった。寄せ手が何人か、
+          兵糧があと何月もつか、後詰が向かっているかは、どこにも出ない。
+          遊ぶ側の申し出は「包囲している、されている軍の情報をわかりやすく城の
+          アラート情報として記載する」であった。
+
+          城の名のすぐ下に、どの欄を開いていても目に入るように置く。見通しは
+          月送りと同じ式から起こす（core/kakomi.js）。 */}
+      {(() => {
+        const 味方か = (st, a, b) => a === b
+          || ["同盟", "不可侵", "従属", "臣従"].includes(relOf(st, a, b).state);
+        const 様 = 囲みの様子(g, c, { 守りの寄親, 月数: marchMonthsOf, 味方か });
+        const 攻 = 囲んでいる様子(g, c, g.player, { 月数: marchMonthsOf, 見える: (st, x) => canSee(st, x) });
+        if ((!様 || !(c.faction === g.player || isVassal(g, g.player, c.faction))) && !攻) return null;
+        /* 「囲まれている」札は、内を知る城にだけ出す。他家の城の兵糧や民心を
+           偵察もせずに読めては、内情不明の札が意味を失う。 */
+        const 我が城 = c.faction === g.player;
+        const 内を知る = 我が城 || isVassal(g, g.player, c.faction);
+        const 行 = { fontSize: 11.5, lineHeight: 1.75, color: U.dim };
+        const 強 = { color: U.text, fontWeight: 600 };
+        const 帯 = (色, 中) => (
+          <div style={{ borderLeft: `3px solid ${色}`, background: "rgba(0,0,0,0.025)",
+            padding: "7px 10px", margin: "0 0 8px" }}>{中}</div>
+        );
+        return (
+          <>
+            {様 && 内を知る && 様.囲まれている && 帯("#B0483C", (<>
+              <div style={{ fontSize: 13, color: "#B0483C", fontWeight: 600, marginBottom: 2 }}>
+                【囲まれている】{c.name}　囲み{様.月数}ヶ月
+              </div>
+              {様.寄せ手 && (
+                <div style={行}>
+                  寄せ手　<span style={強}>{様.寄せ手.家.name}</span>
+                  {様.寄せ手.大将 ? `・${様.寄せ手.大将.name}` : ""}
+                  {"　"}<span style={強}>{fmt(様.寄せ手.兵)}人</span>
+                  <span style={{ marginLeft: 6 }}>（兵糧あと{様.寄せ手.保ち}ヶ月。尽きれば囲みを解く）</span>
+                </div>
+              )}
+              <div style={行}>
+                城方　<span style={強}>{fmt(様.城方.兵)}人</span>（守るに要る{fmt(様.城方.要る)}人）
+                {"　"}兵糧あと<span style={強}>{様.城方.兵糧}ヶ月</span>
+                {"　"}民心 {様.城方.民}<span style={{ fontSize: 10.5 }}>（二十五を割れば城は開く）</span>
+              </div>
+              <div style={{ ...行, color: 様.城方.月 <= 2 ? "#B0483C" : U.dim }}>
+                このままなら<span style={{ ...強, color: 様.城方.月 <= 2 ? "#B0483C" : U.text }}>
+                あと{様.城方.月}ヶ月</span>で落ちる（{様.城方.訳}）
+              </div>
+              {様.寄せ手 && 様.寄せ手.強攻 && (
+                <div style={{ ...行, color: "#B0483C" }}>
+                  寄せ手は城方の一.六倍を超えている。月に四割五分の目で攻めかかってくる
+                </div>
+              )}
+              {様.後詰ら.length > 0 ? (
+                <div style={{ ...行, color: "#3E7A3A" }}>
+                  後詰　{様.後詰ら.map((r) => `${fmt(r.兵)}人があと${r.月}ヶ月で着く`).join("／")}
+                </div>
+              ) : 我が城 ? (
+                <div style={{ ...行, color: "#C89A3A" }}>後詰は向かっていない</div>
+              ) : null}
+              {様.守りの寄親 && (
+                <div style={行}>
+                  この城の守りは<span style={強}>{様.守りの寄親.name}</span>（旗頭）が執る
+                </div>
+              )}
+            </>))}
+            {様 && 内を知る && 様.迫る.length > 0 && 帯("#C89A3A", (<>
+              <div style={{ fontSize: 13, color: "#C89A3A", fontWeight: 600, marginBottom: 2 }}>
+                【敵が迫っている】{c.name}
+              </div>
+              {様.迫る.map((q, i) => (
+                <div key={i} style={行}>
+                  <span style={強}>{q.家.name}</span>の<span style={強}>{fmt(q.兵)}人</span>
+                  {"　"}あと{q.月}ヶ月で着く
+                </div>
+              ))}
+              {!様.囲まれている && (
+                <div style={行}>
+                  城方　<span style={強}>{fmt(様.城方.兵)}人</span>（守るに要る{fmt(様.城方.要る)}人）
+                </div>
+              )}
+            </>))}
+            {攻 && 帯("#4A6E8A", (<>
+              <div style={{ fontSize: 13, color: "#4A6E8A", fontWeight: 600, marginBottom: 2 }}>
+                【{攻.囲んでいる ? "囲んでいる" : "城下に在る"}】{c.name}
+                {攻.囲んでいる ? `　囲み${攻.月数}ヶ月` : ""}
+              </div>
+              <div style={行}>
+                味方　<span style={強}>{fmt(攻.兵)}人</span>（{攻.我が軍.length}手）
+                {"　"}兵糧あと<span style={強}>{攻.保ち}ヶ月</span>
+                <span style={{ marginLeft: 6, fontSize: 10.5 }}>（尽きれば囲みを解いて帰る）</span>
+              </div>
+              {攻.見えている && 攻.城方 ? (
+                <>
+                  <div style={行}>
+                    城方　<span style={強}>{fmt(攻.城方.兵)}人</span>
+                    {"　"}兵糧あと<span style={強}>{攻.城方.兵糧}ヶ月</span>{"　"}民心 {攻.城方.民}
+                  </div>
+                  <div style={{ ...行, color: "#3E7A3A" }}>
+                    このままなら<span style={{ ...強, color: "#3E7A3A" }}>あと{攻.城方.月}ヶ月</span>
+                    で開く（{攻.城方.訳}）
+                  </div>
+                </>
+              ) : (
+                <div style={行}>城の内はまだ知れない（偵察すれば兵糧と民心が読める）</div>
+              )}
+              {攻.強攻 && (
+                <div style={{ ...行, color: "#3E7A3A" }}>
+                  数で押せる。月に四割五分の目で攻めかかる
+                </div>
+              )}
+              {攻.後詰ら.length > 0 && (
+                <div style={{ ...行, color: "#B0483C" }}>
+                  敵の後詰　{攻.後詰ら.map((r) => `${fmt(r.兵)}人があと${r.月}ヶ月で着く`).join("／")}
+                </div>
+              )}
+            </>))}
+          </>
+        );
+      })()}
 
       <div className="split" style={land ? { flexDirection: "column", gap: 10 } : undefined}>
         <div>

@@ -172,9 +172,20 @@ console.log('\n── 七　旗頭に預けた戦は、大名の盤面に出さ�
     確('他家へ寄せる戦は大名の盤面に出ない', 自ら采配するか(u, 出, 的) === false,
       `${(u.generals.find((x) => x.id === 旗.id) || {}).name}の軍 → ${的 ? 的.name : '?'}`);
     確('街道での行き合いも旗頭が捌く', 自ら采配するか(u, 出, null) === false);
-    const 自城 = u.castles.find((c) => c.faction === 'oda');
-    確('ただし自家の城を守る戦なら、大名が采配を執る', 自ら采配するか(u, 出, 自城) === true,
-      `${自城.name}`);
+    /* 自家の城を守る戦は、その城の守りを誰に預けているかで分かれる（GDD 6.4）。
+
+       預けていない城なら大名が采配を執る――我が身の守りである。ところが受け持ちの
+       城であれば、旗頭は自ら後詰を差し向ける（govern/month.js の「一、守り」）。
+       差し向けたその戦で大名が盤面へ呼ばれるのでは、方面を預けた意味がない。 */
+    const 預けた城 = u.castles.find((c) => c.faction === 'oda'
+      && (H.守りの寄親(u, c) || {}).id === 旗.id);
+    const 直の城 = u.castles.find((c) => c.faction === 'oda' && !H.守りの寄親(u, c));
+    if (預けた城) {
+      確('守りを預けた城なら、後詰の戦も旗頭が執る', 自ら采配するか(u, 出, 預けた城) === false,
+        `${預けた城.name}`);
+    }
+    確('守りを預けていない城なら、大名が采配を執る',
+      !直の城 || 自ら采配するか(u, 出, 直の城) === true, 直の城 ? 直の城.name : '（無し）');
   }
   const 直 = { id: 'D1', faction: 'oda', gens: [], men: 1000 };
   確('大名の直の手勢は、これまで通り大名が動かす', 自ら采配するか(u, 直, u.castles.find((c) => c.faction !== 'oda')) === true);
@@ -636,6 +647,116 @@ console.log('\n── 十九　却下すれば陣を払って帰り、その城�
   }
   確('断った城は半年のあいだ願い出ない', !同じ城,
     同じ城 ? '同じ城をまた願い出た' : `${(u.castles.find((c) => c.id === 断城) || {}).name}は持ち出さず`);
+}
+
+/* ── 二十　受け持ちが囲まれたら、まず後詰を差し向ける（GDD 6.4 / 9.2）
+
+   遊ぶ側の申し出は「方面軍としての旗頭は第一に攻められている自分のおさめる
+   寄騎等の城を守りに行くことを第一とする」であった。
+
+   もとは守りの筋がまるで無かった。旗頭は攻める先しか見ておらず、受け持ちの城が
+   囲まれていようとよその城へ兵を出していた。囲まれた城は大名が自ら救うほかなく、
+   方面を預けた意味が薄い。囲まれた城と、敵が二月のうちに着く城を危うい順に並べ、
+   近い城から後詰を差し向ける。出すのは受け持ちの城からで、危うい城そのものからは
+   引かない。 */
+console.log('\n── 二十　受け持ちが囲まれたら、まず後詰を差し向ける');
+{
+  const { s, 旗 } = 場();
+  const 受 = 旗頭の受け持ち(s, 旗);
+  /* 受け持ちの城をひとつ、他家に囲ませる。 */
+  const 的 = s.castles.find((c) => c.faction === 'oda' && 受.includes(c.kuni)
+    && c.id !== 旗.本領);
+  const 敵 = s.castles.find((c) => c.faction !== 'oda');
+  const 将 = s.generals.find((x) => x.faction === 敵.faction && !x.captive && !x.lord);
+  if (将) 将.at = null;
+  const 寄 = { id: 'SIEGE', faction: 敵.faction, from: 敵.id, gens: 将 ? [将.id] : [],
+    local: 5000, localTrain: 70, rost: H.newRoster(5000, 'arm-SIEGE'), men: 5000,
+    at: 的.id, path: [的.id], prog: 0, food: 30000, target: 的.id, sieging: true };
+  s.armies.push(寄);
+  s.sieges = [{ castleId: 的.id, armyId: 'SIEGE', months: 1, decided: null }];
+  確('受け持ちの城が囲まれている', !!的 && 受.includes(的.kuni),
+    `${的.name}（${的.kuni}）が${(s.factions[敵.faction] || {}).name}の5,000人に囲まれている`);
+  const u = advanceMonth(s, s);
+  const 後詰 = (u.armies || []).filter((a) => a.faction === 'oda' && a.旗頭 === 旗.id
+    && a.relief === 的.id);
+  確('旗頭が後詰を差し向ける', 後詰.length > 0,
+    後詰.length ? `${(u.castles.find((c) => c.id === 後詰[0].from) || {}).name}より${後詰[0].men}人`
+      : '出さなかった');
+  確('囲みに後詰の札が付く',
+    (u.sieges || []).some((x) => x.castleId === 的.id && x.relief),
+    ((u.sieges || []).find((x) => x.castleId === 的.id) || {}).relief || 'なし');
+  確('月報に後詰の報せが立つ',
+    (u.monthEvents || []).some((x) => /後詰を差し向けた/.test(x)),
+    (u.monthEvents || []).filter((x) => /後詰を差し向けた/.test(x))[0] || 'なし');
+  確('危うい城そのものからは兵を引かない',
+    !後詰.some((a) => a.from === 的.id),
+    後詰.map((a) => (u.castles.find((c) => c.id === a.from) || {}).name).join('・'));
+}
+
+/* ── 二十一　方面軍は多方面に手を伸ばす（GDD 6.4）
+
+   もとは「手勢がひとつでも動いていれば何もしない」としていたので、旗頭は一度に
+   ひとつの城しか攻められなかった。四国五国を預けても戦は一筋である。遊ぶ側の
+   申し出は「多方面に軍を展開するようにする。城を防衛しに行きつつ、他城を攻めたり、
+   複数の城を攻めたりして合理的に動くようにしてほしい」であった。
+
+   預かる国の数で手数を決める。一国二国なら一手、三国四国で二手、五国から三手。
+   後詰は手数のうちに数えない――守りは攻めの都合で止めるものではないからである。 */
+console.log('\n── 二十一　方面軍は多方面に手を伸ばす');
+{
+  const { s, 旗 } = 場();
+  /* 大名が二つの城を許した形にする。攻める先が二つあるときに、旗頭が二手に
+     分けて出せるかを見る（指した家が一城しか抱えていない盤では、そもそも
+     二つ目の狙いが立たないので、多方面の可否を測れない）。 */
+  const 受 = 旗頭の受け持ち(s, 旗);
+  const 己方 = s.castles.filter((c) => c.faction === 'oda' && 受.includes(c.kuni));
+  const 的ら = s.castles.filter((c) => c.faction !== 'oda'
+    && !underMyBanner(s, 'oda', c.faction)
+    && 己方.some((x) => (軍の道(s, 'oda', x.id, c.id) || []).length === 2))
+    .slice(0, 2);
+  for (const c of 的ら) 旗頭に許す(s, 旗.id, c.id);
+  確('攻める先が二つ許してある', 的ら.length === 2,
+    的ら.map((c) => `${c.name}（${(s.factions[c.faction] || {}).name}）`).join('・'));
+  const 受数 = 旗頭の受け持ち(s, 旗).length;
+  const 手数 = Math.min(3, 1 + Math.floor(Math.max(0, 受数 - 1) / 2));
+  確('受け持ちは四国以上ある（手数二以上）', 受数 >= 4 && 手数 >= 2,
+    `${旗頭の受け持ち(s, 旗).join('・')}（${受数}国・手数${手数}）`);
+  const u = advanceMonth(s, s);
+  const 手 = (u.armies || []).filter((a) => a.faction === 'oda' && a.旗頭 === 旗.id && a.target);
+  const 先 = new Set(手.map((a) => a.target));
+  確('ひと月で二手以上が別々の城へ向かう', 先.size >= 2,
+    手.map((a) => `${(u.castles.find((c) => c.id === a.from) || {}).name}→`
+      + `${(u.castles.find((c) => c.id === a.target) || {}).name}（${a.men}人）`).join('／') || 'なし');
+  確('同じ城へ二重に向かわない', 手.length === 先.size,
+    `手${手.length}／行き先${先.size}`);
+  確('手数を超えない', 手.length <= 手数, `${手.length}手／手数${手数}`);
+}
+
+/* ── 二十二　守りを先に、攻めはそのあと（GDD 6.4）
+
+   囲まれた城があっても攻めは止めない。止めれば受け持ちは縮む一方である。
+   守りは手数のうちに数えないので、後詰を出したうえでなお攻めに出る。 */
+console.log('\n── 二十二　守りを先に、攻めはそのあと');
+{
+  const { s, 旗 } = 場();
+  const 選 = H.旗頭の的にできる家(s, 旗);
+  H.旗頭の的家を定める(s, 'oda', 旗.id, 選.slice(0, 3));
+  const 受 = 旗頭の受け持ち(s, 旗);
+  const 的 = s.castles.find((c) => c.faction === 'oda' && 受.includes(c.kuni) && c.id !== 旗.本領);
+  const 敵 = s.castles.find((c) => c.faction !== 'oda');
+  const 将 = s.generals.find((x) => x.faction === 敵.faction && !x.captive && !x.lord);
+  if (将) 将.at = null;
+  s.armies.push({ id: 'SIEGE2', faction: 敵.faction, from: 敵.id, gens: 将 ? [将.id] : [],
+    local: 5000, localTrain: 70, rost: H.newRoster(5000, 'arm-SIEGE2'), men: 5000,
+    at: 的.id, path: [的.id], prog: 0, food: 30000, target: 的.id, sieging: true });
+  s.sieges = [{ castleId: 的.id, armyId: 'SIEGE2', months: 1, decided: null }];
+  const u = advanceMonth(s, s);
+  const 手 = (u.armies || []).filter((a) => a.faction === 'oda' && a.旗頭 === 旗.id);
+  const 救 = 手.filter((a) => a.relief === 的.id);
+  const 攻 = 手.filter((a) => !a.relief && a.target);
+  確('囲まれても後詰は出る', 救.length > 0, `${救.length}手`);
+  確('後詰を出したうえで、なお攻めにも出る', 攻.length > 0,
+    攻.map((a) => (u.castles.find((c) => c.id === a.target) || {}).name).join('・') || 'なし');
 }
 
 console.log(`\n════ 旗頭の差配：咎 ${咎.length} 件`);
