@@ -651,8 +651,13 @@ export function battleAI(b) {
        命じれば動き、動けば見つかる。 */
     if (c.ambush && !c.revealed) continue;
     /* 伝令の届かぬ隊は、己の判じで戦う（上の「指揮圏の外で戦う」を見よ）。
-       本陣の絵図（回り込み・丘取り・伏せ）には加われないが、立ち尽くしもしない。 */
-    if (!MAP && !c.伏せ場 && outOfCommand(b, c)) { 自ら当たる(b, c, alive); continue; }
+       本陣の絵図（回り込み・丘取り・伏せ）には加われないが、立ち尽くしもしない。
+
+       退くと決めた隊には触れない。退きは本人の判断であって伝令を要しないので、
+       ここで当たらせては、退きの下知をその場で打ち消すことになる。実測では、
+       指揮圏の外の隊に「退け」と命じても四十三歩で足を止めていた。 */
+    if (!MAP && !c.伏せ場 && !c.withdraw && c.order !== "撤退"
+      && outOfCommand(b, c)) { 自ら当たる(b, c, alive); continue; }
     if (c.伏兵無用) { c.伏せ場 = null; }
     if (c.伏せ場 && !c.ambush) {
       const d = Math.hypot(c.伏せ場.x - c.x, c.伏せ場.y - c.y);

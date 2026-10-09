@@ -31586,7 +31586,7 @@ function battleAI(b) {
     if (c.\u672C\u9663\u3092\u5B88\u308B) continue;
     if (c.\u4E0D\u6226 || c.\u63A7\u3048 || c.\u7E1B\u308A) continue;
     if (c.ambush && !c.revealed) continue;
-    if (!MAP && !c.\u4F0F\u305B\u5834 && outOfCommand(b, c)) {
+    if (!MAP && !c.\u4F0F\u305B\u5834 && !c.withdraw && c.order !== "\u64A4\u9000" && outOfCommand(b, c)) {
       \u81EA\u3089\u5F53\u305F\u308B(b, c, alive);
       continue;
     }
