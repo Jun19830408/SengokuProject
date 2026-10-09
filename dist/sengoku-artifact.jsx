@@ -30718,33 +30718,52 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
     for (const f of b.fx) {
       const a = 1 - f.t / f.life;
       if (f.k === "arrow") {
-        ctx.globalAlpha = a * 0.5;
-        ctx.strokeStyle = "#5A5238";
-        ctx.lineWidth = 0.7;
-        const u = Math.min(1, f.t / f.life * 1.6);
-        const hx = f.x + (f.x2 - f.x) * u, hy = f.y + (f.y2 - f.y) * u;
-        const tx = f.x + (f.x2 - f.x) * Math.max(0, u - 0.22), ty = f.y + (f.y2 - f.y) * Math.max(0, u - 0.22);
-        const ang3 = Math.atan2(f.y2 - f.y, f.x2 - f.x) + Math.PI / 2;
-        ctx.beginPath();
-        for (const \u5BC4 of [-3.2, 0, 3.4]) {
-          const ox2 = Math.cos(ang3) * \u5BC4, oy2 = Math.sin(ang3) * \u5BC4;
-          const \u9045 = \u5BC4 === 0 ? 0 : 0.06;
-          ctx.moveTo(tx + ox2, ty + oy2);
-          ctx.lineTo(hx + ox2 - (f.x2 - f.x) * \u9045, hy + oy2 - (f.y2 - f.y) * \u9045);
-        }
-        ctx.stroke();
-      } else if (f.k === "shot") {
-        const ang2 = Math.atan2(f.y2 - f.y, f.x2 - f.x);
-        if (\u500B\u4EBA\u7D75) {
-          if (a > 0.6) {
-            ctx.globalAlpha = (a - 0.6) * 2.4;
-            ctx.fillStyle = "#FFE7A8";
+        const d0 = Math.hypot(f.x2 - f.x, f.y2 - f.y) || 1;
+        const ux = (f.x2 - f.x) / d0, uy = (f.y2 - f.y) / d0;
+        const px2 = -uy, py2 = ux;
+        const u0 = f.t / f.life;
+        const \u5F27 = Math.min(26, d0 * 0.085);
+        const \u77E2\u9577 = Math.min(7, 2.6 + d0 * 0.03);
+        ctx.lineCap = "round";
+        for (let n = 0; n < 7; n++) {
+          const \u305A = ((f.\u4E71 || 0) * 97 + n * 13) % 1;
+          const u = clamp(u0 * (1.12 - \u305A * 0.22), 0, 1);
+          if (u <= 0) continue;
+          const \u5BC4 = (n - 3) * (2.4 + d0 * 0.012) + (\u305A - 0.5) * 2.2;
+          const \u843D = Math.sin(Math.PI * u) * \u5F27;
+          const hx = f.x + (f.x2 - f.x) * u + px2 * \u5BC4;
+          const hy = f.y + (f.y2 - f.y) * u + py2 * \u5BC4 - \u843D;
+          const \u50BE = Math.cos(Math.PI * u) * \u5F27 * Math.PI / d0;
+          const dx2 = ux, dy2 = uy - \u50BE * 0.9;
+          const dl = Math.hypot(dx2, dy2) || 1;
+          const tx2 = hx - dx2 / dl * \u77E2\u9577, ty2 = hy - dy2 / dl * \u77E2\u9577;
+          ctx.globalAlpha = a > 0.25 ? 0.9 : a * 3.6;
+          ctx.strokeStyle = "#2E2A1E";
+          ctx.lineWidth = 0.55;
+          ctx.beginPath();
+          ctx.moveTo(tx2, ty2);
+          ctx.lineTo(hx, hy);
+          ctx.stroke();
+          ctx.globalAlpha = (a > 0.25 ? 0.75 : a * 3) * 0.9;
+          ctx.strokeStyle = "#E9E3D2";
+          ctx.lineWidth = 0.75;
+          ctx.beginPath();
+          ctx.moveTo(tx2, ty2);
+          ctx.lineTo(tx2 + dx2 / dl * 1.5, ty2 + dy2 / dl * 1.5);
+          ctx.stroke();
+          if (u >= 0.995 && a < 0.45) {
+            ctx.globalAlpha = a * 0.8;
+            ctx.fillStyle = "#A8987A";
             ctx.beginPath();
-            ctx.arc(f.x + Math.cos(ang2) * 2.6, f.y + Math.sin(ang2) * 2.6, 1.5, 0, 7);
+            ctx.ellipse(hx, hy + 0.6, 1.5 + (1 - a) * 1.2, 0.7 + (1 - a) * 0.6, 0, 0, 7);
             ctx.fill();
           }
-        } else {
-          ctx.globalAlpha = a * 0.75;
+        }
+        ctx.lineCap = "butt";
+      } else if (f.k === "shot") {
+        const ang2 = Math.atan2(f.y2 - f.y, f.x2 - f.x);
+        if (!\u500B\u4EBA\u7D75) {
+          ctx.globalAlpha = a * 0.8;
           ctx.strokeStyle = "#FFF4D8";
           ctx.lineWidth = 1.1;
           ctx.beginPath();
@@ -30752,15 +30771,44 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
           ctx.lineTo(f.x2, f.y2);
           ctx.stroke();
         }
-        ctx.globalAlpha = a * a * (\u500B\u4EBA\u7D75 ? 0.3 : 0.45);
-        ctx.fillStyle = "#EDEAE2";
-        for (let k = 0; k < 3; k++) {
-          const d2 = 4 + k * 5 + (1 - a) * 14;
+        if (a > 0.35) {
+          const b2 = (a - 0.35) / 0.65;
+          const fx2 = f.x + Math.cos(ang2) * 5.5, fy2 = f.y + Math.sin(ang2) * 5.5;
+          ctx.globalAlpha = b2 * 0.45;
+          ctx.fillStyle = "#FFCC66";
+          ctx.beginPath();
+          ctx.arc(fx2, fy2, 1.5 + (1 - b2) * 1, 0, 7);
+          ctx.fill();
+          ctx.globalAlpha = b2 * 0.95;
+          ctx.fillStyle = "#FFF3C8";
+          ctx.beginPath();
+          ctx.arc(fx2, fy2, 0.7, 0, 7);
+          ctx.fill();
+          ctx.globalAlpha = b2 * 0.7;
+          ctx.strokeStyle = "#FFE08A";
+          ctx.lineWidth = 0.4;
+          for (const \u89D2 of [-0.32, 0, 0.3]) {
+            ctx.beginPath();
+            ctx.moveTo(fx2, fy2);
+            ctx.lineTo(fx2 + Math.cos(ang2 + \u89D2) * 2.6, fy2 + Math.sin(ang2 + \u89D2) * 2.6);
+            ctx.stroke();
+          }
+        }
+      } else if (f.k === "\u7159") {
+        const u = f.t / f.life;
+        const cx3 = f.x + (f.vx || 0) * f.t, cy3 = f.y + (f.vy || 0) * f.t - u * u * 2.2;
+        const r3 = (f.r0 || 2) + u * 6;
+        const \u4E713 = f.\u4E71 || 0;
+        ctx.globalAlpha = (1 - u) * (1 - u) * 0.2;
+        ctx.fillStyle = "#F2F0E8";
+        for (let k = 0; k < 5; k++) {
+          const ang4 = \u4E713 * 6.28 + k * 1.257 + u * 0.6;
+          const d4 = r3 * (0.12 + \u4E713 * (3 + k) % 1 * 0.55);
           ctx.beginPath();
           ctx.arc(
-            f.x + Math.cos(ang2) * d2 + (k - 1) * 2,
-            f.y + Math.sin(ang2) * d2 - (1 - a) * 6,
-            2.4 + k * 1.6 + (1 - a) * 5,
+            cx3 + Math.cos(ang4) * d4,
+            cy3 + Math.sin(ang4) * d4 * 0.75,
+            r3 * (0.52 + \u4E713 * (7 + k * 3) % 1 * 0.42),
             0,
             7
           );
@@ -32151,6 +32199,39 @@ function \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, ux, uy) {
 }
 var \u62BC\u3057\u529B = (c) => Math.max(1, corpsMen(c)) * (0.5 + c.morale / 200) * (c.chargeT > 0 ? 1.25 : 1) * (c.order === "\u5B88\u5099" ? 1.12 : 1) * (1 - c.fatigue / 300);
 var \u584A\u3068\u3057\u3066\u7ACB\u3064 = (c) => !c.routed && !c.withdraw && !c.detach && !c.destroyed && !(c.ambush && !c.revealed) && c.squads.some((q) => q.men > 0);
+function \u653E\u3063\u305F\u8DE1(b, \u578B, x, y, x2, y2) {
+  if (!b || !b.fx) return;
+  const \u4E71 = (x * 0.37 + y * 0.71 + b.t * 1.3) % 1;
+  if (\u578B === "teppo") {
+    if (b.fx.length < 180) {
+      b.fx.push({ k: "shot", x, y, x2, y2, t: 0, life: 0.22, \u4E71 });
+    }
+    const \u7159\u6570 = b.fx.reduce((n, f) => n + (f.k === "\u7159" ? 1 : 0), 0);
+    if (\u7159\u6570 < 150) {
+      const d = Math.hypot(x2 - x, y2 - y) || 1;
+      const ux = (x2 - x) / d, uy = (y2 - y) / d;
+      const px2 = -uy, py2 = ux;
+      for (let k = 0; k < 3; k++) {
+        const \u4E71k = \u4E71 * (17 + k * 11) % 1;
+        const \u524D = 5.5 + k * 2 + \u4E71k * 1.6;
+        const \u6A2A = (k - 1) * 3.6 + (\u4E71k - 0.5) * 3;
+        b.fx.push({
+          k: "\u7159",
+          x: x + ux * \u524D + px2 * \u6A2A,
+          y: y + uy * \u524D + py2 * \u6A2A,
+          vx: ux * 2 + (\u4E71k - 0.5) * 2.2,
+          vy: uy * 2 + (\u4E71k * 7 % 1 - 0.5) * 1.8 - 1.4,
+          r0: 1.5 + \u4E71k * 1.2,
+          t: 0,
+          life: 1.8 + \u4E71k * 1,
+          \u4E71: \u4E71k
+        });
+      }
+    }
+  } else if (b.fx.length < 180) {
+    b.fx.push({ k: "arrow", x, y, x2, y2, t: 0, life: 0.8, \u4E71 });
+  }
+}
 function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt;
@@ -33000,7 +33081,7 @@ function stepBattle(b, dt) {
             }
             tgt.morale -= 0.45;
             b.\u5C04\u6C17 = (b.\u5C04\u6C17 || 0) + 0.45;
-            if (b.fx.length < 160) b.fx.push({ k: "shot", x: f.x, y: f.y, x2: qs[0] ? qs[0].x : tgt.x, y2: qs[0] ? qs[0].y : tgt.y, t: 0, life: 0.28 });
+            \u653E\u3063\u305F\u8DE1(b, "teppo", f.x, f.y, qs[0] ? qs[0].x : tgt.x, qs[0] ? qs[0].y : tgt.y);
           }
         }
       } else if (!MAP.layers[f.layer].gates.some((g) => g.broken)) {
@@ -33077,9 +33158,7 @@ function stepBattle(b, dt) {
       }
       \u7684.morale -= 0.3;
       b.\u5C04\u6C17 = (b.\u5C04\u6C17 || 0) + 0.3;
-      if (b.fx.length < 170 && qs[0]) {
-        b.fx.push({ k: "shot", x: c.x, y: c.y, x2: qs[0].x, y2: qs[0].y, t: 0, life: 0.28 });
-      }
+      if (qs[0]) \u653E\u3063\u305F\u8DE1(b, "teppo", c.x, c.y, qs[0].x, qs[0].y);
     }
     let deepest = -1;
     for (const l of MAP.layers) if (l.gates.some((g) => g.broken)) deepest = Math.max(deepest, l.i);
@@ -33280,17 +33359,7 @@ function stepBattle(b, dt) {
           b.\u767A\u5C04\u6570 = b.\u767A\u5C04\u6570 || {};
           b.\u767A\u5C04\u6570[c.id] = (b.\u767A\u5C04\u6570[c.id] || 0) + 1;
           q.aim = { x: melee.e.x, y: melee.e.y, t: b.t };
-          if (b.fx.length < 160 && (c.side === "P" || c.seen)) {
-            b.fx.push({
-              k: q.type === "teppo" ? "shot" : "arrow",
-              x: q.x,
-              y: q.y,
-              x2: melee.e.x,
-              y2: melee.e.y,
-              t: 0,
-              life: q.type === "teppo" ? 0.3 : 0.45
-            });
-          }
+          if (c.side === "P" || c.seen) \u653E\u3063\u305F\u8DE1(b, q.type, q.x, q.y, melee.e.x, melee.e.y);
           const wet = q.type === "teppo" ? WEATHER[b.weather].teppo : 1;
           applyDamage(b, melee.f, melee.e, st.vol * wet * \u521D\u5F3E * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c, q);
         }

@@ -240,6 +240,48 @@ export const 押し力 = (c) => Math.max(1, corpsMen(c)) * (0.5 + c.morale / 200
 export const 塊として立つ = (c) => !c.routed && !c.withdraw && !c.detach && !c.destroyed
   && !(c.ambush && !c.revealed) && c.squads.some((q) => q.men > 0);
 
+/* 放った跡（GDD 8.11）。
+
+   弓と鉄砲が放ったことを、盤の上で見えるようにする。これまでは矢が一瞬の
+   細線、鉄砲が小さな火と薄い煙だけで、遊ぶ側からは「撃っているように見えない」
+   という申し出であった。放った跡は三つに分けて置く。
+
+     矢　　束になって飛び、弧を描いて落ちる（arrow）
+     火　　筒先の閃きと弾道（shot）。一瞬で消える
+     煙　　筒先の白煙（煙）。長く残り、風下へ流れて薄れる
+
+   煙は数が要る――一斉射の白い帯は、一つ二つの丸では出ない。矢と火とは別の
+   枠で数えて、互いに押し出さぬようにする。 */
+export function 放った跡(b, 型, x, y, x2, y2) {
+  if (!b || !b.fx) return;
+  const 乱 = (x * 0.37 + y * 0.71 + b.t * 1.3) % 1;
+  if (型 === "teppo") {
+    if (b.fx.length < 180) {
+      b.fx.push({ k: "shot", x, y, x2, y2, t: 0, life: 0.22, 乱 });
+    }
+    /* 煙は別枠。帯になってこそ一斉射に見えるので、多めに許す。 */
+    const 煙数 = b.fx.reduce((n, f) => n + (f.k === "煙" ? 1 : 0), 0);
+    if (煙数 < 150) {
+      const d = Math.hypot(x2 - x, y2 - y) || 1;
+      const ux = (x2 - x) / d, uy = (y2 - y) / d;
+      const px = -uy, py = ux;                        // 横へ広げる向き
+      /* 煙は筒先に立つ。組の中どころではなく、前列の鼻先へ置く。
+         横にも散らして、一組の斉射が帯に見えるようにする。 */
+      for (let k = 0; k < 3; k++) {
+        const 乱k = ((乱 * (17 + k * 11)) % 1);
+        const 前 = 5.5 + k * 2.0 + 乱k * 1.6;
+        const 横 = (k - 1) * 3.6 + (乱k - 0.5) * 3.0;
+        b.fx.push({ k: "煙", x: x + ux * 前 + px * 横, y: y + uy * 前 + py * 横,
+          vx: ux * 2.0 + (乱k - 0.5) * 2.2,
+          vy: uy * 2.0 + ((乱k * 7) % 1 - 0.5) * 1.8 - 1.4,
+          r0: 1.5 + 乱k * 1.2, t: 0, life: 1.8 + 乱k * 1.0, 乱: 乱k });
+      }
+    }
+  } else if (b.fx.length < 180) {
+    b.fx.push({ k: "arrow", x, y, x2, y2, t: 0, life: 0.8, 乱 });
+  }
+}
+
 export function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt; b.aiClock -= dt;
@@ -1413,7 +1455,7 @@ export function stepBattle(b, dt) {
             }
             tgt.morale -= 0.45;
             b.射気 = (b.射気 || 0) + 0.45;
-            if (b.fx.length < 160) b.fx.push({ k: "shot", x: f.x, y: f.y, x2: qs[0] ? qs[0].x : tgt.x, y2: qs[0] ? qs[0].y : tgt.y, t: 0, life: 0.28 });
+            放った跡(b, "teppo", f.x, f.y, qs[0] ? qs[0].x : tgt.x, qs[0] ? qs[0].y : tgt.y);
           }
         }
       } else if (!MAP.layers[f.layer].gates.some((g) => g.broken)) {
@@ -1498,9 +1540,7 @@ export function stepBattle(b, dt) {
       }
       的.morale -= 0.3;
       b.射気 = (b.射気 || 0) + 0.3;
-      if (b.fx.length < 170 && qs[0]) {
-        b.fx.push({ k: "shot", x: c.x, y: c.y, x2: qs[0].x, y2: qs[0].y, t: 0, life: 0.28 });
-      }
+      if (qs[0]) 放った跡(b, "teppo", c.x, c.y, qs[0].x, qs[0].y);
     }
 
     // 城の傾き。門と曲輪を失うほど城方は士気を保てない（GDD 9.3）
@@ -1769,10 +1809,7 @@ export function stepBattle(b, dt) {
           b.発射数 = b.発射数 || {};
           b.発射数[c.id] = (b.発射数[c.id] || 0) + 1;
           q.aim = { x: melee.e.x, y: melee.e.y, t: b.t };   // 狙っている相手
-          if (b.fx.length < 160 && (c.side === "P" || c.seen)) {
-            b.fx.push({ k: q.type === "teppo" ? "shot" : "arrow", x: q.x, y: q.y,
-              x2: melee.e.x, y2: melee.e.y, t: 0, life: q.type === "teppo" ? 0.3 : 0.45 });
-          }
+          if (c.side === "P" || c.seen) 放った跡(b, q.type, q.x, q.y, melee.e.x, melee.e.y);
           const wet = q.type === "teppo" ? WEATHER[b.weather].teppo : 1;
           applyDamage(b, melee.f, melee.e, st.vol * wet * 初弾 * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c, q);
         }
