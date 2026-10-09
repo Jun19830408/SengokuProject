@@ -12,7 +12,7 @@ export { css } from "../src/ui/css.js";
 export { BattleScreen } from "../src/ui/BattleScreen.jsx";
 export { MapScreen } from "../src/ui/MapScreen.jsx";
 export { 天下分け目の帳, 分け目の沙汰の帳 } from "../src/ui/panels.jsx";
-export { 攻め寄せる問い, MonthReport } from "../src/ui/panels.jsx";
+export { 攻め寄せる問い, MonthReport, 城を委ねる問い } from "../src/ui/panels.jsx";
 // 盤をこしらえるための道具も差し出す。
 // 画面を延々と押して所定の局面まで持っていくのは当てにならないので、
 // 試験によっては盤を直に組み立て、記録として仕込んでから「続きから」で開く。
