@@ -12,7 +12,7 @@ export { css } from "../src/ui/css.js";
 export { BattleScreen } from "../src/ui/BattleScreen.jsx";
 export { MapScreen } from "../src/ui/MapScreen.jsx";
 export { 天下分け目の帳, 分け目の沙汰の帳 } from "../src/ui/panels.jsx";
-export { 攻め寄せる問い, MonthReport, 城を委ねる問い } from "../src/ui/panels.jsx";
+export { 攻め寄せる問い, MonthReport, 城を委ねる問い, 軍の帳 } from "../src/ui/panels.jsx";
 // 盤をこしらえるための道具も差し出す。
 // 画面を延々と押して所定の局面まで持っていくのは当てにならないので、
 // 試験によっては盤を直に組み立て、記録として仕込んでから「続きから」で開く。
@@ -32,7 +32,7 @@ export { findPath } from "../src/core/paths.js";
 export { 城の改名, 改まった名, 武将の改名, 改まった名乗り } from "../src/data/kaimei.js";
 export { forecast, 援けに着く, migrateSave, atPeace, relOf, 軍の道, 本拠を追う, 奪われた本領を繕う, 旗の下を検め直す, 城主の札を据える, 二重の城主を解く, 城の名を改める, 武将の名を改める, 裏切りの出陣か } from "../src/core/state.js";
 export { 臣従の主, 許しの要る主, 許されているか, 攻められるか, 許しを与える, 許しを解く, 容認するか, 済んだ許しを片づける } from "../src/core/yurushi.js";
-export { 囲みの様子, 囲んでいる様子, 城の保ち, 寄せ手の保ち, 城の兵, 迫る軍, 民の離れ } from "../src/core/kakomi.js";
+export { 囲みの様子, 囲んでいる様子, 城の保ち, 寄せ手の保ち, 城の兵, 迫る軍, 民の離れ, 城に在る軍, 軍の中身 } from "../src/core/kakomi.js";
 export { 守りの寄親, 守りを旗頭に任せるか, 城の寄親, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 預けの率, 城の実入り, 旗頭の狙い, 旗頭に許す, 自ら采配するか, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭に任せきりか, 旗頭に断る, 旗頭は断られたか, 旗頭の古い断りを片づける, 断りの直後か } from "../src/core/inin.js";
 export { 旗頭の調略 } from "../src/govern/aiDiplo.js";
 export { 移封の間合い, 拒む信用, 拒む減り, 家の城ら, 石高 as 城らの石高, 渡せる城ら, 移封できるか, 移封できる家ら, 移封の見立て, 移封する,

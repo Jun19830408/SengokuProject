@@ -21,7 +21,7 @@ import { 基準値, 売値, 相場, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
 import { 城の寄親, 守りの寄親 } from "../core/inin.js";
-import { 囲みの様子, 囲んでいる様子 } from "../core/kakomi.js";
+import { 囲みの様子, 囲んでいる様子, 城に在る軍 } from "../core/kakomi.js";
 import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 
@@ -169,7 +169,9 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
           || ["同盟", "不可侵", "従属", "臣従"].includes(relOf(st, a, b).state);
         const 様 = 囲みの様子(g, c, { 守りの寄親, 月数: marchMonthsOf, 味方か });
         const 攻 = 囲んでいる様子(g, c, g.player, { 月数: marchMonthsOf, 見える: (st, x) => canSee(st, x) });
-        if ((!様 || !(c.faction === g.player || isVassal(g, g.player, c.faction))) && !攻) return null;
+        /* 城の下に立っている軍（GDD 6.4 / 9.2）。城の兵とは別のものである。 */
+        const 在 = 城に在る軍(g, c, { 味方か });
+        if ((!様 || !(c.faction === g.player || isVassal(g, g.player, c.faction))) && !攻 && !在.length) return null;
         /* 「囲まれている」札は、内を知る城にだけ出す。他家の城の兵糧や民心を
            偵察もせずに読めては、内情不明の札が意味を失う。 */
         const 我が城 = c.faction === g.player;
@@ -234,6 +236,31 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
               {!様.囲まれている && (
                 <div style={行}>
                   城方　<span style={強}>{fmt(様.城方.兵)}人</span>（守るに要る{fmt(様.城方.要る)}人）
+                </div>
+              )}
+            </>))}
+            {在.length > 0 && 帯("#6E6558", (<>
+              <div style={{ fontSize: 13, color: U.text, fontWeight: 600, marginBottom: 2 }}>
+                【この城に在る軍】{在.length}手
+              </div>
+              <div style={{ ...行, fontSize: 10.5, marginBottom: 2 }}>
+                城の下に立っている軍です。城の兵とは別のもので、城に入ったわけではありません。
+              </div>
+              {在.map((q, i) => (
+                <div key={i} style={行}>
+                  <span style={{ ...強, color: q.味方 ? U.text : "#B0483C" }}>{q.家.name}</span>
+                  <span style={{ marginLeft: 5, fontSize: 10.5,
+                    padding: "0 5px", borderRadius: 3, background: "rgba(0,0,0,0.06)" }}>{q.用}</span>
+                  {"　"}<span style={強}>{fmt(q.兵)}人</span>
+                  <span style={{ fontSize: 10.5 }}>（地の兵{fmt(q.地)}）</span>
+                  {q.将ら.length > 0 && <>{"　"}{q.将ら.map((x) => x.name).join("・")}</>}
+                  {q.味方 && <>{"　"}兵糧{fmt(q.兵糧)}石<span style={{ fontSize: 10.5 }}>（{q.月}ヶ月分）</span></>}
+                  {q.旗頭 && <>{"　"}<span style={{ fontSize: 10.5 }}>{q.旗頭.name}の方面軍</span></>}
+                </div>
+              ))}
+              {在.some((q) => q.味方 && q.軍.faction === g.player) && (
+                <div style={{ ...行, fontSize: 10.5 }}>
+                  進ませる・解く・城へ入れるは「軍事」の欄から。
                 </div>
               )}
             </>))}

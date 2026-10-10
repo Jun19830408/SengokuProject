@@ -26,13 +26,16 @@ dom.window.HTMLCanvasElement.prototype.getContext = () => ctxStub;
 if (!dom.window.structuredClone) dom.window.structuredClone = structuredClone;
 const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 const { React, createRoot, act, CastleSheet, initState, advanceMonth, newRoster,
-  囲みの様子, 囲んでいる様子, 城の保ち, 寄せ手の保ち, 城の兵, 守りの寄親 } = H;
+  囲みの様子, 囲んでいる様子, 城の保ち, 寄せ手の保ち, 城の兵, 守りの寄親,
+  城に在る軍, 軍の中身, 軍の帳, findPath } = H;
 
 const 咎 = [];
 const 確 = (名, 可, 添 = '') => {
   console.log(`  ${可 ? '○' : '★'} ${名}${添 ? '　' + 添 : ''}`);
   if (!可) 咎.push(名);
 };
+
+const root = createRoot(document.getElementById('r'));
 
 let 種 = 0x4C21;
 Math.random = function () { 種 |= 0; 種 = (種 + 0x6D2B79F5) | 0;
@@ -177,7 +180,6 @@ console.log('\n── 三　こちらが囲んでいる城');
 console.log('\n── 四　城の帳に札が出る');
 {
   const { s, c } = 囲ませる({ 我が城: true, 糧: 24000, 民: 68 });
-  const root = createRoot(document.getElementById('r'));
   const 文 = (() => {
     act(() => { root.render(React.createElement(CastleSheet, {
       g: s, castle: c, land: false, tab: '内政', setTab: () => {}, onClose: () => {},
@@ -199,6 +201,92 @@ console.log('\n── 四　城の帳に札が出る');
     return document.body.textContent.replace(/\s+/g, ' ');
   })();
   確('他家の城に「囲まれている」の札は出ない', !/【囲まれている】/.test(文2));
+}
+
+/* ── 五　城の下に立つ軍（GDD 6.4 / 9.2）
+
+   城の下には、城の兵とは別に軍が立っていることがある。落とした城に留まる手勢、
+   救いに着いた後詰、旗の下の家の援軍――どれも「城に入った」わけではないので、
+   城の兵数には出てこない。遊ぶ側の申し出は「城が攻められているだけでなく、その城に
+   在陣している軍の情報も見れるようにしてほしい」であった。 */
+console.log('\n── 五　城の下に立つ軍');
+{
+  const s = initState('oda');
+  const 本拠 = s.castles.find((x) => x.id === s.factions.oda.本拠);
+  const 的 = s.castles.find((x) => x.faction !== 'oda');
+  const 将ら = s.generals.filter((x) => x.faction === 'oda' && x.at === 本拠.id && !x.lord).slice(0, 2);
+  for (const g2 of 将ら) g2.at = null;
+  s.armies.push({ id: 'Z1', faction: 'oda', from: 本拠.id, gens: 将ら.map((x) => x.id),
+    local: 4800, localTrain: 72, rost: newRoster(4800, 'arm-Z1'),
+    men: 4800 + 将ら.reduce((t, x) => t + x.retinue, 0), at: 本拠.id, path: [本拠.id],
+    prog: 0, food: 16000, target: null, 在陣: 本拠.id });
+  s.armies.push({ id: 'Z2', faction: 的.faction, from: 的.id, gens: [], local: 2600,
+    localTrain: 68, rost: newRoster(2600, 'arm-Z2'), men: 2600, at: 本拠.id,
+    path: [本拠.id], prog: 0, food: 5000, target: 本拠.id, 在陣: 本拠.id });
+  const 在 = 城に在る軍(s, 本拠, { 味方か: (st, a, b) => a === b });
+  確('城の下に立つ軍を二手とも数える', 在.length === 2,
+    在.map((q) => `${q.家.name}（${q.用}・${q.兵}人）`).join('／'));
+  確('味方が先に並ぶ', 在[0].味方 === true && 在[1].味方 === false);
+  確('用がわかる', 在[0].用 === '在陣' && 在[1].用 === '城下に陣',
+    在.map((q) => q.用).join('／'));
+  確('将と兵糧がわかる', 在[0].将ら.length === 将ら.length && 在[0].月 > 0,
+    `${在[0].将ら.map((x) => x.name).join('・')}／兵糧${在[0].兵糧}石（${在[0].月}ヶ月分）`);
+  /* 囲んでいる寄せ手は、囲みの札が受け持つ。ここでは重ねて出さない。 */
+  s.sieges = [{ castleId: 本拠.id, armyId: 'Z2', months: 1, decided: null }];
+  const 在2 = 城に在る軍(s, 本拠, { 味方か: (st, a, b) => a === b });
+  確('囲んでいる寄せ手は重ねて数えない', 在2.length === 1 && 在2[0].軍.id === 'Z1',
+    在2.map((q) => q.軍.id).join('／'));
+  /* 城の帳に札が出る */
+  s.sieges = [];
+  act(() => { root.render(React.createElement(CastleSheet, {
+    g: s, castle: 本拠, land: false, tab: '内政', setTab: () => {}, onClose: () => {},
+  })); });
+  const 文 = document.body.textContent.replace(/\s+/g, ' ');
+  確('城の帳に「この城に在る軍」の札が立つ', /【この城に在る軍】/.test(文));
+  確('味方の軍の将が読める', 将ら.every((x) => 文.includes(x.name)),
+    将ら.map((x) => x.name).join('・'));
+  確('他家の軍も出る', 文.includes(s.factions[的.faction].name));
+}
+
+/* ── 六　軍の帳（GDD 7.3）
+
+   地図には進んでいる軍が「軍」の印で出ていたが、押しても何も起きなかった。
+   総勢の数だけが印の脇に添えてあるきりで、誰が率いているのか、何を積んでどこへ
+   向かっているのかは読めない。印を押せば中身が読めるようにした。 */
+console.log('\n── 六　軍の帳');
+{
+  const s = initState('oda');
+  const 本拠 = s.castles.find((x) => x.id === s.factions.oda.本拠);
+  const 的 = s.castles.find((x) => x.faction !== 'oda');
+  const 将ら = s.generals.filter((x) => x.faction === 'oda' && x.at === 本拠.id && !x.lord).slice(0, 3);
+  for (const g2 of 将ら) g2.at = null;
+  const 道 = findPath(本拠.id, 的.id) || [本拠.id, 的.id];
+  const a = { id: 'G1', faction: 'oda', from: 本拠.id, gens: 将ら.map((x) => x.id),
+    local: 4800, localTrain: 72,
+    rost: newRoster(4800, 'arm-G1', { yari: 56, yumi: 21, teppo: 3, kiba: 20 }),
+    men: 4800 + 将ら.reduce((t, x) => t + x.retinue, 0), at: 道[0], path: 道, prog: 0.4,
+    food: 16000, target: 的.id };
+  s.armies.push(a);
+  const 中 = 軍の中身(s, a, { 月数: H.marchMonthsOf });
+  確('総勢と内訳がわかる', 中.兵 === a.men && 中.地 === 4800 && 中.直 > 0,
+    `総勢${中.兵}（地${中.地}＋直属${中.直}）`);
+  確('兵科の割りがわかる',
+    Object.keys(中.兵科).length >= 3
+    && Math.abs(Object.values(中.兵科).reduce((t, n) => t + n, 0) - 中.兵) <= 5,
+    Object.entries(中.兵科).map(([t, n]) => `${t}${n}`).join('・'));
+  確('率いる将がわかる', 中.将ら.length === 将ら.length,
+    中.将ら.map((x) => x.name).join('・'));
+  確('出どころと行き先がわかる',
+    中.出どころ.id === 本拠.id && 中.行き先.id === 的.id && 中.月 >= 1,
+    `${中.出どころ.name} → ${中.行き先.name}（およそ${中.月}ヶ月）`);
+  確('兵糧の保ちがわかる', 中.月 >= 0 && 中.兵糧 === 16000, `${中.兵糧}石`);
+  確('用がわかる', 中.用 === '進軍', 中.用);
+  act(() => { root.render(React.createElement(軍の帳, { g: s, 軍: a, onClose: () => {} })); });
+  const 文 = document.body.textContent.replace(/\s+/g, ' ');
+  確('帳に将の名が並ぶ', 将ら.every((x) => 文.includes(x.name)));
+  確('帳に兵科が出る', /槍/.test(文) && /騎馬/.test(文), (文.match(/槍 [\d,]+/) || ['—'])[0]);
+  確('帳に行き先と月数が出る', 文.includes(的.name) && /およそ\d+ヶ月/.test(文),
+    (文.match(/およそ\d+ヶ月/) || ['—'])[0]);
 }
 
 console.log(`\nエラー: ${咎.length ? 咎.join(' / ') : 'なし'}`);

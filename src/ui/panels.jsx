@@ -7,6 +7,7 @@ import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
 import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 旗頭の受け持ち, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
 import { canSee, forecast, relOf } from "../core/state.js";
+import { 軍の中身 } from "../core/kakomi.js";
 import { courtRank, 旗の下か } from "../core/province.js";
 import { 問われる家, 問わぬ家ら, 応じる目 } from "../core/sobuji.js";
 import { 参陣の顔ぶれ, 号令の限り } from "../core/gourei.js";
@@ -1318,6 +1319,92 @@ export function FactionInfo({ g, onClose }) {
   );
 }
 
+
+/* 軍の帳（GDD 7.3）。
+
+   地図には進んでいる軍が「軍」の印で出ていたが、押しても何も起きなかった。
+   総勢の数だけが印の脇に添えてあるきりで、誰が率いているのか、何を積んで
+   どこへ向かっているのかは読めない。遊ぶ側の申し出は「軍勢が城に到着する前の
+   段階で、政務マップには『軍』という表記で進軍している様子がわかりますが、
+   これをタップしたら軍の内容（武将や兵数など）がわかるようにもしてほしい」で
+   あった。
+
+   総勢は印の脇に出ているのだから、他家の軍であっても中身を隠す理由はない。
+   道を行く軍は、物見の目にそのまま映るものである。 */
+export function 軍の帳({ g, 軍, onClose }) {
+  if (!軍) return null;
+  const 中 = 軍の中身(g, 軍, { 月数: marchMonthsOf });
+  if (!中) return null;
+  const 我 = 軍.faction === g.player;
+  const 兵科の名 = { yari: "槍", yumi: "弓", teppo: "鉄砲", kiba: "騎馬" };
+  const 兵科 = Object.entries(中.兵科).filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1]);
+  const 間 = relOf(g, g.player, 軍.faction).state;
+  return (
+    <div className="modal" {...外を押して閉じる(onClose)}>
+      <div className="card" style={{ maxWidth: 520 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
+          <span className="pill" style={{ background: 中.家.color || "#666" }}>{中.家.name}</span>
+          <div className="mn" style={{ fontSize: 21 }}>
+            {中.将ら[0] ? `${中.将ら[0].name}の軍` : "軍"}
+          </div>
+          <span className="pill" style={{ background: "#6E6558" }}>{中.用}</span>
+          {!我 && <span className="pill" style={{ background: "#4A6E8A" }}>{間}</span>}
+        </div>
+
+        <div className="row"><span>総勢</span>
+          <span className="v num" style={{ fontSize: 15 }}>{fmt(中.兵)} 人</span></div>
+        <div className="row"><span>うち地の兵／直属</span>
+          <span className="v num">{fmt(中.地)} 人 ／ {fmt(中.直)} 人</span></div>
+        {兵科.length > 0 && (
+          <div className="row"><span>兵科</span>
+            <span className="v num">
+              {兵科.map(([t, n]) => `${兵科の名[t] || t} ${fmt(n)}`).join("　")}
+            </span></div>
+        )}
+        <div className="row"><span>兵糧</span>
+          <span className="v num" style={{ color: 中.月 < 2 ? "#B0483C" : undefined }}>
+            {fmt(中.兵糧)} 石（{中.月}ヶ月分）</span></div>
+        <div className="row"><span>出どころ</span>
+          <span className="v">{中.出どころ ? 中.出どころ.name : "—"}</span></div>
+        <div className="row"><span>{中.在陣 ? "在陣" : "行き先"}</span>
+          <span className="v">
+            {中.在陣 ? 中.在陣.name
+              : 中.行き先 ? `${中.行き先.name}（${(g.factions[中.行き先.faction] || {}).name}）`
+              : 中.いま ? `${中.いま.name}の下` : "—"}
+            {中.月 > 0 && <span style={{ color: U.dim, marginLeft: 6 }}>およそ{中.月}ヶ月</span>}
+          </span></div>
+        {中.旗頭 && (
+          <div className="row"><span>方面軍</span>
+            <span className="v">{中.旗頭.name}の手勢</span></div>
+        )}
+
+        <div className="sec">率いる将　{中.将ら.length}名</div>
+        {!中.将ら.length && (
+          <div style={{ fontSize: 12, color: U.dim }}>将を連れていません（地の兵だけの軍です）。</div>
+        )}
+        {中.将ら.map((x) => (
+          <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0",
+            borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" }}>
+            <span className="mn" style={{ fontSize: 15, width: 100 }}>{x.name}</span>
+            <span style={{ color: U.dim, width: 60 }}>{我 ? rankName(x, g) : ""}</span>
+            <span className="num" style={{ flex: 1, color: U.dim }}>
+              {x.age}歳　統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov}
+            </span>
+            <span className="num">直属 {fmt(x.retinue)}</span>
+          </div>
+        ))}
+
+        <div style={{ fontSize: 11.5, color: U.dim, marginTop: 10, lineHeight: 1.75 }}>
+          {我
+            ? "下知は城の帳から出します。城に着けば、攻めるか陣を張るかを問われます。"
+            : "道を行く軍は物見に映ります。着く先と着くまでの月数から、備えを立ててください。"}
+        </div>
+        <button className="btn" style={{ width: "100%", marginTop: 12 }} onClick={onClose}>閉じる</button>
+      </div>
+    </div>
+  );
+}
 
 export function GeneralList({ g, onClose, onYakume }) {
   const gs = g.generals.filter((x) => x.faction === g.player);

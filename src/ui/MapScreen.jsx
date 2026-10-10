@@ -32,7 +32,7 @@ import { BattleScreen } from "./BattleScreen.jsx";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
-import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い, 攻めの願い問い } from "./panels.jsx";
+import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, 軍の帳, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い, 攻めの願い問い } from "./panels.jsx";
 import { SallyDialog, 音の欄 } from "./panels.jsx";
 import { 惣無事令を発する, 応諾を決める, 朝敵を検め直す } from "../core/sobuji.js";
 import { 号令を発する } from "../core/gourei.js";
@@ -137,6 +137,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [breakVow, setBreakVow] = useState(null); // 約束を交わした相手へ兵を出すときの問い
   const [sally, setSally] = useState(null);      // 囲まれた城が討って出るかの問い
   const [攻めの許し願い, set攻めの許し願い] = useState(null);   // 主家へ攻めの許しを願う問い
+  /* 地図で押した軍（GDD 7.3）。印を押せば中身が読める。 */
+  const [軍sel, set軍sel] = useState(null);
   const [callAid, setCallAid] = useState(null);  // 援軍を呼ぶ画面（攻められた城）
   const 終幕を見た = !!g.終幕を見た;
   const [rotate, setRotate] = useState(true);
@@ -172,6 +174,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(terrain, -vx * s + W / 2, -vy * s + H / 2, MAPW * s, MAPH * s);
     const S = (wx, wy) => [(wx - vx) * s + W / 2, (wy - vy) * s + H / 2];
+    /* 検分と試験のための覗き口（BattleScreen の window.__合戦 と同じ趣である）。
+       地図のどこを見ているかが分からねば、盤の上の一点を押す検めが書けない。 */
+    if (typeof window !== "undefined") window.__地図 = { 見: { x: vx, y: vy, s }, 画面: S, 幅: W, 高: H };
 
     // 版図。土地はいちばん近い城の家に属するものとして塗り分ける。
     // 境目がはっきり出るので、誰がどこを持つかが一目で分かる。
@@ -459,8 +464,22 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const dd = Math.hypot(印.x - wx, 印.y - wy);
       if (dd < bt) { bt = dd; ht = t.id; }
     }
-    if (ht) { setTownSel(ht); setSel(null); return; }
-    setSel(null); setTownSel(null);
+    if (ht) { setTownSel(ht); setSel(null); set軍sel(null); return; }
+    /* 道を行く軍の印を押したら、その軍の帳を開く（GDD 7.3）。
+
+       城より狭い当たりで、城を外したときだけ見る。在陣の軍は城の上に重なって
+       いるので、城の帳の「この城に在る軍」が受け持つ。 */
+    let ha = null, ba = 18 / view.s;
+    for (const a of g.armies) {
+      const n0 = nodeById(a.path[0]);
+      const n1 = a.path.length > 1 ? nodeById(a.path[1]) : n0;
+      if (!n0 || !n1) continue;
+      const axw = n0.x + (n1.x - n0.x) * a.prog, ayw = n0.y + (n1.y - n0.y) * a.prog;
+      const dd = Math.hypot(axw - wx, ayw - wy);
+      if (dd < ba) { ba = dd; ha = a.id; }
+    }
+    if (ha) { set軍sel(ha); setSel(null); setTownSel(null); return; }
+    setSel(null); setTownSel(null); set軍sel(null);
   };
   /* 拡げられる限り（GDD 13.1）。
 
@@ -2479,7 +2498,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             <button className="btn sm" disabled={!!battle || !!openSiege || !!openCamp} onClick={nextMonth}>次月へ</button>
           </div>
         )}
-        {!sel && !wide && <div className="hint">城をタップすると詳細が開きます</div>}
+        {!sel && !wide && <div className="hint">城も軍もタップすると詳細が開きます</div>}
 
 
         {selCastle && (
@@ -2780,6 +2799,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         )}
         {modal === "chronicle" && <Chronicle g={g} onClose={() => setModal(null)} />}
         {modal === "factions" && <FactionInfo g={g} onClose={() => setModal(null)} />}
+        {軍sel && !battle && (
+          <軍の帳 g={g} 軍={(g.armies || []).find((a) => a.id === 軍sel)}
+            onClose={() => set軍sel(null)} />
+        )}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)}
           onYakume={(x) => setG((p) => (x.解く
             ? 政務.旗頭を解く下知(p, x.解く)

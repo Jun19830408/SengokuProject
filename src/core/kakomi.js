@@ -133,3 +133,67 @@ export function 囲んでいる様子(s, c, fid, { 月数, 見える } = {}) {
       .sort((x, y) => x.月 - y.月) : [],
   };
 }
+
+/* ============================================ 城に在る軍（GDD 6.4 / 9.2）
+
+   城の下には、城の兵とは別に軍が立っていることがある。落とした城に留まる手勢、
+   救いに着いた後詰、囲んでいる寄せ手、旗の下の家の援軍――どれも「城に入った」
+   わけではないので、城の兵数には出てこない。遊ぶ側の申し出は「城が攻められて
+   いるだけでなく、その城に在陣している軍の情報も見れるようにしてほしい」で
+   あった。
+
+   用（何のためにそこに居るか）を添えて返す。囲んでいる寄せ手は囲みの札が
+   受け持つので、ここでは除く。 */
+export function 城に在る軍(s, c, { 味方か } = {}) {
+  if (!c) return [];
+  const 囲 = (s.sieges || []).find((x) => x.castleId === c.id);
+  return (s.armies || [])
+    .filter((a) => (a.在陣 === c.id || a.at === c.id) && !(囲 && a.id === 囲.armyId))
+    .map((a) => {
+      const 味方 = a.faction === c.faction
+        || (味方か ? 味方か(s, a.faction, c.faction) : false);
+      const 用 = a.在陣 === c.id ? (a.faction === c.faction ? "在陣" : "城下に陣")
+        : a.relief === c.id ? "後詰"
+        : a.助勢 ? "援軍"
+        : a.sieging ? "囲み"
+        : 味方 ? "着いたところ" : "城下に在る";
+      return {
+        軍: a, 家: (s.factions || {})[a.faction] || {}, 味方, 用,
+        兵: 軍の兵(a), 地: Math.max(0, Math.round(a.local || 0)),
+        将ら: (a.gens || []).map((id) => (s.generals || []).find((x) => x.id === id)).filter(Boolean),
+        兵糧: Math.max(0, Math.round(a.food || 0)),
+        /* 道を行く軍は月に一度食う（総勢×〇.〇九）。囲んでいる軍はそれに
+           囲みの扶持が重なるので、寄せ手の保ち のほうで数える。 */
+        月: Math.floor(Math.max(0, a.food || 0) / Math.max(1, Math.round(軍の兵(a) * 0.09))),
+        旗頭: a.旗頭 ? (s.generals || []).find((x) => x.id === a.旗頭) || null : null,
+      };
+    })
+    .sort((x, y) => (y.味方 ? 1 : 0) - (x.味方 ? 1 : 0) || y.兵 - x.兵);
+}
+
+/* 軍の中身。印を押したときに開く帳のための見立て（GDD 7.3）。 */
+export function 軍の中身(s, a, { 月数 } = {}) {
+  if (!a) return null;
+  const 将ら = (a.gens || []).map((id) => (s.generals || []).find((x) => x.id === id)).filter(Boolean);
+  const 直 = 将ら.reduce((t, x) => t + Math.max(0, x.retinue || 0), 0);
+  /* 兵科の割り。名簿（五十人組）の種ごとに数える。名簿が無ければ読めない。 */
+  const 兵科 = {};
+  for (const q of (a.rost || [])) 兵科[q.t] = (兵科[q.t] || 0) + (q.m || 0);
+  for (const g of 将ら) for (const q of (g.rost || [])) 兵科[q.t] = (兵科[q.t] || 0) + (q.m || 0);
+  const 道 = a.path || [];
+  return {
+    軍: a, 家: (s.factions || {})[a.faction] || {},
+    兵: 軍の兵(a), 地: Math.max(0, Math.round(a.local || 0)), 直,
+    将ら, 兵科,
+    兵糧: Math.max(0, Math.round(a.food || 0)),
+    月: Math.floor(Math.max(0, a.food || 0) / Math.max(1, Math.round(軍の兵(a) * 0.09))),
+    出どころ: (s.castles || []).find((c) => c.id === a.from) || null,
+    行き先: (s.castles || []).find((c) => c.id === a.target) || null,
+    いま: (s.castles || []).find((c) => c.id === a.at) || null,
+    月: a.target && 道.length > 1 ? Math.max(1, (月数 ? 月数(道) : 0) || 1) : 0,
+    在陣: a.在陣 ? (s.castles || []).find((c) => c.id === a.在陣) || null : null,
+    旗頭: a.旗頭 ? (s.generals || []).find((x) => x.id === a.旗頭) || null : null,
+    用: a.relief ? "後詰" : a.助勢 ? "援軍" : a.sieging ? "囲み"
+      : a.在陣 ? "在陣" : a.target ? "進軍" : "待機",
+  };
+}
