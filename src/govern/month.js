@@ -18,7 +18,7 @@ import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "./ai.js";
 import { 外交の采配, 調略の采配, 特殊勢力の采配, 旗頭の調略 } from "./aiDiplo.js";
 import { checkUnified } from "./unify.js";
-import { marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く, 盤の乱れを繕う, 城なき家を片づける, 城に合流する, 軍を解く, 将を除く, 旗頭の陣を払う } from "./war.js";
+import { 集結を待つか, marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く, 盤の乱れを繕う, 城なき家を片づける, 城に合流する, 軍を解く, 将を除く, 旗頭の陣を払う } from "./war.js";
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
@@ -550,6 +550,22 @@ export function advanceMonth(prev, g) {
       const arrivals = [];
       for (const a of s.armies) {
         let budget = MARCH_PER_MONTH * (a.food > 0 ? 1 : 0.5);
+        /* 集結を待つ軍は、仲間のいちばん遅い者に歩を合わせる（GDD 7.4）。
+
+           城ごとに送った援軍が着いた順に当たっては、各個に撃破される。待つと
+           決めた軍は足を止め、同じ月に着いて一手に束ねられる（着いた味方を束ねる）。
+           救う城が揃うより先に落ちると見れば、待たずに進む。 */
+        if (集結を待つか(s, a)) {
+          a.待ち月 = (a.待ち月 || 0) + 1;
+          budget = 0;
+          if (a.faction === s.player) {
+            const 的 = s.castles.find((c2) => c2.id === a.待ち合わせ);
+            const 居 = s.castles.find((c2) => c2.id === a.path[0]);
+            events.push(`${(s.generals.find((x) => x.id === (a.gens || [])[0]) || {}).name || "軍"}の`
+              + `${fmt(a.men)}人は${居 ? 居.name + "で" : ""}味方の集結を待っている`
+              + `（${的 ? 的.name : "救う城"}へ向かう手勢・${a.待ち月}ヶ月目）。`);
+          }
+        } else if (a.待ち合わせ) a.待ち月 = 0;
         while (budget > 0 && a.path.length > 1) {
           const r = roadBetween(a.path[0], a.path[1]);
           // 蝦夷を知らぬ軍は、そこを進むのに二.六倍の日数がかかる（GDD 7.1）

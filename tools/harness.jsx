@@ -12,7 +12,7 @@ export { css } from "../src/ui/css.js";
 export { BattleScreen } from "../src/ui/BattleScreen.jsx";
 export { MapScreen } from "../src/ui/MapScreen.jsx";
 export { 天下分け目の帳, 分け目の沙汰の帳 } from "../src/ui/panels.jsx";
-export { 攻め寄せる問い, MonthReport, 城を委ねる問い, 軍の帳 } from "../src/ui/panels.jsx";
+export { 攻め寄せる問い, MonthReport, 城を委ねる問い, 軍の帳, SortieDialog, ReinforceDialog } from "../src/ui/panels.jsx";
 // 盤をこしらえるための道具も差し出す。
 // 画面を延々と押して所定の局面まで持っていくのは当てにならないので、
 // 試験によっては盤を直に組み立て、記録として仕込んでから「続きから」で開く。
@@ -38,7 +38,7 @@ export { 旗頭の調略 } from "../src/govern/aiDiplo.js";
 export { 移封の間合い, 拒む信用, 拒む減り, 家の城ら, 石高 as 城らの石高, 渡せる城ら, 移封できるか, 移封できる家ら, 移封の見立て, 移封する,
   招ける忠誠, 招きの咎め, 招けるか, 招ける者ら, 直参に招く } from "../src/core/ihou.js";
 export { 謀反の目, 走る先, 謀反を起こす, 謀反の見回り } from "../src/core/muhon.js";
-export { 遠征の兵糧 } from "../src/govern/war.js";
+export { 遠征の兵糧, 陣中の月数, 陣中の食い扶持, 集結を待つか, 留守の蓄え } from "../src/govern/war.js";
 export { ROAD_ADJ } from "../src/core/paths.js";
 export { resolveOffscreen, resolveClashOffscreen, reinforceOffers, 運び賃, 運び賃を払う, sackCastle, 城を委ねる, 委ねる差配, 軍を解く, withdrawArmy, homeFor, 城に合流する, 在陣させる, 盤の乱れを繕う, restoreStrays, 滅んだ家を始末する, 城なき家を片づける, 将を除く, 着いた味方を束ねる, 旗頭の陣を払う, 方面の報せ } from "../src/govern/war.js";
 export { 圧す, 解す } from "../src/save/pack.js";

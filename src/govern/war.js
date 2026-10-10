@@ -1,6 +1,6 @@
 import { captureChance, makePrisoner, takeAsPrisoner } from "../core/capture.js";
 import { canRecruit, loyaltyAfterRecruit, ruinedHouse } from "../core/house.js";
-import { findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
+import { marchMonthsOf, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
 import { minGarrison, stipendOf, 城主を据え替える, 寄騎に取れるか, 陣触れに応じる, 陣触れの届き, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
 import { newRoster, rosterCut, rosterSync, rosterTake, 軍の損を分ける } from "../core/roster.js";
 import { relOf, 主を探す } from "../core/state.js";
@@ -15,6 +15,7 @@ import { rosterArms } from "../core/roster.js";
 import { holdsProvince } from "../core/province.js";
 import { underMyBanner, 同じ旗の下, 援けに着く, 本拠を追う, 奪われた本領を繕う } from "../core/state.js";
 import { 難を逃れる } from "../core/capture.js";
+import { 城の保ち } from "../core/kakomi.js";
 
 // ------------------------------------------------ 援軍（GDD 7.3 / 7.4）
 // 各城・各勢力は「守備最低数・距離・従属度」から派遣・減員・遅参・拒否を判断する。
@@ -23,19 +24,68 @@ import { 難を逃れる } from "../core/capture.js";
    関ヶ原も大坂の陣も、全国から兵が集まった。主君の求めがあれば、九州の
    兵も奥羽の兵も出る。呼べる先を距離で切るのは、その姿に合わない。
 
-   縛るのは兵糧である。軍は月に一人あたり〇.〇九石を食う。行程のぶんに
-   陣中の二月を足して持たせる。遠ければ遠いほど蔵が空く。
+   縛るのは兵糧である。軍は月に一人あたり〇.〇九石を食う。囲みを布けば、道中の
+   扶持に囲みの扶持が重なって倍食う（govern/month.js の囲みの段）。
 
-     一月の道  一人〇.二七石
-     六月の道  一人〇.七二石
-     十二月の道 一人一.二六石
+   もとは「行程のぶんに陣中の二月を足す」と決め打ちしていた。これだと、着いてから
+   囲みを続けられるのはどの軍も一月きりである。遊ぶ側の申し出は「連戦するにあたって、
+   兵糧が二、三ヶ月したらすぐになくなる。史実に従って、在陣させる日数の限度はあると
+   して、日数に応じて軍が持てる兵糧の数を変更したい」であった。
+
+   陣中の月数を渡せるようにした。持たせるのは「道中のぶん＋陣中のぶん（囲みの倍で
+   数える）」である。囲まずに在陣するだけなら、陣中のぶんは倍もつ。
+
+     五千人・道中一月・陣中一月　一,三五〇石（元の決め打ちと同じ）
+     五千人・道中三月・陣中六月　六,七五〇石
+     五千人・道中三月・陣中十二月　一一,二五〇石
 
    加えて、城は自らの蔵を空にして援軍を出さない。留守の兵が半年食える
    だけは残す。攻められれば籠らねばならぬからである。
 
    これで、遠国から大軍を呼ぶには豊かな蔵が要ることになる。天下を統べる
    ほどの身代でなければ、全国からの動員はできない。 */
-export const 遠征の兵糧 = (men, months) => Math.round(men * 0.09 * ((months || 1) + 2));
+export const 陣中の食い扶持 = 0.09 * 2;            // 囲みを布けば月に二度食う
+export const 遠征の兵糧 = (men, months, 陣中 = 1) =>
+  Math.round(men * 0.09 * ((months || 1) + Math.max(0, 陣中) * 2));
+
+/* その兵糧で、着いてから何月戦えるか（GDD 7.3）。
+   囲みを続ける月数で数える。囲まずに在陣するだけなら倍もつ。 */
+export const 陣中の月数 = (men, 糧, months) => {
+  const 残 = Math.max(0, (糧 || 0) - men * 0.09 * Math.max(1, months || 1));
+  return Math.floor(残 / Math.max(1, men * 陣中の食い扶持));
+};
+
+/* 集結を待つか（GDD 7.4）。
+
+   援軍を城ごとに送ると、着いた順に一手ずつ寄せ手と当たる。遊ぶ側の申し出は
+   「援軍が送った城ごとに敵と戦うようになっているため、各個撃破されてしまう。
+   その軍だけで戦うか、集結を待つかを選択できるようにしたい」であった。
+
+   待つと決めた軍には待ち合わせの印（待ち合わせ＝救う城）を立てる。印を持つ軍は、
+   仲間のうちいちばん遅い者に歩を合わせる――早く着く軍が足を止めて待つ。同じ月に
+   着けば、着いた先で一手に束ねられる（着いた味方を束ねる）。
+
+   ただし待ちきれぬときがある。救う城が揃うより先に落ちると見れば、待たずに進む。
+   来ぬ者を半年も待つこともしない。 */
+export function 集結を待つか(s, a) {
+  if (!a || !a.待ち合わせ || a.dead) return false;
+  if (!a.path || a.path.length <= 1) return false;          // もう着いている
+  const 残 = (x) => Math.max(0, marchMonthsOf(x.path || []) || 0);
+  const 仲間 = (s.armies || []).filter((x) => x !== a && !x.dead
+    && x.待ち合わせ === a.待ち合わせ && x.faction === a.faction
+    && (x.path || []).length > 1);
+  if (!仲間.length) return false;                           // 待つ相手がいない
+  const 我 = 残(a);
+  const 最遅 = Math.max(我, ...仲間.map(残));
+  if (我 >= 最遅) return false;                             // いちばん遅いのは自分である
+  if ((a.待ち月 || 0) >= 6) return false;                   // 待ちは半年まで
+  /* 救う城が、揃うより先に落ちると見れば待たない。 */
+  const 的 = (s.castles || []).find((c) => c.id === a.待ち合わせ);
+  if (的 && (s.sieges || []).some((x) => x.castleId === 的.id)) {
+    if (城の保ち(s, 的).月 <= 最遅) return false;
+  }
+  return true;
+}
 
 /* 兵糧の運び賃（GDD 7.3）。
 

@@ -186,7 +186,9 @@ export function 軍の中身(s, a, { 月数 } = {}) {
     兵: 軍の兵(a), 地: Math.max(0, Math.round(a.local || 0)), 直,
     将ら, 兵科,
     兵糧: Math.max(0, Math.round(a.food || 0)),
-    月: Math.floor(Math.max(0, a.food || 0) / Math.max(1, Math.round(軍の兵(a) * 0.09))),
+    /* 兵糧の保ちと、着くまでの月数は別のものである。同じ名で持っていたので
+       後の「月」が前を塗り潰し、帳には行程の月数しか出ていなかった。 */
+    糧月: Math.floor(Math.max(0, a.food || 0) / Math.max(1, Math.round(軍の兵(a) * 0.09))),
     出どころ: (s.castles || []).find((c) => c.id === a.from) || null,
     行き先: (s.castles || []).find((c) => c.id === a.target) || null,
     いま: (s.castles || []).find((c) => c.id === a.at) || null,

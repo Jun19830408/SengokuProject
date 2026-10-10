@@ -1963,12 +1963,14 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
          隣国へ行く軍も同じだけしか持たず、途中で飢えて溶けていた。 */
       const 道 = 軍の道(s, c2.faction, c2.id, target) || findPath(c2.id, target);
       const 月 = marchMonthsOf(道, c2.faction);
-      const 糧 = 遠征の兵糧(men, 月);
+      /* 陣中の月数は遊ぶ側が選ぶ（GDD 7.3）。選ばれていなければ、これまでの一月。 */
+      const 陣 = Math.max(1, plan.陣中月 || 1);
+      const 糧 = 遠征の兵糧(men, 月, 陣);
       c2.local -= send;
       c2.food = Math.max(0, c2.food - 糧);
       /* 運び賃は主家の金蔵から出る（GDD 7.3）。米は城の蔵から、金は家から。
          遠国ほど人足と馬と船がかさむので、月数に比例して取る。 */
-      運び賃を払う(s, men, 月);
+      運び賃を払う(s, men, 月 + 陣);
       for (const t of gens) t.at = null;
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
       c2.rost = tk.rest;
@@ -1977,6 +1979,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         gens: gens.map((x) => x.id), local: send, localTrain: c2.localTrain, rost: tk.taken,
         men, at: c2.id, path: 道, prog: 0, food: 糧,
         target, aid: s.player, 助勢: true, ...(囲まれている ? { relief: target } : {}),
+        /* 集結を待つなら、待ち合わせの印を立てる（GDD 7.4）。 */
+        ...(plan.集結 ? { 待ち合わせ: target, 待ち月: 0 } : {}),
       });
       出た += men;
       s.chronicle.push({ y: s.year, m: s.month,
@@ -2003,10 +2007,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const take = [...rgens].sort((a, z) => z.lead - a.lead).slice(0, 1);
       const 勢 = send + take.reduce((a, x) => a + x.retinue, 0);
       const 頼み月 = marchMonthsOf(findPath(c2.id, target), c2.faction);
+      const 頼み陣 = Math.max(1, plan.陣中月 || 1);
       c2.local -= send;
-      c2.food = Math.max(0, c2.food - 遠征の兵糧(勢, 頼み月));
+      c2.food = Math.max(0, c2.food - 遠征の兵糧(勢, 頼み月, 頼み陣));
       // 頼んで来てもらう兵でも、道中の費えはこちらが持つ。
-      運び賃を払う(s, 勢, 頼み月);
+      運び賃を払う(s, 勢, 頼み月 + 頼み陣);
       for (const t of take) t.at = null;
       const tk = rosterTake(c2.rost || newRoster(c2.local + send, `loc-${c2.id}`), send);
       c2.rost = tk.rest;
@@ -2015,9 +2020,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         gens: take.map((x) => x.id), local: send, localTrain: c2.localTrain, rost: tk.taken,
         men: send + take.reduce((a, x) => a + x.retinue, 0), at: c2.id,
         path: findPath(c2.id, target), prog: 0,
-        food: 遠征の兵糧(send + take.reduce((a, x) => a + x.retinue, 0),
-          marchMonthsOf(findPath(c2.id, target), c2.faction)),
+        food: 遠征の兵糧(send + take.reduce((a, x) => a + x.retinue, 0), 頼み月, 頼み陣),
         target, aid: s.player, 助勢: true, ...(囲まれている ? { relief: target } : {}),
+        ...(plan.集結 ? { 待ち合わせ: target, 待ち月: 0 } : {}),
       });
       s.chronicle.push({ y: s.year, m: s.month,
         text: `${s.factions[c2.faction].name}が${c2.name}より援軍${fmt(send)}人を${的.name}へ差し向けた。` });
@@ -2077,7 +2082,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
 
      出陣のときも、在陣から次の城へ攻め寄せるときも、催し方は同じである。
      一つに束ねておかねば、片方だけが古くなる。 */
-  const 加勢を出す = (s, 一覧, 目標) => {
+  const 加勢を出す = (s, 一覧, 目標, { 陣中月 = 1, 集結 = false } = {}) => {
     for (const req of 一覧) {
         const rc2 = s.castles.find((x) => x.id === req.castleId);
         if (!rc2) continue;
@@ -2105,10 +2110,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         }
         const path = 軍の道(s, rc2.faction, rc2.id, 目標) || findPath(rc2.id, 目標);
         const 寄月 = marchMonthsOf(path, rc2.faction);
-        const 寄糧 = 遠征の兵糧(総勢, 寄月);
+        const 寄糧 = 遠征の兵糧(総勢, 寄月, 陣中月);
         rc2.local -= send;
         rc2.food = Math.max(0, rc2.food - 寄糧);
-        運び賃を払う(s, 総勢, 寄月);
+        運び賃を払う(s, 総勢, 寄月 + 陣中月);
         for (const t of take) t.at = null;
         s.armies.push({
           id: 月送り.軍の名(s, "r"), faction: rc2.faction, from: rc2.id,
@@ -2116,6 +2121,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           rost: (() => { const tk = rosterTake(rc2.rost || newRoster(rc2.local + send, `loc-${rc2.id}`), send); rc2.rost = tk.rest; return tk.taken; })(),
           men: send + take.reduce((a, x) => a + x.retinue, 0), at: rc2.id,
           path, prog: 0, food: 寄糧, target: 目標, aid: s.player,
+          ...(集結 ? { 待ち合わせ: 目標, 待ち月: 0 } : {}),
         });
         s.chronicle.push({ y: s.year, m: s.month,
           text: `${rc2.name}より寄騎${fmt(総勢)}人（${take.map((x) => x.name).join("・")}）が${nodeById(目標).name}へ向かう（約${req.months}か月）。` });
@@ -2180,7 +2186,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         }
       }
       // 寄騎（援軍）を出す。各城は守備最低数と距離、従属度から派遣を決める（GDD 7.3）
-      加勢を出す(s, p.reinforce || [], p.to);
+      加勢を出す(s, p.reinforce || [], p.to, { 陣中月: p.陣中月 || 1, 集結: !!p.集結 });
       const c = s.castles.find((x) => x.id === p.from);
       const dest = s.castles.find((x) => x.id === p.to);
       /* 不可侵・同盟を破れば「裏切り」として信用と威信を失う。
@@ -2232,6 +2238,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const 救う = !!dest && s.sieges.some((sg) => sg.castleId === dest.id)
         && (dest.faction === s.player || underMyBanner(s, s.player, dest.faction)
           || atPeace(s, s.player, dest.faction));
+      /* 運び賃は本隊にも掛かる（GDD 7.3）。米は城の蔵から、金は家の蔵から。
+         長く陣を張るほど人足と馬と船が要る。 */
+      運び賃を払う(s, p.local + p.gens.reduce((a2, id) => a2 + ((s.generals.find((x) => x.id === id) || {}).retinue || 0), 0),
+        (p.道月 || 1) + (p.陣中月 || 1));
       s.armies.push({
         /* 出す家。臣従した家の城から出すなら、その家の軍である（GDD 12.2）。
            旗の下の軍であるから、着いた先の扱い（後詰か攻めか）は自家と同じに読む。 */
@@ -2239,6 +2249,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         localTrain: c.localTrain, men: p.local + p.gens.reduce((a, id) => a + s.generals.find((x) => x.id === id).retinue, 0),
         at: p.from, path: 出陣の道(s, p.from, p.to), prog: 0, food: p.food, target: p.to,
         ...(救う ? { relief: p.to } : {}),
+        /* 集結を待つなら、待ち合わせの印を立てる（GDD 7.4）。
+           印を持つ軍は、仲間のいちばん遅い者に歩を合わせて同じ月に着く。 */
+        ...(p.集結 ? { 待ち合わせ: p.to, 待ち月: 0 } : {}),
         /* 助勢の印。援けに着く（core/state.js）はこれを見て、着いた城と戦うか
            否かを判ずる。立てねば、救いに行った城で合戦が始まる。 */
         ...(dest && dest.faction !== s.player
