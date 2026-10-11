@@ -25856,10 +25856,12 @@ var \u8B5C = (t, keys) => {
   }
   return keys[keys.length - 1][1];
 };
-var \u811A\u5177 = (g, hx, hy, fx, fy, s2, \u8FD1, K2) => {
+var \u811A\u5177 = (g, hx, hy, fx, fy, s2, \u8FD1, K2, \u9670) => {
   const l = 2.65 * s2;
-  const [kx, ky] = \u9006\u904B\u52D5(hx, hy, fx, fy, l, l, -1);
-  const \u57FA = \u8FD1 ? \u5E03 : shade2(\u5E03, 0.6);
+  const \u5F712 = \u9670 == null ? 1 : Math.max(0, Math.min(1, \u9670));
+  const [kx, ky] = \u9006\u904B\u52D5(hx, hy, fx, fy, l, l, -\u5F712);
+  const \u843D = (\u8FD1\u3044, \u9060\u3044) => \u8FD1 ? \u8FD1\u3044 : \u9060\u3044 + (\u8FD1\u3044 - \u9060\u3044) * (1 - \u5F712);
+  const \u57FA = shade2(\u5E03, \u843D(1, 0.6));
   \u7DDA8(g, hx, hy, kx, ky, 1.5 * s2, \u57FA);
   \u7DDA8(g, kx, ky, fx, fy, 1.15 * s2, \u57FA);
   \u7DDA8(
@@ -25869,7 +25871,7 @@ var \u811A\u5177 = (g, hx, hy, fx, fy, s2, \u8FD1, K2) => {
     hx + (kx - hx) * 0.72,
     hy + (ky - hy) * 0.72,
     1.9 * s2,
-    \u8FD1 ? shade2(K2.\u4E2D, 0.9) : shade2(K2.\u4E2D, 0.55)
+    shade2(K2.\u4E2D, \u843D(0.9, 0.55))
   );
   \u7DDA8(
     g,
@@ -25878,31 +25880,35 @@ var \u811A\u5177 = (g, hx, hy, fx, fy, s2, \u8FD1, K2) => {
     fx,
     fy,
     1.3 * s2,
-    \u8FD1 ? \u92FC : shade2(\u92FC, 0.6)
+    shade2(\u92FC, \u843D(1, 0.6))
   );
-  g.fillStyle = \u8FD1 ? "#241E16" : shade2("#241E16", 0.7);
+  g.fillStyle = shade2("#241E16", \u843D(1, 0.7));
   g.beginPath();
-  g.ellipse(fx + 0.5 * s2, fy + 0.08 * s2, 0.9 * s2, 0.4 * s2, 0, 0, 7);
+  g.ellipse(fx + 0.5 * s2 * \u5F712, fy + 0.08 * s2, 0.9 * s2, 0.4 * s2, 0, 0, 7);
   g.fill();
 };
-var \u8155\u5177 = (g, sx, sy, gx, gy, s2, \u8FD1, \u8098\u5074, K2) => {
+var \u8155\u5177 = (g, sx, sy, gx, gy, s2, \u8FD1, \u8098\u5074, K2, \u9670) => {
   const l = 2.05 * s2;
-  const [ex, ey] = \u9006\u904B\u52D5(sx, sy, gx, gy, l, l, \u8098\u5074);
-  \u7DDA8(g, sx, sy, ex, ey, 1.25 * s2, \u8FD1 ? shade2(K2.\u4E2D, 1.25) : shade2(K2.\u4E2D, 0.72));
-  \u7DDA8(g, ex, ey, gx, gy, 1 * s2, \u8FD1 ? shade2(\u9769, 1.7) : shade2(\u9769, 1.1));
-  g.fillStyle = \u8FD1 ? \u808C : shade2(\u808C, 0.75);
+  const \u5F712 = \u9670 == null ? 1 : Math.max(0, Math.min(1, \u9670));
+  const [ex, ey] = \u9006\u904B\u52D5(sx, sy, gx, gy, l, l, \u8098\u5074 * \u5F712);
+  const \u843D = (\u8FD1\u3044, \u9060\u3044) => \u8FD1 ? \u8FD1\u3044 : \u9060\u3044 + (\u8FD1\u3044 - \u9060\u3044) * (1 - \u5F712);
+  \u7DDA8(g, sx, sy, ex, ey, 1.25 * s2, shade2(K2.\u4E2D, \u843D(1.25, 0.72)));
+  \u7DDA8(g, ex, ey, gx, gy, 1 * s2, shade2(\u9769, \u843D(1.7, 1.1)));
+  g.fillStyle = shade2(\u808C, \u843D(1, 0.75));
   g.beginPath();
   g.arc(gx, gy, 0.6 * s2, 0, 7);
   g.fill();
 };
-var \u80F4\u5177 = (g, hx, hy, sx, sy, s2, \u524D\u50BE, K2, \u5E45\u5897) => {
+var \u80F4\u5177 = (g, hx, hy, sx, sy, s2, \u524D\u50BE, K2, \u5E45\u5897, \u5965\u8896, \u93E1) => {
   const a = Math.atan2(sy - hy, sx - hx);
   const nx = Math.cos(a + Math.PI / 2), ny = Math.sin(a + Math.PI / 2);
+  const \u958B = 1 - Math.max(0, Math.min(1, (\u5E45\u5897 - 1) / 0.35));
   for (let i = -2; i <= 1; i++) {
+    const ii = \u93E1 ? -1 - i : i;
     g.save();
     g.translate(hx + (i + 0.5) * 0.8 * s2 * \u5E45\u5897, hy + 0.3 * s2);
-    g.rotate(\u524D\u50BE * 0.4 + i * 0.09);
-    g.fillStyle = i % 2 ? shade2(K2.\u4E2D, 0.62) : shade2(K2.\u4E2D, 0.85);
+    g.rotate(\u524D\u50BE * 0.4 + ii * 0.09 * \u958B);
+    g.fillStyle = ii % 2 ? shade2(K2.\u4E2D, 0.62) : shade2(K2.\u4E2D, 0.85);
     g.fillRect(-0.62 * s2, 0, 1.24 * s2, 1.7 * s2);
     g.strokeStyle = "rgba(20,22,16,0.5)";
     g.lineWidth = 0.5;
@@ -25916,7 +25922,7 @@ var \u80F4\u5177 = (g, hx, hy, sx, sy, s2, \u524D\u50BE, K2, \u5E45\u5897) => {
   g.lineTo(sx - nx * w1, sy - ny * w1);
   g.lineTo(hx - nx * w0, hy - ny * w0);
   g.closePath();
-  const g2 = g.createLinearGradient(hx - nx * w1, hy - ny * w1, hx + nx * w1, hy + ny * w1);
+  const g2 = \u93E1 ? g.createLinearGradient(hx + nx * w1, hy + ny * w1, hx - nx * w1, hy - ny * w1) : g.createLinearGradient(hx - nx * w1, hy - ny * w1, hx + nx * w1, hy + ny * w1);
   g2.addColorStop(0, shade2(K2.\u6FC3, 0.72));
   g2.addColorStop(0.45, K2.\u6FC3);
   g2.addColorStop(1, shade2(K2.\u6FC3, 1.45));
@@ -25937,10 +25943,13 @@ var \u80F4\u5177 = (g, hx, hy, sx, sy, s2, \u524D\u50BE, K2, \u5E45\u5897) => {
       shade2(K2.\u5E2F, 1)
     );
   }
-  for (const \u5074 of \u5E45\u5897 > 1.2 ? [-1, 1] : [1]) {
+  const \u5965\u5EA6 = \u5965\u8896 == null ? \u5E45\u5897 > 1.2 ? 1 : 0 : Math.max(0, Math.min(1, \u5965\u8896));
+  for (const \u5074 of \u5965\u5EA6 > 0.02 ? [-1, 1] : [1]) {
+    const \u8896\u03B1 = g.globalAlpha;
+    if (\u5074 < 0) g.globalAlpha = \u8896\u03B1 * \u5965\u5EA6;
     g.save();
-    g.translate(sx + \u5074 * (\u5E45\u5897 > 1.2 ? 1.25 * s2 : 0), sy + 0.3 * s2);
-    g.rotate(\u524D\u50BE + 0.15 * \u5074);
+    g.translate(sx + \u5074 * 1.25 * s2 * \u5965\u5EA6, sy + 0.3 * s2);
+    g.rotate(\u524D\u50BE * \u958B + 0.15 * \u5074);
     const g\u8896 = g.createLinearGradient(0, -0.6 * s2, 0, 1.6 * s2);
     g\u8896.addColorStop(0, shade2(K2.\u4E2D, 1.2));
     g\u8896.addColorStop(1, shade2(K2.\u4E2D, 0.6));
@@ -25963,12 +25972,14 @@ var \u80F4\u5177 = (g, hx, hy, sx, sy, s2, \u524D\u50BE, K2, \u5E45\u5897) => {
       g.stroke();
     }
     g.restore();
+    g.globalAlpha = \u8896\u03B1;
   }
 };
-var \u7B20\u5177 = (g, hx, hy, s2, \u4FEF, K2) => {
+var \u7B20\u5177 = (g, hx, hy, s2, \u4FEF, K2, \u93E1, \u5BC4) => {
   g.save();
-  g.translate(hx - 0.05 * s2, hy);
+  g.translate(hx - 0.05 * s2 * (\u5BC4 == null ? 1 : \u5BC4), hy);
   g.rotate(\u4FEF * 0.4);
+  if (\u93E1) g.scale(-1, 1);
   const g2 = g.createLinearGradient(-1.6 * s2, -1.2 * s2, 1.3 * s2, 0.3 * s2);
   g2.addColorStop(0, "#6E6455");
   g2.addColorStop(0.55, "#443C31");
@@ -26001,33 +26012,24 @@ var \u7B20\u5177 = (g, hx, hy, s2, \u4FEF, K2) => {
   g.fill();
   g.restore();
 };
-var \u982D\u5177 = (g, sx, sy, s2, \u4FEF, K2, \u9762) => {
-  const hx = sx + (\u9762 === "\u6A2A" ? 0.35 * s2 : \u9762 === "\u659C\u524D" || \u9762 === "\u659C\u5F8C" ? 0.2 * s2 : 0);
+var \u982D\u5177 = (g, sx, sy, s2, \u4FEF, K2, \u9762, \u6A2A\u307F, \u5BFE\u307F, \u93E1) => {
+  const \u5BC4 = \u6A2A\u307F == null ? \u9762 === "\u6A2A" ? 1 : \u9762 === "\u659C\u524D" || \u9762 === "\u659C\u5F8C" ? 0.57 : 0 : Math.max(0, \u6A2A\u307F);
+  const \u5BFE = \u5BFE\u307F == null ? \u9762 === "\u524D" ? 1 : \u9762 === "\u5F8C" ? -1 : \u9762 === "\u659C\u524D" ? 0.5 : \u9762 === "\u659C\u5F8C" ? -0.5 : 0 : \u5BFE\u307F;
+  const \u524D\u5EA6 = Math.max(0, \u5BFE) * Math.max(0, \u5BFE), \u5F8C\u5EA6 = Math.min(0, \u5BFE) * Math.min(0, \u5BFE);
+  const hx = sx + 0.35 * s2 * \u5BC4;
   const hy = sy - 1.75 * s2 + \u4FEF * s2;
-  g.strokeStyle = \u9762 === "\u5F8C" || \u9762 === "\u659C\u5F8C" ? shade2(\u808C, 0.8) : \u808C;
+  const \u5143\u03B1 = g.globalAlpha;
+  g.strokeStyle = shade2(\u808C, 1 - 0.2 * \u5F8C\u5EA6);
   g.lineWidth = 0.9 * s2;
   g.beginPath();
   g.moveTo(sx, sy - 0.2 * s2);
-  g.lineTo(hx - 0.1 * s2, hy + 0.9 * s2);
+  g.lineTo(hx - 0.1 * s2 * \u5BC4, hy + 0.9 * s2);
   g.stroke();
-  if (\u9762 === "\u5F8C" || \u9762 === "\u659C\u5F8C") {
-    g.fillStyle = "#8A6E52";
-    g.beginPath();
-    g.arc(hx, hy + 0.45 * s2, 0.95 * s2, 0, 7);
-    g.fill();
-    g.fillStyle = shade2(\u808C, 0.85);
-    g.beginPath();
-    g.arc(hx, hy + 0.1 * s2, 0.82 * s2, 0, 7);
-    g.fill();
-  } else if (\u9762 === "\u524D") {
-    g.fillStyle = \u808C;
-    g.beginPath();
-    g.arc(hx, hy + 0.15 * s2, 0.86 * s2, 0, 7);
-    g.fill();
-    g.fillStyle = "#2A2218";
-    g.fillRect(hx - 0.42 * s2, hy + 0 * s2, 0.22 * s2, 0.3 * s2);
-    g.fillRect(hx + 0.2 * s2, hy + 0 * s2, 0.22 * s2, 0.3 * s2);
-  } else {
+  {
+    g.save();
+    g.translate(hx, 0);
+    g.scale(Math.max(0.12, \u5BC4), 1);
+    g.translate(-hx, 0);
     g.fillStyle = \u808C;
     g.beginPath();
     g.moveTo(hx - 0.9 * s2, hy - 0.7 * s2);
@@ -26040,33 +26042,109 @@ var \u982D\u5177 = (g, sx, sy, s2, \u4FEF, K2, \u9762) => {
     g.strokeStyle = "rgba(60,44,30,0.5)";
     g.lineWidth = 0.5;
     g.stroke();
-    g.fillStyle = "#2A2218";
+    if (\u5BC4 > 0.3) {
+      g.globalAlpha = \u5143\u03B1 * Math.min(1, (\u5BC4 - 0.3) / 0.3);
+      g.fillStyle = "#2A2218";
+      g.beginPath();
+      g.ellipse(hx + 0.42 * s2, hy - 0.18 * s2, 0.14 * s2, 0.2 * s2, 0, 0, 7);
+      g.fill();
+      g.globalAlpha = \u5143\u03B1;
+    }
+    g.restore();
+  }
+  if (\u5F8C\u5EA6 > 0.01) {
+    g.globalAlpha = \u5143\u03B1 * \u5F8C\u5EA6;
+    g.fillStyle = "#8A6E52";
     g.beginPath();
-    g.ellipse(hx + 0.42 * s2, hy - 0.18 * s2, 0.14 * s2, 0.2 * s2, 0, 0, 7);
+    g.arc(hx, hy + 0.45 * s2, 0.95 * s2, 0, 7);
     g.fill();
+    g.fillStyle = shade2(\u808C, 0.85);
+    g.beginPath();
+    g.arc(hx, hy + 0.1 * s2, 0.82 * s2, 0, 7);
+    g.fill();
+    g.globalAlpha = \u5143\u03B1;
+  }
+  if (\u524D\u5EA6 > 0.01) {
+    g.globalAlpha = \u5143\u03B1 * \u524D\u5EA6;
+    g.fillStyle = \u808C;
+    g.beginPath();
+    g.arc(hx, hy + 0.15 * s2, 0.86 * s2, 0, 7);
+    g.fill();
+    g.fillStyle = "#2A2218";
+    g.fillRect(hx - 0.42 * s2, hy + 0 * s2, 0.22 * s2, 0.3 * s2);
+    g.fillRect(hx + 0.2 * s2, hy + 0 * s2, 0.22 * s2, 0.3 * s2);
+    g.globalAlpha = \u5143\u03B1;
   }
   g.strokeStyle = "rgba(90,52,36,0.6)";
   g.lineWidth = 0.3 * s2;
   g.beginPath();
-  g.moveTo(hx - 0.7 * s2, hy - 0.3 * s2);
-  g.quadraticCurveTo(hx, hy + 1.05 * s2, hx + 0.75 * s2, hy - 0.35 * s2);
+  g.moveTo(hx - (0.7 + 0.025 * \u5BC4) * s2, hy - (0.3 + 0.025 * \u5BC4) * s2);
+  g.quadraticCurveTo(
+    hx,
+    hy + 1.05 * s2,
+    hx + (0.7 + 0.025 * \u5BC4) * s2,
+    hy - (0.3 + 0.025 * \u5BC4) * s2
+  );
   g.stroke();
-  \u7B20\u5177(g, hx, hy - 0.9 * s2, s2, \u4FEF, K2);
+  \u7B20\u5177(g, hx, hy - 0.9 * s2, s2, \u4FEF, K2, \u93E1, \u5BC4);
 };
 var \u69CD\u5177 = (g, x0, y0, x1, y1, w) => {
   \u7DDA8(g, x0, y0, x1, y1, w + 0.12 * w, "rgba(30,24,16,0.7)");
   \u7DDA8(g, x0, y0, x1, y1, w, \u67C4);
   \u7A428(g, x1, y1, Math.atan2(y1 - y0, x1 - x0), w * 13);
 };
+var \u76F4\u8FD1\u306E\u9AA8 = {
+  \u03C8: 0,
+  \u6A2A\u91CD: 0,
+  \u5BFE\u91CD: 0,
+  \u93E1: 1,
+  \u5E45\u5897: 0,
+  \u5965\u8896: 0,
+  \u524D\u50BE: 0,
+  hx: 0,
+  hy: 0,
+  \u811A: [0, 0, 0, 0, 0, 0],
+  \u5F97: [0, 0, 0, 0, 0, 0]
+};
+var \u9AA8\u306B\u7F6E\u304F = (\u6B04, a, b, c, d, e, f) => {
+  \u6B04[0] = a;
+  \u6B04[1] = b;
+  \u6B04[2] = c;
+  \u6B04[3] = d;
+  \u6B04[4] = e;
+  \u6B04[5] = f;
+};
 function \u59FF\u516B(g, x, y, s2, dir, fr, \u578B, K2, \u4E71) {
   const N = 16;
   const d16 = (dir % N + N) % N;
   const \u53CD = d16 > 4 && d16 < 12;
   const \u53F3 = \u53CD ? (8 - d16 + 16) % 16 : d16;
-  const a16 = \u53F3 * Math.PI / 8;
-  const \u9762 = \u53F3 === 0 || \u53F3 === 15 || \u53F3 === 1 ? "\u6A2A" : \u53F3 <= 3 ? "\u659C\u524D" : \u53F3 <= 5 ? "\u524D" : \u53F3 <= 7 ? "\u659C\u524D" : \u53F3 <= 9 ? "\u524D" : \u53F3 <= 11 ? "\u659C\u5F8C" : \u53F3 <= 13 ? "\u5F8C" : "\u659C\u5F8C";
-  const \u6A2A\u7CFB = \u9762 === "\u6A2A" || \u9762 === "\u659C\u524D" || \u9762 === "\u659C\u5F8C";
+  const \u03C8 = (\u53F3 <= 8 ? \u53F3 : \u53F3 - 16) * Math.PI / 8;
+  const \u6A2A\u307F = Math.cos(\u03C8), \u5BFE\u307F = Math.sin(\u03C8);
+  const \u6A2A\u91CD = \u6A2A\u307F * \u6A2A\u307F;
+  const \u5BFE\u91CD = \u5BFE\u307F * \u5BFE\u307F;
+  const \u6DF72 = (\u6A2A\u306E, \u5BFE\u306E) => \u6A2A\u306E * \u6A2A\u91CD + \u5BFE\u306E * \u5BFE\u91CD;
+  const \u6DF7\u70B9 = (\u6A2A\u306E, \u5BFE\u306E) => [\u6A2A\u306E[0] * \u6A2A\u91CD + \u5BFE\u306E[0] * \u5BFE\u91CD, \u6A2A\u306E[1] * \u6A2A\u91CD + \u5BFE\u306E[1] * \u5BFE\u91CD];
+  const \u6DF7\u624B = (\u6A2A\u306E, \u5BFE\u306E) => [
+    \u6A2A\u306E[0] * \u6A2A\u91CD + \u5BFE\u306E[0] * \u5BFE\u91CD,
+    \u6A2A\u306E[1] * \u6A2A\u91CD + \u5BFE\u306E[1] * \u5BFE\u91CD,
+    \u6A2A\u306E[2] * \u6A2A\u91CD + \u5BFE\u306E[2] * \u5BFE\u91CD
+  ];
+  const \u5F8C\u308D = \u5BFE\u307F < 0;
+  const \u9762 = Math.abs(\u03C8) > Math.PI * 70 / 180 ? \u5F8C\u308D ? "\u5F8C" : "\u524D" : Math.abs(\u03C8) <= Math.PI / 8 + 1e-6 ? "\u6A2A" : \u5F8C\u308D ? "\u659C\u5F8C" : "\u659C\u524D";
   const j = \u4E71 || 0;
+  const \u9AA8 = \u76F4\u8FD1\u306E\u9AA8;
+  \u9AA8.\u03C8 = \u03C8;
+  \u9AA8.\u6A2A\u91CD = \u6A2A\u91CD;
+  \u9AA8.\u5BFE\u91CD = \u5BFE\u91CD;
+  \u9AA8.\u93E1 = \u53CD ? -1 : 1;
+  \u9AA8.\u5E45\u5897 = 0;
+  \u9AA8.\u5965\u8896 = 0;
+  \u9AA8.\u524D\u50BE = 0;
+  \u9AA8.hx = 0;
+  \u9AA8.hy = 0;
+  \u9AA8\u306B\u7F6E\u304F(\u9AA8.\u811A, 0, 0, 0, 0, 0, 0);
+  \u9AA8\u306B\u7F6E\u304F(\u9AA8.\u5F97, 0, 0, 0, 0, 0, 0);
   g.fillStyle = "#1C1E14";
   const \u5F71a = g.globalAlpha;
   g.globalAlpha = \u5F71a * 0.26;
@@ -26078,14 +26156,14 @@ function \u59FF\u516B(g, x, y, s2, dir, fr, \u578B, K2, \u4E71) {
   g.translate(x, y);
   if (\u53CD) g.scale(-1, 1);
   if (\u578B === "kiba") {
-    \u9A0E\u516B(g, s2, \u9762, fr, K2, j);
+    \u9A0E\u516B(g, s2, \u9762, fr, K2, j, \u6A2A\u307F, \u5BFE\u307F, \u53CD);
     g.restore();
     return;
   }
-  if (\u9762 === "\u659C\u524D" || \u9762 === "\u659C\u5F8C") g.scale(0.9, 1);
   const \u69CB = fr >= 3;
   const T = \u69CB ? ((fr - 3) / 4 % 1 + 1) % 1 : 0;
-  const W2 = Number.isInteger(fr) ? fr === 1 ? 0.25 : fr === 2 ? 0.75 : 0 : ((fr - 1) / 2 % 1 + 1) % 1;
+  const W0 = Number.isInteger(fr) ? fr === 1 ? 0.25 : fr === 2 ? 0.75 : 0 : ((fr - 1) / 2 % 1 + 1) % 1;
+  const W2 = \u53CD ? (W0 + 0.5) % 1 : W0;
   const \u6B69\u304F = !\u69CB && (Number.isInteger(fr) ? fr === 1 || fr === 2 : fr > 0.02);
   let \u7A81 = 0, \u6C88 = 0, \u5F15 = 0, \u653E = 0, \u50992 = 0, \u53CD\u52D5 = 0, \u706B = false;
   if (\u69CB) {
@@ -26104,289 +26182,343 @@ function \u59FF\u516B(g, x, y, s2, dir, fr, \u578B, K2, \u4E71) {
   const \u51FA = Math.max(0, \u7A81);
   const \u819D\u7ACB = \u69CB && \u578B === "teppo";
   const \u63FA2 = \u6B69\u304F ? Math.abs(Math.cos(W2 * 6.283)) * 0.45 * s2 : 0;
-  const hx = (\u6A2A\u7CFB ? \u51FA * 0.6 * s2 : 0) - (\u69CB && \u578B === "teppo" ? \u53CD\u52D5 * 0.2 * s2 : 0);
+  const hx = (\u51FA * 0.6 * s2 - (\u69CB && \u578B === "teppo" ? \u53CD\u52D5 * 0.2 * s2 : 0)) * \u6A2A\u91CD;
   const hy = (\u819D\u7ACB ? -3.6 * s2 : -5.05 * s2 + \u6C88 * 0.5 * s2 - \u5F15 * 0.05 * s2) - \u63FA2;
-  const \u524D\u50BE = !\u6A2A\u7CFB ? 0.04 : \u819D\u7ACB ? 0.14 * \u50992 - \u53CD\u52D5 * 0.06 : 0.1 + \u51FA * 0.16 + (\u7A81 < 0 ? -0.06 : 0) + (\u6B69\u304F ? -0.03 : 0);
+  const \u524D\u50BE = \u6DF72(\u819D\u7ACB ? 0.14 * \u50992 - \u53CD\u52D5 * 0.06 : 0.1 + \u51FA * 0.16 + (\u7A81 < 0 ? -0.06 : 0) + (\u6B69\u304F ? -0.03 : 0), 0);
   const sx = hx + Math.sin(\u524D\u50BE) * 4.1 * s2, sy = hy - Math.cos(\u524D\u50BE) * 4.1 * s2;
+  \u9AA8.\u524D\u50BE = \u524D\u50BE;
+  \u9AA8.hx = hx;
+  \u9AA8.hy = hy;
   const \u811A\u3092\u7F6E\u304F = (\u8FD1) => {
-    if (!\u6A2A\u7CFB) {
-      const \u5074 = \u8FD1 ? 1 : -1;
-      const \u632F2 = \u6B69\u304F ? Math.sin(W2 * 6.283 + (\u8FD1 ? 0 : Math.PI)) : 0;
-      const fx2 = \u5074 * 0.85 * s2;
-      const fy2 = -Math.max(0, -\u632F2) * 0.9 * s2;
-      \u811A\u5177(g, hx + \u5074 * 0.5 * s2, hy, fx2, fy2, s2, \u8FD1, K2);
-      return;
-    }
+    const \u5074 = \u8FD1 ? 1 : -1;
+    const \u632F = \u6B69\u304F ? Math.sin(W2 * 6.283 + (\u8FD1 ? 0 : Math.PI)) : 0;
     if (\u819D\u7ACB && !\u8FD1) {
-      const kx = hx - 1.7 * s2, ky = -0.55 * s2;
-      \u7DDA8(g, hx - 0.2 * s2, hy, kx, ky, 1.5 * s2, shade2(\u5E03, 0.6));
-      \u7DDA8(g, kx, ky, kx - 2.5 * s2, ky + 0.2 * s2, 1.15 * s2, shade2(\u5E03, 0.6));
-      \u7DDA8(g, hx - 0.34 * s2, hy + (ky - hy) * 0.5, kx + 0.4 * s2, ky - 0.4 * s2, 1.8 * s2, shade2(K2.\u4E2D, 0.55));
-      g.fillStyle = shade2("#241E16", 0.7);
+      const \u8170 = \u6DF7\u70B9([hx - 0.2 * s2, hy], [hx - 0.5 * s2, hy]);
+      const \u5BFEfx0 = -0.85 * s2, \u5BFEfy0 = 0;
+      const [ikx, iky] = \u9006\u904B\u52D5(hx - 0.5 * s2, hy, \u5BFEfx0, \u5BFEfy0, 2.65 * s2, 2.65 * s2, -\u6A2A\u91CD);
+      const \u819D = \u6DF7\u70B9([hx - 1.7 * s2, -0.55 * s2], [ikx, iky]);
+      const \u8DB3 = \u6DF7\u70B9([hx - 1.7 * s2 - 2.5 * s2, -0.55 * s2 + 0.2 * s2], [\u5BFEfx0, \u5BFEfy0]);
+      \u9AA8.\u811A[3] = \u8170[0];
+      \u9AA8.\u811A[4] = \u8DB3[0];
+      \u9AA8.\u811A[5] = \u8DB3[1];
+      const \u8272 = shade2(\u5E03, 0.6 + 0.4 * (1 - \u6A2A\u91CD));
+      \u7DDA8(g, \u8170[0], \u8170[1], \u819D[0], \u819D[1], 1.5 * s2, \u8272);
+      \u7DDA8(g, \u819D[0], \u819D[1], \u8DB3[0], \u8DB3[1], 1.15 * s2, \u8272);
+      \u7DDA8(
+        g,
+        \u8170[0] - 0.14 * s2,
+        \u8170[1] + (\u819D[1] - \u8170[1]) * 0.5,
+        \u819D[0] + 0.4 * s2 * \u6A2A\u91CD,
+        \u819D[1] - 0.4 * s2 * \u6A2A\u91CD,
+        1.8 * s2,
+        shade2(K2.\u4E2D, 0.55 + 0.35 * (1 - \u6A2A\u91CD))
+      );
+      g.fillStyle = shade2("#241E16", 0.7 + 0.3 * (1 - \u6A2A\u91CD));
       g.beginPath();
-      g.ellipse(kx - 3.1 * s2, ky + 0.3 * s2, 0.9 * s2, 0.4 * s2, 0, 0, 7);
+      g.ellipse(
+        \u8DB3[0] - 0.6 * s2 * \u6A2A\u91CD + 0.5 * s2 * \u6A2A\u91CD,
+        \u8DB3[1] + 0.3 * s2 * \u6A2A\u91CD + 0.08 * s2,
+        0.9 * s2,
+        0.4 * s2,
+        0,
+        0,
+        7
+      );
       g.fill();
       return;
     }
-    const \u632F = \u6B69\u304F ? Math.sin(W2 * 6.283 + (\u8FD1 ? 0 : Math.PI)) : 0;
-    let fx, fy = 0;
-    if (\u69CB && \u578B === "yari") fx = \u8FD1 ? 2.5 * s2 + \u51FA * 2.1 * s2 : -2.5 * s2 + \u51FA * 0.3 * s2;
-    else if (\u819D\u7ACB) fx = 2.7 * s2;
-    else if (\u69CB) fx = \u8FD1 ? 1.5 * s2 : -1.4 * s2;
+    let \u6A2Afx, \u6A2Afy = 0;
+    if (\u69CB && \u578B === "yari") \u6A2Afx = \u8FD1 ? 2.5 * s2 + \u51FA * 2.1 * s2 : -2.5 * s2 + \u51FA * 0.3 * s2;
+    else if (\u819D\u7ACB) \u6A2Afx = 2.7 * s2;
+    else if (\u69CB) \u6A2Afx = \u8FD1 ? 1.5 * s2 : -1.4 * s2;
     else if (\u6B69\u304F) {
-      fx = \u632F * 2 * s2;
-      fy = -Math.max(0, -\u632F) * 1.1 * s2;
-    } else fx = \u8FD1 ? 0.9 * s2 : -0.9 * s2;
-    \u811A\u5177(g, hx + (\u8FD1 ? 0.2 : -0.2) * s2, hy, fx, fy, s2, \u8FD1, K2);
+      \u6A2Afx = \u632F * 2 * s2;
+      \u6A2Afy = -Math.max(0, -\u632F) * 1.1 * s2;
+    } else \u6A2Afx = \u8FD1 ? 0.9 * s2 : -0.9 * s2;
+    const \u5BFEfx = \u5074 * 0.85 * s2, \u5BFEfy = -Math.max(0, -\u632F) * 0.9 * s2;
+    const \u8170x = hx + \u6DF72((\u8FD1 ? 0.2 : -0.2) * s2, \u5074 * 0.5 * s2);
+    const fx = \u6DF72(\u6A2Afx, \u5BFEfx), fy = \u6DF72(\u6A2Afy, \u5BFEfy);
+    \u9AA8.\u811A[\u8FD1 ? 0 : 3] = \u8170x;
+    \u9AA8.\u811A[\u8FD1 ? 1 : 4] = fx;
+    \u9AA8.\u811A[\u8FD1 ? 2 : 5] = fy;
+    \u811A\u5177(g, \u8170x, hy, fx, fy, s2, \u8FD1, K2, \u6A2A\u91CD);
   };
   const \u624B = { \u5965: null, \u524D: null };
   const \u5F97\u7269\u3092\u63CF\u304F = (\u5C64) => {
+    const px2 = (\u5F8C\u308D ? -1 : 1) * (\u53CD ? -1 : 1) * s2 * (\u578B === "yari" ? 1.4 : \u578B === "yumi" ? 1.5 : 1.2);
     if (\u578B === "yari") {
-      if (!\u6A2A\u7CFB) {
-        const px2 = \u9762 === "\u5F8C" || \u9762 === "\u659C\u5F8C" ? -1.4 * s2 : 1.4 * s2;
-        if (\u69CB) {
-          const \u4F38 = 0.8 + \u51FA * 1.9;
-          if (\u5C64 === "\u524D") {
-            \u69CD\u5177(g, px2 * 0.7, hy - 1.2 * s2, px2 * (0.9 + \u51FA * 0.5), hy + \u4F38 * s2, 0.42 * s2);
-            \u624B.\u524D = [px2 * 0.8, hy - 0.9 * s2, 1];
-            \u624B.\u5965 = [px2 * 0.55, hy - 2 * s2, 1];
-          }
-        } else if (\u5C64 === "\u524D") {
-          \u69CD\u5177(g, px2, -1.2 * s2, px2, -11.2 * s2, 0.38 * s2);
-          \u624B.\u524D = [px2, hy - 1 * s2, 1];
-          \u624B.\u5965 = [px2 * 0.8, sy + 0.6 * s2, 1];
-        }
-        return;
-      }
+      if (\u5C64 !== "\u9593") return;
+      let \u6A2A\u5C3B, \u6A2A\u5148, \u6A2A\u592A, \u6A2A\u524D\u624B, \u6A2A\u5965\u624B;
+      let \u5BFE\u5C3B, \u5BFE\u5148, \u5BFE\u592A, \u5BFE\u524D\u624B, \u5BFE\u5965\u624B;
       if (\u69CB) {
-        if (\u5C64 === "\u9593") {
-          const \u67C4a = -0.06 - \u51FA * 0.02, \u95772 = 9.2 * s2, ex = \u51FA * 4.4 * s2;
-          const gx = hx + 1.4 * s2 + ex * 0.4, gy = hy - 1.5 * s2;
-          const \u5148x = gx + Math.cos(\u67C4a) * (\u95772 * 0.62 + ex), \u5148y = gy + Math.sin(\u67C4a) * (\u95772 * 0.62 + ex);
-          const \u5C3Bx = gx - Math.cos(\u67C4a) * (\u95772 * 0.38 - ex * 0.25), \u5C3By = gy - Math.sin(\u67C4a) * (\u95772 * 0.38 - ex * 0.25);
-          \u69CD\u5177(g, \u5C3Bx, \u5C3By, \u5148x, \u5148y, 0.45 * s2);
-          \u624B.\u5965 = [\u5C3Bx + (gx - \u5C3Bx) * 0.25, \u5C3By + (gy - \u5C3By) * 0.25, 1];
-          \u624B.\u524D = [gx + ex * 0.5, gy, 1];
-          if (\u7A81 > 0.6) {
-            g.strokeStyle = `rgba(238,240,236,${((\u7A81 - 0.6) * 1.2).toFixed(2)})`;
-            g.lineWidth = 0.14 * s2;
-            for (const dy of [-0.45, 0, 0.45]) {
-              g.beginPath();
-              g.moveTo(\u5148x - 2.4 * s2, \u5148y + dy * s2);
-              g.lineTo(\u5148x - 0.6 * s2, \u5148y + dy * 0.4 * s2);
-              g.stroke();
-            }
-          }
-        }
+        const \u67C4a = -0.06 - \u51FA * 0.02, \u95772 = 9.2 * s2, ex = \u51FA * 4.4 * s2;
+        const gx = hx + 1.4 * s2 + ex * 0.4, gy = hy - 1.5 * s2;
+        \u6A2A\u5148 = [gx + Math.cos(\u67C4a) * (\u95772 * 0.62 + ex), gy + Math.sin(\u67C4a) * (\u95772 * 0.62 + ex)];
+        \u6A2A\u5C3B = [gx - Math.cos(\u67C4a) * (\u95772 * 0.38 - ex * 0.25), gy - Math.sin(\u67C4a) * (\u95772 * 0.38 - ex * 0.25)];
+        \u6A2A\u592A = 0.45 * s2;
+        \u6A2A\u5965\u624B = [\u6A2A\u5C3B[0] + (gx - \u6A2A\u5C3B[0]) * 0.25, \u6A2A\u5C3B[1] + (gy - \u6A2A\u5C3B[1]) * 0.25, 1];
+        \u6A2A\u524D\u624B = [gx + ex * 0.5, gy, 1];
+        const \u4F38 = 0.8 + \u51FA * 1.9;
+        \u5BFE\u5C3B = [px2 * 0.7, hy - 1.2 * s2];
+        \u5BFE\u5148 = [px2 * (0.9 + \u51FA * 0.5), hy + \u4F38 * s2];
+        \u5BFE\u592A = 0.42 * s2;
+        \u5BFE\u524D\u624B = [px2 * 0.8, hy - 0.9 * s2, 1];
+        \u5BFE\u5965\u624B = [px2 * 0.55, hy - 2 * s2, 1];
       } else if (\u6B69\u304F) {
-        if (\u5C64 === "\u9593") {
-          const \u67C4a = -2.62, gx = sx + 0.9 * s2, gy = sy + 0.1 * s2;
-          \u69CD\u5177(
-            g,
-            gx - Math.cos(\u67C4a) * 3 * s2,
-            gy - Math.sin(\u67C4a) * 3 * s2,
-            gx + Math.cos(\u67C4a) * 7.6 * s2,
-            gy + Math.sin(\u67C4a) * 7.6 * s2,
-            0.4 * s2
-          );
-          \u624B.\u524D = [gx, gy, -1];
-          \u624B.\u5965 = [hx - 1.1 * s2 - Math.sin(W2 * 6.283) * 1 * s2, hy - 0.4 * s2, 1];
+        const \u67C4a = -2.62, gx = sx + 0.9 * s2, gy = sy + 0.1 * s2;
+        \u6A2A\u5C3B = [gx - Math.cos(\u67C4a) * 3 * s2, gy - Math.sin(\u67C4a) * 3 * s2];
+        \u6A2A\u5148 = [gx + Math.cos(\u67C4a) * 7.6 * s2, gy + Math.sin(\u67C4a) * 7.6 * s2];
+        \u6A2A\u592A = 0.4 * s2;
+        \u6A2A\u524D\u624B = [gx, gy, -1];
+        \u6A2A\u5965\u624B = [hx - 1.1 * s2 - Math.sin(W2 * 6.283) * 1 * s2, hy - 0.4 * s2, 1];
+        \u5BFE\u5C3B = [px2, -1.2 * s2];
+        \u5BFE\u5148 = [px2, -11.2 * s2];
+        \u5BFE\u592A = 0.38 * s2;
+        \u5BFE\u524D\u624B = [px2, hy - 1 * s2, 1];
+        \u5BFE\u5965\u624B = [px2 * 0.8, sy + 0.6 * s2, 1];
+      } else {
+        \u6A2A\u5C3B = [hx + 1 * s2, -0.6 * s2];
+        \u6A2A\u5148 = [hx + 1.35 * s2, -10.9 * s2];
+        \u6A2A\u592A = 0.4 * s2;
+        \u6A2A\u524D\u624B = [hx + 1.15 * s2, hy - 1.4 * s2, -1];
+        \u6A2A\u5965\u624B = [hx + 0.2 * s2, hy - 0.3 * s2, 1];
+        \u5BFE\u5C3B = [px2, -1.2 * s2];
+        \u5BFE\u5148 = [px2, -11.2 * s2];
+        \u5BFE\u592A = 0.38 * s2;
+        \u5BFE\u524D\u624B = [px2, hy - 1 * s2, 1];
+        \u5BFE\u5965\u624B = [px2 * 0.8, sy + 0.6 * s2, 1];
+      }
+      const \u5C3B = \u6DF7\u70B9(\u6A2A\u5C3B, \u5BFE\u5C3B), \u5148 = \u6DF7\u70B9(\u6A2A\u5148, \u5BFE\u5148);
+      \u69CD\u5177(g, \u5C3B[0], \u5C3B[1], \u5148[0], \u5148[1], \u6DF72(\u6A2A\u592A, \u5BFE\u592A));
+      \u624B.\u524D = \u6DF7\u624B(\u6A2A\u524D\u624B, \u5BFE\u524D\u624B);
+      \u624B.\u5965 = \u6DF7\u624B(\u6A2A\u5965\u624B, \u5BFE\u5965\u624B);
+      \u9AA8\u306B\u7F6E\u304F(\u9AA8.\u5F97, \u5C3B[0], \u5C3B[1], \u5148[0], \u5148[1], \u624B.\u524D[0], \u624B.\u524D[1]);
+      if (\u69CB && \u7A81 > 0.6 && \u6A2A\u91CD > 0.02) {
+        g.strokeStyle = `rgba(238,240,236,${((\u7A81 - 0.6) * 1.2 * \u6A2A\u91CD).toFixed(2)})`;
+        g.lineWidth = 0.14 * s2;
+        for (const dy of [-0.45, 0, 0.45]) {
+          g.beginPath();
+          g.moveTo(\u5148[0] - 2.4 * s2, \u5148[1] + dy * s2);
+          g.lineTo(\u5148[0] - 0.6 * s2, \u5148[1] + dy * 0.4 * s2);
+          g.stroke();
         }
-      } else if (\u5C64 === "\u9593") {
-        \u69CD\u5177(g, hx + 1 * s2, -0.6 * s2, hx + 1.35 * s2, -10.9 * s2, 0.4 * s2);
-        \u624B.\u524D = [hx + 1.15 * s2, hy - 1.4 * s2, -1];
-        \u624B.\u5965 = [hx + 0.2 * s2, hy - 0.3 * s2, 1];
       }
       return;
     }
     if (\u578B === "yumi") {
-      if (!\u6A2A\u7CFB) {
-        const px2 = \u9762 === "\u5F8C" || \u9762 === "\u659C\u5F8C" ? -1.5 * s2 : 1.5 * s2;
-        if (\u5C64 === "\u524D") {
-          g.strokeStyle = "#5E4426";
-          g.lineWidth = 0.45 * s2;
-          g.beginPath();
-          g.moveTo(px2, -9.2 * s2);
-          g.quadraticCurveTo(px2 * 1.5, -5.4 * s2, px2, -1.8 * s2);
-          g.stroke();
-          \u624B.\u524D = [px2 * 0.95, sy + 0.4 * s2, -1];
-          \u624B.\u5965 = [\u69CB ? px2 * 0.2 : px2 * 0.5, sy + 0.5 * s2, 1];
-          if (\u9762 === "\u5F8C" || \u9762 === "\u659C\u5F8C") {
-            g.fillStyle = "#4A3A26";
-            g.fillRect(0.6 * s2, -6.3 * s2, 1 * s2, 2.2 * s2);
-            g.strokeStyle = "#8A6E46";
-            g.lineWidth = 0.22 * s2;
-            for (const dx of [0.75, 1.05, 1.35]) {
-              g.beginPath();
-              g.moveTo(dx * s2, -6.3 * s2);
-              g.lineTo(dx * s2 + 0.25 * s2, -8.2 * s2);
-              g.stroke();
-            }
-            g.fillStyle = "#E8EAE6";
-            for (const dx of [0.75, 1.05, 1.35]) {
-              g.beginPath();
-              g.arc(dx * s2 + 0.27 * s2, -8.3 * s2, 0.16 * s2, 0, 7);
-              g.fill();
-            }
-          }
-        }
-        return;
-      }
       const \u5F13x = sx + 3.5 * s2, \u5F13y = sy - 0.2 * s2, \u4E0Ay = \u5F13y - 4.3 * s2, \u4E0By = \u5F13y + 4.3 * s2;
       const \u53CD\u308A = 1 * s2 + \u5F15 * 1.4 * s2;
       const \u5F26x = \u5F13x - \u5F15 * 3.3 * s2 + \u653E * 0.5 * s2;
+      const A = \u6DF7\u70B9([\u5F13x - \u53CD\u308A * 0.25, \u4E0Ay], [px2, -9.2 * s2]);
+      const B = \u6DF7\u70B9([\u5F13x + \u53CD\u308A, \u5F13y - 2 * s2], [px2 * 1.5, -5.4 * s2]);
+      const C = \u6DF7\u70B9([\u5F13x + \u53CD\u308A * 0.5, \u5F13y], [px2 * 1.2, -5.5 * s2]);
+      const D = \u6DF7\u70B9([\u5F13x + \u53CD\u308A, \u5F13y + 2 * s2], [px2 * 1.5, -3.6 * s2]);
+      const E = \u6DF7\u70B9([\u5F13x - \u53CD\u308A * 0.25, \u4E0By], [px2, -1.8 * s2]);
       if (\u5C64 === "\u5F8C") {
-        g.strokeStyle = "rgba(230,228,214,0.9)";
-        g.lineWidth = Math.max(0.35, 0.07 * s2);
-        g.beginPath();
-        g.moveTo(\u5F13x - \u53CD\u308A * 0.25, \u4E0Ay);
-        g.lineTo(\u5F26x, \u5F13y + 0.1 * s2);
-        g.lineTo(\u5F13x - \u53CD\u308A * 0.25, \u4E0By);
-        g.stroke();
-        if (\u5F15 > 0.12 && \u653E === 0) {
-          \u7DDA8(g, \u5F26x, \u5F13y + 0.1 * s2, \u5F13x + 2.4 * s2, \u5F13y - 0.1 * s2, 0.3 * s2, "#8A6E46");
-          g.fillStyle = "#E8EAE6";
+        const \u5143\u03B1 = g.globalAlpha;
+        if (\u6A2A\u91CD > 0.02) {
+          g.globalAlpha = \u5143\u03B1 * \u6A2A\u91CD;
+          g.strokeStyle = "rgba(230,228,214,0.9)";
+          g.lineWidth = Math.max(0.35, 0.07 * s2);
           g.beginPath();
-          g.moveTo(\u5F13x + 3.1 * s2, \u5F13y - 0.14 * s2);
-          g.lineTo(\u5F13x + 2.3 * s2, \u5F13y - 0.5 * s2);
-          g.lineTo(\u5F13x + 2.3 * s2, \u5F13y + 0.3 * s2);
-          g.closePath();
-          g.fill();
-        }
-        if (\u653E > 0) {
-          g.strokeStyle = `rgba(120,96,60,${(1 - \u653E).toFixed(2)})`;
-          g.lineWidth = 0.3 * s2;
-          const fx = \u5F13x + 3 * s2 + \u653E * 7 * s2;
-          g.beginPath();
-          g.moveTo(fx - 1.6 * s2, \u5F13y - 0.2 * s2);
-          g.lineTo(fx, \u5F13y - 0.3 * s2);
+          g.moveTo(A[0], A[1]);
+          g.lineTo(\u5F26x, \u5F13y + 0.1 * s2);
+          g.lineTo(E[0], E[1]);
           g.stroke();
+          if (\u5F15 > 0.12 && \u653E === 0) {
+            \u7DDA8(g, \u5F26x, \u5F13y + 0.1 * s2, \u5F13x + 2.4 * s2, \u5F13y - 0.1 * s2, 0.3 * s2, "#8A6E46");
+            g.fillStyle = "#E8EAE6";
+            g.beginPath();
+            g.moveTo(\u5F13x + 3.1 * s2, \u5F13y - 0.14 * s2);
+            g.lineTo(\u5F13x + 2.3 * s2, \u5F13y - 0.5 * s2);
+            g.lineTo(\u5F13x + 2.3 * s2, \u5F13y + 0.3 * s2);
+            g.closePath();
+            g.fill();
+          }
+          if (\u653E > 0) {
+            g.strokeStyle = `rgba(120,96,60,${(1 - \u653E).toFixed(2)})`;
+            g.lineWidth = 0.3 * s2;
+            const fx = \u5F13x + 3 * s2 + \u653E * 7 * s2;
+            g.beginPath();
+            g.moveTo(fx - 1.6 * s2, \u5F13y - 0.2 * s2);
+            g.lineTo(fx, \u5F13y - 0.3 * s2);
+            g.stroke();
+          }
+          g.globalAlpha = \u5143\u03B1;
         }
-        \u624B.\u5965 = [\u5F26x, \u5F13y + 0.1 * s2, 1];
+        \u624B.\u5965 = \u6DF7\u624B([\u5F26x, \u5F13y + 0.1 * s2, 1], [\u69CB ? px2 * 0.2 : px2 * 0.5, sy + 0.5 * s2, 1]);
+        if (\u5F8C\u308D && \u5BFE\u91CD > 0.02) {
+          g.globalAlpha = \u5143\u03B1 * \u5BFE\u91CD;
+          g.fillStyle = "#4A3A26";
+          g.fillRect(0.6 * s2, -6.3 * s2, 1 * s2, 2.2 * s2);
+          g.strokeStyle = "#8A6E46";
+          g.lineWidth = 0.22 * s2;
+          for (const dx of [0.75, 1.05, 1.35]) {
+            g.beginPath();
+            g.moveTo(dx * s2, -6.3 * s2);
+            g.lineTo(dx * s2 + 0.25 * s2, -8.2 * s2);
+            g.stroke();
+          }
+          g.fillStyle = "#E8EAE6";
+          for (const dx of [0.75, 1.05, 1.35]) {
+            g.beginPath();
+            g.arc(dx * s2 + 0.27 * s2, -8.3 * s2, 0.16 * s2, 0, 7);
+            g.fill();
+          }
+          g.globalAlpha = \u5143\u03B1;
+        }
       }
-      if (\u5C64 === "\u524D") {
+      if (\u5C64 === "\u9593") {
+        \u9AA8\u306B\u7F6E\u304F(\u9AA8.\u5F97, A[0], A[1], C[0], C[1], E[0], E[1]);
         g.strokeStyle = "#5E4426";
-        g.lineWidth = 0.5 * s2;
+        g.lineWidth = \u6DF72(0.5, 0.45) * s2;
         g.beginPath();
-        g.moveTo(\u5F13x - \u53CD\u308A * 0.25, \u4E0Ay);
-        g.quadraticCurveTo(\u5F13x + \u53CD\u308A, \u5F13y - 2 * s2, \u5F13x + \u53CD\u308A * 0.5, \u5F13y);
-        g.quadraticCurveTo(\u5F13x + \u53CD\u308A, \u5F13y + 2 * s2, \u5F13x - \u53CD\u308A * 0.25, \u4E0By);
+        g.moveTo(A[0], A[1]);
+        g.quadraticCurveTo(B[0], B[1], C[0], C[1]);
+        g.quadraticCurveTo(D[0], D[1], E[0], E[1]);
         g.stroke();
-        g.strokeStyle = "rgba(220,200,150,0.5)";
-        g.lineWidth = 0.18 * s2;
-        g.beginPath();
-        g.moveTo(\u5F13x - \u53CD\u308A * 0.22, \u4E0Ay + 1 * s2);
-        g.quadraticCurveTo(\u5F13x + \u53CD\u308A * 0.9, \u5F13y - 1.9 * s2, \u5F13x + \u53CD\u308A * 0.45, \u5F13y);
-        g.stroke();
-        \u624B.\u524D = [\u5F13x + 0.3 * s2, \u5F13y, -1];
-      }
-      return;
-    }
-    if (!\u6A2A\u7CFB) {
-      const px2 = \u9762 === "\u5F8C" || \u9762 === "\u659C\u5F8C" ? -1.2 * s2 : 1.2 * s2;
-      if (\u5C64 === "\u524D") {
-        \u7DDA8(g, px2 * 0.5, -5.2 * s2, px2 * 1.9, -9 * s2, 0.5 * s2, "#241E16");
-        \u7DDA8(g, px2 * 0.2, -4.4 * s2, px2 * 0.9, -6 * s2, 0.6 * s2, "#6E5636");
-        \u624B.\u524D = [px2 * 0.8, sy + 0.5 * s2, -1];
-        \u624B.\u5965 = [px2 * 0.35, sy + 0.6 * s2, 1];
-        if (\u706B) {
-          g.fillStyle = "rgba(255,214,120,0.95)";
+        if (\u6A2A\u91CD > 0.02) {
+          const \u5143\u03B1 = g.globalAlpha;
+          g.globalAlpha = \u5143\u03B1 * \u6A2A\u91CD;
+          g.strokeStyle = "rgba(220,200,150,0.5)";
+          g.lineWidth = 0.18 * s2;
           g.beginPath();
-          g.arc(px2 * 1.9, -9 * s2, 0.5 * s2, 0, 7);
-          g.fill();
+          g.moveTo(\u5F13x - \u53CD\u308A * 0.22, \u4E0Ay + 1 * s2);
+          g.quadraticCurveTo(\u5F13x + \u53CD\u308A * 0.9, \u5F13y - 1.9 * s2, \u5F13x + \u53CD\u308A * 0.45, \u5F13y);
+          g.stroke();
+          g.globalAlpha = \u5143\u03B1;
         }
+        \u624B.\u524D = \u6DF7\u624B([\u5F13x + 0.3 * s2, \u5F13y, -1], [px2 * 0.95, sy + 0.4 * s2, -1]);
       }
       return;
     }
+    if (\u5C64 !== "\u9593") return;
     if (!\u69CB) {
-      if (\u5C64 === "\u524D") {
-        const gx = sx + 0.7 * s2, gy = sy + 0.2 * s2;
-        \u7DDA8(g, gx - 1.6 * s2, gy + 2.2 * s2, gx + 1.9 * s2, gy - 3.6 * s2, 0.45 * s2, "#241E16");
-        \u7DDA8(g, gx - 1.5 * s2, gy + 2 * s2, gx - 0.2 * s2, gy - 0.2 * s2, 0.6 * s2, "#6E5636");
-        \u624B.\u524D = [gx, gy + 0.3 * s2, -1];
-        \u624B.\u5965 = [hx - 0.9 * s2 - (\u6B69\u304F ? Math.sin(W2 * 6.283) * 0.9 * s2 : 0), hy - 0.4 * s2, 1];
-      }
+      const gx = sx + 0.7 * s2, gy = sy + 0.2 * s2;
+      const a1 = \u6DF7\u70B9([gx - 1.6 * s2, gy + 2.2 * s2], [px2 * 0.5, -5.2 * s2]);
+      const a2 = \u6DF7\u70B9([gx + 1.9 * s2, gy - 3.6 * s2], [px2 * 1.9, -9 * s2]);
+      const b1 = \u6DF7\u70B9([gx - 1.5 * s2, gy + 2 * s2], [px2 * 0.2, -4.4 * s2]);
+      const b2 = \u6DF7\u70B9([gx - 0.2 * s2, gy - 0.2 * s2], [px2 * 0.9, -6 * s2]);
+      \u9AA8\u306B\u7F6E\u304F(\u9AA8.\u5F97, a1[0], a1[1], a2[0], a2[1], b1[0], b1[1]);
+      \u7DDA8(g, a1[0], a1[1], a2[0], a2[1], \u6DF72(0.45, 0.5) * s2, "#241E16");
+      \u7DDA8(g, b1[0], b1[1], b2[0], b2[1], \u6DF72(0.6, 0.6) * s2, "#6E5636");
+      \u624B.\u524D = \u6DF7\u624B([gx, gy + 0.3 * s2, -1], [px2 * 0.8, sy + 0.5 * s2, -1]);
+      \u624B.\u5965 = \u6DF7\u624B(
+        [hx - 0.9 * s2 - (\u6B69\u304F ? Math.sin(W2 * 6.283) * 0.9 * s2 : 0), hy - 0.4 * s2, 1],
+        [px2 * 0.35, sy + 0.6 * s2, 1]
+      );
       return;
     }
     const \u9283y = sy + 0.45 * s2, \u9283x0 = sx - 1.9 * s2 - \u53CD\u52D5 * 1.6 * s2, \u9283x1 = sx + 5.6 * s2 - \u53CD\u52D5 * 1.6 * s2;
-    if (\u5C64 === "\u524D") {
+    const \u8EAB1 = \u6DF7\u70B9([\u9283x0 + 2.2 * s2, \u9283y + 0.02 * s2], [px2 * 0.5, -5.2 * s2]);
+    const \u8EAB2 = \u6DF7\u70B9([\u9283x1 + 1.2 * s2, \u9283y - 0.04 * s2], [px2 * 1.9, -9 * s2]);
+    const \u67281 = \u6DF7\u70B9([\u9283x0 + 2.2 * s2, \u9283y + 0.14 * s2], [px2 * 0.2, -4.4 * s2]);
+    const \u67282 = \u6DF7\u70B9([\u9283x1 - 1.1 * s2, \u9283y + 0.1 * s2], [px2 * 0.9, -6 * s2]);
+    if (\u6A2A\u91CD > 0.02) {
+      const \u5143\u03B1 = g.globalAlpha;
+      g.globalAlpha = \u5143\u03B1 * \u6A2A\u91CD;
       \u7DDA8(g, \u9283x0, \u9283y + 0.5 * s2, \u9283x0 + 2.6 * s2, \u9283y + 0.06 * s2, 0.85 * s2, "#6E5636");
-      \u7DDA8(g, \u9283x0 + 2.2 * s2, \u9283y + 0.02 * s2, \u9283x1 + 1.2 * s2, \u9283y - 0.04 * s2, 0.42 * s2, "#241E16");
-      \u7DDA8(g, \u9283x0 + 2.2 * s2, \u9283y + 0.14 * s2, \u9283x1 - 1.1 * s2, \u9283y + 0.1 * s2, 0.5 * s2, "#8A6E46");
       g.fillStyle = "#8A6E1E";
       g.fillRect(sx + 0.4 * s2, \u9283y - 0.5 * s2, 0.5 * s2, 0.4 * s2);
-      \u624B.\u524D = [sx + 3 * s2, \u9283y + 0.2 * s2, -1];
-      \u624B.\u5965 = [sx + 0.6 * s2, \u9283y + 0.5 * s2, 1];
-      if (\u706B) {
-        g.save();
-        g.translate(\u9283x1 + 1.4 * s2, \u9283y - 0.05 * s2);
-        g.fillStyle = "rgba(255,214,120,0.95)";
-        g.beginPath();
-        for (let i = 0; i < 8; i++) {
-          const a = i / 8 * 6.283, r1 = (i % 2 ? 0.8 : 0.32) * s2;
-          g[i ? "lineTo" : "moveTo"](Math.cos(a) * r1, Math.sin(a) * r1 * 0.7);
-        }
-        g.closePath();
-        g.fill();
-        g.fillStyle = "rgba(255,246,220,0.95)";
-        g.beginPath();
-        g.arc(0, 0, 0.26 * s2, 0, 7);
-        g.fill();
-        g.restore();
+      g.globalAlpha = \u5143\u03B1;
+    }
+    \u9AA8\u306B\u7F6E\u304F(\u9AA8.\u5F97, \u8EAB1[0], \u8EAB1[1], \u8EAB2[0], \u8EAB2[1], \u67281[0], \u67281[1]);
+    \u7DDA8(g, \u8EAB1[0], \u8EAB1[1], \u8EAB2[0], \u8EAB2[1], 0.42 * s2, "#241E16");
+    \u7DDA8(g, \u67281[0], \u67281[1], \u67282[0], \u67282[1], \u6DF72(0.5, 0.6) * s2, "#8A6E46");
+    \u624B.\u524D = \u6DF7\u624B([sx + 3 * s2, \u9283y + 0.2 * s2, -1], [px2 * 0.8, sy + 0.5 * s2, -1]);
+    \u624B.\u5965 = \u6DF7\u624B([sx + 0.6 * s2, \u9283y + 0.5 * s2, 1], [px2 * 0.35, sy + 0.6 * s2, 1]);
+    if (\u706B) {
+      const \u53E3 = \u6DF7\u70B9([\u9283x1 + 1.4 * s2, \u9283y - 0.05 * s2], [px2 * 1.9, -9 * s2]);
+      g.save();
+      g.translate(\u53E3[0], \u53E3[1]);
+      g.fillStyle = "rgba(255,214,120,0.95)";
+      g.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * 6.283, r1 = (i % 2 ? 0.8 : 0.32) * s2;
+        g[i ? "lineTo" : "moveTo"](Math.cos(a) * r1, Math.sin(a) * r1 * 0.7);
       }
+      g.closePath();
+      g.fill();
+      g.fillStyle = "rgba(255,246,220,0.95)";
+      g.beginPath();
+      g.arc(0, 0, 0.26 * s2, 0, 7);
+      g.fill();
+      g.restore();
     }
   };
-  const \u5E45\u5897 = \u6A2A\u7CFB ? 1 : 1.35;
+  const \u5E45\u5897 = 1 + 0.35 * \u5BFE\u91CD;
+  const \u5965\u8896 = \u5BFE\u91CD;
+  \u9AA8.\u5E45\u5897 = \u5E45\u5897;
+  \u9AA8.\u5965\u8896 = \u5965\u8896;
   \u5F97\u7269\u3092\u63CF\u304F("\u5F8C");
   \u811A\u3092\u7F6E\u304F(false);
-  if (\u624B.\u5965) \u8155\u5177(g, sx - 0.25 * s2, sy + 0.4 * s2, \u624B.\u5965[0], \u624B.\u5965[1], s2, false, \u624B.\u5965[2], K2);
-  \u80F4\u5177(g, hx, hy, sx, sy, s2, \u524D\u50BE, K2, \u5E45\u5897);
+  if (\u624B.\u5965) \u8155\u5177(g, sx - 0.25 * s2 * \u6A2A\u91CD, sy + 0.4 * s2, \u624B.\u5965[0], \u624B.\u5965[1], s2, false, \u624B.\u5965[2], K2, \u6A2A\u91CD);
+  \u80F4\u5177(g, hx, hy, sx, sy, s2, \u524D\u50BE, K2, \u5E45\u5897, \u5965\u8896, \u53CD);
   \u811A\u3092\u7F6E\u304F(true);
   \u5F97\u7269\u3092\u63CF\u304F("\u9593");
   \u5F97\u7269\u3092\u63CF\u304F("\u524D");
-  if (\u624B.\u524D) \u8155\u5177(g, sx + 0.25 * s2, sy + 0.35 * s2, \u624B.\u524D[0], \u624B.\u524D[1], s2, true, \u624B.\u524D[2], K2);
-  \u982D\u5177(g, sx, sy, s2, (\u69CB ? 0.12 : 0.03) + \u51FA * 0.12 + \u50992 * 0.1, K2, \u9762);
+  if (\u624B.\u524D) \u8155\u5177(g, sx + 0.25 * s2 * \u6A2A\u91CD, sy + 0.35 * s2, \u624B.\u524D[0], \u624B.\u524D[1], s2, true, \u624B.\u524D[2], K2, \u6A2A\u91CD);
+  \u982D\u5177(g, sx, sy, s2, (\u69CB ? 0.12 : 0.03) + \u51FA * 0.12 + \u50992 * 0.1, K2, \u9762, \u6A2A\u307F, \u5BFE\u307F, \u53CD);
   g.restore();
 }
-function \u9A0E\u516B(g, s2, \u9762, fr, K2, j) {
+var \u6DF7\u70B92 = (\u6A2A\u306E, \u5BFE\u306E, w) => [\u6A2A\u306E[0] * w + \u5BFE\u306E[0] * (1 - w), \u6A2A\u306E[1] * w + \u5BFE\u306E[1] * (1 - w)];
+function \u9A0E\u516B(g, s2, \u9762, fr, K2, j, \u6A2A\u307F, \u5BFE\u307F, \u93E1) {
+  const \u6A2A = \u6A2A\u307F == null ? \u9762 === "\u6A2A" ? 1 : \u9762 === "\u659C\u524D" || \u9762 === "\u659C\u5F8C" ? 0.71 : 0 : Math.max(0, \u6A2A\u307F);
+  const \u5BFE = \u5BFE\u307F == null ? \u9762 === "\u524D" ? 1 : \u9762 === "\u5F8C" ? -1 : \u9762 === "\u659C\u524D" ? 0.71 : \u9762 === "\u659C\u5F8C" ? -0.71 : 0 : \u5BFE\u307F;
   const \u6BDB = \u99AC\u6BDB\u3089[(j * 7 | 0) % 3];
   const \u69CB = fr >= 3;
   const T = \u69CB ? ((fr - 3) / 4 % 1 + 1) % 1 : Number.isInteger(fr) ? fr === 1 ? 0.25 : fr === 2 ? 0.75 : 0 : ((fr - 1) / 2 % 1 + 1) % 1;
   const \u52D5\u304F = \u69CB || fr >= 1;
   const \u5F3E = \u52D5\u304F ? Math.sin(T * 6.283 * 2) * 0.22 * s2 : 0;
   const by = -4.6 * s2 + \u5F3E;
-  if (\u9762 === "\u6A2A" || \u9762 === "\u659C\u524D" || \u9762 === "\u659C\u5F8C") {
-    if (\u9762 !== "\u6A2A") g.scale(0.92, 1);
+  {
+    const \u6A2A\u91CD = \u6A2A * \u6A2A, \u5BFE\u91CD = 1 - \u6A2A\u91CD;
+    const \u6DF72 = (\u6A2A\u306E, \u5BFE\u306E) => \u6A2A\u306E * \u6A2A\u91CD + \u5BFE\u306E * \u5BFE\u91CD;
+    const \u99AC\u7E2E = 0.39 + 0.61 * \u6A2A\u91CD;
+    g.scale(\u99AC\u7E2E, 1);
+    const \u623B = 1 / \u99AC\u7E2E;
+    const \u5F8C\u5411 = \u5BFE < 0;
     g.strokeStyle = shade2(\u6BDB, 0.5);
     g.lineCap = "round";
+    const \u5143\u03B1 = g.globalAlpha;
     for (const k of [-0.25, 0, 0.25]) {
+      const \u6FC3 = k === 0 ? 1 : \u6A2A\u91CD;
+      if (\u6FC3 <= 0.02) continue;
+      g.globalAlpha = \u5143\u03B1 * \u6FC3 * (k === 0 && !\u5F8C\u5411 ? \u6A2A\u91CD : 1);
       g.lineWidth = 0.5 * s2;
       g.beginPath();
-      g.moveTo(-4.6 * s2, by - 0.6 * s2);
+      const \u6839 = \u6DF72(-4.6 * s2, 0);
+      g.moveTo(\u6839, by - 0.6 * s2);
       g.quadraticCurveTo(
-        -6.4 * s2,
-        by - 0.2 * s2 + k * 2 * s2 + (\u52D5\u304F ? Math.sin(T * 9 + k * 7) * 0.5 * s2 : 0),
-        -7.3 * s2,
-        by + 1.2 * s2 + k * 3 * s2
+        \u6DF72(-6.4 * s2, 0.3 * s2 * \u623B),
+        by - 0.2 * s2 + k * 2 * s2 * \u6A2A\u91CD + (\u52D5\u304F ? Math.sin(T * 9 + k * 7) * 0.5 * s2 : 0),
+        \u6DF72(-7.3 * s2, 0.1 * s2 * \u623B),
+        by + \u6DF72(1.2 * s2 + k * 3 * s2, 2.9 * s2)
       );
       g.stroke();
     }
-    const \u811A\u99AC = (px2, py2, ph, \u8FD1, \u524D\u811A) => {
+    g.globalAlpha = \u5143\u03B1;
+    const \u811A\u99AC = (px2, py2, ph, \u8FD1, \u524D\u811A, \u5BFEpx, \u6FC3) => {
+      if (\u6FC3 != null && \u6FC3 <= 0.02) return;
       const sw = \u52D5\u304F ? Math.sin(T * 6.283 + ph) : \u524D\u811A ? 0.25 : -0.25;
       const lift = \u52D5\u304F ? Math.max(0, Math.sin(T * 6.283 + ph + Math.PI / 2)) : 0;
-      const fx = px2 + sw * 2.2 * s2, fy = -lift * 1.5 * s2;
+      const \u6839x = \u5BFEpx == null ? px2 : \u6DF72(px2, \u5BFEpx * \u623B);
+      const fx = \u6839x + sw * 2.2 * s2 * \u6A2A\u91CD, fy = -lift * 1.5 * s2 * \u6A2A\u91CD;
       const l = \u524D\u811A ? 2.5 * s2 : 2.7 * s2;
-      const [kx, ky] = \u9006\u904B\u52D5(px2, py2, fx, fy, l, l, \u524D\u811A ? -1 : 1);
-      const \u8272 = \u8FD1 ? shade2(\u6BDB, 0.95) : shade2(\u6BDB, 0.55);
-      \u7DDA8(g, px2, py2, kx, ky, 1 * s2, \u8272);
+      const [kx, ky] = \u9006\u904B\u52D5(\u6839x, py2, fx, fy, l, l, (\u524D\u811A ? -1 : 1) * \u6A2A\u91CD);
+      const \u8272 = shade2(\u6BDB, \u8FD1 ? 0.95 : 0.55 + 0.4 * \u5BFE\u91CD);
+      if (\u6FC3 != null) g.globalAlpha = \u5143\u03B1 * \u6FC3;
+      \u7DDA8(g, \u6839x, py2, kx, ky, 1 * s2, \u8272);
       \u7DDA8(g, kx, ky, fx, fy, 0.68 * s2, \u8272);
       g.fillStyle = "#1E1812";
       g.beginPath();
       g.ellipse(fx, fy + 0.1 * s2, 0.48 * s2, 0.34 * s2, 0, 0, 7);
       g.fill();
+      g.globalAlpha = \u5143\u03B1;
     };
-    \u811A\u99AC(2.8 * s2, by + 1.2 * s2, 0, false, true);
-    \u811A\u99AC(-3 * s2, by + 1 * s2, Math.PI * 0.9, false, false);
+    const \u80A9 = (h) => by + \u6DF72(h * s2, 1.25 * s2);
+    \u811A\u99AC(2.8 * s2, \u80A9(1.2), 0, false, true, -1 * s2);
+    \u811A\u99AC(-3 * s2, \u80A9(1), Math.PI * 0.9, false, false, -1 * s2, \u6A2A\u91CD);
     g.beginPath();
     g.moveTo(-4.7 * s2, by - 0.4 * s2);
     g.quadraticCurveTo(-4.2 * s2, by - 2.2 * s2, -1.6 * s2, by - 2 * s2);
@@ -26405,11 +26537,13 @@ function \u9A0E\u516B(g, s2, \u9762, fr, K2, j) {
     g.lineWidth = 0.6;
     g.stroke();
     const \u4F38 = \u69CB ? 0.5 : 0;
+    const \u9996 = (x) => \u6DF72(x * s2, 0);
+    const \u9854 = \u5F8C\u5411 ? 0 : \u5BFE\u91CD;
     g.beginPath();
-    g.moveTo(2.6 * s2, by - 1.9 * s2);
-    g.quadraticCurveTo((4.9 + \u4F38) * s2, by - (3.3 - \u4F38 * 0.5) * s2, (6.1 + \u4F38) * s2, by - (3.6 - \u4F38 * 0.7) * s2);
-    g.lineTo((6.5 + \u4F38) * s2, by - (2.7 - \u4F38 * 0.7) * s2);
-    g.quadraticCurveTo((5.2 + \u4F38) * s2, by - 1.6 * s2, 4.2 * s2, by - 0.4 * s2);
+    g.moveTo(\u6DF72(2.6 * s2, -0.7 * s2 * \u623B), by - 1.9 * s2);
+    g.quadraticCurveTo(\u9996(4.9 + \u4F38), by - (3.3 - \u4F38 * 0.5) * s2, \u9996(6.1 + \u4F38), by - \u6DF72((3.6 - \u4F38 * 0.7) * s2, 2.6 * s2));
+    g.lineTo(\u9996(6.5 + \u4F38), by - \u6DF72((2.7 - \u4F38 * 0.7) * s2, 2.6 * s2));
+    g.quadraticCurveTo(\u9996(5.2 + \u4F38), by - 1.6 * s2, \u6DF72(4.2 * s2, 0.7 * s2 * \u623B), by - 0.4 * s2);
     g.closePath();
     g.fillStyle = shade2(\u6BDB, 1.05);
     g.fill();
@@ -26418,132 +26552,169 @@ function \u9A0E\u516B(g, s2, \u9762, fr, K2, j) {
     g.stroke();
     g.fillStyle = shade2(\u6BDB, 0.85);
     g.beginPath();
-    g.ellipse((7 + \u4F38) * s2, by - (3.05 - \u4F38 * 0.7) * s2, 1 * s2, 0.58 * s2, 0.25, 0, 7);
+    g.ellipse(
+      \u9996(7 + \u4F38),
+      by - \u6DF72((3.05 - \u4F38 * 0.7) * s2, 1.1 * s2),
+      \u6DF72(1 * s2, 0.7 * s2 * \u623B),
+      \u6DF72(0.58 * s2, 1.5 * s2),
+      0.25 * \u6A2A\u91CD,
+      0,
+      7
+    );
     g.fill();
     g.strokeStyle = "rgba(20,16,10,0.7)";
     g.lineWidth = 0.45;
     g.stroke();
-    g.strokeStyle = shade2(\u6BDB, 0.4);
-    g.lineWidth = 0.45 * s2;
-    for (const k of [0, 0.4, 0.8]) {
-      g.beginPath();
-      g.moveTo((2.8 + k * 1.4 + \u4F38 * k) * s2, by - (1.9 + k * 0.55) * s2);
-      g.quadraticCurveTo(
-        (2.4 + k * 1.4 + \u4F38 * k) * s2,
-        by - (0.9 + k * 0.5) * s2,
-        (2 + k * 1.4 + \u4F38 * k) * s2,
-        by - (0.4 + k * 0.4) * s2
-      );
-      g.stroke();
+    if (\u6A2A\u91CD > 0.02) {
+      const \u03B10 = g.globalAlpha;
+      g.globalAlpha = \u03B10 * \u6A2A\u91CD;
+      g.strokeStyle = shade2(\u6BDB, 0.4);
+      g.lineWidth = 0.45 * s2;
+      for (const k of [0, 0.4, 0.8]) {
+        g.beginPath();
+        g.moveTo(\u9996(2.8 + k * 1.4 + \u4F38 * k), by - (1.9 + k * 0.55) * s2);
+        g.quadraticCurveTo(
+          \u9996(2.4 + k * 1.4 + \u4F38 * k),
+          by - (0.9 + k * 0.5) * s2,
+          \u9996(2 + k * 1.4 + \u4F38 * k),
+          by - (0.4 + k * 0.4) * s2
+        );
+        g.stroke();
+      }
+      g.globalAlpha = \u03B10;
     }
-    g.fillStyle = "#1E1812";
-    g.beginPath();
-    g.arc((6.5 + \u4F38) * s2, by - (3.35 - \u4F38 * 0.7) * s2, 0.18 * s2, 0, 7);
-    g.fill();
-    g.strokeStyle = "#5A452E";
-    g.lineWidth = 0.26 * s2;
-    g.beginPath();
-    g.moveTo((6.2 + \u4F38) * s2, by - (2.9 - \u4F38 * 0.7) * s2);
-    g.quadraticCurveTo(3.4 * s2, by - 1.6 * s2, 1.2 * s2, by - 1.9 * s2);
-    g.stroke();
+    if (\u9854 > 0.02) {
+      const \u03B10 = g.globalAlpha;
+      g.globalAlpha = \u03B10 * \u9854;
+      g.fillStyle = shade2(\u6BDB, 0.7);
+      g.beginPath();
+      g.ellipse(0, by + 0.1 * s2, 0.48 * s2 * \u623B, 0.5 * s2, 0, 0, 7);
+      g.fill();
+      for (const e of [-1, 1]) {
+        g.beginPath();
+        g.moveTo(e * 0.55 * s2 * \u623B, by - 2 * s2);
+        g.lineTo(e * 0.85 * s2 * \u623B, by - 3 * s2);
+        g.lineTo(e * 0.2 * s2 * \u623B, by - 2.2 * s2);
+        g.closePath();
+        g.fillStyle = shade2(\u6BDB, 0.9);
+        g.fill();
+      }
+      g.fillStyle = "#1E1812";
+      for (const e of [-1, 1]) {
+        g.beginPath();
+        g.arc(e * 0.38 * s2 * \u623B, by - 1.3 * s2, 0.15 * s2 * \u623B, 0, 7);
+        g.fill();
+      }
+      g.globalAlpha = \u03B10;
+    }
+    if (\u6A2A\u91CD > 0.02) {
+      const \u03B10 = g.globalAlpha;
+      g.globalAlpha = \u03B10 * \u6A2A\u91CD;
+      g.fillStyle = "#1E1812";
+      g.beginPath();
+      g.arc(\u9996(6.5 + \u4F38), by - (3.35 - \u4F38 * 0.7) * s2, 0.18 * s2, 0, 7);
+      g.fill();
+      g.globalAlpha = \u03B10;
+    }
+    if (\u6A2A\u91CD > 0.02) {
+      const \u03B10 = g.globalAlpha;
+      g.globalAlpha = \u03B10 * \u6A2A\u91CD;
+      g.strokeStyle = "#5A452E";
+      g.lineWidth = 0.26 * s2;
+      g.beginPath();
+      g.moveTo(\u9996(6.2 + \u4F38), by - (2.9 - \u4F38 * 0.7) * s2);
+      g.quadraticCurveTo(\u9996(3.4), by - 1.6 * s2, \u9996(1.2), by - 1.9 * s2);
+      g.stroke();
+      g.globalAlpha = \u03B10;
+    }
     g.fillStyle = "#3A2C1C";
     g.beginPath();
-    g.ellipse(-0.3 * s2, by - 1.95 * s2, 1.45 * s2, 0.5 * s2, 0, 0, 7);
+    g.ellipse(
+      \u6DF72(-0.3 * s2, 0),
+      by - 1.95 * s2,
+      \u6DF72(1.45 * s2, 1.3 * s2 * \u623B),
+      0.5 * s2,
+      0,
+      0,
+      7
+    );
     g.fill();
-    \u811A\u99AC(2.9 * s2, by + 1.3 * s2, Math.PI * 0.45, true, true);
-    \u811A\u99AC(-3.1 * s2, by + 1.1 * s2, Math.PI * 1.35, true, false);
-    const rhx = -0.3 * s2, rhy = by - 2.5 * s2;
-    const \u524D\u50BE = \u69CB ? 0.42 : 0.2;
+    \u811A\u99AC(2.9 * s2, \u80A9(1.3), Math.PI * 0.45, true, true, 1 * s2);
+    \u811A\u99AC(-3.1 * s2, \u80A9(1.1), Math.PI * 1.35, true, false, 1 * s2, \u6A2A\u91CD);
+    g.save();
+    g.scale(\u623B, 1);
+    const rhx = \u6DF72(-0.3 * s2, 0) * \u99AC\u7E2E, rhy = by - \u6DF72(2.5 * s2, 2.6 * s2);
+    const \u524D\u50BE = \u6DF72(\u69CB ? 0.42 : 0.2, 0);
     const rs = s2 * 0.9;
     const rsx = rhx + Math.sin(\u524D\u50BE) * 3.6 * rs, rsy = rhy - Math.cos(\u524D\u50BE) * 3.6 * rs;
-    \u7DDA8(g, rhx, rhy, rhx + 1.4 * rs, rhy + 1.9 * rs, 1.1 * rs, \u5E03);
-    \u7DDA8(g, rhx + 1.4 * rs, rhy + 1.9 * rs, rhx + 1.2 * rs, rhy + 3.2 * rs, 0.85 * rs, \u92FC);
-    if (\u69CB) {
-      const \u67C4a = -0.1;
-      \u69CD\u5177(
-        g,
-        rsx - Math.cos(\u67C4a) * 3 * rs,
-        rsy + 0.6 * rs - Math.sin(\u67C4a) * 3 * rs,
-        rsx + Math.cos(\u67C4a) * 9 * rs,
-        rsy + 0.6 * rs + Math.sin(\u67C4a) * 9 * rs,
-        0.42 * rs
-      );
-    } else {
-      \u69CD\u5177(g, rsx + 0.6 * rs, rsy + 2.6 * rs, rsx + 1.1 * rs, rsy - 6.6 * rs, 0.38 * rs);
+    if (\u6A2A\u91CD > 0.02) {
+      const \u03B10 = g.globalAlpha;
+      g.globalAlpha = \u03B10 * \u6A2A\u91CD;
+      \u7DDA8(g, rhx, rhy, rhx + 1.4 * rs, rhy + 1.9 * rs, 1.1 * rs, \u5E03);
+      \u7DDA8(g, rhx + 1.4 * rs, rhy + 1.9 * rs, rhx + 1.2 * rs, rhy + 3.2 * rs, 0.85 * rs, \u92FC);
+      g.globalAlpha = \u03B10;
     }
-    \u80F4\u5177(g, rhx, rhy, rsx, rsy, rs, \u524D\u50BE, K2, 1);
+    {
+      const px2 = (\u5F8C\u5411 ? -1 : 1) * (\u93E1 ? -1 : 1) * 1.15 * s2;
+      const \u67C4a = -0.1;
+      const \u5C3B = \u6DF7\u70B92(
+        [rsx - Math.cos(\u67C4a) * 3 * rs, rsy + 0.6 * rs - Math.sin(\u67C4a) * 3 * rs],
+        [px2 * 0.7, rhy - 1 * rs],
+        \u6A2A\u91CD
+      );
+      const \u5148 = \u6DF7\u70B92(
+        [rsx + Math.cos(\u67C4a) * 9 * rs, rsy + 0.6 * rs + Math.sin(\u67C4a) * 9 * rs],
+        [px2 * 1.5, rhy + (\u5F8C\u5411 ? -2.6 : 2.2) * rs],
+        \u6A2A\u91CD
+      );
+      const \u7ACB\u5C3B = \u6DF7\u70B92([rsx + 0.6 * rs, rsy + 2.6 * rs], [px2, rhy + 1.4 * rs], \u6A2A\u91CD);
+      const \u7ACB\u5148 = \u6DF7\u70B92([rsx + 1.1 * rs, rsy - 6.6 * rs], [px2 * 1.03, rhy - 5.4 * rs], \u6A2A\u91CD);
+      if (\u69CB) \u69CD\u5177(g, \u5C3B[0], \u5C3B[1], \u5148[0], \u5148[1], \u6DF72(0.42, 0.4) * rs);
+      else \u69CD\u5177(g, \u7ACB\u5C3B[0], \u7ACB\u5C3B[1], \u7ACB\u5148[0], \u7ACB\u5148[1], \u6DF72(0.38, 0.36) * rs);
+    }
+    \u80F4\u5177(g, rhx, rhy, rsx, rsy, rs, \u524D\u50BE, K2, 1 + 0.35 * \u5BFE\u91CD, \u5BFE\u91CD, \u93E1);
     \u8155\u5177(
       g,
-      rsx + 0.2 * rs,
+      rsx + 0.2 * rs * \u6A2A\u91CD,
       rsy + 0.3 * rs,
       \u69CB ? rsx + 2.4 * rs : rsx + 1 * rs,
       rsy + (\u69CB ? 0.7 : 1.4) * rs,
       rs,
       true,
       -1,
-      K2
+      K2,
+      \u6A2A\u91CD
     );
-    \u982D\u5177(g, rsx, rsy, rs, 0.12, K2, \u9762 === "\u6A2A" ? "\u6A2A" : \u9762);
+    \u982D\u5177(g, rsx, rsy, rs, 0.12, K2, \u9762 === "\u6A2A" ? "\u6A2A" : \u9762, \u6A2A, \u5BFE, \u93E1);
+    {
+      const \u9AA8 = \u76F4\u8FD1\u306E\u9AA8;
+      \u9AA8.\u5E45\u5897 = 1 + 0.35 * \u5BFE\u91CD;
+      \u9AA8.\u5965\u8896 = \u5BFE\u91CD;
+      \u9AA8.\u524D\u50BE = \u524D\u50BE;
+      \u9AA8.hx = rhx * \u99AC\u7E2E;
+      \u9AA8.hy = rhy;
+      \u9AA8\u306B\u7F6E\u304F(
+        \u9AA8.\u811A,
+        rsx * \u99AC\u7E2E,
+        \u6DF72(2.9 * s2, 1 * s2 * \u623B) * \u99AC\u7E2E,
+        \u80A9(1.3),
+        rhx * \u99AC\u7E2E,
+        \u6DF72(2.8 * s2, -1 * s2 * \u623B) * \u99AC\u7E2E,
+        \u80A9(1.2)
+      );
+      \u9AA8\u306B\u7F6E\u304F(
+        \u9AA8.\u5F97,
+        \u6DF72(-4.6 * s2, 0) * \u99AC\u7E2E,
+        by - 0.6 * s2,
+        \u9996(6.1 + \u4F38) * \u99AC\u7E2E,
+        by - \u6DF72((3.6 - \u4F38 * 0.7) * s2, 2.6 * s2),
+        \u6DF72(-0.3 * s2, 0) * \u99AC\u7E2E,
+        by - 1.95 * s2
+      );
+    }
+    g.restore();
     return;
   }
-  const \u5F8C\u5411 = \u9762 === "\u5F8C" || \u9762 === "\u659C\u5F8C";
-  for (const dx of [-1, 1]) {
-    const sw = \u52D5\u304F ? Math.sin(T * 6.283 + (dx > 0 ? 0 : Math.PI)) * 0.35 * s2 : 0;
-    \u7DDA8(g, dx * s2, by + 1.4 * s2, dx * s2 + sw, -0.1 * s2, 0.6 * s2, shade2(\u6BDB, 0.55));
-  }
-  g.beginPath();
-  g.ellipse(0, by, 1.85 * s2, 1.6 * s2, 0, 0, 7);
-  const g3 = g.createLinearGradient(-1.5 * s2, 0, 1.5 * s2, 0);
-  g3.addColorStop(0, shade2(\u6BDB, 0.6));
-  g3.addColorStop(0.5, \u6BDB);
-  g3.addColorStop(1, shade2(\u6BDB, 1.2));
-  g.fillStyle = g3;
-  g.fill();
-  g.strokeStyle = "rgba(18,14,8,0.7)";
-  g.lineWidth = 0.5;
-  g.stroke();
-  if (\u5F8C\u5411) {
-    g.strokeStyle = shade2(\u6BDB, 0.42);
-    g.lineWidth = 0.5 * s2;
-    g.beginPath();
-    g.moveTo(0, by - 0.3 * s2);
-    g.quadraticCurveTo(0.3 * s2, by + 1.5 * s2, 0.1 * s2, by + 2.9 * s2);
-    g.stroke();
-  } else {
-    g.fillStyle = shade2(\u6BDB, 1.05);
-    g.beginPath();
-    g.ellipse(0, by - 1.1 * s2, 0.7 * s2, 1.5 * s2, 0, 0, 7);
-    g.fill();
-    g.fillStyle = shade2(\u6BDB, 0.7);
-    g.beginPath();
-    g.ellipse(0, by + 0.1 * s2, 0.48 * s2, 0.5 * s2, 0, 0, 7);
-    g.fill();
-    for (const e of [-1, 1]) {
-      g.beginPath();
-      g.moveTo(e * 0.55 * s2, by - 2 * s2);
-      g.lineTo(e * 0.85 * s2, by - 3 * s2);
-      g.lineTo(e * 0.2 * s2, by - 2.2 * s2);
-      g.closePath();
-      g.fillStyle = shade2(\u6BDB, 0.9);
-      g.fill();
-    }
-    g.fillStyle = "#1E1812";
-    for (const e of [-1, 1]) {
-      g.beginPath();
-      g.arc(e * 0.38 * s2, by - 1.3 * s2, 0.15 * s2, 0, 7);
-      g.fill();
-    }
-  }
-  const rs2 = s2 * 0.9;
-  const rhy2 = by - 2.6 * s2, rsy2 = rhy2 - 3.5 * rs2;
-  if (\u69CB) {
-    const px2 = \u5F8C\u5411 ? -1.1 * s2 : 1.1 * s2;
-    \u69CD\u5177(g, px2 * 0.7, rhy2 - 1 * rs2, px2 * 1.5, rhy2 + (\u5F8C\u5411 ? -2.6 : 2.2) * rs2, 0.4 * rs2);
-  } else {
-    \u69CD\u5177(g, (\u5F8C\u5411 ? -1.3 : 1.3) * s2, rhy2 + 1.4 * rs2, (\u5F8C\u5411 ? -1.35 : 1.35) * s2, rhy2 - 5.4 * rs2, 0.36 * rs2);
-  }
-  \u80F4\u5177(g, 0, rhy2, 0, rsy2, rs2, 0.05, K2, 1.3);
-  \u982D\u5177(g, 0, rsy2, rs2, 0.08, K2, \u9762);
 }
 var \u672D\u5E33 = {};
 function \u672D\u53D6\u308A(side, \u578B, dir, fr) {
@@ -27731,11 +27902,13 @@ var \u7D44\u306E\u614B = (q) => {
       \u901F: new Float32Array(50),
       \u9032x: new Float32Array(50),
       \u9032y: new Float32Array(50),
+      \u63CF: new Float32Array(50),
       \u521D: false,
       prevMen: q.men,
       prevCool: q.cool || 0,
       \u6483\u523B: -99,
-      \u5411: q.facing || 0
+      \u5411: q.facing || 0,
+      \u4F38: 8
     };
     \u7D44\u614B.set(q, s2);
   }
@@ -27899,6 +28072,7 @@ var \u672C\u9663\u306E\u614B = (c) => {
       \u901F: new Float32Array(\u672C\u9663\u306E\u6570),
       \u9032x: new Float32Array(\u672C\u9663\u306E\u6570),
       \u9032y: new Float32Array(\u672C\u9663\u306E\u6570),
+      \u63CF: new Float32Array(\u672C\u9663\u306E\u6570),
       \u6570: 0,
       \u521D: false,
       \u524Dx: 0,
@@ -27951,6 +28125,7 @@ function \u672C\u9663\u8846\u3092\u9032\u3081\u308B(c, b, dt, \u672Cx, \u672Cy) 
       t.x[n] = tx;
       t.y[n] = ty;
       t.\u901F[n] = 0;
+      t.\u63CF[n] = c.facing || 0;
       continue;
     }
     const vx = tx - t.x[n], vy = ty - t.y[n], d = Math.hypot(vx, vy);
@@ -27967,6 +28142,13 @@ function \u672C\u9663\u8846\u3092\u9032\u3081\u308B(c, b, dt, \u672Cx, \u672Cy) 
     }
     t.\u6B69\u8DDD[n] += mv;
     t.\u901F[n] += ((dt > 0 ? mv / dt : 0) - t.\u901F[n]) * Math.min(1, dt * 6);
+    {
+      const \u7684\u5411 = Math.hypot(t.\u9032x[n], t.\u9032y[n]) > 0.3 && t.\u901F[n] > 2.5 ? Math.atan2(t.\u9032y[n], t.\u9032x[n]) : c.facing || 0;
+      let d\u63CF = \u7684\u5411 - t.\u63CF[n];
+      while (d\u63CF > Math.PI) d\u63CF -= Math.PI * 2;
+      while (d\u63CF < -Math.PI) d\u63CF += Math.PI * 2;
+      t.\u63CF[n] += d\u63CF * Math.min(1, dt * 4.5);
+    }
   }
   t.\u521D = true;
 }
@@ -28035,9 +28217,13 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
       const \u5834 = q.type === "kiba" ? \u99AC\u6301\u5834 : \u6301\u5834;
       const th = s2.\u5411, lx = Math.cos(th + Math.PI / 2), ly = Math.sin(th + Math.PI / 2);
       const bx = -Math.cos(th), by = -Math.sin(th);
-      const \u524D = q.engaged && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
+      const \u565B\u307F\u4E2D = q.engaged || b.t - (q.\u565B\u307F\u523B == null ? -99 : q.\u565B\u307F\u523B) < 1.2;
+      const \u4F38\u3073\u7684 = \u565B\u307F\u4E2D && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
+      if (!s2.\u521D) s2.\u4F38 = \u4F38\u3073\u7684;
+      else s2.\u4F38 += (\u4F38\u3073\u7684 - s2.\u4F38) * Math.min(1, dt * 2.4);
+      const \u524D = s2.\u4F38;
       const \u523B\u307F = (\u524D + 2.8) / 4;
-      const \u62BC = q.engaged ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
+      const \u62BC = \u565B\u307F\u4E2D ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
       for (let n = 0; n < alive; n++) {
         const o = \u5834[n];
         const \u6DF1 = q.engaged ? -\u524D + o[2] * \u523B\u307F + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))) : o[1];
@@ -28063,6 +28249,7 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
           s2.sy[n] = ty;
           s2.\u751F[n] = 1;
           s2.\u901F[n] = 0;
+          s2.\u63CF[n] = s2.\u5411;
           continue;
         }
         const vx = tx - s2.sx[n], vy = ty - s2.sy[n], d = Math.hypot(vx, vy);
@@ -28079,6 +28266,13 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
         }
         s2.\u6B69\u8DDD[n] += mv;
         s2.\u901F[n] += ((dt > 0 ? mv / dt : 0) - s2.\u901F[n]) * Math.min(1, dt * 6);
+        {
+          const \u7684\u5411 = Math.hypot(s2.\u9032x[n], s2.\u9032y[n]) > 0.3 && s2.\u901F[n] > 2.5 ? Math.atan2(s2.\u9032y[n], s2.\u9032x[n]) : s2.\u5411;
+          let d\u63CF = \u7684\u5411 - s2.\u63CF[n];
+          while (d\u63CF > Math.PI) d\u63CF -= Math.PI * 2;
+          while (d\u63CF < -Math.PI) d\u63CF += Math.PI * 2;
+          s2.\u63CF[n] += d\u63CF * Math.min(1, dt * 4.5);
+        }
       }
       for (let n = alive; n < 50; n++) s2.\u751F[n] = 0;
       s2.\u521D = true;
@@ -28086,10 +28280,6 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
   }
   return dt;
 }
-var \u5411\u304D\u516B = (vx, vy) => {
-  const a = Math.atan2(vy, vx);
-  return (Math.round(a / (Math.PI / 8)) % 16 + 16) % 16;
-};
 function \u6B66\u5C06\u56F3(g, x, y, s2, K2, \u6848, t) {
   const \u6BDB = "#3E2E20";
   const \u5F712 = (fn) => {
@@ -28727,14 +28917,13 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
       if (!s2 || !s2.\u521D) continue;
       const alive = Math.max(0, Math.min(50, Math.round(q.men)) - (s2.\u501F\u308A || 0));
       const th = s2.\u5411;
-      const dir\u57FA = \u5411\u304D\u516B(Math.cos(th), Math.sin(th));
       const \u6483 = (b.t - s2.\u6483\u523B) / 1.5;
       for (let n = 0; n < alive; n++) {
         if (!s2.\u751F[n]) continue;
         if (\u4E26.length > 12e3) break;
         const wx = s2.sx[n], wy = s2.sy[n];
         if (!\u898B\u3048\u308B(wx, wy)) continue;
-        let fr = 0, dir = dir\u57FA;
+        let fr = 0, dir = s2.\u63CF[n] / (Math.PI / 8);
         const \u5834 = q.type === "kiba" ? \u99AC\u6301\u5834 : \u6301\u5834;
         const \u6B69\u901F = s2.\u901F[n];
         if (q.engaged && \u5834[n][2] < 2 && \u6B69\u901F < 14) {
@@ -28745,7 +28934,6 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
         } else if (\u6B69\u901F > 2.5) {
           const \u6B69\u5E45 = q.type === "kiba" ? 14 : 9;
           const w = s2.\u6B69\u8DDD[n] / \u6B69\u5E45 % 1;
-          if (Math.hypot(s2.\u9032x[n], s2.\u9032y[n]) > 0.3) dir = \u5411\u304D\u516B(s2.\u9032x[n], s2.\u9032y[n]);
           fr = \u9AA8\u5EA6 > 0 ? 1 + w * 2 : 1 + (w < 0.5 ? 0 : 1);
         }
         const \u4E08 = 0.95 + ((q.seed || 0) * 31 + n * 7) % 12 / 100;
@@ -28755,7 +28943,7 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
           \u5730y: wy,
           \u5074,
           \u578B: q.type,
-          dir: Math.round(dir),
+          dir: Math.round((dir % 16 + 16) % 16) % 16,
           fr: Math.round(fr),
           \u4E08,
           \u76F4: \u9AA8\u5EA6 > 0 ? { dir, fr, \u578B: q.type, \u5074, \u4E71: ((q.seed || 0) * 31 + n * 7) % 97 / 97 } : null
@@ -28787,7 +28975,7 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
         \u4E26.push({ wx, wy, \u5730y: wy + 0.08, \u65D7\u6301: { c, \u5074 } });
         continue;
       }
-      const \u9032 = Math.hypot(t.\u9032x[n], t.\u9032y[n]) > 0.3 ? \u5411\u304D\u516B(t.\u9032x[n], t.\u9032y[n]) : \u5411\u304D\u516B(Math.cos(c.facing || 0), Math.sin(c.facing || 0));
+      const \u9032 = Math.round((t.\u63CF[n] / (Math.PI / 8) % 16 + 16) % 16) % 16;
       let fr = 0;
       if (t.\u901F[n] > 2.5) {
         const w = t.\u6B69\u8DDD[n] / 14 % 1;

@@ -152,36 +152,57 @@ const 譜 = (t, keys) => {
   return keys[keys.length - 1][1];
 };
 /* 脚。腰から足先までを二節で繋ぎ、佩楯と脛当を着せる */
-const 脚具 = (g, hx, hy, fx, fy, s, 近, K) => {
+/* 陰。手前の脚と奥の脚の濃さの差である。
+
+   真横から見れば一方が手前で一方が奥だが、こちらを向いた兵の両脚は
+   同じだけ離れている。それでも差をつけていたので、真南をまたいで鏡が
+   返るたび、濃い脚と薄い脚が左右へ入れ替わった。横みのぶんだけ差をつけ、
+   正対では差を消す。 */
+const 脚具 = (g, hx, hy, fx, fy, s, 近, K, 陰) => {
   const l = 2.65 * s;
-  const [kx, ky] = 逆運動(hx, hy, fx, fy, l, l, -1);
-  const 基 = 近 ? 布 : shade(布, 0.6);
+  const 影 = 陰 == null ? 1 : Math.max(0, Math.min(1, 陰));
+  /* 膝は横から見てこそ前後に折れる。こちらを向いた脚は伸びて見えるのだから、
+     折る向きも横みのぶんだけにする。これで正対の両脚が左右対称になり、
+     鏡で返しても形が動かない。 */
+  const [kx, ky] = 逆運動(hx, hy, fx, fy, l, l, -影);
+  const 落 = (近い, 遠い) => 近 ? 近い : 遠い + (近い - 遠い) * (1 - 影);
+  const 基 = shade(布, 落(1, 0.6));
   線8(g, hx, hy, kx, ky, 1.5 * s, 基);                                  // 腿
   線8(g, kx, ky, fx, fy, 1.15 * s, 基);                                 // 脛
   線8(g, hx + (kx - hx) * 0.15, hy + (ky - hy) * 0.15,
     hx + (kx - hx) * 0.72, hy + (ky - hy) * 0.72, 1.9 * s,
-    近 ? shade(K.中, 0.9) : shade(K.中, 0.55));                          // 佩楯
+    shade(K.中, 落(0.9, 0.55)));                                        // 佩楯
   線8(g, kx + (fx - kx) * 0.2, ky + (fy - ky) * 0.2, fx, fy, 1.3 * s,
-    近 ? 鋼 : shade(鋼, 0.6));                                           // 脛当
-  g.fillStyle = 近 ? '#241E16' : shade('#241E16', 0.7);
-  g.beginPath(); g.ellipse(fx + 0.5 * s, fy + 0.08 * s, 0.9 * s, 0.4 * s, 0, 0, 7); g.fill();
+    shade(鋼, 落(1, 0.6)));                                             // 脛当
+  g.fillStyle = shade('#241E16', 落(1, 0.7));                           // 爪先は向いた側へ出る
+  g.beginPath(); g.ellipse(fx + 0.5 * s * 影, fy + 0.08 * s, 0.9 * s, 0.4 * s, 0, 0, 7); g.fill();
 };
 /* 腕。肩から手までを二節で繋ぎ、籠手と手を置く */
-const 腕具 = (g, sx, sy, gx, gy, s, 近, 肘側, K) => {
+const 腕具 = (g, sx, sy, gx, gy, s, 近, 肘側, K, 陰) => {
   const l = 2.05 * s;
-  const [ex, ey] = 逆運動(sx, sy, gx, gy, l, l, 肘側);
-  線8(g, sx, sy, ex, ey, 1.25 * s, 近 ? shade(K.中, 1.25) : shade(K.中, 0.72));
-  線8(g, ex, ey, gx, gy, 1.0 * s, 近 ? shade(革, 1.7) : shade(革, 1.1)); // 籠手
-  g.fillStyle = 近 ? 肌 : shade(肌, 0.75);
+  const 影 = 陰 == null ? 1 : Math.max(0, Math.min(1, 陰));
+  const [ex, ey] = 逆運動(sx, sy, gx, gy, l, l, 肘側 * 影);
+  const 落 = (近い, 遠い) => 近 ? 近い : 遠い + (近い - 遠い) * (1 - 影);
+  線8(g, sx, sy, ex, ey, 1.25 * s, shade(K.中, 落(1.25, 0.72)));
+  線8(g, ex, ey, gx, gy, 1.0 * s, shade(革, 落(1.7, 1.1)));             // 籠手
+  g.fillStyle = shade(肌, 落(1, 0.75));
   g.beginPath(); g.arc(gx, gy, 0.6 * s, 0, 7); g.fill();
 };
 /* 胴着。草摺（腰の板）・胴・威しの段・袖（肩の板） */
-const 胴具 = (g, hx, hy, sx, sy, s, 前傾, K, 幅増) => {
+const 胴具 = (g, hx, hy, sx, sy, s, 前傾, K, 幅増, 奥袖, 鏡) => {
   const a = Math.atan2(sy - hy, sx - hx);
   const nx = Math.cos(a + Math.PI / 2), ny = Math.sin(a + Math.PI / 2);
+  /* 草摺（腰の板）。四枚の濃淡は一枚おきである。鏡で返すと、その並びが
+     画面の上で逆になった――こちらを向いた兵が真南をまたぐたび、腰の縞が
+     まるごと入れ替わる。腰は体のいちばん広い所なので、これが残った段の
+     大きいほうであった。板の番を画面の側で取れば、並びは動かない。
+     板の開きも、正対では左右へ均してまっすぐ立てる。 */
+  const 開 = 1 - Math.max(0, Math.min(1, (幅増 - 1) / 0.35));
   for (let i = -2; i <= 1; i++) {                                       // 草摺
-    g.save(); g.translate(hx + (i + 0.5) * 0.8 * s * 幅増, hy + 0.3 * s); g.rotate(前傾 * 0.4 + i * 0.09);
-    g.fillStyle = i % 2 ? shade(K.中, 0.62) : shade(K.中, 0.85);
+    const ii = 鏡 ? -1 - i : i;
+    g.save(); g.translate(hx + (i + 0.5) * 0.8 * s * 幅増, hy + 0.3 * s);
+    g.rotate(前傾 * 0.4 + ii * 0.09 * 開);
+    g.fillStyle = ii % 2 ? shade(K.中, 0.62) : shade(K.中, 0.85);
     g.fillRect(-0.62 * s, 0, 1.24 * s, 1.7 * s);
     g.strokeStyle = 'rgba(20,22,16,0.5)'; g.lineWidth = 0.5;
     g.strokeRect(-0.62 * s, 0, 1.24 * s, 1.7 * s);
@@ -192,7 +213,14 @@ const 胴具 = (g, hx, hy, sx, sy, s, 前傾, K, 幅増) => {
   g.moveTo(hx + nx * w0, hy + ny * w0); g.lineTo(sx + nx * w1, sy + ny * w1);
   g.lineTo(sx - nx * w1, sy - ny * w1); g.lineTo(hx - nx * w0, hy - ny * w0);
   g.closePath();
-  const g2 = g.createLinearGradient(hx - nx * w1, hy - ny * w1, hx + nx * w1, hy + ny * w1);
+  /* 胴の陰は、鏡で返っても画面の同じ側に光が当たるようにする。
+
+     野じゅうで光は左上から差すと決めてある（draw.js の 光）。ところが兵の
+     胴だけは、鏡で返した兵で陰が裏返り、東を向く兵と西を向く兵とで光の
+     向きが食い違っていた。真南をまたぐ兵では、それが一コマで入れ替わる。 */
+  const g2 = 鏡
+    ? g.createLinearGradient(hx + nx * w1, hy + ny * w1, hx - nx * w1, hy - ny * w1)
+    : g.createLinearGradient(hx - nx * w1, hy - ny * w1, hx + nx * w1, hy + ny * w1);
   g2.addColorStop(0, shade(K.濃, 0.72)); g2.addColorStop(0.45, K.濃); g2.addColorStop(1, shade(K.濃, 1.45));
   g.fillStyle = g2; g.fill();
   g.strokeStyle = 'rgba(16,14,10,0.7)'; g.lineWidth = 0.8; g.stroke();
@@ -201,9 +229,15 @@ const 胴具 = (g, hx, hy, sx, sy, s, 前傾, K, 幅増) => {
     線8(g, mx + nx * w0 * 0.82, my + ny * w0 * 0.82, mx - nx * w0 * 0.82, my - ny * w0 * 0.82,
       0.34 * s, shade(K.帯, 1.0));
   }
-  for (const 側 of (幅増 > 1.2 ? [-1, 1] : [1])) {                      // 袖
-    g.save(); g.translate(sx + 側 * (幅増 > 1.2 ? 1.25 * s : 0), sy + 0.3 * s);
-    g.rotate(前傾 + 0.15 * 側);
+  /* 袖（肩の板）。横から見れば手前の一枚しか見えず、正対すれば二枚見える。
+     もとは幅増が一.二を超えた所で奥の一枚が湧いて出ていた――そこが段であった。
+     奥袖（振りの度合い）で濃さを上げれば、振るにつれて現れる。 */
+  const 奥度 = 奥袖 == null ? (幅増 > 1.2 ? 1 : 0) : Math.max(0, Math.min(1, 奥袖));
+  for (const 側 of (奥度 > 0.02 ? [-1, 1] : [1])) {                      // 袖
+    const 袖α = g.globalAlpha;
+    if (側 < 0) g.globalAlpha = 袖α * 奥度;
+    g.save(); g.translate(sx + 側 * 1.25 * s * 奥度, sy + 0.3 * s);
+    g.rotate(前傾 * 開 + 0.15 * 側);                                     // 正対では左右対称に
     const g袖 = g.createLinearGradient(0, -0.6 * s, 0, 1.6 * s);
     g袖.addColorStop(0, shade(K.中, 1.2)); g袖.addColorStop(1, shade(K.中, 0.6));
     g.fillStyle = g袖;
@@ -213,11 +247,13 @@ const 胴具 = (g, hx, hy, sx, sy, s, 前傾, K, 幅増) => {
     g.strokeStyle = 'rgba(20,22,26,0.45)';
     for (const yy of [0.1, 0.7]) { g.beginPath(); g.moveTo(-1.0 * s, yy * s); g.lineTo(1.0 * s, yy * s); g.stroke(); }
     g.restore();
+    g.globalAlpha = 袖α;
   }
 };
 /* 陣笠。伏せた円錐に家の色の帯 */
-const 笠具 = (g, hx, hy, s, 俯, K) => {
-  g.save(); g.translate(hx - 0.05 * s, hy); g.rotate(俯 * 0.4);
+const 笠具 = (g, hx, hy, s, 俯, K, 鏡, 寄) => {
+  g.save(); g.translate(hx - 0.05 * s * (寄 == null ? 1 : 寄), hy); g.rotate(俯 * 0.4);
+  if (鏡) g.scale(-1, 1);                       // 光は画面の左上から。鏡でも裏返さない
   const g2 = g.createLinearGradient(-1.6 * s, -1.2 * s, 1.3 * s, 0.3 * s);
   g2.addColorStop(0, '#6E6455'); g2.addColorStop(0.55, '#443C31'); g2.addColorStop(1, '#2B2620');
   g.beginPath();
@@ -235,25 +271,28 @@ const 笠具 = (g, hx, hy, s, 俯, K) => {
   g.beginPath(); g.ellipse(-0.55 * s, -0.75 * s, 0.55 * s, 0.2 * s, -0.35, 0, 7); g.fill();
   g.restore();
 };
-/* 頭。首・顔・目・顎紐・陣笠。横顔と正面・背面で輪郭を変える */
-const 頭具 = (g, sx, sy, s, 俯, K, 面) => {
-  const hx = sx + (面 === '横' ? 0.35 * s : 面 === '斜前' || 面 === '斜後' ? 0.2 * s : 0);
+/* 頭。首・顔・目・顎紐・陣笠。
+
+   もとは面の名で横顔・正面・背面を択一にしていた。顔は小さいとはいえ、
+   振り二十二度半のところで横顔が後頭部へ一息に入れ替わる段があった。
+   いまは横顔を土台に置き、そこへ正面の顔と後頭の首布を濃さで重ねる。
+   横顔そのものも、振るにつれて前後に縮める（寄・縮）。 */
+const 頭具 = (g, sx, sy, s, 俯, K, 面, 横み, 対み, 鏡) => {
+  const 寄 = 横み == null
+    ? (面 === '横' ? 1 : 面 === '斜前' || 面 === '斜後' ? 0.57 : 0) : Math.max(0, 横み);
+  const 対 = 対み == null ? (面 === '前' ? 1 : 面 === '後' ? -1
+    : 面 === '斜前' ? 0.5 : 面 === '斜後' ? -0.5 : 0) : 対み;
+  const 前度 = Math.max(0, 対) * Math.max(0, 対), 後度 = Math.min(0, 対) * Math.min(0, 対);
+  const hx = sx + 0.35 * s * 寄;
   const hy = sy - 1.75 * s + 俯 * s;
-  g.strokeStyle = 面 === '後' || 面 === '斜後' ? shade(肌, 0.8) : 肌;
+  const 元α = g.globalAlpha;
+  g.strokeStyle = shade(肌, 1 - 0.2 * 後度);
   g.lineWidth = 0.9 * s;
-  g.beginPath(); g.moveTo(sx, sy - 0.2 * s); g.lineTo(hx - 0.1 * s, hy + 0.9 * s); g.stroke();
-  if (面 === '後' || 面 === '斜後') {
-    g.fillStyle = '#8A6E52';                                            // 首布
-    g.beginPath(); g.arc(hx, hy + 0.45 * s, 0.95 * s, 0, 7); g.fill();
-    g.fillStyle = shade(肌, 0.85);
-    g.beginPath(); g.arc(hx, hy + 0.1 * s, 0.82 * s, 0, 7); g.fill();
-  } else if (面 === '前') {
-    g.fillStyle = 肌; g.beginPath(); g.arc(hx, hy + 0.15 * s, 0.86 * s, 0, 7); g.fill();
-    g.fillStyle = '#2A2218';
-    g.fillRect(hx - 0.42 * s, hy + 0.0 * s, 0.22 * s, 0.3 * s);
-    g.fillRect(hx + 0.2 * s, hy + 0.0 * s, 0.22 * s, 0.3 * s);
-  } else {
-    g.fillStyle = 肌;                                                   // 横顔
+  g.beginPath(); g.moveTo(sx, sy - 0.2 * s); g.lineTo(hx - 0.1 * s * 寄, hy + 0.9 * s); g.stroke();
+  {
+    /* 横顔。振るほど前後に縮み、真向きでは正面・後頭に覆われて見えなくなる */
+    g.save(); g.translate(hx, 0); g.scale(Math.max(0.12, 寄), 1); g.translate(-hx, 0);
+    g.fillStyle = 肌;
     g.beginPath();
     g.moveTo(hx - 0.9 * s, hy - 0.7 * s);
     g.quadraticCurveTo(hx + 0.9 * s, hy - 0.9 * s, hx + 1.05 * s, hy + 0.1 * s);
@@ -262,13 +301,35 @@ const 頭具 = (g, sx, sy, s, 俯, K, 面) => {
     g.quadraticCurveTo(hx - 1.0 * s, hy + 0.6 * s, hx - 0.9 * s, hy - 0.7 * s);
     g.closePath(); g.fill();
     g.strokeStyle = 'rgba(60,44,30,0.5)'; g.lineWidth = 0.5; g.stroke();
+    if (寄 > 0.3) {                                                     // 横目
+      g.globalAlpha = 元α * Math.min(1, (寄 - 0.3) / 0.3);
+      g.fillStyle = '#2A2218';
+      g.beginPath(); g.ellipse(hx + 0.42 * s, hy - 0.18 * s, 0.14 * s, 0.2 * s, 0, 0, 7); g.fill();
+      g.globalAlpha = 元α;
+    }
+    g.restore();
+  }
+  if (後度 > 0.01) {                                                    // 後頭と首布
+    g.globalAlpha = 元α * 後度;
+    g.fillStyle = '#8A6E52';
+    g.beginPath(); g.arc(hx, hy + 0.45 * s, 0.95 * s, 0, 7); g.fill();
+    g.fillStyle = shade(肌, 0.85);
+    g.beginPath(); g.arc(hx, hy + 0.1 * s, 0.82 * s, 0, 7); g.fill();
+    g.globalAlpha = 元α;
+  }
+  if (前度 > 0.01) {                                                    // 正面の顔
+    g.globalAlpha = 元α * 前度;
+    g.fillStyle = 肌; g.beginPath(); g.arc(hx, hy + 0.15 * s, 0.86 * s, 0, 7); g.fill();
     g.fillStyle = '#2A2218';
-    g.beginPath(); g.ellipse(hx + 0.42 * s, hy - 0.18 * s, 0.14 * s, 0.2 * s, 0, 0, 7); g.fill();
+    g.fillRect(hx - 0.42 * s, hy + 0.0 * s, 0.22 * s, 0.3 * s);
+    g.fillRect(hx + 0.2 * s, hy + 0.0 * s, 0.22 * s, 0.3 * s);
+    g.globalAlpha = 元α;
   }
   g.strokeStyle = 'rgba(90,52,36,0.6)'; g.lineWidth = 0.3 * s;          // 顎紐
-  g.beginPath(); g.moveTo(hx - 0.7 * s, hy - 0.3 * s);
-  g.quadraticCurveTo(hx, hy + 1.05 * s, hx + 0.75 * s, hy - 0.35 * s); g.stroke();
-  笠具(g, hx, hy - 0.9 * s, s, 俯, K);
+  g.beginPath(); g.moveTo(hx - (0.7 + 0.025 * 寄) * s, hy - (0.3 + 0.025 * 寄) * s);
+  g.quadraticCurveTo(hx, hy + 1.05 * s,
+    hx + (0.7 + 0.025 * 寄) * s, hy - (0.3 + 0.025 * 寄) * s); g.stroke();
+  笠具(g, hx, hy - 0.9 * s, s, 俯, K, 鏡, 寄);
 };
 /* 槍。柄に影を敷いてから穂を付ける */
 const 槍具 = (g, x0, y0, x1, y1, w) => {
@@ -277,22 +338,82 @@ const 槍具 = (g, x0, y0, x1, y1, w) => {
   穂8(g, x1, y1, Math.atan2(y1 - y0, x1 - x0), w * 13);
 };
 
-/* 向きは十六に割る（GDD 8.11）。八方向では、斜めへ進む隊がかくかくと向きを
-   変えて見えた。右半分（東向き）の型を鏡で返して十六を作る。
+/* 姿の骨（GDD 8.11）。試験のための覗き窓である。
+
+   姿が向きの連続な関数であることは、本来なら絵を二枚焼いて画素を引き算して
+   検めるのが筋だが、試験は画布を持たない（jsdom には canvas が無い）。
+   そこで、姿を決める数――振り・取り合いの割・胴の張り・腰と肩・脚の置き所・
+   得物の両端――を描くついでに控えておく。向きを細かく進めてこの数を見れば、
+   段があるかどうかは画素を見ずとも分かる。盤には一切触れない。
+
+   棚は一つを使い回す。寄りの深い所では一コマに千四百体ほど描くので、
+   一体ごとに新しい棚を拵えては、絵のためでなく塵集めのために時を使う。 */
+const 直近の骨 = { ψ: 0, 横重: 0, 対重: 0, 鏡: 1, 幅増: 0, 奥袖: 0, 前傾: 0, hx: 0, hy: 0,
+  脚: [0, 0, 0, 0, 0, 0], 得: [0, 0, 0, 0, 0, 0] };
+export const 姿の骨 = () => 直近の骨;
+const 骨に置く = (欄, a, b, c, d, e, f) => {
+  欄[0] = a; 欄[1] = b; 欄[2] = c; 欄[3] = d; 欄[4] = e; 欄[5] = f;
+};
+
+/* 向きは角のまま受ける（GDD 8.11）。
+
+   もとは向きを十六に割った目をそのまま使っていた。ところが、この中で十六は
+   西半分を鏡で返して九通りになり、さらに五つの面（横・斜前・前・斜後・後）に
+   しか分かれていなかった。東・東北東・東南東はまったく同じ一枚で、目が一から
+   二へ移るところで横から斜前へ一息に跳ぶ。十六分割の角そのもの（a16）は
+   計算されていながら、ファイルの中で一度も使われていなかった。
+
+   だから「向きを三十二に割る」のは無駄である。型紙が倍（六十五MBが百三十MB）
+   になるだけで、描ける姿は一つも増えない。割るのをやめて、角で描く。
+
+   ψ は、鏡で返したあとの向きを真横からの振りで測った角である。
+     ψ＝〇       … 真横（画面の右を向く）
+     ψ＝＋九十度 … こちらを向く（画面の下）
+     ψ＝－九十度 … 背を向ける（画面の上）
+   横み＝cos ψ は「横から見えている度合い」、対み＝sin ψ は「正対の度合い」。
+   前後の縮み・胴の張り・顔の寄り・袖の見えを、この二つから連続に出す。
 
    拍は 〇＝立ち、一・二＝歩み、三〜六＝働き（突き・引き放ち・放ち）。
    整数なら型紙の拍、小数なら連続の位相で、同じ譜の上を滑る。 */
-function 姿八(g, x, y, s, dir, fr, 型, K, 乱) {
+export function 姿八(g, x, y, s, dir, fr, 型, K, 乱) {
   const N = 16;
   const d16 = ((dir % N) + N) % N;
   const 反 = d16 > 4 && d16 < 12;                    // 西向きは鏡で返す
   const 右 = 反 ? (8 - d16 + 16) % 16 : d16;          // 0=東 … 4=南 12=北
-  const a16 = 右 * Math.PI / 8;
-  const 面 = 右 === 0 || 右 === 15 || 右 === 1 ? '横'
-    : 右 <= 3 ? '斜前' : 右 <= 5 ? '前' : 右 <= 7 ? '斜前' : 右 <= 9 ? '前'
-      : 右 <= 11 ? '斜後' : 右 <= 13 ? '後' : '斜後';
-  const 横系 = 面 === '横' || 面 === '斜前' || 面 === '斜後';
+  const ψ = (右 <= 8 ? 右 : 右 - 16) * Math.PI / 8;   // －九十度〜＋九十度
+  const 横み = Math.cos(ψ), 対み = Math.sin(ψ);
+  /* 二つの型を混ぜる（GDD 8.11）。
+
+     この姿には、はじめから二つの型がある。横から見た型（足を前後に開き、
+     得物を前へ伸ばす）と、正対の型（足を左右に開き、得物を縦に縮める）である。
+     もとはこれを面の名で切り替えていた。切り替えでは、境のところで足が一息に
+     組み替わり、得物が別の場所へ飛ぶ。姿見で並べて見ると、振り七十度から
+     九十度までの八枚はまったく同じ絵で、七十度のところで一息に跳んでいた。
+
+     どちらの型も「どこに置くか」でしかない。ならば置き所を混ぜればよい。
+     混ぜる割は、横から見えている度合いと正対の度合いの取り合いで決める。
+     両の端ではもとの型にぴたりと重なり、あいだは連続に移る。 */
+  /* 取り合いの割は、見えている度合いの二乗で取る。四十五度でちょうど半々、
+     二十二度半ではまだ横の型が八割五分を占める――少し振っただけで姿が
+     半分入れ替わっては、かえって落ち着かない。両の端では一と〇になる。 */
+  const 横重 = 横み * 横み;
+  const 対重 = 対み * 対み;
+  const 混 = (横の, 対の) => 横の * 横重 + 対の * 対重;
+  const 混点 = (横の, 対の) => [横の[0] * 横重 + 対の[0] * 対重, 横の[1] * 横重 + 対の[1] * 対重];
+  /* 肘の曲がる側も混ぜる。逆運動 は側を角に掛けているだけなので、〇を渡せば
+     肘が伸びた形になる――左右の持ち替えは、肘を伸ばしながら裏返って通る。
+     片側へ振れたまま一息に裏返るより、よほど目に障らない。 */
+  const 混手 = (横の, 対の) => [横の[0] * 横重 + 対の[0] * 対重,
+    横の[1] * 横重 + 対の[1] * 対重, 横の[2] * 横重 + 対の[2] * 対重];
+  const 後ろ = 対み < 0;                              // 背を向けている
+  /* 面の名は、もはや箙と顔の型の目安のためだけに残す。姿そのものは角で決まる。 */
+  const 面 = Math.abs(ψ) > Math.PI * 70 / 180 ? (後ろ ? '後' : '前')
+    : Math.abs(ψ) <= Math.PI / 8 + 1e-6 ? '横' : 後ろ ? '斜後' : '斜前';
   const j = 乱 || 0;
+  const 骨 = 直近の骨;
+  骨.ψ = ψ; 骨.横重 = 横重; 骨.対重 = 対重; 骨.鏡 = 反 ? -1 : 1;
+  骨.幅増 = 0; 骨.奥袖 = 0; 骨.前傾 = 0; 骨.hx = 0; 骨.hy = 0;
+  骨に置く(骨.脚, 0, 0, 0, 0, 0, 0); 骨に置く(骨.得, 0, 0, 0, 0, 0, 0);
   /* 接地影。これが無いと兵は地面の上に浮いて見える */
   g.fillStyle = '#1C1E14';
   const 影a = g.globalAlpha; g.globalAlpha = 影a * 0.26;
@@ -300,16 +421,19 @@ function 姿八(g, x, y, s, dir, fr, 型, K, 乱) {
   g.ellipse(x, y + 0.18 * s, (型 === 'kiba' ? 1.9 : 1.2) * s, (型 === 'kiba' ? 0.62 : 0.44) * s, 0, 0, 7);
   g.fill(); g.globalAlpha = 影a;
   g.save(); g.translate(x, y); if (反) g.scale(-1, 1);
-  if (型 === 'kiba') { 騎八(g, s, 面, fr, K, j); g.restore(); return; }
-  /* 斜めは少しだけ細る。正面・背面は正面の形で別に描く */
-  if (面 === '斜前' || 面 === '斜後') g.scale(0.9, 1);
+  if (型 === 'kiba') { 騎八(g, s, 面, fr, K, j, 横み, 対み, 反); g.restore(); return; }
 
   const 構 = fr >= 3;
   /* 働きの位相。整数の拍（三〜六）も、小数の位相も、同じ輪の上に乗せる */
   const T = 構 ? (((fr - 3) / 4) % 1 + 1) % 1 : 0;
-  /* 歩みの位相。一で踏み出し、二で逆足 */
-  const W = Number.isInteger(fr) ? (fr === 1 ? 0.25 : fr === 2 ? 0.75 : 0)
+  /* 歩みの位相。一で踏み出し、二で逆足。
+
+     鏡で返すと、踏み出している脚が画面の反対側へ移る。真南をまたいだ兵は
+     そこで両脚が入れ替わって見えた。鏡の側では位相を半周ずらして打ち消す
+     ――画面の上では、同じ側の脚が同じように出続ける。 */
+  const W0 = Number.isInteger(fr) ? (fr === 1 ? 0.25 : fr === 2 ? 0.75 : 0)
     : (((fr - 1) / 2) % 1 + 1) % 1;
+  const W = 反 ? (W0 + 0.5) % 1 : W0;
   const 歩く = !構 && (Number.isInteger(fr) ? fr === 1 || fr === 2 : fr > 0.02);
 
   /* 拍ごとの値。見本（兵の動きの見本）の譜をそのまま使う */
@@ -331,207 +455,250 @@ function 姿八(g, x, y, s, dir, fr, 型, K, 乱) {
   /* 腰と肩。突けば沈んで前へ、鉄砲は膝を突いて低い */
   const 膝立 = 構 && 型 === 'teppo';
   const 揺 = 歩く ? Math.abs(Math.cos(W * 6.283)) * 0.45 * s : 0;
-  const hx = (横系 ? 出 * 0.6 * s : 0) - (構 && 型 === 'teppo' ? 反動 * 0.2 * s : 0);
+  /* 突きの踏み込みは前へ出るのだから、正対すれば横へは動かない（縮んで見える） */
+  const hx = (出 * 0.6 * s - (構 && 型 === 'teppo' ? 反動 * 0.2 * s : 0)) * 横重;
   const hy = (膝立 ? -3.6 * s : -5.05 * s + 沈 * 0.5 * s - 引 * 0.05 * s) - 揺;
-  const 前傾 = !横系 ? 0.04
-    : 膝立 ? 0.14 * 備 - 反動 * 0.06
-      : 0.10 + 出 * 0.16 + (突 < 0 ? -0.06 : 0) + (歩く ? -0.03 : 0);
+  /* 前へ傾くのは前へ傾くのであって、横へ倒れるのではない。こちらを向いた兵の
+     傾きは画面には出ない――〇にする。これで正対の肩が腰の真上に乗り、
+     鏡で返しても胴が左右へずれなくなる。 */
+  const 前傾 = 混(膝立 ? 0.14 * 備 - 反動 * 0.06
+    : 0.10 + 出 * 0.16 + (突 < 0 ? -0.06 : 0) + (歩く ? -0.03 : 0), 0);
   const sx = hx + Math.sin(前傾) * 4.1 * s, sy = hy - Math.cos(前傾) * 4.1 * s;
+  骨.前傾 = 前傾; 骨.hx = hx; 骨.hy = hy;
 
-  /* ---- 脚 ---- */
+  /* ---- 脚 ----
+
+     横から見た型は足を前後に開き、正対の型は左右に開く。置き所を混ぜれば、
+     振るにつれて前後の開きが左右の開きへ移る――これが「かくかく」の正体の
+     大きいほうであった。膝を突く鉄砲だけは別の形なので、濃いほうに従う。 */
   const 脚を置く = (近) => {
-    if (!横系) {
-      /* 正面・背面。左右に開いて立ち、歩みでは前後に浮く */
-      const 側 = 近 ? 1 : -1;
-      const 振 = 歩く ? Math.sin(W * 6.283 + (近 ? 0 : Math.PI)) : 0;
-      const fx = 側 * 0.85 * s;
-      const fy = -Math.max(0, -振) * 0.9 * s;
-      脚具(g, hx + 側 * 0.5 * s, hy, fx, fy, s, 近, K);
-      return;
-    }
-    if (膝立 && !近) {                                   // 後ろ脚は膝を地に突く
-      const kx = hx - 1.7 * s, ky = -0.55 * s;
-      線8(g, hx - 0.2 * s, hy, kx, ky, 1.5 * s, shade(布, 0.6));
-      線8(g, kx, ky, kx - 2.5 * s, ky + 0.2 * s, 1.15 * s, shade(布, 0.6));
-      線8(g, hx - 0.34 * s, hy + (ky - hy) * 0.5, kx + 0.4 * s, ky - 0.4 * s, 1.8 * s, shade(K.中, 0.55));
-      g.fillStyle = shade('#241E16', 0.7);
-      g.beginPath(); g.ellipse(kx - 3.1 * s, ky + 0.3 * s, 0.9 * s, 0.4 * s, 0, 0, 7); g.fill();
-      return;
-    }
+    const 側 = 近 ? 1 : -1;
     const 振 = 歩く ? Math.sin(W * 6.283 + (近 ? 0 : Math.PI)) : 0;
-    let fx, fy = 0;
-    if (構 && 型 === 'yari') fx = 近 ? 2.5 * s + 出 * 2.1 * s : -2.5 * s + 出 * 0.3 * s;
-    else if (膝立) fx = 2.7 * s;
-    else if (構) fx = 近 ? 1.5 * s : -1.4 * s;
-    else if (歩く) { fx = 振 * 2.0 * s; fy = -Math.max(0, -振) * 1.1 * s; }
-    else fx = 近 ? 0.9 * s : -0.9 * s;
-    脚具(g, hx + (近 ? 0.2 : -0.2) * s, hy, fx, fy, s, 近, K);
+    if (膝立 && !近) {                                   // 後ろ脚は膝を地に突く
+      /* 膝を突いた脚も、正対すれば左右に開いた脚へ移る。もとは濃いほうの型に
+         従わせていたので、振り四十五度でここだけ跳んでいた（鉄砲の構えの絵の
+         跳びは、平らな所の十倍あった）。節を混ぜて渡す。 */
+      const 腰 = 混点([hx - 0.2 * s, hy], [hx - 0.5 * s, hy]);
+      const 対fx0 = -0.85 * s, 対fy0 = 0;
+      const [ikx, iky] = 逆運動(hx - 0.5 * s, hy, 対fx0, 対fy0, 2.65 * s, 2.65 * s, -横重);
+      const 膝 = 混点([hx - 1.7 * s, -0.55 * s], [ikx, iky]);
+      const 足 = 混点([hx - 1.7 * s - 2.5 * s, -0.55 * s + 0.2 * s], [対fx0, 対fy0]);
+      骨.脚[3] = 腰[0]; 骨.脚[4] = 足[0]; 骨.脚[5] = 足[1];
+      const 色 = shade(布, 0.6 + 0.4 * (1 - 横重));
+      線8(g, 腰[0], 腰[1], 膝[0], 膝[1], 1.5 * s, 色);
+      線8(g, 膝[0], 膝[1], 足[0], 足[1], 1.15 * s, 色);
+      線8(g, 腰[0] - 0.14 * s, 腰[1] + (膝[1] - 腰[1]) * 0.5, 膝[0] + 0.4 * s * 横重, 膝[1] - 0.4 * s * 横重,
+        1.8 * s, shade(K.中, 0.55 + 0.35 * (1 - 横重)));
+      g.fillStyle = shade('#241E16', 0.7 + 0.3 * (1 - 横重));
+      g.beginPath(); g.ellipse(足[0] - 0.6 * s * 横重 + 0.5 * s * 横重, 足[1] + 0.3 * s * 横重 + 0.08 * s,
+        0.9 * s, 0.4 * s, 0, 0, 7); g.fill();
+      return;
+    }
+    let 横fx, 横fy = 0;
+    if (構 && 型 === 'yari') 横fx = 近 ? 2.5 * s + 出 * 2.1 * s : -2.5 * s + 出 * 0.3 * s;
+    else if (膝立) 横fx = 2.7 * s;
+    else if (構) 横fx = 近 ? 1.5 * s : -1.4 * s;
+    else if (歩く) { 横fx = 振 * 2.0 * s; 横fy = -Math.max(0, -振) * 1.1 * s; }
+    else 横fx = 近 ? 0.9 * s : -0.9 * s;
+    const 対fx = 側 * 0.85 * s, 対fy = -Math.max(0, -振) * 0.9 * s;
+    const 腰x = hx + 混((近 ? 0.2 : -0.2) * s, 側 * 0.5 * s);
+    const fx = 混(横fx, 対fx), fy = 混(横fy, 対fy);
+    骨.脚[近 ? 0 : 3] = 腰x; 骨.脚[近 ? 1 : 4] = fx; 骨.脚[近 ? 2 : 5] = fy;
+    脚具(g, 腰x, hy, fx, fy, s, 近, K, 横重);
   };
 
   /* ---- 得物と腕 ---- */
   const 手 = { 奥: null, 前: null };          // [x,y,肘側]
   const 得物を描く = (層) => {
+    /* 得物も、二つの型の置き所を混ぜて描く（GDD 8.11）。
+
+       横から見れば得物は前へ伸び、正対すればこちらへ（向こうへ）突き出して
+       縮んで見える。もとはこの二つを面で切り替えていたので、境で得物が
+       別の場所へ飛んだ。柄の両端を混ぜれば、振るにつれて穂先が回り込む。
+       層は、弦のように脚より奥へ置くものだけ「後」に残す（「間」と「前」の
+       あいだには何も入らないので、同じ所である）。 */
+    /* 得物を持つ手の側（GDD 8.11）。
+
+       鏡で返す作りは、西向きを東向きの裏返しで描く。姿はそれで足りるが、
+       得物の持ち手まで裏返る。真横ならば得物は体の芯の近くにあるので目立た
+       ないが、こちらを向いた兵は、真南をまたいだ瞬間に槍が左右へ飛んだ。
+       絵の跳びを測ると、ここが平らな所の三十倍で、残った段のいちばん大きい
+       ものであった（戦列は南北に向き合うことが多いので、兵はまさにこの角に
+       長く居る）。鏡のぶんを打ち消して、得物は画面の同じ側に留める。
+       利き手は裏返るが、隊として揃って見えるほうが目に適う。 */
+    const px = (後ろ ? -1 : 1) * (反 ? -1 : 1) * s
+      * (型 === 'yari' ? 1.4 : 型 === 'yumi' ? 1.5 : 1.2);
     if (型 === 'yari') {
-      if (!横系) {
-        const px = (面 === '後' || 面 === '斜後') ? -1.4 * s : 1.4 * s;
-        if (構) {                                  /* こちらへ（向こうへ）突き出す。縮んで見える */
-          const 伸 = 0.8 + 出 * 1.9;
-          if (層 === '前') {
-            槍具(g, px * 0.7, hy - 1.2 * s, px * (0.9 + 出 * 0.5), hy + 伸 * s, 0.42 * s);
-            手.前 = [px * 0.8, hy - 0.9 * s, 1]; 手.奥 = [px * 0.55, hy - 2.0 * s, 1];
-          }
-        } else if (層 === '前') {
-          槍具(g, px, -1.2 * s, px, -11.2 * s, 0.38 * s);
-          手.前 = [px, hy - 1.0 * s, 1]; 手.奥 = [px * 0.8, sy + 0.6 * s, 1];
-        }
-        return;
-      }
+      if (層 !== '間') return;
+      let 横尻, 横先, 横太, 横前手, 横奥手;
+      let 対尻, 対先, 対太, 対前手, 対奥手;
       if (構) {
-        if (層 === '間') {
-          const 柄a = -0.06 - 出 * 0.02, 長 = 9.2 * s, ex = 出 * 4.4 * s;
-          const gx = hx + 1.4 * s + ex * 0.4, gy = hy - 1.5 * s;
-          const 先x = gx + Math.cos(柄a) * (長 * 0.62 + ex), 先y = gy + Math.sin(柄a) * (長 * 0.62 + ex);
-          const 尻x = gx - Math.cos(柄a) * (長 * 0.38 - ex * 0.25), 尻y = gy - Math.sin(柄a) * (長 * 0.38 - ex * 0.25);
-          槍具(g, 尻x, 尻y, 先x, 先y, 0.45 * s);
-          手.奥 = [尻x + (gx - 尻x) * 0.25, 尻y + (gy - 尻y) * 0.25, 1];
-          手.前 = [gx + ex * 0.5, gy, 1];
-          if (突 > 0.6) {                                   // 突きの風
-            g.strokeStyle = `rgba(238,240,236,${((突 - 0.6) * 1.2).toFixed(2)})`;
-            g.lineWidth = 0.14 * s;
-            for (const dy of [-0.45, 0, 0.45]) {
-              g.beginPath(); g.moveTo(先x - 2.4 * s, 先y + dy * s);
-              g.lineTo(先x - 0.6 * s, 先y + dy * 0.4 * s); g.stroke();
-            }
-          }
+        const 柄a = -0.06 - 出 * 0.02, 長 = 9.2 * s, ex = 出 * 4.4 * s;
+        const gx = hx + 1.4 * s + ex * 0.4, gy = hy - 1.5 * s;
+        横先 = [gx + Math.cos(柄a) * (長 * 0.62 + ex), gy + Math.sin(柄a) * (長 * 0.62 + ex)];
+        横尻 = [gx - Math.cos(柄a) * (長 * 0.38 - ex * 0.25), gy - Math.sin(柄a) * (長 * 0.38 - ex * 0.25)];
+        横太 = 0.45 * s;
+        横奥手 = [横尻[0] + (gx - 横尻[0]) * 0.25, 横尻[1] + (gy - 横尻[1]) * 0.25, 1];
+        横前手 = [gx + ex * 0.5, gy, 1];
+        const 伸 = 0.8 + 出 * 1.9;                 /* こちらへ突き出す。縮んで見える */
+        対尻 = [px * 0.7, hy - 1.2 * s]; 対先 = [px * (0.9 + 出 * 0.5), hy + 伸 * s];
+        対太 = 0.42 * s;
+        対前手 = [px * 0.8, hy - 0.9 * s, 1]; 対奥手 = [px * 0.55, hy - 2.0 * s, 1];
+      } else if (歩く) {                           /* 行軍。肩へ担ぐ */
+        const 柄a = -2.62, gx = sx + 0.9 * s, gy = sy + 0.1 * s;
+        横尻 = [gx - Math.cos(柄a) * 3.0 * s, gy - Math.sin(柄a) * 3.0 * s];
+        横先 = [gx + Math.cos(柄a) * 7.6 * s, gy + Math.sin(柄a) * 7.6 * s];
+        横太 = 0.4 * s;
+        横前手 = [gx, gy, -1];
+        横奥手 = [hx - 1.1 * s - Math.sin(W * 6.283) * 1.0 * s, hy - 0.4 * s, 1];
+        対尻 = [px, -1.2 * s]; 対先 = [px, -11.2 * s]; 対太 = 0.38 * s;
+        対前手 = [px, hy - 1.0 * s, 1]; 対奥手 = [px * 0.8, sy + 0.6 * s, 1];
+      } else {                                     /* 立ち。石突を地に突く */
+        横尻 = [hx + 1.0 * s, -0.6 * s]; 横先 = [hx + 1.35 * s, -10.9 * s]; 横太 = 0.4 * s;
+        横前手 = [hx + 1.15 * s, hy - 1.4 * s, -1];
+        横奥手 = [hx + 0.2 * s, hy - 0.3 * s, 1];
+        対尻 = [px, -1.2 * s]; 対先 = [px, -11.2 * s]; 対太 = 0.38 * s;
+        対前手 = [px, hy - 1.0 * s, 1]; 対奥手 = [px * 0.8, sy + 0.6 * s, 1];
+      }
+      const 尻 = 混点(横尻, 対尻), 先 = 混点(横先, 対先);
+      槍具(g, 尻[0], 尻[1], 先[0], 先[1], 混(横太, 対太));
+      手.前 = 混手(横前手, 対前手); 手.奥 = 混手(横奥手, 対奥手);
+      骨に置く(骨.得, 尻[0], 尻[1], 先[0], 先[1], 手.前[0], 手.前[1]);
+      if (構 && 突 > 0.6 && 横重 > 0.02) {          // 突きの風。真向きでは見えない
+        g.strokeStyle = `rgba(238,240,236,${((突 - 0.6) * 1.2 * 横重).toFixed(2)})`;
+        g.lineWidth = 0.14 * s;
+        for (const dy of [-0.45, 0, 0.45]) {
+          g.beginPath(); g.moveTo(先[0] - 2.4 * s, 先[1] + dy * s);
+          g.lineTo(先[0] - 0.6 * s, 先[1] + dy * 0.4 * s); g.stroke();
         }
-      } else if (歩く) {
-        if (層 === '間') {                                  /* 行軍。肩へ担ぐ */
-          const 柄a = -2.62, gx = sx + 0.9 * s, gy = sy + 0.1 * s;
-          槍具(g, gx - Math.cos(柄a) * 3.0 * s, gy - Math.sin(柄a) * 3.0 * s,
-            gx + Math.cos(柄a) * 7.6 * s, gy + Math.sin(柄a) * 7.6 * s, 0.4 * s);
-          手.前 = [gx, gy, -1];
-          手.奥 = [hx - 1.1 * s - Math.sin(W * 6.283) * 1.0 * s, hy - 0.4 * s, 1];
-        }
-      } else if (層 === '間') {                             /* 立ち。石突を地に突く */
-        槍具(g, hx + 1.0 * s, -0.6 * s, hx + 1.35 * s, -10.9 * s, 0.4 * s);
-        手.前 = [hx + 1.15 * s, hy - 1.4 * s, -1];
-        手.奥 = [hx + 0.2 * s, hy - 0.3 * s, 1];
       }
       return;
     }
     if (型 === 'yumi') {
-      if (!横系) {
-        const px = (面 === '後' || 面 === '斜後') ? -1.5 * s : 1.5 * s;
-        if (層 === '前') {
-          g.strokeStyle = '#5E4426'; g.lineWidth = 0.45 * s;
-          g.beginPath(); g.moveTo(px, -9.2 * s);
-          g.quadraticCurveTo(px * 1.5, -5.4 * s, px, -1.8 * s); g.stroke();
-          手.前 = [px * 0.95, sy + 0.4 * s, -1];
-          手.奥 = [構 ? px * 0.2 : px * 0.5, sy + 0.5 * s, 1];
-          if (面 === '後' || 面 === '斜後') {                 // 箙（矢筒）
-            g.fillStyle = '#4A3A26'; g.fillRect(0.6 * s, -6.3 * s, 1.0 * s, 2.2 * s);
-            g.strokeStyle = '#8A6E46'; g.lineWidth = 0.22 * s;
-            for (const dx of [0.75, 1.05, 1.35]) {
-              g.beginPath(); g.moveTo(dx * s, -6.3 * s); g.lineTo(dx * s + 0.25 * s, -8.2 * s); g.stroke();
-            }
-            g.fillStyle = '#E8EAE6';
-            for (const dx of [0.75, 1.05, 1.35]) { g.beginPath(); g.arc(dx * s + 0.27 * s, -8.3 * s, 0.16 * s, 0, 7); g.fill(); }
-          }
-        }
-        return;
-      }
+      /* 弓は「縦に反った枝」である。横から見れば弦と矢が見え、正対すれば
+         弦は真横を向いて消える。枝の節を混ぜ、弦と矢は横みで薄めていく。 */
       const 弓x = sx + 3.5 * s, 弓y = sy - 0.2 * s, 上y = 弓y - 4.3 * s, 下y = 弓y + 4.3 * s;
       const 反り = 1.0 * s + 引 * 1.4 * s;
       const 弦x = 弓x - 引 * 3.3 * s + 放 * 0.5 * s;
+      const A = 混点([弓x - 反り * 0.25, 上y], [px, -9.2 * s]);
+      const B = 混点([弓x + 反り, 弓y - 2.0 * s], [px * 1.5, -5.4 * s]);
+      const C = 混点([弓x + 反り * 0.5, 弓y], [px * 1.2, -5.5 * s]);
+      const D = 混点([弓x + 反り, 弓y + 2.0 * s], [px * 1.5, -3.6 * s]);
+      const E = 混点([弓x - 反り * 0.25, 下y], [px, -1.8 * s]);
       if (層 === '後') {
-        g.strokeStyle = 'rgba(230,228,214,0.9)'; g.lineWidth = Math.max(0.35, 0.07 * s);
-        g.beginPath(); g.moveTo(弓x - 反り * 0.25, 上y); g.lineTo(弦x, 弓y + 0.1 * s);
-        g.lineTo(弓x - 反り * 0.25, 下y); g.stroke();
-        if (引 > 0.12 && 放 === 0) {                          // 番えた矢
-          線8(g, 弦x, 弓y + 0.1 * s, 弓x + 2.4 * s, 弓y - 0.1 * s, 0.3 * s, '#8A6E46');
+        const 元α = g.globalAlpha;
+        if (横重 > 0.02) {
+          g.globalAlpha = 元α * 横重;
+          g.strokeStyle = 'rgba(230,228,214,0.9)'; g.lineWidth = Math.max(0.35, 0.07 * s);
+          g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(弦x, 弓y + 0.1 * s);
+          g.lineTo(E[0], E[1]); g.stroke();
+          if (引 > 0.12 && 放 === 0) {                          // 番えた矢
+            線8(g, 弦x, 弓y + 0.1 * s, 弓x + 2.4 * s, 弓y - 0.1 * s, 0.3 * s, '#8A6E46');
+            g.fillStyle = '#E8EAE6';
+            g.beginPath(); g.moveTo(弓x + 3.1 * s, 弓y - 0.14 * s);
+            g.lineTo(弓x + 2.3 * s, 弓y - 0.5 * s); g.lineTo(弓x + 2.3 * s, 弓y + 0.3 * s);
+            g.closePath(); g.fill();
+          }
+          if (放 > 0) {                                         // 放たれた矢
+            g.strokeStyle = `rgba(120,96,60,${(1 - 放).toFixed(2)})`; g.lineWidth = 0.3 * s;
+            const fx = 弓x + 3 * s + 放 * 7 * s;
+            g.beginPath(); g.moveTo(fx - 1.6 * s, 弓y - 0.2 * s); g.lineTo(fx, 弓y - 0.3 * s); g.stroke();
+          }
+          g.globalAlpha = 元α;
+        }
+        手.奥 = 混手([弦x, 弓y + 0.1 * s, 1], [構 ? px * 0.2 : px * 0.5, sy + 0.5 * s, 1]);
+        if (後ろ && 対重 > 0.02) {                              // 箙（矢筒）。背を向けて初めて見える
+          g.globalAlpha = 元α * 対重;
+          g.fillStyle = '#4A3A26'; g.fillRect(0.6 * s, -6.3 * s, 1.0 * s, 2.2 * s);
+          g.strokeStyle = '#8A6E46'; g.lineWidth = 0.22 * s;
+          for (const dx of [0.75, 1.05, 1.35]) {
+            g.beginPath(); g.moveTo(dx * s, -6.3 * s); g.lineTo(dx * s + 0.25 * s, -8.2 * s); g.stroke();
+          }
           g.fillStyle = '#E8EAE6';
-          g.beginPath(); g.moveTo(弓x + 3.1 * s, 弓y - 0.14 * s);
-          g.lineTo(弓x + 2.3 * s, 弓y - 0.5 * s); g.lineTo(弓x + 2.3 * s, 弓y + 0.3 * s);
-          g.closePath(); g.fill();
+          for (const dx of [0.75, 1.05, 1.35]) { g.beginPath(); g.arc(dx * s + 0.27 * s, -8.3 * s, 0.16 * s, 0, 7); g.fill(); }
+          g.globalAlpha = 元α;
         }
-        if (放 > 0) {                                         // 放たれた矢
-          g.strokeStyle = `rgba(120,96,60,${(1 - 放).toFixed(2)})`; g.lineWidth = 0.3 * s;
-          const fx = 弓x + 3 * s + 放 * 7 * s;
-          g.beginPath(); g.moveTo(fx - 1.6 * s, 弓y - 0.2 * s); g.lineTo(fx, 弓y - 0.3 * s); g.stroke();
-        }
-        手.奥 = [弦x, 弓y + 0.1 * s, 1];
       }
-      if (層 === '前') {
-        g.strokeStyle = '#5E4426'; g.lineWidth = 0.5 * s;
-        g.beginPath(); g.moveTo(弓x - 反り * 0.25, 上y);
-        g.quadraticCurveTo(弓x + 反り, 弓y - 2.0 * s, 弓x + 反り * 0.5, 弓y);
-        g.quadraticCurveTo(弓x + 反り, 弓y + 2.0 * s, 弓x - 反り * 0.25, 下y); g.stroke();
-        g.strokeStyle = 'rgba(220,200,150,0.5)'; g.lineWidth = 0.18 * s;
-        g.beginPath(); g.moveTo(弓x - 反り * 0.22, 上y + 1 * s);
-        g.quadraticCurveTo(弓x + 反り * 0.9, 弓y - 1.9 * s, 弓x + 反り * 0.45, 弓y); g.stroke();
-        手.前 = [弓x + 0.3 * s, 弓y, -1];
+      if (層 === '間') {
+        骨に置く(骨.得, A[0], A[1], C[0], C[1], E[0], E[1]);
+        g.strokeStyle = '#5E4426'; g.lineWidth = 混(0.5, 0.45) * s;
+        g.beginPath(); g.moveTo(A[0], A[1]);
+        g.quadraticCurveTo(B[0], B[1], C[0], C[1]);
+        g.quadraticCurveTo(D[0], D[1], E[0], E[1]); g.stroke();
+        if (横重 > 0.02) {                                      // 打ち寄せの艶
+          const 元α = g.globalAlpha; g.globalAlpha = 元α * 横重;
+          g.strokeStyle = 'rgba(220,200,150,0.5)'; g.lineWidth = 0.18 * s;
+          g.beginPath(); g.moveTo(弓x - 反り * 0.22, 上y + 1 * s);
+          g.quadraticCurveTo(弓x + 反り * 0.9, 弓y - 1.9 * s, 弓x + 反り * 0.45, 弓y); g.stroke();
+          g.globalAlpha = 元α;
+        }
+        手.前 = 混手([弓x + 0.3 * s, 弓y, -1], [px * 0.95, sy + 0.4 * s, -1]);
       }
       return;
     }
     /* 鉄砲 */
-    if (!横系) {
-      const px = (面 === '後' || 面 === '斜後') ? -1.2 * s : 1.2 * s;
-      if (層 === '前') {
-        線8(g, px * 0.5, -5.2 * s, px * 1.9, -9.0 * s, 0.5 * s, '#241E16');
-        線8(g, px * 0.2, -4.4 * s, px * 0.9, -6.0 * s, 0.6 * s, '#6E5636');
-        手.前 = [px * 0.8, sy + 0.5 * s, -1]; 手.奥 = [px * 0.35, sy + 0.6 * s, 1];
-        if (火) {
-          g.fillStyle = 'rgba(255,214,120,0.95)';
-          g.beginPath(); g.arc(px * 1.9, -9.0 * s, 0.5 * s, 0, 7); g.fill();
-        }
-      }
-      return;
-    }
+    if (層 !== '間') return;
     if (!構) {                                   /* 構えぬ間は肩に担ぐ */
-      if (層 === '前') {
-        const gx = sx + 0.7 * s, gy = sy + 0.2 * s;
-        線8(g, gx - 1.6 * s, gy + 2.2 * s, gx + 1.9 * s, gy - 3.6 * s, 0.45 * s, '#241E16');
-        線8(g, gx - 1.5 * s, gy + 2.0 * s, gx - 0.2 * s, gy - 0.2 * s, 0.6 * s, '#6E5636');
-        手.前 = [gx, gy + 0.3 * s, -1];
-        手.奥 = [hx - 0.9 * s - (歩く ? Math.sin(W * 6.283) * 0.9 * s : 0), hy - 0.4 * s, 1];
-      }
+      const gx = sx + 0.7 * s, gy = sy + 0.2 * s;
+      const a1 = 混点([gx - 1.6 * s, gy + 2.2 * s], [px * 0.5, -5.2 * s]);
+      const a2 = 混点([gx + 1.9 * s, gy - 3.6 * s], [px * 1.9, -9.0 * s]);
+      const b1 = 混点([gx - 1.5 * s, gy + 2.0 * s], [px * 0.2, -4.4 * s]);
+      const b2 = 混点([gx - 0.2 * s, gy - 0.2 * s], [px * 0.9, -6.0 * s]);
+      骨に置く(骨.得, a1[0], a1[1], a2[0], a2[1], b1[0], b1[1]);
+      線8(g, a1[0], a1[1], a2[0], a2[1], 混(0.45, 0.5) * s, '#241E16');
+      線8(g, b1[0], b1[1], b2[0], b2[1], 混(0.6, 0.6) * s, '#6E5636');
+      手.前 = 混手([gx, gy + 0.3 * s, -1], [px * 0.8, sy + 0.5 * s, -1]);
+      手.奥 = 混手([hx - 0.9 * s - (歩く ? Math.sin(W * 6.283) * 0.9 * s : 0), hy - 0.4 * s, 1],
+        [px * 0.35, sy + 0.6 * s, 1]);
       return;
     }
     const 銃y = sy + 0.45 * s, 銃x0 = sx - 1.9 * s - 反動 * 1.6 * s, 銃x1 = sx + 5.6 * s - 反動 * 1.6 * s;
-    if (層 === '前') {
-      線8(g, 銃x0, 銃y + 0.5 * s, 銃x0 + 2.6 * s, 銃y + 0.06 * s, 0.85 * s, '#6E5636');   // 台尻
-      線8(g, 銃x0 + 2.2 * s, 銃y + 0.02 * s, 銃x1 + 1.2 * s, 銃y - 0.04 * s, 0.42 * s, '#241E16'); // 銃身
-      線8(g, 銃x0 + 2.2 * s, 銃y + 0.14 * s, 銃x1 - 1.1 * s, 銃y + 0.1 * s, 0.5 * s, '#8A6E46');  // 台木
-      g.fillStyle = '#8A6E1E'; g.fillRect(sx + 0.4 * s, 銃y - 0.5 * s, 0.5 * s, 0.4 * s);        // 火挟
-      手.前 = [sx + 3.0 * s, 銃y + 0.2 * s, -1];
-      手.奥 = [sx + 0.6 * s, 銃y + 0.5 * s, 1];
-      if (火) {                                                                           // 火花
-        g.save(); g.translate(銃x1 + 1.4 * s, 銃y - 0.05 * s);
-        g.fillStyle = 'rgba(255,214,120,0.95)';
-        g.beginPath();
-        for (let i = 0; i < 8; i++) {
-          const a = i / 8 * 6.283, r1 = (i % 2 ? 0.8 : 0.32) * s;
-          g[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r1, Math.sin(a) * r1 * 0.7);
-        }
-        g.closePath(); g.fill();
-        g.fillStyle = 'rgba(255,246,220,0.95)';
-        g.beginPath(); g.arc(0, 0, 0.26 * s, 0, 7); g.fill();
-        g.restore();
+    const 身1 = 混点([銃x0 + 2.2 * s, 銃y + 0.02 * s], [px * 0.5, -5.2 * s]);
+    const 身2 = 混点([銃x1 + 1.2 * s, 銃y - 0.04 * s], [px * 1.9, -9.0 * s]);
+    const 木1 = 混点([銃x0 + 2.2 * s, 銃y + 0.14 * s], [px * 0.2, -4.4 * s]);
+    const 木2 = 混点([銃x1 - 1.1 * s, 銃y + 0.1 * s], [px * 0.9, -6.0 * s]);
+    if (横重 > 0.02) {                                           // 台尻は正対すれば肩に隠れる
+      const 元α = g.globalAlpha; g.globalAlpha = 元α * 横重;
+      線8(g, 銃x0, 銃y + 0.5 * s, 銃x0 + 2.6 * s, 銃y + 0.06 * s, 0.85 * s, '#6E5636');
+      g.fillStyle = '#8A6E1E'; g.fillRect(sx + 0.4 * s, 銃y - 0.5 * s, 0.5 * s, 0.4 * s);  // 火挟
+      g.globalAlpha = 元α;
+    }
+    骨に置く(骨.得, 身1[0], 身1[1], 身2[0], 身2[1], 木1[0], 木1[1]);
+    線8(g, 身1[0], 身1[1], 身2[0], 身2[1], 0.42 * s, '#241E16');  // 銃身
+    線8(g, 木1[0], 木1[1], 木2[0], 木2[1], 混(0.5, 0.6) * s, '#8A6E46'); // 台木
+    手.前 = 混手([sx + 3.0 * s, 銃y + 0.2 * s, -1], [px * 0.8, sy + 0.5 * s, -1]);
+    手.奥 = 混手([sx + 0.6 * s, 銃y + 0.5 * s, 1], [px * 0.35, sy + 0.6 * s, 1]);
+    if (火) {                                                    // 火花。筒先に出す
+      const 口 = 混点([銃x1 + 1.4 * s, 銃y - 0.05 * s], [px * 1.9, -9.0 * s]);
+      g.save(); g.translate(口[0], 口[1]);
+      g.fillStyle = 'rgba(255,214,120,0.95)';
+      g.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * 6.283, r1 = (i % 2 ? 0.8 : 0.32) * s;
+        g[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r1, Math.sin(a) * r1 * 0.7);
       }
+      g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,246,220,0.95)';
+      g.beginPath(); g.arc(0, 0, 0.26 * s, 0, 7); g.fill();
+      g.restore();
     }
   };
 
   /* ---- 重ね順。奥の脚と腕 → 得物（奥）→ 胴 → 前の脚 → 得物（間）→ 前の腕 → 頭 ---- */
-  const 幅増 = 横系 ? 1 : 1.35;
+  /* 胴の張り。横から見れば薄く、正対すれば肩幅ぶん広い（一.三五倍）。
+     奥の袖は、正対の度合いだけ現れる。 */
+  const 幅増 = 1 + 0.35 * 対重;
+  const 奥袖 = 対重;
+  骨.幅増 = 幅増; 骨.奥袖 = 奥袖;
   得物を描く('後');
   脚を置く(false);
-  if (手.奥) 腕具(g, sx - 0.25 * s, sy + 0.4 * s, 手.奥[0], 手.奥[1], s, false, 手.奥[2], K);
-  胴具(g, hx, hy, sx, sy, s, 前傾, K, 幅増);
+  if (手.奥) 腕具(g, sx - 0.25 * s * 横重, sy + 0.4 * s, 手.奥[0], 手.奥[1], s, false, 手.奥[2], K, 横重);
+  胴具(g, hx, hy, sx, sy, s, 前傾, K, 幅増, 奥袖, 反);
   脚を置く(true);
   得物を描く('間');
   得物を描く('前');
-  if (手.前) 腕具(g, sx + 0.25 * s, sy + 0.35 * s, 手.前[0], 手.前[1], s, true, 手.前[2], K);
-  頭具(g, sx, sy, s, (構 ? 0.12 : 0.03) + 出 * 0.12 + 備 * 0.1, K, 面);
+  if (手.前) 腕具(g, sx + 0.25 * s * 横重, sy + 0.35 * s, 手.前[0], 手.前[1], s, true, 手.前[2], K, 横重);
+  頭具(g, sx, sy, s, (構 ? 0.12 : 0.03) + 出 * 0.12 + 備 * 0.1, K, 面, 横み, 対み, 反);
   g.restore();
 }
 
@@ -540,7 +707,14 @@ function 姿八(g, x, y, s, dir, fr, 型, K, 乱) {
    見本（兵の動きの見本）の騎馬武者と同じ作りにする。馬の脚は骨で繋いで
    駆けの拍で振り、体・首・頭・鬣・尾を形で描く。乗り手は前傾して膝で挟み、
    槍を小脇に構える。元は胴長の塊に棒を立てただけで、馬に見えなかった。 */
-function 騎八(g, s, 面, fr, K, j) {
+const 混点2 = (横の, 対の, w) => [横の[0] * w + 対の[0] * (1 - w), 横の[1] * w + 対の[1] * (1 - w)];
+function 騎八(g, s, 面, fr, K, j, 横み, 対み, 鏡) {
+  /* 乗り手と馬も、振りの度合いを角から受ける（姿八 の ψ を参照）。
+     古い呼び口（面だけ）でも動くよう、無ければ面から当てる。 */
+  const 横 = 横み == null ? (面 === '横' ? 1 : 面 === '斜前' || 面 === '斜後' ? 0.71 : 0)
+    : Math.max(0, 横み);
+  const 対 = 対み == null ? (面 === '前' ? 1 : 面 === '後' ? -1
+    : 面 === '斜前' ? 0.71 : 面 === '斜後' ? -0.71 : 0) : 対み;
   const 毛 = 馬毛ら[(j * 7 | 0) % 3];
   const 構 = fr >= 3;
   /* 駆けの位相。立ちは〇、歩み・駆けは輪を回す */
@@ -550,31 +724,63 @@ function 騎八(g, s, 面, fr, K, j) {
   const 動く = 構 || fr >= 1;
   const 弾 = 動く ? Math.sin(T * 6.283 * 2) * 0.22 * s : 0;
   const by = -4.6 * s + 弾;
-  if (面 === '横' || 面 === '斜前' || 面 === '斜後') {
-    if (面 !== '横') g.scale(0.92, 1);
-    /* 尾 */
+  {
+    /* 馬も、二つの型の持ち替えをやめる（GDD 8.11）。
+
+       馬の体は、横から見れば差し渡し九.四、正対すれば三.七である。これは
+       「前後に長い体を、前から見て縮めた」姿にほかならない。だから横の型を
+       cos で縮めれば、そのまま正対の体になる――歩兵と同じ理屈である。
+       縮みの果てを〇.三九に取ると、九.四×〇.三九＝三.七で正対の体に並ぶ。
+
+       合わないのは脚と首と尾だけである。四本の脚は前後に並んでいるが、
+       正対では左右に二本見える。首は前へ伸びているが、正対では芯に畳まれる。
+       尾は三筋が後ろへ流れるが、正対では一筋が真下へ落ちる。
+       どれも置き所を混ぜれば移る。 */
+    const 横重 = 横 * 横, 対重 = 1 - 横重;
+    const 混 = (横の, 対の) => 横の * 横重 + 対の * 対重;
+    const 馬縮 = 0.39 + 0.61 * 横重;
+    g.scale(馬縮, 1);
+    const 戻 = 1 / 馬縮;                       // 縮めたあとで画面の寸法を取りたいとき
+    const 後向 = 対 < 0;
+    /* 尾。正対では一筋が真下へ落ちる（背を向けていれば見え、向かい合えば隠れる） */
     g.strokeStyle = shade(毛, 0.5); g.lineCap = 'round';
+    const 元α = g.globalAlpha;
     for (const k of [-0.25, 0, 0.25]) {
+      const 濃 = k === 0 ? 1 : 横重;
+      if (濃 <= 0.02) continue;
+      g.globalAlpha = 元α * 濃 * (k === 0 && !後向 ? 横重 : 1);
       g.lineWidth = 0.5 * s;
-      g.beginPath(); g.moveTo(-4.6 * s, by - 0.6 * s);
-      g.quadraticCurveTo(-6.4 * s, by - 0.2 * s + k * 2 * s + (動く ? Math.sin(T * 9 + k * 7) * 0.5 * s : 0),
-        -7.3 * s, by + 1.2 * s + k * 3 * s);
+      g.beginPath();
+      const 根 = 混(-4.6 * s, 0);
+      g.moveTo(根, by - 0.6 * s);
+      g.quadraticCurveTo(混(-6.4 * s, 0.3 * s * 戻),
+        by - 0.2 * s + k * 2 * s * 横重 + (動く ? Math.sin(T * 9 + k * 7) * 0.5 * s : 0),
+        混(-7.3 * s, 0.1 * s * 戻), by + 混(1.2 * s + k * 3 * s, 2.9 * s));
       g.stroke();
     }
-    /* 脚。腰（肩）と足先を骨で繋ぐ */
-    const 脚馬 = (px, py, ph, 近, 前脚) => {
+    g.globalAlpha = 元α;
+    /* 脚。腰（肩）と足先を骨で繋ぐ。前後の並びが、正対では左右の並びへ移る */
+    const 脚馬 = (px, py, ph, 近, 前脚, 対px, 濃) => {
+      if (濃 != null && 濃 <= 0.02) return;
       const sw = 動く ? Math.sin(T * 6.283 + ph) : (前脚 ? 0.25 : -0.25);
       const lift = 動く ? Math.max(0, Math.sin(T * 6.283 + ph + Math.PI / 2)) : 0;
-      const fx = px + sw * 2.2 * s, fy = -lift * 1.5 * s;
+      const 根x = 対px == null ? px : 混(px, 対px * 戻);
+      const fx = 根x + sw * 2.2 * s * 横重, fy = -lift * 1.5 * s * 横重;
       const l = 前脚 ? 2.5 * s : 2.7 * s;
-      const [kx, ky] = 逆運動(px, py, fx, fy, l, l, 前脚 ? -1 : 1);
-      const 色 = 近 ? shade(毛, 0.95) : shade(毛, 0.55);
-      線8(g, px, py, kx, ky, 1.0 * s, 色); 線8(g, kx, ky, fx, fy, 0.68 * s, 色);
+      const [kx, ky] = 逆運動(根x, py, fx, fy, l, l, (前脚 ? -1 : 1) * 横重);
+      const 色 = shade(毛, 近 ? 0.95 : 0.55 + 0.40 * 対重);
+      if (濃 != null) g.globalAlpha = 元α * 濃;
+      線8(g, 根x, py, kx, ky, 1.0 * s, 色); 線8(g, kx, ky, fx, fy, 0.68 * s, 色);
       g.fillStyle = '#1E1812';
       g.beginPath(); g.ellipse(fx, fy + 0.1 * s, 0.48 * s, 0.34 * s, 0, 0, 7); g.fill();
+      g.globalAlpha = 元α;
     };
-    脚馬(2.8 * s, by + 1.2 * s, 0, false, true);
-    脚馬(-3.0 * s, by + 1.0 * s, Math.PI * 0.9, false, false);
+    /* 後ろの二本は、正対では前の二本の陰に入る（薄れて消える）。
+       肩の高さは横から見て前後で少し違うが、正対では左右に並ぶのだから
+       揃えておく――揃えないと、鏡で返したときに高さが入れ替わる。 */
+    const 肩 = (h) => by + 混(h * s, 1.25 * s);
+    脚馬(2.8 * s, 肩(1.2), 0, false, true, -1.0 * s);
+    脚馬(-3.0 * s, 肩(1.0), Math.PI * 0.9, false, false, -1.0 * s, 横重);
     /* 馬体 */
     g.beginPath();
     g.moveTo(-4.7 * s, by - 0.4 * s);
@@ -588,96 +794,112 @@ function 騎八(g, s, 面, fr, K, j) {
     g2.addColorStop(0, shade(毛, 1.35)); g2.addColorStop(0.55, 毛); g2.addColorStop(1, shade(毛, 0.55));
     g.fillStyle = g2; g.fill();
     g.strokeStyle = 'rgba(20,16,10,0.7)'; g.lineWidth = 0.6; g.stroke();
-    /* 首と頭。駆けると前へ伸びる */
+    /* 首と頭。駆けると前へ伸びる。正対では、前へ伸びた首が芯に畳まれて
+       顔だけが見える――向かい合えば顔が、背を向ければ尻が、である。 */
     const 伸 = 構 ? 0.5 : 0;
+    const 首 = (x) => 混(x * s, 0);                // 前へ出るぶんは正対で消える
+    const 顔 = 後向 ? 0 : 対重;                    // 顔の作りは、向かい合って初めて見える
     g.beginPath();
-    g.moveTo(2.6 * s, by - 1.9 * s);
-    g.quadraticCurveTo((4.9 + 伸) * s, by - (3.3 - 伸 * 0.5) * s, (6.1 + 伸) * s, by - (3.6 - 伸 * 0.7) * s);
-    g.lineTo((6.5 + 伸) * s, by - (2.7 - 伸 * 0.7) * s);
-    g.quadraticCurveTo((5.2 + 伸) * s, by - 1.6 * s, 4.2 * s, by - 0.4 * s);
+    g.moveTo(混(2.6 * s, -0.7 * s * 戻), by - 1.9 * s);
+    g.quadraticCurveTo(首(4.9 + 伸), by - (3.3 - 伸 * 0.5) * s, 首(6.1 + 伸), by - 混((3.6 - 伸 * 0.7) * s, 2.6 * s));
+    g.lineTo(首(6.5 + 伸), by - 混((2.7 - 伸 * 0.7) * s, 2.6 * s));
+    g.quadraticCurveTo(首(5.2 + 伸), by - 1.6 * s, 混(4.2 * s, 0.7 * s * 戻), by - 0.4 * s);
     g.closePath(); g.fillStyle = shade(毛, 1.05); g.fill();
     g.strokeStyle = 'rgba(20,16,10,0.7)'; g.lineWidth = 0.55; g.stroke();
     g.fillStyle = shade(毛, 0.85);
-    g.beginPath(); g.ellipse((7.0 + 伸) * s, by - (3.05 - 伸 * 0.7) * s, 1.0 * s, 0.58 * s, 0.25, 0, 7); g.fill();
+    g.beginPath(); g.ellipse(首(7.0 + 伸), by - 混((3.05 - 伸 * 0.7) * s, 1.1 * s),
+      混(1.0 * s, 0.7 * s * 戻), 混(0.58 * s, 1.5 * s), 0.25 * 横重, 0, 7); g.fill();
     g.strokeStyle = 'rgba(20,16,10,0.7)'; g.lineWidth = 0.45; g.stroke();
-    g.strokeStyle = shade(毛, 0.4); g.lineWidth = 0.45 * s;                 // 鬣
-    for (const k of [0, 0.4, 0.8]) {
-      g.beginPath();
-      g.moveTo((2.8 + k * 1.4 + 伸 * k) * s, by - (1.9 + k * 0.55) * s);
-      g.quadraticCurveTo((2.4 + k * 1.4 + 伸 * k) * s, by - (0.9 + k * 0.5) * s,
-        (2.0 + k * 1.4 + 伸 * k) * s, by - (0.4 + k * 0.4) * s);
-      g.stroke();
+    if (横重 > 0.02) {
+      const α0 = g.globalAlpha; g.globalAlpha = α0 * 横重;
+      g.strokeStyle = shade(毛, 0.4); g.lineWidth = 0.45 * s;               // 鬣
+      for (const k of [0, 0.4, 0.8]) {
+        g.beginPath();
+        g.moveTo(首(2.8 + k * 1.4 + 伸 * k), by - (1.9 + k * 0.55) * s);
+        g.quadraticCurveTo(首(2.4 + k * 1.4 + 伸 * k), by - (0.9 + k * 0.5) * s,
+          首(2.0 + k * 1.4 + 伸 * k), by - (0.4 + k * 0.4) * s);
+        g.stroke();
+      }
+      g.globalAlpha = α0;
     }
-    g.fillStyle = '#1E1812';
-    g.beginPath(); g.arc((6.5 + 伸) * s, by - (3.35 - 伸 * 0.7) * s, 0.18 * s, 0, 7); g.fill();
+    if (顔 > 0.02) {                                                        // 耳と両の目
+      const α0 = g.globalAlpha; g.globalAlpha = α0 * 顔;
+      g.fillStyle = shade(毛, 0.7);
+      g.beginPath(); g.ellipse(0, by + 0.1 * s, 0.48 * s * 戻, 0.5 * s, 0, 0, 7); g.fill();
+      for (const e of [-1, 1]) {
+        g.beginPath();
+        g.moveTo(e * 0.55 * s * 戻, by - 2.0 * s); g.lineTo(e * 0.85 * s * 戻, by - 3.0 * s);
+        g.lineTo(e * 0.2 * s * 戻, by - 2.2 * s);
+        g.closePath(); g.fillStyle = shade(毛, 0.9); g.fill();
+      }
+      g.fillStyle = '#1E1812';
+      for (const e of [-1, 1]) { g.beginPath(); g.arc(e * 0.38 * s * 戻, by - 1.3 * s, 0.15 * s * 戻, 0, 7); g.fill(); }
+      g.globalAlpha = α0;
+    }
+    if (横重 > 0.02) {                                                      // 横目
+      const α0 = g.globalAlpha; g.globalAlpha = α0 * 横重;
+      g.fillStyle = '#1E1812';
+      g.beginPath(); g.arc(首(6.5 + 伸), by - (3.35 - 伸 * 0.7) * s, 0.18 * s, 0, 7); g.fill();
+      g.globalAlpha = α0;
+    }
     /* 手綱と鞍 */
-    g.strokeStyle = '#5A452E'; g.lineWidth = 0.26 * s;
-    g.beginPath(); g.moveTo((6.2 + 伸) * s, by - (2.9 - 伸 * 0.7) * s);
-    g.quadraticCurveTo(3.4 * s, by - 1.6 * s, 1.2 * s, by - 1.9 * s); g.stroke();
-    g.fillStyle = '#3A2C1C';
-    g.beginPath(); g.ellipse(-0.3 * s, by - 1.95 * s, 1.45 * s, 0.5 * s, 0, 0, 7); g.fill();
+    if (横重 > 0.02) {
+      const α0 = g.globalAlpha; g.globalAlpha = α0 * 横重;
+      g.strokeStyle = '#5A452E'; g.lineWidth = 0.26 * s;
+      g.beginPath(); g.moveTo(首(6.2 + 伸), by - (2.9 - 伸 * 0.7) * s);
+      g.quadraticCurveTo(首(3.4), by - 1.6 * s, 首(1.2), by - 1.9 * s); g.stroke();
+      g.globalAlpha = α0;
+    }
+    g.fillStyle = '#3A2C1C';                                                  // 鞍
+    g.beginPath(); g.ellipse(混(-0.3 * s, 0), by - 1.95 * s,
+      混(1.45 * s, 1.3 * s * 戻), 0.5 * s, 0, 0, 7); g.fill();
     /* 手前の脚 */
-    脚馬(2.9 * s, by + 1.3 * s, Math.PI * 0.45, true, true);
-    脚馬(-3.1 * s, by + 1.1 * s, Math.PI * 1.35, true, false);
-    /* 乗り手。前傾して膝で挟む */
-    const rhx = -0.3 * s, rhy = by - 2.5 * s;
-    const 前傾 = 構 ? 0.42 : 0.2;
+    脚馬(2.9 * s, 肩(1.3), Math.PI * 0.45, true, true, 1.0 * s);
+    脚馬(-3.1 * s, 肩(1.1), Math.PI * 1.35, true, false, 1.0 * s, 横重);
+    /* 乗り手。前傾して膝で挟む。正対では前へ傾いても画面には出ない。
+
+       縮むのは馬の体であって、乗り手ではない（人は前後に長くない）。
+       馬の縮みを打ち消した中で描く――打ち消しを寸法に掛けてしまい、
+       正対の乗り手が二.五倍に膨れ上がったのは、ここの取り違えであった。 */
+    g.save(); g.scale(戻, 1);
+    const rhx = 混(-0.3 * s, 0) * 馬縮, rhy = by - 混(2.5 * s, 2.6 * s);
+    const 前傾 = 混(構 ? 0.42 : 0.2, 0);
     const rs = s * 0.9;
     const rsx = rhx + Math.sin(前傾) * 3.6 * rs, rsy = rhy - Math.cos(前傾) * 3.6 * rs;
-    線8(g, rhx, rhy, rhx + 1.4 * rs, rhy + 1.9 * rs, 1.1 * rs, 布);           // 曲げた脚
-    線8(g, rhx + 1.4 * rs, rhy + 1.9 * rs, rhx + 1.2 * rs, rhy + 3.2 * rs, 0.85 * rs, 鋼);
-    if (構) {                                                                 // 騎槍を小脇に
-      const 柄a = -0.1;
-      槍具(g, rsx - Math.cos(柄a) * 3.0 * rs, rsy + 0.6 * rs - Math.sin(柄a) * 3.0 * rs,
-        rsx + Math.cos(柄a) * 9.0 * rs, rsy + 0.6 * rs + Math.sin(柄a) * 9.0 * rs, 0.42 * rs);
-    } else {
-      槍具(g, rsx + 0.6 * rs, rsy + 2.6 * rs, rsx + 1.1 * rs, rsy - 6.6 * rs, 0.38 * rs);
+    if (横重 > 0.02) {                                                        // 曲げた脚
+      const α0 = g.globalAlpha; g.globalAlpha = α0 * 横重;
+      線8(g, rhx, rhy, rhx + 1.4 * rs, rhy + 1.9 * rs, 1.1 * rs, 布);
+      線8(g, rhx + 1.4 * rs, rhy + 1.9 * rs, rhx + 1.2 * rs, rhy + 3.2 * rs, 0.85 * rs, 鋼);
+      g.globalAlpha = α0;
     }
-    胴具(g, rhx, rhy, rsx, rsy, rs, 前傾, K, 1);
-    腕具(g, rsx + 0.2 * rs, rsy + 0.3 * rs,
-      構 ? rsx + 2.4 * rs : rsx + 1.0 * rs, rsy + (構 ? 0.7 : 1.4) * rs, rs, true, -1, K);
-    頭具(g, rsx, rsy, rs, 0.12, K, 面 === '横' ? '横' : 面);
+    {                                        // 騎槍。横では小脇に、正対では縮んで見える
+      const px = (後向 ? -1 : 1) * (鏡 ? -1 : 1) * 1.15 * s;
+      const 柄a = -0.1;
+      const 尻 = 混点2([rsx - Math.cos(柄a) * 3.0 * rs, rsy + 0.6 * rs - Math.sin(柄a) * 3.0 * rs],
+        [px * 0.7, rhy - 1.0 * rs], 横重);
+      const 先 = 混点2([rsx + Math.cos(柄a) * 9.0 * rs, rsy + 0.6 * rs + Math.sin(柄a) * 9.0 * rs],
+        [px * 1.5, rhy + (後向 ? -2.6 : 2.2) * rs], 横重);
+      const 立尻 = 混点2([rsx + 0.6 * rs, rsy + 2.6 * rs], [px, rhy + 1.4 * rs], 横重);
+      const 立先 = 混点2([rsx + 1.1 * rs, rsy - 6.6 * rs], [px * 1.03, rhy - 5.4 * rs], 横重);
+      if (構) 槍具(g, 尻[0], 尻[1], 先[0], 先[1], 混(0.42, 0.4) * rs);
+      else 槍具(g, 立尻[0], 立尻[1], 立先[0], 立先[1], 混(0.38, 0.36) * rs);
+    }
+    胴具(g, rhx, rhy, rsx, rsy, rs, 前傾, K, 1 + 0.35 * 対重, 対重, 鏡);
+    腕具(g, rsx + 0.2 * rs * 横重, rsy + 0.3 * rs,
+      構 ? rsx + 2.4 * rs : rsx + 1.0 * rs, rsy + (構 ? 0.7 : 1.4) * rs, rs, true, -1, K, 横重);
+    頭具(g, rsx, rsy, rs, 0.12, K, 面 === '横' ? '横' : 面, 横, 対, 鏡);
+    {                                               // 試験のための覗き窓（姿の骨）
+      const 骨 = 直近の骨;
+      骨.幅増 = 1 + 0.35 * 対重; 骨.奥袖 = 対重; 骨.前傾 = 前傾;
+      骨.hx = rhx * 馬縮; 骨.hy = rhy;
+      骨に置く(骨.脚, rsx * 馬縮, 混(2.9 * s, 1.0 * s * 戻) * 馬縮, 肩(1.3),
+        rhx * 馬縮, 混(2.8 * s, -1.0 * s * 戻) * 馬縮, 肩(1.2));
+      骨に置く(骨.得, 混(-4.6 * s, 0) * 馬縮, by - 0.6 * s, 首(6.1 + 伸) * 馬縮,
+        by - 混((3.6 - 伸 * 0.7) * s, 2.6 * s), 混(-0.3 * s, 0) * 馬縮, by - 1.95 * s);
+    }
+    g.restore();
     return;
   }
-  /* 正面・背面。馬は胸（尻）から見るので、体は狭く脚は四本縦に並ぶ */
-  const 後向 = 面 === '後' || 面 === '斜後';
-  for (const dx of [-1.0, 1.0]) {
-    const sw = 動く ? Math.sin(T * 6.283 + (dx > 0 ? 0 : Math.PI)) * 0.35 * s : 0;
-    線8(g, dx * s, by + 1.4 * s, dx * s + sw, -0.1 * s, 0.6 * s, shade(毛, 0.55));
-  }
-  g.beginPath(); g.ellipse(0, by, 1.85 * s, 1.6 * s, 0, 0, 7);
-  const g3 = g.createLinearGradient(-1.5 * s, 0, 1.5 * s, 0);
-  g3.addColorStop(0, shade(毛, 0.6)); g3.addColorStop(0.5, 毛); g3.addColorStop(1, shade(毛, 1.2));
-  g.fillStyle = g3; g.fill();
-  g.strokeStyle = 'rgba(18,14,8,0.7)'; g.lineWidth = 0.5; g.stroke();
-  if (後向) {
-    g.strokeStyle = shade(毛, 0.42); g.lineWidth = 0.5 * s;                   // 尾
-    g.beginPath(); g.moveTo(0, by - 0.3 * s);
-    g.quadraticCurveTo(0.3 * s, by + 1.5 * s, 0.1 * s, by + 2.9 * s); g.stroke();
-  } else {
-    g.fillStyle = shade(毛, 1.05);                                            // 顔
-    g.beginPath(); g.ellipse(0, by - 1.1 * s, 0.7 * s, 1.5 * s, 0, 0, 7); g.fill();
-    g.fillStyle = shade(毛, 0.7);
-    g.beginPath(); g.ellipse(0, by + 0.1 * s, 0.48 * s, 0.5 * s, 0, 0, 7); g.fill();
-    for (const e of [-1, 1]) {
-      g.beginPath();
-      g.moveTo(e * 0.55 * s, by - 2.0 * s); g.lineTo(e * 0.85 * s, by - 3.0 * s); g.lineTo(e * 0.2 * s, by - 2.2 * s);
-      g.closePath(); g.fillStyle = shade(毛, 0.9); g.fill();
-    }
-    g.fillStyle = '#1E1812';
-    for (const e of [-1, 1]) { g.beginPath(); g.arc(e * 0.38 * s, by - 1.3 * s, 0.15 * s, 0, 7); g.fill(); }
-  }
-  /* 乗り手 */
-  const rs2 = s * 0.9;
-  const rhy2 = by - 2.6 * s, rsy2 = rhy2 - 3.5 * rs2;
-  if (構) {                                                                   // 突き出した槍（縮んで見える）
-    const px = 後向 ? -1.1 * s : 1.1 * s;
-    槍具(g, px * 0.7, rhy2 - 1.0 * rs2, px * 1.5, rhy2 + (後向 ? -2.6 : 2.2) * rs2, 0.4 * rs2);
-  } else {
-    槍具(g, (後向 ? -1.3 : 1.3) * s, rhy2 + 1.4 * rs2, (後向 ? -1.35 : 1.35) * s, rhy2 - 5.4 * rs2, 0.36 * rs2);
-  }
-  胴具(g, 0, rhy2, 0, rsy2, rs2, 0.05, K, 1.3);
-  頭具(g, 0, rsy2, rs2, 0.08, K, 面);
 }
 
 /* 型紙。使う分だけその場で焼く（十六方向×七拍×四兵科×三側を先に焼くと重い） */
@@ -1887,8 +2109,8 @@ const 組の態 = (q) => { let s = 組態.get(q);
   if (!s) { s = { dx: q.x, dy: q.y, sx: new Float32Array(50), sy: new Float32Array(50),
     借り: 0, 前qx: q.x, 前qy: q.y,
     生: new Uint8Array(50), 歩距: new Float32Array(50), 速: new Float32Array(50),
-    進x: new Float32Array(50), 進y: new Float32Array(50),
-    初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0 };
+    進x: new Float32Array(50), 進y: new Float32Array(50), 描: new Float32Array(50),
+    初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0, 伸: 8 };
     組態.set(q, s); }
   return s; };
 const 盤の態 = (b) => { let s = 盤態.get(b);
@@ -2061,6 +2283,7 @@ const 本陣の態 = (c) => { let t = 本陣態.get(c);
   if (!t) { t = { x: new Float32Array(本陣の数), y: new Float32Array(本陣の数),
     歩距: new Float32Array(本陣の数), 速: new Float32Array(本陣の数),
     進x: new Float32Array(本陣の数), 進y: new Float32Array(本陣の数),
+    描: new Float32Array(本陣の数),
     数: 0, 初: false, 前x: 0, 前y: 0 };
     本陣態.set(c, t); }
   return t; };
@@ -2114,7 +2337,7 @@ function 本陣衆を進める(c, b, dt, 本x, 本y) {
     /* 間合いは詰める。広いと歩兵の列に紛れて、本陣の塊として読めない */
     const tx = 本x + lx * (列 - 2) * 4.6 + bx * (行 - 2) * 4.2;
     const ty = 本y + ly * (列 - 2) * 4.6 + by * (行 - 2) * 4.2;
-    if (!t.初) { t.x[n] = tx; t.y[n] = ty; t.速[n] = 0; continue; }
+    if (!t.初) { t.x[n] = tx; t.y[n] = ty; t.速[n] = 0; t.描[n] = c.facing || 0; continue; }
     const vx = tx - t.x[n], vy = ty - t.y[n], d = Math.hypot(vx, vy);
     let mv = 0;
     if (d > 100) { t.x[n] = tx; t.y[n] = ty; }
@@ -2126,6 +2349,14 @@ function 本陣衆を進める(c, b, dt, 本x, 本y) {
     }
     t.歩距[n] += mv;
     t.速[n] += ((dt > 0 ? mv / dt : 0) - t.速[n]) * Math.min(1, dt * 6);
+    {                                      // 描く向き（兵と同じ筋）
+      const 的向 = Math.hypot(t.進x[n], t.進y[n]) > 0.3 && t.速[n] > 2.5
+        ? Math.atan2(t.進y[n], t.進x[n]) : (c.facing || 0);
+      let d描 = 的向 - t.描[n];
+      while (d描 > Math.PI) d描 -= Math.PI * 2;
+      while (d描 < -Math.PI) d描 += Math.PI * 2;
+      t.描[n] += d描 * Math.min(1, dt * 4.5);
+    }
   }
   t.初 = true;
 }
@@ -2223,10 +2454,21 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       const 場 = q.type === "kiba" ? 馬持場 : 持場;
       const th = s.向, lx = Math.cos(th + Math.PI / 2), ly = Math.sin(th + Math.PI / 2);
       const bx = -Math.cos(th), by = -Math.sin(th);
-      /* 噛み合っていれば、前列は敵との中間まで伸びる（槍合わせの線） */
-      const 前 = q.engaged && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
+      /* 噛み合っていれば、前列は敵との中間まで伸びる（槍合わせの線）。
+
+         もとは生の engaged で決めていた。噛み合いは一瞬ごとに立ったり消えたり
+         する印（engine は毎刻 false に戻してから、間合いのうちの組だけ立て直す）
+         であるから、伸びは八歩と十七歩のあいだを飛んだ。測ると跳びは刻の
+         〇.一％だが、出るときは九歩――五十人の塊が丸ごと九歩ずれる。
+         engine が隊の足で使っているのと同じ噛み刻の猶予（一.二秒）を敷き、
+         そのうえで跳ばずに寄せる。押し合いの息も同じ印で立てる。 */
+      const 噛み中 = q.engaged || (b.t - (q.噛み刻 == null ? -99 : q.噛み刻) < 1.2);
+      const 伸び的 = 噛み中 && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
+      if (!s.初) s.伸 = 伸び的;
+      else s.伸 += (伸び的 - s.伸) * Math.min(1, dt * 2.4);
+      const 前 = s.伸;
       const 刻み = (前 + 2.8) / 4;
-      const 押 = q.engaged ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
+      const 押 = 噛み中 ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
       for (let n = 0; n < alive; n++) {
         const o = 場[n];
         const 深 = q.engaged
@@ -2256,7 +2498,8 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
             }
           }
         }
-        if (!s.生[n] || !s.初) { s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; s.速[n] = 0; continue; }
+        if (!s.生[n] || !s.初) {
+          s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; s.速[n] = 0; s.描[n] = s.向; continue; }
         const vx = tx - s.sx[n], vy = ty - s.sy[n], d = Math.hypot(vx, vy);
         let mv = 0;
         /* 飛びは上で組ごと平行移動して捌いた。ここで瞬間移動させるのは、
@@ -2284,6 +2527,26 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
            道のりの見合いが一.〇〇から〇.四五まで落ちた）。 */
         s.歩距[n] += mv;
         s.速[n] += ((dt > 0 ? mv / dt : 0) - s.速[n]) * Math.min(1, dt * 6);
+        /* 描く向きは、兵ごとに一本の角として持ち、そこへ寄せる（GDD 8.11）。
+
+           もとは描く側で、刻ごとに「進む向きの長さが〇.三を超えれば己の足の
+           向き、さもなくば組の向き」と選び直していた。この二つは別物でときに
+           正反対を向くから、足が出たり止まったりするたびに絵が飛んだ。向き
+           自体は両方とも均してあるのに、どちらを使うかの切り替えだけが
+           均されていなかった――測ると、兵の向きの跳びの三十六.七％がこれで、
+           跳ぶ刻の三割は一度に二段以上であった。足そのものの折り返しは
+           〇.七％しかない。つまり動きは滑らかで、絵の選び替えだけが震えていた。
+
+           一本の角に持たせれば、出どころが入れ替わっても兵は「向き直る」。
+           跳ぶのではなく回るのだから、それが正しい見え方である。 */
+        {
+          const 的向 = (Math.hypot(s.進x[n], s.進y[n]) > 0.3 && s.速[n] > 2.5)
+            ? Math.atan2(s.進y[n], s.進x[n]) : s.向;
+          let d描 = 的向 - s.描[n];
+          while (d描 > Math.PI) d描 -= Math.PI * 2;
+          while (d描 < -Math.PI) d描 += Math.PI * 2;
+          s.描[n] += d描 * Math.min(1, dt * 4.5);
+        }
       }
       for (let n = alive; n < 50; n++) s.生[n] = 0;
       s.初 = true;
@@ -2295,9 +2558,6 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
 /* 試験のための覗き窓。見た目の状態（歩いた距離・足の速さ）を読むだけ。 */
 export function 組の見た目(q) { return 組態.get(q) || null; }
 export function 盤の見た目(b) { return 盤態.get(b) || null; }
-
-const 向き八 = (vx, vy) => { const a = Math.atan2(vy, vx);
-  return ((Math.round(a / (Math.PI / 8)) % 16) + 16) % 16; };
 
 /* ---- 将と旗持（GDD 8.11）----
 
@@ -2697,7 +2957,6 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       /* 本陣衆へ貸したぶんは、この組では描かない（数を増やさないため） */
       const alive = Math.max(0, Math.min(50, Math.round(q.men)) - (s.借り || 0));
       const th = s.向;
-      const dir基 = 向き八(Math.cos(th), Math.sin(th));
       const 撃 = (b.t - s.撃刻) / 1.5;
       for (let n = 0; n < alive; n++) {
         if (!s.生[n]) continue;
@@ -2705,7 +2964,10 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
         const wx = s.sx[n], wy = s.sy[n];
         if (!見える(wx, wy)) continue;
         /* 拍：歩き・突き・斉射。寄りが深ければ割り切れない拍で滑らかに */
-        let fr = 0, dir = dir基;
+        /* 描く向きは、兵が持っている角を目盛りへ直してそのまま渡す（小数のまま）。
+           出どころの選び替えは 新絵状態を進める で済んでいる。型紙を貼るときだけ
+           丸める――丸めるのは貼る都合であって、姿を決める筋ではない。 */
+        let fr = 0, dir = s.描[n] / (Math.PI / 8);
         const 場 = q.type === "kiba" ? 馬持場 : 持場;
         const 歩速 = s.速[n];
         /* 働きの順（GDD 8.11）。
@@ -2724,7 +2986,6 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
           /* 歩み：歩幅（騎馬は十四歩、徒は九歩）ごとに一周 */
           const 歩幅 = q.type === "kiba" ? 14 : 9;
           const w = (s.歩距[n] / 歩幅) % 1;
-          if (Math.hypot(s.進x[n], s.進y[n]) > 0.3) dir = 向き八(s.進x[n], s.進y[n]);
           fr = 骨度 > 0 ? 1 + w * 2 : 1 + (w < 0.5 ? 0 : 1);
         }
         /* 丈を少しずつ変える（GDD 8.11）。
@@ -2734,7 +2995,8 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
            あいだで散らすだけなら費えは零で、「同じ判を押した」感じはほどけ
            る。馬の毛色は型紙の側で既に三色に散っている。 */
         const 丈 = 0.95 + (((q.seed || 0) * 31 + n * 7) % 12) / 100;
-        並.push({ wx, wy, 地y: wy, 側, 型: q.type, dir: Math.round(dir), fr: Math.round(fr), 丈,
+        並.push({ wx, wy, 地y: wy, 側, 型: q.type,
+          dir: Math.round(((dir % 16) + 16) % 16) % 16, fr: Math.round(fr), 丈,
           直: 骨度 > 0 ? { dir, fr, 型: q.type, 側, 乱: ((q.seed || 0) * 31 + n * 7) % 97 / 97 } : null });
       }
       /* 組の小旗（後列に二本）。側の色でまとまりを示す */
@@ -2760,8 +3022,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       if (n === 0) { 並.push({ wx, wy, 地y: wy + 0.1, 将: { c, 側 } }); continue; }
       if (n === 1) { 並.push({ wx, wy, 地y: wy + 0.08, 旗持: { c, 側 } }); continue; }
       /* 馬廻。一騎ずつ家の色の指物を立てるので、遠目にも「旗の群れ」として読める */
-      const 進 = Math.hypot(t.進x[n], t.進y[n]) > 0.3
-        ? 向き八(t.進x[n], t.進y[n]) : 向き八(Math.cos(c.facing || 0), Math.sin(c.facing || 0));
+      const 進 = Math.round(((t.描[n] / (Math.PI / 8)) % 16 + 16) % 16) % 16;
       let fr = 0;
       if (t.速[n] > 2.5) { const w = (t.歩距[n] / 14) % 1; fr = 1 + (w < 0.5 ? 0 : 1); }
       並.push({ wx, wy, 地y: wy, 側, 型: "kiba", dir: 進, fr, 直: null,
