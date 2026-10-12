@@ -45,7 +45,7 @@ import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
 import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer, DiploOffer } from "./panels.jsx";
 import { underMyBanner, 同じ旗の下, 己の盟約, 主家, 裏切りの出陣か } from "../core/state.js";
-import { 忠誠, 守備隊の統率, castellanOf, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
+import { 忠誠, 守備隊の統率, castellanOf, rankName, 国主を繕う, 旗頭を繕う, 旗頭を継がせる } from "../core/rank.js";
 import { 城主の札を据える } from "../core/state.js";
 import { 入切, 場面を選ぶ, 試しに鳴らす, 音の設定, 解錠する } from "../audio/oto.js";
 import { 守りの割り付け } from "../core/garrison.js";
@@ -3644,6 +3644,78 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                     </div>
                   </button>
                 ))}
+              </div>
+            </div>
+          );
+        })()}
+        {/* 家督を継いだ者の方面を、誰に継がせるか（GDD 6.4）。
+
+            旗頭だった者が家督を継げば、その役はその場で解ける。当主のいる国に
+            旗頭は置かぬ決めだから、受け持ちは宙に浮く。誰に継がせるかは家の
+            大事であるから、盤が決めずに大名へ問う。候補は、もとの寄騎のうち
+            宿老の身分を備えた者である。 */}
+        {g.旗頭継ぎ待ち && (() => {
+          const 待 = g.旗頭継ぎ待ち;
+          const 候 = (待.候補 || []).map((x) => ({ ...x, gen: g.generals.find((q) => q.id === x.id) }))
+            .filter((x) => x.gen && !x.gen.captive);
+          if (!候.length) {
+            setG((p2) => { const s2 = structuredClone(p2); s2.旗頭継ぎ待ち = null; return s2; });
+            return null;
+          }
+          const 決める = (id) => setG((p2) => {
+            const s2 = structuredClone(p2);
+            const w = s2.旗頭継ぎ待ち;
+            s2.旗頭継ぎ待ち = null;
+            if (!w) return s2;
+            if (!id) {
+              for (const q of w.寄騎 || []) {
+                const x = s2.generals.find((y) => y.id === q); if (x) x.寄親 = null;
+              }
+              s2.chronicle.push({ y: s2.year, m: s2.month,
+                text: `${w.先の名}は家督を継ぎ、旗頭の役を離れた。${w.国 || ""}方面は大名が自ら差配する。` });
+              s2.msg = `${w.国 || ""}方面は大名が自ら差配する。`;
+              return s2;
+            }
+            const r = 旗頭を継がせる(s2, w.faction, id, w.寄騎);
+            if (!r.継者) { s2.msg = r.why || "方面を継がせられなかった。"; return s2; }
+            s2.chronicle.push({ y: s2.year, m: s2.month,
+              text: `${w.先の名}は家督を継ぎ、${w.国 || ""}方面の旗頭を${r.継者.name}に譲った`
+                + `（寄騎${r.寄騎}名を引き継ぐ）。` });
+            s2.msg = `${r.継者.name}が${r.継の国}の旗頭となり、${w.国 || ""}方面を継いだ（寄騎${r.寄騎}名）。`;
+            return s2;
+          });
+          return (
+            <div className="modal">
+              <div className="card">
+                <div className="mn" style={{ fontSize: 20 }}>{待.国 || ""}方面の旗頭を定める</div>
+                <div style={{ fontSize: 12.5, color: U.dim, margin: "8px 0 12px", lineHeight: 1.8 }}>
+                  {待.先の名}が家督を継ぎ、旗頭の役を離れた。<br />
+                  <span style={{ fontSize: 11.5 }}>
+                    当主のいる国に旗頭は置かぬ。もとの寄騎のうち宿老の身分を備えた者から、
+                    方面を継ぐ者を選べ。「引き継ぐ」は、その者が寄騎に取れる数である。
+                  </span>
+                </div>
+                {候.map(({ gen, 国, 取れる }) => (
+                  <button key={gen.id} className="btn"
+                    style={{ width: "100%", textAlign: "left", marginBottom: 6, padding: "9px 12px" }}
+                    onClick={() => 決める(gen.id)}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span className="mn" style={{ fontSize: 15 }}>
+                        {gen.name}
+                        <span style={{ fontSize: 11, color: U.dim, marginLeft: 8 }}>{国}</span>
+                      </span>
+                      <span className="num" style={{ fontSize: 11.5, color: U.dim }}>
+                        {rankName(gen, g)}／{Math.round(stipendOf(g, gen) / 1000)}千石
+                        ・統{gen.lead}・政{gen.gov}・知{gen.wit}
+                        ・寄騎{取れる}名を引き継ぐ
+                      </span>
+                    </div>
+                  </button>
+                ))}
+                <button className="btn" style={{ width: "100%", marginTop: 4, padding: "9px 12px" }}
+                  onClick={() => 決める(null)}>
+                  <span style={{ fontSize: 13 }}>誰にも継がせぬ（大名が自ら差配する）</span>
+                </button>
               </div>
             </div>
           );
