@@ -61,7 +61,7 @@ export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 画面を通すと、戦況の記録が流れて肝心の一行を取り逃がす。
 // 隊がどの門を受け持ち、何の下知を受けているかは、ここから直に見るほかない。
 export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, toUV, gatePos, gateOpenU, inLayer, 城の構え, 門の控え口 } from "../src/battle/castleMap.js";
-export { layoutField, setFieldSeed, setFieldKind, FIELD, terrainAt, TERRAIN, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVER, ROAD, ROADS as 野の道, RIVERS, 筋書きの野を組む, 筋書きを解く, hasRiver, hasMountain, 山が遮るか, 踏み込んだ地, genTerrain } from "../src/battle/field.js";
+export { layoutField, setFieldSeed, setFieldKind, FIELD, terrainAt, TERRAIN, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVER, ROAD, ROADS as 野の道, RIVERS, 筋書きの野を組む, 筋書きを解く, hasRiver, hasMountain, 山が遮るか, 踏み込んだ地, genTerrain, 地の高さ, 高み } from "../src/battle/field.js";
 export { ARM_STATS } from "../src/battle/field.js";
 export { outOfCommand, commandPost, commandRange, makeCorps, corpsMen, placeSquads, issueOrder, makeDetachment, detachOptions, 分遣の頃合い, 転回させる, 退かせる, 退き先, 盤に収める, 寄せ手の隊数 } from "../src/battle/corps.js";
 export { 新絵か, 姿の札, 姿八, 姿の骨, 新絵の野, 野を焼く, 新絵の城の地, 城の地を焼く, 新絵の兵描き, 焼きの内訳, 新絵状態を進める, 組の見た目, 盤の見た目, 持上高, 個人閾, 新絵の寄り限り, 個人で描くか, 見える組数, 見える人数, 組の予算, 人の予算 } from "../src/battle/shinga.js";

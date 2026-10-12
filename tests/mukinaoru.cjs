@@ -152,7 +152,11 @@ console.log('\n── 三　兵は跳ばずに向き直る');
   for (let k = 0; k < 1800; k++) {
     H.stepBattle(b, dt); if (k % 4 === 0) H.battleAI(b);
     H.新絵状態を進める(b, b.t, 見);
-    const qs = [...P, ...E].flatMap((c) => (c.dead || c.destroyed) ? []
+    /* 盤の隊をすべて見る（b.corps）。立てた八隊だけを見ていると、分遣に
+       出ているあいだの組を見失う。見失ったぶんの動きが、戻ってきた刻に
+       「一息の跳び」として現れた――伸びは滑らかに動いていたのに、二十五万
+       九千の刻に二度、八.六歩の跳びがあると読めた。測る側の見落としである。 */
+    const qs = b.corps.flatMap((c) => (c.dead || c.destroyed) ? []
       : c.squads.filter((q) => q.men > 0).map((q) => [c, q]));
     if (qs.some(([, q]) => q.engaged) && 噛み始め == null) 噛み始め = k;
     if (噛み始め == null) continue;

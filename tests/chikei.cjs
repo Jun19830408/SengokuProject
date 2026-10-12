@@ -235,7 +235,18 @@ function 丘取りを測る(守の倍) {
       if ([...P, ...E].some((c) => c.squads.some((q) => q.engaged))) {
         触 = true;
         const 生 = E.filter((c) => !c.dead && !c.destroyed);
-        for (const c of 生) { 隊++; if ((c.地 || A.terrainAt(c.x, c.y)) === 'hill') 丘++; }
+        /* 高みは丘だけではない（GDD 8.1）。
+
+           山を HILLS から抜いて MOUNTAINS へ移してあるので、采配はながらく山を
+           見ていなかった。これを高み（山＋丘）としてまとめ、山を一段上として
+           先に選ばせるようにした。ここで丘だけ数えると、山に就いた隊が
+           「高みを取らなかった」と読める――実際、五分の受け手の三分の一が
+           山に就いていた。高みに就いたかどうかで数える。 */
+        for (const c of 生) {
+          隊++;
+          const t = c.地 || A.terrainAt(c.x, c.y);
+          if (t === 'hill' || t === 'mountain') 丘++;
+        }
         進 += (生.reduce((a, c) => a + c.y, 0) / Math.max(1, 生.length)) - y0;
       }
       if (b.result) break;

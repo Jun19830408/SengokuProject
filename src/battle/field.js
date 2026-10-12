@@ -42,6 +42,23 @@ export const FORESTS = [], WOODS = [], HILLS = [], MARSH = [];
    上から当たる強みは丘より大きい。道さがしは山を強く避ける――避けきれぬときは
    越えるが、それは軍勢にとって難儀な選択である。 */
 export const MOUNTAINS = [];
+/* 高み（GDD 8.1）。山と丘を、拠る所として一つに並べたもの。山が先に来る。
+
+   采配の丘取りは HILLS しか見ていなかった。ところが genTerrain は、立てた山を
+   HILLS から抜いて MOUNTAINS へ移している。つまり采配にとって山は存在せず、
+   山に拠らせた隊は、その山を「自分の立っている高み」とすら思っていなかった
+   ――測ると、山に据えた委任の隊が高みに居たのは刻の一割八分、裾から平均
+   四百六十一歩、最も遠いときで千七百五十六歩も離れていた。
+   山は丘の一段上の地物である（戦う力 一.二八 対 一.一五、見晴らし 四百七十
+   対 三百六十）。拠る所として数えないのは筋が通らない。 */
+export const 高み = [];
+export function 高みを数え直す() {
+  高み.length = 0;
+  for (const m of MOUNTAINS) 高み.push(m);
+  for (const h of HILLS) 高み.push(h);
+}
+/* 高みの格。山は丘より一段上なので、少しくらい遠くても山を選ばせる。 */
+export const 高みの格 = (h) => (MOUNTAINS.includes(h) ? 1.42 : 1);
 
 /* この野を結ぶ街道の質（街道・山道・難所）。山が立つか否かはこれで決まる。 */
 export let 道の質 = "街道";
@@ -209,11 +226,36 @@ export function genTerrain(seed) {
      置き場が残っていない。野の四分の一を塞ぐほどには大きくしない。
      塞いでしまえば戦場ではなく廊下になる。 */
   {
-    const 数山 = 道の質 === "難所" ? 2 : 道の質 === "山道" ? 1 : 0;
+    /* 山の数（GDD 8.1）。
+
+       もとは山越えの街道でしか立たなかった。街道の表は陸の四百四十九区間の
+       うち山道が八十二、難所が三十九――つまり野の二割七分にしか山が無い。
+       この国は山の国である。平らな街道の傍らに山が見えぬほうがめずらしい。
+
+       街道にも賽で一つ立てる（四割二分）。山道は二つ、難所は三つに増やし、
+       広い野ではさらに一つ足す。これで野のおよそ六割に山が立つ。 */
+    /* 山を立てるか否かの賽は、種から直に引く（流れを消費しない）。
+
+       はじめは rnd() を一つ引いていた。ところがこれは地物の賽の流れを一つ
+       ずらすので、山の立たぬ野まで――川も丘も森も――ことごとく並びが変わった。
+       既に組んである野が総入れ替えになり、決め打ちの場所に隊を立てる試験は
+       淵の中から出陣する羽目になる（tests/butsukari）。山を立てぬと決めたなら、
+       その野はこれまでと寸分違わぬ野でなければならない。 */
+    const 山の賽 = ((seed >>> 9) & 1023) / 1024;
+    const 数山 = (道の質 === "難所" ? 3 : 道の質 === "山道" ? 2 : (山の賽 < 0.42 ? 1 : 0))
+      + (sc >= 2.6 && 道の質 !== "海路" && 山の賽 < 0.62 ? 1 : 0);
     const 前 = HILLS.length;
     /* 山の裾は野の高さに縛る。野の半ばを埋める山は、戦場ではなく壁である。 */
     const 裾小 = clamp(120 * sc, 130, H * 0.145), 裾大 = clamp(175 * sc, 190, H * 0.205);
-    if (数山) put(HILLS, 数山, 裾小, Math.max(裾小 + 10, 裾大), true, 60);
+    /* 置き場が見つからねば、少しずつ小さくして試し直す。山は裾が広いので、
+       川と他の地物を避けきれずに一つも立たぬ野があった。 */
+    if (数山) {
+      for (let 試 = 0; 試 < 4 && HILLS.length - 前 < 数山; 試++) {
+        const 縮 = Math.pow(0.78, 試);
+        put(HILLS, 数山 - (HILLS.length - 前), Math.max(90, 裾小 * 縮),
+          Math.max(裾小 * 縮 + 10, 裾大 * 縮), true, 70);
+      }
+    }
     for (const m of HILLS.splice(前)) {
       m.高 = Math.round(180 + (m.seed % 100) * 2.4);   // 比高の目安（m）。絵の起伏に使う
       m.rise = Math.round(m.r * 0.34);
@@ -229,6 +271,7 @@ export function genTerrain(seed) {
   /* 丘の高さ。裾の広い丘ほど高く盛り上がる。
      地形としてはどれも「丘」であって、効きは変わらない。見た目の起伏だけである。 */
   for (const h of HILLS) h.rise = Math.round(h.r * (0.20 + (h.seed % 100) / 100 * 0.14));
+  高みを数え直す();
 
   /* 街道を通す（GDD 8.1）。
 
@@ -352,12 +395,35 @@ export function 筋書きの野を組む(地) {
   (地.山 || []).forEach((o, i) => MOUNTAINS.push({ ...種付(o, i), rise: o.rise || Math.round(o.r * 0.34) }));
   (地.道 || []).forEach((r) => ROADS.push({ 名: r.名, 節: r.節, 幅: r.幅 || 60 }));
   (地.川 || []).forEach((r) => RIVERS.push({ 名: r.名, 節: r.節, 幅: r.幅 || 40, 渡し: r.渡し || [] }));
+  高みを数え直す();
   ROAD.節.length = 0; ROAD.幅 = 0;
   地形格 = 野を焼く(地.升 || 10);
 }
 
 /* 筋書きを畳む。街道ごとの野に戻す（升目を捨てる）。 */
 export function 筋書きを解く() { 地形格 = null; RIVERS.length = 0; }
+
+/* 地の高さ（GDD 8.1）。丘の頂を一、山の頂を二とし、裾から頂へ向けて上がる。
+
+   高みの利は、これまで TERRAIN.fight（丘 一.一五、山 一.二八）だけで表していた。
+   ところがこれは「その地べたに立っていれば付く」ものなので、山へ攻め登る隊にも
+   同じだけ付いていた。頂の隊と、斜面を這い上がる隊が、同じ一.二八で殴り合う
+   ――それでは高みに拠る意味がない。
+
+   高みの利は「相手より高いか」で決まる。同じ丘の頂で睨み合う二隊のあいだに
+   高低は無く、麓から見上げる隊には一段ぶんの不利がある。 */
+export function 地の高さ(x, y) {
+  let 高 = 0;
+  for (const m of MOUNTAINS) {
+    const d = Math.hypot(x - m.x, y - m.y);
+    if (d < m.r) { const v = 2 * (1 - d / m.r); if (v > 高) 高 = v; }
+  }
+  for (const h of HILLS) {
+    const d = Math.hypot(x - h.x, y - h.y);
+    if (d < h.r) { const v = 1 - d / h.r; if (v > 高) 高 = v; }
+  }
+  return 高;
+}
 
 export const hasRiver = () => RIVER.bot > RIVER.top + 4;
 
@@ -530,10 +596,22 @@ export const TERRAIN = {
   forest: { speed: 0.65, fight: 0.85, cohesion: -6, sight: 95, horse: 0.6, charge: false, label: "森" },
   wood: { speed: 0.82, fight: 0.92, cohesion: -3, sight: 165, horse: 0.85, charge: true, label: "林" },
   marsh: { speed: 0.5, fight: 0.8, cohesion: -9, sight: 240, horse: 0.45, charge: false, label: "湿地" },
-  hill: { speed: 0.7, fight: 1.15, cohesion: -2, sight: 360, horse: 0.8, charge: true, label: "丘" },
+  /* 丘と山の「戦う力」は一.〇〇である（GDD 8.1）。
+
+     高みの利は、地べたに立っていれば付くものではない。相手より高いかどうかで
+     決まる（地の高さ と、engine の 高みの利）。もとは丘に一.一五、山に一.二八を
+     置いていたが、これだと山へ攻め登る隊にも頂の隊と同じ一.二八が付き、拠る
+     意味が消える。そのうえ二重に掛かって、山に拠った受け手が一.四三倍の兵を
+     九割三分で撃ち返すほどになった（取り分の比 二.三七）。
+
+     高低そのものは 地の高さ に任せ、ここには残さない。丘の頂から麓へ当たれば
+     一.一八、麓から見上げれば〇.八五――比にして一.三九で、もとの一.一五が
+     両方に付いて比一.〇〇であったのより、よほど高みが効く。
+     登る難しさは、足（速さ）と隊列（結束）のほうで既に表してある。 */
+  hill: { speed: 0.7, fight: 1.0, cohesion: -2, sight: 360, horse: 0.8, charge: true, label: "丘" },
   /* 山。丘の一段上。登るのに難儀し、隊列は崩れ、騎馬は用をなさない。
      そのかわり見晴らしは野の倍近く、上から当たる強みも丘より大きい。 */
-  mountain: { speed: 0.42, fight: 1.28, cohesion: -7, sight: 470, horse: 0.35, charge: false, label: "山" },
+  mountain: { speed: 0.42, fight: 1.0, cohesion: -7, sight: 470, horse: 0.35, charge: false, label: "山" },
   village: { speed: 0.78, fight: 0.95, cohesion: -3, sight: 130, horse: 0.7, charge: false, label: "集落" },
   bridge: { speed: 0.95, fight: 0.85, cohesion: -5, sight: 260, horse: 0.9, charge: false, label: "橋" },
   ford: { speed: 0.3, fight: 0.7, cohesion: -14, sight: 260, horse: 0.5, charge: false, label: "浅瀬" },

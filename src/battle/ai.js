@@ -1,6 +1,6 @@
 import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 門の控え口 } from "./castleMap.js";
 import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
-import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt } from "./field.js";
+import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt, 高み } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { clamp } from "../core/util.js";
 
@@ -1102,11 +1102,51 @@ export function battleAI(b) {
        委任した隊しか通らない）。 */
     /* 丘取りは、筋書きの一戦では行わない。布陣が史実で決まっているのに、
        開戦の合図とともに諸隊が後ろの丘へ登り直しては、その布陣の意味がない。 */
-    if (!MAP && !b.筋書き && HILLS.length && !c.squads.some((q) => q.engaged)) {
+    /* いま高みに立っている受け手は、そこを保つ（GDD 8.1）。
+
+       高みの取り合いは「丘ひとつに一隊」である。頂は狭いのだから、翼は裾へ
+       はみ出し、高みの利は得られぬまま戦列だけが薄くなる――その決めは正しい。
+       ただしそれは「どの高みへ登りに行くか」の決めであって、「いま立っている
+       高みを保つか」の決めではなかった。四隊で丘に拠らせると、丘を押さえた
+       一隊だけが留まり、残る三隊は持ち場が無いものとして下りて行った。
+
+       立っている地べたが高みなら、誰の持ち場かに関わらず、そこで待ち受ける。 */
+    /* 高みを保つのは、敵がまだ取り付いていないあいだである。
+
+       取り付かれてもなお「その場を動くな」と命じ続けると、隊は押し合いに
+       耐えるばかりで槍を合わせに出ない。大軍に当たられた小勢が、守備のまま
+       一度も槍を合わせずに射すくめられた（tests/nirami 四）。敵が槍の間合いに
+       入ったなら、高みに立ったまま斬り結ぶ――そこから先は常の戦である。
+       高みの利は、立っている地べたで既に付いている。 */
+    const 敵の近さ = alive.reduce((d, o) => (o.side === c.side ? d
+      : Math.min(d, Math.hypot(o.x - c.x, o.y - c.y))), Infinity);
+    if (!MAP && !b.筋書き && 高み.length && 守勢の隊(b, c) && 敵の近さ > 340) {
+      const 乗る = 高み.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
+      if (乗る >= 0) {
+        /* 持ち場は、一度決めたら動かさない（GDD 8.1）。
+
+           はじめは毎刻いまの居場所を行き先にしていた。ところが隊は押し合いで
+           押される。押された先がそのまま新しい持ち場になるので、持ち場ごと
+           じりじりと押し出されていく――一万六千九百の大軍に当たられた二千五百の
+           小勢が、守備の下知のまま六百歩も後ろへ流れ、槍は一度も合わなかった
+           （tests/nirami 四）。石鹸を握るようなものである。
+
+           踏んだ高みを覚え、そこに立った刻の場所を持ち場とする。押されても
+           持ち場は動かず、隊は押し返して戻る。高みを離れたなら忘れる。 */
+        if (!c.踏む高み || c.踏む高み.i !== 乗る) c.踏む高み = { i: 乗る, x: c.x, y: c.y };
+        const 持 = c.踏む高み;
+        if (c.order !== "守備" || Math.hypot((c.tx || 0) - 持.x, (c.ty || 0) - 持.y) > 6) {
+          issueOrder(b, c, { order: "守備", tx: 持.x, ty: 持.y });
+        }
+        continue;
+      }
+      c.踏む高み = null;
+    }
+    if (!MAP && !b.筋書き && 高み.length && !c.squads.some((q) => q.engaged)) {
       const 守勢 = 守勢の隊(b, c);
       const 敵まで = Math.hypot(tgt.x - c.x, tgt.y - c.y);
       const 番 = 守勢 ? 空き丘を探す(b, c) : -1;
-      const 丘 = 番 >= 0 ? HILLS[番] : null;
+      const 丘 = 番 >= 0 ? 高み[番] : null;
       /* 下がってまで丘は取らない（GDD 8.1）。
 
          「近くの空いた丘へ登る」とだけ決めていたので、背後に丘があると
@@ -1117,22 +1157,34 @@ export function battleAI(b) {
          丘は、いま立っている所より敵から遠くならない範囲で取る。
          二百歩ぶんの後退までは、備えを固めるうちと見る。 */
       const 下がり = 丘 ? Math.hypot(tgt.x - 丘.x, tgt.y - 丘.y) - 敵まで : 0;
-      if (丘 && 敵まで > 260 && 下がり <= 200) {
+      if (丘) {
         const 遠さ = Math.hypot(丘.x - c.x, 丘.y - c.y);
         const 頂 = clamp(丘.r * 0.45, 60, 120);            // ここまで登れば頂とみなす
-        const 間 = 540 + 丘.r * 0.8;                        // 大きな丘ほど遠くからでも目指す
-        if (遠さ > 頂 && 遠さ < 間 && 岸(c.x, c.y) === 岸(丘.x, 丘.y)) {
-          丘を押さえる(b, 番, c);                           // この丘は我が隊が押さえる
+        const 間 = 540 + 丘.r * 0.8;                        // 大きな高みほど遠くからでも目指す
+        /* 頂に就いたなら、敵が近づいても下りない（GDD 8.1）。
+
+           もとは「敵まで二百六十歩より遠いとき」だけこの段を通していた。
+           登り終えた隊も、敵が二百六十歩まで寄せた途端にこの段を素通りし、
+           下の「接敵」へ落ちて敵のほうへ歩き出す。つまり、寄せ手が近づくたびに
+           受け手が高みを捨てて迎えに下りていた――拠らせた丘に居たのは刻の
+           四割三分、裾から平均四百三十五歩、最も遠いときで千七百三十四歩。
+           山なら一割八分である。高みの利（丘で一割五分、山で二割八分）を
+           手放したうえ、登り直す足まで失う。委任のまま丘に拠ると、拠らぬより
+           勝率が下がっていたのはこれが元であった（素 六割七分 → 丘 五割）。
+
+           頂に立っているなら、そこで待ち受ける。降りて出迎える理由がない。 */
+        if (遠さ <= 頂) {
+          丘を押さえる(b, 番, c);
+          issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
+          continue;
+        }
+        /* 登りに行くのは、敵がまだ遠く、下がりすぎないときだけである。 */
+        if (敵まで > 260 && 下がり <= 200 && 遠さ < 間 && 岸(c.x, c.y) === 岸(丘.x, 丘.y)) {
+          丘を押さえる(b, 番, c);                           // この高みは我が隊が押さえる
           const 道 = 寄せ道を引く(b, c, 丘.x, 丘.y);
           if (道 === "続行") continue;
           if (道) { c.wp = 道; issueOrder(b, c, { order: "移動", tx: 道[0].x, ty: 道[0].y, keepPath: true }); continue; }
           issueOrder(b, c, { order: "移動", tx: 丘.x, ty: 丘.y });
-          continue;
-        }
-        // 頂に就いた受け手は、そこで待ち受ける。降りて出迎える理由がない。
-        if (遠さ <= 頂) {
-          丘を押さえる(b, 番, c);
-          issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
           continue;
         }
       }

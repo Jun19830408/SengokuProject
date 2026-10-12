@@ -2,7 +2,7 @@ import { battleAI } from "./ai.js";
 import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, nearestOpenGate, routeToCastleGate, 門の控え口 } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads, 前列を入れ替える, 支えの向き数, 支えの幅, 空 } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
-import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地 } from "./field.js";
+import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地, 地の高さ } from "./field.js";
 import { clamp } from "../core/util.js";
 import { px, py } from "../data/geo.js";
 import { delegated, issueOrder, 内の門へ退く, 退き場, 退き先, 退かせる } from "./corps.js";
@@ -109,7 +109,16 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
      次々に崩れていたのは、主にこれである。
      千二百人を下限に置き、小さい隊が割を食いすぎぬようにする。 */
   const share = lost / Math.max(1200, corpsMax(fCorps));
-  const 堪え = clamp(1.3 - ((fCorps.gen && fCorps.gen.lead) || 60) / 200, 0.8, 1.2);
+  /* 堪えは、将の統率と兵の練れの両方で決まる（GDD 8.7 / 6.2）。
+
+     もとは統率だけであった。鍛えた兵が損害に動じないのは、将の統率とは
+     別の事である――新兵は一割の損で浮き足立ち、歴戦の兵は半ばを失っても
+     列を保つ。練度が盤に出ない元の一つがこれであった。
+       統率六十・練度七十 … 一.〇〇（これまでと同じ）
+       統率九十・練度八十八 … 〇.八一
+       統率四十五・練度五十五 … 一.一三 */
+  const 堪え = clamp(1.3 - ((fCorps.gen && fCorps.gen.lead) || 60) / 200
+    - ((fCorps.練 == null ? 70 : fCorps.練) - 70) / 380, 0.72, 1.25);
   /* 削れをさらに緩める。二.二 → 一.一五 → 〇.六。
 
      一.一五でも、槍を合わせている隊は毎秒二つ三つと士気を落としていた。
@@ -311,7 +320,7 @@ export function stepBattle(b, dt) {
      一点で測るのではなく、踏み場の大半がその地であるときに限る（field.js を参照）。
      以降の足・疲れ・戦う力・視界は、すべてこの判じを使う。 */
   for (const c of alive) {
-    for (const q of c.squads) q.地 = 踏み込んだ地(q.x, q.y);
+    for (const q of c.squads) { q.地 = 踏み込んだ地(q.x, q.y); q.高 = 地の高さ(q.x, q.y); }
     c.地芯 = 踏み込んだ地(c.x, c.y);
     c.地 = 隊の地(c);
   }
@@ -949,6 +958,29 @@ export function stepBattle(b, dt) {
            ときだけでよい（行き先が明らかに横にあるなら、この段は通らない）。 */
         if (触れた敵 && Math.hypot(望x, 望y) < v * 0.34) { 望x = 0; 望y = 0; }
       }
+      /* 睨みで足止めを解いたあとでも、中どころが重なるのは許さない（GDD 8.3）。
+
+         上の足止めには二つの逃げ道がある。槍がまだ届かぬうち（懐の窪みへ
+         入るため）と、睨みが六秒続いたとき（届かぬ相手の前で凍りつかぬため）
+         である。どちらも要るものだが、そのあいだ寄せ手は相手の只中まで歩ける。
+
+         両軍とも寄せ合っているうちは、互いに押し合って釣り合うので目立たない。
+         片方が持ち場を守って動かぬと、押し戻されるそばから寄せ手が行き先へ
+         向かい直し、中どころが一歩まで重なった――高みを守らせるようにして
+         初めて表に出た（tests/butsukari 一）。
+
+         懐へ入るのも、睨みを解くのも、触れ隙の一.五倍までである。そこから先は、
+         どんな理由があろうと塊は塊を通り抜けない。 */
+      if (!MAP) {
+        for (const o of alive) {
+          if (o.side === c.side || !塊として立つ(o)) continue;
+          const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
+          if (ed < 0.01 || ed > 触れ隙 * 1.5) continue;
+          const ux = ex / ed, uy = ey / ed;
+          const 沿 = 望x * ux + 望y * uy;
+          if (沿 > 0) { 望x -= 沿 * ux; 望y -= 沿 * uy; }
+        }
+      }
       const 速 = c.速 || { x: 望x, y: 望y };
       /* 向きを変えるのに要る間は、おおよそ一秒弱。千の兵が一度に向き直れはしない。 */
       const 寄せ = Math.min(1, dt / 0.9);
@@ -1240,7 +1272,17 @@ export function stepBattle(b, dt) {
            行軍とは陣形が壊れていく過程ではない。良い地なら隊列は保てるし、
            悪路や川では乱れる。そこで「その地で落ち着く先」を置き、そこへ寄せる。
            平地では将の統率しだいで七割前後に落ち着き、森や湿地ではもっと下がる。 */
-        const 落ち着く先 = clamp(52 + c.gen.lead * 0.28 + terr.cohesion * 4, 12, 92);
+        /* 行軍のあいだに落ち着く結束（GDD 8.3）。
+
+           もとは将の統率だけで決めていた。鍛えた兵も、鍛えていない兵も、
+           同じ将の下なら同じ所へ収束する。それでは練度が盤に出ない。
+           落ち着く先は、兵の練れと将の統率の両方で決まる。
+             練度七十・統率六十 → 六十八（これまでと同じ）
+             練度八十八・統率九十 → 八十三
+             練度八十八・統率六十 → 七十五（将が凡庸でも精鋭は崩れにくい）
+             練度五十五・統率九十 → 七十四（将が良ければ新兵も保つ） */
+        const 落ち着く先 = clamp(28 + (q.練 == null ? 70 : q.練) * 0.34
+          + c.gen.lead * 0.28 + terr.cohesion * 4, 12, 96);
         q.cohesion += ((落ち着く先 - q.cohesion) * 0.10 + terr.cohesion * 0.25) * dt;
       } else {
         // 統率が陣形維持の回復に効く。疲労が回復を鈍らせる（GDD 6.1 / 8.8）
@@ -1787,10 +1829,45 @@ export function stepBattle(b, dt) {
            何割が前の九十度より外から噛まれているかで測る（下の c.乱れ）。 */
         const 乱れ攻 = 1 - 0.30 * (c.乱れ || 0);
         const 乱れ受 = 1 + 0.35 * (melee.f.乱れ || 0);
+        /* 将の器量は、槍先そのものに効く（GDD 8.3 / 6.2）。
+
+           測ると、器量九十の将は六十の将に比べて白兵の取り分がわずか一割しか
+           無かった。内訳は士気（八十七→九十一.五）と結束（六十九→七十七）の
+           二つだけで、武勇にいたっては騎馬の駆けにしか効いていない――兵の
+           二割にしか届かない。蘭徹斯特の二乗則で効く盤では、一割の差は兵数
+           五分の差にしかならない。名将を揃えても一.二倍の兵に勝てなかった
+           （器量九十対六十で一対一.二の勝率が八分）のはこれが元である。
+
+           統率は隊列を保ち、武勇は槍先を鋭くする。どちらも白兵の働きそのもの
+           であるから、ここで直に掛ける。
+             器量 六十 … 一.〇〇（これまでと同じ）
+             器量 九十 … 一.一七
+             器量 四十五 … 〇.九二
+           九十対四十五で二割七分の差。結束と士気の差と合わせて四割ほどになる。 */
+        const 器 = 0.72 + ((c.gen.lead || 60) + (c.gen.valor || 60)) / 428;
+        /* 鍛えた兵は、槍の使い方そのものが違う（GDD 6.3 / 8.3）。
+
+           練度は結束と崩れ際には効くようにしたが、槍先には触れていなかった。
+           鍛えるとは、隊列を保つことだけを習うのではない。
+             練度七十 … 一.〇〇　練度八十八 … 一.〇六　練度五十五 … 〇.九五 */
+        const 練れ = 0.78 + (q.練 == null ? 70 : q.練) / 318;
+        /* 高みの利（GDD 8.1）。相手より高ければ強く、低ければ弱い。
+
+           地べたの力（TERRAIN.fight）は「そこで戦う難しさ」であって、
+           「相手より高い」ことではない。山へ攻め登る隊にも頂の隊と同じ
+           一.二八が付いていたので、拠った高みが利かなかった。
+           効き方は測って決めた。はじめ一段あたり一割八分（山の頂と麓で一.三六
+           対〇.七四、比にして一.八四）としたところ、山を守った寡兵が一.四三倍の
+           兵を八割七分で撃ち返した（交換比二.〇六）。勝てることと、必ず勝つことは
+           違う。一割二分に落ち着かせる。
+             丘の頂から麓へ 一.一二／麓から丘の頂へ 〇.八九（比 一.二五）
+             山の頂から麓へ 一.二四／麓から山の頂へ 〇.八一（比 一.五四） */
+        const 高差 = clamp((q.高 || 0) - (melee.e.高 || 0), -2, 2);
+        const 高みの利 = 高差 >= 0 ? 1 + 高差 * 0.12 : 1 / (1 - 高差 * 0.12);
         applyDamage(b, melee.f, melee.e,
           st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200)
           * terr.fight * flank * charge * push * guard * 支え * 騎 * (1 - c.fatigue / 260)
-          * 乱れ攻 * 乱れ受 * dt,
+          * 乱れ攻 * 乱れ受 * 器 * 練れ * 高みの利 * dt,
           flank, c.gen.valor * (c.chargeT > 0 ? 1.2 : 1), c, q);
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
         if (melee.f.seen || mdist < TERRAIN[melee.e.地 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
@@ -1880,6 +1957,10 @@ export function stepBattle(b, dt) {
     // 前列で槍を合わせている組の数。後ろが支える度合いを測るのに使う。
     c.噛み組数 = c.squads.filter((q) => q.men > 0 && q.engaged).length;
     c.立つ組数 = c.squads.filter((q) => q.men > 0).length;
+    /* 隊の練れ。損害で士気がどれだけ削れるかに使う（applyDamage の 堪え）。 */
+    { let 和 = 0, 数 = 0;
+      for (const q of c.squads) if (q.men > 0) { 和 += q.練 == null ? 70 : q.練; 数++; }
+      c.練 = 数 ? 和 / 数 : 70; }
     c.鉄砲組数 = c.squads.filter((q) => q.men > 0 && q.type === "teppo").length;
     c.槍組数 = c.squads.filter((q) => q.men > 0 && q.type === "yari").length;
     c.fatigue = clamp(c.fatigue + (fighting ? 1.1 : c.order === "待機" ? -1.4 : 0) * dt, 0, 100);
@@ -1966,7 +2047,23 @@ export function stepBattle(b, dt) {
        十五分の一まで下げたが、下げすぎた。士気の落ち方を緩めたところ、隊は
        士気では崩れなくなり、兵が一割四分になるまで戦って全滅同然になった。
        二割二分に戻す。三隊のうち二隊を失えば、その隊はもう戦列を保てない。 */
-    if (!c.routed && (c.morale <= 15 || ratio < 0.22)) {
+    /* 崩れる際は、将の器量と兵の練れで動く（GDD 8.7 / 6.2）。
+
+       もとは「士気十五、あるいは兵二割二分」の決め打ちで、誰が率いていようと
+       同じ所で崩れた。名将の手勢も新兵も、同じ二割二分で走り出す。器量と練度が
+       盤に出ない元の一つがこれである――戦の決着は討ち取りよりも崩れで付くの
+       だから、崩れ際が動かなければ、将も鍛錬も勝敗を動かさない。
+
+       鍛えた兵は粘り、気の据わった将は踏み止まらせる。
+         器量六十・練度七十 … 兵二割二分／士気十五（これまでと同じ）
+         器量九十・練度八十八 … 兵一割四分／士気十一
+         器量四十五・練度五十五 … 兵二割六分／士気十七 */
+    const 崩れ器量 = (c.gen.lead || 60) * 0.5 + (c.gen.valor || 60) * 0.3 + (c.gen.wit || 60) * 0.2;
+    const 崩れ練 = c.squads.length
+      ? c.squads.reduce((a2, q) => a2 + (q.練 == null ? 70 : q.練), 0) / c.squads.length : 70;
+    const 崩れ際 = clamp(0.22 - (崩れ器量 - 60) / 550 - (崩れ練 - 70) / 900, 0.11, 0.30);
+    const 気の際 = clamp(15 - (崩れ器量 - 60) * 0.12, 9, 20);
+    if (!c.routed && (c.morale <= 気の際 || ratio < 崩れ際)) {
       c.routed = true; c.order = "敗走";
       c.立て直し = null; c.退き門 = null; c.崩れた刻 = b.t;
       for (const q of c.squads) { q.engaged = false; q.link = null; }   // 崩れた者は掴み合いを解いて走る
@@ -2150,6 +2247,33 @@ export function stepBattle(b, dt) {
   }
   if (b.t - b.膠着.刻 > 180) {
     b.phase = "over"; b.orderly = true;
+    /* 攻めあぐねたと言えるのは、受け手が道を塞いでいるときだけである（GDD 8.8）。
+
+       測った――一隊を森に伏せるだけで、兵力差に関わりなく勝率が七割五分になった。
+       一対一.四三でも、一対二でも、一対三でも、ぴたりと同じ七割五分である。
+       十二戦のうち九勝、そのすべてが「攻めあぐね」で、打ち破った戦は一つも無い。
+       交換比は〇.五五から〇.八九――負けているのに勝ちになっていた。
+
+       からくりはこうである。丘の三隊が討ち取られたあと、森に伏せた一隊だけが
+       残る。伏せた隊は見えぬから噛めず、寄せ手は取り付く相手を失う。槍も合わず、
+       隔たりも縮まず、兵も減らぬまま百八十秒が過ぎ、「寄せ手は攻めあぐねた」と
+       裁かれる。野には寄せ手しか立っていないのに、である。
+
+       攻めあぐねとは「立ちはだかる者を破れなかった」ことである。立ちはだかる者が
+       いないなら、それは攻めあぐねではない。道を塞ぐ隊――崩れておらず、退いても
+       おらず、伏せてもいない隊――が受け手に一つも無ければ、寄せ手の勝ちとする。 */
+    const 塞ぐ = (sd) => b.corps.filter((c) => c.side === sd && !c.dead && !c.destroyed
+      && !c.潰 && !c.withdraw && !c.routed && !c.日和見 && !(c.ambush && !c.revealed)
+      && corpsMen(c) > 0).length;
+    const 受 = b.attacker === "P" ? "E" : "P";
+    if (塞ぐ(受) === 0 && 塞ぐ(b.attacker) > 0) {
+      b.result = b.attacker;
+      const 文2 = MAP ? "城方は野に立つ者を失い、寄せ手が攻め口を押さえた。"
+        : "立ちはだかる者は無く、寄せ手が野を押さえた。";
+      b.log.push({ t: b.t, text: 文2 });
+      notify(b, 文2, b.result === "P" ? "good" : "bad");
+      return;
+    }
     b.result = b.attacker === "P" ? "E" : "P";
     const 文 = MAP ? "寄せ手は攻め口を開けぬまま刻を費やし、囲みへ戻った。"
       : "寄せ手は攻めあぐね、兵を退いた。";

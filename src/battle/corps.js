@@ -1,5 +1,5 @@
 import { MAP, axisOf, fromUV, gatePos } from "./castleMap.js";
-import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, VILLAGES, WOODS, fieldScale, hasRiver, nearestOf, riverShift, terrainAt } from "./field.js";
+import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, VILLAGES, WOODS, fieldScale, hasRiver, nearestOf, riverShift, terrainAt, 高み, 高みの格 } from "./field.js";
 import { clamp } from "../core/util.js";
 import { ARMS } from "../data/roads.js";
 import { FIELD, MAX_CORPS, passable } from "./field.js";
@@ -161,6 +161,14 @@ export function makeCorps(side, gen, retinue, local, retTrain, localTrain, x, y,
         const ang = Math.random() * Math.PI * 2;
         squads.push({
           id: `${gen.id}-${sid++}`, type: u.type, men: m, max: m, origin, src: u.src,
+          /* 練度を組に覚えさせる（GDD 8.3）。
+
+             これまで練度は「初めの結束」としてしか入らず、戦が始まれば
+             落ち着く先（統率だけで決まる）へ吸われて消えていた。練度八十八の
+             精鋭も、統率六十の将の下では六十九へ収束する――だから兵を鍛えても
+             盤の上では何も変わらなかった（練度八十八対七十で勝率五割八分、
+             一対一.二では零）。鍛えた兵は、戦のあいだ鍛えたままである。 */
+          練: train,
           cohesion: clamp(train + (Math.random() * 12 - 6), 20, 100),
           x, y, facing, cool: 0, engaged: false, foe: null, link: null, aim: null,
           // 乱れは毎フレーム無作為化せず、この固定した「乱れ目標」へ補間する（GDD 8.3）
@@ -349,7 +357,7 @@ export const DETACH_DEFS = [
   },
   {
     key: "弓鉄砲高地占拠", pick: (c) => c.squads.filter((q) => ARM_STATS[q.type].range > 0),
-    need: (c, men) => men >= 100 && HILLS.length > 0, why: "遠隔兵100以上・到達可能な高地",
+    need: (c, men) => men >= 100 && 高み.length > 0, why: "遠隔兵100以上・到達可能な高地",
   },
   {
     key: "橋渡河点防衛", pick: (c) => c.squads.filter((q) => q.type === "yari").slice(0, 8),
@@ -519,12 +527,13 @@ export function 丘が空く(b, i, c) {
    麓に立った隊が「自分は丘にいる」と判じて、そこで守りに就いてしまう。
    斜面の裾は高みではない。 */
 export function 空き丘を探す(b, c) {
-  const 立つ番 = HILLS.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
+  const 立つ番 = 高み.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
   if (立つ番 >= 0 && 丘が空く(b, 立つ番, c)) return 立つ番;
   let 番 = -1, 近さ = Infinity;
-  for (let i = 0; i < HILLS.length; i++) {
+  for (let i = 0; i < 高み.length; i++) {
     if (!丘が空く(b, i, c)) continue;
-    const d = (c.x - HILLS[i].x) ** 2 + (c.y - HILLS[i].y) ** 2;
+    /* 山は丘より一段上なので、少しくらい遠くても山を選ぶ（高みの格）。 */
+    const d = Math.hypot(c.x - 高み[i].x, c.y - 高み[i].y) / 高みの格(高み[i]);
     if (d < 近さ) { 近さ = d; 番 = i; }
   }
   return 番;
@@ -577,7 +586,7 @@ export function 分遣の頃合い(b, c, key) {
   }
 
   if (key === "弓鉄砲高地占拠") {
-    if (!HILLS.length) return false;
+    if (!高み.length) return false;
     /* 守勢の隊は本隊ごと丘へ登る（ai.js の「高みを取る」）。そのうえ遠隔兵を
        割いては、同じ丘へ二重に登ることになる。分遣で丘を取るのは押して出る
        側であり、しかも兵で優ると見たときだけである。正面で拮抗している
@@ -586,7 +595,7 @@ export function 分遣の頃合い(b, c, key) {
     if (!兵で優る(b, c.side)) return false;
     const 番 = 空き丘を探す(b, c);              // すでに誰かが押さえた丘へは出さない
     if (番 < 0) return false;
-    const 丘 = HILLS[番];
+    const 丘 = 高み[番];
     const 丘まで = Math.hypot(丘.x - c.x, 丘.y - c.y);
     if (!攻め手) {
       // 兵で優る受け手は、自陣の側の近い高みへ（遠い丘へ兵を割いても戦列が薄くなるだけ）
@@ -774,7 +783,7 @@ export function detachAI(b, c, alive) {
     if (番 == null || 番 < 0 || !丘が空く(b, 番, c)) 番 = 空き丘を探す(b, c);
     if (番 < 0) { c.丘番 = null; c.task = "帰陣"; return true; }   // 空いた高地のない野もある
     c.丘番 = 番; 丘を押さえる(b, 番, c);
-    const h = HILLS[番];
+    const h = 高み[番];
     if (Math.hypot(h.x - c.x, h.y - c.y) > 40) { c.tx = h.x; c.ty = h.y; c.order = "移動"; }
     else { c.order = "射撃"; c.tx = c.x; c.ty = c.y; }
     return true;

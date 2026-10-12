@@ -10569,6 +10569,17 @@ function succeed(s2, dead, cause, heirId, retire) {
     m: s2.month
   }];
   \u672C\u62E0\u3092\u8FFD\u3046(s2);
+  const \u5F15\u7D99 = \u5BB6\u7763\u3067\u5F79\u3092\u5F15\u304D\u7D99\u3050(s2, dead.faction, heir);
+  if (\u5F15\u7D99) {
+    if (\u5F15\u7D99.\u89E3\u3044\u305F === "\u65D7\u982D") {
+      s2.chronicle.push({
+        y: s2.year,
+        m: s2.month,
+        text: \u5F15\u7D99.\u7D99\u8005 ? `${heir.name}\u306F\u5BB6\u7763\u3092\u7D99\u304E\u3001${\u5F15\u7D99.\u56FD || ""}\u65B9\u9762\u306E\u65D7\u982D\u3092${\u5F15\u7D99.\u7D99\u8005.name}\u306B\u8B72\u3063\u305F\uFF08\u5BC4\u9A0E${\u5F15\u7D99.\u5BC4\u9A0E}\u540D\u3092\u5F15\u304D\u7D99\u3050\uFF09\u3002` : `${heir.name}\u306F\u5BB6\u7763\u3092\u7D99\u304E\u3001\u65D7\u982D\u306E\u5F79\u3092\u96E2\u308C\u305F\u3002${\u5F15\u7D99.\u56FD || ""}\u65B9\u9762\u306F\u5927\u540D\u304C\u81EA\u3089\u5DEE\u914D\u3059\u308B\u3002`
+      });
+    }
+    s2.\u4EE3\u66FF\u308F\u308A[s2.\u4EE3\u66FF\u308F\u308A.length - 1].\u65D7\u982D\u5F15\u7D99 = \u5F15\u7D99.\u7D99\u8005 ? { \u524D: heir.name, \u5F8C: \u5F15\u7D99.\u7D99\u8005.name, \u56FD: \u5F15\u7D99.\u7D99\u306E\u56FD, \u5BC4\u9A0E: \u5F15\u7D99.\u5BC4\u9A0E } : { \u524D: heir.name, \u5F8C: null, \u56FD: \u5F15\u7D99.\u56FD, \u5BC4\u9A0E: 0 };
+  }
   return heir;
 }
 var SURNAMES = ["\u6797", "\u4F50\u8107", "\u5CA9\u5BA4", "\u5C71\u53E3", "\u4E2D\u91CE", "\u5859", "\u6CB3\u5C3B", "\u6BDB\u5229", "\u8702\u5C4B", "\u751F\u99D2", "\u6881\u7530", "\u8D64\u5DDD"];
@@ -12584,6 +12595,55 @@ var \u65D7\u982D\u306E\u7684\u5BB6 = (s2, \u65D7) => {
   const \u9078\u3079\u308B = new Set(\u65D7\u982D\u306E\u7684\u306B\u3067\u304D\u308B\u5BB6(s2, \u65D7));
   return (\u65D7 && \u65D7.\u7684\u5BB6 || []).filter((f) => \u9078\u3079\u308B.has(f));
 };
+function \u5BB6\u7763\u3067\u5F79\u3092\u5F15\u304D\u7D99\u3050(s2, fid, \u65B0\u5F53\u4E3B) {
+  if (!\u65B0\u5F53\u4E3B) return null;
+  const \u65D7\u3060\u3063\u305F = \u65B0\u5F53\u4E3B.\u5F79 === "\u65D7\u982D";
+  if (\u65B0\u5F53\u4E3B.\u5F79 !== "\u65D7\u982D" && \u65B0\u5F53\u4E3B.\u5F79 !== "\u56FD\u4E3B") return null;
+  const \u3082\u3068\u306E\u56FD = /* @__PURE__ */ new Set();
+  if (\u65B0\u5F53\u4E3B.\u5F79\u56FD) \u3082\u3068\u306E\u56FD.add(\u65B0\u5F53\u4E3B.\u5F79\u56FD);
+  const \u5BC4\u9A0E\u3089 = \u65D7\u3060\u3063\u305F ? \u5BC4\u9A0E\u305F\u3061(s2, \u65B0\u5F53\u4E3B.id).filter((x) => x.id !== \u65B0\u5F53\u4E3B.id) : [];
+  for (const k of \u65D7\u3060\u3063\u305F ? \u65D7\u982D\u306E\u53D7\u3051\u6301\u3061(s2, \u65B0\u5F53\u4E3B) : []) \u3082\u3068\u306E\u56FD.add(k);
+  const \u3082\u3068\u306E\u5F79\u56FD = \u65B0\u5F53\u4E3B.\u5F79\u56FD;
+  \u65B0\u5F53\u4E3B.\u5F79 = null;
+  \u65B0\u5F53\u4E3B.\u5F79\u56FD = null;
+  \u65B0\u5F53\u4E3B.\u65B9\u9762 = null;
+  \u65B0\u5F53\u4E3B.\u7684\u5BB6 = null;
+  for (const x of \u5BC4\u9A0E\u3089) x.\u5BC4\u89AA = null;
+  if (!\u65D7\u3060\u3063\u305F) return { \u89E3\u3044\u305F: "\u56FD\u4E3B", \u56FD: \u3082\u3068\u306E\u5F79\u56FD, \u7D99\u8005: null, \u5BC4\u9A0E: 0 };
+  const \u5F53\u4E3B\u306E\u56FD\u3005 = \u5F53\u4E3B\u306E\u56FD\u3089(s2, fid);
+  const \u6301\u3064\u56FD = new Set(s2.castles.filter((c) => c.faction === fid).map((c) => c.kuni));
+  const \u5019 = s2.generals.filter((g) => g.faction === fid && !g.captive && !g.lord && g.id !== \u65B0\u5F53\u4E3B.id && g.\u5F79 !== "\u65D7\u982D" && \u8EAB\u5206\u306E\u4F4D(g, s2) >= \u5F79\u306E\u8981\u308B\u8EAB\u5206.\u65D7\u982D).map((g) => ({ g, \u6839: \u6839\u306E\u56FD(s2, g) })).filter((x) => x.\u6839 && \u3082\u3068\u306E\u56FD.has(x.\u6839) && \u6301\u3064\u56FD.has(x.\u6839) && !\u5F53\u4E3B\u306E\u56FD\u3005.includes(x.\u6839));
+  for (const x of \u5019) {
+    const \u524D\u5F79 = x.g.\u5F79, \u524D\u56FD = x.g.\u5F79\u56FD;
+    x.g.\u5F79 = "\u65D7\u982D";
+    x.g.\u5F79\u56FD = x.\u6839;
+    x.\u53D6\u308C\u308B = \u5BC4\u9A0E\u3089.reduce((n, y) => n + (y.id !== x.g.id && \u5BC4\u9A0E\u306B\u53D6\u308C\u308B\u304B(s2, x.g, y).ok ? 1 : 0), 0);
+    x.g.\u5F79 = \u524D\u5F79;
+    x.g.\u5F79\u56FD = \u524D\u56FD;
+  }
+  \u5019.sort((a, z) => z.\u53D6\u308C\u308B - a.\u53D6\u308C\u308B || stipendOf(s2, z.g) - stipendOf(s2, a.g) || (z.g.lead || 0) + (z.g.gov || 0) - ((a.g.lead || 0) + (a.g.gov || 0)));
+  const \u67A0 = \u65D7\u982D\u306E\u67A0(s2, fid);
+  if (!\u5019.length || \u65D7\u982D\u305F\u3061(s2, fid).length >= \u67A0) {
+    return { \u89E3\u3044\u305F: "\u65D7\u982D", \u56FD: \u3082\u3068\u306E\u5F79\u56FD, \u7D99\u8005: null, \u5BC4\u9A0E: 0 };
+  }
+  const { g: \u7D99, \u6839 } = \u5019[0];
+  \u7D99.\u5F79 = "\u56FD\u4E3B";
+  \u7D99.\u5F79\u56FD = \u6839;
+  \u7D99.\u5BC4\u89AA = null;
+  const r = \u65D7\u982D\u306B\u4EFB\u3058\u308B(s2, fid, \u7D99.id);
+  if (!r.ok) {
+    \u7D99.\u5F79 = null;
+    \u7D99.\u5F79\u56FD = null;
+    return { \u89E3\u3044\u305F: "\u65D7\u982D", \u56FD: \u3082\u3068\u306E\u5F79\u56FD, \u7D99\u8005: null, \u5BC4\u9A0E: 0 };
+  }
+  let \u79FB = 0;
+  for (const x of \u5BC4\u9A0E\u3089) {
+    if (x.id === \u7D99.id) continue;
+    if (\u5BC4\u9A0E\u306B\u53D6\u308B(s2, \u7D99.id, x.id).ok) \u79FB++;
+    else x.\u5BC4\u89AA = null;
+  }
+  return { \u89E3\u3044\u305F: "\u65D7\u982D", \u56FD: \u3082\u3068\u306E\u5F79\u56FD, \u7D99\u8005: \u7D99, \u7D99\u306E\u56FD: \u6839, \u5BC4\u9A0E: \u79FB };
+}
 function \u65D7\u982D\u3092\u7E55\u3046(s2, fid) {
   const \u89E3\u3044\u305F = [];
   const \u5F53\u4E3B\u306E\u56FD\u3005 = \u5F53\u4E3B\u306E\u56FD\u3089(s2, fid);
@@ -23859,6 +23919,13 @@ var WOODS = [];
 var HILLS = [];
 var MARSH = [];
 var MOUNTAINS = [];
+var \u9AD8\u307F = [];
+function \u9AD8\u307F\u3092\u6570\u3048\u76F4\u3059() {
+  \u9AD8\u307F.length = 0;
+  for (const m of MOUNTAINS) \u9AD8\u307F.push(m);
+  for (const h of HILLS) \u9AD8\u307F.push(h);
+}
+var \u9AD8\u307F\u306E\u683C = (h) => MOUNTAINS.includes(h) ? 1.42 : 1;
 var \u9053\u306E\u8CEA = "\u8857\u9053";
 function setFieldKind(kind) {
   \u9053\u306E\u8CEA = kind || "\u8857\u9053";
@@ -23952,10 +24019,23 @@ function genTerrain(seed) {
   const \u5E952 = sc >= 2.4 ? 2 : sc >= 1.6 ? 1 : 0;
   const \u6570 = (\u57FA, \u8981) => Math.max(\u8981 ? \u5E952 : 0, Math.round(\u57FA * (0.6 + sc * 0.62)));
   {
-    const \u6570\u5C71 = \u9053\u306E\u8CEA === "\u96E3\u6240" ? 2 : \u9053\u306E\u8CEA === "\u5C71\u9053" ? 1 : 0;
+    const \u5C71\u306E\u8CFD = (seed >>> 9 & 1023) / 1024;
+    const \u6570\u5C71 = (\u9053\u306E\u8CEA === "\u96E3\u6240" ? 3 : \u9053\u306E\u8CEA === "\u5C71\u9053" ? 2 : \u5C71\u306E\u8CFD < 0.42 ? 1 : 0) + (sc >= 2.6 && \u9053\u306E\u8CEA !== "\u6D77\u8DEF" && \u5C71\u306E\u8CFD < 0.62 ? 1 : 0);
     const \u524D = HILLS.length;
     const \u88FE\u5C0F = clamp(120 * sc, 130, H2 * 0.145), \u88FE\u5927 = clamp(175 * sc, 190, H2 * 0.205);
-    if (\u6570\u5C71) put(HILLS, \u6570\u5C71, \u88FE\u5C0F, Math.max(\u88FE\u5C0F + 10, \u88FE\u5927), true, 60);
+    if (\u6570\u5C71) {
+      for (let \u8A66 = 0; \u8A66 < 4 && HILLS.length - \u524D < \u6570\u5C71; \u8A66++) {
+        const \u7E2E = Math.pow(0.78, \u8A66);
+        put(
+          HILLS,
+          \u6570\u5C71 - (HILLS.length - \u524D),
+          Math.max(90, \u88FE\u5C0F * \u7E2E),
+          Math.max(\u88FE\u5C0F * \u7E2E + 10, \u88FE\u5927 * \u7E2E),
+          true,
+          70
+        );
+      }
+    }
     for (const m of HILLS.splice(\u524D)) {
       m.\u9AD8 = Math.round(180 + m.seed % 100 * 2.4);
       m.rise = Math.round(m.r * 0.34);
@@ -23968,6 +24048,7 @@ function genTerrain(seed) {
   put(MARSH, \u6570(rnd() > 0.6 ? 1 : 0), 65 * sc, 100 * sc);
   put(VILLAGES, \u6570(Math.floor(rnd() * 3)), 34 * sc, 58 * sc);
   for (const h of HILLS) h.rise = Math.round(h.r * (0.2 + h.seed % 100 / 100 * 0.14));
+  \u9AD8\u307F\u3092\u6570\u3048\u76F4\u3059();
   ROAD.\u7BC0.length = 0;
   ROADS2.length = 0;
   ROADS2.push(ROAD);
@@ -24067,6 +24148,7 @@ function \u7B4B\u66F8\u304D\u306E\u91CE\u3092\u7D44\u3080(\u5730) {
   (\u5730.\u5C71 || []).forEach((o, i) => MOUNTAINS.push({ ...\u7A2E\u4ED8(o, i), rise: o.rise || Math.round(o.r * 0.34) }));
   (\u5730.\u9053 || []).forEach((r) => ROADS2.push({ \u540D: r.\u540D, \u7BC0: r.\u7BC0, \u5E45: r.\u5E45 || 60 }));
   (\u5730.\u5DDD || []).forEach((r) => RIVERS2.push({ \u540D: r.\u540D, \u7BC0: r.\u7BC0, \u5E45: r.\u5E45 || 40, \u6E21\u3057: r.\u6E21\u3057 || [] }));
+  \u9AD8\u307F\u3092\u6570\u3048\u76F4\u3059();
   ROAD.\u7BC0.length = 0;
   ROAD.\u5E45 = 0;
   \u5730\u5F62\u683C = \u91CE\u3092\u713C\u304F(\u5730.\u5347 || 10);
@@ -24074,6 +24156,24 @@ function \u7B4B\u66F8\u304D\u306E\u91CE\u3092\u7D44\u3080(\u5730) {
 function \u7B4B\u66F8\u304D\u3092\u89E3\u304F() {
   \u5730\u5F62\u683C = null;
   RIVERS2.length = 0;
+}
+function \u5730\u306E\u9AD8\u3055(x, y) {
+  let \u9AD8 = 0;
+  for (const m of MOUNTAINS) {
+    const d = Math.hypot(x - m.x, y - m.y);
+    if (d < m.r) {
+      const v = 2 * (1 - d / m.r);
+      if (v > \u9AD8) \u9AD8 = v;
+    }
+  }
+  for (const h of HILLS) {
+    const d = Math.hypot(x - h.x, y - h.y);
+    if (d < h.r) {
+      const v = 1 - d / h.r;
+      if (v > \u9AD8) \u9AD8 = v;
+    }
+  }
+  return \u9AD8;
 }
 var hasRiver = () => RIVER.bot > RIVER.top + 4;
 function \u5C71\u304C\u906E\u308B\u304B(x1, y1, x2, y2) {
@@ -24180,10 +24280,22 @@ var TERRAIN = {
   forest: { speed: 0.65, fight: 0.85, cohesion: -6, sight: 95, horse: 0.6, charge: false, label: "\u68EE" },
   wood: { speed: 0.82, fight: 0.92, cohesion: -3, sight: 165, horse: 0.85, charge: true, label: "\u6797" },
   marsh: { speed: 0.5, fight: 0.8, cohesion: -9, sight: 240, horse: 0.45, charge: false, label: "\u6E7F\u5730" },
-  hill: { speed: 0.7, fight: 1.15, cohesion: -2, sight: 360, horse: 0.8, charge: true, label: "\u4E18" },
+  /* 丘と山の「戦う力」は一.〇〇である（GDD 8.1）。
+  
+       高みの利は、地べたに立っていれば付くものではない。相手より高いかどうかで
+       決まる（地の高さ と、engine の 高みの利）。もとは丘に一.一五、山に一.二八を
+       置いていたが、これだと山へ攻め登る隊にも頂の隊と同じ一.二八が付き、拠る
+       意味が消える。そのうえ二重に掛かって、山に拠った受け手が一.四三倍の兵を
+       九割三分で撃ち返すほどになった（取り分の比 二.三七）。
+  
+       高低そのものは 地の高さ に任せ、ここには残さない。丘の頂から麓へ当たれば
+       一.一八、麓から見上げれば〇.八五――比にして一.三九で、もとの一.一五が
+       両方に付いて比一.〇〇であったのより、よほど高みが効く。
+       登る難しさは、足（速さ）と隊列（結束）のほうで既に表してある。 */
+  hill: { speed: 0.7, fight: 1, cohesion: -2, sight: 360, horse: 0.8, charge: true, label: "\u4E18" },
   /* 山。丘の一段上。登るのに難儀し、隊列は崩れ、騎馬は用をなさない。
      そのかわり見晴らしは野の倍近く、上から当たる強みも丘より大きい。 */
-  mountain: { speed: 0.42, fight: 1.28, cohesion: -7, sight: 470, horse: 0.35, charge: false, label: "\u5C71" },
+  mountain: { speed: 0.42, fight: 1, cohesion: -7, sight: 470, horse: 0.35, charge: false, label: "\u5C71" },
   village: { speed: 0.78, fight: 0.95, cohesion: -3, sight: 130, horse: 0.7, charge: false, label: "\u96C6\u843D" },
   bridge: { speed: 0.95, fight: 0.85, cohesion: -5, sight: 260, horse: 0.9, charge: false, label: "\u6A4B" },
   ford: { speed: 0.3, fight: 0.7, cohesion: -14, sight: 260, horse: 0.5, charge: false, label: "\u6D45\u702C" },
@@ -24335,6 +24447,14 @@ function makeCorps(side, gen, retinue, local, retTrain, localTrain, x, y, facing
         max: m,
         origin,
         src: u.src,
+        /* 練度を組に覚えさせる（GDD 8.3）。
+        
+                     これまで練度は「初めの結束」としてしか入らず、戦が始まれば
+                     落ち着く先（統率だけで決まる）へ吸われて消えていた。練度八十八の
+                     精鋭も、統率六十の将の下では六十九へ収束する――だから兵を鍛えても
+                     盤の上では何も変わらなかった（練度八十八対七十で勝率五割八分、
+                     一対一.二では零）。鍛えた兵は、戦のあいだ鍛えたままである。 */
+        \u7DF4: train,
         cohesion: clamp(train + (Math.random() * 12 - 6), 20, 100),
         x,
         y,
@@ -24510,7 +24630,7 @@ var DETACH_DEFS = [
   {
     key: "\u5F13\u9244\u7832\u9AD8\u5730\u5360\u62E0",
     pick: (c) => c.squads.filter((q) => ARM_STATS[q.type].range > 0),
-    need: (c, men) => men >= 100 && HILLS.length > 0,
+    need: (c, men) => men >= 100 && \u9AD8\u307F.length > 0,
     why: "\u9060\u9694\u5175100\u4EE5\u4E0A\u30FB\u5230\u9054\u53EF\u80FD\u306A\u9AD8\u5730"
   },
   {
@@ -24615,12 +24735,12 @@ function \u4E18\u304C\u7A7A\u304F(b, i, c) {
   return !!(o.detach && o.task !== "\u5F13\u9244\u7832\u9AD8\u5730\u5360\u62E0");
 }
 function \u7A7A\u304D\u4E18\u3092\u63A2\u3059(b, c) {
-  const \u7ACB\u3064\u756A = HILLS.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
+  const \u7ACB\u3064\u756A = \u9AD8\u307F.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
   if (\u7ACB\u3064\u756A >= 0 && \u4E18\u304C\u7A7A\u304F(b, \u7ACB\u3064\u756A, c)) return \u7ACB\u3064\u756A;
   let \u756A = -1, \u8FD1\u3055 = Infinity;
-  for (let i = 0; i < HILLS.length; i++) {
+  for (let i = 0; i < \u9AD8\u307F.length; i++) {
     if (!\u4E18\u304C\u7A7A\u304F(b, i, c)) continue;
-    const d = (c.x - HILLS[i].x) ** 2 + (c.y - HILLS[i].y) ** 2;
+    const d = Math.hypot(c.x - \u9AD8\u307F[i].x, c.y - \u9AD8\u307F[i].y) / \u9AD8\u307F\u306E\u683C(\u9AD8\u307F[i]);
     if (d < \u8FD1\u3055) {
       \u8FD1\u3055 = d;
       \u756A = i;
@@ -24649,12 +24769,12 @@ function \u5206\u9063\u306E\u9803\u5408\u3044(b, c, key) {
     return \u540D\u5C06 && \u8FD1\u3044\u6575 < 520;
   }
   if (key === "\u5F13\u9244\u7832\u9AD8\u5730\u5360\u62E0") {
-    if (!HILLS.length) return false;
+    if (!\u9AD8\u307F.length) return false;
     if (\u5B88\u52E2\u306E\u968A(b, c)) return false;
     if (!\u5175\u3067\u512A\u308B(b, c.side)) return false;
     const \u756A = \u7A7A\u304D\u4E18\u3092\u63A2\u3059(b, c);
     if (\u756A < 0) return false;
-    const \u4E182 = HILLS[\u756A];
+    const \u4E182 = \u9AD8\u307F[\u756A];
     const \u4E18\u307E\u3067 = Math.hypot(\u4E182.x - c.x, \u4E182.y - c.y);
     if (!\u653B\u3081\u624B) {
       return \u4E18\u307E\u3067 < \u9593 * 0.5 && \u4E18\u307E\u3067 < 700 && Math.hypot(\u4E182.x - \u5473\u65B9\u9663.x, \u4E182.y - \u5473\u65B9\u9663.y) <= Math.hypot(\u4E182.x - \u6575\u9663.x, \u4E182.y - \u6575\u9663.y);
@@ -24847,7 +24967,7 @@ function detachAI(b, c, alive) {
     }
     c.\u4E18\u756A = \u756A;
     \u4E18\u3092\u62BC\u3055\u3048\u308B(b, \u756A, c);
-    const h = HILLS[\u756A];
+    const h = \u9AD8\u307F[\u756A];
     if (Math.hypot(h.x - c.x, h.y - c.y) > 40) {
       c.tx = h.x;
       c.ty = h.y;
@@ -28219,8 +28339,7 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
       const bx = -Math.cos(th), by = -Math.sin(th);
       const \u565B\u307F\u4E2D = q.engaged || b.t - (q.\u565B\u307F\u523B == null ? -99 : q.\u565B\u307F\u523B) < 1.2;
       const \u4F38\u3073\u7684 = \u565B\u307F\u4E2D && q.foe ? Math.max(8, Math.min(17, q.foe.d / 2 - 2)) : 8;
-      if (!s2.\u521D) s2.\u4F38 = \u4F38\u3073\u7684;
-      else s2.\u4F38 += (\u4F38\u3073\u7684 - s2.\u4F38) * Math.min(1, dt * 2.4);
+      s2.\u4F38 += (\u4F38\u3073\u7684 - s2.\u4F38) * Math.min(1, dt * 2.4);
       const \u524D = s2.\u4F38;
       const \u523B\u307F = (\u524D + 2.8) / 4;
       const \u62BC = \u565B\u307F\u4E2D ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
@@ -32408,17 +32527,35 @@ function battleAI(b) {
         }
       }
     }
-    if (!MAP && !b.\u7B4B\u66F8\u304D && HILLS.length && !c.squads.some((q) => q.engaged)) {
+    const \u6575\u306E\u8FD1\u3055 = alive.reduce((d, o) => o.side === c.side ? d : Math.min(d, Math.hypot(o.x - c.x, o.y - c.y)), Infinity);
+    if (!MAP && !b.\u7B4B\u66F8\u304D && \u9AD8\u307F.length && \u5B88\u52E2\u306E\u968A(b, c) && \u6575\u306E\u8FD1\u3055 > 340) {
+      const \u4E57\u308B = \u9AD8\u307F.findIndex((h) => (c.x - h.x) ** 2 + (c.y - h.y) ** 2 < h.r ** 2);
+      if (\u4E57\u308B >= 0) {
+        if (!c.\u8E0F\u3080\u9AD8\u307F || c.\u8E0F\u3080\u9AD8\u307F.i !== \u4E57\u308B) c.\u8E0F\u3080\u9AD8\u307F = { i: \u4E57\u308B, x: c.x, y: c.y };
+        const \u6301 = c.\u8E0F\u3080\u9AD8\u307F;
+        if (c.order !== "\u5B88\u5099" || Math.hypot((c.tx || 0) - \u6301.x, (c.ty || 0) - \u6301.y) > 6) {
+          issueOrder(b, c, { order: "\u5B88\u5099", tx: \u6301.x, ty: \u6301.y });
+        }
+        continue;
+      }
+      c.\u8E0F\u3080\u9AD8\u307F = null;
+    }
+    if (!MAP && !b.\u7B4B\u66F8\u304D && \u9AD8\u307F.length && !c.squads.some((q) => q.engaged)) {
       const \u5B88\u52E2 = \u5B88\u52E2\u306E\u968A(b, c);
       const \u6575\u307E\u3067 = Math.hypot(tgt.x - c.x, tgt.y - c.y);
       const \u756A = \u5B88\u52E2 ? \u7A7A\u304D\u4E18\u3092\u63A2\u3059(b, c) : -1;
-      const \u4E182 = \u756A >= 0 ? HILLS[\u756A] : null;
+      const \u4E182 = \u756A >= 0 ? \u9AD8\u307F[\u756A] : null;
       const \u4E0B\u304C\u308A = \u4E182 ? Math.hypot(tgt.x - \u4E182.x, tgt.y - \u4E182.y) - \u6575\u307E\u3067 : 0;
-      if (\u4E182 && \u6575\u307E\u3067 > 260 && \u4E0B\u304C\u308A <= 200) {
+      if (\u4E182) {
         const \u9060\u3055 = Math.hypot(\u4E182.x - c.x, \u4E182.y - c.y);
         const \u9802 = clamp(\u4E182.r * 0.45, 60, 120);
         const \u9593 = 540 + \u4E182.r * 0.8;
-        if (\u9060\u3055 > \u9802 && \u9060\u3055 < \u9593 && \u5CB8(c.x, c.y) === \u5CB8(\u4E182.x, \u4E182.y)) {
+        if (\u9060\u3055 <= \u9802) {
+          \u4E18\u3092\u62BC\u3055\u3048\u308B(b, \u756A, c);
+          issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
+          continue;
+        }
+        if (\u6575\u307E\u3067 > 260 && \u4E0B\u304C\u308A <= 200 && \u9060\u3055 < \u9593 && \u5CB8(c.x, c.y) === \u5CB8(\u4E182.x, \u4E182.y)) {
           \u4E18\u3092\u62BC\u3055\u3048\u308B(b, \u756A, c);
           const \u90532 = \u5BC4\u305B\u9053\u3092\u5F15\u304F(b, c, \u4E182.x, \u4E182.y);
           if (\u90532 === "\u7D9A\u884C") continue;
@@ -32428,11 +32565,6 @@ function battleAI(b) {
             continue;
           }
           issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u4E182.x, ty: \u4E182.y });
-          continue;
-        }
-        if (\u9060\u3055 <= \u9802) {
-          \u4E18\u3092\u62BC\u3055\u3048\u308B(b, \u756A, c);
-          issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
           continue;
         }
       }
@@ -32593,7 +32725,7 @@ function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   }
   e.cohesion = Math.max(0, e.cohesion - lost * 0.7 * flank * (0.55 + (valor || 60) / 100) * (fCorps.\u887E ? 0.3 : 1));
   const share = lost / Math.max(1200, corpsMax(fCorps));
-  const \u582A\u3048 = clamp(1.3 - (fCorps.gen && fCorps.gen.lead || 60) / 200, 0.8, 1.2);
+  const \u582A\u3048 = clamp(1.3 - (fCorps.gen && fCorps.gen.lead || 60) / 200 - ((fCorps.\u7DF4 == null ? 70 : fCorps.\u7DF4) - 70) / 380, 0.72, 1.25);
   fCorps.\u58EB\u6C17\u306E\u6E9C = (fCorps.\u58EB\u6C17\u306E\u6E9C || 0) + share * 100 * 0.6 * (1 + (flank - 1) * 0.8) * \u582A\u3048;
   fCorps.\u640D = (fCorps.\u640D || 0) + lost;
   if (byCorps) byCorps.\u529F = (byCorps.\u529F || 0) + lost;
@@ -32708,7 +32840,10 @@ function stepBattle(b, dt) {
   if (b.\u9032\u884C) b.\u9032\u884C(b, dt);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed && !c.\u65E5\u548C\u898B);
   for (const c of alive) {
-    for (const q of c.squads) q.\u5730 = \u8E0F\u307F\u8FBC\u3093\u3060\u5730(q.x, q.y);
+    for (const q of c.squads) {
+      q.\u5730 = \u8E0F\u307F\u8FBC\u3093\u3060\u5730(q.x, q.y);
+      q.\u9AD8 = \u5730\u306E\u9AD8\u3055(q.x, q.y);
+    }
     c.\u5730\u82AF = \u8E0F\u307F\u8FBC\u3093\u3060\u5730(c.x, c.y);
     c.\u5730 = \u968A\u306E\u5730(c);
   }
@@ -33141,6 +33276,19 @@ function stepBattle(b, dt) {
           \u671By = 0;
         }
       }
+      if (!MAP) {
+        for (const o of alive) {
+          if (o.side === c.side || !\u584A\u3068\u3057\u3066\u7ACB\u3064(o)) continue;
+          const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
+          if (ed < 0.01 || ed > \u89E6\u308C\u9699 * 1.5) continue;
+          const ux = ex / ed, uy = ey / ed;
+          const \u6CBF = \u671Bx * ux + \u671By * uy;
+          if (\u6CBF > 0) {
+            \u671Bx -= \u6CBF * ux;
+            \u671By -= \u6CBF * uy;
+          }
+        }
+      }
       const \u901F = c.\u901F || { x: \u671Bx, y: \u671By };
       const \u5BC4\u305B = Math.min(1, dt / 0.9);
       \u901F.x += (\u671Bx - \u901F.x) * \u5BC4\u305B;
@@ -33317,7 +33465,7 @@ function stepBattle(b, dt) {
         else if (\u8E0F\u3081\u308Bq(q.x, q.y + sy)) q.y += sy;
         const base = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
         q.facing = base + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
-        const \u843D\u3061\u7740\u304F\u5148 = clamp(52 + c.gen.lead * 0.28 + terr.cohesion * 4, 12, 92);
+        const \u843D\u3061\u7740\u304F\u5148 = clamp(28 + (q.\u7DF4 == null ? 70 : q.\u7DF4) * 0.34 + c.gen.lead * 0.28 + terr.cohesion * 4, 12, 96);
         q.cohesion += ((\u843D\u3061\u7740\u304F\u5148 - q.cohesion) * 0.1 + terr.cohesion * 0.25) * dt;
       } else {
         const rec = (1.2 + c.gen.lead / 40) * (q.engaged ? 0.15 : 1) * (1 - c.fatigue / 200);
@@ -33794,11 +33942,15 @@ function stepBattle(b, dt) {
         const \u652F\u3048 = 1 + clamp(((c.\u7ACB\u3064\u7D44\u6570 || 1) / Math.max(1, c.\u565B\u307F\u7D44\u6570 || 1) - 1) * 0.05, 0, 0.35);
         const \u4E71\u308C\u653B = 1 - 0.3 * (c.\u4E71\u308C || 0);
         const \u4E71\u308C\u53D7 = 1 + 0.35 * (melee.f.\u4E71\u308C || 0);
+        const \u5668 = 0.72 + ((c.gen.lead || 60) + (c.gen.valor || 60)) / 428;
+        const \u7DF4\u308C = 0.78 + (q.\u7DF4 == null ? 70 : q.\u7DF4) / 318;
+        const \u9AD8\u5DEE = clamp((q.\u9AD8 || 0) - (melee.e.\u9AD8 || 0), -2, 2);
+        const \u9AD8\u307F\u306E\u5229 = \u9AD8\u5DEE >= 0 ? 1 + \u9AD8\u5DEE * 0.12 : 1 / (1 - \u9AD8\u5DEE * 0.12);
         applyDamage(
           b,
           melee.f,
           melee.e,
-          st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * \u652F\u3048 * \u9A0E * (1 - c.fatigue / 260) * \u4E71\u308C\u653B * \u4E71\u308C\u53D7 * dt,
+          st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * \u652F\u3048 * \u9A0E * (1 - c.fatigue / 260) * \u4E71\u308C\u653B * \u4E71\u308C\u53D7 * \u5668 * \u7DF4\u308C * \u9AD8\u307F\u306E\u5229 * dt,
           flank,
           c.gen.valor * (c.chargeT > 0 ? 1.2 : 1),
           c,
@@ -33874,6 +34026,14 @@ function stepBattle(b, dt) {
     }
     c.\u565B\u307F\u7D44\u6570 = c.squads.filter((q) => q.men > 0 && q.engaged).length;
     c.\u7ACB\u3064\u7D44\u6570 = c.squads.filter((q) => q.men > 0).length;
+    {
+      let \u548C = 0, \u6570 = 0;
+      for (const q of c.squads) if (q.men > 0) {
+        \u548C += q.\u7DF4 == null ? 70 : q.\u7DF4;
+        \u6570++;
+      }
+      c.\u7DF4 = \u6570 ? \u548C / \u6570 : 70;
+    }
     c.\u9244\u7832\u7D44\u6570 = c.squads.filter((q) => q.men > 0 && q.type === "teppo").length;
     c.\u69CD\u7D44\u6570 = c.squads.filter((q) => q.men > 0 && q.type === "yari").length;
     c.fatigue = clamp(c.fatigue + (fighting ? 1.1 : c.order === "\u5F85\u6A5F" ? -1.4 : 0) * dt, 0, 100);
@@ -33925,7 +34085,11 @@ function stepBattle(b, dt) {
         c.feats.push("\u5BC6\u96C6\u9632\u5FA1");
       }
     }
-    if (!c.routed && (c.morale <= 15 || ratio < 0.22)) {
+    const \u5D29\u308C\u5668\u91CF = (c.gen.lead || 60) * 0.5 + (c.gen.valor || 60) * 0.3 + (c.gen.wit || 60) * 0.2;
+    const \u5D29\u308C\u7DF4 = c.squads.length ? c.squads.reduce((a2, q) => a2 + (q.\u7DF4 == null ? 70 : q.\u7DF4), 0) / c.squads.length : 70;
+    const \u5D29\u308C\u969B = clamp(0.22 - (\u5D29\u308C\u5668\u91CF - 60) / 550 - (\u5D29\u308C\u7DF4 - 70) / 900, 0.11, 0.3);
+    const \u6C17\u306E\u969B = clamp(15 - (\u5D29\u308C\u5668\u91CF - 60) * 0.12, 9, 20);
+    if (!c.routed && (c.morale <= \u6C17\u306E\u969B || ratio < \u5D29\u308C\u969B)) {
       c.routed = true;
       c.order = "\u6557\u8D70";
       c.\u7ACB\u3066\u76F4\u3057 = null;
@@ -34040,6 +34204,15 @@ function stepBattle(b, dt) {
   if (b.t - b.\u81A0\u7740.\u523B > 180) {
     b.phase = "over";
     b.orderly = true;
+    const \u585E\u3050 = (sd) => b.corps.filter((c) => c.side === sd && !c.dead && !c.destroyed && !c.\u6F70 && !c.withdraw && !c.routed && !c.\u65E5\u548C\u898B && !(c.ambush && !c.revealed) && corpsMen(c) > 0).length;
+    const \u53D7 = b.attacker === "P" ? "E" : "P";
+    if (\u585E\u3050(\u53D7) === 0 && \u585E\u3050(b.attacker) > 0) {
+      b.result = b.attacker;
+      const \u65872 = MAP ? "\u57CE\u65B9\u306F\u91CE\u306B\u7ACB\u3064\u8005\u3092\u5931\u3044\u3001\u5BC4\u305B\u624B\u304C\u653B\u3081\u53E3\u3092\u62BC\u3055\u3048\u305F\u3002" : "\u7ACB\u3061\u306F\u3060\u304B\u308B\u8005\u306F\u7121\u304F\u3001\u5BC4\u305B\u624B\u304C\u91CE\u3092\u62BC\u3055\u3048\u305F\u3002";
+      b.log.push({ t: b.t, text: \u65872 });
+      notify(b, \u65872, b.result === "P" ? "good" : "bad");
+      return;
+    }
     b.result = b.attacker === "P" ? "E" : "P";
     const \u6587 = MAP ? "\u5BC4\u305B\u624B\u306F\u653B\u3081\u53E3\u3092\u958B\u3051\u306C\u307E\u307E\u523B\u3092\u8CBB\u3084\u3057\u3001\u56F2\u307F\u3078\u623B\u3063\u305F\u3002" : "\u5BC4\u305B\u624B\u306F\u653B\u3081\u3042\u3050\u306D\u3001\u5175\u3092\u9000\u3044\u305F\u3002";
     b.log.push({ t: b.t, text: \u6587 });

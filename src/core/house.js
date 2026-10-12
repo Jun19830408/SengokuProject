@@ -1,4 +1,4 @@
-import { HOUSE_RANK, fiefOf, fiefWanted, stipendOf } from "./rank.js";
+import { HOUSE_RANK, fiefOf, fiefWanted, stipendOf, 家督で役を引き継ぐ } from "./rank.js";
 import { newRoster } from "./roster.js";
 import { clamp } from "./util.js";
 import { KANJI_TSUJI, LONG_LIVED, NEWCOMERS, PARENT } from "../data/newcomers.js";
@@ -344,6 +344,23 @@ export function succeed(s, dead, cause, heirId, retire) {
      「代が替わったのに、先代の城でしか大名の仕事ができない」と見えた。
      家督が動いた、その場で本拠も動かす。 */
   本拠を追う(s);
+  /* 旗頭のまま家督を継いだら、その場で役を解き、受け持ちを継がせる（GDD 6.4）。
+
+     本拠を追う のあとに回す。新しい当主の城へ本拠が移って初めて、どの国が
+     「当主のいる国」になるかが定まるからである。 */
+  const 引継 = 家督で役を引き継ぐ(s, dead.faction, heir);
+  if (引継) {
+    if (引継.解いた === "旗頭") {
+      s.chronicle.push({ y: s.year, m: s.month,
+        text: 引継.継者
+          ? `${heir.name}は家督を継ぎ、${引継.国 || ""}方面の旗頭を${引継.継者.name}に譲った`
+            + `（寄騎${引継.寄騎}名を引き継ぐ）。`
+          : `${heir.name}は家督を継ぎ、旗頭の役を離れた。${引継.国 || ""}方面は大名が自ら差配する。` });
+    }
+    s.代替わり[s.代替わり.length - 1].旗頭引継 = 引継.継者
+      ? { 前: heir.name, 後: 引継.継者.name, 国: 引継.継の国, 寄騎: 引継.寄騎 }
+      : { 前: heir.name, 後: null, 国: 引継.国, 寄騎: 0 };
+  }
   return heir;
 }
 
