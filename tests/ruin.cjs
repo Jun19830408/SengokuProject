@@ -96,6 +96,9 @@ const txt = () => {
   確('包囲の段が出る', !!btn('強攻'));
   if (!btn('強攻')) { console.log('エラー: 包囲の段が出ない'); process.exit(1); }
   await rc('強攻'); await flush(); await flush();
+  /* 城攻めに入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+     ここで見たいのは城郭図なので、自ら采を執る。 */
+  if (btn('自ら采を執る')) { await rc('自ら采を執る'); await flush(); await flush(); }
   確('城郭図に入る', /城攻め/.test(txt()));
   if (!(await rc('合戦開始'))) { console.log('エラー: 合戦を始められない'); process.exit(1); }
   await rc('委ねて結果を見る');

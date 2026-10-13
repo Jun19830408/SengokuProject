@@ -139,6 +139,9 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
   await flush(); await flush();
   // 寡兵であれば奇襲の献策が出る。ここでは正面から当たる。
   if (btn('正面から当たる')) { await rc('正面から当たる'); await flush(); await flush(); }
+  /* 合戦に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+     ここで見たいのは盤の立ち方なので、自ら采を執る。 */
+  if (btn('自ら采を執る')) { await rc('自ら采を執る'); await flush(); await flush(); }
 
   const 文2 = document.body.textContent;
   const 見出し = [...document.querySelectorAll('button')].map((b) => b.textContent.trim()).filter(Boolean).slice(0, 12);
@@ -207,6 +210,7 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
       /援軍とともに城下で迎え撃/.test(文3) ? '' : '囲みの文言になっている');
     await rc('籠もったまま'); await flush(); await flush();
     if (btn('正面から当たる')) { await rc('正面から当たる'); await flush(); await flush(); }
+    if (btn('自ら采を執る')) { await rc('自ら采を執る'); await flush(); await flush(); }
     const 帯3 = [...document.querySelectorAll('div')]
       .map((d) => d.textContent.replace(/\s+/g, ' '))
       .find((t) => /兵\s*[\d,]+.*対.*兵\s*[\d,]+/.test(t) && t.length < 400) || '';

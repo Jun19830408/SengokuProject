@@ -732,7 +732,9 @@ export function 家督で役を引き継ぐ(s, fid, 新当主) {
   const 候 = 旗頭を継げる者(s, fid, 新当主, もとの国, 寄騎ら);
   const 枠 = 旗頭の枠(s, fid);
   if (!候.length || 旗頭たち(s, fid).length >= 枠) {
-    return { 解いた: "旗頭", 国: もとの役国, 継者: null, 寄騎: 0 };
+    // 継ぐ者がいない。旗を外し、大名の直の手勢に戻す
+    const 軍 = 方面の軍を移す(s, 新当主.id, null);
+    return { 解いた: "旗頭", 国: もとの役国, 継者: null, 寄騎: 0, 軍 };
   }
   /* 遊ぶ側の家なら、誰に継がせるかは大名が決める（GDD 6.4）。
 
@@ -750,7 +752,7 @@ export function 家督で役を引き継ぐ(s, fid, 新当主) {
     return { 解いた: "旗頭", 国: もとの役国, 継者: null, 寄騎: 0, 待ち: true };
   }
   return { 解いた: "旗頭", 国: もとの役国,
-    ...旗頭を継がせる(s, fid, 候[0].g.id, 寄騎ら.map((x) => x.id)) };
+    ...旗頭を継がせる(s, fid, 候[0].g.id, 寄騎ら.map((x) => x.id), 新当主.id) };
 }
 
 /* 旗頭を継げる者（GDD 6.4）。
@@ -784,7 +786,27 @@ export function 旗頭を継げる者(s, fid, 除く, もとの国, 寄騎ら) {
 }
 
 /* 選ばれた者に方面を継がせる。寄騎もそのまま移す。 */
-export function 旗頭を継がせる(s, fid, 継者id, 寄騎ids) {
+/* 方面の軍を、新しい旗頭へ移す（GDD 6.4）。
+
+   家督を譲った旗頭は、その場で役を解かれる。ところが役だけを解いて
+   軍を放っておくと、在陣していた軍は「もう旗頭でない者」の手に残る。
+   実際の記録では、大名になった織田信長の名のまま、五つの軍が
+   二万五千の兵を抱えて在陣し続けていた。陣を払う下知（旗頭の陣を払う）
+   も、加勢を催す段も、みな軍の旗頭を頼りに動くので、どの手も届かない。
+
+   役を移すときは、軍も一緒に移す。継ぐ者がいなければ旗を外し、
+   大名の直の手勢として扱う（盤の筋では、旗頭の無い軍がそれである）。 */
+export function 方面の軍を移す(s, 先id, 後id) {
+  let 移 = 0;
+  for (const a of s.armies || []) {
+    if (a.旗頭 !== 先id) continue;
+    a.旗頭 = 後id || null;
+    移++;
+  }
+  return 移;
+}
+
+export function 旗頭を継がせる(s, fid, 継者id, 寄騎ids, 先id = null) {
   const 継 = s.generals.find((x) => x.id === 継者id && x.faction === fid && !x.captive);
   if (!継) return { 継者: null, 寄騎: 0 };
   const 根 = 根の国(s, 継);
@@ -802,7 +824,8 @@ export function 旗頭を継がせる(s, fid, 継者id, 寄騎ids) {
     if (寄騎に取る(s, 継.id, x.id).ok) 移++;
     else x.寄親 = null;
   }
-  return { 継者: 継, 継の国: 根, 寄騎: 移 };
+  const 軍 = 先id ? 方面の軍を移す(s, 先id, 継.id) : 0;
+  return { 継者: 継, 継の国: 根, 寄騎: 移, 軍 };
 }
 
 export function 旗頭を繕う(s, fid) {

@@ -67,6 +67,9 @@ const bar=()=>document.querySelector('.bar').textContent.replace(/\s+/g,' ').sli
   }
 
   console.log("\n--- 出陣→合戦 ---");
+  /* 盤に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+     無ければ何も起きない書き方にしておく。 */
+  await rc('自ら采を執る');
   if(/合戦開始/.test(document.body.textContent)){
     console.log(" （敵の来襲があったので先に片づけた）");
     await rc('合戦開始'); await rc('全軍撤退');
@@ -80,6 +83,7 @@ const bar=()=>document.querySelector('.bar').textContent.replace(/\s+/g,' ').sli
   await act(async()=>{sel.value=(sel.options[1]||sel.options[0]).value; sel.dispatchEvent(new dom.window.Event('change',{bubbles:true}));}); await flush();
   console.log(" 進発:", await rc('人で進発')?"出陣した":"★押せない");
   await rc('次月へ'); await rc('評定を開く');
+  await rc('自ら采を執る');
   console.log(" 合戦画面:", /合戦開始/.test(document.body.textContent)?"開いた":"★開かない");
   await rc('合戦開始');
   console.log(" 全軍接戦:", await rc('全軍接戦')?"命令できた":"★不可");
@@ -87,7 +91,7 @@ const bar=()=>document.querySelector('.bar').textContent.replace(/\s+/g,' ').sli
   console.log(" 決着:", document.body.textContent.match(/(勝利|敗北)/)?.[0]||"★未決着");
   await rc('戦場を離れる');
   if(/名乗らせる/.test(document.body.textContent)){ console.log(" 昇進:", await rc('と名乗らせる')?"命名できた":"★不可"); }
-  if(/包囲中/.test(document.body.textContent)) console.log(" 包囲:", await rc('強攻')?"強攻を実行":"★不可");
+  if(/包囲中/.test(document.body.textContent)){ console.log(" 包囲:", await rc('強攻')?"強攻を実行":"★不可"); await rc('自ら采を執る'); }
   console.log("\n最終状態:", bar());
   console.log("エラー:", errs.length?errs.slice(0,3).join(" | "):"なし");
   process.exit(0);

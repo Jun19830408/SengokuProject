@@ -34,11 +34,16 @@ const 検分 = `
     .filter((b) => !b.disabled && b.offsetParent !== null)
     .find((b) => (b.textContent || '').includes(t));
   const 押 = async (t) => { for (let i = 0; i < 40; i++) { const el = 釦(t); if (el) { el.click(); await 眠(0.25); return true; } await 眠(0.2); } return false; };
+  // 出るかもしれぬ問いを畳む。無ければすぐ諦める（八秒待たせない）
+  const 押せれば = async (t) => { for (let i = 0; i < 8; i++) { const el = 釦(t); if (el) { el.click(); await 眠(0.25); return true; } await 眠(0.2); } return false; };
   const 報 = { 進んだ: [], 指: {}, 咎: [] };
   try {
     await 眠(0.9);
     報.進んだ.push('続きから:' + await 押('続きから')); await 眠(1.4);
     await 押('正面から当たる'); await 眠(0.8);
+    /* 合戦に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+       ここで測るのは盤の道具立てなので、自ら采を執る。 */
+    報.進んだ.push('自ら采:' + await 押せれば('自ら采を執る')); await 眠(0.5);
     報.進んだ.push('合戦開始:' + await 押('合戦開始')); await 眠(0.6);
     await 押('停止'); await 眠(0.4);
     /* 指で触る。touchstart と touchend を本物として投げ、既定が生きているかを見る。

@@ -75,12 +75,28 @@ console.log('\n── 一　関ヶ原の野');
 console.log('\n── 一の二　山越えの街道に立つ山');
 賽(17);
 {
-  setFieldKind('街道'); setFieldSeed('a', 'b'); layoutField(8000, 6);
-  確('街道の野に山は立たない', MOUNTAINS.length === 0);
-  setFieldKind('山道'); setFieldSeed('a', 'b'); layoutField(8000, 6);
-  確('山道の野には山が一つ立つ', MOUNTAINS.length === 1, `${MOUNTAINS.map((m) => Math.round(m.r) + '歩').join('・')}`);
-  setFieldKind('難所'); setFieldSeed('a', 'b'); layoutField(8000, 6);
-  確('難所の野には山が二つ立つ', MOUNTAINS.length === 2, `${MOUNTAINS.map((m) => Math.round(m.r) + '歩').join('・')}`);
+  /* 山の数は、道の質で決まる。
+
+     もとは街道〇・山道一・難所二と据えていた。これでは山がめったに野へ出ず、
+     山を使って戦う筋がそもそも通らなかった（野に山が立つのは二割七分）。
+     いまは難所三・山道二を据え、街道は賽次第（四割二分で一つ）、広い野では
+     もう一つ増える。立つ野は七割二分になった。
+
+     一つの種で数を決め打ちにすると、置き場が取れずに縮めて置き直した野で
+     すぐ崩れる。十二の野で均して、道の質の順が狂わぬことを見る。 */
+  const 山を数える = (質) => {
+    let 延 = 0;
+    for (let i = 0; i < 12; i++) {
+      setFieldKind(質); setFieldSeed('a' + i, 'b' + i); layoutField(8000, 6);
+      延 += MOUNTAINS.length;
+    }
+    return 延 / 12;
+  };
+  const 街 = 山を数える('街道'), 山路 = 山を数える('山道'), 難 = 山を数える('難所');
+  確('街道の野に立つ山は、あっても僅か', 街 <= 1.2, `平均 ${街.toFixed(2)}山`);
+  確('山道の野には山が立つ（街道より多い）', 山路 >= 2 && 山路 > 街,
+    `街道 ${街.toFixed(2)}山 → 山道 ${山路.toFixed(2)}山`);
+  確('難所の野はさらに多い', 難 > 山路, `山道 ${山路.toFixed(2)}山 → 難所 ${難.toFixed(2)}山`);
   // 山を川が貫かないこと（六十の野で）
   let 貫 = 0;
   for (let i = 0; i < 60; i++) {

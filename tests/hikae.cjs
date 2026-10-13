@@ -99,6 +99,9 @@ const 家の兵 = () => { const m = txt().match(/万石\s+([\d,]+)/); return m ?
   if (!btn('強攻')) { console.log('エラー: 包囲の段が出ない'); process.exit(1); }
 
   await rc('強攻'); await flush(); await flush();
+  /* 城攻めに入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+     この問いを畳まねば盤が立たず、兵数も読めない。 */
+  if (btn('自ら采を執る')) { await rc('自ら采を執る'); await flush(); await flush(); }
   const 盤の兵 = Number(((txt().match(/([\d,]+)\s+\d+\s+対/) || [])[1] || '0').replace(/,/g, ''));
   /* 一隊三千・三十二隊で九万六千。それを超えた分は盤の外に控える。
      （将の数だけで隊を割っていたころは、将三人なら九千しか立てなかった。） */

@@ -134,8 +134,23 @@ console.log('\n── 三　地物の効きが残っている');
   const T = A.TERRAIN;
   確('森は足を鈍らせ、隊列を乱す', T.forest.speed < T.plain.speed && T.forest.cohesion < 0);
   確('林は森より通りやすい', T.wood.speed > T.forest.speed);
-  確('丘は見晴らしが利き、戦う力が増す', T.hill.sight > T.plain.sight && T.hill.fight > 1);
+  確('丘は見晴らしが利く', T.hill.sight > T.plain.sight);
   確('山は丘の一段上', T.mountain.sight > T.hill.sight && T.mountain.speed < T.hill.speed);
+  /* 高みの利は、地形の表ではなく engine が 地の高さ の差から出す。
+     両方に持たせていたころは二重に効き、山へ登っただけで八割勝つ盤だった。
+     表の fight は一に戻し、高低は一本の筋に束ねてある。 */
+  確('丘と山の戦う力は、表では掛けない（高みの利は地の高さが担う）',
+    T.hill.fight === 1 && T.mountain.fight === 1,
+    `丘 ${T.hill.fight}・山 ${T.mountain.fight}`);
+  {
+    A.setFieldSeed('b', 'b'); A.setFieldKind('山道');
+    A.layoutField(4000, 2);
+    const 高み = A.高み || [];
+    const 頂 = 高み.length ? A.地の高さ(高み[0].x, 高み[0].y) : 0;
+    const 裾 = 高み.length ? A.地の高さ(高み[0].x + 高み[0].r * 1.4, 高み[0].y) : 0;
+    確('高みの頂は、その裾より高い', 高み.length > 0 && 頂 > 0.8 && 裾 === 0,
+      `頂 ${頂.toFixed(2)}・裾 ${裾.toFixed(2)}（高み ${高み.length}）`);
+  }
   確('沼は騎馬を殺す', T.marsh.horse < 0.5 && T.marsh.charge === false);
   確('集落は見通しを塞ぐ', T.village.sight < T.plain.sight);
   確('街道は速い', T.road.speed > T.plain.speed);

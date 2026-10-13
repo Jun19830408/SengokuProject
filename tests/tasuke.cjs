@@ -169,7 +169,12 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
      ここで諦めていたため、この試験は五回に二回ほど落ちていた。
      盤が開いたら委ねて決着させ、後詰が着くまで月を送り続ける。 */
   const 戦を片づける = async () => {
-    if (!btn('合戦開始')) return false;
+    /* 合戦に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+       この問いが出ているあいだ、まだ「合戦開始」は無い。盤が開いたかどうかは
+       どちらの文言でも見分けねばならない――ここで取りこぼすと、戦が片づかぬまま
+       月だけが過ぎ、後詰の着く前に城が落ちる。 */
+    if (!btn('合戦開始') && !btn('自ら采を執る')) return false;
+    await rc('自ら采を執る');
     await rc('合戦開始');
     await rc('委ねて結果を見る');
     for (let k = 0; k < 3000; k++) {
@@ -260,7 +265,10 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
   await flush(); await flush();
 
   const 戦文 = document.body.textContent;
-  確('囲みを解く野戦が始まる', /合戦開始|布陣/.test(戦文) || !!btn('合戦開始'));
+  /* 盤に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+     戦が始まった合図は、陣を敷く画面でも、この問いでもよい。 */
+  確('囲みを解く野戦が始まる', /自ら采を執る|合戦開始|布陣/.test(戦文) || !!btn('合戦開始'));
+  if (btn('自ら采を執る')) { await rc('自ら采を執る'); await flush(); await flush(); }
 
   // 委ねて決着まで
   if (btn('委ねて結果を見る')) {

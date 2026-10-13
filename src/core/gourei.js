@@ -26,7 +26,7 @@
 
      五筋まで。一つの号令に加わっている国主・旗頭は、別の号令には出られない。
      人は一人しかいないのだから当然である。 */
-import { minGarrison, 旗頭の受け持ち } from "./rank.js";
+import { castellanOf, minGarrison, 旗頭の受け持ち } from "./rank.js";
 
 export const 号令の限り = 5;                        // 同時に発せる号令の数
 
@@ -215,12 +215,34 @@ export function 号令を発する(s, 主, 的id, 手ら, 具) {
       兵 += 割;
       if (名簿を割く) { const t = 名簿を割く(c, 割); if (t) 名簿.push(...t); }
     }
-    /* 将。その手を率いる者と、発つ城にいる者たちが従う。 */
-    const 将ら = (s.generals || []).filter((g) =>
-      g.faction === 手.家 && !g.captive && g.at === 発.id).slice(0, 4);
-    if (手.将 && !将ら.some((g) => g.id === 手.将)) {
-      const 主将 = s.generals.find((g) => g.id === 手.将);
-      if (主将 && !主将.captive) 将ら.unshift(主将);
+    /* 将。その手を率いる者と、兵を出した城々の城主が従う（GDD 12.5）。
+
+       もとは「発つ城にいる者、四人まで」であった。ところが方面の一手は
+       受け持ちの国々――十を超える城――から兵を割く。それだけの兵を、発つ城に
+       たまたま居合わせた数人で率いることになり、盤には数隊しか立たない。
+       遊ぶ側の申し出は「号令したとき、非常に少ない部隊で出陣することになって
+       いる」であった。
+
+       兵を出した城には、その城の城主が代表として従う。既に出陣している者
+       （居場所を持たぬ者）は除く――二つの軍に同じ将は居られない。
+       それでも足りなければ、これまでどおり発つ城に居る者で埋める。 */
+    const 将ら = [];
+    const 加える = (g) => {
+      if (!g || g.captive || g.faction !== 手.家) return;
+      if (将ら.some((x) => x.id === g.id)) return;
+      将ら.push(g);
+    };
+    if (手.将) 加える(s.generals.find((g) => g.id === 手.将));
+    for (const cid of 手.城ら) {
+      const c = s.castles.find((x) => x.id === cid);
+      if (!c) continue;
+      const 主 = castellanOf(s, c);
+      if (主 && 主.at) 加える(主);                      // 居場所の無い者は出陣中
+    }
+    for (const g of (s.generals || []).filter((x) =>
+      x.faction === 手.家 && !x.captive && x.at === 発.id)) {
+      if (将ら.length >= 12) break;
+      加える(g);
     }
     const 総勢 = 兵 + 将ら.reduce((a, g) => a + (g.retinue || 0), 0);
     if (総勢 < 100) continue;

@@ -15,12 +15,17 @@ const 検分 = `
     .filter((b) => !b.disabled && b.offsetParent !== null)
     .find((b) => (b.textContent || '').includes(t));
   const 押 = async (t) => { for (let i = 0; i < 40; i++) { const el = 釦(t); if (el) { el.click(); await 眠(0.25); return true; } await 眠(0.2); } return false; };
+  // 出るかもしれぬ問いを畳む。無ければすぐ諦める（八秒待たせない）
+  const 押せれば = async (t) => { for (let i = 0; i < 8; i++) { const el = 釦(t); if (el) { el.click(); await 眠(0.25); return true; } await 眠(0.2); } return false; };
   const 報 = { 幅: document.documentElement.clientWidth, 高: document.documentElement.clientHeight, 釦: [], 咎: [], 筋: [] };
   try {
     await 眠(0.9);
     報.筋.push('続きから:' + await 押('続きから')); await 眠(1.4);
     報.筋.push('強攻:' + await 押('強攻')); await 眠(1.0);
     報.筋.push('任せる:' + await 押('すべて任せる')); await 眠(1.2);
+    /* 合戦に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+       ここで測るのは盤の道具立てなので、自ら采を執る。 */
+    報.筋.push('自ら采:' + await 押せれば('自ら采を執る')); await 眠(0.5);
     報.筋.push('合戦開始:' + await 押('合戦開始')); await 眠(0.8);
     await 押('停止'); await 眠(0.5);
     const 盤 = document.querySelector('canvas');

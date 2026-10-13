@@ -127,6 +127,9 @@ const 文 = () => document.body.textContent;
 
   /* ------------------------------ 三、決めれば城攻めが始まる */
   await rc('この備えで迎え撃つ'); await flush(); await flush();
+  /* 盤に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+     ここで見たいのは盤の立ち方なので、自ら采を執る。 */
+  await rc('自ら采を執る'); await flush(); await flush();
   確('城攻めが始まる', /城攻め/.test(文()) && /合戦開始|一括命令/.test(文()), '');
   const 数 = [...(文().match(/兵\s*([\d,]+)/g) || [])].map((t) => Number(t.replace(/[^\d]/g, '')));
   確('城の兵がそのまま盤に立つ', 数.length >= 1 && Math.abs(数[0] - 仕.狙.local) <= 2,

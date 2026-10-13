@@ -91,6 +91,9 @@ const fmtN = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   await rc('続きから'); await flush(); await flush();
   // 強攻して城を落とす
   await rc('強攻'); await flush(); await flush();
+  /* 合戦に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+     ここで見たいのは合戦の後の始末なので、盤に入って諸将に委ねる。 */
+  await rc('自ら采を執る'); await flush(); await flush();
   await rc('合戦開始'); await flush();
   await rc('委ねて結果を見る'); await flush(); await flush(); await flush();
   for (let i = 0; i < 40 && !/を誰に委ねるか/.test(txt()); i++) {

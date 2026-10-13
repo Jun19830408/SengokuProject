@@ -29,6 +29,7 @@ import { reviewAim } from "../govern/ai.js";
 import { checkUnified } from "../govern/unify.js";
 import { sackCastle, 城を委ねる, 軍を解く, 在陣させる, 城に合流する, 将を除く } from "../govern/war.js";
 import { BattleScreen } from "./BattleScreen.jsx";
+import { 出陣前の問い } from "./Shutsujin.jsx";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
@@ -45,7 +46,7 @@ import { Manual } from "./Manual.jsx";
 import { Ending } from "./Ending.jsx";
 import { ReinforceDialog, GateDeployDialog, HimeList, MarriageOffer, DiploOffer } from "./panels.jsx";
 import { underMyBanner, 同じ旗の下, 己の盟約, 主家, 裏切りの出陣か } from "../core/state.js";
-import { 忠誠, 守備隊の統率, castellanOf, rankName, 国主を繕う, 旗頭を繕う, 旗頭を継がせる } from "../core/rank.js";
+import { 忠誠, 守備隊の統率, castellanOf, rankName, 国主を繕う, 方面の軍を移す, 旗頭を繕う, 旗頭を継がせる } from "../core/rank.js";
 import { 城主の札を据える } from "../core/state.js";
 import { 入切, 場面を選ぶ, 試しに鳴らす, 音の設定, 解錠する } from "../audio/oto.js";
 import { 守りの割り付け } from "../core/garrison.js";
@@ -923,6 +924,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
     }
     setBattle({
+      出陣前: true,
       b: bb, armyId: army.id, castleId: castle.id, playerIsAtk, mode: "castle",
       reserveMen, reserveRost,
       pName: g.factions[playerIsAtk ? army.faction : castle.faction].name,
@@ -1230,6 +1232,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
     }
     setBattle({
+      出陣前: true,
       b: bb, armyId: army.id, castleId: dest.id, playerIsAtk, campId: camp ? camp.id : null,
       mode: foe ? "clash" : undefined, foeId: foe ? foe.id : null,
       sally: sally ? { castleId: sally.castleId, gens: sally.gens, local: sally.local } : null,
@@ -2346,6 +2349,22 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   }, [battle ? battle.mode : null, !!sea, 位]);
 
   if (sea) return <SeaScreen key={sea.key} ctx={sea} land={land} onEnd={(bb) => 海戦を終える(bb)} />;
+  /* 合戦に入る前の問い（GDD 8.5 / 13.2）。
+
+     自ら采を執るか、諸将に委ねるか。委ねれば絵を描かずに決着まで進む
+     （BattleScreen の 委ねる と同じ仕組みである）。
+
+     遊ぶ側の申し出は「自ら指揮を取らなければ敗戦の可能性が何パーセントくらい
+     あるのかを確認できて、完全委任によるのか自ら指揮するのか選べるようにしたい」
+     であった。見込みは、盤を写して何度か走らせて数える――別の算段を立てるのでは
+     なく、実際に委ねたときに動くその仕組みで、そのまま確かめる。 */
+  if (battle && battle.出陣前) {
+    return (
+      <出陣前の問い ctx={battle}
+        onSelf={() => setBattle((x) => ({ ...x, 出陣前: false }))}
+        onDelegate={(bb) => finishBattle(bb, battle)} />
+    );
+  }
   if (battle) return <BattleScreen key={battle.armyId} ctx={battle} land={land} onEnd={(bb) => finishBattle(bb, battle)} />;
 
   return (
@@ -3671,17 +3690,23 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               for (const q of w.寄騎 || []) {
                 const x = s2.generals.find((y) => y.id === q); if (x) x.寄親 = null;
               }
+              /* 誰にも継がせぬと決めたなら、その方面の軍も旗を外す。
+                 外さねば、もう旗頭でない者の名のまま在陣し続ける。 */
+              const 軍 = 方面の軍を移す(s2, w.先, null);
               s2.chronicle.push({ y: s2.year, m: s2.month,
-                text: `${w.先の名}は家督を継ぎ、旗頭の役を離れた。${w.国 || ""}方面は大名が自ら差配する。` });
+                text: `${w.先の名}は家督を継ぎ、旗頭の役を離れた。${w.国 || ""}方面は大名が自ら差配する。`
+                  + (軍 ? `在陣していた${軍}軍は大名の手に移った。` : "") });
               s2.msg = `${w.国 || ""}方面は大名が自ら差配する。`;
               return s2;
             }
-            const r = 旗頭を継がせる(s2, w.faction, id, w.寄騎);
+            const r = 旗頭を継がせる(s2, w.faction, id, w.寄騎, w.先);
             if (!r.継者) { s2.msg = r.why || "方面を継がせられなかった。"; return s2; }
             s2.chronicle.push({ y: s2.year, m: s2.month,
               text: `${w.先の名}は家督を継ぎ、${w.国 || ""}方面の旗頭を${r.継者.name}に譲った`
-                + `（寄騎${r.寄騎}名を引き継ぐ）。` });
-            s2.msg = `${r.継者.name}が${r.継の国}の旗頭となり、${w.国 || ""}方面を継いだ（寄騎${r.寄騎}名）。`;
+                + `（寄騎${r.寄騎}名を引き継ぐ`
+                + (r.軍 ? `。在陣の${r.軍}軍も手に移る` : "") + `）。` });
+            s2.msg = `${r.継者.name}が${r.継の国}の旗頭となり、${w.国 || ""}方面を継いだ（寄騎${r.寄騎}名`
+              + (r.軍 ? `・在陣${r.軍}軍` : "") + `）。`;
             return s2;
           });
           return (

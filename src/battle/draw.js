@@ -1942,6 +1942,19 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     if (!isP && !c.seen && b.phase === "fight") continue;
     if (c.ambush && !c.revealed && !isP) continue;
     const live = c.squads.filter((q) => q.men > 0);
+    /* 絵に出す頭数には床を張る（GDD 8.10）。
+
+       組は五十人組である。それより多い人数が入ることはない――はずだった。
+       名簿の組の id が重なると、戦のあとの書き戻しが人数を倍々に膨らませ、
+       定員五十の組に十万二千六十八人が入っていた（core/roster.js の
+       通し番号を据える を見よ）。その数がそのまま絵の大きさになるので、
+       一辺八千画素の青い箱が盤を覆い尽くした。遊ぶ側の申し出は
+       「兵数が多くなると、バグで大きな駒が出てくる」であった。
+
+       元は名簿の側で断ってあるが、絵の側にも床を張る。床は五十である――
+       組の max も膨れた値を取っていることがあるので、それを当てにはしない。
+       何かの拍子に人数が壊れても、盤は読める形で出る。 */
+    const 頭数 = (q) => Math.max(0, Math.min(50, Math.round(q.men)));
     if (!live.length) continue;
     // 敵味方の色。輪郭から駒まで、この色で通す（家の色をそのまま使わない）。
     const side = sideColor(c);
@@ -1987,7 +2000,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     if (lod === "squad") {
       for (const q of live) {
         const fill = q.origin === "直属" ? bright : dark;
-        const size = 3.2 + (q.men / 50) * 4.2;
+        const size = 3.2 + (頭数(q) / 50) * 4.2;
         drawKoma(ctx, q.x, q.y, q.facing, q.type, fill,
           q.origin === "直属" ? edge : edge2, size / 4.8);
         if (ARM_STATS[q.type].range > 0) {
@@ -1998,7 +2011,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
       continue;
     }
     for (const q of live) {
-      const rows = Math.ceil(Math.ceil(q.men / 10) / 5);
+      const rows = Math.ceil(Math.ceil(頭数(q) / 10) / 5);
       const hw = 2 * KOMA + 4, d0 = -4, d1 = (rows - 1) * KOMA + 4;
       const pts = [[-hw, d0], [hw, d0], [hw, d1], [-hw, d1]].map(([a, bb]) => {
         const [ox, oy] = rot(a, bb, q.facing); return [q.x + ox, q.y + oy];
@@ -2039,7 +2052,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     ctx.fillStyle = "rgba(40,36,28,0.16)";
     ctx.beginPath();
     for (const q of live) {
-      const n = Math.ceil(q.men / 10);
+      const n = Math.ceil(頭数(q) / 10);
       for (let i = 0; i < n; i++) {
         const h1 = Math.sin(q.seed + i * 12.9898), h2 = Math.cos(q.seed + i * 78.233);
         const [ox, oy] = rot(((i % 5) - 2) * KOMA + h1 * 0, Math.floor(i / 5) * KOMA + h2 * 0, q.facing);
@@ -2052,7 +2065,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     // 組も奥から手前へ
     live.sort((a, z) => a.y - z.y);
     for (const q of live) {
-      const n = Math.ceil(q.men / 10);
+      const n = Math.ceil(頭数(q) / 10);
       const dis = q.dis || 0;
       const fill = shadeHex(q.origin === "直属" ? bright : dark, on ? 0.16 : 0);
       const stroke = q.origin === "直属" ? edge : edge2;
@@ -2412,7 +2425,11 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
        味方の隊を選んでいるあいだ、敵の名札をそのまま「狙い札」とする。
        札には的の輪を添え、押せば、その隊へ差し向けられる。 */
     const 狙える = (sel || selAll) && !isP && !c.日和見 && !c.detach && b.phase === "fight";
-    const label = c.detach ? `${c.task}${c.autonomous ? "・自律" : ""}` : c.ally ? `${c.name}（${c.ally}）` : c.name;
+    /* 分遣の札は役目（側面攻撃、丘取り…）で出す。ただし退きに入ると役目は
+       解かれる（corps.js の 退かせる が c.task を落とす）ので、そのままでは
+       札に「null」と出た。役目が無ければ隊の名を出す。 */
+    const label = c.detach ? `${c.task || c.name}${c.autonomous ? "・自律" : ""}`
+      : c.ally ? `${c.name}（${c.ally}）` : c.name;
     ctx.font = c.detach ? "11px 'Hiragino Sans',sans-serif" : "600 13px 'Hiragino Sans',sans-serif";
     const w = ctx.measureText(label).width + (狙える ? 15 : 0);
     const ly0 = (c.gen.lord && !c.detach ? 34 : 26) + 14;

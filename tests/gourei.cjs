@@ -234,6 +234,34 @@ console.log('\n── 五　号令を発する');
     /* 臣従家の軍は、主家の助勢として立つ。 */
     const 臣 = 号.手.filter((h) => h.種別 === '臣従');
     確('臣従家も兵を出す', 臣.length > 0, `${臣.length}家`);
+
+    /* 兵を出した城には、その城の城主が代表として従う（GDD 12.5）。
+
+       もとは「発つ城にいる者、四人まで」であった。方面の一手は十を超える城から
+       兵を割くのに、それを数人で率いることになり、盤には数隊しか立たない。
+       遊ぶ側の申し出は「号令したとき、非常に少ない部隊で出陣することになって
+       いる」であった。兵一人あたりの将の数を見る。 */
+    const 軍ら = 号.手.map((h) => (s.armies || []).find((a) => a.id === h.armyId)).filter(Boolean);
+    /* 号令の控え（号.手）には城の一覧が残らないので、発する前の顔ぶれ（可.手ら）
+       から引く。 */
+    const 城ら引き = (h) => ((可.手ら.find((x) => x.将 === h.将 && x.家 === h.家) || {}).城ら || []);
+    const 多城 = 号.手.map((h) => ({ ...h, 城ら: 城ら引き(h) })).filter((h) => h.城ら.length >= 2);
+    確('城を二つ以上抱える手がある（検めが空でない）', 多城.length > 0,
+      `${多城.length}手（最も多い手で ${Math.max(0, ...号.手.map((h) => 城ら引き(h).length))}城）`);
+    const 足りぬ = 多城.filter((h) => {
+      const a = (s.armies || []).find((x) => x.id === h.armyId);
+      return a && (a.gens || []).length < Math.min(3, (h.城ら || []).length);
+    });
+    確('城の数に見合う将を連れる', 足りぬ.length === 0,
+      足りぬ.length ? 足りぬ.map((h) => `${h.将名}:${(h.城ら || []).length}城`).join('、')
+        : 多城.slice(0, 4).map((h) => {
+            const a = (s.armies || []).find((x) => x.id === h.armyId);
+            return `${h.城ら.length}城:${((a || {}).gens || []).length}将`;
+          }).join('、'));
+    const 大軍 = 軍ら.filter((a) => a.men >= 6000);
+    確('大軍が一、二将で動くことはない',
+      大軍.every((a) => (a.gens || []).length >= 2),
+      大軍.map((a) => `${a.men}人:${(a.gens || []).length}将`).slice(0, 5).join('、') || '大軍なし');
   }
 }
 

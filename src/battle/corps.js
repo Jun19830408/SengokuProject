@@ -144,6 +144,22 @@ export function makeCorps(side, gen, retinue, local, retTrain, localTrain, x, y,
   }
   const squads = []; let sid = 0;
   // 名簿があればそれを使う。なければ総数から組み立てる（旧いセーブや守備隊など）。
+  /* 名簿から組むときも、一隊の限りを守る（GDD 8.3）。
+
+     限りは総数（retinue・local）の側でだけ切っていた。ところが名簿があれば
+     組はそちらから立つので、切った数は使われない――名簿の和がそのまま隊の兵に
+     なる。遊ぶ側の申し出は「一部隊が多数になると枠外にはみ出してバグる」で
+     あった。実際に十二万二千二百三十二人の一隊が立ち、陣の枠が野をはみ出して
+     いた。名簿から立てるぶんも、割り当てられた数で打ち切る。
+
+     あふれた組は盤に出ない。控えの兵として城に残るのと同じ扱いである
+     （tests/hikae の「それを超える兵は盤に出ない」）。
+
+     打ち切りは、渡された総数ではなく隊の枠で数える。総数を零にしたまま名簿
+     だけを渡す呼び方があり（名簿が人数の控えを兼ねる）、総数で切ると、その
+     筋の隊から組がひとつも立たなくなる（tests/kumigashira「名簿から立てた駒は
+     組の id を持つ」が零駒になった）。枠は隊ひとつぶんで、直属と地の兵が分け合う。 */
+  let 枠 = MAX_CORPS_MEN;
   const build = (total, origin, train, rost) => {
     const list = rost && rost.length
       ? rost.map((q) => ({ men: q.m, type: q.t, src: q.id }))
@@ -156,8 +172,17 @@ export function makeCorps(side, gen, retinue, local, retTrain, localTrain, x, y,
           return out;
         })();
     for (const u of list) {
-        const m = u.men;
+        /* 組は五十人組である（GDD 6.2）。名簿の一組に五十一人は入らない。
+
+           ところが名簿の組の id が重なると、戦のあとの書き戻しが人数を倍々に
+           膨らませる（core/roster.js の 通し番号を据える を見よ）。実際の記録では
+           定員五十の組に十万二千六十八人が入っていた。その数のまま盤へ出すと、
+           白兵の取り分（q.men / 50 を掛ける）が二千倍になり、絵も一辺八千画素の
+           箱になる。元は名簿の側で断ってあるが、盤を組むここにも床を張る。
+           繕う前の記録から立てた盤でも、理の通る戦になる。 */
+        const m = Math.min(50, u.men, 枠);
         if (m <= 0) continue;
+        枠 -= m;
         const ang = Math.random() * Math.PI * 2;
         squads.push({
           id: `${gen.id}-${sid++}`, type: u.type, men: m, max: m, origin, src: u.src,

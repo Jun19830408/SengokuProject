@@ -144,6 +144,54 @@ console.log('\n── 三　ほかの方面軍の旗頭には手を触れない'
   }
 }
 
+console.log('\n── 三の二　在陣している軍の指揮権も、新しい旗頭へ移る');
+{
+  /* 遊ぶ側の申し出は「家督相続によって方面軍でなくなった武将が、相続前に
+     方面軍として在陣させていた軍が引き継がれず、前の方面軍として在陣し続ける」
+     であった。実際の記録では、大名になった織田信長の名のまま五つの軍が
+     二万五千の兵を抱えて在陣していた。陣を払う下知も加勢を催す段も、
+     みな軍の旗頭を頼りに動くので、どの手も届かない。 */
+  const { s, fid, 当主, 旗, 寄ら } = 場を組む();
+  const 陣 = s.castles.find((c) => c.faction === fid && c.id !== s.factions[fid].本拠);
+  s.armies = [
+    { id: 'armA', faction: fid, 旗頭: 旗.id, gens: [], men: 3000, local: 3000, at: 陣.id, 在陣: 陣.id },
+    { id: 'armB', faction: fid, 旗頭: 旗.id, gens: [], men: 1200, local: 1200, at: 陣.id, 在陣: 陣.id },
+    { id: 'armC', faction: fid, 旗頭: null, gens: [], men: 800, local: 800, at: 陣.id },
+  ];
+  確('旗頭の名で在陣している軍がある', s.armies.filter((a) => a.旗頭 === 旗.id).length === 2);
+  H.succeed(s, 当主, '隠居', 旗.id, true);
+  const 継 = s.旗頭継ぎ待ち
+    ? (() => { const w = s.旗頭継ぎ待ち; s.旗頭継ぎ待ち = null;
+        const r = H.旗頭を継がせる(s, w.faction, w.候補[0].id, w.寄騎, w.先); return r.継者; })()
+    : H.旗頭たち(s, fid)[0];
+  確('継ぐ者が立った', !!継, 継 ? 継.name : 'なし');
+  確('もう当主の名で在陣している軍はない',
+    s.armies.every((a) => a.旗頭 !== 旗.id),
+    s.armies.map((a) => `${a.id}:${a.旗頭 || '旗なし'}`).join('、'));
+  if (継) {
+    確('二つとも新しい旗頭の手に移った',
+      s.armies.filter((a) => a.旗頭 === 継.id).length === 2,
+      `${継.name} の手に ${s.armies.filter((a) => a.旗頭 === 継.id).length}軍`);
+  }
+  確('もとから旗の無い軍には手を触れない', s.armies.find((a) => a.id === 'armC').旗頭 == null);
+  確('兵は増えも減りもしない', s.armies.reduce((a, x) => a + x.men, 0) === 5000,
+    `${s.armies.reduce((a, x) => a + x.men, 0)}人`);
+}
+
+console.log('\n── 三の三　継ぐ者がいなければ、旗を外して大名の手勢に戻す');
+{
+  const { s, fid, 当主, 旗 } = 場を組む();
+  const 陣 = s.castles.find((c) => c.faction === fid && c.id !== s.factions[fid].本拠);
+  s.armies = [{ id: 'armA', faction: fid, 旗頭: 旗.id, gens: [], men: 2000, local: 2000, at: 陣.id, 在陣: 陣.id }];
+  // 継げる者を無くす（宿老の身分を持つ者を落とす）
+  for (const g of s.generals) if (g.faction === fid && g.id !== 旗.id && !g.lord) g.fief = 0;
+  H.succeed(s, 当主, '隠居', 旗.id, true);
+  if (s.旗頭継ぎ待ち) { const w = s.旗頭継ぎ待ち; s.旗頭継ぎ待ち = null; H.方面の軍を移す(s, w.先, null); }
+  確('軍は宙に浮かない（旗が外れている）', s.armies[0].旗頭 == null,
+    `旗頭 = ${s.armies[0].旗頭 || 'なし'}`);
+  確('兵はそのまま', s.armies[0].men === 2000);
+}
+
 console.log('\n── 四　旗頭でない者が継いでも、何も壊れない');
 {
   const { s, fid, 当主, 旗 } = 場を組む();

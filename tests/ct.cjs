@@ -69,6 +69,9 @@ const txt=()=>[...document.querySelectorAll('body *:not(style)')].map(e=>e.child
   console.log('包囲の段:', btn('強攻')?'出た':'★出ず');
   if(!btn('強攻')){ console.log('エラー: 包囲の段が出ない'); process.exit(0); }
   await rc('強攻'); await flush(); await flush();
+  /* 城攻めに入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+     この問いを畳まねば盤が立たず、兵数も読めない。 */
+  if (btn('自ら采を執る')) { await rc('自ら采を執る'); await flush(); await flush(); }
   const 城郭図=/城攻め/.test(txt());
   console.log('城郭図か:', 城郭図?'城郭図に入った':'★城下の野戦のまま');
   console.log('合戦開始:', (await rc('合戦開始'))?'押せた':'★不可');

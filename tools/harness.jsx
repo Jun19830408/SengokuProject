@@ -11,6 +11,7 @@ export { GeneralList } from "../src/ui/panels.jsx";
 export { css } from "../src/ui/css.js";
 export { BattleScreen } from "../src/ui/BattleScreen.jsx";
 export { MapScreen } from "../src/ui/MapScreen.jsx";
+export { 出陣前の問い } from "../src/ui/Shutsujin.jsx";
 export { 天下分け目の帳, 分け目の沙汰の帳 } from "../src/ui/panels.jsx";
 export { 攻め寄せる問い, MonthReport, 城を委ねる問い, 軍の帳, SortieDialog, ReinforceDialog } from "../src/ui/panels.jsx";
 // 盤をこしらえるための道具も差し出す。
@@ -43,9 +44,10 @@ export { ROAD_ADJ } from "../src/core/paths.js";
 export { resolveOffscreen, resolveClashOffscreen, reinforceOffers, 運び賃, 運び賃を払う, sackCastle, 城を委ねる, 委ねる差配, 軍を解く, withdrawArmy, homeFor, 城に合流する, 在陣させる, 盤の乱れを繕う, restoreStrays, 滅んだ家を始末する, 城なき家を片づける, 将を除く, 着いた味方を束ねる, 旗頭の陣を払う, 方面の報せ } from "../src/govern/war.js";
 export { 圧す, 解す } from "../src/save/pack.js";
 export { advanceMonth } from "../src/govern/month.js";
-export { troopCap, 軍役の器, 軍役の割増, extraIncome, goryoOf, fiefOf, 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届き, 陣触れに応じる, 国が隣り合うか, minGarrison, 身分の位, 総大将を定める, 大将を先頭に, 国主に任じる, 旗頭に任じる, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 国主たち, 旗頭たち, stipendOf, 役の要る身分, 寄騎に取る, 寄騎を解く, 寄騎たち, 寄騎に取れるか, 城主か, 城主を据え替える, 城を明け渡す, 城を守る将, 守備隊の統率, 旗頭の受け持ち, 旗頭の届く国, 旗頭の的にできる家, 旗頭の的家, 旗頭の的家を定める, 的家の限り, 家の国ら, 旗の下の家か, 旗の下の当主か, 当主の国ら, 城の知行の余地, fiefRoom, fiefBurden, 旗頭を継がせる, 旗頭を継げる者 } from "../src/core/rank.js";
+export { troopCap, 軍役の器, 軍役の割増, extraIncome, goryoOf, fiefOf, 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届き, 陣触れに応じる, 国が隣り合うか, minGarrison, 身分の位, 総大将を定める, 大将を先頭に, 国主に任じる, 旗頭に任じる, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 国主たち, 旗頭たち, stipendOf, 役の要る身分, 寄騎に取る, 寄騎を解く, 寄騎たち, 寄騎に取れるか, 城主か, 城主を据え替える, 城を明け渡す, 城を守る将, 守備隊の統率, 旗頭の受け持ち, 旗頭の届く国, 旗頭の的にできる家, 旗頭の的家, 旗頭の的家を定める, 的家の限り, 家の国ら, 旗の下の家か, 旗の下の当主か, 当主の国ら, 城の知行の余地, fiefRoom, fiefBurden, 旗頭を継がせる, 旗頭を継げる者, 方面の軍を移す } from "../src/core/rank.js";
 export { 難を逃れる, captureChance } from "../src/core/capture.js";
-export { succeed, is架空, bearChild, pickHeir } from "../src/core/house.js";
+export { succeed, is架空, bearChild, pickHeir, LIFE_CAP, lifeSpan } from "../src/core/house.js";
+export { FATED, LONG_LIVED } from "../src/data/newcomers.js";
 export { REGIONS, GOKINAI } from "../src/data/provinces.js";
 export { 従える比, 臣従させる比, 天下人の目安, 威信の効き } from "../src/data/diplo.js";
 export { courtRank, 号令できるか, 旗の下か, 国を旗の下に, 旗の下の城数, 天下人の直轄, 天下人の版図 } from "../src/core/province.js";
@@ -60,7 +62,7 @@ export { DIPLO, PLOTS } from "../src/data/diplo.js";
 // 合戦の中身を直に動かすための取り出し口。
 // 画面を通すと、戦況の記録が流れて肝心の一行を取り逃がす。
 // 隊がどの門を受け持ち、何の下知を受けているかは、ここから直に見るほかない。
-export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, toUV, gatePos, gateOpenU, inLayer, 城の構え, 門の控え口 } from "../src/battle/castleMap.js";
+export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, toUV, gatePos, gateOpenU, inLayer, 城の構え, 門の控え口, 寄せ口 } from "../src/battle/castleMap.js";
 export { layoutField, setFieldSeed, setFieldKind, FIELD, terrainAt, TERRAIN, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVER, ROAD, ROADS as 野の道, RIVERS, 筋書きの野を組む, 筋書きを解く, hasRiver, hasMountain, 山が遮るか, 踏み込んだ地, genTerrain, 地の高さ, 高み } from "../src/battle/field.js";
 export { ARM_STATS } from "../src/battle/field.js";
 export { outOfCommand, commandPost, commandRange, makeCorps, corpsMen, placeSquads, issueOrder, makeDetachment, detachOptions, 分遣の頃合い, 転回させる, 退かせる, 退き先, 盤に収める, 寄せ手の隊数 } from "../src/battle/corps.js";
@@ -74,7 +76,7 @@ export { 分け目の野, 野を探す, 陣立てを敷く, 隊の間合い } fr
 export { 分け目の限り, 分け目の暮れ, 挑む直轄, 挑まれる版図, 再び挑める信用, 直轄の石高, 版図の石高, 石高の順, 並びの隣か, 天下分け目を挑めるか, 挑める家ら, 挑める見込み, 器量くらべ, 野を選ぶ側, 分け目の顔ぶれ, 分け目の兵, 分け目の備えを組む, 集結の月数, 天下分け目を起こす, 分け目を進める, 割譲できる城ら, 取る城を見立てる, 割譲の限り, 再び挑める月, 逃散の割, 野の見立て, 兵を逃散させる, 上下の縁を解く, 敗れた将の始末, 城を割譲する, 分け目の沙汰 } from "../src/core/wakeme.js";
 export { 分け目の盤を組む, 分け目の戦果 } from "../src/battle/wakemeikusa.js";
 export { 天下分け目の采配, 挑むか, AIの選ぶ野, 盤を開かずに裁く } from "../src/govern/aiWakeme.js";
-export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す, 組頭の帳, 戦の跡, 戦の跡を記す } from "../src/core/roster.js";
+export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す, 組頭の帳, 戦の跡, 戦の跡を記す, 名簿を繕う, 通し番号を据える, 組の番 } from "../src/core/roster.js";
 export { makePromotion } from "../src/core/house.js";
 export { 曲, 音階, 度, 場面の曲 } from "../src/audio/kyoku.js";
 export { 楽器, 鳴らす as 音を鳴らす } from "../src/audio/gakki.js";

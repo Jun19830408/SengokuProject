@@ -1,6 +1,6 @@
 import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位, 城を明け渡す, 城を守る将, canHoldCastle } from "./rank.js";
 import { courtRank } from "./province.js";
-import { newRoster } from "./roster.js";
+import { newRoster, rosterSum, 名簿を繕う, 組の番, 通し番号を据える } from "./roster.js";
 import { 姫を整える } from "./hime.js";
 import { clamp, fmt, monthsBetween } from "./util.js";
 import { findPath, findPathVia } from "./paths.js";
@@ -338,9 +338,62 @@ export function initState(player) {
 
 // 旧いセーブには名簿がない。読み込み時に作る。
 export function migrateRosters(s) {
+  /* まず、組の通し番号を記録から引き継ぐ（GDD 6.2）。
+
+     これをせずに新しい組を立てると、記録の中の組と同じ id を名乗る。
+     id が重なると戦のあとの書き戻しで兵が倍々に膨れる――五万七千で出した
+     軍が、城を落とした時には二十一万になっていた。繕うより先に、
+     これ以上重ならぬようにする。 */
+  let 最 = 0;
+  const 見る = (r) => { for (const q of r || []) 最 = Math.max(最, 組の番(q.id)); };
+  for (const c of s.castles) 見る(c.rost);
+  for (const g of s.generals) { 見る(g.rost); 見る(g.locRost); }
+  for (const a of s.armies || []) 見る(a.rost);
+  通し番号を据える(最);
+
   for (const c of s.castles) if (!c.rost) c.rost = newRoster(Math.max(0, c.local), `loc-${c.id}`);
   for (const gq of s.generals) if (!gq.rost) gq.rost = newRoster(Math.max(0, gq.retinue), `ret-${gq.id}`, 直属の兵科);
   for (const a of s.armies || []) if (!a.rost) a.rost = newRoster(Math.max(0, a.local), `arm-${a.id}`);
+
+  /* 既に膨れてしまった記録を繕う。定員を超えた組を定員へ戻し、重なった id に
+     別の番号を振る。そのうえで、持ち主の人数を名簿の和へ合わせ直す――
+     合わせ直さねば、総勢を数え直す筋を通ったとたんに幻の兵が戻ってくる。 */
+  let 戻し = 0;
+  /* 引くのは「取り除いた幻の兵のぶんだけ」である。
+
+     はじめは控えの人数を名簿の和で上書きした。ところが古い記録には、
+     名簿と控えが元から食い違っている城がいくつもある（名簿を後から足した
+     繕いを通っているからである）。上書きすると、幻でもなんでもない兵まで
+     消える――この記録では城の兵が百十四万から七十五万へ、三十九万人も
+     減った。繕いが記録を壊しては本末転倒である。
+
+     定員を超えていた分を数え、その数だけを控えから引く。食い違いには
+     手を触れない（それはそれで、これまでどおり rosterSync が均す）。 */
+  const 引く = (持ち主, 鍵, 数) => {
+    if (数 > 0) 持ち主[鍵] = Math.max(0, Math.round((持ち主[鍵] || 0) - 数));
+  };
+  const 将の戻し = new Map();
+  for (const c of s.castles) {
+    if (!c.rost) continue;
+    const 戻 = 名簿を繕う(c.rost, `loc-${c.id}`);
+    引く(c, "local", 戻); 戻し += 戻;
+  }
+  for (const g of s.generals) {
+    if (g.rost) {
+      const 戻 = 名簿を繕う(g.rost, `ret-${g.id}`);
+      引く(g, "retinue", 戻); 戻し += 戻;
+      if (戻 > 0) 将の戻し.set(g.id, 戻);
+    }
+    if (g.locRost) 戻し += 名簿を繕う(g.locRost, `loc-${g.id}`);
+  }
+  for (const a of s.armies || []) {
+    const 戻 = a.rost ? 名簿を繕う(a.rost, `arm-${a.id}`) : 0;
+    引く(a, "local", 戻); 戻し += 戻;
+    // 軍の総勢は地の兵と直属の和であるから、抱えた将の繕いも総勢から引く
+    const 将の分 = (a.gens || []).reduce((t, id) => t + (将の戻し.get(id) || 0), 0);
+    引く(a, "men", 戻 + 将の分);
+  }
+  if (戻し > 0) s.名簿を繕った = (s.名簿を繕った || 0) + 戻し;
   return s;
 }
 
@@ -984,6 +1037,27 @@ export function 城主の札を据える(s) {
    方面（国の決め打ち）は廃した。古い記録には g.方面 が残っており、旗頭の
    役国が空のままになっている。受け持ちは根から数えるので、根の国を役国として
    据え直す。 */
+/* 旗頭でない者の名のまま在陣している軍を繕う（GDD 6.4）。
+
+   家督を継いで大名になった旗頭は、その場で役を解かれる。ところが役だけを
+   解いて軍を放っていたので、在陣していた軍は「もう旗頭でない者」の手に
+   残り続けた。実際の記録では、大名になった織田信長の名のまま五つの軍が
+   二万五千の兵を抱えて在陣していた。陣を払う下知も加勢を催す段も、
+   みな軍の旗頭を頼りに動くので、どの手も届かない。
+
+   いま旗頭でない者を指している軍は、旗を外して大名の直の手勢に戻す。
+   誰に継がせるかは、家督の段（rank.js の 家督で役を引き継ぐ）が問う。
+   ここで勝手に別の旗頭へ付け替えると、問う前に決まってしまう。 */
+function 旗の無い軍を繕う(s) {
+  const 旗 = new Set((s.generals || []).filter((g) => g.役 === "旗頭" && !g.captive).map((g) => g.id));
+  let 外し = 0;
+  for (const a of s.armies || []) {
+    if (!a.旗頭 || 旗.has(a.旗頭)) continue;
+    a.旗頭 = null; 外し++;
+  }
+  return 外し;
+}
+
 function 旗頭の名残を繕う(s) {
   for (const g of s.generals || []) {
     if (g.役 !== "旗頭") { if (g.方面) g.方面 = null; continue; }
@@ -1056,6 +1130,7 @@ export function migrateSave(s) {
   役の名を改める(s);                              // 家老→国主・宿老→旗頭（GDD 6.4）
   国主を据える(s);                                // 役の欄の無い古い記録に国主を据える
   旗頭の名残を繕う(s);                            // 方面を廃した。役国を根から据え直す
+  旗の無い軍を繕う(s);                            // 旗頭でない者の名のまま在陣している軍を戻す
   二重の城主を解く(s);                            // 一人で二つの城を持つ姿を解く（古い記録の繕い）
   城主の札を据える(s);                            // 札の無い城に、いまの城主を札として据える
   城の名を改める(s);                              // その年までに改まった城の名を当てる

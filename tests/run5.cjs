@@ -39,9 +39,13 @@ const pump=async(n)=>{for(let i=0;i<n;i++){T+=33; const q=[...rafMap.entries()];
   await click('ゲームをはじめる'); await openFaction('織田家'); await click('この勢力で開始');
   let battles=0, sieges=0, promos=0;
   for(let m=0;m<24;m++){
+    /* 合戦に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+       問いが出ているあいだは次月へ進めないので、先に畳む。 */
+    await click('自ら采を執る');
     if(!(await click('次月へ'))) { console.log(`  ${m}月目: 次月へ不可`); break; }
     await click('評定を開く');
     // 合戦
+    await click('自ら采を執る');
     if(/合戦開始/.test(document.body.textContent)){
       battles++;
       await click('合戦開始');

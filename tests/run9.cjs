@@ -67,6 +67,9 @@ const led=()=>{const e=document.querySelector('.led');return e?e.textContent.rep
   console.log("戦国記:", (await rc('戦国記'))?document.querySelector('.card').textContent.replace(/\s+/g,' ').slice(0,120):"★");
   await rc('閉じる');
   console.log("\n=== 合戦（拡大縮小・分遣） ===");
+  /* 盤に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。
+     無ければ何も起きない書き方にしておく。 */
+  await rc('自ら采を執る');
   if(/合戦開始/.test(document.body.textContent)){
     await rc('合戦開始'); await rc('全軍撤退');
     let n0=0; while(!/戦場を離れる/.test(document.body.textContent)&&n0<600){ await pump(40); n0++; }
