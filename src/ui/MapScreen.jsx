@@ -144,6 +144,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const 終幕を見た = !!g.終幕を見た;
   const [rotate, setRotate] = useState(true);
   const [savedMsg, setSavedMsg] = useState("");
+  /* 記録が収まらなかったときの報せ。一度出したら、同じ訳では二度出さない
+     （月ごとに塞き止めては遊べない）。帯のほうは出し続ける。 */
+  const [kirokuDame, setKirokuDame] = useState("");
+  const 告げた訳 = useRef("");
   const [wide, setWide] = useState(false);
   const drag = useRef(null);
   // 月が変わるたびに自動で記録する
@@ -152,8 +156,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const key = `${g.year}-${g.month}`;
     if (lastSave.current === key || battle) return;
     lastSave.current = key;
-    // 記録は一呼吸おいてから収める。盤を描き終えてからのほうが、指の下が軽い。
-    setTimeout(() => onSave(g), 0);
+    /* 記録は一呼吸おいてから収める。盤を描き終えてからのほうが、指の下が軽い。
+
+       収まらなかったときは、必ず告げる（GDD 15.3）。もとは返り値を捨てていた
+       ので、月送りの記録が撥ねられても画面には何も出なかった。遊ぶ側は収まって
+       いるつもりで進み、気づいたときには何年ぶんも失われている――実際に、
+       一五八四年まで進めた盤が丸ごと消えた。黙って失うのがいちばん悪い。 */
+    setTimeout(async () => {
+      const ok = await onSave(g);
+      if (ok) return;
+      const 訳 = 記録の訳を読む() || "記録できない環境";
+      setSavedMsg(訳);                       // 帯には出し続ける（消えない）
+      if (告げた訳.current !== 訳) { 告げた訳.current = 訳; setKirokuDame(訳); }
+    }, 0);
   }, [g.year, g.month, battle]); // eslint-disable-line
 
   const pf = g.factions[g.player];
@@ -2697,6 +2712,24 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             </div>
           );
         })()}
+        {kirokuDame && (
+          <div className="modal">
+            <div className="card" style={{ maxWidth: 420 }}>
+              <div className="mn" style={{ fontSize: 20, marginBottom: 6 }}>記録が収まらなかった</div>
+              <div style={{ fontSize: 12.5, color: U.dim, lineHeight: 1.9, marginBottom: 12 }}>
+                {kirokuDame}<br />
+                このまま進めると、ここから先の歩みは残りません。
+                記録所で古い枠を消すか、控えを書き出して控えておいてください。
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn" style={{ flex: 1 }}
+                  onClick={() => { setKirokuDame(""); setModal("save"); }}>記録所をひらく</button>
+                <button className="btn" style={{ flex: 1 }}
+                  onClick={() => setKirokuDame("")}>このまま続ける</button>
+              </div>
+            </div>
+          </div>
+        )}
         {modal === "save" && (() => {
           /* 記録所（GDD 15.3）。
 

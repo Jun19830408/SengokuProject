@@ -16615,6 +16615,112 @@ var \u30D6\u30E9\u30A6\u30B6\u306E\u8A18\u61B6 = {
     window.localStorage.removeItem(\u9375);
   }
 };
+var \u5927\u304D\u306A\u8535 = /* @__PURE__ */ (() => {
+  const \u8535\u306E\u540D = "sengoku", \u68DA\u306E\u540D = "kiroku";
+  let \u958B\u304D = null;
+  const \u958B\u304F = () => {
+    if (\u958B\u304D) return \u958B\u304D;
+    \u958B\u304D = new Promise((res, rej) => {
+      let req;
+      try {
+        req = window.indexedDB.open(\u8535\u306E\u540D, 1);
+      } catch (e) {
+        rej(e);
+        return;
+      }
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(\u68DA\u306E\u540D)) db.createObjectStore(\u68DA\u306E\u540D);
+      };
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error || new Error("\u8535\u304C\u958B\u304B\u306A\u3044"));
+      req.onblocked = () => rej(new Error("\u8535\u304C\u585E\u304C\u3063\u3066\u3044\u308B"));
+    });
+    return \u958B\u304D;
+  };
+  const \u4E00\u624B = (\u5411\u304D2, \u6280) => \u958B\u304F().then((db) => new Promise((res, rej) => {
+    const t = db.transaction(\u68DA\u306E\u540D, \u5411\u304D2);
+    const st = t.objectStore(\u68DA\u306E\u540D);
+    const r = \u6280(st);
+    t.oncomplete = () => res(r ? r.result : void 0);
+    t.onerror = () => rej(t.error);
+    t.onabort = () => rej(t.error || new Error("\u8535\u306E\u624B\u304C\u6B62\u307E\u3063\u305F"));
+  }));
+  const \u65E7\u3044\u68DA = () => {
+    try {
+      return typeof window !== "undefined" && window.localStorage || null;
+    } catch (e) {
+      return null;
+    }
+  };
+  return {
+    \u540D: "\u8535",
+    \u4F7F\u3048\u308B\u304B: () => typeof window !== "undefined" && !!window.indexedDB,
+    \u8AAD\u3080: async (\u9375) => {
+      let v = null;
+      try {
+        v = await \u4E00\u624B("readonly", (st) => st.get(\u9375));
+      } catch (e) {
+        v = null;
+      }
+      if (v != null) return v;
+      const ls = \u65E7\u3044\u68DA();
+      if (!ls) return null;
+      let \u53E4 = null;
+      try {
+        \u53E4 = ls.getItem(\u9375);
+      } catch (e) {
+        \u53E4 = null;
+      }
+      if (\u53E4 == null) return null;
+      try {
+        await \u4E00\u624B("readwrite", (st) => st.put(\u53E4, \u9375));
+        const \u691C = await \u4E00\u624B("readonly", (st) => st.get(\u9375));
+        if (\u691C === \u53E4) {
+          try {
+            ls.removeItem(\u9375);
+          } catch (e) {
+          }
+        }
+      } catch (e) {
+      }
+      return \u53E4;
+    },
+    \u66F8\u304F: async (\u9375, \u6587) => {
+      try {
+        await \u4E00\u624B("readwrite", (st) => st.put(\u6587, \u9375));
+        const \u691C = await \u4E00\u624B("readonly", (st) => st.get(\u9375));
+        if (\u691C !== \u6587) throw new Error("\u8535\u306B\u53CE\u307E\u3089\u306A\u304B\u3063\u305F");
+        const ls = \u65E7\u3044\u68DA();
+        if (ls) {
+          try {
+            ls.removeItem(\u9375);
+          } catch (e) {
+          }
+        }
+        return true;
+      } catch (e) {
+        const ls = \u65E7\u3044\u68DA();
+        if (!ls) throw e;
+        ls.setItem(\u9375, \u6587);
+        return true;
+      }
+    },
+    \u6D88\u3059: async (\u9375) => {
+      try {
+        await \u4E00\u624B("readwrite", (st) => st.delete(\u9375));
+      } catch (e) {
+      }
+      const ls = \u65E7\u3044\u68DA();
+      if (ls) {
+        try {
+          ls.removeItem(\u9375);
+        } catch (e) {
+        }
+      }
+    }
+  };
+})();
 var \u7F6E\u304D\u5834\u306A\u3057 = {
   \u540D: "\u306A\u3057",
   \u4F7F\u3048\u308B\u304B: () => true,
@@ -16623,7 +16729,7 @@ var \u7F6E\u304D\u5834\u306A\u3057 = {
   \u6D88\u3059: async () => {
   }
 };
-var \u7F6E\u304D\u5834\u4E00\u89A7 = [Artifacts\u306E\u8535, \u30D6\u30E9\u30A6\u30B6\u306E\u8A18\u61B6, \u7F6E\u304D\u5834\u306A\u3057];
+var \u7F6E\u304D\u5834\u4E00\u89A7 = [Artifacts\u306E\u8535, \u5927\u304D\u306A\u8535, \u30D6\u30E9\u30A6\u30B6\u306E\u8A18\u61B6, \u7F6E\u304D\u5834\u306A\u3057];
 var \u9078\u3093\u3060 = null;
 function \u7F6E\u304D\u5834() {
   if (\u9078\u3093\u3060) return \u9078\u3093\u3060;
@@ -42043,6 +42149,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const \u7D42\u5E55\u3092\u898B\u305F = !!g.\u7D42\u5E55\u3092\u898B\u305F;
   const [rotate, setRotate] = useState8(true);
   const [savedMsg, setSavedMsg] = useState8("");
+  const [kirokuDame, setKirokuDame] = useState8("");
+  const \u544A\u3052\u305F\u8A33 = useRef5("");
   const [wide, setWide] = useState8(false);
   const drag = useRef5(null);
   const lastSave = useRef5("");
@@ -42050,7 +42158,16 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const key = `${g.year}-${g.month}`;
     if (lastSave.current === key || battle) return;
     lastSave.current = key;
-    setTimeout(() => onSave(g), 0);
+    setTimeout(async () => {
+      const ok = await onSave(g);
+      if (ok) return;
+      const \u8A33 = \u8A18\u9332\u306E\u8A33\u3092\u8AAD\u3080() || "\u8A18\u9332\u3067\u304D\u306A\u3044\u74B0\u5883";
+      setSavedMsg(\u8A33);
+      if (\u544A\u3052\u305F\u8A33.current !== \u8A33) {
+        \u544A\u3052\u305F\u8A33.current = \u8A33;
+        setKirokuDame(\u8A33);
+      }
+    }, 0);
   }, [g.year, g.month, battle]);
   const pf = g.factions[g.player];
   const mine = g.castles.filter((c) => c.faction === g.player);
@@ -44470,6 +44587,26 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         "\u627F\u77E5\u306E\u3046\u3048\u3067\u51FA\u9663\u3059\u308B"
       ))));
     })(),
+    kirokuDame && /* @__PURE__ */ React9.createElement("div", { className: "modal" }, /* @__PURE__ */ React9.createElement("div", { className: "card", style: { maxWidth: 420 } }, /* @__PURE__ */ React9.createElement("div", { className: "mn", style: { fontSize: 20, marginBottom: 6 } }, "\u8A18\u9332\u304C\u53CE\u307E\u3089\u306A\u304B\u3063\u305F"), /* @__PURE__ */ React9.createElement("div", { style: { fontSize: 12.5, color: U.dim, lineHeight: 1.9, marginBottom: 12 } }, kirokuDame, /* @__PURE__ */ React9.createElement("br", null), "\u3053\u306E\u307E\u307E\u9032\u3081\u308B\u3068\u3001\u3053\u3053\u304B\u3089\u5148\u306E\u6B69\u307F\u306F\u6B8B\u308A\u307E\u305B\u3093\u3002 \u8A18\u9332\u6240\u3067\u53E4\u3044\u67A0\u3092\u6D88\u3059\u304B\u3001\u63A7\u3048\u3092\u66F8\u304D\u51FA\u3057\u3066\u63A7\u3048\u3066\u304A\u3044\u3066\u304F\u3060\u3055\u3044\u3002"), /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React9.createElement(
+      "button",
+      {
+        className: "btn",
+        style: { flex: 1 },
+        onClick: () => {
+          setKirokuDame("");
+          setModal("save");
+        }
+      },
+      "\u8A18\u9332\u6240\u3092\u3072\u3089\u304F"
+    ), /* @__PURE__ */ React9.createElement(
+      "button",
+      {
+        className: "btn",
+        style: { flex: 1 },
+        onClick: () => setKirokuDame("")
+      },
+      "\u3053\u306E\u307E\u307E\u7D9A\u3051\u308B"
+    )))),
     modal === "save" && (() => {
       const \u53CE\u3081\u308B = async (key, \u540D) => {
         const ok = await onSave(g, key);

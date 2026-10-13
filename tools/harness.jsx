@@ -17,7 +17,8 @@ export { 攻め寄せる問い, MonthReport, 城を委ねる問い, 軍の帳, S
 // 盤をこしらえるための道具も差し出す。
 // 画面を延々と押して所定の局面まで持っていくのは当てにならないので、
 // 試験によっては盤を直に組み立て、記録として仕込んでから「続きから」で開く。
-export { saveGame, loadGame, clearGame, 記録を並べる, 記録の見出し, 自動を逃がす, 枠一覧 } from "../src/save/save.js";
+export { saveGame, loadGame, clearGame, 記録を並べる, 記録の見出し, 自動を逃がす, 枠一覧, SAVE_KEY, 枠の鍵, 記録の訳を読む } from "../src/save/save.js";
+export { 置き場, 置き場の名 } from "../src/save/store.js";
 export { initState } from "../src/core/state.js";
 export { layoutSea, makeFleet, createSeaBattle, stepSeaBattle, seaAI, 海戦を裁く, fleetShips, fleetCrew, 風向き, SEA, 海の状 } from "../src/battle/sea.js";
 export { SHIPS, 船の割り } from "../src/data/ships.js";
