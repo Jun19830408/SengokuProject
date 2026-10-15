@@ -2,7 +2,7 @@ import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位, �
 import { courtRank } from "./province.js";
 import { newRoster, rosterSum, 名簿を繕う, 組の番, 通し番号を据える } from "./roster.js";
 import { 姫を整える } from "./hime.js";
-import { clamp, fmt, monthsBetween } from "./util.js";
+import { clamp, fmt, monthsBetween, 姓, 能力を広げる, 能力の欄 } from "./util.js";
 import { findPath, findPathVia } from "./paths.js";
 import { CASTLES, TOWNS } from "../data/castles.js";
 import { SPECIAL_OPTIONS } from "../data/diplo.js";
@@ -323,6 +323,7 @@ export function initState(player) {
     relations, specials, plots: [], intel: {}, prev: {},
     hime: [],                                    // 姫（GDD 6.8）。下で家々に配る
     chronicle: [{ y: 1546, m: 4, text: "尾張は織田三家に分かれ、美濃は斎藤道三が握る。天下はまだ遠い。" }],
+    能力を広げた: true,                          // 武将帳の値は広げた後のもの（能力の幅を繕う を通さない）
   };
   姫を整える(盤);                                 // 家の石高に応じて姫を立てる
   // 家ごとに本拠を据える。陣触れはここから出る。
@@ -408,7 +409,8 @@ export function fillKeepers(castles, generals) {
     const nm = `${c.name.replace(/城$|御堂$|館$|本願寺$/, "")}${KEEPER_NAMES[k % KEEPER_NAMES.length]}`;
     out.push({
       id: `keeper-${c.id}`, name: nm, faction: c.faction,
-      lead: 52 + (k % 13), valor: 50 + (k % 15), wit: 46 + (k % 12), gov: 50 + (k % 14),
+      lead: 能力を広げる(52 + (k % 13), "lead"), valor: 能力を広げる(50 + (k % 15), "valor"),
+      wit: 能力を広げる(46 + (k % 12), "wit"), gov: 能力を広げる(50 + (k % 14), "gov"),
       loyal: 74 + (k % 16), age: 30 + (k % 22), at: c.id,
       retinue: Math.round(140 + (c.koku / 10000) * 22), retTrain: 52 + (k % 10),
     });
@@ -488,9 +490,9 @@ export function assignRanks(castles, generals) {
     let kin = generals.filter((g) => g.faction === fid && g.id !== lord.id && (g.age || 0) >= 25);
     if (!kin.length) kin = generals.filter((g) => g.faction === fid && g.id !== lord.id && (g.age || 0) >= 18);
     if (!kin.length) continue;
-    const sur = lord.name.slice(0, 2);
+    const sur = 姓(lord.name);
     const pick = [...kin].sort((a, b) =>
-      (b.name.startsWith(sur) ? 1 : 0) - (a.name.startsWith(sur) ? 1 : 0)
+      (姓(b.name) === sur ? 1 : 0) - (姓(a.name) === sur ? 1 : 0)
       || (b.lead + b.gov + b.wit) - (a.lead + a.gov + a.wit))[0];
     lord.guardian = pick.id;
     pick.at = lord.at;                       // 後見は当主のもとに詰める
@@ -750,6 +752,27 @@ export function 膝を屈している(g, me, other) {
    家の数だけ回って、鍵を組み立てて引けばよい。百十三回で済む。
    五十六分の一である。家を増やすと関係は二乗で増えるので、
    ここを直しておかないと、家を足すたびに月送りが重くなる。 */
+/* 出征中の者の元（GDD 6.4）。
+
+   軍にいる者は城に立たない（at が空）ので、どの城の人事にも出ず、武将の帳にも
+   「出征中」としか出なかった。遊ぶ側は褒賞も知行も与えられず、どこから出たかも
+   分からない。本領がその家の城ならそこを、なければ出陣元の城を元とする。
+   返すのは { 城, 軍, 居所, 様 }。城に立っている者には null を返す。 */
+export function 出征の元(g, gen) {
+  if (!gen || gen.at != null || gen.captive) return null;
+  const 軍 = (g.armies || []).find((a) => (a.gens || []).includes(gen.id)) || null;
+  const 自城 = (id) => id && g.castles.find((c) => c.id === id && c.faction === gen.faction);
+  const 城 = 自城(gen.本領) || (軍 && 自城(軍.from)) || null;
+  const 居所 = 軍 ? g.castles.find((c) => c.id === (軍.在陣 || 軍.at)) || null : null;
+  const 行く先 = 軍 && 軍.target ? g.castles.find((c) => c.id === 軍.target) || null : null;
+  // いまの様子を一言で（城を囲む／城の下に在陣／道を行く）
+  const 様 = !軍 ? "" : 軍.sieging && 居所 ? `${居所.name}を囲む`
+    : 軍.在陣 && 居所 ? `${居所.name}に在陣`
+    : (軍.path || []).length > 1 ? `${行く先 ? 行く先.name + "へ" : ""}行軍中`
+    : 居所 ? `${居所.name}の前` : "行軍中";
+  return { 城, 軍, 居所, 様 };
+}
+
 export function 主を探す(g, fid) {
   for (const other of Object.keys(g.factions || {})) {
     if (other === fid) continue;
@@ -1113,9 +1136,28 @@ export function 武将の名を改める(s, { 告げる } = {}) {
   return 改めた;
 }
 
+/* 古い記録の武将の値を、広げた尺度へ写す（core/util.js 能力を広げる）。
+
+   武将帳の値を広げたので、それより前に始めた盤の者は狭い尺度のままである。
+   一度だけ写して印を付ける。盤の増補で後から足す者は、すでに広げた帳から来るので、
+   増補より先に写さねばならない（先に足すと二度写すことになる）。 */
+/* 写すのと同時に、武将帳で元値を改めた者はその値に合わせる。
+   上杉謙信（長尾景虎）の武勇は八十八から、最上の九十六に改めた（遊ぶ側の例示による）。 */
+const 元値の改め = { kagetora: { valor: [88, 96] } };
+
+function 能力の幅を繕う(s) {
+  if (s.能力を広げた) return;
+  for (const g of s.generals || []) {
+    for (const [k, [前, 後]] of Object.entries(元値の改め[g.id] || {})) if (g[k] === 前) g[k] = 後;
+    for (const k of 能力の欄) if (g[k] != null) g[k] = 能力を広げる(g[k], k);
+  }
+  s.能力を広げた = true;
+}
+
 export function migrateSave(s) {
   // 卓の印の無い古い記録には、いま与える（以後、置き場が守れるようになる）
   if (!s.卓) s.卓 = `t${(s.player || "x")}${s.year || 0}-旧`;
+  能力の幅を繕う(s);                              // 狭い尺度の値を、広げた尺度へ
   石高の三段を繕う(s);
   軍役の器を繕う(s);
   migrateRosters(s);
@@ -1136,6 +1178,32 @@ export function migrateSave(s) {
   城の名を改める(s);                              // その年までに改まった城の名を当てる
   武将の名を改める(s);                            // 旧い記録の武将にも、その年までの名乗りを当てる
   将の無い軍を繕う(s);                            // 兵だけ残って浮いていた軍を解く
+  重なった将を一人にする(s);                      // 同じ人物が二つの名で盤にいる姿を解く
+  return s;
+}
+
+/* 同じ人物が、二つの id で盤に立っていた（武将帳の重なり）。
+
+   長尾景虎は改名の表で上杉政虎・輝虎・謙信と名を改めるのに、後年に世に出る者の
+   表にも「上杉政虎」が別の者として載っていた。一五八八年の記録では、上杉謙信と
+   上杉政虎が同じ織田家に並んで仕えていた。表からは除いたが、すでに盤に出た者は
+   ここで除く。本の者が既に没していても、重なりのほうは生き返りであるから除く。
+   左が重なり、右が本の者。 */
+const 重なり = { kenshin: "kagetora" };
+
+function 重なった将を一人にする(s) {
+  for (const 写 of Object.keys(重なり)) {
+    const g = (s.generals || []).find((x) => x.id === 写);
+    s.emerged = [...new Set([...(s.emerged || []), 写])];
+    if (!g || g.lord) continue;                    // 家を背負っていれば、盤の筋が崩れるので残す
+    s.generals = s.generals.filter((x) => x.id !== 写);
+    for (const c of s.castles || []) if (c.lordId === 写) c.lordId = null;
+    for (const a of s.armies || []) if ((a.gens || []).includes(写)) a.gens = a.gens.filter((x) => x !== 写);
+    for (const x of s.generals) if (x.寄親 === 写) x.寄親 = null;
+    s.captives = (s.captives || []).filter((x) => x !== 写);
+    if (!Array.isArray(s.物故)) s.物故 = [];
+    if (!s.物故.includes(写)) s.物故 = [...s.物故, 写];
+  }
   return s;
 }
 

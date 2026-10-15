@@ -6,7 +6,7 @@ import { persuadeResult } from "../core/capture.js";
 import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
 import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 旗頭の受け持ち, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
-import { canSee, forecast, relOf } from "../core/state.js";
+import { canSee, forecast, relOf, 出征の元 } from "../core/state.js";
 import { 軍の中身, 城の保ち } from "../core/kakomi.js";
 import { courtRank, 旗の下か } from "../core/province.js";
 import { 問われる家, 問わぬ家ら, 応じる目 } from "../core/sobuji.js";
@@ -1558,7 +1558,7 @@ export function 軍の帳({ g, 軍, onClose }) {
   );
 }
 
-export function GeneralList({ g, onClose, onYakume }) {
+export function GeneralList({ g, onClose, onYakume, onOpenCastle }) {
   const gs = g.generals.filter((x) => x.faction === g.player);
   const [欄, set欄] = useState("武将");
   /* 名でさがす（GDD 6.4）。
@@ -1568,8 +1568,11 @@ export function GeneralList({ g, onClose, onYakume }) {
      でなくても、候補が出るようにしてほしい」であった。名の一部、城の名、国の名、
      役の名――どれに掠っても候補に残す。 */
   const [探, set探] = useState("");
-  const 城名 = (x) => (g.castles.find((c) => c.id === (x.at || x.本領)) || {}).name || "";
-  const 国名 = (x) => (g.castles.find((c) => c.id === (x.at || x.本領)) || {}).kuni || "";
+  // 出征中の者は、出た城（本領か出陣元）で数える
+  const 居城 = (x) => g.castles.find((c) => c.id === x.at) || (出征の元(g, x) || {}).城
+    || g.castles.find((c) => c.id === x.本領) || null;
+  const 城名 = (x) => (居城(x) || {}).name || "";
+  const 国名 = (x) => (居城(x) || {}).kuni || "";
   const 掠る = (x) => {
     const q = 探.trim();
     if (!q) return true;
@@ -1725,7 +1728,19 @@ export function GeneralList({ g, onClose, onYakume }) {
                 title="遊びの中で生まれた者。史実の人物ではありません">〔架空〕</span>}
             </span>
             <span className="num" style={{ color: U.dim, flex: 1 }}>{x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{忠誠(x)}</span>
-            <span style={{ color: U.dim }}>{x.at ? (g.castles.find((c) => c.id === x.at) || {}).name : "出征中"}</span>
+            {(() => {
+              /* 居所。出征中なら、どの城から出て、いまどこにいるかを示す。
+                 押せばその城の人事が開く（褒賞も知行もそこで与えられる）。 */
+              const 元 = x.at ? null : 出征の元(g, x);
+              const 城 = 居城(x);
+              const 札 = x.at ? 城名(x)
+                : `出征中（${元 && 元.城 ? `${元.城.name}より` : "元の城なし"}`
+                  + `${元 && 元.様 ? `・${元.様}` : ""}）`;
+              return 城 && onOpenCastle
+                ? <button className="btn sm" title={`${城.name}の人事を開く`}
+                    onClick={() => onOpenCastle(城.id)}>{札}</button>
+                : <span style={{ color: U.dim }}>{札}</span>;
+            })()}
             <span className="num">直属 {fmt(x.retinue)}</span>
           </div>
         ))}
@@ -2670,8 +2685,10 @@ export function 惣無事令の帳({ g, onSend, onClose }) {
         </div>
         <div style={{ display: "flex", gap: 9, marginTop: 14 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>今は発しない</button>
-          <button className="btn dark" style={{ flex: 2 }} disabled={!位 || !位.号令}
-            onClick={onSend}>惣無事令を発する</button>
+          {/* 問う家が一つも無ければ発しない。天下を定めた後に「0家が従い0家が拒んだ」
+              という空の令が戦国記に残っていた。 */}
+          <button className="btn dark" style={{ flex: 2 }} disabled={!位 || !位.号令 || !問.length}
+            onClick={onSend}>{問.length ? "惣無事令を発する" : "問うべき家がない"}</button>
         </div>
       </div>
     </div>

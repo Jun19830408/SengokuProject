@@ -12,6 +12,9 @@ function 主従の表(s) {
     const r = s.relations[k];
     if (r.state !== "従属" && r.state !== "臣従") continue;
     const [a, b] = k.split("|");
+    // 城を一つも持たぬ家は旗を立てられない。滅んだ家の約束が表に残っていても数えない。
+    if (!koku[a] && !s.castles.some((c) => c.faction === a)) continue;
+    if (!koku[b] && !s.castles.some((c) => c.faction === b)) continue;
     const master = (koku[a] || 0) >= (koku[b] || 0) ? a : b;
     const vassal = master === a ? b : a;
     (under[master] = under[master] || []).push(vassal);

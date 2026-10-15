@@ -641,6 +641,22 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const a = g.armies.find((x) => x.id === g.pendingArrivals[0]);
     const dest = a && g.castles.find((c) => c.id === a.at);
     if (!a || !dest) { setG((p) => ({ ...p, pendingArrivals: p.pendingArrivals.slice(1) })); return; }
+    /* 味方がすでに囲んでいる城へ着いたなら、囲んでいる軍に加わる（war.js 囲みに加わる）。
+       着いた軍として野戦を始めると、勝った後で囲みを書き換え、先に囲んでいた軍が
+       「囲み中」のまま取り残されて、二度と操作できなくなっていた。
+       入る条件は 囲みに加わる と同じにする（陣触れの軍・後詰・在陣は加わらない）。
+       加われぬ軍をここへ通すと、着陣待ちから落ちて誰にも捌かれなくなる。 */
+    const 戦役の軍 = (g.campaigns || []).some((c) => [...(c.armies || []), ...(c.arrived || [])].includes(a.id));
+    if (!a.relief && !a.在陣 && !戦役の軍 && (!a.target || a.target === dest.id)
+      && g.sieges.some((x) => x.castleId === dest.id && x.armyId !== a.id
+        && (g.armies.find((y) => y.id === x.armyId) || {}).faction === a.faction)) {
+      setG((p) => {
+        const s = structuredClone(p);
+        合戦裁定.囲みに加わる(s);
+        return s;
+      });
+      return;
+    }
     // 自勢力が関わらない合戦は画面に出さず、同じ規則で自動解決する（GDD 13.2）
     // 試走のときは自勢力の合戦も自動で解く
     /* 旗頭に預けた手勢が他家へ寄せる戦は、盤面に出さず旗頭に任せる（GDD 6.4）。
@@ -653,10 +669,20 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     // 後詰が包囲中の城へ着いたら、囲みを解くための野戦になる。
     // 相手は城ではなく、城を囲んでいる軍そのものである。
-    if (a.relief) {
-      const sg2 = g.sieges.find((x) => x.castleId === a.relief);
-      const bes = sg2 && g.armies.find((x) => x.id === sg2.armyId);
-      if (bes) {
+    /* 後詰の印（relief）は、出陣のときに城が囲まれていた軍にしか付かない。出たあとで
+       敵が着いて囲みが始まると、印の無い援軍は「味方の城に着いた軍」として城の下に
+       陣を張るだけで、囲む敵には当たらなかった。遊ぶ側の申し出は「救援に向かわせても
+       合戦にならず、自軍も在陣するだけ、敵も包囲し続けるだけ」であった。
+       印が無くとも、身内の城が敵に囲まれていれば後詰の戦とする（盤の外の裁き
+       war.js 味方の城へ着く も、印ではなく囲みを見ている）。 */
+    const 救う囲み = g.sieges.find((x) => x.castleId === dest.id);
+    const 囲む敵 = 救う囲み && g.armies.find((x) => x.id === 救う囲み.armyId);
+    const 後詰に着いた = !!囲む敵 && 囲む敵.faction !== a.faction
+      && !同じ旗の下(g, 囲む敵.faction, a.faction)
+      && (a.relief === dest.id || 同じ旗の下(g, a.faction, dest.faction) || 援けに着く(g, a, dest));
+    if (後詰に着いた) {
+      const bes = 囲む敵;
+      {
         /* 城方に討って出る機会を与えるのは、旗の下に限らない。従属や同盟の城を
            救いに行ったときも、内と外から挟み撃ちにするのが後詰の形である。 */
         if (a.faction === g.player
@@ -776,6 +802,21 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             `${nodeById(cc.target).name}の手前に着陣した。${late.length ? `遅参${late.length}隊を待つか、先に攻めかかるかを決める。` : "全軍がそろった。"}`];
         }
         s.pendingArrivals = s.pendingArrivals.slice(1);
+        return s;
+      });
+      return;
+    }
+    /* 同じ月に同じ城の前へ着いた自家の軍は、一つに束ねてから戦う（war.js 着いた味方を束ねる）。
+       一隊ずつ戦わせると、先の隊が勝って囲んだ城へ後の隊がまた野戦を挑み、その勝ちで
+       囲みが書き換わって先の隊が取り残された。 */
+    if (dest.faction !== a.faction && g.armies.some((x) => x.id !== a.id && x.faction === a.faction
+      && x.at === dest.id && (!x.path || x.path.length <= 1) && !x.sieging && !x.在陣 && !x.relief
+      && x.target === dest.id)) {
+      setG((p) => {
+        const s = structuredClone(p);
+        const ar = s.armies.find((x) => x.id === a.id);
+        const c = s.castles.find((x) => x.id === dest.id);
+        if (ar && c) 合戦裁定.着いた味方を束ねる(s, ar, c);
         return s;
       });
       return;
@@ -2618,7 +2659,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 if (!道) return s2;
                 const 陣 = s2.castles.find((x) => x.id === a.在陣);
                 a.在陣 = null; a.target = to; a.path = 道; a.prog = 0; a.at = 道[0];
-                a.sieging = false; a.reinforced = false;
+                a.sieging = false; a.reinforced = false; a.relief = null;
                 // 陣を払って自ら攻める軍は、もう誰かの援けではない（GDD 7.3）
                 a.aid = null; a.助勢 = null;
                 s2.chronicle.push({ y: s2.year, m: s2.month,
@@ -2869,6 +2910,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             onClose={() => set軍sel(null)} />
         )}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)}
+          onOpenCastle={(id) => { setModal(null); setSel(id); setTownSel(null); setTab("人事"); focus(id); }}
           onYakume={(x) => setG((p) => (x.解く
             ? 政務.旗頭を解く下知(p, x.解く)
             : 政務.旗頭に任ずる(p, x.任じる)))} />}

@@ -3,7 +3,7 @@ import { ransomCost, takeAsPrisoner } from "../core/capture.js";
 import { 姫を整える, 姫の年送り, 姫の居場所, 使者の帰り, 姫の采配 } from "../core/hime.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
-import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, lifeSpan, needsGuardian, ruinedHouse, succeed, 親の } from "../core/house.js";
+import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, is架空, lifeSpan, needsGuardian, ruinedHouse, succeed, 架空の上限, 親の } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の重み } from "../core/paths.js";
 import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
@@ -18,7 +18,7 @@ import { MARCH_PER_MONTH, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reviewAim } from "./ai.js";
 import { 外交の采配, 調略の采配, 特殊勢力の采配, 旗頭の調略 } from "./aiDiplo.js";
 import { checkUnified } from "./unify.js";
-import { 集結を待つか, marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く, 盤の乱れを繕う, 城なき家を片づける, 城に合流する, 軍を解く, 将を除く, 旗頭の陣を払う } from "./war.js";
+import { 囲みに加わる, 集結を待つか, marchClashes, resolveClash, restoreStrays, sackCastle, withdrawArmy, 将の無い軍を解く, 盤の乱れを繕う, 城なき家を片づける, 城に合流する, 軍を解く, 将を除く, 旗頭の陣を払う } from "./war.js";
 import { 旗の下を狙う戦役を落とす } from "../core/state.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
@@ -339,6 +339,10 @@ export function advanceMonth(prev, g) {
         const target = s.castles.find((x) => x.id === pl.castleId);
         const gen = s.generals.find((x) => x.id === pl.genId);
         if (!target || !gen) return false;
+        /* 仕掛けた家が滅んだか、的の城がすでに仕掛けた家のものになっていれば、
+           調略は宙に浮く。天下を定めた後、自領の首里城への密約が「不調に終わった」
+           と戦国記に残っていた。 */
+        if (target.faction === pl.faction || !s.castles.some((c) => c.faction === pl.faction)) return false;
         // 知略が事の難しさを上回るほど確かに成る（GDD 11.2）。
         // 定めの知略に達していれば、民忠の並みの城には必ず通じる。
         const def2 = PLOTS.find((x) => x.key === pl.type) || { need: 85, hard: 1 };
@@ -441,7 +445,7 @@ export function advanceMonth(prev, g) {
               s.chronicle.push({ y: s.year, m: s.month,
                 text: `${s.factions[oldF].name}は最後の城を失い、滅亡した。` });
             }
-            s.ruined = [...(s.ruined || []), oldF];
+            s.ruined = [...new Set([...(s.ruined || []), oldF])];
           }
           return false;
         }
@@ -680,6 +684,32 @@ export function advanceMonth(prev, g) {
           events.push(`${s.factions[a.faction].name}の援軍${fmt(a.men)}人が本隊へ合流した。`);
         }
       }
+      /* 囲まれた身内の城に在陣している軍は、囲みを衝く後詰に立つ（GDD 9.2）。
+
+         援軍が先に着いて陣を張り、あとから敵が来て囲みに入った場合、敵の着陣の
+         月には城下の野戦（後詰）があるが、その戦に出られなかった軍や、囲みの
+         始まった後に着いて陣を張った軍は、城の下に座ったまま囲みを眺めていた。
+         着いた軍として捌き直せば、囲む敵との野戦になる。 */
+      for (const a of s.armies) {
+        if (!a.在陣 || a.sieging || (a.men || 0) < 300) continue;
+        const c3 = s.castles.find((y) => y.id === a.在陣);
+        const sg3 = c3 && (s.sieges || []).find((y) => y.castleId === c3.id);
+        const bes3 = sg3 && s.armies.find((y) => y.id === sg3.armyId);
+        if (!bes3 || bes3.faction === a.faction) continue;
+        if (underMyBanner(s, a.faction, bes3.faction) || underMyBanner(s, bes3.faction, a.faction)) continue;
+        if (!(c3.faction === a.faction || underMyBanner(s, a.faction, c3.faction) || underMyBanner(s, c3.faction, a.faction))) continue;
+        a.在陣 = null; a.在陣待ち = 0; a.relief = c3.id; a.target = c3.id;
+        a.path = [c3.id]; a.prog = 0; a.at = c3.id;
+        sg3.relief = a.id;
+        if (!arrivals.includes(a)) arrivals.push(a);
+      }
+      /* 味方が囲んでいる城へ後から着いた軍は、囲んでいる軍に加わる（war.js 囲みに加わる）。
+         着いた軍として捌くと、城下の野戦に勝った後で囲みを書き換え、先の軍が取り残される。 */
+      for (const q of 囲みに加わる(s)) {
+        const idx2 = arrivals.indexOf(q.x);
+        if (idx2 >= 0) arrivals.splice(idx2, 1);
+        if (q.host.faction === s.player) events.push(q.文);
+      }
       /* 街道での行き合い（GDD 9.1）。
          甲が乙を攻め、同じ月に乙が甲を攻めれば、両軍は同じ街道を逆に進む。
          すれ違うことはない。どこかで行き合い、まず野戦になる。
@@ -760,6 +790,21 @@ export function advanceMonth(prev, g) {
         if (!f || f.gold < cost.gold || foodHave < cost.food) continue;
         s.ransomOffer = { genId: q.id, gold: cost.gold, food: cost.food, rank: cost.rank, from: cost.payer };
         break;
+      }
+      /* 裁きを待つ捕虜を、年の初めに知らせる（GDD 12.4）。
+
+         心を移した報せは一度きりなので、見落とすとそのまま幾年も留め置かれる。
+         一五八八年の記録では四十六人が裁かれぬまま残り、最も長い者（岡部元信）は
+         一五五五年から三十三年囚われていた。 */
+      if (s.month === 1) {
+        const 囚 = s.generals.filter((q) => q.captive && q.captive.by === s.player);
+        if (囚.length) {
+          const 年数 = (q) => q.captive.since ? s.year - q.captive.since.y : 0;
+          const 古 = [...囚].sort((a, b) => 年数(b) - 年数(a))[0];
+          events.push(`裁きを待つ捕虜が${囚.length}人いる`
+            + `${年数(古) >= 1 ? `（最も長い${古.name}は${年数(古)}年）` : ""}。`
+            + `処遇は城の帳の「外交」の捕虜から決められる。`);
+        }
       }
       // 滅んだ家の捕虜は、囚われの月を重ねるごとに心をほぐしていく（GDD 12.4）
       for (const q of s.generals) {
@@ -1348,6 +1393,7 @@ export function advanceMonth(prev, g) {
         if (fid2 === s.player && !s.autoPlay) continue;   // 遊ぶ側は自ら発する（画面から）
         const 前 = (s.惣無事令の控え || {})[fid2];
         if (前 && (s.year - 前.y) * 12 + (s.month - 前.m) < 問い直しの間) continue;
+        if (!問われる家(s, fid2).length) continue;       // 問う相手の無い令は発しない
         const 令 = 惣無事令を発する(s, fid2);
         s.惣無事令の控え = { ...(s.惣無事令の控え || {}), [fid2]: { y: s.year, m: s.month } };
         const 文 = `${s.factions[fid2].name}が惣無事令を発した。私戦を停め、旗の下に入るよう諸大名に命じる。`;
@@ -1726,7 +1772,7 @@ export function advanceMonth(prev, g) {
           次 = 的ら.find((v) => a.men > v.x.local * 1.4) || null;
         }
         if (次) {
-          a.在陣 = null; a.在陣待ち = 0; a.target = 次.x.id; a.path = 次.道; a.prog = 0;
+          a.在陣 = null; a.在陣待ち = 0; a.relief = null; a.target = 次.x.id; a.path = 次.道; a.prog = 0;
           a.at = 次.道[0]; a.sieging = false; a.reinforced = false;
           s.chronicle.push({ y: s.year, m: s.month,
             text: `${陣.name}の在陣を払い、${s.factions[a.faction].name}の軍が${次.x.name}へ向かう。` });
@@ -1799,7 +1845,12 @@ export function advanceMonth(prev, g) {
         const 子ある = new Set();
         for (const x of s.generals) { if (x.captive) continue; const p = 親の(s, x.id); if (p) 子ある.add(p); }
         for (const n of NEWCOMERS) { const p = PARENT[n.id]; if (p) 子ある.add(p); }
+        /* 架空の者の上限。生まれた子がまた子をなすので、目を落としても数は
+           膨らむ。一五八八年の記録では四十二年で百七十四名、武将の二割に達した。
+           盤にいる架空の者が全体の 架空の上限 を超えれば、その年は生まれない。 */
+        let 架空の数 = s.generals.filter((x) => is架空(x)).length;
         for (const q of [...s.generals]) {
+          if (架空の数 >= s.generals.length * 架空の上限) break;
           if (q.captive || q.lord) continue;
           const a2 = q.age || 30;
           if (a2 < 18 || a2 > 52) continue;
@@ -1809,10 +1860,11 @@ export function advanceMonth(prev, g) {
 
              もとは年に七分であった。二十五年送ると架空の者が百三十一名、
              武将ぜんたいの一割を超える。史実の人物と混ざりすぎる。
-             半分の三分五厘に落とす。二十五年で六十名ほどになる。 */
-          if (Math.random() > 0.035) continue;
+             半分の三分五厘に落とした。それでも孫・曾孫と重なって膨らむので、
+             二分五厘とし、上の上限で頭を押さえる。 */
+          if (Math.random() > 0.025) continue;
           const kid = bearChild(s, q);
-          if (kid) 子ある.add(q.id);
+          if (kid) { 子ある.add(q.id); 架空の数++; }
           if (kid && q.faction === s.player) events.push(`${q.name}に子が生まれた（${kid.name}）。`);
         }
         // 年が改まれば、若い者が世に出る（GDD 6.1）
@@ -1873,6 +1925,20 @@ export function advanceMonth(prev, g) {
          陣を払って帰す（一年のあいだ、その城には向かわない）。 */
       旗頭の済んだ許しを片づける(s);
       旗頭の古い断りを片づける(s);
+      /* 主のいない方面軍を帰す（GDD 6.4）。
+
+         旗頭が没したり役を解かれたりすると、その名を負った軍は誰の差配も受けず、
+         城を落とした地に在陣したまま残った。攻めにも囲みにも出ていない手は帰す。 */
+      for (const a of [...s.armies]) {
+        if (a.faction !== s.player || !a.旗頭 || a.target || a.sieging || !a.在陣) continue;
+        const 主 = s.generals.find((g) => g.id === a.旗頭);
+        if (主 && 主.役 === "旗頭" && !主.captive && 主.faction === s.player
+          && 旗頭の受け持ち(s, 主).length) continue;
+        const 陣 = s.castles.find((c2) => c2.id === a.在陣);
+        const 兵 = a.men, 帰 = withdrawArmy(s, a);
+        if (帰) events.push(`【方面軍】差配する旗頭が無く、${陣 ? 陣.name : "陣"}の陣を払った`
+          + `（${fmt(兵)}人が${帰.name}へ帰陣）。`);
+      }
       for (const 旗 of s.generals.filter((g) => g.faction === s.player && g.役 === "旗頭" && !g.captive)) {
         const 受 = 旗頭の受け持ち(s, 旗);
         if (!受.length) continue;
@@ -1959,6 +2025,26 @@ export function advanceMonth(prev, g) {
           後詰を立てる(危);
         }
 
+        /* ────────────── 一の二、用の済んだ陣を払う（GDD 6.4）
+
+           在陣したまま次の下知の無い手が、何か月も残っていた。攻めの手がほかに
+           出ているあいだは陣払いが走らず、受け持ちのどこかが危ういだけでも
+           払わなかったからである。兵も将も城に戻らず、人事も政務も止まる。
+
+           守っている城がまだ危ういなら残す。そうでなければ、在陣の月を数え、
+           三月を越えて用が無ければ帰す。次の攻めに要るなら、そのとき改めて
+           受け持ちから催せばよい。 */
+        for (const a of 手勢()) {
+          if (!a.在陣 || a.sieging || a.target) continue;
+          if (a.relief && 危うい城.some((x) => x.c.id === a.relief)) { a.在陣待ち = 0; continue; }
+          a.在陣待ち = (a.在陣待ち || 0) + 1;
+          if (a.在陣待ち <= 3) continue;
+          const 陣 = s.castles.find((c2) => c2.id === a.在陣);
+          const 兵 = a.men, 帰 = withdrawArmy(s, a);
+          if (帰) events.push(`【方面軍】${陣 ? 陣.name : "陣"}の在陣が長く、用も無いので${旗.name}は陣を払った`
+            + `（${fmt(兵)}人が${帰.name}へ帰陣）。`);
+        }
+
         /* ────────────── 二、攻め（GDD 6.4）
 
            もとは「手勢がひとつでも動いていれば何もしない」としていたので、旗頭は
@@ -2007,7 +2093,7 @@ export function advanceMonth(prev, g) {
                 const 積 = Math.max(0, Math.min(Math.round(陣城.food), Math.round(在.men * 0.6)));
                 陣城.food = Math.max(0, 陣城.food - 積);
                 在.food = (在.food || 0) + 積;
-                在.在陣 = null; 在.target = 的.id; 在.path = 道; 在.prog = 0;
+                在.在陣 = null; 在.在陣待ち = 0; 在.target = 的.id; 在.path = 道; 在.prog = 0;
                 在.sieging = false; 在.reinforced = false; 在.seaDone = false;
                 在.from = 陣城.id;
                 const 月 = Math.max(1, marchMonthsOf(道) || 1);
