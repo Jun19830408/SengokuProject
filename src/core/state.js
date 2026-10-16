@@ -12,6 +12,7 @@ import { px, py } from "../data/geo.js";
 import { PARENT } from "../data/newcomers.js";
 import { 改まった名, 改まった名乗り } from "../data/kaimei.js";
 import { MOB_POLICY } from "../data/roads.js";
+import { 能力を見直す } from "../data/nouryoku.js";
 import { 城の馬, 城の鉄砲 } from "../data/arms.js";
 import { 直属の兵科 } from "../data/arms.js";
 import { SUBJECT, masterOf } from "../data/diplo.js";
@@ -324,6 +325,7 @@ export function initState(player) {
     hime: [],                                    // 姫（GDD 6.8）。下で家々に配る
     chronicle: [{ y: 1546, m: 4, text: "尾張は織田三家に分かれ、美濃は斎藤道三が握る。天下はまだ遠い。" }],
     能力を広げた: true,                          // 武将帳の値は広げた後のもの（能力の幅を繕う を通さない）
+    能力を見直した: true,                        // 見直しも当てた後のもの（data/nouryoku.js）
   };
   姫を整える(盤);                                 // 家の石高に応じて姫を立てる
   // 家ごとに本拠を据える。陣触れはここから出る。
@@ -1154,10 +1156,19 @@ function 能力の幅を繕う(s) {
   s.能力を広げた = true;
 }
 
+/* 武将の値の見直し（data/nouryoku.js）を、古い記録にも一度だけ当てる。
+   武勇は合戦で与える損害の強さとして定め直し、名のある将の値を改めた。 */
+function 能力の見直しを繕う(s) {
+  if (s.能力を見直した) return;
+  for (const g of s.generals || []) 能力を見直す(g);
+  s.能力を見直した = true;
+}
+
 export function migrateSave(s) {
   // 卓の印の無い古い記録には、いま与える（以後、置き場が守れるようになる）
   if (!s.卓) s.卓 = `t${(s.player || "x")}${s.year || 0}-旧`;
   能力の幅を繕う(s);                              // 狭い尺度の値を、広げた尺度へ
+  能力の見直しを繕う(s);                          // 武勇の定め直しと、名のある将の値の改め
   石高の三段を繕う(s);
   軍役の器を繕う(s);
   migrateRosters(s);

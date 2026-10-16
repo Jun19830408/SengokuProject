@@ -13,6 +13,7 @@ const entry = path.join(ROOT, 'build', 'nouryoku-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { 能力を広げる, 能力の欄 } from "../src/core/util.js";\n'
++ 'export { 能力を見直す, 能力の改め, 武勇の下限_統率の差, 武勇の下限_統率の境 } from "../src/data/nouryoku.js";\n'
 + 'export { initState, migrateSave } from "../src/core/state.js";\n'
 + 'export { GENERALS } from "../src/data/generals.js";\n'
 + 'export { NEWCOMERS } from "../src/data/newcomers.js";\n');
@@ -81,6 +82,39 @@ console.log('\n── 四　古い記録は一度だけ写す');
   const 二度 = g.lead;
   A.migrateSave(古);
   確('二度読んでも写し直さない', g.lead === 二度 && 古.能力を広げた === true);
+}
+
+console.log('\n── 五　武勇は合戦で与える損害の強さ（見直し）');
+{
+  /* 遊ぶ側の申し出：「武勇は力が強いだけではない。合戦の中でどれくらいの強度を持って
+     相手に損害を与えられるかである。竹中半兵衛のように合戦が強かった武将は武勇を
+     下げすぎない。柴田勝家は方面軍を任されるだけの政治力があり、智謀もそれほど
+     悪くはなかった」 */
+  const 外れ = 帳.filter((g) => g.lead >= A.武勇の下限_統率の境 && g.valor < g.lead - A.武勇の下限_統率の差);
+  確('統率の高い将の武勇は、統率から大きく離れない', !外れ.length,
+    外れ.slice(0, 5).map((g) => `${g.name}${g.lead}/${g.valor}`).join('・') || `統率${A.武勇の下限_統率の境}以上は差${A.武勇の下限_統率の差}まで`);
+  const 者 = (n) => 帳.find((g) => g.name === n);
+  const 半 = 者('竹中半兵衛'), 柴 = 者('柴田勝家'), 雪 = 者('太原雪斎'), 武 = 者('宮本武蔵'), 忠 = 者('本多忠勝');
+  確('竹中半兵衛の武勇は下げすぎない', 半.valor >= 80, `武${半.valor}`);
+  確('太原雪斎の武勇も同じ', 雪.valor >= 80, `武${雪.valor}`);
+  確('柴田勝家は知略・政務とも並より上', 柴.wit >= 65 && 柴.gov >= 75, `知${柴.wit} 政${柴.gov}`);
+  確('剣術家は、合戦の名将より武勇が低い', 武.valor < 忠.valor, `宮本武蔵${武.valor}／本多忠勝${忠.valor}`);
+  const 違い = 帳.filter((g) => {
+    const h = A.能力を見直す({ ...g });
+    return A.能力の欄.some((k) => h[k] !== g[k]);
+  });
+  確('武将帳は見直しを当てた後の値である（当て直しても変わらない）', !違い.length, 違い.slice(0, 3).map((g) => g.name).join('・') || 'なし');
+  確('見直しの表は、どれも訳を持つ', Object.values(A.能力の改め).every((x) => x.訳 && x.訳.length > 4));
+  // 古い記録にも当たる
+  const 古 = A.initState('oda');
+  delete 古.能力を見直した;
+  const 半2 = 古.generals.find((g) => g.id === 'hanbei') || null;
+  const 柴2 = 古.generals.find((g) => g.id === 'katsuie');
+  柴2.wit = 38; 柴2.gov = 35;
+  A.migrateSave(古);
+  確('古い記録の柴田勝家も改まる', 柴2.wit === 70 && 柴2.gov === 80, `知${柴2.wit} 政${柴2.gov}`);
+  確('新しい盤には見直しの印がある', A.initState('oda').能力を見直した === true);
+  if (半2) 確('盤の竹中半兵衛も同じ値', 半2.valor >= 80);
 }
 
 console.log(`\nエラー: ${咎.length ? 咎.join(' | ') : 'なし'}`);
