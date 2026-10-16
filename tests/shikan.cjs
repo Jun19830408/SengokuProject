@@ -76,14 +76,16 @@ let 願いの盤 = null;
   const q = 捕らえておく(s, 'oda');
   確('心を移した捕虜は願い出られる', H.仕官を願えるか(s, q), `${q.name}（旧主への忠誠${q.loyal}）`);
   let t = s;
-  for (let i = 0; i < 24 && !t.仕官の願い; i++) t = H.advanceMonth(t, t);
+  /* 身代金の申し出が先に立つと、遊ぶ側が答えるまで願いの札は出ない。
+     画面なしでは誰も答えないので、月ごとに申し出を退けておく。 */
+  for (let i = 0; i < 24 && !t.仕官の願い; i++) { t.ransomOffer = null; t = H.advanceMonth(t, t); }
   確('願いの札が立つ', !!t.仕官の願い && t.仕官の願い.genId === q.id, t.仕官の願い ? `${t.year}年${t.month}月` : '立たない');
   確('月報に願いが出る', (t.monthEvents || []).some((x) => x.includes('仕官を願い出た')));
   願いの盤 = t;
 }
 
 console.log('\n── 二　願いの札から召し抱える／断る');
-for (const 釦 of ['召し抱える', '断る']) {
+for (const 釦 of ['召し抱える', '断る（捕虜のまま）']) {   // 断るは他の札（縁談など）にもあるので、文言まで見る
   const s = structuredClone(願いの盤);
   const id = s.仕官の願い.genId;
   const 蔵 = new Map([['sengoku:save1', JSON.stringify({ v: 1, at: 1, state: s })]]);
