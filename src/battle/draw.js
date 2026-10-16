@@ -571,6 +571,14 @@ export const KOMA_SHAPE = {
   fune:  [[11, 0], [5, 4.4], [-7, 4.0], [-8.5, 0], [-7, -4.0], [5, -4.4]],
 };
 
+/* 斜めの眺めでは、駒の形は縮めずに描く（置き場所だけを斜めに写す）。
+   縮めたまま描くと、駒が横に寝た細い線になって読めなかった。 */
+function 駒を立てて描く(ctx, x, y, f, type, fill, stroke, k, 縮) {
+  if (縮 >= 1) { drawKoma(ctx, x, y, f, type, fill, stroke, k); return; }
+  ctx.save(); ctx.translate(x, y); ctx.scale(1, 1 / 縮);
+  drawKoma(ctx, 0, 0, f, type, fill, stroke, k);
+  ctx.restore();
+}
 export function drawKoma(ctx, x, y, f, type, fill, stroke, k) {
   const m = (k || 1) * 0.46;                 // 従来の大きさに合わせる
   const pts = KOMA_SHAPE[type] || KOMA_SHAPE.yari;
@@ -2014,8 +2022,8 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
         const fill = q.origin === "直属" ? bright : dark;
         const size = 3.2 + (頭数(q) / 50) * 4.2;
         const qy = q.y + 揚(q.x, q.y);
-        drawKoma(ctx, q.x, qy, q.facing, q.type, fill,
-          q.origin === "直属" ? edge : edge2, size / 4.8);
+        駒を立てて描く(ctx, q.x, qy, q.facing, q.type, fill,
+          q.origin === "直属" ? edge : edge2, size / 4.8, 縮);
         if (ARM_STATS[q.type].range > 0) {
           ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 0.8;
           ctx.beginPath(); ctx.arc(q.x, qy, size * 0.75, 0, 7); ctx.stroke();
@@ -2091,7 +2099,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
       for (let i = 0; i < n; i++) {
         const h1 = Math.sin(q.seed + i * 12.9898), h2 = Math.cos(q.seed + i * 78.233);
         const [ox, oy] = rot(((i % 5) - 2) * KOMA + h1 * jit, Math.floor(i / 5) * KOMA + h2 * jit, q.facing);
-        drawKoma(ctx, q.x + ox, qy + oy, q.facing + h1 * spread * 2.0, q.type, fill, stroke, 1);
+        駒を立てて描く(ctx, q.x + ox, qy + oy, q.facing + h1 * spread * 2.0, q.type, fill, stroke, 1, 縮);
       }
       if (q.origin === "直属") {           // 直属家臣団は小旗を立てる（GDD 6.3）
         const [fx, fy] = rot(-2 * KOMA - 3, -3, q.facing);
