@@ -12,6 +12,7 @@ import { px, py } from "../data/geo.js";
 import { PARENT } from "../data/newcomers.js";
 import { 改まった名, 改まった名乗り } from "../data/kaimei.js";
 import { MOB_POLICY } from "../data/roads.js";
+import { 城の上がり, 大身の割, 蔵の目減り, 初めの金 } from "./keizai.js";
 import { 能力を見直す } from "../data/nouryoku.js";
 import { 城の馬, 城の鉄砲 } from "../data/arms.js";
 import { 直属の兵科 } from "../data/arms.js";
@@ -331,6 +332,10 @@ export function initState(player) {
   // 家ごとに本拠を据える。陣触れはここから出る。
   for (const fid of Object.keys(盤.factions)) {
     盤.factions[fid].本拠 = 本拠を定める(fid, 盤.castles, 盤.generals);
+    /* 初めの蔵（core/keizai.js）。月の実入りのおよそ半年分を足す。 */
+    const 実入り = 盤.castles.filter((c) => c.faction === fid)
+      .reduce((a, c) => a + 城の上がり(c) - c.local * 0.075 * MOB_POLICY[盤.factions[fid].mobilization ?? 1].upkeep, 0);
+    盤.factions[fid].gold = 初めの金(盤.factions[fid].gold, 実入り);
   }
   国主を据える(盤);                               // 国ごとに国主を一人（GDD 6.4）
   城主の札を据える(盤);                           // 城ごとに城主を一人（GDD 6.4）
@@ -607,12 +612,14 @@ export function forecast(s, fid) {
   const nextMonth = s.month === 12 ? 1 : s.month + 1;
   const harvest = [9, 10, 11].includes(nextMonth) ? 3 : 1;
   let inGold = 0, outGold = 0, inFood = 0, outFood = 0, troops = 0, food = 0;
+  let 上がり計 = 0, 総石高 = 0;
   for (const c of mine) {
     const ret = s.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive)
       .reduce((a, x) => a + x.retinue, 0);
     const t = c.local + ret;
     troops += t; food += c.food;
-    inGold += c.comm * 4 + c.koku * 0.003;
+    inGold += 城の上がり(c);
+    上がり計 += 城の上がり(c); 総石高 += c.koku || 0;
     // 扶持は地の兵にだけ掛かる（手勢は武将の知行が養う。month.js と同じ勘定）
     outGold += c.local * 0.075 * up;
     inFood += Math.round((c.koku / 12) * 0.5 * harvest * (c.min / 80));
@@ -624,6 +631,10 @@ export function forecast(s, fid) {
   }
   const g = specialBonus(s, fid, "gold") - specialBonus(s, fid, "upkeep");
   inGold += Math.max(0, g); outGold += Math.max(0, -g);
+  // 大身の費えと蔵の目減り（month.js と同じ勘定。core/keizai.js）
+  const 大身 = Math.round(上がり計 * 大身の割(総石高));
+  const 目減り = 蔵の目減り(f.gold, 上がり計);
+  outGold += 大身 + 目減り;
   const netFood = inFood - outFood;
   // 兵糧が尽きるまでの月数。収穫の多い月とそうでない月を織り込んで概算する。
   let left = null;
@@ -647,6 +658,7 @@ export function forecast(s, fid) {
   return {
     inGold: Math.round(inGold), outGold: Math.round(outGold), netGold: Math.round(inGold - outGold),
     inFood, outFood, netFood, gold: f.gold, food, troops, months: left, harvest: harvest > 1,
+    大身, 目減り,
   };
 }
 
@@ -915,6 +927,11 @@ export function 立たぬ申し送りを落とす(s) {
   if (s.ransomOffer) {
     const q = (s.generals || []).find((x) => x.id === s.ransomOffer.genId);
     if (!q || !q.captive || !houseAlive(s, s.ransomOffer.from)) s.ransomOffer = null;
+  }
+  // 一の二、捕虜の仕官の願い。すでに捕虜でない者の願いは落とす。
+  if (s.仕官の願い) {
+    const q = (s.generals || []).find((x) => x.id === s.仕官の願い.genId);
+    if (!q || !q.captive || q.captive.by !== s.player) s.仕官の願い = null;
   }
   // 二、捕虜の処遇を問う列。すでに捕虜でない者、盤にいない者は落とす。
   if (Array.isArray(s.captives)) {

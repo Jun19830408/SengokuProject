@@ -232,6 +232,46 @@ export const COMING_OF_AGE = 15;
    史実の人物を主とし、架空の者は家を繋ぐ添えにとどめる。 */
 export const 架空の上限 = 0.07;
 
+/* ------------------------------------------------ 一族（GDD 6.7）
+   子が生まれるのは、家を背負う者の一族に限る。遊ぶ側の申し出は「架空武将は
+   その武将の一族として続いていくことを表したかったが、全ての武将がそうなると
+   多くなりすぎる。城主・国主・方面軍だけにし、実際の子孫も含めて数を制限する。
+   世界編を考えると子孫がいないと続かない」であった（一族を家の芯とする考え方）。
+
+   子をなすのは次の者である。
+     当主 … 大名家の主。家に継ぐ者が一人もいなければ、架空の者の上限にかかわらず
+             子をなす（家を絶やさぬため）
+     一門 … 当主の血筋の者（兄弟・叔父など）。当主の一族の枠に数える
+     重臣 … 国主・旗頭
+     城主 … 城を預かる者
+   それ以外の家臣には生まれない。
+
+   一族の枠は、盤にいる同じ一族の者（史実の人物も、生まれた子も、幼い者も）を
+   数える。枠が埋まっていれば生まれない。史実の一族が多いあいだは史実の者で
+   埋まり、それが絶えたのちに架空の子が家を繋ぐ。 */
+export const 一族の枠 = { 当主: 4, 一門: 4, 重臣: 3, 城主: 2 };
+export const 生まれる目 = { 当主: 0.10, 一門: 0.03, 重臣: 0.05, 城主: 0.03 };
+// 一人が持てる子の数（盤にいる者）。
+export const 子の数の限り = { 当主: 2, 一門: 1, 重臣: 2, 城主: 1 };
+
+// 子をなす身の格。子をなさぬ者は null。
+export function 一族の格(s, gen) {
+  if (!gen || gen.captive) return null;
+  if (gen.lord) return "当主";
+  if (isMainClan(s, gen)) return "一門";
+  if (gen.役 === "国主" || gen.役 === "旗頭") return "重臣";
+  if ((s.castles || []).some((c) => c.lordId === gen.id && c.faction === gen.faction)) return "城主";
+  return null;
+}
+
+// 同じ一族の者（本人を含む、盤にいる者）。当主と一門は大名家の一族として一つに数える。
+export function 一族(s, gen) {
+  const 生 = s.generals.filter((x) => !x.captive && x.faction === gen.faction);
+  if (gen.lord || isMainClan(s, gen)) return 生.filter((x) => x.lord || isMainClan(s, x));
+  const sur = houseName(gen);
+  return 生.filter((x) => !x.lord && !isMainClan(s, x) && houseName(x) === sur);
+}
+
 export const needsGuardian = (gen) => !!gen && gen.lord && (gen.age || 30) < COMING_OF_AGE;
 
 // 後見に立つべき者を選ぶ。血縁の年長者を先とし、なければ器量と禄高による。

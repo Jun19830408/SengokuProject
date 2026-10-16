@@ -5,7 +5,7 @@ import { MAX_CORPS, MAX_CORPS_MEN } from "../battle/field.js";
 import { persuadeResult } from "../core/capture.js";
 import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { foodDays, minGarrison, rankName, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 旗頭の受け持ち, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
+import { foodDays, minGarrison, rankName, 出征の余地, 出征の限り, 出征中の兵, 家の総兵, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 旗頭の受け持ち, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
 import { canSee, forecast, relOf, 出征の元 } from "../core/state.js";
 import { 軍の中身, 城の保ち } from "../core/kakomi.js";
 import { courtRank, 旗の下か } from "../core/province.js";
@@ -19,7 +19,7 @@ import { 器量くらべ, 挑める家ら, 分け目の備えを組む, 分け�
 import { U, fmt, man, monthsBetween } from "../core/util.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
 import { 元服の齢, 姫の役, 姫の枠, 姫の齢, 婚姻できるか, 婚姻の要る信用, 嫁がせられるか, 婚儀の礼, 使者の礼, 使える姫 } from "../core/hime.js";
-import { ARMS, ROAD_SPEED } from "../data/roads.js";
+import { ARMS, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
 import { reinforceOffers, 運び賃, 遠征の兵糧, 留守の蓄え } from "../govern/war.js";
 import { canRecruit } from "../core/house.js";
 import { underMyBanner } from "../core/state.js";
@@ -270,6 +270,14 @@ export function SortieDialog({ g, from, onClose, onGo }) {
      五十六倍あり、全部持ち出しても一年で満ちた――兵糧の持ち出しは家に
      何の痛みも与えていなかった。米は城の蔵から、金は家の蔵から。長く陣を
      張るほど人足と馬と船が要る。 */
+  /* 出征の余地（core/rank.js）。家の兵のうち、一度に外へ出せる割まで。
+     自家の城から呼ぶ加勢も同じ家の兵なので数える。囲まれた城を救う後詰は縛らない。 */
+  const 余地 = 出征の余地(g, g.player);
+  const 自家の加勢 = offers.filter((o) => aid[o.castleId]
+    && (g.castles.find((x) => x.id === o.castleId) || {}).faction === g.player)
+    .reduce((a, o) => a + (o.指図 ? 加勢の総勢(o) : o.men), 0);
+  const 出征の総勢 = men + 自家の加勢;
+  const 余地を超える = !救いに行くか && 出征の総勢 > 余地;
   const 本隊の運び賃 = 運び賃(men, 道月 + 陣中月);
   const 運び賃の総額 = 本隊の運び賃
     + offers.filter((o) => aid[o.castleId]).reduce((a, o) => a + 賃(o), 0);
@@ -502,6 +510,9 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         <div className="sec">地域家臣団の同行</div>
         <input type="range" min="0" max={availLocal} value={useLocal} onChange={(e) => setLocal(+e.target.value)} style={{ width: "100%" }} />
         <div className="row"><span>同行</span><span className="v">{fmt(useLocal)} / {fmt(availLocal)} 人</span></div>
+        <div className="row"><span>出征の余地</span>
+          <span className="v" style={余地を超える ? { color: "#B0483C" } : undefined}>
+            {救いに行くか ? "後詰は縛らない" : `${fmt(出征の総勢)} / ${fmt(余地)} 人`}</span></div>
         {(() => {
           const 残 = c.local - useLocal + gens.filter((x) => !picked.includes(x.id)).reduce((a, x) => a + x.retinue, 0);
           const 手薄 = 残 < garrison;
@@ -739,7 +750,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
 
         <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onClose}>取りやめ</button>
-          <button className="btn dark" style={{ flex: 2 }} disabled={!to || !path || !picked.length || men < 200 || 米が足りぬ || 賃が足りぬ || !率いる者}
+          <button className="btn dark" style={{ flex: 2 }} disabled={!to || !path || !picked.length || men < 200 || 米が足りぬ || 賃が足りぬ || !率いる者 || 余地を超える}
             onClick={() => onGo({ from, to,
               /* 総大将を先頭に据えて渡す（軍は先頭を大将とする）。
                  寄親を出すなら、この城にいるその寄騎も加える。 */
@@ -757,6 +768,12 @@ export function SortieDialog({ g, from, onClose, onGo }) {
                     men: Math.min(aid[o.castleId].men, 出せる上限(o, 選ばれた将(o))) }
                 : o)) })}>{約束 ? `約束を破って${fmt(men)}人で進発` : `${fmt(men)}人で進発`}</button>
         </div>
+        {余地を超える && <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7, lineHeight: 1.7 }}>
+          出征の余地を超えています。一度に城の外へ出せるのは、家の兵{fmt(家の総兵(g, g.player))}人の
+          {Math.round((MOB_POLICY[g.factions[g.player].mobilization ?? 1] || MOB_POLICY[1]).出征 * 100)}%
+          （{fmt(出征の限り(g, g.player))}人）までで、すでに{fmt(出征中の兵(g, g.player))}人が出ています。
+          動員の段を上げれば割が増えます。
+        </div>}
         {米が足りぬ && <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7, lineHeight: 1.7 }}>
           兵糧が足りない（積めるのは {fmt(積める)} 石まで）。陣中の月数を減らすか、収穫を待つか、開墾を進めねばならぬ。
         </div>}
@@ -1240,6 +1257,13 @@ export function MonthReport({ g, onClose, onAid }) {
                   </span>
                   <span style={{ color: U.dim, fontSize: 11 }}>（入{fmt(fc.inGold)}／出{fmt(fc.outGold)}）</span>
                 </span></div>
+              {(fc.大身 > 0 || fc.目減り > 0) && (
+                <div style={{ fontSize: 11, color: U.dim, margin: "-2px 0 4px", lineHeight: 1.6 }}>
+                  出のうち{fc.大身 > 0 ? `大身の費え（奉行・代官・普請）${fmt(fc.大身)}貫` : ""}
+                  {fc.大身 > 0 && fc.目減り > 0 ? "・" : ""}
+                  {fc.目減り > 0 ? `蔵の目減り（進物・献金・寄進。半年分の上がりを超えた蓄えから）${fmt(fc.目減り)}貫` : ""}
+                </div>
+              )}
               <div className="row"><span>兵糧</span>
                 <span className="v num">
                   {fmt(fc.food)}石　

@@ -1,13 +1,15 @@
 import { ambushChance } from "../core/ambush.js";
-import { ransomCost, takeAsPrisoner } from "../core/capture.js";
+import { 自立に入る城, 自立する } from "../core/jiritsu.js";
+import { 城の上がり, 大身の割, 蔵の目減り } from "../core/keizai.js";
+import { ransomCost, takeAsPrisoner, 仕官を願えるか, 他家が召し抱える, 囚われた年 } from "../core/capture.js";
 import { 姫を整える, 姫の年送り, 姫の居場所, 使者の帰り, 姫の采配 } from "../core/hime.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
-import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, is架空, lifeSpan, needsGuardian, ruinedHouse, succeed, 架空の上限, 親の } from "../core/house.js";
+import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, isMainClan, is架空, lifeSpan, needsGuardian, ruinedHouse, succeed, 一族の格, 一族の枠, 子の数の限り, 生まれる目, 架空の上限, 親の } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の重み } from "../core/paths.js";
 import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
-import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家 } from "../core/rank.js";
+import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 出征の余地, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家 } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake, 軍の損を分ける } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 二重の城主を解く, 城主の札を据える, 城の名を改める, 武将の名を改める } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
@@ -81,7 +83,11 @@ export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限�
     const gens = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive && !q.lord);
     const 余り = x.local + gens.reduce((a2, q) => a2 + q.retinue, 0) - minGarrison(x);
     if (余り < 400) continue;                            // 出せるほどの余りが無い
-    const 出す = Math.round(余り * 0.6);
+    /* 出征の余地（core/rank.js）。後詰は家を守る戦なので縛らない。 */
+    const 余地 = 軍.relief ? Infinity
+      : 出征の余地(s, fid) - ((s.armies || []).includes(軍) ? 0 : (軍.men || 0));
+    if (余地 < 200) break;
+    const 出す = Math.min(Math.round(余り * 0.6), 余地);
     const 将 = [...gens].sort((a2, b2) => b2.lead - a2.lead)[0];
     const 地 = Math.max(0, Math.min(x.local, 出す - (将 ? 将.retinue : 0)));
     if (地 + (将 ? 将.retinue : 0) < 200) continue;
@@ -141,6 +147,7 @@ export function 攻めに要る兵(s, 的, 割 = 1.6) {
 export function advanceMonth(prev, g) {
       const s = structuredClone(prev);
       const events = [];
+      const 記の始め = (s.chronicle || []).length;   // この月送りで年代記に積んだ分を見分ける
       // その月の空模様。梅雨と冬は降りやすい。合戦の奇襲はこれに左右される。
       {
         const mo = s.month;
@@ -158,10 +165,14 @@ export function advanceMonth(prev, g) {
           men: c.local + s.generals.filter((x) => x.at === c.id && x.faction === c.faction).reduce((a, x) => a + x.retinue, 0) };
       }
       s.prevGold = s.factions[s.player].gold;
+      let 帰農 = 0;
       for (const fid of Object.keys(s.factions)) {
         const f = s.factions[fid];
         let gold = 0;
+        /* 上がりの計と家の石高（core/keizai.js）。大身の費えと蔵の目減りに使う。 */
+        let 上がり計 = 0, 総石高 = 0;
         for (const c of s.castles.filter((x) => x.faction === fid)) {
+          総石高 += c.koku || 0;
           // 囲まれた城は封鎖される。年貢も商いも入らず、蓄えを食い潰すだけになる。
           const besieged = s.sieges.some((sg) => sg.castleId === c.id);
           if (besieged) {
@@ -193,7 +204,20 @@ export function advanceMonth(prev, g) {
              兵を二万まで増やすと十貫になる。それでは普請も調略もできない。
 
              大名の蔵が負うのは地の兵――城が直に抱える兵である。 */
-          gold += (c.comm * 4 + c.koku * 0.003) * (fid === s.player ? lv(s).tribute : 1) - c.local * 0.075 * up;
+          const 上がり = 城の上がり(c) * (fid === s.player ? lv(s).tribute : 1);
+          上がり計 += 上がり;
+          gold += 上がり - c.local * 0.075 * up;
+          /* 軍役の器を超えた地の兵は、月に四分ずつ村へ帰る（帰農）。
+             もとは器を超えても減らなかったので、総動員で集めてから平時に戻せば、
+             扶持だけ軽くして兵はそのまま抱えられた。一五八八年の記録では地の兵が
+             一万石あたり九百六十六人に達していた。 */
+          const 器 = troopCap(c, f.mobilization, s);
+          if (c.local > 器) {
+            const 帰 = Math.max(1, Math.round((c.local - 器) * 0.04));
+            c.local -= 帰;
+            rosterSync(c, "rost", c.local, `loc-${c.id}`);
+            if (fid === s.player) 帰農 += 帰;
+          }
           if (c.food < 0) {
             c.food = 0; c.min = Math.max(0, c.min - 4); c.localTrain = Math.max(20, c.localTrain - 3);
             const lost = Math.round(c.local * 0.04); c.local -= lost;
@@ -227,6 +251,9 @@ export function advanceMonth(prev, g) {
           q.retinue = Math.min(器, q.retinue + 増);
           rosterSync(q, "rost", q.retinue, `ret-${q.id}`);
         }
+        /* 大身の費え（core/keizai.js）。領国が広がれば、治める費えが嵩む。 */
+        const 大身 = Math.round(上がり計 * 大身の割(総石高));
+        gold -= 大身;
         gold += specialBonus(s, fid, "gold") - specialBonus(s, fid, "upkeep");
         f.prestige = clamp((f.prestige || 50) + specialBonus(s, fid, "prestige"), 0, 100);
         /* 貢（GDD 12.2）。旗の下にある家は、毎月の実入りのうちいくらかを主へ納める。
@@ -263,7 +290,12 @@ export function advanceMonth(prev, g) {
           }
         }
         f.gold = Math.round(f.gold + gold);
+        /* 蔵の目減り（core/keizai.js）。上がりの半年分を超えた金は、進物・献金・普請に出ていく。 */
+        const 減 = 蔵の目減り(f.gold, 上がり計);
+        f.gold -= 減;
+        f.費え = { 大身, 目減り: 減 };
       }
+      if (帰農 >= 50) events.push(`軍役の器を超えた城で、地の兵${fmt(帰農)}人が村へ帰った（帰農）。`);
       // 外交の残り期間（GDD 11.1）
       /* 家ごとの石高は、ここで一度だけ数える。間柄ごとに数え直していたら、
          二百七十の城を千八百組ぶん走査することになり、三十年の走りが数分
@@ -799,7 +831,7 @@ export function advanceMonth(prev, g) {
       if (s.month === 1) {
         const 囚 = s.generals.filter((q) => q.captive && q.captive.by === s.player);
         if (囚.length) {
-          const 年数 = (q) => q.captive.since ? s.year - q.captive.since.y : 0;
+          const 年数 = (q) => { const y = 囚われた年(q); return y == null ? 0 : s.year - y; };
           const 古 = [...囚].sort((a, b) => 年数(b) - 年数(a))[0];
           events.push(`裁きを待つ捕虜が${囚.length}人いる`
             + `${年数(古) >= 1 ? `（最も長い${古.name}は${年数(古)}年）` : ""}。`
@@ -963,7 +995,16 @@ export function advanceMonth(prev, g) {
           const near = s.castles.filter((c2) => c2.faction !== q.faction);
           const to = near.length ? near[Math.floor(Math.random() * near.length)] : null;
           if (Math.random() < 0.18) {
-            if (to) {
+            /* 守る将のいない城が近くにあれば、そこに入って自立する（core/jiritsu.js）。 */
+            const 拠る = 自立に入る城(s, q);
+            if (拠る) {
+              const oldF = q.faction;
+              const 旧名 = s.factions[oldF].name;
+              const nid = 自立する(s, q, 拠る);
+              const msg = `${q.name}が${旧名}を出奔し、${拠る.name}に入って自立した（${s.factions[nid].name}）。`;
+              s.chronicle.push({ y: s.year, m: s.month, text: msg });
+              if (oldF === s.player) events.push(msg);
+            } else if (to) {
               const oldF = q.faction;
               q.faction = to.faction; q.at = to.id; q.loyal = 45; q.fief = Math.round(fiefWanted(q) * 0.8);
               const msg = `${q.name}が${s.factions[oldF].name}を去り、${s.factions[to.faction].name}に走った。`;
@@ -1017,7 +1058,23 @@ export function advanceMonth(prev, g) {
         q.loyal = clamp((q.loyal == null ? 60 : q.loyal) - step, 0, 100);
         if (q.loyal <= 40 && !q.captive.ready) {
           q.captive.ready = true;
-          events.push(`捕虜の${q.name}が心を移した。登用できる。`);
+          if (q.captive.by === s.player) events.push(`捕虜の${q.name}が心を移した。登用できる。`);
+        }
+      }
+      /* 心を移した捕虜は、みずから仕官を願い出る（GDD 12.4・core/capture.js 仕官を願えるか）。
+         遊ぶ家の捕虜は願いの札を出し、他家の捕虜は他家がそのまま召し抱える。 */
+      for (const q of s.generals) {
+        if (!q.captive || !仕官を願えるか(s, q)) continue;
+        if (Math.random() > 0.3) continue;
+        if (q.captive.by === s.player) {
+          if (s.仕官の願い || s.ransomOffer) continue;
+          s.仕官の願い = { genId: q.id, y: s.year, m: s.month };
+          events.push(`捕虜の${q.name}が仕官を願い出た。`);
+        } else if (s.factions[q.captive.by]) {
+          const 旧 = (s.factions[q.captive.from] || {}).name || "";
+          他家が召し抱える(s, q);
+          s.chronicle.push({ y: s.year, m: s.month,
+            text: `捕虜の${q.name}が${s.factions[q.faction].name}に仕えた${旧 ? `（旧${旧}）` : ""}。` });
         }
       }
       // 他家も寄騎を出す。一城の兵だけでは堅い城は落ちない。
@@ -1665,8 +1722,11 @@ export function advanceMonth(prev, g) {
             s.chronicle.push({ y: s.year, m: s.month,
               text: `${s.factions[主].name}が${s.factions[fid].name}に${cand.name}攻めを許した。` });
           }
+          /* 出征の余地（core/rank.js）。家の兵のうち、一度に外へ出せる割まで。 */
+          const 余地 = 出征の余地(s, fid);
+          if (余地 < 400) break;
           const take = gens.sort((a, b) => b.lead - a.lead).slice(0, 3);
-          const send = Math.round(avail * 0.85);
+          const send = Math.min(Math.round(avail * 0.85), 余地);
           const localSend = Math.max(0, Math.min(c.local, send - take.reduce((a, x) => a + x.retinue, 0)));
           /* 持たせる兵糧は、城の蔵にある分を超えない。
 
@@ -1842,29 +1902,45 @@ export function advanceMonth(prev, g) {
            親子帳が千五百件あるので、年ごとに二百五十万回も引くことになる。
            千五百人まで増やしたいま、これが年送りで目立つ（測って二十五ミリ秒）。
            親の名を一度だけ集めておけば、あとは一件ずつ見るだけで済む。 */
-        const 子ある = new Set();
-        for (const x of s.generals) { if (x.captive) continue; const p = 親の(s, x.id); if (p) 子ある.add(p); }
-        for (const n of NEWCOMERS) { const p = PARENT[n.id]; if (p) 子ある.add(p); }
+        /* 史実の子が後年に現れる者には、重ねて生まれない。 */
+        const 史実の子を待つ = new Set();
+        for (const n of NEWCOMERS) { const p = PARENT[n.id]; if (p && n.y > s.year) 史実の子を待つ.add(p); }
+        const 子の数 = new Map();
+        for (const x of s.generals) {
+          if (x.captive) continue;
+          const p = 親の(s, x.id);
+          if (p) 子の数.set(p, (子の数.get(p) || 0) + 1);
+        }
         /* 架空の者の上限。生まれた子がまた子をなすので、目を落としても数は
            膨らむ。一五八八年の記録では四十二年で百七十四名、武将の二割に達した。
-           盤にいる架空の者が全体の 架空の上限 を超えれば、その年は生まれない。 */
+           盤にいる架空の者が全体の 架空の上限 を超えれば、その年は生まれない。
+           ただし継ぐ者のいない当主には、家を絶やさぬために生まれる。 */
         let 架空の数 = s.generals.filter((x) => is架空(x)).length;
+        /* 一族の頭数は一度だけ数える（当主と一門は家ごとに一つ、ほかは家と姓ごと）。 */
+        const 一族の鍵 = (x) => (x.lord || isMainClan(s, x) ? `${x.faction}|主家` : `${x.faction}|${houseName(x)}`);
+        const 一族の数 = new Map();
+        for (const x of s.generals) {
+          if (x.captive) continue;
+          const k = 一族の鍵(x);
+          一族の数.set(k, (一族の数.get(k) || 0) + 1);
+        }
         for (const q of [...s.generals]) {
-          if (架空の数 >= s.generals.length * 架空の上限) break;
-          if (q.captive || q.lord) continue;
+          const 格 = 一族の格(s, q);
+          if (!格) continue;
+          const 鍵 = 一族の鍵(q);
+          /* 上限を超えていても、継ぐ者のいない当主（一族が当主ひとり）には生まれる。 */
+          if (架空の数 >= s.generals.length * 架空の上限
+            && !(格 === "当主" && (一族の数.get(鍵) || 0) <= 1)) continue;
           const a2 = q.age || 30;
           if (a2 < 18 || a2 > 52) continue;
-          if (!hasHouse(s, q)) continue;
-          if (子ある.has(q.id)) continue;
-          /* 子が生まれる目（GDD 6.7）。
-
-             もとは年に七分であった。二十五年送ると架空の者が百三十一名、
-             武将ぜんたいの一割を超える。史実の人物と混ざりすぎる。
-             半分の三分五厘に落とした。それでも孫・曾孫と重なって膨らむので、
-             二分五厘とし、上の上限で頭を押さえる。 */
-          if (Math.random() > 0.025) continue;
+          if (史実の子を待つ.has(q.id)) continue;
+          if ((子の数.get(q.id) || 0) >= 子の数の限り[格]) continue;
+          if ((一族の数.get(鍵) || 0) >= 一族の枠[格]) continue;
+          /* 子が生まれる目（GDD 6.7）。家を背負う者に限ったので、一人あたりの目は
+             もとの二分五厘より高い。当主は一割、国主・旗頭は五分、城主と一門は三分。 */
+          if (Math.random() > 生まれる目[格]) continue;
           const kid = bearChild(s, q);
-          if (kid) { 子ある.add(q.id); 架空の数++; }
+          if (kid) { 子の数.set(q.id, (子の数.get(q.id) || 0) + 1); 一族の数.set(鍵, (一族の数.get(鍵) || 0) + 1); 架空の数++; }
           if (kid && q.faction === s.player) events.push(`${q.name}に子が生まれた（${kid.name}）。`);
         }
         // 年が改まれば、若い者が世に出る（GDD 6.1）
@@ -2124,8 +2200,10 @@ export function advanceMonth(prev, g) {
           if (!gens3.length) continue;
           const avail3 = c2.local + gens3.reduce((a, x) => a + x.retinue, 0) - minGarrison(c2);
           if (avail3 < 400) continue;
+          const 余地3 = 出征の余地(s, s.player);           // 方面軍も家の出征の余地の内
+          if (余地3 < 400) continue;
           const take3 = [...gens3].sort((a, b) => b.lead - a.lead).slice(0, 3);
-          const send3 = Math.round(avail3 * 0.85);
+          const send3 = Math.min(Math.round(avail3 * 0.85), 余地3);
           const loc3 = Math.max(0, Math.min(c2.local, send3 - take3.reduce((a, x) => a + x.retinue, 0)));
           if (loc3 < 200) continue;
           c2.local -= loc3;
@@ -2389,10 +2467,15 @@ export function advanceMonth(prev, g) {
          積む所（改名・役の繕いなど）である。前者は遊ぶ側の出来事にかぎって
          年代記に二度並んでいた（実測：二十年で四百行のうち四十七行）。
          同じ文が本当に二度起きることもある（兵糧の尽きた軍が二つ）ので、
-         数で引く――events にある数から、すでに載っている数を差し引いた分だけ足す。 */
+         数で引く――events にある数から、すでに載っている数を差し引いた分だけ足す。
+
+         「すでに載っている」は、この月送りで積んだ行で数える。月は途中で改まる
+         ので、改まる前に直に積んだ行は前の月の日付を持つ。日付で数えると、
+         出奔・自立のような行が前の月と今月に二度並んでいた（一五八八年の記録を
+         送って、自立の報せがみな二度ずつ出た）。 */
       if (events.length) {
         const 既 = {};
-        for (const x of s.chronicle) if (x.y === s.year && x.m === s.month) 既[x.text] = (既[x.text] || 0) + 1;
+        for (const x of s.chronicle.slice(記の始め)) 既[x.text] = (既[x.text] || 0) + 1;
         for (const t of events) {
           if (既[t]) { 既[t]--; continue; }
           s.chronicle.push({ y: s.year, m: s.month, text: t });

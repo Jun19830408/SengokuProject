@@ -55,7 +55,7 @@ import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 攻められるか, 許しの要る主, 許されているか, 許しを与える, 容認するか, 臣従の主 } from "../core/yurushi.js";
 import { 城の寄親, 守りを旗頭に任せるか, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 旗頭に許す, 旗頭に断る, 自ら采配するか } from "../core/inin.js";
-import { 難を逃れる } from "../core/capture.js";
+import { 難を逃れる, 囚われた年 } from "../core/capture.js";
 import { 記録の訳を読む, 記録の見出し } from "../save/save.js";
 import { 外を押して閉じる } from "./panels.jsx";
 import { rosterCut } from "../core/roster.js";
@@ -3287,7 +3287,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                   return MOB_POLICY.map((m, i) => {
                     const v = 実(i);
                     return (<option key={m.name} value={i}>
-                      {`動員：${m.name}（一万石 ${m.per}人${v && v > m.per + 4 ? `／当家は ${v}人` : ""}）`}
+                      {`動員：${m.name}（一万石 ${m.per}人${v && v > m.per + 4 ? `／当家は ${v}人` : ""}・出征は家の兵の${Math.round(m.出征 * 10)}割まで）`}
                     </option>);
                   });
                 })()}
@@ -3398,6 +3398,48 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                     s.chronicle.push({ y: s.year, m: s.month, text: `${s.factions[o.from].name}の身代金の申し出を退けた。` });
                     s.ransomOffer = null; return s;
                   })}>退ける</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+        {g.仕官の願い && !g.ransomOffer && !battle && (() => {
+          /* 心を移した捕虜の仕官の願い（GDD 12.4・core/capture.js 仕官を願えるか）。 */
+          const o = g.仕官の願い;
+          const gen = g.generals.find((x) => x.id === o.genId);
+          if (!gen || !gen.captive || gen.captive.by !== g.player) {
+            setG((p) => { const s = structuredClone(p); s.仕官の願い = null; return s; });
+            return null;
+          }
+          const 旧 = (g.factions[gen.captive.from] || {}).name;
+          const 年 = 囚われた年(gen);
+          return (
+            <div className="modal">
+              <div className="card">
+                <div className="mn" style={{ fontSize: 18 }}>{gen.name}より仕官の願い</div>
+                <div style={{ fontSize: 12.5, color: U.dim, marginTop: 8, lineHeight: 1.9 }}>
+                  捕虜の<b>{gen.name}</b>{旧 ? `（旧${旧}）` : ""}が、当家に仕えたいと願い出ている。<br />
+                  統率{gen.lead}・武勇{gen.valor}・知略{gen.wit}・政務{gen.gov}
+                  {年 != null && g.year - 年 >= 1 ? `。囚われて${g.year - 年}年になる` : ""}。
+                </div>
+                <div className="g2" style={{ marginTop: 12 }}>
+                  <button className="btn dark" onClick={() => setG((p) => {
+                    const q = p.generals.find((x) => x.id === o.genId);
+                    const s = q && q.captive && q.captive.ruin
+                      ? 政務.settleCaptive(p, o.genId, "登用")
+                      : 政務.doCaptive(p, o.genId, "登用");
+                    s.仕官の願い = null;
+                    const r = s.generals.find((x) => x.id === o.genId);
+                    if (r && !r.captive) s.msg = `${r.name}を召し抱えた。`;
+                    return s;
+                  })}>召し抱える</button>
+                  <button className="btn" onClick={() => setG((p) => {
+                    const s = structuredClone(p);
+                    const q = s.generals.find((x) => x.id === o.genId);
+                    if (q && q.captive) q.captive = { ...q.captive, 断った: { y: s.year, m: s.month } };
+                    s.chronicle.push({ y: s.year, m: s.month, text: `${gen.name}の仕官の願いを退けた。` });
+                    s.仕官の願い = null; return s;
+                  })}>断る（捕虜のまま）</button>
                 </div>
               </div>
             </div>
