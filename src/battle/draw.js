@@ -4,6 +4,7 @@ import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
+import { 縦の縮み, 浮き, 画の縦 } from "./naname.js";
 import { 新絵か, 新絵の兵描き, 新絵の城の地, 新絵の画布上限, 個人で描くか, 近景の肌理, 本陣の所 } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
@@ -1877,7 +1878,7 @@ export function 空模様を被せる(ctx, b, W, H) {
   ctx.restore();
 }
 
-export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, 跡Canvas, 城Canvas) {
+export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, 跡Canvas, 城Canvas, 斜め地) {
   /* 新しい絵（関ヶ原だけ・GDD 8.11）。深く寄ったときは組を五十人にほどいて
      一人ずつ描く。引きはこれまでの絵のまま。理には触れない。
 
@@ -1890,14 +1891,25 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   ctx.clearRect(0, 0, W, H);
   // 狙い札の置き場（画面の座標）。押せる所を、描いた側が控えて渡す。
   b.狙い札 = [];
-  const S = (wx, wy) => [(wx - cam.x) * cam.s + W / 2, (wy - cam.y) * cam.s + H / 2];
+  /* 斜めの眺め（battle/naname.js）。盤の縦を 縮 だけ縮め、地の高さぶん持ち上げる。
+     画の上の縦は 画の縦(x, y)＝y×縮−浮き。カメラの縦（cam.y）は盤の所のまま持つ。 */
+  const 縮 = 縦の縮み();
+  const 揚 = (x, y) => -浮き(x, y) / 縮;               // 傾けた筆の上で、持ち上げに要る縦のずれ
+  const S = (wx, wy) => [(wx - cam.x) * cam.s + W / 2, (画の縦(wx, wy) - cam.y * 縮) * cam.s + H / 2];
 
   ctx.save();
-  ctx.translate(W / 2 - cam.x * cam.s, H / 2 - cam.y * cam.s);
-  ctx.scale(cam.s, cam.s);
+  ctx.translate(W / 2 - cam.x * cam.s, H / 2 - cam.y * 縮 * cam.s);
+  ctx.scale(cam.s, cam.s * 縮);
   /* 地の画布は、広い野では間引いて焼いてある（画面の側の 画布の倍 を参照）。
-     貼るときに野の寸法まで引き伸ばす。 */
-  ctx.drawImage(terrainCanvas, 0, 0, FIELD.w, FIELD.h);
+     貼るときに野の寸法まで引き伸ばす。斜めに焼いた地は、傾けずに（既に写してあるので）
+     せり出しの分だけ上から貼る。 */
+  if (斜め地 && 縮 < 1) {
+    ctx.save(); ctx.scale(1, 1 / 縮);
+    ctx.drawImage(斜め地.画, 0, -斜め地.上, FIELD.w, 斜め地.縦);
+    ctx.restore();
+  } else {
+    ctx.drawImage(terrainCanvas, 0, 0, FIELD.w, FIELD.h);
+  }
   // 戦の痕。地の上に重ねる（画布は地の半分の寸法なので、引き伸ばして貼る）
   if (跡Canvas) ctx.drawImage(跡Canvas, 0, 0, FIELD.w, FIELD.h);
   /* 近景の肌理（GDD 8.11）。寄ったときだけ、地の肌理を画面の縮尺で刻む。
@@ -1960,7 +1972,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     const side = sideColor(c);
 
     // 隊の輪郭。まとまりが一目で分かるようにする。
-    const xs = live.map((q) => q.x), ys = live.map((q) => q.y);
+    const xs = live.map((q) => q.x), ys = live.map((q) => q.y + 揚(q.x, q.y));
     const x0 = Math.min(...xs) - 12, x1 = Math.max(...xs) + 12;
     const y0 = Math.min(...ys) - 12, y1 = Math.max(...ys) + 12;
     const on = sel === c.id || selAll;
@@ -2001,11 +2013,12 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
       for (const q of live) {
         const fill = q.origin === "直属" ? bright : dark;
         const size = 3.2 + (頭数(q) / 50) * 4.2;
-        drawKoma(ctx, q.x, q.y, q.facing, q.type, fill,
+        const qy = q.y + 揚(q.x, q.y);
+        drawKoma(ctx, q.x, qy, q.facing, q.type, fill,
           q.origin === "直属" ? edge : edge2, size / 4.8);
         if (ARM_STATS[q.type].range > 0) {
           ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 0.8;
-          ctx.beginPath(); ctx.arc(q.x, q.y, size * 0.75, 0, 7); ctx.stroke();
+          ctx.beginPath(); ctx.arc(q.x, qy, size * 0.75, 0, 7); ctx.stroke();
         }
       }
       continue;
@@ -2013,8 +2026,9 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     for (const q of live) {
       const rows = Math.ceil(Math.ceil(頭数(q) / 10) / 5);
       const hw = 2 * KOMA + 4, d0 = -4, d1 = (rows - 1) * KOMA + 4;
+      const qy = q.y + 揚(q.x, q.y);
       const pts = [[-hw, d0], [hw, d0], [hw, d1], [-hw, d1]].map(([a, bb]) => {
-        const [ox, oy] = rot(a, bb, q.facing); return [q.x + ox, q.y + oy];
+        const [ox, oy] = rot(a, bb, q.facing); return [q.x + ox, qy + oy];
       });
       ctx.fillStyle = q.reserve ? side + "12" : side + "26";
       ctx.beginPath();
@@ -2026,10 +2040,11 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
       ctx.lineCap = "round";
       for (const q of live) {
         if (q.link) {
+          const qy = q.y + 揚(q.x, q.y), ly = q.link.y + 揚(q.link.x, q.link.y);
           ctx.strokeStyle = "rgba(40,36,28,0.42)"; ctx.lineWidth = 1.6;
-          ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.link.x, q.link.y); ctx.stroke();
-          const mx = (q.x + q.link.x) / 2, my = (q.y + q.link.y) / 2;
-          const ang = Math.atan2(q.link.y - q.y, q.link.x - q.x) + Math.PI / 2;
+          ctx.beginPath(); ctx.moveTo(q.x, qy); ctx.lineTo(q.link.x, ly); ctx.stroke();
+          const mx = (q.x + q.link.x) / 2, my = (qy + ly) / 2;
+          const ang = Math.atan2(ly - qy, q.link.x - q.x) + Math.PI / 2;
           ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.moveTo(mx + Math.cos(ang) * 3.4, my + Math.sin(ang) * 3.4);
@@ -2038,7 +2053,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
         } else if (q.aim && b.t - q.aim.t < 1.6 && (sel === c.id || selAll)) {
           ctx.strokeStyle = side + "44"; ctx.lineWidth = 0.8;
           ctx.setLineDash([3, 4]);
-          ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.aim.x, q.aim.y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(q.x, q.y + 揚(q.x, q.y)); ctx.lineTo(q.aim.x, q.aim.y + 揚(q.aim.x, q.aim.y)); ctx.stroke();
           ctx.setLineDash([]);
         }
       }
@@ -2053,11 +2068,12 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     ctx.beginPath();
     for (const q of live) {
       const n = Math.ceil(頭数(q) / 10);
+      const qy = q.y + 揚(q.x, q.y);
       for (let i = 0; i < n; i++) {
         const h1 = Math.sin(q.seed + i * 12.9898), h2 = Math.cos(q.seed + i * 78.233);
         const [ox, oy] = rot(((i % 5) - 2) * KOMA + h1 * 0, Math.floor(i / 5) * KOMA + h2 * 0, q.facing);
-        ctx.moveTo(q.x + ox + 2.2, q.y + oy + 2.6);
-        ctx.arc(q.x + ox + 1.6, q.y + oy + 2.2, 2.6, 0, 7);
+        ctx.moveTo(q.x + ox + 2.2, qy + oy + 2.6);
+        ctx.arc(q.x + ox + 1.6, qy + oy + 2.2, 2.6, 0, 7);
       }
     }
     ctx.fill();
@@ -2071,14 +2087,15 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
       const stroke = q.origin === "直属" ? edge : edge2;
       const jit = Math.pow(dis, 1.8) * 2.2;                  // 位置の乱れ（控えめ）
       const spread = dis > 0.62 ? (dis - 0.62) * 2.6 : 0;    // 相当低いときだけ向きが乱れる
+      const qy = q.y + 揚(q.x, q.y);
       for (let i = 0; i < n; i++) {
         const h1 = Math.sin(q.seed + i * 12.9898), h2 = Math.cos(q.seed + i * 78.233);
         const [ox, oy] = rot(((i % 5) - 2) * KOMA + h1 * jit, Math.floor(i / 5) * KOMA + h2 * jit, q.facing);
-        drawKoma(ctx, q.x + ox, q.y + oy, q.facing + h1 * spread * 2.0, q.type, fill, stroke, 1);
+        drawKoma(ctx, q.x + ox, qy + oy, q.facing + h1 * spread * 2.0, q.type, fill, stroke, 1);
       }
       if (q.origin === "直属") {           // 直属家臣団は小旗を立てる（GDD 6.3）
         const [fx, fy] = rot(-2 * KOMA - 3, -3, q.facing);
-        const bx = q.x + fx, by = q.y + fy;
+        const bx = q.x + fx, by = qy + fy;
         ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - 8); ctx.stroke();
         ctx.fillStyle = bright;
@@ -2094,6 +2111,9 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   // 戦いの気配。短く消える細い線と火花だけで、駒を隠さない。
   if (b.fx && b.fx.length) {
     for (const f of b.fx) {
+      /* 斜めの眺めでは、気配もその所の地の高さだけ持ち上げる（起こりの所で量る） */
+      ctx.save(); ctx.translate(0, 揚(f.x || 0, f.y || 0));
+      try {
       const a = 1 - f.t / f.life;
       if (f.k === "arrow") {
         /* 矢（GDD 8.11）。
@@ -2281,6 +2301,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
         ctx.fillRect(-1.6, -0.9, 3.2, 1.8);
         ctx.restore();
       }
+      } finally { ctx.restore(); }
     }
     ctx.globalAlpha = 1;
   }
@@ -2298,6 +2319,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     for (const f of [...WOODS, ...FORESTS]) {
       const 濃 = FORESTS.includes(f);
       ctx.save();
+      ctx.translate(0, 揚(f.x, f.y));                  // 斜めの眺めでは地の高さだけ持ち上げる
       ゆらぎ形(ctx, f, 0.96, 0.18);
       ctx.clip();
       /* 濃さの加減。六割まで被せると、木の下の隊がほとんど読めなくなった。

@@ -18,6 +18,7 @@
    まず関ヶ原（筋書き sekigahara）だけで使い、実機の重さと操作感を測ってから
    広げる。切りたいときは棚に sengoku:旧絵 を「入」で置けば元の絵に戻る。
    ========================================================================== */
+import { 縦の縮み, 画の縦, 揚げ代, 高さ図を据える, 高さ図を外す } from "./naname.js";
 import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS, ROAD,
   RIVER, hasRiver, riverShift } from "./field.js";
 
@@ -51,7 +52,7 @@ export const 組の予算 = 400;                 // 画面に四百組（古い�
 export const 人の予算 = 22000;              // 一度に一人ずつ描くのはここまで
 export function 見える人数(b, cam, W, H) {
   const x0 = cam.x - W / 2 / cam.s - 40, x1 = cam.x + W / 2 / cam.s + 40;
-  const y0 = cam.y - H / 2 / cam.s - 60, y1 = cam.y + H / 2 / cam.s + 40;
+  const y0 = cam.y - H / 2 / (cam.s * 縦の縮み()) - 60, y1 = cam.y + H / 2 / (cam.s * 縦の縮み()) + 揚げ代() + 40;
   let n = 0;
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
@@ -69,7 +70,7 @@ export function 個人で描くか(b, cam, W, H) {
 }
 export function 見える組数(b, cam, W, H) {
   const vx0 = cam.x - W / 2 / cam.s - 60, vx1 = cam.x + W / 2 / cam.s + 60;
-  const vy0 = cam.y - H / 2 / cam.s - 80, vy1 = cam.y + H / 2 / cam.s + 60;
+  const vy0 = cam.y - H / 2 / (cam.s * 縦の縮み()) - 80, vy1 = cam.y + H / 2 / (cam.s * 縦の縮み()) + 揚げ代() + 60;
   let n = 0;
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
@@ -1535,6 +1536,9 @@ export function* 野を焼く(g, 画k) {
       if (t > 0) 林[y * hw + x] = Math.max(林[y * hw + x], Math.min(1, t * 2.2));
     }
   }
+  /* 斜めの眺めの高さの図（battle/naname.js）。梢を盛る前の、地そのものの高さ。
+     一升は 半／k 歩、値一つも 半／k 歩にあたる。 */
+  高さ図を据える(高.slice(), hw, hh, 半 / k, 半 / k);
   { const 林帯 = 帯幅(hh, 20) * hw;
     for (let i = 0; i < 林.length; i++) {
       if (i % 林帯 === 0) yield;
@@ -1688,6 +1692,7 @@ export function* 野を焼く(g, 画k) {
 export function 新絵の城の地(g, m, 画k) { const it = 城の地を焼く(g, m, 画k); while (!it.next().done) { /* 一息で焼く */ } }
 /* 帯で止められる焼き手。頁はこちらを汲む（上の一息版は試験と道具のため）。 */
 export function* 城の地を焼く(g, m, 画k) {
+  高さ図を外す();                     // 城攻めの盤は傾けるだけ（battle/naname.js）
   const k = 画k || 1;
   const W = Math.max(1, Math.round(FIELD.w * k)), H = Math.max(1, Math.round(FIELD.h * k));
   const 倍 = Math.max(0.5, Math.min(2, k * 3.2));
@@ -2110,7 +2115,7 @@ const 組の態 = (q) => { let s = 組態.get(q);
     借り: 0, 前qx: q.x, 前qy: q.y,
     生: new Uint8Array(50), 歩距: new Float32Array(50), 速: new Float32Array(50),
     進x: new Float32Array(50), 進y: new Float32Array(50), 描: new Float32Array(50),
-    初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0, 伸: 8 };
+    初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0, 伸: 8, 偏x: 0, 偏y: 0 };
     組態.set(q, s); }
   return s; };
 const 盤の態 = (b) => { let s = 盤態.get(b);
@@ -2211,9 +2216,10 @@ export function 近景の肌理(ctx, cam, W, H, dpr, m) {
   const 草 = 肌理の型紙(); if (!草) return;
   /* 画面の座標で貼る。こうすれば草の丈は寄りによらず同じ太さに保たれ、
      盤の原点に合わせて位置を決めるので、画面を動かしても地から浮かない。 */
-  const sx = W / 2 - cam.x * s, sy = H / 2 - cam.y * s;   // 野の原点の画面座標
+  const 縮 = 縦の縮み();                                   // 斜めの眺めでは縦が縮む
+  const sx = W / 2 - cam.x * s, sy = H / 2 - cam.y * 縮 * s;   // 野の原点の画面座標
   const 左 = Math.max(0, sx), 上 = Math.max(0, sy);
-  const 右 = Math.min(W, sx + FIELD.w * s), 下 = Math.min(H, sy + FIELD.h * s);
+  const 右 = Math.min(W, sx + FIELD.w * s), 下 = Math.min(H, sy + FIELD.h * 縮 * s);
   if (右 <= 左 || 下 <= 上) return;
   ctx.save();
   /* 画面の座標へ戻す。画素の倍（dpr）を掛け忘れると、画素の細かい画面では
@@ -2233,10 +2239,10 @@ export function 近景の肌理(ctx, cam, W, H, dpr, m) {
     /* 城攻め。内側の曲輪は外側の曲輪の中に入れ子であるから、
        いちばん外の曲輪ひとつを切り抜けば、曲輪はすべて砂になる。 */
     const l0 = m.layers[0], t = m.t, ob = l0.masu + t + 8;
-    const 郭x = sx + (m.cx + (l0.ox || 0) - l0.hw - t) * s, 郭y = sy + (m.cy + (l0.oy || 0) - l0.hh - t) * s;
-    const 郭w = (l0.hw + t) * 2 * s, 郭h = (l0.hh + t) * 2 * s;
+    const 郭x = sx + (m.cx + (l0.ox || 0) - l0.hw - t) * s, 郭y = sy + (m.cy + (l0.oy || 0) - l0.hh - t) * 縮 * s;
+    const 郭w = (l0.hw + t) * 2 * s, 郭h = (l0.hh + t) * 2 * 縮 * s;
     const 外幅 = l0.hw + t + ob + m.moat.band, 外奥 = l0.hh + t + ob + m.moat.band;
-    const 堀x = sx + (m.cx - 外幅) * s, 堀y = sy + (m.cy - 外奥) * s;
+    const 堀x = sx + (m.cx - 外幅) * s, 堀y = sy + (m.cy - 外奥) * 縮 * s;
     /* 草を貼る所。偶奥の規矩（evenodd）で、入れ子の矩形を一筆で抜く。
          城の外 … 一重 → 貼る
          堀     … 二重 → 抜く（水や空堀に草は生えない）
@@ -2245,8 +2251,8 @@ export function 近景の肌理(ctx, cam, W, H, dpr, m) {
     const 内幅 = l0.hw + t + ob, 内奥 = l0.hh + t + ob;
     ctx.save();
     ctx.beginPath(); ctx.rect(左, 上, 右 - 左, 下 - 上);
-    ctx.rect(堀x, 堀y, 外幅 * 2 * s, 外奥 * 2 * s);
-    ctx.rect(sx + (m.cx - 内幅) * s, sy + (m.cy - 内奥) * s, 内幅 * 2 * s, 内奥 * 2 * s);
+    ctx.rect(堀x, 堀y, 外幅 * 2 * s, 外奥 * 2 * 縮 * s);
+    ctx.rect(sx + (m.cx - 内幅) * s, sy + (m.cy - 内奥) * 縮 * s, 内幅 * 2 * s, 内奥 * 2 * 縮 * s);
     ctx.rect(郭x, 郭y, 郭w, 郭h);
     ctx.clip("evenodd");
     敷(草);
@@ -2379,6 +2385,8 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
      新しく画面に入った組は見た目の状態を持たないまま描く側へ回るので、
      兵が一人も出なかった（地面だけが映る）。刻がゼロなら誰も動かないが、
      初めての組を持ち場に据える仕事は要る。 */
+  const 集め = [];                                   // 敵味方の押し分けに使う（下）
+  if (dt > 0) 敵の組を離す(b, dt, viewRect);
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
     if (viewRect && (c.x < viewRect.x0 - 160 || c.x > viewRect.x1 + 160
@@ -2430,7 +2438,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
         s.前qx = q.x; s.前qy = q.y;
       }
       /* 組の足：目標（盤の位置）へ、歩幅の上限で寄る */
-      { const ddx = q.x - s.dx, ddy = q.y - s.dy, d = Math.hypot(ddx, ddy);
+      { const ddx = q.x + s.偏x - s.dx, ddy = q.y + s.偏y - s.dy, d = Math.hypot(ddx, ddy);
         /* 組を追う点は、組より速くなければ置いて行かれる。
            遅く取っていたころは、絵の兵が組から六十六歩も遅れた。
            組の足（騎馬五十六・徒三十四）の三倍を取り、瞬間移動だけを均す。 */
@@ -2445,9 +2453,39 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       const alive = Math.max(0, Math.min(50, Math.round(q.men)));
       const 前alive = Math.max(0, Math.min(50, Math.round(s.prevMen)));
       if (alive < 前alive && s.初) {
-        for (let n = alive; n < 前alive && 態.倒れ.length < 1600; n++)
-          態.倒れ.push({ x: s.sx[n] || q.x, y: s.sy[n] || q.y,
-            s: c.日和見 ? "P" : (c.side === "P" ? "P" : "E") });
+        /* 倒れるのは、敵に当たっている者である（遊ぶ側の申し出：「当たるときの感じを
+           トータルウォーに近づけたい」）。
+
+           もとは数の減りを持ち場の番号の大きいほう――後ろの列――から消していた。
+           槍を合わせている前列は無傷のまま、後ろの者が倒れて行く。それでは
+           ぶつかっている所が見えない。
+
+           いまは、敵（噛み合っている組）にいちばん近い者から倒し、空いた持ち場へ
+           後ろの列の者を繰り上げる。後ろの者が前へ歩み出て列を埋める。
+           盤の数（何人減ったか）は変えない。誰が倒れるかを選ぶだけである。 */
+        const 死数 = 前alive - alive;
+        const 側0 = c.日和見 ? "P" : (c.side === "P" ? "P" : "E");
+        const 敵 = q.link || null;
+        const 場0 = q.type === "kiba" ? 馬持場 : 持場;
+        const 晒し = (n) => (敵 ? Math.hypot(s.sx[n] - 敵.x, s.sy[n] - 敵.y) : 場0[n][1]);
+        const 候 = [];
+        for (let n = 0; n < 前alive; n++) if (s.生[n]) 候.push(n);
+        候.sort((a, z) => 晒し(a) - 晒し(z));
+        const 死 = new Uint8Array(50);
+        for (let i = 0; i < Math.min(死数, 候.length); i++) {
+          const n = 候[i]; 死[n] = 1;
+          if (態.倒れ.length < 1600) 態.倒れ.push({ x: s.sx[n] || q.x, y: s.sy[n] || q.y, s: 側0 });
+        }
+        /* 詰める。空いた持ち場へ、いちばん後ろの生き残りを移す */
+        let j = 前alive - 1;
+        for (let i = 0; i < alive; i++) {
+          if (!死[i]) continue;
+          while (j > i && (死[j] || !s.生[j])) j--;
+          if (j <= i) break;
+          s.sx[i] = s.sx[j]; s.sy[i] = s.sy[j]; s.速[i] = s.速[j]; s.歩距[i] = s.歩距[j];
+          s.描[i] = s.描[j]; s.進x[i] = s.進x[j]; s.進y[i] = s.進y[j]; s.生[i] = 1;
+          死[j] = 1; j--;
+        }
       }
       s.prevMen = q.men;
       /* 一人ずつの足 */
@@ -2475,6 +2513,20 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       const 前 = s.伸;
       const 刻み = (前 + 2.8) / 4;
       const 押 = 噛み中 ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
+      /* 槍合わせの線（GDD 8.11）。噛み合っている組は、敵の組との中ほどの線を
+         越えない。両の組が同じ線で止まるので、前列どうしが向き合って押し合う。
+         敵味方が入り混じって見えたのは、この線が無く、前列が敵の列の中まで
+         伸びていたからである。 */
+      let 線 = null;
+      if (q.link && 噛み中) {
+        const nx0 = q.link.x - q.x, ny0 = q.link.y - q.y, nd = Math.hypot(nx0, ny0);
+        if (nd > 0.5) 線 = { mx: (q.x + q.link.x) / 2, my: (q.y + q.link.y) / 2, nx: nx0 / nd, ny: ny0 / nd };
+      }
+      const 線の内 = (x, y) => {
+        if (!線) return 0;
+        const e = (x - 線.mx) * 線.nx + (y - 線.my) * 線.ny + 0.95;   // 線から〇.九五歩は空ける
+        return e > 0 ? e : 0;
+      };
       for (let n = 0; n < alive; n++) {
         const o = 場[n];
         const 深 = q.engaged
@@ -2504,6 +2556,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
             }
           }
         }
+        { const e = 線の内(tx, ty); if (e) { tx -= 線.nx * e; ty -= 線.ny * e; } }
         if (!s.生[n] || !s.初) {
           s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; s.速[n] = 0; s.描[n] = s.向; continue; }
         const vx = tx - s.sx[n], vy = ty - s.sy[n], d = Math.hypot(vx, vy);
@@ -2515,6 +2568,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
            遅いと、組が走り続けるあいだ兵が置いて行かれ、百八十歩も遅れた。 */
         else if (d > 0.02) { mv = Math.min(d, (q.type === "kiba" ? 130 : 90) * dt);
           s.sx[n] += vx / d * mv; s.sy[n] += vy / d * mv;
+          { const e = 線の内(s.sx[n], s.sy[n]); if (e) { s.sx[n] -= 線.nx * e; s.sy[n] -= 線.ny * e; } }
           /* 進む向き。均しておかないと、持ち場の細かな直しで体がくるくる回る */
           s.進x[n] += (vx / d - s.進x[n]) * Math.min(1, dt * 3);
           s.進y[n] += (vy / d - s.進y[n]) * Math.min(1, dt * 3); }
@@ -2556,9 +2610,113 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       }
       for (let n = alive; n < 50; n++) s.生[n] = 0;
       s.初 = true;
+      if (!c.routed) 集め.push({ s, alive, 側: c.side === "P" ? 1 : 2 });
     }
   }
+  /* 敵味方の押し分け（GDD 8.11）。
+
+     槍合わせの線は、噛み合っている組どうしにしか引けない。脇から回り込んだ組、
+     すれ違う組の兵は、なお敵の列の中へ入り込む。ここで、敵の兵と一・八歩より
+     近づいた者を互いに押し返す。味方どうしは押さない（列の中の詰まりは持ち場が
+     受け持つ）。崩れて逃げる隊は押し分けない――算を乱して入り混じるのが道理である。 */
+  if (dt > 0 && 集め.length > 1) 敵味方を押し分ける(集め);
   return dt;
+}
+
+/* 敵の組どうしを離す（絵の上だけ）。
+
+   盤の理は隊（武将隊）どうしの押し合いしか持たず、組（五十人）どうしは
+   重なりうる。重なった組を一人ずつ描くと、敵味方の列が縞のように入り組む。
+   絵の上で、敵の組の中心どうしを十六歩（盤の間合い十五歩にあたる）より
+   近づけない。ずらしは組ごとに持ち（偏）、重なりが解ければ元へ戻す。
+   盤の組の居場所は動かさない。 */
+const 組の間 = 16;
+function 敵の組を離す(b, dt, viewRect) {
+  const 並 = [];
+  for (const c of b.corps) {
+    if (c.dead || c.destroyed || c.routed) continue;
+    if (viewRect && (c.x < viewRect.x0 - 160 || c.x > viewRect.x1 + 160
+      || c.y < viewRect.y0 - 160 || c.y > viewRect.y1 + 160)) continue;
+    const 側 = c.side === "P" ? 1 : 2;
+    for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const s = 組態.get(q); if (!s || !s.初) continue;
+      並.push({ s, 側 });
+    }
+  }
+  const 格 = new Map();
+  const 鍵 = (gx, gy) => gx * 73856093 ^ gy * 19349663;
+  for (let i = 0; i < 並.length; i++) {
+    const { s } = 並[i];
+    const key = 鍵(Math.floor(s.dx / 組の間), Math.floor(s.dy / 組の間));
+    let a = 格.get(key); if (!a) { a = []; 格.set(key, a); } a.push(i);
+  }
+  const 寄 = Math.min(1, dt * 6);
+  for (let i = 0; i < 並.length; i++) {
+    const A = 並[i];
+    const gx = Math.floor(A.s.dx / 組の間), gy = Math.floor(A.s.dy / 組の間);
+    for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
+      const a = 格.get(鍵(gx + ox, gy + oy)); if (!a) continue;
+      for (const j of a) {
+        if (j <= i) continue;
+        const B = 並[j]; if (B.側 === A.側) continue;
+        let dx = B.s.dx - A.s.dx, dy = B.s.dy - A.s.dy;
+        let d = Math.hypot(dx, dy);
+        if (d >= 組の間) continue;
+        if (d < 0.01) { dx = 1; dy = 0; d = 1; }
+        const 押 = (組の間 - d) / 2 * 寄;
+        A.s.偏x -= dx / d * 押; A.s.偏y -= dy / d * 押;
+        B.s.偏x += dx / d * 押; B.s.偏y += dy / d * 押;
+      }
+    }
+  }
+  // ずらしは十四歩まで。重なりが無ければ元へ戻す
+  const 戻 = Math.max(0, 1 - dt * 0.8);
+  for (const { s } of 並) {
+    const L = Math.hypot(s.偏x, s.偏y);
+    if (L > 14) { s.偏x *= 14 / L; s.偏y *= 14 / L; }
+    s.偏x *= 戻; s.偏y *= 戻;
+  }
+}
+
+const 押し分けの間 = 1.8;
+function 敵味方を押し分ける(集め) {
+  const 升 = 押し分けの間;
+  const 格 = new Map();
+  const 鍵 = (gx, gy) => gx * 73856093 ^ gy * 19349663;
+  for (let k = 0; k < 集め.length; k++) {
+    const { s, alive } = 集め[k];
+    for (let n = 0; n < alive; n++) {
+      if (!s.生[n]) continue;
+      const gx = Math.floor(s.sx[n] / 升), gy = Math.floor(s.sy[n] / 升);
+      const key = 鍵(gx, gy);
+      let a = 格.get(key); if (!a) { a = []; 格.set(key, a); }
+      a.push(k, n);
+    }
+  }
+  const 間2 = 升 * 升;
+  for (let k = 0; k < 集め.length; k++) {
+    const A = 集め[k];
+    for (let n = 0; n < A.alive; n++) {
+      if (!A.s.生[n]) continue;
+      const x = A.s.sx[n], y = A.s.sy[n];
+      const gx = Math.floor(x / 升), gy = Math.floor(y / 升);
+      for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
+        const a = 格.get(鍵(gx + ox, gy + oy)); if (!a) continue;
+        for (let i = 0; i < a.length; i += 2) {
+          const k2 = a[i]; if (k2 <= k) continue;                 // 一組につき一度
+          const B = 集め[k2]; if (B.側 === A.側) continue;
+          const m = a[i + 1];
+          const dx = B.s.sx[m] - A.s.sx[n], dy = B.s.sy[m] - A.s.sy[n];
+          const d2 = dx * dx + dy * dy;
+          if (d2 >= 間2 || d2 < 1e-6) continue;
+          const d = Math.sqrt(d2), 押 = (升 - d) / 2 / d;
+          A.s.sx[n] -= dx * 押; A.s.sy[n] -= dy * 押;
+          B.s.sx[m] += dx * 押; B.s.sy[m] += dy * 押;
+        }
+      }
+    }
+  }
 }
 
 /* 試験のための覗き窓。見た目の状態（歩いた距離・足の速さ）を読むだけ。 */
@@ -2933,24 +3091,28 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
   城盤 = !!(b && b.map);
   const dt = 新絵状態を進める(b, nowSec, {
     x0: cam.x - W / 2 / cam.s, x1: cam.x + W / 2 / cam.s,
-    y0: cam.y - H / 2 / cam.s, y1: cam.y + H / 2 / cam.s });
+    y0: cam.y - H / 2 / (cam.s * 縦の縮み()), y1: cam.y + H / 2 / (cam.s * 縦の縮み()) + 揚げ代() });
   const 態 = 盤の態(b);
   /* 直接描き（連続位相）は型紙貼りより費えが重い。見える組が絞れたときだけ使う */
   let 見組 = 0;
   { const px0 = cam.x - W / 2 / cam.s - 40, px1 = cam.x + W / 2 / cam.s + 40;
-    const py0 = cam.y - H / 2 / cam.s - 60, py1 = cam.y + H / 2 / cam.s + 40;
+    const py0 = cam.y - H / 2 / (cam.s * 縦の縮み()) - 60, py1 = cam.y + H / 2 / (cam.s * 縦の縮み()) + 揚げ代() + 40;
     for (const c of 隊ら) for (const q of c.squads) {
       if (q.men > 0 && q.x > px0 && q.x < px1 && q.y > py0 && q.y < py1) 見組++; } }
   const 骨度 = (見組 <= 28) ? Math.max(0, Math.min(1, (cam.s - 滑閾) / 0.7)) : 0;
   const x0 = cam.x - W / 2 / cam.s - 40, x1 = cam.x + W / 2 / cam.s + 40;
-  const y0 = cam.y - H / 2 / cam.s - 60, y1 = cam.y + H / 2 / cam.s + 40;
+  const y0 = cam.y - H / 2 / (cam.s * 縦の縮み()) - 60, y1 = cam.y + H / 2 / (cam.s * 縦の縮み()) + 揚げ代() + 40;
   const 見える = (x, y) => x > x0 && x < x1 && y > y0 && y < y1;
+  /* 斜めの眺め（battle/naname.js）。人の姿は傾けずに立てて描く。
+     筆の縦の縮みを戻し、足元を 画の縦（y×縮−持ち上げ）に置く。 */
+  const 縮 = 縦の縮み();
+  ctx.save(); ctx.scale(1, 1 / 縮);
   /* 倒れた者 */
   for (const e of 態.倒れ) {
     if (!見える(e.x, e.y)) continue;
     { const n = 倒れ札(e.s);
       if (n) { ctx.globalAlpha = 0.85;
-        ctx.drawImage(n, e.x - n.width / 2 * 0.056, e.y - 持上高(e.x, e.y) - (n.height - 8) * 0.056,
+        ctx.drawImage(n, e.x - n.width / 2 * 0.056, 画の縦(e.x, e.y) - (n.height - 8) * 0.056,
           n.width * 0.056, n.height * 0.056);
         ctx.globalAlpha = 1; } }
   }
@@ -2966,7 +3128,10 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       const 撃 = (b.t - s.撃刻) / 1.5;
       for (let n = 0; n < alive; n++) {
         if (!s.生[n]) continue;
-        if (並.length > 12000) break;
+        /* 描く人の上限。斜めの眺めでは同じ寄りでも奥まで映るので、見える人数の
+           予算（人の予算）と同じだけは描く。上限を一万二千にしていたころは、
+           先に並べた隊で尽きて、あとの隊が小旗だけになった。 */
+        if (並.length > 人の予算) break;
         const wx = s.sx[n], wy = s.sy[n];
         if (!見える(wx, wy)) continue;
         /* 拍：歩き・突き・斉射。寄りが深ければ割り切れない拍で滑らかに */
@@ -3038,7 +3203,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
   }
   並.sort((a, z) => a.地y - z.地y);
   for (const p of 並) {
-    const y = p.wy - 持上高(p.wx, p.wy);
+    const y = 画の縦(p.wx, p.wy);
     if (p.指) {                                    // 馬廻の指物
       const K2 = 具側[p.指];
       ctx.strokeStyle = "#3A2C1A"; ctx.lineWidth = 0.1;
@@ -3081,5 +3246,6 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       if (n) ctx.drawImage(n, p.wx - n.width / 2 * k2, y - (n.height - 8) * k2,
         n.width * k2, n.height * k2); }
   }
+  ctx.restore();
   return dt;
 }
