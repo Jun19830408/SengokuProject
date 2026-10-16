@@ -2610,7 +2610,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       }
       for (let n = alive; n < 50; n++) s.生[n] = 0;
       s.初 = true;
-      if (!c.routed) 集め.push({ s, alive, 側: c.side === "P" ? 1 : 2 });
+      if (!c.routed && s.近敵) 集め.push({ s, alive, 側: c.side === "P" ? 1 : 2 });
     }
   }
   /* 敵味方の押し分け（GDD 8.11）。
@@ -2641,6 +2641,7 @@ function 敵の組を離す(b, dt, viewRect) {
     for (const q of c.squads) {
       if (q.men <= 0) continue;
       const s = 組態.get(q); if (!s || !s.初) continue;
+      s.近敵 = false;
       並.push({ s, 側 });
     }
   }
@@ -2662,6 +2663,9 @@ function 敵の組を離す(b, dt, viewRect) {
         const B = 並[j]; if (B.側 === A.側) continue;
         let dx = B.s.dx - A.s.dx, dy = B.s.dy - A.s.dy;
         let d = Math.hypot(dx, dy);
+        /* 敵の組が近い組だけ、兵の押し分けにかける（下の 敵味方を押し分ける）。
+           盤ぜんたいの兵（関ヶ原で十六万）を毎刻ふるいにかけると重すぎる。 */
+        if (d < 組の間 * 2) { A.s.近敵 = true; B.s.近敵 = true; }
         if (d >= 組の間) continue;
         if (d < 0.01) { dx = 1; dy = 0; d = 1; }
         const 押 = (組の間 - d) / 2 * 寄;
