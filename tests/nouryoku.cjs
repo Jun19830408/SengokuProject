@@ -13,7 +13,7 @@ const entry = path.join(ROOT, 'build', 'nouryoku-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { 能力を広げる, 能力の欄 } from "../src/core/util.js";\n'
-+ 'export { 能力を見直す, 能力の改め, 武勇の下限_統率の差, 武勇の下限_統率の境 } from "../src/data/nouryoku.js";\n'
++ 'export { 能力を見直す, 能力の改め } from "../src/data/nouryoku.js";\n'
 + 'export { initState, migrateSave } from "../src/core/state.js";\n'
 + 'export { GENERALS } from "../src/data/generals.js";\n'
 + 'export { NEWCOMERS } from "../src/data/newcomers.js";\n');
@@ -36,8 +36,9 @@ for (const k of A.能力の欄) {
   const v = 帳.map((g) => g[k]);
   const n = v.length, 平 = v.reduce((a, b) => a + b, 0) / n;
   const 偏 = Math.sqrt(v.reduce((a, b) => a + (b - 平) ** 2, 0) / n);
-  確(`${名[k]}のばらつきが十二を越える`, 偏 > 12, `平均${平.toFixed(1)}・ばらつき${偏.toFixed(1)}`);
-  確(`${名[k]}の最上は百、最下は二十五`, Math.max(...v) === 100 && Math.min(...v) === 25,
+  確(`${名[k]}は六十を並とし、ばらつきが十一を越える`, Math.abs(平 - 60) < 2 && 偏 > 11, `平均${平.toFixed(1)}・ばらつき${偏.toFixed(1)}`);
+  確(`${名[k]}の九十以上は、上位二分ほどに限る`, v.filter((x) => x >= 90).length <= n * 0.025, `${v.filter((x) => x >= 90).length}人`);
+  確(`${名[k]}の最上は百、最下は二十`, Math.max(...v) === 100 && Math.min(...v) === 20,
     `${Math.min(...v)}〜${Math.max(...v)}`);
   確(`${名[k]}は百を越えず、整数である`, v.every((x) => Number.isInteger(x) && x >= 5 && x <= 100));
 }
@@ -78,33 +79,28 @@ console.log('\n── 四　古い記録は一度だけ写す');
   h.lead = 60; h.valor = 60; h.wit = 58; h.gov = 56;
   A.migrateSave(古);
   確('古い記録は広い尺度へ写る（謙信の武勇は武将帳の改めに合わせる）', g.lead === 100 && g.valor === 100, `謙信 統${g.lead} 武${g.valor}`);
-  確('並の者は並に、低い者は下へ', h.lead === 47 && h.wit === 47, `統${h.lead} 知${h.wit}`);
+  確('並の者は並に、低い者は下へ', h.lead === 45 && h.wit === 45, `統${h.lead} 知${h.wit}`);
   const 二度 = g.lead;
   A.migrateSave(古);
   確('二度読んでも写し直さない', g.lead === 二度 && 古.能力を広げた === true);
 }
 
-console.log('\n── 五　武勇は合戦で与える損害の強さ（見直し）');
+console.log('\n── 五　尺度に照らした見直し');
 {
-  /* 遊ぶ側の申し出：「武勇は力が強いだけではない。合戦の中でどれくらいの強度を持って
-     相手に損害を与えられるかである。竹中半兵衛のように合戦が強かった武将は武勇を
-     下げすぎない。柴田勝家は方面軍を任されるだけの政治力があり、智謀もそれほど
-     悪くはなかった」 */
-  const 外れ = 帳.filter((g) => g.lead >= A.武勇の下限_統率の境 && g.valor < g.lead - A.武勇の下限_統率の差);
-  確('統率の高い将の武勇は、統率から大きく離れない', !外れ.length,
-    外れ.slice(0, 5).map((g) => `${g.name}${g.lead}/${g.valor}`).join('・') || `統率${A.武勇の下限_統率の境}以上は差${A.武勇の下限_統率の差}まで`);
+  /* 遊ぶ側の示した尺度：六十が並、七十台「できる」、八十台「非常にできる」、九十以上は
+     とくに逸話のある者。竹中半兵衛・黒田孝高・太原雪斎の武勇は七十台、柴田勝家の知略と
+     政務は六十台（前田利家・佐々成政も同じほど）、福島正則の政務は五十台。 */
   const 者 = (n) => 帳.find((g) => g.name === n);
-  const 半 = 者('竹中半兵衛'), 柴 = 者('柴田勝家'), 雪 = 者('太原雪斎'), 武 = 者('宮本武蔵'), 忠 = 者('本多忠勝');
-  /* 「下げすぎない」が、上げすぎもしない（遊ぶ側の申し出：「修正した武将は上げすぎ」）。
-     中ほど（武勇六十六・知略六十四・政務六十）の少し下から少し上に収める。 */
-  確('竹中半兵衛の武勇は下げすぎず、上げすぎない', 半.valor >= 60 && 半.valor <= 70, `武${半.valor}`);
-  確('太原雪斎の武勇も同じ', 雪.valor >= 60 && 雪.valor <= 70, `武${雪.valor}`);
-  確('柴田勝家の知略は中ほどの少し下、政務は中ほどの少し上', 柴.wit >= 50 && 柴.wit < 64 && 柴.gov >= 60 && 柴.gov <= 68,
-    `知${柴.wit} 政${柴.gov}`);
-  const 上げ = 帳.filter((g) => A.能力の改め[g.id] && ['valor', 'wit', 'gov'].some((k) => A.能力の改め[g.id][k] != null && A.能力の改め[g.id][k] > 70
-    && !/剣術/.test(A.能力の改め[g.id].訳)));
-  確('個別に引き上げた値は、七十を超えない', !上げ.length, 上げ.map((g) => g.name).join('・') || 'なし');
-  確('剣術家は、合戦の名将より武勇が低い', 武.valor < 忠.valor, `宮本武蔵${武.valor}／本多忠勝${忠.valor}`);
+  const 段 = (v, a, b) => v >= a && v <= b;
+  for (const n of ['竹中半兵衛', '小寺孝高', '太原雪斎']) {
+    確(`${n}の武勇は七十台`, 段(者(n).valor, 70, 79), `武${者(n).valor}`);
+  }
+  for (const n of ['柴田勝家', '前田利家', '佐々成政']) {
+    確(`${n}の知略・政務は六十台`, 段(者(n).wit, 60, 69) && 段(者(n).gov, 60, 69), `知${者(n).wit} 政${者(n).gov}`);
+  }
+  確('福島正則の政務は五十台', 段(者('福島正則').gov, 50, 59), `政${者('福島正則').gov}`);
+  const 剣士 = 帳.filter((g) => (A.能力の改め[g.id] || {}).訳 && /剣術の達人/.test(A.能力の改め[g.id].訳));
+  確('剣術家は武勇九十に届かない（合戦の名将より低い）', 剣士.every((g) => g.valor < 90), 剣士.filter((g) => g.valor >= 90).map((g) => g.name).join('・') || `${剣士.length}人`);
   const 違い = 帳.filter((g) => {
     const h = A.能力を見直す({ ...g });
     return A.能力の欄.some((k) => h[k] !== g[k]);
@@ -114,13 +110,11 @@ console.log('\n── 五　武勇は合戦で与える損害の強さ（見直�
   // 古い記録にも当たる
   const 古 = A.initState('oda');
   delete 古.能力を見直した;
-  const 半2 = 古.generals.find((g) => g.id === 'hanbei') || null;
   const 柴2 = 古.generals.find((g) => g.id === 'katsuie');
-  柴2.wit = 38; 柴2.gov = 35;
+  柴2.wit = 30; 柴2.gov = 31;
   A.migrateSave(古);
-  確('古い記録の柴田勝家も改まる', 柴2.wit === 55 && 柴2.gov === 62, `知${柴2.wit} 政${柴2.gov}`);
+  確('古い記録の柴田勝家も改まる', 柴2.wit === 63 && 柴2.gov === 66, `知${柴2.wit} 政${柴2.gov}`);
   確('新しい盤には見直しの印がある', A.initState('oda').能力を見直した === true);
-  if (半2) 確('盤の竹中半兵衛も同じ値', 半2.valor === 64);
 }
 
 console.log(`\nエラー: ${咎.length ? 咎.join(' | ') : 'なし'}`);

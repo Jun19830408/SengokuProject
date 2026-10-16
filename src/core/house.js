@@ -185,11 +185,12 @@ export function bearChild(s, gen) {
   if (s.generals.some((x) => x.id === id)) return null;
   const 名 = 子の名(s, gen);
   if (!名) return null;
-  // 親の器量を半ば継ぎ、残りは並み（六十前後）に寄る。値の幅は武将帳と同じく二十五から百
-  const mix = (a, b) => clamp(Math.round(a * 0.55 + b * 0.45 + (Math.random() * 30 - 15)), 25, 100);
+  /* 親の器量を半ば継ぎ、残りは並み（六十前後）に寄る。九十からは「とくに逸話のある者」の
+     段なので、遊びの中で生まれた者は八十五で止める。 */
+  const mix = (a, b) => clamp(Math.round(a * 0.55 + b * 0.45 + (Math.random() * 30 - 15)), 20, 85);
   const kid = {
     id, name: 名, faction: gen.faction,
-    lead: mix(gen.lead, 62), valor: mix(gen.valor, 62),
+    lead: mix(gen.lead, 60), valor: mix(gen.valor, 60),
     wit: mix(gen.wit, 60), gov: mix(gen.gov, 60),
     loyal: clamp((gen.loyal == null ? 70 : gen.loyal) - 4, 0, 100),
     age: 1, at: gen.at, 本領: gen.本領 || gen.at,      // 生まれた子は父の本領に生まれる

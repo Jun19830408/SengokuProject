@@ -1132,7 +1132,10 @@ export function fiefWanted(gen) {
   // 器量に見合う知行（石）。器量の差が知行の桁に出るようにする。
   // 凡将は千石、一国を代表する将は二万石、傑物は五万石を望む。
   const able = (gen.lead + gen.valor + gen.wit + gen.gov) / 4;   // 平均の器量
-  const base = Math.pow(Math.max(1, able - 42) / 12, 2.6) * 900;
+  /* 基準点。能力の尺度を「六十を並」に改めたとき（core/util.js 能力を広げる）、平均が
+     六十六から六十に下がったので、四十二から三十八へ移した。武将帳ぜんたいの望む知行が
+     改める前とほぼ同じ（およそ千万石）になる点である。 */
+  const base = Math.pow(Math.max(1, able - 38) / 12, 2.6) * 900;
   return Math.round(400 + base + (gen.merit || 0) * 900);
 }
 
