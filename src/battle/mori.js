@@ -13,7 +13,8 @@
    ========================================================================== */
 import { FORESTS, WOODS } from "./field.js";
 import { 揚げ, 画の横, 画の縦, 斜め, 見える範囲, 視の筆へ, 縦の縮み } from "./naname.js";
-import { 野の川筋 } from "./shinga.js";
+import { 野の川筋, 野の橋 } from "./shinga.js";
+import { 家々を据える, 家の棟, 葦を据える, 葦を描く } from "./sato.js";
 
 /* ---- 川の流れ ---- */
 export function 川の流れを描く(ctx, 秒, 尺) {
@@ -27,13 +28,25 @@ export function 川の流れを描く(ctx, 秒, 尺) {
     const w = r.幅;
     for (const [横, 濃, 速] of [[-0.34, 0.12, 0.8], [-0.17, 0.16, 1.0], [0.0, 0.18, 1.2], [0.15, 0.15, 1.05], [0.32, 0.11, 0.85]]) {
       ctx.beginPath();
+      /* 橋の床は袂の高さに据えてある。節を飛び飛びに持ち上げると、筋が橋の上へ
+         乗り上げる。節の間を刻んで辿り、橋の下では筆を上げる */
+      let 前 = null, 下 = false;
       for (let i = 0; i < 節.length; i++) {
         const [x, y] = 節[i];
         const [x2, y2] = 節[Math.min(節.length - 1, i + 1)], [x0, y0] = 節[Math.max(0, i - 1)];
         const dx = x2 - x0, dy = y2 - y0, L = Math.hypot(dx, dy) || 1;
         const px = x - dy / L * w * 横, py = y + dx / L * w * 横;
-        const [ex, ey] = 揚げ(px, py);
-        if (i) ctx.lineTo(px + ex, py + ey); else ctx.moveTo(px + ex, py + ey);
+        const 刻 = 前 && 野の橋.length ? Math.max(1, Math.ceil(Math.hypot(px - 前[0], py - 前[1]) / Math.max(6, w * 0.4))) : 1;
+        for (let s = 1; s <= 刻; s++) {
+          const qx = 前 ? 前[0] + (px - 前[0]) * s / 刻 : px, qy = 前 ? 前[1] + (py - 前[1]) * s / 刻 : py;
+          const 橋下 = 野の橋.some((b) => { const ax = qx - b.cx, ay = qy - b.cy;
+            return Math.abs(ax * b.ux + ay * b.uy) < b.長 + 2 && Math.abs(ax * b.nx + ay * b.ny) < b.半 + 2; });
+          if (橋下) { 下 = true; continue; }
+          const [ex, ey] = 揚げ(qx, qy);
+          if (前 && !下) ctx.lineTo(qx + ex, qy + ey); else ctx.moveTo(qx + ex, qy + ey);
+          下 = false;
+        }
+        前 = [px, py];
       }
       ctx.strokeStyle = `rgba(236,246,255,${濃})`;
       ctx.lineWidth = Math.max(0.4, w * 0.022);
@@ -139,4 +152,30 @@ export function 立木を描く(ctx, cam, W, H) {
   ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / 縦の縮み());
   for (const [y, x, t] of 並) 木を描く(ctx, t, x, y);
   ctx.restore();
+}
+
+/* 引いた眺めのための木の画。斜めに焼いた地（斜めに焼く の戻り）と同じ寸法・同じ写し方で、
+   木をすべて一度だけ描いておく。引いた眺めで毎コマ何千本も描くと、一コマが
+   二十ミリ秒から五十ミリ秒に重くなった（関ヶ原）。焼いておけば貼るだけで済む。 */
+export function 木立を焼く(斜め地) {
+  if (!斜め地 || !斜め地.画 || typeof document === "undefined") return null;
+  const 紙 = 木の型紙(); if (!紙) return null;
+  const 画 = document.createElement("canvas");
+  画.width = 斜め地.画.width; 画.height = 斜め地.画.height;
+  const g = 画.getContext("2d"); if (!g || !g.drawImage) return null;
+  const 倍 = 斜め地.画.width / (斜め地.横 || 1);
+  /* 木・家・葦をまとめて、奥から手前へ（集落の家と湿地の葦も sato.js から借りる） */
+  const k = 縦の縮み();
+  const 並 = 斜め.森 === "木" ? 木立を据える().map((t) => [画の縦(t.x, t.y), 画の横(t.x, t.y), t, 0]) : [];
+  for (const h of 家々を据える()) { const b = 家の棟(h); 並.push([b.鍵 * k, 0, b, 1]); }
+  for (const t of 葦を据える()) 並.push([画の縦(t.x, t.y), 画の横(t.x, t.y), t, 2]);
+  if (!並.length) return null;
+  並.sort((a, b) => a[0] - b[0]);
+  g.setTransform(倍, 0, 0, 倍, 0, 斜め地.上 * 倍);
+  for (const [y, x, t, 種] of 並) {
+    if (種 === 0) 木を描く(g, t, x, y);
+    else if (種 === 1) t.描(g, k);
+    else 葦を描く(g, t, x, y);
+  }
+  return { 画, 上: 斜め地.上, 縦: 斜め地.縦, 横: 斜め地.横 };
 }

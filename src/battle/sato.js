@@ -10,6 +10,7 @@
    湿地 … 地には水溜まりと泥を焼く（shinga.js）。ここでは葦の株を立てて描く。
 
    絵だけのものである。当たり（集落・湿地の足止めや見通し）には触れない。
+   兵は家をよけて通る（家をよける）。これも絵の上だけで、盤の組は動かさない。
    ========================================================================== */
 import { VILLAGES, MARSH } from "./field.js";
 import { 棟, 瓦, 板葺 } from "./tachimono.js";
@@ -33,12 +34,14 @@ export function 家々を据える() {
     const R = 種乱(Math.round(v.x * 3 + v.y * 5));
     const r = (v.r || 40) * 0.92;
     const 横道 = R() < 0.5;                                  // 村の道は東西か南北に通す
-    const 間 = 26;                                            // 道に沿った家の間（歩）
+    /* 道に沿った家の間。斜めの眺めでは南北が縮んで見えるので、道が南北に通る村は
+       間を広く取る（詰めると家が前後に重なり、柱が並んだように見えた） */
+    const 間 = 横道 ? 32 : 46;
     for (let 段 = -1; 段 <= 1; 段 += 2) {                     // 道の両側
-      for (let 列 = 0; 列 < 3; 列++) {                       // 道から奥へ三列まで
-        const 奥 = 段 * (15 + 列 * 24 + R() * 4);
-        for (let u = -r; u <= r; u += 間) {
-          if (R() < 0.18) continue;                           // ところどころ空き地（畑）
+      for (let 列 = 0; 列 < 3; 列++) {                       // 道から奥へ三列まで（奥ほどまばら）
+        const 奥 = 段 * (16 + 列 * 26 + R() * 5);
+        for (let u = -r + (列 % 2) * 間 / 2; u <= r; u += 間) {   // 列ごとに互い違い
+          if (R() < 0.28 + 列 * 0.12) continue;               // ところどころ空き地（畑）
           const 寄 = u + (R() - 0.5) * 8;
           const x = v.x + (横道 ? 寄 : 奥), y = v.y + (横道 ? 奥 : 寄);
           if (Math.hypot(x - v.x, (y - v.y) / 0.84) > r * 0.9) continue;
@@ -55,13 +58,52 @@ export function 家々を据える() {
   家々 = 並;
   return 家々;
 }
-function 家の棟(h) {
+/* 家をよける（絵だけ。盤の組の居場所は動かさない）。
+   遊ぶ側の申し出は「集落を抜けるとき、兵が家を突き抜けるのは変。せめて各家を
+   避けるように進まないと」であった。集落の足の遅さ（field.js village 〇.七八）は
+   盤が持っている。ここでは、兵一人ずつの立ち所が家の中に入ったら、いちばん
+   近い壁の外へ出す。持ち場（行き先）にも、歩いた後の所にも掛けるので、兵は
+   家の角を回り込み、家と家の間の道や空き地へ寄って抜けて行く。 */
+const 桝 = 40;
+let 家の桝 = null, 家の桝の元 = null;
+function 桝を据える() {
+  const 家 = 家々を据える();
+  if (家の桝 && 家の桝の元 === 家) return 家の桝;
+  家の桝の元 = 家; 家の桝 = new Map();
+  for (const h of 家) {
+    const x0 = Math.floor((h.x - h.hw - 2) / 桝), x1 = Math.floor((h.x + h.hw + 2) / 桝);
+    const y0 = Math.floor((h.y - h.hh - 2) / 桝), y1 = Math.floor((h.y + h.hh + 2) / 桝);
+    for (let i = x0; i <= x1; i++) for (let j = y0; j <= y1; j++) {
+      const k = i * 100003 + j;
+      if (!家の桝.has(k)) 家の桝.set(k, []);
+      家の桝.get(k).push(h);
+    }
+  }
+  return 家の桝;
+}
+// 家の中なら壁の外の所 [x, y] を、外なら null を返す。余 は壁からあける隙（歩）
+export function 家をよける(x, y, 余 = 0.9) {
+  if (!VILLAGES.length || !里を立てるか()) return null;
+  const 桝ら = 桝を据える();
+  const 中 = 桝ら.get(Math.floor(x / 桝) * 100003 + Math.floor(y / 桝));
+  if (!中) return null;
+  for (const h of 中) {
+    const dx = x - h.x, dy = y - h.y, ax = h.hw + 余, ay = h.hh + 余;
+    if (Math.abs(dx) >= ax || Math.abs(dy) >= ay) continue;
+    // いちばん近い壁の外へ
+    if (ax - Math.abs(dx) < ay - Math.abs(dy)) return [h.x + (dx >= 0 ? ax : -ax), y];
+    return [x, h.y + (dy >= 0 ? ay : -ay)];
+  }
+  return null;
+}
+if (typeof window !== "undefined") window.__家々 = () => 家々を据える();   // 撮る道具・試しが覗く口
+export function 家の棟(h) {
   const x0 = h.x - h.hw, x1 = h.x + h.hw, y0 = h.y - h.hh, y1 = h.y + h.hh;
   const s = Math.min(h.hw, h.hh) * 2;
   if (h.種 === "蔵") return 棟(x0, y0, x1, y1, s * 0.75, s * 0.42, 1.0, { 腰: true, 陰: true, 屋根: 瓦 });
   if (h.種 === "納屋") return 棟(x0, y0, x1, y1, s * 0.42, s * 0.5, 1.4, { 壁: "#7C6648", 陰: true, 屋根: 板葺 });
   // 家。土壁と板の壁に、厚い茅葺の寄棟
-  return 棟(x0, y0, x1, y1, s * 0.4, s * 0.62, 2.0, { 壁: "#9C8A6C", 窓: true, 陰: true, 屋根: 茅 });
+  return 棟(x0, y0, x1, y1, s * 0.38, s * 0.5, 1.8, { 壁: "#9C8A6C", 窓: true, 陰: true, 屋根: 茅 });
 }
 
 /* ---- 葦 ---- */

@@ -390,6 +390,8 @@ export function 筋書きの野を組む(地) {
   (地.村 || []).forEach((o, i) => VILLAGES.push(種付(o, i)));
   (地.丘 || []).forEach((o, i) => HILLS.push({ ...種付(o, i), rise: o.rise || Math.round(o.r * 0.24) }));
   (地.沼 || []).forEach((o, i) => MARSH.push(種付(o, i)));
+  /* 撮る道具が置く沼（湿地の見え方を撮るため。頁の外からしか立たない印） */
+  if (typeof window !== "undefined" && Array.isArray(window.__撮影の沼)) window.__撮影の沼.forEach((o, i) => MARSH.push(種付(o, 90 + i)));
   (地.林 || []).forEach((o, i) => WOODS.push(種付(o, i)));
   (地.森 || []).forEach((o, i) => FORESTS.push(種付(o, i)));
   (地.山 || []).forEach((o, i) => MOUNTAINS.push({ ...種付(o, i), rise: o.rise || Math.round(o.r * 0.34) }));

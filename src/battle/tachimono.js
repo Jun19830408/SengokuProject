@@ -107,18 +107,176 @@ export function 棟(x0, y0, x1, y1, 丈, 屋丈, 軒, 種) {
 /* 塀。石垣の天端の外寄りに、白い壁と瓦の笠を通す */
 function 塀(x0, y0, x1, y1, 丈) {
   const v = 視の矩(x0, y0, x1, y1);
-  return { 鍵: v.y1 - 0.01, 描: (ctx, k) => {
-    const L = 足元(x0, y0, x1, y1);
-    箱(ctx, k, v, L, 丈, 白壁, null, (x, y, w, h) => {
-      ctx.fillStyle = "rgba(52,46,40,0.62)"; ctx.fillRect(x, y + h * 0.66, w, h * 0.34);   // 下見板
-      ctx.fillStyle = "rgba(40,36,30,0.7)";                                             // 狭間
-      for (let u = x + 4; u < x + w - 2; u += 9) ctx.fillRect(u, y + h * 0.3, 1.4, h * 0.2);
+  return { 鍵: v.y1 - 0.01, 描: (ctx, k) => 塀を描く(ctx, k, v, 足元(x0, y0, x1, y1), 丈) };
+}
+function 塀を描く(ctx, k, v, L, 丈) {
+  箱(ctx, k, v, L, 丈, 白壁, 白壁陰, (x, y, w, h) => {
+    ctx.fillStyle = "rgba(52,46,40,0.62)"; ctx.fillRect(x, y + h * 0.66, w, h * 0.34);   // 下見板
+    ctx.fillStyle = "rgba(40,36,30,0.7)";                                             // 狭間
+    for (let u = x + 4; u < x + w - 2; u += 9) ctx.fillRect(u, y + h * 0.3, 1.4, h * 0.2);
+  });
+  /* 瓦の笠。真上から見た塀は笠の面しか見えないので、南北に延びる塀が太い灰色の板に
+     見えた（遊ぶ側の四枚目）。笠は壁の厚みより少し張り出すだけの細い棟にし、
+     真ん中に棟の照りを一筋通す */
+  const 縦長 = (v.y1 - v.y0) * k > (v.x1 - v.x0);
+  const top = v.y0 * k - L - 丈;
+  ctx.fillStyle = "#4E5662";
+  ctx.fillRect(v.x0 - 0.5, top - 0.9, v.x1 - v.x0 + 1.0, (v.y1 - v.y0) * k + 1.6);
+  ctx.fillStyle = "rgba(220,224,230,0.4)";                                         // 笠の照り
+  if (縦長) ctx.fillRect((v.x0 + v.x1) / 2 - 0.3, top - 0.9, 0.6, (v.y1 - v.y0) * k + 1.6);
+  else ctx.fillRect(v.x0 - 0.5, top - 0.9, v.x1 - v.x0 + 1.0, 0.6);
+}
+
+/* 城壁をよける（絵だけ。盤の組の居場所は動かさない）。
+   城壁に取り付いた組は、持ち場の一部が曲輪の内へ掛かる。そこに立つ兵は曲輪の天端の
+   高さまで持ち上がり、石垣の面の途中に立って見えた。兵は自分の組のいる側（外か内か）に
+   とどめる。門の間口は通す（門をくぐるのは盤が決める）。
+   (qx, qy) は組の所、(x, y) は兵の所。よけるなら [x, y]、そのままなら null */
+export function 城壁をよける(m, qx, qy, x, y) {
+  if (!m || !m.layers) return null;
+  const t = m.t;
+  let r = null;
+  for (const l of m.layers) {
+    const cx = m.cx + (l.ox || 0), cy = m.cy + (l.oy || 0), hw = l.hw + t, hh = l.hh + t;
+    const 内 = (a, b) => Math.abs(a - cx) < hw && Math.abs(b - cy) < hh;
+    const px = r ? r[0] : x, py = r ? r[1] : y;
+    const 組内 = 内(qx, qy);
+    if (内(px, py) === 組内) continue;
+    // 越えた面。際までの隔たりの近いほう
+    const 南北 = Math.abs(Math.abs(py - cy) - hh) < Math.abs(Math.abs(px - cx) - hw);
+    const u = 南北 ? px - cx : py - cy;
+    const 面 = 南北 ? (py > cy ? "S" : "N") : (px > cx ? "E" : "W");
+    if (l.gates.some((g) => g.face === 面 && Math.abs(u - g.off) < g.w / 2 + 2)) continue;   // 門の間口
+    if (南北) { const s = py > cy ? 1 : -1; r = [px, cy + s * (組内 ? hh - 1.5 : hh + 1.2)]; }
+    else { const s = px > cx ? 1 : -1; r = [cx + s * (組内 ? hw - 1.5 : hw + 1.2), py]; }
+  }
+  return r;
+}
+
+/* 視の矩の四隅を、足元 L・高さ h から画へ写した四角として塗る（地に置く物） */
+function 地の四角(ctx, k, v, L, 色) {
+  ctx.fillStyle = 色;
+  ctx.fillRect(v.x0, v.y0 * k - L, v.x1 - v.x0, (v.y1 - v.y0) * k);
+}
+const 石色 = "#A39C8C";
+function 石の目(ctx) {
+  return (x, y, w, h) => {
+    ctx.strokeStyle = "rgba(80,76,66,0.42)"; ctx.lineWidth = 0.45;
+    for (let u = 2.6; u < h; u += 2.6) { ctx.beginPath(); ctx.moveTo(x, y + u); ctx.lineTo(x + w, y + u); ctx.stroke(); }
+    ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(x, y, w, 0.6);
+  };
+}
+
+/* 櫓門。遊ぶ側の申し出は「門をくぐる様子が分からない、兵が門にめり込む」であった。
+   門を開口を塞ぐ箱として描いていたからである。
+
+   両脇の門柱（石の袖）の上に櫓を渡し、その下を通れる形にする。間口は盤の門の幅
+   （兵が実際に通る幅）にそのまま合わせる。重ねの順は部分ごとに分ける：
+     通りの陰 … 通りの奥の端で（通る兵より先に）
+     扉       … 扉の所で（扉の向こうの兵は隠れ、手前の兵は扉の前に立つ）
+     門柱・櫓 … 門の手前の端で（通りの中の兵の頭に、手前の櫓が掛かる）
+   破れた門は扉が倒れて地に落ち、通りが開く。 */
+function 櫓門(m, l, g) {
+  const t = m.t;
+  const a = axisOf(l, g), gp = gatePos(m, l, g);
+  const along = a.along === "x";
+  const 柱 = 6, 厚 = t + 6, w = g.w + 柱 * 2;
+  const r = along ? [gp.x - w / 2, gp.y - 厚 / 2, gp.x + w / 2, gp.y + 厚 / 2]
+    : [gp.x - 厚 / 2, gp.y - w / 2, gp.x + 厚 / 2, gp.y + w / 2];
+  const v = 視の矩(...r);
+  // 通りが画の縦（手前と奥）に抜けるか、横に抜けるか
+  const [p0x, p0y] = 視(gp.x, gp.y), [p1x, p1y] = 視(gp.x + (along ? 0 : 1), gp.y + (along ? 1 : 0));
+  const 縦通 = Math.abs(p1y - p0y) > Math.abs(p1x - p0x);
+  const 通丈 = t * 1.25, 櫓丈 = t * 0.85, 屋丈 = t * 0.75;
+  const 傷 = Math.max(0, Math.min(1, g.hp / g.max));
+  const 扉色 = `rgb(${Math.round(74 + 66 * 傷)},${Math.round(53 + 53 * 傷)},${Math.round(36 + 33 * 傷)})`;
+  let L = null;
+  const 足 = () => (L == null ? (L = 足元(...r)) : L);
+  // 門柱と通り・扉の矩（視の所）
+  const 柱ら = 縦通
+    ? [{ ...v, x1: v.x0 + 柱 }, { ...v, x0: v.x1 - 柱 }]
+    : [{ ...v, y1: v.y0 + 柱 }, { ...v, y0: v.y1 - 柱 }];
+  const 通 = 縦通 ? { ...v, x0: v.x0 + 柱, x1: v.x1 - 柱 } : { ...v, y0: v.y0 + 柱, y1: v.y1 - 柱 };
+  const 中 = 縦通 ? (v.y0 + v.y1) / 2 : (v.x0 + v.x1) / 2;
+  const 扉矩 = 縦通 ? { ...通, y0: 中 - 0.8, y1: 中 + 0.8 } : { ...通, x0: 中 - 0.8, x1: 中 + 0.8 };
+  const 物 = [];
+  // 通りの陰。櫓の下は暗い
+  物.push({ 鍵: v.y0 - 0.3, 描: (ctx, k) => 地の四角(ctx, k, 通, 足(), "rgba(30,26,20,0.30)") });
+  if (!g.broken) {
+    物.push({ 鍵: 扉矩.y1, 描: (ctx, k) => {
+      箱(ctx, k, 扉矩, 足(), 通丈 * 0.96, 扉色, 扉色, (x, y, w2, h) => {
+        ctx.strokeStyle = "rgba(20,14,8,0.8)"; ctx.lineWidth = 0.7;
+        ctx.beginPath(); ctx.moveTo(x + w2 / 2, y); ctx.lineTo(x + w2 / 2, y + h); ctx.stroke();
+        ctx.fillStyle = "rgba(226,214,182,0.6)";                  // 鋲
+        if (w2 > 6) for (let i = 1; i < 4; i++) for (const s2 of [0.25, 0.75]) ctx.fillRect(x + w2 * s2 - 0.5, y + h * i / 4, 1, 1);
+      });
+    } });
+  } else {
+    // 破れた扉。二枚が通りの奥へ倒れている
+    物.push({ 鍵: v.y0 - 0.2, 描: (ctx, k) => {
+      const L0 = 足();
+      ctx.fillStyle = "rgba(72,52,34,0.9)";
+      const 半 = 縦通 ? (通.x1 - 通.x0) / 2 : (通.y1 - 通.y0) / 2;
+      for (const s2 of [-1, 1]) {
+        ctx.save();
+        if (縦通) { ctx.translate((通.x0 + 通.x1) / 2 + s2 * 半 * 0.5, (中 - 2) * k - L0); ctx.rotate(s2 * 0.25); ctx.fillRect(-半 * 0.45, -2.2 * k, 半 * 0.9, 4.4 * k); }
+        else { ctx.translate(中 - 1, ((通.y0 + 通.y1) / 2 + s2 * 半 * 0.5) * k - L0); ctx.rotate(s2 * 0.2); ctx.fillRect(-2.6, -半 * 0.45 * k, 5.2, 半 * 0.9 * k); }
+        ctx.restore();
+      }
+    } });
+  }
+  // 門柱（石の袖）。それぞれの手前の端で
+  for (const c of 柱ら) 物.push({ 鍵: c.y1, 描: (ctx, k) => 箱(ctx, k, c, 足(), 通丈, 石色, "#B4AD9C", 石の目(ctx)) });
+  // 櫓。門柱の上に渡す
+  物.push({ 鍵: v.y1 + 0.01, 描: (ctx, k) => {
+    const L0 = 足() + 通丈;
+    箱(ctx, k, v, L0, 櫓丈, 白壁, null, (x, y, w2, h) => {
+      ctx.fillStyle = 腰板; ctx.fillRect(x, y + h * 0.6, w2, h * 0.4);
+      ctx.fillStyle = "rgba(40,36,30,0.78)";                      // 格子窓
+      const n = Math.max(2, Math.round(w2 / 9));
+      for (let i = 0; i < n; i++) ctx.fillRect(x + (i + 0.3) * w2 / n, y + h * 0.2, Math.min(3, w2 / n * 0.45), h * 0.26);
+      ctx.fillStyle = "rgba(0,0,0,0.08)"; ctx.fillRect(x + w2 * 0.55, y, w2 * 0.45, h);
     });
-    // 瓦の笠。少し張り出す
-    ctx.fillStyle = "#4E5662";
-    ctx.fillRect(v.x0 - 0.8, v.y0 * k - L - 丈 - 1.6, v.x1 - v.x0 + 1.6, (v.y1 - v.y0) * k + 3.0);
-    ctx.fillStyle = "rgba(220,224,230,0.35)";                                       // 笠の照り
-    ctx.fillRect(v.x0 - 0.8, v.y0 * k - L - 丈 - 1.6, v.x1 - v.x0 + 1.6, 0.8);
+    屋根(ctx, k, v, L0 + 櫓丈, 屋丈, 2.4, 瓦);
+  } });
+  return 物;
+}
+
+/* 枡形の袖と正面。石塁の上に塀を載せる。真上の絵（draw.js 城の立つものを描く）と同じ所 */
+function 枡形(m, l, g) {
+  const t = m.t, a = axisOf(l, g), along = a.along === "x";
+  const 物 = [];
+  const put = (u, v0, wu, wv) => {
+    const q = fromUV(m, a, u, v0);
+    const r = along ? [q.x - wu / 2, a.sgn > 0 ? q.y : q.y - wv, q.x + wu / 2, a.sgn > 0 ? q.y + wv : q.y]
+      : [a.sgn > 0 ? q.x : q.x - wv, q.y - wu / 2, a.sgn > 0 ? q.x + wv : q.x, q.y + wu / 2];
+    // 長い石塁は切って並べる（塀と同じ理由）
+    const 長 = Math.max(r[2] - r[0], r[3] - r[1]), n = Math.max(1, Math.ceil(長 / 24));
+    const 横長 = r[2] - r[0] >= r[3] - r[1];
+    for (let i = 0; i < n; i++) {
+      const rr = 横長 ? [r[0] + (r[2] - r[0]) * i / n, r[1], r[0] + (r[2] - r[0]) * (i + 1) / n, r[3]]
+        : [r[0], r[1] + (r[3] - r[1]) * i / n, r[2], r[1] + (r[3] - r[1]) * (i + 1) / n];
+      物.push(石塁(...rr, t * 0.9, Math.max(5, t * 0.8)));
+    }
+  };
+  put(g.off - g.w / 2, a.half + t, t, g.masu);
+  put(g.off + g.w / 2, a.half + t, t, g.masu);
+  const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
+  const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
+  const seg = (u0, u1) => { if (u1 > u0) put((u0 + u1) / 2, a.half + t + g.masu, u1 - u0, t); };
+  seg(g.off - g.w * 1.05, from); seg(from + g.w, g.off + g.w * 1.05);
+  return 物;
+}
+/* 石塁。石を積んだ低い土台に、細い塀を載せる */
+function 石塁(x0, y0, x1, y1, 石丈, 塀丈) {
+  const v = 視の矩(x0, y0, x1, y1);
+  return { 鍵: v.y1, 描: (ctx, k) => {
+    const L = 足元(x0, y0, x1, y1);
+    箱(ctx, k, v, L, 石丈, 石色, "#B4AD9C", 石の目(ctx));
+    const w2 = Math.min(3, (v.x1 - v.x0) * 0.4), h2 = Math.min(3, (v.y1 - v.y0) * 0.4);
+    const 細 = (v.x1 - v.x0) > (v.y1 - v.y0) ? { ...v, y0: (v.y0 + v.y1) / 2 - h2 / 2, y1: (v.y0 + v.y1) / 2 + h2 / 2 }
+      : { ...v, x0: (v.x0 + v.x1) / 2 - w2 / 2, x1: (v.x0 + v.x1) / 2 + w2 / 2 };
+    塀を描く(ctx, k, 細, L + 石丈, 塀丈);
   } };
 }
 
@@ -172,6 +330,26 @@ function 天守(p) {
 export function 城を立てて描く(ctx, m) {
   if (!m) return;
   const k = 縦の縮み();
+  const 物 = 城の物を集める(m);
+  物.sort((a, b) => a.鍵 - b.鍵);
+  ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / k);
+  for (const o of 物) o.描(ctx, k);
+  ctx.restore();
+}
+/* 兵と前後を重ねて描く（遊ぶ側の申し出：兵が門の屋根や塀の上に乗って見える）。
+   兵を一人ずつ描く寄りでは、drawBattle が城をここへ預け、新絵の兵描きが兵と一緒に
+   奥から手前へ並べる。塀の向こうの兵は塀に隠れ、手前の兵は塀の前に立つ。
+   兵描きが呼ばれなかったときは、drawBattle が残りを立てる。 */
+let 預かり = null;
+export function 城を預ける(m) { 預かり = m || null; }
+export function 城の物を並べる(並) {
+  if (!預かり) return;
+  for (const o of 城の物を集める(預かり)) 並.push({ 棟: o, 鍵: o.鍵 });
+  預かり = null;
+}
+export function 預けた城を立てる(ctx) { if (預かり) { const m = 預かり; 預かり = null; 城を立てて描く(ctx, m); } }
+
+function 城の物を集める(m) {
   const t = m.t, cx = m.cx, cy = m.cy;
   const 物 = [];
   /* 塀。曲輪ごとに、門の口を抜いて四方へ回す */
@@ -186,9 +364,15 @@ export function 城を立てて描く(ctx, m) {
       const fixed = face === "S" ? y1 - 厚 : face === "N" ? y0 : face === "E" ? x1 - 厚 : x0;
       let cur = horiz ? x0 : y0;
       const end = horiz ? x1 : y1;
+      /* 長い塀は二十四歩ごとに切って並べる。一本のまま奥から手前へ並べると、
+         南北に延びる塀は南の端の所で一度に描かれ、その北の脇に立つ兵まで覆った */
       const 置く = (a, b) => {
         if (b - a < 1) return;
-        物.push(horiz ? 塀(a, fixed, b, fixed + 厚, 丈) : 塀(fixed, a, fixed + 厚, b, 丈));
+        const n = Math.max(1, Math.ceil((b - a) / 24));
+        for (let i = 0; i < n; i++) {
+          const a2 = a + (b - a) * i / n, b2 = a + (b - a) * (i + 1) / n;
+          物.push(horiz ? 塀(a2, fixed, b2, fixed + 厚, 丈) : 塀(fixed, a2, fixed + 厚, b2, 丈));
+        }
       };
       for (const g of gs) {
         const wid = g.w + (g.broken ? 20 : 0);
@@ -197,17 +381,10 @@ export function 城を立てて描く(ctx, m) {
       }
       置く(cur, end);
     }
-    /* 門。門櫓（二階の櫓門）として、扉の上に白壁と屋根を載せる */
+    /* 門。櫓門（下を通り抜け、上に櫓を載せる）として立てる。虎口の袖と正面も石塁で */
     for (const g of l.gates) {
-      if (g.broken) continue;
-      const a = axisOf(l, g), gp = gatePos(m, l, g);
-      const along = a.along === "x";
-      const 厚 = t + 6, w = g.w + 12;
-      const r = along ? [gp.x - w / 2, gp.y - 厚 / 2, gp.x + w / 2, gp.y + 厚 / 2]
-        : [gp.x - 厚 / 2, gp.y - w / 2, gp.x + 厚 / 2, gp.y + w / 2];
-      const 傷 = Math.max(0, Math.min(1, g.hp / g.max));
-      const 扉 = `rgb(${Math.round(74 + 66 * 傷)},${Math.round(53 + 53 * 傷)},${Math.round(36 + 33 * 傷)})`;
-      物.push(棟(...r, t * 2.0, t * 1.1, 2.6, { 扉, 腰: false, 窓: false, 陰: true }));
+      物.push(...櫓門(m, l, g));
+      if (!g.broken) 物.push(...枡形(m, l, g));
     }
   });
   /* 施設。矢倉は二重の櫓、陣鐘は鐘楼 */
@@ -228,8 +405,5 @@ export function 城を立てて描く(ctx, m) {
   }
   const 天 = 天守の置き場(m);
   if (天) 物.push(天守(天));
-  物.sort((a, b) => a.鍵 - b.鍵);
-  ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / k);
-  for (const o of 物) o.描(ctx, k);
-  ctx.restore();
+  return 物;
 }

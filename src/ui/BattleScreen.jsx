@@ -1,8 +1,9 @@
+import { 木立を焼く } from "../battle/mori.js";
 import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
-import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限 } from "../battle/shinga.js";
+import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限 } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
 import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸 } from "../battle/naname.js";
 import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, TERRAIN, VILLAGES, WEATHER, WOODS, terrainAt } from "../battle/field.js";
@@ -17,11 +18,15 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const 城Ref = useRef(null), 焼きRef = useRef(null);
   /* 斜めの眺め（battle/naname.js）。地を焼き直すたびに版を上げ、斜めの地を焼き直す */
   const 地版Ref = useRef(0), 斜め地Ref = useRef(null);
-  const 城版Ref = useRef(0), 斜め城Ref = useRef(null);   // 城に立つもの（石垣・門・櫓）の斜めの写し
+  const 城版Ref = useRef(0), 斜め城Ref = useRef(null), 斜め木Ref = useRef(null);   // 城に立つもの（石垣・門・櫓）の斜めの写し
   const [視点, set視点] = useState(() => 視点を読む());
   /* 盤の向き（naname.js 向き）。九十度ずつ回して、山の向こう側も見えるようにする。
-     合戦ごとに南からの眺めで始める。 */
-  const 向きRef = useRef(向きを据える(0, FIELD.w, FIELD.h));
+     合戦ごとに南からの眺めで始める。
+     useRef(向きを据える(0, …)) と書くと、据える方は描き直しのたびに呼ばれ、盤の向きが
+     次のコマまで南へ戻っていた（その間に画面を触ると、回した眺めでは命じた先がずれる）。
+     初めの一度だけ据える。 */
+  const 向きRef = useRef(null);
+  if (向きRef.current === null) 向きRef.current = 向きを据える(0, FIELD.w, FIELD.h);
   const [, force] = useState(0);
   const [sel, setSel] = useState(null);
   const [speed, setSpeedState] = useState(0);
@@ -129,7 +134,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (ctx.mode === "castle" && ctx.b.map) {
       if (新) {
         /* 地は野より粗く焼いて引き伸ばす。石垣や天守の線は画布の寸法で描く（別画布） */
-        const 地k = Math.min(k, Math.sqrt(新絵の画布上限 / Math.max(1, FIELD.w * FIELD.h)));
+        const 地k = Math.min(k, Math.sqrt(城の地の画布上限 / Math.max(1, FIELD.w * FIELD.h)));
         const m = ctx.b.map;
         焼きを仕込む(t, 地k, (g, kk) => 城の地を焼く(g, m, kk));
         paintCastle();
@@ -320,6 +325,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
             if (typeof window !== "undefined") window.__斜め焼き = Math.round(performance.now() - 焼t0);
           }
           斜め地 = 斜め地Ref.current;
+          /* 引いた眺めのための木の画（mori.js 木立を焼く）。地を焼き直したら焼き直す */
+          if (斜め地 && 斜め地.画 && (!斜め木Ref.current || 斜め木Ref.current.版 !== 斜め地.版)) {
+            斜め木Ref.current = { ...(木立を焼く(斜め地) || {}), 版: 斜め地.版 };
+          }
+          if (斜め木Ref.current && 斜め木Ref.current.画) 斜め地 = { ...斜め地, 木: 斜め木Ref.current };
           /* 城に立つものも同じ高さで持ち上げて写す。門が破れて描き直したら写し直す */
           if (城Ref.current && 斜め地 && 斜め地.画) {
             const 版2 = `${斜め地.版}:${城版Ref.current}`;
