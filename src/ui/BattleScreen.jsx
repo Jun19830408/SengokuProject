@@ -309,11 +309,19 @@ export function BattleScreen({ ctx, land, onEnd }) {
           const 焼2 = 焼きRef.current;
           const 版 = 地版Ref.current + (斜め.入 ? 0.5 : 0);
           if ((!斜め地Ref.current || 斜め地Ref.current.版 !== 版) && !(焼2 && 焼2.済)) {
+            const 焼t0 = performance.now();
             斜め地Ref.current = { ...斜めに焼く(terrainRef.current, FIELD.w, FIELD.h), 版 };
+            if (typeof window !== "undefined") window.__斜め焼き = Math.round(performance.now() - 焼t0);
           }
           斜め地 = 斜め地Ref.current;
         }
+        const 描t0 = performance.now();
         drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current, 斜め地);
+        /* 一コマを描くのに要った時（直近六十コマ）。重さを測るための覗き窓 */
+        if (typeof window !== "undefined") {
+          const 刻ら = window.__描きの刻 || (window.__描きの刻 = []);
+          刻ら.push(performance.now() - 描t0); if (刻ら.length > 60) 刻ら.shift();
+        }
       }
       if (b.phase === "over" && speedRef.current !== 0) setSpeed(0);
       if (ts - uiRef.current > 100) { uiRef.current = ts; force((n) => (n + 1) % 1000); }

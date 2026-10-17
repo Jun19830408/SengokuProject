@@ -18,7 +18,7 @@
    まず関ヶ原（筋書き sekigahara）だけで使い、実機の重さと操作感を測ってから
    広げる。切りたいときは棚に sengoku:旧絵 を「入」で置けば元の絵に戻る。
    ========================================================================== */
-import { 縦の縮み, 画の縦, 揚げ代, 高さ図を据える, 高さ図を外す } from "./naname.js";
+import { 縦の縮み, 画の縦, 揚げ代, 高さ図を据える, 高さ図を外す, 浮き } from "./naname.js";
 import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS, ROAD,
   RIVER, hasRiver, riverShift } from "./field.js";
 
@@ -63,6 +63,36 @@ export function 見える人数(b, cam, W, H) {
     }
   }
   return n;
+}
+/* 一人ずつ描く隊を選ぶ（GDD 8.11）。
+
+   見える人数が予算を超えると、もとは画面ぜんたいを駒の絵へ落としていた。斜めの
+   眺めでは同じ寄りでも奥まで映るので、深く寄っても駒の絵に落ちることが多い。
+   画面の真ん中に近い隊から順に予算まで一人ずつ描き、外れた隊だけを駒で描く。 */
+export function 一人ずつ描く隊(b, cam, W, H) {
+  if (!新絵か(b) || cam.s < 個人閾) return null;
+  const k = 縦の縮み();
+  const x0 = cam.x - W / 2 / cam.s - 40, x1 = cam.x + W / 2 / cam.s + 40;
+  const y0 = cam.y - H / 2 / (cam.s * k) - 60, y1 = cam.y + H / 2 / (cam.s * k) + 40 + 揚げ代();
+  const 並 = [];
+  for (const c of b.corps) {
+    if (c.dead || c.destroyed) continue;
+    let n = 0;
+    for (const q of c.squads) {
+      if (q.men <= 0 || q.x < x0 || q.x > x1 || q.y < y0 || q.y > y1) continue;
+      n += Math.min(50, Math.round(q.men));
+    }
+    if (!n) continue;
+    並.push({ c, n, d: Math.hypot(c.x - cam.x, (c.y - cam.y) * k) });
+  }
+  並.sort((a, z) => a.d - z.d);
+  const 選 = new Set();
+  let 計 = 0;
+  for (const p of 並) {
+    if (計 + p.n > 人の予算 && 選.size) break;
+    計 += p.n; 選.add(p.c.id);
+  }
+  return 選;
 }
 export function 個人で描くか(b, cam, W, H) {
   if (!新絵か(b) || cam.s < 個人閾) return false;
@@ -3110,6 +3140,23 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
   /* 斜めの眺め（battle/naname.js）。人の姿は傾けずに立てて描く。
      筆の縦の縮みを戻し、足元を 画の縦（y×縮−持ち上げ）に置く。 */
   const 縮 = 縦の縮み();
+  /* 組の足元の影（GDD 8.11）。斜めから見ると、塊が地に立って見える。
+     組ごとに楕円を二つ重ねるだけなので、千組でも費えは小さい。 */
+  {
+    ctx.fillStyle = "rgba(34,30,20,0.20)";
+    for (const c of 隊ら) for (const q of c.squads) {
+      if (q.men <= 0) continue;
+      const s = 組態.get(q); if (!s || !s.初) continue;
+      if (!見える(s.dx, s.dy)) continue;
+      ctx.save();
+      ctx.translate(s.dx, s.dy - 浮き(s.dx, s.dy) / 縮);
+      ctx.rotate(s.向 + Math.PI / 2);
+      const 横 = q.type === "kiba" ? 34 : 22, 奥 = q.type === "kiba" ? 22 : 16;
+      ctx.beginPath(); ctx.ellipse(0, 4, 横 * 0.62, 奥 * 0.62, 0, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, 4, 横 * 0.5, 奥 * 0.45, 0, 0, 7); ctx.fill();
+      ctx.restore();
+    }
+  }
   ctx.save(); ctx.scale(1, 1 / 縮);
   /* 倒れた者 */
   for (const e of 態.倒れ) {

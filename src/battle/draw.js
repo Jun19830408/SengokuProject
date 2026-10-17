@@ -5,6 +5,7 @@ import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
 import { 縦の縮み, 浮き, 画の縦 } from "./naname.js";
+import { 一人ずつ描く隊 } from "./shinga.js";
 import { 新絵か, 新絵の兵描き, 新絵の城の地, 新絵の画布上限, 個人で描くか, 近景の肌理, 本陣の所 } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
@@ -1893,7 +1894,9 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
      ただし予算がある。関ヶ原の西口は組が六百も密集しており、倍率一.六で
      ほどくと画面に三万人が立って筆が止まる。見えている組×五十が予算を
      超えるあいだは従来の駒のままにし、寄って数が絞れたら一人ずつへ移る。 */
-  const 個人絵 = 個人で描くか(b, cam, W, H);
+  /* 一人ずつ描く隊（真ん中に近い隊から予算まで。shinga.js 一人ずつ描く隊） */
+  const 一人ずつ = 一人ずつ描く隊(b, cam, W, H);
+  const 個人絵 = !!(一人ずつ && 一人ずつ.size);
   const 新絵隊 = [];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
@@ -1985,6 +1988,10 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     const y0 = Math.min(...ys) - 12, y1 = Math.max(...ys) + 12;
     const on = sel === c.id || selAll;
     const rr = 10;
+    /* 隊の枠は、選んでいる隊だけに出す（遊ぶ側の判断。枠が無くても隊は押して選べる）。
+       選ぶ当たりは組の広がりと名札で見ている（画面の側の hitCorps）。
+       ただし一番引いた眺め（武将隊の段）では、枠そのものが隊の印なので出す。 */
+    if (on || lod === "corps") {
     ctx.beginPath();
     ctx.moveTo(x0 + rr, y0);
     ctx.arcTo(x1, y0, x1, y1, rr); ctx.arcTo(x1, y1, x0, y1, rr);
@@ -2010,9 +2017,10 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     if (!isP && !on) ctx.setLineDash([7 / cam.s, 5 / cam.s]);
     ctx.stroke();
     ctx.setLineDash([]);
+    }
 
     if (lod === "corps") continue;
-    if (個人絵) { 新絵隊.push(c); continue; }   // 組の体は新絵がまとめて描く（輪郭と選びは残す）
+    if (個人絵 && 一人ずつ.has(c.id)) { 新絵隊.push(c); continue; }   // 組の体は新絵がまとめて描く（輪郭と選びは残す）
 
     const bright = shadeHex(side, isP ? 0.18 : 0.16), dark = shadeHex(side, isP ? -0.30 : -0.22);
     const edge = isP ? "rgba(255,255,255,0.95)" : "rgba(28,26,22,0.85)";
@@ -2373,12 +2381,13 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
        白い丸と旗に隠れて見えない――遊ぶ側から「将が見えない」との申し出は
        これである。新しい絵のときは、標識だけを将の上へ逃がし、
        細い線で足元へ結ぶ。押せる所（狙い札）も札に付いて動く。 */
-    const 本 = 個人絵 ? 本陣の所(c) : null;
+    const 人で = 個人絵 && 一人ずつ.has(c.id);
+    const 本 = 人で ? 本陣の所(c) : null;
     const 将所 = 本 || { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
     const [x, y0] = S(将所.x, 将所.y);
     /* 逃がす高さは、将の背丈より高く取る。実測で、将の丈は寄り七.二倍のとき
        五十二点ほど――二十六×倍×〇.三では札の底が将の兜に掛かっていた。 */
-    const 逃 = 個人絵 && !c.destroyed ? Math.min(92, Math.max(34, 30 * cam.s * 0.38)) : 0;
+    const 逃 = 人で && !c.destroyed ? Math.min(92, Math.max(34, 30 * cam.s * 0.38)) : 0;
     const y = y0 - 逃;
     if (逃 > 0) {                                  // 標識と将を結ぶ細い線
       ctx.strokeStyle = "rgba(60,58,50,0.45)"; ctx.lineWidth = 1;
