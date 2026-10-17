@@ -18,9 +18,9 @@
    まず関ヶ原（筋書き sekigahara）だけで使い、実機の重さと操作感を測ってから
    広げる。切りたいときは棚に sengoku:旧絵 を「入」で置けば元の絵に戻る。
    ========================================================================== */
-import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 見える範囲, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
+import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 見える範囲, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 面を据える, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
 import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS, ROAD,
-  RIVER, hasRiver, riverShift } from "./field.js";
+  RIVER, hasRiver, riverShift, fieldScale } from "./field.js";
 
 /* どの盤でも新しい絵で描く。棚の sengoku:旧絵 が「入」なら使わない（逃げ道）。
 
@@ -1450,6 +1450,7 @@ export function 新絵の野(g, 画k) { const it = 野を焼く(g, 画k); while 
 /* 帯で止められる焼き手。頁はこちらを汲み、試験や道具は上の一息版を使う。 */
 export function* 野を焼く(g, 画k) {
   計始();
+  面を据える(null);                     // 石垣の肌は城の盤だけのもの
   const k = 画k || 1;
   const W = Math.max(1, Math.round(FIELD.w * k)), H = Math.max(1, Math.round(FIELD.h * k));
   const 倍 = Math.max(0.5, Math.min(2, k * 3.2));      /* 筆の太さの目安 */
@@ -1724,7 +1725,7 @@ export function* 野を焼く(g, 画k) {
 export function 新絵の城の地(g, m, 画k) { const it = 城の地を焼く(g, m, 画k); while (!it.next().done) { /* 一息で焼く */ } }
 /* 帯で止められる焼き手。頁はこちらを汲む（上の一息版は試験と道具のため）。 */
 export function* 城の地を焼く(g, m, 画k) {
-  高さ図を外す();                     // 城攻めの盤は傾けるだけ（battle/naname.js）
+  高さ図を外す(); 面を据える(null);   // 焼き上がるまでは傾けるだけ（下で高さの図を据える）
   const k = 画k || 1;
   const W = Math.max(1, Math.round(FIELD.w * k)), H = Math.max(1, Math.round(FIELD.h * k));
   const 倍 = Math.max(0.5, Math.min(2, k * 3.2));
@@ -1788,8 +1789,10 @@ export function* 城の地を焼く(g, m, 画k) {
       高[y * gw + x] = h / 半;
     }
   }
-  /* 曲輪の段。外から内へ、一段ずつ盛り上がる */
-  const 段 = 5.5 * 倍;
+  /* 曲輪の段。外から内へ、一段ずつ盛り上がる。
+     斜めから見ると段の手前の面が石垣として立つ。五.五では膝ほどの段にしか
+     見えなかったので、石垣らしい丈（人の五、六倍）まで上げる。 */
+  const 段 = 10 * 倍;
   for (const r of 郭ら) {
     const b = 枠(r, 2);
     const 段帯 = 帯幅(b.y1 - b.y0 + 1, 28);
@@ -1797,7 +1800,7 @@ export function* 城の地を焼く(g, m, 画k) {
      for (let x = b.x0; x <= b.x1; x++) {
       const d = 矩距(x, y, r);
       if (d >= 0) continue;
-      const w = Math.min(1, -d / 1.4);
+      const w = Math.min(1, -d / 0.8);                     // 際は切り立たせる（石垣の面）
       const j = y * gw + x;
       郭[j] += w; 高[j] += (段 / 半) * w;
      }
@@ -1913,6 +1916,18 @@ export function* 城の地を焼く(g, m, 画k) {
       if (v > 0) 林[y * gw + x] = Math.max(林[y * gw + x], Math.min(1, v * 2.2));
     }
   }
+  /* 斜めの眺めの高さの図（battle/naname.js）。梢を盛る前の、曲輪と堀と峰の高さ。
+     遊ぶ側の申し出は「城も五十五度の角度からにできないか。堀や壁、城門がリアルに
+     なると思う」であった。曲輪の段の手前の面は石垣、堀の縁は石垣か土の切岸として
+     塗らせる（面を据える）。 */
+  高さ図を据える(高.slice(), gw, gh, 半 / k, 半 / k);
+  面を据える((wx, wy) => {
+    const x = wx * k / 半, y = wy * k / 半;
+    for (const r of 郭ら) { const d = 矩距(x, y, r); if (d > -2.4 && d < 0.8) return 1; }
+    const d1 = 矩距(x, y, 堀外), d2 = 矩距(x, y, 堀内);
+    if (Math.abs(d1) < 2 || Math.abs(d2) < 2) return 空堀 ? 2 : 1;
+    return 0;
+  });
   const 林帯 = 帯幅(gh, 20) * gw;
   for (let i = 0; i < 林.length; i++) {
     if (i % 林帯 === 0) yield;
@@ -2340,8 +2355,13 @@ const 本陣の態 = (c) => { let t = 本陣態.get(c);
    食い違う（tests/shinga.cjs の「盤に書かない」が咎めた）。棚から引く。 */
 export function 本陣の所(c) {
   const t = 本陣態.get(c);
-  return t && t.初 ? { x: t.前x, y: t.前y } : null;
+  return t && t.初 ? { x: t.平x == null ? t.前x : t.平x, y: t.平y == null ? t.前y : t.平y } : null;   // 札が震えぬよう、均した所
 }
+
+/* 組と本陣の行き先を均す刻（秒・盤の刻）。位置は〇.四五秒、勢い（速さ）は一秒で均す。
+   関ヶ原で比べると、〇.二二秒では兵の行きつ戻りつが二秒に七〜十三歩残り、
+   〇.四五秒で四歩ほどになった。行軍する組からの遅れは、どちらも二、三歩である。 */
+const 均しの刻 = 0.45, 勢いの刻 = 1.0;
 
 /* 本陣衆を進める。塊として本陣に据え、隊と一緒に動く。
    描くぶんの兵は、本陣に近い組から少しずつ借りて差し引く（絵は盤を偽らない）。 */
@@ -2363,15 +2383,30 @@ function 本陣衆を進める(c, b, dt, 本x, 本y) {
       組の態(q).借り = n; 残 -= n;
     }
   }
-  /* 盤が隊を飛ばしたら、塊も同じだけ平行移動する */
+  /* 盤が隊を飛ばしたら、塊も同じだけ平行移動する（足は野の広さに合わせて量る） */
+  const 尺 = fieldScale();
   if (t.初) {
     const jx = 本x - t.前x, jy = 本y - t.前y;
-    if (Math.hypot(jx, jy) > 56 * dt * 1.6 + 1.5) {
+    if (Math.hypot(jx, jy) > 56 * 尺 * dt * 2.6 + 1.5) {
       for (let n = 0; n < 本陣の数; n++) { t.x[n] += jx; t.y[n] += jy; }
+      if (t.平x != null) { t.平x += jx; t.平y += jy; }
     }
   }
   t.前x = 本x; t.前y = 本y;
-  const 向 = c.facing || 0;
+  /* 本陣の所と向きも、組と同じく均す（新絵状態を進める の 組の行き先を均す） */
+  if (t.平x == null || !t.初) { t.平x = 本x; t.平y = 本y; t.勢x = 0; t.勢y = 0; t.向 = c.facing || 0; }
+  else if (dt > 0) {
+    const a = 1 - Math.exp(-dt / 均しの刻), be = 1 - Math.exp(-dt / 勢いの刻);
+    const 見x = t.平x + t.勢x * dt, 見y = t.平y + t.勢y * dt;
+    const nx = 見x + (本x - 見x) * a, ny = 見y + (本y - 見y) * a;
+    t.勢x += ((nx - t.平x) / dt - t.勢x) * be; t.勢y += ((ny - t.平y) / dt - t.勢y) * be;
+    t.平x = nx; t.平y = ny;
+    let df = (c.facing || 0) - t.向;
+    while (df > Math.PI) df -= Math.PI * 2; while (df < -Math.PI) df += Math.PI * 2;
+    t.向 += df * Math.min(1, dt / 0.5);
+  }
+  本x = t.平x; 本y = t.平y;
+  const 向 = t.向;
   const lx = Math.cos(向 + Math.PI / 2), ly = Math.sin(向 + Math.PI / 2);
   const bx = -Math.cos(向), by = -Math.sin(向);
   for (let n = 0; n < t.数; n++) {
@@ -2385,9 +2420,9 @@ function 本陣衆を進める(c, b, dt, 本x, 本y) {
     if (!t.初) { t.x[n] = tx; t.y[n] = ty; t.速[n] = 0; t.描[n] = c.facing || 0; continue; }
     const vx = tx - t.x[n], vy = ty - t.y[n], d = Math.hypot(vx, vy);
     let mv = 0;
-    if (d > 100) { t.x[n] = tx; t.y[n] = ty; }
+    if (d > 100 * 尺) { t.x[n] = tx; t.y[n] = ty; }
     else if (d > 0.02) {
-      mv = Math.min(d, 130 * dt);
+      mv = Math.min(d, 130 * 尺 * dt);
       t.x[n] += vx / d * mv; t.y[n] += vy / d * mv;
       t.進x[n] += (vx / d - t.進x[n]) * Math.min(1, dt * 3);
       t.進y[n] += (vy / d - t.進y[n]) * Math.min(1, dt * 3);
@@ -2395,8 +2430,8 @@ function 本陣衆を進める(c, b, dt, 本x, 本y) {
     t.歩距[n] += mv;
     t.速[n] += ((dt > 0 ? mv / dt : 0) - t.速[n]) * Math.min(1, dt * 6);
     {                                      // 描く向き（兵と同じ筋）
-      const 的向 = Math.hypot(t.進x[n], t.進y[n]) > 0.3 && t.速[n] > 2.5
-        ? Math.atan2(t.進y[n], t.進x[n]) : (c.facing || 0);
+      const 的向 = Math.hypot(t.進x[n], t.進y[n]) > 0.3 && t.速[n] > 2.5 * 尺
+        ? Math.atan2(t.進y[n], t.進x[n]) : 向;
       let d描 = 的向 - t.描[n];
       while (d描 > Math.PI) d描 -= Math.PI * 2;
       while (d描 < -Math.PI) d描 += Math.PI * 2;
@@ -2448,8 +2483,9 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
 
     /* 馬廻の陣（五×五）が占める四角。ほかの兵はこの四角を避ける。
        崩れた隊・退く隊では避けない（陣形どころではない）。 */
-    const 本x2 = 本x, 本y2 = 本y;
-    const 陣向2 = c.facing || 0;
+    const 本態 = 本陣の態(c);                          // 均した本陣の所と向き（本陣衆を進める）
+    const 本x2 = 本態.平x == null ? 本x : 本態.平x, 本y2 = 本態.平y == null ? 本y : 本態.平y;
+    const 陣向2 = 本態.向 == null ? (c.facing || 0) : 本態.向;
     const 陣fx = Math.cos(陣向2), 陣fy = Math.sin(陣向2);
     const 陣横半 = 2 * 4.6 + 3.4, 陣奥半 = 2 * 4.2 + 3.4;
     const 本陣よけ = !(c.routed || c.withdraw);
@@ -2465,29 +2501,57 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
          「打ち寄せる波」のように現れる――遊ぶ側の申し出はこれである。
          塊ごと同じだけ動かせば、並びを保ったまま移る。歩幅は積まない
          （歩いていないのだから、足も出ない）。 */
+      /* 広い野では、盤の足も野の広さ（fieldScale）に合わせて速い。関ヶ原は五倍ほどある。
+         絵の側の歩幅をその倍に取らずにいたので、組がふつうに歩くだけで「飛んだ」と
+         見なし、兵を塊ごと瞬時に動かしていた。持ち場へ追いつく組は二.四倍の足で
+         歩くから、その分も見込む。 */
+      const 尺 = fieldScale();
       {
         const jx2 = q.x - s.前qx, jy2 = q.y - s.前qy;
         const j = Math.hypot(jx2, jy2);
-        const 歩ける = (q.type === "kiba" ? 56 : 34) * dt * 1.6 + 1.5;
+        const 歩ける = (q.type === "kiba" ? 56 : 34) * 尺 * dt * 2.6 + 1.5;
         if (s.初 && j > 歩ける) {
           態.飛び数++;
           s.dx += jx2; s.dy += jy2;
+          if (s.平x != null) { s.平x += jx2; s.平y += jy2; }
           for (let n = 0; n < 50; n++) { s.sx[n] += jx2; s.sy[n] += jy2; }
         }
         s.前qx = q.x; s.前qy = q.y;
       }
-      /* 組の足：目標（盤の位置）へ、歩幅の上限で寄る */
-      { const ddx = q.x + s.偏x - s.dx, ddy = q.y + s.偏y - s.dy, d = Math.hypot(ddx, ddy);
+      /* 組の行き先を均す（GDD 8.11）。
+
+         遊ぶ側の申し出は「プルプルするのと、前後に小刻みに行ったり来たりするのが
+         気になる」であった。関ヶ原で測ると、噛み合いの中の組は、盤の上で二秒の
+         うちに二十一歩も行きつ戻りつしていた（出た所へ戻る道のり）。持ち場が隊の
+         押し合いにつれて揺れ、組がそれを毎刻追うからである。兵はその組を
+         そのまま追っていたので、二十三歩ぶん震えて見えた。
+
+         盤の理（どこで斬り結んでいるか）は変えない。絵の兵が追う点だけを均す。
+         ただ遅らせるだけの均しでは、行軍する隊から兵が置いて行かれる。そこで
+         「位置」と「勢い（速さ）」を別々に均す（二重の指数の均し）。まっすぐ
+         進む組には遅れずに付いて行き、行きつ戻りつの揺れだけが打ち消し合って消える。 */
+      if (s.平x == null || !s.初) { s.平x = q.x; s.平y = q.y; s.勢x = 0; s.勢y = 0; }
+      else if (dt > 0) {
+        const a = 1 - Math.exp(-dt / 均しの刻), be = 1 - Math.exp(-dt / 勢いの刻);
+        const 見x = s.平x + s.勢x * dt, 見y = s.平y + s.勢y * dt;
+        const nx = 見x + (q.x - 見x) * a, ny = 見y + (q.y - 見y) * a;
+        s.勢x += ((nx - s.平x) / dt - s.勢x) * be; s.勢y += ((ny - s.平y) / dt - s.勢y) * be;
+        const 速上 = (q.type === "kiba" ? 56 : 34) * 尺 * 2.4, 勢 = Math.hypot(s.勢x, s.勢y);
+        if (勢 > 速上) { s.勢x *= 速上 / 勢; s.勢y *= 速上 / 勢; }
+        s.平x = nx; s.平y = ny;
+      }
+      /* 組の足：目標（均した組の所）へ、歩幅の上限で寄る */
+      { const ddx = s.平x + s.偏x - s.dx, ddy = s.平y + s.偏y - s.dy, d = Math.hypot(ddx, ddy);
         /* 組を追う点は、組より速くなければ置いて行かれる。
            遅く取っていたころは、絵の兵が組から六十六歩も遅れた。
            組の足（騎馬五十六・徒三十四）の三倍を取り、瞬間移動だけを均す。 */
-        if (!s.初 || d > 200) { s.dx = q.x; s.dy = q.y; }
-        else if (d > 0.02) { const mv = Math.min(d, (q.type === "kiba" ? 170 : 110) * dt);
+        if (!s.初 || d > 200 * 尺) { s.dx = q.x; s.dy = q.y; }
+        else if (d > 0.02) { const mv = Math.min(d, (q.type === "kiba" ? 170 : 110) * 尺 * dt);
           s.dx += ddx / d * mv; s.dy += ddy / d * mv; } }
       /* 向きの均し */
       { let df = (q.facing || 0) - s.向;
         while (df > Math.PI) df -= Math.PI * 2; while (df < -Math.PI) df += Math.PI * 2;
-        s.向 += df * Math.min(1, dt * 2.2); }
+        s.向 += df * Math.min(1, dt * 1.4); }
       /* 倒れ：減ったぶんは、立っていた場所に倒れて残る */
       const alive = Math.max(0, Math.min(50, Math.round(q.men)));
       const 前alive = Math.max(0, Math.min(50, Math.round(s.prevMen)));
@@ -2551,7 +2615,9 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       s.伸 += (伸び的 - s.伸) * Math.min(1, dt * 2.4);
       const 前 = s.伸;
       const 刻み = (前 + 2.8) / 4;
-      const 押 = 噛み中 ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 1.2 : 0;
+      /* 押し合いの息。前後の揺れは遊ぶ側から「行ったり来たり」と嫌われたので、
+         一.二歩から〇.五歩へ細める（七秒ほどでひと息のまま） */
+      const 押 = 噛み中 ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 0.5 : 0;
       /* 槍合わせの線（GDD 8.11）。噛み合っている組は、敵の組との中ほどの線を
          越えない。両の組が同じ線で止まるので、前列どうしが向き合って押し合う。
          敵味方が入り混じって見えたのは、この線が無く、前列が敵の列の中まで
@@ -2602,10 +2668,10 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
         let mv = 0;
         /* 飛びは上で組ごと平行移動して捌いた。ここで瞬間移動させるのは、
            よほど離れたとき（盤の繕いの取りこぼし）だけである。 */
-        if (d > 100) { s.sx[n] = tx; s.sy[n] = ty; }
+        if (d > 100 * 尺) { s.sx[n] = tx; s.sy[n] = ty; }
         /* 兵の足は、組の足（騎馬五十六・徒三十四）より速く取る。
            遅いと、組が走り続けるあいだ兵が置いて行かれ、百八十歩も遅れた。 */
-        else if (d > 0.02) { mv = Math.min(d, (q.type === "kiba" ? 130 : 90) * dt);
+        else if (d > 0.02) { mv = Math.min(d, (q.type === "kiba" ? 130 : 90) * 尺 * dt);
           s.sx[n] += vx / d * mv; s.sy[n] += vy / d * mv;
           { const e = 線の内(s.sx[n], s.sy[n]); if (e) { s.sx[n] -= 線.nx * e; s.sy[n] -= 線.ny * e; } }
           /* 進む向き。均しておかないと、持ち場の細かな直しで体がくるくる回る */
@@ -2639,7 +2705,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
            一本の角に持たせれば、出どころが入れ替わっても兵は「向き直る」。
            跳ぶのではなく回るのだから、それが正しい見え方である。 */
         {
-          const 的向 = (Math.hypot(s.進x[n], s.進y[n]) > 0.3 && s.速[n] > 2.5)
+          const 的向 = (Math.hypot(s.進x[n], s.進y[n]) > 0.3 && s.速[n] > 2.5 * 尺)
             ? Math.atan2(s.進y[n], s.進x[n]) : s.向;
           let d描 = 的向 - s.描[n];
           while (d描 > Math.PI) d描 -= Math.PI * 2;
@@ -3142,6 +3208,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
   const 骨度 = (見組 <= 28) ? Math.max(0, Math.min(1, (cam.s - 滑閾) / 0.7)) : 0;
   const { x0, x1, y0, y1 } = 見える範囲(cam, W, H, 50);
   const 見える = (x, y) => x > x0 && x < x1 && y > y0 && y < y1;
+  const 尺2 = fieldScale();                       // 野の広さの倍。足の速さもこの倍である
   /* 盤を回した眺めでは、人の向きの目盛り（十六方向）を回しの分だけ進める */
   const 回目 = 今の向き() * 4;
   /* 斜めの眺め（battle/naname.js）。人の姿は傾けずに立てて描く。
@@ -3205,15 +3272,15 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
            「歩き」と見なされ、突きが一度も出なかった。
            槍を合わせているなら突く。放ったなら構えを解く。それ以外で
            足が出ているときだけ歩く――働きのほうが先である。 */
-        if (q.engaged && 場[n][2] < 2 && 歩速 < 14) {
+        if (q.engaged && 場[n][2] < 2 && 歩速 < 14 * 尺2) {
           /* 突き：合戦の刻で回す。盤を遅くすれば、槍もゆっくり繰り出される */
           const ph = (b.t * 0.55 + (q.seed || 0) + n * 0.17) % 1;
           fr = 骨度 > 0 ? 3 + ph * 3.999 : 3 + Math.min(3, (ph * 4) | 0);
         } else if (撃 >= 0 && 撃 < 1 && (q.type === "yumi" || q.type === "teppo")) {
           fr = 骨度 > 0 ? 3 + Math.min(3.999, 撃 * 4) : 3 + Math.min(3, (撃 * 4) | 0);
-        } else if (歩速 > 2.5) {
+        } else if (歩速 > 2.5 * 尺2) {
           /* 歩み：歩幅（騎馬は十四歩、徒は九歩）ごとに一周 */
-          const 歩幅 = q.type === "kiba" ? 14 : 9;
+          const 歩幅 = (q.type === "kiba" ? 14 : 9) * 尺2;   // 広い野では足も速いので、歩幅もその倍に取る（足がちらつかぬように）
           const w = (s.歩距[n] / 歩幅) % 1;
           fr = 骨度 > 0 ? 1 + w * 2 : 1 + (w < 0.5 ? 0 : 1);
         }
@@ -3253,7 +3320,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       /* 馬廻。一騎ずつ家の色の指物を立てるので、遠目にも「旗の群れ」として読める */
       const 進 = Math.round(((t.描[n] / (Math.PI / 8) + 回目) % 16 + 16) % 16) % 16;
       let fr = 0;
-      if (t.速[n] > 2.5) { const w = (t.歩距[n] / 14) % 1; fr = 1 + (w < 0.5 ? 0 : 1); }
+      if (t.速[n] > 2.5 * 尺2) { const w = (t.歩距[n] / (14 * 尺2)) % 1; fr = 1 + (w < 0.5 ? 0 : 1); }
       並.push({ wx, wy, 地y: wy, 側, 型: "kiba", dir: 進, fr, 直: null,
         丈: 0.96 + ((n * 13) % 10) / 100 });
       並.push({ wx, wy, 地y: wy + 0.05, 指: 側 });

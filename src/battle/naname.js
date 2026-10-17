@@ -155,6 +155,15 @@ export function 盤へ戻す(vx, 画y) {
   return { x, y };
 }
 
+/* 盤の所（x, y）を画面の真ん中に映すカメラの所。カメラは平らな面で持つので、
+   山の上の所はその高さぶん上に映る。真ん中に据えるときは、持ち上げを見込んで
+   カメラを手前へずらす（山頂の隊へ寄ると、隊が画面の上へ逃げていた）。 */
+export function 真ん中に据える(x, y) {
+  const k = 縦の縮み();
+  const [x2, y2] = 視から盤(画の横(x, y), 画の縦(x, y) / k);
+  return { x: x2, y: y2 };
+}
+
 /* 見えている盤の範囲（盤の所の外枠）。画面の四隅を盤へ戻して囲む。 */
 export function 見える範囲(cam, W, H, 余 = 0) {
   const k = 縦の縮み();
@@ -177,7 +186,34 @@ export function 見える範囲(cam, W, H, 余 = 0) {
 
    返す 上 は、画布の上の端より上へせり出した分（歩）である。貼るときは
    （0, −上）から、縦 src高×傾き＋上 の大きさで貼る。 */
-export function 斜めに焼く(src0, 野w, 野h) {
+/* ---- 切り立った面の肌（城の石垣・空堀の切岸）----
+   斜めに起こすと、段の手前の面（石垣の正面）が見えてくる。地の画は真上から
+   描いたものなので、その面の色を持たない。引き伸ばすと、天端の色が縦に流れた
+   だけの帯になる。城の地を焼く側が、どこが石垣でどこが土の切岸かを教える。
+   面の型(盤x, 盤y) … 0 何もなし（なだらかに伸ばす）・1 石垣・2 土の切岸 */
+let 面の型 = null;
+export function 面を据える(fn) { 面の型 = fn || null; }
+// 石垣の正面。石を横に寝かせて積み、段ごとに縦目地をずらす。上ほど明るい
+function 石垣の色(o, di, x, u, 伸, 明) {
+  const 段 = Math.floor(u / 3.2), 段内 = u - 段 * 3.2;
+  const 目地 = 段内 < 0.9 || ((x + (段 % 2) * 4) % 8) < 1;
+  const 斑 = ((x * 7 + 段 * 13) % 5) * 4;
+  let v = 178 - (u / Math.max(1, 伸)) * 46 + 斑;
+  if (u < 1) v = 214;                                      // 天端の照り
+  if (目地 && u >= 1) v -= 34;
+  v *= 明;
+  o[di] = Math.min(255, v * 0.98); o[di + 1] = Math.min(255, v * 0.95); o[di + 2] = Math.min(255, v * 0.86); o[di + 3] = 255;
+}
+function 切岸の色(o, di, x, u, 伸, 明) {
+  const v = (150 - (u / Math.max(1, 伸)) * 40 + ((x * 5 + u * 3) % 7) * 3) * 明;
+  o[di] = Math.min(255, v * 1.0); o[di + 1] = Math.min(255, v * 0.84); o[di + 2] = Math.min(255, v * 0.62); o[di + 3] = 255;
+}
+
+/* 地の上に重ねる画（城の石垣・門・櫓）を、地と同じく持ち上げて写す。
+   面は伸ばさない（石垣の正面は地の側が描く）。地に隠れる所は隠す。 */
+export function 斜めに写す(src0, 野w, 野h) { return 斜めに焼く(src0, 野w, 野h, true); }
+
+export function 斜めに焼く(src0, 野w, 野h, 重ね) {
   const k = 縦の縮み();
   const 倍 = src0.width / 野w;                        // 画素あたりの歩の逆
   /* 回した眺めでは、真上の地をまず回して写す（九十度ずつなので画素は崩れない） */
@@ -209,6 +245,7 @@ export function 斜めに焼く(src0, 野w, 野h) {
   const o = od.data;
   // 行ごとの持ち上げ（画素）。列ごとに同じ表を使い回さぬよう、列の中で引く
   const 丈px = new Float32Array(sh);
+  const 面 = 重ね ? null : 面の型;
   for (let x = 0; x < sw; x++) {
     const vx = (x + 0.5) / 倍;
     for (let y = 0; y < sh; y++) { const [wx, wy] = 視から盤(vx, (y + 0.5) / 倍); 丈px[y] = 浮き(wx, wy) * 倍; }
@@ -223,6 +260,30 @@ export function 斜めに焼く(src0, 野w, 野h) {
       const 明 = 伸 > 1.6 ? Math.min(1.12, 1 + (伸 - 1) * 0.03) : 1;
       const r = Math.min(255, sd[si] * 明), gg = Math.min(255, sd[si + 1] * 明), bb = Math.min(255, sd[si + 2] * 明);
       const 下 = Math.min(頂, dh);
+      if (重ね) {
+        /* 重ねる画は一行だけ置く。面を伸ばすのは地の役目である */
+        if (sd[si + 3] > 0 && yp >= 0) {
+          const di = (yp * sw + x) * 4;
+          o[di] = sd[si]; o[di + 1] = sd[si + 1]; o[di + 2] = sd[si + 2]; o[di + 3] = sd[si + 3];
+          if (伸 >= 2 && yp + 1 < 下) { const d2 = di + sw * 4; o[d2] = sd[si]; o[d2 + 1] = sd[si + 1]; o[d2 + 2] = sd[si + 2]; o[d2 + 3] = sd[si + 3]; }
+        }
+        頂 = Math.max(0, yp);
+        if (頂 === 0) break;
+        continue;
+      }
+      /* 切り立った面（石垣・切岸）は、その肌で塗る */
+      let 型 = 0;
+      if (面 && 伸 > 2.2) { const [wx, wy] = 視から盤((x + 0.5) / 倍, (y + 0.5) / 倍); 型 = 面(wx, wy); }
+      if (型) {
+        for (let yy = Math.max(0, yp); yy < 下; yy++) {
+          const di = (yy * sw + x) * 4;
+          if (型 === 1) 石垣の色(o, di, x, yy - yp, 伸, 1); else 切岸の色(o, di, x, yy - yp, 伸, 1);
+        }
+        pr = r; pg = gg; pb = bb;
+        頂 = Math.max(0, yp);
+        if (頂 === 0) break;
+        continue;
+      }
       /* 引き伸ばす所は、手前の行の色へなだらかに移す（縦の筋を立てない） */
       const 滑 = 伸 > 1.5 && pr >= 0;
       for (let yy = Math.max(0, yp); yy < 下; yy++) {

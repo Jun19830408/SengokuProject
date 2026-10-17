@@ -6,6 +6,7 @@ import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
 import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 向きの角, 盤の筆を回す, 視の筆へ, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
 import { 一人ずつ描く隊 } from "./shinga.js";
+import { 城を立てて描く } from "./tachimono.js";
 import { 新絵か, 新絵の兵描き, 新絵の城の地, 新絵の画布上限, 個人で描くか, 近景の肌理, 本陣の所 } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
@@ -572,13 +573,15 @@ export const KOMA_SHAPE = {
   fune:  [[11, 0], [5, 4.4], [-7, 4.0], [-8.5, 0], [-7, -4.0], [5, -4.4]],
 };
 
-/* 斜めの眺めでは、駒の形は縮めずに描く（置き場所だけを斜めに写す）。
-   縮めたまま描くと、駒が横に寝た細い線になって読めなかった。 */
+/* 斜めの眺めでは、駒の形は縮めを半ばだけ戻して描く（置き場所は斜めに写す）。
+   縮めたまま描くと、駒が横に寝た細い線になって読めなかった。かといって縮めを
+   すっかり戻すと、手前や奥を向いた駒が縦に長い棘になって立った（山の動画で
+   毛利隊が棘の林に見えた）。駒は地に置いた札であるから、半ばだけ寝かせる。 */
 function 駒を立てて描く(ctx, x, y, f, type, fill, stroke, k, 縮) {
   const 角 = 向きの角();
   if (縮 >= 1 && !角) { drawKoma(ctx, x, y, f, type, fill, stroke, k); return; }
   // 回した眺めでは、筆の回しを戻してから、向きに回しの角を足して描く
-  ctx.save(); ctx.translate(x, y); if (角) ctx.rotate(-角); ctx.scale(1, 1 / 縮);
+  ctx.save(); ctx.translate(x, y); if (角) ctx.rotate(-角); ctx.scale(1, 1 / Math.sqrt(縮));
   drawKoma(ctx, 0, 0, f + 角, type, fill, stroke, k);
   ctx.restore();
 }
@@ -1572,27 +1575,30 @@ function 旧の城の地(ctx, m, t, cx, cy) {
 }
 
 /* 門と施設の傷み帯。毎刻変わるので、焼いた画布には入れず、その場で描く。 */
-function 門の傷みを一つ描く(ctx, m, g) {
+function 門の傷みを一つ描く(ctx, m, g, 揚) {
   const l = m.layers[g.layer];
   if (!l) return;
   const a = axisOf(l, g);
   const along = a.along === "x";
   const bp = fromUV(m, a, g.off, a.half + m.t + 11);
+  if (揚) { ctx.save(); ctx.translate(...揚(bp.x, bp.y)); 門の傷みを一つ描く(ctx, m, g, null); ctx.restore(); return; }
   const r = g.hp / g.max;
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   if (along) ctx.fillRect(bp.x - g.w / 2, bp.y - 2, g.w, 4); else ctx.fillRect(bp.x - 2, bp.y - g.w / 2, 4, g.w);
   ctx.fillStyle = r > 0.5 ? "#5C8C4A" : r > 0.22 ? "#C89A3A" : "#B0483C";
   if (along) ctx.fillRect(bp.x - g.w / 2, bp.y - 2, g.w * r, 4); else ctx.fillRect(bp.x - 2, bp.y - g.w / 2, 4, g.w * r);
 }
-function 施設の傷みを一つ描く(ctx, f) {
+function 施設の傷みを一つ描く(ctx, f, 揚) {
+  if (揚) { ctx.save(); ctx.translate(...揚(f.x, f.y)); 施設の傷みを一つ描く(ctx, f, null); ctx.restore(); return; }
   ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2, 3);
   ctx.fillStyle = f.hp / f.max > 0.5 ? "#5C8C4A" : f.hp / f.max > 0.25 ? "#C89A3A" : "#B0483C";
   ctx.fillRect(f.x - f.r, f.y + f.r + 2, f.r * 2 * (f.hp / f.max), 3);
 }
 /* 城の傷みを、焼いた画布の上に重ねる。これだけは毎コマ描く（十数回の塗りで済む）。 */
-export function 城の傷みを描く(ctx, m) {
-  for (const l of m.layers) for (const g of l.gates) { if (!g.broken) 門の傷みを一つ描く(ctx, m, g); }
-  for (const f of m.fac) { if (f.hp > 0 && f.max) 施設の傷みを一つ描く(ctx, f); }
+// 揚 … 斜めの眺めで、地の高さぶん持ち上げるずれ（naname.js 揚げ）
+export function 城の傷みを描く(ctx, m, 揚) {
+  for (const l of m.layers) for (const g of l.gates) { if (!g.broken) 門の傷みを一つ描く(ctx, m, g, 揚); }
+  for (const f of m.fac) { if (f.hp > 0 && f.max) 施設の傷みを一つ描く(ctx, f, 揚); }
 }
 
 /* 城に立つものだけを、透けた画布へ描く（GDD 8.11）。
@@ -1602,19 +1608,20 @@ export function 城の傷みを描く(ctx, m) {
    攻めている間じゅう一.五秒の焼きが繰り返されていた――遊ぶ側には
    「城攻めになると固まる」としか見えない。
    地は一度焼けば動かぬもの、立つものは戦のあいだ変わるもの。別の画布に住まわせる。 */
-export function drawCastleBuildings(ctx, m, 画k) {
+/* 立体 … 斜めの眺めのとき。門・櫓・普請は tachimono.js が立てて描くので、ここでは描かない */
+export function drawCastleBuildings(ctx, m, 画k, 立体) {
   const k = 画k || 1;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, Math.ceil(FIELD.w * k) + 2, Math.ceil(FIELD.h * k) + 2);
   ctx.setTransform(k, 0, 0, k, 0, 0);
   札を控える(地の札.城);                       // 曲輪・門・堀の名は焼かずに控え、描くたびに立てる
-  try { 城の立つものを描く(ctx, m, m.t, m.cx, m.cy, true); } finally { 札を控え止める(); }
+  try { 城の立つものを描く(ctx, m, m.t, m.cx, m.cy, true, 立体); } finally { 札を控え止める(); }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 /* 城に立つもの ── 石垣・門・櫓・天守と、堀を渡る土橋。
    戦の間に破れたり燃えたりして形が変わるので、地とは分けて描く。 */
-function 城の立つものを描く(ctx, m, t, cx, cy, 新) {
+function 城の立つものを描く(ctx, m, t, cx, cy, 新, 立体) {
   const o = m.layers[0], band = m.moat.band;
   const ob = o.masu + t + 8;
   const tone4 = ["#C6D2A8", "#C0CDA0", "#BACA98", "#B4C592"];
@@ -1697,7 +1704,7 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新) {
         }
         continue;
       }
-      門を描く(ctx, gp, along, g.w, t, g.hp / g.max);
+      if (!立体) 門を描く(ctx, gp, along, g.w, t, g.hp / g.max);
       /* 傷み具合の帯は、新しい絵では焼かない（毎刻変わるものだからである）。
          石垣や門を焼いた画布は、門が破れるまで動かない。帯だけ上から描く。 */
       if (!新) 門の傷みを一つ描く(ctx, m, g);
@@ -1729,7 +1736,7 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新) {
 
   /* 城の中の普請（GDD 9.3）。御殿・蔵・井戸・馬屋。絵だけのもので、当たりには関わらない。
      石垣や櫓と同じ光（左上）で描き、瓦は青鈍、白壁は漆喰の色で置く。 */
-  for (const f of m.普請 || []) 普請を描く(ctx, f);
+  for (const f of m.普請 || []) if (!立体 || f.kind === "井戸") 普請を描く(ctx, f);
 
   // 施設。崩れたものは瓦礫にする
   for (const f of m.fac) {
@@ -1742,7 +1749,8 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新) {
       }
       continue;
     }
-    if (f.kind === "矢倉") 櫓を描く(ctx, f);
+    if (立体) { /* 斜めの眺めでは立てて描く（tachimono.js） */ }
+    else if (f.kind === "矢倉") 櫓を描く(ctx, f);
     else {
       // 鐘楼。柱を立てて屋根を載せる
       ctx.fillStyle = "rgba(70,66,56,0.30)";
@@ -1934,7 +1942,14 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   if (個人絵) 近景の肌理(ctx, cam, W, H, dpr, b.map || null);
   /* 城に立つもの（石垣・門・櫓・天守）。地とは別の画布に焼いてある。
      肌理のあとに貼るので、草や砂の粒が石垣の上に乗ることもない。 */
-  if (城Canvas) {
+  if (城Canvas && 斜め地 && 斜め地.城 && 斜め地.城.画 && 縮 < 1) {
+    /* 斜めの眺めでは、石垣・門・櫓も地と同じだけ持ち上げて写したものを貼る */
+    ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / 縮);
+    ctx.drawImage(斜め地.城.画, 0, -斜め地.城.上, 斜め地.城.横 || FIELD.w, 斜め地.城.縦);
+    ctx.restore();
+    城を立てて描く(ctx, b.map);                         // 門・櫓・塀・御殿・蔵を立てて描く
+    城の傷みを描く(ctx, b.map, 揚げ);
+  } else if (城Canvas) {
     ctx.drawImage(城Canvas, 0, 0, FIELD.w, FIELD.h);
     城の傷みを描く(ctx, b.map);          // 帯だけは毎コマ。画布は門が破れるまで焼き直さない
   }

@@ -4,7 +4,7 @@ import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, m
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限 } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
-import { 縦の縮み, 盤へ戻す, 斜めに焼く, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸 } from "../battle/naname.js";
+import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸 } from "../battle/naname.js";
 import { ARM_STATS, BASE, FIELD, MOUNTAINS, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
@@ -17,6 +17,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const 城Ref = useRef(null), 焼きRef = useRef(null);
   /* 斜めの眺め（battle/naname.js）。地を焼き直すたびに版を上げ、斜めの地を焼き直す */
   const 地版Ref = useRef(0), 斜め地Ref = useRef(null);
+  const 城版Ref = useRef(0), 斜め城Ref = useRef(null);   // 城に立つもの（石垣・門・櫓）の斜めの写し
   const [視点, set視点] = useState(() => 視点を読む());
   /* 盤の向き（naname.js 向き）。九十度ずつ回して、山の向こう側も見えるようにする。
      合戦ごとに南からの眺めで始める。 */
@@ -82,8 +83,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const k = 画布の倍();
     const c = 城Ref.current || document.createElement("canvas");
     c.width = Math.max(1, Math.round(FIELD.w * k)); c.height = Math.max(1, Math.round(FIELD.h * k));
-    drawCastleBuildings(c.getContext("2d"), ctx.b.map, k);
-    城Ref.current = c;
+    drawCastleBuildings(c.getContext("2d"), ctx.b.map, k, 縦の縮み() < 1);   // 斜めなら門・櫓は立てて描く側へ回す
+    城Ref.current = c; 城版Ref.current++;
     return true;
   };
   /* 地を二段で焼く（GDD 8.11）。
@@ -123,6 +124,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const g2 = t.getContext("2d");
     const 焼始 = (typeof performance !== "undefined" ? performance.now() : 0);
     焼きRef.current = null; 城Ref.current = null;
+    if (typeof window !== "undefined") window.__焼き済み = false;
     const 新 = 新絵か(ctx.b);
     if (ctx.mode === "castle" && ctx.b.map) {
       if (新) {
@@ -278,7 +280,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
              最後は濃さ一で置くので、粗い下地はきれいに消える。 */
           const 濃 = [0.35, 0.5, 0.7, 1][焼.溶] ?? 1;
           焼.貼る(焼.細, 濃);
-          if (++焼.溶 >= 4) 焼きRef.current = null;
+          if (++焼.溶 >= 4) { 焼きRef.current = null; if (typeof window !== "undefined") window.__焼き済み = true; }   // 撮る道具が本焼きを待つための印
         }
       }
       // 門が破れたら城の立つものを描き直す（地は変わらないので焼き直さない）
@@ -318,6 +320,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
             if (typeof window !== "undefined") window.__斜め焼き = Math.round(performance.now() - 焼t0);
           }
           斜め地 = 斜め地Ref.current;
+          /* 城に立つものも同じ高さで持ち上げて写す。門が破れて描き直したら写し直す */
+          if (城Ref.current && 斜め地 && 斜め地.画) {
+            const 版2 = `${斜め地.版}:${城版Ref.current}`;
+            if (!斜め城Ref.current || 斜め城Ref.current.版 !== 版2) 斜め城Ref.current = { ...斜めに写す(城Ref.current, FIELD.w, FIELD.h), 版: 版2 };
+            斜め地 = { ...斜め地, 城: 斜め城Ref.current };
+          }
         }
         const 描t0 = performance.now();
         drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current, 斜め地);
@@ -393,10 +401,18 @@ export function BattleScreen({ ctx, land, onEnd }) {
       : (c.squads || []).filter((q) => q.engaged && q.men > 0).length), 0);
     /* 名のある隊の将の只中へ寄る。新しい絵（将と馬廻）を撮って検めるために使う。 */
     /* 写しを撮るための取っ手。カメラを盤の所へ据える（斜めの眺めの確かめに使う） */
+    /* 隊に下知を出す取っ手（撮る道具が山を登らせたりするのに使う）。縛り・控えも解く */
+    window.__下知 = (名, order, tx, ty) => {
+      const c = b.corps.find((x) => !x.dead && !x.destroyed && x.name.includes(名));
+      if (!c) return null;
+      c.縛り = null; c.控え = false; c.不戦 = false; c.auto = false;
+      issueOrder(b, c, { order, tx, ty });
+      return { x: Math.round(c.x), y: Math.round(c.y) };
+    };
     window.__向き = (r) => { 向きRef.current = 向きを据える(r, FIELD.w, FIELD.h); force((n) => (n + 1) % 1000); return 向きRef.current; };
     window.__カメラ = (x, y, 倍) => {
       const cam = camRef.current;
-      cam.x = x; cam.y = y; cam.s = clamp(倍, 縮みの限り(), 寄りの限り());
+      ({ x: cam.x, y: cam.y } = 真ん中に据える(x, y)); cam.s = clamp(倍, 縮みの限り(), 寄りの限り());
       force((n) => (n + 1) % 1000);
       return { 山: MOUNTAINS.map((o) => [Math.round(o.x), Math.round(o.y), Math.round(o.r)]) };
     };
@@ -406,7 +422,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       if (!c) return null;
       const 所 = { x: c.gx == null ? c.x : c.gx, y: c.gy == null ? c.y : c.gy };
       const cam = camRef.current;
-      cam.x = 所.x; cam.y = 所.y; cam.s = clamp(倍, 縮みの限り(), 寄りの限り());
+      ({ x: cam.x, y: cam.y } = 真ん中に据える(所.x, 所.y)); cam.s = clamp(倍, 縮みの限り(), 寄りの限り());
       force((n) => (n + 1) % 1000);
       return { 名: c.name, x: Math.round(所.x), y: Math.round(所.y), s: cam.s };
     };
@@ -440,7 +456,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
         cy = 生.reduce((a2, c) => a2 + c.y, 0) / 生.length;
       }
       const cam = camRef.current;
-      cam.x = cx; cam.y = cy;
+      ({ x: cam.x, y: cam.y } = 真ん中に据える(cx, cy));
       /* 倍率に零以下を渡せば、噛み合っている塊がちょうど収まる寄りを自ら選ぶ。
          塊の広がりを測り、盤の七割に収める。 */
       let 倍2 = 倍;
@@ -459,7 +475,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       return { 隊: 生.length, 噛み合い: 点.length, x: Math.round(cx), y: Math.round(cy), s: cam.s };
     };
     return () => {
-      try { delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; delete window.__カメラ; delete window.__向き; } catch (e) { /* よい */ }
+      try { delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; delete window.__カメラ; delete window.__向き; delete window.__下知; } catch (e) { /* よい */ }
     };
   }, [b]);
 
@@ -1576,7 +1592,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
               <div className="mbtn" onClick={() => {
                 /* カメラは盤の所で持っているので、替えても同じ所が真ん中に映る */
                 set視点(視点を替える(!視点));
-                斜め地Ref.current = null;
+                斜め地Ref.current = null; 斜め城Ref.current = null;
+                paintCastle();                                  // 斜めと真上で、城の画布に描くものが違う
                 force((n) => (n + 1) % 1000);
               }}><b>{視点 ? "◇" : "□"}</b>{視点 ? "斜め" : "真上"}</div>
               {/* 盤を九十度ずつ回す。真ん中に映る所はそのまま */}
