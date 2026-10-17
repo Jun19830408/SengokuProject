@@ -18,7 +18,9 @@
    まず関ヶ原（筋書き sekigahara）だけで使い、実機の重さと操作感を測ってから
    広げる。切りたいときは棚に sengoku:旧絵 を「入」で置けば元の絵に戻る。
    ========================================================================== */
-import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 見える範囲, 画面に映るか, 画面の真ん中から, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 面を据える, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
+import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 見える範囲, 画面に映るか, 画面の真ん中から, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 面を据える, 斜め, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
+import { 木立を並べる, 木を描く } from "./mori.js";
+import { 里を並べる, 葦を描く, 村の道は横か } from "./sato.js";
 import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS, ROAD,
   RIVER, hasRiver, riverShift, fieldScale } from "./field.js";
 
@@ -1289,9 +1291,12 @@ function 繁木を描く(q, x, y, r, 振, 日) {
   }
 }
 /* ---- 集落。道を一本通し、その両側に茅葺きの家と白壁の蔵を並べ、生垣で囲う ---- */
-function 集落(q, cx, cy, r, 種, 明関, 倍) {
+/* 立体 … 斜めの眺めで、家は sato.js が立てて描く。ここでは道と庭と生垣だけを焼く。
+   道の向きは家並みと揃える（道角） */
+function 集落(q, cx, cy, r, 種, 明関, 倍, 立体, 道角) {
   野種を置く(種);
-  const 向 = 野乱() * 6.283, ux = Math.cos(向), uy = Math.sin(向);
+  const 向0 = 野乱() * 6.283;
+  const 向 = 立体 ? 道角 : 向0, ux = Math.cos(向), uy = Math.sin(向);
   const 長 = r * 1.5;
   q.lineCap = "round"; q.lineJoin = "round";
   q.strokeStyle = "rgba(176,152,124,0.5)"; q.lineWidth = Math.max(2, 5 * 倍);
@@ -1312,8 +1317,19 @@ function 集落(q, cx, cy, r, 種, 明関, 倍) {
   垣引(2 * 倍, 3 * 倍, Math.max(2.4, 5 * 倍), "rgba(46,70,32,0.34)");
   垣引(0, 0, Math.max(2, 4 * 倍), "#5A7A36");
   垣引(-0.8 * 倍, -1.4 * 倍, Math.max(0.8, 1.4 * 倍), "rgba(150,180,96,0.6)");
+  if (立体) {
+    /* 家の建つ帯は、踏み固めた土と庭。家そのものは立てて描く */
+    q.save();
+    q.beginPath(); q.moveTo(垣[0][0], 垣[0][1]); for (const [x, y] of 垣) q.lineTo(x, y); q.closePath(); q.clip();
+    q.translate(cx, cy); q.rotate(向);
+    q.fillStyle = "rgba(188,166,126,0.42)"; q.fillRect(-r * 1.2, -r * 0.55, r * 2.4, r * 1.1);
+    q.fillStyle = "rgba(120,140,70,0.28)";                         // 庭先の畑
+    for (let i = 0; i < 14; i++) { const x = (野乱() - 0.5) * r * 2, y = (野乱() - 0.5) * r * 1.4;
+      q.fillRect(x, y, (6 + 野乱() * 8) * 倍, (4 + 野乱() * 6) * 倍); }
+    q.restore();
+  }
   const 家ら = [];
-  const n = Math.max(9, Math.round(r / (3.6 * 倍)));
+  const n = 立体 ? 0 : Math.max(9, Math.round(r / (3.6 * 倍)));
   for (let i = 0; i < n; i++) {
     const t = (i / (n - 1) - 0.5) * 1.7, 側 = (i % 2) ? 1 : -1;
     const 寄 = (0.18 + 野乱() * 0.5) * r * 側;
@@ -1401,13 +1417,24 @@ function 渡し場を描く(g, r, w, 倍) {
       }
     }
   } else {
-    g.fillStyle = "rgba(196,218,226,0.72)";                       // 浅い瀬
-    g.fillRect(x0, -半, 長 * 2, 半 * 2);
-    g.fillStyle = "rgba(206,200,176,0.8)";                        // 瀬に覗く石
+    /* 浅い瀬。板を一枚置いたような四角では、斜めから見ると川の上の台に見えた。
+       縁をぼかした楕円を重ねて底の透ける浅い水にし、小石とさざ波を散らす */
+    for (const [k2, a] of [[1.0, 0.22], [0.82, 0.24], [0.62, 0.26]]) {
+      g.fillStyle = `rgba(170,198,204,${a})`;
+      g.beginPath(); g.ellipse(0, 0, 長 * k2, 半 * k2, 0, 0, 7); g.fill();
+    }
     野種を置く(Math.round(w.x + w.y));
-    for (let i = 0; i < 26; i++) {
-      const x = x0 + 野乱() * 長 * 2, d = (野乱() - 0.5) * 川幅 * 0.8;
-      g.beginPath(); g.ellipse(x, d, (0.8 + 野乱() * 1.2) * 倍, (0.5 + 野乱() * 0.7) * 倍, 0, 0, 7); g.fill();
+    for (let i = 0; i < 90; i++) {                                // 瀬に覗く石と砂利
+      const a = 野乱() * 7, rr = Math.sqrt(野乱());
+      const x = Math.cos(a) * 長 * rr * 0.95, d = Math.sin(a) * 半 * rr * 0.85;
+      g.fillStyle = 野乱() < 0.5 ? "rgba(196,188,160,0.75)" : "rgba(150,142,118,0.6)";
+      g.beginPath(); g.ellipse(x, d, (0.5 + 野乱() * 1.1) * 倍, (0.4 + 野乱() * 0.6) * 倍, 野乱() * 3, 0, 7); g.fill();
+    }
+    g.strokeStyle = "rgba(240,248,252,0.55)"; g.lineWidth = Math.max(0.5, 0.45 * 倍);
+    for (let i = 0; i < 26; i++) {                                // 石に当たって立つさざ波
+      const a = 野乱() * 7, rr = Math.sqrt(野乱());
+      const x = Math.cos(a) * 長 * rr * 0.9, d = Math.sin(a) * 半 * rr * 0.75;
+      g.beginPath(); g.arc(x, d, (1.2 + 野乱() * 1.6) * 倍, -0.6, 0.6); g.stroke();
     }
   }
   g.restore();
@@ -1554,6 +1581,20 @@ export function* 野を焼く(g, 画k) {
     yield* 刻む(r.節, r.幅, 道度, 2 * 倍, (d) => Math.min(1, (半幅 - d) / (2.5 * 倍)));
   }
   for (let i = 0; i < 高.length; i++) if (川谷[i] > 0) 高[i] -= 川谷[i] / 半;
+  /* 川床を掘る（GDD 8.11）。斜めから見ると、両岸の土手が面として立ち、水面は
+     岸より一段低く沈む。底は平らに近く、岸だけを切り立たせる（川深の縁で落とす） */
+  { const 掘り = 2.6 * 倍 / 半;
+    // 浅瀬のあたりは浅く掘る（渡れる所は岸が低い）
+    const 瀬ら = 野の川.flatMap((r) => (r.渡し || []).filter((w) => w.種 !== "橋")
+      .map((w) => ({ x: PX(w.x) / 半, y: PY(w.y) / 半, r: PX(w.r || 100) / 半 * 1.3 })));
+    for (let i = 0; i < 高.length; i++) {
+      if (!(川深[i] > 0)) continue;
+      let 浅 = 1;
+      if (瀬ら.length) { const x = i % hw, y = (i / hw) | 0;
+        for (const w of 瀬ら) { const d = Math.hypot(x - w.x, y - w.y) / w.r; if (d < 1) 浅 = Math.min(浅, 0.25 + 0.75 * d * d); } }
+      const t = Math.min(1, 川深[i] * 3.2);
+      高[i] -= t * t * (3 - 2 * t) * 掘り * 浅;                  // 縁はなめらかに落とす
+    } }
   /* 林。梢の塊として高さを持たせ、自ら影を落とさせる */
   const 林 = new Float32Array(hw * hh);
   for (const f of [...FORESTS, ...WOODS]) {
@@ -1569,8 +1610,9 @@ export function* 野を焼く(g, 画k) {
     }
   }
   /* 斜めの眺めの高さの図（battle/naname.js）。梢を盛る前の、地そのものの高さ。
-     一升は 半／k 歩、値一つも 半／k 歩にあたる。 */
-  高さ図を据える(高.slice(), hw, hh, 半 / k, 半 / k);
+     一升は 半／k 歩、値一つも 半／k 歩にあたる。隊はこの地べたに立つ。 */
+  const 地べた = 高.slice();
+  高さ図を据える(地べた, hw, hh, 半 / k, 半 / k);
   { const 林帯 = 帯幅(hh, 20) * hw;
     for (let i = 0; i < 林.length; i++) {
       if (i % 林帯 === 0) yield;
@@ -1580,6 +1622,18 @@ export function* 野を焼く(g, 画k) {
       高[i] += 林[i] * (3.5 * 倍 + 梢 * 2.5 * 倍);
     }
   }
+  /* 森を梢の塊として起こすなら、絵を起こす高さに梢を含める（隊は地べたのまま）。
+     遊ぶ側の申し出は「森や川も新しいマップに従ってリアルにできないか」であった。 */
+  if (斜め.森 === "塊") 高さ図を据える(地べた, hw, hh, 半 / k, 半 / k, 高.slice());
+  /* 切り立った面の肌。林の縁は幹と陰、川の岸は土の切岸 */
+  面を据える((wx, wy) => {
+    const px = wx * k, py = wy * k;
+    if (斜め.森 === "塊" && 引伸(林, hw, hh, px, py, 半) > 0.3) return 3;
+    if (引伸(川岸, hw, hh, px, py, 半) > 0.08) return 2;
+    const 深 = 引伸(川深, hw, hh, px, py, 半);
+    if (深 > 0.01 && 深 < 0.45) return 2;
+    return 0;
+  });
   const 光x = -0.62, 光y = -0.72, 光高 = 0.52;
   計("高さ");
   yield;
@@ -1664,16 +1718,40 @@ export function* 野を焼く(g, 画k) {
   }
 
   計("草");
-  /* 沼 */
+  /* 沼（湿地）。湿った泥の地に、空を映す水溜まりを散らし、縁に泥の輪を回す。
+     ぼんやりした緑の円だけでは、そこが足を取られる地だと読めなかった。
+     葦は斜めの眺めでは立てて描く（sato.js）。真上からは株の点で見せる */
   for (const m of MARSH) {
     const mx = PX(m.x), my = PY(m.y), r = PX(m.r);
     const gr = g.createRadialGradient(mx, my, r * 0.2, mx, my, r);
-    gr.addColorStop(0, "rgba(86,112,92,0.55)"); gr.addColorStop(1, "rgba(86,112,92,0)");
+    gr.addColorStop(0, "rgba(92,98,70,0.62)"); gr.addColorStop(0.7, "rgba(98,108,74,0.45)"); gr.addColorStop(1, "rgba(98,108,74,0)");
     g.fillStyle = gr; g.beginPath(); g.ellipse(mx, my, r, r * 0.8, 0, 0, 7); g.fill();
+    野種を置く(Math.round(m.x * 13 + m.y));
+    const n = 7 + ((野乱() * 7) | 0);
+    for (let i = 0; i < n; i++) {
+      const a = 野乱() * 6.283, d = r * Math.sqrt(野乱()) * 0.72;
+      const x = mx + Math.cos(a) * d, y = my + Math.sin(a) * d * 0.8;
+      const rx = r * (0.08 + 野乱() * 0.16), ry = rx * (0.45 + 野乱() * 0.4), 角 = 野乱() * 3.14;
+      g.fillStyle = "rgba(84,76,52,0.55)";                          // 泥の縁
+      g.beginPath(); g.ellipse(x, y, rx * 1.18, ry * 1.25, 角, 0, 7); g.fill();
+      const wg = g.createLinearGradient(x, y - ry, x, y + ry);
+      wg.addColorStop(0, "rgba(150,176,186,0.92)"); wg.addColorStop(1, "rgba(92,118,128,0.92)");
+      g.fillStyle = wg; g.beginPath(); g.ellipse(x, y, rx, ry, 角, 0, 7); g.fill();
+      g.strokeStyle = "rgba(236,244,248,0.5)"; g.lineWidth = Math.max(0.5, 0.6 * 倍);   // 空の照り返し
+      g.beginPath(); g.ellipse(x - rx * 0.2, y - ry * 0.3, rx * 0.5, ry * 0.25, 角, 3.6, 5.4); g.stroke();
+    }
+    g.fillStyle = "rgba(70,86,44,0.55)";                            // 葦の株（真上から）
+    for (let i = 0; i < Math.round(r * r / (60 * 倍 * 倍)); i++) {
+      const a = 野乱() * 6.283, d = r * Math.sqrt(野乱()) * 0.95;
+      g.beginPath(); g.arc(mx + Math.cos(a) * d, my + Math.sin(a) * d * 0.8, (0.8 + 野乱()) * 倍, 0, 7); g.fill();
+    }
   }
 
   /* 集落 */
-  for (const v of VILLAGES) 集落(g, PX(v.x), PY(v.y), PX(v.r || 40) * 0.95, Math.round(v.x + v.y), 明関, 倍);
+  /* 斜めの眺めでは、家は立てて描く（sato.js）。道の向きを家並みと揃える */
+  const 里立体 = 斜め.入 && 斜め.傾き < 1;
+  for (const v of VILLAGES) 集落(g, PX(v.x), PY(v.y), PX(v.r || 40) * 0.95, Math.round(v.x + v.y), 明関, 倍,
+    里立体, 村の道は横か(v) ? 0 : Math.PI / 2);
 
   計("沼と集落");
   /* 木。林の只中は塊で描いたので、木は縁と野にだけ立てる */
@@ -3328,12 +3406,17 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       並.push({ wx, wy, 地y: wy + 0.05, 指: 側 });
     }
   }
+  木立を並べる(並, 見える);                       // 森を一本ずつの木で描く案（mori.js）
+  里を並べる(並, 見える);                         // 集落の家と湿地の葦（sato.js）
   /* 奥から手前へ。並べる鍵は回した眺めの縦（地y の小さなずれは重ねの順の加減） */
-  for (const p of 並) { const [vx, vy] = 視(p.wx, p.wy); p.vx = vx; p.鍵 = vy + (p.地y - p.wy); }
+  for (const p of 並) { if (p.棟) continue; const [vx, vy] = 視(p.wx, p.wy); p.vx = vx; p.鍵 = vy + (p.地y - p.wy); }
   並.sort((a, z) => a.鍵 - z.鍵);
   for (const p of 並) {
+    if (p.棟) { p.棟.描(ctx, 縮); continue; }        // 家（箱と屋根。sato.js）
     const y = 画の縦(p.wx, p.wy);
     p.wx = p.vx;                                   // ここから先は画の横で描く
+    if (p.木) { 木を描く(ctx, p.木, p.wx, y); continue; }
+    if (p.葦) { 葦を描く(ctx, p.葦, p.wx, y); continue; }
     if (p.指) {                                    // 馬廻の指物
       const K2 = 具側[p.指];
       ctx.strokeStyle = "#3A2C1A"; ctx.lineWidth = 0.1;

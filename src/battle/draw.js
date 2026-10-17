@@ -4,9 +4,11 @@ import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
-import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 向きの角, 盤の筆を回す, 視の筆へ, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
+import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 画の揚げ, 斜め, 向きの角, 盤の筆を回す, 視の筆へ, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
 import { 一人ずつ描く隊 } from "./shinga.js";
 import { 城を立てて描く, 天守の置き場 } from "./tachimono.js";
+import { 川の流れを描く, 立木を描く } from "./mori.js";
+import { 里を描く } from "./sato.js";
 import { 新絵か, 新絵の兵描き, 新絵の城の地, 新絵の画布上限, 個人で描くか, 近景の肌理, 本陣の所 } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
@@ -2006,6 +2008,11 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     ctx.setLineDash([]);
   }
 
+  // 川の流れ（mori.js）。水面の筋が下手へ流れる
+  if (!b.map) 川の流れを描く(ctx, (typeof performance !== "undefined" ? performance.now() : 0) / 1000, 1);
+  // 集落の家と湿地の葦（sato.js）。兵を一人ずつ描く寄りでは、兵と前後を重ねて描く
+  if (!b.map && 縮 < 1 && !個人絵) 里を描く(ctx, cam, W, H);
+
   // LOD：近距離＝10人駒、中距離＝50人組、遠距離＝武将隊（GDD 8.10）
   const lod = cam.s >= 0.55 ? "koma" : cam.s >= 0.3 ? "squad" : "corps";
   /* 奥から手前へ描く（GDD 8.10）。
@@ -2389,11 +2396,15 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
      駒を先に描き、そのあとで梢をもう一度、透かして被せる。
      木の下にいる隊は葉に紛れ、木を出れば元通りはっきり見える。
      隠す絵と隠れる決まりが、同じ木立を指すことになる。 */
-  if (!b.map && (FORESTS.length || WOODS.length)) {
+  /* 森を一本ずつの木で描く案では、木そのものが隊を隠すので被せない（mori.js）。
+     梢の塊の案では、梢の高さまで持ち上げて被せる */
+  const 木で描く = 縮 < 1 && 斜め.森 === "木";
+  if (木で描く && !新絵隊.length) 立木を描く(ctx, cam, W, H);
+  if (!b.map && !木で描く && (FORESTS.length || WOODS.length)) {
     for (const f of [...WOODS, ...FORESTS]) {
       const 濃 = FORESTS.includes(f);
       ctx.save();
-      ctx.translate(...揚げ(f.x, f.y));                 // 斜めの眺めでは地の高さだけ持ち上げる
+      ctx.translate(...(縮 < 1 && 斜め.森 === "塊" ? 画の揚げ(f.x, f.y) : 揚げ(f.x, f.y)));   // 斜めの眺めでは地（梢）の高さだけ持ち上げる
       ゆらぎ形(ctx, f, 0.96, 0.18);
       ctx.clip();
       /* 濃さの加減。六割まで被せると、木の下の隊がほとんど読めなくなった。

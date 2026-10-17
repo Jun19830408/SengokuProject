@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
-import { 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限 } from "../battle/shinga.js";
+import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限 } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
 import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸 } from "../battle/naname.js";
-import { ARM_STATS, BASE, FIELD, MOUNTAINS, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
+import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, TERRAIN, VILLAGES, WEATHER, WOODS, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
 import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる, 内応させる, 内応の門を開く } from "../battle/corps.js";
@@ -409,12 +409,16 @@ export function BattleScreen({ ctx, land, onEnd }) {
       issueOrder(b, c, { order, tx, ty });
       return { x: Math.round(c.x), y: Math.round(c.y) };
     };
+    /* 湿地の見本を撮るための取っ手。沼を一つ足して地を焼き直す（撮る道具だけが使う。足した沼は理の地形にも効きうる） */
+    window.__沼を足す = (x, y, r) => { MARSH.push({ x, y, r, seed: 7 }); paintTerrain(); return MARSH.length; };
     window.__向き = (r) => { 向きRef.current = 向きを据える(r, FIELD.w, FIELD.h); force((n) => (n + 1) % 1000); return 向きRef.current; };
     window.__カメラ = (x, y, 倍) => {
       const cam = camRef.current;
       ({ x: cam.x, y: cam.y } = 真ん中に据える(x, y)); cam.s = clamp(倍, 縮みの限り(), 寄りの限り());
       force((n) => (n + 1) % 1000);
-      return { 山: MOUNTAINS.map((o) => [Math.round(o.x), Math.round(o.y), Math.round(o.r)]) };
+      const 丸 = (o) => [Math.round(o.x), Math.round(o.y), Math.round(o.r)];
+      return { 山: MOUNTAINS.map(丸), 森: FORESTS.map(丸), 林: WOODS.map(丸), 村: VILLAGES.map(丸), 沼: MARSH.map(丸),
+        川: 野の川筋().map((r) => ({ 幅: Math.round(r.幅), 節: r.節.filter((_, i) => i % 6 === 0).map((p) => p.map(Math.round)), 渡し: r.渡し })) };
     };
     window.__将へ = (名, 倍 = 4) => {
       const c = b.corps.find((x) => !x.dead && !x.destroyed
@@ -475,7 +479,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       return { 隊: 生.length, 噛み合い: 点.length, x: Math.round(cx), y: Math.round(cy), s: cam.s };
     };
     return () => {
-      try { delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; delete window.__カメラ; delete window.__向き; delete window.__下知; } catch (e) { /* よい */ }
+      try { delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; delete window.__カメラ; delete window.__向き; delete window.__下知; delete window.__沼を足す; } catch (e) { /* よい */ }
     };
   }, [b]);
 
@@ -1593,7 +1597,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 /* カメラは盤の所で持っているので、替えても同じ所が真ん中に映る */
                 set視点(視点を替える(!視点));
                 斜め地Ref.current = null; 斜め城Ref.current = null;
-                paintCastle();                                  // 斜めと真上で、城の画布に描くものが違う
+                // 斜めと真上で、城の画布と野の地に描くもの（門・櫓、集落の家）が違うので焼き直す
+                if (!paintCastle()) paintTerrain();
                 force((n) => (n + 1) % 1000);
               }}><b>{視点 ? "◇" : "□"}</b>{視点 ? "斜め" : "真上"}</div>
               {/* 盤を九十度ずつ回す。真ん中に映る所はそのまま */}

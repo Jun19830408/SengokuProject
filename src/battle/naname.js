@@ -23,7 +23,20 @@ const 棚の鍵 = "sengoku:視点";
 /* 傾き〇.五八は、真上から五十五度ほど倒した眺め（遊ぶ側が三つの案から選んだもの）。
    持ち上げ一.〇は「普通」の盛り上がり。高さの図そのものが山の高さに比例しているので、
    高い山ほど大きく、低い丘ほど控えめにせり上がる。 */
-export const 斜め = { 傾き: 0.58, 持ち上げ: 1.0, 入: true };
+export const 斜め = { 傾き: 0.58, 持ち上げ: 1.0, 入: true, 森: "塊" };
+
+/* 森の描き方（見た目の案を比べるための切り替え。棚の sengoku:森の描き）
+     塊 … 梢を一つの塊として持ち上げ、縁に幹と陰の面を見せる
+     木 … 木を一本ずつ立てて描く（兵と前後を重ね合う）
+     平 … 従来どおり、地に描いた梢のまま */
+export function 森の描きを読む() {
+  try {
+    const v = typeof localStorage !== "undefined" ? localStorage.getItem("sengoku:森の描き") : null;
+    if (v === "塊" || v === "木" || v === "平") 斜め.森 = v;
+  } catch (e) { /* 読めなければ既定 */ }
+  return 斜め.森;
+}
+森の描きを読む();
 
 
 export function 視点を読む() {
@@ -45,28 +58,33 @@ export const 縦の縮み = () => (斜め.入 ? 斜め.傾き : 1);
 /* ---- 高さの図。地を焼いたときに据える（野だけ） ---- */
 let 図 = null;   // { 高: Float32Array, w, h, 単: 一升あたりの歩, 丈単: 値一あたりの歩 }
 
-export function 高さ図を据える(高, w, h, 単, 丈単) {
+/* 画高 … 絵を起こすときだけ使う高さ（梢の塊を含む）。隊は地べた（高）に立つ。
+   森を梢の塊として持ち上げても、森に入った隊が梢の上に乗らないように分けて持つ。 */
+export function 高さ図を据える(高, w, h, 単, 丈単, 画高) {
   let 最 = 0;
-  for (let i = 0; i < 高.length; i++) if (高[i] > 最) 最 = 高[i];
-  図 = { 高, w, h, 単, 丈単, 最: 最 * 丈単 };             // 最 … いちばん高い所（歩）
+  const 上の図 = 画高 || 高;
+  for (let i = 0; i < 上の図.length; i++) if (上の図[i] > 最) 最 = 上の図[i];
+  図 = { 高, 画高: 画高 || null, w, h, 単, 丈単, 最: 最 * 丈単 };   // 最 … いちばん高い所（歩）
 }
 export function 高さ図を外す() { 図 = null; }
 export const 高さ図があるか = () => !!図;
 
-// その所の地の高さ（歩）。図が無ければ零。
-export function 地の丈(x, y) {
+// その所の地の高さ（歩）。図が無ければ零。画 を立てれば梢まで含めた高さ
+export function 地の丈(x, y, 画) {
   if (!図) return 0;
   const fx = x / 図.単, fy = y / 図.単;
   const x0 = Math.max(0, Math.min(図.w - 1, Math.floor(fx))), y0 = Math.max(0, Math.min(図.h - 1, Math.floor(fy)));
   const x1 = Math.min(図.w - 1, x0 + 1), y1 = Math.min(図.h - 1, y0 + 1);
   const tx = Math.max(0, Math.min(1, fx - x0)), ty = Math.max(0, Math.min(1, fy - y0));
-  const H = 図.高, w = 図.w;
+  const H = (画 && 図.画高) || 図.高, w = 図.w;
   const a = H[y0 * w + x0], b = H[y0 * w + x1], c = H[y1 * w + x0], d = H[y1 * w + x1];
   return ((a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty) * 図.丈単;
 }
 
 // 画の上での持ち上げ（歩）。平らな所でも、うねりの分だけわずかに動く。
 export const 浮き = (x, y) => (斜め.入 ? 地の丈(x, y) * 斜め.持ち上げ : 0);
+// 絵の持ち上げ（梢の塊を含む）。斜めに焼くときと、梢を被せるときに使う
+export const 画の浮き = (x, y) => (斜め.入 ? 地の丈(x, y, true) * 斜め.持ち上げ : 0);
 
 /* ---- 向き（GDD 8.10）----
 
@@ -145,6 +163,18 @@ export function 地の字(g, s, x, y, 縁) {
   g.fillText(s, x, y);
 }
 
+// 梢の高さまで含めた持ち上げのずれ（森を梢の塊で描くとき、梢を被せる所）
+export function 画の揚げ(x, y) {
+  const L = 画の浮き(x, y) / 縦の縮み();
+  if (!L) return [0, 0];
+  switch (向き) {
+    case 1: return [-L, 0];
+    case 2: return [0, L];
+    case 3: return [L, 0];
+    default: return [0, -L];
+  }
+}
+
 /* 画の所。盤の（x, y）を、斜めの眺めの横と縦（歩の単位のまま）へ写す。 */
 export const 画の横 = (x, y) => 視(x, y)[0];
 export const 画の縦 = (x, y) => 視(x, y)[1] * 縦の縮み() - 浮き(x, y);
@@ -210,7 +240,7 @@ export function 見える範囲(cam, W, H, 余 = 0) {
    斜めに起こすと、段の手前の面（石垣の正面）が見えてくる。地の画は真上から
    描いたものなので、その面の色を持たない。引き伸ばすと、天端の色が縦に流れた
    だけの帯になる。城の地を焼く側が、どこが石垣でどこが土の切岸かを教える。
-   面の型(盤x, 盤y) … 0 何もなし（なだらかに伸ばす）・1 石垣・2 土の切岸 */
+   面の型(盤x, 盤y) … 0 何もなし（なだらかに伸ばす）・1 石垣・2 土の切岸・3 林の縁 */
 let 面の型 = null;
 export function 面を据える(fn) { 面の型 = fn || null; }
 // 石垣の正面。石を横に寝かせて積み、段ごとに縦目地をずらす。上ほど明るい
@@ -223,6 +253,15 @@ function 石垣の色(o, di, x, u, 伸, 明) {
   if (目地 && u >= 1) v -= 34;
   v *= 明;
   o[di] = Math.min(255, v * 0.98); o[di + 1] = Math.min(255, v * 0.95); o[di + 2] = Math.min(255, v * 0.86); o[di + 3] = 255;
+}
+// 林の縁。梢の下に幹が並び、奥は暗い。上ほど葉の緑
+function 林縁の色(o, di, x, u, 伸, 明) {
+  const t = u / Math.max(1, 伸);
+  const 幹 = ((x * 13) % 7) < 1.3 && t > 0.35;
+  let r = 58 - t * 26, g = 84 - t * 40, b = 40 - t * 18;
+  if (t < 0.35) { r = 70 + (x * 7 % 5) * 3; g = 102 + (x * 11 % 7) * 3; b = 46; }   // 葉の裾
+  if (幹) { r = 86; g = 70; b = 52; }
+  o[di] = r * 明; o[di + 1] = g * 明; o[di + 2] = b * 明; o[di + 3] = 255;
 }
 function 切岸の色(o, di, x, u, 伸, 明) {
   const v = (150 - (u / Math.max(1, 伸)) * 40 + ((x * 5 + u * 3) % 7) * 3) * 明;
@@ -250,7 +289,7 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
   const sw = src.width, sh = src.height;
   // せり出しの最大を測る
   let 最 = 0;
-  if (図) for (let i = 0; i < 図.高.length; i++) { const v = 図.高[i] * 図.丈単; if (v > 最) 最 = v; }
+  if (図) 最 = 図.最;
   const 上 = 最 * 斜め.持ち上げ + 4;                   // 歩
   const 上px = Math.ceil(上 * 倍);
   const dh = Math.ceil(sh * k) + 上px + 2;
@@ -268,7 +307,7 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
   const 面 = 重ね ? null : 面の型;
   for (let x = 0; x < sw; x++) {
     const vx = (x + 0.5) / 倍;
-    for (let y = 0; y < sh; y++) { const [wx, wy] = 視から盤(vx, (y + 0.5) / 倍); 丈px[y] = 浮き(wx, wy) * 倍; }
+    for (let y = 0; y < sh; y++) { const [wx, wy] = 視から盤(vx, (y + 0.5) / 倍); 丈px[y] = 画の浮き(wx, wy) * 倍; }
     let 頂 = dh;                                      // まだ塗っていない一番下の行の一つ下
     let pr = -1, pg = 0, pb = 0;                      // 一つ手前に塗った行の色
     for (let y = sh - 1; y >= 0; y--) {
@@ -297,7 +336,9 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
       if (型) {
         for (let yy = Math.max(0, yp); yy < 下; yy++) {
           const di = (yy * sw + x) * 4;
-          if (型 === 1) 石垣の色(o, di, x, yy - yp, 伸, 1); else 切岸の色(o, di, x, yy - yp, 伸, 1);
+          if (型 === 1) 石垣の色(o, di, x, yy - yp, 伸, 1);
+          else if (型 === 3) 林縁の色(o, di, x, yy - yp, 伸, 1);
+          else 切岸の色(o, di, x, yy - yp, 伸, 1);
         }
         pr = r; pg = gg; pb = bb;
         頂 = Math.max(0, yp);
