@@ -138,10 +138,9 @@ export function 城壁をよける(m, qx, qy, x, y) {
   let r = null;
   for (const l of m.layers) {
     const cx = m.cx + (l.ox || 0), cy = m.cy + (l.oy || 0), hw = l.hw + t, hh = l.hh + t;
-    const 内 = (a, b) => Math.abs(a - cx) < hw && Math.abs(b - cy) < hh;
     const px = r ? r[0] : x, py = r ? r[1] : y;
-    const 組内 = 内(qx, qy);
-    if (内(px, py) === 組内) continue;
+    const 組内 = Math.abs(qx - cx) < hw && Math.abs(qy - cy) < hh;
+    if ((Math.abs(px - cx) < hw && Math.abs(py - cy) < hh) === 組内) continue;
     // 越えた面。際までの隔たりの近いほう
     const 南北 = Math.abs(Math.abs(py - cy) - hh) < Math.abs(Math.abs(px - cx) - hw);
     const u = 南北 ? px - cx : py - cy;

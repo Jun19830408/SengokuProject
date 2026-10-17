@@ -24,9 +24,13 @@ function 種乱(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) 
 export function 村の道は横か(v) { return 種乱(Math.round(v.x * 3 + v.y * 5))() < 0.5; }
 
 /* ---- 家並み ---- */
-let 家々 = null, 家々の鍵 = "";
+let 家々 = null, 家々の鍵 = "", 家々の数 = -1, 家々の頭 = null;
 export function 家々を据える() {
+  /* 兵一人ずつの家よけ（家をよける）からも毎刻呼ばれる。野が変わらぬうちは、
+     鍵の文字列を作らずに返す（作っていたころは関ヶ原の試しが何倍も遅くなった） */
+  if (家々 && VILLAGES.length === 家々の数 && VILLAGES[0] === 家々の頭) return 家々;
   const 鍵 = VILLAGES.map((v) => `${Math.round(v.x)},${Math.round(v.y)},${Math.round(v.r || 40)}`).join(";");
+  家々の数 = VILLAGES.length; 家々の頭 = VILLAGES[0] || null;
   if (家々 && 鍵 === 家々の鍵) return 家々;
   家々の鍵 = 鍵;
   const 並 = [];

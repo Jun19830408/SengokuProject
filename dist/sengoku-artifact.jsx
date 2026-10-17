@@ -27419,10 +27419,9 @@ function \u57CE\u58C1\u3092\u3088\u3051\u308B(m, qx, qy, x, y) {
   let r = null;
   for (const l of m.layers) {
     const cx = m.cx + (l.ox || 0), cy = m.cy + (l.oy || 0), hw = l.hw + t, hh = l.hh + t;
-    const \u5185 = (a, b) => Math.abs(a - cx) < hw && Math.abs(b - cy) < hh;
     const px2 = r ? r[0] : x, py2 = r ? r[1] : y;
-    const \u7D44\u5185 = \u5185(qx, qy);
-    if (\u5185(px2, py2) === \u7D44\u5185) continue;
+    const \u7D44\u5185 = Math.abs(qx - cx) < hw && Math.abs(qy - cy) < hh;
+    if ((Math.abs(px2 - cx) < hw && Math.abs(py2 - cy) < hh) === \u7D44\u5185) continue;
     const \u5357\u5317 = Math.abs(Math.abs(py2 - cy) - hh) < Math.abs(Math.abs(px2 - cx) - hw);
     const u = \u5357\u5317 ? px2 - cx : py2 - cy;
     const \u9762 = \u5357\u5317 ? py2 > cy ? "S" : "N" : px2 > cx ? "E" : "W";
@@ -27705,8 +27704,13 @@ function \u6751\u306E\u9053\u306F\u6A2A\u304B(v) {
 }
 var \u5BB6\u3005 = null;
 var \u5BB6\u3005\u306E\u9375 = "";
+var \u5BB6\u3005\u306E\u6570 = -1;
+var \u5BB6\u3005\u306E\u982D = null;
 function \u5BB6\u3005\u3092\u636E\u3048\u308B() {
+  if (\u5BB6\u3005 && VILLAGES.length === \u5BB6\u3005\u306E\u6570 && VILLAGES[0] === \u5BB6\u3005\u306E\u982D) return \u5BB6\u3005;
   const \u9375 = VILLAGES.map((v) => `${Math.round(v.x)},${Math.round(v.y)},${Math.round(v.r || 40)}`).join(";");
+  \u5BB6\u3005\u306E\u6570 = VILLAGES.length;
+  \u5BB6\u3005\u306E\u982D = VILLAGES[0] || null;
   if (\u5BB6\u3005 && \u9375 === \u5BB6\u3005\u306E\u9375) return \u5BB6\u3005;
   \u5BB6\u3005\u306E\u9375 = \u9375;
   const \u4E26 = [];
