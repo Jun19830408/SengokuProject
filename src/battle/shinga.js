@@ -18,7 +18,7 @@
    まず関ヶ原（筋書き sekigahara）だけで使い、実機の重さと操作感を測ってから
    広げる。切りたいときは棚に sengoku:旧絵 を「入」で置けば元の絵に戻る。
    ========================================================================== */
-import { 縦の縮み, 画の縦, 揚げ代, 高さ図を据える, 高さ図を外す, 浮き } from "./naname.js";
+import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 見える範囲, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
 import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS, ROAD,
   RIVER, hasRiver, riverShift } from "./field.js";
 
@@ -51,8 +51,7 @@ export const 組の予算 = 400;                 // 画面に四百組（古い�
    人で数えれば、戦が進んで組が欠けるほど、一人ずつ描ける範囲も広がる。 */
 export const 人の予算 = 22000;              // 一度に一人ずつ描くのはここまで
 export function 見える人数(b, cam, W, H) {
-  const x0 = cam.x - W / 2 / cam.s - 40, x1 = cam.x + W / 2 / cam.s + 40;
-  const y0 = cam.y - H / 2 / (cam.s * 縦の縮み()) - 60, y1 = cam.y + H / 2 / (cam.s * 縦の縮み()) + 揚げ代() + 40;
+  const { x0, x1, y0, y1 } = 見える範囲(cam, W, H, 50);
   let n = 0;
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
@@ -72,8 +71,8 @@ export function 見える人数(b, cam, W, H) {
 export function 一人ずつ描く隊(b, cam, W, H) {
   if (!新絵か(b) || cam.s < 個人閾) return null;
   const k = 縦の縮み();
-  const x0 = cam.x - W / 2 / cam.s - 40, x1 = cam.x + W / 2 / cam.s + 40;
-  const y0 = cam.y - H / 2 / (cam.s * k) - 60, y1 = cam.y + H / 2 / (cam.s * k) + 40 + 揚げ代();
+  const { x0, x1, y0, y1 } = 見える範囲(cam, W, H, 50);
+  const [cvx, cvy] = 視(cam.x, cam.y);
   const 並 = [];
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
@@ -83,7 +82,8 @@ export function 一人ずつ描く隊(b, cam, W, H) {
       n += Math.min(50, Math.round(q.men));
     }
     if (!n) continue;
-    並.push({ c, n, d: Math.hypot(c.x - cam.x, (c.y - cam.y) * k) });
+    const [vx, vy] = 視(c.x, c.y);                   // 画面の真ん中からの隔たりは、回した眺めの上で量る
+    並.push({ c, n, d: Math.hypot(vx - cvx, (vy - cvy) * k) });
   }
   並.sort((a, z) => a.d - z.d);
   const 選 = new Set();
@@ -99,8 +99,7 @@ export function 個人で描くか(b, cam, W, H) {
   return 見える人数(b, cam, W, H) <= 人の予算;
 }
 export function 見える組数(b, cam, W, H) {
-  const vx0 = cam.x - W / 2 / cam.s - 60, vx1 = cam.x + W / 2 / cam.s + 60;
-  const vy0 = cam.y - H / 2 / (cam.s * 縦の縮み()) - 80, vy1 = cam.y + H / 2 / (cam.s * 縦の縮み()) + 揚げ代() + 60;
+  const { x0: vx0, x1: vx1, y0: vy0, y1: vy1 } = 見える範囲(cam, W, H, 70);
   let n = 0;
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
@@ -1035,8 +1034,8 @@ function 線引(g, pts, lw, st) { g.strokeStyle = st; g.lineWidth = lw;
 const 名札 = (g, x, y, s, 倍 = 1) => {
   const 字 = Math.round(13 * Math.max(1, 倍));
   g.save(); g.font = `600 ${字}px "Hiragino Mincho ProN","Yu Mincho",serif`; g.textAlign = "center";
-  g.lineWidth = 字 * 0.27; g.strokeStyle = "rgba(238,232,214,0.85)"; g.strokeText(s, x, y);
-  g.fillStyle = "rgba(56,50,36,0.95)"; g.fillText(s, x, y); g.restore(); };
+  g.lineWidth = 字 * 0.27; g.strokeStyle = "rgba(238,232,214,0.85)";
+  g.fillStyle = "rgba(56,50,36,0.95)"; 地の字(g, s, x, y, true); g.restore(); };
 
 /* ===== 野を、画素ごとに塗る（GDD 8.11）=====
 
@@ -1701,10 +1700,13 @@ export function* 野を焼く(g, 画k) {
 
   /* 渡し場と、名のある峰・村の札。野の座標で描く */
   g.setTransform(k, 0, 0, k, 0, 0);
+  札を控える(地の札.野);                       // 札の字は焼かずに控え、描くたびに立てる（naname.js 地の札）
+  try {
   for (const r of 野の川) for (const w of (r.渡し || [])) 渡し場を描く(g, r, w, Math.max(1, 倍 / k));
   { const 札倍 = Math.max(1, 0.7 * 倍 / k);
     for (const o of [...HILLS, ...MOUNTAINS]) if (o.札 && o.名) 名札(g, o.x, o.y - o.r * 0.36, o.名, 札倍);
     for (const v of VILLAGES) if (v.札 && v.名) 名札(g, v.x, v.y + (v.r || 40) + 12, v.名, 札倍); }
+  } finally { 札を控え止める(); }
   g.setTransform(1, 0, 0, 1, 0, 0);
 }
 
@@ -2247,9 +2249,17 @@ export function 近景の肌理(ctx, cam, W, H, dpr, m) {
   /* 画面の座標で貼る。こうすれば草の丈は寄りによらず同じ太さに保たれ、
      盤の原点に合わせて位置を決めるので、画面を動かしても地から浮かない。 */
   const 縮 = 縦の縮み();                                   // 斜めの眺めでは縦が縮む
-  const sx = W / 2 - cam.x * s, sy = H / 2 - cam.y * 縮 * s;   // 野の原点の画面座標
+  const [cvx, cvy] = 視(cam.x, cam.y);                   // 盤を回した眺めでは、回した野の上で量る
+  const sx = W / 2 - cvx * s, sy = H / 2 - cvy * 縮 * s;   // 野の原点の画面座標
+  const 寸 = 視の寸();
   const 左 = Math.max(0, sx), 上 = Math.max(0, sy);
-  const 右 = Math.min(W, sx + FIELD.w * s), 下 = Math.min(H, sy + FIELD.h * 縮 * s);
+  const 右 = Math.min(W, sx + 寸.w * s), 下 = Math.min(H, sy + 寸.h * 縮 * s);
+  // 盤の矩形（x0, y0 から x1, y1）を、画面の矩形 [x, y, w, h] へ写す
+  const 矩 = (ax, ay, bx, by) => {
+    const [p0, q0] = 視(ax, ay), [p1, q1] = 視(bx, by);
+    const vx = Math.min(p0, p1), vy = Math.min(q0, q1);
+    return [sx + vx * s, sy + vy * 縮 * s, Math.abs(p1 - p0) * s, Math.abs(q1 - q0) * 縮 * s];
+  };
   if (右 <= 左 || 下 <= 上) return;
   ctx.save();
   /* 画面の座標へ戻す。画素の倍（dpr）を掛け忘れると、画素の細かい画面では
@@ -2269,10 +2279,9 @@ export function 近景の肌理(ctx, cam, W, H, dpr, m) {
     /* 城攻め。内側の曲輪は外側の曲輪の中に入れ子であるから、
        いちばん外の曲輪ひとつを切り抜けば、曲輪はすべて砂になる。 */
     const l0 = m.layers[0], t = m.t, ob = l0.masu + t + 8;
-    const 郭x = sx + (m.cx + (l0.ox || 0) - l0.hw - t) * s, 郭y = sy + (m.cy + (l0.oy || 0) - l0.hh - t) * 縮 * s;
-    const 郭w = (l0.hw + t) * 2 * s, 郭h = (l0.hh + t) * 2 * 縮 * s;
+    const 郭cx = m.cx + (l0.ox || 0), 郭cy = m.cy + (l0.oy || 0);
+    const [郭x, 郭y, 郭w, 郭h] = 矩(郭cx - l0.hw - t, 郭cy - l0.hh - t, 郭cx + l0.hw + t, 郭cy + l0.hh + t);
     const 外幅 = l0.hw + t + ob + m.moat.band, 外奥 = l0.hh + t + ob + m.moat.band;
-    const 堀x = sx + (m.cx - 外幅) * s, 堀y = sy + (m.cy - 外奥) * 縮 * s;
     /* 草を貼る所。偶奥の規矩（evenodd）で、入れ子の矩形を一筆で抜く。
          城の外 … 一重 → 貼る
          堀     … 二重 → 抜く（水や空堀に草は生えない）
@@ -2281,8 +2290,8 @@ export function 近景の肌理(ctx, cam, W, H, dpr, m) {
     const 内幅 = l0.hw + t + ob, 内奥 = l0.hh + t + ob;
     ctx.save();
     ctx.beginPath(); ctx.rect(左, 上, 右 - 左, 下 - 上);
-    ctx.rect(堀x, 堀y, 外幅 * 2 * s, 外奥 * 2 * 縮 * s);
-    ctx.rect(sx + (m.cx - 内幅) * s, sy + (m.cy - 内奥) * 縮 * s, 内幅 * 2 * s, 内奥 * 2 * 縮 * s);
+    ctx.rect(...矩(m.cx - 外幅, m.cy - 外奥, m.cx + 外幅, m.cy + 外奥));
+    ctx.rect(...矩(m.cx - 内幅, m.cy - 内奥, m.cx + 内幅, m.cy + 内奥));
     ctx.rect(郭x, 郭y, 郭w, 郭h);
     ctx.clip("evenodd");
     敷(草);
@@ -3123,20 +3132,18 @@ const 馬印の形 = { 大名: "金の唐傘", 総大将: "金の扇", 将: "長
 export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
   札を焼く();
   城盤 = !!(b && b.map);
-  const dt = 新絵状態を進める(b, nowSec, {
-    x0: cam.x - W / 2 / cam.s, x1: cam.x + W / 2 / cam.s,
-    y0: cam.y - H / 2 / (cam.s * 縦の縮み()), y1: cam.y + H / 2 / (cam.s * 縦の縮み()) + 揚げ代() });
+  const dt = 新絵状態を進める(b, nowSec, 見える範囲(cam, W, H, 0));
   const 態 = 盤の態(b);
   /* 直接描き（連続位相）は型紙貼りより費えが重い。見える組が絞れたときだけ使う */
   let 見組 = 0;
-  { const px0 = cam.x - W / 2 / cam.s - 40, px1 = cam.x + W / 2 / cam.s + 40;
-    const py0 = cam.y - H / 2 / (cam.s * 縦の縮み()) - 60, py1 = cam.y + H / 2 / (cam.s * 縦の縮み()) + 揚げ代() + 40;
+  { const { x0: px0, x1: px1, y0: py0, y1: py1 } = 見える範囲(cam, W, H, 50);
     for (const c of 隊ら) for (const q of c.squads) {
       if (q.men > 0 && q.x > px0 && q.x < px1 && q.y > py0 && q.y < py1) 見組++; } }
   const 骨度 = (見組 <= 28) ? Math.max(0, Math.min(1, (cam.s - 滑閾) / 0.7)) : 0;
-  const x0 = cam.x - W / 2 / cam.s - 40, x1 = cam.x + W / 2 / cam.s + 40;
-  const y0 = cam.y - H / 2 / (cam.s * 縦の縮み()) - 60, y1 = cam.y + H / 2 / (cam.s * 縦の縮み()) + 揚げ代() + 40;
+  const { x0, x1, y0, y1 } = 見える範囲(cam, W, H, 50);
   const 見える = (x, y) => x > x0 && x < x1 && y > y0 && y < y1;
+  /* 盤を回した眺めでは、人の向きの目盛り（十六方向）を回しの分だけ進める */
+  const 回目 = 今の向き() * 4;
   /* 斜めの眺め（battle/naname.js）。人の姿は傾けずに立てて描く。
      筆の縦の縮みを戻し、足元を 画の縦（y×縮−持ち上げ）に置く。 */
   const 縮 = 縦の縮み();
@@ -3149,7 +3156,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       const s = 組態.get(q); if (!s || !s.初) continue;
       if (!見える(s.dx, s.dy)) continue;
       ctx.save();
-      ctx.translate(s.dx, s.dy - 浮き(s.dx, s.dy) / 縮);
+      { const [ex, ey] = 揚げ(s.dx, s.dy); ctx.translate(s.dx + ex, s.dy + ey); }
       ctx.rotate(s.向 + Math.PI / 2);
       const 横 = q.type === "kiba" ? 34 : 22, 奥 = q.type === "kiba" ? 22 : 16;
       ctx.beginPath(); ctx.ellipse(0, 4, 横 * 0.62, 奥 * 0.62, 0, 0, 7); ctx.fill();
@@ -3157,13 +3164,13 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       ctx.restore();
     }
   }
-  ctx.save(); ctx.scale(1, 1 / 縮);
+  ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / 縮);
   /* 倒れた者 */
   for (const e of 態.倒れ) {
     if (!見える(e.x, e.y)) continue;
     { const n = 倒れ札(e.s);
       if (n) { ctx.globalAlpha = 0.85;
-        ctx.drawImage(n, e.x - n.width / 2 * 0.056, 画の縦(e.x, e.y) - (n.height - 8) * 0.056,
+        ctx.drawImage(n, 画の横(e.x, e.y) - n.width / 2 * 0.056, 画の縦(e.x, e.y) - (n.height - 8) * 0.056,
           n.width * 0.056, n.height * 0.056);
         ctx.globalAlpha = 1; } }
   }
@@ -3189,7 +3196,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
         /* 描く向きは、兵が持っている角を目盛りへ直してそのまま渡す（小数のまま）。
            出どころの選び替えは 新絵状態を進める で済んでいる。型紙を貼るときだけ
            丸める――丸めるのは貼る都合であって、姿を決める筋ではない。 */
-        let fr = 0, dir = s.描[n] / (Math.PI / 8);
+        let fr = 0, dir = s.描[n] / (Math.PI / 8) + 回目;
         const 場 = q.type === "kiba" ? 馬持場 : 持場;
         const 歩速 = s.速[n];
         /* 働きの順（GDD 8.11）。
@@ -3244,7 +3251,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       if (n === 0) { 並.push({ wx, wy, 地y: wy + 0.1, 将: { c, 側 } }); continue; }
       if (n === 1) { 並.push({ wx, wy, 地y: wy + 0.08, 旗持: { c, 側 } }); continue; }
       /* 馬廻。一騎ずつ家の色の指物を立てるので、遠目にも「旗の群れ」として読める */
-      const 進 = Math.round(((t.描[n] / (Math.PI / 8)) % 16 + 16) % 16) % 16;
+      const 進 = Math.round(((t.描[n] / (Math.PI / 8) + 回目) % 16 + 16) % 16) % 16;
       let fr = 0;
       if (t.速[n] > 2.5) { const w = (t.歩距[n] / 14) % 1; fr = 1 + (w < 0.5 ? 0 : 1); }
       並.push({ wx, wy, 地y: wy, 側, 型: "kiba", dir: 進, fr, 直: null,
@@ -3252,9 +3259,12 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       並.push({ wx, wy, 地y: wy + 0.05, 指: 側 });
     }
   }
-  並.sort((a, z) => a.地y - z.地y);
+  /* 奥から手前へ。並べる鍵は回した眺めの縦（地y の小さなずれは重ねの順の加減） */
+  for (const p of 並) { const [vx, vy] = 視(p.wx, p.wy); p.vx = vx; p.鍵 = vy + (p.地y - p.wy); }
+  並.sort((a, z) => a.鍵 - z.鍵);
   for (const p of 並) {
     const y = 画の縦(p.wx, p.wy);
+    p.wx = p.vx;                                   // ここから先は画の横で描く
     if (p.指) {                                    // 馬廻の指物
       const K2 = 具側[p.指];
       ctx.strokeStyle = "#3A2C1A"; ctx.lineWidth = 0.1;

@@ -64,16 +64,109 @@ export function 地の丈(x, y) {
 // 画の上での持ち上げ（歩）。平らな所でも、うねりの分だけわずかに動く。
 export const 浮き = (x, y) => (斜め.入 ? 地の丈(x, y) * 斜め.持ち上げ : 0);
 
-/* 画の縦。盤の（x, y）を、斜めの眺めの縦の位置へ写す（歩の単位のまま）。 */
-export const 画の縦 = (x, y) => y * 縦の縮み() - 浮き(x, y);
+/* ---- 向き（GDD 8.10）----
 
-/* 画の上の所から、盤の所を求める（押した所を盤へ戻す）。
+   遊ぶ側の申し出は「山の向こう側をどう見えるようにするか。マップを回せるように
+   して奥も見えるようにするのか」であった。盤を九十度ずつ回して眺める。
+     0 … 南から北を見る（いつもの向き）
+     1 … 西から東を見る
+     2 … 北から南を見る
+     3 … 東から西を見る
+   盤の理（隊の居場所・向き）は回さない。絵を描くときだけ、盤の所を「視」の所へ写す。
+   視の所は、回した盤を真上から見たときの所（横 vx・縦 vy）である。 */
+let 向き = 0;
+let 野 = { w: 1, h: 1 };
+export function 向きを据える(r, w, h) { 向き = ((r % 4) + 4) % 4; 野 = { w, h }; return 向き; }
+export const 今の向き = () => 向き;
+export const 向きの角 = () => 向き * Math.PI / 2;
+// 回した盤の寸法
+export const 視の寸 = () => (向き % 2 ? { w: 野.h, h: 野.w } : { w: 野.w, h: 野.h });
+// 盤の所 → 視の所
+export function 視(x, y) {
+  switch (向き) {
+    case 1: return [野.h - y, x];
+    case 2: return [野.w - x, 野.h - y];
+    case 3: return [y, 野.w - x];
+    default: return [x, y];
+  }
+}
+// 視の所 → 盤の所
+export function 視から盤(vx, vy) {
+  switch (向き) {
+    case 1: return [vy, 野.h - vx];
+    case 2: return [野.w - vx, 野.h - vy];
+    case 3: return [野.w - vy, vx];
+    default: return [vx, vy];
+  }
+}
+/* 筆を回す。傾けた筆（scale(s, s×縮)）のあとに掛けると、盤の所のまま描いたものが
+   回した眺めに写る（地・枠・跡のように地べたに貼るもの）。 */
+const 回しの式 = () => [[1, 0, 0, 1, 0, 0], [0, 1, -1, 0, 野.h, 0], [-1, 0, 0, -1, 野.w, 野.h], [0, -1, 1, 0, 0, 野.w]][向き];
+export function 盤の筆を回す(ctx) { if (向き) ctx.transform(...回しの式()); }
+// 回した筆を、視の所で描く筆へ戻す（立つもの・斜めに焼いた地を描くとき）
+export function 視の筆へ(ctx) {
+  if (!向き) return;
+  const [a, b, c, d, e, f] = 回しの式();
+  const det = a * d - b * c;
+  ctx.transform(d / det, -b / det, -c / det, a / det, (c * f - d * e) / det, (b * e - a * f) / det);
+}
+/* 地の高さぶんの持ち上げを、回して傾けた筆の上のずれ（盤の歩）で返す。
+   画面の上へ持ち上げる向きは、回し方によって盤の上では東西にも南北にもなる。 */
+export function 揚げ(x, y) {
+  const L = 浮き(x, y) / 縦の縮み();
+  if (!L) return [0, 0];
+  switch (向き) {
+    case 1: return [-L, 0];
+    case 2: return [0, L];
+    case 3: return [L, 0];
+    default: return [0, -L];
+  }
+}
+
+/* ---- 地の札 ----
+   地に焼いていた字（峰・村・渡し・曲輪・門・堀の名）。地と一緒に回すと、北から
+   見れば逆さ、東西からは横倒しになって読めない。焼くときは控えるだけにして、
+   描くたびに画面に向けて立てる。控えていないとき（旧い絵）はその場で書く。 */
+export const 地の札 = { 野: [], 城: [] };
+let 札の控え = null;
+export function 札を控える(先) { 先.length = 0; 札の控え = 先; }
+export function 札を控え止める() { 札の控え = null; }
+// 筆の今の書体・色のまま字を置く。縁 を立てれば縁取りもする
+export function 地の字(g, s, x, y, 縁) {
+  if (札の控え) {
+    札の控え.push({ s, x, y, font: typeof g.font === "string" ? g.font : "13px serif", align: g.textAlign || "start", lw: g.lineWidth, st: g.strokeStyle, fi: g.fillStyle, 縁 });
+    return;
+  }
+  if (縁) g.strokeText(s, x, y);
+  g.fillText(s, x, y);
+}
+
+/* 画の所。盤の（x, y）を、斜めの眺めの横と縦（歩の単位のまま）へ写す。 */
+export const 画の横 = (x, y) => 視(x, y)[0];
+export const 画の縦 = (x, y) => 視(x, y)[1] * 縦の縮み() - 浮き(x, y);
+
+/* 画の上の所（視の横 vx・画の縦）から、盤の所を求める（押した所を盤へ戻す）。
    持ち上げは盤の所しだいなので、二、三度回して寄せる。 */
-export function 盤へ戻す(x, 画y) {
+export function 盤へ戻す(vx, 画y) {
   const k = 縦の縮み();
-  let y = 画y / k;
-  for (let i = 0; i < 4; i++) y = (画y + 浮き(x, y)) / k;
-  return y;
+  let vy = 画y / k;
+  for (let i = 0; i < 4; i++) { const [x, y] = 視から盤(vx, vy); vy = (画y + 浮き(x, y)) / k; }
+  const [x, y] = 視から盤(vx, vy);
+  return { x, y };
+}
+
+/* 見えている盤の範囲（盤の所の外枠）。画面の四隅を盤へ戻して囲む。 */
+export function 見える範囲(cam, W, H, 余 = 0) {
+  const k = 縦の縮み();
+  const [cvx, cvy] = 視(cam.x, cam.y);
+  const vx0 = cvx - W / 2 / cam.s - 余, vx1 = cvx + W / 2 / cam.s + 余;
+  const vy0 = cvy - H / 2 / (cam.s * k) - 余, vy1 = cvy + H / 2 / (cam.s * k) + 余 + 揚げ代();
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const [vx, vy] of [[vx0, vy0], [vx1, vy0], [vx0, vy1], [vx1, vy1]]) {
+    const [x, y] = 視から盤(vx, vy);
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  return { x0, x1, y0, y1 };
 }
 
 /* ---- 地を斜めに焼く ----
@@ -84,10 +177,21 @@ export function 盤へ戻す(x, 画y) {
 
    返す 上 は、画布の上の端より上へせり出した分（歩）である。貼るときは
    （0, −上）から、縦 src高×傾き＋上 の大きさで貼る。 */
-export function 斜めに焼く(src, 野w, 野h) {
+export function 斜めに焼く(src0, 野w, 野h) {
   const k = 縦の縮み();
+  const 倍 = src0.width / 野w;                        // 画素あたりの歩の逆
+  /* 回した眺めでは、真上の地をまず回して写す（九十度ずつなので画素は崩れない） */
+  let src = src0;
+  if (向き) {
+    const 寸 = 視の寸();
+    src = document.createElement("canvas");
+    src.width = Math.round(寸.w * 倍); src.height = Math.round(寸.h * 倍);
+    const g = src.getContext("2d");
+    const [a, b, c, d, e, f] = 回しの式();
+    g.setTransform(a, b, c, d, e * 倍, f * 倍);
+    g.drawImage(src0, 0, 0);
+  }
   const sw = src.width, sh = src.height;
-  const 倍 = sw / 野w;                                // 画素あたりの歩の逆
   // せり出しの最大を測る
   let 最 = 0;
   if (図) for (let i = 0; i < 図.高.length; i++) { const v = 図.高[i] * 図.丈単; if (v > 最) 最 = v; }
@@ -97,15 +201,17 @@ export function 斜めに焼く(src, 野w, 野h) {
   const out = document.createElement("canvas");
   out.width = sw; out.height = dh;
   const sctx = src.getContext("2d");
-  const sd = sctx.getImageData(0, 0, sw, sh).data;
+  const 画素 = sctx.getImageData(0, 0, sw, sh);
+  const sd = 画素 && 画素.data;
+  if (!sd) return { 画: null, 上: 0, 縦: 0, 横: 0 };   // 画素を読めぬ場（試しの画面など）では焼かず、真上の地を貼る
   const og = out.getContext("2d");
   const od = og.createImageData(sw, dh);
   const o = od.data;
   // 行ごとの持ち上げ（画素）。列ごとに同じ表を使い回さぬよう、列の中で引く
   const 丈px = new Float32Array(sh);
   for (let x = 0; x < sw; x++) {
-    const wx = (x + 0.5) / 倍;
-    for (let y = 0; y < sh; y++) 丈px[y] = 浮き(wx, (y + 0.5) / 倍) * 倍;
+    const vx = (x + 0.5) / 倍;
+    for (let y = 0; y < sh; y++) { const [wx, wy] = 視から盤(vx, (y + 0.5) / 倍); 丈px[y] = 浮き(wx, wy) * 倍; }
     let 頂 = dh;                                      // まだ塗っていない一番下の行の一つ下
     let pr = -1, pg = 0, pb = 0;                      // 一つ手前に塗った行の色
     for (let y = sh - 1; y >= 0; y--) {
@@ -133,7 +239,7 @@ export function 斜めに焼く(src, 野w, 野h) {
     }
   }
   og.putImageData(od, 0, 0);
-  return { 画: out, 上, 縦: dh / 倍 };
+  return { 画: out, 上, 縦: dh / 倍, 横: sw / 倍 };
 }
 
 /* 見えている盤の縦の範囲を量るときの余り（歩）。丘の上の者は持ち上がって、

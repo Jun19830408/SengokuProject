@@ -4,7 +4,7 @@ import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, m
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限 } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
-import { 縦の縮み, 盤へ戻す, 斜めに焼く, 高さ図があるか, 視点を読む, 視点を替える, 斜め } from "../battle/naname.js";
+import { 縦の縮み, 盤へ戻す, 斜めに焼く, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸 } from "../battle/naname.js";
 import { ARM_STATS, BASE, FIELD, MOUNTAINS, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
@@ -18,6 +18,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
   /* 斜めの眺め（battle/naname.js）。地を焼き直すたびに版を上げ、斜めの地を焼き直す */
   const 地版Ref = useRef(0), 斜め地Ref = useRef(null);
   const [視点, set視点] = useState(() => 視点を読む());
+  /* 盤の向き（naname.js 向き）。九十度ずつ回して、山の向こう側も見えるようにする。
+     合戦ごとに南からの眺めで始める。 */
+  const 向きRef = useRef(向きを据える(0, FIELD.w, FIELD.h));
   const [, force] = useState(0);
   const [sel, setSel] = useState(null);
   const [speed, setSpeedState] = useState(0);
@@ -305,9 +308,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
         if (跡Ref.current) 跡を焼き足す(跡Ref.current.getContext("2d"), b, Math.min(0.5, 画布の倍()));
         /* 斜めの地。高さの図がある野だけ焼き直す（溶暗の最中は待つ） */
         let 斜め地 = null;
+        向きを据える(向きRef.current, FIELD.w, FIELD.h);     // 野の寸法は戦ごとに違うので、毎コマ据え直す
         if (縦の縮み() < 1 && 高さ図があるか()) {
           const 焼2 = 焼きRef.current;
-          const 版 = 地版Ref.current + (斜め.入 ? 0.5 : 0);
+          const 版 = `${地版Ref.current}:${斜め.入 ? 1 : 0}:${向きRef.current}`;
           if ((!斜め地Ref.current || 斜め地Ref.current.版 !== 版) && !(焼2 && 焼2.済)) {
             const 焼t0 = performance.now();
             斜め地Ref.current = { ...斜めに焼く(terrainRef.current, FIELD.w, FIELD.h), 版 };
@@ -339,9 +343,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const wrap = wrapRef.current, r = wrap.getBoundingClientRect();
     const cam = camRef.current;
     /* 斜めの眺めでは、画の縦から盤の縦へ戻す（地の持ち上げも解く） */
-    const x = (clientX - r.left - r.width / 2) / cam.s + cam.x;
-    const 画y = (clientY - r.top - r.height / 2) / cam.s + cam.y * 縦の縮み();
-    return { x, y: 盤へ戻す(x, 画y) };
+    /* 盤を回した眺めでは、画の横・縦は回した野の上の所。盤の所へ戻す */
+    const [cvx, cvy] = 視(cam.x, cam.y);
+    const vx = (clientX - r.left - r.width / 2) / cam.s + cvx;
+    const 画y = (clientY - r.top - r.height / 2) / cam.s + cvy * 縦の縮み();
+    return 盤へ戻す(vx, 画y);
   };
   /* 縮められる限りは、盤の広さで決める。
 
@@ -354,7 +360,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const 縮みの限り = () => {
     const w = wrapRef.current;
     if (!w || !w.clientWidth) return 0.25;
-    const 収まる = Math.min(w.clientWidth / FIELD.w, w.clientHeight / (FIELD.h * 縦の縮み()));
+    const 寸 = 視の寸();
+    const 収まる = Math.min(w.clientWidth / 寸.w, w.clientHeight / (寸.h * 縦の縮み()));
     return Math.min(0.25, 収まる * 0.9);
   };
   const zoomAt = (k, clientX, clientY) => {
@@ -386,6 +393,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       : (c.squads || []).filter((q) => q.engaged && q.men > 0).length), 0);
     /* 名のある隊の将の只中へ寄る。新しい絵（将と馬廻）を撮って検めるために使う。 */
     /* 写しを撮るための取っ手。カメラを盤の所へ据える（斜めの眺めの確かめに使う） */
+    window.__向き = (r) => { 向きRef.current = 向きを据える(r, FIELD.w, FIELD.h); force((n) => (n + 1) % 1000); return 向きRef.current; };
     window.__カメラ = (x, y, 倍) => {
       const cam = camRef.current;
       cam.x = x; cam.y = y; cam.s = clamp(倍, 縮みの限り(), 寄りの限り());
@@ -451,7 +459,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       return { 隊: 生.length, 噛み合い: 点.length, x: Math.round(cx), y: Math.round(cy), s: cam.s };
     };
     return () => {
-      try { delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; delete window.__カメラ; } catch (e) { /* よい */ }
+      try { delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; delete window.__カメラ; delete window.__向き; } catch (e) { /* よい */ }
     };
   }, [b]);
 
@@ -459,7 +467,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const w = wrapRef.current;
     const cam = camRef.current;
     cam.x = FIELD.w / 2; cam.y = FIELD.h / 2;
-    if (w) cam.s = clamp(Math.min(w.clientWidth / FIELD.w, w.clientHeight / (FIELD.h * 縦の縮み())) * 0.98, 縮みの限り(), 寄りの限り());
+    const 寸 = 視の寸();
+    if (w) cam.s = clamp(Math.min(w.clientWidth / 寸.w, w.clientHeight / (寸.h * 縦の縮み())) * 0.98, 縮みの限り(), 寄りの限り());
     force((n) => (n + 1) % 1000);
   };
   // 隊のどこを押しても選べるようにする。50人組の広がりと、頭上の武将名の札を当たり判定にする。
@@ -520,8 +529,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
     g.moved = Math.max(g.moved, Math.hypot(p.clientX - g.sx, p.clientY - g.sy));
     if (g.mode === "camera") {
       const cam = camRef.current;
-      cam.x = g.camX - (p.clientX - g.sx) / cam.s;
-      cam.y = g.camY - (p.clientY - g.sy) / (cam.s * 縦の縮み());
+      /* 引いた分だけ、回した眺めの上で動かしてから盤の所へ戻す */
+      const [vx, vy] = 視(g.camX, g.camY);
+      const [x, y] = 視から盤(vx - (p.clientX - g.sx) / cam.s, vy - (p.clientY - g.sy) / (cam.s * 縦の縮み()));
+      cam.x = x; cam.y = y;
     }
   };
   const orderTo = (c, f, foe) => {
@@ -1568,6 +1579,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 斜め地Ref.current = null;
                 force((n) => (n + 1) % 1000);
               }}><b>{視点 ? "◇" : "□"}</b>{視点 ? "斜め" : "真上"}</div>
+              {/* 盤を九十度ずつ回す。真ん中に映る所はそのまま */}
+              <div className="mbtn" onClick={() => {
+                向きRef.current = 向きを据える(向きRef.current + 1, FIELD.w, FIELD.h);
+                force((n) => (n + 1) % 1000);
+              }}><b>↻</b>{["南から", "西から", "北から", "東から"][向きRef.current]}</div>
             </div>
             {wide && (
               <div className="grip l" title="道具立てを戻す"
