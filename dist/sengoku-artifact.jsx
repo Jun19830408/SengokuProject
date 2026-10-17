@@ -17803,6 +17803,82 @@ function DaimyoSelect({
   )))), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: U.dim, lineHeight: 1.7, borderTop: `1px solid ${U.line2}`, paddingTop: 12, marginTop: 8 } }, "\u5BB6\u540D\u3092\u62BC\u3059\u3068\u8A73\u3057\u3044\u69D8\u5B50\u304C\u51FA\u307E\u3059\u3002\u9078\u3070\u306A\u304B\u3063\u305F\u5BB6\u306F\u3059\u3079\u3066AI\u304C\u62C5\u5F53\u3057\u307E\u3059\u3002"))));
 }
 
+// src/data/tenshu.js
+var \u5929\u5B88\u306E\u8868 = [
+  // ── 畿内・近江
+  { id: "tamonyama", \u81EA: 1567, \u81F3: 1577, \u91CD: 4, \u78BA: "\u78BA\u5B9F", \u5178: "\u591A\u805E\u9662\u65E5\u8A18\uFF08\u30B3\u30C8\u30D0\u30F3\u30AF\u300C\u591A\u805E\u5C71\u57CE\u300D\uFF09\u3002\u56DB\u968E\u6AD3\u3002\u5E74\u306F\u4E00\u4E94\u516D\u3007\u5E74\u4EE3\u3068\u3057\u304B\u5206\u304B\u3089\u306C\u306E\u3067\u4E00\u4E94\u516D\u4E03\u3068\u3057\u305F" },
+  { id: "sakamoto", \u81EA: 1573, \u81F3: 1582, \u91CD: 3, \u78BA: "\u78BA\u5B9F", \u5178: "\u517C\u898B\u537F\u8A18 \u5143\u4E80\u4E09\u5E74\u5341\u4E8C\u6708\u4E8C\u5341\u56DB\u65E5\u6761\uFF08\u5927\u6D25\u5E02\u306E\u8CC7\u6599\uFF09\u3002\u91CD\u306E\u6570\u306F\u4E0D\u660E" },
+  { id: "sakamoto", \u81EA: 1586, \u81F3: 1601, \u91CD: 4, \u78BA: "\u6709\u529B", \u5178: "\u5927\u6D25\u57CE\uFF08\u6ECB\u8CC0\u770C\u306E\u8CC7\u6599\uFF09\u3002\u56DB\u91CD\u4E94\u968E" },
+  { id: "kannonji", \u81EA: 1579, \u81F3: 1582, \u91CD: 5, \u78BA: "\u78BA\u5B9F", \u5178: "\u5B89\u571F\u57CE\u5929\u4E3B\uFF08\u6ECB\u8CC0\u770C\uFF09\u3002\u4E94\u91CD\u4E03\u968E\u306F\u901A\u8AAC" },
+  { id: "ishiyama", \u81EA: 1585, \u81F3: 1615, \u91CD: 5, \u78BA: "\u78BA\u5B9F", \u5178: "\u5927\u5742\u57CE\uFF08\u5927\u962A\u5E02\u306E\u8CC7\u6599\uFF09" },
+  { id: "koriyama", \u81EA: 1585, \u91CD: 4, \u78BA: "\u6709\u529B", \u5178: "\u5927\u548C\u90E1\u5C71\u57CE\uFF08\u795E\u5948\u5DDD\u5927\u5B66\u306E\u8CC7\u6599\u3002\u4E8C\u3007\u4E00\u56DB\u5E74\u306E\u767A\u6398\u3067\u5929\u5B88\u306E\u790E\u77F3\uFF09" },
+  { id: "takatori", \u81EA: 1589, \u91CD: 3, \u78BA: "\u6709\u529B", \u5178: "\u9AD8\u53D6\u57CE\uFF08\u5948\u826F\u770C\u306E\u8CC7\u6599\uFF09" },
+  { id: "ueno_iga", \u81EA: 1586, \u81F3: 1612, \u91CD: 3, \u78BA: "\u6709\u529B", \u5178: "\u4F0A\u8CC0\u4E0A\u91CE\u57CE\uFF08\u4F0A\u8CC0\u5E02\u306E\u8CC7\u6599\uFF09\u3002\u7B52\u4E95\u671F\u306E\u5929\u5B88\u3002\u91CD\u306E\u6570\u306F\u4E0D\u660E" },
+  { id: "kishiwada", \u81EA: 1597, \u91CD: 5, \u78BA: "\u6709\u529B", \u5178: "\u5CB8\u548C\u7530\u57CE\uFF08\u5927\u962A\u5E9C\u306E\u8CC7\u6599\u30FB\u6B63\u4FDD\u57CE\u7D75\u56F3\uFF09" },
+  { id: "sawayama", \u81EA: 1607, \u91CD: 3, \u78BA: "\u78BA\u5B9F", \u5178: "\u5F66\u6839\u57CE\uFF08\u6ECB\u8CC0\u770C\u306E\u8CC7\u6599\uFF09\u3002\u4F50\u548C\u5C71\u306E\u6B04\u306F\u4E00\u516D\u3007\u4E09\u5E74\u304B\u3089\u5F66\u6839\u57CE" },
+  // ── 東海・甲信・関東
+  { id: "nagoya", \u81EA: 1612, \u91CD: 5, \u78BA: "\u78BA\u5B9F", \u5178: "\u540D\u53E4\u5C4B\u57CE\uFF08\u30B3\u30C8\u30D0\u30F3\u30AF\uFF09" },
+  { id: "inuyama", \u81EA: 1590, \u91CD: 3, \u78BA: "\u6709\u529B", \u5178: "\u72AC\u5C71\u57CE\uFF08\u72AC\u5C71\u5E02\u306E\u8CC7\u6599\u30FB\u5E74\u8F2A\u5E74\u4EE3\uFF09" },
+  { id: "kuwana", \u81EA: 1601, \u91CD: 4, \u78BA: "\u6709\u529B", \u5178: "\u6851\u540D\u57CE\uFF08\u4E09\u91CD\u770C\u306E\u8CC7\u6599\uFF09\u3002\u56DB\u91CD\u516D\u968E" },
+  { id: "toba", \u81EA: 1595, \u91CD: 3, \u78BA: "\u6709\u529B", \u5178: "\u9CE5\u7FBD\u57CE\uFF08\u9CE5\u7FBD\u5E02\u306E\u8CC7\u6599\u30FB\u4E09\u6D66\u6B63\u5E78\u7814\u7A76\u5BA4\u306E\u5FA9\u5143\uFF09" },
+  { id: "sunpu", \u81EA: 1590, \u81F3: 1607, \u91CD: 3, \u78BA: "\u6709\u529B", \u5178: "\u99FF\u5E9C\u57CE \u5929\u6B63\u671F\uFF08\u9759\u5CA1\u5E02\u3002\u4E2D\u6751\u4E00\u6C0F\u671F\u306E\u91D1\u7B94\u74E6\uFF09\u3002\u91CD\u306E\u6570\u306F\u4E0D\u660E" },
+  { id: "sunpu", \u81EA: 1610, \u91CD: 5, \u78BA: "\u78BA\u5B9F", \u5178: "\u99FF\u5E9C\u57CE \u6176\u9577\u671F\uFF08\u9759\u5CA1\u5E02\uFF09\u3002\u91CD\u306E\u6570\u306F\u672A\u78BA\u8A8D" },
+  { id: "hikuma", \u81EA: 1600, \u91CD: 3, \u78BA: "\u6709\u529B", \u5178: "\u6D5C\u677E\u57CE\uFF08\u6D5C\u677E\u5E02\uFF09\u3002\u5800\u5C3E\u5409\u6674\u671F\u3002\u91CD\u306E\u6570\u3068\u5931\u308F\u308C\u305F\u5E74\u306F\u4E0D\u660E" },
+  { id: "fukashi", \u81EA: 1594, \u91CD: 5, \u78BA: "\u78BA\u5B9F", \u5178: "\u677E\u672C\u57CE\uFF08\u56FD\u571F\u4EA4\u901A\u7701\u306E\u89E3\u8AAC\u6587\uFF09\u3002\u4E94\u91CD\u516D\u968E" },
+  { id: "edo", \u81EA: 1607, \u91CD: 5, \u78BA: "\u78BA\u5B9F", \u5178: "\u6C5F\u6238\u57CE \u6176\u9577\u5EA6\u5929\u5B88\uFF08\u5343\u4EE3\u7530\u533A\u30FB\u74B0\u5883\u7701\u306E\u8CC7\u6599\uFF09" },
+  { id: "numata", \u81EA: 1597, \u91CD: 5, \u78BA: "\u6709\u529B", \u5178: "\u6CBC\u7530\u57CE\uFF08\u53F2\u8DE1\u306E\u8ABF\u67FB\u5831\u544A\u66F8\uFF09" },
+  { id: "matsukura_h", \u81EA: 1603, \u91CD: 3, \u78BA: "\u6709\u529B", \u5178: "\u9AD8\u5C71\u57CE\uFF08\u5C90\u961C\u770C\u3002\u5929\u5B88\u306E\u790E\u77F3\u304C\u6B8B\u308B\uFF09\u3002\u91CD\u306E\u6570\u306F\u4E0D\u660E" },
+  // ── 北陸
+  { id: "kitanosho", \u81EA: 1576, \u81F3: 1583, \u91CD: 5, \u78BA: "\u6709\u529B", \u5178: "\u5317\u30CE\u5E84\u57CE\uFF08\u798F\u4E95\u5E02\u306E\u50AC\u3057\u306E\u9801\u3002\u4E5D\u91CD\u30FB\u4E03\u91CD\u306E\u8AAC\uFF09\u3002\u4E94\u91CD\u3067\u63CF\u304F" },
+  { id: "kanazawa", \u81EA: 1586, \u81F3: 1602, \u91CD: 3, \u78BA: "\u6709\u529B", \u5178: "\u91D1\u6CA2\u57CE\uFF08\u77F3\u5DDD\u770C\u306E\u5E74\u8868\uFF09\u3002\u4E00\u516D\u3007\u4E8C\u5E74\u306B\u843D\u96F7\u3067\u713C\u5931" },
+  // ── 中国・四国・九州
+  { id: "himeji", \u81EA: 1581, \u81F3: 1601, \u91CD: 3, \u78BA: "\u78BA\u5B9F", \u5178: "\u59EB\u8DEF\u57CE \u79C0\u5409\u306E\u5929\u5B88\uFF08\u677E\u6C5F\u5E02\u30FB\u56FD\u571F\u4EA4\u901A\u7701\u306E\u8CC7\u6599\uFF09\u3002\u4E09\u968E" },
+  { id: "himeji", \u81EA: 1609, \u91CD: 5, \u78BA: "\u78BA\u5B9F", \u5178: "\u59EB\u8DEF\u57CE \u6C60\u7530\u8F1D\u653F\u306E\u5927\u5929\u5B88\uFF08\u540C\uFF09\u3002\u4E94\u91CD\u516D\u968E\u5730\u4E0B\u4E00\u968E" },
+  { id: "ishiyama_bz", \u81EA: 1597, \u91CD: 3, \u78BA: "\u78BA\u5B9F", \u5178: "\u5CA1\u5C71\u57CE\uFF08\u5CA1\u5C71\u5E02\uFF09\u3002\u91CD\u306E\u6570\u306F\u672A\u78BA\u8A8D" },
+  { id: "kanayama_a", \u81EA: 1599, \u91CD: 5, \u78BA: "\u6709\u529B", \u5178: "\u5E83\u5CF6\u57CE\uFF08\u5E83\u5CF6\u5E02\u306E\u8CC7\u6599\uFF09\u3002\u9280\u5C71\u306E\u6B04\u306F\u5E83\u5CF6\u57CE\u3002\u5E74\u306F\u4E00\u4E94\u4E5D\u4E8C\u301C\u4E5D\u4E5D\u5E74\u3067\u5B9A\u307E\u3089\u306A\u3044" },
+  { id: "shiraga", \u81EA: 1611, \u91CD: 4, \u78BA: "\u78BA\u5B9F", \u5178: "\u677E\u6C5F\u57CE\uFF08\u6587\u5316\u907A\u7523\u30AA\u30F3\u30E9\u30A4\u30F3\u30FB\u6176\u9577\u5341\u516D\u5E74\u306E\u7948\u7977\u672D\uFF09\u3002\u767D\u9E7F\u306E\u6B04\u306F\u677E\u6C5F\u57CE" },
+  { id: "yonago", \u81EA: 1602, \u91CD: 4, \u78BA: "\u6709\u529B", \u5178: "\u7C73\u5B50\u57CE\uFF08\u7C73\u5B50\u5E02\u306E\u8CC7\u6599\uFF09\u3002\u56DB\u91CD\u4E94\u968E\u3002\u5409\u5DDD\u671F\u306E\u56DB\u91CD\u6AD3\u306F\u89E3\u91C8\u304C\u5206\u304B\u308C\u308B\u306E\u3067\u8F09\u305B\u306A\u3044" },
+  { id: "sumoto", \u81EA: 1586, \u91CD: 3, \u78BA: "\u6709\u529B", \u5178: "\u6D32\u672C\u57CE\uFF08\u6587\u5316\u907A\u7523\u30AA\u30F3\u30E9\u30A4\u30F3\u3002\u5929\u5B88\u53F0\u3042\u308A\uFF09\u3002\u91CD\u306E\u6570\u306F\u4E0D\u660E" },
+  { id: "kokura", \u81EA: 1602, \u91CD: 4, \u78BA: "\u78BA\u5B9F", \u5178: "\u5C0F\u5009\u57CE\uFF08\u5317\u4E5D\u5DDE\u5E02\uFF09\u3002\u5B8C\u6210\u306E\u5E74\u306F\u8AF8\u8AAC" },
+  { id: "kumamoto", \u81EA: 1607, \u91CD: 3, \u78BA: "\u78BA\u5B9F", \u5178: "\u718A\u672C\u57CE\uFF08\u718A\u672C\u5E02\u306E\u8CC7\u6599\uFF09\u3002\u91CD\u306E\u6570\u306F\u672A\u78BA\u8A8D" },
+  /* 大きな本拠でありながら天守の記録の無い城。その家が持つあいだは、二で立てない */
+  { id: "odawara", \u7121\u3057: true, \u5BB6: "hojo" },
+  { id: "kasugayama", \u7121\u3057: true, \u5BB6: "nagao" },
+  { id: "koriyama_a", \u7121\u3057: true, \u5BB6: "mori" },
+  { id: "okou", \u7121\u3057: true, \u5BB6: "chosokabe" },
+  { id: "uchijo", \u7121\u3057: true, \u5BB6: "shimazu" },
+  { id: "yonezawa", \u7121\u3057: true, \u5BB6: "date" },
+  { id: "yamagata", \u7121\u3057: true, \u5BB6: "mogami" },
+  { id: "ichijodani", \u7121\u3057: true, \u5BB6: "asakura" },
+  { id: "tsutsujigasaki", \u7121\u3057: true, \u5BB6: "takeda" },
+  { id: "gassan", \u7121\u3057: true, \u5BB6: "amago" },
+  { id: "funai", \u7121\u3057: true, \u5BB6: "otomo" }
+];
+var \u5927\u304D\u306A\u5BB6\u306E\u77F3\u9AD8 = 5e5;
+var \u5929\u5B88\u306E\u4E16 = 1576;
+function \u8868\u3067\u5F15\u304F(id, \u5E74, \u6301\u3061\u4E3B) {
+  const \u3089 = \u5929\u5B88\u306E\u8868.filter((x) => x.id === id);
+  if (!\u3089.length) return void 0;
+  const \u4ECA = \u3089.find((x) => !x.\u7121\u3057 && x.\u81EA <= \u5E74 && (x.\u81F3 == null || \u5E74 < x.\u81F3));
+  if (\u4ECA) return \u4ECA;
+  const \u53F2\u306E\u5929\u5B88 = \u3089.some((x) => !x.\u7121\u3057);
+  if (\u53F2\u306E\u5929\u5B88) return null;
+  return \u3089.some((x) => x.\u7121\u3057 && x.\u5BB6 === \u6301\u3061\u4E3B) ? null : void 0;
+}
+function \u5929\u5B88\u3092\u898B\u308B(s2, castle) {
+  if (!castle) return null;
+  const \u5E74 = s2 && s2.year || 1546;
+  const \u53F2 = \u8868\u3067\u5F15\u304F(castle.id, \u5E74, castle.faction);
+  if (\u53F2) return { \u91CD: \u53F2.\u91CD || 3, \u53F2\u5B9F: true, \u78BA: \u53F2.\u78BA || "", \u5178: \u53F2.\u5178 || "" };
+  if (\u53F2 === null) return null;
+  if (\u5E74 < \u5929\u5B88\u306E\u4E16 || !s2 || !castle.faction) return null;
+  const \u5BB6 = (s2.factions || {})[castle.faction];
+  if (!\u5BB6 || \u5BB6.\u672C\u62E0 !== castle.id) return null;
+  const \u77F3 = \u5BB6\u306E\u77F3\u9AD8(s2, castle.faction);
+  if (\u77F3 < \u5927\u304D\u306A\u5BB6\u306E\u77F3\u9AD8) return null;
+  return { \u91CD: \u77F3 >= 15e5 ? 5 : \u77F3 >= 1e6 ? 4 : 3, \u53F2\u5B9F: false };
+}
+
 // src/core/capture.js
 var CAPTURE_BASE = 0.06;
 function captureChance(gen) {
@@ -30809,6 +30885,56 @@ function \u5840(x0, y0, x1, y1, \u4E08) {
     ctx.fillRect(v.x0 - 0.8, v.y0 * k - L - \u4E08 - 1.6, v.x1 - v.x0 + 1.6, 0.8);
   } };
 }
+function \u5929\u5B88\u306E\u7F6E\u304D\u5834(m) {
+  if (!m || !m.\u5929\u5B88 || !m.layers || !m.layers.length) return null;
+  const l = m.layers[m.layers.length - 1];
+  const lx = m.cx + (l.ox || 0), ly = m.cy + (l.oy || 0);
+  const \u534A = Math.min(l.hw, l.hh) * 0.26;
+  return { x: lx + l.hw * 0.02, y: ly - l.hh * 0.55, \u534A, \u91CD: Math.max(1, Math.min(5, m.\u5929\u5B88.\u91CD || 3)) };
+}
+function \u5929\u5B88(p) {
+  const v\u53F0 = \u8996\u306E\u77E9(p.x - p.\u534A, p.y - p.\u534A, p.x + p.\u534A, p.y + p.\u534A);
+  return { \u9375: v\u53F0.y1 + 0.02, \u63CF: (ctx, k) => {
+    const L0 = \u8DB3\u5143(p.x - p.\u534A, p.y - p.\u534A, p.x + p.\u534A, p.y + p.\u534A);
+    const \u53F0\u4E08 = p.\u534A * 0.42;
+    \u7BB1(ctx, k, v\u53F0, L0, \u53F0\u4E08, "#A39C8C", null, (x, y, w, h) => {
+      ctx.strokeStyle = "rgba(80,76,66,0.45)";
+      ctx.lineWidth = 0.5;
+      for (let u = 3; u < h; u += 3) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + u);
+        ctx.lineTo(x + w, y + u);
+        ctx.stroke();
+      }
+    });
+    let L = L0 + \u53F0\u4E08, \u534A = p.\u534A * 0.94;
+    const \u91CD\u4E08 = p.\u534A * (p.\u91CD >= 4 ? 0.36 : 0.44);
+    for (let i = 0; i < p.\u91CD; i++) {
+      const \u4E0A = i === p.\u91CD - 1;
+      const v = \u8996\u306E\u77E9(p.x - \u534A, p.y - \u534A, p.x + \u534A, p.y + \u534A);
+      \u7BB1(ctx, k, v, L, \u91CD\u4E08, \u767D\u58C1, null, (x, y, w, h) => {
+        ctx.fillStyle = "rgba(40,36,30,0.78)";
+        const n = Math.max(2, Math.round(w / 8));
+        for (let j = 0; j < n; j++) ctx.fillRect(x + (j + 0.35) * w / n, y + h * 0.3, Math.min(2.4, w / n * 0.4), h * 0.3);
+        if (i === 0) {
+          ctx.fillStyle = \u8170\u677F;
+          ctx.fillRect(x, y + h * 0.72, w, h * 0.28);
+        }
+        ctx.fillStyle = "rgba(0,0,0,0.08)";
+        ctx.fillRect(x + w * 0.55, y, w * 0.45, h);
+      });
+      L += \u91CD\u4E08;
+      \u5C4B\u6839(ctx, k, v, L, \u4E0A ? \u534A * 0.75 : \u534A * 0.3, \u534A * (\u4E0A ? 0.2 : 0.16), \u74E6);
+      if (\u4E0A) {
+        const cx = (v.x0 + v.x1) / 2, yy = (v.y0 + v.y1) / 2 * k - L - \u534A * 0.75;
+        ctx.fillStyle = "#C9A64A";
+        const \u6A2A = v.x1 - v.x0 >= (v.y1 - v.y0) * k ? (v.x1 - v.x0) / 2 - \u534A * 0.4 : 0;
+        for (const d of \u6A2A ? [-\u6A2A, \u6A2A] : [0]) ctx.fillRect(cx + d - 0.8, yy - 2.2, 1.6, 2.4);
+      }
+      \u534A *= 0.8;
+    }
+  } };
+}
 function \u57CE\u3092\u7ACB\u3066\u3066\u63CF\u304F(ctx, m) {
   if (!m) return;
   const k = \u7E26\u306E\u7E2E\u307F();
@@ -30861,6 +30987,8 @@ function \u57CE\u3092\u7ACB\u3066\u3066\u63CF\u304F(ctx, m) {
     else if (kind === "\u8535") \u7269.push(\u68DF(x - w / 2, y - h / 2, x + w / 2, y + h / 2, s2 * 0.9, s2 * 0.45, 1.4, { \u8170: true, \u9670: true }));
     else \u7269.push(\u68DF(x - w / 2, y - h / 2, x + w / 2, y + h / 2, s2 * 0.5, s2 * 0.4, 1.4, { \u58C1: "#8C7452", \u5C4B\u6839: \u677F\u847A, \u9670: true }));
   }
+  const \u5929 = \u5929\u5B88\u306E\u7F6E\u304D\u5834(m);
+  if (\u5929) \u7269.push(\u5929\u5B88(\u5929));
   \u7269.sort((a, b) => a.\u9375 - b.\u9375);
   ctx.save();
   \u8996\u306E\u7B46\u3078(ctx);
@@ -32635,6 +32763,28 @@ function \u57CE\u306E\u7ACB\u3064\u3082\u306E\u3092\u63CF\u304F(ctx, m, t, cx, c
     \u5730\u306E\u5B57(ctx, l.name, lx - l.hw + 10, ly - l.hh + 22, true);
   });
   for (const f of m.\u666E\u8ACB || []) if (!\u7ACB\u4F53 || f.kind === "\u4E95\u6238") \u666E\u8ACB\u3092\u63CF\u304F(ctx, f);
+  {
+    const p = \u5929\u5B88\u306E\u7F6E\u304D\u5834(m);
+    if (p && !\u7ACB\u4F53) {
+      ctx.fillStyle = "rgba(74,72,62,0.3)";
+      ctx.fillRect(p.x - p.\u534A + \u5F71.x * 0.9, p.y - p.\u534A + \u5F71.y * 0.9, p.\u534A * 2, p.\u534A * 2);
+      ctx.fillStyle = "#A39C8C";
+      ctx.fillRect(p.x - p.\u534A, p.y - p.\u534A, p.\u534A * 2, p.\u534A * 2);
+      let r = p.\u534A * 1.02;
+      for (let i = 0; i < p.\u91CD; i++) {
+        ctx.fillStyle = i % 2 ? "#6E7783" : "#5D6470";
+        ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+        ctx.fillStyle = "#ECE6D6";
+        ctx.fillRect(p.x - r * 0.72, p.y - r * 0.72, r * 1.44, r * 1.44);
+        r *= 0.76;
+      }
+      ctx.fillStyle = "#525A66";
+      ctx.fillRect(p.x - r * 1.1, p.y - r * 0.5, r * 2.2, r);
+      ctx.strokeStyle = "rgba(40,42,48,0.55)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(p.x - p.\u534A, p.y - p.\u534A, p.\u534A * 2, p.\u534A * 2);
+    }
+  }
   for (const f of m.fac) {
     if (f.hp <= 0) {
       for (let k = 0; k < 10; k++) {
@@ -43907,6 +44057,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const castle = g.castles.find((x) => x.id === sg.castleId);
     if (!army || !castle) return;
     const map = layoutCastleField(buildCastleMap(castle));
+    map.\u5929\u5B88 = \u5929\u5B88\u3092\u898B\u308B(g, castle);
     setBattleMap(map);
     const atkGens = army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
     const defGens = g.generals.filter((x) => x.at === castle.id && x.faction === castle.faction);

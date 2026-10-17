@@ -6,7 +6,7 @@ import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
 import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 向きの角, 盤の筆を回す, 視の筆へ, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
 import { 一人ずつ描く隊 } from "./shinga.js";
-import { 城を立てて描く } from "./tachimono.js";
+import { 城を立てて描く, 天守の置き場 } from "./tachimono.js";
 import { 新絵か, 新絵の兵描き, 新絵の城の地, 新絵の画布上限, 個人で描くか, 近景の肌理, 本陣の所 } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
@@ -1737,6 +1737,23 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新, 立体) {
   /* 城の中の普請（GDD 9.3）。御殿・蔵・井戸・馬屋。絵だけのもので、当たりには関わらない。
      石垣や櫓と同じ光（左上）で描き、瓦は青鈍、白壁は漆喰の色で置く。 */
   for (const f of m.普請 || []) if (!立体 || f.kind === "井戸") 普請を描く(ctx, f);
+  /* 天守（data/tenshu.js）。真上からは、重ごとに一回り小さな屋根を重ねて見せる */
+  { const p = 天守の置き場(m);
+    if (p && !立体) {
+      ctx.fillStyle = "rgba(74,72,62,0.3)";
+      ctx.fillRect(p.x - p.半 + 影.x * 0.9, p.y - p.半 + 影.y * 0.9, p.半 * 2, p.半 * 2);
+      ctx.fillStyle = "#A39C8C"; ctx.fillRect(p.x - p.半, p.y - p.半, p.半 * 2, p.半 * 2);
+      let r = p.半 * 1.02;
+      for (let i = 0; i < p.重; i++) {
+        ctx.fillStyle = i % 2 ? "#6E7783" : "#5D6470";
+        ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+        ctx.fillStyle = "#ECE6D6"; ctx.fillRect(p.x - r * 0.72, p.y - r * 0.72, r * 1.44, r * 1.44);
+        r *= 0.76;
+      }
+      ctx.fillStyle = "#525A66"; ctx.fillRect(p.x - r * 1.1, p.y - r * 0.5, r * 2.2, r);
+      ctx.strokeStyle = "rgba(40,42,48,0.55)"; ctx.lineWidth = 1;
+      ctx.strokeRect(p.x - p.半, p.y - p.半, p.半 * 2, p.半 * 2);
+    } }
 
   // 施設。崩れたものは瓦礫にする
   for (const f of m.fac) {

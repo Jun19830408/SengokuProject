@@ -1,3 +1,4 @@
+import { 天守を見る } from "../data/tenshu.js";
 import * as 政務 from "../govern/commands.js";
 import * as 月送り from "../govern/month.js";
 import * as 合戦裁定 from "../govern/war.js";
@@ -882,6 +883,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const castle = g.castles.find((x) => x.id === sg.castleId);
     if (!army || !castle) return;
     const map = layoutCastleField(buildCastleMap(castle));
+    map.天守 = 天守を見る(g, castle);                   // 史実に天守のある城、盤で大きな家の本拠になった城（data/tenshu.js）
     setBattleMap(map);
     const atkGens = army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
     const defGens = g.generals.filter((x) => x.at === castle.id && x.faction === castle.faction);

@@ -122,6 +122,52 @@ function 塀(x0, y0, x1, y1, 丈) {
   } };
 }
 
+/* 天守の置き場。本丸の奥寄り（御殿の北、蔵と井戸のあいだ）。真上の絵と同じ所 */
+export function 天守の置き場(m) {
+  if (!m || !m.天守 || !m.layers || !m.layers.length) return null;
+  const l = m.layers[m.layers.length - 1];
+  const lx = m.cx + (l.ox || 0), ly = m.cy + (l.oy || 0);
+  const 半 = Math.min(l.hw, l.hh) * 0.26;
+  return { x: lx + l.hw * 0.02, y: ly - l.hh * 0.55, 半, 重: Math.max(1, Math.min(5, m.天守.重 || 3)) };
+}
+
+/* 天守。石の天守台に、重ごとに一回りずつ小さな白壁を積み、重ごとに庇の屋根を
+   回す。最上重は棟の高い寄棟（入母屋の代わり）で葺く。 */
+function 天守(p) {
+  const v台 = 視の矩(p.x - p.半, p.y - p.半, p.x + p.半, p.y + p.半);
+  return { 鍵: v台.y1 + 0.02, 描: (ctx, k) => {
+    const L0 = 足元(p.x - p.半, p.y - p.半, p.x + p.半, p.y + p.半);
+    const 台丈 = p.半 * 0.42;
+    箱(ctx, k, v台, L0, 台丈, "#A39C8C", null, (x, y, w, h) => {      // 天守台の石垣
+      ctx.strokeStyle = "rgba(80,76,66,0.45)"; ctx.lineWidth = 0.5;
+      for (let u = 3; u < h; u += 3) { ctx.beginPath(); ctx.moveTo(x, y + u); ctx.lineTo(x + w, y + u); ctx.stroke(); }
+    });
+    let L = L0 + 台丈, 半 = p.半 * 0.94;
+    const 重丈 = p.半 * (p.重 >= 4 ? 0.36 : 0.44);
+    for (let i = 0; i < p.重; i++) {
+      const 上 = i === p.重 - 1;
+      const v = 視の矩(p.x - 半, p.y - 半, p.x + 半, p.y + 半);
+      箱(ctx, k, v, L, 重丈, 白壁, null, (x, y, w, h) => {
+        ctx.fillStyle = "rgba(40,36,30,0.78)";                    // 窓
+        const n = Math.max(2, Math.round(w / 8));
+        for (let j = 0; j < n; j++) ctx.fillRect(x + (j + 0.35) * w / n, y + h * 0.3, Math.min(2.4, w / n * 0.4), h * 0.3);
+        if (i === 0) { ctx.fillStyle = 腰板; ctx.fillRect(x, y + h * 0.72, w, h * 0.28); }
+        ctx.fillStyle = "rgba(0,0,0,0.08)"; ctx.fillRect(x + w * 0.55, y, w * 0.45, h);
+      });
+      L += 重丈;
+      屋根(ctx, k, v, L, 上 ? 半 * 0.75 : 半 * 0.3, 半 * (上 ? 0.2 : 0.16), 瓦);   // 軒は深く張り出す
+      // 最上重の大棟に鯱
+      if (上) {
+        const cx = (v.x0 + v.x1) / 2, yy = ((v.y0 + v.y1) / 2) * k - L - 半 * 0.75;
+        ctx.fillStyle = "#C9A64A";
+        const 横 = (v.x1 - v.x0) >= (v.y1 - v.y0) * k ? (v.x1 - v.x0) / 2 - 半 * 0.4 : 0;
+        for (const d of 横 ? [-横, 横] : [0]) ctx.fillRect(cx + d - 0.8, yy - 2.2, 1.6, 2.4);
+      }
+      半 *= 0.8;
+    }
+  } };
+}
+
 /* 城の立つものを集めて、奥から手前へ描く。drawBattle の世界の筆の中で呼ぶ */
 export function 城を立てて描く(ctx, m) {
   if (!m) return;
@@ -180,6 +226,8 @@ export function 城を立てて描く(ctx, m) {
     else if (kind === "蔵") 物.push(棟(x - w / 2, y - h / 2, x + w / 2, y + h / 2, s * 0.9, s * 0.45, 1.4, { 腰: true, 陰: true }));
     else 物.push(棟(x - w / 2, y - h / 2, x + w / 2, y + h / 2, s * 0.5, s * 0.4, 1.4, { 壁: "#8C7452", 屋根: 板葺, 陰: true }));
   }
+  const 天 = 天守の置き場(m);
+  if (天) 物.push(天守(天));
   物.sort((a, b) => a.鍵 - b.鍵);
   ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / k);
   for (const o of 物) o.描(ctx, k);
