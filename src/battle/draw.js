@@ -1922,6 +1922,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
      超えるあいだは従来の駒のままにし、寄って数が絞れたら一人ずつへ移る。 */
   /* 一人ずつ描く隊（真ん中に近い隊から予算まで。shinga.js 一人ずつ描く隊） */
   const 一人ずつ = 一人ずつ描く隊(b, cam, W, H);
+  b.__一人ずつ = 一人ずつ; b.__cam = cam.s;           // 撮る道具が覗く（どの隊を一人ずつ描いたか）
   const 個人絵 = !!(一人ずつ && 一人ずつ.size);
   const 新絵隊 = [];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

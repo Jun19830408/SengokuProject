@@ -18,7 +18,7 @@
    まず関ヶ原（筋書き sekigahara）だけで使い、実機の重さと操作感を測ってから
    広げる。切りたいときは棚に sengoku:旧絵 を「入」で置けば元の絵に戻る。
    ========================================================================== */
-import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 見える範囲, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 面を据える, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
+import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 見える範囲, 画面に映るか, 画面の真ん中から, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 面を据える, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
 import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS, ROAD,
   RIVER, hasRiver, riverShift, fieldScale } from "./field.js";
 
@@ -58,6 +58,7 @@ export function 見える人数(b, cam, W, H) {
     for (const q of c.squads) {
       if (q.men <= 0) continue;
       if (q.x < x0 || q.x > x1 || q.y < y0 || q.y > y1) continue;
+      if (!画面に映るか(q.x, q.y, cam, W, H, 60)) continue;
       n += Math.min(50, Math.round(q.men));
     }
   }
@@ -70,20 +71,21 @@ export function 見える人数(b, cam, W, H) {
    画面の真ん中に近い隊から順に予算まで一人ずつ描き、外れた隊だけを駒で描く。 */
 export function 一人ずつ描く隊(b, cam, W, H) {
   if (!新絵か(b) || cam.s < 個人閾) return null;
-  const k = 縦の縮み();
   const { x0, x1, y0, y1 } = 見える範囲(cam, W, H, 50);
-  const [cvx, cvy] = 視(cam.x, cam.y);
   const 並 = [];
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
     let n = 0;
     for (const q of c.squads) {
       if (q.men <= 0 || q.x < x0 || q.x > x1 || q.y < y0 || q.y > y1) continue;
+      /* 持ち上げたうえで画面に映る組だけを数える（山の上の隊を取りこぼさず、
+         画面の外の隊に予算を食わせない） */
+      if (!画面に映るか(q.x, q.y, cam, W, H, 60)) continue;
       n += Math.min(50, Math.round(q.men));
     }
     if (!n) continue;
-    const [vx, vy] = 視(c.x, c.y);                   // 画面の真ん中からの隔たりは、回した眺めの上で量る
-    並.push({ c, n, d: Math.hypot(vx - cvx, (vy - cvy) * k) });
+    // 画面の真ん中からの隔たりは、回して持ち上げた画面の上で量る
+    並.push({ c, n, d: 画面の真ん中から(c.x, c.y, cam, W, H) });
   }
   並.sort((a, z) => a.d - z.d);
   const 選 = new Set();

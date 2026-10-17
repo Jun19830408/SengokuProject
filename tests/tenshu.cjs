@@ -29,9 +29,9 @@ console.log('\n── 二　記録の無い大きな本拠');
 
 console.log('\n── 三　表に無い城は、大きな家の本拠になったときだけ');
 {
-  const 城 = { id: 'kiyosu', faction: 'oda' };
-  const 盤 = (年, 石) => ({ year: 年, factions: { oda: { 本拠: 'kiyosu' } },
-    castles: [{ id: 'kiyosu', faction: 'oda', koku: 石 }] });
+  const 城 = { id: 'okazaki', faction: 'oda' };   // 天守の表に無い城
+  const 盤 = (年, 石) => ({ year: 年, factions: { oda: { 本拠: 'okazaki' } },
+    castles: [{ id: 'okazaki', faction: 'oda', koku: 石 }] });
   確('一五七五年には立たない', !H.天守を見る(盤(1575, 900000), 城));
   確('小さな家の本拠には立たない', !H.天守を見る(盤(1590, 300000), 城));
   const 立 = H.天守を見る(盤(1590, 900000), 城);
