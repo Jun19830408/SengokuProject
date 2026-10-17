@@ -18,7 +18,7 @@
    まず関ヶ原（筋書き sekigahara）だけで使い、実機の重さと操作感を測ってから
    広げる。切りたいときは棚に sengoku:旧絵 を「入」で置けば元の絵に戻る。
    ========================================================================== */
-import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 浮き, 見える範囲, 画面に映るか, 画面の真ん中から, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 面を据える, 斜め, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
+import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 浮き, 隠れの際, 見える範囲, 画面に映るか, 画面の真ん中から, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 面を据える, 斜め, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
 import { 木立を並べる, 木を描く } from "./mori.js";
 import { 里を並べる, 葦を描く, 村の道は横か, 家をよける } from "./sato.js";
 import { 城の物を並べる, 城壁をよける } from "./tachimono.js";
@@ -3404,6 +3404,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
         const h0 = 浮き(s.dx, s.dy);
         if (Math.abs(浮き(s.dx, s.dy + 12) - h0) > 3 || Math.abs(浮き(s.dx, s.dy - 12) - h0) > 3
           || Math.abs(浮き(s.dx + 14, s.dy) - h0) > 3 || Math.abs(浮き(s.dx - 14, s.dy) - h0) > 3) continue;
+        if (隠れの際(s.dx, s.dy) < 画の縦(s.dx, s.dy) + 4) continue;   // 石垣の向こうに隠れる組の影も落とさない
       }
       ctx.save();
       { const [ex, ey] = 揚げ(s.dx, s.dy); ctx.translate(s.dx + ex, s.dy + ey); }
@@ -3515,19 +3516,35 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
   /* 奥から手前へ。並べる鍵は回した眺めの縦（地y の小さなずれは重ねの順の加減） */
   for (const p of 並) { if (p.棟) continue; const [vx, vy] = 視(p.wx, p.wy); p.vx = vx; p.鍵 = vy + (p.地y - p.wy); }
   並.sort((a, z) => a.鍵 - z.鍵);
+  /* 城の盤では、手前の高い地（石垣の天端）に隠れる者を隠す（naname.js 隠れの際）。
+     際より下は描かず、際に掛かる者は際で切る。組ごとに一度だけ量る持ち場もあるが、
+     石垣は組の中ほどを通ることもあるので、一人ずつ量る */
+  const 隠す = 城盤 && 縮 < 1;
   for (const p of 並) {
     if (p.棟) { p.棟.描(ctx, 縮); continue; }        // 家（箱と屋根。sato.js）
     const y = 画の縦(p.wx, p.wy);
+    let 切 = false;
+    if (隠す && !p.木 && !p.葦) {
+      const 際 = 隠れの際(p.wx, p.wy);
+      if (際 < y - 0.3) {
+        if (際 < y - 9) continue;                  // 丸ごと隠れる（兵の丈は七、八歩）
+        ctx.save(); ctx.beginPath(); ctx.rect(p.vx - 12, 際 - 40, 24, 40); ctx.clip(); 切 = true;
+      }
+    }
     p.wx = p.vx;                                   // ここから先は画の横で描く
-    if (p.木) { 木を描く(ctx, p.木, p.wx, y); continue; }
-    if (p.葦) { 葦を描く(ctx, p.葦, p.wx, y); continue; }
+    if (切) { 一人を描く(p, y); ctx.restore(); continue; }
+    一人を描く(p, y);
+  }
+  function 一人を描く(p, y) {
+    if (p.木) { 木を描く(ctx, p.木, p.wx, y); return; }
+    if (p.葦) { 葦を描く(ctx, p.葦, p.wx, y); return; }
     if (p.指) {                                    // 馬廻の指物
       const K2 = 具側[p.指];
       ctx.strokeStyle = "#3A2C1A"; ctx.lineWidth = 0.1;
       ctx.beginPath(); ctx.moveTo(p.wx - 1.4, y - 3.2); ctx.lineTo(p.wx - 1.6, y - 7.4); ctx.stroke();
       ctx.fillStyle = shade(K2.帯, 1.25);
       ctx.fillRect(p.wx - 1.58, y - 7.4, 0.85, 1.6);
-      continue;
+      return;
     }
     if (p.旗) {
       ctx.strokeStyle = "#3A2C1A"; ctx.lineWidth = 0.12;
@@ -3535,7 +3552,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       /* 組の小旗は家の色（帯）で描く。具足を暗く落としたので、中では沈む */
       ctx.fillStyle = shade(具側[p.旗].帯, 1.02);
       ctx.fillRect(p.wx + 0.06, y - 2.0, 0.55, 1.05);
-      continue;
+      return;
     }
     if (p.将) {
       const c2 = p.将.c, 側2 = p.将.側;
@@ -3545,7 +3562,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       const n2 = 将札(側2, 格);
       if (n2) ctx.drawImage(n2, p.wx - n2.width / 2 * 倍2, y - (n2.height - 12) * 倍2,
         n2.width * 倍2, n2.height * 倍2);
-      continue;
+      return;
     }
     if (p.旗持) {                                   // 馬印を掲げる旗持。将の隣に立つ
       const 格 = 将の格(b, p.旗持.c);
@@ -3553,7 +3570,7 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
       const 倍3 = 0.062 * (104 / 190) * 1.18 * (11 / 19);   // 乗り手の丈は将と同じに保つ
       if (n3) ctx.drawImage(n3, p.wx - n3.width / 2 * 倍3, y - (n3.height - 12) * 倍3,
         n3.width * 倍3, n3.height * 倍3);
-      continue;
+      return;
     }
     const 丈 = p.丈 || 1;
     if (p.直) 姿八(ctx, p.wx, y, (p.直.型 === "kiba" ? 6.2 : 6.4) * 0.062 * 丈,

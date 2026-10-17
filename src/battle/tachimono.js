@@ -130,7 +130,7 @@ function 塀を描く(ctx, k, v, L, 丈) {
 /* 城壁をよける（絵だけ。盤の組の居場所は動かさない）。
    城壁に取り付いた組は、持ち場の一部が曲輪の内へ掛かる。そこに立つ兵は曲輪の天端の
    高さまで持ち上がり、石垣の面の途中に立って見えた。兵は自分の組のいる側（外か内か）に
-   とどめる。門の間口は通す（門をくぐるのは盤が決める）。
+   とどめる。破れた門の間口は通す（門をくぐるのは盤が決める）。閉じた門は壁と同じ。
    (qx, qy) は組の所、(x, y) は兵の所。よけるなら [x, y]、そのままなら null */
 export function 城壁をよける(m, qx, qy, x, y) {
   if (!m || !m.layers) return null;
@@ -145,7 +145,8 @@ export function 城壁をよける(m, qx, qy, x, y) {
     const 南北 = Math.abs(Math.abs(py - cy) - hh) < Math.abs(Math.abs(px - cx) - hw);
     const u = 南北 ? px - cx : py - cy;
     const 面 = 南北 ? (py > cy ? "S" : "N") : (px > cx ? "E" : "W");
-    if (l.gates.some((g) => g.face === 面 && Math.abs(u - g.off) < g.w / 2 + 2)) continue;   // 門の間口
+    // 破れた門の間口だけは通す。閉じた門まで通していたころは、敵味方の兵が門をすり抜けて見えた
+    if (l.gates.some((g) => g.broken && g.face === 面 && Math.abs(u - g.off) < g.w / 2 + 10)) continue;
     if (南北) { const s = py > cy ? 1 : -1; r = [px, cy + s * (組内 ? hh - 1.5 : hh + 1.2)]; }
     else { const s = px > cx ? 1 : -1; r = [cx + s * (組内 ? hw - 1.5 : hw + 1.2), py]; }
   }
