@@ -1,5 +1,5 @@
 import { battleAI } from "./ai.js";
-import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, nearestOpenGate, routeToCastleGate, 門の控え口 } from "./castleMap.js";
+import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口 } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads, 前列を入れ替える, 支えの向き数, 支えの幅, 空 } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地, 地の高さ } from "./field.js";
@@ -591,6 +591,7 @@ export function stepBattle(b, dt) {
       if (沿 < 0) { px -= 沿 * ux; py -= 沿 * uy; }
     }
     const 前の隔 = Math.hypot(c.tx - c.x, c.ty - c.y);
+    const 押す前x = c.x, 押す前y = c.y;
     if (passable(c.x + px, c.y + py)) { c.x += px; c.y += py; }
     else if (passable(c.x + px, c.y)) c.x += px;
     else if (passable(c.x, c.y + py)) c.y += py;
@@ -605,8 +606,12 @@ export function stepBattle(b, dt) {
       const 許 = Math.max(前の隔, 40);
       if (後の隔 > 許 + 0.001) {
         const k = 許 / 後の隔;
-        c.x = c.tx + (c.x - c.tx) * k;
-        c.y = c.ty + (c.y - c.ty) * k;
+        const nx = c.tx + (c.x - c.tx) * k, ny = c.ty + (c.y - c.ty) * k;
+        /* 引き寄せる先が塀の中なら押す前へ戻す。ここで塀に埋まった隊は、
+           すぐ下の「壁の帯に入り込んだ隊」の段で城の外向きへ押し出され、
+           塀の内側に貼りついていた隊が塀の外へ抜けていた。 */
+        if (!MAP || passable(nx, ny)) { c.x = nx; c.y = ny; }
+        else { c.x = 押す前x; c.y = 押す前y; }
       }
     }
     /* 押されて盤の外へ出ない。盤を落ちるのは崩れて逃げる隊だけである。 */
@@ -990,7 +995,10 @@ export function stepBattle(b, dt) {
       const 歩 = Math.min(速さ * dt, dist);
       const mvx = (速.x / 速さ) * 歩, mvy = (速.y / 速さ) * 歩;
       // 城壁と閉じた門は通れない。ぶつかったら壁沿いに滑る。
-      const 足元 = c.地;
+      /* 「すでに水の中か」は、踏み場の判じ（c.地）ではなく足元の一点で見る。
+         踏み場の判じは岸寄りや細い川では「平地」と出るので、淵に立つ隊が
+         どちらの岸へも一歩も踏み出せなくなっていた。 */
+      const 足元 = terrainAt(c.x, c.y) === "deep" ? "deep" : c.地;
       const 元x = c.x, 元y = c.y;
       const 踏める = (nx, ny) => passableFor(c, b, nx, ny) && 淵を踏めるか(c, b, nx, ny, 足元);
       if (踏める(c.x + mvx, c.y + mvy)) { c.x += mvx; c.y += mvy; }
@@ -1176,7 +1184,16 @@ export function stepBattle(b, dt) {
       else if (homeD < 40 || 噛み最近) q.lost = false;
       // それでも大きく離れたままなら、武将のそばへ引き戻す。
       // 壁や堀を挟んで取り残された一組が、隊全体の足を止めてしまうのを防ぐ。
-      if (homeD > 190) {
+      /* ただし城の盤で、組と持ち場のあいだに塀や閉じた門があるときは、すぐには飛ばさない。
+         飛ばしていたころは、狭い門を抜けきれなかった組が塀を越えて内へ移り、
+         遊ぶ側には「閉じた門や塀を兵がすり抜けている」と見えた。そのあいだは下の
+         「はぐれ」として隊の道筋（門をくぐった跡）を辿らせ、二十五秒たっても
+         越えられないときだけ引き戻す。 */
+      const 塀越し = homeD > 190 && MAP && !見通せる(q.x, q.y, targetX, targetY);
+      q.塀越し刻 = 塀越し ? (q.塀越し刻 || 0) + dt : 0;
+      if (塀越し && q.塀越し刻 <= 25) q.lost = true;
+      else if (homeD > 190) {
+        q.塀越し刻 = 0;
         let put = null;
         for (let k = 0; k < 18 && !put; k++) {
           const ang = k * 2.399, rr = k === 0 ? 0 : 12 + k * 8;
@@ -1257,7 +1274,8 @@ export function stepBattle(b, dt) {
         const v = st0.speed * 追いつき * (噛みでも戻る ? 0.45 : 1) * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = ((targetX - q.x) / qd) * Math.min(v * dt, qd);
         const sy = ((targetY - q.y) / qd) * Math.min(v * dt, qd);
-        const 踏めるq = (nx, ny) => passableFor(c, b, nx, ny) && 淵を踏めるか(c, b, nx, ny, q.地);
+        const 足元q = terrainAt(q.x, q.y) === "deep" ? "deep" : q.地;   // 隊と同じく一点で見る
+        const 踏めるq = (nx, ny) => passableFor(c, b, nx, ny) && 淵を踏めるか(c, b, nx, ny, 足元q);
         if (踏めるq(q.x + sx, q.y + sy)) { q.x += sx; q.y += sy; }
         else if (踏めるq(q.x + sx, q.y)) q.x += sx;
         else if (踏めるq(q.x, q.y + sy)) q.y += sy;
@@ -1399,12 +1417,22 @@ export function stepBattle(b, dt) {
         c.gate待ち = i + 1;                       // 何番目に控えているか（帳に出す）
         c.pinned = false;
         if (控まで > 46) {
-          if (門まで < R * 1.6 || !c.wp || !c.wp.length) {
-            // 門前に重なっているか、道順を持たぬ隊は、控え口へ引く
-            c.wp = null; c.tx = 控.x; c.ty = 控.y;
+          if (g.layer === 0 || 見通せる(c.x, c.y, 控.x, 控.y)) {   // 外の門は堀の外へまっすぐ引く（これまでどおり）
+            if (門まで < R * 1.6 || !c.wp || !c.wp.length) {
+              // 門前に重なっているか、道順を持たぬ隊は、控え口へ引く
+              c.wp = null; c.tx = 控.x; c.ty = 控.y; c.控の的 = null;
+            }
+          } else if (!c.wp || !c.wp.length || !c.控の的
+              || Math.hypot(c.控の的.x - 控.x, c.控の的.y - 控.y) > 30) {
+            /* 控え口が塀の向こうなら、まっすぐ引かずに道を引く。
+               R の一.六倍（四百歩余り）は塀を幾重も跨ぐ。外の塀の外にいる隊を
+               まっすぐ引くと、塀に貼りついたまま動けなかった。 */
+            const p = navPath(MAP, c.x, c.y, 控.x, 控.y);
+            if (p && p.length) { c.wp = p; c.tx = p[0].x; c.ty = p[0].y; c.stuck = 0; c.lastD = null; }
+            c.控の的 = { x: 控.x, y: 控.y };
           }
         } else {
-          c.wp = null; c.tx = c.x; c.ty = c.y;    // 着いたらその場で待つ
+          c.wp = null; c.tx = c.x; c.ty = c.y; c.控の的 = null;   // 着いたらその場で待つ
         }
       });
       holder.gate待ち = 0;

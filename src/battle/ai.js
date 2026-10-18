@@ -1,4 +1,4 @@
-import { MAP, axisOf, fromUV, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 門の控え口 } from "./castleMap.js";
+import { MAP, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口 } from "./castleMap.js";
 import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt, 地の高さ, 高み } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
@@ -1099,7 +1099,10 @@ export function battleAI(b) {
           const 隔 = Math.hypot(c.x - 控.x, c.y - 控.y);
           if (隔 > 46) {
             if (!c.wp || !c.wp.length) {
-              issueOrder(b, c, { order: "移動", tx: 控.x, ty: 控.y });
+              // 控え口が塀の向こうなら道を引く（まっすぐ行けば塀に貼りつく）
+              const p = g.layer === 0 || 見通せる(c.x, c.y, 控.x, 控.y) ? null : navPath(MAP, c.x, c.y, 控.x, 控.y);
+              if (p && p.length) { issueOrder(b, c, { order: "移動", tx: p[0].x, ty: p[0].y, keepPath: true }); c.wp = p; }
+              else issueOrder(b, c, { order: "移動", tx: 控.x, ty: 控.y });
             }
           } else {
             c.wp = null;

@@ -397,8 +397,36 @@ export function 門の控え口(m, l, g, 順 = 0) {
   const a = axisOf(l, g);
   // 外周の門には堀が回る。内の門に堀は無い。
   const 堀 = g.layer === 0 ? (m.moat ? m.moat.band : 0) + 8 : 0;
-  const v = a.half + m.t + g.masu + m.t + 堀 + 54 + Math.max(0, 順) * 70;
-  return fromUV(m, a, gateOpenU(g), v);
+  const v0 = a.half + m.t + g.masu + m.t + 堀 + 54;
+  順 = Math.max(0, 順);
+  /* 内の門の前は、ひとつ外の曲輪の帯である。列を門の正面へ七十歩ずつ伸ばして
+     いたので、三番手の控え口は外の塀の向こう（清洲の二の丸裏門なら惣構の塀の外、
+     四番手は堀の中）に落ちた。そこを目指す隊は外の塀の内側に貼りつき、門へも
+     進めず動かなくなる――遊ぶ側の「見えない壁があって進めない」はこれである。
+     帯に収まる段だけ縦に並べ、あふれたぶんは塀沿いに横へ並べる。 */
+  if (g.layer > 0) {
+    const o = m.layers[g.layer - 1], U = m.unit || { w: 216, d: 88 };
+    const 外 = a.along === "x" ? o.hh + a.sgn * ((o.oy || 0) - a.oy) : o.hw + a.sgn * ((o.ox || 0) - a.ox);
+    const vmax = Math.max(a.half + m.t + g.masu + m.t + 8, 外 - U.d / 2 - 4);
+    const 段数 = Math.max(1, Math.floor((vmax - v0) / 70) + 1);
+    const 段 = 順 % 段数, 列 = Math.floor(順 / 段数);
+    const 幅 = U.w * 0.7;
+    const du = 列 ? (列 % 2 ? 1 : -1) * Math.ceil(列 / 2) * 幅 : 0;
+    const 寄 = a.along === "x" ? (o.ox || 0) - a.ox : (o.oy || 0) - a.oy;
+    const 半 = (a.along === "x" ? o.hw : o.hh) - U.w / 2 - 8;
+    const u = clamp(gateOpenU(g) + du, 寄 - 半, 寄 + 半);
+    return fromUV(m, a, u, Math.min(v0 + 段 * 70, vmax));
+  }
+  return fromUV(m, a, gateOpenU(g), v0 + 順 * 70);
+}
+
+/* 二点のあいだに塀や閉じた門が無いか。五歩ごとに見る。 */
+export function 見通せる(x0, y0, x1, y1) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 5));
+  for (let k = 1; k <= n; k++) {
+    if (!passable(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n)) return false;
+  }
+  return true;
 }
 
 export function masuWall(m, l, g, dx, dy) {
@@ -626,6 +654,10 @@ export function routeToCastleGate(m, g, cx, cy) {
   const 残り = Math.hypot(open.x - cx, open.y - cy);
   let i = 0;
   while (i < path.length - 1 && Math.hypot(open.x - path[i].x, open.y - path[i].y) >= 残り - 4) i++;
+  /* ただし、塀を回り込む地点まで捨ててはならない。塀の外から内の門へ向かう隊は、
+     いったん門から遠ざかって外の門をくぐる。そこを捨てると道は塀を突っ切り、
+     詰まって引き直しても同じ道が返るので、隊は塀の外で永久に立ち尽くした。 */
+  while (i > 0 && !見通せる(cx, cy, path[i].x, path[i].y)) i--;
   return [...path.slice(i), ...tail];
 }
 

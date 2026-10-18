@@ -26600,8 +26600,29 @@ function gateOpenU(g) {
 function \u9580\u306E\u63A7\u3048\u53E3(m, l, g, \u9806 = 0) {
   const a = axisOf(l, g);
   const \u5800 = g.layer === 0 ? (m.moat ? m.moat.band : 0) + 8 : 0;
-  const v = a.half + m.t + g.masu + m.t + \u5800 + 54 + Math.max(0, \u9806) * 70;
-  return fromUV(m, a, gateOpenU(g), v);
+  const v0 = a.half + m.t + g.masu + m.t + \u5800 + 54;
+  \u9806 = Math.max(0, \u9806);
+  if (g.layer > 0) {
+    const o = m.layers[g.layer - 1], U2 = m.unit || { w: 216, d: 88 };
+    const \u5916 = a.along === "x" ? o.hh + a.sgn * ((o.oy || 0) - a.oy) : o.hw + a.sgn * ((o.ox || 0) - a.ox);
+    const vmax = Math.max(a.half + m.t + g.masu + m.t + 8, \u5916 - U2.d / 2 - 4);
+    const \u6BB5\u6570 = Math.max(1, Math.floor((vmax - v0) / 70) + 1);
+    const \u6BB52 = \u9806 % \u6BB5\u6570, \u5217 = Math.floor(\u9806 / \u6BB5\u6570);
+    const \u5E452 = U2.w * 0.7;
+    const du = \u5217 ? (\u5217 % 2 ? 1 : -1) * Math.ceil(\u5217 / 2) * \u5E452 : 0;
+    const \u5BC4 = a.along === "x" ? (o.ox || 0) - a.ox : (o.oy || 0) - a.oy;
+    const \u534A = (a.along === "x" ? o.hw : o.hh) - U2.w / 2 - 8;
+    const u = clamp(gateOpenU(g) + du, \u5BC4 - \u534A, \u5BC4 + \u534A);
+    return fromUV(m, a, u, Math.min(v0 + \u6BB52 * 70, vmax));
+  }
+  return fromUV(m, a, gateOpenU(g), v0 + \u9806 * 70);
+}
+function \u898B\u901A\u305B\u308B(x0, y0, x1, y1) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 5));
+  for (let k = 1; k <= n; k++) {
+    if (!passable(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n)) return false;
+  }
+  return true;
 }
 function masuWall(m, l, g, dx, dy) {
   if (g.broken) return false;
@@ -26789,6 +26810,7 @@ function routeToCastleGate(m, g, cx, cy) {
   const \u6B8B\u308A2 = Math.hypot(open.x - cx, open.y - cy);
   let i = 0;
   while (i < path.length - 1 && Math.hypot(open.x - path[i].x, open.y - path[i].y) >= \u6B8B\u308A2 - 4) i++;
+  while (i > 0 && !\u898B\u901A\u305B\u308B(cx, cy, path[i].x, path[i].y)) i--;
   return [...path.slice(i), ...tail];
 }
 var gateReachable = (m, g) => g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);
@@ -35406,7 +35428,11 @@ function battleAI(b) {
           const \u9694 = Math.hypot(c.x - \u63A7.x, c.y - \u63A7.y);
           if (\u9694 > 46) {
             if (!c.wp || !c.wp.length) {
-              issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u63A7.x, ty: \u63A7.y });
+              const p = g.layer === 0 || \u898B\u901A\u305B\u308B(c.x, c.y, \u63A7.x, \u63A7.y) ? null : navPath(MAP, c.x, c.y, \u63A7.x, \u63A7.y);
+              if (p && p.length) {
+                issueOrder(b, c, { order: "\u79FB\u52D5", tx: p[0].x, ty: p[0].y, keepPath: true });
+                c.wp = p;
+              } else issueOrder(b, c, { order: "\u79FB\u52D5", tx: \u63A7.x, ty: \u63A7.y });
             }
           } else {
             c.wp = null;
@@ -35984,6 +36010,7 @@ function stepBattle(b, dt) {
       }
     }
     const \u524D\u306E\u9694 = Math.hypot(c.tx - c.x, c.ty - c.y);
+    const \u62BC\u3059\u524Dx = c.x, \u62BC\u3059\u524Dy = c.y;
     if (passable(c.x + px2, c.y + py2)) {
       c.x += px2;
       c.y += py2;
@@ -35994,8 +36021,14 @@ function stepBattle(b, dt) {
       const \u8A31 = Math.max(\u524D\u306E\u9694, 40);
       if (\u5F8C\u306E\u9694 > \u8A31 + 1e-3) {
         const k = \u8A31 / \u5F8C\u306E\u9694;
-        c.x = c.tx + (c.x - c.tx) * k;
-        c.y = c.ty + (c.y - c.ty) * k;
+        const nx = c.tx + (c.x - c.tx) * k, ny = c.ty + (c.y - c.ty) * k;
+        if (!MAP || passable(nx, ny)) {
+          c.x = nx;
+          c.y = ny;
+        } else {
+          c.x = \u62BC\u3059\u524Dx;
+          c.y = \u62BC\u3059\u524Dy;
+        }
       }
     }
     if (!MAP && !c.routed && !c.withdraw) {
@@ -36246,7 +36279,7 @@ function stepBattle(b, dt) {
       const \u901F\u3055 = Math.hypot(\u901F.x, \u901F.y) || 1;
       const \u6B69 = Math.min(\u901F\u3055 * dt, dist);
       const mvx = \u901F.x / \u901F\u3055 * \u6B69, mvy = \u901F.y / \u901F\u3055 * \u6B69;
-      const \u8DB3\u51432 = c.\u5730;
+      const \u8DB3\u51432 = terrainAt(c.x, c.y) === "deep" ? "deep" : c.\u5730;
       const \u5143x = c.x, \u5143y = c.y;
       const \u8E0F\u3081\u308B = (nx, ny) => passableFor(c, b, nx, ny) && \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, nx, ny, \u8DB3\u51432);
       if (\u8E0F\u3081\u308B(c.x + mvx, c.y + mvy)) {
@@ -36356,7 +36389,11 @@ function stepBattle(b, dt) {
       const \u565B\u307F\u6700\u8FD1 = q.engaged || b.t - (q.\u565B\u307F\u523B == null ? -99 : q.\u565B\u307F\u523B) < 3;
       if (homeD > 110 && !\u565B\u307F\u6700\u8FD1) q.lost = true;
       else if (homeD < 40 || \u565B\u307F\u6700\u8FD1) q.lost = false;
-      if (homeD > 190) {
+      const \u5840\u8D8A\u3057 = homeD > 190 && MAP && !\u898B\u901A\u305B\u308B(q.x, q.y, targetX, targetY);
+      q.\u5840\u8D8A\u3057\u523B = \u5840\u8D8A\u3057 ? (q.\u5840\u8D8A\u3057\u523B || 0) + dt : 0;
+      if (\u5840\u8D8A\u3057 && q.\u5840\u8D8A\u3057\u523B <= 25) q.lost = true;
+      else if (homeD > 190) {
+        q.\u5840\u8D8A\u3057\u523B = 0;
         let put = null;
         for (let k = 0; k < 18 && !put; k++) {
           const ang = k * 2.399, rr = k === 0 ? 0 : 12 + k * 8;
@@ -36406,7 +36443,8 @@ function stepBattle(b, dt) {
         const v = st0.speed * \u8FFD\u3044\u3064\u304D * (\u565B\u307F\u3067\u3082\u623B\u308B ? 0.45 : 1) * fieldScale() * (b.\u8DB3\u306E\u624B\u52A0\u6E1B || 1) * \u6C34\u99B4\u308C\u306E\u8DB3(c, q.\u5730, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = (targetX - q.x) / qd * Math.min(v * dt, qd);
         const sy = (targetY - q.y) / qd * Math.min(v * dt, qd);
-        const \u8E0F\u3081\u308Bq = (nx, ny) => passableFor(c, b, nx, ny) && \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, nx, ny, q.\u5730);
+        const \u8DB3\u5143q = terrainAt(q.x, q.y) === "deep" ? "deep" : q.\u5730;
+        const \u8E0F\u3081\u308Bq = (nx, ny) => passableFor(c, b, nx, ny) && \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, nx, ny, \u8DB3\u5143q);
         if (\u8E0F\u3081\u308Bq(q.x + sx, q.y + sy)) {
           q.x += sx;
           q.y += sy;
@@ -36488,15 +36526,29 @@ function stepBattle(b, dt) {
         c.gate\u5F85\u3061 = i + 1;
         c.pinned = false;
         if (\u63A7\u307E\u3067 > 46) {
-          if (\u9580\u307E\u3067 < R2 * 1.6 || !c.wp || !c.wp.length) {
-            c.wp = null;
-            c.tx = \u63A7.x;
-            c.ty = \u63A7.y;
+          if (g.layer === 0 || \u898B\u901A\u305B\u308B(c.x, c.y, \u63A7.x, \u63A7.y)) {
+            if (\u9580\u307E\u3067 < R2 * 1.6 || !c.wp || !c.wp.length) {
+              c.wp = null;
+              c.tx = \u63A7.x;
+              c.ty = \u63A7.y;
+              c.\u63A7\u306E\u7684 = null;
+            }
+          } else if (!c.wp || !c.wp.length || !c.\u63A7\u306E\u7684 || Math.hypot(c.\u63A7\u306E\u7684.x - \u63A7.x, c.\u63A7\u306E\u7684.y - \u63A7.y) > 30) {
+            const p = navPath(MAP, c.x, c.y, \u63A7.x, \u63A7.y);
+            if (p && p.length) {
+              c.wp = p;
+              c.tx = p[0].x;
+              c.ty = p[0].y;
+              c.stuck = 0;
+              c.lastD = null;
+            }
+            c.\u63A7\u306E\u7684 = { x: \u63A7.x, y: \u63A7.y };
           }
         } else {
           c.wp = null;
           c.tx = c.x;
           c.ty = c.y;
+          c.\u63A7\u306E\u7684 = null;
         }
       });
       holder.gate\u5F85\u3061 = 0;
