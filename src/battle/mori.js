@@ -12,7 +12,7 @@
    絵だけのものである。当たり（森の視界・川の足止め）には触れない。
    ========================================================================== */
 import { FORESTS, WOODS } from "./field.js";
-import { 揚げ, 画の横, 画の縦, 斜め, 見える範囲, 視の筆へ, 縦の縮み } from "./naname.js";
+import { 揚げ, 画の横, 画の縦, 斜め, 見える範囲, 視の筆へ, 縦の縮み, 隠して描く } from "./naname.js";
 import { 野の川筋, 野の橋 } from "./shinga.js";
 import { 家々を据える, 家の棟, 葦を据える, 葦を描く } from "./sato.js";
 
@@ -150,7 +150,7 @@ export function 立木を描く(ctx, cam, W, H) {
   for (const t of 木ら) if (t.x > x0 && t.x < x1 && t.y > y0 && t.y < y1) 並.push([画の縦(t.x, t.y), 画の横(t.x, t.y), t]);
   並.sort((a, b) => a[0] - b[0]);
   ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / 縦の縮み());
-  for (const [y, x, t] of 並) 木を描く(ctx, t, x, y);
+  for (const [y, x, t] of 並) 隠して描く(ctx, t.x, t.y, x, y, 30, () => 木を描く(ctx, t, x, y));   // 丘の向こうの木は隠す
   ctx.restore();
 }
 
@@ -173,9 +173,9 @@ export function 木立を焼く(斜め地) {
   並.sort((a, b) => a[0] - b[0]);
   g.setTransform(倍, 0, 0, 倍, 0, 斜め地.上 * 倍);
   for (const [y, x, t, 種] of 並) {
-    if (種 === 0) 木を描く(g, t, x, y);
+    if (種 === 0) 隠して描く(g, t.x, t.y, x, y, 30, () => 木を描く(g, t, x, y));   // 丘の向こうの木は隠す
     else if (種 === 1) t.描(g, k);
-    else 葦を描く(g, t, x, y);
+    else 隠して描く(g, t.x, t.y, x, y, 10, () => 葦を描く(g, t, x, y));
   }
   return { 画, 上: 斜め地.上, 縦: 斜め地.縦, 横: 斜め地.横 };
 }

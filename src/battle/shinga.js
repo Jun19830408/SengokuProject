@@ -3404,8 +3404,8 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
         const h0 = 浮き(s.dx, s.dy);
         if (Math.abs(浮き(s.dx, s.dy + 12) - h0) > 3 || Math.abs(浮き(s.dx, s.dy - 12) - h0) > 3
           || Math.abs(浮き(s.dx + 14, s.dy) - h0) > 3 || Math.abs(浮き(s.dx - 14, s.dy) - h0) > 3) continue;
-        if (隠れの際(s.dx, s.dy) < 画の縦(s.dx, s.dy) + 4) continue;   // 石垣の向こうに隠れる組の影も落とさない
       }
+      if (縮 < 1 && 隠れの際(s.dx, s.dy) < 画の縦(s.dx, s.dy) + 4) continue;   // 石垣や丘の向こうに隠れる組の影も落とさない
       ctx.save();
       { const [ex, ey] = 揚げ(s.dx, s.dy); ctx.translate(s.dx + ex, s.dy + ey); }
       ctx.rotate(s.向 + Math.PI / 2);
@@ -3519,16 +3519,19 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
   /* 城の盤では、手前の高い地（石垣の天端）に隠れる者を隠す（naname.js 隠れの際）。
      際より下は描かず、際に掛かる者は際で切る。組ごとに一度だけ量る持ち場もあるが、
      石垣は組の中ほどを通ることもあるので、一人ずつ量る */
-  const 隠す = 城盤 && 縮 < 1;
+  /* 野でも同じ。丘や山の向こう斜面へ降りた兵は、頂の陰に隠れる（遊ぶ側の申し出：
+     「山の奥側に降りていって見えなくなるのが自然なのに、頂の上に乗って見える」） */
+  const 隠す = 縮 < 1;
   for (const p of 並) {
     if (p.棟) { p.棟.描(ctx, 縮); continue; }        // 家（箱と屋根。sato.js）
     const y = 画の縦(p.wx, p.wy);
     let 切 = false;
-    if (隠す && !p.木 && !p.葦) {
+    if (隠す) {
       const 際 = 隠れの際(p.wx, p.wy);
       if (際 < y - 0.3) {
-        if (際 < y - 9) continue;                  // 丸ごと隠れる（兵の丈は七、八歩）
-        ctx.save(); ctx.beginPath(); ctx.rect(p.vx - 12, 際 - 40, 24, 40); ctx.clip(); 切 = true;
+        const 丈 = p.木 ? 30 : p.葦 ? 10 : 9;        // 兵の丈は七、八歩。木は高い
+        if (際 < y - 丈) continue;                  // 丸ごと隠れる
+        ctx.save(); ctx.beginPath(); ctx.rect(p.vx - 丈 * 2, 際 - 丈 * 4, 丈 * 4, 丈 * 4); ctx.clip(); 切 = true;
       }
     }
     p.wx = p.vx;                                   // ここから先は画の横で描く

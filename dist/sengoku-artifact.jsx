@@ -26975,8 +26975,12 @@ var \u56F3 = null;
 function \u9AD8\u3055\u56F3\u3092\u636E\u3048\u308B(\u9AD8, w, h, \u5358, \u4E08\u5358, \u753B\u9AD8) {
   let \u6700 = 0;
   const \u4E0A\u306E\u56F3 = \u753B\u9AD8 || \u9AD8;
-  for (let i = 0; i < \u4E0A\u306E\u56F3.length; i++) if (\u4E0A\u306E\u56F3[i] > \u6700) \u6700 = \u4E0A\u306E\u56F3[i];
-  \u56F3 = { \u9AD8, \u753B\u9AD8: \u753B\u9AD8 || null, w, h, \u5358, \u4E08\u5358, \u6700: \u6700 * \u4E08\u5358 };
+  let \u4F4E = Infinity;
+  for (let i = 0; i < \u4E0A\u306E\u56F3.length; i++) {
+    if (\u4E0A\u306E\u56F3[i] > \u6700) \u6700 = \u4E0A\u306E\u56F3[i];
+    if (\u4E0A\u306E\u56F3[i] < \u4F4E) \u4F4E = \u4E0A\u306E\u56F3[i];
+  }
+  \u56F3 = { \u9AD8, \u753B\u9AD8: \u753B\u9AD8 || null, w, h, \u5358, \u4E08\u5358, \u6700: \u6700 * \u4E08\u5358, \u4F4E: (Number.isFinite(\u4F4E) ? \u4F4E : 0) * \u4E08\u5358 };
 }
 function \u9AD8\u3055\u56F3\u3092\u5916\u3059() {
   \u56F3 = null;
@@ -27241,9 +27245,21 @@ function \u659C\u3081\u306B\u713C\u304F(src0, \u91CEw, \u91CEh, \u91CD\u306D) {
     let \u9802 = dh;
     let pr = -1, pg = 0, pb = 0;
     let \u524D\u578B = 0, \u9762\u5E95 = 0;
+    let \u96A0\u6570 = 0;
     for (let y = sh - 1; y >= 0; y--) {
       const yp = Math.floor(y * k + \u4E0Apx - \u4E08px[y]);
-      if (yp >= \u9802) continue;
+      if (yp >= \u9802) {
+        \u96A0\u6570++;
+        continue;
+      }
+      if (\u96A0\u6570 > 8 && !\u91CD\u306D && \u9802 < dh) {
+        const \u6FC3 = Math.min(1, (\u96A0\u6570 - 8) / 24) * 0.42;
+        const di = (\u9802 * sw + x) * 4;
+        o[di] *= 1 - \u6FC3;
+        o[di + 1] *= 1 - \u6FC3;
+        o[di + 2] *= 1 - \u6FC3 * 0.85;
+      }
+      \u96A0\u6570 = 0;
       const si = (y * sw + x) * 4;
       const \u4F38 = \u9802 - yp;
       const \u660E = \u4F38 > 1.6 ? Math.min(1.12, 1 + (\u4F38 - 1) * 0.03) : 1;
@@ -27322,17 +27338,48 @@ function \u659C\u3081\u306B\u713C\u304F(src0, \u91CEw, \u91CEh, \u91CD\u306D) {
   og.putImageData(od, 0, 0);
   return { \u753B: out, \u4E0A, \u7E26: dh / \u500D, \u6A2A: sw / \u500D };
 }
-function \u96A0\u308C\u306E\u969B(x, y, \u5148 = 56, \u6B69 = 2) {
+var \u969B\u306E\u5347 = 6;
+var \u969B\u306E\u899A\u3048 = null;
+var \u969B\u306E\u9375 = null;
+function \u96A0\u308C\u306E\u969B(x, y) {
   if (!\u56F3 || !\u659C\u3081.\u5165) return Infinity;
   const k = \u7E26\u306E\u7E2E\u307F();
-  const [vx, vy] = \u8996(x, y);
-  let \u969B = Infinity;
-  for (let d = \u6B69; d <= \u5148; d += \u6B69) {
-    const [wx, wy] = \u8996\u304B\u3089\u76E4(vx, vy + d);
-    const yy = (vy + d) * k - \u753B\u306E\u6D6E\u304D(wx, wy);
-    if (yy < \u969B) \u969B = yy;
+  const \u9375 = \u56F3;
+  if (\u969B\u306E\u9375 !== \u9375 || !\u969B\u306E\u899A\u3048 || \u969B\u306E\u899A\u3048.\u5411\u304D !== \u5411\u304D || \u969B\u306E\u899A\u3048.k !== k || \u969B\u306E\u899A\u3048.\u6301 !== \u659C\u3081.\u6301\u3061\u4E0A\u3052) {
+    const w = Math.ceil((\u91CE.w || \u56F3.w * \u56F3.\u5358) / \u969B\u306E\u5347) + 1, h = Math.ceil((\u91CE.h || \u56F3.h * \u56F3.\u5358) / \u969B\u306E\u5347) + 1;
+    \u969B\u306E\u899A\u3048 = { \u5411\u304D, k, \u6301: \u659C\u3081.\u6301\u3061\u4E0A\u3052, w, h, \u5024: new Float32Array(w * h).fill(NaN) };
+    \u969B\u306E\u9375 = \u9375;
+  }
+  const M = \u969B\u306E\u899A\u3048;
+  const cx = Math.max(0, Math.min(M.w - 1, Math.round(x / \u969B\u306E\u5347))), cy = Math.max(0, Math.min(M.h - 1, Math.round(y / \u969B\u306E\u5347)));
+  const j = cy * M.w + cx;
+  let \u969B = M.\u5024[j];
+  if (Number.isNaN(\u969B)) {
+    const [vx, vy] = \u8996(cx * \u969B\u306E\u5347, cy * \u969B\u306E\u5347);
+    const \u5148 = Math.min(900, (\u56F3.\u6700 - \u56F3.\u4F4E) * \u659C\u3081.\u6301\u3061\u4E0A\u3052 / k + 12);
+    \u969B = Infinity;
+    for (let d = \u969B\u306E\u5347 * 0.75 + 2; d <= \u5148; d += Math.max(2, d * 0.05)) {
+      const [wx, wy] = \u8996\u304B\u3089\u76E4(vx, vy + d);
+      const yy = (vy + d) * k - \u753B\u306E\u6D6E\u304D(wx, wy);
+      if (yy < \u969B) \u969B = yy;
+    }
+    M.\u5024[j] = \u969B;
   }
   return \u969B;
+}
+function \u96A0\u3057\u3066\u63CF\u304F(ctx, wx, wy, x, y, \u4E08, fn) {
+  const \u969B = \u96A0\u308C\u306E\u969B(wx, wy);
+  if (!(\u969B < y - 0.3)) {
+    fn();
+    return;
+  }
+  if (\u969B < y - \u4E08) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x - \u4E08 * 2, \u969B - \u4E08 * 4, \u4E08 * 4, \u4E08 * 4);
+  ctx.clip();
+  fn();
+  ctx.restore();
 }
 var \u63DA\u3052\u4EE3 = () => \u56F3 && \u659C\u3081.\u5165 ? \u56F3.\u6700 * \u659C\u3081.\u6301\u3061\u4E0A\u3052 / \u7E26\u306E\u7E2E\u307F() + 20 : 0;
 
@@ -28078,7 +28125,7 @@ function \u7ACB\u6728\u3092\u63CF\u304F(ctx, cam, W2, H2) {
   ctx.save();
   \u8996\u306E\u7B46\u3078(ctx);
   ctx.scale(1, 1 / \u7E26\u306E\u7E2E\u307F());
-  for (const [y, x, t] of \u4E26) \u6728\u3092\u63CF\u304F(ctx, t, x, y);
+  for (const [y, x, t] of \u4E26) \u96A0\u3057\u3066\u63CF\u304F(ctx, t.x, t.y, x, y, 30, () => \u6728\u3092\u63CF\u304F(ctx, t, x, y));
   ctx.restore();
 }
 function \u6728\u7ACB\u3092\u713C\u304F(\u659C\u3081\u5730) {
@@ -28102,9 +28149,9 @@ function \u6728\u7ACB\u3092\u713C\u304F(\u659C\u3081\u5730) {
   \u4E26.sort((a, b) => a[0] - b[0]);
   g.setTransform(\u500D, 0, 0, \u500D, 0, \u659C\u3081\u5730.\u4E0A * \u500D);
   for (const [y, x, t, \u7A2E2] of \u4E26) {
-    if (\u7A2E2 === 0) \u6728\u3092\u63CF\u304F(g, t, x, y);
+    if (\u7A2E2 === 0) \u96A0\u3057\u3066\u63CF\u304F(g, t.x, t.y, x, y, 30, () => \u6728\u3092\u63CF\u304F(g, t, x, y));
     else if (\u7A2E2 === 1) t.\u63CF(g, k);
-    else \u8466\u3092\u63CF\u304F(g, t, x, y);
+    else \u96A0\u3057\u3066\u63CF\u304F(g, t.x, t.y, x, y, 10, () => \u8466\u3092\u63CF\u304F(g, t, x, y));
   }
   return { \u753B, \u4E0A: \u659C\u3081\u5730.\u4E0A, \u7E26: \u659C\u3081\u5730.\u7E26, \u6A2A: \u659C\u3081\u5730.\u6A2A };
 }
@@ -31702,8 +31749,8 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
       if (\u57CE\u76E4) {
         const h0 = \u6D6E\u304D(s2.dx, s2.dy);
         if (Math.abs(\u6D6E\u304D(s2.dx, s2.dy + 12) - h0) > 3 || Math.abs(\u6D6E\u304D(s2.dx, s2.dy - 12) - h0) > 3 || Math.abs(\u6D6E\u304D(s2.dx + 14, s2.dy) - h0) > 3 || Math.abs(\u6D6E\u304D(s2.dx - 14, s2.dy) - h0) > 3) continue;
-        if (\u96A0\u308C\u306E\u969B(s2.dx, s2.dy) < \u753B\u306E\u7E26(s2.dx, s2.dy) + 4) continue;
       }
+      if (\u7E2E < 1 && \u96A0\u308C\u306E\u969B(s2.dx, s2.dy) < \u753B\u306E\u7E26(s2.dx, s2.dy) + 4) continue;
       ctx.save();
       {
         const [ex, ey] = \u63DA\u3052(s2.dx, s2.dy);
@@ -31837,7 +31884,7 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
     p.\u9375 = vy + (p.\u5730y - p.wy);
   }
   \u4E26.sort((a, z) => a.\u9375 - z.\u9375);
-  const \u96A0\u3059 = \u57CE\u76E4 && \u7E2E < 1;
+  const \u96A0\u3059 = \u7E2E < 1;
   for (const p of \u4E26) {
     if (p.\u68DF) {
       p.\u68DF.\u63CF(ctx, \u7E2E);
@@ -31845,13 +31892,14 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
     }
     const y = \u753B\u306E\u7E26(p.wx, p.wy);
     let \u5207 = false;
-    if (\u96A0\u3059 && !p.\u6728 && !p.\u8466) {
+    if (\u96A0\u3059) {
       const \u969B = \u96A0\u308C\u306E\u969B(p.wx, p.wy);
       if (\u969B < y - 0.3) {
-        if (\u969B < y - 9) continue;
+        const \u4E08 = p.\u6728 ? 30 : p.\u8466 ? 10 : 9;
+        if (\u969B < y - \u4E08) continue;
         ctx.save();
         ctx.beginPath();
-        ctx.rect(p.vx - 12, \u969B - 40, 24, 40);
+        ctx.rect(p.vx - \u4E08 * 2, \u969B - \u4E08 * 4, \u4E08 * 4, \u4E08 * 4);
         ctx.clip();
         \u5207 = true;
       }
@@ -33999,7 +34047,7 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
   }
   if (!b.map) \u5DDD\u306E\u6D41\u308C\u3092\u63CF\u304F(ctx, (typeof performance !== "undefined" ? performance.now() : 0) / 1e3, 1);
   if (!b.map && \u7E2E < 1 && !\u500B\u4EBA\u7D75) {
-    const \u713C\u304D\u3067\u8DB3\u308A\u308B = \u659C\u3081\u5730 && \u659C\u3081\u5730.\u6728 && \u659C\u3081\u5730.\u6728.\u753B && cam.s * dpr <= 1.5 * \u659C\u3081\u5730.\u6728.\u753B.width / (\u659C\u3081\u5730.\u6728.\u6A2A || FIELD.w);
+    const \u713C\u304D\u3067\u8DB3\u308A\u308B = \u659C\u3081\u5730 && \u659C\u3081\u5730.\u6728 && \u659C\u3081\u5730.\u6728.\u753B && cam.s * dpr <= 3 * \u659C\u3081\u5730.\u6728.\u753B.width / (\u659C\u3081\u5730.\u6728.\u6A2A || FIELD.w);
     if (\u713C\u304D\u3067\u8DB3\u308A\u308B) {
       ctx.save();
       \u8996\u306E\u7B46\u3078(ctx);
@@ -34066,8 +34114,9 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
     const bright = shadeHex(side, isP ? 0.18 : 0.16), dark = shadeHex(side, isP ? -0.3 : -0.22);
     const edge = isP ? "rgba(255,255,255,0.95)" : "rgba(28,26,22,0.85)";
     const edge2 = isP ? "rgba(20,20,18,0.55)" : "rgba(28,26,22,0.9)";
+    const \u898Blive = \u7E2E < 1 ? live.filter((q) => !(\u96A0\u308C\u306E\u969B(q.x, q.y) < \u753B\u306E\u7E26(q.x, q.y) - 4)) : live;
     if (lod === "squad") {
-      for (const q of live) {
+      for (const q of \u898Blive) {
         const fill = q.origin === "\u76F4\u5C5E" ? bright : dark;
         const size = 3.2 + \u982D\u6570(q) / 50 * 4.2;
         const [qx, qy] = \u4E0A\u3052(q.x, q.y);
@@ -34092,7 +34141,7 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
       }
       continue;
     }
-    for (const q of live) {
+    for (const q of \u898Blive) {
       const rows = Math.ceil(Math.ceil(\u982D\u6570(q) / 10) / 5);
       const hw = 2 * KOMA + 4, d0 = -4, d1 = (rows - 1) * KOMA + 4;
       const [qx, qy] = \u4E0A\u3052(q.x, q.y);
@@ -34108,7 +34157,7 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
     }
     if (lod === "koma" || lod === "squad") {
       ctx.lineCap = "round";
-      for (const q of live) {
+      for (const q of \u898Blive) {
         if (q.link) {
           const [qx, qy] = \u4E0A\u3052(q.x, q.y), [lx, ly] = \u4E0A\u3052(q.link.x, q.link.y);
           ctx.strokeStyle = "rgba(40,36,28,0.42)";
@@ -34140,7 +34189,7 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
     ctx.save();
     ctx.fillStyle = "rgba(40,36,28,0.16)";
     ctx.beginPath();
-    for (const q of live) {
+    for (const q of \u898Blive) {
       const n = Math.ceil(\u982D\u6570(q) / 10);
       const [qx, qy] = \u4E0A\u3052(q.x, q.y);
       for (let i = 0; i < n; i++) {
@@ -34152,8 +34201,8 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
     }
     ctx.fill();
     ctx.restore();
-    live.sort((a, z) => \u8996y(a.x, a.y) - \u8996y(z.x, z.y));
-    for (const q of live) {
+    \u898Blive.sort((a, z) => \u8996y(a.x, a.y) - \u8996y(z.x, z.y));
+    for (const q of \u898Blive) {
       const n = Math.ceil(\u982D\u6570(q) / 10);
       const dis = q.dis || 0;
       const fill = shadeHex(q.origin === "\u76F4\u5C5E" ? bright : dark, on ? 0.16 : 0);
@@ -34484,7 +34533,8 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
       continue;
     }
     if (c.ambush && !c.revealed && !isP) continue;
-    ctx.globalAlpha = c.routed || c.withdraw ? 0.55 : 1;
+    const \u9670 = \u7E2E < 1 && \u96A0\u308C\u306E\u969B(\u5C06\u6240.x, \u5C06\u6240.y) < \u753B\u306E\u7E26(\u5C06\u6240.x, \u5C06\u6240.y) - 6;
+    ctx.globalAlpha = (c.routed || c.withdraw ? 0.55 : 1) * (\u9670 ? 0.45 : 1);
     const lord = c.gen.lord && !c.detach;
     const H3 = lord ? 30 : 22;
     ctx.strokeStyle = "rgba(255,255,255,0.9)";
@@ -40399,6 +40449,7 @@ function BattleScreen({ ctx, land, onEnd }) {
       force((n) => (n + 1) % 1e3);
       const \u4E38 = (o) => [Math.round(o.x), Math.round(o.y), Math.round(o.r)];
       return {
+        \u4E18: HILLS.map(\u4E38),
         \u5C71: MOUNTAINS.map(\u4E38),
         \u68EE: FORESTS.map(\u4E38),
         \u6797: WOODS.map(\u4E38),

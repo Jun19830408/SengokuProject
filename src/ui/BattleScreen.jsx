@@ -6,7 +6,7 @@ import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, i
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限 } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
 import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸 } from "../battle/naname.js";
-import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, TERRAIN, VILLAGES, WEATHER, WOODS, terrainAt } from "../battle/field.js";
+import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, HILLS, TERRAIN, VILLAGES, WEATHER, WOODS, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
 import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる, 内応させる, 内応の門を開く } from "../battle/corps.js";
@@ -427,7 +427,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       ({ x: cam.x, y: cam.y } = 真ん中に据える(x, y)); cam.s = clamp(倍, 縮みの限り(), 寄りの限り());
       force((n) => (n + 1) % 1000);
       const 丸 = (o) => [Math.round(o.x), Math.round(o.y), Math.round(o.r)];
-      return { 山: MOUNTAINS.map(丸), 森: FORESTS.map(丸), 林: WOODS.map(丸), 村: VILLAGES.map(丸), 沼: MARSH.map(丸),
+      return { 丘: HILLS.map(丸), 山: MOUNTAINS.map(丸), 森: FORESTS.map(丸), 林: WOODS.map(丸), 村: VILLAGES.map(丸), 沼: MARSH.map(丸),
         川: 野の川筋().map((r) => ({ 幅: Math.round(r.幅), 節: r.節.filter((_, i) => i % 6 === 0).map((p) => p.map(Math.round)), 渡し: r.渡し })) };
     };
     window.__将へ = (名, 倍 = 4) => {

@@ -4,7 +4,7 @@ import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
-import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 画の揚げ, 斜め, 向きの角, 盤の筆を回す, 視の筆へ, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
+import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 画の揚げ, 斜め, 向きの角, 盤の筆を回す, 視の筆へ, 地の札, 札を控える, 札を控え止める, 地の字, 隠れの際 } from "./naname.js";
 import { 一人ずつ描く隊 } from "./shinga.js";
 import { 城を立てて描く, 天守の置き場, 城を預ける, 預けた城を立てる } from "./tachimono.js";
 import { 川の流れを描く, 立木を描く } from "./mori.js";
@@ -2046,7 +2046,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     /* 焼いた画は粗いので、寄って見るときは一本ずつ描く（兵のいない所へ寄ると、
        家と木だけがぼやけて映った） */
     const 焼きで足りる = 斜め地 && 斜め地.木 && 斜め地.木.画
-      && cam.s * dpr <= 1.5 * 斜め地.木.画.width / (斜め地.木.横 || FIELD.w);
+      && cam.s * dpr <= 3 * 斜め地.木.画.width / (斜め地.木.横 || FIELD.w);   // 画素が三倍に伸びるまでは焼いた画で足りる
     if (焼きで足りる) {
       ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / 縮);
       ctx.drawImage(斜め地.木.画, 0, -斜め地.木.上, 斜め地.木.横 || FIELD.w, 斜め地.木.縦);
@@ -2129,8 +2129,10 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     const bright = shadeHex(side, isP ? 0.18 : 0.16), dark = shadeHex(side, isP ? -0.30 : -0.22);
     const edge = isP ? "rgba(255,255,255,0.95)" : "rgba(28,26,22,0.85)";
     const edge2 = isP ? "rgba(20,20,18,0.55)" : "rgba(28,26,22,0.9)";
+    /* 丘や山の向こう斜面に隠れた組は描かない（naname.js 隠れの際） */
+    const 見live = 縮 < 1 ? live.filter((q) => !(隠れの際(q.x, q.y) < 画の縦(q.x, q.y) - 4)) : live;
     if (lod === "squad") {
-      for (const q of live) {
+      for (const q of 見live) {
         const fill = q.origin === "直属" ? bright : dark;
         const size = 3.2 + (頭数(q) / 50) * 4.2;
         const [qx, qy] = 上げ(q.x, q.y);
@@ -2143,7 +2145,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
       }
       continue;
     }
-    for (const q of live) {
+    for (const q of 見live) {
       const rows = Math.ceil(Math.ceil(頭数(q) / 10) / 5);
       const hw = 2 * KOMA + 4, d0 = -4, d1 = (rows - 1) * KOMA + 4;
       const [qx, qy] = 上げ(q.x, q.y);
@@ -2158,7 +2160,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     // 噛み合っている組どうしを短い線でつなぐ。どの50人が誰と戦っているかが分かる。
     if (lod === "koma" || lod === "squad") {
       ctx.lineCap = "round";
-      for (const q of live) {
+      for (const q of 見live) {
         if (q.link) {
           const [qx, qy] = 上げ(q.x, q.y), [lx, ly] = 上げ(q.link.x, q.link.y);
           ctx.strokeStyle = "rgba(40,36,28,0.42)"; ctx.lineWidth = 1.6;
@@ -2186,7 +2188,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     ctx.save();
     ctx.fillStyle = "rgba(40,36,28,0.16)";
     ctx.beginPath();
-    for (const q of live) {
+    for (const q of 見live) {
       const n = Math.ceil(頭数(q) / 10);
       const [qx, qy] = 上げ(q.x, q.y);
       for (let i = 0; i < n; i++) {
@@ -2199,8 +2201,8 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     ctx.fill();
     ctx.restore();
     // 組も奥から手前へ
-    live.sort((a, z) => 視y(a.x, a.y) - 視y(z.x, z.y));
-    for (const q of live) {
+    見live.sort((a, z) => 視y(a.x, a.y) - 視y(z.x, z.y));
+    for (const q of 見live) {
       const n = Math.ceil(頭数(q) / 10);
       const dis = q.dis || 0;
       const fill = shadeHex(q.origin === "直属" ? bright : dark, on ? 0.16 : 0);
@@ -2526,7 +2528,10 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     }
     if (c.ambush && !c.revealed && !isP) continue;
 
-    ctx.globalAlpha = c.routed || c.withdraw ? 0.55 : 1;
+    /* 丘や山の陰に隠れた隊の標識は薄く描く。兵は隠れているのに札だけが頂の上に
+       浮かぶと、頂の上に立っているように見える */
+    const 陰 = 縮 < 1 && 隠れの際(将所.x, 将所.y) < 画の縦(将所.x, 将所.y) - 6;
+    ctx.globalAlpha = (c.routed || c.withdraw ? 0.55 : 1) * (陰 ? 0.45 : 1);
     // 武将の居場所は馬印で示す。総大将は旗を二本立て、金の輪をつける。
     const lord = c.gen.lord && !c.detach;
     const H = lord ? 30 : 22;
