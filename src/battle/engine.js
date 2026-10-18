@@ -1,5 +1,5 @@
 import { battleAI } from "./ai.js";
-import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口 } from "./castleMap.js";
+import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads, 前列を入れ替える, 支えの向き数, 支えの幅, 空 } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地, 地の高さ } from "./field.js";
@@ -1198,7 +1198,11 @@ export function stepBattle(b, dt) {
         for (let k = 0; k < 18 && !put; k++) {
           const ang = k * 2.399, rr = k === 0 ? 0 : 12 + k * 8;
           const nx2 = targetX + Math.cos(ang) * rr, ny2 = targetY + Math.sin(ang) * rr;
-          if (passable(nx2, ny2) && 淵を踏めるか(c, b, nx2, ny2, null)) put = { x: nx2, y: ny2 };
+          /* 城の盤では、隊の将から塀を挟まずに見える所にだけ置く。持ち場が本丸の際に
+             掛かっていると、閉じた本丸の内へ組を置いてしまい、門も破らずに本丸を
+             押さえたことになった */
+          if (passable(nx2, ny2) && 淵を踏めるか(c, b, nx2, ny2, null)
+            && (!MAP || 見通せる(c.x, c.y, nx2, ny2))) put = { x: nx2, y: ny2 };
         }
         if (put) { q.x = put.x; q.y = put.y; q.lost = false; q.cohesion = Math.max(0, q.cohesion - 8); }
       }
@@ -1502,9 +1506,25 @@ export function stepBattle(b, dt) {
     for (const c of atkC) {
       if (!attached.has(c.id)) { c.gateFat = Math.max(0, (c.gateFat || 0) - 3.4 * dt); c.pinned = false; }
     }
-    // 委任された隊は、門を破ったらより内側の近い門へ自ら向かう
+    /* 門を破ったら次へ（GDD 9.3）。委任された隊と、遊ぶ側が「門を破る」を命じた隊
+       （破ったら次の門へ自ら進む：c.siegeAuto）は、門が破れたら自ら次へ向かう。
+       siegeAuto は画面が立てるだけで、ここで読んでいなかった――門を破った隊は、
+       新たに命じるまでその場に立ち尽くした。
+       次の的は、本丸の門が破れていれば本丸（城攻めの第一の的）、さもなくば
+       抜けられる門のうちいちばん内側の門。 */
+    const 本丸 = MAP.layers[MAP.layers.length - 1];
+    const 開 = 本丸が開いたか(MAP);
     for (const c of atkC) {
-      if (c.side === "P" && !c.auto) continue;
+      if (c.side === "P" && !c.auto && !c.siegeAuto) continue;
+      if (開) {
+        if (inLayer(MAP, 本丸, c.x, c.y)) { c.本丸攻め = true; continue; }   // もう入った。あとは斬り結ぶ
+        if (c.本丸攻め && ((c.wp && c.wp.length) || (c.本丸刻 || 0) > b.t)) continue;
+        const wp = 本丸への道(MAP, c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my);
+        if (wp && wp.length) { c.gate = null; c.wp = wp; c.tx = wp[0].x; c.ty = wp[0].y; c.order = "前進"; c.stuck = 0; c.lastD = null; c.pinned = false; }
+        if (!c.本丸攻め) b.log.push({ t: b.t, text: `${c.gen.name}隊は本丸へ攻め入る。` });
+        c.本丸攻め = true; c.本丸刻 = b.t + 5;      // 道が尽きて入れずにいれば、五秒ごとに引き直す
+        continue;
+      }
       const cur = c.gate;
       if (cur && !cur.broken && gateReachable(MAP, cur)) continue;
       const nx = nearestOpenGate(MAP, c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my);

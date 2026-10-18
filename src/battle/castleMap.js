@@ -663,6 +663,26 @@ export function routeToCastleGate(m, g, cx, cy) {
 
 export const gateReachable = (m, g) => g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);
 
+/* 本丸へ攻め入る道（GDD 9.3）。城攻めの第一の的は本丸に入ることである。
+   本丸の門が一つでも破れていれば、近いほうの破れた門をくぐり、本丸の中ほどまで
+   の道を返す。破れていなければ null（まだ破るべき門がある）。
+   遊ぶ側の申し出は「本丸侵入についてちゃんと設定し、破ったら次の門への設定を
+   ちゃんと行う」であった。門を破った隊が、本丸の門が開いているのに別の門を
+   破りに引き返していた。 */
+export function 本丸への道(m, x, y) {
+  const hon = m.layers[m.layers.length - 1];
+  const 破 = hon.gates.filter((g) => g.broken);
+  if (!破.length) return null;
+  const hg = 破.slice().sort((a, b) => {
+    const pa = gatePos(m, hon, a), pb = gatePos(m, hon, b);
+    return Math.hypot(pa.x - x, pa.y - y) - Math.hypot(pb.x - x, pb.y - y);
+  })[0];
+  const a = axisOf(hon, hg);
+  return [...routeToCastleGate(m, hg, x, y), fromUV(m, a, hg.off, a.half - 40),
+    { x: m.cx + (hon.ox || 0), y: m.cy + (hon.oy || 0) }];
+}
+export const 本丸が開いたか = (m) => m.layers[m.layers.length - 1].gates.some((g) => g.broken);
+
 // 抜けられる門のうち、いちばん内側の層を選ぶ。同じ層なら近いほう。
 // 外周の門をいくつ破っても城は落ちない。破ったら中へ進むのが筋である。
 export function nearestOpenGate(m, x, y) {

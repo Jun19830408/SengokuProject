@@ -1,6 +1,6 @@
 import { 木立を焼く } from "../battle/mori.js";
 import React, { useState, useRef, useEffect } from "react";
-import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
+import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 本丸への道 } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限 } from "../battle/shinga.js";
@@ -834,13 +834,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
         下知(b, c, { order: "前進", tx: p.x, ty: p.y });
       }
     } else if (kind === "本丸へ") {
-      c.siegeAuto = false;                   // 別命令。門攻めの自動追随はやめる
-      const hon = m.layers[m.layers.length - 1];
-      if (hon.gates.some((x) => x.broken)) {
-        const hg = hon.gates.find((x) => x.broken);
-        const a2 = axisOf(hon, hg);
-        const wp = [...routeToCastleGate(m, hg, c.x, c.y),
-          fromUV(m, a2, hg.off, a2.half - 40), { x: m.cx, y: m.cy }];
+      /* 本丸の門が開いていれば本丸へ。閉じていれば門を破りに行き、破ったら次の門へ、
+         本丸の門が破れたら本丸へと自ら進む（engine.js 門を破ったら次へ） */
+      const wp = 本丸への道(m, c.x, c.y);
+      if (wp && wp.length) {
+        c.gate = null; c.siegeAuto = true; c.本丸攻め = true; c.本丸刻 = b.t + 5;
         下知(b, c, { order: "前進", tx: wp[0].x, ty: wp[0].y, keepPath: true });
         c.wp = wp;
       } else castleGo(c, "門を破る");

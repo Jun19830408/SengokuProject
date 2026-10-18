@@ -1,4 +1,4 @@
-import { MAP, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口 } from "./castleMap.js";
+import { MAP, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか } from "./castleMap.js";
 import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt, 地の高さ, 高み } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
@@ -1076,6 +1076,19 @@ export function battleAI(b) {
         }
       }
       if (c.side === b.attacker) {
+        /* 本丸の門が破れていれば、門を破りに回らず本丸へ攻め入る（castleMap.js 本丸への道）。
+           これまでは「抜けられる門」を探し続けたので、本丸の門が開いても二の丸の
+           残りの門へ引き返し、門が尽きると本丸の中ほどへまっすぐ向かって塀に貼りついた */
+        {
+          const h0 = MAP.layers[MAP.layers.length - 1];
+          if (本丸が開いたか(MAP)) {
+            if (!inLayer(MAP, h0, c.x, c.y) && (!c.wp || !c.wp.length)) {
+              const wp = 本丸への道(MAP, c.x, c.y);
+              if (wp && wp.length) { issueOrder(b, c, { order: "移動", tx: wp[0].x, ty: wp[0].y, keepPath: true }); c.wp = wp; }
+            }
+            continue;
+          }
+        }
         // 寄せ手：抜けられる門のうち、いちばん外の近い門へ取り付く
         const g = nearestOpenGate(MAP, c.x, c.y);
         /* 門の順番待ち（GDD 9.3）。

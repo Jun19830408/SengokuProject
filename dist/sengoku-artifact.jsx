@@ -26814,6 +26814,22 @@ function routeToCastleGate(m, g, cx, cy) {
   return [...path.slice(i), ...tail];
 }
 var gateReachable = (m, g) => g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);
+function \u672C\u4E38\u3078\u306E\u9053(m, x, y) {
+  const hon = m.layers[m.layers.length - 1];
+  const \u7834 = hon.gates.filter((g) => g.broken);
+  if (!\u7834.length) return null;
+  const hg = \u7834.slice().sort((a2, b) => {
+    const pa = gatePos(m, hon, a2), pb = gatePos(m, hon, b);
+    return Math.hypot(pa.x - x, pa.y - y) - Math.hypot(pb.x - x, pb.y - y);
+  })[0];
+  const a = axisOf(hon, hg);
+  return [
+    ...routeToCastleGate(m, hg, x, y),
+    fromUV(m, a, hg.off, a.half - 40),
+    { x: m.cx + (hon.ox || 0), y: m.cy + (hon.oy || 0) }
+  ];
+}
+var \u672C\u4E38\u304C\u958B\u3044\u305F\u304B = (m) => m.layers[m.layers.length - 1].gates.some((g) => g.broken);
 function nearestOpenGate(m, x, y) {
   const c = m.gates.filter((g) => !g.broken && gateReachable(m, g));
   if (!c.length) return null;
@@ -35418,6 +35434,19 @@ function battleAI(b) {
         }
       }
       if (c.side === b.attacker) {
+        {
+          const h0 = MAP.layers[MAP.layers.length - 1];
+          if (\u672C\u4E38\u304C\u958B\u3044\u305F\u304B(MAP)) {
+            if (!inLayer(MAP, h0, c.x, c.y) && (!c.wp || !c.wp.length)) {
+              const wp = \u672C\u4E38\u3078\u306E\u9053(MAP, c.x, c.y);
+              if (wp && wp.length) {
+                issueOrder(b, c, { order: "\u79FB\u52D5", tx: wp[0].x, ty: wp[0].y, keepPath: true });
+                c.wp = wp;
+              }
+            }
+            continue;
+          }
+        }
         const g = nearestOpenGate(MAP, c.x, c.y);
         if (g && g.slot && g.slot !== c.id && !c.pinned) {
           const \u5F85\u3064\u968A = b.corps.filter((o) => !o.dead && !o.destroyed && !o.routed && !o.withdraw && o.side === b.attacker && o.id !== g.slot && (o.gate === g || !o.gate));
@@ -36398,7 +36427,7 @@ function stepBattle(b, dt) {
         for (let k = 0; k < 18 && !put; k++) {
           const ang = k * 2.399, rr = k === 0 ? 0 : 12 + k * 8;
           const nx2 = targetX + Math.cos(ang) * rr, ny2 = targetY + Math.sin(ang) * rr;
-          if (passable(nx2, ny2) && \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, nx2, ny2, null)) put = { x: nx2, y: ny2 };
+          if (passable(nx2, ny2) && \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, nx2, ny2, null) && (!MAP || \u898B\u901A\u305B\u308B(c.x, c.y, nx2, ny2))) put = { x: nx2, y: ny2 };
         }
         if (put) {
           q.x = put.x;
@@ -36623,8 +36652,32 @@ function stepBattle(b, dt) {
         c.pinned = false;
       }
     }
+    const \u672C\u4E38 = MAP.layers[MAP.layers.length - 1];
+    const \u958B = \u672C\u4E38\u304C\u958B\u3044\u305F\u304B(MAP);
     for (const c of atkC) {
-      if (c.side === "P" && !c.auto) continue;
+      if (c.side === "P" && !c.auto && !c.siegeAuto) continue;
+      if (\u958B) {
+        if (inLayer(MAP, \u672C\u4E38, c.x, c.y)) {
+          c.\u672C\u4E38\u653B\u3081 = true;
+          continue;
+        }
+        if (c.\u672C\u4E38\u653B\u3081 && (c.wp && c.wp.length || (c.\u672C\u4E38\u523B || 0) > b.t)) continue;
+        const wp2 = \u672C\u4E38\u3078\u306E\u9053(MAP, c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my);
+        if (wp2 && wp2.length) {
+          c.gate = null;
+          c.wp = wp2;
+          c.tx = wp2[0].x;
+          c.ty = wp2[0].y;
+          c.order = "\u524D\u9032";
+          c.stuck = 0;
+          c.lastD = null;
+          c.pinned = false;
+        }
+        if (!c.\u672C\u4E38\u653B\u3081) b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F\u672C\u4E38\u3078\u653B\u3081\u5165\u308B\u3002` });
+        c.\u672C\u4E38\u653B\u3081 = true;
+        c.\u672C\u4E38\u523B = b.t + 5;
+        continue;
+      }
       const cur = c.gate;
       if (cur && !cur.broken && gateReachable(MAP, cur)) continue;
       const nx = nearestOpenGate(MAP, c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my);
@@ -40745,16 +40798,12 @@ function BattleScreen({ ctx, land, onEnd }) {
         \u4E0B\u77E5(b, c, { order: "\u524D\u9032", tx: p.x, ty: p.y });
       }
     } else if (kind === "\u672C\u4E38\u3078") {
-      c.siegeAuto = false;
-      const hon = m.layers[m.layers.length - 1];
-      if (hon.gates.some((x) => x.broken)) {
-        const hg = hon.gates.find((x) => x.broken);
-        const a2 = axisOf(hon, hg);
-        const wp = [
-          ...routeToCastleGate(m, hg, c.x, c.y),
-          fromUV(m, a2, hg.off, a2.half - 40),
-          { x: m.cx, y: m.cy }
-        ];
+      const wp = \u672C\u4E38\u3078\u306E\u9053(m, c.x, c.y);
+      if (wp && wp.length) {
+        c.gate = null;
+        c.siegeAuto = true;
+        c.\u672C\u4E38\u653B\u3081 = true;
+        c.\u672C\u4E38\u523B = b.t + 5;
         \u4E0B\u77E5(b, c, { order: "\u524D\u9032", tx: wp[0].x, ty: wp[0].y, keepPath: true });
         c.wp = wp;
       } else castleGo(c, "\u9580\u3092\u7834\u308B");
