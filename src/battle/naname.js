@@ -83,7 +83,7 @@ export function 地の丈(x, y, 画) {
   return ((a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty) * 図.丈単;
 }
 
-if (typeof window !== "undefined") window.__地の丈 = 地の丈;   // 撮る道具・試しが覗く口
+if (typeof window !== "undefined") { window.__地の丈 = 地の丈; window.__隠れ = (x, y) => [隠れの際(x, y), 画の縦(x, y)]; }   // 撮る道具・試しが覗く口
 // 画の上での持ち上げ（歩）。平らな所でも、うねりの分だけわずかに動く。
 export const 浮き = (x, y) => (斜め.入 ? 地の丈(x, y) * 斜め.持ち上げ : 0);
 // 絵の持ち上げ（梢の塊を含む）。斜めに焼くときと、梢を被せるときに使う
@@ -331,8 +331,10 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
     let pr = -1, pg = 0, pb = 0;                      // 一つ手前に塗った行の色
     let 前型 = 0, 面底 = 0;                           // 続いている面の型と、その根（画素）
     let 隠数 = 0;                                     // いま手前の地に隠れている行の数
+    let 前頂 = -1, 前覆 = 1;                          // 一つ手前に塗った行の上の画素と、その行が覆う割合
     for (let y = sh - 1; y >= 0; y--) {
-      const yp = Math.floor(y * k + 上px - 丈px[y]);
+      const ypf = y * k + 上px - 丈px[y];
+      const yp = Math.floor(ypf);
       if (yp >= 頂) { 隠数++; continue; }              // 手前に隠れる
       /* 稜線。手前の丘の向こうが隠れたあと、その奥の地（低い川や野）が見えてくる所は、
          頂のすぐ上に奥の地が続けて塗られ、頂と奥が地続きに見えた（遊ぶ側の申し出）。
@@ -346,6 +348,13 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
         o[di] *= 1 - 濃; o[di + 1] *= 1 - 濃; o[di + 2] *= 1 - 濃 * 0.85;
       }
       隠数 = 0;
+      /* 縁をなめらかに。手前の行の上の画素は、その行が一部しか覆っていない。残りを
+         奥のこの行の色で埋める（稜線が画素の段々に見えていた） */
+      if (!重ね && 前頂 >= 0 && 前頂 < dh && yp < 前頂 && 前覆 < 1) {
+        const di = (前頂 * sw + x) * 4, sj = (y * sw + x) * 4, a = 1 - 前覆;
+        o[di] = o[di] * 前覆 + sd[sj] * a; o[di + 1] = o[di + 1] * 前覆 + sd[sj + 1] * a; o[di + 2] = o[di + 2] * 前覆 + sd[sj + 2] * a;
+      }
+      前頂 = yp; 前覆 = 1 - (ypf - yp);
       const si = (y * sw + x) * 4;
       // 手前を向いた斜面は、少し明るく（日を受ける面）。奥を向く面は隠れる
       const 伸 = 頂 - yp;
@@ -389,11 +398,16 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
       if (前型) { 天端(x, 頂, 前型); 前型 = 0; }
       /* 引き伸ばす所は、手前の行の色へなだらかに移す（縦の筋を立てない） */
       const 滑 = 伸 > 1.5 && pr >= 0;
+      /* 引き伸ばした面には、地肌の細かな斑を足す。二つの画素の色を伸ばしただけでは、
+         手前を向いた斜面がのっぺりした色の帯になった */
+      const 斑の強さ = 伸 > 2 ? Math.min(1, (伸 - 2) / 6) * 0.11 : 0;
       for (let yy = Math.max(0, yp); yy < 下; yy++) {
         const di = (yy * sw + x) * 4;
         if (滑) {
           const t = (yy - yp) / 伸;
-          o[di] = r + (pr - r) * t; o[di + 1] = gg + (pg - gg) * t; o[di + 2] = bb + (pb - bb) * t;
+          let m = 1;
+          if (斑の強さ) { const h = (((x * 73856093) ^ (yy * 19349663)) >>> 0) % 1021 / 1021; m = 1 + (h - 0.5) * 斑の強さ * 2; }
+          o[di] = (r + (pr - r) * t) * m; o[di + 1] = (gg + (pg - gg) * t) * m; o[di + 2] = (bb + (pb - bb) * t) * m;
         } else { o[di] = r; o[di + 1] = gg; o[di + 2] = bb; }
         o[di + 3] = sd[si + 3];
       }
@@ -456,11 +470,16 @@ export function 隠れの際(x, y) {
 export function 隠して描く(ctx, wx, wy, x, y, 丈, fn) {
   const 際 = 隠れの際(wx, wy);
   if (!(際 < y - 0.3)) { fn(); return; }
-  if (際 < y - 丈) return;
+  const 濃 = 隠れの薄さ(y - 際, 丈);
+  if (濃 <= 0) return;
   ctx.save(); ctx.beginPath(); ctx.rect(x - 丈 * 2, 際 - 丈 * 4, 丈 * 4, 丈 * 4); ctx.clip();
+  ctx.globalAlpha *= 濃;
   fn();
   ctx.restore();
 }
+/* 頂の向こうへ沈むほど薄く。際で切るだけでは、頂を越える兵の頭が稜線に貼りついた
+   細い線に見えた。沈む深さが丈に近づくほど薄くして、すっと消えるようにする */
+export const 隠れの薄さ = (深, 丈) => Math.max(0, Math.min(1, 1 - 深 / (丈 * 0.9)));
 
 /* 見えている盤の縦の範囲を量るときの余り（歩）。丘の上の者は持ち上がって、
    盤の所より上（手前の下の端より内）に見える。 */
