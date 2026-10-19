@@ -1971,6 +1971,18 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   if (斜め地 && 斜め地.画 && 縮 < 1) {
     ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / 縮);
     ctx.drawImage(斜め地.画, 0, -斜め地.上, 斜め地.横 || FIELD.w, 斜め地.縦);
+    /* 稜線。頂の縁を画面の点の太さで引く（naname.js 斜めに焼く の 稜線）。焼いた画の筋は
+       寄れば滲み、頂と奥の野が溶け合って見えた。向こうが深く隠れる所ほど濃い */
+    if (斜め地.稜線) {
+      // 道は稜線そのものに覚えさせる（斜め地は毎コマ写し直されるので、そこに置くと毎コマ組み直す）
+      if (!斜め地.稜線.道) 斜め地.稜線.道 = 斜め地.稜線.map((線) => {
+        const 道 = new Path2D();
+        for (let i = 0; i < 線.length; i += 4) { 道.moveTo(線[i], 線[i + 1]); 道.lineTo(線[i + 2], 線[i + 3]); }
+        return 道;
+      });
+      ctx.lineCap = "round"; ctx.lineWidth = 1.3 / cam.s;
+      [0.22, 0.38, 0.55].forEach((a, i) => { ctx.strokeStyle = `rgba(28,38,26,${a})`; ctx.stroke(斜め地.稜線.道[i]); });
+    }
     ctx.restore();
   } else {
     ctx.drawImage(terrainCanvas, 0, 0, FIELD.w, FIELD.h);

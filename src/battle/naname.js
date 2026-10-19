@@ -318,6 +318,8 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
   // 行ごとの持ち上げ（画素）。列ごとに同じ表を使い回さぬよう、列の中で引く
   const 丈px = new Float32Array(sh);
   const 面 = 重ね ? null : 面の型;
+  const 霞 = 重ね ? null : new Float32Array(sw * dh);   // 稜線の向こうの霞の濃さ（下で横にぼかして掛ける）
+  const 稜点 = 重ね ? null : new Float32Array(sw * 4).fill(-1);   // 列ごとの稜線（いちばん奥の二つまで：頂の画素と深さ）
   // 天端の照り。続いた面の上の縁に一筋だけ引く
   const 天端 = (x, yy, 型) => {
     if (型 !== 1 || yy < 0 || yy >= dh) return;
@@ -332,6 +334,7 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
     let 前型 = 0, 面底 = 0;                           // 続いている面の型と、その根（画素）
     let 隠数 = 0;                                     // いま手前の地に隠れている行の数
     let 前頂 = -1, 前覆 = 1;                          // 一つ手前に塗った行の上の画素と、その行が覆う割合
+    const 稜ら = [];                                  // この列の稜線（頂の画素と、向こうの隠れの深さ）
     for (let y = sh - 1; y >= 0; y--) {
       const ypf = y * k + 上px - 丈px[y];
       const yp = Math.floor(ypf);
@@ -342,10 +345,15 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
       /* 筋の濃さは隠れた奥行き（行の数）に応じてなめらかに上げる。三行ほどで
          一律に引いていたころは、なだらかな丘の頂で列ごとに出たり消えたりして、
          点線の縞になった */
-      if (隠数 > 8 && !重ね && 頂 < dh) {
-        const 濃 = Math.min(1, (隠数 - 8) / 24) * 0.42;
+      if (隠数 > 5 && !重ね && 頂 < dh) {
+        const 深さ = Math.min(1, (隠数 - 5) / 28);
+        const 濃 = 深さ * 0.5;
         const di = (頂 * sw + x) * 4;
         o[di] *= 1 - 濃; o[di + 1] *= 1 - 濃; o[di + 2] *= 1 - 濃 * 0.85;
+        if (頂 + 1 < dh) { const d2 = di + sw * 4, 濃2 = 濃 * 0.4; o[d2] *= 1 - 濃2; o[d2 + 1] *= 1 - 濃2; o[d2 + 2] *= 1 - 濃2 * 0.85; }
+        稜ら.push(頂, 深さ);
+        // 稜線の線を引くため、列ごとに二つまで控える（手前から順に。奥の稜線ほど後）
+        if (深さ > 0.12) { const b = x * 4; if (稜点[b] < 0) { 稜点[b] = 頂 + 1 - 前覆; 稜点[b + 1] = 深さ; } else { 稜点[b + 2] = 頂 + 1 - 前覆; 稜点[b + 3] = 深さ; } }
       }
       隠数 = 0;
       /* 縁をなめらかに。手前の行の上の画素は、その行が一部しか覆っていない。残りを
@@ -415,9 +423,74 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
       頂 = Math.max(0, yp);
       if (頂 === 0) break;
     }
+    /* 稜線の向こうの霞。頂の向こうに見える低い野は遠い。頂のすぐ上から、離れるにつれ
+       淡い霞の色へ寄せる。手前の頂と奥の野が同じ緑で溶け合い、隊が頂にいるのか奥の野に
+       いるのか分からなかった（遊ぶ側の申し出）。霞の幅は画素で二十六 */
+    // 霞の濃さは図へ書き出すだけにして、あとで横にぼかしてから掛ける（列ごとの縞を出さない）
+    for (let i = 0; i < 稜ら.length; i += 2) {
+      const 底 = 稜ら[i], 強 = 稜ら[i + 1] * 0.42, 長 = 26;
+      for (let d = 1; d <= 長; d++) {
+        const yy = 底 - d; if (yy < 0) break;
+        const w = 強 * (1 - (d - 1) / 長) * (d < 3 ? d / 3 : 1);
+        const j = yy * sw + x;
+        if (w > 霞[j]) 霞[j] = w;
+      }
+    }
+  }
+  if (!重ね) {
+    /* 霞を横に十二画素ほどぼかして掛ける */
+    const R = 12, 行 = new Float32Array(sw);
+    for (let yy = 0; yy < dh; yy++) {
+      const b0 = yy * sw;
+      let 有 = false;
+      for (let x = 0; x < sw; x++) if (霞[b0 + x] > 0) { 有 = true; break; }
+      if (!有) continue;
+      let 和 = 0;
+      for (let x = -R; x < sw + R; x++) {
+        if (x + R < sw) 和 += 霞[b0 + x + R];
+        if (x - R - 1 >= 0) 和 -= 霞[b0 + x - R - 1];
+        if (x >= 0 && x < sw) 行[x] = 和 / (R * 2 + 1);
+      }
+      for (let x = 0; x < sw; x++) {
+        const w = 行[x]; if (w <= 0.002) continue;
+        const di = (b0 + x) * 4;
+        o[di] += (198 - o[di]) * w; o[di + 1] += (212 - o[di + 1]) * w; o[di + 2] += (214 - o[di + 2]) * w;
+      }
+    }
   }
   og.putImageData(od, 0, 0);
-  return { 画: out, 上, 縦: dh / 倍, 横: sw / 倍 };
+  /* 稜線の線。焼いた画の中の一画素の筋は、寄れば滲んで太い帯になる。描くたびに画面の点の
+     太さで引けるよう、隣り合う列の稜点を結んだ線分にして返す（盤の歩の尺。濃さで三段に分ける） */
+  let 稜線 = null;
+  if (稜点) {
+    /* 隣り合う列の稜点をつないで筋（一続きの線）にし、筋ごとに縦をならしてから引く。
+       列ごとの画素の段がそのまま線に出ると、階段のような稜線になった */
+    稜線 = [[], [], []];
+    const 筋ら = [];
+    let 生 = [];                                         // いま伸びている筋
+    for (let x = 0; x < sw; x++) {
+      const 次 = [];
+      for (let a = 0; a < 2; a++) {
+        const y0 = 稜点[x * 4 + a * 2]; if (y0 < 0) continue;
+        const 深 = 稜点[x * 4 + a * 2 + 1];
+        let 最 = null, 近 = 4;
+        for (const 筋 of 生) { const d = Math.abs(筋.y[筋.y.length - 1] - y0); if (d < 近 && 筋.末 !== x) { 近 = d; 最 = 筋; } }
+        if (最) { 最.y.push(y0); 最.深.push(深); 最.末 = x; 次.push(最); }
+        else { const 筋 = { x0: x, y: [y0], 深: [深], 末: x }; 筋ら.push(筋); 次.push(筋); }
+      }
+      生 = 次;
+    }
+    for (const 筋 of 筋ら) {
+      const n = 筋.y.length; if (n < 3) continue;
+      const 平 = new Float32Array(n);
+      for (let i = 0; i < n; i++) { let 和 = 0, 数 = 0; for (let j = Math.max(0, i - 3); j <= Math.min(n - 1, i + 3); j++) { 和 += 筋.y[j]; 数++; } 平[i] = 和 / 数; }
+      for (let i = 0; i + 1 < n; i++) {
+        const 深 = (筋.深[i] + 筋.深[i + 1]) / 2, 段 = 深 > 0.66 ? 2 : 深 > 0.33 ? 1 : 0;
+        稜線[段].push((筋.x0 + i + 0.5) / 倍, 平[i] / 倍 - 上, (筋.x0 + i + 1.5) / 倍, 平[i + 1] / 倍 - 上);
+      }
+    }
+  }
+  return { 画: out, 上, 縦: dh / 倍, 横: sw / 倍, 稜線 };
 }
 
 /* 隠れの際。盤の所（x, y）に立つ者が、手前の高い地（城の石垣の天端など）に
