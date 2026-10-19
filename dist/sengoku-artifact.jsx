@@ -27465,33 +27465,40 @@ function \u659C\u3081\u306B\u713C\u304F(src0, \u91CEw, \u91CEh, \u91CD\u306D) {
   return { \u753B: out, \u4E0A, \u7E26: dh / \u500D, \u6A2A: sw / \u500D, \u7A1C\u7DDA };
 }
 var \u969B\u306E\u5347 = 6;
+var \u969B\u306E\u523B\u307F = 2;
+var \u969B\u306E\u59CB\u3081 = \u969B\u306E\u5347 * 0.75 + 2;
 var \u969B\u306E\u899A\u3048 = null;
 var \u969B\u306E\u9375 = null;
+function \u969B\u306E\u5217\u3092\u91CF\u308B(M, ci) {
+  const k = M.k, vx = ci * \u969B\u306E\u5347, \u5217 = M.\u5024, \u57FA = ci * M.h;
+  let \u4E0A = Infinity;
+  let vy = (M.h - 1) * \u969B\u306E\u5347 + \u969B\u306E\u59CB\u3081 + \u969B\u306E\u5347;
+  for (let j = M.h - 1; j >= 0; j--) {
+    const \u969B\u306E\u6240 = j * \u969B\u306E\u5347 + \u969B\u306E\u59CB\u3081;
+    for (; vy >= \u969B\u306E\u6240; vy -= \u969B\u306E\u523B\u307F) {
+      const [wx, wy] = \u8996\u304B\u3089\u76E4(vx, vy);
+      const yy = vy * k - \u753B\u306E\u6D6E\u304D(wx, wy);
+      if (yy < \u4E0A) \u4E0A = yy;
+    }
+    \u5217[\u57FA + j] = \u4E0A;
+  }
+  M.\u6E08[ci] = 1;
+}
 function \u96A0\u308C\u306E\u969B(x, y) {
   if (!\u56F3 || !\u659C\u3081.\u5165) return Infinity;
   const k = \u7E26\u306E\u7E2E\u307F();
   const \u9375 = \u56F3;
   if (\u969B\u306E\u9375 !== \u9375 || !\u969B\u306E\u899A\u3048 || \u969B\u306E\u899A\u3048.\u5411\u304D !== \u5411\u304D || \u969B\u306E\u899A\u3048.k !== k || \u969B\u306E\u899A\u3048.\u6301 !== \u659C\u3081.\u6301\u3061\u4E0A\u3052) {
-    const w = Math.ceil((\u91CE.w || \u56F3.w * \u56F3.\u5358) / \u969B\u306E\u5347) + 1, h = Math.ceil((\u91CE.h || \u56F3.h * \u56F3.\u5358) / \u969B\u306E\u5347) + 1;
-    \u969B\u306E\u899A\u3048 = { \u5411\u304D, k, \u6301: \u659C\u3081.\u6301\u3061\u4E0A\u3052, w, h, \u5024: new Float32Array(w * h).fill(NaN) };
+    const \u5BF8 = \u8996\u306E\u5BF8();
+    const w = Math.ceil((\u5BF8.w || \u56F3.w * \u56F3.\u5358) / \u969B\u306E\u5347) + 1, h = Math.ceil((\u5BF8.h || \u56F3.h * \u56F3.\u5358) / \u969B\u306E\u5347) + 1;
+    \u969B\u306E\u899A\u3048 = { \u5411\u304D, k, \u6301: \u659C\u3081.\u6301\u3061\u4E0A\u3052, w, h, \u5024: new Float32Array(w * h), \u6E08: new Uint8Array(w) };
     \u969B\u306E\u9375 = \u9375;
   }
   const M = \u969B\u306E\u899A\u3048;
-  const cx = Math.max(0, Math.min(M.w - 1, Math.round(x / \u969B\u306E\u5347))), cy = Math.max(0, Math.min(M.h - 1, Math.round(y / \u969B\u306E\u5347)));
-  const j = cy * M.w + cx;
-  let \u969B = M.\u5024[j];
-  if (Number.isNaN(\u969B)) {
-    const [vx, vy] = \u8996(cx * \u969B\u306E\u5347, cy * \u969B\u306E\u5347);
-    const \u5148 = Math.min(900, (\u56F3.\u6700 - \u56F3.\u4F4E) * \u659C\u3081.\u6301\u3061\u4E0A\u3052 / k + 12);
-    \u969B = Infinity;
-    for (let d = \u969B\u306E\u5347 * 0.75 + 2; d <= \u5148; d += Math.max(2, d * 0.05)) {
-      const [wx, wy] = \u8996\u304B\u3089\u76E4(vx, vy + d);
-      const yy = (vy + d) * k - \u753B\u306E\u6D6E\u304D(wx, wy);
-      if (yy < \u969B) \u969B = yy;
-    }
-    M.\u5024[j] = \u969B;
-  }
-  return \u969B;
+  const [vx, vy] = \u8996(x, y);
+  const ci = Math.max(0, Math.min(M.w - 1, Math.round(vx / \u969B\u306E\u5347))), cj = Math.max(0, Math.min(M.h - 1, Math.round(vy / \u969B\u306E\u5347)));
+  if (!M.\u6E08[ci]) \u969B\u306E\u5217\u3092\u91CF\u308B(M, ci);
+  return M.\u5024[ci * M.h + cj];
 }
 function \u96A0\u3057\u3066\u63CF\u304F(ctx, wx, wy, x, y, \u4E08, fn) {
   const \u969B = \u96A0\u308C\u306E\u969B(wx, wy);
