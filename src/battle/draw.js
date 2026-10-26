@@ -1974,14 +1974,16 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     /* 稜線。頂の縁を画面の点の太さで引く（naname.js 斜めに焼く の 稜線）。焼いた画の筋は
        寄れば滲み、頂と奥の野が溶け合って見えた。向こうが深く隠れる所ほど濃い */
     if (斜め地.稜線) {
-      // 道は稜線そのものに覚えさせる（斜め地は毎コマ写し直されるので、そこに置くと毎コマ組み直す）
-      if (!斜め地.稜線.道) 斜め地.稜線.道 = 斜め地.稜線.map((線) => {
-        const 道 = new Path2D();
-        for (let i = 0; i < 線.length; i += 4) { 道.moveTo(線[i], 線[i + 1]); 道.lineTo(線[i + 2], 線[i + 3]); }
-        return 道;
-      });
+      const 引く = (筆, 線) => { for (let i = 0; i < 線.length; i += 4) { 筆.moveTo(線[i], 線[i + 1]); 筆.lineTo(線[i + 2], 線[i + 3]); } };
+      // 道は稜線そのものに覚えさせる（斜め地は毎コマ写し直されるので、そこに置くと毎コマ組み直す）。
+      // Path2D の無い所（試験の器）では、その都度引く
+      if (!斜め地.稜線.道 && typeof Path2D === "function") 斜め地.稜線.道 = 斜め地.稜線.map((線) => { const 道 = new Path2D(); 引く(道, 線); return 道; });
       ctx.lineCap = "round"; ctx.lineWidth = 1.3 / cam.s;
-      [0.22, 0.38, 0.55].forEach((a, i) => { ctx.strokeStyle = `rgba(28,38,26,${a})`; ctx.stroke(斜め地.稜線.道[i]); });
+      [0.22, 0.38, 0.55].forEach((a, i) => {
+        ctx.strokeStyle = `rgba(28,38,26,${a})`;
+        if (斜め地.稜線.道) ctx.stroke(斜め地.稜線.道[i]);
+        else { ctx.beginPath(); 引く(ctx, 斜め地.稜線[i]); ctx.stroke(); }
+      });
     }
     ctx.restore();
   } else {

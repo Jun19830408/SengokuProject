@@ -34270,19 +34270,27 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
     ctx.scale(1, 1 / \u7E2E);
     ctx.drawImage(\u659C\u3081\u5730.\u753B, 0, -\u659C\u3081\u5730.\u4E0A, \u659C\u3081\u5730.\u6A2A || FIELD.w, \u659C\u3081\u5730.\u7E26);
     if (\u659C\u3081\u5730.\u7A1C\u7DDA) {
-      if (!\u659C\u3081\u5730.\u7A1C\u7DDA.\u9053) \u659C\u3081\u5730.\u7A1C\u7DDA.\u9053 = \u659C\u3081\u5730.\u7A1C\u7DDA.map((\u7DDA) => {
-        const \u90532 = new Path2D();
+      const \u5F15\u304F = (\u7B46, \u7DDA) => {
         for (let i = 0; i < \u7DDA.length; i += 4) {
-          \u90532.moveTo(\u7DDA[i], \u7DDA[i + 1]);
-          \u90532.lineTo(\u7DDA[i + 2], \u7DDA[i + 3]);
+          \u7B46.moveTo(\u7DDA[i], \u7DDA[i + 1]);
+          \u7B46.lineTo(\u7DDA[i + 2], \u7DDA[i + 3]);
         }
+      };
+      if (!\u659C\u3081\u5730.\u7A1C\u7DDA.\u9053 && typeof Path2D === "function") \u659C\u3081\u5730.\u7A1C\u7DDA.\u9053 = \u659C\u3081\u5730.\u7A1C\u7DDA.map((\u7DDA) => {
+        const \u90532 = new Path2D();
+        \u5F15\u304F(\u90532, \u7DDA);
         return \u90532;
       });
       ctx.lineCap = "round";
       ctx.lineWidth = 1.3 / cam.s;
       [0.22, 0.38, 0.55].forEach((a, i) => {
         ctx.strokeStyle = `rgba(28,38,26,${a})`;
-        ctx.stroke(\u659C\u3081\u5730.\u7A1C\u7DDA.\u9053[i]);
+        if (\u659C\u3081\u5730.\u7A1C\u7DDA.\u9053) ctx.stroke(\u659C\u3081\u5730.\u7A1C\u7DDA.\u9053[i]);
+        else {
+          ctx.beginPath();
+          \u5F15\u304F(ctx, \u659C\u3081\u5730.\u7A1C\u7DDA[i]);
+          ctx.stroke();
+        }
       });
     }
     ctx.restore();
