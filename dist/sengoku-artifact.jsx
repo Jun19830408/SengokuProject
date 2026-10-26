@@ -26717,19 +26717,27 @@ function navPath(m, x0, y0, x1, y1) {
   };
   const ix = (x) => clamp(Math.floor(x / CS), 0, w - 1);
   const iy = (y) => clamp(Math.floor(y / CS), 0, h - 1);
-  const near = (i0, j0) => {
+  const near = (i0, j0, x, y) => {
     if (ok[j0 * w + i0]) return j0 * w + i0;
+    let \u898B\u3048 = -1, \u898B\u3048\u9694 = Infinity, \u8F2A\u306E\u5148 = -1;
     for (let r = 1; r <= 6; r++) {
       for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
         if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
         const i = i0 + di, j = j0 + dj;
         if (i < 0 || j < 0 || i >= w || j >= h) continue;
-        if (ok[j * w + i]) return j * w + i;
+        if (!ok[j * w + i]) continue;
+        if (\u8F2A\u306E\u5148 < 0) \u8F2A\u306E\u5148 = j * w + i;
+        const cx = i * CS + CS / 2, cy = j * CS + CS / 2, d = Math.hypot(cx - x, cy - y);
+        if (d < \u898B\u3048\u9694 && \u898B\u901A\u305B\u308B(x, y, cx, cy)) {
+          \u898B\u3048\u9694 = d;
+          \u898B\u3048 = j * w + i;
+        }
       }
+      if (\u898B\u3048 >= 0) return \u898B\u3048;
     }
-    return -1;
+    return \u8F2A\u306E\u5148;
   };
-  const S = near(ix(x0), iy(y0)), T = near(ix(x1), iy(y1));
+  const S = near(ix(x0), iy(y0), x0, y0), T = near(ix(x1), iy(y1), x1, y1);
   if (S < 0 || T < 0) return null;
   if (S === T) return [{ x: x1, y: y1, r: 24 }];
   const N = w * h;
@@ -26783,18 +26791,141 @@ function navPath(m, x0, y0, x1, y1) {
     if (k === S) break;
   }
   cells.reverse();
-  const pts = [];
+  const \u4E2D = (k) => ({ x: k % w * CS + CS / 2, y: (k / w | 0) * CS + CS / 2 });
+  const \u89D2 = [];
   let lastDir = null;
   for (let n = 1; n < cells.length; n++) {
     const a2 = cells[n - 1], b2 = cells[n];
     const d = `${b2 % w - a2 % w},${(b2 / w | 0) - (a2 / w | 0)}`;
     if (d !== lastDir) {
       lastDir = d;
-      pts.push({ x: a2 % w * CS + CS / 2, y: (a2 / w | 0) * CS + CS / 2, r: 30 });
+      \u89D2.push(n - 1);
     }
+  }
+  const \u4E26 = [];
+  for (let t = 0; t < \u89D2.length; t++) {
+    const n0 = \u89D2[t], n1 = t + 1 < \u89D2.length ? \u89D2[t + 1] : cells.length - 1;
+    \u4E26.push({ ...\u4E2D(cells[n0]), r: 30 });
+    const p0 = \u4E2D(cells[n0]), p1 = \u4E2D(cells[n1]);
+    if (n1 > n0 + 1 && !\u898B\u901A\u305B\u308B(p0.x, p0.y, p1.x, p1.y)) {
+      for (let n = n0 + 1; n < n1; n++) \u4E26.push({ ...\u4E2D(cells[n]), r: 22 });
+    }
+  }
+  if (cells.length > 1) \u4E26.push({ ...\u4E2D(cells[cells.length - 1]), r: 22 });
+  const pts = [];
+  for (const p of \u4E26) {
+    const a = pts[pts.length - 1];
+    if (a && Math.abs(a.x - p.x) === CS && Math.abs(a.y - p.y) === CS && !\u898B\u901A\u305B\u308B(a.x, a.y, p.x, p.y)) {
+      const k1 = { x: p.x, y: a.y }, k2 = { x: a.x, y: p.y };
+      if (\u898B\u901A\u305B\u308B(a.x, a.y, k1.x, k1.y) && \u898B\u901A\u305B\u308B(k1.x, k1.y, p.x, p.y)) pts.push({ ...k1, r: 20 });
+      else if (\u898B\u901A\u305B\u308B(a.x, a.y, k2.x, k2.y) && \u898B\u901A\u305B\u308B(k2.x, k2.y, p.x, p.y)) pts.push({ ...k2, r: 20 });
+    }
+    pts.push(p);
   }
   pts.push({ x: x1, y: y1, r: 26 });
   return pts;
+}
+function \u6D41\u308C\u306E\u5347(nv, x, y) {
+  const { CS, w, h, ok } = nv;
+  const i0 = clamp(Math.floor(x / CS), 0, w - 1), j0 = clamp(Math.floor(y / CS), 0, h - 1);
+  if (ok[j0 * w + i0]) return j0 * w + i0;
+  const \u899A = nv.\u5347\u306E\u899A\u3048 || (nv.\u5347\u306E\u899A\u3048 = /* @__PURE__ */ new Map());
+  const \u9375 = Math.floor(y / 4) * 8192 + Math.floor(x / 4);
+  const \u524D = \u899A.get(\u9375);
+  if (\u524D !== void 0) return \u524D;
+  let best = -1, bd = Infinity;
+  for (let r = 1; r <= 2 && best < 0; r++) {
+    for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+      if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+      const i = i0 + di, j = j0 + dj;
+      if (i < 0 || j < 0 || i >= w || j >= h || !ok[j * w + i]) continue;
+      const cx = i * CS + CS / 2, cy = j * CS + CS / 2, d = Math.hypot(cx - x, cy - y);
+      if (d < bd && \u898B\u901A\u305B\u308B(x, y, cx, cy)) {
+        bd = d;
+        best = j * w + i;
+      }
+    }
+  }
+  \u899A.set(\u9375, best);
+  return best;
+}
+function \u6D41\u308C\u3092\u4F5C\u308B(m, x, y) {
+  const nv = m.nav || buildNav(m);
+  const { w, h, eR, eD } = nv;
+  const S = \u6D41\u308C\u306E\u5347(nv, x, y);
+  if (S < 0) return null;
+  const \u8DDD = new Int32Array(w * h).fill(-1);
+  const \u5217 = new Int32Array(w * h);
+  let \u982D2 = 0, \u5C3E2 = 0;
+  \u8DDD[S] = 0;
+  \u5217[\u5C3E2++] = S;
+  while (\u982D2 < \u5C3E2) {
+    const k = \u5217[\u982D2++], i = k % w, d = \u8DDD[k] + 1;
+    if (i + 1 < w && eR[k] && \u8DDD[k + 1] < 0) {
+      \u8DDD[k + 1] = d;
+      \u5217[\u5C3E2++] = k + 1;
+    }
+    if (i > 0 && eR[k - 1] && \u8DDD[k - 1] < 0) {
+      \u8DDD[k - 1] = d;
+      \u5217[\u5C3E2++] = k - 1;
+    }
+    if (k + w < w * h && eD[k] && \u8DDD[k + w] < 0) {
+      \u8DDD[k + w] = d;
+      \u5217[\u5C3E2++] = k + w;
+    }
+    if (k >= w && eD[k - w] && \u8DDD[k - w] < 0) {
+      \u8DDD[k - w] = d;
+      \u5217[\u5C3E2++] = k - w;
+    }
+  }
+  return { nv, S, si: S % w, sj: S / w | 0, \u8DDD };
+}
+function \u56DE\u308A\u9053\u304B(\u6D41, x, y) {
+  const k = \u6D41\u308C\u306E\u5347(\u6D41.nv, x, y);
+  if (k < 0 || \u6D41.\u8DDD[k] < 0) return true;
+  const w = \u6D41.nv.w;
+  return \u6D41.\u8DDD[k] > Math.abs(k % w - \u6D41.si) + Math.abs((k / w | 0) - \u6D41.sj) + 3;
+}
+function \u5840\u306E\u3053\u3061\u3089(\u6D41, cx, cy, x, y) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x - cx, y - cy) / 11));
+  for (let s2 = n - 1; s2 >= 1; s2--) {
+    const px2 = cx + (x - cx) * s2 / n, py2 = cy + (y - cy) * s2 / n;
+    if (passable(px2, py2) && !\u56DE\u308A\u9053\u304B(\u6D41, px2, py2)) return { x: px2, y: py2 };
+  }
+  return { x: cx, y: cy };
+}
+function \u6D41\u308C\u306E\u5148(\u6D41, x, y, \u5148\u307E\u3067 = 6) {
+  const { nv, \u8DDD } = \u6D41, { CS, w, h, eR, eD } = nv;
+  let k = \u6D41\u308C\u306E\u5347(nv, x, y);
+  if (k < 0 || \u8DDD[k] <= 0) return null;
+  const \u90532 = [];
+  for (let n = 0; n < \u5148\u307E\u3067 && \u8DDD[k] > 0; n++) {
+    const i = k % w, d = \u8DDD[k] - 1;
+    let nk = -1;
+    if (i + 1 < w && eR[k] && \u8DDD[k + 1] === d) nk = k + 1;
+    else if (i > 0 && eR[k - 1] && \u8DDD[k - 1] === d) nk = k - 1;
+    else if (k + w < w * h && eD[k] && \u8DDD[k + w] === d) nk = k + w;
+    else if (k >= w && eD[k - w] && \u8DDD[k - w] === d) nk = k - w;
+    if (nk < 0) break;
+    \u90532.push(nk);
+    k = nk;
+  }
+  for (let n = \u90532.length - 1; n >= 0; n--) {
+    const px2 = \u90532[n] % w * CS + CS / 2, py2 = (\u90532[n] / w | 0) * CS + CS / 2;
+    if (n === 0 || \u898B\u901A\u305B\u308B(x, y, px2, py2)) return { x: px2, y: py2 };
+  }
+  return null;
+}
+function \u5217\u306B\u7740\u304F(c, g, gp, t) {
+  if (c.\u5217\u306E\u9580 === g) return;
+  c.\u5217\u306E\u9580 = g;
+  c.\u5217\u306B\u7740\u3044\u305F\u523B = t;
+  c.\u5217\u306B\u7740\u3044\u305F\u9694 = Math.hypot((c.mx == null ? c.x : c.mx) - gp.x, (c.my == null ? c.y : c.my) - gp.y);
+}
+function \u5217\u306E\u9806(g, gp) {
+  const \u9694 = (o) => o.\u5217\u306E\u9580 === g ? o.\u5217\u306B\u7740\u3044\u305F\u9694 : Math.hypot((o.mx == null ? o.x : o.mx) - gp.x, (o.my == null ? o.y : o.my) - gp.y);
+  const \u7740 = (o) => o.\u5217\u306E\u9580 === g ? o.\u5217\u306B\u7740\u3044\u305F\u523B : Infinity;
+  return (a, b2) => \u7740(a) - \u7740(b2) || \u9694(a) - \u9694(b2);
 }
 function routeToCastleGate(m, g, cx, cy) {
   const a = axisOf(m.layers[g.layer], g), t = m.t;
@@ -35671,7 +35802,7 @@ function battleAI(b) {
         if (g && g.slot && g.slot !== c.id && !c.pinned) {
           const \u5F85\u3064\u968A = b.corps.filter((o) => !o.dead && !o.destroyed && !o.routed && !o.withdraw && o.side === b.attacker && o.id !== g.slot && (o.gate === g || !o.gate));
           const gp5 = gatePos(MAP, MAP.layers[g.layer], g);
-          \u5F85\u3064\u968A.sort((x, y) => Math.hypot(x.x - gp5.x, x.y - gp5.y) - Math.hypot(y.x - gp5.x, y.y - gp5.y));
+          \u5F85\u3064\u968A.sort(\u5217\u306E\u9806(g, gp5));
           const \u9806 = Math.max(0, \u5F85\u3064\u968A.findIndex((o) => o.id === c.id));
           const \u63A7 = \u9580\u306E\u63A7\u3048\u53E3(MAP, MAP.layers[g.layer], g, \u9806);
           const \u9694 = Math.hypot(c.x - \u63A7.x, c.y - \u63A7.y);
@@ -35953,6 +36084,13 @@ function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   fCorps.\u58EB\u6C17\u306E\u6E9C = (fCorps.\u58EB\u6C17\u306E\u6E9C || 0) + share * 100 * 0.6 * (1 + (flank - 1) * 0.8) * \u582A\u3048;
   fCorps.\u640D = (fCorps.\u640D || 0) + lost;
   if (byCorps) byCorps.\u529F = (byCorps.\u529F || 0) + lost;
+}
+function \u968A\u306E\u6D41\u308C(c) {
+  const nv = MAP.nav || buildNav(MAP);
+  const f = c.\u6D41\u308C;
+  if (f && f.nv === nv && f.S === \u6D41\u308C\u306E\u5347(nv, c.x, c.y)) return f;
+  c.\u6D41\u308C = \u6D41\u308C\u3092\u4F5C\u308B(MAP, c.x, c.y);
+  return c.\u6D41\u308C;
 }
 function \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, x, y, \u8DB3\u51432) {
   if (!c) return true;
@@ -36374,7 +36512,7 @@ function stepBattle(b, dt) {
     if (c.wp && c.wp.length && !HOLD) {
       const w0 = c.wp[0];
       const d0 = Math.hypot(w0.x - c.x, w0.y - c.y);
-      if (d0 < (w0.r || 40)) {
+      if (d0 < (w0.r || 40) && (!MAP || \u898B\u901A\u305B\u308B(c.x, c.y, w0.x, w0.y))) {
         c.wp.shift();
         c.stuck = 0;
         c.lastD = null;
@@ -36605,6 +36743,9 @@ function stepBattle(b, dt) {
     }
     placeSquads(c, false);
     const aggressive = c.order === "\u63A5\u6226" || c.order === "\u7A81\u6483" || c.order === "\u524D\u9032" || c.order === "\u5C04\u6483";
+    const \u6D41 = MAP ? \u968A\u306E\u6D41\u308C(c) : null;
+    const \u66F2\u8F2A\u306E\u5185 = (x, y) => MAP.layers.some((L) => inLayer(MAP, L, x, y));
+    const \u5C06\u306F\u5185 = \u6D41 ? \u66F2\u8F2A\u306E\u5185(c.x, c.y) : false;
     for (const q of c.squads) {
       let targetX = c.x + q.slotX, targetY = c.y + q.slotY;
       const st0 = ARM_STATS[q.type];
@@ -36634,13 +36775,41 @@ function stepBattle(b, dt) {
           targetY = homeY + (targetY - homeY) / off * leash;
         }
       }
+      let \u56DE\u308A\u5148 = null;
+      if (\u6D41) {
+        if (\u56DE\u308A\u9053\u304B(\u6D41, targetX, targetY) && (\u5C06\u306F\u5185 || \u66F2\u8F2A\u306E\u5185(targetX, targetY))) {
+          const \u899A = q.\u5F15\u304D\u5BC4\u305B, ox = targetX - c.x, oy = targetY - c.y;
+          if (\u899A && \u899A.\u6D41 === \u6D41 && Math.abs(\u899A.ox - ox) < 4 && Math.abs(\u899A.oy - oy) < 4 && b.t - \u899A.t < 0.5) {
+            targetX = c.x + \u899A.px;
+            targetY = c.y + \u899A.py;
+          } else {
+            const p = \u5840\u306E\u3053\u3061\u3089(\u6D41, c.x, c.y, targetX, targetY);
+            q.\u5F15\u304D\u5BC4\u305B = { \u6D41, ox, oy, px: p.x - c.x, py: p.y - c.y, t: b.t };
+            targetX = p.x;
+            targetY = p.y;
+          }
+        }
+        if (\u56DE\u308A\u9053\u304B(\u6D41, q.x, q.y) && (\u5C06\u306F\u5185 || \u66F2\u8F2A\u306E\u5185(q.x, q.y))) {
+          const \u899A = q.\u56DE\u308A\u5148;
+          if (\u899A && b.t - \u899A.t < 0.4 && Math.hypot(\u899A.x - q.x, \u899A.y - q.y) > 14) \u56DE\u308A\u5148 = \u899A;
+          else {
+            \u56DE\u308A\u5148 = \u6D41\u308C\u306E\u5148(\u6D41, q.x, q.y);
+            if (\u56DE\u308A\u5148) \u56DE\u308A\u5148.t = b.t;
+          }
+        }
+        q.\u56DE\u308A\u5148 = \u56DE\u308A\u5148;
+      }
       const homeD = Math.hypot(q.x - targetX, q.y - targetY);
       const \u565B\u307F\u6700\u8FD1 = q.engaged || b.t - (q.\u565B\u307F\u523B == null ? -99 : q.\u565B\u307F\u523B) < 3;
       if (homeD > 110 && !\u565B\u307F\u6700\u8FD1) q.lost = true;
       else if (homeD < 40 || \u565B\u307F\u6700\u8FD1) q.lost = false;
       const \u5840\u8D8A\u3057 = homeD > 190 && MAP && !\u898B\u901A\u305B\u308B(q.x, q.y, targetX, targetY);
-      q.\u5840\u8D8A\u3057\u523B = \u5840\u8D8A\u3057 ? (q.\u5840\u8D8A\u3057\u523B || 0) + dt : 0;
-      if (\u5840\u8D8A\u3057 && q.\u5840\u8D8A\u3057\u523B <= 25) q.lost = true;
+      q.\u5840\u8D8A\u3057\u523B = \u5840\u8D8A\u3057 && !\u56DE\u308A\u5148 ? (q.\u5840\u8D8A\u3057\u523B || 0) + dt : 0;
+      if (\u56DE\u308A\u5148) {
+        q.lost = false;
+        targetX = \u56DE\u308A\u5148.x;
+        targetY = \u56DE\u308A\u5148.y;
+      } else if (\u5840\u8D8A\u3057 && q.\u5840\u8D8A\u3057\u523B <= 25) q.lost = true;
       else if (homeD > 190) {
         q.\u5840\u8D8A\u3057\u523B = 0;
         let put = null;
@@ -36755,6 +36924,7 @@ function stepBattle(b, dt) {
       if (!holder) continue;
       attached.add(holder.id);
       g.hold = holder.gen.name;
+      \u5217\u306B\u7740\u304F(holder, g, gp, b.t);
       const a3 = axisOf(l, g);
       const stand = fromUV(MAP, a3, g.off, a3.half + MAP.t + 22);
       if (holder.gate === g && !holder.wp) {
@@ -36763,15 +36933,18 @@ function stepBattle(b, dt) {
         holder.pinned = true;
       }
       const \u5F85\u3061 = atkC.filter((c) => c.id !== holder.id && c.gate === g && !c.detach && !c.squads.some((q) => q.engaged));
-      \u5F85\u3061.sort((x, y2) => Math.hypot((x.mx == null ? x.x : x.mx) - gp.x, (x.my == null ? x.y : x.my) - gp.y) - Math.hypot((y2.mx == null ? y2.x : y2.mx) - gp.x, (y2.my == null ? y2.y : y2.my) - gp.y));
+      const \u9580\u3078\u306E\u9694 = (x) => Math.hypot((x.mx == null ? x.x : x.mx) - gp.x, (x.my == null ? x.y : x.my) - gp.y);
+      \u5F85\u3061.sort(\u5217\u306E\u9806(g, gp));
       \u5F85\u3061.forEach((c, i) => {
         const \u63A7 = \u9580\u306E\u63A7\u3048\u53E3(MAP, l, g, i);
-        const \u9580\u307E\u3067 = Math.hypot((c.mx == null ? c.x : c.mx) - gp.x, (c.my == null ? c.y : c.my) - gp.y);
+        const \u9580\u307E\u3067 = \u9580\u3078\u306E\u9694(c);
         const \u63A7\u307E\u3067 = Math.hypot(c.x - \u63A7.x, c.y - \u63A7.y);
         if (\u9580\u307E\u3067 > R2 * 3.2 && \u63A7\u307E\u3067 > R2 * 3.2) {
           c.gate\u5F85\u3061 = 0;
+          c.\u5217\u306E\u9580 = null;
           return;
         }
+        \u5217\u306B\u7740\u304F(c, g, gp, b.t);
         c.gate\u5F85\u3061 = i + 1;
         c.pinned = false;
         if (\u63A7\u307E\u3067 > 46) {

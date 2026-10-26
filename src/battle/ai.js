@@ -1,4 +1,4 @@
-import { MAP, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか } from "./castleMap.js";
+import { MAP, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 列の順 } from "./castleMap.js";
 import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt, 地の高さ, 高み } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
@@ -1104,7 +1104,7 @@ export function battleAI(b) {
           const 待つ隊 = b.corps.filter((o) => !o.dead && !o.destroyed && !o.routed && !o.withdraw
             && o.side === b.attacker && o.id !== g.slot && (o.gate === g || !o.gate));
           const gp5 = gatePos(MAP, MAP.layers[g.layer], g);
-          待つ隊.sort((x, y) => Math.hypot(x.x - gp5.x, x.y - gp5.y) - Math.hypot(y.x - gp5.x, y.y - gp5.y));
+          待つ隊.sort(列の順(g, gp5));                   // engine と同じ順（castleMap.js 列の順）
           const 順 = Math.max(0, 待つ隊.findIndex((o) => o.id === c.id));
           /* 立ち所は engine と同じ口から採る。采配と engine が別々の所を指して
              いると、隊は二つの的のあいだで揺れる。 */

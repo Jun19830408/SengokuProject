@@ -1,5 +1,5 @@
 import { battleAI } from "./ai.js";
-import { MAP, SIEGE_KIT, axisOf, fromUV, gatePos, gateReachable, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか } from "./castleMap.js";
+import { MAP, SIEGE_KIT, axisOf, buildNav, fromUV, gatePos, gateReachable, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 流れの升, 流れを作る, 回り道か, 塀のこちら, 流れの先, 列の順, 列に着く } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads, 前列を入れ替える, 支えの向き数, 支えの幅, 空 } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地, 地の高さ } from "./field.js";
@@ -131,6 +131,16 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   // 押しているか押されているかを数える（士気の上げ下げに使う。刻ごとに褪せる）
   fCorps.損 = (fCorps.損 || 0) + lost;
   if (byCorps) byCorps.功 = (byCorps.功 || 0) + lost;
+}
+
+/* 隊の流れ（城の盤。castleMap.js 将への流れ）。将が別の升目へ移るか、
+   通れる所が変われば（門が破れて道さがしの格子が作り直されれば）作り直す。 */
+function 隊の流れ(c) {
+  const nv = MAP.nav || buildNav(MAP);
+  const f = c.流れ;
+  if (f && f.nv === nv && f.S === 流れの升(nv, c.x, c.y)) return f;
+  c.流れ = 流れを作る(MAP, c.x, c.y);
+  return c.流れ;
 }
 
 /* 淵（深い川）は、決めてからでなければ踏み込まない（GDD 8.1）。
@@ -736,7 +746,10 @@ export function stepBattle(b, dt) {
     if (c.wp && c.wp.length && !HOLD) {
       const w0 = c.wp[0];
       const d0 = Math.hypot(w0.x - c.x, w0.y - c.y);
-      if (d0 < (w0.r || 40)) { c.wp.shift(); c.stuck = 0; c.lastD = null; }
+      /* 着いたとするのは、地点とのあいだに塀が無いときだけ。地点の輪（三十歩）は
+         塀より厚いので、塀の外から塀の内の地点に「着いた」ことになり、隊は次の
+         地点へまっすぐ向かって塀の外を這っていた */
+      if (d0 < (w0.r || 40) && (!MAP || 見通せる(c.x, c.y, w0.x, w0.y))) { c.wp.shift(); c.stuck = 0; c.lastD = null; }
       else {
         // まったく進めていないときだけ「詰まった」とみなす。
         // 他の隊に阻まれて遅いだけの場合に地点を捨てると、城壁へ突っ込んで動けなくなる。
@@ -1115,6 +1128,9 @@ export function stepBattle(b, dt) {
     // 移動でも敵を追わせると、指示した場所へ着かずに流れていってしまう。
     // 「移動」は行き先へ進む命令。近くの敵に食いつくのは接戦・突撃・前進・射撃のとき。
     const aggressive = c.order === "接戦" || c.order === "突撃" || c.order === "前進" || c.order === "射撃";
+    const 流 = MAP ? 隊の流れ(c) : null;              // 城の盤だけ（下の 回り先）
+    const 曲輪の内 = (x, y) => MAP.layers.some((L) => inLayer(MAP, L, x, y));
+    const 将は内 = 流 ? 曲輪の内(c.x, c.y) : false;
     for (const q of c.squads) {
       let targetX = c.x + q.slotX, targetY = c.y + q.slotY;
       const st0 = ARM_STATS[q.type];
@@ -1169,6 +1185,39 @@ export function stepBattle(b, dt) {
           targetY = homeY + ((targetY - homeY) / off) * leash;
         }
       }
+      /* 城の盤では、塀を挟んだ持ち場へまっすぐ歩かせない（castleMap.js 将への流れ）。
+         持ち場が将から見て塀の向こうに掛かれば、将の側の塀の手前へ引き寄せる。
+         組が塀の向こうにいれば、将への流れを下って門へ回る（回り先）。
+         どちらも無ければ、これまでどおり持ち場へまっすぐ歩く。
+
+         効かせるのは、将か、持ち場か、組のどれかが曲輪の内にいるとき（塀を挟むとき）
+         だけである。将が城の外の野にいて、持ち場が堀と塀のあいだの帯に掛かるとき
+         （門の前へ出てきた城方と、橋を渡って斬り結ぶとき）まで将の側へ引き寄せると、
+         寄せ手は門前の敵に手が出せない。稲葉山では、大手門の外へ出た斎藤高政隊を
+         崩すのが三十秒から五十五秒に延びた。 */
+      let 回り先 = null;
+      if (流) {
+        if (回り道か(流, targetX, targetY) && (将は内 || 曲輪の内(targetX, targetY))) {
+          /* 引き寄せた所は、将からのずれとして〇.五秒覚える（将が同じ升目にいて、
+             持ち場のずれが四歩の内なら使い回す）。塀のこちらは十一歩ごとに地を
+             量るので、塀ぞいを進む隊では一刻ごとに量ると重い */
+          const 覚 = q.引き寄せ, ox = targetX - c.x, oy = targetY - c.y;
+          if (覚 && 覚.流 === 流 && Math.abs(覚.ox - ox) < 4 && Math.abs(覚.oy - oy) < 4 && b.t - 覚.t < 0.5) {
+            targetX = c.x + 覚.px; targetY = c.y + 覚.py;
+          } else {
+            const p = 塀のこちら(流, c.x, c.y, targetX, targetY);
+            q.引き寄せ = { 流, ox, oy, px: p.x - c.x, py: p.y - c.y, t: b.t };
+            targetX = p.x; targetY = p.y;
+          }
+        }
+        if (回り道か(流, q.x, q.y) && (将は内 || 曲輪の内(q.x, q.y))) {
+          // 升目の先は見通しを量るので重い。着くか、〇.四秒たつまで覚えておく
+          const 覚 = q.回り先;
+          if (覚 && b.t - 覚.t < 0.4 && Math.hypot(覚.x - q.x, 覚.y - q.y) > 14) 回り先 = 覚;
+          else { 回り先 = 流れの先(流, q.x, q.y); if (回り先) 回り先.t = b.t; }
+        }
+        q.回り先 = 回り先;
+      }
       /* 隊からはぐれた組は、まず隊の来た道を辿って追いつく。追いついたら定位置へ戻る。
 
          ただし槍を合わせている組は「はぐれ」ではない。足を止めて斬り結んで
@@ -1189,9 +1238,12 @@ export function stepBattle(b, dt) {
          遊ぶ側には「閉じた門や塀を兵がすり抜けている」と見えた。そのあいだは下の
          「はぐれ」として隊の道筋（門をくぐった跡）を辿らせ、二十五秒たっても
          越えられないときだけ引き戻す。 */
+      /* 門へ回っている組（回り先）は、遠く離れていても飛ばさない。回り道は長く、
+         城の向こう側からなら二十五秒では着かないことがある */
       const 塀越し = homeD > 190 && MAP && !見通せる(q.x, q.y, targetX, targetY);
-      q.塀越し刻 = 塀越し ? (q.塀越し刻 || 0) + dt : 0;
-      if (塀越し && q.塀越し刻 <= 25) q.lost = true;
+      q.塀越し刻 = 塀越し && !回り先 ? (q.塀越し刻 || 0) + dt : 0;
+      if (回り先) { q.lost = false; targetX = 回り先.x; targetY = 回り先.y; }
+      else if (塀越し && q.塀越し刻 <= 25) q.lost = true;
       else if (homeD > 190) {
         q.塀越し刻 = 0;
         let put = null;
@@ -1387,6 +1439,7 @@ export function stepBattle(b, dt) {
       const holder = near.find((c) => c.id === g.slot);
       if (!holder) continue;
       attached.add(holder.id); g.hold = holder.gen.name;
+      列に着く(holder, g, gp, b.t);                     // 取り付きを外れたら列の先頭へ（castleMap.js 列の順）
       // 取り付いた隊は門の前に据わる。押し合いで少しずつ流されて、
       // いつのまにか門から離れてしまわないようにする。
       const a3 = axisOf(l, g);
@@ -1409,15 +1462,17 @@ export function stepBattle(b, dt) {
          次の隊がそのまま前へ出る。 */
       const 待ち = atkC.filter((c) => c.id !== holder.id && c.gate === g && !c.detach
         && !c.squads.some((q) => q.engaged));
-      待ち.sort((x, y2) => Math.hypot((x.mx == null ? x.x : x.mx) - gp.x, (x.my == null ? x.y : x.my) - gp.y)
-        - Math.hypot((y2.mx == null ? y2.x : y2.mx) - gp.x, (y2.my == null ? y2.y : y2.my) - gp.y));
+      // 列の順は先着（castleMap.js 列の順。采配 ai.js も同じ順を使う）
+      const 門への隔 = (x) => Math.hypot((x.mx == null ? x.x : x.mx) - gp.x, (x.my == null ? x.y : x.my) - gp.y);
+      待ち.sort(列の順(g, gp));
       待ち.forEach((c, i) => {
         const 控 = 門の控え口(MAP, l, g, i);
-        const 門まで = Math.hypot((c.mx == null ? c.x : c.mx) - gp.x, (c.my == null ? c.y : c.my) - gp.y);
+        const 門まで = 門への隔(c);
         const 控まで = Math.hypot(c.x - 控.x, c.y - 控.y);
         /* 遠くを進んでいる隊は、道順に任せる。列に着くのは門の間近まで来た隊だけ。
            ここで横から手を出すと、壁を突っ切る向きへ引かれて道に迷う。 */
-        if (門まで > R * 3.2 && 控まで > R * 3.2) { c.gate待ち = 0; return; }
+        if (門まで > R * 3.2 && 控まで > R * 3.2) { c.gate待ち = 0; c.列の門 = null; return; }
+        列に着く(c, g, gp, b.t);
         c.gate待ち = i + 1;                       // 何番目に控えているか（帳に出す）
         c.pinned = false;
         if (控まで > 46) {

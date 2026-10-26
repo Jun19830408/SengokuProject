@@ -549,19 +549,32 @@ export function navPath(m, x0, y0, x1, y1) {
   };
   const ix = (x) => clamp(Math.floor(x / CS), 0, w - 1);
   const iy = (y) => clamp(Math.floor(y / CS), 0, h - 1);
-  const near = (i0, j0) => {                       // 壁の中なら最寄りの通れる格子へ
+  /* 壁の中なら最寄りの通れる格子へ。
+
+     最寄りは、元の所から塀を挟まずに見える格子のうちで選ぶ。塀の脇に立つ隊は、
+     升目の中ほどが塀に掛かることがある。見通しを問わずに輪の順で拾うと、塀の
+     向こうの升目から道が始まり、隊は塀の外から内の地点へ向かって塀に当たり、
+     横へ滑った。委任した隊は道を毎秒引き直すので、そのたびにまた塀の向こうから
+     始まり、観音寺城では外郭の塀の外を西へ這い続けた。見える格子が無いときだけ、
+     これまでどおり輪の順で拾う。 */
+  const near = (i0, j0, x, y) => {
     if (ok[j0 * w + i0]) return j0 * w + i0;
+    let 見え = -1, 見え隔 = Infinity, 輪の先 = -1;
     for (let r = 1; r <= 6; r++) {
       for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
         if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
         const i = i0 + di, j = j0 + dj;
         if (i < 0 || j < 0 || i >= w || j >= h) continue;
-        if (ok[j * w + i]) return j * w + i;
+        if (!ok[j * w + i]) continue;
+        if (輪の先 < 0) 輪の先 = j * w + i;
+        const cx = i * CS + CS / 2, cy = j * CS + CS / 2, d = Math.hypot(cx - x, cy - y);
+        if (d < 見え隔 && 見通せる(x, y, cx, cy)) { 見え隔 = d; 見え = j * w + i; }
       }
+      if (見え >= 0) return 見え;
     }
-    return -1;
+    return 輪の先;
   };
-  const S = near(ix(x0), iy(y0)), T = near(ix(x1), iy(y1));
+  const S = near(ix(x0), iy(y0), x0, y0), T = near(ix(x1), iy(y1), x1, y1);
   if (S < 0 || T < 0) return null;
   if (S === T) return [{ x: x1, y: y1, r: 24 }];
   const N = w * h;
@@ -611,20 +624,185 @@ export function navPath(m, x0, y0, x1, y1) {
      一折り返しあたり三十.三歩が二十四.二歩、寄せの無い城でも四十九歩が
      二十一.六歩になる。道が長い直線になるぶん、隊は壁の角へ大きく寄りかかり、
      そこで滑って揺れる。城の中は角だらけなので、この手は合わない。捨てた。 */
-  const pts = [];
+  const 中 = (k) => ({ x: (k % w) * CS + CS / 2, y: ((k / w) | 0) * CS + CS / 2 });
+  const 角 = [];
   let lastDir = null;
   for (let n = 1; n < cells.length; n++) {
     const a2 = cells[n - 1], b2 = cells[n];
     const d = `${(b2 % w) - (a2 % w)},${((b2 / w) | 0) - ((a2 / w) | 0)}`;
-    if (d !== lastDir) {
-      lastDir = d;
-      pts.push({ x: (a2 % w) * CS + CS / 2, y: ((a2 / w) | 0) * CS + CS / 2, r: 30 });
+    if (d !== lastDir) { lastDir = d; 角.push(n - 1); }
+  }
+  /* 角と角を結ぶ線が塀を掠めないようにする。
+
+     升目どうしの継ぎ目は縦横の線の上でしか検めていないので、斜めの並びの角を
+     まっすぐ結ぶと、門柱や塀の端を掠めることがある。清洲の外の門では、破れた
+     門の脇の一升を斜めに抜ける道が引かれ、隊は門柱の外で塀に当たり、次の角へ
+     まっすぐ向かって塀の外を這っていた（遊ぶ側の申し出は「城門を破ったあと、
+     攻撃側が門からうまく入れず、外側の壁を這うように移動してしまう」）。
+     結ぶ線が塀に掛かる所は、あいだの升目の中ほどを残らず挟み、斜めの一歩も
+     塀に掛かるなら、通れる側の折れ目を挟む。 */
+  const 並 = [];
+  for (let t = 0; t < 角.length; t++) {
+    const n0 = 角[t], n1 = t + 1 < 角.length ? 角[t + 1] : cells.length - 1;
+    並.push({ ...中(cells[n0]), r: 30 });
+    const p0 = 中(cells[n0]), p1 = 中(cells[n1]);
+    if (n1 > n0 + 1 && !見通せる(p0.x, p0.y, p1.x, p1.y)) {
+      for (let n = n0 + 1; n < n1; n++) 並.push({ ...中(cells[n]), r: 22 });
     }
+  }
+  if (cells.length > 1) 並.push({ ...中(cells[cells.length - 1]), r: 22 });
+  const pts = [];
+  for (const p of 並) {
+    const a = pts[pts.length - 1];
+    if (a && Math.abs(a.x - p.x) === CS && Math.abs(a.y - p.y) === CS && !見通せる(a.x, a.y, p.x, p.y)) {
+      const k1 = { x: p.x, y: a.y }, k2 = { x: a.x, y: p.y };
+      if (見通せる(a.x, a.y, k1.x, k1.y) && 見通せる(k1.x, k1.y, p.x, p.y)) pts.push({ ...k1, r: 20 });
+      else if (見通せる(a.x, a.y, k2.x, k2.y) && 見通せる(k2.x, k2.y, p.x, p.y)) pts.push({ ...k2, r: 20 });
+    }
+    pts.push(p);
   }
   pts.push({ x: x1, y: y1, r: 26 });
   return pts;
 }
 
+
+/* ------------------------------------------- 将への流れ（城の盤）
+
+   遊ぶ側の申し出は「城門を破ったあと、攻撃側が門からうまく入れず、外側の壁を
+   這うように移動してしまう」であった。清洲で測ると、門が破れて将が門をくぐった
+   あと、外に残った組の半ば（四百組のうち二百組）が外郭の塀ぞいに並んでいた。
+   わけは三つあった。
+     一　組は持ち場（将からの陣形の席）へまっすぐ歩き、塀に当たれば塀ぞいに滑る。
+         将が門をくぐって塀の内を横へ進めば、外の組は塀の外を同じ向きへ這う。
+     二　持ち場そのものが塀の外に掛かれば、組は塀の外で将と並んで歩く。
+     三　はぐれた組は隊の来た跡を辿るが、いちばん近い跡の点が塀の向こうにあれば
+         やはり塀ぞいに滑る。跡は二十六点しか覚えないので、門をくぐった所は
+         じきに忘れられてしまう。
+
+   そこで、将のいる升目から通れる升目を四方へ広げ、升目ごとに「将まで何升か」を
+   数えた図（流れ）を作る。壁を跨ぐ継ぎ目は断たれているので、数は門を回った
+   道のりになる。
+     ・その数が真っすぐの升数（縦横の升の差の和）より大きく膨らむ所は、将から
+       見て「塀の向こう」である（回り道か）。
+     ・持ち場が塀の向こうに掛かれば、将の側の塀の手前へ引き寄せる（塀のこちら）。
+     ・組が塀の向こうにいれば、図を下って門へ回る（流れの先）。 */
+
+// 所（x, y）の升目。升目の中ほどが壁や堀に掛かっていれば、塀を挟まずに見える
+// 近くの升目を取る（塀の脇に立つ組を、塀の向こうの升目に数えないため）。
+export function 流れの升(nv, x, y) {
+  const { CS, w, h, ok } = nv;
+  const i0 = clamp(Math.floor(x / CS), 0, w - 1), j0 = clamp(Math.floor(y / CS), 0, h - 1);
+  if (ok[j0 * w + i0]) return j0 * w + i0;
+  /* 見通しを量るので重い（小谷城のような山城では、城攻めの一刻の二割近くがここに
+     掛かった）。四歩四方ごとに覚えておく。塀は十歩あるので、四歩の升が塀の両側に
+     跨ることはない。門が破れて格子が作り直されれば、覚えも新しくなる。 */
+  const 覚 = nv.升の覚え || (nv.升の覚え = new Map());
+  const 鍵 = Math.floor(y / 4) * 8192 + Math.floor(x / 4);
+  const 前 = 覚.get(鍵);
+  if (前 !== undefined) return 前;
+  let best = -1, bd = Infinity;
+  for (let r = 1; r <= 2 && best < 0; r++) {
+    for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
+      if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+      const i = i0 + di, j = j0 + dj;
+      if (i < 0 || j < 0 || i >= w || j >= h || !ok[j * w + i]) continue;
+      const cx = i * CS + CS / 2, cy = j * CS + CS / 2, d = Math.hypot(cx - x, cy - y);
+      if (d < bd && 見通せる(x, y, cx, cy)) { bd = d; best = j * w + i; }
+    }
+  }
+  覚.set(鍵, best);
+  return best;
+}
+
+// 将の所（x, y）から広げた流れ。距 は升目ごとの将までの升数（着けない升目は −1）。
+export function 流れを作る(m, x, y) {
+  const nv = m.nav || buildNav(m);
+  const { w, h, eR, eD } = nv;
+  const S = 流れの升(nv, x, y);
+  if (S < 0) return null;
+  const 距 = new Int32Array(w * h).fill(-1);
+  const 列 = new Int32Array(w * h);
+  let 頭 = 0, 尾 = 0;
+  距[S] = 0; 列[尾++] = S;
+  while (頭 < 尾) {
+    const k = 列[頭++], i = k % w, d = 距[k] + 1;
+    if (i + 1 < w && eR[k] && 距[k + 1] < 0) { 距[k + 1] = d; 列[尾++] = k + 1; }
+    if (i > 0 && eR[k - 1] && 距[k - 1] < 0) { 距[k - 1] = d; 列[尾++] = k - 1; }
+    if (k + w < w * h && eD[k] && 距[k + w] < 0) { 距[k + w] = d; 列[尾++] = k + w; }
+    if (k >= w && eD[k - w] && 距[k - w] < 0) { 距[k - w] = d; 列[尾++] = k - w; }
+  }
+  return { nv, S, si: S % w, sj: (S / w) | 0, 距 };
+}
+
+/* 将から見て、その所が塀の向こうか（門を回らねば着けないか）。
+   櫓や虎口の角をよける程度の回り（三升まで）は、塀の向こうとしない。 */
+export function 回り道か(流, x, y) {
+  const k = 流れの升(流.nv, x, y);
+  if (k < 0 || 流.距[k] < 0) return true;
+  const w = 流.nv.w;
+  return 流.距[k] > Math.abs((k % w) - 流.si) + Math.abs(((k / w) | 0) - 流.sj) + 3;
+}
+
+/* 塀の向こうに掛かった所を、将と結ぶ線の上で、将の側の塀の手前まで引き寄せる。
+   的の側から十一歩ずつ将へ寄せ、初めて将の側に入った所を取る。将の側から外へ
+   辿って初めの障りで止めると、櫓の向こうの持ち場まで将の脇へ縮み、隊が団子に
+   なった（観音寺城で塀ぞいの組が三倍に増えた）。 */
+export function 塀のこちら(流, cx, cy, x, y) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x - cx, y - cy) / 11));
+  for (let s = n - 1; s >= 1; s--) {
+    const px = cx + (x - cx) * s / n, py = cy + (y - cy) * s / n;
+    if (passable(px, py) && !回り道か(流, px, py)) return { x: px, y: py };
+  }
+  return { x: cx, y: cy };
+}
+
+/* 図を下って将へ近づく道の、先の升目の中ほど。六升先まで辿り、組から塀を挟まずに
+   見える限り先の升目を取る（升目ごとに曲がると、組が階段のように折れて歩く）。 */
+export function 流れの先(流, x, y, 先まで = 6) {
+  const { nv, 距 } = 流, { CS, w, h, eR, eD } = nv;
+  let k = 流れの升(nv, x, y);
+  if (k < 0 || 距[k] <= 0) return null;
+  const 道 = [];
+  for (let n = 0; n < 先まで && 距[k] > 0; n++) {
+    const i = k % w, d = 距[k] - 1;
+    let nk = -1;
+    if (i + 1 < w && eR[k] && 距[k + 1] === d) nk = k + 1;
+    else if (i > 0 && eR[k - 1] && 距[k - 1] === d) nk = k - 1;
+    else if (k + w < w * h && eD[k] && 距[k + w] === d) nk = k + w;
+    else if (k >= w && eD[k - w] && 距[k - w] === d) nk = k - w;
+    if (nk < 0) break;
+    道.push(nk); k = nk;
+  }
+  for (let n = 道.length - 1; n >= 0; n--) {
+    const px = (道[n] % w) * CS + CS / 2, py = ((道[n] / w) | 0) * CS + CS / 2;
+    if (n === 0 || 見通せる(x, y, px, py)) return { x: px, y: py };
+  }
+  return null;
+}
+
+/* 門の前の列の順（engine の門の順番待ちと、采配 ai.js の両方で使う）。
+
+   列に着いた順（先着）。門までの近さだけで並べると、近さの似た隊どうしが刻ごとに
+   入れ替わり、そのたびに控え口が遠く離れた所へ移って道を引き直す。清洲では、
+   外の塀の外にいた隊が四番目と五番目を行き来して、塀の外を東へ西へと這い続けた。
+   まだ列に着いていない隊は、門に近い順に後ろへ並べる。engine と采配が別の順を
+   使うと、委ねた隊は二つの控え口のあいだで揺れるので、順はここ一つで決める。
+   列に着いた印（列の門・列に着いた刻・列に着いた隔）は engine の門の順番待ちが付ける。
+   同じ刻に着いた隊どうしは、着いたときの門までの隔（動かない値）で並べる。いまの
+   隔で並べると、やはり刻ごとに入れ替わる。門に取り付いた隊も、取り付いたときに
+   印を付ける。取り付きを外れた隊が列のいちばん後ろへ回されると、門の間近から
+   列の尻まで三百歩も歩いて戻った（稲葉山）。 */
+export function 列に着く(c, g, gp, t) {
+  if (c.列の門 === g) return;
+  c.列の門 = g; c.列に着いた刻 = t;
+  c.列に着いた隔 = Math.hypot((c.mx == null ? c.x : c.mx) - gp.x, (c.my == null ? c.y : c.my) - gp.y);
+}
+export function 列の順(g, gp) {
+  const 隔 = (o) => (o.列の門 === g ? o.列に着いた隔
+    : Math.hypot((o.mx == null ? o.x : o.mx) - gp.x, (o.my == null ? o.y : o.my) - gp.y));
+  const 着 = (o) => (o.列の門 === g ? o.列に着いた刻 : Infinity);
+  return (a, b2) => (着(a) - 着(b2)) || (隔(a) - 隔(b2));
+}
 
 /* かつては城の外周を回り込む道順（ringPath / routeToGate）を持っていたが、
    同心の矩形を前提とした当て推量であって、縄張りを崩すと通らない。
