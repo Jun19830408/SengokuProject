@@ -9,6 +9,7 @@
    ========================================================================== */
 const fs = require('fs');
 const path = require('path');
+const { 明朝, ゴシック } = require('./jitai.cjs');   // 日本語の字体を名指しする（中国語の字体に落とさない）
 const { execFileSync } = require('child_process');
 const esbuild = require('esbuild');
 
@@ -60,7 +61,7 @@ const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8">
 <title>${esc(題名)}　仕様書</title>
 <style>
   @page { size: A4; margin: 18mm 16mm 16mm; }
-  body { font-family: "Hiragino Mincho ProN", serif; color: #26262A;
+  body { font-family: ${明朝}; color: #26262A;
          font-size: 10.5pt; line-height: 1.95; margin: 0; }
   .cover { text-align: center; page-break-after: always; padding-top: 34mm; }
   .cover .logo { width: 108mm; height: auto; display: block; margin: 0 auto 8mm; }
@@ -69,12 +70,12 @@ const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8">
   .toc ul { list-style: none; padding: 0; margin: 0; column-count: 2; column-gap: 12mm; }
   .toc li { font-size: 11pt; padding: 1.4mm 0; }
   .no { display: inline-block; width: 7mm; color: #8A8478;
-        font-family: sans-serif; font-size: 9pt; }
+        font-family: ${ゴシック}; font-size: 9pt; }
   section.brk { page-break-before: always; }
   h2 { font-size: 17pt; letter-spacing: .06em; margin: 0 0 5mm;
        padding-bottom: 2mm; border-bottom: 1.4pt solid #26262A; }
   h3 { font-size: 11.5pt; letter-spacing: .12em; color: #4A4640; margin: 6mm 0 1.5mm;
-       font-family: sans-serif; font-weight: 600; }
+       font-family: ${ゴシック}; font-weight: 600; }
   p { margin: 0 0 3mm; text-align: justify; }
   table { width: 100%; border-collapse: collapse; margin: 1mm 0 4mm; }
   th { text-align: left; width: 30%; font-weight: 600; vertical-align: top;
@@ -84,7 +85,7 @@ const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8">
           border-left: 2.4pt solid #8A6A34; }
   .kime > b { font-size: 12pt; display: block; margin-bottom: 1mm; }
   .ron { font-size: 9.5pt; color: #6E6A62; margin-bottom: 1.5mm; line-height: 1.85; }
-  table.k th { width: 22%; font-size: 9.5pt; font-family: sans-serif; color: #6E6A62;
+  table.k th { width: 22%; font-size: 9.5pt; font-family: ${ゴシック}; color: #6E6A62;
                border-bottom: none; padding: .8mm 3mm .8mm 0; }
   table.k td { font-size: 10pt; border-bottom: none; padding: .8mm 0; }
   .off { color: #A29C90; }

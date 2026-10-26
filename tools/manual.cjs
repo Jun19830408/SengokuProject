@@ -13,6 +13,7 @@
    ========================================================================== */
 const fs = require('fs');
 const path = require('path');
+const { 明朝, ゴシック } = require('./jitai.cjs');   // 日本語の字体を名指しする（中国語の字体に落とさない）
 const { execFileSync } = require('child_process');
 const esbuild = require('esbuild');
 
@@ -90,7 +91,7 @@ const html = `<!doctype html>
 <style>
   @page { size: A4; margin: 18mm 16mm 16mm; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  body { margin: 0; font-family: ${明朝};
          color: #26262A; font-size: 10.5pt; line-height: 1.95; }
   .cover { height: 232mm; display: flex; flex-direction: column;
            align-items: center; justify-content: center; text-align: center;
@@ -101,12 +102,12 @@ const html = `<!doctype html>
   .toc { margin-top: 16mm; text-align: left; }
   .toc ul { list-style: none; padding: 0; margin: 0; column-count: 2; column-gap: 12mm; }
   .toc li { font-size: 11pt; padding: 1.5mm 0; }
-  .no { display: inline-block; width: 7mm; color: #8A8478; font-family: sans-serif; font-size: 9pt; }
+  .no { display: inline-block; width: 7mm; color: #8A8478; font-family: ${ゴシック}; font-size: 9pt; }
   section.brk { page-break-before: always; }
   h2 { font-size: 17pt; letter-spacing: .06em; margin: 0 0 5mm;
        padding-bottom: 2mm; border-bottom: 1.4pt solid #26262A; }
   h3 { font-size: 11.5pt; letter-spacing: .12em; color: #4A4640; margin: 7mm 0 2mm;
-       font-family: sans-serif; font-weight: 600; }
+       font-family: ${ゴシック}; font-weight: 600; }
   p { margin: 0 0 3mm; text-align: justify; }
   ul { margin: 1mm 0 3mm; padding-left: 5mm; }
   li { margin: 0.6mm 0; }

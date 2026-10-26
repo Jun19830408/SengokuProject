@@ -12,6 +12,7 @@
    ========================================================================== */
 const fs = require('fs');
 const path = require('path');
+const { 明朝, ゴシック } = require('./jitai.cjs');   // 日本語の字体を名指しする（中国語の字体に落とさない）
 const { execFileSync } = require('child_process');
 const esbuild = require('esbuild');
 
@@ -110,7 +111,7 @@ const html = `<!doctype html>
 <style>
   @page { size: A4; margin: 18mm 16mm 16mm; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+  body { margin: 0; font-family: ${明朝};
          color: #26262A; font-size: 10.5pt; line-height: 1.95; }
   .cover { height: 232mm; display: flex; flex-direction: column;
            align-items: center; justify-content: center; text-align: center;
@@ -122,20 +123,20 @@ const html = `<!doctype html>
   .toc ul { list-style: none; padding: 0; margin: 0; column-count: 2; column-gap: 12mm; }
   .toc li { font-size: 10.5pt; padding: 1.4mm 0; }
   .toc i { font-style: normal; color: #8A8478; font-size: 9pt; margin-left: 2.5mm; }
-  .no { display: inline-block; width: 7mm; color: #8A8478; font-family: sans-serif; font-size: 9pt; }
+  .no { display: inline-block; width: 7mm; color: #8A8478; font-family: ${ゴシック}; font-size: 9pt; }
   section.brk { page-break-before: always; }
   h2 { font-size: 17pt; letter-spacing: .06em; margin: 0 0 5mm;
        padding-bottom: 2mm; border-bottom: 1.4pt solid #26262A; }
   h2 .sub { font-size: 10pt; letter-spacing: .16em; color: #8A8478;
-            font-family: sans-serif; font-weight: 400; margin-left: 4mm; }
+            font-family: ${ゴシック}; font-weight: 400; margin-left: 4mm; }
   h3 { font-size: 11.5pt; letter-spacing: .12em; color: #4A4640; margin: 7mm 0 2mm;
-       font-family: sans-serif; font-weight: 600; page-break-after: avoid; }
+       font-family: ${ゴシック}; font-weight: 600; page-break-after: avoid; }
   p { margin: 0 0 3mm; text-align: justify; }
   ul { margin: 1mm 0 3mm; padding-left: 5mm; }
   li { margin: 0.6mm 0; }
   table { width: 100%; border-collapse: collapse; margin: 1mm 0 4mm;
           page-break-inside: avoid; font-size: 9.8pt; }
-  thead th { font-family: sans-serif; font-size: 8.6pt; letter-spacing: .1em;
+  thead th { font-family: ${ゴシック}; font-size: 8.6pt; letter-spacing: .1em;
              color: #6E6A62; font-weight: 600; border-bottom: .9pt solid #26262A;
              padding: 0 3mm 1.2mm 0; text-align: left; }
   th.k { text-align: left; font-weight: 600; vertical-align: top; white-space: nowrap;
@@ -150,7 +151,7 @@ const html = `<!doctype html>
   .kazu { display: flex; flex-wrap: wrap; gap: 0; margin: 2mm 0 4mm;
           border-top: .9pt solid #26262A; page-break-inside: avoid; }
   .k1 { width: 50%; padding: 2mm 4mm 2mm 0; border-bottom: .4pt solid #D8D2C4; }
-  .kn { display: block; font-family: sans-serif; font-size: 8.4pt;
+  .kn { display: block; font-family: ${ゴシック}; font-size: 8.4pt;
         letter-spacing: .12em; color: #8A8478; }
   .kv { display: block; font-size: 15pt; line-height: 1.3; }
   .ka { display: block; font-size: 8.8pt; color: #6E6A62; line-height: 1.6; }
