@@ -10,7 +10,9 @@
      二、上がりの半年分（少なくとも一万貫）を超えた蓄えは、月に六分ずつ出ていく（頭打ちになる）
      三、大身の費え。五十万石を超えた家は、上がりの一部を治める費えに取られる
      四、軍役の器を超えた地の兵は、月に四分ずつ村へ帰る（帰農）
-     五、出征の余地。家の兵の四割（通常の段）まで。超える出陣は画面で止まる
+     五、出征の余地。家の兵の四割（通常の段）まで。超える出陣は画面で止まる。
+         ただし十万石までの家は縛らず、三十万石まではなだらかに四割へ近づく
+         （遊ぶ側の申し出「出陣の四割の縛りは、弱小大名では撤廃すべき」）
      六、来月の見通しに、大身の費えと蔵の目減りが載る */
 const path = require('path');
 const fs = require('fs');
@@ -21,7 +23,7 @@ fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export * from "../src/core/keizai.js";\n'
 + 'export { initState, forecast } from "../src/core/state.js";\n'
-+ 'export { troopCap, 出征の余地, 出征の限り, 出征中の兵, 家の総兵, 軍役の割増, 大身の軍役 } from "../src/core/rank.js";\n'
++ 'export { troopCap, 出征の余地, 出征の限り, 出征の割, 出征中の兵, 家の総兵, 家の石高, 軍役の割増, 大身の軍役 } from "../src/core/rank.js";\n'
 + 'export { MOB_POLICY } from "../src/data/roads.js";\n'
 + 'export { FACTIONS } from "../src/data/factions.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n');
@@ -133,15 +135,27 @@ console.log('\n── 五　軍役の率');
 
 console.log('\n── 六　出征の余地');
 {
+  /* 三十万石を超える家は段の割（三好家 五十七万石）。
+     遊ぶ側の申し出「出陣の四割の縛りは、弱小大名では撤廃すべき」により、
+     十万石までの家は縛らず（毛利家 九万石）、そのあいだはなだらかに（織田家 十八万石）。 */
   const s = A.initState('oda');
-  const 総 = A.家の総兵(s, 'oda');
-  確('通常の段で家の兵の四割', A.出征の限り(s, 'oda') === Math.round(総 * 0.4), `家の兵${総}・限り${A.出征の限り(s, 'oda')}`);
-  s.armies.push({ id: 'x', faction: 'oda', men: 1000, gens: [], local: 1000 });
-  確('出ている軍のぶん余地は減る', A.出征の余地(s, 'oda') === Math.max(0, A.出征の限り(s, 'oda') - 1000));
-  s.armies.push({ id: 'y', faction: 'oda', men: 800, gens: [], local: 800, relief: 'nagoya' });
-  確('後詰は数えない', A.出征中の兵(s, 'oda') === 1000);
-  s.factions.oda.mobilization = 3;
-  確('総動員なら六割', A.出征の限り(s, 'oda') === Math.round(A.家の総兵(s, 'oda') * 0.6));
+  const 総 = A.家の総兵(s, 'miyoshi');
+  確('三十万石を超える家は、通常の段で家の兵の四割', A.出征の限り(s, 'miyoshi') === Math.round(総 * 0.4),
+    `家の兵${総}・限り${A.出征の限り(s, 'miyoshi')}`);
+  確('十万石までの家は縛らない（家の兵を残らず出せる）', A.出征の限り(s, 'mori') === A.家の総兵(s, 'mori'),
+    `石高${A.家の石高(s, 'mori')}・家の兵${A.家の総兵(s, 'mori')}・限り${A.出征の限り(s, 'mori')}`);
+  const 割 = A.出征の割(s, 'oda');
+  確('十万〜三十万石の家は、段の割と十割のあいだ', 割 > 0.4 && 割 < 1, `織田家 ${A.家の石高(s, 'oda')}石・${割.toFixed(3)}`);
+  確('石高が大きいほど割は小さい', A.出征の割(s, 'imagawa') < 割 && 割 < A.出征の割(s, 'mori'),
+    `今川 ${A.出征の割(s, 'imagawa').toFixed(3)}・織田 ${割.toFixed(3)}・毛利 ${A.出征の割(s, 'mori').toFixed(3)}`);
+  s.armies.push({ id: 'x', faction: 'miyoshi', men: 1000, gens: [], local: 1000 });
+  確('出ている軍のぶん余地は減る', A.出征の余地(s, 'miyoshi') === Math.max(0, A.出征の限り(s, 'miyoshi') - 1000));
+  s.armies.push({ id: 'y', faction: 'miyoshi', men: 800, gens: [], local: 800, relief: 'nagoya' });
+  確('後詰は数えない', A.出征中の兵(s, 'miyoshi') === 1000);
+  s.factions.miyoshi.mobilization = 3;
+  確('総動員なら六割', A.出征の限り(s, 'miyoshi') === Math.round(A.家の総兵(s, 'miyoshi') * 0.6));
+  s.factions.mori.mobilization = 0;
+  確('小身の家は平時でも縛らない', A.出征の限り(s, 'mori') === A.家の総兵(s, 'mori'));
 }
 
 console.log(`\nエラー: ${咎.length ? 咎.join(' | ') : 'なし'}`);

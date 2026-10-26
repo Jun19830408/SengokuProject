@@ -5,7 +5,7 @@ import { MAX_CORPS, MAX_CORPS_MEN } from "../battle/field.js";
 import { persuadeResult } from "../core/capture.js";
 import { isNameless } from "../core/house.js";
 import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
-import { foodDays, minGarrison, rankName, 出征の余地, 出征の限り, 出征中の兵, 家の総兵, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 旗頭の受け持ち, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
+import { foodDays, minGarrison, rankName, 出征の余地, 出征の限り, 出征の割, 出征中の兵, 家の総兵, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 旗頭の受け持ち, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
 import { canSee, forecast, relOf, 出征の元 } from "../core/state.js";
 import { 軍の中身, 城の保ち } from "../core/kakomi.js";
 import { courtRank, 旗の下か } from "../core/province.js";
@@ -769,9 +769,9 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         </div>
         {余地を超える && <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7, lineHeight: 1.7 }}>
           出征の余地を超えています。一度に城の外へ出せるのは、家の兵{fmt(家の総兵(g, g.player))}人の
-          {Math.round((MOB_POLICY[g.factions[g.player].mobilization ?? 1] || MOB_POLICY[1]).出征 * 100)}%
+          {Math.round(出征の割(g, g.player) * 100)}%
           （{fmt(出征の限り(g, g.player))}人）までで、すでに{fmt(出征中の兵(g, g.player))}人が出ています。
-          動員の段を上げれば割が増えます。
+          動員の段を上げれば割が増えます（十万石までの小身の家は縛られません）。
         </div>}
         {米が足りぬ && <div style={{ color: "#B0483C", fontSize: 12, marginTop: 7, lineHeight: 1.7 }}>
           兵糧が足りない（積めるのは {fmt(積める)} 石まで）。陣中の月数を減らすか、収穫を待つか、開墾を進めねばならぬ。

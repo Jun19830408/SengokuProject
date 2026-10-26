@@ -121,6 +121,7 @@ export const troopCap = (c, p, s) => Math.round((c.koku / 10000) * MOB_POLICY[p]
 
    家が一度に城の外へ出せる兵は、家の兵（城の地の兵・将の手勢・出ている軍）の
    動員の段ごとの割まで（data/roads.js MOB_POLICY の 出征）。通常の段で四割。
+   ただし小身の家は縛りが緩く、十万石までは縛らない（下の 出征の割）。
    遊ぶ側の申し出は「出征できる兵数についても、朝鮮出兵を基準に検討する」であった。
    城を守る兵は数えない――囲まれた城を救う後詰も、家を守る戦なので縛らない。 */
 export function 家の総兵(s, fid) {
@@ -135,10 +136,28 @@ export function 出征中の兵(s, fid) {
   for (const a of s.armies || []) if (a.faction === fid && !a.relief) n += a.men || 0;
   return n;
 }
-export function 出征の限り(s, fid) {
+/* 小身の家は縛らない（GDD 6.2・6.4）。
+
+   遊ぶ側の申し出は「出陣の四割の縛りは、弱小大名では撤廃すべき」であった。
+   動員の値を決めたときの考え（上の 軍役の割増）と同じ筋である。国人や小大名は
+   在地に密着し、村を丸ごと駆り出して戦った。広い領国を治める大名は、境目の
+   押さえや国々の守りを残さねばならず、一度に外へ出せる兵には限りがある。
+
+   家の石高が十万石までは縛らない（家の兵を残らず出せる）。十万石から三十万石
+   までは、石高に応じてなだらかに段の割へ下げる。三十万石を超える家は、これまで
+   どおり段の割（通常の段で四割）。遊びの初め（一五四六年）には百三十七家のうち
+   九十七家が十万石まで、三十万石を超えるのは八家である。
+   境の十万石・三十万石は史料に拠るものではなく、遊びの調整として置いた値である。
+   城ごとの守りの目安（minGarrison）は、これまでどおり別に効く。 */
+export const 小身の境 = 100000, 大名の境 = 300000;
+export function 出征の割(s, fid, 段) {
   const f = (s.factions || {})[fid];
-  const p = MOB_POLICY[(f && f.mobilization) ?? 1] || MOB_POLICY[1];
-  return Math.round(家の総兵(s, fid) * p.出征);
+  const p = MOB_POLICY[段 ?? (f && f.mobilization) ?? 1] || MOB_POLICY[1];
+  const 小ささ = Math.max(0, Math.min(1, (大名の境 - 家の石高(s, fid)) / (大名の境 - 小身の境)));
+  return p.出征 + (1 - p.出征) * 小ささ;
+}
+export function 出征の限り(s, fid) {
+  return Math.round(家の総兵(s, fid) * 出征の割(s, fid));
 }
 export const 出征の余地 = (s, fid) => Math.max(0, 出征の限り(s, fid) - 出征中の兵(s, fid));
 

@@ -16,7 +16,7 @@ import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween } from "../core/paths.js";
 import { 遠征の兵糧, 運び賃を払う } from "../govern/war.js";
 import { courtRank, 号令できるか, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
-import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap, 寄騎に取る, 寄騎を解く, 城を守る将, 旗頭の受け持ち } from "../core/rank.js";
+import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap, 寄騎に取る, 寄騎を解く, 城を守る将, 旗頭の受け持ち, 出征の割 } from "../core/rank.js";
 import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す, 戦の跡, 戦の跡を記す } from "../core/roster.js";
 import { atPeace, forecast, lv, relKey, relOf, specialBonus, 軍の道 } from "../core/state.js";
 import { SEASON, U, clamp, fmt, man, monthsBetween } from "../core/util.js";
@@ -3262,10 +3262,13 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                   const 石 = 我.reduce((a, c) => a + c.koku, 0);
                   const 実 = (i) => (石 <= 0 ? null
                     : Math.round(我.reduce((a, c) => a + troopCap(c, i, g), 0) / (石 / 10000)));
+                  /* 出征の割は家の大きさで変わる（core/rank.js 出征の割）。十万石までの
+                      小身は縛らないので、段の素の割ではなく当家の割を出す。 */
                   return MOB_POLICY.map((m, i) => {
                     const v = 実(i);
+                    const 割 = 出征の割(g, g.player, i);
                     return (<option key={m.name} value={i}>
-                      {`動員：${m.name}（一万石 ${m.per}人${v && v > m.per + 4 ? `／当家は ${v}人` : ""}・出征は家の兵の${Math.round(m.出征 * 10)}割まで）`}
+                      {`動員：${m.name}（一万石 ${m.per}人${v && v > m.per + 4 ? `／当家は ${v}人` : ""}・${割 >= 0.995 ? "小身ゆえ出征の縛りなし" : `出征は家の兵の${Math.round(割 * 10)}割まで`}）`}
                     </option>);
                   });
                 })()}
