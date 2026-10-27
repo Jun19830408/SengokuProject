@@ -1110,6 +1110,18 @@ let 野種 = 20250915;
 const 野乱 = () => { 野種 = (野種 * 1103515245 + 12345) & 0x7fffffff; return 野種 / 0x7fffffff; };
 const 野種を置く = (n) => { 野種 = n; };
 const 挟 = (v, a, b) => (v < a ? a : v > b ? b : v);
+/* 川辺の茂り（〇から一）。盤の所（x, y）、水際まで e 歩の所で、森の梢と木立をどれだけ
+   残すか。水際から川辺の間（所によって五歩から二十八歩に揺らぐ）を河原として空け、
+   そこから三十歩ほどかけて茂らせる。茂りの際には森の縁と同じようなほつれを掛ける
+   （ほつれても水際から三歩の内には茂らせない）。一律の幅で引くと、森の縁が川の縁を
+   なぞった線になる。盤の所で決まるので、地の焼き（梢）と mori.js（木立）とで同じ縁になる。 */
+export function 川辺の茂り(x, y, e) {
+  if (e >= 70) return 1;
+  const 間 = 5 + 23 * 挟((襞(x / 90 + 31.7, y / 90 + 12.3, 2) - 0.32) / 0.5, 0, 1);
+  const ほつれ = (襞(x / 26 + 5.1, y / 26 + 9.7, 3) - 0.5) * 24;
+  const t = (e - Math.max(3, 間 - ほつれ)) / 30;
+  return t <= 0 ? 0 : t >= 1 ? 1 : 滑曲(t);
+}
 const 混色 = (c1, c2, t) => [c1[0] + (c2[0] - c1[0]) * t, c1[1] + (c2[1] - c1[1]) * t,
   c1[2] + (c2[2] - c1[2]) * t];
 
@@ -1296,8 +1308,9 @@ function 繁木を描く(q, x, y, r, 振, 日) {
 }
 /* ---- 集落。道を一本通し、その両側に茅葺きの家と白壁の蔵を並べ、生垣で囲う ---- */
 /* 立体 … 斜めの眺めで、家は sato.js が立てて描く。ここでは道と庭と生垣だけを焼く。
-   道の向きは家並みと揃える（道角） */
-function 集落(q, cx, cy, r, 種, 明関, 倍, 立体, 道角) {
+   道の向きは家並みと揃える（道角）。水際 … 画素の所から水際までの画素（川べりの村で、
+   家と木を水の上や岸の際に置かぬため。無ければ見ない） */
+function 集落(q, cx, cy, r, 種, 明関, 倍, 立体, 道角, 水際) {
   野種を置く(種);
   const 向0 = 野乱() * 6.283;
   const 向 = 立体 ? 道角 : 向0, ux = Math.cos(向), uy = Math.sin(向);
@@ -1340,7 +1353,9 @@ function 集落(q, cx, cy, r, 種, 明関, 倍, 立体, 道角) {
     const x = cx + ux * 長 * t - uy * 寄 * 0.8 + (野乱() - 0.5) * 6 * 倍;
     const y = cy + uy * 長 * t * 0.72 + ux * 寄 * 0.6 + (野乱() - 0.5) * 5 * 倍;
     if (Math.hypot((x - cx) / r, (y - cy) / (r * 0.76)) > 0.94) continue;
-    家ら.push([x, y, 野乱() < 0.22 ? "蔵" : "家", 野乱()]);
+    const 種類 = 野乱() < 0.22 ? "蔵" : "家", rr = 野乱();
+    if (水際 && 水際(x, y) < 15 * 倍) continue;                       // 川の上や岸の際には建てない（家の差し渡しの半ばと岸の砂）
+    家ら.push([x, y, 種類, rr]);
   }
   家ら.sort((a, b) => a[1] - b[1]);
   for (const [x, y, 種類, rr] of 家ら) {
@@ -1364,7 +1379,9 @@ function 集落(q, cx, cy, r, 種, 明関, 倍, 立体, 道角) {
   for (let i = 0; i < Math.max(6, (r / (6 * 倍)) | 0); i++) {
     const a = 野乱() * 6.283, dd = r * (0.5 + 野乱() * 0.42);
     const x = cx + Math.cos(a) * dd, y = cy + Math.sin(a) * dd * 0.76;
-    繁木(q, x, y, (4 + 野乱() * 3) * 倍, 野乱(), 明関(x, y));
+    const rr = (4 + 野乱() * 3) * 倍, 振 = 野乱();
+    if (水際 && 水際(x, y) < rr * 1.6 + 2 * 倍) continue;
+    繁木(q, x, y, rr, 振, 明関(x, y));
   }
 }
 
@@ -1523,7 +1540,12 @@ export function* 野を焼く(g, 画k) {
   const hw = Math.max(2, Math.ceil(W / 半)), hh = Math.max(2, Math.ceil(H / 半));
   const 高 = new Float32Array(hw * hh);
   const 川深 = new Float32Array(hw * hh), 川岸 = new Float32Array(hw * hh);
-  const 道度 = new Float32Array(hw * hh), 川谷 = new Float32Array(hw * hh);
+  const 道度 = new Float32Array(hw * hh);
+  /* 川際 … いちばん近い水際までの隔たり（升。水の中は負。遠い所は 1e9）
+     川位 … その水際の川の水位（高さの値）
+     川落 … その岸を水位まで下ろす量（高さの値）、川届 … 下ろしを均して戻す隔たり（升） */
+  const 川際 = new Float32Array(hw * hh).fill(1e9), 川位 = new Float32Array(hw * hh);
+  const 川落 = new Float32Array(hw * hh), 川届 = new Float32Array(hw * hh);
   /* 地のうねり */
   { const 帯 = 帯幅(hh, 48);
     for (let y = 0; y < hh; y++) {
@@ -1596,32 +1618,173 @@ export function* 野を焼く(g, 画k) {
       }
     }
   };
+  /* 川の場（GDD 8.1・8.11）。
+
+     もとは川の芯から二.四幅の内を、一律の深さの椀で掘り下げていた（川谷）。これは
+     その所の地の高さから引くだけなので、川が丘に掛かれば、水は丘の高さのまま丘を
+     登って越え、丘の中腹を横切った。遊ぶ側の申し出は「山と川の分け目や森と川の
+     分け目が変」であった。斜めから見ると、川が丘の稜線の上を流れ、水際と丘の陰影が
+     食い違い、手前の岸に稜線の黒い筋が出ていた。
+
+     水は低い所を流れる。川ごとに水位を決め、岸をその水位まで下ろす。
+       一、水位 … 川の芯に沿って、川の横断でいちばん低い地を拾い、それを「途中で盛り
+                 上がらない」下の包みにする（両の端からいちばん低い所へ向かって下るだけの
+                 形。端から見たいちばん低い所の高さの、両側の高いほう）。丘に掛かっても、
+                 水位は丘の手前と向こうの低い所の高さのまま通り抜ける。山から下る川は
+                 山なりに下ってよい（はじめは流れに沿って百歩に二歩より急に上がることを
+                 禁じたので、山あいの川が山を深い谷に刻み、谷の壁が縦の縞に引き伸ばされた）。
+                 川が落ち合う所は低いほうに揃える。
+       二、岸 … 左右の岸それぞれ、水際の地が水位より高い分（下ろす量）だけ下げ、
+                 水際から離れるにつれて元の地へなだらかに戻す。戻す隔たりは下ろす量の
+                 四倍（谷の尺＝川幅の半ば、湖ほどの広い水でも七十歩まで、の二倍は取る）。
+                 下ろす量に比べて短い所で戻すと、丘の裾が崖になる（谷の形を引いてそれより
+                 高い地を切ると、高い丘ほど切り口が切り立った）。ただし岸の向こうの頂
+                 （岸から外へ辿って最も高い所）より先へは及ぼさない。湖へ落ちる山の峰まで
+                 均して低くしてしまい、盤の高み（地の高さ）と絵の高さが食い違った。
+                 引くだけなので、丘や山の形と傾きはそのまま、川の側だけが水位へ降りる。
+       三、川床 … 水位から掘り下げる（もとと同じ形。浅瀬は浅く）。
+     水際までの隔たりは、線を辿って円を重ねる刻みではなく、区間ごとに真っ直ぐ量る
+     （岸を戻す所まで量るので、円を重ねると重なりの分だけ何倍も重くなる）。 */
+  const 高を引く = (cx, cy) => 引伸(高, hw, hh, cx * 半, cy * 半, 半);
+  /* 水位を途中で盛り上がらない形にする。上の端から見たいちばん低い所と、下の端から見た
+     いちばん低い所の、高いほう（どちらも元の地より高くならず、途中に峠を作らない） */
+  const 均す = (筋) => {
+    const { 位 } = 筋, n = 位.length, 前 = new Float32Array(n);
+    let m = Infinity;
+    for (let i = 0; i < n; i++) { if (位[i] < m) m = 位[i]; 前[i] = m; }
+    m = Infinity;
+    for (let i = n - 1; i >= 0; i--) { if (位[i] < m) m = 位[i]; 位[i] = Math.max(前[i], m); }
+  };
+  const 筋ら = [];
   for (const r of 川ら) {
-    const 半幅 = r.幅 / 2;
-    yield* 刻む(r.節, r.幅, 川深, 0, (d) => (d < 半幅 ? 1 - d / 半幅 : 0));
-    yield* 刻む(r.節, r.幅, 川岸, 3 * 倍, (d) => (d > 半幅 ? (半幅 + 3 * 倍 - d) / (3 * 倍) : 0));
-    /* 谷を刻む。高さを下げるので、別の場へ取ってから引く */
-    const 谷 = r.幅 * 2.4;
-    yield* 刻む(r.節, 谷 * 2, 川谷, 0, (d) => (d < 谷 ? (1 - d / 谷) ** 2 * r.幅 * 0.5 : 0));
+    yield;
+    const 半幅 = r.幅 / 2 / 半;                                 // 升
+    const 尺 = 挟(r.幅 / 2, 20 * k, 70 * k) / 半;                // 谷の尺（升）
+    // 芯を四升ごとに割り、横断（水の幅）のいちばん低い地を拾う。左右の水際の所も控える
+    const 点 = [], 区 = [], 際ら = [];
+    for (let i = 0; i + 1 < r.節.length; i++) {
+      const [ax, ay] = r.節[i], [bx, by] = r.節[i + 1];
+      const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 半 / 4));
+      区.push({ 始: 点.length, n });
+      for (let j = 0; j < n; j++) 点.push([(ax + (bx - ax) * j / n) / 半, (ay + (by - ay) * j / n) / 半]);
+    }
+    { const [ex, ey] = r.節[r.節.length - 1]; 点.push([ex / 半, ey / 半]); }
+    const 位 = new Float32Array(点.length);
+    for (let i = 0; i < 点.length; i++) {
+      const [x, y] = 点[i], [x0, y0] = 点[Math.max(0, i - 1)], [x1, y1] = 点[Math.min(点.length - 1, i + 1)];
+      const L = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
+      let m = Infinity;
+      for (let o = -1; o <= 1.001; o += 0.25) m = Math.min(m, 高を引く(x + nx * o * 半幅, y + ny * o * 半幅));
+      位[i] = m;
+      際ら.push([x + nx * 半幅, y + ny * 半幅, x - nx * 半幅, y - ny * 半幅]);   // 左の水際・右の水際
+    }
+    const 筋 = { r, 半幅, 尺, 点, 区, 位, 際ら };
+    均す(筋);
+    筋ら.push(筋);
+  }
+  /* 川が落ち合う所では、水位を低いほうへ揃える（揃えねば、近い川の取り替わる所で
+     水面に段がつく）。端が他の川の水か谷に掛かっていれば、そこの水位を両方の低いほうに */
+  for (let 回 = 0; 回 < 2 && 筋ら.length > 1; 回++) {
+    for (const a of 筋ら) for (const 端 of [0, a.点.length - 1]) {
+      const [px, py] = a.点[端];
+      for (const b of 筋ら) {
+        if (b === a) continue;
+        let 近 = Infinity, bi = -1;
+        for (let i = 0; i < b.点.length; i++) { const d = Math.hypot(b.点[i][0] - px, b.点[i][1] - py); if (d < 近) { 近 = d; bi = i; } }
+        if (近 > b.半幅 + a.半幅 + b.尺) continue;
+        const m = Math.min(a.位[端], b.位[bi]);
+        a.位[端] = m; b.位[bi] = m;
+        均す(a); 均す(b);
+      }
+    }
+  }
+  /* 左右の岸の下ろす量と、元の地へ戻す隔たり。下ろす量は水際の地が水位より高い分。
+     戻す隔たりは下ろす量の四倍（谷の尺の二倍は取る）。ただし岸から外へ辿って最も高い所
+     （頂）の手前までとする。芯に沿って少し均す（細かな波を立てない） */
+  const 沿って均す = (a) => { const n = a.length, o = new Float32Array(n);
+    for (let i = 0; i < n; i++) { let 和 = 0, 数 = 0; for (let j = Math.max(0, i - 3); j <= Math.min(n - 1, i + 3); j++) { 和 += a[j]; 数++; } o[i] = 和 / 数; }
+    return o; };
+  for (const 筋 of 筋ら) {
+    const { 点, 位, 際ら, 尺 } = 筋, n = 点.length;
+    const 落 = [new Float32Array(n), new Float32Array(n)], 届 = [new Float32Array(n), new Float32Array(n)];
+    for (let i = 0; i < n; i++) {
+      const [lx, ly, rx, ry] = 際ら[i], [x, y] = 点[i];
+      for (const [側, ex, ey] of [[0, lx, ly], [1, rx, ry]]) {
+        const 下 = Math.max(0, 高を引く(ex, ey) - 位[i]);
+        落[側][i] = 下;
+        // 岸から外へ、下ろす量の四倍まで辿って頂を探す
+        const 先 = 下 * 4, L = Math.hypot(ex - x, ey - y) || 1, nx = (ex - x) / L, ny = (ey - y) / L;
+        let 頂 = 先, 頂の高さ = -Infinity;
+        if (先 > 尺 * 2) {
+          const 刻 = Math.max(1, 先 / 40);
+          for (let t = 0; t <= 先; t += 刻) { const h = 高を引く(ex + nx * t, ey + ny * t); if (h > 頂の高さ) { 頂の高さ = h; 頂 = t; } }
+        }
+        届[側][i] = Math.max(尺 * 2, Math.min(先, 頂 * 0.9));
+      }
+    }
+    筋.落 = 落.map(沿って均す);
+    筋.届ら = 届.map(沿って均す);
+    let 最 = 0; for (const a of 筋.届ら) for (const v of a) if (v > 最) 最 = v;
+    筋.届 = 筋.半幅 + 最 + 1;
+  }
+  let 量った = 0;                                               // 量った升の数（十二万ごとに一息つく）
+  for (const { r, 半幅, 点, 区, 位, 落, 届ら, 届 } of 筋ら) {
+    // 区間ごとに、届く升の水際までの隔たりを真っ直ぐ量る
+    const 半幅px = r.幅 / 2, 岸幅 = 3 * 倍;
+    for (let i = 0; i + 1 < r.節.length; i++) {
+      const ax = r.節[i][0] / 半, ay = r.節[i][1] / 半, bx = r.節[i + 1][0] / 半, by = r.節[i + 1][1] / 半;
+      const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy, { 始, n } = 区[i];
+      const x0 = Math.max(0, Math.floor(Math.min(ax, bx) - 届)), x1 = Math.min(hw - 1, Math.ceil(Math.max(ax, bx) + 届));
+      const y0 = Math.max(0, Math.floor(Math.min(ay, by) - 届)), y1 = Math.min(hh - 1, Math.ceil(Math.max(ay, by) + 届));
+      for (let y = y0; y <= y1; y++) {
+       if ((量った += x1 - x0 + 1) > 120000) { 量った = 0; yield; }
+       for (let x = x0; x <= x1; x++) {
+        let t = L2 ? ((x - ax) * vx + (y - ay) * vy) / L2 : 0;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const dx = x - ax - vx * t, dy = y - ay - vy * t, d = Math.sqrt(dx * dx + dy * dy);
+        if (d > 届) continue;
+        const j = y * hw + x, dp = d * 半;
+        if (dp < 半幅px) { const v = 1 - dp / 半幅px; if (v > 川深[j]) 川深[j] = v; }
+        else if (dp < 半幅px + 岸幅) { const v = (半幅px + 岸幅 - dp) / 岸幅; if (v > 川岸[j]) 川岸[j] = v; }
+        const e = d - 半幅;
+        if (e < 川際[j]) {
+          const u = 始 + t * n, u0 = Math.min(点.length - 2, u | 0), f = u - u0;
+          const 側 = (vx * dy - vy * dx) > 0 ? 0 : 1;                 // 左の岸か右の岸か
+          川際[j] = e; 川位[j] = 位[u0] + (位[u0 + 1] - 位[u0]) * f;
+          川落[j] = 落[側][u0] + (落[側][u0 + 1] - 落[側][u0]) * f;
+          川届[j] = 届ら[側][u0] + (届ら[側][u0 + 1] - 届ら[側][u0]) * f;
+        }
+       }
+      }
+    }
   }
   for (const r of 道ら) {
     const 半幅 = r.幅 / 2 + 2 * 倍;
     yield* 刻む(r.節, r.幅, 道度, 2 * 倍, (d) => Math.min(1, (半幅 - d) / (2.5 * 倍)));
   }
-  for (let i = 0; i < 高.length; i++) if (川谷[i] > 0) 高[i] -= 川谷[i] / 半;
-  /* 川床を掘る（GDD 8.11）。斜めから見ると、両岸の土手が面として立ち、水面は
-     岸より一段低く沈む。底は平らに近く、岸だけを切り立たせる（川深の縁で落とす） */
+  /* 岸を水位まで下ろし、川床を掘る（GDD 8.11）。斜めから見ると、両岸の土手が
+     面として立ち、水面は岸より一段低く沈む。底は平らに近く、岸だけを切り立たせる
+     （川深の縁で落とす）。浅瀬のあたりは浅く掘る（渡れる所は岸が低い） */
   { const 掘り = 2.6 * 倍 / 半;
-    // 浅瀬のあたりは浅く掘る（渡れる所は岸が低い）
     const 瀬ら = 野の川.flatMap((r) => (r.渡し || []).filter((w) => w.種 !== "橋")
       .map((w) => ({ x: PX(w.x) / 半, y: PY(w.y) / 半, r: PX(w.r || 100) / 半 * 1.3 })));
     for (let i = 0; i < 高.length; i++) {
-      if (!(川深[i] > 0)) continue;
-      let 浅 = 1;
-      if (瀬ら.length) { const x = i % hw, y = (i / hw) | 0;
-        for (const w of 瀬ら) { const d = Math.hypot(x - w.x, y - w.y) / w.r; if (d < 1) 浅 = Math.min(浅, 0.25 + 0.75 * d * d); } }
-      const t = Math.min(1, 川深[i] * 3.2);
-      高[i] -= t * t * (3 - 2 * t) * 掘り * 浅;                  // 縁はなめらかに落とす
+      const e = 川際[i];
+      if (e >= 1e8) continue;
+      const 位 = 川位[i];
+      if (川深[i] > 0) {
+        let 浅 = 1;
+        if (瀬ら.length) { const x = i % hw, y = (i / hw) | 0;
+          for (const w of 瀬ら) { const d = Math.hypot(x - w.x, y - w.y) / w.r; if (d < 1) 浅 = Math.min(浅, 0.25 + 0.75 * d * d); } }
+        const t = Math.min(1, 川深[i] * 3.2);
+        高[i] = 位 - t * t * (3 - 2 * t) * 掘り * 浅;                // 縁はなめらかに落とす
+        continue;
+      }
+      const 届 = 川届[i];
+      if (e >= 届) continue;
+      const 元 = 高[i];
+      // 岸を水位まで下ろし、届く所までに元の地へ戻す。水位より下へは掘らない（元が低ければ元のまま）
+      高[i] = Math.max(元 - 川落[i] * (1 - 滑曲(e / 届)), Math.min(元, 位));
     } }
   /* 橋の床。川床と谷を彫った地に板を描くと、斜めに起こしたとき橋が谷なりに
      へこんで見えた（遊ぶ側の申し出は「川の橋が下にベコっとなっている」）。
@@ -1663,6 +1826,21 @@ export function* 野を焼く(g, 画k) {
       const ほつれ = (襞(x / (4.5 * 倍), y / (4.5 * 倍), 3) - 0.5) * 0.52;
       const t = 1 - (d + ほつれ);
       if (t > 0) 林[y * hw + x] = Math.max(林[y * hw + x], Math.min(1, t * 2.2));
+    }
+  }
+  /* 梢は水の上に張り出さない。森の円をそのまま塗ってから水を塗っていたので、森が
+     川の縁と同じ線で切り取られ、水の中にまで梢の起伏の影が落ちていた（遊ぶ側の申し出
+     「森と川の分け目が変」）。水際から川辺の間（五歩から二十八歩、所により揺らぐ）だけ
+     梢を引き、そこから三十歩ほどかけて茂らせる（川辺の茂り）。森の縁は川の縁とは別の
+     線になり、間の河原にはまばらな木だけが立つ（下の 木。mori.js の木立も同じ縁で引く）。
+     街道も切り開かれている（盤の理では街道は森に勝つ）。梢を道の上に張らない */
+  { const 帯 = 帯幅(hh, 24) * hw;
+    for (let i = 0; i < 林.length; i++) {
+      if (i % 帯 === 0) yield;
+      if (林[i] < 0.005) continue;
+      const e = 川際[i] * 半 / k;                                     // 歩
+      if (e < 70) 林[i] *= 川辺の茂り((i % hw) * 半 / k, ((i / hw) | 0) * 半 / k, e);
+      if (道度[i] > 0) 林[i] *= 1 - Math.min(1, 道度[i]);
     }
   }
   /* 斜めの眺めの高さの図（battle/naname.js）。梢を盛る前の、地そのものの高さ。
@@ -1791,37 +1969,80 @@ export function* 野を焼く(g, 画k) {
   /* 沼（湿地）。湿った泥の地に、空を映す水溜まりを散らし、縁に泥の輪を回す。
      ぼんやりした緑の円だけでは、そこが足を取られる地だと読めなかった。
      葦は斜めの眺めでは立てて描く（sato.js）。真上からは株の点で見せる */
+  /* 水の外にだけ描く。沼と集落は野の色を塗ったあとに筆で重ねるので、川に掛かる沼や村は
+     水の上に泥の輪や水溜まり、垣や畑を描き、川の中に沼や村が浮いて見えた。水から遠い
+     ものはそのまま描き、近いものは別の画布に描いてから、水際の内と岸の砂に落ちた画素を
+     消して重ねる。水溜まり・家・木のように形のあるものは、半端に欠けぬよう水際の近くには
+     初めから置かない（水際px で見る）。 */
+  const 水際px = (x, y) => (川ら.length ? 引伸(川際, hw, hh, x, y, 半) * 半 : 1e9);
+  const 水の外へ描く = (cx, cy, R, 描く) => {
+    let 近 = Infinity;
+    if (川ら.length) for (let y = cy - R; y <= cy + R; y += 4 * 倍) for (let x = cx - R; x <= cx + R; x += 4 * 倍) 近 = Math.min(近, 水際px(x, y));
+    if (近 > 4 * 倍 || typeof document === "undefined") { 描く(g); return; }
+    const x0 = Math.max(0, Math.floor(cx - R)), y0 = Math.max(0, Math.floor(cy - R));
+    const x1 = Math.min(W, Math.ceil(cx + R)), y1 = Math.min(H, Math.ceil(cy + R));
+    if (x1 - x0 < 1 || y1 - y0 < 1) return;
+    const c = document.createElement("canvas"); c.width = x1 - x0; c.height = y1 - y0;
+    const q = c.getContext("2d");
+    if (!q || !q.getImageData) { 描く(g); return; }
+    q.translate(-x0, -y0);
+    描く(q);
+    const im = q.getImageData(0, 0, c.width, c.height), dd = im && im.data;
+    if (!dd || dd.length < c.width * c.height * 4) { 描く(g); return; }   // 画素を読めぬ場（試しの画面など）では、そのまま描く
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+      const i = (y * c.width + x) * 4;
+      if (!dd[i + 3]) continue;
+      const e = 水際px(x0 + x + 0.5, y0 + y + 0.5);
+      if (e < 4 * 倍) dd[i + 3] *= e <= 倍 ? 0 : (e - 倍) / (3 * 倍);
+    }
+    q.putImageData(im, 0, 0);
+    g.drawImage(c, x0, y0);
+  };
   for (const m of MARSH) {
     const mx = PX(m.x), my = PY(m.y), r = PX(m.r);
-    const gr = g.createRadialGradient(mx, my, r * 0.2, mx, my, r);
-    gr.addColorStop(0, "rgba(92,98,70,0.62)"); gr.addColorStop(0.7, "rgba(98,108,74,0.45)"); gr.addColorStop(1, "rgba(98,108,74,0)");
-    g.fillStyle = gr; g.beginPath(); g.ellipse(mx, my, r, r * 0.8, 0, 0, 7); g.fill();
-    野種を置く(Math.round(m.x * 13 + m.y));
-    const n = 7 + ((野乱() * 7) | 0);
-    for (let i = 0; i < n; i++) {
-      const a = 野乱() * 6.283, d = r * Math.sqrt(野乱()) * 0.72;
-      const x = mx + Math.cos(a) * d, y = my + Math.sin(a) * d * 0.8;
-      const rx = r * (0.08 + 野乱() * 0.16), ry = rx * (0.45 + 野乱() * 0.4), 角 = 野乱() * 3.14;
-      g.fillStyle = "rgba(84,76,52,0.55)";                          // 泥の縁
-      g.beginPath(); g.ellipse(x, y, rx * 1.18, ry * 1.25, 角, 0, 7); g.fill();
-      const wg = g.createLinearGradient(x, y - ry, x, y + ry);
-      wg.addColorStop(0, "rgba(150,176,186,0.92)"); wg.addColorStop(1, "rgba(92,118,128,0.92)");
-      g.fillStyle = wg; g.beginPath(); g.ellipse(x, y, rx, ry, 角, 0, 7); g.fill();
-      g.strokeStyle = "rgba(236,244,248,0.5)"; g.lineWidth = Math.max(0.5, 0.6 * 倍);   // 空の照り返し
-      g.beginPath(); g.ellipse(x - rx * 0.2, y - ry * 0.3, rx * 0.5, ry * 0.25, 角, 3.6, 5.4); g.stroke();
-    }
-    g.fillStyle = "rgba(70,86,44,0.55)";                            // 葦の株（真上から）
-    for (let i = 0; i < Math.round(r * r / (60 * 倍 * 倍)); i++) {
-      const a = 野乱() * 6.283, d = r * Math.sqrt(野乱()) * 0.95;
-      g.beginPath(); g.arc(mx + Math.cos(a) * d, my + Math.sin(a) * d * 0.8, (0.8 + 野乱()) * 倍, 0, 7); g.fill();
-    }
+    水の外へ描く(mx, my, r * 1.05 + 4 * 倍, (q) => {
+      const gr = q.createRadialGradient(mx, my, r * 0.2, mx, my, r);
+      gr.addColorStop(0, "rgba(92,98,70,0.62)"); gr.addColorStop(0.7, "rgba(98,108,74,0.45)"); gr.addColorStop(1, "rgba(98,108,74,0)");
+      q.fillStyle = gr; q.beginPath(); q.ellipse(mx, my, r, r * 0.8, 0, 0, 7); q.fill();
+      野種を置く(Math.round(m.x * 13 + m.y));
+      const n = 7 + ((野乱() * 7) | 0);
+      for (let i = 0; i < n; i++) {
+        let a, d, x, y, rx, ry, 角, 置ける = false;
+        /* 川に掛かる水溜まりは置かない。川を跨ぐ沼は水溜まりが半ば消えてしまうので、
+           岸の上で置き場を三度まで探し直す（水から遠い沼は一度目で決まり、もとと同じ形） */
+        for (let 試 = 0; 試 < 4 && !置ける; 試++) {
+          a = 野乱() * 6.283; d = r * Math.sqrt(野乱()) * 0.72;
+          x = mx + Math.cos(a) * d; y = my + Math.sin(a) * d * 0.8;
+          rx = r * (0.08 + 野乱() * 0.16); ry = rx * (0.45 + 野乱() * 0.4); 角 = 野乱() * 3.14;
+          置ける = 水際px(x, y) >= rx * 1.3 + 3 * 倍;
+        }
+        if (!置ける) continue;
+        q.fillStyle = "rgba(84,76,52,0.55)";                          // 泥の縁
+        q.beginPath(); q.ellipse(x, y, rx * 1.18, ry * 1.25, 角, 0, 7); q.fill();
+        const wg = q.createLinearGradient(x, y - ry, x, y + ry);
+        wg.addColorStop(0, "rgba(150,176,186,0.92)"); wg.addColorStop(1, "rgba(92,118,128,0.92)");
+        q.fillStyle = wg; q.beginPath(); q.ellipse(x, y, rx, ry, 角, 0, 7); q.fill();
+        q.strokeStyle = "rgba(236,244,248,0.5)"; q.lineWidth = Math.max(0.5, 0.6 * 倍);   // 空の照り返し
+        q.beginPath(); q.ellipse(x - rx * 0.2, y - ry * 0.3, rx * 0.5, ry * 0.25, 角, 3.6, 5.4); q.stroke();
+      }
+      q.fillStyle = "rgba(70,86,44,0.55)";                            // 葦の株（真上から）
+      for (let i = 0; i < Math.round(r * r / (60 * 倍 * 倍)); i++) {
+        const a = 野乱() * 6.283, d = r * Math.sqrt(野乱()) * 0.95, rr = (0.8 + 野乱()) * 倍;
+        const x = mx + Math.cos(a) * d, y = my + Math.sin(a) * d * 0.8;
+        if (水際px(x, y) < 倍 || 引伸(道度, hw, hh, x, y, 半) > 0.3) continue;   // 水の上と街道の上には置かない
+        q.beginPath(); q.arc(x, y, rr, 0, 7); q.fill();
+      }
+    });
   }
 
   /* 集落 */
   /* 斜めの眺めでは、家は立てて描く（sato.js）。道の向きを家並みと揃える */
   const 里立体 = 斜め.入 && 斜め.傾き < 1;
-  for (const v of VILLAGES) 集落(g, PX(v.x), PY(v.y), PX(v.r || 40) * 0.95, Math.round(v.x + v.y), 明関, 倍,
-    里立体, 村の道は横か(v) ? 0 : Math.PI / 2);
+  for (const v of VILLAGES) {
+    const r = PX(v.r || 40) * 0.95;
+    水の外へ描く(PX(v.x), PY(v.y), r * 1.6 + 8 * 倍, (q) => 集落(q, PX(v.x), PY(v.y), r, Math.round(v.x + v.y), 明関, 倍,
+      里立体, 村の道は横か(v) ? 0 : Math.PI / 2, 水際px));
+  }
 
   計("沼と集落");
   /* 木。林の只中は塊で描いたので、木は縁と野にだけ立てる */

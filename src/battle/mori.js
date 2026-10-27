@@ -11,9 +11,9 @@
 
    絵だけのものである。当たり（森の視界・川の足止め）には触れない。
    ========================================================================== */
-import { FORESTS, WOODS } from "./field.js";
-import { 揚げ, 画の横, 画の縦, 斜め, 見える範囲, 視の筆へ, 縦の縮み, 隠して描く } from "./naname.js";
-import { 野の川筋, 野の橋 } from "./shinga.js";
+import { FORESTS, WOODS, ROADS, 水際まで, 節までの隔たり } from "./field.js";
+import { 揚げ, 画の横, 画の縦, 斜め, 見える範囲, 視の筆へ, 縦の縮み, 隠して描く, 隠れの際 } from "./naname.js";
+import { 野の川筋, 野の橋, 川辺の茂り } from "./shinga.js";
 import { 家々を据える, 家の棟, 葦を据える, 葦を描く } from "./sato.js";
 
 /* ---- 川の流れ ---- */
@@ -31,17 +31,21 @@ export function 川の流れを描く(ctx, 秒, 尺) {
       /* 橋の床は袂の高さに据えてある。節を飛び飛びに持ち上げると、筋が橋の上へ
          乗り上げる。節の間を刻んで辿り、橋の下では筆を上げる */
       let 前 = null, 下 = false;
+      /* 斜めの眺めでは、手前の岸や丘に隠れた水面に筋を引かない。隠れた所にも引いて
+         いたので、丘の向こうの川の筋が丘の斜面に白く浮いていた。隠れの際で見るので、
+         節の間も細かく刻む */
+      const 隠れを見る = 縦の縮み() < 1 && 斜め.入;
       for (let i = 0; i < 節.length; i++) {
         const [x, y] = 節[i];
         const [x2, y2] = 節[Math.min(節.length - 1, i + 1)], [x0, y0] = 節[Math.max(0, i - 1)];
         const dx = x2 - x0, dy = y2 - y0, L = Math.hypot(dx, dy) || 1;
         const px = x - dy / L * w * 横, py = y + dx / L * w * 横;
-        const 刻 = 前 && 野の橋.length ? Math.max(1, Math.ceil(Math.hypot(px - 前[0], py - 前[1]) / Math.max(6, w * 0.4))) : 1;
+        const 刻 = 前 && (野の橋.length || 隠れを見る) ? Math.max(1, Math.ceil(Math.hypot(px - 前[0], py - 前[1]) / Math.max(6, w * 0.4))) : 1;
         for (let s = 1; s <= 刻; s++) {
           const qx = 前 ? 前[0] + (px - 前[0]) * s / 刻 : px, qy = 前 ? 前[1] + (py - 前[1]) * s / 刻 : py;
           const 橋下 = 野の橋.some((b) => { const ax = qx - b.cx, ay = qy - b.cy;
             return Math.abs(ax * b.ux + ay * b.uy) < b.長 + 2 && Math.abs(ax * b.nx + ay * b.ny) < b.半 + 2; });
-          if (橋下) { 下 = true; continue; }
+          if (橋下 || (隠れを見る && 隠れの際(qx, qy) < 画の縦(qx, qy) - 1.5)) { 下 = true; continue; }
           const [ex, ey] = 揚げ(qx, qy);
           if (前 && !下) ctx.lineTo(qx + ex, qy + ey); else ctx.moveTo(qx + ex, qy + ey);
           下 = false;
@@ -63,24 +67,28 @@ export function 川の流れを描く(ctx, 秒, 尺) {
 /* ---- 木立 ---- */
 let 木立 = null, 木立の鍵 = "";
 function 種乱(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-// 川の上には木を立てない
-function 川の上か(川ら, x, y) {
-  for (const r of 川ら) {
-    const 節 = r.節, w = r.幅 * 0.75;
-    for (let i = 1; i < 節.length; i++) {
-      const [ax, ay] = 節[i - 1], [bx, by] = 節[i];
-      const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy || 1;
-      const t = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / L2));
-      if (Math.hypot(x - ax - vx * t, y - ay - vy * t) < w) return true;
-    }
+/* 川べりと道の上には木を立てない。
+
+   もとは川の芯から川幅の四分の三の内を除くだけだった。川幅の広い川ほど岸から遠くまで
+   木が消え、狭い川では岸の際まで木が並び、どちらでも森の縁が川の縁と同じ線で切れて
+   いた（遊ぶ側の申し出「森と川の分け目が変」）。地の焼きの梢と同じ縁（川辺の茂り。
+   水際から五歩から二十八歩を河原として空け、三十歩ほどかけて茂らせる）で間引く。
+   河原にも、まれに一本だけ木が立つ。
+   街道は切り開かれている（盤の理では街道は森に勝つ）。道の上と際にも立てない。 */
+function 木を置かぬ所か(x, y, R) {
+  const e = 水際まで(x, y, 70);
+  if (e < 70) {
+    const 茂 = 川辺の茂り(x, y, e);
+    if (茂 <= 0) { if (e < 3 || R() > 0.06) return true; }
+    else if (茂 < 1 && R() > 茂) return true;
   }
+  for (const r of ROADS) if (r.幅 > 0 && 節までの隔たり(r.節, x, y) < r.幅 / 2 + 3) return true;
   return false;
 }
 export function 木立を据える() {
   const 鍵 = [...FORESTS, ...WOODS].map((f) => `${Math.round(f.x)},${Math.round(f.y)},${Math.round(f.r)}`).join(";");
   if (木立 && 鍵 === 木立の鍵) return 木立;
   木立の鍵 = 鍵;
-  const 川ら = 野の川筋();
   const 並 = [];
   for (const f of [...FORESTS, ...WOODS]) {
     const 濃 = FORESTS.includes(f);
@@ -92,7 +100,7 @@ export function 木立を据える() {
       const x = f.x + Math.cos(a) * rr, y = f.y + Math.sin(a) * rr * 0.92;
       // 縁はまばらに
       if (rr > f.r * 0.82 && R() < 0.5) continue;
-      if (川の上か(川ら, x, y)) continue;
+      if (木を置かぬ所か(x, y, R)) continue;
       const 種 = 濃 ? (R() < 0.55 ? 0 : R() < 0.5 ? 1 : 2) : (R() < 0.7 ? 2 : 1);
       並.push({ x, y, 丈: (濃 ? 13 : 10) * (0.75 + R() * 0.55), 種 });
     }

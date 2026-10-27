@@ -1,6 +1,6 @@
 import { axisOf, fromUV, gateOpenU, gatePos } from "./castleMap.js";
 import { KOMA, rot } from "./corps.js";
-import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS, ROAD, ROADS, WOODS, hasRiver, riverShift } from "./field.js";
+import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS, ROAD, ROADS, WOODS, hasRiver, riverShift, 水際まで, 地形の代, 節までの隔たり } from "./field.js";
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
@@ -9,7 +9,7 @@ import { 一人ずつ描く隊 } from "./shinga.js";
 import { 城を立てて描く, 天守の置き場, 城を預ける, 預けた城を立てる } from "./tachimono.js";
 import { 川の流れを描く, 立木を描く } from "./mori.js";
 import { 里を描く } from "./sato.js";
-import { 新絵か, 新絵の兵描き, 新絵の城の地, 新絵の画布上限, 個人で描くか, 近景の肌理, 本陣の所 } from "./shinga.js";
+import { 新絵か, 新絵の兵描き, 新絵の城の地, 新絵の画布上限, 個人で描くか, 近景の肌理, 本陣の所, 川辺の茂り } from "./shinga.js";
 
 /* ------------------------------------------------ 敵味方の色（GDD 8.10）
 
@@ -878,20 +878,33 @@ function 木立を描く(ctx, f, 濃, n, label) {
 /* 木立の梢だけを、もう一度描く。
    地も幹も描かない。駒の上に被せて、木の下に入った隊を葉に紛れさせるのに使う。
    木立を描くときと同じ種から起こすので、下に敷いた木とぴたりと重なる。 */
+/* 梢の並びは森ごとに覚えておく（毎コマ水際を量らぬよう。地を組み直したら量り直す） */
+const 梢の控え = new WeakMap();
 export function 木の梢だけ(ctx, f, 濃, n) {
   const 丈 = Math.max(7, f.r * (濃 ? 0.17 : 0.15));
   const 梢 = 濃 ? "#537A44" : "#6E9553";
   const 明 = 濃 ? "#79A15C" : "#93B76E";
-  const rnd = 種乱数((f.seed || 7) * 104729);
-  const 木 = [];
-  for (let i = 0; i < n; i++) {
-    const a = i * 2.399 + rnd() * 0.6;
-    const r = f.r * Math.pow((i + 0.6) / n, 0.42) * (0.92 + rnd() * 0.20);
-    木.push({ x: f.x + Math.cos(a) * r, y: f.y + Math.sin(a) * r * 0.84,
-      s: 丈 * (0.80 + rnd() * 0.46) });
+  let 控 = 梢の控え.get(f);
+  if (!控 || 控.代 !== 地形の代() || 控.n !== n) {
+    const rnd = 種乱数((f.seed || 7) * 104729);
+    const 並 = [];
+    for (let i = 0; i < n; i++) {
+      const a = i * 2.399 + rnd() * 0.6;
+      const r = f.r * Math.pow((i + 0.6) / n, 0.42) * (0.92 + rnd() * 0.20);
+      const t = { x: f.x + Math.cos(a) * r, y: f.y + Math.sin(a) * r * 0.84, s: 丈 * (0.80 + rnd() * 0.46) };
+      /* 川の上と岸の河原には梢を被せない。森の円のまま被せていたので、真上の眺めで
+         川の水の上に木の梢が浮いていた。地の焼きの梢と同じ縁（川辺の茂り）で間引く。
+         森を抜ける街道の上にも被せない（地の焼きも木立も、道の上は切り開いてある） */
+      const e = 水際まで(t.x, t.y, 70) - t.s;
+      if (e < 3 || (e < 70 && 川辺の茂り(t.x, t.y, e) < 0.5)) continue;
+      if (ROADS.some((rd) => rd.幅 > 0 && 節までの隔たり(rd.節, t.x, t.y) < rd.幅 / 2 + t.s * 0.6)) continue;
+      並.push(t);
+    }
+    並.sort((a, b) => a.y - b.y);
+    控 = { 代: 地形の代(), n, 並 };
+    梢の控え.set(f, 控);
   }
-  木.sort((a, b) => a.y - b.y);
-  for (const t of 木) {
+  for (const t of 控.並) {
     ctx.fillStyle = 梢;
     for (const [dx, dy, k] of [[0.30, -0.28, 0.56], [0.06, -0.20, 0.60], [-0.34, -0.30, 0.52]]) {
       ctx.beginPath();

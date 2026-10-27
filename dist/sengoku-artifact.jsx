@@ -25078,6 +25078,7 @@ function genTerrain(seed) {
   put(WOODS, \u6570(Math.floor(rnd() * 3) + 1), 50 * sc, 85 * sc);
   put(MARSH, \u6570(rnd() > 0.6 ? 1 : 0), 65 * sc, 100 * sc);
   put(VILLAGES, \u6570(Math.floor(rnd() * 3)), 34 * sc, 58 * sc);
+  \u4E18\u3068\u6751\u3092\u5DDD\u304B\u3089\u9000\u3051\u308B();
   for (const h of HILLS) h.rise = Math.round(h.r * (0.2 + h.seed % 100 / 100 * 0.14));
   \u9AD8\u307F\u3092\u6570\u3048\u76F4\u3059();
   ROAD.\u7BC0.length = 0;
@@ -25111,6 +25112,46 @@ function genTerrain(seed) {
     ROAD.\u7BC0.push(...\u66F2(\u5DDD\u4E2D - \u5DDD\u5E45 * 1.6, -30, \u6E21\u308A, \u5317, 3));
     ROAD.\u7BC0.push({ x: \u5317, y: -30 });
   }
+}
+function \u5DDD\u304B\u3089\u9000\u3051\u308B(list) {
+  const H2 = FIELD.h;
+  const \u82AF = (x) => (RIVER.top + RIVER.bot) / 2 + riverShift(x);
+  for (const h of list) {
+    const \u969B0 = \u6C34\u969B\u307E\u3067(h.x, h.y, h.r);
+    if (\u969B0 >= h.r) continue;
+    const \u5411 = h.y >= \u82AF(h.x) ? 1 : -1;
+    const \u4ED6 = [...FORESTS, ...WOODS, ...HILLS, ...MOUNTAINS, ...MARSH, ...VILLAGES].filter((o) => o !== h && Math.hypot(o.x - h.x, o.y - h.y) >= o.r + h.r + 30);
+    const \u639B\u304B\u308B = (y, r) => \u4ED6.some((o) => Math.hypot(o.x - h.x, o.y - y) < o.r + r + 30);
+    let \u5148 = null, \u6B21\u5584 = { \u6BD4: \u969B0 / h.r };
+    for (const \u5411\u304D3 of [\u5411, -\u5411]) {
+      for (let \u7E2E = 1; \u7E2E > 0.49 && !\u5148; \u7E2E -= 0.05) {
+        const r = Math.round(h.r * \u7E2E);
+        for (let \u03B4 = 0; ; \u03B4 += 6) {
+          const y = h.y + \u5411\u304D3 * \u03B4;
+          if (y < r + 24 || y > H2 - r - 24) break;
+          const \u969B = \u6C34\u969B\u307E\u3067(h.x, y, r);
+          if (\u969B < r) {
+            if (\u969B / r > \u6B21\u5584.\u6BD4 && !\u639B\u304B\u308B(y, r)) \u6B21\u5584 = { y: Math.round(y), r, \u6BD4: \u969B / r };
+            continue;
+          }
+          if (!\u639B\u304B\u308B(y, r)) \u5148 = { y: Math.round(y), r };
+          else if (\u5411\u304D3 !== \u5411) continue;
+          break;
+        }
+      }
+      if (\u5148) break;
+    }
+    if (!\u5148 && \u6B21\u5584.y != null) \u5148 = \u6B21\u5584;
+    if (\u5148) {
+      h.y = \u5148.y;
+      h.r = \u5148.r;
+    }
+  }
+}
+function \u4E18\u3068\u6751\u3092\u5DDD\u304B\u3089\u9000\u3051\u308B() {
+  if (!hasRiver()) return;
+  \u5DDD\u304B\u3089\u9000\u3051\u308B(HILLS);
+  \u5DDD\u304B\u3089\u9000\u3051\u308B(VILLAGES);
 }
 var \u683C\u7A2E = ["plain", "road", "forest", "wood", "marsh", "mountain", "hill", "village", "deep", "ford", "bridge"];
 var \u5730\u5F62\u683C = null;
@@ -25208,6 +25249,59 @@ function \u5730\u306E\u9AD8\u3055(x, y) {
   return \u9AD8;
 }
 var hasRiver = () => RIVER.bot > RIVER.top + 4;
+var \u5DDD\u306E\u5347 = null;
+function \u5DDD\u306E\u5347\u3092\u636E\u3048\u308B() {
+  if (\u5DDD\u306E\u5347 && \u5DDD\u306E\u5347.\u4EE3 === \u4EE3 && \u5DDD\u306E\u5347.\u6570 === RIVERS2.length) return \u5DDD\u306E\u5347;
+  const G = 160, \u4F59 = 80, \u53472 = /* @__PURE__ */ new Map();
+  for (const r of RIVERS2) {
+    const \u534A = (r.\u5E45 || 40) / 2;
+    for (let i = 0; i + 1 < r.\u7BC0.length; i++) {
+      const a = r.\u7BC0[i], b = r.\u7BC0[i + 1], \u533A = { a, b, \u534A };
+      const i0 = Math.floor((Math.min(a.x, b.x) - \u534A - \u4F59) / G), i1 = Math.floor((Math.max(a.x, b.x) + \u534A + \u4F59) / G);
+      const j0 = Math.floor((Math.min(a.y, b.y) - \u534A - \u4F59) / G), j1 = Math.floor((Math.max(a.y, b.y) + \u534A + \u4F59) / G);
+      for (let i2 = i0; i2 <= i1; i2++) for (let j2 = j0; j2 <= j1; j2++) {
+        const \u9375 = i2 * 100003 + j2;
+        if (!\u53472.has(\u9375)) \u53472.set(\u9375, []);
+        \u53472.get(\u9375).push(\u533A);
+      }
+    }
+  }
+  \u5DDD\u306E\u5347 = { \u4EE3, \u6570: RIVERS2.length, G, \u4F59, \u5347: \u53472 };
+  return \u5DDD\u306E\u5347;
+}
+function \u6C34\u969B\u307E\u3067(x, y, \u4E0A\u9650 = Infinity) {
+  if (RIVERS2.length) {
+    let \u6700 = Infinity;
+    const M = \u5DDD\u306E\u5347\u3092\u636E\u3048\u308B();
+    if (\u4E0A\u9650 <= M.\u4F59) {
+      const \u533A\u3089 = M.\u5347.get(Math.floor(x / M.G) * 100003 + Math.floor(y / M.G));
+      if (!\u533A\u3089) return M.\u4F59 + 1;
+      for (const { a, b, \u534A } of \u533A\u3089) {
+        const e = \u7BC0\u307E\u3067\u306E\u9694\u305F\u308A([a, b], x, y) - \u534A;
+        if (e < \u6700) \u6700 = e;
+      }
+      return Math.min(\u6700, M.\u4F59 + 1);
+    }
+    for (const r of RIVERS2) {
+      const e = \u7BC0\u307E\u3067\u306E\u9694\u305F\u308A(r.\u7BC0, x, y) - (r.\u5E45 || 40) / 2;
+      if (e < \u6700) \u6700 = e;
+    }
+    return \u6700;
+  }
+  if (!hasRiver()) return Infinity;
+  const \u534A\u5E45 = (RIVER.bot - RIVER.top) / 2, \u82AF = (RIVER.top + RIVER.bot) / 2;
+  const \u7E26 = Math.abs(y - \u82AF - riverShift(x));
+  const \u50BE = RIVER.wave * RIVER.k;
+  const \u4E0B = \u7E26 / Math.sqrt(1 + \u50BE * \u50BE) - \u534A\u5E45;
+  if (\u4E0B > \u4E0A\u9650) return \u4E0B;
+  let \u8FD1 = \u7E26;
+  const \u523B = Math.max(2, Math.min(8, \u7E26 / 24));
+  for (let xx = x - \u7E26; xx <= x + \u7E26; xx += \u523B) {
+    const d = Math.hypot(xx - x, y - \u82AF - riverShift(xx));
+    if (d < \u8FD1) \u8FD1 = d;
+  }
+  return \u8FD1 - \u534A\u5E45;
+}
 function \u5C71\u304C\u906E\u308B\u304B(x1, y1, x2, y2) {
   if (!MOUNTAINS.length) return false;
   if (terrainAt(x1, y1) === "mountain" || terrainAt(x2, y2) === "mountain") return false;
@@ -28114,6 +28208,7 @@ function \u5BB6\u3005\u3092\u636E\u3048\u308B() {
           const \u95772 = \u7A2E2 === "\u8535" ? 10 + R2() * 3 : \u7A2E2 === "\u7D0D\u5C4B" ? 13 + R2() * 4 : 15 + R2() * 6;
           const \u5E452 = \u7A2E2 === "\u8535" ? 8 + R2() * 2 : 10 + R2() * 3;
           const hw = (\u6A2A\u9053 ? \u95772 : \u5E452) / 2, hh = (\u6A2A\u9053 ? \u5E452 : \u95772) / 2;
+          if (\u6C34\u969B\u307E\u3067(x, y, 40) < Math.hypot(hw, hh) + 5) continue;
           \u4E26.push({ x, y, hw, hh, \u7A2E: \u7A2E2 });
         }
       }
@@ -28177,7 +28272,10 @@ function \u8466\u3092\u636E\u3048\u308B() {
       const x = m.x + Math.cos(a) * rr, y = m.y + Math.sin(a) * rr * 0.8;
       const \u7FA4 = Math.sin(x * 0.045 + m.x) * Math.cos(y * 0.05 + m.y);
       if (\u7FA4 < -0.2 && R2() < 0.75) continue;
-      \u4E26.push({ x, y, \u4E08: 4.5 + R2() * 4, \u7A2E: R2() });
+      const \u4E08 = 4.5 + R2() * 4, \u7A2E2 = R2();
+      if (\u6C34\u969B\u307E\u3067(x, y, 10) < -1.5) continue;
+      if (ROADS2.some((r) => r.\u5E45 > 0 && \u7BC0\u307E\u3067\u306E\u9694\u305F\u308A(r.\u7BC0, x, y) < r.\u5E45 / 2)) continue;
+      \u4E26.push({ x, y, \u4E08, \u7A2E: \u7A2E2 });
     }
   }
   \u8466\u539F = \u4E26;
@@ -28241,19 +28339,20 @@ function \u5DDD\u306E\u6D41\u308C\u3092\u63CF\u304F(ctx, \u79D2, \u5C3A) {
     for (const [\u6A2A, \u6FC3, \u901F] of [[-0.34, 0.12, 0.8], [-0.17, 0.16, 1], [0, 0.18, 1.2], [0.15, 0.15, 1.05], [0.32, 0.11, 0.85]]) {
       ctx.beginPath();
       let \u524D = null, \u4E0B = false;
+      const \u96A0\u308C\u3092\u898B\u308B = \u7E26\u306E\u7E2E\u307F() < 1 && \u659C\u3081.\u5165;
       for (let i = 0; i < \u7BC0.length; i++) {
         const [x, y] = \u7BC0[i];
         const [x2, y2] = \u7BC0[Math.min(\u7BC0.length - 1, i + 1)], [x0, y0] = \u7BC0[Math.max(0, i - 1)];
         const dx = x2 - x0, dy = y2 - y0, L = Math.hypot(dx, dy) || 1;
         const px2 = x - dy / L * w * \u6A2A, py2 = y + dx / L * w * \u6A2A;
-        const \u523B = \u524D && \u91CE\u306E\u6A4B.length ? Math.max(1, Math.ceil(Math.hypot(px2 - \u524D[0], py2 - \u524D[1]) / Math.max(6, w * 0.4))) : 1;
+        const \u523B = \u524D && (\u91CE\u306E\u6A4B.length || \u96A0\u308C\u3092\u898B\u308B) ? Math.max(1, Math.ceil(Math.hypot(px2 - \u524D[0], py2 - \u524D[1]) / Math.max(6, w * 0.4))) : 1;
         for (let s2 = 1; s2 <= \u523B; s2++) {
           const qx = \u524D ? \u524D[0] + (px2 - \u524D[0]) * s2 / \u523B : px2, qy = \u524D ? \u524D[1] + (py2 - \u524D[1]) * s2 / \u523B : py2;
           const \u6A4B\u4E0B = \u91CE\u306E\u6A4B.some((b) => {
             const ax = qx - b.cx, ay = qy - b.cy;
             return Math.abs(ax * b.ux + ay * b.uy) < b.\u9577 + 2 && Math.abs(ax * b.nx + ay * b.ny) < b.\u534A + 2;
           });
-          if (\u6A4B\u4E0B) {
+          if (\u6A4B\u4E0B || \u96A0\u308C\u3092\u898B\u308B && \u96A0\u308C\u306E\u969B(qx, qy) < \u753B\u306E\u7E26(qx, qy) - 1.5) {
             \u4E0B = true;
             continue;
           }
@@ -28285,23 +28384,21 @@ function \u7A2E\u4E712(seed) {
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
 }
-function \u5DDD\u306E\u4E0A\u304B(\u5DDD\u3089, x, y) {
-  for (const r of \u5DDD\u3089) {
-    const \u7BC0 = r.\u7BC0, w = r.\u5E45 * 0.75;
-    for (let i = 1; i < \u7BC0.length; i++) {
-      const [ax, ay] = \u7BC0[i - 1], [bx, by] = \u7BC0[i];
-      const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy || 1;
-      const t = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / L2));
-      if (Math.hypot(x - ax - vx * t, y - ay - vy * t) < w) return true;
-    }
+function \u6728\u3092\u7F6E\u304B\u306C\u6240\u304B(x, y, R2) {
+  const e = \u6C34\u969B\u307E\u3067(x, y, 70);
+  if (e < 70) {
+    const \u8302 = \u5DDD\u8FBA\u306E\u8302\u308A(x, y, e);
+    if (\u8302 <= 0) {
+      if (e < 3 || R2() > 0.06) return true;
+    } else if (\u8302 < 1 && R2() > \u8302) return true;
   }
+  for (const r of ROADS2) if (r.\u5E45 > 0 && \u7BC0\u307E\u3067\u306E\u9694\u305F\u308A(r.\u7BC0, x, y) < r.\u5E45 / 2 + 3) return true;
   return false;
 }
 function \u6728\u7ACB\u3092\u636E\u3048\u308B() {
   const \u9375 = [...FORESTS, ...WOODS].map((f) => `${Math.round(f.x)},${Math.round(f.y)},${Math.round(f.r)}`).join(";");
   if (\u6728\u7ACB && \u9375 === \u6728\u7ACB\u306E\u9375) return \u6728\u7ACB;
   \u6728\u7ACB\u306E\u9375 = \u9375;
-  const \u5DDD\u3089 = \u91CE\u306E\u5DDD\u7B4B();
   const \u4E26 = [];
   for (const f of [...FORESTS, ...WOODS]) {
     const \u6FC3 = FORESTS.includes(f);
@@ -28312,7 +28409,7 @@ function \u6728\u7ACB\u3092\u636E\u3048\u308B() {
       const a = R2() * Math.PI * 2, rr = f.r * Math.sqrt(R2()) * 1.02;
       const x = f.x + Math.cos(a) * rr, y = f.y + Math.sin(a) * rr * 0.92;
       if (rr > f.r * 0.82 && R2() < 0.5) continue;
-      if (\u5DDD\u306E\u4E0A\u304B(\u5DDD\u3089, x, y)) continue;
+      if (\u6728\u3092\u7F6E\u304B\u306C\u6240\u304B(x, y, R2)) continue;
       const \u7A2E2 = \u6FC3 ? R2() < 0.55 ? 0 : R2() < 0.5 ? 1 : 2 : R2() < 0.7 ? 2 : 1;
       \u4E26.push({ x, y, \u4E08: (\u6FC3 ? 13 : 10) * (0.75 + R2() * 0.55), \u7A2E: \u7A2E2 });
     }
@@ -29566,6 +29663,13 @@ var \u91CE\u7A2E\u3092\u7F6E\u304F = (n) => {
   \u91CE\u7A2E = n;
 };
 var \u631F = (v, a, b) => v < a ? a : v > b ? b : v;
+function \u5DDD\u8FBA\u306E\u8302\u308A(x, y, e) {
+  if (e >= 70) return 1;
+  const \u9593 = 5 + 23 * \u631F((\u895E(x / 90 + 31.7, y / 90 + 12.3, 2) - 0.32) / 0.5, 0, 1);
+  const \u307B\u3064\u308C = (\u895E(x / 26 + 5.1, y / 26 + 9.7, 3) - 0.5) * 24;
+  const t = (e - Math.max(3, \u9593 - \u307B\u3064\u308C)) / 30;
+  return t <= 0 ? 0 : t >= 1 ? 1 : \u6ED1\u66F2(t);
+}
 var \u6DF7\u8272 = (c1, c2, t) => [
   c1[0] + (c2[0] - c1[0]) * t,
   c1[1] + (c2[1] - c1[1]) * t,
@@ -29777,7 +29881,7 @@ function \u7E41\u6728\u3092\u63CF\u304F(q, x, y, r, \u632F, \u65E5) {
     q.fill();
   }
 }
-function \u96C6\u843D(q, cx, cy, r, \u7A2E2, \u660E\u95A2, \u500D, \u7ACB\u4F53, \u9053\u89D2) {
+function \u96C6\u843D(q, cx, cy, r, \u7A2E2, \u660E\u95A2, \u500D, \u7ACB\u4F53, \u9053\u89D2, \u6C34\u969B) {
   \u91CE\u7A2E\u3092\u7F6E\u304F(\u7A2E2);
   const \u54110 = \u91CE\u4E71() * 6.283;
   const \u5411 = \u7ACB\u4F53 ? \u9053\u89D2 : \u54110, ux = Math.cos(\u5411), uy = Math.sin(\u5411);
@@ -29838,7 +29942,9 @@ function \u96C6\u843D(q, cx, cy, r, \u7A2E2, \u660E\u95A2, \u500D, \u7ACB\u4F53,
     const x = cx + ux * \u95772 * t - uy * \u5BC4 * 0.8 + (\u91CE\u4E71() - 0.5) * 6 * \u500D;
     const y = cy + uy * \u95772 * t * 0.72 + ux * \u5BC4 * 0.6 + (\u91CE\u4E71() - 0.5) * 5 * \u500D;
     if (Math.hypot((x - cx) / r, (y - cy) / (r * 0.76)) > 0.94) continue;
-    \u5BB6\u3089.push([x, y, \u91CE\u4E71() < 0.22 ? "\u8535" : "\u5BB6", \u91CE\u4E71()]);
+    const \u7A2E\u985E = \u91CE\u4E71() < 0.22 ? "\u8535" : "\u5BB6", rr = \u91CE\u4E71();
+    if (\u6C34\u969B && \u6C34\u969B(x, y) < 15 * \u500D) continue;
+    \u5BB6\u3089.push([x, y, \u7A2E\u985E, rr]);
   }
   \u5BB6\u3089.sort((a, b) => a[1] - b[1]);
   for (const [x, y, \u7A2E\u985E, rr] of \u5BB6\u3089) {
@@ -29866,7 +29972,9 @@ function \u96C6\u843D(q, cx, cy, r, \u7A2E2, \u660E\u95A2, \u500D, \u7ACB\u4F53,
   for (let i = 0; i < Math.max(6, r / (6 * \u500D) | 0); i++) {
     const a = \u91CE\u4E71() * 6.283, dd = r * (0.5 + \u91CE\u4E71() * 0.42);
     const x = cx + Math.cos(a) * dd, y = cy + Math.sin(a) * dd * 0.76;
-    \u7E41\u6728(q, x, y, (4 + \u91CE\u4E71() * 3) * \u500D, \u91CE\u4E71(), \u660E\u95A2(x, y));
+    const rr = (4 + \u91CE\u4E71() * 3) * \u500D, \u632F = \u91CE\u4E71();
+    if (\u6C34\u969B && \u6C34\u969B(x, y) < rr * 1.6 + 2 * \u500D) continue;
+    \u7E41\u6728(q, x, y, rr, \u632F, \u660E\u95A2(x, y));
   }
 }
 function \u6E21\u3057\u306E\u5F62(r, w, \u500D) {
@@ -30008,7 +30116,9 @@ function* \u91CE\u3092\u713C\u304F2(g, \u753Bk) {
   const hw = Math.max(2, Math.ceil(W2 / \u534A)), hh = Math.max(2, Math.ceil(H2 / \u534A));
   const \u9AD8 = new Float32Array(hw * hh);
   const \u5DDD\u6DF1 = new Float32Array(hw * hh), \u5DDD\u5CB8 = new Float32Array(hw * hh);
-  const \u9053\u5EA6 = new Float32Array(hw * hh), \u5DDD\u8C37 = new Float32Array(hw * hh);
+  const \u9053\u5EA6 = new Float32Array(hw * hh);
+  const \u5DDD\u969B = new Float32Array(hw * hh).fill(1e9), \u5DDD\u4F4D = new Float32Array(hw * hh);
+  const \u5DDD\u843D = new Float32Array(hw * hh), \u5DDD\u5C4A = new Float32Array(hw * hh);
   {
     const \u5E2F = \u5E2F\u5E45(hh, 48);
     for (let y = 0; y < hh; y++) {
@@ -30067,33 +30177,179 @@ function* \u91CE\u3092\u713C\u304F2(g, \u753Bk) {
       }
     }
   };
+  const \u9AD8\u3092\u5F15\u304F = (cx, cy) => \u5F15\u4F38(\u9AD8, hw, hh, cx * \u534A, cy * \u534A, \u534A);
+  const \u5747\u3059 = (\u7B4B3) => {
+    const { \u4F4D } = \u7B4B3, n = \u4F4D.length, \u524D = new Float32Array(n);
+    let m = Infinity;
+    for (let i = 0; i < n; i++) {
+      if (\u4F4D[i] < m) m = \u4F4D[i];
+      \u524D[i] = m;
+    }
+    m = Infinity;
+    for (let i = n - 1; i >= 0; i--) {
+      if (\u4F4D[i] < m) m = \u4F4D[i];
+      \u4F4D[i] = Math.max(\u524D[i], m);
+    }
+  };
+  const \u7B4B\u3089 = [];
   for (const r of \u5DDD\u3089) {
-    const \u534A\u5E45 = r.\u5E45 / 2;
-    yield* \u523B\u3080(r.\u7BC0, r.\u5E45, \u5DDD\u6DF1, 0, (d2) => d2 < \u534A\u5E45 ? 1 - d2 / \u534A\u5E45 : 0);
-    yield* \u523B\u3080(r.\u7BC0, r.\u5E45, \u5DDD\u5CB8, 3 * \u500D, (d2) => d2 > \u534A\u5E45 ? (\u534A\u5E45 + 3 * \u500D - d2) / (3 * \u500D) : 0);
-    const \u8C37 = r.\u5E45 * 2.4;
-    yield* \u523B\u3080(r.\u7BC0, \u8C37 * 2, \u5DDD\u8C37, 0, (d2) => d2 < \u8C37 ? (1 - d2 / \u8C37) ** 2 * r.\u5E45 * 0.5 : 0);
+    yield;
+    const \u534A\u5E45 = r.\u5E45 / 2 / \u534A;
+    const \u5C3A = \u631F(r.\u5E45 / 2, 20 * k, 70 * k) / \u534A;
+    const \u70B9 = [], \u533A = [], \u969B\u3089 = [];
+    for (let i = 0; i + 1 < r.\u7BC0.length; i++) {
+      const [ax, ay] = r.\u7BC0[i], [bx, by] = r.\u7BC0[i + 1];
+      const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / \u534A / 4));
+      \u533A.push({ \u59CB: \u70B9.length, n });
+      for (let j = 0; j < n; j++) \u70B9.push([(ax + (bx - ax) * j / n) / \u534A, (ay + (by - ay) * j / n) / \u534A]);
+    }
+    {
+      const [ex, ey] = r.\u7BC0[r.\u7BC0.length - 1];
+      \u70B9.push([ex / \u534A, ey / \u534A]);
+    }
+    const \u4F4D = new Float32Array(\u70B9.length);
+    for (let i = 0; i < \u70B9.length; i++) {
+      const [x, y] = \u70B9[i], [x0, y0] = \u70B9[Math.max(0, i - 1)], [x1, y1] = \u70B9[Math.min(\u70B9.length - 1, i + 1)];
+      const L = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
+      let m = Infinity;
+      for (let o = -1; o <= 1.001; o += 0.25) m = Math.min(m, \u9AD8\u3092\u5F15\u304F(x + nx * o * \u534A\u5E45, y + ny * o * \u534A\u5E45));
+      \u4F4D[i] = m;
+      \u969B\u3089.push([x + nx * \u534A\u5E45, y + ny * \u534A\u5E45, x - nx * \u534A\u5E45, y - ny * \u534A\u5E45]);
+    }
+    const \u7B4B3 = { r, \u534A\u5E45, \u5C3A, \u70B9, \u533A, \u4F4D, \u969B\u3089 };
+    \u5747\u3059(\u7B4B3);
+    \u7B4B\u3089.push(\u7B4B3);
+  }
+  for (let \u56DE = 0; \u56DE < 2 && \u7B4B\u3089.length > 1; \u56DE++) {
+    for (const a of \u7B4B\u3089) for (const \u7AEF of [0, a.\u70B9.length - 1]) {
+      const [px2, py2] = a.\u70B9[\u7AEF];
+      for (const b of \u7B4B\u3089) {
+        if (b === a) continue;
+        let \u8FD1 = Infinity, bi = -1;
+        for (let i = 0; i < b.\u70B9.length; i++) {
+          const d2 = Math.hypot(b.\u70B9[i][0] - px2, b.\u70B9[i][1] - py2);
+          if (d2 < \u8FD1) {
+            \u8FD1 = d2;
+            bi = i;
+          }
+        }
+        if (\u8FD1 > b.\u534A\u5E45 + a.\u534A\u5E45 + b.\u5C3A) continue;
+        const m = Math.min(a.\u4F4D[\u7AEF], b.\u4F4D[bi]);
+        a.\u4F4D[\u7AEF] = m;
+        b.\u4F4D[bi] = m;
+        \u5747\u3059(a);
+        \u5747\u3059(b);
+      }
+    }
+  }
+  const \u6CBF\u3063\u3066\u5747\u3059 = (a) => {
+    const n = a.length, o = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      let \u548C = 0, \u6570 = 0;
+      for (let j = Math.max(0, i - 3); j <= Math.min(n - 1, i + 3); j++) {
+        \u548C += a[j];
+        \u6570++;
+      }
+      o[i] = \u548C / \u6570;
+    }
+    return o;
+  };
+  for (const \u7B4B3 of \u7B4B\u3089) {
+    const { \u70B9, \u4F4D, \u969B\u3089, \u5C3A } = \u7B4B3, n = \u70B9.length;
+    const \u843D = [new Float32Array(n), new Float32Array(n)], \u5C4A = [new Float32Array(n), new Float32Array(n)];
+    for (let i = 0; i < n; i++) {
+      const [lx, ly, rx, ry] = \u969B\u3089[i], [x, y] = \u70B9[i];
+      for (const [\u5074, ex, ey] of [[0, lx, ly], [1, rx, ry]]) {
+        const \u4E0B = Math.max(0, \u9AD8\u3092\u5F15\u304F(ex, ey) - \u4F4D[i]);
+        \u843D[\u5074][i] = \u4E0B;
+        const \u5148 = \u4E0B * 4, L = Math.hypot(ex - x, ey - y) || 1, nx = (ex - x) / L, ny = (ey - y) / L;
+        let \u9802 = \u5148, \u9802\u306E\u9AD8\u3055 = -Infinity;
+        if (\u5148 > \u5C3A * 2) {
+          const \u523B = Math.max(1, \u5148 / 40);
+          for (let t = 0; t <= \u5148; t += \u523B) {
+            const h = \u9AD8\u3092\u5F15\u304F(ex + nx * t, ey + ny * t);
+            if (h > \u9802\u306E\u9AD8\u3055) {
+              \u9802\u306E\u9AD8\u3055 = h;
+              \u9802 = t;
+            }
+          }
+        }
+        \u5C4A[\u5074][i] = Math.max(\u5C3A * 2, Math.min(\u5148, \u9802 * 0.9));
+      }
+    }
+    \u7B4B3.\u843D = \u843D.map(\u6CBF\u3063\u3066\u5747\u3059);
+    \u7B4B3.\u5C4A\u3089 = \u5C4A.map(\u6CBF\u3063\u3066\u5747\u3059);
+    let \u6700 = 0;
+    for (const a of \u7B4B3.\u5C4A\u3089) for (const v of a) if (v > \u6700) \u6700 = v;
+    \u7B4B3.\u5C4A = \u7B4B3.\u534A\u5E45 + \u6700 + 1;
+  }
+  let \u91CF\u3063\u305F = 0;
+  for (const { r, \u534A\u5E45, \u70B9, \u533A, \u4F4D, \u843D, \u5C4A\u3089, \u5C4A } of \u7B4B\u3089) {
+    const \u534A\u5E45px = r.\u5E45 / 2, \u5CB8\u5E45 = 3 * \u500D;
+    for (let i = 0; i + 1 < r.\u7BC0.length; i++) {
+      const ax = r.\u7BC0[i][0] / \u534A, ay = r.\u7BC0[i][1] / \u534A, bx = r.\u7BC0[i + 1][0] / \u534A, by = r.\u7BC0[i + 1][1] / \u534A;
+      const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy, { \u59CB, n } = \u533A[i];
+      const x0 = Math.max(0, Math.floor(Math.min(ax, bx) - \u5C4A)), x1 = Math.min(hw - 1, Math.ceil(Math.max(ax, bx) + \u5C4A));
+      const y0 = Math.max(0, Math.floor(Math.min(ay, by) - \u5C4A)), y1 = Math.min(hh - 1, Math.ceil(Math.max(ay, by) + \u5C4A));
+      for (let y = y0; y <= y1; y++) {
+        if ((\u91CF\u3063\u305F += x1 - x0 + 1) > 12e4) {
+          \u91CF\u3063\u305F = 0;
+          yield;
+        }
+        for (let x = x0; x <= x1; x++) {
+          let t = L2 ? ((x - ax) * vx + (y - ay) * vy) / L2 : 0;
+          t = t < 0 ? 0 : t > 1 ? 1 : t;
+          const dx = x - ax - vx * t, dy = y - ay - vy * t, d2 = Math.sqrt(dx * dx + dy * dy);
+          if (d2 > \u5C4A) continue;
+          const j = y * hw + x, dp = d2 * \u534A;
+          if (dp < \u534A\u5E45px) {
+            const v = 1 - dp / \u534A\u5E45px;
+            if (v > \u5DDD\u6DF1[j]) \u5DDD\u6DF1[j] = v;
+          } else if (dp < \u534A\u5E45px + \u5CB8\u5E45) {
+            const v = (\u534A\u5E45px + \u5CB8\u5E45 - dp) / \u5CB8\u5E45;
+            if (v > \u5DDD\u5CB8[j]) \u5DDD\u5CB8[j] = v;
+          }
+          const e = d2 - \u534A\u5E45;
+          if (e < \u5DDD\u969B[j]) {
+            const u = \u59CB + t * n, u0 = Math.min(\u70B9.length - 2, u | 0), f = u - u0;
+            const \u5074 = vx * dy - vy * dx > 0 ? 0 : 1;
+            \u5DDD\u969B[j] = e;
+            \u5DDD\u4F4D[j] = \u4F4D[u0] + (\u4F4D[u0 + 1] - \u4F4D[u0]) * f;
+            \u5DDD\u843D[j] = \u843D[\u5074][u0] + (\u843D[\u5074][u0 + 1] - \u843D[\u5074][u0]) * f;
+            \u5DDD\u5C4A[j] = \u5C4A\u3089[\u5074][u0] + (\u5C4A\u3089[\u5074][u0 + 1] - \u5C4A\u3089[\u5074][u0]) * f;
+          }
+        }
+      }
+    }
   }
   for (const r of \u9053\u3089) {
     const \u534A\u5E45 = r.\u5E45 / 2 + 2 * \u500D;
     yield* \u523B\u3080(r.\u7BC0, r.\u5E45, \u9053\u5EA6, 2 * \u500D, (d2) => Math.min(1, (\u534A\u5E45 - d2) / (2.5 * \u500D)));
   }
-  for (let i = 0; i < \u9AD8.length; i++) if (\u5DDD\u8C37[i] > 0) \u9AD8[i] -= \u5DDD\u8C37[i] / \u534A;
   {
     const \u6398\u308A = 2.6 * \u500D / \u534A;
     const \u702C\u3089 = \u91CE\u306E\u5DDD.flatMap((r) => (r.\u6E21\u3057 || []).filter((w) => w.\u7A2E !== "\u6A4B").map((w) => ({ x: PX(w.x) / \u534A, y: PY(w.y) / \u534A, r: PX(w.r || 100) / \u534A * 1.3 })));
     for (let i = 0; i < \u9AD8.length; i++) {
-      if (!(\u5DDD\u6DF1[i] > 0)) continue;
-      let \u6D45 = 1;
-      if (\u702C\u3089.length) {
-        const x = i % hw, y = i / hw | 0;
-        for (const w of \u702C\u3089) {
-          const d2 = Math.hypot(x - w.x, y - w.y) / w.r;
-          if (d2 < 1) \u6D45 = Math.min(\u6D45, 0.25 + 0.75 * d2 * d2);
+      const e = \u5DDD\u969B[i];
+      if (e >= 1e8) continue;
+      const \u4F4D = \u5DDD\u4F4D[i];
+      if (\u5DDD\u6DF1[i] > 0) {
+        let \u6D45 = 1;
+        if (\u702C\u3089.length) {
+          const x = i % hw, y = i / hw | 0;
+          for (const w of \u702C\u3089) {
+            const d2 = Math.hypot(x - w.x, y - w.y) / w.r;
+            if (d2 < 1) \u6D45 = Math.min(\u6D45, 0.25 + 0.75 * d2 * d2);
+          }
         }
+        const t = Math.min(1, \u5DDD\u6DF1[i] * 3.2);
+        \u9AD8[i] = \u4F4D - t * t * (3 - 2 * t) * \u6398\u308A * \u6D45;
+        continue;
       }
-      const t = Math.min(1, \u5DDD\u6DF1[i] * 3.2);
-      \u9AD8[i] -= t * t * (3 - 2 * t) * \u6398\u308A * \u6D45;
+      const \u5C4A = \u5DDD\u5C4A[i];
+      if (e >= \u5C4A) continue;
+      const \u5143 = \u9AD8[i];
+      \u9AD8[i] = Math.max(\u5143 - \u5DDD\u843D[i] * (1 - \u6ED1\u66F2(e / \u5C4A)), Math.min(\u5143, \u4F4D));
     }
   }
   const \u6A4B\u3089 = \u91CE\u306E\u6A4B;
@@ -30132,6 +30388,16 @@ function* \u91CE\u3092\u713C\u304F2(g, \u753Bk) {
       const \u307B\u3064\u308C = (\u895E(x / (4.5 * \u500D), y / (4.5 * \u500D), 3) - 0.5) * 0.52;
       const t = 1 - (d2 + \u307B\u3064\u308C);
       if (t > 0) \u67972[y * hw + x] = Math.max(\u67972[y * hw + x], Math.min(1, t * 2.2));
+    }
+  }
+  {
+    const \u5E2F = \u5E2F\u5E45(hh, 24) * hw;
+    for (let i = 0; i < \u67972.length; i++) {
+      if (i % \u5E2F === 0) yield;
+      if (\u67972[i] < 5e-3) continue;
+      const e = \u5DDD\u969B[i] * \u534A / k;
+      if (e < 70) \u67972[i] *= \u5DDD\u8FBA\u306E\u8302\u308A(i % hw * \u534A / k, (i / hw | 0) * \u534A / k, e);
+      if (\u9053\u5EA6[i] > 0) \u67972[i] *= 1 - Math.min(1, \u9053\u5EA6[i]);
     }
   }
   const \u5730\u3079\u305F = \u9AD8.slice();
@@ -30241,59 +30507,111 @@ function* \u91CE\u3092\u713C\u304F2(g, \u753Bk) {
     g.stroke();
   }
   \u8A08("\u8349");
+  const \u6C34\u969Bpx = (x, y) => \u5DDD\u3089.length ? \u5F15\u4F38(\u5DDD\u969B, hw, hh, x, y, \u534A) * \u534A : 1e9;
+  const \u6C34\u306E\u5916\u3078\u63CF\u304F = (cx, cy, R2, \u63CF\u304F) => {
+    let \u8FD1 = Infinity;
+    if (\u5DDD\u3089.length) for (let y = cy - R2; y <= cy + R2; y += 4 * \u500D) for (let x = cx - R2; x <= cx + R2; x += 4 * \u500D) \u8FD1 = Math.min(\u8FD1, \u6C34\u969Bpx(x, y));
+    if (\u8FD1 > 4 * \u500D || typeof document === "undefined") {
+      \u63CF\u304F(g);
+      return;
+    }
+    const x0 = Math.max(0, Math.floor(cx - R2)), y0 = Math.max(0, Math.floor(cy - R2));
+    const x1 = Math.min(W2, Math.ceil(cx + R2)), y1 = Math.min(H2, Math.ceil(cy + R2));
+    if (x1 - x0 < 1 || y1 - y0 < 1) return;
+    const c = document.createElement("canvas");
+    c.width = x1 - x0;
+    c.height = y1 - y0;
+    const q = c.getContext("2d");
+    if (!q || !q.getImageData) {
+      \u63CF\u304F(g);
+      return;
+    }
+    q.translate(-x0, -y0);
+    \u63CF\u304F(q);
+    const im2 = q.getImageData(0, 0, c.width, c.height), dd = im2 && im2.data;
+    if (!dd || dd.length < c.width * c.height * 4) {
+      \u63CF\u304F(g);
+      return;
+    }
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+      const i = (y * c.width + x) * 4;
+      if (!dd[i + 3]) continue;
+      const e = \u6C34\u969Bpx(x0 + x + 0.5, y0 + y + 0.5);
+      if (e < 4 * \u500D) dd[i + 3] *= e <= \u500D ? 0 : (e - \u500D) / (3 * \u500D);
+    }
+    q.putImageData(im2, 0, 0);
+    g.drawImage(c, x0, y0);
+  };
   for (const m of MARSH) {
     const mx = PX(m.x), my = PY(m.y), r = PX(m.r);
-    const gr = g.createRadialGradient(mx, my, r * 0.2, mx, my, r);
-    gr.addColorStop(0, "rgba(92,98,70,0.62)");
-    gr.addColorStop(0.7, "rgba(98,108,74,0.45)");
-    gr.addColorStop(1, "rgba(98,108,74,0)");
-    g.fillStyle = gr;
-    g.beginPath();
-    g.ellipse(mx, my, r, r * 0.8, 0, 0, 7);
-    g.fill();
-    \u91CE\u7A2E\u3092\u7F6E\u304F(Math.round(m.x * 13 + m.y));
-    const n = 7 + (\u91CE\u4E71() * 7 | 0);
-    for (let i = 0; i < n; i++) {
-      const a = \u91CE\u4E71() * 6.283, d2 = r * Math.sqrt(\u91CE\u4E71()) * 0.72;
-      const x = mx + Math.cos(a) * d2, y = my + Math.sin(a) * d2 * 0.8;
-      const rx = r * (0.08 + \u91CE\u4E71() * 0.16), ry = rx * (0.45 + \u91CE\u4E71() * 0.4), \u89D2 = \u91CE\u4E71() * 3.14;
-      g.fillStyle = "rgba(84,76,52,0.55)";
-      g.beginPath();
-      g.ellipse(x, y, rx * 1.18, ry * 1.25, \u89D2, 0, 7);
-      g.fill();
-      const wg = g.createLinearGradient(x, y - ry, x, y + ry);
-      wg.addColorStop(0, "rgba(150,176,186,0.92)");
-      wg.addColorStop(1, "rgba(92,118,128,0.92)");
-      g.fillStyle = wg;
-      g.beginPath();
-      g.ellipse(x, y, rx, ry, \u89D2, 0, 7);
-      g.fill();
-      g.strokeStyle = "rgba(236,244,248,0.5)";
-      g.lineWidth = Math.max(0.5, 0.6 * \u500D);
-      g.beginPath();
-      g.ellipse(x - rx * 0.2, y - ry * 0.3, rx * 0.5, ry * 0.25, \u89D2, 3.6, 5.4);
-      g.stroke();
-    }
-    g.fillStyle = "rgba(70,86,44,0.55)";
-    for (let i = 0; i < Math.round(r * r / (60 * \u500D * \u500D)); i++) {
-      const a = \u91CE\u4E71() * 6.283, d2 = r * Math.sqrt(\u91CE\u4E71()) * 0.95;
-      g.beginPath();
-      g.arc(mx + Math.cos(a) * d2, my + Math.sin(a) * d2 * 0.8, (0.8 + \u91CE\u4E71()) * \u500D, 0, 7);
-      g.fill();
-    }
+    \u6C34\u306E\u5916\u3078\u63CF\u304F(mx, my, r * 1.05 + 4 * \u500D, (q) => {
+      const gr = q.createRadialGradient(mx, my, r * 0.2, mx, my, r);
+      gr.addColorStop(0, "rgba(92,98,70,0.62)");
+      gr.addColorStop(0.7, "rgba(98,108,74,0.45)");
+      gr.addColorStop(1, "rgba(98,108,74,0)");
+      q.fillStyle = gr;
+      q.beginPath();
+      q.ellipse(mx, my, r, r * 0.8, 0, 0, 7);
+      q.fill();
+      \u91CE\u7A2E\u3092\u7F6E\u304F(Math.round(m.x * 13 + m.y));
+      const n = 7 + (\u91CE\u4E71() * 7 | 0);
+      for (let i = 0; i < n; i++) {
+        let a, d2, x, y, rx, ry, \u89D2, \u7F6E\u3051\u308B = false;
+        for (let \u8A662 = 0; \u8A662 < 4 && !\u7F6E\u3051\u308B; \u8A662++) {
+          a = \u91CE\u4E71() * 6.283;
+          d2 = r * Math.sqrt(\u91CE\u4E71()) * 0.72;
+          x = mx + Math.cos(a) * d2;
+          y = my + Math.sin(a) * d2 * 0.8;
+          rx = r * (0.08 + \u91CE\u4E71() * 0.16);
+          ry = rx * (0.45 + \u91CE\u4E71() * 0.4);
+          \u89D2 = \u91CE\u4E71() * 3.14;
+          \u7F6E\u3051\u308B = \u6C34\u969Bpx(x, y) >= rx * 1.3 + 3 * \u500D;
+        }
+        if (!\u7F6E\u3051\u308B) continue;
+        q.fillStyle = "rgba(84,76,52,0.55)";
+        q.beginPath();
+        q.ellipse(x, y, rx * 1.18, ry * 1.25, \u89D2, 0, 7);
+        q.fill();
+        const wg = q.createLinearGradient(x, y - ry, x, y + ry);
+        wg.addColorStop(0, "rgba(150,176,186,0.92)");
+        wg.addColorStop(1, "rgba(92,118,128,0.92)");
+        q.fillStyle = wg;
+        q.beginPath();
+        q.ellipse(x, y, rx, ry, \u89D2, 0, 7);
+        q.fill();
+        q.strokeStyle = "rgba(236,244,248,0.5)";
+        q.lineWidth = Math.max(0.5, 0.6 * \u500D);
+        q.beginPath();
+        q.ellipse(x - rx * 0.2, y - ry * 0.3, rx * 0.5, ry * 0.25, \u89D2, 3.6, 5.4);
+        q.stroke();
+      }
+      q.fillStyle = "rgba(70,86,44,0.55)";
+      for (let i = 0; i < Math.round(r * r / (60 * \u500D * \u500D)); i++) {
+        const a = \u91CE\u4E71() * 6.283, d2 = r * Math.sqrt(\u91CE\u4E71()) * 0.95, rr = (0.8 + \u91CE\u4E71()) * \u500D;
+        const x = mx + Math.cos(a) * d2, y = my + Math.sin(a) * d2 * 0.8;
+        if (\u6C34\u969Bpx(x, y) < \u500D || \u5F15\u4F38(\u9053\u5EA6, hw, hh, x, y, \u534A) > 0.3) continue;
+        q.beginPath();
+        q.arc(x, y, rr, 0, 7);
+        q.fill();
+      }
+    });
   }
   const \u91CC\u7ACB\u4F53 = \u659C\u3081.\u5165 && \u659C\u3081.\u50BE\u304D < 1;
-  for (const v of VILLAGES) \u96C6\u843D(
-    g,
-    PX(v.x),
-    PY(v.y),
-    PX(v.r || 40) * 0.95,
-    Math.round(v.x + v.y),
-    \u660E\u95A2,
-    \u500D,
-    \u91CC\u7ACB\u4F53,
-    \u6751\u306E\u9053\u306F\u6A2A\u304B(v) ? 0 : Math.PI / 2
-  );
+  for (const v of VILLAGES) {
+    const r = PX(v.r || 40) * 0.95;
+    \u6C34\u306E\u5916\u3078\u63CF\u304F(PX(v.x), PY(v.y), r * 1.6 + 8 * \u500D, (q) => \u96C6\u843D(
+      q,
+      PX(v.x),
+      PY(v.y),
+      r,
+      Math.round(v.x + v.y),
+      \u660E\u95A2,
+      \u500D,
+      \u91CC\u7ACB\u4F53,
+      \u6751\u306E\u9053\u306F\u6A2A\u304B(v) ? 0 : Math.PI / 2,
+      \u6C34\u969Bpx
+    ));
+  }
   \u8A08("\u6CBC\u3068\u96C6\u843D");
   \u91CE\u7A2E\u3092\u7F6E\u304F(606);
   const \u67282 = [];
@@ -33161,23 +33479,29 @@ function \u6728\u7ACB\u3092\u63CF\u304F(ctx, f, \u6FC3, n, label) {
   ctx.fillStyle = "rgba(38,58,34,0.95)";
   ctx.fillText(label, f.x - label.length * \u5B57 * 0.5, f.y + \u5B57 * 0.4);
 }
+var \u68A2\u306E\u63A7\u3048 = /* @__PURE__ */ new WeakMap();
 function \u6728\u306E\u68A2\u3060\u3051(ctx, f, \u6FC3, n) {
   const \u4E08 = Math.max(7, f.r * (\u6FC3 ? 0.17 : 0.15));
   const \u68A2 = \u6FC3 ? "#537A44" : "#6E9553";
   const \u660E = \u6FC3 ? "#79A15C" : "#93B76E";
-  const rnd = \u7A2E\u4E71\u6570((f.seed || 7) * 104729);
-  const \u67282 = [];
-  for (let i = 0; i < n; i++) {
-    const a = i * 2.399 + rnd() * 0.6;
-    const r = f.r * Math.pow((i + 0.6) / n, 0.42) * (0.92 + rnd() * 0.2);
-    \u67282.push({
-      x: f.x + Math.cos(a) * r,
-      y: f.y + Math.sin(a) * r * 0.84,
-      s: \u4E08 * (0.8 + rnd() * 0.46)
-    });
+  let \u63A7 = \u68A2\u306E\u63A7\u3048.get(f);
+  if (!\u63A7 || \u63A7.\u4EE3 !== \u5730\u5F62\u306E\u4EE3() || \u63A7.n !== n) {
+    const rnd = \u7A2E\u4E71\u6570((f.seed || 7) * 104729);
+    const \u4E26 = [];
+    for (let i = 0; i < n; i++) {
+      const a = i * 2.399 + rnd() * 0.6;
+      const r = f.r * Math.pow((i + 0.6) / n, 0.42) * (0.92 + rnd() * 0.2);
+      const t = { x: f.x + Math.cos(a) * r, y: f.y + Math.sin(a) * r * 0.84, s: \u4E08 * (0.8 + rnd() * 0.46) };
+      const e = \u6C34\u969B\u307E\u3067(t.x, t.y, 70) - t.s;
+      if (e < 3 || e < 70 && \u5DDD\u8FBA\u306E\u8302\u308A(t.x, t.y, e) < 0.5) continue;
+      if (ROADS2.some((rd) => rd.\u5E45 > 0 && \u7BC0\u307E\u3067\u306E\u9694\u305F\u308A(rd.\u7BC0, t.x, t.y) < rd.\u5E45 / 2 + t.s * 0.6)) continue;
+      \u4E26.push(t);
+    }
+    \u4E26.sort((a, b) => a.y - b.y);
+    \u63A7 = { \u4EE3: \u5730\u5F62\u306E\u4EE3(), n, \u4E26 };
+    \u68A2\u306E\u63A7\u3048.set(f, \u63A7);
   }
-  \u67282.sort((a, b) => a.y - b.y);
-  for (const t of \u67282) {
+  for (const t of \u63A7.\u4E26) {
     ctx.fillStyle = \u68A2;
     for (const [dx, dy, k] of [[0.3, -0.28, 0.56], [0.06, -0.2, 0.6], [-0.34, -0.3, 0.52]]) {
       ctx.beginPath();
