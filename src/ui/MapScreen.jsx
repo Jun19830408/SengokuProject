@@ -34,7 +34,8 @@ import { 出陣前の問い } from "./Shutsujin.jsx";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
-import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, 軍の帳, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い, 攻めの願い問い } from "./panels.jsx";
+import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, 郡の帳, 軍の帳, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い, 攻めの願い問い } from "./panels.jsx";
+import { 郡の地点ら, 郡の境の線ら } from "../core/gun.js";
 import { SallyDialog } from "./panels.jsx";
 import { 惣無事令を発する, 応諾を決める, 朝敵を検め直す } from "../core/sobuji.js";
 import { 号令を発する } from "../core/gourei.js";
@@ -245,6 +246,51 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       ctx.fillStyle = q.on ? `rgba(96,86,66,${clamp(0.20 + s * 0.16, 0.2, 0.42)})`
         : `rgba(140,134,120,${clamp(0.12 + s * 0.08, 0.12, 0.24)})`;
       ctx.fillText(q.name, a, b2);
+    }
+    /* 郡の名（郡の導入の段階一）。寄せたときだけ、郡の地点に薄く添える。
+       郡は六百を越えるので、遠目に出すと図が字で埋まる。城の名より控えめにし、
+       色は旧国の名と同じ筋にする（国の中の区切りであることが見て取れるように）。 */
+    if (s > 1.3) {
+      /* 郡の境（目安）。村の点から引いた線なので、細い点線で控えめに引く。
+         同じ郡を城ごとに分けた所は、さらに細かい点で見分ける。 */
+      ctx.save();
+      ctx.lineWidth = 1;
+      for (const 分け目 of [false, true]) {
+        ctx.strokeStyle = `rgba(78,62,40,${clamp(0.3 + (s - 1.3) * 0.2, 0.3, 0.62) * (分け目 ? 0.8 : 1)})`;
+        ctx.lineWidth = 分け目 ? 1 : 1.3;
+        ctx.setLineDash(分け目 ? [1.5, 3] : [6, 3]);
+        ctx.beginPath();
+        const wx0 = vx - W / 2 / s, wx1 = vx + W / 2 / s, wy0 = vy - H / 2 / s, wy1 = vy + H / 2 / s;
+        for (const l of 郡の境の線ら) {
+          if (l.分け目 !== 分け目 || l.x1 < wx0 || l.x0 > wx1 || l.y1 < wy0 || l.y0 > wy1) continue;
+          const [a0, b0] = S(l.ps[0], l.ps[1]);
+          ctx.moveTo(a0, b0);
+          for (let i = 2; i < l.ps.length; i += 2) { const [a, b2] = S(l.ps[i], l.ps[i + 1]); ctx.lineTo(a, b2); }
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = `${Math.round(clamp(8 + s * 1.8, 11, 15))}px 'Hiragino Mincho ProN',serif`;
+      // 地の色の上でも読めるよう、白く細く縁取る（城の名札より薄く）
+      const 濃 = clamp(0.3 + (s - 1.3) * 0.3, 0.3, 0.62);
+      ctx.lineJoin = "round"; ctx.lineWidth = 2.4;
+      ctx.strokeStyle = `rgba(255,255,255,${濃 * 0.8})`;
+      ctx.fillStyle = `rgba(96,86,66,${濃 + 0.12})`;
+      /* 名どうしが重なるところ（美濃の西のように郡の細かい所）は、大きな郡を先に置き、
+         重なる名は出さない。寄せれば間が開いて、隠れていた名も出てくる。 */
+      const 置いた = [], 字高 = Math.round(clamp(8 + s * 1.8, 11, 15));
+      for (const q of 郡の地点ら) {
+        const [a, b2] = S(q.x, q.y);
+        if (a < -50 || a > W + 50 || b2 < -20 || b2 > H + 20) continue;
+        const 半 = ctx.measureText(q.名).width / 2 + 3;
+        const 枠 = [a - 半, b2 - 字高 / 2 - 1, a + 半, b2 + 字高 / 2 + 1];
+        if (置いた.some((o) => o[0] < 枠[2] && 枠[0] < o[2] && o[1] < 枠[3] && 枠[1] < o[3])) continue;
+        置いた.push(枠);
+        ctx.strokeText(q.名, a, b2);
+        ctx.fillText(q.名, a, b2);
+      }
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";   // 立てたら戻す
     }
     // 海と湖の名
     ctx.fillStyle = `rgba(70,104,128,${clamp(0.3 + s * 0.2, 0.3, 0.6)})`;
@@ -2532,6 +2578,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             )}
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("factions")}><b>⚑</b>勢力情報</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("generals")}><b>☗</b>武将一覧</div>
+            <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("gun")}><b>郡</b>郡の帳</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("hime")}><b>◇</b>姫</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("goal")}><b>◈</b>攻略目標</div>
             <div className="mbtn" style={{ width: 66 }} onClick={() => setModal("seisaku")}><b>政</b>方針</div>
@@ -2887,6 +2934,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           <軍の帳 g={g} 軍={(g.armies || []).find((a) => a.id === 軍sel)}
             onClose={() => set軍sel(null)} />
         )}
+        {modal === "gun" && <郡の帳 g={g} onClose={() => setModal(null)}
+          onOpenCastle={(id) => { setModal(null); setSel(id); setTownSel(null); setTab("人事"); focus(id); }} />}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)}
           onOpenCastle={(id) => { setModal(null); setSel(id); setTownSel(null); setTab("人事"); focus(id); }}
           onYakume={(x) => setG((p) => (x.解く

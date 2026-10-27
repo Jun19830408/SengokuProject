@@ -24,6 +24,7 @@ import { 城の寄親, 守りの寄親 } from "../core/inin.js";
 import { 囲みの様子, 囲んでいる様子, 城に在る軍 } from "../core/kakomi.js";
 import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
+import { 郡の石高ら } from "../core/gun.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
 export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onShirogae, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onHatagashiraMato, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime, onIhou, onChokusan }) {
@@ -353,6 +354,29 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
               )}
             </span>
             <span className="k">石高</span><span className="v">{V(c.koku)} / {V(c.kokuMax)} 石</span>
+            {(() => {
+              /* 石高の内訳（郡の導入の段階一）。郡は城に従う。城のない郡〔城外〕も
+                 この城の石高のうちに数える。郡の名は地図にも出ているので伏せず、
+                 石高だけを内情として伏せる。蝦夷・琉球の城は郡を持たない。 */
+              const 郡 = 郡の石高ら(c);
+              if (!郡.length) return null;
+              return (
+                <>
+                  <span className="k">郡</span>
+                  <span className="v" style={{ fontSize: 12, lineHeight: 1.75 }}>
+                    {郡.map(({ 郡: x, 石高 }) => (
+                      <span key={x.id} style={{ whiteSpace: "nowrap", marginRight: 10, display: "inline-block" }}>
+                        {x.名}
+                        {!x.在城 && <span style={{ color: "#8A6A34", fontSize: 10.5 }}>〔城外〕</span>}
+                        <span className="num" style={{ color: U.dim, marginLeft: 4 }}>
+                          {open ? `約${fmt(石高)}石` : "？"}
+                        </span>
+                      </span>
+                    ))}
+                  </span>
+                </>
+              );
+            })()}
             <span className="k">人口</span><span className="v">{V(c.pop)}</span>
             <span className="k">兵数</span><span className="v">{V(total)}</span>
             <span className="k">武将</span><span className="v">{open ? `${gens.length} 名` : "？"}</span>

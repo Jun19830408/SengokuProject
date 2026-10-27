@@ -32,6 +32,7 @@ import { 主家 } from "../core/state.js";
 import { is架空 } from "../core/house.js";
 import { isCoastal, navalPower } from "../core/naval.js";
 import { findPathVia, marchMonthsOf } from "../core/paths.js";
+import { 城の郡ら, 郡の石高ら, 郡の治め手 } from "../core/gun.js";
 
 
 export function SortieDialog({ g, from, onClose, onGo }) {
@@ -1745,6 +1746,129 @@ export function GeneralList({ g, onClose, onYakume, onOpenCastle }) {
         )}
         <button className="btn" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>閉じる</button>
         </>)}
+      </div>
+    </div>
+  );
+}
+
+
+/* 郡の帳（郡の導入の段階一）。
+
+   遊ぶ側の申し出は「郡の一覧はほしいです。郡代がいるかどうか（城主が兼ねている
+   場合でもその城主の名前を記載）もわかるようにしたい」であった。郡代の役はまだ
+   置かないので、いまはどの郡も城主が兼ねる。誰が兼ねているかを郡ごとに書く。
+
+   国ごとに城を並べ、城の下にその郡を並べる。自家の郡と天下の郡とを切り替えられる。
+   名でさがせば、郡・城・国・家・治める者の名のどれに掠っても、その城ごと残す。
+   他家の城の内情（石高と城主）は、城の帳と同じく、見えている城のほかは伏せる。 */
+export function 郡の帳({ g, onClose, onOpenCastle }) {
+  const [欄, set欄] = useState("自家");
+  const [探, set探] = useState("");
+  const q = 探.trim();
+  const 自家の城 = g.castles.filter((c) => c.faction === g.player);
+  const 数 = (cs) => cs.reduce((a, c) => a + 城の郡ら(c.id).length, 0);
+  const 国ら = [], 国の位 = new Map();
+  for (const c of 欄 === "自家" ? 自家の城 : g.castles) {
+    const 家 = g.factions[c.faction] || {};
+    const 見 = c.faction === g.player || canSee(g, c);
+    const 治 = 見 ? 郡の治め手(g, c) : null;
+    const 郡 = 郡の石高ら(c);
+    const 文 = [c.name, c.kuni, 家.name, 治 && 治.者 && 治.者.name, ...郡.map((r) => r.郡.名), ...郡.map((r) => r.郡.幕末)];
+    if (q && !文.some((t) => t && String(t).includes(q))) continue;
+    if (!国の位.has(c.kuni)) { 国の位.set(c.kuni, 国ら.length); 国ら.push({ 国: c.kuni, 城ら: [] }); }
+    国ら[国の位.get(c.kuni)].城ら.push({ c, 家, 見, 治, 郡 });
+  }
+  const 当たりの郡 = 国ら.reduce((a, k) => a + k.城ら.reduce((b, r) => b + r.郡.length, 0), 0);
+  const 治めの札 = (治) => !治 ? "？"
+    : !治.者 ? "不在（城に将がいない）"
+    : `${治.役} ${治.者.name}が兼ねる${治.留守 ? `（出陣中。留守は${治.留守.name}）` : ""}`;
+  return (
+    <div className="modal" {...外を押して閉じる(onClose)}>
+      <div className="card">
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+          <div className="mn" style={{ fontSize: 21 }}>郡の帳</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {[["自家", `自家の郡 ${数(自家の城)}`], ["天下", `天下の郡 ${数(g.castles)}`]].map(([k, 札]) => (
+              <button key={k} className={`btn sm ${欄 === k ? "on" : ""}`} onClick={() => set欄(k)}>{札}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.8 }}>
+          郡は城に従います。城のある郡はその城に、城のない郡〔城外〕は同じ国でいちばん近い城に属し、
+          城が落ちれば郡も移ります。<br />
+          <b style={{ color: U.text }}>郡代の役はまだ置いていません。</b>
+          いまはどの郡も、その城の城主（城代しかいなければ城代）が兼ねます。<br />
+          郡の石高は、城の石高を、郡の幕末の石高（村高の和）の比で割り振った目安です。<br />
+          郡の名は、分かる範囲で戦国のころの名にしています（江戸時代に改められた名は「のちの」と添えます）。
+          分からないものは幕末の名のままです。
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <input value={探} onChange={(e) => set探(e.target.value)}
+            placeholder="郡の名でさがす（幕末の郡名・城・国・家・人の名でも当たります）"
+            style={{ flex: 1, padding: "5px 8px", background: "transparent", color: U.text,
+              border: `1px solid ${U.line2}`, fontSize: 13 }} />
+          {探 && <button className="btn sm" onClick={() => set探("")}>消す</button>}
+          <span className="num" style={{ color: U.dim, fontSize: 12 }}>{当たりの郡}郡</span>
+        </div>
+        {!国ら.length && (
+          <div style={{ fontSize: 12.5, color: U.dim, padding: "18px 0", textAlign: "center" }}>
+            {q ? `「${q}」に当たる郡はありません。` : "城がありません。"}
+          </div>
+        )}
+        {国ら.map((k) => (
+          <div key={k.国}>
+            <div className="sec" style={{ marginTop: 12 }}>
+              {k.国}　{k.城ら.length}城・{k.城ら.reduce((a, r) => a + r.郡.length, 0)}郡
+            </div>
+            {k.城ら.map(({ c, 家, 見, 治, 郡 }) => (
+              <div key={c.id} style={{ padding: "6px 0", borderBottom: `1px solid ${U.line2}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13 }}>
+                  <span className="dot" style={{ background: 家.color }} />
+                  {/* 押せば城の人事が開く（郡代を置くのも、次の段ではそこから） */}
+                  {onOpenCastle && c.faction === g.player
+                    ? <button className="btn sm" title={`${c.name}の人事を開く`}
+                        onClick={() => onOpenCastle(c.id)}>{c.name}</button>
+                    : <span className="mn" style={{ fontSize: 15 }}>{c.name}</span>}
+                  {c.faction !== g.player && <span style={{ fontSize: 11.5, color: U.dim }}>{家.name}</span>}
+                  <span className="num" style={{ color: U.dim, flex: 1, textAlign: "right" }}>
+                    {見 ? `${fmt(c.koku)}石` : "？石"}
+                  </span>
+                </div>
+                {!郡.length && (
+                  <div style={{ fontSize: 11.5, color: U.dim, paddingLeft: 18, marginTop: 2 }}>
+                    郡の拠り所がありません（城を最小の単位とします）。
+                  </div>
+                )}
+                {郡.map(({ 郡: x, 石高 }) => (
+                  <div key={x.id} style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap",
+                    paddingLeft: 18, fontSize: 12.5, marginTop: 3 }}>
+                    <span style={{ minWidth: 112 }}>
+                      {x.名}
+                      {!x.在城 && <span style={{ color: "#8A6A34", fontSize: 10.5, marginLeft: 3 }}>〔城外〕</span>}
+                      {/* 江戸時代に改められた名は、名の下に小さく添える。名の欄の幅で折り返し、
+                          石高の欄の並びを崩さない */}
+                      {x.幕末 && <span style={{ display: "block", maxWidth: 112, color: U.dim, fontSize: 10.5, lineHeight: 1.35 }}>
+                        のちの{x.幕末}</span>}
+                    </span>
+                    <span className="num" style={{ color: U.dim, width: 84, textAlign: "right" }}>
+                      {見 ? `約${fmt(石高)}石` : "？"}
+                    </span>
+                    <span style={{ color: U.dim, flex: 1 }}>郡代：{治めの札(治)}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
+        <div style={{ fontSize: 10.5, color: U.dim, marginTop: 12, lineHeight: 1.7 }}>
+          郡の拠り所：本田謙一・夏目宗幸・根元裕樹「幕末期近世村領域データ」v2.01
+          （https://github.com/yaoyue00085856/Kyudaka_agrivillage、CC BY-SA 4.0
+          https://creativecommons.org/licenses/by-sa/4.0/deed.ja、無保証）、
+          同「幕末期近世村領域データの作成」GIS-理論と応用34巻1号。
+          その元は国立歴史民俗博物館「旧高旧領取調帳データベース」と農林水産省「農業集落境界データ」です。
+          幕末の郡を元に、郡の名・城への割り振り・石高の割・境の目安の線を改めたものです。
+        </div>
+        <button className="btn" style={{ width: "100%", marginTop: 14 }} onClick={onClose}>閉じる</button>
       </div>
     </div>
   );
