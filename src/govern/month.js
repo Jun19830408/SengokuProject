@@ -10,7 +10,7 @@ import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritH
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
 import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の重み } from "../core/paths.js";
 import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
-import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 出征の余地, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家 } from "../core/rank.js";
+import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 出征の余地, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家, 家の尺を改める } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake, 軍の損を分ける } from "../core/roster.js";
 import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 二重の城主を解く, 城主の札を据える, 城の名を改める, 武将の名を改める } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
@@ -989,7 +989,7 @@ export function advanceMonth(prev, g) {
       // 知行と忠誠（GDD 6.1）。禄が器量に見合わなければ、心は離れていく。
       for (const q of s.generals) {
         if (q.captive) continue;
-        const d = loyaltyDrift(q);
+        const d = loyaltyDrift(q, s);
         /* 一門は禄の多寡で心が離れない。姫を娶った婿も同じである（GDD 6.8）。
            家の内の者であるから、下がるにも底がある。 */
         const 底 = q.一門 ? 70 : 0;
@@ -1010,7 +1010,7 @@ export function advanceMonth(prev, g) {
               if (oldF === s.player) events.push(msg);
             } else if (to) {
               const oldF = q.faction;
-              q.faction = to.faction; q.at = to.id; q.loyal = 45; q.fief = Math.round(fiefWanted(q) * 0.8);
+              q.faction = to.faction; q.at = to.id; q.loyal = 45; q.fief = Math.round(fiefWanted(q, s) * 0.8);
               const msg = `${q.name}が${s.factions[oldF].name}を去り、${s.factions[to.faction].name}に走った。`;
               s.chronicle.push({ y: s.year, m: s.month, text: msg });
               if (oldF === s.player || to.faction === s.player) events.push(msg);
@@ -2450,6 +2450,20 @@ export function advanceMonth(prev, g) {
         }
         /* 人の名も年につれて改まる（GDD 4.7）。藤吉郎が秀吉に、元康が家康に。 */
         武将の名を改める(s, { 告げる: (t) => events.push(t) });
+        /* 家の尺（core/rank.js）。この月に上がった身分を控えてから、家の石高で尺を
+           量り直す。城を取り、また失ったぶんは、ここで次の月の境に映る。役の繕いは
+           改めた境で測るが、古参の身分は控えで据え置かれる。 */
+        for (const r of 家の尺を改める(s, { 恩賞: auto })) {
+          /* 遊ぶ側の家の尺が一割上がるごとに知らせる。望む知行も身分の境も上がる。 */
+          if (r.fid !== s.player) continue;
+          const f = s.factions[r.fid];
+          if (f.尺の報せ == null) f.尺の報せ = r.前;    // 前に知らせた尺。そこから一割上がれば知らせる
+          if (r.後 >= f.尺の報せ + 0.1) {
+            events.push(`家が大きくなった（家の尺 ${f.尺の報せ.toFixed(2)} → ${r.後.toFixed(2)}）。家臣の望む知行と身分の境が上がる。`
+              + `すでに就いた身分はそのまま。望みに足りぬ者には加増を。`);
+            f.尺の報せ = r.後;
+          } else if (r.後 < f.尺の報せ) f.尺の報せ = r.後;
+        }
         二重の城主を解く(s);
         城主の札を据える(s);
         for (const fid of Object.keys(s.factions)) {

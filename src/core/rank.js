@@ -4,6 +4,7 @@ import { isCoastal } from "./naval.js";
 import { rankBonus, courtRank } from "./province.js";
 import { MOB_POLICY } from "../data/roads.js";
 import { isMainClan } from "./house.js";
+import { fmt } from "./util.js";
 
 /* 外交の掛け合いに効く、家の格ひと揃い（GDD 12.1）。
    画面と処理で別々に組み立てると、押せるのに成らぬ、が起きる。ここ一つに拠る。 */
@@ -167,19 +168,148 @@ export const foodDays = (food, troops) => (troops > 0 ? Math.round((food / (troo
 /* ------------------------------------------------ 武将の家（GDD 6.7）
    城を預かる者は家を興す。家は代を重ね、禄と身分が継がれる。
    家を持たぬ者は一代限りで、没すれば跡は残らない。
-   これにより、城主となることが「家を興す」ことの意味を持つ。 */
-export const HOUSE_RANK = 8000;                 // 家を興せる禄高（家老の格）
+   これにより、城主となることが「家を興す」ことの意味を持つ。
+   家を興せるのは家老の格からである（house.js hasHouse）。もとは禄高八千石と
+   数で定めていたが、身分の境が家の大きさで動くようになったので、身分で見る。 */
 
 /* ------------------------------------------------ 身分（GDD 6.4）
    知行の高が、そのまま身分である。
    一隊を預かるだけの者と、城を任される者、家中を差配する宿老は違う。
-   新たな数値を設けず、既にある知行で身分を定める。 */
+   新たな数値を設けず、既にある知行で身分を定める。
+
+   下の min は、三十万石の家での境である。じっさいの境は、家の尺を掛けて
+   家ごとに定まる（下の 家の尺・身分の境）。 */
 export const RANKS = [
   { key: "宿老", min: 20000, desc: "家中の重鎮。旗頭に任じられ、方面を預かりうる" },
   { key: "家老", min: 8000, desc: "一家を成す身代。国主に任じられ、一国を預かりうる" },
   { key: "侍大将", min: 2500, desc: "城主となり、一手の兵を率いる" },
   { key: "物頭", min: 0, desc: "一手の兵を預かる。城代にはなれる" },
 ];
+
+/* 家の尺（GDD 6.4）。身分の境と望む知行は、家の大きさに応じて変わる。
+
+   遊ぶ側の申し出は「物頭の信長の望む石高が五万石を超えており、これに応えると
+   あっという間に宿老になる。他の武将でも割と簡単に宿老までいってしまう。
+   望む石高を能力だけでなく大名家の大きさに従って変え、身分に要る石高も家の
+   大きさに応じて変えてほしい。ただし、大名が小さいときは家老だったのに、
+   大きくなると侍大将になってしまうのはおかしい。昔からその家にいて家老に
+   なった者はそのままで、大きくなってから家臣になった者は、さらに多くの石高が
+   要る」であった。
+
+   二十万石の家の家老と、百万石の家の家老とでは、身代の桁が違う。境を一つに
+   定めていたので、小さな家では誰も宿老に届かず、大きな家では誰もが届いた。
+
+   尺は家の石高の平方根で測る。三十万石の家で一（境は上の min のまま）、
+   七万五千石に満たぬ家で〇.五、二百七十万石を超える家で三で止める。
+
+     五万石 〇.五　十万石 〇.五八　二十万石 〇.八二　三十万石 一
+     五十万石 一.二九　百万石 一.八三　二百万石 二.五八
+
+   平方根にしたのは、家が四倍になっても家臣ひとりの身代は四倍にならぬ
+   （抱える家臣の数も増える）からである。三十万石・〇.五・三は史料に拠る
+   ものではなく、遊びの調整として置いた値である。
+
+   尺は月を送るときに改め、家ごとに控える（f.家の尺）。城を一つ取ったその場で
+   境が動けば、同じ月のうちに身分が揺れるからである。控えの無いとき（盤を立てる
+   途中など）は、その場で量る。 */
+export const 尺の基 = 300000;
+export const 尺を量る = (koku) => Math.max(0.5, Math.min(3, Math.sqrt(Math.max(0, koku || 0) / 尺の基)));
+export function 家の尺(s, fid) {
+  if (!s || !fid) return 1;                      // 主を持たぬ者は、もとの境で測る
+  const f = s.factions && s.factions[fid];
+  if (f && f.家の尺 != null) return f.家の尺;
+  return 尺を量る(家の石高(s, fid));
+}
+
+/* 身分の境（GDD 6.4）。RANKS の min に家の尺を掛けたもの。
+
+   古参の身分は据え置く。その身分に就いたときの境を控えておき（x.身分控）、
+   いまの境と、就いたときの境の低いほうで測る。小さな家で家老になった者は、
+   家が大きくなっても、禄高が就いたときの境を割らぬかぎり家老のままである。
+   大きくなってから仕えた者には控えが無いので、いまの境で測る――これが
+   「新参にはさらに多くが要る」ということになる。
+
+   控えは家ごとのものである。家を移れば効かなくなる（新参として測り直す）。
+   家督を継いだ者は、親の控えを継ぐ（家の格は家に付く。house.js inheritHouse）。
+   減封されて就いたときの境を割れば、その身分は降りる。 */
+export function 身分の境(s, gen) {
+  const k = 家の尺(s, gen && gen.faction);
+  const 控 = gen && gen.身分控 && gen.身分控.家 === gen.faction ? gen.身分控 : null;
+  const o = {};
+  for (const r of RANKS) {
+    const いま = Math.round(r.min * k);
+    o[r.key] = 控 && 控[r.key] != null ? Math.min(いま, 控[r.key]) : いま;
+  }
+  return o;
+}
+
+/* 身分を控える。いまの身分と、その下の身分のうち、まだ控えの無いものに、
+   いまの境を書く。尺を改める直前に、家中の者すべてについて呼ぶ。
+   尺は月を送るときにしか動かないので、月の半ばに上がった身分も、尺が動く前に
+   控えられる。 */
+export function 身分を控える(s, gen) {
+  if (!gen || gen.lord || gen.captive || !gen.faction) return;
+  const i = RANKS.findIndex((x) => x.key === rankOf(gen, s).key);
+  if (i < 0) return;                             // 後見など
+  let 控 = gen.身分控 && gen.身分控.家 === gen.faction ? gen.身分控 : null;
+  const k = 家の尺(s, gen.faction);
+  for (let j = i; j < RANKS.length - 1; j++) {  // 物頭（境〇）は控えない
+    const key = RANKS[j].key;
+    if (控 && 控[key] != null) continue;
+    if (!控) 控 = gen.身分控 = { 家: gen.faction };
+    控[key] = Math.round(RANKS[j].min * k);
+  }
+}
+
+/* 月を送るときに、身分を控えてから家の尺を改める（govern/month.js）。
+
+   他家の恩賞。望む知行は家の尺とともに増えるが、他家は加増をしない。そのままでは
+   家が大きくなるほど他家の家臣の心が離れていく。十年送って測ると（種一つ）、望みに
+   足りぬ家臣が二百六十六人から五百十人に、出奔が十七件から三十四件に増えた。
+   そこで他家（o.恩賞 が真を返す家）は、尺が上がれば家臣の知行を同じ割で増す。
+   種を三つ変えた十年の平均で、出奔は二十三.三件（尺の無かった頃は二十三.〇件）、
+   家臣の忠誠の平均は六十八.八（同じく六十八.〇）と、ほぼもとに戻る。
+   家が大きくなれば恩賞を配る、というだけのことで、望みとの釣り合いはもとのまま
+   保たれる。尺が下がっても召し上げはしない。配った尺を控え（f.恩賞の尺）、
+   いちど下がってから戻ったぶんは重ねて配らない。配れるのは家と本領の城の余地の
+   うちだけで、遊ぶ側の加増と同じく、増えた知行のぶん軍役の器も増える。
+   遊ぶ側の家は自ら加増するので、控えだけを進める。
+
+   返り値は、尺の上がった家とその前後の尺（遊ぶ側に知らせるのに使う）。 */
+export function 家の尺を改める(s, o = {}) {
+  for (const g of s.generals || []) 身分を控える(s, g);
+  const 改まり = [];
+  for (const fid of Object.keys(s.factions || {})) {
+    const f = s.factions[fid];
+    const 前 = f.家の尺;
+    const k = Math.round(尺を量る(家の石高(s, fid)) * 1000) / 1000;
+    f.家の尺 = k;
+    if (f.恩賞の尺 == null) f.恩賞の尺 = 前 != null ? 前 : k;
+    if (k > f.恩賞の尺) {
+      if (o.恩賞 && o.恩賞(fid)) 恩賞を配る(s, fid, k / f.恩賞の尺);
+      f.恩賞の尺 = k;
+    }
+    if (前 != null && k !== 前) 改まり.push({ fid, 前, 後: k });
+  }
+  return 改まり;
+}
+
+/* 恩賞を配る。家臣の知行を 倍 の割で増す（家と本領の城の余地のうち）。 */
+function 恩賞を配る(s, fid, 倍) {
+  let 余 = fiefRoom(s, fid).left;
+  const gs = (s.generals || []).filter((x) => x.faction === fid && !x.lord && !x.captive && fiefOf(x) > 0)
+    .sort((a, b) => fiefOf(b) - fiefOf(a));
+  for (const x of gs) {
+    if (余 <= 0) break;
+    const 城余 = 城の知行の余地(s, x.本領 || x.at).left;
+    const d = Math.min(Math.round(fiefOf(x) * (倍 - 1)), 余, Math.max(0, 城余));
+    if (d <= 0) continue;
+    const 器前 = 軍役の器(x);
+    x.fief = fiefOf(x) + d;
+    x.retCap = Math.max(x.retinue || 0, 器前 + 軍役の増(x, d));
+    余 -= d;
+  }
+}
 
 /* ------------------------------------------------ 役（GDD 6.4）
 
@@ -216,9 +346,35 @@ export function rankOf(gen, s) {
   if (!gen) return RANKS[RANKS.length - 1];
   if (gen.lord) return { key: "当主", min: 0, desc: "一家の主" };
   if (s && isGuardian(s, gen)) return { key: "後見", min: 0, desc: "幼き当主に代わって家を差配する" };
-  /* 身分は禄高だけで定まる。役（国主・旗頭）では上がらない。 */
-  const 高 = s ? stipendOf(s, gen) : fiefOf(gen);
-  return RANKS.find((r) => 高 >= r.min) || RANKS[RANKS.length - 1];
+  /* 身分は禄高だけで定まる。役（国主・旗頭）では上がらない。
+     境は家の尺と、その者の控えで定まる（上の 身分の境）。 */
+  if (!s) return RANKS.find((r) => fiefOf(gen) >= r.min) || RANKS[RANKS.length - 1];
+  const 高 = stipendOf(s, gen);
+  const 境 = 身分の境(s, gen);
+  const i = RANKS.findIndex((r) => 高 >= 境[r.key]);
+  return RANKS[Math.max(i < 0 ? RANKS.length - 1 : i, 齢の身分の頭(gen.age))];
+}
+
+/* 若年の者の身分の頭（GDD 6.4）。RANKS の添字で返す。
+
+   十三に満たぬ者は物頭、十五に満たぬ者は侍大将、二十に満たぬ者は家老まで。
+   三十万石の家で、禄高の齢の頭打ち（二千四百・四千・九千・一万六千石）が届く
+   身分と同じである。もとは頭打ちの禄高だけで抑えていたが、境が家の大きさで
+   動くようになると、小さな家では頭打ちの禄高でも上の身分に届いてしまう
+   （織田家の境では、十二歳の信長が二千四百石で侍大将になった）。身分の側でも抑える。 */
+const 齢の身分の頭 = (age) => (age == null || age >= 20 ? 0 : age < 13 ? 3 : age < 15 ? 2 : 1);
+export const 身分に就ける齢 = { 侍大将: 13, 家老: 15, 宿老: 20 };
+
+/* 次の身分と、それに要る禄高（画面に出す）。いまの身分の一つ上を見る。
+   禄高は足りているのに齢で止まっているときは、就ける齢を添える。 */
+export function 次の身分(s, gen) {
+  const i = RANKS.findIndex((r) => r.key === rankOf(gen, s).key);
+  if (i <= 0) return null;                       // 宿老・当主・後見
+  const 次 = RANKS[i - 1].key;
+  const 要る = 身分の境(s, gen)[次];
+  const 高 = stipendOf(s, gen);
+  return { key: 次, 要る, 足りぬ: Math.max(0, 要る - 高),
+    齢: 高 >= 要る && (gen.age || 30) < 身分に就ける齢[次] ? 身分に就ける齢[次] : null };
 }
 
 
@@ -289,7 +445,7 @@ export function 国主に任じる(s, fid, kuni, genId) {
   /* 役に就くには身分が要る（GDD 6.4）。国主は家老以上。
      身分は禄高で定まるので、まず加増して身代を上げねばならない。 */
   if (身分の位(g, s) < 役の要る身分.国主) {
-    return { ok: false, why: `${g.name}は${rankName(g, s)}。国主となるには家老（禄高八千石）以上の身分が要る。` };
+    return { ok: false, why: `${g.name}は${rankName(g, s)}。国主となるには家老（${g.name}には禄高${fmt(身分の境(s, g).家老)}石）以上の身分が要る。` };
   }
   const 先 = 国の国主(s, fid, kuni);
   if (先 && 先.id !== g.id) { 先.役 = null; 先.役国 = null; }
@@ -684,7 +840,7 @@ export function 旗頭に任じる(s, fid, genId) {
   if (!g || g.faction !== fid || g.captive) return { ok: false, why: "その者はいない。" };
   if (g.lord) return { ok: false, why: "当主は宿老に任じられない。" };
   if (身分の位(g, s) < 役の要る身分.旗頭) {
-    return { ok: false, why: `${g.name}は${rankName(g, s)}。旗頭となるには宿老（禄高二万石）以上の身分が要る。` };
+    return { ok: false, why: `${g.name}は${rankName(g, s)}。旗頭となるには宿老（${g.name}には禄高${fmt(身分の境(s, g).宿老)}石）以上の身分が要る。` };
   }
   if (g.役 !== "国主" && g.役 !== "旗頭") {
     return { ok: false, why: `${g.name}は国主ではない。方面軍を預かるには、まず一国を預かる者でなければならぬ。` };
@@ -1179,17 +1335,42 @@ export function troopLimit(gen, s) {
 
 /* ------------------------------------------------- 知行と忠誠（GDD 6.1）
    家臣は禄を食んで仕える。知行が器量に見合わなければ、忠誠は下がっていく。
-   下がりきれば出奔し、あるいは敵の調略に応じる。 */
-export function fiefWanted(gen) {
+   下がりきれば出奔し、あるいは敵の調略に応じる。
+
+   望む知行は、器量と家の大きさで定まる（上の 家の尺）。小さな家の家臣は小さな
+   知行を、大きな家の家臣は大きな知行を望む。身分の境にも同じ尺を掛けるので、
+   望みに応えたときに届く身分は、家の大小によらず器量で決まる。
+
+   ただし二つの頭打ちを置く。
+     ・宿老の境の一.二五倍を超えては望まない。もとは器量の尺の頂で五万石を
+       望み、宿老の境（二万石）の二倍半に達していた。家中の最上の身分に
+       見合う高より上を望む筋はない。
+     ・二十に満たぬ者は、禄高の齢の頭打ち（下の 齢の頭打ち）を超えては望まない。
+       盤の初め（天文十五年）の織田信長は十二歳の物頭で、五万九百四十七石を
+       望んでいた。与えても禄高は二千四百石で止まるのだから、望むのも筋が違う。 */
+export function fiefWanted(gen, s) {
   // 器量に見合う知行（石）。器量の差が知行の桁に出るようにする。
-  // 凡将は千石、一国を代表する将は二万石、傑物は五万石を望む。
+  // 三十万石の家で、凡将は千石、一国を代表する将は二万石を望む。
   const able = (gen.lead + gen.valor + gen.wit + gen.gov) / 4;   // 平均の器量
   /* 基準点。能力の尺度を「六十を並」に改めたとき（core/util.js 能力を広げる）、平均が
      六十六から六十に下がったので、四十二から三十八へ移した。武将帳ぜんたいの望む知行が
      改める前とほぼ同じ（およそ千万石）になる点である。 */
   const base = Math.pow(Math.max(1, able - 38) / 12, 2.6) * 900;
-  return Math.round(400 + base + (gen.merit || 0) * 900);
+  const k = 家の尺(s, gen.faction);
+  let w = (400 + base + (gen.merit || 0) * 900) * k;
+  w = Math.min(w, RANKS[0].min * 1.25 * k);
+  const 頭 = gen.lord ? null : 齢の頭打ち(gen.age);
+  if (頭 != null) w = Math.min(w, 頭);
+  return Math.round(w);
 }
+
+/* 若年の者の禄高の頭打ち。二十からは無い。
+   三十万石の家で、十五で家老の格、十八で宿老の格に届きうる、という程度に抑える。
+   家の尺は掛けない（下の stipendOf を見よ）。 */
+export const 齢の頭打ち = (age) => {
+  const a = age == null ? 30 : age;
+  return a < 13 ? 2400 : a < 15 ? 4000 : a < 18 ? 9000 : a < 20 ? 16000 : null;
+};
 
 /* 知行。負の値は取らない。
    加増が没収に化ける不具合で、負の知行を抱えた記録が残っている。
@@ -1258,20 +1439,20 @@ export function stipendOf(s, gen) {
      もう一つ、出陣中は城が見つからず fief をそのまま返していた。齢の頭打ちを
      素通りするので、天文十五年の織田信長（十三歳）は在城で二千四百石、
      出陣すると三万二千六百石になっていた。本領で数えれば、どちらも同じである。 */
+  /* 齢の頭打ちには家の尺を掛けない。城を預かるに要る禄高（castleRankNeed）は
+     城の大きさで決まり、家の尺では動かないからである。尺を掛けると、小さな家では
+     十六の城主が城の要る禄高に届かなくなる。大きな家ほど、若くして重い身分に
+     就くのは遅れる――家中の重みが違うのだから、それでよい。 */
+  const 頭 = gen.lord || age >= 20 ? null : 齢の頭打ち(age);
   const c = s.castles.find((x) => x.id === (gen.本領 || gen.at));
   if (!c) {
     // 本領も居所も無い（城を失った、取り立て直後など）。知行だけで数える
-    if (gen.lord || age >= 20) return fiefOf(gen);
-    const cap0 = age < 13 ? 2400 : age < 15 ? 4000 : age < 18 ? 9000 : 16000;
-    return Math.min(fiefOf(gen), cap0);
+    return 頭 == null ? fiefOf(gen) : Math.min(fiefOf(gen), 頭);
   }
   const burden = fiefBurden(s, c.id);
   const share = burden > 0 ? fiefOf(gen) / burden : 0;
   const raw = Math.round(fiefOf(gen) + extraIncome(c) * share);
-  if (gen.lord || age >= 20) return raw;
-  // 十五で家老の格、十八で宿老の格に届きうる、という程度に抑える
-  const capByAge = age < 13 ? 2400 : age < 15 ? 4000 : age < 18 ? 9000 : 16000;
-  return Math.min(raw, capByAge);
+  return 頭 == null ? raw : Math.min(raw, 頭);
 }
 
 // 大名の御料＝直轄領（配り残した石高の総和）＋全城の余禄
@@ -1303,8 +1484,8 @@ export function goryoOf(s, fid) {
 export const 忠誠 = (gen) => Math.floor(gen && gen.loyal != null ? gen.loyal : 60);
 
 // 知行の過不足が忠誠をどう動かすか（毎月）
-export function loyaltyDrift(gen) {
-  const want = fiefWanted(gen), have = fiefOf(gen);
+export function loyaltyDrift(gen, s) {
+  const want = fiefWanted(gen, s), have = fiefOf(gen);
   if (want <= 0) return 0;
   const r = have / want;
   if (r >= 1.25) return 0.7;

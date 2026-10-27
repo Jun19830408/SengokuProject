@@ -24,7 +24,7 @@ import { canRecruit } from "../core/house.js";
 import { underMyBanner } from "../core/state.js";
 import { 軍の道 } from "../core/state.js";
 import { atPeace } from "../core/state.js";
-import { 忠誠 } from "../core/rank.js";
+import { 忠誠, 身分の境, stipendOf, fiefOf, fiefWanted, fiefBurden, goryoOf } from "../core/rank.js";
 import { 兵科の割り, 蓄えに合わせる , 組の鍵, 長の名, 長の階, 階の段, 組頭の帳 } from "../core/roster.js";
 import { clamp } from "../core/util.js";
 import { 既定の兵科 } from "../data/arms.js";
@@ -1581,15 +1581,56 @@ export function GeneralList({ g, onClose, onYakume, onOpenCastle }) {
     || g.castles.find((c) => c.id === x.本領) || null;
   const 城名 = (x) => (居城(x) || {}).name || "";
   const 国名 = (x) => (居城(x) || {}).kuni || "";
+  /* 知行の在り処（GDD 6.4）。
+
+     遊ぶ側の申し出は「それぞれの武将の知行について、どこに何石持っているのかを
+     武将一覧でわかるようにしたい」であった。知行は本領の城の田から与える
+     （core/rank.js fiefBurden）。一人の知行は本領の城一つにまとまっているので、
+     本領の城と国、知行の高を並べる。居所（いま居る城）とは別である――城代として
+     預かる城や、出陣した先は本領ではない。
+
+     並べ方は三つ。家中の順・知行の多い順・本領の城ごと（城ごとに、石高と、
+     家臣に配った知行の計を添える）。 */
+  const [並べ, set並べ] = useState("家中");
+  const 本領の城 = (x) => g.castles.find((c) => c.id === (x.本領 || x.at)) || null;
   const 掠る = (x) => {
     const q = 探.trim();
     if (!q) return true;
     const 郡 = 郡代の郡(g, x.id);
-    return [x.name, 城名(x), 国名(x), x.役 || "", rankName(x, g), 郡 ? `${郡.名}の郡代` : ""]
+    const 本 = 本領の城(x);
+    return [x.name, 城名(x), 国名(x), x.役 || "", rankName(x, g), 郡 ? `${郡.名}の郡代` : "",
+      本 ? 本.name : "", 本 ? 本.kuni : ""]
       .some((t) => String(t).includes(q));
   };
   const 当たり = gs.filter(掠る);
   const 頭 = 組頭の帳(g);
+  const 家の境 = 身分の境(g, { faction: g.player });
+  /* 知行の札。身分・知行と本領・禄高・望む知行。望みに足りぬほど色が濃くなる
+     （城の帳の人事と同じ色分け）。当主は知行ではなく御料を持つ。 */
+  const 知行の札 = (x) => {
+    if (x.lord) {
+      const 御 = goryoOf(g, x.faction);
+      return (
+        <span style={{ color: U.dim }}>
+          <span style={{ color: "#8A7A5A" }}>当主</span>{`　御料 ${fmt(御.total)}石`}
+          （直轄 {fmt(御.direct)}石・余禄 {fmt(御.extra)}石）
+        </span>
+      );
+    }
+    const 本 = 本領の城(x);
+    const have = fiefOf(x), want = fiefWanted(x, g);
+    const r = have / Math.max(1, want);
+    const 色 = r >= 0.75 ? U.dim : r >= 0.5 ? "#C89A3A" : "#B0483C";
+    return (
+      <span style={{ color: U.dim }}>
+        <span style={{ color: "#8A7A5A" }}>{rankName(x, g)}</span>
+        {"　知行 "}<b style={{ color: U.text }}>{fmt(have)}石</b>
+        （本領 {本 ? `${本.name}・${本.kuni}` : "なし"}{本 && 本.faction !== g.player ? "。他家の手にある" : ""}）
+        {`　禄高 ${fmt(stipendOf(g, x))}石`}
+        <span style={{ color: 色 }}>{`　望む ${fmt(want)}石`}</span>
+      </span>
+    );
+  };
   return (
     <div className="modal" {...外を押して閉じる(onClose)}>
       <div className="card">
@@ -1647,9 +1688,9 @@ export function GeneralList({ g, onClose, onYakume, onOpenCastle }) {
             大名が任じる役である。誰に何を預けているかは一覧で見えねばならない。 */}
         {欄 === "役" && (<>
           <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 }}>
-            <b style={{ color: U.text }}>国主</b>は一国を預かる役。家老（禄高八千石）以上が就け、城を持つ国につき一人までです。
+            <b style={{ color: U.text }}>国主</b>は一国を預かる役。家老（いまの境は禄高{fmt(身分の境(g, { faction: g.player }).家老)}石）以上が就け、城を持つ国につき一人までです。
             その旗のもとに<b style={{ color: U.text }}>寄騎</b>が集まります。任じるのは城の「人事」から。
-            <br /><b style={{ color: U.text }}>旗頭</b>は方面軍を率いる役。宿老（禄高二万石）以上で、かつ国主を務める者から選びます。
+            <br /><b style={{ color: U.text }}>旗頭</b>は方面軍を率いる役。宿老（いまの境は禄高{fmt(身分の境(g, { faction: g.player }).宿老)}石）以上で、かつ国主を務める者から選びます。
             受け持ちは任じるときに決めず、<b style={{ color: U.text }}>国主を寄騎に取るたびに一国ずつ広がります</b>。
             置けるのは四国につき一人。柴田を北国へ、明智を丹波へ――これです。
             <br />寄騎も方面軍の兵も、大名の直臣のままです。いつでも解けます。
@@ -1728,7 +1769,52 @@ export function GeneralList({ g, onClose, onYakume, onOpenCastle }) {
             「{探}」に当たる者はいません。
           </div>
         )}
-        {当たり.map((x) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11.5, color: U.dim }}>並べ方</span>
+          {[["家中", "家中の順"], ["知行", "知行の多い順"], ["城", "本領の城ごと"]].map(([k, 札]) => (
+            <button key={k} className={`btn sm ${並べ === k ? "on" : ""}`} onClick={() => set並べ(k)}>{札}</button>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: U.dim, marginBottom: 8, lineHeight: 1.7 }}>
+          知行は<b style={{ color: U.text }}>本領の城</b>の田から与えられます（いま居る城とは別）。
+          加増と減封は本領の城の「人事」から。
+          この家の身分の境（禄高）は 侍大将 {fmt(家の境.侍大将)}石・家老 {fmt(家の境.家老)}石・宿老 {fmt(家の境.宿老)}石
+          （家の大きさで動き、すでに就いた身分は据え置かれます）。
+        </div>
+        {(並べ === "城"
+          ? (() => {
+            /* 本領の城ごと。城の並びは国ごと、国の中は石高の高い順。当主は先頭に別に置く。 */
+            const 群 = new Map();
+            for (const x of 当たり) {
+              const 本 = x.lord ? null : 本領の城(x);
+              const k = x.lord ? "当主" : 本 ? 本.id : "なし";
+              if (!群.has(k)) 群.set(k, { 本, 人: [] });
+              群.get(k).人.push(x);
+            }
+            const 並 = [...群.entries()].sort(([ka, a], [kb, b]) =>
+              (ka === "当主" ? -1 : kb === "当主" ? 1 : 0)
+              || (!a.本 ? 1 : !b.本 ? -1 : 0)
+              || (a.本 && b.本 ? String(a.本.kuni).localeCompare(String(b.本.kuni), "ja") || b.本.koku - a.本.koku : 0));
+            return 並.map(([k, { 本, 人 }]) => ({
+              鍵: k, 人: [...人].sort((a, b) => fiefOf(b) - fiefOf(a)),
+              頭: k === "当主" ? null : 本 ? (
+                <div className="sec" style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                  {onOpenCastle && 本.faction === g.player
+                    ? <button className="btn sm" title={`${本.name}の人事を開く`} onClick={() => onOpenCastle(本.id)}>{本.name}</button>
+                    : <span>{本.name}</span>}
+                  <span style={{ fontSize: 11.5, color: U.dim }}>
+                    {本.kuni}　石高 {fmt(本.koku)}石のうち 家臣の知行 {fmt(fiefBurden(g, 本.id))}石
+                    {本.faction !== g.player ? "（他家の手にある）" : ""}
+                  </span>
+                </div>
+              ) : <div className="sec" style={{ marginTop: 10 }}>本領のない者</div>,
+            }));
+          })()
+          : [{ 鍵: "全", 頭: null,
+              人: 並べ === "知行" ? [...当たり].sort((a, b) => fiefOf(b) - fiefOf(a)) : 当たり }]
+        ).map(({ 鍵, 頭, 人 }) => (<div key={鍵}>
+        {頭}
+        {人.map((x) => (
           <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${U.line2}`, fontSize: 13, flexWrap: "wrap" }}>
             <span className="mn" style={{ fontSize: 15, width: 100 }}>
               {x.name}
@@ -1756,8 +1842,10 @@ export function GeneralList({ g, onClose, onYakume, onOpenCastle }) {
                 : <span style={{ color: U.dim }}>{札}</span>;
             })()}
             <span className="num">直属 {fmt(x.retinue)}</span>
+            <div className="num" style={{ width: "100%", fontSize: 11.5, marginTop: -2 }}>{知行の札(x)}</div>
           </div>
         ))}
+        </div>))}
         {当たり.some((x) => is架空(x)) && (
           <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
             〔架空〕… 遊びの中で生まれた者です。史実の人物ではありません。

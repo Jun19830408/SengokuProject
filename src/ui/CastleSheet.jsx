@@ -3,7 +3,7 @@ import { RANSOM_DIV, ransomRank } from "../core/capture.js";
 import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/house.js";
 import { marchMonths, marchMonthsOf } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
-import { 軍役の割増, RANKS, castellanOf, 城を守る将, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 旗頭の受け持ち, 旗頭の的にできる家, 旗頭の的家, 的家の限り, 旗の下の当主か, 城主か } from "../core/rank.js";
+import { 軍役の割増, 身分の境, 家の尺, 次の身分, castellanOf, 城を守る将, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 旗頭の受け持ち, 旗頭の的にできる家, 旗頭の的家, 的家の限り, 旗の下の当主か, 城主か } from "../core/rank.js";
 import { canSee, forecast, relOf, isVassal, 主を探す, 出征の元 } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
@@ -843,8 +843,20 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                         {rm.left < 0 ? `／${fmt(-rm.left)}石の配りすぎ` : ""}）</span></span>
                     </div>
                   ); })()}
+                  {(() => {
+                    /* この家の身分の境（core/rank.js 家の尺）。家の大きさで動く。
+                       すでに就いた身分は、就いたときの境で据え置かれる。 */
+                    const 境 = 身分の境(g, { faction: g.player });
+                    return (
+                      <div style={{ fontSize: 11, color: U.dim, padding: "4px 0", borderBottom: `1px solid ${U.line2}`, lineHeight: 1.7 }}>
+                        この家の身分の境（禄高）　侍大将 {fmt(境.侍大将)}石・家老 {fmt(境.家老)}石・宿老 {fmt(境.宿老)}石
+                        <span style={{ marginLeft: 6 }}>（家の尺 {家の尺(g, g.player).toFixed(2)}）</span><br />
+                        家が大きくなれば境も上がり、望む知行も増えます。すでに就いた身分は、就いたときの境を禄高が割らぬかぎり保たれます。
+                      </div>
+                    );
+                  })()}
                   {[...gens, ...出征中の者].filter((x) => !x.captive).map((x) => {
-                    const want = fiefWanted(x), have = fiefOf(x);
+                    const want = fiefWanted(x, g), have = fiefOf(x);
                     const 出征 = x.at == null ? 出征の元(g, x) : null;
                     const r = have / Math.max(1, want);
                     const mood = r >= 1.0 ? "満ちている" : r >= 0.75 ? "不足はない" : r >= 0.5 ? "不満がある" : "強い不満";
@@ -893,10 +905,13 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                           <span style={{ color: "#8A7A5A" }}>{rankName(x, g)}</span>
                           {!x.lord && (() => {
                             if (x.lord) return <span style={{ color: U.dim, marginLeft: 6 }}>　御料{fmt(goryoOf(g, x.faction).total)}石</span>;
+                            /* 次の身分までの禄高。境は家の大きさで動き、古参は就いたときの
+                               境で据え置かれる（core/rank.js 身分の境・次の身分）。
+                               若年で齢に止められているときは、就ける齢を出す。 */
                             const st = stipendOf(g, x);
-                            const nx = RANKS.filter((r) => r.min > st).sort((a, b) => a.min - b.min)[0];
+                            const nx = 次の身分(g, x);
                             return nx ? <span style={{ color: U.dim, marginLeft: 6 }}>
-                              　禄高{fmt(st)}石（あと{fmt(nx.min - st)}石で{nx.key}）
+                              　禄高{fmt(st)}石{nx.齢 ? `（${nx.齢}歳になれば${nx.key}）` : `（あと${fmt(nx.足りぬ)}石で${nx.key}）`}
                             </span> : <span style={{ color: U.dim, marginLeft: 6 }}>　禄高{fmt(st)}石</span>;
                           })()}
                         </div>
@@ -1245,7 +1260,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                         padding: "8px 10px", marginBottom: 10, background: "rgba(200,164,74,.05)" }}>
                         <div className="mn" style={{ fontSize: 15, marginBottom: 2 }}>旗頭を選ぶ</div>
                         <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75, marginBottom: 6 }}>
-                          旗頭は<b style={{ color: U.text }}>方面軍</b>を率いる役です。宿老（禄高二万石）以上で、
+                          旗頭は<b style={{ color: U.text }}>方面軍</b>を率いる役です。宿老（いまの境は禄高{fmt(身分の境(g, { faction: g.player }).宿老)}石）以上で、
                           かつ国主を務める者から選びます。受け持ちは任じるときに決めるのではなく、
                           <b style={{ color: U.text }}>国主を寄騎に取るたびに一国ずつ広がります</b>。
                           置けるのは四国につき一人。<b style={{ color: U.text }}>本拠でのみ</b>定められます。
@@ -1279,7 +1294,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                             </div>
                             {!国主ら.some((x) => 身分の位(x, g) >= 4) && (
                               <div style={{ fontSize: 12, color: U.dim }}>
-                                宿老（禄高二万石）に届く国主がいません。加増して身代を上げてください。
+                                宿老（いまの境は禄高{fmt(身分の境(g, { faction: g.player }).宿老)}石）に届く国主がいません。加増して身代を上げてください。
                               </div>
                             )}
                           </div>

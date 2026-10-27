@@ -18,7 +18,7 @@ const entry = path.join(ROOT, 'build', 'fief-entry.js');
 fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState, migrateSave, 国主を据える } from "../src/core/state.js";\n'
-+ 'export { 城主か, 城の知行の余地, fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, canBeKeeper, 預かりの格, castellanOf, rankName, 身分の位, 軍役の器, 国主の枠, 国主たち, 国の国主, 国主に任じる, 国主を繕う, 寄騎たち, 寄騎に取れるか, 寄騎に取る, 寄騎を解く, 寄騎を繕う, 旗頭の枠, 旗頭たち, 旗頭の受け持ち, 旗頭の届く国, 国の旗頭, 旗頭に任じる, 旗頭を解く, 旗頭を繕う, 陣触れの届き, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
++ 'export { 身分の境, 城主か, 城の知行の余地, fiefRoom, fiefOf, stipendOf, fiefBurden, castleRankNeed, canHoldCastle, canBeKeeper, 預かりの格, castellanOf, rankName, 身分の位, 軍役の器, 国主の枠, 国主たち, 国の国主, 国主に任じる, 国主を繕う, 寄騎たち, 寄騎に取れるか, 寄騎に取る, 寄騎を解く, 寄騎を繕う, 旗頭の枠, 旗頭たち, 旗頭の受け持ち, 旗頭の届く国, 国の旗頭, 旗頭に任じる, 旗頭を解く, 旗頭を繕う, 陣触れの届き, 総大将を定める, 大将を先頭に } from "../src/core/rank.js";\n'
 + 'export { grantFief, appoint, 国主に任ずる, 旗頭に任ずる, 旗頭を解く下知 } from "../src/govern/commands.js";\n'
 + 'export { isMainClan } from "../src/core/house.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n');
@@ -453,7 +453,7 @@ const 確 = (名, 可, 添 = '') => {
     `${移す.name} 禄${Math.round(A.stipendOf(t, 移す))}石 → ${A.rankName(移す, t)}`);
   {
     const 軽 = t.generals.find((g) => g.faction === 'oda' && !g.lord && !g.役 && g.id !== 移す.id
-      && A.stipendOf(t, g) < 8000);
+      && A.stipendOf(t, g) < A.身分の境(t, g).家老);
     if (軽) {
       const 前 = A.rankName(軽, t);
       const rr = A.国主に任じる(t, 'oda', '尾張', 軽.id);
@@ -790,12 +790,16 @@ const 確 = (名, 可, 添 = '') => {
   }
   const 旗ら = A.国主たち(t, 'oda').filter((g) => g.役国);
   /* ここで見るのは「宿老に届かぬ国主」である。器量の大きい者（柴田勝家など）は
-     盤の初めから宿老の身代を持つことがあるので、禄を国主並みに据えてから問う。 */
+     盤の初めから宿老の身代を持つことがあるので、禄を国主並みに据えてから問う。
+     宿老の境は家の大きさで動く（rank.js 身分の境）ので、その家の境を割るまで下げる。 */
   旗ら[0].fief = Math.min(旗ら[0].fief, 14000);
+  for (let i = 0; i < 30 && A.stipendOf(t, 旗ら[0]) >= A.身分の境(t, 旗ら[0]).宿老; i++) {
+    旗ら[0].fief = Math.round(旗ら[0].fief * 0.9);
+  }
   const r1 = A.旗頭に任じる(t, 'oda', 旗ら[0].id, [旗ら[0].役国]);
   確('一国だけでは方面にならない', !r1.ok, r1.why);
 
-  /* 旗頭となれるのは宿老（禄高二万石）以上である（GDD 6.4）。
+  /* 旗頭となれるのは宿老以上である（GDD 6.4。境は家の大きさで動く）。
      身分は禄高だけで定まるので、まず加増して身代を上げる。 */
   const 二国 = [旗ら[0].役国, 旗ら[1].役国];
   {

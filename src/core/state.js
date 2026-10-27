@@ -1,4 +1,4 @@
-import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位, 城を明け渡す, 城を守る将, canHoldCastle } from "./rank.js";
+import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位, 城を明け渡す, 城を守る将, canHoldCastle, castleRankNeed, 尺を量る, 家の尺を改める, 身分を控える, RANKS } from "./rank.js";
 import { courtRank } from "./province.js";
 import { newRoster, rosterSum, 名簿を繕う, 組の番, 通し番号を据える } from "./roster.js";
 import { 姫を整える } from "./hime.js";
@@ -320,7 +320,9 @@ export function initState(player) {
          武将は城とその城が抱える土地に根付く。居場所と根は別である。
          初めは居る城をそのまま本領とする。 */
       本領: g.at || null,
-      fief: Math.round(fiefWanted(g) * (0.72 + Math.random() * 0.34)),
+      /* 望む知行は家の大きさで変わる（rank.js 家の尺）。盤を立てる途中なので、
+         拠点定義の城の石高で家の尺を量る。 */
+      fief: Math.round(fiefWanted(g, { castles: CASTLES }) * (0.72 + Math.random() * 0.34)),
       rost: newRoster(g.retinue, `ret-${g.id}`, 直属の兵科) }))),
     armies: [], orders: {}, ledger: [], sieges: [], promo: null, campaigns: [],
     relations, specials, plots: [], intel: {}, prev: {},
@@ -335,6 +337,9 @@ export function initState(player) {
   for (const fid of Object.keys(盤.factions)) {
     盤.factions[fid].本拠 = 本拠を定める(fid, 盤.castles, 盤.generals);
   }
+  /* 家の尺を控え、初めの身分を控える（rank.js 家の尺・身分の境）。
+     国主に就けるかは身分で決まるので、国主を据える前に行う。 */
+  家の尺を改める(盤);
   国主を据える(盤);                               // 国ごとに国主を一人（GDD 6.4）
   城主の札を据える(盤);                           // 城ごとに城主を一人（GDD 6.4）
   /* 初めの蔵（core/keizai.js）。月の実入りのおよそ半年分を足す。
@@ -441,6 +446,8 @@ export function assignRanks(castles, generals) {
     const cs = castles.filter((c) => c.faction === fid);
     const gs = generals.filter((g) => g.faction === fid);
     if (!cs.length || !gs.length) continue;
+    /* 家老・宿老の境は家の大きさで動く（rank.js 家の尺・身分の境）。 */
+    const 尺 = 尺を量る(cs.reduce((t, c) => t + c.koku, 0));
     const lord = gs.find((g) => g.lord);
     // 当主が座す城を除いた数だけ、家老が要る
     const seatId = lord ? lord.at : null;
@@ -454,13 +461,17 @@ export function assignRanks(castles, generals) {
         (b.lead + b.gov + b.wit) - (a.lead + a.gov + a.wit))[0];
       // 家老の禄高に届くだけの知行を与える。城が小さければ届かぬこともある。
       // 余禄の分け前を見込んで逆算する。
+      /* 家老の境は家の尺で動く。小さな家では境が低いが、その城を預かるに要る
+         禄高（castleRankNeed）は城の大きさで決まるので、そちらにも届かせる。
+         もとの八千四百石は、どの城の要る禄高（高くて八千石）も越えていた。 */
+      const 要る = Math.round(Math.max(RANKS[1].min * 尺, castleRankNeed(c)) * 1.05);
       const extra = extraIncome(c);
       const others = here.filter((x) => x !== head).reduce((t, x) => t + (x.fief || 0), 0);
       let want = Math.max(head.fief || 0, 1000);
       for (let i = 0; i < 40; i++) {
         const total = others + want;
         const got = want + (total > 0 ? extra * (want / total) : 0);
-        if (got >= 8400) break;
+        if (got >= 要る) break;
         want = Math.round(want * 1.15) + 300;
         if (want > c.koku * 0.75) break;
       }
@@ -491,7 +502,7 @@ export function assignRanks(castles, generals) {
         for (let i = 0; i < 40; i++) {
           const total = others + want;
           const got = want + (total > 0 ? extra * (want / total) : 0);
-          if (got >= 20600) break;
+          if (got >= Math.round(RANKS[0].min * 尺 * 1.03)) break;
           want = Math.round(want * 1.12) + 500;
           if (want > c.koku * 0.8) break;
         }
@@ -1207,6 +1218,7 @@ export function migrateSave(s) {
   盤の増補を取り込む(s);                          // 後から足した城・武将・家・特殊勢力
   城の座標を揃える(s);                            // 調べ直して改めた城の座標を、古い記録にも当てる
   if (!s.郡代) s.郡代 = {};                       // 郡代の無かった頃の記録（郡の導入の段階二より前）
+  身分の控えを繕う(s);                            // 家の尺の無かった頃の記録。いまの身分を控えて据え置く
   本領と本拠を繕う(s);
   本拠を追う(s);                                  // 当主のいる城へ本拠を合わせ直す
   役の名を改める(s);                              // 家老→国主・宿老→旗頭（GDD 6.4）
@@ -1293,6 +1305,19 @@ export function 将の無い軍を繕う(s) {
    もし本来の持ち主が既に滅んでいれば、その城は誰の物でもない――が、盤には
    持ち主の無い城という形が無いので、そのときは足さない。滅んだ家を復活
    させるよりは、盤に出ないほうが害が少ない。 */
+/* 家の尺の無かった頃の記録（core/rank.js 家の尺・身分の境）。
+
+   その頃の境は、家の大小によらず一つであった（尺が一のときの境）。その境で
+   いまの身分を控えてから、家の尺を量る。大きな家の家臣も、読み込んだとたんに
+   身分が下がることはない。以後に上がる身分は、家の大きさに応じた境で測る。 */
+function 身分の控えを繕う(s) {
+  const 家ら = Object.values(s.factions || {});
+  if (!家ら.length || 家ら.every((f) => f.家の尺 != null)) return;
+  for (const f of 家ら) if (f.家の尺 == null) f.家の尺 = 1;
+  家の尺を改める(s);
+  for (const f of 家ら) f.恩賞の尺 = f.家の尺;      // 恩賞は、いまの尺から先のぶんだけ配る
+}
+
 /* 足す城と武将を、盤を立てるときと同じ形にこしらえる。
    欄の一つでも欠ければ、そこから静かに壊れていく。 */
 function 新しい城(c) {
@@ -1310,12 +1335,12 @@ function 新しい城(c) {
   return 城;
 }
 
-function 新しい将(g) {
+function 新しい将(g, s) {
   return {
     ...g, unity: clamp(g.retTrain + 8, 30, 100), merit: 0,
     retCap: g.retinue,
     本領: g.at || null,
-    fief: Math.round(fiefWanted(g) * 0.9),
+    fief: Math.round(fiefWanted(g, s) * 0.9),
     rost: newRoster(g.retinue, `ret-${g.id}`, 直属の兵科),
   };
 }
@@ -1399,7 +1424,7 @@ export function 盤の増補を取り込む(s) {
     if (!g.at || !城id.has(g.at)) continue;                 // 居場所の無い者は加えない
     const 城 = s.castles.find((c) => c.id === g.at);
     if (!城 || 城.faction !== g.faction) continue;           // 主が変わった城には湧かせない
-    s.generals.push(新しい将(g));
+    s.generals.push(新しい将(g, s));
     将id.add(g.id);
     足した将++;
   }

@@ -1,4 +1,4 @@
-import { HOUSE_RANK, fiefOf, fiefWanted, stipendOf, 家督で役を引き継ぐ } from "./rank.js";
+import { fiefOf, fiefWanted, 家督で役を引き継ぐ, 身分の位 } from "./rank.js";
 import { newRoster } from "./roster.js";
 import { clamp, 姓, 姓名, 能力を広げる } from "./util.js";
 import { KANJI_TSUJI, LONG_LIVED, NEWCOMERS, PARENT } from "../data/newcomers.js";
@@ -27,9 +27,11 @@ export function emergeGenerals(s) {
       本領: home.id,
       retinue: n.retinue, retTrain: n.retTrain,
       unity: clamp(n.retTrain + 8, 30, 100), merit: 0,
-      fief: Math.round(fiefWanted(n) * 0.7),
+      fief: 0,
       rost: newRoster(n.retinue, `ret-${n.id}`, 直属の兵科),
     };
+    /* 望む知行は仕える家の大きさと、その者の齢で決まる（rank.js fiefWanted）。 */
+    gen.fief = Math.round(fiefWanted(gen, s) * 0.7);
     s.generals.push(gen);
     s.emerged = [...(s.emerged || []), n.id];
     out.push(`${gen.name}が${s.factions[fid].name}に仕えた（${home.name}）。`);
@@ -91,8 +93,10 @@ export function isMainClan(s, gen) {
   return isClan(s, gen, lord);
 }
 
+/* 家を興せるのは家老の格からである。境は家の大きさで動くので（rank.js 家の尺）、
+   禄高の数ではなく身分で見る。 */
 export const hasHouse = (s, gen) => !!gen && !gen.lord && !isMainClan(s, gen)
-  && (!!gen.house || stipendOf(s, gen) >= HOUSE_RANK);
+  && (!!gen.house || 身分の位(gen, s) >= 3);
 
 // 家名。姓をもって家とする（一字の姓も三字の姓もある。core/util.js の 姓名）。
 export const houseName = (gen) => (gen ? 姓(gen.name) : "");
@@ -214,6 +218,17 @@ export function inheritHouse(s, dead) {
   const heir = heirOfHouse(s, dead);
   if (!heir) return null;
   heir.fief = Math.max(heir.fief || 0, Math.round(fiefOf(dead) * 0.85));   // 分割で目減りする
+  /* 身分の控えも継ぐ（rank.js 身分の境）。家の格は家に付くものであって、古くから
+     仕える家の跡取りは、家が大きくなってから仕えた者と同じには測らない。
+     跡取りに自らの控えがあれば、低いほうを取る。 */
+  if (dead.身分控 && dead.身分控.家 === heir.faction) {
+    const 控 = heir.身分控 && heir.身分控.家 === heir.faction ? heir.身分控 : { 家: heir.faction };
+    for (const [k, v] of Object.entries(dead.身分控)) {
+      if (k === "家") continue;
+      控[k] = 控[k] == null ? v : Math.min(控[k], v);
+    }
+    heir.身分控 = 控;
+  }
   heir.retinue += Math.round(dead.retinue * 0.6);
   heir.house = true;
   heir.at = dead.at;
@@ -536,7 +551,7 @@ export function 取り立てる(s, promo, name) {
     unity: clamp(o.retTrain + 6, 30, 100), merit: 6, 架空: true,
     fief: 0, rost: newRoster(o.retinue, `ret-${id}`, 直属の兵科),
   };
-  gen.fief = Math.round(fiefWanted(gen) * 0.5);
+  gen.fief = Math.round(fiefWanted(gen, s) * 0.5);
   s.generals.push(gen);
   return gen;
 }
