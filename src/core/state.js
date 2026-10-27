@@ -1195,6 +1195,7 @@ export function migrateSave(s) {
   if (!Array.isArray(s.hime)) { s.hime = []; 姫を整える(s); }
   物故の控えを繕う(s);                            // 盤にいない史実の将を「死んだ者」と見なす
   盤の増補を取り込む(s);                          // 後から足した城・武将・家・特殊勢力
+  城の座標を揃える(s);                            // 調べ直して改めた城の座標を、古い記録にも当てる
   本領と本拠を繕う(s);
   本拠を追う(s);                                  // 当主のいる城へ本拠を合わせ直す
   役の名を改める(s);                              // 家老→国主・宿老→旗頭（GDD 6.4）
@@ -1323,6 +1324,23 @@ function 物故の控えを繕う(s) {
   if (Array.isArray(s.物故)) return;
   const 居る = new Set((s.generals || []).map((g) => g.id));
   s.物故 = GENERALS.filter((g) => !居る.has(g.id)).map((g) => g.id);
+}
+
+/* 城の座標を、城のデータに揃える。
+
+   郡の当てのために城の在り処を調べ直し、座標のずれていた城（数km、美作の岩屋城は
+   約二十km）を改めた（data/castles.js の冒頭）。古い記録には、古い座標と、それから
+   計った盤の位置（x・y）が残っている。街道と地点（paths.js の NODES）は常に城の
+   データで組まれるので、そのままでは地図の城の印と街道の端が食い違う。
+   読み込みのたびに、城のデータの経緯度と、それから計る盤の位置に揃える。
+   城は遊びの中で動かないので、揃えても失うものはない。 */
+function 城の座標を揃える(s) {
+  const 元 = new Map(CASTLES.map((c) => [c.id, c]));
+  for (const c of s.castles || []) {
+    const d = 元.get(c.id);
+    if (!d || (c.lon === d.lon && c.lat === d.lat)) continue;
+    c.lon = d.lon; c.lat = d.lat; c.x = px(d.lon); c.y = py(d.lat);
+  }
 }
 
 export function 盤の増補を取り込む(s) {
