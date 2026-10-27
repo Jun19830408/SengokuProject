@@ -192,7 +192,9 @@ export function genTerrain(seed) {
            裾が岸に届くくらいは、むしろ野の姿である。ところが裾の広い山は、
            中どころが川から離れていても裾が川を跨ぐ。絵の上では川が山を貫いて
            流れ、地形としても山の中に淵があるという有様になった。
-           山だけは、丸ごと川の外にあることを求める。 */
+           山だけは、丸ごと川の外にあることを求める。
+           丘と村は、置き終えてから裾が岸に届くところまで退ける（丘と村を川から
+           退ける）。ここで求めると試みの数が変わり、賽の流れがずれるからである。 */
         const 際 = 丸ごと外へ ? r0 + 24 : 40;
         if (RIVER.bot > RIVER.top
           && y + 際 > RIVER.top - (丸ごと外へ ? RIVER.wave : 0)
@@ -267,6 +269,7 @@ export function genTerrain(seed) {
   put(WOODS, 数(Math.floor(rnd() * 3) + 1), 50 * sc, 85 * sc);
   put(MARSH, 数(rnd() > 0.6 ? 1 : 0), 65 * sc, 100 * sc);
   put(VILLAGES, 数(Math.floor(rnd() * 3)), 34 * sc, 58 * sc);
+  丘と村を川から退ける();
 
   /* 丘の高さ。裾の広い丘ほど高く盛り上がる。
      地形としてはどれも「丘」であって、効きは変わらない。見た目の起伏だけである。 */
@@ -316,6 +319,73 @@ export function genTerrain(seed) {
     ROAD.節.push(...曲(川中 - 川幅 * 1.6, -30, 渡り, 北, 3));
     ROAD.節.push({ x: 北, y: -30 });
   }
+}
+
+/* 川べりの丘と村（GDD 8.1・8.11）。
+
+   丘を置くとき、川を避けるのに中どころが川の帯から四十歩離れていることしか見て
+   いなかった。丘の半径は八十歩から六百歩に及び、川は蛇行して帯の外へも振れるので、
+   川が丘の中腹を、ときには頂のそばを横切った。測ると、川のある野の丘の三割五分が
+   川に掛かり、一割三分は頂の近くまで水が来て、三分は頂そのものが水の中にあった。
+   遊ぶ側の申し出は「山と川の分け目が変」であった。斜めから見ると、川が丘の稜線の
+   上を流れ、水際が丘の陰影と食い違う。水は低い所を流れるもので、丘の上に川は無い。
+   盤の理のうえでも、丘の頂を取りに行った隊が淵へ踏み込むことになる。
+   村も同じで、一割余りが川に掛かり、三分は村の中ほどが水の中にあった。家と垣が
+   川の上に並ぶか、水の上を除けば両岸に切れ端だけが残る。
+
+   丘と村は川から離れる向き（川は東西に流れるので、ある側の南か北）へ、裾が岸に
+   届くところまで退ける――裾が岸に届くくらいは野の姿である（上の put の断り）。
+   はじめは丘の裾の三割まで水に浸かってよいとしたが、その裾を水位まで下ろすと丘の
+   川側の斜面が切り立ち、高い丘ほど斜めの眺めで川べりに稜線の黒い筋が残った。
+   退けた先が盤の外や他の地物に掛かるなら、少しずつ（半ばまで）小さくして試し、
+   それでも収まらねば川の向こう岸で探す（もとから重なっていた地物は咎めない。村は
+   置くとき互いを避けていない）。どうしても収まらぬもの（丘で二千に一つほど）は、
+   試した中でいちばん川から離れる所に置く。賽は引かないので、川・森・林・沼・山・道は
+   これまでと寸分違わない。
+   丘を退けると、その近くで戦の筋が変わる。互角の戦を三十二の種で測る試験
+   （tests/kahei「互角なら五分に近い」）は、受け手の勝ちが四割一分から二割五分へ
+   振れて三割を割った。戦の賽の流れを替えて九十六の野で三度測り直すと、直す前と
+   後とで三割八分と三割八分、四割一分と四割五分、三割九分と三割八分。勝ち負けの
+   入れ替わりも両向きに同じほど（二十八と三十一）で、丘の置き所が受け手を弱めた
+   のではない。三十二の種の勝ち負けが振り直されたのである（直す前の野でも、流れに
+   よっては二割五分に落ちる）。 */
+function 川から退ける(list) {
+  const H = FIELD.h;
+  const 芯 = (x) => (RIVER.top + RIVER.bot) / 2 + riverShift(x);
+  for (const h of list) {
+    const 際0 = 水際まで(h.x, h.y, h.r);
+    if (際0 >= h.r) continue;
+    const 向 = h.y >= 芯(h.x) ? 1 : -1;
+    const 他 = [...FORESTS, ...WOODS, ...HILLS, ...MOUNTAINS, ...MARSH, ...VILLAGES]
+      .filter((o) => o !== h && Math.hypot(o.x - h.x, o.y - h.y) >= o.r + h.r + 30);
+    const 掛かる = (y, r) => 他.some((o) => Math.hypot(o.x - h.x, o.y - y) < o.r + r + 30);
+    let 先 = null, 次善 = { 比: 際0 / h.r };
+    for (const 向き of [向, -向]) {
+      for (let 縮 = 1; 縮 > 0.49 && !先; 縮 -= 0.05) {
+        const r = Math.round(h.r * 縮);
+        for (let δ = 0; ; δ += 6) {
+          const y = h.y + 向き * δ;
+          if (y < r + 24 || y > H - r - 24) break;           // 盤からはみ出す
+          const 際 = 水際まで(h.x, y, r);
+          if (際 < r) {
+            if (際 / r > 次善.比 && !掛かる(y, r)) 次善 = { y: Math.round(y), r, 比: 際 / r };
+            continue;
+          }
+          if (!掛かる(y, r)) 先 = { y: Math.round(y), r };
+          else if (向き !== 向) continue;                     // 向こう岸では、空いた所まで進む
+          break;
+        }
+      }
+      if (先) break;
+    }
+    if (!先 && 次善.y != null) 先 = 次善;
+    if (先) { h.y = 先.y; h.r = 先.r; }
+  }
+}
+function 丘と村を川から退ける() {
+  if (!hasRiver()) return;
+  川から退ける(HILLS);
+  川から退ける(VILLAGES);
 }
 
 /* ========================================================================== 
@@ -428,6 +498,69 @@ export function 地の高さ(x, y) {
 }
 
 export const hasRiver = () => RIVER.bot > RIVER.top + 4;
+
+/* 筋書きの川の升。筋書きの川は何百節もある。木を一本ずつ量るたびに全ての節を当たると
+   重いので、百六十歩の升に「水際から八十歩の内に届く区間」を控えておく（水際まで） */
+let 川の升 = null;
+function 川の升を据える() {
+  if (川の升 && 川の升.代 === 代 && 川の升.数 === RIVERS.length) return 川の升;
+  const G = 160, 余 = 80, 升 = new Map();
+  for (const r of RIVERS) {
+    const 半 = (r.幅 || 40) / 2;
+    for (let i = 0; i + 1 < r.節.length; i++) {
+      const a = r.節[i], b = r.節[i + 1], 区 = { a, b, 半 };
+      const i0 = Math.floor((Math.min(a.x, b.x) - 半 - 余) / G), i1 = Math.floor((Math.max(a.x, b.x) + 半 + 余) / G);
+      const j0 = Math.floor((Math.min(a.y, b.y) - 半 - 余) / G), j1 = Math.floor((Math.max(a.y, b.y) + 半 + 余) / G);
+      for (let i2 = i0; i2 <= i1; i2++) for (let j2 = j0; j2 <= j1; j2++) {
+        const 鍵 = i2 * 100003 + j2;
+        if (!升.has(鍵)) 升.set(鍵, []);
+        升.get(鍵).push(区);
+      }
+    }
+  }
+  川の升 = { 代, 数: RIVERS.length, G, 余, 升 };
+  return 川の升;
+}
+/* 水際までの隔たり（歩）。盤の所（x, y）から、いちばん近い川の水際まで。水の中は負。
+   生まれた野の川は蛇行する帯（riverShift）、筋書きの野の川は折れ線（RIVERS）である。
+   丘と村を川から退けるとき（genTerrain）と、木・家・葦を水際から離して立てるとき
+   （mori.js・sato.js・draw.js）に使う。上限 を渡せば、それより遠い所は細かく量らず、
+   上限を超える値をそのまま返す（何千本もの木を一本ずつ量るので軽くする）。 */
+export function 水際まで(x, y, 上限 = Infinity) {
+  if (RIVERS.length) {
+    let 最 = Infinity;
+    const M = 川の升を据える();
+    if (上限 <= M.余) {
+      const 区ら = M.升.get(Math.floor(x / M.G) * 100003 + Math.floor(y / M.G));
+      if (!区ら) return M.余 + 1;                    // 八十歩の内に水は無い
+      for (const { a, b, 半 } of 区ら) {
+        const e = 節までの隔たり([a, b], x, y) - 半;
+        if (e < 最) 最 = e;
+      }
+      return Math.min(最, M.余 + 1);
+    }
+    for (const r of RIVERS) {
+      const e = 節までの隔たり(r.節, x, y) - (r.幅 || 40) / 2;
+      if (e < 最) 最 = e;
+    }
+    return 最;
+  }
+  if (!hasRiver()) return Infinity;
+  const 半幅 = (RIVER.bot - RIVER.top) / 2, 芯 = (RIVER.top + RIVER.bot) / 2;
+  const 縦 = Math.abs(y - 芯 - riverShift(x));
+  /* 川筋の傾きは 振れ×細かさ を超えない。真上（南北）の隔たりを、その傾きの分だけ
+     割り引いたものより近くに水は無い。近い所は、南北の隔たりの内で東西を刻んで探す */
+  const 傾 = RIVER.wave * RIVER.k;
+  const 下 = 縦 / Math.sqrt(1 + 傾 * 傾) - 半幅;
+  if (下 > 上限) return 下;
+  let 近 = 縦;
+  const 刻 = Math.max(2, Math.min(8, 縦 / 24));
+  for (let xx = x - 縦; xx <= x + 縦; xx += 刻) {
+    const d = Math.hypot(xx - x, y - 芯 - riverShift(xx));
+    if (d < 近) 近 = d;
+  }
+  return 近 - 半幅;
+}
 
 export const hasHill = () => HILLS.length > 0;
 
