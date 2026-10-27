@@ -35,7 +35,7 @@ import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
 import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, 郡の帳, 軍の帳, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い, 攻めの願い問い } from "./panels.jsx";
-import { 郡の地点ら, 郡の境の線ら } from "../core/gun.js";
+import { 郡の地点ら, 郡の境の線ら, 郡を引く } from "../core/gun.js";
 import { SallyDialog } from "./panels.jsx";
 import { 惣無事令を発する, 応諾を決める, 朝敵を検め直す } from "../core/sobuji.js";
 import { 号令を発する } from "../core/gourei.js";
@@ -2617,6 +2617,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         {selCastle && (
           <CastleSheet g={g} castle={selCastle} land={land} tab={tab} setTab={setTab}
             onClose={() => setSel(null)} onCommand={runCommand} onAppoint={appoint}
+            onGundai={(郡id, genId) => setG((p) => (genId ? 政務.郡代に任ずる(p, 郡id, genId) : 政務.郡代を退ける(p, 郡id)))}
             onShirogae={(genId, toId) => setG((p) => 政務.城替え(p, genId, toId))}
             onTrade={(id, kind, n) => setG((prev) => 政務.doTrade(prev, id, kind, n))}
             onSortie={() => setModal("sortie")}
@@ -2935,6 +2936,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             onClose={() => set軍sel(null)} />
         )}
         {modal === "gun" && <郡の帳 g={g} onClose={() => setModal(null)}
+          onGundai={(郡id, genId) => setG((p) => 政務.郡代に任ずる(p, 郡id, genId))}
           onOpenCastle={(id) => { setModal(null); setSel(id); setTownSel(null); setTab("人事"); focus(id); }} />}
         {modal === "generals" && <GeneralList g={g} onClose={() => setModal(null)}
           onOpenCastle={(id) => { setModal(null); setSel(id); setTownSel(null); setTab("人事"); focus(id); }}
@@ -3911,6 +3913,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 text: 主
                   ? `${c.name}を${主.name}に委ねた${寄せた ? `（${寄せた.name}の寄騎とする）` : "（大名の直轄）"}。`
                   : `${c.name}には城主を置かず、軍は在陣のまま進む。` });
+            }
+            /* 据えた郡代を、委ねた一行のあとに記す（郡の導入の段階二）。 */
+            for (const [郡id, gid] of Object.entries((差配 && 差配.郡代) || {})) {
+              if ((s.郡代 || {})[郡id] !== gid) continue;           // 据えられなかった
+              const x = s.generals.find((y) => y.id === gid), 郡 = 郡を引く(郡id);
+              if (x && 郡) s.chronicle.push({ y: s.year, m: s.month, text: `${x.name}を${郡.名}の郡代に任じた。` });
             }
             return s;
           });

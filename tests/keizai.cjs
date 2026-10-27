@@ -26,7 +26,8 @@ fs.writeFileSync(entry,
 + 'export { troopCap, 出征の余地, 出征の限り, 出征の割, 出征中の兵, 家の総兵, 家の石高, 軍役の割増, 大身の軍役 } from "../src/core/rank.js";\n'
 + 'export { MOB_POLICY } from "../src/data/roads.js";\n'
 + 'export { FACTIONS } from "../src/data/factions.js";\n'
-+ 'export { advanceMonth } from "../src/govern/month.js";\n');
++ 'export { advanceMonth } from "../src/govern/month.js";\n'
++ 'export { 城の年貢の割 } from "../src/core/gun.js";\n');
 const out = path.join(ROOT, 'build', 'keizai-test.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out, loader: { '.jsx': 'jsx' }, logLevel: 'error' });
 
@@ -43,8 +44,9 @@ const 確 = (名, 可, 添 = '') => {
   console.log(`  ${可 ? '○' : '★'} ${名}${添 ? '　' + 添 : ''}`);
   if (!可) 咎.push(名);
 };
+// 年貢は郡を治める者の手腕で増減する（core/gun.js の 城の年貢の割。郡の導入の段階二）
 const 月の実入り = (s, fid) => s.castles.filter((c) => c.faction === fid)
-  .reduce((a, c) => a + A.城の上がり(c) - c.local * 0.075, 0);
+  .reduce((a, c) => a + A.城の上がり(c, A.城の年貢の割(s, c)) - c.local * 0.075, 0);
 
 console.log('\n── 一　初めの蔵');
 {

@@ -13,6 +13,7 @@ import { PARENT } from "../data/newcomers.js";
 import { 改まった名, 改まった名乗り } from "../data/kaimei.js";
 import { MOB_POLICY } from "../data/roads.js";
 import { 城の上がり, 大身の割, 蔵の目減り, 初めの金 } from "./keizai.js";
+import { 城の年貢の割 } from "./gun.js";
 import { 能力を見直す } from "../data/nouryoku.js";
 import { 城の馬, 城の鉄砲 } from "../data/arms.js";
 import { 直属の兵科 } from "../data/arms.js";
@@ -327,18 +328,25 @@ export function initState(player) {
     chronicle: [{ y: 1546, m: 4, text: "尾張は織田三家に分かれ、美濃は斎藤道三が握る。天下はまだ遠い。" }],
     能力を広げた: true,                          // 武将帳の値は広げた後のもの（能力の幅を繕う を通さない）
     能力を見直した: true,                        // 見直しも当てた後のもの（data/nouryoku.js）
+    郡代: {},                                    // 郡の id → 郡代の id（core/gun.js）。初めはどの郡も城主が兼ねる
   };
   姫を整える(盤);                                 // 家の石高に応じて姫を立てる
   // 家ごとに本拠を据える。陣触れはここから出る。
   for (const fid of Object.keys(盤.factions)) {
     盤.factions[fid].本拠 = 本拠を定める(fid, 盤.castles, 盤.generals);
-    /* 初めの蔵（core/keizai.js）。月の実入りのおよそ半年分を足す。 */
-    const 実入り = 盤.castles.filter((c) => c.faction === fid)
-      .reduce((a, c) => a + 城の上がり(c) - c.local * 0.075 * MOB_POLICY[盤.factions[fid].mobilization ?? 1].upkeep, 0);
-    盤.factions[fid].gold = 初めの金(盤.factions[fid].gold, 実入り);
   }
   国主を据える(盤);                               // 国ごとに国主を一人（GDD 6.4）
   城主の札を据える(盤);                           // 城ごとに城主を一人（GDD 6.4）
+  /* 初めの蔵（core/keizai.js）。月の実入りのおよそ半年分を足す。
+
+     年貢は郡を治める者の手腕で増減する（core/gun.js）。治める者は城主であるから、
+     城主の札を据えてから勘定する。先に勘定すると、札を据えたあとの月の実入りと
+     食い違うことがある。 */
+  for (const fid of Object.keys(盤.factions)) {
+    const 実入り = 盤.castles.filter((c) => c.faction === fid)
+      .reduce((a, c) => a + 城の上がり(c, 城の年貢の割(盤, c)) - c.local * 0.075 * MOB_POLICY[盤.factions[fid].mobilization ?? 1].upkeep, 0);
+    盤.factions[fid].gold = 初めの金(盤.factions[fid].gold, 実入り);
+  }
   城の名を改める(盤);                             // 始めの年より後の名は当てない（天文十五年の名）
   武将の名を改める(盤);                           // 人の名も同じ。開いた年に合わせた名乗りにする
   return 盤;
@@ -618,11 +626,13 @@ export function forecast(s, fid) {
       .reduce((a, x) => a + x.retinue, 0);
     const t = c.local + ret;
     troops += t; food += c.food;
-    inGold += 城の上がり(c);
-    上がり計 += 城の上がり(c); 総石高 += c.koku || 0;
+    // 年貢は郡を治める者の手腕で増減する（core/gun.js。month.js と同じ勘定）
+    const 割 = 城の年貢の割(s, c);
+    inGold += 城の上がり(c, 割);
+    上がり計 += 城の上がり(c, 割); 総石高 += c.koku || 0;
     // 扶持は地の兵にだけ掛かる（手勢は武将の知行が養う。month.js と同じ勘定）
     outGold += c.local * 0.075 * up;
-    inFood += Math.round((c.koku / 12) * 0.5 * harvest * (c.min / 80));
+    inFood += Math.round((c.koku / 12) * 0.5 * harvest * (c.min / 80) * 割);
     outFood += Math.round(t * 0.08 * up);
   }
   for (const a of s.armies.filter((x) => x.faction === fid)) {
@@ -1196,6 +1206,7 @@ export function migrateSave(s) {
   物故の控えを繕う(s);                            // 盤にいない史実の将を「死んだ者」と見なす
   盤の増補を取り込む(s);                          // 後から足した城・武将・家・特殊勢力
   城の座標を揃える(s);                            // 調べ直して改めた城の座標を、古い記録にも当てる
+  if (!s.郡代) s.郡代 = {};                       // 郡代の無かった頃の記録（郡の導入の段階二より前）
   本領と本拠を繕う(s);
   本拠を追う(s);                                  // 当主のいる城へ本拠を合わせ直す
   役の名を改める(s);                              // 家老→国主・宿老→旗頭（GDD 6.4）

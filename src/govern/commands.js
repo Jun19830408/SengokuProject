@@ -18,6 +18,7 @@ import { 基準値, 売値, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
 import { 特殊勢力の可否 } from "../core/town.js";
+import { 郡を引く, 郡代を据える, 郡代を解く } from "../core/gun.js";
 /* ==========================================================================
    政務 ─ 城と家中への下知
    いずれも「いまの盤の様子（prev）を受け取り、改めた盤の様子を返す」だけの処理。
@@ -195,6 +196,38 @@ export function appoint(prev, castleId, genId) {
           ? `（${gen.役}の役はそのまま。根は${(s.castles.find((x) => x.id === gen.本領) || {}).name || "元の城"}に置く）` : ""}`
         : `${gen.name}を${c.name}の城代に任じた（禄高${fmt(stipendOf(s, gen))}石。城主には${fmt(castleRankNeed(c))}石と侍大将以上の身分が要る）。` });
     return s;
+}
+
+/* 郡代を任ずる（郡の導入の段階二）。
+
+   遊ぶ側の申し出は「郡代の任命ができないので、城を取ったときと、通常の政務
+   フェーズにおいて人事で任命できるようにしてください」であった。
+
+   郡代はその城に属する者から選ぶ。ほかの城の者は、城替えで移してから任じる
+   （城主の任命と同じ形である）。一人一郡なので、ほかの郡の郡代を任じ直せば、
+   前の郡は城主が兼ねる。人事は即座に効き、月の働きは使わない。 */
+export function 郡代に任ずる(prev, 郡id, genId) {
+  const s = structuredClone(prev);
+  const r = 郡代を据える(s, 郡id, genId);
+  if (r.訳) {
+    const x = s.generals.find((g) => g.id === genId);
+    s.msg = `${x ? x.name : "その者"}は郡代にできない（${r.訳}）。`;
+    return s;
+  }
+  s.chronicle.push({ y: s.year, m: s.month,
+    text: `${r.x.name}を${r.郡.名}の郡代に任じた。`
+      + (r.前の郡 ? `（${r.前の郡.名}は城主が兼ねる）` : "")
+      + (r.前の者 ? `（前の郡代${r.前の者.name}は役を解いた）` : "") });
+  return s;
+}
+
+export function 郡代を退ける(prev, 郡id) {
+  const s = structuredClone(prev);
+  const id = 郡代を解く(s, 郡id);
+  const x = id && s.generals.find((g) => g.id === id);
+  const 郡 = 郡を引く(郡id);
+  if (x && 郡) s.chronicle.push({ y: s.year, m: s.month, text: `${x.name}の${郡.名}の郡代を解いた（城主が兼ねる）。` });
+  return s;
 }
 
 /* ====================================================== 城替え（GDD 6.4）

@@ -16,6 +16,7 @@ import { holdsProvince } from "../core/province.js";
 import { underMyBanner, 同じ旗の下, 援けに着く, 本拠を追う, 奪われた本領を繕う } from "../core/state.js";
 import { 難を逃れる } from "../core/capture.js";
 import { 城の保ち } from "../core/kakomi.js";
+import { 郡代を据える, 郡代を整える } from "../core/gun.js";
 
 // ------------------------------------------------ 援軍（GDD 7.3 / 7.4）
 // 各城・各勢力は「守備最低数・距離・従属度」から派遣・減員・遅参・拒否を判断する。
@@ -744,7 +745,9 @@ export function 城を委ねる(s, castleId, armyId, 差配) {
   const c = s.castles.find((x) => x.id === castleId);
   const a = (s.armies || []).find((x) => x.id === armyId);
   if (!c || !a) return s;
-  const 置く = [...new Set([...(差配.所属 || []), ...(差配.城主 ? [差配.城主] : [])])];
+  /* 郡代に選んだ者も、この城に置く（郡代はその城に属する。郡の導入の段階二）。 */
+  const 郡代 = 差配.郡代 || {};
+  const 置く = [...new Set([...(差配.所属 || []), ...(差配.城主 ? [差配.城主] : []), ...Object.values(郡代)])];
   for (const gid of 置く) {
     if (!(a.gens || []).includes(gid)) continue;        // その軍にいない者は置けない
     const g = s.generals.find((x) => x.id === gid);
@@ -784,6 +787,10 @@ export function 城を委ねる(s, castleId, armyId, 差配) {
      繕いでは一月遅れる。実測では、朝倉孝景が建部山城に入った一五四九年九月に
      丹後の国主山崎吉家と並んだ。その場で検める。 */
   当主が入れば役を繕う(s, c.faction);
+  /* 郡代を据える（郡の導入の段階二）。遊ぶ側の申し出は「城を取ったときにも郡代を
+     任命できるようにしてほしい」であった。城主を据えたあと、置いた将から郡ごとに一人。
+     年代記には、城を委ねた一行のあとに記す（地図の画面の側で書く）。 */
+  for (const [郡id, gid] of Object.entries(郡代)) 郡代を据える(s, 郡id, gid);
   // 地の兵を残す。軍の名簿から割いて城の名簿へ移す
   const 残 = Math.max(0, Math.min(Math.round(差配.兵 || 0), a.local || 0));
   if (残 > 0) {
@@ -1512,6 +1519,8 @@ export function 城主の札を繕う(s) {
     c.lordId = null;
     外した.push(c.id);
   }
+  /* 郡代も併せて整える（郡の導入の段階二）。家を移った者・城を失った家の郡代を外す。 */
+  郡代を整える(s);
   return 外した;
 }
 

@@ -57,7 +57,8 @@ console.log('■ 一、扶持は地の兵にだけ掛かる');
   for (const c of 我) {
     地 += c.local;
     手 += s.generals.filter((g) => g.at === c.id && g.faction === f && !g.captive).reduce((a, g) => a + g.retinue, 0);
-    入 += c.comm * 4 + c.koku * 0.004;   // 年貢は石高の千分の四（core/keizai.js）
+    // 年貢は石高の千分の四（core/keizai.js）に、郡を治める者の手腕の割を掛ける（core/gun.js）
+    入 += c.comm * 4 + c.koku * 0.004 * H.城の年貢の割(s, c);
   }
   const fc = H.forecast(s, f);
   確('出は地の兵ぶんだけ（手勢は武将の知行が養う）', Math.abs(fc.outGold - 地 * 0.075) < 1,

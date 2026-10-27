@@ -1,6 +1,7 @@
 import { ambushChance } from "../core/ambush.js";
 import { 自立に入る城, 自立する } from "../core/jiritsu.js";
 import { 城の上がり, 大身の割, 蔵の目減り } from "../core/keizai.js";
+import { 城の年貢の割, 郡代を整える, 郡代を任ずる差配 } from "../core/gun.js";
 import { ransomCost, takeAsPrisoner, 仕官を願えるか, 他家が召し抱える, 囚われた年 } from "../core/capture.js";
 import { 姫を整える, 姫の年送り, 姫の居場所, 使者の帰り, 姫の采配 } from "../core/hime.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
@@ -191,7 +192,10 @@ export function advanceMonth(prev, g) {
           const ret = s.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive).reduce((a, x) => a + x.retinue, 0);
           const troops = c.local + ret;
           const up = MOB_POLICY[f.mobilization].upkeep;
-          c.food += Math.round((c.koku / 12) * 0.5 * harvest * (c.min / 80)) - Math.round(troops * 0.08 * up);
+          /* 年貢は郡を治める者の手腕で増減する（core/gun.js）。郡代を置けば上がり、
+             能のある郡代ほど上がる。米も金も同じ割である。 */
+          const 年貢の割 = 城の年貢の割(s, c);
+          c.food += Math.round((c.koku / 12) * 0.5 * harvest * (c.min / 80) * 年貢の割) - Math.round(troops * 0.08 * up);
           /* 扶持は地の兵にだけ掛かる（GDD 6.2）。
 
              兵は養うものである。扶持が軽すぎると金が余り、兵を抱える判断が生まれない。
@@ -204,7 +208,7 @@ export function advanceMonth(prev, g) {
              兵を二万まで増やすと十貫になる。それでは普請も調略もできない。
 
              大名の蔵が負うのは地の兵――城が直に抱える兵である。 */
-          const 上がり = 城の上がり(c) * (fid === s.player ? lv(s).tribute : 1);
+          const 上がり = 城の上がり(c, 年貢の割) * (fid === s.player ? lv(s).tribute : 1);
           上がり計 += 上がり;
           gold += 上がり - c.local * 0.075 * up;
           /* 軍役の器を超えた地の兵は、月に四分ずつ村へ帰る（帰農）。
@@ -2456,6 +2460,13 @@ export function advanceMonth(prev, g) {
             if (fid === s.player) events.push(`${g.name}は受け持ちを保てなくなり、旗頭の役を離れた。`);
           }
           寄騎を繕う(s, fid);
+        }
+        /* 郡代（郡の導入の段階二）。務められなくなった者を外し、他家の城と、差配を
+           国主・旗頭に預けた城の空いた郡を埋める。遊ぶ側の直轄の城は遊ぶ側が任じる。
+           寄親が任じたときだけ、遊ぶ側に知らせる。 */
+        郡代を整える(s);
+        for (const r of 郡代を任ずる差配(s)) {
+          if (r.寄親) events.push(`${r.x.name}が${r.郡.名}の郡代に任じられた（${r.寄親.name}の差配）。`);
         }
       }
       s.代替わり = [];

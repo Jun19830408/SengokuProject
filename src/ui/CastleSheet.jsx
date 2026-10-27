@@ -24,10 +24,10 @@ import { 城の寄親, 守りの寄親 } from "../core/inin.js";
 import { 囲みの様子, 囲んでいる様子, 城に在る軍 } from "../core/kakomi.js";
 import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
-import { 郡の石高ら } from "../core/gun.js";
+import { 郡の石高ら, 城の郡ら, 郡の治め, 郡代の候補, 郡代の郡, 郡代の者, 郡代の割, 城の年貢の割 } from "../core/gun.js";
 
 /* ------------------------------------------------------------ 城詳細シート */
-export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onShirogae, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onHatagashiraMato, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime, onIhou, onChokusan }) {
+export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onShirogae, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onHatagashiraMato, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime, onIhou, onChokusan, onGundai }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   /* この城から出征している者。城には立っていないが、この城の家臣である。
@@ -70,7 +70,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
       && heirCandidates(g, 当主).filter(({ gen }) => gen.age >= 12).length > 0;
     const 虜 = g.generals.some((x) => x.captive && x.captive.ruin
       && x.captive.by === g.player && x.at === c.id);
-    return [["城と知行", true], ["国と方面", mine], ["家督", 継げる], ["捕虜", 虜]]
+    return [["城と知行", true], ["郡代", mine && 城の郡ら(c.id).length > 0], ["国と方面", mine], ["家督", 継げる], ["捕虜", 虜]]
       .filter((x) => x[1]).map((x) => x[0]);
   })();
   const 口 = 人事の小口.includes(人事口) ? 人事口 : (人事の小口[0] || "城と知行");
@@ -371,6 +371,11 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                         <span className="num" style={{ color: U.dim, marginLeft: 4 }}>
                           {open ? `約${fmt(石高)}石` : "？"}
                         </span>
+                        {open && (() => {
+                          // 郡代を置いた郡は、その名を添える（郡の導入の段階二）
+                          const 代 = 郡代の者(g, x);
+                          return 代 ? <span style={{ color: "#4A7E5A", marginLeft: 4 }}>郡代{代.name}</span> : null;
+                        })()}
                       </span>
                     ))}
                   </span>
@@ -1014,6 +1019,84 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                   })()}
                     </>
                   )}
+                  {/* 郡代（郡の導入の段階二）。
+
+                      遊ぶ側の申し出は「郡代の任命ができないので、…通常の政務フェーズに
+                      おいて人事で任命できるようにしてください」「郡代を任命したほうが
+                      収入が上がり、郡代の能力が良ければさらに収入が上がる仕組みを」で
+                      あった。郡ごとに、いま誰が治め、年貢が幾らの割かを示し、この城に
+                      属する者から任じる。候補の多い城でも崩れぬよう、選ぶのは引き出しにする。 */}
+                  {口 === "郡代" && (() => {
+                    const 郡 = 郡の石高ら(c);
+                    const 候補 = 郡代の候補(g, c);
+                    const 寄親 = 城の寄親(g, c);
+                    const 割の色 = (割) => (割 >= 1.0 ? "#4A7E5A" : 割 < 0.9 ? "#B0483C" : U.text);
+                    return (
+                      <>
+                        <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.75 }}>
+                          郡代は<b style={{ color: U.text }}>この城に属する者</b>から、一郡に一人を任じます
+                          （ほかの城の者は「城替え」で移してから。城主・当主・国主・旗頭はなれません）。<br />
+                          郡代の治める郡は、年貢（金と兵糧）が<b style={{ color: U.text }}>1.00〜1.10倍</b>になります（郡代の政治が高いほど多い）。
+                          郡代を置かない郡は城主が兼ねて<b style={{ color: U.text }}>0.90〜1.00倍</b>（城主の政治による）、
+                          城代しかいなければさらに一割減ります。郡代が出陣しているあいだは城主が兼ねます。
+                        </div>
+                        {寄親 && (
+                          <div style={{ fontSize: 11.5, color: "#4A6E8A", marginBottom: 8, lineHeight: 1.7 }}>
+                            この城の差配は{寄親.name}（{寄親.役}）に預けています。空いた郡には、月が改まると
+                            {寄親.name}が郡代を任じます。ここから任じ直すこともできます。
+                          </div>
+                        )}
+                        <div className="row" style={{ borderBottom: `1px solid ${U.line2}`, paddingBottom: 4 }}>
+                          <span>この城の年貢の割（郡をならして）</span>
+                          <span className="v num" style={{ color: 割の色(城の年貢の割(g, c)) }}>×{城の年貢の割(g, c).toFixed(3)}</span>
+                        </div>
+                        {郡.map(({ 郡: x, 石高 }) => {
+                          const 治 = 郡の治め(g, c, x);
+                          const 代 = 治.役 === "郡代" ? 治.者 : 治.出陣中の郡代;
+                          const 選べる = 候補.filter((y) => !代 || y.id !== 代.id);
+                          return (
+                            <div key={x.id} style={{ borderBottom: `1px solid ${U.line2}`, padding: "7px 0" }}>
+                              <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                                <span className="mn" style={{ fontSize: 14 }}>{x.名}</span>
+                                {!x.在城 && <span style={{ color: "#8A6A34", fontSize: 10.5 }}>〔城外〕</span>}
+                                <span className="num" style={{ color: U.dim, fontSize: 12 }}>約{fmt(石高)}石</span>
+                                <span style={{ flex: 1 }} />
+                                <span className="num" style={{ fontSize: 12.5, color: 割の色(治.割) }}>年貢×{治.割.toFixed(2)}</span>
+                              </div>
+                              <div style={{ fontSize: 12, color: U.dim, marginTop: 2 }}>
+                                {治.役 === "郡代"
+                                  ? <>郡代 <b style={{ color: U.text }}>{治.者.name}</b>（政治{治.者.gov}）</>
+                                  : 治.者
+                                    ? <>{治.役} {治.者.name}が兼ねる（政治{治.者.gov}）{代 ? `　郡代の${代.name}は出陣中` : ""}</>
+                                    : "治める者がいない（城に将がいない）"}
+                              </div>
+                              <div style={{ display: "flex", gap: 6, marginTop: 5, alignItems: "center" }}>
+                                {選べる.length > 0 ? (
+                                  <select className="sel" style={{ flex: 1 }} value=""
+                                    onChange={(e) => e.target.value && onGundai && onGundai(x.id, e.target.value)}>
+                                    <option value="">{代 ? "郡代を替える…" : "郡代を任じる…"}</option>
+                                    {選べる.map((y) => {
+                                      const 務め = 郡代の郡(g, y.id);
+                                      return (
+                                        <option key={y.id} value={y.id}>
+                                          {`${y.name}（政治${y.gov}・年貢×${郡代の割(y.gov).toFixed(2)}${務め ? `・いま${務め.名}の郡代` : ""}）`}
+                                        </option>
+                                      );
+                                    })}
+                                  </select>
+                                ) : !代 && (
+                                  <span style={{ fontSize: 11.5, color: U.dim, flex: 1 }}>
+                                    郡代になれる者がこの城にいません（城替えで将を移せば任じられます）。
+                                  </span>
+                                )}
+                                {代 && <button className="btn sm" onClick={() => onGundai && onGundai(x.id, null)}>郡代を解く</button>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
                   {口 === "国と方面" && (
                     <>
                   {/* 国主。家が城を持つ国につき一人（GDD 6.4）。

@@ -32,7 +32,8 @@ import { 主家 } from "../core/state.js";
 import { is架空 } from "../core/house.js";
 import { isCoastal, navalPower } from "../core/naval.js";
 import { findPathVia, marchMonthsOf } from "../core/paths.js";
-import { 城の郡ら, 郡の石高ら, 郡の治め手 } from "../core/gun.js";
+import { 城の郡ら, 郡の石高ら, 郡の治め, 郡代の候補, 郡代の郡, 郡代の割 } from "../core/gun.js";
+import { 城の寄親 } from "../core/inin.js";
 
 
 export function SortieDialog({ g, from, onClose, onGo }) {
@@ -1239,6 +1240,23 @@ export function MonthReport({ g, onClose, onAid }) {
                   <span style={{ color: U.dim, fontSize: 11 }}>（入{fmt(fc.inFood)}／出{fmt(fc.outFood)}）</span>
                 </span></div>
               <div className="row"><span>抱える兵</span><span className="v num">{fmt(fc.troops)}人</span></div>
+              {(() => {
+                /* 郡代（郡の導入の段階二）。他家は月ごとに空いた郡を埋めるので、遊ぶ側が
+                   任じなければ年貢で差がつく。直轄の城で郡代のいない郡の数を知らせる
+                   （差配を預けた城は寄親が埋める）。 */
+                const 総 = mine.reduce((a, c) => a + 城の郡ら(c.id).length, 0);
+                if (!総) return null;
+                const 居る = mine.reduce((a, c) => a + 城の郡ら(c.id).filter((x) => 郡の治め(g, c, x).役 === "郡代").length, 0);
+                const 空き = mine.filter((c) => !城の寄親(g, c))
+                  .reduce((a, c) => a + 城の郡ら(c.id).filter((x) => 郡の治め(g, c, x).役 !== "郡代").length, 0);
+                return (
+                  <div className="row"><span>郡代</span>
+                    <span className="v num">{居る}／{総}郡
+                      {空き > 0 && <span style={{ color: "#C89A3A", fontSize: 11, marginLeft: 6 }}>
+                        郡代のいない郡が{空き}（郡の帳か、城の人事から任じられる）</span>}
+                    </span></div>
+                );
+              })()}
               <div style={{ fontSize: 11.5, color: warn ? "#B0483C" : U.dim, marginTop: 4, lineHeight: 1.7 }}>
                 {fc.harvest ? "来月は収穫の月。兵糧が三倍入る。" : ""}
                 {fc.months != null
@@ -1566,7 +1584,8 @@ export function GeneralList({ g, onClose, onYakume, onOpenCastle }) {
   const 掠る = (x) => {
     const q = 探.trim();
     if (!q) return true;
-    return [x.name, 城名(x), 国名(x), x.役 || "", rankName(x, g)]
+    const 郡 = 郡代の郡(g, x.id);
+    return [x.name, 城名(x), 国名(x), x.役 || "", rankName(x, g), 郡 ? `${郡.名}の郡代` : ""]
       .some((t) => String(t).includes(q));
   };
   const 当たり = gs.filter(掠る);
@@ -1719,6 +1738,11 @@ export function GeneralList({ g, onClose, onYakume, onOpenCastle }) {
             </span>
             <span className="num" style={{ color: U.dim, flex: 1 }}>{x.age}歳 統{x.lead} 武{x.valor} 知{x.wit} 政{x.gov} 忠{忠誠(x)}</span>
             {(() => {
+              // 郡代の役（郡の導入の段階二）
+              const 郡 = 郡代の郡(g, x.id);
+              return 郡 ? <span style={{ fontSize: 11.5, color: "#4A7E5A" }}>{郡.名}の郡代</span> : null;
+            })()}
+            {(() => {
               /* 居所。出征中なら、どの城から出て、いまどこにいるかを示す。
                  押せばその城の人事が開く（褒賞も知行もそこで与えられる）。 */
               const 元 = x.at ? null : 出征の元(g, x);
@@ -1755,13 +1779,14 @@ export function GeneralList({ g, onClose, onYakume, onOpenCastle }) {
 /* 郡の帳（郡の導入の段階一）。
 
    遊ぶ側の申し出は「郡の一覧はほしいです。郡代がいるかどうか（城主が兼ねている
-   場合でもその城主の名前を記載）もわかるようにしたい」であった。郡代の役はまだ
-   置かないので、いまはどの郡も城主が兼ねる。誰が兼ねているかを郡ごとに書く。
+   場合でもその城主の名前を記載）もわかるようにしたい」であった。郡ごとに、郡代か、
+   いなければ兼ねている城主の名を書き、年貢の割を添える（郡の導入の段階二）。
+   自家の郡は、ここからも郡代を任じられる（城の帳の「人事」→「郡代」と同じ下知）。
 
    国ごとに城を並べ、城の下にその郡を並べる。自家の郡と天下の郡とを切り替えられる。
    名でさがせば、郡・城・国・家・治める者の名のどれに掠っても、その城ごと残す。
    他家の城の内情（石高と城主）は、城の帳と同じく、見えている城のほかは伏せる。 */
-export function 郡の帳({ g, onClose, onOpenCastle }) {
+export function 郡の帳({ g, onClose, onOpenCastle, onGundai }) {
   const [欄, set欄] = useState("自家");
   const [探, set探] = useState("");
   const q = 探.trim();
@@ -1771,24 +1796,30 @@ export function 郡の帳({ g, onClose, onOpenCastle }) {
   for (const c of 欄 === "自家" ? 自家の城 : g.castles) {
     const 家 = g.factions[c.faction] || {};
     const 見 = c.faction === g.player || canSee(g, c);
-    const 治 = 見 ? 郡の治め手(g, c) : null;
-    const 郡 = 郡の石高ら(c);
-    const 文 = [c.name, c.kuni, 家.name, 治 && 治.者 && 治.者.name, ...郡.map((r) => r.郡.名), ...郡.map((r) => r.郡.幕末)];
+    const 郡 = 郡の石高ら(c).map((r) => ({ ...r, 治: 見 ? 郡の治め(g, c, r.郡) : null }));
+    const 文 = [c.name, c.kuni, 家.name, ...郡.map((r) => r.郡.名), ...郡.map((r) => r.郡.幕末),
+      ...郡.map((r) => r.治 && r.治.者 && r.治.者.name)];
     if (q && !文.some((t) => t && String(t).includes(q))) continue;
     if (!国の位.has(c.kuni)) { 国の位.set(c.kuni, 国ら.length); 国ら.push({ 国: c.kuni, 城ら: [] }); }
-    国ら[国の位.get(c.kuni)].城ら.push({ c, 家, 見, 治, 郡 });
+    国ら[国の位.get(c.kuni)].城ら.push({ c, 家, 見, 郡 });
   }
+  const 自家の郡代 = 自家の城.reduce((a, c) => a + 城の郡ら(c.id).filter((x) => (g.郡代 || {})[x.id]).length, 0);
   const 当たりの郡 = 国ら.reduce((a, k) => a + k.城ら.reduce((b, r) => b + r.郡.length, 0), 0);
+  /* 治める者の札は短く書く。郡代がいれば「郡代 某」、いなければ「城主某が兼ねる」。
+     年貢の割を添える（郡代のいない郡は、どの郡も城主の政治で決まる同じ割になる）。 */
   const 治めの札 = (治) => !治 ? "？"
-    : !治.者 ? "不在（城に将がいない）"
-    : `${治.役} ${治.者.name}が兼ねる${治.留守 ? `（出陣中。留守は${治.留守.name}）` : ""}`;
+    : 治.役 === "郡代" ? `郡代 ${治.者.name}　×${治.割.toFixed(2)}`
+    : !治.者 ? `将なし　×${治.割.toFixed(2)}`
+    : `${治.役}${治.者.name}が兼ねる　×${治.割.toFixed(2)}`
+      + (治.出陣中の郡代 ? `（郡代${治.出陣中の郡代.name}は出陣中）` : "")
+      + (治.留守 ? `（留守${治.留守.name}）` : "");
   return (
     <div className="modal" {...外を押して閉じる(onClose)}>
       <div className="card">
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
           <div className="mn" style={{ fontSize: 21 }}>郡の帳</div>
           <div style={{ display: "flex", gap: 6 }}>
-            {[["自家", `自家の郡 ${数(自家の城)}`], ["天下", `天下の郡 ${数(g.castles)}`]].map(([k, 札]) => (
+            {[["自家", `自家の郡 ${数(自家の城)}（郡代 ${自家の郡代}）`], ["天下", `天下の郡 ${数(g.castles)}`]].map(([k, 札]) => (
               <button key={k} className={`btn sm ${欄 === k ? "on" : ""}`} onClick={() => set欄(k)}>{札}</button>
             ))}
           </div>
@@ -1796,8 +1827,10 @@ export function 郡の帳({ g, onClose, onOpenCastle }) {
         <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 8, lineHeight: 1.8 }}>
           郡は城に従います。城のある郡はその城に、城のない郡〔城外〕は同じ国でいちばん近い城に属し、
           城が落ちれば郡も移ります。<br />
-          <b style={{ color: U.text }}>郡代の役はまだ置いていません。</b>
-          いまはどの郡も、その城の城主（城代しかいなければ城代）が兼ねます。<br />
+          <b style={{ color: U.text }}>郡代</b>は、その城に属する者から一郡に一人を任じます（ここか、城の帳の「人事」→「郡代」から）。
+          郡代を置いた郡の年貢（金と兵糧）は<b style={{ color: U.text }}>1.00〜1.10倍</b>（郡代の政治による）、
+          置かない郡は城主が兼ねて<b style={{ color: U.text }}>0.90〜1.00倍</b>（城代しかいなければさらに一割減）です。
+          各郡の「×」は年貢の割です。<br />
           郡の石高は、城の石高を、郡の幕末の石高（村高の和）の比で割り振った目安です。<br />
           郡の名は、分かる範囲で戦国のころの名にしています（江戸時代に改められた名は「のちの」と添えます）。
           分からないものは幕末の名のままです。
@@ -1820,11 +1853,11 @@ export function 郡の帳({ g, onClose, onOpenCastle }) {
             <div className="sec" style={{ marginTop: 12 }}>
               {k.国}　{k.城ら.length}城・{k.城ら.reduce((a, r) => a + r.郡.length, 0)}郡
             </div>
-            {k.城ら.map(({ c, 家, 見, 治, 郡 }) => (
+            {k.城ら.map(({ c, 家, 見, 郡 }) => (
               <div key={c.id} style={{ padding: "6px 0", borderBottom: `1px solid ${U.line2}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13 }}>
                   <span className="dot" style={{ background: 家.color }} />
-                  {/* 押せば城の人事が開く（郡代を置くのも、次の段ではそこから） */}
+                  {/* 押せば城の人事が開く */}
                   {onOpenCastle && c.faction === g.player
                     ? <button className="btn sm" title={`${c.name}の人事を開く`}
                         onClick={() => onOpenCastle(c.id)}>{c.name}</button>
@@ -1839,7 +1872,7 @@ export function 郡の帳({ g, onClose, onOpenCastle }) {
                     郡の拠り所がありません（城を最小の単位とします）。
                   </div>
                 )}
-                {郡.map(({ 郡: x, 石高 }) => (
+                {郡.map(({ 郡: x, 石高, 治 }) => (
                   <div key={x.id} style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap",
                     paddingLeft: 18, fontSize: 12.5, marginTop: 3 }}>
                     <span style={{ minWidth: 112 }}>
@@ -1853,7 +1886,27 @@ export function 郡の帳({ g, onClose, onOpenCastle }) {
                     <span className="num" style={{ color: U.dim, width: 84, textAlign: "right" }}>
                       {見 ? `約${fmt(石高)}石` : "？"}
                     </span>
-                    <span style={{ color: U.dim, flex: 1 }}>郡代：{治めの札(治)}</span>
+                    <span style={{ color: 治 && 治.役 === "郡代" ? "#4A7E5A" : U.dim, flex: 1 }}>{治めの札(治)}</span>
+                    {/* 自家の郡は、ここからも郡代を任じられる */}
+                    {onGundai && c.faction === g.player && (() => {
+                      const 代 = 治 && (治.役 === "郡代" ? 治.者 : 治.出陣中の郡代);
+                      const 選べる = 郡代の候補(g, c).filter((y) => !代 || y.id !== 代.id);
+                      if (!選べる.length) return null;
+                      return (
+                        <select className="sel" style={{ maxWidth: 170, fontSize: 12 }} value=""
+                          onChange={(e) => e.target.value && onGundai(x.id, e.target.value)}>
+                          <option value="">{代 ? "郡代を替える…" : "郡代を任じる…"}</option>
+                          {選べる.map((y) => {
+                            const 務め = 郡代の郡(g, y.id);
+                            return (
+                              <option key={y.id} value={y.id}>
+                                {`${y.name}（政治${y.gov}・年貢×${郡代の割(y.gov).toFixed(2)}${務め ? `・いま${務め.名}の郡代` : ""}）`}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
@@ -2580,8 +2633,23 @@ export function 城を委ねる問い({ g, 待ち, onDone, onSkip }) {
   const [兵, set兵] = useState(a ? Math.round((a.local || 0) * 0.4) : 0);
   // 旗頭が落とした城なら、その寄騎とするか直轄とするかを選ぶ（既定は寄騎）
   const [寄騎にする, set寄騎にする] = useState(true);
+  /* 郡代（郡の導入の段階二）。遊ぶ側の申し出は「城を取ったときにも郡代を任命できる
+     ようにしてほしい」であった。城主を決めたうえで、郡ごとに一人を選ぶ（城主・当主・
+     国主・旗頭・ほかの城を預かる者は選べない）。選んだ将はこの城に残る。 */
+  const [郡代, set郡代] = useState({});
   if (!c || !a) return null;
-  const 置く = [...new Set([...所属, ...(城主 ? [城主] : [])])];
+  const 郡ら = 城の郡ら(c.id);
+  const 郡代になれる将 = 将ら.filter((x) => x.id !== 城主 && !x.lord && !x.captive && x.faction === c.faction
+    && x.役 !== "国主" && x.役 !== "旗頭" && !g.castles.some((o) => o.lordId === x.id));
+  const 選んだ郡代 = 城主 ? Object.fromEntries(Object.entries(郡代)
+    .filter(([, v]) => 郡代になれる将.some((x) => x.id === v))) : {};
+  const 郡代を選ぶ = (郡id, genId) => set郡代((p) => {
+    const n = { ...p };
+    for (const k of Object.keys(n)) if (n[k] === genId) delete n[k];     // 一人一郡
+    if (genId) n[郡id] = genId; else delete n[郡id];
+    return n;
+  });
+  const 置く = [...new Set([...所属, ...(城主 ? [城主] : []), ...Object.values(選んだ郡代)])];
   const 残る将 = 将ら.filter((x) => !置く.includes(x.id));
   const 移る直属 = 将ら.filter((x) => 置く.includes(x.id)).reduce((t, x) => t + x.retinue, 0);
   const 守り = minGarrison(c);
@@ -2618,6 +2686,28 @@ export function 城を委ねる問い({ g, 待ち, onDone, onSkip }) {
               </button>
             ))}
           </div>
+        </>)}
+
+        {城主 && 郡ら.length > 0 && 郡代になれる将.length > 0 && (<>
+          <div className="sec">郡代に据える</div>
+          <div style={{ fontSize: 11, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
+            郡ごとに一人。選んだ将はこの城に残ります。郡代を置いた郡は年貢が1.00〜1.10倍（政治による）、
+            置かない郡は城主が兼ねます。あとから城の帳の「人事」→「郡代」でも任じられます。
+          </div>
+          {郡ら.map((x) => (
+            <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12.5, minWidth: 100 }}>
+                {x.名}{!x.在城 && <span style={{ color: "#8A6A34", fontSize: 10.5, marginLeft: 2 }}>〔城外〕</span>}
+              </span>
+              <button className={`btn sm ${!選んだ郡代[x.id] ? "on" : ""}`} onClick={() => 郡代を選ぶ(x.id, null)}>据えない</button>
+              {郡代になれる将.map((y) => (
+                <button key={y.id} className={`btn sm ${選んだ郡代[x.id] === y.id ? "on" : ""}`}
+                  onClick={() => 郡代を選ぶ(x.id, y.id)}>
+                  {y.name}<span style={{ color: U.dim, fontSize: 10, marginLeft: 3 }}>政{y.gov}</span>
+                </button>
+              ))}
+            </div>
+          ))}
         </>)}
 
         <div className="sec">城へ残す地の兵</div>
@@ -2688,7 +2778,7 @@ export function 城を委ねる問い({ g, 待ち, onDone, onSkip }) {
         <div style={{ display: "flex", gap: 9, marginTop: 14 }}>
           <button className="btn" style={{ flex: 1 }} onClick={onSkip}>空けたまま進む</button>
           <button className="btn dark" style={{ flex: 2 }}
-            onClick={() => onDone({ 城主, 所属, 兵, 寄親: 寄騎にする && a.旗頭 ? a.旗頭 : null })}>
+            onClick={() => onDone({ 城主, 所属, 兵, 寄親: 寄騎にする && a.旗頭 ? a.旗頭 : null, 郡代: 選んだ郡代 })}>
             {城主 ? `${(将ら.find((x) => x.id === 城主) || {}).name}に委ねる` : "この差配で決める"}
           </button>
         </div>
