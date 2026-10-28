@@ -1416,9 +1416,32 @@ function 渡しの形(r, w, 倍) {
 export const 野の橋 = [];
 function 渡し場を描く(g, r, w, 倍) {
   const { cx, cy, 角, 長, 半, 橋 } = 渡しの形(r, w, 倍);
+  const 落 = w.種 === "落橋";
   g.save();
   g.translate(cx, cy); g.rotate(角);
   const x0 = -長, x1 = 長;
+  if (落) {
+    /* 落ちた橋。板は流れ、橋脚の杭だけが水面から折れて覗く。両の袂に板の切れ端が残る */
+    野種を置く(Math.round(w.x * 3 + w.y));
+    for (const t of [0.22, 0.5, 0.78]) {
+      const d = -半 + 半 * 2 * t;
+      for (const x of [x0 + 長 * 0.2, 0, x1 - 長 * 0.2]) {
+        const h = (1.3 + 野乱() * 1.5) * 倍;
+        g.fillStyle = "rgba(24,40,52,0.35)"; g.fillRect(x - 1.3 * 倍 + 1.4 * 倍, d - h + 1.8 * 倍, 2.6 * 倍, h * 2);
+        g.fillStyle = "#4E3A24"; g.fillRect(x - 1.3 * 倍, d - h, 2.6 * 倍, h * 2);
+        g.fillStyle = "rgba(236,242,246,0.5)"; g.fillRect(x - 1.6 * 倍, d + h - 0.4 * 倍, 3.2 * 倍, 0.8 * 倍);   // 杭に当たる水の白
+      }
+    }
+    g.fillStyle = "#7C5E38";
+    for (const s2 of [-1, 1]) {                                   // 袂に残った板の切れ端
+      g.save(); g.translate(s2 * 長 * 0.15, s2 * (半 - 2 * 倍)); g.rotate(s2 * 0.18);
+      g.fillRect(-長 * 0.6, -1.4 * 倍, 長 * 1.2, 2.8 * 倍); g.restore();
+    }
+    g.restore();
+    const nx0 = -Math.sin(角), ny0 = Math.cos(角), 向0 = ny0 > 0 ? -1 : 1;
+    名札(g, cx + nx0 * 向0 * (半 + 3 * 倍), cy + ny0 * 向0 * (半 + 3 * 倍), "落ちた橋", 倍 * 0.7);
+    return;
+  }
   if (橋) {
     g.fillStyle = "rgba(24,40,52,0.38)";                          // 水面へ落ちる影
     g.fillRect(x0 + 1.5 * 倍, -半 + 2.5 * 倍, 長 * 2, 半 * 2);
@@ -1470,7 +1493,7 @@ function 渡し場を描く(g, r, w, 倍) {
   /* 札は回さない。字は常に真っ直ぐ読めるようにして、川の上の側へ置く。 */
   const nx = -Math.sin(角), ny = Math.cos(角);
   const 向 = ny > 0 ? -1 : 1;
-  名札(g, cx + nx * 向 * (半 + 3 * 倍), cy + ny * 向 * (半 + 3 * 倍), 橋 ? "橋" : "浅瀬", 倍 * 0.7);
+  名札(g, cx + nx * 向 * (半 + 3 * 倍), cy + ny * 向 * (半 + 3 * 倍), 橋 ? (RIVER.仮橋 && w.種 === "橋" ? "仮橋" : "橋") : "浅瀬", 倍 * 0.7);
 }
 
 /* ============ 野を焼く ============
@@ -1494,7 +1517,8 @@ export function 野の川筋() {
     節.push([FIELD.w, 芯 + riverShift(FIELD.w)]);
     const 渡し = [];
     const 幅川 = Math.max(20, RIVER.bot - RIVER.top);
-    for (const [帯, 種] of [[RIVER.bridge, "橋"], [RIVER.ford, "浅瀬"]]) {
+    /* 落ちた橋（field.js 橋を落とす）。橋の幅は淵になったが、折れた橋脚が水面に残る */
+    for (const [帯, 種] of [[RIVER.bridge, "橋"], [RIVER.ford, "浅瀬"], [RIVER.落ちた橋, "落橋"]]) {
       if (!帯 || !(帯[1] > 帯[0])) continue;
       const cx = (帯[0] + 帯[1]) / 2;
       渡し.push({ x: cx, y: 芯 + riverShift(cx), r: (帯[1] - 帯[0]) / 2, 種, 帯, 川幅: 幅川 });
@@ -1798,7 +1822,7 @@ export function* 野を焼く(g, 画k, opt = {}) {
      面として立ち、水面は岸より一段低く沈む。底は平らに近く、岸だけを切り立たせる
      （川深の縁で落とす）。浅瀬のあたりは浅く掘る（渡れる所は岸が低い） */
   { const 掘り = 2.6 * 倍 / 半;
-    const 瀬ら = 野の川.flatMap((r) => (r.渡し || []).filter((w) => w.種 !== "橋")
+    const 瀬ら = 野の川.flatMap((r) => (r.渡し || []).filter((w) => w.種 !== "橋" && w.種 !== "落橋")
       .map((w) => ({ x: PX(w.x) / 半, y: PY(w.y) / 半, r: PX(w.r || 100) / 半 * 1.3 })));
     for (let i = 0; i < 高.length; i++) {
       const e = 川際[i];
@@ -2289,6 +2313,39 @@ export function* 城の地を焼く(g, m, 画k, 区) {
      }
     }
   }
+  /* 出城（castleMap.js 出城を組む）。土を盛った台に塀を載せ、空堀を回す。
+     台の際は石垣ではなく土の切岸である。門の前と背の口の前は、堀を掘り残した土橋 */
+  const 出 = m.出城 || null;
+  const 出堀 = 出 ? new Float32Array(gw * gh) : null;
+  const 出台 = 出 ? { x: PXx(m.cx + 出.ox), y: PXy(m.cy + 出.oy), hw: PX(出.hw + t), hh: PX(出.hh + t) } : null;
+  const 出外 = 出 ? { ...出台, hw: PX(出.hw + t + 出.堀), hh: PX(出.hh + t + 出.堀) } : null;
+  const 出の土橋か = (x, y) => {
+    if (!出) return false;
+    const lx = x * 半 - 出台.x, ly = y * 半 - 出台.y;
+    if (Math.abs(ly) <= 出台.hh - 1) return false;
+    const 門 = 出.gates[0];
+    return ly > 0 ? Math.abs(lx - PX(門.off)) <= PX(門.w * 0.8) : Math.abs(lx - PX(出.口.off)) <= PX(出.口.w * 0.8);
+  };
+  if (出) {
+    const 台丈 = 段 * 0.55, 出深 = 深 * 0.6;
+    const 出切 = Math.max(1.5, Math.min(PX(出.堀) * 0.4, 6 * 丈));
+    const b = 枠(出外, 3);
+    for (let y = b.y0; y <= b.y1; y++) { if ((y - b.y0) % 24 === 0) yield;
+     for (let x = b.x0; x <= b.x1; x++) {
+      const j = y * gw + x;
+      const d台 = 矩距(x, y, 出台), d外 = 矩距(x, y, 出外);
+      if (d台 < 0) {
+        const w = Math.min(1, -d台 / 0.8);
+        高[j] += (台丈 / 半) * w; 郭[j] += w;
+      } else if (d外 < 0) {
+        const e = Math.min(d台, -d外) * 半;
+        出堀[j] = Math.min(1, e / Math.max(0.8, 倍));
+        if (出の土橋か(x, y)) continue;
+        高[j] -= (出深 / 半) * Math.min(1, e / 出切);
+      } else if (d外 * 半 < 3 * 倍) 岸[j] = Math.max(岸[j], 1 - d外 * 半 / (3 * 倍));
+     }
+    }
+  }
   /* 大手道。門の前から盤の外へ伸びる。寄せ手が上ってくる道である */
   const 刻む = function* (x0, y0, x1, y1, 幅, 場, 深さ) {
     yield;
@@ -2370,6 +2427,7 @@ export function* 城の地を焼く(g, m, 画k, 区) {
     const y0 = Math.max(0, (fy - rr) | 0), y1 = Math.min(gh - 1, Math.ceil(fy + rr));
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       if (矩距(x, y, 堀外) < 0) continue;
+      if (出外 && 矩距(x, y, 出外) < 6 * 倍 / 半) continue;      // 出城の台と空堀にも生やさぬ
       const d = Math.hypot(x - fx, y - fy) / rr;
       const ほつれ = (襞(x / (4.5 * 倍), y / (4.5 * 倍), 3) - 0.5) * 0.52;
       const v = 1 - (d + ほつれ);
@@ -2387,6 +2445,10 @@ export function* 城の地を焼く(g, m, 画k, 区) {
     if (坂の上か(x, y)) return 0;                        // 門の坂は土のまま
     if (土橋ら.length && 土橋の上か(x, y, 1.5)) return 1;   // 土橋の両脇は石で固める
     for (const r of 郭ら) { const d = 矩距(x, y, r); if (d > -2.4 && d < 0.8) return 1; }
+    if (出) {
+      const e1 = 矩距(x, y, 出台), e2 = 矩距(x, y, 出外);
+      if ((e1 > -2.4 && e1 < 0.8) || Math.abs(e2) < 2) return 出の土橋か(x, y) ? 0 : 2;
+    }
     const d1 = 矩距(x, y, 堀外), d2 = 矩距(x, y, 堀内);
     if (Math.abs(d1) < 2 || Math.abs(d2) < 2) return 空堀 ? 2 : 1;
     return 0;
@@ -2490,6 +2552,15 @@ export function* 城の地を焼く(g, m, 画k, 区) {
           c = 混色(c, 面, 堀m);
         }
       }
+      /* 出城の空堀。掘った土の色（城の堀が水堀でも、出城の堀は空堀である） */
+      if (出堀) {
+        const 出m = 引伸(出堀, gw, gh, x, y, 半);
+        if (出m > 0.01) {
+          let 土 = 混色([178, 162, 128], [134, 118, 90], 挟(出m * 0.9, 0, 1));
+          土 = [土[0] * (1 + n1 * 0.08), 土[1] * (1 + n1 * 0.08), 土[2] * (1 + n1 * 0.1)];
+          c = 混色(c, 土, 出m);
+        }
+      }
       /* 光。日影・環境遮蔽・面の向き。石垣の根にはここで影が落ちる */
       const nx = -gx * 0.5 / 半, ny = -gy * 0.5 / 半, nl = Math.hypot(nx, ny, 1);
       const 直 = 挟((nx * 光x + ny * 光y + 光高) / nl, 0, 1);
@@ -2539,7 +2610,7 @@ export function* 城の地を焼く(g, m, 画k, 区) {
          道の長さが足りない城で城下が丸ごと消えていた。 */
       const mx = 挟(口.x0 + (ux / uL) * 寄, r + 6, W - r - 6);
       const my = 挟(口.y0 + (uy / uL) * 寄, r + 6, H - r - 6);
-      if (矩距(mx / 半, my / 半, 堀外) > r * 0.5 / 半) {
+      if (矩距(mx / 半, my / 半, 堀外) > r * 0.5 / 半 && !(出外 && 矩距(mx / 半, my / 半, 出外) < r * 1.1 / 半)) {
         集落(g, mx, my, r, Math.round(m.cx + m.cy), 明関, 倍);
       }
     }
@@ -2571,6 +2642,7 @@ export function* 城の地を焼く(g, m, 画k, 区) {
       else 生 = 野乱() < 0.006;
     }
     if (!生) continue;
+    if (出外 && 矩距(x / 半, y / 半, 出外) < 8 * 倍 / 半) continue;   // 出城の台と空堀には立てない
     if (引伸(道度, gw, gh, x, y, 半) > 0.05) continue;
     if (引伸(堀域, gw, gh, x, y, 半) > 0.02) continue;
     木.push([x, y, (2.6 + 野乱() * 3.2) * 倍, 野乱(), 明関(x, y)]);

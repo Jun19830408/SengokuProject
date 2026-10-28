@@ -34,6 +34,14 @@ export function 持ち場を並べる(map) {
     // これを渡さないと、城方は戦の始まりに持ち場を捨てて奥へ引いてしまう。
     guard.push({ x: p.x, y: p.y, f: Math.atan2(p.y - map.cy, p.x - map.cx) + Math.PI, gate: gt });
   }
+  /* 出城の持ち場。出城の門のすぐ内に立ち、前（南）を向く（castleMap.js 出城を組む）。
+     隊は前の列を芯にして後ろへ伸びるので、城の門の守りのように内（北）を向けると、
+     隊の体が出城の前の塀を越えて空堀へはみ出す。出城は狭い。前を向けて、体を内へ収める */
+  if (map.出城) for (const gt of map.出城.gates) {
+    const a = axisOf(map.出城, gt);
+    const p = fromUV(map, a, gt.off, a.half - 30);
+    guard.push({ x: p.x, y: p.y, f: Math.PI / 2, gate: gt });
+  }
   guard.push({ x: map.cx, y: map.cy, f: Math.PI / 2, gate: null });   // 余った隊は本丸に控える
   return guard;
 }

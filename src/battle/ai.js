@@ -1,7 +1,8 @@
-import { MAP, 城の域か, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 列の順 } from "./castleMap.js";
-import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
+import { MAP, 城の域か, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 列の順, 門の輪, 出城が保つ, 出城の内か } from "./castleMap.js";
+import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く, 出城から引き取らせる, 引き取りを進める } from "./corps.js";
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt, 地の高さ, 高み } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
+import { 采配の計略 } from "./keiryaku.js";
 import { clamp } from "../core/util.js";
 
 /* ------------------------------------- 先客のいる敵と、前をふさぐ味方（GDD 8.4）
@@ -511,6 +512,81 @@ function 自ら当たる(b, c, alive) {
   issueOrder(b, c, { order: "接戦", target: 的.id, tx: sx, ty: sy }, { 即: true });
 }
 
+/* ------------------------------------------------ 出城の采配（GDD 9.3）
+
+   出城に当てる … 出城が保ち、中に守り手がいるあいだ、寄せ手の三分の一（少なくとも
+                  一隊）を出城へ向ける。出城に近い隊から選ぶ。残りは城の門へ向かうが、
+                  大手へ寄せる道は出城の横腹の前を通るので、出城と大手の両方から射られる。
+                  採るのは采配の隊（敵方と、遊ぶ側の委任した隊）だけである
+   出城を守る   … 出城の門を受け持つ城方。門が保つあいだは常の門の守り（下の段）に任せ、
+                  門が破れたら中で斬り結ぶ。保てなくなれば背の口から大手門の内へ引き取る
+                    ・出城が落ちた
+                    ・門が破れ、兵が三割を切った、または入った寄せ手が己の三倍を超えて
+                      兵が六割を切った
+                    ・士気が二十五を切った */
+function 出城に当てる(b, alive) {
+  if (!出城が保つ(MAP)) return;
+  const 出 = MAP.出城;
+  const 守 = alive.filter((c) => c.side !== b.attacker && !c.routed && 出城の内か(MAP, c.x, c.y, 8));
+  if (!守.length) return;
+  const 寄 = alive.filter((c) => c.side === b.attacker && !c.routed && !c.withdraw && !c.detach && delegated(b, c));
+  if (!寄.length) return;
+  const 要る = Math.max(1, Math.round(寄.length / 3));
+  const 今 = 寄.filter((c) => c.出城攻め).length;
+  if (今 >= 要る) return;
+  const 芯x = MAP.cx + 出.ox, 芯y = MAP.cy + 出.oy;
+  const 候 = 寄.filter((c) => !c.出城攻め && !c.本丸攻め && !(c.gate && c.gate.slot === c.id))
+    .sort((x, y) => Math.hypot(x.x - 芯x, x.y - 芯y) - Math.hypot(y.x - 芯x, y.y - 芯y));
+  for (const c of 候.slice(0, 要る - 今)) {
+    c.出城攻め = true; c.gate = 出.gates[0]; c.wp = null; c.gate待ち = 0;
+    b.log.push({ t: b.t, text: `${c.gen.name}隊は${出.name}に当たる。` });
+  }
+}
+function 出城を守る(b, c, alive) {
+  if (c.引き取り) {
+    if (引き取りを進める(b, c)) issueOrder(b, c, { order: "移動", tx: c.tx, ty: c.ty });
+    return true;
+  }
+  const 出 = MAP.出城, g = c.holdGate;
+  if (!出) return false;
+  const 入った = alive.filter((o) => o.side === b.attacker && !o.routed && !o.withdraw && 出城の内か(MAP, o.x, o.y, 6));
+  const 入兵 = 入った.reduce((t, o) => t + corpsMen(o), 0);
+  const 兵 = corpsMen(c);
+  const 見切る = 出.落ちた || c.morale < 25
+    || (g.broken && (兵 < corpsMax(c) * 0.3 || (入兵 > 兵 * 3 && 兵 < corpsMax(c) * 0.6)));
+  if (見切る) return 出城から引き取らせる(b, c);
+  if (!g.broken) return false;                   // 門が保つうちは常の門の守りに任せる
+  // 門が破れた。中へ入った寄せ手と斬り結ぶ。いなければ破れ口を塞ぐ
+  const 敵 = 入った.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
+  if (敵) { issueOrder(b, c, { order: "接戦", tx: 敵.x, ty: 敵.y, target: 敵.id }); return true; }
+  const a = axisOf(出, g), p = fromUV(MAP, a, g.off, a.half - 34);
+  if (Math.hypot(c.x - p.x, c.y - p.y) > 40) issueOrder(b, c, { order: "移動", tx: p.x, ty: p.y });
+  else issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
+  return true;
+}
+
+/* 盤に現れた後詰（engine.js 後詰を入れる）。城の守りの筋には乗らず、野戦の隊として
+   寄せ手に当たる。遠ければ道を引いて寄せ（橋・浅瀬を辿り、城山の塀を回る）、近づけば
+   槍を合わせる。狙うのは手近な寄せ手――門に取り付いている隊は背が空いている。
+   道は八秒ごとに引き直す（寄せ手も動く） */
+function 後詰を当てる(b, c, alive) {
+  const 敵 = alive.filter((o) => o.side === b.attacker && !o.routed && !o.withdraw && !o.dead && !o.destroyed);
+  if (!敵.length) { if (c.order !== "待機") issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y }); return; }
+  if (c.order === "接戦" && c.squads.some((q) => q.engaged)) return;       // 槍を合わせている
+  const 的 = 敵.reduce((a, o) => (Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a), 敵[0]);
+  const d = Math.hypot(的.x - c.x, 的.y - c.y);
+  if (d > 320 * fieldScale()) {
+    if (c.wp && c.wp.length && b.t < (c.後詰の道 || 0)) return;            // 引いた道を辿っている
+    c.後詰の道 = b.t + 8;
+    const p = navPath(MAP, c.x, c.y, 的.x, 的.y);
+    if (p && p.length) { c.wp = p; issueOrder(b, c, { order: "移動", tx: p[0].x, ty: p[0].y, keepPath: true }); return; }
+    issueOrder(b, c, { order: "前進", tx: 的.x, ty: 的.y, target: 的.id });
+    return;
+  }
+  c.wp = null;
+  issueOrder(b, c, { order: "接戦", tx: 的.x, ty: 的.y, target: 的.id });
+}
+
 export function battleAI(b) {
   setAiIssuing(true);
   // 去就の定まらぬ隊（日和見）は采配の目にも入らない（GDD 8.9）
@@ -679,12 +755,14 @@ export function battleAI(b) {
     }
   }
 
+  if (MAP) { 出城に当てる(b, alive); 采配の計略(b); }   // 采配の寄せ手は、水の手と焼き働きを一日一度ずつ（keiryaku.js）
   for (const c of alive) {
     if (!delegated(b, c) || c.routed || c.detach) continue;
     if (c.本陣を守る) continue;                       // 本陣の守りに就いた隊は、そのまま
     /* 動かぬと決めている隊には、采配も何も企てない。
        戦わぬ島津に「木立へ回って伏せよ」と命じては、動かぬと決めた意味がない。 */
     if (c.不戦 || c.控え || c.縛り) continue;
+    if (MAP && c.後詰) { 後詰を当てる(b, c, alive); continue; }   // 盤に現れた後詰は野戦の隊として当たる
     /* 伏せに向かう隊と、伏せている隊。
 
        伏せ場へ着いたら身をひそめる。ひそめた隊には、以後なにも命じない。
@@ -950,16 +1028,19 @@ export function battleAI(b) {
            これでは戦の始まりに、持ち場を捨てて皆が本丸へ引き上げてしまう。
            外の門を素通りさせ、寄せ手が本丸に届くまで一矢も射ないことになる。
            守るべきは、まだ破れていない輪のうち、いちばん外の輪である。 */
+        /* 出城の守り手（下の 出城を守る）。門が保つあいだは常の門の守りと同じに受け持つ */
+        if ((c.引き取り || (c.holdGate && c.holdGate.出城)) && 出城を守る(b, c, alive)) continue;
         let g2 = c.holdGate;
         /* 一割まで待つと、門が破れる前に下がりきれない。四半分で見切りをつける。
-           「城門が一割を切っても内の門へ行かない」という声はここである。 */
-        const need = !g2 || g2.broken || g2.hp / g2.max < 0.25;
+           「城門が一割を切っても内の門へ行かない」という声はここである。
+           出城の門だけは見切らない（出城の見切りは 出城を守る が受け持つ） */
+        const need = !g2 || (!g2.出城 && (g2.broken || g2.hp / g2.max < 0.25));
         if (need) {
           // 持ち場があるなら、それより内の門だけを見る（下がるのであって、進み出るのではない）
           const 残り = MAP.gates.filter((x) => !x.broken && (!g2 || x.layer > g2.layer));
           if (残り.length) {
             const 輪 = Math.min(...残り.map((x) => x.layer));        // まだ破れていない、いちばん外の輪
-            const 場 = (x) => gatePos(MAP, MAP.layers[x.layer], x);
+            const 場 = (x) => gatePos(MAP, 門の輪(MAP, x), x);
             const 次 = 残り.filter((x) => x.layer === 輪).sort((x, y2) => {
               const ga = 場(x), gb = 場(y2);                          // 同じ輪なら手近な門を受け持つ
               return Math.hypot(ga.x - c.x, ga.y - c.y) - Math.hypot(gb.x - c.x, gb.y - c.y);
@@ -980,14 +1061,18 @@ export function battleAI(b) {
            寄せ手が弱れば門を開いて打って出る。
            持ち場の門が保たなくなれば内側の門へ、最後は本丸へ籠る。 */
         if (g2 && !g2.broken) {
-          const l2 = MAP.layers[g2.layer], a2 = axisOf(l2, g2);
-          // 門のすぐ内側に立つ。奥へ引っ込んでは門を支えられない。
-          const p2 = fromUV(MAP, a2, g2.off, a2.half - 14);
+          const l2 = 門の輪(MAP, g2), a2 = axisOf(l2, g2);
+          /* 門のすぐ内側に立つ。奥へ引っ込んでは門を支えられない。
+             出城は塀が薄いので、塀から三十歩は退いて立つ（塀ごしに槍を合わせない） */
+          const p2 = fromUV(MAP, a2, g2.off, a2.half - (g2.出城 ? 30 : 14));
           const d2 = Math.hypot(c.x - p2.x, c.y - p2.y);
           /* 持ち場へ寄る。ただし「三十四を超えたら動く」だけでは、ちょうどその際で
              毎瞬「動け」と「そこで守れ」が入れ替わり、隊がその場で震えて見える。
              動き出す間合いと、着いたとみなす間合いを分ける。 */
-          if (d2 > (c.持ち場に着いた ? 46 : 30)) {
+          /* 後詰に呼応して出た隊は、出ているあいだ持ち場へ呼び戻さない（下の 呼応の的）。
+             的は門から三百歩の内にいる。持ち場の際（四十六歩）を越えるたびに呼び戻すと、
+             的に届かぬまま門の前を出入りするだけになる */
+          if (d2 > (c.持ち場に着いた ? 46 : 30) && !(c.sallied && c.呼応して出た)) {
             c.持ち場に着いた = false;
             issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y });
             continue;
@@ -1010,11 +1095,24 @@ export function battleAI(b) {
             const foeWorth = foes.length
               ? Math.max(...foes.map((x) => (x.gen.valor || 60) + (x.gen.lead || 60))) : 999;
             const fit = c.morale > 58 && myMen > corpsMax(c) * 0.45;   // 自隊が保っている
-            const chance = foes.length && fit && (
+            /* 後詰に呼応する（engine.js 後詰に呼応する）。六十秒のあいだは、門から三百歩の内に
+               いる寄せ手の隊のうち、自隊の四倍までの隊へ門を開いて当たる。後詰に向き直った隊
+               （城に背を向けた隊）を先に狙う。内と外から挟むのが後詰の形である。
+               もとは常の打って出と同じく「門の前（百七十歩）の寄せ手の総勢が自隊の三倍まで、
+               自隊が兵の四割五分を保つこと」を求めていた。門に寄せ手が群がる城攻めではこれが
+               まず満たされず、呼応の報せが出ても一隊も出なかった */
+            const 呼応中 = !!(b.呼応 && b.t < b.呼応.まで && b.呼応.側 === c.side);
+            const 呼応の的 = 呼応中 && c.morale > 45 && myMen > corpsMax(c) * 0.25
+              ? b.corps.filter((x) => x.side === b.attacker && !x.dead && !x.destroyed && !x.routed
+                && Math.hypot(x.x - gp.x, x.y - gp.y) < 300 && corpsMen(x) < myMen * 4)
+                .sort((x, y2) => (y2.後詰に向いた ? 1 : 0) - (x.後詰に向いた ? 1 : 0)
+                  || Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0] || null
+              : null;
+            const chance = (foes.length && fit && (
               foeMor < 40                        // 寄せ手の士気が尽きかけている
               || foeMen < myMen / 3              // 寄せ手が三分の一を割った
               || myWorth > foeWorth * 1.4        // 将の器量で大きく上回る
-            );
+            )) || !!呼応の的;                    // 後詰に呼応する
             if (c.守備隊) {
               /* 守備隊は討って出ない（GDD 9.3）。門を支え、外へ射かけるだけである。
                  名も無き足軽小頭に、門を開いて野へ出よとは言えない。 */
@@ -1029,22 +1127,24 @@ export function battleAI(b) {
             if (c.sallied) {
               // 打って出た後は四十秒で城へ戻る
               if (b.t - (c.sallyAt || 0) > 40 || c.morale < 46) {
-                c.sallied = false; c.sallyLogged = false;
+                c.sallied = false; c.sallyLogged = false; c.呼応して出た = false;
                 b.log.push({ t: b.t, text: `${c.gen.name}隊が${g2.key}の内へ戻った。` });
                 issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y });
                 continue;
               }
-              const t2 = [...foes].sort((x, y2) => corpsMen(x) - corpsMen(y2))[0];
+              // 呼応して出た隊は、門の前に寄せ手がいなくても、呼応のあいだは的を追う
+              const t2 = [...foes].sort((x, y2) => corpsMen(x) - corpsMen(y2))[0] || (c.呼応して出た ? 呼応の的 : null);
               if (t2) { issueOrder(b, c, { order: "接戦", tx: t2.x, ty: t2.y, target: t2.id }); continue; }
-              c.sallied = false;
+              c.sallied = false; c.呼応して出た = false;
             } else if (chance) {
-              const t2 = [...foes].sort((x, y2) => corpsMen(x) - corpsMen(y2))[0];
+              const t2 = 呼応の的 || [...foes].sort((x, y2) => corpsMen(x) - corpsMen(y2))[0];
               if (t2) {
-                c.sallied = true; c.sallyAt = b.t;
+                c.sallied = true; c.sallyAt = b.t; c.呼応して出た = !!呼応の的;
                 issueOrder(b, c, { order: "接戦", tx: t2.x, ty: t2.y, target: t2.id });
                 if (!c.sallyLogged) {
                   c.sallyLogged = true;
-                  b.log.push({ t: b.t, text: `${c.gen.name}隊が${g2.key}を開いて討って出た。` });
+                  b.log.push({ t: b.t, text: 呼応の的 ? `${c.gen.name}隊が後詰に呼応し、${g2.key}を開いて討って出た。`
+                    : `${c.gen.name}隊が${g2.key}を開いて討って出た。` });
                 }
                 continue;
               }
@@ -1076,6 +1176,26 @@ export function battleAI(b) {
         }
       }
       if (c.side === b.attacker) {
+        /* 後詰に背を衝かれたら向き直る（engine.js 後詰を入れる）。外郭の塀の外にいて、門に
+           取り付いていない隊のうち、後詰の隊が三百五十歩の内に迫った隊は、門を捨てて
+           後詰に当たる。門に取り付いた隊と、曲輪に攻め入った隊はそのまま攻める */
+        if (b.後詰 && b.後詰.some((r) => r.入った) && !inLayer(MAP, MAP.layers[0], c.x, c.y)
+          && ![...MAP.gates, ...(MAP.出城 ? MAP.出城.gates : [])].some((g) => g.slot === c.id)) {
+          const 迫 = alive.filter((o) => o.後詰 && !o.routed && !o.withdraw
+            && Math.hypot(o.x - c.x, o.y - c.y) < 350 * fieldScale());
+          if (迫.length) {
+            const 的 = 迫.reduce((a, o) => (Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a), 迫[0]);
+            if (!c.後詰に向いた) {
+              c.後詰に向いた = true;
+              b.log.push({ t: b.t, text: `${c.gen.name}隊は後詰に向き直った。` });
+            }
+            c.wp = null; c.出城攻め = false;
+            if (!(c.order === "接戦" && c.squads.some((q) => q.engaged))) {
+              issueOrder(b, c, { order: "接戦", tx: 的.x, ty: 的.y, target: 的.id });
+            }
+            continue;
+          }
+        }
         /* 渡河のあとの再編（上の 渡りきった隊は隊列を整える）は、隊を待機にして足を止める。
            城攻めの采配は道順を持つあいだ下知を出し直さないので、整え終わっても待機のまま
            道順の途中で立ち尽くした（広い盤で川を渡った寄せ手が、橋の北で動かなくなった）。
@@ -1090,12 +1210,34 @@ export function battleAI(b) {
             if (!inLayer(MAP, h0, c.x, c.y) && (!c.wp || !c.wp.length)) {
               const wp = 本丸への道(MAP, c.x, c.y);
               if (wp && wp.length) { issueOrder(b, c, { order: "移動", tx: wp[0].x, ty: wp[0].y, keepPath: true }); c.wp = wp; }
+            } else if (inLayer(MAP, h0, c.x, c.y)) {
+              /* 本丸に入った隊は、本丸に残る城方に当たる。これまでは入ったところで足を止めて
+                 いた。城兵が崩れて本丸が空けば押さえられたが、囲みの輪で死兵となった城兵は
+                 崩れないので、本丸に居残る隊に誰も当たらず、本丸を押さえられぬまま三分が過ぎて
+                 「攻めあぐね」と裁かれていた */
+              const 残 = alive.filter((o) => o.side !== b.attacker && !o.routed && !o.withdraw
+                && o.squads.some((q) => q.men > 0 && inLayer(MAP, h0, q.x, q.y)));
+              if (残.length && !(c.order === "接戦" && c.squads.some((q) => q.engaged))) {
+                const 的 = 残.reduce((a, o) => (Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a), 残[0]);
+                issueOrder(b, c, { order: "接戦", tx: 的.x, ty: 的.y, target: 的.id });
+              }
             }
             continue;
           }
         }
+        /* 出城に当たる隊（出城に当てる）。門が保つあいだは出城の門へ取り付く。
+           門が破れたら中へ攻め入り（道は engine の 門を破ったら次へ が引く）、中の守り手を討つ */
+        if (c.出城攻め && 出城が保つ(MAP) && MAP.出城.gates[0].broken) {
+          if (出城の内か(MAP, c.x, c.y, -6)) {
+            const 敵 = alive.filter((o) => o.side !== b.attacker && !o.routed && 出城の内か(MAP, o.x, o.y, 10))
+              .sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
+            if (敵) issueOrder(b, c, { order: "接戦", tx: 敵.x, ty: 敵.y, target: 敵.id });
+            else issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
+          }
+          continue;
+        }
         // 寄せ手：抜けられる門のうち、いちばん外の近い門へ取り付く
-        const g = nearestOpenGate(MAP, c.x, c.y);
+        const g = c.出城攻め && 出城が保つ(MAP) ? MAP.出城.gates[0] : nearestOpenGate(MAP, c.x, c.y);
         /* 門の順番待ち（GDD 9.3）。
 
            門の間口は狭く、取り付けるのは一隊だけである。ところが残りの隊も毎度
@@ -1108,19 +1250,19 @@ export function battleAI(b) {
         if (g && g.slot && g.slot !== c.id && !c.pinned) {
           const 待つ隊 = b.corps.filter((o) => !o.dead && !o.destroyed && !o.routed && !o.withdraw
             && o.side === b.attacker && o.id !== g.slot && (o.gate === g || !o.gate));
-          const gp5 = gatePos(MAP, MAP.layers[g.layer], g);
+          const gp5 = gatePos(MAP, 門の輪(MAP, g), g);
           待つ隊.sort(列の順(g, gp5));                   // engine と同じ順（castleMap.js 列の順）
           const 順 = Math.max(0, 待つ隊.findIndex((o) => o.id === c.id));
           /* 立ち所は engine と同じ口から採る。采配と engine が別々の所を指して
              いると、隊は二つの的のあいだで揺れる。 */
-          const 控 = 門の控え口(MAP, MAP.layers[g.layer], g, 順);
+          const 控 = 門の控え口(MAP, 門の輪(MAP, g), g, 順);
           const 隔 = Math.hypot(c.x - 控.x, c.y - 控.y);
           if (隔 > 46) {
             if (!c.wp || !c.wp.length) {
               // 控え口が塀の向こうなら道を引く（まっすぐ行けば塀に貼りつく）
               /* 広い盤で城山の外にいるなら、野の道（橋・浅瀬）を辿って寄せる（castleMap.js 継いだ道） */
               const 遠い = MAP.域 && !城の域か(c.x, c.y);
-              const p = !遠い && (g.layer === 0 || 見通せる(c.x, c.y, 控.x, 控.y)) ? null : navPath(MAP, c.x, c.y, 控.x, 控.y);
+              const p = !遠い && (g.layer <= 0 || 見通せる(c.x, c.y, 控.x, 控.y)) ? null : navPath(MAP, c.x, c.y, 控.x, 控.y);
               if (p && p.length) { issueOrder(b, c, { order: "移動", tx: p[0].x, ty: p[0].y, keepPath: true }); c.wp = p; }
               else issueOrder(b, c, { order: "移動", tx: 控.x, ty: 控.y });
             }
@@ -1135,7 +1277,7 @@ export function battleAI(b) {
             const wp = routeToCastleGate(MAP, g, c.x, c.y);
             if (wp.length) { issueOrder(b, c, { order: "移動", tx: wp[0].x, ty: wp[0].y, keepPath: true }); c.wp = wp; }
             else {
-              const a2 = axisOf(MAP.layers[g.layer], g);
+              const a2 = axisOf(門の輪(MAP, g), g);
               const app = fromUV(MAP, a2, g.off, a2.half + MAP.t + 26);
               issueOrder(b, c, { order: "移動", tx: app.x, ty: app.y });
             }

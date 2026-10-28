@@ -90,14 +90,29 @@ export const rosterSum = (r) => (r || []).reduce((a, q) => a + q.m, 0);
    理屈で、手柄の重い組から埋めるのが筋である。国許で兵を集めれば、まず
    名の知られた組頭の下へ配される――そういう順になる。
 
-   手柄が同じなら、欠けの大きい組を先に埋める。潰れかけた組から手当てする。 */
+   手柄が同じなら、欠けの大きい組を先に埋める。潰れかけた組から手当てする。
+
+   名を挙げた組（五十人長より上。勲功五より上）は、兵種の割に縛られず先に満たす。
+   補充は兵種の割（槍五割六分・弓二割一分・騎馬二割・鉄砲三分）で配るので、もとは
+   その兵種の取り分の中でしか埋まらなかった。鉄砲の組は取り分が三分しかなく、
+   百六十人を補っても五人しか回らない。手柄を挙げやすいのは射手であるのに、
+   名を挙げた鉄砲の組ほど欠けたまま次の戦に出て消えていた（tests/kumigashira 三で、
+   勲功四十三の鉄砲の組が五十人から十一人まで擦り減り、補充のたびに数人ずつしか
+   戻らなかった）。名を挙げた組を満たしたあとの残りを、これまでどおり兵種の割で配る。 */
 export function rosterAdd(r, n, tag) {
   if (!r || n <= 0) return r || [];
   let left = Math.round(n);
   // 手柄の重い順、同じなら人数の少ない順（潰れかけた古参が先）
   const 順 = [...r].sort((a, b) => (b.功 || 0) - (a.功 || 0) || a.m - b.m);
+  for (const q of 順) {
+    if (left <= 0 || (q.功 || 0) < 階の段[1].要) break;          // 名を挙げた組だけ（手柄の重い順に並んでいる）
+    if (q.m >= q.max) continue;
+    const add = Math.min(q.max - q.m, left);
+    q.m += add; left -= add;
+  }
+  const 割る = left;
   for (const a of ARMS) {
-    const want = Math.round(n * a.ratio);
+    const want = Math.round(割る * a.ratio);
     let give = want;
     for (const q of 順) {
       if (give <= 0) break;

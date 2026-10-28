@@ -164,7 +164,21 @@ export function genTerrain(seed, opt = {}) {
      街道は城山を避けて通し、大手の麓から街道へ枝道を付ける。城を渡さなければ、
      これまでと寸分違わぬ野を組む（賽の流れも変えない）。 */
   const 城 = opt.城 || null;
+  /* 野戦の盤を広げたとき（layoutField 野の倍）の、広げる前の幅（尺の幅）。
+
+     地物の大きさ・川幅・橋と浅瀬の幅は、これで決める。隊の足も見通しも指揮圏も
+     広げる前の尺のまま据えてあるので、地物まで広げた幅で決めると、隊に比べて丘や
+     川ばかりが大きくなる。実際に一.五倍に広げたところ、受け手が丘を取りに行く
+     間合いに丘が入らず、麓から頂まで登り切る前に寄せ手が来て（tests/chikei）、
+     行軍の翼が広くなった川に濡れた（tests/keiretsu）。
+     数は広げた面積なりに増やし、地物の濃さを広げる前と同じに保つ。
+     ただ野が広く、遠くなるだけで、隊と地物の釣り合いは変えない。
+     城攻めの広い盤の野は、これを渡さない（これまでどおり盤の幅で決める）。 */
+  const 尺W = opt.尺の幅 > 0 ? Math.min(W, opt.尺の幅) : W;
+  const 尺H = 尺W * (H / W);
+  const 面倍 = (W * H) / (尺W * 尺H);
   RIVER.top = 0; RIVER.bot = 0; RIVER.bridge = [0, 0]; RIVER.ford = [0, 0]; RIVER.wave = 0;
+  RIVER.落ちた橋 = null; RIVER.仮橋 = false;
   FORESTS.length = 0; WOODS.length = 0; HILLS.length = 0; MARSH.length = 0; VILLAGES.length = 0;
   MOUNTAINS.length = 0;
   const kind = rnd();
@@ -181,9 +195,9 @@ export function genTerrain(seed, opt = {}) {
        橋は隘路でなければならない。盤がどれだけ広がろうと、板を渡した幅は
        変わらない。ほぼ絶対の寸法で取り、野の広さぶんは僅かに効かせるに留める。
        川幅も同じ考えで、際限なく広がらぬよう歯止めを入れる。 */
-    const 幅倍 = clamp(Math.pow(W / 1080, 0.3), 1, 1.7);
+    const 幅倍 = clamp(Math.pow(尺W / 1080, 0.3), 1, 1.7);
     let cy = H * (0.36 + rnd() * 0.28);
-    const wide = clamp(H * (0.045 + rnd() * 0.035), 52, 190);
+    const wide = clamp(尺H * (0.045 + rnd() * 0.035), 52, 190);
     RIVER.top = Math.round(cy - wide / 2); RIVER.bot = Math.round(cy + wide / 2);
     const bw = (74 + rnd() * 26) * 幅倍;               // 橋。一隊の半ばに満たない
     let bx = W * (0.15 + rnd() * 0.7);
@@ -199,8 +213,8 @@ export function genTerrain(seed, opt = {}) {
     const fw = (150 + rnd() * 60) * 幅倍;              // 浅瀬。橋より広いが、なお狭い
     RIVER.ford = [Math.round(clamp(fx - fw / 2, 10, W - fw - 10)), 0];
     RIVER.ford[1] = Math.round(RIVER.ford[0] + fw);
-    RIVER.wave = H * (0.02 + rnd() * 0.05);          // 蛇行の振れ
-    RIVER.k = (1.4 + rnd() * 1.6) * Math.PI / W;     // 蛇行の細かさ
+    RIVER.wave = 尺H * (0.02 + rnd() * 0.05);        // 蛇行の振れ（隊の尺で。上の 尺の幅）
+    RIVER.k = (1.4 + rnd() * 1.6) * Math.PI / 尺W;   // 蛇行の細かさ（広げた野では曲がりの数が増える）
     RIVER.ph = rnd() * Math.PI * 2;
     /* 城の盤では、川は城山の裾より南を流す。寄せ手は川を越えて城へ寄せる。
        南に寄せ手の構えるだけの野が残らなければ、川は流さない */
@@ -257,12 +271,14 @@ export function genTerrain(seed, opt = {}) {
      広い野に地物が二つ三つでは、ただ広いだけの原っぱである。
      回り込む目印になり、伏せる場所になり、拠って戦う高みになってこそ、
      広さが効いてくる。 */
-  const sc = clamp(FIELD.w / 1080, 1, 4.6);
+  const sc = clamp(尺W / 1080, 1, 4.6);               // 広げた野戦では広げる前の幅で（上の 尺の幅）
   /* 広い野には、必ずいくらか地物を置く。
      倍を掛けるだけでは、賽が零を出した野は七千歩の原っぱになる。
      見渡す限り何も無い野では、回り込む目印も、伏せる場所もない。 */
-  const 底 = sc >= 2.4 ? 2 : sc >= 1.6 ? 1 : 0;
-  const 数 = (基, 要) => Math.max(要 ? 底 : 0, Math.round(基 * (0.6 + sc * 0.62)));
+  /* 下限も面積なりに増やす。賽の目が零の野は下限だけ置かれるので、ここを増やさないと
+     広げた野では丘や森が薄くなり、受け手の手の届く所に丘が無くなる（tests/chikei） */
+  const 底 = Math.round((sc >= 2.4 ? 2 : sc >= 1.6 ? 1 : 0) * 面倍);
+  const 数 = (基, 要) => Math.max(要 ? 底 : 0, Math.round(基 * (0.6 + sc * 0.62) * 面倍));
   /* 山を立てる（GDD 8.1）。
 
      山越えの街道でのみ立つ。山道なら一つ、難所なら二つ。
@@ -525,6 +541,7 @@ export function 筋書きの野を組む(地) {
   尺を据える(0);                                    // 筋書きの野は、盤の幅をそのまま尺とする
   setFieldKind("街道");
   RIVER.top = 0; RIVER.bot = 0; RIVER.bridge = [0, 0]; RIVER.ford = [0, 0]; RIVER.wave = 0;
+  RIVER.落ちた橋 = null; RIVER.仮橋 = false;
   FORESTS.length = 0; WOODS.length = 0; HILLS.length = 0; MARSH.length = 0;
   VILLAGES.length = 0; MOUNTAINS.length = 0; RIVERS.length = 0; ROADS.length = 0;
   const 種付 = (o, i) => ({ seed: ((o.x | 0) * 7919 + (o.y | 0) * 31 + i) >>> 0, ...o });
@@ -569,6 +586,28 @@ export function 地の高さ(x, y) {
 }
 
 export const hasRiver = () => RIVER.bot > RIVER.top + 4;
+
+/* 城攻めの盤の橋（GDD 9.3）。
+
+   城方は、城の前の川に架かる橋を落としておける（囲みの札の「橋を落とす」）。落ちた橋の
+   幅は淵になり、寄せ手は浅瀬へ回るか淵を押し渡るほかない。道さがし（route.js）は地形の
+   代で網を張り直すので、橋が無くなれば自ずと浅瀬を選ぶ。
+   寄せ手は夜のうちに仮橋を架け直す（engine.js 夜を明かす）。仮橋は元の橋の八割の幅 */
+export function 橋を落とす() {
+  if (!hasRiver() || RIVER.落ちた橋 || !(RIVER.bridge[1] > RIVER.bridge[0])) return false;
+  RIVER.落ちた橋 = RIVER.bridge.slice();
+  RIVER.bridge = [0, 0]; RIVER.仮橋 = false;
+  代++;
+  return true;
+}
+export function 仮橋を架ける() {
+  if (!RIVER.落ちた橋) return false;
+  const [a, z] = RIVER.落ちた橋, c = (a + z) / 2, w = (z - a) * 0.8;
+  RIVER.bridge = [Math.round(c - w / 2), Math.round(c + w / 2)];
+  RIVER.落ちた橋 = null; RIVER.仮橋 = true;
+  代++;
+  return true;
+}
 
 /* 筋書きの川の升。筋書きの川は何百節もある。木を一本ずつ量るたびに全ての節を当たると
    重いので、百六十歩の升に「水際から八十歩の内に届く区間」を控えておく（水際まで） */
@@ -702,7 +741,7 @@ export function layoutField(totalMen, 隊数) {
   const h = Math.round(w * 0.667);
   FIELD.w = w; FIELD.h = h;
   尺を据える(w0 / BASE.w);
-  genTerrain(FIELD_SEED);
+  genTerrain(FIELD_SEED, { 尺の幅: w0 });
 }
 /* 野戦の盤の広げ。倍と頭打ち（歩） */
 export const 野の倍 = 1.5, 野の頭 = 12000;
@@ -717,6 +756,13 @@ export function passable(x, y) { return !BLOCKED[terrainAt(x, y)]; }
 
 // 城方は自分の城の門を通れる。ただし内へ入るときだけ（外へ出るのは「打って出る」）。
 export function passableFor(c, b, x, y) {
+  /* 出城の背の木戸（castleMap.js 出城の地）。城方だけが通れる。出城のまわりでだけ地を引く */
+  if (MAP && MAP.出城 && b && b.map) {
+    const 出 = MAP.出城, lx = x - MAP.cx - 出.ox, ly = y - MAP.cy - 出.oy;
+    if (Math.abs(lx) <= 出.hw + MAP.t + 2 && Math.abs(ly) <= 出.hh + MAP.t + 2 && terrainAt(x, y) === "kido") {
+      return !c || c.side !== b.attacker;
+    }
+  }
   if (passable(x, y)) return true;
   if (!b || !b.map || !c || c.side === b.attacker) return false;
   if (c.sortie) return true;                      // 打って出ている間は外へも抜けられる
@@ -848,6 +894,13 @@ export const TERRAIN = {
   tower: { speed: 0.55, fight: 1.3, cohesion: -2, sight: 430, horse: 0.3, charge: false, label: "櫓" },
   kuruwa: { speed: 0.92, fight: 1.0, cohesion: -3, sight: 210, horse: 0.75, charge: true, label: "曲輪" },
   honmaru: { speed: 0.88, fight: 1.12, cohesion: -3, sight: 230, horse: 0.7, charge: false, label: "本丸" },
+  /* 出城の内（castleMap.js 出城を組む）。土塁に囲まれた狭い曲輪で、構えて戦える */
+  demaru: { speed: 0.9, fight: 1.08, cohesion: -3, sight: 260, horse: 0.7, charge: false, label: "出城" },
+  kido: { speed: 0.8, fight: 0.9, cohesion: -6, sight: 220, horse: 0.6, charge: false, label: "木戸" },
+  /* 付城（castleMap.js 付城を据える）。柵は越えられるが足が鈍り、柵の際で戦う者は強い。
+     陣の内は踏み固められ、井楼から見晴らしが利く */
+  saku: { speed: 0.35, fight: 1.15, cohesion: -6, sight: 300, horse: 0.3, charge: false, label: "柵" },
+  jinsho: { speed: 0.96, fight: 1.05, cohesion: 1, sight: 330, horse: 0.95, charge: true, label: "付城" },
 };
 
 // 天候（GDD 8.8：悪天候は疲労を増やす）

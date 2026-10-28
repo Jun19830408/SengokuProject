@@ -1,4 +1,4 @@
-import { FIELD, TERRAIN, 地形の代, terrainAt } from "./field.js";
+import { FIELD, RIVER, TERRAIN, 地形の代, terrainAt } from "./field.js";
 
 /* ==========================================================================
    野の道さがし（GDD 8.1 / 8.6）
@@ -37,6 +37,13 @@ export const 通りにくさ = {
 
 // 押し渡ると決めた隊のための目。水を厭わず、地物だけを避ける。
 const 押し渡る目 = { ...通りにくさ, deep: 2.2, ford: 1.4 };
+/* 城方が橋を落とした野の目（field.js 橋を落とす）。
+
+   城攻めの盤では、橋は城山の脇に架けてある。橋があれば寄せ手は橋まで回り込み、
+   橋が無ければ淵を真っすぐ押し渡った――淵は細いので、遠回りより早く着いてしまう。
+   橋を落とした甲斐が無い。城の前の川を、大軍が具足のまま泳いで渡るものではない。
+   橋の落ちた野では、淵をよほどのことがなければ渡らぬ重さにして、浅瀬へ回らせる */
+const 落橋の目 = { ...通りにくさ, deep: 90 };
 
 const 費 = (t, 目) => 目[t] || (TERRAIN[t] ? 1 / Math.max(0.08, TERRAIN[t].speed) : 1);
 
@@ -95,7 +102,7 @@ function ヒープ() {
 export function 野の道(x0, y0, x1, y1, opt = {}) {
   const g = 網を張る();
   const { w, h, 地 } = g;
-  const 目 = opt.押し渡る ? 押し渡る目 : 通りにくさ;
+  const 目 = opt.押し渡る ? 押し渡る目 : RIVER.落ちた橋 ? 落橋の目 : 通りにくさ;
   const ix = (x) => Math.max(0, Math.min(w - 1, Math.floor(x / 升)));
   const iy = (y) => Math.max(0, Math.min(h - 1, Math.floor(y / 升)));
   const S = iy(y0) * w + ix(x0), T = iy(y1) * w + ix(x1);

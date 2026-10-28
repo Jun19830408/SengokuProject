@@ -34,7 +34,16 @@ const 確 = (名, 可, 添 = '') => {
 const 将 = (i, nm) => ({ id: 'g' + i, name: nm, lead: 64, valor: 62, wit: 55, gov: 55,
   retinue: 0, retTrain: 70, unity: 60, arms: { yari: 55, yumi: 20, teppo: 10, kiba: 15 } });
 
-function 当てる(種, 刻数 = 1400) {
+/* 刻みは画面と同じ〇.〇三秒とする（BattleScreen は一コマ〇.〇五秒を上限に、〇.六倍を一歩の
+   上限として割って踏む）。もとは〇.二秒で刻んでいた。野戦の盤を一.五倍に広げて地物を
+   隊の尺で据え直したところ（field.js 尺の幅）、平らな野で正面から当たる組み合わせが
+   出て、一歩が大きすぎて隊が行き過ぎ、中どころが三歩まで重なり、前後の揺れが五割を
+   超えた。広げる前の盤でも、帯の平らな種（a766）を〇.二秒で刻めば同じく背く――
+   〇.〇三秒で刻めば広げる前も後も通る。画面の上では起きていなかった咎である。
+   戦の長さは秒で数える（〇.二秒×千四百＝二百八十秒ぶん刻む）。 */
+const 刻み = 0.03;
+function 当てる(種, 刻数0 = 1400) {
+  const 刻数 = Math.round(刻数0 * 0.2 / 刻み);
   let _s = 種 >>> 0;
   Math.random = function () { _s = (_s + 0x6D2B79F5) | 0; let t = Math.imul(_s ^ (_s >>> 15), 1 | _s);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -62,15 +71,18 @@ function 当てる(種, 刻数 = 1400) {
   const b = H.createBattle(P, E, 'P');
   b.mode = 'field'; b.dusk = 99999; b.phase = 'fight'; b.face = 'S'; b.myFar = false;
   for (const c of [...P, ...E]) { H.placeSquads(c, true); c.auto = false; }
+  /* 相手の隊を名指しで当たらせる（狙い。ai.js 名指しの目標）。場所だけを指すと、崩れた
+     相手が広い野の遠くで立ち直ったとき、追わずにその場で止まり、睨み合いのまま日が暮れる
+     （手ずから戦う遊ぶ側は、隊を名指しして当たらせる） */
   for (let i = 0; i < 2; i++) {
-    H.issueOrder(b, P[i], { order: '接戦', tx: E[i].x, ty: E[i].y });
-    H.issueOrder(b, E[i], { order: '接戦', tx: P[i].x, ty: P[i].y });
+    H.issueOrder(b, P[i], { order: '接戦', tx: E[i].x, ty: E[i].y, target: E[i].id, 狙い: E[i].id });
+    H.issueOrder(b, E[i], { order: '接戦', tx: P[i].x, ty: P[i].y, target: P[i].id, 狙い: P[i].id });
   }
   const 立つ = (c) => H.塊として立つ(c) && !c.dead;
   let 最短 = 1e9, 反転 = 0, 動き = 0, 決着 = null, 線の散らばり = [], 入替 = 0;
   const 前 = new Map();
   for (let k = 0; k < 刻数; k++) {
-    H.stepBattle(b, 0.2);
+    H.stepBattle(b, 刻み);
     for (const c of [...P, ...E]) {
       if (!立つ(c)) continue;
       const p = 前.get(c.id);
@@ -100,7 +112,7 @@ function 当てる(種, 刻数 = 1400) {
         }
       }
     }
-    if (!決着 && (!P.some(立つ) || !E.some(立つ))) 決着 = Math.round(k * 0.2);
+    if (!決着 && (!P.some(立つ) || !E.some(立つ))) 決着 = Math.round(k * 刻み);
   }
   入替 = (b.log || []).filter((l) => /前列を入れ替えた/.test(l.text || '')).length;
   return {

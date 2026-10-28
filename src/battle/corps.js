@@ -1,4 +1,4 @@
-import { MAP, axisOf, fromUV, gatePos } from "./castleMap.js";
+import { MAP, axisOf, fromUV, gatePos, 門の輪, 出城の退き道 } from "./castleMap.js";
 import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, VILLAGES, WOODS, fieldScale, hasRiver, nearestOf, riverShift, terrainAt, 高み, 高みの格 } from "./field.js";
 import { clamp } from "../core/util.js";
 import { ARMS } from "../data/roads.js";
@@ -439,6 +439,10 @@ export function 手綱を取り戻す(b, side = "P") {
 export function 内応させる(b, c) {
   if (!c || c.dead || c.destroyed || c.寝返り) return null;
   c.side = c.side === "P" ? "E" : "P";
+  /* 旗の色も寝返った先の家の色に替える（遊ぶ側の申し出：「寝返ってその場で相手側に
+     色が変わり相手方の軍になる」）。下知は側に付いて移る（遊ぶ側なら遊ぶ側が采を執る） */
+  const 仲間 = b && b.corps.find((o) => o !== c && o.side === c.side && !o.寝返り && o.color && !o.dead);
+  if (仲間) { c.元の色 = c.color; c.color = 仲間.color; }
   c.寝返り = true;
   c.内応 = false;
   c.order = "待機";
@@ -705,9 +709,12 @@ export function returnToGate(b, c, MAP) {
   if (!c || !MAP) return false;
   c.sallied = false; c.chasing = false; c.manualSally = false; c.sallyLogged = false;
   const g2 = c.holdGate;
-  if (g2) {
-    const l2 = MAP.layers[g2.layer], a2 = axisOf(l2, g2);
-    const p2 = fromUV(MAP, a2, g2.off, a2.half - 14);
+  if (g2 && g2.出城 && MAP.出城 && MAP.出城.落ちた) {
+    /* 出城が落ちていれば、戻る先は出城ではない。背の口から大手門の内へ引き取る */
+    return 出城から引き取らせる(b, c);
+  } else if (g2) {
+    const l2 = 門の輪(MAP, g2), a2 = axisOf(l2, g2);
+    const p2 = fromUV(MAP, a2, g2.off, a2.half - (g2.出城 ? 30 : 14));
     issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y });
   } else {
     issueOrder(b, c, { order: "移動", tx: MAP.cx, ty: MAP.cy });
@@ -725,12 +732,64 @@ export function moveToGate(b, c, MAP, gate) {
     b.log.push({ t: b.t, text: `${c.gen.name}隊は本丸へ移った。` });
     return true;
   }
+  /* 出城の守り手が城の持ち場へ移るときは、まず背の口から大手門の内へ引き取り、
+     そこから行き先の門へ向かう（まっすぐ向かえば出城の塀と城の堀に阻まれる） */
+  if (c.holdGate && c.holdGate.出城 && !gate.出城 && MAP.出城) {
+    if (!出城から引き取らせる(b, c)) return false;
+    c.引き取り.次 = gate;
+    return true;
+  }
   c.holdGate = gate;
-  const l2 = MAP.layers[gate.layer], a2 = axisOf(l2, gate);
-  const p2 = fromUV(MAP, a2, gate.off, a2.half - 14);
+  const l2 = 門の輪(MAP, gate), a2 = axisOf(l2, gate);
+  const p2 = fromUV(MAP, a2, gate.off, a2.half - (gate.出城 ? 30 : 14));
   issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y });
   b.log.push({ t: b.t, text: `${c.gen.name}隊は${gate.key}へ移った。` });
   return true;
+}
+
+/* 出城から城へ引き取る（GDD 9.3）。castleMap.js 出城の退き道 を辿り、大手門の前まで
+   来たら、閉じた門の内へ迎え入れる（門を開けて入れた、とみる）。城方は自分の門を
+   内へは抜けられるが、隊の芯は塀の帯に入ると外へ押し出されるので、狭い門を隊のまま
+   くぐらせることができない。門の前で内へ移すのはそのためである。
+
+   出城から引き取らせる … 道を据えて歩き出させる（采配の見切りと、遊ぶ側の「城へ戻れ」）
+   引き取りを進める     … 一刻ごとに道を辿る。辿り終えれば false */
+export function 出城から引き取らせる(b, c) {
+  const 道 = MAP && 出城の退き道(MAP);
+  if (!道) return false;
+  c.sallied = false; c.chasing = false;
+  const 引 = { 道: 道.道.map((p) => ({ ...p })), 門: 道.門, 刻: b.t };
+  issueOrder(b, c, { order: "移動", tx: 引.道[0].x, ty: 引.道[0].y });   // 下知は引き取りを解くので、先に命じる
+  c.引き取り = 引;
+  b.log.push({ t: b.t, text: `${c.gen.name}隊は${MAP.出城.name}を出て、${道.門.key}の内へ引き取る。` });
+  return true;
+}
+export function 引き取りを進める(b, c) {
+  const 引 = c.引き取り, m = b && b.map;
+  if (!引 || !m) return false;
+  const p = 引.道[0];
+  if (p && Math.hypot(p.x - c.x, p.y - c.y) < (p.r || 30)) { 引.道.shift(); 引.刻 = b.t; }
+  /* 寄せ手に阻まれて十二秒進めなければ、その所は飛ばす */
+  if (引.道.length > 1 && b.t - 引.刻 > 12) { 引.道.shift(); 引.刻 = b.t; }
+  if (引.道.length && !(引.道.length === 1 && b.t - 引.刻 > 12)) {
+    const q = 引.道[0]; c.tx = q.x; c.ty = q.y;
+    return true;
+  }
+  // 道の尽きる所は大手門の前。門が閉じていれば内へ迎え入れる
+  const g = 引.門, a = axisOf(門の輪(m, g), g);
+  if (!g.broken) {
+    const 内 = fromUV(m, a, g.off, a.half - 30);
+    c.x = 内.x; c.y = 内.y; placeSquads(c, true);
+  }
+  c.holdGate = g; c.引き取り = null; c.tx = c.x; c.ty = c.y; c.wp = null;
+  b.log.push({ t: b.t, text: `${c.gen.name}隊は${g.key}の内へ引き取った。` });
+  // 行き先の持ち場が別にあれば、そこへ向かう（moveToGate）
+  if (引.次 && 引.次 !== g && !引.次.broken) {
+    c.holdGate = 引.次;
+    const a2 = axisOf(門の輪(m, 引.次), 引.次), p2 = fromUV(m, a2, 引.次.off, a2.half - 14);
+    issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y });
+  }
+  return false;
 }
 
 
@@ -893,6 +952,7 @@ export function issueOrder(b, c, patch, { 即 } = {}) {
   if (patch && patch.order && patch.order !== "撤退") c.withdraw = false;
   if (!AI_ISSUING && c.side === "P") {
     c.auto = false;                                   // 手ずから命じた隊は委任を離れる
+    c.引き取り = null;                                // 出城からの引き取りも、別の下知で取りやめる
     if (b) b.手出し = b.t;                            // 遊ぶ側が手を出した刻（膠着の見極めに使う）
   }
   if (!patch.keepPath) c.wp = null;      // 新たな命令は道順を打ち消す
@@ -1005,7 +1065,21 @@ export function 内の門へ退く(b, c) {
   return { 場: { x: p.x, y: p.y }, 門: 選, 名: 選.key };
 }
 
+/* 盤に現れた後詰の隊を、入り口に据え直す（engine.js 後詰を入れる）。川のどちらの岸から
+   出たかも、据えた所で数え直す（渡ったあとの立て直しは、この岸から測る） */
+export function 後詰を据える(c, p) {
+  c.x = p.x; c.y = p.y; c.facing = p.f; c.陣向き = p.f; c.tx = p.x; c.ty = p.y;
+  c.northStart = hasRiver() && p.y < RIVER.top;
+  c.bank0 = hasRiver() ? (p.y < (RIVER.top + RIVER.bot) / 2 + riverShift(p.x) ? -1 : 1) : 0;
+  placeSquads(c, true);
+}
+
 export function 退き先(b, c) {
+  /* 盤に現れた後詰（engine.js 後詰を入れる）は、城の中ではなく、来た方の盤の端へ退く */
+  if (b && b.map && c.後詰 && c.後詰.外) {
+    const 遠 = FIELD.w + FIELD.h;
+    return { x: c.x + c.後詰.外.x * 遠, y: c.y + c.後詰.外.y * 遠 };
+  }
   if (b && b.map) {
     /* 城の中で崩れたとき。
 

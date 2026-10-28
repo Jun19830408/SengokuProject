@@ -281,10 +281,120 @@ export function buildCastleMap(castle) {
         w: 二.hw * 0.22, h: 二.hh * 0.10 });
     }
   }
+  const moat = { band: 38 * k * 癖.堀, 空堀: 癖.空堀 };
+  /* 出城（下の 出城を組む）。普請を終えた城にだけ立つ。矢倉は施設と同じ控えに入れる */
+  const 出城 = castle.出城 ? 出城を組む(castle, layers, moat, t, U, k) : null;
+  if (出城) {
+    for (const sx of [-1, 1]) {
+      fac.push({ kind: "矢倉", name: `${出城.name}矢倉${sx > 0 ? "東" : "西"}`, 出城: true,
+        x: 出城.ox + sx * (出城.hw - 22), y: 出城.oy + 出城.hh - 22,
+        r: 13, hp: 260 + castle.def * 3, max: 260 + castle.def * 3, layer: 0, cool: 0 });
+    }
+  }
   // 中心は戦場を決めたあとに据える（施設は相対座標で持っておく）
-  return { cx: 0, cy: 0, t, layers, moat: { band: 38 * k * 癖.堀, 空堀: 癖.空堀 }, n, 普請,
+  return { cx: 0, cy: 0, t, layers, moat, n, 普請, 出城,
     構: 構, 縄張, 横長, 坂: 構 === "山城" ? 1 : 構 === "平山城" ? 0.55 : 0,
     gates: layers.flatMap((l) => l.gates), fac, unit: U };
+}
+
+/* ------------------------------------------------ 出城（GDD 9.3）
+
+   遊ぶ側の申し出は「付城などは面白い（例えば、真田丸的なものができるとも思います）。
+   大阪の冬の陣のように野戦で負けても真田丸を中心に戦って撃退することも考えられる。
+   政務フェーズで付け城などを建設できるようになるのもいい」であった。
+
+   出城は、大手の堀の外に築く小さな曲輪である。空堀を回し、土塁に塀を載せ、
+   前（南）に門を一つ、前の隅に矢倉を二つ立てる。背（城の側）には木戸を構え、
+   守り手が大手の土橋へ引き取れるようにしておく（寄せ手はこの木戸を通れない）。
+
+     据え所 … 大手の土橋の脇。大手へ寄せる道は、出城の横腹の前を通る
+     寸法   … 中に一隊（三千）が構えられるだけ
+     名     … 「出城」とだけ呼ぶ（遊ぶ側の申し出は「〇〇丸は変なので、出城でいい」であった）
+
+   出城は層（曲輪）とは別に持つ。層は入れ子の矩形で、内へ行くほど深い――その
+   決まりの上に城攻めの順（門を破れば次の輪へ）が乗っているので、出城を層に
+   混ぜると崩れる。門だけは層の門と同じ形（face, off, w, hp, broken…）で持ち、
+   門の輪（m, g）が層の代わりに出城を返す。出城の門の layer は −1 とする
+   （どの層よりも外。内の門へ下がる勘定がそのまま通る）。 */
+function 出城を組む(castle, layers, moat, t, U, k) {
+  const o = layers[0];
+  const 大手 = o.gates.find((g) => g.face === "S") || o.gates[0];
+  if (!大手) return null;
+  const 名 = "出城";                  // 古い記録に「〇〇丸」の名が残っていても、盤では「出城」と呼ぶ
+  const hw = Math.round(U.w * 0.68), hh = Math.round(U.d * 1.15);
+  const 堀 = Math.round(26 * Math.max(0.9, k));
+  const 堀外 = o.hh + t + o.masu + t + 8 + moat.band;   // 城の堀の外の際（南）
+  const ub = gateOpenU(大手);                             // 大手の土橋の真ん中
+  const 側 = ub >= 0 ? -1 : 1;                            // 土橋の、城の真ん中寄りの側に据える
+  const ox = Math.round(ub + 側 * (大手.w * 0.8 + 70 + 堀 + t + hw));
+  const oy = Math.round(堀外 + 56 + 堀 + t + hh);
+  /* 門は城の大手の九割の堅さ。板の門だが、出城は門を破らせるための曲輪ではない――
+     門の前の土橋に寄せ手を集め、三方の狭間から射るための曲輪である */
+  const hp = Math.round((110 + castle.def * 16) * 0.9);
+  const 門 = { face: "S", layer: -1, i: 0, name: "門", key: `${名}の門`, 出城: true,
+    off: 0, w: Math.round(58 * k), hp, max: hp, broken: false,
+    masu: 0, open: 1, slot: null, hold: null, def: 0 };
+  return { 出城: true, name: 名, i: -1, hw, hh, ox, oy, masu: 0, 堀, gates: [門],
+    口: { off: Math.round(-側 * hw * 0.55), w: 40 }, 落ちた: false };
+}
+
+/* 門の輪。門の属する曲輪（出城の門なら出城）。層の門は m.layers[g.layer] と同じ */
+export const 門の輪 = (m, g) => (g && g.出城 ? m.出城 : m.layers[g.layer]);
+/* 出城がまだ保っているか（築かれていて、落ちていない） */
+export const 出城が保つ = (m) => !!(m && m.出城 && !m.出城.落ちた);
+/* その所が出城の内か（塀の内。pad だけ広げて測る） */
+export function 出城の内か(m, x, y, pad = 0) {
+  const 出 = m && m.出城;
+  return !!出 && inRect(x - m.cx - 出.ox, y - m.cy - 出.oy, 出.hw + pad, 出.hh + pad);
+}
+/* 出城から城へ引き取る道（GDD 9.3）。背の口を出て、堀の外を大手の土橋まで回り、
+   枡形を抜けて大手門の前まで。門が閉じていれば、門の前で城の内へ迎え入れる
+   （ai.js 出城を守る）。返すのは { 道, 門 } */
+export function 出城の退き道(m) {
+  const 出 = m && m.出城;
+  if (!出) return null;
+  const 大手 = m.layers[0].gates.find((g) => g.face === "S") || m.layers[0].gates[0];
+  const x = m.cx + 出.ox + 出.口.off;
+  const 口内 = { x, y: m.cy + 出.oy - 出.hh + 22, r: 26 };
+  const 口外 = { x, y: m.cy + 出.oy - 出.hh - m.t - 出.堀 - 24, r: 30 };
+  return { 道: [口内, 口外, ...routeToCastleGate(m, 大手, 口外.x, 口外.y)], 門: 大手 };
+}
+/* 出城の塀の区切り（絵のため。draw.js と tachimono.js）。土塁の天端の帯を、門と背の口の
+   間口を抜いて四方に返す。{ face, r: [x0, y0, x1, y1] }（盤の所） */
+export function 出城の塀(m) {
+  const 出 = m && m.出城;
+  if (!出) return [];
+  const t = m.t, X = m.cx + 出.ox, Y = m.cy + 出.oy;
+  const x0 = X - 出.hw - t, x1 = X + 出.hw + t, y0 = Y - 出.hh - t, y1 = Y + 出.hh + t;
+  const 門 = 出.gates[0], 門w = 門.w + (門.broken ? 20 : 0);
+  const gL = X + 門.off - 門w / 2, gR = X + 門.off + 門w / 2;
+  const kL = X + 出.口.off - 出.口.w / 2, kR = X + 出.口.off + 出.口.w / 2;
+  return [
+    { face: "S", r: [x0, y1 - t, gL, y1] }, { face: "S", r: [gR, y1 - t, x1, y1] },
+    { face: "N", r: [x0, y0, kL, y0 + t] }, { face: "N", r: [kR, y0, x1, y0 + t] },
+    { face: "W", r: [x0, y0 + t, x0 + t, y1 - t] }, { face: "E", r: [x1 - t, y0 + t, x1, y1 - t] },
+  ].filter((o) => o.r[2] - o.r[0] > 0.5 && o.r[3] - o.r[1] > 0.5);
+}
+/* 出城の地（castleTerrainAt から）。外なら null */
+function 出城の地(m, dx, dy) {
+  const 出 = m.出城, t = m.t;
+  const lx = dx - 出.ox, ly = dy - 出.oy;
+  if (Math.abs(lx) > 出.hw + t + 出.堀 || Math.abs(ly) > 出.hh + t + 出.堀) return null;
+  const 門 = 出.gates[0];
+  if (Math.abs(lx) > 出.hw + t || Math.abs(ly) > 出.hh + t) {
+    // 空堀。門の前と背の口の前は、堀を掘り残した土橋で渡る
+    if (ly > 0 && Math.abs(lx - 門.off) <= 門.w * 0.8) return "bridge2";
+    if (ly < 0 && Math.abs(lx - 出.口.off) <= 出.口.w * 0.8) return "bridge2";
+    return "karabori";
+  }
+  if (Math.abs(lx) > 出.hw || Math.abs(ly) > 出.hh) {
+    if (ly > 出.hh - 1 && Math.abs(lx - 門.off) <= 門.w / 2 + (門.broken ? 10 : 0)) return 門.broken ? "gateopen" : "gate";
+    /* 背の口の木戸。城方は通れるが、寄せ手は通れない（field.js passableFor）。
+       口を開けたままにしておくと、大手へ寄せる寄せ手が口から出城の中へ流れ込んだ */
+    if (ly < -出.hh + 1 && Math.abs(lx - 出.口.off) <= 出.口.w / 2) return "kido";
+    return "wall";
+  }
+  return "demaru";
 }
 
 // 城の外に、寄せ手が二列並べるだけの余地を取って戦場を決める
@@ -307,6 +417,8 @@ export function layoutCastleField(m, opt = {}) {
   m.旧 = { w: 旧w, h: 旧h };
   if (opt.広く) 広い盤に据える(m, ext, opt);
   else {
+    /* 狭い盤には出城を据える余地が無い（堀の外の野は寄せ手の構える所である） */
+    if (m.出城) { m.出城 = null; m.fac = m.fac.filter((f) => !f.出城); }
     FIELD.w = 旧w; FIELD.h = 旧h;
     尺を据える(0);                                      // 尺は盤の幅のまま
     m.cx = FIELD.w / 2; m.cy = FIELD.h / 2;
@@ -335,7 +447,14 @@ function 広い盤に据える(m, ext, opt) {
   const 半 = Math.max(ext.w, ext.h) + m.moat.band;
   /* 城山の半径。山城は裾が広く、平山城はそれよりやや狭い。平城は堀の外に城下の
      ぶんを足すだけ */
-  const 域r = Math.round(半 * (m.坂 >= 1 ? 1.34 : m.坂 > 0 ? 1.26 : 1.14) + 60);
+  let 域r = Math.round(半 * (m.坂 >= 1 ? 1.34 : m.坂 > 0 ? 1.26 : 1.14) + 60);
+  /* 出城は城山の内に収める。野の道と城の道の継ぎ目（半径の九割）より内に置かねば、
+     寄せ手の道が出城の塀の中で継がれてしまう */
+  if (m.出城) {
+    const 出 = m.出城;
+    const 遠 = Math.hypot(Math.abs(出.ox) + 出.hw + m.t + 出.堀, Math.abs(出.oy) + 出.hh + m.t + 出.堀);
+    域r = Math.max(域r, Math.round((遠 + 70) / 0.88));
+  }
   const W = Math.round(Math.max(9000, Math.min(広い盤の頭, 域r * 5.6)));
   const H = Math.round(W * 0.75);
   FIELD.w = W; FIELD.h = H;
@@ -360,6 +479,73 @@ function 広い盤に据える(m, ext, opt) {
   });
 }
 
+/* ------------------------------------------------ 付城（GDD 9.3。core/tsukejiro.js）
+
+   囲みのあいだに寄せ手が築いた砦。城山の南の縁の外、大手の麓の前に柵を回した陣を
+   据える（二つあれば左右に並べる）。寄せ手は盤の南の端ではなく付城から寄せる――
+   川を越え、城の目の前に陣を構えて囲んできたのだから。
+
+     柵   … 丸太を立て並べた囲い。越えられぬほどではないが、足は鈍り、柵の際で戦う者は強い
+     内   … 陣の地。踏み固められ、隊列を整えやすい
+     口   … 城に向いた北の面に、広く開けておく（打って出る口）
+   城山の外にあるので、地は castleTerrainAt の頭で判ずる（城の域の外でも付城は付城）。 */
+export function 付城を据える(m, n) {
+  m.付城 = null;
+  if (!m || !m.広い || !(n > 0)) return null;
+  const o = m.layers[0];
+  const 大手 = o.gates.find((g) => g.face === "S") || o.gates[0];
+  const x0 = m.cx + (o.ox || 0) + (大手 ? gateOpenU(大手) : 0);
+  const y0 = m.域.y + m.域.r + 150;
+  const hw = 150, hh = 80, t = 8;
+  const 避ける = new Set(["deep", "ford", "bridge", "marsh", "forest", "village", "mountain"]);
+  /* 柵の内と柵が、川・沼・森・村・山に掛からぬ所を探す（城の盤のうちに収める） */
+  const 空き = (cx, cy) => {
+    if (cx - hw - t < 80 || cx + hw + t > FIELD.w - 80 || cy - hh - t < 80 || cy + hh + t > FIELD.h - 80) return false;
+    for (let i = 0; i <= 6; i++) for (let j = 0; j <= 4; j++) {
+      const x = cx - hw - t + (hw + t) * 2 * i / 6, y = cy - hh - t + (hh + t) * 2 * j / 4;
+      if (避ける.has(terrainAt(x, y))) return false;
+    }
+    return true;
+  };
+  const 列 = [];
+  const 数 = Math.min(2, Math.round(n));
+  for (let k = 0; k < 数; k++) {
+    const 振 = 数 > 1 ? (k === 0 ? -1 : 1) * (hw + 90) : 0;
+    let 置 = null;
+    for (let r = 0; r <= 10 && !置; r++) {
+      for (const [dx, dy] of r ? [[r, 0], [-r, 0], [0, r], [r, r], [-r, r]] : [[0, 0]]) {
+        const cx = x0 + 振 + dx * 60, cy = y0 + dy * 40;
+        if (列.some((f) => Math.abs(f.x - cx) < (hw + t) * 2 + 40 && Math.abs(f.y - cy) < (hh + t) * 2 + 20)) continue;
+        if (空き(cx, cy)) { 置 = { x: cx, y: cy }; break; }
+      }
+    }
+    if (置) 列.push({ ...置, hw, hh, t, 口: 120, name: 数 > 1 ? `付城（${k === 0 ? "西" : "東"}）` : "付城" });
+  }
+  m.付城 = 列.length ? 列 : null;
+  return m.付城;
+}
+/* 付城の柵の区切り（絵のため）。北の口と南の木戸を抜いて、柵の帯を返す。{ face, r } */
+export function 付城の柵(f) {
+  const x0 = f.x - f.hw - f.t, x1 = f.x + f.hw + f.t, y0 = f.y - f.hh - f.t, y1 = f.y + f.hh + f.t;
+  return [
+    { face: "N", r: [x0, y0, f.x - f.口 / 2, y0 + f.t] }, { face: "N", r: [f.x + f.口 / 2, y0, x1, y0 + f.t] },
+    { face: "S", r: [x0, y1 - f.t, f.x - 28, y1] }, { face: "S", r: [f.x + 28, y1 - f.t, x1, y1] },
+    { face: "W", r: [x0, y0 + f.t, x0 + f.t, y1 - f.t] }, { face: "E", r: [x1 - f.t, y0 + f.t, x1, y1 - f.t] },
+  ];
+}
+/* 付城の地。柵の帯なら saku、内なら jinsho（北の口は内と同じ）。外なら null */
+function 付城の地(m, x, y) {
+  for (const f of m.付城) {
+    const lx = x - f.x, ly = y - f.y;
+    if (Math.abs(lx) > f.hw + f.t || Math.abs(ly) > f.hh + f.t) continue;
+    if (Math.abs(lx) <= f.hw && Math.abs(ly) <= f.hh) return "jinsho";
+    if (ly < 0 && Math.abs(lx) <= f.口 / 2) return "jinsho";              // 北の口
+    if (ly > 0 && Math.abs(lx) <= 28) return "jinsho";                   // 南の木戸（後ろの口）
+    return "saku";
+  }
+  return null;
+}
+
 /* 広い盤の寄せ手の陣（GDD 9.3）。
 
    寄せ手は野戦から移ってきたのだから、城の堀の際に湧いて出るのではなく、盤の
@@ -368,6 +554,26 @@ function 広い盤に据える(m, ext, opt) {
    （野戦の布陣 MapScreen の lineup と同じ形）。川・森・沼・村には陣を敷かない。 */
 export function 寄せ手の陣(m, i, n) {
   const W = FIELD.w, H = FIELD.h;
+  /* 付城があれば、付城の中とその脇に陣を敷く。総大将（並びの先頭）は付城の中ほどに */
+  if (m.付城 && m.付城.length) {
+    const 置く = (x, y) => ({ x, y, f: Math.atan2(m.cy - y, m.cx - x) });
+    if (i === 0) { const f0 = m.付城[0]; return 置く(f0.x, f0.y + f0.hh * 0.35); }
+    const j = i - 1, 一つに = 5;
+    const f = m.付城[Math.floor(j / 一つに) % m.付城.length];
+    const 席 = j % 一つに;
+    const 並 = [[-0.55, -0.35], [0.55, -0.35], [-0.55, 0.45], [0.55, 0.45], [0, -0.55]];
+    const 周 = Math.floor(j / (一つに * m.付城.length));
+    const [ux, uy] = 並[席];
+    const x = f.x + ux * f.hw + (周 ? (周 % 2 ? 1 : -1) * (f.hw + 160 + 220 * Math.floor((周 - 1) / 2)) : 0);
+    const y = f.y + uy * f.hh + (周 ? f.hh * 0.6 : 0);
+    const 避 = new Set(["forest", "wood", "village", "deep", "ford", "bridge", "marsh", "mountain"]);
+    if (!避.has(terrainAt(x, y))) return 置く(x, y);
+    for (let r = 1; r <= 8; r++) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const x2 = x + dx * r * 60, y2 = y + dy * r * 40;
+      if (!避.has(terrainAt(x2, y2))) return 置く(x2, y2);
+    }
+    return 置く(x, y);
+  }
   const 入 = ROAD.節 && ROAD.節.length ? ROAD.節[0].x : W / 2;   // 街道の南の端
   const 間 = 290, 段間 = 220;
   const 列 = Math.max(1, Math.min(6, n - 1));
@@ -402,6 +608,42 @@ export function 城の域か(x, y, m = MAP) {
   if (!m.域) return true;
   const dx = x - m.域.x, dy = y - m.域.y;
   return dx * dx + dy * dy <= m.域.r * m.域.r;
+}
+
+/* 後詰の入り口（core/gotsume.js 盤に来る後詰・engine.js 後詰を入れる）。
+
+   城の芯から 角 の向きへ延ばした先の、盤の端に隊を並べる。前の列は四隊まで、残りは
+   その後ろ（端の側）に並ぶ。森・村・川・沼・山と城山を避け、敵の隊の間近（二百六十歩）
+   にも立てない。避けきれなければ、端に沿って横へずらす。向きは城の芯へ向ける */
+/* 城の芯から 角 の向きに、盤の際（端から百五十歩）までの長さ */
+export function 盤の端まで(m, 角, 際 = 150) {
+  const W = FIELD.w, H = FIELD.h, ux = Math.cos(角), uy = Math.sin(角);
+  return Math.min(
+    ux > 1e-6 ? (W - 際 - m.cx) / ux : ux < -1e-6 ? (際 - m.cx) / ux : Infinity,
+    uy > 1e-6 ? (H - 際 - m.cy) / uy : uy < -1e-6 ? (際 - m.cy) / uy : Infinity);
+}
+
+export function 後詰の口(m, 角, i, n, 敵ら = []) {
+  const W = FIELD.w, H = FIELD.h;
+  const ux = Math.cos(角), uy = Math.sin(角), vx = -uy, vy = ux;
+  const 長 = 盤の端まで(m, 角);
+  const 列 = Math.max(1, Math.min(4, n)), 段数 = Math.ceil(n / 列);
+  const 段 = Math.floor(i / 列), 残 = Math.min(列, n - 段 * 列);
+  const 席 = (i - 段 * 列) - (残 - 1) / 2;
+  const 内 = (段数 - 1 - 段) * 210;                       // 前の列ほど内へ
+  const 避 = new Set(["forest", "wood", "village", "deep", "ford", "bridge", "marsh", "mountain", "saku"]);
+  const 良 = (x, y) => x > 60 && y > 60 && x < W - 60 && y < H - 60 && passable(x, y) && !避.has(terrainAt(x, y))
+    && !城の域か(x, y, m) && !敵ら.some((o) => Math.hypot(o.x - x, o.y - y) < 260);
+  const 置く = (x, y) => ({ x, y, f: Math.atan2(m.cy - y, m.cx - x) });
+  for (const 寄 of [0, 1, -1, 2, -2, 3, -3]) {
+    for (let 入 = 0; 入 <= 6; 入++) {
+      const d = Math.max(0, 長 - 内 - 入 * 120);
+      const x = m.cx + ux * d + vx * (席 * 270 + 寄 * 360), y = m.cy + uy * d + vy * (席 * 270 + 寄 * 360);
+      if (良(x, y)) return 置く(x, y);
+    }
+  }
+  const d = Math.max(0, 長 - 内);
+  return 置く(clamp(m.cx + ux * d + vx * 席 * 270, 80, W - 80), clamp(m.cy + uy * d + vy * 席 * 270, 80, H - 80));
 }
 
 /* 寄せ手が構える所（GDD 9.3）。
@@ -475,6 +717,7 @@ export const fromUV = (m, a, u, v) =>
 export const gatePos = (m, l, g) => { const a = axisOf(l, g); return fromUV(m, a, g.off, a.half + m.t / 2); };
 
 export function gateOpenU(g) {
+  if (g.出城) return g.off;                         // 出城の門に枡形は無い。正面がそのまま開き口
   const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
   const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
   return from + g.w / 2;
@@ -490,8 +733,8 @@ export function gateOpenU(g) {
    立ち所は虎口の開き口の正面。取り付いた隊が退けば、次の隊がそのまま前へ出る。 */
 export function 門の控え口(m, l, g, 順 = 0) {
   const a = axisOf(l, g);
-  // 外周の門には堀が回る。内の門に堀は無い。
-  const 堀 = g.layer === 0 ? (m.moat ? m.moat.band : 0) + 8 : 0;
+  // 外周の門には堀が回る。内の門に堀は無い。出城の門の前には出城の空堀がある
+  const 堀 = g.出城 ? (l.堀 || 0) + 8 : g.layer === 0 ? (m.moat ? m.moat.band : 0) + 8 : 0;
   const v0 = a.half + m.t + g.masu + m.t + 堀 + 54;
   順 = Math.max(0, 順);
   /* 内の門の前は、ひとつ外の曲輪の帯である。列を門の正面へ七十歩ずつ伸ばして
@@ -539,6 +782,7 @@ export function masuWall(m, l, g, dx, dy) {
 export function castleTerrainAt(x, y) {
   const m = MAP, t = m.t;
   const dx = x - m.cx, dy = y - m.cy;
+  if (m.付城) { const 付 = 付城の地(m, x, y); if (付) return 付; }   // 付城は城山の外にある
   /* 広い盤では、城山の外は野の地で判ずる（null を返せば field.js が野を引く） */
   if (m.域 && (x - m.域.x) ** 2 + (y - m.域.y) ** 2 > m.域.r * m.域.r) return null;
   for (const l of m.layers) for (const g of l.gates) if (masuWall(m, l, g, dx, dy)) return "wall";
@@ -546,6 +790,7 @@ export function castleTerrainAt(x, y) {
   for (const f of m.fac) {
     if (f.hp > 0 && Math.hypot(x - f.x, y - f.y) < f.r * 1.5) return "tower";
   }
+  if (m.出城) { const 出 = 出城の地(m, dx, dy); if (出) return 出; }
   for (const l of m.layers) {
     const lx = dx - l.ox, ly = dy - l.oy;
     if (inRect(lx, ly, l.hw + t, l.hh + t) && !inRect(lx, ly, l.hw, l.hh)) {
@@ -949,10 +1194,12 @@ export function 列の順(g, gp) {
 
 // 目標の門まで、破れた門を順に抜けて至る道順。通り過ぎた地点は落とす。
 export function routeToCastleGate(m, g, cx, cy) {
-  const a = axisOf(m.layers[g.layer], g), t = m.t;
-  // 虎口の開き口までを最短経路で。そこから先は門までの短い道筋。
-  const open = fromUV(m, a, gateOpenU(g), a.half + t + g.masu + t + 12);
-  const tail = [
+  const l = 門の輪(m, g), a = axisOf(l, g), t = m.t;
+  /* 虎口の開き口までを最短経路で。そこから先は門までの短い道筋。
+     出城の門には枡形が無い。空堀の土橋の外が開き口で、土橋を渡ればすぐ門である */
+  const open = g.出城 ? fromUV(m, a, g.off, a.half + t + (l.堀 || 0) + 16)
+    : fromUV(m, a, gateOpenU(g), a.half + t + g.masu + t + 12);
+  const tail = g.出城 ? [{ ...fromUV(m, a, g.off, a.half + t + 14), r: 20 }] : [
     { ...fromUV(m, a, g.off, a.half + t + g.masu / 2), r: 24 },
     { ...fromUV(m, a, g.off, a.half + t + 14), r: 20 },
   ];
@@ -978,7 +1225,7 @@ export function routeToCastleGate(m, g, cx, cy) {
   return [...path.slice(i), ...tail];
 }
 
-export const gateReachable = (m, g) => g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);
+export const gateReachable = (m, g) => !!g.出城 || g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);
 
 /* 本丸へ攻め入る道（GDD 9.3）。城攻めの第一の的は本丸に入ることである。
    本丸の門が一つでも破れていれば、近いほうの破れた門をくぐり、本丸の中ほどまで

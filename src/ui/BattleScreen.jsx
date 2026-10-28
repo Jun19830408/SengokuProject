@@ -1,12 +1,13 @@
 import { 木立を焼く } from "../battle/mori.js";
 import React, { useState, useRef, useEffect } from "react";
-import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 本丸への道 } from "../battle/castleMap.js";
+import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 本丸への道, 門の輪, 出城が保つ, 出城の内か } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限, 城山の形 } from "../battle/shinga.js";
 import { stepBattle, 夜を明かす, 陣を払う, 寄せ手の夜の思案, 今の刻, 日の名, 兵糧の日 } from "../battle/engine.js";
+import { 計略を仕掛ける, 計略の見込み, 計略の減り, 仕掛け手, 仕掛けた, 内応の者 } from "../battle/keiryaku.js";
 import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸, 区の高さ図を外す, 今の面, 面を据える } from "../battle/naname.js";
-import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, HILLS, TERRAIN, VILLAGES, WEATHER, WOODS, fieldScale, terrainAt } from "../battle/field.js";
+import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, HILLS, RIVER, TERRAIN, VILLAGES, WEATHER, WOODS, fieldScale, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
 import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる, 内応させる, 内応の門を開く } from "../battle/corps.js";
@@ -145,6 +146,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const [w1, h1] = 寸(地k);
     const c1 = document.createElement("canvas"); c1.width = w1; c1.height = h1;
     return { it: 作る(c1.getContext("2d"), 地k), 細: c1, 貼る, 済: false, 溶: 0, 控え: opt.控え || null, 後: null };
+  };
+  /* 夜を明かす（engine.js）。夜のうちに仮橋が架かれば、野の絵を焼き直す */
+  const 夜を明かして焼く = (bb) => {
+    夜を明かす(bb);
+    if (bb.野を焼き直す) { bb.野を焼き直す = false; paintTerrain(); }
   };
   const paintTerrain = () => {
     const t = terrainRef.current || document.createElement("canvas");
@@ -294,7 +300,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       while (b2.phase === "fight" && Date.now() - t0 < 24) {
         stepBattle(b2, 委ねる歩幅);
         /* 数日がかりの城攻めの夜は、采配の思案で越す（寄せ手が退くか続けるか） */
-        if (b2.phase === "night") { if (寄せ手の夜の思案(b2) === "退く") 陣を払う(b2); else 夜を明かす(b2); }
+        if (b2.phase === "night") { if (寄せ手の夜の思案(b2) === "退く") 陣を払う(b2); else 夜を明かして焼く(b2); }
       }
       force((n) => (n + 1) % 1000);
       if (b2.phase === "fight") setTimeout(一区切り, 0);
@@ -882,11 +888,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const m = b.map;
     if (!m || !c) return;
     if (kind === "門を破る") {
-      const gt = gate || ((c.gate && !c.gate.broken && (c.gate.layer === 0 || m.layers[c.gate.layer - 1].gates.some((x) => x.broken)))
-        ? c.gate : nearestOpenGate(m, c.x, c.y));
+      const 届く = (g2) => (g2.出城 ? 出城が保つ(m) : (g2.layer === 0 || m.layers[g2.layer - 1].gates.some((x) => x.broken)));
+      const gt = gate || ((c.gate && !c.gate.broken && 届く(c.gate)) ? c.gate : nearestOpenGate(m, c.x, c.y));
       if (!gt) return;
       c.gate = gt; c.siegeAuto = true;      // 破ったら次の門へ自ら進む
-      const l = m.layers[gt.layer], a = axisOf(l, gt);
+      c.出城攻め = !!gt.出城;                 // 出城の門なら、破ったあと出城の中へ攻め入る（engine.js）
+      const l = 門の輪(m, gt), a = axisOf(l, gt);
       const gp = gatePos(m, l, gt);
       // すでに取り付いていれば呼び戻さない
       if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * fieldScale()) { 下知(b, c, { order: "待機" }); return; }
@@ -909,7 +916,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       } else castleGo(c, "門を破る");
     } else if (kind === "施設を崩す") {
       c.siegeAuto = false;
-      const cand = m.fac.filter((f) => f.hp > 0 && (f.layer === 0 ? m.layers[0].gates.some((x) => x.broken)
+      const cand = m.fac.filter((f) => f.hp > 0 && (f.出城 ? 出城が保つ(m) : f.layer === 0 ? m.layers[0].gates.some((x) => x.broken)
         : m.layers[f.layer].gates.some((x) => x.broken) || m.layers[f.layer - 1].gates.some((x) => x.broken)));
       const f = cand.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
       if (f) 下知(b, c, { order: "前進", tx: f.x, ty: f.y });
@@ -928,14 +935,17 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const sortieOut = (c) => {
     if (!c || !b.map || iAmAttacker) return;
     const m = b.map;
+    /* 出城にいる隊は、出城の門を開いて出る。戻るときも出城へ戻る（下の sortieBack） */
+    const 出城から = 出城が保つ(m) && 出城の内か(m, c.x, c.y, 20);
     let li = 0;
     for (let i = m.layers.length - 1; i >= 0; i--) {
       if (inLayer(m, m.layers[i], c.x, c.y)) { li = i; break; }
     }
-    const gt = m.layers[li].gates[0];
-    const a2 = axisOf(m.layers[li], gt);
-    const p2 = fromUV(m, a2, gt.off, a2.half + m.t + 90);
-    c.sortie = true; c.holdGate = null;
+    const 輪 = 出城から ? m.出城 : m.layers[li];
+    const gt = 輪.gates[0];
+    const a2 = axisOf(輪, gt);
+    const p2 = fromUV(m, a2, gt.off, a2.half + m.t + (出城から ? m.出城.堀 : 0) + 90);
+    c.sortie = true; c.holdGate = null; c.出た門 = 出城から ? gt : null;
     下知(b, c, { order: "移動", tx: p2.x, ty: p2.y });
     notify(b, `${c.gen.name}隊が城門を開いて討って出た。`, "info");
     force((n) => (n + 1) % 1000);
@@ -943,6 +953,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const sortieBack = (c) => {
     if (!c || !b.map) return;
     c.sortie = false;
+    const m = b.map, g0 = c.出た門;
+    if (g0 && 出城が保つ(m)) {                // 出城から出た隊は出城の門の内へ戻り、また出城を守る
+      const a0 = axisOf(m.出城, g0), p0 = fromUV(m, a0, g0.off, a0.half - 30);
+      c.holdGate = g0; c.出た門 = null;
+      下知(b, c, { order: "移動", tx: p0.x, ty: p0.y });
+      force((n) => (n + 1) % 1000);
+      return;
+    }
     下知(b, c, { order: "移動", tx: b.map.cx, ty: b.map.cy });
     force((n) => (n + 1) % 1000);
   };
@@ -1066,13 +1084,52 @@ export function BattleScreen({ ctx, land, onEnd }) {
               </>
             )}
           </div>
+          {/* 三つの計略（battle/keiryaku.js）。寄せ手が遊ぶ側のときだけ、戦のさなかに仕掛けられる */}
+          {isCastle && iAmAttacker && b.phase === "fight" && (() => {
+            const 手 = 仕掛け手(b, selC);
+            const 内 = 内応の者(b, "P");
+            const 札 = (kind, 説) => {
+              const 済 = 仕掛けた(b, kind);
+              const p = 手 ? 計略の見込み(b, kind, 手) : 0;
+              return (
+                <div key={kind} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0" }}>
+                  <button className="btn sm" style={{ flex: "0 0 auto", minWidth: 64 }} disabled={!手 || 済}
+                    onClick={() => { 計略を仕掛ける(b, kind, selC); force((n) => (n + 1) % 1000); }}>{kind}</button>
+                  <span style={{ fontSize: 10.5, color: U.dim, lineHeight: 1.5 }}>
+                    {済 ? "今日はもう仕掛けた" : `成る見込み ${Math.round(p * 100)}%`}　{説}
+                  </span>
+                </div>
+              );
+            };
+            const 減水 = 手 ? 計略の減り("水の手", 手) : null, 減火 = 手 ? 計略の減り("焼き働き", 手) : null;
+            return (
+              <div style={{ borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
+                <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim }}>
+                  計略　仕掛け手 {手 ? `${手.gen.name}（知略${手.gen.wit}）` : "なし"}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0" }}>
+                  <button className="btn sm" style={{ flex: "0 0 auto", minWidth: 64 }} disabled={!内}
+                    onClick={() => { 計略を仕掛ける(b, "内応", selC); force((n) => (n + 1) % 1000); }}>内応</button>
+                  <span style={{ fontSize: 10.5, color: U.dim, lineHeight: 1.5 }}>
+                    {内 ? `${内.gen.name}が旗を翻し、色も下知もこちらへ移る` : "調略で密約を結んだ者がいない"}
+                  </span>
+                </div>
+                {札("水の手", 減水 ? `成れば城兵の士気 −${減水.士気}` : "")}
+                {札("焼き働き", 減火 ? `成れば城兵 −${(減火.兵 * 100).toFixed(1)}%・士気 −${減火.士気}・門と櫓が焼ける` : "")}
+                <div style={{ fontSize: 10, color: U.dim, lineHeight: 1.5 }}>
+                  水の手と焼き働きは一日に一度ずつ。減り方は仕掛け手の知略で決まり、しくじれば仕掛けた隊が少し損じる。
+                </div>
+              </div>
+            );
+          })()}
           {isCastle && (
             <div style={{ borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
               <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim }}>
                 城門の押し合い（城の傾き {Math.round((b.press || 0) * 100)}%）
               </div>
-              {b.map.gates.filter((gt) => !gt.broken && (gt.layer === 0 || b.map.layers[gt.layer - 1].gates.some((x) => x.broken))).map((gt) => {
-                const gp = gatePos(b.map, b.map.layers[gt.layer], gt);
+              {[...(出城が保つ(b.map) ? b.map.出城.gates : []), ...b.map.gates]
+                .filter((gt) => !gt.broken && (gt.出城 || gt.layer === 0 || b.map.layers[gt.layer - 1].gates.some((x) => x.broken))).map((gt) => {
+                const gp = gatePos(b.map, 門の輪(b.map, gt), gt);
                 const q = b.corps.filter((c) => c.side === b.attacker && corpsMen(c) > 0 && c.id !== gt.slot
                   && Math.hypot(c.x - gp.x, c.y - gp.y) < 104 * fieldScale()).length;
                 return (
@@ -1375,11 +1432,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
               <span style={{ color: U.dim, marginLeft: 8 }}>（城攻めは{日の名(b.日数 || 3)}まで）</span><br />
               破れた門 {破れ}／{門.length}。夜のうちに両軍とも士気が戻り、疲れが抜けます。城方は破れていない門を一割ほど繕い、
               寄せ手は矢の届かぬ所まで退いて陣を敷き直します（破った門の内に入った隊はそのまま押さえます）。
+              {RIVER.落ちた橋 ? "城の前の落ちた橋には、寄せ手が夜のうちに仮橋を架けます。" : ""}
               {糧我 != null && <><br />兵糧　味方 あと{糧我}日{糧彼 != null && 寄せ手 ? "" : ""}{!寄せ手 && 糧彼 != null ? `　寄せ手 あと${糧彼}日` : ""}</>}
             </div>
             {寄せ手 ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="btn dark" onClick={() => { 夜を明かす(b); force((n) => (n + 1) % 1000); }}>夜を明かす（翌朝また攻める）</button>
+                <button className="btn dark" onClick={() => { 夜を明かして焼く(b); force((n) => (n + 1) % 1000); }}>夜を明かす（翌朝また攻める）</button>
                 <button className="btn" onClick={() => { 陣を払う(b); force((n) => (n + 1) % 1000); }}>陣を払って囲みへ戻る</button>
               </div>
             ) : (
@@ -1387,7 +1445,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <span style={{ fontSize: 12.5, color: 采配の思案 === "退く" ? "#3E7A3A" : U.dim, flex: 1 }}>
                   {采配の思案 === "退く" ? "寄せ手は陣を払う気配です。" : "寄せ手は夜を明かして、明朝また寄せてくる気配です。"}
                 </span>
-                <button className="btn dark" onClick={() => { if (采配の思案 === "退く") 陣を払う(b); else 夜を明かす(b); force((n) => (n + 1) % 1000); }}>
+                <button className="btn dark" onClick={() => { if (采配の思案 === "退く") 陣を払う(b); else 夜を明かして焼く(b); force((n) => (n + 1) % 1000); }}>
                   {采配の思案 === "退く" ? "夜が明ける（寄せ手は退いた）" : "夜を明かす"}
                 </button>
               </div>
@@ -1598,6 +1656,26 @@ export function BattleScreen({ ctx, land, onEnd }) {
               )}
             </span>
           ) : null}
+          {/* 囲みの輪（engine.js 囲みを測る）。四方を囲めば城兵は死兵となり、空けておけば落ち延びる */}
+          {ctx.mode === "castle" && b.map && b.囲み && b.phase === "fight" ? (
+            <span className="kv" style={{ whiteSpace: "nowrap", color: b.死兵 ? "#B0483C" : U.dim }}
+              title="四方を囲めば城兵は死兵となって最後まで戦い、一方を空けておけば崩れた城兵はそこから落ち延びる（囲師必闕）">
+              {b.死兵 ? "死兵（四方を囲む）" : b.囲み.数 >= 4 ? "四方を囲む"
+                : `囲み${["零", "一", "二", "三"][b.囲み.数]}方（${b.囲み.空き.join("・")}が空く）`}
+            </span>
+          ) : null}
+          {/* 後詰（engine.js 後詰を入れる）。城方には着く見込みを出す。寄せ手には着くまで知らせない */}
+          {ctx.mode === "castle" && b.後詰 && b.後詰.length ? (() => {
+            const 城方 = b.後詰[0].側 === "P";
+            const 着 = b.後詰.filter((r) => r.入った), 待 = b.後詰.filter((r) => !r.入った);
+            const 刻名 = (r) => ["朝", "昼前", "昼", "昼すぎ", "夕刻"][Math.min(4, Math.floor(r.刻 * 5))];
+            const 文 = 着.length ? `後詰着到（${着.map((r) => r.家).join("・")}）`
+              : 城方 && 待.length ? `後詰 ${日の名(待[0].日)}の${刻名(待[0])}ごろ・${待[0].方}から` : null;
+            return 文 ? (
+              <span className="kv" style={{ whiteSpace: "nowrap", color: 着.length ? (城方 ? "#5C8A3A" : "#B0483C") : U.dim }}
+                title="城を救いに来た後詰。着けば来た方の盤の端から現れ、城方は呼応して打って出る">{文}</span>
+            ) : null;
+          })() : null}
           {ctx.mode === "castle" && b.map && b.map.gates.map((gt) => (
             <span key={gt.key} style={{ fontSize: 11, color: U.dim }}>
               {gt.key}
@@ -1729,11 +1807,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 if (!paintCastle()) paintTerrain();
                 force((n) => (n + 1) % 1000);
               }}><b>{視点 ? "◇" : "□"}</b>{視点 ? "斜め" : "真上"}</div>
-              {/* 盤を九十度ずつ回す。真ん中に映る所はそのまま */}
+              {/* 盤を九十度ずつ回す。真ん中に映る所はそのまま。名は手前（画面の下）に来る方角で、
+                  向き一は東が手前（東から西を見る）、向き三は西が手前（battle/naname.js 視） */}
               <div className="mbtn" onClick={() => {
                 向きRef.current = 向きを据える(向きRef.current + 1, FIELD.w, FIELD.h);
                 force((n) => (n + 1) % 1000);
-              }}><b>↻</b>{["南から", "西から", "北から", "東から"][向きRef.current]}</div>
+              }}><b>↻</b>{["南から", "東から", "北から", "西から"][向きRef.current]}</div>
             </div>
             {wide && (
               <div className="grip l" title="道具立てを戻す"

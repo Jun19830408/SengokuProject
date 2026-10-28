@@ -1,4 +1,4 @@
-import { axisOf, fromUV, gateOpenU, gatePos } from "./castleMap.js";
+import { axisOf, fromUV, gateOpenU, gatePos, 門の輪, 出城の塀, 付城の柵 } from "./castleMap.js";
 import { KOMA, rot } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS, ROAD, ROADS, WOODS, hasRiver, riverShift, 水際まで, 地形の代, 節までの隔たり } from "./field.js";
 import { px, py } from "../data/geo.js";
@@ -1074,6 +1074,7 @@ function 川筋を描く(ctx, r) {
   筆(r.幅, "#6E9BBE");                            // 水面
   筆(r.幅 * 0.42, "rgba(186,214,232,0.55)");      // 流れの明るいところ
   for (const w of r.渡し || []) {
+    if (w.種 === "落橋") continue;                 // 落ちた橋は 川を描く が描く
     const 橋 = w.種 === "橋";
     ctx.save();
     ctx.fillStyle = 橋 ? "#A8804E" : "rgba(180,212,228,0.85)";
@@ -1166,6 +1167,15 @@ function 川を描く(ctx) {
     for (const bx of [x0 + (x1 - x0) * 0.34, x0 + (x1 - x0) * 0.66]) ctx.fillRect(bx - 2, 上, 4, 下 - 上);
   }
 
+  // 落ちた橋（field.js 橋を落とす）。折れた橋脚が水面に覗く
+  if (RIVER.落ちた橋) {
+    const [bt0, bb0] = band((RIVER.落ちた橋[0] + RIVER.落ちた橋[1]) / 2);
+    const x0 = RIVER.落ちた橋[0], x1 = RIVER.落ちた橋[1];
+    ctx.fillStyle = "#4E3A24";
+    for (const bx of [x0 + (x1 - x0) * 0.2, (x0 + x1) / 2, x0 + (x1 - x0) * 0.8]) {
+      for (const t of [0.22, 0.5, 0.78]) ctx.fillRect(bx - 2, bt0 + (bb0 - bt0) * t - 3, 4, 6);
+    }
+  }
   // 字は輪郭を付けて、水の上でも読めるようにする
   const 字 = Math.round(14 * 札の倍());
   const 札 = (t, x, y) => {
@@ -1176,7 +1186,11 @@ function 川を描く(ctx) {
   };
   if (RIVER.bridge[1] > RIVER.bridge[0]) {
     const [bt0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
-    札("橋", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 字 * 0.5, bt0 - 字);
+    札(RIVER.仮橋 ? "仮橋" : "橋", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 字 * (RIVER.仮橋 ? 1 : 0.5), bt0 - 字);
+  }
+  if (RIVER.落ちた橋) {
+    const [bt0] = band((RIVER.落ちた橋[0] + RIVER.落ちた橋[1]) / 2);
+    札("落ちた橋", (RIVER.落ちた橋[0] + RIVER.落ちた橋[1]) / 2 - 字 * 2, bt0 - 字);
   }
   if (RIVER.ford[1] > RIVER.ford[0]) {
     const [ft0] = band((RIVER.ford[0] + RIVER.ford[1]) / 2);
@@ -1591,7 +1605,7 @@ function 旧の城の地(ctx, m, t, cx, cy) {
 
 /* 門と施設の傷み帯。毎刻変わるので、焼いた画布には入れず、その場で描く。 */
 function 門の傷みを一つ描く(ctx, m, g, 揚) {
-  const l = m.layers[g.layer];
+  const l = 門の輪(m, g);
   if (!l) return;
   const a = axisOf(l, g);
   const along = a.along === "x";
@@ -1618,9 +1632,9 @@ function 城の帯を描く(m, 画面で, ctx) {
     ctx.fillStyle = r > 0.5 ? "#5C8C4A" : r > 0.22 ? "#C89A3A" : "#B0483C";
     ctx.fillRect(-w / 2, 0, w * r, 4);
   };
-  for (const l of m.layers) for (const g of l.gates) {
+  for (const l of [...m.layers, ...(m.出城 && !m.出城.落ちた ? [m.出城] : [])]) for (const g of l.gates) {
     if (g.broken) continue;
-    const a = axisOf(l, g), lp = fromUV(m, a, g.off, a.half + m.t + g.masu + 18);
+    const a = axisOf(l, g), lp = fromUV(m, a, g.off, a.half + m.t + g.masu + (l.出城 ? l.堀 : 0) + 18);
     画面で(lp.x, lp.y + 4, () => { ctx.translate(0, 7); 帯(40, Math.max(0, g.hp / g.max)); });
   }
   for (const f of m.fac) if (f.hp > 0 && f.max) 画面で(f.x, f.y + f.r, () => { ctx.translate(0, 4); 帯(26, f.hp / f.max); });
@@ -1629,6 +1643,7 @@ function 城の帯を描く(m, 画面で, ctx) {
 // 揚 … 斜めの眺めで、地の高さぶん持ち上げるずれ（naname.js 揚げ）
 export function 城の傷みを描く(ctx, m, 揚) {
   for (const l of m.layers) for (const g of l.gates) { if (!g.broken) 門の傷みを一つ描く(ctx, m, g, 揚); }
+  if (m.出城 && !m.出城.落ちた) for (const g of m.出城.gates) { if (!g.broken) 門の傷みを一つ描く(ctx, m, g, 揚); }
   for (const f of m.fac) { if (f.hp > 0 && f.max) 施設の傷みを一つ描く(ctx, f, 揚); }
 }
 
@@ -1649,6 +1664,79 @@ export function drawCastleBuildings(ctx, m, 画k, 立体, 区) {
   札を控える(地の札.城);                       // 曲輪・門・堀の名は焼かずに控え、描くたびに立てる
   try { 城の立つものを描く(ctx, m, m.t, m.cx, m.cy, true, 立体); } finally { 札を控え止める(); }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/* 付城（castleMap.js 付城を据える）。真上の眺めで毎コマ描く（城の画布は城山の区だけ
+   なので、城山の外の付城はそこに焼けない）。柵の杭を並べ、井楼を立て、陣幕を張る */
+export function 付城を描く(ctx, m) {
+  if (!m || !m.付城) return;
+  for (const f of m.付城) {
+    ctx.fillStyle = "rgba(186,170,128,0.35)";                        // 踏み固めた陣の地
+    ctx.fillRect(f.x - f.hw, f.y - f.hh, f.hw * 2, f.hh * 2);
+    for (const { r: [a0, b0, a1, b1] } of 付城の柵(f)) {
+      if (a1 - a0 < 1 || b1 - b0 < 1) continue;
+      ctx.fillStyle = "rgba(60,48,30,0.3)"; ctx.fillRect(a0 + 2, b0 + 3, a1 - a0, b1 - b0);
+      ctx.fillStyle = "#6A5236";
+      const 横 = a1 - a0 >= b1 - b0, L = 横 ? a1 - a0 : b1 - b0;
+      for (let u = 1; u < L; u += 4.2) {
+        if (横) ctx.fillRect(a0 + u, b0, 2, b1 - b0); else ctx.fillRect(a0, b0 + u, a1 - a0, 2);
+      }
+    }
+    // 陣幕。白地に一筋、陣の奥に張る
+    ctx.fillStyle = "rgba(236,232,220,0.9)"; ctx.fillRect(f.x - f.hw * 0.6, f.y + f.hh * 0.45, f.hw * 1.2, 4);
+    ctx.fillStyle = "rgba(48,44,40,0.8)"; ctx.fillRect(f.x - f.hw * 0.6, f.y + f.hh * 0.45 + 1.5, f.hw * 1.2, 1);
+    // 井楼。丸太を組んだ物見の櫓
+    const ix = f.x + f.hw * 0.55, iy = f.y - f.hh * 0.45, ir = 9;
+    ctx.fillStyle = "rgba(60,48,30,0.35)"; ctx.fillRect(ix - ir + 影.x * 0.8, iy - ir + 影.y * 0.8, ir * 2, ir * 2);
+    ctx.fillStyle = "#8A6C46"; ctx.fillRect(ix - ir, iy - ir, ir * 2, ir * 2);
+    ctx.strokeStyle = "rgba(58,40,22,0.85)"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(ix - ir, iy - ir); ctx.lineTo(ix + ir, iy + ir); ctx.moveTo(ix + ir, iy - ir); ctx.lineTo(ix - ir, iy + ir); ctx.stroke();
+    ctx.strokeRect(ix - ir, iy - ir, ir * 2, ir * 2);
+  }
+}
+
+/* 出城（castleMap.js 出城を組む）。土塁の天端に板塀を回し、前に門を構える。
+   真上の眺めでは、土の帯に杭を並べて塀とする。斜めの眺めでは塀と門は立てて描く
+   （tachimono.js）ので、ここでは名札と、破れた門の瓦礫と、焼け跡だけを置く */
+function 出城を描く(ctx, m, t, 新, 立体) {
+  const 出 = m.出城;
+  if (!出) return;
+  const X = m.cx + 出.ox, Y = m.cy + 出.oy, 門 = 出.gates[0];
+  if (!新) {                                       // 新しい地は台と空堀を画素で焼いてある
+    ctx.fillStyle = "rgba(150,132,96,0.55)";
+    ctx.fillRect(X - 出.hw - t - 出.堀, Y - 出.hh - t - 出.堀, (出.hw + t + 出.堀) * 2, (出.hh + t + 出.堀) * 2);
+    ctx.fillStyle = "#C9BE98"; ctx.fillRect(X - 出.hw - t, Y - 出.hh - t, (出.hw + t) * 2, (出.hh + t) * 2);
+  }
+  if (!立体) {
+    for (const { r: [a0, b0, a1, b1] } of 出城の塀(m)) {
+      ctx.fillStyle = "rgba(60,48,30,0.32)"; ctx.fillRect(a0 + 影.x * 0.35, b0 + 影.y * 0.35, a1 - a0, b1 - b0);
+      ctx.fillStyle = "#A28E66"; ctx.fillRect(a0, b0, a1 - a0, b1 - b0);          // 土塁の天端
+      ctx.fillStyle = "#5C4832";                                                    // 板塀の杭
+      const 横 = a1 - a0 >= b1 - b0, L = 横 ? a1 - a0 : b1 - b0;
+      for (let u = 1.5; u < L - 1; u += 3.6) {
+        if (横) ctx.fillRect(a0 + u, (b0 + b1) / 2 - 1.4, 1.5, 2.8);
+        else ctx.fillRect((a0 + a1) / 2 - 1.4, b0 + u, 2.8, 1.5);
+      }
+    }
+    if (!門.broken) 門を描く(ctx, gatePos(m, 出, 門), true, 門.w, t, 門.hp / 門.max);
+  }
+  if (門.broken) {
+    const a = axisOf(出, 門);
+    for (let k = 0; k < 10; k++) {
+      const q = fromUV(m, a, 門.off + ((k * 17) % 27) - 13, a.half + t * 0.5 + Math.floor(k / 3) * 5);
+      ctx.fillStyle = k % 4 === 0 ? "rgba(70,58,46,0.55)" : "rgba(130,108,80,0.62)";
+      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(k * 1.1); ctx.fillRect(-3.5, -2.5, 7, 5); ctx.restore();
+    }
+  }
+  if (出.落ちた && !出.捨てた) {                     // 落ちた出城は焼かれる。焦げ跡を残す
+    ctx.fillStyle = "rgba(48,38,30,0.22)";
+    ctx.fillRect(X - 出.hw, Y - 出.hh, 出.hw * 2, 出.hh * 2);
+  }
+  if (!新 && !門.broken) 門の傷みを一つ描く(ctx, m, 門);
+  ctx.font = "15px 'Hiragino Mincho ProN',serif";
+  ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 3;
+  ctx.fillStyle = "rgba(62,64,50,0.9)";
+  地の字(ctx, 出.name, X - 出.hw + 10, Y - 出.hh + 22, true);
 }
 
 /* 城に立つもの ── 石垣・門・櫓・天守と、堀を渡る土橋。
@@ -1791,6 +1879,7 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新, 立体) {
       ctx.strokeRect(p.x - p.半, p.y - p.半, p.半 * 2, p.半 * 2);
     } }
 
+  出城を描く(ctx, m, t, 新, 立体);
   // 施設。崩れたものは瓦礫にする
   for (const f of m.fac) {
     if (f.hp <= 0) {
@@ -1832,6 +1921,12 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新, 立体) {
 export function ownZone(b) {
   /* 城攻めの広い盤。寄せ手は南の端の帯に陣を敷き、城方は城山の内に籠る */
   if (b.map && b.map.広い) {
+    /* 付城があれば、寄せ手は付城から寄せる（castleMap.js 付城を据える）。城山の縁の外から
+       盤の南の端までを寄せ手の陣とする */
+    if (b.attacker === "P" && b.map.付城 && b.map.付城.length) {
+      const y0 = Math.min(FIELD.h * 0.8, b.map.域.y + b.map.域.r + 30);
+      return { x: 0, y: y0, w: FIELD.w, h: FIELD.h - y0, vertical: true, bottom: true };
+    }
     if (b.attacker === "P") return { x: 0, y: FIELD.h * 0.8, w: FIELD.w, h: FIELD.h * 0.2, vertical: true, bottom: true };
     const 区 = b.map.区;
     return { x: 区.x0, y: 区.y0, w: 区.w, h: 区.h, vertical: true, bottom: false };
@@ -2093,6 +2188,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     if (区) ctx.drawImage(城Canvas, 区.x0, 区.y0, 区.w, 区.h);
     else ctx.drawImage(城Canvas, 0, 0, FIELD.w, FIELD.h);
     城の傷みを描く(ctx, b.map);          // 帯だけは毎コマ。画布は門が破れるまで焼き直さない
+    付城を描く(ctx, b.map);               // 付城は城山の外にあるので、城の画布に焼けない
   }
   /* 地の札（峰・村・渡し／曲輪・門・堀の名）。地と一緒に回さず、画面に向けて立てる。
      字の大きさは画面の点で決める。焼いていたころは焼きの細かさ（粗焼きか本焼きか）で
@@ -2115,6 +2211,12 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
       ctx.font = p.font.replace(/[\d.]+px/, `${字}px`); ctx.textAlign = p.align; ctx.lineJoin = "round";
       if (p.縁) { ctx.lineWidth = 3; ctx.strokeStyle = p.st; ctx.strokeText(p.s, 0, 0); }
       ctx.fillStyle = p.fi; ctx.fillText(p.s, 0, 0);
+    });
+    /* 付城の名（城山の外なので、城の札に焼いていない） */
+    if (b.map && b.map.付城) for (const f of b.map.付城) 画面で(f.x, f.y - f.hh - 16, () => {
+      ctx.font = `${字}px 'Hiragino Mincho ProN',serif`; ctx.textAlign = "center"; ctx.lineJoin = "round";
+      ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.strokeText(f.name, 0, 0);
+      ctx.fillStyle = "rgba(62,64,50,0.95)"; ctx.fillText(f.name, 0, 0);
     });
     if (城立体) 城の帯を描く(b.map, 画面で, ctx);
   };
