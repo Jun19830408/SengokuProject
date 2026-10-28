@@ -11,7 +11,10 @@
      二、地の判定 … 城山の内は城の地（塀・門・堀・坂）、外は野の地（川・橋・道）
      三、足の尺   … 城の中の足と間合いは、これまでの城攻めの盤と同じ
      四、寄せ手   … 南の端に陣を敷き、城方は城の中にいる
-     五、戦       … 寄せ手は川を渡り（淵に浸からず）、日暮れのうちに門へ取り付き、門を破る */
+     五、戦       … 寄せ手は川を渡り（淵に浸からず）、日暮れのうちに門へ取り付き、門を破る
+     六、数日がかり … 日が暮れれば夜の段に移り、夜を明かせば翌朝また攻める（三日まで）。
+                      夜のうちに士気が戻り、城方は門を繕い、寄せ手は矢の届かぬ所へ退き、
+                      兵糧を一日ぶん食う。采配の寄せ手は、弱れば陣を払う */
 const path = require('path');
 const fs = require('fs');
 const esbuild = require('esbuild');
@@ -23,7 +26,7 @@ fs.writeFileSync(entry,
   'export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, gateOpenU, 城の構え, 寄せ手の陣, 城の域か, buildNav } from "../src/battle/castleMap.js";\n'
 + 'export { makeCorps, placeSquads, corpsMen } from "../src/battle/corps.js";\n'
 + 'export { battleAI } from "../src/battle/ai.js";\n'
-+ 'export { createBattle, stepBattle } from "../src/battle/engine.js";\n'
++ 'export { createBattle, stepBattle, 夜を明かす, 陣を払う, 寄せ手の夜の思案, 今の刻, 兵糧の日, 城攻めの日数 } from "../src/battle/engine.js";\n'
 + 'export { FIELD, ROAD, ROADS, RIVER, FORESTS, WOODS, HILLS, MOUNTAINS, MARSH, VILLAGES, terrainAt, fieldScale, setFieldKind, hasRiver, riverShift } from "../src/battle/field.js";\n'
 + 'export { 持ち場を並べる } from "../src/battle/defense.js";\n');
 const out = path.join(ROOT, 'build', 'hiroi-kojo.cjs');
@@ -186,6 +189,63 @@ function 攻める(i, 賽) {
   確('門は破れる（城攻めが詰まない）', 破れた >= 出.length * 0.75, `${破れた}／${出.length}`);
   const 淵 = Math.max(...出.map((r) => r.淵割));
   確('寄せ手は淵に浸からず、渡り場を通る', 淵 < 0.02, `淵に立つ兵はいちばん多い戦で ${(淵 * 100).toFixed(2)}％`);
+}
+
+/* ------------------------------------------ 六、数日がかりの城攻め */
+{
+  種 = 0x77aa;
+  const m = 組む('zz9', '堅城', 84, 0x13579bdf);
+  const atk = [0, 1, 2, 3].map((k) => {
+    const sp = A.寄せ手の陣(m, k, 4);
+    const c = A.makeCorps('P', 将(k), 500, 2300, 75, 75, sp.x, sp.y, sp.f, '#2F5D8C');
+    c.formation = '方陣'; A.placeSquads(c, true); c.auto = true;
+    return c;
+  });
+  const 持 = A.持ち場を並べる(m);
+  const def2 = [0, 1, 2, 3].map((k) => {
+    const sp = 持[Math.min(持.length - 1, k)];
+    const c = A.makeCorps('E', 将(100 + k), 300, 400, 72, 72, sp.x, sp.y, sp.f, '#B0483C');
+    c.holdGate = sp.gate; return c;
+  });
+  const b = A.createBattle(atk, def2, 'P');
+  b.mode = 'castle'; b.map = m; b.phase = 'fight';
+  b.日数 = A.城攻めの日数; b.日 = 1; b.日の始め = 0; b.日の長さ = 200; b.dusk = 200;
+  b.兵糧 = { 寄せ手: { 石: 3000, 日に: 100, 食った: 0 }, 城方: { 石: 5000, 日に: 80, 食った: 0 } };
+  確('日数は三日', A.城攻めの日数 === 3);
+  確('夜明けは卯の刻', A.今の刻(b) === '卯');
+  const 走る = () => { for (let k = 0; k < 20000 && b.phase === 'fight'; k++) { A.stepBattle(b, 0.25); if (k % 4 === 0) A.battleAI(b); } };
+  走る();
+  確('日が暮れれば夜の段に移る', b.phase === 'night', `${b.phase}・${Math.round(b.t)}秒`);
+  if (b.phase === 'night') {
+    確('日暮れは酉の刻', A.今の刻(b) === '酉');
+    const 門 = m.gates.filter((g) => !g.broken);
+    const 前 = 門.map((g) => g.hp);
+    const 気前 = atk.map((c) => c.morale);
+    for (const c of atk) c.morale = Math.min(c.morale, 40);
+    確('弱っていなければ寄せ手（采配）は続ける', A.寄せ手の夜の思案(b) === '続ける');
+    const t0 = b.t;
+    A.夜を明かす(b);
+    確('夜が明ければ二日目', b.日 === 2 && b.phase === 'fight');
+    確('二日目の日暮れは一日の長さの先', Math.abs(b.dusk - (t0 + 200)) < 1e-6);
+    確('城方は破れていない門を繕う', 門.every((g, i) => g.hp >= 前[i]) && 門.some((g, i) => g.hp > 前[i] || g.hp >= g.max),
+      `繕った門 ${門.filter((g, i) => g.hp > 前[i]).length}／${門.length}`);
+    確('夜のうちに士気が戻る', atk.every((c) => c.dead || c.destroyed || c.withdraw || c.morale > 40));
+    確('兵糧を一日ぶん食う', b.兵糧.寄せ手.食った === 100 && b.兵糧.城方.食った === 80
+      && A.兵糧の日(b, '寄せ手') === 29 && A.兵糧の日(b, '城方') === 61);
+    const o = m.layers[0];
+    const 塀まで = (c) => Math.max(Math.abs(c.x - m.cx - (o.ox || 0)) - o.hw, Math.abs(c.y - m.cy - (o.oy || 0)) - o.hh);
+    確('塀の外の寄せ手は矢の届かぬ所へ退く', atk.every((c) => c.dead || c.destroyed || c.withdraw || 塀まで(c) <= 0
+      || 塀まで(c) >= 190 * A.fieldScale() + 100), atk.map((c) => Math.round(塀まで(c))).join('・') + '歩');
+    void 気前;
+    走る();
+    if (b.phase === 'night') { A.夜を明かす(b); 確('三日目の朝', b.日 === 3); 走る(); }
+    確('三日目の日暮れか、城が落ちて城攻めは終わる（三日目の夜は無い）', b.phase === 'over' && b.日 <= 3, `${b.phase}・${b.日}日目・${b.result}`);
+  }
+  // 陣を払う：兵糧が尽きれば采配の寄せ手は退く
+  b.phase = 'night'; b.兵糧.寄せ手.食った = 3000;
+  確('兵糧が尽きれば寄せ手（采配）は陣を払う', A.寄せ手の夜の思案(b) === '退く');
+  A.陣を払う(b);
+  確('陣を払えば城方の勝ちで終わる', b.phase === 'over' && b.result === 'E');
 }
 
 console.log('');

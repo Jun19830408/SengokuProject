@@ -308,6 +308,104 @@ export function 放った跡(b, 型, x, y, x2, y2) {
   }
 }
 
+/* ============================================ 数日がかりの城攻め（GDD 9.3）
+
+   城攻めは一日では終わらない。日が暮れれば両軍とも兵を引き、夜を明かして、
+   翌朝また攻める。一度の城攻め（地図の一月の強攻）は三日までとし、それで落ちねば
+   囲みへ戻る。
+
+   夜のうちに起きること。
+     ・両軍とも士気が戻り（八十へ向けて半ば）、疲れが抜け（七割）、乱れた隊列は整う。
+       崩れて逃げた隊も夜のうちに立て直す（盤を去った隊は戻らない）
+     ・寄せ手は、塀の外にいる隊を矢の届かぬ所まで退いて陣を敷き直す。破った門の
+       内に入った隊は、取った所をそのまま押さえる
+     ・城方は持ち場の門へ戻り、破れていない門を一割ほど、櫓を一分ほど繕う
+     ・兵糧を一日ぶん食う（地図の月の扶持の三十分の一。b.兵糧）
+   寄せ手が遊ぶ側なら、夜の段で「夜を明かす」か「陣を払う」かを選ぶ（BattleScreen）。
+   采配の寄せ手は、兵が初めの三割五分を切るか、士気が三十を切るか、兵糧が一日に
+   満たなければ陣を払う（寄せ手の夜の思案）。 */
+export const 城攻めの日数 = 3;
+export const 刻の名 = ["卯", "辰", "巳", "午", "未", "申", "酉"];
+export const 日の名 = (n) => `${["一", "二", "三", "四", "五", "六", "七"][Math.max(1, n) - 1] || n}日目`;
+/* 今の刻（卯の刻＝六時に夜が明け、酉の刻＝十八時に日が暮れる） */
+export function 今の刻(b) {
+  const 始 = b.日の始め || 0, 長 = Math.max(1, (b.dusk || 1) - 始);
+  const 時 = 6 + 12 * clamp((b.t - 始) / 長, 0, 1);
+  return 刻の名[clamp(Math.floor((時 - 5) / 2), 0, 6)];
+}
+/* 兵糧の残りの日数（側は "寄せ手" か "城方"） */
+export function 兵糧の日(b, 側) {
+  const f = b.兵糧 && b.兵糧[側];
+  if (!f) return null;
+  return Math.max(0, Math.floor((f.石 - f.食った) / Math.max(1, f.日に)));
+}
+export function 寄せ手の夜の思案(b) {
+  const 寄 = b.corps.filter((c) => c.side === b.attacker && !c.dead && !c.destroyed && !c.withdraw);
+  const 兵 = 寄.reduce((a, c) => a + corpsMen(c), 0);
+  const 初 = (b.initial && b.initial[b.attacker]) || 兵 || 1;
+  const 気 = 寄.length ? 寄.reduce((a, c) => a + c.morale, 0) / 寄.length : 0;
+  const 糧 = 兵糧の日(b, "寄せ手");
+  return 兵 < 初 * 0.35 || 気 < 30 || (糧 != null && 糧 < 1) ? "退く" : "続ける";
+}
+export function 陣を払う(b) {
+  if (b.phase !== "night") return;
+  b.phase = "over"; b.orderly = true;
+  b.result = b.attacker === "P" ? "E" : "P";
+  b.夜 = null;
+  b.log.push({ t: b.t, text: "寄せ手は夜のうちに陣を払い、囲みへ戻った。城は落ちなかった。" });
+}
+export function 夜を明かす(b) {
+  if (b.phase !== "night" || !MAP) return;
+  const m = MAP, o = m.layers[0];
+  if (b.兵糧) for (const 側 of ["寄せ手", "城方"]) if (b.兵糧[側]) b.兵糧[側].食った += b.兵糧[側].日に;
+  /* 塀の外から、外郭の塀までの隔たり（外が正） */
+  const 塀まで = (x, y) => {
+    const dx = Math.abs(x - m.cx - (o.ox || 0)) - o.hw, dy = Math.abs(y - m.cy - (o.oy || 0)) - o.hh;
+    return Math.max(dx, dy);
+  };
+  const 引く間 = 190 * fieldScale() + 160;              // 弓の届き（百九十歩×尺）の外
+  for (const c of b.corps) {
+    if (c.dead || c.destroyed || c.withdraw || c.潰) continue;
+    c.x = clamp(c.x, 60, FIELD.w - 60); c.y = clamp(c.y, 60, FIELD.h - 60);   // 逃げて盤の縁を越えかけた隊も、盤の内で夜を明かす
+    if (c.morale < 80) c.morale += (80 - c.morale) * 0.5;
+    c.fatigue = (c.fatigue || 0) * 0.3;
+    c.routed = false; c.chargeT = 0; c.chasing = false; c.sallied = false; c.pinned = false;
+    c.order = "待機"; c.wp = null; c.狙い = null; c.接敵 = null;
+    for (const q of c.squads || []) { q.engaged = false; q.target = null; q.foe = null; q.cohesion = Math.max(q.cohesion || 0, 72); }
+    if (c.side === b.attacker) {
+      const d = 塀まで(c.x, c.y);
+      if (d > 0 && d < 引く間) {
+        // 城の中ほどから外へ、塀から引く間の所まで退く（通れぬなら少しずつ外へ）
+        const ax = c.x - m.cx, ay = c.y - m.cy, al = Math.hypot(ax, ay) || 1;
+        for (let 足 = 引く間 - d; 足 < 引く間 * 3; 足 += 40) {
+          const nx = c.x + (ax / al) * 足, ny = c.y + (ay / al) * 足;
+          if (nx > 40 && ny > 40 && nx < FIELD.w - 40 && ny < FIELD.h - 40 && passable(nx, ny) && terrainAt(nx, ny) !== "deep") {
+            c.x = nx; c.y = ny; break;
+          }
+        }
+      }
+      c.gate = null;
+    } else if (c.holdGate && !c.holdGate.broken) {
+      const l = m.layers[c.holdGate.layer], a = axisOf(l, c.holdGate);
+      const p = fromUV(m, a, c.holdGate.off, a.half - 14);
+      c.x = p.x; c.y = p.y; c.持ち場に着いた = true;
+    }
+    c.tx = c.x; c.ty = c.y;
+    placeSquads(c, true);
+  }
+  for (const g of m.gates) {
+    g.slot = null; g.hold = null;
+    if (!g.broken) g.hp = Math.min(g.max, g.hp + g.max * 0.1);
+  }
+  for (const f of m.fac) if (f.hp > 0) f.hp = Math.min(f.max, f.hp + f.max * 0.01 * 5);
+  m.nav = null; b.mapDirty = true;
+  b.日 = (b.日 || 1) + 1;
+  b.日の始め = b.t;
+  b.dusk = b.t + (b.日の長さ || b.dusk);
+  b.phase = "fight"; b.夜 = null;
+  b.log.push({ t: b.t, text: `${日の名(b.日)}の朝。城方は夜のうちに門を繕った。寄せ手は陣を敷き直して、また寄せる。` });
+}
+
 export function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt; b.aiClock -= dt;
@@ -2444,6 +2542,12 @@ export function stepBattle(b, dt) {
   }
   // 日没。攻撃側だけを一律敗北にはせず、両軍が兵を退く（GDD 8.8）
   if (b.t >= b.dusk) {
+    /* 数日がかりの城攻め（下の 夜を明かす）。日数が残っていれば夜の段へ移る */
+    if (MAP && b.日数 && (b.日 || 1) < b.日数) {
+      b.phase = "night"; b.夜 = { 日: b.日 || 1 };
+      b.log.push({ t: b.t, text: `${日の名(b.日 || 1)}の日が暮れた。両軍とも兵を引いて夜を待つ。` });
+      return;
+    }
     b.phase = "over"; b.orderly = true;
     if (MAP) {
       // 城攻めは日暮れで打ち切り。城は落ちず、寄せ手は囲みへ戻る。

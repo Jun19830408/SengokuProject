@@ -7,7 +7,8 @@ import { SIEGE_CORPS_CAP, SIEGE_KIT, axisOf, buildCastleMap, fromUV, gateOpenU, 
 import { corpsMax, corpsMen, makeCorps, notify, placeSquads, 寄せ手の隊数, 盤に収める } from "../battle/corps.js";
 import { 城方の隊を立てる } from "../battle/defense.js";
 import { drawMon, sideHue } from "../battle/draw.js";
-import { createBattle } from "../battle/engine.js";
+import { createBattle, 城攻めの日数 } from "../battle/engine.js";
+import { 城の保ち } from "../core/kakomi.js";
 import { BASE, FIELD, MAX_CORPS, fieldScale, layoutField, setFieldKind, setFieldSeed, terrainAt } from "../battle/field.js";
 import { ambushChance, ambushPlan, tryAmbush } from "../core/ambush.js";
 import { captureChance, makePrisoner, payRansom, ransomAccept, ransomCost, takeAsPrisoner } from "../core/capture.js";
@@ -18,7 +19,7 @@ import { 遠征の兵糧, 運び賃を払う } from "../govern/war.js";
 import { courtRank, 号令できるか, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, rankBonus, runKenchi } from "../core/province.js";
 import { fiefOf, fiefRoom, fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap, 寄騎に取る, 寄騎を解く, 城を守る将, 旗頭の受け持ち, 出征の割 } from "../core/rank.js";
 import { newRoster, rosterSum, rosterSync, rosterTake, 組の鍵, 長の名, 長の階, 取り立てるべき組, 組頭の働きを記す, 戦の跡, 戦の跡を記す } from "../core/roster.js";
-import { atPeace, forecast, lv, relKey, relOf, specialBonus, 軍の道 } from "../core/state.js";
+import { atPeace, forecast, lv, relKey, relOf, specialBonus, 軍の道, canSee } from "../core/state.js";
 import { SEASON, U, clamp, fmt, man, monthsBetween } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS } from "../data/diplo.js";
@@ -957,9 +958,22 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     bb.mode = "castle";
     bb.map = map;
     // 城攻めは一日がかり。盤の広さに合わせて伸ばす（山城は坂を登る道のりが長い）
-    /* 広い盤では、城の大きさ（これまでの盤の幅）で決め、南の端から寄せる道のりのぶんを足す */
-    bb.dusk = Math.round(1080 * clamp(Math.pow((map.旧 ? map.旧.w : FIELD.w) / 1600, 0.62), 1, 3.2))
-      + (map.広い ? Math.round((FIELD.h - map.cy) / (34 * fieldScale()) * 2.2) : 0);
+    /* 広い盤では、城の大きさ（これまでの盤の幅）で決め、初日だけ南の端から寄せる道のりの
+       ぶんを足す。城攻めは三日まで続く（engine.js 夜を明かす）。二日目からは陣が城に近い */
+    bb.日の長さ = Math.round(1080 * clamp(Math.pow((map.旧 ? map.旧.w : FIELD.w) / 1600, 0.62), 1, 3.2));
+    bb.dusk = bb.日の長さ + (map.広い ? Math.round((FIELD.h - map.cy) / (34 * fieldScale()) * 2.2) : 0);
+    if (map.広い) {
+      bb.日数 = 城攻めの日数; bb.日 = 1; bb.日の始め = 0;
+      /* 兵糧（GDD 9.2）。地図の月の扶持（core/kakomi.js）の三十分の一を一日に食う。
+         寄せ手は月に二度（道中と囲み）、城は封鎖の扶持と囲みの食い潰しを食う */
+      const 城保 = 城の保ち(g, castle);
+      bb.兵糧 = {
+        寄せ手: { 石: Math.max(0, Math.round(army.food || 0)), 日に: Math.max(1, Math.round(Math.round(army.men * 0.09) * 2 / 30)), 食った: 0 },
+        城方: { 石: Math.max(0, Math.round(castle.food || 0)), 日に: Math.max(1, Math.round(城保.食 / 30)), 食った: 0 },
+      };
+      /* 城の兵糧は、遊ぶ側の城か、内を探った城でなければ読めない（城の帳と同じ見え方） */
+      bb.兵糧見える = !playerIsAtk || canSee(g, castle);
+    }
     for (const c of atk) { c.formation = "方陣"; placeSquads(c, true); }   // 狭い道を寄せるので固まる
     bb.gateParty = !!gateParty;
     // 守り手が打って出るか籠るか。優勢なら討って出る。
@@ -1377,6 +1391,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
       castle.local = Math.max(0, dLeft);
       if (castle.rost) rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+      /* 数日がかりの城攻めで食った兵糧（engine.js 夜を明かす）。地図の月の扶持とは別に、
+         夜を越すたびに一日ぶんずつ食っている */
+      if (b.兵糧) {
+        if (army && b.兵糧.寄せ手) army.food = Math.max(0, Math.round((army.food || 0) - b.兵糧.寄せ手.食った));
+        if (b.兵糧.城方) castle.food = Math.max(0, Math.round((castle.food || 0) - b.兵糧.城方.食った));
+      }
       内応の始末(s, b, {
         攻め手: army ? army.faction : (ctx.playerIsAtk ? s.player : castle.faction),
         守り手: castle.faction, atkSide, 落ちた城: won ? castle : null,

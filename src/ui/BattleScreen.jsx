@@ -4,7 +4,7 @@ import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, rout
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限, 城山の形 } from "../battle/shinga.js";
-import { stepBattle } from "../battle/engine.js";
+import { stepBattle, 夜を明かす, 陣を払う, 寄せ手の夜の思案, 今の刻, 日の名, 兵糧の日 } from "../battle/engine.js";
 import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸, 区の高さ図を外す, 今の面, 面を据える } from "../battle/naname.js";
 import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, HILLS, TERRAIN, VILLAGES, WEATHER, WOODS, fieldScale, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
@@ -15,24 +15,12 @@ import { 合戦の問いに答える, 指図の縛り, 筋書きの覚え } from
 /* 早送り（GDD 8.1・9.3）。
 
    野戦の盤を一.五倍に広げ、城攻めには城のまわりに野を敷いたので、寄せ合うまでの
-   道のりが長い。足の尺は広げる前のままなので（field.js 尺を据える）、そのぶん
-   見ているだけの刻が延びる。敵味方がまだ遠く離れているあいだ――どの隊も敵の隊から
-   見通しの一倍半より遠いあいだ――は、刻を四倍で進める。見え合う所まで寄ったら、
-   常の速さに戻す。一コマに刻みを四度踏むので、一歩の大きさは変わらない。 */
-export const 早送りの倍 = 4;
-export function 早送りか(b) {
-  if (!b || b.phase !== "fight" || b.筋書き) return false;
-  const 間 = 390 * fieldScale();                    // 見通し（平地で二百六十）の一倍半
-  const 生 = b.corps.filter((c) => !c.dead && !c.destroyed && !c.routed && !c.withdraw && corpsMen(c) > 0);
-  for (const a of 生) {
-    if (a.side !== "P") continue;
-    for (const o of 生) {
-      if (o.side === "P") continue;
-      if (Math.abs(a.x - o.x) < 間 && Math.abs(a.y - o.y) < 間 && Math.hypot(a.x - o.x, a.y - o.y) < 間) return false;
-    }
-  }
-  return true;
-}
+   道のりが長い。行軍そのものも見どころなので、速さは遊ぶ側が選ぶ（自ずから
+   速めはしない）。速さの釦に「早送り」（通常の四倍）を足す。
+   速い刻みは一コマに何度かに割って踏む。一歩の大きさ（通常で〇.〇三秒まで）は
+   変わらないので、隊の動きや当たりの理は通常と同じである。 */
+export const 早送りの速さ = 2.4;
+const 一歩の上限 = 0.6;                            // 一歩で進める速さ（通常）
 
 /* --------------------------------------------------------------- 合戦画面 */
 export function BattleScreen({ ctx, land, onEnd }) {
@@ -303,7 +291,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const 一区切り = () => {
       if (止め) return;
       const t0 = Date.now();
-      while (b2.phase === "fight" && Date.now() - t0 < 24) stepBattle(b2, 委ねる歩幅);
+      while (b2.phase === "fight" && Date.now() - t0 < 24) {
+        stepBattle(b2, 委ねる歩幅);
+        /* 数日がかりの城攻めの夜は、采配の思案で越す（寄せ手が退くか続けるか） */
+        if (b2.phase === "night") { if (寄せ手の夜の思案(b2) === "退く") 陣を払う(b2); else 夜を明かす(b2); }
+      }
       force((n) => (n + 1) % 1000);
       if (b2.phase === "fight") setTimeout(一区切り, 0);
       else { 委ねRef.current = false; set委ね中(false); }
@@ -323,11 +315,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
       // 委ねている間は絵を描かない。描かぬぶんだけ時が速く進む。
       if (委ねRef.current) { handle = requestAnimationFrame(loop); return; }
       if (b.phase === "fight" && sp > 0) {
-        /* 敵と遠く離れているあいだは早送り（上の 早送りか）。半秒ごとに見直す */
-        if (!b.早送り見 || ts - b.早送り見 > 500) { b.早送り見 = ts; b.早送り = 早送りか(b); }
-        const 回 = b.早送り ? 早送りの倍 : 1;
-        for (let i = 0; i < 回 && b.phase === "fight"; i++) stepBattle(b, dt * sp);
-      } else b.早送り = false;
+        /* 早送り（上の 早送りの速さ）は、一コマを幾つかの刻みに割って踏む */
+        const 回 = Math.max(1, Math.ceil(sp / 一歩の上限 - 1e-9));
+        for (let i = 0; i < 回 && b.phase === "fight"; i++) stepBattle(b, (dt * sp) / 回);
+      }
       /* 地の焼きを少しずつ進める（GDD 8.11）。一コマ十ミリ秒を上限に汲み、
          焼き上がったら数コマかけて溶暗で差し替える。 */
       const 焼 = 焼きRef.current;
@@ -1369,6 +1360,42 @@ export function BattleScreen({ ctx, land, onEnd }) {
         </div>
       )}
 
+      {b.phase === "night" && (() => {
+        /* 夜の段（engine.js 夜を明かす）。寄せ手が遊ぶ側なら、夜を明かすか陣を払うかを選ぶ。
+           城方が遊ぶ側なら、寄せ手（采配）の思案を聞いて夜を明かす */
+        const 寄せ手 = b.attacker === "P";
+        const 采配の思案 = 寄せ手 ? null : 寄せ手の夜の思案(b);
+        const 糧我 = 兵糧の日(b, 寄せ手 ? "寄せ手" : "城方"), 糧彼 = 兵糧の日(b, 寄せ手 ? "城方" : "寄せ手");
+        const 門 = b.map ? b.map.gates : [];
+        const 破れ = 門.filter((g) => g.broken).length;
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+            <div style={{ fontSize: 13.5, lineHeight: 1.7 }}>
+              <b className="mn" style={{ fontSize: 17 }}>{日の名(b.日 || 1)}の日が暮れた</b>
+              <span style={{ color: U.dim, marginLeft: 8 }}>（城攻めは{日の名(b.日数 || 3)}まで）</span><br />
+              破れた門 {破れ}／{門.length}。夜のうちに両軍とも士気が戻り、疲れが抜けます。城方は破れていない門を一割ほど繕い、
+              寄せ手は矢の届かぬ所まで退いて陣を敷き直します（破った門の内に入った隊はそのまま押さえます）。
+              {糧我 != null && <><br />兵糧　味方 あと{糧我}日{糧彼 != null && 寄せ手 ? "" : ""}{!寄せ手 && 糧彼 != null ? `　寄せ手 あと${糧彼}日` : ""}</>}
+            </div>
+            {寄せ手 ? (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button className="btn dark" onClick={() => { 夜を明かす(b); force((n) => (n + 1) % 1000); }}>夜を明かす（翌朝また攻める）</button>
+                <button className="btn" onClick={() => { 陣を払う(b); force((n) => (n + 1) % 1000); }}>陣を払って囲みへ戻る</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: 12.5, color: 采配の思案 === "退く" ? "#3E7A3A" : U.dim, flex: 1 }}>
+                  {采配の思案 === "退く" ? "寄せ手は陣を払う気配です。" : "寄せ手は夜を明かして、明朝また寄せてくる気配です。"}
+                </span>
+                <button className="btn dark" onClick={() => { if (采配の思案 === "退く") 陣を払う(b); else 夜を明かす(b); force((n) => (n + 1) % 1000); }}>
+                  {采配の思案 === "退く" ? "夜が明ける（寄せ手は退いた）" : "夜を明かす"}
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {b.phase === "over" && (
         <div style={{ display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", width: "100%" }}>
           <span className="mn" style={{ fontSize: 19, color: b.result === "P" ? "#3E7A3A" : b.result === "日没" ? "#7C7668" : "#B0483C" }}>
@@ -1557,7 +1584,20 @@ export function BattleScreen({ ctx, land, onEnd }) {
           )}
           {/* 盤の名にすでに「城下」「の囲み」が付いていれば、重ねて添えない（城下下と出ていた） */}
           <span className="kv">{ctx.place}{/城下$|の囲み$/.test(ctx.place || "") ? ""
-            : ctx.mode === "castle" ? "城攻め" : ctx.mode === "clash" ? "の野戦" : "下"}・{b.weather}</span>
+            : ctx.mode === "castle" ? (/城$/.test(ctx.place || "") ? "攻め" : "城攻め") : ctx.mode === "clash" ? "の野戦" : "下"}・{b.weather}</span>
+          {/* 数日がかりの城攻め（engine.js 夜を明かす）。何日目・刻と、両軍の兵糧の残り。
+              門の傷みの並びより前に置く（並びが長く、狭い画面では後ろが押し出される） */}
+          {b.日数 ? (
+            <span className="kv" style={{ whiteSpace: "nowrap" }}>
+              <b>{日の名(b.日 || 1)}　{b.phase === "night" ? "夜" : `${今の刻(b)}の刻`}</b>
+              {b.兵糧 && (
+                <span style={{ color: U.dim, marginLeft: 6 }}>
+                  兵糧 {b.attacker === "P" ? "味方" : "寄せ手"}<b className="num">{兵糧の日(b, "寄せ手")}</b>日
+                  {(b.attacker !== "P" || b.兵糧見える) ? <>・{b.attacker === "P" ? "城方" : "味方"}<b className="num">{兵糧の日(b, "城方")}</b>日</> : null}
+                </span>
+              )}
+            </span>
+          ) : null}
           {ctx.mode === "castle" && b.map && b.map.gates.map((gt) => (
             <span key={gt.key} style={{ fontSize: 11, color: U.dim }}>
               {gt.key}
@@ -1575,7 +1615,6 @@ export function BattleScreen({ ctx, land, onEnd }) {
           <span className="kv num">
             {Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}
             <span style={{ color: U.dim }}>／日没まで{Math.max(0, Math.ceil((b.dusk - b.t) / 60))}分</span>
-            {b.早送り && speed > 0 && <span style={{ color: "#8A6A34", fontWeight: 700, marginLeft: 6 }} title="敵味方が遠く離れているあいだは、刻を四倍で進めています">早送り</span>}
           </span>
           </div>
           {phase === "fight" && (
@@ -1584,6 +1623,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
               <button className={`btn sm ${speed === 0.12 ? "on" : ""}`} onClick={() => setSpeed(0.12)}>微速</button>
               <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} onClick={() => setSpeed(0.3)}>低速</button>
               <button className={`btn sm ${speed === 0.6 ? "on" : ""}`} onClick={() => setSpeed(0.6)}>通常</button>
+              <button className={`btn sm ${speed === 早送りの速さ ? "on" : ""}`} onClick={() => setSpeed(早送りの速さ)}
+                title="通常の四倍で進めます（行軍の間など）">早送り</button>
             </span>
           )}
         </div>
@@ -1657,8 +1698,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <span style={{ color: U.dim }}>対</span>
                 <span className="dot" style={{ background: ctx.eColor }} /><b className="num">{fmt(eMen)}</b>
                 <span className="num" style={{ color: U.dim }}>{Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}</span>
-                {b.早送り && speed > 0 && <span style={{ color: "#8A6A34", fontWeight: 700 }} title="敵味方が遠く離れているあいだは、刻を四倍で進めています">早送り</span>}
-                {phase === "fight" && [["停", 0], ["微", 0.12], ["低", 0.3], ["通", 0.6]].map(([lb, v]) => (
+                {phase === "fight" && [["停", 0], ["微", 0.12], ["低", 0.3], ["通", 0.6], ["早", 早送りの速さ]].map(([lb, v]) => (
                   <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`}
                     style={{ padding: land ? "3px 6px" : "2px 5px", fontSize: land ? 12 : 10.5 }}
                     onClick={() => setSpeed(v)}>{lb}</button>

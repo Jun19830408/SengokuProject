@@ -1966,8 +1966,12 @@ export function 跡を焼き足す(跡ctx, b, 尺 = 0.5) {
    日没で戦が終わるという掟が、絵のほうからも読めるようになる。 */
 export function 空模様を被せる(ctx, b, W, H) {
   if (!b) return;
-  const 刻 = b.dusk ? Math.min(1, Math.max(0, b.t / b.dusk)) : 0;
+  /* 数日がかりの城攻めでは、日の傾きはその日の夜明け（b.日の始め）から量る。夜の段は
+     夜の藍に沈める（engine.js 夜を明かす） */
+  const 始 = b.日の始め || 0;
+  const 刻 = b.phase === "night" ? 1 : b.dusk ? Math.min(1, Math.max(0, (b.t - 始) / Math.max(1, b.dusk - 始))) : 0;
   ctx.save();
+  if (b.phase === "night") { ctx.fillStyle = "rgba(14,20,46,0.42)"; ctx.fillRect(0, 0, W, H); }
   // 一、日の傾き。半ばを過ぎたら茜、終わりに近づけば藍
   if (刻 > 0.45) {
     const u = (刻 - 0.45) / 0.55;
