@@ -3,14 +3,36 @@ import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 本丸への道 } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
-import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限 } from "../battle/shinga.js";
+import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限, 城山の形 } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
-import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸 } from "../battle/naname.js";
-import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, HILLS, TERRAIN, VILLAGES, WEATHER, WOODS, terrainAt } from "../battle/field.js";
+import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸, 区の高さ図を外す, 今の面, 面を据える } from "../battle/naname.js";
+import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, HILLS, TERRAIN, VILLAGES, WEATHER, WOODS, fieldScale, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
 import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる, 内応させる, 内応の門を開く } from "../battle/corps.js";
 import { 合戦の問いに答える, 指図の縛り, 筋書きの覚え } from "../battle/kassen.js";
+
+/* 早送り（GDD 8.1・9.3）。
+
+   野戦の盤を一.五倍に広げ、城攻めには城のまわりに野を敷いたので、寄せ合うまでの
+   道のりが長い。足の尺は広げる前のままなので（field.js 尺を据える）、そのぶん
+   見ているだけの刻が延びる。敵味方がまだ遠く離れているあいだ――どの隊も敵の隊から
+   見通しの一倍半より遠いあいだ――は、刻を四倍で進める。見え合う所まで寄ったら、
+   常の速さに戻す。一コマに刻みを四度踏むので、一歩の大きさは変わらない。 */
+export const 早送りの倍 = 4;
+export function 早送りか(b) {
+  if (!b || b.phase !== "fight" || b.筋書き) return false;
+  const 間 = 390 * fieldScale();                    // 見通し（平地で二百六十）の一倍半
+  const 生 = b.corps.filter((c) => !c.dead && !c.destroyed && !c.routed && !c.withdraw && corpsMen(c) > 0);
+  for (const a of 生) {
+    if (a.side !== "P") continue;
+    for (const o of 生) {
+      if (o.side === "P") continue;
+      if (Math.abs(a.x - o.x) < 間 && Math.abs(a.y - o.y) < 間 && Math.hypot(a.x - o.x, a.y - o.y) < 間) return false;
+    }
+  }
+  return true;
+}
 
 /* --------------------------------------------------------------- 合戦画面 */
 export function BattleScreen({ ctx, land, onEnd }) {
@@ -19,6 +41,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
   /* 斜めの眺め（battle/naname.js）。地を焼き直すたびに版を上げ、斜めの地を焼き直す */
   const 地版Ref = useRef(0), 斜め地Ref = useRef(null);
   const 城版Ref = useRef(0), 斜め城Ref = useRef(null), 斜め木Ref = useRef(null);   // 城に立つもの（石垣・門・櫓）の斜めの写し
+  /* 城攻めの広い盤（GDD 9.3）。城のまわり（区）の地は別の画布に細かく焼き、野の画布の
+     上に重ねる。斜めに焼くときに切り立った面の肌を取り違えぬよう、野と区の面をそれぞれ控える */
+  const 区Ref = useRef(null), 斜め区Ref = useRef(null), 野の面Ref = useRef(null), 区の面Ref = useRef(null);
   const [視点, set視点] = useState(() => 視点を読む());
   /* 盤の向き（naname.js 向き）。九十度ずつ回して、山の向こう側も見えるようにする。
      合戦ごとに南からの眺めで始める。
@@ -76,19 +101,24 @@ export function BattleScreen({ ctx, land, onEnd }) {
      持たせる。引きで見れば差は分からず、寄れば肌理のほうが効く。 */
   const 画布の倍 = () => {
     /* 城攻めは、地を小さく焼いて引き伸ばし、石垣や天守はこの寸法で描く。
-       だから画布そのものは野より大きく取る（GDD 8.11）。 */
+       だから画布そのものは野より大きく取る（GDD 8.11）。
+       広い盤の城攻めは、野の画布は野戦と同じ寸法で、城のまわり（区）だけを大きく取る（区の倍） */
     const 上限 = !ctx.b || !新絵か(ctx.b) ? 2.0e7
-      : ctx.mode === "castle" && ctx.b.map ? 城の画布上限 : 新絵の画布上限;
+      : ctx.mode === "castle" && ctx.b.map && !ctx.b.map.広い ? 城の画布上限 : 新絵の画布上限;
     return Math.min(1, Math.sqrt(上限 / Math.max(1, FIELD.w * FIELD.h)));
   };
+  const 広い盤 = () => !!(ctx.mode === "castle" && ctx.b && ctx.b.map && ctx.b.map.広い && 新絵か(ctx.b));
+  // 城の区の画布の倍（石垣・門・櫓）
+  const 区の倍 = (上限) => { const q = ctx.b.map.区; return Math.min(1, Math.sqrt(上限 / Math.max(1, q.w * q.h))); };
   /* 城に立つもの（石垣・門・櫓・天守）だけを描き直す。
      門が破れても地は変わらないので、ここだけ焼けばよい。 */
   const paintCastle = () => {
     if (!(ctx.b && ctx.b.map && 新絵か(ctx.b))) { 城Ref.current = null; return false; }
-    const k = 画布の倍();
+    const 区 = 広い盤() ? ctx.b.map.区 : null;
+    const k = 区 ? 区の倍(城の画布上限) : 画布の倍();
     const c = 城Ref.current || document.createElement("canvas");
-    c.width = Math.max(1, Math.round(FIELD.w * k)); c.height = Math.max(1, Math.round(FIELD.h * k));
-    drawCastleBuildings(c.getContext("2d"), ctx.b.map, k, 縦の縮み() < 1);   // 斜めなら門・櫓は立てて描く側へ回す
+    c.width = Math.max(1, Math.round((区 ? 区.w : FIELD.w) * k)); c.height = Math.max(1, Math.round((区 ? 区.h : FIELD.h) * k));
+    drawCastleBuildings(c.getContext("2d"), ctx.b.map, k, 縦の縮み() < 1, 区);   // 斜めなら門・櫓は立てて描く側へ回す
     城Ref.current = c; 城版Ref.current++;
     return true;
   };
@@ -100,12 +130,17 @@ export function BattleScreen({ ctx, land, onEnd }) {
 
      一息で焼いていたころは、城攻めに入るたび、門が破れるたびに一.五秒止まった。 */
   const 粗の画素 = 1.6e5;
-  const 焼きを仕込む = (t, 地k, 作る) => {
-    const 粗k = Math.min(地k, Math.sqrt(粗の画素 / Math.max(1, FIELD.w * FIELD.h)));
-    const 寸 = (kk) => [Math.max(1, Math.round(FIELD.w * kk)), Math.max(1, Math.round(FIELD.h * kk))];
+  /* 寸 … 焼く画の盤の寸法（野なら盤じゅう、城の区なら区）。拭う … 貼る前に拭う（縁を透かした
+     区の画は、溶暗で重ねると縁の透けが濃くなるので、溶暗せず拭ってから一度で貼る）。
+     済んだら 後 を呼ぶ（野のあとに区を焼く）。控え … 焼き手が据えた面を控える先 */
+  const 焼きを仕込む = (t, 地k, 作る, opt = {}) => {
+    const 盤w = opt.寸 ? opt.寸.w : FIELD.w, 盤h = opt.寸 ? opt.寸.h : FIELD.h;
+    const 粗k = Math.min(地k, Math.sqrt(粗の画素 / Math.max(1, 盤w * 盤h)));
+    const 寸 = (kk) => [Math.max(1, Math.round(盤w * kk)), Math.max(1, Math.round(盤h * kk))];
     const 貼る = (元, 濃 = 1) => {
       const g = t.getContext("2d");
       g.setTransform(1, 0, 0, 1, 0, 0);
+      if (opt.拭う) { if (濃 < 1) return; g.clearRect(0, 0, t.width, t.height); }
       g.imageSmoothingEnabled = true;
       if ("imageSmoothingQuality" in g) g.imageSmoothingQuality = "high";
       g.globalAlpha = 濃;
@@ -117,10 +152,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const c0 = document.createElement("canvas"); c0.width = w0; c0.height = h0;
     const it0 = 作る(c0.getContext("2d"), 粗k);
     while (!it0.next().done) { /* 粗焼きは一息で */ }
+    if (opt.控え) opt.控え.current = 今の面();
     貼る(c0);
     const [w1, h1] = 寸(地k);
     const c1 = document.createElement("canvas"); c1.width = w1; c1.height = h1;
-    焼きRef.current = { it: 作る(c1.getContext("2d"), 地k), 細: c1, 貼る, 済: false, 溶: 0 };
+    return { it: 作る(c1.getContext("2d"), 地k), 細: c1, 貼る, 済: false, 溶: 0, 控え: opt.控え || null, 後: null };
   };
   const paintTerrain = () => {
     const t = terrainRef.current || document.createElement("canvas");
@@ -131,18 +167,32 @@ export function BattleScreen({ ctx, land, onEnd }) {
     焼きRef.current = null; 城Ref.current = null;
     if (typeof window !== "undefined") window.__焼き済み = false;
     const 新 = 新絵か(ctx.b);
-    if (ctx.mode === "castle" && ctx.b.map) {
+    if (!広い盤()) { 区の高さ図を外す(); 区Ref.current = null; 斜め区Ref.current = null; }
+    if (ctx.mode === "castle" && ctx.b.map && 広い盤()) {
+      /* 広い盤の城攻め。野は野戦と同じ寸法で焼き（城山も同じ式で盛る）、城のまわりの区を
+         細かく焼いて重ねる。野の粗焼き → 区の粗焼き → 野の本焼き → 区の本焼き の順 */
+      const m = ctx.b.map, 区 = m.区, 山 = 城山の形(m);
+      const 野 = 焼きを仕込む(t, k, (g, kk) => 野を焼く(g, kk, { 城山: 山 }), { 控え: 野の面Ref });
+      const q = 区Ref.current || document.createElement("canvas");
+      const 区k = 区の倍(城の地の画布上限);
+      q.width = Math.max(1, Math.round(区.w * 区k)); q.height = Math.max(1, Math.round(区.h * 区k));
+      区Ref.current = q;
+      const 城 = 焼きを仕込む(q, 区k, (g, kk) => 城の地を焼く(g, m, kk, 区), { 寸: 区, 拭う: true, 控え: 区の面Ref });
+      野.後 = 城;
+      焼きRef.current = 野;
+      paintCastle();
+    } else if (ctx.mode === "castle" && ctx.b.map) {
       if (新) {
         /* 地は野より粗く焼いて引き伸ばす。石垣や天守の線は画布の寸法で描く（別画布） */
         const 地k = Math.min(k, Math.sqrt(城の地の画布上限 / Math.max(1, FIELD.w * FIELD.h)));
         const m = ctx.b.map;
-        焼きを仕込む(t, 地k, (g, kk) => 城の地を焼く(g, m, kk));
+        焼きRef.current = 焼きを仕込む(t, 地k, (g, kk) => 城の地を焼く(g, m, kk), { 控え: 野の面Ref });
         paintCastle();
       } else {
         g2.setTransform(k, 0, 0, k, 0, 0); drawCastleTerrain(g2, ctx.b.map, k);
       }
     } else if (新) {
-      焼きを仕込む(t, k, (g, kk) => 野を焼く(g, kk));
+      焼きRef.current = 焼きを仕込む(t, k, (g, kk) => 野を焼く(g, kk), { 控え: 野の面Ref });
     } else {
       g2.setTransform(k, 0, 0, k, 0, 0); drawFieldTerrain(g2);
     }
@@ -272,7 +322,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
       const sp = speedRef.current;
       // 委ねている間は絵を描かない。描かぬぶんだけ時が速く進む。
       if (委ねRef.current) { handle = requestAnimationFrame(loop); return; }
-      if (b.phase === "fight" && sp > 0) stepBattle(b, dt * sp);
+      if (b.phase === "fight" && sp > 0) {
+        /* 敵と遠く離れているあいだは早送り（上の 早送りか）。半秒ごとに見直す */
+        if (!b.早送り見 || ts - b.早送り見 > 500) { b.早送り見 = ts; b.早送り = 早送りか(b); }
+        const 回 = b.早送り ? 早送りの倍 : 1;
+        for (let i = 0; i < 回 && b.phase === "fight"; i++) stepBattle(b, dt * sp);
+      } else b.早送り = false;
       /* 地の焼きを少しずつ進める（GDD 8.11）。一コマ十ミリ秒を上限に汲み、
          焼き上がったら数コマかけて溶暗で差し替える。 */
       const 焼 = 焼きRef.current;
@@ -284,8 +339,13 @@ export function BattleScreen({ ctx, land, onEnd }) {
           /* 溶暗。四コマ（六十ミリ秒ほど）かけて細かい地へ移る。
              最後は濃さ一で置くので、粗い下地はきれいに消える。 */
           const 濃 = [0.35, 0.5, 0.7, 1][焼.溶] ?? 1;
+          if (焼.溶 === 0 && 焼.控え) 焼.控え.current = 今の面();     // 焼き手が据えた面を控える
           焼.貼る(焼.細, 濃);
-          if (++焼.溶 >= 4) { 焼きRef.current = null; if (typeof window !== "undefined") window.__焼き済み = true; }   // 撮る道具が本焼きを待つための印
+          if (++焼.溶 >= 4) {
+            /* 続きの仕事（野のあとの城の区）があれば汲み続ける */
+            焼きRef.current = 焼.後 || null;
+            if (!焼.後 && typeof window !== "undefined") window.__焼き済み = true;   // 撮る道具が本焼きを待つための印
+          }
         }
       }
       // 門が破れたら城の立つものを描き直す（地は変わらないので焼き直さない）
@@ -321,10 +381,20 @@ export function BattleScreen({ ctx, land, onEnd }) {
           const 版 = `${地版Ref.current}:${斜め.入 ? 1 : 0}:${向きRef.current}`;
           if ((!斜め地Ref.current || 斜め地Ref.current.版 !== 版) && !(焼2 && 焼2.済)) {
             const 焼t0 = performance.now();
+            const 今 = 今の面();
+            面を据える(野の面Ref.current || 今);
             斜め地Ref.current = { ...斜めに焼く(terrainRef.current, FIELD.w, FIELD.h), 版 };
+            /* 城の区（広い盤）。区の面で、区の原点から焼く */
+            const 区 = b.map && b.map.区;
+            if (区 && 区Ref.current && 広い盤()) {
+              面を据える(区の面Ref.current);
+              斜め区Ref.current = 斜めに焼く(区Ref.current, 区.w, 区.h, false, { x0: 区.x0, y0: 区.y0 });
+            } else 斜め区Ref.current = null;
+            面を据える(今);
             if (typeof window !== "undefined") window.__斜め焼き = Math.round(performance.now() - 焼t0);
           }
           斜め地 = 斜め地Ref.current;
+          if (斜め地 && 斜め区Ref.current) 斜め地 = { ...斜め地, 区: 斜め区Ref.current };
           /* 引いた眺めのための木の画（mori.js 木立を焼く）。地を焼き直したら焼き直す */
           if (斜め地 && 斜め地.画 && (!斜め木Ref.current || 斜め木Ref.current.版 !== 斜め地.版)) {
             斜め木Ref.current = { ...(木立を焼く(斜め地) || {}), 版: 斜め地.版 };
@@ -333,12 +403,16 @@ export function BattleScreen({ ctx, land, onEnd }) {
           /* 城に立つものも同じ高さで持ち上げて写す。門が破れて描き直したら写し直す */
           if (城Ref.current && 斜め地 && 斜め地.画) {
             const 版2 = `${斜め地.版}:${城版Ref.current}`;
-            if (!斜め城Ref.current || 斜め城Ref.current.版 !== 版2) 斜め城Ref.current = { ...斜めに写す(城Ref.current, FIELD.w, FIELD.h), 版: 版2 };
+            const 区2 = 広い盤() ? b.map.区 : null;
+            if (!斜め城Ref.current || 斜め城Ref.current.版 !== 版2) {
+              斜め城Ref.current = { ...(区2 ? 斜めに写す(城Ref.current, 区2.w, 区2.h, { x0: 区2.x0, y0: 区2.y0 })
+                : 斜めに写す(城Ref.current, FIELD.w, FIELD.h)), 版: 版2 };
+            }
             斜め地 = { ...斜め地, 城: 斜め城Ref.current };
           }
         }
         const 描t0 = performance.now();
-        drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current, 斜め地);
+        drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current, 斜め地, 区Ref.current);
         /* 一コマを描くのに要った時（直近六十コマ）。重さを測るための覗き窓 */
         if (typeof window !== "undefined") {
           const 刻ら = window.__描きの刻 || (window.__描きの刻 = []);
@@ -824,7 +898,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       const l = m.layers[gt.layer], a = axisOf(l, gt);
       const gp = gatePos(m, l, gt);
       // すでに取り付いていれば呼び戻さない
-      if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * (FIELD.w / BASE.w)) { 下知(b, c, { order: "待機" }); return; }
+      if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * fieldScale()) { 下知(b, c, { order: "待機" }); return; }
       const wp = routeToCastleGate(m, gt, c.x, c.y);
       if (wp.length) {
         下知(b, c, { order: "前進", tx: wp[0].x, ty: wp[0].y, keepPath: true });
@@ -897,7 +971,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
             {b.筋書き
               ? "布陣は当時のままです。隊を選び、陣形と向きだけ決めてください。黄の隊は去就が定まっていません――撃ちも撃たれもせず、条件が揃うまで動きません。"
               : ctx.mode === "castle"
-                ? "寄せ手は大手口の前に布陣しています。門に取り付けば門扉が傷み、破れば次の曲輪へ進めます。本丸を押さえれば城は落ちます。"
+                ? (b.map && b.map.広い
+                  ? (b.attacker === "P"
+                    ? "寄せ手は城の南の野に布陣しています（青い帯の中なら置き直せます）。川があれば橋か浅瀬を渡り、大手道を上って門に取り付きます。門を破れば次の曲輪へ進み、本丸を押さえれば城は落ちます。"
+                    : "城方は曲輪に籠っています。寄せ手は南の野から寄せてきます。門を支え、狭間から射かけて寄せ手を退けてください。")
+                  : "寄せ手は大手口の前に布陣しています。門に取り付けば門扉が傷み、破れば次の曲輪へ進めます。本丸を押さえれば城は落ちます。")
                 : "隊を選び、自陣（青い帯の中）をタップかドラッグして布陣。森に置いた隊は伏兵にできます。"}<br />
             駒＝10人。<b style={{ color: ctx.pColor }}>藍＝自軍</b>／<b style={{ color: ctx.eColor }}>朱＝敵軍</b>{b.筋書き ? <>／<b style={{ color: "#B08A10" }}>黄＝去就未定</b></> : null}、<b>明るく白縁＝直属</b>／<b>暗く黒縁＝地域</b>、
             <b>形＝兵科</b>（槍は三角、騎馬は細長、弓は背が凹む、鉄砲は中央に点）。<br />
@@ -1005,7 +1083,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
               {b.map.gates.filter((gt) => !gt.broken && (gt.layer === 0 || b.map.layers[gt.layer - 1].gates.some((x) => x.broken))).map((gt) => {
                 const gp = gatePos(b.map, b.map.layers[gt.layer], gt);
                 const q = b.corps.filter((c) => c.side === b.attacker && corpsMen(c) > 0 && c.id !== gt.slot
-                  && Math.hypot(c.x - gp.x, c.y - gp.y) < 104 * (FIELD.w / BASE.w)).length;
+                  && Math.hypot(c.x - gp.x, c.y - gp.y) < 104 * fieldScale()).length;
                 return (
                   <div key={gt.key} style={{ borderBottom: `1px solid ${U.line2}`, padding: "4px 0" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
@@ -1497,6 +1575,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
           <span className="kv num">
             {Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}
             <span style={{ color: U.dim }}>／日没まで{Math.max(0, Math.ceil((b.dusk - b.t) / 60))}分</span>
+            {b.早送り && speed > 0 && <span style={{ color: "#8A6A34", fontWeight: 700, marginLeft: 6 }} title="敵味方が遠く離れているあいだは、刻を四倍で進めています">早送り</span>}
           </span>
           </div>
           {phase === "fight" && (
@@ -1578,6 +1657,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <span style={{ color: U.dim }}>対</span>
                 <span className="dot" style={{ background: ctx.eColor }} /><b className="num">{fmt(eMen)}</b>
                 <span className="num" style={{ color: U.dim }}>{Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}</span>
+                {b.早送り && speed > 0 && <span style={{ color: "#8A6A34", fontWeight: 700 }} title="敵味方が遠く離れているあいだは、刻を四倍で進めています">早送り</span>}
                 {phase === "fight" && [["停", 0], ["微", 0.12], ["低", 0.3], ["通", 0.6]].map(([lb, v]) => (
                   <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`}
                     style={{ padding: land ? "3px 6px" : "2px 5px", fontSize: land ? 12 : 10.5 }}

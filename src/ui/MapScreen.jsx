@@ -3,12 +3,12 @@ import * as 政務 from "../govern/commands.js";
 import * as 月送り from "../govern/month.js";
 import * as 合戦裁定 from "../govern/war.js";
 import React, { useState, useRef, useEffect } from "react";
-import { SIEGE_CORPS_CAP, SIEGE_KIT, axisOf, buildCastleMap, fromUV, gateOpenU, layoutCastleField, setBattleMap, 寄せ口 } from "../battle/castleMap.js";
+import { SIEGE_CORPS_CAP, SIEGE_KIT, axisOf, buildCastleMap, fromUV, gateOpenU, layoutCastleField, setBattleMap, 寄せ口, 寄せ手の陣 } from "../battle/castleMap.js";
 import { corpsMax, corpsMen, makeCorps, notify, placeSquads, 寄せ手の隊数, 盤に収める } from "../battle/corps.js";
 import { 城方の隊を立てる } from "../battle/defense.js";
 import { drawMon, sideHue } from "../battle/draw.js";
 import { createBattle } from "../battle/engine.js";
-import { BASE, FIELD, MAX_CORPS, layoutField, setFieldKind, setFieldSeed, terrainAt } from "../battle/field.js";
+import { BASE, FIELD, MAX_CORPS, fieldScale, layoutField, setFieldKind, setFieldSeed, terrainAt } from "../battle/field.js";
 import { ambushChance, ambushPlan, tryAmbush } from "../core/ambush.js";
 import { captureChance, makePrisoner, payRansom, ransomAccept, ransomCost, takeAsPrisoner } from "../core/capture.js";
 import { 取り立てる, COMING_OF_AGE, actingHead, bearChild, canRecruit, emergeGenerals, hasHouse, heirCandidates, houseName, inheritHouse, lifeSpan, loyaltyAfterRecruit, makePromotion, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
@@ -882,7 +882,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const army = g.armies.find((x) => x.id === sg.armyId);
     const castle = g.castles.find((x) => x.id === sg.castleId);
     if (!army || !castle) return;
-    const map = layoutCastleField(buildCastleMap(castle));
+    /* 城攻めの盤は、城のまわりに野を敷いた広い盤である（castleMap.js 広い盤に据える）。
+       野の種と街道の質は、野戦と同じく寄せ手の来た道から決める */
+    setFieldSeed(army.from, castle.id);
+    { const r = roadBetween(army.from, castle.id); setFieldKind(r ? r[3] : "街道"); }
+    const map = layoutCastleField(buildCastleMap(castle), { 広く: true, 城id: castle.id });
     map.天守 = 天守を見る(g, castle);                   // 史実に天守のある城、盤で大きな家の本拠になった城（data/tenshu.js）
     setBattleMap(map);
     const atkGens = army.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean);
@@ -939,6 +943,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     /* 寄せ手は野から寄せる。構える所は castleMap の 寄せ口 が決める（GDD 9.3）。 */
     const outer = map.layers[0], og = outer.gates;
     const atk = mk(寄せ手ら, useLocal, army.localTrain, atkSide, atkColor, (i, n) => {
+      if (map.広い) return 寄せ手の陣(map, i, n);         // 南の端から入る
       const gt = og[i % og.length];
       return 寄せ口(map, gt, Math.floor(i / og.length));
     }, commitRost);
@@ -952,7 +957,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     bb.mode = "castle";
     bb.map = map;
     // 城攻めは一日がかり。盤の広さに合わせて伸ばす（山城は坂を登る道のりが長い）
-    bb.dusk = Math.round(1080 * clamp(Math.pow(FIELD.w / 1600, 0.62), 1, 3.2));
+    /* 広い盤では、城の大きさ（これまでの盤の幅）で決め、南の端から寄せる道のりのぶんを足す */
+    bb.dusk = Math.round(1080 * clamp(Math.pow((map.旧 ? map.旧.w : FIELD.w) / 1600, 0.62), 1, 3.2))
+      + (map.広い ? Math.round((FIELD.h - map.cy) / (34 * fieldScale()) * 2.2) : 0);
     for (const c of atk) { c.formation = "方陣"; placeSquads(c, true); }   // 狭い道を寄せるので固まる
     bb.gateParty = !!gateParty;
     // 守り手が打って出るか籠るか。優勢なら討って出る。
@@ -1111,7 +1118,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
        一段に並べる数は野の幅から決めるので、どれだけ隊が増えても盤に収まる。 */
     const lineup = (isAtk, i, n) => {
       const near = 0.14, far = 0.86;                 // 盤の縁からの割合
-      const 間 = Math.round(175 * (FIELD.w / BASE.w));
+      const 間 = Math.round(175 * fieldScale());   // 隊の間は隊の大きさ（足の尺）で取る
       const 列 = Math.max(1, Math.min(n, Math.floor((FIELD.w * 0.78) / Math.max(1, 間))));
       const 段数 = Math.ceil(n / 列);
       /* 並びの先頭は総大将である。後ろの段の真ん中に置き、
@@ -1126,7 +1133,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         return { 段, 席: 中 - (残 - 1) / 2, 幅: 残 };
       })();
       const t2 = 位.席 * 間;
-      const 奥 = 位.段 * Math.round(78 * (FIELD.h / BASE.h));   // 段の厚み（後ろへ下がる）
+      const 奥 = 位.段 * Math.round(78 * fieldScale());   // 段の厚み（後ろへ下がる）
       const put = (ax, ay, f2) => ({ x: ax, y: ay, f: f2 });
       const 締 = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
       const X = (v) => 締(v, 40, FIELD.w - 40), Y = (v) => 締(v, 40, FIELD.h - 40);
@@ -1151,7 +1158,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const 良 = (x, y) => x > 30 && y > 30 && x < FIELD.w - 30 && y < FIELD.h - 30
         && !避ける地.has(terrainAt(x, y));
       if (良(p0.x, p0.y)) return p0;
-      const 刻 = Math.round(46 * (FIELD.w / BASE.w));
+      const 刻 = Math.round(46 * fieldScale());
       for (let r = 1; r <= 5; r++) {
         for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
           const x = p0.x + dx * 刻 * r, y = p0.y + dy * 刻 * r;

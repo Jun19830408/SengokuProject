@@ -1,4 +1,4 @@
-import { MAP, castleTerrainAt } from "./castleMap.js";
+import { MAP, castleTerrainAt, 城の域か } from "./castleMap.js";
 import { clamp, makeRng } from "../core/util.js";
 
 /* ==========================================================================
@@ -19,6 +19,25 @@ export const MAX_CORPS_MEN = 30000;
 export const BASE = { w: 1080, h: 720 };
 
 export const FIELD = { w: 1080, h: 720 };
+
+// 戦場の広さは兵数と城の規模で変わる。指揮圏と伝令もそれに合わせて伸ばす。
+// これを怠ると、広い戦場では隊が軒並み指揮圏外になり、命令が届かなくなる。
+/* 足の尺（GDD 8.1・9.3）。
+
+   野の倍は、足の速さ・見通し・指揮圏・伝令の速さをまとめて決める。もとは
+   盤の幅そのもの（幅÷千八十）であった。これでは盤を広げても渡り切る刻は変わらず、
+   隊が速く滑るように見えるだけで、広さが「遠さ」として効かない。城攻めでは
+   なお悪く、城のまわりに広い野を足すと、城の中まで足が倍になって曲輪を一瞬で
+   駆け抜ける。
+
+   盤を広げるときは、尺を広げる前の盤の幅で据えておく（尺を据える）。城の中も
+   野の隊の足も今までと同じで、広げたぶんだけ道のりが長くなる。 */
+let 尺の上書き = null;
+export function 尺を据える(v) { 尺の上書き = v > 0 ? Math.max(1, v) : null; }
+export const fieldScale = () => 尺の上書き || Math.max(1, FIELD.w / BASE.w);
+/* 広げの倍。盤の幅が、尺の基の幅の何倍あるか（広げていなければ一）。
+   日没までの刻は、これだけ道のりが延びるぶん延ばす。 */
+export const 広げの倍 = () => Math.max(1, FIELD.w / (fieldScale() * BASE.w));
 
 // 戦場の地形は街道ごとに決まる。両端の城の名から種を作り、毎回同じ野を再現する。
 export const RIVER = { top: 0, bot: 0, bridge: [0, 0], ford: [0, 0], wave: 0, ph: 0, k: 1 };
@@ -136,10 +155,15 @@ export function seedOf(aId, bId) {
 }
 
 // 街道の性格から野を組み立てる（GDD 8.1）
-export function genTerrain(seed) {
+export function genTerrain(seed, opt = {}) {
   代++;
   const rnd = makeRng(seed);
   const W = FIELD.w, H = FIELD.h;
+  /* 城攻めの広い盤（GDD 9.3）。城 … 城山の円 { x, y, r, 大手: { x, y } }。
+     城山の内には地物を置かない。川は城の手前（南）を流し、橋は城山の脇に架け、
+     街道は城山を避けて通し、大手の麓から街道へ枝道を付ける。城を渡さなければ、
+     これまでと寸分違わぬ野を組む（賽の流れも変えない）。 */
+  const 城 = opt.城 || null;
   RIVER.top = 0; RIVER.bot = 0; RIVER.bridge = [0, 0]; RIVER.ford = [0, 0]; RIVER.wave = 0;
   FORESTS.length = 0; WOODS.length = 0; HILLS.length = 0; MARSH.length = 0; VILLAGES.length = 0;
   MOUNTAINS.length = 0;
@@ -158,11 +182,17 @@ export function genTerrain(seed) {
        変わらない。ほぼ絶対の寸法で取り、野の広さぶんは僅かに効かせるに留める。
        川幅も同じ考えで、際限なく広がらぬよう歯止めを入れる。 */
     const 幅倍 = clamp(Math.pow(W / 1080, 0.3), 1, 1.7);
-    const cy = H * (0.36 + rnd() * 0.28);
+    let cy = H * (0.36 + rnd() * 0.28);
     const wide = clamp(H * (0.045 + rnd() * 0.035), 52, 190);
     RIVER.top = Math.round(cy - wide / 2); RIVER.bot = Math.round(cy + wide / 2);
     const bw = (74 + rnd() * 26) * 幅倍;               // 橋。一隊の半ばに満たない
-    const bx = W * (0.15 + rnd() * 0.7);
+    let bx = W * (0.15 + rnd() * 0.7);
+    /* 城の盤では、橋を城山の脇へ寄せる（城山を貫く街道を作らない） */
+    if (城 && Math.abs(bx - 城.x) < 城.r + 420) {
+      const 東 = 城.x + 城.r + 420 + (bx - W * 0.15) / (W * 0.7) * W * 0.12;
+      const 西 = 城.x - 城.r - 420 - (bx - W * 0.15) / (W * 0.7) * W * 0.12;
+      bx = 東 < W * 0.9 && (W - 城.x > 城.x || 西 < W * 0.1) ? 東 : Math.max(W * 0.1, 西);
+    }
     RIVER.bridge = [Math.round(bx - bw / 2), Math.round(bx + bw / 2)];
     let fx = W * (0.1 + rnd() * 0.8);
     if (Math.abs(fx - bx) < W * 0.2) fx = bx > W / 2 ? bx - W * 0.28 : bx + W * 0.28;
@@ -172,6 +202,17 @@ export function genTerrain(seed) {
     RIVER.wave = H * (0.02 + rnd() * 0.05);          // 蛇行の振れ
     RIVER.k = (1.4 + rnd() * 1.6) * Math.PI / W;     // 蛇行の細かさ
     RIVER.ph = rnd() * Math.PI * 2;
+    /* 城の盤では、川は城山の裾より南を流す。寄せ手は川を越えて城へ寄せる。
+       南に寄せ手の構えるだけの野が残らなければ、川は流さない */
+    if (城) {
+      RIVER.wave = Math.min(RIVER.wave, H * 0.035);
+      const 上 = 城.y + 城.r + wide / 2 + RIVER.wave + 260, 下 = H - wide / 2 - RIVER.wave - 1500;
+      if (上 > 下) { RIVER.top = 0; RIVER.bot = 0; RIVER.wave = 0; }
+      else {
+        cy = 上 + (下 - 上) * clamp((cy / H - 0.36) / 0.28, 0, 1) * 0.6;
+        RIVER.top = Math.round(cy - wide / 2); RIVER.bot = Math.round(cy + wide / 2);
+      }
+    }
   }
   // 丘・森・林・湿地。数も場所も野ごとに違う。
   /* 置き直しの数（試み）は、既にある野を変えぬよう二十四のままとする。
@@ -196,6 +237,7 @@ export function genTerrain(seed) {
            丘と村は、置き終えてから裾が岸に届くところまで退ける（丘と村を川から
            退ける）。ここで求めると試みの数が変わり、賽の流れがずれるからである。 */
         const 際 = 丸ごと外へ ? r0 + 24 : 40;
+        if (城 && Math.hypot(x - 城.x, y - 城.y) < 城.r + r0 + 90) continue;
         if (RIVER.bot > RIVER.top
           && y + 際 > RIVER.top - (丸ごと外へ ? RIVER.wave : 0)
           && y - 際 < RIVER.bot + (丸ごと外へ ? RIVER.wave : 0)) continue;
@@ -292,11 +334,20 @@ export function genTerrain(seed) {
     ROAD.幅 = Math.min(ROAD.幅, Math.max(24, (RIVER.bridge[1] - RIVER.bridge[0]) - 10));
   }
   {
-    const 渡り = RIVER.bot > RIVER.top
+    let 渡り = RIVER.bot > RIVER.top
       ? (RIVER.bridge[0] + RIVER.bridge[1]) / 2
       : W * (0.3 + rnd() * 0.4);
-    const 南 = clamp(渡り + (rnd() - 0.5) * W * 0.3, W * 0.12, W * 0.88);
-    const 北 = clamp(渡り + (rnd() - 0.5) * W * 0.3, W * 0.12, W * 0.88);
+    let 南 = clamp(渡り + (rnd() - 0.5) * W * 0.3, W * 0.12, W * 0.88);
+    let 北 = clamp(渡り + (rnd() - 0.5) * W * 0.3, W * 0.12, W * 0.88);
+    /* 城の盤では、街道は城山の脇を通す。渡り（川の無い野では道の芯）と北の端を
+       城山と同じ側の外へ出す */
+    if (城) {
+      const 側 = 渡り >= 城.x ? 1 : -1;
+      const 外 = (x) => (側 > 0 ? Math.max(x, 城.x + 城.r + 480) : Math.min(x, 城.x - 城.r - 480));
+      if (!(RIVER.bot > RIVER.top)) 渡り = clamp(外(渡り), W * 0.08, W * 0.92);
+      北 = clamp(外(北), W * 0.06, W * 0.94);
+      南 = clamp(南, W * 0.1, W * 0.9);
+    }
     const 川中 = RIVER.bot > RIVER.top ? (RIVER.top + RIVER.bot) / 2 : H * 0.5;
     /* 曲がりは、川へ近づくほど小さくする。橋の袂で道が揺れていては、道を辿った
        軍勢が橋から外れて淵へ踏み込む。渡り場へは真っすぐ入るのが道というものである。 */
@@ -319,6 +370,25 @@ export function genTerrain(seed) {
     ROAD.節.push(...曲(川中 - 川幅 * 1.6, -30, 渡り, 北, 3));
     ROAD.節.push({ x: 北, y: -30 });
   }
+  /* 大手道。大手の麓から南へ下り、街道へ合わさる。寄せ手が上ってくる道である */
+  if (城 && 城.大手) {
+    const 麓 = { x: 城.大手.x, y: 城.大手.y };
+    const 合y = Math.min(H - 200, 城.y + 城.r + 180);
+    const 合x = 道のx(ROAD.節, 合y);
+    if (合x != null) {
+      const 節 = [麓, { x: 麓.x + (合x - 麓.x) * 0.12, y: 麓.y + (合y - 麓.y) * 0.55 },
+        { x: 麓.x + (合x - 麓.x) * 0.55, y: 合y - 40 }, { x: 合x, y: 合y }];
+      ROADS.push({ 名: "大手道", 節, 幅: Math.round(ROAD.幅 * 0.85) });
+    }
+  }
+}
+/* 折れ線の道が、縦 y を横切る所の横（無ければ null） */
+function 道のx(節, y) {
+  for (let i = 0; i + 1 < 節.length; i++) {
+    const a = 節[i], b = 節[i + 1];
+    if ((a.y - y) * (b.y - y) <= 0 && a.y !== b.y) return a.x + (b.x - a.x) * (y - a.y) / (b.y - a.y);
+  }
+  return null;
 }
 
 /* 川べりの丘と村（GDD 8.1・8.11）。
@@ -452,6 +522,7 @@ function 野を焼く(ce = 10) {
 export function 筋書きの野を組む(地) {
   代++;
   FIELD.w = 地.w; FIELD.h = 地.h;
+  尺を据える(0);                                    // 筋書きの野は、盤の幅をそのまま尺とする
   setFieldKind("街道");
   RIVER.top = 0; RIVER.bot = 0; RIVER.bridge = [0, 0]; RIVER.ford = [0, 0]; RIVER.wave = 0;
   FORESTS.length = 0; WOODS.length = 0; HILLS.length = 0; MARSH.length = 0;
@@ -619,11 +690,22 @@ export function layoutField(totalMen, 隊数) {
      同じ桁である）。 */
   const 隊 = clamp(隊数 || 2, 2, 32);
   const 隊広 = Math.sqrt(隊 / 2);
-  const w = clamp(Math.round(1180 * Math.sqrt(Math.max(600, totalMen) / 3000) * 隊広), 1100, 8600);
+  const w0 = clamp(Math.round(1180 * Math.sqrt(Math.max(600, totalMen) / 3000) * 隊広), 1100, 8600);
+  /* 野戦の盤を広げる（GDD 8.1）。
+
+     遊ぶ側の申し出は「野戦のマップももっと広げてもいいと思っています」であった。
+     上の決め方の一.五倍に広げ、頭打ちを一万二千歩（城攻めの広い盤と同じ）にする。
+     足の尺は広げる前の幅のまま据える（尺を据える）。隊の足も見通しも指揮圏も
+     今までと変わらず、ただ野が広く、遠くなる。回り込み・伏せ・遅れて着く援軍に、
+     そのぶんの間合いが生まれる。 */
+  const w = Math.min(野の頭, Math.round(w0 * 野の倍));
   const h = Math.round(w * 0.667);
   FIELD.w = w; FIELD.h = h;
+  尺を据える(w0 / BASE.w);
   genTerrain(FIELD_SEED);
 }
+/* 野戦の盤の広げ。倍と頭打ち（歩） */
+export const 野の倍 = 1.5, 野の頭 = 12000;
 
 export function setFieldSeed(aId, bId) { FIELD_SEED = seedOf(aId, bId); }
 layoutField(3000);
@@ -645,7 +727,8 @@ export function passableFor(c, b, x, y) {
 
 
 export function terrainAt(x, y) {
-  if (MAP) return castleTerrainAt(x, y);
+  /* 城の盤。広い盤では城山の外を野の地で判ずる（castleTerrainAt が null を返す） */
+  if (MAP) { const t = castleTerrainAt(x, y); if (t) return t; }
   if (地形格) {                                   // 筋書きの野は升目を引くだけ
     const g = 地形格;
     const i = x < 0 ? 0 : x >= FIELD.w ? g.w - 1 : (x / g.ce) | 0;
@@ -690,7 +773,7 @@ export function terrainAt(x, y) {
    石垣の内と外は、一歩の違いが生死を分ける。点で判ずるままとする。 */
 export const 踏み場 = 13;
 export function 踏み込んだ地(x, y, r = 踏み場) {
-  if (MAP) return terrainAt(x, y);
+  if (MAP && 城の域か(x, y)) return terrainAt(x, y);
   const 芯 = terrainAt(x, y);
   if (芯 === "bridge") return 芯;
   let 外 = 0;
@@ -781,6 +864,4 @@ export const ARM_STATS = {
   kiba: { melee: 1.9, range: 0, rof: 0, vol: 0, speed: 56, color: "#A2604A", label: "騎馬" },
 };
 
-// 戦場の広さは兵数と城の規模で変わる。指揮圏と伝令もそれに合わせて伸ばす。
-// これを怠ると、広い戦場では隊が軒並み指揮圏外になり、命令が届かなくなる。
-export const fieldScale = () => Math.max(1, FIELD.w / BASE.w);
+

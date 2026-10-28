@@ -1,5 +1,6 @@
 import { ROW, SP } from "./corps.js";
-import { FIELD, passable } from "./field.js";
+import { FIELD, FIELD_SEED, ROAD, genTerrain, passable, terrainAt, 尺を据える } from "./field.js";
+import { 野の道 } from "./route.js";
 import { U, clamp } from "../core/util.js";
 
 /* ==========================================================================
@@ -287,7 +288,7 @@ export function buildCastleMap(castle) {
 }
 
 // 城の外に、寄せ手が二列並べるだけの余地を取って戦場を決める
-export function layoutCastleField(m) {
+export function layoutCastleField(m, opt = {}) {
   const o = m.layers[0];
   const ext = { w: o.hw + m.t + o.masu + m.t + 8 + m.moat.band, h: o.hh + m.t + o.masu + m.t + 8 + m.moat.band };
   // 城の外に、寄せ手が展開して回り込めるだけの野を残す
@@ -301,12 +302,106 @@ export function layoutCastleField(m) {
      城攻めは門の押し合いであって、野を駆け回る戦ではない。元の広さに戻す。
      山城だけは坂のぶん、わずかに広く取る。 */
   const 余 = m.坂 >= 1 ? 0.68 : 0.6;
-  FIELD.w = Math.round((ext.w + Math.max(m.unit.d * 2.4 + 160, ext.w * 余)) * 2);
-  FIELD.h = Math.round((ext.h + Math.max(m.unit.d * 2.4 + 160, ext.h * 余)) * 2);
-  m.cx = FIELD.w / 2; m.cy = FIELD.h / 2;
+  const 旧w = Math.round((ext.w + Math.max(m.unit.d * 2.4 + 160, ext.w * 余)) * 2);
+  const 旧h = Math.round((ext.h + Math.max(m.unit.d * 2.4 + 160, ext.h * 余)) * 2);
+  m.旧 = { w: 旧w, h: 旧h };
+  if (opt.広く) 広い盤に据える(m, ext, opt);
+  else {
+    FIELD.w = 旧w; FIELD.h = 旧h;
+    尺を据える(0);                                      // 尺は盤の幅のまま
+    m.cx = FIELD.w / 2; m.cy = FIELD.h / 2;
+    m.域 = null; m.広い = false;
+  }
   for (const f of m.fac) { f.x += m.cx; f.y += m.cy; }   // 相対から絶対へ
   for (const f of m.普請 || []) { f.x += m.cx; f.y += m.cy; }
   return m;
+}
+
+/* ------------------------------------------------ 城攻めの広い盤（GDD 9.3）
+
+   遊ぶ側の申し出は「城攻めにあたっては、もっと広いマップにしたい。野戦から
+   移動して、城に向かっていくにあたって野戦に似たようなマップを移動して行って、
+   城の近くまで行って、城に取りついて城門を壊す」であった。
+
+   城は今のまま（縄張りも寸法も変えない）、そのまわりに野戦と同じ作りの野を敷く。
+     城山（域） … 城の外郭と堀に、構えに応じた裾を足した円。この内は城の地
+                  （castleTerrainAt）で判じ、外は野の地（川・森・山・村・道）で判ずる
+     城の据え所 … 盤の北寄り。寄せ手は南の端から入り、川を越えて寄せる
+     盤の広さ   … 城山の大きさから決める（九千〜一万二千歩、縦は横の四分の三）
+   足の尺は、これまでの城攻めの盤の幅で据える（field.js 尺を据える）。城の中の
+   足も間合いも今までと同じで、城へ寄せるまでの道のりだけが延びる。 */
+export const 広い盤の頭 = 12000;
+function 広い盤に据える(m, ext, opt) {
+  const 半 = Math.max(ext.w, ext.h) + m.moat.band;
+  /* 城山の半径。山城は裾が広く、平山城はそれよりやや狭い。平城は堀の外に城下の
+     ぶんを足すだけ */
+  const 域r = Math.round(半 * (m.坂 >= 1 ? 1.34 : m.坂 > 0 ? 1.26 : 1.14) + 60);
+  const W = Math.round(Math.max(9000, Math.min(広い盤の頭, 域r * 5.6)));
+  const H = Math.round(W * 0.75);
+  FIELD.w = W; FIELD.h = H;
+  尺を据える(m.旧.w / 1080);
+  /* 城の据え所は、城の名から起こした種で決める（同じ城はいつも同じ所に立つ）。
+     城の後ろ（北）にも、搦手へ回り込むだけの野を残す */
+  const 種 = Math.abs(String(opt.城id || "x").split("").reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 17));
+  const 振 = (種 % 1000) / 1000;
+  m.cx = Math.round(W * (0.3 + 振 * 0.4));
+  m.cy = Math.round(域r + Math.max(600, H * 0.08));
+  m.域 = { x: m.cx, y: m.cy, r: 域r };
+  m.広い = true;
+  /* 城の区。城山の円を囲む矩形（盤の内に収める）。城の地と石垣は、この区だけを細かく焼く */
+  { const x0 = Math.max(0, Math.floor(m.cx - 域r - 8)), y0 = Math.max(0, Math.floor(m.cy - 域r - 8));
+    const x1 = Math.min(W, Math.ceil(m.cx + 域r + 8)), y1 = Math.min(H, Math.ceil(m.cy + 域r + 8));
+    m.区 = { x0, y0, w: x1 - x0, h: y1 - y0 }; }
+  const o = m.layers[0];
+  const 大手 = o.gates.find((g) => g.face === "S") || null;
+  genTerrain(opt.種 != null ? opt.種 : FIELD_SEED, {
+    城: { x: m.cx, y: m.cy, r: 域r,
+      大手: 大手 ? { x: m.cx + (o.ox || 0) + gateOpenU(大手), y: m.cy + 域r * 0.94 } : null },
+  });
+}
+
+/* 広い盤の寄せ手の陣（GDD 9.3）。
+
+   寄せ手は野戦から移ってきたのだから、城の堀の際に湧いて出るのではなく、盤の
+   南の端――街道の入り口――に陣を敷き、そこから城へ寄せる。総大将（並びの先頭）を
+   後ろの真ん中に据え、ほかの将はその前の段に、中央から外へ振り分けて並べる
+   （野戦の布陣 MapScreen の lineup と同じ形）。川・森・沼・村には陣を敷かない。 */
+export function 寄せ手の陣(m, i, n) {
+  const W = FIELD.w, H = FIELD.h;
+  const 入 = ROAD.節 && ROAD.節.length ? ROAD.節[0].x : W / 2;   // 街道の南の端
+  const 間 = 290, 段間 = 220;
+  const 列 = Math.max(1, Math.min(6, n - 1));
+  const 段数 = Math.ceil(Math.max(0, n - 1) / 列);
+  let 段, 席;
+  if (i === 0) { 段 = 段数; 席 = 0; }
+  else {
+    const j = i - 1;
+    段 = Math.floor(j / 列);
+    const 残 = Math.min(列, (n - 1) - 段 * 列);
+    席 = (j - 段 * 列) - (残 - 1) / 2;
+  }
+  const 半幅 = (列 * 間) / 2 + 300;
+  const cx = clamp(入, 半幅, W - 半幅);
+  const 置く = (x, y) => ({ x, y, f: Math.atan2(m.cy - y, m.cx - x) });
+  const x0 = cx + 席 * 間, y0 = H - 230 - (段数 - 段) * 段間;
+  const 避ける = new Set(["forest", "wood", "village", "deep", "ford", "bridge", "marsh", "mountain", "hill"]);
+  const 良 = (x, y) => x > 60 && y > 60 && x < W - 60 && y < H - 60 && !避ける.has(terrainAt(x, y));
+  if (良(x0, y0)) return 置く(x0, y0);
+  for (let r = 1; r <= 8; r++) {
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+      const x = x0 + dx * r * 70, y = y0 + dy * r * 50;
+      if (良(x, y)) return 置く(x, y);
+    }
+  }
+  return 置く(x0, y0);
+}
+
+/* その所が城山の内か（広い盤のときだけ意味を持つ。狭い盤なら盤じゅうが城） */
+export function 城の域か(x, y, m = MAP) {
+  if (!m) return false;
+  if (!m.域) return true;
+  const dx = x - m.域.x, dy = y - m.域.y;
+  return dx * dx + dy * dy <= m.域.r * m.域.r;
 }
 
 /* 寄せ手が構える所（GDD 9.3）。
@@ -444,6 +539,8 @@ export function masuWall(m, l, g, dx, dy) {
 export function castleTerrainAt(x, y) {
   const m = MAP, t = m.t;
   const dx = x - m.cx, dy = y - m.cy;
+  /* 広い盤では、城山の外は野の地で判ずる（null を返せば field.js が野を引く） */
+  if (m.域 && (x - m.域.x) ** 2 + (y - m.域.y) ** 2 > m.域.r * m.域.r) return null;
   for (const l of m.layers) for (const g of l.gates) if (masuWall(m, l, g, dx, dy)) return "wall";
   // 施設は壁より先に判定する。崩れた施設はもう塞がない。
   for (const f of m.fac) {
@@ -480,7 +577,7 @@ export function castleTerrainAt(x, y) {
   const inner = m.layers[m.layers.length - 1];
   if (inRect(dx - inner.ox, dy - inner.oy, inner.hw, inner.hh)) return "honmaru";
   for (const l of m.layers) if (inRect(dx - l.ox, dy - l.oy, l.hw, l.hh)) return "kuruwa";
-  return "plain";
+  return m.域 ? null : "plain";                       // 広い盤の平城の城下は野の地（道も通る）
 }
 
 // 攻城の道具。槍組の一部を割いて担がせる。効くのは門を破る速さと、矢倉からの被害だけ。
@@ -507,11 +604,18 @@ export function buildNav(m) {
      そこで、隣り合う升目を結ぶ線の上に五歩ごとの目を打ち、そこに壁があれば
      その継ぎ目だけを断つ。升目は真ん中で判ずるまま、壁は越えられなくなる。 */
   const CS = 22, 刻 = 5;
-  const w = Math.ceil(FIELD.w / CS), h = Math.ceil(FIELD.h / CS);
+  /* 広い盤では、格子は城山の周りだけに張る（城山の外は野の道さがし route.js に任せる）。
+     盤じゅうに二十二歩の格子を張ると二十万升になり、門が破れるたびの張り直しで止まる */
+  const 枠 = m.域
+    ? { x0: Math.max(0, Math.floor((m.域.x - m.域.r - CS * 2) / CS) * CS), y0: Math.max(0, Math.floor((m.域.y - m.域.r - CS * 2) / CS) * CS),
+        x1: Math.min(FIELD.w, m.域.x + m.域.r + CS * 2), y1: Math.min(FIELD.h, m.域.y + m.域.r + CS * 2) }
+    : { x0: 0, y0: 0, x1: FIELD.w, y1: FIELD.h };
+  const X0 = 枠.x0, Y0 = 枠.y0;
+  const w = Math.ceil((枠.x1 - X0) / CS), h = Math.ceil((枠.y1 - Y0) / CS);
   const ok = new Uint8Array(w * h);
   for (let j = 0; j < h; j++) {
     for (let i = 0; i < w; i++) {
-      ok[j * w + i] = passable(i * CS + CS / 2, j * CS + CS / 2) ? 1 : 0;
+      ok[j * w + i] = passable(X0 + i * CS + CS / 2, Y0 + j * CS + CS / 2) ? 1 : 0;
     }
   }
   // 継ぎ目。eR は右隣へ、eD は下隣へ渡れるか
@@ -527,18 +631,49 @@ export function buildNav(m) {
     for (let i = 0; i < w; i++) {
       const k = j * w + i;
       if (!ok[k]) continue;
-      const x = i * CS + CS / 2, y = j * CS + CS / 2;
+      const x = X0 + i * CS + CS / 2, y = Y0 + j * CS + CS / 2;
       if (i + 1 < w && ok[k + 1]) eR[k] = 渡れる(x, y, x + CS, y);
       if (j + 1 < h && ok[k + w]) eD[k] = 渡れる(x, y, x, y + CS);
     }
   }
-  m.nav = { CS, w, h, ok, eR, eD };
+  m.nav = { CS, w, h, ok, eR, eD, x0: X0, y0: Y0 };
   return m.nav;
+}
+
+/* 格子の内か（広い盤では、城山の内で、かつ格子の張ってある所） */
+const 格子の内 = (m, nv, x, y) => !m.域 || (x >= nv.x0 && y >= nv.y0 && x < nv.x0 + nv.w * nv.CS
+  && y < nv.y0 + nv.h * nv.CS && 城の域か(x, y, m));
+
+/* 城山の縁の継ぎ目。城山の外から内へ（内から外へ）向かう道は、ここで野の道と城の道を
+   継ぐ。城の中ほどから、外の所の方角へ、城山の半径の九割の所 */
+function 継ぎ目(m, x, y) {
+  const a = Math.atan2(y - m.域.y, x - m.域.x), r = m.域.r * 0.9;
+  return { x: m.域.x + Math.cos(a) * r, y: m.域.y + Math.sin(a) * r };
+}
+/* 野の道（route.js）。行き着けなければ真っすぐ */
+const 野を行く = (x0, y0, x1, y1) => 野の道(x0, y0, x1, y1) || [{ x: x1, y: y1, r: 40 }];
+
+/* 城山の外にかかる道。外→内は「野の道で継ぎ目まで、そこから城の道」、内→外はその逆、
+   外→外は野の道だけ（城山を越える道は、塀と堀を高くつけてあるので回り込む） */
+function 継いだ道(m, x0, y0, x1, y1) {
+  const nv = m.nav || buildNav(m);
+  const 始内 = 格子の内(m, nv, x0, y0), 終内 = 格子の内(m, nv, x1, y1);
+  if (!始内 && !終内) return 野を行く(x0, y0, x1, y1);
+  if (!始内) {
+    const e = 継ぎ目(m, x0, y0);
+    const 内 = navPath(m, e.x, e.y, x1, y1);
+    return [...野を行く(x0, y0, e.x, e.y).map((p, i, a) => (i === a.length - 1 ? { ...p, r: 60 } : p)), ...(内 || [{ x: x1, y: y1, r: 26 }])];
+  }
+  const e = 継ぎ目(m, x1, y1);
+  const 内 = navPath(m, x0, y0, e.x, e.y);
+  return [...(内 || [{ x: e.x, y: e.y, r: 40 }]), ...野を行く(e.x, e.y, x1, y1)];
 }
 
 export function navPath(m, x0, y0, x1, y1) {
   const nv = m.nav || buildNav(m);
+  if (m.域 && (!格子の内(m, nv, x0, y0) || !格子の内(m, nv, x1, y1))) return 継いだ道(m, x0, y0, x1, y1);
   const { CS, w, h, ok, eR, eD } = nv;
+  const X0 = nv.x0 || 0, Y0 = nv.y0 || 0;
   // 升目から升目へ渡れるか。壁を跨ぐ継ぎ目は断たれている。
   const 継 = (i, j, di, dj) => {
     if (di > 0 && !eR[j * w + i]) return false;
@@ -547,8 +682,8 @@ export function navPath(m, x0, y0, x1, y1) {
     if (dj < 0 && !eD[(j - 1) * w + i]) return false;
     return true;
   };
-  const ix = (x) => clamp(Math.floor(x / CS), 0, w - 1);
-  const iy = (y) => clamp(Math.floor(y / CS), 0, h - 1);
+  const ix = (x) => clamp(Math.floor((x - X0) / CS), 0, w - 1);
+  const iy = (y) => clamp(Math.floor((y - Y0) / CS), 0, h - 1);
   /* 壁の中なら最寄りの通れる格子へ。
 
      最寄りは、元の所から塀を挟まずに見える格子のうちで選ぶ。塀の脇に立つ隊は、
@@ -567,7 +702,7 @@ export function navPath(m, x0, y0, x1, y1) {
         if (i < 0 || j < 0 || i >= w || j >= h) continue;
         if (!ok[j * w + i]) continue;
         if (輪の先 < 0) 輪の先 = j * w + i;
-        const cx = i * CS + CS / 2, cy = j * CS + CS / 2, d = Math.hypot(cx - x, cy - y);
+        const cx = X0 + i * CS + CS / 2, cy = Y0 + j * CS + CS / 2, d = Math.hypot(cx - x, cy - y);
         if (d < 見え隔 && 見通せる(x, y, cx, cy)) { 見え隔 = d; 見え = j * w + i; }
       }
       if (見え >= 0) return 見え;
@@ -624,7 +759,7 @@ export function navPath(m, x0, y0, x1, y1) {
      一折り返しあたり三十.三歩が二十四.二歩、寄せの無い城でも四十九歩が
      二十一.六歩になる。道が長い直線になるぶん、隊は壁の角へ大きく寄りかかり、
      そこで滑って揺れる。城の中は角だらけなので、この手は合わない。捨てた。 */
-  const 中 = (k) => ({ x: (k % w) * CS + CS / 2, y: ((k / w) | 0) * CS + CS / 2 });
+  const 中 = (k) => ({ x: X0 + (k % w) * CS + CS / 2, y: Y0 + ((k / w) | 0) * CS + CS / 2 });
   const 角 = [];
   let lastDir = null;
   for (let n = 1; n < cells.length; n++) {
@@ -691,7 +826,10 @@ export function navPath(m, x0, y0, x1, y1) {
 // 近くの升目を取る（塀の脇に立つ組を、塀の向こうの升目に数えないため）。
 export function 流れの升(nv, x, y) {
   const { CS, w, h, ok } = nv;
-  const i0 = clamp(Math.floor(x / CS), 0, w - 1), j0 = clamp(Math.floor(y / CS), 0, h - 1);
+  const X0 = nv.x0 || 0, Y0 = nv.y0 || 0;
+  /* 格子の外（広い盤の城山の外）は升を持たない */
+  if (x < X0 || y < Y0 || x >= X0 + w * CS || y >= Y0 + h * CS) return -1;
+  const i0 = clamp(Math.floor((x - X0) / CS), 0, w - 1), j0 = clamp(Math.floor((y - Y0) / CS), 0, h - 1);
   if (ok[j0 * w + i0]) return j0 * w + i0;
   /* 見通しを量るので重い（小谷城のような山城では、城攻めの一刻の二割近くがここに
      掛かった）。四歩四方ごとに覚えておく。塀は十歩あるので、四歩の升が塀の両側に
@@ -706,7 +844,7 @@ export function 流れの升(nv, x, y) {
       if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
       const i = i0 + di, j = j0 + dj;
       if (i < 0 || j < 0 || i >= w || j >= h || !ok[j * w + i]) continue;
-      const cx = i * CS + CS / 2, cy = j * CS + CS / 2, d = Math.hypot(cx - x, cy - y);
+      const cx = X0 + i * CS + CS / 2, cy = Y0 + j * CS + CS / 2, d = Math.hypot(cx - x, cy - y);
       if (d < bd && 見通せる(x, y, cx, cy)) { bd = d; best = j * w + i; }
     }
   }
@@ -760,6 +898,7 @@ export function 塀のこちら(流, cx, cy, x, y) {
    見える限り先の升目を取る（升目ごとに曲がると、組が階段のように折れて歩く）。 */
 export function 流れの先(流, x, y, 先まで = 6) {
   const { nv, 距 } = 流, { CS, w, h, eR, eD } = nv;
+  const X0 = nv.x0 || 0, Y0 = nv.y0 || 0;
   let k = 流れの升(nv, x, y);
   if (k < 0 || 距[k] <= 0) return null;
   const 道 = [];
@@ -774,7 +913,7 @@ export function 流れの先(流, x, y, 先まで = 6) {
     道.push(nk); k = nk;
   }
   for (let n = 道.length - 1; n >= 0; n--) {
-    const px = (道[n] % w) * CS + CS / 2, py = ((道[n] / w) | 0) * CS + CS / 2;
+    const px = X0 + (道[n] % w) * CS + CS / 2, py = Y0 + ((道[n] / w) | 0) * CS + CS / 2;
     if (n === 0 || 見通せる(x, y, px, py)) return { x: px, y: py };
   }
   return null;

@@ -1,4 +1,4 @@
-import { MAP, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 列の順 } from "./castleMap.js";
+import { MAP, 城の域か, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 列の順 } from "./castleMap.js";
 import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く } from "./corps.js";
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt, 地の高さ, 高み } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
@@ -1076,6 +1076,11 @@ export function battleAI(b) {
         }
       }
       if (c.side === b.attacker) {
+        /* 渡河のあとの再編（上の 渡りきった隊は隊列を整える）は、隊を待機にして足を止める。
+           城攻めの采配は道順を持つあいだ下知を出し直さないので、整え終わっても待機のまま
+           道順の途中で立ち尽くした（広い盤で川を渡った寄せ手が、橋の北で動かなくなった）。
+           待機のまま道順が残っていれば、捨てて引き直す */
+        if (c.wp && c.wp.length && (c.order === "待機" || c.order === "守備") && !c.reforming && !c.pinned) c.wp = null;
         /* 本丸の門が破れていれば、門を破りに回らず本丸へ攻め入る（castleMap.js 本丸への道）。
            これまでは「抜けられる門」を探し続けたので、本丸の門が開いても二の丸の
            残りの門へ引き返し、門が尽きると本丸の中ほどへまっすぐ向かって塀に貼りついた */
@@ -1113,7 +1118,9 @@ export function battleAI(b) {
           if (隔 > 46) {
             if (!c.wp || !c.wp.length) {
               // 控え口が塀の向こうなら道を引く（まっすぐ行けば塀に貼りつく）
-              const p = g.layer === 0 || 見通せる(c.x, c.y, 控.x, 控.y) ? null : navPath(MAP, c.x, c.y, 控.x, 控.y);
+              /* 広い盤で城山の外にいるなら、野の道（橋・浅瀬）を辿って寄せる（castleMap.js 継いだ道） */
+              const 遠い = MAP.域 && !城の域か(c.x, c.y);
+              const p = !遠い && (g.layer === 0 || 見通せる(c.x, c.y, 控.x, 控.y)) ? null : navPath(MAP, c.x, c.y, 控.x, 控.y);
               if (p && p.length) { issueOrder(b, c, { order: "移動", tx: p[0].x, ty: p[0].y, keepPath: true }); c.wp = p; }
               else issueOrder(b, c, { order: "移動", tx: 控.x, ty: 控.y });
             }

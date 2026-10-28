@@ -68,20 +68,53 @@ export function 高さ図を据える(高, w, h, 単, 丈単, 画高) {
   // 最 … いちばん高い所（歩）、低 … いちばん低い所（歩）
   図 = { 高, 画高: 画高 || null, w, h, 単, 丈単, 最: 最 * 丈単, 低: (Number.isFinite(低) ? 低 : 0) * 丈単 };
 }
-export function 高さ図を外す() { 図 = null; }
+export function 高さ図を外す() { 図 = null; 区図 = null; 図の版++; }
 export const 高さ図があるか = () => !!図;
+
+/* ---- 城の区の高さの図（城攻めの広い盤・GDD 9.3）----
+   広い盤では、野を粗く焼き、城のまわり（城山の円を囲む矩形）だけを細かく焼く。
+   石垣の段や堀は野の粗さでは潰れてしまうからである。高さの図も二枚持ち、城山の内は
+   区の図、外は野の図を引く。縁（城山の半径の八割六分から九割九分）では二つを
+   なめらかに混ぜる。区の画の縁も同じだけ透かして野へ溶かす（BattleScreen）。 */
+let 区図 = null;   // { 高, w, h, 単, 丈単, x0, y0, cx, cy, r, 最, 低 }
+let 図の版 = 0;    // どちらかの図が替わるたびに進める（隠れの際の覚えの鍵）
+export function 区の高さ図を据える(高, w, h, 単, 丈単, 区) {
+  let 最 = 0;
+  for (let i = 0; i < 高.length; i++) if (高[i] > 最) 最 = 高[i];
+  区図 = { 高, w, h, 単, 丈単, x0: 区.x0, y0: 区.y0, cx: 区.cx, cy: 区.cy, r: 区.r, 最: 最 * 丈単 };
+  図の版++;
+}
+export function 区の高さ図を外す() { 区図 = null; 図の版++; }
+export const 区の図があるか = () => !!区図;
+/* 区の図の効き（〇〜一）。城山の半径の八割六分までは一、九割九分で零 */
+export function 区の効き(x, y) {
+  if (!区図) return 0;
+  const d = Math.hypot(x - 区図.cx, y - 区図.cy) / 区図.r;
+  if (d <= 0.86) return 1;
+  if (d >= 0.99) return 0;
+  const t = (0.99 - d) / 0.13;
+  return t * t * (3 - 2 * t);
+}
+function 図を引く(M, x, y, 画) {
+  const fx = (x - (M.x0 || 0)) / M.単, fy = (y - (M.y0 || 0)) / M.単;
+  const x0 = Math.max(0, Math.min(M.w - 1, Math.floor(fx))), y0 = Math.max(0, Math.min(M.h - 1, Math.floor(fy)));
+  const x1 = Math.min(M.w - 1, x0 + 1), y1 = Math.min(M.h - 1, y0 + 1);
+  const tx = Math.max(0, Math.min(1, fx - x0)), ty = Math.max(0, Math.min(1, fy - y0));
+  const H = (画 && M.画高) || M.高, w = M.w;
+  const a = H[y0 * w + x0], b = H[y0 * w + x1], c = H[y1 * w + x0], d = H[y1 * w + x1];
+  return ((a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty) * M.丈単;
+}
 
 // その所の地の高さ（歩）。図が無ければ零。画 を立てれば梢まで含めた高さ
 export function 地の丈(x, y, 画) {
   if (!図) return 0;
-  const fx = x / 図.単, fy = y / 図.単;
-  const x0 = Math.max(0, Math.min(図.w - 1, Math.floor(fx))), y0 = Math.max(0, Math.min(図.h - 1, Math.floor(fy)));
-  const x1 = Math.min(図.w - 1, x0 + 1), y1 = Math.min(図.h - 1, y0 + 1);
-  const tx = Math.max(0, Math.min(1, fx - x0)), ty = Math.max(0, Math.min(1, fy - y0));
-  const H = (画 && 図.画高) || 図.高, w = 図.w;
-  const a = H[y0 * w + x0], b = H[y0 * w + x1], c = H[y1 * w + x0], d = H[y1 * w + x1];
-  return ((a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty) * 図.丈単;
+  const 野 = 図を引く(図, x, y, 画);
+  if (!区図) return 野;
+  const k = 区の効き(x, y);
+  return k <= 0 ? 野 : k >= 1 ? 図を引く(区図, x, y, 画) : 野 + (図を引く(区図, x, y, 画) - 野) * k;
 }
+/* いちばん高い所（歩）。区の図があれば、それも含めて */
+const 最も高い = () => Math.max(図 ? 図.最 : 0, 区図 ? 区図.最 : 0);
 
 if (typeof window !== "undefined") { window.__地の丈 = 地の丈; window.__隠れ = (x, y) => [隠れの際(x, y), 画の縦(x, y)]; }   // 撮る道具・試しが覗く口
 // 画の上での持ち上げ（歩）。平らな所でも、うねりの分だけわずかに動く。
@@ -246,6 +279,7 @@ export function 見える範囲(cam, W, H, 余 = 0) {
    面の型(盤x, 盤y) … 0 何もなし（なだらかに伸ばす）・1 石垣・2 土の切岸・3 林の縁・4 橋の側面 */
 let 面の型 = null;
 export function 面を据える(fn) { 面の型 = fn || null; }
+export const 今の面 = () => 面の型;                 // 焼き手が据えた面（野と城の区で別々に控える）
 // 石垣の正面。石を横に寝かせて積み、段ごとに縦目地をずらす。上ほど明るい。
 // 高 は面の根からの高さ（画素）。一行ずつ起こした面を一枚の石垣として続けるため、
 // 石の段はこの高さで刻む（行ごとに刻んでいたころは、行の数だけ天端の照りと目地が
@@ -283,26 +317,34 @@ function 切岸の色(o, di, x, u, 伸, 明) {
 
 /* 地の上に重ねる画（城の石垣・門・櫓）を、地と同じく持ち上げて写す。
    面は伸ばさない（石垣の正面は地の側が描く）。地に隠れる所は隠す。 */
-export function 斜めに写す(src0, 野w, 野h) { return 斜めに焼く(src0, 野w, 野h, true); }
+export function 斜めに写す(src0, 野w, 野h, 原) { return 斜めに焼く(src0, 野w, 野h, true, 原); }
 
-export function 斜めに焼く(src0, 野w, 野h, 重ね) {
+/* 原 … 画布の左上の盤の所 { x0, y0 }（城の区を焼くとき）。無ければ盤の左上（0, 0） */
+export function 斜めに焼く(src0, 野w, 野h, 重ね, 原) {
   const k = 縦の縮み();
   const 倍 = src0.width / 野w;                        // 画素あたりの歩の逆
+  /* 画布の視の原点。盤の一部（城の区）を焼くときは、区の四隅を視の所へ写した外枠の左上 */
+  let v0x = 0, v0y = 0, 寸 = 視の寸();
+  if (原) {
+    const 隅 = [[原.x0, 原.y0], [原.x0 + 野w, 原.y0], [原.x0, 原.y0 + 野h], [原.x0 + 野w, 原.y0 + 野h]].map(([x, y]) => 視(x, y));
+    v0x = Math.min(...隅.map((p) => p[0])); v0y = Math.min(...隅.map((p) => p[1]));
+    寸 = { w: Math.max(...隅.map((p) => p[0])) - v0x, h: Math.max(...隅.map((p) => p[1])) - v0y };
+  }
   /* 回した眺めでは、真上の地をまず回して写す（九十度ずつなので画素は崩れない） */
   let src = src0;
-  if (向き) {
-    const 寸 = 視の寸();
+  if (向き || 原) {
     src = document.createElement("canvas");
     src.width = Math.round(寸.w * 倍); src.height = Math.round(寸.h * 倍);
     const g = src.getContext("2d");
     const [a, b, c, d, e, f] = 回しの式();
-    g.setTransform(a, b, c, d, e * 倍, f * 倍);
+    const ox = 原 ? 原.x0 : 0, oy = 原 ? 原.y0 : 0;
+    g.setTransform(a, b, c, d, (a * ox + c * oy + e - v0x) * 倍, (b * ox + d * oy + f - v0y) * 倍);
     g.drawImage(src0, 0, 0);
   }
   const sw = src.width, sh = src.height;
   // せり出しの最大を測る
   let 最 = 0;
-  if (図) 最 = 図.最;
+  if (図) 最 = 最も高い();
   const 上 = 最 * 斜め.持ち上げ + 4;                   // 歩
   const 上px = Math.ceil(上 * 倍);
   const dh = Math.ceil(sh * k) + 上px + 2;
@@ -327,8 +369,8 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
     o[di] = Math.min(255, o[di] * 1.25 + 20); o[di + 1] = Math.min(255, o[di + 1] * 1.25 + 18); o[di + 2] = Math.min(255, o[di + 2] * 1.22 + 14);
   };
   for (let x = 0; x < sw; x++) {
-    const vx = (x + 0.5) / 倍;
-    for (let y = 0; y < sh; y++) { const [wx, wy] = 視から盤(vx, (y + 0.5) / 倍); 丈px[y] = 画の浮き(wx, wy) * 倍; }
+    const vx = (x + 0.5) / 倍;   // 視の横（画布の原点から）
+    for (let y = 0; y < sh; y++) { const [wx, wy] = 視から盤(v0x + vx, v0y + (y + 0.5) / 倍); 丈px[y] = 画の浮き(wx, wy) * 倍; }
     let 頂 = dh;                                      // まだ塗っていない一番下の行の一つ下
     let pr = -1, pg = 0, pb = 0;                      // 一つ手前に塗った行の色
     let 前型 = 0, 面底 = 0;                           // 続いている面の型と、その根（画素）
@@ -387,7 +429,7 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
       let 型 = 0;
       /* 続きの行も、平らな行（一行の伸びは切り捨てで〇か一）は面にしない。
          一で続けていたころは、橋の床がまるごと桁の色で塗られた */
-      if (面 && (伸 > 2.2 || (前型 && 伸 > 1.5))) { const [wx, wy] = 視から盤((x + 0.5) / 倍, (y + 0.5) / 倍); 型 = 面(wx, wy); }
+      if (面 && (伸 > 2.2 || (前型 && 伸 > 1.5))) { const [wx, wy] = 視から盤(v0x + (x + 0.5) / 倍, v0y + (y + 0.5) / 倍); 型 = 面(wx, wy); }
       if (型) {
         if (型 !== 前型) { 天端(x, 頂, 前型); 面底 = 下; }
         for (let yy = Math.max(0, yp); yy < 下; yy++) {
@@ -486,11 +528,12 @@ export function 斜めに焼く(src0, 野w, 野h, 重ね) {
       for (let i = 0; i < n; i++) { let 和 = 0, 数 = 0; for (let j = Math.max(0, i - 3); j <= Math.min(n - 1, i + 3); j++) { 和 += 筋.y[j]; 数++; } 平[i] = 和 / 数; }
       for (let i = 0; i + 1 < n; i++) {
         const 深 = (筋.深[i] + 筋.深[i + 1]) / 2, 段 = 深 > 0.66 ? 2 : 深 > 0.33 ? 1 : 0;
-        稜線[段].push((筋.x0 + i + 0.5) / 倍, 平[i] / 倍 - 上, (筋.x0 + i + 1.5) / 倍, 平[i + 1] / 倍 - 上);
+        稜線[段].push(v0x + (筋.x0 + i + 0.5) / 倍, v0y * k + 平[i] / 倍 - 上, v0x + (筋.x0 + i + 1.5) / 倍, v0y * k + 平[i + 1] / 倍 - 上);
       }
     }
   }
-  return { 画: out, 上, 縦: dh / 倍, 横: sw / 倍, 稜線 };
+  /* 原 … 画を貼る所（視の横と、縮めた視の縦）。盤じゅうを焼いたなら（0, 0） */
+  return { 画: out, 上, 縦: dh / 倍, 横: sw / 倍, 稜線, 原: { x: v0x, y: v0y * k } };
 }
 
 /* 隠れの際。盤の所（x, y）に立つ者が、手前の高い地（城の石垣の天端など）に
@@ -532,7 +575,7 @@ function 際の列を量る(M, ci) {
 export function 隠れの際(x, y) {
   if (!図 || !斜め.入) return Infinity;
   const k = 縦の縮み();
-  const 鍵 = 図;
+  const 鍵 = 図の版;
   if (際の鍵 !== 鍵 || !際の覚え || 際の覚え.向き !== 向き || 際の覚え.k !== k || 際の覚え.持 !== 斜め.持ち上げ) {
     const 寸 = 視の寸();
     const w = Math.ceil((寸.w || 図.w * 図.単) / 際の升) + 1, h = Math.ceil((寸.h || 図.h * 図.単) / 際の升) + 1;
@@ -571,4 +614,4 @@ export const 隠れの薄さ = (深, 丈) => Math.max(0, Math.min(1, 1 - 深 / (
    百六十歩で決め打ちにしていたころは、関ヶ原の山の上の隊が「画面の外」と量られ、
    画面の真ん中に映っているのに一人ずつ描く隊から漏れて、駒のまま残った
    （遊ぶ側がスマホで大谷吉継隊を見て気づいた）。 */
-export const 揚げ代 = () => (図 && 斜め.入 ? (図.最 * 斜め.持ち上げ) / 縦の縮み() + 20 : 0);
+export const 揚げ代 = () => (図 && 斜め.入 ? (最も高い() * 斜め.持ち上げ) / 縦の縮み() + 20 : 0);

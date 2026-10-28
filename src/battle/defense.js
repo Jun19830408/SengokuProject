@@ -1,4 +1,4 @@
-import { BASE, FIELD, MAX_CORPS } from "./field.js";
+import { MAX_CORPS, fieldScale } from "./field.js";
 import { axisOf, fromUV } from "./castleMap.js";
 import { makeCorps } from "./corps.js";
 import { rosterTake } from "../core/roster.js";
@@ -28,7 +28,7 @@ export function 持ち場を並べる(map) {
     const nx = map.layers[l.i + 1];
     const innerEdge = nx ? (a.along === "x" ? nx.hh : nx.hw) + map.t : 0;
     const band = Math.max(20, a.half - innerEdge);
-    const inset = Math.min(44 * (FIELD.w / BASE.w), band * 0.5);
+    const inset = Math.min(44 * fieldScale(), band * 0.5);
     const p = fromUV(map, a, gt.off, a.half - inset);
     // 立たせた場所だけでなく、受け持ちの門そのものを控えておく。
     // これを渡さないと、城方は戦の始まりに持ち場を捨てて奥へ引いてしまう。
