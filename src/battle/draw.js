@@ -1848,6 +1848,61 @@ export const inOwnZone = (b, x, y) => {
   return x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h;
 };
 
+/* 自陣の帯（布陣の段。GDD 8.2）。
+
+   布陣の間は、隊を置ける自陣を「青い帯」で示す（布陣の手引きの文言）。ところが帯は
+   濃さ七分の青を盤に薄く掛けただけで、境の点線も盤の歩で一.五歩の太さに引いていた。
+   引いた眺め（倍〇.二）では画面の〇.三点にしかならず、点線の刻みも潰れる。東西に
+   陣取る戦では、野の六割の所（那古野城下の野なら x がおよそ三千百九十）を細い暗い筋が
+   一本、縦に貫くだけになり、その向こうの地がわずかに青みを帯びる。帯とは読めず、地の
+   絵の継ぎ目に見えた（遊ぶ側からは「縦の継ぎ目」として直すよう求められた）。斜めの
+   眺めでは、帯を持ち上げない平らな板として掛けていたので、丘や山の上で境が地から
+   浮き、向こう斜面に隠れる所にも引かれた。
+
+   境の線は画面の点で太さと刻みを決め（白い下地に二点の点線）、地の高さに沿わせて
+   引き、丘や山に隠れる所では筆を上げる。帯の青も少し濃くし、外周を地の高さに沿わせて
+   塗る。戦が始まれば帯は消える（布陣の段だけのもの）。
+   S … 盤の所から画面の点へ写す（回しと持ち上げを含む）。s … 画面の倍 */
+function 自陣の帯を描く(ctx, z, S, s, dpr) {
+  const 刻 = Math.max(4, Math.min(60, 6 / s));                  // 歩。画面でおよそ六点ごとに辿る
+  // 斜めの眺めでは、丘や山の向こう斜面に隠れる所の境を引かない（川の流れの筋と同じ見方）
+  const 隠れを見る = 縦の縮み() < 1 && 斜め.入;
+  const 辺 = (x0, y0, x1, y1, 点, 隠れも) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 刻));
+    for (let i = 点.length ? 1 : 0; i <= n; i++) {
+      const wx = x0 + (x1 - x0) * i / n, wy = y0 + (y1 - y0) * i / n;
+      const p = S(wx, wy);
+      if (隠れも) p.隠 = 隠れを見る && 隠れの際(wx, wy) < 画の縦(wx, wy) - 1.5;
+      点.push(p);
+    }
+    return 点;
+  };
+  const x0 = z.x, y0 = z.y, x1 = z.x + z.w, y1 = z.y + z.h;
+  const 外周 = [];
+  辺(x0, y0, x1, y0, 外周); 辺(x1, y0, x1, y1, 外周); 辺(x1, y1, x0, y1, 外周); 辺(x0, y1, x0, y0, 外周);
+  const 境 = z.vertical
+    ? (z.bottom ? 辺(0, y0, FIELD.w, y0, [], true) : 辺(0, y1, FIELD.w, y1, [], true))
+    : (z.bottom ? 辺(x0, 0, x0, FIELD.h, [], true) : 辺(x1, 0, x1, FIELD.h, [], true));
+  const 辿る = (点) => {
+    ctx.beginPath();
+    let 筆 = false;
+    for (const p of 点) {
+      if (p.隠) { 筆 = false; continue; }
+      if (筆) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]);
+      筆 = true;
+    }
+  };
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "rgba(47,93,140,0.11)";
+  辿る(外周); ctx.closePath(); ctx.fill();
+  ctx.lineJoin = "round";
+  辿る(境);
+  ctx.strokeStyle = "rgba(246,249,255,0.5)"; ctx.lineWidth = 4; ctx.stroke();
+  ctx.setLineDash([9, 6]); ctx.strokeStyle = "rgba(34,72,122,0.92)"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.restore();
+}
+
 /* 戦の痕を焼き足す（GDD 8.1）。
 
    踏み荒らされた土と、倒れた者の跡。戦が進むにつれて野が荒れていく。
@@ -2048,22 +2103,11 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   if (!城立体) 札を立てる();
 
   // 布陣段階は自陣の範囲を示す（筋書きの一戦は布陣を動かせないので出さない）
-  if (b.phase === "deploy" && !b.筋書き) {
-    const z = ownZone(b);
-    ctx.fillStyle = "rgba(47,93,140,0.07)";
-    ctx.fillRect(z.x, z.y, z.w, z.h);
-    ctx.strokeStyle = "rgba(47,93,140,0.35)"; ctx.setLineDash([8, 6]); ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    if (z.vertical) {
-      const ly = z.bottom ? z.y : z.y + z.h;
-      ctx.moveTo(0, ly); ctx.lineTo(FIELD.w, ly);
-    } else {
-      const lx = z.bottom ? z.x : z.x + z.w;
-      ctx.moveTo(lx, 0); ctx.lineTo(lx, FIELD.h);
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
+  /* 城攻めの盤には帯を出さない。城攻めの戦は攻め口の方角（face）と寄せ手の側（myFar）を
+     持たないので、帯は決め打ちの「盤の北の四割」になり、城の曲輪の中ほどを横切る。寄せ手は
+     城の手引きのとおり大手口の前に布陣してあり、帯はその所とも合わない。もとは帯がほとんど
+     見えなかったので目立たなかったが、境を読める太さにすると、城を横切る筋になる */
+  if (b.phase === "deploy" && !b.筋書き && !b.map) 自陣の帯を描く(ctx, ownZone(b), S, cam.s, dpr);
 
   // 川の流れ（mori.js）。水面の筋が下手へ流れる
   if (!b.map) 川の流れを描く(ctx, (typeof performance !== "undefined" ? performance.now() : 0) / 1000, 1);
