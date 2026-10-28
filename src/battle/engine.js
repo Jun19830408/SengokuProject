@@ -2676,8 +2676,11 @@ export function stepBattle(b, dt) {
     if (c.潰 || c.withdraw) {
       // 退く先は自陣の側。決め打ちの「南」では、自陣が北にある戦で敵陣へ歩いてしまう。
       const p2 = 退き先(b, c); c.tx = p2.x; c.ty = p2.y;
-      // 戦場の外へ落ち延びた隊は退場させる。横に抜けた場合も見落とさない。
-      if (c.y > FIELD.h + 60 || c.y < -60 || c.x > FIELD.w + 60 || c.x < -60) c.dead = true;
+      /* 戦場の外へ落ち延びた隊は退場させる。横に抜けた場合も見落とさない。
+         境は盤の縁で、画面にはその線を引いてある（draw.js 境の線を引く）。遊ぶ側の申し出は
+         「撤退した部隊が範囲線を越えたら完全撤退に」であった。もとは縁から六十歩外で
+         退場させていたので、線を越えた隊が少しのあいだ盤の外に見えていた */
+      if (c.y > FIELD.h || c.y < 0 || c.x > FIELD.w || c.x < 0) c.dead = true;
     }
     if (corpsMen(c) <= 0 && !c.destroyed) {
       c.destroyed = true; c.order = "待機";
