@@ -46,10 +46,17 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onK
   const 在る = (saves || []).filter((w) => w.d);
   const 最新 = 在る.length
     ? 在る.reduce((a, w) => ((w.d.at || 0) > (a.d.at || 0) ? w : a), 在る[0]) : null;
+  /* 中身は上下の余白（margin: auto）で真ん中に寄せる。
+
+     もとは外枠を上下中央寄せ（justify-content: center）にしていた。携帯を横に持つと
+     中身が画面より高くなり、上にはみ出した分は送っても戻らない。「続きから」と
+     「新しくはじめる」が画面の外に出て押せなかった（844×390 で上へ百四点）。
+     余白で寄せれば、余るときは真ん中に、足りぬときは上から並んで送れる。
+     地の色は外枠に塗る。送っても画面の地は動かない。 */
   return (
-    <div className="sp" style={{ height: "100dvh", alignItems: "center", justifyContent: "center", position: "relative", overflow: "auto" }}>
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)" }} />
-      <div style={{ position: "relative", textAlign: "center", padding: "24px 0" }}>
+    <div className="sp" style={{ height: "100dvh", alignItems: "center", position: "relative", overflow: "auto",
+      background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)" }}>
+      <div style={{ position: "relative", textAlign: "center", padding: "24px 0", margin: "auto 0" }}>
         {/* 題（GDD 1.1）。絵の題字が来たので置き換えた。
             横に組むときは題字を使う、という決まりに従う。印章と副題は題字の中に
             入っているので、ここで字を重ねる必要はない。
@@ -107,8 +114,10 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onK
         </div>
       </div>
       {/* 書き出した日時を出す。ネットに置いたものが古いままか、
-          新しく上げ直したものかを、この一行で見分けられる。 */}
-      <div style={{ position: "absolute", left: 20, bottom: 16, fontSize: 11, color: U.dim }}>
+          新しく上げ直したものかを、この一行で見分けられる。
+          画面の左下に置く。中身の後ろに並べるので、中身が画面より高いときは
+          送った先の終わりに出る（中身に重ならない） */}
+      <div style={{ alignSelf: "flex-start", flex: "0 0 auto", margin: "0 20px 16px", fontSize: 11, color: U.dim, textAlign: "left" }}>
         ver.0.2.0
         {typeof window !== "undefined" && window.__BUILD__ ? `　書き出し ${window.__BUILD__}` : ""}
       </div>

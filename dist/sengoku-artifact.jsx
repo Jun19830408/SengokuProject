@@ -52190,7 +52190,13 @@ function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onKassen }
   const \u63A7\u3048\u53E3 = useRef6(null);
   const \u5728\u308B = (saves || []).filter((w) => w.d);
   const \u6700\u65B0 = \u5728\u308B.length ? \u5728\u308B.reduce((a, w) => (w.d.at || 0) > (a.d.at || 0) ? w : a, \u5728\u308B[0]) : null;
-  return /* @__PURE__ */ React10.createElement("div", { className: "sp", style: { height: "100dvh", alignItems: "center", justifyContent: "center", position: "relative", overflow: "auto" } }, /* @__PURE__ */ React10.createElement("div", { style: { position: "absolute", inset: 0, background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)" } }), /* @__PURE__ */ React10.createElement("div", { style: { position: "relative", textAlign: "center", padding: "24px 0" } }, /* @__PURE__ */ React10.createElement(
+  return /* @__PURE__ */ React10.createElement("div", { className: "sp", style: {
+    height: "100dvh",
+    alignItems: "center",
+    position: "relative",
+    overflow: "auto",
+    background: "linear-gradient(#CFE0EA 0%, #DDE6CC 42%, #C6D5A8 100%)"
+  } }, /* @__PURE__ */ React10.createElement("div", { style: { position: "relative", textAlign: "center", padding: "24px 0", margin: "auto 0" } }, /* @__PURE__ */ React10.createElement(
     "img",
     {
       src: \u7D75\u306B\u3059\u308B(\u984C\u5B57),
@@ -52227,7 +52233,7 @@ function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onKassen }
         if (f) onImport(f);
       }
     }
-  ))), /* @__PURE__ */ React10.createElement("div", { style: { position: "absolute", left: 20, bottom: 16, fontSize: 11, color: U.dim } }, "ver.0.2.0", typeof window !== "undefined" && window.__BUILD__ ? `\u3000\u66F8\u304D\u51FA\u3057 ${window.__BUILD__}` : ""), \u904A\u3073\u65B9 && /* @__PURE__ */ React10.createElement(Manual, { onClose: () => set\u904A\u3073\u65B9(false) }));
+  ))), /* @__PURE__ */ React10.createElement("div", { style: { alignSelf: "flex-start", flex: "0 0 auto", margin: "0 20px 16px", fontSize: 11, color: U.dim, textAlign: "left" } }, "ver.0.2.0", typeof window !== "undefined" && window.__BUILD__ ? `\u3000\u66F8\u304D\u51FA\u3057 ${window.__BUILD__}` : ""), \u904A\u3073\u65B9 && /* @__PURE__ */ React10.createElement(Manual, { onClose: () => set\u904A\u3073\u65B9(false) }));
 }
 
 // src/ui/KassenScreen.jsx
