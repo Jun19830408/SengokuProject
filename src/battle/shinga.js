@@ -18,7 +18,7 @@
    まず関ヶ原（筋書き sekigahara）だけで使い、実機の重さと操作感を測ってから
    広げる。切りたいときは棚に sengoku:旧絵 を「入」で置けば元の絵に戻る。
    ========================================================================== */
-import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 浮き, 隠れの際, 隠れの薄さ, 見える範囲, 画面に映るか, 画面の真ん中から, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 面を据える, 斜め, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
+import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 浮き, 隠れの際, 隠れの薄さ, 見える範囲, 画面に映るか, 画面の真ん中から, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 区の高さ図を据える, 面を据える, 斜め, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
 import { 木立を並べる, 木を描く } from "./mori.js";
 import { 里を並べる, 葦を描く, 村の道は横か, 家をよける } from "./sato.js";
 import { 城の物を並べる, 城壁をよける } from "./tachimono.js";
@@ -1416,9 +1416,32 @@ function 渡しの形(r, w, 倍) {
 export const 野の橋 = [];
 function 渡し場を描く(g, r, w, 倍) {
   const { cx, cy, 角, 長, 半, 橋 } = 渡しの形(r, w, 倍);
+  const 落 = w.種 === "落橋";
   g.save();
   g.translate(cx, cy); g.rotate(角);
   const x0 = -長, x1 = 長;
+  if (落) {
+    /* 落ちた橋。板は流れ、橋脚の杭だけが水面から折れて覗く。両の袂に板の切れ端が残る */
+    野種を置く(Math.round(w.x * 3 + w.y));
+    for (const t of [0.22, 0.5, 0.78]) {
+      const d = -半 + 半 * 2 * t;
+      for (const x of [x0 + 長 * 0.2, 0, x1 - 長 * 0.2]) {
+        const h = (1.3 + 野乱() * 1.5) * 倍;
+        g.fillStyle = "rgba(24,40,52,0.35)"; g.fillRect(x - 1.3 * 倍 + 1.4 * 倍, d - h + 1.8 * 倍, 2.6 * 倍, h * 2);
+        g.fillStyle = "#4E3A24"; g.fillRect(x - 1.3 * 倍, d - h, 2.6 * 倍, h * 2);
+        g.fillStyle = "rgba(236,242,246,0.5)"; g.fillRect(x - 1.6 * 倍, d + h - 0.4 * 倍, 3.2 * 倍, 0.8 * 倍);   // 杭に当たる水の白
+      }
+    }
+    g.fillStyle = "#7C5E38";
+    for (const s2 of [-1, 1]) {                                   // 袂に残った板の切れ端
+      g.save(); g.translate(s2 * 長 * 0.15, s2 * (半 - 2 * 倍)); g.rotate(s2 * 0.18);
+      g.fillRect(-長 * 0.6, -1.4 * 倍, 長 * 1.2, 2.8 * 倍); g.restore();
+    }
+    g.restore();
+    const nx0 = -Math.sin(角), ny0 = Math.cos(角), 向0 = ny0 > 0 ? -1 : 1;
+    名札(g, cx + nx0 * 向0 * (半 + 3 * 倍), cy + ny0 * 向0 * (半 + 3 * 倍), "落ちた橋", 倍 * 0.7);
+    return;
+  }
   if (橋) {
     g.fillStyle = "rgba(24,40,52,0.38)";                          // 水面へ落ちる影
     g.fillRect(x0 + 1.5 * 倍, -半 + 2.5 * 倍, 長 * 2, 半 * 2);
@@ -1470,7 +1493,7 @@ function 渡し場を描く(g, r, w, 倍) {
   /* 札は回さない。字は常に真っ直ぐ読めるようにして、川の上の側へ置く。 */
   const nx = -Math.sin(角), ny = Math.cos(角);
   const 向 = ny > 0 ? -1 : 1;
-  名札(g, cx + nx * 向 * (半 + 3 * 倍), cy + ny * 向 * (半 + 3 * 倍), 橋 ? "橋" : "浅瀬", 倍 * 0.7);
+  名札(g, cx + nx * 向 * (半 + 3 * 倍), cy + ny * 向 * (半 + 3 * 倍), 橋 ? (RIVER.仮橋 && w.種 === "橋" ? "仮橋" : "橋") : "浅瀬", 倍 * 0.7);
 }
 
 /* ============ 野を焼く ============
@@ -1494,7 +1517,8 @@ export function 野の川筋() {
     節.push([FIELD.w, 芯 + riverShift(FIELD.w)]);
     const 渡し = [];
     const 幅川 = Math.max(20, RIVER.bot - RIVER.top);
-    for (const [帯, 種] of [[RIVER.bridge, "橋"], [RIVER.ford, "浅瀬"]]) {
+    /* 落ちた橋（field.js 橋を落とす）。橋の幅は淵になったが、折れた橋脚が水面に残る */
+    for (const [帯, 種] of [[RIVER.bridge, "橋"], [RIVER.ford, "浅瀬"], [RIVER.落ちた橋, "落橋"]]) {
       if (!帯 || !(帯[1] > 帯[0])) continue;
       const cx = (帯[0] + 帯[1]) / 2;
       渡し.push({ x: cx, y: 芯 + riverShift(cx), r: (帯[1] - 帯[0]) / 2, 種, 帯, 川幅: 幅川 });
@@ -1504,9 +1528,28 @@ export function 野の川筋() {
   return 野の川;
 }
 
-export function 新絵の野(g, 画k) { const it = 野を焼く(g, 画k); while (!it.next().done) { /* 一息で焼く */ } }
+/* 城山（城攻めの広い盤・GDD 9.3）。
+
+   広い盤では、野を粗く焼き（野を焼く）、城のまわりだけを細かく焼く（城の地を焼く の
+   区）。城の立つ峰は、その両方に同じ形で盛らねばならない。縁で二つの絵を溶かし合わせる
+   ので、形が違えば峰が二重に見える。形は盤の所（歩）で決め、縁の凸凹（崩れ）も盤の所で
+   引く。崩れは半径の内に収める（城山の円の外へは盛らない）。
+     山 … { x, y, R（半径）, 丈（頂の高さ。歩） } */
+export function 城山の形(m) {
+  if (!m || !m.域) return null;
+  const R = m.域.r * 0.97;
+  return { x: m.域.x, y: m.域.y, R, 丈: (m.坂 >= 1 ? 0.26 : m.坂 > 0 ? 0.10 : 0) * R };
+}
+export function 城山の丈(山, wx, wy) {
+  if (!山 || !(山.丈 > 0)) return 0;
+  const 崩 = (0.82 + 襞(wx / 147, wy / 147, 3) * 0.42) / 1.24;
+  const d = Math.hypot(wx - 山.x, wy - 山.y) / (山.R * 崩);
+  return d < 1 ? 山.丈 * Math.cos(d * Math.PI / 2) ** 1.35 : 0;
+}
+
+export function 新絵の野(g, 画k, opt) { const it = 野を焼く(g, 画k, opt); while (!it.next().done) { /* 一息で焼く */ } }
 /* 帯で止められる焼き手。頁はこちらを汲み、試験や道具は上の一息版を使う。 */
-export function* 野を焼く(g, 画k) {
+export function* 野を焼く(g, 画k, opt = {}) {
   計始();
   面を据える(null);                     // 石垣の肌は城の盤だけのもの
   const k = 画k || 1;
@@ -1552,6 +1595,19 @@ export function* 野を焼く(g, 画k) {
       if (y % 帯 === 0) yield;
       for (let x = 0; x < hw; x++) {
         高[y * hw + x] = ((襞(x * 半 / (150 * 倍), y * 半 / (150 * 倍), 3) - 0.5) * 7 * 倍) / 半;
+      }
+    }
+  }
+  /* 城山（広い盤）。城の区の焼き（城の地を焼く）と同じ式で盛る。城山の内に野の地物は無い */
+  if (opt.城山 && opt.城山.丈 > 0) {
+    const 山 = opt.城山;
+    const x0 = Math.max(0, Math.floor((山.x - 山.R) * k / 半)), x1 = Math.min(hw - 1, Math.ceil((山.x + 山.R) * k / 半));
+    const y0 = Math.max(0, Math.floor((山.y - 山.R) * k / 半)), y1 = Math.min(hh - 1, Math.ceil((山.y + 山.R) * k / 半));
+    for (let y = y0; y <= y1; y++) {
+      if ((y - y0) % 48 === 0) yield;
+      for (let x = x0; x <= x1; x++) {
+        const v = 城山の丈(山, x * 半 / k, y * 半 / k);
+        if (v > 0) 高[y * hw + x] += v * k / 半;
       }
     }
   }
@@ -1766,7 +1822,7 @@ export function* 野を焼く(g, 画k) {
      面として立ち、水面は岸より一段低く沈む。底は平らに近く、岸だけを切り立たせる
      （川深の縁で落とす）。浅瀬のあたりは浅く掘る（渡れる所は岸が低い） */
   { const 掘り = 2.6 * 倍 / 半;
-    const 瀬ら = 野の川.flatMap((r) => (r.渡し || []).filter((w) => w.種 !== "橋")
+    const 瀬ら = 野の川.flatMap((r) => (r.渡し || []).filter((w) => w.種 !== "橋" && w.種 !== "落橋")
       .map((w) => ({ x: PX(w.x) / 半, y: PY(w.y) / 半, r: PX(w.r || 100) / 半 * 1.3 })));
     for (let i = 0; i < 高.length; i++) {
       const e = 川際[i];
@@ -2093,17 +2149,24 @@ export function* 野を焼く(g, 画k) {
    立てるもの（石垣・門・櫓・天守）は、戦の間に破れたり燃えたりする。
    それは今までどおり drawCastleTerrain と drawBattle に描かせ、ここでは
    地だけを焼く。地は一度焼けば動かぬものである。                        */
-export function 新絵の城の地(g, m, 画k) { const it = 城の地を焼く(g, m, 画k); while (!it.next().done) { /* 一息で焼く */ } }
+export function 新絵の城の地(g, m, 画k, 区) { const it = 城の地を焼く(g, m, 画k, 区); while (!it.next().done) { /* 一息で焼く */ } }
 /* 帯で止められる焼き手。頁はこちらを汲む（上の一息版は試験と道具のため）。 */
-export function* 城の地を焼く(g, m, 画k) {
-  高さ図を外す(); 面を据える(null);   // 焼き上がるまでは傾けるだけ（下で高さの図を据える）
+/* 区 … 広い盤のとき、焼くのは城山を囲む矩形だけ { x0, y0, w, h }（盤の歩）。
+   区の画は城山の円の縁で透かし、野の画の上に重ねる（BattleScreen）。高さの図も
+   区のものとして据える（naname.js 区の高さ図を据える）。 */
+export function* 城の地を焼く(g, m, 画k, 区) {
+  if (!区) 高さ図を外す();
+  面を据える(null);   // 焼き上がるまでは傾けるだけ（下で高さの図を据える）
   const k = 画k || 1;
-  const W = Math.max(1, Math.round(FIELD.w * k)), H = Math.max(1, Math.round(FIELD.h * k));
+  const OX = 区 ? 区.x0 : 0, OY = 区 ? 区.y0 : 0;
+  const W = Math.max(1, Math.round((区 ? 区.w : FIELD.w) * k)), H = Math.max(1, Math.round((区 ? 区.h : FIELD.h) * k));
   const 倍 = Math.max(0.5, Math.min(2, k * 3.2));
   /* 高さの倍。倍（肌理の粗さ）は二で頭打ちにしてあるので、高さまでそれで決めると、
      細かく焼くほど石垣や堀が低くなった。高さは焼きの細かさに拠らず、盤の歩で揃える */
   const 丈 = k * 3.2;
-  const PX = (v) => v * k;
+  const PX = (v) => v * k;                                // 長さ
+  const PXx = (v) => (v - OX) * k, PXy = (v) => (v - OY) * k;   // 盤の所（区の原点から）
+  const 山 = 区 ? 城山の形(m) : null;
   g.setTransform(1, 0, 0, 1, 0, 0);
 
   計始();
@@ -2111,10 +2174,10 @@ export function* 城の地を焼く(g, m, 画k) {
   const o0 = m.layers[0], ob = o0.masu + t + 8;
   /* 曲輪。石垣の厚みぶん外へ出した矩形が、その曲輪の天端である */
   const 郭ら = m.layers.map((l, i) => ({
-    i, x: PX(m.cx + (l.ox || 0)), y: PX(m.cy + (l.oy || 0)),
+    i, x: PXx(m.cx + (l.ox || 0)), y: PXy(m.cy + (l.oy || 0)),
     hw: PX(l.hw + t), hh: PX(l.hh + t),
   }));
-  const 堀外 = { x: PX(m.cx), y: PX(m.cy),
+  const 堀外 = { x: PXx(m.cx), y: PXy(m.cy),
     hw: PX(o0.hw + t + ob + band), hh: PX(o0.hh + t + ob + band) };
   const 堀幅 = Math.max(2, PX(band));
   const 堀内 = { x: 堀外.x, y: 堀外.y, hw: 堀外.hw - 堀幅, hh: 堀外.hh - 堀幅 };
@@ -2154,7 +2217,14 @@ export function* 城の地を焼く(g, m, 画k) {
     for (let x = 0; x < gw; x++) {
       let h = (襞(x * 半 / (150 * 倍), y * 半 / (150 * 倍), 3) - 0.5) * 9 * 丈
         + (襞(x * 半 / (430 * 倍) + 11, y * 半 / (430 * 倍) + 7, 2) - 0.5) * 22 * 丈;   // 大きなうねり
-      if (坂丈 > 0) {
+      if (山) {
+        /* 広い盤の区。峰は野の焼きと同じ式で盛り（城山の丈）、うねりは城山の縁へ向けて
+           消す（縁で野の画へ溶かすので、野に無いうねりを残さない） */
+        const wx = OX + x * 半 / k, wy = OY + y * 半 / k;
+        const e = Math.hypot(wx - 山.x, wy - 山.y) / (m.域.r || 1);
+        const 残 = e < 0.72 ? 1 : e > 0.94 ? 0 : 1 - (e - 0.72) / 0.22;
+        h = h * 残 + 城山の丈(山, wx, wy) * k;
+      } else if (坂丈 > 0) {
         /* 真円の丘は作り物に見える。尾根と谷で縁を崩す */
         const 崩 = 0.82 + 襞(x / (46 * 倍), y / (46 * 倍), 3) * 0.42;
         const d = Math.hypot(x - ccx, y - ccy) / (坂r2 * 崩);
@@ -2215,8 +2285,8 @@ export function* 城の地を焼く(g, m, 画k) {
     const u0 = 開 - q.w * 0.8, u1 = u0 + q.w * 1.6;
     const v0 = (横 ? o0.hh : o0.hw) + t + ob - 3, v1 = v0 + band + 6;
     const [a0, a1] = 符 > 0 ? [v0, v1] : [-v1, -v0];
-    return 横 ? { x0: PX(m.cx + u0) / 半, x1: PX(m.cx + u1) / 半, y0: PX(m.cy + a0) / 半, y1: PX(m.cy + a1) / 半 }
-      : { x0: PX(m.cx + a0) / 半, x1: PX(m.cx + a1) / 半, y0: PX(m.cy + u0) / 半, y1: PX(m.cy + u1) / 半 };
+    return 横 ? { x0: PXx(m.cx + u0) / 半, x1: PXx(m.cx + u1) / 半, y0: PXy(m.cy + a0) / 半, y1: PXy(m.cy + a1) / 半 }
+      : { x0: PXx(m.cx + a0) / 半, x1: PXx(m.cx + a1) / 半, y0: PXy(m.cy + u0) / 半, y1: PXy(m.cy + u1) / 半 };
   });
   const 土橋の上か = (x, y, 余) => 土橋ら.some((q) => x > q.x0 - 余 && x < q.x1 + 余 && y > q.y0 - 余 && y < q.y1 + 余);
   /* 堀。水堀でも空堀でも、掘り下げるのは同じ。切岸の傾きだけ違う */
@@ -2243,6 +2313,39 @@ export function* 城の地を焼く(g, m, 画k) {
      }
     }
   }
+  /* 出城（castleMap.js 出城を組む）。土を盛った台に塀を載せ、空堀を回す。
+     台の際は石垣ではなく土の切岸である。門の前と背の口の前は、堀を掘り残した土橋 */
+  const 出 = m.出城 || null;
+  const 出堀 = 出 ? new Float32Array(gw * gh) : null;
+  const 出台 = 出 ? { x: PXx(m.cx + 出.ox), y: PXy(m.cy + 出.oy), hw: PX(出.hw + t), hh: PX(出.hh + t) } : null;
+  const 出外 = 出 ? { ...出台, hw: PX(出.hw + t + 出.堀), hh: PX(出.hh + t + 出.堀) } : null;
+  const 出の土橋か = (x, y) => {
+    if (!出) return false;
+    const lx = x * 半 - 出台.x, ly = y * 半 - 出台.y;
+    if (Math.abs(ly) <= 出台.hh - 1) return false;
+    const 門 = 出.gates[0];
+    return ly > 0 ? Math.abs(lx - PX(門.off)) <= PX(門.w * 0.8) : Math.abs(lx - PX(出.口.off)) <= PX(出.口.w * 0.8);
+  };
+  if (出) {
+    const 台丈 = 段 * 0.55, 出深 = 深 * 0.6;
+    const 出切 = Math.max(1.5, Math.min(PX(出.堀) * 0.4, 6 * 丈));
+    const b = 枠(出外, 3);
+    for (let y = b.y0; y <= b.y1; y++) { if ((y - b.y0) % 24 === 0) yield;
+     for (let x = b.x0; x <= b.x1; x++) {
+      const j = y * gw + x;
+      const d台 = 矩距(x, y, 出台), d外 = 矩距(x, y, 出外);
+      if (d台 < 0) {
+        const w = Math.min(1, -d台 / 0.8);
+        高[j] += (台丈 / 半) * w; 郭[j] += w;
+      } else if (d外 < 0) {
+        const e = Math.min(d台, -d外) * 半;
+        出堀[j] = Math.min(1, e / Math.max(0.8, 倍));
+        if (出の土橋か(x, y)) continue;
+        高[j] -= (出深 / 半) * Math.min(1, e / 出切);
+      } else if (d外 * 半 < 3 * 倍) 岸[j] = Math.max(岸[j], 1 - d外 * 半 / (3 * 倍));
+     }
+    }
+  }
   /* 大手道。門の前から盤の外へ伸びる。寄せ手が上ってくる道である */
   const 刻む = function* (x0, y0, x1, y1, 幅, 場, 深さ) {
     yield;
@@ -2266,7 +2369,7 @@ export function* 城の地を焼く(g, m, 画k) {
   /* 門の口。石垣の内側、曲輪に降りた所 */
   const 門の口 = (l, q) => {
     const 横 = q.face === "S" || q.face === "N";
-    const lx = PX(m.cx + (l.ox || 0)), ly = PX(m.cy + (l.oy || 0));
+    const lx = PXx(m.cx + (l.ox || 0)), ly = PXy(m.cy + (l.oy || 0));
     const hwp = PX(l.hw + t), hhp = PX(l.hh + t);
     return 横 ? { x: lx + PX(q.off), y: ly + (q.face === "S" ? hhp - PX(t) * 2 : -hhp + PX(t) * 2) }
       : { x: lx + (q.face === "E" ? hwp - PX(t) * 2 : -hwp + PX(t) * 2), y: ly + PX(q.off) };
@@ -2299,7 +2402,7 @@ export function* 城の地を焼く(g, m, 画k) {
         }
         b2 = 最;
       } else {
-        b2 = { x: PX(m.cx + (l.ox || 0)), y: PX(m.cy + (l.oy || 0)) };   // 本丸は中ほどへ
+        b2 = { x: PXx(m.cx + (l.ox || 0)), y: PXy(m.cy + (l.oy || 0)) };   // 本丸は中ほどへ
       }
       if (!b2) continue;
       const 幅 = Math.max(4 * 倍, PX(q.w) * 0.55);
@@ -2324,6 +2427,7 @@ export function* 城の地を焼く(g, m, 画k) {
     const y0 = Math.max(0, (fy - rr) | 0), y1 = Math.min(gh - 1, Math.ceil(fy + rr));
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       if (矩距(x, y, 堀外) < 0) continue;
+      if (出外 && 矩距(x, y, 出外) < 6 * 倍 / 半) continue;      // 出城の台と空堀にも生やさぬ
       const d = Math.hypot(x - fx, y - fy) / rr;
       const ほつれ = (襞(x / (4.5 * 倍), y / (4.5 * 倍), 3) - 0.5) * 0.52;
       const v = 1 - (d + ほつれ);
@@ -2334,12 +2438,17 @@ export function* 城の地を焼く(g, m, 画k) {
      遊ぶ側の申し出は「城も五十五度の角度からにできないか。堀や壁、城門がリアルに
      なると思う」であった。曲輪の段の手前の面は石垣、堀の縁は石垣か土の切岸として
      塗らせる（面を据える）。 */
-  高さ図を据える(高.slice(), gw, gh, 半 / k, 半 / k);
+  if (区) 区の高さ図を据える(高.slice(), gw, gh, 半 / k, 半 / k, { x0: OX, y0: OY, cx: m.域.x, cy: m.域.y, r: m.域.r });
+  else 高さ図を据える(高.slice(), gw, gh, 半 / k, 半 / k);
   面を据える((wx, wy) => {
-    const x = wx * k / 半, y = wy * k / 半;
+    const x = (wx - OX) * k / 半, y = (wy - OY) * k / 半;
     if (坂の上か(x, y)) return 0;                        // 門の坂は土のまま
     if (土橋ら.length && 土橋の上か(x, y, 1.5)) return 1;   // 土橋の両脇は石で固める
     for (const r of 郭ら) { const d = 矩距(x, y, r); if (d > -2.4 && d < 0.8) return 1; }
+    if (出) {
+      const e1 = 矩距(x, y, 出台), e2 = 矩距(x, y, 出外);
+      if ((e1 > -2.4 && e1 < 0.8) || Math.abs(e2) < 2) return 出の土橋か(x, y) ? 0 : 2;
+    }
     const d1 = 矩距(x, y, 堀外), d2 = 矩距(x, y, 堀内);
     if (Math.abs(d1) < 2 || Math.abs(d2) < 2) return 空堀 ? 2 : 1;
     return 0;
@@ -2443,6 +2552,15 @@ export function* 城の地を焼く(g, m, 画k) {
           c = 混色(c, 面, 堀m);
         }
       }
+      /* 出城の空堀。掘った土の色（城の堀が水堀でも、出城の堀は空堀である） */
+      if (出堀) {
+        const 出m = 引伸(出堀, gw, gh, x, y, 半);
+        if (出m > 0.01) {
+          let 土 = 混色([178, 162, 128], [134, 118, 90], 挟(出m * 0.9, 0, 1));
+          土 = [土[0] * (1 + n1 * 0.08), 土[1] * (1 + n1 * 0.08), 土[2] * (1 + n1 * 0.1)];
+          c = 混色(c, 土, 出m);
+        }
+      }
       /* 光。日影・環境遮蔽・面の向き。石垣の根にはここで影が落ちる */
       const nx = -gx * 0.5 / 半, ny = -gy * 0.5 / 半, nl = Math.hypot(nx, ny, 1);
       const 直 = 挟((nx * 光x + ny * 光y + 光高) / nl, 0, 1);
@@ -2492,7 +2610,7 @@ export function* 城の地を焼く(g, m, 画k) {
          道の長さが足りない城で城下が丸ごと消えていた。 */
       const mx = 挟(口.x0 + (ux / uL) * 寄, r + 6, W - r - 6);
       const my = 挟(口.y0 + (uy / uL) * 寄, r + 6, H - r - 6);
-      if (矩距(mx / 半, my / 半, 堀外) > r * 0.5 / 半) {
+      if (矩距(mx / 半, my / 半, 堀外) > r * 0.5 / 半 && !(出外 && 矩距(mx / 半, my / 半, 出外) < r * 1.1 / 半)) {
         集落(g, mx, my, r, Math.round(m.cx + m.cy), 明関, 倍);
       }
     }
@@ -2524,6 +2642,7 @@ export function* 城の地を焼く(g, m, 画k) {
       else 生 = 野乱() < 0.006;
     }
     if (!生) continue;
+    if (出外 && 矩距(x / 半, y / 半, 出外) < 8 * 倍 / 半) continue;   // 出城の台と空堀には立てない
     if (引伸(道度, gw, gh, x, y, 半) > 0.05) continue;
     if (引伸(堀域, gw, gh, x, y, 半) > 0.02) continue;
     木.push([x, y, (2.6 + 野乱() * 3.2) * 倍, 野乱(), 明関(x, y)]);
@@ -2532,6 +2651,17 @@ export function* 城の地を焼く(g, m, 画k) {
   for (const [x, y, r, 振, 日] of 木) 繁木(g, x, y, r, 振, 日);
   計("木");
 
+  /* 広い盤の区は、城山の円の縁で透かす（野の画の上に重ねて溶かす。naname.js 区の効き と同じ縁） */
+  if (区) {
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    const cx2 = PXx(m.域.x), cy2 = PXy(m.域.y), r2 = PX(m.域.r);
+    const 縁 = g.createRadialGradient(cx2, cy2, 0, cx2, cy2, r2);
+    縁.addColorStop(0, "rgba(0,0,0,1)"); 縁.addColorStop(0.86, "rgba(0,0,0,1)");
+    縁.addColorStop(0.925, "rgba(0,0,0,0.5)"); 縁.addColorStop(0.99, "rgba(0,0,0,0)"); 縁.addColorStop(1, "rgba(0,0,0,0)");
+    g.globalCompositeOperation = "destination-in";
+    g.fillStyle = 縁; g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = "source-over";
+  }
   g.setTransform(1, 0, 0, 1, 0, 0);
 }
 

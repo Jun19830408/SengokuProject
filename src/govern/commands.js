@@ -6,6 +6,8 @@ import { fiefOf, fiefRoom, troopCap , 軍役の器, 軍役の増, 城の知行�
 import { rosterSync } from "../core/roster.js";
 import { forecast, relKey, 己の盟約, 主を探す, 旗の下に入る, relOf } from "../core/state.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
+import { 出城の手間, 出城の普請, 出城の普請高 } from "../core/demaru.js";
+import { 橋の普請を見る, 橋の残り } from "../core/hashi.js";
 import { 鉄甲 } from "../data/ships.js";
 import { clamp, fmt } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
@@ -40,7 +42,8 @@ export function runCommand(prev, castleId, cmd, genId, g) {
       // 金がなければ何も命じられぬ。無い袖は振れぬ。
       const 身の丈 = (x) => Math.max(0.35, Math.min(1.4, 0.35 + x.koku / 60000));
       const 値 = (n) => Math.round(n * 身の丈(c));
-      const COST_OF = { 開墾: 値(140), 治水: 値(180), 商業: 値(160), 築城: 値(200), 訓練: 値(120), 徴募: 100, 造船: 鉄甲.手間 };
+      const COST_OF = { 開墾: 値(140), 治水: 値(180), 商業: 値(160), 築城: 値(200), 訓練: 値(120), 徴募: 100, 造船: 鉄甲.手間,
+        出城: 出城の手間(c) };
       if (f.gold < (COST_OF[cmd] || 140)) {
         s.msg = `金が足りぬ。${cmd}には${COST_OF[cmd] || 140}貫が要る（手元${fmt(Math.max(0, f.gold))}貫）。`;
         return s;
@@ -76,8 +79,19 @@ export function runCommand(prev, castleId, cmd, genId, g) {
       } else if (cmd === "築城") {
         cost = 値(240);
         const d = Math.round(3 * (0.5 + gen.gov / 100));
+        const 橋前 = 橋の残り(c);
         rec("城防", Math.round(c.def), Math.min(100, Math.round(c.def) + d)); c.def = Math.min(100, c.def + d);
         rec("耐久", c.hp, c.hp + 200); c.hp += 200;
+        /* 落ちたままの橋（core/hashi.js）。防備を上げ直せば架け直す */
+        if (c.落橋) {
+          const 架けた = 橋の普請を見る(c);
+          rec("橋を架け直すまで（城防）", 橋前, 架けた ? 0 : 橋の残り(c));
+          if (架けた) {
+            const 文 = `${c.name}の前の川に橋を架け直した。`;
+            s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+            s.msg = 文;
+          }
+        }
       } else if (cmd === "訓練") {
         cost = 値(110);
         const d = Math.round(4 * (0.4 + gen.lead / 100));
@@ -106,6 +120,17 @@ export function runCommand(prev, castleId, cmd, genId, g) {
         if (r.成) {
           rec("鉄甲船", r.数 - 1, r.数, "艘");
           const 文 = `${c.name}で鉄甲船が一艘できあがった（${r.数}艘目）。舷に鉄を張った大船である。`;
+          s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+          s.msg = 文;
+        }
+      } else if (cmd === "出城") {
+        /* 出城の普請（core/demaru.js）。大手の堀の外に小さな曲輪を築く。数度の下知で成る */
+        const r = 出城の普請(s, c, gen);
+        if (!r.ok) { s.msg = r.why; return s; }      // 断りの訳を残す（出城の普請は断るときに何も動かさない）
+        cost = 0;                                   // 金は 出城の普請 の中で払っている
+        rec("出城の普請", r.前, r.後, `／${出城の普請高}`);
+        if (r.成) {
+          const 文 = `${gen.name}が${c.name}の大手の前に出城を築いた。`;
           s.chronicle.push({ y: s.year, m: s.month, text: 文 });
           s.msg = 文;
         }

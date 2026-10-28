@@ -7,6 +7,8 @@ import { 軍役の割増, 身分の境, 家の尺, 次の身分, castellanOf, �
 import { canSee, forecast, relOf, isVassal, 主を探す, 出征の元 } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
+import { 出城の手間, 出城の進み, 出城の普請高 } from "../core/demaru.js";
+import { 橋の残り } from "../core/hashi.js";
 import { 鉄甲 } from "../data/ships.js";
 import { U, clamp, fmt, monthsBetween } from "../core/util.js";
 import { TOWNS } from "../data/castles.js";
@@ -44,7 +46,8 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
   // その城の政務を預けている相手（寄親）。いれば大名は下知しない（GDD 6.4）
   const 預け先 = mine ? 城の寄親(g, c) : null;
   const lord = castellanOf(g, c);
-  /* 城主が出陣していれば、城に残る者が留守を預かる（GDD 6.4）。
+  /* 城主が出陣していれば、城に残る者が城代として留守を預かる（GDD 6.4）。当主の城も同じで、
+     城主は当主のまま変わらない（rank.js 当主の城の主）。
      身分は問わない。城主が帰れば、また城主が座を取る。 */
   const 留守 = mine && lord && lord.at !== c.id ? 城を守る将(g, c) : null;
   const [cmd, setCmd] = useState("開墾");
@@ -316,7 +319,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
               {open ? (lord ? lord.name : "―") : "？"}
               {open && 留守 && (
                 <span style={{ fontSize: 11, color: U.dim, marginLeft: 6 }}>
-                  （出陣中。留守は{留守.name}が預かる）
+                  （出陣中。{留守.name}が城代として預かる）
                 </span>
               )}
               {open && lord && (
@@ -393,6 +396,16 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
             <span className="k">商業</span><span className="v">{N(c.comm)} / 100</span>
             <span className="k">民忠</span><span className="v">{N(c.min)} / 100</span>
             <span className="k">耐久</span><span className="v">{V(c.hp)}</span>
+            {/* 出城（core/demaru.js）。見える城だけ。普請の途中なら進みを出す */}
+            {(c.出城 || (open && c.出城普請 > 0)) && (<>
+              <span className="k">出城</span>
+              <span className="v">{c.出城 ? "大手の前に構える" : open ? `普請 ${Math.round(c.出城普請)}／${出城の普請高}` : "？"}</span>
+            </>)}
+            {/* 落ちたままの橋（core/hashi.js）。防備を上げ直せば架け直す。橋が落ちているのは外から見える */}
+            {c.落橋 && (<>
+              <span className="k">城の前の橋</span>
+              <span className="v">落ちたまま（城防をあと{橋の残り(c)}上げれば架け直す）</span>
+            </>)}
           </div>
           {!open && (
             <div style={{ fontSize: 12, color: U.dim, marginTop: 10, lineHeight: 1.6 }}>
@@ -533,7 +546,25 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                     {鉄甲船を造れるか(g, c).ok && (
                       <button className={`btn sm ${cmd === "造船" ? "on" : ""}`} onClick={() => setCmd("造船")}>造船</button>
                     )}
+                    {/* 出城の普請（core/demaru.js）。まだ出城の無い城でだけ出す */}
+                    {!c.出城 && (
+                      <button className={`btn sm ${cmd === "出城" ? "on" : ""}`} onClick={() => setCmd("出城")}>出城</button>
+                    )}
                   </div>
+                  {cmd === "出城" && !c.出城 && (() => {
+                    const 担 = freeGens.find((x) => x.id === cur) || freeGens[0] || null;
+                    const 進 = 出城の進み(担);
+                    const 今 = Math.round(c.出城普請 || 0);
+                    return (
+                      <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.85, marginBottom: 8 }}>
+                        出城の普請 <b style={{ color: U.text }}>{今}</b>／{出城の普請高}
+                        （一度の下知で{fmt(出城の手間(c))}貫。{担 ? `${担.name}なら一度に${進}進み、あと${Math.max(1, Math.ceil((出城の普請高 - 今) / 進))}度で成る` : ""}）<br />
+                        大手の堀の外に、空堀と土塁と板塀で囲った小さな曲輪を築く。城攻めのとき、寄せ手は
+                        出城の前を通らねば大手へ寄せられず、出城の守り手は塀の内から寄せ手の横腹を射る
+                        （大坂冬の陣の真田丸）。落とされれば焼かれる。
+                      </div>
+                    );
+                  })()}
                   {/* 打つ前に、月の懐がどう動くかを示す（GDD 6.2）。
 
                       田を開けば入りが増え、商いを興せばさらに増え、兵を雇えば扶持が増える。

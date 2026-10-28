@@ -1,11 +1,11 @@
-import { axisOf, fromUV, gateOpenU, gatePos } from "./castleMap.js";
+import { axisOf, fromUV, gateOpenU, gatePos, 門の輪, 出城の塀, 付城の柵 } from "./castleMap.js";
 import { KOMA, rot } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS, ROAD, ROADS, WOODS, hasRiver, riverShift, 水際まで, 地形の代, 節までの隔たり } from "./field.js";
 import { px, py } from "../data/geo.js";
 import { VILLAGES } from "./field.js";
 import { clamp } from "../core/util.js";
 import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 画の揚げ, 斜め, 向きの角, 盤の筆を回す, 視の筆へ, 地の札, 札を控える, 札を控え止める, 地の字, 隠れの際 } from "./naname.js";
-import { 一人ずつ描く隊 } from "./shinga.js";
+import { 一人ずつ描く隊, 野の川筋 } from "./shinga.js";
 import { 城を立てて描く, 天守の置き場, 城を預ける, 預けた城を立てる } from "./tachimono.js";
 import { 川の流れを描く, 立木を描く } from "./mori.js";
 import { 里を描く } from "./sato.js";
@@ -1074,6 +1074,7 @@ function 川筋を描く(ctx, r) {
   筆(r.幅, "#6E9BBE");                            // 水面
   筆(r.幅 * 0.42, "rgba(186,214,232,0.55)");      // 流れの明るいところ
   for (const w of r.渡し || []) {
+    if (w.種 === "落橋") continue;                 // 落ちた橋は 川を描く が描く
     const 橋 = w.種 === "橋";
     ctx.save();
     ctx.fillStyle = 橋 ? "#A8804E" : "rgba(180,212,228,0.85)";
@@ -1166,6 +1167,15 @@ function 川を描く(ctx) {
     for (const bx of [x0 + (x1 - x0) * 0.34, x0 + (x1 - x0) * 0.66]) ctx.fillRect(bx - 2, 上, 4, 下 - 上);
   }
 
+  // 落ちた橋（field.js 橋を落とす）。折れた橋脚が水面に覗く
+  if (RIVER.落ちた橋) {
+    const [bt0, bb0] = band((RIVER.落ちた橋[0] + RIVER.落ちた橋[1]) / 2);
+    const x0 = RIVER.落ちた橋[0], x1 = RIVER.落ちた橋[1];
+    ctx.fillStyle = "#4E3A24";
+    for (const bx of [x0 + (x1 - x0) * 0.2, (x0 + x1) / 2, x0 + (x1 - x0) * 0.8]) {
+      for (const t of [0.22, 0.5, 0.78]) ctx.fillRect(bx - 2, bt0 + (bb0 - bt0) * t - 3, 4, 6);
+    }
+  }
   // 字は輪郭を付けて、水の上でも読めるようにする
   const 字 = Math.round(14 * 札の倍());
   const 札 = (t, x, y) => {
@@ -1176,7 +1186,11 @@ function 川を描く(ctx) {
   };
   if (RIVER.bridge[1] > RIVER.bridge[0]) {
     const [bt0] = band((RIVER.bridge[0] + RIVER.bridge[1]) / 2);
-    札("橋", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 字 * 0.5, bt0 - 字);
+    札(RIVER.仮橋 ? "仮橋" : "橋", (RIVER.bridge[0] + RIVER.bridge[1]) / 2 - 字 * (RIVER.仮橋 ? 1 : 0.5), bt0 - 字);
+  }
+  if (RIVER.落ちた橋) {
+    const [bt0] = band((RIVER.落ちた橋[0] + RIVER.落ちた橋[1]) / 2);
+    札("落ちた橋", (RIVER.落ちた橋[0] + RIVER.落ちた橋[1]) / 2 - 字 * 2, bt0 - 字);
   }
   if (RIVER.ford[1] > RIVER.ford[0]) {
     const [ft0] = band((RIVER.ford[0] + RIVER.ford[1]) / 2);
@@ -1591,7 +1605,7 @@ function 旧の城の地(ctx, m, t, cx, cy) {
 
 /* 門と施設の傷み帯。毎刻変わるので、焼いた画布には入れず、その場で描く。 */
 function 門の傷みを一つ描く(ctx, m, g, 揚) {
-  const l = m.layers[g.layer];
+  const l = 門の輪(m, g);
   if (!l) return;
   const a = axisOf(l, g);
   const along = a.along === "x";
@@ -1618,9 +1632,9 @@ function 城の帯を描く(m, 画面で, ctx) {
     ctx.fillStyle = r > 0.5 ? "#5C8C4A" : r > 0.22 ? "#C89A3A" : "#B0483C";
     ctx.fillRect(-w / 2, 0, w * r, 4);
   };
-  for (const l of m.layers) for (const g of l.gates) {
+  for (const l of [...m.layers, ...(m.出城 && !m.出城.落ちた ? [m.出城] : [])]) for (const g of l.gates) {
     if (g.broken) continue;
-    const a = axisOf(l, g), lp = fromUV(m, a, g.off, a.half + m.t + g.masu + 18);
+    const a = axisOf(l, g), lp = fromUV(m, a, g.off, a.half + m.t + g.masu + (l.出城 ? l.堀 : 0) + 18);
     画面で(lp.x, lp.y + 4, () => { ctx.translate(0, 7); 帯(40, Math.max(0, g.hp / g.max)); });
   }
   for (const f of m.fac) if (f.hp > 0 && f.max) 画面で(f.x, f.y + f.r, () => { ctx.translate(0, 4); 帯(26, f.hp / f.max); });
@@ -1629,6 +1643,7 @@ function 城の帯を描く(m, 画面で, ctx) {
 // 揚 … 斜めの眺めで、地の高さぶん持ち上げるずれ（naname.js 揚げ）
 export function 城の傷みを描く(ctx, m, 揚) {
   for (const l of m.layers) for (const g of l.gates) { if (!g.broken) 門の傷みを一つ描く(ctx, m, g, 揚); }
+  if (m.出城 && !m.出城.落ちた) for (const g of m.出城.gates) { if (!g.broken) 門の傷みを一つ描く(ctx, m, g, 揚); }
   for (const f of m.fac) { if (f.hp > 0 && f.max) 施設の傷みを一つ描く(ctx, f, 揚); }
 }
 
@@ -1640,14 +1655,88 @@ export function 城の傷みを描く(ctx, m, 揚) {
    「城攻めになると固まる」としか見えない。
    地は一度焼けば動かぬもの、立つものは戦のあいだ変わるもの。別の画布に住まわせる。 */
 /* 立体 … 斜めの眺めのとき。門・櫓・普請は tachimono.js が立てて描くので、ここでは描かない */
-export function drawCastleBuildings(ctx, m, 画k, 立体) {
+/* 区 … 広い盤のとき、画布は城山を囲む矩形だけ（castleMap.js の m.区）。原点をずらして描く */
+export function drawCastleBuildings(ctx, m, 画k, 立体, 区) {
   const k = 画k || 1;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, Math.ceil(FIELD.w * k) + 2, Math.ceil(FIELD.h * k) + 2);
-  ctx.setTransform(k, 0, 0, k, 0, 0);
+  ctx.clearRect(0, 0, Math.ceil((区 ? 区.w : FIELD.w) * k) + 2, Math.ceil((区 ? 区.h : FIELD.h) * k) + 2);
+  ctx.setTransform(k, 0, 0, k, 区 ? -区.x0 * k : 0, 区 ? -区.y0 * k : 0);
   札を控える(地の札.城);                       // 曲輪・門・堀の名は焼かずに控え、描くたびに立てる
   try { 城の立つものを描く(ctx, m, m.t, m.cx, m.cy, true, 立体); } finally { 札を控え止める(); }
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/* 付城（castleMap.js 付城を据える）。真上の眺めで毎コマ描く（城の画布は城山の区だけ
+   なので、城山の外の付城はそこに焼けない）。柵の杭を並べ、井楼を立て、陣幕を張る */
+export function 付城を描く(ctx, m) {
+  if (!m || !m.付城) return;
+  for (const f of m.付城) {
+    ctx.fillStyle = "rgba(186,170,128,0.35)";                        // 踏み固めた陣の地
+    ctx.fillRect(f.x - f.hw, f.y - f.hh, f.hw * 2, f.hh * 2);
+    for (const { r: [a0, b0, a1, b1] } of 付城の柵(f)) {
+      if (a1 - a0 < 1 || b1 - b0 < 1) continue;
+      ctx.fillStyle = "rgba(60,48,30,0.3)"; ctx.fillRect(a0 + 2, b0 + 3, a1 - a0, b1 - b0);
+      ctx.fillStyle = "#6A5236";
+      const 横 = a1 - a0 >= b1 - b0, L = 横 ? a1 - a0 : b1 - b0;
+      for (let u = 1; u < L; u += 4.2) {
+        if (横) ctx.fillRect(a0 + u, b0, 2, b1 - b0); else ctx.fillRect(a0, b0 + u, a1 - a0, 2);
+      }
+    }
+    // 陣幕。白地に一筋、陣の奥に張る
+    ctx.fillStyle = "rgba(236,232,220,0.9)"; ctx.fillRect(f.x - f.hw * 0.6, f.y + f.hh * 0.45, f.hw * 1.2, 4);
+    ctx.fillStyle = "rgba(48,44,40,0.8)"; ctx.fillRect(f.x - f.hw * 0.6, f.y + f.hh * 0.45 + 1.5, f.hw * 1.2, 1);
+    // 井楼。丸太を組んだ物見の櫓
+    const ix = f.x + f.hw * 0.55, iy = f.y - f.hh * 0.45, ir = 9;
+    ctx.fillStyle = "rgba(60,48,30,0.35)"; ctx.fillRect(ix - ir + 影.x * 0.8, iy - ir + 影.y * 0.8, ir * 2, ir * 2);
+    ctx.fillStyle = "#8A6C46"; ctx.fillRect(ix - ir, iy - ir, ir * 2, ir * 2);
+    ctx.strokeStyle = "rgba(58,40,22,0.85)"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(ix - ir, iy - ir); ctx.lineTo(ix + ir, iy + ir); ctx.moveTo(ix + ir, iy - ir); ctx.lineTo(ix - ir, iy + ir); ctx.stroke();
+    ctx.strokeRect(ix - ir, iy - ir, ir * 2, ir * 2);
+  }
+}
+
+/* 出城（castleMap.js 出城を組む）。土塁の天端に板塀を回し、前に門を構える。
+   真上の眺めでは、土の帯に杭を並べて塀とする。斜めの眺めでは塀と門は立てて描く
+   （tachimono.js）ので、ここでは名札と、破れた門の瓦礫と、焼け跡だけを置く */
+function 出城を描く(ctx, m, t, 新, 立体) {
+  const 出 = m.出城;
+  if (!出) return;
+  const X = m.cx + 出.ox, Y = m.cy + 出.oy, 門 = 出.gates[0];
+  if (!新) {                                       // 新しい地は台と空堀を画素で焼いてある
+    ctx.fillStyle = "rgba(150,132,96,0.55)";
+    ctx.fillRect(X - 出.hw - t - 出.堀, Y - 出.hh - t - 出.堀, (出.hw + t + 出.堀) * 2, (出.hh + t + 出.堀) * 2);
+    ctx.fillStyle = "#C9BE98"; ctx.fillRect(X - 出.hw - t, Y - 出.hh - t, (出.hw + t) * 2, (出.hh + t) * 2);
+  }
+  if (!立体) {
+    for (const { r: [a0, b0, a1, b1] } of 出城の塀(m)) {
+      ctx.fillStyle = "rgba(60,48,30,0.32)"; ctx.fillRect(a0 + 影.x * 0.35, b0 + 影.y * 0.35, a1 - a0, b1 - b0);
+      ctx.fillStyle = "#A28E66"; ctx.fillRect(a0, b0, a1 - a0, b1 - b0);          // 土塁の天端
+      ctx.fillStyle = "#5C4832";                                                    // 板塀の杭
+      const 横 = a1 - a0 >= b1 - b0, L = 横 ? a1 - a0 : b1 - b0;
+      for (let u = 1.5; u < L - 1; u += 3.6) {
+        if (横) ctx.fillRect(a0 + u, (b0 + b1) / 2 - 1.4, 1.5, 2.8);
+        else ctx.fillRect((a0 + a1) / 2 - 1.4, b0 + u, 2.8, 1.5);
+      }
+    }
+    if (!門.broken) 門を描く(ctx, gatePos(m, 出, 門), true, 門.w, t, 門.hp / 門.max);
+  }
+  if (門.broken) {
+    const a = axisOf(出, 門);
+    for (let k = 0; k < 10; k++) {
+      const q = fromUV(m, a, 門.off + ((k * 17) % 27) - 13, a.half + t * 0.5 + Math.floor(k / 3) * 5);
+      ctx.fillStyle = k % 4 === 0 ? "rgba(70,58,46,0.55)" : "rgba(130,108,80,0.62)";
+      ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(k * 1.1); ctx.fillRect(-3.5, -2.5, 7, 5); ctx.restore();
+    }
+  }
+  if (出.落ちた && !出.捨てた) {                     // 落ちた出城は焼かれる。焦げ跡を残す
+    ctx.fillStyle = "rgba(48,38,30,0.22)";
+    ctx.fillRect(X - 出.hw, Y - 出.hh, 出.hw * 2, 出.hh * 2);
+  }
+  if (!新 && !門.broken) 門の傷みを一つ描く(ctx, m, 門);
+  ctx.font = "15px 'Hiragino Mincho ProN',serif";
+  ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 3;
+  ctx.fillStyle = "rgba(62,64,50,0.9)";
+  地の字(ctx, 出.name, X - 出.hw + 10, Y - 出.hh + 22, true);
 }
 
 /* 城に立つもの ── 石垣・門・櫓・天守と、堀を渡る土橋。
@@ -1790,6 +1879,7 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新, 立体) {
       ctx.strokeRect(p.x - p.半, p.y - p.半, p.半 * 2, p.半 * 2);
     } }
 
+  出城を描く(ctx, m, t, 新, 立体);
   // 施設。崩れたものは瓦礫にする
   for (const f of m.fac) {
     if (f.hp <= 0) {
@@ -1829,6 +1919,18 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新, 立体) {
 
 /* 布陣できる自陣の範囲。寄せ手は遠い側、守り手は近い側から入る。 */
 export function ownZone(b) {
+  /* 城攻めの広い盤。寄せ手は南の端の帯に陣を敷き、城方は城山の内に籠る */
+  if (b.map && b.map.広い) {
+    /* 付城があれば、寄せ手は付城から寄せる（castleMap.js 付城を据える）。城山の縁の外から
+       盤の南の端までを寄せ手の陣とする */
+    if (b.attacker === "P" && b.map.付城 && b.map.付城.length) {
+      const y0 = Math.min(FIELD.h * 0.8, b.map.域.y + b.map.域.r + 30);
+      return { x: 0, y: y0, w: FIELD.w, h: FIELD.h - y0, vertical: true, bottom: true };
+    }
+    if (b.attacker === "P") return { x: 0, y: FIELD.h * 0.8, w: FIELD.w, h: FIELD.h * 0.2, vertical: true, bottom: true };
+    const 区 = b.map.区;
+    return { x: 区.x0, y: 区.y0, w: 区.w, h: 区.h, vertical: true, bottom: false };
+  }
   const face = b.face || "S", far = !!b.myFar;
   const vertical = face === "N" || face === "S";
   if (vertical) {
@@ -1959,8 +2061,12 @@ export function 跡を焼き足す(跡ctx, b, 尺 = 0.5) {
    日没で戦が終わるという掟が、絵のほうからも読めるようになる。 */
 export function 空模様を被せる(ctx, b, W, H) {
   if (!b) return;
-  const 刻 = b.dusk ? Math.min(1, Math.max(0, b.t / b.dusk)) : 0;
+  /* 数日がかりの城攻めでは、日の傾きはその日の夜明け（b.日の始め）から量る。夜の段は
+     夜の藍に沈める（engine.js 夜を明かす） */
+  const 始 = b.日の始め || 0;
+  const 刻 = b.phase === "night" ? 1 : b.dusk ? Math.min(1, Math.max(0, (b.t - 始) / Math.max(1, b.dusk - 始))) : 0;
   ctx.save();
+  if (b.phase === "night") { ctx.fillStyle = "rgba(14,20,46,0.42)"; ctx.fillRect(0, 0, W, H); }
   // 一、日の傾き。半ばを過ぎたら茜、終わりに近づけば藍
   if (刻 > 0.45) {
     const u = (刻 - 0.45) / 0.55;
@@ -2003,7 +2109,139 @@ export function 空模様を被せる(ctx, b, W, H) {
   ctx.restore();
 }
 
-export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, 跡Canvas, 城Canvas, 斜め地) {
+/* ------------------------------------------- 盤の外（GDD 8.11）
+
+   遊ぶ側の申し出は「マップの範囲外が空白になっていて不自然。範囲外の余白も何となく
+   マップが続いた状態で（そんなに作り込まなくてよい）範囲線だけ描き、撤退した部隊が
+   この線を越えたら完全撤退となるように」であった。
+
+   盤の外を、盤の縁の色を拾った草地の肌で塗り、盤の端に届いている川と道はそのまま外へ
+   真っすぐ延ばす。外は薄く霞ませて盤の内と見分け、盤の縁に境の線を引く（境の線を引く）。
+   理の上でも、退く隊はこの線を越えたところで盤を去る（engine.js 戦場の外へ）。
+   肌の型は、試験の作り物の筆のように型を作れない筆では無地で塗る。 */
+const 外の広さ = () => Math.max(FIELD.w, FIELD.h) * 3;
+let 縁の色の控え = null;                         // { 鍵, 色 }（野を焼き直すまで使い回す）
+function 縁の色(地) {
+  const 既定 = "#9CB46C";
+  if (!地 || !地.width || typeof document === "undefined") return 既定;
+  const 鍵 = `${地形の代()}:${地.width}x${地.height}`;
+  if (縁の色の控え && 縁の色の控え.鍵 === 鍵) return 縁の色の控え.色;
+  let 色 = 既定;
+  try {
+    const n = 16, cv = document.createElement("canvas");
+    cv.width = n; cv.height = n;
+    const g = cv.getContext("2d");
+    g.drawImage(地, 0, 0, n, n);
+    const d = g.getImageData(0, 0, n, n).data;
+    let r = 0, gg = 0, bb = 0, k = 0;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      if (x > 0 && y > 0 && x < n - 1 && y < n - 1) continue;      // 縁の升だけ
+      const i = (y * n + x) * 4;
+      if (d[i + 3] < 200) continue;
+      /* 水（青みの強い升）は除く。川の出口が縁にあると、野の色が青く濁る */
+      if (d[i + 2] > d[i + 1] + 8) continue;
+      r += d[i]; gg += d[i + 1]; bb += d[i + 2]; k++;
+    }
+    if (k) 色 = `rgb(${Math.round(r / k)},${Math.round(gg / k)},${Math.round(bb / k)})`;
+  } catch (e) { /* 読めない画布（汚れた画布）なら既定の色 */ }
+  縁の色の控え = { 鍵, 色 };
+  return 色;
+}
+let 外の肌 = null;                               // { 色, 画 }
+function 外の肌の画(色) {
+  if (外の肌 && 外の肌.色 === 色) return 外の肌.画;
+  if (typeof document === "undefined") return null;
+  /* 斑の型。草地の濃淡を、柔らかな斑として焼く（盤の地の焼きほど細かくはしない） */
+  const n = 96, cv = document.createElement("canvas");
+  cv.width = n; cv.height = n;
+  const g = cv.getContext("2d");
+  if (!g) return null;
+  g.fillStyle = 色; g.fillRect(0, 0, n, n);
+  let sd = 7;
+  const rnd = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+  for (let i = 0; i < 46; i++) {
+    const x = rnd() * n, y = rnd() * n, r = 4 + rnd() * 14, 濃 = rnd() < 0.5;
+    for (const dx of [-n, 0, n]) for (const dy of [-n, 0, n]) {      // 継ぎ目が見えぬよう、四方へ写して巻く
+      const gr = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r);
+      gr.addColorStop(0, 濃 ? "rgba(40,60,20,0.16)" : "rgba(255,255,230,0.13)");
+      gr.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = gr; g.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
+    }
+  }
+  外の肌 = { 色, 画: cv };
+  return cv;
+}
+/* 盤の外を塗る。筆は盤の所（回して傾けた筆）のまま渡される */
+function 盤の外を塗る(ctx, 地) {
+  const L = 外の広さ(), w = FIELD.w, h = FIELD.h;
+  const 色 = 縁の色(地);
+  ctx.save();
+  ctx.fillStyle = 色;
+  ctx.fillRect(-L, -L, w + 2 * L, h + 2 * L);
+  const 画 = 外の肌の画(色);
+  const 型 = 画 && ctx.createPattern ? ctx.createPattern(画, "repeat") : null;
+  if (型) {
+    if (型.setTransform && typeof DOMMatrix === "function") 型.setTransform(new DOMMatrix([14, 0, 0, 14, 0, 0]));
+    ctx.fillStyle = 型; ctx.fillRect(-L, -L, w + 2 * L, h + 2 * L);
+  }
+  /* 盤の端に届いている川と道を、そのまま外へ延ばす（端の区間の向きのまま）。
+     向きは、端の節から十歩より離れた最初の節で取る。川筋の終わりには同じ所に節が
+     二つ重なっていることがあり（shinga.js 野の川筋 の盤の右の端）、隣の節で向きを
+     取ると長さが零になって、川が盤の縁で途切れて見えた */
+  const 延ばす = (節, 幅, 筆色) => {
+    if (!節 || 節.length < 2) return;
+    const 端か = (p) => p[0] <= 1 || p[1] <= 1 || p[0] >= w - 1 || p[1] >= h - 1;
+    for (const 列 of [節, [...節].reverse()]) {
+      const a = 列[0];
+      if (!端か(a)) continue;
+      const z = 列.find((p) => Math.hypot(p[0] - a[0], p[1] - a[1]) > 10);
+      if (!z) continue;
+      const dx = a[0] - z[0], dy = a[1] - z[1], d = Math.hypot(dx, dy);
+      ctx.strokeStyle = 筆色; ctx.lineWidth = 幅; ctx.lineCap = "butt";
+      ctx.beginPath(); ctx.moveTo(a[0] - dx / d * 2, a[1] - dy / d * 2); ctx.lineTo(a[0] + dx / d * L, a[1] + dy / d * L); ctx.stroke();
+    }
+  };
+  const 点ら = (r) => (r.節 || []).map((p) => [p.x != null ? p.x : p[0], p.y != null ? p.y : p[1]]);
+  for (const r of (ROADS && ROADS.length ? ROADS : (ROAD && ROAD.節 && ROAD.節.length ? [ROAD] : []))) {
+    延ばす(点ら(r), Math.max(20, r.幅 || 30), "#C4B08A");
+  }
+  for (const r of 野の川筋()) {
+    延ばす(r.節, (r.幅 || 50) + 14, "#A9A37F");                       // 岸
+    延ばす(r.節, r.幅 || 50, "#6E97AD");                              // 水
+  }
+  /* 外を薄く霞ませる。盤の内は霞ませない（盤の四方の帯だけを塗る） */
+  ctx.fillStyle = "rgba(238,240,228,0.20)";
+  ctx.fillRect(-L, -L, w + 2 * L, L);
+  ctx.fillRect(-L, h, w + 2 * L, L);
+  ctx.fillRect(-L, 0, L, h);
+  ctx.fillRect(w, 0, L, h);
+  ctx.restore();
+}
+/* 境の線を引く。地の高さぶん持ち上げた盤の縁を、画面の点で引く（S は盤の所 → 画面の点） */
+function 境の線を引く(ctx, S, dpr, cam) {
+  const w = FIELD.w, h = FIELD.h, 刻 = Math.max(40, Math.min(w, h) / 60);
+  const 点 = [];
+  const 辺 = (x0, y0, x1, y1) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 刻));
+    for (let i = 0; i < n; i++) 点.push(S(x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n));
+  };
+  辺(0, 0, w, 0); 辺(w, 0, w, h); 辺(w, h, 0, h); 辺(0, h, 0, 0);
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.beginPath();
+  点.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.closePath();
+  const 太 = clamp(1.2 + cam.s * 0.35, 1.4, 2.6);
+  if (ctx.setLineDash) ctx.setLineDash([]);
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(255,252,240,0.55)"; ctx.lineWidth = 太 + 2.2; ctx.stroke();      // 縁取り（どの地の上でも読める）
+  if (ctx.setLineDash) ctx.setLineDash([9, 6]);
+  ctx.strokeStyle = "rgba(70,52,30,0.78)"; ctx.lineWidth = 太; ctx.stroke();
+  if (ctx.setLineDash) ctx.setLineDash([]);
+  ctx.restore();
+}
+
+export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, 跡Canvas, 城Canvas, 斜め地, 区Canvas) {
   /* 新しい絵（関ヶ原だけ・GDD 8.11）。深く寄ったときは組を五十人にほどいて
      一人ずつ描く。引きはこれまでの絵のまま。理には触れない。
 
@@ -2033,12 +2271,15 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   ctx.translate(W / 2 - 視cx * cam.s, H / 2 - 視cy * 縮 * cam.s);
   ctx.scale(cam.s, cam.s * 縮);
   盤の筆を回す(ctx);
+  盤の外を塗る(ctx, terrainCanvas);                  // 盤の外（上の 盤の外を塗る）。地はこの上に貼る
   /* 地の画布は、広い野では間引いて焼いてある（画面の側の 画布の倍 を参照）。
      貼るときに野の寸法まで引き伸ばす。斜めに焼いた地は、傾けずに（既に写してあるので）
      せり出しの分だけ上から貼る。 */
   if (斜め地 && 斜め地.画 && 縮 < 1) {
     ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / 縮);
     ctx.drawImage(斜め地.画, 0, -斜め地.上, 斜め地.横 || FIELD.w, 斜め地.縦);
+    /* 城攻めの広い盤では、城のまわり（区）を細かく焼いた画を野の上に重ねる。縁は透かしてある */
+    if (斜め地.区 && 斜め地.区.画) { const q = 斜め地.区; ctx.drawImage(q.画, q.原.x, q.原.y - q.上, q.横, q.縦); }
     /* 稜線。頂の縁を画面の点の太さで引く（naname.js 斜めに焼く の 稜線）。焼いた画の筋は
        寄れば滲み、頂と奥の野が溶け合って見えた。向こうが深く隠れる所ほど濃い */
     if (斜め地.稜線) {
@@ -2056,9 +2297,11 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     ctx.restore();
   } else {
     ctx.drawImage(terrainCanvas, 0, 0, FIELD.w, FIELD.h);
+    if (区Canvas && b.map && b.map.区) ctx.drawImage(区Canvas, b.map.区.x0, b.map.区.y0, b.map.区.w, b.map.区.h);
   }
   // 戦の痕。地の上に重ねる（画布は地の半分の寸法なので、引き伸ばして貼る）
   if (跡Canvas) ctx.drawImage(跡Canvas, 0, 0, FIELD.w, FIELD.h);
+  境の線を引く(ctx, S, dpr, cam);                    // 盤の縁（上の 境の線を引く）。兵はこの上に立つ
   /* 近景の肌理（GDD 8.11）。寄ったときだけ、地の肌理を画面の縮尺で刻む。
      焼いた地を引き伸ばすと滲むので、兵と同じ寸法の草と石を上から置く。 */
   if (個人絵) 近景の肌理(ctx, cam, W, H, dpr, b.map || null);
@@ -2067,15 +2310,19 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   if (城Canvas && 斜め地 && 斜め地.城 && 斜め地.城.画 && 縮 < 1) {
     /* 斜めの眺めでは、石垣・門・櫓も地と同じだけ持ち上げて写したものを貼る */
     ctx.save(); 視の筆へ(ctx); ctx.scale(1, 1 / 縮);
-    ctx.drawImage(斜め地.城.画, 0, -斜め地.城.上, 斜め地.城.横 || FIELD.w, 斜め地.城.縦);
+    { const q = 斜め地.城, o = q.原 || { x: 0, y: 0 };
+      ctx.drawImage(q.画, o.x, o.y - q.上, q.横 || FIELD.w, q.縦); }
     ctx.restore();
     /* 門・櫓・塀・御殿・蔵を立てて描く。兵を一人ずつ描く寄りでは、兵と前後を重ねるため
        新絵の兵描きへ預ける（tachimono.js 城を預ける）。傷みの帯はそのあとに描く */
     if (個人絵) 城を預ける(b.map);
     else 城を立てて描く(ctx, b.map);
   } else if (城Canvas) {
-    ctx.drawImage(城Canvas, 0, 0, FIELD.w, FIELD.h);
+    const 区 = b.map && b.map.区;
+    if (区) ctx.drawImage(城Canvas, 区.x0, 区.y0, 区.w, 区.h);
+    else ctx.drawImage(城Canvas, 0, 0, FIELD.w, FIELD.h);
     城の傷みを描く(ctx, b.map);          // 帯だけは毎コマ。画布は門が破れるまで焼き直さない
+    付城を描く(ctx, b.map);               // 付城は城山の外にあるので、城の画布に焼けない
   }
   /* 地の札（峰・村・渡し／曲輪・門・堀の名）。地と一緒に回さず、画面に向けて立てる。
      字の大きさは画面の点で決める。焼いていたころは焼きの細かさ（粗焼きか本焼きか）で
@@ -2091,12 +2338,19 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
     fn(); ctx.restore();
   };
   const 札を立てる = () => {
-    const 札ら = b.map ? (城Canvas ? 地の札.城 : null) : 地の札.野;
+    /* 広い盤の城攻めでは、野の札（峰・村・渡し）と城の札（曲輪・門・堀）の両方を立てる */
+    const 札ら = b.map ? (b.map.広い ? [...地の札.野, ...(城Canvas ? 地の札.城 : [])] : (城Canvas ? 地の札.城 : null)) : 地の札.野;
     const 字 = b.map ? 13 : 15;
     if (札ら) for (const p of 札ら) 画面で(p.x, p.y, () => {
       ctx.font = p.font.replace(/[\d.]+px/, `${字}px`); ctx.textAlign = p.align; ctx.lineJoin = "round";
       if (p.縁) { ctx.lineWidth = 3; ctx.strokeStyle = p.st; ctx.strokeText(p.s, 0, 0); }
       ctx.fillStyle = p.fi; ctx.fillText(p.s, 0, 0);
+    });
+    /* 付城の名（城山の外なので、城の札に焼いていない） */
+    if (b.map && b.map.付城) for (const f of b.map.付城) 画面で(f.x, f.y - f.hh - 16, () => {
+      ctx.font = `${字}px 'Hiragino Mincho ProN',serif`; ctx.textAlign = "center"; ctx.lineJoin = "round";
+      ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.strokeText(f.name, 0, 0);
+      ctx.fillStyle = "rgba(62,64,50,0.95)"; ctx.fillText(f.name, 0, 0);
     });
     if (城立体) 城の帯を描く(b.map, 画面で, ctx);
   };
@@ -2106,13 +2360,14 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   /* 城攻めの盤には帯を出さない。城攻めの戦は攻め口の方角（face）と寄せ手の側（myFar）を
      持たないので、帯は決め打ちの「盤の北の四割」になり、城の曲輪の中ほどを横切る。寄せ手は
      城の手引きのとおり大手口の前に布陣してあり、帯はその所とも合わない。もとは帯がほとんど
-     見えなかったので目立たなかったが、境を読める太さにすると、城を横切る筋になる */
-  if (b.phase === "deploy" && !b.筋書き && !b.map) 自陣の帯を描く(ctx, ownZone(b), S, cam.s, dpr);
+     見えなかったので目立たなかったが、境を読める太さにすると、城を横切る筋になる。
+     広い盤の城攻めでは、寄せ手の帯は南の端の野（ownZone）なので、寄せ手の側にだけ出す */
+  if (b.phase === "deploy" && !b.筋書き && (!b.map || (b.map.広い && b.attacker === "P"))) 自陣の帯を描く(ctx, ownZone(b), S, cam.s, dpr);
 
   // 川の流れ（mori.js）。水面の筋が下手へ流れる
-  if (!b.map) 川の流れを描く(ctx, (typeof performance !== "undefined" ? performance.now() : 0) / 1000, 1);
+  if (!b.map || b.map.広い) 川の流れを描く(ctx, (typeof performance !== "undefined" ? performance.now() : 0) / 1000, 1);
   // 集落の家と湿地の葦（sato.js）。兵を一人ずつ描く寄りでは、兵と前後を重ねて描く
-  if (!b.map && 縮 < 1 && !個人絵) {
+  if ((!b.map || b.map.広い) && 縮 < 1 && !個人絵) {
     // 引いた眺めは、木・家・葦を一度だけ焼いておいた画を貼る（無ければ一本ずつ）
     /* 焼いた画は粗いので、寄って見るときは一本ずつ描く（兵のいない所へ寄ると、
        家と木だけがぼやけて映った） */
@@ -2517,7 +2772,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   const 木で描く = 縮 < 1 && 斜め.森 === "木";
   // 兵を一人ずつ描いているのに一人も映らない隊ばかりのとき（引いた眺めは上で焼いた画を貼った）
   if (木で描く && 個人絵 && !新絵隊.length) 立木を描く(ctx, cam, W, H);
-  if (!b.map && !木で描く && (FORESTS.length || WOODS.length)) {
+  if ((!b.map || b.map.広い) && !木で描く && (FORESTS.length || WOODS.length)) {
     for (const f of [...WOODS, ...FORESTS]) {
       const 濃 = FORESTS.includes(f);
       ctx.save();

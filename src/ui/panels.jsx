@@ -8,6 +8,8 @@ import { canAttack, findPath, marchMonths, nodeById, roadBetween } from "../core
 import { foodDays, minGarrison, rankName, 出征の余地, 出征の限り, 出征の割, 出征中の兵, 家の総兵, 身分の位, 総大将を定める, 大将を先頭に, 陣触れの届き, 寄騎たち, 旗頭たち, 旗頭の枠, 旗頭の受け持ち, 国の旗頭, 国主たち, 国主の枠 } from "../core/rank.js";
 import { canSee, forecast, relOf, 出征の元 } from "../core/state.js";
 import { 軍の中身, 城の保ち } from "../core/kakomi.js";
+import { 付城の手間, 付城の進み, 付城の限り, 付城の普請高, 付城を築けるか } from "../core/tsukejiro.js";
+import { 橋の残り } from "../core/hashi.js";
 import { courtRank, 旗の下か } from "../core/province.js";
 import { 問われる家, 問わぬ家ら, 応じる目 } from "../core/sobuji.js";
 import { 参陣の顔ぶれ, 号令の限り } from "../core/gourei.js";
@@ -926,7 +928,7 @@ export function GateDeployDialog({ g, castle, gates, 寄せ手, onClose, onGo })
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span className="mn" style={{ fontSize: 14, flex: "0 0 34%" }}>{gt.key}
                   <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 5 }}>
-                    {gt.layer === 0 ? "外の輪" : `${gt.layer}つ内`}
+                    {gt.出城 ? "出城（大手の前）" : gt.layer === 0 ? "外の輪" : `${gt.layer}つ内`}
                   </span>
                 </span>
                 <select className="sel" style={{ flex: 1 }} value={決.genId || ""}
@@ -2451,6 +2453,14 @@ export function SiegePanel({ g, sg, onChoose }) {
         <div className="row"><span>包囲率</span><span className="v">{sg.enc == null ? "―" : `${sg.enc}%`}
           {sg.enc != null && sg.enc < 75 ? <span style={{ color: U.dim, fontSize: 11 }}>　後詰が入り得る</span> : null}</span></div>
         <div className="row"><span>城の井戸</span><span className="v">{Math.round(c.well == null ? 100 : c.well)} / 100</span></div>
+        {/* 出城（core/demaru.js）と付城（core/tsukejiro.js） */}
+        {c.出城 && <div className="row"><span>出城</span><span className="v">大手の前に構える</span></div>}
+        {((sg.付城 || 0) > 0 || (sg.付城普請 || 0) > 0) && (
+          <div className="row"><span>付城</span><span className="v">{sg.付城 || 0}／{付城の限り}
+            {(sg.付城普請 || 0) > 0 ? <span style={{ color: U.dim, fontSize: 11 }}>　普請 {Math.round(sg.付城普請)}／{付城の普請高}</span> : null}</span></div>
+        )}
+        {(sg.落橋 || c.落橋) && <div className="row"><span>城の前の橋</span><span className="v">
+          {c.落橋 ? `落ちたまま（城防をあと${橋の残り(c)}上げれば架け直す）` : "落としてある"}</span></div>}
         <div style={{ fontSize: 12, color: U.dim, margin: "12px 0" }}>
           強攻を選ぶと、城とその周辺の図へ移ります。城防に応じて曲輪が二重から四重になり、
           門の前には虎口が構えています。門を破って曲輪を進み、本丸を押さえれば落城です。
@@ -2489,17 +2499,42 @@ export function SiegePanel({ g, sg, onChoose }) {
             <div style={{ fontSize: 11, color: U.dim, marginBottom: 8 }}>
               {Object.entries(SIEGE_KIT).filter(([k]) => k !== "なし").map(([k, v]) => `${k}：${v.note}`).join("　")}
             </div>
-            <div className="g3">
+            {/* 付城を築く（core/tsukejiro.js）。その月も兵糧攻めは続く */}
+            {(() => {
+              const 可 = 付城を築けるか(g, sg, a);
+              return (sg.付城 || 0) < 付城の限り ? (
+                <div style={{ fontSize: 11.5, color: U.dim, margin: "4px 0 8px", lineHeight: 1.7 }}>
+                  <b style={{ color: U.text }}>付城</b>　{sg.付城 || 0}／{付城の限り}　普請 {Math.round(sg.付城普請 || 0)}／{付城の普請高}
+                  （一度に{fmt(付城の手間(a))}貫・{付城の進み(g, a)}進む）<br />
+                  城の前に柵と井楼の砦を築く。ひとつにつき包囲率が十二上がり、城の兵糧の減りが速まる
+                  （包囲率が七十五を超えれば後詰は城へ入れない）。強攻の盤では、寄せ手は付城から寄せる。
+                  {!可.ok && 可.why ? <span style={{ color: "#B0483C" }}>　{可.why}</span> : null}
+                </div>
+              ) : null;
+            })()}
+            <div className="g2">
               <button className="btn" onClick={() => onChoose("兵糧攻め")}>兵糧攻め</button>
+              <button className="btn" disabled={(sg.付城 || 0) >= 付城の限り || !付城を築けるか(g, sg, a).ok}
+                onClick={() => onChoose("付城")}>付城を築く</button>
               <button className="btn" onClick={() => onChoose("強攻", gate && gateOK, kits)}>強攻</button>
               <button className="btn" onClick={() => onChoose("撤退")}>撤退</button>
             </div>
           </>
         ) : (
-          <div className="g2">
-            <button className="btn" onClick={() => onChoose("防衛", false, false)}>籠城して待つ</button>
-            <button className="btn" onClick={() => onChoose("防衛", false, true)}>討って出る</button>
-          </div>
+          <>
+            {!sg.落橋 && !c.落橋 && (
+              <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 6, lineHeight: 1.7 }}>
+                城の前の川に橋が架かっていれば、落としておける。寄せ手は浅瀬へ回るか、淵を押し渡るほかなくなる
+                （川の無い野では効かない。寄せ手は夜のうちに仮橋を架け直すことがある）。
+                落とした橋は戦のあとも落ちたままで、城防を上げ直すまで架からない（討って出るときもこちらの足が鈍る）。
+                <button className="btn sm" style={{ marginLeft: 6 }} onClick={() => onChoose("落橋")}>橋を落とす</button>
+              </div>
+            )}
+            <div className="g2">
+              <button className="btn" onClick={() => onChoose("防衛", false, false)}>籠城して待つ</button>
+              <button className="btn" onClick={() => onChoose("防衛", false, true)}>討って出る</button>
+            </div>
+          </>
         )}
       </div>
     </div>

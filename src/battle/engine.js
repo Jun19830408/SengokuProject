@@ -1,11 +1,11 @@
 import { battleAI } from "./ai.js";
-import { MAP, SIEGE_KIT, axisOf, buildNav, fromUV, gatePos, gateReachable, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 流れの升, 流れを作る, 回り道か, 塀のこちら, 流れの先, 列の順, 列に着く } from "./castleMap.js";
+import { MAP, SIEGE_KIT, 城の域か, axisOf, buildNav, fromUV, gatePos, gateReachable, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 流れの升, 流れを作る, 回り道か, 塀のこちら, 流れの先, 列の順, 列に着く, 門の輪, 出城が保つ, 出城の内か, 出城の退き道, 後詰の口, 盤の端まで } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads, 前列を入れ替える, 支えの向き数, 支えの幅, 空 } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
-import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地, 地の高さ } from "./field.js";
-import { clamp } from "../core/util.js";
+import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, 広げの倍, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地, 地の高さ, 仮橋を架ける } from "./field.js";
+import { clamp, fmt } from "../core/util.js";
 import { px, py } from "../data/geo.js";
-import { delegated, issueOrder, 内の門へ退く, 退き場, 退き先, 退かせる } from "./corps.js";
+import { delegated, issueOrder, 内の門へ退く, 退き場, 退き先, 退かせる, 引き取りを進める, 後詰を据える } from "./corps.js";
 
 /* 水馴れ（GDD 8.1）。
 
@@ -33,7 +33,9 @@ export function createBattle(playerCorps, enemyCorps, attackerSide) {
        野を広げたので、寄せ合うだけで刻を食うようになった。四百八十秒のままでは、
        両軍が触れる前に日が暮れる。広い野を与えておきながら、渡り切る時を
        与えないのでは、広げた意味がない。 */
-    weather, dusk: Math.round(480 * clamp(Math.pow(FIELD.w / 1080, 0.62), 1, 3.2)),
+    /* 盤を広げたときは（field.js 尺を据える）、尺は広げる前の幅で据えてあり、
+       道のりだけが延びる。日没も、延びた道のりのぶん遅らせる（広げの倍） */
+    weather, dusk: Math.round(480 * clamp(Math.pow(fieldScale(), 0.62), 1, 3.2) * 広げの倍()),
     retreat: null, orderly: false, fx: [],
   };
   for (const c of b.corps) { placeSquads(c, true); c.lastSeen = { x: c.x, y: c.y, t: 0 }; }
@@ -132,6 +134,11 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
   fCorps.損 = (fCorps.損 || 0) + lost;
   if (byCorps) byCorps.功 = (byCorps.功 || 0) + lost;
 }
+
+/* 城の内か（GDD 9.3）。城攻めの広い盤では、城山の内だけが城の盤の理で動き、
+   外は野戦と同じ理で動く（押し合いの届き・塊の重なり・渡り場の混み・淵の前の迷い）。
+   狭い盤なら城の盤じゅうが城の内、野戦なら常に外である。 */
+const 城内 = (x, y) => !!MAP && 城の域か(x, y);
 
 /* 隊の流れ（城の盤。castleMap.js 将への流れ）。将が別の升目へ移るか、
    通れる所が変われば（門が破れて道さがしの格子が作り直されれば）作り直す。 */
@@ -301,6 +308,224 @@ export function 放った跡(b, 型, x, y, x2, y2) {
   }
 }
 
+/* ============================================ 数日がかりの城攻め（GDD 9.3）
+
+   城攻めは一日では終わらない。日が暮れれば両軍とも兵を引き、夜を明かして、
+   翌朝また攻める。一度の城攻め（地図の一月の強攻）は三日までとし、それで落ちねば
+   囲みへ戻る。
+
+   夜のうちに起きること。
+     ・両軍とも士気が戻り（八十へ向けて半ば）、疲れが抜け（七割）、乱れた隊列は整う。
+       崩れて逃げた隊も夜のうちに立て直す（盤を去った隊は戻らない）
+     ・寄せ手は、塀の外にいる隊を矢の届かぬ所まで退いて陣を敷き直す。破った門の
+       内に入った隊は、取った所をそのまま押さえる
+     ・城方は持ち場の門へ戻り、破れていない門を一割ほど、櫓を一分ほど繕う
+     ・兵糧を一日ぶん食う（地図の月の扶持の三十分の一。b.兵糧）
+   寄せ手が遊ぶ側なら、夜の段で「夜を明かす」か「陣を払う」かを選ぶ（BattleScreen）。
+   采配の寄せ手は、兵が初めの三割五分を切るか、士気が三十を切るか、兵糧が一日に
+   満たなければ陣を払う（寄せ手の夜の思案）。 */
+export const 城攻めの日数 = 3;
+export const 刻の名 = ["卯", "辰", "巳", "午", "未", "申", "酉"];
+export const 日の名 = (n) => `${["一", "二", "三", "四", "五", "六", "七"][Math.max(1, n) - 1] || n}日目`;
+/* 今の刻（卯の刻＝六時に夜が明け、酉の刻＝十八時に日が暮れる） */
+export function 今の刻(b) {
+  const 始 = b.日の始め || 0, 長 = Math.max(1, (b.dusk || 1) - 始);
+  const 時 = 6 + 12 * clamp((b.t - 始) / 長, 0, 1);
+  return 刻の名[clamp(Math.floor((時 - 5) / 2), 0, 6)];
+}
+/* 兵糧の残りの日数（側は "寄せ手" か "城方"） */
+export function 兵糧の日(b, 側) {
+  const f = b.兵糧 && b.兵糧[側];
+  if (!f) return null;
+  return Math.max(0, Math.floor((f.石 - f.食った) / Math.max(1, f.日に)));
+}
+export function 寄せ手の夜の思案(b) {
+  const 寄 = b.corps.filter((c) => c.side === b.attacker && !c.dead && !c.destroyed && !c.withdraw);
+  const 兵 = 寄.reduce((a, c) => a + corpsMen(c), 0);
+  const 初 = (b.initial && b.initial[b.attacker]) || 兵 || 1;
+  const 気 = 寄.length ? 寄.reduce((a, c) => a + c.morale, 0) / 寄.length : 0;
+  const 糧 = 兵糧の日(b, "寄せ手");
+  return 兵 < 初 * 0.35 || 気 < 30 || (糧 != null && 糧 < 1) ? "退く" : "続ける";
+}
+export function 陣を払う(b) {
+  if (b.phase !== "night") return;
+  b.phase = "over"; b.orderly = true;
+  b.result = b.attacker === "P" ? "E" : "P";
+  b.夜 = null;
+  b.log.push({ t: b.t, text: "寄せ手は夜のうちに陣を払い、囲みへ戻った。城は落ちなかった。" });
+}
+/* ------------------------------------------------ 囲みの輪（GDD 9.4）
+
+   遊ぶ側の申し出は「イ（後詰）とハ（囲みの輪）は入れたい」であった。囲師必闕――
+   城を囲むなら一方を空けておけ、と孫子は言う。四方を塞がれた城兵は逃げ場がなく、
+   死兵となって最後まで戦う。一方が空いていれば、気の尽きた者はそこから落ち延び、
+   城は早く落ちる（ただし将は逃れる）。
+
+     測り方 … 城の芯から見て北・東・南・西の四方に、寄せ手の隊（二百人より多い）が
+              いるかどうか。広い盤では城山の半径の一.三五倍の内だけを数える
+     四方   … 城が傾けば（城の傾き三割より上）城兵は死兵となる。士気は三十より下がらず、
+              兵が尽きかけるまで崩れず、斬り合いの力が一割増す
+     一方でも空けば … 崩れて士気が二十五を切った城兵は、空いた方へ落ち延びる
+              （十秒ほど走ったのち盤を去る。戦のあとで将は同じ家の城へ移る） */
+export const 囲みの方ら = [["北", -Math.PI / 2], ["東", 0], ["南", Math.PI / 2], ["西", Math.PI]];
+export function 囲みを測る(b, atkC) {
+  const m = MAP, R = m.域 ? m.域.r * 1.35 : Infinity;
+  const 押さえ = new Set();
+  for (const c of atkC) {
+    if (corpsMen(c) < 200) continue;
+    const x = c.mx == null ? c.x : c.mx, y = c.my == null ? c.y : c.my;
+    if (Math.hypot(x - m.cx, y - m.cy) > R) continue;
+    const a = Math.atan2(y - m.cy, x - m.cx);
+    for (const [名, 角] of 囲みの方ら) {
+      if (Math.abs(((a - 角 + Math.PI * 3) % (Math.PI * 2)) - Math.PI) <= Math.PI / 4) 押さえ.add(名);
+    }
+  }
+  const 空き = 囲みの方ら.map(([名]) => 名).filter((n) => !押さえ.has(n));
+  return { 数: 4 - 空き.length, 空き, 刻: b.t + 2 };
+}
+
+/* ------------------------------------------------ 盤に現れる後詰（GDD 9.2 / 9.4）
+
+   城を救いに向かっている軍のうち、ひと月の道のりの内にいる者は、城攻めのさなかに
+   来た方の盤の端から現れる（選び方と着く刻は core/gotsume.js、隊立ては ui/MapScreen.jsx
+   城攻めを始める）。b.後詰 に { 日, 刻（日のうちの割）, 角, 方, 側, corps } を控えておく。
+   刻は城に着く刻である。広い盤は大きく、端から城山の際まで歩けば寄せ手が野を渡るのと
+   同じだけかかる（日没の刻の決め方と同じ尺で見積もる）。端にはそのぶん早く現れる。
+   着く日の朝より前には現れない。夜のあいだも入れない（夜が明けてから現れる）。
+
+   後詰が現れたら、
+     城方の士気 … 八上がる（後詰の旗が見えた）
+     寄せ手の士気 … 五下がる（背を衝かれる）
+   後詰が城に迫ったら（城山の際の一.四倍の内に入るか、寄せ手と槍を合わせたら）、城方は
+   呼応する。六十秒のあいだ（後詰が寄せ手と槍を合わせているあいだは延びる）、采配の城方は
+   門から三百歩の内の寄せ手へ門を開いて打って出る（ai.js 呼応の的）。
+   現れた刻に呼応させると、後詰がまだ盤の端にいるうちに城方だけが打って出て、寄せ手の
+   只中で孤立する
+   後詰の隊は城の守りの決まり（持ち場・死兵・落ち延び・内の門へ退く）に乗らず、野戦の
+   隊として寄せ手に当たる。崩れれば来た方の盤の端へ退く（corps.js 退き先）。 */
+/* 盤の端から城山の際まで歩く刻（秒）。日没の刻の決め方（寄せ手が南の端から寄せる道のり）と同じ尺 */
+export function 後詰の道の刻(m, 角) {
+  const 道 = Math.max(0, 盤の端まで(m, 角) - (m.域 ? m.域.r : 0));
+  return 道 / (34 * fieldScale()) * 2.2;
+}
+
+export function 後詰を入れる(b) {
+  if (!MAP || !b.後詰 || !b.後詰.length) return;
+  const 始 = b.日の始め || 0, 長 = Math.max(1, (b.dusk || 1) - 始);
+  const 割 = (b.t - 始) / 長, 日 = b.日 || 1;
+  for (const r of b.後詰) {
+    if (r.入った) { 後詰に呼応する(b, r); continue; }
+    const 出る割 = r.刻 - 後詰の道の刻(MAP, r.角) / 長;    // 城に着く刻から、道のりのぶん早く現れる
+    if (日 < r.日 || (日 === r.日 && 割 < 出る割)) continue;
+    r.入った = true; r.入った刻 = b.t; r.入った日 = 日;
+    const 敵ら = b.corps.filter((o) => !o.dead && !o.destroyed && o.side !== r.側);
+    let 兵 = 0;
+    r.corps.forEach((c, i) => {
+      const p = 後詰の口(MAP, r.角, i, r.corps.length, 敵ら);
+      後詰を据える(c, p);
+      c.後詰.口 = { x: p.x, y: p.y };
+      c.lastSeen = { x: c.x, y: c.y, t: b.t };
+      b.corps.push(c);
+      兵 += corpsMen(c);
+    });
+    b.initial = b.initial || {};
+    b.initial[r.側] = (b.initial[r.側] || 0) + 兵;
+    for (const c of b.corps) {
+      if (c.dead || c.destroyed || c.後詰) continue;
+      if (c.side === r.側) c.morale = Math.min(100, c.morale + 8);
+      else c.morale = Math.max(0, c.morale - 5);
+    }
+    notify(b, `後詰が来た。${r.家}の${r.将}が${r.方}から現れた（${fmt(兵)}人）。`, r.側 === "P" ? "good" : "bad");   // 報せは戦の記にも残る
+  }
+}
+/* 後詰が城に迫ったら、城方は呼応して打って出る構えを取る（上の 後詰を入れる）。一度きり。
+   実際に門を開くかは隊ごとに采配が決め（ai.js 呼応の的）、出た隊はその旨を記に残す。
+   報せは「構え」までにとどめる――手近に当たれる寄せ手がいなければ、誰も出ないことがある */
+function 後詰に呼応する(b, r) {
+  if (r.呼応した) {
+    /* 後詰が寄せ手と槍を合わせているあいだは、呼応の刻を延ばす。迫った刻から六十秒で切ると、
+       後詰が城山の際を回って寄せ手に当たるころには呼応が尽きていた（吉田郡山城で、迫って
+       九十六秒後に槍を合わせた） */
+    if (b.呼応 && b.呼応.側 === r.側
+      && r.corps.some((c) => !c.dead && !c.destroyed && !c.routed && c.squads.some((q) => q.engaged))) {
+      b.呼応.まで = Math.max(b.呼応.まで, b.t + 15);
+    }
+    return;
+  }
+  const R = MAP.域 ? MAP.域.r * 1.4 : Infinity;
+  const 迫った = r.corps.some((c) => !c.dead && !c.destroyed && !c.routed
+    && (Math.hypot(c.x - MAP.cx, c.y - MAP.cy) < R || c.squads.some((q) => q.engaged)));
+  if (!迫った) return;
+  r.呼応した = true;
+  b.呼応 = { まで: b.t + 60, 側: r.側 };
+  notify(b, `${r.家}の後詰が城に迫った。城方は呼応して打って出る構えを取る。`, r.側 === "P" ? "good" : "bad");
+}
+
+export function 夜を明かす(b) {
+  if (b.phase !== "night" || !MAP) return;
+  const m = MAP, o = m.layers[0];
+  if (b.兵糧) for (const 側 of ["寄せ手", "城方"]) if (b.兵糧[側]) b.兵糧[側].食った += b.兵糧[側].日に;
+  /* 塀の外から、外郭の塀までの隔たり（外が正） */
+  const 塀まで = (x, y) => {
+    const dx = Math.abs(x - m.cx - (o.ox || 0)) - o.hw, dy = Math.abs(y - m.cy - (o.oy || 0)) - o.hh;
+    return Math.max(dx, dy);
+  };
+  /* 保っている出城の塀までの隔たり（外が正）。出城の矢倉と狭間も、夜は寄せ手を退かせる */
+  const 出 = 出城が保つ(m) ? m.出城 : null;
+  const 出城まで = (x, y) => (出
+    ? Math.max(Math.abs(x - m.cx - 出.ox) - 出.hw, Math.abs(y - m.cy - 出.oy) - 出.hh) : Infinity);
+  const 引く間 = 190 * fieldScale() + 160;              // 弓の届き（百九十歩×尺）の外
+  for (const c of b.corps) {
+    if (c.dead || c.destroyed || c.withdraw || c.潰) continue;
+    c.x = clamp(c.x, 60, FIELD.w - 60); c.y = clamp(c.y, 60, FIELD.h - 60);   // 逃げて盤の縁を越えかけた隊も、盤の内で夜を明かす
+    if (c.morale < 80) c.morale += (80 - c.morale) * 0.5;
+    c.fatigue = (c.fatigue || 0) * 0.3;
+    c.routed = false; c.chargeT = 0; c.chasing = false; c.sallied = false; c.pinned = false;
+    c.order = "待機"; c.wp = null; c.狙い = null; c.接敵 = null;
+    for (const q of c.squads || []) { q.engaged = false; q.target = null; q.foe = null; q.cohesion = Math.max(q.cohesion || 0, 72); }
+    if (c.side === b.attacker) {
+      /* 城の中ほどから外へ、塀から引く間の所まで退く（通れぬなら少しずつ外へ）。
+         出城が保っていれば、出城の塀からも引く間だけ離れる（城から遠ざかる向きへ） */
+      const 離れ = (x, y) => Math.min(塀まで(x, y), 出城まで(x, y));
+      const d = 離れ(c.x, c.y);
+      if (d > 0 && d < 引く間) {
+        const ax = c.x - m.cx, ay = c.y - m.cy, al = Math.hypot(ax, ay) || 1;
+        for (let 足 = 引く間 - d; 足 < 引く間 * (出 ? 4 : 3); 足 += 40) {
+          const nx = c.x + (ax / al) * 足, ny = c.y + (ay / al) * 足;
+          if (nx > 40 && ny > 40 && nx < FIELD.w - 40 && ny < FIELD.h - 40 && passable(nx, ny) && terrainAt(nx, ny) !== "deep"
+            && (!出 || 離れ(nx, ny) >= 引く間 - 1)) {
+            c.x = nx; c.y = ny; break;
+          }
+        }
+      }
+      c.gate = null; c.出城攻め = false;
+    } else if (c.holdGate && !c.holdGate.broken && !(c.holdGate.出城 && !出)) {
+      const l = 門の輪(m, c.holdGate), a = axisOf(l, c.holdGate);
+      const p = fromUV(m, a, c.holdGate.off, a.half - (c.holdGate.出城 ? 30 : 14));
+      c.x = p.x; c.y = p.y; c.持ち場に着いた = true;
+    }
+    c.tx = c.x; c.ty = c.y;
+    placeSquads(c, true);
+  }
+  for (const g of [...m.gates, ...(出 ? 出.gates : [])]) {
+    g.slot = null; g.hold = null;
+    if (!g.broken) g.hp = Math.min(g.max, g.hp + g.max * 0.1);
+  }
+  for (const f of m.fac) if (f.hp > 0) f.hp = Math.min(f.max, f.hp + f.max * 0.01 * 5);
+  /* 落とされた橋は、寄せ手が夜のうちに仮橋を架け直す（field.js 仮橋を架ける）。
+     野の絵は画面が焼き直す（BattleScreen の 夜を明かして焼く） */
+  if (仮橋を架ける()) {
+    b.野を焼き直す = true;
+    b.log.push({ t: b.t, text: "寄せ手は夜のうちに、落ちた橋に仮橋を架けた。" });
+  }
+  m.nav = null; b.mapDirty = true;
+  b.日 = (b.日 || 1) + 1;
+  b.日の始め = b.t;
+  b.dusk = b.t + (b.日の長さ || b.dusk);
+  b.phase = "fight"; b.夜 = null;
+  b.log.push({ t: b.t, text: `${日の名(b.日)}の朝。城方は夜のうちに門を繕った。寄せ手は陣を敷き直して、また寄せる。` });
+}
+
 export function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   b.t += dt; b.aiClock -= dt;
@@ -309,6 +534,7 @@ export function stepBattle(b, dt) {
     c.pending.t -= dt;
     if (c.pending.t <= 0) { Object.assign(c, c.pending.patch); c.pending = null; }
   }
+  if (b.後詰) 後詰を入れる(b);                // 刻の来た後詰を盤に入れる（上の 後詰を入れる）
   if (b.fx.length) {
     for (const f of b.fx) f.t += dt;
     b.fx = b.fx.filter((f) => f.t < f.life);
@@ -390,7 +616,7 @@ export function stepBattle(b, dt) {
   for (const c of alive) {
     c.接敵 = null;
     c.敵向 = null;
-    if (MAP || !塊として立つ(c)) continue;
+    if (城内(c.x, c.y) || !塊として立つ(c)) continue;
     let 近 = 1e9, 敵近 = 1e9;
     for (const o of alive) {
       if (o.side === c.side || !塊として立つ(o)) continue;
@@ -521,7 +747,7 @@ export function stepBattle(b, dt) {
         /* 縄は野の話である。城内では隊の居場所は門で決まっており（持ち場に
            据えられる）、代表点を兵の重心へ引けば持ち場から外れる。実際、
            外の門が残っているのに城方が本丸の門へ就き替えた。 */
-        if (!MAP && !c.routed && !c.withdraw) {
+        if (!城内(c.x, c.y) && !c.routed && !c.withdraw) {
           const 縄 = 噛んでいる ? clamp(広 * 0.38, 34, 120) : clamp(広 * 0.95, 70, 280);
           const dx2 = c.x - cx2, dy2 = c.y - cy2, dd = Math.hypot(dx2, dy2);
           if (dd > 縄) {
@@ -569,7 +795,7 @@ export function stepBattle(b, dt) {
        行き先に着いて留まっている隊は、よほど重なっていない限り押されない。避けるのは
        通りかかる側の務めであって、陣を敷いている側ではない。城内は狭いので、
        押し合いの届きも野より短く取る。 */
-    const 届き = MAP ? 96 : 150;
+    const 届き = 城内(c.x, c.y) ? 96 : 150;
     const 停まっている = Math.hypot(c.tx - c.x, c.ty - c.y) <= 6;
     let sx = 0, sy = 0;
     for (const o of mates) {
@@ -581,10 +807,11 @@ export function stepBattle(b, dt) {
     // 隊どうしが押し合う力。これも城壁を越えてはならない。
     if (c.pinned) continue;              // 門に取り付いた隊は動かない
     // 押し合いの力が行軍の足より強いと、隣の隊に阻まれて一歩も進めなくなる。
-    const cap = MAP ? 12 : 40;
+    const 城の中 = 城内(c.x, c.y);
+    const cap = 城の中 ? 12 : 40;
     const 踏 = 踏ん張る ? 0.16 : 1;
-    let px = clamp(sx * (MAP ? 0.3 : 0.55), -cap, cap) * dt * 踏;
-    let py = clamp(sy * (MAP ? 0.3 : 0.55), -cap, cap) * dt * 踏;
+    let px = clamp(sx * (城の中 ? 0.3 : 0.55), -cap, cap) * dt * 踏;
+    let py = clamp(sy * (城の中 ? 0.3 : 0.55), -cap, cap) * dt * 踏;
     /* 押し合いで、行き先から遠ざかることはない（GDD 8.3）。
 
        味方に押されて後ろへ下がる隊があった。測ると、槍も合わせていない
@@ -625,7 +852,7 @@ export function stepBattle(b, dt) {
       }
     }
     /* 押されて盤の外へ出ない。盤を落ちるのは崩れて逃げる隊だけである。 */
-    if (!MAP && !c.routed && !c.withdraw) {
+    if ((!MAP || MAP.域) && !c.routed && !c.withdraw) {
       c.x = clamp(c.x, 30, FIELD.w - 30);
       c.y = clamp(c.y, 30, FIELD.h - 30);
     }
@@ -645,14 +872,14 @@ export function stepBattle(b, dt) {
      あとは押し合いになる――押し勝つ側がじりじりと地を得て、負ける側が
      譲る。ここではその「重なりを解く」ことだけを行う。勝敗はいつもどおり
      兵と士気が決める。 */
-  if (!MAP) {
+  if (!MAP || MAP.域) {
     const 寄せ戻し = 0.6;                    // 重なりは一刻で六割ほど解く（残りは次の刻へ）
     for (let i = 0; i < alive.length; i++) {
       const c = alive[i];
-      if (!塊として立つ(c)) continue;
+      if (!塊として立つ(c) || 城内(c.x, c.y)) continue;
       for (let j = i + 1; j < alive.length; j++) {
         const o = alive[j];
-        if (o.side === c.side || !塊として立つ(o)) continue;
+        if (o.side === c.side || !塊として立つ(o) || 城内(o.x, o.y)) continue;
         const dx = o.x - c.x, dy = o.y - c.y;
         let d = Math.hypot(dx, dy);
         if (d > 460) continue;
@@ -741,6 +968,8 @@ export function stepBattle(b, dt) {
         if (passable(nx, ny)) { c.x = nx; c.y = ny; break; }
       }
     }
+    /* 出城から城へ引き取る道（corps.js 引き取りを進める）。崩れた隊は下の崩れの段が進める */
+    if (MAP && c.引き取り && !c.routed) 引き取りを進める(b, c);
     const HOLD = c.order === "待機" || c.order === "守備" || c.order === "転回";
     // 城内では道順を順に辿る。行き詰まったら次の地点へ進む。
     if (c.wp && c.wp.length && !HOLD) {
@@ -783,7 +1012,7 @@ export function stepBattle(b, dt) {
        ただで下がれはしない――後ろ歩きの足は六割で、疲れも常のとおり積もる。
        追う側は必ず追いつける。槍を合わせてしまえば、もう下がれない。 */
     c.後退中 = false;
-    if (!MAP && c.order === "射撃" && !c.routed && !c.withdraw
+    if (!城内(c.x, c.y) && c.order === "射撃" && !c.routed && !c.withdraw
       && !c.squads.some((q) => q.engaged)) {
       /* 隊の届き。いちばん遠くまで届く得物に合わせる */
       let 届 = 0;
@@ -885,7 +1114,7 @@ export function stepBattle(b, dt) {
 
          自分より先に渡っている味方の数だけ足を落とす。押し合いへし合いである。 */
       let 混み = 1;
-      if (!MAP && (c.地 === "bridge" || c.地 === "ford") && dist > 6) {
+      if (!城内(c.x, c.y) && (c.地 === "bridge" || c.地 === "ford") && dist > 6) {
         let 前 = 0;
         for (const o of alive) {
           if (o === c || o.side !== c.side || o.地 !== c.地) continue;
@@ -895,7 +1124,7 @@ export function stepBattle(b, dt) {
         if (前) 混み = Math.max(0.3, 1 - 前 * 0.3);
       }
       let 寄せ道 = 1;
-      if (MAP && c.side === b.attacker && !engaged && !c.withdraw && !c.routed) {
+      if (城内(c.x, c.y) && c.side === b.attacker && !engaged && !c.withdraw && !c.routed) {
         const o = MAP.layers[0];
         const 外 = !inLayer(MAP, o, c.x, c.y, MAP.t + o.masu + MAP.t + 8);
         if (外) 寄せ道 = 0.6;
@@ -951,7 +1180,7 @@ export function stepBattle(b, dt) {
         c.睨み = (c.睨み || 0) + dt;
       } else c.睨み = 0;
       const 触れた敵 = (c.睨み || 0) > 6 ? null : c.接敵;
-      if (!MAP && 触れた敵) {
+      if (!城内(c.x, c.y) && 触れた敵) {
         for (const o of alive) {
           if (o.side === c.side || !塊として立つ(o)) continue;
           const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
@@ -989,7 +1218,7 @@ export function stepBattle(b, dt) {
 
          懐へ入るのも、睨みを解くのも、触れ隙の一.五倍までである。そこから先は、
          どんな理由があろうと塊は塊を通り抜けない。 */
-      if (!MAP) {
+      if (!城内(c.x, c.y)) {
         for (const o of alive) {
           if (o.side === c.side || !塊として立つ(o)) continue;
           const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
@@ -1038,7 +1267,7 @@ export function stepBattle(b, dt) {
          委ねたか否かは、腹の決め方とは関わりがない。足が出ぬまま時が過ぎたなら、
          渡るか退くかを決めねばならぬ――それはどの隊にも等しく要ることである。
          待つ長さは知略で変わるので、渡り場を探せる将ほど遅く決める。 */
-      if (!MAP && !進めた && !c.押し渡る && terrainAt(元x + mvx, 元y + mvy) === "deep") {
+      if (!城内(c.x, c.y) && !進めた && !c.押し渡る && terrainAt(元x + mvx, 元y + mvy) === "deep") {
         c.水際 = (c.水際 || 0) + dt;
         /* 待つ長さは知略で変わる。ものを知らぬ将ほど早く焦れて水へ入る、のではない。
            逆である――渡り場を探して回るだけの才があるかどうかで、腹を決めるまでの
@@ -1285,7 +1514,7 @@ export function stepBattle(b, dt) {
       const 噛み中 = q.engaged || (b.t - (q.噛み刻 == null ? -99 : q.噛み刻) < 1.2);
       /* 足踏みしない幅。城内は隊も組も密なので広く取る（門前の震えはここが効く）。
          野では組がぴたりと寄るほうがよく、狭く取る。 */
-      const 止まる幅 = MAP ? 5 : 2;
+      const 止まる幅 = 城内(c.x, c.y) ? 5 : 2;
       /* 噛み合っている組も、持ち場から大きく離れたら戻る（GDD 8.3）。
 
          もとは「噛み合ったら持ち場へ戻らない」と決めていた。噛み合いは一瞬ごとに
@@ -1414,18 +1643,29 @@ export function stepBattle(b, dt) {
       c.mx = n2 ? sx / n2 : c.x; c.my = n2 ? sy / n2 : c.y;
     }
     const atkC = alive.filter((c) => c.side === b.attacker && !c.routed && !c.withdraw);
-    const defC = alive.filter((c) => c.side !== b.attacker && !c.routed);
+    /* 城方の束には、盤の外から来た後詰を入れない（城の内の士気・門の支え・狭間は城兵だけのこと） */
+    const defC = alive.filter((c) => c.side !== b.attacker && !c.routed && !c.後詰);
     const attached = new Set();
-    for (const l of MAP.layers) for (const g of l.gates) {
+    /* 囲みの輪（上の 囲みを測る）。二秒ごとに測り直す。四方を囲み、城が傾けば死兵となる */
+    if (!b.囲み || b.t >= (b.囲み.刻 || 0)) b.囲み = 囲みを測る(b, atkC);
+    if (!b.死兵 && b.囲み.数 >= 4 && (b.press || 0) >= 0.3) {
+      b.死兵 = true;
+      notify(b, "四方を囲まれ、逃げ場を失った城兵は死兵となった。最後の一兵まで戦う構えである。", b.attacker === "P" ? "bad" : "good");
+    }
+    /* 門の押し合い。層の門に、保っている出城の門を加える（castleMap.js 出城を組む） */
+    const 門の組 = [];
+    for (const l of MAP.layers) for (const g of l.gates) 門の組.push([l, g]);
+    if (出城が保つ(MAP)) for (const g of MAP.出城.gates) 門の組.push([MAP.出城, g]);
+    for (const [l, g] of 門の組) {
       if (g.broken) { g.slot = null; g.hold = null; g.def = 0; continue; }
       const gp = gatePos(MAP, l, g);
-      const R = 104 * (FIELD.w / BASE.w);
+      const R = 104 * fieldScale();
       const near = atkC.filter((c) => (c.gate === g || !c.gate)
         && Math.hypot((c.mx == null ? c.x : c.mx) - gp.x, (c.my == null ? c.y : c.my) - gp.y) < R);
       // 内側で門を支える城方の兵。多いほど門は破れない。
       const a2 = axisOf(l, g);
-      const ins = fromUV(MAP, a2, g.off, a2.half - 52 * (FIELD.w / BASE.w));
-      g.def = defC.filter((c) => Math.hypot((c.mx == null ? c.x : c.mx) - ins.x, (c.my == null ? c.y : c.my) - ins.y) < 120 * (FIELD.w / BASE.w))
+      const ins = fromUV(MAP, a2, g.off, a2.half - 52 * fieldScale());
+      g.def = defC.filter((c) => Math.hypot((c.mx == null ? c.x : c.mx) - ins.x, (c.my == null ? c.y : c.my) - ins.y) < 120 * fieldScale())
         .reduce((t2, c) => t2 + corpsMen(c), 0);
       if (!near.length) { g.slot = null; g.hold = null; continue; }
       if (!g.slot || !near.some((c) => c.id === g.slot)) {
@@ -1476,7 +1716,7 @@ export function stepBattle(b, dt) {
         c.gate待ち = i + 1;                       // 何番目に控えているか（帳に出す）
         c.pinned = false;
         if (控まで > 46) {
-          if (g.layer === 0 || 見通せる(c.x, c.y, 控.x, 控.y)) {   // 外の門は堀の外へまっすぐ引く（これまでどおり）
+          if (g.layer <= 0 || 見通せる(c.x, c.y, 控.x, 控.y)) {   // 外の門（出城の門も）は堀の外へまっすぐ引く（これまでどおり）
             if (門まで < R * 1.6 || !c.wp || !c.wp.length) {
               // 門前に重なっているか、道順を持たぬ隊は、控え口へ引く
               c.wp = null; c.tx = 控.x; c.ty = 控.y; c.控の的 = null;
@@ -1499,7 +1739,9 @@ export function stepBattle(b, dt) {
       // 破れる手応えが士気を支える。ただし〇.四では、門を押すだけで士気が
       // 満ちきってしまい、寄せ手が終始百のまま崩れなくなる。
       holder.morale = Math.min(100, holder.morale + 0.16 * dt);
-      const men = corpsMen(holder);
+      /* 出城の門の前は狭い土橋である。門を押せるのは七百人まで、残りは空堀に溢れて
+         狭間と矢倉に射られる（大坂冬の陣の真田丸の前で、寄せ手はこうして討たれた） */
+      const men = g.出城 ? Math.min(corpsMen(holder), 700) : corpsMen(holder);
       const eff = 1 - (holder.gateFat / 100) * 0.66;
       // 内から支える兵が門を保たせる。ただし支える側も無傷では済まない。
       const push = men / (men + g.def * 1.1);
@@ -1509,9 +1751,9 @@ export function stepBattle(b, dt) {
       // これがないと、城方は門に張りつくだけで日暮れまで凌げてしまう。
       if (g.def > 0) {
         const a4 = axisOf(l, g);
-        const ins2 = fromUV(MAP, a4, g.off, a4.half - 52 * (FIELD.w / BASE.w));
+        const ins2 = fromUV(MAP, a4, g.off, a4.half - 52 * fieldScale());
         const guards = defC.filter((c2) => Math.hypot((c2.mx == null ? c2.x : c2.mx) - ins2.x,
-          (c2.my == null ? c2.y : c2.my) - ins2.y) < 120 * (FIELD.w / BASE.w));
+          (c2.my == null ? c2.y : c2.my) - ins2.y) < 120 * fieldScale());
         let hurt = men * 0.0016 * eff * dt;
         for (const c2 of guards) {
           const share = hurt / guards.length;
@@ -1552,9 +1794,11 @@ export function stepBattle(b, dt) {
         MAP.nav = null;
         b.mapDirty = true; MAP.nav = null;        // 通れる場所が変わった
         notify(b, `${g.key}が破られた。`, b.attacker === "P" ? "good" : "bad");
+        /* 出城の門は城の門ほどには響かない（出城そのものが落ちたときに、もう一度響く） */
+        const 響 = g.出城 ? 0.5 : 1;
         for (const o of alive) {
-          if (o.side !== b.attacker) o.morale -= 8;
-          else o.morale = Math.min(100, o.morale + 5);
+          if (o.side !== b.attacker) o.morale -= 8 * 響;
+          else o.morale = Math.min(100, o.morale + 5 * 響);
         }
       }
     }
@@ -1571,6 +1815,27 @@ export function stepBattle(b, dt) {
     const 開 = 本丸が開いたか(MAP);
     for (const c of atkC) {
       if (c.side === "P" && !c.auto && !c.siegeAuto) continue;
+      /* 出城に当たる隊（ai.js 出城に当てる、遊ぶ側が出城の門を破らせた隊）。出城が保つ
+         あいだは、門を破れば出城の中へ攻め入る。出城が落ちれば常の的（城の門）へ移る */
+      if (c.出城攻め) {
+        if (出城が保つ(MAP)) {
+          const 出 = MAP.出城, 門 = 出.gates[0];
+          if (門.broken) {
+            if (!出城の内か(MAP, c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my, -6)
+              && (!c.wp || !c.wp.length) && (c.出城刻 || 0) <= b.t) {
+              const wp = [...routeToCastleGate(MAP, 門, c.x, c.y), { x: MAP.cx + 出.ox, y: MAP.cy + 出.oy, r: 50 }];
+              c.gate = null; c.wp = wp; c.tx = wp[0].x; c.ty = wp[0].y; c.order = "前進"; c.stuck = 0; c.lastD = null; c.pinned = false;
+              c.出城刻 = b.t + 5;
+            }
+          } else if (c.gate !== 門) {
+            c.gate = 門; c.pinned = false;
+            const wp = routeToCastleGate(MAP, 門, c.x, c.y);
+            if (wp.length) { c.wp = wp; c.tx = wp[0].x; c.ty = wp[0].y; c.order = "前進"; c.stuck = 0; c.lastD = null; }
+          }
+          continue;
+        }
+        c.出城攻め = false; if (c.gate && c.gate.出城) c.gate = null;
+      }
       if (開) {
         if (inLayer(MAP, 本丸, c.x, c.y)) { c.本丸攻め = true; continue; }   // もう入った。あとは斬り結ぶ
         if (c.本丸攻め && ((c.wp && c.wp.length) || (c.本丸刻 || 0) > b.t)) continue;
@@ -1597,8 +1862,8 @@ export function stepBattle(b, dt) {
          列の留めと引っ張り合っていた。待っているのだから、道は要らない。 */
       if (c.gate待ち) continue;
       const gt = c.gate;
-      if (!gt || gt.broken || !gateReachable(MAP, gt)) continue;
-      const gp = gatePos(MAP, MAP.layers[gt.layer], gt);
+      if (!gt || gt.broken || !gateReachable(MAP, gt) || (gt.出城 && !出城が保つ(MAP))) continue;
+      const gp = gatePos(MAP, 門の輪(MAP, gt), gt);
       if (Math.hypot(c.x - gp.x, c.y - gp.y) < 130) continue;
       c.reroute = (c.reroute || 0) - dt;
       if (c.reroute > 0) continue;
@@ -1607,8 +1872,41 @@ export function stepBattle(b, dt) {
       if (wp.length) { c.wp = wp; c.tx = wp[0].x; c.ty = wp[0].y; c.stuck = 0; c.lastD = null; }
     }
 
+    /* 出城の勝ち鬨。出城に当たった寄せ手の隊が崩れれば、城方は勢いづく（一隊につき一度） */
+    if (出城が保つ(MAP)) {
+      for (const c of alive) {
+        if (c.side !== b.attacker || !c.出城攻め || !c.routed || c.出城で崩れた) continue;
+        c.出城で崩れた = true;
+        b.log.push({ t: b.t, text: `${MAP.出城.name}に当たった${c.gen.name}隊が崩れた。城方は勢いづく。` });
+        for (const o of defC) o.morale = Math.min(100, o.morale + 4);
+      }
+    }
+    /* 出城の落ち（GDD 9.3）。塀の内に城方が一隊も残らず、寄せ手が入ったか門が破れて
+       いれば、出城は落ちた。矢倉は焼け落ち、城方は気を落とし、寄せ手は勢いづく。
+       はじめから守り手を置かなかった出城は、捨てたものとみる（響きは無い） */
+    if (出城が保つ(MAP)) {
+      const 出 = MAP.出城;
+      const 内 = (c) => 出城の内か(MAP, c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my, 8);
+      const 守る = defC.some(内), 入った = atkC.some(内);
+      const 捨てた = !守る && !出.守られた;
+      if (守る) 出.守られた = true;
+      if (捨てた || (!守る && (入った || 出.gates.some((g) => g.broken)))) {
+        出.落ちた = true; 出.落ちた刻 = b.t; 出.捨てた = 捨てた;
+        for (const f of MAP.fac) if (f.出城 && f.hp > 0) f.hp = 0;
+        b.mapDirty = true; MAP.nav = null;
+        if (捨てた) b.log.push({ t: b.t, text: `${出.name}には守り手がいない。` });
+        else {
+          notify(b, `${出.name}が落ちた。矢倉は焼け落ちた。`, b.attacker === "P" ? "good" : "bad");
+          for (const o of alive) {
+            if (o.side !== b.attacker) o.morale -= 6;
+            else o.morale = Math.min(100, o.morale + 4);
+          }
+        }
+      }
+    }
+
     // ── 城内の施設 ──
-    const fsN = FIELD.w / BASE.w;
+    const fsN = fieldScale();
     for (const f of MAP.fac) {
       if (f.hp <= 0) continue;
       if (f.kind === "矢倉") {
@@ -1620,7 +1918,7 @@ export function stepBattle(b, dt) {
           if (tgt) {
             f.cool = 2.6;
             const kit = SIEGE_KIT[tgt.kit] || SIEGE_KIT["なし"];
-            let hit = 11 * kit.guard;
+            let hit = 11 * kit.guard * (f.出城 ? 1.5 : 1);   // 出城の矢倉は鉄砲櫓。一発が重い
             const qs = tgt.squads.filter((q) => q.men > 0)
               .sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y));
             for (const q of qs) {
@@ -1683,23 +1981,29 @@ export function stepBattle(b, dt) {
       if (c.狭間 > 0) continue;
       const 射手 = c.squads.reduce((a2, q) => (q.men > 0 && ARM_STATS[q.type].range > 0 ? a2 + q.men : a2), 0);
       if (射手 < 20) { c.狭間 = 2.6; continue; }
-      const 層 = MAP.layers[c.holdGate ? c.holdGate.layer : MAP.layers.length - 1];
+      /* 出城の守り手は出城の塀の内から射る。出城は小さいので、前と両の横腹へ射かけられる */
+      const 出城の守り = !!(c.holdGate && c.holdGate.出城 && 出城が保つ(MAP));
+      const 層 = c.holdGate && (!c.holdGate.出城 || 出城の守り) ? 門の輪(MAP, c.holdGate) : MAP.layers[MAP.layers.length - 1];
       const R = 235 * fsN;
       /* 射かけられるのは、己の受け持つ塀の外にいる敵だけである。
          曲輪をぐるりと回った向こう側、角の陰にいる敵には矢は届かない。
          すべての門に守備隊を置くようにしてから、裏の門の兵まで表の寄せ手を
          射ていた。城の四方の兵が一点へ撃ち込む勘定になり、寄せ手が異様に削れた。 */
-      const 面 = Math.atan2(c.y - MAP.cy, c.x - MAP.cx);
+      const 芯x = MAP.cx + (出城の守り ? MAP.出城.ox : 0), 芯y = MAP.cy + (出城の守り ? MAP.出城.oy : 0);
+      const 面 = Math.atan2(c.y - 芯y, c.x - 芯x);
+      const 角 = Math.PI * (出城の守り ? 0.68 : 0.42);   // 七十六度まで（出城は百二十二度）。それより向こうは角の陰
       const 角の内 = (ax, ay) => {
-        const 向 = Math.atan2(ay - MAP.cy, ax - MAP.cx);
+        const 向 = Math.atan2(ay - 芯y, ax - 芯x);
         const d = Math.abs(((向 - 面 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-        return d <= Math.PI * 0.42;                  // 七十六度まで。それより向こうは角の陰
+        return d <= 角;
       };
       const 的 = atkC
         .filter((x) => {
           const ax = x.mx == null ? x.x : x.mx, ay = x.my == null ? x.y : x.my;
           if (Math.hypot(ax - c.x, ay - c.y) > R) return false;
-          if (attached.has(x.id)) return false;      // 門に取り付いた隊は門の押し合いで削れる
+          /* 門に取り付いた隊は門の押し合いで削れる。ただし出城の門は小さく、左右の塀の
+             狭間から横ざまに射られる（出城の守り手は、取り付いた寄せ手も射る） */
+          if (attached.has(x.id) && !出城の守り) return false;
           if (!角の内(ax, ay)) return false;
           return !inLayer(MAP, 層, ax, ay);          // 曲輪の中の敵は常の戦いに任せる
         })
@@ -1708,7 +2012,12 @@ export function stepBattle(b, dt) {
       if (!的) { c.狭間 = 1.4; continue; }
       c.狭間 = 3.0;
       const kit = SIEGE_KIT[的.kit] || SIEGE_KIT["なし"];
-      let hit = 射手 * 0.0095 * kit.guard;
+      /* 出城は寄せ手を引きつけて射るための曲輪である。狭間は三方に切られ、土塁の上から
+         撃ち下ろす。城の塀の狭間の三倍の矢玉を浴びせ、空堀に落ちた寄せ手にはさらに
+         一.五倍（大坂冬の陣の真田丸。寄せ手は空堀の底から撃ち上げることもできなかった） */
+      const 空堀の底 = 出城の守り && 出城の内か(MAP, 的.mx == null ? 的.x : 的.mx, 的.my == null ? 的.y : 的.my, MAP.t + MAP.出城.堀 + 4)
+        && !出城の内か(MAP, 的.mx == null ? 的.x : 的.mx, 的.my == null ? 的.y : 的.my, MAP.t);
+      let hit = 射手 * 0.0095 * kit.guard * (出城の守り ? (空堀の底 ? 4.5 : 3) : 1);
       const qs = 的.squads.filter((q) => q.men > 0)
         .sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y));
       for (const q of qs) {
@@ -1747,6 +2056,7 @@ export function stepBattle(b, dt) {
     for (const c of defC) {
       if (c.morale > cap) c.morale = Math.max(cap, c.morale - 1.6 * dt);
       if (inL(MAP.layers.length - 1)) c.morale = Math.max(0, c.morale - 1.4 * dt);
+      if (b.死兵) c.morale = Math.max(c.morale, 30);   // 死兵は士気では崩れない（上の 囲みを測る）
     }
   }
 
@@ -1772,9 +2082,17 @@ export function stepBattle(b, dt) {
     }
   }
   // 城攻めでは、壁や閉じた門を隔てた相手とは戦えない
+  /* 出城のまわり（塀と空堀の帯）。出城の塀は十歩しかないので、目と鼻の先でも塀を隔てている
+     ことがある。ここだけは近くても塀の真ん中を確かめる（城の塀は持ち場が塀から離れている） */
+  const 出城際 = MAP && MAP.出城 && !MAP.出城.落ちた
+    ? (x, y) => 出城の内か(MAP, x, y, MAP.t + 6) && !出城の内か(MAP, x, y, -MAP.t - 6) : null;
   const wallBetween = (x1, y1, x2, y2) => {
     if (!MAP) return false;
-    if (Math.abs(x2 - x1) + Math.abs(y2 - y1) < 22) return false;   // 目と鼻の先は調べるまでもない
+    if (Math.abs(x2 - x1) + Math.abs(y2 - y1) < 22) {                 // 目と鼻の先は調べるまでもない
+      if (!出城際 || (!出城際(x1, y1) && !出城際(x2, y2))) return false;
+      const tt = terrainAt((x1 + x2) / 2, (y1 + y2) / 2);
+      return tt === "wall" || tt === "gate" || tt === "tower";
+    }
     for (let k = 1; k <= 2; k++) {
       const t2 = k / 3;
       const tt = terrainAt(x1 + (x2 - x1) * t2, y1 + (y2 - y1) * t2);
@@ -1893,7 +2211,7 @@ export function stepBattle(b, dt) {
             const ax = ((melee.e.x - q.x) / Math.max(1, mdist)) * pull;
             const ay = ((melee.e.y - q.y) / Math.max(1, mdist)) * pull;
             // 詰め寄るときも淵は踏まない。水の中で槍を合わせに行く道理はない
-            const 寄れる = (nx, ny) => passable(nx, ny) && 淵を踏めるか(c, b, nx, ny, q.地);
+            const 寄れる = (nx, ny) => (MAP && MAP.出城 ? passableFor(c, b, nx, ny) : passable(nx, ny)) && 淵を踏めるか(c, b, nx, ny, q.地);
             if (寄れる(q.x + ax, q.y + ay)) { q.x += ax; q.y += ay; }
             else if (寄れる(q.x + ax, q.y)) q.x += ax;
             else if (寄れる(q.x, q.y + ay)) q.y += ay;
@@ -2017,10 +2335,11 @@ export function stepBattle(b, dt) {
            ai の 頂際 を見よ）。 */
         const 高差 = clamp((q.高 || 0) - (melee.e.高 || 0), -2, 2);
         const 高みの利 = 高差 >= 0 ? 1 + 高差 * 0.12 : 1 / (1 - 高差 * 0.12);
+        const 死兵の力 = b.死兵 && c.side !== b.attacker && !c.後詰 ? 1.1 : 1;   // 死兵は斬り合いの力が一割増す（城兵だけ）
         applyDamage(b, melee.f, melee.e,
           st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200)
           * terr.fight * flank * charge * push * guard * 支え * 騎 * (1 - c.fatigue / 260)
-          * 乱れ攻 * 乱れ受 * 器 * 練れ * 高みの利 * dt,
+          * 乱れ攻 * 乱れ受 * 器 * 練れ * 高みの利 * 死兵の力 * dt,
           flank, c.gen.valor * (c.chargeT > 0 ? 1.2 : 1), c, q);
       } else if (st.range > 0 && mdist < st.range && q.cool <= 0) {
         if (melee.f.seen || mdist < TERRAIN[melee.e.地 || terrainAt(melee.e.x, melee.e.y)].sight * fieldScale()) {
@@ -2041,7 +2360,11 @@ export function stepBattle(b, dt) {
           q.aim = { x: melee.e.x, y: melee.e.y, t: b.t };   // 狙っている相手
           if (c.side === "P" || c.seen) 放った跡(b, q.type, q.x, q.y, melee.e.x, melee.e.y);
           const wet = q.type === "teppo" ? WEATHER[b.weather].teppo : 1;
-          applyDamage(b, melee.f, melee.e, st.vol * wet * 初弾 * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight, 1, c.gen.valor, c, q);
+          /* 出城の土塁と板塀は、内の者を矢玉から守る（castleMap.js 出城を組む）。
+             塀の外から射かけても、狭間の陰の者には三分の一しか当たらない */
+          const 塀陰 = MAP && MAP.出城 && !MAP.出城.落ちた && 出城の内か(MAP, melee.e.x, melee.e.y)
+            && !出城の内か(MAP, q.x, q.y, 4) ? 0.34 : 1;
+          applyDamage(b, melee.f, melee.e, st.vol * wet * 初弾 * (q.men / 50) * (0.5 + q.cohesion / 150) * terr.fight * 塀陰, 1, c.gen.valor, c, q);
         }
       }
     }
@@ -2079,7 +2402,7 @@ export function stepBattle(b, dt) {
     c.噛み刻 = fighting ? (c.噛み刻 || 0) + dt : 0;
     /* 傷ついた前列を、後ろの新手と入れ替える（GDD 8.3）。
        槍を合わせているあいだ、七秒ごとに見る。 */
-    if (fighting && !MAP) {
+    if (fighting && !城内(c.x, c.y)) {
       c.入替刻 = (c.入替刻 || 0) - dt;
       if (c.入替刻 <= 0) {
         c.入替刻 = 10;
@@ -2151,7 +2474,7 @@ export function stepBattle(b, dt) {
       /* 筋書きの一戦（関ヶ原など）は、士気の落ちを緩める（GDD 8.9）。
          一回で遊びきる戦であるから、半刻で総崩れになっては筋書きが進まない。
          史実の関ヶ原も、六時間のあいだ押し合っていた。 */
-      const 早さ = b.筋書き ? 0.72 : MAP ? 0.7 : 1.2;
+      const 早さ = b.筋書き ? 0.72 : 城内(c.x, c.y) ? 0.7 : 1.2;
       const 引く = Math.min(c.士気の溜, 早さ * dt);
       c.morale -= 引く; c.士気の溜 -= 引く;
       if (c.士気の溜 < 0.01) c.士気の溜 = 0;
@@ -2216,12 +2539,12 @@ export function stepBattle(b, dt) {
       ? c.squads.reduce((a2, q) => a2 + (q.練 == null ? 70 : q.練), 0) / c.squads.length : 70;
     const 崩れ際 = clamp(0.22 - (崩れ器量 - 60) / 550 - (崩れ練 - 70) / 900, 0.11, 0.30);
     const 気の際 = clamp(15 - (崩れ器量 - 60) * 0.12, 9, 20);
-    if (!c.routed && (c.morale <= 気の際 || ratio < 崩れ際)) {
+    const 死兵 = MAP && b.死兵 && c.side !== b.attacker && !c.後詰;
+    if (!c.routed && ((!死兵 && c.morale <= 気の際) || ratio < 崩れ際 * (死兵 ? 0.5 : 1))) {
       c.routed = true; c.order = "敗走";
       c.立て直し = null; c.退き門 = null; c.崩れた刻 = b.t;
       for (const q of c.squads) { q.engaged = false; q.link = null; }   // 崩れた者は掴み合いを解いて走る
-      notify(b, `${c.gen.name}隊が崩れ、退いた。`, c.side === "P" ? "bad" : "good");
-      b.log.push({ t: b.t, text: `${c.name}隊が崩れ、戦線を離れた。` });
+      notify(b, `${c.gen.name}隊が崩れ、退いた。`, c.side === "P" ? "bad" : "good");   // notify が記録にも書く（二行にしない）
       for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 6;
     }
     /* 隊の引き際（GDD 8.7）。
@@ -2249,11 +2572,10 @@ export function stepBattle(b, dt) {
         /* 早めの引き際は、野の戦だけの話である。城に籠る側に退く先は無い――
            城が持ち場なのだから、崩れても内の曲輪へ下がるのが筋である（下の 内の門へ退く）。
            これを分けずに入れたところ、城方が二隊、城を捨てて盤の外へ歩いて出た。 */
-        || (!(MAP && c.side !== b.attacker) && 大勢 < 0.34
+        || (!(MAP && c.side !== b.attacker && !c.後詰) && 大勢 < 0.34
           && (ratio <= 0.45 || c.morale <= 28)))) {
       退かせる(b, c, true);                              // 統制のとれた退却
-      b.log.push({ t: b.t, text: `${c.name}隊は支えきれず、戦場を退いた。` });
-      notify(b, `${c.gen.name}隊が戦場を退いた。`, c.side === "P" ? "bad" : "good");
+      notify(b, `${c.gen.name}隊は支えきれず、戦場を退いた。`, c.side === "P" ? "bad" : "good");
       continue;
     }
 
@@ -2297,8 +2619,27 @@ export function stepBattle(b, dt) {
            たいてい敵の目の前である。留まった隊は追い立てられ、士気が戻るどころか
            尽きて盤を落ちた。六十五隊が崩れて、立ち直ったのは十隊しかなかった。
            崩れたら、まず走る。走った先で息をつく。 */
-        if (MAP && c.side !== b.attacker) {
-          /* 城方はひとつ内の門へ下がる（GDD 9.3）。
+        /* 囲師必闕（上の 囲みを測る）。囲みの空いた方があれば、気の尽きた城兵はそこから
+           落ち延びる。十秒ほど走ったのち、あるいは城山を出れば盤を去る */
+        if (MAP && c.side !== b.attacker && !c.後詰 && !c.落ち延び && !b.死兵 && b.囲み && b.囲み.空き.length
+          && c.morale < 25 && !c.引き取り) {
+          const 方 = 囲みの方ら.filter(([名]) => b.囲み.空き.includes(名))
+            .sort((p1, p2) => Math.hypot(c.x - MAP.cx - Math.cos(p1[1]) * 500, c.y - MAP.cy - Math.sin(p1[1]) * 500)
+              - Math.hypot(c.x - MAP.cx - Math.cos(p2[1]) * 500, c.y - MAP.cy - Math.sin(p2[1]) * 500))[0];
+          const R = MAP.域 ? MAP.域.r * 1.2 : Math.max(FIELD.w, FIELD.h);
+          c.落ち延び = { x: clamp(MAP.cx + Math.cos(方[1]) * R, 40, FIELD.w - 40), y: clamp(MAP.cy + Math.sin(方[1]) * R, 40, FIELD.h - 40),
+            方: 方[0], 刻: b.t };
+          c.sortie = true; c.holdGate = null; c.立て直し = null;
+          b.log.push({ t: b.t, text: `${c.name}隊は囲みの空いた${方[0]}から落ち延びようとしている。` });
+        }
+        if (MAP && c.落ち延び) {
+          c.tx = c.落ち延び.x; c.ty = c.落ち延び.y;
+          if (b.t - c.落ち延び.刻 > 10 || (MAP.域 && !城の域か(c.x, c.y))) {
+            c.dead = true; c.落ちた = true;
+            notify(b, `${c.gen.name}隊は囲みの空いた${c.落ち延び.方}から落ち延びた。`, c.side === "P" ? "bad" : "good");
+          }
+        } else if (MAP && c.side !== b.attacker && !c.後詰) {
+          /* 城方はひとつ内の門へ下がる（GDD 9.3）。後詰は野の隊として、来た方へ退く（下の else）。
 
              野なら敵の来ない所まで走ればよいが、城の中でそれをやると、
              壁を背にした隅で息をつくことになり、門はがら空きになる。
@@ -2307,7 +2648,14 @@ export function stepBattle(b, dt) {
 
              選び直すのは、受け持ちの門が破れたときだけ。敵が近いからと
              選び直していては、壁ごしの敵に押されて奥へ奥へと下がってしまう。 */
-          if (!c.立て直し || !c.退き門 || c.退き門.broken) {
+          /* 出城で崩れた隊は、背の口から大手門の内へ引き取る（まっすぐ走れば出城の塀に貼りつく） */
+          if (!c.引き取り && c.holdGate && c.holdGate.出城 && 出城の内か(MAP, c.x, c.y, 40)) {
+            const 道 = 出城の退き道(MAP);
+            if (道) { c.引き取り = { 道: 道.道.map((p) => ({ ...p })), 門: 道.門, 刻: b.t };
+              b.log.push({ t: b.t, text: `${c.name}隊は${MAP.出城.name}を捨て、${道.門.key}の内へ逃げ込む。` }); }
+          }
+          if (c.引き取り) { 引き取りを進める(b, c); c.立て直し = null; c.退き門 = c.holdGate; }
+          else if (!c.立て直し || !c.退き門 || c.退き門.broken) {
             const 先 = 内の門へ退く(b, c);
             if (先) {
               c.立て直し = 先.場; c.退き門 = 先.門;
@@ -2315,7 +2663,7 @@ export function stepBattle(b, dt) {
               b.log.push({ t: b.t, text: `${c.name}隊は${先.名}の内へ下がって立て直す。` });
             }
           }
-          if (c.立て直し) { c.tx = c.立て直し.x; c.ty = c.立て直し.y; }
+          if (c.立て直し && !c.引き取り) { c.tx = c.立て直し.x; c.ty = c.立て直し.y; }
         } else {
           const 迫る = (p) => alive.some((o) => o.side !== c.side && !o.routed && !o.destroyed
             && Math.hypot(o.x - p.x, o.y - p.y) < 260);
@@ -2328,13 +2676,15 @@ export function stepBattle(b, dt) {
     if (c.潰 || c.withdraw) {
       // 退く先は自陣の側。決め打ちの「南」では、自陣が北にある戦で敵陣へ歩いてしまう。
       const p2 = 退き先(b, c); c.tx = p2.x; c.ty = p2.y;
-      // 戦場の外へ落ち延びた隊は退場させる。横に抜けた場合も見落とさない。
-      if (c.y > FIELD.h + 60 || c.y < -60 || c.x > FIELD.w + 60 || c.x < -60) c.dead = true;
+      /* 戦場の外へ落ち延びた隊は退場させる。横に抜けた場合も見落とさない。
+         境は盤の縁で、画面にはその線を引いてある（draw.js 境の線を引く）。遊ぶ側の申し出は
+         「撤退した部隊が範囲線を越えたら完全撤退に」であった。もとは縁から六十歩外で
+         退場させていたので、線を越えた隊が少しのあいだ盤の外に見えていた */
+      if (c.y > FIELD.h || c.y < 0 || c.x > FIELD.w || c.x < 0) c.dead = true;
     }
     if (corpsMen(c) <= 0 && !c.destroyed) {
       c.destroyed = true; c.order = "待機";
       notify(b, `${c.gen.name}隊は壊滅した。`, c.side === "P" ? "bad" : "good");
-      b.log.push({ t: b.t, text: `${c.name}隊は壊滅した。` });
     }
   }
 
@@ -2357,8 +2707,7 @@ export function stepBattle(b, dt) {
       b.hold = (b.hold || 0) + dt;
       if (b.hold > 12) {
         b.phase = "over"; b.result = b.attacker; b.captured = true;
-        notify(b, "本丸を押さえた。城は落ちた。", b.attacker === "P" ? "good" : "bad");
-        b.log.push({ t: b.t, text: "本丸を押さえた。城は落ちた。" });
+        notify(b, "本丸を押さえた。城は落ちた。", b.attacker === "P" ? "good" : "bad");   // notify が記にも書く
         return;
       }
     } else b.hold = 0;
@@ -2379,7 +2728,7 @@ export function stepBattle(b, dt) {
      三分（百八十秒）そのどれも起こらなければ、寄せ手は攻めあぐねたのである。
      兵を退く――引き分けではなく、寄せ手の退却として裁く。日没の引き分けは、
      槍を合わせながら決着がつかなかった戦のために取っておく。 */
-  if (!b.膠着) b.膠着 = { 刻: b.t, 近: Infinity, 兵: Infinity, 見た: -9 };
+  if (!b.膠着) b.膠着 = { 刻: b.t, 近: Infinity, 兵: Infinity, 道: Infinity, 見た: -9 };
   if (b.t - b.膠着.見た >= 1) {
     b.膠着.見た = b.t;
     const 立つ = (sd) => b.corps.filter((c) => c.side === sd && !c.dead && !c.destroyed
@@ -2392,11 +2741,27 @@ export function stepBattle(b, dt) {
     }
     const 兵 = [...P立, ...E立].reduce((t, c) => t + corpsMen(c), 0);
     const 噛 = b.corps.some((c) => !c.dead && !c.destroyed && c.squads.some((q) => q.engaged));
-    if (噛 || 近 < b.膠着.近 - 40 || 兵 < b.膠着.兵 - 20 || (b.手出し || -9) > b.膠着.刻) {
+    /* 城攻めの盤では、寄せ手が道順を辿って道のりを縮めているあいだも、まだ寄せているうちに
+       数える。広い盤では、城方が落とした橋を避けて浅瀬へ回る道が、しばらく城から遠ざかる
+       向きに延びる。両軍の隔たりだけを見ていたので、浅瀬へ向かう寄せ手を三分で「攻めあぐね
+       た」と裁き、強攻を委ねると寄せ手は一人も損じぬまま囲みへ戻っていた */
+    let 道 = Infinity;
+    if (MAP) {
+      道 = 0;
+      for (const c of b.attacker === "P" ? P立 : E立) {
+        const wp = c.wp;
+        if (!wp || !wp.length) continue;
+        let d = Math.hypot(wp[0].x - c.x, wp[0].y - c.y);
+        for (let i = 0; i + 1 < wp.length; i++) d += Math.hypot(wp[i + 1].x - wp[i].x, wp[i + 1].y - wp[i].y);
+        道 += d;
+      }
+    }
+    if (噛 || 近 < b.膠着.近 - 40 || 兵 < b.膠着.兵 - 20 || 道 < b.膠着.道 - 40 || (b.手出し || -9) > b.膠着.刻) {
       b.膠着.刻 = b.t;
     }
     if (近 < b.膠着.近) b.膠着.近 = 近;
     if (兵 < b.膠着.兵) b.膠着.兵 = 兵;
+    if (道 < b.膠着.道) b.膠着.道 = 道;
   }
   if (b.t - b.膠着.刻 > 180) {
     b.phase = "over"; b.orderly = true;
@@ -2423,19 +2788,23 @@ export function stepBattle(b, dt) {
       b.result = b.attacker;
       const 文2 = MAP ? "城方は野に立つ者を失い、寄せ手が攻め口を押さえた。"
         : "立ちはだかる者は無く、寄せ手が野を押さえた。";
-      b.log.push({ t: b.t, text: 文2 });
       notify(b, 文2, b.result === "P" ? "good" : "bad");
       return;
     }
     b.result = b.attacker === "P" ? "E" : "P";
     const 文 = MAP ? "寄せ手は攻め口を開けぬまま刻を費やし、囲みへ戻った。"
       : "寄せ手は攻めあぐね、兵を退いた。";
-    b.log.push({ t: b.t, text: 文 });
     notify(b, 文, b.result === "P" ? "good" : "bad");
     return;
   }
   // 日没。攻撃側だけを一律敗北にはせず、両軍が兵を退く（GDD 8.8）
   if (b.t >= b.dusk) {
+    /* 数日がかりの城攻め（下の 夜を明かす）。日数が残っていれば夜の段へ移る */
+    if (MAP && b.日数 && (b.日 || 1) < b.日数) {
+      b.phase = "night"; b.夜 = { 日: b.日 || 1 };
+      b.log.push({ t: b.t, text: `${日の名(b.日 || 1)}の日が暮れた。両軍とも兵を引いて夜を待つ。` });
+      return;
+    }
     b.phase = "over"; b.orderly = true;
     if (MAP) {
       // 城攻めは日暮れで打ち切り。城は落ちず、寄せ手は囲みへ戻る。

@@ -1,4 +1,4 @@
-import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位, 城を明け渡す, 城を守る将, canHoldCastle, castleRankNeed, 尺を量る, 家の尺を改める, 身分を控える, RANKS } from "./rank.js";
+import { extraIncome, fiefWanted, stipendOf, 役の要る身分, 身分の位, 城を明け渡す, 城を守る将, canHoldCastle, castleRankNeed, 尺を量る, 家の尺を改める, 身分を控える, RANKS, 当主の城の主 } from "./rank.js";
 import { courtRank } from "./province.js";
 import { newRoster, rosterSum, 名簿を繕う, 組の番, 通し番号を据える } from "./roster.js";
 import { 姫を整える } from "./hime.js";
@@ -1065,6 +1065,10 @@ export function 城主の札を据える(s) {
   const 据えた = [];
   for (const c of s.castles || []) {
     if (待ち.has(c.id)) continue;
+    /* 当主の城には札を立てない。当主が陣中にあっても、城に残る者は留守を預かる城代で
+       あって城主ではない。前に立ててしまった札（当主が城を離れた月に、残る者へ立てていた）
+       も、ここで下ろす（rank.js 当主の城の主） */
+    if (当主の城の主(s, c)) { c.lordId = null; c.城代 = false; continue; }
     const 札 = c.lordId && (s.generals || []).find((x) => x.id === c.lordId
       && x.faction === c.faction && !x.captive);
     if (札) continue;

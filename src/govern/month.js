@@ -5,6 +5,9 @@ import { 城の年貢の割, 郡代を整える, 郡代を任ずる差配 } from
 import { ransomCost, takeAsPrisoner, 仕官を願えるか, 他家が召し抱える, 囚われた年 } from "../core/capture.js";
 import { 姫を整える, 姫の年送り, 姫の居場所, 使者の帰り, 姫の采配 } from "../core/hime.js";
 import { 鉄甲船の普請, 鉄甲船を造れるか } from "../core/naval.js";
+import { 出城を築けるか, 出城の普請 } from "../core/demaru.js";
+import { 橋の普請を見る } from "../core/hashi.js";
+import { 付城を築けるか, 付城の普請, 付城の手間, 付城の締め, 付城の限り } from "../core/tsukejiro.js";
 import { 鉄甲 } from "../data/ships.js";
 import { COMING_OF_AGE, bearChild, emergeGenerals, hasHouse, houseName, inheritHouse, isMainClan, is架空, lifeSpan, needsGuardian, ruinedHouse, succeed, 一族の格, 一族の枠, 子の数の限り, 生まれる目, 架空の上限, 親の } from "../core/house.js";
 import { resolveSeaBattle, seaInterception } from "../core/naval.js";
@@ -957,6 +960,14 @@ export function advanceMonth(prev, g) {
         s.chronicle.push({ y: s.year, m: s.month, text: txt });
         events.push(txt);
       }
+      /* 落ちたままの橋（core/hashi.js）。防備を上げ直した城は、橋を架け直す。
+         防備が下がっていれば、上げ直す起点も下げる */
+      for (const c of s.castles) {
+        if (!c.落橋 || !橋の普請を見る(c)) continue;
+        const txt = `${c.name}の前の川に橋を架け直した（防備が${Math.round(c.def)}まで戻った）。`;
+        s.chronicle.push({ y: s.year, m: s.month, text: txt });
+        if (c.faction === s.player) events.push(txt);
+      }
       // 一揆（GDD 12.5）。国がまとまらず民忠も低い城では、百姓が蜂起する。
       for (const c of s.castles) {
         const grip = provinceGrip(s, c.faction, c.kuni);
@@ -1139,6 +1150,14 @@ export function advanceMonth(prev, g) {
           && (bes.faction === s.player || cs.faction === s.player)) continue;
         // 試走では自家の包囲も自動で進める
         sg2.months = (sg2.months || 0) + 1;
+        /* 付城（core/tsukejiro.js）。二月囲んで落ちなければ、蓄えのある寄せ手は付城を築く。
+           賽は振らない（振れば他の出来事の目がずれる） */
+        if (sg2.months >= 2 && (sg2.付城 || 0) < 付城の限り && 付城を築けるか(s, sg2, bes).ok
+          && (s.factions[bes.faction] || {}).gold > 付城の手間(bes) * 4) {
+          const r = 付城の普請(s, sg2, bes);
+          if (r.ok && r.成) s.chronicle.push({ y: s.year, m: s.month,
+            text: `${s.factions[bes.faction].name}が${cs.name}の囲みに付城を築いた（${r.数}つ目）。` });
+        }
         // 囲みが長引けば城は痩せる。守り手が回復し続けて落ちない、という膠着を防ぐ。
         if (sg2.months >= 3) {
           cs.def = Math.max(10, cs.def - 1.5);
@@ -1164,8 +1183,8 @@ export function advanceMonth(prev, g) {
             + `（${守旗0 ? 守旗0.name : "方面軍"}の受け持ち・囲み${sg2.months}ヶ月`
             + `／城方${fmt(dMen2)}人・寄せ手${fmt(bes.men)}人）。`);
         }
-        // 兵糧を削り、頃合いを見て攻めかかる
-        cs.food = Math.max(0, cs.food - Math.round(cs.local * 0.35 + 600));
+        // 兵糧を削り、頃合いを見て攻めかかる。付城があれば兵糧の入る道が細り、減りが速い
+        cs.food = Math.max(0, cs.food - Math.round((cs.local * 0.35 + 600) * (1 + 付城の締め(sg2))));
         cs.min = Math.max(0, cs.min - 5);
         bes.food -= Math.round(bes.men * 0.09);
         if (cs.food <= 0 || cs.min < 25) {
@@ -1196,7 +1215,8 @@ export function advanceMonth(prev, g) {
         }
         // 数で押せるなら強攻する
         if (bes.men > dMen2 * 1.6 && Math.random() < 0.45) {
-          const aL = Math.round(bes.men * 0.14), dL = Math.round(dMen2 * 0.4);
+          /* 出城（core/demaru.js）のある城へ攻めかかれば、寄せ手は出城の横矢を浴びる */
+          const aL = Math.round(bes.men * 0.14 * (cs.出城 ? 1.3 : 1)), dL = Math.round(dMen2 * 0.4 * (cs.出城 ? 0.8 : 1));
           軍の損を分ける(s, bes, aL);
           cs.local = Math.max(0, cs.local - dL);
           const 文 = `${s.factions[bes.faction].name}が${cs.name}へ攻めかかった`
@@ -1232,7 +1252,9 @@ export function advanceMonth(prev, g) {
         const cs = s.castles.find((x) => x.id === sg2.castleId);
         const bes = s.armies.find((x) => x.id === sg2.armyId);
         if (!cs || !bes || sg2.relief) continue;
-        const enc = (sg2.enc == null ? 60 : sg2.enc) / 100;
+        /* 包囲率。遊ぶ側の囲みは月の決めで測ってある（付城の締めも入る）。
+           采配同士の囲みは六十とみて、付城の締めを足す */
+        const enc = (sg2.enc == null ? 60 + 付城の締め(sg2) * 100 : sg2.enc) / 100;
         if (enc > 0.75) continue;                       // 固く囲まれていれば入れない
         if (Math.random() > 0.55 * (1 - enc)) continue;
         const from = s.castles.filter((c2) => c2.faction === cs.faction && c2.id !== cs.id)
@@ -1397,6 +1419,22 @@ export function advanceMonth(prev, g) {
             if (r.ok && r.成) {
               s.chronicle.push({ y: s.year, m: s.month,
                 text: `${湊城.name}で${fa.name}が鉄甲船を一艘仕立てた（${r.数}艘目）。` });
+            }
+          }
+        }
+        /* 出城の普請（core/demaru.js）。蓄えの厚い家は、本拠の大手の前に出城を築く。
+           賽は振らない（鉄甲船と同じ理由）。防備の低い本拠（五十五より下）には築かない
+           ――守りの薄い城の前に出城を張り出しても、先に本の城が落ちる */
+        if (fa.gold > 3200) {
+          const 当主 = s.generals.find((q) => q.faction === fid && q.lord && !q.captive);
+          const 本拠 = 当主 && s.castles.find((c2) => c2.id === 当主.at && c2.faction === fid);
+          if (本拠 && !本拠.出城 && 本拠.def >= 55 && 出城を築けるか(s, 本拠).ok) {
+            const 匠 = s.generals.filter((q) => q.at === 本拠.id && q.faction === fid && !q.captive)
+              .sort((a, b) => b.gov - a.gov)[0];
+            const r = 出城の普請(s, 本拠, 匠);
+            if (r.ok && r.成) {
+              s.chronicle.push({ y: s.year, m: s.month,
+                text: `${fa.name}が${本拠.name}の大手の前に出城を築いた。` });
             }
           }
         }

@@ -46,6 +46,20 @@ function 野() {
   種 = 0x84;
   H.setFieldSeed('heika', 'x'); H.setFieldKind('街道'); H.setBattleMap(null);
   H.layoutField(4000, 2);
+  /* 試験の場（盤の真ん中から七百歩の内に掛かる地物）を除いて、平らな野にする。ここで
+     測るのは兵科の理であって、地の効きではない。
+     野戦の地物を盤の元の幅の尺で据え直したところ（field.js 尺の幅）、乱数の引き方が
+     変わって、盤の真ん中（槍隊の立つ所）に湿地が来た。湿地では騎馬が駆けられず
+     （駆けなし・馬の足〇.四五）、「横へ回れば衾は効かず」の横の当たりが弱まって背いた。
+     もとの盤でも、正面から寄る騎馬の道に林が掛かっていた。種を選び直して平らな所を
+     探すのではなく、場から地物を除く（地の判じは並びをその場で引くので、除けば効く。
+     道さがしは采配が使うが、この試験は采配を凍らせている） */
+  const cx = H.FIELD.w / 2, cy = H.FIELD.h * 0.5, 場 = 700;
+  for (const 群 of [H.FORESTS, H.WOODS, H.MARSH, H.HILLS, H.MOUNTAINS, H.VILLAGES]) {
+    for (let i = 群.length - 1; i >= 0; i--) {
+      if (Math.hypot(群[i].x - cx, 群[i].y - cy) < 群[i].r + 場) 群.splice(i, 1);
+    }
+  }
   return { W: H.FIELD.w, Hh: H.FIELD.h };
 }
 
