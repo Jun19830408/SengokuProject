@@ -26199,7 +26199,7 @@ function \u5206\u9063\u306E\u9803\u5408\u3044(b, c, key) {
     const \u68EE\u307E\u3067 = Math.hypot(\u68EE2.x - c.x, \u68EE2.y - c.y);
     if (\u68EE\u307E\u3067 > 460) return false;
     const \u6575\u5074\u306E\u68EE = Math.hypot(\u68EE2.x - \u6575\u9663.x, \u68EE2.y - \u6575\u9663.y) < Math.hypot(\u68EE2.x - \u5473\u65B9\u9663.x, \u68EE2.y - \u5473\u65B9\u9663.y);
-    const \u898B\u5931\u3044 = \u751F\u304D\u305F\u6575.some((o) => !o.seen);
+    const \u898B\u5931\u3044 = \u751F\u304D\u305F\u6575.some((o) => !o.seen && o.lastSeen && o.lastSeen.t > 0);
     return \u6575\u5074\u306E\u68EE && \u6575\u9663\u307E\u3067 < \u9593 * 0.75 || \u898B\u5931\u3044 && \u68EE\u307E\u3067 < 320;
   }
   return false;
