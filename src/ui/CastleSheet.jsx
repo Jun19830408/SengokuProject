@@ -45,7 +45,8 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
   // その城の政務を預けている相手（寄親）。いれば大名は下知しない（GDD 6.4）
   const 預け先 = mine ? 城の寄親(g, c) : null;
   const lord = castellanOf(g, c);
-  /* 城主が出陣していれば、城に残る者が留守を預かる（GDD 6.4）。
+  /* 城主が出陣していれば、城に残る者が城代として留守を預かる（GDD 6.4）。当主の城も同じで、
+     城主は当主のまま変わらない（rank.js 当主の城の主）。
      身分は問わない。城主が帰れば、また城主が座を取る。 */
   const 留守 = mine && lord && lord.at !== c.id ? 城を守る将(g, c) : null;
   const [cmd, setCmd] = useState("開墾");
@@ -317,7 +318,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
               {open ? (lord ? lord.name : "―") : "？"}
               {open && 留守 && (
                 <span style={{ fontSize: 11, color: U.dim, marginLeft: 6 }}>
-                  （出陣中。留守は{留守.name}が預かる）
+                  （出陣中。{留守.name}が城代として預かる）
                 </span>
               )}
               {open && lord && (
