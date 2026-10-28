@@ -77,12 +77,17 @@ const txt=()=>[...document.querySelectorAll('body *:not(style)')].map(e=>e.child
   console.log('合戦開始:', (await rc('合戦開始'))?'押せた':'★不可');
   /* 戦況の記録は下に流れていくので、終わってから読んだのでは開戦直後の一行を取り逃がす。
      肝心なのはまさにその一行なので、走らせながら拾い続ける。 */
+  /* 城攻めの広い盤（段1）では、寄せ手は盤の南の端から川を渡って寄せるので、惣構の門に
+     取り付くまでに暇がかかる。雨の日は足も鈍る。三千コマで切っていたころは、門に取り付く
+     かどうかの際で終わり、天候しだいで通ったり落ちたりした（雨の日に落ちる）。
+     惣構の門が削れはじめるまで回す。上限は九千コマ。開戦直後の持ち場は四百コマまでを見る */
   let 序盤='', 全文='';
-  for(let k=0;k<3000;k++){
+  const 惣構が削れた=(u)=>[...u.matchAll(/惣構[^\s\d%]*門\s*(\d+)%/g)].some((m)=>Number(m[1])<100);
+  for(let k=0;k<9000;k++){
     const q=[...rafMap.entries()]; rafMap.clear();
     if(!q.length){ await flush(); continue; }
     await act(async()=>{q.forEach(([,cb])=>cb(2000+k*90));});
-    if(k%20===0){ const u=txt(); 全文+=' '+u; if(k<400) 序盤+=' '+u; }
+    if(k%20===0){ const u=txt(); 全文+=' '+u; if(k<400) 序盤+=' '+u; if(k>=400&&惣構が削れた(u)) break; }
     if(btn('戦場を離れる')) break;
   }
   const 終=txt();                       // 門の残りは終わったところを見る
