@@ -12,7 +12,12 @@
 
    郡の導入は大きな変更なので、いまの試作版とも分けて試したい、というのが遊ぶ側の
    申し出であった。版に shisaku2 を渡せば第二試作版を作る。記録の置き場は本編とも
-   試作版とも分ける（鍵 shisaku2:sengoku…、蔵 sengoku-shisaku2）。札の色も変える。 */
+   試作版とも分ける（鍵 shisaku2:sengoku…、蔵 sengoku-shisaku2）。札の色も変える。
+
+   管弦の録音（dist/bgm/）は、盤から見て bgm/ に置く決まりである（audio/rokuon.js）。
+   試作版の盤は一段深い所（/shisaku2/index.html）に置くので、そのままでは /shisaku2/bgm/
+   を読みに行って見つからない。録音の根を ../bgm/ と差しておく（audio/oto.js 録音の根）。
+   録音の札は本編の dist/bgm/ のものを分け合う。 */
 const fs = require('fs');
 const path = require('path');
 const 元 = path.join(__dirname, '..', 'dist', 'index.html');
@@ -25,6 +30,7 @@ const 版の形 = {
 }[版];
 if (!版の形) { console.error(`版は shisaku か shisaku2 です（${版}）`); process.exit(1); }
 const 分ける = `<script>(function(){try{
+window.__録音の根="../bgm/";
 var P="${版}:",S=Storage.prototype,g=S.getItem,s=S.setItem,r=S.removeItem;
 var m=function(x){x=String(x);return x.indexOf("sengoku")===0?P+x:x;};
 S.getItem=function(x){return g.call(this,m(x));};

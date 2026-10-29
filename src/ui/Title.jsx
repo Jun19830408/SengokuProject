@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { 題字, 絵にする } from "../data/logo.js";
 import { Manual } from "./Manual.jsx";
+import { 音の欄 } from "./panels.jsx";
 import { U } from "../core/util.js";
 import { FACTIONS } from "../data/factions.js";
 import { 記録の見出し } from "../save/save.js";
@@ -84,6 +85,12 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onK
               新しく始めると、いま「自動」にある盤は空いている枠へ移して取っておきます。
             </div>
           )}
+          {/* 音の入切と音量（GDD 15.4）。ここで決めたものは、次に開いたときも保たれる。
+              本編では画面の右下に浮かせて置いたので、狭い画面では記録の欄と版の表示に
+              重なっていた（遊ぶ側の報せ）。中身の並びに入れて、重ならないようにする */}
+          <div style={{ marginTop: 2 }}>
+            <音の欄 小さく />
+          </div>
 
           <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim, marginTop: 6, textAlign: "left" }}>
             記録所　（押せばその盤から始まります）

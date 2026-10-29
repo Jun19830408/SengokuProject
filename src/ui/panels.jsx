@@ -18,6 +18,7 @@ import { 移封できる家ら, 移封できるか, 移封の見立て, 渡せ�
 import { 器量くらべ, 挑める家ら, 分け目の備えを組む, 分け目の兵, 版図の石高, 直轄の石高,
   割譲できる城ら, 取る城を見立てる, 割譲の限り, 集結の月数, 野を選ぶ側, 天下分け目を挑めるか } from "../core/wakeme.js";
 import { U, fmt, man, monthsBetween } from "../core/util.js";
+import { 入切, 音の設定, 音量, 解錠する } from "../audio/oto.js";
 import { 守りの割り付け, 割り付けの兵, 門の重み } from "../core/garrison.js";
 import { 元服の齢, 姫の役, 姫の枠, 姫の齢, 婚姻できるか, 婚姻の要る信用, 嫁がせられるか, 婚儀の礼, 使者の礼, 使える姫 } from "../core/hime.js";
 import { ARMS, MOB_POLICY, ROAD_SPEED } from "../data/roads.js";
@@ -3555,6 +3556,45 @@ export function 直参の帳({ g, 相手, onSend, onClose }) {
             onClick={() => onSend(選)}>召し出す</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* 音の欄（GDD 15.4）。
+
+   入切と音量はここで決める。携帯は遊ぶ側が触れるまで音を出せない決まりなので、
+   入れた折にその場で解錠し、いまの場面の曲を鳴らす。鳴らすのはオーケストラの三曲
+   だけなので、本編にあった「試し鳴らし」の一音（合成の音）は置かない。
+
+   小さく … 題名の画面に置く形。説明の文を省き、一行に収める。
+   本編の題名の画面では、この欄を画面の右下に浮かせて置いたので、狭い画面では
+   折り返した釦と音量の目盛りが記録の欄と版の表示に重なっていた（遊ぶ側の報せ）。
+   ここでは欄そのものは浮かせず、置く側が並びの中に入れる（Title.jsx）。 */
+export function 音の欄({ 小さく } = {}) {
+  const [設定, set設定] = useState(() => 音の設定());
+  const 直す = (f) => { f(); set設定(音の設定()); };
+  const いま = !設定.入 ? "音は切ってあります"
+    : 設定.鳴り ? `いまの曲「${設定.鳴り}」`
+    : 設定.題 ? `「${設定.題}」を読み込んでいます（鳴らないときは画面に一度触れてください）`
+    : "曲は止まっています";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+      fontSize: 小さく ? 11.5 : 12.5, color: U.dim }}>
+      <button className={`btn sm ${設定.入 ? "on" : ""}`}
+        onClick={() => 直す(() => { if (入切(!音の設定().入)) 解錠する(); })}>
+        ♪ 音 {設定.入 ? "入" : "切"}
+      </button>
+      <input type="range" min="0" max="100" value={Math.round(設定.音量 * 100)} aria-label="音量"
+        style={{ flex: "1 1 120px", maxWidth: 200, minWidth: 0 }}
+        onChange={(e) => 直す(() => 音量(Number(e.target.value) / 100))} />
+      <span className="num" style={{ minWidth: 22, textAlign: "right" }}>{Math.round(設定.音量 * 100)}</span>
+      {!小さく && (
+        <span style={{ flexBasis: "100%", fontSize: 11, lineHeight: 1.7 }}>
+          政務・野戦・城攻めで曲が替わります（天下分け目と海戦は野戦の曲）。
+          鳴らないときは、端末のマナースイッチ（消音）と音量をお確かめください。<br />
+          音の座：<b style={{ color: U.text }}>{設定.座}</b>／{いま}
+        </span>
+      )}
     </div>
   );
 }
