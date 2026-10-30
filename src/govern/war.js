@@ -67,12 +67,18 @@ export const 陣中の月数 = (men, 糧, months) => {
 
    ただし待ちきれぬときがある。救う城が揃うより先に落ちると見れば、待たずに進む。
    来ぬ者を半年も待つこともしない。 */
+/* 仲間は、同じ城を救いに、同じ差し手が差し向けた軍である。差し手は、援軍なら呼んだ家
+   （aid の印）、そうでなければ自らの家。援軍の求めに応じるときは、自家の城の兵だけでなく、
+   他家の城に頼んで来てもらう兵（頼み）も出せる。もとは家が同じ軍だけを仲間としていたので、
+   頼んだ他家の援軍は自家の軍を待たず、先に着いて一手で囲みを衝いていた。遊ぶ側の申し出は
+   「援軍に向かっても、他の軍を待つと選択しても、単独で戦うことにしかなりません」であった。 */
+const 差し手 = (x) => (x.aid != null ? x.aid : x.faction);
 export function 集結を待つか(s, a) {
   if (!a || !a.待ち合わせ || a.dead) return false;
   if (!a.path || a.path.length <= 1) return false;          // もう着いている
   const 残 = (x) => Math.max(0, marchMonthsOf(x.path || []) || 0);
   const 仲間 = (s.armies || []).filter((x) => x !== a && !x.dead
-    && x.待ち合わせ === a.待ち合わせ && x.faction === a.faction
+    && x.待ち合わせ === a.待ち合わせ && 差し手(x) === 差し手(a)
     && (x.path || []).length > 1);
   if (!仲間.length) return false;                           // 待つ相手がいない
   const 我 = 残(a);
@@ -873,21 +879,26 @@ export function 委ねる差配(s, castle, army) {
 
    同じ城の前に立ち、同じ城を狙っている味方は、そこで合流して一手となる。兵も
    将も兵糧も一つの軍にまとめる。総大将は兵の多いほうの軍の将である。 */
+/* army と同じ城の前で束ねられる軍か。画面の側（MapScreen）が束ねる前に問うときも、
+   同じ判じを使う（判じが食い違うと、束ねられぬ軍を待って同じ問いを繰り返す）。 */
+export function 束ねられる(s, army, castle, x) {
+  if (!x || !army || !castle || x.id === army.id) return false;
+  if (x.at !== castle.id) return false;                  // 同じ城の前にいない
+  /* 束ねるのは同じ家の軍だけである。旗の下の家の軍まで一つにすると、他家の将が
+     こちらの軍に混ざり、解いたときに他家の城へ立つ者ができた（巡検が拾った）。
+     家が違えば、兵は並んで戦っても軍は別である。 */
+  if (x.faction !== army.faction) return false;
+  if (x.path && x.path.length > 1) return false;         // まだ道中である
+  /* 狙いが同じ軍だけを束ねる。城を落として在陣している軍は別の用である。 */
+  const 同じ狙い = (x.target && x.target === castle.id)
+    || (x.aid && (!x.target || x.target === castle.id));
+  return !!同じ狙い && !x.sieging;
+}
 export function 着いた味方を束ねる(s, army, castle) {
   if (!army || !castle) return [];
   const 束ねた = [];
   for (const x of [...(s.armies || [])]) {
-    if (x.id === army.id) continue;
-    if (x.at !== castle.id) continue;                    // 同じ城の前にいない
-    /* 束ねるのは同じ家の軍だけである。旗の下の家の軍まで一つにすると、他家の将が
-       こちらの軍に混ざり、解いたときに他家の城へ立つ者ができた（巡検が拾った）。
-       家が違えば、兵は並んで戦っても軍は別である。 */
-    if (x.faction !== army.faction) continue;
-    if (x.path && x.path.length > 1) continue;           // まだ道中である
-    /* 狙いが同じ軍だけを束ねる。城を落として在陣している軍は別の用である。 */
-    const 同じ狙い = (x.target && x.target === castle.id)
-      || (x.aid && (!x.target || x.target === castle.id));
-    if (!同じ狙い || x.sieging) continue;
+    if (!束ねられる(s, army, castle, x)) continue;
     /* 出どころを控える（GDD 7.3）。
 
        束ねた軍を解けば、兵はことごとく本隊の出陣元へ帰る。加勢に来た城の兵まで

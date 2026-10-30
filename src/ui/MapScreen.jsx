@@ -660,6 +660,26 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       });
       return;
     }
+    /* 同じ月に同じ囲みへ着いた後詰は、遊ぶ側の軍を先に捌く（GDD 7.4 / 9.2）。
+
+       他家の後詰（遊ぶ側が頼んで来てもらった援軍や、城の主が自ら出した後詰）が先に
+       並んでいると、盤の外で一手ずつ囲みを衝いてしまい、遊ぶ側の後詰の戦に立てなかった。
+       遊ぶ側の軍を先に捌けば、他家の後詰もその戦に同じ側として立つ（startBattle の 援軍ら）。 */
+    if (a.faction !== g.player && !g.autoPlay) {
+      const 囲 = g.sieges.find((x) => x.castleId === dest.id);
+      const 囲む = 囲 && g.armies.find((x) => x.id === 囲.armyId);
+      const 後詰の側 = (x) => !!囲む && x.faction !== 囲む.faction && !同じ旗の下(g, x.faction, 囲む.faction)
+        && x.at === dest.id && (!x.path || x.path.length <= 1) && !x.sieging;
+      if (後詰の側(a) && (a.relief === dest.id || a.aid === g.player)) {
+        const 我 = (g.pendingArrivals || []).map((id) => g.armies.find((x) => x.id === id))
+          .find((x) => x && x.faction === g.player && 後詰の側(x)
+            && (x.relief === dest.id || 同じ旗の下(g, x.faction, dest.faction) || 援けに着く(g, x, dest)));
+        if (我) {
+          setG((p) => ({ ...p, pendingArrivals: [我.id, ...(p.pendingArrivals || []).filter((id) => id !== 我.id)] }));
+          return;
+        }
+      }
+    }
     // 自勢力が関わらない合戦は画面に出さず、同じ規則で自動解決する（GDD 13.2）
     // 試走のときは自勢力の合戦も自動で解く
     /* 旗頭に預けた手勢が他家へ寄せる戦は、盤面に出さず旗頭に任せる（GDD 6.4）。
@@ -684,6 +704,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       && !同じ旗の下(g, 囲む敵.faction, a.faction)
       && (a.relief === dest.id || 同じ旗の下(g, a.faction, dest.faction) || 援けに着く(g, a, dest));
     if (後詰に着いた) {
+      /* 同じ月に同じ囲みへ着いた自家の援軍は、一手に束ねてから囲みを衝く（war.js 着いた味方を束ねる）。
+         束ねる処理がこの手前で働いていなかったので、「味方の集結を待つ」で同じ月に着いても、
+         先に捌いた一手だけが囲みに当たり、残りは後から一手ずつ当たっていた。 */
+      if (g.armies.some((x) => 合戦裁定.束ねられる(g, a, dest, x))) {
+        setG((p) => {
+          const s = structuredClone(p);
+          const ar = s.armies.find((x) => x.id === a.id);
+          const c = s.castles.find((x) => x.id === dest.id);
+          if (ar && c) 合戦裁定.着いた味方を束ねる(s, ar, c);
+          return s;
+        });
+        return;
+      }
       const bes = 囲む敵;
       {
         /* 城方に討って出る機会を与えるのは、旗の下に限らない。従属や同盟の城を
@@ -1166,8 +1199,22 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const defLocal = foe ? Math.max(0, foe.local)
       : Math.max(0, dest.local - Math.round(minGarrison(dest) * 0.4));
     // 出てくる兵の総数から戦場の広さを決める
-    const 援軍ら = foe ? [] : g.armies.filter((a) => a.id !== army.id && a.at === dest.id
-      && (a.aid === army.faction || (camp && camp.arrived.includes(a.id))));
+    /* 同着した援軍は同じ側に立つ（GDD 7.4）。
+
+       相手を軍として渡す戦（foe）のうち、街道での行き合い（startClash。場に 行き合い の印）は、
+       居合わせた者だけの戦である。囲みを衝く後詰の戦や、城下で迎え撃つ戦は、相手は軍でも
+       場は城である。もとは foe があればみな行き合いと同じに扱って援軍を載せなかったので、
+       同じ月に同じ城へ着いた援軍（遊ぶ側が呼んだ他家の援軍・城の主が出した後詰）がいても、
+       着いた一手だけで戦っていた。遊ぶ側の申し出は「同盟国から援軍要請があり、援軍に
+       向かっても、他の軍を待つと選択しても、単独で戦うことにしかなりません」であった。 */
+    const 援軍ら = !foe
+      ? g.armies.filter((a) => a.id !== army.id && a.at === dest.id
+        && (a.aid === army.faction || (camp && camp.arrived.includes(a.id))))
+      : dest.行き合い ? []
+        : g.armies.filter((a) => a.id !== army.id && a.id !== foe.id && a.at === dest.id
+          && (!a.path || a.path.length <= 1) && !a.sieging
+          && a.faction !== foe.faction && !同じ旗の下(g, a.faction, foe.faction)
+          && (a.aid === army.faction || a.relief === dest.id));
     const aidMen = 援軍ら.reduce((t, a) => t + a.men, 0);
     /* 野の広さは、兵の数と隊の数で決める。隊が多いほど、翼を伸ばし、伏せ、
        迂回する余地が要る。兵数だけで決めていたころは、五隊も出せば戦場が
@@ -1390,10 +1437,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   /* 街道での行き合い（GDD 9.1）。城の壁は関わらぬ。野で軍と軍が当たる。
      相手の軍を、その場かぎりの「守り手」に仕立てて盤へ載せる。 */
   const startClash = (mine, foe, cl) => {
+    /* 行き合い の印：居合わせた者だけの戦（startBattle は援軍を載せない） */
     startBattle(mine, {
       id: cl.v, name: cl.place, faction: foe.faction,
       local: Math.max(0, foe.local), localTrain: foe.localTrain || 60,
-      najimi: 70, def: 0, min: 60, hp: 0, rost: foe.rost, intrigue: false,
+      najimi: 70, def: 0, min: 60, hp: 0, rost: foe.rost, intrigue: false, 行き合い: true,
     }, null, null, foe);
   };
 
@@ -1703,9 +1751,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
          討って出た兵は城の兵であって、後詰の軍の兵ではない。 */
       const 出撃 = ctx.sally || null;
       const 出撃隊 = 出撃 ? myCorps.filter((c) => 出撃.gens.includes(c.id)) : [];
-      const 本隊 = 出撃 ? myCorps.filter((c) => !出撃.gens.includes(c.id)) : myCorps;
+      /* 同じ側に立った援軍（startBattle の 援軍ら。隊に armyId の印）も本隊とは別に数え、
+         損害はそれぞれの軍へ返す。 */
+      const 援の隊 = myCorps.filter((c) => c.armyId && c.armyId !== mine.id);
+      const 本隊 = myCorps.filter((c) => !(出撃 && 出撃.gens.includes(c.id)) && !援の隊.includes(c));
       mine.local = left(本隊); mine.men = mine.local + ret(本隊);
       foe.local = left(foeCorps); foe.men = foe.local + ret(foeCorps);
+      const 援の軍 = [...new Set(援の隊.map((c) => c.armyId))]
+        .map((id) => s.armies.find((x) => x.id === id)).filter(Boolean);
+      for (const ra of 援の軍) {
+        const 隊 = 援の隊.filter((c) => c.armyId === ra.id);
+        ra.local = left(隊); ra.men = ra.local + ret(隊);
+        if (ra.rost && ra.rost.length) rosterSync(ra, "rost", ra.local, `arm-${ra.id}`);
+      }
       if (出撃) {
         const 城 = s.castles.find((x) => x.id === 出撃.castleId);
         if (城) {
@@ -1795,13 +1853,27 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           text: `${s.factions[負.faction].name}の軍は${home ? home.name : "本国"}へ退き、`
             + `${s.factions[勝.faction].name}は${(nodeById(勝.target) || {}).name || ""}へ道を進めた。` });
         // すでに敵城の下まで来ていたなら、そのまま城攻めに移る
-        if (!勝.path || 勝.path.length <= 1) {
+        /* ただし城を囲んでいた軍が後詰を退けたなら、囲みをそのまま続ける。着いた軍として
+           並べ直していたので、囲みのさなかの城へ改めて寄せ、城の守り手ともう一度野戦を
+           していた。 */
+        if ((!勝.path || 勝.path.length <= 1) && !勝.sieging) {
           s.pendingArrivals = [勝.id, ...(s.pendingArrivals || []).filter((id) => id !== 勝.id)];
         }
         s.monthEvents = [...(s.monthEvents || []),
           勝.faction === s.player
             ? `${ctx.place}の野戦に勝った。軍はそのまま${(nodeById(勝.target) || {}).name || ""}へ向かう。`
             : `${ctx.place}の野戦に敗れ、軍は退いた。`];
+      }
+      /* 同じ側に立った援軍の始末。勝てば城の前に残り、着いた軍として捌かれる（囲みの解けた
+         城へ入るか、本国へ帰る）。敗れたか決着がつかねば、本隊と同じく退く。同じ月に
+         もう一度、盤の外で囲みを衝かせない。 */
+      for (const ra of 援の軍) {
+        if (!s.armies.includes(ra)) continue;
+        if (!draw && 勝 === mine) continue;
+        const home = 合戦裁定.withdrawArmy(s, ra);
+        s.pendingArrivals = (s.pendingArrivals || []).filter((id) => id !== ra.id);
+        s.chronicle.push({ y: s.year, m: s.month,
+          text: `${s.factions[ra.faction].name}の援軍は${fmt(Math.max(0, ra.men))}人を残して${home ? `${home.name}へ` : ""}引き揚げた。` });
       }
       if (b.result === "P") {
         組頭の働きを記す(s, b, "P", null);
