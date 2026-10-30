@@ -29069,6 +29069,7 @@ function \u9AD8\u3055\u56F3\u3092\u636E\u3048\u308B(\u9AD8, w, h, \u5358, \u4E08
     if (\u4E0A\u306E\u56F3[i] < \u4F4E) \u4F4E = \u4E0A\u306E\u56F3[i];
   }
   \u56F3 = { \u9AD8, \u753B\u9AD8: \u753B\u9AD8 || null, w, h, \u5358, \u4E08\u5358, \u6700: \u6700 * \u4E08\u5358, \u4F4E: (Number.isFinite(\u4F4E) ? \u4F4E : 0) * \u4E08\u5358 };
+  \u56F3\u306E\u7248++;
 }
 function \u9AD8\u3055\u56F3\u3092\u5916\u3059() {
   \u56F3 = null;
