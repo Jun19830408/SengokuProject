@@ -19387,11 +19387,12 @@ function \u8ECD\u306E\u4E2D\u8EAB(s2, a, { \u6708\u6570 } = {}) {
 // src/govern/war.js
 var \u9663\u4E2D\u306E\u98DF\u3044\u6276\u6301 = 0.09 * 2;
 var \u9060\u5F81\u306E\u5175\u7CE7 = (men, months, \u9663\u4E2D = 1) => Math.round(men * 0.09 * ((months || 1) + Math.max(0, \u9663\u4E2D) * 2));
+var \u5DEE\u3057\u624B = (x) => x.aid != null ? x.aid : x.faction;
 function \u96C6\u7D50\u3092\u5F85\u3064\u304B(s2, a) {
   if (!a || !a.\u5F85\u3061\u5408\u308F\u305B || a.dead) return false;
   if (!a.path || a.path.length <= 1) return false;
   const \u6B8B = (x) => Math.max(0, marchMonthsOf(x.path || []) || 0);
-  const \u4EF2\u9593 = (s2.armies || []).filter((x) => x !== a && !x.dead && x.\u5F85\u3061\u5408\u308F\u305B === a.\u5F85\u3061\u5408\u308F\u305B && x.faction === a.faction && (x.path || []).length > 1);
+  const \u4EF2\u9593 = (s2.armies || []).filter((x) => x !== a && !x.dead && x.\u5F85\u3061\u5408\u308F\u305B === a.\u5F85\u3061\u5408\u308F\u305B && \u5DEE\u3057\u624B(x) === \u5DEE\u3057\u624B(a) && (x.path || []).length > 1);
   if (!\u4EF2\u9593.length) return false;
   const \u6211 = \u6B8B(a);
   const \u6700\u9045 = Math.max(\u6211, ...\u4EF2\u9593.map(\u6B8B));
@@ -19899,16 +19900,19 @@ function \u59D4\u306D\u308B\u5DEE\u914D(s2, castle, army) {
   const \u4E3B = [...\u5C06\u3089].sort((a, b) => stipendOf(s2, b) - stipendOf(s2, a))[0];
   return { \u57CE\u4E3B: \u4E3B.id, \u6240\u5C5E: [\u4E3B.id], \u5175: Math.round((army.local || 0) * 0.5) };
 }
+function \u675F\u306D\u3089\u308C\u308B(s2, army, castle, x) {
+  if (!x || !army || !castle || x.id === army.id) return false;
+  if (x.at !== castle.id) return false;
+  if (x.faction !== army.faction) return false;
+  if (x.path && x.path.length > 1) return false;
+  const \u540C\u3058\u72D9\u3044 = x.target && x.target === castle.id || x.aid && (!x.target || x.target === castle.id);
+  return !!\u540C\u3058\u72D9\u3044 && !x.sieging;
+}
 function \u7740\u3044\u305F\u5473\u65B9\u3092\u675F\u306D\u308B(s2, army, castle) {
   if (!army || !castle) return [];
   const \u675F\u306D\u305F = [];
   for (const x of [...s2.armies || []]) {
-    if (x.id === army.id) continue;
-    if (x.at !== castle.id) continue;
-    if (x.faction !== army.faction) continue;
-    if (x.path && x.path.length > 1) continue;
-    const \u540C\u3058\u72D9\u3044 = x.target && x.target === castle.id || x.aid && (!x.target || x.target === castle.id);
-    if (!\u540C\u3058\u72D9\u3044 || x.sieging) continue;
+    if (!\u675F\u306D\u3089\u308C\u308B(s2, army, castle, x)) continue;
     if (!army.\u51FA\u3069\u3053\u308D) army.\u51FA\u3069\u3053\u308D = [{ from: army.from, local: army.local || 0, gens: [...army.gens || []] }];
     army.\u51FA\u3069\u3053\u308D.push({ from: x.from, local: x.local || 0, gens: [...x.gens || []] });
     army.local = (army.local || 0) + (x.local || 0);
@@ -49334,6 +49338,18 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       });
       return;
     }
+    if (a.faction !== g.player && !g.autoPlay) {
+      const \u56F2 = g.sieges.find((x) => x.castleId === dest.id);
+      const \u56F2\u3080 = \u56F2 && g.armies.find((x) => x.id === \u56F2.armyId);
+      const \u5F8C\u8A70\u306E\u5074 = (x) => !!\u56F2\u3080 && x.faction !== \u56F2\u3080.faction && !\u540C\u3058\u65D7\u306E\u4E0B(g, x.faction, \u56F2\u3080.faction) && x.at === dest.id && (!x.path || x.path.length <= 1) && !x.sieging;
+      if (\u5F8C\u8A70\u306E\u5074(a) && (a.relief === dest.id || a.aid === g.player)) {
+        const \u6211 = (g.pendingArrivals || []).map((id) => g.armies.find((x) => x.id === id)).find((x) => x && x.faction === g.player && \u5F8C\u8A70\u306E\u5074(x) && (x.relief === dest.id || \u540C\u3058\u65D7\u306E\u4E0B(g, x.faction, dest.faction) || \u63F4\u3051\u306B\u7740\u304F(g, x, dest)));
+        if (\u6211) {
+          setG((p) => ({ ...p, pendingArrivals: [\u6211.id, ...(p.pendingArrivals || []).filter((id) => id !== \u6211.id)] }));
+          return;
+        }
+      }
+    }
     const \u5B88\u308A\u4EFB\u305B = \u5B88\u308A\u3092\u65D7\u982D\u306B\u4EFB\u305B\u308B\u304B(g, dest, a);
     if (g.autoPlay || !\u81EA\u3089\u91C7\u914D\u3059\u308B\u304B(g, a, dest) && dest.faction !== g.player || \u5B88\u308A\u4EFB\u305B) {
       autoResolve(a.id, dest.id);
@@ -49343,6 +49359,16 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const \u56F2\u3080\u6575 = \u6551\u3046\u56F2\u307F && g.armies.find((x) => x.id === \u6551\u3046\u56F2\u307F.armyId);
     const \u5F8C\u8A70\u306B\u7740\u3044\u305F = !!\u56F2\u3080\u6575 && \u56F2\u3080\u6575.faction !== a.faction && !\u540C\u3058\u65D7\u306E\u4E0B(g, \u56F2\u3080\u6575.faction, a.faction) && (a.relief === dest.id || \u540C\u3058\u65D7\u306E\u4E0B(g, a.faction, dest.faction) || \u63F4\u3051\u306B\u7740\u304F(g, a, dest));
     if (\u5F8C\u8A70\u306B\u7740\u3044\u305F) {
+      if (g.armies.some((x) => \u675F\u306D\u3089\u308C\u308B(g, a, dest, x))) {
+        setG((p) => {
+          const s2 = structuredClone(p);
+          const ar = s2.armies.find((x) => x.id === a.id);
+          const c = s2.castles.find((x) => x.id === dest.id);
+          if (ar && c) \u7740\u3044\u305F\u5473\u65B9\u3092\u675F\u306D\u308B(s2, ar, c);
+          return s2;
+        });
+        return;
+      }
       const bes = \u56F2\u3080\u6575;
       {
         if (a.faction === g.player && (underMyBanner(g, g.player, dest.faction) || \u63F4\u3051\u306B\u7740\u304F(g, a, dest))) {
@@ -49792,7 +49818,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const defGens = foe ? foe.gens.map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
     const playerIsAtk = army.faction === g.player;
     const defLocal = foe ? Math.max(0, foe.local) : Math.max(0, dest.local - Math.round(minGarrison(dest) * 0.4));
-    const \u63F4\u8ECD\u3089 = foe ? [] : g.armies.filter((a) => a.id !== army.id && a.at === dest.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id)));
+    const \u63F4\u8ECD\u3089 = !foe ? g.armies.filter((a) => a.id !== army.id && a.at === dest.id && (a.aid === army.faction || camp && camp.arrived.includes(a.id))) : dest.\u884C\u304D\u5408\u3044 ? [] : g.armies.filter((a) => a.id !== army.id && a.id !== foe.id && a.at === dest.id && (!a.path || a.path.length <= 1) && !a.sieging && a.faction !== foe.faction && !\u540C\u3058\u65D7\u306E\u4E0B(g, a.faction, foe.faction) && (a.aid === army.faction || a.relief === dest.id));
     const aidMen = \u63F4\u8ECD\u3089.reduce((t, a) => t + a.men, 0);
     const \u51FA\u308B\u5C06 = (army.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean).sort((a, b) => (b.lord ? 1 : 0) - (a.lord ? 1 : 0) || b.lead + b.gov + b.wit - (a.lead + a.gov + a.wit));
     const \u63F4\u5C06\u6570 = \u63F4\u8ECD\u3089.reduce((t, a) => t + (a.gens || []).length, 0) + (sally2 ? (sally2.gens || []).length : 0);
@@ -50020,7 +50046,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       min: 60,
       hp: 0,
       rost: foe.rost,
-      intrigue: false
+      intrigue: false,
+      \u884C\u304D\u5408\u3044: true
     }, null, null, foe);
   };
   const \u5185\u5FDC\u306E\u59CB\u672B = (s2, b, { \u653B\u3081\u624B, \u5B88\u308A\u624B, atkSide, \u843D\u3061\u305F\u57CE }) => {
@@ -50292,11 +50319,19 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const ret = (corps) => corps.reduce((a, c) => a + (s2.generals.find((x) => x.id === c.id)?.retinue || 0), 0);
       const \u51FA\u6483 = ctx.sally || null;
       const \u51FA\u6483\u968A = \u51FA\u6483 ? myCorps.filter((c) => \u51FA\u6483.gens.includes(c.id)) : [];
-      const \u672C\u968A = \u51FA\u6483 ? myCorps.filter((c) => !\u51FA\u6483.gens.includes(c.id)) : myCorps;
+      const \u63F4\u306E\u968A = myCorps.filter((c) => c.armyId && c.armyId !== mine2.id);
+      const \u672C\u968A = myCorps.filter((c) => !(\u51FA\u6483 && \u51FA\u6483.gens.includes(c.id)) && !\u63F4\u306E\u968A.includes(c));
       mine2.local = left(\u672C\u968A);
       mine2.men = mine2.local + ret(\u672C\u968A);
       foe.local = left(foeCorps);
       foe.men = foe.local + ret(foeCorps);
+      const \u63F4\u306E\u8ECD = [...new Set(\u63F4\u306E\u968A.map((c) => c.armyId))].map((id) => s2.armies.find((x) => x.id === id)).filter(Boolean);
+      for (const ra of \u63F4\u306E\u8ECD) {
+        const \u968A = \u63F4\u306E\u968A.filter((c) => c.armyId === ra.id);
+        ra.local = left(\u968A);
+        ra.men = ra.local + ret(\u968A);
+        if (ra.rost && ra.rost.length) rosterSync(ra, "rost", ra.local, `arm-${ra.id}`);
+      }
       if (\u51FA\u6483) {
         const \u57CE = s2.castles.find((x) => x.id === \u51FA\u6483.castleId);
         if (\u57CE) {
@@ -50389,13 +50424,24 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           m: s2.month,
           text: `${s2.factions[\u8CA0.faction].name}\u306E\u8ECD\u306F${home ? home.name : "\u672C\u56FD"}\u3078\u9000\u304D\u3001${s2.factions[\u52DD.faction].name}\u306F${(nodeById(\u52DD.target) || {}).name || ""}\u3078\u9053\u3092\u9032\u3081\u305F\u3002`
         });
-        if (!\u52DD.path || \u52DD.path.length <= 1) {
+        if ((!\u52DD.path || \u52DD.path.length <= 1) && !\u52DD.sieging) {
           s2.pendingArrivals = [\u52DD.id, ...(s2.pendingArrivals || []).filter((id) => id !== \u52DD.id)];
         }
         s2.monthEvents = [
           ...s2.monthEvents || [],
           \u52DD.faction === s2.player ? `${ctx.place}\u306E\u91CE\u6226\u306B\u52DD\u3063\u305F\u3002\u8ECD\u306F\u305D\u306E\u307E\u307E${(nodeById(\u52DD.target) || {}).name || ""}\u3078\u5411\u304B\u3046\u3002` : `${ctx.place}\u306E\u91CE\u6226\u306B\u6557\u308C\u3001\u8ECD\u306F\u9000\u3044\u305F\u3002`
         ];
+      }
+      for (const ra of \u63F4\u306E\u8ECD) {
+        if (!s2.armies.includes(ra)) continue;
+        if (!draw2 && \u52DD === mine2) continue;
+        const home = withdrawArmy(s2, ra);
+        s2.pendingArrivals = (s2.pendingArrivals || []).filter((id) => id !== ra.id);
+        s2.chronicle.push({
+          y: s2.year,
+          m: s2.month,
+          text: `${s2.factions[ra.faction].name}\u306E\u63F4\u8ECD\u306F${fmt(Math.max(0, ra.men))}\u4EBA\u3092\u6B8B\u3057\u3066${home ? `${home.name}\u3078` : ""}\u5F15\u304D\u63DA\u3052\u305F\u3002`
+        });
       }
       if (b.result === "P") {
         \u7D44\u982D\u306E\u50CD\u304D\u3092\u8A18\u3059(s2, b, "P", null);
