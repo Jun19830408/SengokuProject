@@ -81,3 +81,5 @@ export { 分け目の盤を組む, 分け目の戦果 } from "../src/battle/wake
 export { 天下分け目の采配, 挑むか, AIの選ぶ野, 盤を開かずに裁く } from "../src/govern/aiWakeme.js";
 export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す, 組頭の帳, 戦の跡, 戦の跡を記す, 名簿を繕う, 通し番号を据える, 組の番 } from "../src/core/roster.js";
 export { makePromotion } from "../src/core/house.js";
+/* 音の座の様子（場面の曲が選ばれたか）。試験では音の座を作らないので、鳴りはせず曲名だけ見る */
+export { 音の設定 } from "../src/audio/oto.js";

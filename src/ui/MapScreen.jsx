@@ -123,6 +123,22 @@ function 手柄の隊(s, corps, castle) {
   return { lord: 主, at: castle.id, faction: castle.faction, 守備隊: true };
 }
 
+/* 大合戦の野（GDD 15.4）。
+
+   野の広さは、兵の数と隊の数で決まる（battle/field.js の layoutField）。広く組まれた
+   野の戦は、大軍どうしの長い一戦になる。そこで、この幅（歩）を超える野では、天下分け目と
+   同じ大合戦の曲（分け目「天下決戦」）を鳴らす。
+
+   六千歩は、両軍あわせて「二万人・八隊」「三万人・六隊」「一万人・十六隊」ほどの戦に
+   あたる（兵の数×隊の数が、おおむね十五万五千を超えるとき）。野の幅の上限は八千六百歩。
+   境目は本編（main の MapScreen.jsx）と同じ。
+
+   試作版の野は、本編と同じ式で出した幅を一.五倍に広げて組む（field.js layoutField 野の倍）。
+   比べるのは広げる前の幅（足の尺の幅。本編の野の幅と同じ物差し）である。広げた幅で比べると、
+   兵九千余り・十三隊の野（広げる前は五千三百歩ほど）まで大合戦になってしまう。 */
+const 大合戦の幅 = 6000;
+const 広げる前の野の幅 = () => fieldScale() * BASE.w;
+
 export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const cvRef = useRef(null), miniRef = useRef(null), wrapRef = useRef(null);
   const [view, setView] = useState(() => {
@@ -1424,6 +1440,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       出陣前: true,
       b: bb, armyId: army.id, castleId: dest.id, playerIsAtk, campId: camp ? camp.id : null,
       mode: foe ? "clash" : undefined, foeId: foe ? foe.id : null,
+      大合戦: 広げる前の野の幅() > 大合戦の幅,   // 広く組まれた野は、大合戦の曲にする（場面の曲）
       sally: sally ? { castleId: sally.castleId, gens: sally.gens, local: sally.local } : null,
       pName: g.factions[playerIsAtk ? army.faction : defFaction].name,
       eName: g.factions[playerIsAtk ? defFaction : army.faction].name,
@@ -2642,11 +2659,14 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const selCastle = g.castles.find((c) => c.id === sel);
 
   /* 場面の曲（GDD 15.4）。政務は「天下静謐」、戦は野と城で分ける（「疾風の陣」と
-     「攻城の刻」）。天下分け目と海戦は野の戦として「疾風の陣」を鳴らす（audio/oto.js 場面の曲）。 */
+     「攻城の刻」）。天下分け目と、広く組まれた野の大軍どうしの戦（大合戦）は「天下決戦」。
+     海戦は野の戦として「疾風の陣」を鳴らす（audio/oto.js 場面の曲）。 */
+  const 戦の場面 = !battle ? null
+    : battle.mode === "wakeme" || battle.大合戦 ? "分け目"
+    : battle.mode === "castle" ? "城攻め" : "野戦";
   useEffect(() => {
-    場面を選ぶ(battle ? (battle.mode === "wakeme" ? "分け目" : battle.mode === "castle" ? "城攻め" : "野戦")
-      : sea ? "海戦" : "政務");
-  }, [battle ? battle.mode || "野" : null, !!sea]);
+    場面を選ぶ(戦の場面 || (sea ? "海戦" : "政務"));
+  }, [戦の場面, !!sea]);
 
   // 合戦中は戦略画面の帯を出さず、画面全体を戦場にする（GDD 15.1）
   if (sea) return <SeaScreen key={sea.key} ctx={sea} land={land} onEnd={(bb) => 海戦を終える(bb)} />;

@@ -124,6 +124,8 @@ function 大身の盤() {
   if (出釦) await click(出釦);
   await 描く();
   確('合戦の画面が描ける', errs.length === 0, errs[0] || '');
+  /* 天下分け目の一戦は、大合戦の曲「天下決戦」（audio/oto.js 場面の曲・MapScreen の場面の曲） */
+  確('曲は大合戦の「天下決戦」', H.音の設定().題 === '天下決戦', `${H.音の設定().題}`);
   確('布陣の段に入る', /合戦開始|布陣/.test(文()), 文().slice(0, 80));
   for (let i = 0; i < 20; i++) {
     const cbs = [...rafMap.values()]; rafMap.clear();
