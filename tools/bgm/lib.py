@@ -506,12 +506,8 @@ def mix_song(song, rdir, cfg, ir, rev_return_db=0.0, target_lufs=-16.5, master=N
              report=True):
     """cfg: {part_name: dict(gain, pan, width, rev, hp, lp, peq, hs, ls)}"""
     master = master or {}
-    total = None
-    stems = {}
-    for p in song.parts:
-        x = load(os.path.join(rdir, p.name + '.wav'))
-        stems[p.name] = x
-        total = len(x) if total is None else max(total, len(x))
+    # stems are read one at a time (a long piece with thirty-odd stems would not fit in memory at once)
+    total = max(sf.info(os.path.join(rdir, p.name + '.wav')).frames for p in song.parts)
     for (name, start_beat, arr, c) in song.layers:
         st = int(round(start_beat * song.spb * SR))
         total = max(total, st + len(arr))
@@ -520,7 +516,7 @@ def mix_song(song, rdir, cfg, ir, rev_return_db=0.0, target_lufs=-16.5, master=N
     peaks = {}
     for p in song.parts:
         c = cfg.get(p.name, {})
-        x = stems[p.name]
+        x = load(os.path.join(rdir, p.name + '.wav'))
         x = apply_eq(x, c)
         x = pan_stereo(x, c.get('pan', 0.0), c.get('width', 1.0))
         x *= 10 ** (c.get('gain', 0.0) / 20)

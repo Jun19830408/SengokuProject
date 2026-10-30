@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """書き出し。作り直した曲を MP3 にして、遊びの側へ据える。
 
-    python3 tools/bgm/kakidasu.py            # 三曲とも
-    python3 tools/bgm/kakidasu.py shiro      # 城攻めだけ（seimu / yasen / shiro）
+    python3 tools/bgm/kakidasu.py            # 四曲とも
+    python3 tools/bgm/kakidasu.py shiro      # 城攻めだけ（seimu / yasen / shiro / wakeme）
 
   一、work/out/<曲>_loop.wav を MP3（VBR 平均約100kbps）に圧し、dist/bgm/ に置く
   二、MP3 を解き直して、長さが一周ちょうどか（継ぎ目が狂わぬか）を検める
@@ -21,6 +21,7 @@ SR = 44100
     'seimu': ('bgm_seimu.mp3', '政務', '政務「天下静謐」'),
     'yasen': ('bgm_yasen.mp3', '野戦', '野戦「疾風の陣」'),
     'shiro': ('bgm_shirozeme.mp3', '城攻め', '城攻め「攻城の刻」'),
+    'wakeme': ('bgm_wakeme.mp3', '分け目', '天下分け目「天下決戦」'),
 }
 
 
