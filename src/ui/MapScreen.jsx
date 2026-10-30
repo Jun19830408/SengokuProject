@@ -117,6 +117,16 @@ function 手柄の隊(s, corps, castle) {
   return { lord: 主, at: castle.id, faction: castle.faction, 守備隊: true };
 }
 
+/* 大合戦の野（GDD 15.4）。
+
+   野の広さは、兵の数と隊の数で決まる（battle/field.js の layoutField）。広く組まれた
+   野の戦は、大軍どうしの長い一戦になる。そこで、この幅（歩）を超える野では、天下分け目と
+   同じ大合戦の調べ（分け目「天下決戦」）を掛ける。
+
+   六千歩は、両軍あわせて「二万人・八隊」「三万人・六隊」「一万人・十六隊」ほどの戦に
+   あたる（兵の数×隊の数が、おおむね十五万五千を超えるとき）。野の幅の上限は八千六百歩。 */
+const 大合戦の幅 = 6000;
+
 export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const cvRef = useRef(null), miniRef = useRef(null), wrapRef = useRef(null);
   const [view, setView] = useState(() => {
@@ -1250,6 +1260,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       出陣前: true,
       b: bb, armyId: army.id, castleId: dest.id, playerIsAtk, campId: camp ? camp.id : null,
       mode: foe ? "clash" : undefined, foeId: foe ? foe.id : null,
+      大合戦: FIELD.w > 大合戦の幅,          // 広く組まれた野は、大合戦の調べにする（場面の調べ）
       sally: sally ? { castleId: sally.castleId, gens: sally.gens, local: sally.local } : null,
       pName: g.factions[playerIsAtk ? army.faction : defFaction].name,
       eName: g.factions[playerIsAtk ? defFaction : army.faction].name,
@@ -2351,17 +2362,21 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   /* 場面の調べ（GDD 15.4）。
 
      政務は位で替わる――守護代の頃、関白に昇った頃、征夷大将軍に任じられた頃。
-     戦は野と城で分け、天下分け目だけは別に立てる。 */
+     戦は野と城で分け、天下分け目と、広く組まれた野の大軍どうしの戦（大合戦）は、
+     別に立てた大合戦の調べ（分け目）にする。 */
   const 位 = (() => { const r = courtRank(g, g.player); return r ? r.key : null; })();
+  const 戦の場面 = !battle ? null
+    : battle.mode === "wakeme" || battle.大合戦 ? "分け目"
+    : battle.mode === "castle" ? "城攻め" : "野戦";
   useEffect(() => {
-    if (battle) {
-      場面を選ぶ(battle.mode === "wakeme" ? "分け目" : battle.mode === "castle" ? "城攻め" : "野戦");
+    if (戦の場面) {
+      場面を選ぶ(戦の場面);
     } else if (sea) {
       場面を選ぶ("野戦");
     } else {
       場面を選ぶ("政務", { 位 });
     }
-  }, [battle ? battle.mode : null, !!sea, 位]);
+  }, [戦の場面, !!sea, 位]);
 
   if (sea) return <SeaScreen key={sea.key} ctx={sea} land={land} onEnd={(bb) => 海戦を終える(bb)} />;
   /* 合戦に入る前の問い（GDD 8.5 / 13.2）。

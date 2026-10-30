@@ -83,3 +83,4 @@ export { 曲, 音階, 度, 場面の曲 } from "../src/audio/kyoku.js";
 export { 楽器, 鳴らす as 音を鳴らす } from "../src/audio/gakki.js";
 export { 掛ける, 刻む, 口を据える, 場面を選ぶ, 止める as 音を止める, 入切, 音量, 音の設定,
   解錠する, 設定を読む, 覚える口, 盤の場面, 棚の鍵 as 音の棚の鍵, 先読み } from "../src/audio/oto.js";
+export { 録音の曲, 録音の指紋, 録音がある } from "../src/audio/rokuon.js";
