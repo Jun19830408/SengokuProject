@@ -5,19 +5,21 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import pyloudnorm as pyln
 
-def section_balance(S, rdir, cfg, sections, leads):
+def section_balance(S, rdir, cfg, sections, leads=None):
     m = pyln.Meter(SR)
     Lb = int(round(S.L * S.spb * SR))
-    stems = {}
-    for p in S.parts:
-        x = load(os.path.join(rdir, p.name + '.wav'))[Lb:2 * Lb]
-        c = cfg.get(p.name, {})
-        stems[p.name] = x * 10 ** (c.get('gain', 0) / 20)
     bar_s = S.spb * S.bpb
-    for (b0, b1, lead) in sections:
-        a, z = int((b0 - 1) * bar_s * SR), int(b1 * bar_s * SR)
-        L = sum(stems[n][a:z] for n in lead if n in stems)
-        R = sum(stems[n][a:z] for n in stems if n not in lead)
+    spans = [(int((b0 - 1) * bar_s * SR), int(b1 * bar_s * SR)) for (b0, b1, lead) in sections]
+    Ls = [np.zeros((z - a, 2)) for a, z in spans]
+    Rs = [np.zeros((z - a, 2)) for a, z in spans]
+    # one stem at a time (cycle 2 only), so long pieces with many stems fit in memory
+    for p in S.parts:
+        x, _ = sf.read(os.path.join(rdir, p.name + '.wav'), start=Lb, stop=2 * Lb, always_2d=True)
+        x = (np.repeat(x, 2, 1) if x.shape[1] == 1 else x) * 10 ** (cfg.get(p.name, {}).get('gain', 0) / 20)
+        for i, ((a, z), (b0, b1, lead)) in enumerate(zip(spans, sections)):
+            (Ls if p.name in lead else Rs)[i] += x[a:z]
+    for i, (b0, b1, lead) in enumerate(sections):
+        L, R = Ls[i], Rs[i]
         try:
             ll, lr = m.integrated_loudness(L), m.integrated_loudness(R)
         except Exception as e:
