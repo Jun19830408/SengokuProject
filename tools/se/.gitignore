@@ -1,0 +1,3 @@
+# 作り直すときの作業場（WAV・MIDI・FluidSynth の素の音）。持ち歩かない
+work/
+__pycache__/
