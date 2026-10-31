@@ -89,3 +89,6 @@ export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長
 export { makePromotion } from "../src/core/house.js";
 /* 音の座の様子（場面の曲が選ばれたか）。試験では音の座を作らないので、鳴りはせず曲名だけ見る */
 export { 音の設定 } from "../src/audio/oto.js";
+export { 録音の座を据える, 録音を掛ける, 録音を絞る, 録音の様子 } from "../src/audio/rokuon.js";
+export { 効果の札, 効果の指紋, 効果がある, 効果の座を据える, 効果を鳴らす, 締めを鳴らす, 兵の音を掛ける,
+  効果を止める, 効果を先に読む, 効果の様子, 効果の控えを空にする, 地の周, 一打の間, 知らせの間, 一打の限り } from "../src/audio/kouka.js";
