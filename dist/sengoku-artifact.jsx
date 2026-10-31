@@ -39224,8 +39224,23 @@ function \u51FA\u57CE\u3092\u5B88\u308B(b, c, alive) {
   const \u5165\u3063\u305F = alive.filter((o) => o.side === b.attacker && !o.routed && !o.withdraw && \u51FA\u57CE\u306E\u5185\u304B(MAP, o.x, o.y, 6));
   const \u5165\u5175 = \u5165\u3063\u305F.reduce((t, o) => t + corpsMen(o), 0);
   const \u5175 = corpsMen(c);
-  const \u898B\u5207\u308B = \u51FA.\u843D\u3061\u305F || c.morale < 25 || g.broken && (\u5175 < corpsMax(c) * 0.3 || \u5165\u5175 > \u5175 * 3 && \u5175 < corpsMax(c) * 0.6);
-  if (\u898B\u5207\u308B) return \u51FA\u57CE\u304B\u3089\u5F15\u304D\u53D6\u3089\u305B\u308B(b, c);
+  const \u8F2A\u304C\u7834\u308C\u305F = MAP.gates.some((x) => !x.\u51FA\u57CE && x.layer === 0 && x.broken);
+  const \u898B\u5207\u308B = \u51FA.\u843D\u3061\u305F || c.morale < 25 || \u8F2A\u304C\u7834\u308C\u305F || g.broken && (\u5175 < corpsMax(c) * 0.3 || \u5165\u5175 > \u5175 * 3 && \u5175 < corpsMax(c) * 0.6);
+  if (\u898B\u5207\u308B) {
+    const \u5F15\u3044\u305F = \u51FA\u57CE\u304B\u3089\u5F15\u304D\u53D6\u3089\u305B\u308B(b, c);
+    if (\u5F15\u3044\u305F && \u8F2A\u304C\u7834\u308C\u305F && c.\u5F15\u304D\u53D6\u308A) {
+      const \u6B8B\u308A2 = MAP.gates.filter((x) => !x.broken && !x.\u51FA\u57CE && x.layer > 0);
+      if (\u6B8B\u308A2.length) {
+        const \u8F2A = Math.min(...\u6B8B\u308A2.map((x) => x.layer)), \u9580 = c.\u5F15\u304D\u53D6\u308A.\u9580;
+        const \u9580\u306E\u5834 = gatePos(MAP, \u9580\u306E\u8F2A(MAP, \u9580), \u9580);
+        c.\u5F15\u304D\u53D6\u308A.\u6B21 = \u6B8B\u308A2.filter((x) => x.layer === \u8F2A).sort((x, y2) => {
+          const ga = gatePos(MAP, \u9580\u306E\u8F2A(MAP, x), x), gb = gatePos(MAP, \u9580\u306E\u8F2A(MAP, y2), y2);
+          return Math.hypot(ga.x - \u9580\u306E\u5834.x, ga.y - \u9580\u306E\u5834.y) - Math.hypot(gb.x - \u9580\u306E\u5834.x, gb.y - \u9580\u306E\u5834.y);
+        })[0];
+      }
+    }
+    return \u5F15\u3044\u305F;
+  }
   if (!g.broken) return false;
   const \u6575 = \u5165\u3063\u305F.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
   if (\u6575) {
@@ -39621,7 +39636,7 @@ function battleAI(b) {
             const \u5C04\u624B = c.squads.some((q) => q.men > 0 && (q.type === "yumi" || q.type === "teppo"));
             if (\u5C04\u624B && foes2.length) {
               const t4 = [...foes2].sort((x, y2) => Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
-              issueOrder(b, c, { order: "\u5C04\u6483", tx: t4.x, ty: t4.y, target: t4.id });
+              issueOrder(b, c, { order: "\u5C04\u6483", tx: p2.x, ty: p2.y, target: t4.id });
             } else issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
             continue;
           }
@@ -39658,7 +39673,7 @@ function battleAI(b) {
           const shooter = c.squads.some((q) => q.men > 0 && (q.type === "yumi" || q.type === "teppo"));
           if (shooter && foes2.length) {
             const t3 = [...foes2].sort((x, y2) => Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
-            issueOrder(b, c, { order: "\u5C04\u6483", tx: t3.x, ty: t3.y, target: t3.id });
+            issueOrder(b, c, { order: "\u5C04\u6483", tx: p2.x, ty: p2.y, target: t3.id });
             continue;
           }
           issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
@@ -41299,7 +41314,7 @@ function stepBattle(b, dt) {
           if (tgt) {
             f.cool = 2.6;
             const kit = SIEGE_KIT[tgt.kit] || SIEGE_KIT["\u306A\u3057"];
-            let hit = 11 * kit.guard * (f.\u51FA\u57CE ? 1.5 : 1);
+            let hit = 11 * kit.guard * (f.\u51FA\u57CE ? 3 : 1);
             const qs = tgt.squads.filter((q) => q.men > 0).sort((a, b2) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b2.x - f.x, b2.y - f.y));
             for (const q of qs) {
               if (hit <= 0) break;
@@ -41880,10 +41895,10 @@ function stepBattle(b, dt) {
     }
     if (\u565B || \u8FD1 < b.\u81A0\u7740.\u8FD1 - 40 || \u5175 < b.\u81A0\u7740.\u5175 - 20 || \u90532 < b.\u81A0\u7740.\u9053 - 40 || (b.\u624B\u51FA\u3057 || -9) > b.\u81A0\u7740.\u523B) {
       b.\u81A0\u7740.\u523B = b.t;
-    }
-    if (\u8FD1 < b.\u81A0\u7740.\u8FD1) b.\u81A0\u7740.\u8FD1 = \u8FD1;
-    if (\u5175 < b.\u81A0\u7740.\u5175) b.\u81A0\u7740.\u5175 = \u5175;
-    if (\u90532 < b.\u81A0\u7740.\u9053) b.\u81A0\u7740.\u9053 = \u90532;
+      b.\u81A0\u7740.\u8FD1 = \u8FD1;
+      b.\u81A0\u7740.\u5175 = \u5175;
+      b.\u81A0\u7740.\u9053 = \u90532;
+    } else if (\u5175 > b.\u81A0\u7740.\u5175) b.\u81A0\u7740.\u5175 = \u5175;
   }
   if (b.t - b.\u81A0\u7740.\u523B > 180) {
     b.phase = "over";
