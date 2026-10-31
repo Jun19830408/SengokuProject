@@ -1395,10 +1395,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
                     </div>
                     <div className={大 ? "g2" : ""}>
                       {大 && (
-                        <button className="btn sm" style={{ width: "100%" }} disabled={残 <= 0}
+                        <button className="btn sm" style={{ width: "100%" }} disabled={残 <= 0 || selC.routed}
                           onClick={() => 押す(true)}>鼓舞（全軍）</button>
                       )}
-                      <button className="btn sm" style={{ width: "100%" }} disabled={残 <= 0}
+                      <button className="btn sm" style={{ width: "100%" }} disabled={残 <= 0 || selC.routed}
                         onClick={() => 押す(false)}>{近 ? "鼓舞（自部隊と近くの隊）" : "鼓舞（自部隊）"}</button>
                     </div>
                     <div style={{ fontSize: 10, color: U.dim, lineHeight: 1.5 }}>
@@ -1407,7 +1407,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                       統率か知略の高いほう（{Math.max(selC.gen.lead || 0, selC.gen.wit || 0)}）で決まる。
                       {大 ? "大名・総大将は全軍も励ませる。" : ""}
                       {近 ? "統率八十五以上なので、近く（三百歩）の味方の隊にも届く。" : ""}
-                      統率か知略が七十以上なら一つの合戦で二度、それ未満は一度。
+                      統率か知略が七十以上なら一つの合戦で二度、それ未満は一度。崩れている隊の将は鼓舞できない。
                     </div>
                   </>
                 );
