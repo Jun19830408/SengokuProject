@@ -927,7 +927,13 @@ export function detachAI(b, c, alive) {
 
    いまは、敵の隊の組のひとつを狙う。敵の体を押して命じたなら押した所にいちばん近い組、名札
    （狙い札）や敵の帳から命じたなら、こちらの隊にいちばん近い組である。狙った組（c.狙い組）が
-   討ち尽くされれば、こちらの隊にいちばん近い組へ移る。 */
+   討ち尽くされれば、こちらの隊にいちばん近い組へ移る。
+
+   ただし組へ向かうのは、その組が陣形の席から大きく（七十歩より）外れているとき――隊が間延び
+   しているとき――だけである。まとまった隊なら、これまでどおり芯へ向かう。前の組を狙うと寄せる
+   深さが前の組のぶん深くなり、名指しで当たらせた隊どうしの芯が五歩まで寄った（tests/butsukari）。 */
+const 間延びの際 = 70;
+export const 席から外れた隔 = (t, q) => Math.hypot(q.x - (t.x + (q.slotX || 0)), q.y - (t.y + (q.slotY || 0)));
 export function 狙いの組(t, x, y) {
   let 選 = null, 近 = Infinity;
   for (const q of (t && t.squads) || []) {
@@ -939,7 +945,8 @@ export function 狙いの組(t, x, y) {
 }
 export function 狙う所(c, t) {
   const 組 = (c.狙い組 && t.squads.find((q) => q.id === c.狙い組 && q.men > 0)) || 狙いの組(t, c.x, c.y);
-  return 組 ? { x: 組.x, y: 組.y, 組 } : { x: t.x, y: t.y, 組: null };
+  if (組 && 席から外れた隔(t, 組) > 間延びの際) return { x: 組.x, y: 組.y, 組 };
+  return { x: t.x, y: t.y, 組 };
 }
 
 // ------------------------------- 命令伝達（GDD 8.5：距離による遅延と指揮圏）
