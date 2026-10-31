@@ -134,14 +134,14 @@ export function courtRank(s, fid) {
   if (天下人) {
     const kanto = KANTO_KEY.every((k) => 国を旗の下に(s, fid, k));
     if (kanto) return { key: "征夷大将軍", desc: "幕府を開き、天下に号令する",
-      troop: 1.45, diplo: 22, prestige: 30, 号令: true };
+      troop: 1.1, diplo: 22, prestige: 30, 号令: true };
     return { key: "関白", desc: "関白に任ぜられ、天下に号令する",
-      troop: 1.38, diplo: 20, prestige: 26, 号令: true };
+      troop: 1.08, diplo: 20, prestige: 26, 号令: true };
   }
   if (n >= 40) return { key: "内大臣", desc: "五畿を制し、朝廷より内大臣に叙せられた",
-    troop: 1.3, diplo: 16, prestige: 22 };
+    troop: 1.06, diplo: 16, prestige: 22 };
   return { key: "右大臣", desc: "五畿を制し、朝廷より右大臣に叙せられた",
-    troop: 1.22, diplo: 12, prestige: 16 };
+    troop: 1.04, diplo: 12, prestige: 16 };
 }
 
 /* 天下に号令できるか。関白か征夷大将軍のみ。 */

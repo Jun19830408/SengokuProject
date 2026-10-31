@@ -123,6 +123,43 @@ console.log('\n── 二　攻めの願いを却下すれば、在陣の陣を�
   await act(async () => { root.render(null); });
 }
 
+/* ------------------------------------------------ 三　用の済んだ陣は払う */
+console.log('\n── 三　ほかの手が攻めに出ていても、用の無い在陣は払う');
+{
+  /* 遊ぶ側の申し出は「旗頭の軍の中に在陣し続けてそのままのものがいる。用事が
+     終わったら軍を解くようにする」であった。陣払いは「攻めの手が一つも無いとき」
+     にしか走らなかったので、別の手が攻めているあいだは、遊ぶ手が何か月も残った。 */
+  const s = initState('oda');
+  for (const k of ['尾張', '美濃', '三河', '近江']) {
+    for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
+  }
+  const 当主 = s.generals.find((g) => g.faction === 'oda' && g.lord);
+  const 尾張 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '尾張');
+  当主.at = 尾張.id; 当主.本領 = 尾張.id;
+  const 城 = s.castles.find((c) => c.faction === 'oda' && c.kuni === '近江');
+  const 旗 = s.generals.find((x) => x.faction === 'oda' && !x.lord && !x.役);
+  旗.age = 35; 旗.fief = 60000; 旗.at = 城.id; 旗.本領 = 城.id; 城.lordId = 旗.id;
+  国主に任じる(s, 'oda', '近江', 旗.id);
+  旗頭に任じる(s, 'oda', 旗.id);
+  const 供 = s.generals.filter((x) => x.faction === 'oda' && !x.lord && x.id !== 旗.id).slice(0, 4);
+  for (const g of 供) g.at = null;
+  const 的 = s.castles.find((c) => c.faction !== 'oda');
+  s.armies = [...(s.armies || []),
+    { id: 'idle', faction: 'oda', from: 城.id, gens: 供.slice(0, 2).map((g) => g.id),
+      local: 2000, localTrain: 70, rost: null, men: 2000 + 供.slice(0, 2).reduce((a, g) => a + g.retinue, 0),
+      at: 城.id, path: [城.id], prog: 0, food: 99999, target: null, 旗頭: 旗.id, 在陣: 城.id, 在陣待ち: 3 },
+    { id: 'busy', faction: 'oda', from: 城.id, gens: 供.slice(2, 4).map((g) => g.id),
+      local: 2000, localTrain: 70, rost: null, men: 2000 + 供.slice(2, 4).reduce((a, g) => a + g.retinue, 0),
+      at: 的.id, path: [的.id], prog: 0, food: 99999, target: 的.id, sieging: true, 旗頭: 旗.id }];
+  s.sieges = [{ castleId: 的.id, armyId: 'busy', months: 1, decided: null }];
+  const t = H.advanceMonth(s, s);
+  確('三月を越えて用の無い在陣は払われる', !t.armies.some((a) => a.id === 'idle'));
+  確('攻めている手は残る', t.armies.some((a) => a.id === 'busy'));
+  確('払った将は城へ帰る', 供.slice(0, 2).every((g) => (t.generals.find((x) => x.id === g.id) || {}).at != null));
+  確('月報に陣払いが出る', (t.monthEvents || []).some((x) => /在陣が長く、用も無いので/.test(x)),
+    (t.monthEvents || []).filter((x) => /陣/.test(x)).join(' / ') || 'なし');
+}
+
 })().then(() => {
 console.log(`\n════ 方面軍の報せ：咎 ${咎.length} 件`);
 const 重い = errs.filter((e) => !/act\(|Warning: /.test(e));

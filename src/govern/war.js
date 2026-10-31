@@ -500,7 +500,8 @@ export function sackCastle(s, castle, army, hard) {
   const yield_ = Math.round(before * clamp(0.30 - min0 / 400, 0.05, 0.3));
   const resist = Math.round(before * (hard ? 0.18 : 0.08));
   const scatter = Math.max(0, before - stay - yield_ - resist);
-  log(`${castle.name}の地域家臣団${fmt(before)}人のうち、${fmt(stay)}人が残り、${fmt(yield_)}人が降り、`
+  // 守る者が一人も残っていなければ、去就を記すまでもない（「0人のうち0人が…」と出ていた）
+  if (before > 0) log(`${castle.name}の地域家臣団${fmt(before)}人のうち、${fmt(stay)}人が残り、${fmt(yield_)}人が降り、`
     + `${fmt(resist)}人が抗い、${fmt(scatter)}人が散った。`);
   // 戦災
   castle.faction = winner;
@@ -665,7 +666,7 @@ export function sackCastle(s, castle, army, hard) {
     } else {
       滅んだ家を始末する(s, oldF, winner, castle.id, { lord, retainers });
     }
-    s.ruined = [...(s.ruined || []), oldF];
+    s.ruined = [...new Set([...(s.ruined || []), oldF])];
   }
 }
 
@@ -915,6 +916,74 @@ export function 着いた味方を束ねる(s, army, castle) {
       text: `${castle.name}の前で${(s.factions[army.faction] || {}).name}の軍${束ねた.length + 1}隊が合流した（${fmt(army.men)}人）。` });
   }
   return 束ねた;
+}
+
+/* 囲みに後から着いた味方を、囲んでいる軍に加える（GDD 7.3 / 9.2）。
+
+   遊ぶ側の申し出は「軍勢をいくつか動かし、敵の城に攻めさせると、包囲する
+   だけで全く操作できない」であった。先に着いた軍が城を囲んだあと、遅れて
+   着いた同じ家の軍が城下の野戦に勝つと、その城の囲みを自分のものに書き
+   換えていた。先の軍は「囲み中」の印を負ったまま囲みの帳から外れ、月送りも
+   画面もこれを扱わない。兵も将も、ただ城の前に立ち尽くした。
+
+   一　囲みの帳に名の無い「囲み中」の軍は、同じ家が囲んでいればそこへ合流し、
+       誰も囲んでいなければ囲みを立て直す。城がもう味方のものなら在陣に戻す。
+   二　同じ家が囲んでいる城の前に着いた軍は、囲んでいる軍に合流する。
+       後詰（relief）と在陣の軍は別の用であるから加えない。 */
+export function 囲みに加わる(s) {
+  const 加わった = [];
+  const 束ねる = (host, x) => {
+    if (!host.出どころ) host.出どころ = [{ from: host.from, local: host.local || 0, gens: [...(host.gens || [])] }];
+    host.出どころ.push({ from: x.from, local: x.local || 0, gens: [...(x.gens || [])] });
+    host.local = (host.local || 0) + (x.local || 0);
+    host.food = (host.food || 0) + (x.food || 0);
+    host.men = (host.men || 0) + (x.men || 0);
+    host.gens = [...(host.gens || []), ...(x.gens || [])];
+    if (x.rost && x.rost.length) host.rost = [...(host.rost || []), ...x.rost];
+    s.armies = s.armies.filter((y) => y.id !== x.id);
+    s.pendingArrivals = (s.pendingArrivals || []).filter((id) => id !== x.id);
+    s.campaigns = (s.campaigns || []).map((c) => ({
+      ...c,
+      armies: (c.armies || []).map((id) => (id === x.id ? host.id : id)),
+      arrived: (c.arrived || []).filter((id) => id !== x.id),
+    }));
+    加わった.push({ host, x });
+  };
+  if (!Array.isArray(s.sieges)) s.sieges = [];
+  /* 陣触れの軍は、着けば軍議を待つあいだ「囲み中」の印だけを負う（囲みの帳には
+     軍議が攻めかかると決めてから載る）。取り残された軍と取り違えぬよう除く。 */
+  const 戦役の軍 = new Set((s.campaigns || []).flatMap((c) => [...(c.armies || []), ...(c.arrived || [])]));
+  // 一　取り残された「囲み中」の軍
+  for (const x of [...(s.armies || [])]) {
+    if (!x.sieging || 戦役の軍.has(x.id) || s.sieges.some((sg) => sg.armyId === x.id)) continue;
+    const c = s.castles.find((y) => y.id === x.at);
+    if (!c) continue;
+    if (c.faction === x.faction || 同じ旗の下(s, x.faction, c.faction)) { 在陣させる(s, x, c); continue; }
+    const sg = s.sieges.find((y) => y.castleId === c.id);
+    const host = sg && s.armies.find((h) => h.id === sg.armyId);
+    if (host && host.faction === x.faction) { 束ねる(host, x); continue; }
+    if (!sg) { s.sieges.push({ castleId: c.id, armyId: x.id, months: 0, decided: null }); continue; }
+    x.sieging = false;                                   // 他家が囲んでいる。着いた軍として捌き直す
+  }
+  // 二　囲んでいる城の前に、後から着いた同じ家の軍
+  for (const sg of [...s.sieges]) {
+    const host = s.armies.find((h) => h.id === sg.armyId);
+    if (!host) continue;
+    for (const x of [...s.armies]) {
+      if (x === host || x.faction !== host.faction || x.at !== sg.castleId) continue;
+      if ((x.path && x.path.length > 1) || x.sieging || x.在陣 || x.relief || 戦役の軍.has(x.id)) continue;
+      if (x.target && x.target !== sg.castleId) continue;
+      束ねる(host, x);
+    }
+  }
+  for (const q of 加わった) {
+    const c = s.castles.find((y) => y.id === q.host.at);
+    q.文 = `${c ? c.name : "城"}を囲む${(s.factions[q.host.faction] || {}).name}の軍に、`
+      + `後から着いた${fmt(q.x.men)}人が加わった（${fmt(q.host.men)}人）。`;
+    s.chronicle.push({ y: s.year, m: s.month, text: q.文 });
+    if (q.host.faction === s.player) s.monthEvents = [...(s.monthEvents || []), q.文];
+  }
+  return 加わった;
 }
 
 export function resolveOffscreen(prev, armyId, castleId) {
@@ -1378,8 +1447,10 @@ export function 将を除く(s, id) {
      盤の増補（state.js の 盤の増補を取り込む）が据え直してしまう。実測では、
      二十年遊んだ記録を読み直すと五十九人が生き返った――斎藤道三も武田信虎も
      松平広忠も、討たれたはずの者が城に立っていた。死んだ者は死んだままにする。 */
+  /* 控えは足すのではなく作り直す。盤の写しの間で同じ帳を分け合っていると、
+     捨てた写しで除いた者まで控えに載ってしまう。 */
   if (!Array.isArray(s.物故)) s.物故 = [];
-  if (!s.物故.includes(id)) s.物故.push(id);
+  if (!s.物故.includes(id)) s.物故 = [...s.物故, id];
   s.generals = (s.generals || []).filter((x) => x.id !== id);
   for (const c of s.castles || []) if (c.lordId === id) c.lordId = null;
   for (const a of s.armies || []) if ((a.gens || []).includes(id)) a.gens = a.gens.filter((g) => g !== id);
@@ -1488,7 +1559,7 @@ export function 盤の乱れを繕う(s) {
     if (!s.castles.some((c) => c.faction === fid)) continue;
     const 家中 = s.generals.filter((g) => g.faction === fid && !g.captive);
     if (!家中.length || 家中.some((g) => g.lord)) continue;
-    const 継 = pickHeir(s, { id: null, faction: fid, name: (s.factions[fid].name || "").slice(0, 2) });
+    const 継 = pickHeir(s, { id: null, faction: fid, name: "", 姓: (s.factions[fid].name || "").replace(/家$/, "") });
     if (!継) continue;
     継.lord = true;
     s.chronicle.push({ y: s.year, m: s.month,
@@ -1510,6 +1581,38 @@ export function 盤の乱れを繕う(s) {
     if (!s.castles.some((x) => x.id === g.本領 && x.faction === g.faction)) g.本領 = 先.id;
     直し.居所.push({ gen: g, 先 });
   }
+  /* 五　城も軍も持たぬ家との約束を解く。
+
+     家が滅んでも、主従・同盟の間柄は表に残ったままであった。織田が天下を
+     定めたとき、とうに滅んだ加賀一向衆と神保家が「従属」のまま数えられ、
+     戦国記の「諸家は一つも残らなかった」と記録の旗下二家が食い違った。
+     滅んだ家の旗はもう立たない。信用は残す（再び立つことがあれば昔の誼が効く）。 */
+  const 立つ家 = new Set([...s.castles.map((c) => c.faction), ...(s.armies || []).map((a) => a.faction)]);
+  for (const k of Object.keys(s.relations || {})) {
+    const r = s.relations[k];
+    if (!r || r.state === "中立" || r.state === "敵対") continue;
+    const [a, b] = k.split("|");
+    if (立つ家.has(a) && 立つ家.has(b)) continue;
+    r.state = "中立"; r.master = null; r.until = null;
+    直し.名簿.push({ 間柄を解いた: k });
+  }
+  if (Array.isArray(s.ruined)) s.ruined = [...new Set(s.ruined)];
+  /* 六　物故の控えに載りながら盤で仕えている者は、生きている側を正とする。
+
+     一五八八年の記録で、物故の控えに載ったまま城を預かり兵を率いている者が
+     四人いた（真壁道無・小鴨元清・山田有信・正木憲時）。北条氏房は二月続けて
+     「出奔した」と記されていた。どの筋で起きたかはこの版では掴めていない。
+     盤で働いている者を消せば遊ぶ側には不意打ちになるので、控えのほうを外す。 */
+  if (Array.isArray(s.物故) && s.物故.length) {
+    const 居る = new Set(s.generals.map((g) => g.id));
+    const 外す = s.物故.filter((id) => 居る.has(id));
+    if (外す.length) {
+      s.物故 = s.物故.filter((id) => !居る.has(id));
+      直し.名簿.push({ 物故から外した: 外す });
+    }
+  }
+  /* 七　囲みから取り残された軍を、囲みに戻す（囲みに加わる）。 */
+  for (const q of 囲みに加わる(s)) 直し.名簿.push({ 囲みに加えた: q.x.id, 先: q.host.id });
   return 直し;
 }
 

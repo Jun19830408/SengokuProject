@@ -1,6 +1,6 @@
 import { HOUSE_RANK, fiefOf, fiefWanted, stipendOf, 家督で役を引き継ぐ } from "./rank.js";
 import { newRoster } from "./roster.js";
-import { clamp } from "./util.js";
+import { clamp, 姓, 姓名, 能力を広げる } from "./util.js";
 import { KANJI_TSUJI, LONG_LIVED, NEWCOMERS, PARENT } from "../data/newcomers.js";
 import { 直属の兵科 } from "../data/arms.js";
 import { 本拠を追う } from "./state.js";
@@ -63,7 +63,7 @@ export function ruinedHouse(s, fid) {
 }
 
 // 血縁か。姓の二字が同じなら血縁とみなす。
-export const isKin = (a, b) => !!a && !!b && a.name.slice(0, 2) === b.name.slice(0, 2);
+export const isKin = (a, b) => !!a && !!b && 姓(a.name) === 姓(b.name);
 
 // 登用できるか。旧主と血を分けた者、旧主への忠誠が篤い者は靡かない。
 export function canRecruit(gen, lord) {
@@ -94,8 +94,8 @@ export function isMainClan(s, gen) {
 export const hasHouse = (s, gen) => !!gen && !gen.lord && !isMainClan(s, gen)
   && (!!gen.house || stipendOf(s, gen) >= HOUSE_RANK);
 
-// 家名。姓の二字をもって家とする。
-export const houseName = (gen) => (gen ? gen.name.slice(0, 2) : "");
+// 家名。姓をもって家とする（一字の姓も三字の姓もある。core/util.js の 姓名）。
+export const houseName = (gen) => (gen ? 姓(gen.name) : "");
 
 /* 親を尋ねる。史実の親子は PARENT、その盤で生まれた子は s.親 に控える。
 
@@ -118,17 +118,79 @@ export function heirOfHouse(s, gen) {
   return null;
 }
 
+/* 生まれた子の名（GDD 6.7）。
+
+   名乗りの頭は父の通字を継ぐ（信長の子は信、氏康の子は氏）。二字目は
+   KANJI_TSUJI から選び、通字と同じ字や、盤にいる者と同じ名は避ける。
+   もとは「姓の二字＋選んだ字＋父の名の末字」で、姓を取り違え（原胤政貞・
+   朝比元知）、字が重なり（和田政政）、親子で同じ名になった（尚元政王の子が
+   尚元政王）。
+
+   姓の無い者（乙名・按司のような呼び名、法名だけの者）には架空の子を
+   立てない。名の付けようがなく、付ければ史実の外の者が紛れる。 */
+export function 子の名(s, gen) {
+  if (!gen || isNameless(gen)) return null;
+  const { 姓: sur, 名乗り } = 姓名(gen.name);
+  if (!sur) return null;
+  const 諱 = /^[一-龯]{2}$/.test(名乗り) ? 名乗り : null;
+  const 通字 = 諱 ? 諱[0] : null;
+  const 使われた = new Set((s.generals || []).map((x) => x.name));
+  使われた.add(gen.name);
+  const k = Math.abs((gen.id + s.year).split("").reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7));
+  const n = KANJI_TSUJI.length;
+  for (let i = 0; i < n * n; i++) {
+    const a = 通字 || KANJI_TSUJI[(k + Math.floor(i / n)) % n];
+    const b = KANJI_TSUJI[(k * 7 + i) % n];
+    if (a === b) continue;
+    const 名 = `${sur}${a}${b}`;
+    if (!使われた.has(名)) return 名;
+  }
+  return null;
+}
+
+/* 古い記録の架空の子の名を繕う。
+
+   名の付け方を改める前に生まれた子は、姓を取り違えた名（原胤政貞）、字の重なった
+   名（和田政政）、他の者と同じ名（福原義俊が二人）のままである。親の姓と合わない
+   名、重なった名だけを付け直し、もとの名は 旧名 に控える。親の名が分からない者、
+   名の筋が通っている者には触らない。一度見た者には印を付け、二度は付け直さない。 */
+export function 架空の名を繕う(s, 史実の将 = []) {
+  const 子ら = (s.generals || []).filter((x) => /_c\d{4}$/.test(x.id) && !x.名を繕った)
+    .sort((a, b) => a.id.length - b.id.length || (b.age || 0) - (a.age || 0));
+  const 帳 = new Map([...史実の将, ...NEWCOMERS].map((x) => [x.id, x.name]));
+  const 直した = [];
+  for (const q of 子ら) {
+    q.名を繕った = true;
+    // 親の控えが無い古い記録でも、id に親の id が残っている（親の id ＋ _c ＋ 生年）
+    const pid = 親の(s, q.id) || q.id.replace(/_c\d{4}$/, "");
+    const 親 = (s.generals || []).find((x) => x.id === pid) || (帳.has(pid) ? { id: pid, name: 帳.get(pid) } : null);
+    if (!親) continue;
+    const 親の姓 = 姓(親.name), { 姓: 今の姓, 名乗り } = 姓名(q.name);
+    const 同名 = s.generals.some((x) => x !== q && x.name === q.name);
+    const 字の重なり = 名乗り.length === 2 && 名乗り[0] === 名乗り[1];
+    if (今の姓 === 親の姓 && !同名 && !字の重なり) continue;
+    const 旧 = q.name;
+    q.name = "";                                     // 自分の名と重なると見なさぬよう、いったん外す
+    const 新 = 子の名(s, 親);
+    q.name = 新 || 旧;
+    if (!新) continue;
+    q.旧名 = q.旧名 || 旧;
+    直した.push({ 旧, 新 });
+  }
+  return 直した;
+}
+
 export function bearChild(s, gen) {
-  const sur = houseName(gen);
-  const k = Math.abs((gen.id + s.year).split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7));
-  const t1 = KANJI_TSUJI[k % KANJI_TSUJI.length];
-  const t2 = gen.name.slice(-1);                    // 父の名の一字を継ぐ
   const id = `${gen.id}_c${s.year}`;
   if (s.generals.some((x) => x.id === id)) return null;
-  const mix = (a, b) => clamp(Math.round(a * 0.55 + b * 0.45 + (Math.random() * 22 - 11)), 30, 96);
+  const 名 = 子の名(s, gen);
+  if (!名) return null;
+  /* 親の器量を半ば継ぎ、残りは並み（六十前後）に寄る。九十からは「とくに逸話のある者」の
+     段なので、遊びの中で生まれた者は八十五で止める。 */
+  const mix = (a, b) => clamp(Math.round(a * 0.55 + b * 0.45 + (Math.random() * 30 - 15)), 20, 85);
   const kid = {
-    id, name: `${sur}${t1}${t2}`, faction: gen.faction,
-    lead: mix(gen.lead, 62), valor: mix(gen.valor, 62),
+    id, name: 名, faction: gen.faction,
+    lead: mix(gen.lead, 60), valor: mix(gen.valor, 60),
     wit: mix(gen.wit, 60), gov: mix(gen.gov, 60),
     loyal: clamp((gen.loyal == null ? 70 : gen.loyal) - 4, 0, 100),
     age: 1, at: gen.at, 本領: gen.本領 || gen.at,      // 生まれた子は父の本領に生まれる
@@ -165,6 +227,50 @@ export function inheritHouse(s, dead) {
    後見は当主に代わって軍を率い、政を執り、他家とも交渉する。
    当主が元服の齢（十五）に達すれば、後見は解けて一家臣に戻る。 */
 export const COMING_OF_AGE = 15;
+
+/* 盤にいる架空の者（遊びの中で生まれた子・取り立てた者）の割の上限（GDD 6.7）。
+   史実の人物を主とし、架空の者は家を繋ぐ添えにとどめる。 */
+export const 架空の上限 = 0.07;
+
+/* ------------------------------------------------ 一族（GDD 6.7）
+   子が生まれるのは、家を背負う者の一族に限る。遊ぶ側の申し出は「架空武将は
+   その武将の一族として続いていくことを表したかったが、全ての武将がそうなると
+   多くなりすぎる。城主・国主・方面軍だけにし、実際の子孫も含めて数を制限する。
+   世界編を考えると子孫がいないと続かない」であった（一族を家の芯とする考え方）。
+
+   子をなすのは次の者である。
+     当主 … 大名家の主。家に継ぐ者が一人もいなければ、架空の者の上限にかかわらず
+             子をなす（家を絶やさぬため）
+     一門 … 当主の血筋の者（兄弟・叔父など）。当主の一族の枠に数える
+     重臣 … 国主・旗頭
+     城主 … 城を預かる者
+   それ以外の家臣には生まれない。
+
+   一族の枠は、盤にいる同じ一族の者（史実の人物も、生まれた子も、幼い者も）を
+   数える。枠が埋まっていれば生まれない。史実の一族が多いあいだは史実の者で
+   埋まり、それが絶えたのちに架空の子が家を繋ぐ。 */
+export const 一族の枠 = { 当主: 4, 一門: 4, 重臣: 3, 城主: 2 };
+export const 生まれる目 = { 当主: 0.10, 一門: 0.03, 重臣: 0.05, 城主: 0.03 };
+// 一人が持てる子の数（盤にいる者）。
+export const 子の数の限り = { 当主: 2, 一門: 1, 重臣: 2, 城主: 1 };
+
+// 子をなす身の格。子をなさぬ者は null。
+export function 一族の格(s, gen) {
+  if (!gen || gen.captive) return null;
+  if (gen.lord) return "当主";
+  if (isMainClan(s, gen)) return "一門";
+  if (gen.役 === "国主" || gen.役 === "旗頭") return "重臣";
+  if ((s.castles || []).some((c) => c.lordId === gen.id && c.faction === gen.faction)) return "城主";
+  return null;
+}
+
+// 同じ一族の者（本人を含む、盤にいる者）。当主と一門は大名家の一族として一つに数える。
+export function 一族(s, gen) {
+  const 生 = s.generals.filter((x) => !x.captive && x.faction === gen.faction);
+  if (gen.lord || isMainClan(s, gen)) return 生.filter((x) => x.lord || isMainClan(s, x));
+  const sur = houseName(gen);
+  return 生.filter((x) => !x.lord && !isMainClan(s, x) && houseName(x) === sur);
+}
 
 export const needsGuardian = (gen) => !!gen && gen.lord && (gen.age || 30) < COMING_OF_AGE;
 
@@ -222,7 +328,7 @@ export function isClan(s, a, b) {
   };
   const 甲 = 系(a), 乙 = 系(b);
   for (const p of 甲) for (const q of 乙) if (p.id === q.id) return true;
-  return a.name.slice(0, 2) === b.name.slice(0, 2);
+  return 姓(a.name) === 姓(b.name);
 }
 
 // 子を返す（存命の者のみ）
@@ -244,7 +350,6 @@ export const lifeSpan = (g) => (g && LONG_LIVED[g.id]) || LIFE_CAP;
 export function heirCandidates(s, dead) {
   const kin = s.generals.filter((x) => x.faction === dead.faction && x.id !== dead.id && !x.captive);
   if (!kin.length) return [];
-  const sur = dead.name.slice(0, 2);
   const kids = childrenOf(s, dead).map((x) => x.id);
   const scored = kin.map((x) => ({
     gen: x,
@@ -271,9 +376,14 @@ export function heirCandidates(s, dead) {
 export function pickHeir(s, dead) {
   const kin = s.generals.filter((x) => x.faction === dead.faction && x.id !== dead.id && !x.captive);
   if (!kin.length) return null;
-  const sur = dead.name.slice(0, 2);
+  /* 当主の名が無いとき（当主を欠いた家）は、家名を 姓 として渡してよい。
+     家名には官名が付くことがある（織田大和守家）ので、頭が姓と合えば同じ血とみる。 */
+  const sur = 姓(dead.name);
+  const 同姓 = dead.姓
+    ? (x) => { const t = 姓(x.name); return !!t && dead.姓.startsWith(t); }
+    : (x) => 姓(x.name) === sur;
   // 同じ姓の者。年長から選ぶが、幼すぎる者は避ける。
-  const blood = kin.filter((x) => x.name.startsWith(sur) && x.age >= 8)
+  const blood = kin.filter((x) => 同姓(x) && x.age >= 8)
     .sort((a, b) => (b.age >= 15 ? 1 : 0) - (a.age >= 15 ? 1 : 0) || a.age - b.age);
   if (blood.length) return blood[0];
   return [...kin].sort((a, b) => (b.lead + b.gov + b.wit) - (a.lead + a.gov + a.wit))[0];
@@ -292,7 +402,7 @@ export function succeed(s, dead, cause, heirId, retire) {
   }
   heir.lord = true;
   heir.retinue += Math.round(dead.retinue * (retire ? 0.45 : 0.6));
-  const blood = heir.name.startsWith(dead.name.slice(0, 2));
+  const blood = 姓(heir.name) === 姓(dead.name);
   // 血筋でない者が立てば家中は揺れる。若すぎても侮られる。
   // 先代が存命で後見に立てば、家中は落ち着く。
   for (const x of s.generals.filter((q) => q.faction === dead.faction && q.id !== heir.id && !q.captive)) {
@@ -417,8 +527,10 @@ export function 取り立てる(s, promo, name) {
   const o = promo && promo.仕官;
   if (!o || !s.factions[o.faction]) return null;
   const id = `promo-${o.faction}-${s.year}-${s.month}-${s.generals.length}`;
+  /* 取り立ての値は狭い尺度で作っている（makePromotion）。武将帳と同じ広い尺度へ写す。 */
   const gen = {
-    id, name, faction: o.faction, lead: o.lead, valor: o.valor, wit: o.wit, gov: o.gov,
+    id, name, faction: o.faction, lead: 能力を広げる(o.lead, "lead"), valor: 能力を広げる(o.valor, "valor"),
+    wit: 能力を広げる(o.wit, "wit"), gov: 能力を広げる(o.gov, "gov"),
     loyal: 82, age: o.age, at: o.at, 本領: o.at,      // 召し抱えた城が、その者の本領となる
     retinue: o.retinue, retTrain: o.retTrain,
     unity: clamp(o.retTrain + 6, 30, 100), merit: 6, 架空: true,
