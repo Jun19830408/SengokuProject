@@ -65,6 +65,9 @@ function 仕立てる() {
   });
   const b = A.createBattle(def, atk, 'E');
   b.mode = 'castle'; b.map = m; b.phase = 'fight';
+  /* 計略「鼓舞」は使わせない。ここで見るのは受け持ちと引き取りの決まりで、士気を落とした隊に
+     采配が鼓舞を使うと、弱って引き取る所が見られない（鼓舞は tests/kobu が見る） */
+  b.鼓舞なし = true;
   return { m, b, atk, def };
 }
 /* 門の持ち場（門のすぐ内） */
