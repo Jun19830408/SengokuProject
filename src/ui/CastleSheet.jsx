@@ -206,7 +206,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
               <div style={行}>
                 城方　<span style={強}>{fmt(様.城方.兵)}人</span>（守るに要る{fmt(様.城方.要る)}人）
                 {"　"}兵糧あと<span style={強}>{様.城方.兵糧}ヶ月</span>
-                {"　"}民心 {様.城方.民}<span style={{ fontSize: 10.5 }}>（二十五を割れば城は開く）</span>
+                {"　"}民心 {様.城方.民}
               </div>
               <div style={{ ...行, color: 様.城方.月 <= 2 ? "#B0483C" : U.dim }}>
                 このままなら<span style={{ ...強, color: 様.城方.月 <= 2 ? "#B0483C" : U.text }}>
