@@ -1,5 +1,5 @@
 import { MAP, 城の域か, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 列の順, 門の輪, 出城が保つ, 出城の内か } from "./castleMap.js";
-import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く, 出城から引き取らせる, 引き取りを進める } from "./corps.js";
+import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く, 出城から引き取らせる, 引き取りを進める, 狙う所 } from "./corps.js";
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt, 地の高さ, 高み } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { 采配の計略 } from "./keiryaku.js";
@@ -755,11 +755,13 @@ export function battleAI(b) {
     const t = alive.find((o) => o.id === c.狙い);
     if (!t || t.destroyed || !追う命 || (c.side === "P" && t.ambush && !t.revealed)) { c.狙い = null; continue; }
     if (c.squads.some((q) => q.engaged)) continue;
-    const d = Math.hypot(c.x - t.x, c.y - t.y) || 1;
+    /* 狙うのは敵の隊の芯ではなく、狙った組（corps.js 狙う所）。間延びした隊の芯へ引かれない */
+    const 所 = 狙う所(c, t);
+    const d = Math.hypot(c.x - 所.x, c.y - 所.y) || 1;
     // 射撃は間合いを取って撃つ。近すぎれば下がらず、その場で構える。
     const 間 = c.order === "突撃" ? 20 : c.order === "射撃" ? Math.min(d, 150) : 38;
-    issueOrder(b, c, { order: c.order, target: t.id, 狙い: c.狙い,
-      tx: t.x + ((c.x - t.x) / d) * 間, ty: t.y + ((c.y - t.y) / d) * 間 });
+    issueOrder(b, c, { order: c.order, target: t.id, 狙い: c.狙い, 狙い組: 所.組 ? 所.組.id : null,
+      tx: 所.x + ((c.x - 所.x) / d) * 間, ty: 所.y + ((c.y - 所.y) / d) * 間 });
   }
 
   /* 本陣を守る（GDD 8.7）。

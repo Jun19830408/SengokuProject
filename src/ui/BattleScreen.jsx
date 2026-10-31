@@ -1,7 +1,7 @@
 import { 木立を焼く } from "../battle/mori.js";
 import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 本丸への道, 門の輪, 出城が保つ, 出城の内か } from "../battle/castleMap.js";
-import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
+import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す, 狙いの組 } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限, 城山の形 } from "../battle/shinga.js";
 import { stepBattle, 夜を明かす, 兵糧攻めに移る, 寄せ手の夜の思案, 今の刻, 日の名, 兵糧の日 } from "../battle/engine.js";
@@ -430,6 +430,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   }, []);
 
   const b = bRef.current;
+  const 押した所Ref = useRef(null);          // 敵の体を押した所（狙う組を決める）
   const selC = b.corps.find((c) => c.id === sel && !c.dead);
 
   /* ---- 座標変換とカメラ操作（GDD 8.2 / 15.2） ---- */
@@ -677,9 +678,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
       return;
     }
     if (foe) {
-      const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
+      /* 押した所にいちばん近い敵の組へ向かう（芯へ向かうと、間延びした隊の端へ引かれる） */
+      const 組 = 狙いの組(foe, f.x, f.y) || foe;
+      const d = Math.hypot(c.x - 組.x, c.y - 組.y) || 1;
       // 指示したときはまっすぐ向かう。森へ入れ、山を登れ、川を渡れという命令もありうる。
-      const gx = foe.x + ((c.x - foe.x) / d) * 38, gy = foe.y + ((c.y - foe.y) / d) * 38;
+      const gx = 組.x + ((c.x - 組.x) / d) * 38, gy = 組.y + ((c.y - 組.y) / d) * 38;
       下知(b, c, { order: "接戦", tx: gx, ty: gy });
     } else {
       c.siegeAuto = false; c.gate = null;
@@ -717,6 +720,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
        何も選んでいなければただの移動先になっていた。敵の様子を検めてから
        どの隊をぶつけるか決める、という手が打てなかった。 */
     if (foe) setFoeSel(foe.id); else setFoeSel(null);
+    /* 敵の体を押した所を控える（名札を押したときは控えない）。敵の帳から突撃や接戦を命じたとき、
+       押した所にいちばん近い組を狙う（battle/corps.js 狙う所） */
+    押した所Ref.current = foe && !札 ? { id: foe.id, x: f.x, y: f.y } : null;
     if (foe && !selC && !allRef.current) return;         // 自隊を選んでいなければ、見るだけ
     if (allRef.current) {
       // 全部隊選択中は、まとまりを保ったまま全隊へ同じ目標を与える
@@ -825,7 +831,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (c && isCastle && o !== "待機") { c.siegeAuto = false; c.gate = null; }
     if (!c || c.dead || c.destroyed || c.routed) return;
     c.task = null;
-    c.狙い = null;                       // 別の命令を出せば、名指しの狙いは解ける
+    c.狙い = null; c.狙い組 = null;      // 別の命令を出せば、名指しの狙いは解ける
     const t = nearestFoe(c);
     const 近い敵 = (self) => {
       let 近 = null, nd = 1e9;
@@ -871,10 +877,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (!c || !foe || c.dead || c.destroyed || c.routed) return;
     c.task = null; c.狙い = foe.id;
     if (isCastle) { c.siegeAuto = false; c.gate = null; }
-    const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
+    /* 狙う組（battle/corps.js 狙う所）。敵の体を押していれば押した所の組、名札や敵の帳からなら
+       こちらの隊にいちばん近い組。敵の隊の芯へ向かうと、間延びした隊の端へ引き寄せられる */
+    const 押 = 押した所Ref.current && 押した所Ref.current.id === foe.id ? 押した所Ref.current : null;
+    const 組 = (押 ? 狙いの組(foe, 押.x, 押.y) : 狙いの組(foe, c.x, c.y)) || foe;
+    const d = Math.hypot(c.x - 組.x, c.y - 組.y) || 1;
     const 間 = o === "突撃" ? 20 : o === "射撃" ? Math.min(d, 150) : 38;
-    const patch = { order: o, target: foe.id, 狙い: foe.id,
-      tx: foe.x + ((c.x - foe.x) / d) * 間, ty: foe.y + ((c.y - foe.y) / d) * 間 };
+    const patch = { order: o, target: foe.id, 狙い: foe.id, 狙い組: 組 === foe ? null : 組.id,
+      tx: 組.x + ((c.x - 組.x) / d) * 間, ty: 組.y + ((c.y - 組.y) / d) * 間 };
     if (o === "突撃") patch.chargeT = c.formation === "鋒矢" ? 26 : 16;
     下知(b, c, patch);
     notify(b, `${c.gen.name}隊が${foe.gen.name}隊へ${o}。`, "info");
