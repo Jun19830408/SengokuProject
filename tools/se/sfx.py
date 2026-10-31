@@ -895,13 +895,43 @@ def kachidoki(rng):
     return normalize(trim_tail(y), momentary=-14, ceiling_db=-2)
 
 
+# ------------------------------------------------------------ retreat: the march, and the retreat gong from the rear
+def kane_hit(rng, f0=1180, dur=1.3, bright=1.0):
+    """the small war gong (jingane) -- the same 'chan' as the retreat strokes in the castle-fail sting"""
+    rat = [1.0, 1.52, 2.41, 2.95, 3.62, 4.38, 5.6]
+    dec = [0.9, 0.55, 0.4, 0.32, 0.22, 0.16, 0.1]
+    amp = [1.0, 0.8, 0.6 * bright, 0.5 * bright, 0.35 * bright, 0.25 * bright, 0.15 * bright]
+    y = modal([f0 * r for r in rat], [d * dur / 1.2 for d in dec], amp, dur, rng)
+    hit = noise_burst(N(0.01), rng, lo=2000, hi=9000) * np.exp(-tvec(N(0.01)) / 0.002)
+    y[:len(hit)] += hit / np.max(np.abs(hit)) * 0.8
+    return y / np.max(np.abs(y))
+
+
+def loop_hikigane(rng):
+    """a unit falling back (routed or withdrawing): the same footsteps as the march, and from the rear the
+    retreat gong -- three strokes, twice a loop"""
+    L = N(LOOP)
+    march = loop_kougun(np.random.default_rng(1000 + list(ITEMS).index('march')))    # the march loop itself
+    gong = np.zeros((L, 2))
+    for g0 in (0.55, 4.55):
+        for k in range(3):
+            t0 = g0 + 0.42 * k + rng.normal(0, 0.012)
+            h = kane_hit(rng, f0=1180 * (1 + 0.004 * k) * rng.uniform(0.998, 1.002), dur=1.4)
+            h = filt(h, sos_lp(6500, 2)) * (1.0 - 0.12 * k)                          # from the rear, a little dulled
+            place(gong, N(t0), pan2(h, 0.25))
+    gong = reverb(gong, outdoor_ir(57, 1.2), wet_db=-6, circular=True)
+    x = mix_level(march, -24.5) + mix_level(gong, -24.0)
+    return normalize(x, target_lufs=-22.5, ceiling_db=-2)
+
+
 ITEMS = {
     'sel_mikata': sel_mikata, 'sel_teki': sel_teki,
     'march': loop_kougun, 'engage': loop_sessen, 'charge': loop_totsugeki2, 'melee': loop_settekki,
     'ship': loop_fune, 'horoku': one_horoku,
     'horagai_gousei': gou_horagai, 'jindaiko': gou_taiko, 'teppo': tep_seisha, 'yumi': yumi_seisha, 'kachidoki_gousei': kachidoki,
+    'retreat': loop_hikigane,      # added last: every earlier sound keeps its seed (its place in ITEMS)
 }
-LOOPS = {'march', 'engage', 'charge', 'melee', 'ship'}
+LOOPS = {'march', 'engage', 'charge', 'melee', 'ship', 'retreat'}
 
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)

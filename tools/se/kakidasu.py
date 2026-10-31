@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """書き出し。作り直した効果音を MP3 にして遊びの側へ据える。
 
-    python3 tools/se/kakidasu.py                 # 二十一とも
+    python3 tools/se/kakidasu.py                 # 二十二とも
     python3 tools/se/kakidasu.py charge melee    # 名指し（下の 札 の左の名）
 
   一、tools/se/work/out/<名>.wav を MP3（VBR・-q:a 4）に圧し、dist/se/se_<名>.mp3 に置く
   二、MP3 を解き直して、長さが元の WAV と同じか（地は八秒ちょうどか）を検める
-  三、src/audio/kouka.js の「長」（秒）と、地の五つの「指紋」を書き換える
+  三、src/audio/kouka.js の「長」（秒）と、地の六つの「指紋」を書き換える
 """
 import sys, os, re, base64, subprocess
 import numpy as np
@@ -19,13 +19,13 @@ SR = 44100
 # 作る側の名 → kouka.js の名
 札 = {
     'sel_mikata': '自軍を選ぶ', 'sel_teki': '敵を選ぶ',
-    'march': '行軍', 'engage': '接戦', 'charge': '突撃', 'melee': '接敵', 'ship': '軍船',
+    'march': '行軍', 'engage': '接戦', 'charge': '突撃', 'melee': '接敵', 'retreat': '退却', 'ship': '軍船',
     'horoku': '焙烙', 'notice_good': '有利', 'notice_bad': '不利',
     'win_field': '野戦の勝ち', 'lose_field': '野戦の負け', 'win_castle': '城を落とす', 'lose_castle': '城攻めの退き',
     'win_kessen': '決戦の勝ち', 'lose_kessen': '決戦の負け',
     'horagai': '法螺貝', 'jindaiko': '陣太鼓', 'teppo': '鉄砲', 'yumi': '弓', 'kachidoki': '勝鬨',
 }
-地 = {'march', 'engage', 'charge', 'melee', 'ship'}
+地 = {'march', 'engage', 'charge', 'melee', 'retreat', 'ship'}
 
 
 def 指紋を取る(x):
