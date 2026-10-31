@@ -4,8 +4,8 @@ import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS
 import { px, py } from "../data/geo.js";
 import { VILLAGES, fieldScale } from "./field.js";
 import { clamp } from "../core/util.js";
-import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 画の揚げ, 斜め, 向きの角, 盤の筆を回す, 視の筆へ, 地の札, 札を控える, 札を控え止める, 地の字, 隠れの際 } from "./naname.js";
-import { 一人ずつ描く隊, 野の川筋 } from "./shinga.js";
+import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 画の揚げ, 斜め, 向きの角, 今の向き, 盤の筆を回す, 視の筆へ, 地の札, 札を控える, 札を控え止める, 地の字, 隠れの際 } from "./naname.js";
+import { 一人ずつ描く隊, 野の川筋, 組の見た目 } from "./shinga.js";
 import { 城を立てて描く, 天守の置き場, 城を預ける, 預けた城を立てる } from "./tachimono.js";
 import { 川の流れを描く, 立木を描く } from "./mori.js";
 import { 里を描く } from "./sato.js";
@@ -2247,6 +2247,137 @@ function 境の線を引く(ctx, S, dpr, cam) {
   ctx.restore();
 }
 
+/* ---- 矢と鉄砲の火（GDD 8.11）----
+
+   遊ぶ側の申し出は「矢はもっと細いものがいい」「あらぬ方向に矢が飛んでいくときも
+   あるので、あくまでも弓隊から敵に向かって矢が飛ぶように（鉄砲も）」であった。
+   あらぬ方向のもとは三つあった。
+
+     一、山なりの高さを盤の北（y の負）へ足していた。眺めを回すと北は画面の上で
+         なくなるので、矢が横へ、ときに下へ弧を描いた（揚げ と同じく、画面の上は
+         眺めの向きで盤の別の向きになる）。
+     二、盤の組の居所から放っていた。絵の兵は組を歩いて追うので、居所とはずれる。
+         城の狭間の射撃にいたっては、守る隊の芯（曲輪の真ん中）から放っていた。
+     三、矢は太さ〇.五五・長さ七歩までを盤の寸法のまま引いていたので、寄ると
+         太い黒い棒に見えた。
+
+   いまは、矢と火は射った組の兵の立ち所から、狙った組の兵の立ち所へ飛ばす
+   （盤の印 射手・的。engine の 放った跡）。端は放った刹那に決めて控えるので、
+   飛んでいるあいだに兵が動いても矢の道は揺れない。太さは画面の一画素ほど、長さは
+   人の丈の半ばほどに取る。 */
+export function 画面の上() {
+  const 縮 = 縦の縮み(), v = 今の向き();
+  return v === 1 ? [-1 / 縮, 0] : v === 2 ? [0, 1 / 縮] : v === 3 ? [1 / 縮, 0] : [0, -1 / 縮];
+}
+/* 組の絵の兵の一人の立ち所。前 なら前の列（持ち場の一列目）から選ぶ */
+function 兵の立ち所(q, k, 前) {
+  const s = q ? 組の見た目(q) : null;
+  if (!s || !s.初) return null;
+  const 数 = Math.max(0, Math.min(50, Math.round(q.men)) - (s.借り || 0));
+  const 域 = 前 ? Math.min(10, 数) : 数;
+  for (let t = 0; t < 域; t++) { const i = (k + t) % 域; if (s.生[i]) return [s.sx[i], s.sy[i]]; }
+  return null;
+}
+const 射の端の控え = new WeakMap();
+export function 射の端(f, 本数, 前) {
+  let e = 射の端の控え.get(f);
+  if (e) return e;
+  const d0 = Math.hypot(f.x2 - f.x, f.y2 - f.y) || 1;
+  const px = -(f.y2 - f.y) / d0, py = (f.x2 - f.x) / d0;
+  const 種 = Math.floor((f.乱 || 0) * 997);
+  const O = [], T = [];
+  for (let k = 0; k < 本数; k++) {
+    const 寄 = (k - (本数 - 1) / 2) * (2.4 + d0 * 0.012);
+    const o = 兵の立ち所(f.射手, 種 + k * 7, 前);
+    O.push(o || [f.x + px * 寄 * 0.4, f.y + py * 寄 * 0.4]);
+    const t = 兵の立ち所(f.的, 種 * 3 + k * 11, false);
+    T.push(t || [f.x2 + px * 寄, f.y2 + py * 寄]);
+  }
+  e = { O, T };
+  射の端の控え.set(f, e);
+  return e;
+}
+/* 煙の寄せ。撃った組の絵の兵が盤の居所からずれていれば、そのぶん寄せる（撃った刹那に決める） */
+const 射の寄せの控え = new WeakMap();
+function 射の寄せ(f) {
+  let v = 射の寄せの控え.get(f);
+  if (v) return v;
+  const q = f.射手, s = q ? 組の見た目(q) : null;
+  v = s && s.初 ? [s.dx - q.x, s.dy - q.y] : [0, 0];
+  射の寄せの控え.set(f, v);
+  return v;
+}
+/* 矢。組で引き絞って一斉に放つので、七本が射手の兵から放たれ、山なりに飛んで的の兵の
+   あたりへ落ちる。放つ高さは手の高さ、落ちるのは胸の高さ。着いたら地に突き立つ */
+function 矢を描く(ctx, f, 上, 画一) {
+  const a = 1 - f.t / f.life, u0 = f.t / f.life;
+  const { O, T } = 射の端(f, 7, false);
+  const 太 = clamp(1.1 * 画一, 0.05, 0.6), 矢長 = Math.max(2.6, 5 * 画一);
+  ctx.save(); ctx.lineCap = "round";
+  for (let n = 0; n < O.length; n++) {
+    const ず = ((f.乱 || 0) * 97 + n * 13) % 1;          // 一本ごとの遅れ
+    const u = clamp(u0 * (1.12 - ず * 0.22), 0, 1);
+    if (u <= 0) continue;
+    const ox = O[n][0], oy = O[n][1], tx = T[n][0], ty = T[n][1];
+    const d0 = Math.hypot(tx - ox, ty - oy) || 1;
+    const 弧 = Math.min(26, d0 * 0.085);
+    const L0 = 揚げ(ox, oy), L1 = 揚げ(tx, ty);
+    const 所 = (uu) => { const 高 = Math.sin(Math.PI * uu) * 弧 + 3.0 * (1 - uu) + 1.2 * uu;
+      return [ox + (tx - ox) * uu + L0[0] + (L1[0] - L0[0]) * uu + 上[0] * 高,
+        oy + (ty - oy) * uu + L0[1] + (L1[1] - L0[1]) * uu + 上[1] * 高]; };
+    const h = 所(u), g = 所(Math.max(0, u - 0.02));
+    let dx = h[0] - g[0], dy = h[1] - g[1];
+    const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
+    const tx2 = h[0] - dx * 矢長, ty2 = h[1] - dy * 矢長;
+    ctx.globalAlpha = a > 0.25 ? 0.9 : a * 3.6;
+    ctx.strokeStyle = "#2E2A1E"; ctx.lineWidth = 太;
+    ctx.beginPath(); ctx.moveTo(tx2, ty2); ctx.lineTo(h[0], h[1]); ctx.stroke();
+    ctx.globalAlpha *= 0.85;                               // 矢筈の白羽
+    ctx.strokeStyle = "#E9E3D2"; ctx.lineWidth = 太 * 1.6;
+    ctx.beginPath(); ctx.moveTo(tx2, ty2); ctx.lineTo(tx2 + dx * 矢長 * 0.22, ty2 + dy * 矢長 * 0.22); ctx.stroke();
+    if (u >= 0.995 && a < 0.45) {                         // 着いたしるしの土の跳ね
+      ctx.globalAlpha = a * 0.8; ctx.fillStyle = "#A8987A";
+      ctx.beginPath(); ctx.ellipse(tx + L1[0], ty + L1[1], 1.2 + (1 - a), 0.6 + (1 - a) * 0.5, 0, 0, 7); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+/* 鉄砲の火。前の列の三人の筒先に閃きを置き、寄った絵では的へ走る短い光の筋を添える。
+   引いた絵では、弾道の筋が「撃った」を伝える手がかりになる */
+function 火を描く(ctx, f, 上, 画一, 個人絵) {
+  const a = 1 - f.t / f.life, u = f.t / f.life;
+  const { O, T } = 射の端(f, 3, true);
+  ctx.save();
+  for (let n = 0; n < O.length; n++) {
+    const ox = O[n][0], oy = O[n][1], tx = T[n][0], ty = T[n][1];
+    const d0 = Math.hypot(tx - ox, ty - oy) || 1, ux = (tx - ox) / d0, uy = (ty - oy) / d0;
+    const L0 = 揚げ(ox, oy), L1 = 揚げ(tx, ty);
+    const mx = ox + ux * 1.4 + L0[0] + 上[0] * 2.6, my = oy + uy * 1.4 + L0[1] + 上[1] * 2.6;   // 筒先（肩の高さ）
+    const ex = tx + L1[0] + 上[0] * 1.5, ey = ty + L1[1] + 上[1] * 1.5;
+    if (!個人絵) {
+      ctx.globalAlpha = a * 0.8; ctx.strokeStyle = "#FFF4D8"; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(ex, ey); ctx.stroke();
+    } else {
+      const hx = mx + (ex - mx) * u, hy = my + (ey - my) * u, 筋 = Math.min(d0 * 0.25, 9);
+      ctx.globalAlpha = 0.45 * a; ctx.strokeStyle = "#FFF4D8"; ctx.lineWidth = clamp(0.9 * 画一, 0.04, 0.5);
+      ctx.beginPath(); ctx.moveTo(hx - ux * 筋, hy - uy * 筋); ctx.lineTo(hx, hy); ctx.stroke();
+    }
+    if (a > 0.35) {                                        // 筒先の火。芯と暈の二重に置く
+      const b2 = (a - 0.35) / 0.65, ang2 = Math.atan2(uy, ux);
+      ctx.globalAlpha = b2 * 0.45; ctx.fillStyle = "#FFCC66";
+      ctx.beginPath(); ctx.arc(mx, my, 1.1 + (1 - b2) * 0.8, 0, 7); ctx.fill();
+      ctx.globalAlpha = b2 * 0.95; ctx.fillStyle = "#FFF3C8";
+      ctx.beginPath(); ctx.arc(mx, my, 0.5, 0, 7); ctx.fill();
+      ctx.globalAlpha = b2 * 0.7; ctx.strokeStyle = "#FFE08A"; ctx.lineWidth = clamp(0.8 * 画一, 0.04, 0.4);
+      for (const 角 of [-0.32, 0, 0.3]) {                  // 火箭。筒先から前へ、短く尖って散る
+        ctx.beginPath(); ctx.moveTo(mx, my);
+        ctx.lineTo(mx + Math.cos(ang2 + 角) * 2.2, my + Math.sin(ang2 + 角) * 2.2); ctx.stroke();
+      }
+    }
+  }
+  ctx.restore();
+}
+
 export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, 跡Canvas, 城Canvas, 斜め地, 区Canvas) {
   /* 新しい絵（関ヶ原だけ・GDD 8.11）。深く寄ったときは組を五十人にほどいて
      一人ずつ描く。引きはこれまでの絵のまま。理には触れない。
@@ -2568,99 +2699,29 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
   if (城立体) { if (個人絵) 預けた城を立てる(ctx); 札を立てる(); }
   // 戦いの気配。短く消える細い線と火花だけで、駒を隠さない。
   if (b.fx && b.fx.length) {
+    const 上 = 画面の上(), 画一 = 1 / cam.s;
+    /* 立ち上る向き（地べたの傾きに合わせた画面の上）。土煙・飛沫・刃の光は、盤の北ではなく
+       画面の上へ立てる。北へ立てていたころは、眺めを回すと横へ流れた（矢と同じ取り違え） */
+    const 縮0 = 縦の縮み(), 昇向 = [上[0] * 縮0, 上[1] * 縮0];
     for (const f of b.fx) {
+      /* 矢と鉄砲の火（GDD 8.11）。射った組の兵から、狙った組の兵へ飛ばす（射の跡） */
+      if (f.k === "arrow") { 矢を描く(ctx, f, 上, 画一); continue; }
+      if (f.k === "shot") { 火を描く(ctx, f, 上, 画一, 個人絵); continue; }
       /* 斜めの眺めでは、気配もその所の地の高さだけ持ち上げる（起こりの所で量る） */
       ctx.save(); ctx.translate(...揚げ(f.x || 0, f.y || 0));
       try {
       const a = 1 - f.t / f.life;
-      if (f.k === "arrow") {
-        /* 矢（GDD 8.11）。
-
-           一本の細線を引いていただけなので、放った刹那は長さが零、飛んでいる
-           あいだも髪ほどの筋で、盤の上ではまったく見えなかった。遊ぶ側の
-           申し出は「弓の矢のアニメーションがない」であった。
-
-           矢は一人で放つものではない。組で引き絞って一斉に放つのだから、
-           束になり、弧を描いて落ちる。七本を幅に散らし、山なりに飛ばす。
-           放った刹那から矢筈のぶんだけ長さを持たせ、着いたら地に突き立てる。 */
-        const d0 = Math.hypot(f.x2 - f.x, f.y2 - f.y) || 1;
-        const ux = (f.x2 - f.x) / d0, uy = (f.y2 - f.y) / d0;
-        const px = -uy, py = ux;                        // 横へ散らす向き
-        const u0 = f.t / f.life;
-        const 弧 = Math.min(26, d0 * 0.085);            // 山なりの高さ
-        const 矢長 = Math.min(7, 2.6 + d0 * 0.03);
-        ctx.lineCap = "round";
-        for (let n = 0; n < 7; n++) {
-          const ず = ((f.乱 || 0) * 97 + n * 13) % 1;    // 一本ごとの遅れと散らし
-          const u = clamp(u0 * (1.12 - ず * 0.22), 0, 1);
-          if (u <= 0) continue;
-          const 寄 = (n - 3) * (2.4 + d0 * 0.012) + (ず - 0.5) * 2.2;
-          const 落 = Math.sin(Math.PI * u) * 弧;
-          const hx = f.x + (f.x2 - f.x) * u + px * 寄;
-          const hy = f.y + (f.y2 - f.y) * u + py * 寄 - 落;
-          /* 矢は進む向きへ傾く。登りは上を向き、落ちぎわは下を向く。 */
-          const 傾 = Math.cos(Math.PI * u) * 弧 * Math.PI / d0;
-          const dx2 = ux, dy2 = uy - 傾 * 0.9;
-          const dl = Math.hypot(dx2, dy2) || 1;
-          const tx2 = hx - (dx2 / dl) * 矢長, ty2 = hy - (dy2 / dl) * 矢長;
-          ctx.globalAlpha = a > 0.25 ? 0.9 : a * 3.6;
-          ctx.strokeStyle = "#2E2A1E"; ctx.lineWidth = 0.55;
-          ctx.beginPath(); ctx.moveTo(tx2, ty2); ctx.lineTo(hx, hy); ctx.stroke();
-          /* 矢筈の白羽。これがあると、ただの線が矢に見える。 */
-          ctx.globalAlpha = (a > 0.25 ? 0.75 : a * 3) * 0.9;
-          ctx.strokeStyle = "#E9E3D2"; ctx.lineWidth = 0.75;
-          ctx.beginPath();
-          ctx.moveTo(tx2, ty2);
-          ctx.lineTo(tx2 + (dx2 / dl) * 1.5, ty2 + (dy2 / dl) * 1.5);
-          ctx.stroke();
-          /* 落ちた矢は地に立つ。着弾のしるしは、小さな土の跳ねで添える。 */
-          if (u >= 0.995 && a < 0.45) {
-            ctx.globalAlpha = a * 0.8;
-            ctx.fillStyle = "#A8987A";
-            ctx.beginPath();
-            ctx.ellipse(hx, hy + 0.6, 1.5 + (1 - a) * 1.2, 0.7 + (1 - a) * 0.6, 0, 0, 7);
-            ctx.fill();
-          }
-        }
-        ctx.lineCap = "butt";
-      } else if (f.k === "shot") {
-        /* 鉄砲の火（GDD 8.11）。筒先の閃きだけを受け持つ。
-           白煙は長く残るので、別の跡（煙）として置いてある。 */
-        const ang2 = Math.atan2(f.y2 - f.y, f.x2 - f.x);
-        if (!個人絵) {
-          /* 引きの絵では、弾道の筋が「撃った」を伝える手がかりになる。 */
-          ctx.globalAlpha = a * 0.8;
-          ctx.strokeStyle = "#FFF4D8"; ctx.lineWidth = 1.1;
-          ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x2, f.y2); ctx.stroke();
-        }
-        /* 筒先の火。寄れば寄るほど目に立つよう、芯と暈の二重に置く。 */
-        if (a > 0.35) {
-          const b2 = (a - 0.35) / 0.65;
-          /* 火は筒先に立つ。組の中どころではなく、前列の鼻先である。 */
-          const fx2 = f.x + Math.cos(ang2) * 5.5, fy2 = f.y + Math.sin(ang2) * 5.5;
-          ctx.globalAlpha = b2 * 0.45;
-          ctx.fillStyle = "#FFCC66";
-          ctx.beginPath(); ctx.arc(fx2, fy2, 1.5 + (1 - b2) * 1.0, 0, 7); ctx.fill();
-          ctx.globalAlpha = b2 * 0.95;
-          ctx.fillStyle = "#FFF3C8";
-          ctx.beginPath(); ctx.arc(fx2, fy2, 0.7, 0, 7); ctx.fill();
-          /* 火箭。筒先から前へ、短く尖って散る */
-          ctx.globalAlpha = b2 * 0.7;
-          ctx.strokeStyle = "#FFE08A"; ctx.lineWidth = 0.4;
-          for (const 角 of [-0.32, 0, 0.3]) {
-            ctx.beginPath();
-            ctx.moveTo(fx2, fy2);
-            ctx.lineTo(fx2 + Math.cos(ang2 + 角) * 2.6, fy2 + Math.sin(ang2 + 角) * 2.6);
-            ctx.stroke();
-          }
-        }
-      } else if (f.k === "煙") {
+      if (f.k === "煙") {
         /* 硝煙（GDD 8.11）。
 
            一斉に放てば、隊の前に白煙の帯が立つ。遠目にも「いま撃った」と
-           分かるのはこれである。長く残し、風下へ流れながら膨らんで薄れる。 */
+           分かるのはこれである。長く残し、風下へ流れながら膨らんで薄れる。
+           立ち上るのは画面の上へ（盤の北へ流していたころは、眺めを回すと煙が
+           横へ流れた）。撃った組の絵の兵が盤の居所からずれていれば、そのぶん寄せる */
         const u = f.t / f.life;
-        const cx3 = f.x + (f.vx || 0) * f.t, cy3 = f.y + (f.vy || 0) * f.t - u * u * 2.2;
+        const 寄 = 射の寄せ(f);
+        const 昇 = 2.2 + 1.4 * f.t + u * u * 2.2;
+        const cx3 = f.x + 寄[0] + (f.vx || 0) * f.t + 上[0] * 昇, cy3 = f.y + 寄[1] + (f.vy || 0) * f.t + 上[1] * 昇;
         const r3 = (f.r0 || 2) + u * 6.0;
         /* 丸を一つ置くと石鹸玉に見える。小さい丸を幾つも重ねて、縁をぼかす。 */
         const 乱3 = f.乱 || 0;
@@ -2685,19 +2746,21 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
           ctx.globalAlpha = a * a * 0.34;
           ctx.fillStyle = "#B5A684";
           ctx.beginPath();
-          ctx.ellipse(f.x, f.y - 立 * 2.4, (f.big ? 3.2 : 2.2) + 立 * 5.5,
+          ctx.ellipse(f.x + 昇向[0] * 立 * 2.4, f.y + 昇向[1] * 立 * 2.4, (f.big ? 3.2 : 2.2) + 立 * 5.5,
             ((f.big ? 3.2 : 2.2) + 立 * 5.5) * 0.55, 0, 0, 7);
           ctx.fill();
           if (a > 0.45) {                       // 刃の光は、当たった刹那だけ
             ctx.globalAlpha = (a - 0.45) * 1.5;
             ctx.strokeStyle = f.big ? "#FFE9B0" : "#F2F4F0";
-            ctx.lineWidth = f.big ? 0.9 : 0.6;
+            /* 光は髪ほどの細さに取る。盤の寸法のまま〇.六歩で引くと、寄った絵では白い棒が
+               あちこちを向いて浮かび、飛び交う矢と見分けがつかなかった */
+            ctx.lineWidth = clamp((f.big ? 1.3 : 1.0) * 画一, 0.05, f.big ? 0.9 : 0.6);
             const ang = f.x * 0.7 + f.y * 1.3;
             for (let k = 0; k < (f.big ? 2 : 1); k++) {
               const a2 = ang + k * 1.9, r2 = (f.big ? 3.4 : 2.4);
               ctx.beginPath();
-              ctx.moveTo(f.x + Math.cos(a2) * r2 * 0.3, f.y + Math.sin(a2) * r2 * 0.3 - 2);
-              ctx.lineTo(f.x + Math.cos(a2) * r2, f.y + Math.sin(a2) * r2 - 2.6);
+              ctx.moveTo(f.x + Math.cos(a2) * r2 * 0.3 + 昇向[0] * 2, f.y + Math.sin(a2) * r2 * 0.3 + 昇向[1] * 2);
+              ctx.lineTo(f.x + Math.cos(a2) * r2 + 昇向[0] * 2.6, f.y + Math.sin(a2) * r2 + 昇向[1] * 2.6);
               ctx.stroke();
             }
           }
@@ -2719,7 +2782,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
         ctx.globalAlpha = a * a * 0.30;
         ctx.fillStyle = "#B9A98A";
         ctx.beginPath();
-        ctx.arc(f.x, f.y - (1 - a) * 5, (f.r0 || 4) + (1 - a) * 11, 0, 7);
+        ctx.arc(f.x + 昇向[0] * (1 - a) * 5, f.y + 昇向[1] * (1 - a) * 5, (f.r0 || 4) + (1 - a) * 11, 0, 7);
         ctx.fill();
       } else if (f.k === "splash") {
         /* 水飛沫。足元の輪と、跳ね上がる粒。
@@ -2734,7 +2797,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
           const ang = f.x * 0.9 + f.y * 1.7 + k * 1.57;
           const d = r * (0.5 + k * 0.14);
           ctx.beginPath();
-          ctx.arc(f.x + Math.cos(ang) * d, f.y + Math.sin(ang) * d * 0.5 - (1 - a) * 6, 1.5, 0, 7);
+          ctx.arc(f.x + Math.cos(ang) * d + 昇向[0] * (1 - a) * 6, f.y + Math.sin(ang) * d * 0.5 + 昇向[1] * (1 - a) * 6, 1.5, 0, 7);
           ctx.fill();
         }
       } else if (f.k === "gate") {
@@ -2754,7 +2817,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
         const u = f.t;
         ctx.globalAlpha = a * 0.85;
         ctx.fillStyle = "#8A6B45";
-        const cx2 = f.x + f.vx * u, cy2 = f.y + f.vy * u + 130 * u * u;
+        const cx2 = f.x + f.vx * u - 昇向[0] * 130 * u * u, cy2 = f.y + f.vy * u - 昇向[1] * 130 * u * u;   // 画面の下へ落ちる
         ctx.save(); ctx.translate(cx2, cy2); ctx.rotate(u * 9 + f.x);
         ctx.fillRect(-1.6, -0.9, 3.2, 1.8);
         ctx.restore();

@@ -277,13 +277,24 @@ export const 塊として立つ = (c) => !c.routed && !c.withdraw && !c.detach &
      煙　　筒先の白煙（煙）。長く残り、風下へ流れて薄れる
 
    煙は数が要る――一斉射の白い帯は、一つ二つの丸では出ない。矢と火とは別の
-   枠で数えて、互いに押し出さぬようにする。 */
-export function 放った跡(b, 型, x, y, x2, y2) {
+   枠で数えて、互いに押し出さぬようにする。
+
+   射手 … 放った組（矢倉の射撃のように組が無ければ null）。的 … 狙った敵の組。
+   絵は、この組の兵の立ち所から矢を放ち、的の組の兵の立ち所へ落とす（draw.js）。
+   盤の組の居所と、絵の兵の立ち所は少しずれる（兵は組を歩いて追う）ので、居所だけで
+   描くと、矢が射手のいない所から飛んで見えた。どちらも数に出ない印（列挙しない）で
+   付けるので、記録にも、盤の写し（tests/shinga 三）にも現れない。 */
+const 射の印 = (f, 射手, 的) => {
+  if (射手) Object.defineProperty(f, "射手", { value: 射手 });
+  if (的) Object.defineProperty(f, "的", { value: 的 });
+  return f;
+};
+export function 放った跡(b, 型, x, y, x2, y2, 射手 = null, 的 = null) {
   if (!b || !b.fx) return;
   const 乱 = (x * 0.37 + y * 0.71 + b.t * 1.3) % 1;
   if (型 === "teppo") {
     if (b.fx.length < 180) {
-      b.fx.push({ k: "shot", x, y, x2, y2, t: 0, life: 0.22, 乱 });
+      b.fx.push(射の印({ k: "shot", x, y, x2, y2, t: 0, life: 0.22, 乱 }, 射手, 的));
     }
     /* 煙は別枠。帯になってこそ一斉射に見えるので、多めに許す。 */
     const 煙数 = b.fx.reduce((n, f) => n + (f.k === "煙" ? 1 : 0), 0);
@@ -297,14 +308,14 @@ export function 放った跡(b, 型, x, y, x2, y2) {
         const 乱k = ((乱 * (17 + k * 11)) % 1);
         const 前 = 5.5 + k * 2.0 + 乱k * 1.6;
         const 横 = (k - 1) * 3.6 + (乱k - 0.5) * 3.0;
-        b.fx.push({ k: "煙", x: x + ux * 前 + px * 横, y: y + uy * 前 + py * 横,
+        b.fx.push(射の印({ k: "煙", x: x + ux * 前 + px * 横, y: y + uy * 前 + py * 横,
           vx: ux * 2.0 + (乱k - 0.5) * 2.2,
-          vy: uy * 2.0 + ((乱k * 7) % 1 - 0.5) * 1.8 - 1.4,
-          r0: 1.5 + 乱k * 1.2, t: 0, life: 1.8 + 乱k * 1.0, 乱: 乱k });
+          vy: uy * 2.0 + ((乱k * 7) % 1 - 0.5) * 1.8,
+          r0: 1.5 + 乱k * 1.2, t: 0, life: 1.8 + 乱k * 1.0, 乱: 乱k }, 射手, null));
       }
     }
   } else if (b.fx.length < 180) {
-    b.fx.push({ k: "arrow", x, y, x2, y2, t: 0, life: 0.8, 乱 });
+    b.fx.push(射の印({ k: "arrow", x, y, x2, y2, t: 0, life: 0.8, 乱 }, 射手, 的));
   }
 }
 
@@ -1961,7 +1972,7 @@ export function stepBattle(b, dt) {
             }
             tgt.morale -= 0.45;
             b.射気 = (b.射気 || 0) + 0.45;
-            放った跡(b, "teppo", f.x, f.y, qs[0] ? qs[0].x : tgt.x, qs[0] ? qs[0].y : tgt.y);
+            放った跡(b, "teppo", f.x, f.y, qs[0] ? qs[0].x : tgt.x, qs[0] ? qs[0].y : tgt.y, null, qs[0] || null);
           }
         }
       } else if (!MAP.layers[f.layer].gates.some((g) => g.broken)) {
@@ -2057,7 +2068,13 @@ export function stepBattle(b, dt) {
       }
       的.morale -= 0.3;
       b.射気 = (b.射気 || 0) + 0.3;
-      if (qs[0]) 放った跡(b, "teppo", c.x, c.y, qs[0].x, qs[0].y);
+      /* 放つのは、的にいちばん近い守り手の組である。隊の芯（c.x, c.y）から描いていた
+         ころは、曲輪の真ん中の誰もいない所から弾が飛んで見えた */
+      if (qs[0]) {
+        const 射手 = c.squads.filter((q) => q.men > 0)
+          .sort((p, r) => Math.hypot(p.x - qs[0].x, p.y - qs[0].y) - Math.hypot(r.x - qs[0].x, r.y - qs[0].y))[0];
+        放った跡(b, "teppo", 射手 ? 射手.x : c.x, 射手 ? 射手.y : c.y, qs[0].x, qs[0].y, 射手 || null, qs[0]);
+      }
     }
 
     // 城の傾き。門と曲輪を失うほど城方は士気を保てない（GDD 9.3）
@@ -2385,7 +2402,7 @@ export function stepBattle(b, dt) {
           b.発射数 = b.発射数 || {};
           b.発射数[c.id] = (b.発射数[c.id] || 0) + 1;
           q.aim = { x: melee.e.x, y: melee.e.y, t: b.t };   // 狙っている相手
-          if (c.side === "P" || c.seen) 放った跡(b, q.type, q.x, q.y, melee.e.x, melee.e.y);
+          if (c.side === "P" || c.seen) 放った跡(b, q.type, q.x, q.y, melee.e.x, melee.e.y, q, melee.e);
           const wet = q.type === "teppo" ? WEATHER[b.weather].teppo : 1;
           /* 出城の土塁と板塀は、内の者を矢玉から守る（castleMap.js 出城を組む）。
              塀の外から射かけても、狭間の陰の者には三分の一しか当たらない */
