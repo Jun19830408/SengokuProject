@@ -583,6 +583,28 @@ function 出城を守る(b, c, alive) {
   return true;
 }
 
+/* 城の外に出た城方（数日がかりの城攻めの朝の布陣。BattleScreen）。遊ぶ側の申し出は
+   「２日目の前に守勢側もあらためて布陣を整えられ、…城外に出て決戦を挑むこともできる」
+   であった。後詰と同じく野戦の隊として手近な寄せ手に当たる。士気が三十か兵が三割を
+   切れば、手近な破れていない外の門へ退き、門の前で内へ迎え入れられて、その門を受け持つ
+   （出城からの引き取りと同じ筋。corps.js 引き取りを進める） */
+function 城の外で戦う(b, c, alive) {
+  if (c.morale < 30 || corpsMen(c) < corpsMax(c) * 0.3) {
+    const 門 = MAP.layers[0].gates.filter((g) => !g.broken)
+      .map((g) => ({ g, p: gatePos(MAP, 門の輪(MAP, g), g) }))
+      .sort((x, y) => Math.hypot(x.p.x - c.x, x.p.y - c.y) - Math.hypot(y.p.x - c.x, y.p.y - c.y))[0];
+    if (門) {
+      const 道 = routeToCastleGate(MAP, 門.g, c.x, c.y);
+      const 引 = { 道: (道 && 道.length ? 道 : [{ ...門.p, r: 30 }]).map((p) => ({ ...p })), 門: 門.g, 刻: b.t };
+      issueOrder(b, c, { order: "移動", tx: 引.道[0].x, ty: 引.道[0].y });   // 下知は引き取りを解くので、先に命じる
+      c.城外 = false; c.引き取り = 引;
+      b.log.push({ t: b.t, text: `${c.gen.name}隊は城の外から${門.g.key}の内へ引き取る。` });
+      return;
+    }
+  }
+  後詰を当てる(b, c, alive);
+}
+
 /* 盤に現れた後詰（engine.js 後詰を入れる）。城の守りの筋には乗らず、野戦の隊として
    寄せ手に当たる。遠ければ道を引いて寄せ（橋・浅瀬を辿り、城山の塀を回る）、近づけば
    槍を合わせる。狙うのは手近な寄せ手――門に取り付いている隊は背が空いている。
@@ -781,6 +803,7 @@ export function battleAI(b) {
        戦わぬ島津に「木立へ回って伏せよ」と命じては、動かぬと決めた意味がない。 */
     if (c.不戦 || c.控え || c.縛り) continue;
     if (MAP && c.後詰) { 後詰を当てる(b, c, alive); continue; }   // 盤に現れた後詰は野戦の隊として当たる
+    if (MAP && c.城外) { 城の外で戦う(b, c, alive); continue; }   // 朝の布陣で城の外に出た城方も野戦の隊
     /* 伏せに向かう隊と、伏せている隊。
 
        伏せ場へ着いたら身をひそめる。ひそめた隊には、以後なにも命じない。

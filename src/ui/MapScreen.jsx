@@ -141,6 +141,43 @@ function 手柄の隊(s, corps, castle) {
 const 大合戦の幅 = 6000;
 const 広げる前の野の幅 = () => fieldScale() * BASE.w;
 
+/* 兵糧攻めのひと月（GDD 9.2）。囲みの札で兵糧攻め（付城）を選んだ月と、強攻のあとで兵糧攻めに
+   移った月（城攻めの後始末）に当てる。包囲率を測って城の兵糧と士気を削り、疫病を振り、
+   兵糧か士気が尽きれば開城させる。月の数（sg.months）は呼ぶ側が進める */
+function 兵糧攻めのひと月(s, sg, castle, army) {
+  // 包囲率。取り囲む軍の数と兵力差で決まり、締め方と援軍の入りやすさを左右する。
+  // 付城はひとつにつき十二上げる（core/tsukejiro.js 付城の締め）
+  const besieging = s.armies.filter((x) => x.target === castle.id && x.sieging);
+  const dGens = s.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
+  const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
+  const enc = clamp(0.28 + 0.18 * besieging.length + 0.36 * Math.min(1, army.men / Math.max(1, dMen * 1.5))
+    + 付城の締め(sg), 0.2, 1);
+  sg.enc = Math.round(enc * 100);
+  castle.food = Math.max(0, castle.food - Math.round((castle.local * 0.35 + 600) * (0.6 + enc) * (castle.intrigue ? 1.8 : 1)));
+  // 井戸が傷んでいれば水に窮する
+  const well = castle.well == null ? 100 : castle.well;
+  const thirst = well < 50 ? (50 - well) / 12 : 0;
+  castle.min = Math.max(0, castle.min - (castle.intrigue ? 11 : 5) - thirst);
+  if (thirst > 0 && sg.months % 2 === 0) {
+    s.chronicle.push({ y: s.year, m: s.month, text: `${castle.name}は水に窮している（井戸${Math.round(well)}）。` });
+  }
+  // 疫病。長引くほど、また囲みが緩いほど起こりやすい。
+  if (Math.random() < 0.045 * sg.months * (1.4 - enc)) {
+    const a1 = Math.round(army.men * (0.04 + Math.random() * 0.05));
+    const d1 = Math.round(castle.local * (0.05 + Math.random() * 0.06));
+    army.men -= a1; army.local = Math.max(0, army.local - a1);
+    castle.local = Math.max(0, castle.local - d1);
+    castle.min = Math.max(0, castle.min - 4);
+    s.chronicle.push({ y: s.year, m: s.month,
+      text: `${castle.name}の囲みに疫病が出た。寄せ手${fmt(a1)}人、城方${fmt(d1)}人を失った。` });
+  }
+  army.food -= Math.round(army.men * 0.09);
+  if (castle.food <= 0 || castle.min < 25) {
+    s.chronicle.push({ y: s.year, m: s.month, text: `兵糧尽き、${castle.name}は開城した。` });
+    sackCastle(s, castle, army, false);     // 開城なので城下の荒れは軽い
+  }
+}
+
 export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const cvRef = useRef(null), miniRef = useRef(null), wrapRef = useRef(null);
   const [view, setView] = useState(() => {
@@ -1076,6 +1113,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     /* 付城から寄せるなら、寄せる道のりは付城から城までである */
     const 寄せ始め = map.付城 && map.付城.length ? Math.max(...map.付城.map((f) => f.y)) : FIELD.h;
     bb.dusk = bb.日の長さ + (map.広い ? Math.round((寄せ始め - map.cy) / (34 * fieldScale()) * 2.2) : 0);
+    /* 寄せる道のりの刻。翌日の強攻も、はじめの陣から寄せ直すので同じだけ足す（engine.js 夜を明かす） */
+    bb.寄せの刻 = bb.dusk - bb.日の長さ;
     if (map.広い) {
       bb.日数 = 城攻めの日数; bb.日 = 1; bb.日の始め = 0;
       /* 兵糧（GDD 9.2）。地図の月の扶持（core/kakomi.js）の三十分の一を一日に食う。
@@ -1755,6 +1794,30 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
          二万で寄せて城を落とすと、一万二千が忽然と失せる。
          上（後詰を戻す件）で足したものを、そのまま捨ててはならない。 */
       if (won && army) { army.local = aLeft + back; sackCastle(s, castle, army, true); }
+      /* 兵糧攻めに移った（engine.js 兵糧攻めに移る、または三日目の暮れ）。遊ぶ側の申し出は
+         「兵糧攻めを選んだら、そのまま政務フェーズに戻って1カ月が経過するかたちとなり、
+         兵糧攻めの結果が知らされる」であった。囲みの札で兵糧攻めを選んだ月と同じく、その月の
+         兵糧攻めを当てて報せる（この月の囲みの札は強攻に使ったので、ここで兵糧攻めに替える）。
+         城の兵糧と民心は、遊ぶ側の城か、内を探った城でなければ書かない（城の帳と同じ見え方）。
+         報せは月の報せ（MonthReport）の「報せ」に足し、地図へ戻ったところで開いて見せる */
+      if (!won && b.兵糧攻めへ && army && s.armies.includes(army)) {
+        const sg = s.sieges.find((x) => x.castleId === castle.id && x.armyId === army.id);
+        if (sg) {
+          const 前の糧 = Math.round(castle.food || 0), 前の民 = Math.round(castle.min || 0);
+          army.sieging = true;
+          sg.months = (sg.months || 0) + 1;
+          兵糧攻めのひと月(s, sg, castle, army);
+          const 開いた = castle.faction === army.faction;
+          const 見える = castle.faction === s.player || canSee(s, castle);
+          s.chronicle.push({ y: s.year, m: s.month, text: `${castle.name}への強攻を打ち切り、兵糧攻めに移った。` });
+          const 報 = 開いた
+            ? `${castle.name}への強攻を打ち切り、兵糧攻めに移った。ひと月の囲みで兵糧が尽き、${castle.name}は開城した。`
+            : `${castle.name}への強攻を打ち切り、兵糧攻めに移った。ひと月囲んだ（囲みの締め${sg.enc}％・囲んで${sg.months}か月）。`
+              + (見える ? `城の兵糧 ${fmt(前の糧)}→${fmt(Math.round(castle.food))}、民心 ${前の民}→${Math.round(castle.min)}（二十五を割れば城は開く）。`
+                : "城の内は窺えない。");
+          s.monthEvents = [...(s.monthEvents || []), 報];
+        }
+      }
       if (b.result === "P" && !ctx.playerIsAtk) {
         /* まず、物頭に届いた組頭を見る。居れば必ず提示する（盤の上で
            五十戦も働いた者であるから、賽で流してはならない）。
@@ -1800,6 +1863,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       return s;
     });
     setBattle(null);
+    if (b.兵糧攻めへ && !b.captured) setModal("report");   // 兵糧攻めのひと月の報せを見せる（上の 兵糧攻めに移った）
   };
 
   // 合戦の損害を組の名簿へ書き戻す。欠けた組は欠けたまま残る。
@@ -2256,37 +2320,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             text: `${castle.name}の囲みに付城を築いた（${r.数}つ目）。城の兵糧の入る道が細った。` });
           else s.msg = `${castle.name}の付城の普請が進んだ（${r.前}→${r.後}／100、${fmt(r.費)}貫）。`;
         }
-        // 包囲率。取り囲む軍の数と兵力差で決まり、締め方と援軍の入りやすさを左右する。
-        // 付城はひとつにつき十二上げる（core/tsukejiro.js 付城の締め）
-        const besieging = s.armies.filter((x) => x.target === castle.id && x.sieging);
-        const dGens = s.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
-        const dMen = castle.local + dGens.reduce((a, x) => a + x.retinue, 0);
-        const enc = clamp(0.28 + 0.18 * besieging.length + 0.36 * Math.min(1, army.men / Math.max(1, dMen * 1.5))
-          + 付城の締め(sg), 0.2, 1);
-        sg.enc = Math.round(enc * 100);
-        castle.food = Math.max(0, castle.food - Math.round((castle.local * 0.35 + 600) * (0.6 + enc) * (castle.intrigue ? 1.8 : 1)));
-        // 井戸が傷んでいれば水に窮する
-        const well = castle.well == null ? 100 : castle.well;
-        const thirst = well < 50 ? (50 - well) / 12 : 0;
-        castle.min = Math.max(0, castle.min - (castle.intrigue ? 11 : 5) - thirst);
-        if (thirst > 0 && sg.months % 2 === 0) {
-          s.chronicle.push({ y: s.year, m: s.month, text: `${castle.name}は水に窮している（井戸${Math.round(well)}）。` });
-        }
-        // 疫病。長引くほど、また囲みが緩いほど起こりやすい。
-        if (Math.random() < 0.045 * sg.months * (1.4 - enc)) {
-          const a1 = Math.round(army.men * (0.04 + Math.random() * 0.05));
-          const d1 = Math.round(castle.local * (0.05 + Math.random() * 0.06));
-          army.men -= a1; army.local = Math.max(0, army.local - a1);
-          castle.local = Math.max(0, castle.local - d1);
-          castle.min = Math.max(0, castle.min - 4);
-          s.chronicle.push({ y: s.year, m: s.month,
-            text: `${castle.name}の囲みに疫病が出た。寄せ手${fmt(a1)}人、城方${fmt(d1)}人を失った。` });
-        }
-        army.food -= Math.round(army.men * 0.09);
-        if (castle.food <= 0 || castle.min < 25) {
-          s.chronicle.push({ y: s.year, m: s.month, text: `兵糧尽き、${castle.name}は開城した。` });
-          sackCastle(s, castle, army, false);     // 開城なので城下の荒れは軽い
-        }
+        兵糧攻めのひと月(s, sg, castle, army);
       } else if (mode === "強攻") {
         // 城門攻撃隊を出すと城防の効きが3割落ち、守り手の損害が25%増す。
         // 代わりに門へ取り付いた300人のうち4分の1が失われる。

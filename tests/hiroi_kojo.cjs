@@ -226,6 +226,9 @@ function 攻める(i, 賽) {
     const t0 = b.t;
     A.夜を明かす(b);
     確('夜が明ければ二日目', b.日 === 2 && b.phase === 'fight');
+    /* 翌日の強攻は、はじめの陣から寄せ直す（遊ぶ側の申し出。engine.js 夜を明かす） */
+    確('寄せ手ははじめの陣へ戻る', atk.some((c) => c.初陣) && atk.every((c) => c.dead || c.destroyed || c.withdraw || !c.初陣
+      || Math.hypot(c.x - c.初陣.x, c.y - c.初陣.y) < 1), atk.map((c) => c.初陣 ? Math.round(Math.hypot(c.x - c.初陣.x, c.y - c.初陣.y)) : '－').join('・') + '歩');
     確('二日目の日暮れは一日の長さの先', Math.abs(b.dusk - (t0 + 200)) < 1e-6);
     確('城方は破れていない門を繕う', 門.every((g, i) => g.hp >= 前[i]) && 門.some((g, i) => g.hp > 前[i] || g.hp >= g.max),
       `繕った門 ${門.filter((g, i) => g.hp > 前[i]).length}／${門.length}`);
@@ -240,12 +243,15 @@ function 攻める(i, 賽) {
     走る();
     if (b.phase === 'night') { A.夜を明かす(b); 確('三日目の朝', b.日 === 3); 走る(); }
     確('三日目の日暮れか、城が落ちて城攻めは終わる（三日目の夜は無い）', b.phase === 'over' && b.日 <= 3, `${b.phase}・${b.日}日目・${b.result}`);
+    確('三日目が暮れても落ちなければ、兵糧攻めに移る', b.captured || b.result === 'P' || !!b.兵糧攻めへ,
+      `${b.captured ? '落城' : b.兵糧攻めへ ? '兵糧攻めへ' : '印なし'}`);
   }
   // 陣を払う：兵糧が尽きれば采配の寄せ手は退く
-  b.phase = 'night'; b.兵糧.寄せ手.食った = 3000;
+  b.phase = 'night'; b.兵糧.寄せ手.食った = 3000; b.兵糧攻めへ = false;
   確('兵糧が尽きれば寄せ手（采配）は陣を払う', A.寄せ手の夜の思案(b) === '退く');
   A.陣を払う(b);
   確('陣を払えば城方の勝ちで終わる', b.phase === 'over' && b.result === 'E');
+  確('陣を払えば兵糧攻めに移る（地図の側でその月の兵糧攻めを当てる）', !!b.兵糧攻めへ);
 }
 
 console.log('');

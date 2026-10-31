@@ -2,7 +2,7 @@ import { axisOf, fromUV, gateOpenU, gatePos, 門の輪, 出城の塀, 付城の�
 import { KOMA, rot } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS, ROAD, ROADS, WOODS, hasRiver, riverShift, 水際まで, 地形の代, 節までの隔たり } from "./field.js";
 import { px, py } from "../data/geo.js";
-import { VILLAGES } from "./field.js";
+import { VILLAGES, fieldScale } from "./field.js";
 import { clamp } from "../core/util.js";
 import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 画の揚げ, 斜め, 向きの角, 盤の筆を回す, 視の筆へ, 地の札, 札を控える, 札を控え止める, 地の字, 隠れの際 } from "./naname.js";
 import { 一人ずつ描く隊, 野の川筋 } from "./shinga.js";
@@ -1937,6 +1937,12 @@ export function ownZone(b) {
       return { x: 0, y: y0, w: FIELD.w, h: FIELD.h - y0, vertical: true, bottom: true };
     }
     if (b.attacker === "P") return { x: 0, y: FIELD.h * 0.8, w: FIELD.w, h: FIELD.h * 0.2, vertical: true, bottom: true };
+    /* 数日がかりの城攻めの朝の布陣（BattleScreen 朝の布陣）。城方は城の内にも外にも
+       置ける（城の外に出て野で戦う）。寄せ手の陣の帯の手前、三百歩の間を置いた所まで */
+    if (b.朝の布陣) {
+      const 寄せの上 = b.map.付城 && b.map.付城.length ? Math.min(FIELD.h * 0.8, b.map.域.y + b.map.域.r + 30) : FIELD.h * 0.8;
+      return { x: 0, y: 0, w: FIELD.w, h: Math.max(FIELD.h * 0.3, 寄せの上 - 300 * fieldScale()), vertical: true, bottom: false };
+    }
     const 区 = b.map.区;
     return { x: 区.x0, y: 区.y0, w: 区.w, h: 区.h, vertical: true, bottom: false };
   }
@@ -2382,7 +2388,7 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
      城の手引きのとおり大手口の前に布陣してあり、帯はその所とも合わない。もとは帯がほとんど
      見えなかったので目立たなかったが、境を読める太さにすると、城を横切る筋になる。
      広い盤の城攻めでは、寄せ手の帯は南の端の野（ownZone）なので、寄せ手の側にだけ出す */
-  if (b.phase === "deploy" && !b.筋書き && (!b.map || (b.map.広い && b.attacker === "P"))) 自陣の帯を描く(ctx, ownZone(b), S, cam.s, dpr);
+  if (b.phase === "deploy" && !b.筋書き && (!b.map || (b.map.広い && (b.attacker === "P" || b.朝の布陣)))) 自陣の帯を描く(ctx, ownZone(b), S, cam.s, dpr);
 
   // 川の流れ（mori.js）。水面の筋が下手へ流れる
   if (!b.map || b.map.広い) 川の流れを描く(ctx, (typeof performance !== "undefined" ? performance.now() : 0) / 1000, 1);

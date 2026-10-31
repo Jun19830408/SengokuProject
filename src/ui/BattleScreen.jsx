@@ -4,14 +4,15 @@ import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, rout
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限, 城山の形 } from "../battle/shinga.js";
-import { stepBattle, 夜を明かす, 陣を払う, 寄せ手の夜の思案, 今の刻, 日の名, 兵糧の日 } from "../battle/engine.js";
+import { stepBattle, 夜を明かす, 兵糧攻めに移る, 寄せ手の夜の思案, 今の刻, 日の名, 兵糧の日 } from "../battle/engine.js";
 import { 計略を仕掛ける, 計略の見込み, 計略の減り, 仕掛け手, 仕掛けた, 内応の者 } from "../battle/keiryaku.js";
 import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸, 区の高さ図を外す, 今の面, 面を据える } from "../battle/naname.js";
-import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, HILLS, RIVER, TERRAIN, VILLAGES, WEATHER, WOODS, fieldScale, terrainAt } from "../battle/field.js";
+import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, HILLS, RIVER, TERRAIN, VILLAGES, WEATHER, WOODS, fieldScale, passable, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
 import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる, 内応させる, 内応の門を開く } from "../battle/corps.js";
 import { 合戦の問いに答える, 指図の縛り, 筋書きの覚え } from "../battle/kassen.js";
+import { 朝の受け持ちを決める } from "../battle/defense.js";
 
 /* 早送り（GDD 8.1・9.3）。
 
@@ -285,7 +286,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (b2.phase === "over" || 委ねRef.current) return;
     for (const c of b2.corps) if (c.side === "P") { c.auto = true; 持ち場を解く(c); }   // 全軍を委任する
     b2.委ねた = true;                                              // 伏兵の判断まで任せる
-    if (b2.phase === "deploy") { b2.phase = "fight"; setPhase("fight"); }
+    if (b2.phase === "deploy") {
+      if (b2.朝の布陣) { if (b2.attacker !== "P") 朝の受け持ちを決める(b2, MAP, "P"); b2.朝の布陣 = false; }
+      b2.phase = "fight"; setPhase("fight");
+    }
     setSpeed(0);
     委ねRef.current = true; set委ね中(true);
   };
@@ -300,7 +304,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       while (b2.phase === "fight" && Date.now() - t0 < 24) {
         stepBattle(b2, 委ねる歩幅);
         /* 数日がかりの城攻めの夜は、采配の思案で越す（寄せ手が退くか続けるか） */
-        if (b2.phase === "night") { if (寄せ手の夜の思案(b2) === "退く") 陣を払う(b2); else 夜を明かして焼く(b2); }
+        if (b2.phase === "night") { if (寄せ手の夜の思案(b2) === "退く") 兵糧攻めに移る(b2); else 夜を明かして焼く(b2); }
       }
       force((n) => (n + 1) % 1000);
       if (b2.phase === "fight") setTimeout(一区切り, 0);
@@ -667,7 +671,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
           : "この戦の布陣は史実のままである。陣形と向きだけ決められる。");
         return;
       }
-      if (inOwnZone(b, f.x, f.y)) { c.x = f.x; c.y = f.y; c.tx = f.x; c.ty = f.y; placeSquads(c, true); }
+      /* 朝の布陣（数日がかりの城攻め）では、城方は城の内にも外にも置ける。塀や堀や淵には置かない */
+      if (inOwnZone(b, f.x, f.y) && (!b.朝の布陣 || passable(f.x, f.y))) { c.x = f.x; c.y = f.y; c.tx = f.x; c.ty = f.y; placeSquads(c, true); }
       return;
     }
     if (foe) {
@@ -989,6 +994,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
               ? "布陣は陣立てのままです。隊を選び、陣形と向きだけ決めてください。高みと押さえの隊は持ち場を守り、敵が来なければやがて持ち場を離れて戦います。黄の隊は去就が定まっていません――撃ちも撃たれもせず、動きません。"
               : b.筋書き
               ? "布陣は当時のままです。隊を選び、陣形と向きだけ決めてください。黄の隊は去就が定まっていません――撃ちも撃たれもせず、条件が揃うまで動きません。"
+              : b.朝の布陣
+                ? (b.attacker === "P"
+                  ? `${日の名(b.日 || 2)}の朝。寄せ手ははじめの陣に戻っています（青い帯の中なら置き直せます）。城は前の日のまま――破れた門は破れたまま、兵も減ったままです。城方も夜のうちに構えを直しています。`
+                  : `${日の名(b.日 || 2)}の朝。城方は布陣を整え直せます（青い帯の中なら、城の内にも外にも置けます）。門のすぐ内に置いた隊はその門を受け持ち、一つの門に幾隊も集められます。城の外に置いた隊は野に出て寄せ手と戦い、弱れば近い門から城へ引き取ります。破れた門は破れたままです。寄せ手ははじめの陣から寄せ直してきます。`)
               : ctx.mode === "castle"
                 ? (b.map && b.map.広い
                   ? (b.attacker === "P"
@@ -1049,7 +1058,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
               {伏兵の釦(selC)}
             </>
           )}
-          <button className="btn dark" onClick={() => { b.phase = "fight"; setPhase("fight"); setSpeed(0.3); }}>合戦開始</button>
+          <button className="btn dark" onClick={() => {
+            if (b.朝の布陣) { if (b.attacker !== "P") 朝の受け持ちを決める(b, MAP, "P"); b.朝の布陣 = false; }
+            b.phase = "fight"; setPhase("fight"); setSpeed(0.3);
+          }}>{b.朝の布陣 ? `${日の名(b.日 || 2)}の強攻を始める` : "合戦開始"}</button>
           {/* 諸将に委ね、決着だけを見る。戦い方はいまの仕組みのまま変わらない。 */}
           <button className="btn" onClick={委ねる}>委ねて結果を見る</button>
         </div>
@@ -1428,8 +1440,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
       )}
 
       {b.phase === "night" && (() => {
-        /* 夜の段（engine.js 夜を明かす）。寄せ手が遊ぶ側なら、夜を明かすか陣を払うかを選ぶ。
-           城方が遊ぶ側なら、寄せ手（采配）の思案を聞いて夜を明かす */
+        /* 夜の段（engine.js 夜を明かす）。寄せ手が遊ぶ側なら、翌日の強攻か兵糧攻めかを選ぶ。
+           城方が遊ぶ側なら、寄せ手（采配）の思案を聞く。翌日の強攻なら、夜を明かしてから
+           朝の布陣の段を挟み、両軍とも布陣を整え直す（寄せ手ははじめの陣から寄せ直す） */
+        const 朝を迎える = () => {
+          夜を明かして焼く(b);
+          if (b.phase === "fight") { b.phase = "deploy"; b.朝の布陣 = true; setPhase("deploy"); }
+          force((n) => (n + 1) % 1000);
+        };
         const 寄せ手 = b.attacker === "P";
         const 采配の思案 = 寄せ手 ? null : 寄せ手の夜の思案(b);
         const 糧我 = 兵糧の日(b, 寄せ手 ? "寄せ手" : "城方"), 糧彼 = 兵糧の日(b, 寄せ手 ? "城方" : "寄せ手");
@@ -1440,23 +1458,25 @@ export function BattleScreen({ ctx, land, onEnd }) {
             <div style={{ fontSize: 13.5, lineHeight: 1.7 }}>
               <b className="mn" style={{ fontSize: 17 }}>{日の名(b.日 || 1)}の日が暮れた</b>
               <span style={{ color: U.dim, marginLeft: 8 }}>（城攻めは{日の名(b.日数 || 3)}まで）</span><br />
-              破れた門 {破れ}／{門.length}。夜のうちに両軍とも士気が戻り、疲れが抜けます。城方は破れていない門を一割ほど繕い、
-              寄せ手は矢の届かぬ所まで退いて陣を敷き直します（破った門の内に入った隊はそのまま押さえます）。
+              破れた門 {破れ}／{門.length}。夜のうちに両軍とも士気が戻り、疲れが抜けます。城方は破れていない門を一割ほど繕います
+              （破れた門は破れたまま、兵も減ったまま）。翌日の強攻なら、朝に両軍とも布陣を整え直し、寄せ手ははじめの陣から攻め直します。
+              兵糧攻めに移れば合戦を終え、この月は囲みを続けます（ひと月の兵糧攻めの結果は政務の画面で報せます）。
               {RIVER.落ちた橋 ? "城の前の落ちた橋には、寄せ手が夜のうちに仮橋を架けます。" : ""}
               {糧我 != null && <><br />兵糧　味方 あと{糧我}日{糧彼 != null && 寄せ手 ? "" : ""}{!寄せ手 && 糧彼 != null ? `　寄せ手 あと${糧彼}日` : ""}</>}
             </div>
             {寄せ手 ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="btn dark" onClick={() => { 夜を明かして焼く(b); force((n) => (n + 1) % 1000); }}>夜を明かす（翌朝また攻める）</button>
-                <button className="btn" onClick={() => { 陣を払う(b); force((n) => (n + 1) % 1000); }}>陣を払って囲みへ戻る</button>
+                <button className="btn dark" onClick={朝を迎える}>{日の名((b.日 || 1) + 1)}の強攻に移る（はじめの陣から攻め直す）</button>
+                <button className="btn" onClick={() => { 兵糧攻めに移る(b); force((n) => (n + 1) % 1000); }}>兵糧攻めに移る（合戦を終え、この月は囲む）</button>
               </div>
             ) : (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                 <span style={{ fontSize: 12.5, color: 采配の思案 === "退く" ? "#3E7A3A" : U.dim, flex: 1 }}>
-                  {采配の思案 === "退く" ? "寄せ手は陣を払う気配です。" : "寄せ手は夜を明かして、明朝また寄せてくる気配です。"}
+                  {采配の思案 === "退く" ? "寄せ手は強攻をやめ、兵糧攻めに移る気配です。"
+                    : "寄せ手は明朝、はじめの陣から寄せ直してくる気配です。城方も布陣を整え直せます。"}
                 </span>
-                <button className="btn dark" onClick={() => { if (采配の思案 === "退く") 陣を払う(b); else 夜を明かして焼く(b); force((n) => (n + 1) % 1000); }}>
-                  {采配の思案 === "退く" ? "夜が明ける（寄せ手は退いた）" : "夜を明かす"}
+                <button className="btn dark" onClick={() => { if (采配の思案 === "退く") { 兵糧攻めに移る(b); force((n) => (n + 1) % 1000); } else 朝を迎える(); }}>
+                  {采配の思案 === "退く" ? "夜が明ける（寄せ手は兵糧攻めに移った）" : "夜を明かして布陣を整える"}
                 </button>
               </div>
             )}
@@ -1466,10 +1486,13 @@ export function BattleScreen({ ctx, land, onEnd }) {
 
       {b.phase === "over" && (
         <div style={{ display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", width: "100%" }}>
-          <span className="mn" style={{ fontSize: 19, color: b.result === "P" ? "#3E7A3A" : b.result === "日没" ? "#7C7668" : "#B0483C" }}>
-            {b.result === "P" ? "勝利" : b.result === "日没" ? "日没・両軍撤収" : b.orderly ? "撤退" : "敗北"}
+          {/* 寄せ手が兵糧攻めに移った（engine.js 兵糧攻めに移る・三日目の暮れ）。遊ぶ側が寄せ手なら
+              「撤退」ではなく、強攻を打ち切って囲みを続けることを見出しにする */}
+          <span className="mn" style={{ fontSize: 19, color: b.result === "P" ? "#3E7A3A" : b.result === "日没" || (b.兵糧攻めへ && b.attacker === "P") ? "#7C7668" : "#B0483C" }}>
+            {b.result === "P" ? "勝利" : b.result === "日没" ? "日没・両軍撤収" : b.兵糧攻めへ && b.attacker === "P" ? "兵糧攻めへ" : b.orderly ? "撤退" : "敗北"}
           </span>
           <span style={{ fontSize: 12, color: U.dim, flex: 1 }}>
+            {b.兵糧攻めへ && <>{b.attacker === "P" ? "強攻を打ち切り、兵糧攻めに移った（この月は囲みを続け、結果は政務の画面で報せる）。" : "寄せ手は強攻を打ち切り、兵糧攻めに移った。"}<br /></>}
             損害　直属 {fmt(b.corps.filter((c) => c.side === "P").reduce((a, c) => a + c.loss["直属"], 0))}人／
             地域 {fmt(b.corps.filter((c) => c.side === "P").reduce((a, c) => a + c.loss["地域"], 0))}人
           </span>
