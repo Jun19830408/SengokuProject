@@ -1,4 +1,4 @@
-import { MAP, axisOf, fromUV, gatePos, 門の輪, 出城の退き道 } from "./castleMap.js";
+import { MAP, axisOf, fromUV, gatePos, navPath, 門の輪, 出城の退き道 } from "./castleMap.js";
 import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, VILLAGES, WOODS, fieldScale, hasRiver, nearestOf, riverShift, terrainAt, 高み, 高みの格 } from "./field.js";
 import { clamp } from "../core/util.js";
 import { ARMS } from "../data/roads.js";
@@ -790,10 +790,27 @@ export function 引き取りを進める(b, c) {
   // 行き先の持ち場が別にあれば、そこへ向かう（moveToGate）
   if (引.次 && 引.次 !== g && !引.次.broken) {
     c.holdGate = 引.次;
-    const a2 = axisOf(門の輪(m, 引.次), 引.次), p2 = fromUV(m, a2, 引.次.off, a2.half - 14);
-    issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y });
+    const a2 = axisOf(門の輪(m, 引.次), 引.次), p2 = fromUV(m, a2, 引.次.off, a2.half - 50);
+    /* 同じ輪の内を回って次の持ち場へ。まっすぐ向かうと内の輪の塀に貼りつく。道は門の五十歩内で
+       終える（塀の際まで引くと、塀の帯に踏み込む）。残りは常の持ち場への寄りが詰める */
+    const 道 = navPath(m, c.x, c.y, p2.x, p2.y);
+    c.城内道 = { 道: [...((道 || []).map((q) => ({ ...q }))).filter((q) => Math.hypot(q.x - p2.x, q.y - p2.y) > 30), { x: p2.x, y: p2.y, r: 26 }], 刻: b.t, 先: 引.次 };
+    issueOrder(b, c, { order: "移動", tx: c.城内道.道[0].x, ty: c.城内道.道[0].y });
   }
   return false;
+}
+
+/* 城の内の道を辿る（城方が同じ輪の内で持ち場を移るとき）。着いた所は落とし、十二秒進めなければ
+   その所を飛ばす（味方や寄せ手に阻まれて動けぬまま立ち尽くさない）。辿り終えれば false */
+export function 城内の道を進める(b, c) {
+  const 道 = c.城内道;
+  if (!道) return false;
+  const p = 道.道[0];
+  if (p && Math.hypot(p.x - c.x, p.y - c.y) < (p.r || 30)) { 道.道.shift(); 道.刻 = b.t; }
+  if (道.道.length > 1 && b.t - 道.刻 > 12) { 道.道.shift(); 道.刻 = b.t; }
+  if (!道.道.length || (道.道.length === 1 && b.t - 道.刻 > 12)) { c.城内道 = null; return false; }
+  c.tx = 道.道[0].x; c.ty = 道.道[0].y;
+  return true;
 }
 
 

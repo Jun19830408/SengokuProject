@@ -495,6 +495,7 @@ export function 夜を明かす(b) {
   const 出城まで = (x, y) => (出
     ? Math.max(Math.abs(x - m.cx - 出.ox) - 出.hw, Math.abs(y - m.cy - 出.oy) - 出.hh) : Infinity);
   const 引く間 = 190 * fieldScale() + 160;              // 弓の届き（百九十歩×尺）の外
+  b.夜の割り = 0;
   for (const c of b.corps) {
     if (c.dead || c.destroyed || c.withdraw || c.潰) continue;
     c.x = clamp(c.x, 60, FIELD.w - 60); c.y = clamp(c.y, 60, FIELD.h - 60);   // 逃げて盤の縁を越えかけた隊も、盤の内で夜を明かす
@@ -524,6 +525,26 @@ export function 夜を明かす(b) {
         }
       }
       c.gate = null; c.出城攻め = false;
+    } else if ((c.side !== "P" || c.auto) && !c.後詰 && !(c.holdGate && c.holdGate.出城 && 出)
+      && (!c.holdGate || c.holdGate.broken || m.gates.some((x) => !x.出城 && x.layer === c.holdGate.layer && x.broken))) {
+      /* 采配の城方は、夜のうちに受け持ちを組み直す（GDD 9.3 数日がかり）。破れた門や、破れた輪の門を
+         受け持っていた隊は、寄せ手が次に寄せる輪（まだ破れていない、いちばん外の輪）の門に就く。
+         破れ口に向いた門から順に、二隊ずつ割り振る（遊ぶ側の申し出「残った城門の一つに兵を
+         集中する」の采配の形）。夜のうちに移るので、朝には持ち場に立っている */
+      const 残り = m.gates.filter((x) => !x.broken && !x.出城 && !m.gates.some((y) => !y.出城 && y.layer === x.layer && y.broken));
+      if (残り.length) {
+        const 輪 = Math.min(...残り.map((x) => x.layer));
+        const 破れ口 = m.gates.filter((x) => x.broken && !x.出城).map((x) => gatePos(m, 門の輪(m, x), x));
+        const 口まで = (x) => { const p = gatePos(m, 門の輪(m, x), x); return 破れ口.length ? Math.min(...破れ口.map((q) => Math.hypot(q.x - p.x, q.y - p.y))) : 0; };
+        const 門ら = 残り.filter((x) => x.layer === 輪).sort((x, y) => 口まで(x) - 口まで(y));
+        b.夜の割り = (b.夜の割り || 0) + 1;
+        const 次 = 門ら[Math.floor((b.夜の割り - 1) / 2) % 門ら.length];
+        const l = 門の輪(m, 次), a = axisOf(l, 次);
+        const p = fromUV(m, a, 次.off, a.half - 14);
+        c.holdGate = 次; c.x = p.x; c.y = p.y; c.持ち場に着いた = true; c.引き取り = null; c.城内道 = null;
+      } else {
+        c.holdGate = null; c.x = m.cx; c.y = m.cy;                  // 守る門が尽きた。本丸に籠る
+      }
     } else if (c.holdGate && !c.holdGate.broken && !(c.holdGate.出城 && !出)) {
       const l = 門の輪(m, c.holdGate), a = axisOf(l, c.holdGate);
       const p = fromUV(m, a, c.holdGate.off, a.half - (c.holdGate.出城 ? 30 : 14));
@@ -993,8 +1014,13 @@ export function stepBattle(b, dt) {
 
   for (const c of alive) {
     // 壁の帯に入り込んだ隊は身動きが取れない。城の中心から遠ざかる向きへ押し出す。
+    /* ただし城の内にいる城方は、内へ押し戻す（城の芯へ向かう）。外へ押し出していたので、門の
+       すぐ内の持ち場へ寄った城方が塀の外の枡形へ出され、そこを持ち場と思って立っていた */
     if (MAP && !passable(c.x, c.y)) {
-      const ox = c.x - MAP.cx, oy = c.y - MAP.cy, od = Math.hypot(ox, oy) || 1;
+      /* 城の外に出ている城方（朝の布陣で城外に置いた隊・打って出た隊・追い討ちの隊）は、これまでどおり
+         外へ押し出す（内へ押せば塀を抜けて城に入ってしまう） */
+      const 内へ = c.side !== b.attacker && !c.後詰 && !c.sortie && !c.sallied && !c.城外 && !c.chasing;
+      const ox = (c.x - MAP.cx) * (内へ ? -1 : 1), oy = (c.y - MAP.cy) * (内へ ? -1 : 1), od = Math.hypot(ox, oy) || 1;
       for (let k = 1; k <= 12; k++) {
         const nx = c.x + (ox / od) * k * 14, ny = c.y + (oy / od) * k * 14;
         if (passable(nx, ny)) { c.x = nx; c.y = ny; break; }
@@ -1939,6 +1965,11 @@ export function stepBattle(b, dt) {
 
     // ── 城内の施設 ──
     const fsN = fieldScale();
+    /* 城から射かける矢玉は、もとの三倍（矢倉も狭間も。GDD 9.3）。塀と櫓に拠る城方は、寄せ手を
+       門へ取り付くまでに削る。もとは矢倉ひとつが一秒に四人ほど、狭間は射手四百で一秒に一人ほどで、
+       寄せ手の損の多くは門が破れたあとの斬り合いで出ていた。門の硬さの二倍（castleMap.js）と
+       合わせて、三日がかりの強攻で寄せ手が三倍なら六割ほど落ちるところに置く */
+    const 城の射の倍 = 3;
     for (const f of MAP.fac) {
       if (f.hp <= 0) continue;
       if (f.kind === "矢倉") {
@@ -1956,7 +1987,7 @@ export function stepBattle(b, dt) {
                持ち場を出ては呼び戻される往き来を止めると、本城の守りが固くなり、出城に将と兵を
                割いた城のほうが寄せ手の損が軽くなった（出城の有無で〇.九八倍。tests/demaru）。
                出城の値打ちは寄せ手を引きつけて射ることにあるので、出城の矢倉を一.五倍から上げた */
-            let hit = 11 * kit.guard * (f.出城 ? 3 : 1);
+            let hit = 11 * kit.guard * (f.出城 ? 3 : 1) * 城の射の倍;
             const qs = tgt.squads.filter((q) => q.men > 0)
               .sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y));
             for (const q of qs) {
@@ -2055,7 +2086,7 @@ export function stepBattle(b, dt) {
          一.五倍（大坂冬の陣の真田丸。寄せ手は空堀の底から撃ち上げることもできなかった） */
       const 空堀の底 = 出城の守り && 出城の内か(MAP, 的.mx == null ? 的.x : 的.mx, 的.my == null ? 的.y : 的.my, MAP.t + MAP.出城.堀 + 4)
         && !出城の内か(MAP, 的.mx == null ? 的.x : 的.mx, 的.my == null ? 的.y : 的.my, MAP.t);
-      let hit = 射手 * 0.0095 * kit.guard * (出城の守り ? (空堀の底 ? 4.5 : 3) : 1);
+      let hit = 射手 * 0.0095 * kit.guard * (出城の守り ? (空堀の底 ? 4.5 : 3) : 1) * 城の射の倍;
       const qs = 的.squads.filter((q) => q.men > 0)
         .sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y));
       for (const q of qs) {
@@ -2704,6 +2735,12 @@ export function stepBattle(b, dt) {
             if (先) {
               c.立て直し = 先.場; c.退き門 = 先.門;
               if (先.門) c.holdGate = 先.門;          // 立ち直ったらこの門を守る
+              /* 内の輪の外にいれば、道を辿って門の前まで走り、内へ迎え入れられる
+                 （まっすぐ走れば内の輪の塀に貼りつき、追い討ちに討たれる） */
+              if (先.門 && !inLayer(MAP, 門の輪(MAP, 先.門), c.x, c.y)) {
+                const 道 = routeToCastleGate(MAP, 先.門, c.x, c.y);
+                if (道 && 道.length) c.引き取り = { 道: 道.map((q) => ({ ...q })), 門: 先.門, 刻: b.t };
+              }
               b.log.push({ t: b.t, text: `${c.name}隊は${先.名}の内へ下がって立て直す。` });
             }
           }
@@ -2923,6 +2960,10 @@ export function stepBattle(b, dt) {
   const 引き際 = (side) => {
     const 生 = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.潰 && !c.withdraw && !c.日和見);
     if (!生.length) return null;                       // 「隊が尽きた」で既に拾う
+    /* 城方は、本丸の門が破れるまで退かない（城に籠った兵に退く先は無い）。門ごとに戦えば
+       城兵は減るので、兵が五分の一を切ったところで城を明け渡していた――本丸の門も破られぬ
+       うちに、二の丸で踏み止まっていた城が「軍を退いた」として落ちた（GDD 9.3） */
+    if (MAP && side !== b.attacker && !本丸が開いたか(MAP)) return null;
     const 初 = (b.initial || {})[side] || 0;
     const 兵 = 生.reduce((a, c) => a + corpsMen(c), 0);
     if (初 > 0 && 兵 <= 初 * 0.20) return "兵が五分の一を切り、軍を退いた";
