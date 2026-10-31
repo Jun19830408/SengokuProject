@@ -1,4 +1,5 @@
 import { ambushChance } from "../core/ambush.js";
+import { 強攻の比, 強攻の見込み } from "../core/kakomi.js";
 import { 自立に入る城, 自立する } from "../core/jiritsu.js";
 import { 城の上がり, 大身の割, 蔵の目減り } from "../core/keizai.js";
 import { ransomCost, takeAsPrisoner, 仕官を願えるか, 他家が召し抱える, 囚われた年 } from "../core/capture.js";
@@ -1210,10 +1211,16 @@ export function advanceMonth(prev, g) {
           }
           continue;
         }
-        // 数で押せるなら強攻する
-        if (bes.men > dMen2 * 1.6 && Math.random() < 0.45) {
-          /* 出城（core/demaru.js）のある城へ攻めかかれば、寄せ手は出城の横矢を浴びる */
-          const aL = Math.round(bes.men * 0.14 * (cs.出城 ? 1.3 : 1)), dL = Math.round(dMen2 * 0.4 * (cs.出城 ? 0.8 : 1));
+        /* 数で押せるなら強攻する（城方の二倍を超えたとき）。落ちるかどうかは、盤の上の城攻めと
+           同じ見込みで決める（core/kakomi.js 強攻の見込み）。もとは一.六倍で攻めかかり、そのたびに
+           城兵を四割ずつ削って、百五十を割れば落としていた――一.六倍の寄せ手が、数か月のうちに
+           どの城も落とせた。損は、落とせば寄せ手が一割から二割、しくじれば二割から三割（見込みが
+           低いほど重い）。城方は、しくじらせても一割五分を失う。出城は寄せ手に横矢を浴びせる */
+        if (bes.men > dMen2 * 強攻の比 && Math.random() < 0.45) {
+          const 見込 = 強攻の見込み(bes.men / Math.max(1, dMen2), !!cs.出城);
+          const 落ちる = Math.random() < 見込;
+          const aL = Math.round(bes.men * ((落ちる ? 0.10 : 0.20) + 0.10 * (1 - 見込)) * (cs.出城 ? 1.2 : 1));
+          const dL = Math.round(cs.local * (落ちる ? 0.6 : 0.15));
           軍の損を分ける(s, bes, aL);
           cs.local = Math.max(0, cs.local - dL);
           const 文 = `${s.factions[bes.faction].name}が${cs.name}へ攻めかかった`
@@ -1230,7 +1237,7 @@ export function advanceMonth(prev, g) {
             events.push(`【方面軍】${旗2 ? 旗2.name : "方面軍"}が${cs.name}へ攻めかかった`
               + `（味方${fmt(aL)}人・城方${fmt(dL)}人を失う／囲み${sg2.months}ヶ月）。`);
           }
-          if (cs.local < 150) {
+          if (落ちる) {
             const 守旗3 = 守りを任せた囲み ? 守りの寄親(s, cs) : null;
             sackCastle(s, cs, bes, true);
             if (守旗3) {
