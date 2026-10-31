@@ -12494,10 +12494,10 @@ function diploStat(g, fid) {
 var minGarrison = (c) => {
   const \u58C1\u306E\u8981\u308A = Math.round(c.def * 10 + (100 - c.min) * 5);
   const \u5272\u5897 = Math.max(1, Math.min(1.9, 1 + (3e4 - c.koku) / 3e4 * 0.9));
-  const \u5668 = c.koku / 1e4 * 300 * \u5272\u5897;
-  if (\u58C1\u306E\u8981\u308A <= \u5668 * 0.55) return \u58C1\u306E\u8981\u308A;
+  const \u56682 = c.koku / 1e4 * 300 * \u5272\u5897;
+  if (\u58C1\u306E\u8981\u308A <= \u56682 * 0.55) return \u58C1\u306E\u8981\u308A;
   const \u5272 = Math.max(0.12, Math.min(0.55, 0.2 + (c.def - 45) / 400 + (70 - c.min) / 400));
-  return Math.max(40, Math.round(\u5668 * \u5272));
+  return Math.max(40, Math.round(\u56682 * \u5272));
 };
 var \u8ECD\u5F79\u306E\u5272\u5897 = (koku) => Math.max(1, Math.min(2.2, 1 + (3e4 - koku) / 3e4 * 1.2));
 var \u5927\u8EAB\u306E\u8ECD\u5F79 = (\u7DCF\u77F3\u9AD8) => Math.max(0.6, Math.min(1, 1 - (\u7DCF\u77F3\u9AD8 - 5e5) / 375e5));
@@ -18109,6 +18109,11 @@ function tryAmbush(s2, army, castle, aGens, dGens, weather) {
 }
 
 // src/core/kakomi.js
+var \u5F37\u653B\u306E\u6BD4 = 2;
+function \u5F37\u653B\u306E\u898B\u8FBC\u307F(\u6BD4, \u51FA\u57CE = false) {
+  const r = (\u6BD4 || 0) * (\u51FA\u57CE ? 0.8 : 1);
+  return 1 / (1 + Math.exp(-1.79 * (r - 2.77)));
+}
 function \u57CE\u306E\u5175(s2, c) {
   if (!c) return 0;
   const \u5C06 = (s2.generals || []).filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
@@ -18126,8 +18131,7 @@ function \u57CE\u306E\u4FDD\u3061(s2, c) {
   const \u5175\u7CE7 = Math.max(0, Math.ceil(Math.max(0, c.food || 0) / \u98DF));
   const min = c.min == null ? 100 : c.min;
   const \u6C11\u5FC3 = min < 25 ? 0 : Math.floor((min - 25) / \u6C11\u306E\u96E2\u308C) + 1;
-  const \u6708 = Math.min(\u5175\u7CE7, \u6C11\u5FC3);
-  return { \u5175\u7CE7, \u6C11\u5FC3, \u6708, \u98DF, \u8A33: \u5175\u7CE7 <= \u6C11\u5FC3 ? "\u5175\u7CE7\u304C\u5C3D\u304D\u308B" : "\u6C11\u304C\u96E2\u308C\u308B" };
+  return { \u5175\u7CE7, \u6C11\u5FC3, \u6708: \u5175\u7CE7, \u98DF, \u8A33: "\u5175\u7CE7\u304C\u5C3D\u304D\u308B" };
 }
 function \u5BC4\u305B\u624B\u306E\u4FDD\u3061(a) {
   if (!a) return 0;
@@ -18163,8 +18167,9 @@ function \u56F2\u307F\u306E\u69D8\u5B50(s2, c, { \u5B88\u308A\u306E\u5BC4\u89AA:
       \u5175: \u8ECD\u306E\u5175(\u5BC4),
       \u5927\u5C06: (s2.generals || []).find((x) => x.id === (\u5BC4.gens || [])[0]) || null,
       \u4FDD\u3061: \u5BC4\u305B\u624B\u306E\u4FDD\u3061(\u5BC4),
-      /* 強攻の目。城方の一.六倍を超えれば、月に四割五分の目で攻めかかる。 */
-      \u5F37\u653B: \u8ECD\u306E\u5175(\u5BC4) > \u5B88\u5175 * 1.6,
+      /* 強攻の目。城方の二倍を超えれば、月に四割五分の目で攻めかかる（上の 強攻の見込み）。 */
+      \u5F37\u653B: \u8ECD\u306E\u5175(\u5BC4) > \u5B88\u5175 * \u5F37\u653B\u306E\u6BD4,
+      \u5F37\u653B\u306E\u898B\u8FBC\u307F: \u5F37\u653B\u306E\u898B\u8FBC\u307F(\u8ECD\u306E\u5175(\u5BC4) / Math.max(1, \u5B88\u5175), !!c.\u51FA\u57CE),
       \u56F2\u307F: sg && sg.enc != null ? sg.enc : 60
     } : null,
     \u57CE\u65B9: {
@@ -18197,7 +18202,8 @@ function \u56F2\u3093\u3067\u3044\u308B\u69D8\u5B50(s2, c, fid, { \u6708\u6570, 
     \u5175,
     \u5175\u7CE7: \u7CE7,
     \u4FDD\u3061: Math.max(0, Math.floor(\u7CE7 / Math.max(1, Math.round(\u5175 * 0.09) * 2))),
-    \u5F37\u653B: \u5175 > \u5B88\u5175 * 1.6,
+    \u5F37\u653B: \u5175 > \u5B88\u5175 * \u5F37\u653B\u306E\u6BD4,
+    \u5F37\u653B\u306E\u898B\u8FBC\u307F: \u5F37\u653B\u306E\u898B\u8FBC\u307F(\u5175 / Math.max(1, \u5B88\u5175), !!c.\u51FA\u57CE),
     \u898B\u3048\u3066\u3044\u308B: \u958B,
     \u57CE\u65B9: \u958B ? {
       \u5175: \u5B88\u5175,
@@ -20085,8 +20091,8 @@ function doCaptive(prev, genId, how) {
 }
 function \u89AA\u5584\u306E\u52B9\u304D(\u4F7F\u8005) {
   if (!\u4F7F\u8005) return 1;
-  const \u5668 = ((\u4F7F\u8005.gov || 0) + (\u4F7F\u8005.wit || 0)) / 2;
-  return \u5668 >= 90 ? 6 : \u5668 >= 80 ? 5 : \u5668 >= 70 ? 4 : \u5668 >= 60 ? 3 : \u5668 >= 50 ? 2 : 1;
+  const \u56682 = ((\u4F7F\u8005.gov || 0) + (\u4F7F\u8005.wit || 0)) / 2;
+  return \u56682 >= 90 ? 6 : \u56682 >= 80 ? 5 : \u56682 >= 70 ? 4 : \u56682 >= 60 ? 3 : \u56682 >= 50 ? 2 : 1;
 }
 function \u5916\u4EA4\u3092\u7D50\u3076(s2, actor, fid, key, \u4F7F\u8005id) {
   const me = s2.factions[actor], you = s2.factions[fid];
@@ -22699,8 +22705,8 @@ function \u5929\u4E0B\u5206\u3051\u76EE\u306E\u91C7\u914D(s2, { \u544A\u3052\u30
 function \u76E4\u3092\u958B\u304B\u305A\u306B\u88C1\u304F(s2, w, { \u544A\u3052\u308B } = {}) {
   const \u529B = (fid) => {
     const \u5175 = \u5206\u3051\u76EE\u306E\u5175(s2, fid);
-    const \u5668 = \u5668\u91CF\u304F\u3089\u3079(s2, fid);
-    return \u5175 * (0.8 + \u5668 / 1e3);
+    const \u56682 = \u5668\u91CF\u304F\u3089\u3079(s2, fid);
+    return \u5175 * (0.8 + \u56682 / 1e3);
   };
   const \u91CE2 = \u91CE\u3092\u63A2\u3059(w.\u91CE);
   const a = \u529B(w.\u6311), b = \u529B(w.\u53D7);
@@ -23290,9 +23296,9 @@ function advanceMonth(prev, g) {
       const \u4E0A\u304C\u308A = \u57CE\u306E\u4E0A\u304C\u308A(c) * (fid === s2.player ? lv(s2).tribute : 1);
       \u4E0A\u304C\u308A\u8A08 += \u4E0A\u304C\u308A;
       gold += \u4E0A\u304C\u308A - c.local * 0.075 * up;
-      const \u5668 = troopCap(c, f.mobilization, s2);
-      if (c.local > \u5668) {
-        const \u5E30 = Math.max(1, Math.round((c.local - \u5668) * 0.04));
+      const \u56682 = troopCap(c, f.mobilization, s2);
+      if (c.local > \u56682) {
+        const \u5E30 = Math.max(1, Math.round((c.local - \u56682) * 0.04));
         c.local -= \u5E30;
         rosterSync(c, "rost", c.local, `loc-${c.id}`);
         if (fid === s2.player) \u5E30\u8FB2 += \u5E30;
@@ -23317,10 +23323,10 @@ function advanceMonth(prev, g) {
     }
     for (const q of s2.generals) {
       if (q.faction !== fid || q.captive) continue;
-      const \u5668 = \u8ECD\u5F79\u306E\u5668(q);
-      if (\u5668 <= q.retinue) continue;
+      const \u56682 = \u8ECD\u5F79\u306E\u5668(q);
+      if (\u56682 <= q.retinue) continue;
       const \u5897 = Math.max(4, Math.round(q.retinue * 0.03));
-      q.retinue = Math.min(\u5668, q.retinue + \u5897);
+      q.retinue = Math.min(\u56682, q.retinue + \u5897);
       rosterSync(q, "rost", q.retinue, `ret-${q.id}`);
     }
     const \u5927\u8EAB = Math.round(\u4E0A\u304C\u308A\u8A08 * \u5927\u8EAB\u306E\u5272(\u7DCF\u77F3\u9AD8));
@@ -24095,7 +24101,7 @@ function advanceMonth(prev, g) {
     cs.food = Math.max(0, cs.food - Math.round((cs.local * 0.35 + 600) * (1 + \u4ED8\u57CE\u306E\u7DE0\u3081(sg2))));
     cs.min = Math.max(0, cs.min - 5);
     bes.food -= Math.round(bes.men * 0.09);
-    if (cs.food <= 0 || cs.min < 25) {
+    if (cs.food <= 0) {
       const \u5B88\u65D7 = \u5B88\u308A\u3092\u4EFB\u305B\u305F\u56F2\u307F ? \u5B88\u308A\u306E\u5BC4\u89AA(s2, cs) : null;
       sackCastle(s2, cs, bes, false);
       if (\u5B88\u65D7) {
@@ -24118,8 +24124,11 @@ function advanceMonth(prev, g) {
       }
       continue;
     }
-    if (bes.men > dMen2 * 1.6 && Math.random() < 0.45) {
-      const aL = Math.round(bes.men * 0.14 * (cs.\u51FA\u57CE ? 1.3 : 1)), dL = Math.round(dMen2 * 0.4 * (cs.\u51FA\u57CE ? 0.8 : 1));
+    if (bes.men > dMen2 * \u5F37\u653B\u306E\u6BD4 && Math.random() < 0.45) {
+      const \u898B\u8FBC = \u5F37\u653B\u306E\u898B\u8FBC\u307F(bes.men / Math.max(1, dMen2), !!cs.\u51FA\u57CE);
+      const \u843D\u3061\u308B = Math.random() < \u898B\u8FBC;
+      const aL = Math.round(bes.men * ((\u843D\u3061\u308B ? 0.1 : 0.2) + 0.1 * (1 - \u898B\u8FBC)) * (cs.\u51FA\u57CE ? 1.2 : 1));
+      const dL = Math.round(cs.local * (\u843D\u3061\u308B ? 0.6 : 0.15));
       \u8ECD\u306E\u640D\u3092\u5206\u3051\u308B(s2, bes, aL);
       cs.local = Math.max(0, cs.local - dL);
       const \u6587 = `${s2.factions[bes.faction].name}\u304C${cs.name}\u3078\u653B\u3081\u304B\u304B\u3063\u305F\uFF08\u653B${fmt(aL)}\u4EBA\u30FB\u5B88${fmt(dL)}\u4EBA\u3092\u5931\u3046\uFF09\u3002`;
@@ -24132,7 +24141,7 @@ function advanceMonth(prev, g) {
         const \u65D72 = s2.generals.find((x) => x.id === bes.\u65D7\u982D);
         events.push(`\u3010\u65B9\u9762\u8ECD\u3011${\u65D72 ? \u65D72.name : "\u65B9\u9762\u8ECD"}\u304C${cs.name}\u3078\u653B\u3081\u304B\u304B\u3063\u305F\uFF08\u5473\u65B9${fmt(aL)}\u4EBA\u30FB\u57CE\u65B9${fmt(dL)}\u4EBA\u3092\u5931\u3046\uFF0F\u56F2\u307F${sg2.months}\u30F6\u6708\uFF09\u3002`);
       }
-      if (cs.local < 150) {
+      if (\u843D\u3061\u308B) {
         const \u5B88\u65D73 = \u5B88\u308A\u3092\u4EFB\u305B\u305F\u56F2\u307F ? \u5B88\u308A\u306E\u5BC4\u89AA(s2, cs) : null;
         sackCastle(s2, cs, bes, true);
         if (\u5B88\u65D73) {
@@ -24203,11 +24212,11 @@ function advanceMonth(prev, g) {
       if (s2.sieges.some((sg) => sg.castleId === c.id)) continue;
       const gens2 = s2.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive);
       const gov2 = gens2.length ? Math.max(...gens2.map((x) => x.gov)) : 50;
-      const \u5668 = troopCap(c, f2.mobilization, s2);
+      const \u56682 = troopCap(c, f2.mobilization, s2);
       const \u3044\u307E\u306E\u5175 = c.local + gens2.reduce((a, x) => a + x.retinue, 0);
-      const \u5175\u304C\u6E80\u3061\u305F = \u3044\u307E\u306E\u5175 >= \u5668 * 0.98;
+      const \u5175\u304C\u6E80\u3061\u305F = \u3044\u307E\u306E\u5175 >= \u56682 * 0.98;
       if (\u8535) {
-        \u8535.\u6B20\u3051 = (\u8535.\u6B20\u3051 || 0) + Math.max(0, \u5668 - \u3044\u307E\u306E\u5175);
+        \u8535.\u6B20\u3051 = (\u8535.\u6B20\u3051 || 0) + Math.max(0, \u56682 - \u3044\u307E\u306E\u5175);
       }
       const \u6255\u3048\u308B = (\u984D) => !\u8535 ? f2.gold >= \u984D : \u8535.\u6B8B >= \u984D && f2.gold >= \u984D;
       const \u6255\u3046 = (\u984D) => {
@@ -24233,7 +24242,7 @@ function advanceMonth(prev, g) {
         }
         if (\u8535) \u8535.\u77F3 += c.koku - \u524D\u77F3;
       }
-      const cap = \u5668;
+      const cap = \u56682;
       const cur = \u3044\u307E\u306E\u5175;
       if (!\u8535 && (!f2.kenchiTried || s2.month === 4)) {
         for (const kuni of provincesHeld(s2, fid)) {
@@ -26358,10 +26367,32 @@ function \u5F15\u304D\u53D6\u308A\u3092\u9032\u3081\u308B(b, c) {
   b.log.push({ t: b.t, text: `${c.gen.name}\u968A\u306F${g.key}\u306E\u5185\u3078\u5F15\u304D\u53D6\u3063\u305F\u3002` });
   if (\u5F15.\u6B21 && \u5F15.\u6B21 !== g && !\u5F15.\u6B21.broken) {
     c.holdGate = \u5F15.\u6B21;
-    const a2 = axisOf(\u9580\u306E\u8F2A(m, \u5F15.\u6B21), \u5F15.\u6B21), p2 = fromUV(m, a2, \u5F15.\u6B21.off, a2.half - 14);
-    issueOrder(b, c, { order: "\u79FB\u52D5", tx: p2.x, ty: p2.y });
+    const a2 = axisOf(\u9580\u306E\u8F2A(m, \u5F15.\u6B21), \u5F15.\u6B21), p2 = fromUV(m, a2, \u5F15.\u6B21.off, a2.half - 50);
+    const \u90532 = navPath(m, c.x, c.y, p2.x, p2.y);
+    c.\u57CE\u5185\u9053 = { \u9053: [...(\u90532 || []).map((q) => ({ ...q })).filter((q) => Math.hypot(q.x - p2.x, q.y - p2.y) > 30), { x: p2.x, y: p2.y, r: 26 }], \u523B: b.t, \u5148: \u5F15.\u6B21 };
+    issueOrder(b, c, { order: "\u79FB\u52D5", tx: c.\u57CE\u5185\u9053.\u9053[0].x, ty: c.\u57CE\u5185\u9053.\u9053[0].y });
   }
   return false;
+}
+function \u57CE\u5185\u306E\u9053\u3092\u9032\u3081\u308B(b, c) {
+  const \u90532 = c.\u57CE\u5185\u9053;
+  if (!\u90532) return false;
+  const p = \u90532.\u9053[0];
+  if (p && Math.hypot(p.x - c.x, p.y - c.y) < (p.r || 30)) {
+    \u90532.\u9053.shift();
+    \u90532.\u523B = b.t;
+  }
+  if (\u90532.\u9053.length > 1 && b.t - \u90532.\u523B > 12) {
+    \u90532.\u9053.shift();
+    \u90532.\u523B = b.t;
+  }
+  if (!\u90532.\u9053.length || \u90532.\u9053.length === 1 && b.t - \u90532.\u523B > 12) {
+    c.\u57CE\u5185\u9053 = null;
+    return false;
+  }
+  c.tx = \u90532.\u9053[0].x;
+  c.ty = \u90532.\u9053[0].y;
+  return true;
 }
 function recallDetachment(b, c) {
   if (!c || !c.detach || c.dead) return false;
@@ -26482,6 +26513,25 @@ function detachAI(b, c, alive) {
     return true;
   }
   return false;
+}
+var \u9593\u5EF6\u3073\u306E\u969B = 70;
+var \u5E2D\u304B\u3089\u5916\u308C\u305F\u9694 = (t, q) => Math.hypot(q.x - (t.x + (q.slotX || 0)), q.y - (t.y + (q.slotY || 0)));
+function \u72D9\u3044\u306E\u7D44(t, x, y) {
+  let \u9078 = null, \u8FD1 = Infinity;
+  for (const q of t && t.squads || []) {
+    if (q.men <= 0) continue;
+    const d = Math.hypot(q.x - x, q.y - y);
+    if (d < \u8FD1) {
+      \u8FD1 = d;
+      \u9078 = q;
+    }
+  }
+  return \u9078;
+}
+function \u72D9\u3046\u6240(c, t) {
+  const \u7D44 = c.\u72D9\u3044\u7D44 && t.squads.find((q) => q.id === c.\u72D9\u3044\u7D44 && q.men > 0) || \u72D9\u3044\u306E\u7D44(t, c.x, c.y);
+  if (\u7D44 && \u5E2D\u304B\u3089\u5916\u308C\u305F\u9694(t, \u7D44) > \u9593\u5EF6\u3073\u306E\u969B) return { x: \u7D44.x, y: \u7D44.y, \u7D44 };
+  return { x: t.x, y: t.y, \u7D44 };
 }
 var COURIER_SPEED = 260;
 function commandPost(b, side) {
@@ -26981,7 +27031,7 @@ function buildCastleMap(castle) {
   const \u6A2A\u9577 = rnd() < 0.5;
   const n = castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2;
   const names = n === 4 ? ["\u60E3\u69CB", "\u4E09\u306E\u4E38", "\u4E8C\u306E\u4E38", "\u672C\u4E38"] : n === 3 ? ["\u60E3\u69CB", "\u4E8C\u306E\u4E38", "\u672C\u4E38"] : ["\u4E8C\u306E\u4E38", "\u672C\u4E38"];
-  const base = 110 + castle.def * 16;
+  const base = (110 + castle.def * 16) * 2;
   const gn0 = clamp((castle.def >= 64 ? 4 : castle.def >= 40 ? 3 : 2) + \u7656.\u9580, 1, 4);
   const FACE = ["S", "N", "E", "W"];
   const GNAME = { S: "\u5927\u624B\u9580", N: "\u6426\u624B\u9580", E: "\u6771\u8107\u9580", W: "\u897F\u8107\u9580" };
@@ -36970,6 +37020,19 @@ function drawBattle(ctx, b, sel, terrainCanvas, cam, W2, H2, dpr, selAll, \u8DE1
           ctx.beginPath();
           ctx.arc(f.x, f.y, 4 + (1 - a) * 7, 0, 7);
           ctx.fill();
+        } else if (f.k === "\u9F13\u821E") {
+          const r = (f.r || 40) * (0.35 + (1 - a) * 0.9);
+          ctx.globalAlpha = a * 0.8;
+          ctx.strokeStyle = "#E9C45C";
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          ctx.ellipse(f.x, f.y, r, r * 0.45, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = a * 0.35;
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          ctx.ellipse(f.x, f.y, r * 0.8, r * 0.36, 0, 0, Math.PI * 2);
+          ctx.stroke();
         } else if (f.k === "chip") {
           const u = f.t;
           ctx.globalAlpha = a * 0.85;
@@ -37241,10 +37304,10 @@ function \u8A08\u7565\u306E\u898B\u8FBC\u307F(b, kind, c) {
   return clamp(p, 0.15, 0.85);
 }
 function \u8A08\u7565\u306E\u6E1B\u308A(kind, c) {
-  const \u5668 = clamp(\u77E5(c) / 100, 0.3, 1);
-  if (kind === "\u6C34\u306E\u624B") return { \u58EB\u6C17: Math.round(6 + \u5668 * 10) };
+  const \u56682 = clamp(\u77E5(c) / 100, 0.3, 1);
+  if (kind === "\u6C34\u306E\u624B") return { \u58EB\u6C17: Math.round(6 + \u56682 * 10) };
   if (kind === "\u713C\u304D\u50CD\u304D") {
-    return { \u5175: 0.015 + \u5668 * 0.02, \u58EB\u6C17: Math.round(3 + \u5668 * 6), \u9580: 0.06 + \u5668 * 0.08, \u6AD3: 0.08 + \u5668 * 0.08 };
+    return { \u5175: 0.015 + \u56682 * 0.02, \u58EB\u6C17: Math.round(3 + \u56682 * 6), \u9580: 0.06 + \u56682 * 0.08, \u6AD3: 0.08 + \u56682 * 0.08 };
   }
   return {};
 }
@@ -37312,6 +37375,72 @@ function \u91C7\u914D\u306E\u8A08\u7565(b) {
     return \u8A08\u7565\u3092\u4ED5\u639B\u3051\u308B(b, kind, c);
   }
   return null;
+}
+
+// src/battle/kobu.js
+var \u5668 = (c) => Math.max(c && c.gen && c.gen.lead || 0, c && c.gen && c.gen.wit || 0);
+var \u9F13\u821E\u306E\u56DE\u6570 = (c) => \u5668(c) >= 70 ? 2 : 1;
+var \u9F13\u821E\u306E\u6B8B\u308A = (c) => c.\u9F13\u821E\u306E\u6B8B\u308A == null ? \u9F13\u821E\u306E\u56DE\u6570(c) : c.\u9F13\u821E\u306E\u6B8B\u308A;
+var \u9F13\u821E\u306E\u898B\u8FBC\u307F = (c) => clamp(\u5668(c) / 100, 0.1, 0.95);
+var \u9F13\u821E\u306E\u5272 = (c) => 0.5 * clamp(\u5668(c) / 100, 0, 1);
+var \u9F13\u821E\u306E\u5927\u5C06\u304B = (b, c) => !!(c.gen && c.gen.lord) || commandPost(b, c.side) === c;
+var \u8FD1\u304F\u306B\u3082\u5C4A\u304F\u304B = (c) => (c.gen && c.gen.lead || 0) >= 85;
+var \u9F13\u821E\u306E\u8FD1\u3055 = () => 300 * fieldScale();
+var \u5C4A\u304F\u968A\u304B = (o, side) => o.side === side && !o.dead && !o.destroyed && !o.\u6F70 && !o.\u65E5\u548C\u898B && !o.detach && corpsMen(o) > 0;
+function \u9F13\u821E\u306E\u5C4A\u304F\u5148(b, c, \u5168\u8ECD = false) {
+  const \u5473\u65B9 = b.corps.filter((o) => \u5C4A\u304F\u968A\u304B(o, c.side));
+  if (\u5168\u8ECD && \u9F13\u821E\u306E\u5927\u5C06\u304B(b, c)) return \u5473\u65B9;
+  if (\u8FD1\u304F\u306B\u3082\u5C4A\u304F\u304B(c)) {
+    const R2 = \u9F13\u821E\u306E\u8FD1\u3055();
+    return \u5473\u65B9.filter((o) => o === c || Math.hypot(o.x - c.x, o.y - c.y) < R2);
+  }
+  return \u5473\u65B9.filter((o) => o === c);
+}
+function \u9F13\u821E\u3059\u308B(b, c, { \u5168\u8ECD = false } = {}) {
+  if (!b || b.phase !== "fight") return { ok: false, \u6587: "\u5408\u6226\u306E\u3055\u306A\u304B\u3067\u306A\u3051\u308C\u3070\u9F13\u821E\u3067\u304D\u306A\u3044\u3002" };
+  if (!c || !c.gen || !\u5C4A\u304F\u968A\u304B(c, c.side)) return { ok: false, \u6587: "\u9F13\u821E\u3059\u308B\u5C06\u304C\u3044\u306A\u3044\u3002" };
+  if (c.routed) return { ok: false, \u6587: `${c.gen.name}\u968A\u306F\u5D29\u308C\u3066\u3044\u308B\u3002\u7ACB\u3061\u76F4\u308B\u307E\u3067\u9F13\u821E\u3067\u304D\u306A\u3044\u3002` };
+  if (\u9F13\u821E\u306E\u6B8B\u308A(c) <= 0) return { ok: false, \u6587: `${c.gen.name}\u306F\u3053\u306E\u5408\u6226\u3067\u306F\u3082\u3046\u9F13\u821E\u3067\u304D\u306A\u3044\u3002` };
+  c.\u9F13\u821E\u306E\u6B8B\u308A = \u9F13\u821E\u306E\u6B8B\u308A(c) - 1;
+  c.\u9F13\u821E\u306E\u523B = b.t;
+  const \u5148 = \u9F13\u821E\u306E\u5C4A\u304F\u5148(b, c, \u5168\u8ECD);
+  const \u5168 = \u5168\u8ECD && \u9F13\u821E\u306E\u5927\u5C06\u304B(b, c);
+  const \u6210 = Math.random() < \u9F13\u821E\u306E\u898B\u8FBC\u307F(c);
+  if (!\u6210) {
+    const \u65872 = `${c.gen.name}\u306E\u9F13\u821E\u306F\u5175\u306B\u5C4A\u304B\u306A\u304B\u3063\u305F\u3002`;
+    notify(b, \u65872, c.side === "P" ? "bad" : "good");
+    return { ok: true, \u6210: false, \u6587: \u65872, \u4E0A: 0 };
+  }
+  const \u5272 = \u9F13\u821E\u306E\u5272(c);
+  let \u8A082 = 0;
+  for (const o of \u5148) {
+    const \u4E0A = (100 - o.morale) * \u5272;
+    o.morale = clamp(o.morale + \u4E0A, 0, 100);
+    \u8A082 += \u4E0A;
+    if (b.fx && b.fx.length < 220) b.fx.push({ k: "\u9F13\u821E", x: o.x, y: o.y, r: 46 * fieldScale(), t: 0, life: 1.6 });
+  }
+  const \u5E73 = Math.round(\u8A082 / Math.max(1, \u5148.length));
+  const \u7BC4 = \u5168 ? "\u5168\u8ECD" : \u5148.length > 1 ? `\u81EA\u90E8\u968A\u3068\u8FD1\u304F\u306E${\u5148.length - 1}\u968A` : "\u81EA\u90E8\u968A";
+  const \u6587 = `${c.gen.name}\u304C${\u7BC4}\u3092\u9F13\u821E\u3057\u305F\u3002\u58EB\u6C17\u304C${\u5E73}\u4E0A\u304C\u3063\u305F${\u5148.length > 1 ? "\uFF08\u5E73\u5747\uFF09" : ""}\u3002`;
+  notify(b, \u6587, c.side === "P" ? "good" : "bad");
+  return { ok: true, \u6210: true, \u6587, \u4E0A: \u5E73 };
+}
+function \u91C7\u914D\u306E\u9F13\u821E(b) {
+  if (!b || b.phase !== "fight" || b.\u9F13\u821E\u306A\u3057) return;
+  for (const c of b.corps) {
+    if (!c.gen || !\u5C4A\u304F\u968A\u304B(c, c.side) || c.routed) continue;
+    if (c.side === "P" && !c.auto) continue;
+    if (\u9F13\u821E\u306E\u6B8B\u308A(c) <= 0) continue;
+    if (c.\u9F13\u821E\u306E\u523B != null && b.t - c.\u9F13\u821E\u306E\u523B < 40) continue;
+    if (\u9F13\u821E\u306E\u5927\u5C06\u304B(b, c)) {
+      const \u5F31 = b.corps.filter((o) => \u5C4A\u304F\u968A\u304B(o, c.side) && o.morale < 50).length;
+      if (\u5F31 >= 3) {
+        \u9F13\u821E\u3059\u308B(b, c, { \u5168\u8ECD: true });
+        continue;
+      }
+    }
+    if (c.morale < 45) \u9F13\u821E\u3059\u308B(b, c);
+  }
 }
 
 // src/battle/ai.js
@@ -37663,6 +37792,7 @@ function \u5F8C\u8A70\u3092\u5F53\u3066\u308B(b, c, alive) {
 function battleAI(b) {
   setAiIssuing(true);
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed && !c.\u65E5\u548C\u898B);
+  \u91C7\u914D\u306E\u9F13\u821E(b);
   for (const c of alive) {
     if (!c.\u5185\u5FDC || c.\u5BDD\u8FD4\u308A) continue;
     if (c.\u5185\u5FDC\u306E\u4E3B !== "E") continue;
@@ -37740,14 +37870,16 @@ function battleAI(b) {
       continue;
     }
     if (c.squads.some((q) => q.engaged)) continue;
-    const d = Math.hypot(c.x - t.x, c.y - t.y) || 1;
+    const \u6240 = \u72D9\u3046\u6240(c, t);
+    const d = Math.hypot(c.x - \u6240.x, c.y - \u6240.y) || 1;
     const \u9593 = c.order === "\u7A81\u6483" ? 20 : c.order === "\u5C04\u6483" ? Math.min(d, 150) : 38;
     issueOrder(b, c, {
       order: c.order,
       target: t.id,
       \u72D9\u3044: c.\u72D9\u3044,
-      tx: t.x + (c.x - t.x) / d * \u9593,
-      ty: t.y + (c.y - t.y) / d * \u9593
+      \u72D9\u3044\u7D44: \u6240.\u7D44 ? \u6240.\u7D44.id : null,
+      tx: \u6240.x + (c.x - \u6240.x) / d * \u9593,
+      ty: \u6240.y + (c.y - \u6240.y) / d * \u9593
     });
   }
   if (!MAP && (!b.\u7B4B\u66F8\u304D || b.\u5206\u3051\u76EE)) {
@@ -37975,30 +38107,14 @@ function battleAI(b) {
         }
         if ((c.\u5F15\u304D\u53D6\u308A || c.holdGate && c.holdGate.\u51FA\u57CE) && \u51FA\u57CE\u3092\u5B88\u308B(b, c, alive)) continue;
         let g2 = c.holdGate;
-        const need = !g2 || !g2.\u51FA\u57CE && (g2.broken || g2.hp / g2.max < 0.25);
-        if (need) {
-          const \u6B8B\u308A2 = MAP.gates.filter((x) => !x.broken && (!g2 || x.layer > g2.layer));
-          if (\u6B8B\u308A2.length) {
-            const \u8F2A = Math.min(...\u6B8B\u308A2.map((x) => x.layer));
-            const \u5834 = (x) => gatePos(MAP, \u9580\u306E\u8F2A(MAP, x), x);
-            const \u6B21 = \u6B8B\u308A2.filter((x) => x.layer === \u8F2A).sort((x, y2) => {
-              const ga = \u5834(x), gb = \u5834(y2);
-              return Math.hypot(ga.x - c.x, ga.y - c.y) - Math.hypot(gb.x - c.x, gb.y - c.y);
-            })[0];
-            if (\u6B21 && \u6B21 !== g2) {
-              const \u4E0B\u304C\u308B = !!g2;
-              c.holdGate = \u6B21;
-              g2 = \u6B21;
-              b.log.push({
-                t: b.t,
-                text: \u4E0B\u304C\u308B ? `${c.gen.name}\u968A\u306F${\u6B21.key}\u306E\u5185\u3078\u4E0B\u304C\u3063\u305F\u3002` : `${c.gen.name}\u968A\u304C${\u6B21.key}\u3092\u56FA\u3081\u305F\u3002`
-              });
-            }
-          } else if (g2 && g2.broken) {
-            c.holdGate = null;
-            g2 = null;
+        if (c.\u57CE\u5185\u9053) {
+          if (\u57CE\u5185\u306E\u9053\u3092\u9032\u3081\u308B(b, c)) {
+            issueOrder(b, c, { order: "\u79FB\u52D5", tx: c.tx, ty: c.ty });
+            continue;
           }
         }
+        if (!(g2 && g2.\u51FA\u57CE) && \u5B88\u308A\u624B\u306E\u52D5\u304D(b, c, alive)) continue;
+        g2 = c.holdGate;
         if (g2 && !g2.broken) {
           const l2 = \u9580\u306E\u8F2A(MAP, g2), a2 = axisOf(l2, g2);
           const p2 = fromUV(MAP, a2, g2.off, a2.half - (g2.\u51FA\u57CE ? 30 : 14));
@@ -38071,6 +38187,18 @@ function battleAI(b) {
           const keep = MAP.layers[MAP.layers.length - 1];
           if (keep) {
             const kx = MAP.cx, ky = MAP.cy;
+            if (!c.\u5F15\u304D\u53D6\u308A && !inLayer(MAP, keep, c.x, c.y)) {
+              const \u5165 = keep.gates.slice().sort((x, y) => {
+                const px2 = gatePos(MAP, keep, x), py2 = gatePos(MAP, keep, y);
+                return Math.hypot(px2.x - c.x, px2.y - c.y) - Math.hypot(py2.x - c.x, py2.y - c.y);
+              })[0];
+              const \u90532 = \u5165 ? routeToCastleGate(MAP, \u5165, c.x, c.y) : null;
+              if (\u5165 && \u90532 && \u90532.length) {
+                issueOrder(b, c, { order: "\u79FB\u52D5", tx: c.x, ty: c.y });
+                c.\u5F15\u304D\u53D6\u308A = { \u9053: \u90532.map((q) => ({ ...q })), \u9580: \u5165, \u523B: b.t };
+                continue;
+              }
+            }
             if (Math.hypot(c.x - kx, c.y - ky) > 60) {
               issueOrder(b, c, { order: "\u79FB\u52D5", tx: kx, ty: ky });
             } else {
@@ -38338,6 +38466,93 @@ function battleAI(b) {
     c.chargeT = 0;
   }
   setAiIssuing(false);
+}
+var \u5F31\u3063\u305F\u304B = (c) => c.morale < 20 || corpsMen(c) < corpsMax(c) * 0.2;
+var \u9580\u306E\u5916 = (g) => gatePos(MAP, \u9580\u306E\u8F2A(MAP, g), g);
+var \u9580\u306E\u5185\u306E\u5834 = (g, \u6DF1 = 14) => {
+  const a = axisOf(\u9580\u306E\u8F2A(MAP, g), g);
+  return fromUV(MAP, a, g.off, a.half - \u6DF1);
+};
+function \u56FA\u3081\u308B\u9580(b, c, alive, \u8F2A\u3088\u308A\u5916 = -1) {
+  const \u6B8B\u308A2 = MAP.gates.filter((x) => !x.broken && !x.\u51FA\u57CE && x.layer > \u8F2A\u3088\u308A\u5916);
+  if (!\u6B8B\u308A2.length) return null;
+  const \u8F2A = Math.min(...\u6B8B\u308A2.map((x) => x.layer));
+  const \u7834\u308C\u53E3 = MAP.gates.filter((x) => x.broken && !x.\u51FA\u57CE).map(\u9580\u306E\u5916);
+  const \u5BC4 = (g) => {
+    const p = \u9580\u306E\u5916(g);
+    return alive.reduce((t, o) => o.side === b.attacker && !o.routed && Math.hypot(o.x - p.x, o.y - p.y) < 420 ? t + corpsMen(o) : t, 0);
+  };
+  const \u53E3\u307E\u3067 = (g) => {
+    const p = \u9580\u306E\u5916(g);
+    return \u7834\u308C\u53E3.length ? Math.min(...\u7834\u308C\u53E3.map((q) => Math.hypot(q.x - p.x, q.y - p.y))) : Math.hypot(p.x - c.x, p.y - c.y);
+  };
+  return \u6B8B\u308A2.filter((x) => x.layer === \u8F2A).sort((x, y) => \u5BC4(y) - \u5BC4(x) || \u53E3\u307E\u3067(x) - \u53E3\u307E\u3067(y))[0];
+}
+function \u6301\u3061\u5834\u3092\u79FB\u308B(b, c, \u6B21, \u6587) {
+  if (!\u6B21) return false;
+  c.holdGate = \u6B21;
+  c.\u6301\u3061\u5834\u306B\u7740\u3044\u305F = false;
+  c.sallied = false;
+  c.chasing = false;
+  const \u8F2A = \u9580\u306E\u8F2A(MAP, \u6B21);
+  if (inLayer(MAP, \u8F2A, c.x, c.y)) {
+    const p = \u9580\u306E\u5185\u306E\u5834(\u6B21, 50);
+    const \u90532 = navPath(MAP, c.x, c.y, p.x, p.y);
+    c.\u57CE\u5185\u9053 = { \u9053: [...(\u90532 || []).map((q) => ({ ...q })).filter((q) => Math.hypot(q.x - p.x, q.y - p.y) > 30), { x: p.x, y: p.y, r: 26 }], \u523B: b.t, \u5148: \u6B21 };
+    issueOrder(b, c, { order: "\u79FB\u52D5", tx: c.\u57CE\u5185\u9053.\u9053[0].x, ty: c.\u57CE\u5185\u9053.\u9053[0].y });
+  } else {
+    const \u5165 = \u8F2A.gates.filter((x) => !x.broken).sort((x, y) => {
+      const px2 = \u9580\u306E\u5916(x), py2 = \u9580\u306E\u5916(y);
+      return Math.hypot(px2.x - c.x, px2.y - c.y) - Math.hypot(py2.x - c.x, py2.y - c.y);
+    })[0] || \u6B21;
+    const \u90532 = routeToCastleGate(MAP, \u5165, c.x, c.y);
+    issueOrder(b, c, { order: "\u79FB\u52D5", tx: c.x, ty: c.y });
+    c.\u5F15\u304D\u53D6\u308A = { \u9053: (\u90532 && \u90532.length ? \u90532 : [{ ...\u9580\u306E\u5916(\u5165), r: 30 }]).map((q) => ({ ...q })), \u9580: \u5165, \u523B: b.t, \u6B21 };
+    c.\u57CE\u5185\u9053 = null;
+  }
+  if (\u6587) b.log.push({ t: b.t, text: \u6587 });
+  return true;
+}
+function \u5B88\u308A\u624B\u306E\u52D5\u304D(b, c, alive) {
+  const g = c.holdGate;
+  if (!g) {
+    if (c.\u5F15\u304D\u53D6\u308A) return false;
+    const \u6B21 = \u56FA\u3081\u308B\u9580(b, c, alive);
+    return \u6B21 ? \u6301\u3061\u5834\u3092\u79FB\u308B(b, c, \u6B21, `${c.gen.name}\u968A\u304C${\u6B21.key}\u3092\u56FA\u3081\u305F\u3002`) : false;
+  }
+  if (g.broken) {
+    if (!\u5F31\u3063\u305F\u304B(c) && !c.routed) {
+      const gp = \u9580\u306E\u5916(g), p = \u9580\u306E\u5185\u306E\u5834(g, 30);
+      const \u5165\u308B = alive.filter((o) => o.side === b.attacker && !o.routed && !o.withdraw && Math.hypot(o.x - gp.x, o.y - gp.y) < 260 * fieldScale());
+      if (\u5165\u308B.length) {
+        const \u7684 = \u5165\u308B.reduce((a, o) => Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a, \u5165\u308B[0]);
+        if (!(c.order === "\u63A5\u6226" && c.target === \u7684.id)) issueOrder(b, c, { order: "\u63A5\u6226", tx: \u7684.x, ty: \u7684.y, target: \u7684.id });
+      } else if (Math.hypot(c.x - p.x, c.y - p.y) > 40) issueOrder(b, c, { order: "\u79FB\u52D5", tx: p.x, ty: p.y });
+      else issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
+      return true;
+    }
+    const \u6B21 = \u56FA\u3081\u308B\u9580(b, c, alive, g.layer);
+    if (\u6B21) return \u6301\u3061\u5834\u3092\u79FB\u308B(b, c, \u6B21, `${c.gen.name}\u968A\u306F${g.key}\u306E\u7834\u308C\u53E3\u3092\u652F\u3048\u304D\u308C\u305A\u3001${\u6B21.key}\u306E\u5185\u3078\u5F15\u304D\u53D6\u308B\u3002`);
+    c.holdGate = null;
+    return false;
+  }
+  if (MAP.gates.some((x) => !x.\u51FA\u57CE && x.layer === g.layer && x.broken)) {
+    const \u6B21 = \u56FA\u3081\u308B\u9580(b, c, alive, g.layer);
+    if (\u6B21) return \u6301\u3061\u5834\u3092\u79FB\u308B(b, c, \u6B21, `${c.gen.name}\u968A\u306F${g.key}\u3092\u5F15\u304D\u6255\u3044\u3001${\u6B21.key}\u3092\u56FA\u3081\u306B\u56DE\u308B\u3002`);
+    return false;
+  }
+  if (!c.\u5B88\u5099\u968A && !c.sallied && !c.\u5F15\u304D\u53D6\u308A) {
+    const \u5BC4 = (x, R2) => {
+      const p = \u9580\u306E\u5916(x);
+      return alive.reduce((t, o) => o.side === b.attacker && !o.routed && Math.hypot(o.x - p.x, o.y - p.y) < R2 ? t + corpsMen(o) : t, 0);
+    };
+    const \u5B88 = (x) => alive.reduce((t, o) => o.side !== b.attacker && o.holdGate === x ? t + corpsMen(o) : t, 0);
+    if (\u5BC4(g, 600 * fieldScale()) === 0) {
+      const \u5148 = MAP.gates.filter((x) => x !== g && !x.broken && !x.\u51FA\u57CE && x.layer === g.layer).map((x) => ({ x, \u5BC4: \u5BC4(x, 320 * fieldScale()), \u5B88: \u5B88(x) })).filter((v) => v.\u5BC4 > v.\u5B88 * 1.5).sort((p, q) => q.\u5BC4 - q.\u5B88 - (p.\u5BC4 - p.\u5B88))[0];
+      if (\u5148) return \u6301\u3061\u5834\u3092\u79FB\u308B(b, c, \u5148.x, `${c.gen.name}\u968A\u306F${\u5148.x.key}\u3078\u52A0\u52E2\u306B\u56DE\u3063\u305F\u3002`);
+    }
+  }
+  return false;
 }
 
 // src/battle/engine.js
@@ -38626,6 +38841,7 @@ function \u591C\u3092\u660E\u304B\u3059(b) {
   const \u51FA = \u51FA\u57CE\u304C\u4FDD\u3064(m) ? m.\u51FA\u57CE : null;
   const \u51FA\u57CE\u307E\u3067 = (x, y) => \u51FA ? Math.max(Math.abs(x - m.cx - \u51FA.ox) - \u51FA.hw, Math.abs(y - m.cy - \u51FA.oy) - \u51FA.hh) : Infinity;
   const \u5F15\u304F\u9593 = 190 * fieldScale() + 160;
+  b.\u591C\u306E\u5272\u308A = 0;
   for (const c of b.corps) {
     if (c.dead || c.destroyed || c.withdraw || c.\u6F70) continue;
     c.x = clamp(c.x, 60, FIELD.w - 60);
@@ -38674,6 +38890,31 @@ function \u591C\u3092\u660E\u304B\u3059(b) {
       }
       c.gate = null;
       c.\u51FA\u57CE\u653B\u3081 = false;
+    } else if ((c.side !== "P" || c.auto) && !c.\u5F8C\u8A70 && !(c.holdGate && c.holdGate.\u51FA\u57CE && \u51FA) && (!c.holdGate || c.holdGate.broken || m.gates.some((x) => !x.\u51FA\u57CE && x.layer === c.holdGate.layer && x.broken))) {
+      const \u6B8B\u308A2 = m.gates.filter((x) => !x.broken && !x.\u51FA\u57CE && !m.gates.some((y) => !y.\u51FA\u57CE && y.layer === x.layer && y.broken));
+      if (\u6B8B\u308A2.length) {
+        const \u8F2A = Math.min(...\u6B8B\u308A2.map((x) => x.layer));
+        const \u7834\u308C\u53E3 = m.gates.filter((x) => x.broken && !x.\u51FA\u57CE).map((x) => gatePos(m, \u9580\u306E\u8F2A(m, x), x));
+        const \u53E3\u307E\u3067 = (x) => {
+          const p2 = gatePos(m, \u9580\u306E\u8F2A(m, x), x);
+          return \u7834\u308C\u53E3.length ? Math.min(...\u7834\u308C\u53E3.map((q) => Math.hypot(q.x - p2.x, q.y - p2.y))) : 0;
+        };
+        const \u9580\u3089 = \u6B8B\u308A2.filter((x) => x.layer === \u8F2A).sort((x, y) => \u53E3\u307E\u3067(x) - \u53E3\u307E\u3067(y));
+        b.\u591C\u306E\u5272\u308A = (b.\u591C\u306E\u5272\u308A || 0) + 1;
+        const \u6B21 = \u9580\u3089[Math.floor((b.\u591C\u306E\u5272\u308A - 1) / 2) % \u9580\u3089.length];
+        const l = \u9580\u306E\u8F2A(m, \u6B21), a = axisOf(l, \u6B21);
+        const p = fromUV(m, a, \u6B21.off, a.half - 14);
+        c.holdGate = \u6B21;
+        c.x = p.x;
+        c.y = p.y;
+        c.\u6301\u3061\u5834\u306B\u7740\u3044\u305F = true;
+        c.\u5F15\u304D\u53D6\u308A = null;
+        c.\u57CE\u5185\u9053 = null;
+      } else {
+        c.holdGate = null;
+        c.x = m.cx;
+        c.y = m.cy;
+      }
     } else if (c.holdGate && !c.holdGate.broken && !(c.holdGate.\u51FA\u57CE && !\u51FA)) {
       const l = \u9580\u306E\u8F2A(m, c.holdGate), a = axisOf(l, c.holdGate);
       const p = fromUV(m, a, c.holdGate.off, a.half - (c.holdGate.\u51FA\u57CE ? 30 : 14));
@@ -39030,7 +39271,8 @@ function stepBattle(b, dt) {
   }
   for (const c of alive) {
     if (MAP && !passable(c.x, c.y)) {
-      const ox = c.x - MAP.cx, oy = c.y - MAP.cy, od = Math.hypot(ox, oy) || 1;
+      const \u5185\u3078 = c.side !== b.attacker && !c.\u5F8C\u8A70 && !c.sortie && !c.sallied && !c.\u57CE\u5916 && !c.chasing;
+      const ox = (c.x - MAP.cx) * (\u5185\u3078 ? -1 : 1), oy = (c.y - MAP.cy) * (\u5185\u3078 ? -1 : 1), od = Math.hypot(ox, oy) || 1;
       for (let k = 1; k <= 12; k++) {
         const nx = c.x + ox / od * k * 14, ny = c.y + oy / od * k * 14;
         if (passable(nx, ny)) {
@@ -39715,6 +39957,7 @@ function stepBattle(b, dt) {
       }
     }
     const fsN = fieldScale();
+    const \u57CE\u306E\u5C04\u306E\u500D = 3;
     for (const f of MAP.fac) {
       if (f.hp <= 0) continue;
       if (f.kind === "\u77E2\u5009") {
@@ -39724,7 +39967,7 @@ function stepBattle(b, dt) {
           if (tgt) {
             f.cool = 2.6;
             const kit = SIEGE_KIT[tgt.kit] || SIEGE_KIT["\u306A\u3057"];
-            let hit = 11 * kit.guard * (f.\u51FA\u57CE ? 3 : 1);
+            let hit = 11 * kit.guard * (f.\u51FA\u57CE ? 3 : 1) * \u57CE\u306E\u5C04\u306E\u500D;
             const qs = tgt.squads.filter((q) => q.men > 0).sort((a, b2) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b2.x - f.x, b2.y - f.y));
             for (const q of qs) {
               if (hit <= 0) break;
@@ -39805,7 +40048,7 @@ function stepBattle(b, dt) {
       c.\u72ED\u9593 = 3;
       const kit = SIEGE_KIT[\u7684.kit] || SIEGE_KIT["\u306A\u3057"];
       const \u7A7A\u5800\u306E\u5E95 = \u51FA\u57CE\u306E\u5B88\u308A && \u51FA\u57CE\u306E\u5185\u304B(MAP, \u7684.mx == null ? \u7684.x : \u7684.mx, \u7684.my == null ? \u7684.y : \u7684.my, MAP.t + MAP.\u51FA\u57CE.\u5800 + 4) && !\u51FA\u57CE\u306E\u5185\u304B(MAP, \u7684.mx == null ? \u7684.x : \u7684.mx, \u7684.my == null ? \u7684.y : \u7684.my, MAP.t);
-      let hit = \u5C04\u624B * 95e-4 * kit.guard * (\u51FA\u57CE\u306E\u5B88\u308A ? \u7A7A\u5800\u306E\u5E95 ? 4.5 : 3 : 1);
+      let hit = \u5C04\u624B * 95e-4 * kit.guard * (\u51FA\u57CE\u306E\u5B88\u308A ? \u7A7A\u5800\u306E\u5E95 ? 4.5 : 3 : 1) * \u57CE\u306E\u5C04\u306E\u500D;
       const qs = \u7684.squads.filter((q) => q.men > 0).sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y));
       for (const q of qs) {
         if (hit <= 0) break;
@@ -40010,7 +40253,7 @@ function stepBattle(b, dt) {
         const \u652F\u3048 = 1 + clamp(((c.\u7ACB\u3064\u7D44\u6570 || 1) / Math.max(1, c.\u565B\u307F\u7D44\u6570 || 1) - 1) * 0.05, 0, 0.35);
         const \u4E71\u308C\u653B = 1 - 0.3 * (c.\u4E71\u308C || 0);
         const \u4E71\u308C\u53D7 = 1 + 0.35 * (melee.f.\u4E71\u308C || 0);
-        const \u5668 = 0.72 + ((c.gen.lead || 60) + (c.gen.valor || 60)) / 428;
+        const \u56682 = 0.72 + ((c.gen.lead || 60) + (c.gen.valor || 60)) / 428;
         const \u7DF4\u308C = 0.78 + (q.\u7DF4 == null ? 70 : q.\u7DF4) / 318;
         const \u9AD8\u5DEE = clamp((q.\u9AD8 || 0) - (melee.e.\u9AD8 || 0), -2, 2);
         const \u9AD8\u307F\u306E\u5229 = \u9AD8\u5DEE >= 0 ? 1 + \u9AD8\u5DEE * 0.12 : 1 / (1 - \u9AD8\u5DEE * 0.12);
@@ -40019,7 +40262,7 @@ function stepBattle(b, dt) {
           b,
           melee.f,
           melee.e,
-          st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * \u652F\u3048 * \u9A0E * (1 - c.fatigue / 260) * \u4E71\u308C\u653B * \u4E71\u308C\u53D7 * \u5668 * \u7DF4\u308C * \u9AD8\u307F\u306E\u5229 * \u6B7B\u5175\u306E\u529B * dt,
+          st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200) * terr.fight * flank * charge * push * guard * \u652F\u3048 * \u9A0E * (1 - c.fatigue / 260) * \u4E71\u308C\u653B * \u4E71\u308C\u53D7 * \u56682 * \u7DF4\u308C * \u9AD8\u307F\u306E\u5229 * \u6B7B\u5175\u306E\u529B * dt,
           flank,
           c.gen.valor * (c.chargeT > 0 ? 1.2 : 1),
           c,
@@ -40237,6 +40480,10 @@ function stepBattle(b, dt) {
               c.\u7ACB\u3066\u76F4\u3057 = \u5148.\u5834;
               c.\u9000\u304D\u9580 = \u5148.\u9580;
               if (\u5148.\u9580) c.holdGate = \u5148.\u9580;
+              if (\u5148.\u9580 && !inLayer(MAP, \u9580\u306E\u8F2A(MAP, \u5148.\u9580), c.x, c.y)) {
+                const \u90532 = routeToCastleGate(MAP, \u5148.\u9580, c.x, c.y);
+                if (\u90532 && \u90532.length) c.\u5F15\u304D\u53D6\u308A = { \u9053: \u90532.map((q) => ({ ...q })), \u9580: \u5148.\u9580, \u523B: b.t };
+              }
               b.log.push({ t: b.t, text: `${c.name}\u968A\u306F${\u5148.\u540D}\u306E\u5185\u3078\u4E0B\u304C\u3063\u3066\u7ACB\u3066\u76F4\u3059\u3002` });
             }
           }
@@ -40373,6 +40620,7 @@ function stepBattle(b, dt) {
   const \u5F15\u304D\u969B = (side) => {
     const \u751F = b.corps.filter((c) => c.side === side && !c.dead && !c.destroyed && !c.\u6F70 && !c.withdraw && !c.\u65E5\u548C\u898B);
     if (!\u751F.length) return null;
+    if (MAP && side !== b.attacker && !\u672C\u4E38\u304C\u958B\u3044\u305F\u304B(MAP)) return null;
     const \u521D = (b.initial || {})[side] || 0;
     const \u5175 = \u751F.reduce((a, c) => a + corpsMen(c), 0);
     if (\u521D > 0 && \u5175 <= \u521D * 0.2) return "\u5175\u304C\u4E94\u5206\u306E\u4E00\u3092\u5207\u308A\u3001\u8ECD\u3092\u9000\u3044\u305F";
@@ -42045,7 +42293,7 @@ function \u5929\u4E0B\u5206\u3051\u76EE\u306E\u5E33({ g, onSend, onClose }) {
   const \u5F7C\u304C\u5175 = useMemo(() => \u7684 ? \u5206\u3051\u76EE\u306E\u5175(g, \u7684) : 0, [g, \u7684]);
   const \u9078\u3076\u5074 = \u7684 ? \u91CE\u3092\u9078\u3076\u5074(g, g.player, \u7684) : null;
   const \u5F85 = \u7684 ? Math.max(\u96C6\u7D50\u306E\u6708\u6570(g, g.player), \u96C6\u7D50\u306E\u6708\u6570(g, \u7684)) : 0;
-  const \u5668 = (f) => \u5668\u91CF\u304F\u3089\u3079(g, f);
+  const \u56682 = (f) => \u5668\u91CF\u304F\u3089\u3079(g, f);
   const \u9078\u3079\u308B = \u9078\u3076\u5074 === g.player;
   const \u898B = \u5206\u3051\u76EE\u306E\u91CE.find((f) => f.id === \u91CE2) || \u5206\u3051\u76EE\u306E\u91CE[0];
   return /* @__PURE__ */ React2.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React2.createElement("div", { className: "card", style: { maxWidth: 580 } }, /* @__PURE__ */ React2.createElement("div", { className: "mn", style: { fontSize: 21, marginBottom: 4 } }, "\u5929\u4E0B\u5206\u3051\u76EE"), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95, marginBottom: 8 } }, "\u80A9\u3092\u4E26\u3079\u308B\u5BB6\u3078\u3001\u5168\u8ECD\u3092\u6319\u3052\u3066\u4E00\u6226\u3092\u6311\u307F\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("b", null, "\u51FA\u3059\u5175\u306F\u9078\u3079\u307E\u305B\u3093\u3002"), "\u76F4\u8F44\u30FB\u5F93\u5C5E\u30FB\u81E3\u5F93\u306E\u3059\u3079\u3066\u306E\u57CE\u304B\u3089\u3001\u7559\u5B88\u5C45\u3092\u9664\u3044\u305F\u5175\u304C\u6B8B\u3089\u305A\u51FA\u307E\u3059\u3002 \u7559\u5B88\u306F\u8584\u304F\u306A\u308A\u307E\u3059\u304B\u3089\u3001\u305D\u306E\u9699\u306B\u4ED6\u5BB6\u304C\u653B\u3081\u3066\u304F\u308B\u3053\u3068\u3082\u3042\u308A\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("br", null), "\u52DD\u3066\u3070\u3001\u3053\u3061\u3089\u306E\u9818\u3068\u63A5\u3057\u305F\u4E00\u56FD\uFF08\u6700\u5927", \u5272\u8B72\u306E\u9650\u308A, "\u57CE\uFF09\u304C\u624B\u306B\u5165\u308A\u3001 \u76F8\u624B\u306E\u5175\u306F\u5927\u304D\u304F\u640D\u3058\u307E\u3059\u3002\u8CA0\u3051\u308C\u3070\u540C\u3058\u3053\u3068\u304C\u8D77\u3053\u308A\u307E\u3059\u3002", /* @__PURE__ */ React2.createElement("br", null), /* @__PURE__ */ React2.createElement("span", { style: { color: U.dim } }, "\u6E21\u308B\u306E\u306F", /* @__PURE__ */ React2.createElement("b", null, "\u63A5\u3057\u305F\u56FD\u306E\u57CE\u3060\u3051"), "\u3067\u3059\u3002\u9818\u304C\u63A5\u3057\u3066\u3044\u306A\u3044\u76F8\u624B\u306B\u52DD\u3063\u3066\u3082\u3001 \u57CE\u306F\u6E21\u308A\u307E\u305B\u3093\uFF08\u98DB\u3073\u5730\u3092\u4F5C\u3089\u306C\u305F\u3081\u306E\u6C7A\u307E\u308A\u3067\u3059\uFF09\u3002")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u51FA\u305B\u308B\u5175"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, fmt(\u6211\u304C\u5175), " \u4EBA\uFF0F", \u6211\u304C\u968A, " \u968A")), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, "\u76F4\u8F44"), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, man(\u76F4\u8F44\u306E\u77F3\u9AD8(g, g.player)), " \u4E07\u77F3")), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u6311\u3080\u76F8\u624B"), !\u7684\u3089.length && /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12.5, color: U.dim, padding: "6px 0" } }, "\u3044\u307E\u6311\u3081\u308B\u5BB6\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u77F3\u9AD8\u3067\u4E00\u3064\u4E0A\u304B\u4E00\u3064\u4E0B\u306E\u5BB6\u3067\u3001\u7248\u56F3\u767E\u4E8C\u5341\u4E07\u77F3\u3092\u8D85\u3048\u308B\u76F8\u624B\u304C\u8981\u308A\u307E\u3059\u3002"), \u7684\u3089.map((f) => /* @__PURE__ */ React2.createElement("label", { key: f, style: {
@@ -42055,7 +42303,7 @@ function \u5929\u4E0B\u5206\u3051\u76EE\u306E\u5E33({ g, onSend, onClose }) {
     padding: "5px 0",
     fontSize: 13,
     borderBottom: `1px solid ${U.line2}`
-  } }, /* @__PURE__ */ React2.createElement("input", { type: "radio", checked: \u7684 === f, onChange: () => set\u7684(f) }), /* @__PURE__ */ React2.createElement("span", { className: "pill", style: { background: (g.factions[f] || {}).color } }, (g.factions[f] || {}).name), /* @__PURE__ */ React2.createElement("span", { className: "v num", style: { marginLeft: "auto" } }, "\u7248\u56F3 ", man(\u7248\u56F3\u306E\u77F3\u9AD8(g, f)), " \u4E07\u77F3\uFF0F\u5175 ", fmt(\u5206\u3051\u76EE\u306E\u5175(g, f)), " \u4EBA"))), \u7684 && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5668\u91CF\u304F\u3089\u3079\uFF08\u77E5\u7565\u3092\u500D\u306B\u898B\u308B\uFF09"), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, (g.factions[g.player] || {}).name), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, \u5668(g.player))), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, (g.factions[\u7684] || {}).name), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, \u5668(\u7684))), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: \u9078\u3079\u308B ? "#3E7A3A" : U.dim, margin: "4px 0 2px" } }, \u9078\u3076\u5074 == null ? "\u5668\u91CF\u306F\u4F2F\u4EF2\u3057\u3066\u3044\u308B\u3002\u91CE\u306F\u8CFD\u3067\u6C7A\u307E\u308B\u3002" : \u9078\u3079\u308B ? "\u5668\u91CF\u3067\u4E0A\u56DE\u3063\u3066\u3044\u308B\u3002\u6226\u3046\u91CE\u3092\u3053\u3061\u3089\u304C\u9078\u3079\u308B\u3002" : `${(g.factions[\u7684] || {}).name}\u304C\u91CE\u3092\u9078\u3076\u3002`), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u6226\u3046\u91CE"), \u9078\u3079\u308B ? /* @__PURE__ */ React2.createElement("div", { style: { maxHeight: 150, overflow: "auto" } }, \u5206\u3051\u76EE\u306E\u91CE.map((f) => /* @__PURE__ */ React2.createElement("label", { key: f.id, style: {
+  } }, /* @__PURE__ */ React2.createElement("input", { type: "radio", checked: \u7684 === f, onChange: () => set\u7684(f) }), /* @__PURE__ */ React2.createElement("span", { className: "pill", style: { background: (g.factions[f] || {}).color } }, (g.factions[f] || {}).name), /* @__PURE__ */ React2.createElement("span", { className: "v num", style: { marginLeft: "auto" } }, "\u7248\u56F3 ", man(\u7248\u56F3\u306E\u77F3\u9AD8(g, f)), " \u4E07\u77F3\uFF0F\u5175 ", fmt(\u5206\u3051\u76EE\u306E\u5175(g, f)), " \u4EBA"))), \u7684 && /* @__PURE__ */ React2.createElement(React2.Fragment, null, /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u5668\u91CF\u304F\u3089\u3079\uFF08\u77E5\u7565\u3092\u500D\u306B\u898B\u308B\uFF09"), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, (g.factions[g.player] || {}).name), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, \u56682(g.player))), /* @__PURE__ */ React2.createElement("div", { className: "row" }, /* @__PURE__ */ React2.createElement("span", null, (g.factions[\u7684] || {}).name), /* @__PURE__ */ React2.createElement("span", { className: "v num" }, \u56682(\u7684))), /* @__PURE__ */ React2.createElement("div", { style: { fontSize: 12, color: \u9078\u3079\u308B ? "#3E7A3A" : U.dim, margin: "4px 0 2px" } }, \u9078\u3076\u5074 == null ? "\u5668\u91CF\u306F\u4F2F\u4EF2\u3057\u3066\u3044\u308B\u3002\u91CE\u306F\u8CFD\u3067\u6C7A\u307E\u308B\u3002" : \u9078\u3079\u308B ? "\u5668\u91CF\u3067\u4E0A\u56DE\u3063\u3066\u3044\u308B\u3002\u6226\u3046\u91CE\u3092\u3053\u3061\u3089\u304C\u9078\u3079\u308B\u3002" : `${(g.factions[\u7684] || {}).name}\u304C\u91CE\u3092\u9078\u3076\u3002`), /* @__PURE__ */ React2.createElement("div", { className: "sec" }, "\u6226\u3046\u91CE"), \u9078\u3079\u308B ? /* @__PURE__ */ React2.createElement("div", { style: { maxHeight: 150, overflow: "auto" } }, \u5206\u3051\u76EE\u306E\u91CE.map((f) => /* @__PURE__ */ React2.createElement("label", { key: f.id, style: {
     display: "flex",
     gap: 8,
     alignItems: "center",
@@ -43533,6 +43781,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     };
   }, []);
   const b = bRef.current;
+  const \u62BC\u3057\u305F\u6240Ref = useRef2(null);
   const selC = b.corps.find((c) => c.id === sel && !c.dead);
   const toField = (clientX, clientY) => {
     const wrap = wrapRef.current, r = wrap.getBoundingClientRect();
@@ -43765,8 +44014,10 @@ function BattleScreen({ ctx, land, onEnd }) {
       return;
     }
     if (foe) {
-      const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
-      const gx = foe.x + (c.x - foe.x) / d * 38, gy = foe.y + (c.y - foe.y) / d * 38;
+      const \u7D440 = \u72D9\u3044\u306E\u7D44(foe, f.x, f.y);
+      const \u7D44 = \u72D9\u3046\u6240({ x: c.x, y: c.y, \u72D9\u3044\u7D44: \u7D440 ? \u7D440.id : null }, foe);
+      const d = Math.hypot(c.x - \u7D44.x, c.y - \u7D44.y) || 1;
+      const gx = \u7D44.x + (c.x - \u7D44.x) / d * 38, gy = \u7D44.y + (c.y - \u7D44.y) / d * 38;
       \u4E0B\u77E5(b, c, { order: "\u63A5\u6226", tx: gx, ty: gy });
     } else {
       c.siegeAuto = false;
@@ -43805,6 +44056,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     const foe = \u672D || b.corps.find((c) => !c.dead && !c.destroyed && c.side === "E" && c.seen && Math.hypot(c.x - f.x, c.y - f.y) < 42 / Math.max(0.4, camRef.current.s));
     if (foe) setFoeSel(foe.id);
     else setFoeSel(null);
+    \u62BC\u3057\u305F\u6240Ref.current = foe && !\u672D ? { id: foe.id, x: f.x, y: f.y } : null;
     if (foe && !selC && !allRef.current) return;
     if (allRef.current) {
       const live = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed && !c.routed);
@@ -43895,6 +44147,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     if (!c || c.dead || c.destroyed || c.routed) return;
     c.task = null;
     c.\u72D9\u3044 = null;
+    c.\u72D9\u3044\u7D44 = null;
     const t = nearestFoe(c);
     const \u8FD1\u3044\u6575 = (self) => {
       let \u8FD1 = null, nd = 1e9;
@@ -43944,14 +44197,18 @@ function BattleScreen({ ctx, land, onEnd }) {
       c.siegeAuto = false;
       c.gate = null;
     }
-    const d = Math.hypot(c.x - foe.x, c.y - foe.y) || 1;
+    const \u62BC = \u62BC\u3057\u305F\u6240Ref.current && \u62BC\u3057\u305F\u6240Ref.current.id === foe.id ? \u62BC\u3057\u305F\u6240Ref.current : null;
+    const \u7D440 = \u62BC ? \u72D9\u3044\u306E\u7D44(foe, \u62BC.x, \u62BC.y) : \u72D9\u3044\u306E\u7D44(foe, c.x, c.y);
+    const \u7D44 = \u72D9\u3046\u6240({ x: c.x, y: c.y, \u72D9\u3044\u7D44: \u7D440 ? \u7D440.id : null }, foe);
+    const d = Math.hypot(c.x - \u7D44.x, c.y - \u7D44.y) || 1;
     const \u9593 = o === "\u7A81\u6483" ? 20 : o === "\u5C04\u6483" ? Math.min(d, 150) : 38;
     const patch = {
       order: o,
       target: foe.id,
       \u72D9\u3044: foe.id,
-      tx: foe.x + (c.x - foe.x) / d * \u9593,
-      ty: foe.y + (c.y - foe.y) / d * \u9593
+      \u72D9\u3044\u7D44: \u7D440 ? \u7D440.id : null,
+      tx: \u7D44.x + (c.x - \u7D44.x) / d * \u9593,
+      ty: \u7D44.y + (c.y - \u7D44.y) / d * \u9593
     };
     if (o === "\u7A81\u6483") patch.chargeT = c.formation === "\u92D2\u77E2" ? 26 : 16;
     \u4E0B\u77E5(b, c, patch);
@@ -44339,7 +44596,33 @@ function BattleScreen({ ctx, land, onEnd }) {
       gates.map((g) => /* @__PURE__ */ React3.createElement("option", { key: g.key, value: g.key }, g.key, "\uFF08", Math.round(g.hp / g.max * 100), "%\uFF09")),
       /* @__PURE__ */ React3.createElement("option", { value: "\u672C\u4E38" }, "\u672C\u4E38\u306B\u7ACB\u3066\u7C60\u308B")
     ));
-  })(), /* @__PURE__ */ React3.createElement(FormationPicker, { corps: selC, onPick: (f) => changeForm(selC, f) }), !selC.detach && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim } }, "\u5206\u9063 ", opts[0] ? `${opts[0].used}\uFF0F${opts[0].cap}` : ""), /* @__PURE__ */ React3.createElement("div", { className: "g2" }, opts.map((o) => /* @__PURE__ */ React3.createElement(
+  })(), /* @__PURE__ */ React3.createElement(FormationPicker, { corps: selC, onPick: (f) => changeForm(selC, f) }), !selC.detach && selC.side === "P" && (() => {
+    const \u6B8B = \u9F13\u821E\u306E\u6B8B\u308A(selC), \u898B\u8FBC = \u9F13\u821E\u306E\u898B\u8FBC\u307F(selC), \u5272 = \u9F13\u821E\u306E\u5272(selC);
+    const \u5927 = \u9F13\u821E\u306E\u5927\u5C06\u304B(b, selC), \u8FD1 = \u8FD1\u304F\u306B\u3082\u5C4A\u304F\u304B(selC);
+    const \u62BC\u3059 = (\u5168\u8ECD) => {
+      \u9F13\u821E\u3059\u308B(b, selC, { \u5168\u8ECD });
+      force((n) => (n + 1) % 1e3);
+    };
+    return /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim } }, "\u8A08\u7565\u3000\u9F13\u821E\uFF08\u3053\u306E\u5408\u6226\u3067\u6B8B\u308A", \u6B8B, "\u56DE\uFF0F", \u9F13\u821E\u306E\u56DE\u6570(selC), "\u56DE\uFF09"), /* @__PURE__ */ React3.createElement("div", { className: \u5927 ? "g2" : "" }, \u5927 && /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: "btn sm",
+        style: { width: "100%" },
+        disabled: \u6B8B <= 0 || selC.routed,
+        onClick: () => \u62BC\u3059(true)
+      },
+      "\u9F13\u821E\uFF08\u5168\u8ECD\uFF09"
+    ), /* @__PURE__ */ React3.createElement(
+      "button",
+      {
+        className: "btn sm",
+        style: { width: "100%" },
+        disabled: \u6B8B <= 0 || selC.routed,
+        onClick: () => \u62BC\u3059(false)
+      },
+      \u8FD1 ? "\u9F13\u821E\uFF08\u81EA\u90E8\u968A\u3068\u8FD1\u304F\u306E\u968A\uFF09" : "\u9F13\u821E\uFF08\u81EA\u90E8\u968A\uFF09"
+    )), /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10, color: U.dim, lineHeight: 1.5 } }, "\u6210\u308B\u898B\u8FBC\u307F ", Math.round(\u898B\u8FBC * 100), "%\u3002\u6210\u308C\u3070\u5931\u3063\u305F\u58EB\u6C17\u306E", Math.round(\u5272 * 100), "%\u3092\u53D6\u308A\u623B\u3059 \uFF08\u3053\u306E\u968A\u306A\u3089\u58EB\u6C17", Math.round(selC.morale), "\u2192", Math.round(selC.morale + (100 - selC.morale) * \u5272), "\uFF09\u3002 \u7D71\u7387\u304B\u77E5\u7565\u306E\u9AD8\u3044\u307B\u3046\uFF08", Math.max(selC.gen.lead || 0, selC.gen.wit || 0), "\uFF09\u3067\u6C7A\u307E\u308B\u3002", \u5927 ? "\u5927\u540D\u30FB\u7DCF\u5927\u5C06\u306F\u5168\u8ECD\u3082\u52B1\u307E\u305B\u308B\u3002" : "", \u8FD1 ? "\u7D71\u7387\u516B\u5341\u4E94\u4EE5\u4E0A\u306A\u306E\u3067\u3001\u8FD1\u304F\uFF08\u4E09\u767E\u6B69\uFF09\u306E\u5473\u65B9\u306E\u968A\u306B\u3082\u5C4A\u304F\u3002" : "", "\u7D71\u7387\u304B\u77E5\u7565\u304C\u4E03\u5341\u4EE5\u4E0A\u306A\u3089\u4E00\u3064\u306E\u5408\u6226\u3067\u4E8C\u5EA6\u3001\u305D\u308C\u672A\u6E80\u306F\u4E00\u5EA6\u3002\u5D29\u308C\u3066\u3044\u308B\u968A\u306E\u5C06\u306F\u9F13\u821E\u3067\u304D\u306A\u3044\u3002"));
+  })(), !selC.detach && /* @__PURE__ */ React3.createElement(React3.Fragment, null, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 10.5, letterSpacing: ".14em", color: U.dim } }, "\u5206\u9063 ", opts[0] ? `${opts[0].used}\uFF0F${opts[0].cap}` : ""), /* @__PURE__ */ React3.createElement("div", { className: "g2" }, opts.map((o) => /* @__PURE__ */ React3.createElement(
     "button",
     {
       key: o.key,
@@ -46029,13 +46312,13 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
         padding: "7px 10px",
         margin: "0 0 8px"
       } }, \u4E2D);
-      return /* @__PURE__ */ React6.createElement(React6.Fragment, null, \u69D8 && \u5185\u3092\u77E5\u308B && \u69D8.\u56F2\u307E\u308C\u3066\u3044\u308B && \u5E2F("#B0483C", /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 13, color: "#B0483C", fontWeight: 600, marginBottom: 2 } }, "\u3010\u56F2\u307E\u308C\u3066\u3044\u308B\u3011", c.name, "\u3000\u56F2\u307F", \u69D8.\u6708\u6570, "\u30F6\u6708"), \u69D8.\u5BC4\u305B\u624B && /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u5BC4\u305B\u624B\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, \u69D8.\u5BC4\u305B\u624B.\u5BB6.name), \u69D8.\u5BC4\u305B\u624B.\u5927\u5C06 ? `\u30FB${\u69D8.\u5BC4\u305B\u624B.\u5927\u5C06.name}` : "", "\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(\u69D8.\u5BC4\u305B\u624B.\u5175), "\u4EBA"), /* @__PURE__ */ React6.createElement("span", { style: { marginLeft: 6 } }, "\uFF08\u5175\u7CE7\u3042\u3068", \u69D8.\u5BC4\u305B\u624B.\u4FDD\u3061, "\u30F6\u6708\u3002\u5C3D\u304D\u308C\u3070\u56F2\u307F\u3092\u89E3\u304F\uFF09")), /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u57CE\u65B9\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(\u69D8.\u57CE\u65B9.\u5175), "\u4EBA"), "\uFF08\u5B88\u308B\u306B\u8981\u308B", fmt(\u69D8.\u57CE\u65B9.\u8981\u308B), "\u4EBA\uFF09", "\u3000", "\u5175\u7CE7\u3042\u3068", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, \u69D8.\u57CE\u65B9.\u5175\u7CE7, "\u30F6\u6708"), "\u3000", "\u6C11\u5FC3 ", \u69D8.\u57CE\u65B9.\u6C11, /* @__PURE__ */ React6.createElement("span", { style: { fontSize: 10.5 } }, "\uFF08\u4E8C\u5341\u4E94\u3092\u5272\u308C\u3070\u57CE\u306F\u958B\u304F\uFF09")), /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: \u69D8.\u57CE\u65B9.\u6708 <= 2 ? "#B0483C" : U.dim } }, "\u3053\u306E\u307E\u307E\u306A\u3089", /* @__PURE__ */ React6.createElement("span", { style: { ...\u5F37, color: \u69D8.\u57CE\u65B9.\u6708 <= 2 ? "#B0483C" : U.text } }, "\u3042\u3068", \u69D8.\u57CE\u65B9.\u6708, "\u30F6\u6708"), "\u3067\u843D\u3061\u308B\uFF08", \u69D8.\u57CE\u65B9.\u8A33, "\uFF09"), \u69D8.\u5BC4\u305B\u624B && \u69D8.\u5BC4\u305B\u624B.\u5F37\u653B && /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#B0483C" } }, "\u5BC4\u305B\u624B\u306F\u57CE\u65B9\u306E\u4E00.\u516D\u500D\u3092\u8D85\u3048\u3066\u3044\u308B\u3002\u6708\u306B\u56DB\u5272\u4E94\u5206\u306E\u76EE\u3067\u653B\u3081\u304B\u304B\u3063\u3066\u304F\u308B"), \u69D8.\u5F8C\u8A70\u3089.length > 0 ? /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#3E7A3A" } }, "\u5F8C\u8A70\u3000", \u69D8.\u5F8C\u8A70\u3089.map((r) => `${fmt(r.\u5175)}\u4EBA\u304C\u3042\u3068${r.\u6708}\u30F6\u6708\u3067\u7740\u304F`).join("\uFF0F")) : \u6211\u304C\u57CE ? /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#C89A3A" } }, "\u5F8C\u8A70\u306F\u5411\u304B\u3063\u3066\u3044\u306A\u3044") : null, \u69D8.\u5B88\u308A\u306E\u5BC4\u89AA && /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u3053\u306E\u57CE\u306E\u5B88\u308A\u306F", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, \u69D8.\u5B88\u308A\u306E\u5BC4\u89AA.name), "\uFF08\u65D7\u982D\uFF09\u304C\u57F7\u308B"))), \u69D8 && \u5185\u3092\u77E5\u308B && \u69D8.\u8FEB\u308B.length > 0 && \u5E2F("#C89A3A", /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 13, color: "#C89A3A", fontWeight: 600, marginBottom: 2 } }, "\u3010\u6575\u304C\u8FEB\u3063\u3066\u3044\u308B\u3011", c.name), \u69D8.\u8FEB\u308B.map((q, i) => /* @__PURE__ */ React6.createElement("div", { key: i, style: \u884C }, /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, q.\u5BB6.name), "\u306E", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(q.\u5175), "\u4EBA"), "\u3000", "\u3042\u3068", q.\u6708, "\u30F6\u6708\u3067\u7740\u304F")), !\u69D8.\u56F2\u307E\u308C\u3066\u3044\u308B && /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u57CE\u65B9\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(\u69D8.\u57CE\u65B9.\u5175), "\u4EBA"), "\uFF08\u5B88\u308B\u306B\u8981\u308B", fmt(\u69D8.\u57CE\u65B9.\u8981\u308B), "\u4EBA\uFF09"))), \u5728.length > 0 && \u5E2F("#6E6558", /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 13, color: U.text, fontWeight: 600, marginBottom: 2 } }, "\u3010\u3053\u306E\u57CE\u306B\u5728\u308B\u8ECD\u3011", \u5728.length, "\u624B"), /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, fontSize: 10.5, marginBottom: 2 } }, "\u57CE\u306E\u4E0B\u306B\u7ACB\u3063\u3066\u3044\u308B\u8ECD\u3067\u3059\u3002\u57CE\u306E\u5175\u3068\u306F\u5225\u306E\u3082\u306E\u3067\u3001\u57CE\u306B\u5165\u3063\u305F\u308F\u3051\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), \u5728.map((q, i) => /* @__PURE__ */ React6.createElement("div", { key: i, style: \u884C }, /* @__PURE__ */ React6.createElement("span", { style: { ...\u5F37, color: q.\u5473\u65B9 ? U.text : "#B0483C" } }, q.\u5BB6.name), /* @__PURE__ */ React6.createElement("span", { style: {
+      return /* @__PURE__ */ React6.createElement(React6.Fragment, null, \u69D8 && \u5185\u3092\u77E5\u308B && \u69D8.\u56F2\u307E\u308C\u3066\u3044\u308B && \u5E2F("#B0483C", /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 13, color: "#B0483C", fontWeight: 600, marginBottom: 2 } }, "\u3010\u56F2\u307E\u308C\u3066\u3044\u308B\u3011", c.name, "\u3000\u56F2\u307F", \u69D8.\u6708\u6570, "\u30F6\u6708"), \u69D8.\u5BC4\u305B\u624B && /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u5BC4\u305B\u624B\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, \u69D8.\u5BC4\u305B\u624B.\u5BB6.name), \u69D8.\u5BC4\u305B\u624B.\u5927\u5C06 ? `\u30FB${\u69D8.\u5BC4\u305B\u624B.\u5927\u5C06.name}` : "", "\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(\u69D8.\u5BC4\u305B\u624B.\u5175), "\u4EBA"), /* @__PURE__ */ React6.createElement("span", { style: { marginLeft: 6 } }, "\uFF08\u5175\u7CE7\u3042\u3068", \u69D8.\u5BC4\u305B\u624B.\u4FDD\u3061, "\u30F6\u6708\u3002\u5C3D\u304D\u308C\u3070\u56F2\u307F\u3092\u89E3\u304F\uFF09")), /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u57CE\u65B9\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(\u69D8.\u57CE\u65B9.\u5175), "\u4EBA"), "\uFF08\u5B88\u308B\u306B\u8981\u308B", fmt(\u69D8.\u57CE\u65B9.\u8981\u308B), "\u4EBA\uFF09", "\u3000", "\u5175\u7CE7\u3042\u3068", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, \u69D8.\u57CE\u65B9.\u5175\u7CE7, "\u30F6\u6708"), "\u3000", "\u6C11\u5FC3 ", \u69D8.\u57CE\u65B9.\u6C11), /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: \u69D8.\u57CE\u65B9.\u6708 <= 2 ? "#B0483C" : U.dim } }, "\u3053\u306E\u307E\u307E\u306A\u3089", /* @__PURE__ */ React6.createElement("span", { style: { ...\u5F37, color: \u69D8.\u57CE\u65B9.\u6708 <= 2 ? "#B0483C" : U.text } }, "\u3042\u3068", \u69D8.\u57CE\u65B9.\u6708, "\u30F6\u6708"), "\u3067\u843D\u3061\u308B\uFF08", \u69D8.\u57CE\u65B9.\u8A33, "\uFF09"), \u69D8.\u5BC4\u305B\u624B && \u69D8.\u5BC4\u305B\u624B.\u5F37\u653B && /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#B0483C" } }, "\u5BC4\u305B\u624B\u306F\u57CE\u65B9\u306E\u4E8C\u500D\u3092\u8D85\u3048\u3066\u3044\u308B\u3002\u6708\u306B\u56DB\u5272\u4E94\u5206\u306E\u76EE\u3067\u653B\u3081\u304B\u304B\u3063\u3066\u304F\u308B\uFF08\u4E00\u5EA6\u3067\u843D\u3061\u308B\u898B\u8FBC\u307F", Math.round((\u69D8.\u5BC4\u305B\u624B.\u5F37\u653B\u306E\u898B\u8FBC\u307F || 0) * 100), "\uFF05\uFF09"), \u69D8.\u5F8C\u8A70\u3089.length > 0 ? /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#3E7A3A" } }, "\u5F8C\u8A70\u3000", \u69D8.\u5F8C\u8A70\u3089.map((r) => `${fmt(r.\u5175)}\u4EBA\u304C\u3042\u3068${r.\u6708}\u30F6\u6708\u3067\u7740\u304F`).join("\uFF0F")) : \u6211\u304C\u57CE ? /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#C89A3A" } }, "\u5F8C\u8A70\u306F\u5411\u304B\u3063\u3066\u3044\u306A\u3044") : null, \u69D8.\u5B88\u308A\u306E\u5BC4\u89AA && /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u3053\u306E\u57CE\u306E\u5B88\u308A\u306F", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, \u69D8.\u5B88\u308A\u306E\u5BC4\u89AA.name), "\uFF08\u65D7\u982D\uFF09\u304C\u57F7\u308B"))), \u69D8 && \u5185\u3092\u77E5\u308B && \u69D8.\u8FEB\u308B.length > 0 && \u5E2F("#C89A3A", /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 13, color: "#C89A3A", fontWeight: 600, marginBottom: 2 } }, "\u3010\u6575\u304C\u8FEB\u3063\u3066\u3044\u308B\u3011", c.name), \u69D8.\u8FEB\u308B.map((q, i) => /* @__PURE__ */ React6.createElement("div", { key: i, style: \u884C }, /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, q.\u5BB6.name), "\u306E", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(q.\u5175), "\u4EBA"), "\u3000", "\u3042\u3068", q.\u6708, "\u30F6\u6708\u3067\u7740\u304F")), !\u69D8.\u56F2\u307E\u308C\u3066\u3044\u308B && /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u57CE\u65B9\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(\u69D8.\u57CE\u65B9.\u5175), "\u4EBA"), "\uFF08\u5B88\u308B\u306B\u8981\u308B", fmt(\u69D8.\u57CE\u65B9.\u8981\u308B), "\u4EBA\uFF09"))), \u5728.length > 0 && \u5E2F("#6E6558", /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 13, color: U.text, fontWeight: 600, marginBottom: 2 } }, "\u3010\u3053\u306E\u57CE\u306B\u5728\u308B\u8ECD\u3011", \u5728.length, "\u624B"), /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, fontSize: 10.5, marginBottom: 2 } }, "\u57CE\u306E\u4E0B\u306B\u7ACB\u3063\u3066\u3044\u308B\u8ECD\u3067\u3059\u3002\u57CE\u306E\u5175\u3068\u306F\u5225\u306E\u3082\u306E\u3067\u3001\u57CE\u306B\u5165\u3063\u305F\u308F\u3051\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), \u5728.map((q, i) => /* @__PURE__ */ React6.createElement("div", { key: i, style: \u884C }, /* @__PURE__ */ React6.createElement("span", { style: { ...\u5F37, color: q.\u5473\u65B9 ? U.text : "#B0483C" } }, q.\u5BB6.name), /* @__PURE__ */ React6.createElement("span", { style: {
         marginLeft: 5,
         fontSize: 10.5,
         padding: "0 5px",
         borderRadius: 3,
         background: "rgba(0,0,0,0.06)"
-      } }, q.\u7528), "\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(q.\u5175), "\u4EBA"), /* @__PURE__ */ React6.createElement("span", { style: { fontSize: 10.5 } }, "\uFF08\u5730\u306E\u5175", fmt(q.\u5730), "\uFF09"), q.\u5C06\u3089.length > 0 && /* @__PURE__ */ React6.createElement(React6.Fragment, null, "\u3000", q.\u5C06\u3089.map((x) => x.name).join("\u30FB")), q.\u5473\u65B9 && /* @__PURE__ */ React6.createElement(React6.Fragment, null, "\u3000", "\u5175\u7CE7", fmt(q.\u5175\u7CE7), "\u77F3", /* @__PURE__ */ React6.createElement("span", { style: { fontSize: 10.5 } }, "\uFF08", q.\u6708, "\u30F6\u6708\u5206\uFF09")), q.\u65D7\u982D && /* @__PURE__ */ React6.createElement(React6.Fragment, null, "\u3000", /* @__PURE__ */ React6.createElement("span", { style: { fontSize: 10.5 } }, q.\u65D7\u982D.name, "\u306E\u65B9\u9762\u8ECD")))), \u5728.some((q) => q.\u5473\u65B9 && q.\u8ECD.faction === g.player) && /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, fontSize: 10.5 } }, "\u9032\u307E\u305B\u308B\u30FB\u89E3\u304F\u30FB\u57CE\u3078\u5165\u308C\u308B\u306F\u300C\u8ECD\u4E8B\u300D\u306E\u6B04\u304B\u3089\u3002"))), \u653B && \u5E2F("#4A6E8A", /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 13, color: "#4A6E8A", fontWeight: 600, marginBottom: 2 } }, "\u3010", \u653B.\u56F2\u3093\u3067\u3044\u308B ? "\u56F2\u3093\u3067\u3044\u308B" : "\u57CE\u4E0B\u306B\u5728\u308B", "\u3011", c.name, \u653B.\u56F2\u3093\u3067\u3044\u308B ? `\u3000\u56F2\u307F${\u653B.\u6708\u6570}\u30F6\u6708` : ""), /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u5473\u65B9\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(\u653B.\u5175), "\u4EBA"), "\uFF08", \u653B.\u6211\u304C\u8ECD.length, "\u624B\uFF09", "\u3000", "\u5175\u7CE7\u3042\u3068", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, \u653B.\u4FDD\u3061, "\u30F6\u6708"), /* @__PURE__ */ React6.createElement("span", { style: { marginLeft: 6, fontSize: 10.5 } }, "\uFF08\u5C3D\u304D\u308C\u3070\u56F2\u307F\u3092\u89E3\u3044\u3066\u5E30\u308B\uFF09")), \u653B.\u898B\u3048\u3066\u3044\u308B && \u653B.\u57CE\u65B9 ? /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u57CE\u65B9\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(\u653B.\u57CE\u65B9.\u5175), "\u4EBA"), "\u3000", "\u5175\u7CE7\u3042\u3068", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, \u653B.\u57CE\u65B9.\u5175\u7CE7, "\u30F6\u6708"), "\u3000", "\u6C11\u5FC3 ", \u653B.\u57CE\u65B9.\u6C11), /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#3E7A3A" } }, "\u3053\u306E\u307E\u307E\u306A\u3089", /* @__PURE__ */ React6.createElement("span", { style: { ...\u5F37, color: "#3E7A3A" } }, "\u3042\u3068", \u653B.\u57CE\u65B9.\u6708, "\u30F6\u6708"), "\u3067\u958B\u304F\uFF08", \u653B.\u57CE\u65B9.\u8A33, "\uFF09")) : /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u57CE\u306E\u5185\u306F\u307E\u3060\u77E5\u308C\u306A\u3044\uFF08\u5075\u5BDF\u3059\u308C\u3070\u5175\u7CE7\u3068\u6C11\u5FC3\u304C\u8AAD\u3081\u308B\uFF09"), \u653B.\u5F37\u653B && /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#3E7A3A" } }, "\u6570\u3067\u62BC\u305B\u308B\u3002\u6708\u306B\u56DB\u5272\u4E94\u5206\u306E\u76EE\u3067\u653B\u3081\u304B\u304B\u308B"), \u653B.\u5F8C\u8A70\u3089.length > 0 && /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#B0483C" } }, "\u6575\u306E\u5F8C\u8A70\u3000", \u653B.\u5F8C\u8A70\u3089.map((r) => `${fmt(r.\u5175)}\u4EBA\u304C\u3042\u3068${r.\u6708}\u30F6\u6708\u3067\u7740\u304F`).join("\uFF0F")))));
+      } }, q.\u7528), "\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(q.\u5175), "\u4EBA"), /* @__PURE__ */ React6.createElement("span", { style: { fontSize: 10.5 } }, "\uFF08\u5730\u306E\u5175", fmt(q.\u5730), "\uFF09"), q.\u5C06\u3089.length > 0 && /* @__PURE__ */ React6.createElement(React6.Fragment, null, "\u3000", q.\u5C06\u3089.map((x) => x.name).join("\u30FB")), q.\u5473\u65B9 && /* @__PURE__ */ React6.createElement(React6.Fragment, null, "\u3000", "\u5175\u7CE7", fmt(q.\u5175\u7CE7), "\u77F3", /* @__PURE__ */ React6.createElement("span", { style: { fontSize: 10.5 } }, "\uFF08", q.\u6708, "\u30F6\u6708\u5206\uFF09")), q.\u65D7\u982D && /* @__PURE__ */ React6.createElement(React6.Fragment, null, "\u3000", /* @__PURE__ */ React6.createElement("span", { style: { fontSize: 10.5 } }, q.\u65D7\u982D.name, "\u306E\u65B9\u9762\u8ECD")))), \u5728.some((q) => q.\u5473\u65B9 && q.\u8ECD.faction === g.player) && /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, fontSize: 10.5 } }, "\u9032\u307E\u305B\u308B\u30FB\u89E3\u304F\u30FB\u57CE\u3078\u5165\u308C\u308B\u306F\u300C\u8ECD\u4E8B\u300D\u306E\u6B04\u304B\u3089\u3002"))), \u653B && \u5E2F("#4A6E8A", /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 13, color: "#4A6E8A", fontWeight: 600, marginBottom: 2 } }, "\u3010", \u653B.\u56F2\u3093\u3067\u3044\u308B ? "\u56F2\u3093\u3067\u3044\u308B" : "\u57CE\u4E0B\u306B\u5728\u308B", "\u3011", c.name, \u653B.\u56F2\u3093\u3067\u3044\u308B ? `\u3000\u56F2\u307F${\u653B.\u6708\u6570}\u30F6\u6708` : ""), /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u5473\u65B9\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(\u653B.\u5175), "\u4EBA"), "\uFF08", \u653B.\u6211\u304C\u8ECD.length, "\u624B\uFF09", "\u3000", "\u5175\u7CE7\u3042\u3068", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, \u653B.\u4FDD\u3061, "\u30F6\u6708"), /* @__PURE__ */ React6.createElement("span", { style: { marginLeft: 6, fontSize: 10.5 } }, "\uFF08\u5C3D\u304D\u308C\u3070\u56F2\u307F\u3092\u89E3\u3044\u3066\u5E30\u308B\uFF09")), \u653B.\u898B\u3048\u3066\u3044\u308B && \u653B.\u57CE\u65B9 ? /* @__PURE__ */ React6.createElement(React6.Fragment, null, /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u57CE\u65B9\u3000", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, fmt(\u653B.\u57CE\u65B9.\u5175), "\u4EBA"), "\u3000", "\u5175\u7CE7\u3042\u3068", /* @__PURE__ */ React6.createElement("span", { style: \u5F37 }, \u653B.\u57CE\u65B9.\u5175\u7CE7, "\u30F6\u6708"), "\u3000", "\u6C11\u5FC3 ", \u653B.\u57CE\u65B9.\u6C11), /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#3E7A3A" } }, "\u3053\u306E\u307E\u307E\u306A\u3089", /* @__PURE__ */ React6.createElement("span", { style: { ...\u5F37, color: "#3E7A3A" } }, "\u3042\u3068", \u653B.\u57CE\u65B9.\u6708, "\u30F6\u6708"), "\u3067\u958B\u304F\uFF08", \u653B.\u57CE\u65B9.\u8A33, "\uFF09")) : /* @__PURE__ */ React6.createElement("div", { style: \u884C }, "\u57CE\u306E\u5185\u306F\u307E\u3060\u77E5\u308C\u306A\u3044\uFF08\u5075\u5BDF\u3059\u308C\u3070\u5175\u7CE7\u3068\u6C11\u5FC3\u304C\u8AAD\u3081\u308B\uFF09"), \u653B.\u5F37\u653B && /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#3E7A3A" } }, "\u6570\u3067\u62BC\u305B\u308B\uFF08\u57CE\u65B9\u306E\u4E8C\u500D\u3092\u8D85\u3048\u308B\uFF09\u3002\u6708\u306B\u56DB\u5272\u4E94\u5206\u306E\u76EE\u3067\u653B\u3081\u304B\u304B\u308B\uFF08\u4E00\u5EA6\u3067\u843D\u3068\u305B\u308B\u898B\u8FBC\u307F", Math.round((\u653B.\u5F37\u653B\u306E\u898B\u8FBC\u307F || 0) * 100), "\uFF05\uFF09"), \u653B.\u5F8C\u8A70\u3089.length > 0 && /* @__PURE__ */ React6.createElement("div", { style: { ...\u884C, color: "#B0483C" } }, "\u6575\u306E\u5F8C\u8A70\u3000", \u653B.\u5F8C\u8A70\u3089.map((r) => `${fmt(r.\u5175)}\u4EBA\u304C\u3042\u3068${r.\u6708}\u30F6\u6708\u3067\u7740\u304F`).join("\uFF0F")))));
     })(),
     /* @__PURE__ */ React6.createElement("div", { className: "split", style: land ? { flexDirection: "column", gap: 10 } : void 0 }, /* @__PURE__ */ React6.createElement("div", null, /* @__PURE__ */ React6.createElement("div", { className: "tbl" }, /* @__PURE__ */ React6.createElement("span", { className: "k" }, c.\u57CE\u4EE3 ? "\u57CE\u4EE3" : "\u57CE\u4E3B"), /* @__PURE__ */ React6.createElement("span", { className: "v mn" }, open ? lord ? lord.name : "\u2015" : "\uFF1F", open && \u7559\u5B88 && /* @__PURE__ */ React6.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, "\uFF08\u51FA\u9663\u4E2D\u3002", \u7559\u5B88.name, "\u304C\u57CE\u4EE3\u3068\u3057\u3066\u9810\u304B\u308B\uFF09"), open && lord && /* @__PURE__ */ React6.createElement("span", { style: { fontSize: 11, color: U.dim, marginLeft: 6 } }, lord.lord ? needsGuardian(lord) ? `\uFF08\u5F53\u4E3B\u30FB${lord.age}\u6B73\uFF09` : "\uFF08\u5F53\u4E3B\uFF09" : isGuardian(g, lord) ? "\uFF08\u5F8C\u898B\uFF09" : `\uFF08${rankName(lord, g)}\u30FB\u7984\u9AD8${fmt(stipendOf(g, lord))}\u77F3\uFF09`)), open && (() => {
       const \u59EB = \u57CE\u306E\u59EB(g, c.id).filter((h) => h.faction === c.faction);
@@ -46584,8 +46867,8 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
         },
         /* @__PURE__ */ React6.createElement("option", { value: "" }, "\uFF08\u7ACB\u3066\u306A\u3044\u30FB\u89AA\u5584\u306E\u52B9\u304D\u306F\u4E00\uFF09"),
         \u4F7F\u3048\u308B.map((x) => {
-          const \u5668 = Math.round(((x.gov || 0) + (x.wit || 0)) / 2);
-          const \u52B9 = \u5668 >= 90 ? 6 : \u5668 >= 80 ? 5 : \u5668 >= 70 ? 4 : \u5668 >= 60 ? 3 : \u5668 >= 50 ? 2 : 1;
+          const \u56682 = Math.round(((x.gov || 0) + (x.wit || 0)) / 2);
+          const \u52B9 = \u56682 >= 90 ? 6 : \u56682 >= 80 ? 5 : \u56682 >= 70 ? 4 : \u56682 >= 60 ? 3 : \u56682 >= 50 ? 2 : 1;
           return /* @__PURE__ */ React6.createElement("option", { key: x.id, value: x.id }, x.name, "\uFF08\u653F", x.gov, "\uFF0F\u77E5", x.wit, "\u3000\u89AA\u5584\uFF0B", \u52B9, "\uFF09");
         })
       ));
@@ -47767,7 +48050,7 @@ function \u5175\u7CE7\u653B\u3081\u306E\u3072\u3068\u6708(s2, sg, castle, army) 
     });
   }
   army.food -= Math.round(army.men * 0.09);
-  if (castle.food <= 0 || castle.min < 25) {
+  if (castle.food <= 0) {
     s2.chronicle.push({ y: s2.year, m: s2.month, text: `\u5175\u7CE7\u5C3D\u304D\u3001${castle.name}\u306F\u958B\u57CE\u3057\u305F\u3002` });
     sackCastle(s2, castle, army, false);
   }
@@ -49237,7 +49520,7 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           const \u958B\u3044\u305F = castle.faction === army.faction;
           const \u898B\u3048\u308B = castle.faction === s2.player || canSee(s2, castle);
           s2.chronicle.push({ y: s2.year, m: s2.month, text: `${castle.name}\u3078\u306E\u5F37\u653B\u3092\u6253\u3061\u5207\u308A\u3001\u5175\u7CE7\u653B\u3081\u306B\u79FB\u3063\u305F\u3002` });
-          const \u5831 = \u958B\u3044\u305F ? `${castle.name}\u3078\u306E\u5F37\u653B\u3092\u6253\u3061\u5207\u308A\u3001\u5175\u7CE7\u653B\u3081\u306B\u79FB\u3063\u305F\u3002\u3072\u3068\u6708\u306E\u56F2\u307F\u3067\u5175\u7CE7\u304C\u5C3D\u304D\u3001${castle.name}\u306F\u958B\u57CE\u3057\u305F\u3002` : `${castle.name}\u3078\u306E\u5F37\u653B\u3092\u6253\u3061\u5207\u308A\u3001\u5175\u7CE7\u653B\u3081\u306B\u79FB\u3063\u305F\u3002\u3072\u3068\u6708\u56F2\u3093\u3060\uFF08\u56F2\u307F\u306E\u7DE0\u3081${sg.enc}\uFF05\u30FB\u56F2\u3093\u3067${sg.months}\u304B\u6708\uFF09\u3002` + (\u898B\u3048\u308B ? `\u57CE\u306E\u5175\u7CE7 ${fmt(\u524D\u306E\u7CE7)}\u2192${fmt(Math.round(castle.food))}\u3001\u6C11\u5FC3 ${\u524D\u306E\u6C11}\u2192${Math.round(castle.min)}\uFF08\u4E8C\u5341\u4E94\u3092\u5272\u308C\u3070\u57CE\u306F\u958B\u304F\uFF09\u3002` : "\u57CE\u306E\u5185\u306F\u7ABA\u3048\u306A\u3044\u3002");
+          const \u5831 = \u958B\u3044\u305F ? `${castle.name}\u3078\u306E\u5F37\u653B\u3092\u6253\u3061\u5207\u308A\u3001\u5175\u7CE7\u653B\u3081\u306B\u79FB\u3063\u305F\u3002\u3072\u3068\u6708\u306E\u56F2\u307F\u3067\u5175\u7CE7\u304C\u5C3D\u304D\u3001${castle.name}\u306F\u958B\u57CE\u3057\u305F\u3002` : `${castle.name}\u3078\u306E\u5F37\u653B\u3092\u6253\u3061\u5207\u308A\u3001\u5175\u7CE7\u653B\u3081\u306B\u79FB\u3063\u305F\u3002\u3072\u3068\u6708\u56F2\u3093\u3060\uFF08\u56F2\u307F\u306E\u7DE0\u3081${sg.enc}\uFF05\u30FB\u56F2\u3093\u3067${sg.months}\u304B\u6708\uFF09\u3002` + (\u898B\u3048\u308B ? `\u57CE\u306E\u5175\u7CE7 ${fmt(\u524D\u306E\u7CE7)}\u2192${fmt(Math.round(castle.food))}\u3001\u6C11\u5FC3 ${\u524D\u306E\u6C11}\u2192${Math.round(castle.min)}\u3002` : "\u57CE\u306E\u5185\u306F\u7ABA\u3048\u306A\u3044\u3002");
           s2.monthEvents = [...s2.monthEvents || [], \u5831];
         }
       }
