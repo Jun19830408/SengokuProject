@@ -21996,20 +21996,20 @@ var \u5730\u65B9\u306E\u4E26\u3073 = {
   \u4E5D\u5DDE: ["\u4E2D\u56FD", "\u56DB\u56FD"]
 };
 var \u5730\u65B9\u304C\u96A3\u308A\u5408\u3046\u304B = (a, b) => !!(\u5730\u65B9\u306E\u4E26\u3073[a] || []).includes(b);
-function \u6BB5\u306E\u4E0A\u4E57\u305B(\u72B62, \u7684, { \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u304B3, \u4EAC\u307E\u3067\u306E\u6B69 } = {}) {
-  if (!\u72B62 || !\u7684) return 0;
+function \u6BB5\u306E\u4E0A\u4E57\u305B(\u72B63, \u7684, { \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u304B3, \u4EAC\u307E\u3067\u306E\u6B69 } = {}) {
+  if (!\u72B63 || !\u7684) return 0;
   let w = 0;
-  const \u56FD = \u72B62.\u72D9\u3046\u56FD;
-  if (\u72B62.\u6BB5 === \u6BB5.\u5B58\u7D9A) return 0;
-  if (\u72B62.\u72D9\u3046\u57CE && \u7684.id === \u72B62.\u72D9\u3046\u57CE) w += 140;
+  const \u56FD = \u72B63.\u72D9\u3046\u56FD;
+  if (\u72B63.\u6BB5 === \u6BB5.\u5B58\u7D9A) return 0;
+  if (\u72B63.\u72D9\u3046\u57CE && \u7684.id === \u72B63.\u72D9\u3046\u57CE) w += 140;
   if (\u56FD && \u56FD.includes(\u7684.kuni)) {
-    w += \u72B62.\u6BB5 === \u6BB5.\u8DB3\u5834 ? 70 : \u72B62.\u6BB5 === \u6BB5.\u95A2\u6771 ? 80 : \u72B62.\u6BB5 === \u6BB5.\u4E0A\u6D1B ? 90 : \u72B62.\u6BB5 === \u6BB5.\u4E94\u757F ? 90 : \u72B62.\u6BB5 === \u6BB5.\u5468\u308A ? 50 : 30;
+    w += \u72B63.\u6BB5 === \u6BB5.\u8DB3\u5834 ? 70 : \u72B63.\u6BB5 === \u6BB5.\u95A2\u6771 ? 80 : \u72B63.\u6BB5 === \u6BB5.\u4E0A\u6D1B ? 90 : \u72B63.\u6BB5 === \u6BB5.\u4E94\u757F ? 90 : \u72B63.\u6BB5 === \u6BB5.\u5468\u308A ? 50 : 30;
   }
-  if (\u72B62.\u6BB5 === \u6BB5.\u4E0A\u6D1B && typeof \u4EAC\u307E\u3067\u306E\u6B69 === "function") {
+  if (\u72B63.\u6BB5 === \u6BB5.\u4E0A\u6D1B && typeof \u4EAC\u307E\u3067\u306E\u6B69 === "function") {
     const \u6B69 = \u4EAC\u307E\u3067\u306E\u6B69(\u7684.id);
     if (\u6B69 != null && \u6B69 <= 8) w += Math.round(75 * Math.pow(0.75, \u6B69 - 1));
   }
-  if (\u72B62.\u6BB5 === \u6BB5.\u4E0A\u6D1B && GOKINAI.includes(\u7684.kuni)) w += 40;
+  if (\u72B63.\u6BB5 === \u6BB5.\u4E0A\u6D1B && GOKINAI.includes(\u7684.kuni)) w += 40;
   return w;
 }
 
@@ -23511,8 +23511,8 @@ function advanceMonth(prev, g) {
   const \u5929\u4E0B\u306E\u9053 = /* @__PURE__ */ new Map();
   for (const fid2 of Object.keys(s2.factions)) {
     if (!s2.castles.some((c) => c.faction === fid2)) continue;
-    const \u72B62 = \u3044\u307E\u306E\u6BB5(s2, fid2, { \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u5224\u3058 });
-    if (\u72B62 && !\u72B62.\u5FD7\u306A\u3057) \u5929\u4E0B\u306E\u9053.set(fid2, \u72B62);
+    const \u72B63 = \u3044\u307E\u306E\u6BB5(s2, fid2, { \u65D7\u306E\u4E0B\u304B: \u65D7\u306E\u4E0B\u5224\u3058 });
+    if (\u72B63 && !\u72B63.\u5FD7\u306A\u3057) \u5929\u4E0B\u306E\u9053.set(fid2, \u72B63);
   }
   const \u5BB6\u306E\u57CE\u6570 = /* @__PURE__ */ new Map();
   for (const c2 of s2.castles) \u5BB6\u306E\u57CE\u6570.set(c2.faction, (\u5BB6\u306E\u57CE\u6570.get(c2.faction) || 0) + 1);
@@ -32694,7 +32694,7 @@ function battleAI(b) {
             const \u5C04\u624B = c.squads.some((q) => q.men > 0 && (q.type === "yumi" || q.type === "teppo"));
             if (\u5C04\u624B && foes2.length) {
               const t4 = [...foes2].sort((x, y2) => Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
-              issueOrder(b, c, { order: "\u5C04\u6483", tx: t4.x, ty: t4.y, target: t4.id });
+              issueOrder(b, c, { order: "\u5C04\u6483", tx: p2.x, ty: p2.y, target: t4.id });
             } else issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
             continue;
           }
@@ -32728,7 +32728,7 @@ function battleAI(b) {
           const shooter = c.squads.some((q) => q.men > 0 && (q.type === "yumi" || q.type === "teppo"));
           if (shooter && foes2.length) {
             const t3 = [...foes2].sort((x, y2) => Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
-            issueOrder(b, c, { order: "\u5C04\u6483", tx: t3.x, ty: t3.y, target: t3.id });
+            issueOrder(b, c, { order: "\u5C04\u6483", tx: p2.x, ty: p2.y, target: t3.id });
             continue;
           }
           issueOrder(b, c, { order: "\u5B88\u5099", tx: c.x, ty: c.y });
@@ -34499,9 +34499,9 @@ function stepBattle(b, dt) {
     const \u565B = b.corps.some((c) => !c.dead && !c.destroyed && c.squads.some((q) => q.engaged));
     if (\u565B || \u8FD1 < b.\u81A0\u7740.\u8FD1 - 40 || \u5175 < b.\u81A0\u7740.\u5175 - 20 || (b.\u624B\u51FA\u3057 || -9) > b.\u81A0\u7740.\u523B) {
       b.\u81A0\u7740.\u523B = b.t;
-    }
-    if (\u8FD1 < b.\u81A0\u7740.\u8FD1) b.\u81A0\u7740.\u8FD1 = \u8FD1;
-    if (\u5175 < b.\u81A0\u7740.\u5175) b.\u81A0\u7740.\u5175 = \u5175;
+      b.\u81A0\u7740.\u8FD1 = \u8FD1;
+      b.\u81A0\u7740.\u5175 = \u5175;
+    } else if (\u5175 > b.\u81A0\u7740.\u5175) b.\u81A0\u7740.\u5175 = \u5175;
   }
   if (b.t - b.\u81A0\u7740.\u523B > 180) {
     b.phase = "over";
@@ -34925,11 +34925,182 @@ function \u9CF4\u3089\u3059(\u5EA7, \u51FA, \u540D, \u97F3, \u6642, \u95772, \u5
   return true;
 }
 
+// src/audio/rokuon.js
+var \u9332\u97F3\u306E\u66F2 = {
+  \u653F\u52D9: { \u672D: "bgm_seimu.mp3", \u5468: 128, \u984C: "\u5929\u4E0B\u9759\u8B10" },
+  \u91CE\u6226: { \u672D: "bgm_yasen.mp3", \u5468: 89.6, \u984C: "\u75BE\u98A8\u306E\u9663" },
+  \u57CE\u653B\u3081: { \u672D: "bgm_shirozeme.mp3", \u5468: 96, \u984C: "\u653B\u57CE\u306E\u523B" },
+  \u5206\u3051\u76EE: { \u672D: "bgm_wakeme.mp3", \u5468: 176, \u984C: "\u5929\u4E0B\u6C7A\u6226" }
+};
+var \u9332\u97F3\u306E\u6307\u7D0B = {
+  \u653F\u52D9: "BwYFBAMCAQD//v7/AQIFBwkLDQ4QERISEhITFBQUFBUVFhgZGhscHRwcGxoYFhUWFxgZGxwdHiAjJykqKScmJiYnJiMfHRwdHRwcHBsaGx0eHRwaGBUTERAQERITEhEPDgsHA//7+fj6/P8BAgEB//79+/r5+Pj5+vr5+fn49vPw7Ono6evs7e/x8/X19PPx7+3r6urr7O3t7e3t7e3t7u7s6unn5+jp6+3t7e3s6+vs6+rq6+zr6OXj4uPj5OTk5eXl5ujo6Ofk4d7c2djX1NDOzc7O0NPW2t3g5Ofp6+ro5ePg3dva2t3h5Ofo5+fl4+Dd3Nzc29nX1tfZ3N/i5Obp7Ozs6+vr7Ozs7Oro5+fo6+/y9ff4+fr6+fj07+vm4uHh5erv8/f49/Tx7+7u7ezs7Ovq6Ofn5ufn5+Xj4uLk5ubm5ePi4uLk5ujo6Ojp6uvt7/Hz8/Hu7Ovr7e/x8vLy8fHy8vLx7+zp5+bm6Orr6+rp6eno6Ons7vHy8/Pz8vHw8vP19vj6/QAA//359vTx8O/v7u3u7ezs7e7w8vP2+fv9/fz8/gIGCAsNDg0JBwgMEBMVFhgdJC45Q0tQTD0lDfru5+Xk4+bu+gcSHCIkIyEeHB0hJiosMDtKVlpaVU9IQTcrHxYPDRAXIC4/TE1JREFAQkVDPDQtJR0ZGR0lLCwkEwDz8PcEEyAqMThCS1VcXVdNQjg0MzQ1ODxCR0hAMSYmKSUcFxohKjI6Pz86Njg/SVJVT0U9ODU2Pk1dZmdiWVJRVFldXVpVUU9SWWNveHt4bFpIOCkcDwL6+PwBBAYMExYWFBANDA0QExghLDY+Q0RDQDozLCMYDAUBAQUOGygxNDItKCcnKCkmHhD+7+bm6vD09e/j08fBwsrU3eXp6+7z+wcTFQv+9fHu6ujn6Ovw8vLv6ePf3NXOyszT3ODb0crM0tjd4ufn39PKxsnS3ufr6eHa1tXZ3N/f3+Di5Oft9gAHCgYA9+rayryzrauqrbO6wMXIyszMx761sbS5vsTL0dbZ3ODi39jQyL6zqaSkqrTAzNXa3Nzc3eDj49/XzMC1r6+zu8LEvrKlm5WUmJ+nr7W6wcrV3+Xl4NfOxsG+vb/EycvKyszQ09HJvri8w8rO0NHS09XZ4Onu7ufbzsbEx8zQ1NfY19fY3ODk5efp6ebj4uLm7PT8AgMA+OrZyLqtpaOmqq+0usHJz9PTzsjCwMPIztTa4Obs7/Du6uPaz8W+u7m8xdbo9vv8/QAFDA8PDAf/9Orm6O70/AMHBfvw5d/f4+rx9/0FEyMyPEFBOzElHBcWGBgVEhQcJCcmIh8eHyAgHx4dGxkYHSY0QEhIQTcuKiswNjs/Q0VHSU1RVlpdXV1eXl1dXmRrcnl/f3x3bVpFNSojHRweIictMztAQ0I+OTQwLzI2PkZOVFlgZmlmYFZLQDcvKioxO0RKTlBSVltfYmNfV0o8MSonJykrLS8uKB0RCQUEBgsSGSIrNkJOVldPQzo2NC8qJicsNDtAQT87NzMxMDAyMi8pJCQoMj1HSkc7LSIcGx0gIiIiIyIhIictMTQ1NTMwLSwuMDQ4PkVLTktCNSYXCwD48ezr7vT6AAUKDQ0LBQD8+/v+AgcMEhcdICEeGA0B9u7q6u3z+f4DBgoOExgbGhYQCP707uzs7vH1+fv58uje1dDP0dXY2+Pu+gULDAoGAvz17ujl5efq7Ozq5+Xk4+Pk5ePd0sfBv8PL09nc2tPKwb7AwsTGx8jJycrN0tjf5Ojr7Orl3tvc4ejv9/4DAvzy5djNwbevqqmrsLe/yM/T1NLOycTBwMHDx8vR1t3l6+zm3NHIwLu6vMHEx8jJzNHY3eHi4t3Vy8K7trGvrq+zuLq2r6mjnpqYmJ2msbzGz9fe4N/b1c7Iw8HBw8XHyMjHxcTGys3NycO6s7CyuL7Dx8nHwby7vsfR2t/f3NjTzs/V3ubr7e3q49rSztDY4+75AgkMCQH16d3TzMbDwsTHys7T2N3j5+np6ejn5uTj5Ojv+gYOEAwD+O3l4eLk5+rt8fX8BQ8ZICQjHRQLA/vz7+7w9Pr+AAIDAv738ezs8Pb8AgkTHSYsLSkjHBYTERIVFxcWEg4NExsiJygmIRwYFxgdIiYmIx0XEhARFx8mLC4uLCkoKS00PUVLT09MRT05OT1DTFVfZmtsZ11QQzYqIBsZGx8lKzE4QEZKTU9QUE9MR0RCQ0dNVVtdWVFHPjYwLCoqKikoKCsyO0JHSk1NSkU+NzEsKCQgHh4gIiMgGxUPDAwOERUaISo1PkRHRkI8NjEvMDIzMCkhHR0iKC0uLCUdEw0LDxYdISMiHhgRDg8UGSAlKCgmIh8dHiEnLTM3OTUvKCIeHR8jKS82Ozw6MykcDgH27+zs7e/y9fj6/f8CBAYFA//69fLy9v0ECQoHAvvy6uPf3dva2Nfa4Ofu8/kBBwgFAfv28uzm4N3e4ebq7Ozp5eHe3d7e4OPn7fT8AwcHA/z18vL09fPu5+Dc3ODm6+3q49rSzc7T2+Tq7Onj29PMys3S2N7j5uXh3t3f5Orx9/wAAf759PDt7e7x9vwECg0MB/3y5tvSzMrLzdDT1tre4+ju9Pb18u7q6Ons8fb7/v359O/r5+Pf29jX19jb3uPp7/T39/b08vDs5t/Z1tXW2dnZ2NbT0M7Oz9HT1trg6fP7AAD9+fb29/n5+PPs5eHh5u30+Pjz6uE=",
+  \u91CE\u6226: "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",
+  \u57CE\u653B\u3081: "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",
+  \u5206\u3051\u76EE: "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"
+};
+var \u72B6 = {
+  \u5EA7: null,
+  \u4E3B: null,
+  \u6839: "bgm/",
+  \u751F: /* @__PURE__ */ new Map(),
+  // 名 → 圧したままの札（Promise<ArrayBuffer>）
+  \u89E3: /* @__PURE__ */ new Map(),
+  // 名 → 解いたもの（Promise<{ 布, 起点, 周 }>）。二曲まで
+  \u4ECA: null,
+  // いま鳴っている録音 { 名, 源, 声, 起点, 周 }
+  \u756A: 0,
+  // 指図の番号。後から来た指図が勝つ
+  \u6B8B\u308A\u3092\u8AAD\u3093\u3060: false
+};
+function \u9332\u97F3\u306E\u5EA7\u3092\u636E\u3048\u308B(\u5EA7, \u4E3B, { \u6839 = "bgm/" } = {}) {
+  \u72B6.\u5EA7 = \u5EA7;
+  \u72B6.\u4E3B = \u4E3B;
+  \u72B6.\u6839 = \u6839;
+}
+var \u9332\u97F3\u304C\u3042\u308B = (\u540D) => Object.prototype.hasOwnProperty.call(\u9332\u97F3\u306E\u66F2, \u540D);
+var \u4F7F\u3048\u308B = () => !!(\u72B6.\u5EA7 && \u72B6.\u4E3B && \u72B6.\u5EA7.decodeAudioData && typeof fetch === "function");
+function \u751F\u3092\u8AAD\u3080(\u540D) {
+  if (\u72B6.\u751F.has(\u540D)) return \u72B6.\u751F.get(\u540D);
+  const p = fetch(\u72B6.\u6839 + \u9332\u97F3\u306E\u66F2[\u540D].\u672D).then((r) => {
+    if (!r.ok) throw new Error("\u672D\u304C\u7121\u3044\uFF08" + r.status + "\uFF09");
+    return r.arrayBuffer();
+  });
+  p.catch(() => \u72B6.\u751F.delete(\u540D));
+  \u72B6.\u751F.set(\u540D, p);
+  return p;
+}
+function \u89E3\u304F2(\u540D) {
+  if (\u72B6.\u89E3.has(\u540D)) {
+    const p2 = \u72B6.\u89E3.get(\u540D);
+    \u72B6.\u89E3.delete(\u540D);
+    \u72B6.\u89E3.set(\u540D, p2);
+    return p2;
+  }
+  const p = \u751F\u3092\u8AAD\u3080(\u540D).then((ab) => new Promise((res, rej) => {
+    const q = \u72B6.\u5EA7.decodeAudioData(ab.slice(0), res, rej);
+    if (q && q.then) q.then(res, rej);
+  })).then((\u5E032) => {
+    const \u5DE6 = \u5E032.getChannelData(0);
+    const \u53F3 = \u5E032.numberOfChannels > 1 ? \u5E032.getChannelData(1) : \u5DE6;
+    const \u8D77\u70B9 = \u8D77\u70B9\u3092\u63A2\u3059(\u5DE6, \u53F3, \u5E032.sampleRate, \u9332\u97F3\u306E\u6307\u7D0B[\u540D]);
+    const \u5468 = Math.min(\u9332\u97F3\u306E\u66F2[\u540D].\u5468, \u5E032.duration - \u8D77\u70B9);
+    return { \u5E03: \u5E032, \u8D77\u70B9, \u5468 };
+  });
+  p.catch(() => \u72B6.\u89E3.delete(\u540D));
+  \u72B6.\u89E3.set(\u540D, p);
+  while (\u72B6.\u89E3.size > 2) {
+    const \u53E4 = [...\u72B6.\u89E3.keys()].find((k) => k !== \u540D && !(\u72B6.\u4ECA && \u72B6.\u4ECA.\u540D === k));
+    if (!\u53E4) break;
+    \u72B6.\u89E3.delete(\u53E4);
+  }
+  return p;
+}
+function \u8D77\u70B9\u3092\u63A2\u3059(\u5DE6, \u53F3, \u7387, \u53702) {
+  if (!\u53702) return 0;
+  const \u6587 = typeof atob === "function" ? atob(\u53702) : Buffer.from(\u53702, "base64").toString("binary");
+  let \u5F62 = new Float32Array(\u6587.length);
+  for (let i = 0; i < \u6587.length; i++) {
+    let v = \u6587.charCodeAt(i);
+    if (v > 127) v -= 256;
+    \u5F62[i] = v / 127;
+  }
+  if (Math.abs(\u7387 - 44100) > 1) {
+    const n = Math.floor(\u5F62.length * \u7387 / 44100);
+    const \u4F38 = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = i * 44100 / \u7387, k = Math.floor(x), f = x - k;
+      \u4F38[i] = (\u5F62[k] || 0) * (1 - f) + (\u5F62[k + 1] || 0) * f;
+    }
+    \u5F62 = \u4F38;
+  }
+  const \u9650 = Math.min(Math.floor(0.08 * \u7387), \u5DE6.length - \u5F62.length - 1);
+  let \u826F = 0, \u6700 = -Infinity;
+  for (let o = 0; o <= \u9650; o++) {
+    let \u548C = 0, \u529B = 0;
+    for (let i = 0; i < \u5F62.length; i += 2) {
+      const v = (\u5DE6[o + i] + \u53F3[o + i]) * 0.5;
+      \u548C += v * \u5F62[i];
+      \u529B += v * v;
+    }
+    const \u5024 = \u548C / Math.sqrt(\u529B + 1e-9);
+    if (\u5024 > \u6700) {
+      \u6700 = \u5024;
+      \u826F = o;
+    }
+  }
+  return \u826F / \u7387;
+}
+function \u9000\u304B\u305B\u308B2(\u4ECA2, \u4EA4\u5DEE) {
+  if (!\u4ECA2 || !\u72B6.\u5EA7) return;
+  const \u6642 = \u72B6.\u5EA7.currentTime, \u95772 = Math.max(0.02, \u4EA4\u5DEE);
+  try {
+    const g = \u4ECA2.\u58F0.gain;
+    g.cancelScheduledValues(\u6642);
+    g.setValueAtTime(Math.max(1e-4, g.value), \u6642);
+    g.linearRampToValueAtTime(1e-4, \u6642 + \u95772);
+    \u4ECA2.\u6E90.onended = () => {
+      try {
+        \u4ECA2.\u58F0.disconnect();
+      } catch (e) {
+      }
+    };
+    \u4ECA2.\u6E90.stop(\u6642 + \u95772 + 0.05);
+  } catch (e) {
+  }
+}
+function \u9332\u97F3\u3092\u639B\u3051\u308B(\u540D, { \u4EA4\u5DEE = 1.5, \u982D: \u982D2 = 0 } = {}) {
+  if (!\u9332\u97F3\u304C\u3042\u308B(\u540D) || !\u4F7F\u3048\u308B()) return Promise.resolve(false);
+  if (\u72B6.\u4ECA && \u72B6.\u4ECA.\u540D === \u540D) return Promise.resolve(true);
+  const \u756A = ++\u72B6.\u756A;
+  return \u89E3\u304F2(\u540D).then(({ \u5E03: \u5E032, \u8D77\u70B9, \u5468 }) => {
+    if (\u756A !== \u72B6.\u756A) return true;
+    const \u5EA7 = \u72B6.\u5EA7, \u6642 = \u5EA7.currentTime;
+    const \u58F0 = \u5EA7.createGain();
+    \u58F0.gain.setValueAtTime(1e-4, \u6642);
+    \u58F0.gain.linearRampToValueAtTime(1, \u6642 + Math.max(0.02, \u4EA4\u5DEE));
+    \u58F0.connect(\u72B6.\u4E3B);
+    const \u6E90 = \u5EA7.createBufferSource();
+    \u6E90.buffer = \u5E032;
+    \u6E90.loop = true;
+    \u6E90.loopStart = \u8D77\u70B9;
+    \u6E90.loopEnd = \u8D77\u70B9 + \u5468;
+    \u6E90.connect(\u58F0);
+    \u6E90.start(\u6642, \u8D77\u70B9 + (\u982D2 % \u5468 + \u5468) % \u5468);
+    \u9000\u304B\u305B\u308B2(\u72B6.\u4ECA, \u4EA4\u5DEE);
+    \u72B6.\u4ECA = { \u540D, \u6E90, \u58F0, \u8D77\u70B9, \u5468 };
+    if (!\u72B6.\u6B8B\u308A\u3092\u8AAD\u3093\u3060 && typeof setTimeout === "function") {
+      \u72B6.\u6B8B\u308A\u3092\u8AAD\u3093\u3060 = true;
+      setTimeout(() => {
+        \u9332\u97F3\u3092\u5148\u306B\u8AAD\u3080();
+      }, 4e3);
+    }
+    return true;
+  }).catch(() => \u756A === \u72B6.\u756A ? false : true);
+}
+function \u9332\u97F3\u3092\u6B62\u3081\u308B(\u4EA4\u5DEE = 0.6) {
+  \u72B6.\u756A++;
+  const \u4ECA2 = \u72B6.\u4ECA;
+  \u72B6.\u4ECA = null;
+  \u9000\u304B\u305B\u308B2(\u4ECA2, \u4EA4\u5DEE);
+}
+function \u9332\u97F3\u3092\u5148\u306B\u8AAD\u3080(\u540D\u3089 = Object.keys(\u9332\u97F3\u306E\u66F2)) {
+  if (!\u4F7F\u3048\u308B()) return Promise.resolve([]);
+  return Promise.all(\u540D\u3089.filter(\u9332\u97F3\u304C\u3042\u308B).map((n) => \u751F\u3092\u8AAD\u3080(n).then(() => n, () => null)));
+}
+var \u9332\u97F3\u306E\u69D8\u5B50 = () => ({
+  \u9CF4\u308A: \u72B6.\u4ECA ? \u72B6.\u4ECA.\u540D : null,
+  \u8D77\u70B9: \u72B6.\u4ECA ? \u72B6.\u4ECA.\u8D77\u70B9 : null,
+  \u5468: \u72B6.\u4ECA ? \u72B6.\u4ECA.\u5468 : null,
+  \u8AAD\u3081\u305F: [...\u72B6.\u751F.keys()],
+  \u89E3\u3051\u305F: [...\u72B6.\u89E3.keys()],
+  \u5EA7: !!\u72B6.\u5EA7
+});
+
 // src/audio/oto.js
 var \u68DA\u306E\u9375 = "sengoku:oto";
 var \u5148\u8AAD\u307F = 0.4;
 var \u523B\u307F\u306E\u9593 = 0.2;
-var \u72B6 = {
+var \u72B62 = {
   \u5EA7: null,
   \u4E3B: null,
   \u53E3: null,
@@ -34947,34 +35118,35 @@ var \u72B6 = {
 };
 function \u8A2D\u5B9A\u3092\u8AAD\u3080(\u68DA) {
   const st = \u68DA || (typeof localStorage !== "undefined" ? localStorage : null);
-  if (!st) return { \u5165: \u72B6.\u5165, \u97F3\u91CF: \u72B6.\u97F3\u91CF };
+  if (!st) return { \u5165: \u72B62.\u5165, \u97F3\u91CF: \u72B62.\u97F3\u91CF };
   try {
     const v = JSON.parse(st.getItem(\u68DA\u306E\u9375) || "null");
     if (v && typeof v === "object") {
-      \u72B6.\u5165 = v.\u5165 !== false;
-      \u72B6.\u97F3\u91CF = typeof v.\u97F3\u91CF === "number" ? Math.max(0, Math.min(1, v.\u97F3\u91CF)) : \u72B6.\u97F3\u91CF;
+      \u72B62.\u5165 = v.\u5165 !== false;
+      \u72B62.\u97F3\u91CF = typeof v.\u97F3\u91CF === "number" ? Math.max(0, Math.min(1, v.\u97F3\u91CF)) : \u72B62.\u97F3\u91CF;
     }
   } catch (e) {
   }
-  return { \u5165: \u72B6.\u5165, \u97F3\u91CF: \u72B6.\u97F3\u91CF };
+  return { \u5165: \u72B62.\u5165, \u97F3\u91CF: \u72B62.\u97F3\u91CF };
 }
 function \u8A2D\u5B9A\u3092\u66F8\u304F() {
   if (typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(\u68DA\u306E\u9375, JSON.stringify({ \u5165: \u72B6.\u5165, \u97F3\u91CF: \u72B6.\u97F3\u91CF }));
+    localStorage.setItem(\u68DA\u306E\u9375, JSON.stringify({ \u5165: \u72B62.\u5165, \u97F3\u91CF: \u72B62.\u97F3\u91CF }));
   } catch (e) {
   }
 }
 var \u97F3\u306E\u8A2D\u5B9A = () => ({
-  \u5165: \u72B6.\u5165,
-  \u97F3\u91CF: \u72B6.\u97F3\u91CF,
-  \u89E3\u3051\u305F: \u72B6.\u89E3\u3051\u305F,
-  \u66F2: \u72B6.\u66F2\u540D,
+  \u5165: \u72B62.\u5165,
+  \u97F3\u91CF: \u72B62.\u97F3\u91CF,
+  \u89E3\u3051\u305F: \u72B62.\u89E3\u3051\u305F,
+  \u66F2: \u72B62.\u66F2\u540D,
   /* 座の様子。鳴らないと言われたとき、どこで止まっているかを判じるための一言。 */
-  \u5EA7: !\u72B6.\u5EA7 ? \u72B6.\u53E3 ? "\u507D\u306E\u53E3" : "\u4F5C\u308C\u3066\u3044\u306A\u3044" : \u72B6.\u5EA7.state || "\u4E0D\u660E"
+  \u5EA7: !\u72B62.\u5EA7 ? \u72B62.\u53E3 ? "\u507D\u306E\u53E3" : "\u4F5C\u308C\u3066\u3044\u306A\u3044" : \u72B62.\u5EA7.state || "\u4E0D\u660E",
+  \u9332\u97F3: \u9332\u97F3\u306E\u69D8\u5B50()
 });
 function \u8A66\u3057\u306B\u9CF4\u3089\u3059() {
-  if (!\u72B6.\u89E3\u3051\u305F) \u89E3\u9320\u3059\u308B();
+  if (!\u72B62.\u89E3\u3051\u305F) \u89E3\u9320\u3059\u308B();
   \u8D77\u3053\u3057\u76F4\u3059();
   const t = \u4ECA() + 0.05;
   \u51FA\u3059("\u9266", 74, t, 1.2, 0.5);
@@ -34982,23 +35154,23 @@ function \u8A66\u3057\u306B\u9CF4\u3089\u3059() {
   return true;
 }
 function \u5165\u5207(v) {
-  \u72B6.\u5165 = !!v;
+  \u72B62.\u5165 = !!v;
   \u8A2D\u5B9A\u3092\u66F8\u304F();
-  if (!\u72B6.\u5165) \u6B62\u3081\u308B();
-  else if (\u72B6.\u89E3\u3051\u305F && \u72B6.\u66F2\u540D) \u639B\u3051\u308B(\u72B6.\u66F2\u540D, true);
-  return \u72B6.\u5165;
+  if (!\u72B62.\u5165) \u6B62\u3081\u308B();
+  else if (\u72B62.\u89E3\u3051\u305F && \u72B62.\u66F2\u540D) \u639B\u3051\u308B(\u72B62.\u66F2\u540D, true);
+  return \u72B62.\u5165;
 }
 function \u97F3\u91CF(v) {
-  \u72B6.\u97F3\u91CF = Math.max(0, Math.min(1, Number(v) || 0));
+  \u72B62.\u97F3\u91CF = Math.max(0, Math.min(1, Number(v) || 0));
   \u8A2D\u5B9A\u3092\u66F8\u304F();
-  if (\u72B6.\u4E3B && \u72B6.\u5EA7) \u72B6.\u4E3B.gain.setValueAtTime(\u72B6.\u97F3\u91CF * 1.1, \u72B6.\u5EA7.currentTime);
-  return \u72B6.\u97F3\u91CF;
+  if (\u72B62.\u4E3B && \u72B62.\u5EA7) \u72B62.\u4E3B.gain.setValueAtTime(\u72B62.\u97F3\u91CF * 1.1, \u72B62.\u5EA7.currentTime);
+  return \u72B62.\u97F3\u91CF;
 }
 function \u8D77\u3053\u3057\u76F4\u3059() {
-  if (!\u72B6.\u5EA7) return false;
+  if (!\u72B62.\u5EA7) return false;
   try {
-    if (\u72B6.\u5EA7.state !== "running" && \u72B6.\u5EA7.resume) \u72B6.\u5EA7.resume();
-    return \u72B6.\u5EA7.state === "running";
+    if (\u72B62.\u5EA7.state !== "running" && \u72B62.\u5EA7.resume) \u72B62.\u5EA7.resume();
+    return \u72B62.\u5EA7.state === "running";
   } catch (e) {
     return false;
   }
@@ -35014,57 +35186,73 @@ function \u7121\u97F3\u3092\u4E00\u3064(\u5EA7) {
   }
 }
 function \u89E3\u9320\u3059\u308B(\u4F5C\u308B) {
-  if (\u72B6.\u89E3\u3051\u305F) {
+  if (\u72B62.\u89E3\u3051\u305F) {
     \u8D77\u3053\u3057\u76F4\u3059();
     return true;
   }
   \u8A2D\u5B9A\u3092\u8AAD\u3080();
   const \u4F5C\u308A = \u4F5C\u308B || typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext);
-  if (!\u72B6.\u53E3) {
+  if (!\u72B62.\u53E3) {
     if (!\u4F5C\u308A) return false;
     try {
-      \u72B6.\u5EA7 = typeof \u4F5C\u308A === "function" && \u4F5C\u308A.prototype ? new \u4F5C\u308A() : \u4F5C\u308A();
-      \u72B6.\u4E3B = \u72B6.\u5EA7.createGain();
-      \u72B6.\u4E3B.gain.setValueAtTime(\u72B6.\u97F3\u91CF * 1.1, \u72B6.\u5EA7.currentTime);
-      \u72B6.\u4E3B.connect(\u72B6.\u5EA7.destination);
-      if (\u72B6.\u5EA7.state !== "running" && \u72B6.\u5EA7.resume) \u72B6.\u5EA7.resume();
-      \u7121\u97F3\u3092\u4E00\u3064(\u72B6.\u5EA7);
+      \u72B62.\u5EA7 = typeof \u4F5C\u308A === "function" && \u4F5C\u308A.prototype ? new \u4F5C\u308A() : \u4F5C\u308A();
+      \u72B62.\u4E3B = \u72B62.\u5EA7.createGain();
+      \u72B62.\u4E3B.gain.setValueAtTime(\u72B62.\u97F3\u91CF * 1.1, \u72B62.\u5EA7.currentTime);
+      \u72B62.\u4E3B.connect(\u72B62.\u5EA7.destination);
+      if (\u72B62.\u5EA7.state !== "running" && \u72B62.\u5EA7.resume) \u72B62.\u5EA7.resume();
+      \u7121\u97F3\u3092\u4E00\u3064(\u72B62.\u5EA7);
+      \u9332\u97F3\u306E\u5EA7\u3092\u636E\u3048\u308B(\u72B62.\u5EA7, \u72B62.\u4E3B);
+      \u9332\u97F3\u3092\u5148\u306B\u8AAD\u3080(["\u653F\u52D9"]);
     } catch (e) {
       return false;
     }
   }
-  \u72B6.\u89E3\u3051\u305F = true;
-  if (\u72B6.\u66F2\u540D) \u639B\u3051\u308B(\u72B6.\u66F2\u540D, true);
+  \u72B62.\u89E3\u3051\u305F = true;
+  if (\u72B62.\u66F2\u540D) \u639B\u3051\u308B(\u72B62.\u66F2\u540D, true);
   return true;
 }
-var \u4ECA = () => \u72B6.\u53E3 && \u72B6.\u53E3.\u3044\u307E ? \u72B6.\u53E3.\u3044\u307E() : \u72B6.\u5EA7 ? \u72B6.\u5EA7.currentTime : 0;
+var \u4ECA = () => \u72B62.\u53E3 && \u72B62.\u53E3.\u3044\u307E ? \u72B62.\u53E3.\u3044\u307E() : \u72B62.\u5EA7 ? \u72B62.\u5EA7.currentTime : 0;
 function \u5834\u9762\u3092\u9078\u3076(\u5834\u9762, \u69D8 = {}) {
   const \u540D = \u5834\u9762\u306E\u66F2(\u5834\u9762, \u69D8);
   if (!\u540D) {
     \u6B62\u3081\u308B();
     return null;
   }
-  if (\u540D === \u72B6.\u66F2\u540D) return \u540D;
+  if (\u540D === \u72B62.\u66F2\u540D) return \u540D;
   \u639B\u3051\u308B(\u540D);
   return \u540D;
 }
 function \u639B\u3051\u308B(\u540D, \u7D9A\u304D) {
   if (!\u66F2[\u540D]) return null;
-  \u72B6.\u66F2\u540D = \u540D;
-  if (!\u7D9A\u304D) \u72B6.\u5C0F\u7BC0 = 0;
-  if (!\u72B6.\u5165 || !\u72B6.\u89E3\u3051\u305F) return \u540D;
-  \u72B6.\u6B21\u306E\u6642 = \u4ECA() + 0.08;
+  \u72B62.\u66F2\u540D = \u540D;
+  if (!\u7D9A\u304D) \u72B62.\u5C0F\u7BC0 = 0;
+  if (!\u72B62.\u5165 || !\u72B62.\u89E3\u3051\u305F) return \u540D;
+  if (!\u72B62.\u53E3 && \u9332\u97F3\u304C\u3042\u308B(\u540D)) {
+    \u5408\u6210\u3092\u6B62\u3081\u308B();
+    \u9332\u97F3\u3092\u639B\u3051\u308B(\u540D).then((\u9CF4\u3063\u305F) => {
+      if (\u9CF4\u3063\u305F || \u72B62.\u66F2\u540D !== \u540D || !\u72B62.\u5165) return;
+      \u72B62.\u6B21\u306E\u6642 = \u4ECA() + 0.08;
+      \u4ED5\u639B\u3051\u308B();
+    });
+    return \u540D;
+  }
+  \u9332\u97F3\u3092\u6B62\u3081\u308B();
+  \u72B62.\u6B21\u306E\u6642 = \u4ECA() + 0.08;
   \u4ED5\u639B\u3051\u308B();
   return \u540D;
 }
+function \u5408\u6210\u3092\u6B62\u3081\u308B() {
+  if (\u72B62.\u6642\u8A08 && typeof clearInterval !== "undefined") clearInterval(\u72B62.\u6642\u8A08);
+  \u72B62.\u6642\u8A08 = null;
+}
 function \u6B62\u3081\u308B() {
-  if (\u72B6.\u6642\u8A08 && typeof clearInterval !== "undefined") clearInterval(\u72B6.\u6642\u8A08);
-  \u72B6.\u6642\u8A08 = null;
+  \u5408\u6210\u3092\u6B62\u3081\u308B();
+  \u9332\u97F3\u3092\u6B62\u3081\u308B();
 }
 function \u4ED5\u639B\u3051\u308B() {
-  if (\u72B6.\u6642\u8A08) return;
+  if (\u72B62.\u6642\u8A08) return;
   if (typeof setInterval === "undefined") return;
-  \u72B6.\u6642\u8A08 = setInterval(() => {
+  \u72B62.\u6642\u8A08 = setInterval(() => {
     try {
       \u523B\u3080();
     } catch (e) {
@@ -35073,32 +35261,32 @@ function \u4ED5\u639B\u3051\u308B() {
   \u523B\u3080();
 }
 function \u523B\u3080() {
-  if (!\u72B6.\u5165 || !\u72B6.\u89E3\u3051\u305F || !\u72B6.\u66F2\u540D) return 0;
-  const k = \u66F2[\u72B6.\u66F2\u540D];
+  if (!\u72B62.\u5165 || !\u72B62.\u89E3\u3051\u305F || !\u72B62.\u66F2\u540D) return 0;
+  const k = \u66F2[\u72B62.\u66F2\u540D];
   const \u4E00\u62CD = 60 / k.\u62CD;
   let \u7A4D\u3093\u3060 = 0;
-  while (\u72B6.\u6B21\u306E\u6642 < \u4ECA() + \u5148\u8AAD\u307F) {
-    const \u982D2 = \u72B6.\u6B21\u306E\u6642;
-    const \u97F3\u7B26 = k.\u97F3\u7B26(\u72B6.\u5C0F\u7BC0 % k.\u5C0F\u7BC0);
+  while (\u72B62.\u6B21\u306E\u6642 < \u4ECA() + \u5148\u8AAD\u307F) {
+    const \u982D2 = \u72B62.\u6B21\u306E\u6642;
+    const \u97F3\u7B26 = k.\u97F3\u7B26(\u72B62.\u5C0F\u7BC0 % k.\u5C0F\u7BC0);
     for (const n of \u97F3\u7B26) {
       const t = \u982D2 + n.\u4F4D * \u4E00\u62CD;
       const \u95772 = n.\u9577 * \u4E00\u62CD;
       \u51FA\u3059(n.\u697D\u5668, n.\u97F3, t, \u95772, n.\u5F37);
       \u7A4D\u3093\u3060++;
     }
-    \u72B6.\u5C0F\u7BC0++;
-    \u72B6.\u6B21\u306E\u6642 += k.\u62CD\u5B50 * \u4E00\u62CD;
+    \u72B62.\u5C0F\u7BC0++;
+    \u72B62.\u6B21\u306E\u6642 += k.\u62CD\u5B50 * \u4E00\u62CD;
   }
   return \u7A4D\u3093\u3060;
 }
 function \u51FA\u3059(\u697D\u56682, \u97F3, \u6642, \u95772, \u5F37) {
-  if (\u72B6.\u53E3) {
-    \u72B6.\u53E3.\u9CF4\u3089\u3059(\u697D\u56682, \u97F3, \u6642, \u95772, \u5F37);
-    \u72B6.\u63A7\u3048.push({ \u697D\u5668: \u697D\u56682, \u97F3, \u6642, \u9577: \u95772, \u5F37 });
+  if (\u72B62.\u53E3) {
+    \u72B62.\u53E3.\u9CF4\u3089\u3059(\u697D\u56682, \u97F3, \u6642, \u95772, \u5F37);
+    \u72B62.\u63A7\u3048.push({ \u697D\u5668: \u697D\u56682, \u97F3, \u6642, \u9577: \u95772, \u5F37 });
     return;
   }
-  if (!\u72B6.\u5EA7 || !\u72B6.\u4E3B) return;
-  \u9CF4\u3089\u3059(\u72B6.\u5EA7, \u72B6.\u4E3B, \u697D\u56682, \u97F3, \u6642, \u95772, \u5F37);
+  if (!\u72B62.\u5EA7 || !\u72B62.\u4E3B) return;
+  \u9CF4\u3089\u3059(\u72B62.\u5EA7, \u72B62.\u4E3B, \u697D\u56682, \u97F3, \u6642, \u95772, \u5F37);
 }
 
 // src/core/ihou.js
@@ -38259,7 +38447,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     }
     if (b.phase === "deploy") {
       if (b.\u7B4B\u66F8\u304D) {
-        set\u548E\u3081("\u3053\u306E\u6226\u306E\u5E03\u9663\u306F\u53F2\u5B9F\u306E\u307E\u307E\u3067\u3042\u308B\u3002\u9663\u5F62\u3068\u5411\u304D\u3060\u3051\u6C7A\u3081\u3089\u308C\u308B\u3002");
+        set\u548E\u3081(b.\u5206\u3051\u76EE ? "\u3053\u306E\u6226\u306E\u5E03\u9663\u306F\u9663\u7ACB\u3066\u306E\u307E\u307E\u3067\u3042\u308B\u3002\u9663\u5F62\u3068\u5411\u304D\u3060\u3051\u6C7A\u3081\u3089\u308C\u308B\u3002" : "\u3053\u306E\u6226\u306E\u5E03\u9663\u306F\u53F2\u5B9F\u306E\u307E\u307E\u3067\u3042\u308B\u3002\u9663\u5F62\u3068\u5411\u304D\u3060\u3051\u6C7A\u3081\u3089\u308C\u308B\u3002");
         return;
       }
       if (inOwnZone(b, f.x, f.y)) {
@@ -38563,7 +38751,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     \u5F8C\u9000: "\u6575\u304B\u3089\u8DDD\u96E2\u3092\u53D6\u308A\u76F4\u3059\u3002",
     \u5F85\u6A5F: "\u305D\u306E\u5834\u3067\u968A\u5217\u3092\u6574\u3048\u308B\u3002"
   };
-  const panelBody = /* @__PURE__ */ React3.createElement(React3.Fragment, null, b.phase === "deploy" && /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", flexWrap: "wrap", width: "100%" } }, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.65, flex: 1 } }, b.\u7B4B\u66F8\u304D ? "\u5E03\u9663\u306F\u5F53\u6642\u306E\u307E\u307E\u3067\u3059\u3002\u968A\u3092\u9078\u3073\u3001\u9663\u5F62\u3068\u5411\u304D\u3060\u3051\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002\u9EC4\u306E\u968A\u306F\u53BB\u5C31\u304C\u5B9A\u307E\u3063\u3066\u3044\u307E\u305B\u3093\u2015\u2015\u6483\u3061\u3082\u6483\u305F\u308C\u3082\u305B\u305A\u3001\u6761\u4EF6\u304C\u63C3\u3046\u307E\u3067\u52D5\u304D\u307E\u305B\u3093\u3002" : ctx.mode === "castle" ? "\u5BC4\u305B\u624B\u306F\u5927\u624B\u53E3\u306E\u524D\u306B\u5E03\u9663\u3057\u3066\u3044\u307E\u3059\u3002\u9580\u306B\u53D6\u308A\u4ED8\u3051\u3070\u9580\u6249\u304C\u50B7\u307F\u3001\u7834\u308C\u3070\u6B21\u306E\u66F2\u8F2A\u3078\u9032\u3081\u307E\u3059\u3002\u672C\u4E38\u3092\u62BC\u3055\u3048\u308C\u3070\u57CE\u306F\u843D\u3061\u307E\u3059\u3002" : "\u968A\u3092\u9078\u3073\u3001\u81EA\u9663\uFF08\u9752\u3044\u5E2F\u306E\u4E2D\uFF09\u3092\u30BF\u30C3\u30D7\u304B\u30C9\u30E9\u30C3\u30B0\u3057\u3066\u5E03\u9663\u3002\u68EE\u306B\u7F6E\u3044\u305F\u968A\u306F\u4F0F\u5175\u306B\u3067\u304D\u307E\u3059\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u99D2\uFF1D10\u4EBA\u3002", /* @__PURE__ */ React3.createElement("b", { style: { color: ctx.pColor } }, "\u85CD\uFF1D\u81EA\u8ECD"), "\uFF0F", /* @__PURE__ */ React3.createElement("b", { style: { color: ctx.eColor } }, "\u6731\uFF1D\u6575\u8ECD"), b.\u7B4B\u66F8\u304D ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\uFF0F", /* @__PURE__ */ React3.createElement("b", { style: { color: "#B08A10" } }, "\u9EC4\uFF1D\u53BB\u5C31\u672A\u5B9A")) : null, "\u3001", /* @__PURE__ */ React3.createElement("b", null, "\u660E\u308B\u304F\u767D\u7E01\uFF1D\u76F4\u5C5E"), "\uFF0F", /* @__PURE__ */ React3.createElement("b", null, "\u6697\u304F\u9ED2\u7E01\uFF1D\u5730\u57DF"), "\u3001", /* @__PURE__ */ React3.createElement("b", null, "\u5F62\uFF1D\u5175\u79D1"), "\uFF08\u69CD\u306F\u4E09\u89D2\u3001\u9A0E\u99AC\u306F\u7D30\u9577\u3001\u5F13\u306F\u80CC\u304C\u51F9\u3080\u3001\u9244\u7832\u306F\u4E2D\u592E\u306B\u70B9\uFF09\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u6700\u5F8C\u5C3E\u306E\u6BB5\u306F\u4E88\u5099\u968A\u3067\u3001\u524D\u7DDA\u304C\u8584\u304F\u306A\u308B\u307E\u3067\u524D\u3078\u51FA\u307E\u305B\u3093\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u5929\u5019\u306F", /* @__PURE__ */ React3.createElement("b", null, b.weather), "\uFF1A", WEATHER[b.weather].note), selC && /* @__PURE__ */ React3.createElement(React3.Fragment, null, isCastle && selC.side !== b.attacker && (() => {
+  const panelBody = /* @__PURE__ */ React3.createElement(React3.Fragment, null, b.phase === "deploy" && /* @__PURE__ */ React3.createElement("div", { style: { display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", flexWrap: "wrap", width: "100%" } }, /* @__PURE__ */ React3.createElement("div", { style: { fontSize: 11.5, color: U.dim, lineHeight: 1.65, flex: 1 } }, b.\u5206\u3051\u76EE ? "\u5E03\u9663\u306F\u9663\u7ACB\u3066\u306E\u307E\u307E\u3067\u3059\u3002\u968A\u3092\u9078\u3073\u3001\u9663\u5F62\u3068\u5411\u304D\u3060\u3051\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002\u9AD8\u307F\u3068\u62BC\u3055\u3048\u306E\u968A\u306F\u6301\u3061\u5834\u3092\u5B88\u308A\u3001\u6575\u304C\u6765\u306A\u3051\u308C\u3070\u3084\u304C\u3066\u6301\u3061\u5834\u3092\u96E2\u308C\u3066\u6226\u3044\u307E\u3059\u3002\u9EC4\u306E\u968A\u306F\u53BB\u5C31\u304C\u5B9A\u307E\u3063\u3066\u3044\u307E\u305B\u3093\u2015\u2015\u6483\u3061\u3082\u6483\u305F\u308C\u3082\u305B\u305A\u3001\u52D5\u304D\u307E\u305B\u3093\u3002" : b.\u7B4B\u66F8\u304D ? "\u5E03\u9663\u306F\u5F53\u6642\u306E\u307E\u307E\u3067\u3059\u3002\u968A\u3092\u9078\u3073\u3001\u9663\u5F62\u3068\u5411\u304D\u3060\u3051\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002\u9EC4\u306E\u968A\u306F\u53BB\u5C31\u304C\u5B9A\u307E\u3063\u3066\u3044\u307E\u305B\u3093\u2015\u2015\u6483\u3061\u3082\u6483\u305F\u308C\u3082\u305B\u305A\u3001\u6761\u4EF6\u304C\u63C3\u3046\u307E\u3067\u52D5\u304D\u307E\u305B\u3093\u3002" : ctx.mode === "castle" ? "\u5BC4\u305B\u624B\u306F\u5927\u624B\u53E3\u306E\u524D\u306B\u5E03\u9663\u3057\u3066\u3044\u307E\u3059\u3002\u9580\u306B\u53D6\u308A\u4ED8\u3051\u3070\u9580\u6249\u304C\u50B7\u307F\u3001\u7834\u308C\u3070\u6B21\u306E\u66F2\u8F2A\u3078\u9032\u3081\u307E\u3059\u3002\u672C\u4E38\u3092\u62BC\u3055\u3048\u308C\u3070\u57CE\u306F\u843D\u3061\u307E\u3059\u3002" : "\u968A\u3092\u9078\u3073\u3001\u81EA\u9663\uFF08\u9752\u3044\u5E2F\u306E\u4E2D\uFF09\u3092\u30BF\u30C3\u30D7\u304B\u30C9\u30E9\u30C3\u30B0\u3057\u3066\u5E03\u9663\u3002\u68EE\u306B\u7F6E\u3044\u305F\u968A\u306F\u4F0F\u5175\u306B\u3067\u304D\u307E\u3059\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u99D2\uFF1D10\u4EBA\u3002", /* @__PURE__ */ React3.createElement("b", { style: { color: ctx.pColor } }, "\u85CD\uFF1D\u81EA\u8ECD"), "\uFF0F", /* @__PURE__ */ React3.createElement("b", { style: { color: ctx.eColor } }, "\u6731\uFF1D\u6575\u8ECD"), b.\u7B4B\u66F8\u304D ? /* @__PURE__ */ React3.createElement(React3.Fragment, null, "\uFF0F", /* @__PURE__ */ React3.createElement("b", { style: { color: "#B08A10" } }, "\u9EC4\uFF1D\u53BB\u5C31\u672A\u5B9A")) : null, "\u3001", /* @__PURE__ */ React3.createElement("b", null, "\u660E\u308B\u304F\u767D\u7E01\uFF1D\u76F4\u5C5E"), "\uFF0F", /* @__PURE__ */ React3.createElement("b", null, "\u6697\u304F\u9ED2\u7E01\uFF1D\u5730\u57DF"), "\u3001", /* @__PURE__ */ React3.createElement("b", null, "\u5F62\uFF1D\u5175\u79D1"), "\uFF08\u69CD\u306F\u4E09\u89D2\u3001\u9A0E\u99AC\u306F\u7D30\u9577\u3001\u5F13\u306F\u80CC\u304C\u51F9\u3080\u3001\u9244\u7832\u306F\u4E2D\u592E\u306B\u70B9\uFF09\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u6700\u5F8C\u5C3E\u306E\u6BB5\u306F\u4E88\u5099\u968A\u3067\u3001\u524D\u7DDA\u304C\u8584\u304F\u306A\u308B\u307E\u3067\u524D\u3078\u51FA\u307E\u305B\u3093\u3002", /* @__PURE__ */ React3.createElement("br", null), "\u5929\u5019\u306F", /* @__PURE__ */ React3.createElement("b", null, b.weather), "\uFF1A", WEATHER[b.weather].note), selC && /* @__PURE__ */ React3.createElement(React3.Fragment, null, isCastle && selC.side !== b.attacker && (() => {
     const MAPX = MAP;
     if (!MAPX) return null;
     const held = selC.holdGate;
@@ -40143,7 +40331,7 @@ function SeaScreen({ ctx, land, onEnd }) {
     }
     force((n) => (n + 1) % 1e3);
   };
-  const \u9000\u304B\u305B\u308B2 = (f) => {
+  const \u9000\u304B\u305B\u308B3 = (f) => {
     f.withdraw = true;
     f.order = "\u9000\u304F";
     f.auto = false;
@@ -40174,7 +40362,7 @@ function SeaScreen({ ctx, land, onEnd }) {
     const \u71C3 = f.ships.filter((s2) => !s2.sunk && s2.fire > 8).length;
     return { n, \u71C3 };
   };
-  return /* @__PURE__ */ React5.createElement("div", { className: "sp", style: { height: "100dvh", background: "#2C4356" } }, \u9000\u304D && /* @__PURE__ */ React5.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React5.createElement("div", { className: "card", style: { maxWidth: 400 } }, /* @__PURE__ */ React5.createElement("div", { className: "mn", style: { fontSize: 20, marginBottom: 6 } }, \u9000\u304D.f.gen.name, "\u306E\u8239\u56E3\u3092\u9000\u304B\u305B\u307E\u3059\u304B"), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95 } }, fleetShips(\u9000\u304D.f), "\u8258\u304C\u6C96\u3078\u9003\u308C\u307E\u3059\u3002\u6D77\u306E\u4E0A\u306B\u9000\u304D\u5834\u306F\u3042\u308A\u307E\u305B\u3093\u3002 \u4E00\u5EA6\u9000\u3044\u305F\u8239\u56E3\u306F\u3001\u3053\u306E\u6226\u306B\u306F\u623B\u305B\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React5.createElement("div", { style: { display: "flex", gap: 9, marginTop: 12 } }, /* @__PURE__ */ React5.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => set\u9000\u304D(null) }, "\u53D6\u308A\u3084\u3081\u308B"), /* @__PURE__ */ React5.createElement("button", { className: "btn dark", style: { flex: 1 }, onClick: () => \u9000\u304B\u305B\u308B2(\u9000\u304D.f) }, "\u627F\u77E5\u3002\u9000\u304F")))), /* @__PURE__ */ React5.createElement("div", { style: { display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 } }, /* @__PURE__ */ React5.createElement("div", { className: "bar", style: { padding: "6px 10px", gap: 10, fontSize: 12 } }, /* @__PURE__ */ React5.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React5.createElement("span", { className: "dot", style: { background: ctx.pColor } }), /* @__PURE__ */ React5.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.pName)), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, "\u8239 ", /* @__PURE__ */ React5.createElement("b", { className: "num" }, \u6211\u8258), "\u8258"), /* @__PURE__ */ React5.createElement("span", { className: "mn", style: { color: U.dim } }, "\u5BFE"), /* @__PURE__ */ React5.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React5.createElement("span", { className: "dot", style: { background: ctx.eColor } }), /* @__PURE__ */ React5.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.eName)), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, "\u8239 ", /* @__PURE__ */ React5.createElement("b", { className: "num" }, \u6575\u8258), "\u8258"), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, ctx.place, "\uFF0F\u98A8 ", \u98A8\u306E\u547C\u3073\u540D()), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, Math.floor(b.t / 60), "\u523B"), /* @__PURE__ */ React5.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React5.createElement("button", { className: "btn sm", onClick: fit }, "\u5168\u4F53")), /* @__PURE__ */ React5.createElement(
+  return /* @__PURE__ */ React5.createElement("div", { className: "sp", style: { height: "100dvh", background: "#2C4356" } }, \u9000\u304D && /* @__PURE__ */ React5.createElement("div", { className: "modal", onMouseDown: (e) => e.stopPropagation(), onMouseUp: (e) => e.stopPropagation() }, /* @__PURE__ */ React5.createElement("div", { className: "card", style: { maxWidth: 400 } }, /* @__PURE__ */ React5.createElement("div", { className: "mn", style: { fontSize: 20, marginBottom: 6 } }, \u9000\u304D.f.gen.name, "\u306E\u8239\u56E3\u3092\u9000\u304B\u305B\u307E\u3059\u304B"), /* @__PURE__ */ React5.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.95 } }, fleetShips(\u9000\u304D.f), "\u8258\u304C\u6C96\u3078\u9003\u308C\u307E\u3059\u3002\u6D77\u306E\u4E0A\u306B\u9000\u304D\u5834\u306F\u3042\u308A\u307E\u305B\u3093\u3002 \u4E00\u5EA6\u9000\u3044\u305F\u8239\u56E3\u306F\u3001\u3053\u306E\u6226\u306B\u306F\u623B\u305B\u307E\u305B\u3093\u3002"), /* @__PURE__ */ React5.createElement("div", { style: { display: "flex", gap: 9, marginTop: 12 } }, /* @__PURE__ */ React5.createElement("button", { className: "btn", style: { flex: 1 }, onClick: () => set\u9000\u304D(null) }, "\u53D6\u308A\u3084\u3081\u308B"), /* @__PURE__ */ React5.createElement("button", { className: "btn dark", style: { flex: 1 }, onClick: () => \u9000\u304B\u305B\u308B3(\u9000\u304D.f) }, "\u627F\u77E5\u3002\u9000\u304F")))), /* @__PURE__ */ React5.createElement("div", { style: { display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 } }, /* @__PURE__ */ React5.createElement("div", { className: "bar", style: { padding: "6px 10px", gap: 10, fontSize: 12 } }, /* @__PURE__ */ React5.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React5.createElement("span", { className: "dot", style: { background: ctx.pColor } }), /* @__PURE__ */ React5.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.pName)), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, "\u8239 ", /* @__PURE__ */ React5.createElement("b", { className: "num" }, \u6211\u8258), "\u8258"), /* @__PURE__ */ React5.createElement("span", { className: "mn", style: { color: U.dim } }, "\u5BFE"), /* @__PURE__ */ React5.createElement("span", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React5.createElement("span", { className: "dot", style: { background: ctx.eColor } }), /* @__PURE__ */ React5.createElement("b", { className: "mn", style: { fontSize: 14 } }, ctx.eName)), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, "\u8239 ", /* @__PURE__ */ React5.createElement("b", { className: "num" }, \u6575\u8258), "\u8258"), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, ctx.place, "\uFF0F\u98A8 ", \u98A8\u306E\u547C\u3073\u540D()), /* @__PURE__ */ React5.createElement("span", { className: "kv" }, Math.floor(b.t / 60), "\u523B"), /* @__PURE__ */ React5.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ React5.createElement("button", { className: "btn sm", onClick: fit }, "\u5168\u4F53")), /* @__PURE__ */ React5.createElement(
     "div",
     {
       ref: wrap,
@@ -40958,8 +41146,8 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
       const \u6BD4 = \u79C1.koku > 0 ? \u6575.koku / \u79C1.koku : 9;
       return /* @__PURE__ */ React6.createElement("div", { className: "num", style: { fontSize: 11.5, color: U.dim, marginTop: 6, lineHeight: 1.8 } }, "\u77F3\u9AD8\u3000\u81EA\u5BB6 ", fmt(Math.round(\u79C1.koku)), "\u77F3 \uFF0F ", g.factions[dt].name, " ", fmt(Math.round(\u6575.koku)), "\u77F3 \uFF08", /* @__PURE__ */ React6.createElement("b", { style: { color: U.text } }, "\u81EA\u5BB6\u306E", Math.round(\u6BD4 * 100), "\uFF05"), "\uFF09", /* @__PURE__ */ React6.createElement("br", null), "\u5A01\u4FE1 ", Math.round(\u79C1.prestige), "\uFF0F\u5B98\u4F4D\u306E\u9A13 ", \u79C1.diplo, /* @__PURE__ */ React6.createElement("span", { style: { color: U.dim } }, "\u5A01\u4FE1\u304C\u9AD8\u3044\u307B\u3069\u3001\u8981\u308B\u4FE1\u7528\u304C\u7DE9\u307F\u307E\u3059"));
     })(), (() => {
-      const \u4F7F\u3048\u308B = gens.filter((x) => !g.orders[x.id]);
-      if (!\u4F7F\u3048\u308B.length) return /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 11.5, color: "#B0483C", marginTop: 8 } }, "\u3053\u306E\u57CE\u306B\u624B\u306E\u7A7A\u3044\u305F\u5C06\u304C\u3044\u306A\u3044\u3002\u4F7F\u8005\u3092\u7ACB\u3066\u3089\u308C\u306A\u3044\u306E\u3067\u3001\u89AA\u5584\u306E\u52B9\u304D\u306F\u4E00\u306B\u7559\u307E\u308B\u3002");
+      const \u4F7F\u3048\u308B2 = gens.filter((x) => !g.orders[x.id]);
+      if (!\u4F7F\u3048\u308B2.length) return /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 11.5, color: "#B0483C", marginTop: 8 } }, "\u3053\u306E\u57CE\u306B\u624B\u306E\u7A7A\u3044\u305F\u5C06\u304C\u3044\u306A\u3044\u3002\u4F7F\u8005\u3092\u7ACB\u3066\u3089\u308C\u306A\u3044\u306E\u3067\u3001\u89AA\u5584\u306E\u52B9\u304D\u306F\u4E00\u306B\u7559\u307E\u308B\u3002");
       return /* @__PURE__ */ React6.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ React6.createElement("div", { style: { fontSize: 11, color: U.dim, marginBottom: 4 } }, "\u4F7F\u8005\u306B\u7ACB\u3066\u308B\u5C06"), /* @__PURE__ */ React6.createElement(
         "select",
         {
@@ -40969,7 +41157,7 @@ function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTr
           onChange: (e) => set\u4F7F\u8005(e.target.value || null)
         },
         /* @__PURE__ */ React6.createElement("option", { value: "" }, "\uFF08\u7ACB\u3066\u306A\u3044\u30FB\u89AA\u5584\u306E\u52B9\u304D\u306F\u4E00\uFF09"),
-        \u4F7F\u3048\u308B.map((x) => {
+        \u4F7F\u3048\u308B2.map((x) => {
           const \u5668 = Math.round(((x.gov || 0) + (x.wit || 0)) / 2);
           const \u52B9 = \u5668 >= 90 ? 6 : \u5668 >= 80 ? 5 : \u5668 >= 70 ? 4 : \u5668 >= 60 ? 3 : \u5668 >= 50 ? 2 : 1;
           return /* @__PURE__ */ React6.createElement("option", { key: x.id, value: x.id }, x.name, "\uFF08\u653F", x.gov, "\uFF0F\u77E5", x.wit, "\u3000\u89AA\u5584\uFF0B", \u52B9, "\uFF09");
@@ -42123,6 +42311,7 @@ function \u624B\u67C4\u306E\u968A(s2, corps, castle) {
   if (!\u4E3B) return null;
   return { lord: \u4E3B, at: castle.id, faction: castle.faction, \u5B88\u5099\u968A: true };
 }
+var \u5927\u5408\u6226\u306E\u5E45 = 6e3;
 function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const cvRef = useRef5(null), miniRef = useRef5(null), wrapRef = useRef5(null);
   const [view, setView] = useState8(() => {
@@ -43225,6 +43414,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       campId: camp ? camp.id : null,
       mode: foe ? "clash" : void 0,
       foeId: foe ? foe.id : null,
+      \u5927\u5408\u6226: FIELD.w > \u5927\u5408\u6226\u306E\u5E45,
+      // 広く組まれた野は、大合戦の調べにする（場面の調べ）
       sally: sally2 ? { castleId: sally2.castleId, gens: sally2.gens, local: sally2.local } : null,
       pName: g.factions[playerIsAtk ? army.faction : defFaction].name,
       eName: g.factions[playerIsAtk ? defFaction : army.faction].name,
@@ -44221,15 +44412,16 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const r = courtRank(g, g.player);
     return r ? r.key : null;
   })();
+  const \u6226\u306E\u5834\u9762 = !battle ? null : battle.mode === "wakeme" || battle.\u5927\u5408\u6226 ? "\u5206\u3051\u76EE" : battle.mode === "castle" ? "\u57CE\u653B\u3081" : "\u91CE\u6226";
   useEffect6(() => {
-    if (battle) {
-      \u5834\u9762\u3092\u9078\u3076(battle.mode === "wakeme" ? "\u5206\u3051\u76EE" : battle.mode === "castle" ? "\u57CE\u653B\u3081" : "\u91CE\u6226");
+    if (\u6226\u306E\u5834\u9762) {
+      \u5834\u9762\u3092\u9078\u3076(\u6226\u306E\u5834\u9762);
     } else if (sea) {
       \u5834\u9762\u3092\u9078\u3076("\u91CE\u6226");
     } else {
       \u5834\u9762\u3092\u9078\u3076("\u653F\u52D9", { \u4F4D });
     }
-  }, [battle ? battle.mode : null, !!sea, \u4F4D]);
+  }, [\u6226\u306E\u5834\u9762, !!sea, \u4F4D]);
   if (sea) return /* @__PURE__ */ React9.createElement(SeaScreen, { key: sea.key, ctx: sea, land, onEnd: (bb) => \u6D77\u6226\u3092\u7D42\u3048\u308B(bb) });
   if (battle && battle.\u51FA\u9663\u524D) {
     return /* @__PURE__ */ React9.createElement(
@@ -45744,7 +45936,7 @@ function KassenScreen({ land, onTitle }) {
     ctxRef.current = c;
     setCtx(c);
     set\u7D42(null);
-    \u5834\u9762\u3092\u9078\u3076(r.\u7B4B\u66F8\u304D && r.\u7B4B\u66F8\u304D.\u57CE ? "\u57CE\u653B\u3081" : "\u91CE\u6226");
+    \u5834\u9762\u3092\u9078\u3076(r.\u7B4B\u66F8\u304D && r.\u7B4B\u66F8\u304D.\u57CE ? "\u57CE\u653B\u3081" : "\u5206\u3051\u76EE");
   };
   const \u59CB\u3081\u308B = async (\u65D7) => {
     await \u63A7\u3048\u3092\u6D88\u3059();
@@ -46009,21 +46201,21 @@ function App() {
   useEffect8(() => {
     \u8A2D\u5B9A\u3092\u8AAD\u3080();
     if (typeof window === "undefined") return void 0;
-    const \u89E3\u304F2 = () => {
+    const \u89E3\u304F3 = () => {
       \u89E3\u9320\u3059\u308B();
       \u8D77\u3053\u3057\u76F4\u3059();
     };
     const \u623B\u308A = () => {
       if (!document.hidden) \u8D77\u3053\u3057\u76F4\u3059();
     };
-    window.addEventListener("pointerdown", \u89E3\u304F2);
-    window.addEventListener("touchend", \u89E3\u304F2);
-    window.addEventListener("keydown", \u89E3\u304F2);
+    window.addEventListener("pointerdown", \u89E3\u304F3);
+    window.addEventListener("touchend", \u89E3\u304F3);
+    window.addEventListener("keydown", \u89E3\u304F3);
     document.addEventListener("visibilitychange", \u623B\u308A);
     return () => {
-      window.removeEventListener("pointerdown", \u89E3\u304F2);
-      window.removeEventListener("touchend", \u89E3\u304F2);
-      window.removeEventListener("keydown", \u89E3\u304F2);
+      window.removeEventListener("pointerdown", \u89E3\u304F3);
+      window.removeEventListener("touchend", \u89E3\u304F3);
+      window.removeEventListener("keydown", \u89E3\u304F3);
       document.removeEventListener("visibilitychange", \u623B\u308A);
     };
   }, []);
