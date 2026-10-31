@@ -187,12 +187,19 @@ Math.random = function () {
      数えたいのは「守っている門を捨てて離れていく」ことであって、「新しい持ち場へ
      向かって歩いている」ことではない。付け替えの直後は、その門に着くまで数えない。 */
   const 走らす = (b) => {
-    let 出た = 0, 離れ = 0, 分遣 = 0;
+    let 出た = 0, 離れ = 0, 分遣 = 0, 呼び戻し = 0;
+    const 前の下知 = new Map();
     for (let i = 0; i < 900; i++) {
       A.battleAI(b);
       A.stepBattle(b, 0.5);
       for (const c of b.corps) {
         if (c.side !== 'E' || c.detach) continue;
+        /* 門の射手が持ち場から歩み出ては呼び戻される往き来を数える（同じ門を受け持ったまま、
+           射撃の下知から持ち場へ戻る移動の下知に替わった数） */
+        const 前 = 前の下知.get(c.id);
+        if (前 && 前.下知 === '射撃' && c.order === '移動' && c.holdGate && c.holdGate === 前.門
+          && !c.holdGate.broken && !c.sallied) 呼び戻し++;
+        前の下知.set(c.id, { 下知: c.order, 門: c.holdGate });
         if (c.sortie || c.sallied) 出た++;
         if (c.holdGate && !c.holdGate.broken && !c.routed && !c.withdraw) {
           const gp = A.gatePos(b.map, b.map.layers[c.holdGate.layer], c.holdGate);
@@ -205,7 +212,7 @@ Math.random = function () {
       分遣 = Math.max(分遣, b.corps.filter((c) => c.detach && c.side === 'E').length);
       if (b.result) break;
     }
-    return { 出た, 離れ, 分遣 };
+    return { 出た, 離れ, 分遣, 呼び戻し };
   };
   const 守 = 走らす(仕立て(true));
   const 将 = 走らす(仕立て(false));
@@ -214,6 +221,10 @@ Math.random = function () {
   確('同じ頃合いなら、武将の隊は討って出る', 将.出た > 0, `${将.出た}回`);
   確('守備隊は門を離れない', 守.離れ === 0, `${守.離れ}回`);
   確('守備隊は兵を割かない（分遣を出さない）', 守.分遣 === 0, `${守.分遣}隊`);
+  /* 射撃の下知の行き先が的の居所だったころは、城の盤で間合いを取る足が働かないので隊が門を
+     出て的へ歩き、持ち場の際で呼び戻される往き来を繰り返した */
+  確('門の射手は持ち場から歩み出ては呼び戻される往き来をしない（一戦に二度まで）',
+    守.呼び戻し <= 2 && 将.呼び戻し <= 2, `守備隊の戦 ${守.呼び戻し}度／武将の戦 ${将.呼び戻し}度`);
 }
 
 /* ------------------------------------- 三、武功による取り立ては人を増やす */

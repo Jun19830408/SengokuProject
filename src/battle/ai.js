@@ -1022,7 +1022,7 @@ export function battleAI(b) {
               if (射手 && foes.length) {
                 const t4 = [...foes].sort((x, y2) =>
                   Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
-                issueOrder(b, c, { order: "射撃", tx: t4.x, ty: t4.y, target: t4.id });
+                issueOrder(b, c, { order: "射撃", tx: p2.x, ty: p2.y, target: t4.id });
               } else issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
               continue;
             }
@@ -1049,13 +1049,19 @@ export function battleAI(b) {
                 continue;
               }
             }
-          // 射手は門ごしに射かける。槍組は門を支えて守る。
+          /* 射手は門ごしに射かける。槍組は門を支えて守る。
+
+             射撃の下知の行き先は持ち場のまま、狙いだけを渡す（上の守備隊も同じ）。もとは
+             行き先を的の居所にしていた。城の盤では射撃の間合いを取る足（engine）が働かない
+             ので、行き先がそのまま歩く先になる。隊は門を出て的へ歩き出し、持ち場の際
+             （四十六歩）を越えると呼び戻される――この往き来を二秒ほどごとに繰り返し、
+             門の前で震えて見えた */
           const shooter = c.squads.some((q) => (q.men > 0)
             && (q.type === "yumi" || q.type === "teppo"));
           if (shooter && foes.length) {
             const t3 = [...foes].sort((x, y2) =>
               Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
-            issueOrder(b, c, { order: "射撃", tx: t3.x, ty: t3.y, target: t3.id });
+            issueOrder(b, c, { order: "射撃", tx: p2.x, ty: p2.y, target: t3.id });
             continue;
           }
           issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
