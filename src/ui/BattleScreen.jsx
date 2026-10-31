@@ -6,6 +6,7 @@ import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, i
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限, 城山の形 } from "../battle/shinga.js";
 import { stepBattle, 夜を明かす, 兵糧攻めに移る, 寄せ手の夜の思案, 今の刻, 日の名, 兵糧の日 } from "../battle/engine.js";
 import { 計略を仕掛ける, 計略の見込み, 計略の減り, 仕掛け手, 仕掛けた, 内応の者 } from "../battle/keiryaku.js";
+import { 鼓舞する, 鼓舞の残り, 鼓舞の見込み, 鼓舞の割, 鼓舞の大将か, 近くにも届くか, 鼓舞の回数 } from "../battle/kobu.js";
 import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸, 区の高さ図を外す, 今の面, 面を据える } from "../battle/naname.js";
 import { ARM_STATS, BASE, FIELD, FORESTS, MARSH, MOUNTAINS, HILLS, RIVER, TERRAIN, VILLAGES, WEATHER, WOODS, fieldScale, passable, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
@@ -1381,6 +1382,36 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 );
               })()}
               <FormationPicker corps={selC} onPick={(f) => changeForm(selC, f)} />
+              {/* 計略「鼓舞」（battle/kobu.js）。将が兵を励まし、失った士気を取り戻させる。
+                  大名と総大将は全軍も、統率八十五以上の将は近くの味方の隊も励ませる */}
+              {!selC.detach && selC.side === "P" && (() => {
+                const 残 = 鼓舞の残り(selC), 見込 = 鼓舞の見込み(selC), 割 = 鼓舞の割(selC);
+                const 大 = 鼓舞の大将か(b, selC), 近 = 近くにも届くか(selC);
+                const 押す = (全軍) => { 鼓舞する(b, selC, { 全軍 }); force((n) => (n + 1) % 1000); };
+                return (
+                  <>
+                    <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim }}>
+                      計略　鼓舞（この合戦で残り{残}回／{鼓舞の回数(selC)}回）
+                    </div>
+                    <div className={大 ? "g2" : ""}>
+                      {大 && (
+                        <button className="btn sm" style={{ width: "100%" }} disabled={残 <= 0}
+                          onClick={() => 押す(true)}>鼓舞（全軍）</button>
+                      )}
+                      <button className="btn sm" style={{ width: "100%" }} disabled={残 <= 0}
+                        onClick={() => 押す(false)}>{近 ? "鼓舞（自部隊と近くの隊）" : "鼓舞（自部隊）"}</button>
+                    </div>
+                    <div style={{ fontSize: 10, color: U.dim, lineHeight: 1.5 }}>
+                      成る見込み {Math.round(見込 * 100)}%。成れば失った士気の{Math.round(割 * 100)}%を取り戻す
+                      （この隊なら士気{Math.round(selC.morale)}→{Math.round(selC.morale + (100 - selC.morale) * 割)}）。
+                      統率か知略の高いほう（{Math.max(selC.gen.lead || 0, selC.gen.wit || 0)}）で決まる。
+                      {大 ? "大名・総大将は全軍も励ませる。" : ""}
+                      {近 ? "統率八十五以上なので、近く（三百歩）の味方の隊にも届く。" : ""}
+                      統率か知略が七十以上なら一つの合戦で二度、それ未満は一度。
+                    </div>
+                  </>
+                );
+              })()}
               {!selC.detach && (
                 <>
                   <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim }}>

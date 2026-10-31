@@ -2812,6 +2812,15 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
         ctx.globalAlpha = a * 0.45;
         ctx.fillStyle = "#FFF2CE";
         ctx.beginPath(); ctx.arc(f.x, f.y, 4 + (1 - a) * 7, 0, 7); ctx.fill();
+      } else if (f.k === "鼓舞") {
+        /* 計略「鼓舞」（battle/kobu.js）。届いた隊のまわりに金の輪が広がって薄れる */
+        const r = (f.r || 40) * (0.35 + (1 - a) * 0.9);
+        ctx.globalAlpha = a * 0.8;
+        ctx.strokeStyle = "#E9C45C"; ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.ellipse(f.x, f.y, r, r * 0.45, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = a * 0.35;
+        ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.ellipse(f.x, f.y, r * 0.8, r * 0.36, 0, 0, Math.PI * 2); ctx.stroke();
       } else if (f.k === "chip") {
         // 飛び散る木屑。撃たれた向きへ飛び、落ちる
         const u = f.t;
