@@ -1,7 +1,7 @@
 import { 木立を焼く } from "../battle/mori.js";
 import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 本丸への道, 門の輪, 出城が保つ, 出城の内か } from "../battle/castleMap.js";
-import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す, 狙いの組 } from "../battle/corps.js";
+import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す, 狙いの組, 狙う所 } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限, 城山の形 } from "../battle/shinga.js";
 import { stepBattle, 夜を明かす, 兵糧攻めに移る, 寄せ手の夜の思案, 今の刻, 日の名, 兵糧の日 } from "../battle/engine.js";
@@ -678,8 +678,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
       return;
     }
     if (foe) {
-      /* 押した所にいちばん近い敵の組へ向かう（芯へ向かうと、間延びした隊の端へ引かれる） */
-      const 組 = 狙いの組(foe, f.x, f.y) || foe;
+      /* 押した所にいちばん近い敵の組へ向かう（間延びした隊なら。battle/corps.js 狙う所。芯へ向かうと、
+         間延びした隊の端へ引かれる） */
+      const 組0 = 狙いの組(foe, f.x, f.y);
+      const 組 = 狙う所({ x: c.x, y: c.y, 狙い組: 組0 ? 組0.id : null }, foe);
       const d = Math.hypot(c.x - 組.x, c.y - 組.y) || 1;
       // 指示したときはまっすぐ向かう。森へ入れ、山を登れ、川を渡れという命令もありうる。
       const gx = 組.x + ((c.x - 組.x) / d) * 38, gy = 組.y + ((c.y - 組.y) / d) * 38;
@@ -880,10 +882,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
     /* 狙う組（battle/corps.js 狙う所）。敵の体を押していれば押した所の組、名札や敵の帳からなら
        こちらの隊にいちばん近い組。敵の隊の芯へ向かうと、間延びした隊の端へ引き寄せられる */
     const 押 = 押した所Ref.current && 押した所Ref.current.id === foe.id ? 押した所Ref.current : null;
-    const 組 = (押 ? 狙いの組(foe, 押.x, 押.y) : 狙いの組(foe, c.x, c.y)) || foe;
+    const 組0 = 押 ? 狙いの組(foe, 押.x, 押.y) : 狙いの組(foe, c.x, c.y);
+    const 組 = 狙う所({ x: c.x, y: c.y, 狙い組: 組0 ? 組0.id : null }, foe);
     const d = Math.hypot(c.x - 組.x, c.y - 組.y) || 1;
     const 間 = o === "突撃" ? 20 : o === "射撃" ? Math.min(d, 150) : 38;
-    const patch = { order: o, target: foe.id, 狙い: foe.id, 狙い組: 組 === foe ? null : 組.id,
+    const patch = { order: o, target: foe.id, 狙い: foe.id, 狙い組: 組0 ? 組0.id : null,
       tx: 組.x + ((c.x - 組.x) / d) * 間, ty: 組.y + ((c.y - 組.y) / d) * 間 };
     if (o === "突撃") patch.chargeT = c.formation === "鋒矢" ? 26 : 16;
     下知(b, c, patch);
