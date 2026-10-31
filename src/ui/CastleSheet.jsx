@@ -215,7 +215,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
               </div>
               {様.寄せ手 && 様.寄せ手.強攻 && (
                 <div style={{ ...行, color: "#B0483C" }}>
-                  寄せ手は城方の一.六倍を超えている。月に四割五分の目で攻めかかってくる
+                  寄せ手は城方の二倍を超えている。月に四割五分の目で攻めかかってくる（一度で落ちる見込み{Math.round((様.寄せ手.強攻の見込み || 0) * 100)}％）
                 </div>
               )}
               {様.後詰ら.length > 0 ? (
@@ -298,7 +298,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
               )}
               {攻.強攻 && (
                 <div style={{ ...行, color: "#3E7A3A" }}>
-                  数で押せる。月に四割五分の目で攻めかかる
+                  数で押せる（城方の二倍を超える）。月に四割五分の目で攻めかかる（一度で落とせる見込み{Math.round((攻.強攻の見込み || 0) * 100)}％）
                 </div>
               )}
               {攻.後詰ら.length > 0 && (
