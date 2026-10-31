@@ -660,7 +660,13 @@ export function BattleScreen({ ctx, land, onEnd }) {
       /* 筋書きの一戦は、布陣を動かせない（GDD 8.9）。
          関ヶ原の隊は当時の布陣図どおりに置いてある。並べ替えられては、
          史実の布陣から始めるという肝が消える。陣形と向きだけは決められる。 */
-      if (b.筋書き) { set咎め("この戦の布陣は史実のままである。陣形と向きだけ決められる。"); return; }
+      /* 天下分け目（battle/wakemeikusa.js）も筋書きの印を立てて陣立てどおりに置くが、史実の
+         布陣ではない。もとは天下分け目でも「史実のまま」と咎めていた */
+      if (b.筋書き) {
+        set咎め(b.分け目 ? "この戦の布陣は陣立てのままである。陣形と向きだけ決められる。"
+          : "この戦の布陣は史実のままである。陣形と向きだけ決められる。");
+        return;
+      }
       if (inOwnZone(b, f.x, f.y)) { c.x = f.x; c.y = f.y; c.tx = f.x; c.ty = f.y; placeSquads(c, true); }
       return;
     }
@@ -977,7 +983,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
       {b.phase === "deploy" && (
         <div style={{ display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", flexWrap: "wrap", width: "100%" }}>
           <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.65, flex: 1 }}>
-            {b.筋書き
+            {/* 天下分け目は筋書きの印を立てるが、関ヶ原ではない。もとは関ヶ原の文（当時の布陣・
+                条件が揃えば動く黄の隊）が出ていた。天下分け目の黄の隊を動かす決まりは無い */}
+            {b.分け目
+              ? "布陣は陣立てのままです。隊を選び、陣形と向きだけ決めてください。高みと押さえの隊は持ち場を守り、敵が来なければやがて持ち場を離れて戦います。黄の隊は去就が定まっていません――撃ちも撃たれもせず、動きません。"
+              : b.筋書き
               ? "布陣は当時のままです。隊を選び、陣形と向きだけ決めてください。黄の隊は去就が定まっていません――撃ちも撃たれもせず、条件が揃うまで動きません。"
               : ctx.mode === "castle"
                 ? (b.map && b.map.広い
