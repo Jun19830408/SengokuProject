@@ -24,7 +24,8 @@ import { clamp } from "../core/util.js";
      しくじれば … 回数だけが減る（兵に届かなかっただけで、士気は動かない）
 
    崩れた隊にも届く。崩れた隊の立ち直り（engine）は士気で決まるので、鼓舞は崩れた隊を
-   早く立ち直らせる――将が馬を返して兵をまとめ直す形である。盤の外へ落ちた隊（潰）、
+   早く立ち直らせる――大名や総大将が全軍を励ます形である。ただし崩れて逃げている隊の将は、
+   己が鼓舞することはできない（立ち直ってから）。盤の外へ落ちた隊（潰）、
    去就の定まらぬ隊（日和見）、分遣した隊には届かない（分遣は本隊の将の手の内にある）。
    ========================================================================== */
 
@@ -57,6 +58,7 @@ export function 鼓舞の届く先(b, c, 全軍 = false) {
 export function 鼓舞する(b, c, { 全軍 = false } = {}) {
   if (!b || b.phase !== "fight") return { ok: false, 文: "合戦のさなかでなければ鼓舞できない。" };
   if (!c || !c.gen || !届く隊か(c, c.side)) return { ok: false, 文: "鼓舞する将がいない。" };
+  if (c.routed) return { ok: false, 文: `${c.gen.name}隊は崩れている。立ち直るまで鼓舞できない。` };
   if (鼓舞の残り(c) <= 0) return { ok: false, 文: `${c.gen.name}はこの合戦ではもう鼓舞できない。` };
   c.鼓舞の残り = 鼓舞の残り(c) - 1;
   c.鼓舞の刻 = b.t;
@@ -90,9 +92,9 @@ export function 鼓舞する(b, c, { 全軍 = false } = {}) {
    一隊ごとに四十秒は間を空ける（二度ある将が続けざまに使い切らない）。
    遊ぶ側の手ずから率いる隊には、遊ぶ側が鼓舞を下す。 */
 export function 采配の鼓舞(b) {
-  if (!b || b.phase !== "fight") return;
+  if (!b || b.phase !== "fight" || b.鼓舞なし) return;     // 鼓舞なし … ほかの梃子だけを測る試験のため
   for (const c of b.corps) {
-    if (!c.gen || !届く隊か(c, c.side)) continue;
+    if (!c.gen || !届く隊か(c, c.side) || c.routed) continue;
     if (c.side === "P" && !c.auto) continue;
     if (鼓舞の残り(c) <= 0) continue;
     if (c.鼓舞の刻 != null && b.t - c.鼓舞の刻 < 40) continue;

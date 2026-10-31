@@ -69,6 +69,9 @@ function 一戦(賽, o) {
     E.push(H.makeCorps('E', 将('e' + i, 衆器), 0, Math.round(衆兵 / 4), 衆練, 衆練,
       W / 2 + (i - 1.5) * 240, Hh * 0.28, Math.PI / 2, '#B0483C'));
   const b = H.createBattle(P, E, 'E');
+  /* 計略「鼓舞」は使わせない。ここで測るのは地と器量と伏兵の梃子である。鼓舞を采配だけが
+     使うと、手ずから保つ側（遊ぶ側）との釣り合いが崩れる（鼓舞は tests/kobu が見る） */
+  b.鼓舞なし = true;
   b.mode = 'field'; b.dusk = 600; b.phase = 'fight'; b.face = 'S'; b.myFar = false; b.陣 = true;
   for (const c of b.corps) H.placeSquads(c, true);
   for (const c of E) c.auto = true;
