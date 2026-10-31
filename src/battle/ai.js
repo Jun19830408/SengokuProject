@@ -3,6 +3,7 @@ import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, de
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt, 地の高さ, 高み } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { 采配の計略 } from "./keiryaku.js";
+import { 采配の鼓舞 } from "./kobu.js";
 import { clamp } from "../core/util.js";
 
 /* ------------------------------------- 先客のいる敵と、前をふさぐ味方（GDD 8.4）
@@ -631,6 +632,8 @@ export function battleAI(b) {
   setAiIssuing(true);
   // 去就の定まらぬ隊（日和見）は采配の目にも入らない（GDD 8.9）
   const alive = b.corps.filter((c) => !c.dead && !c.destroyed && !c.日和見);
+  /* 計略「鼓舞」（battle/kobu.js）。士気の落ちた采配の隊は、将が兵を励ます */
+  采配の鼓舞(b);
   /* 采配の側が結んだ内応は、采配が頃合いを計って動かす（GDD 11.2）。
 
      遊ぶ側は敵の隊の帳面から「内応させる」を押す。采配にはその画面が無いので、
