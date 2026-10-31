@@ -1,5 +1,5 @@
 import { MAX_CORPS, fieldScale } from "./field.js";
-import { axisOf, fromUV } from "./castleMap.js";
+import { axisOf, fromUV, inLayer, 門の輪, 出城が保つ, 出城の内か } from "./castleMap.js";
 import { makeCorps } from "./corps.js";
 import { rosterTake } from "../core/roster.js";
 import { 守りの割り付け } from "../core/garrison.js";
@@ -88,4 +88,30 @@ export function 城方の隊を立てる(s, castle, map, { defGens, 割り付け
     if (def.length >= MAX_CORPS) break;
   }
   return def;
+}
+
+/* 朝の布陣を終えたら、城方の隊の受け持ちを、置いた所で決め直す（数日がかりの城攻め。
+   BattleScreen 朝の布陣）。遊ぶ側の申し出は「２日目の前に守勢側もあらためて布陣を整えられ、
+   例えば、残った城門の一つに兵を集中するなどの方策や、逆に城外に出て決戦を挑むこともできる
+   ように」であった。側 … 決め直す城方の側（遊ぶ側が城方なら "P"）。
+     ・破れていない門の持ち場（門のすぐ内）から百七十歩の内に置いた隊は、その門を受け持つ。
+       一つの門に幾隊でも集められる
+     ・城の内のほかの所に置いた隊は、受け持ちを持たない（采配が守るべき門を選ぶ）
+     ・城の外に置いた隊は、野に出て寄せ手と戦う（ai.js 城の外で戦う） */
+export function 朝の受け持ちを決める(b, m, 側) {
+  if (!m) return;
+  const 出 = 出城が保つ(m) ? m.出城 : null;
+  const 場 = [...m.gates, ...(出 ? 出.gates : [])].filter((g) => !g.broken).map((g) => {
+    const a = axisOf(門の輪(m, g), g);
+    return { g, p: fromUV(m, a, g.off, a.half - (g.出城 ? 30 : 14)) };
+  });
+  for (const c of b.corps) {
+    if (c.side !== 側 || c.side === b.attacker || c.dead || c.destroyed || c.後詰) continue;
+    const 近 = 場.reduce((a, x) => (!a || Math.hypot(x.p.x - c.x, x.p.y - c.y) < Math.hypot(a.p.x - c.x, a.p.y - c.y) ? x : a), null);
+    const 内 = inLayer(m, m.layers[0], c.x, c.y) || (!!出 && 出城の内か(m, c.x, c.y));
+    c.引き取り = null; c.持ち場に着いた = false; c.sallied = false; c.城外 = false;
+    if (近 && Math.hypot(近.p.x - c.x, 近.p.y - c.y) < 170) c.holdGate = 近.g;
+    else if (内) c.holdGate = null;
+    else { c.holdGate = null; c.城外 = true; }
+  }
 }
