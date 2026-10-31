@@ -1187,7 +1187,8 @@ export function advanceMonth(prev, g) {
         cs.food = Math.max(0, cs.food - Math.round((cs.local * 0.35 + 600) * (1 + 付城の締め(sg2))));
         cs.min = Math.max(0, cs.min - 5);
         bes.food -= Math.round(bes.men * 0.09);
-        if (cs.food <= 0 || cs.min < 25) {
+        /* 城が開くのは兵糧が尽きたときだけ（民心では開かない。ui/MapScreen.jsx 兵糧攻めのひと月） */
+        if (cs.food <= 0) {
           const 守旗 = 守りを任せた囲み ? 守りの寄親(s, cs) : null;
           sackCastle(s, cs, bes, false);
           if (守旗) {

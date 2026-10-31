@@ -172,7 +172,10 @@ function 兵糧攻めのひと月(s, sg, castle, army) {
       text: `${castle.name}の囲みに疫病が出た。寄せ手${fmt(a1)}人、城方${fmt(d1)}人を失った。` });
   }
   army.food -= Math.round(army.men * 0.09);
-  if (castle.food <= 0 || castle.min < 25) {
+  /* 城が開くのは兵糧が尽きたときだけである。もとは民心が二十五を割っても開いていた。
+     遊ぶ側の申し出は「民心25を下回ったら開城してしまうのですか？それは変なので辞めたい」で
+     あった。民心は囲まれれば下がり続け、年貢や一揆には効く */
+  if (castle.food <= 0) {
     s.chronicle.push({ y: s.year, m: s.month, text: `兵糧尽き、${castle.name}は開城した。` });
     sackCastle(s, castle, army, false);     // 開城なので城下の荒れは軽い
   }
@@ -1813,7 +1816,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           const 報 = 開いた
             ? `${castle.name}への強攻を打ち切り、兵糧攻めに移った。ひと月の囲みで兵糧が尽き、${castle.name}は開城した。`
             : `${castle.name}への強攻を打ち切り、兵糧攻めに移った。ひと月囲んだ（囲みの締め${sg.enc}％・囲んで${sg.months}か月）。`
-              + (見える ? `城の兵糧 ${fmt(前の糧)}→${fmt(Math.round(castle.food))}、民心 ${前の民}→${Math.round(castle.min)}（二十五を割れば城は開く）。`
+              + (見える ? `城の兵糧 ${fmt(前の糧)}→${fmt(Math.round(castle.food))}、民心 ${前の民}→${Math.round(castle.min)}。`
                 : "城の内は窺えない。");
           s.monthEvents = [...(s.monthEvents || []), 報];
         }
