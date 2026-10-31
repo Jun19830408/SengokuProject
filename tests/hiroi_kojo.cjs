@@ -213,7 +213,8 @@ function 攻める(i, 賽) {
   b.兵糧 = { 寄せ手: { 石: 3000, 日に: 100, 食った: 0 }, 城方: { 石: 5000, 日に: 80, 食った: 0 } };
   確('日数は三日', A.城攻めの日数 === 3);
   確('夜明けは卯の刻', A.今の刻(b) === '卯');
-  const 走る = () => { for (let k = 0; k < 20000 && b.phase === 'fight'; k++) { A.stepBattle(b, 0.25); if (k % 4 === 0) A.battleAI(b); } };
+  let 采を執る = false;            // 遊ぶ側が采を執っている（止まった戦の見切りで閉じない）
+  const 走る = () => { for (let k = 0; k < 20000 && b.phase === 'fight'; k++) { if (采を執る) b.手出し = b.t; A.stepBattle(b, 0.25); if (k % 4 === 0) A.battleAI(b); } };
   走る();
   確('日が暮れれば夜の段に移る', b.phase === 'night', `${b.phase}・${Math.round(b.t)}秒`);
   if (b.phase === 'night') {
@@ -240,6 +241,11 @@ function 攻める(i, 賽) {
     確('塀の外の寄せ手は矢の届かぬ所へ退く', atk.every((c) => c.dead || c.destroyed || c.withdraw || 塀まで(c) <= 0
       || 塀まで(c) >= 190 * A.fieldScale() + 100), atk.map((c) => Math.round(塀まで(c))).join('・') + '歩');
     void 気前;
+    /* 二日目からは寄せ手を控えさせ、三日目の暮れまで城を保たせる。ここで見るのは日が尽きたときの決まりで
+       ある。城の門と矢玉を強めてから、寄せ手が二日目のうちに総崩れになることがある。控えた寄せ手は
+       遊ぶ側が采を執っている形にする（でなければ止まった戦の見切りで三分のうちに閉じる） */
+    for (const c of atk) { c.auto = false; c.order = '待機'; c.tx = c.x; c.ty = c.y; }
+    采を執る = true;
     走る();
     if (b.phase === 'night') { A.夜を明かす(b); 確('三日目の朝', b.日 === 3); 走る(); }
     確('三日目の日暮れか、城が落ちて城攻めは終わる（三日目の夜は無い）', b.phase === 'over' && b.日 <= 3, `${b.phase}・${b.日}日目・${b.result}`);

@@ -1,5 +1,5 @@
 import { MAP, 城の域か, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 列の順, 門の輪, 出城が保つ, 出城の内か } from "./castleMap.js";
-import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く, 出城から引き取らせる, 引き取りを進める, 狙う所 } from "./corps.js";
+import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く, 出城から引き取らせる, 引き取りを進める, 狙う所, 城内の道を進める } from "./corps.js";
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt, 地の高さ, 高み } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
 import { 采配の計略 } from "./keiryaku.js";
@@ -1077,31 +1077,14 @@ export function battleAI(b) {
         /* 出城の守り手（下の 出城を守る）。門が保つあいだは常の門の守りと同じに受け持つ */
         if ((c.引き取り || (c.holdGate && c.holdGate.出城)) && 出城を守る(b, c, alive)) continue;
         let g2 = c.holdGate;
-        /* 一割まで待つと、門が破れる前に下がりきれない。四半分で見切りをつける。
-           「城門が一割を切っても内の門へ行かない」という声はここである。
-           出城の門だけは見切らない（出城の見切りは 出城を守る が受け持つ） */
-        const need = !g2 || (!g2.出城 && (g2.broken || g2.hp / g2.max < 0.25));
-        if (need) {
-          // 持ち場があるなら、それより内の門だけを見る（下がるのであって、進み出るのではない）
-          const 残り = MAP.gates.filter((x) => !x.broken && (!g2 || x.layer > g2.layer));
-          if (残り.length) {
-            const 輪 = Math.min(...残り.map((x) => x.layer));        // まだ破れていない、いちばん外の輪
-            const 場 = (x) => gatePos(MAP, 門の輪(MAP, x), x);
-            const 次 = 残り.filter((x) => x.layer === 輪).sort((x, y2) => {
-              const ga = 場(x), gb = 場(y2);                          // 同じ輪なら手近な門を受け持つ
-              return Math.hypot(ga.x - c.x, ga.y - c.y) - Math.hypot(gb.x - c.x, gb.y - c.y);
-            })[0];
-            if (次 && 次 !== g2) {
-              const 下がる = !!g2;
-              c.holdGate = 次; g2 = 次;
-              b.log.push({ t: b.t,
-                text: 下がる ? `${c.gen.name}隊は${次.key}の内へ下がった。`
-                  : `${c.gen.name}隊が${次.key}を固めた。` });
-            }
-          } else if (g2 && g2.broken) {
-            c.holdGate = null; g2 = null;                            // 守るべき門が尽きた。本丸へ籠る。
-          }
+        /* 守り手の動き（下の 守り手の動き）。城の内の道を辿っているあいだは、それを進める。
+           もとは「持ち場の門が四半分を切れば、まだ破れていない内の輪の手近な門へ下がる」だけで、
+           門が破れる前に下がり、道も引かずに歩くので内の輪の塀に貼りついていた */
+        if (c.城内道) {
+          if (城内の道を進める(b, c)) { issueOrder(b, c, { order: "移動", tx: c.tx, ty: c.ty }); continue; }
         }
+        if (!(g2 && g2.出城) && 守り手の動き(b, c, alive)) continue;
+        g2 = c.holdGate;                 // 守り手の動きが持ち場を解いたら（守る門が尽きた）、本丸へ籠る
         /* 城方の戦い方（GDD 9.3）
            門のすぐ内に張り付いて門を支え、外の寄せ手へ射かける。
            寄せ手が弱れば門を開いて打って出る。
@@ -1218,6 +1201,19 @@ export function battleAI(b) {
           const keep = MAP.layers[MAP.layers.length - 1];
           if (keep) {
             const kx = MAP.cx, ky = MAP.cy;      // 本丸の中心
+            /* 本丸の外にいれば、手近な本丸の門まで道を辿って入る（まっすぐ歩けば塀に貼りつく） */
+            if (!c.引き取り && !inLayer(MAP, keep, c.x, c.y)) {
+              const 入 = keep.gates.slice().sort((x, y) => {
+                const px = gatePos(MAP, keep, x), py = gatePos(MAP, keep, y);
+                return Math.hypot(px.x - c.x, px.y - c.y) - Math.hypot(py.x - c.x, py.y - c.y);
+              })[0];
+              const 道 = 入 ? routeToCastleGate(MAP, 入, c.x, c.y) : null;
+              if (入 && 道 && 道.length) {
+                issueOrder(b, c, { order: "移動", tx: c.x, ty: c.y });
+                c.引き取り = { 道: 道.map((q) => ({ ...q })), 門: 入, 刻: b.t };
+                continue;
+              }
+            }
             if (Math.hypot(c.x - kx, c.y - ky) > 60) {
               issueOrder(b, c, { order: "移動", tx: kx, ty: ky });
             } else {
@@ -1696,3 +1692,105 @@ export function battleAI(b) {
   setAiIssuing(false);
 }
 
+
+/* ==========================================================================
+   守り手の動き（GDD 9.3）
+
+   遊ぶ側の申し出は「門が破られたあともしばらくは門の前で戦い、士気や兵数が2割を切ったり
+   した場合により内側に向かうようにする」「よりリアルな守勢側の動き」であった。測ると、
+   寄せ手は一つの門に集まって攻め、城兵の半ばは寄せ手の来ない門で遊んだまま、通り道の隊が
+   一隊ずつ討たれていた。
+
+     一、加勢     … 寄せ手の来ていない門の将の隊は、同じ輪のうちで寄せ手が守り手の一.五倍を
+                    超えて群がる門へ回る（城の内の道を辿る）。守備隊は持ち場を離れない
+     二、破れ口   … 門が破れても、その門の隊は門のすぐ内で、破れ口から入る寄せ手に当たる。
+                    士気が二十か兵が二割を切れば、ひとつ内の輪へ引き取る
+     三、輪の固め直し … 同じ輪のどこかの門が破れたら、その輪のほかの門の隊は、取り残される前に
+                    ひとつ内の輪へ引き取る。入るのは手近な内の門、受け持つのは破れ口に向いた門
+     四、籠る     … 守る門が尽きれば本丸へ
+   内の輪へは「引き取り」（corps.js 引き取りを進める。道を辿り、門の前で内へ迎え入れる）で入る。
+   返すのは、この刻の下知を出したか
+   ========================================================================== */
+const 弱ったか = (c) => c.morale < 20 || corpsMen(c) < corpsMax(c) * 0.2;
+const 門の外 = (g) => gatePos(MAP, 門の輪(MAP, g), g);
+const 門の内の場 = (g, 深 = 14) => { const a = axisOf(門の輪(MAP, g), g); return fromUV(MAP, a, g.off, a.half - 深); };
+/* 寄せ手が次に寄せる輪（まだ破れていない門の残る、いちばん外の輪）の門のうち、受け持つ門。
+   寄せ手の群がる門、無ければ破れ口に向いた門、無ければ手近な門 */
+function 固める門(b, c, alive, 輪より外 = -1) {
+  const 残り = MAP.gates.filter((x) => !x.broken && !x.出城 && x.layer > 輪より外);
+  if (!残り.length) return null;
+  const 輪 = Math.min(...残り.map((x) => x.layer));
+  const 破れ口 = MAP.gates.filter((x) => x.broken && !x.出城).map(門の外);
+  const 寄 = (g) => { const p = 門の外(g); return alive.reduce((t, o) => (o.side === b.attacker && !o.routed && Math.hypot(o.x - p.x, o.y - p.y) < 420 ? t + corpsMen(o) : t), 0); };
+  const 口まで = (g) => { const p = 門の外(g); return 破れ口.length ? Math.min(...破れ口.map((q) => Math.hypot(q.x - p.x, q.y - p.y))) : Math.hypot(p.x - c.x, p.y - c.y); };
+  return 残り.filter((x) => x.layer === 輪).sort((x, y) => (寄(y) - 寄(x)) || (口まで(x) - 口まで(y)))[0];
+}
+/* 受け持つ門 次 へ移る。次の輪の外にいれば、手近な門から引き取りで内へ入り、内を回る */
+function 持ち場を移る(b, c, 次, 文) {
+  if (!次) return false;
+  c.holdGate = 次; c.持ち場に着いた = false; c.sallied = false; c.chasing = false;
+  const 輪 = 門の輪(MAP, 次);
+  if (inLayer(MAP, 輪, c.x, c.y)) {
+    /* 道は持ち場（門の十四歩内）の手前、門の五十歩内で終える。塀の際の升目まで引くと、塀の帯に
+       踏み込んで外へ押し出される。残りは常の持ち場への寄り（下の 城方の戦い方）が詰める */
+    const p = 門の内の場(次, 50);
+    const 道 = navPath(MAP, c.x, c.y, p.x, p.y);
+    c.城内道 = { 道: [...((道 || []).map((q) => ({ ...q }))).filter((q) => Math.hypot(q.x - p.x, q.y - p.y) > 30), { x: p.x, y: p.y, r: 26 }], 刻: b.t, 先: 次 };
+    issueOrder(b, c, { order: "移動", tx: c.城内道.道[0].x, ty: c.城内道.道[0].y });
+  } else {
+    const 入 = 輪.gates.filter((x) => !x.broken).sort((x, y) => {
+      const px = 門の外(x), py = 門の外(y);
+      return Math.hypot(px.x - c.x, px.y - c.y) - Math.hypot(py.x - c.x, py.y - c.y);
+    })[0] || 次;
+    const 道 = routeToCastleGate(MAP, 入, c.x, c.y);
+    issueOrder(b, c, { order: "移動", tx: c.x, ty: c.y });          // 下知は引き取りを解くので、先に命じる
+    c.引き取り = { 道: (道 && 道.length ? 道 : [{ ...門の外(入), r: 30 }]).map((q) => ({ ...q })), 門: 入, 刻: b.t, 次 };
+    c.城内道 = null;
+  }
+  if (文) b.log.push({ t: b.t, text: 文 });
+  return true;
+}
+function 守り手の動き(b, c, alive) {
+  const g = c.holdGate;
+  /* 持ち場が無い（本丸に籠る隊や、城の外から戻った隊）。守る門が残れば受け持つ */
+  if (!g) {
+    if (c.引き取り) return false;
+    const 次 = 固める門(b, c, alive);
+    return 次 ? 持ち場を移る(b, c, 次, `${c.gen.name}隊が${次.key}を固めた。`) : false;
+  }
+  if (g.broken) {
+    /* 二、破れ口で戦う。弱れば内の輪へ */
+    if (!弱ったか(c) && !c.routed) {
+      const gp = 門の外(g), p = 門の内の場(g, 30);
+      const 入る = alive.filter((o) => o.side === b.attacker && !o.routed && !o.withdraw && Math.hypot(o.x - gp.x, o.y - gp.y) < 260 * fieldScale());
+      if (入る.length) {
+        const 的 = 入る.reduce((a, o) => (Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a), 入る[0]);
+        if (!(c.order === "接戦" && c.target === 的.id)) issueOrder(b, c, { order: "接戦", tx: 的.x, ty: 的.y, target: 的.id });
+      } else if (Math.hypot(c.x - p.x, c.y - p.y) > 40) issueOrder(b, c, { order: "移動", tx: p.x, ty: p.y });
+      else issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
+      return true;
+    }
+    const 次 = 固める門(b, c, alive, g.layer);
+    if (次) return 持ち場を移る(b, c, 次, `${c.gen.name}隊は${g.key}の破れ口を支えきれず、${次.key}の内へ引き取る。`);
+    c.holdGate = null;                      // 守る門が尽きた。本丸へ籠る（下の決まり）
+    return false;
+  }
+  /* 三、輪の固め直し。同じ輪のどこかが破れたら、内の輪へ */
+  if (MAP.gates.some((x) => !x.出城 && x.layer === g.layer && x.broken)) {
+    const 次 = 固める門(b, c, alive, g.layer);
+    if (次) return 持ち場を移る(b, c, 次, `${c.gen.name}隊は${g.key}を引き払い、${次.key}を固めに回る。`);
+    return false;
+  }
+  /* 一、加勢。寄せ手の来ていない門の将の隊は、同じ輪のうちで寄せ手が群がる門へ回る */
+  if (!c.守備隊 && !c.sallied && !c.引き取り) {
+    const 寄 = (x, R) => { const p = 門の外(x); return alive.reduce((t, o) => (o.side === b.attacker && !o.routed && Math.hypot(o.x - p.x, o.y - p.y) < R ? t + corpsMen(o) : t), 0); };
+    const 守 = (x) => alive.reduce((t, o) => (o.side !== b.attacker && o.holdGate === x ? t + corpsMen(o) : t), 0);
+    if (寄(g, 600 * fieldScale()) === 0) {
+      const 先 = MAP.gates.filter((x) => x !== g && !x.broken && !x.出城 && x.layer === g.layer)
+        .map((x) => ({ x, 寄: 寄(x, 320 * fieldScale()), 守: 守(x) }))
+        .filter((v) => v.寄 > v.守 * 1.5).sort((p, q) => (q.寄 - q.守) - (p.寄 - p.守))[0];
+      if (先) return 持ち場を移る(b, c, 先.x, `${c.gen.name}隊は${先.x.key}へ加勢に回った。`);
+    }
+  }
+  return false;
+}
