@@ -1918,7 +1918,13 @@ export function stepBattle(b, dt) {
           if (tgt) {
             f.cool = 2.6;
             const kit = SIEGE_KIT[tgt.kit] || SIEGE_KIT["なし"];
-            let hit = 11 * kit.guard * (f.出城 ? 1.5 : 1);   // 出城の矢倉は鉄砲櫓。一発が重い
+            /* 出城の矢倉は鉄砲櫓。一発が重い（常の矢倉の三倍）。
+               城の守りで寄せ手を最も削るのは、多くの城で矢倉である（出城の無い四城を測ると、三城で
+               矢倉がいちばんで、寄せ手の損の四割から七割半。小さな館では斬り合いが勝る）。門の射手が
+               持ち場を出ては呼び戻される往き来を止めると、本城の守りが固くなり、出城に将と兵を
+               割いた城のほうが寄せ手の損が軽くなった（出城の有無で〇.九八倍。tests/demaru）。
+               出城の値打ちは寄せ手を引きつけて射ることにあるので、出城の矢倉を一.五倍から上げた */
+            let hit = 11 * kit.guard * (f.出城 ? 3 : 1);
             const qs = tgt.squads.filter((q) => q.men > 0)
               .sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y));
             for (const q of qs) {

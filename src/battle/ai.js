@@ -552,9 +552,27 @@ function 出城を守る(b, c, alive) {
   const 入った = alive.filter((o) => o.side === b.attacker && !o.routed && !o.withdraw && 出城の内か(MAP, o.x, o.y, 6));
   const 入兵 = 入った.reduce((t, o) => t + corpsMen(o), 0);
   const 兵 = corpsMen(c);
-  const 見切る = 出.落ちた || c.morale < 25
+  /* 本城の外の輪が、どこかの門で破れた。出城は大手の前を固める曲輪であって、寄せ手が輪の
+     内へ入ったなら、出城に籠っていても城は守れない。背の口から引き取り、まだ破れていない
+     内の輪の門に就く。出城に将と兵を回した城は内の輪が薄いので、ここで戻す */
+  const 輪が破れた = MAP.gates.some((x) => !x.出城 && x.layer === 0 && x.broken);
+  const 見切る = 出.落ちた || c.morale < 25 || 輪が破れた
     || (g.broken && (兵 < corpsMax(c) * 0.3 || (入兵 > 兵 * 3 && 兵 < corpsMax(c) * 0.6)));
-  if (見切る) return 出城から引き取らせる(b, c);
+  if (見切る) {
+    const 引いた = 出城から引き取らせる(b, c);
+    if (引いた && 輪が破れた && c.引き取り) {
+      const 残り = MAP.gates.filter((x) => !x.broken && !x.出城 && x.layer > 0);
+      if (残り.length) {
+        const 輪 = Math.min(...残り.map((x) => x.layer)), 門 = c.引き取り.門;
+        const 門の場 = gatePos(MAP, 門の輪(MAP, 門), 門);
+        c.引き取り.次 = 残り.filter((x) => x.layer === 輪).sort((x, y2) => {
+          const ga = gatePos(MAP, 門の輪(MAP, x), x), gb = gatePos(MAP, 門の輪(MAP, y2), y2);
+          return Math.hypot(ga.x - 門の場.x, ga.y - 門の場.y) - Math.hypot(gb.x - 門の場.x, gb.y - 門の場.y);
+        })[0];
+      }
+    }
+    return 引いた;
+  }
   if (!g.broken) return false;                   // 門が保つうちは常の門の守りに任せる
   // 門が破れた。中へ入った寄せ手と斬り結ぶ。いなければ破れ口を塞ぐ
   const 敵 = 入った.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
@@ -1120,7 +1138,7 @@ export function battleAI(b) {
               if (射手 && foes.length) {
                 const t4 = [...foes].sort((x, y2) =>
                   Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
-                issueOrder(b, c, { order: "射撃", tx: t4.x, ty: t4.y, target: t4.id });
+                issueOrder(b, c, { order: "射撃", tx: p2.x, ty: p2.y, target: t4.id });
               } else issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
               continue;
             }
@@ -1149,13 +1167,19 @@ export function battleAI(b) {
                 continue;
               }
             }
-          // 射手は門ごしに射かける。槍組は門を支えて守る。
+          /* 射手は門ごしに射かける。槍組は門を支えて守る。
+
+             射撃の下知の行き先は持ち場のまま、狙いだけを渡す（上の守備隊も同じ）。もとは
+             行き先を的の居所にしていた。城の内では射撃の間合いを取る足（engine）が働かない
+             ので、行き先がそのまま歩く先になる。隊は門を出て的へ歩き出し、持ち場の際
+             （四十六歩）を越えると呼び戻される――この往き来を二秒ほどごとに繰り返し、
+             門の前で震えて見えた */
           const shooter = c.squads.some((q) => (q.men > 0)
             && (q.type === "yumi" || q.type === "teppo"));
           if (shooter && foes.length) {
             const t3 = [...foes].sort((x, y2) =>
               Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0];
-            issueOrder(b, c, { order: "射撃", tx: t3.x, ty: t3.y, target: t3.id });
+            issueOrder(b, c, { order: "射撃", tx: p2.x, ty: p2.y, target: t3.id });
             continue;
           }
           issueOrder(b, c, { order: "守備", tx: c.x, ty: c.y });
