@@ -216,11 +216,22 @@ function 攻める(i, 賽, 出城あり) {
   b.dusk = Math.round(1080 * Math.max(1, Math.min(3.2, Math.pow(m.旧.w / 1600, 0.62))))
     + Math.round((A.FIELD.h - m.cy) / (34 * A.fieldScale()) * 2.2);
   const 初寄 = atk.reduce((a, c) => a + A.corpsMen(c), 0);
-  let 当たる = 0, 叩いた = false, 落ちた = null, 塀の中 = 0, 刻数 = 0, 入り込み = 0;
+  let 当たる = 0, 叩いた = false, 落ちた = null, 塀の中 = 0, 刻数 = 0, 入り込み = 0, 呼び戻し = 0;
   const 出門 = m.出城 ? m.出城.gates[0] : null;
+  const 前の下知 = new Map();
   for (let k = 0; k < 200000; k++) {
     A.stepBattle(b, 0.03);
-    if (k % 8 === 0) A.battleAI(b);
+    if (k % 8 === 0) {
+      A.battleAI(b);
+      /* 門の射手が持ち場から歩み出ては呼び戻される往き来を数える（同じ門を受け持ったまま、
+         射撃の下知から持ち場へ戻る移動の下知に替わった数） */
+      for (const c of def2) {
+        const 前 = 前の下知.get(c.id);
+        if (前 && 前.下知 === '射撃' && c.order === '移動' && c.holdGate && c.holdGate === 前.門
+          && !c.holdGate.broken && !c.sallied && !c.引き取り) 呼び戻し++;
+        前の下知.set(c.id, { 下知: c.order, 門: c.holdGate });
+      }
+    }
     if (m.出城) {
       当たる = Math.max(当たる, atk.filter((c) => c.出城攻め).length);
       if (出門.hp < 出門.max * 0.98) 叩いた = true;
@@ -240,7 +251,7 @@ function 攻める(i, 賽, 出城あり) {
     if (b.result || b.t > b.dusk) break;
   }
   const 残寄 = atk.reduce((a, c) => a + A.corpsMen(c), 0);
-  return { 名: name, 構: m.構, 出城あり, 当たる, 叩いた, 落ちた, 入り込み,
+  return { 名: name, 構: m.構, 出城あり, 当たる, 叩いた, 落ちた, 入り込み, 呼び戻し,
     引き取った: b.log.some((l) => /内へ引き取った/.test(l.text)),
     寄せ手の損: Math.round(初寄 - 残寄), 落城: b.result === 'P' || !!b.captured, 破: m.gates.filter((g) => g.broken).length,
     塀割: 刻数 ? 塀の中 / 刻数 : 0, 刻: b.t, 日暮: b.dusk, log: b.log };
@@ -272,6 +283,10 @@ function 攻める(i, 賽, 出城あり) {
   const 刻無 = 無.filter((r, i) => r.落城 && 有[i].落城).reduce((a, r) => a + r.刻, 0);
   確('どちらでも落ちた城では、出城のある城のほうが長く保つ', 刻有 >= 刻無 * 0.98, `出城あり ${Math.round(刻有)}秒／なし ${Math.round(刻無)}秒`);
   const 塀 = Math.max(...有.map((r) => r.塀割));
+  /* 射撃の下知の行き先が的の居所だったころは、城の内で間合いを取る足が働かないので隊が門を
+     出て的へ歩き、持ち場の際で呼び戻されて、一戦に五度から十五度この往き来をした */
+  const 往き来 = Math.max(...[...有, ...無].map((r) => r.呼び戻し));
+  確('門の射手は持ち場から歩み出ては呼び戻される往き来をしない（一戦に二度まで）', 往き来 <= 2, `いちばん多い戦で${往き来}度`);
   確('隊が塀や門の中に埋まらない', 塀 < 0.01, `いちばん多い戦で ${(塀 * 100).toFixed(2)}％`);
 }
 
