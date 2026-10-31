@@ -25,6 +25,7 @@ export function 川の流れを描く(ctx, 秒, 尺) {
   for (const r of 川ら) {
     const 節 = r.節;
     if (!節 || 節.length < 2) continue;
+    if (r.湖) continue;                      // 湖と海（戦場の型の広い水）は流れない
     const w = r.幅;
     for (const [横, 濃, 速] of [[-0.34, 0.12, 0.8], [-0.17, 0.16, 1.0], [0.0, 0.18, 1.2], [0.15, 0.15, 1.05], [0.32, 0.11, 0.85]]) {
       ctx.beginPath();
@@ -86,14 +87,15 @@ function 木を置かぬ所か(x, y, R) {
   return false;
 }
 export function 木立を据える() {
-  const 鍵 = [...FORESTS, ...WOODS].map((f) => `${Math.round(f.x)},${Math.round(f.y)},${Math.round(f.r)}`).join(";");
+  const 鍵 = [...FORESTS, ...WOODS].map((f) => `${Math.round(f.x)},${Math.round(f.y)},${Math.round(f.r)},${f.密 != null ? f.密 : ""}`).join(";");
   if (木立 && 鍵 === 木立の鍵) return 木立;
   木立の鍵 = 鍵;
   const 並 = [];
   for (const f of [...FORESTS, ...WOODS]) {
     const 濃 = FORESTS.includes(f);
     const 間 = 濃 ? 9 : 15;
-    const n = Math.min(9000, Math.round(Math.PI * f.r * f.r / (間 * 間)));
+    /* 密 … 間引きの割（戦場の型の森は木の数に頭を設けて間引く。battle/kata.js） */
+    const n = Math.min(9000, Math.round(Math.PI * f.r * f.r / (間 * 間) * (f.密 != null ? f.密 : 1)));
     const R = 種乱(Math.round(f.x * 7 + f.y * 13 + f.r));
     for (let i = 0; i < n; i++) {
       const a = R() * Math.PI * 2, rr = f.r * Math.sqrt(R()) * 1.02;

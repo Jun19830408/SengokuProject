@@ -1056,7 +1056,8 @@ function 一本の道を描く(ctx, 節, 幅0) {
    街道ごとの野の川は盤を横切る一本の帯なので、上下の岸を引けば済んだ。
    筋書きの野の川は曲がりくねっているので、芯線を太い筆で引き、
    その上に細い明るい筋を重ねて流れを出す。渡し場（橋・浅瀬）はその上に置く。 */
-function 川筋を描く(ctx, r) {
+/* だけ … "岸" か "水" を渡せば、それだけを塗る（湖と海の帯。下の 野の地物を描く） */
+function 川筋を描く(ctx, r, だけ) {
   const 節 = r.節;
   if (!節 || 節.length < 2) return;
   const 筆 = (幅, 色) => {
@@ -1070,6 +1071,8 @@ function 川筋を描く(ctx, r) {
     ctx.lineTo(節[節.length - 1].x, 節[節.length - 1].y);
     ctx.stroke(); ctx.restore();
   };
+  if (だけ === "岸") { 筆(r.幅 + 16, "rgba(196,186,152,0.55)"); return; }
+  if (だけ === "水") { 筆(r.幅, "#6E9BBE"); return; }
   筆(r.幅 + 16, "rgba(196,186,152,0.55)");        // 河原の砂利
   筆(r.幅, "#6E9BBE");                            // 水面
   筆(r.幅 * 0.42, "rgba(186,214,232,0.55)");      // 流れの明るいところ
@@ -1265,7 +1268,13 @@ export function drawFieldTerrain(ctx) {
   for (const f of WOODS) 木立を描く(ctx, f, false, 22, "林");
   for (const f of FORESTS) 木立を描く(ctx, f, true, 48, "森");
   if (hasRiver()) 川を描く(ctx);
-  for (const r of RIVERS) 川筋を描く(ctx, r);
+  /* 湖と海（戦場の型の広い水。battle/kata.js）は帯を重ねて表す。帯ごとに岸と水を塗ると、
+     後の帯の岸が先の帯の水の上に砂の筋として出るので、岸を皆塗ってから水を塗る。
+     流れの明るみは引かない（湖も海も流れない） */
+  const 広い水 = RIVERS.filter((r) => r.湖);
+  for (const r of 広い水) 川筋を描く(ctx, r, "岸");
+  for (const r of 広い水) 川筋を描く(ctx, r, "水");
+  for (const r of RIVERS) if (!r.湖) 川筋を描く(ctx, r);
 }
 
 
@@ -2202,10 +2211,21 @@ function 盤の外を塗る(ctx, 地) {
     }
   };
   const 点ら = (r) => (r.節 || []).map((p) => [p.x != null ? p.x : p[0], p.y != null ? p.y : p[1]]);
+  /* 湖と海（戦場の型の広い水。battle/kata.js）は、盤の外でも形のまま水を塗る。端から
+     延ばしたのでは、水の帯の幅のまま真っすぐな板が外へ伸びた。岸を先に、水を後に塗る */
+  const 広い水 = 野の川筋().filter((r) => r.湖);
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (const [足, 筆色] of [[14, "#A9A37F"], [0, "#6E97AD"]]) {
+    for (const r of 広い水) {
+      ctx.strokeStyle = 筆色; ctx.lineWidth = (r.幅 || 50) + 足;
+      ctx.beginPath(); r.節.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
+    }
+  }
   for (const r of (ROADS && ROADS.length ? ROADS : (ROAD && ROAD.節 && ROAD.節.length ? [ROAD] : []))) {
     延ばす(点ら(r), Math.max(20, r.幅 || 30), "#C4B08A");
   }
   for (const r of 野の川筋()) {
+    if (r.湖) continue;                                              // 上で形のまま塗った
     延ばす(r.節, (r.幅 || 50) + 14, "#A9A37F");                       // 岸
     延ばす(r.節, r.幅 || 50, "#6E97AD");                              // 水
   }

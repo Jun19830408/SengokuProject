@@ -21,7 +21,8 @@ const 茅 = { 奥: "#BBA36F", 左: "#AC935F", 右: "#7F6A45", 前: "#977E52", �
 function 種乱(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 /* 村の道の向き。地の焼き（shinga.js 集落）と家並みとで同じ向きを使う */
-export function 村の道は横か(v) { return 種乱(Math.round(v.x * 3 + v.y * 5))() < 0.5; }
+/* 村の 横 が決まっていれば（戦場の型の町並み。battle/kata.js）、それに従う */
+export function 村の道は横か(v) { return v.横 != null ? !!v.横 : 種乱(Math.round(v.x * 3 + v.y * 5))() < 0.5; }
 
 /* ---- 家並み ---- */
 let 家々 = null, 家々の鍵 = "", 家々の数 = -1, 家々の頭 = null;
@@ -29,7 +30,7 @@ export function 家々を据える() {
   /* 兵一人ずつの家よけ（家をよける）からも毎刻呼ばれる。野が変わらぬうちは、
      鍵の文字列を作らずに返す（作っていたころは関ヶ原の試しが何倍も遅くなった） */
   if (家々 && VILLAGES.length === 家々の数 && VILLAGES[0] === 家々の頭) return 家々;
-  const 鍵 = VILLAGES.map((v) => `${Math.round(v.x)},${Math.round(v.y)},${Math.round(v.r || 40)}`).join(";");
+  const 鍵 = VILLAGES.map((v) => `${Math.round(v.x)},${Math.round(v.y)},${Math.round(v.r || 40)}${v.横 == null ? "" : v.横 ? "横" : "縦"}`).join(";");
   家々の数 = VILLAGES.length; 家々の頭 = VILLAGES[0] || null;
   if (家々 && 鍵 === 家々の鍵) return 家々;
   家々の鍵 = 鍵;
@@ -37,7 +38,8 @@ export function 家々を据える() {
   for (const v of VILLAGES) {
     const R = 種乱(Math.round(v.x * 3 + v.y * 5));
     const r = (v.r || 40) * 0.92;
-    const 横道 = R() < 0.5;                                  // 村の道は東西か南北に通す
+    const 道の賽 = R();
+    const 横道 = v.横 != null ? !!v.横 : 道の賽 < 0.5;         // 村の道は東西か南北に通す（村の道は横か と同じ）
     /* 道に沿った家の間。斜めの眺めでは南北が縮んで見えるので、道が南北に通る村は
        間を広く取る（詰めると家が前後に重なり、柱が並んだように見えた） */
     const 間 = 横道 ? 32 : 46;
@@ -116,13 +118,14 @@ export function 家の棟(h) {
 /* ---- 葦 ---- */
 let 葦原 = null, 葦の鍵 = "";
 export function 葦を据える() {
-  const 鍵 = MARSH.map((m) => `${Math.round(m.x)},${Math.round(m.y)},${Math.round(m.r)}`).join(";");
+  const 鍵 = MARSH.map((m) => `${Math.round(m.x)},${Math.round(m.y)},${Math.round(m.r)},${m.葦 != null ? m.葦 : ""}`).join(";");
   if (葦原 && 鍵 === 葦の鍵) return 葦原;
   葦の鍵 = 鍵;
   const 並 = [];
   for (const m of MARSH) {
     const R = 種乱(Math.round(m.x * 11 + m.y * 7));
-    const n = Math.min(5000, Math.round(Math.PI * m.r * m.r / 120));
+    /* 葦 … 間引きの割（戦場の型の深田は株をまばらにし、葦の数も頭打ちにする。battle/kata.js） */
+    const n = Math.min(5000, Math.round(Math.PI * m.r * m.r / 120 * (m.葦 != null ? m.葦 : 1)));
     for (let i = 0; i < n; i++) {
       const a = R() * 6.283, rr = m.r * Math.sqrt(R());
       const x = m.x + Math.cos(a) * rr, y = m.y + Math.sin(a) * rr * 0.8;

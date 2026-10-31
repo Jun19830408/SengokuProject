@@ -1,5 +1,6 @@
 import { MAP, castleTerrainAt, 城の域か } from "./castleMap.js";
 import { clamp, makeRng } from "../core/util.js";
+import { 型の野 } from "./kata.js";
 
 /* ==========================================================================
    戦闘エンジン
@@ -106,6 +107,18 @@ export const ROADS = [];
    川が曲がり、幾筋にも分かれ、渡し場が決まった所にある。帯では表せない。 */
 export const RIVERS = [];
 
+/* 戦場の型（GDD 8.1 / battle/kata.js）。
+
+   型の野を組んだときだけ、その型の名と一言、布陣させる横の帯を持つ。帯 … 攻め口に
+   横切る向き（南北から寄せるなら東西、東西から寄せるなら南北）の芯と幅（歩）。幅が
+   零なら縛らない。賽で撒く野・筋書きの野・城の盤を組むときに解く。 */
+export const 野の型 = { id: null, 名: "", 詞: "" };
+export const 陣の帯 = { 中: 0, 幅: 0 };
+function 型を解く() {
+  野の型.id = null; 野の型.名 = ""; 野の型.詞 = "";
+  陣の帯.中 = 0; 陣の帯.幅 = 0;
+}
+
 // 点から道までの隔たり（線分の集まりとして測る）
 export const 道までの隔たり = (x, y) => 節までの隔たり(ROAD.節, x, y);
 
@@ -157,6 +170,9 @@ export function seedOf(aId, bId) {
 // 街道の性格から野を組み立てる（GDD 8.1）
 export function genTerrain(seed, opt = {}) {
   代++;
+  /* 前の野が型の野や筋書きの野なら、升目と型を捨てる（升目が残ると、この野の地物で
+     なく前の野の升目を引いてしまう） */
+  地形格 = null; 型を解く();
   const rnd = makeRng(seed);
   const W = FIELD.w, H = FIELD.h;
   /* 城攻めの広い盤（GDD 9.3）。城 … 城山の円 { x, y, r, 大手: { x, y } }。
@@ -529,7 +545,8 @@ function 野を焼く(ce = 10) {
   for (const o of FORESTS) 丸(o, 2);
   for (const o of MOUNTAINS) 丸(o, 5);
   for (const r of ROADS) 帯(r.節, r.幅, 1);
-  for (const r of RIVERS) 帯(r.節, r.幅, 8);
+  /* 浅い流れ（戦場の型の小川と沢。battle/kata.js）は、どこでも瀬である */
+  for (const r of RIVERS) 帯(r.節, r.幅, r.浅 ? 9 : 8);
   for (const r of RIVERS) for (const w of r.渡し || []) 丸(w, w.種 === "橋" ? 10 : 9);
   return { ce, w: gw, h: gh, d };
 }
@@ -537,6 +554,7 @@ function 野を焼く(ce = 10) {
 /* 筋書きから野を組む。地物はすべて写し取った形で渡される。 */
 export function 筋書きの野を組む(地) {
   代++;
+  型を解く();
   FIELD.w = 地.w; FIELD.h = 地.h;
   尺を据える(0);                                    // 筋書きの野は、盤の幅をそのまま尺とする
   setFieldKind("街道");
@@ -562,6 +580,39 @@ export function 筋書きの野を組む(地) {
 
 /* 筋書きを畳む。街道ごとの野に戻す（升目を捨てる）。 */
 export function 筋書きを解く() { 地形格 = null; RIVERS.length = 0; }
+
+/* 型の野を組む（GDD 8.1 / battle/kata.js）。
+
+   戦場の型が描いた地物を写す。形は筋書きの野と同じで、升目に焼いて引く。
+   筋書きの野と違うのは三つ。尺は街道ごとの野と同じく広げる前の幅のまま（layoutField が
+   据えたもの）で、隊と地物の釣り合いを変えない。街道の質も変えない。街道（地.道 の
+   先頭）を ROAD に据える――寄せ手の端から受け手の端へ通る本道である。
+   村の 横（家並みの向き）、森と林の 密（木の間引き）、沼の 葦（葦の間引き）、川の 湖
+   （流れの筋を引かぬ広い水）と 浅（どこでも瀬の小川）は、そのまま持たせる。 */
+function 型の野を組む(地) {
+  代++;
+  RIVER.top = 0; RIVER.bot = 0; RIVER.bridge = [0, 0]; RIVER.ford = [0, 0]; RIVER.wave = 0;
+  RIVER.落ちた橋 = null; RIVER.仮橋 = false;
+  FORESTS.length = 0; WOODS.length = 0; HILLS.length = 0; MARSH.length = 0;
+  VILLAGES.length = 0; MOUNTAINS.length = 0; RIVERS.length = 0; ROADS.length = 0;
+  const 種付 = (o, i) => ({ seed: ((o.x | 0) * 7919 + (o.y | 0) * 31 + i) >>> 0, ...o });
+  (地.村 || []).forEach((o, i) => VILLAGES.push(種付(o, i)));
+  (地.丘 || []).forEach((o, i) => HILLS.push({ ...種付(o, i), rise: o.rise || Math.round(o.r * 0.24) }));
+  (地.沼 || []).forEach((o, i) => MARSH.push(種付(o, i)));
+  (地.林 || []).forEach((o, i) => WOODS.push(種付(o, i)));
+  (地.森 || []).forEach((o, i) => FORESTS.push(種付(o, i)));
+  (地.山 || []).forEach((o, i) => MOUNTAINS.push({ ...種付(o, i), rise: o.rise || Math.round(o.r * 0.34) }));
+  const [本道, ...脇道] = 地.道 || [];
+  ROAD.節.length = 0; ROAD.幅 = 0;
+  if (本道) { ROAD.節.push(...本道.節); ROAD.幅 = 本道.幅 || 40; ROADS.push(ROAD); }
+  脇道.forEach((r) => ROADS.push({ 名: r.名, 節: r.節, 幅: r.幅 || 30 }));
+  (地.川 || []).forEach((r) => RIVERS.push({ 名: r.名, 節: r.節, 幅: r.幅 || 40, 渡し: r.渡し || [],
+    ...(r.湖 ? { 湖: true } : {}), ...(r.浅 ? { 浅: true } : {}) }));
+  高みを数え直す();
+  野の型.id = 地.型; 野の型.名 = 地.名 || ""; 野の型.詞 = 地.詞 || "";
+  陣の帯.中 = 地.帯 ? 地.帯.中 : 0; 陣の帯.幅 = 地.帯 ? 地.帯.幅 : 0;
+  地形格 = 野を焼く(地.升 || 10);
+}
 
 /* 地の高さ（GDD 8.1）。丘の頂を一、山の頂を二とし、裾から頂へ向けて上がる。
 
@@ -709,7 +760,9 @@ export const nearestOf = (list, x, y) => (list.length
   ? list.reduce((a, o) => (Math.hypot(o.x - x, o.y - y) < Math.hypot(a.x - x, a.y - y) ? o : a), list[0])
   : null);
 
-export function layoutField(totalMen, 隊数) {
+/* 型 … 戦場の型の書き付け（battle/kata.js 野の型を決める）。渡せば型の野を、渡さなければ
+   これまでどおり賽で撒いた野を組む。 */
+export function layoutField(totalMen, 隊数, 型 = null) {
   /* 野の広さ（GDD 8.1）。
 
      兵数だけで決めていたが、それでは狭すぎた。五隊も出せば戦場が一杯になり、
@@ -741,7 +794,9 @@ export function layoutField(totalMen, 隊数) {
   const h = Math.round(w * 0.667);
   FIELD.w = w; FIELD.h = h;
   尺を据える(w0 / BASE.w);
-  genTerrain(FIELD_SEED, { 尺の幅: w0 });
+  const 地 = 型 ? 型の野(型, { 種: FIELD_SEED, W: w, H: h, 尺W: w0, 質: 道の質 }) : null;
+  if (地) 型の野を組む(地);
+  else genTerrain(FIELD_SEED, { 尺の幅: w0 });
 }
 /* 野戦の盤の広げ。倍と頭打ち（歩） */
 export const 野の倍 = 1.5, 野の頭 = 12000;

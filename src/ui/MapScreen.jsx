@@ -12,7 +12,9 @@ import { 盤に来る後詰 } from "../core/gotsume.js";
 import { 城の保ち } from "../core/kakomi.js";
 import { 付城の普請, 付城の締め, 付城を築けるか, 付城の手間, 付城の限り } from "../core/tsukejiro.js";
 import { 橋を落としたままにする, 橋を架け直す幅 } from "../core/hashi.js";
-import { BASE, FIELD, MAX_CORPS, fieldScale, layoutField, setFieldKind, setFieldSeed, terrainAt, 橋を落とす } from "../battle/field.js";
+import { BASE, FIELD, FIELD_SEED, MAX_CORPS, fieldScale, layoutField, setFieldKind, setFieldSeed, terrainAt, 橋を落とす, 野の型, 陣の帯 } from "../battle/field.js";
+import { 野の型を決める } from "../battle/kata.js";
+import { 街道の性格 } from "../core/senjo.js";
 import { ambushChance, ambushPlan, tryAmbush } from "../core/ambush.js";
 import { captureChance, makePrisoner, payRansom, ransomAccept, ransomCost, takeAsPrisoner } from "../core/capture.js";
 import { 取り立てる, COMING_OF_AGE, actingHead, bearChild, canRecruit, emergeGenerals, hasHouse, heirCandidates, houseName, inheritHouse, lifeSpan, loyaltyAfterRecruit, makePromotion, needsGuardian, ruinedHouse, succeed } from "../core/house.js";
@@ -1294,9 +1296,14 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const 援将数 = 援軍ら.reduce((t, a) => t + ((a.gens || []).length), 0)
       + (sally ? (sally.gens || []).length : 0);
     const 隊数 = Math.max(2, 出る将.length + 援将数 + Math.max(1, defGens.length));
-    layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0), 隊数);
     // 攻め口の方角に応じ、盤の四辺のどこから寄せるかを決める（GDD 8.1）
     const face = attackFace(army.from, dest.id);
+    /* 戦場の型（GDD 8.1 / battle/kata.js）。戦う街道の性格――難所か山道か、大河を渡るか、
+       湖のそばか、海沿いか、道のりが短いか――から野の型を決める。型は攻め口の向きに
+       合わせて盤へ写すので、向きを先に決める。型に当たらない街道は、これまでどおり
+       賽で撒いた野になる。 */
+    const 型 = 野の型を決める(街道の性格(army.from, dest.id, face), FIELD_SEED, face);
+    layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0), 隊数, 型);
     /* 初めの布陣（GDD 8.1）。
 
        横一列に並べていたので、隊が多いと盤からはみ出して端まで延びていた。
@@ -1306,10 +1313,20 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
        ほかの将はその前を、中央から外へ振り分けて固める。
        一段に並べる数は野の幅から決めるので、どれだけ隊が増えても盤に収まる。 */
     const lineup = (isAtk, i, n) => {
-      const near = 0.14, far = 0.86;                 // 盤の縁からの割合
       const 間 = Math.round(175 * fieldScale());   // 隊の間は隊の大きさ（足の尺）で取る
-      const 列 = Math.max(1, Math.min(n, Math.floor((FIELD.w * 0.78) / Math.max(1, 間))));
+      /* 型の野が布陣の帯を渡したら（湖や海や山に脇を塞がれた野）、その帯の内に並べる。
+         帯は攻め口に横切る向きの芯と幅（field.js 陣の帯）。東西から寄せる盤では、
+         隊を並べる間を〇.六六に詰めている（下の E・W）ので、そのぶん列を多く取る */
+      const 帯 = 陣の帯.幅 > 0 ? 陣の帯 : null;
+      const 詰め = face === "E" || face === "W" ? 0.66 : 1;
+      const 列 = Math.max(1, Math.min(n, Math.floor((帯 ? 帯.幅 / 詰め : FIELD.w * 0.78) / Math.max(1, 間))));
       const 段数 = Math.ceil(n / 列);
+      /* 前の列の、盤の縁からの割合。帯のある野は一段に並べる隊が少なく、段が深くなる。
+         段の深さが盤の縁までに収まらなければ、前の列を前へ出す（三割六分まで）。さもないと
+         後ろの段が盤の縁に押しつけられて、隊が重なった。帯の無い野はこれまでどおり */
+      const 段厚 = Math.round(78 * fieldScale());
+      const 軸長 = face === "E" || face === "W" ? FIELD.w : FIELD.h;
+      const near = 帯 ? Math.min(0.36, Math.max(0.14, (段数 * 段厚 + 80) / 軸長)) : 0.14, far = 1 - near;
       /* 並びの先頭は総大将である。後ろの段の真ん中に置き、
          残りを前の段から順に、中央から外へ埋める。 */
       /* 総大将には段を一つ与える。最後の段が半端に埋まると、そこへ大将が重なり、
@@ -1322,15 +1339,16 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         return { 段, 席: 中 - (残 - 1) / 2, 幅: 残 };
       })();
       const t2 = 位.席 * 間;
-      const 奥 = 位.段 * Math.round(78 * fieldScale());   // 段の厚み（後ろへ下がる）
+      const 奥 = 位.段 * 段厚;                       // 段の厚み（後ろへ下がる）
       const put = (ax, ay, f2) => ({ x: ax, y: ay, f: f2 });
       const 締 = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
       const X = (v) => 締(v, 40, FIELD.w - 40), Y = (v) => 締(v, 40, FIELD.h - 40);
       // 後ろへ下がる向きは、盤のどちら側に立つかで決まる
-      const S = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * far + 奥 : FIELD.h * near - 奥), isAtk ? -Math.PI / 2 : Math.PI / 2);
-      const N = () => put(X(FIELD.w / 2 + t2), Y(isAtk ? FIELD.h * near - 奥 : FIELD.h * far + 奥), isAtk ? Math.PI / 2 : -Math.PI / 2);
-      const E = () => put(X(isAtk ? FIELD.w * far + 奥 : FIELD.w * near - 奥), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? Math.PI : 0);
-      const W = () => put(X(isAtk ? FIELD.w * near - 奥 : FIELD.w * far + 奥), Y(FIELD.h / 2 + t2 * 0.66), isAtk ? 0 : Math.PI);
+      const 横芯 = 帯 ? 帯.中 : null;
+      const S = () => put(X((横芯 ?? FIELD.w / 2) + t2), Y(isAtk ? FIELD.h * far + 奥 : FIELD.h * near - 奥), isAtk ? -Math.PI / 2 : Math.PI / 2);
+      const N = () => put(X((横芯 ?? FIELD.w / 2) + t2), Y(isAtk ? FIELD.h * near - 奥 : FIELD.h * far + 奥), isAtk ? Math.PI / 2 : -Math.PI / 2);
+      const E = () => put(X(isAtk ? FIELD.w * far + 奥 : FIELD.w * near - 奥), Y((横芯 ?? FIELD.h / 2) + t2 * 0.66), isAtk ? Math.PI : 0);
+      const W = () => put(X(isAtk ? FIELD.w * near - 奥 : FIELD.w * far + 奥), Y((横芯 ?? FIELD.h / 2) + t2 * 0.66), isAtk ? 0 : Math.PI);
       const p0 = face === "N" ? N() : face === "E" ? E() : face === "W" ? W() : S();
       return 置ける所へ(p0);
     };
@@ -1442,6 +1460,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     // 自陣がどちらの側かを控える。攻め口の方角で変わるので、下側に決め打ちできない。
     bb.face = face;
     bb.myFar = playerIsAtk;      // 寄せ手は遠い側（far）から入る
+    /* 戦場の型の名と一言（GDD 8.1）。合戦の初めに報せ、記録にも残す */
+    if (野の型.名) {
+      bb.野の型 = 野の型.名;
+      bb.log.push({ t: 0, text: `戦場は${野の型.名}。${野の型.詞}。` });
+    }
     if (betray) {
       const 内応の側 = (dest.intrigueOwner || g.player) === g.player ? "P" : "E";
       for (const c of bb.corps) {
@@ -1483,6 +1506,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         bb.log.push({ t: 0, text: `${ambush.head.name}の伏勢は露見した。味方の士気が落ちている。` });
       }
     }
+    if (野の型.名) bb.notices = [...(bb.notices || []), { t: 0, kind: "info", text: `戦場：${野の型.名}` }];
     setBattle({
       出陣前: true,
       b: bb, armyId: army.id, castleId: dest.id, playerIsAtk, campId: camp ? camp.id : null,

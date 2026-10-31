@@ -1493,11 +1493,29 @@ function 渡し場を描く(g, r, w, 倍) {
   /* 札は回さない。字は常に真っ直ぐ読めるようにして、川の上の側へ置く。 */
   const nx = -Math.sin(角), ny = Math.cos(角);
   const 向 = ny > 0 ? -1 : 1;
+  if (w.札なし) return;
   名札(g, cx + nx * 向 * (半 + 3 * 倍), cy + ny * 向 * (半 + 3 * 倍), 橋 ? (RIVER.仮橋 && w.種 === "橋" ? "仮橋" : "橋") : "浅瀬", 倍 * 0.7);
 }
 
 /* ============ 野を焼く ============
    g は画布の筆。画k ＝ 野の寸法から画布の画素への倍。 */
+function 浅い流れの瀬(r, 渡し) {
+  const 幅 = r.幅 || 40, 間 = Math.max(60, 幅 * 1.5), 出 = [];
+  const 節 = (r.節 || []).map((p) => [p.x != null ? p.x : p[0], p.y != null ? p.y : p[1]]);
+  let 次 = 間 / 2, 累 = 0;                      // 次の瀬を置く所（流れの頭からの道のり）
+  for (let i = 0; i + 1 < 節.length; i++) {
+    const [x0, y0] = 節[i], [x1, y1] = 節[i + 1], L = Math.hypot(x1 - x0, y1 - y0);
+    for (; 次 < 累 + L; 次 += 間) {
+      const t = (次 - 累) / L, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t;
+      if (渡し.some((w) => w.種 === "橋" && Math.hypot(w.x - x, w.y - y) < w.r + 間 * 0.6)) continue;
+      if (x < -幅 || y < -幅 || x > FIELD.w + 幅 || y > FIELD.h + 幅) continue;
+      出.push({ x, y, r: 間 * 0.62, 種: "浅瀬", 札なし: true });
+    }
+    累 += L;
+  }
+  if (出.length) delete 出[Math.floor(出.length / 2)].札なし;
+  return 出;
+}
 /* 盤の川を、絵に写せる形へ起こす（GDD 8.1）。
    筋書きの野は RIVERS に節と渡しを持つ。生まれた野は RIVER の帯と
    riverShift の蛇行で持つ――どちらも同じ形に揃えて返す。理（terrainAt）と
@@ -1506,9 +1524,12 @@ export function 野の川筋() {
   const 野の川 = [];
   if (RIVERS && RIVERS.length) {
     for (const r of RIVERS) {
-      野の川.push({ 幅: r.幅 || 50,
-        節: (r.節 || []).map((p) => [p.x != null ? p.x : p[0], p.y != null ? p.y : p[1]]),
-        渡し: (r.渡し || []).map((w) => ({ x: w.x, y: w.y, r: w.r, 種: w.種 })) });
+      const 渡し = (r.渡し || []).map((w) => ({ x: w.x, y: w.y, r: w.r, 種: w.種 }));
+      /* 浅い流れ（戦場の型の小川と沢。battle/kata.js）は、どこでも瀬である。流れに沿って
+         瀬の絵を並べ、底の透ける浅い水に見せる。名札は真ん中の一つだけに付ける */
+      if (r.浅) 渡し.push(...浅い流れの瀬(r, 渡し));
+      野の川.push({ 幅: r.幅 || 50, ...(r.湖 ? { 湖: true } : {}),
+        節: (r.節 || []).map((p) => [p.x != null ? p.x : p[0], p.y != null ? p.y : p[1]]), 渡し });
     }
   } else if (hasRiver()) {
     const 芯 = (RIVER.top + RIVER.bot) / 2;
