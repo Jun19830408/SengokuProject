@@ -3,6 +3,8 @@ import { U, clamp, fmt } from "../core/util.js";
 import { SEA, createSeaBattle, fleetCrew, fleetShips, layoutSea, makeFleet, stepSeaBattle, 並べ直す, 海の状, 海戦を裁く, 風の呼び名, 風向き } from "../battle/sea.js";
 import { drawSea, drawSeaTerrain } from "../battle/seaDraw.js";
 import { SHIPS } from "../data/ships.js";
+/* 海戦の効果音（効果音取り込みの手引き「三」の三・五）。理からは鳴らさず、ここから鳴らす */
+import { 兵の音を掛ける, 効果を止める, 音の列を鳴らす, 終わりの締め } from "./senoto.js";
 
 /* ==========================================================================
    海戦の画面（GDD 10章）
@@ -29,6 +31,7 @@ const 命 = [
 ];
 
 export function SeaScreen({ ctx, land, onEnd }) {
+  const 地の刻 = useRef(0);                 // 船の音（地）を判じた刻
   const cv = useRef(null), wrap = useRef(null), terrainRef = useRef(null);
   const [, force] = useState(0);
   const [sel, setSel] = useState(null);
@@ -91,6 +94,17 @@ export function SeaScreen({ ctx, land, onEnd }) {
          船が寄り合って火が回るまでを見ている間がない。
          陸の野戦と同じ手応えにする。停止・微速・低速・通常も同じ四つ。 */
       if (speedRef.current > 0 && b.phase === "fight") stepSeaBattle(b, dt * speedRef.current);
+      音の列を鳴らす(b);                       // 理が積んだ音（焙烙・知らせ）
+      /* 船の音（地）。海戦のさなかは軍船（波・櫓・櫓杭）、味方の船が乗り移って斬り合って
+         いるあいだは接敵。半秒に一度判じる。終われば一度だけ勝ち負けの締め（地は退く） */
+      if (ts - 地の刻.current > 500) {
+        地の刻.current = ts;
+        if (b.phase === "fight") {
+          const 斬り合い = (b.fleets || []).some((f) => f.side === "P" && !f.dead && (f.ships || []).some((x) => !x.sunk && x.boarding));
+          兵の音を掛ける(斬り合い ? "接敵" : "軍船");
+        } else if (b.phase !== "over") 兵の音を掛ける(null);
+      }
+      if (b.phase === "over") 終わりの締め(b, { mode: "sea" });
       const c = cv.current, w = wrap.current;
       if (!c || !w) return;
       const dpr = Math.min(2, (typeof window !== "undefined" && window.devicePixelRatio) || 1);
@@ -101,7 +115,7 @@ export function SeaScreen({ ctx, land, onEnd }) {
       force((n) => (n + 1) % 1000);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    return () => { cancelAnimationFrame(raf); 効果を止める(); };   // 海戦の画面を離れれば音を止める
   }, []); // eslint-disable-line
 
   const toSea = (cx, cy) => {

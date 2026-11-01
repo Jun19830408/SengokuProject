@@ -266,6 +266,9 @@ export function stepSeaBattle(b, dt) {
           的.e.hp -= 3 * 効 * 手加減;
           if (b.fx.length < 240) b.fx.push({ k: "horo", x: 的.e.x, y: 的.e.y, t: 0, life: 0.6 });
           b.log.push({ t: b.t, text: `${f.gen.name}の小早が焙烙を投げた。` });
+          /* 鳴らしたい音の列（効果音取り込みの手引き「三」の三）。画面が鳴らす（ui/senoto.js） */
+          (b.音 || (b.音 = [])).push({ 名: "焙烙", 間: 1.5, 左右: f.side === "P" ? -0.3 : 0.3 });
+          if (b.音.length > 8) b.音.shift();
           if (b.log.length > 60) b.log.shift();
         }
       }

@@ -1,4 +1,4 @@
-import { commandPost, corpsMen, notify } from "./corps.js";
+import { commandPost, corpsMen, notify, 音を積む } from "./corps.js";
 import { fieldScale } from "./field.js";
 import { clamp } from "../core/util.js";
 
@@ -82,6 +82,10 @@ export function 鼓舞する(b, c, { 全軍 = false } = {}) {
   const 範 = 全 ? "全軍" : 先.length > 1 ? `自部隊と近くの${先.length - 1}隊` : "自部隊";
   const 文 = `${c.gen.name}が${範}を鼓舞した。士気が${平}上がった${先.length > 1 ? "（平均）" : ""}。`;
   notify(b, 文, c.side === "P" ? "good" : "bad");
+  /* 鼓舞が成れば勝鬨（効果音取り込みの手引き「三」の六）。知らせの音（有利・不利）の代わりに鳴らす。
+     敵の鼓舞は小さく、敵の側へ振って鳴らす（手引きの案） */
+  if (b.音 && (b.音[b.音.length - 1] === "有利" || b.音[b.音.length - 1] === "不利")) b.音.pop();
+  音を積む(b, c.side === "P" ? "勝鬨" : { 名: "勝鬨", 音量: 0.6, 左右: 0.4 });
   return { ok: true, 成: true, 文, 上: 平 };
 }
 

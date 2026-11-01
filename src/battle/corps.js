@@ -986,6 +986,17 @@ export function notify(b, text, kind) {
   b.notices.push({ text, kind: kind || "info", t: b.t });
   if (b.notices.length > 6) b.notices.shift();
   b.log.push({ t: b.t, text });
+  /* 鳴らしたい音の列（効果音取り込みの手引き「二」）。理は音を鳴らさず、画面が一コマごとに
+     鳴らす（ui/senoto.js 音の列を鳴らす）。緑の知らせは「有利」、赤は「不利」 */
+  if (kind === "good" || kind === "bad") 音を積む(b, kind === "good" ? "有利" : "不利");
+}
+/* 鳴らしたい音の列に積む（効果音取り込みの手引き「二」）。画面が鳴らすまで、多くとも八つまで持つ
+   （委ねて絵を描かずに進めるあいだは画面が捨てる） */
+export function 音を積む(b, 音) {
+  if (!b) return;
+  const 列 = b.音 || (b.音 = []);
+  列.push(音);
+  if (列.length > 8) 列.shift();
 }
 
 export function issueOrder(b, c, patch, { 即 } = {}) {
