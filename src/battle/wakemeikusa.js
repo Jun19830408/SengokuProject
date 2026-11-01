@@ -9,7 +9,7 @@
    ぶつかり合いで、初めから鶴翼や魚鱗に散らすと戦列が崩れる）。
    ========================================================================== */
 import { FIELD, MAX_CORPS, terrainAt, 筋書きの野を組む } from "./field.js";
-import { corpsMax, corpsMen, makeCorps, placeSquads } from "./corps.js";
+import { corpsMax, corpsMen, makeCorps, notify, placeSquads } from "./corps.js";
 import { createBattle } from "./engine.js";
 import { newRoster, rosterSum, rosterTake } from "../core/roster.js";
 import { 陣立てを敷く, 野を探す } from "../data/wakemeba.js";
@@ -147,7 +147,7 @@ function 備えを隊にする(s, fid, 陣, side, 色, 覚え) {
     if (c.役 === "高み" || c.役 === "押さえ" || c.役 === "本陣") {
       c.持ち場 = { x: c.x, y: c.y, 縄: c.役 === "高み" ? 900 : c.役 === "押さえ" ? 1100 : 1400 };
     }
-    c.分け目 = { 家: 手.家, 城ら: 手.城ら, 旗の下: !!手.旗の下, 出し前, 備: p.名 || null, 役: c.役 };
+    c.分け目 = { 家: 手.家, 城ら: 手.城ら, 旗の下: !!手.旗の下, 出し前, 備: p.名 || null, 役: c.役, 色 };
     隊.push(c);
     覚え.push({ id: 将.id, 家: 手.家, 城ら: 手.城ら, side });
   });
@@ -178,8 +178,57 @@ export function 分け目の盤を組む(s, w, { 味方 } = {}) {
   b.損の手加減 = 0.11;
   b.足の手加減 = 0.5;
   b.mode = "wakeme";
+  b.進行 = 黄の去就を見る;               // 黄の隊が去就を決める（下の 黄の去就を見る）
   b.log.push({ t: 0, text: `${野.詞}。${(s.factions[挑] || {}).name}と${(s.factions[受] || {}).name}、雌雄を決する。` });
   return { b, 覚え, 野 };
+}
+
+/* 黄の隊が去就を決める（GDD 12.6）。
+
+   説明書き（docs/天下分け目.md）には「優勢になるまで動かない」とあるのに、盤には去就を決める
+   仕組みが無く、黄の隊は戦が終わるまで盤の上に立ち尽くしていた。遊ぶ側の申し出（残りの直し）で、
+   優勢になれば加わるようにした。
+
+   五秒ごとに、黄の隊の属する側が優勢かを見る。
+     減り   … 初めの兵（黄の隊を除く）から、いま戦える兵がどれだけ減ったか。崩れた隊は半ばに数える
+     優勢   … 敵の減りが己の減りを一割より多く上回っていること。将の忠誠が薄いほど大きな優勢を
+              待つ（忠誠七十より上は一割、四十五で一割八分、二十五より下は二割五分）
+   優勢が十秒続けば、黄の隊は旗色を定めて己の側に加わる。色が戻り、采配が動かす（遊ぶ側の隊も
+   采配に委ねた形で加わる。選べば手ずから率いられる）。旗を定めるのは楽なことではないので、
+   士気は少し下がる。優勢にならぬまま戦が終われば、黄の隊は戦わずに終わる――関ヶ原の南宮山の
+   毛利勢も、ついに山を下りなかった。 */
+const 戦える兵 = (b, 側) => b.corps.reduce((a, c) => (c.side !== 側 || c.dead || c.destroyed || c.潰 || c.withdraw || c.日和見)
+  ? a : a + corpsMen(c) * (c.routed ? 0.5 : 1), 0);
+export const 去就の待ち = (c) => {
+  const 忠 = c && c.gen && c.gen.loyal != null ? c.gen.loyal : 60;
+  return 0.10 + Math.max(0, Math.min(0.15, (70 - 忠) / 312.5));
+};
+export function 黄の去就を見る(b, dt) {
+  const w = b.分け目;
+  if (!w || b.phase !== "fight") return;
+  if (!w.初) w.初 = { P: 戦える兵(b, "P"), E: 戦える兵(b, "E") };
+  w.去就の刻 = (w.去就の刻 == null ? 5 : w.去就の刻) - dt;
+  if (w.去就の刻 > 0) return;
+  w.去就の刻 = 5;
+  const 黄 = b.corps.filter((c) => c.日和見 && !c.dead && !c.destroyed && !c.withdraw);
+  if (!黄.length) return;
+  const 減り = (側) => 1 - 戦える兵(b, 側) / Math.max(1, w.初[側]);
+  w.優 = { P: 減り("E") - 減り("P"), E: 減り("P") - 減り("E") };
+  for (const c of 黄) {
+    if (w.優[c.side] >= 去就の待ち(c)) c.優の続き = (c.優の続き || 0) + 5;
+    else c.優の続き = 0;
+    if (c.優の続き >= 10) 旗色を定める(b, c);
+  }
+}
+function 旗色を定める(b, c) {
+  c.日和見 = false; c.優の続き = 0;
+  c.color = (c.分け目 && c.分け目.色) || c.color;
+  c.auto = true;
+  c.order = "待機";
+  c.morale = Math.max(20, Math.min(100, c.morale - 4));
+  placeSquads(c, true);
+  notify(b, `${c.gen.name}隊が旗色を定め、${c.side === "P" ? "味方に加わった（采配に委ねて戦う）" : "敵に加わった"}。`,
+    c.side === "P" ? "good" : "bad");
 }
 
 /* 戦の跡を数える。逃散の割を出すのに使う。 */

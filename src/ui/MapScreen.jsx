@@ -1730,6 +1730,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               + (見える ? `城の兵糧 ${fmt(前の糧)}→${fmt(Math.round(castle.food))}、民心 ${前の民}→${Math.round(castle.min)}。`
                 : "城の内は窺えない。");
           s.monthEvents = [...(s.monthEvents || []), 報];
+          /* 月の途中の報せ。月初報告とは別の板（兵糧攻めの報せ）で、頭に出す */
+          const 途中 = s.途中の報せ && s.途中の報せ.y === s.year && s.途中の報せ.m === s.month ? s.途中の報せ.文 : [];
+          s.途中の報せ = { y: s.year, m: s.month, 文: [...途中, 報] };
         }
       }
       if (b.result === "P" && !ctx.playerIsAtk) {
@@ -1777,7 +1780,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       return s;
     });
     setBattle(null);
-    if (b.兵糧攻めへ && !b.captured) setModal("report");   // 兵糧攻めのひと月の報せを見せる（上の 兵糧攻めに移った）
+    /* 兵糧攻めのひと月の報せを見せる（上の 兵糧攻めに移った）。月の途中に開くので、月初報告ではなく
+       「兵糧攻めの報せ」として出す（panels.jsx MonthReport の 途中） */
+    if (b.兵糧攻めへ && !b.captured) setModal("report_mid");
   };
 
   // 合戦の損害を組の名簿へ書き戻す。欠けた組は欠けたまま残る。
@@ -3187,6 +3192,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           );
         })()}
         {modal === "report" && <MonthReport g={g} onClose={() => setModal(null)}
+          onAid={(id) => { setModal(null); setCallAid(id); }} />}
+        {modal === "report_mid" && <MonthReport g={g} 途中 onClose={() => setModal(null)}
           onAid={(id) => { setModal(null); setCallAid(id); }} />}
         {modal === "manual" && <Manual onClose={() => setModal(null)} />}
         {/* 終幕（GDD 15.5）。天下が定まるか、家が絶えたら一度だけ告げる。

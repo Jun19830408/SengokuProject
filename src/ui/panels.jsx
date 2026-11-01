@@ -1183,7 +1183,10 @@ export const 外を押して閉じる = (onClose) => ({
   },
 });
 
-export function MonthReport({ g, onClose, onAid }) {
+/* 途中 … 月の途中に開くとき（城攻めで兵糧攻めに移ったあと。MapScreen の 兵糧攻めに移った）。
+   見出しを「兵糧攻めの報せ」とし、その月の途中の報せ（g.途中の報せ）を報せの頁の頭に出す。
+   もとは月初報告の板をそのまま開いたので、月の半ばに「月初報告」の見出しが出ていた */
+export function MonthReport({ g, onClose, onAid, 途中 = false }) {
   const mine = g.castles.filter((c) => c.faction === g.player);
   /* 月初報告は三つの頁に分ける（GDD 15.1）。
 
@@ -1203,7 +1206,7 @@ export function MonthReport({ g, onClose, onAid }) {
   return (
     <div className="modal" {...外を押して閉じる(onClose)}>
       <div className="card">
-        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>{g.year}年{g.month}月　月初報告</div>
+        <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>{g.year}年{g.month}月　{途中 ? "兵糧攻めの報せ" : "月初報告"}</div>
         <div style={{ display: "flex", gap: 6, margin: "8px 0 10px" }}>
           {頁ら.map((x) => (
             <button key={x.鍵} className={`btn sm ${頁 === x.鍵 ? "on" : ""}`}
@@ -1292,10 +1295,24 @@ export function MonthReport({ g, onClose, onAid }) {
             ひとまとまりにして、いちばん上に置く。 */}
         {頁 === "報せ" && (() => {
           const 印 = "【方面軍】";
-          const 方面 = (g.monthEvents || []).filter((e) => typeof e === "string" && e.startsWith(印));
-          const ほか = (g.monthEvents || []).filter((e) => !(typeof e === "string" && e.startsWith(印)));
+          const 途中の文 = 途中 && g.途中の報せ && g.途中の報せ.y === g.year && g.途中の報せ.m === g.month ? g.途中の報せ.文 : [];
+          const 月の文 = (g.monthEvents || []).filter((e) => !途中の文.includes(e));
+          const 方面 = 月の文.filter((e) => typeof e === "string" && e.startsWith(印));
+          const ほか = 月の文.filter((e) => !(typeof e === "string" && e.startsWith(印)));
           return (
             <>
+              {途中の文.length > 0 && (
+                <>
+                  <div className="sec">兵糧攻め</div>
+                  {途中の文.map((e, i) => (
+                    <div key={`m${i}`} style={{ fontSize: 13, padding: "5px 0 5px 9px", lineHeight: 1.75,
+                      borderLeft: "3px solid #3E7A3A", borderBottom: `1px solid ${U.line2}` }}>{e}</div>
+                  ))}
+                  <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.8, margin: "4px 0 6px" }}>
+                    この月の初めの報せは、下に続けて載せています。
+                  </div>
+                </>
+              )}
               {方面.length > 0 && (
                 <>
                   <div className="sec">方面軍</div>
@@ -1310,7 +1327,7 @@ export function MonthReport({ g, onClose, onAid }) {
                   </div>
                 </>
               )}
-              <div className="sec">報せ</div>
+              <div className="sec">{途中の文.length ? "この月の初めの報せ" : "報せ"}</div>
               {ほか.length === 0 && <div style={{ fontSize: 12, color: U.dim }}>特に報せはない。</div>}
               {ほか.map((e, i) => <div key={i} style={{ fontSize: 13, padding: "5px 0", borderBottom: `1px solid ${U.line2}` }}>{e}</div>)}
             </>
@@ -1340,7 +1357,7 @@ export function MonthReport({ g, onClose, onAid }) {
             </div>
           </>
         )}
-        <button className="btn dark" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>評定を開く</button>
+        <button className="btn dark" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>{途中 ? "閉じる" : "評定を開く"}</button>
       </div>
     </div>
   );
