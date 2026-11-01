@@ -356,13 +356,164 @@ export function 兵糧の日(b, 側) {
   if (!f) return null;
   return Math.max(0, Math.floor((f.石 - f.食った) / Math.max(1, f.日に)));
 }
+/* 盤の上の兵の比（寄せ手÷城方）。崩れている隊は半ばに数える（合戦の終わりの判じの 手勢の勘定 と同じ）。
+   城方には盤に現れた後詰も入る。去就の定まらぬ隊は数えない */
+export function 盤の比(b, 崩れを半ば = true) {
+  let 寄 = 0, 受 = 0;
+  for (const c of b.corps) {
+    if (c.dead || c.destroyed || c.潰 || c.withdraw || c.日和見) continue;
+    const n = corpsMen(c) * (崩れを半ば && c.routed ? 0.5 : 1);
+    if (c.side === b.attacker) 寄 += n; else 受 += n;
+  }
+  return 寄 / Math.max(1, 受);
+}
+/* 城攻めを通しての寄せ手の損の割（初めの兵から、いまの盤の兵がどれだけ減ったか。盤に現れた後詰も初めに入る） */
+export function 通しの損(b) {
+  const 初 = (b.initial && b.initial[b.attacker]) || 0;
+  if (!(初 > 0)) return 0;
+  const 今 = b.corps.reduce((a, c) => (c.side !== b.attacker || c.dead || c.destroyed || c.潰 || c.withdraw) ? a : a + corpsMen(c), 0);
+  return Math.max(0, 1 - 今 / 初);
+}
+/* 寄せ手の夜の思案。盤の上の兵の比（上の 盤の比）で決める。
+     三倍あれば … 翌日も攻める（城方はもう支えきれない）
+     二倍に届かねば … 兵糧攻めに移る
+     その間 … この日に門を一つでも破っていれば翌日も攻め、破れていなければ兵糧攻めに移る
+   士気が三十を切るか、兵糧が一日に満たなければ、比にかかわらず兵糧攻めに移る。城攻めを通して兵の
+   半ばを失ったときも、四倍に届かなければ兵糧攻めに移る（出城のある城で、比では勝ちながら三日攻め
+   続け、寄せ手が七割を失って落とせなかった）。
+   はじめは寄せ手の損（初めの六割を切れば退く）で決めていたが、測ると、三倍で寄せた城の多くで
+   城方は兵の七割から九割五分を失っていたのに、寄せ手は己の損だけを見て退き、城は「保った」
+   ことになっていた（千鳥城は城方二百四十四人、寄せ手六千余で退いた）。退くか攻めるかは、
+   己の損ではなく彼我の比で決まる。上田合戦の徳川勢も、吉田郡山城の尼子勢も、攻めて城兵を
+   崩せず、数の利が薄れたところで退いている。 */
 export function 寄せ手の夜の思案(b) {
   const 寄 = b.corps.filter((c) => c.side === b.attacker && !c.dead && !c.destroyed && !c.withdraw);
-  const 兵 = 寄.reduce((a, c) => a + corpsMen(c), 0);
-  const 初 = (b.initial && b.initial[b.attacker]) || 兵 || 1;
   const 気 = 寄.length ? 寄.reduce((a, c) => a + c.morale, 0) / 寄.length : 0;
   const 糧 = 兵糧の日(b, "寄せ手");
-  return 兵 < 初 * 0.35 || 気 < 30 || (糧 != null && 糧 < 1) ? "退く" : "続ける";
+  if (気 < 30 || (糧 != null && 糧 < 1)) return "退く";
+  const 比 = 盤の比(b, false);
+  if (通しの損(b) >= 通しの引き際 && 比 < 4) return "退く";       // 軍の半ばを失った（下の 日の引き際の四）
+  if (比 >= 3) return "続ける";
+  if (比 < 2) return "退く";
+  const 今日破った = MAP ? MAP.gates.filter((g) => g.broken).length - ((b.日の構え && b.日の構え.破) || 0) : 0;
+  return 今日破った > 0 ? "続ける" : "退く";
+}
+/* ------------------------------------------------ 日の引き際（GDD 9.3 数日がかり）
+
+   遊ぶ側の申し出は「1は尼子の吉田郡山攻めの失敗や大内の月山富田攻めをモチーフにしています。
+   ただ、8割は大きすぎるので、史実に従ったかたちに修正してください」であった。
+   測ると、強攻に敗れた寄せ手は一日目のうちに初めの兵の八割を失い、総崩れになっていた
+   （清洲城・一.七四倍。寄せ手八千のうち六千四百）。城から射られて兵が減っても士気は九十から
+   百のまま戻り続け、どの隊も兵の八割を失って崩れるまで門へ寄せていた。
+
+   史実の強攻は、そこまで続けない。
+     ・上田合戦（天正十三年）… 徳川勢七千余のうち討たれた者は、真田方の書状で千三百余、
+       『三河物語』で三百ほどとされる（一割九分から四分）。徳川勢は退いて囲みに移った
+     ・吉田郡山城（天文九年から十年）… 『毛利元就郡山籠城日記』の記す尼子方の討死は、
+       一つの戦で数十から二百余。尼子勢は数か月攻めあぐね、総攻めで総大将の尼子久幸を
+       失った夜に陣を払った
+     ・月山富田城（天文十二年）… 大内勢は四か月囲み、国衆の寝返りで退いた。大きく損じたのは
+       退き口で（大内晴持の溺死、小早川正平の討死）、攻めの最中ではない
+   寄せ手の大将は、攻めが進まぬまま兵が減れば、引き鉦を打ってその日の攻めをやめ、陣へ退く。
+   采配の寄せ手（他家と、遊ぶ側が委ねた寄せ手）は、次のどれかで引き鉦を打つ。
+     一、この日に寄せた兵の二割を失い、攻めが進んでいない（この九十秒に門を破らず、この
+         六十秒に門を削れてもいない）。ただし盤の兵がまだ城方の三倍あれば押し続ける
+     二、この日に寄せた兵の三割を失った（押していても）。ただし盤の兵が城方の四倍あれば
+         押し続ける（城方のほうが速く減っている）
+     三、寄せ手の兵の半ばが崩れている（総崩れになる前に引く）。三倍あれば引かない
+     四、城攻めを通して、初めの兵の半ばを失った。四倍あれば押し続ける
+   本丸の門が破れていれば引かない（あと一押しで城が落ちる）。
+   比を見ずに己の損だけで引いていたころは、三倍で寄せて城方を九割まで減らしながら引き、
+   翌日も同じ損を重ねていた（上の 寄せ手の夜の思案）。手ずから率いる遊ぶ側は、
+   一括命令の「引き鉦」で同じことができる（BattleScreen）。
+   引き鉦のあとは日暮れと同じく夜の段へ移り、夜のうちに翌日も攻めるかを決める
+   （上の 寄せ手の夜の思案）。城方は追い討ちをかけない――寄せ手は備えを崩さずに退く。 */
+export const 日の引き際の損 = 0.20;            // 一の割（攻めが進んでいないとき）
+export const 日の引き際の大損 = 0.30;          // 二の割
+export const 通しの引き際 = 0.5;               // 四の割（城攻めを通しての損）
+const 攻めの進みの刻 = 90;
+/* 攻めが進んでいるか。この九十秒に門を破ったか、この六十秒に、まだ破れていない門のどれかを
+   その門の固さの八分より多く削ったか（寄せ手が門に取り付いて押している）。
+   十秒ごとに、破れていない門の傷みを控えておく（下の 門の傷みを控える） */
+function 攻めが進んでいるか(b) {
+  if (b.t - (b.門の破れた刻 == null ? -Infinity : b.門の破れた刻) < 攻めの進みの刻) return true;
+  const 控 = b.門の傷み || [];
+  const 前 = 控.find((x) => b.t - x.t <= 60);
+  const 今 = 控[控.length - 1];
+  if (!前 || !今 || 前 === 今) return false;
+  const 割 = 0.08;
+  for (const [鍵, hp] of Object.entries(前.hp)) {
+    const g = MAP.gates.find((x) => x.key === 鍵) || (MAP.出城 && MAP.出城.gates.find((x) => x.key === 鍵));
+    if (!g || g.broken || !(g.max > 0)) continue;
+    if (hp - (今.hp[鍵] == null ? g.hp : 今.hp[鍵]) >= g.max * 割) return true;
+  }
+  return false;
+}
+function 門の傷みを控える(b) {
+  if (!MAP) return;
+  const 控 = b.門の傷み || (b.門の傷み = []);
+  if (控.length && b.t - 控[控.length - 1].t < 10) return;
+  const hp = {};
+  for (const g of [...MAP.gates, ...(MAP.出城 ? MAP.出城.gates : [])]) if (!g.broken) hp[g.key] = g.hp;
+  控.push({ t: b.t, hp });
+  while (控.length > 8) 控.shift();
+}
+/* この日の寄せ手と城方の兵を控える（朝、寄せ始める刻に） */
+function 日の構えを控える(b) {
+  for (const c of b.corps) c.朝の兵 = (c.dead || c.destroyed || c.潰 || c.withdraw) ? 0 : corpsMen(c);
+  b.日の構え = { t: b.t, 日: b.日 || 1, 破: MAP ? MAP.gates.filter((g) => g.broken).length : 0 };
+  b.門の破れた刻 = -Infinity;
+  b.門の傷み = [];
+}
+/* この日の寄せ手の損の割（朝にいた隊のうち、討たれた兵の割。後から来た隊は数えない） */
+export function この日の損(b) {
+  let 朝 = 0, 今 = 0;
+  for (const c of b.corps) {
+    if (c.side !== b.attacker || !c.朝の兵) continue;
+    朝 += c.朝の兵;
+    今 += Math.min(c.朝の兵, corpsMen(c));
+  }
+  return 朝 > 0 ? 1 - 今 / 朝 : 0;
+}
+export function 日の引き際(b) {
+  if (!MAP || !b.日の構え || b.phase !== "fight") return null;
+  門の傷みを控える(b);
+  if (本丸が開いたか(MAP)) return null;
+  const 損 = この日の損(b);
+  const 進み = 攻めが進んでいるか(b);
+  const 大損 = 日の引き際の大損, 小損 = 日の引き際の損;
+  const 比 = 盤の比(b);
+  const 押せる = 3, 大いに押せる = 4;              // 盤の兵が城方の三倍・四倍あれば押し続ける
+  if (損 >= 大損 && 比 < 大いに押せる) return `この日の攻めで兵の${Math.round(損 * 10)}割を失い`;
+  if (損 >= 小損 && !進み && 比 < 押せる) return `攻めあぐねて兵の${Math.round(損 * 10)}割を失い`;
+  const 寄 = b.corps.filter((c) => c.side === b.attacker && !c.dead && !c.destroyed && !c.潰 && !c.withdraw && !c.日和見);
+  const 兵 = 寄.reduce((a, c) => a + corpsMen(c), 0);
+  const 崩 = 寄.filter((c) => c.routed).reduce((a, c) => a + corpsMen(c), 0);
+  if (兵 > 0 && 崩 >= 兵 * 0.5 && 比 < 押せる) return "隊の半ばが崩れ";
+  if (通しの損(b) >= 通しの引き際 && 比 < 大いに押せる) return "城攻めを通して兵の半ばを失い";
+  return null;
+}
+/* 引き鉦を打つ。寄せ手はこの日の攻めをやめ、夜の段へ移る（日数が尽きていれば兵糧攻めに移る）。
+   訳 … 報せに添える訳（「門を破れぬまま兵の二割を失い」など）。遊ぶ側が打てば訳は無い */
+export function 引き鉦を打つ(b, 訳 = "") {
+  if (!MAP || b.phase !== "fight") return false;
+  const 損 = Math.round(b.corps.filter((c) => c.side === b.attacker && c.朝の兵)
+    .reduce((a, c) => a + Math.max(0, c.朝の兵 - corpsMen(c)), 0));
+  for (const c of b.corps) { c.chasing = false; c.sallied = false; }
+  const 名 = b.attacker === "P" ? "味方" : "寄せ手";
+  const 文 = `${名}は${訳 ? 訳 + "、" : ""}引き鉦を打って陣へ退いた（この日の寄せ手の損 ${fmt(損)}人）。`;
+  notify(b, 文, b.attacker === "P" ? "bad" : "good");
+  if (b.日数 && (b.日 || 1) < b.日数) {
+    b.phase = "night"; b.夜 = { 日: b.日 || 1, 引き鉦: true };
+    return true;
+  }
+  b.phase = "over"; b.orderly = true;
+  b.result = b.attacker === "P" ? "E" : "P";
+  if (b.日数) {
+    b.兵糧攻めへ = true;
+    b.log.push({ t: b.t, text: "強攻で城は落ちず、寄せ手は兵糧攻めに移った。" });
+  } else b.log.push({ t: b.t, text: "城は落ちず、寄せ手は囲みへ戻った。" });
+  return true;
 }
 /* 兵糧攻めに移る。強攻はここで終わり、城は落ちなかった（城方の勝ち）。地図の側
    （MapScreen 城攻めの後始末）が b.兵糧攻めへ を見て、その月の兵糧攻めを当てる */
@@ -570,6 +721,7 @@ export function 夜を明かす(b) {
   /* 寄せ手ははじめの陣から寄せ直すので、一日目と同じく寄せる道のりの刻を足す */
   b.dusk = b.t + (b.日の長さ || b.dusk) + (b.初陣を控えた ? (b.寄せの刻 || 0) : 0);
   b.phase = "fight"; b.夜 = null; b.朝 = b.日;
+  日の構えを控える(b);
   b.log.push({ t: b.t, text: `${日の名(b.日)}の朝。城方は夜のうちに門を繕った。寄せ手ははじめの陣から寄せ直す。` });
 }
 
@@ -581,6 +733,7 @@ export function stepBattle(b, dt) {
     b.初陣を控えた = true;
     for (const c of b.corps) if (c.side === b.attacker && !c.dead && !c.destroyed) c.初陣 = { x: c.x, y: c.y, f: c.facing };
   }
+  if (MAP && !b.日の構え) 日の構えを控える(b);     // この日の寄せ手の兵（日の引き際の損を測る）
   b.t += dt; b.aiClock -= dt;
   for (const c of b.corps) {
     if (!c.pending) continue;
@@ -1852,6 +2005,7 @@ export function stepBattle(b, dt) {
         MAP.nav = null;
         b.mapDirty = true; MAP.nav = null;        // 通れる場所が変わった
         notify(b, `${g.key}が破られた。`, b.attacker === "P" ? "good" : "bad");
+        b.門の破れた刻 = b.t;                      // 寄せ手の日の引き際で「攻めが進んでいるか」を見る
         /* 出城の門は城の門ほどには響かない（出城そのものが落ちたときに、もう一度響く） */
         const 響 = g.出城 ? 0.5 : 1;
         for (const o of alive) {
@@ -2881,6 +3035,12 @@ export function stepBattle(b, dt) {
       : "寄せ手は攻めあぐね、兵を退いた。";
     notify(b, 文, b.result === "P" ? "good" : "bad");
     return;
+  }
+  /* 采配の寄せ手の日の引き際（上の 日の引き際）。手ずから率いる遊ぶ側には効かせない */
+  if (MAP && (b.attacker !== "P" || b.委ねた) && b.t >= (b.引き際を見た || 0) + 1) {
+    b.引き際を見た = b.t;
+    const 訳 = 日の引き際(b);
+    if (訳) { 引き鉦を打つ(b, 訳); return; }
   }
   // 日没。攻撃側だけを一律敗北にはせず、両軍が兵を退く（GDD 8.8）
   if (b.t >= b.dusk) {

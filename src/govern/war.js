@@ -1075,7 +1075,12 @@ export function resolveOffscreen(prev, armyId, castleId) {
     let def = dMen2 * (0.85 + castle.localTrain / 250) * (1 + castle.def / 200 + lead(dGens2) / 300) * (0.85 + Math.random() * 0.3) * 乱れ;
     const atkWon = atk > def;
     const r = Math.min(atk, def) / Math.max(atk, def);
-    const aLoss = Math.round(army.men * (atkWon ? 0.16 * r + 0.06 : 0.3 + 0.2 * r));
+    /* 寄せて敗れた側の損は、一割二分から二割四分（両軍が拮抗するほど重い）。もとは三割から
+       五割で、城に寄せて退けられただけの軍が半ばを失っていた。遊ぶ側の申し出は「8割は大きすぎる
+       ので、史実に従ったかたちに修正してください」であった（battle/engine.js 日の引き際）。
+       上田合戦（天正十三年）の徳川勢の損は、真田方の書状で七千余のうち千三百余、『三河物語』で
+       三百ほどとされる */
+    const aLoss = Math.round(army.men * (atkWon ? 0.16 * r + 0.06 : 0.12 + 0.12 * r));
     const dLoss = Math.round(dMen2 * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
     軍の損を分ける(s, army, aLoss);
     castle.local = Math.max(0, castle.local - dLoss);

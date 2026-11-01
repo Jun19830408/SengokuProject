@@ -4,7 +4,7 @@ import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, rout
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す, 狙いの組, 狙う所 } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限, 城山の形 } from "../battle/shinga.js";
-import { stepBattle, 夜を明かす, 兵糧攻めに移る, 寄せ手の夜の思案, 今の刻, 日の名, 兵糧の日 } from "../battle/engine.js";
+import { stepBattle, 夜を明かす, 兵糧攻めに移る, 寄せ手の夜の思案, 今の刻, 日の名, 兵糧の日, 引き鉦を打つ, この日の損 } from "../battle/engine.js";
 import { 計略を仕掛ける, 計略の見込み, 計略の減り, 仕掛け手, 仕掛けた, 内応の者 } from "../battle/keiryaku.js";
 import { 鼓舞する, 鼓舞の残り, 鼓舞の見込み, 鼓舞の割, 鼓舞の大将か, 近くにも届くか, 鼓舞の回数 } from "../battle/kobu.js";
 import { 真ん中に据える, 縦の縮み, 盤へ戻す, 斜めに焼く, 斜めに写す, 高さ図があるか, 視点を読む, 視点を替える, 斜め, 向きを据える, 視, 視から盤, 視の寸, 区の高さ図を外す, 今の面, 面を据える } from "../battle/naname.js";
@@ -1108,6 +1108,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <button className="btn sm" onClick={() => castleAll("施設を崩す")}>全軍施設を崩す</button>
                 <button className="btn sm" onClick={() => castleAll("本丸へ")}>全軍本丸へ</button>
                 <button className="btn sm" onClick={() => allOrder("接戦")}>全軍接戦</button>
+                {/* 引き鉦（engine.js 日の引き際・引き鉦を打つ）。この日の攻めをやめて陣へ退き、夜の段へ移る */}
+                {b.phase === "fight" && <button className="btn sm" onClick={() => set退き確認({ 引き鉦: true })}>引き鉦</button>}
                 <button className="btn sm" onClick={() => set退き確認({ 全軍: true })}>全軍撤退</button>
               </>
             ) : (
@@ -1500,7 +1502,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
             <div style={{ fontSize: 13.5, lineHeight: 1.7 }}>
-              <b className="mn" style={{ fontSize: 17 }}>{日の名(b.日 || 1)}の日が暮れた</b>
+              <b className="mn" style={{ fontSize: 17 }}>{b.夜 && b.夜.引き鉦
+                ? `${日の名(b.日 || 1)}、${寄せ手 ? "味方" : "寄せ手"}は引き鉦を打って陣へ退いた`
+                : `${日の名(b.日 || 1)}の日が暮れた`}</b>
               <span style={{ color: U.dim, marginLeft: 8 }}>（城攻めは{日の名(b.日数 || 3)}まで）</span><br />
               破れた門 {破れ}／{門.length}。夜のうちに両軍とも士気が戻り、疲れが抜けます。城方は破れていない門を一割ほど繕います
               （破れた門は破れたまま、兵も減ったまま）。翌日の強攻なら、朝に両軍とも布陣を整え直し、寄せ手ははじめの陣から攻め直します。
@@ -1566,6 +1570,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const k = 退き確認;
     set退き確認(null);
     if (!k) return;
+    if (k.引き鉦) { 引き鉦を打つ(b); force((n) => (n + 1) % 1000); return; }
     if (k.全軍) allOrder("撤退");
     else if (k.corps && k.corps.gen.lord && !b.筋書き) {
       /* 総大将が退けば、軍は退く（GDD 8.7）。
@@ -1585,7 +1590,33 @@ export function BattleScreen({ ctx, land, onEnd }) {
     }
     force((n) => (n + 1) % 1000);
   };
-  const 退きの札 = 退き確認 && (() => {
+  /* 引き鉦の念押し。この日の攻めをやめる（一日を費やすので、指の滑りでは打たせない） */
+  const 引き鉦の札 = 退き確認 && 退き確認.引き鉦 && (() => {
+    const 損 = Math.round(この日の損(b) * 100);
+    const 終い = !(b.日数 && (b.日 || 1) < b.日数);
+    return (
+      <div className="modal" onMouseDown={stop} onMouseUp={stop}>
+        <div className="card" style={{ maxWidth: 430 }}>
+          <div className="mn" style={{ fontSize: 20, marginBottom: 6 }}>この日の攻めをやめますか</div>
+          <div style={{ fontSize: 12.5, lineHeight: 1.95 }}>
+            引き鉦を打ち、全軍を陣へ退かせます（この日の損は寄せた兵の<b>{損}％</b>）。
+            {終い ? <>今日は{日の名(b.日 || 1)}で強攻の日数が尽きているので、<b>兵糧攻め</b>に移ります。</>
+              : <>この日の攻めはここまでとし、<b>夜の段</b>に移ります（翌日も攻めるか、兵糧攻めに移るかを選べます）。</>}
+          </div>
+          <div style={{ margin: "10px 0", padding: "9px 11px", background: "rgba(47,93,140,0.08)",
+            borderLeft: "3px solid #2F5D8C", fontSize: 11.5, lineHeight: 1.9 }}>
+            備えを崩さずに退くので、追い討ちは受けません。破った門は破れたまま、城方の兵も減ったままです
+            （城方は夜のうちに、破れていない門を一割ほど繕います）。
+          </div>
+          <div style={{ display: "flex", gap: 9 }}>
+            <button className="btn" style={{ flex: 1 }} onClick={() => set退き確認(null)}>取りやめる</button>
+            <button className="btn dark" style={{ flex: 1 }} onClick={退き実行}>承知。引き鉦を打つ</button>
+          </div>
+        </div>
+      </div>
+    );
+  })();
+  const 退きの札 = 退き確認 && !退き確認.引き鉦 && (() => {
     const 全 = !!退き確認.全軍;
     const c = 退き確認.corps;
     const 兵 = 全 ? pMen : c ? corpsMen(c) : 0;
@@ -1692,6 +1723,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   return (
     <div className="sp" style={{ height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }} onMouseDown={stop} onMouseUp={stop}>
       {退きの札}
+      {引き鉦の札}
       {問いの札}
       {咎めの帯}
       {覚えの札}
