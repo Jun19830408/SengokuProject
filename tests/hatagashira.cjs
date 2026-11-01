@@ -559,7 +559,7 @@ console.log('\n── 十六　世に出た者・生まれた子は「本領を�
 }
 
 /* ---- 在陣からの連戦（GDD 6.4）。落とした城に在陣した手勢が、そのまま次へ向かうか。 */
-const 方面の盤 = (的家を指す) => {
+const 方面の盤 = (的家を指す, 在陣の兵 = 3000) => {
   const s = initState('oda');
   for (const k of ['尾張', '美濃', '三河', '近江']) {
     for (const c of s.castles.filter((x) => x.kuni === k)) c.faction = 'oda';
@@ -581,7 +581,7 @@ const 方面の盤 = (的家を指す) => {
   for (const g of 供) g.at = null;
   const 軍 = {
     id: 'test-army', faction: 'oda', from: 城.id, gens: 供.map((g) => g.id),
-    local: 3000, localTrain: 70, rost: null, men: 3000 + 供.reduce((a, g) => a + g.retinue, 0),
+    local: 在陣の兵, localTrain: 70, rost: null, men: 在陣の兵 + 供.reduce((a, g) => a + g.retinue, 0),
     at: 城.id, path: [城.id], prog: 0, food: 4000, target: null, 旗頭: 旗.id, 在陣: 城.id,
   };
   s.armies = [...(s.armies || []), 軍];
@@ -590,7 +590,10 @@ const 方面の盤 = (的家を指す) => {
 
 console.log('\n── 十七　攻める家を指せば、伺いを立てず在陣の陣を進める');
 {
-  const { s, 旗 } = 方面の盤(true);
+  /* 在陣の手勢は、次の城を攻めるに足る兵（城兵の三倍。出征の見立て）を抱えていれば進む。
+     もとは三千で囲ませていたが、攻めの物差しを城兵の三倍に改めてからは、三千に近隣から
+     寄せても足りず（松ヶ島城に九千九百余りが要る）、陣を払っていた。一万二千を持たせる */
+  const { s, 旗 } = 方面の盤(true, 12000);
   確('攻める家が指してある', H.旗頭の的家(s, 旗).length > 0,
     H.旗頭の的家(s, 旗).map((f) => (s.factions[f] || {}).name).join('・'));
   const u = advanceMonth(s, s);

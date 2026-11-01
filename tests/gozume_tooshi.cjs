@@ -50,8 +50,11 @@ const 確 = (名, 可, 添 = '') => {
    組は二通り。
      落ちる組 … 寄せ手三万で囲む。城兵九百・城防三十。後詰千二百が来ても城は落ちる見込み
      保つ組   … 寄せ手六千で囲む。城兵三千五百・城防八十五。後詰六千が来る。城の門と矢玉を強めてから
-                寄せ手三千では後詰の着く前に崩れて合戦が閉じたので、城が保つうちで寄せ手を増やした */
-function 仕込む({ 寄兵, 城兵, 城防, 後兵, 寄将数 }) {
+                寄せ手三千では後詰の着く前に崩れて合戦が閉じたので、城が保つうちで寄せ手を増やした。
+                寄せ手は城兵の三倍に満たないので、一日目に兵の二割を失えば引き鉦を打って陣へ退く
+                （engine.js 日の引き際）。委ねたままでは後詰の着く前に合戦が閉じるので、この組は
+                後詰が盤に現れるまで委ねずに見ていて（寄せ手は動かさない）、現れてから委ねる */
+function 仕込む({ 寄兵, 城兵, 城防, 後兵, 寄将数, 後詰を待つ = false }) {
   const s = initState('oda');
   let 自 = null, 的 = null, 援 = null;
   for (const c of s.castles.filter((x) => x.faction === s.player)) {
@@ -84,7 +87,7 @@ function 仕込む({ 寄兵, 城兵, 城防, 後兵, 寄将数 }) {
     at: 道[0], path: 道, prog: 0.97, food: 9000, target: 的.id, relief: 的.id,
   });
   s.sieges[0].relief = 'reliefArmy';
-  return { s, 自, 的, 援, 将, 後将, 寄兵, 城兵, 後兵 };
+  return { s, 自, 的, 援, 将, 後将, 寄兵, 城兵, 後兵, 後詰を待つ };
 }
 
 const 蔵 = new Map();
@@ -116,11 +119,22 @@ async function 通す(仕) {
   if (btn('自ら采を執る')) { await rc('自ら采を執る'); await flush(); await flush(); }
   出た.始めの文 = txt();
   await rc('合戦開始'); await flush();
-  await rc('委ねて結果を見る');
   出た.見えた = false;
+  let 刻み = 0;                                        // 一コマの時刻（二つの繰り返しで通して進める）
+  if (仕.後詰を待つ) {
+    /* 後詰が盤に現れるまでは委ねずに早送りで見ている。現れてから委ねる */
+    await rc('早送り');
+    for (let k = 0; k < 20000 && !出た.見えた; k++) {
+      const q = [...rafMap.entries()]; rafMap.clear();
+      if (q.length) { const ts = 2000 + (刻み++) * 90; await act(async () => { q.forEach(([, cb]) => cb(ts)); }); } else await flush();
+      if (/後詰着到/.test(txt())) 出た.見えた = true;
+      if (btn('戦場を離れる')) break;
+    }
+  }
+  await rc('委ねて結果を見る');
   for (let k = 0; k < 60000; k++) {
     const q = [...rafMap.entries()]; rafMap.clear();
-    if (q.length) await act(async () => { q.forEach(([, cb]) => cb(2000 + k * 90)); }); else await flush();
+    if (q.length) { const ts = 2000 + (刻み++) * 90; await act(async () => { q.forEach(([, cb]) => cb(ts)); }); } else await flush();
     if (!出た.見えた && /後詰着到/.test(txt())) 出た.見えた = true;
     if (btn('戦場を離れる')) break;
   }
@@ -142,7 +156,7 @@ async function 通す(仕) {
 (async () => {
   for (const [名, 設定] of [
     ['落ちる組', { 寄兵: 30000, 城兵: 900, 城防: 30, 後兵: 1200, 寄将数: 3 }],
-    ['保つ組', { 寄兵: 6000, 城兵: 3500, 城防: 85, 後兵: 6000, 寄将数: 2 }],
+    ['保つ組', { 寄兵: 6000, 城兵: 3500, 城防: 85, 後兵: 6000, 寄将数: 2, 後詰を待つ: true }],
   ]) {
     console.log(`── ${名}`);
     const 仕 = 仕込む(設定);

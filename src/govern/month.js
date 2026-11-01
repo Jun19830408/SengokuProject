@@ -2353,6 +2353,11 @@ export function advanceMonth(prev, g) {
               const 在の将 = (在.gens || []).map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
               const 見在 = 出征の見立て(s, s.player, 的, 在の将);
               const 要る兵 = Math.max(0, 見在.要る - 先に出た), 望む兵 = Math.max(0, 見在.望む - 先に出た);
+              /* 寄せる前の軍の姿を控える。揃わずに陣を進めないなら、寄せた兵をもとの城へ戻し、
+                 軍も寄せる前に戻す（寄せを返す は城の側だけを戻す）。戻さねば、揃わぬ月に寄せた兵と
+                 将が、そのあと陣を払うときに在陣の軍の帰り先へまとめて入ってしまう */
+              const 寄せる前 = { local: 在.local, men: 在.men, food: 在.food, rost: 在.rost, gens: 在.gens,
+                出どころ: 在.出どころ ? [...在.出どころ] : undefined };
               const 寄 = 在.men < 望む兵
                 ? 近隣から兵を寄せる(s, s.player, 陣城, 在, { 道: 軍の道, 限り: 寄せ限り, 歩: 寄せ歩,
                   要る: 望む兵, 選べる: (x) => 受けの城.has(x.id) })
@@ -2370,6 +2375,11 @@ export function advanceMonth(prev, g) {
                   + `${寄.length ? `。${寄.map((q) => q.城.name).join("・")}より加勢` : ""}`
                   + `／兵${fmt(在.men)}人・要り${fmt(要る兵)}人・およそ${月}ヶ月。`);
                 return true;
+              }
+              if (寄.length) {
+                寄せを返す(寄);
+                Object.assign(在, 寄せる前);
+                if (!在.出どころ) delete 在.出どころ;
               }
               if (!待ちを報せた) {
                 待ちを報せた = true;

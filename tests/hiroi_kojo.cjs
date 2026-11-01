@@ -26,7 +26,7 @@ fs.writeFileSync(entry,
   'export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, gateOpenU, 城の構え, 寄せ手の陣, 城の域か, buildNav } from "../src/battle/castleMap.js";\n'
 + 'export { makeCorps, placeSquads, corpsMen } from "../src/battle/corps.js";\n'
 + 'export { battleAI } from "../src/battle/ai.js";\n'
-+ 'export { createBattle, stepBattle, 夜を明かす, 陣を払う, 寄せ手の夜の思案, 今の刻, 兵糧の日, 城攻めの日数 } from "../src/battle/engine.js";\n'
++ 'export { createBattle, stepBattle, 夜を明かす, 陣を払う, 寄せ手の夜の思案, 今の刻, 兵糧の日, 城攻めの日数, 通しの損 } from "../src/battle/engine.js";\n'
 + 'export { FIELD, ROAD, ROADS, RIVER, FORESTS, WOODS, HILLS, MOUNTAINS, MARSH, VILLAGES, terrainAt, fieldScale, setFieldKind, hasRiver, riverShift } from "../src/battle/field.js";\n'
 + 'export { 持ち場を並べる } from "../src/battle/defense.js";\n');
 const out = path.join(ROOT, 'build', 'hiroi-kojo.cjs');
@@ -223,7 +223,25 @@ function 攻める(i, 賽) {
     const 前 = 門.map((g) => g.hp);
     const 気前 = atk.map((c) => c.morale);
     for (const c of atk) c.morale = Math.min(c.morale, 40);
-    確('弱っていなければ寄せ手（采配）は続ける', A.寄せ手の夜の思案(b) === '続ける');
+    /* 夜の思案は、盤の上の兵の比と、初めの兵からの損（通しの損）で決まる（engine.js 寄せ手の夜の思案）。
+       城方の兵をいっとき増減し、初めの兵の控え（b.initial）をいっとき差し替えて形を作り、確かめたら
+       元に戻す。この盤の一日目で寄せ手は初めの兵の六割近くを失うので、そのままでは半ばを失った形になる */
+    const 兵 = (sd) => b.corps.filter((c) => c.side === sd && !c.dead && !c.destroyed && !c.withdraw).reduce((a, c) => a + A.corpsMen(c), 0);
+    const 比で = (比, 損) => {
+      const 元 = def2.map((c) => c.squads.map((q) => q.men));
+      const 元の初め = b.initial[b.attacker];
+      const 割 = (兵('P') / 比) / Math.max(1, 兵('E'));
+      for (const c of def2) for (const q of c.squads) q.men = q.men * 割;
+      b.initial[b.attacker] = 元の初め * (1 - A.通しの損(b)) / (1 - 損);
+      const 答 = A.寄せ手の夜の思案(b);
+      def2.forEach((c, i) => c.squads.forEach((q, j) => { q.men = 元[i][j]; }));
+      b.initial[b.attacker] = 元の初め;
+      return 答;
+    };
+    確('初めの兵の半ばを失っておらず、城方の三倍あれば、寄せ手（采配）は翌日も攻める', 比で(3.2, 0.3) === '続ける');
+    確('初めの兵の半ばを失えば、城方の三倍あっても四倍に届かぬ寄せ手は兵糧攻めに移る', 比で(3.2, 0.55) === '退く');
+    確('城方の四倍あれば、半ばを失っていても翌日も攻める', 比で(4.2, 0.55) === '続ける');
+    確('城方の二倍に届かなければ、寄せ手（采配）は兵糧攻めに移る', 比で(1.8, 0.3) === '退く');
     const t0 = b.t;
     A.夜を明かす(b);
     確('夜が明ければ二日目', b.日 === 2 && b.phase === 'fight');
