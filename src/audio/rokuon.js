@@ -207,6 +207,24 @@ export function 録音を止める(交差 = 0.6) {
   退かせる(今, 交差);
 }
 
+/* 曲を絞る（効果音の段 kouka.js から呼ぶ）。勝ち負けの曲や知らせが鳴るあいだ、いま鳴って
+   いる録音を 倍 まで〇.一五秒で下げ、間（秒）そのまま保ち、戻し（秒）かけて元へ戻す。
+   鳴っていなければ何もせず false。場面が替わって入れ替わった曲は、絞らずに鳴る。 */
+export function 録音を絞る(倍 = 0.12, 間 = 3, 戻し = 1.5) {
+  const 今 = 状.今;
+  if (!今 || !状.座) return false;
+  try {
+    const 時 = 状.座.currentTime, g = 今.声.gain;
+    const 低 = Math.max(0.0001, 倍), 保 = 時 + 0.15 + Math.max(0, 間);
+    g.cancelScheduledValues(時);
+    g.setValueAtTime(Math.max(0.0001, g.value), 時);
+    g.linearRampToValueAtTime(低, 時 + 0.15);
+    g.setValueAtTime(低, 保);
+    g.linearRampToValueAtTime(1, 保 + Math.max(0.05, 戻し));
+    return true;
+  } catch (e) { return false; }
+}
+
 /* 圧したままの札を先に読んでおく（解くのは鳴らす折）。 */
 export function 録音を先に読む(名ら = Object.keys(録音の曲)) {
   if (!使える()) return Promise.resolve([]);
