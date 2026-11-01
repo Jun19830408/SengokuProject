@@ -44,7 +44,8 @@ export { 遠征の兵糧, 陣中の月数, 陣中の食い扶持, 集結を待�
 export { ROAD_ADJ } from "../src/core/paths.js";
 export { resolveOffscreen, resolveClashOffscreen, reinforceOffers, 運び賃, 運び賃を払う, sackCastle, 城を委ねる, 委ねる差配, 軍を解く, withdrawArmy, homeFor, 城に合流する, 在陣させる, 盤の乱れを繕う, restoreStrays, 滅んだ家を始末する, 城なき家を片づける, 将を除く, 着いた味方を束ねる, 旗頭の陣を払う, 方面の報せ } from "../src/govern/war.js";
 export { 圧す, 解す } from "../src/save/pack.js";
-export { advanceMonth } from "../src/govern/month.js";
+export { advanceMonth, 出征の見立て, 攻めに要る兵, 近隣から兵を寄せる, 寄せを返す } from "../src/govern/month.js";
+export { 城攻めの比, 野で当たる比, 将の利, 将の器量, 城攻めの基の比, 野の比, 連戦の余り } from "../src/core/shussei.js";
 export { troopCap, 軍役の器, 軍役の割増, extraIncome, goryoOf, fiefOf, 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届き, 陣触れに応じる, 国が隣り合うか, minGarrison, 身分の位, 総大将を定める, 大将を先頭に, 国主に任じる, 旗頭に任じる, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 国主たち, 旗頭たち, stipendOf, 役の要る身分, 寄騎に取る, 寄騎を解く, 寄騎たち, 寄騎に取れるか, 城主か, 城主を据え替える, 城を明け渡す, 城を守る将, 守備隊の統率, 旗頭の受け持ち, 旗頭の届く国, 旗頭の的にできる家, 旗頭の的家, 旗頭の的家を定める, 的家の限り, 家の国ら, 旗の下の家か, 旗の下の当主か, 当主の国ら, 城の知行の余地, fiefRoom, fiefBurden, 旗頭を継がせる, 旗頭を継げる者, 方面の軍を移す } from "../src/core/rank.js";
 export { 天守を見る, 天守の表 } from "../src/data/tenshu.js";
 export { 難を逃れる, captureChance, 仕官を願えるか, 他家が召し抱える, 囚われた年, makePrisoner, takeAsPrisoner } from "../src/core/capture.js";
