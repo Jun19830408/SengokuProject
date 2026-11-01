@@ -2,13 +2,15 @@ import React, { useState, useRef, useEffect } from "react";
 import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
-import { 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限 } from "../battle/shinga.js";
+import { 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 個人で描くか } from "../battle/shinga.js";
 import { stepBattle } from "../battle/engine.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, terrainAt } from "../battle/field.js";
 import { U, clamp, fmt } from "../core/util.js";
 import { FormationPicker } from "./panels.jsx";
 import { 伏せ場を探す, 伏兵に置ける, 伏兵の策士, 退かせる, 内応させる, 内応の門を開く } from "../battle/corps.js";
 import { 合戦の問いに答える, 指図の縛り, 筋書きの覚え } from "../battle/kassen.js";
+/* 合戦の効果音（効果音取り込みの手引き「三」）。理からは鳴らさず、ここから鳴らす */
+import { 効果を鳴らす, 兵の音を掛ける, 効果を止める, 音の列を鳴らす, 下知の音, 陣形の音, 地の名, 真ん中の隊, 終わりの締め } from "./senoto.js";
 
 /* --------------------------------------------------------------- 合戦画面 */
 export function BattleScreen({ ctx, land, onEnd }) {
@@ -32,7 +34,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const camRef = useRef({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
   const gesture = useRef(null);
   const setSpeed = (v) => { speedRef.current = v; setSpeedState(v); };
-  const pickCorps = (v) => { selRef.current = v; setSel(v); if (v) { allRef.current = false; setSelAll(false); } };
+  /* 隊を選べば「自軍を選ぶ」の音（小鼓の「ポン」）。選びを外したときは鳴らさない */
+  const pickCorps = (v) => { selRef.current = v; setSel(v); if (v) { allRef.current = false; setSelAll(false); 効果を鳴らす("自軍を選ぶ"); } };
   const setFace = (v) => { faceRef.current = v; setFaceMode(v); };
 
   /* 下知の関所（GDD 8.9）。
@@ -44,10 +47,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const 訳 = 指図の縛り(bb, c);
     if (訳) { set咎め(訳); return false; }
     issueOrder(bb, c, patch);
+    下知の音(bb, c, patch && patch.order);     // 前進・後退・転回は陣太鼓、射撃は鉄砲か弓（合戦の最中だけ）
     return true;
   };
 
   const brokeRef = useRef(-1);
+  const 地Ref = useRef(0);                 // 寄ったときの兵の音を判じた刻
   const 跡Ref = useRef(null);
   /* 地の画布の寸法（GDD 8.1）。
 
@@ -226,7 +231,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     if (b2.phase === "over" || 委ねRef.current) return;
     for (const c of b2.corps) if (c.side === "P") { c.auto = true; 持ち場を解く(c); }   // 全軍を委任する
     b2.委ねた = true;                                              // 伏兵の判断まで任せる
-    if (b2.phase === "deploy") { b2.phase = "fight"; setPhase("fight"); }
+    if (b2.phase === "deploy") { b2.phase = "fight"; setPhase("fight"); 効果を鳴らす("法螺貝"); }
     setSpeed(0);
     委ねRef.current = true; set委ね中(true);
   };
@@ -256,8 +261,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
       last = ts;
       const sp = speedRef.current;
       // 委ねている間は絵を描かない。描かぬぶんだけ時が速く進む。
-      if (委ねRef.current) { handle = requestAnimationFrame(loop); return; }
+      // 鳴らしたい音の列も、委ねているあいだは鳴らさずに捨てる（決着の締めだけを鳴らす）
+      if (委ねRef.current) { if (b.音) b.音.length = 0; 兵の音を掛ける(null); handle = requestAnimationFrame(loop); return; }
       if (b.phase === "fight" && sp > 0) stepBattle(b, dt * sp);
+      音の列を鳴らす(b);                       // 理が積んだ音（知らせの有利・不利など）
       /* 地の焼きを少しずつ進める（GDD 8.11）。一コマ十ミリ秒を上限に汲み、
          焼き上がったら数コマかけて溶暗で差し替える。 */
       const 焼 = 焼きRef.current;
@@ -299,13 +306,22 @@ export function BattleScreen({ ctx, land, onEnd }) {
         // 新しく増えた戦の痕だけを、跡の画布へ焼き足す
         if (跡Ref.current) 跡を焼き足す(跡Ref.current.getContext("2d"), b, Math.min(0.5, 画布の倍()));
         drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current);
+        /* 寄ったときの兵の音（地）。兵が一人ずつ描かれるまで寄れば、画面の真ん中にいちばん近い隊の
+           様子で選ぶ（行軍・接戦・突撃・接敵・退却）。引けば止める。半秒に一度判じる */
+        if (ts - 地Ref.current > 500) {
+          地Ref.current = ts;
+          const cam = camRef.current;
+          兵の音を掛ける(b.phase === "fight" && 個人で描くか(b, cam, W, H) ? 地の名(真ん中の隊(b, cam.x, cam.y)) : null);
+        }
       }
+      /* 合戦が終わった折に一度だけ、勝ち負けの締めを鳴らす（日没・兵糧攻めへは鳴らさない） */
+      if (b.phase === "over") 終わりの締め(b, { mode: ctx.mode, playerIsAtk: ctx.playerIsAtk });
       if (b.phase === "over" && speedRef.current !== 0) setSpeed(0);
       if (ts - uiRef.current > 100) { uiRef.current = ts; force((n) => (n + 1) % 1000); }
       handle = requestAnimationFrame(loop);
     };
     handle = requestAnimationFrame(loop);
-    return () => { alive = false; cancelAnimationFrame(handle); };
+    return () => { alive = false; cancelAnimationFrame(handle); 効果を止める(); };   // 合戦の画面を離れれば音を止める
   }, []);
 
   const b = bRef.current;
@@ -511,6 +527,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
          陣形そのものが押した方角へ向き直る。 */
       if (指図の縛り(b, c)) { set咎め(指図の縛り(b, c)); setFace(false); return; }
       転回させる(b, c, f.x, f.y);
+      下知の音(b, c, "転回");                  // 向きを変える下知も陣太鼓（合戦の最中だけ）
       setFace(false);
       return;
     }
@@ -568,7 +585,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
        これまでは、自隊を選んでいるときだけ「そこへ攻めかかれ」の意味しか持たず、
        何も選んでいなければただの移動先になっていた。敵の様子を検めてから
        どの隊をぶつけるか決める、という手が打てなかった。 */
-    if (foe) setFoeSel(foe.id); else setFoeSel(null);
+    if (foe) { setFoeSel(foe.id); 効果を鳴らす("敵を選ぶ"); } else setFoeSel(null);
     if (foe && !selC && !allRef.current) return;         // 自隊を選んでいなければ、見るだけ
     if (allRef.current) {
       // 全部隊選択中は、まとまりを保ったまま全隊へ同じ目標を与える
@@ -736,6 +753,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const changeForm = (c, f) => {
     if (!c || c.formation === f) return;
     c.formation = f;
+    陣形の音(b);                                // 合戦の最中に陣形を選び直せば陣太鼓
     /* 遊ぶ側が選んだ陣形には印をつける。采配は開戦の一手目で兵力差を見て
        陣形を選び直すので、印がないと、布陣のときに選んだ陣がその場で
        書き換えられてしまう（選んだそばから鶴翼や魚鱗になっていた）。 */
@@ -893,7 +911,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
               {伏兵の釦(selC)}
             </>
           )}
-          <button className="btn dark" onClick={() => { b.phase = "fight"; setPhase("fight"); setSpeed(0.3); }}>合戦開始</button>
+          <button className="btn dark" onClick={() => { b.phase = "fight"; setPhase("fight"); setSpeed(0.3); 効果を鳴らす("法螺貝"); }}>合戦開始</button>
           {/* 諸将に委ね、決着だけを見る。戦い方はいまの仕組みのまま変わらない。 */}
           <button className="btn" onClick={委ねる}>委ねて結果を見る</button>
         </div>
