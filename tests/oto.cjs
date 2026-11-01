@@ -12,7 +12,7 @@
    読み込みを据えて、次を検める。
 
      一、場面で曲が替わる（政務は位を問わず一曲、天下分け目は大合戦の曲、海戦は野戦の曲）
-     二、合成の調べを持たない（音の部品は録音の二つだけ）
+     二、合成の調べを持たない（音の部品は録音の二つと効果音だけ）
      三、遊ぶ側が触れる（解錠する）まで、札も読まず鳴らさない
      四、解錠すると、いまの場面の札を読み、その曲が鳴る
      五、場面が替われば曲が替わる
@@ -102,7 +102,8 @@ const 確 = (名, 可, 添 = '') => {
   console.log('■ 二、合成の調べを持たない');
   {
     const 部品 = fs.readdirSync(path.join(ROOT, 'src', 'audio')).sort();
-    確('音の部品は録音の二つだけ（oto.js・rokuon.js）', 部品.join('・') === 'oto.js・rokuon.js', 部品.join('・'));
+    /* 効果音（kouka.js）は録音の札を鳴らすだけで、合成の調べではない（効果音取り込みの手引き「七」の4） */
+    確('音の部品は録音の二つと効果音だけ（kouka.js・oto.js・rokuon.js）', 部品.join('・') === 'kouka.js・oto.js・rokuon.js', 部品.join('・'));
     const 本文 = fs.readFileSync(path.join(ROOT, 'src', 'audio', 'oto.js'), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');      // 説明の文は除いて見る
     確('音の座は合成の調べ（kyoku・gakki）を取り込まない', !/kyoku|gakki/.test(本文));
