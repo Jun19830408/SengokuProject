@@ -82,4 +82,5 @@ export { 分け目の限り, 分け目の暮れ, 挑む直轄, 挑まれる版�
 export { 分け目の盤を組む, 分け目の戦果 } from "../src/battle/wakemeikusa.js";
 export { 天下分け目の采配, 挑むか, AIの選ぶ野, 盤を開かずに裁く } from "../src/govern/aiWakeme.js";
 export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す, 組頭の帳, 戦の跡, 戦の跡を記す, 名簿を繕う, 通し番号を据える, 組の番 } from "../src/core/roster.js";
-export { makePromotion } from "../src/core/house.js";
+export { makePromotion, 取り立てる, 子の器量 } from "../src/core/house.js";
+export { 能力を広げる } from "../src/core/util.js";
