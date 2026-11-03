@@ -105,6 +105,7 @@ function 物頭を取り立てる(s, corps) {
   if (!best) return null;
   const promo = makePromotion(best.gen, s.generals, {
     faction: best.gen.faction, at: best.gen.at, 旧名: 長の名(best.q.id, best.q.代),
+    勲功: best.q.功 || 0,                          // 勲功を重ねた者ほど器量が高い（house.js）
   });
   best.q.代 = (best.q.代 || 0) + 1;                  // 組には次の長が立つ
   best.q.功 = 0;

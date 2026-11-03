@@ -184,18 +184,39 @@ export function 架空の名を繕う(s, 史実の将 = []) {
   return 直した;
 }
 
+/* 生まれた子の器量（GDD 6.7）。
+
+   遊ぶ側の申し出は「武将の子などで登場する場合は、親武将の能力を何らかのアルゴリズムで
+   引き継ぐ(能力ままを引き継ぐというよりかは増減させる)かたちがいいと思います」であった。
+   欄ごとに、親の値から並み（六十。始めの盤の武将の中ほど）へ三割寄せ、上げ下げの揺らぎを足す。
+   揺らぎは二つ――その子の才の振れ（四つの欄すべてに同じだけ効く。兄弟でも違う）と、欄ごとの
+   振れ。どちらも釣鐘の形に散らばるので、たいていは親の近くに収まり、まれに親を超える子も、
+   遠く及ばぬ子も出る。
+     親が八十の欄 … 子の中ほどは七十四（三人に二人は六十八から八十）
+     親が六十の欄 … 子の中ほどは六十（三人に二人は五十四から六十六）
+     親が四十五の欄 … 子の中ほどは五十.五（三人に二人は四十四から五十七）
+   九十からは「とくに逸話のある者」の段なので、遊びの中で生まれた者は八十五で止める。
+   もとは（親×五割五分＋六十×四割五分）に一様な振れ（±十五）を足していた */
+export const 子の継ぎ = 0.7;
+const 並みの器量 = 60;
+/* 釣鐘の振れ（平均〇・ばらつき一）。一様な目を二つ足して形を作る */
+const 釣鐘 = () => (Math.random() + Math.random() - 1) * 2.449;
+export function 子の器量(親, 才 = 釣鐘()) {
+  const 欄 = (v) => clamp(Math.round(並みの器量 + 子の継ぎ * ((v == null ? 並みの器量 : v) - 並みの器量)
+    + 才 * 4 + 釣鐘() * 4.5), 20, 85);
+  return { lead: 欄(親.lead), valor: 欄(親.valor), wit: 欄(親.wit), gov: 欄(親.gov) };
+}
+
 export function bearChild(s, gen) {
   const id = `${gen.id}_c${s.year}`;
   if (s.generals.some((x) => x.id === id)) return null;
   const 名 = 子の名(s, gen);
   if (!名) return null;
-  /* 親の器量を半ば継ぎ、残りは並み（六十前後）に寄る。九十からは「とくに逸話のある者」の
-     段なので、遊びの中で生まれた者は八十五で止める。 */
-  const mix = (a, b) => clamp(Math.round(a * 0.55 + b * 0.45 + (Math.random() * 30 - 15)), 20, 85);
+  /* 親の器量を継ぎ、増減させる（上の 子の器量） */
+  const 器 = 子の器量(gen);
   const kid = {
     id, name: 名, faction: gen.faction,
-    lead: mix(gen.lead, 60), valor: mix(gen.valor, 60),
-    wit: mix(gen.wit, 60), gov: mix(gen.gov, 60),
+    lead: 器.lead, valor: 器.valor, wit: 器.wit, gov: 器.gov,
     loyal: clamp((gen.loyal == null ? 70 : gen.loyal) - 4, 0, 100),
     age: 1, at: gen.at, 本領: gen.本領 || gen.at,      // 生まれた子は父の本領に生まれる
     retinue: 60, retTrain: 55,
@@ -520,9 +541,21 @@ export function makePromotion(lord, allGens, opts = {}) {
   }
   if (!cands.length) cands.push(`${sur}${henki}勝`);
   const r = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
-  /* 取り立てられた者の器量。名の知られた武将には及ばぬが、戦場で立った者である。
-     門を守り抜いた者（守備隊）は、堪える力（統率）がいくらか高い。 */
+  /* 取り立てられた者の器量（GDD 6.7）。
+
+     遊ぶ側の申し出は「架空武将の能力が、めちゃくちゃ低いです。勲功を重ねて昇進した者はむしろ
+     高めにすべきだと思います」であった。もとは狭い尺度で作った値（統率三十八から五十六ほど）を
+     武将帳の尺度へ写していたので、統率は十四から四十、知略と政務は五から三十ほどに落ちていた。
+     始めの盤の武将の下から一割（統率五十）にも届かない。
+     いまは武将帳の尺度で直に作る。戦場で立った者であるから、統率と武勇は並み（六十）より上、
+     知略と政務は並みの前後に置く。勲功を重ねた者ほど高い（物頭に届く勲功三十を基とし、五つ
+     重ねるごとに一つ上がる。八まで）。一戦の手柄で取り立てた者は、物頭より三つ低い。
+     門を守り抜いた者（守備隊）は、堪える力（統率）が高く、武勇はやや低い。八十五で止める。
+       物頭（勲功三十） … 統率五十八から七十五・武勇六十五から八十・知略四十五から六十五・
+                           政務三十八から五十八 */
   const 守 = !!opts.守備隊;
+  const 上げ = opts.勲功 != null ? Math.max(0, Math.min(8, Math.floor((opts.勲功 - 30) / 5))) : -3;
+  const 欄 = (a, b) => clamp(r(a, b) + 上げ, 20, 85);
   return {
     /* 旧名。組頭から取り立てるときは、その者の通称をそのまま使う。
        盤の上で手柄を重ねてきた者であって、いま思いついた名ではない。 */
@@ -530,8 +563,9 @@ export function makePromotion(lord, allGens, opts = {}) {
     candidates: cands.slice(0, 4), feat: FEATS[Math.floor(Math.random() * FEATS.length)],
     仕官: {
       faction: opts.faction || lord.faction, at: opts.at || lord.at,
-      lead: 守 ? r(46, 62) : r(38, 56), valor: 守 ? r(44, 64) : r(48, 70),
-      wit: r(28, 52), gov: r(26, 50), age: r(19, 34),
+      lead: 守 ? 欄(62, 78) : 欄(58, 75), valor: 守 ? 欄(60, 76) : 欄(65, 80),
+      wit: 欄(45, 65), gov: 欄(38, 58), age: r(19, 34),
+      広い尺度: true,                              // 武将帳の尺度で作った（取り立てるで写さない）
       retinue: r(0, 3) * 20, retTrain: r(44, 62),
     },
   };
@@ -542,10 +576,12 @@ export function 取り立てる(s, promo, name) {
   const o = promo && promo.仕官;
   if (!o || !s.factions[o.faction]) return null;
   const id = `promo-${o.faction}-${s.year}-${s.month}-${s.generals.length}`;
-  /* 取り立ての値は狭い尺度で作っている（makePromotion）。武将帳と同じ広い尺度へ写す。 */
+  /* 取り立ての値は武将帳の尺度で作っている（makePromotion）。それより前の記録に残った取り立ては
+     狭い尺度なので、武将帳と同じ広い尺度へ写す。 */
+  const 写す = (v, k) => (o.広い尺度 ? v : 能力を広げる(v, k));
   const gen = {
-    id, name, faction: o.faction, lead: 能力を広げる(o.lead, "lead"), valor: 能力を広げる(o.valor, "valor"),
-    wit: 能力を広げる(o.wit, "wit"), gov: 能力を広げる(o.gov, "gov"),
+    id, name, faction: o.faction, lead: 写す(o.lead, "lead"), valor: 写す(o.valor, "valor"),
+    wit: 写す(o.wit, "wit"), gov: 写す(o.gov, "gov"),
     loyal: 82, age: o.age, at: o.at, 本領: o.at,      // 召し抱えた城が、その者の本領となる
     retinue: o.retinue, retTrain: o.retTrain,
     unity: clamp(o.retTrain + 6, 30, 100), merit: 6, 架空: true,

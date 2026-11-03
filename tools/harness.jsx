@@ -86,9 +86,10 @@ export { 分け目の限り, 分け目の暮れ, 挑む直轄, 挑まれる版�
 export { 分け目の盤を組む, 分け目の戦果 } from "../src/battle/wakemeikusa.js";
 export { 天下分け目の采配, 挑むか, AIの選ぶ野, 盤を開かずに裁く } from "../src/govern/aiWakeme.js";
 export { newRoster, rosterTake, rosterAdd, rosterSync, rosterSum, 長の名, 長の階, 組の鍵, 階の段, 取り立てるべき組, 組頭の働きを記す, 組頭の帳, 戦の跡, 戦の跡を記す, 名簿を繕う, 通し番号を据える, 組の番 } from "../src/core/roster.js";
-export { makePromotion } from "../src/core/house.js";
+export { makePromotion, 取り立てる, 子の器量 } from "../src/core/house.js";
 /* 音の座の様子（場面の曲が選ばれたか）。試験では音の座を作らないので、鳴りはせず曲名だけ見る */
 export { 音の設定 } from "../src/audio/oto.js";
 export { 録音の座を据える, 録音を掛ける, 録音を絞る, 録音の様子 } from "../src/audio/rokuon.js";
 export { 効果の札, 効果の指紋, 効果がある, 効果の座を据える, 効果を鳴らす, 締めを鳴らす, 兵の音を掛ける,
   効果を止める, 効果を先に読む, 効果の様子, 効果の控えを空にする, 地の周, 一打の間, 知らせの間, 一打の限り } from "../src/audio/kouka.js";
+export { 能力を広げる } from "../src/core/util.js";
