@@ -520,6 +520,12 @@ function 野を焼く(ce = 10) {
       if ((cx - o.x) ** 2 + (cy - o.y) ** 2 <= rr) d[j * gw + i] = v;
     }
   };
+  /* 町割の区（battle/kata.js 町）は長方形で塗る */
+  const 矩 = (o, v) => {
+    const x0 = Math.max(0, Math.floor(o.x0 / ce)), x1 = Math.min(gw - 1, Math.floor(o.x1 / ce));
+    const y0 = Math.max(0, Math.floor(o.y0 / ce)), y1 = Math.min(gh - 1, Math.floor(o.y1 / ce));
+    for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) d[j * gw + i] = v;
+  };
   const 帯 = (節, 幅, v) => {
     const h2 = 幅 / 2;
     for (let k = 0; k + 1 < 節.length; k++) {
@@ -538,7 +544,7 @@ function 野を焼く(ce = 10) {
   /* 塗る順は「弱い地物から」。後から塗ったものが上に来る。
      山は森より上に置く――木の生えた山は、やはり山である。
      川はすべての上を流れ、渡し場（橋・浅瀬）はその川の上に架かる。 */
-  for (const o of VILLAGES) 丸(o, 7);
+  for (const o of VILLAGES) if (o.町割) 矩(o.町割, 7); else 丸(o, 7);
   for (const o of HILLS) 丸(o, 6);
   for (const o of MARSH) 丸(o, 4);
   for (const o of WOODS) 丸(o, 3);
@@ -850,7 +856,10 @@ export function terrainAt(x, y) {
   for (const m of MARSH) if ((x - m.x) ** 2 + (y - m.y) ** 2 < m.r ** 2) return "marsh";
   for (const m of MOUNTAINS) if ((x - m.x) ** 2 + (y - m.y) ** 2 < m.r ** 2) return "mountain";
   for (const h of HILLS) if ((x - h.x) ** 2 + (y - h.y) ** 2 < h.r ** 2) return "hill";
-  for (const v of VILLAGES) if ((x - v.x) ** 2 + (y - v.y) ** 2 < v.r ** 2) return "village";
+  for (const v of VILLAGES) {
+    const m = v.町割;
+    if (m ? (x >= m.x0 && x <= m.x1 && y >= m.y0 && y <= m.y1) : (x - v.x) ** 2 + (y - v.y) ** 2 < v.r ** 2) return "village";
+  }
   return "plain";
 }
 

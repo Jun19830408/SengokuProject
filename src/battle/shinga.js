@@ -20,7 +20,7 @@
    ========================================================================== */
 import { 縦の縮み, 画の縦, 画の横, 視, 揚げ, 浮き, 隠れの際, 隠れの薄さ, 見える範囲, 画面に映るか, 画面の真ん中から, 今の向き, 視の筆へ, 視の寸, 高さ図を据える, 高さ図を外す, 区の高さ図を据える, 面を据える, 斜め, 地の札, 札を控える, 札を控え止める, 地の字 } from "./naname.js";
 import { 木立を並べる, 木を描く } from "./mori.js";
-import { 里を並べる, 葦を描く, 村の道は横か, 家をよける } from "./sato.js";
+import { 里を並べる, 葦を描く, 村の道は横か, 家をよける, 家々を据える } from "./sato.js";
 import { 城の物を並べる, 城壁をよける } from "./tachimono.js";
 import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS, ROAD,
   RIVER, hasRiver, riverShift, fieldScale } from "./field.js";
@@ -1453,6 +1453,79 @@ function 繁木を描く(q, x, y, r, 振, 日) {
 /* 立体 … 斜めの眺めで、家は sato.js が立てて描く。ここでは道と庭と生垣だけを焼く。
    道の向きは家並みと揃える（道角）。水際 … 画素の所から水際までの画素（川べりの村で、
    家と木を水の上や岸の際に置かぬため。無ければ見ない） */
+/* ---- 切妻の板葺き屋根（町家）。棟は長い辺に沿い、二面が落ちる。押さえの石が並ぶ ---- */
+function 板屋根(q, cx, cy, w, d, 向, 明, 倍) {
+  q.save(); q.translate(cx, cy); q.rotate(向);
+  const hw = w / 2, hd = d / 2, 出 = d * 0.08;
+  const 基 = [168, 156, 134];                                       // 日に焼けた板葺き
+  const c = (k) => `rgb(${Math.min(255, 基[0] * k * 明) | 0},${Math.min(255, 基[1] * k * 明) | 0},${Math.min(255, 基[2] * k * 明) | 0})`;
+  q.fillStyle = c(1.18); q.fillRect(-hw, -hd, w, hd - 出);         // 奥の面（日の当たる側）
+  q.fillStyle = c(0.78); q.fillRect(-hw, -出, w, hd + 出);         // 手前の面
+  q.fillStyle = `rgba(86,82,76,${0.55 * 明})`;                       // 押さえの石
+  for (let i = 1; i < 5; i++) for (const s of [-hd * 0.5, hd * 0.45]) {
+    q.beginPath(); q.arc(-hw + (w * i) / 5, s, Math.max(0.6, 0.9 * 倍), 0, 7); q.fill();
+  }
+  q.strokeStyle = `rgba(70,60,46,${0.75 * 明})`; q.lineWidth = Math.max(1, 1.5 * 倍); q.lineCap = "round";
+  q.beginPath(); q.moveTo(-hw, -出); q.lineTo(hw, -出); q.stroke();
+  q.strokeStyle = `rgba(52,42,30,${0.55 * 明})`; q.lineWidth = Math.max(0.8, 1.1 * 倍);
+  q.strokeRect(-hw, -hd, w, d);
+  q.restore();
+}
+
+/* ---- 城下・宿場の町の区と寺の境内（battle/kata.js 町）。
+
+   区は通りに挟まれた長方形。表は町家の並ぶ踏み固めた土、奥は裏庭（畑と庭木）。村のような
+   楕円の生垣と村の道は引かない（もとは区ごとに生垣で囲った楕円の島に見えた）。寺は砂利を
+   敷いた境内を築地塀で囲む。真上の眺めでは、家並み（sato.js 家々を据える）の屋根をここで
+   並べる。斜めの眺めでは家を立てて描くので、地だけを塗る ---- */
+function 町の区を焼く(q, v, PX, PY, 倍, 立体, 明関) {
+  野種を置く(Math.round(v.x * 7 + v.y * 3));
+  let 範;
+  if (v.寺) {
+    const r = PX(v.r || 40) * 1.9, cx = PX(v.x), cy = PY(v.y);
+    範 = { x0: v.x - (v.r || 40) * 2.2, y0: v.y - (v.r || 40) * 2.2, x1: v.x + (v.r || 40) * 2.2, y1: v.y + (v.r || 40) * 2.2 };
+    q.fillStyle = "rgba(216,206,180,0.82)"; q.fillRect(cx - r, cy - r, r * 2, r * 2);            // 砂利
+    q.strokeStyle = "rgba(60,54,46,0.35)"; q.lineWidth = Math.max(2, 4 * 倍); q.strokeRect(cx - r + 1.5 * 倍, cy - r + 2 * 倍, r * 2, r * 2);
+    q.strokeStyle = "rgba(232,222,196,0.95)"; q.lineWidth = Math.max(1.6, 3 * 倍); q.strokeRect(cx - r, cy - r, r * 2, r * 2);   // 築地塀
+    q.strokeStyle = "rgba(96,98,104,0.7)"; q.lineWidth = Math.max(0.8, 1.2 * 倍); q.strokeRect(cx - r, cy - r, r * 2, r * 2);   // 塀の瓦
+  } else {
+    const m = v.町割;
+    範 = m;
+    const x0 = PX(m.x0), y0 = PY(m.y0), x1 = PX(m.x1), y1 = PY(m.y1);
+    q.fillStyle = "rgba(184,166,128,0.66)"; q.fillRect(x0, y0, x1 - x0, y1 - y0);                // 表の地
+    const 奥 = PX(15);
+    const ix0 = x0 + 奥, iy0 = y0 + 奥, ix1 = x1 - 奥, iy1 = y1 - 奥;
+    if (ix1 - ix0 > 4 * 倍 && iy1 - iy0 > 4 * 倍) {
+      /* 裏庭。踏み固めた土に、植え込みと菜園がところどころ（畑の畝は引かない。町が畑に見えた） */
+      q.fillStyle = "rgba(170,160,118,0.55)"; q.fillRect(ix0, iy0, ix1 - ix0, iy1 - iy0);
+      const 植 = Math.max(2, Math.min(10, Math.round(((ix1 - ix0) * (iy1 - iy0)) / (700 * 倍 * 倍))));
+      for (let i = 0; i < 植; i++) {
+        const w = (6 + 野乱() * 10) * 倍, h = (4 + 野乱() * 7) * 倍;
+        const x = ix0 + 野乱() * Math.max(0, ix1 - ix0 - w), y = iy0 + 野乱() * Math.max(0, iy1 - iy0 - h);
+        q.fillStyle = 野乱() < 0.5 ? "rgba(112,136,70,0.55)" : "rgba(136,150,86,0.45)";
+        q.fillRect(x, y, w, h);
+      }
+      const n = Math.max(1, Math.min(6, Math.round(((ix1 - ix0) * (iy1 - iy0)) / (2000 * 倍 * 倍))));
+      for (let i = 0; i < n; i++) {                                                               // 庭木
+        const x = ix0 + 野乱() * (ix1 - ix0), y = iy0 + 野乱() * (iy1 - iy0);
+        繁木(q, x, y, (3 + 野乱() * 2) * 倍, 野乱(), 明関(x, y));
+      }
+    }
+  }
+  if (立体) return;
+  const 家ら = 家々を据える().filter((h) => h.x >= 範.x0 - 1 && h.x <= 範.x1 + 1 && h.y >= 範.y0 - 1 && h.y <= 範.y1 + 1);
+  家ら.sort((a, b) => a.y - b.y);
+  for (const h of 家ら) {
+    const x = PX(h.x), y = PY(h.y), w = PX(h.hw * 2), d = PY(h.hh * 2);
+    const 明 = 明関(x, y);
+    q.fillStyle = `rgba(40,56,26,${0.36 * (0.5 + 明 * 0.5)})`;
+    q.fillRect(x - w / 2 + 2 * 倍, y - d / 2 + 2.5 * 倍, w, d);
+    const 横 = w >= d, 長 = 横 ? w : d, 奥 = 横 ? d : w, 向 = 横 ? 0 : Math.PI / 2;
+    if (h.種 === "町家" || h.種 === "庫裏") 板屋根(q, x, y, 長, 奥, 向, 明, 倍);
+    else 瓦屋根(q, x, y, 長, 奥, 向, 明, 倍);
+  }
+}
+
 function 集落(q, cx, cy, r, 種, 明関, 倍, 立体, 道角, 水際) {
   野種を置く(種);
   const 向0 = 野乱() * 6.283;
@@ -1667,7 +1740,7 @@ export function 野の川筋() {
   const 野の川 = [];
   if (RIVERS && RIVERS.length) {
     for (const r of RIVERS) {
-      const 渡し = (r.渡し || []).map((w) => ({ x: w.x, y: w.y, r: w.r, 種: w.種 }));
+      const 渡し = (r.渡し || []).map((w) => ({ x: w.x, y: w.y, r: w.r, 種: w.種, ...(w.札なし ? { 札なし: true } : {}) }));
       /* 浅い流れ（戦場の型の小川と沢。battle/kata.js）は、どこでも瀬である。流れに沿って
          瀬の絵を並べ、底の透ける浅い水に見せる。名札は真ん中の一つだけに付ける */
       if (r.浅) 渡し.push(...浅い流れの瀬(r, 渡し));
@@ -2259,6 +2332,11 @@ export function* 野を焼く(g, 画k, opt = {}) {
   /* 斜めの眺めでは、家は立てて描く（sato.js）。道の向きを家並みと揃える */
   const 里立体 = 斜め.入 && 斜め.傾き < 1;
   for (const v of VILLAGES) {
+    if (v.町割 || v.寺) {                               // 城下・宿場の町の区と寺の境内（battle/kata.js 町）
+      const 半 = v.町割 ? Math.hypot(PX(v.町割.x1 - v.町割.x0), PY(v.町割.y1 - v.町割.y0)) / 2 : PX(v.r || 40) * 2.2;
+      水の外へ描く(PX(v.x), PY(v.y), 半 + 8 * 倍, (q) => 町の区を焼く(q, v, PX, PY, 倍, 里立体, 明関));
+      continue;
+    }
     const r = PX(v.r || 40) * 0.95;
     水の外へ描く(PX(v.x), PY(v.y), r * 1.6 + 8 * 倍, (q) => 集落(q, PX(v.x), PY(v.y), r, Math.round(v.x + v.y), 明関, 倍,
       里立体, 村の道は横か(v) ? 0 : Math.PI / 2, 水際px));

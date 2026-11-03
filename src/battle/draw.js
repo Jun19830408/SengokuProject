@@ -953,6 +953,13 @@ function 湿地を描く(ctx, m) {
 
    屋根に光を当て、影を落とす。見た目だけのもので、地形としての効きはない。 */
 function 集落を描く(ctx, v) {
+  /* 城下・宿場の町の区と寺の境内（battle/kata.js 町）は、長方形の地だけを塗る（家並みは新しい絵で立てる） */
+  if (v.町割 || v.寺) {
+    const m = v.町割 || { x0: v.x - v.r * 2, y0: v.y - v.r * 2, x1: v.x + v.r * 2, y1: v.y + v.r * 2 };
+    ctx.fillStyle = v.寺 ? "rgba(214,204,178,0.7)" : "rgba(184,166,128,0.55)";
+    ctx.fillRect(m.x0, m.y0, m.x1 - m.x0, m.y1 - m.y0);
+    return;
+  }
   const rnd = 種乱数((v.seed || 13) * 2654435761);
   const 家 = [];
   const n = 6 + Math.floor(rnd() * 5);
