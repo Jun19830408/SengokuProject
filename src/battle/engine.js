@@ -342,6 +342,13 @@ export function 放った跡(b, 型, x, y, x2, y2, 射手 = null, 的 = null) {
    采配の寄せ手は、兵が初めの三割五分を切るか、士気が三十を切るか、兵糧が一日に
    満たなければ兵糧攻めに移る（寄せ手の夜の思案）。 */
 export const 城攻めの日数 = 3;
+/* 門を破る速さの倍（城攻めの四つの直し。上の 城の射の倍 を見よ）。門の硬さは「三倍で六割」の折に
+   二倍にしてあった（castleMap.js）。矢玉を抑えたので、押す速さもそれに見合うだけ上げる */
+export const 門を破る倍 = 2;
+/* 門の順を待つ隊が浴びる矢玉の割（竹束と仕寄りの陰に控える）。門に取り付けるのは一隊だけなので、
+   残りの隊は堀の外に列を作って待つ。これまでは列ごと矢倉と狭間に射られ、取り付く前に崩れる隊が
+   出ていた */
+export const 控えの陰 = 0.35;
 export const 刻の名 = ["卯", "辰", "巳", "午", "未", "申", "酉"];
 export const 日の名 = (n) => `${["一", "二", "三", "四", "五", "六", "七"][Math.max(1, n) - 1] || n}日目`;
 /* 今の刻（卯の刻＝六時に夜が明け、酉の刻＝十八時に日が暮れる） */
@@ -417,11 +424,13 @@ export function 寄せ手の夜の思案(b) {
    寄せ手の大将は、攻めが進まぬまま兵が減れば、引き鉦を打ってその日の攻めをやめ、陣へ退く。
    采配の寄せ手（他家と、遊ぶ側が委ねた寄せ手）は、次のどれかで引き鉦を打つ。
      一、この日に寄せた兵の二割を失い、攻めが進んでいない（この九十秒に門を破らず、この
-         六十秒に門を削れてもいない）。ただし盤の兵がまだ城方の三倍あれば押し続ける
-     二、この日に寄せた兵の三割を失った（押していても）。ただし盤の兵が城方の四倍あれば
-         押し続ける（城方のほうが速く減っている）
+         六十秒に門を削れてもいない）。ただし盤の兵がまだ城方の三倍あれば押し続ける。
+         この日にまだどの門にも取り付いていなければ、寄せている最中とみて引かない
+     二、この日に寄せた兵の三割を失い、盤の比が朝より下がっている（城方より速く減っている）、
+         あるいは三倍に満たない
      三、寄せ手の兵の半ばが崩れている（総崩れになる前に引く）。三倍あれば引かない
      四、城攻めを通して、初めの兵の半ばを失った。四倍あれば押し続ける
+     五、この日に寄せた兵の四割を失った（比にかかわらず）
    本丸の門が破れていれば引かない（あと一押しで城が落ちる）。
    比を見ずに己の損だけで引いていたころは、三倍で寄せて城方を九割まで減らしながら引き、
    翌日も同じ損を重ねていた（上の 寄せ手の夜の思案）。手ずから率いる遊ぶ側は、
@@ -430,12 +439,17 @@ export function 寄せ手の夜の思案(b) {
    （上の 寄せ手の夜の思案）。城方は追い討ちをかけない――寄せ手は備えを崩さずに退く。 */
 export const 日の引き際の損 = 0.20;            // 一の割（攻めが進んでいないとき）
 export const 日の引き際の大損 = 0.30;          // 二の割
+export const 日の引き際の限り = 0.40;          // 五の割（この日の損の限り）
 export const 通しの引き際 = 0.5;               // 四の割（城攻めを通しての損）
 const 攻めの進みの刻 = 90;
 /* 攻めが進んでいるか。この九十秒に門を破ったか、この六十秒に、まだ破れていない門のどれかを
    その門の固さの八分より多く削ったか（寄せ手が門に取り付いて押している）。
    十秒ごとに、破れていない門の傷みを控えておく（下の 門の傷みを控える） */
 function 攻めが進んでいるか(b) {
+  /* まだどの門にも取り付いていなければ、寄せている最中である（城攻めの四つの直し）。もとは
+     門を削れていなければ「進んでいない」と数えたので、寄せる道のりで矢玉に二割を失うと、
+     門に着く前に引き鉦を打っていた */
+  if (b.日の構え && !b.日の構え.取り付いた) return true;
   if (b.t - (b.門の破れた刻 == null ? -Infinity : b.門の破れた刻) < 攻めの進みの刻) return true;
   const 控 = b.門の傷み || [];
   const 前 = 控.find((x) => b.t - x.t <= 60);
@@ -458,10 +472,33 @@ function 門の傷みを控える(b) {
   控.push({ t: b.t, hp });
   while (控.length > 8) 控.shift();
 }
+/* 攻め口を選ぶ（城攻めの四つの直し）。采配の寄せ手と「門を破る」を命じた隊が、次に向かう門。
+   もとはいちばん近い門（castleMap.js nearestOpenGate）で、南から寄せる七隊がみな大手門ひとつに
+   並び、門に取り付けるのは一隊だけなので、残りは列ごと射られていた。いま攻められる輪（まだ
+   破れていない、いちばん内の輪）の門のうちから、道のりと、すでにその門へ向かっている隊の数で
+   選ぶ。一つの門へ向かう隊が一つ増えるごとに、九百歩遠い門と同じに見る。城方の守りも分かれる
+   （四方から攻め寄せる） */
+export const 攻め口の重み = 900;
+export function 攻め口を選ぶ(m, c, atkC) {
+  const 候 = m.gates.filter((g) => !g.broken && gateReachable(m, g));
+  if (!候.length) return null;
+  const 内 = 候.reduce((a, g) => Math.max(a, g.layer), 0);
+  const x = c.mx == null ? c.x : c.mx, y = c.my == null ? c.y : c.my;
+  const 荷 = new Map();
+  for (const o of atkC) if (o !== c && o.gate && !o.routed && !o.withdraw && !o.dead) 荷.set(o.gate, (荷.get(o.gate) || 0) + 1);
+  let 選 = null, 値 = Infinity;
+  for (const g of 候) {
+    if (g.layer !== 内) continue;
+    const p = gatePos(m, m.layers[g.layer], g);
+    const v = Math.hypot(p.x - x, p.y - y) + (荷.get(g) || 0) * 攻め口の重み;
+    if (v < 値) { 値 = v; 選 = g; }
+  }
+  return 選;
+}
 /* この日の寄せ手と城方の兵を控える（朝、寄せ始める刻に） */
 function 日の構えを控える(b) {
   for (const c of b.corps) c.朝の兵 = (c.dead || c.destroyed || c.潰 || c.withdraw) ? 0 : corpsMen(c);
-  b.日の構え = { t: b.t, 日: b.日 || 1, 破: MAP ? MAP.gates.filter((g) => g.broken).length : 0 };
+  b.日の構え = { t: b.t, 日: b.日 || 1, 破: MAP ? MAP.gates.filter((g) => g.broken).length : 0, 比: 盤の比(b) };
   b.門の破れた刻 = -Infinity;
   b.門の傷み = [];
 }
@@ -484,7 +521,12 @@ export function 日の引き際(b) {
   const 大損 = 日の引き際の大損, 小損 = 日の引き際の損;
   const 比 = 盤の比(b);
   const 押せる = 3, 大いに押せる = 4;              // 盤の兵が城方の三倍・四倍あれば押し続ける
-  if (損 >= 大損 && 比 < 大いに押せる) return `この日の攻めで兵の${Math.round(損 * 10)}割を失い`;
+  /* 城攻めの四つの直し。二の割は、盤の比が朝より下がっていれば（城方より速く減っていれば）引く。
+     もとは「四倍あれば押し続ける」で、城方も減っていくと比が四倍を割らず、寄せ手が一日で七割を
+     失うまで押していた（清洲城・三倍）。四倍の留めの代わりに、この日の損の限り（四割）を置く */
+  const 朝の比 = (b.日の構え && b.日の構え.比) || 比;
+  if (損 >= 日の引き際の限り) return `この日の攻めで兵の${Math.round(損 * 10)}割を失い`;
+  if (損 >= 大損 && 比 < Math.max(押せる, 朝の比)) return `この日の攻めで兵の${Math.round(損 * 10)}割を失い`;
   if (損 >= 小損 && !進み && 比 < 押せる) return `攻めあぐねて兵の${Math.round(損 * 10)}割を失い`;
   const 寄 = b.corps.filter((c) => c.side === b.attacker && !c.dead && !c.destroyed && !c.潰 && !c.withdraw && !c.日和見);
   const 兵 = 寄.reduce((a, c) => a + corpsMen(c), 0);
@@ -725,6 +767,12 @@ export function 夜を明かす(b) {
   b.log.push({ t: b.t, text: `${日の名(b.日)}の朝。城方は夜のうちに門を繕った。寄せ手ははじめの陣から寄せ直す。` });
 }
 
+/* 報せに出す隊の呼び名。分遣隊（battle/corps.js makeDetachment）は本隊の将を持つので、将の名だけでは
+   本隊が崩れたように読める。野戦で三十秒ほどで「〇〇隊が崩れ、退いた」と出たのは、本隊から出た
+   百人ほどの分遣隊（騎馬側面攻撃など）であった。分遣隊なら務めの名を添える */
+export function 隊の呼び名(c) {
+  return c.detach ? `${c.gen.name}隊の${c.task || ""}分遣隊` : `${c.gen.name}隊`;
+}
 export function stepBattle(b, dt) {
   if (b.phase !== "fight") return;
   /* 城攻めの寄せ手の、はじめの陣（布陣を終えて戦が動き出した所）。翌日の強攻は
@@ -1890,6 +1938,7 @@ export function stepBattle(b, dt) {
       const holder = near.find((c) => c.id === g.slot);
       if (!holder) continue;
       attached.add(holder.id); g.hold = holder.gen.name;
+      if (b.日の構え) b.日の構え.取り付いた = true;     // この日に門へ取り付いた（日の引き際）
       列に着く(holder, g, gp, b.t);                     // 取り付きを外れたら列の先頭へ（castleMap.js 列の順）
       // 取り付いた隊は門の前に据わる。押し合いで少しずつ流されて、
       // いつのまにか門から離れてしまわないようにする。
@@ -1957,7 +2006,7 @@ export function stepBattle(b, dt) {
       // 内から支える兵が門を保たせる。ただし支える側も無傷では済まない。
       const push = men / (men + g.def * 1.1);
       const kit = SIEGE_KIT[holder.kit] || SIEGE_KIT["なし"];
-      g.hp -= men * 0.016 * kit.gate * eff * push * (b.gateParty ? 1.25 : 1) * dt;
+      g.hp -= men * 0.016 * 門を破る倍 * kit.gate * eff * push * (b.gateParty ? 1.25 : 1) * dt;
       // 門を隔てた押し合いは、支える城方にも損害を与える。
       // これがないと、城方は門に張りつくだけで日暮れまで凌げてしまう。
       if (g.def > 0) {
@@ -2059,7 +2108,7 @@ export function stepBattle(b, dt) {
       }
       const cur = c.gate;
       if (cur && !cur.broken && gateReachable(MAP, cur)) continue;
-      const nx = nearestOpenGate(MAP, c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my);
+      const nx = 攻め口を選ぶ(MAP, c, atkC);
       if (!nx || nx === cur) continue;
       c.gate = nx; c.pinned = false;
       const wp = routeToCastleGate(MAP, nx, c.x, c.y);
@@ -2123,14 +2172,32 @@ export function stepBattle(b, dt) {
        門へ取り付くまでに削る。もとは矢倉ひとつが一秒に四人ほど、狭間は射手四百で一秒に一人ほどで、
        寄せ手の損の多くは門が破れたあとの斬り合いで出ていた。門の硬さの二倍（castleMap.js）と
        合わせて、三日がかりの強攻で寄せ手が三倍なら六割ほど落ちるところに置く */
-    const 城の射の倍 = 3;
+    /* 城の射の倍を三から0.5に改める（城攻めの四つの直し）。遊ぶ側の申し出は「城が強行で落とすのが
+       困難」「特に城攻めでは敗走、撤退してしまい城攻めがさらに難しくなっている」であった（清洲城を
+       七千で攻め、千五百の城方に一日目で落とせず、二日目で兵糧攻めに移った）。同じ形を組んで測ると、
+       寄せ手は二日で七千のうち三千五百を失い、門は一つも破れず、損の九割余りは矢倉の矢玉であった。
+       三倍は引き鉦の無いころに「三倍で六割落ちる」に合わせた値で、寄せ手は兵の八割を失うまで
+       攻め続けて門を破っていた。引き鉦（下の 日の引き際）が入ってからは、門に取り付く前に矢玉で
+       二割三割を失って引くので、四.七倍でも落ちなかった。矢倉は己の曲輪の外の敵だけを射ることに
+       し（下の 矢倉）、門の順を待つ隊は竹束と仕寄りの陰に控え（下の 控えの陰）、采配の寄せ手は
+       攻め口を分ける（攻め口を選ぶ）。そのうえで、ここの倍と門を破る速さ（門を破る倍）を、他家
+       どうしの強攻と同じ見込み（core/kakomi.js 強攻の見込み：二倍で二割・三倍で六割・四倍で九割）
+       に寄せて定めた。清洲・小谷・稲葉山・岡崎の四城（城方千五百）を采配の寄せ手に二度ずつ攻め
+       させると、三倍で八度のうち六度、四倍で八度とも落ち、落とした寄せ手の損は三倍で五割、四倍で
+       四割ほど（〇.六なら三倍で十二度のうち七度、四倍の損は四割七分）。二倍では、采配の寄せ手は
+       一日目に引き鉦を打って兵糧攻めに移る（下の 日の引き際・上の 寄せ手の夜の思案）ので落ちない */
+    const 城の射の倍 = 0.5;
     for (const f of MAP.fac) {
       if (f.hp <= 0) continue;
       if (f.kind === "矢倉") {
         // 近づいた寄せ手を射て兵を削る。竹束を担いだ隊は被害が軽い。
         f.cool -= dt;
         if (f.cool <= 0) {
-          const tgt = atkC.filter((c) => Math.hypot(c.x - f.x, c.y - f.y) < 165 * fsN)
+          /* 矢倉は塀の上から外へ向けて射る。己の曲輪の内に入った敵には射かけない――そこは槍と刀の
+             間合いである（下の 狭間 と同じ）。外の門を破ったあとも、外輪の矢倉が曲輪の内の寄せ手を
+             射続けていたので、門を破ってからの損が攻めの前の損と同じほど出ていた */
+          const tgt = atkC.filter((c) => Math.hypot(c.x - f.x, c.y - f.y) < 165 * fsN
+            && !(MAP.layers[f.layer] && inLayer(MAP, MAP.layers[f.layer], c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my)))
             .sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y))[0];
           if (tgt) {
             f.cool = 2.6;
@@ -2141,7 +2208,7 @@ export function stepBattle(b, dt) {
                持ち場を出ては呼び戻される往き来を止めると、本城の守りが固くなり、出城に将と兵を
                割いた城のほうが寄せ手の損が軽くなった（出城の有無で〇.九八倍。tests/demaru）。
                出城の値打ちは寄せ手を引きつけて射ることにあるので、出城の矢倉を一.五倍から上げた */
-            let hit = 11 * kit.guard * (f.出城 ? 3 : 1) * 城の射の倍;
+            let hit = 11 * kit.guard * (f.出城 ? 3 : 1) * 城の射の倍 * (tgt.gate待ち > 0 ? 控えの陰 : 1);
             const qs = tgt.squads.filter((q) => q.men > 0)
               .sort((a, b) => Math.hypot(a.x - f.x, a.y - f.y) - Math.hypot(b.x - f.x, b.y - f.y));
             for (const q of qs) {
@@ -2240,7 +2307,7 @@ export function stepBattle(b, dt) {
          一.五倍（大坂冬の陣の真田丸。寄せ手は空堀の底から撃ち上げることもできなかった） */
       const 空堀の底 = 出城の守り && 出城の内か(MAP, 的.mx == null ? 的.x : 的.mx, 的.my == null ? 的.y : 的.my, MAP.t + MAP.出城.堀 + 4)
         && !出城の内か(MAP, 的.mx == null ? 的.x : 的.mx, 的.my == null ? 的.y : 的.my, MAP.t);
-      let hit = 射手 * 0.0095 * kit.guard * (出城の守り ? (空堀の底 ? 4.5 : 3) : 1) * 城の射の倍;
+      let hit = 射手 * 0.0095 * kit.guard * (出城の守り ? (空堀の底 ? 4.5 : 3) : 1) * 城の射の倍 * (的.gate待ち > 0 ? 控えの陰 : 1);
       const qs = 的.squads.filter((q) => q.men > 0)
         .sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y));
       for (const q of qs) {
@@ -2773,8 +2840,11 @@ export function stepBattle(b, dt) {
       c.routed = true; c.order = "敗走";
       c.立て直し = null; c.退き門 = null; c.崩れた刻 = b.t;
       for (const q of c.squads) { q.engaged = false; q.link = null; }   // 崩れた者は掴み合いを解いて走る
-      notify(b, `${c.gen.name}隊が崩れ、退いた。`, c.side === "P" ? "bad" : "good");   // notify が記録にも書く（二行にしない）
-      for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 6;
+      notify(b, `${隊の呼び名(c)}が崩れ、退いた。`, c.side === "P" ? "bad" : "good");   // notify が記録にも書く（二行にしない）
+      /* そばの味方が揺らぐ。分遣隊（百人ほどの組）の崩れは、本隊の崩れの三割しか響かない（城攻めの四つの
+         直し。遊ぶ側の申し出は「双方共に簡単に敗走してしまう」であった） */
+      const 響き = c.detach ? 0.3 : 1;
+      for (const o of alive) if (o.side === c.side && Math.hypot(o.x - c.x, o.y - c.y) < 200) o.morale -= 6 * 響き;
     }
     /* 隊の引き際（GDD 8.7）。
 
@@ -2804,7 +2874,7 @@ export function stepBattle(b, dt) {
         || (!(MAP && c.side !== b.attacker && !c.後詰) && 大勢 < 0.34
           && (ratio <= 0.45 || c.morale <= 28)))) {
       退かせる(b, c, true);                              // 統制のとれた退却
-      notify(b, `${c.gen.name}隊は支えきれず、戦場を退いた。`, c.side === "P" ? "bad" : "good");
+      notify(b, `${隊の呼び名(c)}は支えきれず、戦場を退いた。`, c.side === "P" ? "bad" : "good");
       continue;
     }
 
@@ -2839,7 +2909,7 @@ export function stepBattle(b, dt) {
         c.routed = false; c.潰 = false; c.立て直し = null;
         c.order = "待機"; c.tx = c.x; c.ty = c.y;
         for (const q of c.squads) q.cohesion = Math.max(q.cohesion, 40);
-        notify(b, `${c.gen.name}隊が立ち直り、戦列に戻った。`, c.side === "P" ? "good" : "bad");
+        notify(b, `${隊の呼び名(c)}が立ち直り、戦列に戻った。`, c.side === "P" ? "good" : "bad");
         b.log.push({ t: b.t, text: `${c.name}隊が立ち直った。` });
       } else {
         /* 退き場へ走る。着いて、敵が寄って来なければ、そこで息をつく。

@@ -9,7 +9,7 @@ import { 城方の隊を立てる } from "../battle/defense.js";
 import { drawMon, sideHue } from "../battle/draw.js";
 import { createBattle, 城攻めの日数, 日の名 } from "../battle/engine.js";
 import { 盤に来る後詰 } from "../core/gotsume.js";
-import { 城の保ち } from "../core/kakomi.js";
+import { 城の保ち, 囲みの食い } from "../core/kakomi.js";
 import { 付城の普請, 付城の締め, 付城を築けるか, 付城の手間, 付城の限り } from "../core/tsukejiro.js";
 import { 橋を落としたままにする, 橋を架け直す幅 } from "../core/hashi.js";
 import { BASE, FIELD, MAX_CORPS, fieldScale, layoutField, setFieldKind, setFieldSeed, terrainAt, 橋を落とす } from "../battle/field.js";
@@ -134,7 +134,19 @@ function 兵糧攻めのひと月(s, sg, castle, army) {
   const enc = clamp(0.28 + 0.18 * besieging.length + 0.36 * Math.min(1, army.men / Math.max(1, dMen * 1.5))
     + 付城の締め(sg), 0.2, 1);
   sg.enc = Math.round(enc * 100);
-  castle.food = Math.max(0, castle.food - Math.round((castle.local * 0.35 + 600) * (0.6 + enc) * (castle.intrigue ? 1.8 : 1)));
+  /* 囲みの食い（core/kakomi.js）。地の兵と城へ逃げ込んだ民が食い、囲みが固いほど外から米が入らない */
+  castle.food = Math.max(0, castle.food - Math.round(囲みの食い(castle, enc) * (castle.intrigue ? 1.8 : 1)));
+  /* 囲みが長引けば城は痩せる（采配どうしの囲みと同じ。govern/month.js）。三月を過ぎれば、城兵は
+     月に三分ずつ落ち延び、防備と練度も下がる */
+  if ((sg.months || 0) >= 3) {
+    castle.def = Math.max(10, castle.def - 1.5);
+    castle.localTrain = Math.max(25, castle.localTrain - 1.5);
+    const 落 = Math.round(castle.local * 0.03);
+    if (落 > 0) {
+      castle.local = Math.max(0, castle.local - 落);
+      rosterSync(castle, "rost", castle.local, `loc-${castle.id}`);
+    }
+  }
   // 井戸が傷んでいれば水に窮する
   const well = castle.well == null ? 100 : castle.well;
   const thirst = well < 50 ? (50 - well) / 12 : 0;

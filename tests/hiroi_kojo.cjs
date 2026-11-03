@@ -209,7 +209,10 @@ function 攻める(i, 賽) {
   });
   const b = A.createBattle(atk, def2, 'P');
   b.mode = 'castle'; b.map = m; b.phase = 'fight';
-  b.日数 = A.城攻めの日数; b.日 = 1; b.日の始め = 0; b.日の長さ = 200; b.dusk = 200;
+  /* 一日の長さは百秒。城攻めの四つの直し（battle/engine.js 城の射の倍）で城が落ちやすくなり、この形
+     （寄せ手が城方の四倍）では一日目の百七十秒余りで落ちて、日暮れに届かなくなった。ここで確かめたいのは
+     日暮れから夜の段への移りなので、落ちる前に日が暮れるよう一日を縮める */
+  b.日数 = A.城攻めの日数; b.日 = 1; b.日の始め = 0; b.日の長さ = 100; b.dusk = 100;
   b.兵糧 = { 寄せ手: { 石: 3000, 日に: 100, 食った: 0 }, 城方: { 石: 5000, 日に: 80, 食った: 0 } };
   確('日数は三日', A.城攻めの日数 === 3);
   確('夜明けは卯の刻', A.今の刻(b) === '卯');
@@ -225,7 +228,7 @@ function 攻める(i, 賽) {
     for (const c of atk) c.morale = Math.min(c.morale, 40);
     /* 夜の思案は、盤の上の兵の比と、初めの兵からの損（通しの損）で決まる（engine.js 寄せ手の夜の思案）。
        城方の兵をいっとき増減し、初めの兵の控え（b.initial）をいっとき差し替えて形を作り、確かめたら
-       元に戻す。この盤の一日目で寄せ手は初めの兵の六割近くを失うので、そのままでは半ばを失った形になる */
+       元に戻す。一日目の損は戦の運びで変わるので、通しの損もここで形に合わせる */
     const 兵 = (sd) => b.corps.filter((c) => c.side === sd && !c.dead && !c.destroyed && !c.withdraw).reduce((a, c) => a + A.corpsMen(c), 0);
     const 比で = (比, 損) => {
       const 元 = def2.map((c) => c.squads.map((q) => q.men));
@@ -248,7 +251,7 @@ function 攻める(i, 賽) {
     /* 翌日の強攻は、はじめの陣から寄せ直す（遊ぶ側の申し出。engine.js 夜を明かす） */
     確('寄せ手ははじめの陣へ戻る', atk.some((c) => c.初陣) && atk.every((c) => c.dead || c.destroyed || c.withdraw || !c.初陣
       || Math.hypot(c.x - c.初陣.x, c.y - c.初陣.y) < 1), atk.map((c) => c.初陣 ? Math.round(Math.hypot(c.x - c.初陣.x, c.y - c.初陣.y)) : '－').join('・') + '歩');
-    確('二日目の日暮れは一日の長さの先', Math.abs(b.dusk - (t0 + 200)) < 1e-6);
+    確('二日目の日暮れは一日の長さの先', Math.abs(b.dusk - (t0 + b.日の長さ)) < 1e-6 && b.日の長さ === 100);
     確('城方は破れていない門を繕う', 門.every((g, i) => g.hp >= 前[i]) && 門.some((g, i) => g.hp > 前[i] || g.hp >= g.max),
       `繕った門 ${門.filter((g, i) => g.hp > 前[i]).length}／${門.length}`);
     確('夜のうちに士気が戻る', atk.every((c) => c.dead || c.destroyed || c.withdraw || c.morale > 40));

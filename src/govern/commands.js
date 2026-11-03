@@ -10,6 +10,7 @@ import { 出城の手間, 出城の普請, 出城の普請高 } from "../core/de
 import { 橋の普請を見る, 橋の残り } from "../core/hashi.js";
 import { 鉄甲 } from "../data/ships.js";
 import { clamp, fmt } from "../core/util.js";
+import { 蔵の限り } from "../core/kakomi.js";
 import { TOWNS } from "../data/castles.js";
 import { DIPLO, PLOTS, SPECIAL_OPTIONS, SUBJECT } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
@@ -847,6 +848,13 @@ export function doTrade(prev, castleId, kind, n) {
     else if (kind === "horse") c.horse = Math.max(0, Math.round((c.horse || 0) + d));
     else c.gun = Math.max(0, Math.round((c.gun || 0) + d));
   };
+  if (n > 0 && kind === "food") {
+    /* 城の蔵には限りがある（core/kakomi.js 蔵の限り）。収まらぬ米は翌月に売り払われるので、
+       限りまでしか買えない */
+    const 空き = Math.max(0, 蔵の限り(c) - Math.round(c.food));
+    if (空き <= 0) { s.msg = `${c.name}の蔵はいっぱいで、兵糧を買い入れても収まらない（蔵の限り${fmt(蔵の限り(c))}石）。`; return s; }
+    n = Math.min(n, 空き);
+  }
   if (n > 0) {                                   // 買う
     const 金 = 買値(s, c, kind, n);
     if (f.gold < 金) {

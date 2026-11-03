@@ -1,5 +1,6 @@
 import { ambushChance } from "../core/ambush.js";
-import { 強攻の比, 強攻の見込み } from "../core/kakomi.js";
+import { 強攻の比, 強攻の見込み, 囲みの食い, 蔵の限り } from "../core/kakomi.js";
+import { 売値 } from "../data/market.js";
 import { 自立に入る城, 自立する } from "../core/jiritsu.js";
 import { 城の上がり, 大身の割, 蔵の目減り } from "../core/keizai.js";
 import { ransomCost, takeAsPrisoner, 仕官を願えるか, 他家が召し抱える, 囚われた年 } from "../core/capture.js";
@@ -235,7 +236,9 @@ export function advanceMonth(prev, g) {
           men: c.local + s.generals.filter((x) => x.at === c.id && x.faction === c.faction).reduce((a, x) => a + x.retinue, 0) };
       }
       s.prevGold = s.factions[s.player].gold;
-      let 帰農 = 0;
+      let 帰農 = 0, 売り米 = 0, 売り金 = 0;
+      /* 囲まれた城（月の初めの囲み）。手勢を調える段で使う */
+      const 囲まれた城 = new Set((s.sieges || []).map((sg) => sg.castleId));
       for (const fid of Object.keys(s.factions)) {
         const f = s.factions[fid];
         let gold = 0;
@@ -262,6 +265,15 @@ export function advanceMonth(prev, g) {
           const troops = c.local + ret;
           const up = MOB_POLICY[f.mobilization].upkeep;
           c.food += Math.round((c.koku / 12) * 0.5 * harvest * (c.min / 80)) - Math.round(troops * 0.08 * up);
+          /* 蔵の限り（core/kakomi.js）。城の蔵に収まらぬ年貢米は、市の売値で売り払う。
+             もとは限りが無く、年貢が積み上がる一方で、二年も経てば兵糧攻めが効かなくなっていた */
+          const 限 = 蔵の限り(c);
+          if (c.food > 限) {
+            const 余 = Math.round(c.food - 限);
+            const 金 = 売値(s, c, "food", 余);
+            c.food = 限; gold += 金;
+            if (fid === s.player) { 売り米 += 余; 売り金 += 金; }
+          }
           /* 扶持は地の兵にだけ掛かる（GDD 6.2）。
 
              兵は養うものである。扶持が軽すぎると金が余り、兵を抱える判断が生まれない。
@@ -314,6 +326,9 @@ export function advanceMonth(prev, g) {
            器に満ちている者、身分の限りに達している者は増えない。 */
         for (const q of s.generals) {
           if (q.faction !== fid || q.captive) continue;
+          /* 囲まれた城の中では、在郷の者を募れない（遊ぶ側の申し出は「包囲されている城は毎月兵を
+             雇用でき増えていく」であった） */
+          if (囲まれた城.has(q.at)) continue;
           // 手勢の器は知行なり（軍役）。身分では縛らない（GDD 6.4）
           const 器 = 軍役の器(q);
           if (器 <= q.retinue) continue;
@@ -366,6 +381,7 @@ export function advanceMonth(prev, g) {
         f.費え = { 大身, 目減り: 減 };
       }
       if (帰農 >= 50) events.push(`軍役の器を超えた城で、地の兵${fmt(帰農)}人が村へ帰った（帰農）。`);
+      if (売り米 >= 100) events.push(`城の蔵に収まらぬ年貢米${fmt(売り米)}石を市で売り払った（${fmt(売り金)}貫）。`);
       // 外交の残り期間（GDD 11.1）
       /* 家ごとの石高は、ここで一度だけ数える。間柄ごとに数え直していたら、
          二百七十の城を千八百組ぶん走査することになり、三十年の走りが数分
@@ -639,6 +655,10 @@ export function advanceMonth(prev, g) {
         if (fid === s.player) continue;
         const f = s.factions[fid];
         for (const c of s.castles.filter((x) => x.faction === fid)) {
+          /* 囲まれた城では、兵を募ることも普請もできない（下の 采配の内政と同じ）。遊ぶ側の申し出は
+             「包囲されている城は毎月兵を雇用でき増えていく」であった。ここには囲みの留めが無く、
+             兵が器の八割に満たなければ、囲まれていても足りぬ分の三割五分を月ごとに募っていた */
+          if (s.sieges.some((sg) => sg.castleId === c.id)) continue;
           const gen = s.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive).sort((a, b) => b.gov - a.gov)[0];
           if (!gen || f.gold < 260) continue;
           const cap = troopCap(c, f.mobilization, g || s);
@@ -1247,7 +1267,8 @@ export function advanceMonth(prev, g) {
             + `／城方${fmt(dMen2)}人・寄せ手${fmt(bes.men)}人）。`);
         }
         // 兵糧を削り、頃合いを見て攻めかかる。付城があれば兵糧の入る道が細り、減りが速い
-        cs.food = Math.max(0, cs.food - Math.round((cs.local * 0.35 + 600) * (1 + 付城の締め(sg2))));
+        /* 囲みの食い（core/kakomi.js）。采配どうしの囲みの締めは六割とみて、付城の締めを足す */
+        cs.food = Math.max(0, cs.food - 囲みの食い(cs, 0.6 + 付城の締め(sg2)));
         cs.min = Math.max(0, cs.min - 5);
         bes.food -= Math.round(bes.men * 0.09);
         /* 城が開くのは兵糧が尽きたときだけ（民心では開かない。ui/MapScreen.jsx 兵糧攻めのひと月） */
