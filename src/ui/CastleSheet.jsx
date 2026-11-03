@@ -23,7 +23,7 @@ import { 基準値, 売値, 相場, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
 import { 城の寄親, 守りの寄親 } from "../core/inin.js";
-import { 囲みの様子, 囲んでいる様子, 城に在る軍 } from "../core/kakomi.js";
+import { 囲みの様子, 囲んでいる様子, 城に在る軍, 蔵の限り } from "../core/kakomi.js";
 import { is架空 } from "../core/house.js";
 import { 特殊勢力の可否 } from "../core/town.js";
 import { 郡の石高ら, 城の郡ら, 郡の治め, 郡代の候補, 郡代の郡, 郡代の者, 郡代の割, 城の年貢の割 } from "../core/gun.js";
@@ -388,7 +388,7 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
             <span className="k">人口</span><span className="v">{V(c.pop)}</span>
             <span className="k">兵数</span><span className="v">{V(total)}</span>
             <span className="k">武将</span><span className="v">{open ? `${gens.length} 名` : "？"}</span>
-            <span className="k">兵糧</span><span className="v">{open ? `${fmt(c.food)} 石（${foodDays(c.food, total)} 日分）` : "？"}</span>
+            <span className="k">兵糧</span><span className="v">{open ? `${fmt(c.food)} 石（${foodDays(c.food, total)} 日分・蔵の限り ${fmt(蔵の限り(c))} 石）` : "？"}</span>
           </div>
           <div style={{ height: 10 }} />
           <div className="tbl">
