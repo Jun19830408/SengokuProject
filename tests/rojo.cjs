@@ -10,7 +10,7 @@
                       （囲まれていない城は募る）
      五、囲みの食い … （地の兵＋城下の民の百のうち三）×〇.三五＋六百 に（〇.六＋締め×一.五）を掛ける
      六、清洲城の例 … 城兵千五百（地の兵九百十八）を固く囲めば（締め八割二分）、始めの蓄えでも
-                      五か月半ほどで尽きる（もとの式では十二か月余り） */
+                      五.七か月で尽きる（もとの式では十二.八か月） */
 const path = require('path');
 const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 const { initState, advanceMonth, newRoster, 囲みの食い, 蔵の限り, 籠る民の割, doTrade } = H;
