@@ -4,7 +4,7 @@ import { heirCandidates, isGuardian, isNameless, needsGuardian } from "../core/h
 import { marchMonths, marchMonthsOf } from "../core/paths.js";
 import { holdsProvince, kenchiCost, kenchiDone } from "../core/province.js";
 import { 軍役の割増, RANKS, castellanOf, 城を守る将, castleRankNeed, extraIncome, fiefBurden, fiefOf, fiefRoom, fiefWanted, foodDays, goryoOf, minGarrison, rankName, stipendOf, troopCap, 身分の位, 国の国主, 国主の枠, 国主たち, 寄騎たち, 寄騎に取れるか, 旗頭の枠, 旗頭たち, 旗頭の受け持ち, 旗頭の的にできる家, 旗頭の的家, 的家の限り, 旗の下の当主か, 城主か } from "../core/rank.js";
-import { canSee, forecast, relOf, isVassal, 主を探す } from "../core/state.js";
+import { canSee, forecast, relOf, isVassal, 主を探す, 出征の元 } from "../core/state.js";
 import { 城の姫, 使える姫, 婚姻の要る信用 } from "../core/hime.js";
 import { 鉄甲船を造れるか } from "../core/naval.js";
 import { 鉄甲 } from "../data/ships.js";
@@ -29,6 +29,10 @@ import { 特殊勢力の可否 } from "../core/town.js";
 export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onCommand, onTrade, onAppoint, onShirogae, onSortie, onMarchOn, onDisband, onJoinCastle, onHatagashira, onHatagashiraCorps, onHatagashiraRelease, onHatagashiraMato, onYoriki, onCallAid, onDiplo, onPlot, onSpecial, onReward, onCaptive, onFief, onRetire, onSettle, onKenchi, onHime, onIhou, onChokusan }) {
   const f = g.factions[c.faction];
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
+  /* この城から出征している者。城には立っていないが、この城の家臣である。
+     人事に並べねば、出征のあいだ褒賞も知行も与えられない。 */
+  const 出征中の者 = g.generals.filter((x) => x.faction === c.faction && x.at == null && !x.captive
+    && (出征の元(g, x) || {}).城 === c);
   const ret = gens.reduce((a, x) => a + x.retinue, 0);
   const total = c.local + ret;
   const mine = c.faction === g.player;
@@ -810,8 +814,9 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                         {rm.left < 0 ? `／${fmt(-rm.left)}石の配りすぎ` : ""}）</span></span>
                     </div>
                   ); })()}
-                  {gens.filter((x) => !x.captive).map((x) => {
+                  {[...gens, ...出征中の者].filter((x) => !x.captive).map((x) => {
                     const want = fiefWanted(x), have = fiefOf(x);
+                    const 出征 = x.at == null ? 出征の元(g, x) : null;
                     const r = have / Math.max(1, want);
                     const mood = r >= 1.0 ? "満ちている" : r >= 0.75 ? "不足はない" : r >= 0.5 ? "不満がある" : "強い不満";
                     const col = r >= 0.75 ? U.dim : r >= 0.5 ? "#C89A3A" : "#B0483C";
@@ -831,6 +836,15 @@ export function CastleSheet({ g, castle: c, land, tab, setTab, onClose, onComman
                             const 城主か = canHoldCastle(x, g, c);
                             const 要る = castleRankNeed(c), いま = stipendOf(g, x);
                             const 身分足らず = 身分の位(x, g) < 2 && !x.lord;
+                            // 出征中の者は城に居ないので、城を預けるのは帰陣してから
+                            if (出征) return (
+                              <span style={{ flex: 1, fontSize: 13, padding: "3px 0" }}>
+                                {x.name}
+                                <span style={{ fontSize: 10.5, color: "#4A6E8A", marginLeft: 6 }}>
+                                  出征中{出征.様 ? `（${出征.様}）` : ""}・城を預けるのは帰陣の後
+                                </span>
+                              </span>
+                            );
                             return (
                               <button className={`btn sm ${lord && lord.id === x.id ? "on" : ""}`}
                                 style={{ flex: 1, textAlign: "left" }}

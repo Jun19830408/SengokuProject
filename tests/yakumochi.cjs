@@ -166,7 +166,12 @@ function 移りの盤(新国に国主を置く) {
   const 城 = (k) => 我().filter((c) => c.kuni === k);
   const ら = s.generals.filter((g) => g.faction === fid && !g.lord && !g.captive);
   for (const g of ら.slice(0, 12)) { g.fief = 60000; g.age = Math.max(28, g.age || 28); }
-  const 置く = (g, c) => { g.at = c.id; g.本領 = c.id; c.lordId = g.id; };
+  /* 据える前に、もとの城の札を外す。初めの盤で城を預かっている者もいる（誰が預かるかは
+     武将の器量で決まる）ので、外さねば仕込みのほかに二重の城主ができてしまう。 */
+  const 置く = (g, c) => {
+    for (const x of s.castles) if (x.lordId === g.id) x.lordId = null;
+    g.at = c.id; g.本領 = c.id; c.lordId = g.id;
+  };
   const [旗, 国主, 移る, 留守, 新国主] = ら;
   置く(旗, 城('美濃')[0]); 置く(国主, 城('近江')[0]); 置く(移る, 城('近江')[1]);
   留守.at = 城('近江')[1].id; 留守.本領 = 城('近江')[1].id;

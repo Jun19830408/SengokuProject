@@ -74,7 +74,10 @@ export function diploStat(g, fid) {
    数にもそれぞれ理屈が通っている。 */
 export const minGarrison = (c) => {
   const 壁の要り = Math.round(c.def * 10 + (100 - c.min) * 5);
-  const 器 = (c.koku / 10000) * 300 * 軍役の割増(c.koku);
+  /* 守りの目安は、軍役の率を改める前の器（一万石に三百人・割増は最大一.九倍）で量る。
+     器の率を下げても、城を守るのに要る兵は変わらない。 */
+  const 割増 = Math.max(1, Math.min(1.9, 1 + (30000 - c.koku) / 30000 * 0.9));
+  const 器 = (c.koku / 10000) * 300 * 割増;
   if (壁の要り <= 器 * 0.55) return 壁の要り;          // 身代に見合っている。元のまま
   const 割 = Math.max(0.12, Math.min(0.55, 0.20 + (c.def - 45) / 400 + (70 - c.min) / 400));
   return Math.max(40, Math.round(器 * 割));
@@ -82,32 +85,62 @@ export const minGarrison = (c) => {
 
 /* 小身ほど、村を丸ごと駆り出せる（GDD 6.4）。
 
-   軍役の器は、これまで家の大小を問わず一万石に三百八十人であった。
-   ところが盤の実際はそうなっていない。
+   軍役の器は、動員の段ごとの一万石あたりの率（data/roads.js MOB_POLICY）を基にする。
+   国人領主は在地に密着し、村を丸ごと駆り出せた。広域を治める大名は耕作と行政を
+   残さねばならず、率は下がる。
 
-     三万石未満の家（三十二家）  兵 六百二十二人／万石
-     二十万石超の家（十五家）    兵 二百四十三人／万石
+   一、城の小ささ（軍役の割増）。三万石を境として、小さい城ほど厚く見る。
+       通常の段（一万石に三百人）で、五千石の城は六百人、二万石の城は四百二十人。
+   二、家の大きさ（大身の軍役）。五十万石を超える家は、大きくなるほど率が下がり、
+       千五百五十万石を超えれば六割になる。天下を統べた家は通常の段で一万石に百八十人。
 
-   大家の二百四十三人は史実の軍役（一万石に二百五十〜三百人）に近い。
-   外れているのは小勢のほうである。一律三百八十人では、小勢には低すぎて
-   徴募が一人も効かず、大家には高すぎて縛りにならない。
-
-   理屈も立つ。国人領主は在地に密着し、村を丸ごと駆り出せた。広域を治める
-   大名は耕作と行政を残さねばならず、率は下がる。三万石を境として、
-   小さいほど厚く見る。三万石を超える城は、これまでと変わらない。
-
-     五千石   ×一.七五   六百六十五人／万石
-     八千五百石 ×一.六五   六百二十五人／万石（岡豊城）
-     一万三千五百石 ×一.五〇 五百六十八人／万石（本山城）
-     二万石   ×一.三〇   四百九十四人／万石
-     三万石以上 ×一.〇〇   三百八十人／万石（もとのまま） */
+   もとは家の大小を問わず一万石に三百八十人で、総動員と官位の割増（最大一.四五倍）を
+   重ねると七百二十人を超えた。地の兵は器を超えても減らなかったので、一五八八年の記録
+   では地の兵だけで二百万人、手勢を合わせて二百二十三万人に達していた（遊ぶ側の申し出は
+   「最終的に百万人超えの兵数になるのもどうか。朝鮮出兵が一つの基準になる」）。
+   遊びの初めの家はほとんど五十万石に届かないので、初めの器はもととあまり変わらない。 */
 export const 軍役の割増 = (koku) =>
-  Math.max(1, Math.min(1.9, 1 + (30000 - koku) / 30000 * 0.9));
+  Math.max(1, Math.min(2.2, 1 + (30000 - koku) / 30000 * 1.2));
+
+export const 大身の軍役 = (総石高) => Math.max(0.6, Math.min(1, 1 - (総石高 - 500000) / 37500000));
+
+// 家の石高（城の石高の計）。
+export function 家の石高(s, fid) {
+  let t = 0;
+  for (const c of (s && s.castles) || []) if (c.faction === fid) t += c.koku || 0;
+  return t;
+}
 
 export const troopCap = (c, p, s) => Math.round((c.koku / 10000) * MOB_POLICY[p].per
   * 軍役の割増(c.koku)
+  * (s ? 大身の軍役(家の石高(s, c.faction)) : 1)
   * (0.75 + (c.najimi == null ? 70 : c.najimi) / 400)
   * (s ? rankBonus(s, c.faction).troop : 1));
+
+/* 出征の余地（GDD 6.2）。
+
+   家が一度に城の外へ出せる兵は、家の兵（城の地の兵・将の手勢・出ている軍）の
+   動員の段ごとの割まで（data/roads.js MOB_POLICY の 出征）。通常の段で四割。
+   遊ぶ側の申し出は「出征できる兵数についても、朝鮮出兵を基準に検討する」であった。
+   城を守る兵は数えない――囲まれた城を救う後詰も、家を守る戦なので縛らない。 */
+export function 家の総兵(s, fid) {
+  let n = 0;
+  for (const c of s.castles || []) if (c.faction === fid) n += c.local || 0;
+  for (const g of s.generals || []) if (g.faction === fid && !g.captive && g.at) n += g.retinue || 0;
+  for (const a of s.armies || []) if (a.faction === fid) n += a.men || 0;
+  return n;
+}
+export function 出征中の兵(s, fid) {
+  let n = 0;
+  for (const a of s.armies || []) if (a.faction === fid && !a.relief) n += a.men || 0;
+  return n;
+}
+export function 出征の限り(s, fid) {
+  const f = (s.factions || {})[fid];
+  const p = MOB_POLICY[(f && f.mobilization) ?? 1] || MOB_POLICY[1];
+  return Math.round(家の総兵(s, fid) * p.出征);
+}
+export const 出征の余地 = (s, fid) => Math.max(0, 出征の限り(s, fid) - 出征中の兵(s, fid));
 
 export const foodDays = (food, troops) => (troops > 0 ? Math.round((food / (troops * 0.08)) * 30) : 999);
 
@@ -1132,7 +1165,10 @@ export function fiefWanted(gen) {
   // 器量に見合う知行（石）。器量の差が知行の桁に出るようにする。
   // 凡将は千石、一国を代表する将は二万石、傑物は五万石を望む。
   const able = (gen.lead + gen.valor + gen.wit + gen.gov) / 4;   // 平均の器量
-  const base = Math.pow(Math.max(1, able - 42) / 12, 2.6) * 900;
+  /* 基準点。能力の尺度を「六十を並」に改めたとき（core/util.js 能力を広げる）、平均が
+     六十六から六十に下がったので、四十二から三十八へ移した。武将帳ぜんたいの望む知行が
+     改める前とほぼ同じ（およそ千万石）になる点である。 */
+  const base = Math.pow(Math.max(1, able - 38) / 12, 2.6) * 900;
   return Math.round(400 + base + (gen.merit || 0) * 900);
 }
 

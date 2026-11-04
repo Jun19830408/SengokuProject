@@ -26,7 +26,7 @@
 
      五筋まで。一つの号令に加わっている国主・旗頭は、別の号令には出られない。
      人は一人しかいないのだから当然である。 */
-import { castellanOf, minGarrison, 旗頭の受け持ち } from "./rank.js";
+import { castellanOf, minGarrison, 旗頭の受け持ち, 出征の余地 } from "./rank.js";
 
 export const 号令の限り = 5;                        // 同時に発せる号令の数
 
@@ -203,18 +203,6 @@ export function 号令を発する(s, 主, 的id, 手ら, 具) {
       ? ((素の道 ? 素の道(発.id, 的id) : null) || (道を引く ? 道を引く(s, 手.家, 発.id, 的id) : null))
       : (道を引く ? 道を引く(s, 手.家, 発.id, 的id) : null);
     if (!道) continue;                                   // それでも道がなければ出られない
-    /* その手の城々から兵を割く。守備に要る分は残す。 */
-    let 兵 = 0;
-    const 名簿 = [];
-    for (const cid of 手.城ら) {
-      const c = s.castles.find((x) => x.id === cid);
-      if (!c) continue;
-      const 割 = 出せる地の兵(s, c);              // 守備の分は残す
-      if (割 <= 0) continue;
-      c.local = Math.max(0, (c.local || 0) - 割);
-      兵 += 割;
-      if (名簿を割く) { const t = 名簿を割く(c, 割); if (t) 名簿.push(...t); }
-    }
     /* 将。その手を率いる者と、兵を出した城々の城主が従う（GDD 12.5）。
 
        もとは「発つ城にいる者、四人まで」であった。ところが方面の一手は
@@ -243,6 +231,21 @@ export function 号令を発する(s, 主, 的id, 手ら, 具) {
       x.faction === 手.家 && !x.captive && x.at === 発.id)) {
       if (将ら.length >= 12) break;
       加える(g);
+    }
+    /* その手の城々から兵を割く。守備に要る分は残す。 */
+    let 兵 = 0;
+    const 名簿 = [];
+    /* 出征の余地（core/rank.js）。号令でも、家の兵のうち一度に外へ出せる割まで。 */
+    const 手勢の計 = 将ら.reduce((a, g) => a + (g.retinue || 0), 0);
+    const 地の余地 = Math.max(0, 出征の余地(s, 手.家) - 手勢の計);
+    for (const cid of 手.城ら) {
+      const c = s.castles.find((x) => x.id === cid);
+      if (!c) continue;
+      const 割 = Math.min(出せる地の兵(s, c), 地の余地 - 兵);   // 守備の分は残す
+      if (割 <= 0) continue;
+      c.local = Math.max(0, (c.local || 0) - 割);
+      兵 += 割;
+      if (名簿を割く) { const t = 名簿を割く(c, 割); if (t) 名簿.push(...t); }
     }
     const 総勢 = 兵 + 将ら.reduce((a, g) => a + (g.retinue || 0), 0);
     if (総勢 < 100) continue;
