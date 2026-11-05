@@ -1,4 +1,4 @@
-import { axisOf, fromUV, gateOpenU, gatePos, 門の輪, 出城の塀, 付城の柵 } from "./castleMap.js";
+import { axisOf, fromUV, gateOpenU, gatePos, 門の輪, 出城の塀, 付城の柵, 枡形の切れ目 } from "./castleMap.js";
 import { KOMA, rot } from "./corps.js";
 import { ARM_STATS, BASE, FIELD, FORESTS, HILLS, MARSH, MOUNTAINS, RIVER, RIVERS, ROAD, ROADS, WOODS, hasRiver, riverShift, 水際まで, 地形の代, 節までの隔たり } from "./field.js";
 import { px, py } from "../data/geo.js";
@@ -1855,10 +1855,9 @@ function 城の立つものを描く(ctx, m, t, cx, cy, 新, 立体) {
       if (!立体) {                                        // 斜めの眺めでは石塁として立てる（tachimono.js 枡形）
         put(g.off - g.w / 2, a.half + t, t, g.masu);
         put(g.off + g.w / 2, a.half + t, t, g.masu);
-        const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
-        const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
+        const [c0, c1] = 枡形の切れ目(g);                 // 正面の塀の切れ目（castleMap.js 枡形の切れ目）
         const seg = (u0, u1) => { if (u1 > u0) put((u0 + u1) / 2, a.half + t + g.masu, u1 - u0, t); };
-        seg(g.off - g.w * 1.05, from); seg(from + g.w, g.off + g.w * 1.05);
+        seg(g.off - g.w * 1.05, c0); seg(c1, g.off + g.w * 1.05);
       }
       const lp = fromUV(m, a, g.off, a.half + t + g.masu + 18);
       ctx.font = `${Math.round(11 * (FIELD.w / BASE.w))}px sans-serif`;

@@ -16,7 +16,7 @@
 
    絵だけのものである。当たり（壁・門・施設の居場所と強さ）には触れない。
    ========================================================================== */
-import { axisOf, fromUV, gatePos, 出城の塀, 付城の柵 } from "./castleMap.js";
+import { axisOf, fromUV, gatePos, 出城の塀, 付城の柵, 枡形の切れ目 } from "./castleMap.js";
 import { 視, 浮き, 縦の縮み, 視の筆へ } from "./naname.js";
 
 // 光は左上から。屋根の面ごとの色（奥・左・右・手前）
@@ -277,10 +277,9 @@ function 枡形(m, l, g) {
   };
   put(g.off - g.w / 2, a.half + t, t, g.masu);
   put(g.off + g.w / 2, a.half + t, t, g.masu);
-  const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
-  const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
+  const [c0, c1] = 枡形の切れ目(g);                     // 正面の塀の切れ目（castleMap.js 枡形の切れ目）
   const seg = (u0, u1) => { if (u1 > u0) put((u0 + u1) / 2, a.half + t + g.masu, u1 - u0, t); };
-  seg(g.off - g.w * 1.05, from); seg(from + g.w, g.off + g.w * 1.05);
+  seg(g.off - g.w * 1.05, c0); seg(c1, g.off + g.w * 1.05);
   return 物;
 }
 /* 石塁。石を積んだ低い土台に、細い塀を載せる */

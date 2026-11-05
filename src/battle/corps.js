@@ -1,4 +1,4 @@
-import { MAP, axisOf, fromUV, gatePos, navPath, 門の輪, 出城の退き道 } from "./castleMap.js";
+import { MAP, axisOf, fromUV, gateOpenU, gatePos, navPath, nearestOpenGate, routeToCastleGate, 門の輪, 出城が保つ, 出城の退き道, 城の中の道 } from "./castleMap.js";
 import { ARM_STATS, FORESTS, HILLS, MAX_CORPS_MEN, RIVER, VILLAGES, WOODS, fieldScale, hasRiver, nearestOf, riverShift, terrainAt, 高み, 高みの格 } from "./field.js";
 import { clamp } from "../core/util.js";
 import { ARMS } from "../data/roads.js";
@@ -1036,6 +1036,46 @@ export function issueOrder(b, c, patch, { 即 } = {}) {
   c.pending = { patch, t: commandDelay(b, c) };
 }
 
+
+/* 門を破りに向かわせる（遊ぶ側の「この門へ」「門を破る」、地図で門を押したとき。GDD 9.3）。
+   もとは画面（ui/BattleScreen.jsx castleGo）に書いてあったが、試験から同じ道を通せるよう、ここへ移した。
+   門を名指ししなければ、いま向かっている門か、いちばん内の近い門。破ったら次の門へ自ら進む（engine.js
+   門を破ったら次へ）。道は城の格子で引く（castleMap.js routeToCastleGate。塀ぎわと堀を避ける）。
+   命じる は下知の口（画面では咎めと音を添えた 下知、試験では issueOrder） */
+export function 門へ向かわせる(b, c, gate, 命じる = issueOrder) {
+  const m = b && b.map;
+  if (!m || !c) return null;
+  const 届く = (g2) => (g2.出城 ? 出城が保つ(m) : (g2.layer === 0 || m.layers[g2.layer - 1].gates.some((x) => x.broken)));
+  const gt = gate || ((c.gate && !c.gate.broken && 届く(c.gate)) ? c.gate : nearestOpenGate(m, c.x, c.y));
+  if (!gt) return null;
+  c.gate = gt; c.siegeAuto = true;      // 破ったら次の門へ自ら進む
+  c.出城攻め = !!gt.出城;                 // 出城の門なら、破ったあと出城の中へ攻め入る（engine.js）
+  const l = 門の輪(m, gt), a = axisOf(l, gt);
+  const gp = gatePos(m, l, gt);
+  // すでに取り付いていれば呼び戻さない
+  if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * fieldScale()) { 命じる(b, c, { order: "待機" }); return gt; }
+  const wp = routeToCastleGate(m, gt, c.x, c.y);
+  if (wp.length) {
+    if (命じる(b, c, { order: "前進", tx: wp[0].x, ty: wp[0].y, keepPath: true }) !== false) c.wp = wp;
+  } else {
+    const p = fromUV(m, a, gateOpenU(gt), a.half + m.t + gt.masu + m.t + 30);
+    命じる(b, c, { order: "前進", tx: p.x, ty: p.y });
+  }
+  c.stuck = 0; c.lastD = null;
+  return gt;
+}
+
+/* 城の盤で、押した所へ手ずから動かす（地図を押したときの「移動」）。行き先とのあいだに塀や閉じた門が
+   あれば、塀を回り込む道を引く（castleMap.js 城の中の道）。見通せればまっすぐ向かう */
+export function 城の中を動かす(b, c, x, y, 命じる = issueOrder, order = "移動") {
+  const m = b && b.map;
+  const wp = m ? 城の中の道(m, c.x, c.y, x, y) : null;
+  if (wp && wp.length) {
+    if (命じる(b, c, { order, tx: wp[0].x, ty: wp[0].y, keepPath: true }) !== false) { c.wp = wp; c.stuck = 0; c.lastD = null; }
+    return true;
+  }
+  return 命じる(b, c, { order, tx: x, ty: y });
+}
 
 /* 転回を命じる（GDD 8.3）。
 

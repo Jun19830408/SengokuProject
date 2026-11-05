@@ -1,5 +1,5 @@
 import { ROW, SP } from "./corps.js";
-import { FIELD, FIELD_SEED, ROAD, genTerrain, passable, terrainAt, 尺を据える } from "./field.js";
+import { BLOCKED, FIELD, FIELD_SEED, ROAD, TERRAIN, genTerrain, passable, terrainAt, 尺を据える } from "./field.js";
 import { 野の道 } from "./route.js";
 import { U, clamp } from "../core/util.js";
 
@@ -721,6 +721,20 @@ export const fromUV = (m, a, u, v) =>
 
 export const gatePos = (m, l, g) => { const a = axisOf(l, g); return fromUV(m, a, g.off, a.half + m.t / 2); };
 
+/* 枡形の正面の塀の切れ目（u の始めと終わり）。切れ目は門の正面から片側へずらしてあり、寄せ手は
+   そこで折れて門に向かう。もとは切れ目が枡形の内に門の幅の一割しか重ならず、袖の塀の厚み（五歩）が
+   その大半をふさいで、内へ入る隙間は三歩ほどしかなかった。門に取り付いた隊は、枡形の中の門の前へ
+   入るまでに八秒ほど詰まって道を引き直し、枡形の塀に押しつけられていた（遊ぶ側の申し出は「城の壁
+   などにぶつかってしまいうまく対象の門にたどり着けない」）。切れ目を枡形の内の側へだけ門の幅の
+   三割広げる（門の幅七十八歩なら、内へ入る口は二十六歩）。開き口の真ん中（下の gateOpenU。橋と
+   土橋と道の向き）は動かさない。当たり（下の masuWall）と、真上の絵（draw.js）と斜めの絵
+   （tachimono.js）は、ここから引く */
+export const 枡形の口の広げ = 0.3;
+export function 枡形の切れ目(g) {
+  const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
+  return g.open > 0 ? [gR - g.w * (0.1 + 枡形の口の広げ), gR + g.w * 0.9] : [gL - g.w * 0.9, gL + g.w * (0.1 + 枡形の口の広げ)];
+}
+
 export function gateOpenU(g) {
   if (g.出城) return g.off;                         // 出城の門に枡形は無い。正面がそのまま開き口
   const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
@@ -779,8 +793,8 @@ export function masuWall(m, l, g, dx, dy) {
   if (v < v0 - 1 || v > v1 + t) return false;
   const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
   if (v <= v1) return Math.abs(u - gL) <= t / 2 || Math.abs(u - gR) <= t / 2;
-  const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
-  return u > gL - g.w && u < gR + g.w && !(u > from && u < from + g.w);
+  const [c0, c1] = 枡形の切れ目(g);
+  return u > gL - g.w && u < gR + g.w && !(u > c0 && u < c1);
 }
 
 
@@ -841,6 +855,9 @@ export const SIEGE_KIT = {
 /* ------------------------------------------- 城内の最短経路（A*）
    壁と堀を避けて実際に通れる道を探す。回り込みの当て推量では、
    曲輪の中で壁をつたうだけになってしまう。 */
+/* 塀ぎわの重み。塀に接する升目に二、その隣に一、三升目に〇.三を足す。堀と塀のあいだの帯（五十歩
+   ほど）は二升余りなので、帯を回るより、堀の外を回って橋を渡るほうが軽くなる */
+export const 塀ぎわの重み = [0, 2, 1, 0.3];
 export function buildNav(m) {
   /* 格子は二十二歩四方。ところが城壁は十歩しかない。
      升目の真ん中だけを見ていたので、壁は升目と升目のあいだをすり抜け、
@@ -863,9 +880,21 @@ export function buildNav(m) {
   const X0 = 枠.x0, Y0 = 枠.y0;
   const w = Math.ceil((枠.x1 - X0) / CS), h = Math.ceil((枠.y1 - Y0) / CS);
   const ok = new Uint8Array(w * h);
+  /* 升目の重み（門を名指しした隊の道。遊ぶ側の申し出は「〇〇の門へのコマンドで指示をしたり、
+     門を選んで攻撃させたりする場合、城の壁などにぶつかってしまいうまく対象の門にたどり着けない」
+     であった）。もとはどの升目も一歩一つの重さで、道は最短を取った。測ると、南から北の搦手門へ
+     向かう隊は、城の角で水堀を突っ切り（足は〇.二八倍）、堀と塀のあいだの細い帯を回って、
+     途中の門の枡形に挟まり、塀ぎわを一分余り這っていた。足の遅い地は遅さに見合うだけ重く
+     （一を足の速さで割る）、塀ぎわの升目は窮屈なので重くする（上の 塀ぎわの重み）。道は堀の外を
+     回り、目当ての門の橋を渡って入るようになる */
+  const 重 = new Float32Array(w * h);
   for (let j = 0; j < h; j++) {
     for (let i = 0; i < w; i++) {
-      ok[j * w + i] = passable(X0 + i * CS + CS / 2, Y0 + j * CS + CS / 2) ? 1 : 0;
+      const t = terrainAt(X0 + i * CS + CS / 2, Y0 + j * CS + CS / 2);
+      if (BLOCKED[t]) continue;
+      ok[j * w + i] = 1;
+      const 足 = (TERRAIN[t] || {}).speed;
+      重[j * w + i] = 1 / clamp(足 == null ? 1 : 足, 0.25, 1);
     }
   }
   // 継ぎ目。eR は右隣へ、eD は下隣へ渡れるか
@@ -886,7 +915,54 @@ export function buildNav(m) {
       if (j + 1 < h && ok[k + w]) eD[k] = 渡れる(x, y, x, y + CS);
     }
   }
-  m.nav = { CS, w, h, ok, eR, eD, x0: X0, y0: Y0 };
+  /* 塀ぎわ（塀の升目に接する升目、あるいは継ぎ目が塀で断たれた升目）から何升目か。三升目まで数え、
+     近いほど重くする。隊は四、五十歩の幅で進むので、芯の道が塀から二升（四十四歩）より近いと、
+     塀の側の組が塀に当たる。曲輪の中のように広ければ道は塀から離れ、枡形や門の内のように狭ければ
+     重くても通る（ほかに道が無いので） */
+  const 際 = new Uint8Array(w * h);
+  const 列 = [];
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const k = j * w + i;
+      if (!ok[k]) continue;
+      let 接 = false;
+      for (let dj = -1; dj <= 1 && !接; dj++) for (let di = -1; di <= 1; di++) {
+        const ni = i + di, nj = j + dj;
+        if ((di || dj) && ni >= 0 && nj >= 0 && ni < w && nj < h && !ok[nj * w + ni]) { 接 = true; break; }
+      }
+      if (!接) 接 = (i + 1 < w && ok[k + 1] && !eR[k]) || (i > 0 && ok[k - 1] && !eR[k - 1])
+        || (j + 1 < h && ok[k + w] && !eD[k]) || (j > 0 && ok[k - w] && !eD[k - w]);
+      if (接) { 際[k] = 1; 列.push(k); }
+    }
+  }
+  for (let q = 0; q < 列.length; q++) {
+    const k = 列[q];
+    if (際[k] >= 3) continue;
+    const i = k % w, j = (k / w) | 0;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= w || nj >= h) continue;
+      const nk = nj * w + ni;
+      if (!ok[nk] || 際[nk]) continue;
+      際[nk] = 際[k] + 1; 列.push(nk);
+    }
+  }
+  /* 足の遅い地の際も重くする。隊は二、三升の幅で進むので、道の芯が坂や空堀の際を通れば、片側の組が
+     遅い地を踏んで隊ごと遅れる（稲葉山城では、搦手門への道が空堀の際を回り、直す前より七十秒遅れた）。
+     升目の重みを、上下左右の升目の重みのうち重いほうに揃える */
+  const 地の重 = 重.slice();
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const k = j * w + i;
+      if (!ok[k]) continue;
+      if (i + 1 < w && ok[k + 1] && 地の重[k + 1] > 重[k]) 重[k] = 地の重[k + 1];
+      if (i > 0 && ok[k - 1] && 地の重[k - 1] > 重[k]) 重[k] = 地の重[k - 1];
+      if (j + 1 < h && ok[k + w] && 地の重[k + w] > 重[k]) 重[k] = 地の重[k + w];
+      if (j > 0 && ok[k - w] && 地の重[k - w] > 重[k]) 重[k] = 地の重[k - w];
+    }
+  }
+  for (let k = 0; k < w * h; k++) if (際[k]) 重[k] += 塀ぎわの重み[際[k]];
+  m.nav = { CS, w, h, ok, eR, eD, 重, 際, x0: X0, y0: Y0 };
   return m.nav;
 }
 
@@ -894,11 +970,27 @@ export function buildNav(m) {
 const 格子の内 = (m, nv, x, y) => !m.域 || (x >= nv.x0 && y >= nv.y0 && x < nv.x0 + nv.w * nv.CS
   && y < nv.y0 + nv.h * nv.CS && 城の域か(x, y, m));
 
+/* 跨がずに回り込みたい地（堀・空堀・川）。継ぎ目と、道の頭を詰めるときに見る */
+const 跨がぬ地 = { moat: 1, karabori: 1, deep: 1, ford: 1 };
+
 /* 城山の縁の継ぎ目。城山の外から内へ（内から外へ）向かう道は、ここで野の道と城の道を
    継ぐ。城の中ほどから、外の所の方角へ、城山の半径の九割の所 */
 function 継ぎ目(m, x, y) {
-  const a = Math.atan2(y - m.域.y, x - m.域.x), r = m.域.r * 0.9;
-  return { x: m.域.x + Math.cos(a) * r, y: m.域.y + Math.sin(a) * r };
+  const a = Math.atan2(y - m.域.y, x - m.域.x);
+  const 点 = (f) => ({ x: m.域.x + Math.cos(a) * m.域.r * f, y: m.域.y + Math.sin(a) * m.域.r * f });
+  /* 九割の所が、堀や空堀の中、あるいは塀ぎわ（堀と塀のあいだの帯）に落ちたなら、同じ向きのまま外へ
+     ずらして、開けた所で継ぐ。城の大きい小谷城では、南東から寄せる隊の継ぎ目が塀の角のすぐ外に落ち、
+     隊は野の道の終わりにその角へ入り込んで、塀ぎわで詰まっていた */
+  const nv = m.nav || buildNav(m);
+  const 開けた = (p) => {
+    if (!格子の内(m, nv, p.x, p.y)) return false;
+    const i = Math.floor((p.x - nv.x0) / nv.CS), j = Math.floor((p.y - nv.y0) / nv.CS);
+    if (i < 0 || j < 0 || i >= nv.w || j >= nv.h) return false;
+    const k = j * nv.w + i;
+    return !!nv.ok[k] && !(nv.際 && nv.際[k]) && !跨がぬ地[terrainAt(p.x, p.y)];
+  };
+  for (let f = 0.9; f < 0.995; f += 0.01) { const p = 点(f); if (開けた(p)) return p; }
+  return 点(0.9);
 }
 /* 野の道（route.js）。行き着けなければ真っすぐ */
 const 野を行く = (x0, y0, x1, y1) => 野の道(x0, y0, x1, y1) || [{ x: x1, y: y1, r: 40 }];
@@ -919,10 +1011,44 @@ function 継いだ道(m, x0, y0, x1, y1) {
   return [...(内 || [{ x: e.x, y: e.y, r: 40 }]), ...野を行く(e.x, e.y, x1, y1)];
 }
 
+/* 二分の山（道さがしの開いた升目）。値の小さいものから取り出す */
+class 二分の山 {
+  constructor() { this.k = []; this.f = []; }
+  get 数() { return this.k.length; }
+  積む(k, f) {
+    const K = this.k, F = this.f;
+    let i = K.length; K.push(k); F.push(f);
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (F[p] <= f) break;
+      K[i] = K[p]; F[i] = F[p]; i = p;
+    }
+    K[i] = k; F[i] = f;
+  }
+  取る() {
+    const K = this.k, F = this.f, top = K[0];
+    const k = K.pop(), f = F.pop();
+    if (K.length) {
+      let i = 0;
+      const n = K.length;
+      for (;;) {
+        const l = i * 2 + 1, r = l + 1;
+        let m = i, mf = f;
+        if (l < n && F[l] < mf) { m = l; mf = F[l]; }
+        if (r < n && F[r] < mf) { m = r; mf = F[r]; }
+        if (m === i) break;
+        K[i] = K[m]; F[i] = F[m]; i = m;
+      }
+      K[i] = k; F[i] = f;
+    }
+    return top;
+  }
+}
+
 export function navPath(m, x0, y0, x1, y1) {
   const nv = m.nav || buildNav(m);
   if (m.域 && (!格子の内(m, nv, x0, y0) || !格子の内(m, nv, x1, y1))) return 継いだ道(m, x0, y0, x1, y1);
-  const { CS, w, h, ok, eR, eD } = nv;
+  const { CS, w, h, ok, eR, eD, 重 } = nv;
   const X0 = nv.x0 || 0, Y0 = nv.y0 || 0;
   // 升目から升目へ渡れるか。壁を跨ぐ継ぎ目は断たれている。
   const 継 = (i, j, di, dj) => {
@@ -969,13 +1095,14 @@ export function navPath(m, x0, y0, x1, y1) {
   const tx = T % w, ty = (T / w) | 0;
   const hOf = (k) => { const i = k % w, j = (k / w) | 0; const dx = Math.abs(i - tx), dy = Math.abs(j - ty);
     return (dx + dy) + (Math.SQRT2 - 2) * Math.min(dx, dy); };
-  const open = [{ k: S, f: hOf(S) }];
+  /* 開いた升目は二分の山に積む（重みを入れると探す升目が増えるので、並べ直しを一手ごとに
+     走らせていたもとのやり方では遅い） */
+  const 山 = new 二分の山();
+  山.積む(S, hOf(S));
   g[S] = 0;
   let found = false, guard = 0;
-  while (open.length && guard++ < 60000) {
-    let bi = 0;
-    for (let i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
-    const cur = open.splice(bi, 1)[0].k;
+  while (山.数 && guard++ < 60000) {
+    const cur = 山.取る();
     if (cur === T) { found = true; break; }
     if (seen[cur]) continue;
     seen[cur] = 1;
@@ -993,8 +1120,10 @@ export function navPath(m, x0, y0, x1, y1) {
         const 横縦 = 継(ci, cj, 0, dj) && 継(ci, nj, di, 0);
         if (!縦横 && !横縦) continue;
       } else if (!継(ci, cj, di, dj)) continue;
-      const cost = g[cur] + (di && dj ? Math.SQRT2 : 1);
-      if (cost < g[nk]) { g[nk] = cost; prev[nk] = cur; open.push({ k: nk, f: cost + hOf(nk) }); }
+      /* 一歩の重さは、出る升目と入る升目の重みの中ほど（重みの無い古い格子なら一） */
+      const 歩 = (di && dj ? Math.SQRT2 : 1) * (重 ? (重[cur] + 重[nk]) / 2 : 1);
+      const cost = g[cur] + 歩;
+      if (cost < g[nk]) { g[nk] = cost; prev[nk] = cur; 山.積む(nk, cost + hOf(nk)); }
     }
   }
   if (!found) return null;
@@ -1208,26 +1337,80 @@ export function routeToCastleGate(m, g, cx, cy) {
     { ...fromUV(m, a, g.off, a.half + t + g.masu / 2), r: 24 },
     { ...fromUV(m, a, g.off, a.half + t + 14), r: 20 },
   ];
+  /* 枡形の口の真ん中（正面の塀の切れ目のうち、枡形の内に重なる所）を挟む。開き口の外から枡形の中ほどへ
+     まっすぐ向かうと、道が袖の塀の角をかすめ、隊はその角で止まって八秒ごとに道を引き直した（取り付いた
+     隊の十三分の一ほどが、門の前へ入れなかった） */
+  if (!g.出城 && !g.broken) {
+    const [c0, c1] = 枡形の切れ目(g), gL = g.off - g.w / 2, gR = g.off + g.w / 2;
+    const 内0 = g.open > 0 ? c0 : gL + t / 2, 内1 = g.open > 0 ? gR - t / 2 : c1;
+    if (内1 > 内0) tail.unshift({ ...fromUV(m, a, (内0 + 内1) / 2, a.half + t + g.masu + t / 2), r: 16 });
+  }
   /* 破れた門は通り抜ける先まで導く。門の前で止めていたので、
      破った門の内へ入れず、その場で押し合っていた。 */
   if (g.broken) tail.push({ ...fromUV(m, a, g.off, a.half - 20), r: 22 });
   if (Math.hypot(cx - open.x, cy - open.y) < 46) return tail;
   const path = navPath(m, cx, cy, open.x, open.y);
   if (!path) return tail;
-  /* いま居るところより後ろの地点は捨てる（GDD 9.3）。
+  return [...道の頭を詰める(path, cx, cy), ...tail];
+}
 
-     道は「いちばん近い節」から引かれるので、その節が隊の後ろにあることがある。
-     引き直すたびに隊は一度後戻りし、着いてはまた引き直され――門前で行きつ戻りつ
-     していた。実測では、この隊は百二十秒のあいだに三十八回も前後を繰り返していた。
-     虎口の開き口へ近づかない地点は、通る意味がない。 */
-  const 残り = Math.hypot(open.x - cx, open.y - cy);
+/* いま居るところより後ろの地点は捨てる（GDD 9.3）。
+
+   道は「いちばん近い節」から引かれるので、その節が隊の後ろにあることがある。
+   引き直すたびに隊は一度後戻りし、着いてはまた引き直され――門前で行きつ戻りつ
+   していた。実測では、この隊は百二十秒のあいだに三十八回も前後を繰り返していた。
+
+   もとは「行き先へ近づかない地点」をまとめて捨て、塀の見通せる所まで戻していた。ところが
+   城を回り込んで裏の門へ向かう道は、はじめのうち行き先へあまり近づかないので、回り込みの
+   地点まで捨てられ、隊は堀を突っ切ってその先の地点へまっすぐ向かった（見通しは塀しか
+   見ないので、堀は素通しであった）。いまは、隊がもう通り過ぎた地点（次の地点へは、その地点
+   より隊のほうが近い）だけを、次の地点へ塀も堀も跨がずに行けるときに捨てる。塀を回り込む
+   地点は捨てない */
+export function 素直に行ける(x0, y0, x1, y1) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 5));
+  const 始 = terrainAt(x0, y0);
+  for (let k = 1; k <= n; k++) {
+    const t = terrainAt(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n);
+    if (BLOCKED[t] || (跨がぬ地[t] && !跨がぬ地[始])) return false;
+  }
+  return true;
+}
+export function 道の頭を詰める(path, cx, cy) {
   let i = 0;
-  while (i < path.length - 1 && Math.hypot(open.x - path[i].x, open.y - path[i].y) >= 残り - 4) i++;
-  /* ただし、塀を回り込む地点まで捨ててはならない。塀の外から内の門へ向かう隊は、
-     いったん門から遠ざかって外の門をくぐる。そこを捨てると道は塀を突っ切り、
-     詰まって引き直しても同じ道が返るので、隊は塀の外で永久に立ち尽くした。 */
-  while (i > 0 && !見通せる(cx, cy, path[i].x, path[i].y)) i--;
-  return [...path.slice(i), ...tail];
+  while (i < path.length - 1) {
+    const p = path[i], q = path[i + 1];
+    if (Math.hypot(q.x - cx, q.y - cy) <= Math.hypot(q.x - p.x, q.y - p.y) + 4 && 素直に行ける(cx, cy, q.x, q.y)) i++;
+    else break;
+  }
+  return path.slice(i);
+}
+
+/* 城の中を手ずから動かす道（遊ぶ側が地図を押して「移動」を命じたとき）。行き先とのあいだに塀や
+   閉じた門があれば、塀を回り込む道を返す。見通せれば null（これまでどおりまっすぐ向かう。森へ入れ、
+   堀を渡れという下知もありうる）。もとは城の中でもまっすぐ向かったので、塀の向こうを押すと隊は
+   塀に当たって止まった（地図で裏の門を押すと、三十六回のうち十八回は塀の前で立ち尽くした） */
+export function 城の中の道(m, x0, y0, x1, y1) {
+  if (!m || 見通せる(x0, y0, x1, y1)) return null;
+  const p = navPath(m, x0, y0, x1, y1);
+  return p && p.length ? 道の頭を詰める(p, x0, y0) : null;
+}
+
+/* 地図で押した所の門（寄せ手が手ずから「門を破る」を命じる的）。いま攻められる門（破れていない、
+   外の門か外側の輪が破れた門。保っている出城の門も）のうち、押した所から 幅 の内でいちばん近いもの。
+   門そのもの（塀の線）か、枡形の外の開き口の近くを押せば当たる */
+export function 押した門(m, x, y, 幅) {
+  if (!m) return null;
+  const 候 = [...(出城が保つ(m) ? m.出城.gates : []), ...m.gates]
+    .filter((g) => !g.broken && (g.出城 || gateReachable(m, g)));
+  let 選 = null, 値 = 幅;
+  for (const g of 候) {
+    const l = 門の輪(m, g), a = axisOf(l, g);
+    const 門 = gatePos(m, l, g);
+    const 口 = g.出城 ? fromUV(m, a, g.off, a.half + m.t + 30) : fromUV(m, a, gateOpenU(g), a.half + m.t + g.masu + m.t);
+    const d = Math.min(Math.hypot(門.x - x, 門.y - y), Math.hypot(口.x - x, 口.y - y));
+    if (d < 値) { 値 = d; 選 = g; }
+  }
+  return 選;
 }
 
 export const gateReachable = (m, g) => !!g.出城 || g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);
