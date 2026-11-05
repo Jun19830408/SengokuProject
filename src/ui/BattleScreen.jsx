@@ -1,7 +1,7 @@
 import { 木立を焼く } from "../battle/mori.js";
 import React, { useState, useRef, useEffect } from "react";
-import { MAP, axisOf, fromUV, gateOpenU, gatePos, inLayer, nearestOpenGate, routeToCastleGate, 本丸への道, 門の輪, 出城が保つ, 出城の内か } from "../battle/castleMap.js";
-import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す, 狙いの組, 狙う所 } from "../battle/corps.js";
+import { MAP, axisOf, fromUV, gatePos, inLayer, 本丸への道, 門の輪, 出城が保つ, 出城の内か, 押した門 } from "../battle/castleMap.js";
+import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す, 狙いの組, 狙う所, 門へ向かわせる, 城の中を動かす } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限, 城山の形 } from "../battle/shinga.js";
 import { stepBattle, 夜を明かす, 兵糧攻めに移る, 寄せ手の夜の思案, 今の刻, 日の名, 兵糧の日, 引き鉦を打つ, この日の損 } from "../battle/engine.js";
@@ -642,7 +642,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       cam.x = x; cam.y = y;
     }
   };
-  const orderTo = (c, f, foe) => {
+  const orderTo = (c, f, foe, 門を見る = true) => {
     c.task = null;                       // 手動命令は分遣任務より優先する
     if (faceRef.current) {
       /* 前進はせず、その場で向きだけ変えて陣形を組み直す。
@@ -687,7 +687,15 @@ export function BattleScreen({ ctx, land, onEnd }) {
       const gx = 組.x + ((c.x - 組.x) / d) * 38, gy = 組.y + ((c.y - 組.y) / d) * 38;
       下知(b, c, { order: "接戦", tx: gx, ty: gy });
     } else {
+      /* 城攻めの寄せ手が門を押したら、その門を破りに向かわせる（「この門へ」と同じ）。城の中で
+         塀の向こうを押したら、塀を回り込む道を引く（battle/corps.js 城の中を動かす）。遊ぶ側の申し出は
+         「門を選んで攻撃させたりする場合、城の壁などにぶつかってしまいうまく対象の門にたどり着けない」
+         であった。もとはどちらもまっすぐの「移動」で、塀に当たって止まった */
+      const 門 = isCastle && iAmAttacker && 門を見る
+        ? 押した門(b.map, f.x, f.y, Math.max(60 * fieldScale(), 44 / Math.max(0.4, camRef.current.s))) : null;
+      if (門) { castleGo(c, "門を破る", 門); return; }
       c.siegeAuto = false; c.gate = null;
+      if (isCastle) { 城の中を動かす(b, c, f.x, f.y, 下知); return; }
       下知(b, c, { order: "移動", tx: f.x, ty: f.y });
     }
   };
@@ -732,7 +740,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
       const cx = live.reduce((a, c) => a + c.x, 0) / Math.max(1, live.length);
       const cy = live.reduce((a, c) => a + c.y, 0) / Math.max(1, live.length);
       const 的 = 札 ? { x: 札.x, y: 札.y } : f;
-      for (const c of live) orderTo(c, { x: 的.x + (c.x - cx), y: 的.y + (c.y - cy) }, foe);
+      /* 門を押したなら、どの隊もその門へ（順は門前の列で決まる） */
+      const 門 = !foe && isCastle && iAmAttacker
+        ? 押した門(b.map, f.x, f.y, Math.max(60 * fieldScale(), 44 / Math.max(0.4, camRef.current.s))) : null;
+      if (門) { for (const c of live) if (!c.detach) castleGo(c, "門を破る", 門); return; }
+      for (const c of live) orderTo(c, { x: 的.x + (c.x - cx), y: 的.y + (c.y - cy) }, foe, false);
       return;
     }
     if (!selC) return;
@@ -913,23 +925,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const m = b.map;
     if (!m || !c) return;
     if (kind === "門を破る") {
-      const 届く = (g2) => (g2.出城 ? 出城が保つ(m) : (g2.layer === 0 || m.layers[g2.layer - 1].gates.some((x) => x.broken)));
-      const gt = gate || ((c.gate && !c.gate.broken && 届く(c.gate)) ? c.gate : nearestOpenGate(m, c.x, c.y));
-      if (!gt) return;
-      c.gate = gt; c.siegeAuto = true;      // 破ったら次の門へ自ら進む
-      c.出城攻め = !!gt.出城;                 // 出城の門なら、破ったあと出城の中へ攻め入る（engine.js）
-      const l = 門の輪(m, gt), a = axisOf(l, gt);
-      const gp = gatePos(m, l, gt);
-      // すでに取り付いていれば呼び戻さない
-      if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * fieldScale()) { 下知(b, c, { order: "待機" }); return; }
-      const wp = routeToCastleGate(m, gt, c.x, c.y);
-      if (wp.length) {
-        下知(b, c, { order: "前進", tx: wp[0].x, ty: wp[0].y, keepPath: true });
-        c.wp = wp;
-      } else {
-        const p = fromUV(m, a, gateOpenU(gt), a.half + m.t + gt.masu + m.t + 30);
-        下知(b, c, { order: "前進", tx: p.x, ty: p.y });
-      }
+      /* 中身は battle/corps.js 門へ向かわせる（試験から同じ道を通せるよう、そちらへ移した） */
+      門へ向かわせる(b, c, gate, 下知);
     } else if (kind === "本丸へ") {
       /* 本丸の門が開いていれば本丸へ。閉じていれば門を破りに行き、破ったら次の門へ、
          本丸の門が破れたら本丸へと自ら進む（engine.js 門を破ったら次へ） */
@@ -944,7 +941,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       const cand = m.fac.filter((f) => f.hp > 0 && (f.出城 ? 出城が保つ(m) : f.layer === 0 ? m.layers[0].gates.some((x) => x.broken)
         : m.layers[f.layer].gates.some((x) => x.broken) || m.layers[f.layer - 1].gates.some((x) => x.broken)));
       const f = cand.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
-      if (f) 下知(b, c, { order: "前進", tx: f.x, ty: f.y });
+      if (f) 城の中を動かす(b, c, f.x, f.y, 下知, "前進");     // 塀の向こうの施設へは、塀を回り込む道で
       else castleGo(c, "門を破る");
     }
     force((n) => (n + 1) % 1000);
