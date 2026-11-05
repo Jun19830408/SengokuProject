@@ -26752,6 +26752,45 @@ function issueOrder(b, c, patch, { \u5373 } = {}) {
   }
   c.pending = { patch, t: commandDelay(b, c) };
 }
+function \u9580\u3078\u5411\u304B\u308F\u305B\u308B(b, c, gate, \u547D\u3058\u308B = issueOrder) {
+  const m = b && b.map;
+  if (!m || !c) return null;
+  const \u5C4A\u304F = (g2) => g2.\u51FA\u57CE ? \u51FA\u57CE\u304C\u4FDD\u3064(m) : g2.layer === 0 || m.layers[g2.layer - 1].gates.some((x) => x.broken);
+  const gt = gate || (c.gate && !c.gate.broken && \u5C4A\u304F(c.gate) ? c.gate : nearestOpenGate(m, c.x, c.y));
+  if (!gt) return null;
+  c.gate = gt;
+  c.siegeAuto = true;
+  c.\u51FA\u57CE\u653B\u3081 = !!gt.\u51FA\u57CE;
+  const l = \u9580\u306E\u8F2A(m, gt), a = axisOf(l, gt);
+  const gp = gatePos(m, l, gt);
+  if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * fieldScale()) {
+    \u547D\u3058\u308B(b, c, { order: "\u5F85\u6A5F" });
+    return gt;
+  }
+  const wp = routeToCastleGate(m, gt, c.x, c.y);
+  if (wp.length) {
+    if (\u547D\u3058\u308B(b, c, { order: "\u524D\u9032", tx: wp[0].x, ty: wp[0].y, keepPath: true }) !== false) c.wp = wp;
+  } else {
+    const p = fromUV(m, a, gateOpenU(gt), a.half + m.t + gt.masu + m.t + 30);
+    \u547D\u3058\u308B(b, c, { order: "\u524D\u9032", tx: p.x, ty: p.y });
+  }
+  c.stuck = 0;
+  c.lastD = null;
+  return gt;
+}
+function \u57CE\u306E\u4E2D\u3092\u52D5\u304B\u3059(b, c, x, y, \u547D\u3058\u308B = issueOrder, order = "\u79FB\u52D5") {
+  const m = b && b.map;
+  const wp = m ? \u57CE\u306E\u4E2D\u306E\u9053(m, c.x, c.y, x, y) : null;
+  if (wp && wp.length) {
+    if (\u547D\u3058\u308B(b, c, { order, tx: wp[0].x, ty: wp[0].y, keepPath: true }) !== false) {
+      c.wp = wp;
+      c.stuck = 0;
+      c.lastD = null;
+    }
+    return true;
+  }
+  return \u547D\u3058\u308B(b, c, { order, tx: x, ty: y });
+}
 function \u8EE2\u56DE\u3055\u305B\u308B(b, c, x, y) {
   if (!b || !c) return;
   issueOrder(b, c, { order: "\u8EE2\u56DE", tx: c.x, ty: c.y, faceTo: Math.atan2(y - c.y, x - c.x) });
@@ -27725,6 +27764,11 @@ var gatePos = (m, l, g) => {
   const a = axisOf(l, g);
   return fromUV(m, a, g.off, a.half + m.t / 2);
 };
+var \u67A1\u5F62\u306E\u53E3\u306E\u5E83\u3052 = 0.3;
+function \u67A1\u5F62\u306E\u5207\u308C\u76EE(g) {
+  const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
+  return g.open > 0 ? [gR - g.w * (0.1 + \u67A1\u5F62\u306E\u53E3\u306E\u5E83\u3052), gR + g.w * 0.9] : [gL - g.w * 0.9, gL + g.w * (0.1 + \u67A1\u5F62\u306E\u53E3\u306E\u5E83\u3052)];
+}
 function gateOpenU(g) {
   if (g.\u51FA\u57CE) return g.off;
   const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
@@ -27765,8 +27809,8 @@ function masuWall(m, l, g, dx, dy) {
   if (v < v0 - 1 || v > v1 + t) return false;
   const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
   if (v <= v1) return Math.abs(u - gL) <= t / 2 || Math.abs(u - gR) <= t / 2;
-  const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
-  return u > gL - g.w && u < gR + g.w && !(u > from && u < from + g.w);
+  const [c0, c1] = \u67A1\u5F62\u306E\u5207\u308C\u76EE(g);
+  return u > gL - g.w && u < gR + g.w && !(u > c0 && u < c1);
 }
 function castleTerrainAt(x, y) {
   const m = MAP, t = m.t;
@@ -27819,6 +27863,7 @@ var SIEGE_KIT = {
   \u7AF9\u675F: { gate: 1, guard: 0.4, note: "\u57CE\u5185\u304B\u3089\u306E\u5C04\u6483\u3092\u56DB\u5272\u306B\u6291\u3048\u308B\u3002" },
   \u4E95\u697C: { gate: 1.1, guard: 0.8, shoot: 1.7, note: "\u5840\u3054\u3057\u306B\u5C04\u304B\u3051\u3089\u308C\u3001\u6AD3\u3092\u5D29\u3057\u3084\u3059\u3044\u3002" }
 };
+var \u5840\u304E\u308F\u306E\u91CD\u307F = [0, 2, 1, 0.3];
 function buildNav(m) {
   const CS = 22, \u523B = 5;
   const \u67A0 = m.\u57DF ? {
@@ -27830,9 +27875,14 @@ function buildNav(m) {
   const X0 = \u67A0.x0, Y0 = \u67A0.y0;
   const w = Math.ceil((\u67A0.x1 - X0) / CS), h = Math.ceil((\u67A0.y1 - Y0) / CS);
   const ok = new Uint8Array(w * h);
+  const \u91CD = new Float32Array(w * h);
   for (let j = 0; j < h; j++) {
     for (let i = 0; i < w; i++) {
-      ok[j * w + i] = passable(X0 + i * CS + CS / 2, Y0 + j * CS + CS / 2) ? 1 : 0;
+      const t = terrainAt(X0 + i * CS + CS / 2, Y0 + j * CS + CS / 2);
+      if (BLOCKED[t]) continue;
+      ok[j * w + i] = 1;
+      const \u8DB3 = (TERRAIN[t] || {}).speed;
+      \u91CD[j * w + i] = 1 / clamp(\u8DB3 == null ? 1 : \u8DB3, 0.25, 1);
     }
   }
   const \u6E21\u308C\u308B = (x0, y0, x1, y1) => {
@@ -27852,13 +27902,73 @@ function buildNav(m) {
       if (j + 1 < h && ok[k + w]) eD[k] = \u6E21\u308C\u308B(x, y, x, y + CS);
     }
   }
-  m.nav = { CS, w, h, ok, eR, eD, x0: X0, y0: Y0 };
+  const \u969B = new Uint8Array(w * h);
+  const \u5217 = [];
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const k = j * w + i;
+      if (!ok[k]) continue;
+      let \u63A5 = false;
+      for (let dj = -1; dj <= 1 && !\u63A5; dj++) for (let di = -1; di <= 1; di++) {
+        const ni = i + di, nj = j + dj;
+        if ((di || dj) && ni >= 0 && nj >= 0 && ni < w && nj < h && !ok[nj * w + ni]) {
+          \u63A5 = true;
+          break;
+        }
+      }
+      if (!\u63A5) \u63A5 = i + 1 < w && ok[k + 1] && !eR[k] || i > 0 && ok[k - 1] && !eR[k - 1] || j + 1 < h && ok[k + w] && !eD[k] || j > 0 && ok[k - w] && !eD[k - w];
+      if (\u63A5) {
+        \u969B[k] = 1;
+        \u5217.push(k);
+      }
+    }
+  }
+  for (let q = 0; q < \u5217.length; q++) {
+    const k = \u5217[q];
+    if (\u969B[k] >= 3) continue;
+    const i = k % w, j = k / w | 0;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= w || nj >= h) continue;
+      const nk = nj * w + ni;
+      if (!ok[nk] || \u969B[nk]) continue;
+      \u969B[nk] = \u969B[k] + 1;
+      \u5217.push(nk);
+    }
+  }
+  const \u5730\u306E\u91CD = \u91CD.slice();
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const k = j * w + i;
+      if (!ok[k]) continue;
+      if (i + 1 < w && ok[k + 1] && \u5730\u306E\u91CD[k + 1] > \u91CD[k]) \u91CD[k] = \u5730\u306E\u91CD[k + 1];
+      if (i > 0 && ok[k - 1] && \u5730\u306E\u91CD[k - 1] > \u91CD[k]) \u91CD[k] = \u5730\u306E\u91CD[k - 1];
+      if (j + 1 < h && ok[k + w] && \u5730\u306E\u91CD[k + w] > \u91CD[k]) \u91CD[k] = \u5730\u306E\u91CD[k + w];
+      if (j > 0 && ok[k - w] && \u5730\u306E\u91CD[k - w] > \u91CD[k]) \u91CD[k] = \u5730\u306E\u91CD[k - w];
+    }
+  }
+  for (let k = 0; k < w * h; k++) if (\u969B[k]) \u91CD[k] += \u5840\u304E\u308F\u306E\u91CD\u307F[\u969B[k]];
+  m.nav = { CS, w, h, ok, eR, eD, \u91CD, \u969B, x0: X0, y0: Y0 };
   return m.nav;
 }
 var \u683C\u5B50\u306E\u5185 = (m, nv, x, y) => !m.\u57DF || x >= nv.x0 && y >= nv.y0 && x < nv.x0 + nv.w * nv.CS && y < nv.y0 + nv.h * nv.CS && \u57CE\u306E\u57DF\u304B(x, y, m);
+var \u8DE8\u304C\u306C\u5730 = { moat: 1, karabori: 1, deep: 1, ford: 1 };
 function \u7D99\u304E\u76EE(m, x, y) {
-  const a = Math.atan2(y - m.\u57DF.y, x - m.\u57DF.x), r = m.\u57DF.r * 0.9;
-  return { x: m.\u57DF.x + Math.cos(a) * r, y: m.\u57DF.y + Math.sin(a) * r };
+  const a = Math.atan2(y - m.\u57DF.y, x - m.\u57DF.x);
+  const \u70B9 = (f) => ({ x: m.\u57DF.x + Math.cos(a) * m.\u57DF.r * f, y: m.\u57DF.y + Math.sin(a) * m.\u57DF.r * f });
+  const nv = m.nav || buildNav(m);
+  const \u958B\u3051\u305F = (p) => {
+    if (!\u683C\u5B50\u306E\u5185(m, nv, p.x, p.y)) return false;
+    const i = Math.floor((p.x - nv.x0) / nv.CS), j = Math.floor((p.y - nv.y0) / nv.CS);
+    if (i < 0 || j < 0 || i >= nv.w || j >= nv.h) return false;
+    const k = j * nv.w + i;
+    return !!nv.ok[k] && !(nv.\u969B && nv.\u969B[k]) && !\u8DE8\u304C\u306C\u5730[terrainAt(p.x, p.y)];
+  };
+  for (let f = 0.9; f < 0.995; f += 0.01) {
+    const p = \u70B9(f);
+    if (\u958B\u3051\u305F(p)) return p;
+  }
+  return \u70B9(0.9);
 }
 var \u91CE\u3092\u884C\u304F = (x0, y0, x1, y1) => \u91CE\u306E\u9053(x0, y0, x1, y1) || [{ x: x1, y: y1, r: 40 }];
 function \u7D99\u3044\u3060\u9053(m, x0, y0, x1, y1) {
@@ -27874,10 +27984,61 @@ function \u7D99\u3044\u3060\u9053(m, x0, y0, x1, y1) {
   const \u5185 = navPath(m, x0, y0, e.x, e.y);
   return [...\u5185 || [{ x: e.x, y: e.y, r: 40 }], ...\u91CE\u3092\u884C\u304F(e.x, e.y, x1, y1)];
 }
+var \u4E8C\u5206\u306E\u5C71 = class {
+  constructor() {
+    this.k = [];
+    this.f = [];
+  }
+  get \u6570() {
+    return this.k.length;
+  }
+  \u7A4D\u3080(k, f) {
+    const K2 = this.k, F = this.f;
+    let i = K2.length;
+    K2.push(k);
+    F.push(f);
+    while (i > 0) {
+      const p = i - 1 >> 1;
+      if (F[p] <= f) break;
+      K2[i] = K2[p];
+      F[i] = F[p];
+      i = p;
+    }
+    K2[i] = k;
+    F[i] = f;
+  }
+  \u53D6\u308B() {
+    const K2 = this.k, F = this.f, top = K2[0];
+    const k = K2.pop(), f = F.pop();
+    if (K2.length) {
+      let i = 0;
+      const n = K2.length;
+      for (; ; ) {
+        const l = i * 2 + 1, r = l + 1;
+        let m = i, mf = f;
+        if (l < n && F[l] < mf) {
+          m = l;
+          mf = F[l];
+        }
+        if (r < n && F[r] < mf) {
+          m = r;
+          mf = F[r];
+        }
+        if (m === i) break;
+        K2[i] = K2[m];
+        F[i] = F[m];
+        i = m;
+      }
+      K2[i] = k;
+      F[i] = f;
+    }
+    return top;
+  }
+};
 function navPath(m, x0, y0, x1, y1) {
   const nv = m.nav || buildNav(m);
   if (m.\u57DF && (!\u683C\u5B50\u306E\u5185(m, nv, x0, y0) || !\u683C\u5B50\u306E\u5185(m, nv, x1, y1))) return \u7D99\u3044\u3060\u9053(m, x0, y0, x1, y1);
-  const { CS, w, h, ok, eR, eD } = nv;
+  const { CS, w, h, ok, eR, eD, \u91CD } = nv;
   const X0 = nv.x0 || 0, Y0 = nv.y0 || 0;
   const \u7D99 = (i, j, di, dj) => {
     if (di > 0 && !eR[j * w + i]) return false;
@@ -27921,13 +28082,12 @@ function navPath(m, x0, y0, x1, y1) {
     const dx = Math.abs(i - tx), dy = Math.abs(j - ty);
     return dx + dy + (Math.SQRT2 - 2) * Math.min(dx, dy);
   };
-  const open = [{ k: S, f: hOf(S) }];
+  const \u5C712 = new \u4E8C\u5206\u306E\u5C71();
+  \u5C712.\u7A4D\u3080(S, hOf(S));
   g[S] = 0;
   let found = false, guard = 0;
-  while (open.length && guard++ < 6e4) {
-    let bi = 0;
-    for (let i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
-    const cur = open.splice(bi, 1)[0].k;
+  while (\u5C712.\u6570 && guard++ < 6e4) {
+    const cur = \u5C712.\u53D6\u308B();
     if (cur === T) {
       found = true;
       break;
@@ -27947,11 +28107,12 @@ function navPath(m, x0, y0, x1, y1) {
         const \u6A2A\u7E26 = \u7D99(ci, cj, 0, dj) && \u7D99(ci, nj, di, 0);
         if (!\u7E26\u6A2A && !\u6A2A\u7E26) continue;
       } else if (!\u7D99(ci, cj, di, dj)) continue;
-      const cost = g[cur] + (di && dj ? Math.SQRT2 : 1);
+      const \u6B69 = (di && dj ? Math.SQRT2 : 1) * (\u91CD ? (\u91CD[cur] + \u91CD[nk]) / 2 : 1);
+      const cost = g[cur] + \u6B69;
       if (cost < g[nk]) {
         g[nk] = cost;
         prev[nk] = cur;
-        open.push({ k: nk, f: cost + hOf(nk) });
+        \u5C712.\u7A4D\u3080(nk, cost + hOf(nk));
       }
     }
   }
@@ -28108,15 +28269,55 @@ function routeToCastleGate(m, g, cx, cy) {
     { ...fromUV(m, a, g.off, a.half + t + g.masu / 2), r: 24 },
     { ...fromUV(m, a, g.off, a.half + t + 14), r: 20 }
   ];
+  if (!g.\u51FA\u57CE && !g.broken) {
+    const [c0, c1] = \u67A1\u5F62\u306E\u5207\u308C\u76EE(g), gL = g.off - g.w / 2, gR = g.off + g.w / 2;
+    const \u51850 = g.open > 0 ? c0 : gL + t / 2, \u51851 = g.open > 0 ? gR - t / 2 : c1;
+    if (\u51851 > \u51850) tail.unshift({ ...fromUV(m, a, (\u51850 + \u51851) / 2, a.half + t + g.masu + t / 2), r: 16 });
+  }
   if (g.broken) tail.push({ ...fromUV(m, a, g.off, a.half - 20), r: 22 });
   if (Math.hypot(cx - open.x, cy - open.y) < 46) return tail;
   const path = navPath(m, cx, cy, open.x, open.y);
   if (!path) return tail;
-  const \u6B8B\u308A2 = Math.hypot(open.x - cx, open.y - cy);
+  return [...\u9053\u306E\u982D\u3092\u8A70\u3081\u308B(path, cx, cy), ...tail];
+}
+function \u7D20\u76F4\u306B\u884C\u3051\u308B(x0, y0, x1, y1) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 5));
+  const \u59CB = terrainAt(x0, y0);
+  for (let k = 1; k <= n; k++) {
+    const t = terrainAt(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n);
+    if (BLOCKED[t] || \u8DE8\u304C\u306C\u5730[t] && !\u8DE8\u304C\u306C\u5730[\u59CB]) return false;
+  }
+  return true;
+}
+function \u9053\u306E\u982D\u3092\u8A70\u3081\u308B(path, cx, cy) {
   let i = 0;
-  while (i < path.length - 1 && Math.hypot(open.x - path[i].x, open.y - path[i].y) >= \u6B8B\u308A2 - 4) i++;
-  while (i > 0 && !\u898B\u901A\u305B\u308B(cx, cy, path[i].x, path[i].y)) i--;
-  return [...path.slice(i), ...tail];
+  while (i < path.length - 1) {
+    const p = path[i], q = path[i + 1];
+    if (Math.hypot(q.x - cx, q.y - cy) <= Math.hypot(q.x - p.x, q.y - p.y) + 4 && \u7D20\u76F4\u306B\u884C\u3051\u308B(cx, cy, q.x, q.y)) i++;
+    else break;
+  }
+  return path.slice(i);
+}
+function \u57CE\u306E\u4E2D\u306E\u9053(m, x0, y0, x1, y1) {
+  if (!m || \u898B\u901A\u305B\u308B(x0, y0, x1, y1)) return null;
+  const p = navPath(m, x0, y0, x1, y1);
+  return p && p.length ? \u9053\u306E\u982D\u3092\u8A70\u3081\u308B(p, x0, y0) : null;
+}
+function \u62BC\u3057\u305F\u9580(m, x, y, \u5E452) {
+  if (!m) return null;
+  const \u5019 = [...\u51FA\u57CE\u304C\u4FDD\u3064(m) ? m.\u51FA\u57CE.gates : [], ...m.gates].filter((g) => !g.broken && (g.\u51FA\u57CE || gateReachable(m, g)));
+  let \u9078 = null, \u5024 = \u5E452;
+  for (const g of \u5019) {
+    const l = \u9580\u306E\u8F2A(m, g), a = axisOf(l, g);
+    const \u9580 = gatePos(m, l, g);
+    const \u53E3 = g.\u51FA\u57CE ? fromUV(m, a, g.off, a.half + m.t + 30) : fromUV(m, a, gateOpenU(g), a.half + m.t + g.masu + m.t);
+    const d = Math.min(Math.hypot(\u9580.x - x, \u9580.y - y), Math.hypot(\u53E3.x - x, \u53E3.y - y));
+    if (d < \u5024) {
+      \u5024 = d;
+      \u9078 = g;
+    }
+  }
+  return \u9078;
 }
 var gateReachable = (m, g) => !!g.\u51FA\u57CE || g.layer === 0 || m.layers[g.layer - 1].gates.some((x) => x.broken);
 function \u672C\u4E38\u3078\u306E\u9053(m, x, y) {
@@ -29274,13 +29475,12 @@ function \u67A1\u5F62(m, l, g) {
   };
   put(g.off - g.w / 2, a.half + t, t, g.masu);
   put(g.off + g.w / 2, a.half + t, t, g.masu);
-  const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
-  const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
+  const [c0, c1] = \u67A1\u5F62\u306E\u5207\u308C\u76EE(g);
   const seg = (u0, u1) => {
     if (u1 > u0) put((u0 + u1) / 2, a.half + t + g.masu, u1 - u0, t);
   };
-  seg(g.off - g.w * 1.05, from);
-  seg(from + g.w, g.off + g.w * 1.05);
+  seg(g.off - g.w * 1.05, c0);
+  seg(c1, g.off + g.w * 1.05);
   return \u7269;
 }
 function \u77F3\u5841(x0, y0, x1, y1, \u77F3\u4E08, \u5840\u4E08) {
@@ -36192,13 +36392,12 @@ function \u57CE\u306E\u7ACB\u3064\u3082\u306E\u3092\u63CF\u304F(ctx, m, t, cx, c
       if (!\u7ACB\u4F53) {
         put(g.off - g.w / 2, a.half + t, t, g.masu);
         put(g.off + g.w / 2, a.half + t, t, g.masu);
-        const gL = g.off - g.w / 2, gR = g.off + g.w / 2;
-        const from = g.open > 0 ? gR - g.w * 0.1 : gL - g.w * 0.9;
+        const [c0, c1] = \u67A1\u5F62\u306E\u5207\u308C\u76EE(g);
         const seg = (u0, u1) => {
           if (u1 > u0) put((u0 + u1) / 2, a.half + t + g.masu, u1 - u0, t);
         };
-        seg(g.off - g.w * 1.05, from);
-        seg(from + g.w, g.off + g.w * 1.05);
+        seg(g.off - g.w * 1.05, c0);
+        seg(c1, g.off + g.w * 1.05);
       }
       const lp = fromUV(m, a, g.off, a.half + t + g.masu + 18);
       ctx.font = `${Math.round(11 * (FIELD.w / BASE.w))}px sans-serif`;
@@ -40026,7 +40225,7 @@ function stepBattle(b, dt) {
         c.gate\u5F85\u3061 = i + 1;
         c.pinned = false;
         if (\u63A7\u307E\u3067 > 46) {
-          if (g.layer <= 0 || \u898B\u901A\u305B\u308B(c.x, c.y, \u63A7.x, \u63A7.y)) {
+          if (\u898B\u901A\u305B\u308B(c.x, c.y, \u63A7.x, \u63A7.y)) {
             if (\u9580\u307E\u3067 < R2 * 1.6 || !c.wp || !c.wp.length) {
               c.wp = null;
               c.tx = \u63A7.x;
@@ -44300,7 +44499,7 @@ function BattleScreen({ ctx, land, onEnd }) {
       cam.y = y;
     }
   };
-  const orderTo = (c, f, foe) => {
+  const orderTo = (c, f, foe, \u9580\u3092\u898B\u308B = true) => {
     c.task = null;
     if (faceRef.current) {
       if (\u6307\u56F3\u306E\u7E1B\u308A(b, c)) {
@@ -44333,8 +44532,17 @@ function BattleScreen({ ctx, land, onEnd }) {
       const gx = \u7D44.x + (c.x - \u7D44.x) / d * 38, gy = \u7D44.y + (c.y - \u7D44.y) / d * 38;
       \u4E0B\u77E5(b, c, { order: "\u63A5\u6226", tx: gx, ty: gy });
     } else {
+      const \u9580 = isCastle && iAmAttacker && \u9580\u3092\u898B\u308B ? \u62BC\u3057\u305F\u9580(b.map, f.x, f.y, Math.max(60 * fieldScale(), 44 / Math.max(0.4, camRef.current.s))) : null;
+      if (\u9580) {
+        castleGo(c, "\u9580\u3092\u7834\u308B", \u9580);
+        return;
+      }
       c.siegeAuto = false;
       c.gate = null;
+      if (isCastle) {
+        \u57CE\u306E\u4E2D\u3092\u52D5\u304B\u3059(b, c, f.x, f.y, \u4E0B\u77E5);
+        return;
+      }
       \u4E0B\u77E5(b, c, { order: "\u79FB\u52D5", tx: f.x, ty: f.y });
     }
   };
@@ -44376,7 +44584,12 @@ function BattleScreen({ ctx, land, onEnd }) {
       const cx = live.reduce((a, c) => a + c.x, 0) / Math.max(1, live.length);
       const cy = live.reduce((a, c) => a + c.y, 0) / Math.max(1, live.length);
       const \u7684 = \u672D ? { x: \u672D.x, y: \u672D.y } : f;
-      for (const c of live) orderTo(c, { x: \u7684.x + (c.x - cx), y: \u7684.y + (c.y - cy) }, foe);
+      const \u9580 = !foe && isCastle && iAmAttacker ? \u62BC\u3057\u305F\u9580(b.map, f.x, f.y, Math.max(60 * fieldScale(), 44 / Math.max(0.4, camRef.current.s))) : null;
+      if (\u9580) {
+        for (const c of live) if (!c.detach) castleGo(c, "\u9580\u3092\u7834\u308B", \u9580);
+        return;
+      }
+      for (const c of live) orderTo(c, { x: \u7684.x + (c.x - cx), y: \u7684.y + (c.y - cy) }, foe, false);
       return;
     }
     if (!selC) return;
@@ -44543,26 +44756,7 @@ function BattleScreen({ ctx, land, onEnd }) {
     const m = b.map;
     if (!m || !c) return;
     if (kind === "\u9580\u3092\u7834\u308B") {
-      const \u5C4A\u304F = (g2) => g2.\u51FA\u57CE ? \u51FA\u57CE\u304C\u4FDD\u3064(m) : g2.layer === 0 || m.layers[g2.layer - 1].gates.some((x) => x.broken);
-      const gt = gate || (c.gate && !c.gate.broken && \u5C4A\u304F(c.gate) ? c.gate : nearestOpenGate(m, c.x, c.y));
-      if (!gt) return;
-      c.gate = gt;
-      c.siegeAuto = true;
-      c.\u51FA\u57CE\u653B\u3081 = !!gt.\u51FA\u57CE;
-      const l = \u9580\u306E\u8F2A(m, gt), a = axisOf(l, gt);
-      const gp = gatePos(m, l, gt);
-      if (Math.hypot(c.x - gp.x, c.y - gp.y) < 100 * fieldScale()) {
-        \u4E0B\u77E5(b, c, { order: "\u5F85\u6A5F" });
-        return;
-      }
-      const wp = routeToCastleGate(m, gt, c.x, c.y);
-      if (wp.length) {
-        \u4E0B\u77E5(b, c, { order: "\u524D\u9032", tx: wp[0].x, ty: wp[0].y, keepPath: true });
-        c.wp = wp;
-      } else {
-        const p = fromUV(m, a, gateOpenU(gt), a.half + m.t + gt.masu + m.t + 30);
-        \u4E0B\u77E5(b, c, { order: "\u524D\u9032", tx: p.x, ty: p.y });
-      }
+      \u9580\u3078\u5411\u304B\u308F\u305B\u308B(b, c, gate, \u4E0B\u77E5);
     } else if (kind === "\u672C\u4E38\u3078") {
       const wp = \u672C\u4E38\u3078\u306E\u9053(m, c.x, c.y);
       if (wp && wp.length) {
@@ -44577,7 +44771,7 @@ function BattleScreen({ ctx, land, onEnd }) {
       c.siegeAuto = false;
       const cand = m.fac.filter((f2) => f2.hp > 0 && (f2.\u51FA\u57CE ? \u51FA\u57CE\u304C\u4FDD\u3064(m) : f2.layer === 0 ? m.layers[0].gates.some((x) => x.broken) : m.layers[f2.layer].gates.some((x) => x.broken) || m.layers[f2.layer - 1].gates.some((x) => x.broken)));
       const f = cand.sort((x, y2) => Math.hypot(x.x - c.x, x.y - c.y) - Math.hypot(y2.x - c.x, y2.y - c.y))[0];
-      if (f) \u4E0B\u77E5(b, c, { order: "\u524D\u9032", tx: f.x, ty: f.y });
+      if (f) \u57CE\u306E\u4E2D\u3092\u52D5\u304B\u3059(b, c, f.x, f.y, \u4E0B\u77E5, "\u524D\u9032");
       else castleGo(c, "\u9580\u3092\u7834\u308B");
     }
     force((n) => (n + 1) % 1e3);
