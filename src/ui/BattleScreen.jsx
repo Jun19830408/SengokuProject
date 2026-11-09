@@ -1,6 +1,6 @@
 import { 木立を焼く } from "../battle/mori.js";
 import React, { useState, useRef, useEffect } from "react";
-import { MAP, axisOf, fromUV, gatePos, inLayer, 本丸への道, 門の輪, 出城が保つ, 出城の内か, 押した門 } from "../battle/castleMap.js";
+import { MAP, axisOf, fromUV, gatePos, gateReachable, inLayer, 本丸への道, 門の輪, 出城が保つ, 出城の内か, 押した門, 攻め口を割り振る } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す, 狙いの組, 狙う所, 門へ向かわせる, 城の中を動かす } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
 import { 野の川筋, 新絵か, 野を焼く, 城の地を焼く, 新絵の寄り限り, 新絵の画布上限, 城の画布上限, 城の地の画布上限, 城山の形 } from "../battle/shinga.js";
@@ -947,10 +947,15 @@ export function BattleScreen({ ctx, land, onEnd }) {
     force((n) => (n + 1) % 1000);
   };
   const castleAll = (kind) => {
-    for (const c of b.corps) {
-      if (c.side !== "P" || c.dead || c.destroyed || c.routed || c.detach) continue;
-      castleGo(c, kind);
-    }
+    const 隊ら = b.corps.filter((c) => c.side === "P" && !c.dead && !c.destroyed && !c.routed && !c.detach);
+    /* 全軍で門を破るときは、いま攻められる輪の門へ満遍なく分ける（battle/castleMap.js 攻め口を割り振る）。
+       もとはどの隊もいちばん近い門へ向かい、七隊がみな大手門ひとつに並んだ。門を名指しした隊は、
+       その門が破れるまでそのまま向かう */
+    const 決 = kind === "門を破る" && b.map
+      ? 攻め口を割り振る(b.map, 隊ら.filter((c) => !(c.gate && !c.gate.broken
+        && (c.gate.出城 ? 出城が保つ(b.map) : gateReachable(b.map, c.gate)))), 隊ら)
+      : null;
+    for (const c of 隊ら) castleGo(c, kind, 決 ? 決.get(c) : undefined);
   };
   const CASTLE_ORDERS = ["門を破る", "本丸へ", "施設を崩す"];
   // 城方は門を閉ざして守る。外へ出るのは「打って出る」を選んだときだけ。
