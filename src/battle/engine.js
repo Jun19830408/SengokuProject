@@ -715,6 +715,10 @@ export function 夜を明かす(b) {
         }
       }
       c.gate = null; c.出城攻め = false;
+    } else if (c.前構え) {
+      /* 城の前に構えた後詰（ai.js 前に構える）は、夜のうちに持ち場へ戻って構え直す */
+      c.x = c.前構え.x; c.y = c.前構え.y;
+      c.facing = Math.atan2(c.y - m.cy, c.x - m.cx); c.陣向き = c.facing;
     } else if ((c.side !== "P" || c.auto) && !c.後詰 && !(c.holdGate && c.holdGate.出城 && 出)
       && (!c.holdGate || c.holdGate.broken || m.gates.some((x) => !x.出城 && x.layer === c.holdGate.layer && x.broken))) {
       /* 采配の城方は、夜のうちに受け持ちを組み直す（GDD 9.3 数日がかり）。破れた門や、破れた輪の門を
@@ -857,6 +861,10 @@ export function stepBattle(b, dt) {
     if (!c.withdraw) continue;
     if (c.order === "撤退") continue;
     if (c.pending && c.pending.patch && c.pending.patch.order === "撤退") continue;  // 伝令が走っている
+    /* 退く途中で追われて崩れた隊（下知が「敗走」に替わった）は、新たな下知を受けたのではない。
+       印を降ろすと、次の刻にまた「支えきれず、戦場を退いた」と退き直し、報せが重なった
+       （城の前に構えた後詰が大軍に押されて退いたとき、同じ報せが三度出た） */
+    if (c.routed) continue;
     c.withdraw = false;
   }
 
@@ -2913,7 +2921,7 @@ export function stepBattle(b, dt) {
       if (c.morale <= 0 || corpsMen(c) <= 0) {
         c.潰 = true;
         b.log.push({ t: b.t, text: `${c.name}隊は支えを失い、戦場を落ちていった。` });
-      } else if (c.morale >= 40 && ratio >= 0.26
+      } else if (c.morale >= 40 && ratio >= 0.26 && !c.withdraw   // 戦場を退くと決めた隊は、戦列には戻らない
         && b.t - (c.崩れた刻 || 0) > 30 && !(c.立ち直り数 >= 1)
         && b.t - (c.追われ || -99) > 8) {                 // 騎馬に追われているうちは息をつけない
         /* 兵が戻らぬ隊は立ち直らない。

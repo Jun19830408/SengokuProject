@@ -17,6 +17,7 @@ import { underMyBanner, 同じ旗の下, 援けに着く, 本拠を追う, 奪�
 import { 難を逃れる } from "../core/capture.js";
 import { 城の保ち } from "../core/kakomi.js";
 import { 郡代を据える, 郡代を整える } from "../core/gun.js";
+import { 城方の後詰ら, 野戦の後の後詰 } from "../core/engun.js";
 
 // ------------------------------------------------ 援軍（GDD 7.3 / 7.4）
 // 各城・各勢力は「守備最低数・距離・従属度」から派遣・減員・遅参・拒否を判断する。
@@ -1078,8 +1079,16 @@ export function resolveOffscreen(prev, armyId, castleId) {
     // 奇襲で削れたあとの兵で戦う
     const dGens2 = s.generals.filter((x) => x.at === castle.id && x.faction === castle.faction && !x.captive);
     const dMen2 = castle.local + dGens2.reduce((a, x) => a + x.retinue, 0);
+    /* 城方の後詰（core/engun.js 城方の後詰ら）。城の下に陣を張る味方の軍と、同じ月に着いた後詰も
+       城の兵と並んで戦う。城の防備の利は城の兵だけのもので、後詰は野の軍として数える */
+    const 後詰ら = 城方の後詰ら(s, castle, army);
+    const 後詰の力 = 後詰ら.reduce((t, a) => {
+      const ag = (a.gens || []).map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
+      return t + a.men * (0.85 + (a.localTrain || 60) / 250) * (1 + lead(ag) / 300);
+    }, 0);
     let atk = army.men * (0.8 + army.localTrain / 250) * (1 + lead(aGens) / 300) * (0.85 + Math.random() * 0.3) * 勢い;
-    let def = dMen2 * (0.85 + castle.localTrain / 250) * (1 + castle.def / 200 + lead(dGens2) / 300) * (0.85 + Math.random() * 0.3) * 乱れ;
+    let def = (dMen2 * (0.85 + castle.localTrain / 250) * (1 + castle.def / 200 + lead(dGens2) / 300) + 後詰の力)
+      * (0.85 + Math.random() * 0.3) * 乱れ;
     const atkWon = atk > def;
     const r = Math.min(atk, def) / Math.max(atk, def);
     /* 寄せて敗れた側の損は、一割二分から二割四分（両軍が拮抗するほど重い）。もとは三割から
@@ -1088,21 +1097,45 @@ export function resolveOffscreen(prev, armyId, castleId) {
        上田合戦（天正十三年）の徳川勢（七千余とされる）の討たれた者は、真田信幸の書状に千三百余、
        『三河物語』では三百ほどとする解説もある */
     const aLoss = Math.round(army.men * (atkWon ? 0.16 * r + 0.06 : 0.12 + 0.12 * r));
-    const dLoss = Math.round(dMen2 * (atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05));
+    const 守の割 = atkWon ? 0.34 + 0.2 * r : 0.14 * r + 0.05;
+    const dLoss = Math.round(dMen2 * 守の割);
     軍の損を分ける(s, army, aLoss);
     castle.local = Math.max(0, castle.local - dLoss);
+    /* 城方の後詰も同じ割で損を負う */
+    let 後詰損 = 0;
+    const 後詰の発った兵 = new Map(後詰ら.map((a) => [a.id, a.men]));
+    for (const a of 後詰ら) {
+      const 損 = Math.round(a.men * 守の割);
+      後詰損 += 損;
+      軍の損を分ける(s, a, 損);
+    }
     s.chronicle.push({ y: s.year, m: s.month,
-      text: `${castle.name}下で${s.factions[army.faction].name}と${s.factions[castle.faction].name}が戦い、${atkWon ? "攻め手" : "守り手"}が勝った（攻${fmt(aLoss)}人・守${fmt(dLoss)}人を失う）。` });
+      text: `${castle.name}下で${s.factions[army.faction].name}と${s.factions[castle.faction].name}が戦い、${atkWon ? "攻め手" : "守り手"}が勝った（攻${fmt(aLoss)}人・守${fmt(dLoss + 後詰損)}人を失う${後詰ら.length ? `。城方には後詰${fmt([...後詰の発った兵.values()].reduce((t, v) => t + v, 0))}人が加わった` : ""}）。` });
     方面の報せ(s, army, `${castle.name}の城下で${s.factions[castle.faction].name}勢と戦い、`
       + `${atkWon ? "これを破った" : "敗れた"}（味方${fmt(aLoss)}人・敵${fmt(dLoss)}人を失う）。`);
+    /* 城方の後詰の身の振り（core/engun.js 野戦の後の後詰）。この月にもう一度戦わないよう、着いた軍の
+       控えからも外す。城が落ちれば退く（下の 落ちた城の後詰） */
+    const 後詰を始末する = () => {
+      for (const a of 後詰ら) {
+        if (!s.armies.includes(a)) continue;
+        s.pendingArrivals = (s.pendingArrivals || []).filter((id) => id !== a.id);
+        const 味方の城 = castle.faction === a.faction || 同じ旗の下(s, castle.faction, a.faction);
+        const 道 = 味方の城 && (a.gens || []).length ? 野戦の後の後詰(!atkWon, a.men, 後詰の発った兵.get(a.id)) : "退く";
+        if (道 === "留まる") 在陣させる(s, a, castle);
+        else withdrawArmy(s, a);
+      }
+    };
     if (atkWon && castle.local < 200) {
       sackCastle(s, castle, army, true);
+      後詰を始末する();
     } else if (atkWon) {
+      後詰を始末する();
       army.sieging = true;
       s.sieges = [...s.sieges.filter((x) => x.castleId !== castle.id), { castleId: castle.id, armyId: army.id, months: 0, decided: null }];
       方面の報せ(s, army, `${castle.name}を囲んだ（城兵${fmt(castle.local)}人・寄せ手${fmt(army.men)}人）。`
         + `兵糧が尽きるか、城兵が崩れるまで囲みを続ける。`);
     } else {
+      後詰を始末する();
       const 帰 = withdrawArmy(s, army);        // 出陣元が奪われていても、必ずどこかの自領へ戻す
       方面の報せ(s, army, `${castle.name}攻めに敗れ、${帰 ? 帰.name : "自領"}へ退いた。`);
     }

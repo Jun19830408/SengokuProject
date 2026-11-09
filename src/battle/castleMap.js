@@ -1,5 +1,5 @@
 import { ROW, SP } from "./corps.js";
-import { BLOCKED, FIELD, FIELD_SEED, ROAD, TERRAIN, genTerrain, passable, terrainAt, 尺を据える } from "./field.js";
+import { BLOCKED, FIELD, FIELD_SEED, ROAD, TERRAIN, fieldScale, genTerrain, passable, terrainAt, 尺を据える } from "./field.js";
 import { 野の道 } from "./route.js";
 import { U, clamp } from "../core/util.js";
 
@@ -649,6 +649,40 @@ export function 後詰の口(m, 角, i, n, 敵ら = []) {
   }
   const d = Math.max(0, 長 - 内);
   return 置く(clamp(m.cx + ux * d + vx * 席 * 270, 80, W - 80), clamp(m.cy + uy * d + vy * 席 * 270, 80, H - 80));
+}
+
+/* 城の前に構える後詰の所（MapScreen startAssault・ai.js 前に構える）。
+
+   遊ぶ側の申し出は「援軍がいる場合で城攻めとなったら、その援軍は城攻めにも参加し、城の外で相手を
+   待ち構えるような布陣（城の前面等で布陣して城攻めを防ぐ）」であった。城の下に陣を張っていた
+   後詰は、寄せ手の来る側（盤の南）の外の門の前、枡形の先に構え、門へ寄せる寄せ手を迎え撃つ。
+   隊が多ければ、南に近い外の門二つに代わる代わる割り振り、同じ門の前では横に並べる。
+   川・堀・森・村の上には構えない（そこを避けて外へ、脇へとずらす）。
+   向きは城の外（寄せ手の来る方）を向く */
+export function 前構えの所(m, i, n) {
+  const 外 = m.layers[0];
+  const 門ら = 外.gates.filter((g) => !g.出城)
+    .map((g) => ({ g, p: gatePos(m, 外, g) }))
+    .sort((a, b) => b.p.y - a.p.y)
+    .slice(0, Math.min(2, Math.max(1, n)));
+  if (!門ら.length) return { x: m.cx, y: Math.min(FIELD.h - 80, m.cy + 600), f: Math.PI / 2 };
+  const k = 門ら.length, { g } = 門ら[i % k];
+  const 列 = Math.floor(i / k), 列数 = Math.ceil(n / k);
+  const 席 = 列 - (列数 - 1) / 2;
+  const 尺 = fieldScale();
+  const a = axisOf(外, g);
+  const 避 = new Set(["forest", "wood", "village", "deep", "ford", "bridge", "marsh", "mountain", "saku", "moat", "karabori"]);
+  const 良 = (x, y) => x > 60 && y > 60 && x < FIELD.w - 60 && y < FIELD.h - 60 && passable(x, y) && !避.has(terrainAt(x, y));
+  const 置く = (x, y) => ({ x, y, f: Math.atan2(y - m.cy, x - m.cx) });
+  const 前 = a.half + m.t + (g.masu || 0) + m.t + 150 * 尺;
+  for (let 出 = 0; 出 <= 8; 出++) {
+    for (const 寄 of [0, 1, -1, 2, -2]) {
+      const p = fromUV(m, a, gateOpenU(g) + (席 * 170 + 寄 * 90) * 尺, 前 + 出 * 60 * 尺);
+      if (良(p.x, p.y)) return 置く(p.x, p.y);
+    }
+  }
+  const p = fromUV(m, a, gateOpenU(g) + 席 * 170 * 尺, 前);
+  return 置く(clamp(p.x, 80, FIELD.w - 80), clamp(p.y, 80, FIELD.h - 80));
 }
 
 /* 寄せ手が構える所（GDD 9.3）。
