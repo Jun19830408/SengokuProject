@@ -1816,7 +1816,20 @@ export function stepBattle(b, dt) {
         const sx = ((targetX - q.x) / qd) * Math.min(v * dt, qd);
         const sy = ((targetY - q.y) / qd) * Math.min(v * dt, qd);
         const 足元q = terrainAt(q.x, q.y) === "deep" ? "deep" : q.地;   // 隊と同じく一点で見る
-        const 踏めるq = (nx, ny) => passableFor(c, b, nx, ny) && 淵を踏めるか(c, b, nx, ny, 足元q);
+        /* 城の盤では、踏み出す先だけでなく道筋の途中も四歩ごとに見る。広い盤では尺が大きく、
+           持ち場へ追いつく組の一歩は一刻みで十歩を超える。先の一点だけを見ていたので、厚さ十歩
+           ほどの出城の塀を踏み越え、門の閉じた出城の内へ組が入り込んだ（tests/demaru。寄せ手が
+           門ごとに分かれて寄せるようになり、出城の塀ぎわを回る隊が出て表に出た） */
+        const 跨がぬ = (nx, ny) => {
+          if (!MAP) return true;
+          const 長 = Math.hypot(nx - q.x, ny - q.y), n = Math.floor(長 / 4);
+          for (let k = 1; k <= n; k++) {
+            const t = k / (n + 1);
+            if (!passableFor(c, b, q.x + (nx - q.x) * t, q.y + (ny - q.y) * t)) return false;
+          }
+          return true;
+        };
+        const 踏めるq = (nx, ny) => passableFor(c, b, nx, ny) && 淵を踏めるか(c, b, nx, ny, 足元q) && 跨がぬ(nx, ny);
         if (踏めるq(q.x + sx, q.y + sy)) { q.x += sx; q.y += sy; }
         else if (踏めるq(q.x + sx, q.y)) q.x += sx;
         else if (踏めるq(q.x, q.y + sy)) q.y += sy;
