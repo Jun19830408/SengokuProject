@@ -1,5 +1,5 @@
 import { battleAI } from "./ai.js";
-import { MAP, SIEGE_KIT, 城の域か, axisOf, buildNav, fromUV, gatePos, gateReachable, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 流れの升, 流れを作る, 回り道か, 塀のこちら, 流れの先, 列の順, 列に着く, 門の輪, 出城が保つ, 出城の内か, 出城の退き道, 後詰の口, 盤の端まで } from "./castleMap.js";
+import { MAP, SIEGE_KIT, 城の域か, axisOf, buildNav, fromUV, gatePos, gateReachable, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 流れの升, 流れを作る, 回り道か, 塀のこちら, 流れの先, 列の順, 列に着く, 門の輪, 出城が保つ, 攻める輪, 攻め口を割り振る, 出城の内か, 出城の退き道, 後詰の口, 盤の端まで } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads, 前列を入れ替える, 支えの向き数, 支えの幅, 空 } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
 import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, 広げの倍, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地, 地の高さ, 仮橋を架ける } from "./field.js";
@@ -474,26 +474,23 @@ function 門の傷みを控える(b) {
 }
 /* 攻め口を選ぶ（城攻めの四つの直し）。采配の寄せ手と「門を破る」を命じた隊が、次に向かう門。
    もとはいちばん近い門（castleMap.js nearestOpenGate）で、南から寄せる七隊がみな大手門ひとつに
-   並び、門に取り付けるのは一隊だけなので、残りは列ごと射られていた。いま攻められる輪（まだ
-   破れていない、いちばん内の輪）の門のうちから、道のりと、すでにその門へ向かっている隊の数で
-   選ぶ。一つの門へ向かう隊が一つ増えるごとに、九百歩遠い門と同じに見る。城方の守りも分かれる
-   （四方から攻め寄せる） */
-export const 攻め口の重み = 900;
-export function 攻め口を選ぶ(m, c, atkC) {
-  const 候 = m.gates.filter((g) => !g.broken && gateReachable(m, g));
-  if (!候.length) return null;
-  const 内 = 候.reduce((a, g) => Math.max(a, g.layer), 0);
-  const x = c.mx == null ? c.x : c.mx, y = c.my == null ? c.y : c.my;
-  const 荷 = new Map();
-  for (const o of atkC) if (o !== c && o.gate && !o.routed && !o.withdraw && !o.dead) 荷.set(o.gate, (荷.get(o.gate) || 0) + 1);
-  let 選 = null, 値 = Infinity;
-  for (const g of 候) {
-    if (g.layer !== 内) continue;
-    const p = gatePos(m, m.layers[g.layer], g);
-    const v = Math.hypot(p.x - x, p.y - y) + (荷.get(g) || 0) * 攻め口の重み;
-    if (v < 値) { 値 = v; 選 = g; }
-  }
-  return 選;
+   並び、門に取り付けるのは一隊だけなので、残りは列ごと射られていた。選び方は castleMap.js
+   攻め口を割り振る に移した（采配 ai.js も画面の「全軍門を破る」も同じ選び方を使う）。ここからも
+   出しておく（試験 semeguchi はここから取る） */
+export { 攻め口を選ぶ } from "./castleMap.js";
+/* いまの攻め口を保つか。破れておらず、なお攻められる門で、いま攻められる輪の門なら保つ。
+   外の輪のどこかが破れて内の輪へ進めるようになったら、いまその門に取り付いて破っている隊
+   だけがそのまま破りにかかり（破れば内の輪への口がもう一つ開く）、列に控えている隊も道中の隊も、
+   内の輪の門から選び直す（castleMap.js 攻め口を割り振る）。外の門の列に控えたままでは、破れた口から
+   内へ攻め入る手が細り、内の輪の門に寄せる隊が減って城が落ちにくくなった（稲葉山で測った）。
+   もとはどの隊も門が破れるまで向かい続け、采配（ai.js）だけがいちばん近い内の門へ引いて
+   いたので、二つの的のあいだで揺れた。
+   遊ぶ側が手ずから「門を破る」を命じた隊（委任していない隊）は、その門が破れるまで向かい続ける */
+function 攻め口を保つ(c, cur, 内) {
+  if (!cur || cur.broken || cur.出城 || !gateReachable(MAP, cur)) return false;
+  if (cur.layer >= 内) return true;
+  if (c.side === "P" && !c.auto) return true;
+  return cur.slot === c.id;
 }
 /* この日の寄せ手と城方の兵を控える（朝、寄せ始める刻に） */
 function 日の構えを控える(b) {
@@ -2078,6 +2075,8 @@ export function stepBattle(b, dt) {
        抜けられる門のうちいちばん内側の門。 */
     const 本丸 = MAP.layers[MAP.layers.length - 1];
     const 開 = 本丸が開いたか(MAP);
+    const 内の輪 = 攻める輪(MAP);
+    const 選び直す = [];                 // 門を選び直す隊（下でまとめて割り振る：castleMap.js 攻め口を割り振る）
     for (const c of atkC) {
       if (c.side === "P" && !c.auto && !c.siegeAuto) continue;
       /* 出城に当たる隊（ai.js 出城に当てる、遊ぶ側が出城の門を破らせた隊）。出城が保つ
@@ -2110,14 +2109,21 @@ export function stepBattle(b, dt) {
         c.本丸攻め = true; c.本丸刻 = b.t + 5;      // 道が尽きて入れずにいれば、五秒ごとに引き直す
         continue;
       }
-      const cur = c.gate;
-      if (cur && !cur.broken && gateReachable(MAP, cur)) continue;
-      const nx = 攻め口を選ぶ(MAP, c, atkC);
-      if (!nx || nx === cur) continue;
-      c.gate = nx; c.pinned = false;
-      const wp = routeToCastleGate(MAP, nx, c.x, c.y);
-      if (wp.length) { c.wp = wp; c.tx = wp[0].x; c.ty = wp[0].y; c.order = "前進"; c.stuck = 0; c.lastD = null; }
-      b.log.push({ t: b.t, text: `${c.gen.name}隊は${nx.key}へ向かう。` });
+      if (攻め口を保つ(c, c.gate, 内の輪)) continue;
+      選び直す.push(c);
+    }
+    /* 選び直す隊は、まとめて割り振る。一隊ずつ選ばせると、並びの先の隊から近い門を取っていき、
+       西の隊が東の門へ、東の隊が西の門へと行き違う */
+    if (選び直す.length) {
+      const 決 = 攻め口を割り振る(MAP, 選び直す, atkC);
+      for (const c of 選び直す) {
+        const cur = c.gate, nx = 決.get(c);
+        if (!nx || nx === cur) continue;
+        c.gate = nx; c.pinned = false;
+        const wp = routeToCastleGate(MAP, nx, c.x, c.y);
+        if (wp.length) { c.wp = wp; c.tx = wp[0].x; c.ty = wp[0].y; c.order = "前進"; c.stuck = 0; c.lastD = null; }
+        b.log.push({ t: b.t, text: `${c.gen.name}隊は${nx.key}へ向かう。` });
+      }
     }
     // 道順が尽きたのに門から遠いままの隊は、道順を組み直す
     for (const c of atkC) {

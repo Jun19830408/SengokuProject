@@ -1447,3 +1447,82 @@ export function nearestOpenGate(m, x, y) {
     return Math.hypot(pa.x - x, pa.y - y) - Math.hypot(pb.x - x, pb.y - y);
   })[0];
 }
+
+/* いま攻められる輪。破れていない門のうち、攻められる（外の輪が破れている）門のいちばん内の輪。
+   門が尽きていれば -1 */
+export function 攻める輪(m) {
+  let 内 = -1;
+  for (const g of m.gates) if (!g.broken && gateReachable(m, g)) 内 = Math.max(内, g.layer);
+  return 内;
+}
+
+/* 門までの道のりの見当。外の輪の塀の外から内の輪の門へ向かうなら、外の輪の破れた門をくぐって
+   行く道のりで見る（塀ごしのまっすぐの隔たりで見ると、北の塀の外にいる隊が、南の破れた門から
+   回り込まねばならぬ北の門を「近い」と見てしまう） */
+export function 門までの見当(m, x, y, g) {
+  const p = gatePos(m, m.layers[g.layer], g);
+  if (g.layer === 0 || inLayer(m, m.layers[g.layer - 1], x, y)) return Math.hypot(p.x - x, p.y - y);
+  let 値 = Infinity;
+  for (const o of m.layers[g.layer - 1].gates) {
+    if (!o.broken) continue;
+    const q = gatePos(m, m.layers[o.layer], o);
+    値 = Math.min(値, 門までの見当(m, x, y, o) + Math.hypot(p.x - q.x, p.y - q.y));
+  }
+  return 値 < Infinity ? 値 : Math.hypot(p.x - x, p.y - y);
+}
+
+/* 攻め口を割り振る。采配の寄せ手と「門を破る」を命じた隊が、次に向かう門。
+
+   いま攻められる輪（攻める輪）の門のうちから、向かう隊のいちばん少ない門を選ぶ。向かう隊が
+   同じ数の門どうしでは、門のほうから見ていちばん近い隊を引き当てる（南の隊が北の門へ、北の隊が
+   南の門へと行き違わないように）。こうして門の数より隊が多ければ、どの門にも隊が回り、
+   隊の数の差は一つまでに収まる。
+
+   もとは道のりに「すでにその門へ向かう隊の数×九百歩」を足して選んでいた（engine.js 攻め口を
+   選ぶ）。九百歩より遠い門へは隊が回らず、広い盤の小さな城や、寄せ手から見て城の裏に回る門は
+   いつまでも手薄だった。遊ぶ側の申し出は「城門が複数ある場合（それぞれの段ごと）、武将が複数
+   いるのであれば、満遍なく城門ごとに攻めるように移動させてください」であった。四方の門へ
+   同時に寄せれば、城方の守りも門ごとに分かれる。
+     要る … 門を選び直す隊の並び
+     atkC … 寄せ手の隊のすべて（要る のほかの隊が向かっている門を数える）
+   返すのは、隊から門への Map（攻められる門が無ければ空） */
+export function 攻め口を割り振る(m, 要る, atkC) {
+  const 決 = new Map();
+  const 内 = 攻める輪(m);
+  if (内 < 0 || !要る.length) return 決;
+  const 門ら = m.gates.filter((g) => g.layer === 内 && !g.broken && gateReachable(m, g));
+  const 荷 = new Map(門ら.map((g) => [g, 0]));
+  const 選び直す = new Set(要る);
+  for (const o of atkC) {
+    if (選び直す.has(o) || !o.gate || !荷.has(o.gate) || o.routed || o.withdraw || o.dead || o.destroyed) continue;
+    荷.set(o.gate, 荷.get(o.gate) + 1);
+  }
+  const 隔 = new Map();
+  const 道のり = (c, g) => {
+    const 鍵 = c.id + "|" + g.key;
+    if (!隔.has(鍵)) 隔.set(鍵, 門までの見当(m, c.mx == null ? c.x : c.mx, c.my == null ? c.y : c.my, g));
+    return 隔.get(鍵);
+  };
+  const 残り = [...要る];
+  while (残り.length) {
+    let 少 = Infinity;
+    for (const g of 門ら) 少 = Math.min(少, 荷.get(g));
+    let 選門 = null, 選隊 = -1, 値 = Infinity;
+    for (const g of 門ら) {
+      if (荷.get(g) !== 少) continue;
+      for (let i = 0; i < 残り.length; i++) {
+        const v = 道のり(残り[i], g);
+        if (v < 値) { 値 = v; 選門 = g; 選隊 = i; }
+      }
+    }
+    const [c] = 残り.splice(選隊, 1);
+    決.set(c, 選門);
+    荷.set(選門, 荷.get(選門) + 1);
+  }
+  return 決;
+}
+
+/* 一隊だけの攻め口（攻め口を割り振る の一隊ぶん）。向かう隊のいちばん少ない門の、いちばん近いもの */
+export function 攻め口を選ぶ(m, c, atkC) {
+  return 攻め口を割り振る(m, [c], atkC).get(c) || null;
+}

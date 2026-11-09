@@ -1,4 +1,4 @@
-import { MAP, 城の域か, axisOf, fromUV, gatePos, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 列の順, 門の輪, 出城が保つ, 出城の内か } from "./castleMap.js";
+import { MAP, 城の域か, axisOf, fromUV, gatePos, gateReachable, inLayer, navPath, 攻め口を選ぶ, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 列の順, 門の輪, 出城が保つ, 出城の内か } from "./castleMap.js";
 import { outOfCommand, setAiIssuing, corpsMax, corpsMen, delegated, detachAI, detachOptions, issueOrder, makeDetachment, placeSquads, reformTime, 丘が空く, 丘を押さえる, 伏せ場を探す, 伏せられる地, 伏兵の策士, 分遣の頃合い, 守勢の隊, 空き丘を探す, 内応させる, 内応の門を開く, 出城から引き取らせる, 引き取りを進める, 狙う所, 城内の道を進める } from "./corps.js";
 import { ARM_STATS, FIELD, HILLS, RIVER, RIVERS, fieldScale, hasRiver, riverShift, terrainAt, 地の高さ, 高み } from "./field.js";
 import { 道のり, 野の道 } from "./route.js";
@@ -1284,8 +1284,14 @@ export function battleAI(b) {
           }
           continue;
         }
-        // 寄せ手：抜けられる門のうち、いちばん外の近い門へ取り付く
-        const g = c.出城攻め && 出城が保つ(MAP) ? MAP.出城.gates[0] : nearestOpenGate(MAP, c.x, c.y);
+        /* 寄せ手：割り振られた門（engine.js 攻め口を保つ・castleMap.js 攻め口を割り振る）へ取り付く。
+           もとはここで、いちばん近い門（nearestOpenGate）を引き直していた。engine が南の隊を北の門へ
+           割り振っても、道順が尽きるたびに近い門の列へ引き戻され、門ごとに分かれて攻められなかった
+           （遊ぶ側の申し出は「城門が複数ある場合（それぞれの段ごと）、武将が複数いるのであれば、満遍なく
+           城門ごとに攻めるように移動させてください」） */
+        const 割 = c.gate && !c.gate.broken && !c.gate.出城 && gateReachable(MAP, c.gate) ? c.gate : null;
+        const g = c.出城攻め && 出城が保つ(MAP) ? MAP.出城.gates[0]
+          : 割 || 攻め口を選ぶ(MAP, c, alive.filter((o) => o.side === b.attacker));
         /* 門の順番待ち（GDD 9.3）。
 
            門の間口は狭く、取り付けるのは一隊だけである。ところが残りの隊も毎度
