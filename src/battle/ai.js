@@ -628,6 +628,36 @@ function 後詰を当てる(b, c, alive) {
   issueOrder(b, c, { order: "接戦", tx: 的.x, ty: 的.y, target: 的.id });
 }
 
+/* 城の前に構える後詰（MapScreen startAssault・castleMap.js 前構えの所）。遊ぶ側の申し出は「援軍がいる場合で
+   城攻めとなったら、その援軍は城攻めにも参加し、城の外で相手を待ち構えるような布陣（城の前面等で布陣して
+   城攻めを防ぐ）」であった。持ち場（寄せ手の来る側の外の門の前）を保ち、縄（持ち場から三百八十歩）の内に
+   入った寄せ手に当たる。縄の外の寄せ手は追わず、持ち場へ戻って構え直す。盤に現れた後詰（後詰を当てる）の
+   ように盤じゅうの寄せ手を追えば、城の前が空き、門は寄せ手の思うままになる。崩れれば、構えた側の盤の端へ
+   退く（corps.js 退き先） */
+export const 前構えの縄 = 380;
+function 前に構える(b, c, alive) {
+  if (c.order === "接戦" && c.squads.some((q) => q.engaged)) return;       // 槍を合わせている
+  const 場 = c.前構え, 尺 = fieldScale();
+  const 敵 = alive.filter((o) => o.side === b.attacker && !o.routed && !o.withdraw && !o.dead && !o.destroyed
+    && Math.hypot(o.x - 場.x, o.y - 場.y) < 前構えの縄 * 尺);
+  if (敵.length) {
+    const 的 = 敵.reduce((a, o) => (Math.hypot(o.x - c.x, o.y - c.y) < Math.hypot(a.x - c.x, a.y - c.y) ? o : a), 敵[0]);
+    c.wp = null;
+    issueOrder(b, c, { order: "接戦", tx: 的.x, ty: 的.y, target: 的.id });
+    return;
+  }
+  if (Math.hypot(c.x - 場.x, c.y - 場.y) > 60 * 尺) {
+    if (c.wp && c.wp.length && b.t < (c.前構えの道 || 0)) return;            // 引いた道を辿っている
+    c.前構えの道 = b.t + 8;
+    const p = 見通せる(c.x, c.y, 場.x, 場.y) ? null : navPath(MAP, c.x, c.y, 場.x, 場.y);
+    if (p && p.length) { c.wp = p; issueOrder(b, c, { order: "移動", tx: p[0].x, ty: p[0].y, keepPath: true }); return; }
+    issueOrder(b, c, { order: "移動", tx: 場.x, ty: 場.y });
+    return;
+  }
+  c.wp = null;
+  if (c.order !== "守備") issueOrder(b, c, { order: "守備", tx: 場.x, ty: 場.y });
+}
+
 export function battleAI(b) {
   setAiIssuing(true);
   // 去就の定まらぬ隊（日和見）は采配の目にも入らない（GDD 8.9）
@@ -807,8 +837,12 @@ export function battleAI(b) {
     /* 動かぬと決めている隊には、采配も何も企てない。
        戦わぬ島津に「木立へ回って伏せよ」と命じては、動かぬと決めた意味がない。 */
     if (c.不戦 || c.控え || c.縛り) continue;
-    if (MAP && c.後詰) { 後詰を当てる(b, c, alive); continue; }   // 盤に現れた後詰は野戦の隊として当たる
-    if (MAP && c.城外) { 城の外で戦う(b, c, alive); continue; }   // 朝の布陣で城の外に出た城方も野戦の隊
+    /* 戦場を退いている隊（engine.js の「支えきれず、戦場を退いた」）には下知を出さない。下知（issueOrder）は
+       撤退のほかを命じると退きの印を降ろすので、退いた後詰に接戦を命じ直すと、退いては戻り、戻っては
+       また退いて、そのたびに「戦場を退いた」と報せが重なった */
+    if (MAP && c.前構え) { if (!c.withdraw) 前に構える(b, c, alive); continue; }   // 城の前に構えた後詰は、持ち場を保って寄せ手を待ち構える
+    if (MAP && c.後詰) { if (!c.withdraw) 後詰を当てる(b, c, alive); continue; }   // 盤に現れた後詰は野戦の隊として当たる
+    if (MAP && c.城外) { if (!c.withdraw) 城の外で戦う(b, c, alive); continue; }   // 朝の布陣で城の外に出た城方も野戦の隊
     /* 伏せに向かう隊と、伏せている隊。
 
        伏せ場へ着いたら身をひそめる。ひそめた隊には、以後なにも命じない。

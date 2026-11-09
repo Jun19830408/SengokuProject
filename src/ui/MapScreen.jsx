@@ -3,12 +3,13 @@ import * as 政務 from "../govern/commands.js";
 import * as 月送り from "../govern/month.js";
 import * as 合戦裁定 from "../govern/war.js";
 import React, { useState, useRef, useEffect } from "react";
-import { SIEGE_CORPS_CAP, SIEGE_KIT, axisOf, buildCastleMap, fromUV, gateOpenU, layoutCastleField, setBattleMap, 寄せ口, 寄せ手の陣, 付城を据える, 後詰の口 } from "../battle/castleMap.js";
+import { SIEGE_CORPS_CAP, SIEGE_KIT, axisOf, buildCastleMap, fromUV, gateOpenU, layoutCastleField, setBattleMap, 寄せ口, 寄せ手の陣, 付城を据える, 後詰の口, 前構えの所 } from "../battle/castleMap.js";
 import { corpsMax, corpsMen, makeCorps, notify, placeSquads, 寄せ手の隊数, 盤に収める } from "../battle/corps.js";
 import { 城方の隊を立てる } from "../battle/defense.js";
 import { drawMon, sideHue } from "../battle/draw.js";
 import { createBattle, 城攻めの日数, 日の名 } from "../battle/engine.js";
 import { 盤に来る後詰 } from "../core/gotsume.js";
+import { 城方の後詰ら, 野戦の後の後詰 } from "../core/engun.js";
 import { 城の保ち, 囲みの食い } from "../core/kakomi.js";
 import { 付城の普請, 付城の締め, 付城を築けるか, 付城の手間, 付城の限り } from "../core/tsukejiro.js";
 import { 橋を落としたままにする, 橋を架け直す幅 } from "../core/hashi.js";
@@ -918,7 +919,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
 
        姫がいても同じである。姫は戦場に出ない（統率だけが守備隊に及ぶ）。 */
     const 城将 = g.generals.filter((x) => x.at === dest.id && x.faction === dest.faction && !x.captive);
-    if (!城将.length && !dest.intrigue) {
+    /* 城の下に後詰が陣を張っていれば（core/engun.js 城方の後詰ら）、将のいない城でも後詰が城下の野戦に立つ */
+    if (!城将.length && !dest.intrigue && !城方の後詰ら(g, dest, a).length) {
       setG((p) => {
         const s = structuredClone(p);
         const ar = s.armies.find((x) => x.id === a.id);
@@ -1050,9 +1052,60 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     /* 城方の隊立ては battle/defense.js に置いてある（門ごとの守備隊もそこで立つ）。 */
     const def = 城方の隊を立てる(g, castle, map, {
       defGens, 割り付け: sg.割り付け || null, side: defSide, color: defColor });
+    /* 城の前に構える後詰（core/engun.js 城方の後詰ら・castleMap.js 前構えの所）。遊ぶ側の申し出は「援軍が
+       いる場合で城攻めとなったら、その援軍は城攻めにも参加し、城の外で相手を待ち構えるような布陣（城の
+       前面等で布陣して城攻めを防ぐ）」であった。城の下に陣を張る味方の軍は、寄せ手の来る側の外の門の前に
+       布陣し、門へ寄せる寄せ手を迎え撃つ（ai.js 前に構える）。隊は始めから盤に立つ。後詰の印を付けて
+       おき、戦のあとは城の帳ではなく後詰の軍へ返す（finishAssault の 後詰の始末：城が保てば城の下に
+       陣を張ったまま、落ちれば退く）。広い盤だけ（狭い盤には城の外の野が無い）。一隊三千まで・
+       三軍まで。あふれた兵は盤に出ず、軍に残る */
+    const 前構えの控え = [], 前の隊 = [];
+    if (map.広い) {
+      const 立て = [];
+      for (const ra of 城方の後詰ら(g, castle, army).slice(0, 3)) {
+        const 将ら = (ra.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter((x) => x && !x.captive);
+        const 総 = Math.max(0, ra.local || 0) + 将ら.reduce((a2, x) => a2 + (x.retinue || 0), 0);
+        if (!将ら.length || 総 <= 0) continue;
+        const n = 寄せ手の隊数(将ら.length, 総, SIEGE_CORPS_CAP, 6);
+        const 隊将 = 将ら.slice(0, n);
+        for (let i2 = 隊将.length; i2 < n; i2++) {
+          隊将.push({ id: `${ra.id}-mae${i2}`, name: `後詰${i2 - 将ら.length + 1}の備`,
+            lead: 54, valor: 54, wit: 48, gov: 44, retinue: 0, retTrain: ra.localTrain || 62 });
+        }
+        立て.push({ ra, 将ら, 隊将 });
+      }
+      const 全 = 立て.reduce((a2, x) => a2 + x.隊将.length, 0);
+      let 席 = 0;
+      for (const { ra, 将ら, 隊将 } of 立て) {
+        const 直 = 隊将.reduce((a2, x) => a2 + (x.retinue || 0), 0);
+        const 出す = Math.min(Math.max(0, ra.local || 0), Math.max(0, SIEGE_CORPS_CAP * 隊将.length - 直));
+        let 出る組 = ra.rost || null, 控えの組 = [];
+        if (ra.rost && (ra.local || 0) - 出す > 0) {
+          const tk = rosterTake(JSON.parse(JSON.stringify(ra.rost)), 出す);
+          出る組 = tk.taken; 控えの組 = tk.rest;
+        }
+        const 始め = 席;
+        const 隊 = mk(隊将, 出す, ra.localTrain || 62, defSide, g.factions[ra.faction].color,
+          (i2, n2) => 前構えの所(map, 始め + i2, 全), 出る組);
+        席 += 隊.length;
+        const 他家 = ra.faction !== castle.faction;
+        for (const c of 隊) {
+          /* 崩れたら、城の脇（構えた側の盤の端）へ退く。城の中へも、寄せ手の来た南へも逃げない */
+          c.後詰 = { 軍: ra.id, 外: { x: c.x < map.cx ? -1 : 1, y: 0 } };
+          c.前構え = { x: c.x, y: c.y };
+          c.ally = 他家 ? "後詰・援軍" : "後詰"; c.allyFaction = ra.faction;
+          c.formation = "横陣"; placeSquads(c, true);
+        }
+        前の隊.push(...隊);
+        前構えの控え.push({ 軍: ra.id, 家: g.factions[ra.faction].name, 将: 将ら[0] ? 将ら[0].name : "後詰",
+          側: defSide, 日: 1, 刻: 0, 角: Math.PI / 2, 方: "城の前", corps: 隊,
+          入った: true, 入った刻: 0, 入った日: 1, 呼応した: true, 前構え: true,
+          控え: Math.max(0, (ra.local || 0) - 出す), 控えの組 });
+      }
+    }
 
     if (kits) for (const c of atk) { const k = kits[c.id]; if (k && SIEGE_KIT[k]) c.kit = k; }
-    const P = playerIsAtk ? atk : def, E = playerIsAtk ? def : atk;
+    const P = playerIsAtk ? atk : [...def, ...前の隊], E = playerIsAtk ? [...def, ...前の隊] : atk;
     const bb = createBattle(P, E, atkSide);
     bb.mode = "castle";
     bb.map = map;
@@ -1095,7 +1148,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
        この城攻めのさなかに来た方の盤の端から現れる（engine.js 後詰を入れる）。
        隊はここで立てておき、刻が来るまで盤には置かない。広い盤だけ（狭い盤には端の野が無い）。
        一隊三千まで・六隊まで。あふれた兵は盤に出ず、軍に残る（寄せ手の控えと同じ） */
-    bb.後詰 = [];
+    bb.後詰 = [...前構えの控え];
+    if (前構えの控え.length) {
+      bb.log.push({ t: 0, text: `城の前には${前構えの控え.map((r) => `${r.家}の後詰（${r.将}・${fmt(r.corps.reduce((a2, c) => a2 + corpsMen(c), 0))}人）`).join("・")}が構え、寄せ手を待ち構えている。` });
+    }
     if (map.広い) {
       for (const 来 of 盤に来る後詰(g, castle, army, 城攻めの日数).slice(0, 2)) {
         const ra = 来.軍;
@@ -1271,6 +1327,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           && a.faction !== foe.faction && !同じ旗の下(g, a.faction, foe.faction)
           && (a.aid === army.faction || a.relief === dest.id));
     const aidMen = 援軍ら.reduce((t, a) => t + a.men, 0);
+    /* 城方の後詰（core/engun.js 城方の後詰ら）。城の下に陣を張る味方の軍と、同じ月に着いた後詰は、
+       城の兵と並んで城下の野戦に立つ。もとは城の兵だけが野に出て、陣を張る軍は眺めていた。
+       相手を軍として渡す戦（行き合い・囲みを衝く後詰の戦・城下で迎え撃つ戦）は、城方の側に城の兵が
+       立たないので載せない */
+    const 城方の援軍ら = !foe ? 城方の後詰ら(g, dest, army) : [];
+    const 城方援兵 = 城方の援軍ら.reduce((t, a) => t + a.men, 0);
     /* 野の広さは、兵の数と隊の数で決める。隊が多いほど、翼を伸ばし、伏せ、
        迂回する余地が要る。兵数だけで決めていたころは、五隊も出せば戦場が
        一杯になり、横に並べて前へ出るのが精一杯であった。 */
@@ -1283,9 +1345,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     /* 野の広さは、盤に立つ隊の数で決める。援軍の将を数え落としていたので、
        加勢が多い戦ほど野が狭く組まれ、隊が端へ押しつけられていた。 */
     const 援将数 = 援軍ら.reduce((t, a) => t + ((a.gens || []).length), 0)
-      + (sally ? (sally.gens || []).length : 0);
+      + (sally ? (sally.gens || []).length : 0)
+      + 城方の援軍ら.reduce((t, a) => t + ((a.gens || []).length), 0);
     const 隊数 = Math.max(2, 出る将.length + 援将数 + Math.max(1, defGens.length));
-    layoutField(army.men + aidMen + defLocal + defGens.reduce((t, x) => t + x.retinue, 0), 隊数);
+    layoutField(army.men + aidMen + 城方援兵 + defLocal + defGens.reduce((t, x) => t + x.retinue, 0), 隊数);
     // 攻め口の方角に応じ、盤の四辺のどこから寄せるかを決める（GDD 8.1）
     const face = attackFace(army.from, dest.id);
     /* 初めの布陣（GDD 8.1）。
@@ -1421,6 +1484,30 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     const defList = build(defGens, defLocal, dest.localTrain, playerIsAtk ? "E" : "P",
       playerIsAtk ? FIELD.h * 0.14 : FIELD.h * 0.875, playerIsAtk ? Math.PI / 2 : -Math.PI / 2, defColor, dest.rost, false);
+    /* 城方の後詰は城の兵の脇に並ぶ（寄せ手の援軍と同じ陣立ての続き）。隊に armyId と 城方の後詰 の印を
+       付け、戦のあとは城の帳ではなく後詰の軍へ返す（finishBattle の 城方の後詰の始末） */
+    {
+      let 席の残り = MAX_CORPS - defList.length;
+      for (const a of 城方の援軍ら) {
+        if (席の残り <= 0) break;
+        const ag = (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter((x) => x && !x.captive);
+        if (!ag.length) continue;
+        const list = build(ag.slice(0, 席の残り), Math.max(0, a.local || 0), a.localTrain || 60, playerIsAtk ? "E" : "P",
+          playerIsAtk ? FIELD.h * 0.14 : FIELD.h * 0.875, playerIsAtk ? Math.PI / 2 : -Math.PI / 2,
+          g.factions[a.faction].color, a.rost, false);
+        席の残り -= list.length;
+        const kind = a.faction === dest.faction ? "後詰" : "後詰・援軍";
+        list.forEach((c, i) => {
+          const 席 = defList.length + i;
+          const p2 = lineup(false, 席 + 1, 席 + 2);
+          c.x = p2.x; c.y = p2.y; c.facing = p2.f; c.陣向き = p2.f;
+          c.tx = c.x; c.ty = c.y;
+          c.ally = kind; c.allyFaction = a.faction; c.armyId = a.id; c.城方の後詰 = true;
+          placeSquads(c, true);
+        });
+        defList.push(...list);
+      }
+    }
     /* 念のための留め（GDD 8.1）。
 
        布陣の席は盤の内に取ってあるが、隊には広がりがある――中心が縁の内でも、
@@ -1433,6 +1520,13 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     // 自陣がどちらの側かを控える。攻め口の方角で変わるので、下側に決め打ちできない。
     bb.face = face;
     bb.myFar = playerIsAtk;      // 寄せ手は遠い側（far）から入る
+    if (城方の援軍ら.length) {
+      const 名 = 城方の援軍ら.map((a) => {
+        const 頭 = g.generals.find((x) => x.id === (a.gens || [])[0]);
+        return `${頭 ? 頭.name : g.factions[a.faction].name}の後詰${fmt(a.men)}人`;
+      }).join("・");
+      bb.log.push({ t: 0, text: `${dest.name}の城方には${名}が加わっている。` });
+    }
     if (betray) {
       const 内応の側 = (dest.intrigueOwner || g.player) === g.player ? "P" : "E";
       for (const c of bb.corps) {
@@ -1478,6 +1572,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       出陣前: true,
       b: bb, armyId: army.id, castleId: dest.id, playerIsAtk, campId: camp ? camp.id : null,
       mode: foe ? "clash" : undefined, foeId: foe ? foe.id : null,
+      城方の後詰: 城方の援軍ら.map((a) => ({ id: a.id, men: a.men })),
       sally: sally ? { castleId: sally.castleId, gens: sally.gens, local: sally.local } : null,
       pName: g.factions[playerIsAtk ? army.faction : defFaction].name,
       eName: g.factions[playerIsAtk ? defFaction : army.faction].name,
@@ -1768,16 +1863,19 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         ra.men = Math.max(0, ra.local || 0)
           + ra.gens.reduce((a2, id) => a2 + ((s.generals.find((x) => x.id === id) || {}).retinue || 0), 0);
         const 名 = `${r.家}の後詰`;
+        /* 城の前に構えた後詰（startAssault の 前構えの控え）は、駆けつけたのではなく、はじめから城の前で
+           寄せ手を迎え撃った */
+        const 働き = r.前構え ? `${castle.name}の城の前に構えて寄せ手を迎え撃った` : `${castle.name}の城攻めのさなかに駆けつけ、寄せ手を衝いた`;
         if (!won && ra.men > 0 && (ra.faction === castle.faction || 同じ旗の下(s, ra.faction, castle.faction))) {
           合戦裁定.在陣させる(s, ra, castle);
           s.chronicle.push({ y: s.year, m: s.month,
-            text: `${名}は${castle.name}の城攻めのさなかに駆けつけ、寄せ手を衝いた（${fmt(失)}人を失う）。城の下に陣を張った。` });
+            text: `${名}は${働き}（${fmt(失)}人を失う）。${r.前構え ? "城の下に陣を張ったままでいる。" : "城の下に陣を張った。"}` });
         } else {
           const home = 合戦裁定.withdrawArmy(s, ra);
           s.chronicle.push({ y: s.year, m: s.month,
             text: won
-              ? `${名}は駆けつけたが、${castle.name}は落ちた（${fmt(失)}人を失う）。${home ? `${home.name}へ退いた。` : "帰る城がなかった。"}`
-              : `${名}は${castle.name}の城攻めのさなかに駆けつけ、寄せ手を衝いた（${fmt(失)}人を失う）。役を果たして${home ? `${home.name}へ` : ""}引き揚げた。` });
+              ? `${名}は${r.前構え ? "城の前に構えて戦ったが" : "駆けつけたが"}、${castle.name}は落ちた（${fmt(失)}人を失う）。${home ? `${home.name}へ退いた。` : "帰る城がなかった。"}`
+              : `${名}は${働き}（${fmt(失)}人を失う）。役を果たして${home ? `${home.name}へ` : ""}引き揚げた。` });
         }
       }
       /* 落とした橋は、戦のあとも落ちたままである（core/hashi.js）。城の防備を上げ直すまで
@@ -2081,7 +2179,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         if (gen && !gen.rost) gen.retinue = Math.max(0, Math.round(gen.retinue - c.loss["直属"]));
       }
       const left = (corps) => Math.round(corps.reduce((a, c) => a + c.squads.filter((q) => q.origin === "地域").reduce((t, q) => t + q.men, 0), 0));
-      const atkLeft = left(atkCorps), defLeft = left(defCorps);
+      /* 同じ側に立った援軍（寄せ手の 援軍ら・城方の 城方の後詰。隊に armyId の印）は、本隊の兵でも城の兵でも
+         ない。それぞれの軍へ返す（下の 城方の後詰の始末・援軍の帰国）。もとは本隊と城の帳に数えたうえで
+         援軍の軍にも返していたので、援軍の生き残りが二重になっていた */
+      const atkLeft = left(atkCorps.filter((c) => !c.armyId)), defLeft = left(defCorps.filter((c) => !c.armyId));
       if (army) { army.local = atkLeft; army.men = atkLeft + atkCorps.reduce((a, c) => a + (s.generals.find((x) => x.id === c.id)?.retinue || 0), 0); }
       /* 城に残った守備兵の名簿も欠けたまま持ち越す。
 
@@ -2196,9 +2297,37 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             ? `${s.factions[army.faction].name}の軍は${home.name}へ退いた（${fmt(Math.max(0, atkLeft))}人）。`
             : `${s.factions[army.faction].name}の軍は退いたが、帰る城がなかった。` });
       }
-      // 援軍は損害を反映して帰国させる
+      /* 城方の後詰の始末（startBattle の 城方の援軍ら・core/engun.js 野戦の後の後詰）。損害を後詰の軍へ返す。
+         城方が勝てば、城の下に陣を張ったまま次の寄せにも立つ。城が囲まれたなら、兵が残っていれば城の下に
+         踏みとどまり（城攻めの盤では城の前に構え、翌月には囲みを衝く後詰に立つ）、残っていなければ退く。
+         城が落ちれば退く。この月にもう一度戦わないよう、着いた軍の控えからも外す */
       for (const a of [...s.armies]) {
-        const corpsOf = b.corps.filter((c) => c.armyId === a.id);
+        const 隊 = b.corps.filter((c) => c.armyId === a.id && c.城方の後詰);
+        if (!隊.length) continue;
+        const 発 = ((ctx.城方の後詰 || []).find((x) => x.id === a.id) || {}).men || a.men;
+        if (a.rost) writeBackRosters(s, b, 隊, a, null);
+        else a.local = left(隊);
+        a.gens = (a.gens || []).filter((id) => s.generals.some((x) => x.id === id && !x.captive && x.faction === a.faction));
+        a.men = Math.max(0, a.local || 0) + a.gens.reduce((t, id) => t + ((s.generals.find((x) => x.id === id) || {}).retinue || 0), 0);
+        s.pendingArrivals = (s.pendingArrivals || []).filter((id) => id !== a.id);
+        const 今の城 = s.castles.find((x) => x.id === castle.id);
+        const 味方の城 = !!今の城 && (今の城.faction === a.faction || 同じ旗の下(s, 今の城.faction, a.faction));
+        const 道 = 味方の城 && a.gens.length ? 野戦の後の後詰(!atkWon, a.men, 発) : "退く";
+        const 名 = `${s.factions[a.faction].name}の後詰`;
+        const 失 = Math.max(0, Math.round(発 - a.men));
+        if (道 === "留まる") {
+          合戦裁定.在陣させる(s, a, 今の城);
+          s.chronicle.push({ y: s.year, m: s.month,
+            text: `${名}は${castle.name}の城下の野戦に加わり（${fmt(失)}人を失う）、${atkWon ? "城が囲まれても" : ""}城の下に陣を張った。` });
+        } else {
+          const home = 合戦裁定.withdrawArmy(s, a);
+          s.chronicle.push({ y: s.year, m: s.month,
+            text: `${名}は${castle.name}の城下の野戦に加わったが（${fmt(失)}人を失う）、${home ? `${home.name}へ` : ""}退いた。` });
+        }
+      }
+      // 援軍は損害を反映して帰国させる（城方の後詰は上で始末した）
+      for (const a of [...s.armies]) {
+        const corpsOf = b.corps.filter((c) => c.armyId === a.id && !c.城方の後詰);
         if (!corpsOf.length) continue;
         const men = corpsOf.reduce((t, c) => t + c.squads.filter((q) => q.origin === "地域").reduce((u, q) => u + q.men, 0), 0);
         a.local = Math.round(men);
