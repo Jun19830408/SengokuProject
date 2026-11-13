@@ -26412,6 +26412,12 @@ function \u5EA7\u5E2D\u3092\u5411\u3051\u308B(c, snap) {
       q.facing = c.facing;
     }
   }
+  if (snap) {
+    c.\u5E2Dx = c.x;
+    c.\u5E2Dy = c.y;
+    c.\u5E2D\u524Dx = c.x;
+    c.\u5E2D\u524Dy = c.y;
+  }
   \u5E2D\u306E\u5DEE\u3057\u6E21\u3057\u3092\u713C\u304F(c);
 }
 var \u652F\u3048\u306E\u5411\u304D\u6570 = 32;
@@ -33173,6 +33179,26 @@ var \u99AC\u6301\u5834 = [];
 }
 var \u5C71\u9AD8m = (o) => o.\u9AD8 || Math.min(200, (o.r || 60) * 0.4);
 var \u57CE\u76E4 = false;
+var \u7ACB\u3066\u308B\u6240\u304B = (x, y, \u82AF\u306E\u5730) => passable(x, y) || \u82AF\u306E\u5730 === "gate" && terrainAt(x, y) === "gate";
+function \u585E\u304C\u308A\u3092\u3088\u3051\u308B(qx, qy, x, y, \u82AF\u306E\u5730) {
+  const dx = x - qx, dy = y - qy, \u95772 = Math.hypot(dx, dy);
+  if (\u95772 < 0.5) return null;
+  const n = Math.max(1, Math.ceil(\u95772 / 3));
+  for (let k = 1; k <= n; k++) {
+    const t = k / n;
+    if (\u7ACB\u3066\u308B\u6240\u304B(qx + dx * t, qy + dy * t, \u82AF\u306E\u5730)) continue;
+    const \u6B62 = Math.max(0, (k - 1) / n - 2.2 / \u95772);
+    return [qx + dx * \u6B62, qy + dy * \u6B62];
+  }
+  return null;
+}
+function \u58C1\u969B\u304B(x, y) {
+  for (let k = 0; k < 8; k++) {
+    const c = Math.cos(k * Math.PI / 4), s2 = Math.sin(k * Math.PI / 4);
+    if (!passable(x + c * 14, y + s2 * 14) || !passable(x + c * 26, y + s2 * 26)) return true;
+  }
+  return false;
+}
 var \u7D44\u614B = /* @__PURE__ */ new WeakMap();
 var \u76E4\u614B = /* @__PURE__ */ new WeakMap();
 var \u7D44\u306E\u614B = (q) => {
@@ -33192,6 +33218,10 @@ var \u7D44\u306E\u614B = (q) => {
       \u9032x: new Float32Array(50),
       \u9032y: new Float32Array(50),
       \u63CF: new Float32Array(50),
+      \u62BCx: new Float32Array(50),
+      \u62BCy: new Float32Array(50),
+      \u523B\u521Dx: new Float32Array(50),
+      \u523B\u521Dy: new Float32Array(50),
       \u521D: false,
       prevMen: q.men,
       prevCool: q.cool || 0,
@@ -33505,6 +33535,11 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
   const dt = Math.max(0, Math.min(0.25, b.t - \u614B.\u524Dt));
   \u614B.\u524Dt = b.t;
   const \u96C6\u3081 = [];
+  const \u6B69\u307F = [];
+  let \u7834\u308C\u6570 = 0;
+  if (b.map && b.map.layers) {
+    for (const l of b.map.layers) for (const g of l.gates) if (g.broken) \u7834\u308C\u6570++;
+  }
   if (dt > 0) \u6575\u306E\u7D44\u3092\u96E2\u3059(b, dt, viewRect);
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
@@ -33599,6 +33634,8 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
           s2.\u9032y[i] = s2.\u9032y[j];
           s2.\u76EE[i] = s2.\u76EE[j];
           s2.\u751F[i] = 1;
+          s2.\u62BCx[i] = s2.\u62BCx[j];
+          s2.\u62BCy[i] = s2.\u62BCy[j];
           \u6B7B[j] = 1;
           j--;
         }
@@ -33613,16 +33650,22 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
       const \u524D = s2.\u4F38;
       const \u523B\u307F = (\u524D + 2.8) / 4;
       const \u62BC = \u565B\u307F\u4E2D ? 0.6 - Math.sin(b.t * 0.9 + (q.seed || 0)) * 0.5 : 0;
-      let \u7DDA = null;
+      let \u9650 = Infinity;
       if (q.link && \u565B\u307F\u4E2D) {
         const nx0 = q.link.x - q.x, ny0 = q.link.y - q.y, nd = Math.hypot(nx0, ny0);
-        if (nd > 0.5) \u7DDA = { mx: (q.x + q.link.x) / 2, my: (q.y + q.link.y) / 2, nx: nx0 / nd, ny: ny0 / nd };
-      }
-      const \u7DDA\u306E\u5185 = (x, y) => {
-        if (!\u7DDA) return 0;
-        const e = (x - \u7DDA.mx) * \u7DDA.nx + (y - \u7DDA.my) * \u7DDA.ny + 0.95;
-        return e > 0 ? e : 0;
-      };
+        if (nd > 0.5) {
+          let \u89D2 = Math.atan2(ny0, nx0);
+          if (s2.\u7DDA\u89D2 != null) {
+            let \u5DEE = \u89D2 - s2.\u7DDA\u89D2;
+            \u5DEE -= Math.round(\u5DEE / (Math.PI * 2)) * Math.PI * 2;
+            \u89D2 = s2.\u7DDA\u89D2 + Math.max(-2 * dt, Math.min(2 * dt, \u5DEE));
+          }
+          s2.\u7DDA\u89D2 = \u89D2;
+          const \u524D\u5411\u304D = Math.cos(\u89D2 - th);
+          const \u7DDA\u307E\u3067 = ((q.x + q.link.x) / 2 - s2.dx) * Math.cos(\u89D2) + ((q.y + q.link.y) / 2 - s2.dy) * Math.sin(\u89D2);
+          if (\u524D\u5411\u304D > 0.2) \u9650 = Math.max(\u7DDA\u307E\u3067, 7) / \u524D\u5411\u304D - 0.95;
+        } else s2.\u7DDA\u89D2 = null;
+      } else s2.\u7DDA\u89D2 = null;
       s2.\u565B = \u565B\u307F\u4E2D;
       {
         const \u524D\u69CB = s2.\u69CB;
@@ -33634,10 +33677,30 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
         }
       }
       const \u7684 = c.routed ? null : \u565B\u307F\u4E2D && q.link ? q.link : q.aim && b.t - q.aim.t < 3 ? q.aim : s2.\u69CB ? q.foe : null;
+      const \u62BC\u6B8B = Math.exp(-dt / \u62BC\u3057\u306E\u623B\u308A\u79D2);
+      let \u58C1\u969B = false, \u82AF\u306E\u5730 = null;
+      if (b.map) {
+        const \u9375 = Math.round(q.x / 3) * 100003 + Math.round(q.y / 3) + \u7834\u308C\u6570 * 7919;
+        if (s2.\u969B\u9375 !== \u9375) {
+          s2.\u969B\u9375 = \u9375;
+          s2.\u969B = \u58C1\u969B\u304B(q.x, q.y);
+        }
+        \u58C1\u969B = s2.\u969B;
+        if (\u58C1\u969B) \u82AF\u306E\u5730 = terrainAt(q.x, q.y);
+      }
       for (let n = 0; n < alive; n++) {
         const o = \u5834[n];
         const \u6DF1 = \u565B\u307F\u4E2D ? -\u524D + o[2] * \u523B\u307F + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))) : o[1];
-        let tx = s2.dx + lx * o[0] + bx * (\u6DF1 + \u62BC), ty = s2.dy + ly * o[0] + by * (\u6DF1 + \u62BC);
+        s2.\u62BCx[n] *= \u62BC\u6B8B;
+        s2.\u62BCy[n] *= \u62BC\u6B8B;
+        let tx = s2.dx + lx * o[0] + bx * (\u6DF1 + \u62BC) + s2.\u62BCx[n], ty = s2.dy + ly * o[0] + by * (\u6DF1 + \u62BC) + s2.\u62BCy[n];
+        if (\u9650 < Infinity) {
+          const e = -((tx - s2.dx) * bx + (ty - s2.dy) * by) - \u9650;
+          if (e > 0) {
+            tx += bx * e;
+            ty += by * e;
+          }
+        }
         if (\u672C\u9663\u3088\u3051) {
           const dx3 = tx - \u672Cx2, dy3 = ty - \u672Cy2;
           const \u59653 = dx3 * \u9663fx + dy3 * \u9663fy;
@@ -33654,13 +33717,6 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
             }
           }
         }
-        {
-          const e = \u7DDA\u306E\u5185(tx, ty);
-          if (e) {
-            tx -= \u7DDA.nx * e;
-            ty -= \u7DDA.ny * e;
-          }
-        }
         if (\u5BB6\u3088\u3051) {
           const p = \u5BB6\u3092\u3088\u3051\u308B(tx, ty);
           if (p) {
@@ -33675,12 +33731,23 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
             ty = p[1];
           }
         }
+        if (\u58C1\u969B) {
+          const p = \u585E\u304C\u308A\u3092\u3088\u3051\u308B(q.x, q.y, tx, ty, \u82AF\u306E\u5730);
+          if (p) {
+            tx = p[0];
+            ty = p[1];
+          }
+        }
         if (!s2.\u521D) {
           s2.sx[n] = tx;
           s2.sy[n] = ty;
           s2.\u751F[n] = 1;
           s2.\u901F[n] = 0;
           s2.\u63CF[n] = s2.\u5411;
+          s2.\u62BCx[n] = 0;
+          s2.\u62BCy[n] = 0;
+          s2.\u523B\u521Dx[n] = tx;
+          s2.\u523B\u521Dy[n] = ty;
           continue;
         }
         if (!s2.\u751F[n]) {
@@ -33695,22 +33762,28 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
           s2.\u9032x[n] = 0;
           s2.\u9032y[n] = 0;
           s2.\u76EE[n] = -1;
+          s2.\u62BCx[n] = 0;
+          s2.\u62BCy[n] = 0;
         }
         const vx = tx - s2.sx[n], vy = ty - s2.sy[n], d = Math.hypot(vx, vy);
         let mv = 0;
+        s2.\u523B\u521Dx[n] = s2.sx[n];
+        s2.\u523B\u521Dy[n] = s2.sy[n];
         if (d > 600 * \u5C3A) {
           s2.sx[n] = tx;
           s2.sy[n] = ty;
+          s2.\u523B\u521Dx[n] = tx;
+          s2.\u523B\u521Dy[n] = ty;
         } else if (d > 0.02) {
           mv = Math.min(d, (q.type === "kiba" ? 185 : 125) * \u5C3A * dt);
           s2.sx[n] += vx / d * mv;
           s2.sy[n] += vy / d * mv;
-          {
-            const e = \u7DDA\u306E\u5185(s2.sx[n], s2.sy[n]);
-            if (e) {
+          if (\u9650 < Infinity) {
+            const e = -((s2.sx[n] - s2.dx) * bx + (s2.sy[n] - s2.dy) * by) - \u9650;
+            if (e > 0) {
               const \u623B = Math.min(e, (q.type === "kiba" ? 92 : 62) * \u5C3A * dt);
-              s2.sx[n] -= \u7DDA.nx * \u623B;
-              s2.sy[n] -= \u7DDA.ny * \u623B;
+              s2.sx[n] += bx * \u623B;
+              s2.sy[n] += by * \u623B;
             }
           }
           if (\u5BB6\u3088\u3051) {
@@ -33730,8 +33803,6 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
           s2.\u9032x[n] += (vx / d - s2.\u9032x[n]) * Math.min(1, dt * 3);
           s2.\u9032y[n] += (vy / d - s2.\u9032y[n]) * Math.min(1, dt * 3);
         }
-        s2.\u6B69\u8DDD[n] += mv;
-        s2.\u901F[n] += ((dt > 0 ? mv / dt : 0) - s2.\u901F[n]) * Math.min(1, dt * 6);
         {
           const \u7684\u5411 = \u7684 && s2.\u901F[n] < 14 * \u5C3A ? Math.atan2(\u7684.y - s2.sy[n], \u7684.x - s2.sx[n]) : Math.hypot(s2.\u9032x[n], s2.\u9032y[n]) > 0.3 && s2.\u901F[n] > 2.5 * \u5C3A ? Math.atan2(s2.\u9032y[n], s2.\u9032x[n]) : s2.\u5411;
           let d\u63CF = \u7684\u5411 - s2.\u63CF[n];
@@ -33743,9 +33814,20 @@ function \u65B0\u7D75\u72B6\u614B\u3092\u9032\u3081\u308B(b, nowSec, viewRect) {
       for (let n = alive; n < 50; n++) s2.\u751F[n] = 0;
       s2.\u521D = true;
       if (!c.routed && s2.\u8FD1\u6575) \u96C6\u3081.push({ s: s2, alive, \u5074: c.side === "P" ? 1 : 2 });
+      if (dt > 0) \u6B69\u307F.push(s2, alive);
     }
   }
   if (dt > 0 && \u96C6\u3081.length > 1) \u6575\u5473\u65B9\u3092\u62BC\u3057\u5206\u3051\u308B(\u96C6\u3081);
+  for (let k = 0; k < \u6B69\u307F.length; k += 2) {
+    const s2 = \u6B69\u307F[k], alive = \u6B69\u307F[k + 1];
+    const \u5BC4 = Math.min(1, dt * 6);
+    for (let n = 0; n < alive; n++) {
+      if (!s2.\u751F[n]) continue;
+      const mv = Math.hypot(s2.sx[n] - s2.\u523B\u521Dx[n], s2.sy[n] - s2.\u523B\u521Dy[n]);
+      s2.\u6B69\u8DDD[n] += mv;
+      s2.\u901F[n] += (mv / dt - s2.\u901F[n]) * \u5BC4;
+    }
+  }
   return dt;
 }
 var \u7D44\u306E\u9593 = 16;
@@ -33818,6 +33900,8 @@ function \u6575\u306E\u7D44\u3092\u96E2\u3059(b, dt, viewRect) {
   }
 }
 var \u62BC\u3057\u5206\u3051\u306E\u9593 = 1.8;
+var \u62BC\u3057\u306E\u623B\u308A\u79D2 = 0.8;
+var \u62BC\u3057\u306E\u9650\u308A = 4;
 function \u6575\u5473\u65B9\u3092\u62BC\u3057\u5206\u3051\u308B(\u96C6\u3081) {
   const \u53472 = \u62BC\u3057\u5206\u3051\u306E\u9593;
   const \u683C = /* @__PURE__ */ new Map();
@@ -33860,6 +33944,24 @@ function \u6575\u5473\u65B9\u3092\u62BC\u3057\u5206\u3051\u308B(\u96C6\u3081) {
           A.s.sy[n] -= dy * \u62BC;
           B.s.sx[m] += dx * \u62BC;
           B.s.sy[m] += dy * \u62BC;
+          A.s.\u62BCx[n] -= dx * \u62BC;
+          A.s.\u62BCy[n] -= dy * \u62BC;
+          B.s.\u62BCx[m] += dx * \u62BC;
+          B.s.\u62BCy[m] += dy * \u62BC;
+          {
+            const L = Math.hypot(A.s.\u62BCx[n], A.s.\u62BCy[n]);
+            if (L > \u62BC\u3057\u306E\u9650\u308A) {
+              A.s.\u62BCx[n] *= \u62BC\u3057\u306E\u9650\u308A / L;
+              A.s.\u62BCy[n] *= \u62BC\u3057\u306E\u9650\u308A / L;
+            }
+          }
+          {
+            const L = Math.hypot(B.s.\u62BCx[m], B.s.\u62BCy[m]);
+            if (L > \u62BC\u3057\u306E\u9650\u308A) {
+              B.s.\u62BCx[m] *= \u62BC\u3057\u306E\u9650\u308A / L;
+              B.s.\u62BCy[m] *= \u62BC\u3057\u306E\u9650\u308A / L;
+            }
+          }
         }
       }
     }
@@ -34487,8 +34589,14 @@ function \u65B0\u7D75\u306E\u5175\u63CF\u304D(ctx, b, \u968A\u3089, cam, W2, H2,
         const h0 = \u6D6E\u304D(s2.dx, s2.dy);
         if (Math.abs(\u6D6E\u304D(s2.dx, s2.dy + 12) - h0) > 3 || Math.abs(\u6D6E\u304D(s2.dx, s2.dy - 12) - h0) > 3 || Math.abs(\u6D6E\u304D(s2.dx + 14, s2.dy) - h0) > 3 || Math.abs(\u6D6E\u304D(s2.dx - 14, s2.dy) - h0) > 3) continue;
       }
-      if (\u7E2E < 1 && \u96A0\u308C\u306E\u969B(s2.dx, s2.dy) < \u753B\u306E\u7E26(s2.dx, s2.dy) + 4) continue;
+      let \u5F71\u306E\u6FC3\u3055 = 1;
+      if (\u7E2E < 1) {
+        const \u4F59\u308A = \u96A0\u308C\u306E\u969B(s2.dx, s2.dy) - \u753B\u306E\u7E26(s2.dx, s2.dy);
+        if (\u4F59\u308A <= -6) continue;
+        if (\u4F59\u308A < -2) \u5F71\u306E\u6FC3\u3055 = (\u4F59\u308A + 6) / 4;
+      }
       ctx.save();
+      if (\u5F71\u306E\u6FC3\u3055 < 1) ctx.globalAlpha *= \u5F71\u306E\u6FC3\u3055;
       {
         const [ex, ey] = \u63DA\u3052(s2.dx, s2.dy);
         ctx.translate(s2.dx + ex, s2.dy + ey);
@@ -39371,6 +39479,12 @@ function \u524D\u9762\u307E\u3067(c, ux, uy) {
   return Math.max(0, \u524D\u5F8C) * (c.\u5F35\u308A\u524D || 0) + Math.max(0, -\u524D\u5F8C) * (c.\u5F35\u308A\u5F8C || 0) + Math.max(0, \u5DE6\u53F3) * (c.\u5F35\u308A\u53F3 || 0) + Math.max(0, -\u5DE6\u53F3) * (c.\u5F35\u308A\u5DE6 || 0);
 }
 var \u89E6\u308C\u9699 = 18;
+var \u7DDA\u306E\u7C98\u308A = 30;
+var \u7DDA\u306E\u7C98\u308A\u79D2 = 0.4;
+var \u636E\u3048\u76F4\u3059\u7336\u4E88 = 3;
+var \u6301\u3061\u5834\u306E\u6B69\u3051\u308B\u8DB3 = 56;
+var \u6301\u3061\u5834\u306E\u7C98\u308A\u79D2 = 1;
+var \u6301\u3061\u5834\u306E\u96E2\u308C\u306E\u9650\u308A = 120;
 var \u89E6\u308C\u4E0A\u9650 = 26;
 var \u565B\u307F\u9593 = 34;
 var \u652F\u3048\u5411\u304D = (() => {
@@ -39860,7 +39974,10 @@ function stepBattle(b, dt) {
   for (const c of alive) {
     c.\u63A5\u6575 = null;
     c.\u6575\u5411 = null;
-    if (\u57CE\u5185(c.x, c.y) || !\u584A\u3068\u3057\u3066\u7ACB\u3064(c)) continue;
+    if (\u57CE\u5185(c.x, c.y) || !\u584A\u3068\u3057\u3066\u7ACB\u3064(c)) {
+      c.\u7DDA\u306E\u6575 = null;
+      continue;
+    }
     let \u8FD1 = 1e9, \u6575\u8FD1 = 1e9;
     for (const o of alive) {
       if (o.side === c.side || !\u584A\u3068\u3057\u3066\u7ACB\u3064(o)) continue;
@@ -39874,6 +39991,14 @@ function stepBattle(b, dt) {
       if (ed > \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, ex / ed, ey / ed) + 6) continue;
       \u8FD1 = ed;
       c.\u63A5\u6575 = o;
+    }
+    if (c.\u63A5\u6575) {
+      c.\u7DDA\u306E\u6575 = c.\u63A5\u6575;
+      c.\u7DDA\u306E\u523B = b.t;
+    } else if (c.\u7DDA\u306E\u6575) {
+      const o = c.\u7DDA\u306E\u6575;
+      const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
+      if (b.t - (c.\u7DDA\u306E\u523B == null ? -99 : c.\u7DDA\u306E\u523B) > \u7DDA\u306E\u7C98\u308A\u79D2 || o.dead || o.destroyed || o.\u65E5\u548C\u898B || o.side === c.side || !\u584A\u3068\u3057\u3066\u7ACB\u3064(o) || ed < 0.5 || ed > \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, ex / ed, ey / ed) + 6 + \u7DDA\u306E\u7C98\u308A) c.\u7DDA\u306E\u6575 = null;
     }
     c.\u524D\u887E = c.\u887E;
     c.\u887E = false;
@@ -39930,6 +40055,7 @@ function stepBattle(b, dt) {
     }
   }
   for (const c of alive) {
+    c.\u6B69\u3044\u305F\u5E45 = 0;
     {
       let mx2 = 0, my2 = 0, mn = 0;
       for (const q of c.squads) {
@@ -40084,7 +40210,7 @@ function stepBattle(b, dt) {
         }
         const \u69CD\u304C\u5C4A\u304F = (x) => (x.\u7D44\u306E\u6700\u8FD1 == null ? Infinity : x.\u7D44\u306E\u6700\u8FD1) <= \u565B\u307F\u9593 * 1.4;
         const \u61D0\u306B\u5165\u308B = !\u69CD\u304C\u5C4A\u304F(c) && !\u69CD\u304C\u5C4A\u304F(o) && d2 > \u89E6\u308C\u9699 * 1.5;
-        const \u91CD = \u61D0\u306B\u5165\u308B ? -1 : \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, vx2, vy2) - d2;
+        const \u91CD = Math.max(\u61D0\u306B\u5165\u308B ? -1 : \u89E6\u308C\u308B\u9694\u305F\u308A(c, o, vx2, vy2) - d2, \u89E6\u308C\u9699 * 0.6 - d2);
         if (\u91CD > 0) {
           const \u62BC = \u91CD * \u5BC4\u305B\u623B\u3057;
           \u52D5\u304B\u3059(c, kc, -vx2 * \u62BC, -vy2 * \u62BC);
@@ -40287,15 +40413,16 @@ function stepBattle(b, dt) {
       const \u6B69 = Math.min(\u901F\u3055 * dt, dist);
       const mvx = \u901F.x / \u901F\u3055 * \u6B69, mvy = \u901F.y / \u901F\u3055 * \u6B69;
       const \u8DB3\u51432 = terrainAt(c.x, c.y) === "deep" ? "deep" : c.\u5730;
-      const \u5143x = c.x, \u5143y = c.y;
+      const \u5143x2 = c.x, \u5143y2 = c.y;
       const \u8E0F\u3081\u308B = (nx, ny) => passableFor(c, b, nx, ny) && \u6DF5\u3092\u8E0F\u3081\u308B\u304B(c, b, nx, ny, \u8DB3\u51432);
       if (\u8E0F\u3081\u308B(c.x + mvx, c.y + mvy)) {
         c.x += mvx;
         c.y += mvy;
       } else if (\u8E0F\u3081\u308B(c.x + mvx, c.y)) c.x += mvx;
       else if (\u8E0F\u3081\u308B(c.x, c.y + mvy)) c.y += mvy;
-      const \u9032\u3081\u305F = Math.hypot(c.x - \u5143x, c.y - \u5143y) > \u6B69 * 0.25;
-      if (!\u57CE\u5185(c.x, c.y) && !\u9032\u3081\u305F && !c.\u62BC\u3057\u6E21\u308B && terrainAt(\u5143x + mvx, \u5143y + mvy) === "deep") {
+      c.\u6B69\u3044\u305F\u5E45 = Math.hypot(c.x - \u5143x2, c.y - \u5143y2);
+      const \u9032\u3081\u305F = Math.hypot(c.x - \u5143x2, c.y - \u5143y2) > \u6B69 * 0.25;
+      if (!\u57CE\u5185(c.x, c.y) && !\u9032\u3081\u305F && !c.\u62BC\u3057\u6E21\u308B && terrainAt(\u5143x2 + mvx, \u5143y2 + mvy) === "deep") {
         c.\u6C34\u969B = (c.\u6C34\u969B || 0) + dt;
         const \u5F85\u3064 = 24 + Math.max(0, 80 - (c.gen.wit || 55)) * 0.7;
         if (c.\u6C34\u969B > \u5F85\u3064) {
@@ -40366,19 +40493,46 @@ function stepBattle(b, dt) {
     const \u6D41 = MAP ? \u968A\u306E\u6D41\u308C(c) : null;
     const \u66F2\u8F2A\u306E\u5185 = (x, y) => MAP.layers.some((L) => inLayer(MAP, L, x, y));
     const \u5C06\u306F\u5185 = \u6D41 ? \u66F2\u8F2A\u306E\u5185(c.x, c.y) : false;
+    {
+      const \u524Dx = c.\u5E2D\u524Dx == null ? c.x : c.\u5E2D\u524Dx, \u524Dy = c.\u5E2D\u524Dy == null ? c.y : c.\u5E2D\u524Dy;
+      c.\u5E2D\u524Dx = c.x;
+      c.\u5E2D\u524Dy = c.y;
+      if (c.\u5E2Dx == null || \u57CE\u5185(c.x, c.y) || c.routed || c.withdraw) {
+        c.\u5E2Dx = c.x;
+        c.\u5E2Dy = c.y;
+      } else {
+        let mx = c.x - \u524Dx, my = c.y - \u524Dy;
+        const \u52D5 = Math.hypot(mx, my);
+        const \u5E452 = Math.max(\u6301\u3061\u5834\u306E\u6B69\u3051\u308B\u8DB3 * fieldScale() * dt, (c.\u6B69\u3044\u305F\u5E45 || 0) * 1.5);
+        if (\u52D5 > \u5E452) {
+          mx *= \u5E452 / \u52D5;
+          my *= \u5E452 / \u52D5;
+        }
+        c.\u5E2Dx += mx;
+        c.\u5E2Dy += my;
+        const \u5BC4 = 1 - Math.exp(-dt / \u6301\u3061\u5834\u306E\u7C98\u308A\u79D2);
+        c.\u5E2Dx += (c.x - c.\u5E2Dx) * \u5BC4;
+        c.\u5E2Dy += (c.y - c.\u5E2Dy) * \u5BC4;
+        if (Math.hypot(c.x - c.\u5E2Dx, c.y - c.\u5E2Dy) > \u6301\u3061\u5834\u306E\u96E2\u308C\u306E\u9650\u308A) {
+          c.\u5E2Dx = c.x;
+          c.\u5E2Dy = c.y;
+        }
+      }
+    }
+    const \u5143x = c.\u5E2Dx, \u5143y = c.\u5E2Dy;
     for (const q of c.squads) {
-      let targetX = c.x + q.slotX, targetY = c.y + q.slotY;
+      let targetX = \u5143x + q.slotX, targetY = \u5143y + q.slotY;
       const st0 = ARM_STATS[q.type];
-      const \u524D\u5217\u304B = c.\u63A5\u6575 && !q.reserve && st0.range === 0 && (q.\u5EA7\u5E2D ? -(q.\u5EA7\u5E2D.y || 0) >= -(ROW * 1.2) : false);
-      if (c.\u63A5\u6575 && \u524D\u5217\u304B) {
-        const o = c.\u63A5\u6575;
-        const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey) || 1;
+      const \u524D\u5217\u304B = c.\u7DDA\u306E\u6575 && !q.reserve && st0.range === 0 && (q.\u5EA7\u5E2D ? -(q.\u5EA7\u5E2D.y || 0) >= -(ROW * 1.2) : false);
+      if (c.\u7DDA\u306E\u6575 && \u524D\u5217\u304B) {
+        const o = c.\u7DDA\u306E\u6575;
+        const ex = (o.\u5E2Dx == null ? o.x : o.\u5E2Dx) - \u5143x, ey = (o.\u5E2Dy == null ? o.y : o.\u5E2Dy) - \u5143y, ed = Math.hypot(ex, ey) || 1;
         const ux = ex / ed, uy = ey / ed;
         const vx = -uy, vy = ux;
         const \u6A2A = (q.slotX || 0) * vx + (q.slotY || 0) * vy;
         const \u524D\u3078 = Math.max(0, ed / 2 - 9);
-        targetX = c.x + ux * \u524D\u3078 + vx * \u6A2A;
-        targetY = c.y + uy * \u524D\u3078 + vy * \u6A2A;
+        targetX = \u5143x + ux * \u524D\u3078 + vx * \u6A2A;
+        targetY = \u5143y + uy * \u524D\u3078 + vy * \u6A2A;
       } else if (aggressive && !c.routed && q.foe && !q.reserve && !(c.order === "\u63A5\u6226" && q.type === "kiba" && !c.detach && (c.\u69CD\u7D44\u6570 || 0) >= 3 && (c.\u69CD\u7D44\u6570 || 0) >= (c.\u7ACB\u3064\u7D44\u6570 || 1) * 0.3)) {
         const want = st0.range > 0 ? st0.range * 0.75 : 15;
         if (c.order === "\u5C04\u6483" && st0.range === 0) {
@@ -40387,7 +40541,7 @@ function stepBattle(b, dt) {
           targetX = q.foe.x + ux * want;
           targetY = q.foe.y + uy * want;
         }
-        const homeX = c.x + q.slotX, homeY = c.y + q.slotY;
+        const homeX = \u5143x + q.slotX, homeY = \u5143y + q.slotY;
         const off = Math.hypot(targetX - homeX, targetY - homeY);
         const leash = c.chargeT > 0 ? 24 : 14;
         if (off > leash) {
@@ -40425,13 +40579,15 @@ function stepBattle(b, dt) {
       else if (homeD < 40 || \u565B\u307F\u6700\u8FD1) q.lost = false;
       const \u5840\u8D8A\u3057 = homeD > 190 && MAP && !\u898B\u901A\u305B\u308B(q.x, q.y, targetX, targetY);
       q.\u5840\u8D8A\u3057\u523B = \u5840\u8D8A\u3057 && !\u56DE\u308A\u5148 ? (q.\u5840\u8D8A\u3057\u523B || 0) + dt : 0;
+      q.\u9060\u3044\u523B = homeD > 190 ? (q.\u9060\u3044\u523B || 0) + dt : 0;
       if (\u56DE\u308A\u5148) {
         q.lost = false;
         targetX = \u56DE\u308A\u5148.x;
         targetY = \u56DE\u308A\u5148.y;
       } else if (\u5840\u8D8A\u3057 && q.\u5840\u8D8A\u3057\u523B <= 25) q.lost = true;
-      else if (homeD > 190) {
+      else if (homeD > 190 && q.\u9060\u3044\u523B >= \u636E\u3048\u76F4\u3059\u7336\u4E88) {
         q.\u5840\u8D8A\u3057\u523B = 0;
+        q.\u9060\u3044\u523B = 0;
         let put = null;
         for (let k = 0; k < 18 && !put; k++) {
           const ang = k * 2.399, rr = k === 0 ? 0 : 12 + k * 8;
@@ -40446,21 +40602,34 @@ function stepBattle(b, dt) {
         }
       }
       if (q.lost && c.trail && c.trail.length) {
-        let bi = 0, bd = 1e9;
-        for (let k = 0; k < c.trail.length; k++) {
-          const d2 = Math.hypot(c.trail[k].x - q.x, c.trail[k].y - q.y);
-          if (d2 < bd) {
+        const T = c.trail, \u672B = T.length;
+        const \u884Cx = targetX, \u884Cy = targetY;
+        const \u7AEF = (k) => k < \u672B ? T[k] : { x: \u884Cx, y: \u884Cy };
+        let \u5148 = \u672B, bd = 1e18, \u8FD1x = \u884Cx, \u8FD1y = \u884Cy;
+        for (let k = 0; k < \u672B; k++) {
+          const ax = T[k].x, ay = T[k].y, bx = \u7AEF(k + 1).x - ax, by = \u7AEF(k + 1).y - ay;
+          const L2 = bx * bx + by * by;
+          const t = L2 > 0 ? clamp(((q.x - ax) * bx + (q.y - ay) * by) / L2, 0, 1) : 0;
+          const px2 = ax + bx * t, py2 = ay + by * t;
+          const d2 = (q.x - px2) * (q.x - px2) + (q.y - py2) * (q.y - py2);
+          if (d2 <= bd) {
             bd = d2;
-            bi = k;
+            \u5148 = k + 1;
+            \u8FD1x = px2;
+            \u8FD1y = py2;
           }
         }
-        const nx3 = c.trail[Math.min(c.trail.length - 1, bi + 1)];
-        if (bd > 26) {
-          targetX = c.trail[bi].x;
-          targetY = c.trail[bi].y;
+        const \u7740\u3044\u305F = (k) => Math.hypot(\u7AEF(k).x - q.x, \u7AEF(k).y - q.y) < 16;
+        if (\u7740\u3044\u305F(\u5148)) {
+          while (\u5148 < \u672B && \u7740\u3044\u305F(\u5148)) \u5148++;
+          targetX = \u7AEF(\u5148).x;
+          targetY = \u7AEF(\u5148).y;
+        } else if (bd > 26 * 26) {
+          targetX = \u8FD1x;
+          targetY = \u8FD1y;
         } else {
-          targetX = nx3.x;
-          targetY = nx3.y;
+          targetX = \u7AEF(\u5148).x;
+          targetY = \u7AEF(\u5148).y;
         }
       }
       const qd = Math.hypot(targetX - q.x, targetY - q.y);
@@ -40469,14 +40638,25 @@ function stepBattle(b, dt) {
       const \u6B62\u307E\u308B\u5E45 = \u57CE\u5185(c.x, c.y) ? 5 : 2;
       const \u565B\u307F\u904A\u3073 = 24;
       const \u565B\u307F\u3067\u3082\u623B\u308B = \u565B\u307F\u4E2D && qd > \u565B\u307F\u904A\u3073;
+      const \u9854 = q.\u9854\u6575 && q.\u9854\u6575.men > 0 && Math.hypot(q.\u9854\u6575.x - q.x, q.\u9854\u6575.y - q.y) < 140 ? q.\u9854\u6575 : null;
       {
-        const \u7684 = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
+        let \u7684 = c.facing;
+        if (\u9854) {
+          const f = q.\u9854\u968A;
+          const ax = c.gx == null ? \u5143x : c.gx, ay = c.gy == null ? \u5143y : c.gy;
+          const fx = f ? f.gx == null ? f.x : f.gx : \u9854.x, fy = f ? f.gy == null ? f.y : f.gy : \u9854.y;
+          const \u9694 = Math.hypot(fx - ax, fy - ay);
+          const \u9663 = c.\u9663\u5411\u304D == null ? c.facing : c.\u9663\u5411\u304D;
+          const \u5BC4 = clamp((\u9694 - 20) / 20, 0, 1);
+          const \u958B = \u9694 > 0.5 ? (Math.atan2(fy - ay, fx - ax) - \u9663 + Math.PI * 3) % (Math.PI * 2) - Math.PI : 0;
+          \u7684 = \u9663 + \u958B * \u5BC4;
+        }
         const \u671B\u5411 = \u7684 + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
         const \u5DEE = (\u671B\u5411 - q.facing + Math.PI * 3) % (Math.PI * 2) - Math.PI;
         q.facing += clamp(\u5DEE, -2.6 * dt, 2.6 * dt);
       }
       if (qd > \u6B62\u307E\u308B\u5E45 && (!\u565B\u307F\u4E2D || \u565B\u307F\u3067\u3082\u623B\u308B || c.withdraw || c.routed)) {
-        const \u9045\u308C = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
+        const \u9045\u308C = Math.hypot(q.x - (\u5143x + q.slotX), q.y - (\u5143y + q.slotY));
         const \u8FFD\u3044\u3064\u304D = c.routed ? 1 : clamp(1 + \u9045\u308C / 34, 1, 2.4);
         const v = st0.speed * \u8FFD\u3044\u3064\u304D * (\u565B\u307F\u3067\u3082\u623B\u308B ? 0.45 : 1) * fieldScale() * (b.\u8DB3\u306E\u624B\u52A0\u6E1B || 1) * \u6C34\u99B4\u308C\u306E\u8DB3(c, q.\u5730, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = (targetX - q.x) / qd * Math.min(v * dt, qd);
@@ -40497,8 +40677,6 @@ function stepBattle(b, dt) {
           q.y += sy;
         } else if (\u8E0F\u3081\u308Bq(q.x + sx, q.y)) q.x += sx;
         else if (\u8E0F\u3081\u308Bq(q.x, q.y + sy)) q.y += sy;
-        const base = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
-        q.facing = base + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
         const \u843D\u3061\u7740\u304F\u5148 = clamp(28 + (q.\u7DF4 == null ? 70 : q.\u7DF4) * 0.34 + c.gen.lead * 0.28 + terr.cohesion * 4, 12, 96);
         q.cohesion += ((\u843D\u3061\u7740\u304F\u5148 - q.cohesion) * 0.1 + terr.cohesion * 0.25) * dt;
       } else {
@@ -41037,6 +41215,8 @@ function stepBattle(b, dt) {
       for (const q of c.squads) {
         q.foe = null;
         q.link = null;
+        q.\u9854\u6575 = null;
+        q.\u9854\u968A = null;
       }
       continue;
     }
@@ -41045,6 +41225,18 @@ function stepBattle(b, dt) {
       const st = ARM_STATS[q.type];
       const [melee, mdist] = nearestFoeSquad(c, q);
       q.foe = melee ? { x: melee.e.x, y: melee.e.y, d: mdist } : null;
+      {
+        const \u4ECA = q.\u9854\u6575;
+        let \u4FDD\u3064 = false;
+        if (\u4ECA && \u4ECA.men > 0 && melee) {
+          const \u9694 = Math.hypot(\u4ECA.x - q.x, \u4ECA.y - q.y);
+          \u4FDD\u3064 = \u9694 < 140 && mdist > \u9694 * 0.7;
+        }
+        if (!\u4FDD\u3064) {
+          q.\u9854\u6575 = melee ? melee.e : null;
+          q.\u9854\u968A = melee ? melee.f : null;
+        }
+      }
       if (melee && mdist < (c.\u7D44\u306E\u6700\u8FD1\u6B21 == null ? Infinity : c.\u7D44\u306E\u6700\u8FD1\u6B21)) c.\u7D44\u306E\u6700\u8FD1\u6B21 = mdist;
       q.link = null;
       if (!melee) continue;
