@@ -194,6 +194,18 @@ export function 前面まで(c, ux, uy) {
    隙は十八歩――槍の間合い（二十二歩で槍を合わせる）よりわずかに狭く取る。
    これより広いと槍が届かず、狭いと前列が重なって兵が混じる。 */
 export const 触れ隙 = 18;
+/* 戦の線の相手を替えない粘り。触れ合いが途切れても、〇.四秒のあいだ、三十歩のうちに
+   居るかぎりは、同じ相手に向けて線を引き続ける（下の「戦の線の相手」）。 */
+export const 線の粘り = 30;
+export const 線の粘り秒 = 0.4;
+/* 持ち場から百九十歩を超えて離れた組を、将のそばへ据え直すまでの猶予（秒）。 */
+export const 据え直す猶予 = 3;
+/* 持ち場の元（組の席を測る元の点。下の「持ち場の元」）。代表点が一刻みに動いた幅のうち、
+   この足（尺を掛ける前。騎馬の足）で歩ける幅までは同じだけ動き、超えたぶんは一秒の遅れで
+   追う。ずれが百二十歩を超えたら、代表点へ据え直す。 */
+export const 持ち場の歩ける足 = 56;
+export const 持ち場の粘り秒 = 1.0;
+export const 持ち場の離れの限り = 120;
 /* 触れ合う隔たりの上限。いまは席の差し渡しを持たない相手（軍船など）に
    四方の箱で測るときの、ただの歯止めである（GDD 8.3）。
 
@@ -875,7 +887,7 @@ export function stepBattle(b, dt) {
   for (const c of alive) {
     c.接敵 = null;
     c.敵向 = null;
-    if (城内(c.x, c.y) || !塊として立つ(c)) continue;
+    if (城内(c.x, c.y) || !塊として立つ(c)) { c.線の敵 = null; continue; }
     let 近 = 1e9, 敵近 = 1e9;
     for (const o of alive) {
       if (o.side === c.side || !塊として立つ(o)) continue;
@@ -885,6 +897,29 @@ export function stepBattle(b, dt) {
       if (ed > 460 || ed >= 近) continue;
       if (ed > 触れる隔たり(c, o, ex / ed, ey / ed) + 6) continue;
       近 = ed; c.接敵 = o;
+    }
+    /* 戦の線の相手（GDD 8.3）。
+
+       前列の組は、触れ合っている敵とのあいだに引いた「戦の線」に並ぶ（下の 前列か）。
+       ところが触れ合いは六歩の幅で決まるので、押し合いで塊がわずかに離れるたびに
+       立ったり消えたりする。消えた刻、前列の組は線を捨てて陣形の席へ戻ろうとし、
+       次の刻にはまた線へ向かう。鶴翼の翼の先では席と線とが百歩あまり離れているので、
+       組は一刻みごとに向きを変えて全速で行きつ戻りつした（測ると、騎馬の一組が
+       〇.〇〇四秒ごとに四歩ずつ、席まで百十六歩と百十九歩のあいだを往復し続けた）。
+
+       線を引く相手は、触れ合いが途切れても、〇.四秒のあいだは替えない（三十歩より
+       離れれば、すぐ替える）。刻みごとの立ち消えを跨ぐだけの短い間である。長く
+       留めると、退いていく敵に対しても中ほどの線に並んだまま追わなくなる（粘りを
+       隔たりだけで決めたとき、乱れた槍へ突き入った騎馬が線に留まり、槍が四百しか
+       減らなかった。tests/heika の「乱れた槍には、騎馬がほとんど無傷で勝つ」）。
+       足を止める・押し通るの判じ（接敵）は、これまでどおり六歩の幅で見る。 */
+    if (c.接敵) { c.線の敵 = c.接敵; c.線の刻 = b.t; }
+    else if (c.線の敵) {
+      const o = c.線の敵;
+      const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
+      if (b.t - (c.線の刻 == null ? -99 : c.線の刻) > 線の粘り秒
+        || o.dead || o.destroyed || o.日和見 || o.side === c.side || !塊として立つ(o) || ed < 0.5
+        || ed > 触れる隔たり(c, o, ex / ed, ey / ed) + 6 + 線の粘り) c.線の敵 = null;
     }
     /* 槍衾（GDD 8.4）。
 
@@ -951,6 +986,7 @@ export function stepBattle(b, dt) {
 
   // 代表点（武将の位置）を兵の側に留める。敗走中や分遣も含め、すべての隊に及ぼす。
   for (const c of alive) {
+    c.歩いた幅 = 0;                                  // この刻に自分の足で進んだ幅。歩みの段で書く
     // 代表点（武将の位置）が兵から離れすぎないようにする。
     // 兵が川や壁で足止めされている間に武将だけが先へ出てしまうのを防ぐ。
     {
@@ -1184,7 +1220,15 @@ export function stepBattle(b, dt) {
            ない。塊はもう一歩、懐へ入れる。ただし中どころが重なるまでは許さない。 */
         const 槍が届く = (x) => (x.組の最近 == null ? Infinity : x.組の最近) <= 噛み間 * 1.4;
         const 懐に入る = !槍が届く(c) && !槍が届く(o) && d2 > 触れ隙 * 1.5;
-        const 重 = 懐に入る ? -1 : 触れる隔たり(c, o, vx2, vy2) - d2;
+        /* 中どころどうしは、どの向きからでも寄りすぎない（GDD 8.3）。
+
+           触れ合う隔たりは席の差し渡しで測る。兵の減った隊どうしが、互いに組の居ない向きから
+           寄ると「塞ぐものが無い」と出て（隔たりが負になる）、押し戻しが働かない。二つの
+           代表点はそのまま重なる（tests/butsukari の盤を十二の種で回すと、一つで中どころが
+           三歩まで寄り、三百刻みのあいだ八歩を割っていた）。席の差し渡しがどう出ようと、
+           中どころどうしは触れ隙の六割（十一歩）より寄らないものとする。懐へ入るのを
+           許すのは二十七歩までなので、そちらには掛からない。 */
+        const 重 = Math.max(懐に入る ? -1 : 触れる隔たり(c, o, vx2, vy2) - d2, 触れ隙 * 0.6 - d2);
         if (重 > 0) {
           const 押 = 重 * 寄せ戻し;
           動かす(c, kc, -vx2 * 押, -vy2 * 押);
@@ -1510,6 +1554,7 @@ export function stepBattle(b, dt) {
       if (踏める(c.x + mvx, c.y + mvy)) { c.x += mvx; c.y += mvy; }
       else if (踏める(c.x + mvx, c.y)) c.x += mvx;
       else if (踏める(c.x, c.y + mvy)) c.y += mvy;
+      c.歩いた幅 = Math.hypot(c.x - 元x, c.y - 元y);       // この刻に自分の足で進んだ幅（下の「持ち場の元」）
       /* 「進めた」は、実際に足が出たかで判ずる。横へ滑るだけで零歩でも進んだことに
          していたので、水際に立ち尽くしたまま足止めを数えられなかった。 */
       const 進めた = Math.hypot(c.x - 元x, c.y - 元y) > 歩 * 0.25;
@@ -1624,8 +1669,56 @@ export function stepBattle(b, dt) {
     const 流 = MAP ? 隊の流れ(c) : null;              // 城の盤だけ（下の 回り先）
     const 曲輪の内 = (x, y) => MAP.layers.some((L) => inLayer(MAP, L, x, y));
     const 将は内 = 流 ? 曲輪の内(c.x, c.y) : false;
+    /* 持ち場の元（GDD 8.3）。
+
+       組の持ち場（席）は、隊の代表点から直に測っていた。ところが斬り結ぶ隊の代表点は細かく
+       跳ぶ。兵の重心へ引き戻す縄は、槍が合った刹那に長いものから短いものへ替わり、外へ出た
+       ぶんを一刻みで引き戻す（稲葉山城下の野戦を〇.〇〇四秒で刻むと、一刻みに六・十一・
+       十七・二十一・十七歩と続けて跳んだ）。重なった敵を押し戻す決まりは、重なりの六割を
+       一刻みで解く（触れ合う隔たりの帯が替わった刻に、一息に六歩、十二歩）。そのたび席が
+       丸ごと跳び、組は二.四倍の駆け足でそれを追う。遊ぶ側の申し出は「隊が四方八方に瞬間
+       移動というか、あっちこっちに動き回っていて変」であった。いちばん遅い速さ（微速）で
+       寄って見ると、斬り結ぶ脇を組が滑るように走り回る。
+
+       代表点の理（縄・押し戻し・足の止め方）には手を付けない。跳ぶのを嫌って縄を少しずつ
+       引くようにすると、代表点が敵の前面の手前に留まり、正面から当たった二隊の噛み合いが
+       半分に減った（tests/nirami 一の盤を十通りにずらして、延べ二千十六が九百五十五）。
+       戦の中身まで変えてしまう。
+
+       席を測る元の点を、代表点とは別に持つ。代表点が一刻みに動いた幅のうち、騎馬の足で
+       歩ける幅までは、同じだけ動く（行軍も、押し合いで地を得るのも、これまでどおり）。
+       それを超えたぶん――歩いたのではなく跳んだぶん――は、一秒の遅れで追う。盤を粗く刻む
+       速い進みでは、跳びも一刻みで歩ける幅に収まるので、席はこれまでと寸分違わない
+       （〇.二秒刻みで回す tests/sokumen は、この点を入れる前と後で数字が一つも変わら
+       なかった）。遅い速さほど、跳びが均される。
+
+       城の内は持ち場を門で決めており、崩れた隊・退く隊は走るので、代表点そのままとする。
+       同じ野戦（十八隊・八秒・〇.〇〇四秒刻み）で、組が刻みごとに向きを取り替えて行きつ
+       戻りつする数は、二万四千から数百へ減った。 */
+    {
+      const 前x = c.席前x == null ? c.x : c.席前x, 前y = c.席前y == null ? c.y : c.席前y;
+      c.席前x = c.x; c.席前y = c.y;
+      if (c.席x == null || 城内(c.x, c.y) || c.routed || c.withdraw) { c.席x = c.x; c.席y = c.y; }
+      else {
+        /* 歩ける幅は、騎馬の足と、隊がこの刻に自分の足で進んだ幅の一倍半の、大きいほう。
+           突撃の隊は騎馬の足より速い（一.三五倍）。騎馬の足だけで限ると、突撃のあいだ席が
+           代表点から遅れ続ける（騎馬ばかりの隊を〇.〇〇四秒刻みで突撃させると、席が代表点の
+           九十歩あまり後ろに残った）。隊が自分の足で進んだぶんは跳びではないので、席も
+           そのまま進める。 */
+        let mx = c.x - 前x, my = c.y - 前y;
+        const 動 = Math.hypot(mx, my);
+        const 幅 = Math.max(持ち場の歩ける足 * fieldScale() * dt, (c.歩いた幅 || 0) * 1.5);
+        if (動 > 幅) { mx *= 幅 / 動; my *= 幅 / 動; }
+        c.席x += mx; c.席y += my;
+        const 寄 = 1 - Math.exp(-dt / 持ち場の粘り秒);
+        c.席x += (c.x - c.席x) * 寄; c.席y += (c.y - c.席y) * 寄;
+        // 配り直しや盤の縁の留めで代表点が大きく移ったら、追わずに据え直す
+        if (Math.hypot(c.x - c.席x, c.y - c.席y) > 持ち場の離れの限り) { c.席x = c.x; c.席y = c.y; }
+      }
+    }
+    const 元x = c.席x, 元y = c.席y;
     for (const q of c.squads) {
-      let targetX = c.x + q.slotX, targetY = c.y + q.slotY;
+      let targetX = 元x + q.slotX, targetY = 元y + q.slotY;
       const st0 = ARM_STATS[q.type];
       /* 前列は戦の線を作る（GDD 8.3）。
 
@@ -1638,18 +1731,19 @@ export function stepBattle(b, dt) {
          こちらの前面と敵の前面の中ほどに引いた、敵へ向かう軸と直交する線である。
          横の並び順は陣形の席のまま――つまり隊列を崩さずに線を作る。
          後列は席を保ち、押し支えながら前が空くのを待つ。 */
-      const 前列か = c.接敵 && !q.reserve && st0.range === 0
+      const 前列か = c.線の敵 && !q.reserve && st0.range === 0
         && (q.座席 ? -(q.座席.y || 0) >= -(ROW * 1.2) : false);
-      if (c.接敵 && 前列か) {
-        const o = c.接敵;
-        const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey) || 1;
+      if (c.線の敵 && 前列か) {
+        const o = c.線の敵;
+        // 線も、持ち場の元どうしのあいだに引く（代表点が跳んでも線は跳ばない）
+        const ex = (o.席x == null ? o.x : o.席x) - 元x, ey = (o.席y == null ? o.y : o.席y) - 元y, ed = Math.hypot(ex, ey) || 1;
         const ux = ex / ed, uy = ey / ed;
         const vx = -uy, vy = ux;                       // 線に沿う向き
         // 席の横のずれを、そのまま線の上の並びに移す
         const 横 = (q.slotX || 0) * vx + (q.slotY || 0) * vy;
         const 前へ = Math.max(0, ed / 2 - 9);          // 前面と前面の中ほどの、少し手前
-        targetX = c.x + ux * 前へ + vx * 横;
-        targetY = c.y + uy * 前へ + vy * 横;
+        targetX = 元x + ux * 前へ + vx * 横;
+        targetY = 元y + uy * 前へ + vy * 横;
       } else if (aggressive && !c.routed && q.foe && !q.reserve
         /* 接戦では騎馬は翼で控える（GDD 8.4）。
 
@@ -1669,7 +1763,7 @@ export function stepBattle(b, dt) {
           targetX = q.foe.x + ux * want; targetY = q.foe.y + uy * want;
         }
         // 隊列から離れられるのは持ち場の周りだけ。隊を飛び出して単独で敵へ向かわない。
-        const homeX = c.x + q.slotX, homeY = c.y + q.slotY;
+        const homeX = 元x + q.slotX, homeY = 元y + q.slotY;
         const off = Math.hypot(targetX - homeX, targetY - homeY);
         // 組の第一の務めは陣形を保つこと。持ち場の周りをわずかに動くだけ。
         const leash = c.chargeT > 0 ? 24 : 14;
@@ -1735,10 +1829,18 @@ export function stepBattle(b, dt) {
          城の向こう側からなら二十五秒では着かないことがある */
       const 塀越し = homeD > 190 && MAP && !見通せる(q.x, q.y, targetX, targetY);
       q.塀越し刻 = 塀越し && !回り先 ? (q.塀越し刻 || 0) + dt : 0;
+      /* 据え直しは、歩いても戻れぬ組にだけ（GDD 8.3）。
+
+         もとは持ち場から百九十歩を超えた刻に、その場で将のそばへ飛ばしていた。
+         盤を広げて足を速めた（尺）のに、この百九十歩は元のままである。鶴翼の翼や、
+         斬り結びながら置いて行かれた組は、歩けば一秒足らずで戻れるのに、目の前で
+         消えて持ち場に現れた。壁や堀に阻まれて歩けぬ組を救うための決まりなのだから、
+         三秒のあいだ離れたままのときにだけ据え直す。そのあいだは歩いて追う。 */
+      q.遠い刻 = homeD > 190 ? (q.遠い刻 || 0) + dt : 0;
       if (回り先) { q.lost = false; targetX = 回り先.x; targetY = 回り先.y; }
       else if (塀越し && q.塀越し刻 <= 25) q.lost = true;
-      else if (homeD > 190) {
-        q.塀越し刻 = 0;
+      else if (homeD > 190 && q.遠い刻 >= 据え直す猶予) {
+        q.塀越し刻 = 0; q.遠い刻 = 0;
         let put = null;
         for (let k = 0; k < 18 && !put; k++) {
           const ang = k * 2.399, rr = k === 0 ? 0 : 12 + k * 8;
@@ -1752,15 +1854,46 @@ export function stepBattle(b, dt) {
         if (put) { q.x = put.x; q.y = put.y; q.lost = false; q.cohesion = Math.max(0, q.cohesion - 8); }
       }
       if (q.lost && c.trail && c.trail.length) {
-        // 自分にいちばん近い道筋の点より、ひとつ隊寄りの点を目指す
-        let bi = 0, bd = 1e9;
-        for (let k = 0; k < c.trail.length; k++) {
-          const d2 = Math.hypot(c.trail[k].x - q.x, c.trail[k].y - q.y);
-          if (d2 < bd) { bd = d2; bi = k; }
+        /* はぐれた組は、隊の来た道筋の「いちばん近い区間」を、隊寄りの端へ辿る（GDD 8.3）。
+
+           もとは「いちばん近い道筋の点から二十六歩より遠ければその点へ、近ければ
+           ひとつ隊寄りの点へ」と決めていた。道筋の点は〇.六秒ごとに打つ。盤を広げて
+           足を速めてからは、点と点のあいだが百歩を超える。組は近い点の二十六歩の内に
+           入って次の点へ向かうが、一歩出ればまだ同じ点がいちばん近く、今度は二十六歩の
+           外なので、その点へ引き返す。そこでまた次の点へ――二つの向きを刻みごとに
+           取り替えて、同じ所を行きつ戻りつするだけで、隊へは戻れなかった（稲葉山城下の
+           野戦で測ると、平手政秀隊の騎馬八組が五百歩うしろで足踏みを続け、やがて
+           持ち場へ据え直された。盤の上では、組が震えたのちに消えて現れる）。
+
+           点ではなく区間で見る。道筋から外れていれば、まず道筋のいちばん近い所へ戻り、
+           道筋の上にいれば、その区間の隊寄りの端へ進む。端に着けば次の区間が
+           いちばん近くなるので、引き返すことがない。
+
+           道筋の末（隊のいま居る辺り）から先は、その組の行き先（持ち場。前列なら戦の線）
+           までを、もう一本の区間として継ぐ。道筋だけを辿らせると、組は将のそばまで戻った
+           きり持ち場へ向かわない――「はぐれ」が解けるのは持ち場まで四十歩に寄ったとき
+           なのに、辿る先は道筋の末だからである。もとは足踏みのうちに据え直されていたので
+           表に出なかった。歩いて戻れるようにすると、組が将の足元に溜まり、槍が一つも
+           合わぬまま隊の塊だけが敵を押して野を渡った（tests/chirabaru 三。四隊が一点に
+           重なり、七十五秒のあいだ噛み合う組が無かった）。 */
+        const T = c.trail, 末 = T.length;
+        const 行x = targetX, 行y = targetY;
+        const 端 = (k) => (k < 末 ? T[k] : { x: 行x, y: 行y });
+        let 先 = 末, bd = 1e18, 近x = 行x, 近y = 行y;
+        for (let k = 0; k < 末; k++) {
+          const ax = T[k].x, ay = T[k].y, bx = 端(k + 1).x - ax, by = 端(k + 1).y - ay;
+          const L2 = bx * bx + by * by;
+          const t = L2 > 0 ? clamp(((q.x - ax) * bx + (q.y - ay) * by) / L2, 0, 1) : 0;
+          const px = ax + bx * t, py = ay + by * t;
+          const d2 = (q.x - px) * (q.x - px) + (q.y - py) * (q.y - py);
+          if (d2 <= bd) { bd = d2; 先 = k + 1; 近x = px; 近y = py; }   // 同じ隔たりなら隊寄りの区間
         }
-        const nx3 = c.trail[Math.min(c.trail.length - 1, bi + 1)];
-        if (bd > 26) { targetX = c.trail[bi].x; targetY = c.trail[bi].y; }
-        else { targetX = nx3.x; targetY = nx3.y; }
+        /* 区間の端まで十六歩に寄れば、着いたものとして次の端へ進む。端の手前で足を
+           止める幅（二歩）に入ると、いつまでも「端の手前」のままで次の区間へ移れない */
+        const 着いた = (k) => Math.hypot(端(k).x - q.x, 端(k).y - q.y) < 16;
+        if (着いた(先)) { while (先 < 末 && 着いた(先)) 先++; targetX = 端(先).x; targetY = 端(先).y; }
+        else if (bd > 26 * 26) { targetX = 近x; targetY = 近y; }
+        else { targetX = 端(先).x; targetY = 端(先).y; }
       }
       const qd = Math.hypot(targetX - q.x, targetY - q.y);
       const terr = TERRAIN[q.地];
@@ -1800,8 +1933,40 @@ export function stepBattle(b, dt) {
          横腹を衝かれた隊の「その辺の兵がそちらを向く」はこれである――兵は
          振り向くが、陣形は元の向きに伸びたままで、そこが横撃の利になる
          （tests/sokumen.cjs）。一息には向き直らず、二秒ほどで据わる。 */
+      /* 組の向きは、相手の組ではなく、相手の隊の方角で決める（GDD 8.3）。
+
+         もとは「いちばん近い敵の組」の方角へ向けていた。槍を合わせて入り乱れると、前の敵、
+         横の敵、背の敵が、みな十数歩の内に居る。相手は数刻みごとに入れ替わり、同じ相手でも
+         脇を擦れ違えば方角が半回りする。歩いている組は向きを一息に据え直していたので、
+         一刻みで百七十度あまり跳び、絵の兵はそれを追って回り続けた（稲葉山城下の野戦を
+         〇.〇〇四秒で刻むと、一秒足らずのあいだに、組の向きが延べ九百から千四百度も
+         変わった）。遊ぶ側の申し出は「横一列の隊がクルクル回るような変な挙動」であった。
+
+         一人一人の兵は目の前の敵へ顔を向ける（絵の側で、兵ごとに決めている）。組――
+         五十人の列――が向くのは、斬り結んでいる相手の「隊」のほうである。隊と隊の方角は
+         ゆっくりとしか変わらないので、入り乱れても列は回らない。横から別の隊に噛まれた組は、
+         その隊のほうへ向き直る（横腹を衝かれた兵が振り向くのは、これまでどおり）。
+         隊どうしが二十歩より寄って方角が定まらぬうちは、陣の向きのままとし、四十歩までの
+         あいだで滑らかに移す。相手の居ない行軍では、隊の向きにそろえる。
+
+         歩いているときも、一息には向き直らない。もとは歩くたびに向きを据え直していた
+         （相手を見失った刹那に、三十度ほど跳ぶ）。向きは盤の理には使っておらず、絵が
+         読むだけなので、いつでも同じ速さ（一秒に百五十度まで）で寄せる。 */
+      const 顔 = q.顔敵 && q.顔敵.men > 0 && Math.hypot(q.顔敵.x - q.x, q.顔敵.y - q.y) < 140 ? q.顔敵 : null;
       {
-        const 的 = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
+        let 的 = c.facing;
+        if (顔) {
+          /* 隊と隊の方角は、兵の重心（将の居所）どうしで測る。代表点は陣の前列にあり、
+             斬り結べば相手の代表点と擦れ違うので、代表点どうしで測ると向きが裏返る */
+          const f = q.顔隊;
+          const ax = c.gx == null ? 元x : c.gx, ay = c.gy == null ? 元y : c.gy;
+          const fx = f ? (f.gx == null ? f.x : f.gx) : 顔.x, fy = f ? (f.gy == null ? f.y : f.gy) : 顔.y;
+          const 隔 = Math.hypot(fx - ax, fy - ay);
+          const 陣 = c.陣向き == null ? c.facing : c.陣向き;
+          const 寄 = clamp((隔 - 20) / 20, 0, 1);
+          const 開 = 隔 > 0.5 ? ((Math.atan2(fy - ay, fx - ax) - 陣 + Math.PI * 3) % (Math.PI * 2)) - Math.PI : 0;
+          的 = 陣 + 開 * 寄;
+        }
         const 望向 = 的 + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
         const 差 = ((望向 - q.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
         q.facing += clamp(差, -2.6 * dt, 2.6 * dt);
@@ -1817,7 +1982,7 @@ export function stepBattle(b, dt) {
            持ち場から遅れているぶんだけ、足を速められるようにする。
            駆け足で列に戻る、というだけのことである。追いついた組は元の速さに戻り、
            行き過ぎることもない（歩幅は残りの隔たりで頭打ちにしてある）。 */
-        const 遅れ = Math.hypot(q.x - (c.x + q.slotX), q.y - (c.y + q.slotY));
+        const 遅れ = Math.hypot(q.x - (元x + q.slotX), q.y - (元y + q.slotY));
         const 追いつき = c.routed ? 1 : clamp(1 + 遅れ / 34, 1, 2.4);
         // 斬り結びながら寄り直すのだから、足は半ばである
         const v = st0.speed * 追いつき * (噛みでも戻る ? 0.45 : 1) * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
@@ -1841,8 +2006,6 @@ export function stepBattle(b, dt) {
         if (踏めるq(q.x + sx, q.y + sy)) { q.x += sx; q.y += sy; }
         else if (踏めるq(q.x + sx, q.y)) q.x += sx;
         else if (踏めるq(q.x, q.y + sy)) q.y += sy;
-        const base = q.foe && q.foe.d < 140 ? Math.atan2(q.foe.y - q.y, q.foe.x - q.x) : c.facing;
-        q.facing = base + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;   // 乱れて初めて向きがずれる
         /* 行軍のあいだの陣形維持（GDD 8.3）。
 
            これまでは、歩けば毎秒じわじわ減るだけで、歩きながら整える道がなかった。
@@ -2498,7 +2661,7 @@ export function stepBattle(b, dt) {
     c.組の最近 = c.組の最近次 == null ? Infinity : c.組の最近次;
     c.組の最近次 = null;
     if (!c.敵が近い) {
-      for (const q of c.squads) { q.foe = null; q.link = null; }
+      for (const q of c.squads) { q.foe = null; q.link = null; q.顔敵 = null; q.顔隊 = null; }
       continue;
     }
     for (const q of c.squads) {
@@ -2506,6 +2669,19 @@ export function stepBattle(b, dt) {
       const st = ARM_STATS[q.type];
       const [melee, mdist] = nearestFoeSquad(c, q);
       q.foe = melee ? { x: melee.e.x, y: melee.e.y, d: mdist } : null;
+      /* 顔を向ける相手は、たやすく替えない（GDD 8.3。向きの決め方は、組の足の段の
+         「組の向き」を参照）。いちど顔を向けた相手は、討たれるか、百四十歩より離れるか、
+         別の敵がその七割より近くへ寄るまで、替えない。噛み合い・間合い・射かけの相手
+         （q.foe・q.link）は、これまでどおりいちばん近い敵で決める。 */
+      {
+        const 今 = q.顔敵;
+        let 保つ = false;
+        if (今 && 今.men > 0 && melee) {
+          const 隔 = Math.hypot(今.x - q.x, 今.y - q.y);
+          保つ = 隔 < 140 && mdist > 隔 * 0.7;
+        }
+        if (!保つ) { q.顔敵 = melee ? melee.e : null; q.顔隊 = melee ? melee.f : null; }
+      }
       if (melee && mdist < (c.組の最近次 == null ? Infinity : c.組の最近次)) c.組の最近次 = mdist;
       q.link = null;
       if (!melee) continue;

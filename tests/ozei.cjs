@@ -83,8 +83,18 @@ console.log('── 一　隊が多くても、委ねた隊は立ち尽くさな
   for (const n of [16, 32]) {
     賽を据える(0x2B17);
     const b = 盤を組む(n);
-    const 初 = new Map(b.corps.map((c) => [c.id, { x: c.x, y: c.y }]));
-    for (let k = 0; k < 150; k++) A.stepBattle(b, 0.2);
+    const 初 = new Map(b.corps.map((c) => [c.id, { x: c.x, y: c.y, 遠: 0 }]));
+    /* 動いたかどうかは、三十秒のあいだにいちばん遠くまで出た所で見る。終わりの居所だけで
+       見ると、三百五十歩も出てから采配に呼び戻された隊を「立ち尽くした」と数えてしまう
+       （組の持ち場の測り方を直して采配の賽がずれたとき、味方13がこれに当たった。出立ちから
+       十九歩の所に居たが、十五秒の刻には三百五十五歩先に居た） */
+    for (let k = 0; k < 150; k++) {
+      A.stepBattle(b, 0.2);
+      for (const c of b.corps) {
+        const s0 = 初.get(c.id);
+        if (s0) s0.遠 = Math.max(s0.遠, Math.hypot(c.x - s0.x, c.y - s0.y));
+      }
+    }
     let 不動 = 0, 圏外 = 0, 検 = 0;
     const 名 = [];
     for (const c of b.corps) {
@@ -93,8 +103,7 @@ console.log('── 一　隊が多くても、委ねた隊は立ち尽くさな
       if (!s0) continue;                                 // 戦中に割いた分遣は数えない
       検++;
       if (A.outOfCommand(b, c)) 圏外++;
-      const 動 = Math.hypot(c.x - s0.x, c.y - s0.y);
-      if (動 < 40 && !(c.squads || []).some((q) => q.engaged)) { 不動++; 名.push(c.gen.name); }
+      if (s0.遠 < 40 && !(c.squads || []).some((q) => q.engaged)) { 不動++; 名.push(c.gen.name); }
     }
     確(`片側${n}隊でも、伝令の届かぬ隊が出る（検めが空でない）`, 圏外 > 0, `${検}隊のうち圏外 ${圏外}`);
     確(`片側${n}隊で、動かぬまま立ち尽くす隊がない`, 不動 === 0,

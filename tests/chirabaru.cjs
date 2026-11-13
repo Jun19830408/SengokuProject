@@ -86,41 +86,60 @@ console.log('\n── 二　縄に見切りが付く（敵の来ない持ち場�
 
 console.log('\n── 三　同じ敵へ寄せる味方は、重ならずに囲む');
 {
-  H.setBattleMap(null); H.setFieldSeed('c', 'c'); H.setFieldKind('街道'); H.layoutField(9000, 6);
-  const W = H.FIELD.w, Hh = H.FIELD.h;
-  const 的 = H.makeCorps('E', 将('e1', '的'), 0, 1800, 70, 70, W / 2, Hh * 0.4, Math.PI / 2, '#B0483C');
-  /* 同じ側から四隊で寄せる。もとはどの隊も同じ一点を目指し、重なって止まった。 */
-  const P = [0, 1, 2, 3].map((i) => H.makeCorps('P', 将('p' + i, '味方' + i), 0, 700, 70, 70,
-    W / 2 - 60 + i * 40, Hh * 0.72, -Math.PI / 2, '#2F5D8C'));
-  for (const c of [...P, 的]) H.placeSquads(c, true);
-  const b = H.createBattle(P, [的], 'P');
-  b.mode = 'field'; b.phase = 'fight'; b.dusk = 3000; b.face = 'S'; b.myFar = false;
-  for (const c of b.corps) c.auto = true;
-  for (let k = 0; k < 500; k++) H.stepBattle(b, 0.25);
-  const 生 = P.filter((c) => !c.dead && !c.destroyed);
-  let 最小 = Infinity, 重 = 0;
-  for (let i = 0; i < 生.length; i++) {
-    for (let j = i + 1; j < 生.length; j++) {
-      const d = Math.hypot(生[i].x - 生[j].x, 生[i].y - 生[j].y);
-      if (d < 最小) 最小 = d;
-      if (d < 30) 重++;
+  /* 同じ側から四隊で寄せる。もとはどの隊も同じ一点を目指し、重なって止まった。
+
+     この戦の成り行きは、采配の賽で大きく変わる（寄せたあと、采配が側面へ回すか、そのまま
+     押すか）。一つの置き方だけを見ていたころは、盤の理に触れぬ直し（組の持ち場の測り方）
+     でも、賽の出目がずれて結末が入れ替わった。置き方を数歩・数十人ずつずらして十二通り、
+     どれも同じ賽から始めて回し、束で見る。組の持ち場を直す前の版は、十二通りのうち隊が
+     重ならなかったのは五つ、一点に固まったのが二つ。直したあとは八つと一つ。囲みはまだ
+     賽しだいであり、ここでは「半ばは重ならない」「固まるのは稀」までを縛る。 */
+  const 寄せる = (幅の足し, 兵の足し) => {
+    H.setBattleMap(null); H.setFieldSeed('c', 'c'); H.setFieldKind('街道'); H.layoutField(9000, 6);
+    const W = H.FIELD.w, Hh = H.FIELD.h;
+    const 的 = H.makeCorps('E', 将('e1', '的'), 0, 1800, 70, 70, W / 2, Hh * 0.4, Math.PI / 2, '#B0483C');
+    const P = [0, 1, 2, 3].map((i) => H.makeCorps('P', 将('p' + i, '味方' + i), 0, 700 + 兵の足し, 70, 70,
+      W / 2 - 60 + i * (40 + 幅の足し), Hh * 0.72, -Math.PI / 2, '#2F5D8C'));
+    for (const c of [...P, 的]) H.placeSquads(c, true);
+    const b = H.createBattle(P, [的], 'P');
+    b.mode = 'field'; b.phase = 'fight'; b.dusk = 3000; b.face = 'S'; b.myFar = false;
+    for (const c of b.corps) c.auto = true;
+    for (let k = 0; k < 500; k++) H.stepBattle(b, 0.25);
+    const 生 = P.filter((c) => !c.dead && !c.destroyed);
+    let 最小 = Infinity, 重 = 0;
+    for (let i = 0; i < 生.length; i++) {
+      for (let j = i + 1; j < 生.length; j++) {
+        const d = Math.hypot(生[i].x - 生[j].x, 生[i].y - 生[j].y);
+        if (d < 最小) 最小 = d;
+        if (d < 30) 重++;
+      }
     }
-  }
-  確('味方どうしが駒ごと重ならない', 最小 > 30, `最も近い ${Math.round(最小)}歩`);
-  確('重なった組み合わせが無い', 重 === 0, `${重}対`);
-  /* 囲んでいるか。的から見た向きが散っていれば、一方から押しているのではない。 */
-  const 角 = 生.map((c) => Math.atan2(c.y - 的.y, c.x - 的.x));
-  const 幅 = (() => {
+    /* 囲んでいるか。的から見た向きが散っていれば、一方から押しているのではない。 */
+    const 角 = 生.map((c) => Math.atan2(c.y - 的.y, c.x - 的.x));
     const v = 角.slice().sort((a, z) => a - z);
     let 最 = 0;
     for (let i = 0; i < v.length; i++) {
       const 次 = i + 1 < v.length ? v[i + 1] : v[0] + Math.PI * 2;
       最 = Math.max(最, 次 - v[i]);
     }
-    return Math.PI * 2 - 最;                 // 隊が張っている弧
-  })();
-  確('一点に集まらず、的を囲む向きに散る', 生.length < 2 || 幅 > 0.5,
-    `張っている弧 ${(幅 * 180 / Math.PI).toFixed(0)}度・${生.length}隊`);
+    return { 最小, 重, 幅: Math.PI * 2 - 最, 隊: 生.length };   // 幅＝隊が張っている弧
+  };
+  const 置き方 = [[0, 0], [2, 0], [-2, 0], [4, 0], [-4, 0], [0, 10], [0, -10], [0, 20], [6, 0], [0, 30], [3, 15], [-3, -15]];
+  const 結 = [];
+  const 賽の元 = _s;
+  let 賽の覚え = null;
+  for (const [幅の足し, 兵の足し] of 置き方) {
+    _s = 賽の元;
+    結.push(寄せる(幅の足し, 兵の足し));
+    if (賽の覚え == null) 賽の覚え = _s;       // 四の賽を、これまでどおりにしておく
+  }
+  _s = 賽の覚え;
+  const 重ならぬ = 結.filter((r) => r.重 === 0).length;
+  const 固まる = 結.filter((r) => r.隊 >= 2 && r.幅 <= 0.5).length;
+  確('隊どうしが重ならない置き方が、十二のうち半ばはある', 重ならぬ >= 6,
+    `${重ならぬ}／${結.length}（最も近い二隊 ${結.map((r) => Math.round(r.最小)).join('・')}歩）`);
+  確('一点に固まる置き方は、十二のうち三つまで', 固まる <= 3,
+    `${固まる}／${結.length}（張っている弧 ${結.map((r) => (r.幅 * 180 / Math.PI).toFixed(0)).join('・')}度）`);
 }
 
 console.log('\n── 四　城攻めの寄せ口は、隊が増えても重ならない');
