@@ -23,7 +23,7 @@ import { 木立を並べる, 木を描く } from "./mori.js";
 import { 里を並べる, 葦を描く, 村の道は横か, 家をよける, 家々を据える } from "./sato.js";
 import { 城の物を並べる, 城壁をよける } from "./tachimono.js";
 import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS, ROAD,
-  RIVER, hasRiver, riverShift, fieldScale } from "./field.js";
+  RIVER, hasRiver, riverShift, fieldScale, passable, terrainAt } from "./field.js";
 
 /* どの盤でも新しい絵で描く。棚の sengoku:旧絵 が「入」なら使わない（逃げ道）。
 
@@ -2943,6 +2943,42 @@ export function 持上高(x, y) {
 }
 
 /* ---- 見た目の状態。盤には書かない（WeakMapは記録にも載らない） ---- */
+/* 城の盤で、兵の持ち場が通れない地（塀・虎口の壁・閉じた門・櫓）に掛からぬようにする（GDD 8.11）。
+
+   遊ぶ側の申し出は「城門を挟んで戦っているところで、攻勢側、守勢側ともに城門をはみ出す
+   ところが所々見受けられる」であった。兵は組の芯のまわり十数歩に散って立つ。これまで
+   避けていたのは「輪の外の縁を越えて向こう側へ出ること」だけ（tachimono.js 城壁をよける）で、
+   塀の厚みの中、虎口（枡形）の壁、門の脇の柱に掛かる持ち場は、そのままであった。門の
+   間口は狭く、そこで斬り結ぶ組は寄せ手も城方も塀の厚みの中にいるので、両脇の兵が塀や
+   門に重なって立っていた。
+
+   盤の理（組の芯）は通れる地にしか居ない。持ち場が通れない地に掛かるか、芯から持ち場
+   までのあいだに通れない地を挟むなら、その手前――芯の側――へ寄せる。絵の上だけの話で、
+   盤の組の居場所は動かさない。
+   城方の組は自分の城の閉じた門の中に居ることがある（field.js passableFor）。そのときは
+   門の地も立てる所に数える。 */
+const 立てる所か = (x, y, 芯の地) => passable(x, y) || (芯の地 === "gate" && terrainAt(x, y) === "gate");
+function 塞がりをよける(qx, qy, x, y, 芯の地) {
+  const dx = x - qx, dy = y - qy, 長 = Math.hypot(dx, dy);
+  if (長 < 0.5) return null;
+  const n = Math.max(1, Math.ceil(長 / 3));            // 芯から持ち場へ、三歩ごとに見る（虎口の壁は厚さ五歩）
+  for (let k = 1; k <= n; k++) {
+    const t = k / n;
+    if (立てる所か(qx + dx * t, qy + dy * t, 芯の地)) continue;
+    const 止 = Math.max(0, (k - 1) / n - 2.2 / 長);     // 塞がりの手前。際から二歩あまり空ける
+    return [qx + dx * 止, qy + dy * 止];
+  }
+  return null;
+}
+/* 組の芯のまわり（十四歩と二十六歩の八方）に通れない地があるか。兵の散る幅は十数歩なので、
+   無ければその組の兵は量らなくてよい（重いのは壁際の組だけにする） */
+function 壁際か(x, y) {
+  for (let k = 0; k < 8; k++) {
+    const c = Math.cos(k * Math.PI / 4), s = Math.sin(k * Math.PI / 4);
+    if (!passable(x + c * 14, y + s * 14) || !passable(x + c * 26, y + s * 26)) return true;
+  }
+  return false;
+}
 const 組態 = new WeakMap();
 const 盤態 = new WeakMap();
 const 組の態 = (q) => { let s = 組態.get(q);
@@ -2950,6 +2986,8 @@ const 組の態 = (q) => { let s = 組態.get(q);
     借り: 0, 前qx: q.x, 前qy: q.y,
     生: new Uint8Array(50), 歩距: new Float32Array(50), 速: new Float32Array(50),
     進x: new Float32Array(50), 進y: new Float32Array(50), 描: new Float32Array(50),
+    押x: new Float32Array(50), 押y: new Float32Array(50),
+    刻初x: new Float32Array(50), 刻初y: new Float32Array(50),
     初: false, prevMen: q.men, prevCool: q.cool || 0, 撃刻: -99, 向: q.facing || 0, 伸: 8, 偏x: 0, 偏y: 0,
     見t: -99, 噛: false, 構: false, 目: new Int8Array(50).fill(-1) };
     組態.set(q, s); }
@@ -3270,6 +3308,10 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
      兵が一人も出なかった（地面だけが映る）。刻がゼロなら誰も動かないが、
      初めての組を持ち場に据える仕事は要る。 */
   const 集め = [];                                   // 敵味方の押し分けに使う（下）
+  const 歩み = [];                                   // 歩いた幅を刻の終わりに積む組（下）
+  /* 破れた門の数。門が破れれば通れる地が変わるので、壁際の覚えを量り直す合図にする */
+  let 破れ数 = 0;
+  if (b.map && b.map.layers) for (const l of b.map.layers) for (const g of l.gates) if (g.broken) 破れ数++;
   if (dt > 0) 敵の組を離す(b, dt, viewRect);
   for (const c of b.corps) {
     if (c.dead || c.destroyed) continue;
@@ -3399,6 +3441,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
           if (j <= i) break;
           s.sx[i] = s.sx[j]; s.sy[i] = s.sy[j]; s.速[i] = s.速[j]; s.歩距[i] = s.歩距[j];
           s.描[i] = s.描[j]; s.進x[i] = s.進x[j]; s.進y[i] = s.進y[j]; s.目[i] = s.目[j]; s.生[i] = 1;
+          s.押x[i] = s.押x[j]; s.押y[i] = s.押y[j];
           死[j] = 1; j--;
         }
       }
@@ -3434,16 +3477,39 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
          越えない。両の組が同じ線で止まるので、前列どうしが向き合って押し合う。
          敵味方が入り混じって見えたのは、この線が無く、前列が敵の列の中まで
          伸びていたからである。 */
-      let 線 = null;
+      /* 線は「前へどこまで出るか」の限りとして効かせ、列は曲げない（GDD 8.11）。
+
+         もとは線より先の兵を、一人ずつ線の上へ押し付けていた。盤の上では敵味方の組は
+         互いをすり抜ける（斬り結ぶ間合いは十五歩だが、それより寄るのを止める決まりは
+         無い）ので、相手が七、八歩まで寄ると線は組の二列め三列めを横切り、重なるほど寄れば
+         組の芯を通る。線より先の兵はみな線の上へ並び、五十人が一本の列になった。兵の
+         減った組は初めから一列である。しかも線は相手の方角に直に引くから、相手が脇を
+         擦れ違えば、その一本の列がぐるりと回る。遊ぶ側の申し出は「横一列の隊がクルクル
+         回るような変な挙動」であった。
+
+         組の向き（列の並ぶ向き）はそのままに、前へ出る深さだけを線で限る。相手が斜めに
+         居ても列は斜めに折れず、組は四角いまま、前の列が下がるだけである。線は組の芯から
+         七歩より手前へは引かず（押し下げられるのは前の一列まで）、相手が組の前（左右
+         八十度足らずの内）に居るときだけ効かせる。横や背の相手には、列を畳まない。
+         線の向きは、相手の方角へ一秒に百十五度までしか回さない。 */
+      let 限 = Infinity;
       if (q.link && 噛み中) {
         const nx0 = q.link.x - q.x, ny0 = q.link.y - q.y, nd = Math.hypot(nx0, ny0);
-        if (nd > 0.5) 線 = { mx: (q.x + q.link.x) / 2, my: (q.y + q.link.y) / 2, nx: nx0 / nd, ny: ny0 / nd };
-      }
-      const 線の内 = (x, y) => {
-        if (!線) return 0;
-        const e = (x - 線.mx) * 線.nx + (y - 線.my) * 線.ny + 0.95;   // 線から〇.九五歩は空ける
-        return e > 0 ? e : 0;
-      };
+        if (nd > 0.5) {
+          let 角 = Math.atan2(ny0, nx0);
+          if (s.線角 != null) {
+            let 差 = 角 - s.線角; 差 -= Math.round(差 / (Math.PI * 2)) * Math.PI * 2;
+            角 = s.線角 + Math.max(-2 * dt, Math.min(2 * dt, 差));
+          }
+          s.線角 = 角;
+          const 前向き = Math.cos(角 - th);               // 相手が組の正面なら一、真横なら零
+          /* 線までの隔たりは、絵の上の組の芯（s.dx, s.dy）から測る。盤の組の居場所から
+             測ると、絵の芯が盤より遅れたり、重なった組をずらしたり（偏）しているぶんだけ
+             線がずれ、両の組の前列が同じ線で止まらない。 */
+          const 線まで = ((q.x + q.link.x) / 2 - s.dx) * Math.cos(角) + ((q.y + q.link.y) / 2 - s.dy) * Math.sin(角);
+          if (前向き > 0.2) 限 = Math.max(線まで, 7) / 前向き - 0.95;   // 線から〇.九五歩は空ける
+        } else s.線角 = null;
+      } else s.線角 = null;
       s.噛 = 噛み中;                                     // 描く側（突きの拍）も同じ印で見る
       /* 槍衾の構え。噛み合う前でも、敵の組が六十歩のうちに組の前（左右六十度の内）へ来れば、
          前の二列は槍を水平に下ろして待つ（描く側も同じ印 s.構 で見る）。横や後ろの敵にまで
@@ -3461,6 +3527,13 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
          前に突き出すように」） */
       const 的 = c.routed ? null : 噛み中 && q.link ? q.link
         : q.aim && b.t - q.aim.t < 3 ? q.aim : s.構 ? q.foe : null;
+      const 押残 = Math.exp(-dt / 押しの戻り秒);
+      let 壁際 = false, 芯の地 = null;
+      if (b.map) {
+        const 鍵 = Math.round(q.x / 3) * 100003 + Math.round(q.y / 3) + 破れ数 * 7919;
+        if (s.際鍵 !== 鍵) { s.際鍵 = 鍵; s.際 = 壁際か(q.x, q.y); }
+        壁際 = s.際; if (壁際) 芯の地 = terrainAt(q.x, q.y);
+      }
       for (let n = 0; n < alive; n++) {
         const o = 場[n];
         /* 噛み合いの深さは、生の engaged でなく均した 噛み中 で切り替える。生の印は刻ごとに
@@ -3469,7 +3542,14 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
         const 深 = 噛み中
           ? (-前 + o[2] * 刻み + (o[1] - (-8 + o[2] * (q.type === "kiba" ? 3.6 : 2.6))))
           : o[1];
-        let tx = s.dx + lx * o[0] + bx * (深 + 押), ty = s.dy + ly * o[0] + by * (深 + 押);
+        /* 敵の兵に押し分けられた者は、押された先に留まる（下の 敵味方を押し分ける）。
+           押された幅は 押しの戻り秒 をかけて抜けて行く。 */
+        s.押x[n] *= 押残; s.押y[n] *= 押残;
+        let tx = s.dx + lx * o[0] + bx * (深 + 押) + s.押x[n], ty = s.dy + ly * o[0] + by * (深 + 押) + s.押y[n];
+        if (限 < Infinity) {                              // 前へは、槍合わせの線まで
+          const e = -((tx - s.dx) * bx + (ty - s.dy) * by) - 限;
+          if (e > 0) { tx += bx * e; ty += by * e; }
+        }
         /* 本陣の陣に、ほかの兵を被せない（GDD 8.11）。
 
            将と馬廻を本陣に据えたところ、そこは隊の只中なので歩兵の列に埋もれた
@@ -3493,11 +3573,12 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
             }
           }
         }
-        { const e = 線の内(tx, ty); if (e) { tx -= 線.nx * e; ty -= 線.ny * e; } }
         if (家よけ) { const p = 家をよける(tx, ty); if (p) { tx = p[0]; ty = p[1]; } }   // 持ち場が家の中なら外へ（sato.js）
         if (b.map) { const p = 城壁をよける(b.map, q.x, q.y, tx, ty); if (p) { tx = p[0]; ty = p[1]; } }   // 城壁の向こうへ掛からぬよう（tachimono.js）
+        if (壁際) { const p = 塞がりをよける(q.x, q.y, tx, ty, 芯の地); if (p) { tx = p[0]; ty = p[1]; } }   // 塀の厚み・虎口の壁・門の柱に掛からぬよう
         if (!s.初) {
-          s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; s.速[n] = 0; s.描[n] = s.向; continue; }
+          s.sx[n] = tx; s.sy[n] = ty; s.生[n] = 1; s.速[n] = 0; s.描[n] = s.向; s.押x[n] = 0; s.押y[n] = 0;
+          s.刻初x[n] = tx; s.刻初y[n] = ty; continue; }
         if (!s.生[n]) {
           /* 新しく立つ兵（数の増え・本陣への借りの返し）は、隣の兵の所から歩み出る。
              もとは持ち場にいきなり現れていた。 */
@@ -3505,11 +3586,13 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
           s.sx[n] = k >= 0 ? s.sx[k] : s.dx; s.sy[n] = k >= 0 ? s.sy[k] : s.dy;
           s.生[n] = 1; s.速[n] = 0; s.描[n] = k >= 0 ? s.描[k] : s.向;
           s.歩距[n] = k >= 0 ? s.歩距[k] + 4.5 : 0; s.進x[n] = 0; s.進y[n] = 0; s.目[n] = -1;
+          s.押x[n] = 0; s.押y[n] = 0;
         }
         const vx = tx - s.sx[n], vy = ty - s.sy[n], d = Math.hypot(vx, vy);
         let mv = 0;
+        s.刻初x[n] = s.sx[n]; s.刻初y[n] = s.sy[n];      // この刻の初めの立ち所（歩いた幅は、刻の終わりにここから測る）
         /* 瞬間移動させるのは、ごく遠いとき（盤の繕いの取りこぼし）だけである */
-        if (d > 600 * 尺) { s.sx[n] = tx; s.sy[n] = ty; }
+        if (d > 600 * 尺) { s.sx[n] = tx; s.sy[n] = ty; s.刻初x[n] = tx; s.刻初y[n] = ty; }
         /* 兵の足は、組の芯の足（騎馬百七十・徒百十）より速く取る。芯より遅いと、
            盤が組を飛ばしたときに兵が置いて行かれ、隊が「打ち寄せる波」のように崩れる。
            ふだんの歩みは芯について行くだけなので、この上限には届かない。 */
@@ -3518,8 +3601,8 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
           /* 線を越えた者は線の手前へ戻す。ただし一刻に戻すのは足の上限の半分まで。
              噛み合いが始まった刹那に線が立つと、線の向こうまで駆け込んでいた騎馬が
              一息に三十歩も引き戻されていた（瞬間移動）。歩いて下がらせる。 */
-          { const e = 線の内(s.sx[n], s.sy[n]);
-            if (e) { const 戻 = Math.min(e, (q.type === "kiba" ? 92 : 62) * 尺 * dt); s.sx[n] -= 線.nx * 戻; s.sy[n] -= 線.ny * 戻; } }
+          if (限 < Infinity) { const e = -((s.sx[n] - s.dx) * bx + (s.sy[n] - s.dy) * by) - 限;      // 線より前へ出たぶん
+            if (e > 0) { const 戻 = Math.min(e, (q.type === "kiba" ? 92 : 62) * 尺 * dt); s.sx[n] += bx * 戻; s.sy[n] += by * 戻; } }
           /* 歩いた先が家の中なら、壁に沿って外へ。行き先へまっすぐ向かう途中に家があれば、
              壁を伝って角を回る */
           if (家よけ) { const p = 家をよける(s.sx[n], s.sy[n], 0.6); if (p) { s.sx[n] = p[0]; s.sy[n] = p[1]; } }
@@ -3533,15 +3616,15 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
            滑っていった――遊ぶ側の目には「ヌメっと動く」と映る。
            足は踏んだ地べたのぶんだけ出るのが道理である。歩幅で回せば、
            どんな速さでも足が地に着き、滑りは消える。 */
-        /* 歩幅に積むのは、踏んだ地べたのぶん――そのまま mv である。
+        /* 歩幅に積むのは、踏んだ地べたのぶん――この刻に兵が実際に動いた隔たりである。
+           積むのはここではなく、刻の終わり（下の「歩いた幅を積む」。敵味方の押し分けまで
+           済んでから）。
 
            いちど「組の足（騎馬五十六・徒三十四）より速いぶんは積まない」と
            蓋をしてみたが、これは逆であった。置いて行かれた兵が駆けて追いつく
            とき、足はその速さで回らねばならない。蓋をすると足が地面より遅く
            回り、かえって滑って見える（盤の刻を細かく取ったとき、歩幅と
            道のりの見合いが一.〇〇から〇.四五まで落ちた）。 */
-        s.歩距[n] += mv;
-        s.速[n] += ((dt > 0 ? mv / dt : 0) - s.速[n]) * Math.min(1, dt * 6);
         /* 描く向きは、兵ごとに一本の角として持ち、そこへ寄せる（GDD 8.11）。
 
            もとは描く側で、刻ごとに「進む向きの長さが〇.三を超えれば己の足の
@@ -3568,6 +3651,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       for (let n = alive; n < 50; n++) s.生[n] = 0;
       s.初 = true;
       if (!c.routed && s.近敵) 集め.push({ s, alive, 側: c.side === "P" ? 1 : 2 });
+      if (dt > 0) 歩み.push(s, alive);
     }
   }
   /* 敵味方の押し分け（GDD 8.11）。
@@ -3577,6 +3661,25 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
      近づいた者を互いに押し返す。味方どうしは押さない（列の中の詰まりは持ち場が
      受け持つ）。崩れて逃げる隊は押し分けない――算を乱して入り混じるのが道理である。 */
   if (dt > 0 && 集め.length > 1) 敵味方を押し分ける(集め);
+  /* 歩いた幅を積む（GDD 8.11）。
+
+     足は踏んだ地べたのぶんだけ出る。もとは「持ち場へ向けて歩いた幅」をその場で積んで
+     いたが、兵はそのあと敵に押し分けられ、槍合わせの線へ戻され、家や塀をよける。
+     歩いたぶんを押し戻されれば、兵は一歩も動いていないのに、足だけが歩いた幅を積む
+     ――深く重なり合った組では、押された幅の覚え（押しの限り）でも受けきれず、関ヶ原の
+     微速で、噛み合った直後の兵が一秒に百二十歩ぶん足を回しながら八十歩しか動いて
+     いなかった。刻の初めの立ち所（刻初）から、すべてが済んだあとの立ち所までの隔たり
+     ――実際に踏んだ地べた――を積む。 */
+  for (let k = 0; k < 歩み.length; k += 2) {
+    const s = 歩み[k], alive = 歩み[k + 1];
+    const 寄 = Math.min(1, dt * 6);
+    for (let n = 0; n < alive; n++) {
+      if (!s.生[n]) continue;
+      const mv = Math.hypot(s.sx[n] - s.刻初x[n], s.sy[n] - s.刻初y[n]);
+      s.歩距[n] += mv;
+      s.速[n] += (mv / dt - s.速[n]) * 寄;
+    }
+  }
   return dt;
 }
 
@@ -3641,6 +3744,22 @@ function 敵の組を離す(b, dt, viewRect) {
 }
 
 const 押し分けの間 = 1.8;
+/* 押し分けられた兵は、押された先に留まる（GDD 8.11）。
+
+   もとは、押し分けは兵の立ち所だけを動かし、持ち場（行き先）は動かさなかった。
+   押し出された兵は次の刻に持ち場へ歩いて戻り、また押し出される。押し出しは
+   刻の長さに依らず一息、戻りは足の速さ（徒で一秒に百二十五歩ぶん）まで歩くから、
+   刻が細かいほど（微速ほど）、兵は同じ所に立ったまま一秒に何百歩ぶんも足だけを
+   回した――関ヶ原の微速で、止まって槍を合わせている組の兵が一秒に三百から
+   四百五十歩ぶん「歩いて」いた（組は四から十四歩しか動いていない）。足が駆けて
+   いるので、体も敵でなく足の向きへ回る。
+
+   押した幅を兵ごとに覚え（押x・押y）、持ち場にそのぶんを足す。兵は押された先を
+   己の持ち場として立ち、綱引きにならない。覚えた幅は 押しの戻り秒 で抜けるので、
+   敵が去れば元の列へ戻る。幅は 押しの限り まで――それより深く押し込まれた兵は、
+   もとのとおり持ち場へ押し返す。 */
+const 押しの戻り秒 = 0.8;
+const 押しの限り = 4;
 function 敵味方を押し分ける(集め) {
   const 升 = 押し分けの間;
   const 格 = new Map();
@@ -3674,6 +3793,10 @@ function 敵味方を押し分ける(集め) {
           const d = Math.sqrt(d2), 押 = (升 - d) / 2 / d;
           A.s.sx[n] -= dx * 押; A.s.sy[n] -= dy * 押;
           B.s.sx[m] += dx * 押; B.s.sy[m] += dy * 押;
+          A.s.押x[n] -= dx * 押; A.s.押y[n] -= dy * 押;
+          B.s.押x[m] += dx * 押; B.s.押y[m] += dy * 押;
+          { const L = Math.hypot(A.s.押x[n], A.s.押y[n]); if (L > 押しの限り) { A.s.押x[n] *= 押しの限り / L; A.s.押y[n] *= 押しの限り / L; } }
+          { const L = Math.hypot(B.s.押x[m], B.s.押y[m]); if (L > 押しの限り) { B.s.押x[m] *= 押しの限り / L; B.s.押y[m] *= 押しの限り / L; } }
         }
       }
     }
@@ -4095,8 +4218,27 @@ export function 新絵の兵描き(ctx, b, 隊ら, cam, W, H, nowSec) {
         if (Math.abs(浮き(s.dx, s.dy + 12) - h0) > 3 || Math.abs(浮き(s.dx, s.dy - 12) - h0) > 3
           || Math.abs(浮き(s.dx + 14, s.dy) - h0) > 3 || Math.abs(浮き(s.dx - 14, s.dy) - h0) > 3) continue;
       }
-      if (縮 < 1 && 隠れの際(s.dx, s.dy) < 画の縦(s.dx, s.dy) + 4) continue;   // 石垣や丘の向こうに隠れる組の影も落とさない
+      /* 石垣や丘の向こうに隠れる組の影は落とさない。隠れかけの組の影は薄くする（GDD 8.11）。
+
+         もとは「隠れの際が、足元の画の縦＋四より上なら落とさない」と、有るか無いかで
+         決めていた。ところが平らな野でも、隠れの際は足元より二〜五半ほど下に出る
+         （すぐ手前の地の画の縦を、六歩の升に丸めて覚えているため）。境の四はちょうど
+         その只中にあり、組が二歩動くたびに 四.三・三.七・三.一・二.六・五.五 と巡って
+         境をまたぐ。稲葉山城下の野で測ると、六十六組のうち四十組が境の下、二十六組が
+         上にあり、微速の六十コマ（盤の〇.二四秒）のあいだに影が六十四度消え、五十九度
+         現れた。遊ぶ側の申し出は「部隊の影もちらちらとしていて変」であった。
+
+         組そのものは、際が足元より四より上へ来たときに隠す（draw.js）。影もそれに
+         合わせ、際が足元より二上までは濃いまま、六上で消えるまで、なだらかに薄くする。
+         平らな野（際は足元より下）では、影はいつも同じ濃さで落ちる。 */
+      let 影の濃さ = 1;
+      if (縮 < 1) {
+        const 余り = 隠れの際(s.dx, s.dy) - 画の縦(s.dx, s.dy);
+        if (余り <= -6) continue;
+        if (余り < -2) 影の濃さ = (余り + 6) / 4;
+      }
       ctx.save();
+      if (影の濃さ < 1) ctx.globalAlpha *= 影の濃さ;
       { const [ex, ey] = 揚げ(s.dx, s.dy); ctx.translate(s.dx + ex, s.dy + ey); }
       ctx.rotate(s.向 + Math.PI / 2);
       const 横 = q.type === "kiba" ? 34 : 22, 奥 = q.type === "kiba" ? 22 : 16;
