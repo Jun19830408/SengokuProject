@@ -319,6 +319,8 @@ function 座席を向ける(c, snap) {
     q.slotY = ry + q.jy * jit;
     if (snap) { q.x = c.x + q.slotX; q.y = c.y + q.slotY; q.facing = c.facing; }
   }
+  // 据え直したなら、席を測る元の点（engine の 持ち場の元）も代表点へ戻す
+  if (snap) { c.席x = c.x; c.席y = c.y; c.席前x = c.x; c.席前y = c.y; }
   席の差し渡しを焼く(c);
 }
 
