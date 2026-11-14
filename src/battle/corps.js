@@ -306,6 +306,25 @@ export function placeSquads(c, snap) {
   座席を向ける(c, snap);
 }
 
+/* 一息に据えた組を、将から塀を跨がない所に収める（GDD 9.3）。
+
+   城の盤で組を一息に据える（開戦の陣形選び・夜明けの持ち場・引き取り）とき、席が塀や閉じた
+   門の向こうに掛かれば、組は塀の外へ据えられ、内へ戻る道が無かった。門の持ち場の城方は、
+   体が門の側へ伸びる向きで据えられると、組の幾つかが門の外の枡形や塀の上に置かれた（遊ぶ側の
+   申し出「守勢側が城門からはみ出している」）。将からまっすぐ見て、塀や門の手前で止める。
+   将そのものが塀の上にいるときは触らない。野の盤（城郭図の無い盤）では何もしない */
+function 塀の手前に据える(c) {
+  if (!MAP || !passable(c.x, c.y)) return;
+  for (const q of c.squads) {
+    const dx = q.x - c.x, dy = q.y - c.y, L = Math.hypot(dx, dy);
+    if (L < 1) continue;
+    const n = Math.ceil(L / 3);
+    let ok = 0;
+    for (let k = 1; k <= n; k++) { if (!passable(c.x + dx * k / n, c.y + dy * k / n)) break; ok = k; }
+    if (ok < n) { const t = Math.max(0, ok / n - 4 / L); q.x = c.x + dx * t; q.y = c.y + dy * t; }
+  }
+}
+
 /* 座席を陣の向きへ回す。割り当てはそのままに、向きだけを掛け直す。 */
 function 座席を向ける(c, snap) {
   for (const q of c.squads) {
@@ -319,6 +338,7 @@ function 座席を向ける(c, snap) {
     q.slotY = ry + q.jy * jit;
     if (snap) { q.x = c.x + q.slotX; q.y = c.y + q.slotY; q.facing = c.facing; }
   }
+  if (snap) 塀の手前に据える(c);
   // 据え直したなら、席を測る元の点（engine の 持ち場の元）も代表点へ戻す
   if (snap) { c.席x = c.x; c.席y = c.y; c.席前x = c.x; c.席前y = c.y; }
   席の差し渡しを焼く(c);
