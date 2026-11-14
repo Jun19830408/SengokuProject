@@ -51957,10 +51957,13 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         padding: "7px 16px",
         borderRadius: 8,
         display: "flex",
-        gap: 12,
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: "4px 12px",
         alignItems: "center",
         fontSize: 13,
-        whiteSpace: "nowrap"
+        maxWidth: "100%",
+        boxSizing: "border-box"
       };
       const \u5E2F\u3089 = [];
       if (g.\u5206\u3051\u76EE && !\u5206\u3051\u76EE\u306E\u8DE1 && (g.\u5206\u3051\u76EE.\u6311 === g.player || g.\u5206\u3051\u76EE.\u53D7 === g.player)) {
@@ -52003,7 +52006,8 @@ function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             flexDirection: "column",
             gap: 6,
             alignItems: "center",
-            maxWidth: "calc(100% - 200px)"
+            width: "max-content",
+            maxWidth: "calc(100% - 150px)"
           },
           onMouseDown: (e) => e.stopPropagation(),
           onMouseUp: (e) => e.stopPropagation()
