@@ -13,6 +13,19 @@
 [build.environment]
   NODE_VERSION = "24"
 
+# 試作版（/shisaku/）は 2026年11月に第二試作版へまとめた。古い住所を開いた人は第二試作版へ移す。
+# 下の「何にも当たらなければ本編を返す」札より先に置く（札は上から順に当てはめる。
+# 後ろに置くと、試作版の住所を開いた人に本編が出てしまう）。
+[[redirects]]
+  from = "/shisaku/*"
+  to = "/shisaku2/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/shisaku"
+  to = "/shisaku2/"
+  status = 301
+
 # 住所の末尾に何も付けずに開いたら、index.html を返す
 [[redirects]]
   from = "/*"
