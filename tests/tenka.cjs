@@ -155,6 +155,11 @@ const 月を送って盤を読む = async () => { await rc('次月へ'); await f
     await rc('惣無事令を発する'); await flush(); await flush();
     /* 発すれば帳は閉じ、盤へ戻る。顛末は月報と戦国記に残る。 */
     確('発すれば帳が閉じる', !/私戦の停止を命じます/.test(txt()));
+    /* 発すれば地図の上の帯に顛末が出る（遊ぶ側の申し出「号令と惣無事令を地図に出すように」）。
+       もとは戦国記に一行残るだけで、地図は何も変わらなかった。 */
+    確('地図の上の帯に惣無事令の顛末が出る',
+      /惣無事令\s*\d+年\d+月\s*\d+家が旗の下に入り、\d+家が拒んで朝敵となった/.test(txt()),
+      (txt().match(/惣無事令\s*\d+年\d+月[^）]*）/) || ['帯なし'])[0]);
     const 後 = await 月を送って盤を読む();
     const 後旗 = Object.keys(後.factions).filter((f) => {
       const r = 後.relations[['oda', f].sort().join('|')];
@@ -228,6 +233,8 @@ const 月を送って盤を読む = async () => { await rc('次月へ'); await f
           const 前軍 = (盤().armies || []).length;
           await click(押); await flush(); await flush();
           確('発すれば帳が閉じる', !/この手立てで決める/.test(txt()));
+          確('地図の上の帯に号令の筋が出る', /へ\s*\d+手・[\d,]+人/.test(txt()) && /\d／5筋/.test(txt()),
+            (txt().match(/[^\s　]{1,8}へ\s*\d+手・[\d,]+人/) || ['帯なし'])[0]);
           const 後 = await 月を送って盤を読む();
           const 号 = (後.号令 || [])[0];
           確('号令が控えられる', !!号, 号 ? `${号.手.length}手` : 'なし');

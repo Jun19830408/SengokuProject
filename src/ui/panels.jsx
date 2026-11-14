@@ -579,7 +579,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
           <b style={{ color: U.text }}>自家と臣従の家</b>には下知が通り、必ず出ます。
           <b style={{ color: U.text }}>同盟・従属の家</b>へは頼むだけで、応じるか否かは相手が決めます。
           <br />陣触れの届く先は<b style={{ color: U.text }}>総大将の身分</b>で決まります。
-          城主は自らの城のみ、国主は一国のうち、<b style={{ color: U.text }}>旗頭と当主は天下じゅう</b>から集められます。
+          城主は街道で隣り合う自家の城まで、国主は一国と隣国、旗頭は預かった方面、<b style={{ color: U.text }}>当主は天下じゅう</b>から集められます。
           {総大将 && <>（いまの総大将 <b style={{ color: U.text }}>{総大将.name}</b>・{rankName(総大将, g)}
             ── 届く先は<b style={{ color: U.text }}>{陣触れの届き(総大将, g)}</b>）</>}
           <br />そのうえで、呼べる先は<b style={{ color: U.text }}>遠近を問いません</b>。関ヶ原も大坂の陣も全国から兵が集まりました。
@@ -2434,7 +2434,7 @@ export function 攻め寄せる問い({ g, armyId, onClose, onGo }) {
         )}
 
         {/* 寄騎（GDD 7.3）。在陣から次を攻めるときも、他の城から兵を催せる。
-            届く先は総大将の役による（城主は自城、国主は一国、旗頭・当主は天下）。 */}
+            届く先は総大将の役による（城主は隣り合う城、国主は一国と隣国、旗頭は方面、当主は天下。core/rank.js 陣触れの届き）。 */}
         {先 && (
           <>
             <div className="sec">加勢を催す</div>
@@ -2670,9 +2670,24 @@ export function 惣無事令の帳({ g, onSend, onClose }) {
   const 問 = 問われる家(g, g.player).filter((f) => g.castles.some((c) => c.faction === f));
   const 石 = {};
   for (const c of g.castles) 石[c.faction] = (石[c.faction] || 0) + c.koku;
-  const 見込 = 問.map((f) => ({ f, 目: 応じる目(g, g.player, f, { 石 }) }))
+  /* 見込みは、発したときの応諾（MapScreen の onSend → core/sobuji.js 応諾を決める）と
+     同じ式で読む。遠さ（互いの城のいちばん近い隔たり）も入れる。
+
+     もとは遠さを入れず、しかも「見込み五割以上の家の数」を「応じそうな家」としていた。
+     応諾は見込みの割で籤を引くので、五割をわずかに超える家が並ぶと、帳では
+     「およそ七十三家」と出て、発すれば三十二家しか従わない――ということが起きた。
+     いまは見込みの和（従う家の数の当て）を出す。 */
+  const 我城 = g.castles.filter((c) => c.faction === g.player);
+  const 隔 = (f) => {
+    const b = g.castles.filter((c) => c.faction === f);
+    if (!我城.length || !b.length) return null;
+    let d = Infinity;
+    for (const x of 我城) for (const y of b) d = Math.min(d, Math.hypot(x.x - y.x, x.y - y.y));
+    return d;
+  };
+  const 見込 = 問.map((f) => ({ f, 目: 応じる目(g, g.player, f, { 石, 隔たり: 隔(f) }) }))
     .sort((a, b) => b.目 - a.目);
-  const 応 = 見込.filter((x) => x.目 >= 0.5).length;
+  const 応 = Math.round(見込.reduce((a, x) => a + x.目, 0));
   return (
     <div className="modal" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
       <div className="card" style={{ maxWidth: 520 }}>

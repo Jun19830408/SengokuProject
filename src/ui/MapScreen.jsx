@@ -41,8 +41,8 @@ import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
 import { CampaignPanel, CaptiveDialog, Chronicle, FactionInfo, GeneralList, 軍の帳, GoalPanel, MonthReport, PromotionDialog, SiegePanel, SortieDialog, 城を委ねる問い, 攻め寄せる問い, 攻めの願い問い } from "./panels.jsx";
 import { SallyDialog } from "./panels.jsx";
-import { 惣無事令を発する, 応諾を決める, 朝敵を検め直す } from "../core/sobuji.js";
-import { 号令を発する } from "../core/gourei.js";
+import { 惣無事令を発する, 応諾を決める, 朝敵を検め直す, 朝敵か } from "../core/sobuji.js";
+import { 号令を発する, 号令の限り } from "../core/gourei.js";
 import { 惣無事令の帳, 惣無事令の問い as 惣無事令の問い札, 号令の帳, 天下分け目の帳, 分け目の沙汰の帳, 移封の帳, 直参の帳 } from "./panels.jsx";
 import { 移封する, 直参に招く } from "../core/ihou.js";
 import { 挑める家ら, 天下分け目を起こす, 分け目の沙汰, 取る城を見立てる } from "../core/wakeme.js";
@@ -330,7 +330,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       const dst = a.target ? nodeById(a.target) : null;
       if (dst) {
         const [dx2, dy2] = S(dst.x, dst.y);
-        ctx.strokeStyle = col + "77"; ctx.setLineDash([5, 5]); ctx.lineWidth = 2;
+        /* 号令で動く軍の道は朱で引く（GDD 12.5）。諸家の手が一つの城へ寄せていくのが、
+           地図を見ただけで読めるように。家の色の破線のままでは、ほかの出陣と見分けがつかなかった。 */
+        if (a.号令) { ctx.strokeStyle = "rgba(176,72,60,0.82)"; ctx.setLineDash([7, 4]); ctx.lineWidth = 2.6; }
+        else { ctx.strokeStyle = col + "77"; ctx.setLineDash([5, 5]); ctx.lineWidth = 2; }
         ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(dx2, dy2); ctx.stroke(); ctx.setLineDash([]);
       }
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ax, ay, 11, 0, 7); ctx.fill();
@@ -407,11 +410,14 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           : 下 === "上" ? { c: "#8A6B3A", t: rel.state === "臣従" ? "臣" : "属" }
           : rel.state === "同盟" ? { c: "#3E7A3A", t: "盟" }
           : rel.state === "不可侵" ? { c: "#4A6E8A", t: "侵" }
+          /* 朝敵（惣無事令を拒んだ家。GDD 12.5）。朱の輪と「朝」の印。
+             惣無事令を発しても地図が何も変わらず、誰が拒んだのか戦国記を開かねば分からなかった。 */
+          : 朝敵か(g, c.faction) ? { c: "#B0483C", t: "朝" }
           : null;
         if (印) {
-          // 城を囲む輪。旗の下（従属・臣従）は太く、誼（同盟・不可侵）は細く。
-          ctx.strokeStyle = 印.c; ctx.lineWidth = 下 ? 3.0 : 2.0;
-          if (!下) ctx.setLineDash([3.2, 2.6]);
+          // 城を囲む輪。旗の下（従属・臣従）は太く、誼（同盟・不可侵）は細く。朝敵は朱の太めの破線。
+          ctx.strokeStyle = 印.c; ctx.lineWidth = 下 ? 3.0 : 印.t === "朝" ? 2.6 : 2.0;
+          if (!下) ctx.setLineDash(印.t === "朝" ? [5, 2.6] : [3.2, 2.6]);
           ctx.beginPath(); ctx.arc(x, y, big + 5.6, 0, 7); ctx.stroke();
           ctx.setLineDash([]);
           if (big >= 6.2) {                          // 近づけば字を添える
@@ -441,6 +447,25 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         ctx.font = "11px sans-serif";
         名札(`${fmt(men)}`, x + big + 5, y + 12, col, 2.6, "left");
       }
+    }
+    /* 号令の的（GDD 12.5）。号令を受けている城に朱の二重の輪と「号令」の札を立てる。
+       諸家の手（号令の軍）の朱の道が、この城へ寄り集まる。 */
+    for (const 号 of (g.号令 || [])) {
+      const c = g.castles.find((q) => q.id === 号.的);
+      if (!c) continue;
+      const [x, y] = S(c.x, c.y);
+      const big = clamp(4.4 + Math.sqrt(c.koku / 10000) * 1.5, 4.4, 11);
+      ctx.strokeStyle = "rgba(176,72,60,0.95)"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(x, y, big + 10, 0, 7); ctx.stroke();
+      ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, y, big + 15, 0, 7); ctx.stroke();
+      const 字 = 号.主 === g.player ? "号令" : `${((g.factions[号.主] || {}).name || "").replace(/家$/, "")}の号令`;
+      ctx.font = "700 11px 'Hiragino Sans',sans-serif";
+      const w = ctx.measureText(字).width + 12, tx = x + big + 9, ty = y - big - 26;
+      ctx.fillStyle = "rgba(176,72,60,0.96)";
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(tx, ty, w, 18, 4) : ctx.rect(tx, ty, w, 18); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(字, tx + 6, ty + 9.5);
+      ctx.textBaseline = "alphabetic";
     }
     const mv = miniRef.current;
     if (mv) {
@@ -2936,17 +2961,21 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp} onTouchCancel={onCancel}
         onWheel={(e) => { if (e.target === cvRef.current) zoom(e.deltaY < 0 ? 1.12 : 0.89); }}>
         <canvas ref={cvRef} style={{ width: "100%", height: "100%", display: "block", touchAction: "none" }} />
-        {/* 天下分け目の触れ（GDD 12.6）。集結の月数を出し、揃えば野へ出る釦を出す。 */}
-        {g.分け目 && !battle && !分け目の跡
-          && (g.分け目.挑 === g.player || g.分け目.受 === g.player) && (() => {
+        {/* 上の帯（天下の触れ）。天下分け目・号令・惣無事令を、地図の上に重ねて出す。
+            号令と惣無事令は、もとは発しても戦国記に一行残るだけで、地図は何も変わらなかった
+            （遊ぶ側の申し出「号令と惣無事令を地図に出すように」）。地図の上では、号令の的の城と
+            号令の軍の朱の道、朝敵の家の城の「朝」の印を描く（上の draw を見よ）。 */}
+        {!battle && (() => {
+          const 帯 = { background: "rgba(44,40,32,0.94)", color: "#F6F2E6", padding: "7px 16px", borderRadius: 8,
+            display: "flex", gap: 12, alignItems: "center", fontSize: 13, whiteSpace: "nowrap" };
+          const 帯ら = [];
+          /* 天下分け目の触れ（GDD 12.6）。集結の月数を出し、揃えば野へ出る釦を出す。 */
+          if (g.分け目 && !分け目の跡 && (g.分け目.挑 === g.player || g.分け目.受 === g.player)) {
             const w = g.分け目;
             const 敵 = w.挑 === g.player ? w.受 : w.挑;
             const 揃 = w.残り <= 0;
-            return (
-              <div style={{ position: "absolute", left: "50%", top: 12, transform: "translateX(-50%)", zIndex: 7,
-                background: "rgba(44,40,32,0.94)", color: "#F6F2E6", padding: "8px 16px", borderRadius: 8,
-                display: "flex", gap: 12, alignItems: "center", fontSize: 13 }}
-                onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+            帯ら.push(
+              <div key="wakeme" style={帯}>
                 <span className="mn" style={{ fontSize: 15 }}>天下分け目</span>
                 <span>{(g.factions[敵] || {}).name}と{w.挑 === g.player ? "の一戦（挑んだ側）" : "の一戦（受けた側）"}</span>
                 <span style={{ color: "#D9A62A" }}>
@@ -2954,9 +2983,47 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 {揃 && (
                   <button className="btn pri" style={{ padding: "4px 12px" }} onClick={野へ出る}>野へ出る</button>
                 )}
-              </div>
-            );
-          })()}
+              </div>);
+          }
+          /* 号令（GDD 12.5）。発している筋ごとに、的の城と、寄せている手と兵を出す。
+             兵はいま地図の上にいる号令の軍の兵（討たれ、散れば減る）。 */
+          const 号ら = (g.号令 || []).filter((x) => x.主 === g.player);
+          if (号ら.length) {
+            const 城名 = (id) => (g.castles.find((c) => c.id === id) || {}).name || "城";
+            帯ら.push(
+              <div key="gourei" style={帯}>
+                <span className="mn" style={{ fontSize: 15, color: "#E89A8C" }}>号令</span>
+                {号ら.slice(0, 3).map((x) => {
+                  const 軍ら = (x.手 || []).map((h) => (g.armies || []).find((a) => a.id === h.armyId)).filter(Boolean);
+                  const 兵 = 軍ら.length ? 軍ら.reduce((a, q) => a + (q.men || 0), 0) : (x.手 || []).reduce((a, h) => a + (h.兵 || 0), 0);
+                  return <span key={x.id}>{城名(x.的)}へ　{軍ら.length || (x.手 || []).length}手・{fmt(兵)}人</span>;
+                })}
+                {号ら.length > 3 && <span>ほか{号ら.length - 3}筋</span>}
+                <span style={{ color: "#BDB6A4" }}>{号ら.length}／{号令の限り}筋</span>
+              </div>);
+          }
+          /* 惣無事令（GDD 12.5）。発した月から三月のあいだ、応じた数を出す。朝敵の数は今の数。 */
+          const 控 = (g.惣無事令の控え || {})[g.player];
+          if (控 && 控.従 != null && (g.year * 12 + g.month) - (控.y * 12 + 控.m) <= 2) {
+            const 朝敵いま = Object.keys(g.朝敵 || {}).filter((f) => f !== g.player
+              && (g.朝敵[f] || {}).主 === g.player && g.castles.some((c) => c.faction === f)).length;
+            帯ら.push(
+              <div key="sobuji" style={帯}>
+                <span className="mn" style={{ fontSize: 15, color: "#E2C877" }}>惣無事令</span>
+                <span>{控.y}年{控.m}月</span>
+                <span><b style={{ color: "#E2C877" }}>{控.従}</b>家が旗の下に入り、<b style={{ color: "#E89A8C" }}>{控.拒}</b>家が拒んで朝敵となった</span>
+                <span style={{ color: "#BDB6A4" }}>（いま朝敵 {朝敵いま}家）</span>
+              </div>);
+          }
+          if (!帯ら.length) return null;
+          return (
+            <div style={{ position: "absolute", left: "50%", top: 12, transform: "translateX(-50%)", zIndex: 7,
+              display: "flex", flexDirection: "column", gap: 6, alignItems: "center", maxWidth: "calc(100% - 200px)" }}
+              onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+              {帯ら}
+            </div>
+          );
+        })()}
         <div className="mapctl l" onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
           <div className="mbtn" onClick={() => zoom(1.25)}><b>＋</b>拡大</div>
           <div className="mbtn" onClick={() => zoom(0.8)}><b>−</b>縮小</div>
@@ -3498,6 +3565,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
                 if (r.従う) 従++; else 拒++;
               }
               朝敵を検め直す(s2);
+              /* 応じた数を控えに残す。地図の上の帯がこれを読んで、発した月から三月のあいだ出す。 */
+              s2.惣無事令の控え[s2.player] = { ...s2.惣無事令の控え[s2.player], 従, 拒 };
               const 文 = `惣無事令を発した。${従}家が旗の下に入り、${拒}家が拒んで朝敵となった。`;
               s2.chronicle.push({ y: s2.year, m: s2.month, text: 文 });
               s2.monthEvents = [...(s2.monthEvents || []), 文];
