@@ -1135,7 +1135,12 @@ export function battleAI(b) {
           /* 後詰に呼応して出た隊は、出ているあいだ持ち場へ呼び戻さない（下の 呼応の的）。
              的は門から三百歩の内にいる。持ち場の際（四十六歩）を越えるたびに呼び戻すと、
              的に届かぬまま門の前を出入りするだけになる */
-          if (d2 > (c.持ち場に着いた ? 46 : 30) && !(c.sallied && c.呼応して出た)) {
+          /* 討って出た隊は、出ているあいだ持ち場へ呼び戻さない。もとは後詰に呼応して出た隊だけを
+             外していたので、門の前（百七十歩）の寄せ手を討ちに出た隊は、門を出たとたんに持ち場の際
+             （四十六歩）を越えて呼び戻され、門の口を出入りするばかりであった（門を開いて列で出る
+             ようにして表に出た。engine.js 門の列を見る）。戻るのは、四十秒たったとき・士気が落ちた
+             とき・門の前から寄せ手が消えたとき（下の 打って出た後） */
+          if (d2 > (c.持ち場に着いた ? 46 : 30) && !c.sallied) {
             c.持ち場に着いた = false;
             issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y });
             continue;
@@ -1145,10 +1150,20 @@ export function battleAI(b) {
           const gp = gatePos(MAP, l2, g2);
           const foes = b.corps.filter((x) => x.side === b.attacker && !x.dead && !x.destroyed
             && !x.routed && Math.hypot(x.x - gp.x, x.y - gp.y) < 170);
-          const foeMen = foes.reduce((t, x) => t + corpsMen(x), 0);
           const myMen = corpsMen(c);
-          const foeMor = foes.length
-            ? foes.reduce((t, x) => t + x.morale, 0) / foes.length : 100;
+          /* 寄せ手の強さは、門の前（百七十歩）の隊だけでなく、門へ迫っている隊（四百五十歩の内）の
+             総勢で量る（GDD 9.4）。
+
+             門の前の隊だけで量っていたので、寄せの先手の小勢が門に着いた刹那に「三分の一を割った」
+             と出て、すぐ後ろに寄せ手の本勢が迫っているのに門を開いて出ていた（稲葉山。斎藤高政隊
+             千四百が、平手政秀隊ひとつを見て討って出た）。出た隊は門の前で寄せ手の本勢に呑まれる。
+             遊ぶ側には「守勢側が城門からはみ出している」と見えた。寄せ手が弱ったとき――門へ迫る
+             者まで含めて――はじめて門を開く。 */
+          const 迫る = b.corps.filter((x) => x.side === b.attacker && !x.dead && !x.destroyed
+            && !x.routed && Math.hypot(x.x - gp.x, x.y - gp.y) < 450);
+          const foeMen = 迫る.reduce((t, x) => t + corpsMen(x), 0);
+          const foeMor = 迫る.length
+            ? 迫る.reduce((t, x) => t + x.morale, 0) / 迫る.length : 100;
           /* 打って出る頃合い（GDD 9.4）
              一、寄せ手の士気が四割を切ったとき
              二、寄せ手の兵が自隊の三分の一を割ったとき
@@ -1171,10 +1186,13 @@ export function battleAI(b) {
                 .sort((x, y2) => (y2.後詰に向いた ? 1 : 0) - (x.後詰に向いた ? 1 : 0)
                   || Math.hypot(x.x - gp.x, x.y - gp.y) - Math.hypot(y2.x - gp.x, y2.y - gp.y))[0] || null
               : null;
-            const chance = (foes.length && fit && (
+            /* 戻ってから二十秒は出直さない。出ては戻り、戻ってはまた出て、門の口で隊が
+               行きつ戻りつしないように */
+            const 出直せる = !(c.戻った刻 != null && b.t - c.戻った刻 < 20);
+            const chance = (foes.length && fit && 出直せる && (
               foeMor < 40                        // 寄せ手の士気が尽きかけている
               || foeMen < myMen / 3              // 寄せ手が三分の一を割った
-              || myWorth > foeWorth * 1.4        // 将の器量で大きく上回る
+              || (myWorth > foeWorth * 1.4 && foeMen < myMen * 1.2)   // 将の器量で大きく上回り、数でも劣らない
             )) || !!呼応の的;                    // 後詰に呼応する
             if (c.守備隊) {
               /* 守備隊は討って出ない（GDD 9.3）。門を支え、外へ射かけるだけである。
@@ -1190,7 +1208,7 @@ export function battleAI(b) {
             if (c.sallied) {
               // 打って出た後は四十秒で城へ戻る
               if (b.t - (c.sallyAt || 0) > 40 || c.morale < 46) {
-                c.sallied = false; c.sallyLogged = false; c.呼応して出た = false;
+                c.sallied = false; c.sallyLogged = false; c.呼応して出た = false; c.戻った刻 = b.t;
                 b.log.push({ t: b.t, text: `${c.gen.name}隊が${g2.key}の内へ戻った。` });
                 issueOrder(b, c, { order: "移動", tx: p2.x, ty: p2.y });
                 continue;
@@ -1198,7 +1216,10 @@ export function battleAI(b) {
               // 呼応して出た隊は、門の前に寄せ手がいなくても、呼応のあいだは的を追う
               const t2 = [...foes].sort((x, y2) => corpsMen(x) - corpsMen(y2))[0] || (c.呼応して出た ? 呼応の的 : null);
               if (t2) { issueOrder(b, c, { order: "接戦", tx: t2.x, ty: t2.y, target: t2.id }); continue; }
-              c.sallied = false; c.呼応して出た = false;
+              /* 門の前から寄せ手が消えても、出て八秒のうちは戻らない（門をくぐる列の半ばで向きを
+                 返さない） */
+              if (b.t - (c.sallyAt || 0) < 8) continue;
+              c.sallied = false; c.呼応して出た = false; c.戻った刻 = b.t;
             } else if (chance) {
               const t2 = 呼応の的 || [...foes].sort((x, y2) => corpsMen(x) - corpsMen(y2))[0];
               if (t2) {

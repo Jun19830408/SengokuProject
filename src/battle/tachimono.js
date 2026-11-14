@@ -217,8 +217,30 @@ function 櫓門(m, l, g, 木 = false) {
   const 物 = [];
   // 通りの陰。櫓の下は暗い
   物.push({ 鍵: v.y0 - 0.3, 描: (ctx, k) => 地の四角(ctx, k, 通, 足(), "rgba(30,26,20,0.30)") });
+  /* 開いた扉（GDD 9.4）。城方が門を開いて討って出る・戻るあいだ（engine.js 門の列を見る が
+     g.開いている を立てる）、二枚の扉を内へ開いて、通りの両脇に寄せて描く。閉じた扉のまま描くと、
+     列が扉を抜けて見える */
+  const 内の向き = (() => {
+    const [ix, iy] = 視(gp.x - (along ? 0 : a.sgn * 10), gp.y - (along ? a.sgn * 10 : 0));
+    return 縦通 ? Math.sign(iy - p0y) || -1 : Math.sign(ix - p0x) || -1;
+  })();
+  const 開いた扉 = (() => {
+    const 板 = 1.6;
+    if (縦通) {
+      const 半 = (通.x1 - 通.x0) / 2, ya = 中, yb = 中 + 内の向き * 半 * 0.9;
+      const y0 = Math.min(ya, yb), y1 = Math.max(ya, yb);
+      return [{ x0: 通.x0, x1: 通.x0 + 板, y0, y1 }, { x0: 通.x1 - 板, x1: 通.x1, y0, y1 }];
+    }
+    const 半 = (通.y1 - 通.y0) / 2, xa = 中, xb = 中 + 内の向き * 半 * 0.9;
+    const x0 = Math.min(xa, xb), x1 = Math.max(xa, xb);
+    return [{ x0, x1, y0: 通.y0, y1: 通.y0 + 板 }, { x0, x1, y0: 通.y1 - 板, y1: 通.y1 }];
+  })();
   if (!g.broken) {
     物.push({ 鍵: 扉矩.y1, 描: (ctx, k) => {
+      if (g.開いている) {
+        for (const 扉 of 開いた扉) 箱(ctx, k, 扉, 足(), 通丈 * 0.96, 扉色, 扉色);
+        return;
+      }
       箱(ctx, k, 扉矩, 足(), 通丈 * 0.96, 扉色, 扉色, (x, y, w2, h) => {
         ctx.strokeStyle = "rgba(20,14,8,0.8)"; ctx.lineWidth = 0.7;
         ctx.beginPath(); ctx.moveTo(x + w2 / 2, y); ctx.lineTo(x + w2 / 2, y + h); ctx.stroke();

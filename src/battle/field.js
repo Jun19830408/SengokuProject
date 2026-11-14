@@ -1,4 +1,4 @@
-import { MAP, castleTerrainAt, 城の域か } from "./castleMap.js";
+import { MAP, castleTerrainAt, 城の域か, inLayer, 出城の内か } from "./castleMap.js";
 import { clamp, makeRng } from "../core/util.js";
 import { 型の野 } from "./kata.js";
 
@@ -828,7 +828,19 @@ export function passableFor(c, b, x, y) {
   if (!b || !b.map || !c || c.side === b.attacker) return false;
   if (c.sortie) return true;                      // 打って出ている間は外へも抜けられる
   if (terrainAt(x, y) !== "gate") return false;
+  /* 門をくぐる列（engine.js 門の列を見る）。討って出る隊と戻る隊は、その門を開けて通る。
+     隊の組も同じ決まりで通す（組の足はこの関数を隊ごとに引く） */
+  const 列 = c.門の列;
+  if (列 && Math.hypot(x - 列.gx, y - 列.gy) < 列.半) return true;
   const m = b.map;
+  /* 内へ入るときだけ通る。「内へ」を城の芯からの隔たりだけで判じていたので、門と横にずれた所に
+     代表点のある隊は、輪の内にいても門の升目のほうが芯に近いと出て、組が門の升目へ踏み出し、
+     門の上に立った（稲葉山の大手門で、斎藤利三隊の一組・百二十六人が門の上に立っていた）。
+     門の升目が掛かる輪（その輪の塀の帯）の内に代表点があれば、通さない */
+  for (const L of m.layers || []) {
+    if (inLayer(m, L, x, y, m.t + 2) && !inLayer(m, L, x, y)) { if (inLayer(m, L, c.x, c.y)) return false; break; }
+  }
+  if (m.出城 && 出城の内か(m, x, y, m.t + 2) && !出城の内か(m, x, y) && 出城の内か(m, c.x, c.y)) return false;
   return Math.hypot(x - m.cx, y - m.cy) < Math.hypot(c.x - m.cx, c.y - m.cy);
 }
 
