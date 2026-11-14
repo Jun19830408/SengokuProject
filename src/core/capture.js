@@ -95,7 +95,7 @@ export function payRansom(s, gen) {
 
 // 捕らえた武将を捕虜として城へ入れる
 export function makePrisoner(s, gen, holderFaction, castleId) {
-  gen.captive = { by: holderFaction, from: gen.faction, at: castleId, since: `${s.year}-${s.month}` };
+  gen.captive = { by: holderFaction, from: gen.faction, at: castleId, since: { y: s.year, m: s.month } };
   gen.at = castleId;
   gen.retinue = 0;
   /* 囚われた者は城主を務められない。札を外し、軍の名簿からも落とす。
@@ -149,3 +149,44 @@ export function takeAsPrisoner(s, gen, winner, castleId) {
   g2.at = castleId;
 }
 
+/* 囚われた年。古い記録には「1560-3」の形で控えたものがある。 */
+export function 囚われた年(gen) {
+  const t = gen && gen.captive && gen.captive.since;
+  if (!t) return null;
+  if (typeof t === "string") { const y = parseInt(t, 10); return Number.isFinite(y) ? y : null; }
+  return t.y ?? null;
+}
+
+/* 仕官の願い（GDD 12.4）。
+
+   心を移した捕虜は、みずから仕官を願い出る。遊ぶ側の考えは「囚われたままの
+   捕虜は勝手に登用を求めてくるのでいい」であった。もとは「心を移した。登用できる」
+   と一度報せるだけで、見落とせば幾年も留め置かれた（一五八八年の記録では
+   四十六人、最も長い者は三十三年）。
+
+   願い出るのは、登用の関門を越えた者である。
+     家が絶えた者（戦後の始末）… 勝った家への忠誠が五十に達した者
+     そのほかの者 … captiveRecruit を通る者（旧主への忠誠四十以下、一門でない）
+   断れば、一年は重ねて願い出ない。 */
+export const 願いの間 = 12;
+export function 仕官を願えるか(s, gen) {
+  if (!gen || !gen.captive) return false;
+  const 断 = gen.captive.断った;
+  if (断 && (s.year - 断.y) * 12 + (s.month - 断.m) < 願いの間) return false;
+  if (gen.captive.ruin) return (gen.warLoyal || 0) >= 50;
+  return captiveRecruit(s, gen).ok;
+}
+
+/* 他家の捕らえた者も同じく願い出て、他家はこれを召し抱える。
+   もとは他家が捕虜をどうもしなかったので、城が落ちるまで囚われたままであった。 */
+export function 他家が召し抱える(s, gen) {
+  const by = gen.captive.by;
+  const 忠 = gen.captive.ruin ? (gen.warLoyal || 50) : 45 + Math.random() * 15;
+  gen.faction = by;
+  gen.captive = null;
+  gen.warLoyal = undefined;
+  gen.lord = false;
+  gen.loyal = Math.max(0, Math.min(100, Math.round(忠)));
+  gen.retinue = Math.max(gen.retinue || 0, Math.round(140 + Math.random() * 120));
+  return gen;
+}
