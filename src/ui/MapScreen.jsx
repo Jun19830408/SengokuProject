@@ -2966,8 +2966,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             （遊ぶ側の申し出「号令と惣無事令を地図に出すように」）。地図の上では、号令の的の城と
             号令の軍の朱の道、朝敵の家の城の「朝」の印を描く（上の draw を見よ）。 */}
         {!battle && (() => {
+          /* 狭い画面（スマホの縦持ち）では帯の中で折り返す。一行に収めようとすると画面の外へはみ出す */
           const 帯 = { background: "rgba(44,40,32,0.94)", color: "#F6F2E6", padding: "7px 16px", borderRadius: 8,
-            display: "flex", gap: 12, alignItems: "center", fontSize: 13, whiteSpace: "nowrap" };
+            display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px 12px", alignItems: "center", fontSize: 13,
+            maxWidth: "100%", boxSizing: "border-box" };
           const 帯ら = [];
           /* 天下分け目の触れ（GDD 12.6）。集結の月数を出し、揃えば野へ出る釦を出す。 */
           if (g.分け目 && !分け目の跡 && (g.分け目.挑 === g.player || g.分け目.受 === g.player)) {
@@ -3018,7 +3020,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           if (!帯ら.length) return null;
           return (
             <div style={{ position: "absolute", left: "50%", top: 12, transform: "translateX(-50%)", zIndex: 7,
-              display: "flex", flexDirection: "column", gap: 6, alignItems: "center", maxWidth: "calc(100% - 200px)" }}
+              display: "flex", flexDirection: "column", gap: 6, alignItems: "center",
+              width: "max-content", maxWidth: "calc(100% - 150px)" }}
               onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
               {帯ら}
             </div>
