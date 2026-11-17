@@ -18,6 +18,8 @@ import { 朝の受け持ちを決める } from "../battle/defense.js";
 import { 効果を鳴らす, 兵の音を掛ける, 効果を止める, 音の列を鳴らす, 下知の音, 陣形の音, 地の名, 一人ずつの先の隊, 終わりの締め } from "./senoto.js";
 /* 一人働き（武将一人プレイ）のつなぎ。いまは撮る道具・試しの覗き口（window.__一人働き）を据えるだけ */
 import "../hitori/tsunagi.js";
+/* 一人働きの背中越しの視点（試し）。左の釦「背中」で、盤の代わりに与平の背中越しに描く */
+import { 背中を始める, 背中を描く, 与平の所 } from "../hitori/senaka.js";
 
 /* 早送り（GDD 8.1・9.3）。
 
@@ -60,6 +62,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const [咎め, set咎め] = useState(null);            // 「いま下知できぬ」訳を束の間出す
   const [, 問い直し] = useState(0);                  // 筋書きの問いに答えたら描き直す
   const [覚え開く, set覚え開く] = useState(false);    // 筋書きの覚え（分岐の条件）
+  const [背中, set背中] = useState(false);            // 背中越しの視点（一人働きの試し）
+  const 背中Ref = useRef(null);                       // 背中越しの眺めの状態（与平の組・カメラ）
   const faceRef = useRef(false);
   const speedRef = useRef(0), selRef = useRef(null), uiRef = useRef(0), allRef = useRef(false);
   const camRef = useRef({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
@@ -423,7 +427,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
           }
         }
         const 描t0 = performance.now();
-        drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current, 斜め地, 区Ref.current);
+        /* 背中越しの視点のあいだは、盤の代わりに与平の背中越しに描く（hitori/senaka.js。兵は盤の一人ずつの絵の兵をそのまま読む） */
+        if (背中Ref.current) 背中を描く(cv.getContext("2d"), b, 背中Ref.current, W, H, dpr, ts / 1000);
+        else drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current, 斜め地, 区Ref.current);
         /* 一コマを描くのに要った時（直近六十コマ）。重さを測るための覗き窓 */
         if (typeof window !== "undefined") {
           const 刻ら = window.__描きの刻 || (window.__描きの刻 = []);
@@ -498,6 +504,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.__合戦 = b;
+    /* 背中越しの視点を入れる・切る（撮る道具・試しが使う）。名を渡せば、その名を含む味方の隊の組に与平を立てる */
+    window.__背中 = (入, 名) => {
+      if (入 === undefined) { const 態 = 背中Ref.current; if (!態) return null; const 所 = 与平の所(態.組); return { 名: 態.名, 組: 態.組.id, x: 所.x, y: 所.y, 向: 所.向 }; }   // いまの与平の居所
+      if (!入) { 背中Ref.current = null; set背中(false); return null; }
+      const 隊 = 名 ? b.corps.find((c) => c.side === "P" && !c.dead && !c.destroyed && c.name.includes(名)) : null;
+      const 態 = 背中を始める(b, 隊 ? 隊.id : selRef.current); if (!態) return null;
+      背中Ref.current = 態; set背中(true); const 所 = 与平の所(態.組); return { 名: 態.名, 組: 態.組.id, x: 所.x, y: 所.y, 向: 所.向 };
+    };
     /* 倍率は絶対値で受ける（一.六なら一.六倍）。寄る先は「いちばん激しく噛んで
        いる隊」とその相手の中ほどである。噛み合い全体の重心を取ると、両軍の
        あいだの空地が真ん中に来てしまう。 */
@@ -1923,7 +1937,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
 
                 もとは「収納」と「広く」が別々で、二度押さねば広くならず、
                 しかも左の釦の列は残ったままであった。 */}
-            <div className={`mapctl l bctl${wide ? " hid" : ""}`}
+            <div className={`mapctl l bctl${wide || 背中 ? " hid" : ""}`}
               onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}>
               <div className="mbtn" onClick={() => zoomAt(1.3, null)}><b>＋</b>拡大</div>
               <div className="mbtn" onClick={() => zoomAt(0.77, null)}><b>−</b>縮小</div>
@@ -1946,6 +1960,23 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 force((n) => (n + 1) % 1000);
               }}><b>↻</b>{["南から", "東から", "北から", "西から"][向きRef.current]}</div>
             </div>
+            {/* 背中越しの視点（一人働きの試し）。選んだ隊（無ければ敵にいちばん近い味方の隊）の組の後ろに与平を立て、
+                その背中越しに描く。もう一度押せば盤へ戻る。盤にしか効かない左の釦の列は、背中越しのあいだは隠す。
+                置き場は盤の左下。左の釦の列はどの画面の形でも盤の左上にあり（css.js：縦一列／狭い画面と丈の短い画面では横に寝かせる）、
+                列の右隣では、横に寝かせた列に重なる。左下は合戦の盤では空いている（小図は政務の地図だけ）。
+                野戦だけに出す（地を平らに描くので、城攻めの盤（b.map）では塀も門も描けない） */}
+            {!bRef.current.map && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5 }}
+              onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
+              onClick={() => {
+                if (背中Ref.current) { 背中Ref.current = null; set背中(false); }
+                else { const 態 = 背中を始める(bRef.current, selRef.current); if (態) { 背中Ref.current = 態; set背中(true); } }
+              }}><b>{背中 ? "盤" : "人"}</b>{背中 ? "盤の視点" : "背中の視点"}</div>}
+            {背中 && (
+              <div style={{ position: "absolute", left: "50%", top: 10, transform: "translateX(-50%)", background: "rgba(22,24,28,.82)", color: "#F4F1E8",
+                border: "1.5px solid rgba(226,200,119,.6)", borderRadius: 8, padding: "5px 14px 6px", fontSize: 14, fontWeight: 700, pointerEvents: "none", whiteSpace: "nowrap" }}>
+                背中の視点（試し）　与平：{(背中Ref.current && 背中Ref.current.名) || ""}の組
+              </div>
+            )}
             {wide && (
               <div className="grip l" title="道具立てを戻す"
                 onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
