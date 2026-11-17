@@ -54,16 +54,20 @@ export function createBattle(playerCorps, enemyCorps, attackerSide) {
   return b;
 }
 
-export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ) {
+export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ, 正味) {
+  /* 正味（一人働き。src/hitori/tsunagi.js 兵を討つ）。与平が一人を討ったときは、
+     挟撃の割増しも筋書きの手加減も掛けず、ちょうど dmg 人を減らす。
+     一人を討ったのに〇.二人しか減らなければ、駒の数にも一人ずつの絵にも出ない。
+     帳簿（損・隊列の乱れ・士気の削れ・武功）は、ふだんの損害と同じく下で付ける。 */
   // 挟撃を受けている隊は受ける損害がやや増える（二方向1.12倍、三方向以上1.22倍）
-  const pinch = fCorps.pinch >= 3 ? 1.22 : fCorps.pinch === 2 ? 1.12 : 1;
+  const pinch = 正味 ? 1 : fCorps.pinch >= 3 ? 1.22 : fCorps.pinch === 2 ? 1.12 : 1;
   const before = e.men;
   /* 筋書きのある一戦は、損害の出方を緩める（GDD 8.9）。
 
      街道の合戦は百秒ほどで片が付く。一回で遊びきる関ヶ原を同じ速さで
      走らせると、布陣を見終わらぬうちに三十四秒で決着した。それでは
      小早川も南宮山も出番が無い。史実の関ヶ原は六時間戦っている。 */
-  e.men = Math.max(0, e.men - dmg * pinch * (b.損の手加減 || 1));
+  e.men = Math.max(0, e.men - dmg * pinch * (正味 ? 1 : (b.損の手加減 || 1)));
   const lost = before - e.men;
   fCorps.loss[e.origin] += lost;
   /* 駒の長の武功（GDD 6.2）。

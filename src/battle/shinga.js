@@ -3428,6 +3428,13 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
         const 候 = [];
         for (let n = 0; n < 前alive; n++) if (s.生[n]) 候.push(n);
         候.sort((a, z) => 晒し(a) - 晒し(z));
+        /* 指名（一人働き。src/hitori/tsunagi.js 兵を討つ）。与平が討った兵は、その者を
+           先に倒す。盤の数（何人減ったか）は変えない。倒れる順の頭に、指名した者を
+           立てるだけである。指名は一度使えば消す（持ち場の番は、詰めると別の者になる）。 */
+        if (s.指名 && s.指名.length) {
+          const 先 = s.指名.filter((n) => n < 前alive && s.生[n]); s.指名.length = 0;
+          for (let i = 先.length - 1; i >= 0; i--) { const k = 候.indexOf(先[i]); if (k > 0) { 候.splice(k, 1); 候.unshift(先[i]); } }
+        }
         const 死 = new Uint8Array(50);
         for (let i = 0; i < Math.min(死数, 候.length); i++) {
           const n = 候[i]; 死[n] = 1;
