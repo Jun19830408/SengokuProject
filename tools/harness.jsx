@@ -79,7 +79,7 @@ export { createBattle, stepBattle, 放った跡, 前面まで, 触れる隔た�
 // 一人働き（武将一人プレイ）のつなぎ：与平が討った兵を、理の人数と一人ずつの絵の両方で減らす
 export { 兵を討つ, 組の兵を数える, 組の隊 } from "../src/hitori/tsunagi.js";
 // 一人働きの背中越しの視点：盤の一人ずつの兵を、与平の背中越しの眺めへ写す
-export { 歩の尺, 与平の組を選ぶ, 与平の所, 眺めを集める, 背中を始める, 背中を描く, 与平を進める, 与平を立て直す, 与平の今, 突く, 受ける } from "../src/hitori/senaka.js";
+export { 歩の尺, 背中の速さ, 背中の突きの速さ, 与平の組を選ぶ, 与平の所, 眺めを集める, 背中を始める, 背中を描く, 与平を進める, 与平を立て直す, 与平の今, 突く, 受ける } from "../src/hitori/senaka.js";
 export { 合戦一覧, 合戦を探す, 合戦を仕立てる, 合戦を畳む, 合戦の問いに答える, 指図の縛り, 筋書きの覚え, 合戦を控える, 合戦を戻す, 控えの鍵 } from "../src/battle/kassen.js";
 export { 筋書き as 関ヶ原 } from "../src/data/sekigahara.js";
 export { battleAI } from "../src/battle/ai.js";

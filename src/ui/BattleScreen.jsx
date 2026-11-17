@@ -20,7 +20,7 @@ import { 効果を鳴らす, 兵の音を掛ける, 効果を止める, 音の�
 import "../hitori/tsunagi.js";
 /* 一人働きの背中越しの視点（試し）。左下の釦で、盤の代わりに与平の背中越しに描く。与平は自分で動かす
    （札と釦は hitori/SenakaFuda.jsx。与平の動きと突き合いは hitori/senaka.js） */
-import { 背中を始める, 背中を描く, 与平の今 } from "../hitori/senaka.js";
+import { 背中を始める, 背中を描く, 与平の今, 背中の速さ } from "../hitori/senaka.js";
 import SenakaFuda from "../hitori/SenakaFuda.jsx";
 
 /* 早送り（GDD 8.1・9.3）。
@@ -307,6 +307,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
     setSpeed(0);
     委ねRef.current = true; set委ね中(true);
   };
+  /* 背中越し（一人視点）のあいだは、盤の速さを微速に固定する（遊ぶ人の申し出：一人視点では、速さは固定、
+     もしくは委ねる）。速さの釦は微速のほかは押せなくし、委ねて結果を見るはそのまま使える。合戦開始・
+     手綱を取り戻す・問いへの答えなどで速さが変わっても、ここで微速へ戻す。止まっている（〇）のは、
+     合戦が終わったとき・合戦の段でないとき・委ねているあいだだけである */
+  useEffect(() => {
+    if (!背中 || 委ねRef.current || bRef.current.phase !== "fight") return;
+    if (speed !== 背中の速さ) setSpeed(背中の速さ);
+  }, [背中, speed, phase, 委ね中]);
   useEffect(() => {
     if (!委ね中) return;
     let 止め = false;
@@ -1845,12 +1853,13 @@ export function BattleScreen({ ctx, land, onEnd }) {
           </span>
           </div>
           {phase === "fight" && (
-            <span className="tsugi hayasa">
-              <button className={`btn sm ${speed === 0 ? "on" : ""}`} onClick={() => setSpeed(0)}>停止</button>
+            /* 背中越し（一人視点）のあいだは微速に固定し、ほかの速さは押せなくする（上の 背中の速さ の説明） */
+            <span className="tsugi hayasa" title={背中 ? "一人視点では微速に固定（委ねて結果を見ることはできる）" : undefined}>
+              <button className={`btn sm ${speed === 0 ? "on" : ""}`} disabled={背中} onClick={() => setSpeed(0)}>停止</button>
               <button className={`btn sm ${speed === 0.12 ? "on" : ""}`} onClick={() => setSpeed(0.12)}>微速</button>
-              <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} onClick={() => setSpeed(0.3)}>低速</button>
-              <button className={`btn sm ${speed === 0.6 ? "on" : ""}`} onClick={() => setSpeed(0.6)}>通常</button>
-              <button className={`btn sm ${speed === 早送りの速さ ? "on" : ""}`} onClick={() => setSpeed(早送りの速さ)}
+              <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} disabled={背中} onClick={() => setSpeed(0.3)}>低速</button>
+              <button className={`btn sm ${speed === 0.6 ? "on" : ""}`} disabled={背中} onClick={() => setSpeed(0.6)}>通常</button>
+              <button className={`btn sm ${speed === 早送りの速さ ? "on" : ""}`} disabled={背中} onClick={() => setSpeed(早送りの速さ)}
                 title="通常の四倍で進めます（行軍の間など）">早送り</button>
             </span>
           )}
@@ -1926,7 +1935,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <span className="dot" style={{ background: ctx.eColor }} /><b className="num">{fmt(eMen)}</b>
                 <span className="num" style={{ color: U.dim }}>{Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}</span>
                 {phase === "fight" && [["停", 0], ["微", 0.12], ["低", 0.3], ["通", 0.6], ["早", 早送りの速さ]].map(([lb, v]) => (
-                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`}
+                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`} disabled={背中 && v !== 背中の速さ}
                     style={{ padding: land ? "3px 6px" : "2px 5px", fontSize: land ? 12 : 10.5 }}
                     onClick={() => setSpeed(v)}>{lb}</button>
                 ))}
