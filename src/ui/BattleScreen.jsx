@@ -18,8 +18,10 @@ import { 朝の受け持ちを決める } from "../battle/defense.js";
 import { 効果を鳴らす, 兵の音を掛ける, 効果を止める, 音の列を鳴らす, 下知の音, 陣形の音, 地の名, 一人ずつの先の隊, 終わりの締め } from "./senoto.js";
 /* 一人働き（武将一人プレイ）のつなぎ。いまは撮る道具・試しの覗き口（window.__一人働き）を据えるだけ */
 import "../hitori/tsunagi.js";
-/* 一人働きの背中越しの視点（試し）。左の釦「背中」で、盤の代わりに与平の背中越しに描く */
-import { 背中を始める, 背中を描く, 与平の所 } from "../hitori/senaka.js";
+/* 一人働きの背中越しの視点（試し）。左下の釦で、盤の代わりに与平の背中越しに描く。与平は自分で動かす
+   （札と釦は hitori/SenakaFuda.jsx。与平の動きと突き合いは hitori/senaka.js） */
+import { 背中を始める, 背中を描く, 与平の今 } from "../hitori/senaka.js";
+import SenakaFuda from "../hitori/SenakaFuda.jsx";
 
 /* 早送り（GDD 8.1・9.3）。
 
@@ -427,8 +429,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
           }
         }
         const 描t0 = performance.now();
-        /* 背中越しの視点のあいだは、盤の代わりに与平の背中越しに描く（hitori/senaka.js。兵は盤の一人ずつの絵の兵をそのまま読む） */
-        if (背中Ref.current) 背中を描く(cv.getContext("2d"), b, 背中Ref.current, W, H, dpr, ts / 1000);
+        /* 背中越しの視点のあいだは、盤の代わりに与平の背中越しに描く（hitori/senaka.js。兵は盤の一人ずつの絵の兵をそのまま読む）。
+           盤を止めているあいだ（速さ〇。合戦の段でないときも）は、与平も止める */
+        if (背中Ref.current) 背中を描く(cv.getContext("2d"), b, 背中Ref.current, W, H, dpr, ts / 1000, sp === 0 || b.phase !== "fight");
         else drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current, 斜め地, 区Ref.current);
         /* 一コマを描くのに要った時（直近六十コマ）。重さを測るための覗き窓 */
         if (typeof window !== "undefined") {
@@ -506,11 +509,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
     window.__合戦 = b;
     /* 背中越しの視点を入れる・切る（撮る道具・試しが使う）。名を渡せば、その名を含む味方の隊の組に与平を立てる */
     window.__背中 = (入, 名) => {
-      if (入 === undefined) { const 態 = 背中Ref.current; if (!態) return null; const 所 = 与平の所(態.組); return { 名: 態.名, 組: 態.組.id, x: 所.x, y: 所.y, 向: 所.向 }; }   // いまの与平の居所
+      if (入 === undefined) { const 態 = 背中Ref.current; if (!態) return null; return { 名: 態.名, 組: 態.組.id, ...与平の今(態) }; }   // いまの与平（居所・体力・気力・勲功）
       if (!入) { 背中Ref.current = null; set背中(false); return null; }
       const 隊 = 名 ? b.corps.find((c) => c.side === "P" && !c.dead && !c.destroyed && c.name.includes(名)) : null;
       const 態 = 背中を始める(b, 隊 ? 隊.id : selRef.current); if (!態) return null;
-      背中Ref.current = 態; set背中(true); const 所 = 与平の所(態.組); return { 名: 態.名, 組: 態.組.id, x: 所.x, y: 所.y, 向: 所.向 };
+      背中Ref.current = 態; set背中(true); return { 名: 態.名, 組: 態.組.id, ...与平の今(態) };
     };
     /* 倍率は絶対値で受ける（一.六なら一.六倍）。寄る先は「いちばん激しく噛んで
        いる隊」とその相手の中ほどである。噛み合い全体の重心を取ると、両軍の
@@ -1763,7 +1766,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       {引き鉦の札}
       {問いの札}
       {咎めの帯}
-      {覚えの札}
+      {!背中 && 覚えの札 /* 背中越しのあいだは出さない（盤だけを広げたとき、右下の突くの釦に重なる） */}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 }}>
         {!wide && (
         <div className="bar bt">
@@ -1971,11 +1974,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 if (背中Ref.current) { 背中Ref.current = null; set背中(false); }
                 else { const 態 = 背中を始める(bRef.current, selRef.current); if (態) { 背中Ref.current = 態; set背中(true); } }
               }}><b>{背中 ? "盤" : "人"}</b>{背中 ? "盤の視点" : "背中の視点"}</div>}
-            {背中 && (
-              <div style={{ position: "absolute", left: "50%", top: 10, transform: "translateX(-50%)", background: "rgba(22,24,28,.82)", color: "#F4F1E8",
-                border: "1.5px solid rgba(226,200,119,.6)", borderRadius: 8, padding: "5px 14px 6px", fontSize: 14, fontWeight: 700, pointerEvents: "none", whiteSpace: "nowrap" }}>
-                背中の視点（試し）　与平：{(背中Ref.current && 背中Ref.current.名) || ""}の組
-              </div>
+            {/* 与平の札と釦（名札・体力・気力・方向キー・突く／受ける／駆ける・討死の札）。左下の釦より下に重ねる */}
+            {背中 && 背中Ref.current && (
+              <SenakaFuda 態={背中Ref.current} b={bRef.current} 止={speed === 0 || bRef.current.phase !== "fight"}
+                onLeave={() => { 背中Ref.current = null; set背中(false); }} />
             )}
             {wide && (
               <div className="grip l" title="道具立てを戻す"

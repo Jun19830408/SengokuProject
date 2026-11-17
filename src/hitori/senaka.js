@@ -17,10 +17,26 @@
    槍足軽の間隔（横およそ〇.九m・前後およそ一.二m）に合わせた見立てである。
    世界の座標（m）：東が x、北が z、上が y。盤の座標（x 右・y 下）から x＝盤x×尺、z＝−盤y×尺。
 
+   与平は自分で動かす（方向キー・突く・受ける・駆ける、体力・気力・討死）。決まりは、先にお見せした
+   試し版（触って動かす版）と同じにした：歩みは一秒に二.四m、駆ければ四.八m、槍の届きは三.五m。
+   気力は五目盛り（駆ければ一秒に一.一五減り、突けば〇.四五減る。休めば一秒に〇.五戻る）。
+   突けば〇.二秒ののちに前の敵に届き、八割八分で当たる。敵の兵は二突き（会心なら一突き）で倒れる。
+   与平にいちばん近い二人の敵（槍と騎馬の兵）は、槍を引いて（穂先が赤く光る）〇.五五秒ののちに突いてくる。
+   受けていれば火花が出て気力が〇.三減るだけで済み、受けていなければ四割五分で八から十三の手傷。
+   体力が尽きれば討死。与平が倒した敵の兵は、つなぎ（hitori/tsunagi.js 兵を討つ）で組の人数から
+   ちょうど一人減らし、盤の一人ずつの絵でもその兵が倒れる。
+
+   与平の刻（態.t）は、盤の刻（b.t）とは別に、まことの秒で進む。盤を止めているあいだ（速さ〇）は
+   与平も止まる。盤の兵の歩みや突きの拍子は盤の刻のままなので、盤の速さによって、まわりの兵の
+   動きと与平の動きの速さの釣り合いが変わる（微速で歩みが、通常で突きの拍子が、人の動きに近い）。
+
    まだ描かないもの：丘・山の高さ（地は平らに描く）、本陣衆（将・旗持・馬廻）、町家。
+   まだしないもの：川・林・沼で足が鈍ること（与平は野のどこでも同じ速さで歩む）、敵の兵が持ち場から
+   与平へ歩み出ること（試し版ではしていた。盤の兵の居所は盤の側が決めるので、ここでは動かさない）。
    ========================================================================== */
 import { 組の見た目, 盤の見た目, 新絵状態を進める, 野の川筋 } from "../battle/shinga.js";
-import { FORESTS, WOODS, ROADS, fieldScale } from "../battle/field.js";
+import { FIELD, FORESTS, WOODS, ROADS, fieldScale } from "../battle/field.js";
+import { 兵を討つ } from "./tsunagi.js";
 
 export const 歩の尺 = 0.46;
 const 尺 = 歩の尺;
@@ -44,7 +60,7 @@ export function 与平の組を選ぶ(b, 隊id) {
   return 組 ? { 隊, 組 } : null;
 }
 /* 与平の立ち所：組の後ろの列のさらに一歩半うしろ、真ん中。組の向きを向く（盤の座標と角）。
-   いまは見るための仮の立ち所で、組と一緒に動く（自分で動かすのは次の段） */
+   背中越しに入ったとき（と、討死ののち、もう一度）に与平が立つ所。そこからは自分で動かす */
 export function 与平の所(q) {
   const s = 組の見た目(q);
   if (!s || !s.初) return { x: q.x, y: q.y, 向: q.facing || 0, 初: false };
@@ -88,11 +104,201 @@ export function 眺めを集める(b, 我, R = 110) {
   return { 兵, 倒れ };
 }
 
-/* ---------- 背中の眺めを始める・描く ---------- */
+/* ---------- 与平（自分で動かす一人） ----------
+   決まりは試し版（触って動かす版）と同じ。長さは m、刻は 態.t（まことの秒。盤を止めれば止まる）。
+   与平の居所は世界の座標（態.我.x・z）で持つ。盤の座標は x/尺、−z/尺 */
+const 我の速さ = 2.4, 駆けの速さ = 4.8, 届き = 3.5;
+/* 与平の乱数。盤の理（engine）が使う Math.random の並びを、背中越しに入ったかどうかで変えないよう、別に持つ */
+function 乱を作る(種) { let a = 種 >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
 export function 背中を始める(b, 隊id) {
   const 選 = 与平の組を選ぶ(b, 隊id);
   if (!選) return null;
-  return { 隊: 選.隊, 組: 選.組, 名: 選.隊.name, cam: null, 前秒: 0, 我歩: 0, 我前: null };
+  const 態 = { 隊: 選.隊, 組: 選.組, 名: 選.隊.name, cam: null, 前秒: 0, t: 0, 止: false,
+    入: { jx: 0, jy: 0, 駆: false, 受: false, keys: new Set() },
+    我: null, 敵: new WeakMap(), 掛かり: new Set(), 拍: 0, 知らせ: [], 知らせ番: 0, 知らせ間: 0,
+    火花: [], 倒し: [], 今討った: new Set(), 手傷: null, 終: null, 動いた: false,
+    乱: 乱を作る(0x5E1A ^ Math.round((b.t || 0) * 1000)) };
+  与平を立て直す(b, 態);
+  return 態;
+}
+/* 与平を組のうしろに立て直す（入ったとき。討死ののち「もう一度」のとき。勲功は新たに数える） */
+export function 与平を立て直す(b, 態) {
+  if (b && (!態.組 || !(態.組.men > 0))) { const 選 = 与平の組を選ぶ(b, 態.隊 && 態.隊.id); if (選) { 態.組 = 選.組; 態.隊 = 選.隊; 態.名 = 選.隊.name; } }
+  const 所 = 態.組 ? 与平の所(態.組) : { x: FIELD.w / 2, y: FIELD.h / 2, 向: -Math.PI / 2 };
+  const [x, z] = 世へ(所.x, 所.y), [fx, fz] = 向きを世へ(所.向);
+  態.我 = { x, z, fx, fz, hp: 100, 気: 4.5, 勲: 0, 突始: -9, 撃: null, 受始: -9, 受: false, 打: -9,
+    退x: 0, 退z: 0, 倒: null, 倒向: -1, dist: 0, v: 0, 近: false };
+  態.終 = null; 態.手傷 = null; 態.cam = null; 態.掛かり.clear();
+  for (const k in 態.入) if (k !== "keys") 態.入[k] = typeof 態.入[k] === "boolean" ? false : 0;
+  return 態.我;
+}
+/* いまの与平（盤の座標と角。撮る道具・試しが覗く） */
+export function 与平の今(態) {
+  const 我 = 態 && 態.我; if (!我) return null;
+  return { x: 我.x / 尺, y: -我.z / 尺, 向: Math.atan2(-我.fz, 我.fx), 体力: 我.hp, 気力: 我.気, 勲功: 我.勲, 討死: 我.倒 != null };
+}
+function 知らせ(態, 文, 副, 種) {
+  態.知らせ.push({ 番: ++態.知らせ番, 文, 副: 副 || "", 種: 種 || "", ms: Date.now() });
+  if (態.知らせ.length > 6) 態.知らせ.shift();
+}
+
+/* 突く（釦・鍵盤から）。〇.五秒に一度まで。気力が〇.三五に足りなければ突けない */
+export function 突く(態) {
+  const 我 = 態 && 態.我; if (!我 || 我.倒 != null || 態.終 || 態.止) return false;
+  const t = 態.t; if (t - 我.突始 < 0.5) return false;
+  if (我.気 < 0.35) { if (t >= 態.知らせ間) { 知らせ(態, "息が上がっている", "", "warn"); 態.知らせ間 = t + 1.5; } return false; }
+  我.突始 = t; 我.気 -= 0.45; 我.撃 = { t: t + 0.2 };
+  return true;
+}
+/* 受ける（押しているあいだ。軽く押しても〇.三秒は構える） */
+export function 受ける(態, 押す) {
+  if (!態 || !態.我) return;
+  if (押す && !態.入.受) 態.我.受始 = 態.t;
+  態.入.受 = !!押す;
+}
+
+/* 前の相手：o の向き（fx, fz）の前、届きのうちでいちばん近い者（試し版と同じ形の扇） */
+function 前の相手(o, fx, fz, 候) {
+  let best = null, bd = 1e9;
+  for (const e of 候) {
+    const rx = e.x - o.x, rz = e.z - o.z, dz = rx * fx + rz * fz, dx = Math.abs(rx * fz - rz * fx);
+    if (dz < 0.35 || dz > 届き + 0.1 || dx > 0.75 + 0.32 * dz) continue;
+    const dd = dz * dz + dx * dx; if (dd < bd) { bd = dd; best = e; }
+  }
+  return best;
+}
+/* 敵の兵一人ごとの、与平との突き合いの覚え（掛かり・間・手傷・当たった刻）。組と持ち場の番で引く。
+   持ち場の番は、前の者が倒れて後ろの者が詰めると別の者を指す（shinga.js）。覚えた所から三m より
+   離れていれば別の者とみなし、覚えを捨てる。二十秒見なければ忘れる */
+function 敵の状(態, p, 作る) {
+  let m = 態.敵.get(p.組);
+  if (!m) { if (!作る) return null; m = new Map(); 態.敵.set(p.組, m); }
+  let s = m.get(p.番);
+  if (s && (Math.hypot(s.x - p.x, s.z - p.z) > 3 || 態.t - s.見刻 > 20)) { m.delete(p.番); 態.掛かり.delete(s); s = null; }
+  if (!s && 作る) { s = { cd: 0, 撃: null, 突始: -9, 突向: null, 打: -9, 傷: 0, x: p.x, z: p.z, 見刻: 態.t, 拍: -1, p }; m.set(p.番, s); }
+  return s;
+}
+
+/* 与平を一コマ進める。眺（眺めを集める の返り値）の兵の居所で突き合う。dt はまことの秒。
+   盤を止めているあいだ（態.止）は何もしない */
+export function 与平を進める(b, 態, dt, 眺) {
+  const 我 = 態.我;
+  態.今討った.clear();
+  if (!我 || 態.止 || !(dt > 0)) return;
+  態.t += dt; 態.拍++;
+  const t = 態.t, 入 = 態.入, r = 態.乱;
+  const 敵ら = 眺.兵.filter((p) => p.側 === "E");
+  /* ---- 動く（方向キーの上は写しの奥、右は右） ---- */
+  if (我.倒 == null) {
+    let jx = 入.jx, jy = 入.jy;
+    const kx = (入.keys.has("r") ? 1 : 0) - (入.keys.has("l") ? 1 : 0), ky = (入.keys.has("d") ? 1 : 0) - (入.keys.has("u") ? 1 : 0);
+    if (kx || ky) { const L = Math.hypot(kx, ky); jx = kx / L; jy = ky / L; }
+    const m = Math.hypot(jx, jy), 有 = m > 0.12;
+    if (有) 態.動いた = true;
+    const 駆 = 入.駆 && 我.気 > 0.15 && 有;
+    const sp = (駆 ? 駆けの速さ : 我の速さ) * (有 ? Math.min(1, (m - 0.12) / 0.6) : 0);
+    const a = 態.cam ? 態.cam.a : Math.atan2(我.fz, 我.fx), cfx = Math.cos(a), cfz = Math.sin(a);
+    const ux = 有 ? jx / m : 0, uy = 有 ? jy / m : 0;
+    let vx = (cfz * ux - cfx * uy) * sp, vz = (-cfx * ux - cfz * uy) * sp;
+    vx += 我.退x; vz += 我.退z; const 減 = Math.exp(-dt * 8); 我.退x *= 減; 我.退z *= 減;
+    我.x += vx * dt; 我.z += vz * dt;
+    /* 敵の兵とは重ならない（〇.七m より内へは入らない）。味方の列は割って通れる */
+    for (const e of 敵ら) { const dx = 我.x - e.x, dz = 我.z - e.z, d = Math.hypot(dx, dz); if (d < 0.7 && d > 1e-4) { 我.x = e.x + dx / d * 0.7; 我.z = e.z + dz / d * 0.7; } }
+    /* 野の外へは出ない */
+    我.x = clamp(我.x, 1, FIELD.w * 尺 - 1); 我.z = clamp(我.z, -FIELD.h * 尺 + 1, -1);
+    我.v = Math.hypot(vx, vz); 我.dist += 我.v * dt * (駆 ? 0.7 : 1);
+    if (駆) 我.気 = Math.max(0, 我.気 - 1.15 * dt); else if (t - 我.突始 > 0.6) 我.気 = Math.min(5, 我.気 + 0.5 * dt);
+    /* 向き：八m のうちのいちばん近い敵を向く。いなければ歩む向き（止まっていれば、そのまま） */
+    let 近 = null, nd = 64;
+    for (const e of 敵ら) { const dd = (e.x - 我.x) ** 2 + (e.z - 我.z) ** 2; if (dd < nd) { nd = dd; 近 = e; } }
+    let tx = 0, tz = 0;
+    if (近) { tx = 近.x - 我.x; tz = 近.z - 我.z; } else if (有 && sp > 0.05) { tx = vx; tz = vz; }
+    const L = Math.hypot(tx, tz); if (L > 1e-4) { 我.fx = tx / L; 我.fz = tz / L; }
+    我.近 = !!近;
+    我.受 = 入.受 || t - 我.受始 < 0.3;
+  }
+  /* ---- 敵の兵が掛かる（八m のうちのいちばん近い二人。試し版と同じ：槍を引き、〇.五五秒ののちに突く） ----
+     敵の兵は盤の向き（描）の筋で突く。与平がうしろにいれば振り返る。筋から横へ外れていれば突かない。
+     掛かるのは槍と騎馬の兵だけ（鉄砲・弓の兵には、槍を引く・穂先が光るといった前触れの姿がまだ無いので、
+     前触れなしに手傷を負わせないよう掛からせない） */
+  const 近敵 = [];
+  for (const p of 敵ら) { const d = Math.hypot(p.x - 我.x, p.z - 我.z); if (d < 8) 近敵.push({ p, d }); }
+  近敵.sort((a2, z2) => a2.d - z2.d);
+  for (const { p } of 近敵) { const s = 敵の状(態, p, true); s.x = p.x; s.z = p.z; s.見刻 = t; s.拍 = 態.拍; s.p = p; }
+  const 筋 = (p) => { const sg = (我.x - p.x) * p.fx + (我.z - p.z) * p.fz >= 0 ? 1 : -1; return [p.fx * sg, p.fz * sg]; };
+  const 扇の内 = (p, ax, az, 前0, 前1, 横0, 横k) => { const rx = 我.x - p.x, rz = 我.z - p.z, dz = rx * ax + rz * az, dx = Math.abs(rx * az - rz * ax);
+    return dz >= 前0 && dz <= 前1 && dx <= 横0 + 横k * dz; };
+  if (我.倒 == null) for (const { p } of 近敵.filter((o) => o.p.型 === "yari" || o.p.型 === "kiba").slice(0, 2)) {
+    const s = 敵の状(態, p, true);
+    if (s.撃 || t < s.cd) continue;
+    const [ax, az] = 筋(p);
+    if (!扇の内(p, ax, az, 0.35, 届き + 0.1, 0.75, 0.32)) { s.cd = t + 0.3; continue; }
+    s.撃 = { 溜始: t, t: t + 0.55, 筋: [ax, az] }; s.cd = t + 1.8 + r() * 1.2; 態.掛かり.add(s);
+  }
+  for (const s of 態.掛かり) {
+    const 撃 = s.撃;
+    if (!撃 || s.拍 !== 態.拍) { s.撃 = null; 態.掛かり.delete(s); continue; }      // 倒れたか、八m より遠のいた
+    if (s.突始 < 撃.溜始 && t >= 撃.t - 0.2) {                                      // 突き出す（向きはここで定まる）
+      s.突始 = t; const dx = 我.x - s.p.x, dz = 我.z - s.p.z, L2 = Math.hypot(dx, dz) || 1; s.突向 = [dx / L2, dz / L2]; }
+    if (t < 撃.t) continue;
+    s.撃 = null; 態.掛かり.delete(s);
+    if (我.倒 != null) continue;
+    const p = s.p, [ax, az] = 撃.筋;
+    if (!扇の内(p, ax, az, 0.3, 届き + 0.4, 0.9, 0.35)) continue;                    // 外れた（退いた・かわした）
+    if (我.受) { 態.火花.push({ t, x: 我.x + 我.fx * 1.2 - 我.fz * 0.3, y: 1.75, z: 我.z + 我.fz * 1.2 + 我.fx * 0.3 }); 我.気 = Math.max(0, 我.気 - 0.3); continue; }
+    if (r() < 0.45) {
+      const dmg = 8 + Math.round(r() * 5); 我.hp = Math.max(0, 我.hp - dmg); 我.打 = t; 態.手傷 = t;
+      const rx = 我.x - p.x, rz = 我.z - p.z, d2 = Math.hypot(rx, rz) || 1; 我.退x = rx / d2 * 2.2; 我.退z = rz / d2 * 2.2;
+      if (我.hp <= 0) { 我.倒 = t; 我.倒向 = -1; 我.撃 = null; 態.終 = { t: t + 1.6, 種: "討死" }; }
+    }
+  }
+  /* ---- 与平の突き（突いて〇.二秒ののちに届く。八割八分で当たり、三割五分は会心） ----
+     敵の兵は二突き（会心なら一突き）で倒れる。倒せば、つなぎで組の人数をちょうど一人減らす */
+  if (我.撃 && t >= 我.撃.t) {
+    我.撃 = null;
+    const e = 我.倒 == null ? 前の相手(我, 我.fx, 我.fz, 敵ら) : null;
+    if (e && r() < 0.88) {
+      const 会心 = r() < 0.35, s = 敵の状(態, e, true);
+      if ((会心 ? 2 : 1) >= 2 - s.傷) {
+        const v = 組の見た目(e.組), 跡 = v && v.初 ? 世へ(v.sx[e.番], v.sy[e.番]) : null;   // 盤の倒れは揺らぎを除いた持ち場に残る
+        const 武勇 = (態.隊 && 態.隊.gen && 態.隊.gen.valor) || 60;                   // ふだんの損害と同じく、隊の将の武勇
+        if (兵を討つ(b, e.組, e.番, { 隊: 態.隊, 組: 態.組, 武勇 })) {
+          我.勲 += 1; 態.今討った.add(e);
+          態.倒し.push({ p: e, t, 向: r() < 0.5 ? -1 : 1, 跡 }); if (態.倒し.length > 400) 態.倒し.shift();
+          const m = 態.敵.get(e.組); if (m) m.delete(e.番); 態.掛かり.delete(s);
+          知らせ(態, "討ち取り", "勲功 +1");
+        }
+      } else { s.傷 += 1; s.打 = t; }
+    }
+  }
+}
+
+/* 与平の姿（描くための形） */
+function 与平の姿(態, t) {
+  const 我 = 態.我, k = (t - 我.突始) / 0.4, 倒 = 我.倒 != null;
+  const 伸 = !倒 && k >= 0 && k <= 1 ? Math.pow(Math.sin(Math.PI * k), 0.7) : 0;
+  return { x: 我.x, z: 我.z, fx: 我.fx, fz: 我.fz, 側: "P", 型: "yari",
+    働: 倒 ? "立" : 我.近 || 伸 > 0 ? "構" : 我.v > 0.6 ? "歩" : "立", 相: 0, 伸,
+    受: !倒 && 我.受, fl: Math.max(0, 1 - (t - 我.打) / 0.22), fu: 倒 ? clamp((t - 我.倒) / 0.55, 0, 1) : 0, 倒向: 我.倒向,
+    歩: (我.dist / 1.5) % 1, v: 我.v, 丈: 1.02, 幅: 1.02, 癖: 0, 鍵: 7, 我: true };
+}
+/* 与平と突き合っている敵の兵の姿（掛かりの溜め・突き・当たったときの閃き）。そうでなければ盤の姿のまま */
+function 敵の姿(態, p, t) {
+  const m = 態.敵.get(p.組), s = m && m.get(p.番);
+  if (!s || s.拍 !== 態.拍) return p;
+  const 撃 = s.撃, k = (t - s.突始) / 0.4, 突中 = k >= 0 && k <= 1, fl = Math.max(0, 1 - (t - s.打) / 0.22);
+  if (!撃 && !突中 && fl <= 0) return p;
+  const o = { ...p, fl };
+  if (撃 || 突中) {
+    if (突中 && s.突向) { o.fx = s.突向[0]; o.fz = s.突向[1]; }
+    else { const dx = 態.我.x - p.x, dz = 態.我.z - p.z, L = Math.hypot(dx, dz) || 1; o.fx = dx / L; o.fz = dz / L; }
+    o.働 = "突";
+    let e = 突中 ? Math.pow(Math.sin(Math.PI * k), 0.7) : 0;
+    if (撃) { const w = clamp((t - 撃.溜始) / 0.35, 0, 1); if (e === 0) e = -0.35 * sm(w); o.光 = w; }
+    o.伸 = e;
+  }
+  return o;
 }
 
 /* 写し（カメラ）。与平の後ろ上から、組の向きに合わせて見る（右の肩越し） */
@@ -117,20 +323,24 @@ const 色 = {
   Y: { 縅: [196, 160, 62], 布: [92, 80, 50], 旗: [200, 168, 70] },
 };
 
-export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec) {
+/* 背中越しに一コマ描く。止 … 盤を止めているか（止めているあいだは与平も敵の掛かりも止まる） */
+export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false) {
   if (!態.組 || !(態.組.men > 0)) { const 選 = 与平の組を選ぶ(b, 態.隊 && 態.隊.id); if (選) { 態.組 = 選.組; 態.隊 = 選.隊; 態.名 = 選.隊.name; } }
-  const q = 態.組;
+  const q = 態.組, 我 = 態.我;
   /* 与平のまわりの組の見た目を進める（盤の画面が描いていないあいだも、同じ関数で） */
-  const R歩 = 300;
-  if (q) 新絵状態を進める(b, nowSec, { x0: q.x - R歩, x1: q.x + R歩, y0: q.y - R歩, y1: q.y + R歩 });
-  const 我盤 = q ? 与平の所(q) : { x: 0, y: 0, 向: -Math.PI / 2 };
-  const [mx, mz] = 世へ(我盤.x, 我盤.y), [mfx, mfz] = 向きを世へ(我盤.向);
+  const R歩 = 300, 我盤 = { x: 我.x / 尺, y: -我.z / 尺 };
+  新絵状態を進める(b, nowSec, { x0: 我盤.x - R歩, x1: 我盤.x + R歩, y0: 我盤.y - R歩, y1: 我盤.y + R歩 });
   const dt = 態.前秒 ? clamp(nowSec - 態.前秒, 0, 0.1) : 0; 態.前秒 = nowSec;
-  if (態.我前) 態.我歩 += Math.hypot(mx - 態.我前[0], mz - 態.我前[1]); const 我速 = 態.我前 && dt > 0 ? Math.hypot(mx - 態.我前[0], mz - 態.我前[1]) / dt : 0; 態.我前 = [mx, mz];
-  /* カメラはなめらかに寄せる（揺らさない）。向きも角で均す */
-  const 的 = { x: mx - mfx * 引き + mfz * 肩, z: mz - mfz * 引き - mfx * 肩, a: Math.atan2(mfz, mfx) };
+  const 眺 = 眺めを集める(b, 我盤, 110);
+  態.止 = !!止;
+  与平を進める(b, 態, dt, 眺);
+  const t = 態.t;
+  /* カメラ：与平の後ろ上から、組の向きに合わせて見る（右の肩越し）。なめらかに寄せる（揺らさない）。向きも角で均す */
+  const qv = q && 組の見た目(q), 基 = qv && qv.初 ? qv.向 : q ? (q.facing || 0) : -Math.PI / 2;
+  const [cfx, cfz] = 向きを世へ(基);
+  const 的 = { x: 我.x - cfx * 引き + cfz * 肩, z: 我.z - cfz * 引き - cfx * 肩, a: Math.atan2(cfz, cfx) };
   if (!態.cam) 態.cam = { x: 的.x, z: 的.z, a: 的.a };
-  else { const k = 1 - Math.exp(-dt * 4); 態.cam.x += (的.x - 態.cam.x) * k; 態.cam.z += (的.z - 態.cam.z) * k;
+  else { const k = 1 - Math.exp(-dt * 6); 態.cam.x += (的.x - 態.cam.x) * k; 態.cam.z += (的.z - 態.cam.z) * k;
     let da = 的.a - 態.cam.a; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; 態.cam.a += da * (1 - Math.exp(-dt * 2.5)); }
   const fx = Math.cos(態.cam.a), fz = Math.sin(態.cam.a);
   筆 = ctx; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -140,23 +350,51 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec) {
   帯を描く(ctx, 野の川筋(), [92, 132, 160], 0.62);
   帯を描く(ctx, ROADS, [172, 152, 116], 1);
   /* 立つもの（木・兵・倒れた者・与平）を奥から描く */
-  const 眺 = 眺めを集める(b, 我盤, 110);
   const 物 = [];
   木を集める(物);
-  const [psx, , pzc] = P(mx, 0, mz), 我幅 = 0.5 * F / Math.max(0.5, pzc);
-  let 兵ら = 眺.兵.map((p) => ({ p, d: 奥(p.x, p.z) })).filter((o) => o.d > 0.8);
+  const [psx, , pzc] = P(我.x, 0, 我.z), 我幅 = 0.5 * F / Math.max(0.5, pzc);
+  let 兵ら = 眺.兵.filter((p) => !態.今討った.has(p)).map((p) => ({ p, d: 奥(p.x, p.z) })).filter((o) => o.d > 0.8);
   if (兵ら.length > 1500) { 兵ら.sort((a, z) => a.d - z.d); 兵ら = 兵ら.slice(0, 1500); }
+  let 透数 = 0;
   for (const { p, d } of 兵ら) {
     const [sx, , zc] = P(p.x, 0, p.z); if (sx < -200 || sx > W + 200) continue;
     const 透 = d < pzc - 0.3 && Math.abs(sx - psx) < 0.42 * F / zc + 我幅;
-    物.push({ d, f: () => 一人を描く(ctx, p, nowSec, 透 ? 0.32 : 1) });
+    if (透) 透数++;
+    const 姿 = p.側 === "E" ? 敵の姿(態, p, t) : p;
+    物.push({ d, f: () => 一人を描く(ctx, 姿, nowSec, 透 ? 0.32 : 1) });
   }
-  for (const e of 眺.倒れ) { const d = 奥(e.x, e.z); if (d > 0.8) 物.push({ d, f: () => 倒れを描く(ctx, e) }); }
-  物.push({ d: 奥(mx, mz), f: () => { 輪(ctx, mx, mz, 0.55, 0.55); 一人を描く(ctx, { x: mx, z: mz, fx: mfx, fz: mfz, 側: "P", 型: "yari", 働: q && 組の見た目(q) && 組の見た目(q).噛 ? "構" : (我速 > 0.6 ? "歩" : "立"), 相: 0, 歩: (態.我歩 / (9 * fieldScale() * 尺)) % 1, v: 我速, 丈: 1.02, 幅: 1.02, 癖: 0, 鍵: 7, 我: true }, nowSec, 1); } });
+  /* 倒れた者。与平が倒した者は倒れる姿のまま描くので、盤の倒れ（揺らぎを除いた持ち場に残る）からは除く */
+  const 跡ら = 態.倒し.filter((o) => o.跡);
+  for (const e of 眺.倒れ) {
+    if (跡ら.some((o) => Math.abs(o.跡[0] - e.x) < 0.45 && Math.abs(o.跡[1] - e.z) < 0.45)) continue;
+    const d = 奥(e.x, e.z); if (d > 0.8) 物.push({ d, f: () => 倒れを描く(ctx, e) });
+  }
+  for (const o of 態.倒し) { const d = 奥(o.p.x, o.p.z); if (d > 0.8 && d < 130) 物.push({ d, f: () => 一人を描く(ctx, { ...o.p, 働: "立", v: 0, fl: 0, fu: clamp((t - o.t) / 0.55, 0, 1), 倒向: o.向 }, nowSec, 1) }); }
+  物.push({ d: 奥(我.x, 我.z), f: () => { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 一人を描く(ctx, 与平の姿(態, t), nowSec, 1); } });
   物.sort((a, z) => z.d - a.d).forEach((o) => o.f());
+  /* 与平が組の中へ入ると、手前（写し側）の味方が与平に重なる。手前の味方を透かすだけでは、幾重にも
+     重なって与平が見えなくなるので、そのときは与平（と足もとの輪）を上からもう一度、少し透かして描く */
+  if (透数) { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 一人を描く(ctx, 与平の姿(態, t), nowSec, 0.72); }
+  /* 受けたときの火花 */
+  態.火花 = 態.火花.filter((f) => t - f.t < 0.3);
+  for (const f of 態.火花) 火花を描く(ctx, f.x, f.y, f.z, (t - f.t) / 0.28);
   霞の帯(ctx);
+  /* 手傷を負えば、画面の縁が赤く染まる（〇.六秒で引く） */
+  if (態.手傷 != null && t - 態.手傷 < 0.6) 手傷を描く(ctx, 0.85 * (1 - (t - 態.手傷) / 0.6));
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   return { 兵: 眺.兵.length, 倒れ: 眺.倒れ.length, 描いた: 兵ら.length };
+}
+function 火花を描く(ctx, x, y, z, k) {
+  const [sx, sy, zc] = P(x, y, z); if (zc < 0.5) return; const s = F / zc;
+  ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = "#FFF1C4"; ctx.lineCap = "round";
+  for (let i = 0; i < 9; i++) { const a = i * 0.7 + 0.3, r0 = (0.05 + k * 0.1) * s, r1 = (0.18 + k * 0.42) * s; ctx.lineWidth = Math.max(1, 0.025 * s * (1 - k));
+    ctx.beginPath(); ctx.moveTo(sx + Math.cos(a) * r0, sy + Math.sin(a) * r0); ctx.lineTo(sx + Math.cos(a) * r1, sy + Math.sin(a) * r1); ctx.stroke(); }
+  ctx.restore();
+}
+function 手傷を描く(ctx, a) {
+  const cx = W / 2, cy = H * 0.52, R = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy));
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R); g.addColorStop(0.42, "rgba(170,30,22,0)"); g.addColorStop(1, "rgba(170,30,22,.85)");
+  ctx.save(); ctx.globalAlpha = clamp(a, 0, 1); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
 }
 
 /* ---------- 空・地・草・帯（街道と川）・木 ---------- */
@@ -248,9 +486,12 @@ function 線3(ctx, a, b2, w0, w1, rgb, d) {
   ctx.fillStyle = 霞(rgb, d, 120); ctx.beginPath(); ctx.moveTo(ax + nx * wa / 2, ay + ny * wa / 2); ctx.lineTo(bx + nx * wb / 2, by + ny * wb / 2); ctx.lineTo(bx - nx * wb / 2, by - ny * wb / 2); ctx.lineTo(ax - nx * wa / 2, ay - ny * wa / 2); ctx.closePath(); ctx.fill();
   return [bx, by, bz, nx, ny];
 }
-function 槍(ctx, a, b2, d) { const r = 線3(ctx, a, b2, 0.05, 0.04, [64, 48, 32], d); if (!r) return; const [bx, by, bz, nx, ny] = r;
+/* 光 … 穂先を赤く光らせる強さ（〇〜一）。敵の兵が与平へ槍を引いて溜めているあいだ（試し版と同じ見せ方） */
+function 槍(ctx, a, b2, d, 光 = 0) { const r = 線3(ctx, a, b2, 0.05, 0.04, [64, 48, 32], d); if (!r) return; const [bx, by, bz, nx, ny] = r;
   const t = 0.3 / Math.hypot(b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]); const [mx, my, mz] = P(b2[0] - (b2[0] - a[0]) * t, b2[1] - (b2[1] - a[1]) * t, b2[2] - (b2[2] - a[2]) * t); const wm = Math.max(1, 0.07 * F / mz);
-  ctx.fillStyle = 霞([206, 212, 218], d, 120); ctx.beginPath(); ctx.moveTo(mx + nx * wm / 2, my + ny * wm / 2); ctx.lineTo(bx, by); ctx.lineTo(mx - nx * wm / 2, my - ny * wm / 2); ctx.closePath(); ctx.fill(); }
+  ctx.fillStyle = 霞([206, 212, 218], d, 120); ctx.beginPath(); ctx.moveTo(mx + nx * wm / 2, my + ny * wm / 2); ctx.lineTo(bx, by); ctx.lineTo(mx - nx * wm / 2, my - ny * wm / 2); ctx.closePath(); ctx.fill();
+  if (光 > 0) { ctx.save(); ctx.globalAlpha *= 光; const rr = Math.max(4, 0.22 * F / bz); const g = ctx.createRadialGradient(bx, by, 0, bx, by, rr);
+    g.addColorStop(0, "rgba(255,90,70,.95)"); g.addColorStop(1, "rgba(255,90,70,0)"); ctx.fillStyle = g; ctx.fillRect(bx - rr, by - rr, rr * 2, rr * 2); ctx.restore(); } }
 const 突きの伸び = (ph) => (ph < 0.45 ? -0.35 * Math.sin((ph / 0.45) * Math.PI / 2) : ph < 0.6 ? lerp(-0.35, 1, (ph - 0.45) / 0.15) : lerp(1, 0, sm((ph - 0.6) / 0.4)));
 function 一人を描く(ctx, p, t, al) {
   筆 = ctx;
@@ -260,16 +501,23 @@ function 一人を描く(ctx, p, t, al) {
   ctx.globalAlpha = al * 近;
   const 前 = p.fx * C.fx + p.fz * C.fz < 0;              // 顔がカメラを向いているか
   const 色組 = 色[p.側] || 色.P;
-  const c = (rgb) => 霞(rgb, d, 120);
+  /* fl … 当たったときの閃き（〇.二二秒、白へ寄せる）。fu … 倒れる進み（〇.五五秒で横たわる）。試し版と同じ */
+  const fl = p.fl || 0, fu = p.fu || 0;
+  const c = (rgb) => 霞(fl > 0 ? [rgb[0] + (255 - rgb[0]) * fl * 0.7, rgb[1] + (250 - rgb[1]) * fl * 0.7, rgb[2] + (240 - rgb[2]) * fl * 0.7] : rgb, d, 120);
   const 漆 = c(p.我 ? [26, 25, 30] : [30, 30, 35]), 縅 = c(色組.縅), 布 = c(色組.布), 脛 = c([156, 146, 122]), 肌 = c([204, 166, 132]), 髪 = c([26, 24, 24]), 金 = c([226, 196, 110]);
   const 騎 = p.型 === "kiba";
   const 下 = 騎 ? 1.12 : 0;                                  // 騎馬は人を馬の背に載せる
   const X = (v) => sx + v * s * p.幅, Y = (v) => sy - (v + 下) * s;
   const 線 = (pts, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = Math.max(0.8, w * s); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); pts.forEach(([a, b2], i) => (i ? ctx.lineTo(X(a), Y(b2)) : ctx.moveTo(X(a), Y(b2)))); ctx.stroke(); };
   const 細 = s > 16, 粗 = s < 6;
-  /* 右手の所（世界）：兵から見て右。槍は兵の向きに沿う */
+  /* 右手の所（世界）：兵から見て右。槍は兵の向きに沿う。横 … 右手からさらに右（負なら左）へ */
   const rx = p.fz, rz = -p.fx;
-  const 手 = (前後, 高さ) => [p.x + rx * 0.3 * p.幅 + p.fx * 前後, (高さ + 下) * p.丈, p.z + rz * 0.3 * p.幅 + p.fz * 前後];
+  const 点 = (前後, 高さ, 横 = 0) => [p.x + rx * (0.3 * p.幅 + 横) + p.fx * 前後, (高さ + 下) * p.丈, p.z + rz * (0.3 * p.幅 + 横) + p.fz * 前後];
+  const 手 = (前後, 高さ) => 点(前後, 高さ);
+  /* 倒れる者：得物は地に落ち、体は足もとを軸に横へ倒れる（画面の右へ倒れるなら、槍も写しの右へ落ちる） */
+  if (fu > 0) { const fd = p.倒向 || 1, lx = C.rx * fd, lz = C.rz * fd;
+    槍(ctx, [p.x + lx * 0.15 - p.fx * 0.8, 0.05, p.z + lz * 0.15 - p.fz * 0.8], [p.x + lx * 1.5 + p.fx * 2.4, 0.05, p.z + lz * 1.5 + p.fz * 2.4], d);
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(fd * 1.45 * sm(fu)); ctx.translate(-sx, -sy); }
   /* 馬 */
   if (騎) {
     const 馬 = c([92, 66, 44]), 馬暗 = c([58, 42, 30]), sw = Math.sin((p.歩 || 0) * Math.PI * 2) * (p.働 === "歩" ? 0.12 : 0);
@@ -300,7 +548,7 @@ function 一人を描く(ctx, p, t, al) {
   ctx.beginPath(); ctx.moveTo(X(-0.22), Y(0.97)); ctx.lineTo(X(-0.26), Y(1.36)); ctx.quadraticCurveTo(X(0), Y(1.47), X(0.26), Y(1.36)); ctx.lineTo(X(0.22), Y(0.97)); ctx.closePath(); ctx.fill();
   if (細) { for (let k = 0; k < 4; k++) 線([[-0.22, 1.04 + k * 0.085], [0.22, 1.04 + k * 0.085]], 0.032, 縅); for (let k = 1; k < 5; k++) 線([[-0.26 + k * 0.104, 0.97], [-0.26 + k * 0.104, 0.69]], 0.012, 縅); }
   else if (!粗) 線([[-0.22, 1.12], [0.22, 1.12]], 0.06, 縅);
-  const 腕型 = p.働 === "突" || p.働 === "構" ? "構" : p.働 === "歩" && p.型 === "yari" ? "肩" : "立";
+  const 腕型 = p.受 || p.働 === "突" || p.働 === "構" ? "構" : p.働 === "歩" && p.型 === "yari" ? "肩" : "立";
   if (!粗) { const 腕 = 前 ? [[[0.26, 1.36], [0.34, 1.12], [0.22, 1.02]], [[-0.26, 1.36], [-0.32, 1.12], [-0.06, 1.04]]]
       : 腕型 === "肩" ? [[[0.26, 1.36], [0.4, 1.2], [0.3, 1.4]], [[-0.26, 1.36], [-0.33, 1.12], [-0.3, 0.92]]]
       : 腕型 === "構" ? [[[0.26, 1.36], [0.36, 1.14], [0.24, 1.04]], [[-0.26, 1.36], [-0.3, 1.14], [-0.04, 1.08]]]
@@ -314,10 +562,12 @@ function 一人を描く(ctx, p, t, al) {
   else { ctx.fillStyle = 漆; ctx.beginPath(); ctx.moveTo(X(-0.36), Y(1.6)); ctx.quadraticCurveTo(X(-0.1), Y(1.7), X(0), Y(1.79)); ctx.quadraticCurveTo(X(0.1), Y(1.7), X(0.36), Y(1.6)); ctx.quadraticCurveTo(X(0), Y(1.53), X(-0.36), Y(1.6)); ctx.fill();
     if (p.癖 === 1 && !粗) 線([[-0.3, 1.6], [0.3, 1.6]], 0.02, 縅); }
   if (!前) 旗();
-  /* 得物 */
+  if (fu > 0) { ctx.restore(); ctx.globalAlpha = 1; return; }
+  /* 得物。受け（与平）：槍を斜めに立てて体の前を塞ぐ。伸 … 突きの伸び（与平と、与平に掛かる敵は、盤の拍子でなく自分の拍子で突く） */
   if (p.型 === "yari" || 騎) {
-    if (p.働 === "突" || p.働 === "構") { const e = p.働 === "突" ? 突きの伸び(p.相) : 0;
-      槍(ctx, 手(-1.3 + e * 0.85, 0.92), 手(2.6 + e * 0.85, 1.25 - 0.04 * e), d); }
+    if (p.受) 槍(ctx, 点(-0.4, 0.95, -0.05), 点(1.9, 2.55, -0.95), d);
+    else if (p.働 === "突" || p.働 === "構") { const e = p.伸 != null ? p.伸 : p.働 === "突" ? 突きの伸び(p.相) : 0;
+      槍(ctx, 手(-1.3 + e * 0.85, 0.92), 手(2.6 + e * 0.85, 1.25 - 0.04 * e), d, p.光 || 0); }
     else if (腕型 === "肩" && !騎) { const el = 0.61; 槍(ctx, 手(-0.95 * Math.cos(el), 1.4 - 0.95 * Math.sin(el)), 手(4.6 * Math.cos(el), 1.4 + 4.6 * Math.sin(el)), d); }
     else 槍(ctx, 手(0, 0.04), 手(0.02, 騎 ? 3.4 : 4.4), d);
   } else if (p.型 === "teppo") {
