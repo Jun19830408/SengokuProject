@@ -308,12 +308,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
     委ねRef.current = true; set委ね中(true);
   };
   /* 背中越し（一人視点）のあいだは、盤の速さを微速に固定する（遊ぶ人の申し出：一人視点では、速さは固定、
-     もしくは委ねる）。速さの釦は微速のほかは押せなくし、委ねて結果を見るはそのまま使える。合戦開始・
-     手綱を取り戻す・問いへの答えなどで速さが変わっても、ここで微速へ戻す。止まっている（〇）のは、
-     合戦が終わったとき・合戦の段でないとき・委ねているあいだだけである */
+     もしくは委ねる。停止はできるように）。速さの釦は停止と微速のほかは押せなくし、委ねて結果を見るは
+     そのまま使える。合戦開始・手綱を取り戻す・問いへの答えなどで速さが変わっても、ここで微速へ戻す
+     （止めている〇はそのまま）。委ねているあいだは手を出さない */
   useEffect(() => {
     if (!背中 || 委ねRef.current || bRef.current.phase !== "fight") return;
-    if (speed !== 背中の速さ) setSpeed(背中の速さ);
+    if (speed !== 0 && speed !== 背中の速さ) setSpeed(背中の速さ);
   }, [背中, speed, phase, 委ね中]);
   useEffect(() => {
     if (!委ね中) return;
@@ -1044,9 +1044,26 @@ export function BattleScreen({ ctx, land, onEnd }) {
     後退: "敵から距離を取り直す。", 待機: "その場で隊列を整える。",
   };
 
+  /* 背中越し（一人視点）のあいだの右の欄。与平は足軽で、物頭に届かない。遊ぶ人の申し出（身分に応じて
+     使える下知を増やしていく。物頭未満は、これまでの下知は使えず、自分を動かす・指揮下の組を動かす
+     独自の下知だけ）に従い、布陣・一括命令・隊を選んでの下知・計略などは出さない。委ねて結果を見るは
+     使える（一人視点の速さは、固定か委ねるか）。報せの一行は下知でないので、ふだんの欄と同じく出す */
+  const 一人の欄 = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%" }}>
+      <button className="btn" onClick={委ねる} disabled={委ね中}>{委ね中 ? "委ねている…" : "委ねて結果を見る"}</button>
+      <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.65, borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
+        足軽の身では、全軍への下知も隊の差配もできない。自分（与平）を動かすことだけができる。
+      </div>
+      <div style={{ fontSize: 11, color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
+        {b.log.length ? b.log[b.log.length - 1].text : "　"}
+      </div>
+    </div>
+  );
+
   const panelBody = (
     <>
-      {b.phase === "deploy" && (
+      {背中 && (b.phase === "deploy" || b.phase === "fight") && 一人の欄}
+      {b.phase === "deploy" && !背中 && (
         <div style={{ display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", flexWrap: "wrap", width: "100%" }}>
           <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.65, flex: 1 }}>
             {/* 天下分け目は筋書きの印を立てるが、関ヶ原ではない。もとは関ヶ原の文（当時の布陣・
@@ -1129,7 +1146,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
         </div>
       )}
 
-      {b.phase === "fight" && (
+      {b.phase === "fight" && !背中 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%" }}>
           {/* 途中からでも諸将に委ねられる。以後は絵を描かず、決着まで一息に進む。 */}
           <button className="btn" onClick={委ねる} disabled={委ね中}>
@@ -1772,7 +1789,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     <div className="sp" style={{ height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }} onMouseDown={stop} onMouseUp={stop}>
       {退きの札}
       {引き鉦の札}
-      {問いの札}
+      {!背中 && 問いの札 /* 好機の問いは総大将の判断なので、足軽の背中越しのあいだは出さない（盤の視点へ戻れば出る） */}
       {咎めの帯}
       {!背中 && 覚えの札 /* 背中越しのあいだは出さない（盤だけを広げたとき、右下の突くの釦に重なる） */}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 }}>
@@ -1853,9 +1870,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
           </span>
           </div>
           {phase === "fight" && (
-            /* 背中越し（一人視点）のあいだは微速に固定し、ほかの速さは押せなくする（上の 背中の速さ の説明） */
-            <span className="tsugi hayasa" title={背中 ? "一人視点では微速に固定（委ねて結果を見ることはできる）" : undefined}>
-              <button className={`btn sm ${speed === 0 ? "on" : ""}`} disabled={背中} onClick={() => setSpeed(0)}>停止</button>
+            /* 背中越し（一人視点）のあいだは停止と微速だけ。ほかの速さは押せなくする（上の 背中の速さ の説明） */
+            <span className="tsugi hayasa" title={背中 ? "一人視点では停止と微速だけ（委ねて結果を見ることはできる）" : undefined}>
+              <button className={`btn sm ${speed === 0 ? "on" : ""}`} onClick={() => setSpeed(0)}>停止</button>
               <button className={`btn sm ${speed === 0.12 ? "on" : ""}`} onClick={() => setSpeed(0.12)}>微速</button>
               <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} disabled={背中} onClick={() => setSpeed(0.3)}>低速</button>
               <button className={`btn sm ${speed === 0.6 ? "on" : ""}`} disabled={背中} onClick={() => setSpeed(0.6)}>通常</button>
@@ -1935,7 +1952,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <span className="dot" style={{ background: ctx.eColor }} /><b className="num">{fmt(eMen)}</b>
                 <span className="num" style={{ color: U.dim }}>{Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}</span>
                 {phase === "fight" && [["停", 0], ["微", 0.12], ["低", 0.3], ["通", 0.6], ["早", 早送りの速さ]].map(([lb, v]) => (
-                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`} disabled={背中 && v !== 背中の速さ}
+                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`} disabled={背中 && v !== 0 && v !== 背中の速さ}
                     style={{ padding: land ? "3px 6px" : "2px 5px", fontSize: land ? 12 : 10.5 }}
                     onClick={() => setSpeed(v)}>{lb}</button>
                 ))}
@@ -1976,8 +1993,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 その背中越しに描く。もう一度押せば盤へ戻る。盤にしか効かない左の釦の列は、背中越しのあいだは隠す。
                 置き場は盤の左下。左の釦の列はどの画面の形でも盤の左上にあり（css.js：縦一列／狭い画面と丈の短い画面では横に寝かせる）、
                 列の右隣では、横に寝かせた列に重なる。左下は合戦の盤では空いている（小図は政務の地図だけ）。
-                野戦だけに出す（地を平らに描くので、城攻めの盤（b.map）では塀も門も描けない） */}
-            {!bRef.current.map && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5 }}
+                野戦だけに出す（地を平らに描くので、城攻めの盤（b.map）では塀も門も描けない）。
+                合戦のさなかだけ出す。足軽の身では布陣も合戦開始もできない（一人の欄）ので、布陣の段で入っても
+                合戦が始められない。背中越しのあいだは、盤へ戻るためにいつでも出す */}
+            {!bRef.current.map && (bRef.current.phase === "fight" || 背中) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5 }}
               onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
               onClick={() => {
                 if (背中Ref.current) { 背中Ref.current = null; set背中(false); }
@@ -1985,7 +2004,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
               }}><b>{背中 ? "盤" : "人"}</b>{背中 ? "盤の視点" : "背中の視点"}</div>}
             {/* 与平の札と釦（名札・体力・気力・方向キー・突く／受ける／駆ける・討死の札）。左下の釦より下に重ねる */}
             {背中 && 背中Ref.current && (
-              <SenakaFuda 態={背中Ref.current} b={bRef.current} 止={speed === 0 || bRef.current.phase !== "fight"}
+              <SenakaFuda 態={背中Ref.current} b={bRef.current} 止め={bRef.current.phase !== "fight" ? "段" : speed === 0 ? "停止" : ""}
                 onLeave={() => { 背中Ref.current = null; set背中(false); }} />
             )}
             {wide && (

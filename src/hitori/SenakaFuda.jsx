@@ -77,7 +77,8 @@ const 型 = `
 /* 鍵盤の割り当て（試し版と同じ） */
 const 鍵 = { KeyW: "u", ArrowUp: "u", KeyS: "d", ArrowDown: "d", KeyA: "l", ArrowLeft: "l", KeyD: "r", ArrowRight: "r" };
 
-export default function SenakaFuda({ 態, b, 止, onLeave }) {
+/* 止め … 盤が止まっている訳。"停止"（停止の釦で止めた）・"段"（合戦の段でない：始まる前・決着ののち）・""（進んでいる） */
+export default function SenakaFuda({ 態, b, 止め, onLeave }) {
   const 根Ref = useRef(null), 輪Ref = useRef(null), 玉Ref = useRef(null), 杖 = useRef(null);
   const [突押, set突押] = useState(false);
   const [卓, set卓] = useState(false);
@@ -183,7 +184,8 @@ export default function SenakaFuda({ 態, b, 止, onLeave }) {
           </div></div>
           <div className="kumi">{態.名}の組・背中の視点（試し）</div>
         </div>
-        {止 && !終 && <div className="snk-tomari glass">合戦が止まっている</div>}
+        {止め === "停止" && !終 && <div className="snk-tomari glass">合戦を止めている<small>上の「微速」で進める</small></div>}
+        {止め === "段" && !終 && <div className="snk-tomari glass">合戦が止まっている</div>}
       </div>
       {!態.動いた && !終 && (
         <div className="snk-hint nop"><div className="ring">✥</div>
