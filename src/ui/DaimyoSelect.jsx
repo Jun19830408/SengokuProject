@@ -6,6 +6,8 @@ import { FACTIONS } from "../data/factions.js";
 import { GENERALS } from "../data/generals.js";
 import { MAPH, MAPW, SEA_LABELS, px, py } from "../data/geo.js";
 import { REGIONS } from "../data/provinces.js";
+/* 風雲モードで、家ごとに主人公が付く上司（若手の、一門でない将） */
+import { 風雲の上司表 } from "../hitori/fuun_joushi.js";
 
 // 本拠は当主が座す城。石高の大きい城とは限らない。
 export function seatOf(castles, generals, fid) {
@@ -296,9 +298,22 @@ export function DaimyoSelect({
                     <span className="k">拠点</span><span className="v">{st.castles}城{st.towns ? `・${st.towns}都市` : ""}</span>
                     <span className="k">本拠</span><span className="v">{st.seat}</span>
                     <span className="k">当主</span><span className="v">{st.lord}</span>
+                    {風雲 && (() => {
+                      /* 風雲モード：その家を選ぶ＝この将の下に付く（hitori/fuun_joushi.js） */
+                      const q = 風雲の上司表[f.id] && GENERALS.find((x) => x.id === 風雲の上司表[f.id]);
+                      const c = q && CASTLES.find((x) => x.id === q.at);
+                      return (<><span className="k">仕える将</span>
+                        <span className="v">{q ? `${q.name}（${q.age}歳）・${c ? c.name : ""}` : "―"}</span></>);
+                    })()}
                   </div>
+                  {風雲 && !風雲の上司表[f.id] ? (
+                    <div style={{ fontSize: 12, color: U.dim, marginTop: 10, lineHeight: 1.7 }}>
+                      一門でない家臣がいないため、風雲モードではこの家に仕えられない。
+                    </div>
+                  ) : (
                   <button className="btn" style={{ width: "100%", marginTop: 10, background: f.color, color: "#fff", borderColor: f.color }}
                     onClick={() => onPick(f.id, false, level)}>{風雲 ? "この家に足軽として仕える" : "この勢力で開始"}</button>
+                  )}
                   {!風雲 && <button className="btn sm" style={{ width: "100%", marginTop: 4 }}
                     onClick={() => onPick(f.id, true, level)}>この勢力を任せて見物する</button>}
                 </div>

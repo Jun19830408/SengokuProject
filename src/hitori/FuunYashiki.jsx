@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { U } from "../core/util.js";
 import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数 } from "./fuun.js";
+import { 主命の重さ, 働きかけの見込み } from "./shumei.js";
+import { TOWNS } from "../data/castles.js";
 
 /* ==========================================================================
    風雲モードの屋敷の画面（五の三の骨組み）
@@ -12,7 +14,8 @@ import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの
 
    以前の検討で決めた屋敷の中身のうち、この段で作るもの：
      住まいの絵（身分で替わる）・身分と勲功・上司の覚え・体力・能力・金・月の行い（三つまで）・自分の記
-   武具・郎党・主命・蔵は、のちの段で作る。
+     主命（上司から下される務め。hitori/shumei.js）：中身・期限・褒美の札と、月の行い「主命に励む」
+   武具・郎党・蔵は、のちの段で作る。
    ========================================================================== */
 
 const 棒 = (値, 満, 色) => (
@@ -97,6 +100,14 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   const 終わり = f.討死 ? "討死" : g.滅び ? "滅亡" : null;
   const 選ぶ = (名) => set行い((v) => (v.includes(名) ? v.filter((x) => x !== 名)
     : v.length >= 月の行いの数 ? v : [...v, 名]));
+  /* 主命（上司から下される務め）。あるあいだは、月の行いに「主命に励む」が加わる。果たせば外れる */
+  const 命 = f.主命;
+  const 命の上 = 命 && g.generals.find((x) => x.id === 命.上司);
+  const 命の町 = 命 && 命.町 && TOWNS.find((x) => x.id === 命.町);
+  const 行い一覧 = 命 ? [...月の行い一覧, { 名: "主命に励む", 説: 命.種 === "山賊退治" ? "山賊を討ちに出る（月を送る前に、盤で合戦になる）"
+    : `${命の町 ? 命の町.name : "町"}へ使いする（まとまる見込み およそ${Math.round(働きかけの見込み(f) * 10)}割）` }] : 月の行い一覧;
+  useEffect(() => { if (!命) set行い((v) => v.filter((x) => x !== "主命に励む")); }, [!!命]); // eslint-disable-line
+  const 山賊に出る = !!命 && 命.種 === "山賊退治" && 行い.includes("主命に励む");
   const 記 = [...(f.記 || [])].reverse().slice(0, 14);
   const 家中 = (g.monthEvents || []).slice(0, 8);
 
@@ -123,15 +134,27 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         <span className="k">金</span><span className="v num">{f.金} 貫</span>
         <span className="k">上司</span><span className="v">{上 ? `${上.name}（${上の居所}）` : "―"}</span>
         <span className="k">合戦</span><span className="v num">{f.合戦} 度・討ち取り {f.討ち取り}</span>
+        <span className="k">主命</span><span className="v num">果たした {(f.主命の数 || {}).果たした || 0}・しくじった {(f.主命の数 || {}).しくじった || 0}</span>
       </div>
     </div>
   );
 
   const 行いの欄 = (
     <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 14 }}>
+      {命 && (
+        <div style={{ border: "1px solid #C9A66B", background: "rgba(201,166,107,0.10)", borderRadius: 8, padding: "9px 11px", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: U.dim, letterSpacing: ".12em" }}>主命{命の上 ? `（${命の上.name}より）` : ""}・{命.種}</div>
+          <div className="mn" style={{ fontSize: 15, margin: "4px 0 5px", lineHeight: 1.6 }}>{命.文}</div>
+          <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.7 }}>
+            期限 <b className="num">{命.期限.年}年{命.期限.月}月</b>・重さ {命.重さ}
+            ・果たせば 勲功{(主命の重さ[命.重さ] || {}).勲功}・覚え{(主命の重さ[命.重さ] || {}).覚え}・金{(主命の重さ[命.重さ] || {}).金}貫
+            <br />月の行いに「主命に励む」を選んだ月に行う。しくじるか期限を過ぎれば、覚えが下がる。
+          </div>
+        </div>
+      )}
       <div className="sec" style={{ marginTop: 0 }}>今月の行い（{月の行いの数}つまで）</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {月の行い一覧.map((x) => (
+        {行い一覧.map((x) => (
           <button key={x.名} className={`btn ${行い.includes(x.名) ? "on" : ""}`} style={{ textAlign: "left", padding: "9px 11px" }}
             disabled={!!終わり} onClick={() => 選ぶ(x.名)}>
             <b>{x.名}</b><span style={{ fontSize: 11.5, color: U.dim, marginLeft: 8 }}>{x.説}</span>
@@ -143,7 +166,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
       </div>
       <button className="btn dark" style={{ width: "100%", padding: 12, marginTop: 10 }}
         disabled={!!終わり || 待つ戦} onClick={() => on月送り(行い)}>
-        {待つ戦 ? "合戦の始末を待っている…" : `月を送る（${g.year}年${g.month}月）`}
+        {待つ戦 ? "合戦の始末を待っている…" : 山賊に出る ? `山賊退治に出て、月を送る（${g.year}年${g.month}月）` : `月を送る（${g.year}年${g.month}月）`}
       </button>
       <div className="sec">{f.名}の記</div>
       <div style={{ fontSize: 12, lineHeight: 1.75 }}>

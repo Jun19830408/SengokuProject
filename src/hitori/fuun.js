@@ -10,7 +10,8 @@
      屋敷       … 住まいの絵（身分で替わる）、月の行い（三つほど選ぶ）、蔵
      主命       … 上司から月ごとに頼まれる（山賊退治の小さな戦・特殊勢力への働きかけ など）
    この段（五の三）で作るのは骨組みで、
-     ・家を選び、その家の本拠で足軽として始める（上司は本拠の城の主）
+     ・家を選び、その家の若手の将（一門でない）の下に足軽として付き、その将の城に住む（hitori/fuun_joushi.js。
+       遊ぶ人の申し出：「当主所属なんてあり得ない」「その大名を選ぶ＝その武将の下につく」）
      ・月の行い（稽古・開墾と商い・上納・交流）を三つまで選んで、月を送る
      ・世界はキャンペーンと同じに一月ずつ動く。主家も含めて諸家はAI（キャンペーンの「見物」と同じ）
      ・上司の隊が野で戦うときだけ、主人公は足軽として盤の合戦に出る（ui/MapScreen.jsx が盤を開く）。
@@ -27,6 +28,8 @@ import { 盤を開かずに裁く } from "../govern/aiWakeme.js";
 import { 縁談を断る } from "../core/hime.js";
 import { 旗頭に許す } from "../core/inin.js";
 import { 旗頭を継がせる } from "../core/rank.js";
+import { isKin, isMainClan } from "../core/house.js";
+import { 風雲の上司表 } from "./fuun_joushi.js";
 
 /* 身分の梯子（以前の検討の表。勲功の目安は仮）。十人長より上の合戦の動かし方は次の段で作る */
 export const 風雲の段 = [
@@ -59,24 +62,50 @@ export const 月の行い一覧 = [
 ];
 export const 月の行いの数 = 3;
 
-const 限 = (v, a, b) => Math.min(b, Math.max(a, v));
-const 記す = (s, 文) => { const f = s.風雲; f.記 = [...(f.記 || []), { 年: s.year, 月: s.month, 文 }].slice(-60); };
+export const 限 = (v, a, b) => Math.min(b, Math.max(a, v));
+export const 記す = (s, 文) => { const f = s.風雲; f.記 = [...(f.記 || []), { 年: s.year, 月: s.month, 文 }].slice(-60); };
 
-/* 上司：主人公の住む城の主（城主が居なければ、その城にいる者のうち禄の高い者。家の者が居なければ当主） */
-export function 上司を選ぶ(s, 城id) {
-  const f = s.player, c = (s.castles || []).find((x) => x.id === 城id);
-  const 居る = (s.generals || []).filter((x) => x.faction === f && !x.captive && x.at === 城id);
-  const 城主 = c && c.lordId ? 居る.find((x) => x.id === c.lordId) : null;
-  if (城主) return 城主;
-  if (居る.length) return [...居る].sort((a, b) => (b.fief || 0) - (a.fief || 0) || (b.lead || 0) - (a.lead || 0))[0];
-  return (s.generals || []).find((x) => x.faction === f && x.lord && !x.captive) || null;
+/* 上司の選び方（hitori/fuun_joushi.js の表の決まりと同じ）：当主と一門を除き、城にいる十六〜三十五歳の者から、
+   器量が高く若い者。城を渡せば、その城にいる者を先にする。若手がいなければ年長からも、一門でない者が
+   いなければ一門からも選ぶ（当主にはできるだけ付けない） */
+const 器量 = (x) => x.lead * 0.4 + x.valor * 0.3 + x.wit * 0.2 + x.gov * 0.1;
+const 選びの点 = (x) => 器量(x) - Math.max(0, (x.age || 30) - 25) * 1.5;
+export function 若手の上司を選ぶ(s, fid, 城id = null) {
+  const 家 = (s.generals || []).filter((x) => x.faction === fid && !x.captive && x.at
+    && (s.castles || []).some((c) => c.id === x.at && c.faction === fid));
+  const 主 = (s.generals || []).find((x) => x.faction === fid && x.lord && !x.captive);
+  const 一門 = (x) => x.lord || (主 && isKin(x, 主)) || isMainClan(s, x);
+  const 並べる = (xs) => [...xs].sort((a, b) => 選びの点(b) - 選びの点(a) || String(a.id).localeCompare(String(b.id)));
+  const 段 = [
+    (x) => !一門(x) && (x.age || 30) >= 16 && (x.age || 30) <= 35,
+    (x) => !一門(x) && (x.age || 30) >= 16,
+    (x) => !x.lord && (x.age || 30) >= 16,
+  ];
+  for (const 合う of 段) {
+    const 城の者 = 城id ? 家.filter((x) => x.at === 城id && 合う(x)) : [];
+    if (城の者.length) return 並べる(城の者)[0];
+    const 家の者 = 家.filter(合う);
+    if (家の者.length) return 並べる(家の者)[0];
+  }
+  return 主 || null;
 }
+/* 風雲を始めるときの上司：家ごとの表（fuun_joushi.js）の将。表に無い・もう居ないときは、同じ決まりで選ぶ */
+export function 風雲の上司を決める(s, fid) {
+  const id = 風雲の上司表[fid];
+  const 表の将 = id && (s.generals || []).find((x) => x.id === id && x.faction === fid && !x.captive && !x.lord && x.at);
+  return 表の将 || (id === null ? null : 若手の上司を選ぶ(s, fid));
+}
+/* 風雲モードで選べる家か（一門でない家臣がいない家は表で null） */
+export const 風雲で選べるか = (fid) => !!風雲の上司表[fid];
+/* 上司を選び直す（上司が討たれた・捕われた・家を去ったとき）：主人公の住む城の者を先に、同じ決まりで */
+export function 上司を選ぶ(s, 城id) { return 若手の上司を選ぶ(s, s.player, 城id); }
 
 /* 風雲を始める。initState(fid) で作った盤に、主人公を据える。主家も諸家もAIで動かす（見物と同じ） */
 export function 風雲を始める(s, 名 = "与平") {
   const 家 = s.factions[s.player];
-  const 本拠 = (家 && 家.本拠) || ((s.castles || []).find((c) => c.faction === s.player) || {}).id;
-  const 上 = 上司を選ぶ(s, 本拠);
+  const 上 = 風雲の上司を決める(s, s.player);
+  /* 住むのは上司の城（上司がいなければ家の本拠） */
+  const 本拠 = (上 && 上.at) || (家 && 家.本拠) || ((s.castles || []).find((c) => c.faction === s.player) || {}).id;
   s.autoPlay = true;
   s.level = s.level || "普通";
   s.風雲 = { 名, 身分: "足軽", 勲功: 0, 覚え: 50, 体力: 100, 武勇: 45, 統率: 20, 知略: 25, 政務: 20, 金: 2,

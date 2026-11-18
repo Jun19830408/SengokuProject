@@ -42,6 +42,8 @@ import { 出陣前の問い } from "./Shutsujin.jsx";
    地図の代わりに主人公の屋敷を出す（hitori/fuun.js・hitori/FuunYashiki.jsx） */
 import { 風雲の戦か, 風雲の一人, 戦の勲功を記す, 風雲の問いに答える, 風雲の月の初め } from "../hitori/fuun.js";
 import { FuunYashiki } from "../hitori/FuunYashiki.jsx";
+/* 風雲モードの主命（上司から下される務め。山賊退治は盤の小さな戦。hitori/shumei.js） */
+import { 主命の月の初め, 主命の月が明けた, 山賊の盤を組む, 山賊退治の果て, 主命の組 } from "../hitori/shumei.js";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
@@ -1081,6 +1083,33 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       if (後詰) return (後詰.gens || []).includes(g.風雲.上司) && 風雲の戦か(g, 後詰, null, a);
     }
     return 風雲の戦か(g, a, dest, null);
+  };
+  /* 風雲モードの月送り（屋敷の「月を送る」）。先に … 同じ書き換えの中で先に行う始末（山賊退治の盤のあと） */
+  const 風雲の月を送る = (行い, 先に = null) => setG((prev) => {
+    const s = structuredClone(prev);
+    if (先に) 先に(s);
+    if (!s.風雲 || s.風雲.討死) return s;
+    s.風雲.行い = 行い;
+    風雲の月の初め(s);
+    主命の月の初め(s);
+    const n = 月送り.advanceMonth(s, g);
+    主命の月が明けた(n);
+    return n;
+  });
+  const 風雲の月送り = (行い) => {
+    const f = g.風雲;
+    if ((行い || []).includes("主命に励む") && f && f.主命 && f.主命.種 === "山賊退治") {
+      const 家 = g.factions[g.player] || {};
+      const 城 = g.castles.find((c) => c.id === f.城);
+      setBattle({
+        出陣前: false, mode: "主命", b: 山賊の盤を組む(g), armyId: `shumei-${g.year}-${g.month}`, castleId: f.城,
+        playerIsAtk: true, 一人: { ...風雲の一人(g), 隊id: 主命の組 }, 行い,
+        pName: 家.name, eName: "山賊", pColor: sideHue(家.color || "#2F5D8C", true), eColor: sideHue("#6B5A48", false),
+        place: `${城 ? 城.name : ""}の近在の山`,
+      });
+      return;
+    }
+    風雲の月を送る(行い);
   };
   // 画面外の合戦。兵数・練度・統率・城防から勝敗と損害を出し、結果だけを記録する。
   const autoResolve = (armyId, castleId) => setG((prev) => 合戦裁定.resolveOffscreen(prev, armyId, castleId));
@@ -2328,6 +2357,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   };
 
   const finishBattle = (b, ctx) => {
+    /* 風雲モード：主命の山賊退治の盤のあと。働きを記してから、その月を送る（選んでいた月の行い ctx.行い） */
+    if (ctx.mode === "主命") { setBattle(null); 風雲の月を送る(ctx.行い, (s) => 山賊退治の果て(s, b)); return; }
     /* 風雲モード：主人公の働き（盤の b.一人働き：討ち取り・体力・討死）を記す。勝ち負けと損害は、下のふだんの道で書き戻す */
     if (ctx.一人 && ctx.一人.風雲) setG((prev) => 戦の勲功を記す(structuredClone(prev), b, ctx.place));
     if (ctx.mode === "wakeme") return finishWakeme(b, ctx);
@@ -3049,15 +3080,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   }
   if (battle) return <BattleScreen key={battle.armyId} ctx={battle} land={land} onEnd={(bb) => finishBattle(bb, battle)} />;
   /* 風雲モード：地図の代わりに主人公の屋敷を出す。月の行いを決めて月を送る（hitori/FuunYashiki.jsx）。
-     月の初めに行いを行ってから、世界をキャンペーンと同じに一月進める（主家も諸家もAI） */
+     月の初めに行いを行ってから（主命の働きかけも）、世界をキャンペーンと同じに一月進める（主家も諸家もAI）。
+     明けた月に、主命の期限を見て、主命が無ければ上司から新たに下される（hitori/shumei.js）。
+     「主命に励む」を選んだ月の主命が山賊退治なら、先に盤を開いて戦い、戦のあとでその月を送る（finishBattle） */
   if (g.風雲) return (
-    <FuunYashiki g={g} land={land} onTitle={onTitle}
-      on月送り={(行い) => setG((prev) => {
-        const s = structuredClone(prev);
-        s.風雲.行い = 行い;
-        風雲の月の初め(s);
-        return 月送り.advanceMonth(s, g);
-      })}
+    <FuunYashiki g={g} land={land} onTitle={onTitle} on月送り={風雲の月送り}
       on知らせを閉じる={() => setG((p) => ({ ...p, 風雲: { ...p.風雲, 知らせ: [] } }))} />
   );
 
