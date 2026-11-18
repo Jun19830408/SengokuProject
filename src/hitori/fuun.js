@@ -46,10 +46,16 @@ export const 次の段 = (身分) => 風雲の段[段の番(身分) + 1] || null
 /* 合戦の盤での身分（ui/BattleScreen.jsx の 身分）。物頭に届くまでは足軽と同じに、自分を動かすだけである
    （十人長から五十人長が組へ下知する動かし方は次の段で作る） */
 export const 盤の身分 = (身分) => (段の番(身分) >= 段の番("物頭") ? "物頭" : "足軽");
-/* 盤へ渡す主人公（ctx.一人）。隊は上司の隊（隊の id は将の id）。体力と武勇は風雲の値で、討死すれば二度目は無い */
+/* 大将首の勲功（遊ぶ人の申し出：「その範囲を超えて一騎駆けや抜け駆けすることで敵の大将の首を取るなどしたら勲功が上がる」）。
+   値は仮。総大将の首は二十、ほかの大将の首は十（物頭に届く勲功は六十）。首を取った一突きも、討ち取り一つに数える。
+   山賊の頭（主命の山賊退治）は大将首に数えない（主命の褒美と釣り合わないため） */
+export const 首の勲功 = { 総大将: 20, 大将: 10 };
+export const 首の値 = (首) => (!首 || 首.山賊 ? 0 : 首.総大将 ? 首の勲功.総大将 : 首の勲功.大将);
+/* 盤へ渡す主人公（ctx.一人）。隊は上司の隊（隊の id は将の id）。体力と武勇は風雲の値で、討死すれば二度目は無い。
+   首の勲功は、背中越しの知らせ（hitori/senaka.js）に出すために渡す */
 export function 風雲の一人(s) {
   const f = s && s.風雲; if (!f) return null;
-  return { 身分: 盤の身分(f.身分), 隊id: f.上司, 体力: f.体力, 武勇: f.武勇, 一度きり: true, 名: f.名, 風雲: true };
+  return { 身分: 盤の身分(f.身分), 隊id: f.上司, 体力: f.体力, 武勇: f.武勇, 一度きり: true, 名: f.名, 風雲: true, 首の勲功 };
 }
 
 /* 月の行い（以前の検討の「月の行い」のうち、この段で作るもの。武具・郎党・主命はのちの段）。
@@ -59,6 +65,9 @@ export const 月の行い一覧 = [
   { 名: "開墾・商い", 説: "金を二貫得て、政務を一上げる" },
   { 名: "上納", 説: "金二貫を上司に納め、覚えを五上げる" },
   { 名: "交流", 説: "知略を一上げ、覚えを一上げる" },
+  /* 陣借り（遊ぶ人の申し出：上司の戦が少ないので、家の他の将の戦に加わる）。この月に家の野戦や城攻めがあれば、
+     上司の戦でなくても、その戦の家の将の隊に加わって一度出る（上司の戦があれば、そちらが先） */
+  { 名: "陣借り", 説: "家の他の将の戦に加わる（この月に家の野戦や城攻めがあれば、その将の隊で一度出る）" },
 ];
 export const 月の行いの数 = 3;
 
@@ -127,6 +136,8 @@ export function 風雲の月の初め(s) {
     else if (名 === "交流") { f.知略 = 限(f.知略 + 1, 0, 90); f.覚え = 限(f.覚え + 1, 0, 100); }
   }
   f.体力 = 限(f.体力 + 25, 0, 100);                              // 月をまたげば手傷は癒える
+  /* 陣借り：この月（月送りで起こる戦）に一度だけ、家の他の将の戦に加わる。次の月の初めまで */
+  f.陣借り = 選んだ.has("陣借り") ? { 済: false } : null;
   上司を見直す(s);
   return s;
 }
@@ -153,39 +164,99 @@ export function 上司を見直す(s) {
      行き合い（foe あり）… 上司が、どちらかの軍にいる
      着陣（foe なし）  … 上司の軍が敵の城へ着いた（城下の野戦）か、敵が上司のいる城へ着いた（城方の野戦）
    囲み・城攻め（城の盤）は、背中の視点が城に対応していないので、まだ盤の外で決める */
-export function 風雲の戦か(s, army, dest, foe) {
-  const f = s.風雲; if (!f || f.討死 || !f.上司 || !army) return false;
-  const 上 = f.上司;
-  if (foe) return (army.gens || []).includes(上) || (foe.gens || []).includes(上);
-  if (!dest) return false;
-  if ((army.gens || []).includes(上)) return dest.faction !== army.faction;
-  const 上の将 = (s.generals || []).find((x) => x.id === 上);
-  return !!(上の将 && 上の将.at === dest.id && dest.faction === s.player && army.faction !== s.player);
+/* 陣を借りる将：その戦の家の将のうち、当主と一門でない者を先にする（当主には付けない。上司の表と同じ考え）。
+   いなければ、その戦の家の将の先頭 */
+function 陣を借りる将(s, ids) {
+  const 主 = (s.generals || []).find((x) => x.faction === s.player && x.lord && !x.captive);
+  const 将ら = ids.map((id) => (s.generals || []).find((x) => x.id === id)).filter((x) => x && !x.captive);
+  const 外 = 将ら.find((x) => !x.lord && !(主 && isKin(x, 主)) && !isMainClan(s, x));
+  return (外 || 将ら[0] || {}).id || null;
 }
+export function 風雲の隊を選ぶ(s, army, dest, foe) {
+  const f = s && s.風雲; if (!f || f.討死 || !army) return null;
+  const 上 = f.上司;
+  if (上) {
+    if (foe) { if ((army.gens || []).includes(上) || (foe.gens || []).includes(上)) return { 隊id: 上, 陣借り: false }; }
+    else if (dest) {
+      if ((army.gens || []).includes(上)) { if (dest.faction !== army.faction) return { 隊id: 上, 陣借り: false }; }
+      else {
+        const 上の将 = (s.generals || []).find((x) => x.id === 上);
+        if (上の将 && 上の将.at === dest.id && dest.faction === s.player && army.faction !== s.player) return { 隊id: 上, 陣借り: false };
+      }
+    }
+  }
+  /* 陣借り：この月に一度だけ、家の戦なら、その戦の家の将（軍の先頭の将・城の主）の隊に加わる */
+  if (f.陣借り && !f.陣借り.済) {
+    const 家 = s.player;
+    if (foe) {
+      const 我軍 = army.faction === 家 ? army : foe.faction === 家 ? foe : null;
+      const id = 我軍 && 陣を借りる将(s, 我軍.gens || []);
+      if (id) return { 隊id: id, 陣借り: true };
+    } else if (dest) {
+      if (army.faction === 家 && dest.faction !== 家) { const id = 陣を借りる将(s, army.gens || []); if (id) return { 隊id: id, 陣借り: true }; }
+      if (dest.faction === 家 && army.faction !== 家) {
+        const 城将 = (s.generals || []).filter((x) => x.at === dest.id && x.faction === 家 && !x.captive).map((x) => x.id);
+        const id = 陣を借りる将(s, 城将);
+        if (id) return { 隊id: id, 陣借り: true };
+      }
+    }
+  }
+  return null;
+}
+export const 風雲の戦か = (s, army, dest, foe) => !!風雲の隊を選ぶ(s, army, dest, foe);
 
 /* 主人公の城攻めか：上司が寄せ手の軍にいるか、囲まれた家の城に籠っているとき（遊ぶ人の申し出「BC をいずれも入れれば」の C）。
    月送り（govern/month.js）は、この強攻を式で裁かずに s.風雲の城攻め へ積み、地図画面が城の盤を開く */
-export function 風雲の城攻めか(s, army, castle) {
-  const f = s && s.風雲; if (!f || f.討死 || !f.上司 || !army || !castle) return false;
-  if ((army.gens || []).includes(f.上司)) return castle.faction !== army.faction;
-  const 上 = (s.generals || []).find((x) => x.id === f.上司);
-  return !!(上 && !上.captive && 上.at === castle.id && castle.faction === s.player && army.faction !== s.player);
+export function 風雲の城攻めの隊(s, army, castle) {
+  const f = s && s.風雲; if (!f || f.討死 || !army || !castle) return null;
+  if (f.上司) {
+    if ((army.gens || []).includes(f.上司)) { if (castle.faction !== army.faction) return { 隊id: f.上司, 陣借り: false }; }
+    else {
+      const 上 = (s.generals || []).find((x) => x.id === f.上司);
+      if (上 && !上.captive && 上.at === castle.id && castle.faction === s.player && army.faction !== s.player) return { 隊id: f.上司, 陣借り: false };
+    }
+  }
+  /* 陣借り：家の軍が寄せる城攻めか、家の城が受ける城攻め（この月に一度） */
+  if (f.陣借り && !f.陣借り.済) {
+    const 家 = s.player;
+    if (army.faction === 家 && castle.faction !== 家) { const id = 陣を借りる将(s, army.gens || []); if (id) return { 隊id: id, 陣借り: true }; }
+    if (castle.faction === 家 && army.faction !== 家) {
+      const id = 陣を借りる将(s, (s.generals || []).filter((x) => x.at === castle.id && x.faction === 家 && !x.captive).map((x) => x.id));
+      if (id) return { 隊id: id, 陣借り: true };
+    }
+  }
+  return null;
 }
+export const 風雲の城攻めか = (s, army, castle) => !!風雲の城攻めの隊(s, army, castle);
 
 /* 合戦のあと：与平の働きを書き戻す（盤の b.一人働き：討ち取り・体力・討死） */
-export function 戦の勲功を記す(s, b, 場所) {
+export function 戦の勲功を記す(s, b, 場所, 添 = {}) {
   const f = s.風雲; if (!f || !b) return s;
+  /* 陣借りの戦なら、その月の陣借りは済む（一月に一度） */
+  if (添.陣借り && f.陣借り) f.陣借り.済 = true;
+  const 借り = 添.陣借り ? (s.generals || []).find((x) => x.id === 添.隊id) : null;
   const 働 = b.一人働き || {};
   const 討 = 働.討ち取り || 0;
   f.合戦 += 1; f.討ち取り += 討; f.勲功 += 討;
   if (働.体力 != null) f.体力 = 限(Math.round(働.体力), 0, 100);
+  /* 大将首（首ごとに勲功を足す）と、持ち場を離れた咎（上司の覚えから引く。hitori/senaka.js 持ち場を見る） */
+  const 首ら = (働.首 || []).filter((k) => 首の値(k) > 0);
+  for (const k of 首ら) f.勲功 += 首の値(k);
+  const 咎 = Math.round(働.咎 || 0);
+  if (咎 > 0) f.覚え = 限(f.覚え - 咎, 0, 100);
+  const 首と咎を記す = () => {
+    for (const k of 首ら) 記す(s, `${k.抜け駆け ? "持ち場を離れて抜け駆けし、" : ""}${k.名}${k.総大将 ? "（総大将）" : ""}の首を取った。勲功${首の値(k)}。`);
+    if (咎 > 0) 記す(s, `持ち場を離れたため、上司の覚えが${咎}下がった。`);
+  };
   const 勝 = b.result === "P" ? "勝ち戦" : b.result === "E" ? "負け戦" : "引き分け";
   if (働.討死) {
     f.討死 = { 年: s.year, 月: s.month, 場所: 場所 || "" };
+    首と咎を記す();
     記す(s, `${場所 ? `${場所}の` : ""}${勝}で討死した。生涯の討ち取り${f.討ち取り}・勲功${f.勲功}。`);
     return s;
   }
-  記す(s, `${場所 ? `${場所}の` : ""}${勝}に足軽として出た。討ち取り${討}。`);
+  記す(s, `${借り ? `${借り.name}の陣を借りて、` : ""}${場所 ? `${場所}の` : ""}${勝}に足軽として出た。討ち取り${討}。`);
+  首と咎を記す();
   取り立てを見る(s);
   return s;
 }

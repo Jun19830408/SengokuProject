@@ -40,7 +40,7 @@ import { BattleScreen } from "./BattleScreen.jsx";
 import { 出陣前の問い } from "./Shutsujin.jsx";
 /* 風雲モード（一人の侍の立身）。遊ぶ家もAIに任せ（見物と同じ）、主人公の上司が野で戦うときだけ盤を開く。
    地図の代わりに主人公の屋敷を出す（hitori/fuun.js・hitori/FuunYashiki.jsx） */
-import { 風雲の戦か, 風雲の一人, 戦の勲功を記す, 風雲の問いに答える, 風雲の月の初め, 風雲の城攻めか } from "../hitori/fuun.js";
+import { 風雲の戦か, 風雲の一人, 戦の勲功を記す, 風雲の問いに答える, 風雲の月の初め, 風雲の城攻めか, 風雲の隊を選ぶ, 風雲の城攻めの隊 } from "../hitori/fuun.js";
 import { FuunYashiki } from "../hitori/FuunYashiki.jsx";
 /* 風雲モードの主命（上司から下される務め。山賊退治は盤の小さな戦。hitori/shumei.js） */
 import { 主命の月の初め, 主命の月が明けた, 山賊の盤を組む, 山賊退治の果て, 主命の組 } from "../hitori/shumei.js";
@@ -1091,7 +1091,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         && (!x.path || x.path.length <= 1) && !x.sieging
         && 同じ旗の下(g, x.faction, dest.faction)
         && (待つ.has(x.id) || x.在陣 === dest.id));
-      if (後詰) return (後詰.gens || []).includes(g.風雲.上司) && 風雲の戦か(g, 後詰, null, a);
+      if (後詰) { const 選 = 風雲の隊を選ぶ(g, 後詰, null, a); return !!選 && (後詰.gens || []).includes(選.隊id); }
     }
     return 風雲の戦か(g, a, dest, null);
   };
@@ -1153,7 +1153,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const army = g.armies.find((x) => x.id === sg.armyId);
     const castle = g.castles.find((x) => x.id === sg.castleId);
     /* 風雲モード：上司が寄せ手か籠る側にいる城攻めは、見物でも盤を開く。主人公は足軽として出る（出陣前の問いは経ない） */
-    const 風雲城攻め = !!g.風雲 && 風雲の城攻めか(g, army, castle);
+    const 風雲の城の選び = g.風雲 ? 風雲の城攻めの隊(g, army, castle) : null;
+    const 風雲城攻め = !!風雲の城の選び;
     if (g.autoPlay && !風雲城攻め) return;
     if (!army || !castle) return;
     /* 城攻めの盤は、城のまわりに野を敷いた広い盤である（castleMap.js 広い盤に据える）。
@@ -1392,7 +1393,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     setBattle({
       出陣前: !風雲城攻め,
-      ...(風雲城攻め ? { 一人: 風雲の一人(g) } : {}),
+      ...(風雲城攻め ? { 一人: { ...風雲の一人(g), 隊id: 風雲の城の選び.隊id, 陣借り: 風雲の城の選び.陣借り } } : {}),
       b: bb, armyId: army.id, castleId: castle.id, playerIsAtk, mode: "castle",
       reserveMen, reserveRost,
       pName: g.factions[playerIsAtk ? army.faction : castle.faction].name,
@@ -1464,7 +1465,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const startBattle = (army, dest, camp, ambush, foe, sally) => {
     /* 風雲モード：主人公の上司が野に立つ戦は、見物でも盤を開く。奇襲の献策と出陣前の問い（自ら采を執るか
        委ねるか）は総大将の判断なので、足軽には問わない */
-    const 風雲戦 = !!g.風雲 && 風雲の戦か(g, army, foe ? null : dest, foe || null);
+    /* 主人公が出る隊（上司の隊。陣借りなら、その戦の家の将の隊）。hitori/fuun.js 風雲の隊を選ぶ */
+    const 風雲の選び = g.風雲 ? 風雲の隊を選ぶ(g, army, foe ? null : dest, foe || null) : null;
+    const 風雲戦 = !!風雲の選び;
     if (風雲戦) ambush = null;
     // 見物のときは画面を開かず、同じ規則で自動に解く
     if (g.autoPlay && !風雲戦) {
@@ -1779,7 +1782,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     if (野の型.名) bb.notices = [...(bb.notices || []), { t: 0, kind: "info", text: `戦場：${野の型.名}` }];
     setBattle({
       出陣前: !風雲戦,
-      ...(風雲戦 ? { 一人: 風雲の一人(g) } : {}),
+      ...(風雲戦 ? { 一人: { ...風雲の一人(g), 隊id: 風雲の選び.隊id, 陣借り: 風雲の選び.陣借り } } : {}),
       b: bb, armyId: army.id, castleId: dest.id, playerIsAtk, campId: camp ? camp.id : null,
       mode: foe ? "clash" : undefined, foeId: foe ? foe.id : null,
       城方の後詰: 城方の援軍ら.map((a) => ({ id: a.id, men: a.men })),
@@ -1984,6 +1987,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
            壊滅の重みを半ばに落とし、討死の境を上げ、あいだを捕縛にした。 */
         let risk = lossRate * 0.5 + (c.routed ? 0.14 : 0) + (c.潰 ? 0.08 : 0) + (c.destroyed ? 0.15 : 0)
           - gen.valor / 380 + Math.random() * 0.3 - 0.15;
+        if (c.将討たれ) risk = 1;   // 一人働きで首を取られた将（hitori/tsunagi.js 将を討つ）は討死
         if (risk <= 0.60) continue;
         if (risk > 0.86) {
           // 討死。跡目は家督の定めに従う。
@@ -1995,7 +1999,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           if (wasLord) {
             if (gen.faction === s.player) s.succession = { dead: gen, cause: "討死した" };
             else succeed(s, gen, "討死した");
-          } else s.chronicle.push({ y: s.year, m: s.month, text: `${gen.name}が討死した。` });
+          } else s.chronicle.push({ y: s.year, m: s.month, text: `${gen.name}が討死した${c.将討たれ && c.将討たれ.手 ? `（${c.将討たれ.手}が首を取った）` : ""}。` });
         } else {
           /* 捕縛。盤上から消さず、捕虜として相手の手に落ちる（GDD 12.3）。
              ここは castle を見る。かつては dest という在りもしない名を書いていたため、
@@ -2200,7 +2204,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         /* 討死。当主と器量者は、配下に守られ、あるいは自らの手で斬り抜けて
            戦場を離れる（難を逃れる）。大名が野戦で討たれるのは稀な事である。 */
         let fate = null;
-        if (risk > 0.86 && Math.random() < 難を逃れる(gen)) fate = "討死";
+        if (c.将討たれ) fate = "討死";   // 一人働きで首を取られた将（hitori/tsunagi.js 将を討つ）は討死
+        else if (risk > 0.86 && Math.random() < 難を逃れる(gen)) fate = "討死";
         else if (勝家 && risk > 0.58
           && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0) + (c.潰 ? 1.2 : 0))) fate = "捕縛";
         if (fate) notify(b, `${gen.name}、${fate}。`, c.side === "P" ? "bad" : "good");
@@ -2226,7 +2231,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           if (gen.lord) {
             if (gen.faction === s.player) s.succession = { dead: gen, cause: "討死した" };
             else succeed(s, gen, "討死した");
-          } else s.chronicle.push({ y: s.year, m: s.month, text: `${gen.name}が討死した。` });
+          } else s.chronicle.push({ y: s.year, m: s.month, text: `${gen.name}が討死した${c.将討たれ && c.将討たれ.手 ? `（${c.将討たれ.手}が首を取った）` : ""}。` });
         } else if (fate === "重傷") {
           gen.hurt = 3; gen.unity = Math.max(20, (gen.unity || 60) - 8);
           s.chronicle.push({ y: s.year, m: s.month, text: `${gen.name}が重傷を負い、しばらく戦えない。` });
@@ -2376,7 +2381,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     /* 風雲モード：主人公の働き（盤の b.一人働き：討ち取り・体力・討死）を記す。勝ち負けと損害は、下のふだんの道で書き戻す */
     if (ctx.一人 && ctx.一人.風雲) {
       const 場所 = ctx.mode === "castle" ? `${ctx.place || ""}${ctx.playerIsAtk ? "攻め" : "の籠城"}` : ctx.place;
-      setG((prev) => 戦の勲功を記す(structuredClone(prev), b, 場所));
+      setG((prev) => 戦の勲功を記す(structuredClone(prev), b, 場所, { 陣借り: !!ctx.一人.陣借り, 隊id: ctx.一人.隊id }));
     }
     if (ctx.mode === "wakeme") return finishWakeme(b, ctx);
     if (ctx.mode === "castle") return finishAssault(b, ctx);
@@ -2432,7 +2437,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         /* 討死。当主と器量者は、配下に守られ、あるいは自らの手で斬り抜けて
            戦場を離れる（難を逃れる）。大名が野戦で討たれるのは稀な事である。 */
         let fate = null;
-        if (risk > 0.86 && Math.random() < 難を逃れる(gen)) fate = "討死";
+        if (c.将討たれ) fate = "討死";   // 一人働きで首を取られた将（hitori/tsunagi.js 将を討つ）は討死
+        else if (risk > 0.86 && Math.random() < 難を逃れる(gen)) fate = "討死";
         else if (risk > 0.58
           && Math.random() < captureChance(gen) * (1 + (c.routed ? 1.4 : 0) + (c.潰 ? 1.2 : 0))) fate = "捕縛";
         if (fate) notify(b, `${gen.name}、${fate}。`, c.side === "P" ? "bad" : "good");
@@ -2461,7 +2467,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           if (gen.lord) {
             if (gen.faction === s.player) s.succession = { dead: gen, cause: "討死した" };
             else succeed(s, gen, "討死した");
-          } else s.chronicle.push({ y: s.year, m: s.month, text: `${gen.name}が討死した。` });
+          } else s.chronicle.push({ y: s.year, m: s.month, text: `${gen.name}が討死した${c.将討たれ && c.将討たれ.手 ? `（${c.将討たれ.手}が首を取った）` : ""}。` });
         } else if (fate === "重傷") {
           gen.hurt = 3; gen.unity = Math.max(20, (gen.unity || 60) - 8);
           s.chronicle.push({ y: s.year, m: s.month, text: `${gen.name}が重傷を負い、しばらく戦えない。` });

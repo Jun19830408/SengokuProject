@@ -23,7 +23,7 @@
         者が詰めると別の者を指すので、討つその時に引き当てる（組の兵を数える を使う）。
    ========================================================================== */
 import { applyDamage } from "../battle/engine.js";
-import { 組の見た目 } from "../battle/shinga.js";
+import { 組の見た目, 本陣衆を見る } from "../battle/shinga.js";
 
 /* 組 q を抱える隊 */
 export function 組の隊(b, q) {
@@ -58,5 +58,34 @@ export function 兵を討つ(b, q, 番, 討ち手 = {}) {
   return true;
 }
 
+/* 総大将か：当主の隊（合戦の理が総大将として扱う gen.lord。battle/engine.js）。当主のいない側は、その側の先頭の隊 */
+export function 総大将か(b, c) {
+  if (!b || !c) return false;
+  if (c.gen && c.gen.lord) return true;
+  if (b.corps.some((x) => x.side === c.side && x.gen && x.gen.lord)) return false;
+  return b.corps.find((x) => x.side === c.side && !x.ally && !x.detach) === c;
+}
+
+/* 将を討つ（一人働き・風雲モード。遊ぶ人の申し出：「範囲を超えて一騎駆けや抜け駆けすることで敵の大将の首を取る」）。
+   与平が本陣衆の将を討ち取ったとき。その隊は士気が崩れ、同じ側の隊は怯み、相手の側は勢いづく（奇襲が本陣を衝いた
+   ときと同じ向き。ui/MapScreen.jsx 奇襲の始末）。総大将なら響きが大きい。合戦のあとは、この隊の将を必ず討死として
+   書き戻す（ui/MapScreen.jsx 武将の生死 の c.将討たれ）。返すのは { 名, 総大将 }（討てなければ null） */
+export function 将を討つ(b, c, 討ち手 = {}) {
+  if (!b || !c || c.将討たれ || c.dead || c.destroyed) return null;
+  const 大 = 総大将か(b, c);
+  c.将討たれ = { t: b.t, 手: 討ち手.名 || "" };
+  c.morale = Math.min(c.morale, 10);
+  for (const q of c.squads) q.cohesion = Math.max(0, (q.cohesion || 0) - 30);
+  for (const o of b.corps) {
+    if (o === c || o.dead || o.destroyed) continue;
+    if (o.side === c.side) o.morale = Math.max(5, o.morale - (大 ? 28 : 10));
+    else o.morale = Math.min(100, o.morale + (大 ? 14 : 5));
+  }
+  const 文 = `${討ち手.名 ? `${討ち手.名}が` : ""}${c.name}${大 ? "（総大将）" : ""}を討ち取った`;
+  b.notices = [...(b.notices || []), { t: b.t, kind: c.side === "P" ? "bad" : "good", text: 文 }];
+  (b.log || (b.log = [])).push({ t: b.t, text: `${文}。` });
+  return { 名: c.name, 総大将: 大 };
+}
+
 /* 撮る道具・試しが覗く口（遊びの側からは呼ばない。battle/shinga.js の window.__組の兵の所 と同じ扱い） */
-if (typeof window !== "undefined") window.__一人働き = { 兵を討つ, 組の兵を数える, 組の隊 };
+if (typeof window !== "undefined") window.__一人働き = { 兵を討つ, 組の兵を数える, 組の隊, 将を討つ, 本陣衆を見る };

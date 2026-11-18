@@ -3,8 +3,8 @@
 
    背中越しの視点は兵を新しく作らず、一人ずつの絵（shinga.js）が持つ兵を
    そのまま写す。ここで確かめるのは、
-     一、写した兵の数が、一人ずつの絵の立っている兵の数と一致する
-     二、一人ひとりの居所が、盤の居所（揺らぎも同じ式）を一歩〇.四六mで写した所と一致する
+     一、写した兵の数が、一人ずつの絵の立っている兵の数と一致する（組の兵と、本陣衆＝将・旗持・馬廻のそれぞれ）
+     二、一人ひとりの居所が、盤の居所（揺らぎも同じ式）を一歩〇.四六mで写した所と一致する（本陣衆も同じ）
      三、与平は組のうしろに、組の向きを向いて立つ
      四、与平が一人を討てば（hitori/tsunagi.js）、背中越しにも立つ者が一人減り、その所に倒れた者が出る
      五、描く手続き（背中を描く）が、画布の真似で最後まで通る
@@ -40,23 +40,34 @@ const 尺 = H.歩の尺;
 const 立つ数 = () => { let n = 0; for (const c of b.corps) for (const q of c.squads) { if (!(q.men > 0)) continue; const v = H.組の見た目(q); if (!v || !v.初) continue;
   const alive = Math.max(0, Math.min(50, Math.round(q.men)) - (v.借り || 0)); for (let i = 0; i < alive; i++) if (v.生[i]) n++; } return n; };
 
+/* 本陣衆（将・旗持・馬廻）。一人ずつの絵では組の兵から借りて本陣に立てる（shinga.js 本陣衆を進める）。
+   背中越しにも同じ数だけ立てる（大将首を取れるように。hitori/senaka.js 眺めを集める） */
+const 本陣の数 = () => b.corps.reduce((n, c) => { const 本 = H.本陣衆を見る(c); return n + (本 ? 本.数 - (c.将討たれ ? 1 : 0) : 0); }, 0);
+const 組の兵だけ = (兵) => 兵.filter((p) => !p.本陣);
+
 console.log('\n── 一　写した兵の数が、一人ずつの絵の立っている兵の数と一致する');
 {
   const 眺 = H.眺めを集める(b, { x: cx, y: cy }, 1e6);
-  確('数が一致する', 眺.兵.length === 立つ数() && 眺.兵.length > 0, `背中越し ${眺.兵.length}人・一人ずつの絵 ${立つ数()}人`);
+  const 組兵 = 組の兵だけ(眺.兵), 本陣 = 眺.兵.filter((p) => p.本陣);
+  確('組の兵の数が一致する', 組兵.length === 立つ数() && 組兵.length > 0, `背中越し ${組兵.length}人・一人ずつの絵 ${立つ数()}人`);
+  確('本陣衆（将・旗持・馬廻）の数も一致する', 本陣.length === 本陣の数() && 本陣.length > 0, `背中越し ${本陣.length}人・一人ずつの絵 ${本陣の数()}人`);
+  確('本陣衆は隊ごとに将一人・旗持一人', b.corps.every((c) => 本陣.filter((p) => p.本陣.c === c && p.将).length === 1 && 本陣.filter((p) => p.本陣.c === c && p.旗持).length === 1));
 }
 
 console.log('\n── 二　一人ひとりの居所は、盤の居所を一歩〇.四六mで写した所');
 {
   const 眺 = H.眺めを集める(b, { x: cx, y: cy }, 1e6);
   let 最 = 0;
-  for (const p of 眺.兵) { const v = H.組の見た目(p.組), n = p.番, q = p.組;
+  for (const p of 組の兵だけ(眺.兵)) { const v = H.組の見た目(p.組), n = p.番, q = p.組;
     const h = (Math.imul((q.seed || 0) + 7, 2654435761) ^ Math.imul(n + 1, 40503)) >>> 0;     // shinga.js 新絵の兵描き と同じ揺らぎ
     const bx = v.sx[n] + (((h >>> 21) % 7) - 3) * 0.22, by = v.sy[n] + (((h >>> 24) % 7) - 3) * 0.22;
     最 = Math.max(最, Math.hypot(p.x - bx * 尺, p.z + by * 尺)); }
   確('どの兵も一致する（ずれ一ミリ未満）', 最 < 1e-3, `いちばん大きいずれ ${(最 * 1000).toFixed(3)}mm`);
+  let 最本 = 0;
+  for (const p of 眺.兵.filter((x) => x.本陣)) { const 本 = H.本陣衆を見る(p.本陣.c), n = p.本陣.n; 最本 = Math.max(最本, Math.hypot(p.x - 本.x[n] * 尺, p.z + 本.y[n] * 尺)); }
+  確('本陣衆も、一人ずつの絵の居所と一致する（ずれ一ミリ未満）', 最本 < 1e-3, `いちばん大きいずれ ${(最本 * 1000).toFixed(3)}mm`);
   /* 一人ずつの絵の決まり（shinga.js 新絵の兵描き）：噛み合った組の前の二列で、足が止まっている（一秒に十四歩未満）者は突く */
-  const 噛み = 眺.兵.filter((p) => { const v = H.組の見た目(p.組); return v.噛 && p.番 < 20 && v.速[p.番] < 14 * H.fieldScale(); });
+  const 噛み = 組の兵だけ(眺.兵).filter((p) => { const v = H.組の見た目(p.組); return v.噛 && p.番 < 20 && v.速[p.番] < 14 * H.fieldScale(); });
   確('噛み合った組の前の二列で足の止まった者は、突いている', 噛み.length > 0 && 噛み.every((p) => p.働 === '突'), `${噛み.length}人`);
 }
 
@@ -74,7 +85,7 @@ console.log('\n── 四　与平が一人を討てば、背中越しにも立�
 {
   const 選 = H.与平の組を選ぶ(b, null), 我 = H.与平の所(選.組);
   const 前眺 = H.眺めを集める(b, 我, 110);
-  const 的 = 前眺.兵.filter((p) => p.側 === 'E').sort((a, z) => Math.hypot(a.x - 我.x * 尺, a.z + 我.y * 尺) - Math.hypot(z.x - 我.x * 尺, z.z + 我.y * 尺))[0];
+  const 的 = 組の兵だけ(前眺.兵).filter((p) => p.側 === 'E').sort((a, z) => Math.hypot(a.x - 我.x * 尺, a.z + 我.y * 尺) - Math.hypot(z.x - 我.x * 尺, z.z + 我.y * 尺))[0];
   const v = H.組の見た目(的.組), 盤x = v.sx[的.番], 盤y = v.sy[的.番];
   確('討てた', H.兵を討つ(b, 的.組, 的.番, { 隊: 甲, 組: 選.組, 武勇: 70 }) === true);
   H.新絵状態を進める(b, 0, null);

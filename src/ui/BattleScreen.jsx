@@ -615,6 +615,17 @@ export function BattleScreen({ ctx, land, onEnd }) {
     降りの段を合わせる();
   };
   const 釦で昇る = () => { const 降り = 降りRef.current; if (降り) 降り.的 = 0; };
+  /* 風雲モードの合戦は、始めから背中越しで始める（遊ぶ人の申し出：「風雲モードのみ最初から背中越しにしましょう」）。
+     盤をいちばん寄せて与平を真ん中に据え、降りきった所から始める。盤へはピンチ・車・釦でこれまでどおり昇れる。
+     関ヶ原の試し入り口とふだんの合戦は、これまでどおり盤から始める */
+  useEffect(() => {
+    if (!一人の備え || !降りられるか()) return;
+    const 態 = 地の態を据える(); if (!態) return;
+    const cam = camRef.current, 所 = 与平の今(態);
+    ({ x: cam.x, y: cam.y } = 真ん中に据える(所.x, 所.y)); cam.s = 寄りの限り();
+    降りRef.current = { u: 1, 的: null, 盤: 盤の写し() };
+    降りの段を合わせる();
+  }, []); // eslint-disable-line
   const zoomAt = (k, clientX, clientY) => {
     const cam = camRef.current;
     /* 降りている途中と地にいるあいだは、寄せれば降り、引けば昇る */

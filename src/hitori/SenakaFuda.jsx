@@ -26,7 +26,7 @@
    見物（態.身分＝"見物"。ふだんの合戦で地へ降りたとき）は、見るだけの札（地の眺め・盤へ戻る釦）を出す。
    ========================================================================== */
 import React, { useEffect, useRef, useState } from "react";
-import { 突く, 受ける, 与平を立て直す } from "./senaka.js";
+import { 突く, 受ける, 与平を立て直す, 持ち場の間 } from "./senaka.js";
 
 const R杖 = 52;                                   // 方向キーの輪の半径（px。試し版と同じ）
 const 型 = `
@@ -72,6 +72,10 @@ const 型 = `
 .snk-pop{background:rgba(22,24,28,.9);border:1.5px solid #E2C877;border-radius:7px;padding:4px 12px 5px;font-size:14.5px;font-weight:700;white-space:nowrap;animation:snk-pop 1.9s ease-out forwards}
 .snk-pop b{color:#E2C877;margin-left:8px}
 .snk-pop.warn{border-color:#E07A6C}
+.snk-pop.kubi{border:2px solid #E2C877;background:rgba(92,62,18,.95);font-size:17px;padding:6px 16px 7px;animation-duration:3.2s}
+.snk-mochiba{margin-top:6px;padding:4px 8px 5px;border-left:3px solid #E07A6C;background:rgba(176,72,60,.24);border-radius:0 6px 6px 0;font-size:12.5px;font-weight:700}
+.snk-mochiba b{margin-left:8px;color:#F0A090;font-family:'Hiragino Sans','Yu Gothic UI','Meiryo',system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.snk-mochiba small{display:block;font-size:11px;font-weight:400;color:#CFCBC0}
 @keyframes snk-pop{0%{opacity:0;transform:translateY(6px)}10%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
 @media (prefers-reduced-motion:reduce){.snk-pop{animation-duration:2.4s}.snk-hint{transition:none}}
 .snk-panel{position:absolute;inset:0;display:grid;place-items:center;background:rgba(8,9,11,.62);z-index:10}
@@ -194,7 +198,7 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
   });
 
   const 体 = Math.round(我.hp), 気 = 我.気;
-  const 知らせ = (態.知らせ || []).filter((o) => Date.now() - o.ms < 2400);
+  const 知らせ = (態.知らせ || []).filter((o) => Date.now() - o.ms < (o.種 === "kubi" ? 3400 : 2400));
   /* 車：前へ回せば寄せて降り、手前へ回せば引いて昇る（盤の車と同じ一目盛り一.一二倍） */
   const 車 = (e) => { e.stopPropagation(); if (on寄り) on寄り(e.deltaY < 0 ? 1.12 : 1 / 1.12); };
   const 根の手当て = {
@@ -245,6 +249,11 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
             {[0, 1, 2, 3, 4].map((i) => <i key={i}><b style={{ width: `${Math.round(Math.min(1, Math.max(0, 気 - i)) * 100)}%` }} /></i>)}
           </div></div>
           <div className="kumi">{態.名}の組・背中の視点（試し）</div>
+          {/* 持ち場（風雲モード・物頭未満）。外にいるあいだ、上司の覚えの咎が積もる（hitori/senaka.js 持ち場を見る） */}
+          {態.備え && 態.持ち場 && (態.持ち場.内
+            ? <div className="kumi">持ち場の内（組から{持ち場の間}mまで）{態.持ち場.咎 >= 0.05 ? `・この戦の咎 覚え −${態.持ち場.咎.toFixed(1)}` : ""}</div>
+            : <div className="snk-mochiba">持ち場を離れている<b>覚え −{態.持ち場.咎.toFixed(1)}</b>
+                <small>組から{Math.round(態.持ち場.間 || 0)}m（{持ち場の間}mまでが持ち場）</small></div>)}
         </div>
         )}
         {止め === "停止" && !終 && <div className="snk-tomari glass">合戦を止めている<small>上の「微速」で進める</small></div>}

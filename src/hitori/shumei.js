@@ -129,6 +129,7 @@ export function 山賊の盤を組む(s) {
   const P = makeCorps("P", 我将, 我の数, 0, 62, 60, W * 0.5, Hh * 0.7, -Math.PI / 2, 家.color || "#2F5D8C");
   const E = makeCorps("E", 賊将, 重.賊, 0, 40, 40, W * 0.5, Hh * 0.32, Math.PI / 2, "#6B5A48");
   for (const c of [P, E]) { c.formation = "横陣"; placeSquads(c, true); }
+  E.山賊 = true;   // 山賊の頭の首は大将首に数えない（hitori/fuun.js 首の値）
   const b = createBattle([P], [E], "P");
   b.mode = "field"; b.face = "S"; b.myFar = false;
   b.notices = [{ t: 0, kind: "info", text: `主命：${m.文}` }];
@@ -147,8 +148,13 @@ export function 山賊退治の果て(s, b) {
     f.主命 = null;
     return s;
   }
+  /* 持ち場を離れた咎（ふだんの合戦と同じ。hitori/senaka.js 持ち場を見る）。山賊の頭を討てば記す */
+  const 咎 = Math.round(働.咎 || 0);
+  if (咎 > 0) f.覚え = 限(f.覚え - 咎, 0, 100);
+  if ((働.首 || []).some((k) => k && k.山賊)) 記す(s, "山賊の頭を討ち取った。");
   if (b.result === "P") 果たす(s, `山賊を討ち払った（討ち取り${討}）。`);
   else しくじる(s, `山賊を討ち漏らし（討ち取り${討}）、`, 5);
+  if (咎 > 0) 記す(s, `持ち場を離れたため、上司の覚えが${咎}下がった。`);
   取り立てを見る(s);
   return s;
 }
