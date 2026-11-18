@@ -20,7 +20,7 @@ import { 効果を鳴らす, 兵の音を掛ける, 効果を止める, 音の�
 import "../hitori/tsunagi.js";
 /* 一人働きの背中越しの視点（試し）。左下の釦で、盤の代わりに与平の背中越しに描く。与平は自分で動かす
    （札と釦は hitori/SenakaFuda.jsx。与平の動きと突き合いは hitori/senaka.js） */
-import { 背中を始める, 背中を描く, 与平の今, 背中の速さ, 与平の組を選ぶ, 寄った所の組 } from "../hitori/senaka.js";
+import { 背中を始める, 背中を描く, 与平の今, 背中の速さ, 与平の組を選ぶ, 寄った所の組, 歩の尺 } from "../hitori/senaka.js";
 import SenakaFuda from "../hitori/SenakaFuda.jsx";
 
 /* 早送り（GDD 8.1・9.3）。
@@ -353,7 +353,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
   useEffect(() => {
     if (!身分) return;
     const b2 = bRef.current;
-    if (b2.phase === "deploy") { b2.phase = "fight"; setPhase("fight"); 効果を鳴らす("法螺貝"); }
+    if (b2.phase === "deploy") {
+      /* 城攻め（風雲モードの城攻め・籠城）の朝の布陣も、総大将の役なので、合戦開始の釦と同じに据えて始める */
+      if (b2.朝の布陣) { if (b2.attacker !== "P") 朝の受け持ちを決める(b2, MAP, "P"); b2.朝の布陣 = false; }
+      b2.phase = "fight"; setPhase("fight"); 効果を鳴らす("法螺貝");
+    }
     if (b2.phase === "fight") setSpeed(背中の速さ);
     if (身分 === "物頭" && 一人Ref.current && 一人Ref.current.隊id) pickCorps(一人Ref.current.隊id);
   }, []);
@@ -394,6 +398,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
         const 回 = Math.max(1, Math.ceil(sp / 一歩の上限 - 1e-9));
         for (let i = 0; i < 回 && b.phase === "fight"; i++) stepBattle(b, (dt * sp) / 回);
       }
+      /* 一人働き（足軽・物頭）の城攻めの夜：翌日も強攻するか兵糧攻めに移るかは総大将の判断なので、
+         委ねたときと同じ采配の思案で夜を越す（朝の布陣も経ない。遊ぶ人の申し出の C：城攻め・籠城に出る） */
+      if (身分 && b.phase === "night") { if (寄せ手の夜の思案(b) === "退く") 兵糧攻めに移る(b); else 夜を明かして焼く(b); force((n) => (n + 1) % 1000); }
       音の列を鳴らす(b);                       // 理が積んだ音（知らせの有利・不利、鼓舞の勝鬨など）
       /* 地の焼きを少しずつ進める（GDD 8.11）。一コマ十ミリ秒を上限に汲み、
          焼き上がったら数コマかけて溶暗で差し替える。 */
@@ -557,7 +564,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
   };
   /* ---- 盤から地へ降りる・地から盤へ昇る（上の 降りRef の説明） ---- */
   const 降りの倍 = 2.6;                     // 盤をいちばん寄せた所から、さらに二.六倍ぶん寄せれば地に着く（車なら九目盛りほど）
-  const 降りられるか = () => !bRef.current.map && !委ねRef.current && (!身分 || bRef.current.phase === "fight");
+  /* 城攻めの盤でも降りられる（背中越しの視点が城の造作を立てて描く：hitori/shiro_senaka.js。遊ぶ人の申し出の C） */
+  const 降りられるか = () => !委ねRef.current && (!身分 || bRef.current.phase === "fight");
   /* 降り始めの盤の写し。地の色は、いま描いている盤の画から草地らしい色（緑の勝つ点）を拾って平らにならす
      （hitori/senaka.js 降りの写し：高いところでは地をこの色に寄せる）。拾えなければ寄せない */
   const 盤の地色 = () => {
@@ -647,6 +655,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
       if (!態) return null;
       降りRef.current = { u: 1, 的: null, 盤: 盤の写し() }; 降りの段を合わせる();
       return { 名: 態.名, 組: 態.組.id, ...与平の今(態) };
+    };
+    /* 与平を盤の所（x, y）へ据える。撮る道具・試しが、城の造作や壁の当たりを確かめるのに使う（遊びには使わない） */
+    window.__与平を据える = (x, y) => {
+      const 態 = 背中Ref.current; if (!態 || !態.我) return null;
+      態.我.x = x * 歩の尺; 態.我.z = -y * 歩の尺; 態.cam = null;
+      return 与平の今(態);
     };
     /* 盤から地へ降りる途中を、撮る道具・試しが据える（u：〇＝盤・一＝地）。降りていなければ、いまの盤から降り始める */
     window.__降り = (u) => {
@@ -741,7 +755,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       return { 隊: 生.length, 噛み合い: 点.length, x: Math.round(cx), y: Math.round(cy), s: cam.s };
     };
     return () => {
-      try { delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; delete window.__カメラ; delete window.__向き; delete window.__下知; delete window.__沼を足す; } catch (e) { /* よい */ }
+      try { delete window.__与平を据える; delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; delete window.__カメラ; delete window.__向き; delete window.__下知; delete window.__沼を足す; } catch (e) { /* よい */ }
     };
   }, [b]);
 
@@ -2135,7 +2149,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 野戦だけに出す（地を平らに描くので、城攻めの盤（b.map）では塀も門も描けない）。
                 合戦のさなかだけ出す。足軽の身では布陣も合戦開始もできない（一人の欄）ので、布陣の段で入っても
                 合戦が始められない。背中越しのあいだは、盤へ戻るためにいつでも出す */}
-            {!bRef.current.map && 身分 && (bRef.current.phase === "fight" || 降り段) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5 }}
+            {身分 && (bRef.current.phase === "fight" || 降り段) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5 }}
               onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
               onClick={() => {
                 if (降りRef.current) 釦で昇る(); else 釦で降りる();

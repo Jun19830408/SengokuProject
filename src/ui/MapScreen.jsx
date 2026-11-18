@@ -40,7 +40,7 @@ import { BattleScreen } from "./BattleScreen.jsx";
 import { 出陣前の問い } from "./Shutsujin.jsx";
 /* 風雲モード（一人の侍の立身）。遊ぶ家もAIに任せ（見物と同じ）、主人公の上司が野で戦うときだけ盤を開く。
    地図の代わりに主人公の屋敷を出す（hitori/fuun.js・hitori/FuunYashiki.jsx） */
-import { 風雲の戦か, 風雲の一人, 戦の勲功を記す, 風雲の問いに答える, 風雲の月の初め } from "../hitori/fuun.js";
+import { 風雲の戦か, 風雲の一人, 戦の勲功を記す, 風雲の問いに答える, 風雲の月の初め, 風雲の城攻めか } from "../hitori/fuun.js";
 import { FuunYashiki } from "../hitori/FuunYashiki.jsx";
 /* 風雲モードの主命（上司から下される務め。山賊退治は盤の小さな戦。hitori/shumei.js） */
 import { 主命の月の初め, 主命の月が明けた, 山賊の盤を組む, 山賊退治の果て, 主命の組 } from "../hitori/shumei.js";
@@ -1060,6 +1060,17 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   }, [g.captives, g.ransomOffer, g.仕官の願い, g.申し入れ, g.縁談, g.委ねる待ち, g.warSettle, g.promo,
     g.succession, g.旗頭の願い, g.旗頭継ぎ待ち, g.国平定, g.分け目, battle]); // eslint-disable-line
 
+  /* 風雲モード：上司が寄せ手か籠る側にいる城攻め（月送りが s.風雲の城攻め に積んだもの）を、城の盤で戦う。
+     行き合いと着陣を先に捌いてから、一つずつ開く */
+  useEffect(() => {
+    if (!g.風雲 || battle || !(g.風雲の城攻め || []).length) return;
+    if ((g.clashes || []).length || (g.pendingArrivals || []).length) return;
+    const 先 = g.風雲の城攻め[0];
+    setG((p) => ({ ...p, 風雲の城攻め: (p.風雲の城攻め || []).slice(1) }));
+    const sg = g.sieges.find((x) => x.castleId === 先.castleId && x.armyId === 先.armyId);
+    if (sg) startAssault(sg, null, null);
+  }, [g.風雲の城攻め, battle, g.clashes, g.pendingArrivals]); // eslint-disable-line
+
   /* 風雲モード：この着陣で、主人公の上司が野に立つか（上の着陣の道と同じ順に見る）。
        囲みを衝く後詰の戦 … 上司が後詰の軍か、囲む軍にいる
        城下の後詰の戦   … 上司が後詰の軍にいる（城に籠る上司は討って出ない。盤の外で裁く）
@@ -1139,9 +1150,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
 
   // 強攻＝城郭図の上での2D戦（GDD 9.3）
   const startAssault = (sg, gateParty, kits) => {
-    if (g.autoPlay) return;
     const army = g.armies.find((x) => x.id === sg.armyId);
     const castle = g.castles.find((x) => x.id === sg.castleId);
+    /* 風雲モード：上司が寄せ手か籠る側にいる城攻めは、見物でも盤を開く。主人公は足軽として出る（出陣前の問いは経ない） */
+    const 風雲城攻め = !!g.風雲 && 風雲の城攻めか(g, army, castle);
+    if (g.autoPlay && !風雲城攻め) return;
     if (!army || !castle) return;
     /* 城攻めの盤は、城のまわりに野を敷いた広い盤である（castleMap.js 広い盤に据える）。
        野の種と街道の質は、野戦と同じく寄せ手の来た道から決める */
@@ -1378,7 +1391,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       }
     }
     setBattle({
-      出陣前: true,
+      出陣前: !風雲城攻め,
+      ...(風雲城攻め ? { 一人: 風雲の一人(g) } : {}),
       b: bb, armyId: army.id, castleId: castle.id, playerIsAtk, mode: "castle",
       reserveMen, reserveRost,
       pName: g.factions[playerIsAtk ? army.faction : castle.faction].name,
@@ -2360,7 +2374,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     /* 風雲モード：主命の山賊退治の盤のあと。働きを記してから、その月を送る（選んでいた月の行い ctx.行い） */
     if (ctx.mode === "主命") { setBattle(null); 風雲の月を送る(ctx.行い, (s) => 山賊退治の果て(s, b)); return; }
     /* 風雲モード：主人公の働き（盤の b.一人働き：討ち取り・体力・討死）を記す。勝ち負けと損害は、下のふだんの道で書き戻す */
-    if (ctx.一人 && ctx.一人.風雲) setG((prev) => 戦の勲功を記す(structuredClone(prev), b, ctx.place));
+    if (ctx.一人 && ctx.一人.風雲) {
+      const 場所 = ctx.mode === "castle" ? `${ctx.place || ""}${ctx.playerIsAtk ? "攻め" : "の籠城"}` : ctx.place;
+      setG((prev) => 戦の勲功を記す(structuredClone(prev), b, 場所));
+    }
     if (ctx.mode === "wakeme") return finishWakeme(b, ctx);
     if (ctx.mode === "castle") return finishAssault(b, ctx);
     if (ctx.mode === "clash") return finishClash(b, ctx);

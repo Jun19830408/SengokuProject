@@ -41,7 +41,11 @@
    与平へ歩み出ること（試し版ではしていた。盤の兵の居所は盤の側が決めるので、ここでは動かさない）。
    ========================================================================== */
 import { 組の見た目, 盤の見た目, 新絵状態を進める, 野の川筋 } from "../battle/shinga.js";
-import { FIELD, FORESTS, WOODS, ROADS, fieldScale } from "../battle/field.js";
+import { FIELD, FORESTS, WOODS, ROADS, fieldScale, passableFor } from "../battle/field.js";
+/* 城攻め・籠城（遊ぶ人の申し出の C）。城の造作を背中越しに立てる（hitori/shiro_senaka.js）。
+   壁ぎわの兵は、盤の斜めの眺めと同じく自分の組の側にとどめる（battle/tachimono.js 城壁をよける） */
+import { 城の箱を集める, 堀の帯 } from "./shiro_senaka.js";
+import { 城壁をよける } from "../battle/tachimono.js";
 import { 兵を討つ } from "./tsunagi.js";
 
 export const 歩の尺 = 0.46;
@@ -96,7 +100,9 @@ export function 眺めを集める(b, 我, R = 110, 拍 = null) {
       for (let n = 0; n < alive; n++) {
         if (!s.生[n]) continue;
         const h = (Math.imul((q.seed || 0) + 7, 2654435761) ^ Math.imul(n + 1, 40503)) >>> 0;
-        const [x, z] = 世へ(s.sx[n] + (((h >>> 21) % 7) - 3) * 0.22, s.sy[n] + (((h >>> 24) % 7) - 3) * 0.22);
+        let bx = s.sx[n] + (((h >>> 21) % 7) - 3) * 0.22, by = s.sy[n] + (((h >>> 24) % 7) - 3) * 0.22;
+        if (b.map) { const r = 城壁をよける(b.map, q.x, q.y, bx, by); if (r) { bx = r[0]; by = r[1]; } }
+        const [x, z] = 世へ(bx, by);
         if (Math.hypot(x - wx0, z - wz0) > R) continue;
         const [fx, fz] = 向きを世へ(s.描[n]), 列 = (n / 10) | 0, 歩速 = s.速[n];
         let 働 = "立", 相 = 0;
@@ -197,6 +203,11 @@ function 敵の状(態, p, 作る) {
   return s;
 }
 
+/* 城の盤で、与平が（元x, 元z）から（x, z）へ（世界の所）踏み出せるか。盤の組と同じ決まり（battle/field.js passableFor）：
+   壁と閉じた門は通れない。籠る側は、自分の城の門を内へ向かってだけ通れる。破れた門は誰でも通れる */
+export function 城で通れるか(b, 隊, 元x, 元z, x, z) {
+  return passableFor({ side: 隊.side, x: 元x / 尺, y: -元z / 尺, sortie: 隊.sortie, 門の列: 隊.門の列 }, b, x / 尺, -z / 尺);
+}
 /* 与平を一コマ進める。眺（眺めを集める の返り値）の兵の居所で突き合う。dt はまことの秒。
    盤を止めているあいだ（態.止）は何もしない */
 export function 与平を進める(b, 態, dt, 眺) {
@@ -227,6 +238,15 @@ function 与平を一コマ進める(b, 態, dt, 眺) {
     let vx = (cfz * ux - cfx * uy) * sp, vz = (-cfx * ux - cfz * uy) * sp;
     vx += 我.退x; vz += 我.退z; const 減 = Math.exp(-dt * 8); 我.退x *= 減; 我.退z *= 減;
     我.x += vx * dt; 我.z += vz * dt;
+    /* 城の盤では、壁と閉じた門を通り抜けない（盤の組と同じ決まり。籠る側は自分の城の門を内へは通れる：
+       battle/field.js passableFor）。抜けられなければ、壁に沿って滑らせ、それも無理なら留まる */
+    if (b.map && 態.隊) {
+      const 元x = 我.x - vx * dt, 元z = 我.z - vz * dt;
+      const 通れる = (x, z) => 城で通れるか(b, 態.隊, 元x, 元z, x, z);
+      if (!通れる(我.x, 我.z)) {
+        if (通れる(我.x, 元z)) 我.z = 元z; else if (通れる(元x, 我.z)) 我.x = 元x; else { 我.x = 元x; 我.z = 元z; }
+      }
+    }
     /* 敵の兵とは重ならない（〇.七m より内へは入らない）。味方の列は割って通れる */
     for (const e of 敵ら) { const dx = 我.x - e.x, dz = 我.z - e.z, d = Math.hypot(dx, dz); if (d < 0.7 && d > 1e-4) { 我.x = e.x + dx / d * 0.7; 我.z = e.z + dz / d * 0.7; } }
     /* 野の外へは出ない */
@@ -441,9 +461,25 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
   草を描く(ctx);
   帯を描く(ctx, 野の川筋(), [92, 132, 160], 0.62);
   帯を描く(ctx, ROADS, [172, 152, 116], 1);
-  /* 立つもの（木・兵・倒れた者・与平）を奥から描く */
+  /* 城攻め・籠城の盤なら、堀と橋を地に敷く（水堀は水の色、空堀は土の色） */
+  const 城 = b.map || null;
+  if (城) { const 堀 = 堀の帯(城); 帯を描く(ctx, 堀.堀, 堀.空堀 ? [128, 108, 80] : [74, 104, 124], 0.92); 帯を描く(ctx, 堀.橋, [150, 124, 88], 1); }
+  /* 立つもの（木・兵・倒れた者・与平、城の造作）を奥から描く */
   const 物 = [];
   木を集める(物);
+  let 城の前 = 0;                                            // 写しと与平のあいだに立つ造作の数（与平を上から透かして描き直す）
+  if (城) {
+    const [hx, , hz] = P(我.x, 0, 我.z), 我d = 奥(我.x, 我.z), 我の幅 = 0.5 * F / Math.max(0.5, hz);
+    for (const o of 城の物(城)) {
+      const [wx, wz] = 世へ(o.x, o.y), d = 奥(wx, wz);
+      if (d < -25 || d > 260 || Math.hypot(wx - C.x, wz - C.z) > 280) continue;
+      物.push({ d, f: () => 城の物を描く(ctx, o, d) });
+      if (!見物 && !途中 && d < 我d - 0.5 && hz > 0) {
+        const r = o.部品[0].r, xs = [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]].map(([bx, by]) => { const [wx2, wz2] = 世へ(bx, by); return 奥(wx2, wz2) > 近 ? P(wx2, 0, wz2)[0] : null; });
+        if (xs.every((v) => v != null) && Math.min(...xs) < hx + 我の幅 && Math.max(...xs) > hx - 我の幅) 城の前++;
+      }
+    }
+  }
   const [psx, , pzc] = P(我.x, 0, 我.z), 我幅 = 0.5 * F / Math.max(0.5, pzc);
   const 上限 = 途中 ? 2600 : 1500;                            // 高いところからは多く見える
   let 兵ら = 眺.兵.filter((p) => !態.今討った.has(p)).map((p) => ({ p, d: 奥(p.x, p.z) })).filter((o) => o.d > 0.8);
@@ -467,7 +503,7 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
   物.sort((a, z) => z.d - a.d).forEach((o) => o.f());
   /* 与平が組の中へ入ると、手前（写し側）の味方が与平に重なる。手前の味方を透かすだけでは、幾重にも
      重なって与平が見えなくなるので、そのときは与平（と足もとの輪）を上からもう一度、少し透かして描く */
-  if (透数 && !見物) { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 一人を描く(ctx, 与平の姿(態, t), nowSec, 0.72); }
+  if ((透数 || 城の前) && !見物) { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 一人を描く(ctx, 与平の姿(態, t), nowSec, 0.72); }
   /* 受けたときの火花 */
   態.火花 = 態.火花.filter((f) => t - f.t < 0.3);
   for (const f of 態.火花) 火花を描く(ctx, f.x, f.y, f.z, (t - f.t) / 0.28);
@@ -690,4 +726,85 @@ function 倒れを描く(ctx, e) {
   ctx.fillStyle = 霞([30, 30, 35], d, 120); ctx.beginPath(); ctx.ellipse(0, -1.62 * s, 0.32 * s, 0.1 * s, 0, 0, 7); ctx.fill();
   ctx.fillStyle = 霞(色組.旗, d, 120); ctx.fillRect(0.3 * s, -1.9 * s, 0.32 * s, 0.5 * s);
   ctx.restore();
+}
+
+/* ---------- 城の造作を描く（城攻め・籠城。hitori/shiro_senaka.js の箱と屋根） ----------
+   箱は六面のうち、写しの側を向いた面だけを塗る（凸なので重ならない）。写しのすぐ手前（近 m）で面を切る。
+   門の傷み・崩れ・櫓の落ちで造作が変わるので、それを鍵にして集め直す */
+let 城の控え = { m: null, 鍵: "", 物: [] };
+function 城の物(m) {
+  const 鍵 = (m.gates || []).map((g) => (g.broken ? "b" : Math.round((g.hp / (g.max || 1)) * 4))).join("")
+    + "|" + (m.fac || []).map((f) => (f.hp > 0 ? 1 : 0)).join("") + "|" + (m.付城 || []).length + "|" + (m.出城 ? m.出城.gates.map((g) => (g.broken ? 1 : 0)).join("") : "");
+  if (城の控え.m !== m || 城の控え.鍵 !== 鍵) 城の控え = { m, 鍵, 物: 城の箱を集める(m, 尺) };
+  return 城の控え.物;
+}
+const 近 = 0.25;
+function 写す(x, y, z) {
+  const dx = x - C.x, dz = z - C.z; const rx = dx * C.rx + dz * C.rz, rz = dx * C.fx + dz * C.fz, ry = y - C.h;
+  return [rx, ry * C.cs + rz * C.sn, -ry * C.sn + rz * C.cs];
+}
+/* 世界の点の並び（[x, y, z]）を一つの面として塗る。写しの手前で切る */
+function 面を塗る(ctx, 点ら, 塗り) {
+  const cs = 点ら.map((p) => 写す(p[0], p[1], p[2])), out = [];
+  for (let i = 0; i < cs.length; i++) {
+    const a = cs[i], b2 = cs[(i + 1) % cs.length], ai = a[2] >= 近, bi = b2[2] >= 近;
+    if (ai) out.push(a);
+    if (ai !== bi) { const u = (近 - a[2]) / (b2[2] - a[2]); out.push([a[0] + (b2[0] - a[0]) * u, a[1] + (b2[1] - a[1]) * u, 近]); }
+  }
+  if (out.length < 3) return false;
+  ctx.beginPath();
+  for (let i = 0; i < out.length; i++) { const [rx, yc, zc] = out[i]; const sx = W / 2 + F * rx / zc, sy = H / 2 - F * yc / zc; if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); }
+  ctx.closePath(); ctx.fillStyle = 塗り; ctx.fill();
+  return true;
+}
+const 濃く = (rgb, k) => [rgb[0] * k, rgb[1] * k, rgb[2] * k];
+function 城の物を描く(ctx, o, d) {
+  for (const p of o.部品) { if (p.k === "箱") 箱を描く(ctx, p, d); else 屋根を描く(ctx, p, d); }
+}
+function 箱を描く(ctx, p, d) {
+  const X0 = p.r[0] * 尺, X1 = p.r[2] * 尺, Z0 = -p.r[3] * 尺, Z1 = -p.r[1] * 尺, Y0 = p.底, Y1 = p.底 + p.丈;
+  const 面 = [];
+  if (C.x < X0) 面.push({ 点: [[X0, Y0, Z1], [X0, Y0, Z0], [X0, Y1, Z0], [X0, Y1, Z1]], 陰: 0.84 });
+  if (C.x > X1) 面.push({ 点: [[X1, Y0, Z0], [X1, Y0, Z1], [X1, Y1, Z1], [X1, Y1, Z0]], 陰: 0.70 });
+  if (C.z < Z0) 面.push({ 点: [[X0, Y0, Z0], [X1, Y0, Z0], [X1, Y1, Z0], [X0, Y1, Z0]], 陰: 0.78 });
+  if (C.z > Z1) 面.push({ 点: [[X1, Y0, Z1], [X0, Y0, Z1], [X0, Y1, Z1], [X1, Y1, Z1]], 陰: 0.93 });
+  for (const f of 面) {
+    if (!面を塗る(ctx, f.点, 霞(濃く(p.色, f.陰), d))) continue;
+    if (d > 80) continue;
+    const [a0, a1, a2, a3] = f.点;                 // a0→a1 が地の辺、a3→a2 が上の辺
+    const 帯 = (v0, v1, rgb) => 面を塗る(ctx, [[...a0.slice(0, 1), lerp(a0[1], a3[1], v0), a0[2]], [a1[0], lerp(a1[1], a2[1], v0), a1[2]],
+      [a1[0], lerp(a1[1], a2[1], v1), a1[2]], [a0[0], lerp(a0[1], a3[1], v1), a0[2]]], 霞(rgb, d));
+    if (p.腰) 帯(0, 0.34, 濃く([74, 66, 57], f.陰));
+    if (p.石) for (const v of [0.3, 0.62]) 帯(v, v + 0.035, 濃く([110, 104, 92], f.陰));
+    if (p.窓) {
+      const L = Math.hypot(a1[0] - a0[0], a1[2] - a0[2]), n = Math.max(1, Math.min(8, Math.round(L / 2.6)));
+      for (let i = 0; i < n; i++) {
+        const u0 = (i + 0.35) / n, u1 = (i + 0.6) / n, at = (u, v) => [lerp(a0[0], a1[0], u), lerp(a0[1], a3[1], v), lerp(a0[2], a1[2], u)];
+        面を塗る(ctx, [at(u0, 0.55), at(u1, 0.55), at(u1, 0.75), at(u0, 0.75)], 霞([40, 36, 30], d));
+      }
+    }
+    if (p.扉) 面を塗る(ctx, [[lerp(a0[0], a1[0], 0.49), Y0, lerp(a0[2], a1[2], 0.49)], [lerp(a0[0], a1[0], 0.51), Y0, lerp(a0[2], a1[2], 0.51)],
+      [lerp(a0[0], a1[0], 0.51), Y1, lerp(a0[2], a1[2], 0.51)], [lerp(a0[0], a1[0], 0.49), Y1, lerp(a0[2], a1[2], 0.49)]], 霞([28, 20, 12], d));
+  }
+  if (C.h > Y1) 面を塗る(ctx, [[X0, Y1, Z0], [X1, Y1, Z0], [X1, Y1, Z1], [X0, Y1, Z1]], 霞(p.石 ? [178, 172, 158] : 濃く(p.色, 1.02), d));
+}
+/* 寄棟の屋根。棟は長い向きに通し、四つの面のうち写しの側を向いたものを塗る */
+function 屋根を描く(ctx, p, d) {
+  const X0 = p.r[0] * 尺, X1 = p.r[2] * 尺, Z0 = -p.r[3] * 尺, Z1 = -p.r[1] * 尺, Y0 = p.底, Y1 = p.底 + p.丈;
+  const 横 = X1 - X0 >= Z1 - Z0, 入 = (横 ? Z1 - Z0 : X1 - X0) / 2, Xc = (X0 + X1) / 2, Zc = (Z0 + Z1) / 2;
+  const r0 = 横 ? [X0 + 入, Y1, Zc] : [Xc, Y1, Z0 + 入], r1 = 横 ? [X1 - 入, Y1, Zc] : [Xc, Y1, Z1 - 入];
+  const c00 = [X0, Y0, Z0], c10 = [X1, Y0, Z0], c11 = [X1, Y0, Z1], c01 = [X0, Y0, Z1];
+  const 面ら = 横
+    ? [{ 点: [c00, c10, r1, r0], 陰: 0.8 }, { 点: [c11, c01, r0, r1], 陰: 1.0 }, { 点: [c01, c00, r0], 陰: 0.9 }, { 点: [c10, c11, r1], 陰: 0.7 }]
+    : [{ 点: [c01, c00, r0, r1], 陰: 0.9 }, { 点: [c10, c11, r1, r0], 陰: 0.7 }, { 点: [c00, c10, r0], 陰: 0.8 }, { 点: [c11, c01, r1], 陰: 1.0 }];
+  for (const f of 面ら) {
+    const [a, b2, c] = f.点;
+    const ux = b2[0] - a[0], uy = b2[1] - a[1], uz = b2[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;       // 面の法線
+    /* 外へ向ける（屋根の芯から面の真ん中へ向かう向きと揃える） */
+    const k = f.点.length, gx = f.点.reduce((s, q) => s + q[0], 0) / k, gy = f.点.reduce((s, q) => s + q[1], 0) / k, gz = f.点.reduce((s, q) => s + q[2], 0) / k;
+    if (nx * (gx - Xc) + ny * (gy - (Y0 + Y1) / 2) + nz * (gz - Zc) < 0) { nx = -nx; ny = -ny; nz = -nz; }
+    if (nx * (C.x - gx) + ny * (C.h - gy) + nz * (C.z - gz) <= 0) continue;
+    面を塗る(ctx, f.点, 霞(濃く(p.色, f.陰), d));
+  }
 }

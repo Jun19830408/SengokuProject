@@ -12,7 +12,11 @@
      三、題の画面：三つのモード。風雲モードで仕える家を選び、屋敷の画面で月の行いを選んで月を送る
      四、上司の野戦：見物と同じに諸家をAIに任せていても、上司のいる城へ敵が着けば盤が開き、
          出陣前の問いを経ずに足軽として戦う。戦場を離れれば、働きが勲功に積まれて取り立てられる
-   を確かめる。
+     五、主命（申し出「BC をいずれも入れれば」の B）：上司から期限と重さつきで下され、山賊退治は盤の小さな
+         野戦で足軽として戦い、特殊勢力への働きかけは知略と政務で決まる。果たせば褒美、しくじれば覚えが下がる
+     六、城攻め・籠城（同じく C）：上司が関わる強攻は月送りが積み、城の盤で足軽として戦う。背中越しの城の
+         造作・堀・壁と門の当たり
+   を確かめる。上司は家ごとの表（hitori/fuun_joushi.js。一門でない若手の家臣）から決まる（一の段）。
    ============================================================ */
 const path = require('path');
 const { JSDOM } = require('jsdom');
@@ -348,6 +352,93 @@ const openFaction = async (nm) => {
     確('主命の果てが記される（果たした・しくじった のいずれか）', /主命を果たした（山賊退治）|主命（山賊退治）を果たせなかった/.test(文()),
       (文().match(/主命を果たした[^。]*。|[^。]*主命（山賊退治）を果たせなかった/) || [''])[0]);
     確('討ち取りが勲功に積まれる', /討ち取り 2/.test(文()) || /討ち取り2/.test(文()));
+    await act(async () => { root.unmount(); }); await flush();
+  }
+
+  /* ======================================================= 六、城攻め・籠城 */
+  console.log('\n── 六　城攻め・籠城（上司が寄せ手か籠る側にいる強攻は、城の盤で足軽として戦う）');
+  const 囲みを仕込む = () => {
+    const s = initState('oda'); H.風雲を始める(s);
+    const f = s.風雲, 上 = s.generals.find((x) => x.id === f.上司);
+    const 敵城 = s.castles.find((d) => d.faction !== 'oda' && !String(d.faction).startsWith('_') && (H.findPath(f.城, d.id) || []).length === 2)
+      || s.castles.find((d) => d.faction !== 'oda' && !String(d.faction).startsWith('_'));
+    上.at = null;
+    const 軍 = { id: 'fuun-army', faction: 'oda', gens: [上.id], local: 6000, localTrain: 66, rost: null,
+      men: 6000 + (上.retinue || 0), at: 敵城.id, from: f.城, path: [敵城.id], prog: 0, sieging: true, food: 90000, target: 敵城.id };
+    s.armies.push(軍);
+    s.sieges.push({ castleId: 敵城.id, armyId: 軍.id, months: 1, decided: null });
+    s.monthEvents = [];
+    return { s, f, 上, 敵城, 軍 };
+  };
+  {
+    const { s, f, 敵城, 軍 } = 囲みを仕込む();
+    確('上司の軍が敵の城を囲めば、主人公の城攻め', H.風雲の城攻めか(s, 軍, 敵城) === true);
+    確('上司のいない軍の城攻めは、主人公の城攻めではない', H.風雲の城攻めか(s, { ...軍, gens: ['nobunaga'] }, 敵城) === false);
+    const 家の城 = s.castles.find((c) => c.id === f.城);
+    const s2 = initState('oda'); H.風雲を始める(s2);
+    確('上司が籠る家の城を敵が囲めば、主人公の籠城', H.風雲の城攻めか(s2, { id: 'e', faction: 'saito', gens: [] }, 家の城) === true);
+    /* 月送り：上司の軍の強攻は、式で裁かずに城攻めを待つ列へ積む（落ちるかどうかは盤で決まる） */
+    let 積んだ = null, 月 = 0;
+    let st = s;
+    for (; 月 < 10 && !積んだ; 月++) {
+      st = H.advanceMonth(st, st);
+      if ((st.風雲の城攻め || []).length) 積んだ = st.風雲の城攻め[0];
+      st.風雲の城攻め = [];
+    }
+    const 城の今 = st.castles.find((c) => c.id === 敵城.id);
+    確('上司の軍が囲む城への強攻は、月送りが盤の城攻めとして積む', !!積んだ && 積んだ.castleId === 敵城.id && 積んだ.armyId === 'fuun-army', 積んだ ? `${月}か月目に積んだ` : '積まれない');
+    確('積んだ強攻は、式では裁かない（城は盤で落ちるまで敵の手にある）', !!城の今 && 城の今.faction === 敵城.faction, 城の今 && 城の今.faction);
+  }
+  {
+    蔵.clear();
+    const { s, 敵城 } = 囲みを仕込む();
+    s.風雲の城攻め = [{ castleId: 敵城.id, armyId: 'fuun-army' }];
+    蔵.set('sengoku:save1', JSON.stringify({ v: 1, at: Date.now(), state: s }));
+    const root = createRoot(document.getElementById('r'));
+    await act(async () => { root.render(React.createElement(App)); }); await flush(); await flush();
+    await rc('続きから'); for (let i = 0; i < 8; i++) await flush();
+    const b = window.__合戦;
+    確('城攻めの盤が開く（見物でも、上司の城攻めは盤で戦う）', !!b && !!b.map && b.phase === 'fight', b ? `${b.phase}・城の盤 ${!!b.map}` : '開かない');
+    確('足軽として出る（出陣前の問い・門の割り付けを経ない）', /足軽の身では/.test(文()) && !/自ら采を執る|城門の割り付け/.test(文()));
+    確('上司の隊が寄せ手の側に立つ', !!b && b.corps.some((c) => c.id === 'katsuie' && c.side === 'P'));
+    /* 背中越しの城（hitori/shiro_senaka.js）：造作を集め、壁の当たりを持ち、描いて落ちない */
+    {
+      const m = b.map, o = m.layers[0], g = o.gates.find((x) => x.face === 'S') || o.gates[0];
+      const 箱ら = H.城の箱を集める(m, H.歩の尺);
+      const 扉の数 = (xs) => xs.reduce((n, x) => n + x.部品.filter((p) => p.扉).length, 0);
+      const 閉じた門 = m.layers.reduce((n, l) => n + l.gates.filter((x) => !x.broken).length, 0);
+      確('城の造作が集まる（石垣と塀・櫓門・枡形・矢倉など）', 箱ら.length > 50 && 扉の数(箱ら) === 閉じた門, `${箱ら.length}の物・扉${扉の数(箱ら)}／閉じた門${閉じた門}`);
+      const 堀 = H.堀の帯(m);
+      確('堀と橋が地に敷かれる', 堀.堀.length === 1 && 堀.橋.length === o.gates.length);
+      const 寄せ = b.corps.find((c) => c.id === 'katsuie');
+      const 尺 = H.歩の尺, 世 = (x, y) => [x * 尺, -y * 尺];
+      /* 大手（南の面）の門で確かめる。門の脇の外（枡形にも堀にも掛からない所）と、枡形の内（袖の石塁のあいだ） */
+      const 南 = g.face === 'S';
+      const [gx, gy] = [m.cx + g.off, m.cy + o.hh + m.t / 2];
+      const 脇の外 = [m.cx + g.off + g.w * 1.6, m.cy + o.hh + m.t + 20], 壁 = [脇の外[0], gy];
+      const 枡形の内 = [gx, m.cy + o.hh + m.t + o.masu / 2];
+      const 通る = (from, to) => H.城で通れるか(b, 寄せ, ...世(...from), ...世(...to));
+      確('石垣の帯は通れない（門の脇の外から壁へ）', 南 && !通る(脇の外, 壁) && 通る(脇の外, [脇の外[0] + 4, 脇の外[1]]),
+        南 ? `壁へ ${通る(脇の外, 壁)}・外で ${通る(脇の外, [脇の外[0] + 4, 脇の外[1]])}・地 ${H.terrainAt(...壁)}/${H.terrainAt(...脇の外)}` : '南の門が無い');
+      確('閉じた門は寄せ手には通れない（枡形の内から門へ）', 南 && !g.broken && !通る(枡形の内, [gx, gy]), `地 ${H.terrainAt(...枡形の内)}/${H.terrainAt(gx, gy)}`);
+      g.broken = true;
+      確('破れた門は通れる', 通る(枡形の内, [gx, gy]), `地 ${H.terrainAt(gx, gy)}`);
+      確('破れた門には扉が無い', 扉の数(H.城の箱を集める(m, 尺)) === 閉じた門 - 1);
+      g.broken = false;
+      const 態 = H.背中を始める(b, 'katsuie', '足軽', null, { 体力: 100, 武勇: 45, 一度きり: true, 名: '与平' });
+      態.我.x = 脇の外[0] * 尺; 態.我.z = -脇の外[1] * 尺;
+      let 落ちた = null, 描いた = null;
+      try { for (let k = 0; k < 4; k++) 描いた = H.背中を描く(ctxStub, b, 態, 960, 600, 1, 10 + k * 0.05); } catch (e) { 落ちた = e.message; }
+      確('城の盤で背中越しに描いて落ちない', !落ちた && !!描いた, 落ちた || `兵${描いた.兵}`);
+    }
+    b.一人働き = { 討ち取り: 3, 体力: 66, 討死: false };
+    await click(btnAny('委ねて結果を見る'));
+    for (let i = 0; i < 1500 && b.phase !== 'over'; i++) await flush();
+    確('委ねれば城攻めの決着まで進む（夜も采配の思案で越す）', b.phase === 'over', b.phase);
+    await rc('戦場を離れる'); for (let i = 0; i < 12; i++) await flush();
+    確('戦場を離れると屋敷へ戻る', /今月の行い/.test(文()));
+    確('城攻めの記が残り、討ち取りが勲功に積まれる', new RegExp(`${敵城.name}攻めの(勝ち戦|負け戦|引き分け)に足軽として出た。討ち取り3`).test(文()),
+      (文().match(/[^。]*攻めの[^。]*に足軽として出た。討ち取り\d+/) || [''])[0]);
     await act(async () => { root.unmount(); }); await flush();
   }
 

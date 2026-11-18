@@ -38,6 +38,8 @@ import { 惣無事令を発する, 応諾を決める, 問われる家, 朝敵�
 import { 済んだ号令を片づける } from "../core/gourei.js";
 import { 分け目を進める, 挑める見込み } from "../core/wakeme.js";
 import { 天下分け目の采配, 盤を開かずに裁く } from "./aiWakeme.js";
+/* 風雲モード（一人の侍の立身）：上司が関わる城攻めは盤で戦う（hitori/fuun.js）。風雲でない盤には何もしない */
+import { 風雲の城攻めか } from "../hitori/fuun.js";
 import { いまの段, 段の上乗せ, 段 as 天下の段, 京の城 } from "../core/tenkabito.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 import { 旗頭が城主を宛てがう, 城の寄親, 守りの寄親, 守りを旗頭に任せるか, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭に任せきりか, 旗頭は断られたか, 旗頭の古い断りを片づける, 断りの直後か } from "../core/inin.js";
@@ -1490,6 +1492,12 @@ export function advanceMonth(prev, g) {
         const 寄せの将 = (bes.gens || []).map((id) => s.generals.find((x) => x.id === id)).filter(Boolean);
         const 押す比 = bes.men * 将の利(寄せの将) / Math.max(1, dMen2);
         if (押す比 > 強攻の比 && Math.random() < 0.45) {
+          /* 風雲モード：主人公の上司が寄せ手にいるか、囲まれた城に籠っている強攻は、ここで裁かずに積み、
+             地図画面が城の盤を開いて主人公を足軽として出す（ui/MapScreen.jsx 風雲の城攻め） */
+          if (s.風雲 && 風雲の城攻めか(s, bes, cs)) {
+            s.風雲の城攻め = [...(s.風雲の城攻め || []), { castleId: cs.id, armyId: bes.id }];
+            continue;
+          }
           const 見込 = 強攻の見込み(押す比, !!cs.出城);
           const 落ちる = Math.random() < 見込;
           const aL = Math.round(bes.men * ((落ちる ? 0.10 : 0.15) + 0.08 * (1 - 見込)) * (cs.出城 ? 1.2 : 1));

@@ -81,9 +81,11 @@ export { 兵を討つ, 組の兵を数える, 組の隊 } from "../src/hitori/ts
 // 一人働きの背中越しの視点：盤の一人ずつの兵を、与平の背中越しの眺めへ写す
 export { 歩の尺, 背中の速さ, 背中の突きの速さ, 与平の組を選ぶ, 与平の所, 眺めを集める, 背中を始める, 背中を描く, 与平を進める, 与平を立て直す, 与平の今, 突く, 受ける, 物頭を据える, 降りの写し, 寄った所の組 } from "../src/hitori/senaka.js";
 /* 風雲モード（一人の侍の立身）の理と屋敷の画面（試し：tests/fuun.cjs） */
-export { 風雲の段, 段の番, 次の段, 盤の身分, 風雲の一人, 月の行い一覧, 月の行いの数, 上司を選ぶ, 若手の上司を選ぶ, 風雲の上司を決める, 風雲で選べるか, 風雲を始める, 風雲の月の初め, 上司を見直す, 風雲の戦か, 戦の勲功を記す, 取り立てを見る, 風雲の問いに答える } from "../src/hitori/fuun.js";
+export { 風雲の段, 段の番, 次の段, 盤の身分, 風雲の一人, 月の行い一覧, 月の行いの数, 上司を選ぶ, 若手の上司を選ぶ, 風雲の上司を決める, 風雲で選べるか, 風雲を始める, 風雲の月の初め, 上司を見直す, 風雲の戦か, 風雲の城攻めか, 戦の勲功を記す, 取り立てを見る, 風雲の問いに答える } from "../src/hitori/fuun.js";
 export { FuunYashiki, 住まいの絵 } from "../src/hitori/FuunYashiki.jsx";
 export { 風雲の上司表 } from "../src/hitori/fuun_joushi.js";
+export { 城の箱を集める, 堀の帯 } from "../src/hitori/shiro_senaka.js";
+export { 城で通れるか } from "../src/hitori/senaka.js";
 export { 主命の重さ, 主命の組, 山賊の隊, 手の届く町ら, 主命を下す, 主命の月の初め, 主命の月が明けた, 山賊の盤を組む, 山賊退治の果て, 働きかけの見込み, 月を足す } from "../src/hitori/shumei.js";
 /* 一門の見分け（風雲の上司を選ぶ試し） */
 export { isKin, isMainClan, isClan, houseName } from "../src/core/house.js";

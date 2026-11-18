@@ -163,6 +163,15 @@ export function 風雲の戦か(s, army, dest, foe) {
   return !!(上の将 && 上の将.at === dest.id && dest.faction === s.player && army.faction !== s.player);
 }
 
+/* 主人公の城攻めか：上司が寄せ手の軍にいるか、囲まれた家の城に籠っているとき（遊ぶ人の申し出「BC をいずれも入れれば」の C）。
+   月送り（govern/month.js）は、この強攻を式で裁かずに s.風雲の城攻め へ積み、地図画面が城の盤を開く */
+export function 風雲の城攻めか(s, army, castle) {
+  const f = s && s.風雲; if (!f || f.討死 || !f.上司 || !army || !castle) return false;
+  if ((army.gens || []).includes(f.上司)) return castle.faction !== army.faction;
+  const 上 = (s.generals || []).find((x) => x.id === f.上司);
+  return !!(上 && !上.captive && 上.at === castle.id && castle.faction === s.player && army.faction !== s.player);
+}
+
 /* 合戦のあと：与平の働きを書き戻す（盤の b.一人働き：討ち取り・体力・討死） */
 export function 戦の勲功を記す(s, b, 場所) {
   const f = s.風雲; if (!f || !b) return s;
