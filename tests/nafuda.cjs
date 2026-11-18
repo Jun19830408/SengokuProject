@@ -96,7 +96,7 @@ const openFaction = async (nm) => {
 (async () => {
   await act(async () => { root.render(React.createElement(App)); });
   await flush();
-  await click('ゲームをはじめる');
+  await click('キャンペーンモード');
   /* 三好で始める。畿内は城が密で、旗の下の印（属・臣・盟・侵）を付ける相手も
      多い。揃えが居座る不具合は、印を描いたあとの城から現れる。 */
   await openFaction('三好家');

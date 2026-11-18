@@ -38,6 +38,10 @@ import { checkUnified } from "../govern/unify.js";
 import { sackCastle, 城を委ねる, 軍を解く, 在陣させる, 城に合流する, 将を除く } from "../govern/war.js";
 import { BattleScreen } from "./BattleScreen.jsx";
 import { 出陣前の問い } from "./Shutsujin.jsx";
+/* 風雲モード（一人の侍の立身）。遊ぶ家もAIに任せ（見物と同じ）、主人公の上司が野で戦うときだけ盤を開く。
+   地図の代わりに主人公の屋敷を出す（hitori/fuun.js・hitori/FuunYashiki.jsx） */
+import { 風雲の戦か, 風雲の一人, 戦の勲功を記す, 風雲の問いに答える, 風雲の月の初め } from "../hitori/fuun.js";
+import { FuunYashiki } from "../hitori/FuunYashiki.jsx";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
@@ -775,7 +779,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     const b = g.armies.find((x) => x.id === cl.bId);
     if (!a || !b) { setG((p) => ({ ...p, clashes: (p.clashes || []).slice(1) })); return; }
     // 旗頭に預けた手勢の行き合いも、旗頭が捌く（GDD 6.4）
-    if (g.autoPlay || (!自ら采配するか(g, a, null) && !自ら采配するか(g, b, null))) {
+    /* 風雲モードでは、主人公の上司が加わる行き合いだけ盤を開く（hitori/fuun.js 風雲の戦か） */
+    const 風雲戦 = !!g.風雲 && 風雲の戦か(g, a, null, b);
+    if (!風雲戦 && (g.autoPlay || (!自ら采配するか(g, a, null) && !自ら采配するか(g, b, null)))) {
       setG((prev) => 合戦裁定.resolveClashOffscreen(prev));
       return;
     }
@@ -832,7 +838,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     /* 守りを旗頭に預けた城なら、寄せ手が来ても旗頭が受ける（GDD 6.4）。
        方面を預けたのだから、その国々の守りまで大名が出る謂れはない。 */
     const 守り任せ = 守りを旗頭に任せるか(g, dest, a);
-    if (g.autoPlay || (!自ら采配するか(g, a, dest) && dest.faction !== g.player) || 守り任せ) {
+    /* 風雲モードでは、主人公の上司が野に立つ着陣だけ、下の盤の道へ進める（それ以外は見物と同じく盤の外で裁く） */
+    const 風雲戦 = 風雲の着陣か(a, dest);
+    if (!風雲戦 && (g.autoPlay || (!自ら采配するか(g, a, dest) && dest.faction !== g.player) || 守り任せ)) {
       autoResolve(a.id, dest.id); return;
     }
     // 後詰が包囲中の城へ着いたら、囲みを解くための野戦になる。
@@ -868,7 +876,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
            救いに行ったときも、内と外から挟み撃ちにするのが後詰の形である。 */
         if (a.faction === g.player
           && (underMyBanner(g, g.player, dest.faction) || 援けに着く(g, a, dest))) {
-          setSally({ armyId: a.id, castleId: dest.id, foeId: bes.id });
+          /* 風雲モード：城方が討って出るかは城の主の判断で、足軽には問わない（討って出ない形で盤を開く） */
+          if (g.風雲) startBattle(a, { ...dest, name: `${dest.name}の囲み` }, null, null, bes);
+          else setSally({ armyId: a.id, castleId: dest.id, foeId: bes.id });
         } else if (bes.faction === g.player || a.faction === g.player) {
           startBattle(a, { ...dest, name: `${dest.name}の囲み` }, null, undefined, bes);
         } else autoResolve(a.id, dest.id);
@@ -897,7 +907,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         && 同じ旗の下(g, x.faction, dest.faction)
         && (待つ.has(x.id) || x.在陣 === dest.id));
       if (後詰) {
-        setSally({ armyId: 後詰.id, castleId: dest.id, foeId: a.id, 城下: true });
+        /* 風雲モード：上司が後詰の軍にいるときだけここへ来る（風雲の着陣か）。城方は討って出ない形で盤を開く */
+        if (g.風雲) startBattle(後詰, { ...dest, name: `${dest.name}城下` }, null, null, a);
+        else setSally({ armyId: 後詰.id, castleId: dest.id, foeId: a.id, 城下: true });
         return;
       }
     }
@@ -1033,6 +1045,43 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     startBattle(a, dest);
   }, [g.pendingArrivals, g.clashes, battle]); // eslint-disable-line
 
+  /* 風雲モード：大名（遊ぶ家）に宛てた問いは、主人公の手の届かぬことなので、AIと同じ答えを自動で返す
+     （捕虜・身代金・仕官の願い・申し入れ・縁談・城の預け・滅んだ家の始末・取り立て・家督・旗頭の願いと継ぎ・
+     一国平定の知らせ・天下分け目。hitori/fuun.js 風雲の問いに答える） */
+  useEffect(() => {
+    if (!g.風雲 || battle) return;
+    const 待つ = (g.captives || []).length || g.ransomOffer || g.仕官の願い || g.申し入れ || g.縁談
+      || (g.委ねる待ち || []).length || g.warSettle || g.promo || g.succession || g.旗頭の願い || g.旗頭継ぎ待ち
+      || g.国平定 || (g.分け目 && (g.分け目.挑 === g.player || g.分け目.受 === g.player) && g.分け目.残り <= 0);
+    if (!待つ) return;
+    setG((p) => { const r = 風雲の問いに答える(structuredClone(p)); return r.変えた ? r.s : p; });
+  }, [g.captives, g.ransomOffer, g.仕官の願い, g.申し入れ, g.縁談, g.委ねる待ち, g.warSettle, g.promo,
+    g.succession, g.旗頭の願い, g.旗頭継ぎ待ち, g.国平定, g.分け目, battle]); // eslint-disable-line
+
+  /* 風雲モード：この着陣で、主人公の上司が野に立つか（上の着陣の道と同じ順に見る）。
+       囲みを衝く後詰の戦 … 上司が後詰の軍か、囲む軍にいる
+       城下の後詰の戦   … 上司が後詰の軍にいる（城に籠る上司は討って出ない。盤の外で裁く）
+       ふつうの着陣     … 上司が着いた軍にいて敵の城へ着いたか、上司のいる自家の城へ敵が着いた
+     味方の城へ着いた軍は戦わない。将のいない城は、野戦をせずに囲む（下の道のまま） */
+  const 風雲の着陣か = (a, dest) => {
+    if (!g.風雲) return false;
+    const 囲 = g.sieges.find((x) => x.castleId === dest.id);
+    const 囲む敵 = 囲 && g.armies.find((x) => x.id === 囲.armyId);
+    if (囲む敵 && 囲む敵.faction !== a.faction && !同じ旗の下(g, 囲む敵.faction, a.faction)
+      && (a.relief === dest.id || 同じ旗の下(g, a.faction, dest.faction) || 援けに着く(g, a, dest))) {
+      return 風雲の戦か(g, a, null, 囲む敵);
+    }
+    if (同じ旗の下(g, a.faction, dest.faction) || 援けに着く(g, a, dest)) return false;
+    if (dest.faction === g.player) {
+      const 待つ = new Set(g.pendingArrivals || []);
+      const 後詰 = g.armies.find((x) => x.id !== a.id && x.at === dest.id
+        && (!x.path || x.path.length <= 1) && !x.sieging
+        && 同じ旗の下(g, x.faction, dest.faction)
+        && (待つ.has(x.id) || x.在陣 === dest.id));
+      if (後詰) return (後詰.gens || []).includes(g.風雲.上司) && 風雲の戦か(g, 後詰, null, a);
+    }
+    return 風雲の戦か(g, a, dest, null);
+  };
   // 画面外の合戦。兵数・練度・統率・城防から勝敗と損害を出し、結果だけを記録する。
   const autoResolve = (armyId, castleId) => setG((prev) => 合戦裁定.resolveOffscreen(prev, armyId, castleId));
 
@@ -1370,8 +1419,12 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   // 城下に着いた。合戦の前に、寡兵ならば奇襲の策が献じられる（GDD 8.7）
   // foe を渡せば、城ではなく軍と軍の野戦になる（街道での行き合い）。
   const startBattle = (army, dest, camp, ambush, foe, sally) => {
+    /* 風雲モード：主人公の上司が野に立つ戦は、見物でも盤を開く。奇襲の献策と出陣前の問い（自ら采を執るか
+       委ねるか）は総大将の判断なので、足軽には問わない */
+    const 風雲戦 = !!g.風雲 && 風雲の戦か(g, army, foe ? null : dest, foe || null);
+    if (風雲戦) ambush = null;
     // 見物のときは画面を開かず、同じ規則で自動に解く
-    if (g.autoPlay) {
+    if (g.autoPlay && !風雲戦) {
       if (foe) setG((prev) => 合戦裁定.resolveClashOffscreen(prev));
       else autoResolve(army.id, dest.id);
       return;
@@ -1682,7 +1735,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     }
     if (野の型.名) bb.notices = [...(bb.notices || []), { t: 0, kind: "info", text: `戦場：${野の型.名}` }];
     setBattle({
-      出陣前: true,
+      出陣前: !風雲戦,
+      ...(風雲戦 ? { 一人: 風雲の一人(g) } : {}),
       b: bb, armyId: army.id, castleId: dest.id, playerIsAtk, campId: camp ? camp.id : null,
       mode: foe ? "clash" : undefined, foeId: foe ? foe.id : null,
       城方の後詰: 城方の援軍ら.map((a) => ({ id: a.id, men: a.men })),
@@ -2274,6 +2328,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   };
 
   const finishBattle = (b, ctx) => {
+    /* 風雲モード：主人公の働き（盤の b.一人働き：討ち取り・体力・討死）を記す。勝ち負けと損害は、下のふだんの道で書き戻す */
+    if (ctx.一人 && ctx.一人.風雲) setG((prev) => 戦の勲功を記す(structuredClone(prev), b, ctx.place));
     if (ctx.mode === "wakeme") return finishWakeme(b, ctx);
     if (ctx.mode === "castle") return finishAssault(b, ctx);
     if (ctx.mode === "clash") return finishClash(b, ctx);
@@ -2992,6 +3048,18 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     );
   }
   if (battle) return <BattleScreen key={battle.armyId} ctx={battle} land={land} onEnd={(bb) => finishBattle(bb, battle)} />;
+  /* 風雲モード：地図の代わりに主人公の屋敷を出す。月の行いを決めて月を送る（hitori/FuunYashiki.jsx）。
+     月の初めに行いを行ってから、世界をキャンペーンと同じに一月進める（主家も諸家もAI） */
+  if (g.風雲) return (
+    <FuunYashiki g={g} land={land} onTitle={onTitle}
+      on月送り={(行い) => setG((prev) => {
+        const s = structuredClone(prev);
+        s.風雲.行い = 行い;
+        風雲の月の初め(s);
+        return 月送り.advanceMonth(s, g);
+      })}
+      on知らせを閉じる={() => setG((p) => ({ ...p, 風雲: { ...p.風雲, 知らせ: [] } }))} />
+  );
 
   return (
     <div className="sp" style={{ height: "100dvh" }}>

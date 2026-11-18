@@ -40,7 +40,7 @@ const rc=async(t)=>{const el=[...document.querySelectorAll('button,.mbtn')].find
   };
 (async()=>{
   await act(async()=>{root.render(React.createElement(App));});await flush();
-  await rc('ゲームをはじめる'); await openFaction('織田家'); await rc('この勢力で開始');
+  await rc('キャンペーンモード'); await openFaction('織田家'); await rc('この勢力で開始');
   for(let i=0;i<3;i++){ await rc('次月へ'); await rc('評定を開く'); }
   console.log("自動保存:", store.has('sengoku:save1')?"あり":"★なし");
   /* 記録所（GDD 15.3）。五つの枠へ収められること。 */
@@ -85,7 +85,7 @@ const rc=async(t)=>{const el=[...document.querySelectorAll('button,.mbtn')].find
   const 前見 = 解(前).state;
   確('いま自動の枠に盤がある', !!前見, `${前見.player} ${前見.year}年${前見.month}月`);
   dom.window.confirm = () => true; dom.window.alert = () => {};
-  await rc('新しくはじめる'); await flush();
+  await rc('キャンペーンモード'); await flush();
   const 逃 = ['slot1','slot2','slot4','slot5'].map(k=>'sengoku:'+k).filter(k=>store.has(k));
   確('自動の盤が空き枠へ逃げている', 逃.length >= 1, 逃.join('／'));
   if (逃.length) {

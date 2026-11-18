@@ -36,7 +36,7 @@ const pump=async(n)=>{for(let i=0;i<n;i++){T+=33; const q=[...rafMap.entries()];
   };
 (async()=>{
   await act(async()=>{root.render(React.createElement(App));}); await flush();
-  await click('ゲームをはじめる'); await openFaction('織田家'); await click('この勢力で開始');
+  await click('キャンペーンモード'); await openFaction('織田家'); await click('この勢力で開始');
   let battles=0, sieges=0, promos=0;
   for(let m=0;m<24;m++){
     /* 合戦に入る前に、自ら采を執るか諸将に委ねるかを問われる（GDD 8.5）。

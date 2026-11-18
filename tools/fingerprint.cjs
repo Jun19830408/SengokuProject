@@ -97,7 +97,7 @@ function 語られたこと(t) {
 (async () => {
   await act(async () => { root.render(React.createElement(App)); });
   await flush();
-  await 押す('ゲームをはじめる');
+  await 押す('キャンペーンモード');
   await 家を開く('新開家');
   const cards = [...document.querySelectorAll('button')].filter((b) => /この勢力を任せて見物する/.test(b.textContent));
   if (!cards.length) { console.log('★見物の入口が見つからない'); process.exit(1); }

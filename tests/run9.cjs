@@ -40,7 +40,7 @@ const led=()=>{const e=document.querySelector('.led');return e?e.textContent.rep
   };
 (async()=>{
   await act(async()=>{root.render(React.createElement(App));});await flush();
-  await rc('ゲームをはじめる'); await openFaction('織田家'); await rc('この勢力で開始');
+  await rc('キャンペーンモード'); await openFaction('織田家'); await rc('この勢力で開始');
   const wrap=document.querySelector('.mapwrap'), cv=wrap.querySelector('canvas');
   const tap=async(wx,wy)=>{const x=(wx-480)*0.9+600,y=(wy-480)*0.9+400;
     await act(async()=>{M('mousedown',cv,x,y);});await act(async()=>{M('mouseup',cv,x,y);});await flush();};

@@ -55,7 +55,7 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
   const root = createRoot(document.getElementById('r'));
   await act(async () => { root.render(React.createElement(App)); });
   await flush(); await flush();
-  await rc('ゲームをはじめる'); await flush(); await flush();
+  await rc('キャンペーンモード'); await flush(); await flush();
   /* 大名を一つ選んで始める（一覧の行は釦ではないので、押しの出来事を投げる）。 */
   const el = [...document.querySelectorAll('.mn')].find((e) => e.textContent.trim() === '織田家');
   if (el) {

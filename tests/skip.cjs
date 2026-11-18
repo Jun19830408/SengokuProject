@@ -27,7 +27,7 @@ const openFaction=async(nm)=>{const el=[...document.querySelectorAll('.mn')].fin
 const txt=()=>document.body.textContent.replace(/\s+/g,' ');
 (async()=>{
   await act(async()=>{root.render(React.createElement(App));});await flush();
-  await rc('ゲームをはじめる'); await openFaction('織田家'); await rc('この勢力で開始');
+  await rc('キャンペーンモード'); await openFaction('織田家'); await rc('この勢力で開始');
   const cv=document.querySelector('.mapwrap canvas');
   await rc('本拠');
   for(const [x,y] of [[450,300],[450,290],[460,310]]){

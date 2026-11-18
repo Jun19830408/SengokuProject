@@ -23,7 +23,7 @@ const rc=async(t)=>{const el=[...document.querySelectorAll('button,.mbtn')].find
   if(!el||el.disabled)return false; await click(el); return true;};
 (async()=>{
   await act(async()=>{root.render(React.createElement(App));});await flush();
-  await rc('ゲームをはじめる');
+  await rc('キャンペーンモード');
   const t=document.body.textContent;
   console.log('見出し:', (t.match(/大名を選ぶ（\d+家）/)||['★なし'])[0]);
   console.log('難易度の欄:', /易/.test(t)&&/普通/.test(t)&&/難/.test(t)?'三段階あり':'★なし');

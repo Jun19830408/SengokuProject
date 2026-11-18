@@ -86,7 +86,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
      預かる隊（足軽なら与平の隊）は、合戦の初めに、敵にいちばん近い味方の隊を選ぶ（hitori/senaka.js 与平の組を選ぶ） */
   const 身分 = (ctx.一人 && ctx.一人.身分) || null;
   const 一人Ref = useRef(null);
-  if (身分 && !一人Ref.current) { const 選 = 与平の組を選ぶ(bRef.current, null); 一人Ref.current = { 身分, 隊id: 選 ? 選.隊.id : null, 態: null }; }
+  /* 風雲モードでは、預かる隊は上司の隊（ctx.一人.隊id）で、主人公の体力・武勇を盤へ持ち込む（hitori/fuun.js 風雲の一人） */
+  const 一人の備え = ctx.一人 && ctx.一人.風雲 ? ctx.一人 : null;
+  if (身分 && !一人Ref.current) { const 選 = 与平の組を選ぶ(bRef.current, (ctx.一人 && ctx.一人.隊id) || null); 一人Ref.current = { 身分, 隊id: 選 ? 選.隊.id : null, 態: null }; }
   /* 地に降りきって、自分の身で戦っている（足軽・物頭）か。ふだんの合戦の見物は含めない（見るだけで、
      速さも下知もふだんどおり）。撮る道具の覗き口（window.__背中）で、ふだんの合戦に与平を立てたときも含める */
   const 地の身 = !!(背中 && 背中Ref.current && 背中Ref.current.身分 !== "見物");
@@ -577,7 +579,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const 地の態を据える = () => {
     const b2 = bRef.current, cam = camRef.current;
     let 態 = null;
-    if (身分) 態 = 一人Ref.current.態 || (一人Ref.current.態 = 背中を始める(b2, 一人Ref.current.隊id, 身分));
+    if (身分) 態 = 一人Ref.current.態 || (一人Ref.current.態 = 背中を始める(b2, 一人Ref.current.隊id, 身分, null, 一人の備え));
     else { const 選 = 寄った所の組(b2, cam.x, cam.y); if (選) 態 = 背中を始める(b2, null, "見物", 選); }
     if (!態) return null;
     態.cam = null; 態.前秒 = 0;

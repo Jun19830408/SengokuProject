@@ -270,10 +270,12 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
         <div className="snk-panel" onPointerDown={(e) => e.stopPropagation()}>
           <div className="box">
             <h2>討死</h2>
-            <p>与平は討ち死にした。勲功 {我.勲}</p>
+            <p>{(態.備え && 態.備え.名) || "与平"}は討ち死にした。勲功 {我.勲}</p>
+            {/* 風雲モード（一度きり）では、討死すればそこで終わる（遊ぶ人の申し出：討死もあり）。合戦の行方は盤で見届ける */}
+            {態.備え && 態.備え.一度きり && <p>風雲はここで終わる。合戦の行方は、盤の視点で見届けられる。</p>}
             <div className="btns">
-              <button type="button" onClick={() => 与平を立て直す(b, 態)}>もう一度（組のうしろから）</button>
-              <button type="button" className="sub" onClick={() => onLeave && onLeave()}>盤の視点へ</button>
+              {!(態.備え && 態.備え.一度きり) && <button type="button" onClick={() => 与平を立て直す(b, 態)}>もう一度（組のうしろから）</button>}
+              <button type="button" className={態.備え && 態.備え.一度きり ? "" : "sub"} onClick={() => onLeave && onLeave()}>盤の視点へ</button>
             </div>
           </div>
         </div>

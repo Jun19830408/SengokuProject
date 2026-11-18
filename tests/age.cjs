@@ -61,7 +61,7 @@ const 齢が出るか = (範囲) => /\d{1,2}歳/.test(範囲);
 
 (async () => {
   await act(async () => { root.render(React.createElement(App)); }); await flush();
-  await rc('ゲームをはじめる');
+  await rc('キャンペーンモード');
   const 家 = [...document.querySelectorAll('.mn')].find((e) => e.textContent.trim() === '織田家');
   if (家) await click(家.parentElement);
   await rc('この勢力で開始'); await flush(); await flush();

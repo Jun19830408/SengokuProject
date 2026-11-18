@@ -289,7 +289,7 @@ const 控える = (名, 事, いつ) => {
 (async () => {
   await act(async () => { root.render(React.createElement(App)); });
   await 息(20);
-  await 押す('ゲームをはじめる');
+  await 押す('キャンペーンモード');
   await 息(20);
 
   /* 家を選ぶ。一覧から家名の札を開き、「この勢力で開始」を押す。

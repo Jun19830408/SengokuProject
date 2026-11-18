@@ -80,6 +80,9 @@ export { createBattle, stepBattle, 放った跡, 前面まで, 触れる隔た�
 export { 兵を討つ, 組の兵を数える, 組の隊 } from "../src/hitori/tsunagi.js";
 // 一人働きの背中越しの視点：盤の一人ずつの兵を、与平の背中越しの眺めへ写す
 export { 歩の尺, 背中の速さ, 背中の突きの速さ, 与平の組を選ぶ, 与平の所, 眺めを集める, 背中を始める, 背中を描く, 与平を進める, 与平を立て直す, 与平の今, 突く, 受ける, 物頭を据える, 降りの写し, 寄った所の組 } from "../src/hitori/senaka.js";
+/* 風雲モード（一人の侍の立身）の理と屋敷の画面（試し：tests/fuun.cjs） */
+export { 風雲の段, 段の番, 次の段, 盤の身分, 風雲の一人, 月の行い一覧, 月の行いの数, 上司を選ぶ, 風雲を始める, 風雲の月の初め, 上司を見直す, 風雲の戦か, 戦の勲功を記す, 取り立てを見る, 風雲の問いに答える } from "../src/hitori/fuun.js";
+export { FuunYashiki, 住まいの絵 } from "../src/hitori/FuunYashiki.jsx";
 export { 合戦一覧, 合戦を探す, 合戦を仕立てる, 合戦を畳む, 合戦の問いに答える, 指図の縛り, 筋書きの覚え, 合戦を控える, 合戦を戻す, 控えの鍵 } from "../src/battle/kassen.js";
 export { 筋書き as 関ヶ原 } from "../src/data/sekigahara.js";
 export { battleAI } from "../src/battle/ai.js";

@@ -9,6 +9,7 @@ import { KassenScreen } from "./KassenScreen.jsx";
 import { css } from "./css.js";
 import { FACTIONS } from "../data/factions.js";
 import { exportSave, importSave } from "../save/save.js";
+import { 風雲を始める } from "../hitori/fuun.js";
 import { 起こし直す, 解錠する, 設定を読む, 止める as 音を止める } from "../audio/oto.js";
 
 // 横画面を基本とする（GDD 15.2）。政務も合戦も横で扱う。
@@ -83,7 +84,8 @@ export default function App() {
      これをせずにいたため、新しく始めた途端――正しくは最初の月送りの折に――
      自動の枠が黙って上書きされ、進めていた盤が失われた。
      逃がせないとき（空き枠が無いとき）は、消える旨を告げて確かめる。 */
-  const 新しく始める = async () => {
+  /* 先 … 次に出す画面（キャンペーンなら大名選び "select"、風雲モードなら仕える家選び "fuun-select"） */
+  const 新しく始める = async (先 = "select") => {
     const r = await 自動を逃がす();
     await 並べ直す();
     if (r.空きなし || r.失敗) {
@@ -99,7 +101,7 @@ export default function App() {
       window.alert(`いままでの盤（${h ? `${h.家}・${h.年}年${h.月}月` : "自動の記録"}）を「${r.名}」へ移しました。\n`
         + "新しく始めても消えません。");
     }
-    setScreen("select");
+    setScreen(先);
   };
 
   // 枠を選んで、その盤から始める
@@ -110,7 +112,7 @@ export default function App() {
   };
 
   if (screen === "title") return (<><style>{css}</style>
-    <Title saves={saves} onStart={新しく始める}
+    <Title saves={saves} onStart={() => 新しく始める("select")} onFuun={() => 新しく始める("fuun-select")}
       onLoad={記録から始める}
       onErase={async (key) => { await clearGame(key); await 並べ直す(); }}
       onExport={async (key) => {
@@ -122,6 +124,15 @@ export default function App() {
   /* 合戦。国も月も無い、決まった一戦だけの遊び方（GDD 8.9）。 */
   if (screen === "kassen") return (<><style>{css}</style>
     <KassenScreen land={land} onTitle={() => setScreen("title")} /></>);
+  /* 風雲モード：仕える家を選ぶ。その家の本拠で、足軽として始める（hitori/fuun.js 風雲を始める） */
+  if (screen === "fuun-select") return (<><style>{css}</style>
+    <DaimyoSelect 風雲 terrain={terrain} land={land} onBack={() => setScreen("title")}
+      onPick={(f, watch, lvl) => {
+        const st = initState(f);
+        st.level = lvl || "普通";
+        風雲を始める(st);
+        setG(st); setScreen("map");
+      }} /></>);
   if (screen === "select") return (<><style>{css}</style>
     <DaimyoSelect terrain={terrain} land={land} onBack={() => setScreen("title")}
       onPick={(f, watch, lvl) => {

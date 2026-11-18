@@ -26,7 +26,7 @@ function 記録の札({ 枠, onLoad, onErase }) {
             onClick={() => onLoad(枠.key)}>
             <b className="mn" style={{ fontSize: 14 }}>{h.家}</b>
             <span className="num" style={{ color: U.dim, marginLeft: 7 }}>
-              {h.年}年{h.月}月／{h.城数}城・{h.万石}万石{h.見物 ? "／見物" : ""}
+              {h.年}年{h.月}月／{h.城数}城・{h.万石}万石{h.風雲 ? `／風雲・${h.風雲}` : h.見物 ? "／見物" : ""}
             </span>
             {日時 && <span style={{ color: U.dim, fontSize: 10.5, marginLeft: 7 }}>{日時}</span>}
           </button>
@@ -41,7 +41,7 @@ function 記録の札({ 枠, onLoad, onErase }) {
   );
 }
 
-export function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onKassen }) {
+export function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onKassen, onFuun }) {
   const [遊び方, set遊び方] = useState(false);
   const 控え口 = useRef(null);
   const 在る = (saves || []).filter((w) => w.d);
@@ -68,15 +68,20 @@ export function Title({ saves, onStart, onLoad, onErase, onExport, onImport, onK
           {最新 && (
             <button className="btn dark" style={{ padding: "13px" }} onClick={() => onLoad(最新.key)}>
               続きから（{最新.名}・{最新.d.state.year}年{最新.d.state.month}月・
-              {(FACTIONS[最新.d.state.player] || {}).name}）
+              {(FACTIONS[最新.d.state.player] || {}).name}{最新.d.state.風雲 ? "・風雲" : ""}）
             </button>
           )}
+          {/* 遊び方は三つ（遊ぶ人の申し出：「キャンペーンモード 風雲モード 合戦モード でいきましょうか」）。
+              キャンペーンは大名として国を治める。風雲は一人の侍（はじめは足軽）として仕える（hitori/fuun.js）。
+              合戦は国を治めずに、決まった一戦だけを遊ぶ（GDD 8.9）。 */}
           <button className={`btn ${最新 ? "" : "dark"}`} style={{ padding: "13px" }} onClick={onStart}>
-            {最新 ? "新しくはじめる" : "ゲームをはじめる"}
+            キャンペーンモード
           </button>
-          {/* 合戦（GDD 8.9）。国を治めずに、決まった一戦だけを遊ぶ入口。 */}
+          <button className="btn" style={{ padding: "13px" }} onClick={onFuun}>
+            風雲モード
+          </button>
           <button className="btn" style={{ padding: "13px" }} onClick={onKassen}>
-            合戦 ── 関ヶ原
+            合戦モード（関ヶ原）
           </button>
           {/* 初めて開いた人が、まず読めるように。遊びの中からも同じものが開ける。 */}
           <button className="btn" style={{ padding: "11px" }} onClick={() => set遊び方(true)}>遊び方を読む</button>

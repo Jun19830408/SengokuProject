@@ -26,7 +26,7 @@ const openFaction=async(nm)=>{const el=[...document.querySelectorAll('.mn')].fin
   if(!el)return false; await click(el.parentElement); return true;};
 (async()=>{
   await act(async()=>{root.render(React.createElement(App));});await flush();
-  await rc('ゲームをはじめる'); await openFaction('新開家'); await rc('この勢力で開始');
+  await rc('キャンペーンモード'); await openFaction('新開家'); await rc('この勢力で開始');
   const wrap=document.querySelector('.mapwrap'), cv=wrap.querySelector('canvas');
   // 牛岐城を選ぶ（本拠なので「本拠」ボタンで寄せる）
   await rc('本拠');

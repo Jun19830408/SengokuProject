@@ -36,7 +36,7 @@ const rc=async(t)=>{const el=[...document.querySelectorAll('button,.mbtn')].find
   };
 (async()=>{
   await act(async()=>{root.render(React.createElement(App));});await flush();
-  await rc('ゲームをはじめる');
+  await rc('キャンペーンモード');
   // 勢力一覧から織田家を選ぶ
   const all=[...document.querySelectorAll('button')].map(b=>b.textContent.trim());
   console.log('画面のボタン: '+all.slice(0,8).join(' / '));

@@ -74,7 +74,7 @@ const 文 = () => document.body.textContent;
   確('閉じればタイトルに戻る', !/一月の流れ/.test(文()) && !!btn('遊び方を読む'), '');
 
   /* -------------------------------------- 二、遊びの最中にも読める */
-  await rc('ゲームをはじめる') || await rc('新しくはじめる'); await flush(); await flush();
+  await rc('キャンペーンモード'); await flush(); await flush();
   // 大名を選び、始める
   const 家札 = [...document.querySelectorAll('.mn')].find((e) => e.textContent.trim() === '織田家');
   if (家札) { await click(家札.parentElement); await flush(); }

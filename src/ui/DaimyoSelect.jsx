@@ -27,8 +27,9 @@ export function regionOf(fid) {
   return r ? r.name : "―";
 }
 
+/* 風雲 … 風雲モードで仕える家を選ぶとき（大名としてではなく、その家の足軽として始める。見物は無い） */
 export function DaimyoSelect({
- terrain, land, onBack, onPick }) {
+ terrain, land, onBack, onPick, 風雲 = false }) {
   const [level, setLevel] = useState("普通");
   const [region, setRegion] = useState("すべて");
   const [size, setSize] = useState("すべて");
@@ -258,7 +259,7 @@ export function DaimyoSelect({
             {(LEVELS[level] || LEVELS["普通"]).desc}
           </div>
 
-          <div className="sec">大名を選ぶ（{Object.keys(FACTIONS).length}家）</div>
+          <div className="sec">{風雲 ? "仕える家を選ぶ" : "大名を選ぶ"}（{Object.keys(FACTIONS).length}家）</div>
           <div className="g2" style={{ marginBottom: 8 }}>
             {["すべて", "大身", "中堅", "小勢力"].map((k) => (
               <button key={k} className={`btn sm ${size === k ? "on" : ""}`} onClick={() => setSize(k)}>{k}</button>
@@ -297,15 +298,16 @@ export function DaimyoSelect({
                     <span className="k">当主</span><span className="v">{st.lord}</span>
                   </div>
                   <button className="btn" style={{ width: "100%", marginTop: 10, background: f.color, color: "#fff", borderColor: f.color }}
-                    onClick={() => onPick(f.id, false, level)}>この勢力で開始</button>
-                  <button className="btn sm" style={{ width: "100%", marginTop: 4 }}
-                    onClick={() => onPick(f.id, true, level)}>この勢力を任せて見物する</button>
+                    onClick={() => onPick(f.id, false, level)}>{風雲 ? "この家に足軽として仕える" : "この勢力で開始"}</button>
+                  {!風雲 && <button className="btn sm" style={{ width: "100%", marginTop: 4 }}
+                    onClick={() => onPick(f.id, true, level)}>この勢力を任せて見物する</button>}
                 </div>
               )}
             </div>
           ))}
           <div style={{ fontSize: 11, color: U.dim, lineHeight: 1.7, borderTop: `1px solid ${U.line2}`, paddingTop: 12, marginTop: 8 }}>
-            家名を押すと詳しい様子が出ます。選ばなかった家はすべてAIが担当します。
+            {風雲 ? "家名を押すと詳しい様子が出ます。風雲モードでは、仕える家もほかの家もすべてAIが動かします。"
+              : "家名を押すと詳しい様子が出ます。選ばなかった家はすべてAIが担当します。"}
           </div>
         </div>
       </div>

@@ -35,7 +35,7 @@ const bar=()=>document.querySelector('.bar').textContent.replace(/\s+/g,' ').sli
   };
 (async()=>{
   await act(async()=>{root.render(React.createElement(App));}); await flush();
-  console.log("● タイトル→大名選択:", await rc('ゲームをはじめる'));
+  console.log("● タイトル→大名選択:", await rc('キャンペーンモード'));
   await openFaction('織田家');
   console.log("● 織田家で開始:", await rc('この勢力で開始'));
   const wrap=document.querySelector('.mapwrap'), cv=wrap.querySelector('canvas');
