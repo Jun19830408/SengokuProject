@@ -20,7 +20,7 @@ import { 効果を鳴らす, 兵の音を掛ける, 効果を止める, 音の�
 import "../hitori/tsunagi.js";
 /* 一人働きの背中越しの視点（試し）。左下の釦で、盤の代わりに与平の背中越しに描く。与平は自分で動かす
    （札と釦は hitori/SenakaFuda.jsx。与平の動きと突き合いは hitori/senaka.js） */
-import { 背中を始める, 背中を描く, 与平の今, 背中の速さ, 与平の組を選ぶ } from "../hitori/senaka.js";
+import { 背中を始める, 背中を描く, 与平の今, 背中の速さ, 与平の組を選ぶ, 寄った所の組 } from "../hitori/senaka.js";
 import SenakaFuda from "../hitori/SenakaFuda.jsx";
 
 /* 早送り（GDD 8.1・9.3）。
@@ -64,8 +64,19 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const [咎め, set咎め] = useState(null);            // 「いま下知できぬ」訳を束の間出す
   const [, 問い直し] = useState(0);                  // 筋書きの問いに答えたら描き直す
   const [覚え開く, set覚え開く] = useState(false);    // 筋書きの覚え（分岐の条件）
-  const [背中, set背中] = useState(false);            // 背中越しの視点（一人働きの試し）
-  const 背中Ref = useRef(null);                       // 背中越しの眺めの状態（与平の組・カメラ）
+  const [背中, set背中] = useState(false);            // 地に降りきっている（背中越しの視点・見物の地の眺め）
+  const 背中Ref = useRef(null);                       // 地の眺めの状態（与平の組・カメラ）。降りてくる途中から据える
+  /* 盤から地へ降りる（遊ぶ人の申し出：「ピンチイン、アウトでスムーズに一人称視点までいけるようにしたい」
+     「通常のキャンペーンモードでも、一人モードと同じような視点まで拡大できるとさらに迫力が増す」）。
+     盤をいちばん寄せた所から、さらに寄せる（ピンチ・車）と地へ降り、引けば盤へ昇る。
+       降りRef … { u（〇＝盤・一＝地）, 的（釦で降りる・昇るときの行き先。指や車で動かすあいだは null）,
+                   盤（降り始めた盤の写し：真ん中・倍・向き・傾き。hitori/senaka.js 降りの写し） }
+       降り段 … null（盤）・"途中"・"地"。札（hitori/SenakaFuda.jsx）は途中から出して指と車を受け、名札や釦は地で出す
+     一人働きなら与平（物頭なら預かる隊の組）のうしろへ降りる。ふだんの合戦なら、盤の真ん中にいちばん近い組の
+     うしろへ降りて見物する（見るだけ。下知はこれまでどおり右の欄から） */
+  const 降りRef = useRef(null);
+  const [降り段, set降り段] = useState(null);
+  const 板Ref = useRef(null);                         // 降りる途中、地の眺めを描いて盤に重ねる画布
   /* 一人働き（武将一人プレイ）の合戦では、遊ぶ人の身分（ctx.一人.身分：足軽・物頭）で使える下知を分ける。
      遊ぶ人の申し出：「背中視点でできるのは物頭未満の指示、物頭以降は背中視点できるが、それまでの指示は
      逆にできず、部隊としての通常（全軍指示はできない）の指示」。下知は、見ている視点でなく身分で決まる。
@@ -75,7 +86,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
      預かる隊（足軽なら与平の隊）は、合戦の初めに、敵にいちばん近い味方の隊を選ぶ（hitori/senaka.js 与平の組を選ぶ） */
   const 身分 = (ctx.一人 && ctx.一人.身分) || null;
   const 一人Ref = useRef(null);
-  if (身分 && !一人Ref.current) { const 選 = 与平の組を選ぶ(bRef.current, null); 一人Ref.current = { 身分, 隊id: 選 ? 選.隊.id : null }; }
+  if (身分 && !一人Ref.current) { const 選 = 与平の組を選ぶ(bRef.current, null); 一人Ref.current = { 身分, 隊id: 選 ? 選.隊.id : null, 態: null }; }
+  /* 地に降りきって、自分の身で戦っている（足軽・物頭）か。ふだんの合戦の見物は含めない（見るだけで、
+     速さも下知もふだんどおり）。撮る道具の覗き口（window.__背中）で、ふだんの合戦に与平を立てたときも含める */
+  const 地の身 = !!(背中 && 背中Ref.current && 背中Ref.current.身分 !== "見物");
+  const 速さ縛り = !!身分 || 地の身;                   // 速さは停止と微速だけ
   const faceRef = useRef(false);
   const speedRef = useRef(0), selRef = useRef(null), uiRef = useRef(0), allRef = useRef(false);
   const camRef = useRef({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
@@ -327,7 +342,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
      そのまま使える。合戦開始・手綱を取り戻す・問いへの答えなどで速さが変わっても、ここで微速へ戻す
      （止めている〇はそのまま）。委ねているあいだは手を出さない */
   useEffect(() => {
-    if (!(背中 || 身分) || 委ねRef.current || bRef.current.phase !== "fight") return;
+    if (!速さ縛り || 委ねRef.current || bRef.current.phase !== "fight") return;
     if (speed !== 0 && speed !== 背中の速さ) setSpeed(背中の速さ);
   }, [背中, speed, phase, 委ね中]);
   /* 一人働きの合戦は、布陣を待たずに始まる。足軽も物頭も、布陣と合戦開始は総大将の役で、遊ぶ人には
@@ -464,8 +479,27 @@ export function BattleScreen({ ctx, land, onEnd }) {
         const 描t0 = performance.now();
         /* 背中越しの視点のあいだは、盤の代わりに与平の背中越しに描く（hitori/senaka.js。兵は盤の一人ずつの絵の兵をそのまま読む）。
            盤を止めているあいだ（速さ〇。合戦の段でないときも）は、与平も止める */
-        if (背中Ref.current) 背中を描く(cv.getContext("2d"), b, 背中Ref.current, W, H, dpr, ts / 1000, sp === 0 || b.phase !== "fight");
-        else drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current, 斜め地, 区Ref.current);
+        /* 盤から地へ降りる途中は、釦で降りる・昇るときの行き先（的）へ u を進め、盤に地の眺めを重ねる。
+           u が〇.三五に届くまでは、盤を下に描き、地の眺めを別の画布に描いて濃さ（なめらかに〇→一）で重ねる */
+        const 降り = 降りRef.current;
+        if (降り && 降り.的 != null) {
+          const 歩 = dt * 1.15;
+          降り.u = 降り.u < 降り.的 ? Math.min(降り.的, 降り.u + 歩) : Math.max(降り.的, 降り.u - 歩);
+          if (降り.u === 降り.的) 降り.的 = null;
+          降りの段を合わせる();
+        }
+        const 地 = 背中Ref.current, 降り2 = 降りRef.current, u = 降り2 ? 降り2.u : 1;
+        const 盤を描く = () => drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current, 斜め地, 区Ref.current);
+        const 止め = sp === 0 || b.phase !== "fight";
+        if (地 && u < 0.35) {
+          盤を描く();
+          const 板 = 板Ref.current || (板Ref.current = document.createElement("canvas"));
+          if (板.width !== cv.width || 板.height !== cv.height) { 板.width = cv.width; 板.height = cv.height; }
+          背中を描く(板.getContext("2d"), b, 地, W, H, dpr, ts / 1000, 止め, 降り2);
+          const g2 = cv.getContext("2d"), v = Math.max(0, Math.min(1, u / 0.35));
+          g2.save(); g2.setTransform(1, 0, 0, 1, 0, 0); g2.globalAlpha = v * v * (3 - 2 * v); g2.drawImage(板, 0, 0); g2.restore();
+        } else if (地) 背中を描く(cv.getContext("2d"), b, 地, W, H, dpr, ts / 1000, 止め, 降り2 && u < 1 ? 降り2 : null);
+        else 盤を描く();
         /* 一コマを描くのに要った時（直近六十コマ）。重さを測るための覗き窓 */
         if (typeof window !== "undefined") {
           const 刻ら = window.__描きの刻 || (window.__描きの刻 = []);
@@ -519,14 +553,72 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const 収まる = Math.min(w.clientWidth / 寸.w, w.clientHeight / (寸.h * 縦の縮み()));
     return Math.min(0.25, 収まる * 0.9);
   };
+  /* ---- 盤から地へ降りる・地から盤へ昇る（上の 降りRef の説明） ---- */
+  const 降りの倍 = 2.6;                     // 盤をいちばん寄せた所から、さらに二.六倍ぶん寄せれば地に着く（車なら九目盛りほど）
+  const 降りられるか = () => !bRef.current.map && !委ねRef.current && (!身分 || bRef.current.phase === "fight");
+  /* 降り始めの盤の写し。地の色は、いま描いている盤の画から草地らしい色（緑の勝つ点）を拾って平らにならす
+     （hitori/senaka.js 降りの写し：高いところでは地をこの色に寄せる）。拾えなければ寄せない */
+  const 盤の地色 = () => {
+    try {
+      const cv = canvasRef.current; if (!cv || !cv.width) return null;
+      /* 盤の画を二十四×十六に縮めて写し（大きな画をそのまま読むと重い）、緑の勝つ点だけを平らにならす */
+      const 小 = document.createElement("canvas"); 小.width = 24; 小.height = 16;
+      const g2 = 小.getContext("2d"); g2.drawImage(cv, 0, 0, 24, 16);
+      const d = g2.getImageData(0, 0, 24, 16).data; if (!d || !d.length) return null;
+      let r = 0, g = 0, bl = 0, n = 0;
+      for (let k = 0; k < d.length; k += 4) if (d[k + 1] > d[k] && d[k + 1] > d[k + 2]) { r += d[k]; g += d[k + 1]; bl += d[k + 2]; n++; }
+      return n >= 12 ? [r / n, g / n, bl / n] : null;
+    } catch (e) { return null; }
+  };
+  const 盤の写し = () => { const cam = camRef.current; return { x: cam.x, y: cam.y, s: cam.s, 向き: 向きRef.current, 傾き: 縦の縮み(), 地色: 盤の地色() }; };
+  /* 地の眺めを据える。一人働きなら与平（物頭なら預かる隊の組）で、与平の態は合戦のあいだ一つを保つ
+     （盤へ戻ってまた降りても、居所・体力・勲功はそのまま。盤のあいだ与平は止まっている）。
+     ふだんの合戦なら、盤の真ん中にいちばん近い組を、そのつど選んで見物する */
+  const 地の態を据える = () => {
+    const b2 = bRef.current, cam = camRef.current;
+    let 態 = null;
+    if (身分) 態 = 一人Ref.current.態 || (一人Ref.current.態 = 背中を始める(b2, 一人Ref.current.隊id, 身分));
+    else { const 選 = 寄った所の組(b2, cam.x, cam.y); if (選) 態 = 背中を始める(b2, null, "見物", 選); }
+    if (!態) return null;
+    態.cam = null; 態.前秒 = 0;
+    背中Ref.current = 態;
+    return 態;
+  };
+  const 降りの段を合わせる = () => {
+    const 降り = 降りRef.current; if (!降り) return;
+    if (降り.u <= 0) { 降りRef.current = null; 背中Ref.current = null; set降り段(null); set背中(false); return; }
+    const 段 = 降り.u >= 1 ? "地" : "途中";
+    set降り段(段); set背中(段 === "地");
+  };
+  const 降りを動かす = (du) => {
+    const 降り = 降りRef.current; if (!降り) return;
+    降り.的 = null; 降り.u = clamp(降り.u + du, 0, 1);
+    降りの段を合わせる();
+  };
+  /* 釦で降りる：盤をいちばん寄せ、与平（物頭なら預かる組）を真ん中に据えてから、なめらかに降りる（〇.九秒ほど） */
+  const 釦で降りる = () => {
+    if (!降りられるか()) return;
+    const 態 = 地の態を据える(); if (!態) return;
+    const cam = camRef.current, 所 = 与平の今(態);
+    ({ x: cam.x, y: cam.y } = 真ん中に据える(所.x, 所.y)); cam.s = 寄りの限り();
+    降りRef.current = { u: 0.001, 的: 1, 盤: 盤の写し() };
+    降りの段を合わせる();
+  };
+  const 釦で昇る = () => { const 降り = 降りRef.current; if (降り) 降り.的 = 0; };
   const zoomAt = (k, clientX, clientY) => {
     const cam = camRef.current;
+    /* 降りている途中と地にいるあいだは、寄せれば降り、引けば昇る */
+    if (降りRef.current) { 降りを動かす(Math.log(k) / Math.log(降りの倍)); return; }
+    const 限り = 寄りの限り();
+    const 余り = k > 1 && cam.s * k > 限り && 降りられるか() ? Math.log((cam.s * k) / 限り) / Math.log(降りの倍) : 0;
     const before = clientX == null ? null : toField(clientX, clientY);
-    cam.s = clamp(cam.s * k, 縮みの限り(), 寄りの限り());
+    cam.s = clamp(cam.s * k, 縮みの限り(), 限り);
     if (before) {
       const after = toField(clientX, clientY);
       cam.x += before.x - after.x; cam.y += before.y - after.y;
     }
+    /* 盤をいちばん寄せた所から、さらに寄せれば地へ降りる（寄せた余りのぶんだけ降りる） */
+    if (余り > 0 && 地の態を据える()) { 降りRef.current = { u: 0, 的: null, 盤: 盤の写し() }; 降りを動かす(余り); }
     force((n) => (n + 1) % 1000);
   };
   /* 写しを撮るための取っ手（GDD 15.4）。
@@ -543,10 +635,23 @@ export function BattleScreen({ ctx, land, onEnd }) {
     /* 背中越しの視点を入れる・切る（撮る道具・試しが使う）。名を渡せば、その名を含む味方の隊の組に与平を立てる */
     window.__背中 = (入, 名) => {
       if (入 === undefined) { const 態 = 背中Ref.current; if (!態) return null; return { 名: 態.名, 組: 態.組.id, ...与平の今(態) }; }   // いまの与平（居所・体力・気力・勲功）
-      if (!入) { 背中Ref.current = null; set背中(false); return null; }
-      const 隊 = 名 ? b.corps.find((c) => c.side === "P" && !c.dead && !c.destroyed && c.name.includes(名)) : null;
-      const 態 = 背中を始める(b, 隊 ? 隊.id : 一人Ref.current ? 一人Ref.current.隊id : selRef.current, 身分 || "足軽"); if (!態) return null;
-      背中Ref.current = 態; set背中(true); return { 名: 態.名, 組: 態.組.id, ...与平の今(態) };
+      if (!入) { 降りRef.current = null; 背中Ref.current = null; set降り段(null); set背中(false); return null; }
+      let 態;
+      if (身分) 態 = 地の態を据える();
+      else {
+        const 隊 = 名 ? b.corps.find((c) => c.side === "P" && !c.dead && !c.destroyed && c.name.includes(名)) : null;
+        態 = 背中を始める(b, 隊 ? 隊.id : selRef.current, "足軽"); if (態) 背中Ref.current = 態;
+      }
+      if (!態) return null;
+      降りRef.current = { u: 1, 的: null, 盤: 盤の写し() }; 降りの段を合わせる();
+      return { 名: 態.名, 組: 態.組.id, ...与平の今(態) };
+    };
+    /* 盤から地へ降りる途中を、撮る道具・試しが据える（u：〇＝盤・一＝地）。降りていなければ、いまの盤から降り始める */
+    window.__降り = (u) => {
+      if (u === undefined) return 降りRef.current ? 降りRef.current.u : 0;
+      if (!降りRef.current) { if (!降りられるか() || !地の態を据える()) return null; 降りRef.current = { u: 0, 的: null, 盤: 盤の写し() }; }
+      降りRef.current.的 = null; 降りRef.current.u = clamp(u, 0, 1); 降りの段を合わせる();
+      return 降りRef.current ? 降りRef.current.u : 0;
     };
     /* 倍率は絶対値で受ける（一.六なら一.六倍）。寄る先は「いちばん激しく噛んで
        いる隊」とその相手の中ほどである。噛み合い全体の重心を取ると、両軍の
@@ -693,6 +798,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const onMove = (e) => {
     const g = gesture.current;
     if (!g) return;
+    if (降りRef.current && g.mode !== "pinch") return;   // 降りているあいだは盤を動かさない
     if (g.mode === "pinch" && e.touches && e.touches.length === 2) {
       const [a, c2] = [e.touches[0], e.touches[1]];
       const d = Math.hypot(a.clientX - c2.clientX, a.clientY - c2.clientY);
@@ -772,7 +878,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const onCancel = () => { gesture.current = null; };
   const onUp = (e) => {
     const g = gesture.current; gesture.current = null;
-    if (!g || g.mode === "pinch") return;
+    if (!g || g.mode === "pinch" || 降りRef.current) return;
     const p = pointerOf(e);
     const f = toField(p.clientX, p.clientY);
     if (g.mode === "unit" && g.moved > 8) { orderTo(g.corps, f, null); return; }   // 部隊ドラッグ＝移動／布陣
@@ -1087,7 +1193,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
 
   /* 足軽の欄を出すか。一人働きでは身分で決める（足軽なら盤の視点でも出す）。ふだんの合戦では背中越しのあいだ
      （撮る道具・試しの覗き口 window.__背中 で入ったとき）だけ */
-  const 足軽の欄か = 身分 ? 身分 === "足軽" : 背中;
+  const 足軽の欄か = 身分 ? 身分 === "足軽" : 地の身;
   const panelBody = (
     <>
       {足軽の欄か && (b.phase === "deploy" || b.phase === "fight") && 一人の欄}
@@ -1820,9 +1926,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
     <div className="sp" style={{ height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }} onMouseDown={stop} onMouseUp={stop}>
       {退きの札}
       {引き鉦の札}
-      {!背中 && !身分 && 問いの札 /* 好機の問いは総大将の判断なので、背中越しのあいだと一人働きの合戦では出さない */}
+      {!地の身 && !身分 && 問いの札 /* 好機の問いは総大将の判断なので、自分の身で戦っているあいだと一人働きの合戦では出さない */}
       {咎めの帯}
-      {!背中 && 覚えの札 /* 背中越しのあいだは出さない（盤だけを広げたとき、右下の突くの釦に重なる） */}
+      {!地の身 && 覚えの札 /* 自分の身で戦っているあいだは出さない（盤だけを広げたとき、右下の突くの釦に重なる） */}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 }}>
         {!wide && (
         <div className="bar bt">
@@ -1902,12 +2008,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
           </div>
           {phase === "fight" && (
             /* 背中越し（一人視点）のあいだと一人働きの合戦では、停止と微速だけ。ほかの速さは押せなくする（上の 背中の速さ の説明） */
-            <span className="tsugi hayasa" title={背中 || 身分 ? "一人視点・一人働きでは停止と微速だけ（委ねて結果を見ることはできる）" : undefined}>
+            <span className="tsugi hayasa" title={速さ縛り ? "一人視点・一人働きでは停止と微速だけ（委ねて結果を見ることはできる）" : undefined}>
               <button className={`btn sm ${speed === 0 ? "on" : ""}`} onClick={() => setSpeed(0)}>停止</button>
               <button className={`btn sm ${speed === 0.12 ? "on" : ""}`} onClick={() => setSpeed(0.12)}>微速</button>
-              <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} disabled={背中 || !!身分} onClick={() => setSpeed(0.3)}>低速</button>
-              <button className={`btn sm ${speed === 0.6 ? "on" : ""}`} disabled={背中 || !!身分} onClick={() => setSpeed(0.6)}>通常</button>
-              <button className={`btn sm ${speed === 早送りの速さ ? "on" : ""}`} disabled={背中 || !!身分} onClick={() => setSpeed(早送りの速さ)}
+              <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} disabled={速さ縛り} onClick={() => setSpeed(0.3)}>低速</button>
+              <button className={`btn sm ${speed === 0.6 ? "on" : ""}`} disabled={速さ縛り} onClick={() => setSpeed(0.6)}>通常</button>
+              <button className={`btn sm ${speed === 早送りの速さ ? "on" : ""}`} disabled={速さ縛り} onClick={() => setSpeed(早送りの速さ)}
                 title="通常の四倍で進めます（行軍の間など）">早送り</button>
             </span>
           )}
@@ -1983,7 +2089,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <span className="dot" style={{ background: ctx.eColor }} /><b className="num">{fmt(eMen)}</b>
                 <span className="num" style={{ color: U.dim }}>{Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}</span>
                 {phase === "fight" && [["停", 0], ["微", 0.12], ["低", 0.3], ["通", 0.6], ["早", 早送りの速さ]].map(([lb, v]) => (
-                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`} disabled={(背中 || !!身分) && v !== 0 && v !== 背中の速さ}
+                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`} disabled={速さ縛り && v !== 0 && v !== 背中の速さ}
                     style={{ padding: land ? "3px 6px" : "2px 5px", fontSize: land ? 12 : 10.5 }}
                     onClick={() => setSpeed(v)}>{lb}</button>
                 ))}
@@ -1997,7 +2103,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
 
                 もとは「収納」と「広く」が別々で、二度押さねば広くならず、
                 しかも左の釦の列は残ったままであった。 */}
-            <div className={`mapctl l bctl${wide || 背中 ? " hid" : ""}`}
+            <div className={`mapctl l bctl${wide || 降り段 ? " hid" : ""}`}
               onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}>
               <div className="mbtn" onClick={() => zoomAt(1.3, null)}><b>＋</b>拡大</div>
               <div className="mbtn" onClick={() => zoomAt(0.77, null)}><b>−</b>縮小</div>
@@ -2027,16 +2133,15 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 野戦だけに出す（地を平らに描くので、城攻めの盤（b.map）では塀も門も描けない）。
                 合戦のさなかだけ出す。足軽の身では布陣も合戦開始もできない（一人の欄）ので、布陣の段で入っても
                 合戦が始められない。背中越しのあいだは、盤へ戻るためにいつでも出す */}
-            {!bRef.current.map && 身分 && (bRef.current.phase === "fight" || 背中) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5 }}
+            {!bRef.current.map && 身分 && (bRef.current.phase === "fight" || 降り段) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5 }}
               onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
               onClick={() => {
-                if (背中Ref.current) { 背中Ref.current = null; set背中(false); }
-                else { const 態 = 背中を始める(bRef.current, 一人Ref.current && 一人Ref.current.隊id, 身分); if (態) { 背中Ref.current = 態; set背中(true); } }
-              }}><b>{背中 ? "盤" : "人"}</b>{背中 ? "盤の視点" : "背中の視点"}</div>}
+                if (降りRef.current) 釦で昇る(); else 釦で降りる();
+              }}><b>{降り段 ? "盤" : "人"}</b>{降り段 ? "盤の視点" : "背中の視点"}</div>}
             {/* 与平の札と釦（名札・体力・気力・方向キー・突く／受ける／駆ける・討死の札）。左下の釦より下に重ねる */}
-            {背中 && 背中Ref.current && (
-              <SenakaFuda 態={背中Ref.current} b={bRef.current} 止め={bRef.current.phase !== "fight" ? "段" : speed === 0 ? "停止" : ""}
-                onLeave={() => { 背中Ref.current = null; set背中(false); }} />
+            {降り段 && 背中Ref.current && (
+              <SenakaFuda 態={背中Ref.current} b={bRef.current} 段={降り段} 止め={bRef.current.phase !== "fight" ? "段" : speed === 0 ? "停止" : ""}
+                on寄り={(k) => zoomAt(k)} onLeave={釦で昇る} />
             )}
             {wide && (
               <div className="grip l" title="道具立てを戻す"

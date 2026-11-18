@@ -18,6 +18,12 @@
    物頭（態.身分＝"物頭"）は自分では動かない（遊ぶ人の申し出：物頭以降は背中視点はできるが、それまでの
    指示はできず、部隊としての通常の指示）。名札に預かる隊（兵の数・いまの下知）を出すだけで、方向キー・
    三つの釦・鍵盤は出さない。隊への下知は、合戦の画面の右の欄から出す。
+
+   盤から地へ降りる（ui/BattleScreen.jsx 降りRef）。段＝"途中"（降りている途中）のあいだは、札も釦も出さず、
+   二本の指のピンチと車だけを受けて on寄り（倍）へ渡す（寄せれば降り、引けば昇る）。段＝"地"では、名札・
+   方向キー・釦に加えて、ピンチと車も受ける（方向キーを押さえている指のほかに、もう一本の指を置けば
+   ピンチになり、方向キーはやめる。釦の上に置いた指はピンチに数えない）。
+   見物（態.身分＝"見物"。ふだんの合戦で地へ降りたとき）は、見るだけの札（地の眺め・盤へ戻る釦）を出す。
    ========================================================================== */
 import React, { useEffect, useRef, useState } from "react";
 import { 突く, 受ける, 与平を立て直す } from "./senaka.js";
@@ -82,8 +88,9 @@ const 型 = `
 const 鍵 = { KeyW: "u", ArrowUp: "u", KeyS: "d", ArrowDown: "d", KeyA: "l", ArrowLeft: "l", KeyD: "r", ArrowRight: "r" };
 
 /* 止め … 盤が止まっている訳。"停止"（停止の釦で止めた）・"段"（合戦の段でない：始まる前・決着ののち）・""（進んでいる） */
-export default function SenakaFuda({ 態, b, 止め, onLeave }) {
+export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLeave }) {
   const 根Ref = useRef(null), 輪Ref = useRef(null), 玉Ref = useRef(null), 杖 = useRef(null);
+  const 指Ref = useRef(new Map()), 摘みRef = useRef(null);   // 置いている指（釦の上でないもの）と、ピンチの指の隔たり
   const [突押, set突押] = useState(false);
   const [卓, set卓] = useState(false);
   useEffect(() => { try { set卓(!!(window.matchMedia && window.matchMedia("(pointer: fine)").matches)); } catch (_) {} }, []);
@@ -116,23 +123,37 @@ export default function SenakaFuda({ 態, b, 止め, onLeave }) {
   }, [態]);
 
   if (!態 || !態.我) return null;
-  const 我 = 態.我, 入 = 態.入, 物頭 = 態.身分 === "物頭";
+  const 我 = 態.我, 入 = 態.入, 物頭 = 態.身分 === "物頭", 見物 = 態.身分 === "見物";
   const 終 = 態.終 && 態.t >= 態.終.t ? 態.終 : null;
 
   /* ---- 方向キー（左半分に指を置いた所に出る） ---- */
   const 所 = (e) => { const r = 根Ref.current.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top, r.width]; };
+  const 方向キーをやめる = () => { if (杖.current) { 杖.current = null; if (輪Ref.current) 輪Ref.current.style.display = "none"; 入.jx = 0; 入.jy = 0; } };
   const 下 = (e) => {
-    if (!根Ref.current || 杖.current || 終 || 物頭) return;
+    if (!根Ref.current) return;
     if (e.target.closest && e.target.closest("button")) return;
+    指Ref.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { 根Ref.current.setPointerCapture(e.pointerId); } catch (_) {}
+    if (指Ref.current.size >= 2) {                         // 二本目の指：ピンチ（方向キーはやめる）
+      方向キーをやめる();
+      const [a, c] = [...指Ref.current.values()]; 摘みRef.current = { d: Math.hypot(a.x - c.x, a.y - c.y) };
+      e.preventDefault(); return;
+    }
+    if (段 !== "地" || 杖.current || 終 || 物頭 || 見物) return;
     const [u, v, w] = 所(e);
     if (u >= w * 0.5) return;
     杖.current = { id: e.pointerId, ox: u, oy: v };
-    try { 根Ref.current.setPointerCapture(e.pointerId); } catch (_) {}
     const j = 輪Ref.current; if (j) { j.style.left = `${u}px`; j.style.top = `${v}px`; j.style.display = "block"; }
     if (玉Ref.current) 玉Ref.current.style.transform = "";
     入.jx = 0; 入.jy = 0; e.preventDefault();
   };
   const 動 = (e) => {
+    if (指Ref.current.has(e.pointerId)) 指Ref.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (摘みRef.current && 指Ref.current.size >= 2) {
+      const [a, c] = [...指Ref.current.values()]; const d = Math.hypot(a.x - c.x, a.y - c.y);
+      if (摘みRef.current.d > 0 && d > 0 && on寄り) on寄り(d / 摘みRef.current.d);
+      摘みRef.current.d = d; return;
+    }
     const j0 = 杖.current; if (!j0 || e.pointerId !== j0.id) return;
     const [u, v] = 所(e);
     let dx = u - j0.ox, dy = v - j0.oy; const L = Math.hypot(dx, dy);
@@ -144,6 +165,8 @@ export default function SenakaFuda({ 態, b, 止め, onLeave }) {
     入.jx = dx / R杖; 入.jy = dy / R杖;
   };
   const 放す = (e) => {
+    指Ref.current.delete(e.pointerId);
+    if (指Ref.current.size < 2) 摘みRef.current = null;
     const j0 = 杖.current; if (!j0 || e.pointerId !== j0.id) return;
     杖.current = null; if (輪Ref.current) 輪Ref.current.style.display = "none"; 入.jx = 0; 入.jy = 0;
   };
@@ -172,11 +195,34 @@ export default function SenakaFuda({ 態, b, 止め, onLeave }) {
 
   const 体 = Math.round(我.hp), 気 = 我.気;
   const 知らせ = (態.知らせ || []).filter((o) => Date.now() - o.ms < 2400);
+  /* 車：前へ回せば寄せて降り、手前へ回せば引いて昇る（盤の車と同じ一目盛り一.一二倍） */
+  const 車 = (e) => { e.stopPropagation(); if (on寄り) on寄り(e.deltaY < 0 ? 1.12 : 1 / 1.12); };
+  const 根の手当て = {
+    onPointerDown: 下, onPointerMove: 動, onPointerUp: 放す, onPointerCancel: 放す, onLostPointerCapture: 放す,
+    onMouseDown: 止める, onMouseMove: 止める, onMouseUp: 止める, onTouchStart: 止める, onTouchMove: 止める, onTouchEnd: 止める,
+    onWheel: 車, onContextMenu: (e) => e.preventDefault(),
+  };
+  /* 降りている途中は、指と車を受けるだけ（札も釦も出さない） */
+  if (段 !== "地") return <div ref={根Ref} className="snk" lang="ja" {...根の手当て}><style>{型}</style></div>;
+  /* 見物（ふだんの合戦で地へ降りたとき）：見るだけ。地の眺めの札と、盤へ戻る釦 */
+  if (見物) {
+    return (
+      <div ref={根Ref} className="snk" lang="ja" {...根の手当て}>
+        <style>{型}</style>
+        <div className="snk-tl nop">
+          <div className="snk-me glass">
+            <div className="row"><span className="mibun">見物</span><span className="na" style={{ fontSize: 16 }}>地の眺め</span></div>
+            <div className="kumi" style={{ color: "#F4F1E8", fontSize: 12.5 }}>{態.名}隊の組のうしろから見る</div>
+            <div className="kumi">指で狭める（車を手前へ回す）と盤へ戻る。下知は右の欄から</div>
+          </div>
+        </div>
+        <button type="button" className="snk-maru" style={{ left: "max(12px, env(safe-area-inset-left))", bottom: "max(10px, env(safe-area-inset-bottom))", width: 66, height: 66, fontSize: 13 }}
+          onPointerDown={(e) => e.stopPropagation()} onClick={() => onLeave && onLeave()}><span><i>盤</i>盤へ戻る</span></button>
+      </div>
+    );
+  }
   return (
-    <div ref={根Ref} className="snk" lang="ja"
-      onPointerDown={下} onPointerMove={動} onPointerUp={放す} onPointerCancel={放す} onLostPointerCapture={放す}
-      onMouseDown={止める} onMouseMove={止める} onMouseUp={止める} onTouchStart={止める} onTouchMove={止める} onTouchEnd={止める}
-      onWheel={止める} onContextMenu={(e) => e.preventDefault()}>
+    <div ref={根Ref} className="snk" lang="ja" {...根の手当て}>
       <style>{型}</style>
       <div className="snk-tl nop">
         {物頭 ? (() => {

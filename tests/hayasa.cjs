@@ -59,6 +59,9 @@ Math.random = function () { 種 |= 0; 種 = (種 + 0x6D2B79F5) | 0; let t = Math
 
   const 釦 = (t) => [...document.querySelectorAll('.mbtn,button')].find((x) => (x.textContent || '').includes(t));
   const 押 = async (el) => { await act(async () => { el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); }); await flush(); };
+  /* 背中の視点・盤の視点の釦は、地へなめらかに降りる・盤へ昇る（合戦の画面の刻みで進む）。jsdom では刻みが
+     回らないので、撮る道具の覗き口（window.__降り）で降りきらせる・昇りきらせる */
+  const 降りきる = async (u) => { await act(async () => { window.__降り(u); }); await flush(); };
   const 速さの釦 = () => [...document.querySelectorAll('.hayasa button')];
   const 選ばれた = () => (速さの釦().find((x) => x.classList.contains('on')) || {}).textContent || '';
   const 押せない = () => 速さの釦().filter((x) => x.disabled).map((x) => x.textContent);
@@ -73,7 +76,7 @@ Math.random = function () { 種 |= 0; 種 = (種 + 0x6D2B79F5) | 0; let t = Math
   確('押せない釦（通常）を押しても、微速のまま', 選ばれた() === '微速', `選ばれた釦「${選ばれた()}」`);
 
   console.log('\n── 二　背中越し：停止で止まり、微速で進む');
-  await 押(釦('背中の視点'));
+  await 押(釦('背中の視点')); await 降りきる(1);
   確('背中越しの札が出る', !!document.querySelector('.snk') && /与平/.test(札()));
   確('背中越しでも、停止と微速のほかは押せない', 押せない().join('・') === '低速・通常・早送り', `押せない：${押せない().join('・')}`);
   await 押(速さの釦().find((x) => x.textContent === '停止'));
@@ -95,7 +98,7 @@ Math.random = function () { 種 |= 0; 種 = (種 + 0x6D2B79F5) | 0; let t = Math
   確('手綱を取り戻すと、微速へ戻る（取り戻すはふつう通常にする）', 選ばれた() === '微速' && !/諸将に委ねている/.test(document.body.textContent), `選ばれた釦「${選ばれた()}」`);
 
   console.log('\n── 四　盤だけを広げたときの速さの釦も、停止と微速のほかは押せない');
-  await 押(釦('盤の視点'));
+  await 押(釦('盤の視点')); await 降りきる(0);
   await 押(釦('広く'));
   const 小釦 = [...document.querySelectorAll('button')].filter((x) => ['停', '微', '低', '通', '早'].includes((x.textContent || '').trim()));
   確('広げたときの速さの釦が出る', 小釦.length === 5, `${小釦.length}つ`);
@@ -124,7 +127,7 @@ Math.random = function () { 種 |= 0; 種 = (種 + 0x6D2B79F5) | 0; let t = Math
     if (!一人) 確(`${名}：好機の問いの札が出る`, 盤で);
     else {
       確(`${名}：盤の視点でも好機の問いの札が出ない`, !盤で);
-      await 押(釦('背中の視点'));
+      await 押(釦('背中の視点')); await 降りきる(1);
       確(`${名}：背中の視点でも出ない`, !/試しの好機を問う/.test(document.body.textContent));
     }
     await act(async () => { root2.unmount(); }); await flush();

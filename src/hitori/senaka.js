@@ -122,9 +122,10 @@ const 我の速さ = 2.4, 駆けの速さ = 4.8, 届き = 3.5;
 function 乱を作る(種) { let a = 種 >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 /* 身分 … "足軽"（自分を動かす）・"物頭"（自分では動かず、預かる隊の組のうしろに立って組と一緒に動く。
-   隊への下知は合戦の画面の右の欄から。ui/BattleScreen.jsx の 身分 の説明） */
-export function 背中を始める(b, 隊id, 身分 = "足軽") {
-  const 選 = 与平の組を選ぶ(b, 隊id);
+   隊への下知は合戦の画面の右の欄から。ui/BattleScreen.jsx の 身分 の説明）・"見物"（ふだんの合戦で盤から
+   地へ降りたとき。誰でもなく、寄った所の組のうしろから見るだけ。選びを渡す に { 隊, 組 } を渡す） */
+export function 背中を始める(b, 隊id, 身分 = "足軽", 選びを渡す = null) {
+  const 選 = 選びを渡す || 与平の組を選ぶ(b, 隊id);
   if (!選) return null;
   const 態 = { 身分, 隊: 選.隊, 組: 選.組, 名: 選.隊.name, cam: null, 前秒: 0, t: 0, 止: false,
     入: { jx: 0, jy: 0, 駆: false, 受: false, keys: new Set() },
@@ -294,7 +295,10 @@ export function 物頭を据える(b, 態, dt) {
   態.今討った.clear();
   if (態.止 || !(dt > 0)) return;
   態.t += dt; 態.拍++;
-  if (!態.組 || !(態.組.men > 0) || !(態.隊.squads || []).includes(態.組)) { const 選 = 与平の組を選ぶ(b, 態.隊 && 態.隊.id); if (選) { 態.組 = 選.組; 態.隊 = 選.隊; 態.名 = 選.隊.name; } }
+  if (!態.組 || !(態.組.men > 0) || !(態.隊.squads || []).includes(態.組)) {
+    const 選 = 態.身分 === "見物" ? 寄った所の組(b, 我.x / 尺, -我.z / 尺) : 与平の組を選ぶ(b, 態.隊 && 態.隊.id);
+    if (選) { 態.組 = 選.組; 態.隊 = 選.隊; 態.名 = 選.隊.name; }
+  }
   const 所 = 与平の所(態.組), [x, z] = 世へ(所.x, 所.y), [fx, fz] = 向きを世へ(所.向);
   const 歩 = Math.hypot(x - 我.x, z - 我.z);
   我.v = 歩 / dt; 我.dist += 歩; 我.x = x; 我.z = z; 我.fx = fx; 我.fz = fz;
@@ -331,17 +335,59 @@ function 敵の姿(態, p, t) {
 /* 写し（カメラ）。与平の後ろ上から、組の向きに合わせて見る（右の肩越し） */
 const 引き = 5.0, 高 = 3.3, 俯 = 13 * Math.PI / 180, 肩 = 0.85;
 let C = null, W = 0, H = 0, F = 0;
+/* 写しを据える。cam … { x, z（目の真下の地の所）, a（向き）, h（目の高さ）, 俯（俯く角） }。
+   背中越しでは h＝高・俯＝俯。盤から降りてくるあいだ（降りの写し）は、高く・深く俯いた所から始まる */
 function 写しを据える(cam, w, h) {
   W = w; H = h; F = w * 0.6;
-  C = { x: cam.x, z: cam.z, fx: cam.fx, fz: cam.fz, rx: cam.fz, rz: -cam.fx, cs: Math.cos(俯), sn: Math.sin(俯) };
+  const fx = Math.cos(cam.a), fz = Math.sin(cam.a), 角 = cam.俯 == null ? 俯 : cam.俯;
+  C = { x: cam.x, z: cam.z, fx, fz, rx: fz, rz: -fx, cs: Math.cos(角), sn: Math.sin(角), tn: Math.tan(角), h: cam.h == null ? 高 : cam.h,
+    地色: cam.地色 || null, 混ぜ: cam.混ぜ || 0 };
 }
 function P(x, y, z) {
-  const dx = x - C.x, dz = z - C.z; const rx = dx * C.rx + dz * C.rz, rz = dx * C.fx + dz * C.fz, ry = y - 高;
+  const dx = x - C.x, dz = z - C.z; const rx = dx * C.rx + dz * C.rz, rz = dx * C.fx + dz * C.fz, ry = y - C.h;
   const yc = ry * C.cs + rz * C.sn, zc = -ry * C.sn + rz * C.cs;
   return [W / 2 + F * rx / zc, H / 2 - F * yc / zc, zc];
 }
 const 奥 = (x, z) => (x - C.x) * C.fx + (z - C.z) * C.fz;            // カメラの前へどれだけ奥か（m）
-const 水平 = () => H / 2 - F * Math.tan(俯);
+const 水平 = () => H / 2 - F * C.tn;
+
+/* ---------- 盤から背中越しへ降りる写し ----------
+   遊ぶ人の申し出：「ピンチイン、アウトでスムーズに一人称視点までいけるようにしたい」。盤をいちばん
+   寄せたところ（盤の真ん中の点を、盤と同じ大きさ・同じ向き・同じ傾きで見る写し）から、背中越しの写し
+   （肩の写し）まで、降り.u（〇〜一）につれてなめらかに移す。
+     盤の写し（u＝〇）：盤の真ん中の点 Q を、距 D＝F×尺÷盤の倍（真ん中で盤と同じ大きさ）、俯き＝盤の傾き
+                       （斜めの眺めの縦の縮み＝俯きの sin。真上なら六十五度で止める）、向き＝盤の上の方角で見る
+     肩の写し（u＝一）：与平の背中越し（目の高さ 高・俯き 俯）。その真ん中の目線が地に届く点と距で表す
+   点・距（対数で）・俯きは u をなめらかにした値で、向きは u の〇.一五〜〇.八五のあいだで回す */
+export function 降りの写し(肩の写し, 降り, w) {
+  const u = clamp(降り.u, 0, 1), v = sm(u), 盤 = 降り.盤, Fw = w * 0.6;
+  const [qbx, qbz] = 世へ(盤.x, 盤.y);
+  const Db = Fw * 尺 / Math.max(0.05, 盤.s);
+  const θb = Math.min(65 * Math.PI / 180, Math.asin(clamp(盤.傾き || 1, 0.2, 1)));
+  const ab = Math.PI / 2 + (盤.向き || 0) * Math.PI / 2;
+  const θs = 肩の写し.俯 == null ? 俯 : 肩の写し.俯, hs = 肩の写し.h == null ? 高 : 肩の写し.h;
+  const fsx = Math.cos(肩の写し.a), fsz = Math.sin(肩の写し.a);
+  const Ds = hs / Math.sin(θs), qsx = 肩の写し.x + fsx * hs / Math.tan(θs), qsz = 肩の写し.z + fsz * hs / Math.tan(θs);
+  let da = 肩の写し.a - ab; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
+  const a = ab + da * sm((u - 0.15) / 0.7);
+  const θ = lerp(θb, θs, v), D = Math.exp(lerp(Math.log(Db), Math.log(Ds), v));
+  const qx = lerp(qbx, qsx, v), qz = lerp(qbz, qsz, v), fx = Math.cos(a), fz = Math.sin(a);
+  /* 地の色：高いところ（盤に近いところ）では、降り始めに盤から写し取った地の色（盤.地色）に寄せ、降りるにつれて
+     背中越しの地の色へ移す（盤の明るい緑と、背中越しの草色が、重ね始めにずれて見えぬように） */
+  return { x: qx - fx * D * Math.cos(θ), z: qz - fz * D * Math.cos(θ), a, h: D * Math.sin(θ), 俯: θ, 焦点: [qx, qz], 距: D,
+    地色: 盤.地色 || null, 混ぜ: 盤.地色 ? 1 - v : 0 };
+}
+
+/* 寄った所の組：盤の点 (x, y) にいちばん近い、立っている組（敵味方・去就の定まらぬ隊を問わない）。
+   ふだんの合戦で盤から地へ降りたとき（見物）、その組のうしろから見る */
+export function 寄った所の組(b, x, y) {
+  let 出 = null, m = 1e18;
+  for (const c of b.corps || []) {
+    if (c.dead || c.destroyed) continue;
+    for (const q of c.squads || []) { if (!(q.men > 0)) continue; const d = (q.x - x) ** 2 + (q.y - y) ** 2; if (d < m) { m = d; 出 = { 隊: c, 組: q }; } }
+  }
+  return 出;
+}
 const 霞色 = [198, 202, 200];
 function 霞(rgb, d, k = 90) { const t = 1 - Math.exp(-Math.max(0, d - 6) / k); return `rgb(${Math.round(rgb[0] + (霞色[0] - rgb[0]) * t)},${Math.round(rgb[1] + (霞色[1] - rgb[1]) * t)},${Math.round(rgb[2] + (霞色[2] - rgb[2]) * t)})`; }
 const 色 = {
@@ -351,28 +397,36 @@ const 色 = {
 };
 
 /* 背中越しに一コマ描く。止 … 盤を止めているか（止めているあいだは与平も敵の掛かりも止まる） */
-export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false) {
-  if (!態.組 || !(態.組.men > 0)) { const 選 = 与平の組を選ぶ(b, 態.隊 && 態.隊.id); if (選) { 態.組 = 選.組; 態.隊 = 選.隊; 態.名 = 選.隊.name; } }
+/* 止 … 盤が止まっているか（止まっているあいだは与平も敵の掛かりも止まる）。
+   降り … 盤から降りてくる途中なら { u（〇〜一）, 盤: { x, y, s, 向き, 傾き } }（上の 降りの写し）。
+          途中（u＜一）は、与平も敵の掛かりも止め、写しは盤の写しと肩の写しのあいだに置く */
+export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降り = null) {
+  const 見物 = 態.身分 === "見物", 途中 = !!(降り && 降り.u < 1);
+  if (!見物 && (!態.組 || !(態.組.men > 0))) { const 選 = 与平の組を選ぶ(b, 態.隊 && 態.隊.id); if (選) { 態.組 = 選.組; 態.隊 = 選.隊; 態.名 = 選.隊.name; } }
   const q = 態.組, 我 = 態.我;
-  /* 与平のまわりの組の見た目を進める（盤の画面が描いていないあいだも、同じ関数で） */
-  const R歩 = 300, 我盤 = { x: 我.x / 尺, y: -我.z / 尺 };
-  新絵状態を進める(b, nowSec, { x0: 我盤.x - R歩, x1: 我盤.x + R歩, y0: 我盤.y - R歩, y1: 我盤.y + R歩 });
   const dt = 態.前秒 ? clamp(nowSec - 態.前秒, 0, 0.1) : 0; 態.前秒 = nowSec;
-  const 眺 = 眺めを集める(b, 我盤, 110, 態.t);              // 突きの拍子は与平の刻（まことの秒）で刻む
-  態.止 = !!止;
-  if (態.身分 === "物頭") 物頭を据える(b, 態, dt); else 与平を進める(b, 態, dt, 眺);
-  const t = 態.t;
-  /* カメラ：与平の後ろ上から、組の向きに合わせて見る（右の肩越し）。なめらかに寄せる（揺らさない）。向きも角で均す */
+  /* カメラ：与平の後ろ上から、組の向きに合わせて見る（右の肩越し）。なめらかに寄せる（揺らさない）。向きも角で均す。
+     降りてくる途中は、この肩の写しと盤の写しのあいだに置く（降りの写し） */
   const qv = q && 組の見た目(q), 基 = qv && qv.初 ? qv.向 : q ? (q.facing || 0) : -Math.PI / 2;
   const [cfx, cfz] = 向きを世へ(基);
   const 的 = { x: 我.x - cfx * 引き + cfz * 肩, z: 我.z - cfz * 引き - cfx * 肩, a: Math.atan2(cfz, cfx) };
   if (!態.cam) 態.cam = { x: 的.x, z: 的.z, a: 的.a };
   else { const k = 1 - Math.exp(-dt * 6); 態.cam.x += (的.x - 態.cam.x) * k; 態.cam.z += (的.z - 態.cam.z) * k;
     let da = 的.a - 態.cam.a; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; 態.cam.a += da * (1 - Math.exp(-dt * 2.5)); }
-  const fx = Math.cos(態.cam.a), fz = Math.sin(態.cam.a);
+  const 写 = 途中 ? 降りの写し({ x: 態.cam.x, z: 態.cam.z, a: 態.cam.a }, 降り, w) : { x: 態.cam.x, z: 態.cam.z, a: 態.cam.a, h: 高, 俯 };
+  /* 見る所（眺めを集める・見た目を進める）の芯と広さ。背中越しでは与平のまわり百十m、降りてくる途中は
+     目線が地に届く点のまわり（高いほど広く） */
+  const 芯 = 途中 ? { x: 写.焦点[0] / 尺, y: -写.焦点[1] / 尺 } : { x: 我.x / 尺, y: -我.z / 尺 };
+  const 広さ = 途中 ? Math.max(110, 写.距 * 2.2) : 110;
+  const R歩 = Math.max(300, 広さ / 尺 + 60);
+  新絵状態を進める(b, nowSec, { x0: 芯.x - R歩, x1: 芯.x + R歩, y0: 芯.y - R歩, y1: 芯.y + R歩 });
+  const 眺 = 眺めを集める(b, 芯, 広さ, 態.t);                 // 突きの拍子は与平の刻（まことの秒）で刻む
+  態.止 = !!止 || 途中;
+  if (態.身分 === "物頭" || 見物) 物頭を据える(b, 態, dt); else 与平を進める(b, 態, dt, 眺);
+  const t = 態.t;
   筆 = ctx; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  写しを据える({ x: 態.cam.x, z: 態.cam.z, fx, fz }, w, h);
-  空と地を描く(ctx, 態.cam.a);
+  写しを据える(写, w, h);
+  空と地を描く(ctx, 写.a);
   草を描く(ctx);
   帯を描く(ctx, 野の川筋(), [92, 132, 160], 0.62);
   帯を描く(ctx, ROADS, [172, 152, 116], 1);
@@ -380,12 +434,13 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false) {
   const 物 = [];
   木を集める(物);
   const [psx, , pzc] = P(我.x, 0, 我.z), 我幅 = 0.5 * F / Math.max(0.5, pzc);
+  const 上限 = 途中 ? 2600 : 1500;                            // 高いところからは多く見える
   let 兵ら = 眺.兵.filter((p) => !態.今討った.has(p)).map((p) => ({ p, d: 奥(p.x, p.z) })).filter((o) => o.d > 0.8);
-  if (兵ら.length > 1500) { 兵ら.sort((a, z) => a.d - z.d); 兵ら = 兵ら.slice(0, 1500); }
+  if (兵ら.length > 上限) { 兵ら.sort((a, z) => a.d - z.d); 兵ら = 兵ら.slice(0, 上限); }
   let 透数 = 0;
   for (const { p, d } of 兵ら) {
     const [sx, , zc] = P(p.x, 0, p.z); if (sx < -200 || sx > W + 200) continue;
-    const 透 = d < pzc - 0.3 && Math.abs(sx - psx) < 0.42 * F / zc + 我幅;
+    const 透 = !見物 && !途中 && d < pzc - 0.3 && Math.abs(sx - psx) < 0.42 * F / zc + 我幅;
     if (透) 透数++;
     const 姿 = p.側 === "E" ? 敵の姿(態, p, t) : p;
     物.push({ d, f: () => 一人を描く(ctx, 姿, nowSec, 透 ? 0.32 : 1) });
@@ -397,11 +452,11 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false) {
     const d = 奥(e.x, e.z); if (d > 0.8) 物.push({ d, f: () => 倒れを描く(ctx, e) });
   }
   for (const o of 態.倒し) { const d = 奥(o.p.x, o.p.z); if (d > 0.8 && d < 130) 物.push({ d, f: () => 一人を描く(ctx, { ...o.p, 働: "立", v: 0, fl: 0, fu: clamp((t - o.t) / 0.55, 0, 1), 倒向: o.向 }, nowSec, 1) }); }
-  物.push({ d: 奥(我.x, 我.z), f: () => { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 一人を描く(ctx, 与平の姿(態, t), nowSec, 1); } });
+  if (!見物) 物.push({ d: 奥(我.x, 我.z), f: () => { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 一人を描く(ctx, 与平の姿(態, t), nowSec, 1); } });
   物.sort((a, z) => z.d - a.d).forEach((o) => o.f());
   /* 与平が組の中へ入ると、手前（写し側）の味方が与平に重なる。手前の味方を透かすだけでは、幾重にも
      重なって与平が見えなくなるので、そのときは与平（と足もとの輪）を上からもう一度、少し透かして描く */
-  if (透数) { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 一人を描く(ctx, 与平の姿(態, t), nowSec, 0.72); }
+  if (透数 && !見物) { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 一人を描く(ctx, 与平の姿(態, t), nowSec, 0.72); }
   /* 受けたときの火花 */
   態.火花 = 態.火花.filter((f) => t - f.t < 0.3);
   for (const f of 態.火花) 火花を描く(ctx, f.x, f.y, f.z, (t - f.t) / 0.28);
@@ -434,7 +489,10 @@ function 空と地を描く(ctx, a) {
     for (let x = 0; x <= W + 8; x += 8) { const u = (x + off) / 周; ctx.lineTo(x, hz - amp * (0.5 + 0.5 * Math.sin(u * 0.8 + ph)) * (0.55 + 0.45 * Math.sin(u * 0.33 + ph * 2))); }
     ctx.lineTo(W, hz + 2); ctx.closePath(); ctx.fillStyle = col; ctx.fill(); };
   山(46, "rgba(118,130,138,.55)", 70, 1.3); 山(24, "rgba(100,114,116,.72)", 52, 0.4);
-  const gg = ctx.createLinearGradient(0, hz, 0, H); gg.addColorStop(0, "#A7AD95"); gg.addColorStop(0.2, "#8C9668"); gg.addColorStop(1, "#6A6A43");
+  /* 地。盤から降りてくる途中は、盤の地の色（C.地色）に C.混ぜ だけ寄せる */
+  const 寄せ = (rgb) => { if (!C.地色 || !(C.混ぜ > 0)) return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`; const k = C.混ぜ;
+    return `rgb(${Math.round(rgb[0] + (C.地色[0] - rgb[0]) * k)},${Math.round(rgb[1] + (C.地色[1] - rgb[1]) * k)},${Math.round(rgb[2] + (C.地色[2] - rgb[2]) * k)})`; };
+  const gg = ctx.createLinearGradient(0, hz, 0, H); gg.addColorStop(0, 寄せ([167, 173, 149])); gg.addColorStop(0.2, 寄せ([140, 150, 104])); gg.addColorStop(1, 寄せ([106, 106, 67]));
   ctx.fillStyle = gg; ctx.fillRect(0, hz, W, H - hz);
 }
 /* 草：地の升目ごとに一本（升目の番から決めるので、カメラが動いても地に据わったまま） */
