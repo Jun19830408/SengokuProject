@@ -26,7 +26,7 @@
    見物（態.身分＝"見物"。ふだんの合戦で地へ降りたとき）は、見るだけの札（地の眺め・盤へ戻る釦）を出す。
    ========================================================================== */
 import React, { useEffect, useRef, useState } from "react";
-import { 突く, 受ける, 与平を立て直す, 持ち場の間 } from "./senaka.js";
+import { 突く, 受ける, 与平を立て直す, 持ち場の間, 合戦の勲功 } from "./senaka.js";
 
 const R杖 = 52;                                   // 方向キーの輪の半径（px。試し版と同じ）
 const 型 = `
@@ -243,7 +243,7 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
         })() : (
         <div className="snk-me glass">
           <div className="row"><span className="mibun">足軽</span><span className="na">与平</span>
-            <span className="kun">勲功 <b>{我.勲}</b></span></div>
+            <span className="kun">討ち取り <b>{我.勲}</b>{態.備え && 態.備え.風雲 && <> 勲功 <b>+{合戦の勲功(態)}</b></>}</span></div>
           <div className="snk-gauge"><span>体力</span><div className="tr"><i className={体 < 35 ? "low" : ""} style={{ width: `${Math.max(0, 体)}%` }} /></div></div>
           <div className="snk-gauge"><span>気力</span><div className="snk-kiryoku">
             {[0, 1, 2, 3, 4].map((i) => <i key={i}><b style={{ width: `${Math.round(Math.min(1, Math.max(0, 気 - i)) * 100)}%` }} /></i>)}
@@ -279,7 +279,7 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
         <div className="snk-panel" onPointerDown={(e) => e.stopPropagation()}>
           <div className="box">
             <h2>討死</h2>
-            <p>{(態.備え && 態.備え.名) || "与平"}は討ち死にした。勲功 {我.勲}</p>
+            <p>{(態.備え && 態.備え.名) || "与平"}は討ち死にした。討ち取り {我.勲}{態.備え && 態.備え.風雲 ? `・この戦の勲功 ${合戦の勲功(態)}` : ""}</p>
             {/* 風雲モード（一度きり）では、討死すればそこで終わる（遊ぶ人の申し出：討死もあり）。合戦の行方は盤で見届ける */}
             {態.備え && 態.備え.一度きり && <p>風雲はここで終わる。合戦の行方は、盤の視点で見届けられる。</p>}
             <div className="btns">

@@ -43,7 +43,8 @@ import { 出陣前の問い } from "./Shutsujin.jsx";
 import { 風雲の戦か, 風雲の一人, 戦の勲功を記す, 風雲の問いに答える, 風雲の月の初め, 風雲の城攻めか, 風雲の隊を選ぶ, 風雲の城攻めの隊 } from "../hitori/fuun.js";
 import { FuunYashiki } from "../hitori/FuunYashiki.jsx";
 /* 風雲モードの主命（上司から下される務め。山賊退治は盤の小さな戦。hitori/shumei.js） */
-import { 主命の月の初め, 主命の月が明けた, 山賊の盤を組む, 山賊退治の果て, 主命の組 } from "../hitori/shumei.js";
+import { 主命の月の初め, 主命の月が明けた, 山賊の盤を組む, 山賊退治の果て, 主命の組, 偵察の組, 山賊の月か, 偵察の月か, 山賊の務めを決める,
+  偵察の的を選ぶ, 偵察の盤を組む, 偵察の果て, 偵察を見合わせる } from "../hitori/shumei.js";
 import { SeaScreen, 海戦を仕立てる } from "./SeaScreen.jsx";
 import { CastleSheet } from "./CastleSheet.jsx";
 import { seatOf } from "./DaimyoSelect.jsx";
@@ -1107,14 +1108,31 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     主命の月が明けた(n);
     return n;
   });
+  /* 屋敷の「月を送る」。務めの月なら、先に盤を開く（遊ぶ人の申し出：三か月ごとに山賊との戦い・半年に一度の威力偵察。
+     hitori/shumei.js）。威力偵察は、上司が出陣中なら翌月へ、的が無ければ半年先へ見合わせて、そのまま月を送る */
   const 風雲の月送り = (行い) => {
     const f = g.風雲;
-    if ((行い || []).includes("主命に励む") && f && f.主命 && f.主命.種 === "山賊退治") {
-      const 家 = g.factions[g.player] || {};
-      const 城 = g.castles.find((c) => c.id === f.城);
+    const 家 = g.factions[g.player] || {};
+    const 城 = f && g.castles.find((c) => c.id === f.城);
+    if (f && !f.討死 && 偵察の月か(g)) {
+      const 的 = 偵察の的を選ぶ(g);
+      if (!的.城) { 風雲の月を送る(行い, (s) => 偵察を見合わせる(s, 的.訳)); return; }
+      const 敵家 = g.factions[的.家] || {};
       setBattle({
-        出陣前: false, mode: "主命", b: 山賊の盤を組む(g), armyId: `shumei-${g.year}-${g.month}`, castleId: f.城,
-        playerIsAtk: true, 一人: { ...風雲の一人(g), 隊id: 主命の組 }, 行い,
+        出陣前: false, mode: "偵察", b: 偵察の盤を組む(g, 的), armyId: `teisatsu-${g.year}-${g.month}`, castleId: 的.城.id,
+        playerIsAtk: true, 一人: { ...風雲の一人(g), 隊id: 偵察の組 }, 行い,
+        pName: 家.name, eName: 敵家.name || "", pColor: sideHue(家.color || "#2F5D8C", true), eColor: sideHue(敵家.color || "#B0483C", false),
+        place: `${的.城.name}の近く`,
+      });
+      return;
+    }
+    /* 三か月ごとの山賊退治（務め）。前の記録の主命（山賊退治）は、これまでどおり「主命に励む」で出る */
+    const 務め = f && !f.討死 && 山賊の月か(g) ? 山賊の務めを決める(g) : null;
+    const 古い主命 = !務め && (行い || []).includes("主命に励む") && f && f.主命 && f.主命.種 === "山賊退治";
+    if (務め || 古い主命) {
+      setBattle({
+        出陣前: false, mode: "主命", b: 山賊の盤を組む(g, 務め), armyId: `shumei-${g.year}-${g.month}`, castleId: f.城,
+        playerIsAtk: true, 一人: { ...風雲の一人(g), 隊id: 主命の組 }, 行い, 務め,
         pName: 家.name, eName: "山賊", pColor: sideHue(家.color || "#2F5D8C", true), eColor: sideHue("#6B5A48", false),
         place: `${城 ? 城.name : ""}の近在の山`,
       });
@@ -2377,7 +2395,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
 
   const finishBattle = (b, ctx) => {
     /* 風雲モード：主命の山賊退治の盤のあと。働きを記してから、その月を送る（選んでいた月の行い ctx.行い） */
-    if (ctx.mode === "主命") { setBattle(null); 風雲の月を送る(ctx.行い, (s) => 山賊退治の果て(s, b)); return; }
+    if (ctx.mode === "主命") { setBattle(null); 風雲の月を送る(ctx.行い, (s) => 山賊退治の果て(s, b, ctx.務め || null)); return; }
+    /* 風雲モード：威力偵察の盤のあと。討たれた兵を城と上司の手勢から減らし、働きを記してから、その月を送る */
+    if (ctx.mode === "偵察") { setBattle(null); 風雲の月を送る(ctx.行い, (s) => 偵察の果て(s, b)); return; }
     /* 風雲モード：主人公の働き（盤の b.一人働き：討ち取り・体力・討死）を記す。勝ち負けと損害は、下のふだんの道で書き戻す */
     if (ctx.一人 && ctx.一人.風雲) {
       const 場所 = ctx.mode === "castle" ? `${ctx.place || ""}${ctx.playerIsAtk ? "攻め" : "の籠城"}` : ctx.place;

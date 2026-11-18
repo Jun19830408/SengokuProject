@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { U } from "../core/util.js";
 import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数 } from "./fuun.js";
-import { 主命の重さ, 働きかけの見込み } from "./shumei.js";
+import { 主命の重さ, 働きかけの見込み, 予定を見る, 月番を年月に, 山賊の月か, 偵察の月か, 偵察の的を選ぶ, 今の月番 } from "./shumei.js";
 import { TOWNS } from "../data/castles.js";
 
 /* ==========================================================================
@@ -108,6 +108,13 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
     : `${命の町 ? 命の町.name : "町"}へ使いする（まとまる見込み およそ${Math.round(働きかけの見込み(f) * 10)}割）` }] : 月の行い一覧;
   useEffect(() => { if (!命) set行い((v) => v.filter((x) => x !== "主命に励む")); }, [!!命]); // eslint-disable-line
   const 山賊に出る = !!命 && 命.種 === "山賊退治" && 行い.includes("主命に励む");
+  /* 務めの予定（三か月ごとの山賊退治・半年ごとの威力偵察。hitori/shumei.js）。偵察の的は月ごとに一度だけ見立てる */
+  const 予 = 予定を見る(g);
+  const 山賊の今 = 山賊の月か(g), 偵察の今 = 偵察の月か(g);
+  const 偵の的 = useMemo(() => 偵察の的を選ぶ(g), [g.year, g.month, f.上司]); // eslint-disable-line
+  const 年月の文 = (n) => { const x = 月番を年月に(n); return `${x.年}年${x.月}月`; };
+  const 重く見る城 = f.偵察の的 && 今の月番(g) <= f.偵察の的.迄 ? g.castles.find((c) => c.id === f.偵察の的.城 && c.faction !== g.player) : null;
+  const 出る務め = 偵察の今 && 偵の的 && 偵の的.城 ? "威力偵察" : 山賊の今 || 山賊に出る ? "山賊退治" : null;
   const 記 = [...(f.記 || [])].reverse().slice(0, 14);
   const 家中 = (g.monthEvents || []).slice(0, 8);
 
@@ -134,13 +141,28 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         <span className="k">金</span><span className="v num">{f.金} 貫</span>
         <span className="k">上司</span><span className="v">{上 ? `${上.name}（${上の居所}）` : "―"}</span>
         <span className="k">合戦</span><span className="v num">{f.合戦} 度・討ち取り {f.討ち取り}</span>
-        <span className="k">主命</span><span className="v num">果たした {(f.主命の数 || {}).果たした || 0}・しくじった {(f.主命の数 || {}).しくじった || 0}</span>
+        <span className="k">務め・主命</span><span className="v num">果たした {(f.主命の数 || {}).果たした || 0}・しくじった {(f.主命の数 || {}).しくじった || 0}</span>
       </div>
     </div>
   );
 
   const 行いの欄 = (
     <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 14 }}>
+      {予 && !終わり && (
+        <div style={{ border: `1px solid ${U.line2}`, borderRadius: 8, padding: "9px 11px", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: U.dim, letterSpacing: ".12em" }}>務めの予定（上司の手の者として出る）</div>
+          <div style={{ fontSize: 12.5, lineHeight: 1.85, marginTop: 4 }}>
+            山賊退治（三か月ごと）：<b className="num">{山賊の今 ? "今月" : 年月の文(予.山賊)}</b>
+            <br />威力偵察（半年ごと）：<b className="num">{偵察の今 ? "今月" : 年月の文(予.偵察)}</b>
+            <span style={{ color: U.dim }}>{偵の的 && 偵の的.城 ? `　的：${偵の的.城.name}（${偵の的.家名}・城の兵 およそ${Math.round(偵の的.兵).toLocaleString()}人）`
+              : 偵の的 && 偵の的.訳 === "上司が出陣中" ? "　（上司が出陣中）" : "　（いまは的が無い）"}</span>
+            {重く見る城 && <><br /><span style={{ color: U.dim }}>威力偵察で兵を減らした{重く見る城.name}を、家中では攻める的として重く見ている。</span></>}
+          </div>
+          <div style={{ fontSize: 11, color: U.dim, lineHeight: 1.7, marginTop: 3 }}>
+            務めの月に「月を送る」と、盤で戦ってから月が送られる。山賊退治に勝てば褒美を得る。威力偵察で討たれた兵は、敵も味方も実際に減る。
+          </div>
+        </div>
+      )}
       {命 && (
         <div style={{ border: "1px solid #C9A66B", background: "rgba(201,166,107,0.10)", borderRadius: 8, padding: "9px 11px", marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: U.dim, letterSpacing: ".12em" }}>主命{命の上 ? `（${命の上.name}より）` : ""}・{命.種}</div>
@@ -166,7 +188,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
       </div>
       <button className="btn dark" style={{ width: "100%", padding: 12, marginTop: 10 }}
         disabled={!!終わり || 待つ戦} onClick={() => on月送り(行い)}>
-        {待つ戦 ? "合戦の始末を待っている…" : 山賊に出る ? `山賊退治に出て、月を送る（${g.year}年${g.month}月）` : `月を送る（${g.year}年${g.month}月）`}
+        {待つ戦 ? "合戦の始末を待っている…" : 出る務め ? `${出る務め}に出て、月を送る（${g.year}年${g.month}月）` : `月を送る（${g.year}年${g.month}月）`}
       </button>
       <div className="sec">{f.名}の記</div>
       <div style={{ fontSize: 12, lineHeight: 1.75 }}>
