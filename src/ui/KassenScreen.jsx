@@ -68,11 +68,14 @@ export function KassenScreen({ land, onTitle }) {
     };
   }, []);
 
-  const 仕立てる = (r, 旗) => {
+  /* 身分 … 一人働き（武将一人プレイ）の試し。"足軽"・"物頭" を渡せば、総大将としてでなく、その身分の
+     一人として戦う（下知は身分で分ける：ui/BattleScreen.jsx の 身分）。省けばこれまでどおり総大将 */
+  const 仕立てる = (r, 旗, 身分 = null) => {
     if (!r) return;
     const 敵旗 = 旗 === "西" ? "東" : "西";
     const c = {
-      b: r.b, 筋書き: r.筋書き, mode: "kassen", armyId: `kassen-${r.筋書き.id}-${旗}`,
+      b: r.b, 筋書き: r.筋書き, mode: "kassen", armyId: `kassen-${r.筋書き.id}-${旗}${身分 ? `-${身分}` : ""}`,
+      一人: 身分 ? { 身分 } : null,
       playerIsAtk: 旗 === "東",
       pName: `${旗}軍`, eName: `${敵旗}軍`,
       pColor: "#2F5D8C", eColor: "#B0483C",
@@ -84,9 +87,9 @@ export function KassenScreen({ land, onTitle }) {
     場面を選ぶ(r.筋書き && r.筋書き.城 ? "城攻め" : "分け目");
   };
 
-  const 始める = async (旗) => {
+  const 始める = async (旗, 身分 = null) => {
     await 控えを消す(); set控え(null);
-    仕立てる(合戦を仕立てる(選び, 旗), 旗);
+    仕立てる(合戦を仕立てる(選び, 旗), 旗, 身分);
   };
   const 続きから = () => { if (控え) 仕立てる(合戦を戻す(控え), 控え.味方旗); };
 
@@ -152,6 +155,13 @@ export function KassenScreen({ land, onTitle }) {
                 <div style={{ fontSize: 12.5, lineHeight: 1.95, marginTop: 8, minHeight: 96 }}>{旗の説[旗].詞}</div>
                 <button className="btn dark" style={{ width: "100%", padding: 11, marginTop: 8 }}
                   onClick={() => 始める(旗)}>{旗の説[旗].名}で戦う</button>
+                {/* 一人働き（武将一人プレイ）の試し。総大将でなく、足軽・物頭の一人として戦う */}
+                <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                  {["足軽", "物頭"].map((身) => (
+                    <button key={身} className="btn" style={{ flex: 1, padding: "8px 6px", fontSize: 12.5 }}
+                      onClick={() => 始める(旗, 身)}>{身}として戦う<span style={{ display: "block", fontSize: 10.5, color: U.dim }}>一人働き・試し</span></button>
+                  ))}
+                </div>
               </div>
             ))}
           </div>

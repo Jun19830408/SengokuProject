@@ -14,6 +14,10 @@
    盤の左下の「盤の視点」の釦（BattleScreen.jsx）は、この札の重なりより上に置かれている。
    与平の動きそのもの（歩み・突き・敵の掛かり）は hitori/senaka.js にある。
    ここは 態.入（方向・受け・駆け）を書き、突く・受ける・与平を立て直す を呼ぶだけである。
+
+   物頭（態.身分＝"物頭"）は自分では動かない（遊ぶ人の申し出：物頭以降は背中視点はできるが、それまでの
+   指示はできず、部隊としての通常の指示）。名札に預かる隊（兵の数・いまの下知）を出すだけで、方向キー・
+   三つの釦・鍵盤は出さない。隊への下知は、合戦の画面の右の欄から出す。
    ========================================================================== */
 import React, { useEffect, useRef, useState } from "react";
 import { 突く, 受ける, 与平を立て直す } from "./senaka.js";
@@ -87,7 +91,7 @@ export default function SenakaFuda({ 態, b, 止め, onLeave }) {
   /* 鍵盤。札が出ているあいだだけ聞く。この札の釦に手があるとき（Enter・空白）は釦に任せる。
      上の速さの釦などに手が残っていても、空白は突きに使う（その釦を押し直さない） */
   useEffect(() => {
-    if (!態) return undefined;
+    if (!態 || 態.身分 === "物頭") return undefined;
     const 入 = 態.入;
     const 書く場か = (e) => { const el = e.target; return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable); };
     const 釦か = (e) => !!(e.target && e.target.closest && e.target.closest("button"));
@@ -112,13 +116,13 @@ export default function SenakaFuda({ 態, b, 止め, onLeave }) {
   }, [態]);
 
   if (!態 || !態.我) return null;
-  const 我 = 態.我, 入 = 態.入;
+  const 我 = 態.我, 入 = 態.入, 物頭 = 態.身分 === "物頭";
   const 終 = 態.終 && 態.t >= 態.終.t ? 態.終 : null;
 
   /* ---- 方向キー（左半分に指を置いた所に出る） ---- */
   const 所 = (e) => { const r = 根Ref.current.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top, r.width]; };
   const 下 = (e) => {
-    if (!根Ref.current || 杖.current || 終) return;
+    if (!根Ref.current || 杖.current || 終 || 物頭) return;
     if (e.target.closest && e.target.closest("button")) return;
     const [u, v, w] = 所(e);
     if (u >= w * 0.5) return;
@@ -175,6 +179,18 @@ export default function SenakaFuda({ 態, b, 止め, onLeave }) {
       onWheel={止める} onContextMenu={(e) => e.preventDefault()}>
       <style>{型}</style>
       <div className="snk-tl nop">
+        {物頭 ? (() => {
+          /* 物頭の名札：預かる隊の兵の数と、いまの下知（委任なら諸将の采配で動いている） */
+          const 隊 = 態.隊, 兵 = 隊 ? Math.round((隊.squads || []).reduce((a, q) => a + Math.max(0, q.men || 0), 0)) : 0;
+          return (
+            <div className="snk-me glass">
+              <div className="row"><span className="mibun">物頭</span><span className="na">与平</span></div>
+              <div className="kumi" style={{ color: "#F4F1E8", fontSize: 12.5 }}>{態.名}の隊を預かる　兵 {兵.toLocaleString()}人</div>
+              <div className="kumi">下知：{隊 && 隊.auto ? "委任（諸将の采配）" : (隊 && 隊.order) || "―"}　右の欄から隊へ下知する</div>
+              <div className="kumi">背中の視点（試し）</div>
+            </div>
+          );
+        })() : (
         <div className="snk-me glass">
           <div className="row"><span className="mibun">足軽</span><span className="na">与平</span>
             <span className="kun">勲功 <b>{我.勲}</b></span></div>
@@ -184,10 +200,11 @@ export default function SenakaFuda({ 態, b, 止め, onLeave }) {
           </div></div>
           <div className="kumi">{態.名}の組・背中の視点（試し）</div>
         </div>
+        )}
         {止め === "停止" && !終 && <div className="snk-tomari glass">合戦を止めている<small>上の「微速」で進める</small></div>}
         {止め === "段" && !終 && <div className="snk-tomari glass">合戦が止まっている</div>}
       </div>
-      {!態.動いた && !終 && (
+      {!態.動いた && !終 && !物頭 && (
         <div className="snk-hint nop"><div className="ring">✥</div>
           <p>左側に指を置くと<br />方向キーが出ます
             <small>{卓 ? "パソコンでは WASD か矢印キーで動き、J で突く、K で受ける、Shift で駆けます" : "右の釦で突く・受ける・駆ける"}</small>
@@ -195,7 +212,7 @@ export default function SenakaFuda({ 態, b, 止め, onLeave }) {
         </div>
       )}
       <div ref={輪Ref} className="snk-joy" style={{ display: "none" }}><div ref={玉Ref} className="snk-knob" /></div>
-      {!終 && <>
+      {!終 && !物頭 && <>
         <button type="button" className={`snk-maru snk-kakeru${入.駆 ? " press" : ""}`} aria-label="駆ける（押しているあいだ走る）" {...釦("駆")}><span><i>⇡</i>駆ける</span></button>
         <button type="button" className={`snk-maru snk-ukeru${我.受 ? " press" : ""}`} aria-label="受ける（押しているあいだ構えて防ぐ）" {...釦("受")}><span><i>◇</i>受ける</span></button>
         <button type="button" className={`snk-maru snk-tsuku${突押 || 態.t - 我.突始 < 0.22 ? " press" : ""}`} aria-label="突く" {...釦("突")}><span><i>⟋</i>突く</span></button>

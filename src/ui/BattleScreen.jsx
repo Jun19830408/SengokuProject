@@ -20,7 +20,7 @@ import { 効果を鳴らす, 兵の音を掛ける, 効果を止める, 音の�
 import "../hitori/tsunagi.js";
 /* 一人働きの背中越しの視点（試し）。左下の釦で、盤の代わりに与平の背中越しに描く。与平は自分で動かす
    （札と釦は hitori/SenakaFuda.jsx。与平の動きと突き合いは hitori/senaka.js） */
-import { 背中を始める, 背中を描く, 与平の今, 背中の速さ } from "../hitori/senaka.js";
+import { 背中を始める, 背中を描く, 与平の今, 背中の速さ, 与平の組を選ぶ } from "../hitori/senaka.js";
 import SenakaFuda from "../hitori/SenakaFuda.jsx";
 
 /* 早送り（GDD 8.1・9.3）。
@@ -66,13 +66,28 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const [覚え開く, set覚え開く] = useState(false);    // 筋書きの覚え（分岐の条件）
   const [背中, set背中] = useState(false);            // 背中越しの視点（一人働きの試し）
   const 背中Ref = useRef(null);                       // 背中越しの眺めの状態（与平の組・カメラ）
+  /* 一人働き（武将一人プレイ）の合戦では、遊ぶ人の身分（ctx.一人.身分：足軽・物頭）で使える下知を分ける。
+     遊ぶ人の申し出：「背中視点でできるのは物頭未満の指示、物頭以降は背中視点できるが、それまでの指示は
+     逆にできず、部隊としての通常（全軍指示はできない）の指示」。下知は、見ている視点でなく身分で決まる。
+       足軽 … 自分（与平）を動かすだけ。盤の視点でも見るだけで、隊は選べない
+       物頭 … 預かる隊（一つ）への通常の下知だけ（盤の視点でも背中の視点でも）。全軍への下知・内応はできない
+     ふだんの合戦（総大将）は 身分 null で、これまでどおり。
+     預かる隊（足軽なら与平の隊）は、合戦の初めに、敵にいちばん近い味方の隊を選ぶ（hitori/senaka.js 与平の組を選ぶ） */
+  const 身分 = (ctx.一人 && ctx.一人.身分) || null;
+  const 一人Ref = useRef(null);
+  if (身分 && !一人Ref.current) { const 選 = 与平の組を選ぶ(bRef.current, null); 一人Ref.current = { 身分, 隊id: 選 ? 選.隊.id : null }; }
   const faceRef = useRef(false);
   const speedRef = useRef(0), selRef = useRef(null), uiRef = useRef(0), allRef = useRef(false);
   const camRef = useRef({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
   const gesture = useRef(null);
   const setSpeed = (v) => { speedRef.current = v; setSpeedState(v); };
   /* 隊を選べば「自軍を選ぶ」の音（小鼓の「ポン」）。選びを外したときは鳴らさない */
-  const pickCorps = (v) => { selRef.current = v; setSel(v); if (v) { allRef.current = false; setSelAll(false); 効果を鳴らす("自軍を選ぶ"); } };
+  const pickCorps = (v) => {
+    /* 一人働き：足軽は隊を選べない（見るだけ）。物頭は預かる隊だけを、選んだままにする */
+    if (身分 === "足軽") return;
+    if (身分 === "物頭" && v !== (一人Ref.current && 一人Ref.current.隊id)) return;
+    selRef.current = v; setSel(v); if (v) { allRef.current = false; setSelAll(false); 効果を鳴らす("自軍を選ぶ"); }
+  };
   const setFace = (v) => { faceRef.current = v; setFaceMode(v); };
 
   /* 下知の関所（GDD 8.9）。
@@ -312,9 +327,19 @@ export function BattleScreen({ ctx, land, onEnd }) {
      そのまま使える。合戦開始・手綱を取り戻す・問いへの答えなどで速さが変わっても、ここで微速へ戻す
      （止めている〇はそのまま）。委ねているあいだは手を出さない */
   useEffect(() => {
-    if (!背中 || 委ねRef.current || bRef.current.phase !== "fight") return;
+    if (!(背中 || 身分) || 委ねRef.current || bRef.current.phase !== "fight") return;
     if (speed !== 0 && speed !== 背中の速さ) setSpeed(背中の速さ);
   }, [背中, speed, phase, 委ね中]);
+  /* 一人働きの合戦は、布陣を待たずに始まる。足軽も物頭も、布陣と合戦開始は総大将の役で、遊ぶ人には
+     押せない（総大将は諸将の采配に任せる。隊ははじめ委任で戦う：battle/corps.js）。速さは微速から。
+     物頭は預かる隊を選んだ形で始める（右の欄にその隊の下知が出る） */
+  useEffect(() => {
+    if (!身分) return;
+    const b2 = bRef.current;
+    if (b2.phase === "deploy") { b2.phase = "fight"; setPhase("fight"); 効果を鳴らす("法螺貝"); }
+    if (b2.phase === "fight") setSpeed(背中の速さ);
+    if (身分 === "物頭" && 一人Ref.current && 一人Ref.current.隊id) pickCorps(一人Ref.current.隊id);
+  }, []);
   useEffect(() => {
     if (!委ね中) return;
     let 止め = false;
@@ -520,7 +545,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       if (入 === undefined) { const 態 = 背中Ref.current; if (!態) return null; return { 名: 態.名, 組: 態.組.id, ...与平の今(態) }; }   // いまの与平（居所・体力・気力・勲功）
       if (!入) { 背中Ref.current = null; set背中(false); return null; }
       const 隊 = 名 ? b.corps.find((c) => c.side === "P" && !c.dead && !c.destroyed && c.name.includes(名)) : null;
-      const 態 = 背中を始める(b, 隊 ? 隊.id : selRef.current); if (!態) return null;
+      const 態 = 背中を始める(b, 隊 ? 隊.id : 一人Ref.current ? 一人Ref.current.隊id : selRef.current, 身分 || "足軽"); if (!態) return null;
       背中Ref.current = 態; set背中(true); return { 名: 態.名, 組: 態.組.id, ...与平の今(態) };
     };
     /* 倍率は絶対値で受ける（一.六なら一.六倍）。寄る先は「いちばん激しく噛んで
@@ -1060,10 +1085,13 @@ export function BattleScreen({ ctx, land, onEnd }) {
     </div>
   );
 
+  /* 足軽の欄を出すか。一人働きでは身分で決める（足軽なら盤の視点でも出す）。ふだんの合戦では背中越しのあいだ
+     （撮る道具・試しの覗き口 window.__背中 で入ったとき）だけ */
+  const 足軽の欄か = 身分 ? 身分 === "足軽" : 背中;
   const panelBody = (
     <>
-      {背中 && (b.phase === "deploy" || b.phase === "fight") && 一人の欄}
-      {b.phase === "deploy" && !背中 && (
+      {足軽の欄か && (b.phase === "deploy" || b.phase === "fight") && 一人の欄}
+      {b.phase === "deploy" && !足軽の欄か && !身分 && (
         <div style={{ display: "flex", flexDirection: land ? "column" : "row", gap: 8, alignItems: land ? "stretch" : "center", flexWrap: "wrap", width: "100%" }}>
           <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.65, flex: 1 }}>
             {/* 天下分け目は筋書きの印を立てるが、関ヶ原ではない。もとは関ヶ原の文（当時の布陣・
@@ -1146,12 +1174,14 @@ export function BattleScreen({ ctx, land, onEnd }) {
         </div>
       )}
 
-      {b.phase === "fight" && !背中 && (
+      {b.phase === "fight" && !足軽の欄か && (
         <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%" }}>
           {/* 途中からでも諸将に委ねられる。以後は絵を描かず、決着まで一息に進む。 */}
           <button className="btn" onClick={委ねる} disabled={委ね中}>
             {委ね中 ? "委ねている…" : "委ねて結果を見る"}
           </button>
+          {/* 一括命令は全軍への下知なので、総大将だけ（一人働きの物頭には出さない） */}
+          {!身分 && <>
           <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim }}>一括命令</div>
           <div className="g4">
             <button className="btn sm" onClick={() => {
@@ -1187,8 +1217,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
               </>
             )}
           </div>
+          </>}
           {/* 三つの計略（battle/keiryaku.js）。寄せ手が遊ぶ側のときだけ、戦のさなかに仕掛けられる */}
-          {isCastle && iAmAttacker && b.phase === "fight" && (() => {
+          {isCastle && iAmAttacker && b.phase === "fight" && !身分 && (() => {
             const 手 = 仕掛け手(b, selC);
             const 内 = 内応の者(b, "P");
             const 札 = (kind, 説) => {
@@ -1295,7 +1326,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 {内訳 && <div className="num" style={{ fontSize: 11.5, color: U.dim }}>兵科　{内訳}</div>}
                 {/* 内応（GDD 11.2 / 9.4）。密約を結んだ側だけが、この釦を持つ。
                     押した時点でその隊はこちらに付く。 */}
-                {foe.内応 && foe.内応の主 === "P" && !foe.寝返り && (
+                {foe.内応 && foe.内応の主 === "P" && !foe.寝返り && !身分 && (
                   <>
                     <button className="btn sm" style={{ width: "100%", marginTop: 5,
                       borderColor: "#8A6A34", color: "#6B4E1E" }}
@@ -1473,8 +1504,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
                     <div style={{ fontSize: 10.5, letterSpacing: ".14em", color: U.dim }}>
                       計略　鼓舞（この合戦で残り{残}回／{鼓舞の回数(selC)}回）
                     </div>
-                    <div className={大 ? "g2" : ""}>
-                      {大 && (
+                    <div className={大 && !身分 ? "g2" : ""}>
+                      {大 && !身分 && (
                         <button className="btn sm" style={{ width: "100%" }} disabled={残 <= 0 || selC.routed}
                           onClick={() => 押す(true)}>鼓舞（全軍）</button>
                       )}
@@ -1485,7 +1516,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                       成る見込み {Math.round(見込 * 100)}%。成れば失った士気の{Math.round(割 * 100)}%を取り戻す
                       （この隊なら士気{Math.round(selC.morale)}→{Math.round(selC.morale + (100 - selC.morale) * 割)}）。
                       統率か知略の高いほう（{Math.max(selC.gen.lead || 0, selC.gen.wit || 0)}）で決まる。
-                      {大 ? "大名・総大将は全軍も励ませる。" : ""}
+                      {大 && !身分 ? "大名・総大将は全軍も励ませる。" : ""}
                       {近 ? "統率八十五以上なので、近く（三百歩）の味方の隊にも届く。" : ""}
                       統率か知略が七十以上なら一つの合戦で二度、それ未満は一度。崩れている隊の将は鼓舞できない。
                     </div>
@@ -1789,7 +1820,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     <div className="sp" style={{ height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }} onMouseDown={stop} onMouseUp={stop}>
       {退きの札}
       {引き鉦の札}
-      {!背中 && 問いの札 /* 好機の問いは総大将の判断なので、足軽の背中越しのあいだは出さない（盤の視点へ戻れば出る） */}
+      {!背中 && !身分 && 問いの札 /* 好機の問いは総大将の判断なので、背中越しのあいだと一人働きの合戦では出さない */}
       {咎めの帯}
       {!背中 && 覚えの札 /* 背中越しのあいだは出さない（盤だけを広げたとき、右下の突くの釦に重なる） */}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 }}>
@@ -1870,13 +1901,13 @@ export function BattleScreen({ ctx, land, onEnd }) {
           </span>
           </div>
           {phase === "fight" && (
-            /* 背中越し（一人視点）のあいだは停止と微速だけ。ほかの速さは押せなくする（上の 背中の速さ の説明） */
-            <span className="tsugi hayasa" title={背中 ? "一人視点では停止と微速だけ（委ねて結果を見ることはできる）" : undefined}>
+            /* 背中越し（一人視点）のあいだと一人働きの合戦では、停止と微速だけ。ほかの速さは押せなくする（上の 背中の速さ の説明） */
+            <span className="tsugi hayasa" title={背中 || 身分 ? "一人視点・一人働きでは停止と微速だけ（委ねて結果を見ることはできる）" : undefined}>
               <button className={`btn sm ${speed === 0 ? "on" : ""}`} onClick={() => setSpeed(0)}>停止</button>
               <button className={`btn sm ${speed === 0.12 ? "on" : ""}`} onClick={() => setSpeed(0.12)}>微速</button>
-              <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} disabled={背中} onClick={() => setSpeed(0.3)}>低速</button>
-              <button className={`btn sm ${speed === 0.6 ? "on" : ""}`} disabled={背中} onClick={() => setSpeed(0.6)}>通常</button>
-              <button className={`btn sm ${speed === 早送りの速さ ? "on" : ""}`} disabled={背中} onClick={() => setSpeed(早送りの速さ)}
+              <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} disabled={背中 || !!身分} onClick={() => setSpeed(0.3)}>低速</button>
+              <button className={`btn sm ${speed === 0.6 ? "on" : ""}`} disabled={背中 || !!身分} onClick={() => setSpeed(0.6)}>通常</button>
+              <button className={`btn sm ${speed === 早送りの速さ ? "on" : ""}`} disabled={背中 || !!身分} onClick={() => setSpeed(早送りの速さ)}
                 title="通常の四倍で進めます（行軍の間など）">早送り</button>
             </span>
           )}
@@ -1952,7 +1983,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <span className="dot" style={{ background: ctx.eColor }} /><b className="num">{fmt(eMen)}</b>
                 <span className="num" style={{ color: U.dim }}>{Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}</span>
                 {phase === "fight" && [["停", 0], ["微", 0.12], ["低", 0.3], ["通", 0.6], ["早", 早送りの速さ]].map(([lb, v]) => (
-                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`} disabled={背中 && v !== 0 && v !== 背中の速さ}
+                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`} disabled={(背中 || !!身分) && v !== 0 && v !== 背中の速さ}
                     style={{ padding: land ? "3px 6px" : "2px 5px", fontSize: land ? 12 : 10.5 }}
                     onClick={() => setSpeed(v)}>{lb}</button>
                 ))}
@@ -1996,11 +2027,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 野戦だけに出す（地を平らに描くので、城攻めの盤（b.map）では塀も門も描けない）。
                 合戦のさなかだけ出す。足軽の身では布陣も合戦開始もできない（一人の欄）ので、布陣の段で入っても
                 合戦が始められない。背中越しのあいだは、盤へ戻るためにいつでも出す */}
-            {!bRef.current.map && (bRef.current.phase === "fight" || 背中) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5 }}
+            {!bRef.current.map && 身分 && (bRef.current.phase === "fight" || 背中) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5 }}
               onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
               onClick={() => {
                 if (背中Ref.current) { 背中Ref.current = null; set背中(false); }
-                else { const 態 = 背中を始める(bRef.current, selRef.current); if (態) { 背中Ref.current = 態; set背中(true); } }
+                else { const 態 = 背中を始める(bRef.current, 一人Ref.current && 一人Ref.current.隊id, 身分); if (態) { 背中Ref.current = 態; set背中(true); } }
               }}><b>{背中 ? "盤" : "人"}</b>{背中 ? "盤の視点" : "背中の視点"}</div>}
             {/* 与平の札と釦（名札・体力・気力・方向キー・突く／受ける／駆ける・討死の札）。左下の釦より下に重ねる */}
             {背中 && 背中Ref.current && (
