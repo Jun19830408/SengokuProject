@@ -379,6 +379,9 @@ export function 攻めに要る兵(s, 的, 将ら = []) {
 }
 
 // 月を送る。天下じゅうの家が、この一手で動く
+/* 好機に付け入る目（第三試作版。上の出陣の腰を見よ）。寄せられる兵が要る兵の一.四倍に届く城を「楽に落とせる城」とし、
+   腰のくじに外れた月でも八割五分までは出る */
+export const 好機の余裕 = 1.4, 好機の腰 = 0.85;
 export function advanceMonth(prev, g) {
       const s = structuredClone(prev);
       const events = [];
@@ -1904,7 +1907,13 @@ export function advanceMonth(prev, g) {
            「気性」で、代替わりしても変わらなかった。器量で決めれば、当主が
            替われば家の動きも変わる。 */
         const eager = 攻めの腰(s, fid) * lv(s).aiEager;
-        if (Math.random() > eager) continue;
+        /* 好機に付け入る（第三試作版。遊ぶ人の申し出：「AIももっと積極的に戦さを仕掛けるように」「よりチャンスと
+           見れば積極的に戦さをするように」）。腰のくじに外れた月でも、楽に落とせる城（寄せられる兵が要る兵の
+           好機の余裕倍に届く城）があれば出る（好機の腰まで）。出征の物差し（城兵の三倍。core/shussei.js）と
+           出せる軍の数は変えない。くじに当たった月は、これまでどおり。くじの目は一つで、引く数も変えない */
+        const 腰の目 = Math.random();
+        const 好機だけ = 腰の目 > eager;
+        if (好機だけ && 腰の目 > 好機の腰) continue;
         const aim = fa.aim;
         const order = aim ? [s.castles.find((x) => x.id === aim.from), ...s.castles.filter((x) => x.faction === fid && x.id !== aim.from)]
           : s.castles.filter((x) => x.faction === fid);
@@ -2061,8 +2070,9 @@ export function advanceMonth(prev, g) {
             /* 先手は一つの城に一度だけ。後を追う本隊は要る兵を揃えて発ち、先手の兵ですでに要る兵に
                届いていれば重ねて出さない */
             const 先手で = !奇襲で && !先に出た && 見.野の敵 > 0 && 寄 < 要る && 寄 >= Math.max(見.野の敵 * 見.野, 見.守 * 1.5);
-            return { x, 見, 要る, 望む, 奇襲で, 先に出た, 立つ: (要る > 0 || !先に出た) && (寄 >= 要る || 先手で) };
-          }).filter((v) => v.立つ);
+            return { x, 見, 要る, 望む, 奇襲で, 先に出た, 立つ: (要る > 0 || !先に出た) && (寄 >= 要る || 先手で),
+              好機: !奇襲で && !先手で && 要る > 0 && 寄 >= 要る * 好機の余裕 };
+          }).filter((v) => v.立つ && (!好機だけ || v.好機));
           const 頭 = 当たる.slice(0, 3);             // 采配の切れ味（上）は、落とせる城のうちで効かせる
           const 選 = !頭.length ? null
             : (Math.random() < 鋭 ? 頭[0] : 頭[Math.floor(Math.random() * 頭.length)]);
