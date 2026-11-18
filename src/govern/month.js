@@ -74,8 +74,17 @@ import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
 
    声をかけるのは三城まで。囲まれている城、門前に敵軍が来ている城からは呼ばない
    ――そこは守るのが先である。 */
+/* 風雲モードで主人公の仕える家なら、主人公の上司の id（そうでなければ null）。
+   遊ぶ人の申し出（「家が出陣するときに上司を軍に加えやすくする」案でいく）により、この家が兵を寄せるときは
+   上司のいる城から先に呼び、その城からは上司を率いる将として呼ぶ。風雲モードでない盤では何も変えない */
+export const 風雲の主家の上司 = (s, fid) => (s && s.風雲 && !s.風雲.討死 && fid === s.player && s.風雲.上司) || null;
+const 上司の城を先に = (s, 上司id) => (a, b) => {
+  const 居 = (x) => ((s.generals || []).some((q) => q.id === 上司id && q.at === x.x.id) ? 1 : 0);
+  return 居(b) - 居(a) || a.歩 - b.歩;
+};
 export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限り = 3, 歩 = 3, 選べる, 要る } = {}) {
   const 寄せた = [];
+  const 上司id = 風雲の主家の上司(s, fid);
   const 近い = (s.castles || []).filter((x) => {
     if (x.faction !== fid || x.id === 発つ城.id) return false;
     if (選べる && !選べる(x)) return false;
@@ -85,7 +94,7 @@ export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限�
     const p = 道 ? 道(s, fid, x.id, 発つ城.id) : null;
     return !!p && p.length - 1 <= 歩;
   }).map((x) => ({ x, 歩: (道(s, fid, x.id, 発つ城.id) || []).length - 1 }))
-    .sort((a, b) => a.歩 - b.歩);
+    .sort(上司id ? 上司の城を先に(s, 上司id) : (a, b) => a.歩 - b.歩);
 
   for (const { x } of 近い) {
     if (寄せた.length >= 限り) break;
@@ -98,7 +107,7 @@ export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限�
       : 出征の余地(s, fid) - ((s.armies || []).includes(軍) ? 0 : (軍.men || 0));
     if (余地 < 200) break;
     const 出す = Math.min(Math.round(余り * 0.6), 余地);
-    const 将 = [...gens].sort((a2, b2) => b2.lead - a2.lead)[0];
+    const 将 = (上司id && gens.find((q) => q.id === 上司id)) || [...gens].sort((a2, b2) => b2.lead - a2.lead)[0];
     const 地 = Math.max(0, Math.min(x.local, 出す - (将 ? 将.retinue : 0)));
     if (地 + (将 ? 将.retinue : 0) < 200) continue;
     const tk = rosterTake(x.rost || newRoster(x.local, `loc-${x.id}`), 地);
@@ -124,6 +133,7 @@ export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限�
    発つ城の余りの八割五分と、近くの城の余りの六割の和（出征の余地を超えない）。狙う城を選ぶとき、
    この見込みで落とせる城（出征の見立ての「要る」に届く城）から選ぶ */
 export function 寄せられる見込み(s, fid, 発つ城, { 道, 限り = 3, 歩 = 3, 選べる } = {}) {
+  const 上司id = 風雲の主家の上司(s, fid);
   const 余り = (x) => {
     const gs = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive);
     return x.local + gs.reduce((a2, q) => a2 + q.retinue, 0) - minGarrison(x);
@@ -140,7 +150,7 @@ export function 寄せられる見込み(s, fid, 発つ城, { 道, 限り = 3, �
     const p = 道 ? 道(s, fid, x.id, 発つ城.id) : null;
     return !!p && p.length - 1 <= 歩;
   }).map((x) => ({ x, 歩: (道(s, fid, x.id, 発つ城.id) || []).length - 1 }))
-    .sort((a, b) => a.歩 - b.歩);
+    .sort(上司id ? 上司の城を先に(s, 上司id) : (a, b) => a.歩 - b.歩);
   let n = 0;
   for (const { x } of 近い) {
     if (n >= 限り || 余地 < 200) break;
@@ -382,6 +392,10 @@ export function 攻めに要る兵(s, 的, 将ら = []) {
 /* 好機に付け入る目（第三試作版。上の出陣の腰を見よ）。寄せられる兵が要る兵の一.四倍に届く城を「楽に落とせる城」とし、
    腰のくじに外れた月でも八割五分までは出る */
 export const 好機の余裕 = 1.4, 好機の腰 = 0.85;
+/* 風雲モードで主人公の仕える家だけ、攻め気をさらに上げる（遊ぶ人の申し出：「プレイヤーの所属する大名家のみ、
+   より攻め気を上げればいい」）。腰のくじを一.五倍（一を超えない）、好機は毎月見て、楽に落とせる城の見立てを
+   一.二倍に緩める。値は仮 */
+export const 主家の腰の倍 = 1.5, 主家の好機の余裕 = 1.2, 主家の好機の腰 = 1;
 export function advanceMonth(prev, g) {
       const s = structuredClone(prev);
       const events = [];
@@ -1906,17 +1920,22 @@ export function advanceMonth(prev, g) {
         /* 腰の重さは当主の武勇で決まる（GDD 6.2）。もとは家の名を数にした
            「気性」で、代替わりしても変わらなかった。器量で決めれば、当主が
            替われば家の動きも変わる。 */
-        const eager = 攻めの腰(s, fid) * lv(s).aiEager;
+        const 主家の上司id = 風雲の主家の上司(s, fid), 主家 = !!主家の上司id;
+        const eager = 主家 ? Math.min(1, 攻めの腰(s, fid) * lv(s).aiEager * 主家の腰の倍) : 攻めの腰(s, fid) * lv(s).aiEager;
         /* 好機に付け入る（第三試作版。遊ぶ人の申し出：「AIももっと積極的に戦さを仕掛けるように」「よりチャンスと
            見れば積極的に戦さをするように」）。腰のくじに外れた月でも、楽に落とせる城（寄せられる兵が要る兵の
            好機の余裕倍に届く城）があれば出る（好機の腰まで）。出征の物差し（城兵の三倍。core/shussei.js）と
            出せる軍の数は変えない。くじに当たった月は、これまでどおり。くじの目は一つで、引く数も変えない */
         const 腰の目 = Math.random();
         const 好機だけ = 腰の目 > eager;
-        if (好機だけ && 腰の目 > 好機の腰) continue;
+        if (好機だけ && 腰の目 > (主家 ? 主家の好機の腰 : 好機の腰)) continue;
         const aim = fa.aim;
-        const order = aim ? [s.castles.find((x) => x.id === aim.from), ...s.castles.filter((x) => x.faction === fid && x.id !== aim.from)]
+        let order = aim ? [s.castles.find((x) => x.id === aim.from), ...s.castles.filter((x) => x.faction === fid && x.id !== aim.from)]
           : s.castles.filter((x) => x.faction === fid);
+        /* 風雲：主人公の上司のいる城から先に出陣を試す（上司を軍に加えやすくする） */
+        const 上司 = 主家 ? (s.generals || []).find((x) => x.id === 主家の上司id && x.faction === fid && !x.captive) : null;
+        const 上司の城 = 上司 && 上司.at ? s.castles.find((x) => x.id === 上司.at && x.faction === fid) : null;
+        if (上司の城) order = [上司の城, ...order.filter((x) => x && x.id !== 上司の城.id)];
         /* 一つの月に、別々の城へ向ける軍を幾つも立てられる（出せる軍の数まで）。寄せても兵が
            揃わなければ兵は城へ返す。それを二度しくじれば、その月はもう試さない（重いので） */
         let 試し = 2;
@@ -2027,7 +2046,9 @@ export function advanceMonth(prev, g) {
              値打ちだけで選んで寄せてみると、三年で千八百余り試して発てたのは十六度であった
              （寄せた兵は中ほどで要る兵の二割四分）。もとの作りでは、発つ城の兵が城兵の
              一.三五倍あるかを先に見ていたので、手の届く城を狙っていた */
-          const take = [...gens].sort((a, b) => b.lead - a.lead).slice(0, 3);
+          let take = [...gens].sort((a, b) => b.lead - a.lead).slice(0, 3);
+          /* 風雲：上司のいる城から出るなら、上司を率いる将に入れる（統率の上位三人に入らなくても） */
+          if (上司 && 上司.at === c.id && !take.includes(上司)) take = [...take.slice(0, 2), 上司];
           // 常に優勢でなければ動かぬ、という将ばかりでは天下は動かぬ。
           // 知略に優れた者は、雨の月に、劣勢を承知で勝負に出る。桶狭間はそういう戦であった。
           /* 奇襲の目があれば、要る兵を二割（目が厚く、雨の月か知略八十八以上なら三割）減らして発つ。
@@ -2071,7 +2092,7 @@ export function advanceMonth(prev, g) {
                届いていれば重ねて出さない */
             const 先手で = !奇襲で && !先に出た && 見.野の敵 > 0 && 寄 < 要る && 寄 >= Math.max(見.野の敵 * 見.野, 見.守 * 1.5);
             return { x, 見, 要る, 望む, 奇襲で, 先に出た, 立つ: (要る > 0 || !先に出た) && (寄 >= 要る || 先手で),
-              好機: !奇襲で && !先手で && 要る > 0 && 寄 >= 要る * 好機の余裕 };
+              好機: !奇襲で && !先手で && 要る > 0 && 寄 >= 要る * (主家 ? 主家の好機の余裕 : 好機の余裕) };
           }).filter((v) => v.立つ && (!好機だけ || v.好機));
           const 頭 = 当たる.slice(0, 3);             // 采配の切れ味（上）は、落とせる城のうちで効かせる
           const 選 = !頭.length ? null
@@ -2180,7 +2201,7 @@ export function advanceMonth(prev, g) {
             c.food += 糧;
             for (const t2 of take) t2.at = c.id;
             寄せを返す(寄);
-            if (--試し <= 0) break;
+            if (!(上司の城 && c.id === 上司の城.id) && --試し <= 0) break;   // 風雲：上司の城の試しは数えない
             continue;
           }
           if (先手) 軍.先手 = true;

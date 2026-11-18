@@ -48,7 +48,7 @@ export { 遠征の兵糧, 陣中の月数, 陣中の食い扶持, 集結を待�
 export { ROAD_ADJ } from "../src/core/paths.js";
 export { resolveOffscreen, resolveClashOffscreen, reinforceOffers, 運び賃, 運び賃を払う, sackCastle, 城を委ねる, 委ねる差配, 軍を解く, withdrawArmy, homeFor, 城に合流する, 在陣させる, 盤の乱れを繕う, restoreStrays, 滅んだ家を始末する, 城なき家を片づける, 将を除く, 着いた味方を束ねる, 旗頭の陣を払う, 方面の報せ } from "../src/govern/war.js";
 export { 圧す, 解す } from "../src/save/pack.js";
-export { advanceMonth, 出征の見立て, 攻めに要る兵, 近隣から兵を寄せる, 寄せを返す, 城を救う援軍を出す, 城が危ういか, 援軍の望み, 二陣の見込み } from "../src/govern/month.js";
+export { advanceMonth, 出征の見立て, 攻めに要る兵, 近隣から兵を寄せる, 寄せを返す, 寄せられる見込み, 風雲の主家の上司, 主家の腰の倍, 主家の好機の余裕, 主家の好機の腰, 好機の余裕, 好機の腰, 城を救う援軍を出す, 城が危ういか, 援軍の望み, 二陣の見込み } from "../src/govern/month.js";
 export { 城方の後詰ら, 野戦の後の後詰 } from "../src/core/engun.js";
 export { 城攻めの比, 野で当たる比, 将の利, 将の器量, 城攻めの基の比, 野の比, 連戦の余り } from "../src/core/shussei.js";
 export { troopCap, 軍役の器, 軍役の割増, extraIncome, goryoOf, fiefOf, 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届き, 陣触れに応じる, 国が隣り合うか, minGarrison, 身分の位, 総大将を定める, 大将を先頭に, 国主に任じる, 旗頭に任じる, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 国主たち, 旗頭たち, stipendOf, 役の要る身分, 寄騎に取る, 寄騎を解く, 寄騎たち, 寄騎に取れるか, 城主か, 城主を据え替える, 城を明け渡す, 城を守る将, 守備隊の統率, 旗頭の受け持ち, 旗頭の届く国, 旗頭の的にできる家, 旗頭の的家, 旗頭の的家を定める, 的家の限り, 家の国ら, 旗の下の家か, 旗の下の当主か, 当主の国ら, 城の知行の余地, fiefRoom, fiefBurden, 旗頭を継がせる, 旗頭を継げる者, 方面の軍を移す } from "../src/core/rank.js";
@@ -79,7 +79,7 @@ export { createBattle, stepBattle, 放った跡, 前面まで, 触れる隔た�
 // 一人働き（武将一人プレイ）のつなぎ：与平が討った兵を、理の人数と一人ずつの絵の両方で減らす
 export { 兵を討つ, 組の兵を数える, 組の隊, 将を討つ, 総大将か } from "../src/hitori/tsunagi.js";
 // 一人働きの背中越しの視点：盤の一人ずつの兵を、与平の背中越しの眺めへ写す
-export { 歩の尺, 背中の速さ, 背中の突きの速さ, 与平の組を選ぶ, 与平の所, 眺めを集める, 背中を始める, 背中を描く, 与平を進める, 与平を立て直す, 与平の今, 突く, 受ける, 物頭を据える, 降りの写し, 寄った所の組, 持ち場の間, 咎の目 } from "../src/hitori/senaka.js";
+export { 歩の尺, 背中の速さ, 背中の突きの速さ, 与平の組を選ぶ, 与平の所, 眺めを集める, 背中を始める, 背中を描く, 与平を進める, 与平を立て直す, 与平の今, 突く, 受ける, 物頭を据える, 降りの写し, 寄った所の組, 持ち場の間, 咎の目, 兵の太刀, 旗持の太刀, 馬廻の太刀, 将の太刀, 要る太刀 } from "../src/hitori/senaka.js";
 /* 風雲モード（一人の侍の立身）の理と屋敷の画面（試し：tests/fuun.cjs） */
 export { 風雲の段, 段の番, 次の段, 盤の身分, 風雲の一人, 月の行い一覧, 月の行いの数, 上司を選ぶ, 若手の上司を選ぶ, 風雲の上司を決める, 風雲で選べるか, 風雲を始める, 風雲の月の初め, 上司を見直す, 風雲の戦か, 風雲の城攻めか, 風雲の隊を選ぶ, 風雲の城攻めの隊, 戦の勲功を記す, 取り立てを見る, 風雲の問いに答える, 首の勲功, 首の値 } from "../src/hitori/fuun.js";
 export { FuunYashiki, 住まいの絵 } from "../src/hitori/FuunYashiki.jsx";
