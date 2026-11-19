@@ -47,6 +47,7 @@ import { FIELD, FORESTS, WOODS, ROADS, fieldScale, passableFor } from "../battle
 import { 城の箱を集める, 堀の帯 } from "./shiro_senaka.js";
 import { 城壁をよける } from "../battle/tachimono.js";
 import { 兵を討つ, 将を討つ, 総大将か } from "./tsunagi.js";
+import { 人形を描く, 倒れ人形を描く } from "./ningyo.js";
 
 export const 歩の尺 = 0.46;
 export const 背中の速さ = 0.12;                           // 背中越しのあいだの盤の速さ（微速に固定）
@@ -576,14 +577,18 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
   const 上限 = 途中 ? 2600 : 1500;                            // 高いところからは多く見える
   let 兵ら = 眺.兵.filter((p) => !態.今討った.has(p)).map((p) => ({ p, d: 奥(p.x, p.z) })).filter((o) => o.d > 0.8);
   if (兵ら.length > 上限) { 兵ら.sort((a, z) => a.d - z.d); 兵ら = 兵ら.slice(0, 上限); }
-  let 透数 = 0;
+  let 透数 = 0; const 奥ら = [];
   for (const { p, d } of 兵ら) {
     const [sx, , zc] = P(p.x, 0, p.z); if (sx < -200 || sx > W + 200) continue;
+    奥ら.push(d);
     const 透 = !見物 && !途中 && d < pzc - 0.3 && Math.abs(sx - psx) < 0.42 * F / zc + 我幅;
     if (透) 透数++;
     const 姿 = p.側 === "E" ? 敵の姿(態, p, t) : p;
     物.push({ d, f: () => 一人を描く(ctx, 姿, nowSec, 透 ? 0.32 : 1) });
   }
+  /* 人形を細かく描くのは、画に映る兵のうち写しに近い者から 人形の細の数 人まで、中ほどに描くのは 人形の中の数 人まで
+     （重さのため。hitori/ningyo.js） */
+  奥ら.sort((a, z) => a - z); 人形の環.細の奥 = 奥ら[人形の細の数 - 1] ?? Infinity; 人形の環.中の奥 = 奥ら[人形の中の数 - 1] ?? Infinity;
   /* 倒れた者。与平が倒した者は倒れる姿のまま描くので、盤の倒れ（揺らぎを除いた持ち場に残る）からは除く */
   const 跡ら = 態.倒し.filter((o) => o.跡);
   for (const e of 眺.倒れ) {
@@ -702,8 +707,9 @@ function 霞の帯(ctx) { const hz = 水平(); const gr = ctx.createLinearGradie
 function 輪(ctx, x, z, rx, rz) { ctx.beginPath(); for (let k = 0; k <= 40; k++) { const a = (k / 40) * Math.PI * 2; const [sx, sy] = P(x + Math.cos(a) * rx, 0, z + Math.sin(a) * rz); k ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); } ctx.closePath(); ctx.strokeStyle = "rgba(240,214,130,.95)"; ctx.lineWidth = 2.6; ctx.stroke(); }
 
 /* ---------- 一人を描く ----------
-   体は平らな絵（カメラに向けて立てる）。背中が見えるか顔が見えるかは、兵の向きとカメラの向きで決める。
-   槍・鉄砲・弓は、兵の向きに沿って長さを持つ線として遠近で描く。騎馬は馬の上に人を描く。 */
+   兵は三次元の骨組みで組んだ人形として描く（hitori/ningyo.js。遊ぶ人の申し出「今はペラペラの兵ですが、もっと
+   リアルになりませんか？」により、平らな絵から改めた）。槍・鉄砲・弓は、兵の向きに沿って長さを持つ線として遠近で
+   描く（下の 線3・槍。人形の側から呼ぶ）。騎馬は馬の上に人を描く。 */
 function 線3(ctx, a, b2, w0, w1, rgb, d) {
   const [ax, ay, az] = P(...a), [bx, by, bz] = P(...b2); if (az < 0.5 || bz < 0.5) return null;
   const wa = Math.max(0.7, w0 * F / az), wb = Math.max(0.6, w1 * F / bz); const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
@@ -717,121 +723,21 @@ function 槍(ctx, a, b2, d, 光 = 0) { const r = 線3(ctx, a, b2, 0.05, 0.04, [6
   if (光 > 0) { ctx.save(); ctx.globalAlpha *= 光; const rr = Math.max(4, 0.22 * F / bz); const g = ctx.createRadialGradient(bx, by, 0, bx, by, rr);
     g.addColorStop(0, "rgba(255,90,70,.95)"); g.addColorStop(1, "rgba(255,90,70,0)"); ctx.fillStyle = g; ctx.fillRect(bx - rr, by - rr, rr * 2, rr * 2); ctx.restore(); } }
 const 突きの伸び = (ph) => (ph < 0.45 ? -0.35 * Math.sin((ph / 0.45) * Math.PI / 2) : ph < 0.6 ? lerp(-0.35, 1, (ph - 0.45) / 0.15) : lerp(1, 0, sm((ph - 0.6) / 0.4)));
+/* 人形へ渡す写しの道具（写し C・焦点 F・画の幅 W は、描くたびに据え直されるので、読むときに引く）。
+   細の奥・中の奥 … この奥行き（m）より奥の兵は、近くても一つ下の段で描く（背中を描く が一コマごとに据える） */
+const 人形の細の数 = 24, 人形の中の数 = 240;
+const 人形の環 = {
+  細の奥: Infinity, 中の奥: Infinity,
+  P: (x, y, z) => P(x, y, z), 奥: (x, z) => 奥(x, z), 霞: (rgb, d, k) => 霞(rgb, d, k), 色,
+  槍: (ctx, a, b2, d, 光) => 槍(ctx, a, b2, d, 光), 線3: (ctx, a, b2, w0, w1, rgb, d) => 線3(ctx, a, b2, w0, w1, rgb, d), 突きの伸び: (ph) => 突きの伸び(ph),
+  get C() { return C; }, get F() { return F; }, get W() { return W; },
+};
 function 一人を描く(ctx, p, t, al) {
   筆 = ctx;
-  const d = 奥(p.x, p.z); const [sx, sy, zc] = P(p.x, 0, p.z); if (zc < 0.9) return;
-  const s = (sy - P(p.x, 1, p.z)[1]) * p.丈; if (s < 1.2) return;
-  const 近 = p.我 ? 1 : clamp((zc - 1.6) / 1.4, 0, 1); if (近 <= 0.01) return;
-  ctx.globalAlpha = al * 近;
-  const 前 = p.fx * C.fx + p.fz * C.fz < 0;              // 顔がカメラを向いているか
-  const 色組 = 色[p.側] || 色.P;
-  /* fl … 当たったときの閃き（〇.二二秒、白へ寄せる）。fu … 倒れる進み（〇.五五秒で横たわる）。試し版と同じ */
-  const fl = p.fl || 0, fu = p.fu || 0;
-  const c = (rgb) => 霞(fl > 0 ? [rgb[0] + (255 - rgb[0]) * fl * 0.7, rgb[1] + (250 - rgb[1]) * fl * 0.7, rgb[2] + (240 - rgb[2]) * fl * 0.7] : rgb, d, 120);
-  const 漆 = c(p.我 ? [26, 25, 30] : [30, 30, 35]), 縅 = c(色組.縅), 布 = c(色組.布), 脛 = c([156, 146, 122]), 肌 = c([204, 166, 132]), 髪 = c([26, 24, 24]), 金 = c([226, 196, 110]);
-  const 騎 = p.型 === "kiba";
-  const 下 = 騎 ? 1.12 : 0;                                  // 騎馬は人を馬の背に載せる
-  const X = (v) => sx + v * s * p.幅, Y = (v) => sy - (v + 下) * s;
-  const 線 = (pts, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = Math.max(0.8, w * s); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); pts.forEach(([a, b2], i) => (i ? ctx.lineTo(X(a), Y(b2)) : ctx.moveTo(X(a), Y(b2)))); ctx.stroke(); };
-  const 細 = s > 16, 粗 = s < 6;
-  /* 右手の所（世界）：兵から見て右。槍は兵の向きに沿う。横 … 右手からさらに右（負なら左）へ */
-  const rx = p.fz, rz = -p.fx;
-  const 点 = (前後, 高さ, 横 = 0) => [p.x + rx * (0.3 * p.幅 + 横) + p.fx * 前後, (高さ + 下) * p.丈, p.z + rz * (0.3 * p.幅 + 横) + p.fz * 前後];
-  const 手 = (前後, 高さ) => 点(前後, 高さ);
-  /* 倒れる者：得物は地に落ち、体は足もとを軸に横へ倒れる（画面の右へ倒れるなら、槍も写しの右へ落ちる） */
-  if (fu > 0) { const fd = p.倒向 || 1, lx = C.rx * fd, lz = C.rz * fd;
-    槍(ctx, [p.x + lx * 0.15 - p.fx * 0.8, 0.05, p.z + lz * 0.15 - p.fz * 0.8], [p.x + lx * 1.5 + p.fx * 2.4, 0.05, p.z + lz * 1.5 + p.fz * 2.4], d);
-    ctx.save(); ctx.translate(sx, sy); ctx.rotate(fd * 1.45 * sm(fu)); ctx.translate(-sx, -sy); }
-  /* 馬 */
-  if (騎) {
-    const 馬 = c([92, 66, 44]), 馬暗 = c([58, 42, 30]), sw = Math.sin((p.歩 || 0) * Math.PI * 2) * (p.働 === "歩" ? 0.12 : 0);
-    const MX = (v) => sx + v * s, MY = (v) => sy - v * s;
-    ctx.strokeStyle = 馬暗; ctx.lineWidth = Math.max(0.8, 0.07 * s); ctx.lineCap = "round";
-    for (const [lx, ph] of [[-0.17, 0], [0.17, 1], [-0.11, 1], [0.11, 0]]) { ctx.beginPath(); ctx.moveTo(MX(lx), MY(1.0)); ctx.lineTo(MX(lx + (ph ? sw : -sw) * 0.3), MY(0.04 + (ph ? Math.max(0, sw) : Math.max(0, -sw)))); ctx.stroke(); }
-    ctx.fillStyle = 馬; ctx.beginPath(); ctx.ellipse(MX(0), MY(1.22), 0.27 * s, 0.27 * s, 0, 0, 7); ctx.fill();
-    if (前) { ctx.fillStyle = 馬暗; ctx.beginPath(); ctx.ellipse(MX(0), MY(1.55), 0.1 * s, 0.26 * s, 0, 0, 7); ctx.fill(); ctx.fillStyle = 馬; ctx.beginPath(); ctx.ellipse(MX(0), MY(1.32), 0.09 * s, 0.17 * s, 0, 0, 7); ctx.fill(); }
-    else { ctx.strokeStyle = 馬暗; ctx.lineWidth = Math.max(0.8, 0.06 * s); ctx.beginPath(); ctx.moveTo(MX(0), MY(1.2)); ctx.quadraticCurveTo(MX(0.05), MY(0.9), MX(0.02), MY(0.7)); ctx.stroke(); }
-  }
-  /* 指物（背の小旗）：背中が見えるなら体の後で、顔が見えるなら体の前に描く */
-  const 旗 = () => { if (粗) return; const 高 = (p.我 ? 2.75 : 2.45); let sg = 前 ? -1 : 1; if (p.我) sg = -sg; const 旗色 = c(色組.旗);
-    線([[0.02 * sg, 1.2], [0.02 * sg, 高]], 0.03, c([58, 46, 32]));
-    ctx.fillStyle = 旗色; ctx.beginPath(); ctx.moveTo(X(0.02 * sg), Y(高)); ctx.lineTo(X(0.34 * sg), Y(高)); ctx.lineTo(X(0.34 * sg), Y(高 - 0.62)); ctx.lineTo(X(0.02 * sg), Y(高 - 0.62)); ctx.closePath(); ctx.fill();
-    if (p.我) { ctx.strokeStyle = 金; ctx.lineWidth = Math.max(1.2, 0.035 * s); ctx.stroke(); }   // 与平の小旗は金の縁で見分ける
-    if (s > 22) { ctx.fillStyle = c([238, 232, 216]); ctx.beginPath(); ctx.arc(X(0.18 * sg), Y(高 - 0.31), 0.08 * s, 0, 7); ctx.fill(); } };
-  if (前) 旗();
-  /* 脚（騎馬の人は鞍の上で、脚は短く垂らす） */
-  if (!騎) {
-    const A = lerp(0.055, 0.13, clamp((p.v - 2) / 1.5, 0, 1)) * clamp(p.v / 0.5, 0, 1) * (p.働 === "歩" || p.我 ? 1 : 0.4), φ = (p.歩 || 0) * Math.PI * 2;
-    for (const k of [-1, 1]) { const lift = A * Math.max(0, Math.sin(φ + (k < 0 ? 0 : Math.PI)));
-      線([[k * 0.1, 0.86], [k * 0.12, 0.48 + lift * 0.6], [k * 0.13, 0.1 + lift]], 0.12, 布);
-      if (!粗) 線([[k * 0.12, 0.42 + lift * 0.8], [k * 0.13, 0.12 + lift]], 0.105, 脛);
-      ctx.fillStyle = 漆; ctx.beginPath(); ctx.ellipse(X(k * 0.13), Y(0.05 + lift), 0.08 * s, 0.04 * s, 0, 0, 7); ctx.fill(); }
-  } else { for (const k of [-1, 1]) 線([[k * 0.2, 0.86], [k * 0.3, 0.5]], 0.1, 布); }
-  /* 胴・草摺・腕 */
-  ctx.fillStyle = 漆; ctx.fillRect(X(-0.26), Y(0.98), 0.52 * s * p.幅, 0.3 * s);
-  ctx.beginPath(); ctx.moveTo(X(-0.22), Y(0.97)); ctx.lineTo(X(-0.26), Y(1.36)); ctx.quadraticCurveTo(X(0), Y(1.47), X(0.26), Y(1.36)); ctx.lineTo(X(0.22), Y(0.97)); ctx.closePath(); ctx.fill();
-  if (細) { for (let k = 0; k < 4; k++) 線([[-0.22, 1.04 + k * 0.085], [0.22, 1.04 + k * 0.085]], 0.032, 縅); for (let k = 1; k < 5; k++) 線([[-0.26 + k * 0.104, 0.97], [-0.26 + k * 0.104, 0.69]], 0.012, 縅); }
-  else if (!粗) 線([[-0.22, 1.12], [0.22, 1.12]], 0.06, 縅);
-  const 腕型 = p.受 || p.働 === "突" || p.働 === "構" ? "構" : p.働 === "歩" && p.型 === "yari" ? "肩" : "立";
-  if (!粗) { const 腕 = 前 ? [[[0.26, 1.36], [0.34, 1.12], [0.22, 1.02]], [[-0.26, 1.36], [-0.32, 1.12], [-0.06, 1.04]]]
-      : 腕型 === "肩" ? [[[0.26, 1.36], [0.4, 1.2], [0.3, 1.4]], [[-0.26, 1.36], [-0.33, 1.12], [-0.3, 0.92]]]
-      : 腕型 === "構" ? [[[0.26, 1.36], [0.36, 1.14], [0.24, 1.04]], [[-0.26, 1.36], [-0.3, 1.14], [-0.04, 1.08]]]
-      : [[[0.26, 1.36], [0.35, 1.12], [0.33, 0.98]], [[-0.26, 1.36], [-0.32, 1.1], [-0.3, 0.92]]];
-    for (const a of 腕) { 線(a.slice(0, 2), 0.1, 布); 線(a.slice(1), 0.085, 漆); } }
-  /* 頭と被り物（癖：〇・一 陣笠、二 鉢巻、三 頭形兜） */
-  if (前) { ctx.fillStyle = 肌; ctx.beginPath(); ctx.ellipse(X(0), Y(1.55), 0.1 * s, 0.12 * s, 0, 0, 7); ctx.fill(); }
-  else { ctx.fillStyle = 髪; ctx.beginPath(); ctx.ellipse(X(0), Y(1.55), 0.1 * s, 0.115 * s, 0, 0, 7); ctx.fill(); }
-  if (p.癖 === 2) { 線([[-0.1, 1.6], [0.1, 1.6]], 0.035, c([236, 232, 220])); }
-  else if (p.癖 === 3) { ctx.fillStyle = 漆; ctx.beginPath(); ctx.ellipse(X(0), Y(1.62), 0.15 * s, 0.14 * s, 0, Math.PI, 0); ctx.fill(); ctx.fillRect(X(-0.2), Y(1.62), 0.4 * s * p.幅, 0.08 * s); }
-  else { ctx.fillStyle = 漆; ctx.beginPath(); ctx.moveTo(X(-0.36), Y(1.6)); ctx.quadraticCurveTo(X(-0.1), Y(1.7), X(0), Y(1.79)); ctx.quadraticCurveTo(X(0.1), Y(1.7), X(0.36), Y(1.6)); ctx.quadraticCurveTo(X(0), Y(1.53), X(-0.36), Y(1.6)); ctx.fill();
-    if (p.癖 === 1 && !粗) 線([[-0.3, 1.6], [0.3, 1.6]], 0.02, 縅); }
-  if (!前) 旗();
-  /* 本陣衆の将：兜に金の前立て（三日月）。遠目にも将と分かる */
-  if (p.将 && !粗) { ctx.strokeStyle = 金; ctx.lineWidth = Math.max(1.2, 0.07 * s); ctx.beginPath(); ctx.arc(X(0), Y(1.68), 0.27 * s, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); }
-  /* 旗持：大きな馬印（家の色の大旗）を高く掲げる。本陣の在り処の目印 */
-  if (p.旗持) { const sg = 前 ? -1 : 1, 旗色 = c(色組.旗);
-    線([[0.18 * sg, 0.9], [0.18 * sg, 4.6]], 0.045, c([58, 46, 32]));
-    ctx.fillStyle = 旗色; ctx.beginPath(); ctx.moveTo(X(0.18 * sg), Y(4.6)); ctx.lineTo(X(0.98 * sg), Y(4.6)); ctx.lineTo(X(0.98 * sg), Y(3.0)); ctx.lineTo(X(0.18 * sg), Y(3.0)); ctx.closePath(); ctx.fill();
-    if (!粗) { ctx.fillStyle = c([238, 232, 216]); ctx.beginPath(); ctx.arc(X(0.58 * sg), Y(3.8), 0.24 * s, 0, 7); ctx.fill(); } }
-  if (fu > 0) { ctx.restore(); ctx.globalAlpha = 1; return; }
-  /* 得物。受け（与平）：槍を斜めに立てて体の前を塞ぐ。伸 … 突きの伸び（与平と、与平に掛かる敵は、盤の拍子でなく自分の拍子で突く） */
-  if (p.将) {
-    /* 采配：短い柄に白い房 */
-    const [a1, a2] = [手(0.1, 1.05), 手(0.45, 1.75)];
-    線3(ctx, a1, a2, 0.03, 0.025, [40, 34, 28], d);
-    const [qx, qy, qz] = P(...a2); if (qz > 0.5) { ctx.fillStyle = c([240, 238, 230]); ctx.beginPath(); ctx.ellipse(qx, qy, 0.09 * F / qz, 0.16 * F / qz, 0, 0, 7); ctx.fill(); }
-  } else if (p.旗持) {
-    /* 馬印を持つので得物は持たない */
-  } else if (p.型 === "yari" || 騎) {
-    if (p.受) 槍(ctx, 点(-0.4, 0.95, -0.05), 点(1.9, 2.55, -0.95), d);
-    else if (p.働 === "突" || p.働 === "構") { const e = p.伸 != null ? p.伸 : p.働 === "突" ? 突きの伸び(p.相) : 0;
-      槍(ctx, 手(-1.3 + e * 0.85, 0.92), 手(2.6 + e * 0.85, 1.25 - 0.04 * e), d, p.光 || 0); }
-    else if (腕型 === "肩" && !騎) { const el = 0.61; 槍(ctx, 手(-0.95 * Math.cos(el), 1.4 - 0.95 * Math.sin(el)), 手(4.6 * Math.cos(el), 1.4 + 4.6 * Math.sin(el)), d); }
-    else 槍(ctx, 手(0, 0.04), 手(0.02, 騎 ? 3.4 : 4.4), d);
-  } else if (p.型 === "teppo") {
-    if (p.働 === "放") { const 反 = p.相 < 0.15 ? -0.12 * Math.sin(p.相 / 0.15 * Math.PI) : 0; const 先 = 手(1.25 + 反, 1.42);
-      線3(ctx, 手(-0.1 + 反, 1.38), 先, 0.05, 0.035, [40, 36, 34], d);
-      if (p.相 < 0.4) { const [px, py, pz] = P(...先); if (pz > 0.5) { const k = p.相 / 0.4, r = (0.15 + k * 0.6) * F / pz; ctx.save(); ctx.globalAlpha *= (1 - k) * 0.8; ctx.fillStyle = "rgb(236,236,230)"; ctx.beginPath(); ctx.arc(px, py, r, 0, 7); ctx.fill(); ctx.restore(); } } }
-    else 線3(ctx, 手(0, 0.3), 手(0.02, 1.6), 0.05, 0.035, [40, 36, 34], d);
-  } else if (p.型 === "yumi") {
-    /* 弓：左手に持つ。放つあいだは顔の前に上げる */
-    const lx = -p.fz, lz = p.fx, 上 = p.働 === "放" && p.相 < 0.6;
-    const 弓芯 = [p.x + lx * 0.32 + p.fx * (上 ? 0.4 : 0.05), (上 ? 1.45 : 1.2) * p.丈, p.z + lz * 0.32 + p.fz * (上 ? 0.4 : 0.05)];
-    const [bx, by, bz] = P(...弓芯); if (bz > 0.5) { const L = 0.85 * F / bz; ctx.strokeStyle = c([70, 50, 30]); ctx.lineWidth = Math.max(0.8, 0.035 * F / bz); ctx.beginPath(); ctx.moveTo(bx, by - L); ctx.quadraticCurveTo(bx + (前 ? 0.25 : -0.25) * L, by, bx, by + L * 0.85); ctx.stroke(); }
-  }
-  if (p.我) { ctx.strokeStyle = "#141416"; ctx.lineCap = "round"; ctx.lineWidth = 0.055 * s; ctx.beginPath(); ctx.moveTo(X(-0.16), Y(0.92)); ctx.lineTo(X(-0.36), Y(0.79)); ctx.stroke(); }
-  ctx.globalAlpha = 1;
+  人形を描く(ctx, p, t, al, 人形の環);
 }
 function 倒れを描く(ctx, e) {
-  const d = 奥(e.x, e.z); const [sx, sy, zc] = P(e.x, 0, e.z); if (zc < 0.9 || sx < -200 || sx > W + 200) return;
-  const s = sy - P(e.x, 1, e.z)[1]; if (s < 1) return;
-  const 色組 = 色[e.側] || 色.E, 向 = (e.鍵 & 1) ? 1 : -1;
-  ctx.save(); ctx.translate(sx, sy); ctx.scale(1, 0.55); ctx.rotate(向 * 1.48);
-  ctx.fillStyle = 霞([30, 30, 35], d, 120); ctx.fillRect(-0.26 * s, -1.4 * s, 0.52 * s, 0.6 * s);
-  ctx.fillStyle = 霞(色組.布, d, 120); ctx.fillRect(-0.18 * s, -0.86 * s, 0.36 * s, 0.86 * s);
-  ctx.fillStyle = 霞([30, 30, 35], d, 120); ctx.beginPath(); ctx.ellipse(0, -1.62 * s, 0.32 * s, 0.1 * s, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = 霞(色組.旗, d, 120); ctx.fillRect(0.3 * s, -1.9 * s, 0.32 * s, 0.5 * s);
-  ctx.restore();
+  倒れ人形を描く(ctx, e, 人形の環);
 }
 
 /* ---------- 城の造作を描く（城攻め・籠城。hitori/shiro_senaka.js の箱と屋根） ----------
