@@ -49,6 +49,7 @@ import { 城壁をよける } from "../battle/tachimono.js";
 import { 兵を討つ, 将を討つ, 総大将か } from "./tsunagi.js";
 import { 人形を描く, 倒れ人形を描く } from "./ningyo.js";
 import { 矢玉を集める } from "./yadama.js";
+import { 手勢を導く } from "./tezei.js";
 
 export const 歩の尺 = 0.46;
 export const 背中の速さ = 0.12;                           // 背中越しのあいだの盤の速さ（微速に固定）
@@ -77,7 +78,9 @@ export function 与平の組を選ぶ(b, 隊id) {
    背中越しに入ったとき（と、討死ののち、もう一度）に与平が立つ所。そこからは自分で動かす */
 export function 与平の所(q) {
   const s = 組の見た目(q);
-  if (!s || !s.初) return { x: q.x, y: q.y, 向: q.facing || 0, 初: false };
+  /* 一人ずつの絵の居所が盤の居所から大きく離れていれば（盤の視点にいたあいだ、遠くの組の絵は進めない）、盤の居所を使う。
+     物頭はこの所に毎コマ据えられるので、古い絵の居所を使うと、隊から遠い野に独り立つことになった */
+  if (!s || !s.初 || Math.hypot(s.dx - q.x, s.dy - q.y) > 40) return { x: q.x, y: q.y, 向: q.facing || 0, 初: false };
   const th = s.向, 後 = 2.4 + 1.5;                       // 五の列（持場の奥 二.四歩）のうしろ一.五歩
   return { x: s.dx - Math.cos(th) * 後, y: s.dy - Math.sin(th) * 後, 向: th, 初: true };
 }
@@ -246,6 +249,8 @@ export function 合戦の勲功(態) {
    盤を止めているあいだ（態.止）は何もしない */
 export function 与平を進める(b, 態, dt, 眺) {
   与平を一コマ進める(b, 態, dt, 眺);
+  /* 手勢（十人長から三百人長）は与平に従う（hitori/tezei.js） */
+  if (態.隊 && 態.隊.手勢 && 態.我 && !態.止) 手勢を導く(b, 態.隊, 態.我.x / 尺, -態.我.z / 尺, 態.t, 態.我.倒 != null);
   if (態.備え && 態.我) {
     持ち場を見る(b, 態, dt);
     const 分 = 討ち分け(態);
@@ -254,27 +259,49 @@ export function 与平を進める(b, 態, dt, 眺) {
 }
 /* 持ち場（風雲モード・物頭未満。遊ぶ人の申し出：「自分及び自分の部隊について、同じ所属の部隊等から離れて行動すると
    （範囲を決めてそこから出ると）上司のおぼえが低くなる（時間とともにマイナスが増えていく感じ）」）。
-   持ち場は、与平の属する隊の組のいずれかから 持ち場の間 m のうち。外にいるあいだ、覚えの咎が積もる。咎の積もる
-   速さは、続けて外にいる秒とともに上がる（一秒に〇.〇八から。三十秒外にいれば咎およそ四、六十秒でおよそ十二）。
-   持ち場へ戻れば、続けて外にいた秒は〇に戻る（積もった咎は残る）。合戦のあとに覚えから引く（hitori/fuun.js） */
+   持ち場は、与平の属する隊（十人長から三百人長は、手勢を分けた上司の隊）を囲む円の内。遊ぶ人の申し出（「隊の範囲
+   （その範囲外に出ると上司の覚えが悪くなる）を円で示せるといい」）により、円として決め、地に描く（背中を描く）。
+   円の芯は隊の組の居所の真ん中、半径は芯からいちばん遠い組まで＋組の広がり（十歩）＋持ち場の間（四十m）。
+   もとは「隊の組のいずれかから四十m のうち」（組ごとの円を重ねた形）であった。隊が動けば円も動く（なめらかに追う）。
+   外にいるあいだ、覚えの咎が積もる。咎の積もる速さは、続けて外にいる秒とともに上がる（一秒に〇.〇八から。三十秒
+   外にいれば咎およそ四、六十秒でおよそ十二）。持ち場へ戻れば、続けて外にいた秒は〇に戻る（積もった咎は残る）。
+   合戦のあとに覚えから引く（hitori/fuun.js） */
 export const 持ち場の間 = 40;
 export const 咎の目 = (秒) => 0.08 * 秒 + 0.002 * 秒 * 秒;
+/* 持ち場を決める隊。手勢を率いていれば、手勢を分けた上司の隊 */
+export function 持ち場の隊(b, 態) {
+  const 隊 = 態 && 態.隊; if (!隊) return null;
+  if (隊.手勢) return (b.corps || []).find((c) => c.id === 隊.parentId) || null;
+  return 隊;
+}
+/* 隊を囲む円（盤の座標と歩）。組が一つも立っていなければ null */
+export function 持ち場の円を量る(隊) {
+  let x = 0, y = 0, n = 0;
+  for (const q of (隊 && 隊.squads) || []) { if (!(q.men > 0)) continue; x += q.x; y += q.y; n++; }
+  if (!n) return null;
+  x /= n; y /= n;
+  let r = 0; for (const q of 隊.squads) { if (!(q.men > 0)) continue; r = Math.max(r, Math.hypot(q.x - x, q.y - y)); }
+  return { x, y, r: r + 10 + 持ち場の間 / 尺 };
+}
 function 持ち場を見る(b, 態, dt) {
   const 我 = 態.我;
   const 場 = 態.持ち場 || (態.持ち場 = { 内: true, 咎: 0, 離れ秒: 0, 咎の始め: 0 });
   if (態.身分 !== "足軽" || 我.倒 != null || 態.止 || !(dt > 0)) return;
-  const 隊 = 態.隊; if (!隊 || 隊.dead || 隊.destroyed) { 場.内 = true; return; }
-  const bx = 我.x / 尺, by = -我.z / 尺;
-  let 近 = 1e9;
-  for (const q of 隊.squads || []) { if (!(q.men > 0)) continue; const d = Math.hypot(q.x - bx, q.y - by) * 尺; if (d < 近) 近 = d; }
-  const 内 = 近 <= 持ち場の間;
+  const 隊 = 持ち場の隊(b, 態); if (!隊 || 隊.dead || 隊.destroyed) { 場.内 = true; return; }
+  const 今 = 持ち場の円を量る(隊); if (!今) { 場.内 = true; return; }
+  const 円 = 態.持ち場の円 || (態.持ち場の円 = { ...今 });
+  /* 盤の視点にいたあいだ（円を追わないあいだ）に隊が遠くへ動いていれば、追わずに据え直す */
+  if (Math.hypot(今.x - 円.x, 今.y - 円.y) > 60) Object.assign(円, 今);
+  const k = 1 - Math.exp(-dt * 1.2); 円.x += (今.x - 円.x) * k; 円.y += (今.y - 円.y) * k; 円.r += (今.r - 円.r) * k;
+  const bx = 我.x / 尺, by = -我.z / 尺, 隔 = Math.hypot(bx - 円.x, by - 円.y);
+  const 内 = 隔 <= 円.r;
   if (内) { if (!場.内) { 場.咎の始め = 場.咎; } 場.離れ秒 = 0; }
   else {
     if (場.内) 場.咎の始め = 場.咎;
     場.離れ秒 += dt;
     場.咎 = 場.咎の始め + 咎の目(場.離れ秒);
   }
-  場.内 = 内; 場.間 = 近;
+  場.内 = 内; 場.間 = Math.max(0, (隔 - 円.r) * 尺);           // 円の外へ出た隔たり（m）。内なら〇
 }
 
 /* 倒すのに要る太刀（会心は二太刀に数える）。遊ぶ人の申し出（「大将が2突きで死ぬのは簡単すぎる」「普通の足軽でも
@@ -566,6 +593,8 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
   /* 城攻め・籠城の盤なら、堀と橋を地に敷く（水堀は水の色、空堀は土の色） */
   const 城 = b.map || null;
   if (城) { const 堀 = 堀の帯(城); 帯を描く(ctx, 堀.堀, 堀.空堀 ? [128, 108, 80] : [74, 104, 124], 0.92); 帯を描く(ctx, 堀.橋, [150, 124, 88], 1); }
+  /* 持ち場の円（風雲モード・物頭未満。hitori/senaka.js 持ち場を見る）。地に点線の輪を描く。外にいれば赤く */
+  if (!見物 && 態.身分 === "足軽" && 態.備え && 態.持ち場の円) 持ち場の輪を描く(ctx, 態.持ち場の円, !!(態.持ち場 && !態.持ち場.内));
   /* 立つもの（木・兵・倒れた者・与平、城の造作）を奥から描く */
   const 物 = [];
   木を集める(物);
@@ -587,13 +616,16 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
   let 兵ら = 眺.兵.filter((p) => !態.今討った.has(p)).map((p) => ({ p, d: 奥(p.x, p.z) })).filter((o) => o.d > 0.8);
   if (兵ら.length > 上限) { 兵ら.sort((a, z) => a.d - z.d); 兵ら = 兵ら.slice(0, 上限); }
   let 透数 = 0; const 奥ら = [];
+  const 手勢 = !見物 && 態.隊 && 態.隊.手勢 ? 態.隊 : null;
   for (const { p, d } of 兵ら) {
     const [sx, , zc] = P(p.x, 0, p.z); if (sx < -200 || sx > W + 200) continue;
     奥ら.push(d);
     const 透 = !見物 && !途中 && d < pzc - 0.3 && Math.abs(sx - psx) < 0.42 * F / zc + 我幅;
     if (透) 透数++;
     const 姿 = p.側 === "E" ? 敵の姿(態, p, t) : p;
-    物.push({ d, f: () => 一人を描く(ctx, 姿, nowSec, 透 ? 0.32 : 1) });
+    /* 与平の手勢（十人長から三百人長。hitori/tezei.js）の兵は、足もとに薄い輪を描いて見分ける */
+    const 我が手 = 手勢 && p.組 && 手勢.squads.includes(p.組);
+    物.push({ d, f: () => { if (我が手) 手勢の輪(ctx, p.x, p.z); 一人を描く(ctx, 姿, nowSec, 透 ? 0.32 : 1); } });
   }
   /* 人形を細かく描くのは、画に映る兵のうち写しに近い者から 人形の細の数 人まで、中ほどに描くのは 人形の中の数 人まで
      （重さのため。hitori/ningyo.js） */
@@ -715,6 +747,30 @@ function 杉(x, z, h, d) { const ctx = 筆; const [sx, sy, zc] = P(x, 0, z); if 
   for (let k = 0; k < 5; k++) { const y0 = sy - h * (0.22 + k * 0.155) * s, ww = (1.7 - k * 0.27) * s; ctx.fillStyle = k % 2 ? 葉2 : 葉; ctx.beginPath(); ctx.moveTo(sx - ww, y0); ctx.lineTo(sx, y0 - h * 0.3 * s); ctx.lineTo(sx + ww, y0); ctx.closePath(); ctx.fill(); } }
 function 霞の帯(ctx) { const hz = 水平(); const gr = ctx.createLinearGradient(0, hz - 40, 0, hz + 60); gr.addColorStop(0, "rgba(214,216,210,0)"); gr.addColorStop(0.5, "rgba(214,216,210,.3)"); gr.addColorStop(1, "rgba(214,216,210,0)"); ctx.fillStyle = gr; ctx.fillRect(0, hz - 40, W, 100);
   const v = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.4, W / 2, H * 0.55, W * 0.78); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.34)"); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); }
+/* 持ち場の輪。地の上の円（盤の座標と歩）を、写しの前にある所だけ点線で描く。下に幅広の薄い帯を敷いて、草の上でも見えるようにする */
+function 持ち場の輪を描く(ctx, 円, 外) {
+  const cx = 円.x * 尺, cz = -円.y * 尺, r = 円.r * 尺, n = 240;
+  const 筋 = []; let 今 = null;
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2, S = P(cx + Math.cos(a) * r, 0.03, cz + Math.sin(a) * r);
+    if (S[2] < 0.8) { 今 = null; continue; }
+    if (!今) { 今 = []; 筋.push(今); }
+    今.push(S);
+  }
+  if (!筋.length) return;
+  ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (const [w, 色, 点線] of [[7, 外 ? "rgba(200,60,48,.22)" : "rgba(255,244,210,.2)", null], [2.6, 外 ? "rgba(214,72,56,.92)" : "rgba(250,236,186,.9)", [12, 9]]]) {
+    ctx.lineWidth = w; ctx.strokeStyle = 色; ctx.setLineDash(点線 || []);
+    ctx.beginPath(); for (const 点ら of 筋) { ctx.moveTo(点ら[0][0], 点ら[0][1]); for (let k = 1; k < 点ら.length; k++) ctx.lineTo(点ら[k][0], 点ら[k][1]); }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+/* 手勢の兵の足もとの輪（与平の輪より細く淡い） */
+function 手勢の輪(ctx, x, z) {
+  ctx.beginPath(); for (let k = 0; k <= 16; k++) { const a = (k / 16) * Math.PI * 2; const [sx, sy, zc] = P(x + Math.cos(a) * 0.45, 0.02, z + Math.sin(a) * 0.45); if (zc < 0.5) return; k ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }
+  ctx.closePath(); ctx.strokeStyle = "rgba(240,214,130,.6)"; ctx.lineWidth = 1.4; ctx.stroke();
+}
 function 輪(ctx, x, z, rx, rz) { ctx.beginPath(); for (let k = 0; k <= 40; k++) { const a = (k / 40) * Math.PI * 2; const [sx, sy] = P(x + Math.cos(a) * rx, 0, z + Math.sin(a) * rz); k ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); } ctx.closePath(); ctx.strokeStyle = "rgba(240,214,130,.95)"; ctx.lineWidth = 2.6; ctx.stroke(); }
 
 /* ---------- 一人を描く ----------

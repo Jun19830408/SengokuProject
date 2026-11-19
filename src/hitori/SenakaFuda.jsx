@@ -37,8 +37,8 @@ const 型 = `
 .snk-tl{position:absolute;left:max(10px,env(safe-area-inset-left));top:8px;display:grid;gap:6px;justify-items:start}
 .snk-me{width:224px;padding:7px 11px 8px}
 .snk-me .row{display:flex;align-items:baseline;gap:8px}
-.snk-me .mibun{background:#B0483C;color:#F4F1E8;font-size:11.5px;font-weight:700;padding:0 7px;border-radius:4px}
-.snk-me .na{font-size:19px;font-weight:700;letter-spacing:.06em}
+.snk-me .mibun{background:#B0483C;color:#F4F1E8;font-size:11.5px;font-weight:700;padding:0 7px;border-radius:4px;white-space:nowrap;flex:none}
+.snk-me .na{font-size:19px;font-weight:700;letter-spacing:.06em;white-space:nowrap;flex:none}
 .snk-me .kun{margin-left:auto;font-family:'Hiragino Sans','Yu Gothic UI','Meiryo',system-ui,sans-serif;font-size:11.5px;color:#CFCBC0;font-variant-numeric:tabular-nums}
 .snk-me .kun b{color:#E2C877;font-size:15px}
 .snk-me .kumi{margin-top:4px;font-size:11px;color:#CFCBC0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -242,18 +242,20 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
           );
         })() : (
         <div className="snk-me glass">
-          <div className="row"><span className="mibun">足軽</span><span className="na">与平</span>
+          <div className="row"><span className="mibun">{(態.備え && 態.備え.段) || "足軽"}</span><span className="na">与平</span>
             <span className="kun">討ち取り <b>{我.勲}</b>{態.備え && 態.備え.風雲 && <> 勲功 <b>+{合戦の勲功(態)}</b></>}</span></div>
           <div className="snk-gauge"><span>体力</span><div className="tr"><i className={体 < 35 ? "low" : ""} style={{ width: `${Math.max(0, 体)}%` }} /></div></div>
           <div className="snk-gauge"><span>気力</span><div className="snk-kiryoku">
             {[0, 1, 2, 3, 4].map((i) => <i key={i}><b style={{ width: `${Math.round(Math.min(1, Math.max(0, 気 - i)) * 100)}%` }} /></i>)}
           </div></div>
-          <div className="kumi">{態.名}の組・背中の視点（試し）</div>
+          <div className="kumi">{態.隊 && 態.隊.手勢
+            ? `手勢 ${Math.round((態.隊.squads || []).reduce((a, q) => a + Math.max(0, q.men || 0), 0))}人を率いる（${態.隊.手勢}人から）・背中の視点（試し）`
+            : `${態.名}の組・背中の視点（試し）`}</div>
           {/* 持ち場（風雲モード・物頭未満）。外にいるあいだ、上司の覚えの咎が積もる（hitori/senaka.js 持ち場を見る） */}
           {態.備え && 態.持ち場 && (態.持ち場.内
-            ? <div className="kumi">持ち場の内（組から{持ち場の間}mまで）{態.持ち場.咎 >= 0.05 ? `・この戦の咎 覚え −${態.持ち場.咎.toFixed(1)}` : ""}</div>
+            ? <div className="kumi">持ち場の内（地の点線の円の内）{態.持ち場.咎 >= 0.05 ? `・この戦の咎 覚え −${態.持ち場.咎.toFixed(1)}` : ""}</div>
             : <div className="snk-mochiba">持ち場を離れている<b>覚え −{態.持ち場.咎.toFixed(1)}</b>
-                <small>組から{Math.round(態.持ち場.間 || 0)}m（{持ち場の間}mまでが持ち場）</small></div>)}
+                <small>円の外へ{Math.round(態.持ち場.間 || 0)}m（隊のいちばん外の組から{持ち場の間}m先までが持ち場）</small></div>)}
         </div>
         )}
         {止め === "停止" && !終 && <div className="snk-tomari glass">合戦を止めている<small>上の「微速」で進める</small></div>}

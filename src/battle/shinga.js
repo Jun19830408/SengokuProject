@@ -3339,7 +3339,9 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
        近くの組から差し引く（下の 借り）。数は増えも減りもしないし、
        塊は何があっても離れようがない。 */
     const 本x = c.gx == null ? c.x : c.gx, 本y = c.gy == null ? c.y : c.gy;
-    本陣衆を進める(c, b, dt, 本x, 本y);
+    /* 主人公の手勢（風雲モード・十人長から三百人長。hitori/tezei.js）には本陣を立てない。率いるのは主人公で、
+       主人公は背中越しに自分で描くので、将・旗持・馬廻を組から借りて立てると、将が二人になる */
+    if (!c.手勢) 本陣衆を進める(c, b, dt, 本x, 本y);
 
     /* 馬廻の陣（五×五）が占める四角。ほかの兵はこの四角を避ける。
        崩れた隊・退く隊では避けない（陣形どころではない）。 */
@@ -3348,7 +3350,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
     const 陣向2 = 本態.向 == null ? (c.facing || 0) : 本態.向;
     const 陣fx = Math.cos(陣向2), 陣fy = Math.sin(陣向2);
     const 陣横半 = 2 * 4.6 + 3.4, 陣奥半 = 2 * 4.2 + 3.4;
-    const 本陣よけ = !(c.routed || c.withdraw);
+    const 本陣よけ = !(c.routed || c.withdraw) && !c.手勢;
     const 家よけ = !b.map && VILLAGES.length > 0 && !(typeof window !== "undefined" && window.__家よけ無し);
     for (const q of c.squads) {
       const s = 組の態(q);

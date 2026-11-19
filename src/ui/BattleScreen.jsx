@@ -22,6 +22,7 @@ import "../hitori/tsunagi.js";
    （札と釦は hitori/SenakaFuda.jsx。与平の動きと突き合いは hitori/senaka.js） */
 import { 背中を始める, 背中を描く, 与平の今, 背中の速さ, 与平の組を選ぶ, 寄った所の組, 歩の尺 } from "../hitori/senaka.js";
 import SenakaFuda from "../hitori/SenakaFuda.jsx";
+import { 手勢を組む } from "../hitori/tezei.js";
 
 /* 早送り（GDD 8.1・9.3）。
 
@@ -86,9 +87,16 @@ export function BattleScreen({ ctx, land, onEnd }) {
      預かる隊（足軽なら与平の隊）は、合戦の初めに、敵にいちばん近い味方の隊を選ぶ（hitori/senaka.js 与平の組を選ぶ） */
   const 身分 = (ctx.一人 && ctx.一人.身分) || null;
   const 一人Ref = useRef(null);
+  const 撮りの速さRef = useRef(null);                  // 撮る道具が盤の速さを決めているあいだ（window.__速さ）は、背中越しの速さに戻さない
   /* 風雲モードでは、預かる隊は上司の隊（ctx.一人.隊id）で、主人公の体力・武勇を盤へ持ち込む（hitori/fuun.js 風雲の一人） */
   const 一人の備え = ctx.一人 && ctx.一人.風雲 ? ctx.一人 : null;
-  if (身分 && !一人Ref.current) { const 選 = 与平の組を選ぶ(bRef.current, (ctx.一人 && ctx.一人.隊id) || null); 一人Ref.current = { 身分, 隊id: 選 ? 選.隊.id : null, 態: null }; }
+  if (身分 && !一人Ref.current) {
+    const 選 = 与平の組を選ぶ(bRef.current, (ctx.一人 && ctx.一人.隊id) || null);
+    let 隊id = 選 ? 選.隊.id : null;
+    /* 十人長から三百人長は、上司の隊から手勢を分けて率いる（hitori/tezei.js）。与平は手勢の組に立つ */
+    if (身分 === "足軽" && ctx.一人 && ctx.一人.手勢 > 0 && 隊id) { const 手 = 手勢を組む(bRef.current, 隊id, ctx.一人); if (手) 隊id = 手.id; }
+    一人Ref.current = { 身分, 隊id, 態: null };
+  }
   /* 地に降りきって、自分の身で戦っている（足軽・物頭）か。ふだんの合戦の見物は含めない（見るだけで、
      速さも下知もふだんどおり）。撮る道具の覗き口（window.__背中）で、ふだんの合戦に与平を立てたときも含める */
   const 地の身 = !!(背中 && 背中Ref.current && 背中Ref.current.身分 !== "見物");
@@ -344,7 +352,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
      そのまま使える。合戦開始・手綱を取り戻す・問いへの答えなどで速さが変わっても、ここで微速へ戻す
      （止めている〇はそのまま）。委ねているあいだは手を出さない */
   useEffect(() => {
-    if (!速さ縛り || 委ねRef.current || bRef.current.phase !== "fight") return;
+    if (!速さ縛り || 委ねRef.current || bRef.current.phase !== "fight" || 撮りの速さRef.current != null) return;
     if (speed !== 0 && speed !== 背中の速さ) setSpeed(背中の速さ);
   }, [背中, speed, phase, 委ね中]);
   /* 一人働きの合戦は、布陣を待たずに始まる。足軽も物頭も、布陣と合戦開始は総大将の役で、遊ぶ人には
@@ -692,6 +700,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
     /* 名のある隊の将の只中へ寄る。新しい絵（将と馬廻）を撮って検めるために使う。 */
     /* 写しを撮るための取っ手。カメラを盤の所へ据える（斜めの眺めの確かめに使う） */
     /* 隊に下知を出す取っ手（撮る道具が山を登らせたりするのに使う）。縛り・控えも解く */
+    /* 撮る道具が盤の速さを決める取っ手（両軍が遠いあいだを早く進めて撮るため）。null で背中越しの速さへ戻す */
+    window.__速さ = (v) => { 撮りの速さRef.current = v == null ? null : v; setSpeed(v == null ? 背中の速さ : v); return v; };
     window.__下知 = (名, order, tx, ty) => {
       const c = b.corps.find((x) => !x.dead && !x.destroyed && x.name.includes(名));
       if (!c) return null;
@@ -769,7 +779,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       return { 隊: 生.length, 噛み合い: 点.length, x: Math.round(cx), y: Math.round(cy), s: cam.s };
     };
     return () => {
-      try { delete window.__与平を据える; delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; delete window.__カメラ; delete window.__向き; delete window.__下知; delete window.__沼を足す; } catch (e) { /* よい */ }
+      try { delete window.__与平を据える; delete window.__合戦; delete window.__寄る; delete window.__噛み; delete window.__将へ; delete window.__カメラ; delete window.__向き; delete window.__下知; delete window.__沼を足す; delete window.__速さ; } catch (e) { /* よい */ }
     };
   }, [b]);
 
