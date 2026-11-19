@@ -48,6 +48,7 @@ import { 城の箱を集める, 堀の帯 } from "./shiro_senaka.js";
 import { 城壁をよける } from "../battle/tachimono.js";
 import { 兵を討つ, 将を討つ, 総大将か } from "./tsunagi.js";
 import { 人形を描く, 倒れ人形を描く } from "./ningyo.js";
+import { 矢玉を集める } from "./yadama.js";
 
 export const 歩の尺 = 0.46;
 export const 背中の速さ = 0.12;                           // 背中越しのあいだの盤の速さ（微速に固定）
@@ -97,7 +98,8 @@ export function 眺めを集める(b, 我, R = 110, 拍 = null) {
       if (Math.abs(q.x - 我.x) > R歩 + 60 || Math.abs(q.y - 我.y) > R歩 + 60) continue;
       const s = 組の見た目(q); if (!s || !s.初) continue;
       const alive = Math.max(0, Math.min(50, Math.round(q.men)) - (s.借り || 0));
-      const 撃 = (b.t - s.撃刻) / 1.5, 型 = q.type || "yari", 歩幅 = (型 === "kiba" ? 14 : 9) * 尺2;
+      /* 足の運びの一巡り（道のり）：徒は一.三m、馬は一.八m（hitori/ningyo.js の歩幅と合わせ、足が地を滑らないように） */
+      const 撃 = (b.t - s.撃刻) / 1.5, 型 = q.type || "yari", 歩幅 = (型 === "kiba" ? 1.8 : 1.3) / 尺;
       for (let n = 0; n < alive; n++) {
         if (!s.生[n]) continue;
         const h = (Math.imul((q.seed || 0) + 7, 2654435761) ^ Math.imul(n + 1, 40503)) >>> 0;
@@ -123,13 +125,14 @@ export function 眺めを集める(b, 我, R = 110, 拍 = null) {
   for (const c of b.corps || []) {
     if (c.dead || c.destroyed) continue;
     const 本 = 本陣衆を見る(c); if (!本) continue;
-    const 側 = c.日和見 ? "Y" : (c.side === "P" ? "P" : "E"), 歩幅 = 14 * 尺2;
+    const 側 = c.日和見 ? "Y" : (c.side === "P" ? "P" : "E");
     for (let n = 0; n < 本.数; n++) {
       if (n === 0 && c.将討たれ) continue;
       if (b.本陣の倒れ && b.本陣の倒れ.has(`${c.id}:${n}`)) continue;
       const [x, z] = 世へ(本.x[n], 本.y[n]);
       if (Math.hypot(x - wx0, z - wz0) > R) continue;
       const [fx, fz] = 向きを世へ(本.描[n]), h = (Math.imul((n + 3) * 977, 2654435761) ^ Math.imul(String(c.id).length + 1, 40503)) >>> 0;
+      const 歩幅 = (n === 1 ? 1.3 : 1.8) / 尺;
       兵.push({ x, z, fx, fz, 側, 型: n === 1 ? "yari" : "kiba", 働: 本.速[n] > 2.5 * 尺2 ? "歩" : "立", 相: 0, 歩: (本.歩距[n] / 歩幅) % 1,
         v: 本.速[n] * 尺, 丈: n === 0 ? 1.04 : 0.97, 幅: n === 0 ? 1.06 : 1, 癖: n === 0 ? 3 : 0, 鍵: h, 組: c, 番: 100 + n,
         本陣: { c, n }, 将: n === 0, 旗持: n === 1 });
@@ -436,7 +439,7 @@ function 与平の姿(態, t) {
   return { x: 我.x, z: 我.z, fx: 我.fx, fz: 我.fz, 側: "P", 型: "yari",
     働: 倒 ? "立" : 我.近 || 伸 > 0 ? "構" : 我.v > 0.6 ? "歩" : "立", 相: 0, 伸,
     受: !倒 && 我.受, fl: Math.max(0, 1 - (t - 我.打) / 0.22), fu: 倒 ? clamp((t - 我.倒) / 0.55, 0, 1) : 0, 倒向: 我.倒向,
-    歩: (我.dist / 1.5) % 1, v: 我.v, 丈: 1.02, 幅: 1.02, 癖: 態.身分 === "物頭" ? 3 : 0, 鍵: 7, 我: true };
+    歩: (我.dist / 1.3) % 1, v: 我.v, 丈: 1.02, 幅: 1.02, 癖: 態.身分 === "物頭" ? 3 : 0, 鍵: 7, 我: true };
 }
 /* 与平と突き合っている敵の兵の姿（掛かりの溜め・突き・当たったときの閃き）。そうでなければ盤の姿のまま */
 function 敵の姿(態, p, t) {
@@ -529,6 +532,12 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
   if (!見物 && (!態.組 || !(態.組.men > 0))) { const 選 = 与平の組を選ぶ(b, 態.隊 && 態.隊.id); if (選) { 態.組 = 選.組; 態.隊 = 選.隊; 態.名 = 選.隊.name; } }
   const q = 態.組, 我 = 態.我;
   const dt = 態.前秒 ? clamp(nowSec - 態.前秒, 0, 0.1) : 0; 態.前秒 = nowSec;
+  /* 盤の刻と実の秒の比（微速なら〇.一二）。兵の足の速さは盤の刻で測っているので、人形の姿（歩む・駆ける、馬の
+     常歩・駆け足）は、この比を掛けた画の上の速さで描き分ける（hitori/ningyo.js 実v）。止めているあいだは前の比の
+     まま（姿は止まったまま）。はじめは背中越しの速さ（微速）とみなす */
+  const 盤dt = 態.前盤t == null ? 0 : b.t - 態.前盤t; 態.前盤t = b.t;
+  if (dt > 0.004 && 盤dt > 0) 態.刻比 = 態.刻比 == null ? clamp(盤dt / dt, 0, 5) : 態.刻比 + (clamp(盤dt / dt, 0, 5) - 態.刻比) * 0.1;
+  人形の環.刻比 = 態.刻比 == null ? 0.12 : 態.刻比;
   /* カメラ：与平の後ろ上から、組の向きに合わせて見る（右の肩越し）。なめらかに寄せる（揺らさない）。向きも角で均す。
      降りてくる途中は、この肩の写しと盤の写しのあいだに置く（降りの写し） */
   const qv = q && 組の見た目(q), 基 = qv && qv.初 ? qv.向 : q ? (q.facing || 0) : -Math.PI / 2;
@@ -597,6 +606,8 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
   }
   for (const o of 態.倒し) { const d = 奥(o.p.x, o.p.z); if (d > 0.8 && d < 130) 物.push({ d, f: () => 一人を描く(ctx, { ...o.p, 働: "立", v: 0, fl: 0, fu: clamp((t - o.t) / 0.55, 0, 1), 倒向: o.向 }, nowSec, 1) }); }
   if (!見物) 物.push({ d: 奥(我.x, 我.z), f: () => { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 一人を描く(ctx, 与平の姿(態, t), nowSec, 1); } });
+  /* 矢玉（鉄砲の火と弾の筋・煙・矢・騎馬の砂煙）を、盤の印から実の秒で描く（hitori/yadama.js） */
+  矢玉を集める(b, 態, 物, { ctx, P, 奥, 霞, C, F }, 尺, nowSec, 態.止, 眺.兵);
   物.sort((a, z) => z.d - a.d).forEach((o) => o.f());
   /* 与平が組の中へ入ると、手前（写し側）の味方が与平に重なる。手前の味方を透かすだけでは、幾重にも
      重なって与平が見えなくなるので、そのときは与平（と足もとの輪）を上からもう一度、少し透かして描く */

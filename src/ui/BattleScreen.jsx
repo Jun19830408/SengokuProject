@@ -668,9 +668,12 @@ export function BattleScreen({ ctx, land, onEnd }) {
       return { 名: 態.名, 組: 態.組.id, ...与平の今(態) };
     };
     /* 与平を盤の所（x, y）へ据える。撮る道具・試しが、城の造作や壁の当たりを確かめるのに使う（遊びには使わない） */
-    window.__与平を据える = (x, y) => {
+    window.__与平を据える = (x, y, 向, 組id) => {
       const 態 = 背中Ref.current; if (!態 || !態.我) return null;
+      /* 撮る道具は、与平の属する組も据えられる（写しは組の向きに合わせて回るので、鉄砲組・弓組・騎馬の組のうしろから撮るため） */
+      if (組id) { for (const c of b.corps) { const q = (c.squads || []).find((s) => s.id === 組id); if (q) { 態.組 = q; 態.隊 = c; 態.名 = c.name; break; } } }
       態.我.x = x * 歩の尺; 態.我.z = -y * 歩の尺; 態.cam = null;
+      if (向 != null) { 態.我.fx = Math.cos(向); 態.我.fz = -Math.sin(向); }        // 盤の角（撮る道具が向きも据える）
       return 与平の今(態);
     };
     /* 盤から地へ降りる途中を、撮る道具・試しが据える（u：〇＝盤・一＝地）。降りていなければ、いまの盤から降り始める */
