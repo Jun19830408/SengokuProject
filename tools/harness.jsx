@@ -74,13 +74,13 @@ export { buildCastleMap, layoutCastleField, setBattleMap, axisOf, fromUV, toUV, 
 export { layoutField, setFieldSeed, setFieldKind, fieldScale, FIELD, terrainAt, TERRAIN, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVER, ROAD, ROADS as 野の道, RIVERS, 筋書きの野を組む, 筋書きを解く, hasRiver, hasMountain, 山が遮るか, 踏み込んだ地, genTerrain, 地の高さ, 高み } from "../src/battle/field.js";
 export { ARM_STATS } from "../src/battle/field.js";
 export { outOfCommand, commandPost, commandRange, makeCorps, corpsMen, placeSquads, issueOrder, makeDetachment, detachOptions, 分遣の頃合い, 転回させる, 退かせる, 退き先, 盤に収める, 寄せ手の隊数 } from "../src/battle/corps.js";
-export { 新絵か, 姿の札, 姿八, 姿の骨, 新絵の野, 野を焼く, 新絵の城の地, 城の地を焼く, 新絵の兵描き, 焼きの内訳, 新絵状態を進める, 組の見た目, 本陣衆を見る, 盤の見た目, 持上高, 個人閾, 新絵の寄り限り, 個人で描くか, 見える組数, 見える人数, 組の予算, 人の予算 } from "../src/battle/shinga.js";
+export { 新絵か, 姿の札, 姿八, 姿の骨, 新絵の野, 野を焼く, 新絵の城の地, 城の地を焼く, 新絵の兵描き, 焼きの内訳, 新絵状態を進める, 組の見た目, 組頭の番, 本陣衆を見る, 盤の見た目, 持上高, 個人閾, 新絵の寄り限り, 個人で描くか, 見える組数, 見える人数, 組の予算, 人の予算 } from "../src/battle/shinga.js";
 export { createBattle, stepBattle, 放った跡, 前面まで, 触れる隔たり, 触れ隙, 触れ上限, 噛み間, 押し力, 塊として立つ } from "../src/battle/engine.js";
 // 一人働き（武将一人プレイ）のつなぎ：与平が討った兵を、理の人数と一人ずつの絵の両方で減らす
 export { 兵を討つ, 組の兵を数える, 組の隊, 将を討つ, 総大将か } from "../src/hitori/tsunagi.js";
 // 一人働きの背中越しの視点：盤の一人ずつの兵を、与平の背中越しの眺めへ写す
 export { 歩の尺, 背中の速さ, 背中の突きの速さ, 与平の組を選ぶ, 与平の所, 眺めを集める, 背中を始める, 背中を描く, 与平を進める, 与平を立て直す, 与平の今, 突く, 受ける, 物頭を据える, 降りの写し, 寄った所の組, 持ち場の間, 咎の目, 兵の太刀, 旗持の太刀, 馬廻の太刀, 将の太刀, 要る太刀, 合戦の勲功, 持ち場の円を量る, 持ち場の隊 } from "../src/hitori/senaka.js";
-export { 手勢の数, 手勢を組む, 手勢を導く, 掛かる間 } from "../src/hitori/tezei.js";
+export { 手勢の数, 手勢を組む, 手勢へ下知, 手勢で掛かる, 手勢を構えさせる, 手勢を委ねる, 下知の名, 掛かれの届き } from "../src/hitori/tezei.js";
 /* 風雲モード（一人の侍の立身）の理と屋敷の画面（試し：tests/fuun.cjs） */
 export { 風雲の段, 段の番, 次の段, 盤の身分, 風雲の一人, 月の行い一覧, 月の行いの数, 上司を選ぶ, 若手の上司を選ぶ, 風雲の上司を決める, 風雲で選べるか, 風雲を始める, 風雲の月の初め, 上司を見直す, 風雲の戦か, 風雲の城攻めか, 風雲の隊を選ぶ, 風雲の城攻めの隊, 戦の勲功を記す, 取り立てを見る, 風雲の問いに答える, 首の勲功, 首の値, 討ち取りの勲功, 雑兵の勲功の割 } from "../src/hitori/fuun.js";
 export { FuunYashiki, 住まいの絵 } from "../src/hitori/FuunYashiki.jsx";

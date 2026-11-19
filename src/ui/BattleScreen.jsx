@@ -1223,7 +1223,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%" }}>
       <button className="btn" onClick={委ねる} disabled={委ね中}>{委ね中 ? "委ねている…" : "委ねて結果を見る"}</button>
       <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.65, borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
-        足軽の身では、全軍への下知も隊の差配もできない。自分（与平）を動かすことだけができる。
+        {b.手勢 && ctx.一人 && ctx.一人.段
+          ? `${ctx.一人.段}の身では、全軍への下知も上司の隊の差配もできない。方向キーと釦で、率いる手勢（${b.手勢.手勢}人）に下知することだけができる。`
+          : "足軽の身では、全軍への下知も隊の差配もできない。自分（与平）を動かすことだけができる。"}
       </div>
       <div style={{ fontSize: 11, color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
         {b.log.length ? b.log[b.log.length - 1].text : "　"}

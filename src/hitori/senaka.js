@@ -40,7 +40,7 @@
    まだしないもの：川・林・沼で足が鈍ること（与平は野のどこでも同じ速さで歩む）、敵の兵が持ち場から
    与平へ歩み出ること（試し版ではしていた。盤の兵の居所は盤の側が決めるので、ここでは動かさない）。
    ========================================================================== */
-import { 組の見た目, 盤の見た目, 新絵状態を進める, 野の川筋, 本陣衆を見る } from "../battle/shinga.js";
+import { 組の見た目, 盤の見た目, 新絵状態を進める, 野の川筋, 本陣衆を見る, 組頭の番 } from "../battle/shinga.js";
 import { FIELD, FORESTS, WOODS, ROADS, fieldScale, passableFor } from "../battle/field.js";
 /* 城攻め・籠城（遊ぶ人の申し出の C）。城の造作を背中越しに立てる（hitori/shiro_senaka.js）。
    壁ぎわの兵は、盤の斜めの眺めと同じく自分の組の側にとどめる（battle/tachimono.js 城壁をよける） */
@@ -49,7 +49,7 @@ import { 城壁をよける } from "../battle/tachimono.js";
 import { 兵を討つ, 将を討つ, 総大将か } from "./tsunagi.js";
 import { 人形を描く, 倒れ人形を描く } from "./ningyo.js";
 import { 矢玉を集める } from "./yadama.js";
-import { 手勢を導く } from "./tezei.js";
+import { 手勢へ下知, 手勢で掛かる, 手勢を構えさせる, 手勢を委ねる } from "./tezei.js";
 
 export const 歩の尺 = 0.46;
 export const 背中の速さ = 0.12;                           // 背中越しのあいだの盤の速さ（微速に固定）
@@ -103,6 +103,7 @@ export function 眺めを集める(b, 我, R = 110, 拍 = null) {
       const alive = Math.max(0, Math.min(50, Math.round(q.men)) - (s.借り || 0));
       /* 足の運びの一巡り（道のり）：徒は一.三m、馬は一.八m（hitori/ningyo.js の歩幅と合わせ、足が地を滑らないように） */
       const 撃 = (b.t - s.撃刻) / 1.5, 型 = q.type || "yari", 歩幅 = (型 === "kiba" ? 1.8 : 1.3) / 尺;
+      const 頭 = 組頭の番(q, c, alive);                      // 組頭（組のうしろに馬上で立つ。battle/shinga.js 組頭の番）
       for (let n = 0; n < alive; n++) {
         if (!s.生[n]) continue;
         const h = (Math.imul((q.seed || 0) + 7, 2654435761) ^ Math.imul(n + 1, 40503)) >>> 0;
@@ -117,6 +118,11 @@ export function 眺めを集める(b, 我, R = 110, 拍 = null) {
         else if (撃 >= 0 && 撃 < 1 && (型 === "yumi" || 型 === "teppo")) { 働 = "放"; 相 = 撃; }
         else if (歩速 > 2.5 * 尺2) 働 = "歩";
         const 癖r = (h >>> 27) % 16;
+        if (n === 頭) {                                     // 組頭は馬上。兜を被り、歩むか立つかだけ
+          兵.push({ x, z, fx, fz, 側, 型: "kiba", 働: 歩速 > 2.5 * 尺2 ? "歩" : "立", 相: 0, 歩: (s.歩距[n] / (1.8 / 尺)) % 1, v: 歩速 * 尺,
+            丈: 1.0, 幅: 1.02, 癖: 3, 鍵: h, 組: q, 番: n, 組頭: true });
+          continue;
+        }
         兵.push({ x, z, fx, fz, 側, 型, 働, 相, 歩: (s.歩距[n] / 歩幅) % 1, v: 歩速 * 尺,
           丈: 0.9 + ((h >>> 3) % 21) / 100, 幅: 0.92 + ((h >>> 9) % 17) / 100, 癖: 癖r < 8 ? 0 : 癖r < 12 ? 1 : 癖r < 15 ? 2 : 3, 鍵: h, 組: q, 番: n });
       }
@@ -161,7 +167,9 @@ function 乱を作る(種) { let a = 種 >>> 0; return () => { a = (a + 0x6D2B79
 export function 背中を始める(b, 隊id, 身分 = "足軽", 選びを渡す = null, 備え = null) {
   const 選 = 選びを渡す || 与平の組を選ぶ(b, 隊id);
   if (!選) return null;
-  const 態 = { 身分, 隊: 選.隊, 組: 選.組, 名: 選.隊.name, cam: null, 前秒: 0, t: 0, 止: false, 備え,
+  /* 率いる … 手勢（十人長から三百人長。hitori/tezei.js）を率いて、うしろから下知する。騎 … 五十人を率いれば馬上 */
+  const 率いる = 身分 === "足軽" && !!(選.隊 && 選.隊.手勢), 騎 = 率いる && 選.隊.手勢 >= 50;
+  const 態 = { 身分, 隊: 選.隊, 組: 選.組, 名: 選.隊.name, cam: null, 前秒: 0, t: 0, 止: false, 備え, 率いる, 騎,
     入: { jx: 0, jy: 0, 駆: false, 受: false, keys: new Set() },
     我: null, 敵: new WeakMap(), 掛かり: new Set(), 拍: 0, 知らせ: [], 知らせ番: 0, 知らせ間: 0,
     火花: [], 倒し: [], 今討った: new Set(), 手傷: null, 終: null, 動いた: false,
@@ -194,6 +202,7 @@ function 知らせ(態, 文, 副, 種) {
 /* 突く（釦・鍵盤から）。〇.五秒に一度まで。気力が〇.三五に足りなければ突けない。物頭は自分では突かない */
 export function 突く(態) {
   const 我 = 態 && 態.我; if (!我 || 我.倒 != null || 態.終 || 態.止 || 態.身分 === "物頭") return false;
+  if (態.率いる) return 掛かれ(態);
   const t = 態.t; if (t - 我.突始 < 0.5) return false;
   if (我.気 < 0.35) { if (t >= 態.知らせ間) { 知らせ(態, "息が上がっている", "", "warn"); 態.知らせ間 = t + 1.5; } return false; }
   我.突始 = t; 我.気 -= 0.45; 我.撃 = { t: t + 0.2 };
@@ -202,8 +211,41 @@ export function 突く(態) {
 /* 受ける（押しているあいだ。軽く押しても〇.三秒は構える） */
 export function 受ける(態, 押す) {
   if (!態 || !態.我 || 態.身分 === "物頭") return;
+  if (態.率いる) { if (押す && 態.我.倒 == null && !態.止 && 態.盤) { if (手勢を構えさせる(態.盤, 態.隊)) 知らせ(態, "構え", "手勢がその場に止まって構える"); } return; }
   if (押す && !態.入.受) 態.我.受始 = 態.t;
   態.入.受 = !!押す;
+}
+
+/* 掛かれ（率いるとき、突くの釦）：手勢を前の敵の組へ掛からせる。駆けよを押しながらなら突撃（hitori/tezei.js） */
+function 掛かれ(態) {
+  if (!態.盤) return false;
+  const 的 = 手勢で掛かる(態.盤, 態.隊, !!態.入.駆);
+  if (!的) { if (態.t >= 態.知らせ間) { 知らせ(態, "前に敵の組がいない", "掛かれの届きは五十五mほど", "warn"); 態.知らせ間 = 態.t + 1.5; } return false; }
+  知らせ(態, 態.入.駆 ? "突撃" : "掛かれ", `${的.e.name}の組へ`);
+  return true;
+}
+/* 与平を手勢のうしろに付ける（率いるとき）。手勢の兵（一人ずつの絵）のうち、手勢の向きでいちばん後ろの者の
+   うしろ（徒は三.五歩、馬上は五.五歩）、兵の左右の真ん中。急に跳ばないよう、隔たりに応じた速さで寄せる */
+function 与平をうしろに付ける(態, dt) {
+  const 我 = 態.我, c = 態.隊; if (!我 || !c) return;
+  const f = c.facing || 0, fx = Math.cos(f), fy = Math.sin(f);
+  let 後 = Infinity, 横和 = 0, n = 0;
+  for (const q of c.squads || []) {
+    if (!(q.men > 0)) continue;
+    const s = 組の見た目(q), 新 = s && s.初 && Math.hypot(s.dx - q.x, s.dy - q.y) < 40;
+    if (新) {
+      const al = Math.max(0, Math.min(50, Math.round(q.men)) - (s.借り || 0));
+      for (let k = 0; k < al; k++) { if (!s.生[k]) continue; const v = s.sx[k] * fx + s.sy[k] * fy; if (v < 後) 後 = v; 横和 += -s.sx[k] * fy + s.sy[k] * fx; n++; }
+    } else { const v = q.x * fx + q.y * fy - 3; if (v < 後) 後 = v; 横和 += -q.x * fy + q.y * fx; n++; }
+  }
+  if (!n) return;
+  const 横 = 横和 / n, v0 = 後 - (態.騎 ? 5.5 : 3.5);
+  const [wx, wz] = 世へ(fx * v0 - fy * 横, fy * v0 + fx * 横);
+  const dx = wx - 我.x, dz = wz - 我.z, d = Math.hypot(dx, dz);
+  const mv = d > 30 ? d : Math.min(d, d * (1 - Math.exp(-dt * 3)) + 0.4 * dt);
+  if (d > 1e-6) { 我.x += dx / d * mv; 我.z += dz / d * mv; }
+  我.v = mv / Math.max(1e-3, dt); 我.dist += mv;
+  const [ffx, ffz] = 向きを世へ(f); 我.fx = ffx; 我.fz = ffz;
 }
 
 /* 前の相手：o の向き（fx, fz）の前、届きのうちでいちばん近い者（試し版と同じ形の扇） */
@@ -248,9 +290,13 @@ export function 合戦の勲功(態) {
 /* 与平を一コマ進める。眺（眺めを集める の返り値）の兵の居所で突き合う。dt はまことの秒。
    盤を止めているあいだ（態.止）は何もしない */
 export function 与平を進める(b, 態, dt, 眺) {
+  態.盤 = b;
+  /* 率いる（十人長から三百人長）：方向キーと釦は手勢への下知。与平は手勢のうしろに付く（hitori/tezei.js） */
+  const 率 = 態.率いる && 態.隊 && 態.隊.手勢 && 態.我;
+  if (率 && 態.我.倒 != null) 手勢を委ねる(態.隊);
+  else if (率 && !態.止 && dt > 0) 手勢へ下知(b, 態.隊, 態.入, 態.cam ? 態.cam.a : Math.atan2(態.我.fz, 態.我.fx), 態.t + dt);
   与平を一コマ進める(b, 態, dt, 眺);
-  /* 手勢（十人長から三百人長）は与平に従う（hitori/tezei.js） */
-  if (態.隊 && 態.隊.手勢 && 態.我 && !態.止) 手勢を導く(b, 態.隊, 態.我.x / 尺, -態.我.z / 尺, 態.t, 態.我.倒 != null);
+  if (率 && 態.我.倒 == null && !態.止 && dt > 0) 与平をうしろに付ける(態, dt);
   if (態.備え && 態.我) {
     持ち場を見る(b, 態, dt);
     const 分 = 討ち分け(態);
@@ -293,7 +339,8 @@ function 持ち場を見る(b, 態, dt) {
   /* 盤の視点にいたあいだ（円を追わないあいだ）に隊が遠くへ動いていれば、追わずに据え直す */
   if (Math.hypot(今.x - 円.x, 今.y - 円.y) > 60) Object.assign(円, 今);
   const k = 1 - Math.exp(-dt * 1.2); 円.x += (今.x - 円.x) * k; 円.y += (今.y - 円.y) * k; 円.r += (今.r - 円.r) * k;
-  const bx = 我.x / 尺, by = -我.z / 尺, 隔 = Math.hypot(bx - 円.x, by - 円.y);
+  /* 率いるときは、手勢の居所（隊の芯）で測る（自分の部隊が離れれば咎） */
+  const bx = 態.率いる && 態.隊 ? 態.隊.x : 我.x / 尺, by = 態.率いる && 態.隊 ? 態.隊.y : -我.z / 尺, 隔 = Math.hypot(bx - 円.x, by - 円.y);
   const 内 = 隔 <= 円.r;
   if (内) { if (!場.内) { 場.咎の始め = 場.咎; } 場.離れ秒 = 0; }
   else {
@@ -320,8 +367,13 @@ function 与平を一コマ進める(b, 態, dt, 眺) {
   態.t += dt; 態.拍++;
   const t = 態.t, 入 = 態.入, r = 態.乱;
   const 敵ら = 眺.兵.filter((p) => p.側 === "E");
-  /* ---- 動く（方向キーの上は写しの奥、右は右） ---- */
-  if (我.倒 == null) {
+  /* ---- 動く（方向キーの上は写しの奥、右は右）。率いるときは、方向キーは手勢を動かす（与平は手勢のうしろに付く） ---- */
+  if (態.率いる) {
+    我.受 = false; 我.近 = false;
+    /* 方向キーの手引きは、手勢を動かしたら閉じる（与平が自分で歩むときと同じ） */
+    if (Math.hypot(入.jx || 0, 入.jy || 0) > 0.12 || ["u", "d", "l", "r"].some((k) => 入.keys.has(k))) 態.動いた = true;
+  }
+  if (我.倒 == null && !態.率いる) {
     let jx = 入.jx, jy = 入.jy;
     const kx = (入.keys.has("r") ? 1 : 0) - (入.keys.has("l") ? 1 : 0), ky = (入.keys.has("d") ? 1 : 0) - (入.keys.has("u") ? 1 : 0);
     if (kx || ky) { const L = Math.hypot(kx, ky); jx = kx / L; jy = ky / L; }
@@ -463,10 +515,11 @@ export function 物頭を据える(b, 態, dt) {
 function 与平の姿(態, t) {
   const 我 = 態.我, k = (t - 我.突始) / 0.4, 倒 = 我.倒 != null;
   const 伸 = !倒 && k >= 0 && k <= 1 ? Math.pow(Math.sin(Math.PI * k), 0.7) : 0;
-  return { x: 我.x, z: 我.z, fx: 我.fx, fz: 我.fz, 側: "P", 型: "yari",
-    働: 倒 ? "立" : 我.近 || 伸 > 0 ? "構" : 我.v > 0.6 ? "歩" : "立", 相: 0, 伸,
+  /* 五十人を率いれば馬上（組頭と同じ。兜を被る） */
+  return { x: 我.x, z: 我.z, fx: 我.fx, fz: 我.fz, 側: "P", 型: 態.騎 ? "kiba" : "yari",
+    働: 倒 ? "立" : !態.騎 && (我.近 || 伸 > 0) ? "構" : 我.v > 0.6 ? "歩" : "立", 相: 0, 伸,
     受: !倒 && 我.受, fl: Math.max(0, 1 - (t - 我.打) / 0.22), fu: 倒 ? clamp((t - 我.倒) / 0.55, 0, 1) : 0, 倒向: 我.倒向,
-    歩: (我.dist / 1.3) % 1, v: 我.v, 丈: 1.02, 幅: 1.02, 癖: 態.身分 === "物頭" ? 3 : 0, 鍵: 7, 我: true };
+    歩: (我.dist / (態.騎 ? 1.8 : 1.3)) % 1, v: 我.v, 丈: 1.02, 幅: 1.02, 癖: 態.身分 === "物頭" || 態.騎 ? 3 : 0, 鍵: 7, 我: true };
 }
 /* 与平と突き合っている敵の兵の姿（掛かりの溜め・突き・当たったときの閃き）。そうでなければ盤の姿のまま */
 function 敵の姿(態, p, t) {
@@ -569,11 +622,13 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
      降りてくる途中は、この肩の写しと盤の写しのあいだに置く（降りの写し） */
   const qv = q && 組の見た目(q), 基 = qv && qv.初 ? qv.向 : q ? (q.facing || 0) : -Math.PI / 2;
   const [cfx, cfz] = 向きを世へ(基);
-  const 的 = { x: 我.x - cfx * 引き + cfz * 肩, z: 我.z - cfz * 引き - cfx * 肩, a: Math.atan2(cfz, cfx) };
+  /* 馬上なら目が高い：写しを高く・遠く据える（兵の頭の上から見渡せる） */
+  const 引き2 = 態.騎 ? 6.4 : 引き, 高2 = 態.騎 ? 4.6 : 高;
+  const 的 = { x: 我.x - cfx * 引き2 + cfz * 肩, z: 我.z - cfz * 引き2 - cfx * 肩, a: Math.atan2(cfz, cfx) };
   if (!態.cam) 態.cam = { x: 的.x, z: 的.z, a: 的.a };
   else { const k = 1 - Math.exp(-dt * 6); 態.cam.x += (的.x - 態.cam.x) * k; 態.cam.z += (的.z - 態.cam.z) * k;
     let da = 的.a - 態.cam.a; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; 態.cam.a += da * (1 - Math.exp(-dt * 2.5)); }
-  const 写 = 途中 ? 降りの写し({ x: 態.cam.x, z: 態.cam.z, a: 態.cam.a }, 降り, w) : { x: 態.cam.x, z: 態.cam.z, a: 態.cam.a, h: 高, 俯 };
+  const 写 = 途中 ? 降りの写し({ x: 態.cam.x, z: 態.cam.z, a: 態.cam.a }, 降り, w) : { x: 態.cam.x, z: 態.cam.z, a: 態.cam.a, h: 高2, 俯 };
   /* 見る所（眺めを集める・見た目を進める）の芯と広さ。背中越しでは与平のまわり百十m、降りてくる途中は
      目線が地に届く点のまわり（高いほど広く） */
   const 芯 = 途中 ? { x: 写.焦点[0] / 尺, y: -写.焦点[1] / 尺 } : { x: 我.x / 尺, y: -我.z / 尺 };

@@ -27,6 +27,7 @@
    ========================================================================== */
 import React, { useEffect, useRef, useState } from "react";
 import { 突く, 受ける, 与平を立て直す, 持ち場の間, 合戦の勲功 } from "./senaka.js";
+import { 下知の名 } from "./tezei.js";
 
 const R杖 = 52;                                   // 方向キーの輪の半径（px。試し版と同じ）
 const 型 = `
@@ -249,7 +250,7 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
             {[0, 1, 2, 3, 4].map((i) => <i key={i}><b style={{ width: `${Math.round(Math.min(1, Math.max(0, 気 - i)) * 100)}%` }} /></i>)}
           </div></div>
           <div className="kumi">{態.隊 && 態.隊.手勢
-            ? `手勢 ${Math.round((態.隊.squads || []).reduce((a, q) => a + Math.max(0, q.men || 0), 0))}人を率いる（${態.隊.手勢}人から）・背中の視点（試し）`
+            ? `手勢 ${Math.round((態.隊.squads || []).reduce((a, q) => a + Math.max(0, q.men || 0), 0))}人を率いる（${態.隊.手勢}人から）・下知：${下知の名(態.隊)}`
             : `${態.名}の組・背中の視点（試し）`}</div>
           {/* 持ち場（風雲モード・物頭未満）。外にいるあいだ、上司の覚えの咎が積もる（hitori/senaka.js 持ち場を見る） */}
           {態.備え && 態.持ち場 && (態.持ち場.内
@@ -263,16 +264,27 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
       </div>
       {!態.動いた && !終 && !物頭 && (
         <div className="snk-hint nop"><div className="ring">✥</div>
-          <p>左側に指を置くと<br />方向キーが出ます
-            <small>{卓 ? "パソコンでは WASD か矢印キーで動き、J で突く、K で受ける、Shift で駆けます" : "右の釦で突く・受ける・駆ける"}</small>
-            <small>敵が槍を引いたら（穂先が赤く光る）受ける</small></p>
+          {態.率いる
+            ? <p>左側に指を置くと<br />方向キーが出ます
+                <small>方向キーで手勢を動かす（与平はうしろに付く）。{卓 ? "J で掛かれ、K で構え、Shift で駆けよ" : "右の釦で掛かれ・構え・駆けよ"}</small>
+                <small>掛かれ：前の敵の組へ掛かる（駆けよと共に押せば突撃）。構え：止まって構える</small></p>
+            : <p>左側に指を置くと<br />方向キーが出ます
+                <small>{卓 ? "パソコンでは WASD か矢印キーで動き、J で突く、K で受ける、Shift で駆けます" : "右の釦で突く・受ける・駆ける"}</small>
+                <small>敵が槍を引いたら（穂先が赤く光る）受ける</small></p>}
         </div>
       )}
       <div ref={輪Ref} className="snk-joy" style={{ display: "none" }}><div ref={玉Ref} className="snk-knob" /></div>
       {!終 && !物頭 && <>
-        <button type="button" className={`snk-maru snk-kakeru${入.駆 ? " press" : ""}`} aria-label="駆ける（押しているあいだ走る）" {...釦("駆")}><span><i>⇡</i>駆ける</span></button>
-        <button type="button" className={`snk-maru snk-ukeru${我.受 ? " press" : ""}`} aria-label="受ける（押しているあいだ構えて防ぐ）" {...釦("受")}><span><i>◇</i>受ける</span></button>
-        <button type="button" className={`snk-maru snk-tsuku${突押 || 態.t - 我.突始 < 0.22 ? " press" : ""}`} aria-label="突く" {...釦("突")}><span><i>⟋</i>突く</span></button>
+        {態.率いる ? <>
+          {/* 率いるとき：三つの釦は手勢への下知（hitori/tezei.js） */}
+          <button type="button" className={`snk-maru snk-kakeru${入.駆 ? " press" : ""}`} aria-label="駆けよ（押しているあいだ手勢が駆け足）" {...釦("駆")}><span><i>⇡</i>駆けよ</span></button>
+          <button type="button" className={`snk-maru snk-ukeru${態.隊 && 態.隊.下知 && 態.隊.下知.様 === "構え" ? " press" : ""}`} aria-label="構え（手勢が止まって構える）" {...釦("受")}><span><i>◇</i>構え</span></button>
+          <button type="button" className={`snk-maru snk-tsuku${突押 ? " press" : ""}`} aria-label="掛かれ（手勢が前の敵の組へ掛かる）" {...釦("突")}><span><i>⟋</i>掛かれ</span></button>
+        </> : <>
+          <button type="button" className={`snk-maru snk-kakeru${入.駆 ? " press" : ""}`} aria-label="駆ける（押しているあいだ走る）" {...釦("駆")}><span><i>⇡</i>駆ける</span></button>
+          <button type="button" className={`snk-maru snk-ukeru${我.受 ? " press" : ""}`} aria-label="受ける（押しているあいだ構えて防ぐ）" {...釦("受")}><span><i>◇</i>受ける</span></button>
+          <button type="button" className={`snk-maru snk-tsuku${突押 || 態.t - 我.突始 < 0.22 ? " press" : ""}`} aria-label="突く" {...釦("突")}><span><i>⟋</i>突く</span></button>
+        </>}
       </>}
       <div className="snk-pops nop">
         {知らせ.map((o) => <div key={o.番} className={`snk-pop${o.種 ? ` ${o.種}` : ""}`}>{o.文}{o.副 && <b>{o.副}</b>}</div>)}
