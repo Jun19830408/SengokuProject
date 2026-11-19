@@ -14,6 +14,10 @@
    申し出であった。版に shisaku2 を渡せば第二試作版を作る。記録の置き場は本編とも
    試作版とも分ける（鍵 shisaku2:sengoku…、蔵 sengoku-shisaku2）。札の色も変える。
 
+   第三試作版（風雲モード・背中越し。枝 claude/hitori）は、遊ぶ側の申し出（「いったん第三試作版としてアップして
+   遊びながら修正していく」）により、版に shisaku3 を渡して作る。記録の置き場は本編とも第二試作版とも分ける
+   （鍵 shisaku3:sengoku…、蔵 sengoku-shisaku3）。置き場は /shisaku3/index.html。札は緑。
+
    管弦の録音（dist/bgm/）は、盤から見て bgm/ に置く決まりである（audio/rokuon.js）。
    試作版の盤は一段深い所（/shisaku2/index.html）に置くので、そのままでは /shisaku2/bgm/
    を読みに行って見つからない。録音の根を ../bgm/ と差しておく（audio/oto.js 録音の根）。
@@ -27,8 +31,9 @@ if (!先) { console.error('出す先を渡してください'); process.exit(1);
 const 版の形 = {
   shisaku: { 名: '試作版', 札: '試作版（記録は本編と別）', 色: 'rgba(160,40,30,.88)' },
   shisaku2: { 名: '第二試作版', 札: '第二試作版（記録は本編・試作版と別）', 色: 'rgba(40,70,140,.88)' },
+  shisaku3: { 名: '第三試作版', 札: '第三試作版（記録は本編・第二試作版と別）', 色: 'rgba(40,110,60,.88)' },
 }[版];
-if (!版の形) { console.error(`版は shisaku か shisaku2 です（${版}）`); process.exit(1); }
+if (!版の形) { console.error(`版は shisaku・shisaku2・shisaku3 のどれかです（${版}）`); process.exit(1); }
 const 分ける = `<script>(function(){try{
 window.__録音の根="../bgm/";
 var P="${版}:",S=Storage.prototype,g=S.getItem,s=S.setItem,r=S.removeItem;
