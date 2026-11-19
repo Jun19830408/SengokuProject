@@ -101,6 +101,13 @@ export function BattleScreen({ ctx, land, onEnd }) {
      速さも下知もふだんどおり）。撮る道具の覗き口（window.__背中）で、ふだんの合戦に与平を立てたときも含める */
   const 地の身 = !!(背中 && 背中Ref.current && 背中Ref.current.身分 !== "見物");
   const 速さ縛り = !!身分 || 地の身;                   // 速さは停止と微速だけ
+  /* 背中越しの微速。遊ぶ人の申し出：「普通の合戦に参加した際、周りの所属している部隊も含めてスピードが早すぎて
+     ついていけない」。盤は兵の多い合戦ほど広く、隊の足を野の倍（battle/field.js fieldScale）だけ速めて、広い盤も
+     同じ刻で渡り切れるようにしている。ところが背中越しは一歩を〇.四六m に決めて描くので、広い盤では兵が倍の速さで
+     走って見えた（山賊退治の小さな盤は倍一なので、見かけどおり）。背中越し（と一人働きの合戦）の微速は、その倍で
+     割る。どの盤でも、兵の歩みは毎秒一.九m ほど（与平の歩み二.四m より少し遅い）に見える */
+  const 背中の今の速さ = () => 背中の速さ / fieldScale();
+  const 微速の値 = 速さ縛り ? 背中の今の速さ() : 0.12;
   const faceRef = useRef(false);
   const speedRef = useRef(0), selRef = useRef(null), uiRef = useRef(0), allRef = useRef(false);
   const camRef = useRef({ x: FIELD.w / 2, y: FIELD.h / 2, s: 0.7 });
@@ -353,7 +360,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
      （止めている〇はそのまま）。委ねているあいだは手を出さない */
   useEffect(() => {
     if (!速さ縛り || 委ねRef.current || bRef.current.phase !== "fight" || 撮りの速さRef.current != null) return;
-    if (speed !== 0 && speed !== 背中の速さ) setSpeed(背中の速さ);
+    if (speed !== 0 && Math.abs(speed - 背中の今の速さ()) > 1e-9) setSpeed(背中の今の速さ());
   }, [背中, speed, phase, 委ね中]);
   /* 一人働きの合戦は、布陣を待たずに始まる。足軽も物頭も、布陣と合戦開始は総大将の役で、遊ぶ人には
      押せない（総大将は諸将の采配に任せる。隊ははじめ委任で戦う：battle/corps.js）。速さは微速から。
@@ -366,7 +373,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       if (b2.朝の布陣) { if (b2.attacker !== "P") 朝の受け持ちを決める(b2, MAP, "P"); b2.朝の布陣 = false; }
       b2.phase = "fight"; setPhase("fight"); 効果を鳴らす("法螺貝");
     }
-    if (b2.phase === "fight") setSpeed(背中の速さ);
+    if (b2.phase === "fight") setSpeed(背中の今の速さ());
     if (身分 === "物頭" && 一人Ref.current && 一人Ref.current.隊id) pickCorps(一人Ref.current.隊id);
   }, []);
   useEffect(() => {
@@ -701,7 +708,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
     /* 写しを撮るための取っ手。カメラを盤の所へ据える（斜めの眺めの確かめに使う） */
     /* 隊に下知を出す取っ手（撮る道具が山を登らせたりするのに使う）。縛り・控えも解く */
     /* 撮る道具が盤の速さを決める取っ手（両軍が遠いあいだを早く進めて撮るため）。null で背中越しの速さへ戻す */
-    window.__速さ = (v) => { 撮りの速さRef.current = v == null ? null : v; setSpeed(v == null ? 背中の速さ : v); return v; };
+    window.__速さ = (v) => { 撮りの速さRef.current = v == null ? null : v; setSpeed(v == null ? 背中の今の速さ() : v); return v; };
     window.__下知 = (名, order, tx, ty) => {
       const c = b.corps.find((x) => !x.dead && !x.destroyed && x.name.includes(名));
       if (!c) return null;
@@ -2052,7 +2059,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
             /* 背中越し（一人視点）のあいだと一人働きの合戦では、停止と微速だけ。ほかの速さは押せなくする（上の 背中の速さ の説明） */
             <span className="tsugi hayasa" title={速さ縛り ? "一人視点・一人働きでは停止と微速だけ（委ねて結果を見ることはできる）" : undefined}>
               <button className={`btn sm ${speed === 0 ? "on" : ""}`} onClick={() => setSpeed(0)}>停止</button>
-              <button className={`btn sm ${speed === 0.12 ? "on" : ""}`} onClick={() => setSpeed(0.12)}>微速</button>
+              <button className={`btn sm ${Math.abs(speed - 微速の値) < 1e-9 ? "on" : ""}`} onClick={() => setSpeed(微速の値)}>微速</button>
               <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} disabled={速さ縛り} onClick={() => setSpeed(0.3)}>低速</button>
               <button className={`btn sm ${speed === 0.6 ? "on" : ""}`} disabled={速さ縛り} onClick={() => setSpeed(0.6)}>通常</button>
               <button className={`btn sm ${speed === 早送りの速さ ? "on" : ""}`} disabled={速さ縛り} onClick={() => setSpeed(早送りの速さ)}
@@ -2130,8 +2137,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 <span style={{ color: U.dim }}>対</span>
                 <span className="dot" style={{ background: ctx.eColor }} /><b className="num">{fmt(eMen)}</b>
                 <span className="num" style={{ color: U.dim }}>{Math.floor(b.t / 60)}:{String(Math.floor(b.t % 60)).padStart(2, "0")}</span>
-                {phase === "fight" && [["停", 0], ["微", 0.12], ["低", 0.3], ["通", 0.6], ["早", 早送りの速さ]].map(([lb, v]) => (
-                  <button key={lb} className={`btn sm ${speed === v ? "on" : ""}`} disabled={速さ縛り && v !== 0 && v !== 背中の速さ}
+                {phase === "fight" && [["停", 0], ["微", 微速の値], ["低", 0.3], ["通", 0.6], ["早", 早送りの速さ]].map(([lb, v]) => (
+                  <button key={lb} className={`btn sm ${Math.abs(speed - v) < 1e-9 ? "on" : ""}`} disabled={速さ縛り && v !== 0 && v !== 微速の値}
                     style={{ padding: land ? "3px 6px" : "2px 5px", fontSize: land ? 12 : 10.5 }}
                     onClick={() => setSpeed(v)}>{lb}</button>
                 ))}

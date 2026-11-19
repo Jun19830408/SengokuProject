@@ -46,7 +46,7 @@ import { FIELD, FORESTS, WOODS, ROADS, fieldScale, passableFor } from "../battle
    壁ぎわの兵は、盤の斜めの眺めと同じく自分の組の側にとどめる（battle/tachimono.js 城壁をよける） */
 import { 城の箱を集める, 堀の帯 } from "./shiro_senaka.js";
 import { 城壁をよける } from "../battle/tachimono.js";
-import { 兵を討つ, 将を討つ, 総大将か } from "./tsunagi.js";
+import { 兵を討つ, 将を討つ, 総大将か, 組の隊 } from "./tsunagi.js";
 import { 人形を描く, 倒れ人形を描く } from "./ningyo.js";
 import { 矢玉を集める } from "./yadama.js";
 import { 手勢へ下知, 手勢で掛かる, 手勢を構えさせる, 手勢を委ねる, 手勢を留める } from "./tezei.js";
@@ -156,6 +156,10 @@ export function 眺めを集める(b, 我, R = 110, 拍 = null) {
    与平の居所は世界の座標（態.我.x・z）で持つ。盤の座標は x/尺、−z/尺 */
 const 我の速さ = 2.4, 駆けの速さ = 4.8, 届き = 3.5;
 export const 体力の戻り = 0.4, 体力の戻りの間 = 5;            // 体力の戻り（一秒に）と、手傷から戻り始めるまでの秒。値は仮
+/* 敵の兵が与平に気づく（与平を進める の 敵の兵が掛かる）。前の扇（左右百度）の六m・横や背の三.五m。振り向く速さ（一秒に）。
+   味方の兵が加勢する届き。値は仮 */
+export const 気づきの前 = 6, 気づきの背 = 3.5, 気づきの扇 = Math.cos(100 * Math.PI / 180), 振り向きの速さ = 4.5, 加勢の届き = 4.5;
+const 角差 = (a, z) => { let d = a - z; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 /* 与平の乱数。盤の理（engine）が使う Math.random の並びを、背中越しに入ったかどうかで変えないよう、別に持つ */
 function 乱を作る(種) { let a = 種 >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
@@ -172,7 +176,7 @@ export function 背中を始める(b, 隊id, 身分 = "足軽", 選びを渡す 
   const 率いる = 身分 === "足軽" && !!(選.隊 && 選.隊.手勢), 騎 = 率いる && 選.隊.手勢 >= 50;
   const 態 = { 身分, 隊: 選.隊, 組: 選.組, 名: 選.隊.name, cam: null, 前秒: 0, t: 0, 止: false, 備え, 率いる, 騎,
     入: { jx: 0, jy: 0, 駆: false, 受: false, keys: new Set() },
-    我: null, 敵: new WeakMap(), 掛かり: new Set(), 拍: 0, 知らせ: [], 知らせ番: 0, 知らせ間: 0,
+    我: null, 敵: new WeakMap(), 味方: new WeakMap(), 掛かり: new Set(), 拍: 0, 知らせ: [], 知らせ番: 0, 知らせ間: 0,
     火花: [], 倒し: [], 今討った: new Set(), 手傷: null, 終: null, 動いた: false, 一騎: null,
     乱: 乱を作る(0x5E1A ^ Math.round((b.t || 0) * 1000)) };
   与平を立て直す(b, 態);
@@ -297,6 +301,24 @@ function 敵の状(態, p, 作る) {
   if (s && (Math.hypot(s.x - p.x, s.z - p.z) > 3 || 態.t - s.見刻 > 20)) { m.delete(p.番); 態.掛かり.delete(s); s = null; }
   if (!s && 作る) { s = { cd: 0, 撃: null, 突始: -9, 突向: null, 打: -9, 傷: 0, x: p.x, z: p.z, 見刻: 態.t, 拍: -1, p }; m.set(p.番, s); }
   return s;
+}
+/* 味方の兵一人ごとの、加勢の覚え（間・突いた刻と向き）。敵の状 と同じく組と持ち場の番で引き、三m より動けば捨てる */
+function 味方の状(態, p, 作る) {
+  let m = 態.味方.get(p.組);
+  if (!m) { if (!作る) return null; m = new Map(); 態.味方.set(p.組, m); }
+  let s = m.get(p.番);
+  if (s && (Math.hypot(s.x - p.x, s.z - p.z) > 3 || 態.t - s.見刻 > 20)) { m.delete(p.番); s = null; }
+  if (!s && 作る) { s = { cd: 0, 突始: -9, 突向: null, x: p.x, z: p.z, 見刻: 態.t, 拍: -1 }; m.set(p.番, s); }
+  if (s) { s.x = p.x; s.z = p.z; }
+  return s;
+}
+/* 加勢して槍を入れた味方の兵の姿（突いて〇.四秒のあいだ、敵のほうへ突き出す） */
+function 味方の姿(態, p, t) {
+  const m = 態.味方.get(p.組), s = m && m.get(p.番);
+  if (!s || !s.突向) return p;
+  const k = (t - s.突始) / 0.4;
+  if (!(k >= 0 && k <= 1)) return p;
+  return { ...p, fx: s.突向[0], fz: s.突向[1], 働: "突", 伸: Math.pow(Math.sin(Math.PI * k), 0.7) };
 }
 
 /* 城の盤で、与平が（元x, 元z）から（x, z）へ（世界の所）踏み出せるか。盤の組と同じ決まり（battle/field.js passableFor）：
@@ -464,22 +486,60 @@ function 与平を一コマ進める(b, 態, dt, 眺) {
     我.受 = 入.受 || t - 我.受始 < 0.3;
   }
   /* ---- 敵の兵が掛かる（八m のうちのいちばん近い二人。試し版と同じ：槍を引き、〇.五五秒ののちに突く） ----
-     敵の兵は盤の向き（描）の筋で突く。与平がうしろにいれば振り返る。筋から横へ外れていれば突かない。
      掛かるのは槍と騎馬の兵だけ（鉄砲・弓の兵には、槍を引く・穂先が光るといった前触れの姿がまだ無いので、
-     前触れなしに手傷を負わせないよう掛からせない） */
+     前触れなしに手傷を負わせないよう掛からせない）。
+     敵の兵は与平に気づく（遊ぶ人の申し出：「敵の背後に回ると簡単に打ち取れてしまう。プレイヤーや部隊の動きに応じて
+     敵AI（味方も）の動きも対応するかたちに」）。もとは盤の向き（描）の筋の前後だけで突き、横や背の与平には
+     気づかなかった。いまは：
+       ・前（左右百度のうち）の六m のうちに与平が来れば〇.二五〜〇.八五秒で、横や背でも三.五m のうちなら
+         〇.六〜一.五秒で気づく。与平に突かれた者はすぐ、そのまわり（三m）の者も〇.二〜〇.六秒で気づく
+       ・気づいた者は与平のほうへ振り向き（一秒に二百六十度ほど）、向き直ればどの向きからでも掛かる
+       ・掛かるのは近い二人までだが、気づいた者なら三人まで（囲まれれば手が増える）。同じときに槍を引いている者は
+         三人まで（与平が突き退けられて近い者が入れ替わっても、それより増えない）
+       ・与平を五秒見なければ（八m より遠のけば）忘れる
+     気づいていない者は、これまでどおり盤の向きの筋で突く（与平がうしろにいれば振り返る。筋から外れていれば突かない）。
+     値は仮 */
   const 近敵 = [];
   for (const p of 敵ら) { const d = Math.hypot(p.x - 我.x, p.z - 我.z); if (d < 8) 近敵.push({ p, d }); }
   近敵.sort((a2, z2) => a2.d - z2.d);
-  for (const { p } of 近敵) { const s = 敵の状(態, p, true); s.x = p.x; s.z = p.z; s.見刻 = t; s.拍 = 態.拍; s.p = p; }
+  for (const { p, d } of 近敵) {
+    const s = 敵の状(態, p, true);
+    if (s.覚 != null && t - s.見刻 > 5) { s.覚 = null; s.気づき始 = null; s.呼ばれ = null; }   // しばらく見なければ忘れる
+    s.x = p.x; s.z = p.z; s.見刻 = t; s.拍 = 態.拍; s.p = p;
+    if (s.顔 == null) s.顔 = Math.atan2(p.fz, p.fx);
+    if (s.覚 == null && 我.倒 == null) {
+      const 前 = ((我.x - p.x) * p.fx + (我.z - p.z) * p.fz) / Math.max(1e-6, d), 前に見える = 前 > 気づきの扇 && d < 気づきの前;
+      if (s.呼ばれ != null && t >= s.呼ばれ) s.覚 = t;                                // まわりの者が突かれて気づく
+      else if (前に見える || d < 気づきの背) {
+        if (s.気づき始 == null) s.気づき始 = t + (前に見える ? 0.25 + r() * 0.6 : 0.6 + r() * 0.9);
+        if (t >= s.気づき始) s.覚 = t;
+      } else s.気づき始 = null;
+    }
+    /* 気づいた者は与平のほうへ振り向く。気づいていない者は盤の向きへ戻る */
+    const 的角 = s.覚 != null ? Math.atan2(我.z - p.z, 我.x - p.x) : Math.atan2(p.fz, p.fx);
+    s.顔 += clamp(角差(的角, s.顔), -振り向きの速さ * dt, 振り向きの速さ * dt);
+  }
   const 筋 = (p) => { const sg = (我.x - p.x) * p.fx + (我.z - p.z) * p.fz >= 0 ? 1 : -1; return [p.fx * sg, p.fz * sg]; };
   const 扇の内 = (p, ax, az, 前0, 前1, 横0, 横k) => { const rx = 我.x - p.x, rz = 我.z - p.z, dz = rx * ax + rz * az, dx = Math.abs(rx * az - rz * ax);
     return dz >= 前0 && dz <= 前1 && dx <= 横0 + 横k * dz; };
-  if (我.倒 == null) for (const { p } of 近敵.filter((o) => o.p.型 === "yari" || o.p.型 === "kiba").slice(0, 2)) {
-    const s = 敵の状(態, p, true);
-    if (s.撃 || t < s.cd) continue;
-    const [ax, az] = 筋(p);
-    if (!扇の内(p, ax, az, 0.35, 届き + 0.1, 0.75, 0.32)) { s.cd = t + 0.3; continue; }
-    s.撃 = { 溜始: t, t: t + 0.55, 筋: [ax, az] }; s.cd = t + 1.8 + r() * 1.2; 態.掛かり.add(s);
+  if (我.倒 == null) {
+    let 数 = 0;
+    for (const { p } of 近敵) {
+      if (!(p.型 === "yari" || p.型 === "kiba")) continue;
+      const s = 敵の状(態, p, true), 覚 = s.覚 != null;
+      if (数 >= (覚 ? 3 : 2)) continue;
+      数++;
+      if (s.撃 || t < s.cd) continue;
+      if (態.掛かり.size >= 3) break;                                                  // 同じときに槍を引くのは三人まで
+      let ax, az;
+      if (覚) {
+        /* 気づいた者は、向き直ってから（与平との向きの差が三十五度のうちになってから）掛かる */
+        if (Math.abs(角差(Math.atan2(我.z - p.z, 我.x - p.x), s.顔)) > 0.6) { s.cd = t + 0.15; continue; }
+        ax = Math.cos(s.顔); az = Math.sin(s.顔);
+      } else [ax, az] = 筋(p);
+      if (!扇の内(p, ax, az, 0.35, 届き + 0.1, 0.75, 0.32)) { s.cd = t + 0.3; continue; }
+      s.撃 = { 溜始: t, t: t + 0.55, 筋: [ax, az] }; s.cd = t + 1.8 + r() * 1.2; 態.掛かり.add(s);
+    }
   }
   for (const s of 態.掛かり) {
     const 撃 = s.撃;
@@ -503,6 +563,14 @@ function 与平を一コマ進める(b, 態, dt, 眺) {
   if (我.撃 && t >= 我.撃.t) {
     我.撃 = null;
     const e = 我.倒 == null ? 前の相手(我, 我.fx, 我.fz, 敵ら) : null;
+    /* 突かれた者はすぐ気づき、まわり（三m）の者も〇.二〜〇.六秒で気づく（上の 敵の兵が掛かる） */
+    if (e) {
+      const se = 敵の状(態, e, true); if (se.覚 == null) se.覚 = t;
+      for (const { p: o } of 近敵) {
+        if (o === e || Math.hypot(o.x - e.x, o.z - e.z) > 3) continue;
+        const so = 敵の状(態, o, true); if (so.覚 == null && so.呼ばれ == null) so.呼ばれ = t + 0.2 + r() * 0.4;
+      }
+    }
     if (e && r() < 限り(0.88 + 勇の差(態) * 0.002, 0.7, 0.97)) {
       const 会心 = r() < 限り(0.35 + 勇の差(態) * 0.004, 0.2, 0.6), s = 敵の状(態, e, true);
       const 太刀 = 会心 ? 2 : 1, 届いた = s.傷 + 太刀 >= 要る太刀(e);
@@ -542,6 +610,38 @@ function 与平を一コマ進める(b, 態, dt, 眺) {
           知らせ(態, "討ち取り", 態.備え && 態.備え.風雲 ? "雑兵（三人で勲功一）" : "勲功 +1");
         }
       } else { s.傷 += 太刀; s.打 = t; }
+    }
+  }
+  /* ---- 味方の兵の加勢（遊ぶ人の申し出の「味方も」）。与平に気づいて掛かってくる敵の兵（与平から五m のうち。
+     本陣衆を除く）には、その敵から 加勢の届き（四.五m。噛み合った前の列どうしは槍の間合いで三.七〜四.三m 離れて
+     立つ）のうちにいる味方の槍・騎馬の兵（いちばん近い一人）が槍を入れる。
+     一人の味方は二〜三.五秒に一度。三割五分で当たり、敵の手傷が一つ増える（与平の突きと同じ数え方）。要る太刀に
+     届けば倒れる。倒した手柄は味方の組のもので、与平の討ち取りには数えない。値は仮 ---- */
+  if (我.倒 == null) {
+    const 味方ら = 眺.兵.filter((p) => p.側 === "P" && !p.本陣 && !p.組頭 && (p.型 === "yari" || p.型 === "kiba")
+      && Math.hypot(p.x - 我.x, p.z - 我.z) < 7);
+    for (const { p: e, d } of 近敵) {
+      if (d > 5) break;
+      if (e.本陣) continue;
+      const se = 敵の状(態, e, false); if (!se || se.覚 == null) continue;
+      let 加 = null, nd = 加勢の届き;
+      for (const a of 味方ら) { const dd = Math.hypot(a.x - e.x, a.z - e.z); if (dd < nd) { nd = dd; 加 = a; } }
+      if (!加) continue;
+      const sa = 味方の状(態, 加, true);
+      sa.拍 = 態.拍; sa.見刻 = t;
+      if (t < sa.cd) continue;
+      const L = Math.hypot(e.x - 加.x, e.z - 加.z) || 1;
+      sa.cd = t + 2 + r() * 1.5; sa.突始 = t; sa.突向 = [(e.x - 加.x) / L, (e.z - 加.z) / L];
+      if (r() >= 0.35) continue;
+      se.打 = t;
+      if (se.傷 + 1 < 要る太刀(e)) { se.傷 += 1; continue; }
+      const v = 組の見た目(e.組), 跡 = v && v.初 ? 世へ(v.sx[e.番], v.sy[e.番]) : null;
+      const 討ち手 = { 隊: 組の隊(b, 加.組), 組: 加.組, 武勇: 60, 数えぬ: true };
+      if (兵を討つ(b, e.組, e.番, 討ち手)) {
+        態.倒し.push({ p: e, t, 向: r() < 0.5 ? -1 : 1, 跡, 味方: true }); if (態.倒し.length > 400) 態.倒し.shift();
+        const m = 態.敵.get(e.組); if (m) m.delete(e.番); 態.掛かり.delete(se);
+        態.今討った.add(e);
+      }
     }
   }
   /* ---- 体力の戻り（遊ぶ人の申し出：「合戦した際、体力がすぐになくなってしまうので回復の方法が必要。気力よりも遅く
@@ -584,7 +684,12 @@ function 敵の姿(態, p, t) {
   const m = 態.敵.get(p.組), s = m && m.get(p.番);
   if (!s || s.拍 !== 態.拍) return p;
   const 撃 = s.撃, k = (t - s.突始) / 0.4, 突中 = k >= 0 && k <= 1, fl = Math.max(0, 1 - (t - s.打) / 0.22);
-  if (!撃 && !突中 && fl <= 0) return p;
+  /* 与平に気づいた者は、与平のほうへ振り向いて（槍と騎馬の兵は）構える（与平を進める の 敵の兵が掛かる） */
+  if (!撃 && !突中 && fl <= 0) {
+    if (s.覚 == null || s.顔 == null) return p;
+    const 構える = (p.型 === "yari" || p.型 === "kiba") && p.働 !== "歩" && p.働 !== "走";
+    return { ...p, fx: Math.cos(s.顔), fz: Math.sin(s.顔), 働: 構える ? "構" : p.働 };
+  }
   const o = { ...p, fl };
   if (撃 || 突中) {
     if (突中 && s.突向) { o.fx = s.突向[0]; o.fz = s.突向[1]; }
@@ -735,14 +840,23 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
     奥ら.push(d);
     const 透 = !見物 && !途中 && d < pzc - 0.3 && Math.abs(sx - psx) < 0.42 * F / zc + 我幅;
     if (透) 透数++;
-    const 姿 = p.側 === "E" ? 敵の姿(態, p, t) : p;
+    const 姿 = p.側 === "E" ? 敵の姿(態, p, t) : p.側 === "P" ? 味方の姿(態, p, t) : p;
     /* 与平の手勢（十人長から三百人長。hitori/tezei.js）の兵は、足もとに薄い輪を描いて見分ける */
     const 我が手 = 手勢 && p.組 && 手勢.squads.includes(p.組);
     物.push({ d, f: () => { if (我が手) 手勢の輪(ctx, p.x, p.z); 一人を描く(ctx, 姿, nowSec, 透 ? 0.32 : 1); } });
   }
   /* 人形を細かく描くのは、画に映る兵のうち写しに近い者から 人形の細の数 人まで、中ほどに描くのは 人形の中の数 人まで
      （重さのため。hitori/ningyo.js） */
-  奥ら.sort((a, z) => a - z); 人形の環.細の奥 = 奥ら[人形の細の数 - 1] ?? Infinity; 人形の環.中の奥 = 奥ら[人形の中の数 - 1] ?? Infinity;
+  /* 境目は、コマごとに跳ねさせない（遊ぶ人の申し出：「何秒かに一度突然画質が悪くなる」）。兵が寄せて来るたびに境目が
+     一息に縮み、大勢の兵がいっせいに粗い段へ落ちて（離れれば戻って）、画が揺れて見えた。縮むほうは一秒ほど、広がるほうは
+     〇.三秒ほどかけて寄せる。寄せるあいだは、限りの数より少し多く細かく描くことがある */
+  奥ら.sort((a, z) => a - z);
+  { const 描dt = 態.前描 == null ? 1 : clamp(nowSec - 態.前描, 0, 0.25); 態.前描 = nowSec;
+    /* 映る兵が限りの数に満たないときは、いちばん奥の者のすぐ先を境目とする（限り無しから一息に縮めないため） */
+    const 末 = 奥ら.length ? 奥ら[奥ら.length - 1] + 1 : 300;
+    const 寄せ = (旧, 新) => (旧 == null ? 新 : 旧 + (新 - 旧) * (1 - Math.exp(-描dt * (新 < 旧 ? 1.2 : 3.5))));
+    態.細の奥 = 寄せ(態.細の奥, 奥ら[人形の細の数 - 1] ?? 末); 態.中の奥 = 寄せ(態.中の奥, 奥ら[人形の中の数 - 1] ?? 末);
+    人形の環.細の奥 = 態.細の奥; 人形の環.中の奥 = 態.中の奥; }
   /* 倒れた者。与平が倒した者は倒れる姿のまま描くので、盤の倒れ（揺らぎを除いた持ち場に残る）からは除く */
   const 跡ら = 態.倒し.filter((o) => o.跡);
   for (const e of 眺.倒れ) {
