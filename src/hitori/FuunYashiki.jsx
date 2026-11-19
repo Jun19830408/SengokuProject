@@ -3,11 +3,14 @@ import { U } from "../core/util.js";
 import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数 } from "./fuun.js";
 import { 主命の重さ, 働きかけの見込み, 予定を見る, 月番を年月に, 山賊の月か, 偵察の月か, 偵察の的を選ぶ, 今の月番 } from "./shumei.js";
 import { TOWNS } from "../data/castles.js";
+import { 住まいの絵 } from "./sumai_e.jsx";
 
 /* ==========================================================================
    風雲モードの屋敷の画面（五の三の骨組み）
 
-   風雲モードでは、地図の代わりにこの画面を出す（ui/MapScreen.jsx）。主人公は大名ではないので、
+   風雲モードの政務の画面は、キャンペーンと同じ全国地図を真ん中に出し、この屋敷の欄を地図の右（縦長の画面では
+   地図の下）に置く（ui/MapScreen.jsx。遊ぶ人の申し出：「政務フェーズですが、キャンペーンモードと同じで全国地図を
+   メインにしてください。家の図は小さくでも構いません」）。上の帯は 風雲の帯。主人公は大名ではないので、
    国や城の差配はできない。できるのは、月の行いを選んで月を送ることだけで、世界は
    キャンペーンと同じに一月ずつ動く（主家も諸家もAI）。上司の隊が野で戦う月には、
    地図画面が盤を開き、主人公は足軽としてその合戦に出る。
@@ -24,68 +27,8 @@ const 棒 = (値, 満, 色) => (
   </div>
 );
 
-/* 住まいの絵。長屋 → 小さな家 → 庭のある家 → 屋敷 → 門のある屋敷 → 館（以前の検討の表） */
-export function 住まいの絵({ 住まい }) {
-  const 段 = ["長屋", "小さな家", "庭のある家", "屋敷", "門のある屋敷", "館"].indexOf(住まい);
-  const 屋根 = 段 >= 3 ? "#4B4E57" : "#8C7A55", 壁 = "#EFE7D4", 柱 = "#6B5236", 地 = "#C9BE98";
-  return (
-    <svg viewBox="0 0 320 150" width="100%" style={{ display: "block", borderRadius: 8 }} role="img" aria-label={`住まい：${住まい}`}>
-      <defs>
-        <linearGradient id="fy-sora" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#D7E3EA" /><stop offset="1" stopColor="#EEF0E4" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="320" height="150" fill="url(#fy-sora)" />
-      <path d="M0 92 Q60 70 120 84 T240 78 T320 86 V150 H0 Z" fill="#B9C6A6" opacity="0.55" />
-      <rect x="0" y="118" width="320" height="32" fill={地} />
-      {段 <= 0 && (<g>
-        {/* 長屋：低い一棟に戸口が並ぶ。主人公の戸口だけ暖簾が掛かる */}
-        <path d="M40 78 L280 78 L292 92 L28 92 Z" fill={屋根} />
-        <rect x="40" y="92" width="240" height="28" fill={壁} stroke={柱} strokeWidth="1.2" />
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <g key={i}>
-            <rect x={52 + i * 38} y="98" width="18" height="22" fill={i === 2 ? "#E9DFC7" : "#D9CFB6"} stroke={柱} strokeWidth="1" />
-            {i === 2 && <rect x={51 + i * 38} y="97" width="20" height="8" fill="#3D5A80" />}
-          </g>
-        ))}
-      </g>)}
-      {段 >= 1 && (<g>
-        {/* 家：段が上がるほど大きく、瓦屋根になる */}
-        {(() => {
-          const w = [0, 92, 104, 140, 140, 168][段], x = 160 - w / 2, h = [0, 28, 30, 34, 34, 38][段];
-          const 上 = 118 - h;
-          return (<g>
-            <path d={`M${x - 12} ${上} L${160} ${上 - 26} L${x + w + 12} ${上} Z`} fill={屋根} />
-            <rect x={x} y={上} width={w} height={h} fill={壁} stroke={柱} strokeWidth="1.3" />
-            {Array.from({ length: Math.round(w / 26) }).map((_, i) => (
-              <rect key={i} x={x + 6 + i * 26} y={上 + 6} width="18" height={h - 6} fill="#E6DCC3" stroke={柱} strokeWidth="0.9" />
-            ))}
-          </g>);
-        })()}
-      </g>)}
-      {段 >= 2 && (<g>
-        {/* 庭：松と石灯籠 */}
-        <rect x="262" y="96" width="5" height="22" fill="#5B4632" />
-        <ellipse cx="264" cy="92" rx="20" ry="9" fill="#4E6B45" /><ellipse cx="270" cy="84" rx="14" ry="7" fill="#5D7C52" />
-        <rect x="44" y="104" width="8" height="14" fill="#9A968C" /><rect x="40" y="99" width="16" height="6" fill="#8A867C" />
-      </g>)}
-      {段 >= 3 && (<g>
-        {/* 塀 */}
-        <rect x="8" y="110" width="304" height="8" fill="#D8CDB2" stroke={柱} strokeWidth="0.8" />
-      </g>)}
-      {段 >= 4 && (<g>
-        {/* 門（冠木門） */}
-        <rect x="146" y="98" width="5" height="22" fill={柱} /><rect x="169" y="98" width="5" height="22" fill={柱} />
-        <rect x="140" y="95" width="40" height="5" fill={柱} />
-      </g>)}
-      {段 >= 5 && (<g>
-        {/* 館：築地塀と門の屋根 */}
-        <rect x="8" y="104" width="304" height="14" fill="#E6DDC6" stroke={柱} strokeWidth="0.8" />
-        <path d="M136 92 L160 84 L184 92 Z" fill={屋根} />
-      </g>)}
-    </svg>
-  );
-}
+/* 住まいの絵は hitori/sumai_e.jsx（遊ぶ人の申し出「家の絵をもう少しリアルに」で描き直した） */
+export { 住まいの絵 };
 
 export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉じる }) {
   const f = g.風雲;
@@ -119,11 +62,11 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   const 家中 = (g.monthEvents || []).slice(0, 8);
 
   const 身の欄 = (
-    <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 14 }}>
-      <住まいの絵 住まい={今の段.住まい} />
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 10 }}>
-        <span className="mn" style={{ fontSize: 24 }}>{f.名}</span>
-        <span className="mn" style={{ fontSize: 17 }}>{f.身分}</span>
+    <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 11 }}>
+      <div style={{ maxWidth: land ? "100%" : 300, margin: land ? 0 : "0 auto" }}><住まいの絵 住まい={今の段.住まい} /></div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 8 }}>
+        <span className="mn" style={{ fontSize: 21 }}>{f.名}</span>
+        <span className="mn" style={{ fontSize: 16 }}>{f.身分}</span>
         <span style={{ fontSize: 11.5, color: U.dim, marginLeft: "auto" }}>住まい：{今の段.住まい}</span>
       </div>
       <div style={{ fontSize: 12, marginTop: 10 }}>
@@ -147,7 +90,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   );
 
   const 行いの欄 = (
-    <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 14 }}>
+    <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 11 }}>
       {予 && !終わり && (
         <div style={{ border: `1px solid ${U.line2}`, borderRadius: 8, padding: "9px 11px", marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: U.dim, letterSpacing: ".12em" }}>務めの予定（上司の手の者として出る）</div>
@@ -186,10 +129,6 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
       <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
         金の要る行いは、金が足りなければ行えない（開墾・商いで得た金は、同じ月に使える）。月を越せば体力は二十五戻る。
       </div>
-      <button className="btn dark" style={{ width: "100%", padding: 12, marginTop: 10 }}
-        disabled={!!終わり || 待つ戦} onClick={() => on月送り(行い)}>
-        {待つ戦 ? "合戦の始末を待っている…" : 出る務め ? `${出る務め}に出て、月を送る（${g.year}年${g.month}月）` : `月を送る（${g.year}年${g.month}月）`}
-      </button>
       <div className="sec">{f.名}の記</div>
       <div style={{ fontSize: 12, lineHeight: 1.75 }}>
         {記.map((x, i) => (
@@ -207,24 +146,23 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
     </div>
   );
 
+  /* 屋敷の欄。横長の画面では地図の右に幅を決めて、縦長の画面では地図の下に高さを決めて置く（ui/MapScreen.jsx） */
   return (
-    <div className="sp" style={{ height: "100dvh", position: "relative" }}>
-      <div className="bar">
-        <div className="barin">
-          <span className="mn" style={{ fontSize: 16 }}>風雲</span>
-          <span className="num" style={{ fontSize: 13 }}>{g.year}年{g.month}月</span>
-          <span className="dot" style={{ background: 家.color || "#888" }} />
-          <span style={{ fontSize: 13 }}>{家.name}{城 ? `・${城.name}` : ""}</span>
-        </div>
-        <button className="btn sm" onClick={() => {
-          if (typeof window === "undefined" || window.confirm("題の画面へ戻ります。月を送るたびに「自動」へ収めています。よろしいですか。")) onTitle && onTitle();
-        }}>題へ</button>
-      </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px max(12px, env(safe-area-inset-left)) 24px" }}>
-        <div style={{ display: land ? "grid" : "flex", gridTemplateColumns: land ? "minmax(0, 1fr) minmax(0, 1fr)" : undefined,
-          flexDirection: "column", gap: 12, maxWidth: 980, margin: "0 auto" }}>
+    <>
+      <div style={{ flex: land ? "0 0 min(380px, 42%)" : "0 0 46%", minWidth: 0, minHeight: 0, overflowY: "auto",
+        overscrollBehavior: "contain", background: U.paper, borderLeft: land ? `1px solid ${U.line}` : undefined,
+        borderTop: land ? undefined : `1px solid ${U.line}`, padding: "10px max(10px, env(safe-area-inset-right)) 18px 10px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {身の欄}
           {行いの欄}
+        </div>
+        {/* 月を送る釦は、欄の下に留める（欄が細く長くなったので、繰らずに押せるように） */}
+        <div style={{ position: "sticky", bottom: -18, background: U.paper, padding: "8px 0 18px", marginTop: 6 }}>
+          <button className="btn dark" style={{ width: "100%", padding: 12 }}
+            disabled={!!終わり || 待つ戦} onClick={() => on月送り(行い)}>
+            {待つ戦 ? "合戦の始末を待っている…" : 出る務め ? `${出る務め}に出て、月を送る（${g.year}年${g.month}月）` : `月を送る（${g.year}年${g.month}月）`}
+            <span style={{ fontSize: 11, opacity: 0.8, marginLeft: 8 }}>行い {行い.length}／{月の行いの数}</span>
+          </button>
         </div>
       </div>
       {!終わり && (f.知らせ || []).length > 0 && (
@@ -260,6 +198,26 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+/* 風雲の政務の画面の上の帯（家・年月・主人公の城・題へ） */
+export function 風雲の帯({ g, onTitle }) {
+  const f = g.風雲, 家 = g.factions[g.player] || {};
+  const 城 = g.castles.find((c) => c.id === f.城);
+  return (
+    <div className="bar">
+      <div className="barin">
+        <span className="mn" style={{ fontSize: 16 }}>風雲</span>
+        <span className="num" style={{ fontSize: 13 }}>{g.year}年{g.month}月</span>
+        <span className="dot" style={{ background: 家.color || "#888" }} />
+        <span style={{ fontSize: 13 }}>{家.name}{城 ? `・${城.name}` : ""}</span>
+        <span style={{ fontSize: 12, color: U.dim }}>{f.名}（{f.身分}）</span>
+      </div>
+      <button className="btn sm" onClick={() => {
+        if (typeof window === "undefined" || window.confirm("題の画面へ戻ります。月を送るたびに「自動」へ収めています。よろしいですか。")) onTitle && onTitle();
+      }}>題へ</button>
     </div>
   );
 }

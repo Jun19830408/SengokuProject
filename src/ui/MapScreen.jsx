@@ -39,9 +39,9 @@ import { sackCastle, 城を委ねる, 軍を解く, 在陣させる, 城に合�
 import { BattleScreen } from "./BattleScreen.jsx";
 import { 出陣前の問い } from "./Shutsujin.jsx";
 /* 風雲モード（一人の侍の立身）。遊ぶ家もAIに任せ（見物と同じ）、主人公の上司が野で戦うときだけ盤を開く。
-   地図の代わりに主人公の屋敷を出す（hitori/fuun.js・hitori/FuunYashiki.jsx） */
+   政務の画面は全国地図を真ん中に出し、主人公の屋敷の欄をその横に置く（hitori/fuun.js・hitori/FuunYashiki.jsx） */
 import { 風雲の戦か, 風雲の一人, 戦の勲功を記す, 風雲の問いに答える, 風雲の月の初め, 風雲の城攻めか, 風雲の隊を選ぶ, 風雲の城攻めの隊 } from "../hitori/fuun.js";
-import { FuunYashiki } from "../hitori/FuunYashiki.jsx";
+import { FuunYashiki, 風雲の帯 } from "../hitori/FuunYashiki.jsx";
 /* 風雲モードの主命（上司から下される務め。山賊退治は盤の小さな戦。hitori/shumei.js） */
 import { 主命の月の初め, 主命の月が明けた, 山賊の盤を組む, 山賊退治の果て, 主命の組, 偵察の組, 山賊の月か, 偵察の月か, 山賊の務めを決める,
   偵察の的を選ぶ, 偵察の盤を組む, 偵察の果て, 偵察を見合わせる } from "../hitori/shumei.js";
@@ -205,6 +205,9 @@ function 兵糧攻めのひと月(s, sg, castle, army) {
 export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const cvRef = useRef(null), miniRef = useRef(null), wrapRef = useRef(null);
   const [view, setView] = useState(() => {
+    /* 風雲モードは、主人公の城を真ん中にして始める */
+    const 風雲の城 = g.風雲 && g.castles.find((c) => c.id === g.風雲.城);
+    if (風雲の城) return { x: 風雲の城.x, y: 風雲の城.y, s: 2.4 };
     const seat = seatOf(g.castles, g.generals, g.player);
     return seat ? { x: seat.x, y: seat.y, s: 2.4 } : { x: MAPW / 2, y: MAPH / 2, s: 0.9 };
   });
@@ -217,6 +220,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [分け目の跡, set分け目の跡] = useState(null);
   const [移封の相手, set移封の相手] = useState(null);   // 外交の帳から開いた相手
   const [小図, set小図] = useState(true);               // 左下の日本全土図を出すか
+  /* 風雲モードの全土図。縦長の画面では地図が低く、左の釦と重なるので、畳んだ形で始める */
+  const [風雲の小図, set風雲の小図] = useState(land);
   const [sea, setSea] = useState(null);        // 盤の上の海戦
   const [townSel, setTownSel] = useState(null); // 押した特殊勢力
   const [raid, setRaid] = useState(null);        // 合戦前の奇襲の献策
@@ -3126,9 +3131,42 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
      月の初めに行いを行ってから（主命の働きかけも）、世界をキャンペーンと同じに一月進める（主家も諸家もAI）。
      明けた月に、主命の期限を見て、主命が無ければ上司から新たに下される（hitori/shumei.js）。
      「主命に励む」を選んだ月の主命が山賊退治なら、先に盤を開いて戦い、戦のあとでその月を送る（finishBattle） */
+  /* 風雲モードの政務の画面も、キャンペーンと同じ全国地図を真ん中に出す（遊ぶ人の申し出：「政務フェーズですが、
+     キャンペーンモードと同じで全国地図をメインにしてください。家の図は小さくでも構いません」）。屋敷の欄
+     （家の絵・身分・月の行い・月を送る・記）は、横長の画面では地図の右に、縦長の画面では地図の下に置く。
+     主人公は大名ではないので、地図は見るだけ（城や軍を押しても帳は開かない。拡げ縮め・居所・全体図・全土図は使える） */
   if (g.風雲) return (
-    <FuunYashiki g={g} land={land} onTitle={onTitle} on月送り={風雲の月送り}
-      on知らせを閉じる={() => setG((p) => ({ ...p, 風雲: { ...p.風雲, 知らせ: [] } }))} />
+    <div className="sp" style={{ height: "100dvh" }}>
+      <風雲の帯 g={g} onTitle={onTitle} />
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" }}>
+        <div className="mapwrap" ref={wrapRef}
+          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={() => (drag.current = null)} onMouseLeave={() => (drag.current = null)}
+          onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={() => (drag.current = null)} onTouchCancel={onCancel}
+          onWheel={(e) => { if (e.target === cvRef.current) zoom(e.deltaY < 0 ? 1.12 : 0.89); }}>
+          <canvas ref={cvRef} style={{ width: "100%", height: "100%", display: "block", touchAction: "none" }} />
+          {/* 釦の列は、全土図を畳んでいるあいだは下の端まで使う（css の .mapctl.l は全土図の分を空けて詰める） */}
+          <div className="mapctl l" style={風雲の小図 ? undefined : { maxHeight: "calc(100% - 48px)" }}
+            onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
+            <div className="mbtn" onClick={() => zoom(1.25)}><b>＋</b>拡大</div>
+            <div className="mbtn" onClick={() => zoom(0.8)}><b>−</b>縮小</div>
+            <div className="mbtn" onClick={() => focus(g.風雲.城 || (mine[0] && mine[0].id))}><b>◎</b>居所</div>
+            <div className="mbtn" onClick={whole}><b>⛶</b>全体図</div>
+          </div>
+          {風雲の小図 ? (
+            <>
+              <div className="minifold" onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); set風雲の小図(false); }}>全土図を畳む ▾</div>
+              <canvas className="mini" ref={miniRef} onClick={whole} />
+            </>
+          ) : (
+            <div className="minitab" onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); set風雲の小図(true); }}>▴ 全土図</div>
+          )}
+        </div>
+        <FuunYashiki g={g} land={land} onTitle={onTitle} on月送り={風雲の月送り}
+          on知らせを閉じる={() => setG((p) => ({ ...p, 風雲: { ...p.風雲, 知らせ: [] } }))} />
+      </div>
+    </div>
   );
 
   return (
