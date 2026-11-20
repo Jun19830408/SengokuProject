@@ -127,7 +127,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         ))}
       </div>
       <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
-        金の要る行いは、金が足りなければ行えない（開墾・商いで得た金は、同じ月に使える）。月を越せば体力は二十五戻る。
+        金の要る行いは、金が足りなければ行えない（開墾・商いで得た金は、同じ月に使える）。体力は合戦ごとに満ちて始まる。
       </div>
       <div className="sec">{f.名}の記</div>
       <div style={{ fontSize: 12, lineHeight: 1.75 }}>

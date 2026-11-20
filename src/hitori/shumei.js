@@ -31,7 +31,7 @@ import { setBattleMap } from "../battle/castleMap.js";
 import { FIELD, layoutField, setFieldKind, setFieldSeed } from "../battle/field.js";
 import { makeCorps, placeSquads } from "../battle/corps.js";
 import { createBattle } from "../battle/engine.js";
-import { 記す, 限, 段の番, 取り立てを見る, 討ち取りの勲功, 内訳の文 } from "./fuun.js";
+import { 記す, 限, 段の番, 取り立てを見る, 討ち取りの勲功, 内訳の文, 合戦の初めの体力 } from "./fuun.js";
 
 /* 主命の重さ。山賊の数と、果たしたときの褒美 */
 export const 主命の重さ = {
@@ -180,7 +180,7 @@ export function 山賊退治の果て(s, b, 務め = null) {
   const 働 = b.一人働き || {}, 討 = 働.討ち取り || 0;
   const 功 = 討ち取りの勲功(f, 働);                  // 雑兵は三人で一・山賊の頭は一（hitori/fuun.js）
   f.討ち取り += 討; f.勲功 += 功.勲功;
-  if (働.体力 != null) f.体力 = 限(Math.round(働.体力), 0, 100);
+  f.体力 = 合戦の初めの体力;                         // 手傷は持ち越さない（合戦ごとに満ちて始まる。hitori/fuun.js 風雲の一人）
   const 次を据える = () => { if (!古い主命) { const 予 = 予定を据える(s); 予.山賊 = 今の月番(s) + 山賊の間; } };
   if (働.討死) {
     f.討死 = { 年: s.year, 月: s.month, 場所: "山賊退治" };
@@ -298,7 +298,7 @@ export function 偵察の果て(s, b) {
   if (上) 上.retinue = Math.max(0, Math.round((上.retinue || 0) - 我の損));
   const 働 = b.一人働き || {}, 討 = 働.討ち取り || 0, 功 = 討ち取りの勲功(f, 働);
   f.合戦 += 1; f.討ち取り += 討; f.勲功 += 功.勲功;
-  if (働.体力 != null) f.体力 = 限(Math.round(働.体力), 0, 100);
+  f.体力 = 合戦の初めの体力;                         // 手傷は持ち越さない（合戦ごとに満ちて始まる。hitori/fuun.js 風雲の一人）
   const 予 = 予定を据える(s); 予.偵察 = 今の月番(s) + 偵察の間;
   const 勝 = b.result === "P" ? "勝ち戦" : b.result === "E" ? "負け戦" : "引き分け";
   const 場 = `${城 ? 城.name : ""}（${(s.factions[偵.家] || {}).name || ""}）`;
