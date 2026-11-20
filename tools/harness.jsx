@@ -9,7 +9,7 @@ export { SeaScreen, 海戦を仕立てる } from "../src/ui/SeaScreen.jsx";
 export { CastleSheet } from "../src/ui/CastleSheet.jsx";
 export { GeneralList } from "../src/ui/panels.jsx";
 export { css } from "../src/ui/css.js";
-export { BattleScreen } from "../src/ui/BattleScreen.jsx";
+export { BattleScreen, 早送りの速さ } from "../src/ui/BattleScreen.jsx";
 export { MapScreen } from "../src/ui/MapScreen.jsx";
 export { 出陣前の問い } from "../src/ui/Shutsujin.jsx";
 export { 天下分け目の帳, 分け目の沙汰の帳 } from "../src/ui/panels.jsx";
@@ -79,7 +79,8 @@ export { createBattle, stepBattle, 放った跡, 前面まで, 触れる隔た�
 // 一人働き（武将一人プレイ）のつなぎ：与平が討った兵を、理の人数と一人ずつの絵の両方で減らす
 export { 兵を討つ, 組の兵を数える, 組の隊, 将を討つ, 総大将か } from "../src/hitori/tsunagi.js";
 // 一人働きの背中越しの視点：盤の一人ずつの兵を、与平の背中越しの眺めへ写す
-export { 歩の尺, 背中の速さ, 背中の突きの速さ, 与平の組を選ぶ, 与平の所, 眺めを集める, 背中を始める, 背中を描く, 与平を進める, 与平を立て直す, 与平の今, 突く, 受ける, 物頭を据える, 降りの写し, 寄った所の組, 持ち場の間, 咎の目, 兵の太刀, 旗持の太刀, 馬廻の太刀, 将の太刀, 要る太刀, 合戦の勲功, 持ち場の円を量る, 持ち場の隊, 一騎駆け, 一騎駆けの秒, 一騎駆けの残り, 率いている, 体力の戻り, 体力の戻りの間, 気づきの前, 気づきの背, 振り向きの速さ, 加勢の届き } from "../src/hitori/senaka.js";
+export { 歩の尺, 背中の速さ, 背中の突きの速さ, 与平の組を選ぶ, 与平の所, 眺めを集める, 背中を始める, 背中を描く, 与平を進める, 与平を立て直す, 与平の今, 突く, 受ける, 物頭を据える, 降りの写し, 寄った所の組, 持ち場の間, 咎の目, 兵の太刀, 旗持の太刀, 馬廻の太刀, 将の太刀, 要る太刀, 合戦の勲功, 持ち場の円を量る, 持ち場の隊, 一騎駆け, 一騎駆けの秒, 一騎駆けの残り, 率いている, 体力の戻り, 体力の戻りの間, 気づきの前, 気づきの背, 振り向きの速さ, 加勢の届き, 視を回す, 視を戻す, 視を回しているか, 視の仰の限り, 視の芯の高さ, 視の鍵の速さ } from "../src/hitori/senaka.js";
+export { 視のなぞりの横, 視のなぞりの縦 } from "../src/hitori/SenakaFuda.jsx";
 export { 人形の段 } from "../src/hitori/ningyo.js";
 export { 手勢の数, 手勢を組む, 手勢へ下知, 手勢で掛かる, 手勢を構えさせる, 手勢を委ねる, 手勢を留める, 下知の名, 掛かれの届き } from "../src/hitori/tezei.js";
 /* 風雲モード（一人の侍の立身）の理と屋敷の画面（試し：tests/fuun.cjs） */

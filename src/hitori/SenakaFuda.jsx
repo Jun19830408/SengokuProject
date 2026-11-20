@@ -7,9 +7,12 @@
 
      左上   … 名札（足軽 与平・勲功・体力・気力・組の名）。合戦が止まっていれば、その知らせ
      左半分 … 指を置いた所に方向キーが出る（指が輪の外へ出れば、輪のほうが指についてくる）
+     右半分 … なぞれば視点が回る（横になぞれば与平のまわりを回り、縦になぞれば見下ろす角が変わる。hitori/senaka.js 視を回す）。
+              方向キーを押さえたまま、右半分をなぞってもよい。回していれば、右の釦の上に「視点を戻す」が出る
      右下   … 突く（押す）／受ける（押しているあいだ）／駆ける（押しているあいだ）
      真ん中 … 知らせ（討ち取り・息が上がっている）、討死の札
-   パソコンでは WASD か矢印キーで動き、J（または空白）で突く、K で受ける、Shift で駆ける。
+   パソコンでは WASD か矢印キーで動き、J（または空白）で突く、K で受ける、Shift で駆ける。Q・E で視点を横に回す
+   （右半分をマウスでなぞっても回る）。
    十人長から三百人長（率いるとき）は、方向キーと三つの釦が手勢への下知になり（掛かれ・構え・駆けよ）、四つ目の釦（L）で
    一騎駆け（与平が手勢を離れて自分で戦う。一騎駆けの秒ののち手勢へ戻る。hitori/senaka.js 一騎駆け）。
 
@@ -23,15 +26,20 @@
 
    盤から地へ降りる（ui/BattleScreen.jsx 降りRef）。段＝"途中"（降りている途中）のあいだは、札も釦も出さず、
    二本の指のピンチと車だけを受けて on寄り（倍）へ渡す（寄せれば降り、引けば昇る）。段＝"地"では、名札・
-   方向キー・釦に加えて、ピンチと車も受ける（方向キーを押さえている指のほかに、もう一本の指を置けば
-   ピンチになり、方向キーはやめる。釦の上に置いた指はピンチに数えない）。
+   方向キー・釦に加えて、ピンチと車も受ける。二本目の指を置けばピンチになり、方向キーと視点を回すのはやめる。
+   ただし、方向キーを押さえている指のほかに右半分へ置いた指は、ピンチにせず視点を回す（歩みながら見回せる）。
+   釦の上に置いた指はピンチに数えない。
+   物頭と見物は方向キーが無いので、画面のどこをなぞっても視点が回る（Q・E も同じ）。
    見物（態.身分＝"見物"。ふだんの合戦で地へ降りたとき）は、見るだけの札（地の眺め・盤へ戻る釦）を出す。
    ========================================================================== */
 import React, { useEffect, useRef, useState } from "react";
-import { 突く, 受ける, 与平を立て直す, 持ち場の間, 合戦の勲功, 一騎駆け, 率いている, 一騎駆けの残り, 一騎駆けの秒 } from "./senaka.js";
+import { 突く, 受ける, 与平を立て直す, 持ち場の間, 合戦の勲功, 一騎駆け, 率いている, 一騎駆けの残り, 一騎駆けの秒,
+  視を回す, 視を戻す, 視を回しているか } from "./senaka.js";
 import { 下知の名 } from "./tezei.js";
 
 const R杖 = 52;                                   // 方向キーの輪の半径（px。試し版と同じ）
+/* なぞって視点を回す速さ（一px につき回る角）。横は画面の幅の半分（四百八十px）で百六十五度ほど、縦は百px で二十三度ほど。値は仮 */
+export const 視のなぞりの横 = 0.006, 視のなぞりの縦 = 0.004;
 const 型 = `
 .snk{position:absolute;inset:0;z-index:4;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
   font-family:'Hiragino Mincho ProN','Yu Mincho','YuMincho','MS Mincho',serif;color:#F4F1E8}
@@ -64,6 +72,11 @@ const 型 = `
 .snk-kakeru{width:66px;height:66px;right:calc(max(12px,env(safe-area-inset-right)) + 84px);bottom:calc(max(10px,env(safe-area-inset-bottom)) + 110px);font-size:13px}.snk-kakeru i{font-size:16px}
 .snk-ikki{width:66px;height:66px;right:max(12px,env(safe-area-inset-right));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 124px);font-size:12.5px;letter-spacing:.02em}.snk-ikki i{font-size:16px}
 .snk-ikki.on{background:radial-gradient(circle at 50% 35%,rgba(150,118,56,.96),rgba(52,40,20,.96));cursor:default}
+.snk-modosu{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 202px);
+  font:inherit;font-size:13px;font-weight:700;letter-spacing:.04em;color:#F4F1E8;padding:6px 12px 7px;cursor:pointer;touch-action:none}
+.snk-modosu.low{bottom:max(10px,env(safe-area-inset-bottom))}
+.snk-modosu i{font-style:normal;color:#E2C877;margin-right:5px}
+.snk-modosu:focus-visible{outline:2px solid #E2C877;outline-offset:2px}
 .snk-joy{position:absolute;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;border:2px solid rgba(240,214,130,.75);background:radial-gradient(circle,rgba(22,24,28,.15),rgba(22,24,28,.45));pointer-events:none}
 .snk-joy::before,.snk-joy::after{content:"";position:absolute;left:50%;top:50%;width:76%;height:0;border-top:1px dashed rgba(240,214,130,.35);transform:translate(-50%,-50%)}
 .snk-joy::after{transform:translate(-50%,-50%) rotate(90deg)}
@@ -98,7 +111,7 @@ const 鍵 = { KeyW: "u", ArrowUp: "u", KeyS: "d", ArrowDown: "d", KeyA: "l", Arr
 
 /* 止め … 盤が止まっている訳。"停止"（停止の釦で止めた）・"段"（合戦の段でない：始まる前・決着ののち）・""（進んでいる） */
 export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLeave }) {
-  const 根Ref = useRef(null), 輪Ref = useRef(null), 玉Ref = useRef(null), 杖 = useRef(null);
+  const 根Ref = useRef(null), 輪Ref = useRef(null), 玉Ref = useRef(null), 杖 = useRef(null), 視杖 = useRef(null);   // 視杖 … 視点を回している指
   const 指Ref = useRef(new Map()), 摘みRef = useRef(null);   // 置いている指（釦の上でないもの）と、ピンチの指の隔たり
   const [突押, set突押] = useState(false);
   const [卓, set卓] = useState(false);
@@ -107,13 +120,16 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
   /* 鍵盤。札が出ているあいだだけ聞く。この札の釦に手があるとき（Enter・空白）は釦に任せる。
      上の速さの釦などに手が残っていても、空白は突きに使う（その釦を押し直さない） */
   useEffect(() => {
-    if (!態 || 態.身分 === "物頭") return undefined;
-    const 入 = 態.入;
+    if (!態) return undefined;
+    const 入 = 態.入, 動けぬ = 態.身分 === "物頭";      // 物頭は Q・E（視点を回す）だけを聞く
+    const 視の鍵 = { KeyQ: "視左", KeyE: "視右" };
     const 書く場か = (e) => { const el = e.target; return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable); };
     const 釦か = (e) => !!(e.target && e.target.closest && e.target.closest("button"));
     const 内か = (e) => !!(根Ref.current && e.target && 根Ref.current.contains(e.target));
     const down = (e) => {
       if (書く場か(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (視の鍵[e.code]) { 入.keys.add(視の鍵[e.code]); e.preventDefault(); return; }
+      if (動けぬ) return;
       if (釦か(e) && (e.key === "Enter" || (e.key === " " && 内か(e)))) return;
       if (鍵[e.code]) { 入.keys.add(鍵[e.code]); e.preventDefault(); }
       if (e.code === "KeyJ" || e.code === "Space") { if (!e.repeat) 突く(態); e.preventDefault(); }
@@ -122,6 +138,8 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
       if (e.code === "KeyL") { if (!e.repeat) 一騎駆け(態); e.preventDefault(); }
     };
     const up = (e) => {
+      if (視の鍵[e.code]) { 入.keys.delete(視の鍵[e.code]); return; }
+      if (動けぬ) return;
       if (e.code === "Space" && 釦か(e) && !内か(e)) e.preventDefault();
       if (鍵[e.code]) 入.keys.delete(鍵[e.code]);
       if (e.code === "KeyK") 受ける(態, false);
@@ -144,14 +162,20 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
     if (e.target.closest && e.target.closest("button")) return;
     指Ref.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try { 根Ref.current.setPointerCapture(e.pointerId); } catch (_) {}
-    if (指Ref.current.size >= 2) {                         // 二本目の指：ピンチ（方向キーはやめる）
-      方向キーをやめる();
-      const [a, c] = [...指Ref.current.values()]; 摘みRef.current = { d: Math.hypot(a.x - c.x, a.y - c.y) };
+    const [u, v, w] = 所(e), 地 = 段 === "地" && !終;
+    /* 方向キーを押さえたまま右半分に置いた指は、ピンチにせず視点を回す（歩みながら見回せる） */
+    if (地 && 杖.current && !視杖.current && !摘みRef.current && u >= w * 0.5 && 指Ref.current.size === 2) {
+      視杖.current = { id: e.pointerId, x: e.clientX, y: e.clientY }; e.preventDefault(); return;
+    }
+    if (指Ref.current.size >= 2) {                         // 二本目の指：ピンチ（方向キーと視点を回すのはやめる）
+      方向キーをやめる(); 視杖.current = null;
+      const ids = [...指Ref.current.keys()].slice(-2), [a, c] = ids.map((k) => 指Ref.current.get(k));
+      摘みRef.current = { ids, d: Math.hypot(a.x - c.x, a.y - c.y) };
       e.preventDefault(); return;
     }
-    if (段 !== "地" || 杖.current || 終 || 物頭 || 見物) return;
-    const [u, v, w] = 所(e);
-    if (u >= w * 0.5) return;
+    if (!地 || 杖.current) return;
+    /* 右半分（方向キーの無い物頭・見物は、どこでも）：視点を回す */
+    if (u >= w * 0.5 || 物頭 || 見物) { 視杖.current = { id: e.pointerId, x: e.clientX, y: e.clientY }; e.preventDefault(); return; }
     杖.current = { id: e.pointerId, ox: u, oy: v };
     const j = 輪Ref.current; if (j) { j.style.left = `${u}px`; j.style.top = `${v}px`; j.style.display = "block"; }
     if (玉Ref.current) 玉Ref.current.style.transform = "";
@@ -159,10 +183,17 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
   };
   const 動 = (e) => {
     if (指Ref.current.has(e.pointerId)) 指Ref.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (摘みRef.current && 指Ref.current.size >= 2) {
-      const [a, c] = [...指Ref.current.values()]; const d = Math.hypot(a.x - c.x, a.y - c.y);
-      if (摘みRef.current.d > 0 && d > 0 && on寄り) on寄り(d / 摘みRef.current.d);
-      摘みRef.current.d = d; return;
+    const 摘 = 摘みRef.current;
+    if (摘) {
+      const a = 指Ref.current.get(摘.ids[0]), c = 指Ref.current.get(摘.ids[1]);
+      if (a && c) { const d = Math.hypot(a.x - c.x, a.y - c.y); if (摘.d > 0 && d > 0 && on寄り) on寄り(d / 摘.d); 摘.d = d; }
+      return;
+    }
+    const 視0 = 視杖.current;
+    if (視0 && e.pointerId === 視0.id) {
+      const dx = e.clientX - 視0.x, dy = e.clientY - 視0.y; 視0.x = e.clientX; 視0.y = e.clientY;
+      if (dx || dy) 視を回す(態, dx * 視のなぞりの横, dy * 視のなぞりの縦);
+      return;
     }
     const j0 = 杖.current; if (!j0 || e.pointerId !== j0.id) return;
     const [u, v] = 所(e);
@@ -176,7 +207,8 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
   };
   const 放す = (e) => {
     指Ref.current.delete(e.pointerId);
-    if (指Ref.current.size < 2) 摘みRef.current = null;
+    if (摘みRef.current && 摘みRef.current.ids.includes(e.pointerId)) 摘みRef.current = null;
+    if (視杖.current && 視杖.current.id === e.pointerId) 視杖.current = null;
     const j0 = 杖.current; if (!j0 || e.pointerId !== j0.id) return;
     杖.current = null; if (輪Ref.current) 輪Ref.current.style.display = "none"; 入.jx = 0; 入.jy = 0;
   };
@@ -205,6 +237,11 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
 
   const 体 = Math.round(我.hp), 気 = 我.気;
   const 知らせ = (態.知らせ || []).filter((o) => Date.now() - o.ms < (o.種 === "kubi" ? 3400 : 2400));
+  /* 視点を戻す（回していれば出す）。釦の列の上に置く。物頭と見物は右下に釦が無いので、右下の隅に置く（低） */
+  const 視点を戻す釦 = (低) => 視を回しているか(態) && (
+    <button type="button" className={`snk-modosu glass${低 ? " low" : ""}`} aria-label="視点を戻す（与平の背中越しへ）"
+      onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); 視を戻す(態); }}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); 視を戻す(態); } }}><i>↺</i>視点を戻す</button>);
   /* 車：前へ回せば寄せて降り、手前へ回せば引いて昇る（盤の車と同じ一目盛り一.一二倍） */
   const 車 = (e) => { e.stopPropagation(); if (on寄り) on寄り(e.deltaY < 0 ? 1.12 : 1 / 1.12); };
   const 根の手当て = {
@@ -224,10 +261,12 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
             <div className="row"><span className="mibun">見物</span><span className="na" style={{ fontSize: 16 }}>地の眺め</span></div>
             <div className="kumi" style={{ color: "#F4F1E8", fontSize: 12.5 }}>{態.名}隊の組のうしろから見る</div>
             <div className="kumi">指で狭める（車を手前へ回す）と盤へ戻る。下知は右の欄から</div>
+            <div className="kumi">なぞると視点が回る{卓 ? "（Q・E でも）" : ""}</div>
           </div>
         </div>
         <button type="button" className="snk-maru" style={{ left: "max(12px, env(safe-area-inset-left))", bottom: "max(10px, env(safe-area-inset-bottom))", width: 66, height: 66, fontSize: 13 }}
           onPointerDown={(e) => e.stopPropagation()} onClick={() => onLeave && onLeave()}><span><i>盤</i>盤へ戻る</span></button>
+        {視点を戻す釦(true)}
       </div>
     );
   }
@@ -243,7 +282,7 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
               <div className="row"><span className="mibun">物頭</span><span className="na">与平</span></div>
               <div className="kumi" style={{ color: "#F4F1E8", fontSize: 12.5 }}>{態.名}の隊を預かる　兵 {兵.toLocaleString()}人</div>
               <div className="kumi">下知：{隊 && 隊.auto ? "委任（諸将の采配）" : (隊 && 隊.order) || "―"}　右の欄から隊へ下知する</div>
-              <div className="kumi">背中の視点（試し）</div>
+              <div className="kumi">背中の視点（試し）・なぞると視点が回る{卓 ? "（Q・E でも）" : ""}</div>
             </div>
           );
         })() : (
@@ -275,10 +314,12 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
             ? <p>左側に指を置くと<br />方向キーが出ます
                 <small>方向キーで手勢を動かす（与平はうしろに付く）。{卓 ? "J で掛かれ、K で構え、Shift で駆けよ、L で一騎駆け" : "右の釦で掛かれ・構え・駆けよ・一騎駆け"}</small>
                 <small>掛かれ：前の敵の組へ掛かる（駆けよと共に押せば突撃）。構え：止まって構える</small>
-                <small>一騎駆け：与平が手勢を離れて自分で戦う（{一騎駆けの秒}秒ののち手勢へ戻る）</small></p>
+                <small>一騎駆け：与平が手勢を離れて自分で戦う（{一騎駆けの秒}秒ののち手勢へ戻る）</small>
+                <small>{卓 ? "右側をマウスでなぞるか、Q・E で視点が回ります" : "右側をなぞると視点が回ります（方向キーを押さえたままでも）"}</small></p>
             : <p>左側に指を置くと<br />方向キーが出ます
                 <small>{卓 ? "パソコンでは WASD か矢印キーで動き、J で突く、K で受ける、Shift で駆けます" : "右の釦で突く・受ける・駆ける"}</small>
-                <small>敵が槍を引いたら（穂先が赤く光る）受ける</small></p>}
+                <small>敵が槍を引いたら（穂先が赤く光る）受ける</small>
+                <small>{卓 ? "右側をマウスでなぞるか、Q・E で視点が回ります" : "右側をなぞると視点が回ります（方向キーを押さえたままでも）"}</small></p>}
         </div>
       )}
       <div ref={輪Ref} className="snk-joy" style={{ display: "none" }}><div ref={玉Ref} className="snk-knob" /></div>
@@ -300,6 +341,7 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
           <button type="button" className={`snk-maru snk-tsuku${突押 || 態.t - 我.突始 < 0.22 ? " press" : ""}`} aria-label="突く" {...釦("突")}><span><i>⟋</i>突く</span></button>
         </>}
       </>}
+      {!終 && 視点を戻す釦(物頭)}
       <div className="snk-pops nop">
         {知らせ.map((o) => <div key={o.番} className={`snk-pop${o.種 ? ` ${o.種}` : ""}`}>{o.文}{o.副 && <b>{o.副}</b>}</div>)}
       </div>

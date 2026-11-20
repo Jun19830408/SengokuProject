@@ -100,7 +100,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
   /* 地に降りきって、自分の身で戦っている（足軽・物頭）か。ふだんの合戦の見物は含めない（見るだけで、
      速さも下知もふだんどおり）。撮る道具の覗き口（window.__背中）で、ふだんの合戦に与平を立てたときも含める */
   const 地の身 = !!(背中 && 背中Ref.current && 背中Ref.current.身分 !== "見物");
-  const 速さ縛り = !!身分 || 地の身;                   // 速さは停止と微速だけ
+  /* 速さの縛り（停止と微速だけ）。遊ぶ人の申し出：「視点を盤にしたときはスピードを速いものも選べるように。一人視点では
+     微速のみのままで」。もとは一人働きの合戦なら盤の視点でも縛っていた。いまは背中越し（自分の身で戦っている）の
+     あいだだけ縛り、盤の視点では一人働きの合戦でも低速・通常・早送りを選べる。盤と背中越しのあいだ（降り昇りの途中。
+     ピンチや車で少しだけ寄せたままのときも）も縛る：画は背中越しに近いので、盤の速さのままでは兵が速く走って見える */
+  const 速さ縛り = !!(降り段 && 背中Ref.current && 背中Ref.current.身分 !== "見物");
   /* 背中越しの微速。遊ぶ人の申し出：「普通の合戦に参加した際、周りの所属している部隊も含めてスピードが早すぎて
      ついていけない」。盤は兵の多い合戦ほど広く、隊の足を野の倍（battle/field.js fieldScale）だけ速めて、広い盤も
      同じ刻で渡り切れるようにしている。ところが背中越しは一歩を〇.四六m に決めて描くので、広い盤では兵が倍の速さで
@@ -361,7 +365,15 @@ export function BattleScreen({ ctx, land, onEnd }) {
   useEffect(() => {
     if (!速さ縛り || 委ねRef.current || bRef.current.phase !== "fight" || 撮りの速さRef.current != null) return;
     if (speed !== 0 && Math.abs(speed - 背中の今の速さ()) > 1e-9) setSpeed(背中の今の速さ());
-  }, [背中, speed, phase, 委ね中]);
+  }, [速さ縛り, speed, phase, 委ね中]);
+  /* 盤の視点へ昇りきったとき、背中越しの微速（野の倍で割った値）のままなら、盤の微速（〇.一二）にする
+     （盤の視点の速さの釦のどれかが選ばれた形にする）。止めている〇や、撮る道具が決めた速さはそのまま */
+  const 前の縛り = useRef(速さ縛り);
+  useEffect(() => {
+    if (前の縛り.current && !速さ縛り && 撮りの速さRef.current == null && !委ねRef.current && speedRef.current !== 0
+      && Math.abs(speedRef.current - 背中の今の速さ()) < 1e-9) setSpeed(0.12);
+    前の縛り.current = 速さ縛り;
+  }, [速さ縛り]);
   /* 一人働きの合戦は、布陣を待たずに始まる。足軽も物頭も、布陣と合戦開始は総大将の役で、遊ぶ人には
      押せない（総大将は諸将の采配に任せる。隊ははじめ委任で戦う：battle/corps.js）。速さは微速から。
      物頭は預かる隊を選んだ形で始める（右の欄にその隊の下知が出る） */
@@ -373,7 +385,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       if (b2.朝の布陣) { if (b2.attacker !== "P") 朝の受け持ちを決める(b2, MAP, "P"); b2.朝の布陣 = false; }
       b2.phase = "fight"; setPhase("fight"); 効果を鳴らす("法螺貝");
     }
-    if (b2.phase === "fight") setSpeed(背中の今の速さ());
+    if (b2.phase === "fight") setSpeed(速さ縛り ? 背中の今の速さ() : 0.12);
     if (身分 === "物頭" && 一人Ref.current && 一人Ref.current.隊id) pickCorps(一人Ref.current.隊id);
   }, []);
   useEffect(() => {
@@ -691,6 +703,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
       if (向 != null) { 態.我.fx = Math.cos(向); 態.我.fz = -Math.sin(向); }        // 盤の角（撮る道具が向きも据える）
       return 与平の今(態);
     };
+    /* いまの背中越しの態（与平・写し・視点の回し）。試し（tests/shiten.cjs）が覗く。遊びには使わない */
+    window.__背中の態 = () => 背中Ref.current;
     /* 盤から地へ降りる途中を、撮る道具・試しが据える（u：〇＝盤・一＝地）。降りていなければ、いまの盤から降り始める */
     window.__降り = (u) => {
       if (u === undefined) return 降りRef.current ? 降りRef.current.u : 0;
@@ -2056,8 +2070,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
           </span>
           </div>
           {phase === "fight" && (
-            /* 背中越し（一人視点）のあいだと一人働きの合戦では、停止と微速だけ。ほかの速さは押せなくする（上の 背中の速さ の説明） */
-            <span className="tsugi hayasa" title={速さ縛り ? "一人視点・一人働きでは停止と微速だけ（委ねて結果を見ることはできる）" : undefined}>
+            /* 背中越し（一人視点）のあいだは、停止と微速だけ。ほかの速さは押せなくする（上の 速さ縛り・背中の速さ の説明）。
+               盤の視点では、一人働きの合戦でも低速・通常・早送りを選べる */
+            <span className="tsugi hayasa" title={速さ縛り ? "一人視点（背中越し）では停止と微速だけ（盤の視点では速い速さも選べる。委ねて結果を見ることもできる）" : undefined}>
               <button className={`btn sm ${speed === 0 ? "on" : ""}`} onClick={() => setSpeed(0)}>停止</button>
               <button className={`btn sm ${Math.abs(speed - 微速の値) < 1e-9 ? "on" : ""}`} onClick={() => setSpeed(微速の値)}>微速</button>
               <button className={`btn sm ${speed === 0.3 ? "on" : ""}`} disabled={速さ縛り} onClick={() => setSpeed(0.3)}>低速</button>
