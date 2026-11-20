@@ -23,7 +23,7 @@ import { 木立を並べる, 木を描く } from "./mori.js";
 import { 里を並べる, 葦を描く, 村の道は横か, 家をよける, 家々を据える } from "./sato.js";
 import { 城の物を並べる, 城壁をよける } from "./tachimono.js";
 import { FIELD, HILLS, MOUNTAINS, FORESTS, WOODS, MARSH, VILLAGES, RIVERS, ROADS, ROAD,
-  RIVER, hasRiver, riverShift, fieldScale, passable, terrainAt } from "./field.js";
+  RIVER, hasRiver, riverShift, fieldScale, passable, terrainAt, 率いの刻比 } from "./field.js";
 
 /* どの盤でも新しい絵で描く。棚の sengoku:旧絵 が「入」なら使わない（逃げ道）。
 
@@ -3361,6 +3361,14 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
     const 陣横半 = 2 * 4.6 + 3.4, 陣奥半 = 2 * 4.2 + 3.4;
     const 本陣よけ = !(c.routed || c.withdraw) && !c.手勢;
     const 家よけ = !b.map && VILLAGES.length > 0 && !(typeof window !== "undefined" && window.__家よけ無し);
+    /* 背中越しに率いている手勢（battle/field.js 率いの刻比）は、絵の均し（組の所と勢い・向き・兵の進む向きと描く向き・
+       速さの見積もり）を実の秒で効かせる。微速の盤の刻で均すと、押してから兵が歩み出し、向き直るまでに数秒かかる。
+       足の速さ（盤の歩の数）はそのまま盤の刻で測る */
+    const 率刻 = 率いの刻比(b, c), 均dt = 率刻 ? Math.min(0.1, dt / 率刻) : dt;
+    /* 率いている手勢は、組の所と勢いの均しを短く取る（実の秒で〇.一五秒・〇.三秒。ふだんは盤の秒で〇.四五秒・一秒）。
+       遊ぶ人が手勢をじかに動かすので、盤の押し合いの揺れより、押して歩み出すまでの遅れのほうが目に付く。値は仮 */
+    const 均しの刻2 = 率刻 ? 0.15 : 均しの刻, 勢いの刻2 = 率刻 ? 0.3 : 勢いの刻, 向きの均し = 率刻 ? 3 : 1.4;
+    const 下がる組 = !!(率刻 && c.向きを保つ);
     for (const q of c.squads) {
       const s = 組の態(q);
       /* 画面の外で長く進めずにいた組は、持ち場に据え直す（GDD 8.11）。
@@ -3405,7 +3413,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
          進む組には遅れずに付いて行き、行きつ戻りつの揺れだけが打ち消し合って消える。 */
       if (s.平x == null || !s.初) { s.平x = q.x; s.平y = q.y; s.勢x = 0; s.勢y = 0; }
       else if (dt > 0) {
-        const a = 1 - Math.exp(-dt / 均しの刻), be = 1 - Math.exp(-dt / 勢いの刻);
+        const a = 1 - Math.exp(-均dt / 均しの刻2), be = 1 - Math.exp(-均dt / 勢いの刻2);
         const 見x = s.平x + s.勢x * dt, 見y = s.平y + s.勢y * dt;
         const nx = 見x + (q.x - 見x) * a, ny = 見y + (q.y - 見y) * a;
         s.勢x += ((nx - s.平x) / dt - s.勢x) * be; s.勢y += ((ny - s.平y) / dt - s.勢y) * be;
@@ -3424,7 +3432,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
       /* 向きの均し */
       { let df = (q.facing || 0) - s.向;
         while (df > Math.PI) df -= Math.PI * 2; while (df < -Math.PI) df += Math.PI * 2;
-        s.向 += df * Math.min(1, dt * 1.4); }
+        s.向 += df * Math.min(1, 均dt * 向きの均し); }
       /* 倒れ：減ったぶんは、立っていた場所に倒れて残る */
       const alive = Math.max(0, Math.min(50, Math.round(q.men)));
       const 前alive = Math.max(0, Math.min(50, Math.round(s.prevMen)));
@@ -3493,7 +3501,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
          ――八は噛み合っていないときの値そのものである。かえって、何かの
          拍子に初が降りている組が一息に八.五歩も飛んだ（二十五万九千の刻に
          二度、最大八.六歩。tests/mukinaoru 三）。場合分けを外す。 */
-      s.伸 += (伸び的 - s.伸) * Math.min(1, dt * 2.4);
+      s.伸 += (伸び的 - s.伸) * Math.min(1, 均dt * 2.4);
       const 前 = s.伸;
       const 刻み = (前 + 2.8) / 4;
       /* 押し合いの息。前後の揺れは遊ぶ側から「行ったり来たり」と嫌われたので、
@@ -3525,7 +3533,7 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
           let 角 = Math.atan2(ny0, nx0);
           if (s.線角 != null) {
             let 差 = 角 - s.線角; 差 -= Math.round(差 / (Math.PI * 2)) * Math.PI * 2;
-            角 = s.線角 + Math.max(-2 * dt, Math.min(2 * dt, 差));
+            角 = s.線角 + Math.max(-2 * 均dt, Math.min(2 * 均dt, 差));
           }
           s.線角 = 角;
           const 前向き = Math.cos(角 - th);               // 相手が組の正面なら一、真横なら零
@@ -3627,8 +3635,15 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
            ふだんの歩みは芯について行くだけなので、この上限には届かない。 */
         else if (d > 0.02) {
           let 上限 = (q.type === "kiba" ? 185 : 125) * 尺;
-          /* 主人公の手勢は、兵ごとに足の出し方が少し違う（上の 足の癖）。遅れが八歩を超えれば、ふだんの足で追う */
-          if (足癖あり) {
+          /* 主人公の手勢は、兵ごとに足の出し方が少し違う（上の 足の癖）。遅れが八歩を超えれば、ふだんの足で追う。
+             背中越しに率いているあいだ（上の 率刻）は、遊びと遅れを野の倍（尺）で広げず、まことの歩で量る（背中越しは
+             一歩を〇.四六m に決めて描くので、広い盤ほど兵が遅れて歩み出し、隊の足に追いつけずに遅れが積もっていた）。
+             遅れが二.五歩を超えれば足を速め（十歩で一.八倍）、十歩を超えればふだんの足で追う。値は仮 */
+          if (足癖あり && 率刻) {
+            const 癖 = 足の癖(q, n), 歩足 = (徒の足[q.type] || 34) * 1.35 * 癖.速 * 尺;   // d は盤の歩（背中越しの〇.四六m）
+            if (d < 癖.遊 * 0.6 && s.速[n] < 3 * 尺) 上限 = 0;                // 遊びも六割（〇.二〜一歩）
+            else if (d < 10) 上限 = 歩足 * (1 + Math.max(0, d - 2.5) / 7.5 * 0.8);
+          } else if (足癖あり) {
             const 癖 = 足の癖(q, n);
             if (d < 癖.遊 * 尺 && s.速[n] < 3 * 尺) 上限 = 0;
             else if (d < 8 * 尺) 上限 = (徒の足[q.type] || 34) * 1.35 * 癖.速 * 尺;
@@ -3645,8 +3660,8 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
           if (家よけ) { const p = 家をよける(s.sx[n], s.sy[n], 0.6); if (p) { s.sx[n] = p[0]; s.sy[n] = p[1]; } }
           if (b.map) { const p = 城壁をよける(b.map, q.x, q.y, s.sx[n], s.sy[n]); if (p) { s.sx[n] = p[0]; s.sy[n] = p[1]; } }
           /* 進む向き。均しておかないと、持ち場の細かな直しで体がくるくる回る */
-          s.進x[n] += (vx / d - s.進x[n]) * Math.min(1, dt * 3);
-          s.進y[n] += (vy / d - s.進y[n]) * Math.min(1, dt * 3); }
+          s.進x[n] += (vx / d - s.進x[n]) * Math.min(1, 均dt * 3);
+          s.進y[n] += (vy / d - s.進y[n]) * Math.min(1, 均dt * 3); }
         /* 歩いた距離で拍を回す（GDD 8.11）。
 
            時計で回していたころは、盤を微速にすると体だけ止まり、位置だけが
@@ -3675,20 +3690,23 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
            一本の角に持たせれば、出どころが入れ替わっても兵は「向き直る」。
            跳ぶのではなく回るのだから、それが正しい見え方である。 */
         {
-          /* 相手（狙い）がいれば、駆けているとき（十四歩毎秒を超える）のほかは相手を向く */
+          /* 相手（狙い）がいれば、駆けているとき（十四歩毎秒を超える）のほかは相手を向く。
+             背中越しに率いている手勢が前を向いたまま下がるあいだ（上の 率刻・battle/engine.js 向きを保つ）は、歩む向きでなく
+             組の向きを向く（振り向かずに下がる） */
           const 的向 = 的 && s.速[n] < 14 * 尺 ? Math.atan2(的.y - s.sy[n], 的.x - s.sx[n])
+            : 下がる組 ? s.向
             : (Math.hypot(s.進x[n], s.進y[n]) > 0.3 && s.速[n] > 2.5 * 尺)
               ? Math.atan2(s.進y[n], s.進x[n]) : s.向;
           let d描 = 的向 - s.描[n];
           while (d描 > Math.PI) d描 -= Math.PI * 2;
           while (d描 < -Math.PI) d描 += Math.PI * 2;
-          s.描[n] += d描 * Math.min(1, dt * 4.5);
+          s.描[n] += d描 * Math.min(1, 均dt * 4.5);
         }
       }
       for (let n = alive; n < 50; n++) s.生[n] = 0;
       s.初 = true;
       if (!c.routed && s.近敵) 集め.push({ s, alive, 側: c.side === "P" ? 1 : 2 });
-      if (dt > 0) 歩み.push(s, alive);
+      if (dt > 0) 歩み.push(s, alive, 均dt);
     }
   }
   /* 敵味方の押し分け（GDD 8.11）。
@@ -3707,9 +3725,9 @@ export function 新絵状態を進める(b, nowSec, viewRect) {
      微速で、噛み合った直後の兵が一秒に百二十歩ぶん足を回しながら八十歩しか動いて
      いなかった。刻の初めの立ち所（刻初）から、すべてが済んだあとの立ち所までの隔たり
      ――実際に踏んだ地べた――を積む。 */
-  for (let k = 0; k < 歩み.length; k += 2) {
+  for (let k = 0; k < 歩み.length; k += 3) {
     const s = 歩み[k], alive = 歩み[k + 1];
-    const 寄 = Math.min(1, dt * 6);
+    const 寄 = Math.min(1, 歩み[k + 2] * 6);
     for (let n = 0; n < alive; n++) {
       if (!s.生[n]) continue;
       const mv = Math.hypot(s.sx[n] - s.刻初x[n], s.sy[n] - s.刻初y[n]);

@@ -5,7 +5,11 @@
    変えないよう、ここにまとめた。見た目と手の入りは、先にお見せした試し版（触って
    動かす版）と同じにしてある。
 
-     左上   … 名札（足軽 与平・勲功・体力・気力・組の名）。合戦が止まっていれば、その知らせ
+     左上   … 名札（足軽 与平・勲功・体力・気力・組の名）。合戦が止まっていれば、その知らせ。
+              名札は、ふだんは小さく畳んで身分と体力・気力だけを出し（持ち場の外にいれば、その一行も）、名札を押せば
+              開いて討ち取り・勲功・手勢・持ち場を出す（もう一度押せば畳む）。遊ぶ人の申し出（「左上のステータスですが
+              大きすぎて前が見にくいです。閉じれるようにするか、小さくするかしてください。体力と気力は常に表示させるが、
+              小さく表示するように」）による。開け閉めは端末に覚える（棚の sengoku:名札）
      左半分 … 指を置いた所に方向キーが出る。指を置いているあいだ輪はその所に留まり（指が輪の外へ出ても、つまみが輪の縁で
               止まるだけ）、指を離せば消える。もとは指が輪の外へ出ると輪のほうが指についてきたが、遊ぶ人の申し出（「置いた
               ところで固定してほしい。前進するためにカーソルを移動するとコントローラごと移動してしまう」）により留めた
@@ -64,6 +68,21 @@ const 型 = `
 .snk-kiryoku i b{display:block;height:100%;background:#E2C877}
 .snk-tomari{padding:4px 10px 5px;font-size:12.5px;font-weight:700;border-left:3px solid #E2C877;border-radius:0 6px 6px 0}
 .snk-tomari small{display:block;font-size:11px;font-weight:400;color:#CFCBC0}
+.snk-me{position:relative}
+.snk-me.snk-tatami{width:auto;min-width:0;display:grid;grid-template-columns:auto 104px;align-items:center;column-gap:7px;row-gap:3px;padding:5px 22px 5px 7px}
+.snk-me.snk-tatami .mibun{grid-row:1 / span 2;font-size:10.5px;padding:1px 5px}
+.snk-me.snk-tatami .na{font-size:13px;grid-row:1 / span 2}
+.snk-mg{display:grid;grid-template-columns:20px 1fr;align-items:center;gap:4px;font-size:9.5px;line-height:1;color:#CFCBC0}
+.snk-mg .tr{height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden}
+.snk-mg .tr i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#4E8A3C,#7DB35A)}
+.snk-mg .tr i.low{background:linear-gradient(90deg,#8A3C32,#C25A48)}
+.snk-mg .snk-kiryoku{gap:2px}
+.snk-mg .snk-kiryoku i{height:5px;border-radius:2px}
+.snk .snk-tl .snk-kai{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:9px;background:transparent;pointer-events:auto;cursor:pointer;touch-action:none;color:#E2C877;font:inherit}
+.snk-kai span{position:absolute;right:6px;top:3px;font-size:10px;line-height:1;opacity:.85}
+.snk-kai:focus-visible{outline:2px solid #E2C877;outline-offset:2px}
+.snk-mochiba.snk-tatami{margin-top:0;padding:2px 7px 3px;font-size:10.5px;background:rgba(60,20,16,.78);border-radius:0 5px 5px 0;white-space:nowrap}
+.snk-mochiba.snk-tatami b{margin-left:6px}
 .snk-maru{position:absolute;border-radius:50%;display:grid;place-items:center;text-align:center;font-weight:700;letter-spacing:.08em;color:#F4F1E8;font-family:inherit;
   background:radial-gradient(circle at 50% 35%,rgba(60,62,68,.92),rgba(18,19,22,.92));border:2.5px solid #E2C877;box-shadow:0 3px 12px rgba(0,0,0,.45);padding:0;cursor:pointer;touch-action:none}
 .snk-maru i{display:block;font-style:normal;color:#E2C877;line-height:1;margin-bottom:3px}
@@ -118,6 +137,8 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
   const [突押, set突押] = useState(false);
   const [卓, set卓] = useState(false);
   useEffect(() => { try { set卓(!!(window.matchMedia && window.matchMedia("(pointer: fine)").matches)); } catch (_) {} }, []);
+  /* 名札を開いているか（上の 左上）。はじめは畳む。開け閉めは端末に覚える */
+  const [札開, set札開] = useState(() => { try { return localStorage.getItem("sengoku:名札") === "開"; } catch (_) { return false; } });
 
   /* 鍵盤。札が出ているあいだだけ聞く。この札の釦に手があるとき（Enter・空白）は釦に任せる。
      上の速さの釦などに手が残っていても、空白は突きに使う（その釦を押し直さない） */
@@ -235,6 +256,20 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
   });
 
   const 体 = Math.round(我.hp), 気 = 我.気;
+  /* 名札の開け閉め（上の 左上）。名札の上に重ねた透けた釦で受ける（方向キーの指には数えない） */
+  const 開け閉め = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const n = !札開; set札開(n);
+    try { localStorage.setItem("sengoku:名札", n ? "開" : "閉"); } catch (_) {}
+    try { e.currentTarget.blur(); } catch (_) {}                      // 空白の鍵が名札の開け閉めでなく突きに効くよう
+  };
+  const 開け閉め釦 = (
+    <button type="button" className="snk-kai" aria-expanded={札開} aria-label={札開 ? "名札を畳む" : "名札を開く（討ち取り・勲功・手勢・持ち場）"}
+      onPointerDown={(e) => e.stopPropagation()} onClick={開け閉め}><span aria-hidden="true">{札開 ? "▴" : "▾"}</span></button>);
+  const 体力の筋 = (cls) => <div className={cls}><span>体力</span><div className="tr"><i className={体 < 35 ? "low" : ""} style={{ width: `${Math.max(0, 体)}%` }} /></div></div>;
+  const 気力の筋 = (cls) => <div className={cls}><span>気力</span><div className="snk-kiryoku">
+    {[0, 1, 2, 3, 4].map((i) => <i key={i}><b style={{ width: `${Math.round(Math.min(1, Math.max(0, 気 - i)) * 100)}%` }} /></i>)}
+  </div></div>;
   const 知らせ = (態.知らせ || []).filter((o) => Date.now() - o.ms < (o.種 === "kubi" ? 3400 : 2400));
   /* 視点を戻す（回していれば出す）。釦の列の上に置く。物頭と見物は右下に釦が無いので、右下の隅に置く（低） */
   const 視点を戻す釦 = (低) => 視を回しているか(態) && (
@@ -276,22 +311,36 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
         {物頭 ? (() => {
           /* 物頭の名札：預かる隊の兵の数と、いまの下知（委任なら諸将の采配で動いている） */
           const 隊 = 態.隊, 兵 = 隊 ? Math.round((隊.squads || []).reduce((a, q) => a + Math.max(0, q.men || 0), 0)) : 0;
-          return (
+          /* 畳めば一行（預かる隊と兵の数）。開けばこれまでの名札 */
+          return 札開 ? (
             <div className="snk-me glass">
               <div className="row"><span className="mibun">物頭</span><span className="na">与平</span></div>
               <div className="kumi" style={{ color: "#F4F1E8", fontSize: 12.5 }}>{態.名}の隊を預かる　兵 {兵.toLocaleString()}人</div>
               <div className="kumi">下知：{隊 && 隊.auto ? "委任（諸将の采配）" : (隊 && 隊.order) || "―"}　右の欄から隊へ下知する</div>
               <div className="kumi">背中の視点（試し）・なぞると視点が回る{卓 ? "（Q・E でも）" : ""}</div>
+              {開け閉め釦}
+            </div>
+          ) : (
+            <div className="snk-me snk-tatami glass" style={{ display: "flex", alignItems: "center", gap: 7, maxWidth: 230 }}>
+              <span className="mibun">物頭</span>
+              <span className="kumi" style={{ marginTop: 0, color: "#F4F1E8", fontSize: 11 }}>{態.名}の隊を預かる　兵 {兵.toLocaleString()}人</span>
+              {開け閉め釦}
             </div>
           );
-        })() : (
+        })() : !札開 ? (
+        /* 畳んだ名札：身分と、小さな体力・気力 */
+        <div className="snk-me snk-tatami glass">
+          <span className="mibun">{(態.備え && 態.備え.段) || "足軽"}</span>
+          {体力の筋("snk-mg")}
+          {気力の筋("snk-mg")}
+          {開け閉め釦}
+        </div>
+        ) : (
         <div className="snk-me glass">
           <div className="row"><span className="mibun">{(態.備え && 態.備え.段) || "足軽"}</span><span className="na">与平</span>
             <span className="kun">討ち取り <b>{我.勲}</b>{態.備え && 態.備え.風雲 && <> 勲功 <b>+{合戦の勲功(態)}</b></>}</span></div>
-          <div className="snk-gauge"><span>体力</span><div className="tr"><i className={体 < 35 ? "low" : ""} style={{ width: `${Math.max(0, 体)}%` }} /></div></div>
-          <div className="snk-gauge"><span>気力</span><div className="snk-kiryoku">
-            {[0, 1, 2, 3, 4].map((i) => <i key={i}><b style={{ width: `${Math.round(Math.min(1, Math.max(0, 気 - i)) * 100)}%` }} /></i>)}
-          </div></div>
+          {体力の筋("snk-gauge")}
+          {気力の筋("snk-gauge")}
           <div className="kumi">{態.一騎
             ? (態.一騎.様 === "戻る" ? "一騎駆け　手勢へ戻る途中" : `一騎駆け　残り${一騎駆けの残り(態)}秒で手勢へ戻る`)
             : 態.隊 && 態.隊.手勢
@@ -302,8 +351,12 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
             ? <div className="kumi">持ち場の内（地の点線の円の内）{態.持ち場.咎 >= 0.05 ? `・この戦の咎 覚え −${態.持ち場.咎.toFixed(1)}` : ""}</div>
             : <div className="snk-mochiba">持ち場を離れている<b>覚え −{態.持ち場.咎.toFixed(1)}</b>
                 <small>円の外へ{Math.round(態.持ち場.間 || 0)}m（隊のいちばん外の組から{持ち場の間}m先までが持ち場）</small></div>)}
+          {開け閉め釦}
         </div>
         )}
+        {/* 畳んでいても、持ち場の外にいれば一行で知らせる（咎が積もるので） */}
+        {!物頭 && !札開 && 態.備え && 態.持ち場 && !態.持ち場.内 && (
+          <div className="snk-mochiba snk-tatami">持ち場の外 {Math.round(態.持ち場.間 || 0)}m<b>覚え −{態.持ち場.咎.toFixed(1)}</b></div>)}
         {止め === "停止" && !終 && <div className="snk-tomari glass">合戦を止めている<small>上の「微速」で進める</small></div>}
         {止め === "段" && !終 && <div className="snk-tomari glass">合戦が止まっている</div>}
       </div>

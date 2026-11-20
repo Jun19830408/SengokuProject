@@ -2,7 +2,7 @@ import { battleAI } from "./ai.js";
 import { MAP, SIEGE_KIT, 城の域か, axisOf, buildNav, fromUV, gatePos, gateReachable, inLayer, navPath, nearestOpenGate, routeToCastleGate, 見通せる, 門の控え口, 本丸への道, 本丸が開いたか, 流れの升, 流れを作る, 回り道か, 塀のこちら, 流れの先, 列の順, 列に着く, 門の輪, 出城が保つ, 攻める輪, 攻め口を割り振る, 出城の内か, 出城の退き道, 後詰の口, 盤の端まで, 門をくぐる道, 門の内か, 門の向こうか } from "./castleMap.js";
 import { ROW, SP, corpsMax, corpsMen, notify, placeSquads, 前列を入れ替える, 支えの向き数, 支えの幅, 空 } from "./corps.js";
 import { 組の鍵 } from "../core/roster.js";
-import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, 広げの倍, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地, 地の高さ, 仮橋を架ける } from "./field.js";
+import { ARM_STATS, BASE, FIELD, TERRAIN, WEATHER, fieldScale, 広げの倍, passable, passableFor, terrainAt, 山が遮るか, 踏み込んだ地, 隊の地, 地の高さ, 仮橋を架ける, 率いの刻比 } from "./field.js";
 import { clamp, fmt } from "../core/util.js";
 import { px, py } from "../data/geo.js";
 import { delegated, issueOrder, 内の門へ退く, 退き場, 退き先, 退かせる, 引き取りを進める, 後詰を据える } from "./corps.js";
@@ -1181,8 +1181,14 @@ export function stepBattle(b, dt) {
 
   // 味方の武将隊どうしの重なりだけを押し戻す。
   // 「離れすぎたら本隊へ戻す」ような、命じていない移動はさせない。
+  /* 背中越しに率いている手勢（field.js 率いの刻比）は、味方と押し合わない（押されもせず、押しもしない）。手勢は上司の
+     隊の前の列から分けた十人から三百人で、上司の隊の塊の中に立つ。押し合いは百五十歩のうちの味方から掛かるので、
+     手勢を歩ませると、上司の隊から押し出されて横へ流れていた（実の秒で毎秒〇.八m ほど。持ち場の円の外へも
+     流される）。小さな手勢は味方の隊のあいだを縫って歩む */
+  const 率いる手勢 = alive.filter((c) => 率いの刻比(b, c));
   for (const c of alive) {
     if (c.detach || c.routed || c.withdraw || (c.ambush && !c.revealed)) continue;
+    if (率いる手勢.length && 率いる手勢.includes(c)) continue;
     /* 槍を合わせている隊は、隣に押されて横へ動かない（GDD 8.3）。
        噛み合いとは足を止めて斬り結ぶことである。そこへ味方の押し合いを
        掛けると、戦列が横へ流れ、置き去りにされた組がはぐれる。
@@ -1194,7 +1200,7 @@ export function stepBattle(b, dt) {
        隣の隊はその壁から一方的に押され続けて、盤の外まで流れ出た（実測、
        小西行長隊が八十秒で盤の左外へ）。押し返さないのではなく、押されにくい。 */
     const 踏ん張る = c.squads.some((q) => q.men > 0 && q.engaged) || c.不戦 || c.控え || c.縛り;
-    const mates = alive.filter((o) => o !== c && o.side === c.side && !o.detach && !o.routed && !o.withdraw);
+    const mates = alive.filter((o) => o !== c && o.side === c.side && !o.detach && !o.routed && !o.withdraw && !率いる手勢.includes(o));
     if (!mates.length) continue;
     /* 押し合いは、重なったときだけ（GDD 8.3）。
 
@@ -1479,6 +1485,9 @@ export function stepBattle(b, dt) {
         }
       }
     }
+    /* 背中越しに率いている手勢は、足の慣性と向き直りを実の秒で効かせる（field.js 率いの刻比）。率いていなければ null。
+       向きを保つ（hitori/tezei.js 手勢へ下知：写しの手前へ押したとき）なら、向き直らずに前を向いたまま下がる */
+    const 率刻 = 率いの刻比(b, c), 向きを保つ = !!(率刻 && c.向きを保つ);
     const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy);
     if (!(dist > 6) || HOLD || (c.ambush && !c.revealed)) {
       // 止まる隊の足は、すっと止まらず、少しずつ落ちる
@@ -1558,7 +1567,7 @@ export function stepBattle(b, dt) {
       }
       const v = 隊の足 * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, c.地, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1)
         * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * 寄せ道 * 混み
-        * (c.後退中 ? 0.62 : 1);
+        * (c.後退中 ? 0.62 : 1) * (向きを保つ ? 0.6 : 1);
       /* 行き過ぎない（GDD 8.3）。
 
          歩幅を残りの隔たりで頭打ちにしていなかった。足は毎秒三十歩ほど、刻みは
@@ -1656,8 +1665,9 @@ export function stepBattle(b, dt) {
         }
       }
       const 速 = c.速 || { x: 望x, y: 望y };
-      /* 向きを変えるのに要る間は、おおよそ一秒弱。千の兵が一度に向き直れはしない。 */
-      const 寄せ = Math.min(1, dt / 0.9);
+      /* 向きを変えるのに要る間は、おおよそ一秒弱。千の兵が一度に向き直れはしない。
+         背中越しに率いている手勢（十人から三百人）は、実の秒で〇.二秒（値は仮） */
+      const 寄せ = Math.min(1, dt / (率刻 ? 0.2 * 率刻 : 0.9));
       速.x += (望x - 速.x) * 寄せ; 速.y += (望y - 速.y) * 寄せ;
       c.速 = 速;
       const 速さ = Math.hypot(速.x, 速.y) || 1;
@@ -1756,10 +1766,12 @@ export function stepBattle(b, dt) {
          その歩みに向きを付き合わせると、横腹を噛まれた隊が押し戻されるついでに
          敵のほうへ向き直ってしまう。兵がそちらへ顔を向けるのはよいが、陣ごと
          向き直るには「転回」の下知が要る（tests/sokumen.cjs）。 */
-      if (!c.squads.some((q) => q.engaged)) {
+      /* 背中越しに率いている手勢は、実の秒で一秒に二.四（九十度をおよそ〇.七秒。値は仮）。向きを保つなら向き直らない */
+      if (!c.squads.some((q) => q.engaged) && !向きを保つ) {
         const want = Math.atan2(dy, dx);
         const diff = ((want - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-        c.facing += clamp(diff, -1.4 * dt, 1.4 * dt);
+        const 回 = 率刻 ? 2.4 / 率刻 : 1.4;
+        c.facing += clamp(diff, -回 * dt, 回 * dt);
       }
       c.faceTo = null;
     } else if (c.faceTo != null) {
@@ -1769,7 +1781,7 @@ export function stepBattle(b, dt) {
          回り、陣形は元の向きに伸びたまま――「押した方角へ陣形が向く」ことに
          ならない（corps.js の placeSquads を参照）。 */
       const diff = ((c.faceTo - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      const rate = 0.45 + c.gen.lead / 130;
+      const rate = 率刻 ? 2.0 / 率刻 : 0.45 + c.gen.lead / 130;     // 率いている手勢は実の秒で（上の 率刻）
       if (Math.abs(diff) < 0.05) {
         c.facing = c.faceTo; c.faceTo = null;
         c.陣向き = c.facing;
@@ -2042,7 +2054,9 @@ export function stepBattle(b, dt) {
       const 噛み中 = q.engaged || (b.t - (q.噛み刻 == null ? -99 : q.噛み刻) < 1.2);
       /* 足踏みしない幅。城内は隊も組も密なので広く取る（門前の震えはここが効く）。
          野では組がぴたりと寄るほうがよく、狭く取る。 */
-      const 止まる幅 = 城内(c.x, c.y) ? 5 : 2;
+      /* 背中越しに率いている手勢（上の 率刻）は、組がぴたりと付いて歩み出す（〇.三歩）。二歩のままでは、押してから
+         組が歩み出すまでに隊が二歩進むのを待つことになる */
+      const 止まる幅 = 城内(c.x, c.y) ? 5 : 率刻 ? 0.3 : 2;
       /* 噛み合っている組も、持ち場から大きく離れたら戻る（GDD 8.3）。
 
          もとは「噛み合ったら持ち場へ戻らない」と決めていた。噛み合いは一瞬ごとに
@@ -2100,7 +2114,8 @@ export function stepBattle(b, dt) {
         }
         const 望向 = 的 + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
         const 差 = ((望向 - q.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-        q.facing += clamp(差, -2.6 * dt, 2.6 * dt);
+        const 組回 = 率刻 ? 3.0 / 率刻 : 2.6;                 // 率いている手勢は実の秒で一秒に三（上の 率刻）
+        q.facing += clamp(差, -組回 * dt, 組回 * dt);
       }
       if (qd > 止まる幅 && (!噛み中 || 噛みでも戻る || c.withdraw || c.routed)) {
         /* 持ち場へ追いつくための足（GDD 8.3）。
@@ -2116,7 +2131,9 @@ export function stepBattle(b, dt) {
         const 遅れ = Math.hypot(q.x - (元x + q.slotX), q.y - (元y + q.slotY));
         /* 門をくぐる列の組は、列の足（一.四倍まで）で歩く。持ち場から遠いからといって駆け込むと、
            狭い門の口で組が重なり合う */
-        const 追いつき = c.routed ? 1 : clamp(1 + 遅れ / 34, 1, 列中 ? 1.4 : 2.4);
+        /* 背中越しに率いている手勢（上の 率刻）は、遅れ六歩で倍の足（ふだんは三十四歩）。遅れを溜めたまま歩むと、
+           止めたあとも組が持ち場へ向けて数m 歩き続けた */
+        const 追いつき = c.routed ? 1 : clamp(1 + 遅れ / (率刻 ? 6 : 34), 1, 列中 ? 1.4 : 2.4);
         // 斬り結びながら寄り直すのだから、足は半ばである
         const v = st0.speed * 追いつき * (噛みでも戻る ? 0.45 : 1) * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
         const sx = ((targetX - q.x) / qd) * Math.min(v * dt, qd);
