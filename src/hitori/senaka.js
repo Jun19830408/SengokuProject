@@ -58,7 +58,7 @@ import { 地のGLで描く, 地のGLが使えるか, 地の色, 地のGLの様�
 import { 城の箱を集める, 堀の帯 } from "./shiro_senaka.js";
 import { 城壁をよける } from "../battle/tachimono.js";
 import { 兵を討つ, 将を討つ, 総大将か, 組の隊 } from "./tsunagi.js";
-import { 人形を描く, 倒れ人形を描く } from "./ningyo.js";
+import { 人形を描く, 倒れ人形を描く, 人形の近さ } from "./ningyo.js";
 import { 矢玉を集める } from "./yadama.js";
 import { 手勢へ下知, 手勢を委ねる, 手勢を留める } from "./tezei.js";
 
@@ -1067,7 +1067,10 @@ function 写しを据える(cam, w, h) {
 function P(x, y, z) {
   const dx = x - C.x, dz = z - C.z; const rx = dx * C.rx + dz * C.rz, rz = dx * C.fx + dz * C.fz, ry = y - C.h;
   const yc = ry * C.cs + rz * C.sn, zc = -ry * C.sn + rz * C.cs;
-  return [W / 2 + F * rx / zc, H / 2 - F * yc / zc, zc];
+  const sx = W / 2 + F * rx / zc, sy = H / 2 - F * yc / zc;
+  /* 層に描いているあいだは、写した点の囲みを覚える（下の 透けて描く） */
+  if (囲 && zc > 0.05) { if (sx < 囲.x0) 囲.x0 = sx; if (sx > 囲.x1) 囲.x1 = sx; if (sy < 囲.y0) 囲.y0 = sy; if (sy > 囲.y1) 囲.y1 = sy; }
+  return [sx, sy, zc];
 }
 const 奥 = (x, z) => (x - C.x) * C.fx + (z - C.z) * C.fz;            // カメラの前へどれだけ奥か（m）
 const 水平 = () => H / 2 - F * C.tn;
@@ -1180,6 +1183,7 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
   if (態.身分 === "物頭" || 見物) 物頭を据える(b, 態, dt); else 与平を進める(b, 態, dt, 眺);
   const t = 態.t;
   筆 = ctx; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  層を用意する(ctx, dpr);
   写しを据える(写, w, h);
   空と地を描く(ctx, 写.a);
   /* 起伏があれば、盤の地の画・高さ・水面で地を描いて重ねる（hitori/chi_gl.js）。街道と川はその中に入っている。
@@ -1242,7 +1246,12 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
     const 姿 = p.側 === "E" ? 敵の姿(態, p, t) : p.側 === "P" ? 味方の姿(態, p, t) : p;
     /* 与平の手勢（十人長から三百人長。hitori/tezei.js）の兵は、足もとに薄い輪を描いて見分ける */
     const 我が手 = 手勢 && p.組 && 手勢.squads.includes(p.組);
-    物.push({ d, f: () => { if (我が手) 手勢の輪(ctx, p.x, p.z); 姿.基 = 基; 立てて描く(ctx, p.x, p.z, 基, 深, 陰, (al) => 一人を描く(ctx, 姿, nowSec, al), 透 ? 0.32 : 1); } });
+    /* 薄めて描く者のうち、丘の陰に切られず水にも浸かっていない者は、続けて並ぶ同じ濃さの者と一枚の層にまとめて描き、
+       まとめて一度だけ重ねる（下の 物を描く。重ねる広さを減らす） */
+    const 濃 = (透 ? 0.32 : 1) * 人形の近さ(zc), 束ねる = 濃 >= 0.06 && 濃 < 0.9 && 陰 == null && !(深 > 0);
+    物.push({ d, 層: 束ねる ? 濃 : null,
+      層f: (囲み) => { if (我が手) 手勢の輪(ctx, p.x, p.z); 姿.基 = 基; 層に描く(姿, nowSec, 囲み); },
+      f: () => { if (我が手) 手勢の輪(ctx, p.x, p.z); 姿.基 = 基; 立てて描く(ctx, p.x, p.z, 基, 深, 陰, (al) => 透けて描く(ctx, 姿, nowSec, al), 透 ? 0.32 : 1); } });
   }
   /* 人形を細かく描くのは、画に映る兵のうち写しに近い者から 人形の細の数 人まで、中ほどに描くのは 人形の中の数 人まで
      （重さのため。hitori/ningyo.js） */
@@ -1266,14 +1275,14 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
     物.push({ d, f: () => 立てて描く(ctx, e.x, e.z, 基, 深, 陰, (al) => { ctx.globalAlpha = al; 倒れを描く(ctx, e); ctx.globalAlpha = 1; }, 1) });
   }
   for (const o of 態.倒し) { const d = 奥(o.p.x, o.p.z); if (d > 0.8 && d < 130) { const [基, 深] = 足もと(o.p.x, o.p.z);
-    物.push({ d, f: () => 立てて描く(ctx, o.p.x, o.p.z, 基, 深, null, (al) => 一人を描く(ctx, { ...o.p, 働: "立", v: 0, fl: 0, fu: clamp((t - o.t) / 0.55, 0, 1), 倒向: o.向, 基 }, nowSec, al), 1) }); } }
+    物.push({ d, f: () => 立てて描く(ctx, o.p.x, o.p.z, 基, 深, null, (al) => 透けて描く(ctx, { ...o.p, 働: "立", v: 0, fl: 0, fu: clamp((t - o.t) / 0.55, 0, 1), 倒向: o.向, 基 }, nowSec, al), 1) }); } }
   /* 与平。水に入れば浸かる（下の 立てて描く） */
-  const 与平を描く = (al) => 立てて描く(ctx, 我.x, 我.z, 我の基, 我の深, null, (a2) => { const 姿 = 与平の姿(態, t); 姿.基 = 我の基; 一人を描く(ctx, 姿, nowSec, a2); }, al);
+  const 与平を描く = (al) => 立てて描く(ctx, 我.x, 我.z, 我の基, 我の深, null, (a2) => { const 姿 = 与平の姿(態, t); 姿.基 = 我の基; 透けて描く(ctx, 姿, nowSec, a2); }, al);
   if (!見物) 物.push({ d: 奥(我.x, 我.z), f: () => { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 与平を描く(1); } });
   /* 矢玉（鉄砲の火と弾の筋・煙・矢・騎馬の砂煙）を、盤の印から実の秒で描く（hitori/yadama.js）。起伏があれば、その所の地の高さに */
   const P地 = 起伏 ? (x, y, z) => P(x, y + 地(x, z), z) : P;
   矢玉を集める(b, 態, 物, { ctx, P: P地, 奥, 霞, C, F }, 尺, nowSec, 態.止, 眺.兵);
-  物.sort((a, z) => z.d - a.d).forEach((o) => o.f());
+  物を描く(ctx, 物.sort((a, z) => z.d - a.d));
   /* 与平が組の中へ入ると、手前（写し側）の味方が与平に重なる。手前の味方を透かすだけでは、幾重にも
      重なって与平が見えなくなるので、そのときは与平（と足もとの輪）を上からもう一度、少し透かして描く */
   if ((透数 || 城の前 || 透かしの的.数) && !見物) { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 与平を描く(0.72); }
@@ -1589,6 +1598,76 @@ function 一人を描く(ctx, p, t, al) {
   人形の環.基 = p.基 || 0;
   人形を描く(ctx, p, t, al, 人形の環);
   人形の環.基 = 0;
+}
+/* 薄めて描く兵（写しに近すぎて薄める者・与平の手前に立って透かす者・上から重ねる与平）は、いったん別の画布（層）に
+   濃く描き、描いた所だけを薄めて重ね、重ねたら層から消す。遊ぶ人の申し出：「突く、駆けるなどの動作のとき、他の兵の
+   画質？が下がるので修正してください」。人形は手足・胴・笠・旗を一つずつ塗るので、薄めたまま塗ると部品の重なりが
+   透けて見え、粗く崩れた絵になっていた。与平が歩み・駆け・突くと、写し（与平のうしろ五m）が上司の隊の兵のあいだへ
+   入り、薄める兵が増えるので目に付いた。濃さ（al と 写しに近い者の薄め 人形の近さ）は、これまでと同じ */
+let 層 = null, 層筆 = null, 囲 = null, 層のコマ = 0;
+function 層を用意する(ctx, dpr) {
+  if (typeof document === "undefined" || !ctx || !ctx.canvas) { 層筆 = null; return; }
+  const cw = ctx.canvas.width, ch = ctx.canvas.height;
+  if (!(cw > 0 && ch > 0)) { 層筆 = null; return; }
+  if (!層) 層 = document.createElement("canvas");
+  if (!層筆) 層筆 = 層 && 層.getContext ? 層.getContext("2d") : null;
+  if (!層筆) return;
+  /* 描くたびに描いた所を消すので、層ぜんたいを消すのは六十コマに一度でよい（はみ出しの消し残しの用心） */
+  if (層.width !== cw || 層.height !== ch) { 層.width = cw; 層.height = ch; 層のコマ = 0; }
+  else if (++層のコマ >= 60) { 層のコマ = 0; 層筆.setTransform(1, 0, 0, 1, 0, 0); 層筆.clearRect(0, 0, cw, ch); }
+  層.倍 = dpr || 1;
+}
+/* 遠い物から順に描く。層 を持つ者（薄めて描く兵）は、続けて並ぶ同じ濃さ（差〇.〇三のうち）の者を一枚の層にまとめて描き、
+   ほかの物を描く前（と終わり）にまとめて重ねる */
+function 物を描く(ctx, 物ら) {
+  let 束 = null;
+  const 流す = () => { if (束) { 層を重ねる(ctx, 束.濃, 束.囲み); 束 = null; } };
+  for (const o of 物ら) {
+    if (o.層 != null && 層筆) {
+      if (束 && Math.abs(束.濃 - o.層) > 0.03) 流す();
+      if (!束) 束 = { 濃: o.層, 囲み: 新しい囲み() };
+      o.層f(束.囲み);
+    } else { 流す(); o.f(); }
+  }
+  流す();
+}
+function 透けて描く(ctx, 姿, t, al) {
+  const zc = P(姿.x, 姿.基 || 0, 姿.z)[2];
+  const 濃 = al * (姿.我 ? 1 : 人形の近さ(zc));
+  /* ほとんど見えない淡さ（〇.〇六より下）なら描かない。九割より濃ければ、部品の重なりは目に付かないので、そのまま描く */
+  if (濃 < 0.06) return;
+  if (濃 >= 0.9 || !層筆 || zc < 0.9) { 一人を描く(ctx, 姿, t, al); return; }
+  const 囲み = 新しい囲み();
+  層に描く(姿, t, 囲み);
+  層を重ねる(ctx, 濃, 囲み);
+}
+const 新しい囲み = () => ({ x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity });
+/* 層に一人を濃く描き、描いた所（写した点の囲みに、手足の太さ・頭の丸みのはみ出しとして、その者の奥行きで〇.一八m ぶんの
+   縁を足した所）を 囲み に足す */
+function 層に描く(姿, t, 囲み) {
+  const zc = P(姿.x, 姿.基 || 0, 姿.z)[2], d = 層.倍, 主 = 筆;
+  層筆.setTransform(d, 0, 0, d, 0, 0); 層筆.globalAlpha = 1;
+  囲 = 新しい囲み();
+  一人を描く(層筆, { ...姿, 層: true }, t, 1);
+  const 一 = 囲; 囲 = null; 筆 = 主;
+  if (!(一.x1 >= 一.x0 && 一.y1 >= 一.y0)) return;
+  const 縁 = clamp(0.18 * F / Math.max(0.9, zc), 3, 60);
+  囲み.x0 = Math.min(囲み.x0, 一.x0 - 縁); 囲み.y0 = Math.min(囲み.y0, 一.y0 - 縁);
+  囲み.x1 = Math.max(囲み.x1, 一.x1 + 縁); 囲み.y1 = Math.max(囲み.y1, 一.y1 + 縁);
+}
+/* 層の 囲み の所を、濃さ 濃 で重ね、層から消す（消すのは囲みより少し広く。層ぜんたいは、六十コマに一度 層を用意する が消す） */
+function 層を重ねる(ctx, 濃, 囲み) {
+  if (!(囲み.x1 > 囲み.x0 && 囲み.y1 > 囲み.y0)) return;
+  const d = 層.倍;
+  const x0 = Math.max(0, Math.floor(囲み.x0 * d)), y0 = Math.max(0, Math.floor(囲み.y0 * d));
+  const x1 = Math.min(層.width, Math.ceil(囲み.x1 * d)), y1 = Math.min(層.height, Math.ceil(囲み.y1 * d));
+  if (x1 > x0 && y1 > y0) {
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 濃;
+    ctx.drawImage(層, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
+    ctx.restore();
+  }
+  const 余 = Math.ceil(8 * d), 消x0 = Math.max(0, x0 - 余), 消y0 = Math.max(0, y0 - 余);
+  層筆.setTransform(1, 0, 0, 1, 0, 0); 層筆.clearRect(消x0, 消y0, Math.min(層.width, x1 + 余) - 消x0, Math.min(層.height, y1 + 余) - 消y0);
 }
 function 倒れを描く(ctx, e) {
   人形の環.基 = e.基 || 0;
