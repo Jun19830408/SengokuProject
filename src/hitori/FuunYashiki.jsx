@@ -4,6 +4,8 @@ import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの
 import { 主命の重さ, 働きかけの見込み, 予定を見る, 月番を年月に, 山賊の月か, 偵察の月か, 偵察の的を選ぶ, 今の月番 } from "./shumei.js";
 import { TOWNS } from "../data/castles.js";
 import { 住まいの絵 } from "./sumai_e.jsx";
+import { 名簿の形を見る, 手勢の名簿を整える, 雇えるか, 手勢を雇う, 暇を出す, 今の統率, 名簿の扶持, 手勢の統率を量る } from "./tezei_meibo.js";
+import { 実効の統率 } from "./tezei.js";
 
 /* ==========================================================================
    風雲モードの屋敷の画面（五の三の骨組み）
@@ -30,7 +32,7 @@ const 棒 = (値, 満, 色) => (
 /* 住まいの絵は hitori/sumai_e.jsx（遊ぶ人の申し出「家の絵をもう少しリアルに」で描き直した） */
 export { 住まいの絵 };
 
-export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉じる }) {
+export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉じる, on風雲を改める }) {
   const f = g.風雲;
   const [行い, set行い] = useState(() => (f.行い || []).slice(0, 月の行いの数));
   const 家 = g.factions[g.player] || {};
@@ -59,6 +61,11 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   const 重く見る城 = f.偵察の的 && 今の月番(g) <= f.偵察の的.迄 ? g.castles.find((c) => c.id === f.偵察の的.城 && c.faction !== g.player) : null;
   const 出る務め = 偵察の今 && 偵の的 && 偵の的.城 ? "威力偵察" : 山賊の今 || 山賊に出る ? "山賊退治" : null;
   const 記 = [...(f.記 || [])].reverse().slice(0, 14);
+  /* 手勢（十人長から三百人長。hitori/tezei_meibo.js。案の②）。名簿が無いか、身分や月が改まっていれば整える */
+  const 形 = 名簿の形を見る(f.身分), 月の鍵 = `${g.year}-${g.month}`;
+  const 整え要る = !!形 && !f.討死 && (!f.手勢 || f.手勢.身分 !== f.身分 || f.手勢.候補の月 !== 月の鍵);
+  useEffect(() => { if (整え要る && on風雲を改める) on風雲を改める((ff, gg) => 手勢の名簿を整える(ff, gg.year, gg.month)); }, [整え要る, f.身分, 月の鍵]); // eslint-disable-line
+  const 手 = 形 && f.手勢 && f.手勢.身分 === f.身分 ? f.手勢 : null;
   const 家中 = (g.monthEvents || []).slice(0, 8);
 
   const 身の欄 = (
@@ -85,6 +92,60 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         <span className="k">上司</span><span className="v">{上 ? `${上.name}（${上の居所}）` : "―"}</span>
         <span className="k">合戦</span><span className="v num">{f.合戦} 度・討ち取り {f.討ち取り}</span>
         <span className="k">務め・主命</span><span className="v num">果たした {(f.主命の数 || {}).果たした || 0}・しくじった {(f.主命の数 || {}).しくじった || 0}</span>
+      </div>
+    </div>
+  );
+
+  /* 手勢の欄：名簿（今の統率＝素質×練れ・武勇・扶持。暇を出せる）と、今月の候補（雇える。扶持の枠と、候補の数が縛り） */
+  const 改める = (改) => on風雲を改める && on風雲を改める((ff) => 改(ff));
+  const 札の値 = (m) => (
+    <span style={{ fontSize: 11.5 }}>
+      統率 <b className="num">{今の統率(m)}</b><span style={{ color: U.dim }}>（素質 {m.素質}・練れ {Math.round(m.練れ * 100)}%）</span>
+      ・武勇 <b className="num">{m.武勇}</b>・扶持 <b className="num">{m.扶持}</b>
+    </span>
+  );
+  const 手統 = 手 ? 手勢の統率を量る(手.名簿) : null, 扶持 = 手 ? 名簿の扶持(手.名簿) : 0;
+  const 手勢の欄 = 形 && 手 && !終わり && (
+    <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 11 }}>
+      <div className="sec" style={{ marginTop: 0 }}>手勢（{形.種 === "足軽" ? `足軽${形.数}人` : `${形.種}${形.数}つ`}）</div>
+      <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>
+        手勢の統率 <b className="num">{手統}</b>・{f.名}の統率 <b className="num">{f.統率}</b>
+        → 合戦での統率 <b className="num">{実効の統率(f.統率, 手統)}</b>
+        <span style={{ color: U.dim, fontSize: 11 }}>（低いほうに寄る）</span>
+      </div>
+      <div style={{ fontSize: 12, marginTop: 4 }}>扶持 <b className="num">{扶持}</b><span style={{ color: U.dim }}> ／ 枠 {形.枠}</span>{棒(扶持, 形.枠, "#8A6A3A")}</div>
+      <div style={{ fontSize: 11.5, color: U.dim, letterSpacing: ".12em", marginTop: 10 }}>名簿</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+        {手.名簿.map((m) => (
+          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, borderBottom: `1px solid ${U.line2}`, padding: "3px 0" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5 }}>{m.名}{m.新参 && !/^新参/.test(m.名) && <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 6 }}>新参</span>}
+                {m.継ぎ && <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 6 }}>引き継ぎ</span>}</div>
+              {札の値(m)}
+            </div>
+            {!m.新参 && <button className="btn sm" onClick={() => 改める((ff) => 暇を出す(ff, m.id))}>暇を出す</button>}
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 11.5, color: U.dim, letterSpacing: ".12em", marginTop: 12 }}>今月の候補（{手.候補.length}{形.人 > 1 ? "隊" : "人"}・月ごとに入れ替わる）</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+        {手.候補.filter((c) => !(手.雇った || []).includes(c.id)).map((c) => {
+          const 訳 = 雇えるか(f, c.id);
+          return (
+            <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, borderBottom: `1px solid ${U.line2}`, padding: "3px 0" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12.5 }}>{c.名}</div>
+                {札の値(c)}
+                {訳 && <div style={{ fontSize: 10.5, color: U.dim }}>{訳}</div>}
+              </div>
+              <button className="btn sm" disabled={!!訳} onClick={() => 改める((ff) => 手勢を雇う(ff, c.id))}>雇う</button>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
+        雇えば、新参の枠に入る。空きが無ければ、先に暇を出す。名簿の空きと、合戦で討たれた兵の跡は新参で埋まる（素質・練れが低く、扶持は安い）。
+        今の統率は素質と練れを掛けたもので、練れは合戦に出るたびに上がる。
       </div>
     </div>
   );
@@ -154,6 +215,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         borderTop: land ? undefined : `1px solid ${U.line}`, padding: "10px max(10px, env(safe-area-inset-right)) 18px 10px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {身の欄}
+          {手勢の欄}
           {行いの欄}
         </div>
         {/* 月を送る釦は、欄の下に留める（欄が細く長くなったので、繰らずに押せるように） */}

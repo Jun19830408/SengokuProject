@@ -3164,7 +3164,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           )}
         </div>
         <FuunYashiki g={g} land={land} onTitle={onTitle} on月送り={風雲の月送り}
-          on知らせを閉じる={() => setG((p) => ({ ...p, 風雲: { ...p.風雲, 知らせ: [] } }))} />
+          on知らせを閉じる={() => setG((p) => ({ ...p, 風雲: { ...p.風雲, 知らせ: [] } }))}
+          on風雲を改める={(改) => setG((p) => { const n = structuredClone(p); 改(n.風雲, n); return n; })} />
       </div>
     </div>
   );

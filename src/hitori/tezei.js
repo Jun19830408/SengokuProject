@@ -121,6 +121,8 @@ export function 手勢を組む(b, 隊id, 一人) {
   c.手勢の統率 = 一人 && Number.isFinite(一人.手勢の統率) ? 一人.手勢の統率 : 手勢の統率の初め;
   c.統率 = 実効の統率(c.与平の統率, c.手勢の統率);
   c.統率の効き = 統率の効き(c.統率);
+  /* 手勢の武勇（雇い入れの名簿の均し。hitori/tezei_meibo.js）。突く（全体）の当たりが変わる（hitori/senaka.js 手勢の突き合い） */
+  c.手勢の武勇 = 一人 && Number.isFinite(一人.手勢の武勇) ? 一人.手勢の武勇 : null;
   placeSquads(c, true);
   placeSquads(親, false);
   /* はじめの座：上司の隊のいちばん前の組の前へ出す。分けた兵は上司の組と同じ所に立つので、そのままでは兵の列が
