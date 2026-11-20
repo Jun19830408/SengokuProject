@@ -1785,7 +1785,7 @@ export function stepBattle(b, dt) {
       if (!c.squads.some((q) => q.engaged) && !向きを保つ) {
         const want = Math.atan2(dy, dx);
         const diff = ((want - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-        const 回 = 率刻 ? 2.4 / 率刻 : 1.4;
+        const 回 = 率刻 ? 2.4 * (c.統率の効き ? c.統率の効き.回り : 1) / 率刻 : 1.4;   // 率いている手勢は統率で遅くなる（hitori/tezei.js 統率の効き）
         c.facing += clamp(diff, -回 * dt, 回 * dt);
       }
       c.faceTo = null;
@@ -1796,7 +1796,7 @@ export function stepBattle(b, dt) {
          回り、陣形は元の向きに伸びたまま――「押した方角へ陣形が向く」ことに
          ならない（corps.js の placeSquads を参照）。 */
       const diff = ((c.faceTo - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      const rate = 率刻 ? 2.0 / 率刻 : 0.45 + c.gen.lead / 130;     // 率いている手勢は実の秒で（上の 率刻）
+      const rate = 率刻 ? 2.0 * (c.統率の効き ? c.統率の効き.回り : 1) / 率刻 : 0.45 + c.gen.lead / 130;     // 率いている手勢は実の秒で（上の 率刻）。統率の効きを掛ける
       if (Math.abs(diff) < 0.05) {
         c.facing = c.faceTo; c.faceTo = null;
         c.陣向き = c.facing;
@@ -2129,7 +2129,7 @@ export function stepBattle(b, dt) {
         }
         const 望向 = 的 + q.ja * Math.pow(q.dis || 0, 2.4) * 0.85;
         const 差 = ((望向 - q.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-        const 組回 = 率刻 ? 3.0 / 率刻 : 2.6;                 // 率いている手勢は実の秒で一秒に三（上の 率刻）
+        const 組回 = 率刻 ? 3.0 * (c.統率の効き ? c.統率の効き.回り : 1) / 率刻 : 2.6;   // 率いている手勢は実の秒で一秒に三（上の 率刻）に統率の効き
         q.facing += clamp(差, -組回 * dt, 組回 * dt);
       }
       if (qd > 止まる幅 && (!噛み中 || 噛みでも戻る || c.withdraw || c.routed)) {
