@@ -75,7 +75,7 @@ export function 高さ図を据える(高, w, h, 単, 丈単, 画高) {
   図 = { 高, 画高: 画高 || null, w, h, 単, 丈単, 最: 最 * 丈単, 低: (Number.isFinite(低) ? 低 : 0) * 丈単 };
   図の版++;
 }
-export function 高さ図を外す() { 図 = null; 区図 = null; 図の版++; }
+export function 高さ図を外す() { 図 = null; 区図 = null; 水図 = null; 図の版++; }
 export const 高さ図があるか = () => !!図;
 
 /* ---- 城の区の高さの図（城攻めの広い盤・GDD 9.3）----
@@ -112,6 +112,27 @@ function 図を引く(M, x, y, 画) {
   return ((a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty) * M.丈単;
 }
 
+/* ---- 水面の図（川の水位）。地を焼いたときに、高さの図と一緒に据える（野だけ） ----
+   背中越しの視点（hitori/senaka.js）が、川を盤と同じ所・同じ水位で描き、川に入った兵を水に浸からせるために読む。
+   地を焼くときの川の水位（川ごとに、横断のいちばん低い地を拾って均した高さ。shinga.js 野を焼く）を、高さの図より
+   粗い升（升四つごと）で持つ。川から遠い升は 無（NaN）。値は高さの図と同じ尺（値一つが 丈単 歩） */
+let 水図 = null;   // { 水: Float32Array, w, h, 単, 丈単 }
+export function 水図を据える(水, w, h, 単, 丈単) { 水図 = 水 ? { 水, w, h, 単, 丈単 } : null; }
+export const 水図があるか = () => !!水図;
+/* その所の水面の高さ（歩）。川の水の届く所でなければ null（まわりの升に水位が無ければ）。
+   水面が地より低ければ、そこは乾いた岸（水面の丈 ≦ 地の丈）。まわり四升のうち水位のあるものだけを均して引く */
+export function 水面の丈(x, y) {
+  const M = 水図; if (!M) return null;
+  const fx = x / M.単, fy = y / M.単;
+  if (fx < 0 || fy < 0 || fx > M.w - 1 || fy > M.h - 1) return null;
+  const x0 = Math.floor(fx), y0 = Math.floor(fy), x1 = Math.min(M.w - 1, x0 + 1), y1 = Math.min(M.h - 1, y0 + 1);
+  const tx = fx - x0, ty = fy - y0, w = M.w, A = M.水;
+  let 和 = 0, 重 = 0;
+  const 足す = (v, k) => { if (v === v && k > 0) { 和 += v * k; 重 += k; } };     // v === v … NaN でない
+  足す(A[y0 * w + x0], (1 - tx) * (1 - ty)); 足す(A[y0 * w + x1], tx * (1 - ty));
+  足す(A[y1 * w + x0], (1 - tx) * ty); 足す(A[y1 * w + x1], tx * ty);
+  return 重 > 0.05 ? (和 / 重) * M.丈単 : null;
+}
 // その所の地の高さ（歩）。図が無ければ零。画 を立てれば梢まで含めた高さ
 export function 地の丈(x, y, 画) {
   if (!図) return 0;

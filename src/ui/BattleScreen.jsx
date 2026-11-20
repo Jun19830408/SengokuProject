@@ -531,10 +531,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
           盤を描く();
           const 板 = 板Ref.current || (板Ref.current = document.createElement("canvas"));
           if (板.width !== cv.width || 板.height !== cv.height) { 板.width = cv.width; 板.height = cv.height; }
-          背中を描く(板.getContext("2d"), b, 地, W, H, dpr, ts / 1000, 止め, 降り2);
+          背中を描く(板.getContext("2d"), b, 地, W, H, dpr, ts / 1000, 止め, 降り2, terrainRef.current, 地版Ref.current);
           const g2 = cv.getContext("2d"), v = Math.max(0, Math.min(1, u / 0.35));
           g2.save(); g2.setTransform(1, 0, 0, 1, 0, 0); g2.globalAlpha = v * v * (3 - 2 * v); g2.drawImage(板, 0, 0); g2.restore();
-        } else if (地) 背中を描く(cv.getContext("2d"), b, 地, W, H, dpr, ts / 1000, 止め, 降り2 && u < 1 ? 降り2 : null);
+        } else if (地) 背中を描く(cv.getContext("2d"), b, 地, W, H, dpr, ts / 1000, 止め, 降り2 && u < 1 ? 降り2 : null, terrainRef.current, 地版Ref.current);
+        /* 背中越しの地（起伏・川の水面）は、盤の地の画（terrainRef）と高さの図から描く（hitori/chi_gl.js） */
         else 盤を描く();
         /* 一コマを描くのに要った時（直近六十コマ）。重さを測るための覗き窓 */
         if (typeof window !== "undefined") {

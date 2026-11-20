@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { U } from "../core/util.js";
-import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数 } from "./fuun.js";
+import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数, 月の体力の戻り, 養生の戻り } from "./fuun.js";
 import { 主命の重さ, 働きかけの見込み, 予定を見る, 月番を年月に, 山賊の月か, 偵察の月か, 偵察の的を選ぶ, 今の月番 } from "./shumei.js";
 import { TOWNS } from "../data/castles.js";
 import { 住まいの絵 } from "./sumai_e.jsx";
@@ -127,7 +127,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         ))}
       </div>
       <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
-        金の要る行いは、金が足りなければ行えない（開墾・商いで得た金は、同じ月に使える）。体力は合戦ごとに満ちて始まる。
+        金の要る行いは、金が足りなければ行えない（開墾・商いで得た金は、同じ月に使える）。月を越せば体力は{月の体力の戻り}戻り、養生を選べば、さらに{養生の戻り}戻る。
       </div>
       <div className="sec">{f.名}の記</div>
       <div style={{ fontSize: 12, lineHeight: 1.75 }}>

@@ -84,7 +84,7 @@ export { 視のなぞりの横, 視のなぞりの縦 } from "../src/hitori/Sena
 export { 人形の段 } from "../src/hitori/ningyo.js";
 export { 手勢の数, 手勢を組む, 手勢へ下知, 手勢で掛かる, 手勢を構えさせる, 手勢を委ねる, 手勢を留める, 下知の名, 掛かれの届き } from "../src/hitori/tezei.js";
 /* 風雲モード（一人の侍の立身）の理と屋敷の画面（試し：tests/fuun.cjs） */
-export { 風雲の段, 段の番, 次の段, 盤の身分, 風雲の一人, 月の行い一覧, 月の行いの数, 上司を選ぶ, 若手の上司を選ぶ, 風雲の上司を決める, 風雲で選べるか, 風雲を始める, 風雲の月の初め, 上司を見直す, 風雲の戦か, 風雲の城攻めか, 風雲の隊を選ぶ, 風雲の城攻めの隊, 戦の勲功を記す, 取り立てを見る, 風雲の問いに答える, 首の勲功, 首の値, 討ち取りの勲功, 雑兵の勲功の割, 合戦の初めの体力 } from "../src/hitori/fuun.js";
+export { 風雲の段, 段の番, 次の段, 盤の身分, 風雲の一人, 月の行い一覧, 月の行いの数, 上司を選ぶ, 若手の上司を選ぶ, 風雲の上司を決める, 風雲で選べるか, 風雲を始める, 風雲の月の初め, 上司を見直す, 風雲の戦か, 風雲の城攻めか, 風雲の隊を選ぶ, 風雲の城攻めの隊, 戦の勲功を記す, 取り立てを見る, 風雲の問いに答える, 首の勲功, 首の値, 討ち取りの勲功, 雑兵の勲功の割, 月の体力の戻り, 養生の戻り } from "../src/hitori/fuun.js";
 export { FuunYashiki, 住まいの絵 } from "../src/hitori/FuunYashiki.jsx";
 export { 風雲の上司表 } from "../src/hitori/fuun_joushi.js";
 export { 城の箱を集める, 堀の帯 } from "../src/hitori/shiro_senaka.js";
@@ -98,7 +98,10 @@ export { 筋書き as 関ヶ原 } from "../src/data/sekigahara.js";
 export { battleAI } from "../src/battle/ai.js";
 export { sideColor, ownZone, drawMon, 紋の核, drawCastleTerrain, drawCastleBuildings, drawFieldTerrain, drawBattle, 画面の上, 射の端 } from "../src/battle/draw.js";
 // 眺めを回す向きと、盤の所を眺めの所へ写す式（兵の絵の試し：矢の弧は画面の上へ）
-export { 向きを据える, 視 } from "../src/battle/naname.js";
+export { 向きを据える, 視, 地の丈, 水面の丈, 水図があるか, 高さ図があるか } from "../src/battle/naname.js";
+export { 家々を据える, 葦を据える } from "../src/battle/sato.js";
+export { 木立を据える } from "../src/battle/mori.js";
+export { 地の足, 障りの内, 幹の半 } from "../src/hitori/senaka.js";
 export { 分け目の野, 野を探す, 陣立てを敷く, 隊の間合い } from "../src/data/wakemeba.js";
 export { 分け目の限り, 分け目の暮れ, 挑む直轄, 挑まれる版図, 再び挑める信用, 直轄の石高, 版図の石高, 石高の順, 並びの隣か, 天下分け目を挑めるか, 挑める家ら, 挑める見込み, 器量くらべ, 野を選ぶ側, 分け目の顔ぶれ, 分け目の兵, 分け目の備えを組む, 集結の月数, 天下分け目を起こす, 分け目を進める, 割譲できる城ら, 取る城を見立てる, 割譲の限り, 再び挑める月, 逃散の割, 野の見立て, 兵を逃散させる, 上下の縁を解く, 敗れた将の始末, 城を割譲する, 分け目の沙汰 } from "../src/core/wakeme.js";
 export { 分け目の盤を組む, 分け目の戦果 } from "../src/battle/wakemeikusa.js";
