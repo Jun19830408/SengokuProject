@@ -6,7 +6,8 @@
 
    十人長から三百人長に上がると、合戦で手勢を率いる。手勢は、上司の隊の槍組から分けた兵で、
    十人長は十人、三十人長は三十人、五十人長は一組（五十人）、百人長は二組、三百人長は六組。
-   上司の隊とは別の隊として盤に立つ（分遣隊と同じ形：battle/corps.js makeDetachment）。
+   盤の理の上では上司の隊とは別の隊として動かす（分遣隊と同じ形：battle/corps.js makeDetachment）が、上司の隊に
+   属するものとして扱う（下の「手勢は上司の隊に属する」）。
      ・隊の id は「上司の id ＋ #手勢」。戦の跡では、組の名簿の id（src）で上司の兵に数える
        （同じ組から分けた兵は、生き残りを足し合わせる：core/roster.js 戦の跡）
      ・将は与平（上司の将を写し、名と武勇・統率を与平のものに替える。総大将の印は持たない。手勢が崩れても
@@ -23,20 +24,30 @@
        （足は六割。手勢が写しのほうへ向き直ると、与平が手勢の向こうへ回り、手勢が写しと与平のあいだに入るため）
      ・背中越しに率いているあいだ、手勢の足の慣性・向き直り・兵の絵の均しは実の秒で効かせる（battle/field.js
        率いの刻比。遊ぶ人の申し出：「隊を持ったときでも一人のときと同様にスムースに移動できるよう」）
-     ・三つの釦は手勢への下知：掛かれ（前の敵の組へ掛かる。駆けよと共に押せば突撃）・構え（止まって構える）・
-       駆けよ（押しているあいだ駆け足）
+     ・釦は一人のときと同じ三つを、手勢の全体で行う（遊ぶ人の申し出：「掛かれはあくまでも一人のときに槍をついていた
+       のを部隊全体で突くようにするだけに」「突く（全体）と受ける（全体）」）：突く（与平と手勢の兵がいっせいに突く）・
+       受ける（押しているあいだ、与平と手勢の兵が構えて受ける）・駆ける（押しているあいだ、手勢と与平が駆け足。倍の足。
+       与平の気力を使う）。手勢の兵と敵の兵との突き合いは hitori/senaka.js 手勢の突き合い。もとの掛かれ（敵の組へ
+       接戦の下知）と構え（守備の下知）はやめた。掛かれで敵と噛み合うと、盤の斬り合いに足を止められて動けなかった
+     ・手勢は上司の隊に属する（遊ぶ人の申し出：「あくまでも武将に所属する部隊なので、別個にする必要はないと思います。
+       別個に動くのはあくまでも物頭になってから」）。上司の隊の中の座（上司の隊の向きで測った前後・左右のずれ）を保って、
+       上司の隊と一緒に歩む（下の 手勢を親に付ける）。背中越しに率いているあいだは遊ぶ人の下知に従い（方向キーを
+       放せばその場に留まる）、率いていないとき（盤の視点・一騎駆けのあいだ・委ねたとき）は元の座へ戻って上司の隊に
+       付く。盤の視点では、手勢に別の隊の印（旗・名・士気の帯）を出さない（battle/draw.js）。
+       はじめの座は、上司の隊のいちばん前の組の前（兵の列が上司の兵の列に重ならない所）
      ・兵の足の出し方は一人ずつ少し違う（battle/shinga.js 足の癖）
      ・一騎駆け（遊ぶ人の申し出：「隊を率いている場合も一騎駆けができるように。ただし一定の時間が経過すると隊に戻る」）：
-       与平が手勢を離れて自分で戦うあいだ、手勢は最後の下知を守る（歩ませていたなら止まる。hitori/senaka.js 一騎駆け）
-     ・与平が討たれるか、委ねて結果を見るなら、手勢は諸将の采配に任せる
+       与平が手勢を離れて自分で戦うあいだ、手勢は上司の隊に付く（歩ませていたなら止め、元の座へ戻る。hitori/senaka.js
+       一騎駆け）
+     ・与平が討たれるか、委ねて結果を見るなら、手勢は上司の隊について動く（上司の隊が崩れたら諸将の采配に任せる）
    五十人長からは、与平は馬上（組頭と同じ。battle/shinga.js 組頭の番）。
    値はみな仮。
    ========================================================================== */
 import { placeSquads } from "../battle/corps.js";
+import { terrainAt, 率いの刻比 } from "../battle/field.js";
+import { 野の道 } from "../battle/route.js";
 
 export const 手勢の数 = { 十人長: 10, 三十人長: 30, 五十人長: 50, 百人長: 100, 三百人長: 300 };
-export const 掛かれの届き = 120;              // 掛かれの下知で掛かる敵の組の遠さ（盤の歩・およそ五十五m）
-const 組の前 = 8;                              // 組の前の列は、組の芯から八歩前（shinga.js 持場）
 const 下知の間 = 0.2;                           // 方向キーから手勢へ下知を出し直す間（実の秒）
 
 /* 手勢を組む（合戦の始めに一度）。隊id … 上司の隊。一人 … 盤へ渡す主人公（手勢・名・武勇・統率）。
@@ -79,23 +90,25 @@ export function 手勢を組む(b, 隊id, 一人) {
   };
   placeSquads(c, true);
   placeSquads(親, false);
+  /* はじめの座：上司の隊のいちばん前の組の前へ出す。分けた兵は上司の組と同じ所に立つので、そのままでは兵の列が
+     上司の兵の列と重なり、どれが手勢か見分けられない。手勢のいちばん後ろの兵の列が、上司のいちばん前の兵の列より
+     三歩前に来る所（組の兵は十人ずつ列を作り、列は二.七歩ごと。battle/shinga.js） */
+  {
+    const 向 = 親.陣向き != null ? 親.陣向き : 親.facing, fx = Math.cos(向), fy = Math.sin(向);
+    const 上司の前 = Math.max(...親.squads.filter((q) => q.men > 0).map((q) => q.x * fx + q.y * fy).concat([親.x * fx + 親.y * fy]));
+    const 手勢の後 = Math.min(...c.squads.map((q) => q.x * fx + q.y * fy - (Math.ceil(Math.min(50, q.men) / 10) - 1) * 2.7));
+    const 出 = 上司の前 + 3 - 手勢の後;
+    if (出 > 0) { c.x += fx * 出; c.y += fy * 出; }
+    c.facing = 向; c.陣向き = 向; c.tx = c.x; c.ty = c.y;
+    placeSquads(c, true);
+  }
   b.corps.push(c);
   b.手勢 = c;
+  b.手勢を付ける = 手勢を親に付ける;                 // 盤の刻みごとに上司の隊に付ける（battle/engine.js stepBattle）
   if (b.log) b.log.push({ t: b.t || 0, text: `${名}が手勢${数}人を率いる（${親.name}の隊から）。` });
   return c;
 }
 
-/* 手勢の前の列の真ん中（盤の座標）。組ごとの前の列（芯から向きへ八歩）のうち、隊の向きでいちばん前にある組たち
-   （六歩のうち）の真ん中。組が前後に並ぶ陣（百人長・三百人長）でも、前の組の並びを取る */
-function 前の列(c) {
-  const fx = Math.cos(c.facing || 0), fy = Math.sin(c.facing || 0), 点ら = [];
-  for (const q of c.squads) { if (!(q.men > 0)) continue; const a = q.facing || c.facing || 0, x = q.x + Math.cos(a) * 組の前, y = q.y + Math.sin(a) * 組の前; 点ら.push({ x, y, v: x * fx + y * fy }); }
-  if (!点ら.length) return null;
-  const 先 = Math.max(...点ら.map((o) => o.v)), 前ら = 点ら.filter((o) => o.v > 先 - 6);
-  return { x: 前ら.reduce((a, o) => a + o.x, 0) / 前ら.length, y: 前ら.reduce((a, o) => a + o.y, 0) / 前ら.length };
-}
-
-export { 前の列 as 手勢の前の列 };
 
 const 角の差 = (a, z) => { let d = a - z; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
 const 下知の控え = (c) => c.下知 || (c.下知 = { t: -9, 様: "待つ", 陣t: -9 });
@@ -104,83 +117,144 @@ const 委ねるか = (b, c) => !c || !c.手勢 || c.dead || c.destroyed || b.委
 /* 方向キーから手勢へ（背中越しの一コマごと）。入 … 背中越しの入り（jx・jy・keys・駆）。写し角 … 写しの向き（世界の角）。
    t … 実の秒。押していれば、押した向き（盤の座標）へ四十歩先を行き先にして歩ませる。放せば止める。
    写しの手前（真うしろから左右七十度のうち）へ押せば、向きを保ったまま下がる（c.向きを保つ。battle/engine.js）。
-   噛み合っていて前へ押しているあいだは、掛かれの下知のまま戦わせる（前へ押して引き離さない） */
+   手勢の兵が敵の兵と槍の間合いまで詰まっていれば、詰まった向きへは出さない（下）。駆ける可 … 駆け足を許すか
+   （与平の気力が尽きれば許さない。hitori/senaka.js） */
 export const 下がる押し = 0.342;               // 押した向きの写しの手前への分がこれを超えれば下がる（cos 七十度。値は仮）
-export function 手勢へ下知(b, c, 入, 写し角, t) {
+/* 手勢の兵が敵の兵と詰まっているときの留まり（下の 手勢へ下知）。値は仮 */
+export const 寄る押し = 0.3;                                   // 押した向きが、詰まった向きを均した向きへこれより寄っていれば敵へ寄る押し
+export const 詰まりの正面 = Math.cos(50 * Math.PI / 180);     // 敵へ寄る押しなら、押した向きの左右五十度のうちで詰まっていれば留まる
+export const 詰まりの真向き = Math.cos(25 * Math.PI / 180);   // 横やうしろへの押しなら、左右二十五度のうちで詰まっているときだけ留まる
+export function 手勢へ下知(b, c, 入, 写し角, t, 駆ける可 = true) {
   if (委ねるか(b, c)) return;
   const 下 = 下知の控え(c);
   let jx = 入.jx || 0, jy = 入.jy || 0;
   const 鍵 = 入.keys || new Set(), kx = (鍵.has("r") ? 1 : 0) - (鍵.has("l") ? 1 : 0), ky = (鍵.has("d") ? 1 : 0) - (鍵.has("u") ? 1 : 0);
   if (kx || ky) { const L = Math.hypot(kx, ky); jx = kx / L; jy = ky / L; }
   const m = Math.hypot(jx, jy), 押す = m > 0.12;
-  if (t - 下.t < 下知の間) return;
-  下.t = t;
+  /* 下知は〇.二秒ごとに出し直す。ただし押し始め・放した刻、手勢の兵が敵の兵と詰まった・離れた刻、駆ける・駆けないが
+     変わった刻は待たずに出す（押してから最大〇.二秒、上司の隊について向き直る動きが続いていた。詰まってからも
+     〇.二秒、敵の列へ歩み続けた） */
+  const 詰 = c.詰まり && c.詰まり.数 > 0 && t - c.詰まり.t < 0.5 ? c.詰まり : null, 駆け = !!入.駆 && !!駆ける可;
+  if (t - 下.t < 下知の間 && 押す === !!下.押す && !!詰 === !!下.詰 && 駆け === !!下.駆け) return;
+  下.t = t; 下.押す = 押す; 下.詰 = !!詰; 下.駆け = 駆け;
   c.auto = false; c.pending = null; c.wp = null;
   if (押す) {
     const cfx = Math.cos(写し角), cfz = Math.sin(写し角), ux = jx / m, uy = jy / m;
-    const wx = cfz * ux - cfx * uy, wz = -cfx * ux - cfz * uy, dx = wx, dy = -wz;    // 世界の向き → 盤の向き
-    const 噛 = c.squads.some((q) => q.engaged && q.men > 0);
-    const 前へ = dx * Math.cos(c.facing) + dy * Math.sin(c.facing) > 0.3;
-    if (噛 && 前へ && 下.様 === "掛かる") return;
-    c.order = "移動"; c.狙い = null; c.tx = c.x + dx * 40; c.ty = c.y + dy * 40; 下.様 = "動く";
+    const wx = cfz * ux - cfx * uy, wz = -cfx * ux - cfz * uy;
+    let dx = wx, dy = -wz;                                                            // 世界の向き → 盤の向き
+    /* 手勢の兵が敵の兵と槍の間合いまで詰まっていれば（hitori/senaka.js 手勢の突き合い の c.詰まり。〇.五秒より古ければ
+       見ない）、詰まった向き（十六方のどれか）へは出さない。
+         ・敵へ寄る向きに押せば（押した向きが、詰まった向きを均した向きへ 寄る押し より寄っている）、押した向きの
+           左右五十度（詰まりの正面）のうちで詰まっていれば、その場に留まって槍を合わせる
+         ・横やうしろへ押せば、押した向きの左右二十五度（詰まりの真向き）のうちで詰まっているときだけ留まる（敵の兵が
+           脇や斜めうしろに回っていても、離れられる）
+       留まらなければ、押した向きから詰まった向きへの分を順に抜いて（三巡）、残りの向きへ動く（敵の列に沿って横へ、
+       また敵から離れる向きへ動ける）。もとは詰まった向きを均した一つの向きだけを見ていたので、敵の隊の角で触れると、
+       均した向き（横）を抜いた残り（前）へ歩み続け、敵の兵の列の中へ入り込んだ */
+    if (詰) {
+      const L = Math.hypot(詰.x, 詰.y) || 1;
+      const 方 = 詰.方 && 詰.方.length ? 詰.方.map((k) => [Math.cos(k * Math.PI / 8), Math.sin(k * Math.PI / 8)]) : [[詰.x / L, 詰.y / L]];
+      const 寄る = (dx * 詰.x + dy * 詰.y) / L > 寄る押し, 留め = 寄る ? 詰まりの正面 : 詰まりの真向き;
+      if (方.some(([nx, ny]) => dx * nx + dy * ny > 留め)) { dx = 0; dy = 0; }
+      else for (let 巡 = 0; 巡 < 3; 巡++) for (const [nx, ny] of 方) { const 沿 = dx * nx + dy * ny; if (沿 > 1e-6) { dx -= 沿 * nx; dy -= 沿 * ny; } }
+    }
+    const 残 = Math.hypot(dx, dy);
+    if (残 < 0.3) { dx = 0; dy = 0; } else { dx /= 残; dy /= 残; }
+    c.order = "移動"; c.狙い = null; c.tx = c.x + dx * 40; c.ty = c.y + dy * 40; 下.様 = "動く"; c.従い = false; c.faceTo = null; c.wp = null;
     c.向きを保つ = uy > 下がる押し;                                   // 写しの手前へ押せば、前を向いたまま下がる
-    /* 駆けよ：押しているあいだ駆け足。突撃の刻は盤の秒で減るので、実の秒でおよそ〇.三五秒ぶん（下知は〇.二秒ごとに
-       出し直す）。背中越しの微速の盤で〇.六（盤の秒）と据えていたころは、放してから十秒ほど駆け続けた */
-    if (入.駆) c.chargeT = Math.max(c.chargeT || 0, 0.35 * (c.率い刻比 > 0 ? c.率い刻比 : 1));
+    /* 駆ける（全体）：押しているあいだ駆け足（倍の足。battle/engine.js）。与平の気力が尽きれば駆けない（駆ける可。
+       hitori/senaka.js が与平の気力で決める）。下がりながらは駆けない。もとは突撃の刻（一.三五倍）を使っていたので、
+       駆けているのが目に見えなかった（遊ぶ人の申し出：「ダッシュもできません」） */
+    c.駆け足 = 駆け && !c.向きを保つ;
     /* 組が二つ以上なら、陣の向きも歩む向きへ回す（〇.六秒に一度まで。二十度より回れば陣を組み直す） */
     if (c.squads.filter((q) => q.men > 0).length > 1 && t - 下.陣t > 0.6 && Math.abs(角の差(c.facing, c.陣向き == null ? c.facing : c.陣向き)) > 0.35) {
       下.陣t = t; c.陣向き = c.facing; placeSquads(c, false);
     }
   } else if (下.様 === "動く") {
-    c.order = "待機"; c.tx = c.x; c.ty = c.y; 下.様 = "待つ"; c.向きを保つ = false;
+    c.order = "待機"; c.tx = c.x; c.ty = c.y; 下.様 = "待つ"; c.向きを保つ = false; c.駆け足 = false;
   }
 }
 
-/* 掛かれ：手勢の前（向きから左右八十度のうち）の、掛かれの届きのうちでいちばん近い敵の組へ掛かる。前に無ければ、
-   六十歩のうちならどの向きでも。駆け … 駆けよを押しながらなら突撃（ゲームの「突撃」の釦と同じく突撃の刻を付ける）。
-   掛かった敵の組を返す（無ければ null） */
-export function 手勢で掛かる(b, c, 駆 = false) {
-  if (委ねるか(b, c)) return null;
-  const 下 = 下知の控え(c), fx = Math.cos(c.facing), fy = Math.sin(c.facing);
-  let 的 = null, 的d = 1e9;
-  for (const e of b.corps) {
-    if (e.side === c.side || e.dead || e.destroyed || e.日和見 || e.routed) continue;
-    for (const q of e.squads || []) {
-      if (!(q.men > 0)) continue;
-      const dx = q.x - c.x, dy = q.y - c.y, d = Math.hypot(dx, dy);
-      const 前 = d > 1e-6 ? (dx * fx + dy * fy) / d : 1;
-      if (!(d < 60 || (d < 掛かれの届き && 前 > Math.cos(80 * Math.PI / 180)))) continue;
-      if (d < 的d) { 的d = d; 的 = { q, e }; }
-    }
-  }
-  if (!的) return null;
-  c.auto = false; c.pending = null; c.wp = null;
-  c.order = 駆 ? "突撃" : "接戦"; c.tx = 的.q.x; c.ty = 的.q.y; c.狙い = 的.e.id; c.向きを保つ = false;
-  if (駆) c.chargeT = c.formation === "鋒矢" ? 26 : 16;
-  下.様 = "掛かる"; 下.t = -9;
-  return 的;
-}
-
-/* 構え：その場に止まって構える（守備） */
-export function 手勢を構えさせる(b, c) {
-  if (委ねるか(b, c)) return false;
-  const 下 = 下知の控え(c);
-  c.auto = false; c.pending = null; c.wp = null;
-  c.order = "守備"; c.tx = c.x; c.ty = c.y; c.狙い = null; 下.様 = "構え"; 下.t = -9; c.向きを保つ = false;
-  return true;
-}
-
-/* 与平が手勢を離れる（一騎駆け。hitori/senaka.js）とき：方向キーで歩ませていたなら、その場に止める。
-   掛かれ・構えの下知は、そのまま守る */
+/* 与平が手勢を離れる（一騎駆け。hitori/senaka.js）とき：方向キーで歩ませていたなら、その場に止める。そののちは
+   率いていないので、上司の隊の元の座へ戻って付く（下の 手勢を親に付ける） */
 export function 手勢を留める(b, c) {
   if (委ねるか(b, c)) return;
   const 下 = 下知の控え(c);
   if (下.様 === "動く") { c.order = "待機"; c.tx = c.x; c.ty = c.y; 下.様 = "待つ"; }
-  c.向きを保つ = false; 下.t = -9;
+  c.向きを保つ = false; c.駆け足 = false; 下.t = -9;
 }
 
-/* 与平が討たれたら、手勢は諸将の采配に任せる */
-export function 手勢を委ねる(c) { if (c && c.手勢) { c.auto = true; c.向きを保つ = false; } }
+/* 与平が討たれたら、手勢は上司の隊について動く（下の 手勢を親に付ける。上司の隊が崩れていれば諸将の采配に任せる） */
+export function 手勢を委ねる(c) {
+  if (!c || !c.手勢) return;
+  const 下 = 下知の控え(c);
+  if (下.様 === "動く") { c.order = "待機"; c.tx = c.x; c.ty = c.y; }
+  下.様 = "待つ"; c.向きを保つ = false; c.駆け足 = false; c.委ねた = true;
+}
+
+/* 手勢を上司の隊に付ける（盤の刻みごと。battle/engine.js stepBattle が b.手勢を付ける として呼ぶ）。遊ぶ人の申し出：
+   「盤にした場合、10人組でも所属する武将とは別個として認識されていますが、動かせず、その場にとどまります。あくまでも
+   武将に所属する部隊なので、別個にする必要はないと思います」。手勢は、上司の隊の中の座（上司の隊の向きで測った前後・
+   左右のずれ。c.親の座。はじめの座は上司の隊の前の列の前）を保って、上司の隊と一緒に歩む。座から 付き従いの隔 より
+   離れれば歩み出し（上司の隊が動いているあいだは、行き先を刻みごとに改めて付いて歩む）、上司の隊が止まって座に
+   着けば、上司の隊の向きへ向き直る。背中越しに率いているあいだは付き従わない（遊ぶ人の下知に従う。下）。
+   盤の組どうしで噛み合っているあいだは、斬り合いを捨てて歩み去らない。上司の隊が崩れたか退いたなら付き従わず、
+   遊ぶ人が率いていなければ諸将の采配に任せる */
+export const 付き従いの隔 = 8;                    // 座からこれより離れれば歩み出す（盤の歩。値は仮）
+const 淵を跨ぐ = (x0, y0, x1, y1) => { for (let k = 0; k <= 8; k++) if (terrainAt(x0 + (x1 - x0) * k / 8, y0 + (y1 - y0) * k / 8) === "deep") return true; return false; };
+function 従う道(c, 親, tx, ty) {
+  const T = 親.trail || [];
+  let k0 = -1, bd = 1e9;
+  for (let k = 0; k < T.length; k++) { const d = Math.hypot(T[k].x - c.x, T[k].y - c.y); if (d < bd) { bd = d; k0 = k; } }
+  const 末 = { x: tx, y: ty, r: 8, 末: true };
+  if (k0 >= 0 && bd < 120) return [...T.slice(k0).map((p) => ({ x: p.x, y: p.y, r: 12 })), 末];
+  const 道 = 野の道(c.x, c.y, tx, ty);
+  return 道 && 道.length ? [...道.map((p) => ({ x: p.x, y: p.y, r: Math.min(p.r || 40, 12) })), 末] : null;
+}
+export function 手勢を親に付ける(b, c) {
+  if (!b || !c || !c.手勢 || c.dead || c.destroyed || c.routed || c.withdraw) return;
+  const 親 = b.corps.find((x) => x.id === c.parentId);
+  const 下 = 下知の控え(c);
+  if (!親 || 親.dead || 親.destroyed || 親.routed || 親.withdraw) {
+    c.従い = false;
+    if (!(c.率い刻比 > 0 && b.t - (c.率い盤t == null ? -1e9 : c.率い盤t) < 0.25)) c.auto = true;
+    return;
+  }
+  const 向 = 親.陣向き != null ? 親.陣向き : 親.facing, fx = Math.cos(向), fy = Math.sin(向);
+  const 元x = 親.席x != null ? 親.席x : 親.x, 元y = 親.席y != null ? 親.席y : 親.y;
+  const 座を据える = () => { const dx = c.x - 元x, dy = c.y - 元y; c.親の座 = { 前: dx * fx + dy * fy, 横: -dx * fy + dy * fx }; };
+  if (!c.親の座) 座を据える();
+  /* 背中越しに率いているあいだは、遊ぶ人の下知に従う。方向キーを放せばその場に留まり、上司の隊が動いても付いて
+     歩まない（突く・受けるを押しているあいだに、手勢が上司の隊のほうへ歩き出していた）。座は改めない（率いるのを
+     やめれば、上司の隊の中の元の座へ戻って付く）。付いて歩んでいた途中で率い始めたなら、その場に止める */
+  if (率いの刻比(b, c)) {
+    if (c.従い) { c.従い = false; c.order = "待機"; c.tx = c.x; c.ty = c.y; c.wp = null; }
+    return;
+  }
+  c.auto = false;
+  if (c.squads.some((q) => q.engaged && q.men > 0)) { c.従い = false; return; }
+  const 座 = c.親の座, tx = 元x + fx * 座.前 - fy * 座.横, ty = 元y + fy * 座.前 + fx * 座.横;
+  const d = Math.hypot(tx - c.x, ty - c.y);
+  const 親の足 = 親.速 ? Math.hypot(親.速.x, 親.速.y) : 0;
+  if (d > 付き従いの隔 || (c.従い && (d > 6 || 親の足 > 2))) {          // 盤の隊は行き先の六歩のうちで足を止める
+    c.order = "移動"; c.狙い = null; c.向きを保つ = false; c.駆け足 = false; c.pending = null; c.faceTo = null; c.従い = true;
+    /* 座へまっすぐ行くと淵（深い川）を跨ぐなら、上司の隊が来た道（c.trail。上司の隊は橋や浅瀬を渡って来ている）を
+       手勢にいちばん近い所から辿り、それから座へ向かう。上司の道が近くに無ければ、浅瀬や橋を辿る道を引く
+       （battle/route.js 野の道）。道は六秒ごとに引き直し、道の末は刻みごとに上司の座へ改める。曲がり角に着いたと
+       するのは十二歩のうち（野の道の輪は五十歩ほどと広く、橋の袂の手前で着いたことになって淵へ向かった）。
+       もとは淵の手前で立ち尽くし、上司の隊だけが川を越えて行った */
+    if (淵を跨ぐ(c.x, c.y, tx, ty)) {
+      if (!c.wp || !c.wp.length || b.t - (c.従い道刻 == null ? -99 : c.従い道刻) > 6) {
+        c.wp = 従う道(c, 親, tx, ty); c.従い道刻 = b.t;
+      } else if (c.wp[c.wp.length - 1].末) c.wp[c.wp.length - 1] = { x: tx, y: ty, r: 8, 末: true };
+    } else c.wp = null;
+    if (c.wp && c.wp.length) { c.tx = c.wp[0].x; c.ty = c.wp[0].y; } else { c.tx = tx; c.ty = ty; }
+  } else if (c.従い) {
+    c.従い = false; c.order = "待機"; c.tx = c.x; c.ty = c.y; c.wp = null;
+    if (Math.abs(角の差(c.facing, 向)) > 0.3) c.faceTo = 向;          // 着いたら上司の隊の向きへ向き直る
+  }
+}
 
 /* 手勢の下知の名（名札に出す） */
-export const 下知の名 = (c) => ({ 動く: "進め", 掛かる: "掛かれ", 構え: "構え", 待つ: "待て" })[(c && c.下知 && c.下知.様) || "待つ"];
+export const 下知の名 = (c) => (c && c.従い ? "上司の隊に付く"
+  : c && c.下知 && c.下知.様 === "動く" ? (c.駆け足 ? "駆けよ" : c.向きを保つ ? "下がれ" : "進め") : "待て");

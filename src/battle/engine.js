@@ -927,6 +927,9 @@ export function stepBattle(b, dt) {
      采配（battleAI）のあとに置く。前に置いていたころは、備ごとにまとめて
      当たらせた下知を、その直後に采配が隊ごとの下知で塗り潰していた。 */
   if (b.進行) b.進行(b, dt);
+  /* 主人公の手勢（風雲モード・十人長から三百人長）を、上司の隊について動かす（hitori/tezei.js 手勢を親に付ける）。
+     盤の視点でも委ねていても、刻みごとに */
+  if (b.手勢 && b.手勢を付ける) b.手勢を付ける(b, b.手勢);
   /* 去就の定まらぬ隊（日和見）は、盤の上にいるが戦には加わらない（GDD 8.9）。
 
      松尾山の小早川も、南宮山の毛利も、開戦から昼まで一歩も動かなかった。
@@ -1028,7 +1031,8 @@ export function stepBattle(b, dt) {
        隔たりだけで決めたとき、乱れた槍へ突き入った騎馬が線に留まり、槍が四百しか
        減らなかった。tests/heika の「乱れた槍には、騎馬がほとんど無傷で勝つ」）。
        足を止める・押し通るの判じ（接敵）は、これまでどおり六歩の幅で見る。 */
-    if (c.接敵) { c.線の敵 = c.接敵; c.線の刻 = b.t; }
+    if (率いの刻比(b, c)) c.線の敵 = null;     // 率いている手勢は戦の線に並ばない（陣形のまま。上の 噛み合いの段を見よ）
+    else if (c.接敵) { c.線の敵 = c.接敵; c.線の刻 = b.t; }
     else if (c.線の敵) {
       const o = c.線の敵;
       const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
@@ -1181,11 +1185,12 @@ export function stepBattle(b, dt) {
 
   // 味方の武将隊どうしの重なりだけを押し戻す。
   // 「離れすぎたら本隊へ戻す」ような、命じていない移動はさせない。
-  /* 背中越しに率いている手勢（field.js 率いの刻比）は、味方と押し合わない（押されもせず、押しもしない）。手勢は上司の
-     隊の前の列から分けた十人から三百人で、上司の隊の塊の中に立つ。押し合いは百五十歩のうちの味方から掛かるので、
-     手勢を歩ませると、上司の隊から押し出されて横へ流れていた（実の秒で毎秒〇.八m ほど。持ち場の円の外へも
-     流される）。小さな手勢は味方の隊のあいだを縫って歩む */
-  const 率いる手勢 = alive.filter((c) => 率いの刻比(b, c));
+  /* 主人公の手勢（hitori/tezei.js。率いていても、盤の視点で上司の隊について動いていても）は、味方と押し合わない
+     （押されもせず、押しもしない）。手勢は上司の隊の前の列から分けた十人から三百人で、上司の隊に属し、その塊の
+     そばに立つ。押し合いは百五十歩のうちの味方から掛かるので、手勢を歩ませると上司の隊から押し出されて横へ流れ
+     （実の秒で毎秒〇.八m ほど。持ち場の円の外へも流される）、上司の隊について動くときは、手勢と上司の隊とが押し
+     合って上司の隊まで向きが揺れた。小さな手勢は味方の隊のあいだを縫って歩む */
+  const 率いる手勢 = alive.filter((c) => c.手勢);
   for (const c of alive) {
     if (c.detach || c.routed || c.withdraw || (c.ambush && !c.revealed)) continue;
     if (率いる手勢.length && 率いる手勢.includes(c)) continue;
@@ -1349,7 +1354,11 @@ export function stepBattle(b, dt) {
            三歩まで寄り、三百刻みのあいだ八歩を割っていた）。席の差し渡しがどう出ようと、
            中どころどうしは触れ隙の六割（十一歩）より寄らないものとする。懐へ入るのを
            許すのは二十七歩までなので、そちらには掛からない。 */
-        const 重 = Math.max(懐に入る ? -1 : 触れる隔たり(c, o, vx2, vy2) - d2, 触れ隙 * 0.6 - d2);
+        /* 背中越しに率いている手勢（field.js 率いの刻比）と敵の隊とは、塊の差し渡しでは押し戻さない（中どころが重ならない
+           ことだけを守る）。塊の差し渡しで押し戻すと、手勢の兵の槍が敵の兵に届かない。手勢は兵と兵とが槍の間合いまで
+           寄ったところで止める（hitori/senaka.js 手勢の突き合い・hitori/tezei.js 手勢へ下知） */
+        const 率いる手勢か = 率いの刻比(b, c) || 率いの刻比(b, o);
+        const 重 = 率いる手勢か ? 触れ隙 * 0.6 - d2 : Math.max(懐に入る ? -1 : 触れる隔たり(c, o, vx2, vy2) - d2, 触れ隙 * 0.6 - d2);
         if (重 > 0) {
           const 押 = 重 * 寄せ戻し;
           動かす(c, kc, -vx2 * 押, -vy2 * 押);
@@ -1500,7 +1509,8 @@ export function stepBattle(b, dt) {
       const avgSpeed = c.squads.length ? c.squads.reduce((s, q) => s + ARM_STATS[q.type].speed * q.men, 0) / Math.max(1, corpsMen(c)) : 30;
       const engaged = c.squads.some((q) => q.engaged);
       const W = WEATHER[b.weather];
-      const chg = (c.chargeT > 0 ? 1.35 : 1) * (c.reformT > 0 ? 0.55 : 1);   // 突撃中は速く、陣形替え中は鈍い
+      const chg = (c.chargeT > 0 ? 1.35 : 1) * (c.reformT > 0 ? 0.55 : 1)    // 突撃中は速く、陣形替え中は鈍い
+        * (率刻 && c.駆け足 ? 2 : 1);   // 背中越しに率いている手勢の駆け足（hitori/tezei.js 手勢へ下知。遊ぶ人の申し出「ダッシュもできません」）
       // 隊が伸びきっていたら足を緩めて組の追いつきを待つ。
       // これをしないと、遅れた組を置き去りにして武将だけが先へ出てしまう。
       let far = 0, nq = 0;
@@ -1615,7 +1625,11 @@ export function stepBattle(b, dt) {
       if (!止まる下知 && c.接敵 && !c.squads.some((q) => q.engaged)) {
         c.睨み = (c.睨み || 0) + dt;
       } else c.睨み = 0;
-      const 触れた敵 = (c.睨み || 0) > 6 ? null : c.接敵;
+      /* 背中越しに率いている手勢（上の 率刻）は、塊どうしの触れ合いでは足を止めない。塊の広がりで測る触れ合いは、手勢の兵と
+         敵の兵とのあいだに二十m ほど残すので、手勢の兵の槍が届かなかった。手勢は、兵と兵とが槍の間合いまで寄ったところで
+         止める（hitori/senaka.js 手勢の突き合い が c.詰まり を書き、hitori/tezei.js 手勢へ下知 が前へ出るのを止める）。
+         中どころが重なるのは、下の段で、これまでどおり許さない */
+      const 触れた敵 = 率刻 || (c.睨み || 0) > 6 ? null : c.接敵;
       if (!城内(c.x, c.y) && 触れた敵) {
         for (const o of alive) {
           if (o.side === c.side || !塊として立つ(o)) continue;
@@ -1655,10 +1669,11 @@ export function stepBattle(b, dt) {
          懐へ入るのも、睨みを解くのも、触れ隙の一.五倍までである。そこから先は、
          どんな理由があろうと塊は塊を通り抜けない。 */
       if (!城内(c.x, c.y)) {
+        const 中の限り = 率刻 ? 触れ隙 * 0.6 : 触れ隙 * 1.5;          // 率いている手勢は十一歩まで（上の 率刻）
         for (const o of alive) {
           if (o.side === c.side || !塊として立つ(o)) continue;
           const ex = o.x - c.x, ey = o.y - c.y, ed = Math.hypot(ex, ey);
-          if (ed < 0.01 || ed > 触れ隙 * 1.5) continue;
+          if (ed < 0.01 || ed > 中の限り) continue;
           const ux = ex / ed, uy = ey / ed;
           const 沿 = 望x * ux + 望y * uy;
           if (沿 > 0) { 望x -= 沿 * ux; 望y -= 沿 * uy; }
@@ -1759,7 +1774,7 @@ export function stepBattle(b, dt) {
         }
       }
       // 疲労：移動・登坂・渡渉・悪天候で増える（GDD 8.8）
-      c.fatigue = Math.min(100, c.fatigue + (0.55 + (1 / Math.max(0.1, terr.speed) - 1) * 0.5) * W.fatigue * (c.chargeT > 0 ? 1.8 : 1) * dt);
+      c.fatigue = Math.min(100, c.fatigue + (0.55 + (1 / Math.max(0.1, terr.speed) - 1) * 0.5) * W.fatigue * (c.chargeT > 0 || (率刻 && c.駆け足) ? 1.8 : 1) * dt);
       /* 歩けば、歩く方へ向き直る。ただし槍を合わせている隊は向きを変えない。
 
          噛み合った隊は押し合いで持ち場から押し出され、持ち場へ戻ろうと歩く。
@@ -2135,7 +2150,8 @@ export function stepBattle(b, dt) {
            止めたあとも組が持ち場へ向けて数m 歩き続けた */
         const 追いつき = c.routed ? 1 : clamp(1 + 遅れ / (率刻 ? 6 : 34), 1, 列中 ? 1.4 : 2.4);
         // 斬り結びながら寄り直すのだから、足は半ばである
-        const v = st0.speed * 追いつき * (噛みでも戻る ? 0.45 : 1) * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300);
+        const v = st0.speed * 追いつき * (噛みでも戻る ? 0.45 : 1) * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, q.地, terr.speed) * (q.type === "kiba" ? terr.horse : 1) * WEATHER[b.weather].speed * (0.7 + q.cohesion / 300)
+          * (率刻 && c.駆け足 ? 2 : 1);           // 背中越しに率いている手勢の駆け足（組も隊と同じく倍の足）
         const sx = ((targetX - q.x) / qd) * Math.min(v * dt, qd);
         const sy = ((targetY - q.y) / qd) * Math.min(v * dt, qd);
         const 足元q = terrainAt(q.x, q.y) === "deep" ? "deep" : q.地;   // 隊と同じく一点で見る
@@ -2844,7 +2860,14 @@ export function stepBattle(b, dt) {
       /* 噛み合う間合い。ふだんは二十二歩だが、槍衾は穂先が長い。
          構えた側・構えを衝く側は、離れても穂先が届いて斬り結び続ける。
          これが無いと、当たった直後に押し合いで離れ、衾が空を切る。 */
-      if (mdist < 噛み間) {
+      /* 背中越しに率いている手勢（field.js 率いの刻比）は、盤の組どうしの斬り合いに入らない。手勢の組は噛み合わず
+         （足を止められず、間合いへ引き寄せられない）、手勢との斬り合いの損は、どちらへも盤では付けない。手勢の兵と
+         敵の兵とは、背中越しで一人ずつ槍を合わせる（hitori/senaka.js 手勢の突き合い）。遊ぶ人の申し出：「部隊が敵と
+         戦うよう指示したら基本的に動けなくなってしまいます」「掛かれはあくまでも一人のときに槍をついていたのを部隊
+         全体で突くようにするだけに」。敵の組は、手勢に向かって噛み合う（足を止め、間合いを詰める） */
+      const 我が率い = !!率いの刻比(b, c), 相手が率い = !!率いの刻比(b, melee.f);
+      if (mdist < 噛み間 && 我が率い) { /* 率いている手勢の組は噛み合わない（上） */ }
+      else if (mdist < 噛み間) {
         /* 退いている隊は組み合わない。背を向けて離れていく。
            相手を掴み直すこともしないし、相手からも掴まれない。
            ただし離れきるまでは追い討ちの刃を受ける（下の applyDamage は通る）。 */
@@ -2852,7 +2875,7 @@ export function stepBattle(b, dt) {
         const 相手も引く = melee.f.withdraw || melee.f.routed;
         if (!引く) {
           q.engaged = true;
-          if (!相手も引く) melee.e.engaged = true;
+          if (!相手も引く && !相手が率い) melee.e.engaged = true;
           q.link = { x: melee.e.x, y: melee.e.y };      // 組み合っている相手
           q.噛み刻 = b.t;                                // 噛み合った刻。持ち場へ戻すのを控える
           /* 噛み合いは間合いを保つ（GDD 8.3）。
@@ -2918,7 +2941,7 @@ export function stepBattle(b, dt) {
         if (q.type === "kiba") {
           if (melee.f.routed) { 騎 *= 1.7; melee.f.追われ = b.t; }
           else if (melee.e.cohesion < 40) 騎 *= 1.55;
-          if (flank === 1.0 && melee.f.衾) {
+          if (flank === 1.0 && melee.f.衾 && !相手が率い) {
             騎 *= 0.5;
             // 穂先の返し。受け止めた槍組の厚みに応じて、馬側が削られる
             applyDamage(b, c, q, 1.0 * (melee.e.men / 50) * terr.fight * dt,
@@ -2994,7 +3017,7 @@ export function stepBattle(b, dt) {
         const 高差 = clamp((q.高 || 0) - (melee.e.高 || 0), -2, 2);
         const 高みの利 = 高差 >= 0 ? 1 + 高差 * 0.12 : 1 / (1 - 高差 * 0.12);
         const 死兵の力 = b.死兵 && c.side !== b.attacker && !c.後詰 ? 1.1 : 1;   // 死兵は斬り合いの力が一割増す（城兵だけ）
-        applyDamage(b, melee.f, melee.e,
+        if (!相手が率い) applyDamage(b, melee.f, melee.e,
           st.melee * (q.men / 50) * (0.45 + q.cohesion / 160) * (0.6 + c.morale / 200)
           * terr.fight * flank * charge * push * guard * 支え * 騎 * (1 - c.fatigue / 260)
           * 乱れ攻 * 乱れ受 * 器 * 練れ * 高みの利 * 死兵の力 * dt,

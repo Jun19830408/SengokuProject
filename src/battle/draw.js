@@ -2917,6 +2917,10 @@ export function drawBattle(ctx, b, sel, terrainCanvas, cam, W, H, dpr, selAll, �
 
   // 標識・文字は画面座標で描く
   for (const c of shown) {
+    /* 主人公の手勢（風雲モード・十人長から三百人長。hitori/tezei.js）は上司の隊に属するので、別の隊の印（馬印・名札・
+       士気の帯）を出さない。兵は上司の隊のそばに描かれる。遊ぶ人の申し出：「10人組でも所属する武将とは別個として
+       認識されています…あくまでも武将に所属する部隊なので、別個にする必要はない」 */
+    if (c.手勢) continue;
     const isP = c.side === "P";
     const side = sideColor(c);          // 馬印も足元の印も、敵味方の色で描く
     /* 武将は隊の後ろ寄りに描く（c.gx/c.gy が算出済みならそこへ）。
