@@ -70,7 +70,8 @@ import { 守りの割り付け } from "../core/garrison.js";
 import { 使者に立てる, 婚姻を結ぶ, 家臣に嫁がせる, 縁談を受ける, 縁談を断る } from "../core/hime.js";
 import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
-import { 風雲の主のid, 風雲の主の軍か, 風雲の主の籠る城か } from "../core/state.js";
+import { 風雲の主のid, 風雲の主の軍か, 風雲の主の籠る城か, 風雲の大名か, 風雲で守られるか } from "../core/state.js";
+import { 下剋上を起こす, 下剋上を成す, 独立する, 下剋上の在陣先か } from "../hitori/daimyo.js";
 import { 攻められるか, 許しの要る主, 許されているか, 許しを与える, 容認するか, 臣従の主 } from "../core/yurushi.js";
 import { 城の寄親, 守りを旗頭に任せるか, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 旗頭に許す, 旗頭に断る, 自ら采配するか } from "../core/inin.js";
 import { 難を逃れる, 囚われた年 } from "../core/capture.js";
@@ -201,8 +202,13 @@ function 兵糧攻めのひと月(s, sg, castle, army) {
   if (castle.food <= 0) {
     s.chronicle.push({ y: s.year, m: s.month, text: `兵糧尽き、${castle.name}は開城した。` });
     sackCastle(s, castle, army, false);     // 開城なので城下の荒れは軽い
+    下剋上を見る(s);                          // 風雲：下剋上の城なら、同じ書き換えの中で成す（hitori/daimyo.js）
   }
 }
+
+/* 風雲：下剋上で旧主の当主の城を落としたら（govern/war.js sackCastle が印を立てる）、同じ書き換えの中で下剋上を成す
+   （一族の始末・従う城。hitori/daimyo.js）。捕虜や滅んだ家の問いは、成したのちの盤で出す */
+const 下剋上を見る = (s) => { const 下 = s && s.風雲 && s.風雲.下剋上; if (下 && 下.成った && !下.済) 下剋上を成す(s); };
 
 export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const cvRef = useRef(null), miniRef = useRef(null), wrapRef = useRef(null);
@@ -887,7 +893,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         if (a.faction === g.player
           && (underMyBanner(g, g.player, dest.faction) || 援けに着く(g, a, dest))) {
           /* 風雲モード：城方が討って出るかは城の主の判断で、足軽には問わない（討って出ない形で盤を開く） */
-          if (g.風雲) startBattle(a, { ...dest, name: `${dest.name}の囲み` }, null, null, bes);
+          if (g.風雲 && !風雲の大名か(g)) startBattle(a, { ...dest, name: `${dest.name}の囲み` }, null, null, bes);
           else setSally({ armyId: a.id, castleId: dest.id, foeId: bes.id });
         } else if (bes.faction === g.player || a.faction === g.player) {
           startBattle(a, { ...dest, name: `${dest.name}の囲み` }, null, undefined, bes);
@@ -918,7 +924,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         && (待つ.has(x.id) || x.在陣 === dest.id));
       if (後詰) {
         /* 風雲モード：上司が後詰の軍にいるときだけここへ来る（風雲の着陣か）。城方は討って出ない形で盤を開く */
-        if (g.風雲) startBattle(後詰, { ...dest, name: `${dest.name}城下` }, null, null, a);
+        if (g.風雲 && !風雲の大名か(g)) startBattle(後詰, { ...dest, name: `${dest.name}城下` }, null, null, a);
         else setSally({ armyId: 後詰.id, castleId: dest.id, foeId: a.id, 城下: true });
         return;
       }
@@ -1059,7 +1065,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
      （捕虜・身代金・仕官の願い・申し入れ・縁談・城の預け・滅んだ家の始末・取り立て・家督・旗頭の願いと継ぎ・
      一国平定の知らせ・天下分け目。hitori/fuun.js 風雲の問いに答える） */
   useEffect(() => {
-    if (!g.風雲 || battle) return;
+    if (!g.風雲 || 風雲の大名か(g) || battle) return;              // 大名なら、問いはキャンペーンと同じく遊ぶ人が答える
     const 待つ = (g.captives || []).length || g.ransomOffer || g.仕官の願い || g.申し入れ || g.縁談
       || (g.委ねる待ち || []).length || g.warSettle || g.promo || g.succession || g.旗頭の願い || g.旗頭継ぎ待ち
       || g.国平定 || (g.分け目 && (g.分け目.挑 === g.player || g.分け目.受 === g.player) && g.分け目.残り <= 0);
@@ -1067,6 +1073,21 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     setG((p) => { const r = 風雲の問いに答える(structuredClone(p)); return r.変えた ? r.s : p; });
   }, [g.captives, g.ransomOffer, g.仕官の願い, g.申し入れ, g.縁談, g.委ねる待ち, g.warSettle, g.promo,
     g.succession, g.旗頭の願い, g.旗頭継ぎ待ち, g.国平定, g.分け目, battle]); // eslint-disable-line
+
+  /* 風雲：下剋上の旗揚げ（hitori/daimyo.js 下剋上を起こす）ののち、すぐ当主の城を急襲する（城攻めの盤。場所の名に「下剋上」） */
+  useEffect(() => {
+    const 下 = g.風雲 && g.風雲.下剋上;
+    if (!下 || !下.盤を待つ || battle) return;
+    const sg = (g.sieges || []).find((x) => x.castleId === 下.城 && x.armyId === 下.軍);
+    setG((p) => ({ ...p, 風雲: { ...p.風雲, 下剋上: { ...p.風雲.下剋上, 盤を待つ: false } } }));
+    if (sg) startAssault(sg, null, null);
+  }, [!!(g.風雲 && g.風雲.下剋上 && g.風雲.下剋上.盤を待つ), battle]); // eslint-disable-line
+  /* 風雲：当主の城を落とせば（govern/war.js sackCastle が印を立てる）、下剋上を成す（城主ごとに従うかを決める） */
+  useEffect(() => {
+    const 下 = g.風雲 && g.風雲.下剋上;
+    if (!下 || !下.成った || 下.済 || battle) return;
+    setG((p) => { const s = structuredClone(p); 下剋上を成す(s); return s; });
+  }, [!!(g.風雲 && g.風雲.下剋上 && g.風雲.下剋上.成った), battle]); // eslint-disable-line
 
   /* 風雲モード：上司が寄せ手か籠る側にいる城攻め（月送りが s.風雲の城攻め に積んだもの）を、城の盤で戦う。
      行き合いと着陣を先に捌いてから、一つずつ開く */
@@ -1085,7 +1106,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
        ふつうの着陣     … 上司が着いた軍にいて敵の城へ着いたか、上司のいる自家の城へ敵が着いた
      味方の城へ着いた軍は戦わない。将のいない城は、野戦をせずに囲む（下の道のまま） */
   const 風雲の着陣か = (a, dest) => {
-    if (!g.風雲) return false;
+    if (!g.風雲 || 風雲の大名か(g)) return false;
     const 囲 = g.sieges.find((x) => x.castleId === dest.id);
     const 囲む敵 = 囲 && g.armies.find((x) => x.id === 囲.armyId);
     if (囲む敵 && 囲む敵.faction !== a.faction && !同じ旗の下(g, 囲む敵.faction, a.faction)
@@ -1426,7 +1447,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       eName: g.factions[playerIsAtk ? castle.faction : army.faction].name,
       pColor: sideHue(playerIsAtk ? atkColor : defColor, true),
       eColor: sideHue(playerIsAtk ? defColor : atkColor, false),
-      place: castle.name,
+      place: sg.下剋上 ? `${castle.name}（下剋上）` : castle.name,   // 風雲の下剋上の急襲（hitori/daimyo.js）
     });
   };
 
@@ -2001,7 +2022,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       for (const c of [...atkCorps, ...defCorps, ...後詰の隊]) {
         const gen = s.generals.find((x) => x.id === c.id);
         if (!gen || c.detach || c.落ちた) continue;      // 落ち延びた将は、討たれも捕らわれもしない
-        if (gen.風雲の主) continue;                      // 風雲の主人公（家老から上）は、総大将として出ても討たれも捕らわれもしない（値は仮）
+        if (風雲で守られるか(s, gen)) continue;                      // 風雲の主人公（家老から上）は、総大将として出ても討たれも捕らわれもしない（値は仮。大名になればキャンペーンの当主と同じ）
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
         /* 潰走（士気も兵も尽きて戦場を落ちた隊）の将は、逃れる術が乏しい。
            捕らわれる目は大きく上げ、討たれる目はわずかに上げるにとどめる。
@@ -2060,7 +2081,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
          一隊三千を超える兵は盤に出ないから、大軍で攻めるほど大きく消えた。
          二万で寄せて城を落とすと、一万二千が忽然と失せる。
          上（後詰を戻す件）で足したものを、そのまま捨ててはならない。 */
-      if (won && army) { army.local = aLeft + back; sackCastle(s, castle, army, true); }
+      if (won && army) { army.local = aLeft + back; sackCastle(s, castle, army, true); 下剋上を見る(s); }
       /* 兵糧攻めに移った（engine.js 兵糧攻めに移る、または三日目の暮れ）。遊ぶ側の申し出は
          「兵糧攻めを選んだら、そのまま政務フェーズに戻って1カ月が経過するかたちとなり、
          兵糧攻めの結果が知らされる」であった。囲みの札で兵糧攻めを選んだ月と同じく、その月の
@@ -2224,7 +2245,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       for (const c of [...myCorps, ...foeCorps]) {
         const gen = s.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
-        if (gen.風雲の主) continue;                      // 風雲の主人公（家老から上）は討たれも捕らわれもしない（上の城攻めと同じ）
+        if (風雲で守られるか(s, gen)) continue;                      // 風雲の主人公（家老から上）は討たれも捕らわれもしない（上の城攻めと同じ）
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
         /* 潰走（士気も兵も尽きて戦場を落ちた隊）の将は、逃れる術が乏しい。
            捕らわれる目は大きく上げ、討たれる目はわずかに上げるにとどめる。
@@ -2461,7 +2482,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       for (const c of [...atkCorps, ...defCorps]) {
         const gen = s.generals.find((x) => x.id === c.id);
         if (!gen || c.detach) continue;
-        if (gen.風雲の主) continue;                      // 風雲の主人公（家老から上）は討たれも捕らわれもしない（上の城攻めと同じ）
+        if (風雲で守られるか(s, gen)) continue;                      // 風雲の主人公（家老から上）は討たれも捕らわれもしない（上の城攻めと同じ）
         const lossRate = 1 - corpsMen(c) / Math.max(1, corpsMax(c));
         /* 潰走（士気も兵も尽きて戦場を落ちた隊）の将は、逃れる術が乏しい。
            捕らわれる目は大きく上げ、討たれる目はわずかに上げるにとどめる。
@@ -2538,6 +2559,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         if (castle.local < 200) {
           army.local = atkLeft;
           sackCastle(s, castle, army, true);
+          下剋上を見る(s);                        // 風雲：下剋上の城なら、同じ書き換えの中で成す
         } else {
           army.sieging = true;
           s.sieges = [...s.sieges.filter((x) => x.castleId !== castle.id), { castleId: castle.id, armyId: army.id, months: 0, decided: null }];
@@ -2657,6 +2679,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
         if (castle.local < 120) {
           s.chronicle.push({ y: s.year, m: s.month, text: `${castle.name}、強攻により陥落。攻め手${fmt(aL)}人、守り手${fmt(dL)}人を失った。` });
           sackCastle(s, castle, army, true);
+          下剋上を見る(s);                        // 風雲：下剋上の城なら、同じ書き換えの中で成す
         } else {
           s.chronicle.push({ y: s.year, m: s.month, text: `${castle.name}への強攻は退けられた。攻め手${fmt(aL)}人を失った。` });
         }
@@ -3118,7 +3141,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const openCamp = (g.campaigns || []).find((c) => {
     if (c.decided === `${g.year}-${g.month}` || !c.arrived.length) return false;
     /* 風雲：軍議を開くのは主人公の軍の戦役だけ（hitori/fuun.js 家老から上） */
-    if (g.風雲 && !(c.armies || []).some((id) => 風雲の主の軍か(g, g.armies.find((x) => x.id === id)))) return false;
+    if (g.風雲 && !風雲の大名か(g) && !(c.armies || []).some((id) => 風雲の主の軍か(g, g.armies.find((x) => x.id === id)))) return false;
     const t = g.castles.find((x) => x.id === c.target);
     return t && !underMyBanner(g, g.player, t.faction);
   });
@@ -3141,12 +3164,13 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     if (旗頭に任せた囲みか(x)) return false;
     const a2 = g.armies.find((y) => y.id === x.armyId), c2 = g.castles.find((y) => y.id === x.castleId);
     if (!a2 || !c2) return false;
-    if (g.風雲) return 風雲の主の軍か(g, a2) || 風雲の主の籠る城か(g, c2);
+    if (g.風雲 && !風雲の大名か(g)) return 風雲の主の軍か(g, a2) || 風雲の主の籠る城か(g, c2);
     return a2.faction === g.player || c2.faction === g.player;
   };
   const openSiege = g.sieges.find(遊ぶ人の囲みか);
   /* 風雲：家老から上の主人公の城から兵を出せる先（出陣の画面・攻め寄せる問いの篩。hitori/fuun.js 風雲の攻め先か） */
-  const 風雲の篩 = useCallback((x) => 風雲の攻め先か(g, x), [g]);
+  /* 宿老は、当主の城へも兵を移せる（そこに在陣して下剋上の構えをとる。hitori/daimyo.js 下剋上の在陣先か） */
+  const 風雲の篩 = useCallback((x) => 風雲の攻め先か(g, x) || 下剋上の在陣先か(g, x), [g]);
   const selCastle = g.castles.find((c) => c.id === sel);
 
   /* 場面の曲（GDD 15.4）。政務は「天下静謐」、戦は野と城で分ける（「疾風の陣」と
@@ -3186,7 +3210,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
      キャンペーンモードと同じで全国地図をメインにしてください。家の図は小さくでも構いません」）。屋敷の欄
      （家の絵・身分・月の行い・月を送る・記）は、横長の画面では地図の右に、縦長の画面では地図の下に置く。
      主人公は大名ではないので、地図は見るだけ（城や軍を押しても帳は開かない。拡げ縮め・居所・全体図・全土図は使える） */
-  if (g.風雲) return (
+  /* 大名になれば（hitori/daimyo.js）、屋敷でなくキャンペーンと同じ画面で家を差配する */
+  if (g.風雲 && !風雲の大名か(g)) return (
     <div className="sp" style={{ height: "100dvh" }}>
       <風雲の帯 g={g} onTitle={onTitle} />
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" }}>
@@ -3218,7 +3243,9 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           on知らせを閉じる={() => setG((p) => ({ ...p, 風雲: { ...p.風雲, 知らせ: [] } }))}
           on風雲を改める={(改) => setG((p) => { const n = structuredClone(p); 改(n.風雲, n); return n; })}
           on盤を改める={(改) => setG((p) => 改(p))}
-          on出陣={() => setModal("sortie")} on攻め寄せる={(id) => { set在陣(id); setModal("marchon"); }} on陣を解く={陣を解く} />
+          on出陣={() => setModal("sortie")} on攻め寄せる={(id) => { set在陣(id); setModal("marchon"); }} on陣を解く={陣を解く}
+          on下剋上={(id) => setG((p) => { const s = structuredClone(p); const r = 下剋上を起こす(s, id); return r.ok ? s : { ...p, 風雲: { ...p.風雲, 下準備の文: r.訳 } }; })}
+          on独立={() => setG((p) => { const s = structuredClone(p); const r = 独立する(s); return r.ok ? s : { ...p, 風雲: { ...p.風雲, 下準備の文: r.訳 } }; })} />
       </div>
       {/* 家老から上：主人公の城からの出陣・在陣からの攻め寄せ・軍議・囲みの帳は、キャンペーンと同じ画面を使う */}
       {modal === "sortie" && 主人公の城(g) && (

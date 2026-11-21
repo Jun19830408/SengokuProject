@@ -17,7 +17,7 @@ import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の�
 import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 出征の余地, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家, 家の尺を改める } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake, 軍の損を分ける } from "../core/roster.js";
-import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 二重の城主を解く, 城主の札を据える, 城の名を改める, 武将の名を改める, 風雲の主の城か, 風雲の主の軍か, 風雲の主の籠る城か } from "../core/state.js";
+import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 二重の城主を解く, 城主の札を据える, 城の名を改める, 武将の名を改める, 風雲の主の城か, 風雲の主の軍か, 風雲の主の籠る城か, 風雲で守られるか } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
 import { PLOTS } from "../data/diplo.js";
 import { FATED, NEWCOMERS, PARENT } from "../data/newcomers.js";
@@ -1164,7 +1164,7 @@ export function advanceMonth(prev, g) {
         // 姫も老いる（齢は生年から数えるので、加えるのは死の判じだけである）
         姫の年送り(s, { 告げる: (t) => events.push(t) });
         for (const q of [...s.generals]) {
-          if (q.風雲の主) continue;                       // 風雲の主人公は寿命で没しない（討死のほかは、風雲の終わりまで生きる）
+          if (風雲で守られるか(s, q)) continue;          // 風雲の主人公は寿命で没しない（大名になれば、キャンペーンの当主と同じ）
           const a = q.age;
           const cap = lifeSpan(q);
           // 史実で没する年が定まっている者は、その年に没する。
@@ -2364,7 +2364,7 @@ export function advanceMonth(prev, g) {
           一族の数.set(k, (一族の数.get(k) || 0) + 1);
         }
         for (const q of [...s.generals]) {
-          if (q.風雲の主) continue;
+          if (風雲で守られるか(s, q)) continue;          // 風雲の主人公に子は生まれない（大名になれば、キャンペーンの当主と同じ）
           const 格 = 一族の格(s, q);
           if (!格) continue;
           const 鍵 = 一族の鍵(q);

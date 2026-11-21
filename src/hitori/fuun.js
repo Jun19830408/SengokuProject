@@ -174,7 +174,7 @@ export function 風雲を始める(s, 名 = "与平") {
 
 /* 月の初め：月の行いを行い、上司を見直す（上司が討たれた・城を移ったなど）。返すのは同じ s */
 export function 風雲の月の初め(s) {
-  const f = s.風雲; if (!f || f.討死) return s;
+  const f = s.風雲; if (!f || f.討死 || f.身分 === "大名") return s;
   /* 選んだ順でなく、入りを先に、出を後に行う（開墾・商いで得た金で、同じ月に稽古や上納ができる） */
   const 選んだ = new Set((f.行い || []).slice(0, 月の行いの数));
   for (const 名 of ["開墾・商い", "交流", "稽古", "上納", "養生"].filter((x) => 選んだ.has(x))) {
@@ -258,7 +258,7 @@ function 主人公の戦の隊(s, army, dest, foe) {
   return g.at === dest.id && dest.faction === s.player && army.faction !== s.player ? 我 : null;
 }
 export function 風雲の隊を選ぶ(s, army, dest, foe) {
-  const f = s && s.風雲; if (!f || f.討死 || !army) return null;
+  const f = s && s.風雲; if (!f || f.討死 || !army || f.身分 === "大名") return null;   // 大名ならキャンペーンの合戦（hitori/daimyo.js）
   /* 城主（武将の帳に入った主人公）は、自ら率いる戦と自城の守りの戦だけに出る（上司の戦・陣借りには出ない） */
   if (主人公の武将(s)) return 主人公の戦の隊(s, army, dest, foe);
   const 上 = f.上司;
@@ -295,7 +295,7 @@ export const 風雲の戦か = (s, army, dest, foe) => !!風雲の隊を選ぶ(s
 /* 主人公の城攻めか：上司が寄せ手の軍にいるか、囲まれた家の城に籠っているとき（遊ぶ人の申し出「BC をいずれも入れれば」の C）。
    月送り（govern/month.js）は、この強攻を式で裁かずに s.風雲の城攻め へ積み、地図画面が城の盤を開く */
 export function 風雲の城攻めの隊(s, army, castle) {
-  const f = s && s.風雲; if (!f || f.討死 || !army || !castle) return null;
+  const f = s && s.風雲; if (!f || f.討死 || !army || !castle || f.身分 === "大名") return null;
   /* 城主（武将の帳に入った主人公）：自ら率いる軍の城攻めか、主人公のいる城の籠城だけ（上の 主人公の戦の隊） */
   if (主人公の武将(s)) return 主人公の戦の隊(s, army, castle, null);
   if (f.上司) {
@@ -542,6 +542,7 @@ export function 城主にする城を選ぶ(s) {
 /* 主人公の武将（帳の）に、風雲の値（能力・知行・齢）を写す。帳に無ければ null */
 export function 主人公の武将を写す(s) {
   const f = s.風雲, g = 主人公の武将(s); if (!f || !g) return null;
+  if (f.身分 === "大名") return g;                                  // 大名ならキャンペーンの当主のまま（hitori/daimyo.js）
   g.name = f.名; g.lead = f.統率; g.valor = f.武勇; g.wit = f.知略; g.gov = f.政務; g.fief = f.知行 || 0;
   g.loyal = 100; g.faction = s.player; g.風雲の主 = true; g.lord = false; g.age = 主人公の齢(s);
   if (f.身分控) g.身分控 = f.身分控;

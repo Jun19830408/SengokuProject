@@ -707,6 +707,30 @@ export const 風雲の主の軍か = (s, a) => !!(s && s.風雲 && a && a.風雲
 /* 家老から上の主人公が、自分の城から仕掛けた戦（風雲の主の軍）で城を取ったときの勲功：城の石高一万石につき（値は仮。
    遊ぶ人に出した案「家老から：自分で仕掛けた戦で城を取る　城の石高一万石につき5」。govern/war.js sackCastle） */
 export const 風雲の城を取る勲功 = 1;     // 遊ぶ人の答え「（勲功の速さは）遅めがいいです」により五から一へ（値は仮）
+/* ---- 風雲の主人公が大名になる（遊ぶ人の申し出：「風雲モードはモードで、大名でキャンペーンと同じシステムにしてください」。
+   大名への道は 家督・下剋上・独立。hitori/daimyo.js・core/house.js pickHeir）。大名になれば、遊ぶ家を主人公の家に替え、
+   AIの差配を止める（遊ぶ人がキャンペーンと同じく家を差配する）。値はみな仮 ---- */
+export const 風雲の大名か = (s) => !!(s && s.風雲 && s.風雲.身分 === "大名");
+/* 風雲の主人公で、まだ大名でない者。AIの差配・寿命・子の生まれ・合戦や落城での討死と捕縛の判じから外す。大名になれば
+   キャンペーンの当主と同じに扱う */
+export const 風雲で守られるか = (s, g) => !!(g && g.風雲の主 && !風雲の大名か(s));
+export function 風雲の主を大名に(s, 道) {
+  const f = s && s.風雲; if (!f) return null;
+  const g = (s.generals || []).find((x) => x.風雲の主);
+  if (!g) return null;
+  g.lord = true; g.loyal = 100;
+  f.身分 = "大名"; f.上司 = null; f.城を待つ = false;
+  f.大名 = { 道, 年: s.year, 月: s.month, 家: g.faction };
+  s.player = g.faction;
+  s.autoPlay = false;
+  const 家 = s.factions[g.faction] || {};
+  const 文 = `${g.name}が${道}により${家.name || ""}の当主となった。`;
+  f.記 = [...(f.記 || []), { 年: s.year, 月: s.month, 文 }].slice(-60);
+  s.chronicle = [...(s.chronicle || []), { y: s.year, m: s.month, text: 文 }];
+  s.monthEvents = [...(s.monthEvents || []), 文];
+  s.msg = 文;
+  return g;
+}
 /* 主人公が籠っている主人公の城（その囲みは遊ぶ人が決める。主人公が出陣して留守なら、城はAIの差配で守る） */
 export const 風雲の主の籠る城か = (s, c) => 風雲の主の城か(s, c)
   && (s.generals || []).some((q) => q.風雲の主 && q.at === c.id && !q.captive);

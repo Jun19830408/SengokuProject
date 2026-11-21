@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { U } from "../core/util.js";
 import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数, 月の体力の戻り, 養生の戻り, 武将の段か, 主人公の禄高, 主人公の次の身分,
   主人公の城, 城の政務, 城の政務を行う, 城の預けの月分, 名乗りを定める, 名乗りの限り } from "./fuun.js";
+import { 家の城主ら, 誼を通じる, 城主を調略する, 下剋上の構え, 独立の構え, 当主の城, 誼の費え, 調略の費え, 調略の見込み } from "./daimyo.js";
+import { 姓 } from "../core/util.js";
 import { 主命の重さ, 働きかけの見込み, 予定を見る, 月番を年月に, 山賊の月か, 偵察の月か, 偵察の的を選ぶ, 今の月番 } from "./shumei.js";
 import { TOWNS } from "../data/castles.js";
 import { 住まいの絵 } from "./sumai_e.jsx";
@@ -34,7 +36,7 @@ const 棒 = (値, 満, 色) => (
 /* 住まいの絵は hitori/sumai_e.jsx（遊ぶ人の申し出「家の絵をもう少しリアルに」で描き直した） */
 export { 住まいの絵 };
 
-export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉じる, on風雲を改める, on盤を改める, on出陣, on攻め寄せる, on陣を解く }) {
+export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉じる, on風雲を改める, on盤を改める, on出陣, on攻め寄せる, on陣を解く, on下剋上, on独立 }) {
   const f = g.風雲;
   const [行い, set行い] = useState(() => (f.行い || []).slice(0, 月の行いの数));
   const 家 = g.factions[g.player] || {};
@@ -188,9 +190,13 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         <div key={a.id} style={{ fontSize: 12, marginTop: 6, borderTop: `1px solid ${U.line2}`, paddingTop: 5 }}>
           <div>{軍の様子(a)}<span className="num" style={{ color: U.dim }}>　{Math.round(a.men)}人・兵糧{Math.round(a.food || 0)}石</span></div>
           {a.在陣 && (
-            <div style={{ display: "flex", gap: 4, marginTop: 3 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 3 }}>
               <button className="btn sm" onClick={() => on攻め寄せる && on攻め寄せる(a.id)}>次の城へ攻め寄せる</button>
               <button className="btn sm" onClick={() => on陣を解く && on陣を解く(a.id)}>陣を解いて帰る</button>
+              {下剋上の構え(g, a.id).ok && on下剋上 && (
+                <button className="btn sm" style={{ background: "#8E2A20", color: "#FFF", borderColor: "#8E2A20" }}
+                  onClick={() => set問い({ 種: "下剋上", armyId: a.id })}>下剋上</button>
+              )}
             </div>
           )}
         </div>
@@ -201,6 +207,41 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
           {(城の帳.lines || []).map((x, i) => <div key={i} className="num">{x.text || `${x.label}　${Math.round(x.before)} → ${Math.round(x.after)}${x.unit || ""}`}</div>)}
         </div>
       )}
+    </div>
+  );
+  /* 下準備（宿老。hitori/daimyo.js）：家の城主と誼を通じ（友好）、調略する（当主への忠誠）。下剋上・独立の問い */
+  const 宿老 = f.身分 === "宿老" && !!我が城;
+  const 城主ら = 宿老 ? 家の城主ら(g) : [];
+  const 独 = 宿老 ? 独立の構え(g) : null;
+  const [問い, set問い] = useState(null);                   // { 種: "下剋上", armyId } | { 種: "独立" }
+  const 割 = (p) => `${Math.round(p * 100)}%`;
+  const 主人公の姓 = f.姓 || 姓(f.名) || f.名;
+  const 下準備の欄 = 宿老 && !終わり && (
+    <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 11 }}>
+      <div className="sec" style={{ marginTop: 0 }}>下準備（宿老）</div>
+      <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.75 }}>
+        家の城主と誼を通じて友好を上げ（{誼の費え}貫）、調略して当主への忠誠を下げる（{調略の費え}貫・見込み{割(調略の見込み(f.知略))}）。
+        費えは預かった金から、城主ごとに月に一度ずつ。<br />
+        下剋上：自ら率いる軍で当主の城へ兵を移して在陣し、軍の欄の「下剋上」で城を急襲する。落とせば、城主ごとに見込みで従うかが決まる（国主・旗頭が従えば、その寄騎も従う。家にほかの城主がいなければ、家中はみな従う）。<br />
+        独立：国主か旗頭なら、寄騎とともに家を興せる（下剋上より従いやすい）。
+      </div>
+      {城主ら.length === 0 && <div style={{ fontSize: 12, marginTop: 6 }}>家にほかの城主はいない（下剋上が成れば、家中はみな従う）。</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
+        {城主ら.map((x) => (
+          <div key={x.主.id} style={{ borderBottom: `1px solid ${U.line2}`, paddingBottom: 5, fontSize: 12.5 }}>
+            <div>{x.主.name}<span style={{ color: U.dim, fontSize: 11 }}>（{x.城.name}{x.役 ? `・${x.役}` : ""}{x.寄騎 ? `・寄騎${x.寄騎}` : ""}{x.主人公の寄騎 ? "・自分の寄騎" : ""}）</span></div>
+            <div className="num" style={{ fontSize: 11.5, color: U.dim }}>友好 {x.友好}・忠誠 {Math.round(x.忠誠)}　従う見込み 下剋上 {割(x.下剋上)}{x.主人公の寄騎 ? `・独立 ${割(x.独立)}` : ""}</div>
+            <div style={{ display: "flex", gap: 4, marginTop: 3 }}>
+              <button className="btn sm" onClick={() => on盤を改める && on盤を改める((p) => 誼を通じる(p, x.主.id))}>誼を通じる</button>
+              <button className="btn sm" onClick={() => on盤を改める && on盤を改める((p) => 城主を調略する(p, x.主.id))}>調略</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {f.下準備の文 && <div style={{ fontSize: 11.5, color: U.dim, marginTop: 6 }}>{f.下準備の文}</div>}
+      <button className="btn sm" style={{ marginTop: 8 }} disabled={!独 || !独.ok || !on独立} onClick={() => set問い({ 種: "独立" })}>
+        独立{独 && !独.ok ? `（${独.訳}）` : ""}
+      </button>
     </div>
   );
   const 手勢の欄 = 形 && 手 && !終わり && (
@@ -337,6 +378,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
           {身の欄}
           {手勢の欄}
           {城の欄}
+          {下準備の欄}
           {行いの欄}
         </div>
         {/* 月を送る釦は、欄の下に留める（欄が細く長くなったので、繰らずに押せるように） */}
@@ -348,6 +390,33 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
           </button>
         </div>
       </div>
+      {!終わり && 問い && (() => {
+        const 下 = 問い.種 === "下剋上", 当 = 当主の城(g), 当主 = g.generals.find((x) => x.faction === g.player && x.lord && !x.captive);
+        const 並び = 下 ? 城主ら : 城主ら.filter((x) => x.主人公の寄騎);
+        return (
+          <div className="modal">
+            <div className="card" style={{ maxWidth: 440 }}>
+              <div className="mn" style={{ fontSize: 22, marginBottom: 6 }}>{下 ? "下剋上" : "独立"}</div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.85 }}>
+                {下
+                  ? `${当 ? 当.name : "当主の城"}の${当主 ? 当主.name : "当主"}に背き、城を急襲する。旗を揚げれば後戻りはできない。${主人公の姓}家を興し、${我が城 ? 我が城.name : "自分の城"}と、軍と城にいる将が付く。城を落とせば下剋上が成り、家の城主は下の見込みで従うかが決まる（国主・旗頭が従えば、その寄騎も従う）。落とせなければ、${家.name}と戦い続ける。`
+                  : `${家.name}から独立し、${主人公の姓}家を興す。${我が城 ? 我が城.name : "自分の城"}と、城にいる将が付く。寄騎は下の見込みで従うかが決まる。以後、${家.name}とは敵対する。`}
+              </div>
+              <div style={{ fontSize: 12, marginTop: 8 }}>
+                {並び.length === 0
+                  ? <div style={{ color: U.dim }}>{下 ? "家にほかの城主はいない（成れば、家中はみな従う）。" : "寄騎はいない。"}</div>
+                  : 並び.map((x) => <div key={x.主.id} className="num">{x.主.name}（{x.城.name}{x.役 ? `・${x.役}` : ""}）　従う見込み {割(下 ? x.下剋上 : x.独立)}</div>)}
+              </div>
+              <div className="g2" style={{ marginTop: 12 }}>
+                <button className="btn" onClick={() => set問い(null)}>取りやめ</button>
+                <button className="btn dark" onClick={() => { const q = 問い; set問い(null); if (q.種 === "下剋上") on下剋上 && on下剋上(q.armyId); else on独立 && on独立(); }}>
+                  {下 ? "下剋上" : "独立する"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {!終わり && 待つ名 && (
         <div className="modal">
           <div className="card" style={{ maxWidth: 420 }}>

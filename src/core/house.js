@@ -3,7 +3,7 @@ import { newRoster } from "./roster.js";
 import { clamp, 姓, 姓名, 能力を広げる } from "./util.js";
 import { KANJI_TSUJI, LONG_LIVED, NEWCOMERS, PARENT } from "../data/newcomers.js";
 import { 直属の兵科 } from "../data/arms.js";
-import { 本拠を追う } from "./state.js";
+import { 本拠を追う, 風雲の主を大名に } from "./state.js";
 
 // その年に世に出る者を招く。仕えるべき家が滅んでいれば、代わりにその城の主へ仕える。
 export function emergeGenerals(s) {
@@ -422,6 +422,11 @@ export function pickHeir(s, dead) {
   const blood = kin.filter((x) => 同姓(x) && x.age >= 8)
     .sort((a, b) => (b.age >= 15 ? 1 : 0) - (a.age >= 15 ? 1 : 0) || a.age - b.age);
   if (blood.length) return blood[0];
+  /* 風雲：遊ぶ家の当主に血筋の跡継ぎがいなければ、宿老の主人公が家を継ぐ（遊ぶ人の申し出：大名への道「(a) 家督：当主が亡くなり
+     跡継ぎがいなければ、宿老の主人公が家を継ぐ」。継いだのち、下の succeed で大名に替える） */
+  const 主人公 = s.風雲 && !s.風雲.討死 && s.風雲.身分 === "宿老" && dead.faction === s.player
+    ? s.generals.find((x) => x.風雲の主 && x.faction === dead.faction && !x.captive) : null;
+  if (主人公) return 主人公;
   return [...kin].sort((a, b) => (b.lead + b.gov + b.wit) - (a.lead + a.gov + a.wit))[0];
 }
 
@@ -510,6 +515,8 @@ export function succeed(s, dead, cause, heirId, retire) {
         : { 前: heir.name, 後: null, 国: 引継.国, 寄騎: 0 };
     }
   }
+  /* 風雲：主人公が家督を継げば、大名に替える（遊ぶ人がキャンペーンと同じく家を差配する。core/state.js 風雲の主を大名に） */
+  if (heir.風雲の主 && s.風雲) 風雲の主を大名に(s, "家督");
   return heir;
 }
 

@@ -3,7 +3,7 @@ import { canRecruit, loyaltyAfterRecruit, ruinedHouse } from "../core/house.js";
 import { marchMonthsOf, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
 import { minGarrison, stipendOf, 城主を据え替える, 寄騎に取れるか, 陣触れに応じる, 陣触れの届き, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
 import { newRoster, rosterCut, rosterSync, rosterTake, 軍の損を分ける } from "../core/roster.js";
-import { relOf, 主を探す, 風雲の城を取る勲功 } from "../core/state.js";
+import { relOf, 主を探す, 風雲の城を取る勲功, 風雲で守られるか } from "../core/state.js";
 import { clamp, fmt } from "../core/util.js";
 import { tryAmbush } from "../core/ambush.js";
 import { persuadeResult } from "../core/capture.js";
@@ -419,6 +419,10 @@ function 味方の城へ着く(s, army, castle) {
 
 // 陥落の処理（GDD 9.5）。武将の身の振り方、地域家臣団の去就、戦災を扱う。
 export function sackCastle(s, castle, army, hard) {
+  /* 風雲：下剋上で旗を揚げた家が、旧主の当主の城を落とせば、下剋上が成る印を立てる（従う城は hitori/daimyo.js 下剋上を成す。
+     地図画面が呼ぶ） */
+  { const 下 = s.風雲 && s.風雲.下剋上;
+    if (下 && !下.済 && castle.id === 下.城 && army && army.faction === 下.家) 下.成った = { 年: s.year, 月: s.month }; }
   /* 風雲：家老から上の主人公が自分の城から仕掛けた戦で城を取れば、城の石高一万石につき 風雲の城を取る勲功（core/state.js）。
      論功行賞で加増に換わる（hitori/fuun.js 論功行賞を見る） */
   if (s.風雲 && !s.風雲.討死 && army && army.風雲の主の軍) {
@@ -431,7 +435,7 @@ export function sackCastle(s, castle, army, hard) {
   const oldF = castle.faction;
   // 城を守るのは、身が自由な者だけである。囚われの身は戦わぬ。
   /* 風雲の主人公は、城が落ちても討たれも捕らわれもしない（落ち延びる。月の終いに自家の城へ移る：盤の乱れを繕う） */
-  const defGens = s.generals.filter((x) => x.at === castle.id && x.faction === oldF && !x.captive && !x.風雲の主);
+  const defGens = s.generals.filter((x) => x.at === castle.id && x.faction === oldF && !x.captive && !風雲で守られるか(s, x));   // 大名になれば、キャンペーンの当主と同じ
   // その城に囚われていた者。城が落ちれば身柄も動く。
   const 囚人 = s.generals.filter((x) => x.at === castle.id && x.captive);
   const winner = army.faction;
