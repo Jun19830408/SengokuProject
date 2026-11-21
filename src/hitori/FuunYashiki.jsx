@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { U } from "../core/util.js";
 import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数, 月の体力の戻り, 養生の戻り, 武将の段か, 主人公の禄高, 主人公の次の身分,
-  主人公の城, 城の政務, 城の政務を行う, 城の預けの月分 } from "./fuun.js";
+  主人公の城, 城の政務, 城の政務を行う, 城の預けの月分, 名乗りを定める, 名乗りの限り } from "./fuun.js";
 import { 主命の重さ, 働きかけの見込み, 予定を見る, 月番を年月に, 山賊の月か, 偵察の月か, 偵察の的を選ぶ, 今の月番 } from "./shumei.js";
 import { TOWNS } from "../data/castles.js";
 import { 住まいの絵 } from "./sumai_e.jsx";
@@ -49,6 +49,14 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   const 未賞 = 武将 ? Math.max(0, f.勲功 - (f.賞した勲功 == null ? f.勲功 : f.賞した勲功)) : 0;
   const 待つ戦 = (g.pendingArrivals || []).length > 0 || (g.clashes || []).length > 0;
   const 終わり = f.討死 ? "討死" : g.滅び ? "滅亡" : null;
+  /* 名乗り（物頭に取り立てられたとき。hitori/fuun.js 名乗りの支度）：自分で決めるか、自動（偏諱の候補）か */
+  const 待つ名 = f.名乗りを待つ || null;
+  const [名の道, set名の道] = useState(null);
+  const [入れ姓, set入れ姓] = useState(""), [入れ名, set入れ名] = useState("");
+  const [候補の番, set候補の番] = useState(0);
+  const 名の訳 = (姓, 名) => (!String(姓).trim() || !String(名).trim() ? "姓と名をどちらも入れてください"
+    : String(姓).trim().length > 名乗りの限り || String(名).trim().length > 名乗りの限り ? `姓と名は、それぞれ${名乗りの限り}字までです` : null);
+  const 名乗る = (姓, 名) => { if (名の訳(姓, 名)) return; on風雲を改める && on風雲を改める((n風雲, n盤) => { 名乗りを定める(n盤, 姓, 名); }); set名の道(null); };
   const 選ぶ = (名) => set行い((v) => (v.includes(名) ? v.filter((x) => x !== 名)
     : v.length >= 月の行いの数 ? v : [...v, 名]));
   /* 主命（上司から下される務め）。あるあいだは、月の行いに「主命に励む」が加わる。果たせば外れる */
@@ -340,7 +348,51 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
           </button>
         </div>
       </div>
-      {!終わり && (f.知らせ || []).length > 0 && (
+      {!終わり && 待つ名 && (
+        <div className="modal">
+          <div className="card" style={{ maxWidth: 420 }}>
+            <div style={{ fontSize: 12, color: U.dim, letterSpacing: ".3em", textAlign: "center" }}>名乗り</div>
+            <div className="mn" style={{ fontSize: 22, margin: "8px 0 6px", textAlign: "center" }}>物頭に取り立てられた</div>
+            <div style={{ fontSize: 12.5, lineHeight: 1.85, color: U.dim }}>
+              武士として名乗りを定める（いまは{待つ名.旧名}）。自分で姓と名を決めるか、自動で決めるかを選ぶ。
+              自動なら、キャンペーンの物頭昇進と同じく、{待つ名.当主 || "主君"}より偏諱「{待つ名.偏諱}」の一字を賜った名乗りから選ぶ。
+            </div>
+            <div className="g2" style={{ marginTop: 10 }}>
+              <button className={`btn ${名の道 === "自分" ? "on" : ""}`} onClick={() => set名の道("自分")}>自分で決める</button>
+              <button className={`btn ${名の道 === "自動" ? "on" : ""}`} onClick={() => set名の道("自動")}>自動で決める</button>
+            </div>
+            {名の道 === "自分" && (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+                  <span>姓</span>
+                  <input value={入れ姓} maxLength={名乗りの限り} onChange={(e) => set入れ姓(e.target.value)} placeholder="例：木下"
+                    style={{ flex: 1, minWidth: 0, padding: "7px 8px", fontSize: 15, border: `1px solid ${U.line2}`, borderRadius: 6, background: "transparent", color: U.text }} />
+                  <span>名</span>
+                  <input value={入れ名} maxLength={名乗りの限り} onChange={(e) => set入れ名(e.target.value)} placeholder="例：藤吉郎"
+                    style={{ flex: 1, minWidth: 0, padding: "7px 8px", fontSize: 15, border: `1px solid ${U.line2}`, borderRadius: 6, background: "transparent", color: U.text }} />
+                </div>
+                {名の訳(入れ姓, 入れ名) && (入れ姓 || 入れ名) && <div style={{ fontSize: 11.5, color: "#B0483C", marginTop: 5 }}>{名の訳(入れ姓, 入れ名)}</div>}
+                <button className="btn dark" style={{ width: "100%", marginTop: 10 }} disabled={!!名の訳(入れ姓, 入れ名)}
+                  onClick={() => 名乗る(入れ姓, 入れ名)}>{名の訳(入れ姓, 入れ名) ? "姓と名を入れる" : `${入れ姓.trim()}${入れ名.trim()}と名乗る`}</button>
+              </div>
+            )}
+            {名の道 === "自動" && (
+              <div style={{ marginTop: 10 }}>
+                <div className="g2">
+                  {(待つ名.候補 || []).map((x, i) => (
+                    <button key={i} className={`btn mn ${候補の番 === i ? "on" : ""}`} style={{ fontSize: 17 }} onClick={() => set候補の番(i)}>{x.姓}{x.名}</button>
+                  ))}
+                </div>
+                {(待つ名.候補 || [])[候補の番] && (
+                  <button className="btn dark" style={{ width: "100%", marginTop: 10 }}
+                    onClick={() => { const x = 待つ名.候補[候補の番]; 名乗る(x.姓, x.名); }}>{待つ名.候補[候補の番].姓}{待つ名.候補[候補の番].名}と名乗る</button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {!終わり && !待つ名 && (f.知らせ || []).length > 0 && (
         <div className="modal">
           <div className="card" style={{ maxWidth: 380, textAlign: "center" }}>
             <div style={{ fontSize: 12, color: U.dim, letterSpacing: ".3em" }}>{今の段.禄 ? "身分" : "取り立て"}</div>

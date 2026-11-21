@@ -1252,7 +1252,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
       <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.65, borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
         {b.手勢 && ctx.一人 && ctx.一人.段
           ? `${ctx.一人.段}の身では、全軍への下知も上司の隊の差配もできない。率いる手勢（${b.手勢.手勢}人）は上司の隊に属し、ふだんは上司の隊について動く。背中の視点では、方向キーで手勢を動かし、突く・受ける・駆けるを手勢の全体で行う。一騎駆け（L）で、しばらく自ら戦うこともできる。`
-          : "足軽の身では、全軍への下知も隊の差配もできない。自分（与平）を動かすことだけができる。"}
+          : `足軽の身では、全軍への下知も隊の差配もできない。自分（${(ctx.一人 && ctx.一人.名) || "与平"}）を動かすことだけができる。`}
       </div>
       <div style={{ fontSize: 11, color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
         {b.log.length ? b.log[b.log.length - 1].text : "　"}

@@ -316,7 +316,7 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
           /* 畳めば一行（預かる隊と兵の数）。開けばこれまでの名札 */
           return 札開 ? (
             <div className="snk-me glass">
-              <div className="row"><span className="mibun">物頭</span><span className="na">与平</span></div>
+              <div className="row"><span className="mibun">物頭</span><span className="na">{(態.備え && 態.備え.名) || "与平"}</span></div>
               <div className="kumi" style={{ color: "#F4F1E8", fontSize: 12.5 }}>{態.名}の隊を預かる　兵 {兵.toLocaleString()}人</div>
               <div className="kumi">下知：{隊 && 隊.auto ? "委任（諸将の采配）" : (隊 && 隊.order) || "―"}　右の欄から隊へ下知する</div>
               <div className="kumi">背中の視点（試し）・なぞると視点が回る{卓 ? "（Q・E でも）" : ""}</div>
@@ -339,7 +339,7 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
         </div>
         ) : (
         <div className="snk-me glass">
-          <div className="row"><span className="mibun">{(態.備え && 態.備え.段) || "足軽"}</span><span className="na">与平</span>
+          <div className="row"><span className="mibun">{(態.備え && 態.備え.段) || "足軽"}</span><span className="na">{(態.備え && 態.備え.名) || "与平"}</span>
             <span className="kun">討ち取り <b>{我.勲}</b>{態.備え && 態.備え.風雲 && <> 勲功 <b>+{合戦の勲功(態)}</b></>}</span></div>
           {体力の筋("snk-gauge")}
           {気力の筋("snk-gauge")}

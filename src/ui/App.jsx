@@ -10,6 +10,7 @@ import { css } from "./css.js";
 import { FACTIONS } from "../data/factions.js";
 import { exportSave, importSave } from "../save/save.js";
 import { 風雲を始める } from "../hitori/fuun.js";
+import { 通称を起こす } from "../core/roster.js";
 import { 起こし直す, 解錠する, 設定を読む, 止める as 音を止める } from "../audio/oto.js";
 
 // 横画面を基本とする（GDD 15.2）。政務も合戦も横で扱う。
@@ -130,7 +131,7 @@ export default function App() {
       onPick={(f, watch, lvl) => {
         const st = initState(f);
         st.level = lvl || "普通";
-        風雲を始める(st);
+        風雲を始める(st, 通称を起こす());                 // 初めの名（通称）は、そのつど賽で起こす（core/roster.js）
         setG(st); setScreen("map");
       }} /></>);
   if (screen === "select") return (<><style>{css}</style>

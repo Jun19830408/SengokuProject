@@ -260,7 +260,10 @@ const openFaction = async (nm) => {
     確('風雲の政務の画面は、キャンペーンと同じ全国地図（拡大・縮小・居所・全体図）を真ん中に出し、屋敷の欄（家の絵・月を送る）を横に置く',
       !!document.querySelector('.mapwrap canvas') && ['拡大', '縮小', '居所', '全体図'].every((k) => [...document.querySelectorAll('.mapctl.l .mbtn')].some((b) => b.textContent.includes(k)))
       && !!document.querySelector('svg[aria-label^="住まい："]') && !document.querySelector('.mapctl.r'));
-    確('足軽・長屋で始まる', /与平足軽/.test(文().replace(/\s/g, '')) && /住まい：長屋/.test(文()));
+    /* 初めの名（通称）は、そのつど賽で起こす（遊ぶ人の申し出：「最初の名前は与平ですが、ランダムでその都度変えてください」。
+       core/roster.js 通称を起こす。材料は組頭の名と同じ） */
+    確('足軽・長屋で始まる（名は賽で起こした通称）', /(権|左|右|小|大|上)?[与藤弥喜孫彦源太半新又小甚伝勘作市角宗](三郎|七郎|九郎|十郎|兵衛|太夫|助|作|市|蔵|介|八|右衛門|左衛門|次郎|五郎|六郎|四郎)足軽/.test(文().replace(/\s/g, ''))
+      && /住まい：長屋/.test(文()), (文().replace(/\s/g, '').match(/.{0,6}足軽/) || [''])[0]);
     確('始めの記が出る', /織田家に足軽として仕えた。那古野城に住み、織田信長の手に属する/.test(文()));
     await rc('稽古'); await rc('開墾・商い');
     const 選 = [...document.querySelectorAll('button.on')].map((x) => x.textContent);
