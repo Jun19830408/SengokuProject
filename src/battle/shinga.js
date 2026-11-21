@@ -3879,7 +3879,7 @@ export function 組の見た目(q) { return 組態.get(q) || null; }
    別に立てない。主人公の手勢で五十人までのもの（hitori/tezei.js）は、主人公が長なので立てない */
 export function 組頭の番(q, c, alive) {
   if (!q || q.type === "kiba" || !(alive >= 4)) return -1;
-  if (c && c.手勢 && c.手勢 <= 50) return -1;
+  if (c && c.手勢 && (c.手勢の定め || c.手勢) <= 50) return -1;     // 欠員があっても身分の定めの人数で決める（hitori/tezei.js）
   const 列 = ((alive - 1) / 10) | 0;
   return Math.min(alive - 1, 列 * 10 + 5);
 }

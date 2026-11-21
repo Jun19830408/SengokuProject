@@ -115,13 +115,17 @@ export function 手勢を組む(b, 隊id, 一人) {
     fatigue: 親.fatigue || 0, chargeT: 0, reformT: 0, faceTo: null, 陣向き: 親.陣向き != null ? 親.陣向き : 親.facing,
     pending: null, pinch: 0, northStart: 親.northStart, bank0: 親.bank0,
     auto: false, detach: false, parentId: 親.id, task: null, autonomous: false, boxed: false, 手勢: 数, 導き: null,
+    /* 身分の定めの人数（名簿に欠員があれば 数 より多い）。馬上か（hitori/senaka.js）・組頭を立てるか（battle/shinga.js
+       組頭の番）は、今の人数でなく身分で決める */
+    手勢の定め: Math.max(数, (一人 && 一人.手勢の定め) || 0),
   };
   /* 統率（上の 統率の効き）。与平の統率は風雲の値、手勢の統率は雇い入れの顔ぶれから（まだ無ければ 手勢の統率の初め） */
   c.与平の統率 = 一人 && Number.isFinite(一人.統率) ? 一人.統率 : 30;
   c.手勢の統率 = 一人 && Number.isFinite(一人.手勢の統率) ? 一人.手勢の統率 : 手勢の統率の初め;
   c.統率 = 実効の統率(c.与平の統率, c.手勢の統率);
   c.統率の効き = 統率の効き(c.統率);
-  /* 手勢の武勇（雇い入れの名簿の均し。hitori/tezei_meibo.js）。突く（全体）の当たりが変わる（hitori/senaka.js 手勢の突き合い） */
+  /* 手勢の武勇（雇い入れの名簿の均し。hitori/tezei_meibo.js）。突く（全体）の当たりと、敵の突きの当たり（守り）が変わる
+     （hitori/senaka.js 手勢の突き合い 武勇の攻め・武勇の守り） */
   c.手勢の武勇 = 一人 && Number.isFinite(一人.手勢の武勇) ? 一人.手勢の武勇 : null;
   placeSquads(c, true);
   placeSquads(親, false);

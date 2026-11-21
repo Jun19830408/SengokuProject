@@ -4,7 +4,8 @@ import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの
 import { 主命の重さ, 働きかけの見込み, 予定を見る, 月番を年月に, 山賊の月か, 偵察の月か, 偵察の的を選ぶ, 今の月番 } from "./shumei.js";
 import { TOWNS } from "../data/castles.js";
 import { 住まいの絵 } from "./sumai_e.jsx";
-import { 名簿の形を見る, 手勢の名簿を整える, 雇えるか, 手勢を雇う, 暇を出す, 今の統率, 名簿の扶持, 手勢の統率を量る } from "./tezei_meibo.js";
+import { 名簿の形を見る, 手勢の名簿を整える, 雇えるか, 手勢を雇う, 暇を出す, 今の統率, 名簿の扶持, 手勢の統率を量る,
+  補充できるか, 補充する, みな補充する, 欠けの数, 欠けの和, 新参の値 } from "./tezei_meibo.js";
 import { 実効の統率 } from "./tezei.js";
 
 /* ==========================================================================
@@ -96,36 +97,60 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
     </div>
   );
 
-  /* 手勢の欄：名簿（今の統率＝素質×練れ・武勇・扶持。暇を出せる）と、今月の候補（雇える。扶持の枠と、候補の数が縛り） */
+  /* 手勢の欄：名簿（今の統率＝素質×練れ・武勇・扶持。暇を出せる）と、今月の候補（雇える。扶持の枠と、候補の数が縛り）。
+     合戦で討たれた兵の跡は欠員（隊なら人数の欠け）になり、扶持もそのぶん下がる。欠員は新参で埋めるか、候補を雇って埋める
+     （遊ぶ人の申し出：「部隊が少なくなったらその分扶持も下がり、その分補充するという流れにしたい」） */
   const 改める = (改) => on風雲を改める && on風雲を改める((ff) => 改(ff));
   const 札の値 = (m) => (
     <span style={{ fontSize: 11.5 }}>
+      {m.定 > 1 && <>人数 <b className="num">{m.人}</b><span style={{ color: U.dim }}>／{m.定}</span>・</>}
       統率 <b className="num">{今の統率(m)}</b><span style={{ color: U.dim }}>（素質 {m.素質}・練れ {Math.round(m.練れ * 100)}%）</span>
       ・武勇 <b className="num">{m.武勇}</b>・扶持 <b className="num">{m.扶持}</b>
     </span>
   );
   const 手統 = 手 ? 手勢の統率を量る(手.名簿) : null, 扶持 = 手 ? 名簿の扶持(手.名簿) : 0;
+  const 今の人 = 手 ? 手.名簿.reduce((a, m) => a + m.人, 0) : 0, 欠け = 手 ? 欠けの和(手.名簿) : 0;
   const 手勢の欄 = 形 && 手 && !終わり && (
     <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 11 }}>
       <div className="sec" style={{ marginTop: 0 }}>手勢（{形.種 === "足軽" ? `足軽${形.数}人` : `${形.種}${形.数}つ`}）</div>
       <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>
-        手勢の統率 <b className="num">{手統}</b>・{f.名}の統率 <b className="num">{f.統率}</b>
-        → 合戦での統率 <b className="num">{実効の統率(f.統率, 手統)}</b>
+        手勢の統率 <b className="num">{手統 ?? "—"}</b>・{f.名}の統率 <b className="num">{f.統率}</b>
+        → 合戦での統率 <b className="num">{手統 != null ? 実効の統率(f.統率, 手統) : "—"}</b>
         <span style={{ color: U.dim, fontSize: 11 }}>（低いほうに寄る）</span>
+      </div>
+      <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>
+        人数 <b className="num">{今の人}</b><span style={{ color: U.dim }}> ／ 定め {今の人 + 欠け}</span>
+        {欠け > 0 && <span style={{ color: "#B0483C", marginLeft: 6 }}>欠員 {欠け}人</span>}
+        {欠け > 0 && <button className="btn sm" style={{ marginLeft: 8 }} onClick={() => 改める((ff) => みな補充する(ff))}>みな新参で埋める</button>}
       </div>
       <div style={{ fontSize: 12, marginTop: 4 }}>扶持 <b className="num">{扶持}</b><span style={{ color: U.dim }}> ／ 枠 {形.枠}</span>{棒(扶持, 形.枠, "#8A6A3A")}</div>
       <div style={{ fontSize: 11.5, color: U.dim, letterSpacing: ".12em", marginTop: 10 }}>名簿</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
-        {手.名簿.map((m) => (
-          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, borderBottom: `1px solid ${U.line2}`, padding: "3px 0" }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5 }}>{m.名}{m.新参 && !/^新参/.test(m.名) && <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 6 }}>新参</span>}
-                {m.継ぎ && <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 6 }}>引き継ぎ</span>}</div>
-              {札の値(m)}
+        {手.名簿.map((m) => {
+          const 欠 = 欠けの数(m), 訳 = 欠 ? 補充できるか(f, m.id) : null;
+          return (
+            <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 6, borderBottom: `1px solid ${U.line2}`, padding: "3px 0" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {m.欠 ? (
+                  <>
+                    <div style={{ fontSize: 12.5, color: "#B0483C" }}>欠員{m.定 > 1 ? `（${形.種}）` : ""}</div>
+                    <span style={{ fontSize: 11.5, color: U.dim }}>候補を雇えば、ここに入る。新参で埋めれば扶持 {欠 * 新参の値.扶持}</span>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 12.5 }}>{m.名}{m.新参 && !/^新参/.test(m.名) && <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 6 }}>新参</span>}
+                      {m.継ぎ && <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 6 }}>引き継ぎ</span>}
+                      {欠 > 0 && <span style={{ fontSize: 10.5, color: "#B0483C", marginLeft: 6 }}>{欠}人欠け</span>}</div>
+                    {札の値(m)}
+                  </>
+                )}
+                {訳 && <div style={{ fontSize: 10.5, color: U.dim }}>{訳}</div>}
+              </div>
+              {欠 > 0 && <button className="btn sm" disabled={!!訳} onClick={() => 改める((ff) => 補充する(ff, m.id))}>{m.欠 ? "新参で埋める" : `補充（新参${欠}人）`}</button>}
+              {!m.欠 && !m.新参 && <button className="btn sm" onClick={() => 改める((ff) => 暇を出す(ff, m.id))}>暇を出す</button>}
             </div>
-            {!m.新参 && <button className="btn sm" onClick={() => 改める((ff) => 暇を出す(ff, m.id))}>暇を出す</button>}
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div style={{ fontSize: 11.5, color: U.dim, letterSpacing: ".12em", marginTop: 12 }}>今月の候補（{手.候補.length}{形.人 > 1 ? "隊" : "人"}・月ごとに入れ替わる）</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
@@ -144,8 +169,10 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         })}
       </div>
       <div style={{ fontSize: 11, color: U.dim, marginTop: 6, lineHeight: 1.7 }}>
-        雇えば、新参の枠に入る。空きが無ければ、先に暇を出す。名簿の空きと、合戦で討たれた兵の跡は新参で埋まる（素質・練れが低く、扶持は安い）。
-        今の統率は素質と練れを掛けたもので、練れは合戦に出るたびに上がる。
+        雇えば、欠員の枠（無ければ新参の枠）に入る。空きが無ければ、先に暇を出す（暇を出した枠は欠員になる）。
+        合戦で討たれた兵の跡は欠員になり、そのぶん扶持が下がる。欠員は新参（素質・練れが低く、扶持は一人に一）で埋めるか、
+        候補を雇って埋める。隊の欠けは新参で埋め、そのぶん隊の素質・練れ・武勇が下がる。埋めなければ、手勢はその人数のまま合戦に出る。
+        今の統率は素質と練れを掛けたもので、練れは合戦に出るたびに上がる（威力偵察と山賊退治では伸びが少ない）。
       </div>
     </div>
   );

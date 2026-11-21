@@ -31,7 +31,7 @@ import { setBattleMap } from "../battle/castleMap.js";
 import { FIELD, layoutField, setFieldKind, setFieldSeed } from "../battle/field.js";
 import { makeCorps, placeSquads } from "../battle/corps.js";
 import { createBattle } from "../battle/engine.js";
-import { 記す, 限, 段の番, 取り立てを見る, 討ち取りの勲功, 内訳の文 } from "./fuun.js";
+import { 記す, 限, 段の番, 取り立てを見る, 討ち取りの勲功, 内訳の文, 合戦ののちの伸び } from "./fuun.js";
 
 /* 主命の重さ。山賊の数と、果たしたときの褒美 */
 export const 主命の重さ = {
@@ -209,6 +209,9 @@ export function 山賊退治の果て(s, b, 務め = null) {
     }
   }
   if (咎 > 0) 記す(s, `持ち場を離れたため、上司の覚えが${咎}下がった。`);
+  /* 手勢の損（欠員）と練れ・統率の伸び（hitori/fuun.js 合戦ののちの伸び）。遊ぶ人の申し出により、伸びは威力偵察より
+     さらに少ない（hitori/tezei_meibo.js 戦の伸びの倍） */
+  合戦ののちの伸び(s, b, 働, "山賊退治", 主命の組);
   次を据える();
   取り立てを見る(s);
   return s;
@@ -291,7 +294,9 @@ export function 偵察の果て(s, b) {
   const f = s.風雲; if (!f || !b || !b.偵察) return s;
   const 偵 = b.偵察, 城 = (s.castles || []).find((c) => c.id === 偵.城);
   const P = (b.corps || []).find((c) => c.id === 偵察の組), E = (b.corps || []).find((c) => c.id === 偵察の敵);
-  const 我の損 = Math.max(0, Math.round(偵.我の数 - 隊の兵(P))), 敵の損 = Math.max(0, Math.round(偵.敵の数 - 隊の兵(E)));
+  /* 味方の残りには、上司の手勢から分けた与平の手勢（hitori/tezei.js 手勢を組む）の生き残りも数える */
+  const 手 = b.手勢 && b.手勢.parentId === 偵察の組 ? b.手勢 : null;
+  const 我の損 = Math.max(0, Math.round(偵.我の数 - 隊の兵(P) - 隊の兵(手))), 敵の損 = Math.max(0, Math.round(偵.敵の数 - 隊の兵(E)));
   const 減らせた = !!城 && 城.faction === 偵.家;
   if (減らせた) 城の兵を減らす(s, 城, 敵の損);
   const 上 = (s.generals || []).find((x) => x.id === f.上司);
@@ -314,6 +319,9 @@ export function 偵察の果て(s, b) {
     f.偵察の的 = { 城: 城.id, 迄: 今の月番(s) + 偵察の間 };
     記す(s, `家中では、兵の減った${城.name}を攻める的として重く見るようになった。`);
   }
+  /* 手勢の損（欠員）と練れ・統率の伸び（hitori/fuun.js 合戦ののちの伸び）。遊ぶ人の申し出により、伸びはふだんの合戦より
+     少ない（hitori/tezei_meibo.js 戦の伸びの倍） */
+  合戦ののちの伸び(s, b, 働, "威力偵察", 偵察の組);
   取り立てを見る(s);
   return s;
 }
