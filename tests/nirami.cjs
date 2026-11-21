@@ -119,6 +119,10 @@ console.log('■ 三、退けの下知は、指揮圏の外でも必ず効く');
 
 console.log('■ 四、大軍が小勢に攻めかかれる');
 {
+  /* この節の賽は、ここで据える。もとは前の節（三、川のある野で退く隊）が回した賽の残りで始まっていたので、川を渡る道の直し
+     （battle/route.js 渡り場の輪・battle/engine.js 淵の縁を伝う ほか）で三の退き方が変わると、この節の賽まで変わって結果が揺れた。
+     据える値は、直す前にこの節の始めで賽が取っていた値（同じ並びになる） */
+  種 = 826058889;
   H.setFieldSeed('e', 'f'); H.setBattleMap(null); H.layoutField(20000, 4);
   const W = H.FIELD.w, Hh = H.FIELD.h;
   const 大 = H.makeCorps('P', 将(6, '大軍'), 0, 16930, 78, 78, W * 0.45, Hh * 0.5, 0, '#2F5D8C');

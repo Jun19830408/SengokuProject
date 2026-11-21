@@ -906,9 +906,16 @@ export function battleAI(b) {
           const 後ろ = clamp(FIELD.h * 0.13, 240, 900);
           const tx = clamp(cx + (vx / d) * 後ろ, 60, FIELD.w - 60);
           const ty = clamp(cy + (vy / d) * 後ろ, 60, FIELD.h - 60);
-          if (Math.hypot(tx - c.x, ty - c.y) > 90) issueOrder(b, c, { order: "移動", tx, ty });
-          else issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y });
+          /* 構える所へも、ほかの隊と同じく道（橋・浅瀬）を辿って行く（遊ぶ人の申し出：「川を橋などから渡らず川の中腹を
+             渡ったりして止まり、そのまま動かなくなる」）。もとは真っすぐ向かったので、味方が川を渡ると、そのうしろの構える所が
+             川の向こうになり、総大将の隊は水際で立ち尽くしたのち淵を押し渡った */
           c.本陣に構える = true;
+          if (Math.hypot(tx - c.x, ty - c.y) > 90) {
+            const 道 = 寄せ道を引く(b, c, tx, ty);
+            if (道 === "続行") continue;
+            if (道) { c.wp = 道; issueOrder(b, c, { order: "移動", tx: 道[0].x, ty: 道[0].y, keepPath: true }); }
+            else issueOrder(b, c, { order: "移動", tx, ty });
+          } else issueOrder(b, c, { order: "待機", tx: c.x, ty: c.y });
           continue;
         }
         if (c.本陣に構える) {
@@ -1682,9 +1689,14 @@ export function battleAI(b) {
         if ((sx - 塞.x) * px + (sy - 塞.y) * py < 0) { px = -px; py = -py; }   // 寄せ先に近い側へ
         const 脇 = 110 * fieldScale();
         const wx = 塞.x + px * 脇, wy = 塞.y + py * 脇;
-        c.wp = [{ x: wx, y: wy, r: 50 * fieldScale() }, { x: sx, y: sy, r: 40 * fieldScale() }];
-        issueOrder(b, c, { order: "移動", tx: wx, ty: wy, keepPath: true });
-        continue;
+        /* 脇へ回る二つの点は真っすぐ結ぶだけなので、淵を跨ぐなら使わない（下の川の掟と寄せ道に任せ、橋・浅瀬を通る）。
+           跨いだまま向かうと、隊は水際で足を止め、渡り場へ回り直すか淵を押し渡るまで立ち尽くした（遊ぶ人の申し出：「川を
+           橋などから渡らず川の中腹を渡ったりして止まり、そのまま動かなくなる」。tests/kawa_watari） */
+        if (!淵を跨ぐ(c.x, c.y, wx, wy) && !淵を跨ぐ(wx, wy, sx, sy)) {
+          c.wp = [{ x: wx, y: wy, r: 50 * fieldScale() }, { x: sx, y: sy, r: 40 * fieldScale() }];
+          issueOrder(b, c, { order: "移動", tx: wx, ty: wy, keepPath: true });
+          continue;
+        }
       }
     }
     /* 川ごしの向き合い方は、川の掟にまとめた（このファイルの上のほう）。

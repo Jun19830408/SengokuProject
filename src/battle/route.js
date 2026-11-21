@@ -48,6 +48,7 @@ const 落橋の目 = { ...通りにくさ, deep: 90 };
 const 費 = (t, 目) => 目[t] || (TERRAIN[t] ? 1 / Math.max(0.08, TERRAIN[t].speed) : 1);
 
 const 升 = 48;
+export const 渡り場の輪 = 14;        // 渡り場（橋・浅瀬）の脇の曲がり角に着いたとみなす輪（歩。下の 野の道。値は仮）
 let 網 = null, 網の印 = "";
 
 function 網を張る() {
@@ -145,6 +146,21 @@ export function 野の道(x0, y0, x1, y1, opt = {}) {
   for (let k = T; k !== -1; k = prev[k]) { 列.push(k); if (k === S) break; }
   列.reverse();
   // 曲がり角だけを残す。まっすぐな区間に地点を置いても意味がない。
+  /* 渡り場（橋・浅瀬に接する升）の曲がり角は、着いたとみなす輪を狭める（渡り場の輪）。輪が升より広い（五十二歩）と、隊は
+     橋の袂の角に着く前に「着いた」ことになり、次の地点（橋の上）へまっすぐ向かって袂の角の淵をかすめた（遊ぶ人の申し出：
+     「川を橋などから渡らず川の中腹を渡ったりして止まり、そのまま動かなくなる」。淵の縁を伝って寄るのは battle/engine.js）。
+     淵に接するだけの升（岸沿いの曲がり角）までは狭めない。狭めると、隊は角の芯まで寄ろうとして混み合い、森・林・湿地・
+     集落にいる刻が増えた（tests/chikei。百分の十三を超えた） */
+  const 渡り場の脇か = (k) => {
+    const i = k % w, j = (k / w) | 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= w || nj >= h) continue;
+      const t = 地[nj * w + ni];
+      if (t === "bridge" || t === "ford") return true;
+    }
+    return false;
+  };
   const 道 = [];
   let 前の向き = null;
   for (let n = 1; n < 列.length; n++) {
@@ -152,7 +168,7 @@ export function 野の道(x0, y0, x1, y1, opt = {}) {
     const v = `${(z % w) - (a % w)},${((z / w) | 0) - ((a / w) | 0)}`;
     if (v !== 前の向き) {
       前の向き = v;
-      道.push({ x: (z % w) * 升 + 升 / 2, y: ((z / w) | 0) * 升 + 升 / 2, r: 52 });
+      道.push({ x: (z % w) * 升 + 升 / 2, y: ((z / w) | 0) * 升 + 升 / 2, r: 渡り場の脇か(z) ? 渡り場の輪 : 52 });
     }
   }
   道.push({ x: x1, y: y1, r: 40 });
