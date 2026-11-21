@@ -342,7 +342,7 @@ export function 調略の采配(s, fid, { 告げる } = {}) {
      人を狙う企て（密約・引き抜き・内応）は、相手を定めねば立たない。 */
   /* 当主は内応にも引き抜きにも応じない（家そのものである）。的から外す。 */
   const 城中 = s.generals.filter((x) => x.at === 的.id && x.faction === 的.faction
-    && !x.lord && !x.captive);
+    && !x.lord && !x.captive && !x.風雲の主);                 // 風雲の主人公は調略の的にしない
   const 心の離れた = [...城中].sort((a, b) => (a.loyal == null ? 60 : a.loyal) - (b.loyal == null ? 60 : b.loyal))[0];
   const 城主 = 城中.length ? [...城中].sort((a, b) => (b.lead + b.gov) - (a.lead + a.gov))[0] : null;
   const 候補 = [];
@@ -405,7 +405,7 @@ export function 旗頭の調略(s, 旗, { 告げる, 残, 受け持ち } = {}) {
     .sort((a, b) => b.wit - a.wit)[0];
   if (!手) return null;
 
-  const 城中 = s.generals.filter((x) => x.at === 的.id && x.faction === 的.faction && !x.lord && !x.captive);
+  const 城中 = s.generals.filter((x) => x.at === 的.id && x.faction === 的.faction && !x.lord && !x.captive && !x.風雲の主);
   const 心の離れた = [...城中].sort((a, b) => (a.loyal == null ? 60 : a.loyal) - (b.loyal == null ? 60 : b.loyal))[0];
   const 城主 = 城中.length ? [...城中].sort((a, b) => (b.lead + b.gov) - (a.lead + a.gov))[0] : null;
   const 候補 = [];

@@ -297,7 +297,7 @@ export function 家の尺を改める(s, o = {}) {
 /* 恩賞を配る。家臣の知行を 倍 の割で増す（家と本領の城の余地のうち）。 */
 function 恩賞を配る(s, fid, 倍) {
   let 余 = fiefRoom(s, fid).left;
-  const gs = (s.generals || []).filter((x) => x.faction === fid && !x.lord && !x.captive && fiefOf(x) > 0)
+  const gs = (s.generals || []).filter((x) => x.faction === fid && !x.lord && !x.captive && fiefOf(x) > 0 && !x.風雲の主)   // 風雲の主人公の禄は勲功で（hitori/fuun.js 論功行賞）
     .sort((a, b) => fiefOf(b) - fiefOf(a));
   for (const x of gs) {
     if (余 <= 0) break;

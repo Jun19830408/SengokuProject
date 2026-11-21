@@ -126,7 +126,7 @@ export function 謀反を起こす(s, 親, 先) {
 export function 謀反の見回り(s, fid, { 告げる, 籤 } = {}) {
   const 引く = typeof 籤 === "function" ? 籤 : Math.random;
   const 起きた = [];
-  for (const 親 of (s.generals || []).filter((g) => g.faction === fid && !g.captive)) {
+  for (const 親 of (s.generals || []).filter((g) => g.faction === fid && !g.captive && !g.風雲の主)) {   // 風雲の主人公は謀反を起こさない（遊ぶ人が決める）
     const 目 = 謀反の目(s, 親);
     if (目 <= 0) { if (親.謀反支度) 親.謀反支度 = null; continue; }
     const 忠 = 忠誠(親);

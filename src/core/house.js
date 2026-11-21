@@ -384,7 +384,7 @@ export const lifeSpan = (g) => (g && LONG_LIVED[g.id]) || LIFE_CAP;
    血筋を継ぐ者があれば、それが継ぐ。なければ、器量の勝る者が立つ。 */
 // 跡目の候補。血筋の者と、器量の勝る者を並べる。
 export function heirCandidates(s, dead) {
-  const kin = s.generals.filter((x) => x.faction === dead.faction && x.id !== dead.id && !x.captive);
+  const kin = s.generals.filter((x) => x.faction === dead.faction && x.id !== dead.id && !x.captive && !x.風雲の主);
   if (!kin.length) return [];
   const kids = childrenOf(s, dead).map((x) => x.id);
   const scored = kin.map((x) => ({
@@ -410,7 +410,7 @@ export function heirCandidates(s, dead) {
 
 // 跡を継ぐ者を選ぶ。同じ姓の若い者を先とし、なければ器量による。
 export function pickHeir(s, dead) {
-  const kin = s.generals.filter((x) => x.faction === dead.faction && x.id !== dead.id && !x.captive);
+  const kin = s.generals.filter((x) => x.faction === dead.faction && x.id !== dead.id && !x.captive && !x.風雲の主);
   if (!kin.length) return null;
   /* 当主の名が無いとき（当主を欠いた家）は、家名を 姓 として渡してよい。
      家名には官名が付くことがある（織田大和守家）ので、頭が姓と合えば同じ血とみる。 */

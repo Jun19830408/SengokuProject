@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { U } from "../core/util.js";
-import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数, 月の体力の戻り, 養生の戻り, 武将の段か, 主人公の禄高, 主人公の次の身分 } from "./fuun.js";
+import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数, 月の体力の戻り, 養生の戻り, 武将の段か, 主人公の禄高, 主人公の次の身分,
+  主人公の城, 城の政務, 城の政務を行う, 城の預けの月分 } from "./fuun.js";
 import { 主命の重さ, 働きかけの見込み, 予定を見る, 月番を年月に, 山賊の月か, 偵察の月か, 偵察の的を選ぶ, 今の月番 } from "./shumei.js";
 import { TOWNS } from "../data/castles.js";
 import { 住まいの絵 } from "./sumai_e.jsx";
@@ -33,7 +34,7 @@ const 棒 = (値, 満, 色) => (
 /* 住まいの絵は hitori/sumai_e.jsx（遊ぶ人の申し出「家の絵をもう少しリアルに」で描き直した） */
 export { 住まいの絵 };
 
-export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉じる, on風雲を改める }) {
+export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉じる, on風雲を改める, on盤を改める, on出陣, on攻め寄せる, on陣を解く }) {
   const f = g.風雲;
   const [行い, set行い] = useState(() => (f.行い || []).slice(0, 月の行いの数));
   const 家 = g.factions[g.player] || {};
@@ -130,6 +131,70 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   );
   const 手統 = 手 ? 手勢の統率を量る(手.名簿) : null, 扶持 = 手 ? 名簿の扶持(手.名簿) : 0;
   const 今の人 = 手 ? 手.名簿.reduce((a, m) => a + m.人, 0) : 0, 欠け = 手 ? 欠けの和(手.名簿) : 0;
+  /* 城の政務（家老から上で城主のとき。hitori/fuun.js 城主の政務）。城の様子と預かった金、城にいる将ごとの下知の釦 */
+  const 我が城 = 主人公の城(g);
+  const 城の将ら = 我が城 ? g.generals.filter((x) => x.at === 我が城.id && x.faction === g.player && !x.captive && !x.lord)
+    .sort((a, z) => (z.風雲の主 ? 1 : 0) - (a.風雲の主 ? 1 : 0)) : [];
+  const 城の帳 = 我が城 && (g.ledger || [])[0] && g.ledger[0].castle === 我が城.name ? g.ledger[0] : null;
+  /* 主人公の軍（主人公の城から出した軍。ui/MapScreen.jsx の出陣で印を立てる）の様子。在陣なら、攻め寄せるか解くかを選ぶ。
+     着陣の軍議と囲みは、キャンペーンと同じ画面（軍議・囲みの帳）がひとりでに開く */
+  const 我が軍ら = (g.armies || []).filter((a) => a.風雲の主の軍);
+  const 城名 = (id) => (g.castles.find((c) => c.id === id) || {}).name || "";
+  const 軍の様子 = (a) => a.在陣 ? `${城名(a.在陣)}に在陣`
+    : (g.sieges || []).some((sg) => sg.armyId === a.id) ? `${城名((g.sieges.find((sg) => sg.armyId === a.id) || {}).castleId)}を囲む`
+      : a.target ? `${城名(a.target)}へ向かう` : "行軍中";
+  const 城の欄 = 我が城 && !終わり && (
+    <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 11 }}>
+      <div className="sec" style={{ marginTop: 0 }}>城の政務（{我が城.name}）</div>
+      <div className="tbl" style={{ fontSize: 12.5 }}>
+        <span className="k">石高</span><span className="v num">{Math.round(我が城.koku)} ／ {Math.round(我が城.kokuMax)} 石</span>
+        <span className="k">商業・民忠</span><span className="v num">{Math.round(我が城.comm || 0)}・{Math.round(我が城.min || 0)}</span>
+        <span className="k">城の兵</span><span className="v num">{Math.round(我が城.local || 0)} 人</span>
+        <span className="k">預かった金</span><span className="v num">{Math.round(f.城の預け || 0)} 貫<span style={{ color: U.dim }}>（月に{城の預けの月分(g)}貫を預かる・三月ぶんまで）</span></span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+        {城の将ら.map((x) => {
+          const 働いた = (g.orders || {})[x.id];
+          return (
+            <div key={x.id} style={{ borderBottom: `1px solid ${U.line2}`, paddingBottom: 5 }}>
+              <div style={{ fontSize: 12.5 }}>{x.name}{x.風雲の主 ? "（自分）" : ""}<span style={{ color: U.dim, fontSize: 11 }}>　統率 {Math.round(x.lead)}・政務 {Math.round(x.gov)}</span></div>
+              {働いた ? <div style={{ fontSize: 11.5, color: U.dim }}>今月は{働いた.cmd}を行った</div> : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 3 }}>
+                  {城の政務.map((命) => (
+                    <button key={命} className="btn sm" onClick={() => on盤を改める && on盤を改める((p) => 城の政務を行う(p, 命, x.id))}>{命}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {f.政務の文 && <div style={{ fontSize: 11.5, color: U.dim, marginTop: 6 }}>{f.政務の文}</div>}
+      <div className="sec" style={{ marginTop: 10 }}>出陣</div>
+      <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.7 }}>
+        {我が城.name}から、まわりの敵の城へ兵を出せる（キャンペーンの出陣と同じ画面。和を結んだ家の城は外す）。主人公は自ら出る。
+      </div>
+      <button className="btn sm" style={{ marginTop: 5 }} disabled={!on出陣 || (g.sieges || []).some((sg) => sg.castleId === 我が城.id)}
+        onClick={() => on出陣 && on出陣()}>出陣の支度</button>
+      {我が軍ら.map((a) => (
+        <div key={a.id} style={{ fontSize: 12, marginTop: 6, borderTop: `1px solid ${U.line2}`, paddingTop: 5 }}>
+          <div>{軍の様子(a)}<span className="num" style={{ color: U.dim }}>　{Math.round(a.men)}人・兵糧{Math.round(a.food || 0)}石</span></div>
+          {a.在陣 && (
+            <div style={{ display: "flex", gap: 4, marginTop: 3 }}>
+              <button className="btn sm" onClick={() => on攻め寄せる && on攻め寄せる(a.id)}>次の城へ攻め寄せる</button>
+              <button className="btn sm" onClick={() => on陣を解く && on陣を解く(a.id)}>陣を解いて帰る</button>
+            </div>
+          )}
+        </div>
+      ))}
+      {城の帳 && (
+        <div style={{ fontSize: 11.5, marginTop: 6, lineHeight: 1.7 }}>
+          <div style={{ color: U.dim }}>{城の帳.cmd}（{城の帳.general}）</div>
+          {(城の帳.lines || []).map((x, i) => <div key={i} className="num">{x.text || `${x.label}　${Math.round(x.before)} → ${Math.round(x.after)}${x.unit || ""}`}</div>)}
+        </div>
+      )}
+    </div>
+  );
   const 手勢の欄 = 形 && 手 && !終わり && (
     <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 11 }}>
       <div className="sec" style={{ marginTop: 0 }}>手勢（{形.種 === "足軽" ? `足軽${形.数}人` : `${形.種}${形.数}つ`}）</div>
@@ -263,6 +328,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {身の欄}
           {手勢の欄}
+          {城の欄}
           {行いの欄}
         </div>
         {/* 月を送る釦は、欄の下に留める（欄が細く長くなったので、繰らずに押せるように） */}

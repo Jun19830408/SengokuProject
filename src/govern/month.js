@@ -17,7 +17,7 @@ import { findPath, marchMonths, marchMonthsOf, nodeById, roadBetween, 蝦夷の�
 import { courtRank, 旗の下の城数, 天下人の直轄, 天下人の版図, holdsProvince, kenchiCost, kenchiDone, provinceGrip, provincesHeld, runKenchi } from "../core/province.js";
 import { fiefWanted, loyaltyDrift, minGarrison, stipendOf, troopCap , 軍役の器, 出征の余地, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 旗頭の受け持ち, 旗頭の的家, 家の尺を改める } from "../core/rank.js";
 import { newRoster, rosterSync, rosterTake, 軍の損を分ける } from "../core/roster.js";
-import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 二重の城主を解く, 城主の札を据える, 城の名を改める, 武将の名を改める } from "../core/state.js";
+import { atPeace, lv, relKey, relOf, specialBonus, 盟約の相手, 主を探す, 二重の城主を解く, 城主の札を据える, 城の名を改める, 武将の名を改める, 風雲の主の城か, 風雲の主の軍か, 風雲の主の籠る城か } from "../core/state.js";
 import { clamp, fmt, monthsBetween } from "../core/util.js";
 import { PLOTS } from "../data/diplo.js";
 import { FATED, NEWCOMERS, PARENT } from "../data/newcomers.js";
@@ -93,7 +93,7 @@ export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限�
   const 寄せた = [];
   const 上司id = 風雲の主家の上司(s, fid);
   const 近い = (s.castles || []).filter((x) => {
-    if (x.faction !== fid || x.id === 発つ城.id) return false;
+    if (x.faction !== fid || x.id === 発つ城.id || 風雲の主の城か(s, x)) return false;   // 風雲の主人公の城は遊ぶ人が差配する
     if (選べる && !選べる(x)) return false;
     if ((s.sieges || []).some((sg) => sg.castleId === x.id)) return false;
     if ((s.armies || []).some((a2) => a2.faction !== fid && a2.target === x.id
@@ -106,7 +106,7 @@ export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限�
   for (const { x } of 近い) {
     if (寄せた.length >= 限り) break;
     if (要る && 軍.men >= 要る) break;                     // 足りたら、それ以上は呼ばない
-    const gens = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive && !q.lord);
+    const gens = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive && !q.lord && !q.風雲の主);
     const 余り = x.local + gens.reduce((a2, q) => a2 + q.retinue, 0) - minGarrison(x);
     if (余り < 400) continue;                            // 出せるほどの余りが無い
     /* 出征の余地（core/rank.js）。後詰は家を守る戦なので縛らない。 */
@@ -142,14 +142,14 @@ export function 近隣から兵を寄せる(s, fid, 発つ城, 軍, { 道, 限�
 export function 寄せられる見込み(s, fid, 発つ城, { 道, 限り = 3, 歩 = 3, 選べる } = {}) {
   const 上司id = 風雲の主家の上司(s, fid);
   const 余り = (x) => {
-    const gs = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive);
+    const gs = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive && !q.風雲の主);
     return x.local + gs.reduce((a2, q) => a2 + q.retinue, 0) - minGarrison(x);
   };
   let 余地 = 出征の余地(s, fid);
   let 計 = Math.max(0, Math.min(Math.round(余り(発つ城) * 0.85), 余地));
   余地 -= 計;
   const 近い = (s.castles || []).filter((x) => {
-    if (x.faction !== fid || x.id === 発つ城.id) return false;
+    if (x.faction !== fid || x.id === 発つ城.id || 風雲の主の城か(s, x)) return false;   // 風雲の主人公の城は遊ぶ人が差配する
     if (選べる && !選べる(x)) return false;
     if ((s.sieges || []).some((sg) => sg.castleId === x.id)) return false;
     if ((s.armies || []).some((a2) => a2.faction !== fid && a2.target === x.id
@@ -227,7 +227,7 @@ export function 城を救う援軍を出す(s, fid) {
   if (!危.size) return 出した;
   const 通し = s.year * 12 + s.month;
   const 囲まれた = (x) => (s.sieges || []).some((sg) => sg.castleId === x.id);
-  const 将ら = (x) => (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive);
+  const 将ら = (x) => (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive && !q.風雲の主);
   const 使った = new Set();
   /* 出せる兵。当主は出さず、将を一人は残す。率いるのは器量の高い者から二人まで */
   const 出せる兵 = (x) => {
@@ -274,7 +274,7 @@ export function 城を救う援軍を出す(s, fid) {
     const 望む = Math.round(e.敵兵 * 援軍の望み);
     let 足りぬ = 望む - 野の守 - 間に合う;
     if (足りぬ <= 0) continue;
-    const 候 = 我が城.filter((x) => x.id !== c.id && !危.has(x.id) && !囲まれた(x) && !使った.has(x.id))
+    const 候 = 我が城.filter((x) => x.id !== c.id && !危.has(x.id) && !囲まれた(x) && !使った.has(x.id) && !風雲の主の城か(s, x))
       .map((x) => {
         const 出 = 出せる兵(x);
         if (!出) return null;
@@ -685,7 +685,7 @@ export function advanceMonth(prev, g) {
              ここを塞いでいなかったため、当主が城ごと寝返って一つの家に当主が
              二人並ぶ、ということが起きていた。 */
           const 城中 = s.generals.filter((x) => x.at === target.id && x.faction === target.faction
-            && !x.lord && !x.captive);
+            && !x.lord && !x.captive && !x.風雲の主);
           const 名指し = pl.matoId ? 城中.find((x) => x.id === pl.matoId) : null;
           const lordOf = 名指し || 城中.sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
           const loy = lordOf ? (lordOf.loyal == null ? 60 : lordOf.loyal) : 100;
@@ -784,7 +784,7 @@ export function advanceMonth(prev, g) {
           /* 一人に絞れば深く刺さり、城中に広く撒けば浅く広がる。
              噂は的を絞るほど効く。誰それが敵に通じている、という形になるからである。 */
           const 名指し = pl.matoId
-            ? s.generals.find((x) => x.id === pl.matoId && x.at === target.id && !x.captive)
+            ? s.generals.find((x) => x.id === pl.matoId && x.at === target.id && !x.captive && !x.風雲の主)
             : null;
           if (名指し) {
             target.min = Math.max(0, target.min - 4);
@@ -792,7 +792,7 @@ export function advanceMonth(prev, g) {
             say(`${target.name}に${名指し.name}を疑う噂が流れた（忠誠 ${Math.round(名指し.loyal)}）。`);
           } else {
             target.min = Math.max(0, target.min - 9);
-            for (const x of s.generals.filter((q) => q.at === target.id)) x.loyal = Math.max(0, x.loyal - 6);
+            for (const x of s.generals.filter((q) => q.at === target.id && !q.風雲の主)) x.loyal = Math.max(0, x.loyal - 6);
             say(`${target.name}に流言が広がり、民忠と武将の忠誠が下がった。`);
           }
         } else if (pl.type === "城工作") {
@@ -819,7 +819,7 @@ export function advanceMonth(prev, g) {
           /* 誰を誘うかは仕掛けるときに選んである。
              選んだ者の心が離れていなければ、いくら手を尽くしても応じない。
              選ばれた者が城を去っていれば、城中で最も心の離れた者に当たる。 */
-          const 城中 = s.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.lord && !x.captive);
+          const 城中 = s.generals.filter((x) => x.at === target.id && x.faction === target.faction && !x.lord && !x.captive && !x.風雲の主);
           const cand = (pl.matoId ? 城中.find((x) => x.id === pl.matoId) : null)
             || [...城中].sort((a, b) => (a.loyal || 60) - (b.loyal || 60))[0];
           if (cand && (cand.loyal == null ? 60 : cand.loyal) < 70) {
@@ -1164,6 +1164,7 @@ export function advanceMonth(prev, g) {
         // 姫も老いる（齢は生年から数えるので、加えるのは死の判じだけである）
         姫の年送り(s, { 告げる: (t) => events.push(t) });
         for (const q of [...s.generals]) {
+          if (q.風雲の主) continue;                       // 風雲の主人公は寿命で没しない（討死のほかは、風雲の終わりまで生きる）
           const a = q.age;
           const cap = lifeSpan(q);
           // 史実で没する年が定まっている者は、その年に没する。
@@ -1278,7 +1279,7 @@ export function advanceMonth(prev, g) {
         const gd = s.generals.find((x) => x.id === lord.guardian && !x.captive);
         // 後見の器量が高ければ揺れは小さい。後見がいなければ大きく揺れる。
         const drift = gd ? clamp(1.4 - (gd.lead + gd.gov) / 150, 0.1, 1.4) : 2.2;
-        for (const x of s.generals.filter((q) => q.faction === fid && !q.lord && !q.captive)) {
+        for (const x of s.generals.filter((q) => q.faction === fid && !q.lord && !q.captive && !q.風雲の主)) {
           if (x.id === lord.guardian) continue;
           if (x.loyal != null) x.loyal = clamp(x.loyal - drift, 0, 100);
         }
@@ -1288,7 +1289,7 @@ export function advanceMonth(prev, g) {
       }
       // 知行と忠誠（GDD 6.1）。禄が器量に見合わなければ、心は離れていく。
       for (const q of s.generals) {
-        if (q.captive) continue;
+        if (q.captive || q.風雲の主) continue;           // 風雲の主人公は遊ぶ人なので、心は離れない
         const d = loyaltyDrift(q, s);
         /* 一門は禄の多寡で心が離れない。姫を娶った婿も同じである（GDD 6.8）。
            家の内の者であるから、下がるにも底がある。 */
@@ -1384,6 +1385,7 @@ export function advanceMonth(prev, g) {
       // 他家も寄騎を出す。一城の兵だけでは堅い城は落ちない。
       for (const a of s.armies) {
         if (!auto(a.faction) || a.aid) continue;
+        if (風雲の主の軍か(s, a)) continue;                // 風雲の主人公の軍の加勢は、出陣のとき遊ぶ人が決める
         if (a.reinforced || a.path.length > 1) continue;
         a.reinforced = true;
         const tgt = s.castles.find((c2) => c2.id === a.target);
@@ -1392,9 +1394,9 @@ export function advanceMonth(prev, g) {
         const need = (tgt.local + dg3.reduce((t2, x) => t2 + x.retinue, 0)) * 1.5 - a.men;
         if (need <= 0) continue;
         let sent = 0;
-        for (const c2 of s.castles.filter((x) => x.faction === a.faction && x.id !== a.from)) {
+        for (const c2 of s.castles.filter((x) => x.faction === a.faction && x.id !== a.from && !風雲の主の城か(s, x))) {
           if (sent >= need) break;
-          const gs = s.generals.filter((x) => x.at === c2.id && x.faction === a.faction && !x.captive);
+          const gs = s.generals.filter((x) => x.at === c2.id && x.faction === a.faction && !x.captive && !x.風雲の主);
           const spare = c2.local + gs.reduce((t2, x) => t2 + x.retinue, 0) - minGarrison(c2);
           if (spare < 400 || !gs.length) continue;
           const take = [...gs].sort((x, y2) => y2.lead - x.lead).slice(0, 1);
@@ -1437,6 +1439,9 @@ export function advanceMonth(prev, g) {
         const 守りを任せた囲み = cs.faction === s.player && !!守りを旗頭に任せるか(s, cs, bes);
         if (!s.autoPlay && !旗頭に任せた囲み && !守りを任せた囲み
           && (bes.faction === s.player || cs.faction === s.player)) continue;
+        /* 風雲：主人公の軍の囲みと、主人公の籠る城の囲みは、遊ぶ人が囲みの帳で一月ずつ決める（ui/MapScreen.jsx。
+           キャンペーンで遊ぶ側の囲みを月送りが捌かないのと同じ）。主人公が留守の城は、これまでどおり月送りが捌く */
+        if (s.風雲 && (風雲の主の軍か(s, bes) || 風雲の主の籠る城か(s, cs))) continue;
         // 試走では自家の包囲も自動で進める
         sg2.months = (sg2.months || 0) + 1;
         /* 付城（core/tsukejiro.js）。二月囲んで落ちなければ、蓄えのある寄せ手は付城を築く。
@@ -1566,11 +1571,11 @@ export function advanceMonth(prev, g) {
         const enc = (sg2.enc == null ? 60 + 付城の締め(sg2) * 100 : sg2.enc) / 100;
         if (enc > 0.75) continue;                       // 固く囲まれていれば入れない
         if (Math.random() > 0.55 * (1 - enc)) continue;
-        const from = s.castles.filter((c2) => c2.faction === cs.faction && c2.id !== cs.id)
+        const from = s.castles.filter((c2) => c2.faction === cs.faction && c2.id !== cs.id && !風雲の主の城か(s, c2))
           .map((c2) => ({ c2, p: 軍の道(s, c2.faction, c2.id, cs.id) })).filter((x) => x.p)
           .sort((a, b) => a.p.length - b.p.length)[0];
         if (!from) continue;
-        const fg = s.generals.filter((x) => x.at === from.c2.id && x.faction === from.c2.faction && !x.captive);
+        const fg = s.generals.filter((x) => x.at === from.c2.id && x.faction === from.c2.faction && !x.captive && !x.風雲の主);
         const avail = from.c2.local + fg.reduce((a, x) => a + x.retinue, 0) - minGarrison(from.c2);
         if (avail < 500 || !fg.length) continue;
         const take = [...fg].sort((a, b) => b.lead - a.lead).slice(0, 2);
@@ -1603,7 +1608,7 @@ export function advanceMonth(prev, g) {
         const 委任あり = fid === s.player && 預け帳.size > 0;
         if (!auto(fid) && !委任あり) continue;
         const f2 = s.factions[fid];
-        for (const c of s.castles.filter((x) => x.faction === fid)) {
+        for (const c of s.castles.filter((x) => x.faction === fid && !風雲の主の城か(s, x))) {   // 風雲の主人公の城の内政は遊ぶ人が
           /* 遊ぶ側の城は、差配を預けたものだけを采配が治める。
              自ら見る城には手を出さない。 */
           let 蔵 = null;
@@ -1773,7 +1778,7 @@ export function advanceMonth(prev, g) {
           if (t) {
             fa.gold -= 220;
             t.min = Math.max(0, t.min - 3);
-            for (const x of s.generals.filter((q) => q.at === t.id && q.faction === t.faction && !q.captive)) {
+            for (const x of s.generals.filter((q) => q.at === t.id && q.faction === t.faction && !q.captive && !q.風雲の主)) {
               x.loyal = Math.max(0, (x.loyal == null ? 60 : x.loyal) - 2);
             }
             if (t.faction === s.player) events.push(`${s.factions[fid].name}の手の者が${t.name}で流言を広めている。`);
@@ -1951,13 +1956,13 @@ export function advanceMonth(prev, g) {
            揃わなければ兵は城へ返す。それを二度しくじれば、その月はもう試さない（重いので） */
         let 試し = 2;
         for (const c of order.filter(Boolean)) {
-          if (c.faction !== fid) continue;
+          if (c.faction !== fid || 風雲の主の城か(s, c)) continue;     // 風雲の主人公の城からは、遊ぶ人が出陣を決める
           // 囲まれた城、敵軍が門前まで来ている城からは兵を出さない。
           // 留守にすれば、そのまま城を取られる。守るのが先である。
           if (s.sieges.some((sg) => sg.castleId === c.id)) continue;
           if (s.armies.some((a2) => a2.faction !== fid && a2.target === c.id
             && (a2.at === c.id || !a2.path || a2.path.length <= 1))) continue;
-          const gens = s.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive);
+          const gens = s.generals.filter((x) => x.at === c.id && x.faction === fid && !x.captive && !x.風雲の主);
           const avail = c.local + gens.reduce((a, x) => a + x.retinue, 0) - minGarrison(c);
           /* 出陣に要る余り兵は七百。ただし天下を目指す段にある家が、五畿の内に
              飛び地を持っているときは四百でよい。
@@ -2193,9 +2198,9 @@ export function advanceMonth(prev, g) {
           /* 出陣の底（GDD 7.3）。小勢で出ては各個に潰される。ただし家そのものが
              小さければ、千五百を待っていては永久に動けない――その家が出せる兵の
              六割を上限として底を置く。 */
-          const 家の出せる = (s.castles || []).filter((x) => x.faction === fid)
+          const 家の出せる = (s.castles || []).filter((x) => x.faction === fid && !風雲の主の城か(s, x))
             .reduce((a2, x) => {
-              const gs3 = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive);
+              const gs3 = (s.generals || []).filter((q) => q.at === x.id && q.faction === fid && !q.captive && !q.風雲の主);
               return a2 + Math.max(0, x.local + gs3.reduce((t, q) => t + (q.retinue || 0), 0) - minGarrison(x));
             }, 0);
           const 底 = Math.min(1500, Math.round(家の出せる * 0.6));
@@ -2245,6 +2250,7 @@ export function advanceMonth(prev, g) {
          薄ければ城に入れ、そのどちらでもなければ解いて本領へ帰す。 */
       for (const a of [...s.armies]) {
         if (!auto(a.faction) || !a.在陣 || a.aid) continue;
+        if (風雲の主の軍か(s, a)) continue;                // 風雲の主人公の軍は、在陣を払うか解くかを遊ぶ人が決める
         const 陣 = s.castles.find((c2) => c2.id === a.在陣 && c2.faction === a.faction);
         if (!陣) continue;
         /* 城を救いに来た後詰（城を救う援軍を出す）は、その城が危ういあいだは陣を払わない。
@@ -2358,6 +2364,7 @@ export function advanceMonth(prev, g) {
           一族の数.set(k, (一族の数.get(k) || 0) + 1);
         }
         for (const q of [...s.generals]) {
+          if (q.風雲の主) continue;
           const 格 = 一族の格(s, q);
           if (!格) continue;
           const 鍵 = 一族の鍵(q);
@@ -2448,7 +2455,7 @@ export function advanceMonth(prev, g) {
         if (帰) events.push(`【方面軍】差配する旗頭が無く、${陣 ? 陣.name : "陣"}の陣を払った`
           + `（${fmt(兵)}人が${帰.name}へ帰陣）。`);
       }
-      for (const 旗 of s.generals.filter((g) => g.faction === s.player && g.役 === "旗頭" && !g.captive)) {
+      for (const 旗 of s.generals.filter((g) => g.faction === s.player && g.役 === "旗頭" && !g.captive && !g.風雲の主)) {
         const 受 = 旗頭の受け持ち(s, 旗);
         if (!受.length) continue;
         const 受けの城 = new Set(s.castles.filter((c2) => c2.faction === s.player && 受.includes(c2.kuni))
@@ -2750,7 +2757,7 @@ export function advanceMonth(prev, g) {
       }
       /* 旗頭は調略も差配する（GDD 6.4 / 11.2）。
          金は旗頭に預けた高から出る。方面の実入りに目盛りを掛けたものである。 */
-      for (const 旗 of s.generals.filter((g) => g.faction === s.player && g.役 === "旗頭" && !g.captive)) {
+      for (const 旗 of s.generals.filter((g) => g.faction === s.player && g.役 === "旗頭" && !g.captive && !g.風雲の主)) {
         const 高 = 旗頭の預け高(s, 旗, { 受け持ち: 旗頭の受け持ち });
         const 使 = (s.plots || []).filter((p) => p.旗頭 === 旗.id).length;
         if (使) continue;                                  // 一人一つ

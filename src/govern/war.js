@@ -3,7 +3,7 @@ import { canRecruit, loyaltyAfterRecruit, ruinedHouse } from "../core/house.js";
 import { marchMonthsOf, findPath, marchMonths, nodeById, roadBetween } from "../core/paths.js";
 import { minGarrison, stipendOf, 城主を据え替える, 寄騎に取れるか, 陣触れに応じる, 陣触れの届き, 国主を繕う, 旗頭を繕う } from "../core/rank.js";
 import { newRoster, rosterCut, rosterSync, rosterTake, 軍の損を分ける } from "../core/roster.js";
-import { relOf, 主を探す } from "../core/state.js";
+import { relOf, 主を探す, 風雲の城を取る勲功 } from "../core/state.js";
 import { clamp, fmt } from "../core/util.js";
 import { tryAmbush } from "../core/ambush.js";
 import { persuadeResult } from "../core/capture.js";
@@ -419,11 +419,19 @@ function 味方の城へ着く(s, army, castle) {
 
 // 陥落の処理（GDD 9.5）。武将の身の振り方、地域家臣団の去就、戦災を扱う。
 export function sackCastle(s, castle, army, hard) {
+  /* 風雲：家老から上の主人公が自分の城から仕掛けた戦で城を取れば、城の石高一万石につき 風雲の城を取る勲功（core/state.js）。
+     論功行賞で加増に換わる（hitori/fuun.js 論功行賞を見る） */
+  if (s.風雲 && !s.風雲.討死 && army && army.風雲の主の軍) {
+    const f = s.風雲, 功 = Math.max(1, Math.round(風雲の城を取る勲功 * (castle.koku || 0) / 10000));
+    f.勲功 = (f.勲功 || 0) + 功;
+    f.記 = [...(f.記 || []), { 年: s.year, 月: s.month, 文: `自ら仕掛けた戦で${castle.name}（${Math.round(castle.koku || 0)}石）を取った。勲功${功}。` }].slice(-60);
+  }
   // その家の最後の城か。最後なら、城内の者は散らさず戦後の始末に回す（GDD 12.4）
   const lastOne = s.castles.filter((c2) => c2.faction === castle.faction).length === 1;
   const oldF = castle.faction;
   // 城を守るのは、身が自由な者だけである。囚われの身は戦わぬ。
-  const defGens = s.generals.filter((x) => x.at === castle.id && x.faction === oldF && !x.captive);
+  /* 風雲の主人公は、城が落ちても討たれも捕らわれもしない（落ち延びる。月の終いに自家の城へ移る：盤の乱れを繕う） */
+  const defGens = s.generals.filter((x) => x.at === castle.id && x.faction === oldF && !x.captive && !x.風雲の主);
   // その城に囚われていた者。城が落ちれば身柄も動く。
   const 囚人 = s.generals.filter((x) => x.at === castle.id && x.captive);
   const winner = army.faction;
@@ -872,7 +880,10 @@ export function 委ねる差配(s, castle, army) {
      大名が自ら城を移るのは国替えであり、下知によるものである。采配は選ばない。 */
   const 将ら = (army.gens || []).map((id) => s.generals.find((x) => x.id === id))
     .filter(Boolean)
-    .filter((g) => g.id !== army.旗頭 && !g.lord && g.役 !== "国主" && g.役 !== "旗頭");
+    .filter((g) => g.id !== army.旗頭 && !g.lord && g.役 !== "国主" && g.役 !== "旗頭")
+    /* 風雲の主人公（家老から上）も据えない。主人公の城は主君から任されたもので、落とした城へ移るかを采配が決めては
+       ならない（hitori/fuun.js 城主に任じる） */
+    .filter((g) => !g.風雲の主);
   if (将ら.length <= 1) return { 城主: null, 所属: [], 兵: Math.round((army.local || 0) * 0.3) };
   const 主 = [...将ら].sort((a, b) => stipendOf(s, b) - stipendOf(s, a))[0];
   return { 城主: 主.id, 所属: [主.id], 兵: Math.round((army.local || 0) * 0.5) };

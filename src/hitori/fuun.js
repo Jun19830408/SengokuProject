@@ -26,9 +26,14 @@ import { 滅んだ家を始末する, 城を委ねる, 委ねる差配 } from ".
 import { succeed, 取り立てる } from "../core/house.js";
 import { 盤を開かずに裁く } from "../govern/aiWakeme.js";
 import { 縁談を断る } from "../core/hime.js";
-import { 旗頭に許す } from "../core/inin.js";
-import { 旗頭を継がせる, rankOf, 身分を控える, 家の尺, fiefRoom, stipendOf, castellanOf, 次の身分 as 禄の次の身分 } from "../core/rank.js";
-import { 組の鍵 } from "../core/roster.js";
+import { 旗頭に許す, 城の実入り, 預けの率 } from "../core/inin.js";
+import { runCommand } from "../govern/commands.js";
+import { 旗頭を継がせる, rankOf, 身分を控える, 家の尺, fiefRoom, stipendOf, castellanOf, 次の身分 as 禄の次の身分,
+  城主を据え替える, 城主を控える, 外された城主の忠誠を下げる, 国の国主, 国の旗頭, 軍役の増 } from "../core/rank.js";
+import { 組の鍵, newRoster } from "../core/roster.js";
+import { 風雲の主のid, atPeace, underMyBanner } from "../core/state.js";
+import { 攻められるか } from "../core/yurushi.js";
+import { 新しい城主の寄親を定める } from "../govern/war.js";
 import { 総大将か } from "./tsunagi.js";
 import { isKin, isMainClan } from "../core/house.js";
 import { 風雲の上司表 } from "./fuun_joushi.js";
@@ -182,6 +187,8 @@ export function 風雲の月の初め(s) {
   /* 陣借り：この月（月送りで起こる戦）に一度だけ、家の他の将の戦に加わる。次の月の初めまで */
   f.陣借り = 選んだ.has("陣借り") ? { 済: false } : null;
   論功行賞を見る(s);                                             // 物頭から上：勲功を加増に換える（下の 武将の段）
+  f.政務の文 = null;
+  if (城主の段か(f.身分)) { 城主に任じる(s); 主人公の武将を写す(s); 城の預けを積む(s); }   // 家老から上：城を失っていれば、また城主に。政務の金を預かる（下の 城主の段・城主の政務）
   上司を見直す(s);
   return s;
 }
@@ -196,6 +203,18 @@ export function 上司を見直す(s) {
   }
   /* 物頭から上（遊ぶ人の申し出：「物頭以上は上司が城主になる」）：上司は住む城の城主。城主のいない城や、当主の居る城
      （城主の札が要らない）なら当主。住む城は城主が移っても変えない */
+  /* 家老から上で城主なら（遊ぶ人の申し出：「プレイヤーが城主になれば、上司は国主か旗頭か大名のいずれかになります（国主が
+     いれば上司は国主。国主がおらず旗頭のみなら旗頭が上司、どちらもいなければ大名が上司）」）：その城の国の国主、いなければ
+     その国を受け持つ旗頭、どちらもいなければ当主 */
+  const 我が城 = 城主の段か(f.身分) ? 主人公の城(s) : null;
+  if (我が城) {
+    const 当主 = (s.generals || []).find((x) => x.faction === s.player && x.lord && !x.captive);
+    const 国主 = 国の国主(s, s.player, 我が城.kuni), 旗 = 国の旗頭(s, s.player, 我が城.kuni);
+    const 新 = (国主 && !国主.風雲の主 ? 国主 : null) || (旗 && !旗.風雲の主 ? 旗 : null) || 当主;
+    f.城 = 我が城.id;
+    if (新 && 新.id !== f.上司) { f.上司 = 新.id; 記す(s, `${新.name}（${新.lord ? "当主" : 新.役}）を上司とする。`); }
+    return;
+  }
   if (武将の段か(f.身分)) {
     const 住む = (s.castles || []).find((c) => c.id === f.城);
     const 主 = 住む ? castellanOf(s, 住む) : null;
@@ -226,8 +245,21 @@ function 陣を借りる将(s, ids) {
   const 外 = 将ら.find((x) => !x.lord && !(主 && isKin(x, 主)) && !isMainClan(s, x));
   return (外 || 将ら[0] || {}).id || null;
 }
+/* 家老から上（武将の帳に入った主人公）：主人公が自ら率いる軍の戦か、主人公のいる城が受ける戦。自ら … 総大将の差配で
+   戦う（盤の身分は無し。キャンペーンのふだんの合戦と同じ下知。ui/MapScreen.jsx） */
+function 主人公の戦の隊(s, army, dest, foe) {
+  const g = 主人公の武将(s); if (!g || g.captive) return null;
+  const 我 = { 隊id: g.id, 陣借り: false, 自ら: true };
+  const 居る = (a) => !!a && (a.gens || []).includes(g.id);
+  if (foe) return 居る(army) || 居る(foe) ? 我 : null;
+  if (!dest) return null;
+  if (居る(army)) return dest.faction !== army.faction ? 我 : null;
+  return g.at === dest.id && dest.faction === s.player && army.faction !== s.player ? 我 : null;
+}
 export function 風雲の隊を選ぶ(s, army, dest, foe) {
   const f = s && s.風雲; if (!f || f.討死 || !army) return null;
+  /* 城主（武将の帳に入った主人公）は、自ら率いる戦と自城の守りの戦だけに出る（上司の戦・陣借りには出ない） */
+  if (主人公の武将(s)) return 主人公の戦の隊(s, army, dest, foe);
   const 上 = f.上司;
   if (上) {
     if (foe) { if ((army.gens || []).includes(上) || (foe.gens || []).includes(上)) return { 隊id: 上, 陣借り: false }; }
@@ -263,6 +295,8 @@ export const 風雲の戦か = (s, army, dest, foe) => !!風雲の隊を選ぶ(s
    月送り（govern/month.js）は、この強攻を式で裁かずに s.風雲の城攻め へ積み、地図画面が城の盤を開く */
 export function 風雲の城攻めの隊(s, army, castle) {
   const f = s && s.風雲; if (!f || f.討死 || !army || !castle) return null;
+  /* 城主（武将の帳に入った主人公）：自ら率いる軍の城攻めか、主人公のいる城の籠城だけ（上の 主人公の戦の隊） */
+  if (主人公の武将(s)) return 主人公の戦の隊(s, army, castle, null);
   if (f.上司) {
     if ((army.gens || []).includes(f.上司)) { if (castle.faction !== army.faction) return { 隊id: f.上司, 陣借り: false }; }
     else {
@@ -313,7 +347,7 @@ export function 戦の勲功を記す(s, b, 場所, 添 = {}) {
     /* 物頭から上：預かる隊の戦果を勲功に積む（下の 預かる隊の勲功）。論功行賞で加増に換わる */
     const 隊 = 預かる隊の勲功(b, 添.隊id || f.上司, 添);
     f.勲功 += 隊.勲功;
-    記す(s, `${借り ? `${借り.name}の陣を借りて、` : ""}${場所 ? `${場所}の` : ""}${勝}に${f.身分}として出た。${隊.文}勲功${隊.勲功}。`);
+    記す(s, `${借り ? `${借り.name}の陣を借りて、` : ""}${場所 ? `${場所}の` : ""}${勝}に${添.自ら ? `${f.身分}として自ら兵を率いて` : `${f.身分}として`}出た。${隊.文}勲功${隊.勲功}。`);
   } else 記す(s, `${借り ? `${借り.name}の陣を借りて、` : ""}${場所 ? `${場所}の` : ""}${勝}に足軽として出た。討ち取り${討}${内訳の文(功)}。勲功${功.勲功}。`);
   首と咎を記す();
   合戦ののちの伸び(s, b, 働, "合戦", 添.隊id || f.上司);
@@ -380,7 +414,9 @@ export const 武将の段か = (身分) => 段の番(身分) >= 段の番("物�
 /* 禄高と身分を量るための仮の武将（帳には載せない。本領も居所も持たせないので、禄高は知行そのもの） */
 export function 主人公の仮の武将(s) {
   const f = s.風雲;
-  return { id: "fuun-hero", name: f.名, faction: s.player, fief: f.知行 || 0, 身分控: f.身分控 || null,
+  /* 城主になって武将の帳に入っていれば、帳の武将で量る（本領の城の余禄の取り分も禄高に入る。下の 城主の段） */
+  const g = 主人公の武将(s); if (g) return 主人公の武将を写す(s);
+  return { id: 風雲の主のid, name: f.名, faction: s.player, fief: f.知行 || 0, 身分控: f.身分控 || null,
     lead: f.統率, valor: f.武勇, wit: f.知略, gov: f.政務, lord: false };
 }
 export const 主人公の禄高 = (s) => stipendOf(s, 主人公の仮の武将(s));
@@ -406,6 +442,7 @@ export function 禄高の身分を見る(s) {
   }
   身分を控える(s, 仮);
   if (仮.身分控) f.身分控 = 仮.身分控;
+  if (城主の段か(f.身分)) 城主に任じる(s);                       // 家老に届けば必ず城主に（下の 城主の段）
   return s;
 }
 /* 論功行賞（月送りの初めに見る。上の 風雲の月の初め） */
@@ -418,10 +455,12 @@ export function 論功行賞を見る(s) {
   if (!未賞 || !(得た || s.month === 1 || s.month === 7)) return s;
   const k = 家の尺(s, s.player), 倍 = 覚えの倍(f.覚え), 一つ = 加増の石 * k * 倍;
   const 望 = Math.round(未賞 * 一つ);
-  const 余 = Math.max(0, fiefRoom(s, s.player).left - (f.知行 || 0));
+  /* 帳に載らぬあいだは、主人公の知行は家の配った知行に数えられていないので引く（帳に入れば数えられている） */
+  const 余 = Math.max(0, fiefRoom(s, s.player).left - (主人公の武将(s) ? 0 : f.知行 || 0));
   const 地 = Math.min(望, 余), 金 = 望 > 地 ? Math.round((望 - 地) / 一つ) : 0;
   const 前 = f.知行 || 0;
   f.知行 = 前 + 地; f.金 = (f.金 || 0) + 金; f.賞した勲功 = f.勲功;
+  主人公の武将を写す(s);
   記す(s, `論功行賞：勲功${未賞}（覚え${f.覚え}）により、知行${地}石を加増された（${前}→${f.知行}石）。`
     + (金 ? `家の配れる知行が足りず、残りは金${金}貫で賜った。` : ""));
   禄高の身分を見る(s);
@@ -457,6 +496,128 @@ export function 預かる隊の勲功(b, 隊id, 添 = {}) {
   if (守った) 項.push(["城を守り切り", W.守り切る]);
   const 勲功 = 項.reduce((a, x) => a + x[1], 0);
   return { 勲功, 文: 項.length ? `預かる隊で${項.map((x) => x[0]).join("、")}、` : "預かる隊は手柄を立てられなかった。" };
+}
+
+/* ---- 家老から上（城主の段）。遊ぶ人の申し出：「家老となれば必ず城主に任命（その大名のうち最もステータスの低い城主と
+   交代する）」「（物差しは）器量です。当主は除くのは当然ですが、一門は必ずしも除かなくてもいいと思います。ただし、城主の
+   交代によって元城主の忠誠は下げた方がいい」「家老となったら城を任されて城とその周囲（今あるシステムのとおりで）の城で
+   合戦をしかけることができる」「プレイヤーが城主になれば、上司は国主か旗頭か大名のいずれか」。
+     城主に任じる … 家老に届けば、家の城主（城代も含む。当主の居る城・本拠と、囲まれている城は除く。一門は除かない）のうち
+                   器量（上の 器量：統率四割・武勇三割・知略二割・政務一割）のいちばん低い者と交代する。城主のいる城が
+                   無ければ、城主のいない城に入る。交代された元の城主はその城に残り、忠誠が下がる（core/rank.js
+                   外された城主の忠誠を下げる）。城の寄親（国主・旗頭）の筋に繋ぐ（govern/war.js 新しい城主の寄親を定める）
+     武将の帳 … 城主に任じられるとき、主人公を武将の帳（s.generals）に入れる（id は 風雲の主のid、印 風雲の主）。能力・知行は
+                 毎月、風雲の値から写す。手勢は知行の軍役の器の半ばを連れて入る。齢は仕えた年から数える（二十から）。
+                 AIの差配はこの武将とその城に手を出さない（core/state.js 風雲の主の城か。出陣・兵を寄せる・援軍・後詰・
+                 内政・調略・忠誠・寿命・家督・恩賞）
+     上司     … 国主がいれば国主、国主がおらず旗頭のみなら旗頭、どちらもいなければ当主（上の 上司を見直す）
+     城を失えば … 城が落ちても討たれも捕らわれもせず、自家の城へ落ち延びる（govern/war.js）。月の初めに、また城主に任じられる
+   値はみな仮 ---- */
+export const 城主の段か = (身分) => 段の番(身分) >= 段の番("家老");
+export const 主人公の武将 = (s) => ((s && s.generals) || []).find((x) => x.id === 風雲の主のid) || null;
+export const 主人公の城 = (s) => ((s && s.castles) || []).find((c) => c.lordId === 風雲の主のid && c.faction === s.player) || null;
+const 主人公の齢 = (s) => 20 + Math.max(0, (s.year || 0) - ((s.風雲 && s.風雲.始め && s.風雲.始め.年) || s.year || 0));
+/* 城主にする城と、交代する元の城主（無ければ null）を選ぶ */
+export function 城主にする城を選ぶ(s) {
+  const fid = s.player;
+  const 当主 = (s.generals || []).find((x) => x.faction === fid && x.lord && !x.captive);
+  const 本拠 = (s.factions[fid] || {}).本拠;
+  const 囲まれた = (c) => (s.sieges || []).some((sg) => sg.castleId === c.id);
+  const 城ら = (s.castles || []).filter((c) => c.faction === fid && c.id !== 本拠 && !(当主 && 当主.at === c.id) && !囲まれた(c));
+  const 主の居る = 城ら.map((c) => ({ c, 主: c.lordId ? (s.generals || []).find((x) => x.id === c.lordId && x.faction === fid && !x.captive && !x.lord) : null }))
+    .filter((o) => o.主 && !o.主.風雲の主);
+  if (主の居る.length) {
+    const 低い = [...主の居る].sort((a, z) => 器量(a.主) - 器量(z.主) || String(a.c.id).localeCompare(String(z.c.id)))[0];
+    return { 城: 低い.c, 元: 低い.主 };
+  }
+  const 空き = 城ら.find((c) => !c.lordId);
+  return 空き ? { 城: 空き, 元: null } : null;
+}
+/* 主人公の武将（帳の）に、風雲の値（能力・知行・齢）を写す。帳に無ければ null */
+export function 主人公の武将を写す(s) {
+  const f = s.風雲, g = 主人公の武将(s); if (!f || !g) return null;
+  g.name = f.名; g.lead = f.統率; g.valor = f.武勇; g.wit = f.知略; g.gov = f.政務; g.fief = f.知行 || 0;
+  g.loyal = 100; g.faction = s.player; g.風雲の主 = true; g.lord = false; g.age = 主人公の齢(s);
+  if (f.身分控) g.身分控 = f.身分控;
+  return g;
+}
+/* 主人公を武将の帳に入れる（無ければ作る） */
+export function 主人公を武将の帳に入れる(s, 城) {
+  const f = s.風雲;
+  let g = 主人公の武将(s);
+  if (!g) {
+    g = { id: 風雲の主のid, name: f.名, faction: s.player, lord: false, 風雲の主: true, loyal: 100,
+      at: 城.id, 本領: 城.id, retTrain: 60, unity: 70, merit: 0, fief: f.知行 || 0, 身分控: f.身分控 || null };
+    g.lead = f.統率; g.valor = f.武勇; g.wit = f.知略; g.gov = f.政務;
+    g.retCap = 軍役の増(g, g.fief);
+    g.retinue = Math.round(g.retCap * 0.5);
+    g.rost = newRoster(g.retinue, `ret-${風雲の主のid}`);
+    s.generals.push(g);
+  }
+  return 主人公の武将を写す(s);
+}
+/* 城主に任じる（家老に届いたとき・城を失ったのちの月の初め）。任じた城を返す（すでに城主ならその城。任じられなければ null） */
+export function 城主に任じる(s) {
+  const f = s.風雲; if (!f || f.討死 || !城主の段か(f.身分)) return null;
+  const 今 = 主人公の城(s); if (今) return 今;
+  const 選 = 城主にする城を選ぶ(s);
+  if (!選) {
+    if (!f.城を待つ) 記す(s, "家老に届いたが、任されるべき城が家に無い。城が空くのを待つ。");
+    f.城を待つ = true;
+    return null;
+  }
+  f.城を待つ = false;
+  const 城 = 選.城, g = 主人公を武将の帳に入れる(s, 城);
+  const 控え = 城主を控える(s, s.player);
+  g.at = 城.id; g.本領 = 城.id;
+  城主を据え替える(s, 城, g.id, { 城代: false });
+  for (const x of 外された城主の忠誠を下げる(s, 控え)) 記す(s, `${x.g.name}は${x.城.name}の城主を解かれた（忠誠${Math.round(x.前)}→${Math.round(x.g.loyal)}）。`);
+  新しい城主の寄親を定める(s, 城, g.id, null);
+  f.城 = 城.id;
+  記す(s, `家老として${城.name}の城主に任じられた${選.元 ? `（${選.元.name}に代わる）` : ""}。`);
+  f.知らせ = [...(f.知らせ || []), `${城.name}の城主に任じられた`];
+  上司を見直す(s);
+  return 城;
+}
+
+/* ---- 城主の政務（遊ぶ人の申し出：「あとは、政務をどうするかですね」。案：家老（城主）は自城の内政を執り、金は家から
+   預かる）。
+     預かる金 … 月ごとに、その城の実入り（core/inin.js 城の実入り。月送りと同じ数え方）に、家の預けの目盛り（並で一倍）を
+                掛けた金を預かる（f.城の預け）。使わなければ三月ぶんまで溜まる
+     下知     … 開墾・治水・商業・築城・訓練・徴募。キャンペーンの城の下知（govern/commands.js runCommand）をそのまま使う。
+                費えは家の蔵から払うが、預かった金の内に限る。城にいる将（主人公と、その城の家臣）が月に一つずつ行える
+   値はみな仮 ---- */
+export const 城の政務 = ["開墾", "治水", "商業", "築城", "訓練", "徴募"];
+/* 主人公の城から兵を出せる先（出陣の画面の行き先の篩）。家の敵で、和を結んでいない家の城に限る（家老は家の外交を破らない。
+   臣従の主の許しの要る城も外す）。道と月数の縛りは、キャンペーンの出陣の画面のまま（ui/panels.jsx SortieDialog） */
+export const 風雲の攻め先か = (s, x) => !!x && x.faction !== s.player && !underMyBanner(s, s.player, x.faction)
+  && !atPeace(s, s.player, x.faction) && 攻められるか(s, s.player, x.id);
+export const 城の預けの月分 = (s) => { const c = 主人公の城(s); return c ? Math.round(城の実入り(c) * 預けの率(s.factions[s.player])) : 0; };
+/* 月の初めに預かる（上の 風雲の月の初め） */
+export function 城の預けを積む(s) {
+  const f = s.風雲, 月分 = 城の預けの月分(s);
+  if (!f || !月分) return s;
+  f.城の預け = Math.min(月分 * 3, (f.城の預け || 0) + 月分);
+  return s;
+}
+/* 城の政務を行う。新しい盤を返す。行えたか・行えなかった訳は f.政務の文 に書く（屋敷の城の政務の欄に出す。月を送れば消す） */
+const 政務の文を置く = (prev, 文) => ({ ...prev, 風雲: { ...prev.風雲, 政務の文: 文 } });
+export function 城の政務を行う(prev, 命, genId) {
+  const f0 = prev && prev.風雲, 城 = 主人公の城(prev);
+  if (!f0 || !城 || !城の政務.includes(命)) return prev;
+  const 将 = (prev.generals || []).find((x) => x.id === genId && x.at === 城.id && x.faction === prev.player && !x.captive);
+  if (!将) return 政務の文を置く(prev, "その将は城にいない。");
+  if ((prev.orders || {})[genId]) return 政務の文を置く(prev, `${将.name}は今月もう働いた。`);
+  const 前の金 = (prev.factions[prev.player] || {}).gold || 0;
+  const s = runCommand(prev, 城.id, 命, genId, prev);
+  if (s === prev) return 政務の文を置く(prev, `${命}を行えなかった（家の蔵の金が足りぬ）。`);
+  const 費え = 前の金 - ((s.factions[s.player] || {}).gold || 0);
+  if (!(s.orders || {})[genId]) return 政務の文を置く(prev, s.msg || `${命}を行えなかった。`);   // 囲まれている・家の蔵の金が足りぬ（訳は s.msg）
+  if (費え > (f0.城の預け || 0)) return 政務の文を置く(prev, `預かった金が足りぬ。${命}には${費え}貫が要る（預かり${Math.round(f0.城の預け || 0)}貫）。`);
+  s.風雲.城の預け = Math.round(((f0.城の預け || 0) - 費え) * 10) / 10;
+  s.風雲.政務の文 = `${将.name}が${命}を行った（費え${費え}貫）。`;
+  記す(s, `${城.name}で${将.name}が${命}を行った（費え${費え}貫）。`);
+  return s;
 }
 
 /* 取り立て：勲功が次の段の目安に届けば上げる（一度に一段ずつ。届けば続けて上げる） */

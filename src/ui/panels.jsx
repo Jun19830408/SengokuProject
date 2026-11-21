@@ -39,12 +39,16 @@ import { 城の郡ら, 郡の石高ら, 郡の治め, 郡代の候補, 郡代の
 import { 城の寄親 } from "../core/inin.js";
 
 
-export function SortieDialog({ g, from, onClose, onGo }) {
+/* 篩 … 行き先を絞る（無ければこれまでどおり）。必ず … 外せない将の id（風雲モードの家老：主人公は自ら出る。ui/MapScreen.jsx） */
+export function SortieDialog({ g, from, onClose, onGo, 篩 = null, 必ず = null }) {
   const c = g.castles.find((x) => x.id === from);
   const 本拠か = from === (g.factions[g.player] || {}).本拠;
   const gens = g.generals.filter((x) => x.at === c.id && x.faction === c.faction && !x.captive);
   const tooLow = [];
-  const [picked, setPicked] = useState(gens.slice(0, 2).map((x) => x.id));
+  const [picked, setPicked] = useState(() => {
+    const 初め = gens.slice(0, 2).map((x) => x.id);
+    return 必ず && gens.some((x) => x.id === 必ず) && !初め.includes(必ず) ? [必ず, ...初め.slice(0, 1)] : 初め;
+  });
 
   /* 兵を出せる先を、先に一つの表として作る。
      かつては初期の目標を「最も近い敵城」から別に選んでいた。その城がこの表に
@@ -60,7 +64,8 @@ export function SortieDialog({ g, from, onClose, onGo }) {
          人もその所領に留まる――これが臣従と、家臣であることの違いである。
          （敵城へ攻め入るのは差し支えない。軍事の差配は主のものである） */
       .filter((x) => x.id !== from
-        && (underMyBanner(g, c.faction, x.faction) || canAttack(g, x.id)))
+        && (underMyBanner(g, c.faction, x.faction) || canAttack(g, x.id))
+        && (!篩 || 篩(x)))
       .filter((x) => c.faction === g.player || x.faction === c.faction
         || !underMyBanner(g, g.player, x.faction))
       /* 隣り合う城か、味方の城を伝って辿れる先にしか兵は出せぬ。
@@ -105,7 +110,7 @@ export function SortieDialog({ g, from, onClose, onGo }) {
           && (g.sieges.some((sg) => sg.castleId === x.id)
             || g.armies.some((a) => a.target === x.id && a.faction !== x.faction)) }))
       .sort((a, b) => (b.peril ? 1 : 0) - (a.peril ? 1 : 0) || a.m - b.m);
-  }, [g, from, c.faction]);
+  }, [g, from, c.faction, 篩]);
 
   const [to, setTo] = useState(() => {
     // 危うい味方の城があればそこを、なければ最も近い敵城を、それもなければ表の先頭を。
@@ -493,10 +498,10 @@ export function SortieDialog({ g, from, onClose, onGo }) {
         })()}
         {gens.map((x) => (
           <label key={x.id} style={{ display: "flex", gap: 9, alignItems: "center", padding: "5px 0", fontSize: 13 }}>
-            <input type="checkbox" checked={picked.includes(x.id)}
+            <input type="checkbox" checked={picked.includes(x.id)} disabled={x.id === 必ず}
               onChange={() => setPicked((p) => (p.includes(x.id) ? p.filter((y) => y !== x.id) : [...p, x.id]))} />
             <span className="mn" style={{ fontSize: 15 }}>{x.name}
-              <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 5 }}>{rankName(x, g)}</span>
+              <span style={{ fontSize: 10.5, color: U.dim, marginLeft: 5 }}>{rankName(x, g)}{x.id === 必ず ? "・自ら出る" : ""}</span>
             </span>
             <span className="num" style={{ color: U.dim, fontSize: 11 }}>{x.age}歳／統{x.lead} 武{x.valor} 知{x.wit}／直属{fmt(x.retinue)}</span>
           </label>
@@ -2632,17 +2637,18 @@ export function PromotionDialog({ promo, onDone }) {
 
    出陣とは違い、兵も将も既に揃っている。決めるのは行き先だけである。
    兵糧は在陣のあいだに細っているので、それを添えて示す。 */
-export function 攻め寄せる問い({ g, armyId, onClose, onGo }) {
+/* 篩 … 行き先を絞る（無ければこれまでどおり。風雲モードの家老は、主人公の城から攻められる城に限る。ui/MapScreen.jsx） */
+export function 攻め寄せる問い({ g, armyId, onClose, onGo, 篩 = null }) {
   const a = (g.armies || []).find((x) => x.id === armyId);
   const 陣 = a && g.castles.find((x) => x.id === a.在陣);
   const 行き先 = useMemo(() => {
     if (!陣) return [];
     return g.castles
-      .filter((x) => x.id !== 陣.id && 軍の道(g, g.player, 陣.id, x.id))
+      .filter((x) => x.id !== 陣.id && (!篩 || 篩(x)) && 軍の道(g, g.player, 陣.id, x.id))
       .map((x) => ({ c: x, 月: marchMonthsOf(軍の道(g, g.player, 陣.id, x.id) || [], g.player) }))
       .filter((x) => x.月 <= 8)
       .sort((p, q) => p.月 - q.月);
-  }, [g, 陣 && 陣.id]);
+  }, [g, 陣 && 陣.id, 篩]);
   const [to, setTo] = useState(null);
   const [aid, setAid] = useState({});
   const 将ら = a ? (a.gens || []).map((id) => g.generals.find((x) => x.id === id)).filter(Boolean) : [];
