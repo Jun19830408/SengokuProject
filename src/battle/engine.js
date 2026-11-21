@@ -1579,7 +1579,11 @@ export function stepBattle(b, dt) {
       }
       const v = 隊の足 * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, c.地, terr.speed) * W.speed * chg * (engaged ? 0.35 : 1)
         * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * 寄せ道 * 混み
-        * (c.後退中 ? 0.62 : 1) * (向きを保つ ? 0.6 : 1);
+        * (c.後退中 ? 0.62 : 1) * (向きを保つ ? 0.6 : 1)
+        /* 背中越しに率いている手勢が詰まった向きへ押すときの押し込み（hitori/tezei.js 手勢へ下知 の c.押し込み）と、盤で上司の
+           隊について歩む手勢の追い付き（hitori/tezei.js 手勢を親に付ける の c.追い付き）。遊ぶ人の申し出：「敵と戦うと
+           プレイヤー自体が身動きできなくなったり」「盤にしても自隊だけ遅れており変です」 */
+        * (率刻 && c.押し込み > 0 ? c.押し込み : 1) * (!率刻 && c.手勢 && c.従い && c.追い付き > 0 ? c.追い付き : 1);
       /* 行き過ぎない（GDD 8.3）。
 
          歩幅を残りの隔たりで頭打ちにしていなかった。足は毎秒三十歩ほど、刻みは
@@ -1798,7 +1802,7 @@ export function stepBattle(b, dt) {
          回り、陣形は元の向きに伸びたまま――「押した方角へ陣形が向く」ことに
          ならない（corps.js の placeSquads を参照）。 */
       const diff = ((c.faceTo - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-      const rate = 率刻 ? 2.0 * (c.統率の効き ? c.統率の効き.回り : 1) / 率刻 : 0.45 + c.gen.lead / 130;     // 率いている手勢は実の秒で（上の 率刻）。統率の効きを掛ける
+      const rate = 率刻 ? 2.0 * (c.統率の効き ? c.統率の効き.回り : 1) / 率刻 : 0.45 + (c.歩みの統率 != null ? c.歩みの統率 : c.gen.lead) / 130;     // 率いている手勢は実の秒で（上の 率刻）。統率の効きを掛ける。盤で上司について歩む手勢は上司の統率で（hitori/tezei.js 歩みの統率）
       if (Math.abs(diff) < 0.05) {
         c.facing = c.faceTo; c.faceTo = null;
         c.陣向き = c.facing;

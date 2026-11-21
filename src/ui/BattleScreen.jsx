@@ -414,7 +414,11 @@ export function BattleScreen({ ctx, land, onEnd }) {
     const loop = (ts) => {
       if (!alive) return;
       const b = bRef.current;
-      const dt = last ? Math.min(0.05, (ts - last) / 1000) : 0;
+      /* 一コマで進める刻の頭打ち。背中越し（地の眺め）では、与平の歩み（hitori/senaka.js 背中を描く）と同じ〇.一秒にする。
+         もとはどちらでも〇.〇五秒で、描きの重い端末（一コマ〇.〇五秒より長い）では、盤の兵だけがその割で遅れ、与平は
+         ふつうに歩んだ（遊ぶ人の申し出：「移動中もスピードが出ずに他の隊から出遅れたり」）。背中越しの盤は微速なので、
+         〇.一秒ぶんを一息に踏んでも盤の刻は〇.〇〇二秒に満たない */
+      const dt = last ? Math.min(背中Ref.current ? 0.1 : 0.05, (ts - last) / 1000) : 0;
       last = ts;
       const sp = speedRef.current;
       // 委ねている間は絵を描かない。描かぬぶんだけ時が速く進む。
