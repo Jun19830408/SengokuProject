@@ -2406,7 +2406,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     /* 風雲モード：主人公の働き（盤の b.一人働き：討ち取り・体力・討死）を記す。勝ち負けと損害は、下のふだんの道で書き戻す */
     if (ctx.一人 && ctx.一人.風雲) {
       const 場所 = ctx.mode === "castle" ? `${ctx.place || ""}${ctx.playerIsAtk ? "攻め" : "の籠城"}` : ctx.place;
-      setG((prev) => 戦の勲功を記す(structuredClone(prev), b, 場所, { 陣借り: !!ctx.一人.陣借り, 隊id: ctx.一人.隊id }));
+      setG((prev) => 戦の勲功を記す(structuredClone(prev), b, 場所, { 陣借り: !!ctx.一人.陣借り, 隊id: ctx.一人.隊id,
+        城攻め: ctx.mode === "castle" ? (ctx.playerIsAtk ? "攻め" : "守り") : null }));
     }
     if (ctx.mode === "wakeme") return finishWakeme(b, ctx);
     if (ctx.mode === "castle") return finishAssault(b, ctx);

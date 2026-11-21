@@ -51,7 +51,7 @@ export { 圧す, 解す } from "../src/save/pack.js";
 export { advanceMonth, 出征の見立て, 攻めに要る兵, 近隣から兵を寄せる, 寄せを返す, 寄せられる見込み, 風雲の主家の上司, 主家の腰の倍, 主家の好機の余裕, 主家の好機の腰, 好機の余裕, 好機の腰, 城を救う援軍を出す, 城が危ういか, 援軍の望み, 二陣の見込み } from "../src/govern/month.js";
 export { 城方の後詰ら, 野戦の後の後詰 } from "../src/core/engun.js";
 export { 城攻めの比, 野で当たる比, 将の利, 将の器量, 城攻めの基の比, 野の比, 連戦の余り } from "../src/core/shussei.js";
-export { troopCap, 軍役の器, 軍役の割増, extraIncome, goryoOf, fiefOf, 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届き, 陣触れに応じる, 国が隣り合うか, minGarrison, 身分の位, 総大将を定める, 大将を先頭に, 国主に任じる, 旗頭に任じる, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 国主たち, 旗頭たち, stipendOf, 役の要る身分, 寄騎に取る, 寄騎を解く, 寄騎たち, 寄騎に取れるか, 城主か, 城主を据え替える, 城を明け渡す, 城を守る将, 守備隊の統率, 旗頭の受け持ち, 旗頭の届く国, 旗頭の的にできる家, 旗頭の的家, 旗頭の的家を定める, 的家の限り, 家の国ら, 旗の下の家か, 旗の下の当主か, 当主の国ら, 城の知行の余地, fiefRoom, fiefBurden, 旗頭を継がせる, 旗頭を継げる者, 方面の軍を移す } from "../src/core/rank.js";
+export { troopCap, 軍役の器, 軍役の割増, extraIncome, goryoOf, fiefOf, 忠誠, diploStat, loyaltyDrift, castellanOf, rankName, 陣触れの届き, 陣触れに応じる, 国が隣り合うか, minGarrison, 身分の位, 総大将を定める, 大将を先頭に, 国主に任じる, 旗頭に任じる, 国主を繕う, 寄騎を繕う, 旗頭を繕う, 国主たち, 旗頭たち, stipendOf, 役の要る身分, 寄騎に取る, 寄騎を解く, 寄騎たち, 寄騎に取れるか, 城主か, 城主を据え替える, 城を明け渡す, 城を守る将, 守備隊の統率, 旗頭の受け持ち, 旗頭の届く国, 旗頭の的にできる家, 旗頭の的家, 旗頭の的家を定める, 的家の限り, 家の国ら, 旗の下の家か, 旗の下の当主か, 当主の国ら, 城の知行の余地, fiefRoom, fiefBurden, 旗頭を継がせる, 旗頭を継げる者, 方面の軍を移す, 家の尺, 身分の境, rankOf, RANKS, 城主を外された忠誠の減り } from "../src/core/rank.js";
 export { 天守を見る, 天守の表 } from "../src/data/tenshu.js";
 export { 難を逃れる, captureChance, 仕官を願えるか, 他家が召し抱える, 囚われた年, makePrisoner, takeAsPrisoner } from "../src/core/capture.js";
 export { succeed, is架空, bearChild, pickHeir, LIFE_CAP, lifeSpan } from "../src/core/house.js";
@@ -75,7 +75,7 @@ export { layoutField, setFieldSeed, setFieldKind, fieldScale, FIELD, terrainAt, 
 export { ARM_STATS } from "../src/battle/field.js";
 export { outOfCommand, commandPost, commandRange, makeCorps, corpsMen, placeSquads, issueOrder, makeDetachment, detachOptions, 分遣の頃合い, 転回させる, 退かせる, 退き先, 盤に収める, 寄せ手の隊数 } from "../src/battle/corps.js";
 export { 新絵か, 姿の札, 姿八, 姿の骨, 新絵の野, 野を焼く, 新絵の城の地, 城の地を焼く, 新絵の兵描き, 焼きの内訳, 新絵状態を進める, 組の見た目, 組頭の番, 本陣衆を見る, 盤の見た目, 持上高, 個人閾, 新絵の寄り限り, 個人で描くか, 見える組数, 見える人数, 組の予算, 人の予算 } from "../src/battle/shinga.js";
-export { createBattle, stepBattle, 放った跡, 前面まで, 触れる隔たり, 触れ隙, 触れ上限, 噛み間, 押し力, 塊として立つ } from "../src/battle/engine.js";
+export { createBattle, stepBattle, applyDamage, 放った跡, 前面まで, 触れる隔たり, 触れ隙, 触れ上限, 噛み間, 押し力, 塊として立つ } from "../src/battle/engine.js";
 // 一人働き（武将一人プレイ）のつなぎ：与平が討った兵を、理の人数と一人ずつの絵の両方で減らす
 export { 兵を討つ, 組の兵を数える, 組の隊, 将を討つ, 総大将か } from "../src/hitori/tsunagi.js";
 // 一人働きの背中越しの視点：盤の一人ずつの兵を、与平の背中越しの眺めへ写す
@@ -84,7 +84,8 @@ export { 視のなぞりの横, 視のなぞりの縦 } from "../src/hitori/Sena
 export { 人形の段 } from "../src/hitori/ningyo.js";
 export { 手勢の数, 手勢を組む, 手勢へ下知, 手勢を委ねる, 手勢を留める, 下知の名, 下がる押し, 手勢を親に付ける, 付き従いの隔, 寄る押し, 詰まりの正面, 詰まりの真向き, 統率の効き, 実効の統率, 手勢の統率の初め } from "../src/hitori/tezei.js";
 /* 風雲モード（一人の侍の立身）の理と屋敷の画面（試し：tests/fuun.cjs） */
-export { 風雲の段, 段の番, 次の段, 盤の身分, 風雲の一人, 月の行い一覧, 月の行いの数, 上司を選ぶ, 若手の上司を選ぶ, 風雲の上司を決める, 風雲で選べるか, 風雲を始める, 風雲の月の初め, 上司を見直す, 風雲の戦か, 風雲の城攻めか, 風雲の隊を選ぶ, 風雲の城攻めの隊, 戦の勲功を記す, 取り立てを見る, 風雲の問いに答える, 首の勲功, 首の値, 討ち取りの勲功, 雑兵の勲功の割, 月の体力の戻り, 養生の戻り, 合戦ののちの伸び } from "../src/hitori/fuun.js";
+export { 風雲の段, 段の番, 次の段, 盤の身分, 風雲の一人, 月の行い一覧, 月の行いの数, 上司を選ぶ, 若手の上司を選ぶ, 風雲の上司を決める, 風雲で選べるか, 風雲を始める, 風雲の月の初め, 上司を見直す, 風雲の戦か, 風雲の城攻めか, 風雲の隊を選ぶ, 風雲の城攻めの隊, 戦の勲功を記す, 取り立てを見る, 風雲の問いに答える, 首の勲功, 首の値, 討ち取りの勲功, 雑兵の勲功の割, 月の体力の戻り, 養生の戻り, 合戦ののちの伸び,
+  武将の勲功, 武将の始めの知行, 加増の石, 覚えの倍, 武将の段か, 主人公の仮の武将, 主人公の禄高, 主人公の次の身分, 武将の支度, 禄高の身分を見る, 論功行賞を見る, 預かる隊の勲功 } from "../src/hitori/fuun.js";
 export { FuunYashiki, 住まいの絵 } from "../src/hitori/FuunYashiki.jsx";
 export { 名簿の形, 新参の値, 名簿の形を見る, 今の統率, 一人の扶持, 新参を作る, 候補を作る, 名簿の扶持, 手勢の統率を量る, 手勢の武勇を量る, 名簿の素質, 手勢の名簿を整える, 雇えるか, 手勢を雇う, 暇を出す, 戦の損を名簿に移す, 名簿の人数, 練れの伸び, 統率の伸び, 練れを伸ばす, 統率の伸びを量る,
   欠員を作る, 欠けの数, 欠けの和, 補充できるか, 補充する, みな補充する, 戦の伸びの倍, 伸びの倍を見る, 統率に足す } from "../src/hitori/tezei_meibo.js";

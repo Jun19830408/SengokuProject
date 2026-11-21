@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { U } from "../core/util.js";
-import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数, 月の体力の戻り, 養生の戻り } from "./fuun.js";
+import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数, 月の体力の戻り, 養生の戻り, 武将の段か, 主人公の禄高, 主人公の次の身分 } from "./fuun.js";
 import { 主命の重さ, 働きかけの見込み, 予定を見る, 月番を年月に, 山賊の月か, 偵察の月か, 偵察の的を選ぶ, 今の月番 } from "./shumei.js";
 import { TOWNS } from "../data/castles.js";
 import { 住まいの絵 } from "./sumai_e.jsx";
@@ -42,6 +42,10 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   const 上の居所 = 上 ? (上.at ? (g.castles.find((c) => c.id === 上.at) || {}).name || "" : "出陣中") : "";
   const 今の段 = 風雲の段[段の番(f.身分)] || 風雲の段[0];
   const 次 = 次の段(f.身分);
+  /* 物頭から上：禄高・次の身分・まだ賞されていない勲功（hitori/fuun.js 武将の段） */
+  const 武将 = 武将の段か(f.身分) && f.知行 != null;
+  const 禄 = 武将 ? 主人公の禄高(g) : 0, 禄の次 = 武将 ? 主人公の次の身分(g) : null;
+  const 未賞 = 武将 ? Math.max(0, f.勲功 - (f.賞した勲功 == null ? f.勲功 : f.賞した勲功)) : 0;
   const 待つ戦 = (g.pendingArrivals || []).length > 0 || (g.clashes || []).length > 0;
   const 終わり = f.討死 ? "討死" : g.滅び ? "滅亡" : null;
   const 選ぶ = (名) => set行い((v) => (v.includes(名) ? v.filter((x) => x !== 名)
@@ -77,11 +81,26 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         <span className="mn" style={{ fontSize: 16 }}>{f.身分}</span>
         <span style={{ fontSize: 11.5, color: U.dim, marginLeft: "auto" }}>住まい：{今の段.住まい}</span>
       </div>
-      <div style={{ fontSize: 12, marginTop: 10 }}>
-        勲功 <b className="num">{f.勲功}</b>
-        <span style={{ color: U.dim }}>{次 ? `（${次.名}まで ${Math.max(0, 次.要 - f.勲功)}）` : ""}</span>
-        {棒(次 ? f.勲功 - 今の段.要 : 1, 次 ? 次.要 - 今の段.要 : 1, "#A4462E")}
-      </div>
+      {武将 ? (
+        /* 物頭から上：禄高で身分が上がる。勲功は論功行賞で加増に換わる（hitori/fuun.js 武将の段） */
+        <>
+          <div style={{ fontSize: 12, marginTop: 10 }}>
+            禄高 <b className="num">{禄}</b> 石
+            <span style={{ color: U.dim }}>{禄の次 ? `（${禄の次.key}まで ${禄の次.要る}石。あと${禄の次.足りぬ}石）` : "（宿老）"}</span>
+            {棒(禄の次 ? 禄 : 1, 禄の次 ? 禄の次.要る : 1, "#A4462E")}
+          </div>
+          <div style={{ fontSize: 12, marginTop: 6 }}>
+            勲功 <b className="num">{f.勲功}</b>
+            <span style={{ color: U.dim }}>（まだ賞されていない勲功 {未賞}。勲功を得た次の月送りか、正月・七月の論功行賞で加増に換わる）</span>
+          </div>
+        </>
+      ) : (
+        <div style={{ fontSize: 12, marginTop: 10 }}>
+          勲功 <b className="num">{f.勲功}</b>
+          <span style={{ color: U.dim }}>{次 && 次.要 != null ? `（${次.名}まで ${Math.max(0, 次.要 - f.勲功)}）` : ""}</span>
+          {棒(次 && 次.要 != null ? f.勲功 - 今の段.要 : 1, 次 && 次.要 != null ? 次.要 - 今の段.要 : 1, "#A4462E")}
+        </div>
+      )}
       <div className="g2" style={{ marginTop: 8, gap: 10 }}>
         <div style={{ fontSize: 12 }}>上司の覚え <b className="num">{f.覚え}</b>{棒(f.覚え, 100, "#3D5A80")}</div>
         <div style={{ fontSize: 12 }}>体力 <b className="num">{f.体力}</b>{棒(f.体力, 100, "#4F7A52")}</div>
@@ -90,6 +109,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         <span className="k">能力</span>
         <span className="v num">武勇 {f.武勇}・統率 {f.統率}・知略 {f.知略}・政務 {f.政務}</span>
         <span className="k">金</span><span className="v num">{f.金} 貫</span>
+        {武将 && <><span className="k">知行</span><span className="v num">{f.知行} 石</span></>}
         <span className="k">上司</span><span className="v">{上 ? `${上.name}（${上の居所}）` : "―"}</span>
         <span className="k">合戦</span><span className="v num">{f.合戦} 度・討ち取り {f.討ち取り}</span>
         <span className="k">務め・主命</span><span className="v num">果たした {(f.主命の数 || {}).果たした || 0}・しくじった {(f.主命の数 || {}).しくじった || 0}</span>
@@ -257,10 +277,10 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
       {!終わり && (f.知らせ || []).length > 0 && (
         <div className="modal">
           <div className="card" style={{ maxWidth: 380, textAlign: "center" }}>
-            <div style={{ fontSize: 12, color: U.dim, letterSpacing: ".3em" }}>取り立て</div>
+            <div style={{ fontSize: 12, color: U.dim, letterSpacing: ".3em" }}>{今の段.禄 ? "身分" : "取り立て"}</div>
             <div className="mn" style={{ fontSize: 30, margin: "10px 0 4px" }}>{f.身分}</div>
             <div style={{ fontSize: 12.5, lineHeight: 1.9, color: U.dim }}>
-              {f.知らせ.join("。")}。<br />住まいは{今の段.住まい}に移る。
+              {f.知らせ.join("。")}。{!今の段.禄 && <><br />住まいは{今の段.住まい}に移る。</>}
             </div>
             <button className="btn dark" style={{ width: "100%", marginTop: 14 }} onClick={() => on知らせを閉じる && on知らせを閉じる()}>了</button>
           </div>

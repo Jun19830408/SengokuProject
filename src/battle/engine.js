@@ -70,6 +70,8 @@ export function applyDamage(b, fCorps, e, dmg, flank, valor, byCorps, byQ, 正�
   e.men = Math.max(0, e.men - dmg * pinch * (正味 ? 1 : (b.損の手加減 || 1)));
   const lost = before - e.men;
   fCorps.loss[e.origin] += lost;
+  /* 最後に損害を与えた敵の隊（風雲モードの勲功：敵の隊を潰した隊。下の 隊を潰した） */
+  if (byCorps && byCorps !== fCorps && lost > 0) fCorps.最後の手 = byCorps.id;
   /* 駒の長の武功（GDD 6.2）。
 
      盤の駒は名簿の一組と一対一であり、組ひとつに長がひとり居る。敵の駒を
@@ -2404,6 +2406,8 @@ export function stepBattle(b, dt) {
       }
       if (g.hp <= 0) {
         g.hp = 0; g.broken = true; g.slot = null; g.hold = null;
+        /* 門を破った隊を控える（風雲モードの勲功。hitori/fuun.js 預かる隊の勲功） */
+        (b.門を破った || (b.門を破った = [])).push({ 門: g.key, 隊: holder.id });
         /* 門が破れたら、道の格子を組み直す（GDD 9.3）。
            格子は戦の初めに一度だけ作っていたので、門が開いてもそこは壁のままで、
            寄せ手は破った門を通り抜けられず、壁際で押し合っていた。 */
@@ -3374,6 +3378,8 @@ export function stepBattle(b, dt) {
     }
     if (corpsMen(c) <= 0 && !c.destroyed) {
       c.destroyed = true; c.order = "待機";
+      /* 潰した隊を控える（風雲モードの勲功。hitori/fuun.js 預かる隊の勲功）。最後に損害を与えた敵の隊の手柄とする */
+      if (c.最後の手) { b.隊を潰した = b.隊を潰した || {}; b.隊を潰した[c.id] = c.最後の手; }
       notify(b, `${c.gen.name}隊は壊滅した。`, c.side === "P" ? "bad" : "good");
     }
   }

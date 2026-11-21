@@ -31,7 +31,7 @@ import { setBattleMap } from "../battle/castleMap.js";
 import { FIELD, layoutField, setFieldKind, setFieldSeed } from "../battle/field.js";
 import { makeCorps, placeSquads } from "../battle/corps.js";
 import { createBattle } from "../battle/engine.js";
-import { 記す, 限, 段の番, 取り立てを見る, 討ち取りの勲功, 内訳の文, 合戦ののちの伸び } from "./fuun.js";
+import { 記す, 限, 段の番, 取り立てを見る, 討ち取りの勲功, 内訳の文, 合戦ののちの伸び, 武将の段か, 預かる隊の勲功 } from "./fuun.js";
 
 /* 主命の重さ。山賊の数と、果たしたときの褒美 */
 export const 主命の重さ = {
@@ -193,6 +193,8 @@ export function 山賊退治の果て(s, b, 務め = null) {
   const 咎 = Math.round(働.咎 || 0);
   if (咎 > 0) f.覚え = 限(f.覚え - 咎, 0, 100);
   if ((働.首 || []).some((k) => k && k.山賊)) 記す(s, "山賊の頭を討ち取った。");
+  /* 物頭から上：預かる隊（主人公の組）の戦果を勲功に積む（hitori/fuun.js 預かる隊の勲功。論功行賞で加増に換わる） */
+  if (武将の段か(f.身分)) { const 隊 = 預かる隊の勲功(b, 主命の組); f.勲功 += 隊.勲功; 記す(s, `山賊退治で${隊.文}勲功${隊.勲功}。`); }
   const 討の文 = `討ち取り${討}${内訳の文(功)}・勲功${功.勲功}`;
   if (古い主命) {
     if (b.result === "P") 果たす(s, `山賊を討ち払った（${討の文}）。`);
@@ -315,6 +317,8 @@ export function 偵察の果て(s, b) {
   記す(s, `${場}へ威力偵察に出て${勝}。敵の兵${敵の損}人を${減らせた ? "減らし" : "討ち"}、味方の損は${我の損}人。討ち取り${討}${内訳の文(功)}・勲功${功.勲功}。`);
   const 咎 = Math.round(働.咎 || 0);
   if (咎 > 0) { f.覚え = 限(f.覚え - 咎, 0, 100); 記す(s, `持ち場を離れたため、上司の覚えが${咎}下がった。`); }
+  /* 物頭から上：預かる隊（偵察の組）の戦果を勲功に積む（hitori/fuun.js 預かる隊の勲功） */
+  if (武将の段か(f.身分)) { const 隊 = 預かる隊の勲功(b, 偵察の組); f.勲功 += 隊.勲功; 記す(s, `威力偵察で${隊.文}勲功${隊.勲功}。`); }
   if (b.result === "P" && 減らせた) {
     f.偵察の的 = { 城: 城.id, 迄: 今の月番(s) + 偵察の間 };
     記す(s, `家中では、兵の減った${城.name}を攻める的として重く見るようになった。`);

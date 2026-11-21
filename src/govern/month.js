@@ -77,7 +77,14 @@ import { 謀反の見回り, 謀反の目, 走る先 } from "../core/muhon.js";
 /* 風雲モードで主人公の仕える家なら、主人公の上司の id（そうでなければ null）。
    遊ぶ人の申し出（「家が出陣するときに上司を軍に加えやすくする」案でいく）により、この家が兵を寄せるときは
    上司のいる城から先に呼び、その城からは上司を率いる将として呼ぶ。風雲モードでない盤では何も変えない */
-export const 風雲の主家の上司 = (s, fid) => (s && s.風雲 && !s.風雲.討死 && fid === s.player && s.風雲.上司) || null;
+/* 物頭から上は、住む城の城主が上司になる（hitori/fuun.js 上司を見直す）。当主の城に住めば上司は当主であるが、
+   当主を上司だからといって軍に入れ急がせはしない（当主が毎度出陣する家になってしまうため） */
+export const 風雲の主家の上司 = (s, fid) => {
+  const id = (s && s.風雲 && !s.風雲.討死 && fid === s.player && s.風雲.上司) || null;
+  if (!id) return null;
+  const 上 = (s.generals || []).find((x) => x.id === id);
+  return 上 && 上.lord ? null : id;
+};
 const 上司の城を先に = (s, 上司id) => (a, b) => {
   const 居 = (x) => ((s.generals || []).some((q) => q.id === 上司id && q.at === x.x.id) ? 1 : 0);
   return 居(b) - 居(a) || a.歩 - b.歩;
