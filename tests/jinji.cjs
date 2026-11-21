@@ -7,6 +7,8 @@
      四　自国の城のあいだで城主と所属武将を入れ替えたい
      六　どの旗頭がどこを攻めたのか分からない
      七　旗頭の受け持ちから城主が欠けると、その城が方面から外れる
+   あわせて、遊ぶ人の申し出（「城主の交代によって元城主の忠誠は下げた方がいいと思います。もし入っていなければ
+   キャンペーンでも入れてください」）を 四の四 で縛る。
 
    一は、本拠の付け替え（本拠を追う）が月送りの終いでしか回っていなかった。
    隠居で家督を譲ると、新しい当主が別の城にいても本拠は先代の城に残る。
@@ -22,11 +24,11 @@ fs.mkdirSync(path.join(ROOT, 'build'), { recursive: true });
 fs.writeFileSync(entry,
   'export { initState, relKey } from "../src/core/state.js";\n'
 + 'export { succeed } from "../src/core/house.js";\n'
-+ 'export { doRetire, 城替え } from "../src/govern/commands.js";\n'
++ 'export { doRetire, 城替え, appoint } from "../src/govern/commands.js";\n'
 + 'export { 旗頭が城主を宛てがう } from "../src/core/inin.js";\n'
 + 'export { 方面の報せ } from "../src/govern/war.js";\n'
 + 'export { advanceMonth } from "../src/govern/month.js";\n'
-+ 'export { castellanOf, canHoldCastle, stipendOf, 旗頭の受け持ち } from "../src/core/rank.js";\n'
++ 'export { castellanOf, canHoldCastle, stipendOf, 旗頭の受け持ち, 城主を外された忠誠の減り } from "../src/core/rank.js";\n'
 + 'export { 臣従の主, 許しの要る主 } from "../src/core/yurushi.js";\n');
 const out = path.join(ROOT, 'build', 'jinji.cjs');
 esbuild.buildSync({ entryPoints: [entry], bundle: true, format: 'cjs', outfile: out,
@@ -179,6 +181,63 @@ console.log('\n── 四の三　動かせぬ者は動かさない');
   const s3 = A.城替え(s, 誰か.id, 他家.id);
   確('他家の城へは移せない',
     s3.generals.find((x) => x.id === 誰か.id).at === 誰か.at, s3.msg || '');
+}
+
+console.log('\n── 四の四　城主を外された者の忠誠が下がる（任命・城替え。城代は除く）');
+{
+  const 減 = A.城主を外された忠誠の減り;
+  const 忠 = (s, id) => s.generals.find((x) => x.id === id).loyal;
+  /* 城主のいる城（当主・国主・旗頭でない城主が、その城に居る）と、同じ城に居て城主に任じられる者 */
+  const s = A.initState('oda');
+  const 場 = s.castles.filter((c) => c.faction === 'oda').map((c) => {
+    const 主 = A.castellanOf(s, c);
+    if (!主 || 主.lord || 主.役 === '国主' || 主.役 === '旗頭' || c.lordId !== 主.id || c.城代) return null;
+    const 次 = s.generals.find((x) => x.at === c.id && x.faction === 'oda' && !x.lord && !x.captive && x.id !== 主.id
+      && !s.castles.some((o) => o.lordId === x.id) && A.canHoldCastle(x, s, c));
+    return 次 ? { c, 主, 次 } : null;
+  }).filter(Boolean)[0];
+  if (場) {
+    const t = A.appoint(s, 場.c.id, 場.次.id);
+    確(`城主を替えれば、元の城主の忠誠が${減}下がる`, 忠(t, 場.主.id) === Math.max(0, 忠(s, 場.主.id) - 減),
+      `${場.主.name}：${Math.round(忠(s, 場.主.id))}→${Math.round(忠(t, 場.主.id))}`);
+    確('任じられた者の忠誠は変わらない', 忠(t, 場.次.id) === 忠(s, 場.次.id));
+    確('戦国記と知らせに残る', (t.chronicle || []).some((x) => x.text.includes(`${場.主.name}は${場.c.name}の城主を解かれ`)) && /城主を解かれ/.test(t.msg || ''),
+      t.msg || '');
+    const 帳 = (t.ledger || [])[0] || {};
+    確('城の帳の「実行前 → 実行後」に忠誠の下がりが出る', 帳.cmd === '城主を解く' && 帳.general === 場.主.name && 帳.lines[0].after === 帳.lines[0].before - 減,
+      `${帳.castle}／${帳.cmd} ${(帳.lines || [])[0] ? `${帳.lines[0].label} ${帳.lines[0].before}→${帳.lines[0].after}` : ''}`);
+    /* 城代を替えても下げない */
+    const s2 = A.initState('oda'), c2 = s2.castles.find((c) => c.id === 場.c.id);
+    c2.城代 = true;
+    const t2 = A.appoint(s2, c2.id, 場.次.id);
+    確('城代（預かるだけの者）を替えても、忠誠は下げない', 忠(t2, 場.主.id) === 忠(s2, 場.主.id));
+  } else 確('城主を替える場が組めた', false);
+
+  /* 城替え：城主どうしの入れ替えは、どちらも城を持つので下げない */
+  {
+    const s3 = A.initState('oda');
+    const 主の居る = s3.castles.filter((c) => c.faction === 'oda').filter((c) => {
+      const l = A.castellanOf(s3, c);
+      return l && !l.lord && l.役 !== '国主' && l.役 !== '旗頭' && l.at === c.id && c.lordId === l.id && !c.城代;
+    });
+    const [甲, 乙] = 主の居る;
+    if (甲 && 乙) {
+      const a = A.castellanOf(s3, 甲), b = A.castellanOf(s3, 乙);
+      const t3 = A.城替え(s3, a.id, 乙.id);
+      確('城主どうしの城替え（入れ替え）では、どちらの忠誠も下げない', 忠(t3, a.id) === 忠(s3, a.id) && 忠(t3, b.id) === 忠(s3, b.id));
+      /* 城主でない者を、城主のいる城へ移す：行き先の城主は札を外されて元の城へ移るので、忠誠が下がる */
+      const s4 = A.initState('oda');
+      const 動 = s4.generals.find((x) => x.at === 甲.id && x.faction === 'oda' && !x.lord && !x.captive && x.id !== a.id
+        && x.役 !== '国主' && x.役 !== '旗頭' && !s4.castles.some((o) => o.lordId === x.id));
+      if (動) {
+        const t4 = A.城替え(s4, 動.id, 乙.id);
+        const 乙4 = t4.castles.find((c) => c.id === 乙.id);
+        確('城主でない者を城主のいる城へ移せば、行き先の城主は札を外され、忠誠が下がる',
+          乙4.lordId === 動.id && !t4.castles.some((c) => c.lordId === b.id) && 忠(t4, b.id) === Math.max(0, 忠(s4, b.id) - 減),
+          `${b.name}：${Math.round(忠(s4, b.id))}→${Math.round(忠(t4, b.id))}（${乙4.城代 ? '動かした者は城代' : '動かした者は城主'}）`);
+      } else console.log('  （甲の城に城主でない者がいないので、その確かめは省く）');
+    } else 確('城替えの場が組めた', false);
+  }
 }
 
 console.log('\n── 六　方面の報せに、旗頭の名と方面が立つ');

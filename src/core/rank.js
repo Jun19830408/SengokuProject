@@ -725,6 +725,29 @@ export function 城主を据え替える(s, castle, genId, { 城代 } = {}) {
   return { 明けた: 明けた.filter(Boolean) };
 }
 
+/* 城主の座を外された者の忠誠。遊ぶ人の申し出：「城主の交代によって元城主の忠誠は下げた方がいいと思います。もし
+   入っていなければキャンペーンでも入れてください」。
+
+   大名の差配（城主の任命・城替え）で城主の札を外され、ほかの城の札も持たなくなった者は、忠誠が
+   城主を外された忠誠の減り だけ下がる。城代（預かるだけの者）は、外されても下げない。同じ差配で別の城の主に
+   まわった者（城替えの入れ替え）も下げない。差配の前に 城主を控える で控え、差配ののちに
+   外された城主の忠誠を下げる を呼ぶ。値は仮。 */
+export const 城主を外された忠誠の減り = 10;
+export const 城主を控える = (s, fid) => new Map((s.castles || [])
+  .filter((c) => c.faction === fid && c.lordId && !c.城代).map((c) => [c.lordId, c]));
+export function 外された城主の忠誠を下げる(s, 控え) {
+  const 下げた = [];
+  for (const [id, 城] of 控え || []) {
+    if ((s.castles || []).some((c) => c.lordId === id)) continue;          // まだ城を持つ
+    const g = (s.generals || []).find((x) => x.id === id);
+    if (!g || g.captive || g.lord || g.faction !== 城.faction) continue;
+    const 前 = g.loyal == null ? 60 : g.loyal;
+    g.loyal = Math.max(0, Math.min(100, 前 - 城主を外された忠誠の減り));
+    下げた.push({ g, 城, 前 });
+  }
+  return 下げた;
+}
+
 /* 城を明け渡す（GDD 6.4）。
 
    城主が他の城へ移れば、その城は空く。城に残る将のうち身代の重い者が後を継ぐ。

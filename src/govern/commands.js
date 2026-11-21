@@ -16,7 +16,7 @@ import { DIPLO, PLOTS, SPECIAL_OPTIONS, SUBJECT } from "../data/diplo.js";
 import { px, py } from "../data/geo.js";
 import { houseAlive } from "../core/state.js";
 import { 忠誠 } from "../core/rank.js";
-import { canBeKeeper, canHoldCastle, castellanOf, castleRankNeed, stipendOf, 国主に任じる, 城主を据え替える, 城を明け渡す, 旗頭に任じる, 旗頭を解く, 旗頭の受け持ち, 旗頭の的家を定める } from "../core/rank.js";
+import { canBeKeeper, canHoldCastle, castellanOf, castleRankNeed, stipendOf, 国主に任じる, 城主を据え替える, 城を明け渡す, 城主を控える, 外された城主の忠誠を下げる, 旗頭に任じる, 旗頭を解く, 旗頭の受け持ち, 旗頭の的家を定める } from "../core/rank.js";
 import { 基準値, 売値, 買値 } from "../data/market.js";
 import { diploStat } from "../core/rank.js";
 import { 主家 } from "../core/state.js";
@@ -196,6 +196,7 @@ export function appoint(prev, castleId, genId) {
     }
     /* 城を移るとは、元の城を明け渡すことである（GDD 6.4）。
        札を立てるだけで元の札を降ろさなかったので、一人が二つの城の城主になっていた。 */
+    const 控え = 城主を控える(s, c.faction);           // 城主を外された者の忠誠を下げるため（core/rank.js）
     const 据 = 城主を据え替える(s, c, genId, { 城代: !城主か });
     /* 城は預かれるが、役持ちの根は動かさない（GDD 6.4）。
 
@@ -221,7 +222,20 @@ export function appoint(prev, castleId, genId) {
         ? `${gen.name}を${c.name}の城主に任じた。${役持ち && (s.castles.find((x) => x.id === gen.本領) || {}).kuni !== c.kuni
           ? `（${gen.役}の役はそのまま。根は${(s.castles.find((x) => x.id === gen.本領) || {}).name || "元の城"}に置く）` : ""}`
         : `${gen.name}を${c.name}の城代に任じた（禄高${fmt(stipendOf(s, gen))}石。城主には${fmt(castleRankNeed(c))}石と侍大将以上の身分が要る）。` });
+    城主を外された者を記す(s, 外された城主の忠誠を下げる(s, 控え));
     return s;
+}
+
+/* 城主を外された者を記す（core/rank.js 外された城主の忠誠を下げる）。戦国記と、城の帳の「実行前 → 実行後」
+   （ui/CastleSheet.jsx の ledger）に出す */
+function 城主を外された者を記す(s, 下げた) {
+    for (const { g, 城, 前 } of 下げた || []) {
+      const 文 = `${g.name}は${城.name}の城主を解かれ、忠誠が下がった（${Math.round(前)}→${Math.round(g.loyal)}）。`;
+      s.chronicle.push({ y: s.year, m: s.month, text: 文 });
+      s.msg = s.msg ? `${s.msg}${文}` : 文;
+      s.ledger = [{ cmd: "城主を解く", cost: 0, castle: 城.name, general: g.name,
+        lines: [{ label: `${g.name} 忠誠`, before: Math.round(前), after: Math.round(g.loyal), unit: "" }] }, ...(s.ledger || [])].slice(0, 6);
+    }
 }
 
 /* 郡代を任ずる（郡の導入の段階二）。
@@ -305,6 +319,7 @@ export function 城替え(prev, genId, toCastleId) {
     }
     const 元の主 = castellanOf(s, from);
     const 先の主 = castellanOf(s, to);
+    const 控え = 城主を控える(s, s.player);             // 城主を外された者の忠誠を下げるため（core/rank.js）
     const 根を移す = (g, c) => { g.at = c.id; if (!役持ち(g)) g.本領 = c.id; };
     const 札を据える = (c, g) => {
       if (!g) { c.lordId = null; c.城代 = false; return; }
@@ -332,6 +347,7 @@ export function 城替え(prev, genId, toCastleId) {
       s.msg = `${g1.name}を${to.name}へ移した。`
         + (明け && !明け.継ぐ ? `${from.name}は将のいない城となった。` : "");
     }
+    城主を外された者を記す(s, 外された城主の忠誠を下げる(s, 控え));
     return s;
 }
 
