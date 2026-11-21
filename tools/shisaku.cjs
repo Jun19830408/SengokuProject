@@ -45,7 +45,12 @@ if(window.IDBFactory){var F=IDBFactory.prototype,o=F.open,d=F.deleteDatabase,n=f
 F.open=function(x,v){return v===undefined?o.call(this,n(x)):o.call(this,n(x),v);};
 F.deleteDatabase=function(x){return d.call(this,n(x));};}
 }catch(e){}})();</script>`;
-const 札 = `<div style="position:fixed;top:4px;right:6px;z-index:2147483647;background:${版の形.色};color:#fff;font:600 12px sans-serif;padding:2px 8px;border-radius:4px;pointer-events:none">${版の形.札}</div>`;
+/* 札は、左上の隅に版の名だけを小さく置く。もとは帯の右上に「第三試作版（記録は本編・第二試作版と別）」と大きく重ねて
+   いたので、帯の右端の釦（記録・題へ・次月へ・合戦の速さ）が札の下に隠れて見えなかった（風雲の帯に置いた「記録」の釦も
+   隠れた。遊ぶ人の申し出：「あと、記録するボタンがないです」）。帯の下の右端へずらすと、横長の画面では地図の右の釦の列に
+   掛かったので、どの画面でも釦の無い左上の隅（帯の上の余白）にした。押しても下へ通る（pointer-events:none）のはもとのまま。
+   札の字は版の名だけにした（もとの「（記録は本編・…と別）」は幅を取り、帯の字に掛かるため） */
+const 札 = `<div style="position:fixed;top:env(safe-area-inset-top, 0px);left:env(safe-area-inset-left, 0px);z-index:2147483647;background:${版の形.色};color:#fff;font:600 8.5px/11px sans-serif;padding:0 4px;border-bottom-right-radius:3px;pointer-events:none">${版の形.名}</div>`;
 let html = fs.readFileSync(元, 'utf8');
 if (!/<head[^>]*>/.test(html) || !/<body[^>]*>/.test(html)) { console.error('頁の形が想定と違う'); process.exit(1); }
 html = html.replace(/<head[^>]*>/, (m) => m + 分ける).replace(/<body[^>]*>/, (m) => m + 札);

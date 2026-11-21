@@ -39,7 +39,8 @@ const 棒 = (値, 満, 色) => (
 /* 住まいの絵は hitori/sumai_e.jsx（遊ぶ人の申し出「家の絵をもう少しリアルに」で描き直した） */
 export { 住まいの絵 };
 
-export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉じる, on風雲を改める, on盤を改める, on出陣, on攻め寄せる, on陣を解く, on下剋上, on独立 }) {
+/* 月を送っている … 務め（山賊退治・威力偵察）の盤から屋敷へ戻り、その月を送っているあいだ（ui/MapScreen.jsx 務めのあとで月を送る） */
+export function FuunYashiki({ g, land, onTitle, on月送り, 月を送っている, on知らせを閉じる, on風雲を改める, on盤を改める, on出陣, on攻め寄せる, on陣を解く, on下剋上, on独立 }) {
   const f = g.風雲;
   const [行い, set行い] = useState(() => (f.行い || []).slice(0, 月の行いの数));
   const 家 = g.factions[g.player] || {};
@@ -396,8 +397,8 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         {/* 月を送る釦は、欄の下に留める（欄が細く長くなったので、繰らずに押せるように） */}
         <div style={{ position: "sticky", bottom: -18, background: U.paper, padding: "8px 0 18px", marginTop: 6 }}>
           <button className="btn dark" style={{ width: "100%", padding: 12 }}
-            disabled={!!終わり || 待つ戦} onClick={() => on月送り(行い)}>
-            {待つ戦 ? "合戦の始末を待っている…" : 出る務め ? `${出る務め}に出て、月を送る（${g.year}年${g.month}月）` : `月を送る（${g.year}年${g.month}月）`}
+            disabled={!!終わり || 待つ戦 || !!月を送っている} onClick={() => on月送り(行い)}>
+            {月を送っている ? `月を送っている…（${g.year}年${g.month}月）` : 待つ戦 ? "合戦の始末を待っている…" : 出る務め ? `${出る務め}に出て、月を送る（${g.year}年${g.month}月）` : `月を送る（${g.year}年${g.month}月）`}
             <span style={{ fontSize: 11, opacity: 0.8, marginLeft: 8 }}>行い {行い.length}／{月の行いの数}</span>
           </button>
         </div>
@@ -528,8 +529,10 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   );
 }
 
-/* 風雲の政務の画面の上の帯（家・年月・主人公の城・題へ） */
-export function 風雲の帯({ g, onTitle }) {
+/* 風雲の政務の画面の上の帯（家・年月・主人公の城・記録・題へ）。
+   記録は、キャンペーンの帯の「記録」と同じ記録所（一〜五の枠と自動。ui/MapScreen.jsx 記録所の窓）を開く（遊ぶ人の申し出：
+   「あと、記録するボタンがないです」）。記録の文 … 収めた枠・収まらなかった訳（キャンペーンの帯と同じく釦の名に添える） */
+export function 風雲の帯({ g, onTitle, on記録, 記録の文 }) {
   const f = g.風雲, 家 = g.factions[g.player] || {};
   const 城 = g.castles.find((c) => c.id === f.城);
   return (
@@ -541,6 +544,7 @@ export function 風雲の帯({ g, onTitle }) {
         <span style={{ fontSize: 13 }}>{家.name}{城 ? `・${城.name}` : ""}</span>
         <span style={{ fontSize: 12, color: U.dim }}>{f.名}（{f.身分}）</span>
       </div>
+      {on記録 && <button className="btn sm tsugi" onClick={on記録}>記録{記録の文 ? `：${記録の文}` : ""}</button>}
       <button className="btn sm" onClick={() => {
         if (typeof window === "undefined" || window.confirm("題の画面へ戻ります。月を送るたびに「自動」へ収めています。よろしいですか。")) onTitle && onTitle();
       }}>題へ</button>

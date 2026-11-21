@@ -3,6 +3,7 @@ import * as 政務 from "../govern/commands.js";
 import * as 月送り from "../govern/month.js";
 import * as 合戦裁定 from "../govern/war.js";
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { SIEGE_CORPS_CAP, SIEGE_KIT, axisOf, buildCastleMap, fromUV, gateOpenU, layoutCastleField, setBattleMap, 寄せ口, 寄せ手の陣, 付城を据える, 後詰の口, 前構えの所 } from "../battle/castleMap.js";
 import { corpsMax, corpsMen, makeCorps, notify, placeSquads, 寄せ手の隊数, 盤に収める } from "../battle/corps.js";
 import { 城方の隊を立てる } from "../battle/defense.js";
@@ -236,6 +237,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [風雲の小図, set風雲の小図] = useState(land);
   /* 風雲モードの地図の左の「組織」「身の上」の窓（hitori/Soshiki.jsx） */
   const [風雲の窓, set風雲の窓] = useState(null);
+  /* 風雲モード：務め（山賊退治・威力偵察）の盤のあと、屋敷へ戻してから月を送っているあいだ（下の 務めのあとで月を送る） */
+  const [月を送っている, set月を送っている] = useState(false);
   const [sea, setSea] = useState(null);        // 盤の上の海戦
   const [townSel, setTownSel] = useState(null); // 押した特殊勢力
   const [raid, setRaid] = useState(null);        // 合戦前の奇襲の献策
@@ -1142,6 +1145,33 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     主命の月が明けた(n);
     return n;
   });
+  /* 務め（山賊退治・威力偵察）の盤のあとの月送り（遊ぶ人の申し出：「一人の段階で、戦さが終わり戦場を離れるを押しても
+     戻らないバグがあります」）。
+
+     もとは「戦場を離れる」を押したその手で、働きを記すのと一緒に月を送っていた（風雲の月を送る の 先に）。月送りは
+     天下じゅうの家を一月動かす重い仕事で、本物の頁で量ると、押してから画面が変わるまで四秒ほど、CPU を四分の一に
+     落とすと十三秒ほどかかった。そのあいだ盤の画面が「戦場を離れる」の釦を出したまま止まるので、押しても戻らない
+     ように見えた。
+
+     いまは、働き（果て）だけを記してすぐ屋敷へ戻し、屋敷を描き終えてから（一コマ待ってから）月を送る。そのあいだ
+     屋敷の月を送る釦は「月を送っている…」と出して押せなくする。月送りの中身（風雲の月を送る）はもとのまま。
+     働きで討死していれば、風雲の月を送る はもとどおり月を送らない。月送りは flushSync で一息に描く
+     （待ちのあいだに押された釦で描きが割り込まれ、重い月送りをやり直すことのないように）。
+     「描き終えてから」は、次の絵の折（requestAnimationFrame）のあとの一手で量る。絵の折が来ない所（裏に回した頁は
+     表に戻れば来る。試しの jsdom では来ない）のために、一秒たっても送っていなければ送る（どちらか先の一度だけ） */
+  const 務めのあとで月を送る = (行い, 果て) => {
+    setBattle(null);
+    setG((prev) => { const s = structuredClone(prev); 果て(s); return s; });
+    set月を送っている(true);
+    let 送った = false;
+    const 送る = () => {
+      if (送った) return;
+      送った = true;
+      flushSync(() => { 風雲の月を送る(行い); set月を送っている(false); });
+    };
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => setTimeout(送る, 0));
+    setTimeout(送る, 1000);
+  };
   /* 屋敷の「月を送る」。務めの月なら、先に盤を開く（遊ぶ人の申し出：三か月ごとに山賊との戦い・半年に一度の威力偵察。
      hitori/shumei.js）。威力偵察は、上司が出陣中なら翌月へ、的が無ければ半年先へ見合わせて、そのまま月を送る */
   const 風雲の月送り = (行い) => {
@@ -2434,10 +2464,11 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   };
 
   const finishBattle = (b, ctx) => {
-    /* 風雲モード：主命の山賊退治の盤のあと。働きを記してから、その月を送る（選んでいた月の行い ctx.行い） */
-    if (ctx.mode === "主命") { setBattle(null); 風雲の月を送る(ctx.行い, (s) => 山賊退治の果て(s, b, ctx.務め || null)); return; }
-    /* 風雲モード：威力偵察の盤のあと。討たれた兵を城と上司の手勢から減らし、働きを記してから、その月を送る */
-    if (ctx.mode === "偵察") { setBattle(null); 風雲の月を送る(ctx.行い, (s) => 偵察の果て(s, b)); return; }
+    /* 風雲モード：主命の山賊退治の盤のあと。働きを記して屋敷へ戻り、それからその月を送る（選んでいた月の行い ctx.行い。
+       上の 務めのあとで月を送る） */
+    if (ctx.mode === "主命") { 務めのあとで月を送る(ctx.行い, (s) => 山賊退治の果て(s, b, ctx.務め || null)); return; }
+    /* 風雲モード：威力偵察の盤のあと。討たれた兵を城と上司の手勢から減らし、働きを記して屋敷へ戻り、それからその月を送る */
+    if (ctx.mode === "偵察") { 務めのあとで月を送る(ctx.行い, (s) => 偵察の果て(s, b)); return; }
     /* 風雲モード：主人公の働き（盤の b.一人働き：討ち取り・体力・討死）を記す。勝ち負けと損害は、下のふだんの道で書き戻す */
     if (ctx.一人 && ctx.一人.風雲) {
       const 場所 = ctx.mode === "castle" ? `${ctx.place || ""}${ctx.playerIsAtk ? "攻め" : "の籠城"}` : ctx.place;
@@ -3208,6 +3239,68 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
     );
   }
   if (battle) return <BattleScreen key={battle.armyId} ctx={battle} land={land} onEnd={(bb) => finishBattle(bb, battle)} />;
+  /* 記録所の窓。キャンペーンの帯の「記録」と、風雲の帯の「記録」（遊ぶ人の申し出：「あと、記録するボタンがないです」）の
+     どちらからも開く。枠の行には、題の画面の記録の並び（ui/Title.jsx）と同じく、風雲の記録なら「風雲・身分」、見物なら
+     「見物」を添える（風雲とキャンペーンの記録が同じ五つの枠に並ぶので、上書きする枠を取り違えないように） */
+  const 記録所の窓 = () => {
+    /* 記録所（GDD 15.3）。
+
+       記録が一つきりだと、分かれ道を試したくても、いまの歩みを捨てるほかない。
+       五つの枠を設けた。自動の枠は月が替わるたびに勝手に上書きされるので、
+       取っておきたい盤は、ここで一〜五のどれかへ収める。 */
+    const 収める = async (key, 名) => {
+      const ok = await onSave(g, key);
+      /* 収まらなかった訳をそのまま出す。「記録できない環境」と一括りにすると、
+         棚が一杯なだけのときも「この端末では無理」と読めてしまい、
+         古い枠を消せばよい、ということが分からない。 */
+      const 訳 = 記録の訳を読む();
+      setSavedMsg(ok ? `${名}へ記録した${訳 ? `（${訳}）` : ""}` : (訳 || "記録できない環境"));
+      setTimeout(() => setSavedMsg(""), 2600);
+      setModal(null);
+    };
+    return (
+      <div className="modal" {...外を押して閉じる(() => setModal(null))}>
+        <div className="card" style={{ maxWidth: 460 }}>
+          <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>記録所</div>
+          <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 }}>
+            いまの盤は{g.year}年{g.month}月（{g.factions[g.player].name}／
+            {g.castles.filter((c) => c.faction === g.player).length}城）。収める枠を選んでください。<br />
+            「自動」は月が替わるたびに上書きされます。取っておきたい盤は一〜五へ。
+            {/* いま動いている版を、いつでも見られる所に出す（GDD 15.3）。
+
+                配り直しても、開いたままの画面は古い仕掛けのまま動き続ける。
+                直したはずの不具合が直らない、という食い違いはここから起きる。
+                版を出しておけば、繋ぎ直せばよいのか、直りが足りないのかが判る。 */}
+            {typeof window !== "undefined" && window.__BUILD__ && (
+              <><br />いまの版：{window.__BUILD__}
+                <span style={{ color: U.dim }}>（配り直しても、この画面を開いたままでは古い版のままです。
+                  版が古ければ、いったん閉じて開き直してください）</span></>
+            )}
+          </div>
+          {(saves || []).map((w) => {
+            const h = 記録の見出し(w.d, g.factions);
+            return (
+              <button key={w.key} className="btn" style={{ width: "100%", textAlign: "left",
+                padding: "9px 11px", marginBottom: 5, fontSize: 12.5 }}
+                onClick={() => 収める(w.key, w.名)}>
+                <span style={{ fontSize: 10.5, color: U.dim, letterSpacing: ".08em" }}>{w.名}</span>
+                　{h
+                  ? <>
+                      <b className="mn">{h.家}</b>
+                      <span className="num" style={{ color: U.dim, marginLeft: 6 }}>
+                        {h.年}年{h.月}月／{h.城数}城・{h.万石}万石{h.風雲 ? `／風雲・${h.風雲}` : h.見物 ? "／見物" : ""}
+                      </span>
+                      <span style={{ color: "#B0483C", marginLeft: 6, fontSize: 11 }}>上書き</span>
+                    </>
+                  : <span style={{ color: U.dim }}>空き</span>}
+              </button>
+            );
+          })}
+          <button className="btn" style={{ width: "100%", marginTop: 8 }} onClick={() => setModal(null)}>閉じる</button>
+        </div>
+      </div>
+    );
+  };
   /* 風雲モード：地図の代わりに主人公の屋敷を出す。月の行いを決めて月を送る（hitori/FuunYashiki.jsx）。
      月の初めに行いを行ってから（主命の働きかけも）、世界をキャンペーンと同じに一月進める（主家も諸家もAI）。
      明けた月に、主命の期限を見て、主命が無ければ上司から新たに下される（hitori/shumei.js）。
@@ -3219,7 +3312,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   /* 大名になれば（hitori/daimyo.js）、屋敷でなくキャンペーンと同じ画面で家を差配する */
   if (g.風雲 && !風雲の大名か(g)) return (
     <div className="sp" style={{ height: "100dvh" }}>
-      <風雲の帯 g={g} onTitle={onTitle} />
+      <風雲の帯 g={g} onTitle={onTitle} on記録={() => setModal("save")} 記録の文={savedMsg} />
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" }}>
         <div className="mapwrap" ref={wrapRef}
           onMouseDown={onDown} onMouseMove={onMove} onMouseUp={() => (drag.current = null)} onMouseLeave={() => (drag.current = null)}
@@ -3250,7 +3343,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
               onClick={(e) => { e.stopPropagation(); set風雲の小図(true); }}>▴ 全土図</div>
           )}
         </div>
-        <FuunYashiki g={g} land={land} onTitle={onTitle} on月送り={風雲の月送り}
+        <FuunYashiki g={g} land={land} onTitle={onTitle} on月送り={風雲の月送り} 月を送っている={月を送っている}
           on知らせを閉じる={() => setG((p) => ({ ...p, 風雲: { ...p.風雲, 知らせ: [] } }))}
           on風雲を改める={(改) => setG((p) => { const n = structuredClone(p); 改(n.風雲, n); return n; })}
           on盤を改める={(改) => setG((p) => 改(p))}
@@ -3260,6 +3353,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
       </div>
       {風雲の窓 === "組織" && <組織の図 g={g} on閉じる={() => set風雲の窓(null)} />}
       {風雲の窓 === "身の上" && <身の上の図 g={g} on閉じる={() => set風雲の窓(null)} />}
+      {modal === "save" && 記録所の窓()}
       {/* 家老から上：主人公の城からの出陣・在陣からの攻め寄せ・軍議・囲みの帳は、キャンペーンと同じ画面を使う */}
       {modal === "sortie" && 主人公の城(g) && (
         <SortieDialog g={g} from={主人公の城(g).id} 篩={風雲の篩} 必ず={風雲の主のid}
@@ -3635,65 +3729,7 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
             </div>
           </div>
         )}
-        {modal === "save" && (() => {
-          /* 記録所（GDD 15.3）。
-
-             記録が一つきりだと、分かれ道を試したくても、いまの歩みを捨てるほかない。
-             五つの枠を設けた。自動の枠は月が替わるたびに勝手に上書きされるので、
-             取っておきたい盤は、ここで一〜五のどれかへ収める。 */
-          const 収める = async (key, 名) => {
-            const ok = await onSave(g, key);
-            /* 収まらなかった訳をそのまま出す。「記録できない環境」と一括りにすると、
-               棚が一杯なだけのときも「この端末では無理」と読めてしまい、
-               古い枠を消せばよい、ということが分からない。 */
-            const 訳 = 記録の訳を読む();
-            setSavedMsg(ok ? `${名}へ記録した${訳 ? `（${訳}）` : ""}` : (訳 || "記録できない環境"));
-            setTimeout(() => setSavedMsg(""), 2600);
-            setModal(null);
-          };
-          return (
-            <div className="modal" {...外を押して閉じる(() => setModal(null))}>
-              <div className="card" style={{ maxWidth: 460 }}>
-                <div className="mn" style={{ fontSize: 21, marginBottom: 4 }}>記録所</div>
-                <div style={{ fontSize: 11.5, color: U.dim, marginBottom: 10, lineHeight: 1.8 }}>
-                  いまの盤は{g.year}年{g.month}月（{g.factions[g.player].name}／
-                  {g.castles.filter((c) => c.faction === g.player).length}城）。収める枠を選んでください。<br />
-                  「自動」は月が替わるたびに上書きされます。取っておきたい盤は一〜五へ。
-                  {/* いま動いている版を、いつでも見られる所に出す（GDD 15.3）。
-
-                      配り直しても、開いたままの画面は古い仕掛けのまま動き続ける。
-                      直したはずの不具合が直らない、という食い違いはここから起きる。
-                      版を出しておけば、繋ぎ直せばよいのか、直りが足りないのかが判る。 */}
-                  {typeof window !== "undefined" && window.__BUILD__ && (
-                    <><br />いまの版：{window.__BUILD__}
-                      <span style={{ color: U.dim }}>（配り直しても、この画面を開いたままでは古い版のままです。
-                        版が古ければ、いったん閉じて開き直してください）</span></>
-                  )}
-                </div>
-                {(saves || []).map((w) => {
-                  const h = 記録の見出し(w.d, g.factions);
-                  return (
-                    <button key={w.key} className="btn" style={{ width: "100%", textAlign: "left",
-                      padding: "9px 11px", marginBottom: 5, fontSize: 12.5 }}
-                      onClick={() => 収める(w.key, w.名)}>
-                      <span style={{ fontSize: 10.5, color: U.dim, letterSpacing: ".08em" }}>{w.名}</span>
-                      　{h
-                        ? <>
-                            <b className="mn">{h.家}</b>
-                            <span className="num" style={{ color: U.dim, marginLeft: 6 }}>
-                              {h.年}年{h.月}月／{h.城数}城・{h.万石}万石
-                            </span>
-                            <span style={{ color: "#B0483C", marginLeft: 6, fontSize: 11 }}>上書き</span>
-                          </>
-                        : <span style={{ color: U.dim }}>空き</span>}
-                    </button>
-                  );
-                })}
-                <button className="btn" style={{ width: "100%", marginTop: 8 }} onClick={() => setModal(null)}>閉じる</button>
-              </div>
-            </div>
-          );
-        })()}
+        {modal === "save" && 記録所の窓()}
         {townSel && !battle && !sea && (() => {
           /* 特殊勢力の帳（GDD 5.4）。
              地図の印を押したら、それが何をする所で、いま誰に付いていて、

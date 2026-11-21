@@ -83,6 +83,7 @@ const btn = (t) => [...document.querySelectorAll('button,.mbtn')].find((b) => b.
 const btnAny = (t) => [...document.querySelectorAll('button,.mbtn')].find((b) => b.textContent.trim().includes(t));
 const rc = async (t) => { const el = btn(t); if (!el) return false; await click(el); return true; };
 const 文 = () => document.body.textContent;
+const 待つ = async (ms) => { await act(async () => { await new Promise((r) => setTimeout(r, ms)); }); };
 const openFaction = async (nm) => {
   const el = [...document.querySelectorAll('.mn')].find((e) => e.textContent.trim() === nm);
   if (!el) return false;
@@ -282,6 +283,24 @@ const openFaction = async (nm) => {
     確('月が送られる', /1546年5月/.test(文()), (文().match(/\d{4}年\d+月/) || [''])[0]);
     確('月の行いが効く（金 二→二＋二−一＝三、武勇 四十五→四十六、知略 二十五→二十六）', /3 貫/.test(文()) && /武勇 46/.test(文()) && /知略 26/.test(文()),
       (文().match(/武勇 \d+・統率 \d+・知略 \d+・政務 \d+/) || [''])[0] + '・' + (文().match(/\d+ 貫/) || [''])[0]);
+    /* 記録（申し出「あと、記録するボタンがないです」）：風雲の帯の「記録」から、キャンペーンの帯と同じ記録所を開き、枠へ収める */
+    const 帯の記録 = () => [...document.querySelectorAll('.bar button')].find((b) => /^記録/.test(b.textContent.trim()));
+    確('風雲の帯に「記録」の釦がある（題へ の隣）', !!帯の記録() && [...document.querySelectorAll('.bar button')].some((b) => b.textContent.trim() === '題へ'));
+    await click(帯の記録()); await flush();
+    const 記録所 = () => [...document.querySelectorAll('.modal')].find((m) => /記録所/.test(m.textContent));
+    確('「記録」で記録所が開く（自動と一〜五の枠）', !!記録所() && ['自動', '記録 一', '記録 五'].every((k) => 記録所().textContent.includes(k)),
+      記録所() ? 記録所().textContent.slice(0, 60) : '開かない');
+    確('自動の枠の行に「風雲・足軽」と出る（キャンペーンの記録と取り違えない。題の画面の並びと同じ）', !!記録所() && /自動\s*織田家1546年5月／\d+城・\d+万石／風雲・足軽/.test(記録所().textContent.replace(/　/g, '')),
+      記録所() ? (記録所().textContent.match(/自動[^上]*/) || [''])[0] : '');
+    const 一 = 記録所() && [...記録所().querySelectorAll('button')].find((b) => /記録 一/.test(b.textContent));
+    if (一) await click(一);
+    for (let i = 0; i < 6; i++) await flush();
+    確('枠を押せば収まり、記録所が閉じて「記録」の釦に「記録 一へ記録した」と出る', 蔵.has('sengoku:slot1') && !記録所() && /記録：記録 一へ記録した/.test(帯の記録() ? 帯の記録().textContent : ''),
+      帯の記録() ? 帯の記録().textContent : '');
+    await click(帯の記録()); await flush();
+    確('収めた枠は、次に開くと「風雲・足軽」の記録として並ぶ', !!記録所() && /記録 一\s*織田家1546年5月／\d+城・\d+万石／風雲・足軽/.test(記録所().textContent.replace(/　/g, '')));
+    await click([...記録所().querySelectorAll('button')].find((b) => b.textContent.trim() === '閉じる'));
+    確('「閉じる」で記録所が閉じる', !記録所());
     await act(async () => { root.unmount(); }); await flush();
 
     /* 記録：見出しで風雲と分かる（見物と取り違えない） */
@@ -406,8 +425,14 @@ const openFaction = async (nm) => {
     b.一人働き = { 討ち取り: 3, 雑兵: 3, 侍: 0, 体力: 70, 討死: false };
     await click(btnAny('委ねて結果を見る'));
     for (let i = 0; i < 600 && b.phase === 'fight'; i++) await flush();
-    await rc('戦場を離れる'); for (let i = 0; i < 12; i++) await flush();
-    確('戦のあとで、その月が送られる', /1546年5月/.test(文()) && /今月の行い/.test(文()), (文().match(/\d{4}年\d+月/) || [''])[0]);
+    /* 「戦場を離れる」を押せば、月送りを待たずにすぐ屋敷へ戻る（遊ぶ人の申し出：「戦場を離れるを押しても戻らない」。
+       もとは押したその手で重い月送りまで済ませていたので、盤の画面のまま止まって見えた） */
+    await rc('戦場を離れる'); await flush();
+    確('戦場を離れると、月送りを待たずにすぐ屋敷へ戻る（釦は「月を送っている…」で押せない）', !window.__合戦 && /今月の行い/.test(文())
+      && /1546年4月/.test(文()) && !!btnAny('月を送っている…') && btnAny('月を送っている…').disabled, (文().match(/月を送[^（]*（\d{4}年\d+月）/) || [''])[0]);
+    確('山賊退治の果て（働き）は、屋敷へ戻ったときにもう記されている', /山賊退治の務めを果たした|山賊退治の務めを果たせなかった/.test(文()));
+    await 待つ(1100); for (let i = 0; i < 4; i++) await flush();
+    確('戦のあとで、その月が送られる', /1546年5月/.test(文()) && /今月の行い/.test(文()) && !btnAny('月を送っている…'), (文().match(/\d{4}年\d+月/) || [''])[0]);
     確('務めの果てが記される（果たした・果たせなかった のいずれか）', /山賊退治の務めを果たした|山賊退治の務めを果たせなかった/.test(文()),
       (文().match(/山賊退治の務めを果たし[^。]*。/) || [''])[0]);
     確('次の山賊退治は三か月後（一五四六年七月）', /山賊退治（三か月ごと）：1546年7月/.test(文()));
@@ -779,7 +804,9 @@ const openFaction = async (nm) => {
       b.一人働き = { 討ち取り: 2, 雑兵: 2, 侍: 0, 体力: 80, 討死: false };
       await click(btnAny('委ねて結果を見る'));
       for (let i = 0; i < 900 && b.phase === 'fight'; i++) await flush();
-      await rc('戦場を離れる'); for (let i = 0; i < 12; i++) await flush();
+      await rc('戦場を離れる'); await flush();
+      確('偵察も、戦場を離れるとすぐ屋敷へ戻り、そのあとで月を送る', !window.__合戦 && /今月の行い/.test(文()) && !!btnAny('月を送っている…'));
+      await 待つ(1100); for (let i = 0; i < 4; i++) await flush();
     }
     確('戦のあとで月が送られ、偵察の記が残る', /1546年5月/.test(文()) && /へ威力偵察に出て(勝ち戦|負け戦|引き分け)。敵の兵\d+人を減らし、味方の損は\d+人/.test(文()),
       (文().match(/[^。]*威力偵察に出て[^。]*。[^。]*。/) || [''])[0]);
