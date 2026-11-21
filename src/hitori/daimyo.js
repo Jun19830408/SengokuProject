@@ -45,6 +45,7 @@ import { makePrisoner } from "../core/capture.js";
 import { 自立する } from "../core/jiritsu.js";
 import { 姓 } from "../core/util.js";
 import { 主人公の武将, 主人公の城, 宿老か, 記す, 限 } from "./fuun.js";
+import { 子を盤に } from "./kazoku.js";
 
 const 月番 = (s) => s.year * 12 + s.month;
 
@@ -205,6 +206,7 @@ export function 下剋上を起こす(s, armyId) {
   記す(s, `${旧の名}の当主${旧当主.name}に背き、${城.name}で下剋上の兵を挙げた。`);
   s.chronicle = [...(s.chronicle || []), { y: s.year, m: s.month, text: `${旧の名}の宿老${g.name}が下剋上の兵を挙げ、${城.name}を急襲した。` }];
   風雲の主を大名に(s, "下剋上の旗揚げ");
+  子を盤に(s);                                                   // 屋敷の帳の子は、主人公の家の武将・姫になる（hitori/kazoku.js）
   return { ok: true, 家 };
 }
 /* 下剋上を成す（当主の城を落としたのち）。返すのは { 結果, 従った城, 残った城 }（成っていなければ null） */
@@ -357,6 +359,7 @@ export function 独立する(s, rand = Math.random) {
   記す(s, 文);
   s.chronicle = [...(s.chronicle || []), { y: s.year, m: s.month, text: `${旧の名}の宿老${g.name}が独立し、${(s.factions[家] || {}).name || ""}を興した。` }];
   風雲の主を大名に(s, "独立");
+  子を盤に(s);                                                   // 屋敷の帳の子は、主人公の家の武将・姫になる（hitori/kazoku.js）
   本拠を追う(s); 奪われた本領を繕う(s);
   return { ok: true, 家, 結果: 結果.map((r) => ({ 主: r.k.name, 友好: r.友好, 見込み: r.見込み, 従: r.従 })) };
 }

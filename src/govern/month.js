@@ -40,6 +40,8 @@ import { 分け目を進める, 挑める見込み } from "../core/wakeme.js";
 import { 天下分け目の采配, 盤を開かずに裁く } from "./aiWakeme.js";
 /* 風雲モード（一人の侍の立身）：上司が関わる城攻めは盤で戦う（hitori/fuun.js）。風雲でない盤には何もしない */
 import { 風雲の城攻めか } from "../hitori/fuun.js";
+/* 風雲：主人公の妻子（縁談・子の生まれ・元服。hitori/kazoku.js） */
+import { 風雲の家の正月, 風雲の家の月 } from "../hitori/kazoku.js";
 import { いまの段, 段の上乗せ, 段 as 天下の段, 京の城 } from "../core/tenkabito.js";
 import { 容認するか, 許しの要る主, 許されているか, 許しを与える, 済んだ許しを片づける } from "../core/yurushi.js";
 import { 旗頭が城主を宛てがう, 城の寄親, 守りの寄親, 守りを旗頭に任せるか, 差配を預けた城, 預け高, 旗頭の狙い, 旗頭に許す, 旗頭は許されているか, 旗頭の済んだ許しを片づける, 旗頭の預け高, 旗頭に任せきりか, 旗頭は断られたか, 旗頭の古い断りを片づける, 断りの直後か } from "../core/inin.js";
@@ -2364,7 +2366,7 @@ export function advanceMonth(prev, g) {
           一族の数.set(k, (一族の数.get(k) || 0) + 1);
         }
         for (const q of [...s.generals]) {
-          if (風雲で守られるか(s, q)) continue;          // 風雲の主人公に子は生まれない（大名になれば、キャンペーンの当主と同じ）
+          if (q.風雲の主) continue;                       // 風雲の主人公の子は、妻があるときだけ生まれる（大名になっても。hitori/kazoku.js）
           const 格 = 一族の格(s, q);
           if (!格) continue;
           const 鍵 = 一族の鍵(q);
@@ -2394,10 +2396,14 @@ export function advanceMonth(prev, g) {
           s.chronicle.push({ y: s.year, m: s.month, text: t });
           if (h.faction === s.player) events.push(t);
         } });
+        /* 風雲：正月に、主君の縁談（家老から上で妻のいない主人公に）と、妻のある主人公の子の生まれ（hitori/kazoku.js） */
+        if (s.風雲) 風雲の家の正月(s, { 告げる: (t) => events.push(t) });
       }
       // 使いに出た姫が戻る／落城した城の姫を他の城へ移す（GDD 6.8）
       使者の帰り(s, { 告げる: (t) => events.push(t) });
       姫の居場所(s, { 告げる: (t) => events.push(t) });
+      /* 風雲：妻を見る・大名なら子を盤に入れる・十五になった子の名の候補を支度する（hitori/kazoku.js） */
+      if (s.風雲) 風雲の家の月(s);
 
       /* 迷子の見回り。軍にも属さず城にもいない将を、自領へ戻す。
          落とし穴は一つずつ塞いだが、見落としがあっても、ここで月ごとに拾う。

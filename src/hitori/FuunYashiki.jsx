@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { U } from "../core/util.js";
 import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数, 月の体力の戻り, 養生の戻り, 武将の段か, 主人公の禄高, 主人公の次の身分,
-  主人公の城, 城の政務, 城の政務を行う, 城の預けの月分, 名乗りを定める, 名乗りの限り } from "./fuun.js";
+  主人公の城, 城の政務, 城の政務を行う, 城の預けの月分, 名乗りを定める, 名乗りの限り, 主人公の齢, 城主の段か } from "./fuun.js";
+import { 主人公の妻, 縁談に答える, 元服させる, 元服を待つ子 } from "./kazoku.js";
+import { 妻子の欄, 縁談の問い, 元服の問い } from "./Kazoku.jsx";
 import { 家の城主ら, 誼を通じる, 城主を調略する, 下剋上の構え, 独立の構え, 当主の城, 誼の費え, 調略の費え, 調略の見込み } from "./daimyo.js";
 import { 姓 } from "../core/util.js";
 import { 主命の重さ, 働きかけの見込み, 予定を見る, 月番を年月に, 山賊の月か, 偵察の月か, 偵察の的を選ぶ, 今の月番 } from "./shumei.js";
@@ -83,6 +85,9 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   useEffect(() => { if (整え要る && on風雲を改める) on風雲を改める((ff, gg) => 手勢の名簿を整える(ff, gg.year, gg.month)); }, [整え要る, f.身分, 月の鍵]); // eslint-disable-line
   const 手 = 形 && f.手勢 && f.手勢.身分 === f.身分 ? f.手勢 : null;
   const 家中 = (g.monthEvents || []).slice(0, 8);
+  /* 妻子（hitori/kazoku.js）：家老から上か、妻か子があれば欄を出す。縁談・元服の問いは、名乗りの問いのあとに出す */
+  const 妻子を出す = !f.討死 && (城主の段か(f.身分) || !!主人公の妻(g) || (f.子ら || []).length > 0);
+  const 待つ元服 = 元服を待つ子(g);
 
   const 身の欄 = (
     <div className="card" style={{ maxWidth: "none", maxHeight: "none", padding: 11 }}>
@@ -117,6 +122,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         <div style={{ fontSize: 12 }}>体力 <b className="num">{f.体力}</b>{棒(f.体力, 100, "#4F7A52")}</div>
       </div>
       <div className="tbl" style={{ marginTop: 10, fontSize: 12.5 }}>
+        <span className="k">齢</span><span className="v num">{主人公の齢(g)} 歳</span>
         <span className="k">能力</span>
         <span className="v num">武勇 {f.武勇}・統率 {f.統率}・知略 {f.知略}・政務 {f.政務}</span>
         <span className="k">金</span><span className="v num">{f.金} 貫</span>
@@ -379,6 +385,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
           {手勢の欄}
           {城の欄}
           {下準備の欄}
+          {妻子を出す && <妻子の欄 g={g} />}
           {行いの欄}
         </div>
         {/* 月を送る釦は、欄の下に留める（欄が細く長くなったので、繰らずに押せるように） */}
@@ -461,7 +468,13 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
           </div>
         </div>
       )}
-      {!終わり && !待つ名 && (f.知らせ || []).length > 0 && (
+      {!終わり && !待つ名 && f.縁談 && (
+        <縁談の問い g={g} on答える={(受ける) => on風雲を改める && on風雲を改める((n風雲, n盤) => { 縁談に答える(n盤, 受ける); })} />
+      )}
+      {!終わり && !待つ名 && !f.縁談 && 待つ元服.length > 0 && (
+        <元服の問い g={g} on決める={(id, 名) => on風雲を改める && on風雲を改める((n風雲, n盤) => { 元服させる(n盤, id, 名); })} />
+      )}
+      {!終わり && !待つ名 && !f.縁談 && !待つ元服.length && (f.知らせ || []).length > 0 && (
         <div className="modal">
           <div className="card" style={{ maxWidth: 380, textAlign: "center" }}>
             <div style={{ fontSize: 12, color: U.dim, letterSpacing: ".3em" }}>{今の段.禄 ? "身分" : "取り立て"}</div>

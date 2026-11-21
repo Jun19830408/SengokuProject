@@ -72,6 +72,9 @@ import { 蓄えに合わせる } from "../core/roster.js";
 import { 援けに着く } from "../core/state.js";
 import { 風雲の主のid, 風雲の主の軍か, 風雲の主の籠る城か, 風雲の大名か, 風雲で守られるか } from "../core/state.js";
 import { 下剋上を起こす, 下剋上を成す, 独立する, 下剋上の在陣先か } from "../hitori/daimyo.js";
+/* 風雲：主人公の妻子（大名になってからの元服の問い。hitori/kazoku.js） */
+import { 元服を待つ子, 元服させる } from "../hitori/kazoku.js";
+import { 元服の問い } from "../hitori/Kazoku.jsx";
 import { 攻められるか, 許しの要る主, 許されているか, 許しを与える, 容認するか, 臣従の主 } from "../core/yurushi.js";
 import { 城の寄親, 守りを旗頭に任せるか, 差配を預けた城, 大名が直に見る城, 預け高, 預けの段, 旗頭に許す, 旗頭に断る, 自ら采配するか } from "../core/inin.js";
 import { 難を逃れる, 囚われた年 } from "../core/capture.js";
@@ -4112,6 +4115,10 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           <MarriageOffer g={g} 談={g.縁談}
             onTake={() => 姫の下知((s) => { const r = 縁談を受ける(s, s.縁談); s.縁談 = null; return r; })}
             onPass={() => 姫の下知((s) => { const r = 縁談を断る(s, s.縁談); s.縁談 = null; return r; })} />
+        )}
+        {/* 風雲：大名になってからも、子が十五になれば名を自分で決めるか自動で決めるかを問う（hitori/kazoku.js） */}
+        {g.風雲 && 風雲の大名か(g) && !g.縁談 && !battle && 元服を待つ子(g).length > 0 && (
+          <元服の問い g={g} on決める={(id, 名) => setG((prev) => { const s = structuredClone(prev); 元服させる(s, id, 名); return s; })} />
         )}
         {modal === "hime" && (
           <HimeList g={g} onClose={() => setModal(null)}
