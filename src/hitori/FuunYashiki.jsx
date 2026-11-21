@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { U } from "../core/util.js";
 import { 風雲の段, 段の番, 次の段, 月の行い一覧, 月の行いの数, 月の体力の戻り, 養生の戻り, 武将の段か, 主人公の禄高, 主人公の次の身分,
-  主人公の城, 城の政務, 城の政務を行う, 城の預けの月分, 名乗りを定める, 名乗りの限り, 主人公の齢, 城主の段か } from "./fuun.js";
+  主人公の城, 城の政務, 城の政務を行う, 城の預けの月分, 名乗りを定める, 名乗りの限り, 主人公の齢, 城主の段か, 仕官の物語 } from "./fuun.js";
+import { 組織の図 } from "./Soshiki.jsx";
 import { 主人公の妻, 縁談に答える, 元服させる, 元服を待つ子 } from "./kazoku.js";
 import { 妻子の欄, 縁談の問い, 元服の問い } from "./Kazoku.jsx";
 import { 家の城主ら, 誼を通じる, 城主を調略する, 下剋上の構え, 独立の構え, 当主の城, 誼の費え, 調略の費え, 調略の見込み } from "./daimyo.js";
@@ -61,6 +62,9 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   const 名の訳 = (姓, 名) => (!String(姓).trim() || !String(名).trim() ? "姓と名をどちらも入れてください"
     : String(姓).trim().length > 名乗りの限り || String(名).trim().length > 名乗りの限り ? `姓と名は、それぞれ${名乗りの限り}字までです` : null);
   const 名乗る = (姓, 名) => { if (名の訳(姓, 名)) return; on風雲を改める && on風雲を改める((n風雲, n盤) => { 名乗りを定める(n盤, 姓, 名); }); set名の道(null); };
+  /* 家中の組織の図（hitori/Soshiki.jsx）と、仕官の物語の札（風雲を始めた月に一度だけ。hitori/fuun.js 仕官の物語） */
+  const [組織を見る, set組織を見る] = useState(false);
+  const 序 = f.序を見た === false && f.身分 === "足軽" && !(f.合戦 > 0);   // 始めのうち（まだ足軽で、合戦にも出ていない）だけ
   const 選ぶ = (名) => set行い((v) => (v.includes(名) ? v.filter((x) => x !== 名)
     : v.length >= 月の行いの数 ? v : [...v, 名]));
   /* 主命（上司から下される務め）。あるあいだは、月の行いに「主命に励む」が加わる。果たせば外れる */
@@ -79,7 +83,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
   const 重く見る城 = f.偵察の的 && 今の月番(g) <= f.偵察の的.迄 ? g.castles.find((c) => c.id === f.偵察の的.城 && c.faction !== g.player) : null;
   const 出る務め = 偵察の今 && 偵の的 && 偵の的.城 ? "威力偵察" : 山賊の今 || 山賊に出る ? "山賊退治" : null;
   const 記 = [...(f.記 || [])].reverse().slice(0, 14);
-  /* 手勢（十人長から三百人長。hitori/tezei_meibo.js。案の②）。名簿が無いか、身分や月が改まっていれば整える */
+  /* 手勢（五人長から三百人長。hitori/tezei_meibo.js。案の②）。名簿が無いか、身分や月が改まっていれば整える */
   const 形 = 名簿の形を見る(f.身分), 月の鍵 = `${g.year}-${g.month}`;
   const 整え要る = !!形 && !f.討死 && (!f.手勢 || f.手勢.身分 !== f.身分 || f.手勢.候補の月 !== 月の鍵);
   useEffect(() => { if (整え要る && on風雲を改める) on風雲を改める((ff, gg) => 手勢の名簿を整える(ff, gg.year, gg.month)); }, [整え要る, f.身分, 月の鍵]); // eslint-disable-line
@@ -131,6 +135,7 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
         <span className="k">合戦</span><span className="v num">{f.合戦} 度・討ち取り {f.討ち取り}</span>
         <span className="k">務め・主命</span><span className="v num">果たした {(f.主命の数 || {}).果たした || 0}・しくじった {(f.主命の数 || {}).しくじった || 0}</span>
       </div>
+      <button className="btn sm" style={{ marginTop: 8 }} onClick={() => set組織を見る(true)}>家中の組織</button>
     </div>
   );
 
@@ -424,7 +429,19 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
           </div>
         );
       })()}
-      {!終わり && 待つ名 && (
+      {組織を見る && <組織の図 g={g} on閉じる={() => set組織を見る(false)} />}
+      {!終わり && 序 && (
+        <div className="modal">
+          <div className="card" style={{ maxWidth: 440 }}>
+            <div style={{ fontSize: 12, color: U.dim, letterSpacing: ".3em", textAlign: "center" }}>仕官</div>
+            <div className="mn" style={{ fontSize: 22, margin: "8px 0 6px", textAlign: "center" }}>{f.名}</div>
+            {仕官の物語(g).map((文, i) => <p key={i} style={{ fontSize: 13.5, lineHeight: 2, margin: "4px 0" }}>{文}</p>)}
+            <button className="btn dark" style={{ width: "100%", marginTop: 12 }}
+              onClick={() => on風雲を改める && on風雲を改める((ff) => { ff.序を見た = true; })}>仕官する</button>
+          </div>
+        </div>
+      )}
+      {!終わり && !序 && 待つ名 && (
         <div className="modal">
           <div className="card" style={{ maxWidth: 420 }}>
             <div style={{ fontSize: 12, color: U.dim, letterSpacing: ".3em", textAlign: "center" }}>名乗り</div>
@@ -468,13 +485,13 @@ export function FuunYashiki({ g, land, onTitle, on月送り, on知らせを閉�
           </div>
         </div>
       )}
-      {!終わり && !待つ名 && f.縁談 && (
+      {!終わり && !序 && !待つ名 && f.縁談 && (
         <縁談の問い g={g} on答える={(受ける) => on風雲を改める && on風雲を改める((n風雲, n盤) => { 縁談に答える(n盤, 受ける); })} />
       )}
-      {!終わり && !待つ名 && !f.縁談 && 待つ元服.length > 0 && (
+      {!終わり && !序 && !待つ名 && !f.縁談 && 待つ元服.length > 0 && (
         <元服の問い g={g} on決める={(id, 名) => on風雲を改める && on風雲を改める((n風雲, n盤) => { 元服させる(n盤, id, 名); })} />
       )}
-      {!終わり && !待つ名 && !f.縁談 && !待つ元服.length && (f.知らせ || []).length > 0 && (
+      {!終わり && !序 && !待つ名 && !f.縁談 && !待つ元服.length && (f.知らせ || []).length > 0 && (
         <div className="modal">
           <div className="card" style={{ maxWidth: 380, textAlign: "center" }}>
             <div style={{ fontSize: 12, color: U.dim, letterSpacing: ".3em" }}>{今の段.禄 ? "身分" : "取り立て"}</div>

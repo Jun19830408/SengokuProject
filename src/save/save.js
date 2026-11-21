@@ -1,4 +1,4 @@
-import { migrateSave } from "../core/state.js";
+import { migrateSave, 風雲の今の身分 } from "../core/state.js";
 import { 架空の名を繕う } from "../core/house.js";
 import { GENERALS } from "../data/generals.js";
 import { 置き場 } from "./store.js";
@@ -255,7 +255,7 @@ export function 記録の見出し(d, FACTIONS) {
     城数: 城.length, 万石: Math.round(koku / 10000),
     at: d.at || 0, 見物: !!st.autoPlay,
     /* 風雲モードの記録なら、主人公の身分（討ち死にしていれば「討死」）。風雲も見物と同じに諸家をAIに任せるので、見物とは分けて出す */
-    風雲: st.風雲 ? (st.風雲.討死 ? "討死" : st.風雲.身分) : null,
+    風雲: st.風雲 ? (st.風雲.討死 ? "討死" : 風雲の今の身分(st.風雲)) : null,
   };
 }
 

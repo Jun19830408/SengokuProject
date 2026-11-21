@@ -93,7 +93,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
   if (身分 && !一人Ref.current) {
     const 選 = 与平の組を選ぶ(bRef.current, (ctx.一人 && ctx.一人.隊id) || null);
     let 隊id = 選 ? 選.隊.id : null;
-    /* 十人長から三百人長は、上司の隊から手勢を分けて率いる（hitori/tezei.js）。与平は手勢の組に立つ */
+    /* 五人長から三百人長は、上司の隊から手勢を分けて率いる（hitori/tezei.js）。与平は手勢の組に立つ */
     if (身分 === "足軽" && ctx.一人 && ctx.一人.手勢 > 0 && 隊id) { const 手 = 手勢を組む(bRef.current, 隊id, ctx.一人); if (手) 隊id = 手.id; }
     一人Ref.current = { 身分, 隊id, 態: null };
   }
