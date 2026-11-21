@@ -21,5 +21,31 @@
       "Bash(node -e \"require\\('./tools/bundle.cjs'\\).buildHarness\\('split'\\)\")",
       "Bash(node tests/sortie.cjs)"
     ]
+  },
+  "language": "japanese",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-/home/user/SengokuProject}/.claude/hooks/nihongo.cjs\" stop",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-/home/user/SengokuProject}/.claude/hooks/nihongo.cjs\" post",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }

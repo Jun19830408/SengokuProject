@@ -233,7 +233,8 @@ const rc = async (t) => { const el = btn(t); if (!el) return false; await click(
     const 手元 = initState('oda').factions.oda.gold;
     確('隣国の助けは、運び賃を気にせず呼べる', 賃(近所) < 手元 * 0.1,
       `尾張の内で ${近所.length}城・${賃(近所)}貫（手元 ${Math.round(手元)}貫）`);
-    確('全国から呼べば、運び賃が身代を超える', 賃(出全) > 手元 * 2,
+    // 初めの蔵を月の実入りの半年分ほど厚くした（core/keizai.js）ので、二倍ではなく蔵そのものと比べる
+    確('全国から呼べば、運び賃が身代を超える', 賃(出全) > 手元,
       `${出全.length}城で ${賃(出全)}貫（手元 ${Math.round(手元)}貫）`);
 
     // 払えば実際に金蔵から減る
