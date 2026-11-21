@@ -14,6 +14,10 @@
      三、古い記録の身分（十人長・三十人長）は段の並びのまま読み替える（記録の見出しも）
      四、組織の木：大名の下に旗頭・国主・城主をみな並べ、自分の城の城主の下に自分の筋（上司の武将・架空の上役・自分・同じ組）
      五、屋敷の画面：仕官の札（一度だけ）と「家中の組織」
+     六、身の上（遊ぶ人の申し出：「自身のパラメーターと自隊の情報を一括して見れるもの」「一人のときから見れるように」）：
+         自分の能力と自隊（足軽は五人長の組、五人長から三百人長は手勢、物頭・侍大将は預かる隊、家老から上は自分の隊と城）
+     七、地図の左（全体図の下）に「組織」「身の上」の釦（遊ぶ人の申し出：「左の全体図の下あたりで見れるようにしたいです」）。
+         足軽のときから押せて、窓が開く
    値はみな仮。
    ============================================================ */
 const path = require('path');
@@ -21,9 +25,20 @@ const { JSDOM } = require('jsdom');
 const dom = new JSDOM('<!doctype html><html><body><div id="r"></div></body></html>', { pretendToBeVisual: true, url: 'http://localhost/' });
 global.window = dom.window; global.document = dom.window.document; global.navigator = dom.window.navigator; global.HTMLElement = dom.window.HTMLElement;
 global.IS_REACT_ACT_ENVIRONMENT = true; dom.window.IS_REACT_ACT_ENVIRONMENT = true;
-const ctxStub = new Proxy({}, { get: (t, p) => { if (p === 'measureText') return () => ({ width: 30 }); return () => ({ addColorStop: () => {} }); } });
+/* 地図の絵（App を描く七の節）に要る canvas の代わり。風雲の試験（tests/fuun.cjs）と同じ */
+let rafMap = new Map(), rafId = 0;
+global.requestAnimationFrame = (cb) => { rafId++; rafMap.set(rafId, cb); return rafId; };
+global.cancelAnimationFrame = (id) => rafMap.delete(id);
+const ctxStub = new Proxy({}, { get: (t, p) => {
+  if (p === 'measureText') return () => ({ width: 30 });
+  if (p === 'createImageData') return (w, h) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h });
+  if (p === 'getImageData') return (x, y, w, h) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h });
+  return () => ({ addColorStop: () => {} });
+} });
 dom.window.HTMLCanvasElement.prototype.getContext = () => ctxStub;
-dom.window.HTMLElement.prototype.scrollIntoView = function () {};
+Object.defineProperty(dom.window.HTMLElement.prototype, 'clientWidth', { get() { return 960; } });
+Object.defineProperty(dom.window.HTMLElement.prototype, 'clientHeight', { get() { return 600; } });
+dom.window.HTMLElement.prototype.getBoundingClientRect = function () { return { left: 0, top: 0, width: 960, height: 600, right: 960, bottom: 600 }; };
 const errs = []; console.error = (...a) => errs.push(String(a[0]).slice(0, 200));
 const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 const { createRoot, act, React, initState } = H;
@@ -170,6 +185,64 @@ const 家老の風雲 = () => {
     await act(async () => { root2.render(React.createElement(H.FuunYashiki, { g: s2, land: true, onTitle: () => {}, on月送り: () => {}, on知らせを閉じる: () => {}, on風雲を改める: () => {} })); }); await flush();
     確('札を見たかの控えの無い古い記録には、仕官の札を出さない', !釦('仕官する'));
     await act(async () => { root2.unmount(); }); await flush();
+  }
+
+  console.log('\n── 六　身の上（自分の能力と自隊。足軽のときから）');
+  {
+    const s = 始める(), f = s.風雲, 役 = H.架空の上役(s), 上 = s.generals.find((x) => x.id === f.上司);
+    const 身 = H.身の上を見る(s);
+    確('自分：名・身分・齢・家と城・上司・覚え・勲功（五人長まであと二十）・体力・能力・金・合戦', 身.自分.名 === f.名 && 身.自分.身分 === '足軽' && 身.自分.齢 === 13
+      && 身.自分.家 === '織田家' && 身.自分.城 === '那古野城' && 身.自分.上司.名 === '織田信長' && 身.自分.覚え === f.覚え && 身.自分.次.名 === '五人長' && 身.自分.次.あと === 20
+      && 身.自分.体力 === f.体力 && 身.自分.武勇 === f.武勇 && 身.自分.統率 === f.統率 && 身.自分.金 === f.金 && 身.自分.合戦 === 0 && !身.自分.禄, JSON.stringify(身.自分).slice(0, 120));
+    確('足軽の自隊は五人長の組：五人長・自分・同じ組の四人（組織の木と同じ名）', 身.隊.種 === '組' && 身.隊.列.length === 6 && 身.隊.列[0].身分 === '五人長' && 身.隊.列[0].名 === 役.五人長
+      && 身.隊.列[1].自分 && 身.隊.列[1].名 === f.名 && 身.隊.列.slice(2).map((m) => m.名).join('・') === 役.同輩.join('・'), 身.隊.列.map((m) => m.名).join('・'));
+    確('属する隊は上司の隊（将・身分・直属の兵・練度）', 身.隊.属する && 身.隊.属する.将 === 上.name && 身.隊.属する.兵 === Math.round(上.retinue) && 身.隊.属する.練度 === Math.round(上.retTrain),
+      JSON.stringify(身.隊.属する));
+    f.勲功 = 20; H.取り立てを見る(s); const 名簿 = f.手勢.名簿;
+    名簿[0] = { ...名簿[0], 新参: false, 名: '試し', 素質: 60, 練れ: 0.8, 武勇: 55, 扶持: 3, 単: 3 };
+    const 身2 = H.身の上を見る(s);
+    確('五人長の自隊は手勢：人数・統率（手勢・自分・合戦で）・武勇・扶持と、名簿の五人', 身2.隊.種 === '手勢' && 身2.隊.人 === 5 && 身2.隊.定 === 5 && 身2.隊.列.length === 5
+      && 身2.隊.統率 === H.手勢の統率を量る(名簿) && 身2.隊.合戦の統率 === H.実効の統率(f.統率, 身2.隊.統率) && 身2.隊.扶持 === H.名簿の扶持(名簿) && 身2.隊.枠 === 16 && !身2.隊.馬上
+      && 身2.隊.列[0].名 === '試し' && 身2.隊.列[0].統率 === 48 && 身2.隊.列[0].武勇 === 55, `${身2.隊.名}・統率${身2.隊.統率}→${身2.隊.合戦の統率}・扶持${身2.隊.扶持}／${身2.隊.枠}`);
+    確('五人長も属する隊（上司の隊）を出す', 身2.隊.属する && 身2.隊.属する.将 === 上.name);
+    f.身分 = '五十人長'; H.手勢の名簿を整える(f, s.year, s.month);
+    確('五十人長からは馬上で率いる', H.身の上を見る(s).隊.馬上 === true && H.身の上を見る(s).隊.定 === 50);
+    f.身分 = '三百人長'; f.勲功 = 270; H.取り立てを見る(s);
+    const 身3 = H.身の上を見る(s), 上3 = s.generals.find((x) => x.id === f.上司);
+    確('物頭の自隊は預かる隊（上司＝城主の隊）。禄高と知行を出す', 身3.隊.種 === '預かる隊' && 身3.隊.将 === 上3.name && 身3.隊.兵 === Math.round(上3.retinue) && 身3.自分.禄 && 身3.自分.禄.知行 === f.知行 && !身3.自分.次,
+      `${身3.隊.名}・直属${身3.隊.兵}・禄高${身3.自分.禄.禄高}`);
+    const s4 = 家老の風雲(), 身4 = H.身の上を見る(s4), 我4 = H.主人公の武将(s4), 城4 = H.主人公の城(s4);
+    確('家老の自隊は自分の隊（直属の兵・練度）と、城主として預かる城', 身4.隊.種 === '自分の隊' && 身4.隊.将 === 我4.name && 身4.隊.兵 === Math.round(我4.retinue) && 身4.隊.城 && 身4.隊.城.名 === 城4.name,
+      `${身4.隊.名}・直属${身4.隊.兵}・${身4.隊.城 && 身4.隊.城.名}`);
+  }
+
+  console.log('\n── 七　地図の左（全体図の下）に「組織」「身の上」。足軽のときから開ける');
+  {
+    const flush = async () => { await act(async () => { await new Promise((r) => setTimeout(r, 6)); }); };
+    dom.window.storage = { get: async () => null, set: async (k, v) => ({ key: k, value: v }), delete: async () => ({}), list: async () => ({ keys: [] }) };
+    const root = createRoot(document.getElementById('r'));
+    await act(async () => { root.render(React.createElement(H.App)); }); await flush(); await flush();
+    const 釦 = (t) => [...document.querySelectorAll('button,.mbtn')].find((b) => b.textContent.trim().includes(t) && !b.disabled);
+    const 押す = async (el) => { for (const t of ['mousedown', 'mouseup', 'click']) await act(async () => { el.dispatchEvent(new dom.window.MouseEvent(t, { bubbles: true })); }); await flush(); };
+    await 押す(釦('風雲モード')); await flush();
+    const 家 = [...document.querySelectorAll('.mn')].find((e) => e.textContent.trim() === '織田家'); await 押す(家.parentElement);
+    await 押す(釦('この家に足軽として仕える')); await flush(); await flush();
+    if (釦('仕官する')) await 押す(釦('仕官する'));
+    const 左 = [...document.querySelectorAll('.mapctl.l .mbtn')].map((b) => b.textContent.trim());
+    確('地図の左の列は 拡大・縮小・居所・全体図 の下に 組織・身の上', 左.join('｜') === '＋拡大｜−縮小｜◎居所｜⛶全体図｜系組織｜身身の上', 左.join('｜'));
+    const 組 = [...document.querySelectorAll('.mapctl.l .mbtn')].find((b) => /組織/.test(b.textContent));
+    await 押す(組);
+    確('足軽のときに「組織」を押せば、家中の組織が開く', /家中の組織/.test(document.body.textContent) && /あなた/.test(document.body.textContent));
+    await 押す([...document.querySelectorAll('button')].find((b) => b.textContent.trim() === '閉じる'));
+    確('「閉じる」で閉じる', !/家中の組織/.test(document.body.textContent.replace(/家中の組織$/, '')) || ![...document.querySelectorAll('.modal')].some((m) => /家中の組織/.test(m.textContent)));
+    const 身 = [...document.querySelectorAll('.mapctl.l .mbtn')].find((b) => /身の上/.test(b.textContent));
+    await 押す(身);
+    const 窓 = [...document.querySelectorAll('.modal')].find((m) => /身の上/.test(m.textContent));
+    確('足軽のときに「身の上」を押せば、自分と自隊（五人長の組）が一つの窓に出る', !!窓 && /自分/.test(窓.textContent) && /能力/.test(窓.textContent) && /自隊（属する組）/.test(窓.textContent)
+      && /五人長/.test(窓.textContent) && /あなた/.test(窓.textContent) && /属する隊/.test(窓.textContent));
+    await 押す([...窓.querySelectorAll('button')].find((b) => b.textContent.trim() === '閉じる'));
+    確('「閉じる」で身の上も閉じる', ![...document.querySelectorAll('.modal')].some((m) => /身の上/.test(m.textContent)));
+    await act(async () => { root.unmount(); }); await flush();
   }
 
   const 拾う = errs.filter((e) => !/act\(|not wrapped|ReactDOMTestUtils/.test(e));

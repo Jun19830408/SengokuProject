@@ -89,6 +89,13 @@ export const css = `
    縦に繰れるようにして、どの口にも手が届くようにする。 */
 .mapctl.r{max-height:calc(100% - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
 .mapctl.r::-webkit-scrollbar{display:none}
+/* 風雲の政務の地図の左の列（全体図の下に「組織」「身の上」を足して六つ）。縦長の携帯でも全土図の札の上に収まるよう、間と
+   釦の上下の余白を詰める。丈がなお足りなければ列を指で送れる */
+.mapctl.l.fuun{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+.mapctl.l.fuun::-webkit-scrollbar{display:none}
+@media(min-height:561px){.mapctl.l.fuun{gap:4px}.mapctl.l.fuun .mbtn{padding:5px 4px}}
+@media(min-height:561px) and (max-height:780px){.mapctl.l.fuun{gap:3px}.mapctl.l.fuun .mbtn{padding:3px 4px;font-size:9.5px;line-height:1.35}
+  .mapctl.l.fuun .mbtn b{font-size:13px}}
 .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(255,255,255,.94);
  border:1px solid ${U.line};border-radius:20px;padding:7px 18px;font-size:12px;color:${U.dim};z-index:4}
 .sheet{position:absolute;left:0;right:0;bottom:0;background:${U.card};border-top:1px solid ${U.line};

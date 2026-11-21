@@ -91,7 +91,7 @@ export { 風雲の段, 段の番, 次の段, 盤の身分, 風雲の一人, 月�
   城主の段か, 主人公の武将, 主人公の城, 城主にする城を選ぶ, 主人公の武将を写す, 主人公を武将の帳に入れる, 城主に任じる, 城の政務, 城の預けの月分, 城の預けを積む, 城の政務を行う, 風雲の攻め先か,
   名乗りの支度, 名乗りを定める, 名乗りの限り, 宿老か, 宿老の役を見る, 自ら率いた勲功の倍, 主人公の齢, 主人公の始めの齢, 手勢の討ちの割, 内訳の文, 仕官の物語 } from "../src/hitori/fuun.js";
 export { 架空の上役, 架空の上役の身分, 同じ組の数 } from "../src/hitori/kakuu.js";
-export { 組織の木, 自分の筋 } from "../src/hitori/soshiki.js";
+export { 組織の木, 自分の筋, 身の上を見る } from "../src/hitori/soshiki.js";
 export { 風雲の今の身分, 風雲の段の版 } from "../src/core/state.js";
 export { 通称を起こす } from "../src/core/roster.js";
 /* 風雲モードの家老から上（試し：tests/fuun_karou.cjs） */

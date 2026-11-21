@@ -43,6 +43,7 @@ import { 出陣前の問い } from "./Shutsujin.jsx";
 import { 風雲の戦か, 風雲の一人, 戦の勲功を記す, 風雲の問いに答える, 風雲の月の初め, 風雲の城攻めか, 風雲の隊を選ぶ, 風雲の城攻めの隊,
   主人公の城, 風雲の攻め先か } from "../hitori/fuun.js";
 import { FuunYashiki, 風雲の帯 } from "../hitori/FuunYashiki.jsx";
+import { 組織の図, 身の上の図 } from "../hitori/Soshiki.jsx";
 /* 風雲モードの主命（上司から下される務め。山賊退治は盤の小さな戦。hitori/shumei.js） */
 import { 主命の月の初め, 主命の月が明けた, 山賊の盤を組む, 山賊退治の果て, 主命の組, 偵察の組, 山賊の月か, 偵察の月か, 山賊の務めを決める,
   偵察の的を選ぶ, 偵察の盤を組む, 偵察の果て, 偵察を見合わせる } from "../hitori/shumei.js";
@@ -233,6 +234,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
   const [小図, set小図] = useState(true);               // 左下の日本全土図を出すか
   /* 風雲モードの全土図。縦長の画面では地図が低く、左の釦と重なるので、畳んだ形で始める */
   const [風雲の小図, set風雲の小図] = useState(land);
+  /* 風雲モードの地図の左の「組織」「身の上」の窓（hitori/Soshiki.jsx） */
+  const [風雲の窓, set風雲の窓] = useState(null);
   const [sea, setSea] = useState(null);        // 盤の上の海戦
   const [townSel, setTownSel] = useState(null); // 押した特殊勢力
   const [raid, setRaid] = useState(null);        // 合戦前の奇襲の献策
@@ -3224,12 +3227,17 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           onWheel={(e) => { if (e.target === cvRef.current) zoom(e.deltaY < 0 ? 1.12 : 0.89); }}>
           <canvas ref={cvRef} style={{ width: "100%", height: "100%", display: "block", touchAction: "none" }} />
           {/* 釦の列は、全土図を畳んでいるあいだは下の端まで使う（css の .mapctl.l は全土図の分を空けて詰める） */}
-          <div className="mapctl l" style={風雲の小図 ? undefined : { maxHeight: "calc(100% - 48px)" }}
+          {/* 全体図の下に「組織」（家中の組織の木）と「身の上」（自分と自隊）を置く（遊ぶ人の申し出：「左の全体図の下あたりで
+              見れるようにしたいです」「自身のパラメーターと自隊の情報を一括して見れるものも組織ツリーの下に」「一人のときから見れる
+              ように」）。釦が六つになるので、風雲の列は詰めて並べ、丈が足りなければ列を指で送れる（css の .mapctl.l.fuun） */}
+          <div className="mapctl l fuun" style={風雲の小図 ? undefined : { maxHeight: "calc(100% - 48px)" }}
             onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()}>
             <div className="mbtn" onClick={() => zoom(1.25)}><b>＋</b>拡大</div>
             <div className="mbtn" onClick={() => zoom(0.8)}><b>−</b>縮小</div>
             <div className="mbtn" onClick={() => focus(g.風雲.城 || (mine[0] && mine[0].id))}><b>◎</b>居所</div>
             <div className="mbtn" onClick={whole}><b>⛶</b>全体図</div>
+            <div className="mbtn" onClick={() => set風雲の窓("組織")}><b>系</b>組織</div>
+            <div className="mbtn" onClick={() => set風雲の窓("身の上")}><b>身</b>身の上</div>
           </div>
           {風雲の小図 ? (
             <>
@@ -3250,6 +3258,8 @@ export function MapScreen({ g, setG, terrain, land, onSave, saves, onTitle }) {
           on下剋上={(id) => setG((p) => { const s = structuredClone(p); const r = 下剋上を起こす(s, id); return r.ok ? s : { ...p, 風雲: { ...p.風雲, 下準備の文: r.訳 } }; })}
           on独立={() => setG((p) => { const s = structuredClone(p); const r = 独立する(s); return r.ok ? s : { ...p, 風雲: { ...p.風雲, 下準備の文: r.訳 } }; })} />
       </div>
+      {風雲の窓 === "組織" && <組織の図 g={g} on閉じる={() => set風雲の窓(null)} />}
+      {風雲の窓 === "身の上" && <身の上の図 g={g} on閉じる={() => set風雲の窓(null)} />}
       {/* 家老から上：主人公の城からの出陣・在陣からの攻め寄せ・軍議・囲みの帳は、キャンペーンと同じ画面を使う */}
       {modal === "sortie" && 主人公の城(g) && (
         <SortieDialog g={g} from={主人公の城(g).id} 篩={風雲の篩} 必ず={風雲の主のid}
