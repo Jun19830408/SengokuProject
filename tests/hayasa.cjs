@@ -14,6 +14,9 @@
      三、委ねているあいだは微速へ戻さない。手綱を取り戻せば微速へ戻る
      四、盤へ昇れば盤の微速（〇.一二）に戻り、盤だけを広げたときの速さの釦もどれも押せる（早送りで進む）。
          もう一度降りれば、背中越しの微速に戻る。降り昇りの途中も縛る
+     四の二、視点の釦（背中の視点・盤の視点）は、指が触れた時（pointerdown）に替わる。ほかの指を画面に置いたままの叩きは
+         click にならないので、click を待たない（遊ぶ人の申し出：「風雲モード、合戦中に人視点、盤視点が突然押せなくなる」）。
+         一本の指で叩いて click も来たときは、二度替えない
      五、委ねれば手を離したまま決着まで進む。決着ののちは止まったまま。「戦場を離れる」は出る
      六、関ヶ原：好機の問い（総大将の判断）は、一人働きでは盤の視点でも背中の視点でも出さない
          （ふだんの合戦では出る）
@@ -143,6 +146,42 @@ Math.random = function () { 種 |= 0; 種 = (種 + 0x6D2B79F5) | 0; let t = Math
       `押せない：${押せない().join('・')}・一コマで ${進.toFixed(5)} 秒（見込み ${見込み.toFixed(5)}）`); }
   await 降りきる(0);
   確('盤へ昇りきれば、また盤の微速（〇.一二）で、どれも押せる', 選ばれた() === '微速' && 押せない().length === 0, `選ばれた釦「${選ばれた()}」・押せない：${押せない().join('・') || 'なし'}`);
+
+  console.log('\n── 四の二　視点の釦は、指が触れた時に替わる（ほかの指を置いたままでも）。click が続いても二度替えない');
+  {
+    /* 指で遊ぶ端末は、ほかの指を画面に置いたまま（方向キーを押さえたまま）二本目の指で叩いても click を起こさない。
+       ここでは pointerdown だけを送って確かめる。降り昇りは合戦の画面の刻みで進むので、刻みを回して見届ける */
+    const 触れる = async (el) => { await act(async () => { el.dispatchEvent(new dom.window.MouseEvent('pointerdown', { bubbles: true, button: 0 })); }); await flush(); };
+    const 刻みを回す = async () => { for (let k = 0; k < 14; k++) await 回す((刻 += 100)); };
+    確('盤の視点にいる（背中の視点の釦が出ている）', !!釦('背中の視点') && (window.__降り() || 0) === 0, `u=${window.__降り()}`);
+    await 触れる(釦('背中の視点'));
+    確('背中の視点の釦に指が触れただけで（click が来なくても）降り始める', !!釦('盤の視点') && window.__降り() > 0, `u=${window.__降り()}`);
+    await 刻みを回す();
+    確('そのまま背中越しへ降りきる', window.__降り() === 1 && !!document.querySelector('.snk-me'), `u=${window.__降り()}`);
+    await 触れる(釦('盤の視点'));
+    await 刻みを回す();
+    確('盤の視点の釦に指が触れただけで（click が来なくても）盤へ昇りきる', !!釦('背中の視点') && (window.__降り() || 0) === 0 && !document.querySelector('.snk'), `u=${window.__降り()}`);
+    /* 一本の指で叩けば、pointerdown のあとに click も来る。その click で昇り直さない */
+    await act(async () => { const el = 釦('背中の視点');
+      el.dispatchEvent(new dom.window.MouseEvent('pointerdown', { bubbles: true, button: 0 })); el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); });
+    await flush(); await 刻みを回す();
+    確('pointerdown のあとに click が来ても二度は替えない（降りきる）', window.__降り() === 1 && !!釦('盤の視点'), `u=${window.__降り()}`);
+    /* pointerdown を伴わない click（これまでの試しの押し方）でも替わる */
+    await 押(釦('盤の視点')); await 刻みを回す();
+    確('click だけでも替わる（盤へ昇りきる）', !!釦('背中の視点') && (window.__降り() || 0) === 0, `u=${window.__降り()}`);
+    /* 鼠の右の釦では替えない */
+    await act(async () => { 釦('背中の視点').dispatchEvent(new dom.window.MouseEvent('pointerdown', { bubbles: true, button: 2 })); }); await flush();
+    確('鼠の右の釦で押しても替えない', !!釦('背中の視点') && (window.__降り() || 0) === 0);
+    /* 討死の札の「盤の視点へ」も、指が触れた時に盤へ昇る（同じ作り。hitori/SenakaFuda.jsx） */
+    await 押(釦('背中の視点')); await 刻みを回す();
+    const 態 = window.__背中の態();
+    態.我.hp = 0; 態.我.倒 = 0; 態.終 = { t: 態.t };
+    await 回す((刻 += 200)); await flush();
+    const 盤へ = () => [...document.querySelectorAll('.snk-panel button')].find((x) => x.textContent.trim() === '盤の視点へ');
+    確('討死の札に「盤の視点へ」が出る', !!盤へ(), (document.querySelector('.snk-panel') || {}).textContent || '札なし');
+    if (盤へ()) { await 触れる(盤へ()); await 刻みを回す(); }
+    確('討死の札の「盤の視点へ」も、指が触れただけで（click が来なくても）盤へ昇る', !!釦('背中の視点') && (window.__降り() || 0) === 0, `u=${window.__降り()}`);
+  }
 
   console.log('\n── 五　委ねれば手を離したまま決着まで進む');
   await 押(委ねる釦());

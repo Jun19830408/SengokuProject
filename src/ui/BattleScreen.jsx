@@ -647,6 +647,31 @@ export function BattleScreen({ ctx, land, onEnd }) {
     降りの段を合わせる();
   };
   const 釦で昇る = () => { const 降り = 降りRef.current; if (降り) 降り.的 = 0; };
+  /* 盤の左下の「背中の視点／盤の視点」の釦（遊ぶ人の申し出：「風雲モード、合戦中に人視点、盤視点が突然押せなくなるバグが
+     あります」）。
+
+     もとは click で受けていた。指で遊ぶ端末は、ほかの指を画面に置いたまま（背中越しなら左の方向キーを押さえたまま、盤なら
+     盤をなぞっている指があるまま）二本目の指で叩いても、それを click にしない（叩いたことにならない）。本物の頁で、方向キー
+     を押さえたまま釦を叩くと、釦に pointerdown・touchstart は届くのに click が来ず、視点が替わらなかった。指を離してから
+     叩けば替わるので、遊んでいると「突然押せなくなる」ように見える。
+
+     いまは、突く・受ける・駆けるの釦（hitori/SenakaFuda.jsx）と同じく、指（鼠）が触れた時（pointerdown）に替える。
+     鼠で押したときや一本の指で叩いたときは、そのあとに click も来るので、pointerdown で替えた押しの click は捨てる。
+     pointerdown を伴わない click（試しが送る click など）は、これまでどおり替える。 */
+  const 視点の押しRef = useRef(0);       // pointerdown で視点を替えた刻（直後の click を捨てる）
+  const 視点を替える = () => { if (降りRef.current) 釦で昇る(); else 釦で降りる(); };
+  const 視点の釦の手当て = {
+    onPointerDown: (e) => {
+      e.stopPropagation();
+      if (e.button > 0) return;                       // 鼠の右・中の釦は替えない
+      視点の押しRef.current = Date.now();
+      視点を替える();
+    },
+    onClick: () => {
+      if (Date.now() - 視点の押しRef.current < 10000) { 視点の押しRef.current = 0; return; }   // pointerdown で替えた押しの click
+      視点を替える();
+    },
+  };
   /* 風雲モードの合戦は、始めから背中越しで始める（遊ぶ人の申し出：「風雲モードのみ最初から背中越しにしましょう」）。
      盤をいちばん寄せて与平を真ん中に据え、降りきった所から始める。盤へはピンチ・車・釦でこれまでどおり昇れる。
      関ヶ原の試し入り口とふだんの合戦は、これまでどおり盤から始める */
@@ -2203,11 +2228,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 野戦だけに出す（地を平らに描くので、城攻めの盤（b.map）では塀も門も描けない）。
                 合戦のさなかだけ出す。足軽の身では布陣も合戦開始もできない（一人の欄）ので、布陣の段で入っても
                 合戦が始められない。背中越しのあいだは、盤へ戻るためにいつでも出す */}
-            {身分 && (bRef.current.phase === "fight" || 降り段) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5 }}
+            {身分 && (bRef.current.phase === "fight" || 降り段) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5, touchAction: "none" }}
               onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
-              onClick={() => {
-                if (降りRef.current) 釦で昇る(); else 釦で降りる();
-              }}><b>{降り段 ? "盤" : "人"}</b>{降り段 ? "盤の視点" : "背中の視点"}</div>}
+              {...視点の釦の手当て /* 指が触れた時に替える（上の 視点の釦の手当て。ほかの指を置いたままでも効く） */}><b>{降り段 ? "盤" : "人"}</b>{降り段 ? "盤の視点" : "背中の視点"}</div>}
             {/* 与平の札と釦（名札・体力・気力・方向キー・突く／受ける／駆ける・討死の札）。左下の釦より下に重ねる */}
             {降り段 && 背中Ref.current && (
               <SenakaFuda 態={背中Ref.current} b={bRef.current} 段={降り段} 止め={bRef.current.phase !== "fight" ? "段" : speed === 0 ? "停止" : ""}

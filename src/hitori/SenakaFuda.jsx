@@ -136,6 +136,9 @@ const 鍵 = { KeyW: "u", ArrowUp: "u", KeyS: "d", ArrowDown: "d", KeyA: "l", Arr
 export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLeave }) {
   const 根Ref = useRef(null), 輪Ref = useRef(null), 玉Ref = useRef(null), 杖 = useRef(null), 視杖 = useRef(null);   // 視杖 … 視点を回している指
   const 指Ref = useRef(new Map()), 摘みRef = useRef(null);   // 置いている指（釦の上でないもの）と、ピンチの指の隔たり
+  /* 討死の札の「盤の視点へ」を pointerdown で押した刻（直後の click を捨てる）。盤の左下の視点の釦（ui/BattleScreen.jsx
+     視点の釦の手当て）と同じく、ほかの指を置いたままでも効くように、指が触れた時に盤へ戻る */
+  const 離れの押しRef = useRef(0);
   const [突押, set突押] = useState(false);
   const [卓, set卓] = useState(false);
   useEffect(() => { try { set卓(!!(window.matchMedia && window.matchMedia("(pointer: fine)").matches)); } catch (_) {} }, []);
@@ -412,7 +415,9 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
             {態.備え && 態.備え.一度きり && <p>風雲はここで終わる。合戦の行方は、盤の視点で見届けられる。</p>}
             <div className="btns">
               {!(態.備え && 態.備え.一度きり) && <button type="button" onClick={() => 与平を立て直す(b, 態)}>もう一度（組のうしろから）</button>}
-              <button type="button" className={態.備え && 態.備え.一度きり ? "" : "sub"} onClick={() => onLeave && onLeave()}>盤の視点へ</button>
+              <button type="button" className={態.備え && 態.備え.一度きり ? "" : "sub"} style={{ touchAction: "none" }}
+                onPointerDown={(e) => { e.stopPropagation(); if (e.button > 0) return; 離れの押しRef.current = Date.now(); if (onLeave) onLeave(); }}
+                onClick={() => { if (Date.now() - 離れの押しRef.current < 10000) { 離れの押しRef.current = 0; return; } if (onLeave) onLeave(); }}>盤の視点へ</button>
             </div>
           </div>
         </div>
