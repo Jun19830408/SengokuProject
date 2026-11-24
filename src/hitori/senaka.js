@@ -60,6 +60,7 @@ import { 城壁をよける } from "../battle/tachimono.js";
 import { 兵を討つ, 将を討つ, 総大将か, 組の隊 } from "./tsunagi.js";
 import { 人形を描く, 倒れ人形を描く, 人形の近さ } from "./ningyo.js";
 import { 矢玉を集める } from "./yadama.js";
+import { GL筆を作る, 筆の選び手 } from "./gl_fude.js";
 import { 手勢へ下知, 手勢を委ねる, 手勢を留める } from "./tezei.js";
 
 export const 歩の尺 = 0.46;
@@ -99,9 +100,19 @@ const 障りの升 = 8;
 let 障り = null;
 /* 家と木の幹を、八m の升に入れて控える（盤の家々・木立が変われば作り直す） */
 const 無い家 = [], 無い木 = [];                             // 集落や森の無い野でも、控えが毎回作り直されないよう同じ空を使う
+/* 一コマに一度だけ確かめる（遊ぶ人の申し出：「写真の状況になった場合、一人称視点がめちゃくちゃ重くなります」）。
+   眺めを集める が兵一人ずつ 障りの外へ を呼ぶので、もとはそのたびに 木立を据える（森の並びの鍵の文字列を毎回作る）が
+   走り、合戦の兵が多いと一コマの重さの一割ほどを占めていた。背中を描く がコマの初めに 障りのコマ を進め、
+   同じコマのうちは、野が替わっていなければ控えをそのまま返す（まだ一コマも描いていなければ、毎回確かめる） */
+let 障りのコマ = 0, 障りを見たコマ = -1;
+/* 野が替わっていないか（森・林・集落の並びの数と頭が同じか）。替わっていれば、同じコマのうちでも確かめ直す */
+const 野の印 = () => [FORESTS.length, WOODS.length, VILLAGES.length, FORESTS[0], WOODS[0], VILLAGES[0]];
+const 野が同じ = (印) => { const n = 野の印(); return !!印 && n.every((v, i) => v === 印[i]); };
 function 障りを据える() {
+  if (障り && 障りのコマ > 0 && 障りを見たコマ === 障りのコマ && 野が同じ(障り.野)) return 障り;
+  障りを見たコマ = 障りのコマ;
   const 家ら = VILLAGES.length ? 家々を据える() : 無い家, 木ら = FORESTS.length || WOODS.length ? 木立を据える() : 無い木;
-  if (障り && 障り.元家 === 家ら && 障り.元木 === 木ら) return 障り;
+  if (障り && 障り.元家 === 家ら && 障り.元木 === 木ら) { 障り.野 = 野の印(); return 障り; }
   const 家升 = new Map(), 木升 = new Map(), 鍵 = (i, j) => i * 100003 + j;
   const 入れる = (M, k, o) => { let a = M.get(k); if (!a) M.set(k, (a = [])); a.push(o); };
   const 家 = [];
@@ -112,7 +123,11 @@ function 障りを据える() {
       for (let j = Math.floor((o.z0 - 1) / 障りの升); j <= Math.floor((o.z1 + 1) / 障りの升); j++) 入れる(家升, 鍵(i, j), o);
   }
   for (const t of 木ら) { const x = t.x * 尺, z = -t.y * 尺; 入れる(木升, 鍵(Math.floor(x / 障りの升), Math.floor(z / 障りの升)), { x, z, 丈: t.丈, 種: t.種 }); }
-  障り = { 家升, 木升, 家, 元家: 家ら, 元木: 木ら };
+  /* 確かめの要る升（家のある升と、木のある升のまわり九升）。障りの外へ は、まずこれを一度だけ引き、無ければすぐ戻る
+     （兵一人ずつ升を十引いていたのを、たいていの兵で一引きにする） */
+  const 近 = new Set(家升.keys());
+  for (const k of 木升.keys()) { const i = Math.round(k / 100003), j = k - i * 100003; for (let a = -1; a <= 1; a++) for (let c = -1; c <= 1; c++) 近.add(鍵(i + a, j + c)); }
+  障り = { 家升, 木升, 家, 近, 元家: 家ら, 元木: 木ら, 野: 野の印() };
   return 障り;
 }
 /* 家の壁の内か、木の幹にかかるか（余 … 体の半ば。m） */
@@ -126,8 +141,9 @@ export function 障りの内(x, z, 余 = 0.3) {
   return false;
 }
 /* 家の壁の内や幹にかかる所なら、いちばん近い外の所 [x, z] を返す。かからなければ null */
-function 障りの外へ(x, z, 余 = 0.3) {
-  const M = 障りを据える(), i = Math.floor(x / 障りの升), j = Math.floor(z / 障りの升);
+function 障りの外へ(x, z, 余 = 0.3, M = 障りを据える()) {
+  const i = Math.floor(x / 障りの升), j = Math.floor(z / 障りの升);
+  if (!M.近.has(i * 100003 + j)) return null;              // 家も木も近くに無い升（上の 障りを据える の 近）
   let nx = x, nz = z, 動 = false;
   for (const o of M.家升.get(i * 100003 + j) || []) {
     if (!(nx > o.x0 - 余 && nx < o.x1 + 余 && nz > o.z0 - 余 && nz < o.z1 + 余)) continue;
@@ -179,7 +195,7 @@ export function 与平の所(q) {
         与平の刻（まことの秒）を渡し、背中の突きの速さで刻む（上の「速さの釣り合い」） */
 export function 眺めを集める(b, 我, R = 110, 拍 = null) {
   const 兵 = [], 倒れ = [];
-  const [wx0, wz0] = 世へ(我.x, 我.y), R歩 = R / 尺, 尺2 = fieldScale();
+  const [wx0, wz0] = 世へ(我.x, 我.y), R歩 = R / 尺, 尺2 = fieldScale(), R2 = R * R;
   for (const c of b.corps || []) {
     if (c.dead || c.destroyed) continue;
     const 側 = c.日和見 ? "Y" : (c.side === "P" ? "P" : "E");
@@ -196,9 +212,9 @@ export function 眺めを集める(b, 我, R = 110, 拍 = null) {
         const h = (Math.imul((q.seed || 0) + 7, 2654435761) ^ Math.imul(n + 1, 40503)) >>> 0;
         let bx = s.sx[n] + (((h >>> 21) % 7) - 3) * 0.22, by = s.sy[n] + (((h >>> 24) % 7) - 3) * 0.22;
         if (b.map) { const r = 城壁をよける(b.map, q.x, q.y, bx, by); if (r) { bx = r[0]; by = r[1]; } }
-        const [x, z] = 世へ(bx, by);
-        if (Math.hypot(x - wx0, z - wz0) > R) continue;
-        const [fx, fz] = 向きを世へ(s.描[n]), 列 = (n / 10) | 0, 歩速 = s.速[n];
+        const x = bx * 尺, z = -by * 尺, ex = x - wx0, ez = z - wz0;            // 世へ と同じ（配列を作らない）
+        if (ex * ex + ez * ez > R2) continue;
+        const th = s.描[n], fx = Math.cos(th), fz = -Math.sin(th), 列 = (n / 10) | 0, 歩速 = s.速[n];   // 向きを世へ と同じ
         let 働 = "立", 相 = 0;
         if (s.噛 && 列 < 2 && 歩速 < 14 * 尺2) { 働 = "突"; 相 = ((拍 == null ? b.t * 0.55 : 拍 * 背中の突きの速さ) + (q.seed || 0) + n * 0.17) % 1; }
         else if (s.構 && 列 < 2 && 歩速 < 14 * 尺2) 働 = "構";
@@ -236,7 +252,7 @@ export function 眺めを集める(b, 我, R = 110, 拍 = null) {
   }
   for (const e of 盤の見た目(b).倒れ) { const [x, z] = 世へ(e.x, e.y); if (Math.hypot(x - wx0, z - wz0) <= R) 倒れ.push({ x, z, 側: e.s, 鍵: 鳴(Math.round(e.x * 7), Math.round(e.y * 7)) }); }
   /* 家の中や木の幹に掛かる兵は、いちばん近い外へ出す（絵だけ。盤の組は動かさない。上の 障りの外へ） */
-  if (VILLAGES.length || FORESTS.length || WOODS.length) for (const p of 兵) { const o = 障りの外へ(p.x, p.z, 0.3); if (o) { p.x = o[0]; p.z = o[1]; } }
+  if (VILLAGES.length || FORESTS.length || WOODS.length) { const M = 障りを据える(); for (const p of 兵) { const o = 障りの外へ(p.x, p.z, 0.3, M); if (o) { p.x = o[0]; p.z = o[1]; } } }
   return { 兵, 倒れ };
 }
 
@@ -1155,8 +1171,10 @@ const 色 = {
 /* 地の画 … 盤の地の画（BattleScreen の terrainRef。地を WebGL で描くときの膚）。地版 … 盤の地の画を貼り直した数 */
 export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降り = null, 地の画 = null, 地版 = 0) {
   const 見物 = 態.身分 === "見物", 途中 = !!(降り && 降り.u < 1);
+  障りのコマ++;                                              // 家と木の幹の控えは、このコマのうち一度だけ確かめる（上の 障りを据える）
   /* 地を起伏つきで描くか（上の 起伏）。城の盤は、これまでどおり平らに描く（城の造作を平らな地に立てて描くので） */
-  起伏 = !b.map && !!地の画 && 高さ図があるか() && !地が重い.断 && 地のGLが使えるか();
+  起伏 = !b.map && !!地の画 && 高さ図があるか() && !地が重い.断 && 地のGLが使えるか()
+    && !(typeof window !== "undefined" && window.__地を平らに);         // 試し：地を平らに描かせる（立つものの重さだけを量るため）
   if (!見物 && (!態.組 || !(態.組.men > 0))) { const 選 = 与平の組を選ぶ(b, 態.隊 && 態.隊.id); if (選) { 態.組 = 選.組; 態.隊 = 選.隊; 態.名 = 選.隊.name; } }
   const q = 態.組, 我 = 態.我;
   const dt = 態.前秒 ? clamp(nowSec - 態.前秒, 0, 0.1) : 0; 態.前秒 = nowSec;
@@ -1211,7 +1229,6 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
   if (態.身分 === "物頭" || 見物) 物頭を据える(b, 態, dt); else 与平を進める(b, 態, dt, 眺);
   const t = 態.t;
   筆 = ctx; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  層を用意する(ctx, dpr);
   写しを据える(写, w, h);
   空と地を描く(ctx, 写.a);
   /* 起伏があれば、盤の地の画・高さ・水面で地を描いて重ねる（hitori/chi_gl.js）。街道と川はその中に入っている。
@@ -1236,93 +1253,109 @@ export function 背中を描く(ctx, b, 態, w, h, dpr, nowSec, 止 = false, 降
   if (城) { const 堀 = 堀の帯(城); 帯を描く(ctx, 堀.堀, 堀.空堀 ? [128, 108, 80] : [74, 104, 124], 0.92); 帯を描く(ctx, 堀.橋, [150, 124, 88], 1); }
   /* 持ち場の円（風雲モード・物頭未満。hitori/senaka.js 持ち場を見る）。地に点線の輪を描く。外にいれば赤く */
   if (!見物 && 態.身分 === "足軽" && 態.備え && 態.持ち場の円) 持ち場の輪を描く(ctx, 態.持ち場の円, !!(態.持ち場 && !態.持ち場.内));
-  /* 立つもの（木・家・葦・兵・倒れた者・与平、城の造作）を奥から描く。木と家と葦は盤と同じ並び（mori.js・sato.js） */
-  const 物 = [];
-  /* 写しと与平のあいだに入る木と家は、兵と同じく透かす（与平が隠れないように。遊ぶ人に見えるのは与平の背中なので） */
-  { const [hx, , hz] = P(我.x, 足もと(我.x, 我.z)[0], 我.z); 透かしの的.x = hx; 透かしの的.奥 = 見物 || 途中 ? -1 : hz; 透かしの的.数 = 0; }
-  木を集める(物);
-  家を集める(ctx, 物);
-  葦を集める(ctx, 物);
-  let 城の前 = 0;                                            // 写しと与平のあいだに立つ造作の数（与平を上から透かして描き直す）
-  if (城) {
-    const [hx, , hz] = P(我.x, 0, 我.z), 我d = 奥(我.x, 我.z), 我の幅 = 0.5 * F / Math.max(0.5, hz);
-    for (const o of 城の物(城)) {
-      const [wx, wz] = 世へ(o.x, o.y), d = 奥(wx, wz);
-      if (d < -25 || d > 260 || Math.hypot(wx - C.x, wz - C.z) > 280) continue;
-      物.push({ d, f: () => 城の物を描く(ctx, o, d) });
-      if (!見物 && !途中 && d < 我d - 0.5 && hz > 0) {
-        const r = o.部品[0].r, xs = [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]].map(([bx, by]) => { const [wx2, wz2] = 世へ(bx, by); return 奥(wx2, wz2) > 近 ? P(wx2, 0, wz2)[0] : null; });
-        if (xs.every((v) => v != null) && Math.min(...xs) < hx + 我の幅 && Math.max(...xs) > hx - 我の幅) 城の前++;
+  /* 立つもの（木・家・葦・城の造作・兵・倒れた者・与平・矢玉・火花）は、GL筆（hitori/gl_fude.js。WebGL2 で塗る）か
+     2D の画布で描く。GL筆なら、描き終えたら一枚の絵にして重ねる（遊ぶ人の申し出：「写真の状況になった場合、一人称視点が
+     めちゃくちゃ重くなります。できるだけ画質等を落とさずに、重くならないように工夫できませんか？」「1000人〜2000人程度の
+     戦さなので、これがもっと増えても耐えられるようにしてほしい」）。どちらが速いかは端末で違うので、兵の多いコマで両方を
+     短く使って量り、速い方に決める（下の 筆の種を選ぶ）。描く手順（何をどの色でどの順に塗るか）はどちらでも同じ。
+     GL で誤りが出れば、このコマを 2D で描き直し、次のコマからも 2D で描く（下の GLを断つ） */
+  const 物を集めて描く = (物筆) => {
+    /* 立つもの（木・家・葦・兵・倒れた者・与平、城の造作）を奥から描く。木と家と葦は盤と同じ並び（mori.js・sato.js） */
+    const 物 = [];
+    /* 写しと与平のあいだに入る木と家は、兵と同じく透かす（与平が隠れないように。遊ぶ人に見えるのは与平の背中なので） */
+    { const [hx, , hz] = P(我.x, 足もと(我.x, 我.z)[0], 我.z); 透かしの的.x = hx; 透かしの的.奥 = 見物 || 途中 ? -1 : hz; 透かしの的.数 = 0; }
+    木を集める(物);
+    家を集める(物筆, 物);
+    葦を集める(物筆, 物);
+    let 城の前 = 0;                                            // 写しと与平のあいだに立つ造作の数（与平を上から透かして描き直す）
+    if (城) {
+      const [hx, , hz] = P(我.x, 0, 我.z), 我d = 奥(我.x, 我.z), 我の幅 = 0.5 * F / Math.max(0.5, hz);
+      for (const o of 城の物(城)) {
+        const [wx, wz] = 世へ(o.x, o.y), d = 奥(wx, wz);
+        if (d < -25 || d > 260 || Math.hypot(wx - C.x, wz - C.z) > 280) continue;
+        物.push({ d, f: () => 城の物を描く(物筆, o, d) });
+        if (!見物 && !途中 && d < 我d - 0.5 && hz > 0) {
+          const r = o.部品[0].r, xs = [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]].map(([bx, by]) => { const [wx2, wz2] = 世へ(bx, by); return 奥(wx2, wz2) > 近 ? P(wx2, 0, wz2)[0] : null; });
+          if (xs.every((v) => v != null) && Math.min(...xs) < hx + 我の幅 && Math.max(...xs) > hx - 我の幅) 城の前++;
+        }
       }
     }
-  }
-  const [我の基, 我の深] = 足もと(我.x, 我.z);
-  const [psx, , pzc] = P(我.x, 我の基, 我.z), 我幅 = 0.5 * F / Math.max(0.5, pzc);
-  const 上限 = 途中 ? 2600 : 1500;                            // 高いところからは多く見える
-  let 兵ら = 眺.兵.filter((p) => !態.今討った.has(p)).map((p) => ({ p, d: 奥(p.x, p.z) })).filter((o) => o.d > 0.8);
-  if (兵ら.length > 上限) { 兵ら.sort((a, z) => a.d - z.d); 兵ら = 兵ら.slice(0, 上限); }
-  let 透数 = 0; const 奥ら = [];
-  const 手勢 = !見物 && 態.隊 && 態.隊.手勢 ? 態.隊 : null;
-  for (const { p, d } of 兵ら) {
-    const [基, 深] = 足もと(p.x, p.z);
-    const [sx, , zc] = P(p.x, 基, p.z); if (sx < -200 || sx > W + 200) continue;
-    /* 丘や山の陰に入った者は描かない（半ば隠れる者は、隠れる線より上だけ描く。下の 地の陰） */
-    const 陰 = 起伏 ? 地の陰(p.x, p.z, 基, 2.1) : null; if (陰 === "隠") continue;
-    奥ら.push(d);
-    const 透 = !見物 && !途中 && d < pzc - 0.3 && Math.abs(sx - psx) < 0.42 * F / zc + 我幅;
-    if (透) 透数++;
-    const 姿 = p.側 === "E" ? 敵の姿(態, p, t) : p.側 === "P" ? 味方の姿(態, p, t) : p;
-    /* 与平の手勢（五人長から三百人長。hitori/tezei.js）の兵は、足もとに薄い輪を描いて見分ける */
-    const 我が手 = 手勢 && p.組 && 手勢.squads.includes(p.組);
-    /* 薄めて描く者のうち、丘の陰に切られず水にも浸かっていない者は、続けて並ぶ同じ濃さの者と一枚の層にまとめて描き、
-       まとめて一度だけ重ねる（下の 物を描く。重ねる広さを減らす） */
-    const 濃 = (透 ? 0.32 : 1) * 人形の近さ(zc), 束ねる = 濃 >= 0.06 && 濃 < 0.9 && 陰 == null && !(深 > 0);
-    物.push({ d, 層: 束ねる ? 濃 : null,
-      層f: (囲み) => { if (我が手) 手勢の輪(ctx, p.x, p.z); 姿.基 = 基; 層に描く(姿, nowSec, 囲み); },
-      f: () => { if (我が手) 手勢の輪(ctx, p.x, p.z); 姿.基 = 基; 立てて描く(ctx, p.x, p.z, 基, 深, 陰, (al) => 透けて描く(ctx, 姿, nowSec, al), 透 ? 0.32 : 1); } });
-  }
-  /* 人形を細かく描くのは、画に映る兵のうち写しに近い者から 人形の細の数 人まで、中ほどに描くのは 人形の中の数 人まで
-     （重さのため。hitori/ningyo.js） */
-  /* 境目は、コマごとに跳ねさせない（遊ぶ人の申し出：「何秒かに一度突然画質が悪くなる」）。兵が寄せて来るたびに境目が
-     一息に縮み、大勢の兵がいっせいに粗い段へ落ちて（離れれば戻って）、画が揺れて見えた。縮むほうは一秒ほど、広がるほうは
-     〇.三秒ほどかけて寄せる。寄せるあいだは、限りの数より少し多く細かく描くことがある */
-  奥ら.sort((a, z) => a - z);
-  { const 描dt = 態.前描 == null ? 1 : clamp(nowSec - 態.前描, 0, 0.25); 態.前描 = nowSec;
-    /* 映る兵が限りの数に満たないときは、いちばん奥の者のすぐ先を境目とする（限り無しから一息に縮めないため） */
-    const 末 = 奥ら.length ? 奥ら[奥ら.length - 1] + 1 : 300;
-    const 寄せ = (旧, 新) => (旧 == null ? 新 : 旧 + (新 - 旧) * (1 - Math.exp(-描dt * (新 < 旧 ? 1.2 : 3.5))));
-    態.細の奥 = 寄せ(態.細の奥, 奥ら[人形の細の数 - 1] ?? 末); 態.中の奥 = 寄せ(態.中の奥, 奥ら[人形の中の数 - 1] ?? 末);
-    人形の環.細の奥 = 態.細の奥; 人形の環.中の奥 = 態.中の奥; }
-  /* 倒れた者。与平が倒した者は倒れる姿のまま描くので、盤の倒れ（揺らぎを除いた持ち場に残る）からは除く */
-  const 跡ら = 態.倒し.filter((o) => o.跡);
-  for (const e of 眺.倒れ) {
-    if (跡ら.some((o) => Math.abs(o.跡[0] - e.x) < 0.45 && Math.abs(o.跡[1] - e.z) < 0.45)) continue;
-    const d = 奥(e.x, e.z); if (d <= 0.8) continue;
-    const [基, 深] = 足もと(e.x, e.z), 陰 = 起伏 ? 地の陰(e.x, e.z, 基, 0.4) : null; if (陰 === "隠") continue;
-    e.基 = 基;
-    物.push({ d, f: () => 立てて描く(ctx, e.x, e.z, 基, 深, 陰, (al) => { ctx.globalAlpha = al; 倒れを描く(ctx, e); ctx.globalAlpha = 1; }, 1) });
-  }
-  for (const o of 態.倒し) { const d = 奥(o.p.x, o.p.z); if (d > 0.8 && d < 130) { const [基, 深] = 足もと(o.p.x, o.p.z);
-    物.push({ d, f: () => 立てて描く(ctx, o.p.x, o.p.z, 基, 深, null, (al) => 透けて描く(ctx, { ...o.p, 働: "立", v: 0, fl: 0, fu: clamp((t - o.t) / 0.55, 0, 1), 倒向: o.向, 基 }, nowSec, al), 1) }); } }
-  /* 与平。水に入れば浸かる（下の 立てて描く） */
-  const 与平を描く = (al) => 立てて描く(ctx, 我.x, 我.z, 我の基, 我の深, null, (a2) => { const 姿 = 与平の姿(態, t); 姿.基 = 我の基; 透けて描く(ctx, 姿, nowSec, a2); }, al);
-  if (!見物) 物.push({ d: 奥(我.x, 我.z), f: () => { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 与平を描く(1); } });
-  /* 矢玉（鉄砲の火と弾の筋・煙・矢・騎馬の砂煙）を、盤の印から実の秒で描く（hitori/yadama.js）。起伏があれば、その所の地の高さに */
-  const P地 = 起伏 ? (x, y, z) => P(x, y + 地(x, z), z) : P;
-  矢玉を集める(b, 態, 物, { ctx, P: P地, 奥, 霞, C, F }, 尺, nowSec, 態.止, 眺.兵);
-  物を描く(ctx, 物.sort((a, z) => z.d - a.d));
-  /* 与平が組の中へ入ると、手前（写し側）の味方が与平に重なる。手前の味方を透かすだけでは、幾重にも
-     重なって与平が見えなくなるので、そのときは与平（と足もとの輪）を上からもう一度、少し透かして描く */
-  if ((透数 || 城の前 || 透かしの的.数) && !見物) { if (我.倒 == null) 輪(ctx, 我.x, 我.z, 0.55, 0.55); 与平を描く(0.72); }
-  /* 受けたときの火花 */
-  態.火花 = 態.火花.filter((f) => t - f.t < 0.3);
-  for (const f of 態.火花) 火花を描く(ctx, f.x, f.y + 地(f.x, f.z), f.z, (t - f.t) / 0.28);
+    const [我の基, 我の深] = 足もと(我.x, 我.z);
+    const [psx, , pzc] = P(我.x, 我の基, 我.z), 我幅 = 0.5 * F / Math.max(0.5, pzc);
+    const 上限 = 途中 ? 2600 : 1500;                            // 高いところからは多く見える
+    let 兵ら = 眺.兵.filter((p) => !態.今討った.has(p)).map((p) => ({ p, d: 奥(p.x, p.z) })).filter((o) => o.d > 0.8);
+    if (兵ら.length > 上限) { 兵ら.sort((a, z) => a.d - z.d); 兵ら = 兵ら.slice(0, 上限); }
+    let 透数 = 0; const 奥ら = [];
+    const 手勢 = !見物 && 態.隊 && 態.隊.手勢 ? 態.隊 : null;
+    for (const { p, d } of 兵ら) {
+      const [基, 深] = 足もと(p.x, p.z);
+      const [sx, , zc] = P(p.x, 基, p.z); if (sx < -200 || sx > W + 200) continue;
+      /* 丘や山の陰に入った者は描かない（半ば隠れる者は、隠れる線より上だけ描く。下の 地の陰） */
+      const 陰 = 起伏 ? 地の陰(p.x, p.z, 基, 2.1) : null; if (陰 === "隠") continue;
+      奥ら.push(d);
+      const 透 = !見物 && !途中 && d < pzc - 0.3 && Math.abs(sx - psx) < 0.42 * F / zc + 我幅;
+      if (透) 透数++;
+      const 姿 = p.側 === "E" ? 敵の姿(態, p, t) : p.側 === "P" ? 味方の姿(態, p, t) : p;
+      /* 与平の手勢（五人長から三百人長。hitori/tezei.js）の兵は、足もとに薄い輪を描いて見分ける */
+      const 我が手 = 手勢 && p.組 && 手勢.squads.includes(p.組);
+      /* 薄めて描く者のうち、丘の陰に切られず水にも浸かっていない者は、続けて並ぶ同じ濃さの者と一枚の層にまとめて描き、
+         まとめて一度だけ重ねる（下の 物を描く。重ねる広さを減らす） */
+      const 濃 = (透 ? 0.32 : 1) * 人形の近さ(zc), 束ねる = 濃 >= 0.06 && 濃 < 0.9 && 陰 == null && !(深 > 0);
+      物.push({ d, 層: 束ねる ? 濃 : null,
+        層f: (囲み) => { if (我が手) 手勢の輪(物筆, p.x, p.z); 姿.基 = 基; 層に描く(姿, nowSec, 囲み); },
+        f: () => { if (我が手) 手勢の輪(物筆, p.x, p.z); 姿.基 = 基; 立てて描く(物筆, p.x, p.z, 基, 深, 陰, (al) => 透けて描く(物筆, 姿, nowSec, al), 透 ? 0.32 : 1); } });
+    }
+    /* 人形を細かく描くのは、画に映る兵のうち写しに近い者から 人形の細の数 人まで、中ほどに描くのは 人形の中の数 人まで
+       （重さのため。hitori/ningyo.js） */
+    /* 境目は、コマごとに跳ねさせない（遊ぶ人の申し出：「何秒かに一度突然画質が悪くなる」）。兵が寄せて来るたびに境目が
+       一息に縮み、大勢の兵がいっせいに粗い段へ落ちて（離れれば戻って）、画が揺れて見えた。縮むほうは一秒ほど、広がるほうは
+       〇.三秒ほどかけて寄せる。寄せるあいだは、限りの数より少し多く細かく描くことがある */
+    奥ら.sort((a, z) => a - z);
+    { const 描dt = 態.前描 == null ? 1 : clamp(nowSec - 態.前描, 0, 0.25); 態.前描 = nowSec;
+      /* 映る兵が限りの数に満たないときは、いちばん奥の者のすぐ先を境目とする（限り無しから一息に縮めないため） */
+      const 末 = 奥ら.length ? 奥ら[奥ら.length - 1] + 1 : 300;
+      const 寄せ = (旧, 新) => (旧 == null ? 新 : 旧 + (新 - 旧) * (1 - Math.exp(-描dt * (新 < 旧 ? 1.2 : 3.5))));
+      態.細の奥 = 寄せ(態.細の奥, 奥ら[人形の細の数 - 1] ?? 末); 態.中の奥 = 寄せ(態.中の奥, 奥ら[人形の中の数 - 1] ?? 末);
+      人形の環.細の奥 = 態.細の奥; 人形の環.中の奥 = 態.中の奥; }
+    /* 倒れた者。与平が倒した者は倒れる姿のまま描くので、盤の倒れ（揺らぎを除いた持ち場に残る）からは除く */
+    const 跡ら = 態.倒し.filter((o) => o.跡);
+    for (const e of 眺.倒れ) {
+      if (跡ら.some((o) => Math.abs(o.跡[0] - e.x) < 0.45 && Math.abs(o.跡[1] - e.z) < 0.45)) continue;
+      const d = 奥(e.x, e.z); if (d <= 0.8) continue;
+      const [基, 深] = 足もと(e.x, e.z), 陰 = 起伏 ? 地の陰(e.x, e.z, 基, 0.4) : null; if (陰 === "隠") continue;
+      e.基 = 基;
+      物.push({ d, f: () => 立てて描く(物筆, e.x, e.z, 基, 深, 陰, (al) => { 物筆.globalAlpha = al; 倒れを描く(物筆, e); 物筆.globalAlpha = 1; }, 1) });
+    }
+    for (const o of 態.倒し) { const d = 奥(o.p.x, o.p.z); if (d > 0.8 && d < 130) { const [基, 深] = 足もと(o.p.x, o.p.z);
+      物.push({ d, f: () => 立てて描く(物筆, o.p.x, o.p.z, 基, 深, null, (al) => 透けて描く(物筆, { ...o.p, 働: "立", v: 0, fl: 0, fu: clamp((t - o.t) / 0.55, 0, 1), 倒向: o.向, 基 }, nowSec, al), 1) }); } }
+    /* 与平。水に入れば浸かる（下の 立てて描く） */
+    const 与平を描く = (al) => 立てて描く(物筆, 我.x, 我.z, 我の基, 我の深, null, (a2) => { const 姿 = 与平の姿(態, t); 姿.基 = 我の基; 透けて描く(物筆, 姿, nowSec, a2); }, al);
+    if (!見物) 物.push({ d: 奥(我.x, 我.z), f: () => { if (我.倒 == null) 輪(物筆, 我.x, 我.z, 0.55, 0.55); 与平を描く(1); } });
+    /* 矢玉（鉄砲の火と弾の筋・煙・矢・騎馬の砂煙）を、盤の印から実の秒で描く（hitori/yadama.js）。起伏があれば、その所の地の高さに */
+    const P地 = 起伏 ? (x, y, z) => P(x, y + 地(x, z), z) : P;
+    矢玉を集める(b, 態, 物, { ctx: 物筆, P: P地, 奥, 霞, C, F }, 尺, nowSec, 態.止, 眺.兵);
+    物を描く(物筆, 物.sort((a, z) => z.d - a.d));
+    /* 与平が組の中へ入ると、手前（写し側）の味方が与平に重なる。手前の味方を透かすだけでは、幾重にも
+       重なって与平が見えなくなるので、そのときは与平（と足もとの輪）を上からもう一度、少し透かして描く */
+    if ((透数 || 城の前 || 透かしの的.数) && !見物) { if (我.倒 == null) 輪(物筆, 我.x, 我.z, 0.55, 0.55); 与平を描く(0.72); }
+    /* 受けたときの火花 */
+    態.火花 = 態.火花.filter((f) => t - f.t < 0.3);
+    for (const f of 態.火花) 火花を描く(物筆, f.x, f.y + 地(f.x, f.z), f.z, (t - f.t) / 0.28);
+    return 兵ら.length;
+  };
+  let 描いた兵 = 0;
+  const gl筆 = 物の筆を始める(w, h, dpr, 筆の種を選ぶ());
+  if (gl筆) {
+    try { 筆 = gl筆; 層を用意する(gl筆, dpr); 描いた兵 = 物を集めて描く(gl筆); 物を重ねる(ctx, 物の筆を終える()); }
+    catch (e) { GLを断つ(e); 筆 = ctx; 層を用意する(ctx, dpr); 描いた兵 = 物を集めて描く(ctx); }
+  } else { 層を用意する(ctx, dpr); 描いた兵 = 物を集めて描く(ctx); }
+  筆 = ctx; 前の描いた兵 = 描いた兵;
   霞の帯(ctx);
   描いた数.全ms = (typeof performance !== "undefined" ? performance.now() : 0) - 地t0;
   /* 手傷を負えば、画面の縁が赤く染まる（〇.六秒で引く） */
   if (態.手傷 != null && t - 態.手傷 < 0.6) 手傷を描く(ctx, 0.85 * (1 - (t - 態.手傷) / 0.6));
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  return { 兵: 眺.兵.length, 倒れ: 眺.倒れ.length, 描いた: 兵ら.length };
+  return { 兵: 眺.兵.length, 倒れ: 眺.倒れ.length, 描いた: 描いた兵 };
 }
 function 火花を描く(ctx, x, y, z, k) {
   const [sx, sy, zc] = P(x, y, z); if (zc < 0.5) return; const s = F / zc;
@@ -1633,17 +1666,66 @@ function 一人を描く(ctx, p, t, al) {
    透けて見え、粗く崩れた絵になっていた。与平が歩み・駆け・突くと、写し（与平のうしろ五m）が上司の隊の兵のあいだへ
    入り、薄める兵が増えるので目に付いた。濃さ（al と 写しに近い者の薄め 人形の近さ）は、これまでと同じ */
 let 層 = null, 層筆 = null, 囲 = null, 層のコマ = 0;
+let 層2d = null, 層筆2d = null;                              // 2D の画布で描くときの層（GL筆で描くときは GL筆 の層を使う）
 function 層を用意する(ctx, dpr) {
+  if (ctx && ctx.GL筆 === true) {                       // 2D の筆の真似（試しの筆）は何を問うても値を返すことがあるので、true と比べる
+    const r = 物のGL && 物のGL.層を用意する();
+    if (!r) { 層筆 = null; return; }
+    層 = r.画; 層筆 = r.筆; 層.倍 = dpr || 1; return;
+  }
   if (typeof document === "undefined" || !ctx || !ctx.canvas) { 層筆 = null; return; }
   const cw = ctx.canvas.width, ch = ctx.canvas.height;
   if (!(cw > 0 && ch > 0)) { 層筆 = null; return; }
-  if (!層) 層 = document.createElement("canvas");
-  if (!層筆) 層筆 = 層 && 層.getContext ? 層.getContext("2d") : null;
+  if (!層2d) 層2d = document.createElement("canvas");
+  if (!層筆2d) 層筆2d = 層2d && 層2d.getContext ? 層2d.getContext("2d") : null;
+  層 = 層2d; 層筆 = 層筆2d;
   if (!層筆) return;
   /* 描くたびに描いた所を消すので、層ぜんたいを消すのは六十コマに一度でよい（はみ出しの消し残しの用心） */
   if (層.width !== cw || 層.height !== ch) { 層.width = cw; 層.height = ch; 層のコマ = 0; }
   else if (++層のコマ >= 60) { 層のコマ = 0; 層筆.setTransform(1, 0, 0, 1, 0, 0); 層筆.clearRect(0, 0, cw, ch); }
   層.倍 = dpr || 1;
+}
+/* 立つものを塗る GL筆（hitori/gl_fude.js）。初めて要るときに一度だけ作る。作れなければ（WebGL の無い端末・試しの jsdom）、
+   また描くうちに誤りが出たり GL の文脈を失ったりすれば、これまでどおり 2D の画布で描く。
+   GL筆と 2D の画布のどちらで描くかは、兵の多いコマで両方を短く使って量り、この端末で速い方に決める（hitori/gl_fude.js
+   筆の選び手）。試し・撮る道具は window.__背中の筆 に "2d" を入れれば 2D で、"gl" を入れれば（一度やめていても）GL で
+   描かせられる */
+let 物のGL = undefined, GLを使わぬ = false, 前の描いた兵 = 0, 様子の口 = false;
+const 選び手 = new 筆の選び手();
+function GLの用意() {
+  if (物のGL === undefined) { try { 物のGL = GL筆を作る(); } catch (e) { 物のGL = null; } }
+  return !!物のGL && !物のGL.失ったか();
+}
+/* このコマの立つものを描く筆の種（"gl" か "2d"） */
+function 筆の種を選ぶ() {
+  const 窓 = typeof window !== "undefined" ? window : null;
+  if (窓 && !様子の口) { 様子の口 = true; 窓.__背中の筆の様子 = 筆の選びの様子; }   // 試しが覗く口（遊びには使わない）
+  const 指図 = 窓 ? 窓.__背中の筆 : null;
+  if (指図 === "2d" || 指図 === "gl") return 指図;
+  const 今 = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+  const 量っていた = !!選び手.試し;
+  const 種 = 選び手.選ぶ(今, 前の描いた兵, () => !GLを使わぬ && GLの用意());
+  /* 量り終えて 2D の画布に決めたなら、GL筆の資（画布と多重標本の描き先）を手放す（量り直すときにまた作る） */
+  if (量っていた && !選び手.試し && 選び手.決め === "2d" && 物のGL) { 物のGL.捨てる(); 物のGL = undefined; }
+  return 種;
+}
+/* 筆の選びの様子（決めた筆・量っている最中か・量りの結果）。試しが覗く */
+export const 筆の選びの様子 = () => 選び手.様子();
+function 物の筆を始める(w, h, dpr, 種) {
+  if (種 !== "gl") return null;
+  const 指図 = typeof window !== "undefined" ? window.__背中の筆 : null;
+  if (GLを使わぬ && 指図 !== "gl") return null;
+  if (!GLの用意()) return null;
+  const 筆2 = 物のGL.始め(w, h, dpr);
+  筆2.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return 筆2;
+}
+const 物の筆を終える = () => 物のGL.終え();
+/* GL筆で描いた立つものの絵（画素の大きさは描き先と同じ）を、2D の画布へ重ねる */
+function 物を重ねる(ctx, 画) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.drawImage(画, 0, 0); ctx.restore(); }
+function GLを断つ(e) {
+  GLを使わぬ = true;
+  if (typeof console !== "undefined" && console.warn) console.warn("背中越しの GL筆 をやめ、2D の画布で描く", e && e.message);
 }
 /* 遠い物から順に描く。層 を持つ者（薄めて描く兵）は、続けて並ぶ同じ濃さ（差〇.〇三のうち）の者を一枚の層にまとめて描き、
    ほかの物を描く前（と終わり）にまとめて重ねる */
