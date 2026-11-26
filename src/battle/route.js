@@ -1,4 +1,5 @@
-import { FIELD, RIVER, TERRAIN, 地形の代, terrainAt } from "./field.js";
+import { FIELD, RIVER, RIVERS, TERRAIN, hasRiver, 地形の代, terrainAt } from "./field.js";
+import { MAP } from "./castleMap.js";
 
 /* ==========================================================================
    野の道さがし（GDD 8.1 / 8.6）
@@ -161,18 +162,146 @@ export function 野の道(x0, y0, x1, y1, opt = {}) {
     }
     return false;
   };
-  const 道 = [];
+  const 道 = [], 番ら = [];                             // 番ら … 道の地点が 列 の何番目の升か（下の 淵をかすめぬよう繕う）
   let 前の向き = null;
   for (let n = 1; n < 列.length; n++) {
     const a = 列[n - 1], z = 列[n];
     const v = `${(z % w) - (a % w)},${((z / w) | 0) - ((a / w) | 0)}`;
     if (v !== 前の向き) {
       前の向き = v;
-      道.push({ x: (z % w) * 升 + 升 / 2, y: ((z / w) | 0) * 升 + 升 / 2, r: 渡り場の脇か(z) ? 渡り場の輪 : 52 });
+      道.push({ x: (z % w) * 升 + 升 / 2, y: ((z / w) | 0) * 升 + 升 / 2, r: 渡り場の脇か(z) ? 渡り場の輪 : 52 }); 番ら.push(n);
     }
   }
-  道.push({ x: x1, y: y1, r: 40 });
-  return 道;
+  道.push({ x: x1, y: y1, r: 40 }); 番ら.push(列.length - 1);
+  /* 城の盤（城山の外の野を含む）では繕わない。城の盤の道は城の道と継いで使い（battle/castleMap.js 継いだ道）、繕いの
+     回り道は淵だけを避けて塀や堀を見ないので、橋を落とした城で寄せ手が城山へ着けなくなった（tests/tsukejiro） */
+  return MAP ? 道 : 淵をかすめぬよう繕う(道, 番ら, 列, w, x0, y0, x1, y1);
+}
+
+/* 二点を結ぶ真っすぐな筋が淵（深い川）をかすめるか。両端は見ず、そのあいだを三歩ごとに見る。
+   升は芯の一点で地を見るので、橋の脇の細い淵の角のような、升より細い淵も拾う */
+export const 繕いの輪 = 8;          // 繕いで挟んだ地点に着いたとみなす輪（歩。ほぼ通り抜ける。値は仮）
+export const 川がある = () => hasRiver() || RIVERS.length > 0;
+export function 淵をかすめる(ax, ay, bx, by) {
+  if (!川がある()) return false;
+  const L = Math.hypot(bx - ax, by - ay), n = Math.ceil(L / 3);
+  for (let s = 1; s < n; s++) { const t = s / n; if (terrainAt(ax + (bx - ax) * t, ay + (by - ay) * t) === "deep") return true; }
+  return false;
+}
+/* 隊がいまの所（x, y）で地点 w0 に着いたとして曲がり、次の地点 w1 へ真っすぐ向かうと、淵の角を切るか（battle/engine.js 地点を
+   辿る）。地点そのものから次の地点へはかすめない時に限る（道が淵を渡ると決めているなら止めない）。地点から次の地点への
+   かすめは、地点に控える（同じ次の地点なら量り直さない）。いまの所からの筋は、はじめの百六十歩だけを見る（曲がる所の
+   近くで切るので。長い筋を一刻みごとに舐めない） */
+export function 角を切るか(x, y, w0, w1) {
+  if (!w1 || !川がある()) return false;
+  if (w0.次の印 !== w1 || w0.次の印x !== w1.x || w0.次の印y !== w1.y) { w0.次の印 = w1; w0.次の印x = w1.x; w0.次の印y = w1.y; w0.次かすめ = 淵をかすめる(w0.x, w0.y, w1.x, w1.y); }
+  if (w0.次かすめ) return false;
+  const L = Math.hypot(w1.x - x, w1.y - y); if (!(L > 0)) return false;
+  const 長 = Math.min(L, 160);
+  return 淵をかすめる(x, y, x + (w1.x - x) * 長 / L, y + (w1.y - y) * 長 / L);
+}
+/* 繕い（遊ぶ人の申し出：「5人組で移動していたところ、川でやはり先に進めなくなります。盤の視点でも同じです」）。
+
+   道は曲がり角だけを残すので、角と角を結ぶ真っすぐな筋が、升の並びの通らない淵の端をかすめることがある。升は芯の
+   一点で地を見るので、升の並びが淵を通らなくても、斜めに結んだ筋は橋の袂の脇の淵の角を切る。盤の刻みが〇.〇五秒なら
+   隊の一歩は四歩ほどあり、その細い淵を跨ぎ越して橋へ乗っていたが、背中越し（微速。一刻み〇.〇〇〇七秒）や盤の微速では
+   一歩が細かく、岸と橋の脇の淵とに挟まれた角へ入り込み、行き先へ寄るどの向きも淵で、そこから出られなくなった（量ると、
+   同じ道を一刻み〇.〇一秒以下で歩ませると、上司の隊は橋の袂の角で止まって渡れなかった。手勢の有無に関わらない）。
+   そこで、淵をかすめる筋は、そのあいだの升の芯を辿り直す。斜めの一歩そのものが淵の角を切るなら、縦横の隣の升の芯を
+   挟む。そのうえで、淵をかすめずに真っすぐ結べるいちばん遠い所まで一息に結ぶ（地点を増やしすぎない）。挟んだ地点の
+   輪は 繕いの輪 とする（早く「着いた」として角を切らない）。升の並びそのもの（どの橋・浅瀬を通るか）は変えない
+   （道の重みを変えると、城攻めの寄せ手が橋を避けて浅瀬へ回った：tests/tsukejiro）。升の並びが淵を通る（押し渡ると決めた
+   隊や、渡り場が無い野）なら繕わない */
+/* 細かく回る：二点（どちらも淵でない）を、そのまわりだけの細かい升（八歩）で、淵を通らずに結ぶ。斜めの一歩は、縦横の
+   隣がどちらも淵でないときだけ（淵の角を切らない）。見つかれば、淵をかすめずに真っすぐ結べるところは一息に結んだ
+   あいだの地点（終わりの点は含めない）を返す。見つからなければ null */
+const 細升 = 8;
+export function 細かく回る(A, Z) {
+  const 余 = 64;
+  const x0 = Math.max(0, Math.min(A.x, Z.x) - 余), y0 = Math.max(0, Math.min(A.y, Z.y) - 余);
+  const x1 = Math.min(FIELD.w, Math.max(A.x, Z.x) + 余), y1 = Math.min(FIELD.h, Math.max(A.y, Z.y) + 余);
+  const w = Math.max(1, Math.ceil((x1 - x0) / 細升)), h = Math.max(1, Math.ceil((y1 - y0) / 細升)), N = w * h;
+  if (N > 40000) return null;
+  const 升の芯 = (k) => ({ x: x0 + (k % w) * 細升 + 細升 / 2, y: y0 + ((k / w) | 0) * 細升 + 細升 / 2 });
+  const 番 = (p) => Math.min(h - 1, Math.max(0, ((p.y - y0) / 細升) | 0)) * w + Math.min(w - 1, Math.max(0, ((p.x - x0) / 細升) | 0));
+  const S = 番(A), T = 番(Z);
+  const 通れ = new Uint8Array(N);
+  for (let k = 0; k < N; k++) { const c = 升の芯(k); 通れ[k] = terrainAt(c.x, c.y) !== "deep" ? 1 : 0; }
+  通れ[S] = 1; 通れ[T] = 1;
+  const gc = new Float32Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1), 済 = new Uint8Array(N);
+  const tx = T % w, ty = (T / w) | 0;
+  const 見 = (k) => Math.hypot((k % w) - tx, ((k / w) | 0) - ty);
+  const 開 = ヒープ(); gc[S] = 0; 開.push(S, 見(S));
+  let 着 = false, 回 = 0;
+  while (開.len() && 回++ < 60000) {
+    const cur = 開.pop();
+    if (cur === T) { 着 = true; break; }
+    if (済[cur]) continue; 済[cur] = 1;
+    const ci = cur % w, cj = (cur / w) | 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dj) continue;
+      const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= w || nj >= h) continue;
+      const nk = nj * w + ni; if (済[nk] || !通れ[nk]) continue;
+      if (di && dj && (!通れ[cj * w + ni] || !通れ[nj * w + ci])) continue;
+      const c2 = gc[cur] + (di && dj ? Math.SQRT2 : 1);
+      if (c2 < gc[nk]) { gc[nk] = c2; prev[nk] = cur; 開.push(nk, c2 + 見(nk)); }
+    }
+  }
+  if (!着) return null;
+  const 列 = [];
+  for (let k = T; k !== -1; k = prev[k]) { 列.push(k); if (k === S) break; }
+  列.reverse();
+  const 並 = [A, ...列.slice(1, -1).map(升の芯), Z];
+  const 出 = [];
+  let i = 0;
+  while (i < 並.length - 1) {
+    let j = 並.length - 1;
+    while (j > i + 1 && 淵をかすめる(並[i].x, 並[i].y, 並[j].x, 並[j].y)) j--;
+    if (j < 並.length - 1) 出.push(並[j]);
+    i = j;
+  }
+  return 出;
+}
+function 淵をかすめぬよう繕う(道, 番ら, 列, w, x0, y0, x1, y1) {
+  const 芯 = (k) => ({ x: (k % w) * 升 + 升 / 2, y: ((k / w) | 0) * 升 + 升 / 2 });
+  const 所 = (n) => (n === 0 ? { x: x0, y: y0 } : n === 列.length - 1 ? { x: x1, y: y1 } : 芯(列[n]));
+  const 淵か = (p) => terrainAt(p.x, p.y) === "deep";
+  const 出 = [];
+  let 前 = { x: x0, y: y0 }, 前の番 = 0;
+  for (let k = 0; k < 道.length; k++) {
+    const 末 = 道[k], 末の番 = 番ら[k];
+    let 繕う = 淵をかすめる(前.x, 前.y, 末.x, 末.y) && !淵か(前) && !淵か(末);
+    for (let n = 前の番 + 1; 繕う && n < 末の番; n++) if (淵か(所(n))) 繕う = false;   // 升の並びが淵を通るなら、そのまま
+    if (!繕う) { 出.push(末); 前 = 末; 前の番 = 末の番; continue; }
+    /* あいだの升の芯を並べる（斜めの一歩が淵の角を切るなら、縦横の隣の升の芯を挟む） */
+    const 並 = [前];
+    for (let n = 前の番 + 1; n <= 末の番; n++) {
+      const a = 列[n - 1], z = 列[n], di = (z % w) - (a % w), dj = ((z / w) | 0) - ((a / w) | 0);
+      const A = 並[並.length - 1], Z = n === 末の番 ? 末 : 所(n);
+      if (di && dj && 淵をかすめる(A.x, A.y, Z.x, Z.y)) {
+        for (const 隣 of [a + di, a + dj * w]) {
+          const C = 芯(隣);
+          if (!淵か(C) && !淵をかすめる(A.x, A.y, C.x, C.y) && !淵をかすめる(C.x, C.y, Z.x, Z.y)) { 並.push(C); break; }
+        }
+      }
+      並.push(Z);
+    }
+    /* 淵をかすめずに結べるいちばん遠い所まで、一息に結ぶ。隣の地点へさえ淵をかすめずに行けなければ（升より細い淵の
+       割れ目が、岸の窪みと浅瀬・橋とのあいだにあるとき）、そのあいだを細かい升で探し直す（下の 細かく回る） */
+    let i = 0;
+    while (i < 並.length - 1) {
+      let j = 並.length - 1;
+      while (j > i + 1 && 淵をかすめる(並[i].x, 並[i].y, 並[j].x, 並[j].y)) j--;
+      if (j === i + 1 && 淵をかすめる(並[i].x, 並[i].y, 並[j].x, 並[j].y)) {
+        const 回り = 細かく回る(並[i], 並[j]);
+        if (回り) for (const p of 回り) 出.push({ x: p.x, y: p.y, r: 繕いの輪 });
+      }
+      出.push(j === 並.length - 1 ? 末 : { x: 並[j].x, y: 並[j].y, r: 繕いの輪 });
+      i = j;
+    }
+    前 = 末; 前の番 = 末の番;
+  }
+  return 出;
 }
 
 /* この道は、真っすぐ行くのと比べてどれほど高くつくか。

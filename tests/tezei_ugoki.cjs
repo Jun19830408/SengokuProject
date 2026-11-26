@@ -44,6 +44,15 @@
          「もう少し別の部分で統率が低いことをあらわしてください」）。統率二十と八十で、押してから歩み出すまで・向き
          直りの速さ・歩くときの隊列の乱れ・駆け足で遅れる兵が同じこと、突く（全体）で揃って突く兵と突き出しのばらつき
          が違うことを比べる。一から十二は、実効の統率八十で確かめる
+     十四、川（遊ぶ人の申し出：「5人組で移動していたところ、川でやはり先に進めなくなります。盤の視点でも同じです。部隊を
+         率いると出てくるバグだと思います」）。背中越しは盤を微速で一コマずつ刻むので、盤の一刻みが〇.〇〇一秒ほどしか
+         ない。一歩が細かいと、上司の隊は橋の袂の脇の細い淵の角で止まり、手勢はそれに付いて立ち尽くした（battle/route.js・
+         battle/engine.js。tests/kawa_watari の 四）。また手勢は上司の隊の跡のうしろの点へ戻っては進み、橋の上で行き来した
+         （hitori/tezei.js 従う道）。与平が一人なら淵も這うように渡れたが、手勢を率いると淵の手前で止まった
+         ・背中越しで方向キーを放して静まると、五人長の手勢と与平は、橋を渡る上司の隊について川を渡る（淵に入らない）
+         ・背中越しで方向キーを淵へ押し続けると、手勢は実の一秒のうちに淵へ入り、与平が一人で渡るときと同じく、ふだんの足の
+           四分の一ほどの足で渡ってゆく。与平も手勢のうしろについて水に入る
+         ・盤の視点（率いていない）で盤の微速（一刻み〇.〇〇二秒）でも、五人長の手勢は上司の隊について橋を渡る
    を確かめる。値はみな仮。
    ============================================================ */
 const path = require('path');
@@ -602,6 +611,77 @@ function 野を仕立てる(種名, 段, 揃 = {}) {
     const 突20 = 突き(20), 突80 = 突き(80);
     確('統率が低いほど、突く（全体）で揃って突く兵が少ない', 突20.揃 < 突80.揃 * 0.75 && 突80.揃 > 0, `一度の突きで突いた兵の均し 二十 ${突20.揃.toFixed(1)}人・八十 ${突80.揃.toFixed(1)}人`);
     確('統率が低いほど、突き出しがばらばらになる', 突20.幅 > 突80.幅 + 0.08, `突き出しの幅の均し 二十 ${突20.幅.toFixed(2)}秒・八十 ${突80.幅.toFixed(2)}秒`);
+  }
+
+  console.log('\n── 十四　川：率いる手勢も、上司の隊について橋を渡り、方向キーで押せば淵へ入って渡る（盤の刻みが細かくても）');
+  {
+    /* 野は 野を仕立てる と同じ（北に川、橋は上司の隊の西）。上司の隊は橋の東の袂の近くに据え、北の川の向こうへの道を引く。
+       背中越しは三十コマの端末と同じく、一コマ三十分の一秒で盤を微速で刻む（盤の一刻みは〇.〇〇一四秒ほど） */
+    const 川の野 = (上司のx) => {
+      種 = 0x7E2A;
+      H.setBattleMap(null); H.setFieldSeed('fuun', 'tezei'); H.layoutField(7000, 6);
+      const W = H.FIELD.w, Hh = H.FIELD.h;
+      const P = [H.makeCorps('P', 将(0, true), 0, 1200, 75, 75, 上司のx == null ? W * 0.5 : 上司のx, Hh * 0.7, -Math.PI / 2, '#2F5D8C')];
+      const E = [H.makeCorps('E', 将(10, true), 0, 900, 75, 75, W * 0.5, Hh * 0.15, Math.PI / 2, '#B0483C')];
+      for (const c of [...P, ...E]) { c.formation = '横陣'; H.placeSquads(c, true); }
+      const b = H.createBattle(P, E, 'P'); b.mode = 'field'; b.phase = 'fight'; b.dusk = 99999;
+      const 手 = H.手勢を組む(b, 'g0', { 手勢: H.手勢の数['五人長'], 名: '与平', 武勇: 45, 統率: 80, 手勢の統率: 80 });
+      const 親 = b.corps.find((c) => c.id === 'g0');
+      for (const c of b.corps) { c.auto = false; c.order = '待機'; c.tx = c.x; c.ty = c.y; } b.aiClock = 1e9;
+      for (let k = 0; k < 30; k++) { b.t += 0.02; H.新絵状態を進める(b, 0, null); }
+      const 態 = H.背中を始める(b, 手.id, '足軽', null, { 体力: 100, 武勇: 45, 風雲: true, 段: '五人長', 首の勲功: H.首の勲功 });
+      const sp = H.背中の速さ / H.fieldScale();
+      let 今 = 1;
+      const 回す = (秒, jx = 0, jy = 0, 毎 = null) => { const n = Math.round(秒 * 30); for (let i = 0; i < n; i++) { 態.入.jx = jx; 態.入.jy = jy; 態.入.駆 = false; H.stepBattle(b, sp / 30); 今 += 1 / 30; H.背中を描く(筆, b, 態, 960, 540, 1, 今, false); if (毎) 毎(i + 1); } };
+      const 北へ = () => { const 道 = H.野を行く道(親.x, 親.y, 親.x, 親.y - 600); 親.wp = 道; 親.order = '移動'; 親.tx = 道[0].x; 親.ty = 道[0].y; };
+      const 我 = () => ({ x: 態.我.x / 尺, y: -態.我.z / 尺 });
+      return { b, 手, 親, 態, 回す, 北へ, 我 };
+    };
+    const 北岸か = (p) => p.y < H.RIVER.top + 60;           // 川の北の岸（川は東西に流れ、うねりは六十歩より小さい所）
+    {
+      const 場 = 川の野(2020);
+      場.北へ();
+      let 手の淵 = false, 我の淵 = false;
+      場.回す(220, 0, 0, () => { if (H.terrainAt(場.手.x, 場.手.y) === 'deep') 手の淵 = true; const g = 場.我(); if (H.terrainAt(g.x, g.y) === 'deep') 我の淵 = true; });
+      確('背中越しで方向キーを放して静まると、五人長の手勢は上司の隊について橋を渡る（淵に入らない）', 北岸か(場.親) && 北岸か(場.手) && !手の淵,
+        `二百二十秒ののち 上司の隊(${場.親.x.toFixed(0)},${場.親.y.toFixed(0)}) 手勢(${場.手.x.toFixed(0)},${場.手.y.toFixed(0)} ${H.terrainAt(場.手.x, 場.手.y)}) 淵に ${手の淵 ? '入った' : '入らない'}`);
+      確('与平も手勢について橋を渡る（淵に入らない）', 北岸か(場.我()) && !我の淵, `与平(${場.我().x.toFixed(0)},${場.我().y.toFixed(0)})`);
+    }
+    {
+      const 場 = 川の野(null);
+      let 縁刻 = null, 入刻 = null, 刻 = 0; const 跡 = [];
+      場.回す(80, 0, -1, () => {
+        刻 += 1 / 30; 跡.push({ t: 刻, y: 場.手.y, 地: H.terrainAt(場.手.x, 場.手.y) });
+        if (縁刻 == null && (場.手.水際 || 0) > 0) 縁刻 = 刻;
+        if (入刻 == null && H.terrainAt(場.手.x, 場.手.y) === 'deep') 入刻 = 刻;
+      });
+      const 足 = (t0, t1) => { const a = 跡.find((p) => p.t >= t0), z = 跡.find((p) => p.t >= t1); return a && z ? (a.y - z.y) / (t1 - t0) : 0; };
+      const 野の足 = 足(10, 30), 淵の足 = 入刻 != null ? 足(入刻 + 5, Math.min(入刻 + 30, 79)) : 0, g = 場.我();
+      確('背中越しで方向キーを淵へ押し続けると、手勢は水際に着いてから実の一秒のうちに淵へ入る', 縁刻 != null && 入刻 != null && 入刻 - 縁刻 < 1.0,
+        `水際に着いた ${縁刻 == null ? '-' : 縁刻.toFixed(1)}秒・淵に入った ${入刻 == null ? '-' : 入刻.toFixed(1)}秒`);
+      確('淵では、与平が一人で渡るときと同じく、ふだんの足の四分の一ほどで渡ってゆく（〇.二より速く、〇.三五より遅い）', 野の足 > 0 && 淵の足 / 野の足 > 0.2 && 淵の足 / 野の足 < 0.35,
+        `野で 毎秒${野の足.toFixed(2)}歩・淵で 毎秒${淵の足.toFixed(2)}歩（${(淵の足 / Math.max(1e-9, 野の足)).toFixed(2)}倍）`);
+      確('与平も手勢のうしろについて水に入る', H.terrainAt(g.x, g.y) === 'deep', `与平(${g.x.toFixed(0)},${g.y.toFixed(0)} ${H.terrainAt(g.x, g.y)})`);
+    }
+    {
+      /* 盤の視点（率いていない）。盤の微速の一コマ（〇.〇〇二秒）で刻む */
+      種 = 0x2C07;
+      H.setBattleMap(null); H.setFieldSeed('fuun', 'tezei'); H.layoutField(7000, 6);
+      const W = H.FIELD.w, Hh = H.FIELD.h;
+      const P = [H.makeCorps('P', 将(0, true), 0, 1200, 75, 75, W * 0.5, Hh * 0.7, -Math.PI / 2, '#2F5D8C')];
+      const E = [H.makeCorps('E', 将(10, true), 0, 900, 75, 75, W * 0.5, Hh * 0.15, Math.PI / 2, '#B0483C')];
+      for (const c of [...P, ...E]) { c.formation = '横陣'; H.placeSquads(c, true); }
+      const b = H.createBattle(P, E, 'P'); b.mode = 'field'; b.phase = 'fight'; b.dusk = 99999;
+      const 手 = H.手勢を組む(b, 'g0', { 手勢: H.手勢の数['五人長'], 名: '与平', 武勇: 45, 統率: 20 });
+      const 親 = b.corps.find((c) => c.id === 'g0');
+      for (const c of b.corps) { c.auto = false; c.order = '待機'; c.tx = c.x; c.ty = c.y; } b.aiClock = 1e9;
+      const 道 = H.野を行く道(親.x, 親.y, 親.x, 親.y - 600); 親.wp = 道; 親.order = '移動'; 親.tx = 道[0].x; 親.ty = 道[0].y;
+      let 淵 = false;
+      for (let k = 0; k < Math.round(25 / 0.002); k++) { H.stepBattle(b, 0.002); if (H.terrainAt(手.x, 手.y) === 'deep') 淵 = true; }
+      const 隔 = Math.hypot(手.x - 親.x, 手.y - 親.y);
+      確('盤の視点で盤の微速（一刻み〇.〇〇二秒）でも、五人長の手勢は上司の隊について橋を渡る（淵に入らない）', 北岸か(親) && 北岸か(手) && 隔 < 40 && !淵,
+        `二十五秒ののち 上司の隊(${親.x.toFixed(0)},${親.y.toFixed(0)}) 手勢(${手.x.toFixed(0)},${手.y.toFixed(0)}) 上司の隊まで ${隔.toFixed(0)}歩`);
+    }
   }
 
   const 拾う = errs.filter((e) => !/act\(|not wrapped|ReactDOMTestUtils/.test(e));

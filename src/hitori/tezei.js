@@ -48,7 +48,7 @@
    ========================================================================== */
 import { placeSquads } from "../battle/corps.js";
 import { terrainAt, 率いの刻比 } from "../battle/field.js";
-import { 野の道 } from "../battle/route.js";
+import { 野の道, 淵をかすめる } from "../battle/route.js";
 
 export const 手勢の数 = { 五人長: 5, 十人長: 10, 五十人長: 50, 百人長: 100, 三百人長: 300 };
 
@@ -307,15 +307,39 @@ export function 手勢を委ねる(c) {
 export const 付き従いの隔 = 8;                    // 座からこれより離れれば歩み出す（盤の歩。値は仮）
 export const 先回りの秒 = 0.15, 追い付きの隔 = 12, 追い付きの倍 = 2.0;   // 上司の隊が歩むときの先回り（盤の秒）と追い付き（もとは一.六倍。値は仮）
 export const 遠い追い付きの隔 = 40, 遠い追い付きの倍 = 2.4;              // 座から遠く離れていれば、なお速く追う（値は仮）
-const 淵を跨ぐ = (x0, y0, x1, y1) => { for (let k = 0; k <= 8; k++) if (terrainAt(x0 + (x1 - x0) * k / 8, y0 + (y1 - y0) * k / 8) === "deep") return true; return false; };
+/* 上司の隊の座へ向かう道（淵を跨ぐとき。下の 手勢を親に付ける）。上司の隊が来た道（跡）を辿り、それから座へ向かう。
+   遊ぶ人の申し出（「5人組で移動していたところ、川でやはり先に進めなくなります。盤の視点でも同じです」）により、
+     ・跡は、いちばん近い跡から先のうち、いまの所から淵をかすめずに真っすぐ行けるいちばん先の跡から辿る。もとはいちばん
+       近い跡から辿ったので、その跡が手勢のうしろ（十二歩ほど）にあると、手勢は一度うしろへ戻り、道を引き直すたびに
+       橋の上で前後に行き来して進めなかった
+     ・跡と跡のあいだ（跡は十八歩ごとにしか残らない）や、跡から座への筋が淵をかすめるなら、跡を使わず野の道（橋・浅瀬を
+       通る道。battle/route.js。淵をかすめぬよう繕ってある）を引く
+   淵を跨ぐかは、三歩ごとに見る（battle/route.js 淵をかすめる）。もとは筋を八つに割って九つの点だけを見たので、
+   橋の袂の脇の細い淵の角を拾ったり拾わなかったりして、道を引いたり捨てたりを一刻みごとに繰り返した */
+const 淵を跨ぐ = (x0, y0, x1, y1) => 淵をかすめる(x0, y0, x1, y1);
 function 従う道(c, 親, tx, ty) {
   const T = 親.trail || [];
   let k0 = -1, bd = 1e9;
   for (let k = 0; k < T.length; k++) { const d = Math.hypot(T[k].x - c.x, T[k].y - c.y); if (d < bd) { bd = d; k0 = k; } }
   const 末 = { x: tx, y: ty, r: 8, 末: true };
-  if (k0 >= 0 && bd < 120) return [...T.slice(k0).map((p) => ({ x: p.x, y: p.y, r: 12 })), 末];
+  if (k0 >= 0 && bd < 120) {
+    let k1 = k0;
+    for (let j = T.length - 1; j > k0; j--) if (!淵をかすめる(c.x, c.y, T[j].x, T[j].y)) { k1 = j; break; }
+    const 跡道 = [...T.slice(k1).map((p) => ({ x: p.x, y: p.y, r: 12 })), 末];
+    let 前 = { x: c.x, y: c.y }, 良い = true;
+    for (const p of 跡道) { if (淵をかすめる(前.x, 前.y, p.x, p.y)) { 良い = false; break; } 前 = p; }
+    if (良い) return 跡道;
+  }
   const 道 = 野の道(c.x, c.y, tx, ty);
-  return 道 && 道.length ? [...道.map((p) => ({ x: p.x, y: p.y, r: Math.min(p.r || 40, 12) })), 末] : null;
+  return 道 && 道.length ? [...道.slice(0, -1).map((p) => ({ x: p.x, y: p.y, r: Math.min(p.r || 40, 12) })), 末] : null;
+}
+/* 座が淵の中なら（上司の隊が岸に立ち、手勢の座がその前の水の上に来たとき）、座から上司の隊のほうへ戻って、淵でない
+   いちばん近い所を行き先とする（淵の中の座へは行き着けず、水際で「上司の隊に付く」のまま立ち尽くしていた） */
+function 淵でない座(tx, ty, 元x, 元y) {
+  if (terrainAt(tx, ty) !== "deep") return [tx, ty];
+  const L = Math.hypot(元x - tx, 元y - ty), n = Math.ceil(L / 4);
+  for (let s = 1; s <= n; s++) { const x = tx + (元x - tx) * s / n, y = ty + (元y - ty) * s / n; if (terrainAt(x, y) !== "deep") return [x, y]; }
+  return [tx, ty];
 }
 export function 手勢を親に付ける(b, c) {
   if (!b || !c || !c.手勢 || c.dead || c.destroyed || c.routed || c.withdraw) return;
@@ -368,7 +392,8 @@ export function 手勢を親に付ける(b, c) {
      すると、上司の隊が止まるときに座を五十歩あまり行き過ぎた。〇.一五秒で、歩むあいだの遅れは六歩ほど）。座から
      追い付きの隔 より離れていれば、追い付きの倍の足で追う（battle/engine.js が c.追い付き を隊の足に掛ける）。もとは同じ足で
      座を追うだけだったので、一度離されると追い付けなかった */
-  const 先 = 親の足 > 2 ? 先回りの秒 : 0, tx = 座x + (親.速 ? 親.速.x : 0) * 先, ty = 座y + (親.速 ? 親.速.y : 0) * 先;
+  const 先 = 親の足 > 2 ? 先回りの秒 : 0;
+  const [tx, ty] = 淵でない座(座x + (親.速 ? 親.速.x : 0) * 先, 座y + (親.速 ? 親.速.y : 0) * 先, 元x, 元y);
   /* 座から 遠い追い付きの隔 より離れていれば 遠い追い付きの倍 で追う（遊ぶ人の申し出：「盤にしても自隊だけ遅れており変です」。
      背中越しで方向キーを放すと手勢がその場に留まって上司の隊に置いていかれ、そののち盤の視点へ昇ると座から四十m あまり
      離れており、一.六倍の足では盤の三秒（微速で三十秒ほど）遅れて見えた）。追い付きの倍は、背中越しで静まって付いて歩む
@@ -385,6 +410,9 @@ export function 手勢を親に付ける(b, c) {
       if (!c.wp || !c.wp.length || b.t - (c.従い道刻 == null ? -99 : c.従い道刻) > 6) {
         c.wp = 従う道(c, 親, tx, ty); c.従い道刻 = b.t;
       } else if (c.wp[c.wp.length - 1].末) c.wp[c.wp.length - 1] = { x: tx, y: ty, r: 8, 末: true };
+    } else if (c.wp && c.wp.length && c.wp[0].回り) {
+      /* 淵の窪みから回り出る道（battle/engine.js 淵の窪みから回り出る）は、辿り終えるまで捨てない。末は上司の座へ改める */
+      if (c.wp[c.wp.length - 1].末) c.wp[c.wp.length - 1] = { x: tx, y: ty, r: 8, 末: true };
     } else c.wp = null;
     if (c.wp && c.wp.length) { c.tx = c.wp[0].x; c.ty = c.wp[0].y; } else { c.tx = tx; c.ty = ty; }
   } else if (c.従い) {
