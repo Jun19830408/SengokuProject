@@ -20,7 +20,7 @@ import { 効果を鳴らす, 兵の音を掛ける, 効果を止める, 音の�
 import "../hitori/tsunagi.js";
 /* 一人働きの背中越しの視点（試し）。左下の釦で、盤の代わりに与平の背中越しに描く。与平は自分で動かす
    （札と釦は hitori/SenakaFuda.jsx。与平の動きと突き合いは hitori/senaka.js） */
-import { 背中を始める, 背中を描く, 与平の今, 背中の速さ, 与平の組を選ぶ, 寄った所の組, 歩の尺 } from "../hitori/senaka.js";
+import { 背中を始める, 背中を描く, 与平の今, 背中の速さ, 与平の組を選ぶ, 寄った所の組, 歩の尺, 寄りで動ける境 } from "../hitori/senaka.js";
 import SenakaFuda from "../hitori/SenakaFuda.jsx";
 import { 手勢を組む } from "../hitori/tezei.js";
 
@@ -71,8 +71,10 @@ export function BattleScreen({ ctx, land, onEnd }) {
      「通常のキャンペーンモードでも、一人モードと同じような視点まで拡大できるとさらに迫力が増す」）。
      盤をいちばん寄せた所から、さらに寄せる（ピンチ・車）と地へ降り、引けば盤へ昇る。
        降りRef … { u（〇＝盤・一＝地）, 的（釦で降りる・昇るときの行き先。指や車で動かすあいだは null）,
-                   盤（降り始めた盤の写し：真ん中・倍・向き・傾き。hitori/senaka.js 降りの写し） }
+                   盤（降り始めた盤の写し：真ん中・倍・向き・傾き。hitori/senaka.js 降りの写し）,
+                   与平の所（前のコマの与平の盤の所。下の 寄りの途中でも写しが与平に付く） }
        降り段 … null（盤）・"途中"・"地"。札（hitori/SenakaFuda.jsx）は途中から出して指と車を受け、名札や釦は地で出す
+                 （寄りの途中でも、地に近く動けるあいだは出す。下の 寄りで動ける）
      一人働きなら与平（物頭なら預かる隊の組）のうしろへ降りる。ふだんの合戦なら、盤の真ん中にいちばん近い組の
      うしろへ降りて見物する（見るだけ。下知はこれまでどおり右の欄から） */
   const 降りRef = useRef(null);
@@ -99,7 +101,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
   }
   /* 地に降りきって、自分の身で戦っている（足軽・物頭）か。ふだんの合戦の見物は含めない（見るだけで、
      速さも下知もふだんどおり）。撮る道具の覗き口（window.__背中）で、ふだんの合戦に与平を立てたときも含める */
-  const 地の身 = !!(背中 && 背中Ref.current && 背中Ref.current.身分 !== "見物");
+  /* 寄りの途中で動けるあいだ（hitori/senaka.js 寄りで動ける境）も、地に降りきったときと同じく札（方向キー・釦・名札）を出す */
+  const 寄りで動ける = !!(降り段 === "途中" && 背中Ref.current && 背中Ref.current.寄りで動ける);
+  const 地の身 = !!((背中 || 寄りで動ける) && 背中Ref.current && 背中Ref.current.身分 !== "見物");
   /* 速さの縛り（停止と微速だけ）。遊ぶ人の申し出：「視点を盤にしたときはスピードを速いものも選べるように。一人視点では
      微速のみのままで」。もとは一人働きの合戦なら盤の視点でも縛っていた。いまは背中越し（自分の身で戦っている）の
      あいだだけ縛り、盤の視点では一人働きの合戦でも低速・通常・早送りを選べる。盤と背中越しのあいだ（降り昇りの途中。
@@ -531,16 +535,36 @@ export function BattleScreen({ ctx, land, onEnd }) {
         const 地 = 背中Ref.current, 降り2 = 降りRef.current, u = 降り2 ? 降り2.u : 1;
         const 盤を描く = () => drawBattle(cv.getContext("2d"), b, selRef.current, terrainRef.current, camRef.current, W, H, dpr, allRef.current, 跡Ref.current, 城Ref.current, 斜め地, 区Ref.current);
         const 止め = sp === 0 || b.phase !== "fight";
-        if (地 && u < 0.35) {
+        if (地 && u < 寄りで動ける境) {
           盤を描く();
           const 板 = 板Ref.current || (板Ref.current = document.createElement("canvas"));
           if (板.width !== cv.width || 板.height !== cv.height) { 板.width = cv.width; 板.height = cv.height; }
           背中を描く(板.getContext("2d"), b, 地, W, H, dpr, ts / 1000, 止め, 降り2, terrainRef.current, 地版Ref.current);
-          const g2 = cv.getContext("2d"), v = Math.max(0, Math.min(1, u / 0.35));
+          const g2 = cv.getContext("2d"), v = Math.max(0, Math.min(1, u / 寄りで動ける境));
           g2.save(); g2.setTransform(1, 0, 0, 1, 0, 0); g2.globalAlpha = v * v * (3 - 2 * v); g2.drawImage(板, 0, 0); g2.restore();
         } else if (地) 背中を描く(cv.getContext("2d"), b, 地, W, H, dpr, ts / 1000, 止め, 降り2 && u < 1 ? 降り2 : null, terrainRef.current, 地版Ref.current);
         /* 背中越しの地（起伏・川の水面）は、盤の地の画（terrainRef）と高さの図から描く（hitori/chi_gl.js） */
         else 盤を描く();
+        /* 寄りの途中でも写しが与平に付くように、降り始めの盤の写しの真ん中（降りの写しの盤の側の芯）と盤の写し（camRef）の
+           真ん中を、与平に付けて動かす。遊ぶ人の申し出：「添付の視点のときにもコントローラーで動かせるといいなと思います」
+           （hitori/senaka.js 寄りで動ける境）。もとは降り始めた所に据えたままだったので、背中越しで歩いたのちに少し引くと、写しが
+           降り始めた所のほうへ寄り、与平が画の外へ外れていった。
+             ・地に降りきっているあいだは、与平を盤の真ん中に据える所（釦で降りるときと同じ）に据え直す（盤のよそを寄せて
+               降りてきても、引けば与平のまわりを見下ろす。地では盤の写しは画に効かないので、据え直しても画は跳ばない）
+             ・寄りの途中は、与平が動いたぶんだけ動かす（画が跳ばない）
+           盤へ昇りきれば、盤は与平のいるあたりを映す。一人働き（足軽・物頭）だけ。見物（ふだんの合戦）は、これまでどおり
+           降りた所に据える */
+        if (地 && 降り2 && 地.身分 !== "見物") {
+          const 今 = 与平の今(地);
+          if (今 && u >= 1) {
+            const 真 = 真ん中に据える(今.x, 今.y);
+            camRef.current.x = 真.x; camRef.current.y = 真.y; 降り2.盤.x = 真.x; 降り2.盤.y = 真.y;
+          } else if (今 && 降り2.与平の所) {
+            const dx = 今.x - 降り2.与平の所.x, dy = 今.y - 降り2.与平の所.y;
+            if (dx || dy) { 降り2.盤.x += dx; 降り2.盤.y += dy; camRef.current.x += dx; camRef.current.y += dy; }
+          }
+          if (今) 降り2.与平の所 = { x: 今.x, y: 今.y };
+        }
         /* 一コマを描くのに要った時（直近六十コマ）。重さを測るための覗き窓 */
         if (typeof window !== "undefined") {
           const 刻ら = window.__描きの刻 || (window.__描きの刻 = []);
@@ -736,6 +760,9 @@ export function BattleScreen({ ctx, land, onEnd }) {
     };
     /* いまの背中越しの態（与平・写し・視点の回し）。試し（tests/shiten.cjs）が覗く。遊びには使わない */
     window.__背中の態 = () => 背中Ref.current;
+    /* 降り始めの盤の写し（降りの写しの盤の側の芯）と盤の写しの真ん中を、試しが覗く（寄りの途中でも写しが与平に付くかを
+       確かめる。上の 寄りの途中でも写しが与平に付く）。遊びには使わない */
+    window.__降りの盤 = () => (降りRef.current ? { ...降りRef.current.盤, 盤x: camRef.current.x, 盤y: camRef.current.y } : null);
     /* 盤から地へ降りる途中を、撮る道具・試しが据える（u：〇＝盤・一＝地）。降りていなければ、いまの盤から降り始める */
     window.__降り = (u) => {
       if (u === undefined) return 降りRef.current ? 降りRef.current.u : 0;
@@ -2233,7 +2260,7 @@ export function BattleScreen({ ctx, land, onEnd }) {
               {...視点の釦の手当て /* 指が触れた時に替える（上の 視点の釦の手当て。ほかの指を置いたままでも効く） */}><b>{降り段 ? "盤" : "人"}</b>{降り段 ? "盤の視点" : "背中の視点"}</div>}
             {/* 与平の札と釦（名札・体力・気力・方向キー・突く／受ける／駆ける・討死の札）。左下の釦より下に重ねる */}
             {降り段 && 背中Ref.current && (
-              <SenakaFuda 態={背中Ref.current} b={bRef.current} 段={降り段} 止め={bRef.current.phase !== "fight" ? "段" : speed === 0 ? "停止" : ""}
+              <SenakaFuda 態={背中Ref.current} b={bRef.current} 段={寄りで動ける ? "地" : 降り段} 止め={bRef.current.phase !== "fight" ? "段" : speed === 0 ? "停止" : ""}
                 on寄り={(k) => zoomAt(k)} onLeave={釦で昇る} />
             )}
             {wide && (

@@ -7,9 +7,12 @@
      一、降りの写し：u＝〇では、盤の真ん中の点を、盤と同じ大きさ（真ん中で一歩が盤の倍の画素）・同じ向き
          （盤の上の方角）・同じ傾き（斜めの縦の縮み＝俯きの sin）で見る。u＝一では背中越しの写しそのもの。
          あいだは、目の高さが u につれて下がっていく（跳ばない）。目線はいつも見る点に届く
-     二、降りてくる途中は、与平も敵の掛かりも止まる（指を置いても動かない）。描く手続きは最後まで通る
+     二、降りてくる途中は、盤に近い所（hitori/senaka.js 寄りで動ける境 より下）では与平も敵の掛かりも止まる。地に近ければ
+         （境より上）、背中越しと同じく方向キーで動き、前へ押せばいま描く写しの前へ歩む。描く手続きは最後まで通る
      三、一人働き（足軽）：盤を車で寄せきると降り始め（札は指と車を受けるだけ）、さらに寄せると地に着く
          （名札・釦が出る）。引けば昇って盤へ戻る。盤へ戻ってまた降りても、与平の居所・体力はそのまま
+     五、一人働き（足軽）：寄りの途中でも、地に近ければ札（名札・釦）が出て方向キーで歩め、写しは与平に付く（降り始めの
+         盤の写しの真ん中も盤の写しの真ん中も、与平が歩んだぶんだけ動く）。盤に近ければ札を出さず、与平も動かない
      四、ふだんの合戦（総大将）：寄せきると、真ん中にいちばん近い組のうしろへ降りて見物する（見るだけの札。
          突くの釦は無い）。下知（一括命令）も速さの釦も、ふだんどおり使える。引けば盤へ戻る
    を確かめる。
@@ -36,6 +39,8 @@ const H = require(path.join(__dirname, '..', 'build', 'harness.cjs'));
 const { createRoot, act, React, BattleScreen } = H;
 
 const 咎 = [];
+const 角 = (d) => { while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+const 度 = (r) => Math.round(r * 180 / Math.PI);
 const 確 = (名, 可, 添 = '') => { console.log(`  ${可 ? '○' : '★'} ${名}${添 ? '　' + 添 : ''}`); if (!可) 咎.push(名); };
 let 種 = 0x0A1B;
 Math.random = function () { 種 |= 0; 種 = (種 + 0x6D2B79F5) | 0; let t = Math.imul(種 ^ (種 >>> 15), 1 | 種);
@@ -79,8 +84,10 @@ const 仕立てる = (種名) => {
     確('目線はいつも見る点に届く', 届かぬ < 1e-6, `いちばん大きいずれ ${届かぬ.toExponential(1)}m`);
   }
 
-  console.log('\n── 二　降りてくる途中は、与平も敵の掛かりも止まり、描く手続きは最後まで通る');
+  console.log('\n── 二　降りてくる途中：盤に近い所では与平も敵の掛かりも止まり、地に近ければ方向キーで動く。描く手続きは最後まで通る');
   {
+    /* 遊ぶ人の申し出：「添付の視点のときにもコントローラーで動かせるといいなと思います」（寄りの途中で見下ろしているとき）。
+       盤の向き一（東から西を見る）で降りるので、寄りの途中の写しの前は、肩の写しの向き（北）と盤の上の方角（西）のあいだにある */
     const { b } = 仕立てる('oriru2');
     b.phase = 'fight';
     for (let k = 0; k < 40; k++) { b.t += 0.05; H.新絵状態を進める(b, 0, null); }
@@ -90,15 +97,31 @@ const 仕立てる = (種名) => {
       beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {}, closePath() {}, arc() {}, ellipse() {}, rect() {}, fill() {}, stroke() {}, clip() {},
       fillRect() {}, strokeRect() {}, drawImage() {}, setLineDash() {}, createLinearGradient: 鈍, createRadialGradient: 鈍, measureText: () => ({ width: 10 }), fillText() {} };
     const 我盤 = H.与平の今(態);
-    const 降り = { u: 0.5, 盤: { x: 我盤.x + 40, y: 我盤.y - 30, s: 7.2, 向き: 0, 傾き: 0.58 } };
+    const 降り = { u: 0.5, 盤: { x: 我盤.x + 40, y: 我盤.y - 30, s: 7.2, 向き: 1, 傾き: 0.58 } };
     let 今 = 1, 咎め = null, r = null;
     const x0 = 態.我.x, z0 = 態.我.z, t0 = 態.t;
     態.入.jy = -1;
-    try { for (let k = 0; k < 30; k++) { 今 += 1 / 60; 降り.u = 0.2 + k * 0.02; r = H.背中を描く(筆, b, 態, 960, 540, 1, 今, false, 降り); } } catch (e) { 咎め = e.message; }
+    try { for (let k = 0; k < 8; k++) { 今 += 1 / 60; 降り.u = 0.2 + k * 0.02; r = H.背中を描く(筆, b, 態, 960, 540, 1, 今, false, 降り); } } catch (e) { 咎め = e.message; }
+    確(`盤に近い所（u〇.二〜〇.三四。寄りで動ける境 ${H.寄りで動ける境} より下）は、方向キーを押しても与平は動かない`, !咎め && Math.hypot(態.我.x - x0, 態.我.z - z0) < 1e-9 && !態.寄りで動ける, 咎め || '');
+    確('盤に近い所は、与平の刻も進まない（敵の掛かりも止まる）', 態.t === t0);
+    try { for (let k = 0; k < 30; k++) { 今 += 1 / 60; 降り.u = 0.4 + k * 0.0131; r = H.背中を描く(筆, b, 態, 960, 540, 1, 今, false, 降り); } } catch (e) { 咎め = e.message; }
+    確('途中を描けた（u＝〇.二〜〇.七八）', !咎め && r && r.描いた > 0, 咎め || `一コマに ${r.描いた}人`);
+    確('地に近い所（u〇.四〜〇.七八）は、背中越しと同じく、方向キーで与平が動き、刻も進む', Math.hypot(態.我.x - x0, 態.我.z - z0) > 0.3 && 態.t > t0 && 態.寄りで動ける === true,
+      `${Math.hypot(態.我.x - x0, 態.我.z - z0).toFixed(2)}m 動いた`);
+    /* u を〇.五五に据えたまま前へ押せば、いま描く写しの前（態.写しの角）へ歩む。肩の写しの向き（態.cam.a）とは違う */
+    const x1 = 態.我.x, z1 = 態.我.z;
+    for (let k = 0; k < 30; k++) { 今 += 1 / 60; 降り.u = 0.55; H.背中を描く(筆, b, 態, 960, 540, 1, 今, false, 降り); }
+    const a = 態.写しの角, dx = 態.我.x - x1, dz = 態.我.z - z1, L = Math.hypot(dx, dz), 振れ = Math.abs(角(Math.atan2(dz, dx) - a));
+    確('寄りの途中で前へ押せば、いま描く写しの前（画の上）へ歩む（肩の写しの向きへではない）', L > 0.3 && 振れ < 10 * Math.PI / 180 && Math.abs(角(a - 態.cam.a)) > 10 * Math.PI / 180,
+      `半秒で${L.toFixed(2)}m・歩んだ向きと写しの前の差 ${度(振れ)}度・写しの前と肩の写しの向きの差 ${度(角(a - 態.cam.a))}度`);
     態.入.jy = 0;
-    確('途中を三十コマ描けた（u＝〇.二〜〇.七八）', !咎め && r && r.描いた > 0, 咎め || `一コマに ${r.描いた}人`);
-    確('途中は、方向キーを押しても与平は動かない', Math.hypot(態.我.x - x0, 態.我.z - z0) < 1e-9);
-    確('途中は、与平の刻も進まない（敵の掛かりも止まる）', 態.t === t0);
+    /* 盤のよそ（与平から六百歩）を寄せて降りてくる途中は、境より地に近くても止める（与平が見る所から遠く、まわりの兵と突き合えない） */
+    const 態2 = H.背中を始める(b, null, '足軽'), x2 = 態2.我.x, z2 = 態2.我.z, 我盤2 = H.与平の今(態2);
+    const 遠い降り = { u: 0.5, 盤: { x: 我盤2.x + 600, y: 我盤2.y, s: 7.2, 向き: 0, 傾き: 0.58 } };
+    態2.入.jy = -1;
+    for (let k = 0; k < 20; k++) { 今 += 1 / 60; H.背中を描く(筆, b, 態2, 960, 540, 1, 今, false, 遠い降り); }
+    態2.入.jy = 0;
+    確('盤のよそから降りてくる途中（与平が見る所から遠い）は、境より地に近くても与平は動かない', Math.hypot(態2.我.x - x2, 態2.我.z - z2) < 1e-9 && !態2.寄りで動ける);
   }
 
   console.log('\n── 三　一人働き（足軽）：車で寄せきると降り、さらに寄せると地に着く。引けば盤へ戻る');
@@ -156,6 +179,39 @@ const 仕立てる = (種名) => {
     確('速さの釦もふだんどおり（どれも押せる）', [...document.querySelectorAll('.hayasa button')].every((x) => !x.disabled));
     let n = 0; while (段() !== '盤' && n++ < 60) await 車(札(), 1, false);
     確('引けば盤へ戻る', 段() === '盤', `${n}目盛り`);
+    await act(async () => { root.unmount(); }); await flush();
+  }
+
+  console.log('\n── 五　一人働き（足軽）：寄りの途中でも、地に近ければ札が出て方向キーで歩め、写しは与平に付く');
+  {
+    /* 遊ぶ人の申し出：「添付の視点のときにもコントローラーで動かせるといいなと思います」。合戦の画面の一コマ
+       （requestAnimationFrame）を刻〇.〇五秒ずつ回す（tests/hayasa と同じ） */
+    const { b } = 仕立てる('oriru5');
+    const ctx = { b, pName: '織田家', eName: '今川家', pColor: '#2F5D8C', eColor: '#B0483C', place: '桶狭間', mode: 'field', 一人: { 身分: '足軽' } };
+    const root = createRoot(document.getElementById('r'));
+    await act(async () => { root.render(React.createElement(BattleScreen, { ctx, land: true, onEnd: () => {} })); });
+    await flush();
+    let 刻 = 30000;
+    const 回す = async (n) => { for (let i = 0; i < n; i++) await act(async () => { const cbs = [...rafMap.values()]; rafMap.clear(); for (const cb of cbs) cb((刻 += 50)); }); };
+    const 鍵 = async (種) => { await act(async () => { window.dispatchEvent(new dom.window.KeyboardEvent(種, { code: 'ArrowUp', key: 'ArrowUp', bubbles: true })); }); };
+    const 降りを据える = async (u) => { await act(async () => { window.__降り(u); }); await flush(); await 回す(3); await flush(); };
+    await 降りを据える(1);
+    確('地に降りきると、名札と突くの釦が出る', !!document.querySelector('.snk-me') && !!document.querySelector('.snk-tsuku'));
+    await 降りを据える(0.6);
+    確('寄りの途中でも、地に近ければ（u〇.六）名札と突くの釦が出る（盤の真ん中から降りても、地に降りきれば写しを与平の上に据え直すので、引いても与平のまわりを見下ろす）', window.__背中の態().寄りで動ける === true && !!document.querySelector('.snk-me') && !!document.querySelector('.snk-tsuku'));
+    const 前 = window.__背中(), 盤前 = window.__降りの盤();
+    await 鍵('keydown'); await 回す(20); await 鍵('keyup'); await 回す(1);
+    const 後 = window.__背中(), 盤後 = window.__降りの盤(), dx = 後.x - 前.x, dy = 後.y - 前.y;
+    確('寄りの途中で方向キーを押せば、与平が歩む', Math.hypot(dx, dy) > 0.5, `${(Math.hypot(dx, dy) * H.歩の尺).toFixed(2)}m`);
+    確('写しは与平に付く（降り始めの盤の写しの真ん中も、盤の写しの真ん中も、与平が歩んだぶんだけ動く）',
+      Math.abs(盤後.x - 盤前.x - dx) < 1e-6 && Math.abs(盤後.y - 盤前.y - dy) < 1e-6 && Math.abs(盤後.盤x - 盤前.盤x - dx) < 1e-6 && Math.abs(盤後.盤y - 盤前.盤y - dy) < 1e-6,
+      `与平 (${dx.toFixed(2)}, ${dy.toFixed(2)})歩・降り始めの盤 (${(盤後.x - 盤前.x).toFixed(2)}, ${(盤後.y - 盤前.y).toFixed(2)})歩・盤 (${(盤後.盤x - 盤前.盤x).toFixed(2)}, ${(盤後.盤y - 盤前.盤y).toFixed(2)})歩`);
+    await 降りを据える(0.2);
+    確('盤に近い所（u〇.二）では、名札も釦も出さない（札は指と車を受けるだけ）', !document.querySelector('.snk-me') && !document.querySelector('.snk-tsuku') && !!document.querySelector('.snk'));
+    const 前2 = window.__背中();
+    await 鍵('keydown'); await 回す(20); await 鍵('keyup');
+    const 後2 = window.__背中();
+    確('盤に近い所では、方向キーを押しても与平は動かない', Math.hypot(後2.x - 前2.x, 後2.y - 前2.y) < 1e-9);
     await act(async () => { root.unmount(); }); await flush();
   }
 
