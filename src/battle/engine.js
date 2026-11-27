@@ -273,6 +273,16 @@ function 門の列を見る(b, c) {
 /* 背中越しに率いる手勢を、方向キーで淵へ押し続けて入るまでの実の秒（下の stepBattle 水際）と、率いる手勢の淵の足の下限
    （上の 水馴れの足。与平が一人で渡る足 hitori/senaka.js 地の足 と同じ）。値は仮 */
 export const 押して淵へ入る秒 = 0.6, 率いる淵の足 = 0.25;
+/* 隊の野の足（盤の歩／盤の秒）。下の 隊の歩み の足のうち、地・押し合い・伸び・混み・下知によらぬもの（兵科・盤の広さ・天気・
+   士気・疲れ）。背中越しに手勢を率いるとき、与平の歩みをこの足までに抑える（hitori/senaka.js 与平を率いて歩ませる。
+   与平が手勢より速く歩めば、手勢の列のうしろに追い付いてしまう）。式は 隊の歩み の v と同じに保つこと */
+export function 隊の野の足(b, c) {
+  const 生 = (c.squads || []).filter((q) => q.men > 0);
+  const avg = 生.length ? 生.reduce((s, q) => s + ARM_STATS[q.type].speed * q.men, 0) / Math.max(1, corpsMen(c)) : 30;
+  const 遅 = 生.length ? Math.min(...生.map((q) => ARM_STATS[q.type].speed)) : avg;
+  return Math.min(avg, 遅 * 1.12) * fieldScale() * ((b && b.足の手加減) || 1) * WEATHER[(b && b.weather) || "晴"].speed
+    * (0.6 + (c.morale == null ? 70 : c.morale) / 250) * (1 - (c.fatigue || 0) / 240);
+}
 
 /* 淵（深い川）は、決めてからでなければ踏み込まない（GDD 8.1）。
 
@@ -1521,13 +1531,18 @@ export function stepBattle(b, dt) {
     /* 背中越しに率いている手勢は、足の慣性と向き直りを実の秒で効かせる（field.js 率いの刻比）。率いていなければ null。
        向きを保つ（hitori/tezei.js 手勢へ下知：写しの手前へ押したとき）なら、向き直らずに前を向いたまま下がる */
     const 率刻 = 率いの刻比(b, c), 向きを保つ = !!(率刻 && c.向きを保つ);
+    /* 与平に付く（hitori/tezei.js 手勢へ下知。遊ぶ人の答え：「案Aでいきましょう」）。背中越しに方向キーで与平を歩ませている
+       あいだ、手勢は与平の前の陣の所（c.tx）へ寄る。行き先は与平とともに一コマごとに動くので、ふだんの隊のように六歩のうちで
+       足を止めず（〇.六歩まで寄る）、残りの隔たりに見合う足（寄せ秒で寄り切る足。隊の足の 倍 まで）で歩む。向きは歩む向きでなく、
+       陣の向き（付く.向。写しの前）へ 付く.回り（実の秒で一秒の角）で回る */
+    const 付く = 率刻 && c.手勢 && c.与平に付く ? c.与平に付く : null, 歩み出す隔 = 付く ? 0.6 : 6;
     const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy);
-    if (!(dist > 6) || HOLD || (c.ambush && !c.revealed)) {
+    if (!(dist > 歩み出す隔) || HOLD || (c.ambush && !c.revealed)) {
       // 止まる隊の足は、すっと止まらず、少しずつ落ちる
       if (c.速) { c.速.x *= Math.max(0, 1 - dt / 0.4); c.速.y *= Math.max(0, 1 - dt / 0.4); }
       c.静止t = (c.静止t || 0) + dt;             // 足を止めている刻（槍衾の条件）
     }
-    if (dist > 6 && !HOLD && !(c.ambush && !c.revealed)) {
+    if (dist > 歩み出す隔 && !HOLD && !(c.ambush && !c.revealed)) {
       c.静止t = 0;
       const terr = TERRAIN[c.門の列 && c.地 === "gate" ? "gateopen" : c.地];   // 列が開けた門は開いた門の足（上の 門の列を見る）
       const avgSpeed = c.squads.length ? c.squads.reduce((s, q) => s + ARM_STATS[q.type].speed * q.men, 0) / Math.max(1, corpsMen(c)) : 30;
@@ -1555,7 +1570,7 @@ export function stepBattle(b, dt) {
       /* 上司の隊について歩む手勢（hitori/tezei.js 手勢を親に付ける の c.従い）も待たない。十人から三百人の小さな隊で、組は隊に
          ぴたりと付いて追う（下の 追いつき）。待てば、座へ追い付くあいだに隊が組を待って足を落とし、盤の視点で自隊だけが
          遅れて見えた（遊ぶ人の申し出：「盤にしても自隊だけ遅れており変です」） */
-      const lag = (engaged || c.withdraw || c.routed || (c.手勢 && c.従い)) ? 1
+      const lag = (engaged || c.withdraw || c.routed || (c.手勢 && c.従い) || 付く) ? 1
         : far <= room ? 1 : far > room * 1.8 ? 0.12 : 0.55;
       /* 隊は、いちばん遅い兵科の足に合わせて進む。
 
@@ -1602,13 +1617,16 @@ export function stepBattle(b, dt) {
         const 外 = !inLayer(MAP, o, c.x, c.y, MAP.t + o.masu + MAP.t + 8);
         if (外) 寄せ道 = 0.6;
       }
-      const v = 隊の足 * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, c.地, terr.speed, b) * W.speed * chg * (engaged ? 0.35 : 1)
+      const v0 = 隊の足 * fieldScale() * (b.足の手加減 || 1) * 水馴れの足(c, c.地, terr.speed, b) * W.speed * chg * (engaged ? 0.35 : 1)
         * (0.6 + c.morale / 250) * (1 - c.fatigue / 240) * lag * 寄せ道 * 混み
         * (c.後退中 ? 0.62 : 1) * (向きを保つ ? 0.6 : 1)
         /* 背中越しに率いている手勢が詰まった向きへ押すときの押し込み（hitori/tezei.js 手勢へ下知 の c.押し込み）と、盤で上司の
            隊について歩む手勢の追い付き（hitori/tezei.js 手勢を親に付ける の c.追い付き）。遊ぶ人の申し出：「敵と戦うと
            プレイヤー自体が身動きできなくなったり」「盤にしても自隊だけ遅れており変です」 */
         * (率刻 && c.押し込み > 0 ? c.押し込み : 1) * (c.手勢 && c.従い && c.追い付き > 0 ? c.追い付き : 1);   // 追い付きは、背中越しで静まって付いて歩むときも
+      /* 与平に付く手勢（上の 付く）は、陣の所までの隔たりを 付く.寄せ秒（実の秒）で寄り切る足に抑える（陣の所の手前で
+         ゆるやかに止まる）。遅れていれば 付く.倍 まで足を上げて追い付く */
+      const v = 付く ? Math.min(v0 * (付く.倍 || 1), dist / Math.max(1e-6, (付く.寄せ秒 || 0.35) * 率刻)) : v0;
       /* 行き過ぎない（GDD 8.3）。
 
          歩幅を残りの隔たりで頭打ちにしていなかった。足は毎秒三十歩ほど、刻みは
@@ -1855,7 +1873,7 @@ export function stepBattle(b, dt) {
          敵のほうへ向き直ってしまう。兵がそちらへ顔を向けるのはよいが、陣ごと
          向き直るには「転回」の下知が要る（tests/sokumen.cjs）。 */
       /* 背中越しに率いている手勢は、実の秒で一秒に二.四（九十度をおよそ〇.七秒。値は仮）。向きを保つなら向き直らない */
-      if (!c.squads.some((q) => q.engaged) && !向きを保つ) {
+      if (!c.squads.some((q) => q.engaged) && !向きを保つ && !付く) {
         const want = Math.atan2(dy, dx);
         const diff = ((want - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
         const 回 = 率刻 ? 2.4 * (c.統率の効き ? c.統率の効き.回り : 1) / 率刻 : 1.4;   // 率いている手勢は統率で遅くなる（hitori/tezei.js 統率の効き）
@@ -1879,6 +1897,14 @@ export function stepBattle(b, dt) {
         c.陣向き = c.facing;
         for (const q of c.squads) q.cohesion = Math.max(0, q.cohesion - 1.3 * dt);
       }
+    }
+    /* 与平に付く手勢（上の 付く）は、歩んでいても止まっていても、陣の向き（写しの前）へ回る。組が一つなら陣の向きも
+       ともに回す（組が二つ以上なら、陣の組み直しは hitori/tezei.js が〇.六秒に一度まで行う） */
+    if (付く && 付く.向 != null) {
+      const diff = ((付く.向 - c.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      const 回 = (付く.回り || 2.4) / 率刻;
+      c.facing += clamp(diff, -回 * dt, 回 * dt);
+      if (c.squads.filter((q) => q.men > 0).length <= 1) c.陣向き = c.facing;
     }
     placeSquads(c, false);
     // 「移動」は行き先へ進む命令。近くの敵に食いつくのは接戦・突撃・前進・射撃のとき。

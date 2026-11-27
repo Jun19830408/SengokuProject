@@ -19,9 +19,11 @@
      真ん中 … 知らせ（討ち取り・息が上がっている）、討死の札
    パソコンでは WASD か矢印キーで動き、J（または空白）で突く、K で受ける、Shift で駆ける。Q・E で視点を横に回す
    （右半分をマウスでなぞっても回る）。
-   五人長から三百人長（率いるとき）は、方向キーで手勢を動かし、三つの釦は一人のときと同じ突く・受ける・駆けるを手勢の全体で
+   五人長から三百人長（率いるとき）は、方向キーで与平を動かし（手勢は与平の前に陣を組んで付いてくる。hitori/tezei.js 手勢へ下知）、
+   三つの釦は一人のときと同じ突く・受ける・駆けるを手勢の全体で
    行う（突く（全体）・受ける（全体）・駆ける（全体）。hitori/senaka.js 手勢の突き合い）。四つ目の釦（L）で
-   一騎駆け（与平が手勢を離れて自分で戦う。一騎駆けの秒ののち手勢へ戻る。hitori/senaka.js 一騎駆け）。
+   一騎駆け（与平が手勢を離れて自分で戦う。駆けているあいだ同じ釦は「戻る」になり、押せばいつでも手勢へ戻る。一騎駆けの秒が
+   過ぎても戻る。hitori/senaka.js 一騎駆け・一騎駆けを終える）。
 
    盤の左下の「盤の視点」の釦（BattleScreen.jsx）は、この札の重なりより上に置かれている。
    与平の動きそのもの（歩み・突き・敵の掛かり）は hitori/senaka.js にある。
@@ -40,7 +42,7 @@
    見物（態.身分＝"見物"。ふだんの合戦で地へ降りたとき）は、見るだけの札（地の眺め・盤へ戻る釦）を出す。
    ========================================================================== */
 import React, { useEffect, useRef, useState } from "react";
-import { 突く, 受ける, 与平を立て直す, 持ち場の間, 合戦の勲功, 手勢の倒し, 一騎駆け, 率いている, 一騎駆けの残り, 一騎駆けの秒,
+import { 突く, 受ける, 与平を立て直す, 持ち場の間, 合戦の勲功, 手勢の倒し, 一騎駆け, 一騎駆けを終える, 率いている, 一騎駆けの残り, 一騎駆けの秒,
   視を回す, 視を戻す, 視を回しているか } from "./senaka.js";
 import { 下知の名 } from "./tezei.js";
 
@@ -94,7 +96,7 @@ const 型 = `
 .snk-ukeru{width:76px;height:76px;right:calc(max(12px,env(safe-area-inset-right)) + 116px);bottom:max(10px,env(safe-area-inset-bottom));font-size:14.5px}.snk-ukeru i{font-size:18px}
 .snk-kakeru{width:66px;height:66px;right:calc(max(12px,env(safe-area-inset-right)) + 84px);bottom:calc(max(10px,env(safe-area-inset-bottom)) + 110px);font-size:13px}.snk-kakeru i{font-size:16px}
 .snk-ikki{width:66px;height:66px;right:max(12px,env(safe-area-inset-right));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 124px);font-size:12.5px;letter-spacing:.02em}.snk-ikki i{font-size:16px}
-.snk-ikki.on{background:radial-gradient(circle at 50% 35%,rgba(150,118,56,.96),rgba(52,40,20,.96));cursor:default}
+.snk-ikki.on{background:radial-gradient(circle at 50% 35%,rgba(150,118,56,.96),rgba(52,40,20,.96))}
 .snk-modosu{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 202px);
   font:inherit;font-size:13px;font-weight:700;letter-spacing:.04em;color:#F4F1E8;padding:6px 12px 7px;cursor:pointer;touch-action:none}
 .snk-modosu.low{bottom:max(10px,env(safe-area-inset-bottom))}
@@ -163,7 +165,7 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
       if (e.code === "KeyJ" || e.code === "Space") { if (!e.repeat) 突く(態); e.preventDefault(); }
       if (e.code === "KeyK") { if (!e.repeat) 受ける(態, true); }
       if (e.key === "Shift") 入.駆 = true;
-      if (e.code === "KeyL") { if (!e.repeat) 一騎駆け(態); e.preventDefault(); }
+      if (e.code === "KeyL") { if (!e.repeat) { if (態.一騎) 一騎駆けを終える(態); else 一騎駆け(態); } e.preventDefault(); }   // 駆けているあいだにもう一度押せば戻る
     };
     const up = (e) => {
       if (視の鍵[e.code]) { 入.keys.delete(視の鍵[e.code]); return; }
@@ -173,7 +175,9 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
       if (e.code === "KeyK") 受ける(態, false);
       if (e.key === "Shift") 入.駆 = false;
     };
-    const 離す = () => { 入.keys.clear(); 入.受 = false; 入.駆 = false; };
+    /* 札が外れる（盤の視点へ昇りきる）ときも、方向キーの輪の向きを消す。指を置いたまま昇ると、札が外れて指を離した知らせが
+       届かず、地へ戻ったとき左半分に触れるまで、その向きへ歩み続けていた */
+    const 離す = () => { 入.keys.clear(); 入.受 = false; 入.駆 = false; 入.jx = 0; 入.jy = 0; };
     window.addEventListener("keydown", down); window.addEventListener("keyup", up); window.addEventListener("blur", 離す);
     return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); window.removeEventListener("blur", 離す); 離す(); };
   }, [態]);
@@ -347,7 +351,7 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
           {体力の筋("snk-gauge")}
           {気力の筋("snk-gauge")}
           <div className="kumi">{態.一騎
-            ? (態.一騎.様 === "戻る" ? "一騎駆け　手勢へ戻る途中" : `一騎駆け　残り${一騎駆けの残り(態)}秒で手勢へ戻る`)
+            ? `一騎駆け　残り${一騎駆けの残り(態)}秒（釦を押せば手勢へ戻る）`
             : 態.隊 && 態.隊.手勢
             ? `手勢 ${Math.round((態.隊.squads || []).reduce((a, q) => a + Math.max(0, q.men || 0), 0))}人を率いる（${態.隊.手勢}人から）・${下知の名(態.隊)}${手勢の倒し(態) ? `・手勢の討ち取り ${手勢の倒し(態)}` : ""}`
             : `${態.名}の組・背中の視点（試し）`}</div>
@@ -372,9 +376,10 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
         <div className="snk-hint nop"><div className="ring">✥</div>
           {態.率いる
             ? <p>左側に指を置くと<br />方向キーが出ます
-                <small>方向キーで手勢を動かす（与平はうしろに付く）。{卓 ? "J で突く、K で受ける、Shift で駆ける（どれも手勢の全体で）、L で一騎駆け" : "右の釦の突く・受ける・駆けるは、手勢の全体で行う"}</small>
-                <small>突く（全体）：前に敵がいる兵がいっせいに突く。受ける（全体）：押しているあいだ構えて受ける。手前へ押せば前を向いたまま下がる</small>
-                <small>一騎駆け：与平が手勢を離れて自分で戦う（{一騎駆けの秒}秒ののち手勢へ戻る）</small>
+                <small>方向キーで与平が動き、手勢は与平の前に陣を組んで付いてくる。{卓 ? "J で突く、K で受ける、Shift で駆ける（どれも手勢の全体で）、L で一騎駆け" : "右の釦の突く・受ける・駆けるは、手勢の全体で行う"}</small>
+                <small>陣は視点の前を向く。左右へ押せば前を向いたまま横へ、手前へ押せば下がる。陣の向きを変えるには視点を回す</small>
+                <small>突く（全体）：前に敵がいる兵がいっせいに突く。受ける（全体）：押しているあいだ構えて受ける</small>
+                <small>一騎駆け：与平が手勢を離れて自分で戦う（もう一度押せば戻る。{一騎駆けの秒}秒たてば自ら戻る）</small>
                 <small>{卓 ? "右側をマウスでなぞるか、Q・E で視点が回ります" : "右側をなぞると視点が回ります（方向キーを押さえたままでも）"}</small></p>
             : <p>左側に指を置くと<br />方向キーが出ます
                 <small>{卓 ? "パソコンでは WASD か矢印キーで動き、J で突く、K で受ける、Shift で駆けます" : "右の釦で突く・受ける・駆ける"}</small>
@@ -387,16 +392,19 @@ export default function SenakaFuda({ 態, b, 段 = "地", 止め, on寄り, onLe
         {率いている(態) ? <>
           {/* 率いるとき：三つの釦は一人のときと同じ突く・受ける・駆けるを、手勢の全体で行う（hitori/senaka.js 手勢の突き合い）。
               四つ目は一騎駆け（hitori/senaka.js） */}
-          <button type="button" className="snk-maru snk-ikki" aria-label={`一騎駆け（与平が手勢を離れて自分で戦う。${一騎駆けの秒}秒ののち手勢へ戻る）`}
+          <button type="button" className="snk-maru snk-ikki" aria-label={`一騎駆け（与平が手勢を離れて自分で戦う。もう一度押せば戻る。${一騎駆けの秒}秒たてば自ら戻る）`}
             onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); 一騎駆け(態); }}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); if (!e.repeat) 一騎駆け(態); } }}><span><i>⇗</i>一騎駆け</span></button>
           <button type="button" className={`snk-maru snk-kakeru${入.駆 ? " press" : ""}`} aria-label="駆ける（全体）（押しているあいだ手勢と与平が駆け足）" {...釦("駆")}><span><i>⇡</i>駆ける<b className="zen">全体</b></span></button>
           <button type="button" className={`snk-maru snk-ukeru${我.受 ? " press" : ""}`} aria-label="受ける（全体）（押しているあいだ手勢と与平が構えて受ける）" {...釦("受")}><span><i>◇</i>受ける<b className="zen">全体</b></span></button>
           <button type="button" className={`snk-maru snk-tsuku${突押 || 態.t - 我.突始 < 0.22 ? " press" : ""}`} aria-label="突く（全体）（前に敵がいる手勢の兵と与平がいっせいに突く）" {...釦("突")}><span><i>⟋</i>突く<b className="zen">全体</b></span></button>
         </> : <>
-          {/* 一騎駆けのあいだ：残りの秒（戻るあいだは「戻る」）。押しても何もしない */}
-          {態.一騎 && <div className="snk-maru snk-ikki on nop" role="status" aria-label={態.一騎.様 === "戻る" ? "一騎駆け・手勢へ戻る途中" : `一騎駆け・残り${一騎駆けの残り(態)}秒`}>
-            <span><i>⇗</i>{態.一騎.様 === "戻る" ? "戻る" : `残り${一騎駆けの残り(態)}秒`}</span></div>}
+          {/* 一騎駆けのあいだ：同じ釦が「戻る」になり、押せばいつでも手勢へ戻る（手勢が駆け寄って陣を組む。遊ぶ人の申し出：
+              「いつでも戻れるようにしたいです」「ボタンを増やさずに」）。残りの秒も出す */}
+          {態.一騎 && <button type="button" className="snk-maru snk-ikki on" aria-label={`手勢へ戻る（一騎駆けの残り${一騎駆けの残り(態)}秒）`}
+            onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); 一騎駆けを終える(態); }}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); if (!e.repeat) 一騎駆けを終える(態); } }}>
+            <span><i>⇙</i>戻る<b className="zen">残り{一騎駆けの残り(態)}秒</b></span></button>}
           <button type="button" className={`snk-maru snk-kakeru${入.駆 ? " press" : ""}`} aria-label="駆ける（押しているあいだ走る）" {...釦("駆")}><span><i>⇡</i>駆ける</span></button>
           <button type="button" className={`snk-maru snk-ukeru${我.受 ? " press" : ""}`} aria-label="受ける（押しているあいだ構えて防ぐ）" {...釦("受")}><span><i>◇</i>受ける</span></button>
           <button type="button" className={`snk-maru snk-tsuku${突押 || 態.t - 我.突始 < 0.22 ? " press" : ""}`} aria-label="突く" {...釦("突")}><span><i>⟋</i>突く</span></button>
