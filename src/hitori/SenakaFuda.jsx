@@ -16,7 +16,7 @@
      右半分 … なぞれば視点が回る（横になぞれば与平のまわりを回り、縦になぞれば見下ろす角が変わる。hitori/senaka.js 視を回す）。
               方向キーを押さえたまま、右半分をなぞってもよい。回していれば、右の釦の上に「視点を戻す」が出る
      右下   … 突く（押す）／受ける（押しているあいだ）／駆ける（押しているあいだ）
-     真ん中 … 知らせ（討ち取り・息が上がっている）、討死の札
+     真ん中 … 知らせ（与平の討ち取り・手勢の討ち取り（縁が青）・息が上がっている）、討死の札
    パソコンでは WASD か矢印キーで動き、J（または空白）で突く、K で受ける、Shift で駆ける。Q・E で視点を横に回す
    （右半分をマウスでなぞっても回る）。
    五人長から三百人長（率いるとき）は、方向キーで与平を動かし（手勢は与平の前に陣を組んで付いてくる。hitori/tezei.js 手勢へ下知）、
@@ -115,6 +115,7 @@ const 型 = `
 .snk-pop{background:rgba(22,24,28,.9);border:1.5px solid #E2C877;border-radius:7px;padding:4px 12px 5px;font-size:14.5px;font-weight:700;white-space:nowrap;animation:snk-pop 1.9s ease-out forwards}
 .snk-pop b{color:#E2C877;margin-left:8px}
 .snk-pop.warn{border-color:#E07A6C}
+.snk-pop.tezei{border-color:#8FB8DE}.snk-pop.tezei b{color:#BFD8EE}
 .snk-pop.kubi{border:2px solid #E2C877;background:rgba(92,62,18,.95);font-size:17px;padding:6px 16px 7px;animation-duration:3.2s}
 .snk-mochiba{margin-top:6px;padding:4px 8px 5px;border-left:3px solid #E07A6C;background:rgba(176,72,60,.24);border-radius:0 6px 6px 0;font-size:12.5px;font-weight:700}
 .snk-mochiba b{margin-left:8px;color:#F0A090;font-family:'Hiragino Sans','Yu Gothic UI','Meiryo',system-ui,sans-serif;font-variant-numeric:tabular-nums}
