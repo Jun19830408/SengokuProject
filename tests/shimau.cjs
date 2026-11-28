@@ -100,8 +100,12 @@ Math.random = function () {
   確('取っ手は消える', !document.querySelector('.grip'));
 
   console.log('\n── 四　下の欄だけをしまうこともできる');
+  /* 縦に持った画面の下の欄は、盤の上に重ねて下から出す（ui/BattleScreen.jsx 下の欄。遊ぶ人の申し出：「下の部分をフィールドを
+     動かすと下に隠れるなどして、フィールドを見やすくしてください」）。しまえば下へ滑り、つまみ（▲展開）だけが残る（中身は置いた
+     まま）。詳しくは tests/shita_ran.cjs */
   await 押(釦('収納'));
-  確('下の欄だけ消える', !document.querySelector('.bpanel') && !!document.querySelector('.bar'));
+  const つまみ = document.querySelector('.bsheet-tab');
+  確('下の欄だけしまう（下へ滑って、つまみだけが残る）', !!つまみ && つまみ.getAttribute('aria-expanded') === 'false' && /展開/.test(つまみ.textContent) && !!document.querySelector('.bar'));
   確('左の道具立ては残る', !document.querySelector('.mapctl.l.hid'));
 
   console.log('');

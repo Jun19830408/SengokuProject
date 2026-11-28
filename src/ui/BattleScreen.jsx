@@ -1,5 +1,5 @@
 import { 木立を焼く } from "../battle/mori.js";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { MAP, axisOf, fromUV, gatePos, gateReachable, inLayer, 本丸への道, 門の輪, 出城が保つ, 出城の内か, 押した門, 攻め口を割り振る } from "../battle/castleMap.js";
 import { corpsMen, detachOptions, issueOrder, makeDetachment, 転回させる, moveToGate, notify, outOfCommand, placeSquads, recallDetachment, reformTime, returnToGate, sallyOut, 手綱を取り戻す, 狙いの組, 狙う所, 門へ向かわせる, 城の中を動かす } from "../battle/corps.js";
 import { drawBattle, drawCastleBuildings, drawCastleTerrain, drawFieldTerrain, inOwnZone, 跡を焼き足す } from "../battle/draw.js";
@@ -57,6 +57,13 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const [speed, setSpeedState] = useState(0);
   const [phase, setPhase] = useState("deploy");
   const [panel, setPanel] = useState(true);
+  /* 縦に持った画面の下の欄（下の 下の欄）。出ているか。遊ぶ人の申し出：「フィールドが全てなはずで、今は説明も長いし、隠せも
+     しないので操作しづらいです」。一人働き（足軽から物頭）の合戦は、しまって始める（欄には委ねる釦と説明だけで、下知は無い。
+     物頭の下知は つまみ で出す）。ふだんの合戦（総大将）は布陣と下知の欄なので、出して始める */
+  const [下欄, set下欄] = useState(() => !(ctx.一人 && ctx.一人.身分));
+  const 下欄Ref = useRef(null), 下欄の丈Ref = useRef(0), 指の始めRef = useRef(new Map());
+  const [下欄の丈, set下欄の丈] = useState(0);
+  const [説明を開く, set説明を開く] = useState(false);   // 一人の欄の操作の説明（下の 一人の欄）
   const [selAll, setSelAll] = useState(false);
   const [wide, setWide] = useState(false);
   const [faceMode, setFaceMode] = useState(false);
@@ -1301,9 +1308,16 @@ export function BattleScreen({ ctx, land, onEnd }) {
   const 一人の欄 = (
     <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%" }}>
       <button className="btn" onClick={委ねる} disabled={委ね中}>{委ね中 ? "委ねている…" : "委ねて結果を見る"}</button>
+      {/* 手勢を率いる身の説明は長いので、はじめの一文（身分でできないこと）だけを出し、操作の説明は押せば開く（遊ぶ人の申し出：
+          「今は説明も長いし、隠せもしないので操作しづらいです」） */}
       <div style={{ fontSize: 11.5, color: U.dim, lineHeight: 1.65, borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
         {b.手勢 && ctx.一人 && ctx.一人.段
-          ? `${ctx.一人.段}の身では、全軍への下知も上司の隊の差配もできない。率いる手勢（${b.手勢.手勢}人）は上司の隊に属し、ふだんは上司の隊について動く。背中の視点では、方向キーで与平が動き、手勢は与平の前に陣を組んで付いてくる（陣は視点の前を向く）。突く・受ける・駆けるは手勢の全体で行う。一騎駆け（L）で自ら戦い、もう一度押せばいつでも手勢へ戻る。`
+          ? <>
+              {`${ctx.一人.段}の身では、全軍への下知も上司の隊の差配もできない。`}
+              <button type="button" className="btn sm" aria-expanded={説明を開く} onClick={() => set説明を開く((v) => !v)}
+                style={{ marginLeft: 6, padding: "1px 8px", fontSize: 11 }}>{説明を開く ? "▾ 操作の説明" : "▸ 操作の説明"}</button>
+              {説明を開く && <div style={{ marginTop: 4 }}>{`率いる手勢（${b.手勢.手勢}人）は上司の隊に属し、ふだんは上司の隊について動く。背中の視点では、方向キーで与平が動き、手勢は与平の前に陣を組んで付いてくる（陣は視点の前を向く）。突く・受ける・駆けるは手勢の全体で行う。一騎駆け（L）で自ら戦い、もう一度押せばいつでも手勢へ戻る。`}</div>}
+            </>
           : `足軽の身では、全軍への下知も隊の差配もできない。自分（${(ctx.一人 && ctx.一人.名) || "与平"}）を動かすことだけができる。`}
       </div>
       <div style={{ fontSize: 11, color: U.dim, borderTop: `1px solid ${U.line2}`, paddingTop: 6 }}>
@@ -2043,6 +2057,41 @@ export function BattleScreen({ ctx, land, onEnd }) {
     </div>
   );
 
+  /* ---- 縦に持った画面の下の欄（遊ぶ人の申し出：「他のiphoneも含めて、フィールド部分を増やしてください。下の部分をフィールドを
+     動かすと下に隠れるなどして、フィールドを見やすくしてください。フィールドが全てなはずで、今は説明も長いし、隠せもしないので
+     操作しづらいです」） ----
+     もとは盤の下に欄を並べ（丈の四割まで）、盤はそのぶん狭かった。背中の視点では左の釦の列（収納・広く）も出ないので、欄を
+     しまう手立てが無かった。いまは縦に持った画面では、盤を下まで広げ、欄は盤の上に重ねて下から出す（下の欄）。
+       ・盤（背中越しも）を指でなぞる・二本の指で摘む・車を回すと、欄は下へしまう（叩くだけではしまわない。隊を選んで下知する
+         ため）。欄・釦の上から始めた指は数えない
+       ・盤の下の真ん中の つまみ（▲展開／▼収納）で出し入れする。左の釦の列の「収納／展開」も同じ
+       ・欄が出ているあいだは、盤の下に置いた物（視点の釦・報せ・背中越しの方向キーと釦）を欄の上へ持ち上げる（隠れない）
+     横に持った画面は、これまでどおり盤の右に欄を並べる */
+  const 縦の欄 = !land && !wide;
+  const 欄の内か = (t) => !!(t && t.closest && t.closest(".bsheet, button, .mbtn, .grip"));
+  const 下欄をしまう = () => { if (縦の欄) set下欄(false); };
+  const 指の手当て = {
+    onPointerDownCapture: (e) => {
+      if (!縦の欄 || 欄の内か(e.target)) return;
+      指の始めRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (指の始めRef.current.size >= 2) 下欄をしまう();            // 二本の指（摘む）
+    },
+    onPointerMoveCapture: (e) => {
+      const 始 = 指の始めRef.current.get(e.pointerId);
+      if (始 && Math.hypot(e.clientX - 始.x, e.clientY - 始.y) > 8) { 指の始めRef.current.delete(e.pointerId); 下欄をしまう(); }   // なぞる（八画素より動いた）
+    },
+    onPointerUpCapture: (e) => { 指の始めRef.current.delete(e.pointerId); },
+    onPointerCancelCapture: (e) => { 指の始めRef.current.delete(e.pointerId); },
+    onWheelCapture: (e) => { if (!欄の内か(e.target)) 下欄をしまう(); },
+  };
+  /* 欄の丈を量って、盤の下に置いた物を持ち上げる丈にする（--sheet-h。出ていなければ〇）。つまみの丈は --tab-h */
+  useLayoutEffect(() => {
+    const el = 下欄Ref.current, h = el ? el.offsetHeight : 0;
+    if (Math.abs(h - 下欄の丈Ref.current) > 1) { 下欄の丈Ref.current = h; set下欄の丈(h); }
+  });
+  const つまみの丈 = 30;
+  const 盤の下の丈 = { "--sheet-h": 縦の欄 && 下欄 ? `${下欄の丈}px` : "0px", "--tab-h": 縦の欄 ? `${つまみの丈}px` : "0px" };
+
   return (
     <div className="sp" style={{ height: "100dvh", background: U.paper, overscrollBehavior: "none", position: "relative" }} onMouseDown={stop} onMouseUp={stop}>
       {退きの札}
@@ -2142,7 +2191,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
         </div>
         )}
 
-        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column" }}>
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: land ? "row" : "column", position: "relative", overflow: "hidden", ...盤の下の丈 }}
+          {...指の手当て}>
           <div ref={wrapRef} className="fieldwrap"
             style={{ flex: 1, minWidth: 0, minHeight: 0, position: "relative", background: "#B9C99C", overflow: "hidden" }}
             onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={() => (gesture.current = null)}
@@ -2191,7 +2241,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
                    左上の道具立て（拡大・縮小・全体・収納・広く）と重なって、
                    釦が読めなくなっていた。下は空いている。 */
                 style={{ position: "absolute", left: "50%", transform: "translateX(-50%)",
-                  bottom: 16 + i * 34, padding: "7px 16px", borderRadius: 8, fontSize: 15,
+                  /* 縦に持った画面では、下の欄とつまみの上へ持ち上げる（上の 下の欄） */
+                  bottom: `calc(${16 + i * 34}px + var(--sheet-h, 0px) + var(--tab-h, 0px))`, padding: "7px 16px", borderRadius: 8, fontSize: 15,
                   maxWidth: "92%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   background: n.kind === "bad" ? "rgba(176,72,60,0.93)" : n.kind === "good" ? "rgba(62,122,58,0.93)" : "rgba(40,40,36,0.9)",
                   color: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.25)", pointerEvents: "none", zIndex: 5 }}>
@@ -2230,7 +2281,8 @@ export function BattleScreen({ ctx, land, onEnd }) {
               <div className="mbtn" onClick={() => zoomAt(1.3, null)}><b>＋</b>拡大</div>
               <div className="mbtn" onClick={() => zoomAt(0.77, null)}><b>−</b>縮小</div>
               <div className="mbtn" onClick={fitAll}><b>⛶</b>全体</div>
-              <div className="mbtn" onClick={() => setPanel((v) => !v)}><b>▤</b>{panel ? "収納" : "展開"}</div>
+              {/* 縦に持った画面では下の欄を出し入れする（上の 下の欄）。横に持った画面では右の欄 */}
+              <div className="mbtn" onClick={() => (land ? setPanel((v) => !v) : set下欄((v) => !v))}><b>▤</b>{(land ? panel : 下欄) ? "収納" : "展開"}</div>
               <div className="mbtn" onClick={() => setWide(true)}><b>⤢</b>広く</div>
               {/* 視点（battle/naname.js）。斜めから見下ろすか、真上から見るか */}
               <div className="mbtn" onClick={() => {
@@ -2255,13 +2307,16 @@ export function BattleScreen({ ctx, land, onEnd }) {
                 野戦だけに出す（地を平らに描くので、城攻めの盤（b.map）では塀も門も描けない）。
                 合戦のさなかだけ出す。足軽の身では布陣も合戦開始もできない（一人の欄）ので、布陣の段で入っても
                 合戦が始められない。背中越しのあいだは、盤へ戻るためにいつでも出す */}
-            {身分 && (bRef.current.phase === "fight" || 降り段) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "max(12px, env(safe-area-inset-bottom))", zIndex: 5, touchAction: "none" }}
+            {身分 && (bRef.current.phase === "fight" || 降り段) && <div className="mbtn" style={{ position: "absolute", left: "max(12px, env(safe-area-inset-left))", bottom: "calc(max(12px, env(safe-area-inset-bottom)) + var(--sheet-h, 0px))", zIndex: 5, touchAction: "none", transition: "bottom .25s ease" }}
               onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
               {...視点の釦の手当て /* 指が触れた時に替える（上の 視点の釦の手当て。ほかの指を置いたままでも効く） */}><b>{降り段 ? "盤" : "人"}</b>{降り段 ? "盤の視点" : "背中の視点"}</div>}
             {/* 与平の札と釦（名札・体力・気力・方向キー・突く／受ける／駆ける・討死の札）。左下の釦より下に重ねる */}
+            {/* 縦に持った画面では、下の欄とつまみの上までを札の場とする（方向キー・釦が欄やつまみに隠れない。上の 下の欄） */}
             {降り段 && 背中Ref.current && (
-              <SenakaFuda 態={背中Ref.current} b={bRef.current} 段={寄りで動ける ? "地" : 降り段} 止め={bRef.current.phase !== "fight" ? "段" : speed === 0 ? "停止" : ""}
-                on寄り={(k) => zoomAt(k)} onLeave={釦で昇る} />
+              <div style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: "calc(var(--sheet-h, 0px) + var(--tab-h, 0px))", zIndex: 4, transition: "bottom .25s ease" }}>
+                <SenakaFuda 態={背中Ref.current} b={bRef.current} 段={寄りで動ける ? "地" : 降り段} 止め={bRef.current.phase !== "fight" ? "段" : speed === 0 ? "停止" : ""}
+                  on寄り={(k) => zoomAt(k)} onLeave={釦で昇る} />
+              </div>
             )}
             {wide && (
               <div className="grip l" title="道具立てを戻す"
@@ -2270,15 +2325,31 @@ export function BattleScreen({ ctx, land, onEnd }) {
             )}
           </div>
 
-          {panel && !wide && (
+          {land && panel && !wide && (
             <div className="bpanel" onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
               style={{
                 flex: "0 0 auto", background: U.card, padding: "8px 10px", overflowY: "auto",
-                width: land ? (wide ? 200 : 246) : "auto", maxHeight: land ? "none" : "40%",
-                borderLeft: land ? `1px solid ${U.line}` : "none",
-                borderTop: land ? "none" : `1px solid ${U.line}`,
+                width: 246, maxHeight: "none", borderLeft: `1px solid ${U.line}`, borderTop: "none",
               }}>
               {panelBody}
+            </div>
+          )}
+          {/* 縦に持った画面の下の欄（上の 下の欄）。盤の上に重ね、しまえば下へ滑ってつまみだけが残る。丈は盤の四割まで */}
+          {縦の欄 && (
+            <div ref={下欄Ref} className="bsheet" onMouseDown={stop} onMouseUp={stop} onTouchStart={stop} onTouchEnd={stop}
+              style={{ position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 8, maxHeight: "40%", display: "flex", flexDirection: "column",
+                transform: 下欄 ? "translateY(0)" : "translateY(calc(100% - env(safe-area-inset-bottom, 0px)))", transition: "transform .25s ease" }}>
+              <button type="button" className="bsheet-tab" aria-expanded={下欄} aria-label={下欄 ? "下の欄をしまう" : "下の欄を出す"}
+                onClick={() => set下欄((v) => !v)}
+                style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", height: つまみの丈, minWidth: 84,
+                  padding: "0 14px", border: `1px solid ${U.line}`, borderBottom: "none", borderRadius: "10px 10px 0 0", background: U.card,
+                  color: U.text, fontSize: 12.5, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer" }}>
+                {下欄 ? "▼ 収納" : "▲ 展開"}
+              </button>
+              <div className="bpanel" style={{ flex: "1 1 auto", minHeight: 0, background: U.card, padding: "8px 10px max(8px, env(safe-area-inset-bottom))",
+                overflowY: "auto", borderTop: `1px solid ${U.line}` }}>
+                {panelBody}
+              </div>
             </div>
           )}
         </div>
