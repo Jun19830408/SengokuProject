@@ -1,4 +1,6 @@
 import { migrateSave } from "../core/state.js";
+import { 架空の名を繕う } from "../core/house.js";
+import { GENERALS } from "../data/generals.js";
 import { 置き場 } from "./store.js";
 import { 圧す, 解す } from "./pack.js";
 import { FACTIONS } from "../data/factions.js";
@@ -49,6 +51,7 @@ function 解く(文) {
   try { d = JSON.parse(解す(文)); } catch (e) { return null; }
   if (!d || !d.state || !Array.isArray(d.state.castles)) return null;
   migrateSave(d.state);                    // 旧い記録を繕う（名簿、旗の下を狙う戦役）
+  架空の名を繕う(d.state, GENERALS);        // 姓を取り違えた架空の子の名を付け直す
   return d;
 }
 
